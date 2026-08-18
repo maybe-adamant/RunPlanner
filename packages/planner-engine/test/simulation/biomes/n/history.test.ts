@@ -41,7 +41,7 @@ describe('N Hub lifecycle composition and history', () => {
       history.ledgers.roomCreations
         .filter(
           (event) =>
-            event.source === 'localChild' &&
+            event.source === 'localVisit' &&
             semanticAddressKey(event.parentOrigin) ===
               semanticAddressKey(combat02.target.room.origin),
         )

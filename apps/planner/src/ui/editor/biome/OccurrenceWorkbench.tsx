@@ -24,10 +24,10 @@ import {
   type WorkspaceEncounterInteraction,
   type WorkspaceEncounterPhase,
   type WorkspaceInteractionCatalog,
-  type WorkspaceEphyraSideRoomDescriptor,
-  type WorkspaceEphyraSideRoomGroup,
+  type WorkspaceLocalVisitDecision,
   type WorkspaceRoomSummary,
   type WorkspaceNaturalChaosSpawnControl,
+  type WorkspaceNaturalChaosExitControl,
   type WorkspaceRunStateLauncher,
   type WorkspaceZagreusSpawnControl,
 } from '@planner/projections/structured-workspace';
@@ -56,13 +56,200 @@ const emptyEncounterPicker: import('@planner/projections/contextualPicker').Cont
 
 interface OccurrenceWorkbenchProps {
   readonly interactions: WorkspaceInteractionCatalog;
+  readonly localVisit?: WorkspaceLocalVisitDecision;
   readonly nextDecisionIntent?: WorkspaceCommandIntent<
     Extract<ProjectCommand, { readonly kind: 'CreateBatch' }>
   >;
   /** Hub visits retain their editable main offer on the Hub board. */
   readonly presentation: 'full' | 'hubRoomLocal';
+  readonly naturalChaosExit?: WorkspaceNaturalChaosExitControl;
   readonly room: WorkspaceRoomSummary;
   readonly runState?: WorkspaceRunStateLauncher;
+}
+
+function LocalVisitOrderSelect({
+  interactions,
+  localVisit,
+  slot,
+}: {
+  readonly interactions: WorkspaceInteractionCatalog;
+  readonly localVisit: WorkspaceLocalVisitDecision;
+  readonly slot: WorkspaceLocalVisitDecision['slots'][number];
+}) {
+  const executeIntent = useCommandIntent();
+  const interaction = requireWorkspaceInteraction(
+    interactions.localVisitOrders,
+    slot.order.interactionKey,
+  );
+  const candidates = useWorkspaceInteraction(interaction);
+  const selectedIndex = slot.order.options.findIndex(
+    (option) => option.key === slot.order.selectedKey,
+  );
+  if (selectedIndex < 0) throw new Error(`${slot.label} has no selected local-visit position`);
+  const selectedCandidate = candidates.result?.[selectedIndex];
+  const replace = (key: string): void => {
+    const optionIndex = slot.order.options.findIndex((option) => option.key === key);
+    const option = slot.order.options[optionIndex];
+    const candidateResults = candidates.result ?? candidates.activate();
+    const candidate = candidateResults?.[optionIndex];
+    if (option === undefined || !candidateMayBeAuthored(candidate)) return;
+    executeIntent(interaction.intentFor(option.proposedOccurrenceIds));
+  };
+  return (
+    <label className="field-control ephyra-side-entry-order">
+      <span className="visually-hidden">{slot.label} visit order</span>
+      <select
+        aria-busy={candidates.pending || undefined}
+        data-candidate-support={candidateSupport(selectedCandidate)}
+        onChange={(event) => replace(event.target.value)}
+        onFocus={candidates.activate}
+        onPointerDown={candidates.activate}
+        value={slot.order.selectedKey}
+      >
+        {slot.order.options.map((option, index) => {
+          const candidate = candidates.result?.[index];
+          const disabled = candidate !== undefined && !candidateMayBeAuthored(candidate);
+          return (
+            <option
+              data-candidate-support={candidateSupport(candidate)}
+              disabled={disabled}
+              key={option.key}
+              value={option.key}
+            >
+              {presentCandidateLabel(option.label, candidate)}
+            </option>
+          );
+        })}
+      </select>
+      <SemanticOwnerMarker address={localVisit.order} />
+    </label>
+  );
+}
+
+function LocalVisitSlotRow({
+  interactions,
+  localVisit,
+  slot,
+}: {
+  readonly interactions: WorkspaceInteractionCatalog;
+  readonly localVisit: WorkspaceLocalVisitDecision;
+  readonly slot: WorkspaceLocalVisitDecision['slots'][number];
+}) {
+  const dispatch = useAppDispatch();
+  const executeIntent = useCommandIntent();
+  const generation = requireWorkspaceInteraction(
+    interactions.localVisitGenerations,
+    workspaceInteractionKey(slot.address),
+  );
+  return (
+    <tr className="ephyra-side-grid-row">
+      <th scope="row">
+        <div className="ephyra-side-room-heading">
+          <div className="owner-markers">
+            <span>{slot.label}</span>
+            <SemanticOwnerMarker address={slot.address} />
+          </div>
+          <p className="card-kicker">Door {slot.physicalDoorId}</p>
+        </div>
+        {slot.generation !== 'generated' ? null : (
+          <button
+            className="quiet-action action-compact"
+            onClick={() => dispatch(semanticOwnerFocused(slot.room.address))}
+            type="button"
+          >
+            Open {slot.label}
+          </button>
+        )}
+      </th>
+      <td className="ephyra-side-priority">{slot.availabilityRank}</td>
+      <td>
+        <CandidateSelect
+          id={`local-${slot.marker.focusKey}-generation`}
+          interaction={generation}
+          label={`${slot.label} generation`}
+          onReplace={(value) => executeIntent(generation.intentFor(value))}
+        />
+      </td>
+      <td>
+        <LocalVisitOrderSelect interactions={interactions} localVisit={localVisit} slot={slot} />
+      </td>
+    </tr>
+  );
+}
+
+function LocalVisitWorkbench({
+  interactions,
+  localVisit,
+}: {
+  readonly interactions: WorkspaceInteractionCatalog;
+  readonly localVisit: WorkspaceLocalVisitDecision;
+}) {
+  return (
+    <section aria-label="Ephyra side rooms" className="ephyra-side-editor">
+      <header className="local-reward-heading">
+        <div className="owner-markers">
+          <h4>Side rooms</h4>
+          <SemanticOwnerMarker address={localVisit.address} />
+        </div>
+        <span className="neutral-status">
+          {localVisit.visitOrder.length} visited · {localVisit.slots.length} possible
+        </span>
+      </header>
+      <div className="ephyra-side-grid-scroll">
+        <table className="ephyra-side-grid">
+          <caption className="visually-hidden">Ephyra side-room generation and visit order</caption>
+          <thead>
+            <tr>
+              <th scope="col">Room</th>
+              <th scope="col">Priority</th>
+              <th scope="col">Generated</th>
+              <th scope="col">Visit order</th>
+            </tr>
+          </thead>
+          <tbody>
+            {localVisit.slots.map((slot) => (
+              <LocalVisitSlotRow
+                interactions={interactions}
+                key={slot.key}
+                localVisit={localVisit}
+                slot={slot}
+              />
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
+function NaturalChaosMapWorkbench({
+  control,
+  interactions,
+}: {
+  readonly control: WorkspaceNaturalChaosExitControl;
+  readonly interactions: WorkspaceInteractionCatalog;
+}) {
+  const executeIntent = useCommandIntent();
+  const interaction = requireWorkspaceInteraction(
+    interactions.naturalChaosExits,
+    workspaceInteractionKey(control.owner),
+  );
+  return (
+    <label className="field-control" htmlFor={`chaos-map-${control.chaosRoom.occurrenceId}`}>
+      <span>Map</span>
+      <select
+        id={`chaos-map-${control.chaosRoom.occurrenceId}`}
+        onChange={(event) => executeIntent(interaction.mapIntent(event.target.value))}
+        value={control.chaosRoom.gameName}
+      >
+        {control.mapChoices.map((choice) => (
+          <option key={choice.value} value={choice.value}>
+            {choice.label}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
 }
 
 function HubRewardContext({
@@ -90,73 +277,6 @@ function HubRewardContext({
         </button>
       )}
     </section>
-  );
-}
-
-function EphyraSideRoomEntryOrderSelect({
-  group,
-  interactions,
-  side,
-}: {
-  readonly group: WorkspaceEphyraSideRoomGroup;
-  readonly interactions: WorkspaceInteractionCatalog;
-  readonly side: WorkspaceEphyraSideRoomDescriptor;
-}) {
-  const interaction = requireWorkspaceInteraction(
-    interactions.sideRoomEntryOrders,
-    side.entryOrder.interactionKey,
-  );
-  const candidates = useWorkspaceInteraction(interaction);
-  const dispatch = useAppDispatch();
-  const selectedIndex = side.entryOrder.options.findIndex(
-    (option) => option.key === side.entryOrder.selectedKey,
-  );
-  if (selectedIndex < 0) {
-    throw new Error(`${side.label} has no selected entry-order option`);
-  }
-  const selectedCandidate = candidates.result?.[selectedIndex];
-
-  const replace = (key: string): void => {
-    const optionIndex = side.entryOrder.options.findIndex((option) => option.key === key);
-    const option = side.entryOrder.options[optionIndex];
-    const candidateResults = candidates.result ?? candidates.activate();
-    const candidate = candidateResults?.[optionIndex];
-    if (option === undefined || !candidateMayBeAuthored(candidate)) return;
-    dispatch(
-      authoredProjectCommandDispatched({
-        kind: 'ReplaceSideRoomEntryOrder',
-        group: group.address,
-        enteredSlotKeys: option.proposedEnteredSlotKeys,
-      }),
-    );
-  };
-  return (
-    <label className="field-control ephyra-side-entry-order">
-      <span className="visually-hidden">{side.label} visit order</span>
-      <select
-        aria-busy={candidates.pending || undefined}
-        data-candidate-support={candidateSupport(selectedCandidate)}
-        onChange={(event) => replace(event.target.value)}
-        onFocus={candidates.activate}
-        onPointerDown={candidates.activate}
-        value={side.entryOrder.selectedKey}
-      >
-        {side.entryOrder.options.map((option, index) => {
-          const candidate = candidates.result?.[index];
-          const disabled = candidate !== undefined && !candidateMayBeAuthored(candidate);
-          return (
-            <option
-              data-candidate-support={candidateSupport(candidate)}
-              disabled={disabled}
-              key={option.key}
-              value={option.key}
-            >
-              {presentCandidateLabel(option.label, candidate)}
-            </option>
-          );
-        })}
-      </select>
-    </label>
   );
 }
 
@@ -335,104 +455,6 @@ function EncounterWorkbench({
             phase={phase}
           />
         ))}
-      </div>
-    </section>
-  );
-}
-
-function EphyraWorkbench({
-  interactions,
-  room,
-}: {
-  readonly interactions: WorkspaceInteractionCatalog;
-  readonly room: Extract<WorkspaceRoomSummary['roomLocal'], { readonly kind: 'ephyra' }>;
-}) {
-  const dispatch = useAppDispatch();
-  if (room.sideRooms.kind === 'withheld') return null;
-  const group = room.sideRooms.group;
-  return (
-    <section className="ephyra-side-editor" aria-label="Ephyra side rooms">
-      <header className="local-reward-heading">
-        <div className="owner-markers">
-          <h4>Side rooms</h4>
-          <SemanticOwnerMarker address={group.address} />
-        </div>
-        <span className="neutral-status">
-          {group.enteredSlotKeys.length} visited · {group.slots.length} possible
-        </span>
-      </header>
-      <div className="ephyra-side-grid-scroll">
-        <table className="ephyra-side-grid">
-          <caption className="visually-hidden">Ephyra side-room generation and visit order</caption>
-          <thead>
-            <tr>
-              <th scope="col">Room</th>
-              <th scope="col">Priority</th>
-              <th scope="col">Generated</th>
-              <th scope="col">Visit order</th>
-            </tr>
-          </thead>
-          <tbody>
-            {group.slots.map((side) => {
-              const generation = requireWorkspaceInteraction(
-                interactions.sideRoomGenerations,
-                workspaceInteractionKey(side.address),
-              );
-              return (
-                <tr className="ephyra-side-grid-row" key={side.key}>
-                  <th scope="row">
-                    <div className="ephyra-side-room-heading">
-                      <div className="owner-markers">
-                        <span>{side.label}</span>
-                        <SemanticOwnerMarker address={side.address} />
-                      </div>
-                      <p className="card-kicker">Door {side.physicalDoorId}</p>
-                    </div>
-                    {side.generation !== 'generated' ? null : (
-                      <div className="ephyra-side-reward room-state-with-marker">
-                        <SemanticOwnerMarker address={side.rewardControl.marker.address} />
-                        <RewardControlEditor
-                          control={side.rewardControl}
-                          idPrefix={`side-${side.marker.focusKey}`}
-                          interactions={interactions}
-                        />
-                      </div>
-                    )}
-                    <EncounterWorkbench
-                      idPrefix={`side-${side.marker.focusKey}`}
-                      interactions={interactions}
-                      phases={side.encounterPhases}
-                    />
-                  </th>
-                  <td className="ephyra-side-priority">{side.availabilityRank}</td>
-                  <td>
-                    <CandidateSelect
-                      id={`side-${side.marker.focusKey}-generation`}
-                      interaction={generation}
-                      label={`${side.label} generation`}
-                      onReplace={(value) =>
-                        dispatch(
-                          authoredProjectCommandDispatched({
-                            kind: 'ReplaceSideRoomGeneration',
-                            sideRoom: side.address,
-                            generation: value,
-                          }),
-                        )
-                      }
-                    />
-                  </td>
-                  <td>
-                    <EphyraSideRoomEntryOrderSelect
-                      group={group}
-                      interactions={interactions}
-                      side={side}
-                    />
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
       </div>
     </section>
   );
@@ -1586,6 +1608,17 @@ function RevertAnomalyAction({ room }: { readonly room: WorkspaceRoomSummary }) 
   );
 }
 
+/** Identity controls stay on the parent door that owns the takeover transition. */
+export function AnomalyIdentityControls({ room }: { readonly room: WorkspaceRoomSummary }) {
+  if (room.anomaly === undefined) return null;
+  return (
+    <div className="anomaly-identity-controls">
+      <AnomalyMapControl room={room} />
+      <RevertAnomalyAction room={room} />
+    </div>
+  );
+}
+
 /**
  * Local disclosure state is intentionally UI-only. Exact semantic focus opens
  * the containing surface without adding navigation or expansion to history.
@@ -1649,7 +1682,6 @@ export function RoomOfferEditor({
       {presentation === 'hubRoomLocal' ? (
         <HubRewardContext interactions={interactions} room={room} />
       ) : null}
-      <AnomalyMapControl room={room} />
       {showMainReward && state.kind === 'none' ? (
         <p className="fixed-room-state">No room reward.</p>
       ) : null}
@@ -1686,24 +1718,7 @@ export function RoomOfferEditor({
           )}
         </div>
       ) : null}
-      {showMainReward && state.kind === 'ephyra' ? (
-        <div className="room-state-with-marker">
-          <SemanticOwnerMarker address={state.incomingReward.marker.address} />
-          <RewardControlEditor
-            control={state.incomingReward}
-            idPrefix={`ephyra-${state.incomingReward.marker.focusKey}`}
-            interactions={interactions}
-          />
-        </div>
-      ) : null}
       <AnomalyClearedControl room={room} />
-      {presentation === 'hubRoomLocal' &&
-      state.kind === 'ephyra' &&
-      state.sideRooms.kind === 'withheld' ? (
-        <p className="fixed-room-state">
-          Side rooms become available after this room is selected in the visit order.
-        </p>
-      ) : null}
       {state.kind === 'shop' && !state.materialized ? (
         <p className="fixed-room-state">Shop inventory appears when you select this room.</p>
       ) : null}
@@ -1730,9 +1745,6 @@ export function RoomOfferEditor({
             interactions={interactions}
             phases={room.encounterPhases}
           />
-          {state.kind === 'ephyra' ? (
-            <EphyraWorkbench interactions={interactions} room={state} />
-          ) : null}
           {state.kind === 'shop' && room.zagreusSpawn?.materialized === true ? (
             <ZagreusSpawnWorkbench control={room.zagreusSpawn} interactions={interactions} />
           ) : null}
@@ -1744,7 +1756,6 @@ export function RoomOfferEditor({
           )}
         </RoomCustomizationDisclosure>
       ) : null}
-      <RevertAnomalyAction room={room} />
     </>
   );
 }
@@ -1752,6 +1763,8 @@ export function RoomOfferEditor({
 /** A room-local editor that consumes the structured workspace only. */
 export function OccurrenceWorkbench({
   interactions,
+  localVisit,
+  naturalChaosExit,
   nextDecisionIntent,
   presentation,
   room,
@@ -1785,7 +1798,7 @@ export function OccurrenceWorkbench({
         <RoomSelector
           idPrefix={idPrefix}
           interaction={roomInteraction}
-          label="Starting room"
+          label="Room"
           onSelect={(gameName) =>
             dispatch(
               authoredProjectCommandDispatched({
@@ -1797,12 +1810,18 @@ export function OccurrenceWorkbench({
           }
         />
       )}
+      {naturalChaosExit === undefined ? null : (
+        <NaturalChaosMapWorkbench control={naturalChaosExit} interactions={interactions} />
+      )}
       <RoomOfferEditor
         idPrefix={idPrefix}
         interactions={interactions}
         presentation={presentation}
         room={room}
       />
+      {localVisit === undefined ? null : (
+        <LocalVisitWorkbench interactions={interactions} localVisit={localVisit} />
+      )}
       {nextDecisionIntent === undefined ? null : (
         <div className="workbench-action-row">
           <button

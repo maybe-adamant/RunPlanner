@@ -89,6 +89,7 @@ function decisionKit(source: WorkspaceBiomeSource) {
       markerDestinations: markers.emitter,
       ordinaryRewardForfeited: (owner) => source.ordinaryRewardForfeited(owner.address),
       occurrence: input.occurrence,
+      ...(input.roomPicker === undefined ? {} : { roomPicker: input.roomPicker }),
     });
   };
   return { assembleOccurrence, markers };
@@ -189,16 +190,13 @@ describe('structured workspace decision assembly', () => {
     );
     expect(assembly.batch.targets.filter((target) => target.selected)).toHaveLength(1);
     expect(assembly.workbenches).toHaveLength(assembly.batch.targets.length);
-    expect(assembly.roomControls.some((control) => control.kind === 'targetRoomPicker')).toBe(true);
+    expect(assembly.roomControls).toHaveLength(assembly.batch.targets.length);
     const selected = assembly.batch.targets.find((target) => target.selected);
     if (selected === undefined) throw new Error('selected target is missing');
-    expect(
-      assembly.roomControls.find(
-        (control) =>
-          control.kind === 'targetRoomPicker' &&
-          semanticAddressKey(control.address) === selected.marker.focusKey,
-      ),
-    ).toEqual({
+    const selectedWorkbench = assembly.workbenches.find(
+      (workbench) => workbench.room.occurrenceId === selected.room.occurrenceId,
+    );
+    expect(selectedWorkbench?.room.roomPicker).toEqual({
       address: selected.marker.address,
       kind: 'targetRoomPicker',
       target: {
@@ -211,7 +209,7 @@ describe('structured workspace decision assembly', () => {
       assembly.batch.key,
     );
     expect(kit.markers.destinations().get(selected.room.marker.focusKey)?.nodeKey).toBe(
-      assembly.batch.key,
+      selectedWorkbench?.key,
     );
   });
 
@@ -412,6 +410,57 @@ describe('structured workspace decision assembly', () => {
     });
   });
 
+  it('projects every prepared active Fields cage as a bounded target-card summary', () => {
+    const source = biomeSource(createGoldenFGHIProject(), 'Underworld', 'H');
+    const decision = batchDecisionAt(source, createOccurrenceId('golden-h-combat02'));
+    const owner = createExitDecisionAddress(goldenHBiome, decision.source);
+    const evaluated = source.evaluatedBatch(owner);
+    if (evaluated === undefined) throw new Error('H comparison batch evaluation is missing');
+    const kit = decisionKit(source);
+    const assembly = assembleWorkspaceDecision({
+      assembleOccurrence: kit.assembleOccurrence,
+      catalog,
+      decision,
+      evaluated,
+      kind: 'batch',
+      markerDestinations: kit.markers.emitter,
+      source,
+    });
+    if (assembly.kind !== 'batch') throw new Error('H comparison decision is not a batch');
+
+    expect(
+      assembly.batch.targets.map((target) => ({
+        fieldsCageOffers: target.fieldsCageOffers,
+        room: target.room.label,
+      })),
+    ).toEqual([
+      {
+        fieldsCageOffers: [
+          { cageKey: 'cage1', cageLabel: 'Cage 1', rewardLabel: 'Hermes' },
+          { cageKey: 'cage2', cageLabel: 'Cage 2', rewardLabel: 'Hammer' },
+        ],
+        room: 'Combat 09',
+      },
+      {
+        fieldsCageOffers: [
+          { cageKey: 'cage1', cageLabel: 'Cage 1', rewardLabel: 'Max Health' },
+          { cageKey: 'cage2', cageLabel: 'Cage 2', rewardLabel: "Selene's Gift" },
+        ],
+        room: 'Combat 03',
+      },
+    ]);
+    expect(assembly.batch.targets.every((target) => target.doorRewardLabel === undefined)).toBe(
+      true,
+    );
+    expect(
+      assembly.batch.targets.every(
+        (target) =>
+          target.room.roomLocal.kind === 'fields' &&
+          target.room.roomLocal.cages.every((cage) => cage.control.kind === 'countedReward'),
+      ),
+    ).toBe(true);
+  });
+
   it('keeps the Fields outcome control available while a retained batch awaits its outcome', () => {
     const start = createOccurrenceId('retained-fields-awaiting-start');
     let project = createProjectDocument(catalog, {
@@ -593,16 +642,20 @@ describe('structured workspace decision assembly', () => {
     expect(
       assembly.batch.targets.every((target) => target.marker.assessment === 'unassessed'),
     ).toBe(true);
+    expect(assembly.roomControls).toHaveLength(assembly.batch.targets.length);
     expect(
-      assembly.roomControls.filter((control) => control.kind === 'targetRoomPicker'),
+      assembly.workbenches.filter((workbench) => workbench.room.roomPicker !== undefined),
     ).toHaveLength(assembly.batch.targets.length);
+    const retainedWorkbench = assembly.workbenches.find(
+      (workbench) => workbench.room.occurrenceId === retainedTarget.room.occurrenceId,
+    );
     expect(kit.markers.destinations().get(retainedTarget.room.marker.focusKey)?.nodeKey).toBe(
-      assembly.batch.key,
+      retainedWorkbench?.key,
     );
     expect(
       kit.markers.destinations().get(retainedTarget.room.rewardControls[0]!.marker.focusKey)
         ?.nodeKey,
-    ).toBe(assembly.batch.key);
+    ).toBe(retainedWorkbench?.key);
   });
 
   it('keeps takeover targets read-only at the decision-owned batch boundary', () => {
@@ -662,13 +715,16 @@ describe('structured workspace decision assembly', () => {
     }
 
     expect(assembly.batch.targetInteraction).toBe('replaceable');
+    expect(assembly.roomControls).toHaveLength(assembly.batch.targets.length);
     expect(
-      assembly.roomControls.find(
-        (control) =>
-          control.kind === 'targetRoomPicker' &&
-          control.target.kind === 'existing' &&
-          control.target.selectedGameName === 'I_PreBoss02',
-      ),
+      assembly.workbenches.find((workbench) => {
+        const picker = workbench.room.roomPicker;
+        return (
+          picker?.kind === 'targetRoomPicker' &&
+          picker.target.kind === 'existing' &&
+          picker.target.selectedGameName === 'I_PreBoss02'
+        );
+      })?.room.roomPicker,
     ).toMatchObject({ kind: 'targetRoomPicker' });
   });
 

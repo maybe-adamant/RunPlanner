@@ -27,6 +27,7 @@ import {
   type WorkspaceTopologyRemovalInteraction,
 } from '@planner/projections/structured-workspace';
 import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
+import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
 import { useAppDispatch } from '@planner/state/store';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
@@ -34,7 +35,7 @@ import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceIntera
 import { SemanticOwnerMarker } from '@planner/ui/feedback/EvaluationFeedback';
 import { candidateSupport } from '@planner/projections/candidateProjection';
 import { CandidateSelect } from './CandidateSelect';
-import { RoomOfferEditor } from './OccurrenceWorkbench';
+import { AnomalyIdentityControls } from './OccurrenceWorkbench';
 import { RoomSelector } from './RoomSelector';
 import { RunStateLauncher } from './RunStateSheet';
 import { BiomeWorkspaceContractError } from './workspaceContract';
@@ -154,8 +155,6 @@ function TargetRow({
   readonly target: WorkspacePhysicalTarget;
 }) {
   const dispatch = useAppDispatch();
-  const replaceable =
-    node.targetInteraction === 'replaceable' && target.physicalState === 'available';
   const selectionInteraction =
     node.targets.length === 1 &&
     node.zagreusContract === undefined &&
@@ -212,24 +211,36 @@ function TargetRow({
             <span className="neutral-status">{roomStatus(target)}</span>
           </div>
         </div>
-        {target.room.anomaly === undefined ? (
-          node.targetInteraction === 'readOnly' ? (
-            <p className="fixed-room-state">These Preboss doors are changed together.</p>
-          ) : !replaceable ? (
-            <p className="fixed-room-state">
-              {target.physicalState === 'unavailable'
-                ? 'This saved door is no longer available here. Fix the earlier route first.'
-                : 'This door cannot be changed.'}
-            </p>
-          ) : (
-            <TargetRoomSelector
-              idPrefix={`target-${target.room.occurrenceId}`}
-              interactionKey={target.marker.focusKey}
-              interactions={interactions}
-              label={`Door ${target.index} room`}
-            />
-          )
+        <button
+          className="quiet-action action-compact"
+          onClick={() => dispatch(semanticOwnerFocused(target.room.address))}
+          type="button"
+        >
+          Open {target.room.label} room
+        </button>
+        {node.targetInteraction === 'readOnly' ? (
+          <p className="fixed-room-state">These Preboss doors are changed together.</p>
+        ) : target.physicalState === 'unavailable' ? (
+          <p className="fixed-room-state">
+            This saved door is no longer available here. Fix the earlier route first.
+          </p>
         ) : null}
+        {target.doorRewardLabel === undefined ? null : (
+          <p className="fixed-room-state">Door reward: {target.doorRewardLabel}</p>
+        )}
+        {target.fieldsCageOffers === undefined || target.fieldsCageOffers.length === 0 ? null : (
+          <dl
+            aria-label={`${target.room.label} Fields cage offers`}
+            className="fields-batch-summary fixed-room-state"
+          >
+            {target.fieldsCageOffers.map((offer) => (
+              <div key={offer.cageKey}>
+                <dt>{offer.cageLabel}</dt>
+                <dd>{offer.rewardLabel}</dd>
+              </div>
+            ))}
+          </dl>
+        )}
         {target.anomalyTakeover === undefined ? null : (
           <button
             className="quiet-action action-compact"
@@ -247,12 +258,7 @@ function TargetRow({
             {target.anomalyTakeover.label}
           </button>
         )}
-        <RoomOfferEditor
-          idPrefix={`target-${target.room.occurrenceId}-reward`}
-          interactions={interactions}
-          presentation="full"
-          room={target.room}
-        />
+        <AnomalyIdentityControls room={target.room} />
       </div>
     </article>
   );
@@ -321,6 +327,7 @@ function ZagreusContractExit({
   readonly interactions: WorkspaceInteractionCatalog;
   readonly selectionName: string;
 }) {
+  const dispatch = useAppDispatch();
   const executeIntent = useCommandIntent();
   const interaction = requireWorkspaceInteraction(
     interactions.zagreusContracts,
@@ -354,12 +361,13 @@ function ZagreusContractExit({
           </div>
         </div>
         <p className="fixed-room-state">Room: {control.contractRoom.label}</p>
-        <RoomOfferEditor
-          idPrefix={`zagreus-${control.contractRoom.occurrenceId}`}
-          interactions={interactions}
-          presentation="full"
-          room={control.contractRoom}
-        />
+        <button
+          className="quiet-action action-compact"
+          onClick={() => dispatch(semanticOwnerFocused(control.contractRoom.address))}
+          type="button"
+        >
+          Open {control.contractRoom.label} room
+        </button>
         <button
           className="danger-action action-compact"
           data-command="RemoveZagreusContract"
@@ -383,6 +391,7 @@ function NaturalChaosExit({
   readonly interactions: WorkspaceInteractionCatalog;
   readonly selectionName: string;
 }) {
+  const dispatch = useAppDispatch();
   const executeIntent = useCommandIntent();
   const interaction = requireWorkspaceInteraction(
     interactions.naturalChaosExits,
@@ -415,26 +424,13 @@ function NaturalChaosExit({
             <SemanticOwnerMarker address={control.owner} />
           </div>
         </div>
-        <label className="field-control" htmlFor={`chaos-map-${control.chaosRoom.occurrenceId}`}>
-          <span>Map</span>
-          <select
-            id={`chaos-map-${control.chaosRoom.occurrenceId}`}
-            onChange={(event) => executeIntent(interaction.mapIntent(event.target.value))}
-            value={control.chaosRoom.gameName}
-          >
-            {control.mapChoices.map((choice) => (
-              <option key={choice.value} value={choice.value}>
-                {choice.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <RoomOfferEditor
-          idPrefix={`chaos-${control.chaosRoom.occurrenceId}`}
-          interactions={interactions}
-          presentation="full"
-          room={control.chaosRoom}
-        />
+        <button
+          className="quiet-action action-compact"
+          onClick={() => dispatch(semanticOwnerFocused(control.chaosRoom.address))}
+          type="button"
+        >
+          Open {control.chaosRoom.label} room
+        </button>
         <button
           className="danger-action action-compact"
           data-command="RemoveNaturalChaos"

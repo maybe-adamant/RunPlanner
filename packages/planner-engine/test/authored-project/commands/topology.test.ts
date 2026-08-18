@@ -1045,7 +1045,9 @@ describe('authored-project commands and topology', () => {
     expect(
       topology.decisions.some(
         (decision) =>
-          decision.source.kind === 'occurrence' && decision.source.occurrenceId === priorId,
+          decision.kind !== 'localVisit' &&
+          decision.source.kind === 'occurrence' &&
+          decision.source.occurrenceId === priorId,
       ),
     ).toBe(false);
     expect(moved.normal).toEqual(beforeOutgoing.normal);

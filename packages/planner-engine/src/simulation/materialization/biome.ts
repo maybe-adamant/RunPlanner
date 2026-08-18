@@ -935,6 +935,7 @@ export function materializeBiomePrefix(
           biome,
           layout.progression,
           authoredHub,
+          topology.decisions.filter((candidate) => candidate.kind === 'localVisit'),
           occurrences,
           loadout,
         );
@@ -1156,6 +1157,7 @@ export function materializeBiome(
           biome,
           layout.progression,
           authoredHub,
+          topology.decisions.filter((candidate) => candidate.kind === 'localVisit'),
           occurrences,
           loadout,
         );

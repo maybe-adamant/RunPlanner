@@ -74,6 +74,8 @@ function applyUnchecked(
     case 'OpenHubSlot':
     case 'CloseHubSlot':
     case 'ReplaceHubVisitOrder':
+    case 'SetLocalVisitGeneration':
+    case 'ReplaceLocalVisitOrder':
     case 'SetExitSelection':
     case 'RemoveExitDecision':
     case 'ReplaceBatchRewardStore':
@@ -112,8 +114,6 @@ function applyUnchecked(
     case 'ReplaceFieldsOptionalRewardCount':
     case 'ReplaceIncomingReward':
     case 'ReplaceLocalReward':
-    case 'ReplaceSideRoomGeneration':
-    case 'ReplaceSideRoomEntryOrder':
     case 'ReplaceRewardWheelOfferCount':
     case 'ReplaceRewardWheelStore':
     case 'ReplaceRewardWheelOffer':

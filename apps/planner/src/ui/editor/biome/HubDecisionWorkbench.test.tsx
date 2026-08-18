@@ -382,6 +382,10 @@ describe('HubDecisionWorkbench', () => {
       }),
     );
     const allocated: ReturnType<typeof createOccurrenceId>[] = [];
+    const allocatedThrough = (count: number) =>
+      Array.from({ length: count }, (_, index) =>
+        createOccurrenceId(`hub-opening-attempt-${index + 1}`),
+      );
     const application = createApplication({
       allocateOccurrenceId: () => {
         const occurrenceId = createOccurrenceId(`hub-opening-attempt-${allocated.length + 1}`);
@@ -396,7 +400,7 @@ describe('HubDecisionWorkbench', () => {
     act(() => opening.focus());
     expect(allocated).toEqual([]);
     fireEvent.pointerDown(opening);
-    expect(allocated).toEqual([createOccurrenceId('hub-opening-attempt-1')]);
+    expect(allocated).toEqual(allocatedThrough(3));
     expect(opening.closest('label')?.dataset.openingAttempt).toBe('active');
     act(() =>
       application.store.dispatch(
@@ -408,24 +412,17 @@ describe('HubDecisionWorkbench', () => {
     );
     await waitFor(() => expect(opening.closest('label')?.dataset.openingAttempt).toBeUndefined());
     fireEvent.pointerDown(opening);
-    expect(allocated).toEqual([
-      createOccurrenceId('hub-opening-attempt-1'),
-      createOccurrenceId('hub-opening-attempt-2'),
-    ]);
+    expect(allocated).toEqual(allocatedThrough(6));
     fireEvent.blur(opening);
     expect(opening.closest('label')?.dataset.openingAttempt).toBeUndefined();
 
     fireEvent.pointerDown(opening);
-    expect(allocated).toEqual([
-      createOccurrenceId('hub-opening-attempt-1'),
-      createOccurrenceId('hub-opening-attempt-2'),
-      createOccurrenceId('hub-opening-attempt-3'),
-    ]);
+    expect(allocated).toEqual(allocatedThrough(9));
     const historyBeforeOpen = application.store.getState().projectWorkspace.history.past.length;
     fireEvent.click(opening);
     await waitFor(() =>
       expect(nHubOccurrence(application, 'combat04').occurrenceId).toBe(
-        createOccurrenceId('hub-opening-attempt-3'),
+        createOccurrenceId('hub-opening-attempt-7'),
       ),
     );
     expect(application.store.getState().projectWorkspace.history.past).toHaveLength(
@@ -437,12 +434,7 @@ describe('HubDecisionWorkbench', () => {
     const restored = await screen.findByRole('checkbox', { name: 'Combat 04 open' });
     expect((restored as HTMLInputElement).checked).toBe(false);
     fireEvent.pointerDown(restored);
-    expect(allocated).toEqual([
-      createOccurrenceId('hub-opening-attempt-1'),
-      createOccurrenceId('hub-opening-attempt-2'),
-      createOccurrenceId('hub-opening-attempt-3'),
-      createOccurrenceId('hub-opening-attempt-4'),
-    ]);
+    expect(allocated).toEqual(allocatedThrough(12));
     fireEvent.blur(restored);
   });
 

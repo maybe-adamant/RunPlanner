@@ -6,15 +6,13 @@ import type {
 import type {
   CompletionRoomAddress,
   HubRoomAddress,
-  LocalChildAddress,
   OccurrenceAddress,
 } from '../../authored-project/addresses';
 import type { ProducerLifecyclePointKey, ResolvedRewardOffer } from '../../reward-kernel/model';
 import type { ResolvedEncounterPhase } from '../encounters';
 import type { FieldsCombatAction } from '../../authored-project/model';
 
-export type RoomHistoryOrigin =
-  CompletionRoomAddress | HubRoomAddress | LocalChildAddress | OccurrenceAddress;
+export type RoomHistoryOrigin = CompletionRoomAddress | HubRoomAddress | OccurrenceAddress;
 
 interface RoomLifecycleEventBase {
   readonly sequence: number;

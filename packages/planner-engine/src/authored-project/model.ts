@@ -5,7 +5,7 @@ import type {
   AuthoredTraitOffer,
 } from './traits';
 
-export const PROJECT_DOCUMENT_SCHEMA_VERSION = 45 as const;
+export const PROJECT_DOCUMENT_SCHEMA_VERSION = 46 as const;
 
 declare const occurrenceIdBrand: unique symbol;
 
@@ -142,17 +142,9 @@ export interface RoomEncounterState {
   >;
 }
 
-export interface EphyraSideRoomState {
-  readonly generation: SideRoomGeneration;
-  readonly enteredOrdinal: number | null;
-  readonly reward: AuthoredRewardState | null;
-  readonly encounters: RoomEncounterState;
-}
-
 export interface EphyraCombatState {
   readonly kind: 'ephyraCombat';
   readonly reward: AuthoredRewardState | null;
-  readonly sideRooms: Readonly<Record<string, EphyraSideRoomState>>;
 }
 
 /**
@@ -273,7 +265,24 @@ export interface HubDecision {
   readonly visitOrder: readonly string[];
 }
 
-export type NextRoomDecision = ExitDecision | HubDecision;
+export interface LocalVisitTargetReference {
+  readonly occurrenceId: OccurrenceId;
+  readonly generation: SideRoomGeneration;
+}
+
+/**
+ * Parent-occurrence-owned topology for one declaration-fixed local room group.
+ * Payload and encounter state live on the referenced ordinary occurrences.
+ */
+export interface LocalVisitDecision {
+  readonly kind: 'localVisit';
+  readonly sourceOccurrenceId: OccurrenceId;
+  readonly groupKey: string;
+  readonly targetsBySlot: Readonly<Record<string, LocalVisitTargetReference>>;
+  readonly visitOrder: readonly OccurrenceId[];
+}
+
+export type NextRoomDecision = ExitDecision | HubDecision | LocalVisitDecision;
 
 export interface BiomeTopology {
   readonly startOccurrenceId: OccurrenceId;

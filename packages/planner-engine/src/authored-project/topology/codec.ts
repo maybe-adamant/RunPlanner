@@ -13,6 +13,7 @@ import type {
   ExitTargetReference,
   HubDecision,
   HubTargetReference,
+  LocalVisitDecision,
   NextRoomDecision,
   OccurrenceId,
   RoomOccurrence,
@@ -957,6 +958,91 @@ function decodeHubDecision(
   });
 }
 
+function decodeLocalVisitDecision(
+  raw: RawDecision,
+  layout: BiomeLayout,
+  catalog: Catalog,
+  occurrences: ReadonlyMap<OccurrenceId, RawOccurrence>,
+): LocalVisitDecision {
+  const value = raw.value;
+  expectExactKeys(
+    value,
+    ['kind', 'sourceOccurrenceId', 'groupKey', 'targetsBySlot', 'visitOrder'],
+    raw.path,
+  );
+  const sourceOccurrenceId = occurrenceId(
+    value.sourceOccurrenceId,
+    `${raw.path}.sourceOccurrenceId`,
+  );
+  const source = occurrences.get(sourceOccurrenceId);
+  if (source === undefined) {
+    failProjectDocument(
+      `${raw.path}.sourceOccurrenceId`,
+      `unknown occurrence ${sourceOccurrenceId}`,
+    );
+  }
+  const sourceRoom = requireHostRoom(source, catalog, layout.biomeKey);
+  const groupKey = expectNonBlankString(value.groupKey, `${raw.path}.groupKey`);
+  const descriptor = sourceRoom.localChildren.find((group) => group.key === groupKey);
+  if (descriptor?.kind !== 'fixedRoomSlots') {
+    failProjectDocument(
+      `${raw.path}.groupKey`,
+      `${sourceRoom.gameName} has no local group ${groupKey}`,
+    );
+  }
+  const targets = expectRecord(value.targetsBySlot, `${raw.path}.targetsBySlot`);
+  expectExactKeys(
+    targets,
+    descriptor.slots.map((slot) => slot.slotKey),
+    `${raw.path}.targetsBySlot`,
+  );
+  const seenOccurrences = new Set<OccurrenceId>();
+  const targetsBySlot = Object.fromEntries(
+    descriptor.slots.map((slot) => {
+      const targetPath = `${raw.path}.targetsBySlot.${slot.slotKey}`;
+      const target = expectRecord(targets[slot.slotKey], targetPath);
+      expectExactKeys(target, ['occurrenceId', 'generation'], targetPath);
+      const id = occurrenceId(target.occurrenceId, `${targetPath}.occurrenceId`);
+      if (seenOccurrences.has(id)) {
+        failProjectDocument(`${targetPath}.occurrenceId`, `duplicates local occurrence ${id}`);
+      }
+      seenOccurrences.add(id);
+      const child = occurrences.get(id);
+      if (child === undefined)
+        failProjectDocument(`${targetPath}.occurrenceId`, `unknown occurrence ${id}`);
+      if (child.gameName !== slot.roomGameName) {
+        failProjectDocument(`${child.path}.gameName`, `local slot requires ${slot.roomGameName}`);
+      }
+      const generation = expectString(target.generation, `${targetPath}.generation`);
+      if (generation !== 'generated' && generation !== 'notGenerated') {
+        failProjectDocument(`${targetPath}.generation`, 'must be generated or notGenerated');
+      }
+      return [slot.slotKey, Object.freeze({ occurrenceId: id, generation })];
+    }),
+  );
+  const visitOrder = expectArray(value.visitOrder, `${raw.path}.visitOrder`).map((entry, index) =>
+    occurrenceId(entry, `${raw.path}.visitOrder[${index}]`),
+  );
+  if (new Set(visitOrder).size !== visitOrder.length) {
+    failProjectDocument(`${raw.path}.visitOrder`, 'must contain distinct local occurrences');
+  }
+  for (const id of visitOrder) {
+    const target = Object.values(targetsBySlot).find((candidate) => candidate.occurrenceId === id);
+    if (target === undefined)
+      failProjectDocument(`${raw.path}.visitOrder`, `unknown local occurrence ${id}`);
+    if (target.generation !== 'generated') {
+      failProjectDocument(`${raw.path}.visitOrder`, `${id} must be generated before entry`);
+    }
+  }
+  return Object.freeze({
+    kind: 'localVisit',
+    sourceOccurrenceId,
+    groupKey,
+    targetsBySlot: Object.freeze(targetsBySlot),
+    visitOrder: Object.freeze(visitOrder),
+  });
+}
+
 function ownerForNormalTarget(
   rawOccurrence: RawOccurrence,
   catalog: Catalog,
@@ -1203,11 +1289,15 @@ export function decodeBiomeTopology(
         ? decodeExitDecision(raw, layout, catalog, occurrences, startOccurrenceId)
         : kind === 'hub'
           ? decodeHubDecision(raw, layout, catalog, occurrences)
-          : failProjectDocument(`${raw.path}.kind`, `unknown decision ${kind}`);
+          : kind === 'localVisit'
+            ? decodeLocalVisitDecision(raw, layout, catalog, occurrences)
+            : failProjectDocument(`${raw.path}.kind`, `unknown decision ${kind}`);
     const identity =
       decision.kind === 'exit'
         ? `exit:${sourceKey(decision.source)}`
-        : `hubDecision:${decision.hubKey}`;
+        : decision.kind === 'hub'
+          ? `hubDecision:${decision.hubKey}`
+          : `localVisit:${decision.sourceOccurrenceId}:${decision.groupKey}`;
     if (decisionSources.has(identity))
       failProjectDocument(raw.path, `duplicates decision source ${identity}`);
     decisionSources.add(identity);
@@ -1251,8 +1341,36 @@ export function decodeBiomeTopology(
     startOccurrenceId,
     decisions: Object.freeze([...decisions]),
   });
+  for (const occurrence of occurrences.values()) {
+    const room = requireKnownRoom(occurrence, catalog);
+    for (const group of room.localChildren) {
+      if (group.kind !== 'fixedRoomSlots') continue;
+      const localDecisionCount = decisions.filter(
+        (decision): decision is LocalVisitDecision =>
+          decision.kind === 'localVisit' &&
+          decision.sourceOccurrenceId === occurrence.occurrenceId &&
+          decision.groupKey === group.key,
+      ).length;
+      if (localDecisionCount !== 1) {
+        failProjectDocument(
+          `${occurrence.path}.occurrenceId`,
+          `${room.gameName} requires exactly one local visit decision for ${group.key}`,
+        );
+      }
+    }
+  }
   for (const [index, decision] of decisions.entries()) {
     const decisionPath = rawDecisions[index]?.path ?? path;
+    if (decision.kind === 'localVisit') {
+      const source = occurrences.get(decision.sourceOccurrenceId);
+      if (source === undefined) {
+        failProjectDocument(
+          `${decisionPath}.sourceOccurrenceId`,
+          `unknown occurrence ${decision.sourceOccurrenceId}`,
+        );
+      }
+      continue;
+    }
     if (decision.kind === 'hub') {
       if (!selectedSources.has(decision.source.occurrenceId)) {
         failProjectDocument(
@@ -1375,6 +1493,28 @@ export function decodeBiomeTopology(
           role: 'ordinary',
           entryActive: decision.visitOrder.includes(target.hubSlotKey),
           path: `${decisionPath}.openTargets`,
+        });
+      }
+      continue;
+    }
+    if (decision.kind === 'localVisit') {
+      const source = occurrences.get(decision.sourceOccurrenceId);
+      if (source === undefined) {
+        failProjectDocument(decisionPath, `unknown source ${decision.sourceOccurrenceId}`);
+      }
+      const room = requireKnownRoom(source, catalog);
+      const descriptor = room.localChildren.find((group) => group.key === decision.groupKey);
+      if (descriptor?.kind !== 'fixedRoomSlots') {
+        failProjectDocument(decisionPath, `${room.gameName} has no local visit group`);
+      }
+      for (const slot of descriptor.slots) {
+        const target = decision.targetsBySlot[slot.slotKey];
+        if (target === undefined) failProjectDocument(decisionPath, `missing ${slot.slotKey}`);
+        own(target.occurrenceId, {
+          gameName: slot.roomGameName,
+          role: 'ordinary',
+          entryActive: decision.visitOrder.includes(target.occurrenceId),
+          path: `${decisionPath}.targetsBySlot.${slot.slotKey}`,
         });
       }
       continue;

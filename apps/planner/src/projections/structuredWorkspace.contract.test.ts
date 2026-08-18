@@ -12,9 +12,9 @@ import {
   createExitSelectionAddress,
   createHubSlotAddress,
   createHubVisitAddress,
+  createIncomingRewardAddress,
   createKeepsakeEquipResultAddress,
-  createLocalChildAddress,
-  createLocalRewardAddress,
+  createLocalVisitSlotAddress,
   createOccurrenceAddress,
   createOccurrenceId,
   createPostbossKeepsakeSelectionAddress,
@@ -52,6 +52,7 @@ import {
   appendNEntry,
   createRepresentativeNOPQProject,
   nBiome,
+  nLocalOccurrenceId,
   nOccurrenceId,
   oBiome,
   oOccurrenceIds,
@@ -328,10 +329,13 @@ function withoutLeafInteraction(
         ...interactions,
         acquisitionOrders: without(interactions.acquisitionOrders),
       };
-    case 'sideRoomEntryOrder':
-      return { ...interactions, sideRoomEntryOrders: without(interactions.sideRoomEntryOrders) };
-    case 'sideRoomGeneration':
-      return { ...interactions, sideRoomGenerations: without(interactions.sideRoomGenerations) };
+    case 'localVisitOrder':
+      return { ...interactions, localVisitOrders: without(interactions.localVisitOrders) };
+    case 'localVisitGeneration':
+      return {
+        ...interactions,
+        localVisitGenerations: without(interactions.localVisitGenerations),
+      };
     case 'levelResolution':
       return { ...interactions, levelResolutions: without(interactions.levelResolutions) };
     case 'traitOffer':
@@ -740,7 +744,12 @@ describe('structured workspace overlay contract', () => {
     const finding = {
       code: 'sideRoomGenerationUnavailable',
       evidence: {},
-      origin: createLocalChildAddress(nBiome, nOccurrenceId('combat10'), 'sideRooms', 'sideDoor1'),
+      origin: createLocalVisitSlotAddress(
+        nBiome,
+        nOccurrenceId('combat10'),
+        'sideRooms',
+        'sideDoor1',
+      ),
       phase: 'rewardGeneration',
       severity: 'error',
     } as const satisfies SemanticFinding;
@@ -755,21 +764,16 @@ describe('structured workspace overlay contract', () => {
   });
 
   it('does not publish an ungenerated Ephyra reward as a current workspace leaf', () => {
-    const sideRoom = createLocalChildAddress(
+    const localVisitSlot = createLocalVisitSlotAddress(
       nBiome,
       nOccurrenceId('combat02'),
       'sideRooms',
       'sideDoor2',
     );
-    const reward = createLocalRewardAddress(
-      nBiome,
-      nOccurrenceId('combat02'),
-      'sideRooms',
-      'sideDoor2',
-    );
+    const reward = createIncomingRewardAddress(nBiome, nLocalOccurrenceId('combat02', 'sideDoor2'));
     const project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
-      kind: 'ReplaceSideRoomGeneration',
-      sideRoom,
+      kind: 'SetLocalVisitGeneration',
+      slot: localVisitSlot,
       generation: 'notGenerated',
     });
     const projected = projectWorkspace(project);
@@ -777,7 +781,7 @@ describe('structured workspace overlay contract', () => {
     expect(projected.focusByOwner.get(semanticAddressKey(reward))).toBeUndefined();
     expect(projected.interactions.rewards.get(semanticAddressKey(reward))).toBeUndefined();
     expect(
-      projected.interactions.sideRoomGenerations.get(semanticAddressKey(sideRoom)),
+      projected.interactions.localVisitGenerations.get(semanticAddressKey(localVisitSlot)),
     ).toBeDefined();
   });
 
@@ -789,11 +793,9 @@ describe('structured workspace overlay contract', () => {
     if (plan?.topology === null || plan === undefined) {
       throw new Error('complete N topology is missing');
     }
-    const address = createLocalRewardAddress(
+    const address = createIncomingRewardAddress(
       nBiome,
-      nOccurrenceId('combat05'),
-      'sideRooms',
-      'sideDoor2',
+      nLocalOccurrenceId('combat05', 'sideDoor2'),
     );
     const requirement = expectedWorkspaceLeafRequirements(catalog, nBiome, plan).find(
       (candidate) => semanticAddressKey(candidate.address) === semanticAddressKey(address),
@@ -918,8 +920,8 @@ describe('structured workspace overlay contract', () => {
         'rewardWheelStore',
         'shipCombatPhaseCount',
         'acquisitionOrder',
-        'sideRoomEntryOrder',
-        'sideRoomGeneration',
+        'localVisitOrder',
+        'localVisitGeneration',
         'levelResolution',
         'traitOffer',
       ].sort(),
@@ -1050,12 +1052,7 @@ describe('structured workspace overlay contract', () => {
     );
     const localN = createEncounterPhaseAddress(
       nBiome,
-      {
-        kind: 'localChild',
-        occurrenceId: nOccurrenceId('combat05'),
-        groupKey: 'sideRooms',
-        slotKey: 'sideDoor2',
-      },
+      { kind: 'occurrence', occurrenceId: nLocalOccurrenceId('combat05', 'sideDoor2') },
       'Encounter',
     );
     const nExpected = expectedWorkspaceEncounterPhaseLeafRequirements(
@@ -1298,12 +1295,20 @@ describe('structured workspace overlay contract', () => {
       gameName: batch.naturalChaos.chaosRoom.gameName,
     });
     expect(batch.naturalChaos.chaosRoom.occurrenceId).toBe(chaosId);
+    expect(projected.focusByOwner.get(semanticAddressKey(additional))?.nodeKey).toBe(batch.key);
+    const chaosWorkbench = workspace?.nodes.find(
+      (node) => node.kind === 'occurrenceWorkbench' && node.room.occurrenceId === chaosId,
+    );
+    if (chaosWorkbench?.kind !== 'occurrenceWorkbench') {
+      throw new Error('natural Chaos occurrence workbench is missing');
+    }
     for (const address of [
-      additional,
       createOccurrenceAddress(biome, chaosId),
       ...batch.naturalChaos.chaosRoom.rewardControls.map((control) => control.owner.address),
     ]) {
-      expect(projected.focusByOwner.get(semanticAddressKey(address))?.nodeKey).toBe(batch.key);
+      expect(projected.focusByOwner.get(semanticAddressKey(address))?.nodeKey).toBe(
+        chaosWorkbench.key,
+      );
     }
     const expected = expectedWorkspaceTopologyManifest(
       biome,
@@ -1416,7 +1421,9 @@ describe('structured workspace overlay contract', () => {
     expect(selectedContract?.zagreusContract?.contractRoom.entered).toBe(true);
     const contractPackages = observed.roomPackagesByOccurrence.get(contractId);
     expect(contractPackages).toHaveLength(1);
-    expect(contractPackages?.[0]?.nodeKey).toBe(`batch:${semanticAddressKey(decision)}`);
+    expect(contractPackages?.[0]?.nodeKey).toBe(
+      `occurrence:${semanticAddressKey(createOccurrenceAddress(biome, contractId))}`,
+    );
     const returnPackages = observed.roomPackagesByOccurrence.get(returnId);
     expect(returnPackages?.length).toBeGreaterThanOrEqual(1);
     expect(

@@ -3,22 +3,34 @@ import {
   createHubOpenSetAddress,
   createHubSlotAddress,
   createHubVisitAddress,
+  createLocalVisitDecisionAddress,
+  createLocalVisitOrderAddress,
+  createLocalVisitSlotAddress,
   createOccurrenceAddress,
   semanticAddressKey,
   type BiomeAddress,
   type BiomeTopology,
   type HubDecision,
   type HubDecisionAddress,
+  type LocalVisitDecision,
+  type LocalVisitSlotAddress,
   type OccurrenceId,
   type RoomOccurrence,
 } from '@run-planner/engine/authored-project';
 import type { Catalog, HubDecisionDescriptor } from '@run-planner/engine/catalog-schema';
-import type { CanonicalAuthoredRoom, CanonicalHubDecision } from '@run-planner/engine/simulation';
+import type {
+  CanonicalAuthoredRoom,
+  CanonicalHubDecision,
+  CanonicalLocalVisitRoom,
+} from '@run-planner/engine/simulation';
 
 import { requireWorkspaceRoom } from './catalog-room';
 import {
   StructuredWorkspaceProjectionContractError,
+  workspaceLocalVisitOrderKey,
   type WorkspaceHubDecisionNode,
+  type WorkspaceLocalVisitOrderControl,
+  type WorkspaceLocalVisitOrderOption,
   type WorkspaceMarker,
   type WorkspaceOccurrenceWorkbenchNode,
   type WorkspaceRewardControl,
@@ -68,7 +80,62 @@ export type WorkspaceHubAssemblyInput = WorkspaceHubAssemblyBaseInput & {
 
 interface ProjectedHubTarget {
   readonly canonical?: CanonicalAuthoredRoom;
+  readonly localSlots?: readonly CanonicalLocalVisitRoom[];
   readonly occurrenceId: OccurrenceId;
+}
+
+function ordinalLabel(position: number): string {
+  const remainder = position % 100;
+  if (remainder >= 11 && remainder <= 13) return `${position}th`;
+  switch (position % 10) {
+    case 1:
+      return `${position}st`;
+    case 2:
+      return `${position}nd`;
+    case 3:
+      return `${position}rd`;
+    default:
+      return `${position}th`;
+  }
+}
+
+function localVisitOrderControl(
+  address: LocalVisitSlotAddress,
+  visitOrder: readonly OccurrenceId[],
+  occurrenceId: OccurrenceId,
+): WorkspaceLocalVisitOrderControl {
+  const index = visitOrder.indexOf(occurrenceId);
+  const withoutOccurrence = Object.freeze(
+    visitOrder.filter((candidate) => candidate !== occurrenceId),
+  );
+  const options: WorkspaceLocalVisitOrderOption[] = [
+    Object.freeze({
+      key: 'notEntered',
+      label: 'Not visited',
+      position: null,
+      proposedOccurrenceIds: withoutOccurrence,
+    }),
+  ];
+  for (let insertionIndex = 0; insertionIndex <= withoutOccurrence.length; insertionIndex += 1) {
+    const position = insertionIndex + 1;
+    options.push(
+      Object.freeze({
+        key: `position:${position}`,
+        label: ordinalLabel(position),
+        position,
+        proposedOccurrenceIds: Object.freeze([
+          ...withoutOccurrence.slice(0, insertionIndex),
+          occurrenceId,
+          ...withoutOccurrence.slice(insertionIndex),
+        ]),
+      }),
+    );
+  }
+  return Object.freeze({
+    interactionKey: workspaceLocalVisitOrderKey(address),
+    options: Object.freeze(options),
+    selectedKey: index < 0 ? 'notEntered' : `position:${index + 1}`,
+  });
 }
 
 function hubOccurrenceMap(
@@ -104,7 +171,157 @@ function projectHubNode(
   const rewardControls: WorkspaceRewardControl[] = [];
   const workbenches: WorkspaceOccurrenceWorkbenchNode[] = [];
   const roomsBySlot = new Map<string, WorkspaceRoomSummary>();
+  const projectLocalVisit = (
+    sourceOccurrence: RoomOccurrence,
+    target: ProjectedHubTarget,
+    detailsActive: boolean,
+  ) => {
+    const sourceRoom = requireWorkspaceRoom(catalog, sourceOccurrence.gameName);
+    const group = sourceRoom.localChildren.find((child) => child.kind === 'fixedRoomSlots');
+    const localDecisions = (topology?.decisions ?? []).filter(
+      (candidate): candidate is LocalVisitDecision =>
+        candidate.kind === 'localVisit' &&
+        candidate.sourceOccurrenceId === sourceOccurrence.occurrenceId,
+    );
+    if (group === undefined) {
+      if (localDecisions.length > 0) {
+        throw new StructuredWorkspaceProjectionContractError(
+          `${sourceRoom.gameName} has authored local visits without a fixed-room declaration`,
+        );
+      }
+      return undefined;
+    }
+    const decision = localDecisions.find((candidate) => candidate.groupKey === group.key);
+    if (decision === undefined) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${sourceRoom.gameName} is missing its ${group.key} local-visit decision`,
+      );
+    }
+    if (localDecisions.length !== 1) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${sourceRoom.gameName} has conflicting local-visit decisions`,
+      );
+    }
+    if (!detailsActive) return undefined;
+    const owner = createLocalVisitDecisionAddress(biome, sourceOccurrence.occurrenceId, group.key);
+    const order = createLocalVisitOrderAddress(biome, sourceOccurrence.occurrenceId, group.key);
+    const canonicalByOccurrence = new Map(
+      (target.localSlots ?? []).map((local) => [local.occurrenceId, local] as const),
+    );
+    const slots = [...group.slots]
+      .sort((left, right) => left.availabilityRank - right.availabilityRank)
+      .map((slot) => {
+        const targetReference = decision.targetsBySlot[slot.slotKey];
+        if (targetReference === undefined) {
+          throw new StructuredWorkspaceProjectionContractError(
+            `${semanticAddressKey(owner)} is missing local slot ${slot.slotKey}`,
+          );
+        }
+        const localOccurrence = occurrences.get(targetReference.occurrenceId);
+        if (localOccurrence === undefined || localOccurrence.gameName !== slot.roomGameName) {
+          throw new StructuredWorkspaceProjectionContractError(
+            `${semanticAddressKey(owner)} local slot ${slot.slotKey} has no matching occurrence`,
+          );
+        }
+        const address = createLocalVisitSlotAddress(
+          biome,
+          sourceOccurrence.occurrenceId,
+          group.key,
+          slot.slotKey,
+        );
+        const evaluatedRoom = canonicalByOccurrence.get(localOccurrence.occurrenceId);
+        canonicalByOccurrence.delete(localOccurrence.occurrenceId);
+        if (
+          evaluatedRoom !== undefined &&
+          (semanticAddressKey(evaluatedRoom.localVisit.origin) !== semanticAddressKey(address) ||
+            evaluatedRoom.localVisit.generation !== targetReference.generation ||
+            evaluatedRoom.gameName !== localOccurrence.gameName)
+        ) {
+          throw new StructuredWorkspaceProjectionContractError(
+            `${semanticAddressKey(address)} evaluated local room does not match authored topology`,
+          );
+        }
+        const enteredOrdinal = decision.visitOrder.indexOf(localOccurrence.occurrenceId);
+        const descriptor = {
+          address,
+          availabilityRank: slot.availabilityRank,
+          entered: enteredOrdinal >= 0,
+          enteredOrdinal: enteredOrdinal < 0 ? null : enteredOrdinal + 1,
+          key: slot.slotKey,
+          label: requireWorkspaceRoom(catalog, localOccurrence.gameName).label,
+          marker: markerDestinations.marker(address),
+          occurrenceId: localOccurrence.occurrenceId,
+          order: localVisitOrderControl(address, decision.visitOrder, localOccurrence.occurrenceId),
+          physicalDoorId: slot.physicalDoorId,
+        };
+        if (targetReference.generation === 'notGenerated') {
+          return Object.freeze({ ...descriptor, generation: 'notGenerated' as const });
+        }
+        const occurrenceAssembly = input.assembleOccurrence(
+          Object.freeze({
+            ...(evaluatedRoom === undefined ? {} : { evaluatedRoom }),
+            occurrence: localOccurrence,
+          }),
+        );
+        occurrenceInteractionRequirements.push(
+          ...occurrenceAssembly.occurrenceInteractionRequirements,
+        );
+        roomControls.push(...occurrenceAssembly.roomControls);
+        rewardControls.push(...occurrenceAssembly.rewardControls);
+        const workbench = Object.freeze({
+          ...occurrenceAssembly.node,
+          inspectorPresentation: 'full' as const,
+          railMarker: descriptor.marker,
+          railVisibility: 'inspectorOnly' as const,
+        });
+        workbenches.push(workbench);
+        return Object.freeze({
+          ...descriptor,
+          generation: 'generated' as const,
+          room: workbench.room,
+        });
+      });
+    if (canonicalByOccurrence.size > 0) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${semanticAddressKey(owner)} has evaluated local rooms outside its authored slots`,
+      );
+    }
+    occurrenceInteractionRequirements.push(
+      Object.freeze({
+        kind: 'localVisits' as const,
+        generationChoices: Object.freeze([
+          Object.freeze({ label: 'Generated', value: 'generated' as const }),
+          Object.freeze({ label: 'Not generated', value: 'notGenerated' as const }),
+        ]),
+        owner,
+        order,
+        slots: Object.freeze(
+          slots.map((slot) =>
+            Object.freeze({
+              address: slot.address,
+              generation: slot.generation,
+              order: slot.order,
+            }),
+          ),
+        ),
+      }),
+    );
+    return Object.freeze({
+      address: owner,
+      marker: markerDestinations.marker(owner),
+      order,
+      orderMarker: markerDestinations.marker(order),
+      slots: Object.freeze(slots),
+      visitOrder: Object.freeze([...decision.visitOrder]),
+    });
+  };
   const slots = descriptor.slots.map((slot) => {
+    const slotRoom = requireWorkspaceRoom(catalog, slot.roomGameName);
+    const localSlotKeys = Object.freeze(
+      slotRoom.localChildren
+        .filter((child) => child.kind === 'fixedRoomSlots')
+        .flatMap((group) => group.slots.map((local) => local.slotKey)),
+    );
     const target = targets.get(slot.slotKey);
     const occurrence = target === undefined ? undefined : occurrences.get(target.occurrenceId);
     const address = createHubSlotAddress(biome, descriptor.hubKey, slot.slotKey);
@@ -126,6 +343,10 @@ function projectHubNode(
           );
     const occurrenceNode = occurrenceAssembly?.node;
     const detailsActive = occurrenceNode?.room.detailsActive ?? false;
+    const localVisit =
+      occurrence === undefined || target === undefined
+        ? undefined
+        : projectLocalVisit(occurrence, target, detailsActive);
     if (occurrenceNode !== undefined) {
       occurrenceInteractionRequirements.push(
         ...occurrenceAssembly!.occurrenceInteractionRequirements,
@@ -135,6 +356,7 @@ function projectHubNode(
       const workbench = Object.freeze({
         ...occurrenceNode,
         inspectorPresentation: 'hubRoomLocal' as const,
+        ...(localVisit === undefined ? {} : { localVisit }),
         railMarker: slotMarker,
         railVisibility: 'inspectorOnly' as const,
       });
@@ -152,6 +374,7 @@ function projectHubNode(
               Object.freeze({ label: 'Closed', value: false }),
               Object.freeze({ label: 'Open', value: true }),
             ]),
+            localSlotKeys,
             owner: address,
             selected: false as const,
           })
@@ -174,12 +397,13 @@ function projectHubNode(
       canClose: target !== undefined && !visitOrder.includes(slot.slotKey),
       canOpen: target === undefined && targets.size < descriptor.openCount.max,
       hubSlotKey: slot.slotKey,
-      label: requireWorkspaceRoom(catalog, slot.roomGameName).label,
+      label: slotRoom.label,
       marker: slotMarker,
+      ...(localVisit === undefined ? {} : { localVisit }),
       open: target !== undefined,
       physicalDoorId: slot.physicalDoorId,
       ...(occurrenceNode === undefined ? {} : { room: occurrenceNode.room }),
-      roomKind: requireWorkspaceRoom(catalog, slot.roomGameName).kind,
+      roomKind: slotRoom.kind,
       visited: detailsActive,
     });
   });
@@ -247,7 +471,16 @@ function projectHubNode(
     Object.freeze([
       node.marker,
       node.openSet,
-      ...node.slots.map((slot) => slot.marker),
+      ...node.slots.flatMap((slot) => [
+        slot.marker,
+        ...(slot.localVisit === undefined
+          ? []
+          : [
+              slot.localVisit.marker,
+              slot.localVisit.orderMarker,
+              ...slot.localVisit.slots.map((local) => local.marker),
+            ]),
+      ]),
       ...node.visits.map((visit) => visit.marker),
     ]),
     node.key,
@@ -317,6 +550,12 @@ function projectAuthoredHubWithOverlay(
       target.hubSlotKey,
       Object.freeze({
         ...(overlay === undefined ? {} : { canonical: overlay.room }),
+        ...(() => {
+          const visit = evaluated?.visits.find(
+            (candidate) => candidate.target.room.occurrenceId === target.occurrenceId,
+          );
+          return visit === undefined ? {} : { localSlots: visit.localSlots };
+        })(),
         occurrenceId: target.occurrenceId,
       }),
     );

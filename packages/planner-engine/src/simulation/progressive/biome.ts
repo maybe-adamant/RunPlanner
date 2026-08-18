@@ -1010,7 +1010,7 @@ function findingOwnerOrigin(finding: SemanticFinding): SemanticAddress {
   return origin;
 }
 
-function ownsOccurrence(origin: SemanticAddress, occurrenceId: string): boolean {
+export function ownsOccurrence(origin: SemanticAddress, occurrenceId: string): boolean {
   if (
     origin.kind === 'traitOffer' ||
     origin.kind === 'levelResolution' ||
@@ -1078,8 +1078,8 @@ function decisionOwnsFinding(decision: CanonicalDecision, finding: SemanticFindi
         semanticAddressKey(visit.origin) === semanticAddressKey(origin) ||
         visit.localSlots.some(
           (slot) =>
-            semanticAddressKey(slot.origin) === semanticAddressKey(origin) ||
-            ownsOccurrence(origin, slot.origin.occurrenceId),
+            semanticAddressKey(slot.localVisit.origin) === semanticAddressKey(origin) ||
+            ownsOccurrence(origin, slot.occurrenceId),
         ),
     )
   );
@@ -1097,8 +1097,8 @@ function activeHubFrontierOwnsFinding(
     ownsOccurrence(origin, frontier.target.room.occurrenceId) ||
     frontier.localSlots.some(
       (slot) =>
-        semanticAddressKey(slot.origin) === semanticAddressKey(origin) ||
-        ownsOccurrence(origin, slot.origin.occurrenceId),
+        semanticAddressKey(slot.localVisit.origin) === semanticAddressKey(origin) ||
+        ownsOccurrence(origin, slot.occurrenceId),
     )
   );
 }
@@ -1158,12 +1158,8 @@ function localSlotIndex(visit: CanonicalHubVisit, finding: SemanticFinding): num
   const origin = findingOwnerOrigin(finding);
   const index = visit.localSlots.findIndex(
     (slot) =>
-      semanticAddressKey(slot.origin) === semanticAddressKey(origin) ||
-      (origin.kind === 'encounterPhase' &&
-        origin.owner.kind === 'localChild' &&
-        slot.origin.occurrenceId === origin.owner.occurrenceId &&
-        slot.origin.groupKey === origin.owner.groupKey &&
-        slot.origin.slotKey === origin.owner.slotKey) ||
+      semanticAddressKey(slot.localVisit.origin) === semanticAddressKey(origin) ||
+      ownsOccurrence(origin, slot.occurrenceId) ||
       (slot.incomingReward !== undefined &&
         semanticAddressKey(slot.incomingReward.origin) === semanticAddressKey(origin)),
   );

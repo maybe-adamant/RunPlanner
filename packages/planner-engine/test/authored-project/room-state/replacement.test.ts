@@ -167,7 +167,7 @@ describe('authored room-state replacement', () => {
     ).toEqual(previousState);
   });
 
-  it('uses complete replacement defaults for Shop while retaining declaration-compatible Ephyra children', () => {
+  it('uses complete replacement defaults for Shop and Ephyra combat state', () => {
     const shopRoom = room('F_Shop01');
     const shopDefault = createDefaultRoomState(catalog, shopRoom, {
       role: 'ordinary',
@@ -192,34 +192,8 @@ describe('authored room-state replacement', () => {
       entryActive: true,
     });
     if (ephyraDefault.kind !== 'ephyraCombat') throw new Error('missing Ephyra default');
-    const sideDoor1 = ephyraDefault.sideRooms.sideDoor1;
-    if (sideDoor1 === undefined) throw new Error('missing Ephyra side room');
-    const enteredEphyra = Object.freeze({
-      ...ephyraDefault,
-      sideRooms: Object.freeze({
-        ...ephyraDefault.sideRooms,
-        sideDoor1: Object.freeze({
-          ...sideDoor1,
-          generation: 'generated' as const,
-          enteredOrdinal: 1,
-          encounters: Object.freeze({
-            encounterKeyByPhase: Object.freeze({ Encounter: 'GeneratedNSubRoom_Bigger' }),
-            figLeafSkipByPhase: Object.freeze({ Encounter: false }),
-          }),
-        }),
-      }),
-    });
     expect(
-      reconcileReplacementRoomState(catalog, ephyraRoom, enteredEphyra, ephyraRoom, ephyraDefault),
-    ).toMatchObject({
-      kind: 'ephyraCombat',
-      sideRooms: {
-        sideDoor1: {
-          generation: 'generated',
-          enteredOrdinal: 1,
-          encounters: { encounterKeyByPhase: { Encounter: 'GeneratedNSubRoom_Bigger' } },
-        },
-      },
-    });
+      reconcileReplacementRoomState(catalog, ephyraRoom, ephyraDefault, ephyraRoom, ephyraDefault),
+    ).toEqual(ephyraDefault);
   });
 });

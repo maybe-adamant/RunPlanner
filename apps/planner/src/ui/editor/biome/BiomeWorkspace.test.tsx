@@ -13,8 +13,6 @@ import {
   createHubSlotAddress,
   createHubVisitAddress,
   createIncomingRewardAddress,
-  createLocalChildAddress,
-  createLocalChildGroupAddress,
   createOccurrenceAddress,
   createOccurrenceId,
   createProjectDocument,
@@ -42,6 +40,7 @@ import {
   authorLegalTraitOffers,
   createRepresentativeNOPQProject,
   nBiome,
+  nLocalOccurrenceId,
   nOccurrenceId,
   nOccurrenceIds,
   pBiome,
@@ -398,7 +397,30 @@ describe('BiomeWorkspace', () => {
     expect(screen.getByText('Door 558353')).toBeTruthy();
     expect(screen.getByLabelText('Side Room 01 generation')).toBeTruthy();
     const inspector = screen.getByRole('complementary', { name: 'Details' });
-    expect(within(inspector).getAllByRole('button', { name: 'Reward' })).toHaveLength(2);
+    expect(within(inspector).queryByRole('button', { name: 'Reward' })).toBeNull();
+    await view.user.selectOptions(
+      within(inspector).getByLabelText('Side Room 03 generation'),
+      'notGenerated',
+    );
+    const localVisit = view.application.store
+      .getState()
+      .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
+      ?.biomes.find((candidate) => candidate.biomeKey === 'N')
+      ?.topology?.decisions.find(
+        (decision) =>
+          decision.kind === 'localVisit' &&
+          decision.sourceOccurrenceId === nOccurrenceId('combat02'),
+      );
+    expect(
+      localVisit?.kind === 'localVisit'
+        ? localVisit.targetsBySlot.sideDoor2?.generation
+        : undefined,
+    ).toBe('notGenerated');
+    await view.user.click(within(inspector).getByRole('button', { name: 'Open Side Room 01' }));
+    expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(
+      createOccurrenceAddress(nBiome, nLocalOccurrenceId('combat02', 'sideDoor1')),
+    );
+    expect(within(inspector).getByRole('button', { name: 'Reward' })).toBeTruthy();
   });
 
   it('returns from local Hub reward context to the exact closed board picker without authoring', async () => {
@@ -489,7 +511,7 @@ describe('BiomeWorkspace', () => {
       );
       const inspector = screen.getByRole('complementary', { name: 'Details' });
       expect(inspector.querySelector('.biome-batch-workbench')).not.toBeNull();
-      expect(inspector.querySelector('.biome-occurrence-workbench')).toBeNull();
+      expect(inspector.querySelector('.biome-occurrence-workbench')).not.toBeNull();
       cleanup();
     }
   }, 15_000);
@@ -532,15 +554,21 @@ describe('BiomeWorkspace', () => {
     await view.user.click(railDecision);
 
     const inspector = screen.getByRole('complementary', { name: 'Details' });
-    const selected = within(inspector)
-      .getAllByRole('radio')
-      .find((radio) => (radio as HTMLInputElement).checked);
-    const offer = selected?.closest<HTMLElement>('.biome-target-row');
-    if (offer === null || offer === undefined) throw new Error('P selected room offer is missing');
+    const decisionNode = workspaceBiome(view.application, 'Surface', 'P').nodes.find(
+      (node) =>
+        (node.kind === 'ordinaryBatch' || node.kind === 'mixedBatch') &&
+        semanticAddressKey(node.owner) === semanticAddressKey(owner),
+    );
+    if (decisionNode?.kind !== 'ordinaryBatch' && decisionNode?.kind !== 'mixedBatch') {
+      throw new Error('P selected room decision is missing');
+    }
+    const picked = decisionNode.targets.find((target) => target.selected);
+    if (picked === undefined) throw new Error('P selected room is missing');
     const before = railDecision.querySelector<HTMLElement>('.biome-rail-selection');
     if (before === null) throw new Error('P selected room rail context is missing');
     const beforeText = before.textContent;
-    await view.user.click(within(offer).getByRole('button', { name: 'Reward' }));
+    act(() => view.application.store.dispatch(semanticOwnerFocused(picked.room.address)));
+    await view.user.click(within(inspector).getByRole('button', { name: 'Reward' }));
     const replacement = within(await screen.findByRole('listbox'))
       .getAllByRole('option')
       .find(
@@ -555,7 +583,9 @@ describe('BiomeWorkspace', () => {
     const after = railDecision.querySelector<HTMLElement>('.biome-rail-selection');
     if (after === null) throw new Error('P updated room rail context is missing');
     expect(after.textContent).not.toBe(beforeText);
-    expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(owner);
+    expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(
+      picked.room.address,
+    );
   });
 
   it('keeps the owning decision rail selected when the next physical target takes focus', async () => {
@@ -1063,7 +1093,7 @@ describe('BiomeWorkspace', () => {
     expect(inspector.querySelector('.biome-batch-workbench')).not.toBeNull();
   });
 
-  it('focuses retained downstream room rewards inside their decision workbench', () => {
+  it('focuses retained downstream room rewards inside their occurrence workbench', () => {
     const project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
       kind: 'ReplaceOccurrenceRoom',
       occurrence: createOccurrenceAddress(goldenFBiome, goldenFOccurrenceId(1, 1)),
@@ -1086,13 +1116,11 @@ describe('BiomeWorkspace', () => {
     act(() => view.application.store.dispatch(semanticOwnerFocused(reward.marker.address)));
 
     const inspector = screen.getByRole('complementary', { name: 'Details' });
+    expect(inspector.querySelector('.biome-occurrence-workbench')).not.toBeNull();
     expect(inspector.querySelector('.biome-batch-workbench')).not.toBeNull();
-    expect(
-      within(inspector).getAllByRole('article', { name: `${target.room.label} room offer` }),
-    ).not.toHaveLength(0);
   });
 
-  it('focuses a fixed Story reward inside its owning decision workbench', () => {
+  it('focuses a fixed Story reward inside its owning occurrence workbench', () => {
     const project = createRepresentativeNOPQProject();
     const view = renderWorkspace(project, 'Surface', 'P');
     const storyOccurrenceId = pOccurrenceId('P_Story01', 7, 1);
@@ -1109,12 +1137,9 @@ describe('BiomeWorkspace', () => {
     );
 
     const inspector = screen.getByRole('complementary', { name: 'Details' });
-    const workbench = inspector.querySelector<HTMLElement>('.biome-batch-workbench');
-    if (workbench === null) throw new Error('P Story decision inspector is missing');
-    const offer = within(workbench).getByRole('article', {
-      name: `${story.room.label} room offer`,
-    });
-    expect(within(offer).getByText(/^Fixed reward:/)).toBeTruthy();
+    const workbench = inspector.querySelector<HTMLElement>('.biome-occurrence-workbench');
+    if (workbench === null) throw new Error('P Story occurrence inspector is missing');
+    expect(within(workbench).getByText(/^Fixed reward:/)).toBeTruthy();
   });
 
   it('moves keyboard focus through semantic owners without authoring a change', async () => {
@@ -1128,54 +1153,6 @@ describe('BiomeWorkspace', () => {
     await view.user.keyboard('{Enter}');
     const focused = view.application.store.getState().editorSession.focusedSemanticOwner;
     expect(focused?.kind).toBe('exitDecision');
-  });
-
-  it('keeps a Hub local-child finding on its authored visit detail workbench', () => {
-    const sideRoom = createLocalChildAddress(
-      nBiome,
-      nOccurrenceId('combat05'),
-      'sideRooms',
-      'sideDoor1',
-    );
-    let project = createRepresentativeNOPQProject();
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceSideRoomEntryOrder',
-      group: createLocalChildGroupAddress(nBiome, nOccurrenceId('combat05'), 'sideRooms'),
-      enteredSlotKeys: ['sideDoor2'],
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceSideRoomGeneration',
-      sideRoom,
-      generation: 'notGenerated',
-    });
-    const view = renderWorkspace(project, 'Surface', 'N');
-    const finding = view.application.store
-      .getState()
-      .projectWorkspace.assembly.evaluation.findings.find(
-        (candidate) =>
-          candidate.code === 'sideRoomGenerationUnavailable' &&
-          semanticAddressKey(candidate.origin) === semanticAddressKey(sideRoom),
-      );
-    if (finding === undefined) throw new Error('N side-room finding is missing');
-
-    act(() =>
-      view.application.store.dispatch(
-        findingSelected({ key: semanticFindingKey(finding), origin: finding.origin }),
-      ),
-    );
-
-    expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(sideRoom);
-    const inspector = screen.getByRole('complementary', { name: 'Details' });
-    expect(within(inspector).getByRole('heading', { level: 3, name: 'Combat 05' })).toBeTruthy();
-    expect(within(inspector).getByRole('heading', { name: 'Side rooms' })).toBeTruthy();
-    const visit = Array.from(
-      view.container.querySelectorAll<HTMLButtonElement>('[data-workspace-node]'),
-    ).find(
-      (button) =>
-        button.dataset.workspaceNode ===
-        semanticAddressKey(createOccurrenceAddress(nBiome, nOccurrenceId('combat05'))),
-    );
-    expect(visit?.dataset.selected).toBe('true');
   });
 
   it('navigates a guaranteed target finding to its owning decision workbench', () => {

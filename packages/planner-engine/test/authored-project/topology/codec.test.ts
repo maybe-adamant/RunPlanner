@@ -538,6 +538,47 @@ describe('persisted authored topology codec', () => {
     },
   );
 
+  it('round-trips strict local-visit topology and rejects retired or malformed local ownership', () => {
+    const complete = createCompleteNProject();
+    const encoded = encodedTopology(complete, 'Surface', 'N');
+    const localIndex = encoded.topology.decisions.findIndex(
+      (decision) => decision.kind === 'localVisit',
+    );
+    const local = encoded.topology.decisions[localIndex];
+    if (localIndex < 0 || local === undefined) throw new Error('complete N local visit is missing');
+    expect(decodeProjectDocument(encoded.document, catalog)).toEqual(complete);
+
+    const missing = encodedTopology(complete, 'Surface', 'N');
+    missing.topology.decisions.splice(localIndex, 1);
+    expect(() => decodeProjectDocument(missing.document, catalog)).toThrow(
+      /requires exactly one local visit decision/,
+    );
+
+    const extra = encodedTopology(complete, 'Surface', 'N');
+    const extraLocal = extra.topology.decisions[localIndex];
+    if (extraLocal === undefined) throw new Error('complete N local visit is missing');
+    extraLocal.sideRooms = {};
+    expect(() => decodeProjectDocument(extra.document, catalog)).toThrow(
+      /sideRooms: is not a project document field/,
+    );
+
+    const invalidOrder = encodedTopology(complete, 'Surface', 'N');
+    const invalidLocal = invalidOrder.topology.decisions[localIndex];
+    const targets = invalidLocal?.targetsBySlot as Record<
+      string,
+      { occurrenceId: string; generation: string }
+    >;
+    const firstTarget = Object.values(targets)[0];
+    if (invalidLocal === undefined || firstTarget === undefined) {
+      throw new Error('complete N local visit target is missing');
+    }
+    firstTarget.generation = 'notGenerated';
+    invalidLocal.visitOrder = [firstTarget.occurrenceId];
+    expect(() => decodeProjectDocument(invalidOrder.document, catalog)).toThrow(
+      /must be generated before entry/,
+    );
+  });
+
   it('retains an incomplete Zagreus normal branch and admits its closed automatic host return', () => {
     let document = incompleteZagreusEnvelopeProject();
     const shopSource = {

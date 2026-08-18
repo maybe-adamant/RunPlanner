@@ -309,15 +309,14 @@ describe('surface product loop', () => {
     await view.user.click(decisionRail);
 
     const offer = screen.getByRole('article', { name: 'Combat 02 room offer' });
-    await view.user.click(within(offer).getByText('Customize'));
-    const intro = within(offer).getByLabelText('Intro encounter phase');
-    expect(within(offer).getByLabelText('Combat encounter phase')).toBeTruthy();
+    await view.user.click(within(offer).getByRole('button', { name: 'Open Combat 02 room' }));
+    await view.user.click(screen.getByText('Customize'));
+    const intro = screen.getByLabelText('Intro encounter phase');
+    expect(screen.getByLabelText('Combat encounter phase')).toBeTruthy();
     await view.user.click(within(intro).getByRole('button', { name: 'Encounter' }));
     await view.user.click(screen.getByRole('option', { name: /Heracles combat/ }));
 
-    await waitFor(() =>
-      expect(within(offer).queryByLabelText('Combat encounter phase')).toBeNull(),
-    );
+    await waitFor(() => expect(screen.queryByLabelText('Combat encounter phase')).toBeNull());
     expect(
       application
         .selectStructuredWorkspace(application.store.getState())
@@ -331,9 +330,7 @@ describe('surface product loop', () => {
     await view.user.click(within(intro).getByRole('button', { name: 'Encounter' }));
     await view.user.click(screen.getByRole('option', { name: /Pre-combat/ }));
 
-    await waitFor(() =>
-      expect(within(offer).getByLabelText('Combat encounter phase')).toBeTruthy(),
-    );
+    await waitFor(() => expect(screen.getByLabelText('Combat encounter phase')).toBeTruthy());
     expect(
       application
         .selectStructuredWorkspace(application.store.getState())

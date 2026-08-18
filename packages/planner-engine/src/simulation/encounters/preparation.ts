@@ -18,7 +18,7 @@ import {
   projectRouteEncounterKeyCounts,
 } from '../history/facts';
 import type { HistoryStateView } from '../history/model';
-import type { CanonicalAuthoredRoom, CanonicalLocalChildRoom } from '../materialization';
+import type { CanonicalAuthoredRoom } from '../materialization';
 import type { SemanticFinding } from '../model';
 import type { ResolvedEncounterPhase } from './model';
 
@@ -64,7 +64,7 @@ export interface PreparedEncounterPhases {
   readonly blockedAt?: EncounterPhaseAddress;
 }
 
-export type EncounterAuthoringRoom = CanonicalAuthoredRoom | CanonicalLocalChildRoom;
+export type EncounterAuthoringRoom = CanonicalAuthoredRoom;
 
 function roomsEntered(view: HistoryStateView): Readonly<Record<string, number>> {
   const counts: Record<string, number> = {};
@@ -151,22 +151,11 @@ function requirementContext(
 
 function phaseAddress(room: EncounterAuthoringRoom, slotKey: string): EncounterPhaseAddress {
   const biome = createBiomeAddress(room.origin.routeKey, room.origin.biomeKey);
-  return room.kind === 'authored'
-    ? createEncounterPhaseAddress(
-        biome,
-        { kind: 'occurrence', occurrenceId: room.occurrenceId },
-        slotKey,
-      )
-    : createEncounterPhaseAddress(
-        biome,
-        {
-          kind: 'localChild',
-          occurrenceId: room.origin.occurrenceId,
-          groupKey: room.groupKey,
-          slotKey: room.slotKey,
-        },
-        slotKey,
-      );
+  return createEncounterPhaseAddress(
+    biome,
+    { kind: 'occurrence', occurrenceId: room.occurrenceId },
+    slotKey,
+  );
 }
 
 function selectedEncounterFinding(

@@ -114,25 +114,26 @@ export interface FieldsActionAddress extends BiomeOwnedAddress {
   readonly occurrenceId: OccurrenceId;
   readonly actionKey: string;
 }
-export interface LocalChildAddress extends BiomeOwnedAddress {
-  readonly kind: 'localChild';
-  readonly occurrenceId: OccurrenceId;
+export interface LocalVisitDecisionAddress extends BiomeOwnedAddress {
+  readonly kind: 'localVisitDecision';
+  readonly sourceOccurrenceId: OccurrenceId;
+  readonly groupKey: string;
+}
+export interface LocalVisitSlotAddress extends BiomeOwnedAddress {
+  readonly kind: 'localVisitSlot';
+  readonly sourceOccurrenceId: OccurrenceId;
   readonly groupKey: string;
   readonly slotKey: string;
 }
-export interface LocalChildGroupAddress extends BiomeOwnedAddress {
-  readonly kind: 'localChildGroup';
-  readonly occurrenceId: OccurrenceId;
+export interface LocalVisitOrderAddress extends BiomeOwnedAddress {
+  readonly kind: 'localVisitOrder';
+  readonly sourceOccurrenceId: OccurrenceId;
   readonly groupKey: string;
 }
-export type EncounterPhaseOwner =
-  | { readonly kind: 'occurrence'; readonly occurrenceId: OccurrenceId }
-  | {
-      readonly kind: 'localChild';
-      readonly occurrenceId: OccurrenceId;
-      readonly groupKey: string;
-      readonly slotKey: string;
-    };
+export type EncounterPhaseOwner = {
+  readonly kind: 'occurrence';
+  readonly occurrenceId: OccurrenceId;
+};
 export interface EncounterPhaseAddress extends BiomeOwnedAddress {
   readonly kind: 'encounterPhase';
   readonly owner: EncounterPhaseOwner;
@@ -184,7 +185,6 @@ export interface ShopOfferAddress extends BiomeOwnedAddress {
 export type AcquisitionSiteOwnerAddress =
   | OccurrenceAddress
   | CompletionRoomAddress
-  | LocalChildAddress
   | LocalRewardAddress
   | RewardWheelAddress
   | HubVisitAddress
@@ -285,8 +285,9 @@ export type SemanticAddress =
   | HubDecisionAddress
   | LocalRewardAddress
   | FieldsActionAddress
-  | LocalChildAddress
-  | LocalChildGroupAddress
+  | LocalVisitDecisionAddress
+  | LocalVisitSlotAddress
+  | LocalVisitOrderAddress
   | EncounterPhaseAddress
   | GorgonPhaseAddress
   | RewardWheelAddress
@@ -522,29 +523,41 @@ export function createFieldsActionAddress(
     actionKey: nonBlank(actionKey, 'actionKey'),
   });
 }
-export function createLocalChildAddress(
+export function createLocalVisitDecisionAddress(
   biome: BiomeAddress,
-  occurrenceId: OccurrenceId,
+  sourceOccurrenceId: OccurrenceId,
+  groupKey: string,
+): LocalVisitDecisionAddress {
+  return Object.freeze({
+    kind: 'localVisitDecision',
+    ...owner(biome),
+    sourceOccurrenceId,
+    groupKey: nonBlank(groupKey, 'groupKey'),
+  });
+}
+export function createLocalVisitSlotAddress(
+  biome: BiomeAddress,
+  sourceOccurrenceId: OccurrenceId,
   groupKey: string,
   slotKey: string,
-): LocalChildAddress {
+): LocalVisitSlotAddress {
   return Object.freeze({
-    kind: 'localChild',
+    kind: 'localVisitSlot',
     ...owner(biome),
-    occurrenceId,
+    sourceOccurrenceId,
     groupKey: nonBlank(groupKey, 'groupKey'),
     slotKey: nonBlank(slotKey, 'slotKey'),
   });
 }
-export function createLocalChildGroupAddress(
+export function createLocalVisitOrderAddress(
   biome: BiomeAddress,
-  occurrenceId: OccurrenceId,
+  sourceOccurrenceId: OccurrenceId,
   groupKey: string,
-): LocalChildGroupAddress {
+): LocalVisitOrderAddress {
   return Object.freeze({
-    kind: 'localChildGroup',
+    kind: 'localVisitOrder',
     ...owner(biome),
-    occurrenceId,
+    sourceOccurrenceId,
     groupKey: nonBlank(groupKey, 'groupKey'),
   });
 }
@@ -553,15 +566,10 @@ export function createEncounterPhaseAddress(
   encounterOwner: EncounterPhaseOwner,
   phaseKey: string,
 ): EncounterPhaseAddress {
-  const normalizedOwner =
-    encounterOwner.kind === 'occurrence'
-      ? Object.freeze({ kind: 'occurrence' as const, occurrenceId: encounterOwner.occurrenceId })
-      : Object.freeze({
-          kind: 'localChild' as const,
-          occurrenceId: encounterOwner.occurrenceId,
-          groupKey: nonBlank(encounterOwner.groupKey, 'groupKey'),
-          slotKey: nonBlank(encounterOwner.slotKey, 'slotKey'),
-        });
+  const normalizedOwner = Object.freeze({
+    kind: 'occurrence' as const,
+    occurrenceId: encounterOwner.occurrenceId,
+  });
   return Object.freeze({
     kind: 'encounterPhase',
     ...owner(biome),
@@ -840,12 +848,19 @@ export function semanticAddressKey(address: SemanticAddress): string {
     case 'hubVisit':
       return JSON.stringify([...base, address.hubKey, address.visitIndex]);
     case 'localReward':
-    case 'localChild':
       return JSON.stringify([...base, address.occurrenceId, address.groupKey, address.slotKey]);
     case 'fieldsAction':
       return JSON.stringify([...base, address.occurrenceId, address.actionKey]);
-    case 'localChildGroup':
-      return JSON.stringify([...base, address.occurrenceId, address.groupKey]);
+    case 'localVisitDecision':
+    case 'localVisitOrder':
+      return JSON.stringify([...base, address.sourceOccurrenceId, address.groupKey]);
+    case 'localVisitSlot':
+      return JSON.stringify([
+        ...base,
+        address.sourceOccurrenceId,
+        address.groupKey,
+        address.slotKey,
+      ]);
     case 'encounterPhase':
       return JSON.stringify([...base, address.owner, address.phaseKey]);
     case 'gorgonPhase':

@@ -9,8 +9,9 @@ import {
   type ExitSelectionAddress,
   type HubDecisionAddress,
   type HubSlotAddress,
-  type LocalChildAddress,
-  type LocalChildGroupAddress,
+  type LocalVisitDecisionAddress,
+  type LocalVisitOrderAddress,
+  type LocalVisitSlotAddress,
   type OccurrenceAddress,
   type OccurrenceId,
   type ProjectCommand,
@@ -19,7 +20,7 @@ import {
 } from '@run-planner/engine/authored-project';
 
 import type {
-  WorkspaceEphyraSideRoomEntryOrderControl,
+  WorkspaceLocalVisitOrderControl,
   WorkspaceExitFrontierCapabilities,
   WorkspaceFieldsActionProposal,
   WorkspaceInteractionChoice,
@@ -43,18 +44,19 @@ export type WorkspaceOccurrenceInteractionRequirement =
     }
   | {
       readonly generationChoices: readonly WorkspaceInteractionChoice<SideRoomGeneration>[];
-      readonly kind: 'ephyraSideRooms';
-      readonly owner: LocalChildGroupAddress;
-      readonly sideRooms: readonly {
-        readonly address: LocalChildAddress;
-        readonly entryOrder: WorkspaceEphyraSideRoomEntryOrderControl;
+      readonly kind: 'localVisits';
+      readonly owner: LocalVisitDecisionAddress;
+      readonly order: LocalVisitOrderAddress;
+      readonly slots: readonly {
+        readonly address: LocalVisitSlotAddress;
+        readonly order: WorkspaceLocalVisitOrderControl;
         readonly generation: SideRoomGeneration;
       }[];
     }
   | {
       /** One active exact pool-backed phase, never a profile or rendered ordinal. */
       readonly kind: 'encounterPhases';
-      readonly owner: LocalChildAddress | OccurrenceAddress;
+      readonly owner: OccurrenceAddress;
       readonly phases: readonly {
         readonly candidateChoices: readonly WorkspaceInteractionChoice<string>[];
         readonly owner: EncounterPhaseAddress;
@@ -146,6 +148,7 @@ export interface WorkspaceHubInteractionRequirement {
   readonly slots: readonly (
     | {
         readonly choices: readonly WorkspaceInteractionChoice<boolean>[];
+        readonly localSlotKeys: readonly string[];
         readonly owner: HubSlotAddress;
         readonly selected: false;
       }

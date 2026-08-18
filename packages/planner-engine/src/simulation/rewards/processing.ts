@@ -71,7 +71,7 @@ import type { CountedRewardBinding } from '../../reward-kernel/bindings';
 import type { HistoryEvent } from '../history';
 import type {
   CanonicalAuthoredRoom,
-  CanonicalLocalChildRoom,
+  CanonicalLocalVisitRoom,
   CanonicalResolvedIncomingReward,
 } from '../materialization';
 import {
@@ -144,7 +144,7 @@ import {
   type KeepsakeState,
 } from '../keepsakes';
 
-export type CanonicalRewardRoom = CanonicalAuthoredRoom | CanonicalLocalChildRoom;
+export type CanonicalRewardRoom = CanonicalAuthoredRoom | CanonicalLocalVisitRoom;
 
 interface PendingShopState {
   readonly profileKey: string;

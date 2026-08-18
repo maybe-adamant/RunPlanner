@@ -3,8 +3,9 @@ import {
   createAcquisitionSiteAddress,
   createAcquisitionEntryAddress,
   createIncomingRewardAddress,
-  createLocalChildAddress,
-  createLocalChildGroupAddress,
+  createLocalVisitDecisionAddress,
+  createLocalVisitOrderAddress,
+  createLocalVisitSlotAddress,
   createLocalRewardAddress,
   createLevelResolutionAddress,
   createOccurrenceAddress,
@@ -25,7 +26,7 @@ import {
 import type { Catalog, RoomDeclaration } from '@run-planner/engine/catalog-schema';
 import { fieldsBatchFacts } from '@run-planner/engine/simulation';
 
-import { workspaceSideRoomEntryOrderTestKey, workspaceTestOwnerKey } from './test-keys';
+import { workspaceTestOwnerKey } from './test-keys';
 
 /**
  * Test-only, independently derived editable-leaf identities. These types do
@@ -40,8 +41,8 @@ export type ExpectedWorkspaceLeafInteractionKind =
   | 'rewardWheelStore'
   | 'shipCombatPhaseCount'
   | 'acquisitionOrder'
-  | 'sideRoomEntryOrder'
-  | 'sideRoomGeneration'
+  | 'localVisitOrder'
+  | 'localVisitGeneration'
   | 'levelResolution'
   | 'traitOffer';
 
@@ -115,6 +116,10 @@ export function expectedWorkspaceDetailsActiveOccurrenceIds(
         const target = decision.openTargets.find((candidate) => candidate.hubSlotKey === slotKey);
         if (target !== undefined) active.add(target.occurrenceId);
       }
+      continue;
+    }
+    if (decision.kind === 'localVisit') {
+      for (const occurrenceId of decision.visitOrder) active.add(occurrenceId);
       continue;
     }
     const target = decision.normal.targets.find((candidate) =>
@@ -227,7 +232,17 @@ export function expectedWorkspaceLeafRequirements(
   const topology = plan.topology;
   if (topology === null) return Object.freeze([]);
   const detailsActive = expectedWorkspaceDetailsActiveOccurrenceIds(plan);
+  const notGeneratedLocalOccurrences = new Set(
+    topology.decisions.flatMap((decision) =>
+      decision.kind !== 'localVisit'
+        ? []
+        : Object.values(decision.targetsBySlot)
+            .filter((target) => target.generation === 'notGenerated')
+            .map((target) => target.occurrenceId),
+    ),
+  );
   for (const occurrence of topology.occurrences) {
+    if (notGeneratedLocalOccurrences.has(occurrence.occurrenceId)) continue;
     const room = requireExpectedRoom(catalog, occurrence.gameName);
     const occurrenceAddress = createOccurrenceAddress(biome, occurrence.occurrenceId);
     const incoming = createIncomingRewardAddress(biome, occurrence.occurrenceId);
@@ -247,35 +262,6 @@ export function expectedWorkspaceLeafRequirements(
         break;
       case 'ephyraCombat': {
         requireRewardWithTraits(incoming, occurrence.state.reward);
-        if (!detailsActive.has(occurrence.occurrenceId)) break;
-        const group = room.localChildren.find((child) => child.kind === 'fixedRoomSlots');
-        if (group === undefined && Object.keys(occurrence.state.sideRooms).length === 0) break;
-        if (group?.kind !== 'fixedRoomSlots') {
-          throw new Error(`${room.gameName} Ephyra state has no fixed side-room declaration`);
-        }
-        requireLeaf(createLocalChildGroupAddress(biome, occurrence.occurrenceId, group.key));
-        for (const slot of group.slots) {
-          const sideAddress = createLocalChildAddress(
-            biome,
-            occurrence.occurrenceId,
-            group.key,
-            slot.slotKey,
-          );
-          requireLeaf(
-            sideAddress,
-            expectedLeafInteraction('sideRoomGeneration', workspaceTestOwnerKey(sideAddress)),
-            expectedLeafInteraction(
-              'sideRoomEntryOrder',
-              workspaceSideRoomEntryOrderTestKey(sideAddress),
-            ),
-          );
-          if (occurrence.state.sideRooms[slot.slotKey]?.generation === 'generated') {
-            requireRewardWithTraits(
-              createLocalRewardAddress(biome, occurrence.occurrenceId, group.key, slot.slotKey),
-              occurrence.state.sideRooms[slot.slotKey]!.reward,
-            );
-          }
-        }
         break;
       }
       case 'fieldsCombat': {
@@ -384,6 +370,36 @@ export function expectedWorkspaceLeafRequirements(
       }
     }
   }
+  for (const decision of topology.decisions) {
+    if (decision.kind !== 'localVisit' || !detailsActive.has(decision.sourceOccurrenceId)) continue;
+    const decisionAddress = createLocalVisitDecisionAddress(
+      biome,
+      decision.sourceOccurrenceId,
+      decision.groupKey,
+    );
+    const orderAddress = createLocalVisitOrderAddress(
+      biome,
+      decision.sourceOccurrenceId,
+      decision.groupKey,
+    );
+    requireLeaf(decisionAddress);
+    requireLeaf(
+      orderAddress,
+      expectedLeafInteraction('localVisitOrder', workspaceTestOwnerKey(orderAddress)),
+    );
+    for (const slotKey of Object.keys(decision.targetsBySlot)) {
+      const slotAddress = createLocalVisitSlotAddress(
+        biome,
+        decision.sourceOccurrenceId,
+        decision.groupKey,
+        slotKey,
+      );
+      requireLeaf(
+        slotAddress,
+        expectedLeafInteraction('localVisitGeneration', workspaceTestOwnerKey(slotAddress)),
+      );
+    }
+  }
   return Object.freeze(
     [...required.values()].map((requirement) =>
       Object.freeze({
@@ -441,19 +457,17 @@ export function expectedWorkspaceEncounterPhaseLeafRequirements(
   };
 
   for (const occurrence of topology.occurrences) {
+    const notGenerated = topology.decisions.some(
+      (decision) =>
+        decision.kind === 'localVisit' &&
+        Object.values(decision.targetsBySlot).some(
+          (target) =>
+            target.occurrenceId === occurrence.occurrenceId && target.generation === 'notGenerated',
+        ),
+    );
+    if (notGenerated) continue;
     const room = requireExpectedRoom(catalog, occurrence.gameName);
     appendRoom(room, { kind: 'occurrence', occurrenceId: occurrence.occurrenceId });
-    for (const group of room.localChildren) {
-      if (group.kind !== 'fixedRoomSlots') continue;
-      for (const slot of group.slots) {
-        appendRoom(requireExpectedRoom(catalog, slot.roomGameName), {
-          kind: 'localChild',
-          occurrenceId: occurrence.occurrenceId,
-          groupKey: group.key,
-          slotKey: slot.slotKey,
-        });
-      }
-    }
   }
   return Object.freeze([...requirements.values()]);
 }

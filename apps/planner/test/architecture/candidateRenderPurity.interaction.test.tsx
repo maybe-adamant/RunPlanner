@@ -102,7 +102,7 @@ describe('candidate render purity', () => {
         </Provider>,
       );
 
-      expect(screen.getByRole('region', { name: /structure$/ })).toBeTruthy();
+      expect(screen.getAllByRole('region', { name: /structure$/ }).length).toBeGreaterThan(0);
       expect(events.filter((event) => event.kind === 'queryBatch')).toEqual([]);
       expect(events.filter((event) => event.kind === 'projectEvaluation')).toEqual([]);
       application.dispose();

@@ -7,9 +7,8 @@ import {
   createHubDecisionAddress,
   createHubSlotAddress,
   createIncomingRewardAddress,
-  createLocalChildAddress,
-  createLocalChildGroupAddress,
-  createLocalRewardAddress,
+  createLocalVisitSlotAddress,
+  createLocalVisitOrderAddress,
   createOccurrenceId,
   createProjectDocument,
   createShopOfferAddress,
@@ -19,6 +18,27 @@ import {
 } from '@run-planner/engine/authored-project';
 
 const nBiome = createBiomeAddress('Surface', 'N');
+
+export function nLocalOccurrenceId(slotKey: string, localSlotKey: string) {
+  return createOccurrenceId(`round-trip-n-${slotKey}-${localSlotKey}`);
+}
+
+export function nLocalOccurrenceIdsBySlot(
+  slotKey: string,
+): Readonly<Record<string, ReturnType<typeof createOccurrenceId>>> {
+  const hub = catalog.biomeLayouts.byKey.N?.progression;
+  const hubSlot =
+    hub?.kind === 'hub' ? hub.slots.find((slot) => slot.slotKey === slotKey) : undefined;
+  const room = hubSlot === undefined ? undefined : catalog.rooms.byKey[hubSlot.roomGameName];
+  const group = room?.localChildren[0];
+  return Object.freeze(
+    Object.fromEntries(
+      group?.kind === 'fixedRoomSlots'
+        ? group.slots.map((slot) => [slot.slotKey, nLocalOccurrenceId(slotKey, slot.slotKey)])
+        : [],
+    ),
+  );
+}
 
 export function createCompleteNProject(): ProjectDocument {
   let document = applyProjectCommand(
@@ -117,6 +137,7 @@ export function createCompleteNProject(): ProjectDocument {
       kind: 'OpenHubSlot',
       slot: createHubSlotAddress(nBiome, 'hub', slotKey),
       occurrenceId: createOccurrenceId(`round-trip-n-${slotKey}`),
+      localOccurrenceIdsBySlot: nLocalOccurrenceIdsBySlot(slotKey),
     });
   }
   for (const [slotKey, value] of Object.entries({
@@ -224,7 +245,7 @@ export function createCompleteNProject(): ProjectDocument {
   });
 }
 
-/** Complete N setup with one entered side-room child for local lifecycle tests. */
+/** Complete N setup with one entered local room for lifecycle tests. */
 export function createEnteredNLocalProject(): ProjectDocument {
   const nCombatId = createOccurrenceId('round-trip-n-combat02');
   let project = createCompleteNProject();
@@ -254,30 +275,30 @@ export function createEnteredNLocalProject(): ProjectDocument {
     },
   });
   project = applyProjectCommand(project, catalog, {
-    kind: 'ReplaceSideRoomGeneration',
-    sideRoom: createLocalChildAddress(nBiome, nCombatId, 'sideRooms', 'sideDoor2'),
+    kind: 'SetLocalVisitGeneration',
+    slot: createLocalVisitSlotAddress(nBiome, nCombatId, 'sideRooms', 'sideDoor2'),
     generation: 'generated',
   });
   project = applyProjectCommand(project, catalog, {
-    kind: 'ReplaceSideRoomGeneration',
-    sideRoom: createLocalChildAddress(nBiome, nCombatId, 'sideRooms', 'sideDoor1'),
+    kind: 'SetLocalVisitGeneration',
+    slot: createLocalVisitSlotAddress(nBiome, nCombatId, 'sideRooms', 'sideDoor1'),
     generation: 'generated',
   });
   project = applyProjectCommand(project, catalog, {
-    kind: 'ReplaceLocalReward',
-    reward: createLocalRewardAddress(nBiome, nCombatId, 'sideRooms', 'sideDoor1'),
+    kind: 'ReplaceIncomingReward',
+    reward: createIncomingRewardAddress(nBiome, nLocalOccurrenceId('combat02', 'sideDoor1')),
     value: { rewardType: 'MaxHealthDropSmall' },
   });
   project = applyProjectCommand(project, catalog, {
-    kind: 'ReplaceLocalReward',
-    reward: createLocalRewardAddress(nBiome, nCombatId, 'sideRooms', 'sideDoor2'),
+    kind: 'ReplaceIncomingReward',
+    reward: createIncomingRewardAddress(nBiome, nLocalOccurrenceId('combat02', 'sideDoor2')),
     value: { rewardType: 'MaxManaDropSmall' },
   });
   return authorLegalTraitOffers(
     applyProjectCommand(project, catalog, {
-      kind: 'ReplaceSideRoomEntryOrder',
-      group: createLocalChildGroupAddress(nBiome, nCombatId, 'sideRooms'),
-      enteredSlotKeys: ['sideDoor1'],
+      kind: 'ReplaceLocalVisitOrder',
+      order: createLocalVisitOrderAddress(nBiome, nCombatId, 'sideRooms'),
+      occurrenceIds: [nLocalOccurrenceId('combat02', 'sideDoor1')],
     }),
   );
 }

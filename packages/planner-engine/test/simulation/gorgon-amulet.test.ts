@@ -835,19 +835,12 @@ describe('Gorgon Amulet lifecycle', () => {
     if (
       nSubEvent === undefined ||
       nSubEvent.kind !== 'roomCreated' ||
-      (nSubEvent.origin.kind !== 'occurrence' && nSubEvent.origin.kind !== 'localChild')
+      nSubEvent.origin.kind !== 'occurrence'
     )
       return;
     const nSideGorgonPhase = createEncounterPhaseAddress(
       nBiome,
-      nSubEvent.origin.kind === 'occurrence'
-        ? { kind: 'occurrence', occurrenceId: nSubEvent.origin.occurrenceId }
-        : {
-            kind: 'localChild',
-            occurrenceId: nSubEvent.origin.occurrenceId,
-            groupKey: nSubEvent.origin.groupKey,
-            slotKey: nSubEvent.origin.slotKey,
-          },
+      { kind: 'occurrence', occurrenceId: nSubEvent.origin.occurrenceId },
       'Encounter',
     );
     expect(

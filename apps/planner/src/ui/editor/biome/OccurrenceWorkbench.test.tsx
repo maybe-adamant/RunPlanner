@@ -14,7 +14,6 @@ import {
   createExitDecisionAddress,
   createExitSelectionAddress,
   createIncomingRewardAddress,
-  createLocalChildAddress,
   createLocalRewardAddress,
   createOccurrenceId,
   createOccurrenceAddress,
@@ -38,7 +37,7 @@ import {
 import { act, cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { createApplication, type PlannerApplication } from '@planner/composition/createApplication';
+import { createApplication } from '@planner/composition/createApplication';
 import type {
   WorkspaceBiome,
   WorkspaceMixedBatchNode,
@@ -116,34 +115,6 @@ function decisionContainingOccurrence(occurrenceId: OccurrenceId) {
     );
     return node === undefined ? undefined : { kind: 'node' as const, node };
   };
-}
-
-function nHubOccurrence(application: PlannerApplication, hubSlotKey: string) {
-  const plan = application.store
-    .getState()
-    .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
-    ?.biomes.find((biome) => biome.biomeKey === 'N');
-  const topology = plan?.topology;
-  if (topology === undefined || topology === null) throw new Error('N Hub topology is missing');
-  const hub = topology.decisions.find((decision) => decision.kind === 'hub');
-  if (hub?.kind !== 'hub') throw new Error('N Hub decision is missing');
-  const target = hub.openTargets.find((candidate) => candidate.hubSlotKey === hubSlotKey);
-  const occurrence = topology.occurrences.find(
-    (candidate) => candidate.occurrenceId === target?.occurrenceId,
-  );
-  if (occurrence === undefined) throw new Error(`${hubSlotKey} occurrence is missing`);
-  return occurrence;
-}
-
-function orderedNHubSideEntries(application: PlannerApplication, hubSlotKey: string) {
-  const occurrence = nHubOccurrence(application, hubSlotKey);
-  if (occurrence.state.kind !== 'ephyraCombat') {
-    throw new Error(`${hubSlotKey} is not an Ephyra combat occurrence`);
-  }
-  return Object.entries(occurrence.state.sideRooms)
-    .filter(([, side]) => side.enteredOrdinal !== null)
-    .sort(([, left], [, right]) => left.enteredOrdinal! - right.enteredOrdinal!)
-    .map(([sideSlotKey]) => sideSlotKey);
 }
 
 function emptyFProject(): ProjectDocument {
@@ -896,11 +867,11 @@ describe('OccurrenceWorkbench', () => {
       ),
       'mysteryBoon',
     );
-    const view = renderDecisionWorkbench(
+    const view = renderOccurrenceWorkbench(
       project,
       'Underworld',
       'G',
-      decisionContainingOccurrence(occurrence.occurrenceId),
+      occurrenceById(occurrence.occurrenceId),
     );
     const pickedUp = screen.getByRole('checkbox', { name: 'Picked up mysteryBoon' });
     expect((pickedUp as HTMLInputElement).disabled).toBe(false);
@@ -1013,11 +984,11 @@ describe('OccurrenceWorkbench', () => {
         deathDefianceConditionMet: false,
       },
     });
-    const view = renderDecisionWorkbench(
+    const view = renderOccurrenceWorkbench(
       project,
       'Underworld',
       'G',
-      decisionContainingOccurrence(occurrence.occurrenceId),
+      occurrenceById(occurrence.occurrenceId),
     );
     const authoredSite = () =>
       view.application.store
@@ -1095,11 +1066,11 @@ describe('OccurrenceWorkbench', () => {
       site,
       entryKeys: ['psyche'],
     });
-    const view = renderDecisionWorkbench(
+    const view = renderOccurrenceWorkbench(
       project,
       'Underworld',
       'G',
-      decisionContainingOccurrence(occurrence.occurrenceId),
+      occurrenceById(occurrence.occurrenceId),
     );
     const maxMana = screen.getByRole('checkbox', { name: 'Picked up maxMana' });
     expect((maxMana as HTMLInputElement).disabled).toBe(false);
@@ -1117,7 +1088,7 @@ describe('OccurrenceWorkbench', () => {
     ).toEqual(['psyche', 'maxMana']);
   });
 
-  it('renders retained Anomaly map, outcome, and revert controls as exact commands', async () => {
+  it('splits Anomaly room outcome from door map and revert controls as exact commands', async () => {
     const { occurrenceId, project } = authoredAnomalyProject();
     const application = createApplication();
     const dispatch = vi.spyOn(application.store, 'dispatch');
@@ -1128,19 +1099,29 @@ describe('OccurrenceWorkbench', () => {
       occurrenceById(occurrenceId),
       application,
     );
-    const map = screen.getByLabelText('Map');
     const reward = screen.getByLabelText('Reward');
     const cleared = screen.getByRole('checkbox', { name: 'Cleared' });
+    expect((cleared as HTMLInputElement).checked).toBe(true);
+    expect(reward.compareDocumentPosition(cleared) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
+    expect(screen.queryByLabelText('Map')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Restore Combat 01' })).toBeNull();
+    expect(screen.queryByLabelText('Customize')).toBeNull();
+    await view.user.click(screen.getByRole('checkbox', { name: 'Cleared' }));
+    cleanup();
+
+    const door = renderDecisionWorkbench(
+      project,
+      'Underworld',
+      'G',
+      decisionContainingOccurrence(occurrenceId),
+      application,
+    );
+    const map = screen.getByLabelText('Map');
     const restore = screen.getByRole('button', { name: 'Restore Combat 01' });
     expect((map as HTMLSelectElement).value).toBe('B_Combat01');
-    expect((cleared as HTMLInputElement).checked).toBe(true);
-    expect(map.compareDocumentPosition(reward) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
-    expect(reward.compareDocumentPosition(cleared) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
-    expect(cleared.compareDocumentPosition(restore) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
-    expect(screen.queryByLabelText('Customize')).toBeNull();
-    await view.user.selectOptions(screen.getByLabelText('Map'), 'B_Combat05');
-    await view.user.click(screen.getByRole('checkbox', { name: 'Cleared' }));
-    await view.user.click(screen.getByRole('button', { name: 'Restore Combat 01' }));
+    expect(screen.queryByRole('checkbox', { name: 'Cleared' })).toBeNull();
+    await door.user.selectOptions(map, 'B_Combat05');
+    await door.user.click(restore);
     expect(
       dispatch.mock.calls
         .map(([action]) => action)
@@ -1148,14 +1129,14 @@ describe('OccurrenceWorkbench', () => {
         .map((action) => action.payload),
     ).toEqual([
       {
-        gameName: 'B_Combat05',
-        kind: 'ReplaceAnomalyMap',
-        occurrence: createOccurrenceAddress(createBiomeAddress('Underworld', 'G'), occurrenceId),
-      },
-      {
         kind: 'ReplaceAnomalySuccess',
         occurrence: createOccurrenceAddress(createBiomeAddress('Underworld', 'G'), occurrenceId),
         success: false,
+      },
+      {
+        gameName: 'B_Combat05',
+        kind: 'ReplaceAnomalyMap',
+        occurrence: createOccurrenceAddress(createBiomeAddress('Underworld', 'G'), occurrenceId),
       },
       {
         kind: 'RevertAnomaly',
@@ -1179,8 +1160,12 @@ describe('OccurrenceWorkbench', () => {
       },
     });
     renderOccurrenceWorkbench(invalid, 'Underworld', 'G', occurrenceById(occurrenceId));
-    expect(screen.getByLabelText('Map')).toBeTruthy();
     expect(screen.getByRole('checkbox', { name: 'Cleared' })).toBeTruthy();
+    expect(screen.queryByLabelText('Map')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Restore Combat 01' })).toBeNull();
+    cleanup();
+    renderDecisionWorkbench(invalid, 'Underworld', 'G', decisionContainingOccurrence(occurrenceId));
+    expect(screen.getByLabelText('Map')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Restore Combat 01' })).toBeTruthy();
   });
   it('shows a Hub room main reward read-only and focuses its board owner without authoring', async () => {
@@ -1243,10 +1228,10 @@ describe('OccurrenceWorkbench', () => {
       occurrenceById(nOccurrenceId('combat10')),
     );
     expect(
-      screen.getByText(
+      screen.queryByText(
         'Side rooms become available after this room is selected in the visit order.',
       ),
-    ).toBeTruthy();
+    ).toBeNull();
     expect(screen.queryByRole('heading', { name: 'Side rooms' })).toBeNull();
     expect(screen.queryByLabelText('Side Room 01 generation')).toBeNull();
     cleanup();
@@ -1416,253 +1401,6 @@ describe('OccurrenceWorkbench', () => {
     await view.user.click(combatPicker);
     await waitFor(() =>
       expect(combatPicker.getAttribute('data-candidate-state')).toBe('unassessed'),
-    );
-  });
-
-  it('keeps impossible side-room positions visible and disabled when not generated', async () => {
-    const project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
-      kind: 'ReplaceSideRoomGeneration',
-      sideRoom: createLocalChildAddress(
-        nBiome,
-        nOccurrenceId('combat02'),
-        'sideRooms',
-        'sideDoor2',
-      ),
-      generation: 'notGenerated',
-    });
-    const view = renderOccurrenceWorkbench(
-      project,
-      'Surface',
-      'N',
-      occurrenceById(nOccurrenceId('combat02')),
-    );
-    const entryOrder = screen.getByRole('combobox', {
-      name: 'Side Room 03 visit order',
-    }) as HTMLSelectElement;
-    await view.user.click(entryOrder);
-    await waitFor(() => {
-      expect(Array.from(entryOrder.options).map((option) => option.textContent)).toEqual([
-        'Not visited',
-        '1st — unavailable',
-        '2nd — unavailable',
-      ]);
-      expect(entryOrder.value).toBe('notEntered');
-      expect(entryOrder.options[0]?.disabled).toBe(false);
-      expect(
-        Array.from(entryOrder.options)
-          .slice(1)
-          .every((option) => option.disabled),
-      ).toBe(true);
-    });
-    expect(nHubOccurrence(view.application, 'combat02').state).toMatchObject({
-      sideRooms: { sideDoor2: { generation: 'notGenerated', enteredOrdinal: null } },
-    });
-  });
-
-  it('orders side rooms by priority and exposes rewards only while generated', async () => {
-    const sideRoom = createLocalChildAddress(
-      nBiome,
-      nOccurrenceId('combat02'),
-      'sideRooms',
-      'sideDoor2',
-    );
-    const reward = createLocalRewardAddress(
-      nBiome,
-      nOccurrenceId('combat02'),
-      'sideRooms',
-      'sideDoor2',
-    );
-    let project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
-      kind: 'ReplaceSideRoomGeneration',
-      sideRoom,
-      generation: 'generated',
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceLocalReward',
-      reward,
-      value: { rewardType: 'AirBoost' },
-    });
-    const view = renderOccurrenceWorkbench(
-      project,
-      'Surface',
-      'N',
-      occurrenceById(nOccurrenceId('combat02')),
-    );
-    const table = screen.getByRole('table', {
-      name: 'Ephyra side-room generation and visit order',
-    });
-    expect(
-      within(table)
-        .getAllByRole('columnheader')
-        .map((header) => header.textContent),
-    ).toEqual(['Room', 'Priority', 'Generated', 'Visit order']);
-    expect(
-      within(table)
-        .getAllByRole('row')
-        .slice(1)
-        .map(
-          (row) => row.querySelector('.ephyra-side-room-heading .owner-markers span')?.textContent,
-        ),
-    ).toEqual(['Side Room 03', 'Side Room 01']);
-
-    const sideRow = () => {
-      const row = screen.getByText('Side Room 03').closest('tr');
-      if (row === null) throw new Error('Side Room 03 row is missing');
-      return row;
-    };
-    expect(within(sideRow()).getByRole('button', { name: 'Reward' })).toBeTruthy();
-    expect(sideRow().querySelector('.encounter-phase-control')).toBeNull();
-
-    act(() =>
-      view.application.store.dispatch(
-        authoredProjectCommandDispatched({
-          kind: 'ReplaceSideRoomGeneration',
-          sideRoom,
-          generation: 'notGenerated',
-        }),
-      ),
-    );
-    await waitFor(() => {
-      expect(within(sideRow()).queryByRole('button', { name: 'Reward' })).toBeNull();
-      expect(within(sideRow()).getByLabelText('Side Room 03 generation')).toBeTruthy();
-      expect(within(sideRow()).getByLabelText('Side Room 03 visit order')).toBeTruthy();
-    });
-
-    act(() =>
-      view.application.store.dispatch(
-        authoredProjectCommandDispatched({
-          kind: 'ReplaceSideRoomGeneration',
-          sideRoom,
-          generation: 'generated',
-        }),
-      ),
-    );
-    await waitFor(() =>
-      expect(within(sideRow()).getByRole('button', { name: 'Reward' })).toBeTruthy(),
-    );
-  });
-
-  it('applies a direct side-room insertion as one undoable complete order', async () => {
-    const view = renderOccurrenceWorkbench(
-      createRepresentativeNOPQProject(),
-      'Surface',
-      'N',
-      occurrenceById(nOccurrenceId('combat05')),
-    );
-    const table = screen.getByRole('table', {
-      name: 'Ephyra side-room generation and visit order',
-    });
-    expect(within(table).getByRole('columnheader', { name: 'Room' })).toBeTruthy();
-    expect(screen.queryByRole('button', { name: /Enter last|Earlier|Later/ })).toBeNull();
-    const entryOrder = within(table).getByRole('combobox', {
-      name: 'Side Room 03 visit order',
-    }) as HTMLSelectElement;
-    await view.user.click(entryOrder);
-    await waitFor(() =>
-      expect(
-        Array.from(entryOrder.options).find((option) => option.value === 'position:1')?.dataset
-          .candidateSupport,
-      ).not.toBe('unavailable'),
-    );
-    const historyLength = view.application.store.getState().projectWorkspace.history.past.length;
-
-    await view.user.selectOptions(entryOrder, 'position:1');
-    await waitFor(() =>
-      expect(orderedNHubSideEntries(view.application, 'combat05')).toEqual([
-        'sideDoor3',
-        'sideDoor2',
-        'sideDoor1',
-      ]),
-    );
-    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
-      historyLength + 1,
-    );
-    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
-    await waitFor(() =>
-      expect(orderedNHubSideEntries(view.application, 'combat05')).toEqual([
-        'sideDoor2',
-        'sideDoor1',
-      ]),
-    );
-    act(() => view.application.store.dispatch(authoredProjectRedoRequested()));
-    await waitFor(() =>
-      expect(orderedNHubSideEntries(view.application, 'combat05')).toEqual([
-        'sideDoor3',
-        'sideDoor2',
-        'sideDoor1',
-      ]),
-    );
-  });
-
-  it('edits an entered local-child encounter through its exact phase and restores its default', async () => {
-    const parent = nOccurrenceId('combat05');
-    const phase = createEncounterPhaseAddress(
-      nBiome,
-      {
-        kind: 'localChild',
-        occurrenceId: parent,
-        groupKey: 'sideRooms',
-        slotKey: 'sideDoor2',
-      },
-      'Encounter',
-    );
-    const view = renderOccurrenceWorkbench(
-      createRepresentativeNOPQProject(),
-      'Surface',
-      'N',
-      occurrenceById(parent),
-    );
-    const sideRoom = screen.getByText('Side Room 07').closest('tr');
-    if (sideRoom === null) throw new Error('entered Side Room 07 is missing');
-    const encounter = sideRoom.querySelector<HTMLElement>('.encounter-phase-control');
-    if (encounter === null) throw new Error('entered Side Room 07 encounter is missing');
-    expect(
-      encounter.querySelector('.semantic-owner-marker')?.getAttribute('data-semantic-owner'),
-    ).toBe(semanticAddressKey(phase));
-    const picker = within(encounter).getByRole('button', { name: 'Encounter' });
-    const historyLength = view.application.store.getState().projectWorkspace.history.past.length;
-
-    await view.user.click(picker);
-    await view.user.click(screen.getByText('Large side-room combat'));
-    await waitFor(() => {
-      const state = occurrenceState(
-        view.application.store.getState().projectWorkspace.history.present,
-        'Surface',
-        'N',
-        parent,
-      );
-      expect(state).toMatchObject({
-        kind: 'ephyraCombat',
-        sideRooms: {
-          sideDoor2: {
-            encounters: { encounterKeyByPhase: { Encounter: 'GeneratedNSubRoom_Bigger' } },
-          },
-        },
-      });
-    });
-    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
-      historyLength + 1,
-    );
-
-    await view.user.click(within(encounter).getByRole('button', { name: 'Reset to default' }));
-    await waitFor(() => {
-      const state = occurrenceState(
-        view.application.store.getState().projectWorkspace.history.present,
-        'Surface',
-        'N',
-        parent,
-      );
-      expect(state).toMatchObject({
-        kind: 'ephyraCombat',
-        sideRooms: {
-          sideDoor2: {
-            encounters: { encounterKeyByPhase: { Encounter: 'GeneratedNSubRoom' } },
-          },
-        },
-      });
-    });
-    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
-      historyLength + 2,
     );
   });
 

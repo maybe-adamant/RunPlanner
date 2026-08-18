@@ -413,7 +413,7 @@ describe('planner history interaction', () => {
     await view.user.click(selected);
     const traitPicker = within(dialog).getByLabelText('option1 trait');
     await view.user.click(traitPicker);
-    expect(screen.getByRole('combobox')).toBeTruthy();
+    expect(screen.getAllByRole('combobox').length).toBeGreaterThan(0);
 
     await view.user.keyboard('{Escape}');
     expect(screen.getByRole('dialog')).toBe(dialog);

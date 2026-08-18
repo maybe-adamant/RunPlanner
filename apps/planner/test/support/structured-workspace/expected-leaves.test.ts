@@ -3,14 +3,19 @@ import {
   applyProjectCommand,
   createEncounterPhaseAddress,
   createIncomingRewardAddress,
-  createLocalChildAddress,
-  createLocalRewardAddress,
+  createLocalVisitSlotAddress,
+  createLocalVisitOrderAddress,
   semanticAddressKey,
   type AuthoredBiomePlan,
 } from '@run-planner/engine/authored-project';
 import { describe, expect, it } from 'vitest';
 
-import { createRepresentativeNOPQProject, nBiome, nOccurrenceId } from '@run-planner/test-fixtures';
+import {
+  createRepresentativeNOPQProject,
+  nBiome,
+  nLocalOccurrenceId,
+  nOccurrenceId,
+} from '@run-planner/test-fixtures';
 import {
   expectedWorkspaceEncounterPhaseLeafRequirements,
   expectedWorkspaceLeafRequirements,
@@ -31,17 +36,12 @@ describe('structured workspace test expectations', () => {
       { kind: 'occurrence', occurrenceId },
       'Encounter',
     );
-    const localChild = createEncounterPhaseAddress(
+    const localOccurrence = createEncounterPhaseAddress(
       nBiome,
-      {
-        kind: 'localChild',
-        occurrenceId,
-        groupKey: 'sideRooms',
-        slotKey: 'sideDoor2',
-      },
+      { kind: 'occurrence', occurrenceId: nLocalOccurrenceId('combat05', 'sideDoor2') },
       'Encounter',
     );
-    const active = new Set([semanticAddressKey(topLevel), semanticAddressKey(localChild)]);
+    const active = new Set([semanticAddressKey(topLevel), semanticAddressKey(localOccurrence)]);
 
     const requirements = expectedWorkspaceEncounterPhaseLeafRequirements(
       catalog,
@@ -51,7 +51,7 @@ describe('structured workspace test expectations', () => {
     );
 
     expect(requirements.map((requirement) => semanticAddressKey(requirement.address))).toEqual(
-      expect.arrayContaining([semanticAddressKey(topLevel), semanticAddressKey(localChild)]),
+      expect.arrayContaining([semanticAddressKey(topLevel), semanticAddressKey(localOccurrence)]),
     );
     expect(requirements).toHaveLength(2);
     const requirementByOwner = new Map(
@@ -66,21 +66,22 @@ describe('structured workspace test expectations', () => {
     ).toEqual(['encounterPhase']);
     expect(
       requirementByOwner
-        .get(semanticAddressKey(localChild))
+        .get(semanticAddressKey(localOccurrence))
         ?.interactions.map((interaction) => interaction.kind),
     ).toEqual(['encounterPhase']);
   });
 
   it('derives Ephyra detail leaves from authored visit order and side generation', () => {
-    const sideChild = createLocalChildAddress(
+    const localSlot = createLocalVisitSlotAddress(
       nBiome,
       nOccurrenceId('combat10'),
       'sideRooms',
       'sideDoor1',
     );
+    const localOccurrenceId = nLocalOccurrenceId('combat10', 'sideDoor1');
     const project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
-      kind: 'ReplaceSideRoomGeneration',
-      sideRoom: sideChild,
+      kind: 'SetLocalVisitGeneration',
+      slot: localSlot,
       generation: 'generated',
     });
     const plan = project.routes
@@ -90,12 +91,8 @@ describe('structured workspace test expectations', () => {
       throw new Error('complete N topology is missing');
     }
     const incoming = createIncomingRewardAddress(nBiome, nOccurrenceId('combat10'));
-    const sideReward = createLocalRewardAddress(
-      nBiome,
-      nOccurrenceId('combat10'),
-      'sideRooms',
-      'sideDoor1',
-    );
+    const sideReward = createIncomingRewardAddress(nBiome, localOccurrenceId);
+    const visitOrder = createLocalVisitOrderAddress(nBiome, nOccurrenceId('combat10'), 'sideRooms');
     const dormant = expectedWorkspaceLeafRequirements(catalog, nBiome, plan);
     expect(
       dormant.some(
@@ -106,10 +103,10 @@ describe('structured workspace test expectations', () => {
       dormant.some(
         (requirement) => semanticAddressKey(requirement.address) === semanticAddressKey(sideReward),
       ),
-    ).toBe(false);
+    ).toBe(true);
     expect(
       dormant.some(
-        (requirement) => semanticAddressKey(requirement.address) === semanticAddressKey(sideChild),
+        (requirement) => semanticAddressKey(requirement.address) === semanticAddressKey(localSlot),
       ),
     ).toBe(false);
 
@@ -133,17 +130,24 @@ describe('structured workspace test expectations', () => {
     expect(activatedReward?.interactions.map((interaction) => interaction.kind)).toEqual([
       'reward',
     ]);
-    const activatedChild = expectedWorkspaceLeafRequirements(catalog, nBiome, visited).find(
-      (requirement) => semanticAddressKey(requirement.address) === semanticAddressKey(sideChild),
+    const activatedSlot = expectedWorkspaceLeafRequirements(catalog, nBiome, visited).find(
+      (requirement) => semanticAddressKey(requirement.address) === semanticAddressKey(localSlot),
     );
-    expect(activatedChild?.interactions.map((interaction) => interaction.kind)).toEqual([
-      'sideRoomGeneration',
-      'sideRoomEntryOrder',
+    expect(activatedSlot?.interactions.map((interaction) => interaction.kind)).toEqual([
+      'localVisitGeneration',
     ]);
+    expect(
+      expectedWorkspaceLeafRequirements(catalog, nBiome, visited)
+        .find(
+          (requirement) =>
+            semanticAddressKey(requirement.address) === semanticAddressKey(visitOrder),
+        )
+        ?.interactions.map((interaction) => interaction.kind),
+    ).toEqual(['localVisitOrder']);
 
     const inactiveProject = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceSideRoomGeneration',
-      sideRoom: sideChild,
+      kind: 'SetLocalVisitGeneration',
+      slot: localSlot,
       generation: 'notGenerated',
     });
     const inactivePlan = inactiveProject.routes

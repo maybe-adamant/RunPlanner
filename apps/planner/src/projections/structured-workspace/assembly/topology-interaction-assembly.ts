@@ -85,7 +85,7 @@ function topologyRemovalInteractionRequirements(
           owner,
         }),
       );
-    } else {
+    } else if (decision.kind === 'exit') {
       const owner = createExitDecisionAddress(biome, decision.source);
       removals.push(
         Object.freeze({

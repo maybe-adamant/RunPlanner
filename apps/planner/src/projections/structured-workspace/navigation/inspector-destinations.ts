@@ -112,67 +112,6 @@ function roomOwnedFocusKeys(room: WorkspaceRoomSummary): readonly string[] {
     case 'incomingReward':
     case 'fields':
       break;
-    case 'ephyra': {
-      const sideRooms = room.roomLocal.sideRooms;
-      if (sideRooms.kind === 'published') {
-        keys.push(
-          sideRooms.group.marker.focusKey,
-          ...sideRooms.group.slots.flatMap((slot) => [
-            slot.marker.focusKey,
-            ...slot.encounterPhases.flatMap((phase) => [
-              phase.marker.focusKey,
-              ...(phase.traitOffer === undefined
-                ? []
-                : [
-                    phase.traitOffer.marker.focusKey,
-                    ...(phase.traitOffer.traitAcquisitionTarget === undefined
-                      ? []
-                      : [phase.traitOffer.traitAcquisitionTarget.marker.focusKey]),
-                    ...(phase.traitOffer.echoPomTarget === undefined
-                      ? []
-                      : [phase.traitOffer.echoPomTarget.marker.focusKey]),
-                    ...(phase.traitOffer.echoLastRunBoon === undefined
-                      ? []
-                      : [phase.traitOffer.echoLastRunBoon.marker.focusKey]),
-                    ...(phase.traitOffer.echoLastReward === undefined
-                      ? []
-                      : [phase.traitOffer.echoLastReward.marker.focusKey]),
-                    ...(phase.traitOffer.allTogetherSets ?? []).map((set) => set.marker.focusKey),
-                  ]),
-              ...(phase.gorgonAthena === undefined ? [] : [phase.gorgonAthena.marker.focusKey]),
-            ]),
-            ...(slot.generation === 'generated'
-              ? [
-                  slot.rewardControl.marker.focusKey,
-                  ...(slot.rewardControl.traitOffers ?? []).flatMap((trait) => [
-                    trait.marker.focusKey,
-                    ...(trait.traitAcquisitionTarget === undefined
-                      ? []
-                      : [trait.traitAcquisitionTarget.marker.focusKey]),
-                    ...(trait.circeResolution === undefined
-                      ? []
-                      : [trait.circeResolution.marker.focusKey]),
-                    ...(trait.echoPomTarget === undefined
-                      ? []
-                      : [trait.echoPomTarget.marker.focusKey]),
-                    ...(trait.echoLastRunBoon === undefined
-                      ? []
-                      : [trait.echoLastRunBoon.marker.focusKey]),
-                    ...(trait.echoLastReward === undefined
-                      ? []
-                      : [trait.echoLastReward.marker.focusKey]),
-                    ...(trait.allTogetherSets ?? []).map((set) => set.marker.focusKey),
-                  ]),
-                  ...(slot.rewardControl.levelResolutions ?? []).map(
-                    (resolution) => resolution.marker.focusKey,
-                  ),
-                ]
-              : []),
-          ]),
-        );
-      }
-      break;
-    }
     case 'fixed':
       keys.push(room.roomLocal.marker.focusKey);
       break;
@@ -247,17 +186,23 @@ function nodeOwnedFocusKeys(node: WorkspaceNode): readonly string[] {
         node.selection.focusKey,
         ...(node.hubTakeover === undefined ? [] : [node.hubTakeover.marker.focusKey]),
         ...(node.rewardStore === undefined ? [] : [node.rewardStore.focusKey]),
-        ...node.targets.flatMap((target) => [
-          target.marker.focusKey,
-          ...roomOwnedFocusKeys(target.room),
-        ]),
+        ...node.targets.map((target) => target.marker.focusKey),
         ...node.missingTargets.map((target) => target.marker.focusKey),
       ]);
     case 'hubDecision':
       return Object.freeze([
         node.marker.focusKey,
         node.openSet.focusKey,
-        ...node.slots.map((slot) => slot.marker.focusKey),
+        ...node.slots.flatMap((slot) => [
+          slot.marker.focusKey,
+          ...(slot.localVisit === undefined
+            ? []
+            : [
+                slot.localVisit.marker.focusKey,
+                slot.localVisit.orderMarker.focusKey,
+                ...slot.localVisit.slots.map((local) => local.marker.focusKey),
+              ]),
+        ]),
       ]);
     case 'completion':
       return Object.freeze([node.marker.focusKey]);

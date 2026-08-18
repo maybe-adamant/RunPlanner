@@ -306,55 +306,7 @@ describe('persisted authored room-state codec', () => {
     ).toThrow('levelResolutionsByAcquisitionRole: Pom resolutions are not supported');
   });
 
-  it('preserves valid Ephyra side-room ownership and rejects an entered dormant side room', () => {
-    const declaration = room('N_Combat02');
-    const raw = mutable(
-      createDefaultRoomState(catalog, declaration, {
-        role: 'ordinary',
-        entryActive: true,
-      }),
-    );
-    const sideRooms = raw.sideRooms as Record<string, Record<string, unknown>>;
-    sideRooms.sideDoor1!.generation = 'generated';
-    sideRooms.sideDoor1!.enteredOrdinal = 1;
-    expect(
-      decodeRoomState(
-        raw,
-        catalog,
-        declaration,
-        {
-          role: 'ordinary',
-          entryActive: true,
-        },
-        path,
-      ),
-    ).toMatchObject({
-      kind: 'ephyraCombat',
-      sideRooms: { sideDoor1: { generation: 'generated', enteredOrdinal: 1 } },
-    });
-
-    sideRooms.sideDoor1!.generation = 'notGenerated';
-    expect(() =>
-      decodeRoomState(
-        raw,
-        catalog,
-        declaration,
-        {
-          role: 'ordinary',
-          entryActive: true,
-        },
-        path,
-      ),
-    ).toThrow('$.room.state.sideRooms.sideDoor1.enteredOrdinal: requires a generated side room');
-  });
-
   it.each([
-    {
-      label: 'Ephyra side rooms',
-      gameName: 'N_Combat02',
-      field: 'sideRooms',
-      requiredKey: 'sideDoor1',
-    },
     {
       label: 'Fields cages',
       gameName: 'H_Combat02',

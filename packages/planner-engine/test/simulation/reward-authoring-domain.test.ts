@@ -28,6 +28,7 @@ import {
   goldenFBiome,
   goldenFOccurrenceId,
   nBiome,
+  nLocalOccurrenceId,
   nOccurrenceId,
   oBiome,
   oOccurrenceIds,
@@ -393,7 +394,7 @@ describe('counted reward authoring domains', () => {
     const local = countedRewardTypeDomain(
       catalog,
       assembly,
-      createLocalRewardAddress(nBiome, hubOccurrence.occurrenceId, group.key, slot.slotKey),
+      createIncomingRewardAddress(nBiome, nLocalOccurrenceId('combat05', slot.slotKey)),
       sideRoom.incomingReward,
     );
 
@@ -435,7 +436,7 @@ describe('counted reward authoring domains', () => {
     const fallbackLocal = resolveCountedRewardTypeDomain(
       fallbackCatalog,
       project,
-      createLocalRewardAddress(nBiome, hubOccurrence.occurrenceId, group.key, slot.slotKey),
+      createIncomingRewardAddress(nBiome, nLocalOccurrenceId('combat05', slot.slotKey)),
       fallbackBinding,
       undefined,
     );

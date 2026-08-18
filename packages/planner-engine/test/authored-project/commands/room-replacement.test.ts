@@ -25,6 +25,7 @@ import {
   qBiome,
   surfaceProject,
 } from '../support/configured-projects';
+import { nLocalOccurrenceIds } from '../support/n-local-occurrences';
 
 function sourceDecision(project: ReturnType<typeof surfaceProject>, biome = oBiome) {
   const topology = project.routes
@@ -182,22 +183,38 @@ describe('authored-project room replacement commands', () => {
       decision: preHubDecision,
       hub: createHubDecisionAddress(nBiome, 'hub'),
     });
-    const slotId = createOccurrenceId('replacement-n-combat01');
+    const slotId = createOccurrenceId('replacement-n-combat02');
+    const localIds = nLocalOccurrenceIds('combat02', 'replacement');
     project = applyProjectCommand(project, catalog, {
       kind: 'OpenHubSlot',
-      slot: createHubSlotAddress(nBiome, 'hub', 'combat01'),
+      slot: createHubSlotAddress(nBiome, 'hub', 'combat02'),
       occurrenceId: slotId,
+      localOccurrenceIdsBySlot: localIds,
     });
     expect(() =>
       applyProjectCommand(project, catalog, {
         kind: 'ReplaceOccurrenceRoom',
         occurrence: createOccurrenceAddress(nBiome, slotId),
-        gameName: 'N_Combat02',
+        gameName: 'N_Combat01',
       }),
     ).toThrowError(
       expect.objectContaining({
         commandKind: 'ReplaceOccurrenceRoom',
         detail: 'Hub slot identity is declaration-fixed',
+      }),
+    );
+    const localId = localIds.sideDoor1;
+    if (localId === undefined) throw new Error('combat02 local occurrence is missing');
+    expect(() =>
+      applyProjectCommand(project, catalog, {
+        kind: 'ReplaceOccurrenceRoom',
+        occurrence: createOccurrenceAddress(nBiome, localId),
+        gameName: 'N_Sub03',
+      }),
+    ).toThrowError(
+      expect.objectContaining({
+        commandKind: 'ReplaceOccurrenceRoom',
+        detail: 'local visit slot identity is declaration-fixed',
       }),
     );
   });

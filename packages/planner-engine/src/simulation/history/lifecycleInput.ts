@@ -5,11 +5,11 @@ import type {
   CanonicalAuthoredRoom,
   CanonicalCompletionRoom,
   CanonicalHubRoom,
-  CanonicalLocalChildRoom,
+  CanonicalLocalVisitRoom,
 } from '../materialization';
 
 export type CanonicalLifecycleRoom =
-  CanonicalAuthoredRoom | CanonicalCompletionRoom | CanonicalHubRoom | CanonicalLocalChildRoom;
+  CanonicalAuthoredRoom | CanonicalCompletionRoom | CanonicalHubRoom | CanonicalLocalVisitRoom;
 
 export class HistoryLifecycleInputContractError extends Error {
   constructor(detail: string) {

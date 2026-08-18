@@ -85,10 +85,10 @@ export function projectCommandAddress(
       return command.slot;
     case 'ReplaceHubVisitOrder':
       return command.hub;
-    case 'ReplaceSideRoomGeneration':
-      return command.sideRoom;
-    case 'ReplaceSideRoomEntryOrder':
-      return command.group;
+    case 'SetLocalVisitGeneration':
+      return command.slot;
+    case 'ReplaceLocalVisitOrder':
+      return command.order;
     case 'SetExitSelection':
       return command.selection;
     case 'ReplaceBatchRewardStore':

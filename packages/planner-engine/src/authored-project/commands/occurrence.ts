@@ -3,7 +3,6 @@ import type { ProjectDocument } from '../model';
 
 import type { LocatedBiome } from './contract';
 import { applyEncounterOccurrenceCommand } from './occurrence-encounter';
-import { applyEphyraOccurrenceCommand } from './occurrence-ephyra';
 import { applyIncomingRewardCommand } from './occurrence-incoming-reward';
 import { applyLocalRewardCommand } from './occurrence-local-reward';
 import { applyShipOccurrenceCommand } from './occurrence-ship';
@@ -31,9 +30,6 @@ export function applyOccurrenceCommand(
     case 'ReplaceRewardWheelOffer':
     case 'ReplaceRewardWheelPicked':
       return applyShipOccurrenceCommand(document, catalog, located, command);
-    case 'ReplaceSideRoomGeneration':
-    case 'ReplaceSideRoomEntryOrder':
-      return applyEphyraOccurrenceCommand(document, catalog, located, command);
     case 'ReplaceShopOffer':
     case 'ReplaceShopDeathDefianceCondition':
       return applyShopOccurrenceCommand(document, catalog, located, command);

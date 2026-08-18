@@ -57,6 +57,7 @@ import { compareAuthoredTargetsInPhysicalOrder, requiredNormalExitOrdinal } from
 import type { WorkspaceOccurrenceAssembler } from './occurrence-assembly';
 import { workspaceRoomRetainsNormalPeers, workspaceRoomTakesOverNormalDoors } from './room-policy';
 import { workspaceRewardStoreLabel } from './reward-labels';
+import { summarizeRewardOffer } from '@planner/projections/rewardPicker';
 import { presentRunState } from '../presentation/run-state';
 import type { WorkspaceBiomeSource, WorkspaceEvaluatedBatchOverlay } from '../source-index';
 import { workspaceDeclaredPhysicalExits } from './topology-presentation';
@@ -336,6 +337,7 @@ function projectAuthoredTargetWithOverlay(
   physical: readonly DeclaredPhysicalExit[],
   sourceDecisionRemoval: WorkspaceStageDecisionRemoval | undefined,
   evaluatedTarget: CanonicalTarget | undefined,
+  batchKind: 'ordinaryBatch' | 'takeoverBatch' | 'mixedBatch',
 ): {
   readonly node: WorkspaceOccurrenceWorkbenchNode;
   readonly occurrenceInteractionRequirements: readonly WorkspaceOccurrenceInteractionRequirement[];
@@ -386,11 +388,24 @@ function projectAuthoredTargetWithOverlay(
             support.selectedPossible,
         )
       : false;
+  const roomPicker: WorkspaceRoomPickerControl | undefined =
+    batchKind === 'takeoverBatch'
+      ? undefined
+      : Object.freeze({
+          address,
+          kind: 'targetRoomPicker' as const,
+          target: Object.freeze({
+            kind: 'existing' as const,
+            occurrence: createOccurrenceAddress(source.biome, occurrence.occurrenceId),
+            selectedGameName: occurrence.gameName,
+          }),
+        });
   const occurrenceAssembly = input.assembleOccurrence(
     Object.freeze({
       ...(evaluatedTarget === undefined ? {} : { evaluatedRoom: evaluatedTarget.room }),
       ...(fieldsFacts === undefined ? {} : { fieldsBatchFacts: fieldsFacts }),
       occurrence,
+      ...(roomPicker === undefined ? {} : { roomPicker }),
     }),
   );
   const node = Object.freeze({
@@ -398,6 +413,37 @@ function projectAuthoredTargetWithOverlay(
     ...(sourceDecisionRemoval === undefined ? {} : { sourceDecisionRemoval }),
     railMarker: markerForTarget,
   });
+  const doorRewardLabel = (() => {
+    switch (node.room.roomLocal.kind) {
+      case 'fixed':
+        return node.room.roomLocal.offer === null ? undefined : node.room.roomLocal.summary;
+      case 'incomingReward':
+        return node.room.roomLocal.control.offer === null
+          ? undefined
+          : summarizeRewardOffer(input.catalog, node.room.roomLocal.control.offer);
+      case 'none':
+      case 'fields':
+      case 'ship':
+      case 'shop':
+        return undefined;
+    }
+  })();
+  const fieldsCageOffers =
+    node.room.roomLocal.kind === 'fields'
+      ? Object.freeze(
+          node.room.roomLocal.cages.flatMap((cage) =>
+            cage.control.offer === null
+              ? []
+              : [
+                  Object.freeze({
+                    cageKey: cage.key,
+                    cageLabel: cage.label,
+                    rewardLabel: summarizeRewardOffer(input.catalog, cage.control.offer),
+                  }),
+                ],
+          ),
+        )
+      : undefined;
   return Object.freeze({
     node,
     occurrenceInteractionRequirements: occurrenceAssembly.occurrenceInteractionRequirements,
@@ -407,6 +453,8 @@ function projectAuthoredTargetWithOverlay(
       ...(evaluatedTarget?.room.clockworkReward === undefined
         ? {}
         : { clockworkReward: evaluatedTarget.room.clockworkReward }),
+      ...(doorRewardLabel === undefined ? {} : { doorRewardLabel }),
+      ...(fieldsCageOffers === undefined ? {} : { fieldsCageOffers }),
       exitKey: target.exitKey,
       index:
         evaluatedTarget?.exit.index ??
@@ -468,20 +516,7 @@ function roomControlsForBatch(
   const firstPhysicalExitKey = orderedPhysical[0]?.exitKey;
   for (const exit of orderedPhysical) {
     const target = targetsByExit.get(exit.exitKey);
-    if (target !== undefined) {
-      controls.push(
-        Object.freeze({
-          address: createTargetAddress(input.source.biome, decision.source, target.exitKey),
-          kind: 'targetRoomPicker' as const,
-          target: Object.freeze({
-            kind: 'existing' as const,
-            occurrence: target.room.address,
-            selectedGameName: target.room.gameName,
-          }),
-        }),
-      );
-      continue;
-    }
+    if (target !== undefined) continue;
     const missing = missingByExit.get(exit.exitKey);
     if (emptyNormalDecision && exit.exitKey === firstPhysicalExitKey && missing !== undefined) {
       const address = createTargetAddress(input.source.biome, decision.source, missing.exitKey);
@@ -713,6 +748,7 @@ function assembleBatchDecision(
         physical,
         sourceDecisionRemoval,
         overlay,
+        kind,
       );
     });
   if (evaluatedTargets.size > 0) {
@@ -978,7 +1014,24 @@ function assembleBatchDecision(
       ...(zagreusContract === undefined ? [] : zagreusContract.assembly.rewardControls),
       ...(naturalChaos === undefined ? [] : naturalChaos.assembly.rewardControls),
     ]),
-    workbenches: Object.freeze(projectedTargets.map((target) => target.node)),
+    workbenches: Object.freeze([
+      ...projectedTargets.map((target) => target.node),
+      ...(zagreusContract === undefined ? [] : [zagreusContract.assembly.node]),
+      ...(naturalChaos === undefined
+        ? []
+        : [
+            Object.freeze({
+              ...naturalChaos.assembly.node,
+              naturalChaosExit: Object.freeze({
+                chaosRoom: naturalChaos.chaosRoom,
+                mapChoices: naturalChaos.mapChoices,
+                marker: naturalChaos.marker,
+                owner: naturalChaos.owner,
+                selected: naturalChaos.selected,
+              }),
+            }),
+          ]),
+    ]),
   });
 }
 

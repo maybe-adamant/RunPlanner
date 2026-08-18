@@ -1,4 +1,8 @@
-import type { SemanticAddress } from '@run-planner/engine/authored-project';
+import {
+  createBiomeAddress,
+  createOccurrenceAddress,
+  type SemanticAddress,
+} from '@run-planner/engine/authored-project';
 
 import type {
   WorkspaceHubDecisionNode,
@@ -135,14 +139,20 @@ export function assertExpectedWorkspaceTopologyClosure(input: {
       );
     }
     const packages = input.observed.roomPackagesByOccurrence.get(additional.occurrenceId);
+    const occurrenceKey = `occurrence:${workspaceTestOwnerKey(
+      createOccurrenceAddress(
+        createBiomeAddress(additional.address.routeKey, additional.address.biomeKey),
+        additional.occurrenceId,
+      ),
+    )}`;
     if (
       packages === undefined ||
       packages.length !== 1 ||
-      packages[0]?.nodeKey !== decision.key ||
+      packages[0]?.nodeKey !== occurrenceKey ||
       packages[0]?.room !== additionalExit.room
     ) {
       throw new Error(
-        `${workspaceTestOwnerKey(additional.address)} occurrence must have one canonical package in its containing decision`,
+        `${workspaceTestOwnerKey(additional.address)} occurrence must have one canonical occurrence-workbench package`,
       );
     }
     assertObservedOwner(

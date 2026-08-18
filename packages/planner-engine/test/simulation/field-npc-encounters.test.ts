@@ -6,9 +6,8 @@ import {
   createExitSelectionAddress,
   createHubDecisionAddress,
   createIncomingRewardAddress,
-  createLocalChildAddress,
-  createLocalChildGroupAddress,
-  createLocalRewardAddress,
+  createLocalVisitOrderAddress,
+  createLocalVisitSlotAddress,
   createTraitOfferAddress,
   createOccurrenceId,
   createOccurrenceAddress,
@@ -69,7 +68,10 @@ import {
   oBiome,
 } from '@run-planner/test-fixtures';
 import { prepareRoomEncounterPhases } from '../../src/simulation/encounters/preparation';
-import { createCompleteNProject } from '../authored-project/support/complete-n-project';
+import {
+  createCompleteNProject,
+  nLocalOccurrenceId as nRoundTripLocalOccurrenceId,
+} from '../authored-project/support/complete-n-project';
 
 function phase(biome: BiomeAddress, occurrenceId: OccurrenceId, phaseKey = 'Encounter') {
   return createEncounterPhaseAddress(biome, { kind: 'occurrence', occurrenceId }, phaseKey);
@@ -78,12 +80,12 @@ function phase(biome: BiomeAddress, occurrenceId: OccurrenceId, phaseKey = 'Enco
 const nCombatId = createOccurrenceId('round-trip-n-combat02');
 const nLocalPhase = createEncounterPhaseAddress(
   nBiome,
-  { kind: 'localChild', occurrenceId: nCombatId, groupKey: 'sideRooms', slotKey: 'sideDoor1' },
+  { kind: 'occurrence', occurrenceId: nRoundTripLocalOccurrenceId('combat02', 'sideDoor1') },
   'Encounter',
 );
 const nDormantLocalPhase = createEncounterPhaseAddress(
   nBiome,
-  { kind: 'localChild', occurrenceId: nCombatId, groupKey: 'sideRooms', slotKey: 'sideDoor2' },
+  { kind: 'occurrence', occurrenceId: nRoundTripLocalOccurrenceId('combat02', 'sideDoor2') },
   'Encounter',
 );
 
@@ -452,30 +454,36 @@ function enteredNLocalProjectForArtemis(): ProjectDocument {
     value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'AphroditeUpgrade' } },
   });
   project = applyProjectCommand(project, catalog, {
-    kind: 'ReplaceSideRoomGeneration',
-    sideRoom: createLocalChildAddress(nBiome, nCombatId, 'sideRooms', 'sideDoor2'),
+    kind: 'SetLocalVisitGeneration',
+    slot: createLocalVisitSlotAddress(nBiome, nCombatId, 'sideRooms', 'sideDoor2'),
     generation: 'generated',
   });
   project = applyProjectCommand(project, catalog, {
-    kind: 'ReplaceSideRoomGeneration',
-    sideRoom: createLocalChildAddress(nBiome, nCombatId, 'sideRooms', 'sideDoor1'),
+    kind: 'SetLocalVisitGeneration',
+    slot: createLocalVisitSlotAddress(nBiome, nCombatId, 'sideRooms', 'sideDoor1'),
     generation: 'generated',
   });
   project = applyProjectCommand(project, catalog, {
-    kind: 'ReplaceLocalReward',
-    reward: createLocalRewardAddress(nBiome, nCombatId, 'sideRooms', 'sideDoor1'),
+    kind: 'ReplaceIncomingReward',
+    reward: createIncomingRewardAddress(
+      nBiome,
+      nRoundTripLocalOccurrenceId('combat02', 'sideDoor1'),
+    ),
     value: { rewardType: 'MaxHealthDropSmall' },
   });
   project = applyProjectCommand(project, catalog, {
-    kind: 'ReplaceLocalReward',
-    reward: createLocalRewardAddress(nBiome, nCombatId, 'sideRooms', 'sideDoor2'),
+    kind: 'ReplaceIncomingReward',
+    reward: createIncomingRewardAddress(
+      nBiome,
+      nRoundTripLocalOccurrenceId('combat02', 'sideDoor2'),
+    ),
     value: { rewardType: 'MaxManaDropSmall' },
   });
   return authorLegalTraitOffers(
     applyProjectCommand(project, catalog, {
-      kind: 'ReplaceSideRoomEntryOrder',
-      group: createLocalChildGroupAddress(nBiome, nCombatId, 'sideRooms'),
-      enteredSlotKeys: ['sideDoor1'],
+      kind: 'ReplaceLocalVisitOrder',
+      order: createLocalVisitOrderAddress(nBiome, nCombatId, 'sideRooms'),
+      occurrenceIds: [nRoundTripLocalOccurrenceId('combat02', 'sideDoor1')],
     }),
   );
 }
@@ -932,13 +940,18 @@ describe('field NPC encounter requirements', () => {
       phase: nDormantLocalPhase,
       encounterKey: 'ArtemisCombatN',
     });
-    const selected = authoredOccurrence(project, 'N', nCombatId);
-    if (selected.state.kind !== 'ephyraCombat') throw new Error('N side-room state is missing');
-    const sideOffer =
-      selected.state.sideRooms.sideDoor1?.encounters.traitOffersByPhase?.Encounter?.ArtemisCombatN;
+    const selected = authoredOccurrence(
+      project,
+      'N',
+      nRoundTripLocalOccurrenceId('combat02', 'sideDoor1'),
+    );
+    const sideOffer = selected.encounters.traitOffersByPhase?.Encounter?.ArtemisCombatN;
     expect(sideOffer).toBeNull();
-    const dormantOffer =
-      selected.state.sideRooms.sideDoor2?.encounters.traitOffersByPhase?.Encounter?.ArtemisCombatN;
+    const dormantOffer = authoredOccurrence(
+      project,
+      'N',
+      nRoundTripLocalOccurrenceId('combat02', 'sideDoor2'),
+    ).encounters.traitOffersByPhase?.Encounter?.ArtemisCombatN;
     expect(dormantOffer).toBeNull();
     project = applyProjectCommand(project, sideCatalog, {
       kind: 'ReplaceTraitOffer',
@@ -959,10 +972,12 @@ describe('field NPC encounter requirements', () => {
       trait: createTraitOfferAddress(nLocalPhase, 'selection'),
       selectedOptionKey: 'option2',
     });
-    const edited = authoredOccurrence(project, 'N', nCombatId);
-    if (edited.state.kind !== 'ephyraCombat') throw new Error('N side-room edit lost its state');
-    const editedOffer =
-      edited.state.sideRooms.sideDoor1?.encounters.traitOffersByPhase?.Encounter?.ArtemisCombatN;
+    const edited = authoredOccurrence(
+      project,
+      'N',
+      nRoundTripLocalOccurrenceId('combat02', 'sideDoor1'),
+    );
+    const editedOffer = edited.encounters.traitOffersByPhase?.Encounter?.ArtemisCombatN;
     if (editedOffer?.kind !== 'traits') throw new Error('Artemis side-room must offer traits');
     expect(editedOffer.selectedOptionKey).toBe('option2');
 
@@ -983,8 +998,9 @@ describe('field NPC encounter requirements', () => {
       biome.rewards.selectedTraitOffers.some(
         (candidate) =>
           candidate.address.owner.kind === 'encounterPhase' &&
-          candidate.address.owner.owner.kind === 'localChild' &&
-          candidate.address.owner.owner.slotKey === 'sideDoor2',
+          candidate.address.owner.owner.kind === 'occurrence' &&
+          candidate.address.owner.owner.occurrenceId ===
+            nRoundTripLocalOccurrenceId('combat02', 'sideDoor2'),
       ),
     ).toBe(false);
   });

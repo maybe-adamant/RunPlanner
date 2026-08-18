@@ -294,14 +294,16 @@ describe('canonical N Hub materialization', () => {
     const combat05 = hub.visits[0];
     if (combat05 === undefined) throw new Error('fixture lost first Hub visit');
 
-    expect(combat05.localSlots.map((slot) => slot.slotKey)).toEqual([
+    expect(combat05.localSlots.map((slot) => slot.localVisit.slotKey)).toEqual([
       'sideDoor1',
       'sideDoor2',
       'sideDoor3',
     ]);
-    expect(combat05.localSlots.map((slot) => slot.availabilityRank)).toEqual([1, 2, 3]);
-    expect(combat05.localSlots.every((slot) => slot.generation === 'generated')).toBe(true);
-    expect(combat05.enteredLocalRooms.map((room) => room.slotKey)).toEqual([
+    expect(combat05.localSlots.map((slot) => slot.localVisit.availabilityRank)).toEqual([1, 2, 3]);
+    expect(combat05.localSlots.every((slot) => slot.localVisit.generation === 'generated')).toBe(
+      true,
+    );
+    expect(combat05.enteredLocalRooms.map((room) => room.localVisit.slotKey)).toEqual([
       'sideDoor2',
       'sideDoor1',
     ]);

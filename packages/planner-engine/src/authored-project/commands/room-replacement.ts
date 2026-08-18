@@ -119,6 +119,17 @@ function occurrenceContext(
       }
       continue;
     }
+    if (decision.kind === 'localVisit') {
+      if (
+        Object.values(decision.targetsBySlot).some((target) => target.occurrenceId === occurrenceId)
+      ) {
+        return Object.freeze({
+          role: 'ordinary',
+          entryActive: decision.visitOrder.includes(occurrenceId),
+        });
+      }
+      continue;
+    }
     const targetIndex = decision.normal.targets.findIndex(
       (target) => target.occurrenceId === occurrenceId,
     );
@@ -291,6 +302,16 @@ export function applyRoomReplacementCommand(
       decision.openTargets.some((target) => target.occurrenceId === occurrence.occurrenceId),
   );
   if (hubTarget !== undefined) failCommand(command, 'Hub slot identity is declaration-fixed');
+  const localVisitTarget = current.decisions.find(
+    (decision) =>
+      decision.kind === 'localVisit' &&
+      Object.values(decision.targetsBySlot).some(
+        (target) => target.occurrenceId === occurrence.occurrenceId,
+      ),
+  );
+  if (localVisitTarget !== undefined) {
+    failCommand(command, 'local visit slot identity is declaration-fixed');
+  }
   requireOrdinaryBatchTarget(
     current,
     catalog,

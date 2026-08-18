@@ -44,6 +44,7 @@ type AuthoredTemplateKey =
   | 'ContractBoss'
   | 'Devotion'
   | 'EphyraCombat'
+  | 'EphyraSideRoom'
   | 'FixedIntro'
   | 'FixedOpening'
   | 'FixedPreHub'
@@ -693,6 +694,7 @@ const authoredTemplateMaterializers = Object.freeze({
   ContractBoss: materializeFixedRoom,
   Devotion: materializeDevotion,
   EphyraCombat: materializeEphyraCombat,
+  EphyraSideRoom: materializeCountedRoom,
   FixedIntro: materializeRewardlessRoom,
   FixedOpening: materializeCountedRoom,
   FixedPreHub: materializeCountedRoom,

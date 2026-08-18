@@ -74,17 +74,6 @@ function phaseForEncounterRecord(
         { kind: 'occurrence', occurrenceId: origin.occurrenceId },
         slotKey,
       );
-    case 'localChild':
-      return createEncounterPhaseAddress(
-        biome,
-        {
-          kind: 'localChild',
-          occurrenceId: origin.occurrenceId,
-          groupKey: origin.groupKey,
-          slotKey: origin.slotKey,
-        },
-        slotKey,
-      );
     case 'completionRoom':
     case 'hubRoom':
       throw new RouteNpcIndexProjectionContractError(

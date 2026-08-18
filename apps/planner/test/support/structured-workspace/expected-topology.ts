@@ -159,6 +159,16 @@ export function expectedWorkspaceTopologyManifest(
       }
       continue;
     }
+    if (decision.kind === 'localVisit') {
+      for (const [slotKey, target] of Object.entries(decision.targetsBySlot)) {
+        if (target.generation !== 'generated') continue;
+        ownOccurrence(
+          target.occurrenceId,
+          `${plan.biomeKey} local visit ${decision.groupKey} slot ${slotKey}`,
+        );
+      }
+      continue;
+    }
 
     const decisionAddress = createExitDecisionAddress(biome, decision.source);
     exitDecisions.push(Object.freeze({ address: decisionAddress, decision }));

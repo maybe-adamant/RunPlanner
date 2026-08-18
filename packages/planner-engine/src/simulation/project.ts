@@ -469,7 +469,7 @@ function structurallyEligibleRunStateOwners(
   prefix: MaterializedBiomePrefix,
 ): readonly DecisionRunStateOwner[] {
   // Canonical decisions are the outer biome chronology. A Hub remains one
-  // decision regardless of how many visits and local children it contains.
+  // decision regardless of how many visits and local rooms it contains.
   const owners: DecisionRunStateOwner[] = prefix.decisions.map((decision) => decision.origin);
   if (prefix.frontier?.kind === 'hubBoard' || prefix.frontier?.kind === 'exitDecision') {
     owners.push(prefix.frontier.origin);

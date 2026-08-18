@@ -12,7 +12,7 @@ import type {
   HubSlotAddress,
   HubVisitAddress,
   IncomingRewardAddress,
-  LocalChildAddress,
+  LocalVisitSlotAddress,
   LocalRewardAddress,
   OccurrenceAddress,
   RewardWheelAddress,
@@ -212,33 +212,17 @@ export interface CanonicalHubRoom {
   readonly entered: true;
 }
 
-export interface CanonicalLocalChildRoom {
-  readonly kind: 'localChild';
-  readonly origin: LocalChildAddress;
-  readonly groupKey: string;
-  readonly slotKey: string;
-  readonly gameName: string;
-  readonly physicalDoorId: number;
-  readonly availabilityRank: number;
-  readonly generation: 'generated' | 'notGenerated';
-  readonly enteredOrdinal: number | null;
-  readonly encounters: RoomEncounterState;
-  readonly encounterEnvelopeKey: string;
-  readonly encounterPhases: readonly ResolvedEncounterPhase[];
-  readonly lifecycleProfileKey: string;
-  readonly counterEffects: RoomCounterEffects;
-  readonly entered: boolean;
-  readonly requiredObjects?: readonly RequiredRoomObjectDescriptor[];
-  readonly incomingReward?: CanonicalResolvedIncomingReward;
-  readonly unresolvedIncomingReward?: Omit<
-    CanonicalResolvedIncomingReward,
-    | 'kind'
-    | 'offer'
-    | 'traitOffersByAcquisitionRole'
-    | 'levelResolutionsByAcquisitionRole'
-    | 'dispositionByAcquisitionRole'
-    | 'traitContext'
-  >;
+/** An ordinary authored occurrence reached through parent-local topology. */
+export interface CanonicalLocalVisitRoom extends CanonicalAuthoredRoom {
+  readonly localVisit: {
+    readonly origin: LocalVisitSlotAddress;
+    readonly groupKey: string;
+    readonly slotKey: string;
+    readonly physicalDoorId: number;
+    readonly availabilityRank: number;
+    readonly generation: 'generated' | 'notGenerated';
+    readonly enteredOrdinal: number | null;
+  };
 }
 
 export type CanonicalRoom = CanonicalAuthoredRoom | CanonicalCompletionRoom;
@@ -353,7 +337,7 @@ export interface CanonicalHubBoard {
 
 export interface CanonicalRoomRestore {
   readonly kind: 'restore';
-  readonly after: HubVisitAddress | LocalChildAddress;
+  readonly after: HubVisitAddress | LocalVisitSlotAddress;
   readonly room: CanonicalHubRoomReference | CanonicalRoomReference;
 }
 
@@ -361,8 +345,8 @@ export interface CanonicalHubVisit {
   readonly origin: HubVisitAddress;
   readonly visitIndex: number;
   readonly target: CanonicalHubTarget;
-  readonly localSlots: readonly CanonicalLocalChildRoom[];
-  readonly enteredLocalRooms: readonly CanonicalLocalChildRoom[];
+  readonly localSlots: readonly CanonicalLocalVisitRoom[];
+  readonly enteredLocalRooms: readonly CanonicalLocalVisitRoom[];
   readonly parentRestores: readonly CanonicalRoomRestore[];
   readonly hubRestore: CanonicalRoomRestore;
 }
@@ -447,8 +431,8 @@ export interface MaterializedHubVisitFrontier {
   readonly origin: HubVisitAddress;
   readonly phase: 'targetLifecycle' | 'sideGeneration' | 'localRoomLifecycle';
   readonly target: CanonicalHubTarget;
-  readonly localSlots: readonly CanonicalLocalChildRoom[];
-  readonly enteredLocalRooms: readonly CanonicalLocalChildRoom[];
+  readonly localSlots: readonly CanonicalLocalVisitRoom[];
+  readonly enteredLocalRooms: readonly CanonicalLocalVisitRoom[];
   readonly parentRestores: readonly CanonicalRoomRestore[];
 }
 

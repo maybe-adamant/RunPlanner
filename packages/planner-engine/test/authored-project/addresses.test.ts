@@ -15,8 +15,9 @@ import {
   createHubSlotAddress,
   createHubVisitAddress,
   createIncomingRewardAddress,
-  createLocalChildAddress,
-  createLocalChildGroupAddress,
+  createLocalVisitDecisionAddress,
+  createLocalVisitOrderAddress,
+  createLocalVisitSlotAddress,
   createLocalRewardAddress,
   createOccurrenceAddress,
   createOccurrenceId,
@@ -69,10 +70,17 @@ const addressCases: readonly { readonly name: string; readonly address: Semantic
     name: 'local reward',
     address: createLocalRewardAddress(nBiome, nOccurrenceId, 'side', 'slot1'),
   },
-  { name: 'local child', address: createLocalChildAddress(nBiome, nOccurrenceId, 'side', 'slot1') },
   {
-    name: 'local child group',
-    address: createLocalChildGroupAddress(nBiome, nOccurrenceId, 'side'),
+    name: 'local visit decision',
+    address: createLocalVisitDecisionAddress(nBiome, nOccurrenceId, 'side'),
+  },
+  {
+    name: 'local visit slot',
+    address: createLocalVisitSlotAddress(nBiome, nOccurrenceId, 'side', 'slot1'),
+  },
+  {
+    name: 'local visit order',
+    address: createLocalVisitOrderAddress(nBiome, nOccurrenceId, 'side'),
   },
   { name: 'reward wheel', address: createRewardWheelAddress(fBiome, fOccurrenceId, 'wheel1') },
   {

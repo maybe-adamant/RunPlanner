@@ -12,9 +12,8 @@ import {
   createHubSlotAddress,
   createIncomingRewardAddress,
   createOccurrenceAddress,
-  createLocalChildAddress,
-  createLocalChildGroupAddress,
-  createLocalRewardAddress,
+  createLocalVisitSlotAddress,
+  createLocalVisitOrderAddress,
   createOccurrenceId,
   createTraitOfferAddress,
   createProjectHistory,
@@ -47,14 +46,11 @@ import { createCompleteNProject } from '../support/complete-n-project';
 import { nBiome } from '../support/configured-projects';
 
 const nCombatId = createOccurrenceId('round-trip-n-combat02');
+const nLocalId = createOccurrenceId('round-trip-n-combat02-sideDoor1');
+const nLocalId2 = createOccurrenceId('round-trip-n-combat02-sideDoor2');
 const nLocalPhase = createEncounterPhaseAddress(
   nBiome,
-  {
-    kind: 'localChild',
-    occurrenceId: nCombatId,
-    groupKey: 'sideRooms',
-    slotKey: 'sideDoor1',
-  },
+  { kind: 'occurrence', occurrenceId: nLocalId },
   'Encounter',
 );
 const pCombatId = pOccurrenceId('P_Combat03', 1, 1);
@@ -83,11 +79,7 @@ function occurrence(project: ProjectDocument, biomeKey: string, occurrenceId: st
 }
 
 function localSideRoom(project: ProjectDocument) {
-  const state = occurrence(project, 'N', nCombatId).state;
-  if (state.kind !== 'ephyraCombat') throw new Error('expected Ephyra combat state');
-  const sideRoom = state.sideRooms.sideDoor1;
-  if (sideRoom === undefined) throw new Error('missing sideDoor1');
-  return sideRoom;
+  return occurrence(project, 'N', nLocalId);
 }
 
 function enteredNLocalProject(): ProjectDocument {
@@ -118,30 +110,30 @@ function enteredNLocalProject(): ProjectDocument {
     },
   });
   project = applyProjectCommand(project, catalog, {
-    kind: 'ReplaceSideRoomGeneration',
-    sideRoom: createLocalChildAddress(nBiome, nCombatId, 'sideRooms', 'sideDoor2'),
+    kind: 'SetLocalVisitGeneration',
+    slot: createLocalVisitSlotAddress(nBiome, nCombatId, 'sideRooms', 'sideDoor2'),
     generation: 'generated',
   });
   project = applyProjectCommand(project, catalog, {
-    kind: 'ReplaceSideRoomGeneration',
-    sideRoom: createLocalChildAddress(nBiome, nCombatId, 'sideRooms', 'sideDoor1'),
+    kind: 'SetLocalVisitGeneration',
+    slot: createLocalVisitSlotAddress(nBiome, nCombatId, 'sideRooms', 'sideDoor1'),
     generation: 'generated',
   });
   project = applyProjectCommand(project, catalog, {
-    kind: 'ReplaceLocalReward',
-    reward: createLocalRewardAddress(nBiome, nCombatId, 'sideRooms', 'sideDoor1'),
+    kind: 'ReplaceIncomingReward',
+    reward: createIncomingRewardAddress(nBiome, nLocalId),
     value: { rewardType: 'MaxHealthDropSmall' },
   });
   project = applyProjectCommand(project, catalog, {
-    kind: 'ReplaceLocalReward',
-    reward: createLocalRewardAddress(nBiome, nCombatId, 'sideRooms', 'sideDoor2'),
+    kind: 'ReplaceIncomingReward',
+    reward: createIncomingRewardAddress(nBiome, nLocalId2),
     value: { rewardType: 'MaxManaDropSmall' },
   });
   return authorLegalTraitOffers(
     applyProjectCommand(project, catalog, {
-      kind: 'ReplaceSideRoomEntryOrder',
-      group: createLocalChildGroupAddress(nBiome, nCombatId, 'sideRooms'),
-      enteredSlotKeys: ['sideDoor1'],
+      kind: 'ReplaceLocalVisitOrder',
+      order: createLocalVisitOrderAddress(nBiome, nCombatId, 'sideRooms'),
+      occurrenceIds: [nLocalId],
     }),
   );
 }
@@ -373,7 +365,7 @@ describe('authored encounter occurrence commands', () => {
     });
   });
 
-  it('edits a selected, entered N local child and retains its selection across removal and re-entry', () => {
+  it('edits a selected, entered N local room and retains its selection across removal and re-entry', () => {
     const entered = enteredNLocalProject();
     const assembly = withAssembly(entered);
     const support = encounterPhaseCandidateSupportForProjectEvaluationAssembly(
@@ -398,13 +390,13 @@ describe('authored encounter occurrence commands', () => {
     });
 
     const unentered = applyProjectCommand(selected, catalog, {
-      kind: 'ReplaceSideRoomEntryOrder',
-      group: createLocalChildGroupAddress(nBiome, nCombatId, 'sideRooms'),
-      enteredSlotKeys: [],
+      kind: 'ReplaceLocalVisitOrder',
+      order: createLocalVisitOrderAddress(nBiome, nCombatId, 'sideRooms'),
+      occurrenceIds: [],
     });
     const removed = applyProjectCommand(unentered, catalog, {
-      kind: 'ReplaceSideRoomGeneration',
-      sideRoom: createLocalChildAddress(nBiome, nCombatId, 'sideRooms', 'sideDoor1'),
+      kind: 'SetLocalVisitGeneration',
+      slot: createLocalVisitSlotAddress(nBiome, nCombatId, 'sideRooms', 'sideDoor1'),
       generation: 'notGenerated',
     });
     expect(localSideRoom(removed).encounters.encounterKeyByPhase).toEqual({
@@ -412,14 +404,14 @@ describe('authored encounter occurrence commands', () => {
     });
 
     const regenerated = applyProjectCommand(removed, catalog, {
-      kind: 'ReplaceSideRoomGeneration',
-      sideRoom: createLocalChildAddress(nBiome, nCombatId, 'sideRooms', 'sideDoor1'),
+      kind: 'SetLocalVisitGeneration',
+      slot: createLocalVisitSlotAddress(nBiome, nCombatId, 'sideRooms', 'sideDoor1'),
       generation: 'generated',
     });
     const reentered = applyProjectCommand(regenerated, catalog, {
-      kind: 'ReplaceSideRoomEntryOrder',
-      group: createLocalChildGroupAddress(nBiome, nCombatId, 'sideRooms'),
-      enteredSlotKeys: ['sideDoor1'],
+      kind: 'ReplaceLocalVisitOrder',
+      order: createLocalVisitOrderAddress(nBiome, nCombatId, 'sideRooms'),
+      occurrenceIds: [nLocalId],
     });
     expect(localSideRoom(reentered).encounters.encounterKeyByPhase).toEqual({
       Encounter: 'GeneratedNSubRoom_Bigger',

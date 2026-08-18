@@ -21,7 +21,6 @@ import { selectedEncounterDefinitionKey } from '../room-state/encounters';
 import { requireShipCombatWheels } from '../room-state/declaration';
 import { incomingLevelEffectSource } from '../room-state/level-effects';
 import { failCommand, requireOccurrence, requireTopology, type LocatedBiome } from './contract';
-import { requireEphyraSideGroup } from './occurrence-ephyra';
 import { sameOccurrenceValue } from './occurrence-leaf-value';
 import { replaceOccurrence, updateOccurrenceTopology } from './occurrence-mutation';
 import type { TraitOfferCommand } from './types';
@@ -463,37 +462,6 @@ export function locateTraitReward(
           } as const,
         });
       }
-      if (state.kind === 'ephyraCombat') {
-        const { state: ephyraState, group } = requireEphyraSideGroup(
-          occurrence,
-          catalog,
-          located,
-          owner.groupKey,
-          command,
-        );
-        if (!group.slots.some((slot) => slot.slotKey === owner.slotKey)) {
-          failCommand(command, `unknown side-room slot ${owner.slotKey}`);
-        }
-        const sideRoom = ephyraState.sideRooms[owner.slotKey];
-        if (sideRoom === undefined) failCommand(command, `missing side-room ${owner.slotKey}`);
-        const slot = group.slots.find((candidate) => candidate.slotKey === owner.slotKey);
-        const sideDeclaration =
-          slot === undefined ? undefined : catalog.rooms.byKey[slot.roomGameName];
-        const binding = sideDeclaration?.incomingReward;
-        if (binding === undefined || binding.kind === 'none')
-          failCommand(command, `side room has no incoming reward binding`);
-        return Object.freeze({
-          reward: requireAuthoredReward(
-            sideRoom.reward,
-            command,
-            'cannot edit trait offer before reward authorship',
-          ),
-          levelEffectSource: {
-            kind: 'producerLifecycle',
-            key: binding.producerLifecycleKey,
-          } as const,
-        });
-      }
       return failCommand(
         command,
         `${occurrence.gameName} has no local reward ${owner.groupKey}/${owner.slotKey}`,
@@ -647,38 +615,6 @@ export function updateTraitRewardState(
               }),
         });
       }
-      if (state.kind === 'ephyraCombat') {
-        const { state: ephyraState, group } = requireEphyraSideGroup(
-          occurrence,
-          catalog,
-          located,
-          owner.groupKey,
-          command,
-        );
-        if (!group.slots.some((slot) => slot.slotKey === owner.slotKey)) {
-          failCommand(command, `unknown side-room slot ${owner.slotKey}`);
-        }
-        const sideRoom = ephyraState.sideRooms[owner.slotKey];
-        if (sideRoom === undefined) failCommand(command, `missing side-room ${owner.slotKey}`);
-        return Object.freeze({
-          ...state,
-          sideRooms: Object.freeze({
-            ...state.sideRooms,
-            [owner.slotKey]: Object.freeze({
-              ...sideRoom,
-              reward: update(
-                requireAuthoredReward(
-                  sideRoom.reward,
-                  command,
-                  'cannot edit trait offer before reward authorship',
-                ),
-                trait.acquisitionRole,
-                value,
-              ),
-            }),
-          }),
-        });
-      }
       return failCommand(
         command,
         `${occurrence.gameName} has no local reward ${owner.groupKey}/${owner.slotKey}`,
@@ -773,29 +709,10 @@ export function applyTraitOfferCommand(
   if (owner.routeKey !== trait.routeKey || owner.biomeKey !== trait.biomeKey)
     failCommand(command, 'trait owner is outside its addressed biome');
   if (owner.kind === 'encounterPhase' || owner.kind === 'gorgonPhase') {
-    const encounterOwner = owner.kind === 'gorgonPhase' ? owner.encounter.owner : owner.owner;
     const phaseKey = owner.kind === 'gorgonPhase' ? owner.encounter.phaseKey : owner.phaseKey;
     const isGorgon = owner.kind === 'gorgonPhase';
-    let currentEncounters = occurrence.encounters;
-    let encounterRoom = catalog.rooms.byKey[occurrence.gameName];
-    let localSide:
-      | Extract<RoomOccurrence['state'], { readonly kind: 'ephyraCombat' }>['sideRooms'][string]
-      | undefined;
-    if (encounterOwner.kind === 'localChild') {
-      if (occurrence.state.kind !== 'ephyraCombat')
-        failCommand(command, `${occurrence.gameName} has no parent-local encounter children`);
-      const parent = catalog.rooms.byKey[occurrence.gameName];
-      const group = parent?.localChildren.find((child) => child.key === encounterOwner.groupKey);
-      if (group?.kind !== 'fixedRoomSlots')
-        failCommand(command, `unknown side-room group ${encounterOwner.groupKey}`);
-      localSide = occurrence.state.sideRooms[encounterOwner.slotKey];
-      if (localSide === undefined)
-        failCommand(command, `missing side-room ${encounterOwner.slotKey}`);
-      currentEncounters = localSide.encounters;
-      const sideRoom = group.slots.find((slot) => slot.slotKey === encounterOwner.slotKey);
-      encounterRoom =
-        sideRoom === undefined ? undefined : catalog.rooms.byKey[sideRoom.roomGameName];
-    }
+    const currentEncounters = occurrence.encounters;
+    const encounterRoom = catalog.rooms.byKey[occurrence.gameName];
     if (encounterRoom === undefined) failCommand(command, `unknown encounter room for ${phaseKey}`);
     const phaseGorgon = isGorgon ? currentEncounters.gorgonResultByPhase?.[phaseKey] : undefined;
     const phaseOffersValue = currentEncounters.traitOffersByPhase?.[phaseKey];
@@ -872,35 +789,11 @@ export function applyTraitOfferCommand(
         }),
       });
     }
-    if (encounterOwner.kind === 'occurrence') {
-      const reconciled = reconcileSelectedPickupEntries(
-        catalog,
-        Object.freeze({ ...occurrence, encounters: nextEncounters }),
-      );
-      return updateOccurrenceTopology(document, located, replaceOccurrence(topology, reconciled));
-    }
-    if (encounterOwner.kind !== 'localChild' || localSide === undefined)
-      failCommand(command, 'encounter owner must be a local child');
-    if (occurrence.state.kind !== 'ephyraCombat')
-      failCommand(command, `${occurrence.gameName} has no parent-local encounter children`);
-    const ephyraState = occurrence.state;
-    return updateOccurrenceTopology(
-      document,
-      located,
-      replaceOccurrence(
-        topology,
-        Object.freeze({
-          ...occurrence,
-          state: Object.freeze({
-            ...occurrence.state,
-            sideRooms: Object.freeze({
-              ...ephyraState.sideRooms,
-              [encounterOwner.slotKey]: Object.freeze({ ...localSide, encounters: nextEncounters }),
-            }),
-          }),
-        }),
-      ),
+    const reconciled = reconcileSelectedPickupEntries(
+      catalog,
+      Object.freeze({ ...occurrence, encounters: nextEncounters }),
     );
+    return updateOccurrenceTopology(document, located, replaceOccurrence(topology, reconciled));
   }
   const reward = locateTraitReward(catalog, located, occurrence, occurrence.state, command);
   if (command.kind === 'ResetEncounterTraitOffer')

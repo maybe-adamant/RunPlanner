@@ -12,7 +12,7 @@ import {
   createHubSlotAddress,
   createHubVisitAddress,
   createIncomingRewardAddress,
-  createLocalChildAddress,
+  createLocalVisitSlotAddress,
   createOccurrenceId,
   createOccurrenceAddress,
   createProjectDocument,
@@ -89,6 +89,20 @@ function railKeyForNode(biome: WorkspaceBiome, nodeKey: string): string {
   );
   if (entry === undefined) throw new Error(`${nodeKey} has no rendered rail stop`);
   return entry.marker.focusKey;
+}
+
+function occurrenceWorkbenchFor(
+  biome: WorkspaceBiome,
+  occurrenceId: string,
+): Extract<WorkspaceBiome['nodes'][number], { readonly kind: 'occurrenceWorkbench' }> {
+  const workbench = biome.nodes.find(
+    (
+      node,
+    ): node is Extract<WorkspaceBiome['nodes'][number], { readonly kind: 'occurrenceWorkbench' }> =>
+      node.kind === 'occurrenceWorkbench' && node.room.occurrenceId === occurrenceId,
+  );
+  if (workbench === undefined) throw new Error(`${occurrenceId} occurrence workbench is missing`);
+  return workbench;
 }
 
 function expectNodeRailDestination(
@@ -263,13 +277,13 @@ describe('workspace inspector destinations', () => {
       (target) => target.room.occurrenceId === 'golden-g-preboss-shop',
     )?.room;
     if (shopRoom?.roomLocal.kind !== 'shop') throw new Error('G Preboss Shop is missing');
+    const shopWorkbench = occurrenceWorkbenchFor(biome(workspace, 'G'), 'golden-g-preboss-shop');
     expect(target).toMatchObject({
       ownerAddress: configured.entry,
       focusAddress: configured.entry,
-      inspectorSubject: { kind: 'node', nodeKey: shop.key },
-      nodeKey: shop.key,
+      inspectorSubject: { kind: 'node', nodeKey: shopWorkbench.key },
+      nodeKey: shopWorkbench.key,
     });
-    expect(target.selectedRailKey).toBeDefined();
     expect(
       shopRoom.roomLocal.supplementalOffers.some(
         (offer) =>
@@ -387,9 +401,8 @@ describe('workspace inspector destinations', () => {
                 if (marker.address.kind !== 'traitOffer') continue;
                 expect(destination(workspace, marker.address)).toMatchObject({
                   ownerAddress: marker.address,
-                  inspectorSubject: { kind: 'node' },
+                  inspectorSubject: { kind: 'node', nodeKey: node.key },
                 });
-                expect(destination(workspace, marker.address).selectedRailKey).toBeDefined();
               }
               continue;
             }
@@ -407,7 +420,6 @@ describe('workspace inspector destinations', () => {
                   ownerAddress: marker.address,
                   inspectorSubject: { kind: 'node' },
                 });
-                expect(destination(workspace, marker.address).selectedRailKey).toBeDefined();
               }
             }
           }
@@ -481,10 +493,17 @@ describe('workspace inspector destinations', () => {
       decision.selection.address,
       ...(decision.rewardStore === undefined ? [] : [decision.rewardStore.address]),
       target.marker.address,
+    ]) {
+      expectNodeRailDestination(complete, owner, decision.key, decisionRail.marker.focusKey);
+    }
+    const targetWorkbench = occurrenceWorkbenchFor(f, target.room.occurrenceId);
+    for (const owner of [
       target.room.marker.address,
       ...target.room.rewardControls.map((control) => control.marker.address),
     ]) {
-      expectNodeRailDestination(complete, owner, decision.key, decisionRail.marker.focusKey);
+      expect(destination(complete, owner)).toMatchObject({
+        inspectorSubject: { kind: 'node', nodeKey: targetWorkbench.key },
+      });
     }
 
     const i = biome(complete, 'I');
@@ -561,12 +580,19 @@ describe('workspace inspector destinations', () => {
     const preHubRailKey = railKeyForNode(n, preHubDecision.key);
     expect(preHubSource.inspectorSubject).toEqual({ kind: 'node', nodeKey: preHubDecision.key });
     expect(preHubSource.selectedRailKey).toBe(preHubRailKey);
-    for (const owner of [
+    expectNodeRailDestination(
+      complete,
       preHubTarget.marker.address,
+      preHubDecision.key,
+      preHubRailKey,
+    );
+    for (const owner of [
       preHubTarget.room.marker.address,
       ...preHubTarget.room.rewardControls.map((control) => control.marker.address),
     ]) {
-      expectNodeRailDestination(complete, owner, preHubDecision.key, preHubRailKey);
+      expect(destination(complete, owner)).toMatchObject({
+        inspectorSubject: { kind: 'node', nodeKey: preHubWorkbench.key },
+      });
     }
 
     const visit = hubRail.visits.find((candidate) => candidate.visitIndex === 3);
@@ -597,7 +623,7 @@ describe('workspace inspector destinations', () => {
       traitDialogTarget: hubTrait.address,
     });
 
-    const sideRoom = createLocalChildAddress(
+    const sideRoom = createLocalVisitSlotAddress(
       nBiome,
       nOccurrenceId('combat05'),
       'sideRooms',
@@ -608,8 +634,8 @@ describe('workspace inspector destinations', () => {
     );
     if (sideVisit === undefined) throw new Error('N Combat 05 Hub visit is missing');
     expect(destination(complete, sideRoom)).toMatchObject({
-      inspectorSubject: { kind: 'node', nodeKey: sideVisit.node.key },
-      selectedRailKey: sideVisit.marker.focusKey,
+      inspectorSubject: { kind: 'node', nodeKey: hub.key },
+      selectedRailKey: hubRail.marker.focusKey,
     });
 
     const handoffOwner = createExitDecisionAddress(nBiome, {
@@ -712,14 +738,16 @@ describe('workspace inspector destinations', () => {
     if (fieldsDecision === undefined || fieldsRoom?.roomLocal.kind !== 'fields') {
       throw new Error('H Fields room-local surface is missing');
     }
-    const fieldsRailKey = railKeyForNode(h, fieldsDecision.key);
-    for (const owner of [
-      ...(fieldsDecision.fieldsCageOutcome === undefined
-        ? []
-        : [fieldsDecision.fieldsCageOutcome.address]),
-      ...fieldsRoom.roomLocal.cages.map((cage) => cage.control.marker.address),
-    ]) {
-      expectNodeRailDestination(underworld, owner, fieldsDecision.key, fieldsRailKey);
+    const fieldsWorkbench = occurrenceWorkbenchFor(h, fieldsRoom.occurrenceId);
+    if (fieldsDecision.fieldsCageOutcome !== undefined) {
+      expect(destination(underworld, fieldsDecision.fieldsCageOutcome.address)).toMatchObject({
+        inspectorSubject: { kind: 'node', nodeKey: fieldsDecision.key },
+      });
+    }
+    for (const owner of fieldsRoom.roomLocal.cages.map((cage) => cage.control.marker.address)) {
+      expect(destination(underworld, owner)).toMatchObject({
+        inspectorSubject: { kind: 'node', nodeKey: fieldsWorkbench.key },
+      });
     }
 
     const surface = project(createRepresentativeNOPQProject());
@@ -742,12 +770,14 @@ describe('workspace inspector destinations', () => {
     if (shipDecision === undefined || shipRoom?.roomLocal.kind !== 'ship') {
       throw new Error('O Ship room-local surface is missing');
     }
-    const shipRailKey = railKeyForNode(o, shipDecision.key);
+    const shipWorkbench = occurrenceWorkbenchFor(o, shipRoom.occurrenceId);
     for (const owner of shipRoom.roomLocal.wheels.flatMap((wheel) => [
       wheel.marker.address,
       ...wheel.offers.map((offer) => offer.control.marker.address),
     ])) {
-      expectNodeRailDestination(surface, owner, shipDecision.key, shipRailKey);
+      expect(destination(surface, owner)).toMatchObject({
+        inspectorSubject: { kind: 'node', nodeKey: shipWorkbench.key },
+      });
     }
   });
 });

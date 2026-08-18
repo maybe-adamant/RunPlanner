@@ -1,6 +1,6 @@
 import type { Catalog, EncounterSlotBinding, RoomDeclaration } from '../../catalog-schema';
 import type { EncounterPhaseAddress } from '../addresses';
-import type { ProjectDocument, RoomEncounterState, RoomOccurrence } from '../model';
+import type { ProjectDocument, RoomEncounterState } from '../model';
 import { encounterBindingsBySlot, encounterSetForBinding } from '../room-state/encounters';
 import {
   failCommand,
@@ -144,53 +144,12 @@ function updatedFigLeafSkip(
   });
 }
 
-function localChildRoom(
-  catalog: Catalog,
-  occurrence: RoomOccurrence,
-  located: LocatedBiome,
-  phase: EncounterPhaseAddress,
-  command: EncounterOccurrenceCommand,
-) {
-  if (phase.owner.kind !== 'localChild') {
-    failCommand(command, 'expected a local-child encounter owner');
-  }
-  const owner = phase.owner;
-  if (occurrence.state.kind !== 'ephyraCombat') {
-    failCommand(command, `${occurrence.gameName} has no parent-local encounter children`);
-  }
-  const parent = requireRoom(catalog, occurrence.gameName, located.layout.biomeKey, command);
-  const group = parent.localChildren.find((child) => child.key === owner.groupKey);
-  if (group?.kind !== 'fixedRoomSlots') {
-    failCommand(command, `${occurrence.gameName} has no side-room group ${owner.groupKey}`);
-  }
-  const slot = group.slots.find((candidate) => candidate.slotKey === owner.slotKey);
-  if (slot === undefined) {
-    failCommand(command, `unknown side-room slot ${owner.slotKey}`);
-  }
-  const state = occurrence.state.sideRooms[slot.slotKey];
-  if (state === undefined) {
-    failCommand(command, `missing side-room state ${slot.slotKey}`);
-  }
-  const room = catalog.rooms.byKey[slot.roomGameName];
-  if (
-    room === undefined ||
-    room.roomSetKey !== located.layout.biomeKey ||
-    room.mode.kind !== 'authored'
-  ) {
-    failCommand(command, `invalid declared side-room ${slot.roomGameName}`);
-  }
-  return { state, room, slot };
-}
-
 function replaceTopLevel(
   document: ProjectDocument,
   catalog: Catalog,
   located: LocatedBiome,
   command: EncounterOccurrenceCommand,
 ): ProjectDocument {
-  if (command.phase.owner.kind !== 'occurrence') {
-    failCommand(command, 'expected an occurrence encounter owner');
-  }
   const topology = requireTopology(located.plan, command);
   const occurrence = requireOccurrence(located.plan, command.phase.owner.occurrenceId, command);
   const room = requireRoom(catalog, occurrence.gameName, located.layout.biomeKey, command);
@@ -211,50 +170,6 @@ function replaceTopLevel(
   );
 }
 
-function replaceLocalChild(
-  document: ProjectDocument,
-  catalog: Catalog,
-  located: LocatedBiome,
-  command: EncounterOccurrenceCommand,
-): ProjectDocument {
-  if (command.phase.owner.kind !== 'localChild') {
-    failCommand(command, 'expected a local-child encounter owner');
-  }
-  const topology = requireTopology(located.plan, command);
-  const occurrence = requireOccurrence(located.plan, command.phase.owner.occurrenceId, command);
-  const { state, room, slot } = localChildRoom(
-    catalog,
-    occurrence,
-    located,
-    command.phase,
-    command,
-  );
-  const encounters = updatedSelections(catalog, room, state.encounters, command.phase, command);
-  const withFigLeaf = updatedFigLeafSkip(catalog, room, encounters, command.phase, command);
-  const withGorgon = updatedGorgonResult(catalog, room, withFigLeaf, command.phase, command);
-  if (withGorgon === state.encounters) return document;
-  if (occurrence.state.kind !== 'ephyraCombat') {
-    failCommand(command, `${occurrence.gameName} has no parent-local encounter children`);
-  }
-  return updateOccurrenceTopology(
-    document,
-    located,
-    replaceOccurrence(
-      topology,
-      Object.freeze({
-        ...occurrence,
-        state: Object.freeze({
-          ...occurrence.state,
-          sideRooms: Object.freeze({
-            ...occurrence.state.sideRooms,
-            [slot.slotKey]: Object.freeze({ ...state, encounters: withGorgon }),
-          }),
-        }),
-      }),
-    ),
-  );
-}
-
 /**
  * Encounter commands mutate only exact persisted room-instance state. Dynamic
  * candidate legality is published by simulation; a retained selection may be
@@ -266,7 +181,5 @@ export function applyEncounterOccurrenceCommand(
   located: LocatedBiome,
   command: EncounterOccurrenceCommand,
 ): ProjectDocument {
-  return command.phase.owner.kind === 'occurrence'
-    ? replaceTopLevel(document, catalog, located, command)
-    : replaceLocalChild(document, catalog, located, command);
+  return replaceTopLevel(document, catalog, located, command);
 }

@@ -34,7 +34,7 @@ export type {
   CanonicalHubRoomReference,
   CanonicalHubTarget,
   CanonicalHubVisit,
-  CanonicalLocalChildRoom,
+  CanonicalLocalVisitRoom,
   CanonicalFieldsOptionalReward,
   CanonicalLocalReward,
   CanonicalRewardWheel,

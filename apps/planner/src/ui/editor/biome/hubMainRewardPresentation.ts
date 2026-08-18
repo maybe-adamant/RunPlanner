@@ -50,12 +50,6 @@ export function hubMainRewardPresentation(
         marker: room.roomLocal.control.marker,
         summary: rewardSummary(room.roomLocal.control, interactions),
       });
-    case 'ephyra':
-      return Object.freeze({
-        control: room.roomLocal.incomingReward,
-        marker: room.roomLocal.incomingReward.marker,
-        summary: rewardSummary(room.roomLocal.incomingReward, interactions),
-      });
     case 'none':
     case 'fields':
     case 'ship':

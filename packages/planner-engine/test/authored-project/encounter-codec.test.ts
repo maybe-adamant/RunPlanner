@@ -6,7 +6,6 @@ import {
   createEncounterPhaseAddress,
   createGorgonPhaseAddress,
   createOccurrenceAddress,
-  createOccurrenceId,
   createIncomingRewardAddress,
   createRouteStartKeepsakeSelectionAddress,
   createTraitOfferAddress,
@@ -27,8 +26,6 @@ import {
   pBiome,
   pOccurrenceId,
 } from '@run-planner/test-fixtures';
-
-import { createCompleteNProject } from './support/complete-n-project';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -71,14 +68,6 @@ function figLeafSkips(owner: JsonRecord): JsonRecord {
 
 function gorgonResults(owner: JsonRecord): JsonRecord {
   return ((owner.encounters as JsonRecord).gorgonResultByPhase ?? {}) as JsonRecord;
-}
-
-function sideRoom(document: JsonRecord, occurrenceId: string, slotKey: string): JsonRecord {
-  const state = occurrence(document, 'N', occurrenceId).state as JsonRecord;
-  const sideRooms = state.sideRooms as JsonRecord;
-  const value = sideRooms[slotKey] as JsonRecord | undefined;
-  if (value === undefined) throw new Error(`missing ${slotKey}`);
-  return value;
 }
 
 function arachneStoryProject(): ProjectDocument {
@@ -150,17 +139,17 @@ function allTogetherOffer(document: JsonRecord): JsonRecord {
   return (reward.traitOffersByAcquisitionRole as JsonRecord).source as JsonRecord;
 }
 
-describe('schema-45 occurrence-owned encounter persistence', () => {
+describe('schema-46 occurrence-owned encounter persistence', () => {
   it('round-trips the exact top-level and parent-local selections', () => {
     const project = createRepresentativeNOPProject();
     const decoded = decodeProjectDocument(encoded(project), catalog);
 
     expect(decoded).toEqual(project);
-    expect(decoded.schemaVersion).toBe(45);
+    expect(decoded.schemaVersion).toBe(46);
   });
 
   it.each(['infernalContractReward', 'travelDealRefill', 'echoDoubleShopReward'] as const)(
-    'rejects reserved initial Shop slot key %s at the schema-45 codec boundary',
+    'rejects reserved initial Shop slot key %s at the schema-46 codec boundary',
     (reservedKey) => {
       const world = catalog.rewards.shops.byKey.WorldShop;
       const first = world?.slots.values[0];
@@ -271,7 +260,7 @@ describe('schema-45 occurrence-owned encounter persistence', () => {
 
     const decoded = decodeProjectDocument(encoded(project), catalog);
     expect(decoded).toEqual(project);
-    expect(encoded(decoded)).toMatchObject({ schemaVersion: 45 });
+    expect(encoded(decoded)).toMatchObject({ schemaVersion: 46 });
   });
 
   it('round-trips one atomically replaced exact All Together map and legal null', () => {
@@ -367,28 +356,28 @@ describe('schema-45 occurrence-owned encounter persistence', () => {
     ).toBeDefined();
   });
 
-  it('rejects schema 44 at the strict schema-45 boundary', () => {
+  it('rejects schema 45 at the strict schema-46 boundary', () => {
     const document = encoded(allTogetherProject());
-    document.schemaVersion = 44;
-    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 45, received 44');
+    document.schemaVersion = 45;
+    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 46, received 45');
   });
 
   it('rejects schema 35 rather than inventing an All Together child migration', () => {
     const document = encoded(allTogetherProject());
     document.schemaVersion = 35;
-    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 45, received 35');
+    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 46, received 35');
   });
 
   it('rejects schema 37 rather than migrating source-keyed Gold chronology', () => {
     const document = encoded(createCompleteFGProject());
     document.schemaVersion = 37;
-    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 45, received 37');
+    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 46, received 37');
   });
 
   it('rejects schema 39 rather than inventing Fields optional rewards', () => {
     const document = encoded(createGoldenFGHProject());
     document.schemaVersion = 40;
-    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 45, received 40');
+    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 46, received 40');
   });
 
   it('requires an exact persisted acquisition disposition map for every reward role', () => {
@@ -650,28 +639,28 @@ describe('schema-45 occurrence-owned encounter persistence', () => {
     const document = encoded(createRepresentativeNOPProject());
     document.schemaVersion = 18;
 
-    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 45, received 18');
+    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 46, received 18');
   });
 
   it('rejects schema 21 rather than inventing a trait-offer migration', () => {
     const document = encoded(createRepresentativeNOPProject());
     document.schemaVersion = 21;
 
-    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 45, received 21');
+    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 46, received 21');
   });
 
   it('rejects schema 29 rather than migrating the generic Gorgon child', () => {
     const document = encoded(createRepresentativeNOPProject());
     document.schemaVersion = 29;
 
-    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 45, received 29');
+    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 46, received 29');
   });
 
   it('rejects schema 30 rather than inventing an Echo Pom target migration', () => {
     const document = encoded(createRepresentativeNOPProject());
     document.schemaVersion = 30;
 
-    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 45, received 30');
+    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 46, received 30');
   });
 
   it.each([
@@ -765,82 +754,5 @@ describe('schema-45 occurrence-owned encounter persistence', () => {
     mutate(document);
 
     expect(() => decodeProjectDocument(document, catalog)).toThrow(message);
-  });
-
-  it.each([
-    {
-      label: 'a missing local encounter state',
-      mutate: (document: JsonRecord) => {
-        delete sideRoom(document, 'round-trip-n-combat02', 'sideDoor1').encounters;
-      },
-      message: 'sideRooms.sideDoor1.encounters: must be an object',
-    },
-    {
-      label: 'a missing local pooled selection',
-      mutate: (document: JsonRecord) => {
-        delete selections(sideRoom(document, 'round-trip-n-combat02', 'sideDoor1')).Encounter;
-      },
-      message: 'encounterKeyByPhase.Encounter: must be a string',
-    },
-    {
-      label: 'an extra local pooled selection',
-      mutate: (document: JsonRecord) => {
-        selections(sideRoom(document, 'round-trip-n-combat02', 'sideDoor1')).unexpected =
-          'GeneratedNSubRoom';
-      },
-      message: 'encounterKeyByPhase.unexpected: is not a project document field',
-    },
-    {
-      label: 'an unknown local encounter key',
-      mutate: (document: JsonRecord) => {
-        selections(sideRoom(document, 'round-trip-n-combat02', 'sideDoor1')).Encounter =
-          'UnknownEncounter';
-      },
-      message: 'UnknownEncounter is not a member of NEncountersSubRoom',
-    },
-    {
-      label: 'a known local encounter outside the declared set',
-      mutate: (document: JsonRecord) => {
-        selections(sideRoom(document, 'round-trip-n-combat02', 'sideDoor1')).Encounter =
-          'GeneratedN';
-      },
-      message: 'GeneratedN is not a member of NEncountersSubRoom',
-    },
-    {
-      label: 'a missing local Fig Leaf phase map',
-      mutate: (document: JsonRecord) => {
-        delete (sideRoom(document, 'round-trip-n-combat02', 'sideDoor1').encounters as JsonRecord)
-          .figLeafSkipByPhase;
-      },
-      message: 'figLeafSkipByPhase: must be an object',
-    },
-    {
-      label: 'an extra local Fig Leaf phase key',
-      mutate: (document: JsonRecord) => {
-        figLeafSkips(sideRoom(document, 'round-trip-n-combat02', 'sideDoor1')).unexpected = true;
-      },
-      message: 'figLeafSkipByPhase.unexpected: is not a project document field',
-    },
-    {
-      label: 'a mutable local Fig Leaf value',
-      mutate: (document: JsonRecord) => {
-        figLeafSkips(sideRoom(document, 'round-trip-n-combat02', 'sideDoor1')).Encounter = {};
-      },
-      message: 'figLeafSkipByPhase.Encounter: must be a boolean',
-    },
-  ])('rejects $label', ({ mutate, message }) => {
-    const document = encoded(createCompleteNProject());
-    mutate(document);
-
-    expect(() => decodeProjectDocument(document, catalog)).toThrow(message);
-  });
-
-  it('requires every local child encounter selection to stay under its parent occurrence', () => {
-    const document = encoded(createCompleteNProject());
-    const parent = occurrence(document, 'N', 'round-trip-n-combat02');
-    const local = sideRoom(document, 'round-trip-n-combat02', 'sideDoor1');
-
-    expect(parent.occurrenceId).toBe(createOccurrenceId('round-trip-n-combat02'));
-    expect(selections(local)).toEqual({ Encounter: 'GeneratedNSubRoom' });
   });
 });

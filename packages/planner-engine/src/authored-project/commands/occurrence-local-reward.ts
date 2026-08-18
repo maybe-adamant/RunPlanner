@@ -8,7 +8,6 @@ import {
   requireTopology,
   type LocatedBiome,
 } from './contract';
-import { requireEphyraSideGroup } from './occurrence-ephyra';
 import { replaceOccurrence, updateOccurrenceTopology } from './occurrence-mutation';
 import { sameOccurrenceValue } from './occurrence-leaf-value';
 import type { LocalRewardCommand } from './types';
@@ -85,50 +84,5 @@ export function applyLocalRewardCommand(
       ),
     );
   }
-  const { state, group } = requireEphyraSideGroup(
-    occurrence,
-    catalog,
-    located,
-    command.reward.groupKey,
-    command,
-  );
-  if (!group.slots.some((slot) => slot.slotKey === command.reward.slotKey)) {
-    failCommand(command, `unknown side-room slot ${command.reward.slotKey}`);
-  }
-  const sideRoom = state.sideRooms[command.reward.slotKey];
-  if (sideRoom === undefined)
-    failCommand(command, `missing side-room state ${command.reward.slotKey}`);
-  if (sideRoom.reward !== null && sameOccurrenceValue(sideRoom.reward.offer, command.value))
-    return document;
-  const sideDeclaration =
-    catalog.rooms.byKey[
-      group.slots.find((slot) => slot.slotKey === command.reward.slotKey)?.roomGameName ?? ''
-    ];
-  if (sideDeclaration === undefined || sideDeclaration.incomingReward.kind === 'none')
-    failCommand(command, `missing side-room reward binding ${command.reward.slotKey}`);
-  const levelEffectSource = producerLevelEffectSource(sideDeclaration.incomingReward);
-  return updateOccurrenceTopology(
-    document,
-    located,
-    replaceOccurrence(
-      current,
-      Object.freeze({
-        ...occurrence,
-        state: Object.freeze({
-          ...state,
-          sideRooms: Object.freeze({
-            ...state.sideRooms,
-            [command.reward.slotKey]: Object.freeze({
-              ...sideRoom,
-              reward: createUnresolvedAcquisitionRewardState(
-                catalog,
-                command.value,
-                levelEffectSource,
-              ),
-            }),
-          }),
-        }),
-      }),
-    ),
-  );
+  failCommand(command, `${occurrence.gameName} has no local reward ${command.reward.groupKey}`);
 }
