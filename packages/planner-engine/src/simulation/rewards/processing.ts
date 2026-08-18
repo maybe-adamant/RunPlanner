@@ -2451,6 +2451,62 @@ export function processOfferGenerationCohort(
   return mergeEquivalentRewardBranches(supported);
 }
 
+/**
+ * Assess one participant in an unordered region without requiring unrelated
+ * participants to form a complete valid cohort. Resolved peers remain real
+ * possible predecessors: the focused offer may follow any supported peer
+ * prefix, but unresolved values and invalid suffixes are never invented.
+ */
+export function processFocusedOfferInUnorderedRegion(
+  branches: readonly RewardBranchState[],
+  peerContexts: readonly OfferProcessingContext[],
+  focusedContext: OfferProcessingContext,
+  findings: Map<string, FindingRegionEntry>,
+): readonly RewardBranchState[] {
+  const reachedByMask = new Map<number, readonly RewardBranchState[]>([[0, branches]]);
+  let representativeFocusedFindings: readonly FindingRegionEntry[] = Object.freeze([]);
+  const completeMask = (1 << peerContexts.length) - 1;
+  for (let mask = 0; mask <= completeMask; mask += 1) {
+    const reached = reachedByMask.get(mask);
+    if (reached === undefined || reached.length === 0) continue;
+    const prior = peerContexts.flatMap((context, offset) =>
+      (mask & (1 << offset)) === 0
+        ? []
+        : [Object.freeze({ origin: context.reward.origin, offer: context.reward.offer })],
+    );
+    const focusedFindings = new Map<string, FindingRegionEntry>();
+    const supported = processRewardOffer(
+      reached,
+      { ...focusedContext, peers: Object.freeze(prior) },
+      focusedFindings,
+    );
+    if (supported.length > 0) return supported;
+    if (representativeFocusedFindings.length === 0) {
+      representativeFocusedFindings = Object.freeze([...focusedFindings.values()]);
+    }
+    for (const [offset, context] of peerContexts.entries()) {
+      const bit = 1 << offset;
+      if ((mask & bit) !== 0) continue;
+      const peerFindings = new Map<string, FindingRegionEntry>();
+      const next = processRewardOffer(
+        reached,
+        { ...context, peers: Object.freeze(prior) },
+        peerFindings,
+      );
+      if (next.length === 0) continue;
+      const nextMask = mask | bit;
+      reachedByMask.set(
+        nextMask,
+        mergeEquivalentRewardBranches([...(reachedByMask.get(nextMask) ?? []), ...next]),
+      );
+    }
+  }
+  for (const value of representativeFocusedFindings) {
+    addRewardFinding(findings, value.finding, value.atomicRegion, value.chronology);
+  }
+  return Object.freeze([]);
+}
+
 function shopRequirements(
   declaration: RoomDeclaration,
   profileKey: string,
