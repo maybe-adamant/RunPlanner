@@ -45,6 +45,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import {
   authorLegalTraitOffers,
+  authorRequiredTestRoomActions,
   createGoldenFGHIProject,
   goldenFBiome,
 } from '@run-planner/test-fixtures';
@@ -324,10 +325,10 @@ function withoutLeafInteraction(
         ...interactions,
         shipCombatPhaseCounts: without(interactions.shipCombatPhaseCounts),
       };
-    case 'acquisitionOrder':
+    case 'roomActions':
       return {
         ...interactions,
-        acquisitionOrders: without(interactions.acquisitionOrders),
+        roomActions: without(interactions.roomActions),
       };
     case 'localVisitOrder':
       return { ...interactions, localVisitOrders: without(interactions.localVisitOrders) };
@@ -701,7 +702,10 @@ describe('structured workspace overlay contract', () => {
   }, 20_000);
 
   it('projects the reached I Gift Hammer repair through its biome-owned control and destination', () => {
-    const project = createGoldenEchoGiftHammerPendingProject();
+    const project = authorRequiredTestRoomActions(
+      createGoldenEchoGiftHammerPendingProject(),
+      catalog,
+    );
     const assembly = simulateProjectAssembly(catalog, project);
     expect(assembly.evaluation.findings).toContainEqual(
       expect.objectContaining({
@@ -919,7 +923,7 @@ describe('structured workspace overlay contract', () => {
         'rewardWheelPick',
         'rewardWheelStore',
         'shipCombatPhaseCount',
-        'acquisitionOrder',
+        'roomActions',
         'localVisitOrder',
         'localVisitGeneration',
         'levelResolution',

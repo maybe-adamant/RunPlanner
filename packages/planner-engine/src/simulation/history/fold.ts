@@ -768,6 +768,7 @@ function foldHistoryEventStream(
       }
       case 'producerRoleAdvanced':
       case 'producerPointReached':
+      case 'encounterInteractionReached':
       case 'roomCommitted':
         break;
     }
@@ -779,7 +780,7 @@ function foldHistoryEventStream(
   if (activeEncounters.size !== 0) {
     throw new HistoryFoldContractError('history ended with an active encounter');
   }
-  if (activeRequiredObjects.size !== 0) {
+  if (mode === 'complete' && activeRequiredObjects.size !== 0) {
     throw new HistoryFoldContractError('history ended with an active required object');
   }
   if (pendingTargetGeneration !== undefined) {

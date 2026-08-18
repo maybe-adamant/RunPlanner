@@ -24,6 +24,7 @@ import {
   selectedOrdinaryBatchIndex,
 } from '../topology/query';
 import { applyTopologyRemovalImpact, describeTopologyRemovalImpact } from '../topologyImpact';
+import { createEmptyRoomActionState } from '../room-actions';
 import {
   failCommand,
   requireOccurrence,
@@ -287,6 +288,7 @@ function switchTargetToAnomaly(
       replacementRoom,
       `occurrences.${occurrence.occurrenceId}.encounters`,
     ),
+    roomActions: occurrence.roomActions,
     additionalExits: occurrence.additionalExits ?? Object.freeze([]),
   });
   return updateTopology(document, located, replaceOccurrence(withoutOutgoing, replacement));
@@ -391,6 +393,7 @@ function revertAnomaly(
           rememberedRoom,
           `occurrences.${occurrence.occurrenceId}.encounters`,
         ),
+        roomActions: occurrence.roomActions,
         additionalExits: occurrence.additionalExits ?? Object.freeze([]),
       }),
     ),
@@ -567,6 +570,7 @@ function addZagreusContract(
       contractRoom,
       `occurrences.${command.occurrenceId}.encounters`,
     ),
+    roomActions: createEmptyRoomActionState(),
     additionalExits: Object.freeze([]),
   });
   const withContract = appendOccurrence(topology, contractOccurrence, command);
@@ -734,6 +738,7 @@ function addNaturalChaos(
       chaosRoom,
       `occurrences.${command.occurrenceId}.encounters`,
     ),
+    roomActions: createEmptyRoomActionState(),
     additionalExits: Object.freeze([]),
   });
   const withChaos = appendOccurrence(topology, chaosOccurrence, command);

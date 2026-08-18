@@ -1,5 +1,10 @@
-import type { SemanticAddress } from './addresses';
-import { semanticAddressKey } from './addresses';
+import type {
+  AcquisitionSiteAddress,
+  OccurrenceAddress,
+  SemanticAddress,
+  TraitOfferOwnerAddress,
+} from './addresses';
+import { createAcquisitionSiteAddress, semanticAddressKey } from './addresses';
 
 /** Collision-safe source-owned identity for the separately acquired replacement. */
 export function artificerReplacementEntryKey(
@@ -21,6 +26,49 @@ export function parseArtificerReplacementEntryKey(
       sourceKey: decodeURIComponent(key.slice('artificer:'.length, separator)),
       acquisitionRole: decodeURIComponent(key.slice(separator + 1)),
     });
+  } catch {
+    return undefined;
+  }
+}
+
+/** Exact occurrence-local site that stores one source's produced Artificer reward. */
+export function artificerAcquisitionSite(
+  occurrence: OccurrenceAddress,
+  source: TraitOfferOwnerAddress,
+): AcquisitionSiteAddress {
+  if (occurrence.routeKey !== source.routeKey || occurrence.biomeKey !== source.biomeKey) {
+    throw new Error('Artificer source is outside its occurrence biome');
+  }
+  return createAcquisitionSiteAddress(
+    occurrence,
+    `artificerSource:${encodeURIComponent(semanticAddressKey(source))}`,
+  );
+}
+
+/** Collision-safe persisted key for one exact occurrence-owned acquisition site. */
+export function acquisitionSiteStorageKey(site: AcquisitionSiteAddress): string {
+  return semanticAddressKey(site);
+}
+
+/** Reattest one persisted occurrence-local site key at its owning occurrence. */
+export function acquisitionSiteFromStorageKey(
+  occurrence: OccurrenceAddress,
+  storageKey: string,
+): AcquisitionSiteAddress | undefined {
+  if (storageKey === 'roomExit') return createAcquisitionSiteAddress(occurrence, 'roomExit');
+  try {
+    const value: unknown = JSON.parse(storageKey);
+    if (!Array.isArray(value) || value.length !== 5) return undefined;
+    const [kind, routeKey, biomeKey, ownerKey, pointKey] = value;
+    if (
+      kind !== 'acquisitionSite' ||
+      routeKey !== occurrence.routeKey ||
+      biomeKey !== occurrence.biomeKey ||
+      ownerKey !== semanticAddressKey(occurrence) ||
+      typeof pointKey !== 'string'
+    )
+      return undefined;
+    return createAcquisitionSiteAddress(occurrence, pointKey);
   } catch {
     return undefined;
   }

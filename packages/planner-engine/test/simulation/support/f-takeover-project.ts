@@ -13,6 +13,7 @@ import {
   createTraitOfferAddress,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
+import { authorRequiredTestRoomActions } from '@run-planner/test-fixtures';
 
 export const fBiome = createBiomeAddress('Underworld', 'F');
 export const fStartId = createOccurrenceId('f-takeover-start');
@@ -41,20 +42,23 @@ export function createFStart(project = createFProject()): ProjectDocument {
       payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
     },
   });
-  return applyProjectCommand(rewarded, catalog, {
-    kind: 'ReplaceTraitOffer',
-    trait: createTraitOfferAddress(createIncomingRewardAddress(fBiome, fStartId), 'source'),
-    value: {
-      kind: 'traits',
-      giverKey: 'Apollo',
-      options: [
-        { traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
-        { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
-        { traitKey: 'ApolloCastBoon', rarity: 'Common' },
-      ],
-      selectedOptionKey: 'option1',
-    },
-  });
+  return authorRequiredTestRoomActions(
+    applyProjectCommand(rewarded, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(createIncomingRewardAddress(fBiome, fStartId), 'source'),
+      value: {
+        kind: 'traits',
+        giverKey: 'Apollo',
+        options: [
+          { traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
+          { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
+          { traitKey: 'ApolloCastBoon', rarity: 'Common' },
+        ],
+        selectedOptionKey: 'option1',
+      },
+    }),
+    catalog,
+  );
 }
 
 export function fDecision(occurrenceId = fStartId) {
@@ -91,11 +95,14 @@ export function createFOpeningTarget(
     occurrenceId: fCombatId,
     gameName,
   });
-  return applyProjectCommand(targeted, catalog, {
-    kind: 'ReplaceIncomingReward',
-    reward: createIncomingRewardAddress(fBiome, fCombatId),
-    value: { rewardType: gameName === 'F_Combat01' ? 'MaxHealthDrop' : 'MetaCurrencyDrop' },
-  });
+  return authorRequiredTestRoomActions(
+    applyProjectCommand(targeted, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(fBiome, fCombatId),
+      value: { rewardType: gameName === 'F_Combat01' ? 'MaxHealthDrop' : 'MetaCurrencyDrop' },
+    }),
+    catalog,
+  );
 }
 
 export function createFCombatBatch(

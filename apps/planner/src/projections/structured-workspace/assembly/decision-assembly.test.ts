@@ -605,7 +605,7 @@ describe('structured workspace decision assembly', () => {
     expect(assembly.batch.fieldsCageOutcome).toBeUndefined();
     expect(assembly.batch.fields).toBeUndefined();
     expect(fieldsWorkbench.room.roomLocal.cages).toEqual([]);
-    expect(fieldsWorkbench.room.roomLocal.chronology).toBeUndefined();
+    expect(fieldsWorkbench.room.roomActions).toBeUndefined();
   });
 
   it('keeps a retained authored suffix and its focus destinations after an unresolved prefix', () => {

@@ -145,6 +145,7 @@ function prepareProperUpbringingFixture() {
         readonly address: TraitOfferOwnerAddress;
         readonly trace: SelectedTraitOfferAssessment;
         readonly options: AuthoredTraitsOffer['options'];
+        readonly requiredRarity: NonNullable<AuthoredTraitsOffer['options'][number]['rarity']>;
       }
     | undefined;
   const staleSession = traitCandidateSession(authored);
@@ -161,6 +162,8 @@ function prepareProperUpbringingFixture() {
     if (repaired === undefined) continue;
     if (repaired.kind !== 'traits') continue;
     const repairedOptions = repaired.options;
+    const requiredRarity = repairedOptions[0]?.rarity;
+    if (requiredRarity === undefined || requiredRarity === 'Common') continue;
     const commonIndex = repairedOptions.findIndex((option) => {
       const domain = application.catalog.traits.byKey[option.traitKey]?.rarityDomain;
       return domain?.kind === 'ranked' && domain.freshOfferRarities.includes('Rare');
@@ -202,6 +205,7 @@ function prepareProperUpbringingFixture() {
       address: trace.address.owner,
       trace,
       options: staleOptions,
+      requiredRarity,
     };
     break;
   }
@@ -261,11 +265,12 @@ describe('Proper Upbringing product loop', () => {
     );
     const rarity = within(dialog).getByLabelText('option1 rarity');
     await view.user.click(rarity);
-    const rare = screen
-      .getAllByText('Rare')
+    const repairedRarity = screen
+      .getAllByText(stale.requiredRarity)
       .find((element) => element.closest('[cmdk-item]') !== null);
-    if (rare === undefined) throw new Error('Proper Upbringing rarity picker has no Rare choice');
-    await view.user.click(rare);
+    if (repairedRarity === undefined)
+      throw new Error(`Proper Upbringing rarity picker has no ${stale.requiredRarity} choice`);
+    await view.user.click(repairedRarity);
     await view.user.click(within(dialog).getByRole('button', { name: 'Save trait offer' }));
     await waitFor(() =>
       expect(
@@ -292,6 +297,6 @@ describe('Proper Upbringing product loop', () => {
       );
     if (repairedOffer?.offer.kind !== 'traits')
       throw new Error('repaired offer must contain traits');
-    expect(repairedOffer.offer.options[0]?.rarity).toBe('Rare');
+    expect(repairedOffer.offer.options[0]?.rarity).toBe(stale.requiredRarity);
   });
 });

@@ -21,6 +21,7 @@ import { applyBossCompletionCommand } from './boss-completion';
 import { applyKeepsakeCommand } from './keepsake';
 import type { ProjectCommand } from './types';
 import { createAcquisitionEntryAddress, semanticAddressKey } from '../addresses';
+import { applyRoomActionCommand } from './room-actions';
 
 function derivedPayloadEntryAddress(
   command: Extract<ProjectCommand, { readonly kind: 'EditDerivedShopEntry' }>['edit'],
@@ -94,6 +95,15 @@ function applyUnchecked(
         locateBiome(document, catalog, command),
         command,
       );
+    case 'InsertRoomAction':
+    case 'RemoveRoomAction':
+    case 'MoveRoomAction':
+      return applyRoomActionCommand(
+        document,
+        catalog,
+        locateBiome(document, catalog, command),
+        command,
+      );
     case 'SwitchTargetToAnomaly':
     case 'ReplaceAnomalyMap':
     case 'ReplaceAnomalySuccess':
@@ -110,7 +120,6 @@ function applyUnchecked(
         command,
       );
     case 'ReplaceShipEncounterCount':
-    case 'ReplaceFieldsActionOrder':
     case 'ReplaceFieldsOptionalRewardCount':
     case 'ReplaceIncomingReward':
     case 'ReplaceLocalReward':
@@ -126,7 +135,6 @@ function applyUnchecked(
         locateBiome(document, catalog, command),
         command,
       );
-    case 'ReplaceAcquisitionOrder':
     case 'SelectDerivedShopEntry':
     case 'ReplaceAcquisitionEntryOffer':
       return applyAcquisitionSiteCommand(
@@ -218,4 +226,5 @@ export type {
   DerivedShopEntryEditCommand,
   EncounterOccurrenceCommand,
   ProjectCommand,
+  RoomActionCommand,
 } from './types';

@@ -13,14 +13,12 @@ import type {
 import type {
   AuthoredRewardState,
   AuthoredRoomState,
-  FieldsCombatAction,
   EphyraCombatState,
   RewardWheelState,
   ShipCombatState,
   ShopOfferState,
   ShopState,
 } from '../model';
-import { fieldsActionKey, fieldsCageActionDomain } from '../fields-actions';
 import {
   expectExactKeys,
   expectArray,
@@ -585,34 +583,10 @@ function decodeAcquisitionDispositions(
         }
         if (kind !== 'artificer')
           failProjectDocument(`${dispositionPath}.kind`, 'must be normal, timePiece, or artificer');
-        if (!allowArtificer)
-          failProjectDocument(dispositionPath, 'Artificer replacements cannot recurse');
-        if (Object.keys(disposition).length !== 2 || disposition.replacement === undefined)
-          failProjectDocument(dispositionPath, 'artificer requires exactly one replacement');
-        const replacement =
-          disposition.replacement === null
-            ? null
-            : decodeRewardState(
-                disposition.replacement,
-                catalog,
-                `${dispositionPath}.replacement`,
-                { kind: 'producerLifecycle', key: 'RoomReward' },
-                false,
-              );
-        const runProgress = catalog.rewards.stores.byKey.RunProgress;
-        if (
-          replacement !== null &&
-          (replacement.offer.rewardType === 'Devotion' ||
-            replacement.offer.rewardType === 'SpellDrop' ||
-            !runProgress?.entries.some(
-              (entry) => entry.rewardType === replacement.offer.rewardType,
-            ))
-        )
-          failProjectDocument(
-            `${dispositionPath}.replacement.offer.rewardType`,
-            'must be an Artificer-eligible RunProgress reward',
-          );
-        return [role, Object.freeze({ kind: 'artificer' as const, replacement })] as const;
+        if (!allowArtificer) failProjectDocument(dispositionPath, 'Artificer cannot recurse');
+        if (Object.keys(disposition).length !== 1)
+          failProjectDocument(dispositionPath, 'artificer is intent-only');
+        return [role, Object.freeze({ kind: 'artificer' as const })] as const;
       }),
     ),
   );
@@ -927,7 +901,7 @@ export function decodeRoomState(
   path: string,
 ): AuthoredRoomState {
   const state = expectRecord(value, path);
-  const { role, entryActive, rememberedCountedBinding, activeCageCount } = context;
+  const { role, entryActive, rememberedCountedBinding } = context;
   switch (authoredTemplateKey(room, path)) {
     case 'FixedIntro':
     case 'RewardlessCombat':
@@ -938,11 +912,7 @@ export function decodeRoomState(
     case 'FieldsCombat': {
       requireOrdinaryRole(role, room, path);
       expectedKind(state.kind, 'fieldsCombat', path);
-      expectExactKeys(
-        state,
-        ['kind', 'cages', 'optionalRewardCount', 'optionalRewards', 'actionOrder'],
-        path,
-      );
+      expectExactKeys(state, ['kind', 'cages', 'optionalRewardCount', 'optionalRewards'], path);
       const descriptor = requireFieldsCages(room, path);
       const rawCages = expectRecord(state.cages, `${path}.cages`);
       expectExactKeys(rawCages, descriptor.slotKeys, `${path}.cages`);
@@ -1004,100 +974,11 @@ export function decodeRoomState(
         );
         optionalRewards[slotKey] = Object.freeze({ ...reward, offer });
       }
-      const domain = fieldsCageActionDomain(catalog, room);
-      const knownActions = new Set([
-        ...domain.flatMap((entry) => [`complete:${entry.phaseKey}`, `interact:${entry.slotKey}`]),
-        ...optionalDescriptor.slotKeys
-          .slice(0, optionalRewardCount)
-          .map((slotKey) => `interactOptional:${slotKey}`),
-        ...domain
-          .slice(0, activeCageCount ?? domain.length)
-          .flatMap((entry) =>
-            Object.entries(cages[entry.slotKey]?.dispositionByAcquisitionRole ?? {}).flatMap(
-              ([role, disposition]) =>
-                disposition.kind === 'artificer'
-                  ? [`interactArtificer:cages:${entry.slotKey}:${role}`]
-                  : [],
-            ),
-          ),
-        ...optionalDescriptor.slotKeys
-          .slice(0, optionalRewardCount)
-          .flatMap((slotKey) =>
-            Object.entries(optionalRewards[slotKey]?.dispositionByAcquisitionRole ?? {}).flatMap(
-              ([role, disposition]) =>
-                disposition.kind === 'artificer'
-                  ? [`interactArtificer:optionalRewards:${slotKey}:${role}`]
-                  : [],
-            ),
-          ),
-      ]);
-      const seenActions = new Set<string>();
-      const actionOrder = expectArray(state.actionOrder, `${path}.actionOrder`).map(
-        (value, index): FieldsCombatAction => {
-          const actionPath = `${path}.actionOrder[${index}]`;
-          const action = expectRecord(value, actionPath);
-          const kind = expectString(action.kind, `${actionPath}.kind`);
-          const decoded: FieldsCombatAction =
-            kind === 'completeCage'
-              ? (() => {
-                  expectExactKeys(action, ['kind', 'phaseKey'], actionPath);
-                  return Object.freeze({
-                    kind,
-                    phaseKey: expectString(action.phaseKey, `${actionPath}.phaseKey`),
-                  });
-                })()
-              : kind === 'interactCageReward' || kind === 'interactOptionalReward'
-                ? (() => {
-                    expectExactKeys(action, ['kind', 'slotKey'], actionPath);
-                    return Object.freeze({
-                      kind,
-                      slotKey: expectString(action.slotKey, `${actionPath}.slotKey`),
-                    });
-                  })()
-                : kind === 'interactArtificerReplacement'
-                  ? (() => {
-                      expectExactKeys(
-                        action,
-                        ['kind', 'sourceGroup', 'slotKey', 'acquisitionRole'],
-                        actionPath,
-                      );
-                      const sourceGroup = expectString(
-                        action.sourceGroup,
-                        `${actionPath}.sourceGroup`,
-                      );
-                      if (sourceGroup !== 'cages' && sourceGroup !== 'optionalRewards')
-                        failProjectDocument(
-                          `${actionPath}.sourceGroup`,
-                          'must be cages or optionalRewards',
-                        );
-                      return Object.freeze({
-                        kind,
-                        sourceGroup,
-                        slotKey: expectString(action.slotKey, `${actionPath}.slotKey`),
-                        acquisitionRole: expectString(
-                          action.acquisitionRole,
-                          `${actionPath}.acquisitionRole`,
-                        ),
-                      });
-                    })()
-                  : failProjectDocument(`${actionPath}.kind`, `unknown Fields action ${kind}`);
-          const key = fieldsActionKey(decoded);
-          if (!knownActions.has(key)) {
-            failProjectDocument(actionPath, `unknown Fields action identity ${key}`);
-          }
-          if (seenActions.has(key)) {
-            failProjectDocument(actionPath, `duplicates Fields action ${key}`);
-          }
-          seenActions.add(key);
-          return decoded;
-        },
-      );
       return Object.freeze({
         kind: 'fieldsCombat',
         cages: Object.freeze(cages),
         optionalRewardCount,
         optionalRewards: Object.freeze(optionalRewards),
-        actionOrder: Object.freeze(actionOrder),
       });
     }
     case 'ShipCombat':

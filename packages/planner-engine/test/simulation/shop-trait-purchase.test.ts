@@ -1,6 +1,9 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
+  acquisitionSiteStorageKey,
   applyProjectHistoryCommand,
+  artificerAcquisitionSite,
+  artificerReplacementEntryKey,
   createAcquisitionRoleAddress,
   createShopOfferAddress,
   createAcquisitionEntryAddress,
@@ -45,7 +48,6 @@ import {
   settleShopAcquisitionSite,
 } from '../../src/simulation/rewards/processing';
 import { selectedTraitOfferProducts } from '../../src/simulation/rewards/biome';
-import { prepareAcquisitionOrderCandidateContext } from '../../src/simulation/rewards/acquisition-order-candidates';
 import {
   attachTraitHistory,
   foldTraitHistoryEvents,
@@ -477,20 +479,26 @@ function echoGoldShop(
                 options.duplicateConversion === 'gold'
                   ? ({ kind: 'timePiece' } as const)
                   : options.duplicateConversion === 'artificer'
-                    ? ({
-                        kind: 'artificer',
-                        replacement: createUnresolvedAcquisitionRewardState(
-                          catalog,
-                          { rewardType: 'MaxHealthDrop' },
-                          { kind: 'producerLifecycle', key: 'RoomReward' },
-                        ),
-                      } as const)
+                    ? ({ kind: 'artificer' } as const)
                     : ({ kind: 'normal' } as const),
               ]),
             ),
           ),
         });
   const occurrenceId = options.occurrenceId ?? shopId;
+  const occurrenceAddress = createOccurrenceAddress(biome, occurrenceId);
+  const duplicateSource = createAcquisitionEntryAddress(
+    createAcquisitionSiteAddress(occurrenceAddress, 'roomExit'),
+    ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
+  );
+  const replacementSite = artificerAcquisitionSite(occurrenceAddress, duplicateSource);
+  const replacementSiteKey = acquisitionSiteStorageKey(replacementSite);
+  const replacementKey = artificerReplacementEntryKey(duplicateSource, 'self');
+  const replacement = createUnresolvedAcquisitionRewardState(
+    catalog,
+    { rewardType: 'MaxHealthDrop' },
+    { kind: 'producerLifecycle', key: 'RoomReward' },
+  );
   const authoredOrder =
     options.includeDuplicate !== true || duplicateKey === undefined || order.includes(duplicateKey)
       ? order
@@ -508,16 +516,31 @@ function echoGoldShop(
     state: Object.freeze({ ...baseState, shop }),
     acquisitionSites: Object.freeze({
       roomExit: Object.freeze({
-        order: Object.freeze([...authoredOrder]),
         ...(options.includeDuplicate !== true ||
         duplicateKey === undefined ||
         duplicateValue === undefined
           ? {}
           : { pickupEntries: Object.freeze({ [duplicateKey]: duplicateValue }) }),
       }),
+      ...(options.duplicateConversion !== 'artificer'
+        ? {}
+        : {
+            [replacementSiteKey]: Object.freeze({
+              pickupEntries: Object.freeze({ [replacementKey]: replacement }),
+            }),
+          }),
     }),
     encounters: createDefaultRoomEncounterState(catalog, room, 'echo-gold-shop.encounters'),
     additionalExits: Object.freeze([]),
+    roomActions: Object.freeze({
+      order: Object.freeze(
+        authoredOrder.map((entryKey) =>
+          shop.offers[entryKey] !== undefined
+            ? { kind: 'interactShopOffer' as const, offerKey: entryKey }
+            : { kind: 'interactAcquisitionEntry' as const, siteKey: 'roomExit', entryKey },
+        ),
+      ),
+    }),
   });
   const canonical = materializeAuthoredRoom({
     catalog,
@@ -573,17 +596,6 @@ function echoGoldShop(
     inventoryFindings,
   );
   const findings = new Map();
-  const candidate = prepareAcquisitionOrderCandidateContext({
-    catalog,
-    room: canonical,
-    declaration: room,
-    branchesBeforePurchases: inventory,
-    historySequence: 3,
-    facts: (_candidateRoom, history) => facts(history),
-    fail: (detail) => {
-      throw new Error(detail);
-    },
-  });
   const settlement = settleShopAcquisitionSite(
     inventory,
     {
@@ -591,6 +603,7 @@ function echoGoldShop(
       room: canonical,
       declaration: room,
       historySequence: 3,
+      order: authoredOrder,
       facts,
       fail: (detail) => {
         throw new Error(detail);
@@ -599,9 +612,9 @@ function echoGoldShop(
     findings,
   );
   return {
-    candidate,
     canonical,
     duplicateKey,
+    replacementKey,
     findings,
     inventory,
     inventoryFindings,
@@ -739,10 +752,6 @@ describe('Echo Gate D Gold Gold Gold', () => {
       sourceOfferKey: 'Boon',
     });
     expect([...result.findings.values()]).toEqual([]);
-    expect(result.candidate.evaluateOrder(['Minor', 'Boon', 'MajorNonBoon'])).toEqual({
-      findings: [],
-      supported: true,
-    });
   });
 
   it('publishes a placeholder without a source and consumes Gold when the active pickup is skipped', () => {
@@ -826,15 +835,12 @@ describe('Echo Gate D Gold Gold Gold', () => {
     ).toBeUndefined();
   });
 
-  it('lets Artificer convert the free Echo Gold duplicate and settle its ordered replacement', () => {
-    const result = echoGoldShop(
-      ['MajorNonBoon', ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY, 'artificer:echoDoubleShopReward:self'],
-      {
-        includeDuplicate: true,
-        duplicateConversion: 'artificer',
-        offerOverrides: { MajorNonBoon: { rewardType: 'GiftDrop' } },
-      },
-    );
+  it('lets Artificer convert the free Echo Gold duplicate and materialize its exact replacement', () => {
+    const result = echoGoldShop(['MajorNonBoon', ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY], {
+      includeDuplicate: true,
+      duplicateConversion: 'artificer',
+      offerOverrides: { MajorNonBoon: { rewardType: 'GiftDrop' } },
+    });
     const branch = result.settlement.branches[0];
     expect([...result.findings.values()]).toEqual([]);
     expect(branch?.events).toContainEqual(
@@ -847,10 +853,10 @@ describe('Echo Gate D Gold Gold Gold', () => {
     );
     expect(branch?.events).toContainEqual(
       expect.objectContaining({
-        kind: 'concreteAcquisition',
+        kind: 'rewardOffered',
         origin: expect.objectContaining({
           kind: 'acquisitionEntry',
-          entryKey: 'artificer:echoDoubleShopReward:self',
+          entryKey: result.replacementKey,
         }),
       }),
     );
@@ -1086,7 +1092,6 @@ describe('Echo Gate D Gold Gold Gold', () => {
         ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === shopOccurrenceId);
 
     expect(occurrence(edited.present)?.acquisitionSites?.roomExit).toMatchObject({
-      order: [],
       pickupEntries: {
         echoDoubleShopReward: {
           offer: { rewardType: 'RandomLoot' },
@@ -1146,7 +1151,6 @@ describe('Echo Gate D Gold Gold Gold', () => {
       },
     });
     expect(occurrence(pom.present)?.acquisitionSites?.roomExit).toMatchObject({
-      order: [],
       pickupEntries: {
         echoDoubleShopReward: {
           levelResolutionsByAcquisitionRole: {
@@ -1168,7 +1172,6 @@ describe('Echo Gate D Gold Gold Gold', () => {
       },
     });
     expect(occurrence(converted.present)?.acquisitionSites?.roomExit).toMatchObject({
-      order: [],
       pickupEntries: {
         echoDoubleShopReward: { dispositionByAcquisitionRole: { self: { kind: 'timePiece' } } },
       },
@@ -1210,7 +1213,6 @@ describe('Echo Gate D Gold Gold Gold', () => {
       site: entry.site,
       entryKey: ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
       sourceOfferKey: 'Boon',
-      entryKeys: ['Boon', ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY],
     });
     history = applyProjectHistoryCommand(history, catalog, {
       kind: 'ReplaceAcquisitionEntryOffer',
@@ -1280,7 +1282,6 @@ describe('Echo Gate D Gold Gold Gold', () => {
       site,
       entryKey: ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
       sourceOfferKey: 'travelDealRefill',
-      entryKeys: ['travelDealRefill', ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY],
     });
     history = applyProjectHistoryCommand(history, catalog, {
       kind: 'ReplaceTraitOffer',
@@ -1363,9 +1364,10 @@ describe('Shop trait acquisition processing', () => {
       occurrenceId: shopId,
       gameName: room.gameName,
       state: pomState,
-      acquisitionSites: Object.freeze({ roomExit: Object.freeze({ order: Object.freeze([]) }) }),
+      acquisitionSites: Object.freeze({}),
       encounters: createDefaultRoomEncounterState(catalog, room, 'pom-shop.encounters'),
       additionalExits: Object.freeze([]),
+      roomActions: Object.freeze({ order: Object.freeze([]) }),
     });
     const canonical = materializeAuthoredRoom({
       catalog,
@@ -1439,8 +1441,8 @@ describe('Shop trait acquisition processing', () => {
           ...pomState,
           shop: pomState.shop,
         }),
-        acquisitionSites: Object.freeze({
-          roomExit: Object.freeze({ order: Object.freeze(['Minor']) }),
+        roomActions: Object.freeze({
+          order: Object.freeze([{ kind: 'interactShopOffer' as const, offerKey: 'Minor' }]),
         }),
       }),
       role: 'ordinary',
@@ -1502,8 +1504,8 @@ describe('Shop trait acquisition processing', () => {
             }),
           }),
         }),
-        acquisitionSites: Object.freeze({
-          roomExit: Object.freeze({ order: Object.freeze(['MajorNonBoon']) }),
+        roomActions: Object.freeze({
+          order: Object.freeze([{ kind: 'interactShopOffer' as const, offerKey: 'MajorNonBoon' }]),
         }),
       }),
       role: 'ordinary',
@@ -1589,11 +1591,12 @@ describe('Shop trait acquisition processing', () => {
         occurrenceId,
         gameName: room.gameName,
         state,
-        acquisitionSites: Object.freeze({
-          roomExit: Object.freeze({ order: Object.freeze(['Minor']) }),
-        }),
+        acquisitionSites: Object.freeze({}),
         encounters: createDefaultRoomEncounterState(catalog, room, 'missing-pom.encounters'),
         additionalExits: Object.freeze([]),
+        roomActions: Object.freeze({
+          order: Object.freeze([{ kind: 'interactShopOffer' as const, offerKey: 'Minor' }]),
+        }),
       }),
       role: 'ordinary',
       entered: true,
@@ -1726,11 +1729,14 @@ describe('Shop trait acquisition processing', () => {
           occurrenceId: createOccurrenceId(`pom-replacement-${entryOrder.join('-')}`),
           gameName: room.gameName,
           state,
-          acquisitionSites: Object.freeze({
-            roomExit: Object.freeze({ order: Object.freeze([...entryOrder]) }),
-          }),
+          acquisitionSites: Object.freeze({}),
           encounters: createDefaultRoomEncounterState(catalog, room, 'pom-replacement.encounters'),
           additionalExits: Object.freeze([]),
+          roomActions: Object.freeze({
+            order: Object.freeze(
+              entryOrder.map((offerKey) => ({ kind: 'interactShopOffer' as const, offerKey })),
+            ),
+          }),
         }),
         role: 'ordinary',
         entered: true,
@@ -1918,11 +1924,12 @@ describe('Shop trait acquisition processing', () => {
           }),
         }),
       }),
-      acquisitionSites: Object.freeze({
-        roomExit: Object.freeze({ order: Object.freeze(['MajorNonBoon']) }),
-      }),
+      acquisitionSites: Object.freeze({}),
       encounters: createDefaultRoomEncounterState(catalog, room, 'stale-shop.encounters'),
       additionalExits: Object.freeze([]),
+      roomActions: Object.freeze({
+        order: Object.freeze([{ kind: 'interactShopOffer' as const, offerKey: 'MajorNonBoon' }]),
+      }),
     } as const;
     const canonical = materializeAuthoredRoom({
       catalog,

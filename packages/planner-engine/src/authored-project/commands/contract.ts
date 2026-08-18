@@ -97,9 +97,12 @@ export function projectCommandAddress(
       return command.decision;
     case 'ReplaceOccurrenceRoom':
     case 'ReplaceShipEncounterCount':
-    case 'ReplaceFieldsActionOrder':
     case 'ReplaceFieldsOptionalRewardCount':
       return command.occurrence;
+    case 'InsertRoomAction':
+    case 'RemoveRoomAction':
+    case 'MoveRoomAction':
+      return command.action;
     case 'ReplaceIncomingReward':
       return command.reward;
     case 'ReplaceLocalReward':
@@ -114,7 +117,6 @@ export function projectCommandAddress(
       return command.offer;
     case 'ReplaceShopDeathDefianceCondition':
       return command.shop;
-    case 'ReplaceAcquisitionOrder':
     case 'SelectDerivedShopEntry':
     case 'EditDerivedShopEntry':
       return command.site;

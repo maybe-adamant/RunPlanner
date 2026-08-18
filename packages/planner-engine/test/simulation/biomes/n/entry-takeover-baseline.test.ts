@@ -23,6 +23,7 @@ import {
   appendCompleteN,
   appendNEntry,
   authorLegalTraitOffers,
+  authorRequiredTestRoomActions,
   nBiome,
   nOccurrenceIds,
 } from '@run-planner/test-fixtures';
@@ -80,7 +81,7 @@ function blankNEntryProject() {
 }
 
 function nBiomeEvaluation(project: ProjectDocument) {
-  const biome = simulateProject(catalog, project)
+  const biome = simulateProject(catalog, authorRequiredTestRoomActions(project, catalog))
     .routes.find((route) => route.routeKey === 'Surface')
     ?.biomes.find((candidate) => candidate.biomeKey === 'N');
   if (biome === undefined) throw new Error('N baseline fixture lost its biome');
@@ -91,7 +92,10 @@ describe('N B1 entry and terminal baseline', () => {
   it('evaluates the blank bounded entry at Opening post-commit depth one', () => {
     const entryCandidates = createPreparedProjectCandidateSession(
       catalog,
-      simulateProjectAssembly(catalog, blankNEntryProject()),
+      simulateProjectAssembly(
+        catalog,
+        authorRequiredTestRoomActions(blankNEntryProject(), catalog),
+      ),
     );
 
     expect(
@@ -348,7 +352,7 @@ describe('N B1 entry and terminal baseline', () => {
     expect(
       createPreparedProjectCandidateSession(
         catalog,
-        simulateProjectAssembly(catalog, project),
+        simulateProjectAssembly(catalog, authorRequiredTestRoomActions(project, catalog)),
       ).evaluate({
         kind: 'takeoverPrebossBatch',
         source: handoff,

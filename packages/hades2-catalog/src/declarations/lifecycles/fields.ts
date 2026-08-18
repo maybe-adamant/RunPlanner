@@ -14,13 +14,8 @@ export const fieldsRoomLifecycleProfiles = [
         effects: ['recordOfferPoint'],
       },
       {
-        kind: 'runFieldsActionSequence',
-        effects: [
-          'recordEncounterStart',
-          'advanceEncounterDepth',
-          'recordEncounterCompletion',
-          'recordAcquisitionPoint',
-        ],
+        kind: 'runEncounterSequence',
+        effects: ['recordEncounterStart', 'advanceEncounterDepth', 'recordEncounterCompletion'],
       },
       { kind: 'generateOutgoingBatch', effects: ['recordOutgoingGeneration'] },
       {

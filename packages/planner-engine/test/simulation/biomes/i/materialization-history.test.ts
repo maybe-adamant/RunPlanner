@@ -31,6 +31,7 @@ import {
 import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
+import { authorRequiredTestRoomActions } from '@run-planner/test-fixtures';
 
 const biome = createBiomeAddress('Underworld', 'I');
 
@@ -45,8 +46,8 @@ type IncomingRewardValue = Extract<
 >['value'];
 
 function plan(project: ProjectDocument): AuthoredBiomePlan {
-  const result = project.routes
-    .find((route) => route.routeKey === 'Underworld')
+  const result = authorRequiredTestRoomActions(project, catalog)
+    .routes.find((route) => route.routeKey === 'Underworld')
     ?.biomes.find((candidate) => candidate.biomeKey === 'I');
   if (result === undefined) {
     throw new Error('fixture lost I plan');

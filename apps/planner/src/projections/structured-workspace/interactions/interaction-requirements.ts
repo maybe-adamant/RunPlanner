@@ -2,7 +2,6 @@ import {
   semanticAddressKey,
   type BatchRewardStoreAddress,
   type AdditionalExitAddress,
-  type AcquisitionSiteAddress,
   type BiomeAddress,
   type EncounterPhaseAddress,
   type ExitDecisionAddress,
@@ -22,7 +21,7 @@ import {
 import type {
   WorkspaceLocalVisitOrderControl,
   WorkspaceExitFrontierCapabilities,
-  WorkspaceFieldsActionProposal,
+  WorkspaceRoomActionProposal,
   WorkspaceInteractionChoice,
 } from '../contract';
 import { StructuredWorkspaceProjectionContractError } from '../contract';
@@ -88,15 +87,9 @@ export type WorkspaceOccurrenceInteractionRequirement =
       }[];
     }
   | {
-      readonly kind: 'acquisitionOrder';
-      readonly owner: AcquisitionSiteAddress;
-      readonly proposalEntryKeys: readonly (readonly string[])[];
-      readonly selectedEntryKeys: readonly string[];
-    }
-  | {
-      readonly kind: 'fieldsActionOrder';
+      readonly kind: 'roomActions';
       readonly owner: OccurrenceAddress;
-      readonly proposals: readonly WorkspaceFieldsActionProposal[];
+      readonly proposals: readonly WorkspaceRoomActionProposal[];
     }
   | {
       readonly kind: 'shopDeathDefianceCondition';

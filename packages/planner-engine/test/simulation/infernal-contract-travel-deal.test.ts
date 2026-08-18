@@ -3,7 +3,6 @@ import {
   createBiomeAddress,
   createOccurrenceId,
   semanticAddressKey,
-  shopAcquisitionOrderProposals,
   type AuthoredRewardState,
 } from '@run-planner/engine/authored-project';
 import {
@@ -318,7 +317,6 @@ function settle(options: {
     state: shopState,
     acquisitionSites: Object.freeze({
       roomExit: Object.freeze({
-        order: Object.freeze([...options.order]),
         pickupEntries: Object.freeze({
           infernalContractReward: selectedContract,
           ...(options.travelChild === undefined ? {} : { travelDealRefill: options.travelChild }),
@@ -333,6 +331,19 @@ function settle(options: {
     }),
     encounters: createDefaultRoomEncounterState(catalog, declaration, 'gate-b.encounters'),
     additionalExits: Object.freeze([]),
+    roomActions: Object.freeze({
+      order: Object.freeze(
+        options.order.map((entryKey) =>
+          shopState.shop?.offers[entryKey] !== undefined
+            ? Object.freeze({ kind: 'interactShopOffer' as const, offerKey: entryKey })
+            : Object.freeze({
+                kind: 'interactAcquisitionEntry' as const,
+                siteKey: 'roomExit',
+                entryKey,
+              }),
+        ),
+      ),
+    }),
   });
   const canonical = materializeAuthoredRoom({
     catalog,
@@ -504,50 +515,6 @@ describe('Infernal Contract and Travel Deal chronology', () => {
         origin: expect.objectContaining({ entryKey: 'travelDealRefill' }),
       }),
     );
-  });
-
-  it('owns atomic source-dependent toggle and move proposals for the singleton refill', () => {
-    expect(
-      shopAcquisitionOrderProposals(
-        ['Boon', 'travelDealRefill', 'Minor'],
-        ['Boon', 'Minor', 'travelDealRefill'],
-        [
-          {
-            kind: 'fixedSource',
-            entryKey: 'travelDealRefill',
-            sourceOfferKey: 'Boon',
-          },
-        ],
-      ),
-    ).toEqual([
-      ['Boon', 'travelDealRefill', 'Minor'],
-      ['Minor'],
-      ['Boon', 'travelDealRefill'],
-      ['Boon', 'Minor'],
-      ['Boon', 'Minor', 'travelDealRefill'],
-    ]);
-  });
-
-  it('repairs Travel removal and Gold rebinding in one complete site-order proposal', () => {
-    const proposals = shopAcquisitionOrderProposals(
-      ['Boon', 'travelDealRefill', 'echoDoubleShopReward', 'Minor'],
-      ['Boon', 'Minor', 'travelDealRefill', 'echoDoubleShopReward'],
-      [
-        {
-          kind: 'fixedSource',
-          entryKey: 'travelDealRefill',
-          sourceOfferKey: 'Boon',
-        },
-        {
-          kind: 'firstEligibleSource',
-          entryKey: 'echoDoubleShopReward',
-          eligibleSourceOfferKeys: ['Boon', 'travelDealRefill', 'Minor'],
-        },
-      ],
-    );
-
-    expect(proposals).toContainEqual(['Minor', 'echoDoubleShopReward']);
-    expect(proposals).not.toContainEqual(['travelDealRefill', 'echoDoubleShopReward', 'Minor']);
   });
 
   it('rebinds the singleton source and indexed slot when a different normal purchase comes first', () => {

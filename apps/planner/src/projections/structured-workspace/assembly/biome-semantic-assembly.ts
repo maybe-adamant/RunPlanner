@@ -485,6 +485,8 @@ export function assembleWorkspaceBiomeSemantics(
       requireCompatibleOccurrenceAssemblyRequest(biome, cached.request, request);
       return cached.assembly;
     }
+    const evaluatedRoom =
+      request.evaluatedRoom ?? source.blockedOccurrenceRoom(request.occurrence.occurrenceId);
     const assembly = assembleWorkspaceOccurrence({
       ...(anomalyReplacementRoomGameNames === undefined ? {} : { anomalyReplacementRoomGameNames }),
       biome,
@@ -492,7 +494,7 @@ export function assembleWorkspaceBiomeSemantics(
       encounterPhaseStatus: source.encounterPhaseStatus,
       figLeafSupport: source.figLeafSupport,
       gorgonSupport: source.gorgonSupport,
-      ...(request.evaluatedRoom === undefined ? {} : { evaluatedRoom: request.evaluatedRoom }),
+      ...(evaluatedRoom === undefined ? {} : { evaluatedRoom }),
       ...(request.fieldsBatchFacts === undefined
         ? {}
         : { fieldsBatchFacts: request.fieldsBatchFacts }),

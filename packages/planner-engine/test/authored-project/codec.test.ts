@@ -3,17 +3,13 @@ import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
-  createAcquisitionSiteAddress,
   createBiomeAddress,
-  createOccurrenceAddress,
   createOccurrenceId,
   createProjectDocument,
   decodeProjectDocument,
   encodeProjectDocument,
+  type RoomActionReference,
 } from '@run-planner/engine/authored-project';
-
-import { createCompleteNProject } from './support/complete-n-project';
-import { nBiome } from './support/configured-projects';
 
 function encodedFStart(): Record<string, unknown> {
   const biome = createBiomeAddress('Underworld', 'F');
@@ -44,6 +40,24 @@ function fTopology(document: Record<string, unknown>): Record<string, unknown> {
   }
   return topology as Record<string, unknown>;
 }
+
+function firstOccurrence(document: Record<string, unknown>): Record<string, unknown> {
+  const occurrence = (fTopology(document).occurrences as Array<Record<string, unknown>>)[0];
+  if (occurrence === undefined) throw new Error('missing encoded F occurrence');
+  return occurrence;
+}
+
+const roomActionReferences: readonly RoomActionReference[] = [
+  { kind: 'completeFieldsCage', phaseKey: 'wave1' },
+  { kind: 'interactIncomingReward', producerPoint: 'beforeCombat', acquisitionRole: 'source' },
+  { kind: 'interactLocalReward', groupKey: 'cages', slotKey: 'cage1' },
+  { kind: 'chooseRewardWheel', wheelKey: 'wheel1' },
+  { kind: 'interactWheelReward', wheelKey: 'wheel1' },
+  { kind: 'interactShopOffer', offerKey: 'Major' },
+  { kind: 'interactEncounter', phaseKey: 'main' },
+  { kind: 'interactGorgon', phaseKey: 'main' },
+  { kind: 'interactAcquisitionEntry', siteKey: 'roomExit', entryKey: 'pickup1' },
+];
 
 function replaceTopology(
   document: Record<string, unknown>,
@@ -170,6 +184,49 @@ const codecRejections: readonly {
 ];
 
 describe('project document codec', () => {
+  it('round-trips the exact closed room-action reference union', () => {
+    const encoded = encodedFStart();
+    firstOccurrence(encoded).roomActions = { order: roomActionReferences };
+
+    const decoded = decodeProjectDocument(encoded, catalog);
+    expect(decoded.routes[0]?.biomes[0]?.topology?.occurrences[0]?.roomActions.order).toEqual(
+      roomActionReferences,
+    );
+    expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(decoded)), catalog)).toEqual(
+      decoded,
+    );
+  });
+
+  it('requires one strict occurrence-level roomActions object', () => {
+    const missing = encodedFStart();
+    delete firstOccurrence(missing).roomActions;
+    expect(() => decodeProjectDocument(missing, catalog)).toThrow('roomActions');
+
+    const extra = encodedFStart();
+    firstOccurrence(extra).roomActions = { order: [], extra: true };
+    expect(() => decodeProjectDocument(extra, catalog)).toThrow(
+      'roomActions.extra: is not a project document field',
+    );
+  });
+
+  it('rejects unknown, malformed, and duplicate room-action references', () => {
+    const unknown = encodedFStart();
+    firstOccurrence(unknown).roomActions = { order: [{ kind: 'unknown' }] };
+    expect(() => decodeProjectDocument(unknown, catalog)).toThrow('unknown room action unknown');
+
+    const malformed = encodedFStart();
+    firstOccurrence(malformed).roomActions = {
+      order: [{ kind: 'interactEncounter', phaseKey: ' ' }],
+    };
+    expect(() => decodeProjectDocument(malformed, catalog)).toThrow('phaseKey');
+
+    const duplicate = encodedFStart();
+    firstOccurrence(duplicate).roomActions = {
+      order: [roomActionReferences[0], roomActionReferences[0]],
+    };
+    expect(() => decodeProjectDocument(duplicate, catalog)).toThrow('duplicates room action');
+  });
+
   it('round-trips a canonical dormant Boss-completion Arcana set', () => {
     const encoded = encodedFStart();
     const route = (encoded.routes as Array<Record<string, unknown>>)[0]!;
@@ -289,27 +346,6 @@ describe('project document codec', () => {
     const route = (encoded.routes as Array<Record<string, unknown>>)[0]!;
     mutate(route.loadout as Record<string, unknown>);
     expect(() => decodeProjectDocument(encoded, catalog)).toThrow();
-  });
-
-  it('round-trips a non-empty Shop purchase order without changing its sequence', () => {
-    const occurrenceId = createOccurrenceId('round-trip-n-preboss');
-    const authored = applyProjectCommand(createCompleteNProject(), catalog, {
-      kind: 'ReplaceAcquisitionOrder',
-      site: createAcquisitionSiteAddress(createOccurrenceAddress(nBiome, occurrenceId), 'roomExit'),
-      entryKeys: ['Minor', 'MajorNonBoon'],
-    });
-
-    const decoded = decodeProjectDocument(JSON.parse(encodeProjectDocument(authored)), catalog);
-    const occurrence = decoded.routes
-      .find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((biome) => biome.biomeKey === 'N')
-      ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === occurrenceId);
-
-    expect(occurrence).toMatchObject({
-      state: { kind: 'shop' },
-      acquisitionSites: { roomExit: { order: ['Minor', 'MajorNonBoon'] } },
-    });
-    expect(encodeProjectDocument(decoded)).toBe(encodeProjectDocument(authored));
   });
 
   it.each(codecRejections)('rejects %s', ({ mutate }) => {

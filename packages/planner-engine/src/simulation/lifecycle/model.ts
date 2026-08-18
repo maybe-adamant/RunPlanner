@@ -7,10 +7,11 @@ import type {
   CompletionRoomAddress,
   HubRoomAddress,
   OccurrenceAddress,
+  RoomActionAddress,
 } from '../../authored-project/addresses';
 import type { ProducerLifecyclePointKey, ResolvedRewardOffer } from '../../reward-kernel/model';
 import type { ResolvedEncounterPhase } from '../encounters';
-import type { FieldsCombatAction } from '../../authored-project/model';
+import type { RoomActionRoster } from '../room-actions';
 
 export type RoomHistoryOrigin = CompletionRoomAddress | HubRoomAddress | OccurrenceAddress;
 
@@ -67,6 +68,11 @@ export type RoomLifecycleEvent =
       readonly figLeafSkipOwner: boolean;
     })
   | (RoomLifecycleEventBase & {
+      readonly kind: 'encounterInteractionReached';
+      readonly phaseKey: string;
+      readonly interaction: 'encounter' | 'gorgon';
+    })
+  | (RoomLifecycleEventBase & {
       readonly kind: 'requiredObjectCompleted';
       readonly objectKey: RequiredRoomObjectDescriptor['key'];
     })
@@ -85,8 +91,9 @@ export type RoomLifecycleEvent =
   | (RoomLifecycleEventBase & {
       readonly kind: 'acquisitionPointReached';
       readonly point: string;
-      /** Exact original source point retained by a later Artificer child action. */
-      readonly artificerSourcePoint?: string;
+      /** Exact persisted site identity for one chronology-owned acquisition entry. */
+      readonly siteKey?: string;
+      readonly entryKey?: string;
     })
   | (RoomLifecycleEventBase & { readonly kind: 'roomCommitted' })
   | (RoomLifecycleEventBase & {
@@ -120,9 +127,8 @@ export interface RoomLifecycleExecutionInput {
   readonly requiredObjects?: readonly RequiredRoomObjectDescriptor[];
   readonly enteredRewardStoreKey?: string;
   readonly offerPointRewardStores?: Readonly<Record<string, string>>;
-  readonly fieldsActions?: readonly FieldsCombatAction[];
-  readonly fieldsCageRewards?: readonly { readonly phaseKey: string; readonly slotKey: string }[];
-  readonly fieldsOptionalRewardSlotKeys?: readonly string[];
+  /** Present for schema-47 authored occurrences; completion/hub lifecycles remain profile-only. */
+  readonly roomActionRoster?: RoomActionRoster;
 }
 
 export interface RoomHistoryFragment {
@@ -130,4 +136,5 @@ export interface RoomHistoryFragment {
   readonly lifecycleProfileKey: string;
   readonly encounterEnvelopeKey: string;
   readonly events: readonly RoomLifecycleEvent[];
+  readonly blockedAt?: RoomActionAddress;
 }

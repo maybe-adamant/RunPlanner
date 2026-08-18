@@ -38,6 +38,7 @@ import {
   fMidshopPomShopId,
   goldenFBiome,
 } from '@run-planner/test-fixtures';
+import { replaceTestShopOfferActions } from '@run-planner/test-fixtures';
 import {
   createFGenerationProject,
   fGenerationBaselineBatches,
@@ -342,23 +343,13 @@ describe('F candidate support', () => {
     const results = createPreparedProjectCandidateSession(
       catalog,
       simulateProjectAssembly(catalog, project),
-    ).evaluate([
-      {
-        kind: 'shopOffer',
-        offer: createShopOfferAddress(fBiome, shopId, offerKey),
-        value: offer.reward.offer,
-      },
-      {
-        kind: 'acquisitionOrder',
-        site: createAcquisitionSiteAddress(createOccurrenceAddress(fBiome, shopId), 'roomExit'),
-        entryKeys: shop.acquisitionSites?.roomExit?.order ?? [],
-      },
-    ]);
+    ).evaluate({
+      kind: 'shopOffer',
+      offer: createShopOfferAddress(fBiome, shopId, offerKey),
+      value: offer.reward.offer,
+    });
 
-    expect(results).toEqual([
-      { kind: 'shopOffer', result: { supported: true, findings: [] } },
-      { kind: 'acquisitionOrder', result: { supported: true, findings: [] } },
-    ]);
+    expect(results).toEqual({ kind: 'shopOffer', result: { supported: true, findings: [] } });
   });
 
   it('separates a structural later purchase from its blocked chronology evaluation', () => {
@@ -380,35 +371,20 @@ describe('F candidate support', () => {
       ),
     ).toHaveLength(1);
 
-    const candidate = createPreparedProjectCandidateSession(
-      catalog,
-      simulateProjectAssembly(catalog, project),
-    ).evaluate({ kind: 'acquisitionOrder', site, entryKeys: ['Boon', 'Minor'] });
-    expect(candidate).toMatchObject({
-      kind: 'acquisitionOrder',
-      result: {
-        supported: false,
-        findings: [
-          {
-            code: 'traitOfferMissing',
-            origin: hiddenSource,
-          },
-        ],
-      },
-    });
-
-    const ordered = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceAcquisitionOrder',
-      site,
-      entryKeys: ['Boon', 'Minor'],
-    });
+    if (site.owner.kind !== 'occurrence') throw new Error('F Shop site must be occurrence-owned');
+    const ordered = replaceTestShopOfferActions(project, catalog, site.owner, ['Boon', 'Minor']);
     expect(
       ordered.routes
         .find((route) => route.routeKey === 'Underworld')
         ?.biomes.find((biome) => biome.biomeKey === 'F')
         ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === fMidshopPomShopId)
-        ?.acquisitionSites?.roomExit?.order,
-    ).toEqual(['Boon', 'Minor']);
+        ?.roomActions.order,
+    ).toEqual(
+      expect.arrayContaining([
+        { kind: 'interactShopOffer', offerKey: 'Boon' },
+        { kind: 'interactShopOffer', offerKey: 'Minor' },
+      ]),
+    );
     const evaluation = simulateProject(catalog, ordered);
     expect(evaluation.findings.map((finding) => finding.code)).toContain('traitOfferMissing');
     expect(evaluation.findings.map((finding) => finding.code)).not.toContain(
@@ -662,19 +638,10 @@ describe('F candidate support', () => {
         offer: createShopOfferAddress(fBiome, shop.occurrenceId, offerKey),
         value: offer.reward.offer,
       },
-      {
-        kind: 'acquisitionOrder',
-        site: createAcquisitionSiteAddress(
-          createOccurrenceAddress(fBiome, shop.occurrenceId),
-          'roomExit',
-        ),
-        entryKeys: shop.acquisitionSites?.roomExit?.order ?? [],
-      },
     ]);
 
     expect(results).toMatchObject([
       { kind: 'incomingReward', result: { supported: true, findings: [] } },
-      { kind: 'unavailable', reason: 'coverageNotReached' },
       { kind: 'unavailable', reason: 'coverageNotReached' },
     ]);
   });

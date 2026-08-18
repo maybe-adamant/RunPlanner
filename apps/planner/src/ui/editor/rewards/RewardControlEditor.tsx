@@ -106,11 +106,7 @@ export function RewardControlEditor({
                         return;
                       }
                       if (kind === 'artificer')
-                        executeIntent(
-                          interaction.intentFor(
-                            Object.freeze({ kind: 'artificer', replacement: null }),
-                          ),
-                        );
+                        executeIntent(interaction.intentFor(Object.freeze({ kind: 'artificer' })));
                     }}
                     value={conversion.value.kind}
                   >
@@ -133,18 +129,6 @@ export function RewardControlEditor({
                     </option>
                   </select>
                 </label>
-                {conversion.value.kind !==
-                'artificer' ? null : interaction.artificerReplacementControl ===
-                  undefined ? null : (
-                  <fieldset className="artificer-replacement-editor">
-                    <legend>Replacement reward</legend>
-                    <RewardControlEditor
-                      control={interaction.artificerReplacementControl}
-                      idPrefix={`${idPrefix}-artificer-${conversion.address.acquisitionRole}`}
-                      interactions={interactions}
-                    />
-                  </fieldset>
-                )}
               </div>
             );
           })}

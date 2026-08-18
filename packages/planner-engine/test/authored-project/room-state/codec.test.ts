@@ -73,41 +73,11 @@ function traitFixture(): {
 }
 
 describe('persisted authored room-state codec', () => {
-  it('accepts missing Fields actions for repair but rejects unknown and duplicate identities', () => {
-    const declaration = room('H_Combat02');
-    const context = { role: 'ordinary' as const, entryActive: true, activeCageCount: 2 };
-    const state = mutable(createDefaultRoomState(catalog, declaration, context));
-    const actionOrder = state.actionOrder as Record<string, unknown>[];
-    state.actionOrder = actionOrder.slice(0, 3);
-    expect(decodeRoomState(state, catalog, declaration, context, path)).toMatchObject({
-      kind: 'fieldsCombat',
-      actionOrder: expect.any(Array),
-    });
-
-    state.actionOrder = [...actionOrder, actionOrder[0]];
-    expect(() => decodeRoomState(state, catalog, declaration, context, path)).toThrow(
-      'duplicates Fields action complete:Cage01',
-    );
-
-    state.actionOrder = [{ kind: 'completeCage', phaseKey: 'UnknownCage' }];
-    expect(() => decodeRoomState(state, catalog, declaration, context, path)).toThrow(
-      'unknown Fields action identity complete:UnknownCage',
-    );
-  });
-
-  it('decodes the declaration-bounded Fields optional inventory and closed actions', () => {
+  it('decodes the declaration-bounded Fields optional inventory', () => {
     const declaration = room('H_Combat02');
     const context = { role: 'ordinary' as const, entryActive: true, activeCageCount: 2 };
     const state = mutable(createDefaultRoomState(catalog, declaration, context));
     state.optionalRewardCount = 0;
-    state.actionOrder = [
-      ...(state.actionOrder as Record<string, unknown>[]),
-      { kind: 'interactOptionalReward', slotKey: 'optional3' },
-    ];
-    expect(() => decodeRoomState(state, catalog, declaration, context, path)).toThrow(
-      'unknown Fields action identity interactOptional:optional3',
-    );
-    state.actionOrder = [];
     expect(decodeRoomState(state, catalog, declaration, context, path)).toMatchObject({
       kind: 'fieldsCombat',
       optionalRewardCount: 0,
@@ -120,11 +90,6 @@ describe('persisted authored room-state codec', () => {
     state.optionalRewardCount = 4;
     expect(() => decodeRoomState(state, catalog, declaration, context, path)).toThrow(
       'must be within 0..3',
-    );
-    state.optionalRewardCount = 2;
-    state.actionOrder = [{ kind: 'interactOptionalReward', slotKey: 'optional4' }];
-    expect(() => decodeRoomState(state, catalog, declaration, context, path)).toThrow(
-      'unknown Fields action identity interactOptional:optional4',
     );
   });
 

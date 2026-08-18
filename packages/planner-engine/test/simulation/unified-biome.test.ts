@@ -28,6 +28,7 @@ import {
 } from '@run-planner/engine/simulation';
 import {
   authorLegalTraitOffers,
+  authorRequiredTestRoomActions,
   authorSurfaceWorldShop,
   createCompleteFGProject,
   createGoldenFGHProject,
@@ -37,6 +38,14 @@ import {
   createRepresentativeNOPProject,
   createRepresentativeNOPQProject,
 } from '@run-planner/test-fixtures';
+
+function evaluatedProject(project: ReturnType<typeof createProjectDocument>) {
+  return simulateProject(catalog, authorRequiredTestRoomActions(project, catalog));
+}
+
+function assembledProject(project: ReturnType<typeof createProjectDocument>) {
+  return simulateProjectAssembly(catalog, authorRequiredTestRoomActions(project, catalog));
+}
 
 function traitContext(project: ReturnType<typeof createProjectDocument>, routeKey: string) {
   const route = project.routes.find((candidate) => candidate.routeKey === routeKey);
@@ -443,7 +452,7 @@ function completeIProject() {
 describe('unified biome simulation', () => {
   it('materializes a selected takeover Preboss as an ordered normal-door batch', () => {
     const project = createCompleteFGProject();
-    const evaluation = simulateProject(catalog, project);
+    const evaluation = evaluatedProject(project);
     const biome = evaluation.routes[0]?.biomes[0];
     expect(biome?.authoring).toBe('complete');
     if (biome?.authoring !== 'complete' || biome.validity !== 'valid') {
@@ -467,10 +476,24 @@ describe('unified biome simulation', () => {
       'startsCompletion',
       'deadLeaf',
     ]);
-    const candidates = createPreparedProjectCandidateSession(
-      catalog,
-      simulateProjectAssembly(catalog, project),
-    );
+    for (const target of takeover.targets) {
+      expect(
+        target.room.roomActionRoster.checkpoints.map((checkpoint) => checkpoint.checkpointKey),
+      ).not.toContain('outgoingGeneration');
+      expect(
+        target.room.roomActionRoster.checkpoints.map((checkpoint) => checkpoint.checkpointKey),
+      ).toContain('exitUsable');
+    }
+    const selectedPreboss = takeover.targets.find((target) => target.room.entered)?.room;
+    expect(
+      biome.history.events.some(
+        (event) =>
+          event.kind === 'outgoingGenerationCheckpoint' &&
+          selectedPreboss !== undefined &&
+          event.origin === selectedPreboss.origin,
+      ),
+    ).toBe(false);
+    const candidates = createPreparedProjectCandidateSession(catalog, assembledProject(project));
     expect(() =>
       candidates.evaluate({
         kind: 'roomTarget',
@@ -493,7 +516,7 @@ describe('unified biome simulation', () => {
 
   it('keeps a structurally complete F prefix evaluated through its next decision frontier', () => {
     const project = incompleteFPrefixProject();
-    const evaluation = simulateProject(catalog, project);
+    const evaluation = evaluatedProject(project);
     const biome = evaluation.routes[0]?.biomes[0];
     expect(biome?.authoring).toBe('incomplete');
     if (biome?.authoring !== 'incomplete') throw new Error('F prefix should be incomplete');
@@ -508,10 +531,7 @@ describe('unified biome simulation', () => {
       JSON.stringify(biome.findings),
     ).toContain('f-prefix-combat');
     expect(biome.roomGeneration.ordinary.forcePressure).toHaveLength(1);
-    const candidates = createPreparedProjectCandidateSession(
-      catalog,
-      simulateProjectAssembly(catalog, project),
-    );
+    const candidates = createPreparedProjectCandidateSession(catalog, assembledProject(project));
     const result = candidates.evaluate({
       kind: 'roomTarget',
       target: createTargetAddress(
@@ -558,7 +578,7 @@ describe('unified biome simulation', () => {
       }),
       storeKey: 'RunProgress',
     });
-    const evaluation = simulateProject(catalog, project);
+    const evaluation = evaluatedProject(project);
     const result = evaluation.routes[0]?.biomes[0];
     expect(result?.authoring).toBe('incomplete');
     if (result?.authoring !== 'incomplete' || !('materializedPrefix' in result)) {
@@ -584,7 +604,7 @@ describe('unified biome simulation', () => {
 
   it('runs the Fields chain and no-store takeover through the same evaluator', () => {
     const project = legalHFieldsProject();
-    const biome = simulateProject(catalog, project)
+    const biome = evaluatedProject(project)
       .routes.find((route) => route.routeKey === 'Underworld')
       ?.biomes.find((candidate) => candidate.biomeKey === 'H');
     if (biome === undefined) throw new Error('missing H evaluation');
@@ -751,6 +771,25 @@ describe('unified biome simulation', () => {
     );
     expect(hubCreation).toHaveLength(9);
     expect(handoffCreation).toMatchObject({ generationIndex: 10, generationCount: 10 });
+    const enteredSideRooms = biome.snapshot.decisions
+      .filter((decision) => decision.kind === 'hub')
+      .flatMap((decision) => decision.visits)
+      .flatMap((visit) => visit.enteredLocalRooms);
+    expect(enteredSideRooms.length).toBeGreaterThan(0);
+    for (const sideRoom of enteredSideRooms) {
+      expect(
+        sideRoom.roomActionRoster.checkpoints.map((checkpoint) => checkpoint.checkpointKey),
+      ).not.toContain('outgoingGeneration');
+      expect(
+        sideRoom.roomActionRoster.checkpoints.map((checkpoint) => checkpoint.checkpointKey),
+      ).toContain('exitUsable');
+      expect(
+        biome.history.events.some(
+          (event) =>
+            event.kind === 'outgoingGenerationCheckpoint' && event.origin === sideRoom.origin,
+        ),
+      ).toBe(false);
+    }
     expect(biome.history.events.some((event) => event.kind === 'biomeCompleted')).toBe(true);
   });
 });

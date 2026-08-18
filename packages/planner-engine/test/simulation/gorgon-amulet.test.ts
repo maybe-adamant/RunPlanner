@@ -13,6 +13,8 @@ import {
   createGoldenFGHProject,
   createCompleteFGProject,
   authorLegalTraitOffers,
+  authorRequiredTestRoomActions,
+  replaceTestRoomActionOrder,
   goldenGBiome,
   goldenGOccurrenceId,
   createRepresentativeNOPProject,
@@ -29,8 +31,6 @@ import {
 import {
   encounterPhaseCandidateSupportForProjectEvaluationAssembly,
   encounterPhaseGorgonSupportForProjectEvaluationAssembly,
-  evaluateBiomeCompleteness,
-  materializeBiome,
   createPreparedProjectCandidateSession,
   simulateProject,
   simulateProjectAssembly,
@@ -48,7 +48,6 @@ import {
   processEncounterTraitOffer,
 } from '../../src/simulation/rewards/processing';
 
-import { evaluateBiomeRewardsAssemblyInternal } from '../../src/simulation/rewards/biome';
 import { attachTraitHistory, foldTraitHistoryEvents } from '../../src/simulation/traits';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
 import {
@@ -88,6 +87,29 @@ function authorGorgon(
 
 function createCompleteRepresentativeNOPProject() {
   return authorLegalTraitOffers(createRepresentativeNOPProject());
+}
+
+function assembled(project: import('../../src/authored-project').ProjectDocument) {
+  return simulateProjectAssembly(catalog, authorRequiredTestRoomActions(project, catalog));
+}
+
+function orderGoldenGorgonAfterIncoming(
+  project: import('../../src/authored-project').ProjectDocument,
+) {
+  return replaceTestRoomActionOrder(
+    authorRequiredTestRoomActions(project, catalog),
+    catalog,
+    goldenGBiome,
+    goldenGOccurrenceId(1, 1),
+    [
+      {
+        kind: 'interactIncomingReward',
+        producerPoint: 'roomRewardPickup',
+        acquisitionRole: 'source',
+      },
+      { kind: 'interactGorgon', phaseKey: 'Encounter' },
+    ],
+  );
 }
 
 describe('Gorgon Amulet lifecycle', () => {
@@ -139,29 +161,16 @@ describe('Gorgon Amulet lifecycle', () => {
     const baseline = simulateProject(catalog, createCompleteFGProject());
     const underworld = baseline.routes.find((route) => route.routeKey === 'Underworld');
     const previous = underworld?.biomes.find((biome) => biome.biomeKey === 'F');
-    const gEvaluation = underworld?.biomes.find((biome) => biome.biomeKey === 'G');
-    const route = project.routes.find((candidate) => candidate.routeKey === 'Underworld');
+    const authoredProject = authorRequiredTestRoomActions(project, catalog);
+    const route = authoredProject.routes.find((candidate) => candidate.routeKey === 'Underworld');
     const plan = route?.biomes.find((biome) => biome.biomeKey === 'G');
     if (
       previous?.authoring !== 'complete' ||
       previous.validity !== 'valid' ||
-      gEvaluation?.authoring !== 'complete' ||
-      gEvaluation.validity !== 'valid' ||
       route === undefined ||
       plan === undefined
     )
       throw new Error('missing valid F-to-G Gorgon fixture');
-    const completeness = evaluateBiomeCompleteness(catalog, goldenGBiome, plan);
-    if (completeness.completion !== 'complete') throw new Error('G fixture is incomplete');
-    const snapshot = materializeBiome(
-      catalog,
-      goldenGBiome,
-      completeness,
-      route.loadout,
-      plan.bossCompletionArcanaKeys,
-      undefined,
-      plan.keepsakeEquipResults,
-    );
     const traitHistory = seed.traitHistory ?? cherishedPrerequisiteHistory();
     const initialBranches = previous.rewards.branches.map((branch) => ({
       ...branch,
@@ -169,14 +178,16 @@ describe('Gorgon Amulet lifecycle', () => {
       traitHistory,
       keepsakes: seed.keepsakes,
     }));
-    return evaluateBiomeRewardsAssemblyInternal(
-      catalog,
-      snapshot,
-      gEvaluation.history,
-      2,
-      route.loadout,
-      initialBranches,
-    );
+    const progressive = evaluateProgressiveBiomeAssembly(catalog, goldenGBiome, plan, {
+      enteredBiomeCount: 2,
+      loadout: route.loadout,
+      seed: { history: previous.history, rewardBranches: initialBranches },
+    });
+    if (progressive === null) throw new Error('G fixture did not publish a progressive assembly');
+    return Object.freeze({
+      simulation: progressive.evaluation.rewards,
+      traitOfferArtifacts: progressive.candidateArtifacts.traitOffers,
+    });
   }
 
   it('starts pending, consumes once, and never reactivates', () => {
@@ -266,7 +277,7 @@ describe('Gorgon Amulet lifecycle', () => {
       selection: createRouteStartKeepsakeSelectionAddress('Underworld'),
       keepsakeKey: 'AthenaEncounterKeepsake',
     });
-    const evaluation = simulateProjectAssembly(catalog, project).evaluation;
+    const evaluation = assembled(project).evaluation;
     const g = evaluation.routes
       .find((route) => route.routeKey === 'Underworld')
       ?.biomes.find((biome) => biome.biomeKey === 'G');
@@ -458,6 +469,7 @@ describe('Gorgon Amulet lifecycle', () => {
       expect(draft.options.every((option) => option.rarity === 'Heroic')).toBe(true);
     }
     project = authorGorgon(project, phase);
+    project = orderGoldenGorgonAfterIncoming(project);
     const result = evaluateGWithGorgonSeed(project, acquired).simulation;
     expect(result.branches, JSON.stringify(result.findings)).not.toHaveLength(0);
     expect(result.branches.every((branch) => branch.keepsakes.gorgon?.status === 'consumed')).toBe(
@@ -615,6 +627,7 @@ describe('Gorgon Amulet lifecycle', () => {
       value: true,
     });
     project = authorGorgon(project, phase);
+    project = orderGoldenGorgonAfterIncoming(project);
     const contextInvalid = project.routes.map((route) =>
       route.routeKey !== 'Underworld'
         ? route
@@ -757,7 +770,7 @@ describe('Gorgon Amulet lifecycle', () => {
       value: true,
     });
     project = authorGorgon(project, phase);
-    const assembly = simulateProjectAssembly(catalog, project);
+    const assembly = assembled(project);
     const p = assembly.evaluation.routes
       .find((route) => route.routeKey === 'Surface')
       ?.biomes.find((biome) => biome.biomeKey === 'P');
@@ -776,7 +789,7 @@ describe('Gorgon Amulet lifecycle', () => {
       { kind: 'occurrence', occurrenceId: pOccurrenceId('P_Combat12', 8, 1) },
       'Combat',
     );
-    const noGorgon = simulateProjectAssembly(catalog, createCompleteRepresentativeNOPProject());
+    const noGorgon = assembled(createCompleteRepresentativeNOPProject());
     expect(
       encounterPhaseGorgonSupportForProjectEvaluationAssembly(noGorgon, phase)?.supported,
     ).toBe(false);
@@ -786,7 +799,7 @@ describe('Gorgon Amulet lifecycle', () => {
       selection: createRouteStartKeepsakeSelectionAddress('Surface'),
       keepsakeKey: 'AthenaEncounterKeepsake',
     });
-    const pending = simulateProjectAssembly(catalog, pendingProject);
+    const pending = assembled(pendingProject);
     expect(encounterPhaseGorgonSupportForProjectEvaluationAssembly(pending, phase)).toMatchObject({
       supported: true,
       rarity: 'Epic',
@@ -798,7 +811,7 @@ describe('Gorgon Amulet lifecycle', () => {
       value: true,
     });
     pendingProject = authorGorgon(pendingProject, phase);
-    const consumed = simulateProjectAssembly(catalog, pendingProject);
+    const consumed = assembled(pendingProject);
     expect(encounterPhaseGorgonSupportForProjectEvaluationAssembly(consumed, phase)).toMatchObject({
       supported: false,
       rarity: 'Epic',
@@ -811,7 +824,7 @@ describe('Gorgon Amulet lifecycle', () => {
         encounterKey: 'AthenaCombatP',
       }),
     );
-    const expired = simulateProjectAssembly(catalog, naturalFirst);
+    const expired = assembled(naturalFirst);
     expect(encounterPhaseGorgonSupportForProjectEvaluationAssembly(expired, phase)?.supported).toBe(
       false,
     );
@@ -821,7 +834,7 @@ describe('Gorgon Amulet lifecycle', () => {
       selection: createRouteStartKeepsakeSelectionAddress('Surface'),
       keepsakeKey: 'AthenaEncounterKeepsake',
     });
-    const nAssembly = simulateProjectAssembly(catalog, nProject);
+    const nAssembly = assembled(nProject);
     const nBiomeEvaluation = nAssembly.evaluation.routes
       .find((route) => route.routeKey === 'Surface')
       ?.biomes.find((biome) => biome.biomeKey === 'N');
@@ -867,7 +880,7 @@ describe('Gorgon Amulet lifecycle', () => {
       value: true,
     });
 
-    const assembly = simulateProjectAssembly(catalog, project);
+    const assembly = assembled(project);
     const p = assembly.evaluation.routes
       .find((route) => route.routeKey === 'Surface')
       ?.biomes.find((biome) => biome.biomeKey === 'P');
@@ -905,7 +918,7 @@ describe('Gorgon Amulet lifecycle', () => {
       selection: createRouteStartKeepsakeSelectionAddress('Surface'),
       keepsakeKey: 'AthenaEncounterKeepsake',
     });
-    const pendingAssembly = simulateProjectAssembly(catalog, project);
+    const pendingAssembly = assembled(project);
     expect(
       encounterPhaseCandidateSupportForProjectEvaluationAssembly(pendingAssembly, phase)
         ?.candidateEncounterKeys,
@@ -917,7 +930,7 @@ describe('Gorgon Amulet lifecycle', () => {
         encounterKey: 'AthenaCombatP',
       }),
     );
-    const naturalFirstAssembly = simulateProjectAssembly(catalog, project);
+    const naturalFirstAssembly = assembled(project);
     const p = naturalFirstAssembly.evaluation.routes
       .find((route) => route.routeKey === 'Surface')
       ?.biomes.find((biome) => biome.biomeKey === 'P');
@@ -950,12 +963,12 @@ describe('Gorgon Amulet lifecycle', () => {
       phase,
       value: true,
     });
-    const baseline = simulateProjectAssembly(catalog, createRepresentativeNOPProject()).evaluation;
+    const baseline = assembled(createRepresentativeNOPProject()).evaluation;
     const previous = baseline.routes
       .find((route) => route.routeKey === 'Surface')
       ?.biomes.find((biome) => biome.biomeKey === 'O');
-    const plan = project.routes
-      .find((route) => route.routeKey === 'Surface')
+    const plan = authorRequiredTestRoomActions(project, catalog)
+      .routes.find((route) => route.routeKey === 'Surface')
       ?.biomes.find((biome) => biome.biomeKey === 'P');
     expect(previous).toBeDefined();
     expect(plan).toBeDefined();

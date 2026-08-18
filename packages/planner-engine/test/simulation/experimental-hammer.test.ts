@@ -8,7 +8,6 @@ import {
   createEncounterPhaseAddress,
   createKeepsakeEquipResultAddress,
   createLocalVisitOrderAddress,
-  createOccurrenceAddress,
   createOccurrenceId,
   createPostbossKeepsakeSelectionAddress,
   createRouteStartKeepsakeSelectionAddress,
@@ -29,6 +28,7 @@ import {
   nOccurrenceId,
   oBiome,
   oOccurrenceIds,
+  replaceTestRoomActionOrder,
 } from '@run-planner/test-fixtures';
 import { evaluateBiomeRewardsAssemblyInternal } from '../../src/simulation/rewards/biome';
 import { evaluateKeepsakeEquipResultCandidate } from '../../src/simulation/candidates/keepsake-equip-result';
@@ -276,19 +276,18 @@ describe('Experimental Hammer', () => {
   });
 
   it('uses every real H encounter completion, including multiple phases owned by one room', () => {
-    const project = applyProjectCommand(createGoldenFGHProject(), catalog, {
-      kind: 'ReplaceFieldsActionOrder',
-      occurrence: createOccurrenceAddress(
-        createBiomeAddress('Underworld', 'H'),
-        createOccurrenceId('golden-h-combat02'),
-      ),
-      actionOrder: [
-        { kind: 'completeCage', phaseKey: 'Cage02' },
-        { kind: 'completeCage', phaseKey: 'Cage01' },
-        { kind: 'interactCageReward', slotKey: 'cage1' },
-        { kind: 'interactCageReward', slotKey: 'cage2' },
+    const project = replaceTestRoomActionOrder(
+      createGoldenFGHProject(),
+      catalog,
+      createBiomeAddress('Underworld', 'H'),
+      createOccurrenceId('golden-h-combat02'),
+      [
+        { kind: 'completeFieldsCage', phaseKey: 'Cage02' },
+        { kind: 'completeFieldsCage', phaseKey: 'Cage01' },
+        { kind: 'interactLocalReward', groupKey: 'cages', slotKey: 'cage1' },
+        { kind: 'interactLocalReward', groupKey: 'cages', slotKey: 'cage2' },
       ],
-    });
+    );
     const completions = lifecycleCompletions(project, 'H');
     const distinctOwners = new Set(completions.map((event) => JSON.stringify(event.origin)));
     expect(completions.length).toBeGreaterThan(distinctOwners.size);

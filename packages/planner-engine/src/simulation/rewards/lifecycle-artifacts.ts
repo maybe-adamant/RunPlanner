@@ -13,18 +13,9 @@ export interface ShipLifecycleCandidateContext {
   readonly evaluateState: (state: ShipCombatState) => RoomLifecycleCandidateResult;
 }
 
-export interface AcquisitionOrderCandidateContext {
-  readonly origin: OccurrenceAddress;
-  readonly evaluateOrder: (order: readonly string[]) => RoomLifecycleCandidateResult;
-}
-
 export interface ShipLifecycleCandidateCapability {
   readonly activeWheelKeys: readonly string[];
   readonly evaluateState: (state: ShipCombatState) => RoomLifecycleCandidateResult;
-}
-
-export interface AcquisitionOrderCandidateCapability {
-  readonly evaluateOrder: (order: readonly string[]) => RoomLifecycleCandidateResult;
 }
 
 /**
@@ -35,14 +26,10 @@ export interface AcquisitionOrderCandidateCapability {
  */
 export interface RoomLifecycleCandidateArtifacts {
   readonly shipAt: (owner: OccurrenceAddress) => ShipLifecycleCandidateCapability | undefined;
-  readonly acquisitionOrderAt: (
-    owner: OccurrenceAddress,
-  ) => AcquisitionOrderCandidateCapability | undefined;
 }
 
 export function createRoomLifecycleCandidateArtifacts(
   shipsByOwner: ReadonlyMap<string, ShipLifecycleCandidateContext>,
-  acquisitionOrdersByOwner: ReadonlyMap<string, AcquisitionOrderCandidateContext>,
 ): RoomLifecycleCandidateArtifacts {
   const ships = new Map<string, ShipLifecycleCandidateCapability>();
   for (const [key, context] of shipsByOwner) {
@@ -54,17 +41,11 @@ export function createRoomLifecycleCandidateArtifacts(
       }),
     );
   }
-  const acquisitionOrders = new Map<string, AcquisitionOrderCandidateCapability>();
-  for (const [key, context] of acquisitionOrdersByOwner) {
-    acquisitionOrders.set(key, Object.freeze({ evaluateOrder: context.evaluateOrder }));
-  }
   return Object.freeze({
     shipAt: (owner: OccurrenceAddress) => ships.get(semanticAddressKey(owner)),
-    acquisitionOrderAt: (owner: OccurrenceAddress) =>
-      acquisitionOrders.get(semanticAddressKey(owner)),
   });
 }
 
 export function createEmptyRoomLifecycleCandidateArtifacts(): RoomLifecycleCandidateArtifacts {
-  return createRoomLifecycleCandidateArtifacts(new Map(), new Map());
+  return createRoomLifecycleCandidateArtifacts(new Map());
 }

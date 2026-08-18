@@ -4,7 +4,6 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   applyProjectHistoryCommand,
-  createAcquisitionSiteAddress,
   createBatchRewardStoreAddress,
   createBiomeAddress,
   createExitDecisionAddress,
@@ -23,6 +22,10 @@ import {
   redoProjectHistory,
   undoProjectHistory,
 } from '@run-planner/engine/authored-project';
+import {
+  authorRequiredTestRoomActions,
+  replaceTestShopOfferActions,
+} from '@run-planner/test-fixtures';
 import {
   composeBiomeHistoryPrefix,
   materializeBiomePrefix,
@@ -470,21 +473,21 @@ describe('authored-project commands and topology', () => {
         (occurrence) => occurrence.occurrenceId === 'f-preboss-shop',
       )?.encounters,
     ).toEqual(prebossShopEncounters);
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceAcquisitionOrder',
-      site: createAcquisitionSiteAddress(
-        createOccurrenceAddress(fBiome, createOccurrenceId('f-preboss-shop')),
-        'roomExit',
-      ),
-      entryKeys: ['Boon'],
-    });
+    project = replaceTestShopOfferActions(
+      project,
+      catalog,
+      createOccurrenceAddress(fBiome, createOccurrenceId('f-preboss-shop')),
+      ['Boon'],
+    );
     expect(
       fTopology(project).occurrences.find(
         (occurrence) => occurrence.occurrenceId === 'f-preboss-shop',
       ),
     ).toMatchObject({
       state: { kind: 'shop' },
-      acquisitionSites: { roomExit: { order: ['Boon'] } },
+      roomActions: {
+        order: expect.arrayContaining([{ kind: 'interactShopOffer', offerKey: 'Boon' }]),
+      },
     });
     project = applyProjectCommand(project, catalog, {
       kind: 'SetExitSelection',
@@ -1081,7 +1084,8 @@ describe('authored-project commands and topology', () => {
       parent: { occurrenceId: nextId },
     });
     expect(historyPrefix).not.toBeNull();
-    const evaluated = simulateProject(catalog, reanchored).routes[0]?.biomes[0];
+    const evaluated = simulateProject(catalog, authorRequiredTestRoomActions(reanchored, catalog))
+      .routes[0]?.biomes[0];
     if (evaluated === undefined || !('history' in evaluated)) {
       throw new Error('re-anchor simulation did not retain its reached history');
     }

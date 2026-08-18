@@ -1,12 +1,13 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
+  artificerAcquisitionSite,
   artificerReplacementEntryKey,
   createAcquisitionEntryAddress,
-  createAcquisitionSiteAddress,
   createBiomeAddress,
   createIncomingRewardAddress,
   createOccurrenceAddress,
   createOccurrenceId,
+  semanticAddressKey,
 } from '@run-planner/engine/authored-project';
 import {
   applyConcreteAcquisition,
@@ -27,7 +28,6 @@ import {
   initializeRewardBranches,
   settleArtificerReplacementAcquisition,
   settleOwnedAcquisitionSite,
-  settlePickupAcquisitionSite,
   type RewardBranchState,
 } from '../../src/simulation/rewards/processing';
 
@@ -105,11 +105,13 @@ function convert(
   const authored = Object.freeze({
     ...sourceReward,
     dispositionByAcquisitionRole: Object.freeze({
-      self: Object.freeze({ kind: 'artificer' as const, replacement: replacement(rewardType) }),
+      self: Object.freeze({ kind: 'artificer' as const }),
     }),
   });
+  const replacementReward = replacement(rewardType);
+  const replacementSite = artificerAcquisitionSite(siteOwner, origin);
   const findings = new Map();
-  const product = settleOwnedAcquisitionSite(
+  const generated = settleOwnedAcquisitionSite(
     catalog,
     branches,
     {
@@ -123,14 +125,44 @@ function convert(
         producerLifecycleKey: 'RoomReward',
         instanceProvenance: 'free',
         dispositionByAcquisitionRole: authored.dispositionByAcquisitionRole,
+        artificerReplacementByAcquisitionRole: Object.freeze({ self: replacementReward }),
+        artificerReplacementSiteByAcquisitionRole: Object.freeze({ self: replacementSite }),
         traitContext: artificerLoadout,
       },
-      deferArtificerReplacement,
+      deferArtificerReplacement: true,
     },
     (history) => factsWithHistory(facts(enteredBiomes), history, new Set()),
     findings,
   );
-  return { authored, findings, origin, product, siteOwner };
+  const product = deferArtificerReplacement
+    ? generated
+    : settleArtificerReplacementAcquisition(
+        catalog,
+        generated.branches,
+        {
+          siteOwner: replacementSite.owner,
+          pointKey: replacementSite.pointKey,
+          sourceEntryKey: semanticAddressKey(origin),
+          sourceOrigin: origin,
+          sourceReward: authored,
+          replacement: replacementReward,
+          acquisitionRole: 'self',
+          participation: 'mandatory',
+          historySequence: index + 1,
+          facts: (history) => factsWithHistory(facts(enteredBiomes), history, new Set()),
+          traitContext: artificerLoadout,
+        },
+        findings,
+      );
+  return {
+    authored,
+    findings,
+    origin,
+    product,
+    replacement: replacementReward,
+    replacementSite,
+    siteOwner,
+  };
 }
 
 describe('The Artificer', () => {
@@ -322,11 +354,12 @@ describe('The Artificer', () => {
       catalog,
       conversion.product.branches,
       {
-        siteOwner: conversion.siteOwner,
-        pointKey: 'roomRewardPickup',
-        sourceEntryKey: 'self',
+        siteOwner: conversion.replacementSite.owner,
+        pointKey: conversion.replacementSite.pointKey,
+        sourceEntryKey: semanticAddressKey(conversion.origin),
         sourceOrigin: conversion.origin,
         sourceReward: conversion.authored,
+        replacement: conversion.replacement,
         acquisitionRole: 'self',
         participation: 'mandatory',
         historySequence: 2,
@@ -337,68 +370,10 @@ describe('The Artificer', () => {
     expect(acquired.branches[0]?.history.consumableRecord.MaxHealthDrop).toBe(1);
     expect(acquired.entries[0]?.address).toEqual(
       createAcquisitionEntryAddress(
-        createAcquisitionSiteAddress(conversion.siteOwner, 'roomRewardPickup'),
-        artificerReplacementEntryKey('self', 'self'),
+        conversion.replacementSite,
+        artificerReplacementEntryKey(conversion.origin, 'self'),
       ),
     );
     expect(acquired.entries[0]?.participation).toBe('mandatory');
-  });
-
-  it('keeps optional replacement participation in the shared pickup order', () => {
-    const occurrenceId = createOccurrenceId('artificer-optional');
-    const siteOwner = createOccurrenceAddress(biome, occurrenceId);
-    const source = Object.freeze({
-      ...createUnresolvedAcquisitionRewardState(
-        catalog,
-        { rewardType: 'MetaCurrencyDrop' },
-        { kind: 'producerLifecycle', key: 'NarcissusPickup' },
-      ),
-      dispositionByAcquisitionRole: Object.freeze({
-        self: Object.freeze({
-          kind: 'artificer' as const,
-          replacement: replacement('MaxHealthDrop'),
-        }),
-      }),
-    });
-    const replacementKey = artificerReplacementEntryKey('ashes', 'self');
-    const withoutPickup = settlePickupAcquisitionSite(
-      catalog,
-      initialBranches(),
-      {
-        siteOwner,
-        entries: { ashes: source },
-        order: ['ashes'],
-        producerLifecycleKey: 'NarcissusPickup',
-        historySequence: 1,
-        facts: (history) => factsWithHistory(facts(), history, new Set()),
-      },
-      new Map(),
-    );
-    expect(withoutPickup.branches[0]?.history.consumableRecord.MaxHealthDrop).toBeUndefined();
-    expect(
-      withoutPickup.entries.find((entry) => entry.address.entryKey === replacementKey),
-    ).toMatchObject({
-      participation: 'dormant',
-    });
-
-    const withPickup = settlePickupAcquisitionSite(
-      catalog,
-      initialBranches(),
-      {
-        siteOwner,
-        entries: { ashes: source },
-        order: ['ashes', replacementKey],
-        producerLifecycleKey: 'NarcissusPickup',
-        historySequence: 1,
-        facts: (history) => factsWithHistory(facts(), history, new Set()),
-      },
-      new Map(),
-    );
-    expect(withPickup.branches[0]?.history.consumableRecord.MaxHealthDrop).toBe(1);
-    expect(
-      withPickup.entries.find((entry) => entry.address.entryKey === replacementKey),
-    ).toMatchObject({
-      participation: 'optional',
-    });
   });
 });

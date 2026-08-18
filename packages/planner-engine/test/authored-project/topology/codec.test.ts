@@ -288,6 +288,7 @@ function incompleteZagreusEnvelopeProject(): ProjectDocument {
       figLeafSkipByPhase: { Encounter: false },
       gorgonResultByPhase: {},
     },
+    roomActions: { order: [] },
     additionalExits: [],
   });
   const shopOccurrence = encoded.topology.occurrences.find(
@@ -1072,6 +1073,7 @@ describe('persisted authored topology codec', () => {
       gameName: 'F_Combat02',
       state: { kind: 'counted', offer: { rewardType: 'Boon' } },
       encounters: { encounterKeyByPhase: {}, figLeafSkipByPhase: {}, gorgonResultByPhase: {} },
+      roomActions: { order: [] },
       additionalExits: [],
     });
     widthOne.topology.decisions.push({
@@ -1134,6 +1136,7 @@ describe('persisted authored topology codec', () => {
       gameName: 'F_Combat02',
       state: { kind: 'counted', offer: { rewardType: 'Boon' } },
       encounters: { encounterKeyByPhase: {}, figLeafSkipByPhase: {}, gorgonResultByPhase: {} },
+      roomActions: { order: [] },
       additionalExits: [],
     });
     expectDocumentError(orphan.document, {

@@ -2,7 +2,6 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createBatchRewardStoreAddress,
-  createAcquisitionSiteAddress,
   createBiomeAddress,
   createExitDecisionAddress,
   createExitSelectionAddress,
@@ -23,6 +22,7 @@ import {
 } from '@run-planner/engine/authored-project';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import { authorLegalTraitOffers } from './trait-offers';
+import { authorRequiredTestRoomActions, replaceTestShopOfferActions } from './room-actions';
 
 /**
  * The canonical Surface regression fixture is intentionally translated from
@@ -583,29 +583,37 @@ export function createRepresentativeNProject(
   const key = JSON.stringify(options);
   const cached = representativeNCache.get(key);
   if (cached !== undefined) return cached;
-  const normalized = appendCompleteN(emptySurfaceProject(1), options);
+  const normalized = authorRequiredTestRoomActions(
+    appendCompleteN(emptySurfaceProject(1), options),
+    catalog,
+  );
   representativeNCache.set(key, normalized);
   return normalized;
 }
 
 export function createRepresentativeNOProject(): ProjectDocument {
   if (representativeNOCache !== undefined) return representativeNOCache;
-  representativeNOCache = appendCompleteO(appendCompleteN(emptySurfaceProject(2)));
+  representativeNOCache = authorRequiredTestRoomActions(
+    appendCompleteO(appendCompleteN(emptySurfaceProject(2))),
+    catalog,
+  );
   return representativeNOCache;
 }
 
 export function createRepresentativeNOPProject(): ProjectDocument {
   if (representativeNOPCache !== undefined) return representativeNOPCache;
-  representativeNOPCache = appendCompleteP(
-    appendCompleteO(appendCompleteN(emptySurfaceProject(3))),
+  representativeNOPCache = authorRequiredTestRoomActions(
+    appendCompleteP(appendCompleteO(appendCompleteN(emptySurfaceProject(3)))),
+    catalog,
   );
   return representativeNOPCache;
 }
 
 export function createRepresentativeNOPQProject(): ProjectDocument {
   if (representativeNOPQCache !== undefined) return representativeNOPQCache;
-  representativeNOPQCache = appendCompleteQ(
-    appendCompleteP(appendCompleteO(appendCompleteN(emptySurfaceProject(4)))),
+  representativeNOPQCache = authorRequiredTestRoomActions(
+    appendCompleteQ(appendCompleteP(appendCompleteO(appendCompleteN(emptySurfaceProject(4))))),
+    catalog,
   );
   return representativeNOPQCache;
 }
@@ -619,14 +627,12 @@ export function createRepresentativeNOPQShopTraitProject(): ProjectDocument {
     offer: createShopOfferAddress(pBiome, pOccurrenceIds.prebossShop, 'MajorNonBoon'),
     value: { rewardType: 'WeaponUpgradeDrop' },
   });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'ReplaceAcquisitionOrder',
-    site: createAcquisitionSiteAddress(
-      createOccurrenceAddress(pBiome, pOccurrenceIds.prebossShop),
-      'roomExit',
-    ),
-    entryKeys: ['MajorNonBoon'],
-  });
+  project = replaceTestShopOfferActions(
+    project,
+    catalog,
+    createOccurrenceAddress(pBiome, pOccurrenceIds.prebossShop),
+    ['MajorNonBoon'],
+  );
   representativeNOPQShopTraitCache = authorLegalTraitOffers(project);
   return representativeNOPQShopTraitCache;
 }

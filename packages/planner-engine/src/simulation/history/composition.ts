@@ -322,6 +322,9 @@ export function appendRoomLifecycle(
       return;
     }
   }
+  if (fragment.blockedAt !== undefined) {
+    throw new RewardAuthorshipBlocked(fragment.blockedAt);
+  }
   if (options.stopAfterOutgoing && !reachedOutgoing) {
     fail(`${room.gameName} has no outgoing checkpoint for prefix composition`);
   }

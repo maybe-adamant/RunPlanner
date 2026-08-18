@@ -11,10 +11,12 @@ import {
 } from '../traits';
 import {
   authoredAcquisitionEntry,
+  authoredAcquisitionEntryAtSite,
   echoShopDuplicateOffer,
   ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
   INFERNAL_CONTRACT_ENTRY_KEY,
   TRAVEL_DEAL_REFILL_ENTRY_KEY,
+  replaceAuthoredAcquisitionEntryAtSite,
 } from '../shop';
 import { parseArtificerReplacementEntryKey } from '../artificer';
 
@@ -67,8 +69,6 @@ export function applyAcquisitionSiteCommand(
       command.entryKey !== ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY
     )
       failCommand(command, 'has an unknown derived Shop entry');
-    if (!command.entryKeys.includes(command.entryKey))
-      failCommand(command, `must include ${command.entryKey} in the acquisition order`);
     const pickupEntries = occurrence.acquisitionSites?.roomExit?.pickupEntries ?? {};
     const derivedValue = derivedShopEntryValue(
       catalog,
@@ -82,7 +82,6 @@ export function applyAcquisitionSiteCommand(
       acquisitionSites: Object.freeze({
         ...(occurrence.acquisitionSites ?? {}),
         roomExit: Object.freeze({
-          order: Object.freeze([...command.entryKeys]),
           pickupEntries: Object.freeze({
             ...pickupEntries,
             [command.entryKey]: pickupEntries[command.entryKey] ?? derivedValue,
@@ -94,10 +93,34 @@ export function applyAcquisitionSiteCommand(
   }
   if (command.kind === 'ReplaceAcquisitionEntryOffer') {
     const site = command.entry.site;
-    if (site.owner.kind !== 'occurrence' || site.pointKey !== 'roomExit')
-      failCommand(command, 'is not an authorable pickup entry');
+    if (site.owner.kind !== 'occurrence') failCommand(command, 'is not an authorable pickup entry');
     const topology = requireTopology(located.plan, command);
     const occurrence = requireOccurrence(located.plan, site.owner.occurrenceId, command);
+    if (site.pointKey !== 'roomExit') {
+      const parsed = parseArtificerReplacementEntryKey(command.entry.entryKey);
+      const entry = authoredAcquisitionEntryAtSite(occurrence, site, command.entry.entryKey);
+      const runProgress = catalog.rewards.stores.byKey.RunProgress;
+      if (parsed === undefined || entry === undefined)
+        failCommand(command, 'does not own an Artificer replacement entry');
+      if (
+        command.value.rewardType === 'Devotion' ||
+        command.value.rewardType === 'SpellDrop' ||
+        !runProgress?.entries.some((candidate) => candidate.rewardType === command.value.rewardType)
+      )
+        failCommand(command, 'must be an Artificer-eligible RunProgress reward');
+      const value = createUnresolvedAcquisitionRewardState(catalog, command.value, {
+        kind: 'producerLifecycle',
+        key: 'RoomReward',
+      });
+      return updateOccurrenceTopology(
+        document,
+        located,
+        replaceOccurrence(
+          topology,
+          replaceAuthoredAcquisitionEntryAtSite(occurrence, site, command.entry.entryKey, value),
+        ),
+      );
+    }
     const pickupEntries = occurrence.acquisitionSites?.roomExit?.pickupEntries;
     const entry = authoredAcquisitionEntry(catalog, occurrence, command.entry.entryKey);
     const producer = selectedPickupProducer(catalog, occurrence.encounters);
@@ -149,7 +172,6 @@ export function applyAcquisitionSiteCommand(
             acquisitionSites: Object.freeze({
               ...(occurrence.acquisitionSites ?? {}),
               roomExit: Object.freeze({
-                order: occurrence.acquisitionSites?.roomExit?.order ?? [],
                 pickupEntries: Object.freeze({
                   ...pickupEntries,
                   [command.entry.entryKey]: createUnresolvedAcquisitionRewardState(
@@ -177,7 +199,6 @@ export function applyAcquisitionSiteCommand(
           acquisitionSites: Object.freeze({
             ...(occurrence.acquisitionSites ?? {}),
             roomExit: Object.freeze({
-              order: occurrence.acquisitionSites?.roomExit?.order ?? [],
               pickupEntries: Object.freeze({
                 ...pickupEntries,
                 [command.entry.entryKey]: createUnresolvedPickupRewardState(
@@ -192,70 +213,7 @@ export function applyAcquisitionSiteCommand(
       ),
     );
   }
-  if (command.site.owner.kind !== 'occurrence' || command.site.pointKey !== 'roomExit') {
-    failCommand(command, 'is not an authorable acquisition site');
-  }
-  if (
-    !Array.isArray(command.entryKeys) ||
-    !command.entryKeys.every((key) => typeof key === 'string')
-  ) {
-    failCommand(command, 'entryKeys must be an array of entry keys');
-  }
-  const topology = requireTopology(located.plan, command);
-  const occurrence = requireOccurrence(located.plan, command.site.owner.occurrenceId, command);
-  const pickupEntries = occurrence.acquisitionSites?.roomExit?.pickupEntries;
-  const pickupProducer = selectedPickupProducer(catalog, occurrence.encounters);
-  const shopOffers =
-    occurrence.state.kind === 'shop' && occurrence.state.shop !== undefined
-      ? occurrence.state.shop.offers
-      : undefined;
-  if (shopOffers === undefined && pickupEntries === undefined)
-    failCommand(command, 'does not own a materialized authorable acquisition site');
-  if (
-    shopOffers === undefined &&
-    (pickupProducer?.pickups.some(
-      (pickup) => pickup.required && !command.entryKeys.includes(pickup.key),
-    ) ??
-      false)
-  )
-    failCommand(command, 'must retain every required pickup in the acquisition order');
-  const seen = new Set<string>();
-  for (const key of command.entryKeys) {
-    const parsedArtificer = parseArtificerReplacementEntryKey(key);
-    const artificerSource =
-      parsedArtificer === undefined ? undefined : pickupEntries?.[parsedArtificer.sourceKey];
-    const belongs =
-      shopOffers === undefined
-        ? pickupProducer?.pickups.some((pickup) => pickup.key === key) === true ||
-          artificerSource?.dispositionByAcquisitionRole[parsedArtificer!.acquisitionRole]?.kind ===
-            'artificer'
-        : shopOffers[key] !== undefined ||
-          pickupEntries?.[key] !== undefined ||
-          artificerSource?.dispositionByAcquisitionRole[parsedArtificer!.acquisitionRole]?.kind ===
-            'artificer';
-    if (!belongs) failCommand(command, `unknown entry ${key}`);
-    if (seen.has(key)) failCommand(command, `entry ${key} is duplicated`);
-    seen.add(key);
-  }
-  const existing = occurrence.acquisitionSites?.[command.site.pointKey]?.order ?? [];
-  if (sameOccurrenceValue(command.entryKeys, existing)) return document;
-  return updateOccurrenceTopology(
-    document,
-    located,
-    replaceOccurrence(
-      topology,
-      Object.freeze({
-        ...occurrence,
-        acquisitionSites: Object.freeze({
-          ...(occurrence.acquisitionSites ?? {}),
-          [command.site.pointKey]: Object.freeze({
-            order: Object.freeze([...command.entryKeys]),
-            ...(pickupEntries === undefined ? {} : { pickupEntries }),
-          }),
-        }),
-      }),
-    ),
-  );
+  return failCommand(command, 'unknown acquisition-site command');
 }
 
 /** Persist only source-derived facts (or an unresolved leaf) before a nested edit. */
@@ -291,7 +249,6 @@ export function materializeDerivedShopEntry(
     acquisitionSites: Object.freeze({
       ...(occurrence.acquisitionSites ?? {}),
       roomExit: Object.freeze({
-        order: site?.order ?? Object.freeze([]),
         pickupEntries: Object.freeze({
           ...(site?.pickupEntries ?? {}),
           [command.entryKey]: derivedValue,

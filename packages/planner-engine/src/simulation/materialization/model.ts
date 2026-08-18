@@ -20,8 +20,11 @@ import type {
   ShopOfferAddress,
   TargetAddress,
 } from '../../authored-project/addresses';
-import type { OccurrenceId, RoomEncounterState } from '../../authored-project/model';
-import type { FieldsCombatAction } from '../../authored-project/model';
+import type {
+  OccurrenceId,
+  RoomActionState,
+  RoomEncounterState,
+} from '../../authored-project/model';
 import type { AuthoredLevelResolution, AuthoredTraitOffer } from '../../authored-project/traits';
 import type { TraitOfferContext } from '../traits';
 import type { ResolvedRewardOffer } from '../../reward-kernel/model';
@@ -69,8 +72,6 @@ export interface CanonicalShopEntryState {
     readonly offerKey: string;
     readonly offerOrigin: ShopOfferAddress;
   }[];
-  /** Exact room-exit membership and chronology, owned by the occurrence site. */
-  readonly order: readonly string[];
 }
 
 export interface CanonicalLocalReward {
@@ -147,6 +148,9 @@ export interface CanonicalAuthoredRoom {
   readonly lifecycleProfileKey: string;
   readonly counterEffects: RoomCounterEffects;
   readonly entered: boolean;
+  /** Persisted occurrence chronology and its sole derived roster product. */
+  readonly roomActions: RoomActionState;
+  readonly roomActionRoster: import('../room-actions').RoomActionRoster;
   readonly requiredObjects?: readonly RequiredRoomObjectDescriptor[];
   readonly clockworkReward?: 'goal' | 'nonGoal';
   readonly incomingReward?: CanonicalResolvedIncomingReward;
@@ -177,15 +181,25 @@ export interface CanonicalAuthoredRoom {
     | 'dispositionByAcquisitionRole'
     | 'traitContext'
   >[];
-  readonly fieldsActions?: readonly FieldsCombatAction[];
   readonly rewardWheels?: readonly CanonicalRewardWheel[];
   readonly entryState?: CanonicalShopEntryState;
   readonly pickupSite?: {
-    readonly order: readonly string[];
     readonly entries: Readonly<
       Record<string, import('../../authored-project/model').AuthoredRewardState | null>
     >;
   };
+  /** Every exact persisted acquisition site; chronology addresses site and entry independently. */
+  readonly acquisitionSites: Readonly<
+    Record<
+      string,
+      {
+        readonly address: import('../../authored-project/addresses').AcquisitionSiteAddress;
+        readonly entries: Readonly<
+          Record<string, import('../../authored-project/model').AuthoredRewardState | null>
+        >;
+      }
+    >
+  >;
 }
 
 export interface CanonicalCompletionRoom {

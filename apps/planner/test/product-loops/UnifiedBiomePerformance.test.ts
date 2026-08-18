@@ -6,7 +6,7 @@ import {
   semanticAddressKey,
 } from '@run-planner/engine/authored-project';
 import { simulateProject } from '@run-planner/engine/simulation';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 
 import {
   createApplication,
@@ -27,6 +27,13 @@ import { createRepresentativeNOPQProject, nBiome } from '@run-planner/test-fixtu
 
 const interactiveBudgetMs = 750;
 const cachedUndoBudgetMs = 50;
+let underworldProject: ReturnType<typeof createGoldenFGHIProject>;
+let surfaceProject: ReturnType<typeof createRepresentativeNOPQProject>;
+
+beforeAll(() => {
+  underworldProject = createGoldenFGHIProject();
+  surfaceProject = createRepresentativeNOPQProject();
+});
 
 function measure<T>(operation: () => T): { readonly durationMs: number; readonly result: T } {
   const started = performance.now();
@@ -80,7 +87,7 @@ describe('unified biome performance', () => {
     const application = createApplication({
       observeEvaluationWork: (event) => events.push(event),
     });
-    const project = createGoldenFGHIProject();
+    const project = underworldProject;
     application.store.dispatch(authoredProjectReplaced(project));
     const baseline = application.store.getState().projectWorkspace.assembly.evaluation;
     events.length = 0;
@@ -132,7 +139,7 @@ describe('unified biome performance', () => {
     const application = createApplication({
       observeEvaluationWork: (event) => events.push(event),
     });
-    const project = createRepresentativeNOPQProject();
+    const project = surfaceProject;
     application.store.dispatch(authoredProjectReplaced(project));
     const baseline = application.store.getState().projectWorkspace.assembly.evaluation;
     events.length = 0;

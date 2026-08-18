@@ -60,24 +60,6 @@ export function createRoomLifecycleInput(
   const incomingReward = 'incomingReward' in room ? room.incomingReward : undefined;
   const requiredObjects = 'requiredObjects' in room ? room.requiredObjects : undefined;
   const rewardWheels = 'rewardWheels' in room ? room.rewardWheels : undefined;
-  const fieldsActions = room.kind === 'authored' ? room.fieldsActions : undefined;
-  const fieldsCageRewards =
-    room.kind === 'authored' && fieldsActions !== undefined
-      ? Object.freeze(
-          [...(room.localRewards ?? []), ...(room.unresolvedLocalRewards ?? [])].map((reward) =>
-            Object.freeze({ phaseKey: reward.encounterPhaseKey, slotKey: reward.slotKey }),
-          ),
-        )
-      : undefined;
-  const fieldsOptionalRewardSlotKeys =
-    room.kind === 'authored' && fieldsActions !== undefined
-      ? Object.freeze(
-          [
-            ...(room.fieldsOptionalRewards ?? []),
-            ...(room.unresolvedFieldsOptionalRewards ?? []),
-          ].map((reward) => reward.slotKey),
-        )
-      : undefined;
   const activePhaseKeys = new Set(encounterPhases.map((phase) => phase.slotKey));
   const offerPointRewardStores =
     rewardWheels === undefined
@@ -97,9 +79,7 @@ export function createRoomLifecycleInput(
     counterEffects: room.counterEffects,
     ...(requiredObjects === undefined ? {} : { requiredObjects }),
     ...(offerPointRewardStores === undefined ? {} : { offerPointRewardStores }),
-    ...(fieldsActions === undefined ? {} : { fieldsActions }),
-    ...(fieldsCageRewards === undefined ? {} : { fieldsCageRewards }),
-    ...(fieldsOptionalRewardSlotKeys === undefined ? {} : { fieldsOptionalRewardSlotKeys }),
+    ...(room.kind === 'authored' ? { roomActionRoster: room.roomActionRoster } : {}),
     ...(incomingReward === undefined
       ? {}
       : {

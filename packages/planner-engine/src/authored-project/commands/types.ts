@@ -22,6 +22,7 @@ import type {
   OccurrenceAddress,
   RewardWheelAddress,
   RewardWheelOfferAddress,
+  RoomActionAddress,
   RouteAddress,
   ShopOfferAddress,
   TraitOfferAddress,
@@ -29,7 +30,12 @@ import type {
   LevelResolutionAddress,
   TargetAddress,
 } from '../addresses';
-import type { AuthoredFieldValue, ExitSelection, OccurrenceId } from '../model';
+import type {
+  AuthoredFieldValue,
+  ExitSelection,
+  OccurrenceId,
+  RoomActionReference,
+} from '../model';
 import type {
   AuthoredGorgonAthenaOffer,
   AuthoredLevelResolution,
@@ -171,6 +177,21 @@ export type RoomReplacementCommand = {
   readonly gameName: string;
 };
 
+/** Explicit edits to the sole persisted chronology owned by one occurrence. */
+export type RoomActionCommand =
+  | {
+      readonly kind: 'InsertRoomAction';
+      readonly action: RoomActionAddress;
+      readonly reference: RoomActionReference;
+      readonly index: number;
+    }
+  | { readonly kind: 'RemoveRoomAction'; readonly action: RoomActionAddress }
+  | {
+      readonly kind: 'MoveRoomAction';
+      readonly action: RoomActionAddress;
+      readonly toIndex: number;
+    };
+
 /**
  * The two currently supported route detours have closed, declaration-owned
  * command shapes. They intentionally do not generalize normal target
@@ -231,17 +252,11 @@ export type LocalRewardCommand = {
   readonly value: ResolvedRewardOffer;
 };
 
-export type FieldsOccurrenceCommand =
-  | {
-      readonly kind: 'ReplaceFieldsActionOrder';
-      readonly occurrence: OccurrenceAddress;
-      readonly actionOrder: readonly import('../model').FieldsCombatAction[];
-    }
-  | {
-      readonly kind: 'ReplaceFieldsOptionalRewardCount';
-      readonly occurrence: OccurrenceAddress;
-      readonly optionalRewardCount: number;
-    };
+export type FieldsOccurrenceCommand = {
+  readonly kind: 'ReplaceFieldsOptionalRewardCount';
+  readonly occurrence: OccurrenceAddress;
+  readonly optionalRewardCount: number;
+};
 
 export type ShipOccurrenceCommand =
   | {
@@ -296,23 +311,17 @@ export type ShopOccurrenceCommand =
 
 export type AcquisitionSiteCommand =
   | {
-      readonly kind: 'ReplaceAcquisitionOrder';
-      readonly site: AcquisitionSiteAddress;
-      readonly entryKeys: readonly string[];
-    }
-  | {
       /** Replaces payload detail for one declaration-fixed site pickup. */
       readonly kind: 'ReplaceAcquisitionEntryOffer';
       readonly entry: AcquisitionEntryAddress;
       readonly value: ResolvedRewardOffer;
     }
   | {
-      /** Atomically materializes and selects one derived Shop entry. */
+      /** Materializes one derived Shop entry; chronology insertion is a separate command. */
       readonly kind: 'SelectDerivedShopEntry';
       readonly site: AcquisitionSiteAddress;
       readonly entryKey: 'travelDealRefill' | 'echoDoubleShopReward';
       readonly sourceOfferKey: string;
-      readonly entryKeys: readonly string[];
     };
 
 export type EncounterOccurrenceCommand =
@@ -404,6 +413,7 @@ export type ProjectCommand =
   | ExperimentalHammerEquipResultCommand
   | TopologyCommand
   | RoomReplacementCommand
+  | RoomActionCommand
   | RouteDetourCommand
   | OccurrenceLeafCommand
   | AcquisitionSiteCommand

@@ -10,12 +10,14 @@ import {
   createExitSelectionAddress,
   createIncomingRewardAddress,
   createOccurrenceAddress,
+  createRoomActionAddress,
   createOccurrenceId,
   createRouteAddress,
   createTraitOfferAddress,
   createTraitAcquisitionTargetAddress,
   createShopOfferAddress,
   semanticAddressKey,
+  roomActionKey,
   encodeProjectDocument,
 } from '@run-planner/engine/authored-project';
 import { derivedAcquisitionEntriesForProjectEvaluationAssembly } from '@run-planner/engine/simulation';
@@ -33,7 +35,11 @@ import {
   authoredProjectCommandDispatched,
   authoredProjectReplaced,
 } from '@planner/state/projectWorkspaceSlice';
-import { routePanelSelected, semanticOwnerFocused } from '@planner/state/editorSessionSlice';
+import {
+  routePanelSelected,
+  semanticOwnerFocused,
+  semanticOwnerNavigated,
+} from '@planner/state/editorSessionSlice';
 import { renderPlannerForInteraction } from '@planner-test/fixtures/renderPlanner';
 import {
   createGoldenEchoGiftHammerPendingProject,
@@ -316,7 +322,8 @@ describe('planner history interaction', () => {
     await waitFor(() => expect(document.activeElement).toBe(encounter));
 
     const traitAddress = createTraitOfferAddress(phase, 'selection');
-    const traitLauncher = within(customize).getByRole('button', { name: /Edit Trait:/ });
+    const roomActions = screen.getByRole('region', { name: 'Room Actions' });
+    const traitLauncher = within(roomActions).getByRole('button', { name: /Edit Trait:/ });
     await view.user.click(traitLauncher);
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByRole('heading', { level: 2 }).textContent).toBe('Artemis');
@@ -345,7 +352,7 @@ describe('planner history interaction', () => {
       historyBeforeSave.past.length + 1,
     );
 
-    await view.user.click(within(customize).getByRole('button', { name: /Edit Trait:/ }));
+    await view.user.click(within(roomActions).getByRole('button', { name: /Edit Trait:/ }));
     const completedDialog = await screen.findByRole('dialog');
     await view.user.click(
       within(completedDialog).getByRole('button', { name: 'Reset to unresolved' }),
@@ -591,9 +598,14 @@ describe('planner history interaction', () => {
     application.store.dispatch(authoredProjectReplaced(createEchoGoldHPrebossProject()));
     application.store.dispatch(
       authoredProjectCommandDispatched({
-        kind: 'ReplaceAcquisitionOrder',
-        site,
-        entryKeys: ['Minor'],
+        kind: 'InsertRoomAction',
+        action: createRoomActionAddress(
+          { kind: 'biome', routeKey: 'Underworld', biomeKey: 'H' },
+          shop.occurrenceId,
+          roomActionKey({ kind: 'interactShopOffer', offerKey: 'Minor' }),
+        ),
+        reference: { kind: 'interactShopOffer', offerKey: 'Minor' },
+        index: 0,
       }),
     );
     const derived = derivedAcquisitionEntriesForProjectEvaluationAssembly(
@@ -607,7 +619,23 @@ describe('planner history interaction', () => {
         site,
         entryKey: 'echoDoubleShopReward',
         sourceOfferKey: derived.sourceOfferKey,
-        entryKeys: ['Minor', 'echoDoubleShopReward'],
+      }),
+    );
+    const goldReference = {
+      kind: 'interactAcquisitionEntry' as const,
+      siteKey: 'roomExit',
+      entryKey: 'echoDoubleShopReward',
+    };
+    application.store.dispatch(
+      authoredProjectCommandDispatched({
+        kind: 'InsertRoomAction',
+        action: createRoomActionAddress(
+          { kind: 'biome', routeKey: 'Underworld', biomeKey: 'H' },
+          shop.occurrenceId,
+          roomActionKey(goldReference),
+        ),
+        reference: goldReference,
+        index: 1,
       }),
     );
     application.store.dispatch(
@@ -782,13 +810,16 @@ describe('planner history interaction', () => {
       offer: createShopOfferAddress(pBiome, pOccurrenceIds.prebossShop, 'MajorNonBoon'),
       value: { rewardType: 'WeaponUpgradeDrop' },
     });
+    const shopReference = { kind: 'interactShopOffer' as const, offerKey: 'MajorNonBoon' };
     project = applyProjectCommand(project, application.catalog, {
-      kind: 'ReplaceAcquisitionOrder',
-      site: createAcquisitionSiteAddress(
-        createOccurrenceAddress(pBiome, pOccurrenceIds.prebossShop),
-        'roomExit',
+      kind: 'InsertRoomAction',
+      action: createRoomActionAddress(
+        pBiome,
+        pOccurrenceIds.prebossShop,
+        roomActionKey(shopReference),
       ),
-      entryKeys: ['MajorNonBoon'],
+      reference: shopReference,
+      index: 0,
     });
     application.store.dispatch(authoredProjectReplaced(project));
     const view = renderPlannerForInteraction({ application });
@@ -826,21 +857,7 @@ describe('planner history interaction', () => {
     );
 
     const roomHammer = visibleLauncher('hammer', 'incomingReward', false);
-    application.store.dispatch(
-      routePanelSelected({
-        routeKey: roomHammer.owner.routeKey,
-        panel: { kind: 'biome', biomeKey: roomHammer.owner.biomeKey },
-      }),
-    );
-    application.store.dispatch(semanticOwnerFocused(roomHammer.owner));
-    await waitFor(() =>
-      expect(
-        document.getElementById(`trait-launcher-${semanticAddressKey(roomHammer.owner)}`),
-      ).not.toBeNull(),
-    );
-    await view.user.click(
-      document.getElementById(`trait-launcher-${semanticAddressKey(roomHammer.owner)}`)!,
-    );
+    application.store.dispatch(semanticOwnerNavigated(roomHammer.owner));
     const roomHammerDialog = await screen.findByRole('dialog');
     expect(within(roomHammerDialog).queryByLabelText('option1 rarity')).toBeNull();
     expect(within(roomHammerDialog).queryByText('Rarity', { selector: 'span' })).toBeNull();
@@ -849,21 +866,7 @@ describe('planner history interaction', () => {
     );
 
     const shopHammer = visibleLauncher('hammer', 'shopOffer', false);
-    application.store.dispatch(
-      routePanelSelected({
-        routeKey: shopHammer.owner.routeKey,
-        panel: { kind: 'biome', biomeKey: shopHammer.owner.biomeKey },
-      }),
-    );
-    application.store.dispatch(semanticOwnerFocused(shopHammer.owner));
-    await waitFor(() =>
-      expect(
-        document.getElementById(`trait-launcher-${semanticAddressKey(shopHammer.owner)}`),
-      ).not.toBeNull(),
-    );
-    await view.user.click(
-      document.getElementById(`trait-launcher-${semanticAddressKey(shopHammer.owner)}`)!,
-    );
+    application.store.dispatch(semanticOwnerNavigated(shopHammer.owner));
     const shopHammerDialog = await screen.findByRole('dialog');
     expect(within(shopHammerDialog).queryByLabelText('option1 rarity')).toBeNull();
   });

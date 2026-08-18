@@ -62,6 +62,8 @@ import {
   createFConversionFrontierProject,
   createFInvalidLaterConversionProject,
   authorLegalTraitOffers,
+  authorRequiredTestRoomActions,
+  authorTestArtificerReplacement,
   goldenFBiome,
   goldenFStartId,
   goldenFOccurrenceId,
@@ -454,7 +456,7 @@ describe('progressive biome evaluation', () => {
       let project = applyProjectCommand(fixture.project, catalog, {
         kind: 'ReplaceAcquisitionDisposition',
         acquisition: fixture.acquisition,
-        value: { kind: 'artificer', replacement: null },
+        value: { kind: 'artificer' },
       });
       const unresolved = createPreparedProjectCandidateSession(
         catalog,
@@ -471,11 +473,8 @@ describe('progressive biome evaluation', () => {
       );
       if (replacement === undefined)
         throw new Error(`${replacementRewardType} Artificer replacement is missing`);
-      project = applyProjectCommand(project, catalog, {
-        kind: 'ReplaceAcquisitionDisposition',
-        acquisition: fixture.acquisition,
-        value: { kind: 'artificer', replacement },
-      });
+      project = authorTestArtificerReplacement(project, catalog, fixture.acquisition, replacement);
+      project = authorRequiredTestRoomActions(project, catalog);
       const assembly = simulateProjectAssembly(catalog, project);
       const role = Object.keys(replacement.traitOffersByAcquisitionRole)[0];
       if (role === undefined) throw new Error(`${replacementRewardType} has no trait role`);

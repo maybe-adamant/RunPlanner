@@ -1,16 +1,15 @@
 import {
   createOccurrenceAddress,
+  createBiomeAddress,
+  createRoomActionAddress,
   createCirceResolutionAddress,
   createTraitAcquisitionTargetAddress,
   createEchoPomTargetAddress,
   createEchoLastRunBoonAddress,
   createAllTogetherSetAddress,
-  createAcquisitionRoleAddress,
-  createTraitOfferAddress,
-  createLevelResolutionAddress,
   optionIndex,
-  traitGiverForAcquisitionRole,
   semanticAddressKey,
+  roomActionKey,
   type OccurrenceId,
   type SemanticAddress,
   type SideRoomGeneration,
@@ -63,14 +62,13 @@ import { createTakeoverBatchCommand } from '@planner/workspace/takeoverBatchInte
 import type { OccurrenceIdFactory } from '@planner/workspace/occurrenceIds';
 
 import { requireWorkspaceRoom } from '../assembly/catalog-room';
-import { workspaceAcquisitionRoleLabel } from '../assembly/occurrence-assembly';
 import { StructuredWorkspaceProjectionContractError, workspaceInteractionKey } from '../contract';
 import type {
   StructuredWorkspaceContextualServices,
   WorkspaceCandidateInteraction,
   WorkspaceEncounterInteraction,
   WorkspaceFigLeafInteraction,
-  WorkspaceFieldsActionOrderInteraction,
+  WorkspaceRoomActionInteraction,
   WorkspaceExitFrontierCapabilities,
   WorkspaceExitSelectionInteraction,
   WorkspaceHubSlotInteraction,
@@ -83,9 +81,7 @@ import type {
   WorkspaceLocalVisitOrderInteraction,
   WorkspaceCommandIntent,
   WorkspaceRewardControl,
-  WorkspaceExplicitRewardControl,
   WorkspaceRewardInteraction,
-  WorkspaceAcquisitionConversionControl,
   WorkspaceTraitOfferControl,
   WorkspaceLevelResolutionControl,
   WorkspaceLevelResolutionInteraction,
@@ -116,130 +112,6 @@ import type {
   WorkspaceTopologyRemovalInteractionRequirement,
 } from './interaction-requirements';
 
-function createArtificerReplacementControl(
-  catalog: Catalog,
-  candidates: CandidateProjectionSession,
-  conversion: WorkspaceAcquisitionConversionControl,
-  replacementAddress: import('@run-planner/engine/authored-project').AcquisitionEntryAddress,
-  candidateOptions: readonly AuthoredRewardState[],
-): WorkspaceExplicitRewardControl | undefined {
-  if (conversion.value.kind !== 'artificer') return undefined;
-  const replacement = conversion.value.replacement;
-  const options = Object.freeze(
-    replacement === null ||
-      candidateOptions.some(
-        (option) => JSON.stringify(option.offer) === JSON.stringify(replacement.offer),
-      )
-      ? [...candidateOptions]
-      : [...candidateOptions, replacement],
-  );
-  const markerFor = (address: SemanticAddress) =>
-    Object.freeze({
-      ...conversion.marker,
-      address,
-      focusKey: semanticAddressKey(address),
-    });
-  const owner = Object.freeze({ kind: 'acquisitionEntry' as const, address: replacementAddress });
-  if (replacement === null) {
-    return Object.freeze({
-      kind: 'explicitReward' as const,
-      marker: markerFor(replacementAddress),
-      offer: null,
-      offerEditVisibility: 'visible' as const,
-      owner,
-      retainedSourceMismatch: false,
-      traitOffers: Object.freeze([]),
-      levelResolutions: Object.freeze([]),
-      conversions: Object.freeze([]),
-      rewardTypes: Object.freeze([...new Set(options.map((option) => option.offer.rewardType))]),
-      artificerReplacementEdit: Object.freeze({
-        acquisition: conversion.address,
-        options,
-        replacement,
-      }),
-    });
-  }
-  const traitOffers = Object.freeze(
-    Object.entries(replacement.traitOffersByAcquisitionRole).flatMap(([role, offer]) => {
-      const giverKey = traitGiverForAcquisitionRole(catalog, replacement.offer, role);
-      const giver = giverKey === undefined ? undefined : catalog.traitGivers.byKey[giverKey];
-      if (giver === undefined) return [];
-      const address = createTraitOfferAddress(replacementAddress, role);
-      return [
-        Object.freeze({
-          acquisitionRoleLabel: workspaceAcquisitionRoleLabel(role),
-          address,
-          giver,
-          marker: markerFor(address),
-          offer,
-          rewardOwner: replacementAddress,
-        }),
-      ];
-    }),
-  );
-  const levelResolutions = Object.freeze(
-    Object.entries(replacement.levelResolutionsByAcquisitionRole ?? {}).flatMap(([role, value]) => {
-      const address = createLevelResolutionAddress(replacementAddress, role);
-      const assessment = candidates.levelResolution(address, value);
-      const counts = new Set((assessment?.groups ?? []).map((group) => group.surface.levelCount));
-      const levelCount = counts.size === 1 ? [...counts][0] : undefined;
-      return levelCount === undefined
-        ? []
-        : [
-            Object.freeze({
-              acquisitionRoleLabel: workspaceAcquisitionRoleLabel(role),
-              address,
-              levelCount,
-              settledEmptyNoOp: false,
-              marker: markerFor(address),
-              rewardOwner: replacementAddress,
-              value,
-            }),
-          ];
-    }),
-  );
-  const declaration = catalog.rewards.rewardTypes.byKey[replacement.offer.rewardType];
-  if (declaration === undefined)
-    throw new StructuredWorkspaceProjectionContractError(
-      `${semanticAddressKey(replacementAddress)} has unknown reward type ${replacement.offer.rewardType}`,
-    );
-  const conversions = Object.freeze(
-    declaration.acquisitionRoles.values.map((role) => {
-      const address = createAcquisitionRoleAddress(replacementAddress, role.key);
-      const value = replacement.dispositionByAcquisitionRole[role.key];
-      if (value === undefined)
-        throw new StructuredWorkspaceProjectionContractError(
-          `${semanticAddressKey(replacementAddress)} lacks disposition ${role.key}`,
-        );
-      return Object.freeze({
-        acquisitionRoleLabel: workspaceAcquisitionRoleLabel(role.key),
-        address,
-        marker: markerFor(address),
-        rewardOwner: replacementAddress,
-        value,
-      });
-    }),
-  );
-  return Object.freeze({
-    kind: 'explicitReward' as const,
-    marker: markerFor(replacementAddress),
-    offer: replacement.offer,
-    offerEditVisibility:
-      replacement.offer.payload === undefined ? ('hidden' as const) : ('visible' as const),
-    owner,
-    retainedSourceMismatch: false,
-    traitOffers,
-    levelResolutions,
-    conversions,
-    rewardTypes: Object.freeze([...new Set(options.map((option) => option.offer.rewardType))]),
-    artificerReplacementEdit: Object.freeze({
-      acquisition: conversion.address,
-      options,
-      replacement,
-    }),
-  });
-}
-
 type RewardPayloadCommand = Extract<
   ProjectCommand,
   {
@@ -252,136 +124,14 @@ type RewardPayloadCommand = Extract<
   }
 >;
 
-function replaceArtificerTraitOffer(
-  replacement: AuthoredRewardState,
-  role: string,
-  value: AuthoredTraitOffer,
-): AuthoredRewardState {
-  return Object.freeze({
-    ...replacement,
-    traitOffersByAcquisitionRole: Object.freeze({
-      ...replacement.traitOffersByAcquisitionRole,
-      [role]: value,
-    }),
-  });
-}
-
-function replaceArtificerLevelResolution(
-  replacement: AuthoredRewardState,
-  role: string,
-  value: AuthoredLevelResolution,
-): AuthoredRewardState {
-  return Object.freeze({
-    ...replacement,
-    levelResolutionsByAcquisitionRole: Object.freeze({
-      ...replacement.levelResolutionsByAcquisitionRole,
-      [role]: value,
-    }),
-  });
-}
-
-function selectArtificerTraitOffer(
-  replacement: AuthoredRewardState,
-  role: string,
-  selectedOptionKey: AuthoredTraitOfferTraits['selectedOptionKey'],
-): AuthoredRewardState {
-  const offer = replacement.traitOffersByAcquisitionRole[role];
-  if (offer?.kind !== 'traits') {
-    throw new StructuredWorkspaceProjectionContractError(
-      `Artificer replacement role ${role} has no selectable trait offer`,
-    );
-  }
-  return replaceArtificerTraitOffer(
-    replacement,
-    role,
-    Object.freeze({ ...offer, selectedOptionKey }),
-  );
-}
-
-function editArtificerReplacement(
-  edit: DerivedShopEntryEditCommand['edit'],
-  owner: NonNullable<WorkspaceRewardControl['artificerReplacementEdit']>,
-): AuthoredRewardState {
-  const replacement = owner.replacement;
-  switch (edit.kind) {
-    case 'ReplaceAcquisitionEntryOffer': {
-      const selected = owner.options.find(
-        (option) => JSON.stringify(option.offer) === JSON.stringify(edit.value),
-      );
-      if (selected === undefined)
-        throw new StructuredWorkspaceProjectionContractError(
-          `${semanticAddressKey(edit.entry)} has no complete Artificer reward option`,
-        );
-      return selected;
-    }
-    default:
-      if (replacement === null)
-        throw new StructuredWorkspaceProjectionContractError(
-          `${semanticAddressKey(owner.acquisition)} has no authored Artificer replacement`,
-        );
-  }
-  switch (edit.kind) {
-    case 'ReplaceTraitOffer':
-      return replaceArtificerTraitOffer(replacement, edit.trait.acquisitionRole, edit.value);
-    case 'ReplaceTraitSelection':
-      return selectArtificerTraitOffer(
-        replacement,
-        edit.trait.acquisitionRole,
-        edit.selectedOptionKey,
-      );
-    case 'ReplaceLevelResolution':
-      return replaceArtificerLevelResolution(
-        replacement,
-        edit.levelResolution.acquisitionRole,
-        edit.value,
-      );
-    case 'ReplaceAcquisitionDisposition':
-      return Object.freeze({
-        ...replacement,
-        dispositionByAcquisitionRole: Object.freeze({
-          ...replacement.dispositionByAcquisitionRole,
-          [edit.acquisition.acquisitionRole]: edit.value,
-        }),
-      });
-    case 'ReplaceGorgonAthenaOffer':
-      throw new StructuredWorkspaceProjectionContractError(
-        'Artificer replacement cannot own a Gorgon Athena offer',
-      );
-  }
-}
-
 function derivedShopPayloadIntent<Command extends ProjectCommand>(
   materialization: WorkspaceRewardControl['derivedShopEntryEdit'],
   edit: Command,
-  artificer?: WorkspaceRewardControl['artificerReplacementEdit'],
 ): WorkspaceCommandIntent<
   | Command
   | DerivedShopEntryEditCommand
   | Extract<ProjectCommand, { readonly kind: 'ReplaceAcquisitionDisposition' }>
 > {
-  if (artificer !== undefined) {
-    if (
-      edit.kind !== 'ReplaceAcquisitionEntryOffer' &&
-      edit.kind !== 'ReplaceTraitOffer' &&
-      edit.kind !== 'ReplaceGorgonAthenaOffer' &&
-      edit.kind !== 'ReplaceTraitSelection' &&
-      edit.kind !== 'ReplaceLevelResolution' &&
-      edit.kind !== 'ReplaceAcquisitionDisposition'
-    )
-      throw new StructuredWorkspaceProjectionContractError(
-        `${edit.kind} cannot edit an Artificer replacement`,
-      );
-    return Object.freeze({
-      command: Object.freeze({
-        kind: 'ReplaceAcquisitionDisposition' as const,
-        acquisition: artificer.acquisition,
-        value: Object.freeze({
-          kind: 'artificer' as const,
-          replacement: editArtificerReplacement(edit, artificer),
-        }),
-      }),
-    });
-  }
   if (materialization === undefined) return Object.freeze({ command: edit });
   if (
     edit.kind !== 'ReplaceAcquisitionEntryOffer' &&
@@ -429,14 +179,12 @@ function rewardIntentFor(
   owner: WorkspaceRewardControl['owner'],
   value: Parameters<WorkspaceRewardInteraction['intentFor']>[0],
   materialization: WorkspaceRewardControl['derivedShopEntryEdit'],
-  artificer?: WorkspaceRewardControl['artificerReplacementEdit'],
 ): WorkspaceCommandIntent<
   | RewardPayloadCommand
   | DerivedShopEntryEditCommand
   | Extract<ProjectCommand, { readonly kind: 'ReplaceAcquisitionDisposition' }>
 > {
   const command = rewardCommandFor(owner, value);
-  if (artificer !== undefined) return derivedShopPayloadIntent(materialization, command, artificer);
   if (materialization === undefined) return Object.freeze({ command });
   if (command.kind !== 'ReplaceAcquisitionEntryOffer') {
     throw new StructuredWorkspaceProjectionContractError(
@@ -572,8 +320,7 @@ interface WorkspaceOccurrenceLocalInteractionCatalog {
   readonly rewardWheelPicks: ReadonlyMap<string, WorkspaceCandidateInteraction<number>>;
   readonly rewardWheelStores: ReadonlyMap<string, WorkspaceCandidateInteraction<string>>;
   readonly shipCombatPhaseCounts: ReadonlyMap<string, WorkspaceCandidateInteraction<2 | 3>>;
-  readonly fieldsActionOrders: ReadonlyMap<string, WorkspaceFieldsActionOrderInteraction>;
-  readonly acquisitionOrders: ReadonlyMap<string, WorkspaceCandidateInteraction<readonly string[]>>;
+  readonly roomActions: ReadonlyMap<string, WorkspaceRoomActionInteraction>;
   readonly shopDeathDefianceConditions: ReadonlyMap<
     string,
     WorkspaceShopDeathDefianceConditionInteraction
@@ -600,8 +347,7 @@ function bindOccurrenceLocalInteractions(
   const rewardWheelPicks = new Map<string, WorkspaceCandidateInteraction<number>>();
   const rewardWheelStores = new Map<string, WorkspaceCandidateInteraction<string>>();
   const shipCombatPhaseCounts = new Map<string, WorkspaceCandidateInteraction<2 | 3>>();
-  const fieldsActionOrders = new Map<string, WorkspaceFieldsActionOrderInteraction>();
-  const acquisitionOrders = new Map<string, WorkspaceCandidateInteraction<readonly string[]>>();
+  const roomActions = new Map<string, WorkspaceRoomActionInteraction>();
   const shopDeathDefianceConditions = new Map<
     string,
     WorkspaceShopDeathDefianceConditionInteraction
@@ -752,35 +498,56 @@ function bindOccurrenceLocalInteractions(
         }
         break;
       }
-      case 'fieldsActionOrder': {
+      case 'roomActions': {
         const key = semanticAddressKey(requirement.owner);
         const proposals = requirement.proposals;
-        const values = Object.freeze(proposals.map((proposal) => proposal.order));
-        if (fieldsActionOrders.has(key)) {
+        if (roomActions.has(key)) {
           throw new StructuredWorkspaceProjectionContractError(
-            `${key} has multiple bound Fields action-order interactions`,
+            `${key} has multiple bound room-action interactions`,
           );
         }
-        fieldsActionOrders.set(
+        roomActions.set(
           key,
           Object.freeze({
             intentFor(proposalKey: string) {
               const proposal = proposals.find((candidate) => candidate.key === proposalKey);
               if (proposal === undefined) {
                 throw new StructuredWorkspaceProjectionContractError(
-                  `${proposalKey} is not a Fields action-order proposal for ${key}`,
+                  `${proposalKey} is not a room-action proposal for ${key}`,
+                );
+              }
+              const action = createRoomActionAddress(
+                createBiomeAddress(requirement.owner.routeKey, requirement.owner.biomeKey),
+                requirement.owner.occurrenceId,
+                roomActionKey(proposal.reference),
+              );
+              if (proposal.kind === 'remove') {
+                return Object.freeze({
+                  command: Object.freeze({ kind: 'RemoveRoomAction' as const, action }),
+                });
+              }
+              if (proposal.toIndex === undefined) {
+                throw new StructuredWorkspaceProjectionContractError(
+                  `${proposalKey} has no room-action destination`,
                 );
               }
               return Object.freeze({
-                command: Object.freeze({
-                  kind: 'ReplaceFieldsActionOrder' as const,
-                  occurrence: requirement.owner,
-                  actionOrder: proposal.order,
-                }),
+                command:
+                  proposal.kind === 'insert'
+                    ? Object.freeze({
+                        kind: 'InsertRoomAction' as const,
+                        action,
+                        reference: proposal.reference,
+                        index: proposal.toIndex,
+                      })
+                    : Object.freeze({
+                        kind: 'MoveRoomAction' as const,
+                        action,
+                        toIndex: proposal.toIndex,
+                      }),
               });
             },
             key,
-            load: () => candidates.fieldsActionOrders(requirement.owner, values),
             owner: requirement.owner,
             proposals,
           }),
@@ -906,30 +673,6 @@ function bindOccurrenceLocalInteractions(
         }
         break;
       }
-      case 'acquisitionOrder': {
-        const key = semanticAddressKey(requirement.owner);
-        const choices = Object.freeze(
-          requirement.proposalEntryKeys.map((offerKeys) =>
-            Object.freeze({
-              label: offerKeys.length === 0 ? 'No purchases' : offerKeys.join(' → '),
-              value: offerKeys,
-            }),
-          ),
-        );
-        set(
-          acquisitionOrders,
-          key,
-          candidateInteraction(
-            requirement.owner,
-            choices,
-            requirement.selectedEntryKeys,
-            () => candidates.acquisitionOrders(requirement.owner, requirement.proposalEntryKeys),
-            key,
-          ),
-          'acquisition order',
-        );
-        break;
-      }
       case 'shopDeathDefianceCondition': {
         const key = semanticAddressKey(requirement.owner);
         if (shopDeathDefianceConditions.has(key)) {
@@ -959,14 +702,13 @@ function bindOccurrenceLocalInteractions(
   }
   return Object.freeze({
     encounterPhases,
-    fieldsActionOrders,
+    roomActions,
     figLeafSkips,
     gorgonConditions,
     rewardWheelOfferCounts,
     rewardWheelPicks,
     rewardWheelStores,
     shipCombatPhaseCounts,
-    acquisitionOrders,
     shopDeathDefianceConditions,
     localVisitOrders,
     localVisitGenerations,
@@ -1747,14 +1489,13 @@ export function bindWorkspaceInteractions(
   const candidates = services.candidateSessions.bind(assembly);
   const {
     encounterPhases,
-    fieldsActionOrders,
+    roomActions,
     figLeafSkips,
     gorgonConditions,
     rewardWheelOfferCounts,
     rewardWheelPicks,
     rewardWheelStores,
     shipCombatPhaseCounts,
-    acquisitionOrders,
     shopDeathDefianceConditions,
     localVisitOrders,
     localVisitGenerations,
@@ -2044,12 +1785,11 @@ export function bindWorkspaceInteractions(
     );
   }
 
-  const effectiveRewardControls = new Map(rewardControls);
   const evaluatedConversions = new Map<
     string,
     ReturnType<CandidateProjectionSession['acquisitionConversion']>
   >();
-  const replacementControls = new Map<string, WorkspaceExplicitRewardControl>();
+  const artificerOptionsByReplacement = new Map<string, readonly AuthoredRewardState[]>();
   for (const control of rewardControls.values()) {
     for (const conversion of control.conversions ?? []) {
       const key = workspaceInteractionKey(conversion.address);
@@ -2060,23 +1800,16 @@ export function bindWorkspaceInteractions(
         evaluated.result.artificerReplacementAddress === undefined
       )
         continue;
-      const replacement = createArtificerReplacementControl(
-        catalog,
-        candidates,
-        conversion,
-        evaluated.result.artificerReplacementAddress,
+      artificerOptionsByReplacement.set(
+        semanticAddressKey(evaluated.result.artificerReplacementAddress),
         evaluated.result.artificerReplacementOptions ?? Object.freeze([]),
       );
-      if (replacement === undefined) continue;
-      const replacementKey = workspaceInteractionKey(replacement.owner.address);
-      effectiveRewardControls.set(replacementKey, replacement);
-      replacementControls.set(key, replacement);
     }
   }
 
   const effectiveTraitControls = new Map(traitControls ?? []);
   const effectiveLevelResolutionControls = new Map(levelResolutionControls ?? []);
-  for (const control of effectiveRewardControls.values()) {
+  for (const control of rewardControls.values()) {
     for (const trait of control.traitOffers ?? [])
       effectiveTraitControls.set(workspaceInteractionKey(trait.address), trait);
     for (const level of control.levelResolutions ?? [])
@@ -2087,42 +1820,36 @@ export function bindWorkspaceInteractions(
     string,
     NonNullable<WorkspaceRewardControl['derivedShopEntryEdit']>
   >();
-  const artificerReplacementEdits = new Map<
-    string,
-    NonNullable<WorkspaceRewardControl['artificerReplacementEdit']>
-  >();
-  for (const control of effectiveRewardControls.values()) {
+  for (const control of rewardControls.values()) {
     if (control.derivedShopEntryEdit !== undefined) {
       derivedShopEntryEdits.set(
         semanticAddressKey(control.owner.address),
         control.derivedShopEntryEdit,
       );
     }
-    if (control.artificerReplacementEdit !== undefined)
-      artificerReplacementEdits.set(
-        semanticAddressKey(control.owner.address),
-        control.artificerReplacementEdit,
-      );
   }
 
   const rewards = new Map<string, WorkspaceRewardInteraction>();
-  for (const [key, control] of effectiveRewardControls) {
+  for (const [key, control] of rewardControls) {
+    const artificerOptions = artificerOptionsByReplacement.get(
+      semanticAddressKey(control.owner.address),
+    );
     const rewardTypes =
       control.kind === 'countedReward'
         ? candidates.countedRewardTypes(control.owner, control.binding, control.offer?.rewardType)
-        : control.rewardTypes;
+        : Object.freeze([
+            ...new Set([
+              ...control.rewardTypes,
+              ...(artificerOptions ?? []).map((option) => option.offer.rewardType),
+            ]),
+          ]);
     rewards.set(
       key,
       Object.freeze({
         authoredRewardTypes: rewardTypes,
         choiceLabel: services.rewardPicker.choiceLabel,
         intentFor: (offer: ResolvedRewardOffer) =>
-          rewardIntentFor(
-            control.owner,
-            offer,
-            control.derivedShopEntryEdit,
-            control.artificerReplacementEdit,
-          ),
+          rewardIntentFor(control.owner, offer, control.derivedShopEntryEdit),
         key,
         load: () => candidates.rewardDomain(control.owner, rewardTypes, control.offer ?? undefined),
         model: services.rewardPicker.project,
@@ -2134,7 +1861,7 @@ export function bindWorkspaceInteractions(
   }
 
   const acquisitionConversions = new Map();
-  for (const control of effectiveRewardControls.values()) {
+  for (const control of rewardControls.values()) {
     for (const conversion of control.conversions ?? []) {
       const key = workspaceInteractionKey(conversion.address);
       const evaluated =
@@ -2147,11 +1874,6 @@ export function bindWorkspaceInteractions(
               ? {
                   timePieceSupported: evaluated.result.timePieceSupported,
                   artificerSupported: evaluated.result.artificerSupported,
-                  artificerReplacementOptions:
-                    evaluated.result.artificerReplacementOptions ?? Object.freeze([]),
-                  ...(replacementControls.get(key) === undefined
-                    ? {}
-                    : { artificerReplacementControl: replacementControls.get(key)! }),
                   visible:
                     evaluated.result.timePieceSupported ||
                     evaluated.result.artificerSupported ||
@@ -2160,7 +1882,6 @@ export function bindWorkspaceInteractions(
               : {
                   timePieceSupported: false,
                   artificerSupported: false,
-                  artificerReplacementOptions: Object.freeze([]),
                   visible: conversion.value.kind !== 'normal',
                 };
           })(),
@@ -2174,7 +1895,6 @@ export function bindWorkspaceInteractions(
                 acquisition: conversion.address,
                 value,
               }),
-              control.artificerReplacementEdit,
             ),
           key,
           owner: conversion.address,
@@ -2187,9 +1907,6 @@ export function bindWorkspaceInteractions(
   const traitOffers = new Map<string, WorkspaceTraitOfferInteraction>();
   for (const [key, control] of effectiveTraitControls) {
     const derivedShopEntryEdit = derivedShopEntryEdits.get(semanticAddressKey(control.rewardOwner));
-    const artificerReplacementEdit = artificerReplacementEdits.get(
-      semanticAddressKey(control.rewardOwner),
-    );
     const traitChoices = Object.freeze(
       control.giver.traitKeys.map((traitKey) => {
         const trait = catalog.traits.byKey[traitKey];
@@ -2331,7 +2048,6 @@ export function bindWorkspaceInteractions(
                         options: Object.freeze(options) as AuthoredTraitOfferTraits['options'],
                       }),
                     ),
-                    artificerReplacementEdit,
                   );
                 },
                 forOffer: (offer: AuthoredTraitOfferTraits) =>
@@ -2402,7 +2118,6 @@ export function bindWorkspaceInteractions(
                         options: Object.freeze(options) as AuthoredTraitOfferTraits['options'],
                       }),
                     ),
-                    artificerReplacementEdit,
                   );
                 },
                 forOffer: (offer: AuthoredTraitOfferTraits) =>
@@ -2451,7 +2166,6 @@ export function bindWorkspaceInteractions(
                         options: Object.freeze(options) as AuthoredTraitOfferTraits['options'],
                       }),
                     ),
-                    artificerReplacementEdit,
                   );
                 },
                 forOffer: (offer: AuthoredTraitOfferTraits) =>
@@ -2656,7 +2370,6 @@ export function bindWorkspaceInteractions(
           derivedShopPayloadIntent(
             derivedShopEntryEdit,
             traitOfferCommandFor(control.address, value),
-            artificerReplacementEdit,
           ),
         key,
         ...(control.echoLastReward === undefined ? {} : { echoLastReward: control.echoLastReward }),
@@ -2692,7 +2405,6 @@ export function bindWorkspaceInteractions(
               selectedOptionKey,
               trait: control.address,
             }),
-            artificerReplacementEdit,
           ),
         value: control.offer,
         traitsStartingDraft: startingDraft,
@@ -2713,9 +2425,6 @@ export function bindWorkspaceInteractions(
 
   const levelResolutions = new Map<string, WorkspaceLevelResolutionInteraction>();
   for (const [key, control] of effectiveLevelResolutionControls) {
-    const artificerReplacementEdit = artificerReplacementEdits.get(
-      semanticAddressKey(control.rewardOwner),
-    );
     levelResolutions.set(
       key,
       Object.freeze({
@@ -2724,7 +2433,6 @@ export function bindWorkspaceInteractions(
           derivedShopPayloadIntent(
             derivedShopEntryEdits.get(semanticAddressKey(control.rewardOwner)),
             levelResolutionCommandFor(control.address, value),
-            artificerReplacementEdit,
           ),
         key,
         levelCount: control.levelCount,
@@ -2927,7 +2635,7 @@ export function bindWorkspaceInteractions(
     exitFrontierCapabilities,
     exitSelections,
     fieldsCageOutcomes,
-    fieldsActionOrders,
+    roomActions,
     naturalChaosExits,
     naturalChaosSpawns,
     hubTakeovers,
@@ -2945,7 +2653,6 @@ export function bindWorkspaceInteractions(
     rewardWheelStores,
     rooms,
     shipCombatPhaseCounts,
-    acquisitionOrders,
     shopDeathDefianceConditions,
     localVisitOrders,
     localVisitGenerations,

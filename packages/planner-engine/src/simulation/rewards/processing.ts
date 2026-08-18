@@ -31,6 +31,8 @@ import {
   traitGiverUsesOfferContext,
 } from '../../authored-project/traits';
 import {
+  acquisitionSiteStorageKey,
+  artificerAcquisitionSite,
   artificerReplacementEntryKey,
   parseArtificerReplacementEntryKey,
 } from '../../authored-project/artificer';
@@ -73,6 +75,7 @@ import type {
   CanonicalAuthoredRoom,
   CanonicalLocalVisitRoom,
   CanonicalResolvedIncomingReward,
+  CanonicalShopOffer,
 } from '../materialization';
 import {
   isAcquisitionAuthorshipMissingFinding,
@@ -146,9 +149,41 @@ import {
 
 export type CanonicalRewardRoom = CanonicalAuthoredRoom | CanonicalLocalVisitRoom;
 
+interface PendingShopTravelRefill {
+  readonly sourceOfferKey: string;
+  readonly slotIndex: number;
+  readonly rewardTypes: readonly string[];
+  readonly excludedNames: ReadonlySet<string>;
+  readonly generationFacts: RewardKernelFacts;
+  readonly evaluateOffer: (
+    offer: ResolvedRewardOffer,
+  ) => import('./producer-frontiers').RewardProducerCandidateResult;
+}
+
+type PendingShopPaidOffer = Omit<CanonicalShopOffer, 'offerOrigin'> & {
+  readonly offerOrigin: TraitOfferOwnerAddress;
+};
+
+interface PendingShopGoldMaterialization {
+  readonly sourceOfferKey: string;
+  readonly roleBindings: readonly {
+    readonly role: string;
+    readonly lifecyclePoint: ProducerLifecyclePointKey;
+  }[];
+  readonly sourceOffer: PendingShopPaidOffer;
+  readonly sourceTraitHistory: TraitHistoryState;
+  readonly sourcePomEligibleTraitKeys: readonly string[];
+}
+
 interface PendingShopState {
   readonly profileKey: string;
   readonly witness: ShopGenerationWitness;
+  readonly remainingSlotIndexes?: readonly number[];
+  readonly travelActiveAtEntry?: boolean;
+  readonly goldActiveAtEntry?: import('../../authored-project/traits').EquippedTrait;
+  readonly firstNormalPurchaseSeen?: boolean;
+  readonly travelRefill?: PendingShopTravelRefill;
+  readonly goldMaterialization?: PendingShopGoldMaterialization;
 }
 
 export interface RewardBranchState {
@@ -288,7 +323,39 @@ export interface AcquisitionSource {
   /** Optional creation-time Pom frontier for an already-materialized loot object. */
   readonly levelResolutionGenerationHistory?: TraitHistoryState;
   readonly dispositionByAcquisitionRole?: AuthoredRewardState['dispositionByAcquisitionRole'];
+  /** Exact source-produced payload stored at the occurrence acquisition site. */
+  readonly artificerReplacementByAcquisitionRole?: Readonly<
+    Record<string, AuthoredRewardState | null>
+  >;
+  readonly artificerReplacementSiteByAcquisitionRole?: Readonly<
+    Record<string, AcquisitionSiteAddress>
+  >;
   readonly traitContext?: CanonicalResolvedIncomingReward['traitContext'];
+}
+
+export function withStoredArtificerReplacements(
+  room: CanonicalRewardRoom,
+  source: AcquisitionSource,
+): AcquisitionSource {
+  const dispositions = source.dispositionByAcquisitionRole ?? {};
+  const site = artificerAcquisitionSite(room.origin, source.origin);
+  const entries = room.acquisitionSites[acquisitionSiteStorageKey(site)]?.entries ?? {};
+  const replacements = Object.freeze(
+    Object.fromEntries(
+      Object.entries(dispositions).flatMap(([role, disposition]) =>
+        disposition.kind !== 'artificer'
+          ? []
+          : [[role, entries[artificerReplacementEntryKey(source.origin, role)] ?? null]],
+      ),
+    ),
+  );
+  return Object.freeze({
+    ...source,
+    artificerReplacementByAcquisitionRole: replacements,
+    artificerReplacementSiteByAcquisitionRole: Object.freeze(
+      Object.fromEntries(Object.keys(replacements).map((role) => [role, site])),
+    ),
+  });
 }
 
 /**
@@ -2404,6 +2471,10 @@ interface ShopProcessingContext {
   readonly findingChronology?: FindingChronology;
   readonly facts: RewardFactsFactory;
   readonly fail: (detail: string) => never;
+  /** Exact participating Shop actions for this settlement invocation. */
+  readonly order?: readonly string[];
+  /** The current action is the final Shop-owned chronology row in this room. */
+  readonly completeAfterOrder?: boolean;
 }
 
 export function processShopInventory(
@@ -2522,7 +2593,17 @@ export function settleShopAcquisitionSite(
   const authored: readonly AuthoredShopOffer[] = entry.offers.map((offer) => ({
     offer: offer.offer,
   }));
-  if (new Set(entry.order).size !== entry.order.length)
+  const order =
+    context.order ??
+    Object.freeze(
+      room.roomActions.order.flatMap((reference) => {
+        if (reference.kind === 'interactShopOffer') return [reference.offerKey];
+        if (reference.kind === 'interactAcquisitionEntry' && reference.siteKey === 'roomExit')
+          return [reference.entryKey];
+        return [];
+      }),
+    );
+  if (new Set(order).size !== order.length)
     return fail(`${room.gameName} acquisition order contains a duplicate entry`);
   const findingKeysBeforeSettlement = new Set(findings.keys());
   const site = createAcquisitionSiteAddress(room.origin, 'roomExit');
@@ -2553,19 +2634,8 @@ export function settleShopAcquisitionSite(
       ]),
     );
   };
-  type TravelRefill = {
-    readonly sourceOfferKey: string;
-    readonly slotIndex: number;
-    readonly rewardTypes: readonly string[];
-    readonly excludedNames: ReadonlySet<string>;
-    readonly generationFacts: RewardKernelFacts;
-    readonly evaluateOffer: (
-      offer: ResolvedRewardOffer,
-    ) => import('./producer-frontiers').RewardProducerCandidateResult;
-  };
-  type PaidOffer = Omit<NonNullable<(typeof entry.offers)[number]>, 'offerOrigin'> & {
-    readonly offerOrigin: TraitOfferOwnerAddress;
-  };
+  type TravelRefill = PendingShopTravelRefill;
+  type PaidOffer = PendingShopPaidOffer;
   type ShopExecution = {
     candidate: RewardBranchState;
     readonly witness: ShopGenerationWitness;
@@ -2576,28 +2646,27 @@ export function settleShopAcquisitionSite(
     travelRefill?: TravelRefill;
     goldMaterialization?: GoldMaterialization;
   };
-  type GoldMaterialization = {
-    readonly sourceOfferKey: string;
-    readonly roleBindings: readonly {
-      readonly role: string;
-      readonly lifecyclePoint: ProducerLifecyclePointKey;
-    }[];
-    readonly sourceOffer: PaidOffer;
-    readonly sourceTraitHistory: TraitHistoryState;
-    readonly sourcePomEligibleTraitKeys: readonly string[];
-  };
+  type GoldMaterialization = PendingShopGoldMaterialization;
   const executions: ShopExecution[] = [];
   for (const branch of branches) {
     const pending = branch.pendingShops[semanticAddressKey(room.origin)];
     if (pending?.profileKey !== profile.key) {
-      return fail(`${room.gameName} lost its shop witness`);
+      return fail(
+        `${room.gameName} lost its shop witness for ${JSON.stringify(order)}; pending=${JSON.stringify(Object.keys(branch.pendingShops))}`,
+      );
     }
     executions.push({
       candidate: branch,
       witness: pending.witness,
-      remainingSlotIndexes: Object.freeze(entry.offers.map((_, index) => index)),
-      travelActiveAtEntry: branch.traitHistory?.equippedTraits.RestockBoon !== undefined,
+      remainingSlotIndexes:
+        pending.remainingSlotIndexes ?? Object.freeze(entry.offers.map((_, index) => index)),
+      travelActiveAtEntry:
+        pending.travelActiveAtEntry ??
+        branch.traitHistory?.equippedTraits.RestockBoon !== undefined,
       ...(() => {
+        if (pending.goldActiveAtEntry !== undefined) {
+          return { goldActiveAtEntry: pending.goldActiveAtEntry };
+        }
         const goldActiveAtEntry = Object.values(branch.traitHistory?.equippedTraits ?? {}).find(
           (equipped) => {
             const disposition = catalog.traits.byKey[equipped.traitKey]?.selectedDisposition;
@@ -2606,7 +2675,11 @@ export function settleShopAcquisitionSite(
         );
         return goldActiveAtEntry === undefined ? {} : { goldActiveAtEntry };
       })(),
-      firstNormalPurchaseSeen: false,
+      firstNormalPurchaseSeen: pending.firstNormalPurchaseSeen ?? false,
+      ...(pending.travelRefill === undefined ? {} : { travelRefill: pending.travelRefill }),
+      ...(pending.goldMaterialization === undefined
+        ? {}
+        : { goldMaterialization: pending.goldMaterialization }),
     });
   }
   const branchCohortSize = executions.length;
@@ -2884,23 +2957,26 @@ export function settleShopAcquisitionSite(
     agreementBranches: readonly RewardBranchState[],
   ): boolean => {
     let current = Object.freeze([execution.candidate]);
-    const source: AcquisitionSource = Object.freeze({
-      origin: offer.offerOrigin,
-      offer: offer.offer,
-      producerLifecycleKey: profile.key,
-      producerKind: 'shop',
-      instanceProvenance: 'paid',
-      ...(offer.traitOffersByAcquisitionRole === undefined
-        ? {}
-        : { traitOffersByAcquisitionRole: offer.traitOffersByAcquisitionRole }),
-      ...(offer.levelResolutionsByAcquisitionRole === undefined
-        ? {}
-        : { levelResolutionsByAcquisitionRole: offer.levelResolutionsByAcquisitionRole }),
-      ...(offer.dispositionByAcquisitionRole === undefined
-        ? {}
-        : { dispositionByAcquisitionRole: offer.dispositionByAcquisitionRole }),
-      ...(offer.traitContext === undefined ? {} : { traitContext: offer.traitContext }),
-    });
+    const source: AcquisitionSource = withStoredArtificerReplacements(
+      room,
+      Object.freeze({
+        origin: offer.offerOrigin,
+        offer: offer.offer,
+        producerLifecycleKey: profile.key,
+        producerKind: 'shop',
+        instanceProvenance: 'paid',
+        ...(offer.traitOffersByAcquisitionRole === undefined
+          ? {}
+          : { traitOffersByAcquisitionRole: offer.traitOffersByAcquisitionRole }),
+        ...(offer.levelResolutionsByAcquisitionRole === undefined
+          ? {}
+          : { levelResolutionsByAcquisitionRole: offer.levelResolutionsByAcquisitionRole }),
+        ...(offer.dispositionByAcquisitionRole === undefined
+          ? {}
+          : { dispositionByAcquisitionRole: offer.dispositionByAcquisitionRole }),
+        ...(offer.traitContext === undefined ? {} : { traitContext: offer.traitContext }),
+      }),
+    );
     const settlement = Object.freeze({
       site,
       entry: createAcquisitionEntryAddress(site, offer.offerKey),
@@ -2920,6 +2996,7 @@ export function settleShopAcquisitionSite(
         roleFrontiers,
         traitChildSettlements,
         agreementBranches,
+        true,
       );
     }
     if (current.length !== 1) return false;
@@ -2927,48 +3004,10 @@ export function settleShopAcquisitionSite(
     return true;
   };
 
-  for (const entryKey of entry.order) {
+  for (const entryKey of order) {
     const agreementBranches = Object.freeze(executions.map(({ candidate }) => candidate));
     const survivors: ShopExecution[] = [];
     for (const execution of executions) {
-      const artificerReplacement = parseArtificerReplacementEntryKey(entryKey);
-      if (artificerReplacement !== undefined) {
-        const sourceReward = room.pickupSite?.entries[artificerReplacement.sourceKey];
-        if (
-          sourceReward === undefined ||
-          sourceReward === null ||
-          sourceReward.dispositionByAcquisitionRole[artificerReplacement.acquisitionRole]?.kind !==
-            'artificer'
-        ) {
-          return fail(`${room.gameName} acquisition order has unknown entry ${entryKey}`);
-        }
-        const settled = settleArtificerReplacementAcquisition(
-          catalog,
-          Object.freeze([execution.candidate]),
-          {
-            siteOwner: room.origin,
-            pointKey: 'roomExit',
-            sourceEntryKey: artificerReplacement.sourceKey,
-            sourceOrigin: createAcquisitionEntryAddress(site, artificerReplacement.sourceKey),
-            sourceReward,
-            acquisitionRole: artificerReplacement.acquisitionRole,
-            participation: 'optional',
-            historySequence,
-            facts: context.facts,
-            ...(context.findingChronology === undefined
-              ? {}
-              : { findingChronology: context.findingChronology }),
-          },
-          findings,
-        );
-        recordRoles(entryKey, settled.entries[0]?.acquisitionRoles ?? Object.freeze([]));
-        roleFrontiers.push(...(settled.roleFrontiers ?? []));
-        traitChildSettlements.push(...(settled.traitChildSettlements ?? []));
-        survivors.push(
-          ...settled.branches.map((candidate) => Object.freeze({ ...execution, candidate })),
-        );
-        continue;
-      }
       if (entryKey === INFERNAL_CONTRACT_ENTRY_KEY) {
         const descriptor = declaration.infernalContractReward;
         const child = room.pickupSite?.entries[entryKey];
@@ -3005,19 +3044,22 @@ export function settleShopAcquisitionSite(
             siteOwner: room.origin,
             pointKey: 'roomExit',
             entryKey,
-            source: Object.freeze({
-              origin: createAcquisitionEntryAddress(site, entryKey),
-              offer: child.offer,
-              producerLifecycleKey: descriptor.producerLifecycleKey,
-              producerKind: 'freeReward',
-              instanceProvenance: 'free',
-              traitOffersByAcquisitionRole: child.traitOffersByAcquisitionRole,
-              ...(child.levelResolutionsByAcquisitionRole === undefined
-                ? {}
-                : { levelResolutionsByAcquisitionRole: child.levelResolutionsByAcquisitionRole }),
-              dispositionByAcquisitionRole: child.dispositionByAcquisitionRole,
-              traitContext: Object.freeze({}),
-            }),
+            source: withStoredArtificerReplacements(
+              room,
+              Object.freeze({
+                origin: createAcquisitionEntryAddress(site, entryKey),
+                offer: child.offer,
+                producerLifecycleKey: descriptor.producerLifecycleKey,
+                producerKind: 'freeReward',
+                instanceProvenance: 'free',
+                traitOffersByAcquisitionRole: child.traitOffersByAcquisitionRole,
+                ...(child.levelResolutionsByAcquisitionRole === undefined
+                  ? {}
+                  : { levelResolutionsByAcquisitionRole: child.levelResolutionsByAcquisitionRole }),
+                dispositionByAcquisitionRole: child.dispositionByAcquisitionRole,
+                traitContext: Object.freeze({}),
+              }),
+            ),
             historySequence,
           },
           context.facts,
@@ -3186,22 +3228,25 @@ export function settleShopAcquisitionSite(
             siteOwner: room.origin,
             pointKey: 'roomExit',
             entryKey,
-            source: Object.freeze({
-              origin: createAcquisitionEntryAddress(site, entryKey),
-              offer: child.offer,
-              producerLifecycleKey: profile.key,
-              producerKind: 'shop',
-              instanceProvenance: 'free',
-              traitOffersByAcquisitionRole: child.traitOffersByAcquisitionRole,
-              ...(child.levelResolutionsByAcquisitionRole === undefined
-                ? {}
-                : { levelResolutionsByAcquisitionRole: child.levelResolutionsByAcquisitionRole }),
-              levelResolutionGenerationHistory: sourceTargetDisappeared
-                ? currentTraits
-                : materialization.sourceTraitHistory,
-              dispositionByAcquisitionRole: child.dispositionByAcquisitionRole,
-              ...(source.traitContext === undefined ? {} : { traitContext: source.traitContext }),
-            }),
+            source: withStoredArtificerReplacements(
+              room,
+              Object.freeze({
+                origin: createAcquisitionEntryAddress(site, entryKey),
+                offer: child.offer,
+                producerLifecycleKey: profile.key,
+                producerKind: 'shop',
+                instanceProvenance: 'free',
+                traitOffersByAcquisitionRole: child.traitOffersByAcquisitionRole,
+                ...(child.levelResolutionsByAcquisitionRole === undefined
+                  ? {}
+                  : { levelResolutionsByAcquisitionRole: child.levelResolutionsByAcquisitionRole }),
+                levelResolutionGenerationHistory: sourceTargetDisappeared
+                  ? currentTraits
+                  : materialization.sourceTraitHistory,
+                dispositionByAcquisitionRole: child.dispositionByAcquisitionRole,
+                ...(source.traitContext === undefined ? {} : { traitContext: source.traitContext }),
+              }),
+            ),
             historySequence,
             roleBindings: materialization.roleBindings,
             deferArtificerReplacement: true,
@@ -3321,11 +3366,39 @@ export function settleShopAcquisitionSite(
   }
 
   const next: RewardBranchState[] = [];
-  for (const { candidate } of executions) {
-    const { [semanticAddressKey(room.origin)]: completed, ...remainingShops } =
-      candidate.pendingShops;
-    void completed;
-    next.push(Object.freeze({ ...candidate, pendingShops: freezeRecord(remainingShops) }));
+  for (const execution of executions) {
+    const { candidate } = execution;
+    const shopKey = semanticAddressKey(room.origin);
+    if (context.completeAfterOrder === true || context.order === undefined) {
+      const { [shopKey]: completed, ...remainingShops } = candidate.pendingShops;
+      void completed;
+      next.push(Object.freeze({ ...candidate, pendingShops: freezeRecord(remainingShops) }));
+      continue;
+    }
+    next.push(
+      Object.freeze({
+        ...candidate,
+        pendingShops: freezeRecord({
+          ...candidate.pendingShops,
+          [shopKey]: Object.freeze({
+            profileKey: profile.key,
+            witness: execution.witness,
+            remainingSlotIndexes: execution.remainingSlotIndexes,
+            travelActiveAtEntry: execution.travelActiveAtEntry,
+            ...(execution.goldActiveAtEntry === undefined
+              ? {}
+              : { goldActiveAtEntry: execution.goldActiveAtEntry }),
+            firstNormalPurchaseSeen: execution.firstNormalPurchaseSeen,
+            ...(execution.travelRefill === undefined
+              ? {}
+              : { travelRefill: execution.travelRefill }),
+            ...(execution.goldMaterialization === undefined
+              ? {}
+              : { goldMaterialization: execution.goldMaterialization }),
+          }),
+        }),
+      }),
+    );
   }
   const settlementFindings = [...findings].flatMap(([key, finding]) =>
     findingKeysBeforeSettlement.has(key) ? [] : [finding.finding],
@@ -3338,7 +3411,7 @@ export function settleShopAcquisitionSite(
       findings,
       rewardFinding('shopPurchaseUnavailable', site, {
         kind: 'jointPurchaseOrder',
-        offerKeys: entry.order,
+        offerKeys: context.order ?? [],
       }),
       ownerRegion(room.origin),
       context.findingChronology ?? historyChronology(historySequence),
@@ -3347,7 +3420,7 @@ export function settleShopAcquisitionSite(
   return Object.freeze({
     site,
     entries: Object.freeze(
-      entry.order.map((offerKey) => {
+      (context.order ?? []).map((offerKey) => {
         const offer = entry.offers.find((candidate) => candidate.offerKey === offerKey);
         if (offer === undefined) {
           const supplemental = room.pickupSite?.entries[offerKey];
@@ -3385,6 +3458,29 @@ export function settleShopAcquisitionSite(
   });
 }
 
+/** Closes a generated Shop witness after the room's final chronology action. */
+export function completePendingShopAcquisitionSite(
+  branches: readonly RewardBranchState[],
+  owner: SemanticAddress,
+  fail: (detail: string) => never,
+): readonly RewardBranchState[] {
+  const shopKey = semanticAddressKey(owner);
+  const pendingCount = branches.filter(
+    (branch) => branch.pendingShops[shopKey] !== undefined,
+  ).length;
+  if (pendingCount === 0) return branches;
+  if (pendingCount !== branches.length) {
+    return fail(`${semanticAddressKey(owner)} has a divergent pending Shop frontier`);
+  }
+  return Object.freeze(
+    branches.map((branch) => {
+      const { [shopKey]: completed, ...remainingShops } = branch.pendingShops;
+      void completed;
+      return Object.freeze({ ...branch, pendingShops: freezeRecord(remainingShops) });
+    }),
+  );
+}
+
 export function settleProducerAcquisitionSite(
   catalog: Catalog,
   branches: readonly RewardBranchState[],
@@ -3405,6 +3501,7 @@ export function settleProducerAcquisitionSite(
   ) {
     return fail(`${room.gameName} producer event does not match its offer`);
   }
+  const incomingSource = withStoredArtificerReplacements(room, incoming);
   if (event.origin.kind === 'hubRoom') {
     return fail('Hub room cannot own an ordinary producer acquisition site');
   }
@@ -3482,7 +3579,7 @@ export function settleProducerAcquisitionSite(
           : applyProducerRoleHistory(
               catalog,
               Object.freeze(remaining),
-              incoming,
+              incomingSource,
               {
                 role: event.role,
                 lifecyclePoint: event.lifecyclePoint,
@@ -3498,6 +3595,8 @@ export function settleProducerAcquisitionSite(
               Object.freeze({ site, entry: entry.address }),
               roleFrontiers,
               traitChildSettlements,
+              undefined,
+              true,
             );
       return Object.freeze({
         site,
@@ -3513,7 +3612,7 @@ export function settleProducerAcquisitionSite(
   const settled = applyProducerRoleHistory(
     catalog,
     branches,
-    incoming,
+    incomingSource,
     {
       role: event.role,
       lifecyclePoint: event.lifecyclePoint,
@@ -3529,6 +3628,8 @@ export function settleProducerAcquisitionSite(
     Object.freeze({ site, entry: entry.address }),
     roleFrontiers,
     traitChildSettlements,
+    undefined,
+    true,
   );
   return Object.freeze({
     site,
@@ -3621,6 +3722,7 @@ export function settleOwnedAcquisitionSite(
           sourceEntryKey: request.entryKey,
           sourceOrigin: request.source.origin,
           sourceReward,
+          replacement: request.source.artificerReplacementByAcquisitionRole?.[binding.role] ?? null,
           acquisitionRole: binding.role,
           participation: 'mandatory',
           historySequence: binding.historySequence,
@@ -3660,6 +3762,7 @@ export function settleArtificerReplacementAcquisition(
     readonly sourceEntryKey: string;
     readonly sourceOrigin: SemanticAddress;
     readonly sourceReward: AuthoredRewardState;
+    readonly replacement?: AuthoredRewardState | null;
     readonly acquisitionRole: string;
     readonly participation: 'mandatory' | 'optional';
     readonly historySequence: number;
@@ -3681,7 +3784,11 @@ export function settleArtificerReplacementAcquisition(
   const reached = branches.filter((branch) =>
     hasArtificerUse(branch, request.sourceOrigin, request.acquisitionRole),
   );
-  if (disposition.replacement === null) {
+  const untouched = branches.filter(
+    (branch) => !hasArtificerUse(branch, request.sourceOrigin, request.acquisitionRole),
+  );
+  const replacement = request.replacement ?? null;
+  if (replacement === null) {
     addRewardFinding(
       findings,
       rewardFinding('rewardMissing', address, { acquisitionRole: request.acquisitionRole }),
@@ -3698,17 +3805,17 @@ export function settleArtificerReplacementAcquisition(
           participation: request.participation,
         }),
       ]),
-      branches: Object.freeze([]),
+      branches: mergeEquivalentRewardBranches(untouched),
       roleFrontiers: Object.freeze([]),
       traitChildSettlements: Object.freeze([]),
     });
   }
   const lifecycle =
     catalog.rewards.producerLifecycles.byKey.RoomReward?.rewardTypes.byKey[
-      disposition.replacement.offer.rewardType
+      replacement.offer.rewardType
     ];
   if (lifecycle === undefined)
-    throw new Error(`${disposition.replacement.offer.rewardType} has no RoomReward lifecycle`);
+    throw new Error(`${replacement.offer.rewardType} has no RoomReward lifecycle`);
   const roleFrontiers: AcquisitionRoleFrontier[] = [];
   const traitChildSettlements: ReachedTraitChildCheckpoint[] = [];
   let current: readonly RewardBranchState[] = reached;
@@ -3718,17 +3825,16 @@ export function settleArtificerReplacementAcquisition(
       current,
       Object.freeze({
         origin: address,
-        offer: disposition.replacement.offer,
+        offer: replacement.offer,
         producerLifecycleKey: 'RoomReward',
         instanceProvenance: 'free',
-        traitOffersByAcquisitionRole: disposition.replacement.traitOffersByAcquisitionRole,
-        ...(disposition.replacement.levelResolutionsByAcquisitionRole === undefined
+        traitOffersByAcquisitionRole: replacement.traitOffersByAcquisitionRole,
+        ...(replacement.levelResolutionsByAcquisitionRole === undefined
           ? {}
           : {
-              levelResolutionsByAcquisitionRole:
-                disposition.replacement.levelResolutionsByAcquisitionRole,
+              levelResolutionsByAcquisitionRole: replacement.levelResolutionsByAcquisitionRole,
             }),
-        dispositionByAcquisitionRole: disposition.replacement.dispositionByAcquisitionRole,
+        dispositionByAcquisitionRole: replacement.dispositionByAcquisitionRole,
         traitContext: request.traitContext ?? Object.freeze({}),
       }),
       Object.freeze({ ...binding, historySequence: request.historySequence }),
@@ -3739,6 +3845,9 @@ export function settleArtificerReplacementAcquisition(
       Object.freeze({ site, entry: address }),
       roleFrontiers,
       traitChildSettlements,
+      undefined,
+      false,
+      true,
     );
   }
   return Object.freeze({
@@ -3751,7 +3860,7 @@ export function settleArtificerReplacementAcquisition(
         participation: request.participation,
       }),
     ]),
-    branches: current,
+    branches: mergeEquivalentRewardBranches(Object.freeze([...untouched, ...current])),
     roleFrontiers: Object.freeze(roleFrontiers),
     traitChildSettlements: Object.freeze(traitChildSettlements),
   });
@@ -3773,6 +3882,14 @@ export function settlePickupAcquisitionSite(
     readonly facts: RewardFactsFactory;
     readonly traitContext?: CanonicalResolvedIncomingReward['traitContext'];
     readonly findingChronology?: FindingChronology;
+    readonly artificerReplacementFor?: (
+      source: AcquisitionEntryAddress,
+      role: string,
+    ) => AuthoredRewardState | null;
+    readonly artificerReplacementSiteFor?: (
+      source: AcquisitionEntryAddress,
+      role: string,
+    ) => AcquisitionSiteAddress;
     /** Candidate-only outer reward probes do not publish the child's own frontier. */
     readonly publishUnpickedChildFrontiers?: boolean;
   },
@@ -3825,28 +3942,6 @@ export function settlePickupAcquisitionSite(
         : 'dormant',
     });
   });
-  for (const [sourceKey, definition] of definitions) {
-    for (const [role, disposition] of Object.entries(
-      definition.reward.dispositionByAcquisitionRole,
-    )) {
-      if (disposition.kind !== 'artificer') continue;
-      const key = artificerReplacementEntryKey(sourceKey, role);
-      const replacementLifecycle =
-        disposition.replacement === null
-          ? undefined
-          : catalog.rewards.producerLifecycles.byKey.RoomReward?.rewardTypes.byKey[
-              disposition.replacement.offer.rewardType
-            ];
-      entries.push(
-        Object.freeze({
-          address: createAcquisitionEntryAddress(site, key),
-          source: definition.address,
-          acquisitionRoles: replacementLifecycle?.acquisitionLifecycle ?? Object.freeze([]),
-          participation: request.order.includes(key) ? 'optional' : 'dormant',
-        }),
-      );
-    }
-  }
   if (new Set(request.order).size !== request.order.length)
     throw new Error('pickup acquisition order contains a duplicate entry');
   let current = branches;
@@ -3898,6 +3993,27 @@ export function settlePickupAcquisitionSite(
               : { levelResolutionsByAcquisitionRole: reward.levelResolutionsByAcquisitionRole }),
             traitContext: request.traitContext ?? Object.freeze({}),
             dispositionByAcquisitionRole: reward.dispositionByAcquisitionRole,
+            artificerReplacementByAcquisitionRole: Object.freeze(
+              Object.fromEntries(
+                Object.entries(reward.dispositionByAcquisitionRole).flatMap(
+                  ([role, disposition]) =>
+                    disposition.kind === 'artificer'
+                      ? [[role, request.artificerReplacementFor?.(entry, role) ?? null]]
+                      : [],
+                ),
+              ),
+            ),
+            artificerReplacementSiteByAcquisitionRole: Object.freeze(
+              Object.fromEntries(
+                Object.entries(reward.dispositionByAcquisitionRole).flatMap(
+                  ([role, disposition]) =>
+                    disposition.kind === 'artificer' &&
+                    request.artificerReplacementSiteFor !== undefined
+                      ? [[role, request.artificerReplacementSiteFor(entry, role)]]
+                      : [],
+                ),
+              ),
+            ),
           }),
           Object.freeze({ ...binding, historySequence: request.historySequence }),
           request.facts,
@@ -3987,6 +4103,25 @@ export function settlePickupAcquisitionSite(
             : { levelResolutionsByAcquisitionRole: reward.levelResolutionsByAcquisitionRole }),
           traitContext: request.traitContext ?? Object.freeze({}),
           dispositionByAcquisitionRole: reward.dispositionByAcquisitionRole,
+          artificerReplacementByAcquisitionRole: Object.freeze(
+            Object.fromEntries(
+              Object.entries(reward.dispositionByAcquisitionRole).flatMap(([role, disposition]) =>
+                disposition.kind === 'artificer'
+                  ? [[role, request.artificerReplacementFor?.(entry, role) ?? null]]
+                  : [],
+              ),
+            ),
+          ),
+          artificerReplacementSiteByAcquisitionRole: Object.freeze(
+            Object.fromEntries(
+              Object.entries(reward.dispositionByAcquisitionRole).flatMap(([role, disposition]) =>
+                disposition.kind === 'artificer' &&
+                request.artificerReplacementSiteFor !== undefined
+                  ? [[role, request.artificerReplacementSiteFor(entry, role)]]
+                  : [],
+              ),
+            ),
+          ),
         }),
         Object.freeze({ ...binding, historySequence: request.historySequence }),
         request.facts,
@@ -4025,6 +4160,7 @@ function applyProducerRoleHistory(
   traitChildSettlements?: ReachedTraitChildCheckpoint[],
   directTraitAgreementBranches?: readonly RewardBranchState[],
   deferArtificerReplacement = false,
+  offerAlreadyGenerated = false,
 ): readonly RewardBranchState[] {
   const artificerReplacementRewardTypes = Object.freeze(
     [
@@ -4048,9 +4184,12 @@ function applyProducerRoleHistory(
             ),
           ),
         );
+  const exactArtificerSite = incoming.artificerReplacementSiteByAcquisitionRole?.[resolution.role];
   const artificerReplacementAddress = createAcquisitionEntryAddress(
-    settlement.site,
-    artificerReplacementEntryKey(settlement.entry.entryKey, resolution.role),
+    exactArtificerSite ?? settlement.site,
+    exactArtificerSite === undefined
+      ? artificerReplacementEntryKey(settlement.entry.entryKey, resolution.role)
+      : artificerReplacementEntryKey(incoming.origin, resolution.role),
   );
   const next: RewardBranchState[] = [];
   let unresolvedArtificerReplacement = false;
@@ -4058,6 +4197,7 @@ function applyProducerRoleHistory(
   for (const branch of branches) {
     const branchFacts = facts(branch.history);
     if (
+      !offerAlreadyGenerated &&
       !isOfferSupportedAtResolutionPoint(catalog.rewards, incoming.offer, branchFacts, {
         acquisitionRole: resolution.role,
       })
@@ -4114,7 +4254,9 @@ function applyProducerRoleHistory(
       );
     }
     if (disposition.kind === 'artificer') {
-      if (disposition.replacement === null) {
+      const artificerReplacement =
+        incoming.artificerReplacementByAcquisitionRole?.[resolution.role] ?? null;
+      if (artificerReplacement === null) {
         unresolvedArtificerReplacement = true;
         addRewardFinding(
           findings,
@@ -4128,13 +4270,10 @@ function applyProducerRoleHistory(
         continue;
       }
       const artificer = assessArtificerConversion(catalog, branch, incoming, resolution);
-      const replacementAddress = createAcquisitionEntryAddress(
-        settlement.site,
-        artificerReplacementEntryKey(settlement.entry.entryKey, resolution.role),
-      );
+      const replacementAddress = artificerReplacementAddress;
       const replacementLifecycle =
         catalog.rewards.producerLifecycles.byKey.RoomReward?.rewardTypes.byKey[
-          disposition.replacement.offer.rewardType
+          artificerReplacement.offer.rewardType
         ];
       const runProgress = catalog.rewards.stores.byKey.RunProgress;
       const prepared = withBag(catalog, branch, 'RunProgress');
@@ -4150,7 +4289,7 @@ function applyProducerRoleHistory(
             catalog.rewards,
             runProgress,
             prepared.bag,
-            disposition.replacement.offer,
+            artificerReplacement.offer,
             facts(prepared.branch.history),
             { ineligibleRewardTypes: new Set(['Devotion', 'SpellDrop']) },
           );
@@ -4160,8 +4299,44 @@ function applyProducerRoleHistory(
           ))
             throw error;
         }
-        for (const bag of bags) {
-          const arcanaFear = consumeArtificerUse(catalog, prepared.branch.arcanaFear, {
+        const replacementAcquisitionNames = new Set(
+          replacementLifecycle.acquisitionLifecycle.map(
+            (binding) =>
+              resolveAcquisitionRole(
+                catalog.rewards,
+                artificerReplacement.offer,
+                binding.role,
+                binding.lifecyclePoint,
+              ).acquisition.gameName,
+          ),
+        );
+        const latestSiblingSequence = branch.events.reduce<number | undefined>(
+          (latest, event) =>
+            event.kind === 'artificerConversion' &&
+            JSON.stringify(event.replacement) === JSON.stringify(artificerReplacement.offer)
+              ? Math.max(latest ?? Number.NEGATIVE_INFINITY, event.historySequence)
+              : latest,
+          undefined,
+        );
+        const hasPendingSibling =
+          latestSiblingSequence !== undefined &&
+          !branch.events.some(
+            (event) =>
+              event.kind === 'concreteAcquisition' &&
+              event.historySequence > latestSiblingSequence &&
+              replacementAcquisitionNames.has(event.acquisition.acquisition.gameName),
+          );
+        // Fields rewards coexist on the map. Once one Artificer conversion
+        // consumes the counted offer, sibling conversions may materialize the
+        // same reward until any such reward is actually acquired.
+        const generationBags =
+          bags.length > 0
+            ? bags
+            : hasPendingSibling
+              ? Object.freeze([prepared.bag])
+              : Object.freeze([]);
+        for (const bag of generationBags) {
+          const arcanaFear = consumeArtificerUse(catalog, branch.arcanaFear, {
             owner: incoming.origin,
             acquisitionRole: resolution.role,
             sequence: resolution.historySequence,
@@ -4170,11 +4345,23 @@ function applyProducerRoleHistory(
                 incoming.offer.rewardType
               ]?.acquisitionRoles.values.findIndex((role) => role.key === resolution.role) ?? 0,
           });
-          if (arcanaFear === undefined) continue;
+          if (arcanaFear === undefined) {
+            addRewardFinding(
+              findings,
+              rewardFinding(
+                'artificerConversionUnavailable',
+                createAcquisitionRoleAddress(incoming.origin, resolution.role),
+                { ...artificer.evidence, replacement: offerEvidence(artificerReplacement.offer) },
+              ),
+              atomicRegion,
+              findingChronology ?? historyChronology(resolution.historySequence),
+            );
+            continue;
+          }
           const generatedHistory = applyOfferProjection(
             catalog.rewards,
             prepared.branch.history,
-            disposition.replacement.offer,
+            artificerReplacement.offer,
             facts(prepared.branch.history),
           );
           const withBagAndUse = Object.freeze({
@@ -4187,7 +4374,7 @@ function applyProducerRoleHistory(
             appendRewardEvent(withBagAndUse, resolution.historySequence, {
               kind: 'rewardOffered',
               origin: replacementAddress,
-              offer: disposition.replacement.offer,
+              offer: artificerReplacement.offer,
               storeKey: 'RunProgress',
             }),
             resolution.historySequence,
@@ -4195,7 +4382,7 @@ function applyProducerRoleHistory(
               kind: 'artificerConversion',
               origin: incoming.origin,
               acquisition,
-              replacement: disposition.replacement.offer,
+              replacement: artificerReplacement.offer,
               settlement,
             },
           );
@@ -4210,17 +4397,17 @@ function applyProducerRoleHistory(
               replacementBranches,
               Object.freeze({
                 origin: replacementAddress,
-                offer: disposition.replacement.offer,
+                offer: artificerReplacement.offer,
                 producerLifecycleKey: 'RoomReward',
                 instanceProvenance: 'free',
-                traitOffersByAcquisitionRole: disposition.replacement.traitOffersByAcquisitionRole,
-                ...(disposition.replacement.levelResolutionsByAcquisitionRole === undefined
+                traitOffersByAcquisitionRole: artificerReplacement.traitOffersByAcquisitionRole,
+                ...(artificerReplacement.levelResolutionsByAcquisitionRole === undefined
                   ? {}
                   : {
                       levelResolutionsByAcquisitionRole:
-                        disposition.replacement.levelResolutionsByAcquisitionRole,
+                        artificerReplacement.levelResolutionsByAcquisitionRole,
                     }),
-                dispositionByAcquisitionRole: disposition.replacement.dispositionByAcquisitionRole,
+                dispositionByAcquisitionRole: artificerReplacement.dispositionByAcquisitionRole,
                 traitContext: incoming.traitContext,
               }),
               Object.freeze({ ...binding, historySequence: resolution.historySequence }),
@@ -4228,14 +4415,18 @@ function applyProducerRoleHistory(
               findings,
               atomicRegion,
               findingChronology,
-              Object.freeze({ site: settlement.site, entry: replacementAddress }),
+              Object.freeze({ site: replacementAddress.site, entry: replacementAddress }),
               roleFrontiers,
               traitChildSettlements,
+              undefined,
+              false,
+              true,
             );
           }
           next.push(...replacementBranches);
+          continue;
         }
-        if (bags.length > 0) continue;
+        if (generationBags.length > 0) continue;
       }
       addRewardFinding(
         findings,
@@ -4244,7 +4435,7 @@ function applyProducerRoleHistory(
             ? 'artificerReplacementUnavailable'
             : 'artificerConversionUnavailable',
           createAcquisitionRoleAddress(incoming.origin, resolution.role),
-          { ...artificer.evidence, replacement: offerEvidence(disposition.replacement.offer) },
+          { ...artificer.evidence, replacement: offerEvidence(artificerReplacement.offer) },
         ),
         atomicRegion,
         findingChronology ?? historyChronology(resolution.historySequence),

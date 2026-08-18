@@ -22,7 +22,6 @@ import {
 } from '@run-planner/engine/simulation';
 import {
   semanticAddressKey,
-  type AcquisitionSiteAddress,
   type AcquisitionEntryAddress,
   type AuthoredTraitOption,
   type BatchRewardStoreAddress,
@@ -41,7 +40,6 @@ import {
   type LocalRewardAddress,
   type OccurrenceId,
   type OccurrenceAddress,
-  type FieldsCombatAction,
   type ProjectDocument,
   type RewardWheelAddress,
   type RewardWheelOfferAddress,
@@ -157,10 +155,6 @@ export interface CandidateProjectionSession {
     decision: ExitDecisionAddress,
     outcomes: readonly ('min' | 'max')[],
   ) => readonly CandidateOptionProjection<'min' | 'max'>[];
-  readonly fieldsActionOrders: (
-    occurrence: OccurrenceAddress,
-    values: readonly (readonly FieldsCombatAction[])[],
-  ) => readonly CandidateOptionProjection<readonly FieldsCombatAction[]>[];
   readonly takeoverPrebossBatches: (
     source: ExitDecisionAddress,
     gameNames: readonly string[],
@@ -203,10 +197,6 @@ export interface CandidateProjectionSession {
     order: LocalVisitOrderAddress,
     values: readonly (readonly OccurrenceId[])[],
   ) => readonly CandidateOptionProjection<readonly OccurrenceId[]>[];
-  readonly acquisitionOrders: (
-    site: AcquisitionSiteAddress,
-    values: readonly (readonly string[])[],
-  ) => readonly CandidateOptionProjection<readonly string[]>[];
   readonly traitOffer: (
     owner: TraitOfferAddress,
     value: AuthoredTraitOffer,
@@ -710,25 +700,6 @@ export function createCandidateSessionFactory(
           catalog,
           options,
         ),
-      fieldsActionOrders: (
-        occurrence: OccurrenceAddress,
-        values: readonly (readonly FieldsCombatAction[])[],
-      ) =>
-        projectOptions(
-          cache,
-          assembly,
-          `fields-actions:${semanticAddressKey(occurrence)}:${domainKey(
-            values.map((value) => JSON.stringify(value)),
-          )}`,
-          values,
-          values.map((actionOrder) => ({
-            kind: 'fieldsActionOrder',
-            occurrence,
-            actionOrder,
-          })),
-          catalog,
-          options,
-        ),
       shipCombatPhaseCounts: (occurrence: OccurrenceAddress, values: readonly (2 | 3)[]) =>
         projectOptions(
           cache,
@@ -840,22 +811,6 @@ export function createCandidateSessionFactory(
             kind: 'sideRoomEntryOrder',
             group,
             occurrenceIds,
-          })),
-          catalog,
-          options,
-        ),
-      acquisitionOrders: (site: AcquisitionSiteAddress, values: readonly (readonly string[])[]) =>
-        projectOptions(
-          cache,
-          assembly,
-          `acquisition-order:${semanticAddressKey(site)}:${domainKey(
-            values.map((value) => JSON.stringify(value)),
-          )}`,
-          values,
-          values.map((entryKeys) => ({
-            kind: 'acquisitionOrder',
-            site,
-            entryKeys,
           })),
           catalog,
           options,
@@ -1170,7 +1125,6 @@ function candidateSelectedPossible(evaluation: CandidateProjectionEvaluation): b
     case 'rewardWheelOffer':
     case 'shopOffer':
     case 'acquisitionEntryOffer':
-    case 'acquisitionOrder':
       return evaluation.result.supported;
     case 'takeoverPrebossBatch':
       return evaluation.result.support !== 'impossible';
@@ -1218,8 +1172,6 @@ function candidateForced(
       return evaluation.result.selectedPossible && evaluation.result.supportStoreKeys.length === 1;
     case 'fieldsCageOutcome':
       return evaluation.result.selectedPossible && evaluation.result.supportOutcomes.length === 1;
-    case 'fieldsActionOrder':
-      return false;
     case 'shipEncounterCount':
       return (
         evaluation.result.selectedPossible && evaluation.result.supportEncounterCounts.length === 1
@@ -1239,7 +1191,6 @@ function candidateForced(
     case 'rewardWheelOffer':
     case 'shopOffer':
     case 'acquisitionEntryOffer':
-    case 'acquisitionOrder':
       return false;
     case 'takeoverPrebossBatch':
       return evaluation.result.support === 'required';

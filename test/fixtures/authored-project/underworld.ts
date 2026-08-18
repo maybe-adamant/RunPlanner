@@ -1,6 +1,5 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
-  createAcquisitionSiteAddress,
   createAcquisitionRoleAddress,
   applyProjectCommand,
   createBatchRewardStoreAddress,
@@ -26,6 +25,7 @@ import {
 } from '@run-planner/engine/authored-project';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import { authorLegalTraitOffers } from './trait-offers';
+import { authorRequiredTestRoomActions, replaceTestShopOfferActions } from './room-actions';
 
 export const goldenFBiome = createBiomeAddress('Underworld', 'F');
 export const goldenGBiome = createBiomeAddress('Underworld', 'G');
@@ -278,7 +278,7 @@ export function createFConversionFrontierProject(
     decision: createExitDecisionAddress(goldenFBiome, source(occurrenceId)),
   });
   return Object.freeze({
-    project,
+    project: authorRequiredTestRoomActions(project, catalog),
     acquisition: createAcquisitionRoleAddress(reward, 'self'),
     unreachedAcquisition: createAcquisitionRoleAddress(
       createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(2, 1)),
@@ -302,7 +302,7 @@ export function createFInvalidLaterConversionProject(): FConversionFrontierFixtu
     value: { rewardType: 'MetaCurrencyDrop' },
   });
   return Object.freeze({
-    project,
+    project: authorRequiredTestRoomActions(project, catalog),
     acquisition: createAcquisitionRoleAddress(reachedReward, 'self'),
     unreachedAcquisition: createAcquisitionRoleAddress(blockedReward, 'self'),
   });
@@ -444,7 +444,13 @@ export function createFMidshopPomFrontierProject(): ProjectDocument {
     offer: createShopOfferAddress(goldenFBiome, fMidshopPomShopId, 'Minor'),
     value: { rewardType: 'StoreRewardRandomStack' },
   });
-  return authorLegalTraitOffers(project);
+  project = authorRequiredTestRoomActions(authorLegalTraitOffers(project), catalog);
+  return replaceTestShopOfferActions(
+    project,
+    catalog,
+    createOccurrenceAddress(goldenFBiome, fMidshopPomShopId),
+    ['Minor'],
+  );
 }
 
 /**
@@ -462,14 +468,12 @@ export function createFMidshopUnresolvedBlindBoxBeforePomProject(): ProjectDocum
       payload: { kind: 'BoonSource', source: 'HephaestusUpgrade' },
     },
   });
-  return applyProjectCommand(project, catalog, {
-    kind: 'ReplaceAcquisitionOrder',
-    site: createAcquisitionSiteAddress(
-      createOccurrenceAddress(goldenFBiome, fMidshopPomShopId),
-      'roomExit',
-    ),
-    entryKeys: ['Boon'],
-  });
+  return replaceTestShopOfferActions(
+    project,
+    catalog,
+    createOccurrenceAddress(goldenFBiome, fMidshopPomShopId),
+    ['Boon'],
+  );
 }
 
 function gBatches(options: GoldenGProjectOptions): readonly BatchSpec[] {
@@ -639,7 +643,10 @@ export function createCompleteFGProject(options: GoldenGProjectOptions = {}): Pr
   const key = JSON.stringify(options);
   const cached = completeFGCache.get(key);
   if (cached !== undefined) return cached;
-  const normalized = authorLegalTraitOffers(createCompleteFGProjectRaw(options));
+  const normalized = authorRequiredTestRoomActions(
+    authorLegalTraitOffers(createCompleteFGProjectRaw(options)),
+    catalog,
+  );
   completeFGCache.set(key, normalized);
   return normalized;
 }
@@ -914,13 +921,19 @@ function appendCompleteI(project: ProjectDocument): ProjectDocument {
 /** Complete F-through-H authored-project fixture. */
 export function createGoldenFGHProject(): ProjectDocument {
   if (goldenFGHCache !== undefined) return goldenFGHCache;
-  goldenFGHCache = authorLegalTraitOffers(appendCompleteH(createCompleteFGProjectRaw()));
+  goldenFGHCache = authorRequiredTestRoomActions(
+    authorLegalTraitOffers(appendCompleteH(createCompleteFGProjectRaw())),
+    catalog,
+  );
   return goldenFGHCache;
 }
 
 /** Complete Underworld authored-project fixture. */
 export function createGoldenFGHIProject(): ProjectDocument {
   if (goldenFGHICache !== undefined) return goldenFGHICache;
-  goldenFGHICache = authorLegalTraitOffers(appendCompleteI(createGoldenFGHProject()));
+  goldenFGHICache = authorRequiredTestRoomActions(
+    authorLegalTraitOffers(appendCompleteI(createGoldenFGHProject())),
+    catalog,
+  );
   return goldenFGHICache;
 }

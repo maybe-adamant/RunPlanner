@@ -1,6 +1,6 @@
 import type { BiomeLayout, Catalog, RoomDeclaration } from '../../catalog-schema';
 import type { ExitDecision, OccurrenceId, RoomOccurrence } from '../../authored-project/model';
-import { deriveFieldsActiveCageCount } from '../../authored-project/fields-actions';
+import { deriveFieldsActiveCageCount } from '../../authored-project/fields';
 
 import type { CanonicalTargetContinuation } from './model';
 

@@ -20,7 +20,7 @@ import {
   selectedExitKey,
   selectedOrdinaryBatchIndex,
 } from '../topology/query';
-import { fieldsDefaultActiveCageCount } from '../fields-actions';
+import { fieldsDefaultActiveCageCount } from '../fields';
 
 import {
   failCommand,
@@ -372,7 +372,6 @@ export function applyRoomReplacementCommand(
       ? {
           acquisitionSites: Object.freeze({
             roomExit: Object.freeze({
-              order: Object.freeze([]),
               ...(replacementRoom.infernalContractReward === undefined
                 ? {}
                 : {
@@ -393,6 +392,7 @@ export function applyRoomReplacementCommand(
         `occurrences.${occurrence.occurrenceId}.encounters`,
       ),
     ),
+    roomActions: occurrence.roomActions,
     additionalExits: occurrence.additionalExits ?? Object.freeze([]),
   });
   return updateOccurrenceTopology(

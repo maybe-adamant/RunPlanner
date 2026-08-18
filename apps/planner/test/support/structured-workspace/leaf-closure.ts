@@ -28,8 +28,8 @@ function leafInteraction(
       return observed.interactions.rewardWheelStores.get(key);
     case 'shipCombatPhaseCount':
       return observed.interactions.shipCombatPhaseCounts.get(key);
-    case 'acquisitionOrder':
-      return observed.interactions.acquisitionOrders.get(key);
+    case 'roomActions':
+      return observed.interactions.roomActions.get(key);
     case 'localVisitOrder':
       return observed.interactions.localVisitOrders.get(key);
     case 'localVisitGeneration':
@@ -45,8 +45,8 @@ function leafInteractionLabel(kind: ExpectedWorkspaceLeafInteractionKind): strin
   switch (kind) {
     case 'encounterPhase':
       return 'encounter phase';
-    case 'acquisitionOrder':
-      return 'acquisition order';
+    case 'roomActions':
+      return 'room actions';
     case 'shipCombatPhaseCount':
       return 'Ship combat-phase count';
     case 'traitOffer':

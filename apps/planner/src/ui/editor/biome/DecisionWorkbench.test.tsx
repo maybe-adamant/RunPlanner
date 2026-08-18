@@ -3,7 +3,6 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
-  createAcquisitionSiteAddress,
   createAdditionalExitAddress,
   createBiomeAddress,
   createBatchRewardStoreAddress,
@@ -307,14 +306,6 @@ describe('DecisionWorkbench', () => {
 
   it('keeps the selected Midshop as a lightweight link to its occurrence workbench', () => {
     let project = createFMidshopPomFrontierProject();
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceAcquisitionOrder',
-      site: createAcquisitionSiteAddress(
-        createOccurrenceAddress(goldenFBiome, fMidshopPomShopId),
-        'roomExit',
-      ),
-      entryKeys: ['Minor'],
-    });
     const outgoingOwner = createExitDecisionAddress(goldenFBiome, {
       kind: 'occurrence',
       occurrenceId: fMidshopPomShopId,
@@ -342,12 +333,12 @@ describe('DecisionWorkbench', () => {
       'F',
       subjectForOwner(createExitDecisionAddress(goldenFBiome, incomingDecision.source)),
     );
-    expect(screen.queryByRole('heading', { level: 4, name: 'Acquisitions' })).toBeNull();
+    expect(screen.queryByRole('heading', { level: 4, name: 'Room Actions' })).toBeNull();
     expect(screen.getByRole('button', { name: 'Open Midshop room' })).toBeTruthy();
 
     cleanup();
     renderDecisionWorkbench(project, 'Underworld', 'F', subjectForOwner(outgoingOwner));
-    expect(screen.queryByRole('heading', { level: 4, name: 'Acquisitions' })).toBeNull();
+    expect(screen.queryByRole('heading', { level: 4, name: 'Room Actions' })).toBeNull();
     expect(screen.queryByText('Pom Slice')).toBeNull();
   });
 

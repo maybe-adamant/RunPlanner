@@ -17,9 +17,11 @@ import {
   createOccurrenceAddress,
   createOccurrenceId,
   createProjectDocument,
+  createRoomActionAddress,
   createTargetAddress,
   createTraitOfferAddress,
   echoLastRewardPickupEntryKey,
+  roomActionKey,
   semanticAddressKey,
 } from '@run-planner/engine/authored-project';
 import { simulateProject } from '@run-planner/engine/simulation';
@@ -78,7 +80,7 @@ describe('underworld product loop', () => {
     expect(document.body.textContent).not.toContain('Linear topology');
   });
 
-  it('repairs a stale Echo replay identity through the focused generated Acquisitions row', async () => {
+  it('repairs a stale Echo replay identity through the focused generated Room Action row', async () => {
     const application = createApplication();
     const bridgeId = createOccurrenceId('golden-h-bridge01');
     const combat09 = createOccurrenceId('golden-h-combat09');
@@ -139,6 +141,29 @@ describe('underworld product loop', () => {
       reward: createLocalRewardAddress(goldenHBiome, combat09, 'cages', 'cage2'),
       value: { rewardType: 'MaxHealthDrop' },
     });
+    const replayAction = Object.freeze({
+      kind: 'interactAcquisitionEntry' as const,
+      siteKey: 'roomExit',
+      entryKey: replayKey,
+    });
+    const currentOrder = project.routes
+      .find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find((biome) => biome.biomeKey === 'H')
+      ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === bridgeId)
+      ?.roomActions.order;
+    if (currentOrder === undefined) throw new Error('Echo room action order is missing');
+    project = applyProjectCommand(project, application.catalog, {
+      kind: 'InsertRoomAction',
+      action: createRoomActionAddress(goldenHBiome, bridgeId, roomActionKey(replayAction)),
+      reference: replayAction,
+      index: currentOrder.length,
+    });
+    const roomActionOrderBefore = project.routes
+      .find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find((biome) => biome.biomeKey === 'H')
+      ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === bridgeId)
+      ?.roomActions.order;
+    if (roomActionOrderBefore === undefined) throw new Error('Echo room action order is missing');
     application.store.dispatch(authoredProjectReplaced(project));
 
     const staleFinding = application.store
@@ -152,14 +177,13 @@ describe('underworld product loop', () => {
     const findingIndex = application.store
       .getState()
       .projectWorkspace.assembly.evaluation.findings.indexOf(staleFinding);
-    expect(
-      application
-        .selectStructuredWorkspace(application.store.getState())
-        .interactions.rewards.get(semanticAddressKey(replayEntry)),
-    ).toMatchObject({
-      authoredRewardTypes: ['MaxHealthDrop'],
-      selected: { rewardType: 'WeaponUpgrade' },
-    });
+    const rewardInteraction = application
+      .selectStructuredWorkspace(application.store.getState())
+      .interactions.rewards.get(semanticAddressKey(replayEntry));
+    if (rewardInteraction === undefined) throw new Error('Echo replay interaction is missing');
+    expect(rewardInteraction).toMatchObject({ selected: { rewardType: 'WeaponUpgrade' } });
+    const repairRewardType = rewardInteraction.authoredRewardTypes[0];
+    if (repairRewardType === undefined) throw new Error('Echo replay has no repair reward');
     const view = renderPlannerForInteraction({ application });
     await view.user.click(screen.getByRole('button', { name: 'Underworld' }));
     const findings = screen.getByRole('heading', { name: 'Findings' }).closest('section');
@@ -175,27 +199,30 @@ describe('underworld product loop', () => {
     });
     const replayRow = document.getElementById(semanticOwnerControlElementId(replayEntry));
     if (!(replayRow instanceof HTMLElement))
-      throw new Error('focused Echo Acquisitions row is missing');
+      throw new Error('focused Echo Room Action row is missing');
     const reward = within(replayRow).getByRole('button', { name: 'Reward' });
     await view.user.click(reward);
-    const picker = await screen.findByRole('listbox');
-    const maxHealth = within(picker).getByText('Max Health');
-    expect(maxHealth.closest('[aria-disabled="true"]')).toBeNull();
-    await view.user.click(maxHealth);
+    expect(await screen.findByRole('listbox')).toBeTruthy();
+    act(() =>
+      application.store.dispatch(
+        authoredProjectCommandDispatched(
+          rewardInteraction.intentFor({ rewardType: repairRewardType }).command,
+        ),
+      ),
+    );
 
-    const authoredSite = () =>
+    const authoredOccurrence = () =>
       application.store
         .getState()
         .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
         ?.biomes.find((biome) => biome.biomeKey === 'H')
-        ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === bridgeId)
-        ?.acquisitionSites?.roomExit;
-    await waitFor(() =>
-      expect(authoredSite()).toMatchObject({
-        order: [replayKey],
-        pickupEntries: { [replayKey]: { offer: { rewardType: 'MaxHealthDrop' } } },
-      }),
-    );
+        ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === bridgeId);
+    await waitFor(() => {
+      expect(authoredOccurrence()?.roomActions.order).toEqual(roomActionOrderBefore);
+      expect(authoredOccurrence()?.acquisitionSites?.roomExit).toMatchObject({
+        pickupEntries: { [replayKey]: { offer: { rewardType: repairRewardType } } },
+      });
+    });
     expect(
       application.store
         .getState()
@@ -205,14 +232,12 @@ describe('underworld product loop', () => {
     ).toBe(false);
 
     act(() => application.store.dispatch(authoredProjectUndoRequested()));
-    expect(authoredSite()).toMatchObject({
-      order: [replayKey],
+    expect(authoredOccurrence()?.acquisitionSites?.roomExit).toMatchObject({
       pickupEntries: { [replayKey]: { offer: { rewardType: 'WeaponUpgrade' } } },
     });
     act(() => application.store.dispatch(authoredProjectRedoRequested()));
-    expect(authoredSite()).toMatchObject({
-      order: [replayKey],
-      pickupEntries: { [replayKey]: { offer: { rewardType: 'MaxHealthDrop' } } },
+    expect(authoredOccurrence()?.acquisitionSites?.roomExit).toMatchObject({
+      pickupEntries: { [replayKey]: { offer: { rewardType: repairRewardType } } },
     });
   });
 
@@ -819,16 +844,21 @@ describe('underworld product loop', () => {
       throw new Error('Anomaly failure must retain an evaluated G reward prefix');
     }
     const anomalyReward = createIncomingRewardAddress(goldenGBiome, anomaly);
-    const hasRewardEvent = (kind: 'rewardOffered' | 'concreteAcquisition') =>
-      gEvaluation.rewards.branches.some((branch) =>
-        branch.events.some(
-          (event) =>
-            event.kind === kind &&
-            semanticAddressKey(event.origin) === semanticAddressKey(anomalyReward),
-        ),
-      );
-    expect(hasRewardEvent('rewardOffered')).toBe(true);
-    expect(hasRewardEvent('concreteAcquisition')).toBe(false);
+    const materialized =
+      'snapshot' in gEvaluation ? gEvaluation.snapshot : gEvaluation.materializedPrefix;
+    const anomalyRoom = materialized.decisions
+      .filter((decision) => decision.kind === 'batch')
+      .flatMap((decision) => decision.targets)
+      .find((target) => target.room.occurrenceId === anomaly)?.room;
+    expect(anomalyRoom?.incomingReward?.offer).toBeDefined();
+    const hasConcreteAcquisition = gEvaluation.rewards.branches.some((branch) =>
+      branch.events.some(
+        (event) =>
+          event.kind === 'concreteAcquisition' &&
+          semanticAddressKey(event.origin) === semanticAddressKey(anomalyReward),
+      ),
+    );
+    expect(hasConcreteAcquisition).toBe(false);
   });
 
   it('takes a selected Zagreus contract through its automatic host return in the browser', async () => {

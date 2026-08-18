@@ -13,6 +13,7 @@ import {
   type TraitAssessment,
   type SelectedTraitOfferAssessment,
 } from '@run-planner/engine/simulation';
+import { authorRequiredTestRoomActions } from './room-actions';
 
 export type TraitCandidateSession = ReturnType<typeof createPreparedProjectCandidateSession>;
 
@@ -165,7 +166,7 @@ export function supportedTraitOffer(
  * as an editor user.
  */
 export function authorLegalTraitOffers(project: ProjectDocument): ProjectDocument {
-  let current = project;
+  let current = authorRequiredTestRoomActions(project, catalog);
   for (let pass = 0; pass < 96; pass += 1) {
     const assembly = preparedCandidateProjectFor(current).assembly;
     const evaluation = assembly.evaluation;
@@ -230,7 +231,7 @@ export function authorLegalTraitOffers(project: ProjectDocument): ProjectDocumen
     // source for every reached Pom capability below.
     if (changed) continue;
     const normalizedPoms = normalizePomResolutions(current, assembly);
-    if (normalizedPoms === current) return current;
+    if (normalizedPoms === current) return authorRequiredTestRoomActions(current, catalog);
     current = normalizedPoms;
   }
   throw new Error('trait fixture normalization exceeded its bounded edit budget');

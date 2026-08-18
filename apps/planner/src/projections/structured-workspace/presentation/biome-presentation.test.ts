@@ -14,7 +14,7 @@ import {
   encounterPhaseSequenceStatusForProjectEvaluationAssembly,
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 
 import {
   createGoldenFGHIProject,
@@ -28,6 +28,23 @@ import { summarizeRewardOffer } from '@planner/projections/rewardPicker';
 import { presentWorkspaceBiome } from './biome-presentation';
 import { assembleWorkspaceBiomeSemantics } from '../assembly/biome-semantic-assembly';
 import { createWorkspaceProjectSourceIndex, type WorkspaceBiomeSource } from '../source-index';
+
+let goldenProject: ReturnType<typeof createGoldenFGHIProject>;
+let surfaceProject: ReturnType<typeof createRepresentativeNOPQProject>;
+let directRewardBiome: ReturnType<typeof present>['presentation']['biome'];
+let fieldsRewardBiome: ReturnType<typeof present>['presentation']['biome'];
+let fixedRewardBiome: ReturnType<typeof present>['presentation']['biome'];
+
+beforeAll(() => {
+  goldenProject = createGoldenFGHIProject();
+  surfaceProject = createRepresentativeNOPQProject();
+});
+
+beforeAll(() => {
+  directRewardBiome = present(goldenProject, 'Underworld', 'F').presentation.biome;
+  fieldsRewardBiome = present(goldenProject, 'Underworld', 'H').presentation.biome;
+  fixedRewardBiome = present(surfaceProject, 'Surface', 'O').presentation.biome;
+});
 
 function biomeSource(
   project: ProjectDocument,
@@ -320,7 +337,7 @@ describe('structured workspace biome presentation', () => {
   });
 
   it('progressively presents one selected room and its direct reward token', () => {
-    const direct = present(createGoldenFGHIProject(), 'Underworld', 'F').presentation.biome;
+    const direct = directRewardBiome;
     const directDecision = direct.nodes.find(
       (node): node is Extract<(typeof direct.nodes)[number], { readonly kind: 'ordinaryBatch' }> =>
         node.kind === 'ordinaryBatch' &&
@@ -352,7 +369,7 @@ describe('structured workspace biome presentation', () => {
       },
     });
 
-    const fields = present(createGoldenFGHIProject(), 'Underworld', 'H').presentation.biome;
+    const fields = fieldsRewardBiome;
     const fieldsDecision = fields.nodes.find(
       (node): node is Extract<(typeof fields.nodes)[number], { readonly kind: 'ordinaryBatch' }> =>
         node.kind === 'ordinaryBatch' &&
@@ -370,7 +387,7 @@ describe('structured workspace biome presentation', () => {
     if (fieldsRail === undefined) throw new Error('H Fields decision rail entry is missing');
     expect(fieldsRail.selectedTarget).toEqual({ roomLabel: fieldsTarget.room.label });
 
-    const fixed = present(createRepresentativeNOPQProject(), 'Surface', 'O').presentation.biome;
+    const fixed = fixedRewardBiome;
     const fixedDecision = fixed.nodes.find(
       (node): node is Extract<(typeof fixed.nodes)[number], { readonly kind: 'ordinaryBatch' }> =>
         node.kind === 'ordinaryBatch' &&

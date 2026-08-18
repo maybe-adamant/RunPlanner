@@ -3,10 +3,8 @@ import {
   applyProjectCommand,
   createBiomeAddress,
   createExitDecisionAddress,
-  createOccurrenceAddress,
   createOccurrenceId,
   createProjectDocument,
-  createAcquisitionSiteAddress,
   createIncomingRewardAddress,
   createTargetAddress,
   createTraitOfferAddress,
@@ -28,8 +26,6 @@ import {
   appendCompleteN,
   createRepresentativeNOPQProject,
   nBiome,
-  qBiome,
-  qOccurrenceIds,
 } from '@run-planner/test-fixtures';
 import { createGoldenFGHIProject, goldenFBiome, goldenFStartId } from '@run-planner/test-fixtures';
 
@@ -50,7 +46,6 @@ const families = [
   'rewardWheelStores',
   'rooms',
   'shipCombatPhaseCounts',
-  'acquisitionOrders',
   'localVisitOrders',
   'localVisitGenerations',
 ] as const satisfies readonly (keyof WorkspaceInteractionCatalog)[];
@@ -74,7 +69,6 @@ const expectedColdQueryBatchCounts: Readonly<Record<InteractionFamily, number>> 
   rewardWheelStores: 1,
   rooms: 1,
   shipCombatPhaseCounts: 1,
-  acquisitionOrders: 1,
   localVisitOrders: 1,
   localVisitGenerations: 1,
 });
@@ -270,40 +264,6 @@ describe('workspace candidate interaction families', () => {
     }
   }, 10_000);
 
-  it('loads one Shop row as a bounded, cached exact-order candidate domain', () => {
-    const events: CandidateEvaluationEvent[] = [];
-    const profile = catalog.rewards.shops.byKey.Q_WorldShop;
-    if (profile === undefined) throw new Error('Q Shop profile is missing');
-    const offerKeys = profile.slots.values.map((slot) => slot.key);
-    const shopOwner = createOccurrenceAddress(qBiome, qOccurrenceIds.preboss);
-    const purchaseOwner = createAcquisitionSiteAddress(shopOwner, 'roomExit');
-    const project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
-      kind: 'ReplaceAcquisitionOrder',
-      site: purchaseOwner,
-      entryKeys: offerKeys,
-    });
-    const services = createStructuredWorkspaceTestServices({
-      observeCandidateEvaluation: (event) => events.push(event),
-    });
-    const interaction = services.structuredWorkspace
-      .project(simulateProjectAssembly(catalog, project))
-      .interactions.acquisitionOrders.get(semanticAddressKey(purchaseOwner));
-    if (interaction === undefined) throw new Error('Q Shop row interaction is missing');
-
-    expect(interaction.owner).toEqual(purchaseOwner);
-    expect(events).toEqual([]);
-    interaction.load();
-    expect(events.filter((event) => event.kind === 'queryBatch')).toEqual([
-      // The exact Shop-order domain now includes acquisition-time child
-      // capability checks for the participating entries.
-      expect.objectContaining({ queryCount: 12 }),
-    ]);
-
-    events.length = 0;
-    interaction.load();
-    expect(events).toEqual([]);
-  });
-
   it('retains only completed-Hub handoff and authored takeover repair as standalone actions', () => {
     const services = createStructuredWorkspaceTestServices();
     const hubHandoffProject = appendCompleteN(
@@ -410,7 +370,7 @@ describe('workspace candidate interaction families', () => {
       throw new Error('F direct entry has no unavailable takeover for this guard');
     }
 
-    expect(unavailableTakeover).toMatchObject({ disabled: true, state: 'impossible' });
+    expect(unavailableTakeover).toMatchObject({ disabled: true, state: 'unassessed' });
     expect(() => interaction.intentFor(unavailableTakeover.value.gameName)).toThrow(
       /not currently authorable/,
     );

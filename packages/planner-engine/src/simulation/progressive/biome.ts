@@ -298,7 +298,7 @@ function derivedAcquisitionEntryAncestor(
   return owner?.kind === 'acquisitionEntry' ? owner : undefined;
 }
 
-function occurrenceOwnerAddress(address: SemanticAddress): OccurrenceAddress | undefined {
+export function occurrenceOwnerAddress(address: SemanticAddress): OccurrenceAddress | undefined {
   if (address.kind === 'occurrence') return address;
   // A room-exit settlement finding is addressed to its atomic entry, whose
   // occurrence owner is intentionally one layer further out through its
@@ -306,6 +306,7 @@ function occurrenceOwnerAddress(address: SemanticAddress): OccurrenceAddress | u
   // blocking region so the already-prepared pre-settlement candidate context
   // remains available for repairing the authored order.
   if (address.kind === 'acquisitionEntry') return occurrenceOwnerAddress(address.site);
+  if (address.kind === 'acquisitionRole') return occurrenceOwnerAddress(address.owner);
   if (address.kind === 'acquisitionSite') return occurrenceOwnerAddress(address.owner);
   if (
     address.kind === 'traitOffer' ||
@@ -791,11 +792,6 @@ function retainBlockedRegionProducts(
       ? undefined
       : (selectedArtifacts.roomLifecycles.shipAt(occurrenceOwner) ??
         blockedArtifacts.roomLifecycles.shipAt(occurrenceOwner));
-  const acquisitionOrderCapability =
-    occurrenceOwner === undefined
-      ? undefined
-      : (selectedArtifacts.roomLifecycles.acquisitionOrderAt(occurrenceOwner) ??
-        blockedArtifacts.roomLifecycles.acquisitionOrderAt(occurrenceOwner));
   const encounterCapability =
     occurrenceOwner === undefined
       ? undefined
@@ -839,7 +835,7 @@ function retainBlockedRegionProducts(
               : retainedArtifacts.rewardProducers.at(owner),
         });
   const roomLifecycles =
-    shipCapability === undefined && acquisitionOrderCapability === undefined
+    shipCapability === undefined
       ? retainedArtifacts.roomLifecycles
       : Object.freeze({
           shipAt: (owner: OccurrenceAddress) =>
@@ -848,12 +844,6 @@ function retainBlockedRegionProducts(
             shipCapability !== undefined
               ? shipCapability
               : retainedArtifacts.roomLifecycles.shipAt(owner),
-          acquisitionOrderAt: (owner: OccurrenceAddress) =>
-            occurrenceOwner !== undefined &&
-            semanticAddressKey(owner) === semanticAddressKey(occurrenceOwner) &&
-            acquisitionOrderCapability !== undefined
-              ? acquisitionOrderCapability
-              : retainedArtifacts.roomLifecycles.acquisitionOrderAt(owner),
         });
   const encounters: EncounterCandidateArtifacts =
     encounterCapability === undefined

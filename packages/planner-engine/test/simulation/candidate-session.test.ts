@@ -4,7 +4,6 @@ import { catalog } from '@run-planner/hades2-catalog';
 import * as simulationPublic from '@run-planner/engine/simulation';
 import {
   applyProjectCommand,
-  createAcquisitionSiteAddress,
   createBatchRewardStoreAddress,
   createBiomeAddress,
   createExitDecisionAddress,
@@ -204,44 +203,22 @@ describe('candidate session', () => {
     const results = createPreparedProjectCandidateSession(
       catalog,
       simulateProjectAssembly(catalog, project),
-    ).evaluate([
-      {
-        kind: 'shopOffer',
-        offer: createShopOfferAddress(fBiome, occurrence.occurrenceId, offerKey),
-        value: offer.reward.offer,
-      },
-      {
-        kind: 'acquisitionOrder',
-        site: createAcquisitionSiteAddress(
-          createOccurrenceAddress(fBiome, occurrence.occurrenceId),
-          'roomExit',
-        ),
-        entryKeys: occurrence.acquisitionSites?.roomExit?.order ?? [],
-      },
-    ]);
+    ).evaluate({
+      kind: 'shopOffer',
+      offer: createShopOfferAddress(fBiome, occurrence.occurrenceId, offerKey),
+      value: offer.reward.offer,
+    });
 
-    expect(results).toMatchObject([
-      {
-        kind: 'unavailable',
-        reason: 'coverageNotReached',
-        evidence: {
-          kind: 'coverageNotReached',
-          requiredOwner: createShopOfferAddress(fBiome, occurrence.occurrenceId, offerKey),
-          requiredCheckpoint: 'afterRoomLifecycle',
-          coverage: { kind: 'prefix' },
-        },
+    expect(results).toMatchObject({
+      kind: 'unavailable',
+      reason: 'coverageNotReached',
+      evidence: {
+        kind: 'coverageNotReached',
+        requiredOwner: createShopOfferAddress(fBiome, occurrence.occurrenceId, offerKey),
+        requiredCheckpoint: 'afterRoomLifecycle',
+        coverage: { kind: 'prefix' },
       },
-      {
-        kind: 'unavailable',
-        reason: 'coverageNotReached',
-        evidence: {
-          kind: 'coverageNotReached',
-          requiredOwner: createOccurrenceAddress(fBiome, occurrence.occurrenceId),
-          requiredCheckpoint: 'afterRoomLifecycle',
-          coverage: { kind: 'prefix' },
-        },
-      },
-    ]);
+    });
   });
 
   it('distinguishes an incomplete and invalid upstream biome from local coverage', () => {

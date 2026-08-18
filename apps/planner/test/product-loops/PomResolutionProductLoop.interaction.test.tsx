@@ -7,7 +7,6 @@ import { afterEach, describe, expect, it } from 'vitest';
 import {
   applyProjectCommand,
   createOccurrenceAddress,
-  createAcquisitionSiteAddress,
   createShopOfferAddress,
   semanticAddressKey,
 } from '@run-planner/engine/authored-project';
@@ -18,6 +17,7 @@ import {
   goldenFBiome,
   pBiome,
   pOccurrenceIds,
+  replaceTestShopOfferActions,
 } from '@run-planner/test-fixtures';
 
 import { createApplication } from '@planner/composition/createApplication';
@@ -29,28 +29,9 @@ afterEach(cleanup);
 describe('Pom resolution product loop', () => {
   it('publishes the purchased Midshop Pom before its next decision is authored', () => {
     const application = createApplication();
-    const unpurchased = createFMidshopPomFrontierProject();
+    const project = createFMidshopPomFrontierProject();
     const offer = createShopOfferAddress(goldenFBiome, fMidshopPomShopId, 'Minor');
-    application.store.dispatch(authoredProjectReplaced(unpurchased));
-    expect(
-      [
-        ...application
-          .selectStructuredWorkspace(application.store.getState())
-          .interactions.levelResolutions.values(),
-      ].some(
-        (interaction) => semanticAddressKey(interaction.owner.owner) === semanticAddressKey(offer),
-      ),
-    ).toBe(false);
-
-    const purchased = applyProjectCommand(unpurchased, application.catalog, {
-      kind: 'ReplaceAcquisitionOrder',
-      site: createAcquisitionSiteAddress(
-        createOccurrenceAddress(goldenFBiome, fMidshopPomShopId),
-        'roomExit',
-      ),
-      entryKeys: ['Minor'],
-    });
-    application.store.dispatch(authoredProjectReplaced(purchased));
+    application.store.dispatch(authoredProjectReplaced(project));
     const workspace = application.selectStructuredWorkspace(application.store.getState());
     expect(
       [...workspace.interactions.levelResolutions.values()].find(
@@ -63,18 +44,18 @@ describe('Pom resolution product loop', () => {
   it('publishes and saves a purchased random Shop Pom only at its exact offer', async () => {
     const application = createApplication();
     let project = createRepresentativeNOPProject();
-    const shop = createOccurrenceAddress(pBiome, pOccurrenceIds.prebossShop);
     const offer = createShopOfferAddress(pBiome, pOccurrenceIds.prebossShop, 'Minor');
     project = applyProjectCommand(project, application.catalog, {
       kind: 'ReplaceShopOffer',
       offer,
       value: { rewardType: 'StoreRewardRandomStack' },
     });
-    project = applyProjectCommand(project, application.catalog, {
-      kind: 'ReplaceAcquisitionOrder',
-      site: createAcquisitionSiteAddress(shop, 'roomExit'),
-      entryKeys: ['Minor'],
-    });
+    project = replaceTestShopOfferActions(
+      project,
+      application.catalog,
+      createOccurrenceAddress(pBiome, pOccurrenceIds.prebossShop),
+      ['Minor'],
+    );
     application.store.dispatch(authoredProjectReplaced(project));
     const workspace = application.selectStructuredWorkspace(application.store.getState());
     const interaction = [...workspace.interactions.levelResolutions.values()].find(

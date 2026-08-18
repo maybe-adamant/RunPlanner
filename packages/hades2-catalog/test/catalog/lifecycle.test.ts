@@ -57,6 +57,13 @@ describe('room lifecycle catalog', () => {
     ).toBe(true);
   });
 
+  it('keeps Fields cage encounters on the declaration-owned sequence operation', () => {
+    expect(catalog.roomLifecycleProfiles.byKey.FieldsCombatRoom?.operations).toContainEqual({
+      kind: 'runEncounterSequence',
+      effects: ['recordEncounterStart', 'advanceEncounterDepth', 'recordEncounterCompletion'],
+    });
+  });
+
   it('rejects unknown operation, effect, producer point, and encounter references', () => {
     const base = declarations.roomLifecycleProfiles[0];
     if (base === undefined) {

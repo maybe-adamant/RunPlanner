@@ -9,7 +9,11 @@ import {
 } from '@run-planner/engine/authored-project';
 import { describe, expect, it } from 'vitest';
 
-import { createCompleteFGProject, goldenFStartId } from '@run-planner/test-fixtures';
+import {
+  authorRequiredTestRoomActions,
+  createCompleteFGProject,
+  goldenFStartId,
+} from '@run-planner/test-fixtures';
 import { simulateProject } from '../../src/simulation';
 import { createPreparedProjectCandidateSession } from '../../src/simulation/candidates';
 import { simulateProjectAssembly } from '../../src/simulation/project';
@@ -32,14 +36,14 @@ function simulated(rewardType: 'Boon' | 'HermesUpgrade') {
         ? { rewardType, payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } }
         : { rewardType },
   });
-  const result = simulateProject(catalog, project);
+  const result = simulateProject(catalog, authorRequiredTestRoomActions(project, catalog));
   const f = result.routes.find((route) => route.routeKey === 'Underworld')?.biomes[0];
   if (f?.authoring !== 'complete') throw new Error('expected complete F simulation');
   return f.rewards;
 }
 
 function rewardsFor(project: ReturnType<typeof createCompleteFGProject>) {
-  const result = simulateProject(catalog, project);
+  const result = simulateProject(catalog, authorRequiredTestRoomActions(project, catalog));
   const f = result.routes.find((route) => route.routeKey === 'Underworld')?.biomes[0];
   if (f?.authoring !== 'complete') throw new Error('expected complete F simulation');
   return f.rewards;
@@ -158,7 +162,7 @@ describe('Vow of Forfeit ordinary room reward veto', () => {
     });
     const session = createPreparedProjectCandidateSession(
       catalog,
-      simulateProjectAssembly(catalog, project),
+      simulateProjectAssembly(catalog, authorRequiredTestRoomActions(project, catalog)),
     );
     expect(
       session.evaluate({

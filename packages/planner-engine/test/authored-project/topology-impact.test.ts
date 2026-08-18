@@ -35,6 +35,7 @@ describe('topology removal impact', () => {
         gameName: 'TestRoom',
         state: { kind: 'none' as const },
         encounters: { encounterKeyByPhase: {}, figLeafSkipByPhase: {} },
+        roomActions: { order: [] },
         additionalExits: [],
       })),
       decisions: [
@@ -71,6 +72,7 @@ describe('topology removal impact', () => {
         gameName: 'TestRoom',
         state: { kind: 'none' as const },
         encounters: { encounterKeyByPhase: {}, figLeafSkipByPhase: {} },
+        roomActions: { order: [] },
         additionalExits: [],
       })),
       decisions: [
@@ -114,6 +116,7 @@ describe('topology removal impact', () => {
           gameName: 'TestRoom',
           state: { kind: 'none' },
           encounters: { encounterKeyByPhase: {}, figLeafSkipByPhase: {} },
+          roomActions: { order: [] },
           additionalExits: [],
         },
       ],
@@ -132,6 +135,7 @@ describe('topology removal impact', () => {
         gameName: 'TestRoom',
         state: { kind: 'none' as const },
         encounters: { encounterKeyByPhase: {}, figLeafSkipByPhase: {} },
+        roomActions: { order: [] },
         additionalExits:
           occurrenceId === root
             ? [
@@ -199,6 +203,7 @@ describe('topology removal impact', () => {
         gameName: 'TestRoom',
         state: { kind: 'none' as const },
         encounters: { encounterKeyByPhase: {}, figLeafSkipByPhase: {} },
+        roomActions: { order: [] },
         additionalExits: [],
       })),
       decisions: [
@@ -261,6 +266,7 @@ describe('topology removal impact', () => {
           gameName: 'TestRoom',
           state: { kind: 'none' },
           encounters: { encounterKeyByPhase: {}, figLeafSkipByPhase: {} },
+          roomActions: { order: [] },
           additionalExits: [],
         },
       ],
@@ -303,6 +309,7 @@ describe('topology removal impact', () => {
         gameName: 'TestRoom',
         state: { kind: 'none' },
         encounters: { encounterKeyByPhase: {}, figLeafSkipByPhase: {} },
+        roomActions: { order: [] },
         additionalExits: [],
       })),
       decisions: [topology.decisions[0]],
@@ -319,6 +326,7 @@ describe('topology removal impact', () => {
         gameName: 'TestRoom',
         state: { kind: 'none' as const },
         encounters: { encounterKeyByPhase: {}, figLeafSkipByPhase: {} },
+        roomActions: { order: [] },
         additionalExits: [],
       })),
       decisions: [
@@ -358,6 +366,7 @@ describe('topology removal impact', () => {
         gameName: 'TestRoom',
         state: { kind: 'none' as const },
         encounters: { encounterKeyByPhase: {}, figLeafSkipByPhase: {} },
+        roomActions: { order: [] },
         additionalExits: [],
       })),
       decisions: [
@@ -403,6 +412,7 @@ describe('topology removal impact', () => {
         gameName: 'TestRoom',
         state: { kind: 'none' },
         encounters: { encounterKeyByPhase: {}, figLeafSkipByPhase: {} },
+        roomActions: { order: [] },
         additionalExits: [],
       })),
       decisions: [topology.decisions[0]],
@@ -422,6 +432,7 @@ describe('topology removal impact', () => {
         gameName: 'TestRoom',
         state: { kind: 'none' as const },
         encounters: { encounterKeyByPhase: {}, figLeafSkipByPhase: {} },
+        roomActions: { order: [] },
         additionalExits: [],
       })),
       decisions: [
