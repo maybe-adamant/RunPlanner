@@ -1249,6 +1249,11 @@ describe('trait offer catalog closure', () => {
     ).toEqual(['Hera:BoonDecayBoon']);
     expect(
       variants
+        .filter((variant) => variant.requiresDeathDefianceCondition === true)
+        .map((variant) => variant.key),
+    ).toEqual(['Athena:DeathDefianceRefillBoon']);
+    expect(
+      variants
         .filter(
           (variant) =>
             traits.traits.byKey[variant.traitKey]?.selectedDisposition.kind ===

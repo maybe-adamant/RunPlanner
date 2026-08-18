@@ -4,7 +4,6 @@ import {
   type AuthoredTraitOffer,
   type AuthoredTraitOfferTraits,
   type AuthoredEchoLastRunBoonOffer,
-  type AuthoredEchoLastRunBoonOption,
   type AuthoredAllTogetherResult,
   type TraitOfferAddress,
 } from '@run-planner/engine/authored-project';
@@ -23,6 +22,7 @@ import {
   type WorkspaceCirceResolutionDomain,
   type WorkspaceEchoPomTargetDomain,
   type WorkspaceEchoLastRunBoonDomain,
+  type WorkspaceEchoLastRunBoonTraitIdentity,
   type WorkspaceAllTogetherSetInteraction,
   type WorkspaceAllTogetherSetDomain,
   type WorkspaceTraitOfferInteraction,
@@ -250,180 +250,316 @@ function traitOfferRevision(interaction: WorkspaceTraitOfferInteraction): string
   ].join('|');
 }
 
-function sameEchoLastRunOption(
-  left: AuthoredEchoLastRunBoonOption,
-  right: AuthoredEchoLastRunBoonOption,
-): boolean {
-  return (
-    left.giverKey === right.giverKey &&
-    left.traitKey === right.traitKey &&
-    left.rarity === right.rarity
-  );
+interface EchoLastRunBoonDraftRow {
+  readonly identity?: WorkspaceEchoLastRunBoonTraitIdentity;
+  readonly rarity?: TraitRarity;
+  readonly targetTraitKey?: string;
 }
-function EchoLastRunBoonEditor({
+
+function pickerItems<T>(model: ContextualPickerModel<T>) {
+  return model.sections.flatMap((section) => section.items);
+}
+
+function EchoLastRunBoonChoiceEditor({
+  controlId,
   domain,
   value,
-  onSelect,
+  onBack,
+  onComplete,
 }: {
+  readonly controlId: string;
   readonly domain: WorkspaceEchoLastRunBoonDomain;
   readonly value?: AuthoredEchoLastRunBoonOffer;
-  readonly onSelect: (value: AuthoredEchoLastRunBoonOffer) => void;
+  readonly onBack: () => void;
+  readonly onComplete: (value: AuthoredEchoLastRunBoonOffer) => void;
 }) {
-  const firstUnused = domain.appendCandidate;
-  if (value === undefined) {
-    return (
-      <fieldset className="trait-circe-resolution">
-        <legend>Boon Boon Boon outcomes</legend>
-        <button
-          disabled={firstUnused === undefined}
-          onClick={() => {
-            if (firstUnused === undefined) return;
-            onSelect(
-              Object.freeze({
-                options: Object.freeze([firstUnused.value] as const),
-                selectedOptionKey: 'option1',
+  const [rows, setRows] = useState<readonly EchoLastRunBoonDraftRow[]>(() =>
+    value === undefined
+      ? Object.freeze([Object.freeze({})])
+      : Object.freeze(
+          value.options.map((option) =>
+            Object.freeze({
+              identity: Object.freeze({
+                giverKey: option.giverKey,
+                traitKey: option.traitKey,
               }),
-            );
-          }}
-          type="button"
-        >
-          Choose previous-run outcome
-        </button>
-      </fieldset>
+              rarity: option.rarity,
+              ...(option.targetTraitKey === undefined
+                ? {}
+                : { targetTraitKey: option.targetTraitKey }),
+            }),
+          ),
+        ),
+  );
+  const [selectedIndex, setSelectedIndex] = useState<number>(() =>
+    value === undefined ? 0 : optionIndex(value.selectedOptionKey),
+  );
+  const selectedRow = rows[selectedIndex];
+  const selectedComplete =
+    selectedRow?.identity !== undefined && selectedRow.rarity !== undefined
+      ? Object.freeze({
+          giverKey: selectedRow.identity.giverKey,
+          traitKey: selectedRow.identity.traitKey,
+          rarity: selectedRow.rarity,
+          ...(selectedRow.targetTraitKey === undefined
+            ? {}
+            : { targetTraitKey: selectedRow.targetTraitKey }),
+        })
+      : undefined;
+  const selectedNeedsTarget =
+    selectedRow?.identity !== undefined && domain.targetRequiredFor(selectedRow.identity);
+  const draftSupport = domain.draftSupportFor(rows, selectedIndex);
+
+  const updateRow = (index: number, next: EchoLastRunBoonDraftRow): void => {
+    setRows((current) =>
+      Object.freeze(current.map((row, rowIndex) => (rowIndex === index ? next : row))),
     );
-  }
+  };
+
   return (
-    <fieldset className="trait-circe-resolution">
-      <legend>Boon Boon Boon outcomes</legend>
-      {value.options.map((entry, index) => {
-        const optionKey = OPTION_KEYS[index]!;
-        const selectedCandidate = domain.candidates.find((candidate) =>
-          sameEchoLastRunOption(candidate.value, entry),
-        );
-        return (
-          <fieldset key={optionKey}>
-            <legend>{optionKey.replace('option', 'Outcome ')}</legend>
-            <select
-              aria-label={`Boon Boon Boon ${optionKey}`}
-              onChange={(event) => {
-                const candidate = domain.candidates[Number(event.target.value)];
-                if (candidate === undefined || !candidate.supported) return;
-                const options = [...value.options];
-                options[index] = candidate.value;
-                onSelect(
-                  Object.freeze({
-                    ...value,
-                    options: Object.freeze(options) as AuthoredEchoLastRunBoonOffer['options'],
-                  }),
-                );
-              }}
-              value={domain.candidates.findIndex((candidate) =>
-                sameEchoLastRunOption(candidate.value, entry),
-              )}
-            >
-              {(domain.candidatesByOption[index] ?? []).map((candidate) => {
-                const candidateIndex = domain.candidates.indexOf(candidate);
-                return (
-                  <option
-                    disabled={!candidate.supported}
-                    key={`${candidate.value.giverKey}:${candidate.value.traitKey}:${candidate.value.rarity}`}
-                    value={candidateIndex}
-                  >
-                    {candidate.label}
-                    {candidate.effectiveRarity === candidate.value.rarity
-                      ? ''
-                      : ` → ${candidate.effectiveRarity}`}
-                  </option>
-                );
-              })}
-            </select>
-            {selectedCandidate?.targetChoices.length ? (
-              <select
-                aria-label={`Boon Boon Boon ${optionKey} acquisition target`}
-                onChange={(event) => {
-                  const options = [...value.options];
-                  options[index] = Object.freeze(
-                    event.target.value === ''
-                      ? {
-                          giverKey: entry.giverKey,
-                          traitKey: entry.traitKey,
-                          rarity: entry.rarity,
-                        }
-                      : { ...entry, targetTraitKey: event.target.value },
+    <section className="echo-last-run-choice" aria-label="Boon Boon Boon choice">
+      <header className="echo-last-run-choice-header">
+        <div>
+          <p className="eyebrow">Echo offer &gt; Boon Boon Boon choice</p>
+          <h3>Boon Boon Boon choice</h3>
+          <p>Choose one to three previous-run outcomes, then select the one Echo grants.</p>
+        </div>
+        <button className="quiet-action action-compact" onClick={onBack} type="button">
+          Back to Echo offer
+        </button>
+      </header>
+      <div className="echo-last-run-options">
+        {rows.map((row, index) => {
+          const optionKey = OPTION_KEYS[index]!;
+          const occupiedTraitKeys = rows.flatMap((other, otherIndex) =>
+            otherIndex === index || other.identity === undefined ? [] : [other.identity.traitKey],
+          );
+          const traitPicker = domain.traitPickerFor(occupiedTraitKeys, row.identity);
+          const rarityPicker =
+            row.identity === undefined
+              ? undefined
+              : domain.rarityPickerFor(row.identity, row.rarity);
+          const allRarityItems = rarityPicker === undefined ? [] : pickerItems(rarityPicker);
+          const rarityItems = allRarityItems.filter((item) => item.state !== 'impossible');
+          const selectedRarityUnavailable = allRarityItems.some(
+            (item) => item.value === row.rarity && item.state === 'impossible',
+          );
+          const fixedRarity =
+            rarityItems.length === 1 && !selectedRarityUnavailable
+              ? rarityItems[0]!.value
+              : undefined;
+          const effectiveRarity =
+            row.identity === undefined || row.rarity === undefined
+              ? undefined
+              : domain.effectiveRarityFor({
+                  giverKey: row.identity.giverKey,
+                  traitKey: row.identity.traitKey,
+                  rarity: row.rarity,
+                });
+          return (
+            <fieldset className="echo-last-run-option" key={optionKey}>
+              <legend>Outcome {index + 1}</legend>
+              <ContextualPicker
+                ariaLabel={`Boon Boon Boon outcome ${index + 1}`}
+                id={index === 0 ? controlId : `${controlId}-${optionKey}`}
+                label="Trait"
+                model={traitPicker}
+                onSelect={(identity) => {
+                  const nextRarityPicker = domain.rarityPickerFor(identity);
+                  const availableRarities = pickerItems(nextRarityPicker).filter(
+                    (item) => item.state !== 'impossible',
                   );
-                  onSelect(
+                  updateRow(
+                    index,
                     Object.freeze({
-                      ...value,
-                      options: Object.freeze(options) as AuthoredEchoLastRunBoonOffer['options'],
+                      identity,
+                      ...(availableRarities.length === 1
+                        ? { rarity: availableRarities[0]!.value }
+                        : {}),
                     }),
                   );
                 }}
-                value={entry.targetTraitKey ?? ''}
-              >
-                <option value="">Choose acquisition target</option>
-                {selectedCandidate.targetChoices.map((choice) => (
-                  <option key={choice.value} value={choice.value}>
-                    {choice.label}
-                  </option>
-                ))}
-              </select>
-            ) : null}
-            <label>
-              <input
-                checked={value.selectedOptionKey === optionKey}
-                name="echo-last-run-selected"
-                onChange={() => onSelect(Object.freeze({ ...value, selectedOptionKey: optionKey }))}
-                type="radio"
+                placeholder="Choose provider and trait"
+                {...(row.identity === undefined
+                  ? {}
+                  : { triggerLabel: domain.labelFor(row.identity) })}
               />
-              Selected
-            </label>
-            {value.options.length === 1 ? null : (
-              <button
-                onClick={() => {
-                  const options = value.options.filter(
-                    (_, candidateIndex) => candidateIndex !== index,
-                  );
-                  const selectedIndex = optionIndex(value.selectedOptionKey);
-                  const nextSelectedIndex =
-                    selectedIndex === index
-                      ? 0
-                      : selectedIndex > index
-                        ? selectedIndex - 1
-                        : selectedIndex;
-                  onSelect(
-                    Object.freeze({
-                      options: Object.freeze(options) as AuthoredEchoLastRunBoonOffer['options'],
-                      selectedOptionKey: OPTION_KEYS[nextSelectedIndex]!,
-                    }),
-                  );
-                }}
-                type="button"
-              >
-                Remove outcome
-              </button>
-            )}
-          </fieldset>
-        );
-      })}
-      {value.options.length >= 3 || firstUnused === undefined ? null : (
+              {row.identity === undefined || rarityPicker === undefined ? null : fixedRarity !==
+                undefined ? (
+                <p className="trait-selected-outcome-detail">Rarity: {fixedRarity}</p>
+              ) : (
+                <ContextualPicker
+                  ariaLabel={`Boon Boon Boon outcome ${index + 1} rarity`}
+                  id={`${controlId}-${optionKey}-rarity`}
+                  label="Rarity"
+                  model={rarityPicker}
+                  onSelect={(rarity) => updateRow(index, Object.freeze({ ...row, rarity }))}
+                  placeholder="Choose rarity"
+                  {...(row.rarity === undefined ? {} : { triggerLabel: rarityLabel(row.rarity) })}
+                />
+              )}
+              {effectiveRarity === undefined || effectiveRarity === row.rarity ? null : (
+                <p className="trait-selected-outcome-detail">Effective rarity: {effectiveRarity}</p>
+              )}
+              <label>
+                <input
+                  checked={selectedIndex === index}
+                  name="echo-last-run-selected"
+                  onChange={() => setSelectedIndex(index)}
+                  type="radio"
+                />
+                Echo grants this outcome
+              </label>
+              {rows.length === 1 ? null : (
+                <button
+                  className="quiet-action action-compact"
+                  onClick={() => {
+                    setRows((current) =>
+                      Object.freeze(current.filter((_, rowIndex) => rowIndex !== index)),
+                    );
+                    setSelectedIndex((current) =>
+                      current === index ? 0 : current > index ? current - 1 : current,
+                    );
+                  }}
+                  type="button"
+                >
+                  Remove outcome
+                </button>
+              )}
+            </fieldset>
+          );
+        })}
+      </div>
+      {selectedComplete === undefined || !selectedNeedsTarget ? null : (
+        <div className="echo-last-run-target">
+          <h4>Selected trait outcome</h4>
+          <ContextualPicker
+            ariaLabel="Boon Boon Boon selected trait target"
+            id={`${controlId}-target`}
+            label="Target"
+            model={domain.targetPickerFor(selectedComplete)}
+            onSelect={(targetTraitKey) =>
+              updateRow(selectedIndex, Object.freeze({ ...selectedRow, targetTraitKey }))
+            }
+            placeholder="Choose an equipped trait"
+            {...(selectedRow.targetTraitKey === undefined
+              ? {}
+              : {
+                  triggerLabel:
+                    pickerValueLabel(
+                      domain.targetPickerFor(selectedComplete),
+                      selectedRow.targetTraitKey,
+                    ) ?? selectedRow.targetTraitKey,
+                })}
+          />
+        </div>
+      )}
+      {!draftSupport.canAppend || !rows.every((row) => row.identity && row.rarity) ? null : (
         <button
-          onClick={() =>
-            onSelect(
-              Object.freeze({
-                ...value,
-                options: Object.freeze([
-                  ...value.options,
-                  firstUnused.value,
-                ]) as AuthoredEchoLastRunBoonOffer['options'],
-              }),
-            )
-          }
+          className="quiet-action action-compact"
+          onClick={() => setRows((current) => Object.freeze([...current, Object.freeze({})]))}
           type="button"
         >
           Add outcome
         </button>
       )}
-    </fieldset>
+      <div className="echo-last-run-choice-actions">
+        <button
+          className="primary-action"
+          disabled={!draftSupport.complete}
+          onClick={() => {
+            if (!draftSupport.complete) return;
+            const options = rows.map((row) =>
+              Object.freeze({
+                giverKey: row.identity!.giverKey,
+                traitKey: row.identity!.traitKey,
+                rarity: row.rarity!,
+                ...(row.targetTraitKey === undefined ? {} : { targetTraitKey: row.targetTraitKey }),
+              }),
+            ) as unknown as AuthoredEchoLastRunBoonOffer['options'];
+            onComplete(
+              Object.freeze({
+                options: Object.freeze(options),
+                selectedOptionKey: OPTION_KEYS[selectedIndex]!,
+              }),
+            );
+          }}
+          type="button"
+        >
+          Save Boon Boon Boon choice
+        </button>
+        <button className="quiet-action" onClick={onBack} type="button">
+          Cancel
+        </button>
+      </div>
+    </section>
+  );
+}
+
+function LoadedEchoLastRunBoonChoice({
+  interaction,
+  offer,
+  onBack,
+  onComplete,
+}: {
+  readonly interaction: WorkspaceTraitOfferInteraction;
+  readonly offer: AuthoredTraitOfferTraits;
+  readonly onBack: () => void;
+  readonly onComplete: (value: AuthoredEchoLastRunBoonOffer) => void;
+}) {
+  const focusedSemanticOwner = useAppSelector((state) => state.editorSession.focusedSemanticOwner);
+  const optionKey = offer.selectedOptionKey;
+  const option = offer.options[optionIndex(optionKey)];
+  const child = useMemo(
+    () => interaction.optionDomain(offer, optionKey).echoLastRunBoon,
+    [interaction, offer, optionKey],
+  );
+  const loadable = useMemo(() => child?.forOffer(offer), [child, offer]);
+  const controller = useWorkspaceInteractionController<
+    WorkspaceEchoLastRunBoonDomain | undefined
+  >();
+  const loaded = controller.observe(loadable);
+  useEffect(() => {
+    if (loadable !== undefined) controller.activate(loadable);
+  }, [controller, loadable]);
+  useEffect(() => {
+    if (
+      loaded.result === undefined ||
+      child === undefined ||
+      focusedSemanticOwner?.kind !== 'echoLastRunBoon' ||
+      semanticAddressKey(focusedSemanticOwner) !== semanticAddressKey(child.control.address)
+    )
+      return;
+    document.getElementById(semanticOwnerControlElementId(child.control.address))?.focus();
+  }, [child, focusedSemanticOwner, loaded.result]);
+  if (child === undefined || option === undefined) {
+    return (
+      <section className="echo-last-run-choice" role="status">
+        <p>Boon Boon Boon is not active for the selected Echo trait.</p>
+        <button className="quiet-action" onClick={onBack} type="button">
+          Back to Echo offer
+        </button>
+      </section>
+    );
+  }
+  if (loaded.result === undefined) {
+    return (
+      <section className="echo-last-run-choice" role="status">
+        <p>{loaded.pending ? 'Evaluating previous-run outcomes…' : 'No outcomes are available.'}</p>
+        <button className="quiet-action" onClick={onBack} type="button">
+          Back to Echo offer
+        </button>
+      </section>
+    );
+  }
+  return (
+    <EchoLastRunBoonChoiceEditor
+      controlId={semanticOwnerControlElementId(child.control.address)}
+      domain={loaded.result}
+      {...(option.echoLastRunBoon === undefined ? {} : { value: option.echoLastRunBoon })}
+      onBack={onBack}
+      onComplete={onComplete}
+    />
   );
 }
 
@@ -721,10 +857,12 @@ function TraitOfferOptionEditor({
 function TraitOfferSelectedOutcomeEditor({
   interaction,
   value,
+  onOpenEchoLastRunBoon,
   onUpdate,
 }: {
   readonly interaction: WorkspaceTraitOfferInteraction;
   readonly value: AuthoredTraitOfferTraits;
+  readonly onOpenEchoLastRunBoon: () => void;
   readonly onUpdate: (value: AuthoredTraitOfferTraits) => void;
 }) {
   const dispatch = useAppDispatch();
@@ -754,8 +892,11 @@ function TraitOfferSelectedOutcomeEditor({
   >();
   const echoPomDomain = echoPomController.observe(echoPomLoadable);
   const echoLastRunLoadable = useMemo(
-    () => loadable.echoLastRunBoon?.forOffer(value),
-    [loadable.echoLastRunBoon, value],
+    () =>
+      loadable.echoLastRunBoon === undefined || option.echoLastRunBoon === undefined
+        ? undefined
+        : loadable.echoLastRunBoon.forOffer(value),
+    [loadable.echoLastRunBoon, option.echoLastRunBoon, value],
   );
   const echoLastRunController = useWorkspaceInteractionController<
     WorkspaceEchoLastRunBoonDomain | undefined
@@ -841,14 +982,33 @@ function TraitOfferSelectedOutcomeEditor({
             : {})}
         />
       )}
-      {loadable.echoLastRunBoon === undefined || echoLastRunDomain.result === undefined ? null : (
-        <EchoLastRunBoonEditor
-          domain={echoLastRunDomain.result}
-          {...(option.echoLastRunBoon === undefined ? {} : { value: option.echoLastRunBoon })}
-          onSelect={(child) =>
-            onUpdate(replaceOption(value, selectedIndex, { ...option, echoLastRunBoon: child }))
-          }
-        />
+      {loadable.echoLastRunBoon === undefined ? null : (
+        <div
+          className="trait-dependent-choice-row"
+          id={semanticOwnerControlElementId(loadable.echoLastRunBoon.control.address)}
+        >
+          <div>
+            <h4>Boon Boon Boon choice</h4>
+            <p>
+              {option.echoLastRunBoon === undefined
+                ? 'Choose the boon Echo grants before room chronology continues.'
+                : (echoLastRunDomain.result?.summaryFor(option.echoLastRunBoon) ??
+                  (echoLastRunDomain.pending
+                    ? 'Evaluating Boon Boon Boon choice…'
+                    : 'Boon Boon Boon summary unavailable'))}
+            </p>
+            <p className="trait-selected-outcome-detail">
+              Resolved immediately after Echo's outer choice.
+            </p>
+          </div>
+          <button
+            className="quiet-action action-compact"
+            onClick={onOpenEchoLastRunBoon}
+            type="button"
+          >
+            {option.echoLastRunBoon === undefined ? 'Choose' : 'Edit choice'}
+          </button>
+        </div>
       )}
       {interaction.echoLastReward === undefined ? null : (
         <fieldset className="trait-circe-resolution">
@@ -924,12 +1084,16 @@ export function TraitOfferLauncher({
 
 export function TraitOfferEditor({
   address,
+  initialView = 'outer',
   interactions,
+  onChildCommit,
   onCommit,
   onReset,
 }: {
   readonly address: TraitOfferAddress;
+  readonly initialView?: 'outer' | 'echoLastRunBoon';
   readonly interactions: WorkspaceInteractionCatalog;
+  readonly onChildCommit?: (value: AuthoredTraitOffer) => void;
   readonly onCommit?: (value: AuthoredTraitOffer) => void;
   readonly onReset?: () => void;
 }) {
@@ -948,8 +1112,10 @@ export function TraitOfferEditor({
   return (
     <LoadedTraitOfferEditor
       initialValue={initialValue}
+      initialView={initialView}
       interaction={interaction}
       key={traitOfferRevision(interaction)}
+      {...(onChildCommit === undefined ? {} : { onChildCommit })}
       {...(onCommit === undefined ? {} : { onCommit })}
       {...(onReset === undefined ? {} : { onReset })}
     />
@@ -958,16 +1124,21 @@ export function TraitOfferEditor({
 
 function LoadedTraitOfferEditor({
   initialValue,
+  initialView,
   interaction,
+  onChildCommit,
   onCommit,
   onReset,
 }: {
   readonly initialValue: AuthoredTraitOffer;
+  readonly initialView: 'outer' | 'echoLastRunBoon';
   readonly interaction: WorkspaceTraitOfferInteraction;
+  readonly onChildCommit?: (value: AuthoredTraitOffer) => void;
   readonly onCommit?: (value: AuthoredTraitOffer) => void;
   readonly onReset?: () => void;
 }) {
   const [value, setValue] = useState<AuthoredTraitOffer>(initialValue);
+  const [view, setView] = useState(initialView);
   type TraitOfferCandidates = ReturnType<WorkspaceTraitOfferInteraction['load']>;
   const controller = useWorkspaceInteractionController<TraitOfferCandidates>();
   const [loadable, setLoadable] = useState(() => traitOfferLoadable(interaction, initialValue));
@@ -1069,6 +1240,27 @@ function LoadedTraitOfferEditor({
     setLoadable(nextLoadable);
     controller.activate(nextLoadable);
   };
+  if (view === 'echoLastRunBoon' && value.kind === 'traits') {
+    const selectedIndex = optionIndex(value.selectedOptionKey);
+    const selected = value.options[selectedIndex];
+    return (
+      <LoadedEchoLastRunBoonChoice
+        interaction={interaction}
+        offer={value}
+        onBack={() => setView('outer')}
+        onComplete={(child) => {
+          if (selected === undefined) return;
+          const completed = replaceOption(value, selectedIndex, {
+            ...selected,
+            echoLastRunBoon: child,
+          });
+          updateValue(completed);
+          onChildCommit?.(completed);
+          setView('outer');
+        }}
+      />
+    );
+  }
   return (
     <div className="trait-offer-editor">
       {value.kind === 'traits' && deathDefianceCondition !== undefined ? (
@@ -1136,6 +1328,7 @@ function LoadedTraitOfferEditor({
           </div>
           <TraitOfferSelectedOutcomeEditor
             interaction={interaction}
+            onOpenEchoLastRunBoon={() => setView('echoLastRunBoon')}
             onUpdate={updateValue}
             value={value}
           />
@@ -1279,7 +1472,8 @@ export function TraitOfferDialog({
       (focusedSemanticOwner?.kind === 'allTogetherSet' ||
         focusedSemanticOwner?.kind === 'traitAcquisitionTarget' ||
         focusedSemanticOwner?.kind === 'circeResolution' ||
-        focusedSemanticOwner?.kind === 'echoPomTarget') &&
+        focusedSemanticOwner?.kind === 'echoPomTarget' ||
+        focusedSemanticOwner?.kind === 'echoLastRunBoon') &&
       semanticAddressKey(focusedSemanticOwner.trait) === semanticAddressKey(target)
         ? document.getElementById(semanticOwnerControlElementId(focusedSemanticOwner))
         : null;
@@ -1341,11 +1535,21 @@ export function TraitOfferDialog({
         </header>
         <TraitOfferEditor
           address={target}
+          initialView={
+            focusedSemanticOwner?.kind === 'echoLastRunBoon' &&
+            semanticAddressKey(focusedSemanticOwner.trait) === semanticAddressKey(target)
+              ? 'echoLastRunBoon'
+              : 'outer'
+          }
           interactions={interactions}
           key={`${semanticAddressKey(target)}:${traitOfferRevision(interaction)}`}
           onCommit={(value) => {
             executeIntent(interaction.intentFor(value));
             close();
+          }}
+          onChildCommit={(value) => {
+            executeIntent(interaction.intentFor(value));
+            dispatch(traitOfferDialogOpened(target));
           }}
           {...(interaction.resetIntent === undefined
             ? {}

@@ -5,7 +5,10 @@ import type {
   TraitRarity,
   TraitRequirementExpression,
 } from '../catalog-schema';
-import type { EchoKeepsakeReplayAddress } from '../authored-project/addresses';
+import type {
+  EchoKeepsakeReplayAddress,
+  EchoLastRunBoonAddress,
+} from '../authored-project/addresses';
 import type {
   LevelResolutionAddress,
   SemanticAddress,
@@ -532,6 +535,41 @@ export interface EchoLastRunBoonOutcome {
   readonly targetTraitKeys: readonly string[];
 }
 
+/** Current-run exclusions for a boon already authored into the prior-run cache. */
+function assessEchoLastRunBoonOption(
+  catalog: Catalog,
+  traitKey: string,
+  history: TraitHistoryState,
+  context: Pick<TraitOfferContext, 'deathDefianceConditionMet'>,
+  requiresDeathDefianceCondition: boolean,
+): TraitAssessment {
+  const trait = catalog.traits.byKey[traitKey];
+  if (trait === undefined)
+    return Object.freeze({
+      legal: false,
+      findings: Object.freeze([
+        Object.freeze({ code: 'missingPrerequisite' as const, traitKey, detail: 'unknown trait' }),
+      ]),
+    });
+  const findings: TraitAssessmentFinding[] = [];
+  if (history.bannedTraitKeys.includes(traitKey)) findings.push({ code: 'bannedTrait', traitKey });
+  if (history.equippedTraits[traitKey] !== undefined)
+    findings.push({ code: 'alreadyEquipped', traitKey });
+  if (
+    trait.ordinaryBoonSlot !== undefined &&
+    history.ordinaryBoonSlots[trait.ordinaryBoonSlot] !== undefined
+  )
+    findings.push({ code: 'occupiedBoonSlot', traitKey, detail: trait.ordinaryBoonSlot });
+  if (requiresDeathDefianceCondition && context.deathDefianceConditionMet !== true)
+    findings.push({ code: 'offerContext', traitKey, detail: 'deathDefianceConditionMet' });
+  if (
+    trait.targetedAcquisition !== undefined &&
+    targetedAcquisitionTargetKeys(catalog, traitKey, history).length === 0
+  )
+    findings.push({ code: 'targetedAcquisitionNoEligibleTarget', traitKey });
+  return Object.freeze({ legal: findings.length === 0, findings: Object.freeze(findings) });
+}
+
 /** Exact source-resolved Echo-last-run union at one pre-Echo trait frontier. */
 export function echoLastRunBoonOutcomes(
   catalog: Catalog,
@@ -555,19 +593,12 @@ export function echoLastRunBoonOutcomes(
           }),
           effectiveRarity,
           targetTraitKeys: targetedAcquisitionTargetKeys(catalog, variant.traitKey, history),
-          assessment: assessTraitOption(
+          assessment: assessEchoLastRunBoonOption(
             catalog,
             variant.traitKey,
             history,
-            {
-              resolvedProviderKey: variant.giverKey,
-              freshRarityOverride: effectiveRarity,
-              ordinarySlotReplacement: 'forbidden',
-              ...(context.deathDefianceConditionMet === undefined
-                ? {}
-                : { deathDefianceConditionMet: context.deathDefianceConditionMet }),
-            },
-            effectiveRarity,
+            context,
+            variant.requiresDeathDefianceCondition === true,
           ),
         });
       });
@@ -801,7 +832,7 @@ export interface TraitContextUnavailable {
   readonly reason: 'lifecycleNotReached' | 'missingParentAcquisition';
 }
 
-export function evaluateReachedTraitOffer(
+function evaluateReachedTraitOfferWithAssessments(
   catalog: Catalog,
   address: SemanticAddress,
   acquisitionRole: string,
@@ -814,6 +845,7 @@ export function evaluateReachedTraitOffer(
   keepsakes?: KeepsakeState,
   /** Calling Card changes a rolled row after base-offer legality is established. */
   rarificationBaseOffer?: AuthoredTraitOffer,
+  assessments?: readonly TraitAssessment[],
 ): ReachedTraitOfferEvaluation {
   // Exact one-result sources (for example, a keepsake equip) are direct
   // acquisitions, not a sparse ordinary offer. They retain the normal
@@ -842,13 +874,80 @@ export function evaluateReachedTraitOffer(
     context,
     ...(arcanaFear === undefined ? {} : { arcanaFear }),
     ...(keepsakes === undefined ? {} : { keepsakes }),
-    assessments: assessTraitOffer(catalog, legalityOffer, before, context),
+    assessments: assessments ?? assessTraitOffer(catalog, legalityOffer, before, context),
     composition,
     replacementComposition,
     targetedAcquisition,
     reached: true,
     chronologicalIndex,
   });
+}
+
+export function evaluateReachedTraitOffer(
+  catalog: Catalog,
+  address: SemanticAddress,
+  acquisitionRole: string,
+  offer: AuthoredTraitOffer,
+  before: TraitHistoryState,
+  context: TraitOfferContext,
+  chronologicalIndex: number,
+  arcanaFear?: ArcanaFearState,
+  directAcquisition = false,
+  keepsakes?: KeepsakeState,
+  /** Calling Card changes a rolled row after base-offer legality is established. */
+  rarificationBaseOffer?: AuthoredTraitOffer,
+): ReachedTraitOfferEvaluation {
+  return evaluateReachedTraitOfferWithAssessments(
+    catalog,
+    address,
+    acquisitionRole,
+    offer,
+    before,
+    context,
+    chronologicalIndex,
+    arcanaFear,
+    directAcquisition,
+    keepsakes,
+    rarificationBaseOffer,
+  );
+}
+
+/** Settle one engine-derived BBB replay through the canonical trait-offer fold. */
+export function evaluateReachedEchoLastRunBoonOffer(
+  catalog: Catalog,
+  address: EchoLastRunBoonAddress,
+  offer: AuthoredTraitOfferTraits,
+  outcome: EchoLastRunBoonOutcome,
+  before: TraitHistoryState,
+  context: TraitOfferContext,
+  chronologicalIndex: number,
+  arcanaFear?: ArcanaFearState,
+  keepsakes?: KeepsakeState,
+): ReachedTraitOfferEvaluation {
+  const option = offer.options[0];
+  if (
+    offer.options.length !== 1 ||
+    offer.selectedOptionKey !== 'option1' ||
+    option === undefined ||
+    offer.giverKey !== outcome.option.giverKey ||
+    option.traitKey !== outcome.option.traitKey ||
+    option.rarity !== outcome.effectiveRarity
+  )
+    throw new Error('BBB settlement requires its exact engine-derived one-option outcome');
+  return evaluateReachedTraitOfferWithAssessments(
+    catalog,
+    address,
+    'echoLastRunSelection',
+    offer,
+    before,
+    context,
+    chronologicalIndex,
+    arcanaFear,
+    true,
+    keepsakes,
+    undefined,
+    Object.freeze([outcome.assessment]),
+  );
 }
 
 /**

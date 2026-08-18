@@ -1,9 +1,11 @@
 import {
   createBiomeAddress,
   createEncounterPhaseAddress,
+  createEchoLastRunBoonAddress,
   createOccurrenceId,
   createProjectAddress,
   createRouteAddress,
+  createTraitOfferAddress,
 } from '@run-planner/engine/authored-project';
 import { catalog } from '@run-planner/hades2-catalog';
 import type { Catalog, RouteDeclaration } from '@run-planner/engine/catalog-schema';
@@ -20,6 +22,7 @@ import {
   semanticOwnerFocused,
   semanticOwnerNavigated,
   settingsSelected,
+  traitOfferDialogOpened,
 } from './editorSessionSlice';
 
 const reducer = createEditorSessionReducer(catalog);
@@ -73,6 +76,28 @@ describe('editor session navigation', () => {
     expect(opened.runStateTarget).toEqual(owner);
     expect(reducer(opened, runStateClosed()).runStateTarget).toBeNull();
     expect(reducer(opened, routeSelected('Surface')).runStateTarget).toBeNull();
+  });
+
+  it('starts explicit trait launcher visits at the outer offer after a BBB finding', () => {
+    const trait = createTraitOfferAddress(
+      createEncounterPhaseAddress(
+        createBiomeAddress('Underworld', 'H'),
+        { kind: 'occurrence', occurrenceId: createOccurrenceId('echo') },
+        'Encounter',
+      ),
+      'selection',
+    );
+    const child = createEchoLastRunBoonAddress(trait, 'option1');
+    const fromFinding = reducer(
+      undefined,
+      findingSelected({ key: 'bbb-missing', origin: child, traitDialogTarget: trait }),
+    );
+    expect(fromFinding.focusedSemanticOwner).toEqual(child);
+    expect(fromFinding.traitDialogTarget).toEqual(trait);
+
+    const explicit = reducer(fromFinding, traitOfferDialogOpened(trait));
+    expect(explicit.focusedSemanticOwner).toEqual(trait);
+    expect(explicit.traitDialogTarget).toEqual(trait);
   });
 
   it('selects route panels without losing another route panel selection', () => {

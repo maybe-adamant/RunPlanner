@@ -17,6 +17,7 @@ import {
   type AcquisitionEntryAddress,
   type AcquisitionSiteAddress,
   type AcquisitionSiteOwnerAddress,
+  type EchoLastRunBoonAddress,
   type SemanticAddress,
   type TraitOfferOwnerAddress,
 } from '../../authored-project/addresses';
@@ -95,6 +96,7 @@ import {
   isPomEligibleTrait,
   echoPomGreatestLevelTraitKeys,
   echoLastRunBoonOutcomes,
+  evaluateReachedEchoLastRunBoonOffer,
   evaluateReachedTraitOffer,
   assessTraitOfferBeforeRarification,
   evaluateReachedLevelResolution,
@@ -106,6 +108,7 @@ import {
   type ReachedTraitOfferEvaluation,
   type ReachedLevelResolutionEvaluation,
   type TraitHistoryState,
+  type EchoLastRunBoonOutcome,
   type TraitOfferContext,
 } from '../traits';
 import {
@@ -518,7 +521,18 @@ export function appendRewardEvent(
   });
 }
 
-function applyTraitOfferForAcquisition(
+interface ApplyTraitOfferOptions {
+  readonly directAcquisition?: boolean;
+  readonly skipCallingCard?: boolean;
+  readonly directTraitSetBranchHistories?: readonly TraitHistoryState[];
+}
+
+interface EchoLastRunBoonSettlement {
+  readonly address: EchoLastRunBoonAddress;
+  readonly outcome: EchoLastRunBoonOutcome;
+}
+
+function applyTraitOfferForAcquisitionInternal(
   catalog: Catalog,
   branch: RewardBranchState,
   reward: {
@@ -536,11 +550,8 @@ function applyTraitOfferForAcquisition(
   sequence: number,
   findings?: Map<string, FindingRegionEntry>,
   findingChronology?: FindingChronology,
-  options: {
-    readonly directAcquisition?: boolean;
-    readonly skipCallingCard?: boolean;
-    readonly directTraitSetBranchHistories?: readonly TraitHistoryState[];
-  } = {},
+  options: ApplyTraitOfferOptions = {},
+  echoLastRunBoon?: EchoLastRunBoonSettlement,
 ): {
   readonly branch: RewardBranchState;
   readonly blockedChild?: ReachedTraitChildCheckpoint;
@@ -730,27 +741,45 @@ function applyTraitOfferForAcquisition(
     }
   }
   if (effectiveAuthored === undefined) return Object.freeze({ branch: effectiveBranch });
-  const evaluation = evaluateReachedTraitOffer(
-    catalog,
-    reward.origin,
-    role,
-    effectiveAuthored,
-    before,
-    {
-      ...(reward.traitContext ?? {}),
-      devotionNoDuo: reward.traitContext?.devotionNoDuo ?? reward.offer?.rewardType === 'Devotion',
-      ...(effectiveAuthored.kind === 'fallbackGold' ||
-      effectiveAuthored.deathDefianceConditionMet === undefined
-        ? {}
-        : { deathDefianceConditionMet: effectiveAuthored.deathDefianceConditionMet }),
-      resolvedProviderKey: effectiveAuthored.giverKey,
-    },
-    branch.traitEvaluations?.length ?? 0,
-    branch.arcanaFear,
-    options.directAcquisition === true,
-    branch.keepsakes,
-    callingCard === undefined ? undefined : authored,
-  );
+  const evaluationContext = Object.freeze({
+    ...(reward.traitContext ?? {}),
+    devotionNoDuo: reward.traitContext?.devotionNoDuo ?? reward.offer?.rewardType === 'Devotion',
+    ...(effectiveAuthored.kind === 'fallbackGold' ||
+    effectiveAuthored.deathDefianceConditionMet === undefined
+      ? {}
+      : { deathDefianceConditionMet: effectiveAuthored.deathDefianceConditionMet }),
+    resolvedProviderKey: effectiveAuthored.giverKey,
+  });
+  const evaluation =
+    echoLastRunBoon === undefined
+      ? evaluateReachedTraitOffer(
+          catalog,
+          reward.origin,
+          role,
+          effectiveAuthored,
+          before,
+          evaluationContext,
+          branch.traitEvaluations?.length ?? 0,
+          branch.arcanaFear,
+          options.directAcquisition === true,
+          branch.keepsakes,
+          callingCard === undefined ? undefined : authored,
+        )
+      : effectiveAuthored.kind !== 'traits'
+        ? (() => {
+            throw new Error('BBB settlement requires a trait offer');
+          })()
+        : evaluateReachedEchoLastRunBoonOffer(
+            catalog,
+            echoLastRunBoon.address,
+            effectiveAuthored,
+            echoLastRunBoon.outcome,
+            before,
+            evaluationContext,
+            branch.traitEvaluations?.length ?? 0,
+            branch.arcanaFear,
+            branch.keepsakes,
+          );
   const selectedForIdentity =
     effectiveAuthored.kind === 'traits'
       ? effectiveAuthored.options[optionIndex(effectiveAuthored.selectedOptionKey)]
@@ -1032,6 +1061,58 @@ function applyTraitOfferForAcquisition(
   });
 }
 
+function applyTraitOfferForAcquisition(
+  catalog: Catalog,
+  branch: RewardBranchState,
+  reward: Parameters<typeof applyTraitOfferForAcquisitionInternal>[2],
+  role: string,
+  lifecyclePoint: string,
+  sequence: number,
+  findings?: Map<string, FindingRegionEntry>,
+  findingChronology?: FindingChronology,
+  options: ApplyTraitOfferOptions = {},
+): ReturnType<typeof applyTraitOfferForAcquisitionInternal> {
+  return applyTraitOfferForAcquisitionInternal(
+    catalog,
+    branch,
+    reward,
+    role,
+    lifecyclePoint,
+    sequence,
+    findings,
+    findingChronology,
+    options,
+  );
+}
+
+function applyEchoLastRunBoonForAcquisition(
+  catalog: Catalog,
+  branch: RewardBranchState,
+  address: EchoLastRunBoonAddress,
+  offer: AuthoredTraitOfferTraits,
+  outcome: EchoLastRunBoonOutcome,
+  context: TraitOfferContext,
+  lifecyclePoint: string,
+  sequence: number,
+): ReturnType<typeof applyTraitOfferForAcquisitionInternal> {
+  return applyTraitOfferForAcquisitionInternal(
+    catalog,
+    branch,
+    {
+      origin: address,
+      traitOffersByAcquisitionRole: Object.freeze({ echoLastRunSelection: offer }),
+      traitContext: context,
+    },
+    'echoLastRunSelection',
+    lifecyclePoint,
+    sequence,
+    undefined,
+    undefined,
+    Object.freeze({ directAcquisition: true, skipCallingCard: true }),
+    Object.freeze({ address, outcome }),
+  );
+}
+
 function traitOwnerAddress(origin: SemanticAddress): TraitOfferOwnerAddress | undefined {
   switch (origin.kind) {
     case 'incomingReward':
@@ -1286,15 +1367,19 @@ export function settleEncounterTraitOffer(
             'echoLastRunBoonOptionUnavailable',
             `${childOption.giverKey}:${childOption.traitKey}:${childOption.rarity}`,
           );
-        if (rowOutcome.targetTraitKeys.length > 0) {
-          if (childOption.targetTraitKey === undefined)
-            return reject('targetedAcquisitionTargetMissing', childOption.traitKey);
-          if (!rowOutcome.targetTraitKeys.includes(childOption.targetTraitKey))
+        if (index === selectedChildIndex) {
+          const targetedAcquisition =
+            catalog.traits.byKey[childOption.traitKey]?.targetedAcquisition;
+          if (targetedAcquisition !== undefined) {
+            if (childOption.targetTraitKey === undefined)
+              return reject('targetedAcquisitionTargetMissing', childOption.traitKey);
+            if (!rowOutcome.targetTraitKeys.includes(childOption.targetTraitKey))
+              return reject('targetedAcquisitionTargetUnavailable', childOption.targetTraitKey);
+          } else if (childOption.targetTraitKey !== undefined) {
             return reject('targetedAcquisitionTargetUnavailable', childOption.targetTraitKey);
-        } else if (childOption.targetTraitKey !== undefined) {
-          return reject('targetedAcquisitionTargetUnavailable', childOption.targetTraitKey);
+          }
+          outcome = rowOutcome;
         }
-        if (index === selectedChildIndex) outcome = rowOutcome;
       }
       if (outcome === undefined) return reject('echoLastRunBoonMissing');
       const nestedOffer: AuthoredTraitOfferTraits = Object.freeze({
@@ -1324,28 +1409,21 @@ export function settleEncounterTraitOffer(
         ...applied,
         history: rewardHistory,
       });
-      const nestedSettlement = applyTraitOfferForAcquisition(
+      const nestedSettlement = applyEchoLastRunBoonForAcquisition(
         catalog,
         sourceApplied,
-        {
-          origin: address,
-          traitOffersByAcquisitionRole: Object.freeze({
-            echoLastRunSelection: nestedOffer,
-          }),
-          traitContext: Object.freeze({
-            freshRarityOverride: outcome.effectiveRarity,
-            ordinarySlotReplacement: 'forbidden',
-            ...(traitContext.deathDefianceConditionMet === undefined
-              ? {}
-              : { deathDefianceConditionMet: traitContext.deathDefianceConditionMet }),
-          }),
-        },
-        'echoLastRunSelection',
+        address,
+        nestedOffer,
+        outcome,
+        Object.freeze({
+          freshRarityOverride: outcome.effectiveRarity,
+          ordinarySlotReplacement: 'forbidden',
+          ...(traitContext.deathDefianceConditionMet === undefined
+            ? {}
+            : { deathDefianceConditionMet: traitContext.deathDefianceConditionMet }),
+        }),
         lifecyclePoint,
         sequence,
-        undefined,
-        undefined,
-        { directAcquisition: true, skipCallingCard: true },
       );
       const nested = nestedSettlement.branch;
       blockedChild ??= nestedSettlement.blockedChild;

@@ -108,6 +108,9 @@ export type {
   EchoPomTargetDomainQuery,
   EvaluatedEchoLastRunBoonCandidate,
   EvaluatedEchoLastRunBoonDomain,
+  EchoLastRunBoonDraftRow,
+  EchoLastRunBoonDraftSupport,
+  EchoLastRunBoonTraitIdentity,
   EchoLastRunBoonDomainEvaluation,
   EchoLastRunBoonDomainQuery,
   EvaluatedAllTogetherSetDomain,
@@ -124,4 +127,9 @@ export type {
   TraitOfferFocusedOptionCandidateEvaluation,
   TraitOfferFocusedOptionCandidateQuery,
   TraitOfferFocusedOptionEvidence,
+} from './trait-offer';
+export {
+  evaluateEchoLastRunBoonDraftSupport,
+  echoLastRunBoonRarityCandidates,
+  echoLastRunBoonTraitCandidatesForRow,
 } from './trait-offer';

@@ -11,6 +11,7 @@ import {
   createExitDecisionAddress,
   createExitSelectionAddress,
   createEncounterPhaseAddress,
+  createEchoLastRunBoonAddress,
   createIncomingRewardAddress,
   createLocalRewardAddress,
   createOccurrenceAddress,
@@ -213,6 +214,70 @@ describe('underworld product loop', () => {
       order: [replayKey],
       pickupEntries: { [replayKey]: { offer: { rewardType: 'MaxHealthDrop' } } },
     });
+  });
+
+  it('opens a missing Boon Boon Boon finding at its forced child checkpoint', async () => {
+    const application = createApplication();
+    const bridgeId = createOccurrenceId('golden-h-bridge01');
+    const echoOwner = createTraitOfferAddress(
+      createEncounterPhaseAddress(
+        goldenHBiome,
+        { kind: 'occurrence', occurrenceId: bridgeId },
+        'Encounter',
+      ),
+      'selection',
+    );
+    const child = createEchoLastRunBoonAddress(echoOwner, 'option1');
+    let project = applyProjectCommand(createGoldenFGHIProject(), application.catalog, {
+      kind: 'SetExitSelection',
+      selection: createExitSelectionAddress(goldenHBiome, {
+        kind: 'occurrence',
+        occurrenceId: createOccurrenceId('golden-h-combat09'),
+      }),
+      value: { kind: 'normal', exitKey: 'exit2' },
+    });
+    project = applyProjectCommand(project, application.catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: echoOwner,
+      value: {
+        kind: 'traits',
+        giverKey: 'Echo',
+        options: [
+          { traitKey: 'EchoLastRunBoon' },
+          { traitKey: 'DiminishingDodgeBoon' },
+          { traitKey: 'EchoDoubleLevelBoon', echoPomTarget: null },
+        ],
+        selectedOptionKey: 'option1',
+        deathDefianceConditionMet: false,
+        rarificationActions: [],
+      },
+    });
+    application.store.dispatch(authoredProjectReplaced(project));
+    const finding = application.store
+      .getState()
+      .projectWorkspace.assembly.evaluation.findings.find(
+        (candidate) =>
+          candidate.code === 'echoLastRunBoonMissing' &&
+          semanticAddressKey(candidate.origin) === semanticAddressKey(child),
+      );
+    if (finding === undefined) throw new Error('BBB child finding is missing');
+
+    const view = renderPlannerForInteraction({ application });
+    await view.user.click(screen.getByRole('button', { name: 'Underworld' }));
+    const findings = screen.getByRole('heading', { name: 'Findings' }).closest('section');
+    if (findings === null) throw new Error('Findings panel is missing');
+    await view.user.click(
+      within(findings).getByRole('button', { name: /Choose the Boon Boon Boon outcomes/ }),
+    );
+
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('Echo offer > Boon Boon Boon choice')).toBeDefined();
+    const childControl = document.getElementById(semanticOwnerControlElementId(child));
+    if (!(childControl instanceof HTMLElement)) throw new Error('BBB child control is missing');
+    await waitFor(() => expect(document.activeElement).toBe(childControl));
+    expect(application.store.getState().editorSession.focusedSemanticOwner).toEqual(child);
+    expect(application.store.getState().editorSession.traitDialogTarget).toEqual(echoOwner);
+    expect(dialog.textContent).not.toContain('Picked up');
   });
 
   it('authors, configures, selects, and continues through a natural Chaos gate', async () => {

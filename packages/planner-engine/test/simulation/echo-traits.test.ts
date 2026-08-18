@@ -42,6 +42,8 @@ import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candida
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
 import { createArcanaFearState } from '../../src/simulation/arcana-fear';
 import {
+  echoLastRunBoonTraitCandidatesForRow,
+  evaluateEchoLastRunBoonDraftSupport,
   evaluateEchoLastRunBoonDomain,
   evaluateEchoPomTargetDomain,
   evaluateTraitOfferFocusedOptionCandidate,
@@ -52,6 +54,7 @@ import {
   attachTraitHistory,
   createTraitHistoryState,
   echoLastRunBoonOutcomes,
+  evaluateReachedTraitOffer,
   foldTraitHistoryEvents,
   type TraitHistoryEvent,
 } from '../../src/simulation/traits';
@@ -512,6 +515,39 @@ describe('Echo Gate A direct choices', () => {
     });
   });
 
+  it('keeps ordinary direct acquisitions on ordinary prerequisite assessment', () => {
+    const history = createTraitHistoryState();
+    const offer: AuthoredTraitOfferTraits = Object.freeze({
+      kind: 'traits',
+      giverKey: 'Aphrodite',
+      options: Object.freeze([
+        Object.freeze({ traitKey: 'WeakPotencyBoon', rarity: 'Common' }),
+      ]) as AuthoredTraitOfferTraits['options'],
+      selectedOptionKey: 'option1',
+      rarificationActions: Object.freeze([]),
+    });
+    const evaluation = evaluateReachedTraitOffer(
+      catalog,
+      echoOwner,
+      'directSelection',
+      offer,
+      history,
+      Object.freeze({ resolvedProviderKey: 'Aphrodite' }),
+      0,
+      undefined,
+      true,
+    );
+
+    expect(evaluation.assessments).toEqual([
+      expect.objectContaining({
+        legal: false,
+        findings: expect.arrayContaining([
+          expect.objectContaining({ code: 'missingPrerequisite' }),
+        ]),
+      }),
+    ]);
+  });
+
   it.each([
     ['DiminishingDodgeBoon', false],
     ['DiminishingHealthAndManaBoon', false],
@@ -907,7 +943,7 @@ describe('Echo Gate B Boon Boon Boon', () => {
     });
   });
 
-  it('publishes row-distinct replacement and append domains from the engine candidate product', () => {
+  it('publishes row-distinct transient domains without choosing an append default', () => {
     const project = completeGoldenFGHProject();
     const history = createTraitHistoryState();
     const child = echoBoonChild(
@@ -943,32 +979,190 @@ describe('Echo Gate B Boon Boon Boon', () => {
       },
     );
     if (domain.kind !== 'echoLastRunBoonDomain') throw new Error('Echo domain is unavailable');
-    expect(
-      domain.result.candidatesByOption[0]?.some(
-        (candidate) => candidate.option.traitKey === 'ZeusWeaponBoon',
-      ),
-    ).toBe(true);
-    expect(
-      domain.result.candidatesByOption[0]?.some(
-        (candidate) => candidate.option.traitKey === 'ApolloWeaponBoon',
-      ),
-    ).toBe(false);
-    expect(
-      domain.result.candidatesByOption[1]?.some(
-        (candidate) => candidate.option.traitKey === 'ApolloWeaponBoon',
-      ),
-    ).toBe(true);
-    expect(
-      domain.result.candidatesByOption[1]?.some(
-        (candidate) => candidate.option.traitKey === 'ZeusWeaponBoon',
-      ),
-    ).toBe(false);
-    expect(['ZeusWeaponBoon', 'ApolloWeaponBoon']).not.toContain(
-      domain.result.appendCandidate?.option.traitKey,
+    const firstRow = echoLastRunBoonTraitCandidatesForRow(
+      domain.result.candidates,
+      ['ApolloWeaponBoon'],
+      { giverKey: 'Zeus', traitKey: 'ZeusWeaponBoon' },
     );
+    expect(
+      firstRow.find((candidate) => candidate.value.traitKey === 'ZeusWeaponBoon'),
+    ).toMatchObject({ selected: true });
+    expect(
+      firstRow.find((candidate) => candidate.value.traitKey === 'ApolloWeaponBoon')?.support,
+    ).toBe('impossible');
+    const newRow = echoLastRunBoonTraitCandidatesForRow(
+      domain.result.candidates,
+      ['ZeusWeaponBoon', 'ApolloWeaponBoon'],
+      undefined,
+    );
+    expect(
+      newRow.filter((candidate) =>
+        ['ZeusWeaponBoon', 'ApolloWeaponBoon'].includes(candidate.value.traitKey),
+      ),
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ support: 'impossible' }),
+        expect.objectContaining({ support: 'impossible' }),
+      ]),
+    );
+    const duoVariants = echoLastRunBoonTraitCandidatesForRow(
+      domain.result.candidates,
+      ['SprintEchoBoon'],
+      undefined,
+    ).filter((candidate) => candidate.value.traitKey === 'SprintEchoBoon');
+    expect(duoVariants.map((candidate) => candidate.value.giverKey)).toEqual(['Aphrodite', 'Zeus']);
+    expect(duoVariants.every((candidate) => candidate.support === 'impossible')).toBe(true);
+    const exhausted = evaluateEchoLastRunBoonDraftSupport(
+      domain.result.candidates.filter((candidate) =>
+        ['ZeusWeaponBoon', 'ApolloWeaponBoon'].includes(candidate.option.traitKey),
+      ),
+      [
+        { giverKey: 'Zeus', traitKey: 'ZeusWeaponBoon', rarity: 'Common' },
+        { giverKey: 'Apollo', traitKey: 'ApolloWeaponBoon', rarity: 'Rare' },
+      ],
+      0,
+    );
+    expect(exhausted).toMatchObject({
+      rowSupport: [true, true],
+      complete: true,
+      remainingTraitIdentities: [],
+      canAppend: false,
+    });
+  });
+
+  it('does not union BBB support across divergent pre-choice branches', () => {
+    const project = completeGoldenFGHProject();
+    const artifacts = createTraitOfferCandidateArtifacts(
+      catalog,
+      new Map([
+        [
+          semanticAddressKey(echoOwner),
+          [
+            Object.freeze({
+              before: createTraitHistoryState(),
+              context: Object.freeze({ resolvedProviderKey: 'Echo' }),
+            }),
+            Object.freeze({
+              before: historyFromTraits([
+                {
+                  giverKey: 'Aphrodite',
+                  traitKey: 'AphroditeWeaponBoon',
+                  rarity: 'Common',
+                },
+              ]),
+              context: Object.freeze({ resolvedProviderKey: 'Echo' }),
+            }),
+          ],
+        ],
+      ]),
+    );
+    const domain = evaluateEchoLastRunBoonDomain(
+      catalog,
+      project,
+      simulateProjectAssembly(catalog, project).evaluation,
+      artifacts,
+      {
+        kind: 'echoLastRunBoonDomain',
+        trait: echoOwner,
+        value: echoBoonOffer(),
+        optionKey: 'option1',
+      },
+    );
+    if (domain.kind !== 'echoLastRunBoonDomain') throw new Error('Echo domain is unavailable');
+    expect(
+      domain.result.candidates.find(
+        (candidate) =>
+          candidate.option.giverKey === 'Aphrodite' &&
+          candidate.option.traitKey === 'AphroditeWeaponBoon' &&
+          candidate.option.rarity === 'Common',
+      ),
+    ).toMatchObject({
+      support: 'impossible',
+      branchSupport: [true, false],
+      reason: 'branchDivergence',
+    });
+  });
+
+  it('rejects one cached BBB rarity when retained branches disagree on its granted rarity', () => {
+    const project = completeGoldenFGHProject();
+    const ordinary = createTraitHistoryState();
+    const floored = Object.freeze({
+      ...createTraitHistoryState(),
+      minimumScalableGodTraitRarity: 'Rare' as const,
+    });
+    const child = echoBoonChild(
+      Object.freeze([
+        {
+          giverKey: 'Aphrodite',
+          traitKey: 'AphroditeWeaponBoon',
+          rarity: 'Common',
+        },
+      ]),
+    );
+    const artifacts = createTraitOfferCandidateArtifacts(
+      catalog,
+      new Map([
+        [
+          semanticAddressKey(echoOwner),
+          [
+            Object.freeze({
+              before: ordinary,
+              context: Object.freeze({ resolvedProviderKey: 'Echo' }),
+            }),
+            Object.freeze({
+              before: floored,
+              context: Object.freeze({ resolvedProviderKey: 'Echo' }),
+            }),
+          ],
+        ],
+      ]),
+    );
+    const domain = evaluateEchoLastRunBoonDomain(
+      catalog,
+      project,
+      simulateProjectAssembly(catalog, project).evaluation,
+      artifacts,
+      {
+        kind: 'echoLastRunBoonDomain',
+        trait: echoOwner,
+        value: echoBoonOffer(child),
+        optionKey: 'option1',
+      },
+    );
+    if (domain.kind !== 'echoLastRunBoonDomain') throw new Error('Echo domain is unavailable');
+    const candidate = domain.result.candidates.find(
+      (entry) =>
+        entry.option.giverKey === 'Aphrodite' &&
+        entry.option.traitKey === 'AphroditeWeaponBoon' &&
+        entry.option.rarity === 'Common',
+    );
+    expect(candidate).toMatchObject({
+      support: 'impossible',
+      branchSupport: [true, true],
+      reason: 'branchDivergence',
+    });
+    expect(candidate?.effectiveRarity).toBeUndefined();
+    expect(
+      evaluateEchoLastRunBoonDraftSupport(
+        domain.result.candidates,
+        [
+          {
+            giverKey: 'Aphrodite',
+            traitKey: 'AphroditeWeaponBoon',
+            rarity: 'Common',
+          },
+        ],
+        0,
+      ),
+    ).toMatchObject({ rowSupport: [false], complete: false });
   });
 
   it.each([
+    [
+      'prerequisite-gated secondary',
+      createTraitHistoryState(),
+      { giverKey: 'Aphrodite', traitKey: 'WeakPotencyBoon', rarity: 'Common' as const },
+    ],
     [
       'Heroic',
       createTraitHistoryState(),
@@ -976,23 +1170,16 @@ describe('Echo Gate B Boon Boon Boon', () => {
     ],
     [
       'Legendary',
-      historyFromTraits([
-        { giverKey: 'Aphrodite', traitKey: 'AphroditeWeaponBoon', rarity: 'Common' },
-        { giverKey: 'Aphrodite', traitKey: 'AphroditeCastBoon', rarity: 'Common' },
-        { giverKey: 'Aphrodite', traitKey: 'HighHealthOffenseBoon', rarity: 'Common' },
-      ]),
+      createTraitHistoryState(),
       { giverKey: 'Aphrodite', traitKey: 'RandomStatusBoon', rarity: 'Legendary' as const },
     ],
     [
       'Duo',
-      historyFromTraits([
-        { giverKey: 'Aphrodite', traitKey: 'AphroditeWeaponBoon', rarity: 'Common' },
-        { giverKey: 'Zeus', traitKey: 'ZeusSpecialBoon', rarity: 'Common' },
-      ]),
+      createTraitHistoryState(),
       { giverKey: 'Aphrodite', traitKey: 'SprintEchoBoon', rarity: 'Duo' as const },
     ],
   ] as const)(
-    'directly equips one %s nested trait after the rarityless outer trait',
+    'directly equips one %s nested trait without its ordinary offer prerequisites',
     (_label, history, option) => {
       const findings = new Map();
       const result = processEncounterTraitOffer(
@@ -1031,6 +1218,62 @@ describe('Echo Gate B Boon Boon Boon', () => {
       expect(findings.size).toBe(0);
     },
   );
+
+  it('retains only current-run BBB replay exclusions after bypassing ordinary prerequisites', () => {
+    const empty = echoLastRunBoonOutcomes(catalog, createTraitHistoryState());
+    expect(
+      empty.find(
+        (outcome) =>
+          outcome.option.giverKey === 'Aphrodite' &&
+          outcome.option.traitKey === 'WeakPotencyBoon' &&
+          outcome.option.rarity === 'Common',
+      ),
+    ).toMatchObject({ assessment: { legal: true } });
+    expect(
+      catalog.echoLastRunBoon.variants.values.some((variant) => variant.giverKey === 'Hades'),
+    ).toBe(false);
+
+    const equipped = echoLastRunBoonOutcomes(
+      catalog,
+      historyFromTraits([{ giverKey: 'Aphrodite', traitKey: 'WeakPotencyBoon', rarity: 'Common' }]),
+    ).find((outcome) => outcome.option.traitKey === 'WeakPotencyBoon');
+    expect(equipped).toMatchObject({
+      assessment: {
+        legal: false,
+        findings: expect.arrayContaining([expect.objectContaining({ code: 'alreadyEquipped' })]),
+      },
+    });
+
+    const occupied = echoLastRunBoonOutcomes(
+      catalog,
+      historyFromTraits([{ giverKey: 'Zeus', traitKey: 'ZeusWeaponBoon', rarity: 'Common' }]),
+    ).find(
+      (outcome) =>
+        outcome.option.giverKey === 'Aphrodite' &&
+        outcome.option.traitKey === 'AphroditeWeaponBoon' &&
+        outcome.option.rarity === 'Common',
+    );
+    expect(occupied).toMatchObject({
+      assessment: {
+        legal: false,
+        findings: expect.arrayContaining([expect.objectContaining({ code: 'occupiedBoonSlot' })]),
+      },
+    });
+
+    const banned = echoLastRunBoonOutcomes(
+      catalog,
+      Object.freeze({
+        ...createTraitHistoryState(),
+        bannedTraitKeys: Object.freeze(['WeakPotencyBoon']),
+      }),
+    ).find((outcome) => outcome.option.traitKey === 'WeakPotencyBoon');
+    expect(banned).toMatchObject({
+      assessment: {
+        legal: false,
+        findings: expect.arrayContaining([expect.objectContaining({ code: 'bannedTrait' })]),
+      },
+    });
+  });
 
   it('publishes Bridal Glow targets and retains its missing acquisition detail after the outer trait', () => {
     const history = historyFromTraits([
@@ -1131,6 +1374,35 @@ describe('Echo Gate B Boon Boon Boon', () => {
       level: 5,
     });
     expect(result.history.lootTypeHistory.HeraUpgrade).toBe(1);
+  });
+
+  it('requires targeted detail only from the selected nested row', () => {
+    const history = historyFromTraits([
+      { giverKey: 'Hephaestus', traitKey: 'HephaestusWeaponBoon', rarity: 'Common' },
+    ]);
+    const findings = new Map();
+    const result = processEncounterTraitOffer(
+      catalog,
+      baseBranch(history),
+      echoOwner.owner,
+      echoBoonOffer(
+        echoBoonChild(
+          Object.freeze([
+            { giverKey: 'Apollo', traitKey: 'ApolloCastBoon', rarity: 'Common' },
+            { giverKey: 'Hera', traitKey: 'BoonDecayBoon', rarity: 'Heroic' },
+          ] as const),
+        ),
+      ),
+      10,
+      'encounterCompleted',
+      findings,
+    );
+    expect(result.traitHistory?.equippedTraits.EchoLastRunBoon).toBeDefined();
+    expect(result.traitHistory?.equippedTraits.ApolloCastBoon).toBeDefined();
+    expect(result.traitHistory?.equippedTraits.BoonDecayBoon).toBeUndefined();
+    expect([...findings.values()].map((entry) => entry.finding)).not.toContainEqual(
+      expect.objectContaining({ code: 'targetedAcquisitionTargetMissing' }),
+    );
   });
 
   it('reuses Cherished Heirloom current-keepsake acquisition semantics', () => {

@@ -29,8 +29,11 @@ import {
   createTraitOfferAddress,
   createTargetAddress,
   semanticAddressKey,
+  type AuthoredTraitOffer,
   type AuthoredTraitOfferTraits,
   type ProjectDocument,
+  type TraitOfferAddress,
+  type TraitOptionKey,
 } from '@run-planner/engine/authored-project';
 import {
   encounterPhaseGorgonSupportForProjectEvaluationAssembly,
@@ -593,7 +596,7 @@ describe('structured workspace interaction binding', () => {
     ).toBe(false);
   });
 
-  it('adapts the engine-owned Echo Boon row and append domains without recomputing distinctness', () => {
+  it('adapts engine-owned Echo Boon distinctness into contextual row domains', () => {
     const bridgeId = createOccurrenceId('golden-h-bridge01');
     let project = reachedEchoProject();
     const trait = createTraitOfferAddress(
@@ -646,29 +649,113 @@ describe('structured workspace interaction binding', () => {
     const boon = interaction?.optionDomain(boonOffer, 'option1').echoLastRunBoon;
     expect(boon?.control.address).toEqual(createEchoLastRunBoonAddress(trait, 'option1'));
     const domain = boon?.forOffer(boonOffer).load();
-    expect(
-      domain?.candidatesByOption[0]?.some(
-        (candidate) => candidate.value.traitKey === 'ZeusWeaponBoon',
-      ),
-    ).toBe(true);
-    expect(
-      domain?.candidatesByOption[0]?.some(
-        (candidate) => candidate.value.traitKey === 'ApolloWeaponBoon',
-      ),
-    ).toBe(false);
-    expect(
-      domain?.candidatesByOption[1]?.some(
-        (candidate) => candidate.value.traitKey === 'ApolloWeaponBoon',
-      ),
-    ).toBe(true);
-    expect(
-      domain?.candidatesByOption[1]?.some(
-        (candidate) => candidate.value.traitKey === 'ZeusWeaponBoon',
-      ),
-    ).toBe(false);
-    expect(['ZeusWeaponBoon', 'ApolloWeaponBoon']).not.toContain(
-      domain?.appendCandidate?.value.traitKey,
+    const firstRow = domain?.traitPickerFor(
+      ['ApolloWeaponBoon'],
+      Object.freeze({ giverKey: 'Zeus', traitKey: 'ZeusWeaponBoon' }),
     );
+    const firstItems = firstRow?.sections.flatMap((section) => section.items) ?? [];
+    expect(firstItems.find((item) => item.value.traitKey === 'ZeusWeaponBoon')).toMatchObject({
+      selected: true,
+    });
+    expect(firstItems.find((item) => item.value.traitKey === 'ApolloWeaponBoon')).toMatchObject({
+      state: 'impossible',
+      disabled: true,
+    });
+    const selectableRarities = domain?.rarityPickerFor({
+      giverKey: 'Zeus',
+      traitKey: 'ZeusWeaponBoon',
+    });
+    expect(
+      selectableRarities?.sections.flatMap((section) => section.items).map((item) => item.value),
+    ).toEqual(expect.arrayContaining(['Common', 'Rare', 'Epic', 'Heroic']));
+    const fixedDuo = domain?.rarityPickerFor({
+      giverKey: 'Aphrodite',
+      traitKey: 'SprintEchoBoon',
+    });
+    expect(
+      fixedDuo?.sections.flatMap((section) => section.items).map((item) => item.value),
+    ).toEqual(['Duo']);
+  });
+
+  it('summarizes a floor-active BBB row as cached rarity to granted rarity', () => {
+    const bridgeId = createOccurrenceId('golden-h-bridge01');
+    let project = reachedEchoProject();
+    const trait = createTraitOfferAddress(
+      createEncounterPhaseAddress(
+        goldenHBiome,
+        { kind: 'occurrence', occurrenceId: bridgeId },
+        'Encounter',
+      ),
+      'selection',
+    );
+    const bridge = project.routes
+      .find((route) => route.routeKey === 'Underworld')!
+      .biomes.find((biome) => biome.biomeKey === 'H')!
+      .topology!.occurrences.find((occurrence) => occurrence.occurrenceId === bridgeId)!;
+    const authoredOffer = bridge.encounters.traitOffersByPhase?.Encounter?.Story_Echo_01;
+    if (authoredOffer?.kind !== 'traits') throw new Error('Echo offer is missing');
+    const child = Object.freeze({
+      options: Object.freeze([
+        Object.freeze({
+          giverKey: 'Aphrodite',
+          traitKey: 'AphroditeWeaponBoon',
+          rarity: 'Common' as const,
+        }),
+      ] as const),
+      selectedOptionKey: 'option1' as const,
+    });
+    const boonOffer = Object.freeze({
+      ...authoredOffer,
+      options: Object.freeze([
+        Object.freeze({ traitKey: 'EchoLastRunBoon', echoLastRunBoon: child }),
+        authoredOffer.options[1],
+        authoredOffer.options[2],
+      ]) as AuthoredTraitOfferTraits['options'],
+      selectedOptionKey: 'option1' as const,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait,
+      value: boonOffer,
+    });
+    const baseSession = createCandidateSessionFactory(catalog).bind(
+      simulateProjectAssembly(catalog, project),
+    );
+    const echoLastRunBoon = vi.fn(
+      (owner: TraitOfferAddress, value: AuthoredTraitOffer, optionKey: TraitOptionKey) => {
+        const evaluated = baseSession.echoLastRunBoon(owner, value, optionKey);
+        if (evaluated.kind !== 'echoLastRunBoonDomain') return evaluated;
+        return Object.freeze({
+          ...evaluated,
+          result: Object.freeze({
+            candidates: Object.freeze(
+              evaluated.result.candidates.map((candidate) =>
+                candidate.option.giverKey === 'Aphrodite' &&
+                candidate.option.traitKey === 'AphroditeWeaponBoon' &&
+                candidate.option.rarity === 'Common'
+                  ? Object.freeze({ ...candidate, effectiveRarity: 'Rare' as const })
+                  : candidate,
+              ),
+            ),
+          }),
+        });
+      },
+    );
+    const candidateSession = Object.freeze({ ...baseSession, echoLastRunBoon });
+    const interaction = bind(
+      project,
+      'Underworld',
+      'H',
+      undefined,
+      candidateSession,
+    ).interactions.traitOffers.get(semanticAddressKey(trait));
+    const boon = interaction?.optionDomain(boonOffer, 'option1').echoLastRunBoon;
+    expect(echoLastRunBoon).not.toHaveBeenCalled();
+    const loadable = boon?.forOffer(boonOffer);
+    const domain = loadable?.load();
+    expect(echoLastRunBoon).toHaveBeenCalledTimes(1);
+    expect(domain?.summaryFor(child)).toBe('Aphrodite · Flutter Strike · Common → Rare');
+    expect(echoLastRunBoon).toHaveBeenCalledTimes(1);
   });
 
   it('binds the exact Echo replay owner to existing acquisition candidate products', () => {

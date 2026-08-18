@@ -78,7 +78,7 @@ export interface EvaluatedDirectTraitOutcomeCandidate<T> {
   readonly support: DirectTraitOutcomeSupport;
   readonly branchSupport: readonly boolean[];
   readonly selected: boolean;
-  readonly reason?: 'branchDivergence' | 'unavailable';
+  readonly reason?: 'branchDivergence' | 'duplicateTrait' | 'unavailable';
 }
 export interface EvaluatedCirceResolutionDomain {
   readonly kind: 'circeResolutionDomain';
@@ -118,21 +118,190 @@ export interface EchoLastRunBoonDomainQuery {
 }
 export interface EvaluatedEchoLastRunBoonCandidate {
   readonly option: import('../../authored-project/traits').AuthoredEchoLastRunBoonOption;
-  readonly effectiveRarity: import('../../catalog-schema').TraitRarity;
-  readonly supported: boolean;
+  readonly effectiveRarity?: import('../../catalog-schema').TraitRarity;
+  readonly support: DirectTraitOutcomeSupport;
   readonly branchSupport: readonly boolean[];
-  readonly targetTraitKeys: readonly string[];
+  readonly reason?: 'branchDivergence' | 'unavailable';
+  readonly targetRequired: boolean;
+  readonly targetCandidates: readonly EvaluatedDirectTraitOutcomeCandidate<string>[];
 }
 export interface EvaluatedEchoLastRunBoonDomain {
   readonly kind: 'echoLastRunBoonDomain';
   readonly result: {
     readonly candidates: readonly EvaluatedEchoLastRunBoonCandidate[];
-    readonly candidatesByOption: readonly (readonly EvaluatedEchoLastRunBoonCandidate[])[];
-    readonly appendCandidate?: EvaluatedEchoLastRunBoonCandidate;
   };
 }
 export type EchoLastRunBoonDomainEvaluation =
   CandidateContextUnavailable | EvaluatedEchoLastRunBoonDomain;
+
+export interface EchoLastRunBoonTraitIdentity {
+  readonly giverKey: string;
+  readonly traitKey: string;
+}
+
+export interface EchoLastRunBoonDraftRow {
+  readonly giverKey?: string;
+  readonly traitKey?: string;
+  readonly rarity?: import('../../catalog-schema').TraitRarity;
+  readonly targetTraitKey?: string;
+}
+
+export interface EchoLastRunBoonDraftSupport {
+  readonly rowSupport: readonly boolean[];
+  readonly selectedTargetSupported: boolean;
+  readonly complete: boolean;
+  readonly remainingTraitIdentities: readonly EchoLastRunBoonTraitIdentity[];
+  readonly canAppend: boolean;
+}
+
+/**
+ * Evaluates one transient BBB compound draft without inventing a persisted
+ * default. Exact row support, selected-target support, and remaining identities
+ * stay engine-owned while the application holds partial rows locally.
+ */
+export function evaluateEchoLastRunBoonDraftSupport(
+  candidates: readonly EvaluatedEchoLastRunBoonCandidate[],
+  rows: readonly EchoLastRunBoonDraftRow[],
+  selectedIndex: number,
+): EchoLastRunBoonDraftSupport {
+  const traitKeys = rows.flatMap((row) => (row.traitKey === undefined ? [] : [row.traitKey]));
+  const distinctTraits = new Set(traitKeys).size === traitKeys.length;
+  const exactCandidates = rows.map((row) =>
+    row.giverKey === undefined || row.traitKey === undefined || row.rarity === undefined
+      ? undefined
+      : candidates.find(
+          (candidate) =>
+            candidate.option.giverKey === row.giverKey &&
+            candidate.option.traitKey === row.traitKey &&
+            candidate.option.rarity === row.rarity,
+        ),
+  );
+  const rowSupport = Object.freeze(
+    exactCandidates.map(
+      (candidate) =>
+        distinctTraits && candidate !== undefined && candidate.support !== 'impossible',
+    ),
+  );
+  const selectedRow = rows[selectedIndex];
+  const selectedCandidate = exactCandidates[selectedIndex];
+  const selectedTargetSupported =
+    selectedRow !== undefined &&
+    selectedCandidate !== undefined &&
+    (selectedCandidate.targetRequired
+      ? selectedRow.targetTraitKey !== undefined &&
+        selectedCandidate.targetCandidates.some(
+          (candidate) =>
+            candidate.value === selectedRow.targetTraitKey && candidate.support !== 'impossible',
+        )
+      : selectedRow.targetTraitKey === undefined);
+  const remaining = new Map<string, EchoLastRunBoonTraitIdentity>();
+  for (const candidate of candidates) {
+    if (candidate.support === 'impossible' || traitKeys.includes(candidate.option.traitKey))
+      continue;
+    const key = `${candidate.option.giverKey}:${candidate.option.traitKey}`;
+    remaining.set(
+      key,
+      Object.freeze({
+        giverKey: candidate.option.giverKey,
+        traitKey: candidate.option.traitKey,
+      }),
+    );
+  }
+  const remainingTraitIdentities = Object.freeze([...remaining.values()]);
+  const complete =
+    rows.length >= 1 && rows.length <= 3 && rowSupport.every(Boolean) && selectedTargetSupported;
+  return Object.freeze({
+    rowSupport,
+    selectedTargetSupported,
+    complete,
+    remainingTraitIdentities,
+    canAppend: rows.length < 3 && remainingTraitIdentities.length > 0,
+  });
+}
+
+/**
+ * Projects the exact mixed-provider domain into one transient BBB row. Trait
+ * distinctness remains an engine rule even while the application is building
+ * a complete child outside persisted authored state.
+ */
+export function echoLastRunBoonTraitCandidatesForRow(
+  candidates: readonly EvaluatedEchoLastRunBoonCandidate[],
+  occupiedTraitKeys: readonly string[],
+  selected: EchoLastRunBoonTraitIdentity | undefined,
+): readonly EvaluatedDirectTraitOutcomeCandidate<EchoLastRunBoonTraitIdentity>[] {
+  const identities = new Map<string, EchoLastRunBoonTraitIdentity>();
+  for (const candidate of candidates) {
+    const key = `${candidate.option.giverKey}:${candidate.option.traitKey}`;
+    identities.set(
+      key,
+      Object.freeze({
+        giverKey: candidate.option.giverKey,
+        traitKey: candidate.option.traitKey,
+      }),
+    );
+  }
+  return Object.freeze(
+    [...identities.values()].map((identity) => {
+      const variants = candidates.filter(
+        (candidate) =>
+          candidate.option.giverKey === identity.giverKey &&
+          candidate.option.traitKey === identity.traitKey,
+      );
+      const branchCount = variants[0]?.branchSupport.length ?? 0;
+      const branchSupport = Object.freeze(
+        Array.from({ length: branchCount }, (_, index) =>
+          variants.some((candidate) => candidate.branchSupport[index] === true),
+        ),
+      );
+      const duplicate = occupiedTraitKeys.includes(identity.traitKey);
+      // One exact persisted rarity must survive every branch. Do not make a
+      // trait selectable by combining different rarity variants per branch.
+      const universallySupported =
+        !duplicate && variants.some((candidate) => candidate.support !== 'impossible');
+      return Object.freeze({
+        value: identity,
+        support: universallySupported ? ('possible' as const) : ('impossible' as const),
+        branchSupport,
+        selected:
+          selected?.giverKey === identity.giverKey && selected.traitKey === identity.traitKey,
+        ...(!universallySupported
+          ? {
+              reason: duplicate
+                ? ('duplicateTrait' as const)
+                : branchSupport.some(Boolean)
+                  ? ('branchDivergence' as const)
+                  : ('unavailable' as const),
+            }
+          : {}),
+      });
+    }),
+  );
+}
+
+/** Exact rarity domain for one transient BBB provider/trait row. */
+export function echoLastRunBoonRarityCandidates(
+  candidates: readonly EvaluatedEchoLastRunBoonCandidate[],
+  identity: EchoLastRunBoonTraitIdentity,
+  selectedRarity: import('../../catalog-schema').TraitRarity | undefined,
+): readonly EvaluatedDirectTraitOutcomeCandidate<import('../../catalog-schema').TraitRarity>[] {
+  return Object.freeze(
+    candidates
+      .filter(
+        (candidate) =>
+          candidate.option.giverKey === identity.giverKey &&
+          candidate.option.traitKey === identity.traitKey,
+      )
+      .map((candidate) =>
+        Object.freeze({
+          value: candidate.option.rarity,
+          support: candidate.support,
+          branchSupport: candidate.branchSupport,
+          selected: candidate.option.rarity === selectedRarity,
+          ...(candidate.reason === undefined ? {} : { reason: candidate.reason }),
+        }),
+      ),
+  );
+}
 
 export interface AllTogetherSetDomainQuery {
   readonly kind: 'allTogetherSetDomain';
@@ -711,17 +880,30 @@ export function evaluateEchoLastRunBoonDomain(
   const candidates = Object.freeze(
     first.map((outcome) => {
       const branchSupport = Object.freeze(
-        branches.map(
-          (branch) =>
-            branch.find(
-              (candidate) =>
-                candidate.option.giverKey === outcome.option.giverKey &&
-                candidate.option.traitKey === outcome.option.traitKey &&
-                candidate.option.rarity === outcome.option.rarity,
-            )?.assessment.legal === true,
-        ),
+        branches.map((branch) => {
+          const candidate = branch.find(
+            (candidate) =>
+              candidate.option.giverKey === outcome.option.giverKey &&
+              candidate.option.traitKey === outcome.option.traitKey &&
+              candidate.option.rarity === outcome.option.rarity,
+          );
+          const targeted = _catalog.traits.byKey[outcome.option.traitKey]?.targetedAcquisition;
+          return (
+            candidate?.assessment.legal === true &&
+            (targeted === undefined || candidate.targetTraitKeys.length > 0)
+          );
+        }),
       );
-      const targetTraitKeys = Object.freeze([
+      const retainedTarget =
+        query.value.kind === 'traits'
+          ? query.value.options[optionIndex(query.optionKey)]?.echoLastRunBoon?.options.find(
+              (option) =>
+                option.giverKey === outcome.option.giverKey &&
+                option.traitKey === outcome.option.traitKey &&
+                option.rarity === outcome.option.rarity,
+            )?.targetTraitKey
+          : undefined;
+      const targetTraitKeys = [
         ...new Set(
           branches.flatMap(
             (branch) =>
@@ -733,48 +915,62 @@ export function evaluateEchoLastRunBoonDomain(
               )?.targetTraitKeys ?? [],
           ),
         ),
-      ]);
+      ];
+      if (retainedTarget !== undefined && !targetTraitKeys.includes(retainedTarget))
+        targetTraitKeys.push(retainedTarget);
+      const branchUniversallySupported = branchSupport.length > 0 && branchSupport.every(Boolean);
+      const effectiveRarities = branches.flatMap((branch) => {
+        const candidate = branch.find(
+          (entry) =>
+            entry.option.giverKey === outcome.option.giverKey &&
+            entry.option.traitKey === outcome.option.traitKey &&
+            entry.option.rarity === outcome.option.rarity,
+        );
+        return candidate === undefined ? [] : [candidate.effectiveRarity];
+      });
+      const effectiveRarity =
+        effectiveRarities.length > 0 &&
+        effectiveRarities.every((rarity) => rarity === effectiveRarities[0])
+          ? effectiveRarities[0]
+          : undefined;
+      const universallySupported = branchUniversallySupported && effectiveRarity !== undefined;
+      const targetRequired =
+        _catalog.traits.byKey[outcome.option.traitKey]?.targetedAcquisition !== undefined;
       return Object.freeze({
         option: outcome.option,
-        effectiveRarity: outcome.effectiveRarity,
-        supported: branchSupport.some(Boolean),
+        ...(effectiveRarity === undefined ? {} : { effectiveRarity }),
+        support: universallySupported ? ('possible' as const) : ('impossible' as const),
         branchSupport,
-        targetTraitKeys,
+        ...(!universallySupported
+          ? {
+              reason: branchSupport.some(Boolean)
+                ? ('branchDivergence' as const)
+                : ('unavailable' as const),
+            }
+          : {}),
+        targetRequired,
+        targetCandidates: outcomeCandidates(
+          targetTraitKeys,
+          branches.map((branch) => {
+            const candidate = branch.find(
+              (candidate) =>
+                candidate.option.giverKey === outcome.option.giverKey &&
+                candidate.option.traitKey === outcome.option.traitKey &&
+                candidate.option.rarity === outcome.option.rarity,
+            );
+            return candidate?.assessment.legal === true ? candidate.targetTraitKeys : [];
+          }),
+          (traitKey) => traitKey === retainedTarget,
+          true,
+          1,
+        ),
       });
     }),
-  );
-  const child =
-    query.value.kind === 'traits'
-      ? query.value.options[optionIndex(query.optionKey)]?.echoLastRunBoon
-      : undefined;
-  const candidatesByOption = Object.freeze(
-    (child?.options ?? []).map((existing, index) =>
-      Object.freeze(
-        candidates.filter(
-          (candidate) =>
-            (candidate.supported &&
-              !child?.options.some(
-                (other, otherIndex) =>
-                  otherIndex !== index && other.traitKey === candidate.option.traitKey,
-              )) ||
-            (candidate.option.giverKey === existing.giverKey &&
-              candidate.option.traitKey === existing.traitKey &&
-              candidate.option.rarity === existing.rarity),
-        ),
-      ),
-    ),
-  );
-  const appendCandidate = candidates.find(
-    (candidate) =>
-      candidate.supported &&
-      !child?.options.some((existing) => existing.traitKey === candidate.option.traitKey),
   );
   return Object.freeze({
     kind: 'echoLastRunBoonDomain',
     result: Object.freeze({
       candidates,
-      candidatesByOption,
-      ...(appendCandidate === undefined ? {} : { appendCandidate }),
     }),
   });
 }

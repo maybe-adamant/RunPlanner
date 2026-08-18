@@ -164,6 +164,9 @@ const editorSessionSlice = createSlice({
     },
     traitOfferDialogOpened(state, action: PayloadAction<TraitOfferAddress>) {
       state.traitDialogTarget = action.payload;
+      // An explicit launcher visit always starts at the outer offer. Findings
+      // retain their exact child owner through `findingSelected` instead.
+      state.focusedSemanticOwner = action.payload;
     },
     traitOfferDialogClosed(state) {
       state.traitDialogTarget = null;

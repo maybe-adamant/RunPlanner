@@ -461,6 +461,11 @@ Reward replay payload/editor path. It must not relocate BBB into acquisitions.
 - Assess all one-to-three authored rows against one immutable pre-BBB frontier.
   Do not combine branch support, admit already-equipped traits, or count two
   source variants of the same Duo as distinct rows.
+- Build that frontier from the declaration-owned BBB variants and equipped
+  rarity domains, not ordinary `assessTraitOption` or `TraitRequirements`.
+  Apply only current banned/equipped/occupied-slot exclusions, the modeled
+  Death-Defiance game-state condition, and selected targeted-acquisition
+  availability.
 - On valid selection, increment only the selected resolved source's loot
   history, equip one trait, and run only its exact selected-acquisition effect.
   Preserve the audited bypasses of ordinary composition, replacement, Calling

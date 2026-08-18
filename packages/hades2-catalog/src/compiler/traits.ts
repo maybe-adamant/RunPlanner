@@ -1220,6 +1220,14 @@ function normalizeEchoLastRunBoon(
           key: `${giver.key}:${traitKey}`,
           giverKey: giver.key,
           traitKey,
+          ...(trait.offerRequirements.some(
+            (requirement) =>
+              requirement.kind === 'offerContext' &&
+              requirement.context === 'deathDefianceConditionMet' &&
+              requirement.required,
+          )
+            ? { requiresDeathDefianceCondition: true }
+            : {}),
           ...(lootHistorySource === undefined ? {} : { lootHistorySource }),
         }),
       ];
