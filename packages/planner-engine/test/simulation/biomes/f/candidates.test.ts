@@ -24,6 +24,7 @@ import {
 import {
   createCompleteFTakeoverProject,
   createFOpeningBatch,
+  createFProject,
   createFStart,
   createUnresolvedFOpeningBatch,
   fBiome,
@@ -161,6 +162,33 @@ function roomCandidate(
 }
 
 describe('F candidate support', () => {
+  it('evaluates the unresolved opening reward before any concrete value is selected', () => {
+    const project = applyProjectCommand(createFProject('f-unresolved-opening-reward'), catalog, {
+      kind: 'CreateStart',
+      biome: fBiome,
+      occurrenceId: fStartId,
+      gameName: 'F_Opening01',
+    });
+    const reward = createIncomingRewardAddress(fBiome, fStartId);
+
+    expect(
+      createPreparedProjectCandidateSession(
+        catalog,
+        simulateProjectAssembly(catalog, project),
+      ).evaluate({
+        kind: 'incomingReward',
+        reward,
+        value: {
+          rewardType: 'Boon',
+          payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+        },
+      }),
+    ).toMatchObject({
+      kind: 'incomingReward',
+      result: { supported: true, findings: [] },
+    });
+  });
+
   it('keeps ordinary Door 1 choices possible before the takeover is eligible', () => {
     const project = createFOpeningBatch();
     const target = createTargetAddress(fBiome, fDecision().source, 'exit1');

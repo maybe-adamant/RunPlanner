@@ -3039,6 +3039,19 @@ export function evaluateBiomeRewardsAssemblyInternal(
             `${room.gameName} materialized local rewards outside a generated target`,
           );
         }
+        if (
+          view === undefined &&
+          event.source === 'biomeEntry' &&
+          unresolvedIncoming !== undefined &&
+          'current' in history
+        ) {
+          // An unresolved biome-entry reward blocks before the room owns a
+          // preparation checkpoint. Its complete valid history prefix is
+          // nevertheless the exact generation-time view needed to evaluate
+          // candidate reward identities. Acquisition remains unavailable
+          // because no entry/pre-outgoing view exists below.
+          view = history.current;
+        }
         if (view === undefined) {
           // A blocked entry can publish only its valid encounter-record
           // prefix. It deliberately has no room-preparation view and therefore

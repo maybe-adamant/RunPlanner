@@ -2,13 +2,14 @@
 
 ## Status
 
-Locked delivery plan. Gate A landed as `e1e3af0` and Gate B landed as
-`f38247d`. Product review after Gate B found one bounded pre-closure correction:
-door-visible reward identity must remain part of the predecessor's door
-contract, and every occurrence stage must render its outgoing decision state
-without requiring separate frontier navigation. The correction is locked
-below before Gate C durable closure. Gate C has not started and may not absorb
-the superseded Gate-A presentation shape.
+Locked delivery plan. Gate A landed as `e1e3af0`, Gate B landed as `f38247d`,
+and the first pre-closure correction landed as `daa876f`. Product review then
+found a second pre-closure correction in N: Hub-board generation, visit
+chronology, and nested main/side-room execution must be projected from the
+engine's true walk rather than coupled through UI nesting or an all-or-nothing
+progressive candidate search. That correction is locked below before Gate C
+durable closure. Gate C has not started and may not absorb either superseded
+path.
 
 This document is temporary delivery authority. It must not be linked from the
 README or stable design documents. At phase closure, absorb its durable
@@ -1352,12 +1353,201 @@ if production, tests, or shared products changed. Commit the correction as
 `fix(planner): restore door contract staging`, then resume Gate C from that
 commit.
 
+## Second Pre-Closure Correction — N Hub Board and Engine Walk
+
+Product testing after the door-contract correction exposed two symptoms of one
+remaining N ownership error:
+
+- an unresolved opening reward does not receive progressive generation support
+  until some reward is selected; and
+- editing rewards across nine or ten open Hub doors can freeze while candidate
+  evaluation searches for a complete sibling configuration through the
+  progressive visit result.
+
+The N Hub is not a sequence of UI panels and is not generated through its six
+visits. The game creates one complete persistent board before the first main
+room is entered. The engine then walks the six selected main rooms and any
+nested side rooms in chronology. Lock those as separate regions.
+
+### Macro topology and the Hub generation region
+
+The normal N route remains:
+
+```text
+Opening -> PreHub -> Hub -> Preboss
+```
+
+The existing natural-Chaos takeover retains its audited entry variation. It
+does not change the Hub rules below.
+
+On the first Hub entry, the engine settles one persistent Hub board containing
+all nine or ten open doors. The open/closed set owns every declaration-fixed
+door participant:
+
+- slot and target occurrence identity;
+- open or closed membership; and
+- the complete base reward identity generated on that door.
+
+The board-generation context is the post-PreHub or audited takeover history
+plus the currently authored/resolved participants in that same unordered Hub
+generation region. It contains no main-room acquisition, encounter result,
+Room Action result, side-room generation, or visit-order history. The six-room
+visit order must never be substituted for board generation order.
+
+Partial authoring remains total. Each open door may be repaired from that one
+Hub-generation product using the resolved peer identities already present on
+the board. An unresolved or invalid peer keeps the board incomplete or invalid,
+but does not hide or disable the other door editors. Complete selected
+validation still requires one supported complete board under the existing
+unordered-generation rules. It does not search future main/side-room
+chronology to decide whether a board edit can be made.
+
+Opening and PreHub reward candidates follow the same generation-frontier
+principle at their own owners: candidate support is available before the first
+selection and does not require a fabricated selected reward history.
+
+Hub offers are generated objects, not acquisitions. All open doors contribute
+their generated base identities to the complete Hub board and Hub reward
+lookup. Only the six visited target occurrences later acquire or otherwise
+resolve their rewards through their own Room Actions.
+
+### Visit order is the singular Hub chronology authority
+
+The Hub persists exactly one ordered list of six distinct open main-room
+occurrences. Open membership and reward identity are not encoded in that list.
+The order answers only which main room the engine enters next.
+
+Hub editing therefore has two lightweight structural surfaces:
+
+1. the unordered open/closed participant set, including every open door's room
+   and base reward identity; and
+2. the six-entry visit order over open main-room occurrences.
+
+Neither surface edits traits, Pom targets, Time Piece, Artificer, encounters,
+side rewards, or Room Actions. Those products become available only at their
+true occurrence/action owner during the engine walk. A blocked current visit
+must not suppress either Hub editor: changing the visit order is itself a valid
+repair operation.
+
+### The engine walk is the only progressive chronology
+
+After the initial Hub board is settled, selected validation walks the authored
+visits and nested local visits exactly as the engine does. A representative
+walk is:
+
+```text
+Hub entry        -- settle the complete Hub board once
+Main Room 1      -- first entry; execute its lifecycle and Room Actions
+Side Room 1.1    -- first entry; execute its lifecycle and Room Actions
+Main Room 1      -- restored parent context; do not replay settled work
+Side Room 1.2    -- if generated and visited
+Main Room 1      -- restored parent context
+Hub              -- restored Hub context; do not regenerate the board
+Main Room 2      -- first entry; execute its lifecycle and Room Actions
+...
+Hub              -- restored after Main Room 6
+Preboss
+```
+
+The first instance of a room occurrence in this walk is the real execution
+point for its lifecycle, Room Actions, acquisitions, encounter effects, and
+history. A restored parent is a spatial/ownership restoration only. It carries
+the accumulated history forward, resumes the parent's remaining local or Hub
+visit sequence, and never replays the parent's lifecycle or actions.
+
+Main-room side generation is parent-local. The main occurrence owns whether
+its declaration-fixed side rooms are generated and the local visit sequence.
+Each generated side room remains its own occurrence and owns only its own room
+state, payloads, Room Actions, findings, and first-entry execution. Side-room
+generation findings attach to the exact main-room/local-decision owner; an
+entered side-room finding attaches to the exact side occurrence or action.
+
+The progressive validator stops at the first invalid or unresolved action in
+this engine walk. The remaining chronological suffix is unevaluated:
+
+- a main-room failure stops the rest of that main room, its side rooms, and all
+  later main/side visits;
+- a side-room failure stops the rest of that side room and all later restored
+  parent, side-room, and main-room visits; and
+- actions and history established before the blocker remain canonical.
+
+Neither failure retroactively invalidates or regenerates the already-settled
+Hub board. It may make the selected Hub traversal and overall route incomplete
+or invalid, but the Hub board and visit-order editors remain available from
+their own earlier generation/structural products.
+
+### Engine ownership and UI projection
+
+The engine walk, not the editor hierarchy, owns chronology and finding
+propagation. Simulation returns the exact reached prefix, restoration events,
+first blocker, and withheld suffix. Candidate and application products consume
+those facts. React may render Hub, main rooms, and nested side rooms as a useful
+hierarchy, but it must not infer execution order, replay a parent, propagate a
+child error, or decide which later occurrence is reachable from panel order.
+
+Keep three statuses distinguishable:
+
+- Hub board generation complete/incomplete/invalid;
+- selected Hub visit execution complete/blocked/invalid; and
+- overall N/route status.
+
+A downstream traversal finding may affect the latter two without changing the
+first. Findings always focus their exact semantic occurrence/action owner.
+
+### Persisted shape and expected replacement
+
+Do not introduce another Hub state model. The existing `HubDecision`
+`openTargets`, occurrence-owned incoming rewards, six-entry `visitOrder`,
+`LocalVisitDecision`, and occurrence-owned `roomActions.order` already contain
+the required authored facts. Retain dormant occurrence/local payloads under
+their existing ownership.
+
+Replace the current focused-repair/existential sibling-completion path with one
+explicit Hub-board generation product and the existing engine-walk traversal.
+Remove any application or React logic that joins Hub generation validity to a
+main/side-room panel or selected progressive suffix. Preserve the separate
+opening-reward frontier fix while replacing any temporary Hub candidate-search
+optimization that merely makes the superseded coupling faster.
+
+### Primary correction witnesses
+
+- With no opening reward selected, the opening reward control receives exact
+  generation candidates from its pre-selection frontier.
+- A Hub with nine and with ten open doors can author every room/reward
+  participant from the board-generation region without selecting a visit or
+  evaluating any main/side-room lifecycle.
+- An unresolved or retained-invalid Hub peer leaves the board incomplete or
+  invalid while unrelated door editors and open/close repair remain responsive.
+- Completing the board produces one stable board and Hub reward lookup; changing
+  visit order neither regenerates offers nor changes unvisited door identities.
+- Six-room visit order is editable while the currently selected traversal is
+  blocked inside a main or side room.
+- A main-room action failure preserves the complete Hub board and prior history,
+  then withholds that room's suffix, all nested side visits, and every later
+  main-room visit.
+- A side-room action failure preserves the Hub board, main-room actions, and
+  earlier side visits, then withholds the remaining restored-parent/Hub walk and
+  all later main-room visits.
+- Parent and Hub restoration events advance the same canonical history without
+  rerunning board generation, room lifecycle, reward acquisition, counters, or
+  Room Actions.
+- Application hierarchy/focus tests prove that moving panels or opening a nested
+  inspector cannot change the reached prefix, blocker, or candidate context.
+
+Implement this correction through a fresh executor and independent reviewer.
+Use the engine's Hub board/reward/candidate/progressive owners first, then adapt
+the smallest application products. Run focused engine/planner/contract/UI/
+product witnesses while developing and one complete `npm run check` only after
+review remediation is stable. Commit it as one coherent correction before Gate
+C durable closure.
+
 ## Gate C — Durable Closure
 
-After the pre-closure correction commit and user product review, perform a fresh
-architecture/gameplay audit. Correct only concrete defects through bounded
-review, absorb schemas 46/47, door contracts, total occurrence staging, and
-chronology into stable authorities, and delete this plan.
+After both pre-closure correction commits and user product review, perform a
+fresh architecture/gameplay audit. Correct only concrete defects through
+bounded review, absorb schemas 46/47, door contracts, total occurrence staging,
+the N Hub board/engine walk, and chronology into stable authorities, and delete
+this plan.
 
 Confirm:
 
