@@ -164,11 +164,14 @@ order. The ordinary four-source limit is therefore not a hard Ephyra-board or
 post-Ephyra history cap.
 
 Complete selected validation remains atomic across that board. For incremental
-authoring, however, one changed reward is assessed from the board's
-pre-generation frontier when other retained defaults still make the complete
-ordering invalid. The current selected value retains its complete-board
-finding, and visits remain withheld until the authored board as a whole admits
-a supported hidden ordering.
+authoring, one changed reward is assessed after every other currently authored
+peer that can contribute once from the board's pre-generation frontier. Thus a
+singleton counted reward selected on one door is unavailable on the next door
+immediately, without waiting for board completion. An independently invalid
+peer remains a precise board finding but is omitted from this focused fold so
+unrelated repair stays available. The current selected value retains its
+complete-board finding, and visits remain withheld until the authored board as
+a whole admits a supported hidden ordering.
 
 All open Hub offers contribute to the Hub reward lookup before the final shop
 is validated. This includes unvisited targets, because the game creates the

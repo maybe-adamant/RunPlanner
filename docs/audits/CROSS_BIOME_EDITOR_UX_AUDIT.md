@@ -201,6 +201,16 @@ Later biome pages remain visible and editable when an earlier biome is
 incomplete or invalid. Their contextual state is `unassessed`, not locally
 invalid.
 
+## Direct Room Workbench Disposition
+
+The cross-biome room surface is direct and section-based. Standard rooms use
+Encounter, Room features, and Room Actions; N main visits insert Side rooms
+before Room features; H inserts Fields setup; Shops lead with inventory and
+conditions; and O groups its one global Room Actions chronology under the
+active Intro, Combat 1, and optional Combat 2 phases. Missing products create
+no empty section. This is application presentation over existing engine and
+catalog facts, not another biome-specific authored model.
+
 ## Phase 7 Consequences
 
 Phase 7 must implement contextual-selection foundations before final frontier

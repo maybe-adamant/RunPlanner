@@ -621,7 +621,32 @@ describe('N Hub rewards, validation, and candidates', () => {
     });
   });
 
-  it('keeps participant repair total while the complete authored board remains invalid', () => {
+  it('rejects a singleton reward already authored on another Hub door during the next edit', () => {
+    const reward = createIncomingRewardAddress(nBiome, nOccurrenceId('combat09'));
+    const result = createPreparedProjectCandidateSession(
+      catalog,
+      simulateProjectAssembly(catalog, createRepresentativeNProject()),
+    ).evaluate({
+      kind: 'incomingReward',
+      reward,
+      value: { rewardType: 'MaxHealthDropBig' },
+    });
+
+    expect(result).toMatchObject({
+      kind: 'incomingReward',
+      result: {
+        supported: false,
+        findings: [
+          expect.objectContaining({
+            code: 'rewardBagEntryUnavailable',
+            origin: reward,
+          }),
+        ],
+      },
+    });
+  });
+
+  it('uses the authored peer pool while keeping a complete invalid board repairable', () => {
     let project = createRepresentativeNProject();
     const repeatedDefault = {
       rewardType: 'Boon' as const,
@@ -644,16 +669,16 @@ describe('N Hub rewards, validation, and candidates', () => {
       session.evaluate({ kind: 'incomingReward', reward, value: repeatedDefault }),
     ).toMatchObject({
       kind: 'incomingReward',
-      result: { supported: true, findings: [] },
+      result: {
+        supported: false,
+        findings: [expect.objectContaining({ code: 'rewardBagEntryUnavailable' })],
+      },
     });
     expect(
       session.evaluate({
         kind: 'incomingReward',
         reward,
-        value: {
-          rewardType: 'Boon',
-          payload: { kind: 'BoonSource', source: 'AresUpgrade' },
-        },
+        value: { rewardType: 'MaxManaDropBig' },
       }),
     ).toMatchObject({
       kind: 'incomingReward',

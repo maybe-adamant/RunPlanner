@@ -208,8 +208,8 @@ selected Chaos resumes through a fresh ordinary host continuation. The stable
 contracts live in the catalog, authored-project, lifecycle,
 simulation/validation, editor, affected biome, and integration-boundary
 authorities; the temporary delivery plan is retired. The natural-Chaos spawn
-action remains intentionally in the selected source room's `Customize` surface:
-authoring the optional gate is room configuration, while the resulting exit is
+action remains intentionally in the selected source room's direct Room features
+section: authoring the optional gate is room configuration, while the resulting exit is
 projected as a first-class sibling route choice.
 
 Phase 7 is complete. Commits 1 through 12, the candidate-system refactor,

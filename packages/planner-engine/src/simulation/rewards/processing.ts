@@ -2452,56 +2452,38 @@ export function processOfferGenerationCohort(
 }
 
 /**
- * Assess one participant in an unordered region without requiring unrelated
- * participants to form a complete valid cohort. Resolved peers remain real
- * possible predecessors: the focused offer may follow any supported peer
- * prefix, but unresolved values and invalid suffixes are never invented.
+ * Assess one new/edited participant after the board identities that are
+ * already authored. Each supported peer contributes once to the generation
+ * frontier; an independently invalid peer is omitted so it cannot suppress an
+ * unrelated repair. This is deliberately linear. Complete unordered-cohort
+ * validation remains owned by `processOfferGenerationCohort`.
  */
-export function processFocusedOfferInUnorderedRegion(
+export function processFocusedOfferAfterAuthoredPeers(
   branches: readonly RewardBranchState[],
   peerContexts: readonly OfferProcessingContext[],
   focusedContext: OfferProcessingContext,
   findings: Map<string, FindingRegionEntry>,
 ): readonly RewardBranchState[] {
-  const reachedByMask = new Map<number, readonly RewardBranchState[]>([[0, branches]]);
-  let representativeFocusedFindings: readonly FindingRegionEntry[] = Object.freeze([]);
-  const completeMask = (1 << peerContexts.length) - 1;
-  for (let mask = 0; mask <= completeMask; mask += 1) {
-    const reached = reachedByMask.get(mask);
-    if (reached === undefined || reached.length === 0) continue;
-    const prior = peerContexts.flatMap((context, offset) =>
-      (mask & (1 << offset)) === 0
-        ? []
-        : [Object.freeze({ origin: context.reward.origin, offer: context.reward.offer })],
-    );
-    const focusedFindings = new Map<string, FindingRegionEntry>();
-    const supported = processRewardOffer(
+  let reached = branches;
+  for (const context of peerContexts) {
+    const peerFindings = new Map<string, FindingRegionEntry>();
+    const next = processRewardOffer(
       reached,
-      { ...focusedContext, peers: Object.freeze(prior) },
-      focusedFindings,
+      { ...context, peers: Object.freeze([]) },
+      peerFindings,
     );
-    if (supported.length > 0) return supported;
-    if (representativeFocusedFindings.length === 0) {
-      representativeFocusedFindings = Object.freeze([...focusedFindings.values()]);
-    }
-    for (const [offset, context] of peerContexts.entries()) {
-      const bit = 1 << offset;
-      if ((mask & bit) !== 0) continue;
-      const peerFindings = new Map<string, FindingRegionEntry>();
-      const next = processRewardOffer(
-        reached,
-        { ...context, peers: Object.freeze(prior) },
-        peerFindings,
-      );
-      if (next.length === 0) continue;
-      const nextMask = mask | bit;
-      reachedByMask.set(
-        nextMask,
-        mergeEquivalentRewardBranches([...(reachedByMask.get(nextMask) ?? []), ...next]),
-      );
-    }
+    if (next.length === 0) continue;
+    reached = mergeEquivalentRewardBranches(next);
   }
-  for (const value of representativeFocusedFindings) {
+
+  const focusedFindings = new Map<string, FindingRegionEntry>();
+  const supported = processRewardOffer(
+    reached,
+    { ...focusedContext, peers: Object.freeze([]) },
+    focusedFindings,
+  );
+  if (supported.length > 0) return supported;
+  for (const value of focusedFindings.values()) {
     addRewardFinding(findings, value.finding, value.atomicRegion, value.chronology);
   }
   return Object.freeze([]);

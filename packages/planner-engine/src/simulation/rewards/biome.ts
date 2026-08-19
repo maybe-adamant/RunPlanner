@@ -188,7 +188,7 @@ import {
   settleArtificerReplacementAcquisition,
   withStoredArtificerReplacements,
   processOfferGenerationCohort,
-  processFocusedOfferInUnorderedRegion,
+  processFocusedOfferAfterAuthoredPeers,
   processEncounterTraitOffer,
   processRewardOffer,
   processShopInventory,
@@ -2256,7 +2256,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
         contexts.filter((context) => semanticAddressKey(context.reward.origin) !== ownerKey),
       );
       const candidateFindings = new Map<string, FindingRegionEntry>();
-      const candidateBranches = processFocusedOfferInUnorderedRegion(
+      const candidateBranches = processFocusedOfferAfterAuthoredPeers(
         pending.frontierBranches,
         peerContexts,
         focusedContext,

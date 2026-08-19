@@ -707,8 +707,7 @@ function OpenHubRoomCard({
     slot.room?.encounterPhases.flatMap((phase) =>
       phase.traitOffer === undefined ? [] : [phase.traitOffer],
     ) ?? [];
-  const canInspectLocalDetail =
-    slot.visited && slot.room !== undefined && slot.room.hasRoomLocalCustomization;
+  const canInspectLocalDetail = slot.visited && slot.room !== undefined;
   const visitPosition = ranking.authoredVisitOrder.indexOf(slot.hubSlotKey);
   const showSlotAssessment =
     visitMarker === undefined || visitMarker.assessment !== slot.marker.assessment;

@@ -197,21 +197,33 @@ an unavailable evaluator cannot erase authored detail ownership. Dormant
 optional state is retained and becomes editable again if the same occurrence is
 reactivated.
 
-### Room-Local Customize and Encounter Phases
+### Direct Room Workbenches and Encounter Phases
 
-A details-active room exposes `Customize` only when it has at least one
-meaningful active room-local section. For encounter selection, meaningful means
-a set-backed phase with two or more declaration-owned choices; it does not mean
-that two candidates happen to be eligible in the current evaluation. The
-control projects the exact `EncounterPhaseAddress`, selected concrete
-definition, bound candidate interaction, marker, and reset intent. React does
-not inspect a set, evaluate a requirement, or decide whether a phase terminates
-another phase.
+A details-active room renders its meaningful room-local sections directly. No
+generic disclosure or presentation capability sits between the occurrence and
+its controls. The application projection publishes one closed Standard,
+Fields, Ship, or Shop composition; React renders that composition without
+switching on biome keys, room labels, or lifecycle-profile strings.
+
+Standard rooms render read-only room and incoming-door context, Encounter when
+present, Room features when present, and Room Actions when present. An N main
+room inserts its parent-owned Side rooms surface between Encounter and Room
+features. Fields render Encounter, Fields setup, Room features, and the one
+mixed Room Actions chronology. Shops render inventory and conditions, Room
+features, and Room Actions. Empty sections remain absent, and outgoing doors
+stay occurrence-stage siblings below the room body.
+
+For encounter selection, meaningful means a set-backed phase with two or more
+declaration-owned choices; it does not mean that two candidates happen to be
+eligible in the current evaluation. The control projects the exact
+`EncounterPhaseAddress`, selected concrete definition, bound candidate
+interaction, marker, and reset intent. React does not inspect a set, evaluate a
+requirement, or decide whether a phase terminates another phase.
 
 A singleton set remains a semantic phase owner with an exact marker and focus
 destination, but it does not produce a one-option picker or no-op reset button.
-If its retained selection has a phase-owned finding, the containing Customize
-surface shows it as read-only diagnostic information. Empty placeholder
+If its retained selection has a phase-owned finding, the containing Encounter
+section shows it as read-only diagnostic information. Empty placeholder
 sections are not rendered merely because a room has potential detail state.
 
 An active invalid phase remains visible and correctable even when an upstream
@@ -364,16 +376,15 @@ width-one continuation presentation. React supplies no eligibility, topology,
 reward, or return policy.
 
 A selected, details-active N/F/G/P room with declared natural-Chaos capability
-exposes one bound spawn action from its room-customization surface. The authored
-spawn action intentionally remains inside `Customize`: adding an optional
-room-local gate configures the current room and is not itself a peer of the
-primary route-navigation choice. Once authored, however, the gate is a genuine
+exposes one bound spawn action in Room features. Adding an optional room-local
+gate configures the current room and is not itself a peer of the primary
+route-navigation choice. Once authored, however, the gate is a genuine
 sibling continuation in the containing decision, where the normal lane and
 concrete Chaos room are independently inspectable and use the same single-choice
 interaction. The Chaos card exposes its declaration-owned map domain, fixed
 encounter and reward facts, and removal action without inventing editable fixed
 leaves. Invalid active gates retain those controls; unpicked source rooms retain
-authored state without exposing active room-local customization. Selecting
+authored state without exposing an active Room features control. Selecting
 Chaos publishes its downstream continuation as the ordinary next-step frontier.
 React supplies no source, spacing, depth, map, reward, or return policy.
 
@@ -574,8 +585,8 @@ derived active prefix as participating. The editor renders that active prefix
 only, while retaining a dormant third authored value so it reappears unchanged
 when a later Fields result activates it. Active cage rewards are mandatory room
 structure and render directly on the room surface for picked and unpicked
-targets; they never move behind the picked-room `Customize` boundary. Concrete
-encounter identities remain optional customization. A non-combat target renders
+targets. Concrete encounter identities render in the direct Encounter section.
+A non-combat target renders
 no cage editor, and deferred
 `FieldsOptionalRewards` render no controls.
 
@@ -584,13 +595,19 @@ declaration-bounded reward wheels in its complete projection product. The
 selected two- or three-phase value marks `wheel2` dormant or active without
 deleting its retained state. The editor renders active wheels only, so a
 dormant wheel reappears unchanged when the third encounter phase is restored.
-Encounter count and active reward wheels are mandatory room structure and
-render on the main room surface, alongside ordinary room rewards. They do not
-move behind `Customize` merely because their authored leaves are room-local.
-Only concrete encounter identities and other optional room features use the
-Customize disclosure. Semantic focus opens that disclosure only for an owner
-actually nested within it; reward-wheel findings continue to focus the same
-room inspector without opening unrelated optional details.
+Encounter count and active reward wheels are mandatory room structure. The
+application groups the active Ship envelope as Intro, Combat 1, and optional
+Combat 2 from declaration-owned phase/wheel attachments plus engine-owned Room
+Action windows. Each group renders its Encounter, wheel structure when present,
+and its view of the single global Room Actions chronology. A reward-wheel
+structural editor appears in the phase immediately before the combat named by
+its declaration-owned `encounterPhaseKey`: Wheel 1 under Intro and active Wheel
+2 under Combat 1. Its choose and pickup actions remain grouped by their own
+engine windows rather than by the editor's structural placement. Ranks remain global,
+and every active row and checkpoint appears exactly once under its active
+phase. A retained action owned by a now-dormant Ship phase appears exactly once
+in the Ship repair surface outside the active phase groups. Semantic focus
+targets the already-rendered exact control.
 Each rendered wheel owns its Run/Meta store, active offer count, ordered
 maximum-capacity offers, and one picked active offer. The editor renders only
 offers marked active by that complete projection product. Reducing the active

@@ -1,12 +1,5 @@
-import { semanticAddressKey, type OccurrenceAddress } from '@run-planner/engine/authored-project';
-import {
-  Fragment,
-  useLayoutEffect,
-  useRef,
-  useState,
-  type PointerEvent as ReactPointerEvent,
-  type ReactNode,
-} from 'react';
+import type { OccurrenceAddress } from '@run-planner/engine/authored-project';
+import { Fragment, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { candidateSupport, presentCandidateLabel } from '@planner/projections/candidateProjection';
 import {
   requireWorkspaceInteraction,
@@ -20,6 +13,10 @@ import {
   type WorkspaceInteractionCatalog,
   type WorkspaceLocalVisitDecision,
   type WorkspaceRoomSummary,
+  type WorkspaceRoomActions,
+  type WorkspaceRoomFeature,
+  type WorkspaceRewardWheelDescriptor,
+  type WorkspaceShipPhasePresentation,
   type WorkspaceNaturalChaosSpawnControl,
   type WorkspaceNaturalChaosExitControl,
   type WorkspaceRunStateLauncher,
@@ -27,7 +24,7 @@ import {
 } from '@planner/projections/structured-workspace';
 import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
 import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
-import { useAppDispatch, useAppSelector } from '@planner/state/store';
+import { useAppDispatch } from '@planner/state/store';
 import { SemanticOwnerMarker } from '@planner/ui/feedback/EvaluationFeedback';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import { candidateMayBeAuthored } from '@planner/ui/feedback/candidatePresentation';
@@ -411,23 +408,14 @@ function EncounterWorkbench({
   readonly interactions: WorkspaceInteractionCatalog;
   readonly phases: readonly WorkspaceEncounterPhase[];
 }) {
-  const presentedPhases = phases.filter(
-    (phase) =>
-      phase.customizable ||
-      phase.marker.findingCount > 0 ||
-      phase.traitOffer !== undefined ||
-      phase.figLeaf !== undefined ||
-      phase.gorgonCondition !== undefined ||
-      phase.gorgonAthena !== undefined,
-  );
-  if (presentedPhases.length === 0) return null;
+  if (phases.length === 0) return null;
   return (
     <section aria-label="Encounter phases" className="encounter-editor">
       <div className="local-reward-heading">
         <h4>Encounter</h4>
       </div>
       <div className="encounter-phase-list">
-        {presentedPhases.map((phase) => (
+        {phases.map((phase) => (
           <EncounterPhaseControl
             idPrefix={idPrefix}
             interactions={interactions}
@@ -447,7 +435,10 @@ function FieldsWorkbench({
 }) {
   const dispatch = useAppDispatch();
   return (
-    <div className="fields-room-editor">
+    <section aria-label="Fields setup" className="fields-room-editor">
+      <div className="local-reward-heading">
+        <h4>Fields setup</h4>
+      </div>
       <label className="field-control">
         <span>Optional pickups</span>
         <select
@@ -470,117 +461,87 @@ function FieldsWorkbench({
           ))}
         </select>
       </label>
-    </div>
+    </section>
   );
 }
 
-function ShipWorkbench({
+function RewardWheelWorkbench({
   interactions,
-  room,
   occurrence,
+  wheel,
 }: {
   readonly interactions: WorkspaceInteractionCatalog;
   readonly occurrence: OccurrenceAddress;
-  readonly room: Extract<WorkspaceRoomSummary['roomLocal'], { readonly kind: 'ship' }>;
+  readonly wheel: WorkspaceRewardWheelDescriptor;
 }) {
   const dispatch = useAppDispatch();
-  const encounter = requireWorkspaceInteraction(
-    interactions.shipCombatPhaseCounts,
-    workspaceInteractionKey(occurrence),
+  const store = requireWorkspaceInteraction(
+    interactions.rewardWheelStores,
+    workspaceInteractionKey(wheel.address),
   );
-  const activeWheels = room.wheels.filter((wheel) => wheel.active);
+  const count = requireWorkspaceInteraction(
+    interactions.rewardWheelOfferCounts,
+    workspaceInteractionKey(wheel.address),
+  );
+  const idPrefix = `room-${occurrence.occurrenceId}-${wheel.key}`;
 
   return (
-    <section aria-label="Ship combat structure" className="ship-combat-editor">
+    <section aria-label={wheel.label} className="reward-wheel">
       <div className="local-reward-heading">
-        <h4>Ship combat</h4>
+        <div className="owner-markers">
+          <h5>{wheel.label}</h5>
+          <SemanticOwnerMarker address={wheel.marker.address} />
+        </div>
       </div>
-      <CandidateSelect
-        id={`room-${occurrence.occurrenceId}-combat-phase-count`}
-        interaction={encounter}
-        label="Combat phases"
-        onReplace={(encounterCount) =>
-          dispatch(
-            authoredProjectCommandDispatched({
-              kind: 'ReplaceShipEncounterCount',
-              occurrence,
-              encounterCount,
-            }),
-          )
-        }
-      />
-      <div className="reward-wheel-list">
-        {activeWheels.map((wheel) => {
-          const store = requireWorkspaceInteraction(
-            interactions.rewardWheelStores,
-            workspaceInteractionKey(wheel.address),
-          );
-          const count = requireWorkspaceInteraction(
-            interactions.rewardWheelOfferCounts,
-            workspaceInteractionKey(wheel.address),
-          );
-          const idPrefix = `room-${occurrence.occurrenceId}-${wheel.key}`;
-          return (
-            <section aria-label={wheel.label} className="reward-wheel" key={wheel.key}>
+      <div className="reward-wheel-settings">
+        <CandidateSelect
+          id={`${idPrefix}-store`}
+          interaction={store}
+          label="Reward pool"
+          onReplace={(storeKey) =>
+            dispatch(
+              authoredProjectCommandDispatched({
+                kind: 'ReplaceRewardWheelStore',
+                wheel: wheel.address,
+                storeKey,
+              }),
+            )
+          }
+        />
+        <CandidateSelect
+          id={`${idPrefix}-count`}
+          interaction={count}
+          label="Offers"
+          onReplace={(offerCount) =>
+            dispatch(
+              authoredProjectCommandDispatched({
+                kind: 'ReplaceRewardWheelOfferCount',
+                wheel: wheel.address,
+                offerCount,
+              }),
+            )
+          }
+        />
+      </div>
+      <div className="reward-wheel-offers">
+        {wheel.offers
+          .filter((offer) => offer.active)
+          .map((offer) => (
+            <section aria-label={offer.label} className="local-reward-slot" key={offer.key}>
               <div className="local-reward-heading">
                 <div className="owner-markers">
-                  <h4>{wheel.label}</h4>
-                  <SemanticOwnerMarker address={wheel.marker.address} />
+                  <h6>{offer.label}</h6>
+                  <SemanticOwnerMarker address={offer.control.marker.address} />
                 </div>
               </div>
-              <div className="reward-wheel-settings">
-                <CandidateSelect
-                  id={`${idPrefix}-store`}
-                  interaction={store}
-                  label="Reward pool"
-                  onReplace={(storeKey) =>
-                    dispatch(
-                      authoredProjectCommandDispatched({
-                        kind: 'ReplaceRewardWheelStore',
-                        wheel: wheel.address,
-                        storeKey,
-                      }),
-                    )
-                  }
-                />
-                <CandidateSelect
-                  id={`${idPrefix}-count`}
-                  interaction={count}
-                  label="Offers"
-                  onReplace={(offerCount) =>
-                    dispatch(
-                      authoredProjectCommandDispatched({
-                        kind: 'ReplaceRewardWheelOfferCount',
-                        wheel: wheel.address,
-                        offerCount,
-                      }),
-                    )
-                  }
-                />
-              </div>
-              <div className="reward-wheel-offers">
-                {wheel.offers
-                  .filter((offer) => offer.active)
-                  .map((offer) => (
-                    <section aria-label={offer.label} className="local-reward-slot" key={offer.key}>
-                      <div className="local-reward-heading">
-                        <div className="owner-markers">
-                          <h5>{offer.label}</h5>
-                          <SemanticOwnerMarker address={offer.control.marker.address} />
-                        </div>
-                      </div>
-                      <RewardControlEditor
-                        control={offer.control}
-                        idPrefix={`${idPrefix}-${offer.key}`}
-                        interactions={interactions}
-                        showAcquisitionChildren={false}
-                      />
-                    </section>
-                  ))}
-              </div>
+              <RewardControlEditor
+                control={offer.control}
+                idPrefix={`${idPrefix}-${offer.key}`}
+                interactions={interactions}
+                showAcquisitionChildren={false}
+              />
             </section>
-          );
-        })}
+          ))}
       </div>
     </section>
   );
@@ -599,9 +560,21 @@ function ShopWorkbench({
   const conditionInteraction = interactions.shopDeathDefianceConditions.get(
     workspaceInteractionKey(occurrence),
   );
-  if (!room.materialized) return null;
+  if (!room.materialized) {
+    return (
+      <section aria-label="Shop inventory and conditions" className="shop-editor">
+        <div className="local-reward-heading">
+          <h4>Shop inventory and conditions</h4>
+        </div>
+        <p className="fixed-room-state">Shop inventory appears when you select this room.</p>
+      </section>
+    );
+  }
   return (
-    <div className="shop-editor">
+    <section aria-label="Shop inventory and conditions" className="shop-editor">
+      <div className="local-reward-heading">
+        <h4>Shop inventory and conditions</h4>
+      </div>
       {conditionInteraction === undefined ? null : (
         <label className="shop-condition-control">
           <input
@@ -685,7 +658,7 @@ function ShopWorkbench({
           </tbody>
         </table>
       </div>
-    </div>
+    </section>
   );
 }
 
@@ -734,32 +707,40 @@ function roomActionDropTargetFromPoint(
 }
 
 function RoomActionsWorkbench({
+  actions,
   interactions,
-  room,
+  ship,
 }: {
+  readonly actions?: WorkspaceRoomActions;
   readonly interactions: WorkspaceInteractionCatalog;
-  readonly room: WorkspaceRoomSummary;
+  readonly ship?: {
+    readonly occurrence: OccurrenceAddress;
+    readonly phases: readonly WorkspaceShipPhasePresentation[];
+    readonly repairRows: readonly WorkspaceRoomActions['rows'][number][];
+  };
 }) {
   const dispatch = useAppDispatch();
   const executeIntent = useCommandIntent();
-  const board = useRef<HTMLOListElement>(null);
+  const board = useRef<HTMLOListElement | HTMLDivElement>(null);
   const pendingPointerDrag = useRef<PendingRoomActionPointerDrag | undefined>(undefined);
   const activePointerDrag = useRef<RoomActionPointerDrag | undefined>(undefined);
   const [pointerDrag, setPointerDrag] = useState<RoomActionPointerDrag | undefined>(undefined);
   const [announcement, setAnnouncement] = useState('');
-  const actions = room.roomActions;
-  if (actions === undefined) return null;
-  const interaction = requireWorkspaceInteraction(interactions.roomActions, actions.interactionKey);
-  const rankedRows = actions.rows.filter((row) => row.rank !== null);
-  const unrankedRows = actions.rows.filter((row) => row.rank === null);
+  if (actions === undefined && ship === undefined) return null;
+  const interaction =
+    actions === undefined
+      ? undefined
+      : requireWorkspaceInteraction(interactions.roomActions, actions.interactionKey);
+  const rankedRows = actions?.rows.filter((row) => row.rank !== null) ?? [];
+  const unrankedRows = actions?.rows.filter((row) => row.rank === null) ?? [];
   const rankedKeys = rankedRows.map((row) => row.key);
   const ranking = reconcileRankedPrefix({
     authoredVisitOrder: rankedKeys,
     declarationOpenSlotKeys: rankedKeys,
   });
   const proposalForMove = (actionKey: string, toIndex: number) => {
-    const row = actions.rows.find((candidate) => candidate.key === actionKey);
-    return actions.proposals.find(
+    const row = actions?.rows.find((candidate) => candidate.key === actionKey);
+    return actions?.proposals.find(
       (proposal) =>
         proposal.kind === 'move' &&
         row?.proposalKeys.includes(proposal.key) === true &&
@@ -767,14 +748,14 @@ function RoomActionsWorkbench({
     );
   };
   const apply = (proposalKey: string): void => {
-    const proposal = interaction.proposals.find((candidate) => candidate.key === proposalKey);
-    if (proposal?.structurallyAuthorable !== true) return;
+    const proposal = interaction?.proposals.find((candidate) => candidate.key === proposalKey);
+    if (interaction === undefined || proposal?.structurallyAuthorable !== true) return;
     executeIntent(interaction.intentFor(proposalKey));
   };
   const proposalForDrop = (
     actionKey: string,
     target: RankedPrefixDropTarget,
-  ): (typeof actions.proposals)[number] | undefined => {
+  ): WorkspaceRoomActions['proposals'][number] | undefined => {
     const result = dropRankedPrefixItem(ranking, rankedRows.length, actionKey, target);
     const toIndex = result?.proposedVisitOrder?.indexOf(actionKey);
     return toIndex === undefined || toIndex < 0 ? undefined : proposalForMove(actionKey, toIndex);
@@ -802,7 +783,7 @@ function RoomActionsWorkbench({
     activePointerDrag.current = undefined;
     setPointerDrag(undefined);
   };
-  const updatePointerDrag = (event: ReactPointerEvent<HTMLOListElement>): void => {
+  const updatePointerDrag = (event: ReactPointerEvent<HTMLElement>): void => {
     const pending = pendingPointerDrag.current;
     if (pending === undefined || pending.pointerId !== event.pointerId) return;
     if (
@@ -821,7 +802,7 @@ function RoomActionsWorkbench({
     activePointerDrag.current = next;
     setPointerDrag(next);
   };
-  const completePointerDrag = (event: ReactPointerEvent<HTMLOListElement>): void => {
+  const completePointerDrag = (event: ReactPointerEvent<HTMLElement>): void => {
     const active = activePointerDrag.current;
     if (active === undefined || active.pointerId !== event.pointerId) {
       clearPointerDrag(event.pointerId);
@@ -832,14 +813,17 @@ function RoomActionsWorkbench({
     if (target === undefined) return;
     const proposal = proposalForDrop(active.actionKey, target);
     if (proposal?.structurallyAuthorable !== true) return;
-    const row = actions.rows.find((candidate) => candidate.key === active.actionKey);
+    const row = actions?.rows.find((candidate) => candidate.key === active.actionKey);
     setAnnouncement(
       `${row?.label ?? active.actionKey} moved to position ${(proposal.toIndex ?? 0) + 1}.`,
     );
     apply(proposal.key);
   };
-  const checkpointRows = (afterRank: number) =>
-    actions.checkpoints
+  const checkpointRows = (
+    afterRank: number,
+    checkpoints: WorkspaceRoomActions['checkpoints'] = actions?.checkpoints ?? [],
+  ) =>
+    checkpoints
       .filter((checkpoint) => checkpoint.afterRank === afterRank)
       .map((checkpoint) => (
         <li className="room-action-checkpoint" key={`checkpoint:${checkpoint.key}`}>
@@ -849,7 +833,11 @@ function RoomActionsWorkbench({
           <strong>{checkpoint.label}</strong>
         </li>
       ));
-  const renderRow = (row: (typeof actions.rows)[number]) => {
+  const renderRow = (
+    row: WorkspaceRoomActions['rows'][number],
+    checkpoints: WorkspaceRoomActions['checkpoints'] = actions?.checkpoints ?? [],
+  ) => {
+    if (actions === undefined) return null;
     const proposals = row.proposalKeys.flatMap((key) => {
       const proposal = actions.proposals.find((candidate) => candidate.key === key);
       return proposal === undefined ? [] : [proposal];
@@ -1016,10 +1004,161 @@ function RoomActionsWorkbench({
             </div>
           )}
         </li>
-        {row.rank === null ? null : checkpointRows(row.rank)}
+        {row.rank === null ? null : checkpointRows(row.rank, checkpoints)}
       </Fragment>
     );
   };
+  const pointerHandlers = {
+    onLostPointerCapture: (event: ReactPointerEvent<HTMLElement>) =>
+      clearPointerDrag(event.pointerId),
+    onPointerCancel: (event: ReactPointerEvent<HTMLElement>) => clearPointerDrag(event.pointerId),
+    onPointerMove: updatePointerDrag,
+    onPointerUp: completePointerDrag,
+  };
+  const dragPreview =
+    pointerDrag === undefined ? null : (
+      <div
+        aria-hidden="true"
+        className="hub-roster-drag-preview"
+        style={{
+          transform: `translate3d(${pointerDrag.x + 14}px, ${pointerDrag.y + 14}px, 0)`,
+        }}
+      >
+        <span>⠿</span>
+        {actions?.rows.find((row) => row.key === pointerDrag.actionKey)?.label ?? 'Room action'}
+      </div>
+    );
+  if (ship !== undefined) {
+    const phaseCount = requireWorkspaceInteraction(
+      interactions.shipCombatPhaseCounts,
+      workspaceInteractionKey(ship.occurrence),
+    );
+    return (
+      <section aria-label="Ship combat structure" className="ship-combat-editor">
+        <div className="local-reward-heading">
+          <h4>Combat phase count</h4>
+        </div>
+        <CandidateSelect
+          id={`room-${ship.occurrence.occurrenceId}-combat-phase-count`}
+          interaction={phaseCount}
+          label="Combat phases"
+          onReplace={(encounterCount) =>
+            dispatch(
+              authoredProjectCommandDispatched({
+                kind: 'ReplaceShipEncounterCount',
+                occurrence: ship.occurrence,
+                encounterCount,
+              }),
+            )
+          }
+        />
+        <section
+          aria-label={actions === undefined ? undefined : 'Room Actions'}
+          className="room-actions-workbench"
+        >
+          {actions === undefined ? null : <SemanticOwnerMarker address={actions.owner} />}
+          <p aria-live="polite" className="visually-hidden">
+            {announcement}
+          </p>
+          <div
+            className="ship-phase-list"
+            ref={(element) => {
+              board.current = element;
+            }}
+            {...pointerHandlers}
+          >
+            {ship.phases.map((phase) => {
+              const phaseRankedRows = phase.actionRows.filter((row) => row.rank !== null);
+              const phaseUnrankedRows = phase.actionRows.filter((row) => row.rank === null);
+              const matchedCheckpointRanks = new Set(
+                phaseRankedRows.flatMap((row) => (row.rank === null ? [] : [row.rank])),
+              );
+              const trailingCheckpoints = phase.checkpoints.filter(
+                (checkpoint) =>
+                  checkpoint.afterRank !== 0 && !matchedCheckpointRanks.has(checkpoint.afterRank),
+              );
+              return (
+                <section
+                  aria-label={`${phase.label} ship phase`}
+                  className="ship-phase"
+                  key={phase.key}
+                >
+                  <div className="local-reward-heading">
+                    <h4>{phase.label}</h4>
+                  </div>
+                  {phase.encounter === undefined ? null : (
+                    <EncounterWorkbench
+                      idPrefix={`room-${ship.occurrence.occurrenceId}-${phase.key}`}
+                      interactions={interactions}
+                      phases={[phase.encounter]}
+                    />
+                  )}
+                  {phase.wheel === undefined ? null : (
+                    <RewardWheelWorkbench
+                      interactions={interactions}
+                      occurrence={ship.occurrence}
+                      wheel={phase.wheel}
+                    />
+                  )}
+                  {phase.actionRows.length === 0 && phase.checkpoints.length === 0 ? null : (
+                    <>
+                      <div className="local-reward-heading ship-phase-actions-heading">
+                        <h5>Actions</h5>
+                      </div>
+                      <ol
+                        aria-label={`${phase.label} room action order`}
+                        className="room-action-list"
+                      >
+                        {checkpointRows(0, phase.checkpoints)}
+                        {phaseRankedRows.map((row) => renderRow(row, phase.checkpoints))}
+                        {trailingCheckpoints.map((checkpoint) => (
+                          <li
+                            className="room-action-checkpoint"
+                            key={`checkpoint:${checkpoint.key}`}
+                          >
+                            <span aria-hidden="true" className="hub-roster-rank">
+                              ·
+                            </span>
+                            <strong>{checkpoint.label}</strong>
+                          </li>
+                        ))}
+                        {phaseUnrankedRows.length === 0 ? null : (
+                          <li
+                            aria-label="Room-action order boundary"
+                            className="hub-visit-boundary"
+                          >
+                            <span>Room action order ends here</span>
+                            <span>{phaseUnrankedRows.length} not ordered</span>
+                          </li>
+                        )}
+                        {phaseUnrankedRows.map((row) => renderRow(row, phase.checkpoints))}
+                      </ol>
+                    </>
+                  )}
+                </section>
+              );
+            })}
+            {ship.repairRows.length === 0 ? null : (
+              <section aria-label="Ship action repairs" className="ship-action-repairs">
+                <div className="local-reward-heading">
+                  <h4>Inactive actions</h4>
+                </div>
+                <p className="fixed-room-state">
+                  These retained actions no longer belong to an active Ship phase. Remove them or
+                  restore the phase that owns them.
+                </p>
+                <ol aria-label="Inactive Ship actions" className="room-action-list">
+                  {ship.repairRows.map((row) => renderRow(row, []))}
+                </ol>
+              </section>
+            )}
+          </div>
+          {dragPreview}
+        </section>
+      </section>
+    );
+  }
+  if (actions === undefined) return null;
   return (
     <section aria-label="Room Actions" className="room-actions-workbench">
       <header className="local-reward-heading">
@@ -1034,34 +1173,22 @@ function RoomActionsWorkbench({
       <ol
         aria-label="Ranked room action order"
         className="room-action-list"
-        onLostPointerCapture={(event) => clearPointerDrag(event.pointerId)}
-        onPointerCancel={(event) => clearPointerDrag(event.pointerId)}
-        onPointerMove={updatePointerDrag}
-        onPointerUp={completePointerDrag}
-        ref={board}
+        {...pointerHandlers}
+        ref={(element) => {
+          board.current = element;
+        }}
       >
         {checkpointRows(0)}
-        {rankedRows.map(renderRow)}
+        {rankedRows.map((row) => renderRow(row))}
         {unrankedRows.length === 0 ? null : (
           <li aria-label="Room-action order boundary" className="hub-visit-boundary">
             <span>Room action order ends here</span>
             <span>{unrankedRows.length} not ordered</span>
           </li>
         )}
-        {unrankedRows.map(renderRow)}
+        {unrankedRows.map((row) => renderRow(row))}
       </ol>
-      {pointerDrag === undefined ? null : (
-        <div
-          aria-hidden="true"
-          className="hub-roster-drag-preview"
-          style={{
-            transform: `translate3d(${pointerDrag.x + 14}px, ${pointerDrag.y + 14}px, 0)`,
-          }}
-        >
-          <span>⠿</span>
-          {actions.rows.find((row) => row.key === pointerDrag.actionKey)?.label ?? 'Room action'}
-        </div>
-      )}
+      {dragPreview}
     </section>
   );
 }
@@ -1228,45 +1355,6 @@ export function AnomalyIdentityControls({ room }: { readonly room: WorkspaceRoom
 }
 
 /**
- * Local disclosure state is intentionally UI-only. Exact semantic focus opens
- * the containing surface without adding navigation or expansion to history.
- */
-function RoomCustomizationDisclosure({
-  children,
-  initiallyOpen,
-  room,
-}: {
-  readonly children: ReactNode;
-  readonly initiallyOpen: boolean;
-  readonly room: WorkspaceRoomSummary;
-}) {
-  const disclosureRef = useRef<HTMLDetailsElement>(null);
-  const { semanticNavigationRevision, focusedSemanticOwner } = useAppSelector(
-    (state) => state.editorSession,
-  );
-  const focusedOwnerKey =
-    focusedSemanticOwner === null ? undefined : semanticAddressKey(focusedSemanticOwner);
-  const focusedLocalOwner =
-    focusedOwnerKey !== undefined &&
-    room.customizationMarkers.some((marker) => marker.focusKey === focusedOwnerKey);
-
-  useLayoutEffect(() => {
-    if (disclosureRef.current !== null) disclosureRef.current.open = initiallyOpen;
-  }, [initiallyOpen]);
-
-  useLayoutEffect(() => {
-    if (focusedLocalOwner && disclosureRef.current !== null) disclosureRef.current.open = true;
-  }, [semanticNavigationRevision, focusedLocalOwner, focusedOwnerKey]);
-
-  return (
-    <details aria-label="Customize" className="room-customization" ref={disclosureRef}>
-      <summary>Customize</summary>
-      <div className="room-customization-content">{children}</div>
-    </details>
-  );
-}
-
-/**
  * Renders the complete reward-bearing state for one room offer without
  * introducing a second room card. Ordinary decisions use this directly so
  * room selection, reward selection, and picked state remain one surface.
@@ -1350,41 +1438,134 @@ export function RoomOfferEditor({
         </div>
       ) : null}
       <AnomalyClearedControl room={room} />
-      {state.kind === 'shop' && !state.materialized ? (
-        <p className="fixed-room-state">Shop inventory appears when you select this room.</p>
-      ) : null}
-      {state.kind === 'shop' && state.materialized ? (
-        <ShopWorkbench interactions={interactions} occurrence={room.address} room={state} />
-      ) : null}
-      {state.kind === 'fields' ? <FieldsWorkbench room={state} /> : null}
-      {state.kind === 'ship' ? (
-        <ShipWorkbench interactions={interactions} occurrence={room.address} room={state} />
-      ) : null}
-      <RoomActionsWorkbench interactions={interactions} room={room} />
-      {room.hasRoomLocalCustomization ? (
-        <RoomCustomizationDisclosure
-          initiallyOpen={presentation === 'hubRoomLocal'}
-          key={`${presentation}:${semanticAddressKey(room.address)}`}
-          room={room}
-        >
+    </>
+  );
+}
+
+function RoomFeaturesWorkbench({
+  features,
+  interactions,
+}: {
+  readonly features: readonly WorkspaceRoomFeature[];
+  readonly interactions: WorkspaceInteractionCatalog;
+}) {
+  if (features.length === 0) return null;
+  return (
+    <section aria-label="Room features" className="room-features-workbench">
+      <div className="local-reward-heading">
+        <h4>Room features</h4>
+      </div>
+      {features.map((feature) => {
+        switch (feature.kind) {
+          case 'zagreusContract':
+            return (
+              <ZagreusSpawnWorkbench
+                control={feature.control}
+                interactions={interactions}
+                key={workspaceInteractionKey(feature.control.owner)}
+              />
+            );
+          case 'naturalChaos':
+            return (
+              <NaturalChaosSpawnWorkbench
+                control={feature.control}
+                interactions={interactions}
+                key={workspaceInteractionKey(feature.control.owner)}
+              />
+            );
+        }
+      })}
+    </section>
+  );
+}
+
+function DirectRoomWorkbench({
+  idPrefix,
+  interactions,
+  localVisit,
+  room,
+}: {
+  readonly idPrefix: string;
+  readonly interactions: WorkspaceInteractionCatalog;
+  readonly localVisit?: WorkspaceLocalVisitDecision;
+  readonly room: WorkspaceRoomSummary;
+}) {
+  const workbench = room.workbench;
+  switch (workbench.kind) {
+    case 'standard':
+      return (
+        <>
           <EncounterWorkbench
             idPrefix={idPrefix}
             interactions={interactions}
-            phases={room.encounterPhases}
+            phases={workbench.encounterPhases}
           />
-          {state.kind === 'shop' && room.zagreusSpawn?.materialized === true ? (
-            <ZagreusSpawnWorkbench control={room.zagreusSpawn} interactions={interactions} />
-          ) : null}
-          {room.naturalChaosSpawn === undefined ? null : (
-            <NaturalChaosSpawnWorkbench
-              control={room.naturalChaosSpawn}
-              interactions={interactions}
-            />
+          {localVisit === undefined ? null : (
+            <LocalVisitWorkbench interactions={interactions} localVisit={localVisit} />
           )}
-        </RoomCustomizationDisclosure>
-      ) : null}
-    </>
-  );
+          <RoomFeaturesWorkbench features={workbench.features} interactions={interactions} />
+          <RoomActionsWorkbench
+            {...(workbench.roomActions === undefined ? {} : { actions: workbench.roomActions })}
+            interactions={interactions}
+          />
+        </>
+      );
+    case 'fields':
+      return (
+        <>
+          <EncounterWorkbench
+            idPrefix={idPrefix}
+            interactions={interactions}
+            phases={workbench.encounterPhases}
+          />
+          <FieldsWorkbench room={workbench.fields} />
+          {localVisit === undefined ? null : (
+            <LocalVisitWorkbench interactions={interactions} localVisit={localVisit} />
+          )}
+          <RoomFeaturesWorkbench features={workbench.features} interactions={interactions} />
+          <RoomActionsWorkbench
+            {...(workbench.roomActions === undefined ? {} : { actions: workbench.roomActions })}
+            interactions={interactions}
+          />
+        </>
+      );
+    case 'shop':
+      return (
+        <>
+          <ShopWorkbench
+            interactions={interactions}
+            occurrence={room.address}
+            room={workbench.shop}
+          />
+          {localVisit === undefined ? null : (
+            <LocalVisitWorkbench interactions={interactions} localVisit={localVisit} />
+          )}
+          <RoomFeaturesWorkbench features={workbench.features} interactions={interactions} />
+          <RoomActionsWorkbench
+            {...(workbench.roomActions === undefined ? {} : { actions: workbench.roomActions })}
+            interactions={interactions}
+          />
+        </>
+      );
+    case 'ship':
+      return (
+        <>
+          <RoomActionsWorkbench
+            {...(workbench.roomActions === undefined ? {} : { actions: workbench.roomActions })}
+            interactions={interactions}
+            ship={{
+              occurrence: room.address,
+              phases: workbench.phases,
+              repairRows: workbench.repairRows,
+            }}
+          />
+          {localVisit === undefined ? null : (
+            <LocalVisitWorkbench interactions={interactions} localVisit={localVisit} />
+          )}
+          <RoomFeaturesWorkbench features={workbench.features} interactions={interactions} />
+        </>
+      );
+  }
 }
 
 /** A room-local editor that consumes the structured workspace only. */
@@ -1418,9 +1599,12 @@ export function OccurrenceWorkbench({
         presentation={presentation}
         room={room}
       />
-      {localVisit === undefined ? null : (
-        <LocalVisitWorkbench interactions={interactions} localVisit={localVisit} />
-      )}
+      <DirectRoomWorkbench
+        idPrefix={idPrefix}
+        interactions={interactions}
+        {...(localVisit === undefined ? {} : { localVisit })}
+        room={room}
+      />
     </article>
   );
 }

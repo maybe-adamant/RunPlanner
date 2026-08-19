@@ -236,7 +236,11 @@ describe('selected O validation', () => {
         expect.objectContaining({ checkpointKey: 'combat:Combat1', afterRank: 2 }),
         expect.objectContaining({ checkpointKey: 'nextPhaseUsable:wheel1', afterRank: 2 }),
         expect.objectContaining({ checkpointKey: 'combat:Combat2', afterRank: 4 }),
-        expect.objectContaining({ checkpointKey: 'outgoingGeneration', afterRank: 4 }),
+        expect.objectContaining({
+          checkpointKey: 'outgoingGeneration',
+          afterRank: 4,
+          window: { kind: 'shipPostCombat', wheelKey: 'wheel2' },
+        }),
         expect.objectContaining({ checkpointKey: 'exitUsable', afterRank: 4 }),
       ]),
     );
@@ -322,6 +326,14 @@ describe('selected O validation', () => {
           checkpoint.checkpointKey === 'combat:Combat2',
       ),
     ).toBe(false);
+    expect(
+      room.roomActionRoster.checkpoints.find(
+        (checkpoint) => checkpoint.checkpointKey === 'outgoingGeneration',
+      ),
+    ).toMatchObject({
+      afterRank: 2,
+      window: { kind: 'shipPostCombat', wheelKey: 'wheel1' },
+    });
     expect(predecessorDecision.resolvedSharedRewardStoreKey).toBe('MetaProgress');
     expect(sourceDecision.rewardStore).toMatchObject({ kind: 'sourceOfferPoint' });
     expect(sourceDecision.resolvedSharedRewardStoreKey).toBe('RunProgress');

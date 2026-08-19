@@ -52,6 +52,7 @@ import { findingSelected, semanticOwnerNavigated } from '@planner/state/editorSe
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import {
   authorLegalTraitOffers,
+  authorRequiredTestRoomActions,
   createGoldenFGHIProject,
   createCompleteFGProject,
   createFConversionFrontierProject,
@@ -75,6 +76,7 @@ import {
   renderOccurrenceWorkbench,
   renderDecisionWorkbench,
   renderStaticOccurrenceWorkbench,
+  renderWorkspace,
   workspaceBiome,
   workspaceProjection,
 } from '@planner-test/support/biome-workbench';
@@ -109,6 +111,10 @@ function decisionContainingOccurrence(occurrenceId: OccurrenceId) {
     );
     return node === undefined ? undefined : { kind: 'node' as const, node };
   };
+}
+
+function expectBefore(first: Element, second: Element): void {
+  expect(first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
 }
 
 function emptyFProject(): ProjectDocument {
@@ -357,6 +363,58 @@ describe('OccurrenceWorkbench', () => {
     });
     expect(screen.getByRole('heading', { level: 3, name: node.room.label })).toBeTruthy();
     expect(screen.queryByLabelText('Room')).toBeNull();
+  });
+
+  it('renders Standard sections in direct workbench order', () => {
+    renderStaticOccurrenceWorkbench(
+      createGoldenFGHIProject(),
+      'Underworld',
+      'F',
+      occurrenceById(goldenFOccurrenceId(1, 1)),
+    );
+    const standardEncounter = screen.getByLabelText('Encounter phases');
+    const standardFeatures = screen.getByLabelText('Room features');
+    const standardActions = screen.getByLabelText('Room Actions');
+    expectBefore(standardEncounter, standardFeatures);
+    expectBefore(standardFeatures, standardActions);
+  });
+
+  it('renders N Side rooms before Room Actions', () => {
+    renderStaticOccurrenceWorkbench(
+      createRepresentativeNOPQProject(),
+      'Surface',
+      'N',
+      occurrenceById(nOccurrenceId('combat05')),
+    );
+    const nEncounter = screen.getByLabelText('Encounter phases');
+    const sideRooms = screen.getByLabelText('Ephyra side rooms');
+    const nActions = screen.getByLabelText('Room Actions');
+    expectBefore(nEncounter, sideRooms);
+    expectBefore(sideRooms, nActions);
+  }, 10_000);
+
+  it('renders Fields setup before its one Room Actions board', () => {
+    renderStaticOccurrenceWorkbench(
+      createGoldenFGHIProject(),
+      'Underworld',
+      'H',
+      occurrenceById(createOccurrenceId('golden-h-combat02')),
+    );
+    const fieldsSetup = screen.getByLabelText('Fields setup');
+    const fieldsActions = screen.getByLabelText('Room Actions');
+    const fieldsEncounter = screen.queryByLabelText('Encounter phases');
+    if (fieldsEncounter !== null) expectBefore(fieldsEncounter, fieldsSetup);
+    expectBefore(fieldsSetup, fieldsActions);
+  });
+
+  it('renders Shop inventory before Room features and Room Actions', () => {
+    const shop = enteredShopProject();
+    renderStaticOccurrenceWorkbench(shop.project, 'Underworld', 'F', occurrenceById(shop.shopId));
+    const inventory = screen.getByLabelText('Shop inventory and conditions');
+    const shopFeatures = screen.getByLabelText('Room features');
+    const shopActions = screen.getByLabelText('Room Actions');
+    expectBefore(inventory, shopFeatures);
+    expectBefore(shopFeatures, shopActions);
   });
 
   it('renders an enabled Artificer disposition for reached Nectar with no Pom target', () => {
@@ -896,7 +954,6 @@ describe('OccurrenceWorkbench', () => {
     expect(screen.getByText(/Incoming door reward/)).toBeTruthy();
     expect(screen.queryByLabelText('Map')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Restore Combat 01' })).toBeNull();
-    expect(screen.queryByLabelText('Customize')).toBeNull();
     await view.user.click(screen.getByRole('checkbox', { name: 'Cleared' }));
     cleanup();
 
@@ -1035,11 +1092,10 @@ describe('OccurrenceWorkbench', () => {
       occurrenceById(nOccurrenceId('miniBoss01')),
     );
     expect(screen.queryByText('No additional room details.')).toBeNull();
-    expect(screen.queryByLabelText('Customize')).toBeNull();
     expect(screen.queryByText('Fixed reward:')).toBeNull();
   });
 
-  it('exposes Encounter customization when the F default set becomes meaningful', () => {
+  it('exposes the direct Encounter section when the F default set becomes meaningful', () => {
     const occurrenceId = goldenFOccurrenceId(1, 1);
     const phase = createEncounterPhaseAddress(
       goldenFBiome,
@@ -1071,7 +1127,7 @@ describe('OccurrenceWorkbench', () => {
         semanticAddressKey(phase),
       ),
     ).toBe(true);
-    expect(screen.getByLabelText('Customize')).toBeTruthy();
+    expect(screen.getByLabelText('Encounter phases')).toBeTruthy();
     expect(screen.getByLabelText('Encounter encounter phase')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Reset to default' })).toBeNull();
   });
@@ -1211,7 +1267,6 @@ describe('OccurrenceWorkbench', () => {
     );
     const count = screen.getByRole('combobox', { name: /Combat phases/ }) as HTMLSelectElement;
     const phase = screen.getByLabelText('Combat2 encounter phase');
-    const customize = screen.getByLabelText('Customize') as HTMLDetailsElement;
     const phaseAddress = createEncounterPhaseAddress(
       oBiome,
       { kind: 'occurrence', occurrenceId: oOccurrenceIds.combat04 },
@@ -1223,13 +1278,12 @@ describe('OccurrenceWorkbench', () => {
     if (finding === undefined) throw new Error('invalid Ship Combat2 finding is missing');
     const historyLength = view.application.store.getState().projectWorkspace.history.past.length;
 
-    expect(customize.open).toBe(false);
     act(() =>
       view.application.store.dispatch(
         findingSelected({ key: semanticFindingKey(finding), origin: finding.origin }),
       ),
     );
-    await waitFor(() => expect(customize.open).toBe(true));
+    await waitFor(() => expect(phase.contains(document.activeElement)).toBe(true));
     expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
       historyLength,
     );
@@ -1272,33 +1326,16 @@ describe('OccurrenceWorkbench', () => {
     );
     if (finding === undefined) throw new Error('invalid I encounter finding is missing');
     const historyLength = view.application.store.getState().projectWorkspace.history.past.length;
-    const customize = screen.getByLabelText('Customize') as HTMLDetailsElement;
-
-    expect(customize.open).toBe(false);
-    act(() =>
-      view.application.store.dispatch(
-        findingSelected({ key: semanticFindingKey(finding), origin: finding.origin }),
-      ),
-    );
-    await waitFor(() => expect(customize.open).toBe(true));
-    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
-      historyLength,
-    );
-    await view.user.click(screen.getByText('Customize'));
-    await waitFor(() => expect(customize.open).toBe(false));
-    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
-      historyLength,
-    );
-    act(() =>
-      view.application.store.dispatch(
-        findingSelected({ key: semanticFindingKey(finding), origin: finding.origin }),
-      ),
-    );
-    await waitFor(() => expect(customize.open).toBe(true));
-    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
-      historyLength,
-    );
     const encounter = screen.getByLabelText('Encounter encounter phase');
+    act(() =>
+      view.application.store.dispatch(
+        findingSelected({ key: semanticFindingKey(finding), origin: finding.origin }),
+      ),
+    );
+    await waitFor(() => expect(encounter.contains(document.activeElement)).toBe(true));
+    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+      historyLength,
+    );
     const picker = within(encounter).getByRole('button', { name: 'Encounter' });
 
     await view.user.click(picker);
@@ -1336,18 +1373,25 @@ describe('OccurrenceWorkbench', () => {
       occurrenceById(oOccurrenceIds.combat04),
     );
     const count = screen.getByRole('combobox', { name: /Combat phases/ }) as HTMLSelectElement;
-    const ship = screen.getByLabelText('Ship combat structure');
-    const customize = screen.getByLabelText('Customize') as HTMLDetailsElement;
-
-    expect(customize.open).toBe(false);
-    expect(ship.closest('.room-customization')).toBeNull();
-    expect(count.closest('.room-customization')).toBeNull();
+    expect(screen.getByLabelText('Ship combat structure')).toBeTruthy();
+    expect(screen.getByLabelText('Intro ship phase')).toBeTruthy();
+    expect(
+      within(screen.getByLabelText('Intro ship phase')).getByLabelText('Combat 1 reward'),
+    ).toBeTruthy();
+    const combatOne = screen.getByLabelText('Combat 1 ship phase');
+    expect(combatOne).toBeTruthy();
+    expect(within(combatOne).queryByLabelText('Combat 1 reward')).toBeNull();
+    expect(screen.queryByLabelText('Combat 2 ship phase')).toBeNull();
+    expect(
+      within(screen.getByLabelText('Intro ship phase')).queryByText('Outgoing generation'),
+    ).toBeNull();
+    expect(within(combatOne).getByText('Outgoing generation')).toBeTruthy();
     act(() =>
       view.application.store.dispatch(
         semanticOwnerNavigated(createRewardWheelAddress(oBiome, oOccurrenceIds.combat04, 'wheel1')),
       ),
     );
-    await waitFor(() => expect(customize.open).toBe(false));
+    await waitFor(() => expect(screen.getByLabelText('Combat 1 reward')).toBeTruthy());
 
     await view.user.click(count);
     await waitFor(() => {
@@ -1378,7 +1422,11 @@ describe('OccurrenceWorkbench', () => {
     const actions = screen.getByLabelText('Room Actions');
 
     expect(within(ship).getAllByRole('button', { name: 'Reward' }).length).toBeGreaterThan(0);
-    expect(within(ship).queryByRole('button', { name: /Edit Trait/ })).toBeNull();
+    expect(
+      within(screen.getByLabelText('Combat 1 reward')).queryByRole('button', {
+        name: /Edit Trait/,
+      }),
+    ).toBeNull();
     expect(within(actions).getByRole('button', { name: /Edit Trait/ })).toBeTruthy();
   });
 
@@ -1415,6 +1463,7 @@ describe('OccurrenceWorkbench', () => {
       offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat07, 'wheel2', 'offer2'),
       value: { rewardType: 'MetaCurrencyDrop' },
     });
+    project = authorRequiredTestRoomActions(project, catalog);
 
     const view = renderOccurrenceWorkbench(
       project,
@@ -1424,8 +1473,36 @@ describe('OccurrenceWorkbench', () => {
     );
     const initialWheel = screen.getByLabelText('Combat 2 reward');
     const ship = screen.getByLabelText('Ship combat structure');
+    const introPhase = screen.getByLabelText('Intro ship phase');
+    const combatOnePhase = screen.getByLabelText('Combat 1 ship phase');
+    const combatTwoPhase = screen.getByLabelText('Combat 2 ship phase');
+    expectBefore(introPhase, combatOnePhase);
+    expectBefore(combatOnePhase, combatTwoPhase);
+    expect(within(introPhase).getByLabelText('Combat 1 reward')).toBeTruthy();
+    expect(within(introPhase).getByText('Choose Combat 1 reward')).toBeTruthy();
+    expect(within(introPhase).queryByLabelText('Combat 2 reward')).toBeNull();
+    expect(within(combatOnePhase).queryByLabelText('Combat 1 reward')).toBeNull();
+    expect(within(combatOnePhase).getByText('Pick up Combat 1 reward')).toBeTruthy();
+    expect(within(combatOnePhase).getByLabelText('Combat 2 reward')).toBeTruthy();
+    expect(within(combatOnePhase).getByText('Choose Combat 2 reward')).toBeTruthy();
+    expect(within(combatTwoPhase).queryByLabelText('Combat 2 reward')).toBeNull();
+    expect(within(combatTwoPhase).getByText('Pick up Combat 2 reward')).toBeTruthy();
+    const actionRows = Array.from(ship.querySelectorAll<HTMLElement>('[data-room-action-key]'));
+    expect(new Set(actionRows.map((row) => row.dataset.roomActionKey)).size).toBe(
+      actionRows.length,
+    );
     expect(
-      Array.from(ship.querySelectorAll('.reward-wheel h4')).map((heading) => heading.textContent),
+      actionRows
+        .filter((row) => row.dataset.inOrder === 'true')
+        .map((row) => row.querySelector('.hub-roster-rank')?.textContent),
+    ).toEqual(
+      Array.from(
+        { length: actionRows.filter((row) => row.dataset.inOrder === 'true').length },
+        (_, index) => String(index + 1),
+      ),
+    );
+    expect(
+      Array.from(ship.querySelectorAll('.reward-wheel h5')).map((heading) => heading.textContent),
     ).toEqual(['Combat 1 reward', 'Combat 2 reward']);
     expect(within(screen.getByLabelText('Combat 1 reward')).queryByLabelText('Offer 2')).toBeNull();
     expect(
@@ -1439,6 +1516,8 @@ describe('OccurrenceWorkbench', () => {
     expect(within(roomActions).getByText('wheel1 next phase usable')).toBeTruthy();
     expect(within(roomActions).getByText('Outgoing generation')).toBeTruthy();
     expect(within(roomActions).getByText('Exit usable')).toBeTruthy();
+    expect(within(combatOnePhase).queryByText('Outgoing generation')).toBeNull();
+    expect(within(combatTwoPhase).getByText('Outgoing generation')).toBeTruthy();
 
     act(() =>
       view.application.store.dispatch(
@@ -1450,8 +1529,17 @@ describe('OccurrenceWorkbench', () => {
       ),
     );
     await waitFor(() => expect(screen.queryByLabelText('Combat 2 reward')).toBeNull());
+    const repairs = screen.getByLabelText('Ship action repairs');
+    expect(within(repairs).getByText('Choose Combat 2 reward')).toBeTruthy();
+    expect(within(repairs).getByText('Pick up Combat 2 reward')).toBeTruthy();
+    expect(screen.getAllByText('Choose Combat 2 reward')).toHaveLength(1);
+    expect(screen.getAllByText('Pick up Combat 2 reward')).toHaveLength(1);
+    expect(screen.queryByText('Combat2 complete')).toBeNull();
     expect(
-      Array.from(ship.querySelectorAll('.reward-wheel h4')).map((heading) => heading.textContent),
+      within(screen.getByLabelText('Combat 1 ship phase')).getByText('Outgoing generation'),
+    ).toBeTruthy();
+    expect(
+      Array.from(ship.querySelectorAll('.reward-wheel h5')).map((heading) => heading.textContent),
     ).toEqual(['Combat 1 reward']);
 
     act(() =>
@@ -1464,8 +1552,17 @@ describe('OccurrenceWorkbench', () => {
       ),
     );
     await waitFor(() => expect(screen.getByLabelText('Combat 2 reward')).toBeTruthy());
+    expect(screen.queryByLabelText('Ship action repairs')).toBeNull();
     expect(
-      Array.from(ship.querySelectorAll('.reward-wheel h4')).map((heading) => heading.textContent),
+      within(screen.getByLabelText('Combat 1 ship phase')).getByLabelText('Combat 2 reward'),
+    ).toBeTruthy();
+    expect(
+      within(screen.getByLabelText('Combat 2 ship phase')).queryByLabelText('Combat 2 reward'),
+    ).toBeNull();
+    expect(screen.getByText('Choose Combat 2 reward')).toBeTruthy();
+    expect(screen.getByText('Pick up Combat 2 reward')).toBeTruthy();
+    expect(
+      Array.from(ship.querySelectorAll('.reward-wheel h5')).map((heading) => heading.textContent),
     ).toEqual(['Combat 1 reward', 'Combat 2 reward']);
 
     const restoredWheel = screen.getByLabelText('Combat 2 reward');
@@ -1489,6 +1586,184 @@ describe('OccurrenceWorkbench', () => {
     expect(shipWheel2(view.application.store.getState().projectWorkspace.history.present)).toEqual(
       shipWheel2(project),
     );
+  });
+
+  it('focuses and removes a retained Combat2 NPC row outside the active two-phase groups', async () => {
+    const occurrenceId = oOccurrenceIds.combat07;
+    const occurrence = createOccurrenceAddress(oBiome, occurrenceId);
+    const phase = createEncounterPhaseAddress(oBiome, occurrence, 'Combat2');
+    const reference = { kind: 'interactEncounter' as const, phaseKey: 'Combat2' };
+    const action = createRoomActionAddress(oBiome, occurrenceId, roomActionKey(reference));
+    let project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+      kind: 'ReplaceShipEncounterCount',
+      occurrence,
+      encounterCount: 3,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SelectEncounter',
+      phase,
+      encounterKey: 'IcarusCombatO',
+    });
+    project = authorRequiredTestRoomActions(authorLegalTraitOffers(project), catalog);
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceShipEncounterCount',
+      occurrence,
+      encounterCount: 2,
+    });
+
+    const view = renderWorkspace(project, 'Surface', 'O');
+    act(() => view.application.store.dispatch(semanticOwnerNavigated(action)));
+    const repairs = await screen.findByLabelText('Ship action repairs');
+    expect(screen.queryByLabelText('Combat 2 ship phase')).toBeNull();
+    const staleNpc = within(repairs).getByText('Interact with Combat2 encounter').closest('li');
+    if (staleNpc === null) throw new Error('Dormant Combat2 NPC action is missing');
+    expect(screen.getAllByText('Interact with Combat2 encounter')).toHaveLength(1);
+    expect(within(staleNpc).getByText('This action no longer belongs to the room.')).toBeTruthy();
+    expect(document.getElementById(semanticOwnerControlElementId(action))).toBe(staleNpc);
+    expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(action);
+
+    await view.user.click(within(staleNpc).getByRole('button', { name: 'Remove' }));
+    await waitFor(() => expect(screen.queryByText('Interact with Combat2 encounter')).toBeNull());
+    expect(
+      occurrenceRoomActionOrder(
+        view.application.store.getState().projectWorkspace.history.present,
+        'Surface',
+        'O',
+        occurrenceId,
+      )?.some((candidate) => roomActionKey(candidate) === roomActionKey(reference)),
+    ).toBe(false);
+  });
+
+  it('shows a stale NPC row from an active Ship phase only in the repair surface', () => {
+    const occurrenceId = oOccurrenceIds.combat01;
+    const occurrence = createOccurrenceAddress(oBiome, occurrenceId);
+    const phase = createEncounterPhaseAddress(oBiome, occurrence, 'Combat1');
+    let project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+      kind: 'ReplaceShipEncounterCount',
+      occurrence,
+      encounterCount: 3,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SelectEncounter',
+      phase,
+      encounterKey: 'IcarusCombatO',
+    });
+    project = authorRequiredTestRoomActions(authorLegalTraitOffers(project), catalog);
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SelectEncounter',
+      phase,
+      encounterKey: 'GeneratedO',
+    });
+
+    renderStaticOccurrenceWorkbench(project, 'Surface', 'O', occurrenceById(occurrenceId));
+    const repairs = screen.getByLabelText('Ship action repairs');
+    const combatOne = screen.getByLabelText('Combat 1 ship phase');
+    expect(within(repairs).getByText('Interact with Ship combat')).toBeTruthy();
+    expect(within(combatOne).queryByText('Interact with Ship combat')).toBeNull();
+    expect(screen.getAllByText('Interact with Ship combat')).toHaveLength(1);
+  });
+
+  it('keeps Ship arrow, pointer, fixed-window, and Undo behavior on one global action order', async () => {
+    const occurrenceId = oOccurrenceIds.combat01;
+    const occurrence = createOccurrenceAddress(oBiome, occurrenceId);
+    let project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+      kind: 'ReplaceShipEncounterCount',
+      occurrence,
+      encounterCount: 3,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SelectEncounter',
+      phase: createEncounterPhaseAddress(oBiome, occurrence, 'Combat1'),
+      encounterKey: 'IcarusCombatO',
+    });
+    project = authorRequiredTestRoomActions(authorLegalTraitOffers(project), catalog);
+
+    const view = renderOccurrenceWorkbench(project, 'Surface', 'O', occurrenceById(occurrenceId));
+    const actions = screen.getByLabelText('Room Actions');
+    const combatOne = screen.getByLabelText('Combat 1 ship phase');
+    const actionOrder = () =>
+      occurrenceRoomActionOrder(
+        view.application.store.getState().projectWorkspace.history.present,
+        'Surface',
+        'O',
+        occurrenceId,
+      );
+    const rowFor = (label: string) => {
+      const row = within(combatOne).getByText(label).closest<HTMLElement>('li');
+      if (row === null) throw new Error(`${label} action row is missing`);
+      return row;
+    };
+
+    const icarus = rowFor('Interact with Icarus combat');
+    const legalArrow = within(icarus)
+      .getAllByRole('button', { name: /Move Interact with Icarus combat (earlier|later)/ })
+      .find((button) => !(button as HTMLButtonElement).disabled);
+    if (legalArrow === undefined) throw new Error('Icarus has no legal same-window arrow move');
+    const wheelTwoChoice = rowFor('Choose Combat 2 reward');
+    expect(
+      within(wheelTwoChoice)
+        .getAllByRole('button', { name: /Move Choose Combat 2 reward (earlier|later)/ })
+        .some((button) => (button as HTMLButtonElement).disabled),
+    ).toBe(true);
+
+    const initialOrder = actionOrder();
+    await view.user.click(legalArrow);
+    expect(actionOrder()).not.toEqual(initialOrder);
+    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
+    expect(actionOrder()).toEqual(initialOrder);
+
+    const restoredIcarus = rowFor('Interact with Icarus combat');
+    const wheelPick = rowFor('Pick up Combat 1 reward');
+    const handle = restoredIcarus.querySelector<HTMLElement>('[data-room-action-drag-handle]');
+    const board = actions.querySelector<HTMLElement>('.ship-phase-list');
+    if (handle === null || board === null) throw new Error('Ship pointer board is missing');
+    const initialKeys = initialOrder?.map(roomActionKey) ?? [];
+    const icarusKey = restoredIcarus.dataset.roomActionKey;
+    const wheelPickKey = wheelPick.dataset.roomActionKey;
+    const dragAfter =
+      icarusKey !== undefined &&
+      wheelPickKey !== undefined &&
+      initialKeys.indexOf(icarusKey) < initialKeys.indexOf(wheelPickKey);
+    vi.spyOn(wheelPick, 'getBoundingClientRect').mockReturnValue({
+      bottom: 180,
+      height: 120,
+      left: 0,
+      right: 360,
+      toJSON: () => ({}),
+      top: 60,
+      width: 360,
+      x: 0,
+      y: 60,
+    } as DOMRect);
+    Object.defineProperty(document, 'elementFromPoint', {
+      configurable: true,
+      value: () => wheelPick,
+    });
+    fireEvent.pointerDown(handle, {
+      button: 0,
+      clientX: 12,
+      clientY: 12,
+      isPrimary: true,
+      pointerId: 73,
+      pointerType: 'mouse',
+    });
+    fireEvent.pointerMove(board, {
+      clientX: 24,
+      clientY: dragAfter ? 150 : 70,
+      isPrimary: true,
+      pointerId: 73,
+      pointerType: 'mouse',
+    });
+    fireEvent.pointerUp(board, {
+      clientX: 24,
+      clientY: dragAfter ? 150 : 70,
+      isPrimary: true,
+      pointerId: 73,
+      pointerType: 'mouse',
+    });
+    await waitFor(() => expect(actionOrder()).not.toEqual(initialOrder));
+    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
+    expect(actionOrder()).toEqual(initialOrder);
   });
 
   it('keeps a supported Ship phase count authorable when its dormant rewards need repair', async () => {
@@ -1630,7 +1905,6 @@ describe('OccurrenceWorkbench', () => {
     expect(screen.getByRole('columnheader', { name: 'Offer' })).toBeTruthy();
     expect(screen.queryByText('Participation')).toBeNull();
     expect(screen.getByRole('heading', { name: 'Preboss' })).toBeTruthy();
-    expect(screen.queryByLabelText('Customize')).toBeNull();
   });
 
   it('renders and binds the applicable Shop Death Defiance repair control', async () => {

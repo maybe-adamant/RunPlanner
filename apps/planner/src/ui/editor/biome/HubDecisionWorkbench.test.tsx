@@ -26,8 +26,10 @@ import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
 import {
   appendCompleteN,
   appendNEntry,
+  createRepresentativeNProject,
   createRepresentativeNOPQProject,
   nBiome,
+  nOpenSlotKeys,
   nOccurrenceId,
   nOccurrenceIds,
 } from '@run-planner/test-fixtures';
@@ -39,9 +41,21 @@ import {
 
 const browserPropertyRestorers: (() => void)[] = [];
 let representativeHubProject: ProjectDocument;
+let invalidTenDoorHubProject: ProjectDocument;
 
 beforeAll(() => {
   representativeHubProject = createRepresentativeNOPQProject();
+  invalidTenDoorHubProject = applyProjectCommand(
+    createRepresentativeNProject({
+      openSlotKeys: [...nOpenSlotKeys, 'combat04'],
+    }),
+    catalog,
+    {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(nBiome, nOccurrenceId('combat04')),
+      value: { rewardType: 'MaxHealthDropBig' },
+    },
+  );
 });
 
 afterEach(() => {
@@ -595,7 +609,17 @@ describe('HubDecisionWorkbench', () => {
     );
   }, 10_000);
 
-  it('only offers Room details for visit-active rooms with meaningful local detail', async () => {
+  it('loads a ten-door invalid board picker without offering a singleton already on a peer', async () => {
+    const view = renderHubDecisionWorkbench(invalidTenDoorHubProject);
+    const editedCard = screen.getByRole('article', { name: 'Combat 09 Hub room' });
+
+    await view.user.click(within(editedCard).getByLabelText('Reward'));
+
+    const listbox = await screen.findByRole('listbox');
+    expect(within(listbox).queryByRole('option', { name: /Big Max Health/ })).toBeNull();
+  });
+
+  it('offers direct Room details for every visited Hub room workbench', async () => {
     const project = appendCompleteN(
       createProjectDocument(catalog, {
         projectId: 'hub-room-detail-boundary',
@@ -640,8 +664,13 @@ describe('HubDecisionWorkbench', () => {
     expect(ordinarySlot.room.encounterPhases).toEqual(
       expect.arrayContaining([expect.objectContaining({ customizable: true })]),
     );
-    expect(ordinarySlot.room.hasRoomLocalCustomization).toBe(true);
-    expect(within(miniboss).queryByRole('button', { name: /Open details/ })).toBeNull();
+    expect(ordinarySlot.room.workbench).toMatchObject({
+      kind: 'standard',
+      encounterPhases: expect.arrayContaining([expect.objectContaining({ customizable: true })]),
+    });
+    expect(
+      within(miniboss).getByRole('button', { name: 'Open details for Satyr Champion' }),
+    ).toBeTruthy();
     expect(
       within(ordinaryCombat).getByRole('button', { name: 'Open details for Combat 07' }),
     ).toBeTruthy();
