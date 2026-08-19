@@ -3,6 +3,7 @@ import {
   applyProjectCommand,
   createExitDecisionAddress,
   createHubDecisionAddress,
+  createHubOpenSetAddress,
   createHubSlotAddress,
   createIncomingRewardAddress,
   createOccurrenceAddress,
@@ -89,6 +90,60 @@ function nBiomeEvaluation(project: ProjectDocument) {
 }
 
 describe('N B1 entry and terminal baseline', () => {
+  it('keeps a fresh zero-target Hub open-set finding alongside an unresolved entry reward', () => {
+    let project = createProjectDocument(catalog, {
+      projectId: 'n-zero-target-hub-finding',
+      name: 'N zero-target Hub finding',
+      configuredBiomeCounts: { Surface: 1 },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateStart',
+      biome: nBiome,
+      occurrenceId: nOccurrenceIds.opening,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateBatch',
+      decision: createExitDecisionAddress(nBiome, {
+        kind: 'occurrence',
+        occurrenceId: nOccurrenceIds.opening,
+      }),
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(
+        nBiome,
+        { kind: 'occurrence', occurrenceId: nOccurrenceIds.opening },
+        'prehub',
+      ),
+      occurrenceId: nOccurrenceIds.preHub,
+      gameName: 'N_PreHub01',
+    });
+    const preHubDecision = createExitDecisionAddress(nBiome, {
+      kind: 'occurrence',
+      occurrenceId: nOccurrenceIds.preHub,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateBatch',
+      decision: preHubDecision,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceWithHubDecision',
+      decision: preHubDecision,
+      hub: createHubDecisionAddress(nBiome, 'hub'),
+    });
+
+    const biome = nBiomeEvaluation(project);
+    const openSet = createHubOpenSetAddress(nBiome, 'hub');
+    expect(biome).toMatchObject({ authoring: 'incomplete' });
+    expect(biome).not.toHaveProperty('validity');
+    expect(biome.findings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: 'rewardMissing' }),
+        expect.objectContaining({ code: 'hubOpenSetIncomplete', origin: openSet }),
+      ]),
+    );
+  });
+
   it('evaluates the blank bounded entry at Opening post-commit depth one', () => {
     const entryCandidates = createPreparedProjectCandidateSession(
       catalog,

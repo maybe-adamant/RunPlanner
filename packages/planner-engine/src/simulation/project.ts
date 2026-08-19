@@ -59,7 +59,7 @@ import type {
   EncounterPhaseCandidateSupport,
   EncounterPhaseSequenceStatus,
 } from './encounters/preparation';
-import type { SemanticFinding } from './model';
+import { isAcquisitionAuthorshipMissingFinding, type SemanticFinding } from './model';
 import type { FindingRegionEntry } from './finding-regions';
 import {
   evaluateProgressiveBiomeAssembly,
@@ -748,21 +748,33 @@ function evaluateBiomeAssembly(
         candidateArtifacts: createEmptyBiomeCandidateArtifacts(origin),
       });
     }
+    const blockedAt = progressive.evaluation.blockedAt;
+    const unresolvedEntryReward =
+      progressive.evaluation.materializedPrefix.entryRoom?.unresolvedIncomingReward;
+    const entryAuthorshipBlocked =
+      blockedAt !== undefined &&
+      unresolvedEntryReward !== undefined &&
+      semanticAddressKey(blockedAt) === semanticAddressKey(unresolvedEntryReward.origin) &&
+      progressive.evaluation.findings.some(
+        (finding) =>
+          semanticAddressKey(finding.origin) === semanticAddressKey(blockedAt) &&
+          isAcquisitionAuthorshipMissingFinding(finding),
+      );
     return Object.freeze({
       evaluation: Object.freeze({
         biomeKey: plan.biomeKey,
         origin,
         authoring: 'incomplete',
         frontier: completeness.frontier,
-        ...(progressive.evaluation.blockedAt === undefined ? {} : { validity: 'invalid' as const }),
+        ...(blockedAt === undefined || entryAuthorshipBlocked
+          ? {}
+          : { validity: 'invalid' as const }),
         coverage: Object.freeze({
           kind: 'prefix',
           through: materializedBiomePrefixCoveragePoint(
             progressive.evaluation.assessmentPrefix ?? progressive.evaluation.materializedPrefix,
           ),
-          ...(progressive.evaluation.blockedAt === undefined
-            ? {}
-            : { blockedAt: progressive.evaluation.blockedAt }),
+          ...(blockedAt === undefined ? {} : { blockedAt }),
         }),
         materializedPrefix: progressive.evaluation.materializedPrefix,
         ...(progressive.evaluation.assessmentPrefix === undefined
@@ -776,7 +788,7 @@ function evaluateBiomeAssembly(
           structurallyEligibleRunStateOwners(progressive.evaluation.materializedPrefix),
         ),
         findings:
-          progressive.evaluation.blockedAt === undefined
+          blockedAt === undefined || entryAuthorshipBlocked
             ? Object.freeze([...completeness.findings, ...progressive.evaluation.findings])
             : progressive.evaluation.findings,
       }),

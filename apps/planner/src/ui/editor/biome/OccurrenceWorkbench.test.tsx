@@ -18,6 +18,7 @@ import {
   createOccurrenceId,
   createOccurrenceAddress,
   createRoomActionAddress,
+  createShopOfferAddress,
   createRouteStartKeepsakeSelectionAddress,
   createProjectDocument,
   createRewardWheelAddress,
@@ -248,19 +249,32 @@ function dormantShopProject(): {
     gameName: 'F_Opening01',
   });
   project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: createIncomingRewardAddress(goldenFBiome, start),
+    value: {
+      rewardType: 'Boon',
+      payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+    },
+  });
+  project = applyProjectCommand(project, catalog, {
     kind: 'CreateBatch',
     decision: createExitDecisionAddress(goldenFBiome, source),
   });
   project = applyProjectCommand(project, catalog, {
     kind: 'ReplaceBatchRewardStore',
     rewardStore: createBatchRewardStoreAddress(goldenFBiome, source),
-    storeKey: 'RunProgress',
+    storeKey: 'MetaProgress',
   });
   project = applyProjectCommand(project, catalog, {
     kind: 'CreateTarget',
     target: createTargetAddress(goldenFBiome, source, 'exit1'),
     occurrenceId: combat,
     gameName: 'F_Combat03',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: createIncomingRewardAddress(goldenFBiome, combat),
+    value: { rewardType: 'GiftDrop' },
   });
   const secondSource = { kind: 'occurrence' as const, occurrenceId: combat };
   project = applyProjectCommand(project, catalog, {
@@ -293,7 +307,7 @@ function enteredShopProject(): {
 } {
   const dormant = dormantShopProject();
   const combat = createOccurrenceId('occurrence-workbench-f-combat');
-  const project = applyProjectCommand(dormant.project, catalog, {
+  let project = applyProjectCommand(dormant.project, catalog, {
     kind: 'SetExitSelection',
     selection: createExitSelectionAddress(goldenFBiome, {
       kind: 'occurrence',
@@ -301,7 +315,24 @@ function enteredShopProject(): {
     }),
     value: { kind: 'normal', exitKey: 'exit2' },
   });
-  return { project, shopId: dormant.shopId };
+  for (const [offerKey, value] of [
+    [
+      'Boon',
+      {
+        rewardType: 'RandomLoot',
+        payload: { kind: 'BoonSource' as const, source: 'ZeusUpgrade' },
+      },
+    ],
+    ['MajorNonBoon', { rewardType: 'RoomRewardHealDrop' }],
+    ['Minor', { rewardType: 'MaxManaDrop' }],
+  ] as const) {
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceShopOffer',
+      offer: createShopOfferAddress(goldenFBiome, dormant.shopId, offerKey),
+      value,
+    });
+  }
+  return { project: authorLegalTraitOffers(project), shopId: dormant.shopId };
 }
 
 describe('OccurrenceWorkbench', () => {
@@ -1646,8 +1677,8 @@ describe('OccurrenceWorkbench', () => {
       if (option === undefined) throw new Error(`${label} has no legal insertion`);
       await view.user.selectOptions(select, option.value);
     };
-    await insertAction('Buy Offer 2');
-    await insertAction('Buy Offer 3');
+    await insertAction('Buy Heal');
+    await insertAction('Buy Max Magick');
     expect(
       occurrenceRoomActionOrder(
         view.application.store.getState().projectWorkspace.history.present,
@@ -1660,9 +1691,11 @@ describe('OccurrenceWorkbench', () => {
       { kind: 'interactShopOffer', offerKey: 'Minor' },
     ]);
 
-    const minor = within(actions).getByText('Buy Offer 3').closest('li');
+    const minor = within(actions).getByText('Buy Max Magick').closest('li');
     if (minor === null) throw new Error('Minor Shop action is missing');
-    await view.user.click(within(minor).getByRole('button', { name: 'Move Buy Offer 3 earlier' }));
+    await view.user.click(
+      within(minor).getByRole('button', { name: 'Move Buy Max Magick earlier' }),
+    );
     expect(
       occurrenceRoomActionOrder(
         view.application.store.getState().projectWorkspace.history.present,
@@ -1698,15 +1731,15 @@ describe('OccurrenceWorkbench', () => {
       if (option === undefined) throw new Error(`${label} has no legal insertion`);
       await view.user.selectOptions(select, option.value);
     };
-    await insertAction('Buy Offer 2');
-    await insertAction('Buy Offer 3');
+    await insertAction('Buy Heal');
+    await insertAction('Buy Max Magick');
 
     expect(within(actions).getByLabelText('Room-action order boundary').textContent).toContain(
       '1 not ordered',
     );
     const board = within(actions).getByRole('list', { name: 'Ranked room action order' });
-    const major = within(actions).getByText('Buy Offer 2').closest<HTMLElement>('li');
-    const minor = within(actions).getByText('Buy Offer 3').closest<HTMLElement>('li');
+    const major = within(actions).getByText('Buy Heal').closest<HTMLElement>('li');
+    const minor = within(actions).getByText('Buy Max Magick').closest<HTMLElement>('li');
     if (major === null || minor === null) throw new Error('Ranked Shop action rows are missing');
     const handle = major.querySelector<HTMLElement>('[data-room-action-drag-handle]');
     if (handle === null) throw new Error('Ranked Room Action drag handle is missing');
