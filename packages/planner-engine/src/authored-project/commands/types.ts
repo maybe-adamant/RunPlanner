@@ -110,6 +110,19 @@ export type TopologyCommand =
     }
   | { readonly kind: 'CreateBatch'; readonly decision: ExitDecisionAddress }
   | {
+      readonly kind: 'InitializeExitDecision';
+      readonly decision: ExitDecisionAddress;
+      readonly edit:
+        | { readonly kind: 'rewardStore'; readonly storeKey: string }
+        | { readonly kind: 'fieldsCageOutcome'; readonly cageOutcome: 'min' | 'max' }
+        | {
+            readonly kind: 'target';
+            readonly target: TargetAddress;
+            readonly occurrenceId: OccurrenceId;
+            readonly gameName: string;
+          };
+    }
+  | {
       readonly kind: 'CreateTarget';
       readonly target: TargetAddress;
       readonly occurrenceId: OccurrenceId;

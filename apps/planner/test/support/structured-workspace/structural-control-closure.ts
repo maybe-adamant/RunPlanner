@@ -16,7 +16,7 @@ import { workspaceTestOwnerKey } from './test-keys';
 
 function expectedStructuralInteraction(
   interactions: WorkspaceInteractionCatalog,
-  kind: Exclude<ExpectedWorkspaceStructuralControlKind, 'exitFrontierCapability'>,
+  kind: ExpectedWorkspaceStructuralControlKind,
   key: string,
 ): ObservedOwnedInteraction | undefined {
   switch (kind) {
@@ -40,8 +40,6 @@ function expectedStructuralInteraction(
       return interactions.rooms.get(key);
     case 'start':
       return interactions.starts.get(key);
-    case 'structural':
-      return interactions.structural.get(key);
     case 'takeoverBatch':
       return interactions.takeoverBatches.get(key);
     case 'topologyRemoval':
@@ -57,12 +55,6 @@ export function assertExpectedWorkspaceStructuralControlClosure(input: {
   readonly interactions: WorkspaceInteractionCatalog;
 }): void {
   for (const control of input.expected) {
-    if (control.kind === 'exitFrontierCapability') {
-      if (input.interactions.exitFrontierCapabilities.get(control.key) === undefined) {
-        throw new Error(`${control.kind} ${control.key} has no exact workspace interaction`);
-      }
-      continue;
-    }
     const interaction = expectedStructuralInteraction(
       input.interactions,
       control.kind,
@@ -150,9 +142,10 @@ function assertRenderedNodeControls(
     case 'takeoverBatch': {
       const ownerKey = workspaceTestOwnerKey(node.owner);
       if (
-        node.targets.length !== 1 ||
-        node.zagreusContract !== undefined ||
-        node.naturalChaos !== undefined
+        !(node.persistence === 'uncommitted' && node.targets.length === 0) &&
+        (node.targets.length !== 1 ||
+          node.zagreusContract !== undefined ||
+          node.naturalChaos !== undefined)
       ) {
         assertExactObservedInteraction(
           interactions.exitSelections.get(node.selection.focusKey),
@@ -257,12 +250,21 @@ function assertRenderedNodeControls(
         }
         assertRenderedRoomControls(chaos.door.room, interactions);
       }
-      assertExactObservedInteraction(
-        interactions.topologyRemovals.get(ownerKey),
-        ownerKey,
-        node.owner,
-        `decision topology removal ${ownerKey}`,
-      );
+      if (node.persistence === 'authored') {
+        assertExactObservedInteraction(
+          interactions.topologyRemovals.get(ownerKey),
+          ownerKey,
+          node.owner,
+          `decision topology removal ${ownerKey}`,
+        );
+      } else {
+        if (interactions.topologyRemovals.has(ownerKey)) {
+          throw new Error(`uncommitted decision ${ownerKey} exposes topology removal`);
+        }
+        if (interactions.exitSelections.has(node.selection.focusKey)) {
+          throw new Error(`uncommitted empty decision ${ownerKey} exposes exit selection`);
+        }
+      }
       for (const target of node.targets) assertRenderedRoomControls(target.room, interactions);
       for (const target of node.missingTargets) {
         const interaction = interactions.rooms.get(target.marker.focusKey);
@@ -360,20 +362,11 @@ export function assertRenderedWorkspaceStructuralControlClosure(input: {
             `start frontier ${frontier.interactionKey}`,
           );
           break;
-        case 'exitDecision': {
-          const capability = input.interactions.exitFrontierCapabilities.get(
-            frontier.interactionKey,
-          );
-          if (capability?.structural !== undefined) {
-            assertExactObservedInteraction(
-              input.interactions.structural.get(frontier.interactionKey),
-              frontier.interactionKey,
-              frontier.owner,
-              `exit frontier structural action ${frontier.interactionKey}`,
-            );
+        case 'exitDecision':
+          if (frontier.provisionalBatch !== undefined) {
+            assertRenderedNodeControls(frontier.provisionalBatch, input.interactions);
           }
           break;
-        }
         case 'hubOpenSet':
         case 'hubVisit':
           break;

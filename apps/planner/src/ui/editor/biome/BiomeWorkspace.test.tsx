@@ -285,12 +285,13 @@ describe('BiomeWorkspace', () => {
   it('edits authored start identity beside the read-only room workbench and undoes exactly', async () => {
     const occurrenceId = createOccurrenceId('start-identity-surface');
     const occurrence = createOccurrenceAddress(goldenFBiome, occurrenceId);
-    const project = applyProjectCommand(emptyProject('Underworld', 1), catalog, {
+    const started = applyProjectCommand(emptyProject('Underworld', 1), catalog, {
       biome: goldenFBiome,
       gameName: 'F_Opening01',
       kind: 'CreateStart',
       occurrenceId,
     });
+    const project = started;
     const view = renderWorkspace(project, 'Underworld', 'F');
     const identity = screen.getByRole('region', { name: 'Start room identity' });
     const workbench = document.querySelector('.biome-occurrence-workbench');
@@ -664,15 +665,13 @@ describe('BiomeWorkspace', () => {
     expect(decisionRail.dataset.selected).toBe('true');
   });
 
-  it('authors and enters the next generated decision from its predecessor', async () => {
-    const occurrenceId = createOccurrenceId('direct-next-decision-f-start');
+  it('authors the first outgoing edit atomically and undo restores provisional doors', async () => {
+    const occurrenceId = goldenFStartId;
     const source = { kind: 'occurrence' as const, occurrenceId };
     const owner = createExitDecisionAddress(goldenFBiome, source);
-    const project = applyProjectCommand(emptyProject('Underworld', 1), catalog, {
-      biome: goldenFBiome,
-      gameName: 'F_Opening01',
-      kind: 'CreateStart',
-      occurrenceId,
+    const project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+      kind: 'RemoveExitDecision',
+      decision: owner,
     });
     const view = renderWorkspace(project, 'Underworld', 'F');
 
@@ -683,13 +682,21 @@ describe('BiomeWorkspace', () => {
     );
     const inspector = screen.getByRole('complementary', { name: 'Details' });
     expect(inspector.querySelector('.biome-occurrence-workbench')).not.toBeNull();
-    expect(within(inspector).getByText('Continue from this room')).toBeTruthy();
-    const continuation = within(inspector).getByRole('button', { name: 'Add next decision' });
-    expect(continuation.classList.contains('primary-action')).toBe(true);
-    expect(continuation.closest('.frontier-actions')).not.toBeNull();
+    expect(within(inspector).getByText('Configure room offers')).toBeTruthy();
+    expect(within(inspector).queryByText('Continue from this room')).toBeNull();
+    expect(within(inspector).queryByRole('button', { name: 'Remove these doors' })).toBeNull();
     const before = view.application.store.getState().projectWorkspace.history.past.length;
 
-    await view.user.click(continuation);
+    const pool = within(inspector).getByRole('combobox', { name: 'Base reward pool' });
+    await view.user.click(pool);
+    await waitFor(() =>
+      expect(
+        within(pool)
+          .getByRole('option', { name: 'Minor Reward' })
+          .getAttribute('data-candidate-support'),
+      ).not.toBe('unavailable'),
+    );
+    await view.user.selectOptions(pool, 'MetaProgress');
 
     await waitFor(() => {
       expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(owner);
@@ -708,19 +715,25 @@ describe('BiomeWorkspace', () => {
     if (authoredDecision?.kind !== 'exit') {
       throw new Error('direct continuation did not create its F decision');
     }
-    expect(authoredDecision.normal).toMatchObject({ kind: 'batch', targets: [] });
+    expect(authoredDecision.normal).toMatchObject({
+      kind: 'batch',
+      rewardStore: { kind: 'authoredBaseStore', baseRewardStoreKey: 'MetaProgress' },
+      targets: [],
+    });
     expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
       before + 1,
     );
-    expect(screen.queryByText('Continue from this room')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Remove these doors' })).toBeTruthy();
 
-    act(() =>
-      view.application.store.dispatch(
-        semanticOwnerFocused(createOccurrenceAddress(goldenFBiome, occurrenceId)),
-      ),
+    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
+    await waitFor(() =>
+      expect(
+        view.application.store.getState().projectWorkspace.history.present.routes[0]?.biomes[0]
+          ?.topology?.decisions,
+      ).toEqual([]),
     );
-    expect(screen.getByRole('complementary', { name: 'Details' })).toBeTruthy();
-    expect(screen.queryByRole('button', { name: 'Add next decision' })).toBeNull();
+    expect(screen.getByText('Configure room offers')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Remove these doors' })).toBeNull();
   });
 
   it('renders topology-owned and terminal outgoing states on their exact N occurrences', () => {

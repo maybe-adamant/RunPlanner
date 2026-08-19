@@ -7,6 +7,7 @@ import type {
   RoomExit,
 } from '../../catalog-schema';
 import type { TargetAddress } from '../addresses';
+import { createInitialExitDecision } from '../batchState';
 import type {
   AuthoredAdditionalExit,
   BiomeTopology,
@@ -375,6 +376,46 @@ export function ordinaryTargetAuthoringEligibility(
     return Object.freeze({ kind: 'unavailable', reason: 'notOrdinaryRoom' });
   }
   return Object.freeze({ kind: 'authorable', room });
+}
+
+/**
+ * Evaluates the first ordinary target at a visible, uncommitted outgoing
+ * frontier. The engine constructs and appends its own exact initial envelope
+ * for the query; application projections never fabricate topology in order to
+ * ask whether the atomic `InitializeExitDecision` target edit can succeed.
+ */
+export function uncommittedOrdinaryTargetAuthoringEligibility(
+  catalog: Catalog,
+  layout: BiomeLayout,
+  topology: BiomeTopology,
+  target: TargetAddress,
+  gameName: string,
+): OrdinaryTargetAuthoringEligibility {
+  const progression = normalDecisionProgressionForLayout(layout);
+  if (progression === undefined) {
+    return Object.freeze({ kind: 'unavailable', reason: 'notGenerated' });
+  }
+  if (target.source.kind === 'hubDecision') {
+    return Object.freeze({ kind: 'unavailable', reason: 'sourceIsHub' });
+  }
+  const source = target.source;
+  if (exitDecisionForSource(topology, target.source) !== undefined) {
+    return ordinaryTargetAuthoringEligibility(catalog, layout, topology, target, gameName);
+  }
+  const occurrence = topology.occurrences.find(
+    (candidate) => candidate.occurrenceId === source.occurrenceId,
+  );
+  const sourceRoom =
+    occurrence === undefined ? undefined : catalog.rooms.byKey[occurrence.gameName];
+  if (sourceRoom === undefined || sourceRoom.mode.kind !== 'authored') {
+    return Object.freeze({ kind: 'unavailable', reason: 'unknownOrNonHostRoom' });
+  }
+  const decision = createInitialExitDecision(progression, source, sourceRoom.mode.templateKey);
+  const provisionalTopology = Object.freeze({
+    ...topology,
+    decisions: Object.freeze([...topology.decisions, decision]),
+  });
+  return ordinaryTargetAuthoringEligibility(catalog, layout, provisionalTopology, target, gameName);
 }
 
 function sameSource(left: ExitDecisionSource, right: ExitDecisionSource): boolean {

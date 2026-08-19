@@ -265,7 +265,6 @@ function bind(
       assembly: projectAssembly,
       batchInteractionRequirements: assembly.batchInteractionRequirements,
       catalog,
-      frontierInteractionRequirements: assembly.frontierInteractionRequirements,
       hubInteractionRequirements: assembly.hubInteractionRequirements,
       hubTakeoverInteractionRequirements: assembly.hubTakeoverInteractionRequirements,
       occurrenceInteractionRequirements: assembly.occurrenceInteractionRequirements,
@@ -1328,7 +1327,7 @@ describe('structured workspace interaction binding', () => {
     expect(allocations).toBe(0);
   });
 
-  it('binds normal-batch creation to an exact before-focus intent', () => {
+  it('binds the provisional batch reward pool to one atomic before-focus intent', () => {
     const startId = createOccurrenceId('structural-batch-start');
     const owner = createExitDecisionAddress(goldenFBiome, {
       kind: 'occurrence',
@@ -1348,21 +1347,19 @@ describe('structured workspace interaction binding', () => {
         occurrenceId: startId,
       },
     );
-    let allocations = 0;
-    const structural = bind(project, 'Underworld', 'F', () => {
-      allocations += 1;
-      return createOccurrenceId('unused-structural-batch-id');
-    }).interactions.structural.get(semanticAddressKey(owner));
-    if (structural?.action !== 'createBatch') {
-      throw new Error('F normal-batch structural interaction is missing');
-    }
+    const interaction = bind(project, 'Underworld', 'F').interactions.batchRewardStores.get(
+      semanticAddressKey(createBatchRewardStoreAddress(goldenFBiome, owner.source)),
+    );
+    if (interaction === undefined) throw new Error('F provisional reward pool is missing');
 
-    expect(allocations).toBe(0);
-    expect(structural.intent).toEqual({
-      command: { decision: owner, kind: 'CreateBatch' },
+    expect(interaction.intentFor('RunProgress')).toEqual({
+      command: {
+        decision: owner,
+        edit: { kind: 'rewardStore', storeKey: 'RunProgress' },
+        kind: 'InitializeExitDecision',
+      },
       focus: { owner, timing: 'before' },
     });
-    expect(allocations).toBe(0);
   });
 
   it('binds existing and missing targets to exact replacement and lazy creation intents', () => {
@@ -1552,7 +1549,7 @@ describe('structured workspace interaction binding', () => {
     });
   });
 
-  it('binds the only terminal Door 1 takeover choice to its exact replacement command', () => {
+  it('binds the provisional terminal Door 1 takeover choice to one create command', () => {
     const owner = createExitDecisionAddress(goldenFBiome, {
       kind: 'occurrence',
       occurrenceId: goldenFOccurrenceId(10, 1),
@@ -1561,10 +1558,7 @@ describe('structured workspace interaction binding', () => {
       decision: owner,
       kind: 'RemoveExitDecision',
     });
-    const project = applyProjectCommand(withoutDecision, catalog, {
-      decision: owner,
-      kind: 'CreateBatch',
-    });
+    const project = withoutDecision;
     const target = createTargetAddress(goldenFBiome, owner.source, 'exit1');
     const allocated: ReturnType<typeof createOccurrenceId>[] = [];
     const interaction = bind(project, 'Underworld', 'F', () => {
@@ -1593,13 +1587,13 @@ describe('structured workspace interaction binding', () => {
     const intent = interaction.intentFor('F_PreBoss01');
     expect(intent.focus).toEqual({ owner, timing: 'before' });
     const command = intent.command;
-    if (command.kind !== 'ReplaceWithTakeoverBatch') {
-      throw new Error('F terminal Preboss selection did not bind a takeover replacement');
+    if (command.kind !== 'CreateTakeoverBatch') {
+      throw new Error('F terminal Preboss selection did not bind an atomic takeover creation');
     }
     expect(command).toMatchObject({
       decision: owner,
       gameName: 'F_PreBoss01',
-      kind: 'ReplaceWithTakeoverBatch',
+      kind: 'CreateTakeoverBatch',
     });
     expect(Object.values(command.targetOccurrenceIds)).toEqual(allocated);
     expect(allocated).not.toHaveLength(0);

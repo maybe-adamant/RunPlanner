@@ -332,17 +332,19 @@ Creation establishes explicit transient semantic focus through the existing
 semantic-owner action. Every authored start selects its created Room Occurrence.
 An ordinary target selects its target owner while remaining in the owning
 decision workbench. The direct predecessor of a generated continuation exposes
-`Add next decision`: its complete bound `CreateBatch` intent creates the empty
-decision envelope and focuses that decision owner before publication. React
-only dispatches that intent; it neither reconstructs a command nor treats
-frontier navigation as an alternate edit.
+the ordinary empty door workbench inline. That workbench is a pure projection,
+not an authored node. Its first reward-pool, Fields, ordinary-room, or takeover
+edit is already bound to one atomic engine command; React never chains
+structural creation with a second edit. Focus resolves through the source room
+stage, and undo restores the provisional workbench directly.
 
 An empty generated decision publishes one Door 1 room control inside its own
 workbench. The control is target-addressed, but its picker can contain both
 target-owned ordinary candidates and decision-owned takeover Preboss evidence.
-Binding returns the chosen, complete `CreateTarget` or
-`ReplaceWithTakeoverBatch` intent lazily, allocating takeover occurrence IDs
-only on activation. Both the target route and the decision-owned takeover route
+Binding returns the chosen complete atomic initialization or takeover-creation
+intent lazily, allocating occurrence IDs only on activation. Once an authored
+empty envelope exists, the same control returns the ordinary target or takeover
+replacement intent. Both the target route and the decision-owned takeover route
 resolve independently to the same containing decision inspector. Later doors
 remain ordinary sequential target controls; a populated ordinary decision
 never publishes a retroactive takeover control.
@@ -451,9 +453,14 @@ topology and never persisted.
 
 ### Empty Decision Entry
 
-The empty decision is already a decision workbench, not an intermediate mode
-card. It shows declared batch setup when present, the Door 1 Room picker, and
-later physical doors waiting for sequential generation. A required reward pool
+Both a persisted empty decision and an uncommitted exit frontier use the same
+decision workbench, not an intermediate mode card. The frontier version is
+projected only; it has no removal action and is replaced in place by the
+authored workbench after its first atomic edit. Because its empty target list
+has nothing to choose, it also publishes no exit-selection interaction. Both
+show declared batch setup
+when present, the Door 1 Room picker, and later physical doors waiting for
+sequential generation. A required reward pool
 or Fields roll can disable ordinary mutation locally, but it cannot hide a
 supported takeover option in that same Door 1 picker. Selecting an ordinary
 room reveals its mandatory room/reward leaves; selecting takeover replaces the

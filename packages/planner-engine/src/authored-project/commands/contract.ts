@@ -57,6 +57,7 @@ export function projectCommandAddress(
     case 'ClearTopology':
       return command.biome;
     case 'CreateBatch':
+    case 'InitializeExitDecision':
     case 'CreateTakeoverBatch':
     case 'ReplaceWithTakeoverBatch':
     case 'ReconcileTakeoverBatch':

@@ -107,6 +107,21 @@ beforeAll(() => {
 type WorkspaceBatchNode =
   WorkspaceMixedBatchNode | WorkspaceOrdinaryBatchNode | WorkspaceTakeoverBatchNode;
 
+function createStructuralFrontierProject(biomeKey: 'G' | 'H' | 'P'): ProjectDocument {
+  const routeKey = biomeKey === 'P' ? 'Surface' : 'Underworld';
+  const project = createProjectDocument(catalog, {
+    configuredBiomeCounts:
+      routeKey === 'Surface' ? { Surface: 3 } : { Underworld: biomeKey === 'G' ? 2 : 3 },
+    name: `Structural frontier ${biomeKey}`,
+    projectId: `structural-frontier-${biomeKey.toLowerCase()}`,
+  });
+  return applyProjectCommand(project, catalog, {
+    biome: createBiomeAddress(routeKey, biomeKey),
+    kind: 'CreateStart',
+    occurrenceId: createOccurrenceId(`structural-${biomeKey.toLowerCase()}-start`),
+  });
+}
+
 /**
  * These tests deliberately bypass only assembly provenance. Production still
  * rejects foreign assemblies; the seam lets this adapter prove it rejects a
@@ -366,11 +381,6 @@ function withoutStructuralInteraction(
       return { ...interactions, batchRewardStores: without(interactions.batchRewardStores) };
     case 'decisionEntryRoomPicker':
       return { ...interactions, rooms: without(interactions.rooms) };
-    case 'exitFrontierCapability':
-      return {
-        ...interactions,
-        exitFrontierCapabilities: without(interactions.exitFrontierCapabilities),
-      };
     case 'exitSelection':
       return { ...interactions, exitSelections: without(interactions.exitSelections) };
     case 'fieldsCageOutcome':
@@ -385,8 +395,6 @@ function withoutStructuralInteraction(
       return { ...interactions, rooms: without(interactions.rooms) };
     case 'start':
       return { ...interactions, starts: without(interactions.starts) };
-    case 'structural':
-      return { ...interactions, structural: without(interactions.structural) };
     case 'takeoverBatch':
       return { ...interactions, takeoverBatches: without(interactions.takeoverBatches) };
     case 'topologyRemoval':
@@ -1801,12 +1809,18 @@ describe('structured workspace overlay contract', () => {
       }),
       kind: 'CreateBatch',
     });
+    const gFrontier = createStructuralFrontierProject('G');
+    const hFrontier = createStructuralFrontierProject('H');
+    const pFrontier = createStructuralFrontierProject('P');
     const nTerminal = appendNEntry(emptyN);
     for (const project of [
       createGoldenFGHIProject(),
       createRepresentativeNOPQProject(),
       emptyN,
       fFrontier,
+      gFrontier,
+      hFrontier,
+      pFrontier,
       fEmptyDecision,
       nTerminal,
     ]) {
@@ -1827,6 +1841,39 @@ describe('structured workspace overlay contract', () => {
           });
         }
       }
+    }
+
+    for (const [project, routeKey, biomeKey, expectedKinds] of [
+      [fFrontier, 'Underworld', 'F', ['batchRewardStore', 'decisionEntryRoomPicker']],
+      [gFrontier, 'Underworld', 'G', ['batchRewardStore', 'decisionEntryRoomPicker']],
+      [hFrontier, 'Underworld', 'H', ['fieldsCageOutcome', 'decisionEntryRoomPicker']],
+      [pFrontier, 'Surface', 'P', ['batchRewardStore', 'decisionEntryRoomPicker']],
+    ] as const) {
+      const plan = project.routes
+        .find((route) => route.routeKey === routeKey)
+        ?.biomes.find((biome) => biome.biomeKey === biomeKey);
+      if (plan === undefined) throw new Error(`missing ${biomeKey} structural frontier`);
+      const projected = projectWorkspace(project);
+      const projectedBiome = projected.routes
+        .find((route) => route.routeKey === routeKey)
+        ?.biomes.find((biome) => biome.biomeKey === biomeKey);
+      if (
+        projectedBiome?.frontier?.kind !== 'exitDecision' ||
+        projectedBiome.frontier.provisionalBatch === undefined
+      ) {
+        throw new Error(`${biomeKey} has no provisional outgoing workbench`);
+      }
+      const controls = expectedWorkspaceStructuralControls(
+        catalog,
+        createBiomeAddress(routeKey, biomeKey),
+        plan,
+      );
+      expect(controls.map((control) => control.kind)).toEqual(
+        expect.arrayContaining([...expectedKinds]),
+      );
+      const provisional = projectedBiome.frontier.provisionalBatch;
+      expect(projected.interactions.exitSelections.has(provisional.selection.focusKey)).toBe(false);
+      expect(projected.interactions.topologyRemovals.has(provisional.marker.focusKey)).toBe(false);
     }
   });
 
@@ -1854,6 +1901,9 @@ describe('structured workspace overlay contract', () => {
       }),
       kind: 'CreateBatch',
     });
+    const gFrontier = createStructuralFrontierProject('G');
+    const hFrontier = createStructuralFrontierProject('H');
+    const pFrontier = createStructuralFrontierProject('P');
     const nTerminal = appendNEntry(emptyN);
     const examples = new Map<
       ExpectedWorkspaceStructuralControl['kind'],
@@ -1867,6 +1917,9 @@ describe('structured workspace overlay contract', () => {
       createRepresentativeNOPQProject(),
       emptyN,
       fFrontier,
+      gFrontier,
+      hFrontier,
+      pFrontier,
       fEmptyDecision,
       nTerminal,
     ]) {
@@ -1890,7 +1943,6 @@ describe('structured workspace overlay contract', () => {
       [
         'batchRewardStore',
         'decisionEntryRoomPicker',
-        'exitFrontierCapability',
         'exitSelection',
         'fieldsCageOutcome',
         'hubTakeover',
@@ -1899,7 +1951,6 @@ describe('structured workspace overlay contract', () => {
         'naturalChaosSpawn',
         'roomPicker',
         'start',
-        'structural',
         'takeoverBatch',
         'topologyRemoval',
         'zagreusSpawn',

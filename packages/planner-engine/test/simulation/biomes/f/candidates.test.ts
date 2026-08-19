@@ -4,10 +4,14 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createAcquisitionSiteAddress,
+  createAdditionalExitAddress,
   createBatchRewardStoreAddress,
   createExitDecisionAddress,
+  createExitSelectionAddress,
   createIncomingRewardAddress,
   createOccurrenceAddress,
+  createOccurrenceId,
+  createProjectDocument,
   createShopOfferAddress,
   createTargetAddress,
   createTraitOfferAddress,
@@ -145,6 +149,55 @@ function boonPrefixProject(): ProjectDocument {
 
 function candidateSession(project: ProjectDocument) {
   return createPreparedProjectCandidateSession(catalog, simulateProjectAssembly(catalog, project));
+}
+
+function selectedNaturalChaosFrontier(): {
+  readonly project: ProjectDocument;
+  readonly chaosOccurrenceId: ReturnType<typeof createOccurrenceId>;
+} {
+  const openingOccurrenceId = createOccurrenceId('candidate-natural-chaos-opening');
+  const chaosOccurrenceId = createOccurrenceId('candidate-natural-chaos-room');
+  let project = createProjectDocument(catalog, {
+    configuredBiomeCounts: { Underworld: 1 },
+    name: 'Selected natural Chaos candidate frontier',
+    projectId: 'selected-natural-chaos-candidate-frontier',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateStart',
+    biome: goldenFBiome,
+    occurrenceId: openingOccurrenceId,
+    gameName: 'F_Opening01',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: createIncomingRewardAddress(goldenFBiome, openingOccurrenceId),
+    value: {
+      rewardType: 'Boon',
+      payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+    },
+  });
+  project = authorLegalTraitOffers(project);
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateBatch',
+    decision: createExitDecisionAddress(goldenFBiome, {
+      kind: 'occurrence',
+      occurrenceId: openingOccurrenceId,
+    }),
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'AddNaturalChaos',
+    additional: createAdditionalExitAddress(goldenFBiome, openingOccurrenceId, 'naturalChaos'),
+    occurrenceId: chaosOccurrenceId,
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'SetExitSelection',
+    selection: createExitSelectionAddress(goldenFBiome, {
+      kind: 'occurrence',
+      occurrenceId: openingOccurrenceId,
+    }),
+    value: { kind: 'additional', additionalExitKey: 'naturalChaos' },
+  });
+  return { project: authorLegalTraitOffers(project), chaosOccurrenceId };
 }
 
 function roomCandidate(
@@ -564,6 +617,67 @@ describe('F candidate support', () => {
       },
     ]);
     expect(JSON.stringify(project)).toBe(before);
+  });
+
+  it('evaluates store and Door 1 from the selected natural Chaos return checkpoint', () => {
+    const fixture = selectedNaturalChaosFrontier();
+    const assembly = simulateProjectAssembly(catalog, fixture.project);
+    const biome = assembly.evaluation.routes[0]?.biomes[0];
+    if (biome === undefined || !('history' in biome)) {
+      throw new Error('selected natural Chaos frontier has no evaluated history');
+    }
+    const source = {
+      kind: 'occurrence' as const,
+      occurrenceId: fixture.chaosOccurrenceId,
+    };
+    const rewardStore = createBatchRewardStoreAddress(goldenFBiome, source);
+    const target = createTargetAddress(goldenFBiome, source, 'exit1');
+    const chaosHistory = biome.history.rooms.find(
+      (room) =>
+        semanticAddressKey(room.origin) ===
+        semanticAddressKey(createOccurrenceAddress(goldenFBiome, fixture.chaosOccurrenceId)),
+    );
+    const [store, room] = createPreparedProjectCandidateSession(catalog, assembly).evaluate([
+      { kind: 'batchRewardStore', rewardStore, storeKey: 'MetaProgress' },
+      { kind: 'roomTarget', target, gameName: 'F_Combat02' },
+    ]);
+
+    expect(biome).toMatchObject({
+      authoring: 'incomplete',
+      coverage: { kind: 'prefix' },
+      materializedPrefix: {
+        frontier: {
+          kind: 'exitDecision',
+          origin: createExitDecisionAddress(goldenFBiome, source),
+        },
+      },
+    });
+    expect(chaosHistory).toMatchObject({
+      origin: createOccurrenceAddress(goldenFBiome, fixture.chaosOccurrenceId),
+      preOutgoing: { sequence: expect.any(Number) },
+    });
+    expect(store).toMatchObject({
+      kind: 'batchRewardStore',
+      result: {
+        origin: rewardStore,
+        selectedStoreKey: 'MetaProgress',
+        selectedPossible: true,
+        historySequence: (chaosHistory?.preOutgoing?.sequence ?? -1) + 1,
+      },
+    });
+    expect(room).toMatchObject({
+      kind: 'roomTarget',
+      result: {
+        pressure: {
+          targetOrigin: target,
+          sourceGameName: 'Chaos_01',
+          selectedGameName: 'F_Combat02',
+          selectedPossible: true,
+          beforeSequence: chaosHistory?.preOutgoing?.sequence,
+        },
+        findings: [],
+      },
+    });
   });
 
   it('evaluates an unresolved F base store from its source prefix and blocks its dependent target', () => {

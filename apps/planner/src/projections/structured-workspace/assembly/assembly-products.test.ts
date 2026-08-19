@@ -26,7 +26,6 @@ import {
 } from './assembly-products';
 import type {
   WorkspaceBatchInteractionRequirement,
-  WorkspaceFrontierInteractionRequirement,
   WorkspaceHubInteractionRequirement,
   WorkspaceOccurrenceInteractionRequirement,
   WorkspaceStartInteractionRequirement,
@@ -35,7 +34,6 @@ import type {
 } from '../interactions/interaction-requirements';
 import {
   appendUniqueBatchInteractionRequirements,
-  appendUniqueFrontierInteractionRequirements,
   appendUniqueHubInteractionRequirements,
   appendUniqueOccurrenceInteractionRequirements,
   appendUniqueStartInteractionRequirements,
@@ -208,19 +206,6 @@ function takeoverInteractionRequirement(): WorkspaceTakeoverInteractionRequireme
   });
 }
 
-function frontierInteractionRequirement(): WorkspaceFrontierInteractionRequirement {
-  const owner = createExitDecisionAddress(createBiomeAddress('Underworld', 'F'), {
-    kind: 'occurrence',
-    occurrenceId: createOccurrenceId('duplicate-frontier-interaction'),
-  });
-  return Object.freeze({
-    capabilities: Object.freeze({ structural: 'createBatch' as const }),
-    kind: 'exitFrontier' as const,
-    owner,
-    structural: Object.freeze({ action: 'createBatch' as const }),
-  });
-}
-
 describe('structured workspace assembly products', () => {
   it('rejects duplicate structural node keys while composing semantic families', () => {
     const node = completionNode('duplicate-node');
@@ -352,19 +337,6 @@ describe('structured workspace assembly products', () => {
     expect(requirements.get(identity)).toBe(requirement);
     expect(() => appendUniqueTakeoverInteractionRequirements(requirements, [requirement])).toThrow(
       `${identity} has multiple projected takeover interaction requirements`,
-    );
-  });
-
-  it('rejects duplicate frontier requirements by kind and semantic owner', () => {
-    const requirement = frontierInteractionRequirement();
-    const identity = `exitFrontier:${semanticAddressKey(requirement.owner)}`;
-    const requirements = new Map<string, WorkspaceFrontierInteractionRequirement>();
-
-    appendUniqueFrontierInteractionRequirements(requirements, [requirement]);
-
-    expect(requirements.get(identity)).toBe(requirement);
-    expect(() => appendUniqueFrontierInteractionRequirements(requirements, [requirement])).toThrow(
-      `${identity} has multiple projected frontier interaction requirements`,
     );
   });
 });

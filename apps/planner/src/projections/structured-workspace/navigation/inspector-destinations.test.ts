@@ -545,8 +545,8 @@ describe('workspace inspector destinations', () => {
     }
     expect(destination(startedWorkspace, startedF.frontier.owner)).toMatchObject({
       inspectorSubject: {
-        frontierFocusKey: startedF.frontier.marker.focusKey,
-        kind: 'frontier',
+        kind: 'node',
+        nodeKey: startedF.entry?.key,
       },
       selectedRailKey: startedF.frontier.marker.focusKey,
     });

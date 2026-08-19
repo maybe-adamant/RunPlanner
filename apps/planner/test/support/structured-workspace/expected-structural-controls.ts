@@ -34,7 +34,6 @@ import { workspaceExpectedControlIdentity, workspaceTestOwnerKey } from './test-
 export type ExpectedWorkspaceStructuralControlKind =
   | 'batchRewardStore'
   | 'decisionEntryRoomPicker'
-  | 'exitFrontierCapability'
   | 'exitSelection'
   | 'fieldsCageOutcome'
   | 'hubTakeover'
@@ -43,7 +42,6 @@ export type ExpectedWorkspaceStructuralControlKind =
   | 'naturalChaosSpawn'
   | 'roomPicker'
   | 'start'
-  | 'structural'
   | 'takeoverBatch'
   | 'topologyRemoval'
   | 'zagreusSpawn';
@@ -348,10 +346,35 @@ export function expectedWorkspaceStructuralControls(
       ) {
         addTakeover(owner);
       }
-      const structural = existing === undefined && owner.source.kind === 'occurrence';
-      if (!structural) break;
-      add('exitFrontierCapability', ownerKey, owner);
-      add('structural', ownerKey, owner);
+      if (existing === undefined && owner.source.kind === 'occurrence') {
+        const progression = normalDecisionProgressionForLayout(layout);
+        const sourceOccurrence = occurrencesById.get(owner.source.occurrenceId);
+        const sourceRoom =
+          sourceOccurrence === undefined
+            ? undefined
+            : requireRoom(catalog, sourceOccurrence.gameName);
+        if (progression !== undefined && sourceRoom?.mode.kind === 'authored') {
+          const sourceRoomTemplateKey = sourceRoom.mode.templateKey;
+          const rewardStorePolicy =
+            progression.rewardStoreOverrides.find(
+              (override) => override.sourceRoomTemplateKey === sourceRoomTemplateKey,
+            )?.policy ?? progression.rewardStorePolicy;
+          if (rewardStorePolicy.kind === 'authoredBaseStore') {
+            const rewardStore = createBatchRewardStoreAddress(biome, owner.source);
+            add('batchRewardStore', workspaceTestOwnerKey(rewardStore), rewardStore);
+          }
+          if (progression.batchPolicy.kind === 'fields') {
+            add('fieldsCageOutcome', ownerKey, owner);
+          }
+          const firstExit = declaredPhysicalExits(catalog, layout, topology, owner.source)
+            ?.filter((exit) => exit.kind === 'normal')
+            .sort((left, right) => left.index - right.index)[0];
+          if (firstExit !== undefined) {
+            const target = createTargetAddress(biome, owner.source, firstExit.exitKey);
+            add('decisionEntryRoomPicker', workspaceTestOwnerKey(target), target, owner);
+          }
+        }
+      }
       break;
     }
     case 'hubDecision':

@@ -1,5 +1,5 @@
 import type { Catalog, RoomDeclaration } from '../../catalog-schema';
-import { createInitialBatchState } from '../batchState';
+import { createInitialBatchRewardStore, createInitialExitDecision } from '../batchState';
 import {
   applyTopologyRemovalImpact,
   describeClearTopologyImpact,
@@ -46,6 +46,7 @@ import { createEmptyRoomActionState } from '../room-actions';
 import { createInfernalContractEntries } from '../shop';
 import {
   failCommand,
+  locateBiome,
   requireOccurrence,
   requireRoom,
   requireTopology,
@@ -105,24 +106,6 @@ function sourceRoom(
     failCommand(command, `${gameName} belongs to ${room.roomSetKey}`);
   }
   return room;
-}
-
-function initialRewardStore(
-  located: LocatedBiome,
-  sourceRoom: RoomDeclaration | undefined,
-): BatchRewardStoreState {
-  const progression = normalDecisionProgressionForLayout(located.layout);
-  const sourceRoomTemplateKey =
-    sourceRoom?.mode.kind === 'authored' ? sourceRoom.mode.templateKey : undefined;
-  const policy =
-    progression !== undefined && sourceRoomTemplateKey !== undefined
-      ? (progression.rewardStoreOverrides.find(
-          (override) => override.sourceRoomTemplateKey === sourceRoomTemplateKey,
-        )?.policy ?? progression.rewardStorePolicy)
-      : { kind: 'none' as const };
-  if (policy.kind === 'authoredBaseStore')
-    return Object.freeze({ kind: 'authoredBaseStore', baseRewardStoreKey: null });
-  return Object.freeze({ kind: policy.kind });
 }
 
 function replaceDecision(
@@ -415,19 +398,59 @@ function createBatch(
   ) {
     failCommand(command, 'normal progression has reached its declaration-owned batch bound');
   }
-  const batchState = createInitialBatchState(progression.batchPolicy);
-  const decision: ExitDecision = Object.freeze({
-    kind: 'exit',
-    source: sourceFromAddress(command.decision.source),
-    normal: Object.freeze({
-      kind: 'batch',
-      rewardStore: initialRewardStore(located, room),
-      batchState,
-      targets: Object.freeze([]),
-    }),
-    selection: Object.freeze({ kind: 'unresolved' }),
-  });
+  const decision = createInitialExitDecision(
+    progression,
+    sourceFromAddress(command.decision.source),
+    room?.mode.kind === 'authored' ? room.mode.templateKey : undefined,
+  );
   return updateTopology(document, located, appendDecision(topology, decision));
+}
+
+/**
+ * Persists the projected frontier envelope and its first semantic edit as one
+ * domain command. The intermediate empty decision is never published, so one
+ * history entry and one undo restore the uncommitted frontier.
+ */
+function initializeExitDecision(
+  document: ProjectDocument,
+  catalog: Catalog,
+  located: LocatedBiome,
+  command: Extract<TopologyCommand, { readonly kind: 'InitializeExitDecision' }>,
+): ProjectDocument {
+  if (
+    command.edit.kind === 'target' &&
+    (command.edit.target.routeKey !== command.decision.routeKey ||
+      command.edit.target.biomeKey !== command.decision.biomeKey ||
+      !sourceEquals(sourceFromAddress(command.decision.source), command.edit.target.source))
+  ) {
+    failCommand(command, 'initial target must belong to the initialized exit decision');
+  }
+  const created = createBatch(document, catalog, located, {
+    kind: 'CreateBatch',
+    decision: command.decision,
+  });
+  const nextLocated = locateBiome(created, catalog, command);
+  switch (command.edit.kind) {
+    case 'rewardStore':
+      return replaceBatchRewardStore(created, catalog, nextLocated, {
+        kind: 'ReplaceBatchRewardStore',
+        rewardStore: { ...command.decision, kind: 'batchRewardStore' },
+        storeKey: command.edit.storeKey,
+      });
+    case 'fieldsCageOutcome':
+      return replaceFieldsCageOutcome(created, catalog, nextLocated, {
+        kind: 'ReplaceFieldsCageOutcome',
+        decision: command.decision,
+        cageOutcome: command.edit.cageOutcome,
+      });
+    case 'target':
+      return createTarget(created, catalog, nextLocated, {
+        kind: 'CreateTarget',
+        target: command.edit.target,
+        occurrenceId: command.edit.occurrenceId,
+        gameName: command.edit.gameName,
+      });
+  }
 }
 
 function failUnavailableOrdinaryTarget(
@@ -731,7 +754,13 @@ function replaceTakeoverBatch(
       rewardStore:
         existing?.normal.kind === 'batch'
           ? existing.normal.rewardStore
-          : initialRewardStore(located, sourceRoomValue),
+          : createInitialBatchRewardStore(
+              normalDecisionProgressionForLayout(located.layout) ??
+                failCommand(command, 'layout has no normal-door decision policy'),
+              sourceRoomValue?.mode.kind === 'authored'
+                ? sourceRoomValue.mode.templateKey
+                : undefined,
+            ),
       batchState: null,
       targets,
     }),
@@ -1483,6 +1512,8 @@ export function applyTopologyCommand(
       return createStart(document, catalog, located, command);
     case 'CreateBatch':
       return createBatch(document, catalog, located, command);
+    case 'InitializeExitDecision':
+      return initializeExitDecision(document, catalog, located, command);
     case 'CreateTarget':
       return createTarget(document, catalog, located, command);
     case 'CreateTakeoverBatch':

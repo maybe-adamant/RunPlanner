@@ -20,7 +20,6 @@ import {
 
 import type {
   WorkspaceLocalVisitOrderControl,
-  WorkspaceExitFrontierCapabilities,
   WorkspaceRoomActionProposal,
   WorkspaceInteractionChoice,
 } from '../contract';
@@ -116,6 +115,7 @@ export interface WorkspaceBatchInteractionRequirement {
   };
   readonly kind: 'batchControls';
   readonly owner: ExitDecisionAddress;
+  readonly persistence?: 'authored' | 'uncommitted';
   readonly rewardStore?: {
     readonly owner: BatchRewardStoreAddress;
     readonly selected?: string;
@@ -233,21 +233,6 @@ export interface WorkspaceHubTakeoverInteractionRequirement {
   readonly owner: ExitDecisionAddress;
 }
 
-export type WorkspaceExitFrontierStructuralRequirement = { readonly action: 'createBatch' };
-
-/**
- * Production requirement for a structural authoring frontier. Exit-frontier
- * capability is the public permission to resolve the corresponding action,
- * so it stays packaged with structural creation rather than being rebuilt by
- * an interaction-side topology traversal.
- */
-export type WorkspaceFrontierInteractionRequirement = {
-  readonly capabilities: WorkspaceExitFrontierCapabilities;
-  readonly kind: 'exitFrontier';
-  readonly owner: ExitDecisionAddress;
-  readonly structural?: WorkspaceExitFrontierStructuralRequirement;
-};
-
 function occurrenceInteractionRequirementKey(
   requirement: WorkspaceOccurrenceInteractionRequirement,
 ): string {
@@ -280,12 +265,6 @@ export function workspaceTakeoverInteractionRequirementKey(
 
 export function workspaceHubTakeoverInteractionRequirementKey(
   requirement: WorkspaceHubTakeoverInteractionRequirement,
-): string {
-  return `${requirement.kind}:${semanticAddressKey(requirement.owner)}`;
-}
-
-function frontierInteractionRequirementKey(
-  requirement: WorkspaceFrontierInteractionRequirement,
 ): string {
   return `${requirement.kind}:${semanticAddressKey(requirement.owner)}`;
 }
@@ -389,21 +368,6 @@ export function appendUniqueHubTakeoverInteractionRequirements(
     if (requirementsByIdentity.has(key)) {
       throw new StructuredWorkspaceProjectionContractError(
         `${key} has multiple projected Hub takeover interaction requirements`,
-      );
-    }
-    requirementsByIdentity.set(key, requirement);
-  }
-}
-
-export function appendUniqueFrontierInteractionRequirements(
-  requirementsByIdentity: Map<string, WorkspaceFrontierInteractionRequirement>,
-  requirements: Iterable<WorkspaceFrontierInteractionRequirement>,
-): void {
-  for (const requirement of requirements) {
-    const key = frontierInteractionRequirementKey(requirement);
-    if (requirementsByIdentity.has(key)) {
-      throw new StructuredWorkspaceProjectionContractError(
-        `${key} has multiple projected frontier interaction requirements`,
       );
     }
     requirementsByIdentity.set(key, requirement);

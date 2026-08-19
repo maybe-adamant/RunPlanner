@@ -47,6 +47,14 @@ import {
   nProject,
 } from '../support/configured-projects';
 
+function startedNTopology(project: ReturnType<typeof nProject>) {
+  const topology = project.routes
+    .find((route) => route.routeKey === 'Surface')
+    ?.biomes.find((biome) => biome.biomeKey === 'N')?.topology;
+  if (topology === null || topology === undefined) throw new Error('missing N topology');
+  return topology;
+}
+
 describe('authored-project commands and topology', () => {
   it('removes the completed-Hub Preboss handoff when an aggregate visit order shortens the Hub', () => {
     const project = applyProjectCommand(createCompleteNProject(), catalog, {
@@ -204,6 +212,126 @@ describe('authored-project commands and topology', () => {
           candidate.source.occurrenceId === startId,
       ),
     ).toMatchObject({ normal: { batchState: { cageOutcome: 'max' } } });
+  });
+
+  it('atomically initializes an outgoing decision with its first semantic edit', () => {
+    const fStartId = createOccurrenceId('atomic-frontier-f-start');
+    const fStarted = applyProjectCommand(fProject(), catalog, {
+      kind: 'CreateStart',
+      biome: fBiome,
+      occurrenceId: fStartId,
+      gameName: 'F_Opening01',
+    });
+    const fDecision = createExitDecisionAddress(fBiome, {
+      kind: 'occurrence',
+      occurrenceId: fStartId,
+    });
+    const history = applyProjectHistoryCommand(createProjectHistory(fStarted), catalog, {
+      kind: 'InitializeExitDecision',
+      decision: fDecision,
+      edit: { kind: 'rewardStore', storeKey: 'RunProgress' },
+    });
+    expect(fTopology(history.present).decisions).toEqual([
+      expect.objectContaining({
+        normal: expect.objectContaining({
+          rewardStore: { kind: 'authoredBaseStore', baseRewardStoreKey: 'RunProgress' },
+          targets: [],
+        }),
+      }),
+    ]);
+    expect(history.past).toHaveLength(1);
+    expect(fTopology(undoProjectHistory(history).present).decisions).toEqual([]);
+
+    const hStartId = createOccurrenceId('atomic-frontier-h-start');
+    const hStarted = applyProjectCommand(hProject(), catalog, {
+      kind: 'CreateStart',
+      biome: hBiome,
+      occurrenceId: hStartId,
+    });
+    const hDecision = createExitDecisionAddress(hBiome, {
+      kind: 'occurrence',
+      occurrenceId: hStartId,
+    });
+    const fields = applyProjectCommand(hStarted, catalog, {
+      kind: 'InitializeExitDecision',
+      decision: hDecision,
+      edit: { kind: 'fieldsCageOutcome', cageOutcome: 'max' },
+    });
+    const fieldsTopology = fields.routes[0]?.biomes.find(
+      (biome) => biome.biomeKey === 'H',
+    )?.topology;
+    expect(
+      fieldsTopology && fieldsTopology.decisions.find((candidate) => candidate.kind === 'exit'),
+    ).toMatchObject({ normal: { batchState: { cageOutcome: 'max' }, targets: [] } });
+
+    const nStartId = createOccurrenceId('atomic-frontier-n-start');
+    const nStarted = applyProjectCommand(nProject(), catalog, {
+      kind: 'CreateStart',
+      biome: nBiome,
+      occurrenceId: nStartId,
+    });
+    const nDecision = createExitDecisionAddress(nBiome, {
+      kind: 'occurrence',
+      occurrenceId: nStartId,
+    });
+    const prehubId = createOccurrenceId('atomic-frontier-n-prehub');
+    const target = applyProjectCommand(nStarted, catalog, {
+      kind: 'InitializeExitDecision',
+      decision: nDecision,
+      edit: {
+        kind: 'target',
+        target: createTargetAddress(nBiome, nDecision.source, 'prehub'),
+        occurrenceId: prehubId,
+        gameName: 'N_PreHub01',
+      },
+    });
+    const targetTopology = target.routes
+      .find((route) => route.routeKey === 'Surface')
+      ?.biomes.find((biome) => biome.biomeKey === 'N')?.topology;
+    expect(
+      targetTopology && targetTopology.decisions.find((candidate) => candidate.kind === 'exit'),
+    ).toMatchObject({ normal: { targets: [{ exitKey: 'prehub', occurrenceId: prehubId }] } });
+    expect(targetTopology?.occurrences).toContainEqual(
+      expect.objectContaining({ occurrenceId: prehubId, gameName: 'N_PreHub01' }),
+    );
+  });
+
+  it('rejects a mismatched atomic target before initializing either decision source', () => {
+    const startId = createOccurrenceId('atomic-mismatch-start');
+    const started = applyProjectCommand(nProject(), catalog, {
+      kind: 'CreateStart',
+      biome: nBiome,
+      occurrenceId: startId,
+    });
+    const decision = createExitDecisionAddress(nBiome, {
+      kind: 'occurrence',
+      occurrenceId: startId,
+    });
+    const mismatchedTarget = createTargetAddress(
+      nBiome,
+      { kind: 'occurrence', occurrenceId: createOccurrenceId('different-source') },
+      'prehub',
+    );
+    const before = encodeProjectDocument(started);
+
+    expect(() =>
+      applyProjectCommand(started, catalog, {
+        kind: 'InitializeExitDecision',
+        decision,
+        edit: {
+          kind: 'target',
+          target: mismatchedTarget,
+          occurrenceId: createOccurrenceId('atomic-mismatch-target'),
+          gameName: 'N_PreHub01',
+        },
+      }),
+    ).toThrowError(
+      expect.objectContaining({
+        detail: 'initial target must belong to the initialized exit decision',
+      }),
+    );
+    expect(encodeProjectDocument(started)).toBe(before);
+    expect(startedNTopology(started).decisions).toEqual([]);
   });
 
   it('rejects Fields cage outcomes outside ordinary Fields batches', () => {

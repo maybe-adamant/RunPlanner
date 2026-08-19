@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
-import type {
-  BiomeTopology,
-  ExitDecision,
-  ProjectDocument,
+import {
+  applyProjectCommand,
+  createOccurrenceId,
+  createTargetAddress,
+  type BiomeTopology,
+  type ExitDecision,
+  type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import {
   createRepresentativeNOPQProject,
@@ -23,7 +26,9 @@ import {
   selectedExitKey,
   selectedExitTarget,
   selectedOrdinaryBatchIndex,
+  uncommittedOrdinaryTargetAuthoringEligibility,
 } from '../../../src/authored-project/topology/query';
+import { nBiome, nProject } from '../support/configured-projects';
 
 function topologyFor(project: ProjectDocument, biomeKey: string): BiomeTopology {
   for (const route of project.routes) {
@@ -43,6 +48,34 @@ function requireExitDecision(
 }
 
 describe('authored topology queries', () => {
+  it('evaluates an uncommitted first target through an engine-owned initial envelope', () => {
+    const startId = createOccurrenceId('uncommitted-query-start');
+    const started = applyProjectCommand(nProject(), catalog, {
+      kind: 'CreateStart',
+      biome: nBiome,
+      occurrenceId: startId,
+    });
+    const topology = topologyFor(started, 'N');
+    const layout = catalog.biomeLayouts.byKey.N;
+    if (layout === undefined) throw new Error('missing N layout');
+    const target = createTargetAddress(
+      nBiome,
+      { kind: 'occurrence', occurrenceId: startId },
+      'prehub',
+    );
+
+    expect(
+      uncommittedOrdinaryTargetAuthoringEligibility(
+        catalog,
+        layout,
+        topology,
+        target,
+        'N_PreHub01',
+      ),
+    ).toMatchObject({ kind: 'authorable', room: { gameName: 'N_PreHub01' } });
+    expect(topology.decisions).toEqual([]);
+  });
+
   it('keeps automatic special returns hidden while an entered Chaos return stays visible', () => {
     expect(hostContinuationExitForDetourRoom(catalog.rooms.byKey.B_Combat01!)).toMatchObject({
       behavior: { kind: 'automaticHostContinuation', rewardPreview: 'hidden' },

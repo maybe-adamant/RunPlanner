@@ -186,7 +186,6 @@ describe('workspace candidate interaction families', () => {
     expect(interaction.owner).toEqual(target);
     expect(interaction.decisionOwner).toEqual(owner);
     expect(interactions.takeoverBatches.get(semanticAddressKey(owner))).toBeUndefined();
-    expect(interactions.exitFrontierCapabilities.has(semanticAddressKey(owner))).toBe(false);
 
     expect(events.filter((event) => event.kind === 'queryBatch')).toEqual([]);
 
@@ -229,8 +228,6 @@ describe('workspace candidate interaction families', () => {
     const takeover = interactions.takeoverBatches.get(semanticAddressKey(owner));
 
     expect(takeover).toBeUndefined();
-    expect(interactions.exitFrontierCapabilities.has(semanticAddressKey(owner))).toBe(false);
-    expect(interactions.structural.has(semanticAddressKey(owner))).toBe(false);
   });
 
   it('loads every family from its addressed domain without reacquiring project evaluation', async () => {

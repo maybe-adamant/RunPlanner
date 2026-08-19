@@ -65,6 +65,7 @@ function applyUnchecked(
       return applyKeepsakeCommand(document, catalog, command);
     case 'CreateStart':
     case 'CreateBatch':
+    case 'InitializeExitDecision':
     case 'CreateTarget':
     case 'CreateTakeoverBatch':
     case 'ReplaceWithTakeoverBatch':

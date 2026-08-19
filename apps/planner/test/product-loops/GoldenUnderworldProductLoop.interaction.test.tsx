@@ -486,6 +486,11 @@ describe('underworld product loop', () => {
     ).toMatchObject({
       selection: { kind: 'additional', additionalExitKey: 'naturalChaos' },
     });
+    application.store.dispatch(
+      authoredProjectReplaced(
+        authorLegalTraitOffers(application.store.getState().projectWorkspace.history.present),
+      ),
+    );
     act(() =>
       application.store.dispatch(
         semanticOwnerFocused(createOccurrenceAddress(goldenFBiome, chaosOccurrenceId)),
@@ -495,7 +500,29 @@ describe('underworld product loop', () => {
     expect(within(enteredChaos).queryByText(/Incoming door reward/)).toBeNull();
 
     await view.user.click(screen.getByRole('button', { name: /Next step.*Continue route/ }));
-    await view.user.click(screen.getByRole('button', { name: 'Add next decision' }));
+    expect(
+      topology()?.decisions.some(
+        (decision) =>
+          decision.kind === 'exit' &&
+          decision.source.kind === 'occurrence' &&
+          decision.source.occurrenceId === chaosOccurrenceId,
+      ),
+    ).toBe(false);
+    const rewardPool = screen.getByRole('combobox', { name: /Base reward pool/ });
+    await view.user.click(rewardPool);
+    let nextPool: HTMLOptionElement | undefined;
+    await waitFor(() => {
+      nextPool = within(rewardPool)
+        .getAllByRole('option')
+        .find(
+          (option): option is HTMLOptionElement =>
+            option instanceof HTMLOptionElement &&
+            ['forced', 'possible'].includes(option.dataset.candidateSupport ?? ''),
+        );
+      expect(nextPool).toBeDefined();
+    });
+    if (nextPool === undefined) throw new Error('Chaos frontier has no selectable reward pool');
+    await view.user.selectOptions(rewardPool, nextPool.value);
     expect(
       topology()?.decisions.some(
         (decision) =>
@@ -532,7 +559,8 @@ describe('underworld product loop', () => {
     await view.user.click(screen.getByRole('button', { name: 'Start biome' }));
     const structure = screen.getByRole('region', { name: 'Oceanus route structure' });
     await view.user.click(within(structure).getByRole('button', { name: /Continue route/ }));
-    expect(screen.getByRole('button', { name: 'Add next decision' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Door 1 room' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Remove these doors' })).toBeNull();
     expect(screen.queryByText('Add doors')).toBeNull();
     const g = application.store
       .getState()
@@ -549,7 +577,7 @@ describe('underworld product loop', () => {
     expect(undone?.topology).toBeNull();
   });
 
-  it('authors a terminal Preboss through the direct decision flow and undoes to its envelope', async () => {
+  it('authors a terminal Preboss atomically and undoes to provisional doors', async () => {
     const application = createApplication();
     const sourceOccurrenceId = goldenFOccurrenceId(10, 1);
     const owner = createExitDecisionAddress(goldenFBiome, {
@@ -572,7 +600,6 @@ describe('underworld product loop', () => {
       ),
     );
     await view.user.click(screen.getByRole('button', { name: /Next step.*Continue route/ }));
-    await view.user.click(screen.getByRole('button', { name: 'Add next decision' }));
     await waitFor(() => expect(screen.getByRole('button', { name: 'Door 1 room' })).toBeTruthy());
 
     const topology = () =>
@@ -587,10 +614,7 @@ describe('underworld product loop', () => {
           decision.source.kind === 'occurrence' &&
           decision.source.occurrenceId === sourceOccurrenceId,
       );
-    expect(terminalDecision()).toMatchObject({
-      kind: 'exit',
-      normal: { kind: 'batch', targets: [] },
-    });
+    expect(terminalDecision()).toBeUndefined();
 
     const historyBeforeTakeover = application.store.getState().projectWorkspace.history.past.length;
     await view.user.click(screen.getByRole('button', { name: 'Door 1 room' }));
@@ -607,7 +631,7 @@ describe('underworld product loop', () => {
         .map(([action]) => action)
         .filter(authoredProjectCommandDispatched.match)
         .map((action) => action.payload.kind),
-    ).toEqual(['ReplaceWithTakeoverBatch']);
+    ).toEqual(['CreateTakeoverBatch']);
     expect(application.store.getState().projectWorkspace.history.past).toHaveLength(
       historyBeforeTakeover + 1,
     );
@@ -625,10 +649,8 @@ describe('underworld product loop', () => {
 
     await view.user.click(screen.getByRole('button', { name: 'Undo' }));
     await waitFor(() => expect(screen.getByRole('button', { name: 'Door 1 room' })).toBeTruthy());
-    expect(terminalDecision()).toMatchObject({
-      kind: 'exit',
-      normal: { kind: 'batch', targets: [] },
-    });
+    expect(terminalDecision()).toBeUndefined();
+    expect(screen.queryByRole('button', { name: 'Remove these doors' })).toBeNull();
   });
 
   it('shrinks a route prefix immediately and preserves existing undo behavior', async () => {

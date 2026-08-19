@@ -161,6 +161,7 @@ export {
   normalDecisionProgressionForLayout,
   additionalExitsForDecision,
   ordinaryTargetAuthoringEligibility,
+  uncommittedOrdinaryTargetAuthoringEligibility,
   selectedExitKey,
   selectedAdditionalExit,
   selectedExitContinuation,
@@ -237,6 +238,11 @@ export {
   type ShopState,
 } from './model';
 export { createEmptyRoomActionState, roomActionKey } from './room-actions';
+export {
+  createInitialBatchRewardStore,
+  createInitialBatchState,
+  createInitialExitDecision,
+} from './batchState';
 export {
   assessStartingArcanaGrasp,
   createDefaultRouteLoadout,

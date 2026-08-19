@@ -415,17 +415,21 @@ same occurrence NonGoal, the editor exposes the retained reward value; it does
 not install a new default or ask the user to author Goal versus NonGoal.
 
 Generated continuation is direct rather than a persistent `Next Step` mode.
-When a selected room directly precedes the next generated decision, `Add next
-decision` dispatches its already-bound `CreateBatch` intent and focuses the
-new decision workbench. This semantic edit is independently undoable; React
-does not reconstruct a command from a frontier address.
+When a selected room directly precedes the next generated decision, the room's
+outgoing section already renders the ordinary empty door workbench. This is a
+pure projection, not a phantom authored decision. Its first reward-store,
+Fields-outcome, ordinary-room, or takeover edit dispatches one complete atomic
+command. React neither reconstructs the command nor chains decision creation
+with another edit, and one undo returns to the provisional cards.
 
-The empty decision uses the ordinary decision layout immediately. Its Door 1
+The provisional frontier and an authored empty decision use the ordinary
+decision layout immediately. Their Door 1
 Room picker offers the declaration-supported ordinary room choices and, where
 the source admits it, a takeover Preboss choice. Selecting an ordinary room
 (including I's `retainNormalPeers` Preboss) creates one target. Selecting a
-`takeOverNormalDoors` Preboss dispatches the decision-owned atomic replacement
-that creates all normal-door targets. The shared picker does not flatten their
+`takeOverNormalDoors` Preboss dispatches decision-owned atomic creation at an
+uncommitted frontier or atomic replacement for an authored envelope. The
+shared picker does not flatten their
 ownership: Door 1 remains target-addressed, while takeover evidence and its
 intent remain decision-addressed.
 

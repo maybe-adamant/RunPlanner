@@ -6,6 +6,7 @@ import {
   applyProjectHistoryCommand,
   createAdditionalExitAddress,
   createBatchRewardStoreAddress,
+  createInitialExitDecision,
   createExitDecisionAddress,
   createExitSelectionAddress,
   createIncomingRewardAddress,
@@ -17,6 +18,7 @@ import {
   createTargetAddress,
   redoProjectHistory,
   undoProjectHistory,
+  normalDecisionProgressionForLayout,
 } from '@run-planner/engine/authored-project';
 
 import { createNormalDispositionByAcquisitionRole } from '../../../src/authored-project/reward-state';
@@ -304,17 +306,37 @@ describe('authored-project route detour commands', () => {
     const opening = createOccurrenceId('natural-chaos-opening');
     const chaos = createOccurrenceId('natural-chaos-target');
     const additional = createAdditionalExitAddress(fBiome, opening, 'naturalChaos');
-    let project = applyProjectCommand(fProject(), catalog, {
+    const started = applyProjectCommand(fProject(), catalog, {
       kind: 'CreateStart',
       biome: fBiome,
       occurrenceId: opening,
       gameName: 'F_Opening01',
     });
-    project = applyProjectCommand(project, catalog, {
+    const added = applyProjectHistoryCommand(createProjectHistory(started), catalog, {
       kind: 'AddNaturalChaos',
       additional,
       occurrenceId: chaos,
     });
+    let project = added.present;
+    const layout = catalog.biomeLayouts.byKey.F;
+    if (layout === undefined) throw new Error('missing F layout');
+    const progression = normalDecisionProgressionForLayout(layout);
+    if (progression === undefined) throw new Error('missing F progression');
+    expect(
+      biomeTopology(project, 'Underworld', 'F').decisions.find(
+        (decision) =>
+          decision.kind === 'exit' &&
+          decision.source.kind === 'occurrence' &&
+          decision.source.occurrenceId === opening,
+      ),
+    ).toEqual(
+      createInitialExitDecision(
+        progression,
+        { kind: 'occurrence', occurrenceId: opening },
+        'Opening',
+      ),
+    );
+    expect(undoProjectHistory(added).present).toBe(started);
     expect(
       biomeTopology(project, 'Underworld', 'F').occurrences.find(
         (occurrence) => occurrence.occurrenceId === opening,

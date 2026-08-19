@@ -71,10 +71,15 @@ import {
 
 let goldenFGHIProject: ReturnType<typeof createGoldenFGHIProject>;
 let representativeNOPQProject: ReturnType<typeof createRepresentativeNOPQProject>;
+let heraclesCombatFixture: ReturnType<typeof createHeraclesCombatFixture>;
 
 beforeAll(() => {
   goldenFGHIProject = createGoldenFGHIProject();
   representativeNOPQProject = createRepresentativeNOPQProject();
+});
+
+beforeAll(() => {
+  heraclesCombatFixture = createHeraclesCombatFixture(representativeNOPQProject);
 });
 import { prepareRoomEncounterPhases } from '../../src/simulation/encounters/preparation';
 import {
@@ -542,6 +547,66 @@ function combatOneCandidates(
   ).candidates.find((phase) => phase.origin.phaseKey === 'Combat1');
   if (candidate === undefined) throw new Error('O Combat1 candidate support is missing');
   return candidate.candidateEncounterKeys;
+}
+
+function createHeraclesCombatFixture(project: ProjectDocument) {
+  const occurrenceId = pOccurrenceId('P_Combat02', 2, 1);
+  const room = createOccurrenceAddress(pBiome, occurrenceId);
+  const intro = phase(pBiome, occurrenceId, 'Intro');
+  const combat = phase(pBiome, occurrenceId, 'Combat');
+  const unavailable = phase(pBiome, pOccurrenceId('P_Combat06', 2, 2), 'Combat');
+  const nHeracles = phase(nBiome, nOccurrenceId('combat05'));
+  const authored = authoredOccurrence(project, 'P', occurrenceId);
+  const retainedCombat = authored.encounters.encounterKeyByPhase.Combat;
+  const baseline = Object.freeze({
+    combatSequence: sequenceStatus(project, combat),
+    combatSupport: support(project, combat),
+    introSupport: support(project, intro),
+    unavailableSequence: sequenceStatus(project, unavailable),
+  });
+
+  const selectedPProject = select(project, intro, 'HeraclesCombatP');
+  const selectedPAuthored = authoredOccurrence(selectedPProject, 'P', occurrenceId);
+  const selectedRoom = evaluatedSurfaceBiome(selectedPProject, 'P').biome.history.rooms.find(
+    (candidate) => semanticAddressKey(candidate.origin) === semanticAddressKey(room),
+  );
+  if (selectedRoom?.postCommit === undefined) {
+    throw new Error('P fixture lost its selected combat room');
+  }
+  const selectedP = Object.freeze({
+    combatSequence: sequenceStatus(selectedPProject, combat),
+    combatSupport: support(selectedPProject, combat),
+    encounterKeys: selectedRoom.postCommit.ledgers.encounterRecords
+      .filter((entry) => semanticAddressKey(entry.origin) === semanticAddressKey(room))
+      .map((entry) => entry.encounterKey),
+    encounterDepthDelta:
+      selectedRoom.postCommit.ledgers.counters.biomeEncounterDepth -
+      selectedRoom.preparation.ledgers.counters.biomeEncounterDepth,
+    encounterKeyByPhase: selectedPAuthored.encounters.encounterKeyByPhase,
+    introSequence: sequenceStatus(selectedPProject, intro),
+    nHeraclesSupport: support(selectedPProject, nHeracles),
+    state: selectedPAuthored.state,
+  });
+
+  const selectedNProject = select(selectedPProject, nHeracles, 'HeraclesCombatN');
+  const selectedN = Object.freeze({
+    combatSequence: sequenceStatus(selectedNProject, combat),
+    combatSupport: support(selectedNProject, combat),
+    findings: evaluatedSurfaceBiome(selectedNProject, 'P').biome.findings,
+    introSequence: sequenceStatus(selectedNProject, intro),
+    introSupport: support(selectedNProject, intro),
+  });
+  const restoredProject = select(selectedNProject, intro, 'GeneratedP_PreCombat');
+
+  return Object.freeze({
+    baseline,
+    combat,
+    originalState: authored.state,
+    retainedCombat,
+    restoredCombatSupport: support(restoredProject, combat),
+    selectedN,
+    selectedP,
+  });
 }
 
 describe('field NPC encounter requirements', () => {
@@ -1554,72 +1619,48 @@ describe('field NPC encounter requirements', () => {
   });
 
   it('trims P Combat only for valid Heracles, retains its selection dormant, and restores it exactly', () => {
-    const occurrenceId = pOccurrenceId('P_Combat02', 2, 1);
-    const room = createOccurrenceAddress(pBiome, occurrenceId);
-    const intro = phase(pBiome, occurrenceId, 'Intro');
-    const combat = phase(pBiome, occurrenceId, 'Combat');
-    const unavailable = phase(pBiome, pOccurrenceId('P_Combat06', 2, 2), 'Combat');
-    let project = representativeNOPQProject;
-    const originalState = authoredOccurrence(project, 'P', occurrenceId).state;
-    const retainedCombat = authoredOccurrence(project, 'P', occurrenceId).encounters
-      .encounterKeyByPhase.Combat;
-
+    const {
+      baseline,
+      combat,
+      originalState,
+      retainedCombat,
+      restoredCombatSupport,
+      selectedN,
+      selectedP,
+    } = heraclesCombatFixture;
     expect(retainedCombat).toBe('GeneratedP');
-    expect(support(project, intro)?.candidateEncounterKeys).toContain('HeraclesCombatP');
-    expect(support(project, combat)).toMatchObject({
+    expect(baseline.introSupport?.candidateEncounterKeys).toContain('HeraclesCombatP');
+    expect(baseline.combatSupport).toMatchObject({
       active: true,
       selectedEncounterKey: 'GeneratedP',
       selectedPossible: true,
     });
-    expect(sequenceStatus(project, combat)).toEqual({ kind: 'active' });
-    expect(sequenceStatus(project, unavailable)).toBeUndefined();
+    expect(baseline.combatSequence).toEqual({ kind: 'active' });
+    expect(baseline.unavailableSequence).toBeUndefined();
 
-    project = select(project, intro, 'HeraclesCombatP');
-    expect(support(project, combat)).toBeUndefined();
-    expect(sequenceStatus(project, intro)).toEqual({ kind: 'active' });
-    expect(sequenceStatus(project, combat)).toEqual({ kind: 'dormantSuffix' });
-    expect(authoredOccurrence(project, 'P', occurrenceId).state).toEqual(originalState);
-    expect(
-      authoredOccurrence(project, 'P', occurrenceId).encounters.encounterKeyByPhase,
-    ).toMatchObject({
+    expect(selectedP.combatSupport).toBeUndefined();
+    expect(selectedP.introSequence).toEqual({ kind: 'active' });
+    expect(selectedP.combatSequence).toEqual({ kind: 'dormantSuffix' });
+    expect(selectedP.state).toEqual(originalState);
+    expect(selectedP.encounterKeyByPhase).toMatchObject({
       Intro: 'HeraclesCombatP',
       Combat: retainedCombat,
     });
+    expect(selectedP.encounterKeys).toEqual(['HeraclesCombatP']);
+    expect(selectedP.encounterDepthDelta).toBe(1);
 
-    const selected = evaluatedSurfaceBiome(project, 'P').biome.history.rooms.find(
-      (candidate) => semanticAddressKey(candidate.origin) === semanticAddressKey(room),
-    );
-    if (selected?.postCommit === undefined) {
-      throw new Error('P fixture lost its selected combat room');
-    }
-    const selectedPostCommit = selected.postCommit;
-    expect(
-      selectedPostCommit.ledgers.encounterRecords
-        .filter((entry) => semanticAddressKey(entry.origin) === semanticAddressKey(room))
-        .map((entry) => entry.encounterKey),
-    ).toEqual(['HeraclesCombatP']);
-    expect(
-      selectedPostCommit.ledgers.counters.biomeEncounterDepth -
-        selected.preparation.ledgers.counters.biomeEncounterDepth,
-    ).toBe(1);
-
-    const nHeracles = phase(nBiome, nOccurrenceId('combat05'));
-    expect(support(project, nHeracles)?.candidateEncounterKeys).toContain('HeraclesCombatN');
-    project = select(project, nHeracles, 'HeraclesCombatN');
-    expect(support(project, intro)).toMatchObject({
+    expect(selectedP.nHeraclesSupport?.candidateEncounterKeys).toContain('HeraclesCombatN');
+    expect(selectedN.introSupport).toMatchObject({
       active: true,
       selectedEncounterKey: 'HeraclesCombatP',
       selectedPossible: false,
     });
-    expect(support(project, combat)).toBeUndefined();
-    expect(sequenceStatus(project, intro)).toEqual({ kind: 'active' });
-    expect(sequenceStatus(project, combat)).toEqual({ kind: 'active' });
-    expect(evaluatedSurfaceBiome(project, 'P').biome.findings).not.toContainEqual(
-      expect.objectContaining({ origin: combat }),
-    );
+    expect(selectedN.combatSupport).toBeUndefined();
+    expect(selectedN.introSequence).toEqual({ kind: 'active' });
+    expect(selectedN.combatSequence).toEqual({ kind: 'active' });
+    expect(selectedN.findings).not.toContainEqual(expect.objectContaining({ origin: combat }));
 
-    project = select(project, intro, 'GeneratedP_PreCombat');
-    expect(support(project, combat)).toMatchObject({
+    expect(restoredCombatSupport).toMatchObject({
       active: true,
       selectedEncounterKey: retainedCombat,
       selectedPossible: true,
