@@ -110,9 +110,13 @@ the next ShipCombat phase. Latest Model may target one exact eligible equipped
 Rank-I Hammer and upgrade it to Rank II through the shared targeted-acquisition
 lifecycle.
 
-The current planner still folds the Icarus trait at encounter completion. The
-source-backed correction and its relationship to wheel selection, repeated
-combat checkpoints, and room-local ordering are owned by
+Encounter end has the same meaning here as in an ordinary combat room: combat
+has ended and the Icarus/wheel objects are available. The later
+`WaitForNextEncounterReady` barrier belongs to starting the next Ship phase,
+not to a different O-specific encounter-end meaning. No room feature or
+physical exit is usable between phases; O has one room-level Cleanup after its
+final active phase. The source evidence and relationship to wheel selection
+and room-local ordering are owned by
 [`ROOM_ACTION_ORDER_GAME_DATA_AUDIT.md`](../audits/ROOM_ACTION_ORDER_GAME_DATA_AUDIT.md).
 
 The remaining NPC event, interaction, reward, and external-profile paths are

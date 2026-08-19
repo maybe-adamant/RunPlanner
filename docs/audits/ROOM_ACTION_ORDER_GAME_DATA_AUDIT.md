@@ -252,10 +252,20 @@ its reward becomes usable. Between active combats, the player may:
 The source does not define a cage-only chronology, an optional-only
 chronology, and an NPC chronology. Those are interactions in the same room.
 
-The planner simplification that a cage completion is one atomic barrier remains
+The physical structure is nevertheless fixed. After room entry, the player
+chooses one unresolved cage, runs that encounter to completion, chooses another
+unresolved cage, and repeats until the active cage count is exhausted. Cage
+identity order is fluid; the sequence of Start/End encounter pairs is not. A
+cage reward may remain unpicked across a later cage start because
+`StartFieldsEncounter` blocks only an incomplete required encounter or an
+object with `BlockFieldsEncounterStart`. Ordinary cage rewards have no such
+flag; Athena does.
+
+The planner simplification that a cage encounter is one atomic barrier remains
 source-compatible. The product need not model reward interaction during an
-active wave so long as it represents every legal between-wave and post-wave
-order.
+active wave so long as it represents every legal room-entry, between-wave, and
+post-wave order. Dependencies between cycles must follow the authored cage
+order rather than the declaration's cage-slot order.
 
 ### Artificer transformation and replacement pickup are different actions
 
@@ -378,11 +388,11 @@ entry order remain their existing topology authorities.
 
 The three representative biome shapes are therefore:
 
-| Biome | Chronology scope                    | Fixed boundaries                                                            | Freely ordered region                                                        | Boundary the model must preserve                                                  |
-| ----- | ----------------------------------- | --------------------------------------------------------------------------- | ---------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| H     | one entered Fields room             | Passive/cage completions and active-wave barriers                           | unlocked cage rewards, optionals, NPCs, source transformations, replacements | no interaction during a modeled wave; phase-produced blockers precede later cages |
-| O     | one entered ShipCombat room         | Intro, wheel choice, matching combat, required-object wait, then next phase | objects produced by the same completed phase                                 | no action crosses into an earlier/later ShipCombat window                         |
-| N     | one entered main or side occurrence | that occurrence's own lifecycle                                             | its local reward/NPC/acquisition actions                                     | Hub visits, side entry, and restoration remain topology between chronologies      |
+| Biome | Chronology scope                    | Fixed boundaries                                                            | Freely ordered region                                                        | Boundary the model must preserve                                                       |
+| ----- | ----------------------------------- | --------------------------------------------------------------------------- | ---------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| H     | one entered Fields room             | Passive entry plus an ordinal Start/End pair for each active chosen cage    | unlocked cage rewards, optionals, NPCs, source transformations, replacements | no interaction during a modeled wave; blocking contacts precede the next authored cage |
+| O     | one entered ShipCombat room         | Intro, wheel choice, matching combat, required-object wait, then next phase | objects produced by the same completed phase                                 | no action crosses into an earlier/later ShipCombat window                              |
+| N     | one entered main or side occurrence | that occurrence's own lifecycle                                             | its local reward/NPC/acquisition actions                                     | Hub visits, side entry, and restoration remain topology between chronologies           |
 
 ### Participation, payload, and order are independent
 
@@ -620,10 +630,10 @@ Each second interaction sees the first interaction's state.
 ```text
 Transform Optional 1 with Artificer
 Transform Optional 2 with Artificer
-Complete Cage 1
+Start and complete Cage 1 atomically
 Interact with Cage 1 reward
 Pick up Optional 1 replacement
-Complete Cage 2
+Start and complete Cage 2 atomically
 Interact with Cage 2 reward
 Pick up Optional 2 replacement
 ```
@@ -634,10 +644,10 @@ structure alone does not assert every authored payload is valid.
 ### Fields with a Gorgon forced encounter
 
 ```text
-Complete the phase that produces Athena
+Start and complete the chosen cage that produces Athena
 Interact with an already-unlocked reward or optional
 Interact with Athena
-Complete the next cage
+Start and complete the next chosen cage
 ```
 
 Athena may move relative to other already-available interactions, but not
