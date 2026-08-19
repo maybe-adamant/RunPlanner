@@ -551,11 +551,13 @@ simulation cache. The document contains only durable semantic choices and its
 schema version.
 
 The normalized `ProjectDocument` is also the portable profile-file format. The
-initial product does not wrap it in a second profile document: a profile is one
-saved planning workspace, and `project.name` supplies the suggested normalized
-filename. A future wrapper is justified only if one profile must own data that
-is not part of one authored project, such as several projects or application
-preferences.
+product does not wrap it in a second profile document: a profile is one saved
+planning workspace. A filename belongs to the application profile session,
+not the authored document. Load captures the selected file's basename, later
+saves reuse it, and New or recovery-only startup clears it so Save falls back
+to `run-plan.runplanner.json`. A future wrapper is justified only if one
+profile must own durable data that is not part of one authored project, such
+as several projects or application preferences.
 
 Manual profile persistence and automatic recovery are separate application
 authorities:
@@ -563,7 +565,7 @@ authorities:
 ```ts
 interface ProfileFileAdapter {
   save(suggestedFileName: string, json: string): Promise<'saved' | 'cancelled'>;
-  load(): Promise<string | null>;
+  load(): Promise<{ readonly fileName: string; readonly json: string } | null>;
 }
 
 interface AutosaveRecoveryAdapter {

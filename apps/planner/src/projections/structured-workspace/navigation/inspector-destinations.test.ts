@@ -127,7 +127,6 @@ function expectNodeRailDestination(
 function emptyProject(routeKey: 'Surface' | 'Underworld', count: number): ProjectDocument {
   return createProjectDocument(catalog, {
     projectId: `inspector-destinations-empty-${routeKey}-${count}`,
-    name: `Inspector destinations empty ${routeKey}`,
     configuredBiomeCounts: { [routeKey]: count },
   });
 }
@@ -782,7 +781,6 @@ describe('workspace inspector destinations', () => {
       appendCompleteN(
         createProjectDocument(catalog, {
           projectId: 'inspector-destinations-handoff',
-          name: 'Inspector destinations Hub handoff',
           configuredBiomeCounts: { Surface: 1 },
         }),
         { includePreboss: false },

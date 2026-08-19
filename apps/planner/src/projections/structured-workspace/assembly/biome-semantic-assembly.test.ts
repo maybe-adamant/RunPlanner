@@ -132,7 +132,6 @@ function selectedContractWithoutNormalTargets() {
 function emptyNProject(): ProjectDocument {
   return createProjectDocument(catalog, {
     configuredBiomeCounts: { Surface: 1 },
-    name: 'Empty N semantic assembly',
     projectId: 'empty-n-semantic-assembly',
   });
 }
@@ -440,7 +439,6 @@ describe('structured workspace biome semantic assembly', () => {
   it('keeps incomplete and route-prefix-blocked biome products explicit', () => {
     const initial = createProjectDocument(catalog, {
       configuredBiomeCounts: { Underworld: 2 },
-      name: 'Semantic prefix states',
       projectId: 'semantic-prefix-states',
     });
     const f = assembleWorkspaceBiomeSemantics(catalog, biomeSource(initial, 'Underworld', 'F'));
@@ -472,7 +470,6 @@ describe('structured workspace biome semantic assembly', () => {
   it('presents a reached contextual block as invalid ahead of a later authored frontier', () => {
     let project = createProjectDocument(catalog, {
       configuredBiomeCounts: { Underworld: 1 },
-      name: 'Blocked incomplete semantic assembly',
       projectId: 'blocked-incomplete-semantic-assembly',
     });
     const openingId = createOccurrenceId('blocked-incomplete-f-opening');

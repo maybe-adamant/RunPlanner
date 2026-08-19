@@ -891,63 +891,58 @@ export function App({
   return (
     <main className="app-shell">
       <header className="app-header">
-        <div>
-          <p className="eyebrow">Hades II Run Director</p>
+        <div className="app-brand">
           <h1>Run Planner</h1>
         </div>
-        <div className="header-actions">
-          <span className="foundation-status">Project editor</span>
-          <StatusBadge status={feedback.status} />
-          <FindingCount count={feedback.findingCount} label="project findings" />
-          <ProjectHistoryControls />
-        </div>
+        <ProjectFileControls operations={projectOperations} />
       </header>
 
-      <ProjectFileControls operations={projectOperations} />
-
-      <nav className="route-tabs" aria-label="Planner sections">
-        {editorNavigation.routes.values.map((route) => {
-          const routeFeedback = feedback.routes.get(route.routeKey);
-          if (routeFeedback === undefined) {
-            throw new Error(`Feedback omitted route ${route.routeKey}`);
-          }
-          const feedbackId = `${route.routeKey}-route-feedback`;
-          return (
-            <button
-              aria-current={route.routeKey === activeRouteKey ? 'page' : undefined}
-              aria-describedby={feedbackId}
-              aria-label={route.label}
-              className="route-tab"
-              data-active={route.routeKey === activeRouteKey}
-              key={route.routeKey}
-              onClick={() => dispatch(routeSelected(route.routeKey))}
-              type="button"
-            >
-              <span>{route.label}</span>
-              <span
-                aria-label={`${routeFeedback.status.label}${routeFeedback.findingCount === 0 ? '' : `, ${routeFeedback.findingCount} findings`}`}
-                className="navigation-feedback"
-                id={feedbackId}
+      <div className="app-navigation-bar">
+        <nav className="route-tabs" aria-label="Planner sections">
+          {editorNavigation.routes.values.map((route) => {
+            const routeFeedback = feedback.routes.get(route.routeKey);
+            if (routeFeedback === undefined) {
+              throw new Error(`Feedback omitted route ${route.routeKey}`);
+            }
+            const feedbackId = `${route.routeKey}-route-feedback`;
+            return (
+              <button
+                aria-current={route.routeKey === activeRouteKey ? 'page' : undefined}
+                aria-describedby={feedbackId}
+                aria-label={route.label}
+                className="route-tab"
+                data-active={route.routeKey === activeRouteKey}
+                key={route.routeKey}
+                onClick={() => dispatch(routeSelected(route.routeKey))}
+                type="button"
               >
-                <StatusBadge status={routeFeedback.status} />
-                <FindingCount
-                  count={routeFeedback.findingCount}
-                  label={`${route.label} findings`}
-                />
-              </span>
-            </button>
-          );
-        })}
-        <button
-          aria-current={activeRouteKey === null ? 'page' : undefined}
-          className="route-tab"
-          data-active={activeRouteKey === null}
-          onClick={() => dispatch(settingsSelected())}
-          type="button"
-        >
-          Settings
-        </button>
-      </nav>
+                <span>{route.label}</span>
+                <span
+                  aria-label={`${routeFeedback.status.label}${routeFeedback.findingCount === 0 ? '' : `, ${routeFeedback.findingCount} findings`}`}
+                  className="navigation-feedback"
+                  id={feedbackId}
+                >
+                  <StatusBadge status={routeFeedback.status} />
+                  <FindingCount
+                    count={routeFeedback.findingCount}
+                    label={`${route.label} findings`}
+                  />
+                </span>
+              </button>
+            );
+          })}
+          <button
+            aria-current={activeRouteKey === null ? 'page' : undefined}
+            className="route-tab"
+            data-active={activeRouteKey === null}
+            onClick={() => dispatch(settingsSelected())}
+            type="button"
+          >
+            Settings
+          </button>
+        </nav>
+        <ProjectHistoryControls />
+      </div>
 
       {activeRouteNavigation !== undefined &&
         activeRouteFeedback !== undefined &&
@@ -973,10 +968,6 @@ export function App({
             </div>
           </header>
           <dl className="catalog-summary">
-            <div>
-              <dt>Project</dt>
-              <dd>{project.name}</dd>
-            </div>
             <div>
               <dt>Catalog</dt>
               <dd>{catalogSummary.version}</dd>

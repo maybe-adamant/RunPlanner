@@ -1310,19 +1310,35 @@ function roomActionsForOccurrence(
   const roster = input.evaluatedRoom?.roomActionRoster;
   if (roster === undefined || input.evaluatedRoom?.entered !== true) return undefined;
   const owner = createOccurrenceAddress(input.biome, input.occurrence.occurrenceId);
-  const proposals = roster.proposals.map((proposal, index) =>
-    Object.freeze({
-      kind: proposal.kind,
-      key: `${proposal.kind}:${index}:${roomActionKey(proposal.reference)}`,
-      label:
-        proposal.kind === 'remove'
-          ? 'Remove from room actions'
-          : `${proposal.kind === 'insert' ? 'Insert' : 'Move'} to position ${(proposal.toIndex ?? 0) + 1}`,
-      reference: proposal.reference,
-      structurallyAuthorable: proposal.structurallyAuthorable,
-      ...(proposal.toIndex === undefined ? {} : { toIndex: proposal.toIndex }),
-    }),
+  const inactiveUnrankedContractKeys = new Set(
+    roster.rows.flatMap((row) =>
+      row.reference.kind === 'interactAcquisitionEntry' &&
+      row.reference.entryKey === INFERNAL_CONTRACT_ENTRY_KEY &&
+      roomLocal.kind === 'shop' &&
+      !roomLocal.supplementalOffers.some(
+        (supplemental) => supplemental.key === INFERNAL_CONTRACT_ENTRY_KEY,
+      ) &&
+      row.rank === null
+        ? [row.key]
+        : [],
+    ),
   );
+  const presentedRows = roster.rows.filter((row) => !inactiveUnrankedContractKeys.has(row.key));
+  const proposals = roster.proposals
+    .filter((proposal) => !inactiveUnrankedContractKeys.has(roomActionKey(proposal.reference)))
+    .map((proposal, index) =>
+      Object.freeze({
+        kind: proposal.kind,
+        key: `${proposal.kind}:${index}:${roomActionKey(proposal.reference)}`,
+        label:
+          proposal.kind === 'remove'
+            ? 'Remove from room actions'
+            : `${proposal.kind === 'insert' ? 'Insert' : 'Move'} to position ${(proposal.toIndex ?? 0) + 1}`,
+        reference: proposal.reference,
+        structurallyAuthorable: proposal.structurallyAuthorable,
+        ...(proposal.toIndex === undefined ? {} : { toIndex: proposal.toIndex }),
+      }),
+    );
   const proposalKeysByAction = new Map<string, string[]>();
   for (const proposal of proposals) {
     const key = roomActionKey(proposal.reference);
@@ -1385,7 +1401,7 @@ function roomActionsForOccurrence(
     owner,
     proposals: Object.freeze(proposals),
     rows: Object.freeze(
-      roster.rows.map((row) => {
+      presentedRows.map((row) => {
         const address = createRoomActionAddress(
           input.biome,
           input.occurrence.occurrenceId,
@@ -1821,16 +1837,51 @@ function presentedEncounterPhases(
 }
 
 function roomFeatures(
+  input: WorkspaceOccurrenceAssemblyInput,
+  room: RoomDeclaration,
   zagreusSpawn: WorkspaceRoomSummary['zagreusSpawn'],
   naturalChaosSpawn: WorkspaceRoomSummary['naturalChaosSpawn'],
 ): readonly WorkspaceRoomFeature[] {
+  const authored = new Set(input.facts.authoredAdditionalExitKeys);
+  const additionalOwner = (key: string) =>
+    createAdditionalExitAddress(input.biome, input.occurrence.occurrenceId, key);
+  const zagreus = room.additionalExits.find((candidate) => candidate.kind === 'zagreusContract');
+  const chaos = room.additionalExits.find((candidate) => candidate.kind === 'naturalChaos');
   return Object.freeze([
     ...(zagreusSpawn?.materialized === true
-      ? [Object.freeze({ kind: 'zagreusContract' as const, control: zagreusSpawn })]
-      : []),
-    ...(naturalChaosSpawn === undefined
-      ? []
-      : [Object.freeze({ kind: 'naturalChaos' as const, control: naturalChaosSpawn })]),
+      ? [
+          Object.freeze({
+            kind: 'zagreusContract' as const,
+            action: 'add' as const,
+            control: zagreusSpawn,
+          }),
+        ]
+      : zagreus !== undefined && authored.has(zagreus.key)
+        ? [
+            Object.freeze({
+              kind: 'zagreusContract' as const,
+              action: 'remove' as const,
+              owner: additionalOwner(zagreus.key),
+            }),
+          ]
+        : []),
+    ...(naturalChaosSpawn !== undefined
+      ? [
+          Object.freeze({
+            kind: 'naturalChaos' as const,
+            action: 'add' as const,
+            control: naturalChaosSpawn,
+          }),
+        ]
+      : chaos !== undefined && authored.has(chaos.key)
+        ? [
+            Object.freeze({
+              kind: 'naturalChaos' as const,
+              action: 'remove' as const,
+              owner: additionalOwner(chaos.key),
+            }),
+          ]
+        : []),
   ]);
 }
 
@@ -2219,7 +2270,7 @@ export function assembleWorkspaceOccurrence(
     ...(zagreusSpawn === undefined ? [] : [zagreusSpawn.marker]),
     ...(naturalChaosSpawn === undefined ? [] : [naturalChaosSpawn.marker]),
   ]);
-  const features = roomFeatures(zagreusSpawn, naturalChaosSpawn);
+  const features = roomFeatures(input, room, zagreusSpawn, naturalChaosSpawn);
   const workbench = roomWorkbenchPresentation(encounterPhases, features, roomLocal, roomActions);
   const roomSummary: WorkspaceRoomSummary = Object.freeze({
     address,

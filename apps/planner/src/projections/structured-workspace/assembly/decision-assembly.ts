@@ -197,7 +197,6 @@ function missingTargetsForPhysicalExits(
             ? Object.freeze({ kind: 'ready' as const })
             : Object.freeze({
                 kind: 'awaitingPriorExit' as const,
-                message: `Choose Door ${firstMissing.index} first.`,
                 prerequisiteExitKey: firstMissing.exitKey,
               })),
         exitKey: exit.exitKey,
@@ -283,13 +282,11 @@ function missingTargetPrerequisite(
   ) {
     return Object.freeze({
       kind: 'awaitingBatchRewardStore' as const,
-      message: 'Choose the reward pool first.',
     });
   }
   if (fieldsBatchOwnsOutcome && decision.normal.batchState === null) {
     return Object.freeze({
       kind: 'awaitingFieldsCageOutcome' as const,
-      message: 'Choose the Fields door roll first.',
     });
   }
   return undefined;
@@ -980,10 +977,6 @@ function assembleBatchDecision(
               : Object.freeze({
                   availability: 'unavailable' as const,
                   owner,
-                  reason:
-                    runState.reason === 'coverageNotReached'
-                      ? 'Run State is unavailable because this decision has not been reached.'
-                      : 'Run State is unavailable for this decision.',
                   title: 'Decision',
                 }),
         }),

@@ -7,7 +7,6 @@ import { createDefaultRouteLoadout } from './loadout';
 
 export interface CreateProjectDocumentOptions {
   readonly projectId: string;
-  readonly name: string;
   readonly configuredBiomeCounts?: Readonly<Record<string, number | undefined>>;
 }
 
@@ -68,7 +67,6 @@ export function createProjectDocument(
     {
       schemaVersion: PROJECT_DOCUMENT_SCHEMA_VERSION,
       projectId: options.projectId,
-      name: options.name,
       catalogVersion: catalog.version,
       routes,
     },
@@ -82,6 +80,5 @@ export function createEmptyProjectDocument(
 ): ProjectDocument {
   return createProjectDocument(catalog, {
     projectId: options.projectId,
-    name: options.name,
   });
 }

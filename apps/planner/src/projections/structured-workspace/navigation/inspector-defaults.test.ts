@@ -63,7 +63,6 @@ function biome(projectDocument: ProjectDocument, biomeKey: string): WorkspaceBio
 function emptyProject(routeKey: 'Surface' | 'Underworld', count: number): ProjectDocument {
   return createProjectDocument(catalog, {
     projectId: `default-inspector-empty-${routeKey}-${count}`,
-    name: `Default inspector empty ${routeKey}`,
     configuredBiomeCounts: { [routeKey]: count },
   });
 }
@@ -276,7 +275,6 @@ describe('workspace inspector defaults', () => {
       appendCompleteN(
         createProjectDocument(catalog, {
           projectId: 'default-inspector-handoff',
-          name: 'Default inspector Hub handoff',
           configuredBiomeCounts: { Surface: 1 },
         }),
         { includePreboss: false },

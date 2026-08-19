@@ -76,11 +76,11 @@ describe('App', () => {
     expect(markup).toContain('Configure route up to');
     expect(markup).toContain('No biomes');
     expect(markup).toContain('No biomes configured.');
-    expect(markup).toContain('Project editor');
-    expect(markup).toContain('Empty project');
     expect(markup).toContain('Findings');
     expect(markup).toContain('Configure a biome in this route to begin simulation.');
     expect(markup).toContain('data-editor-layout="overview"');
+    expect(markup).not.toContain('Hades II Run Director');
+    expect(markup).not.toContain('Project editor');
   });
 
   it('renders the route NPC index as a distinct panel, including an empty route', () => {
@@ -194,8 +194,8 @@ describe('App', () => {
     const markup = appMarkup(application);
     expect(markup).toContain('Route structure');
     expect(markup).toContain('<strong>Opening</strong>');
-    expect(markup).toContain('<h3>Opening 01</h3>');
-    expect(markup).toContain('Details');
+    expect(markup).toContain('aria-label="Entering Opening 01"');
+    expect(markup).not.toContain('<p class="eyebrow">Details</p>');
     expect(markup).toContain('Continue route');
     expect(markup).toContain('data-editor-layout="biome"');
   });

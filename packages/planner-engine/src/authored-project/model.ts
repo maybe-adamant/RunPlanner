@@ -5,7 +5,7 @@ import type {
   AuthoredTraitOffer,
 } from './traits';
 
-export const PROJECT_DOCUMENT_SCHEMA_VERSION = 47 as const;
+export const PROJECT_DOCUMENT_SCHEMA_VERSION = 48 as const;
 
 declare const occurrenceIdBrand: unique symbol;
 
@@ -328,7 +328,6 @@ export interface AuthoredRoutePlan {
 export interface ProjectDocument {
   readonly schemaVersion: typeof PROJECT_DOCUMENT_SCHEMA_VERSION;
   readonly projectId: string;
-  readonly name: string;
   readonly catalogVersion: string;
   readonly routes: readonly AuthoredRoutePlan[];
 }

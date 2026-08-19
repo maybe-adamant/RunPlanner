@@ -17,10 +17,8 @@ import {
   type WorkspaceRoomFeature,
   type WorkspaceRewardWheelDescriptor,
   type WorkspaceShipPhasePresentation,
-  type WorkspaceNaturalChaosSpawnControl,
   type WorkspaceNaturalChaosExitControl,
   type WorkspaceRunStateLauncher,
-  type WorkspaceZagreusSpawnControl,
 } from '@planner/projections/structured-workspace';
 import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
 import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
@@ -228,7 +226,10 @@ export function NaturalChaosMapWorkbench({
     workspaceInteractionKey(control.owner),
   );
   return (
-    <label className="field-control" htmlFor={`chaos-map-${control.door.room.occurrenceId}`}>
+    <label
+      className="field-control field-control-inline"
+      htmlFor={`chaos-map-${control.door.room.occurrenceId}`}
+    >
       <span>Map</span>
       <select
         id={`chaos-map-${control.door.room.occurrenceId}`}
@@ -242,30 +243,6 @@ export function NaturalChaosMapWorkbench({
         ))}
       </select>
     </label>
-  );
-}
-
-function HubRewardContext({ door }: { readonly door?: WorkspaceDoorContract }) {
-  const dispatch = useAppDispatch();
-  const preview = door?.rewardPreview;
-  const reward =
-    preview?.kind === 'visible' && preview.rewards.length === 1 ? preview.rewards[0] : undefined;
-  if (reward === undefined) return null;
-
-  return (
-    <section aria-label="Hub reward" className="hub-reward-context">
-      <span className="hub-reward-context-label">Hub reward</span>
-      <span className="hub-reward-summary">{reward.summary}</span>
-      {reward.control === undefined ? null : (
-        <button
-          className="quiet-action action-compact"
-          onClick={() => dispatch(semanticOwnerFocused(reward.marker.address))}
-          type="button"
-        >
-          Edit Hub reward
-        </button>
-      )}
-    </section>
   );
 }
 
@@ -285,6 +262,7 @@ function CustomizableEncounterPhaseControl({
       <ContextualPicker
         id={`${idPrefix}-${phase.address.phaseKey}`}
         label="Encounter"
+        layout="inline"
         loading={candidates.pending}
         model={candidates.result ?? emptyEncounterPicker}
         onOpenChange={(open) => {
@@ -411,9 +389,6 @@ function EncounterWorkbench({
   if (phases.length === 0) return null;
   return (
     <section aria-label="Encounter phases" className="encounter-editor">
-      <div className="local-reward-heading">
-        <h4>Encounter</h4>
-      </div>
       <div className="encounter-phase-list">
         {phases.map((phase) => (
           <EncounterPhaseControl
@@ -439,7 +414,7 @@ function FieldsWorkbench({
       <div className="local-reward-heading">
         <h4>Fields setup</h4>
       </div>
-      <label className="field-control">
+      <label className="field-control field-control-inline">
         <span>Optional pickups</span>
         <select
           aria-label="Optional pickups"
@@ -1195,66 +1170,104 @@ function RoomActionsWorkbench({
 
 /** The selected Midshop owns only the available spawn affordance. */
 function ZagreusSpawnWorkbench({
-  control,
+  feature,
   interactions,
 }: {
-  readonly control: WorkspaceZagreusSpawnControl;
+  readonly feature: Extract<WorkspaceRoomFeature, { readonly kind: 'zagreusContract' }>;
   readonly interactions: WorkspaceInteractionCatalog;
 }) {
   const executeIntent = useCommandIntent();
-  const interaction = requireWorkspaceInteraction(
-    interactions.zagreusSpawns,
-    workspaceInteractionKey(control.owner),
-  );
+  const owner = feature.action === 'add' ? feature.control.owner : feature.owner;
   return (
     <section aria-label="Zagreus contract availability" className="zagreus-contract-workbench">
-      <div className="local-reward-heading">
-        <div className="owner-markers">
-          <h4>Zagreus contract</h4>
-          <SemanticOwnerMarker address={control.owner} />
-        </div>
+      <div className="owner-markers">
+        {feature.action === 'add' ? (
+          <button
+            className="quiet-action action-compact"
+            data-command="AddZagreusContract"
+            onClick={() =>
+              executeIntent(
+                requireWorkspaceInteraction(
+                  interactions.zagreusSpawns,
+                  workspaceInteractionKey(owner),
+                ).spawnIntent(),
+              )
+            }
+            type="button"
+          >
+            Add Zagreus contract
+          </button>
+        ) : (
+          <button
+            className="danger-action action-compact"
+            data-command="RemoveZagreusContract"
+            onClick={() =>
+              executeIntent(
+                requireWorkspaceInteraction(
+                  interactions.zagreusContracts,
+                  workspaceInteractionKey(owner),
+                ).removeIntent,
+              )
+            }
+            type="button"
+          >
+            Remove Zagreus contract
+          </button>
+        )}
+        {feature.action === 'add' ? <SemanticOwnerMarker address={owner} /> : null}
       </div>
-      <button
-        className="quiet-action action-compact"
-        data-command="AddZagreusContract"
-        onClick={() => executeIntent(interaction.spawnIntent())}
-        type="button"
-      >
-        Add Zagreus contract
-      </button>
     </section>
   );
 }
 
 /** A selected source exposes only the declared natural-Chaos creation command. */
 function NaturalChaosSpawnWorkbench({
-  control,
+  feature,
   interactions,
 }: {
-  readonly control: WorkspaceNaturalChaosSpawnControl;
+  readonly feature: Extract<WorkspaceRoomFeature, { readonly kind: 'naturalChaos' }>;
   readonly interactions: WorkspaceInteractionCatalog;
 }) {
   const executeIntent = useCommandIntent();
-  const interaction = requireWorkspaceInteraction(
-    interactions.naturalChaosSpawns,
-    workspaceInteractionKey(control.owner),
-  );
+  const owner = feature.action === 'add' ? feature.control.owner : feature.owner;
   return (
     <section aria-label="Natural Chaos availability" className="zagreus-contract-workbench">
-      <div className="local-reward-heading">
-        <div className="owner-markers">
-          <h4>Chaos gate</h4>
-          <SemanticOwnerMarker address={control.owner} />
-        </div>
+      <div className="owner-markers">
+        {feature.action === 'add' ? (
+          <button
+            className="quiet-action action-compact"
+            data-command="AddNaturalChaos"
+            onClick={() =>
+              executeIntent(
+                requireWorkspaceInteraction(
+                  interactions.naturalChaosSpawns,
+                  workspaceInteractionKey(owner),
+                ).spawnIntent(),
+              )
+            }
+            type="button"
+          >
+            Add Chaos gate
+          </button>
+        ) : (
+          <button
+            className="danger-action action-compact"
+            data-command="RemoveNaturalChaos"
+            onClick={() =>
+              executeIntent(
+                requireWorkspaceInteraction(
+                  interactions.naturalChaosExits,
+                  workspaceInteractionKey(owner),
+                ).removeIntent,
+              )
+            }
+            type="button"
+          >
+            Remove Chaos gate
+          </button>
+        )}
+        {feature.action === 'add' ? <SemanticOwnerMarker address={owner} /> : null}
       </div>
-      <button
-        className="quiet-action action-compact"
-        data-command="AddNaturalChaos"
-        onClick={() => executeIntent(interaction.spawnIntent())}
-        type="button"
-      >
-        Add Chaos gate
-      </button>
     </section>
   );
 }
@@ -1269,7 +1282,10 @@ function AnomalyMapControl({ room }: { readonly room: WorkspaceRoomSummary }) {
   const anomaly = room.anomaly;
   if (anomaly === undefined) return null;
   return (
-    <label className="field-control" htmlFor={`anomaly-map-${room.occurrenceId}`}>
+    <label
+      className="field-control field-control-inline"
+      htmlFor={`anomaly-map-${room.occurrenceId}`}
+    >
       <span>Map</span>
       <select
         id={`anomaly-map-${room.occurrenceId}`}
@@ -1361,44 +1377,20 @@ export function AnomalyIdentityControls({ room }: { readonly room: WorkspaceRoom
  */
 export function RoomOfferEditor({
   idPrefix,
-  incomingDoor,
   interactions,
   presentation,
   room,
 }: {
   readonly idPrefix: string;
-  readonly incomingDoor?: WorkspaceDoorContract;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly presentation: 'doorTarget' | 'full' | 'hubRoomLocal';
   readonly room: WorkspaceRoomSummary;
 }) {
   const state = room.roomLocal;
   const showMainReward = presentation === 'full';
-  const visibleIncomingRewards =
-    presentation === 'doorTarget' && incomingDoor?.rewardPreview.kind === 'visible'
-      ? incomingDoor.rewardPreview.rewards
-      : Object.freeze([]);
 
   return (
     <>
-      {presentation === 'hubRoomLocal' ? (
-        <HubRewardContext {...(incomingDoor === undefined ? {} : { door: incomingDoor })} />
-      ) : null}
-      {visibleIncomingRewards.length === 1 ? (
-        <p className="fixed-room-state">
-          Incoming door reward: {visibleIncomingRewards[0]!.summary}
-        </p>
-      ) : null}
-      {visibleIncomingRewards.length > 1 ? (
-        <dl className="fields-batch-summary fixed-room-state">
-          {visibleIncomingRewards.map((reward) => (
-            <div key={reward.key}>
-              <dt>{reward.label}</dt>
-              <dd>{reward.summary}</dd>
-            </div>
-          ))}
-        </dl>
-      ) : null}
       {showMainReward && state.kind === 'none' ? (
         <p className="fixed-room-state">No room reward.</p>
       ) : null}
@@ -1460,17 +1452,21 @@ function RoomFeaturesWorkbench({
           case 'zagreusContract':
             return (
               <ZagreusSpawnWorkbench
-                control={feature.control}
+                feature={feature}
                 interactions={interactions}
-                key={workspaceInteractionKey(feature.control.owner)}
+                key={workspaceInteractionKey(
+                  feature.action === 'add' ? feature.control.owner : feature.owner,
+                )}
               />
             );
           case 'naturalChaos':
             return (
               <NaturalChaosSpawnWorkbench
-                control={feature.control}
+                feature={feature}
                 interactions={interactions}
-                key={workspaceInteractionKey(feature.control.owner)}
+                key={workspaceInteractionKey(
+                  feature.action === 'add' ? feature.control.owner : feature.owner,
+                )}
               />
             );
         }
@@ -1578,23 +1574,38 @@ export function OccurrenceWorkbench({
   runState,
 }: OccurrenceWorkbenchProps) {
   const idPrefix = `occurrence-${room.occurrenceId}`;
+  const incomingRewards =
+    incomingDoor?.rewardPreview.kind === 'visible' ? incomingDoor.rewardPreview.rewards : [];
+  const incomingRewardSummary = incomingRewards.map((reward) => reward.summary).join(', ');
+  const heading =
+    incomingRewardSummary === ''
+      ? `Entering ${room.label}`
+      : `Entering ${room.label} · ${
+          incomingRewards.length === 1 ? 'Incoming Reward' : 'Incoming Rewards'
+        }: ${incomingRewardSummary}`;
 
   return (
     <article className="room-card biome-occurrence-workbench">
       <header className="room-card-heading">
-        <div>
-          <p className="card-kicker">{room.entered ? 'Entered room' : 'Offered room'}</p>
-          <h3>{room.label}</h3>
-        </div>
+        <h3 aria-label={heading}>
+          <span>Entering {room.label}</span>
+          {incomingRewardSummary === '' ? null : (
+            <span aria-hidden="true" className="room-heading-incoming-reward">
+              <span className="room-heading-separator">·</span>
+              <span className="room-heading-incoming-label">
+                {incomingRewards.length === 1 ? 'Incoming Reward' : 'Incoming Rewards'}:
+              </span>
+              <strong>{incomingRewardSummary}</strong>
+            </span>
+          )}
+        </h3>
         <div className="owner-markers">
-          <span className="room-kind">{room.kind}</span>
           <SemanticOwnerMarker address={room.address} />
           {runState === undefined ? null : <RunStateLauncher launcher={runState} />}
         </div>
       </header>
       <RoomOfferEditor
         idPrefix={idPrefix}
-        {...(incomingDoor === undefined ? {} : { incomingDoor })}
         interactions={interactions}
         presentation={presentation}
         room={room}

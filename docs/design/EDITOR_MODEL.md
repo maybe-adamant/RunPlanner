@@ -213,6 +213,12 @@ mixed Room Actions chronology. Shops render inventory and conditions, Room
 features, and Room Actions. Empty sections remain absent, and outgoing doors
 stay occurrence-stage siblings below the room body.
 
+The room header combines the room identity and any door-visible incoming reward
+in one line (`Entering <room> · Incoming Reward: <reward>`). It does not repeat
+either fact in a second details block. Room-feature children likewise render
+their bound action directly under `Room features`; they do not add a duplicate
+Chaos-gate or Zagreus-contract heading above that action.
+
 For encounter selection, meaningful means a set-backed phase with two or more
 declaration-owned choices; it does not mean that two candidates happen to be
 eligible in the current evaluation. The control projects the exact
@@ -368,24 +374,25 @@ target and reward remain editable while its selection is declaration-derived,
 so React adds neither a player branch selector nor a special return control.
 
 A selected, details-active declared Midshop with materialized Shop state
-exposes the bound Zagreus spawn action from its Shop workbench. The persisted
+exposes the bound Zagreus Add action from its Room features. Once authored,
+the same feature surface exposes the corresponding Remove action. The persisted
 contract remains a sibling continuation in the containing decision, where the
 normal lane and fixed `C_Boss01` card are independently inspectable and
 selectable. Findings never hide an already-active selected source control;
-unpicked Midshops have no contract surface. `C_Boss01` uses the same ordinary
+unpicked Midshops have no active contract control. `C_Boss01` uses the same ordinary
 width-one continuation presentation. React supplies no eligibility, topology,
 reward, or return policy.
 
 A selected, details-active N/F/G/P room with declared natural-Chaos capability
-exposes one bound spawn action in Room features. Adding an optional room-local
+exposes one bound Add action in Room features. Once authored, the same feature
+surface exposes its bound Remove action. Adding an optional room-local
 gate configures the current room and is not itself a peer of the primary
 route-navigation choice. Once authored, however, the gate is a genuine
 sibling continuation in the containing decision, where the normal lane and
 concrete Chaos room are independently inspectable and use the same single-choice
-interaction. The Chaos card exposes its declaration-owned map domain, fixed
-encounter and reward facts, and removal action without inventing editable fixed
-leaves. Invalid active gates retain those controls; unpicked source rooms retain
-authored state without exposing an active Room features control. Selecting
+interaction. The Chaos card exposes its declaration-owned map domain and fixed
+encounter and reward facts without inventing editable fixed leaves. Invalid
+active gates retain those controls. Selecting
 Chaos publishes its downstream continuation as the ordinary next-step frontier.
 React supplies no source, spacing, depth, map, reward, or return policy.
 
@@ -753,9 +760,11 @@ The user-facing project lifecycle has one explicit file workflow:
 Local Save/Load and Export/Import are not retained as two public persistence
 concepts. Browser Save Profile uses a
 download and Browser Load Profile uses an upload. A later desktop host may use
-native file dialogs through the same application contract. The suggested
-filename is derived from the editable project name, for example
-`erebus-route.runplanner.json`.
+native file dialogs through the same application contract. The application
+profile session remembers the basename returned by Load Profile and reuses it
+for later saves. New and recovery-only startup have no filename, so Save
+Profile suggests `run-plan.runplanner.json`. The filename never enters the
+authored document, undo history, or dirty-state comparison.
 
 Explicit profile replacement is atomic: successful load resets undo/redo,
 runs one fresh simulation, installs the loaded document as the clean baseline,

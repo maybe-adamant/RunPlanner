@@ -356,11 +356,7 @@ function decodeRoutePlan(
 
 export function decodeProjectDocument(value: unknown, catalog: Catalog): ProjectDocument {
   const document = expectRecord(value, '$');
-  expectExactKeys(
-    document,
-    ['schemaVersion', 'projectId', 'name', 'catalogVersion', 'routes'],
-    '$',
-  );
+  expectExactKeys(document, ['schemaVersion', 'projectId', 'catalogVersion', 'routes'], '$');
 
   if (document.schemaVersion !== PROJECT_DOCUMENT_SCHEMA_VERSION) {
     fail(
@@ -370,7 +366,6 @@ export function decodeProjectDocument(value: unknown, catalog: Catalog): Project
   }
 
   const projectId = expectNonBlankString(document.projectId, '$.projectId');
-  const name = expectNonBlankString(document.name, '$.name');
   const catalogVersion = expectString(document.catalogVersion, '$.catalogVersion');
   if (catalogVersion !== catalog.version) {
     fail(
@@ -411,7 +406,6 @@ export function decodeProjectDocument(value: unknown, catalog: Catalog): Project
   return Object.freeze({
     schemaVersion: PROJECT_DOCUMENT_SCHEMA_VERSION,
     projectId,
-    name,
     catalogVersion,
     routes: Object.freeze(routes),
   });

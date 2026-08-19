@@ -1334,11 +1334,23 @@ export type WorkspaceRoomLocal =
 export type WorkspaceRoomFeature =
   | {
       readonly kind: 'zagreusContract';
+      readonly action: 'add';
       readonly control: WorkspaceZagreusSpawnControl;
     }
   | {
+      readonly kind: 'zagreusContract';
+      readonly action: 'remove';
+      readonly owner: AdditionalExitAddress;
+    }
+  | {
       readonly kind: 'naturalChaos';
+      readonly action: 'add';
       readonly control: WorkspaceNaturalChaosSpawnControl;
+    }
+  | {
+      readonly kind: 'naturalChaos';
+      readonly action: 'remove';
+      readonly owner: AdditionalExitAddress;
     };
 
 export interface WorkspaceShipStructurePhase {
@@ -1495,17 +1507,10 @@ export type WorkspaceMissingTargetAuthoring =
   | { readonly kind: 'ready' }
   | {
       readonly kind: 'awaitingPriorExit';
-      readonly message: string;
       readonly prerequisiteExitKey: string;
     }
-  | {
-      readonly kind: 'awaitingBatchRewardStore';
-      readonly message: string;
-    }
-  | {
-      readonly kind: 'awaitingFieldsCageOutcome';
-      readonly message: string;
-    };
+  | { readonly kind: 'awaitingBatchRewardStore' }
+  | { readonly kind: 'awaitingFieldsCageOutcome' };
 
 export type WorkspaceBatchRepairIntent = WorkspaceCommandIntent<
   Extract<ProjectCommand, { readonly kind: 'ReconcileBatchExitCapacity' }>
@@ -1663,8 +1668,6 @@ export type WorkspaceRunStateLauncher =
   | {
       readonly availability: 'unavailable';
       readonly owner: ExitDecisionAddress | HubDecisionAddress;
-      /** Engine coverage reason, translated to visible application copy. */
-      readonly reason: string;
       readonly title: string;
     };
 

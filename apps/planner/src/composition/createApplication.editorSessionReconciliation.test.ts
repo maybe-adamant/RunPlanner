@@ -129,7 +129,6 @@ describe('application editor-session reconciliation', () => {
         authoredProjectReplaced(
           createProjectDocument(catalog, {
             configuredBiomeCounts: { Surface: 1 },
-            name: 'replacement without an N launcher',
             projectId: 'replacement-without-run-state',
           }),
         ),

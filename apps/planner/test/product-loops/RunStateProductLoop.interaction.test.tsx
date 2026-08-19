@@ -143,7 +143,6 @@ describe('Run State product loop', () => {
     const project = appendCompleteN(
       createProjectDocument(application.catalog, {
         configuredBiomeCounts: { Surface: 1 },
-        name: 'Run State N handoff',
         projectId: 'run-state-n-handoff',
       }),
       { includePreboss: false },

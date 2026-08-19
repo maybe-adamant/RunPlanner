@@ -154,6 +154,7 @@ describe('reward editor projections', () => {
     );
 
     expect(markup).toContain('Trial · Apollo / Zeus');
+    expect(markup).toContain('field-control contextual-picker field-control-inline');
     expect(markup).not.toContain('Chosen God');
     expect(markup).not.toContain('ApolloUpgrade');
     expect(markup).not.toContain('ZeusUpgrade');
@@ -411,14 +412,12 @@ describe('reward editor projections', () => {
       store.dispatch(authoredProjectRedoRequested());
     });
     expect(screen.getByLabelText('Reward').getAttribute('aria-expanded')).toBe('false');
-    const loadedProject = applyProjectCommand(project, catalog, {
-      kind: 'RenameProject',
-      name: 'Loaded Profile',
-    });
+    const loadedProject = project;
     act(() => {
       store.dispatch(
         profileLoadSucceeded({
           baselineJson: encodeProjectDocument(loadedProject),
+          fileName: 'loaded-profile.runplanner.json',
           project: loadedProject,
         }),
       );

@@ -282,7 +282,6 @@ function sourceOfferPointProject(testCatalog: Catalog): {
   const targetId = createOccurrenceId('source-offer-o-target');
   let project = createProjectDocument(testCatalog, {
     projectId: 'source-offer-domain',
-    name: 'Source offer domain',
     configuredBiomeCounts: { Surface: 2 },
   });
   project = applyProjectCommand(project, testCatalog, {
@@ -540,7 +539,6 @@ describe('counted reward authoring domains', () => {
     const forcedRunId = createOccurrenceId('forced-shared-run');
     let project = createProjectDocument(catalog, {
       projectId: 'forced-shared-domain',
-      name: 'Forced shared domain',
       configuredBiomeCounts: { Underworld: 2 },
     });
     project = applyProjectCommand(project, catalog, {

@@ -112,7 +112,6 @@ function createStructuralFrontierProject(biomeKey: 'G' | 'H' | 'P'): ProjectDocu
   const project = createProjectDocument(catalog, {
     configuredBiomeCounts:
       routeKey === 'Surface' ? { Surface: 3 } : { Underworld: biomeKey === 'G' ? 2 : 3 },
-    name: `Structural frontier ${biomeKey}`,
     projectId: `structural-frontier-${biomeKey.toLowerCase()}`,
   });
   return applyProjectCommand(project, catalog, {
@@ -1788,12 +1787,10 @@ describe('structured workspace overlay contract', () => {
   it('independently closes structural control identities and rendered interaction handoff', () => {
     const emptyN = createProjectDocument(catalog, {
       configuredBiomeCounts: { Surface: 1 },
-      name: 'Structural oracle empty N',
       projectId: 'structural-oracle-empty-n',
     });
     const emptyF = createProjectDocument(catalog, {
       configuredBiomeCounts: { Underworld: 1 },
-      name: 'Structural oracle frontier F',
       projectId: 'structural-oracle-frontier-f',
     });
     const fFrontier = applyProjectCommand(emptyF, catalog, {
@@ -1880,12 +1877,10 @@ describe('structured workspace overlay contract', () => {
   it('makes every independently expected structural interaction family observable', () => {
     const emptyN = createProjectDocument(catalog, {
       configuredBiomeCounts: { Surface: 1 },
-      name: 'Structural mutation empty N',
       projectId: 'structural-mutation-empty-n',
     });
     const emptyF = createProjectDocument(catalog, {
       configuredBiomeCounts: { Underworld: 1 },
-      name: 'Structural mutation F',
       projectId: 'structural-mutation-f',
     });
     const fFrontier = applyProjectCommand(emptyF, catalog, {
@@ -2061,7 +2056,6 @@ describe('structured workspace overlay contract', () => {
     const started = applyProjectCommand(
       createProjectDocument(catalog, {
         configuredBiomeCounts: { Underworld: 1 },
-        name: 'Decision entry closure',
         projectId: 'decision-entry-closure',
       }),
       catalog,

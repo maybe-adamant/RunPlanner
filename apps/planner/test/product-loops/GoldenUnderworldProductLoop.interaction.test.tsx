@@ -373,7 +373,6 @@ describe('underworld product loop', () => {
     const opening = createOccurrenceId('product-natural-chaos-opening');
     let project = createProjectDocument(application.catalog, {
       configuredBiomeCounts: { Underworld: 1 },
-      name: 'Natural Chaos product loop',
       projectId: 'natural-chaos-product-loop',
     });
     project = applyProjectCommand(project, application.catalog, {
@@ -420,7 +419,7 @@ describe('underworld product loop', () => {
       ),
     );
 
-    await view.user.selectOptions(screen.getByLabelText(/Base reward pool/), 'MetaProgress');
+    await view.user.selectOptions(screen.getByLabelText(/Reward Pool/), 'MetaProgress');
     await view.user.click(screen.getByRole('button', { name: 'Door 1 room' }));
     const normalRoom = within(screen.getByRole('listbox'))
       .getAllByRole('option')
@@ -507,7 +506,7 @@ describe('underworld product loop', () => {
           decision.source.occurrenceId === chaosOccurrenceId,
       ),
     ).toBe(false);
-    const rewardPool = screen.getByRole('combobox', { name: /Base reward pool/ });
+    const rewardPool = screen.getByRole('combobox', { name: /Reward Pool/ });
     await view.user.click(rewardPool);
     let nextPool: HTMLOptionElement | undefined;
     await waitFor(() => {
@@ -838,14 +837,14 @@ describe('underworld product loop', () => {
     );
     if (takeover === null) throw new Error('G takeover rail node is missing');
     await view.user.click(takeover);
-    expect(screen.getByRole('heading', { level: 2, name: 'Preboss' })).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 3, name: 'Entering Preboss' })).toBeTruthy();
 
     await view.user.click(screen.getByRole('button', { name: 'Tartarus' }));
     const iStructure = screen.getByRole('region', { name: 'Tartarus route structure' });
     const mixed = iStructure.querySelector<HTMLButtonElement>('[data-kind="mixedBatch"] button');
     if (mixed === null) throw new Error('I mixed batch rail node is missing');
     await view.user.click(mixed);
-    expect(screen.getByRole('heading', { level: 3, name: 'Preboss' })).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 3, name: /^Entering Preboss/ })).toBeTruthy();
 
     act(() =>
       application.store.dispatch(authoredProjectReplaced(createRepresentativeNOPQProject())),
@@ -859,10 +858,11 @@ describe('underworld product loop', () => {
     if (preHub === undefined) throw new Error('N PreHub rail stage is missing');
     await view.user.click(preHub);
     expect(
-      screen
-        .getByRole('complementary', { name: 'Details' })
-        .querySelector('.biome-occurrence-workbench > header h3')?.textContent,
-    ).toBe('Pre-Hub');
+      within(screen.getByRole('complementary', { name: 'Details' })).getByRole('heading', {
+        level: 3,
+        name: /^Entering Pre-Hub/,
+      }),
+    ).toBeTruthy();
 
     const hub = nStructure.querySelector<HTMLButtonElement>('[data-kind="hubDecision"] button');
     if (hub === null) throw new Error('N Hub rail node is missing');

@@ -45,7 +45,6 @@ describe('canonical N Hub materialization', () => {
   it('keeps an unopened Hub structurally incomplete without inventing a board', () => {
     const project = createProjectDocument(catalog, {
       projectId: 'n-incomplete',
-      name: 'N incomplete',
       configuredBiomeCounts: { Surface: 1 },
     });
     const biome = simulateProject(catalog, authorRequiredTestRoomActions(project, catalog))
@@ -62,7 +61,6 @@ describe('canonical N Hub materialization', () => {
   it('marks the exact empty bounded entry for full Opening lifecycle without widening ordinary frontiers', () => {
     let project = createProjectDocument(catalog, {
       projectId: 'n-empty-entry-lifecycle',
-      name: 'N empty entry lifecycle',
       configuredBiomeCounts: { Surface: 1 },
     });
     const openingDecision = createExitDecisionAddress(nBiome, {
@@ -198,7 +196,6 @@ describe('canonical N Hub materialization', () => {
       appendNEntry(
         createProjectDocument(catalog, {
           projectId: 'n-terminal-envelope',
-          name: 'N terminal envelope',
           configuredBiomeCounts: { Surface: 1 },
         }),
       ),
@@ -257,7 +254,6 @@ describe('canonical N Hub materialization', () => {
       appendNEntry(
         createProjectDocument(catalog, {
           projectId: 'n-hub-source',
-          name: 'N Hub source',
           configuredBiomeCounts: { Surface: 1 },
         }),
       ),

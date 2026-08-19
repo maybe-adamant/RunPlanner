@@ -247,7 +247,6 @@ function completeProject(
 
   let project = createProjectDocument(catalog, {
     projectId: 'h-materialization',
-    name: 'H Materialization',
     configuredBiomeCounts: { Underworld: 3 },
   });
   project = applyProjectCommand(project, catalog, {

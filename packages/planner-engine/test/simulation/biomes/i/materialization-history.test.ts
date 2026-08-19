@@ -106,10 +106,9 @@ function occurrence(key: string): OccurrenceId {
   return createOccurrenceId(`i-materialized-${key}`);
 }
 
-function createIProject(projectId: string, name: string): ProjectDocument {
+function createIProject(projectId: string): ProjectDocument {
   const project = createProjectDocument(catalog, {
     projectId,
-    name,
     configuredBiomeCounts: { Underworld: 4 },
   });
   const started = applyProjectCommand(project, catalog, {
@@ -135,7 +134,7 @@ function completeProject(nonGoalOffer?: IncomingRewardValue): ProjectDocument {
   const enteredCombat12 = occurrence('entered-combat12');
   const combat07 = occurrence('combat07');
   const combat08 = occurrence('combat08');
-  let project = createIProject('i-materialized-fixture', 'I Materialized Fixture');
+  let project = createIProject('i-materialized-fixture');
   project = applyProjectCommand(project, catalog, {
     kind: 'ReplaceBiomeField',
     field: createBiomeFieldAddress(biome, 'maxNonGoalRewards'),
@@ -217,7 +216,7 @@ function projectWithPickedStory(): ProjectDocument {
   const combat06 = occurrence('picked-story-combat06');
   const combat07 = occurrence('picked-story-combat07');
   const combat08 = occurrence('picked-story-combat08');
-  let project = createIProject('i-picked-story-fixture', 'I Picked Story Fixture');
+  let project = createIProject('i-picked-story-fixture');
   project = appendBatch(project, null, [{ occurrenceId: combat01, gameName: 'I_Combat01' }], 1);
   project = appendBatch(
     project,

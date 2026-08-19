@@ -48,11 +48,16 @@ describe('browser profile-file adapter', () => {
     expect(input.accept).toContain('.runplanner.json');
     Object.defineProperty(input, 'files', {
       configurable: true,
-      value: [{ text: () => Promise.resolve('{"project":true}') }],
+      value: [
+        { name: 'erebus-route.runplanner.json', text: () => Promise.resolve('{"project":true}') },
+      ],
     });
     fireEvent.change(input);
 
-    await expect(load).resolves.toBe('{"project":true}');
+    await expect(load).resolves.toEqual({
+      fileName: 'erebus-route.runplanner.json',
+      json: '{"project":true}',
+    });
     expect(document.querySelector('input[type="file"]')).toBeNull();
   });
 
@@ -88,7 +93,12 @@ describe('browser profile-file adapter', () => {
     }
     Object.defineProperty(input, 'files', {
       configurable: true,
-      value: [{ text: () => Promise.reject(new Error('read denied')) }],
+      value: [
+        {
+          name: 'unreadable.runplanner.json',
+          text: () => Promise.reject(new Error('read denied')),
+        },
+      ],
     });
     fireEvent.change(input);
 

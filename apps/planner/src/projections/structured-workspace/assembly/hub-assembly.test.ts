@@ -83,7 +83,6 @@ function hubKit(source: WorkspaceBiomeSource) {
 function emptyNProject(): ProjectDocument {
   return createProjectDocument(catalog, {
     configuredBiomeCounts: { Surface: 1 },
-    name: 'Empty N Hub assembly',
     projectId: 'empty-n-hub-assembly',
   });
 }

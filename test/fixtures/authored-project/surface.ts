@@ -572,7 +572,6 @@ export function appendCompleteQ(project: ProjectDocument): ProjectDocument {
 function emptySurfaceProject(configuredBiomeCount: 1 | 2 | 3 | 4): ProjectDocument {
   return createProjectDocument(catalog, {
     projectId: `surface-${configuredBiomeCount}`,
-    name: `Surface ${configuredBiomeCount}`,
     configuredBiomeCounts: { Surface: configuredBiomeCount },
   });
 }

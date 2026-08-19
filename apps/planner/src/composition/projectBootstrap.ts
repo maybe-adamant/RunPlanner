@@ -4,6 +4,5 @@ import { createProjectDocument, type ProjectDocument } from '@run-planner/engine
 export function createInitialProject(catalog: Catalog): ProjectDocument {
   return createProjectDocument(catalog, {
     projectId: 'run-plan',
-    name: 'Run Plan',
   });
 }

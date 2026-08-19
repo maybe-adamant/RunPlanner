@@ -123,7 +123,6 @@ describe('project workspace application state', () => {
     const initialProject = createInitialProject(catalog);
     const foreignProject = createEmptyProjectDocument(catalog, {
       projectId: 'foreign-assembly',
-      name: 'Foreign assembly',
     });
 
     expect(() =>
@@ -519,7 +518,6 @@ describe('project workspace application state', () => {
     );
     const replacement = createEmptyProjectDocument(catalog, {
       projectId: 'replacement',
-      name: 'Replacement',
     });
 
     store.dispatch(authoredProjectReplaced(replacement));
@@ -567,7 +565,6 @@ describe('project workspace application state', () => {
     const { assembleProjectEvaluation, store } = createStore();
     const replacement = createProjectDocument(catalog, {
       projectId: 'i-replacement',
-      name: 'I Replacement',
       configuredBiomeCounts: { Underworld: 4 },
     });
 

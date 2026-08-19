@@ -98,7 +98,6 @@ function enteredShopProject(): { readonly project: ProjectDocument; readonly sho
   const shop = createOccurrenceId('interaction-binding-shop');
   let project = createProjectDocument(catalog, {
     projectId: 'interaction-binding-entered-shop',
-    name: 'Interaction binding entered Shop',
     configuredBiomeCounts: { Underworld: 1 },
   });
   project = applyProjectCommand(project, catalog, {
@@ -1184,7 +1183,6 @@ describe('structured workspace interaction binding', () => {
       appendNEntry(
         createProjectDocument(catalog, {
           configuredBiomeCounts: { Surface: 1 },
-          name: 'Bound Hub board',
           projectId: 'bound-hub-board',
         }),
       ),
@@ -1209,7 +1207,6 @@ describe('structured workspace interaction binding', () => {
     const handoffProject = appendCompleteN(
       createProjectDocument(catalog, {
         configuredBiomeCounts: { Surface: 1 },
-        name: 'Bound Hub handoff',
         projectId: 'bound-hub-handoff',
       }),
       { includePreboss: false },
@@ -1243,7 +1240,6 @@ describe('structured workspace interaction binding', () => {
   it('lazily binds the fixed start to one complete command and after-focus intent', () => {
     const project = createProjectDocument(catalog, {
       configuredBiomeCounts: { Surface: 1 },
-      name: 'Fixed start binding',
       projectId: 'fixed-start-binding',
     });
     const occurrenceId = createOccurrenceId('bound-fixed-start');
@@ -1272,7 +1268,6 @@ describe('structured workspace interaction binding', () => {
     const biome = createBiomeAddress('Underworld', 'F');
     const project = createProjectDocument(catalog, {
       configuredBiomeCounts: { Underworld: 1 },
-      name: 'Choice start binding',
       projectId: 'choice-start-binding',
     });
     const occurrenceId = createOccurrenceId('bound-choice-start');
@@ -1309,7 +1304,6 @@ describe('structured workspace interaction binding', () => {
     const biome = createBiomeAddress('Underworld', 'F');
     const project = createProjectDocument(catalog, {
       configuredBiomeCounts: { Underworld: 1 },
-      name: 'Invalid start binding',
       projectId: 'invalid-start-binding',
     });
     let allocations = 0;
@@ -1336,7 +1330,6 @@ describe('structured workspace interaction binding', () => {
     const project = applyProjectCommand(
       createProjectDocument(catalog, {
         configuredBiomeCounts: { Underworld: 1 },
-        name: 'Structural batch binding',
         projectId: 'structural-batch-binding',
       }),
       catalog,
@@ -1375,7 +1368,6 @@ describe('structured workspace interaction binding', () => {
     let project = applyProjectCommand(
       createProjectDocument(catalog, {
         configuredBiomeCounts: { Underworld: 1 },
-        name: 'Target interaction binding',
         projectId: 'target-interaction-binding',
       }),
       catalog,
@@ -1608,7 +1600,6 @@ describe('structured workspace interaction binding', () => {
     const started = applyProjectCommand(
       createProjectDocument(catalog, {
         configuredBiomeCounts: { Underworld: 1 },
-        name: 'Unresolved direct F entry',
         projectId: 'unresolved-direct-f-entry',
       }),
       catalog,
@@ -1814,7 +1805,6 @@ describe('structured workspace interaction binding', () => {
     let project = applyProjectCommand(
       createProjectDocument(catalog, {
         configuredBiomeCounts: { Underworld: 1 },
-        name: 'Retained prefix direct entry',
         projectId: 'retained-prefix-direct-entry',
       }),
       catalog,

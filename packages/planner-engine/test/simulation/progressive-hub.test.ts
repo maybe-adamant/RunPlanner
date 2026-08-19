@@ -86,7 +86,6 @@ function openHub(slotCount: number, resolvedBoardRewards = false) {
   const preHub = createOccurrenceId('progressive-n-prehub');
   let project = createProjectDocument(catalog, {
     projectId: `progressive-n-${slotCount}`,
-    name: 'Progressive N',
     configuredBiomeCounts: { Surface: 1 },
   });
   project = applyProjectCommand(project, catalog, {
@@ -250,7 +249,6 @@ describe('Hub progressive biome evaluation', () => {
   it('retains an unopened Hub as incomplete rather than manufacturing a board', () => {
     const project = createProjectDocument(catalog, {
       projectId: 'progressive-n-empty',
-      name: 'Progressive N empty',
       configuredBiomeCounts: { Surface: 1 },
     });
     const biome = nEvaluation(project as ReturnType<typeof openHub>);
@@ -749,7 +747,6 @@ describe('Hub progressive biome evaluation', () => {
 
     const empty = createProjectDocument(catalog, {
       projectId: 'progressive-n-candidate-empty',
-      name: 'Progressive N candidate empty',
       configuredBiomeCounts: { Surface: 1 },
     });
     expect(

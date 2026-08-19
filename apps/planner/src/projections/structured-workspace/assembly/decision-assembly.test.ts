@@ -496,7 +496,6 @@ describe('structured workspace decision assembly', () => {
     const start = createOccurrenceId('retained-fields-awaiting-start');
     let project = createProjectDocument(catalog, {
       configuredBiomeCounts: { Underworld: 3 },
-      name: 'Retained Fields awaiting outcome',
       projectId: 'retained-fields-awaiting-outcome',
     });
     project = applyProjectCommand(project, catalog, {
@@ -526,7 +525,6 @@ describe('structured workspace decision assembly', () => {
     expect(assembly.batch.missingTargets.map((target) => target.authoring)).toEqual([
       {
         kind: 'awaitingFieldsCageOutcome',
-        message: 'Choose the Fields door roll first.',
       },
     ]);
     expect(assembly.roomControls).toMatchObject([
@@ -536,7 +534,6 @@ describe('structured workspace decision assembly', () => {
         kind: 'decisionEntryRoomPicker',
         ordinaryTargetAuthoring: {
           kind: 'awaitingFieldsCageOutcome',
-          message: 'Choose the Fields door roll first.',
         },
         ordinaryTargetGameNames: expect.arrayContaining(['H_Combat02']),
         takeoverGameNames: ['H_PreBoss01'],
@@ -862,7 +859,6 @@ describe('structured workspace decision assembly', () => {
     const startId = createOccurrenceId('decision-assembly-setup-start');
     let project = createProjectDocument(catalog, {
       configuredBiomeCounts: { Underworld: 1 },
-      name: 'Decision assembly setup',
       projectId: 'decision-assembly-setup',
     });
     project = applyProjectCommand(project, catalog, {
@@ -889,7 +885,6 @@ describe('structured workspace decision assembly', () => {
     if (before.kind !== 'batch') throw new Error('F setup decision is not a batch');
     expect(before.batch.missingTargets[0]?.authoring).toEqual({
       kind: 'awaitingBatchRewardStore',
-      message: 'Choose the reward pool first.',
     });
     expect(
       before.batch.missingTargets.every(
@@ -903,7 +898,6 @@ describe('structured workspace decision assembly', () => {
         kind: 'decisionEntryRoomPicker',
         ordinaryTargetAuthoring: {
           kind: 'awaitingBatchRewardStore',
-          message: 'Choose the reward pool first.',
         },
         ordinaryTargetGameNames: expect.arrayContaining(['F_Combat01']),
         takeoverGameNames: ['F_PreBoss01'],

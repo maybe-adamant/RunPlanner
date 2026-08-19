@@ -98,7 +98,6 @@ function projectFor(
 ): ProjectDocument {
   return createProjectDocument(catalog, {
     projectId: `route-detour-${routeKey}-${configuredBiomeCount}`,
-    name: 'Route detour simulation',
     configuredBiomeCounts: { [routeKey]: configuredBiomeCount },
   });
 }

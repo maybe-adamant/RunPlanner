@@ -19,8 +19,9 @@ describe('command-intent dispatch adapter', () => {
     const owner = createRouteAddress('Underworld');
     const intent: WorkspaceCommandIntent = Object.freeze({
       command: Object.freeze({
-        kind: 'RenameProject' as const,
-        name: `Intent ${timing ?? 'none'}`,
+        kind: 'ConfigureRoutePrefix' as const,
+        route: owner,
+        configuredBiomeCount: 1,
       }),
       ...(timing === undefined ? {} : { focus: Object.freeze({ owner, timing }) }),
     });
@@ -44,7 +45,7 @@ describe('command-intent dispatch adapter', () => {
     const owner = createRouteAddress('Underworld');
 
     dispatchCommandIntent(application.store.dispatch, {
-      command: { kind: 'RenameProject', name: before.present.name },
+      command: { kind: 'ConfigureRoutePrefix', route: owner, configuredBiomeCount: 0 },
       focus: { owner, timing: 'after' },
     });
 

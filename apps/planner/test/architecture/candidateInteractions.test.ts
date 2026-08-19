@@ -120,7 +120,6 @@ describe('workspace candidate interaction families', () => {
     const biome = createBiomeAddress('Underworld', 'F');
     const project = createProjectDocument(catalog, {
       projectId: 'candidate-interaction-start',
-      name: 'Candidate interaction start',
       configuredBiomeCounts: { Underworld: 1 },
     });
     const layout = catalog.biomeLayouts.byKey.F;
@@ -158,7 +157,6 @@ describe('workspace candidate interaction families', () => {
     const project = applyProjectCommand(
       createProjectDocument(catalog, {
         projectId: 'candidate-interaction-takeover',
-        name: 'Candidate interaction takeover',
         configuredBiomeCounts: { Underworld: 1 },
       }),
       catalog,
@@ -210,7 +208,6 @@ describe('workspace candidate interaction families', () => {
     const started = applyProjectCommand(
       createProjectDocument(catalog, {
         projectId: 'candidate-interaction-existing-takeover',
-        name: 'Candidate interaction existing takeover',
         configuredBiomeCounts: { Underworld: 1 },
       }),
       catalog,
@@ -291,7 +288,6 @@ describe('workspace candidate interaction families', () => {
     const hubHandoffProject = appendCompleteN(
       createProjectDocument(catalog, {
         projectId: 'candidate-interaction-n-handoff',
-        name: 'Candidate interaction N handoff',
         configuredBiomeCounts: { Surface: 1 },
       }),
       { includePreboss: false },
@@ -338,7 +334,6 @@ describe('workspace candidate interaction families', () => {
     const started = applyProjectCommand(
       createProjectDocument(catalog, {
         configuredBiomeCounts: { Underworld: 1 },
-        name: 'Candidate interaction unavailable direct entry',
         projectId: 'candidate-interaction-unavailable-direct-entry',
       }),
       catalog,

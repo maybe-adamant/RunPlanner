@@ -16,6 +16,7 @@ interface ContextualPickerProps<T> {
   readonly disabled?: boolean;
   readonly id: string;
   readonly label: string;
+  readonly layout?: 'inline' | 'stacked';
   readonly loading?: boolean;
   readonly model: ContextualPickerModel<T>;
   readonly onOpenChange?: (open: boolean) => void;
@@ -160,6 +161,7 @@ export function ContextualPicker<T>({
   disabled = false,
   id,
   label,
+  layout = 'stacked',
   loading = false,
   model,
   onOpenChange,
@@ -198,7 +200,9 @@ export function ContextualPicker<T>({
   }
 
   return (
-    <div className="field-control contextual-picker">
+    <div
+      className={`field-control contextual-picker${layout === 'inline' ? ' field-control-inline' : ''}`}
+    >
       <label htmlFor={id}>{label}</label>
       <Popover.Root open={open} onOpenChange={updateOpen}>
         <Popover.Trigger asChild>

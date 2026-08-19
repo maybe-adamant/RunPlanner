@@ -127,7 +127,7 @@ export interface RoomLifecycleExecutionInput {
   readonly requiredObjects?: readonly RequiredRoomObjectDescriptor[];
   readonly enteredRewardStoreKey?: string;
   readonly offerPointRewardStores?: Readonly<Record<string, string>>;
-  /** Present for schema-47 authored occurrences; completion/hub lifecycles remain profile-only. */
+  /** Present for authored occurrences; completion/hub lifecycles remain profile-only. */
   readonly roomActionRoster?: RoomActionRoster;
 }
 

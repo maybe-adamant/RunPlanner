@@ -15,6 +15,7 @@ export function RewardControlEditor({
   control,
   idPrefix,
   interactions,
+  label = 'Reward',
   showOffer = true,
   showAcquisitionChildren = true,
   offerStartStep,
@@ -22,6 +23,7 @@ export function RewardControlEditor({
   readonly control: WorkspaceRewardControl;
   readonly idPrefix: string;
   readonly interactions: WorkspaceInteractionCatalog;
+  readonly label?: string;
   readonly showOffer?: boolean;
   readonly showAcquisitionChildren?: boolean;
   /** A fixed-type producer can expose its payload directly without a redundant type step. */
@@ -41,6 +43,7 @@ export function RewardControlEditor({
           candidateOwner={control.owner}
           idPrefix={idPrefix}
           interactions={interactions}
+          label={label}
           offer={control.offer}
           onReplace={onReplace}
           {...(control.authoringSeed === undefined
@@ -55,6 +58,7 @@ export function RewardControlEditor({
           candidateOwner={control.owner}
           idPrefix={idPrefix}
           interactions={interactions}
+          label={label}
           offer={control.offer}
           onReplace={onReplace}
           {...(control.authoringSeed === undefined

@@ -94,8 +94,6 @@ export function applyProjectStateCommand(
   command: ProjectStateCommand,
 ): ProjectDocument {
   switch (command.kind) {
-    case 'RenameProject':
-      return command.name === document.name ? document : { ...document, name: command.name };
     case 'ConfigureRoutePrefix':
       return configureRoutePrefix(document, catalog, command);
     case 'ReplaceRouteLoadout': {

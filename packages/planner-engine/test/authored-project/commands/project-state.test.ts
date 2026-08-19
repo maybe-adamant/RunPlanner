@@ -83,23 +83,6 @@ describe('authored-project project-state commands', () => {
     ).toThrow('manual Arcana cost 30 exceeds starting Grasp capacity 18');
   });
 
-  it('renames the project and preserves identity for an unchanged name', () => {
-    const original = fProject();
-    const renamed = applyProjectCommand(original, catalog, {
-      kind: 'RenameProject',
-      name: 'Renamed Project',
-    });
-
-    expect(renamed).not.toBe(original);
-    expect(renamed.name).toBe('Renamed Project');
-    expect(
-      applyProjectCommand(renamed, catalog, {
-        kind: 'RenameProject',
-        name: 'Renamed Project',
-      }),
-    ).toBe(renamed);
-  });
-
   it('grows and shrinks a route prefix while preserving retained authored biomes', () => {
     const underworld = createRouteAddress('Underworld');
     const authored = applyProjectCommand(fProject(), catalog, {

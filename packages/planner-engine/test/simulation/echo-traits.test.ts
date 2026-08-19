@@ -742,7 +742,7 @@ describe('Echo Gate A direct choices', () => {
       deathDefianceConditionMet: false,
     });
     const decoded = decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog);
-    expect(decoded.schemaVersion).toBe(47);
+    expect(decoded.schemaVersion).toBe(48);
     const invalidRarityDocument = JSON.parse(encodeProjectDocument(project)) as JsonRecord;
     const invalidRarityOffer = echoOfferInDocument(invalidRarityDocument);
     ((invalidRarityOffer.options as JsonRecord[])[0] ?? {}).rarity = 'Common';
@@ -2226,7 +2226,7 @@ describe('Echo Gate C Reward Reward Reward', () => {
     });
   });
 
-  it('round-trips schema 47 and rejects the retired nested replay child', () => {
+  it('round-trips schema 48 and rejects the retired nested replay child', () => {
     let project = selectGoldenBridge();
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceTraitOffer',

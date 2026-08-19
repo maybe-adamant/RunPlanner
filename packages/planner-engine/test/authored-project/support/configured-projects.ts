@@ -16,7 +16,6 @@ export const qBiome = createBiomeAddress('Surface', 'Q');
 export function fProject(): ProjectDocument {
   return createProjectDocument(catalog, {
     projectId: 'commands-f',
-    name: 'Commands F',
     configuredBiomeCounts: { Underworld: 1 },
   });
 }
@@ -24,7 +23,6 @@ export function fProject(): ProjectDocument {
 export function gProject(): ProjectDocument {
   return createProjectDocument(catalog, {
     projectId: 'commands-g',
-    name: 'Commands G',
     configuredBiomeCounts: { Underworld: 2 },
   });
 }
@@ -32,7 +30,6 @@ export function gProject(): ProjectDocument {
 export function hProject(): ProjectDocument {
   return createProjectDocument(catalog, {
     projectId: 'commands-h',
-    name: 'Commands H',
     configuredBiomeCounts: { Underworld: 3 },
   });
 }
@@ -40,7 +37,6 @@ export function hProject(): ProjectDocument {
 export function iProject(): ProjectDocument {
   return createProjectDocument(catalog, {
     projectId: 'commands-i',
-    name: 'Commands I',
     configuredBiomeCounts: { Underworld: 4 },
   });
 }
@@ -48,7 +44,6 @@ export function iProject(): ProjectDocument {
 export function nProject(): ProjectDocument {
   return createProjectDocument(catalog, {
     projectId: 'commands-n',
-    name: 'Commands N',
     configuredBiomeCounts: { Surface: 1 },
   });
 }
@@ -56,7 +51,6 @@ export function nProject(): ProjectDocument {
 export function surfaceProject(configuredBiomeCount: number): ProjectDocument {
   return createProjectDocument(catalog, {
     projectId: `commands-surface-${configuredBiomeCount}`,
-    name: 'Commands Surface',
     configuredBiomeCounts: { Surface: configuredBiomeCount },
   });
 }

@@ -6,6 +6,7 @@ import {
   canRedoProjectHistory,
   canUndoProjectHistory,
   createHubDecisionAddress,
+  createRouteAddress,
   createRoomActionAddress,
   createOccurrenceId,
   createProjectHistory,
@@ -20,38 +21,44 @@ import { fProject, nBiome } from './support/configured-projects';
 describe('authored project history', () => {
   it('records effective semantic edits, preserves no-op identity, and restores exact snapshots', () => {
     const initial = createProjectHistory(fProject());
-    const renamed = applyProjectHistoryCommand(initial, catalog, {
-      kind: 'RenameProject',
-      name: 'Renamed project',
+    const route = createRouteAddress('Underworld');
+    const grown = applyProjectHistoryCommand(initial, catalog, {
+      kind: 'ConfigureRoutePrefix',
+      route,
+      configuredBiomeCount: 2,
     });
 
-    expect(renamed.past).toEqual([initial.present]);
-    expect(renamed.future).toEqual([]);
-    expect(canUndoProjectHistory(renamed)).toBe(true);
-    expect(canRedoProjectHistory(renamed)).toBe(false);
+    expect(grown.past).toEqual([initial.present]);
+    expect(grown.future).toEqual([]);
+    expect(canUndoProjectHistory(grown)).toBe(true);
+    expect(canRedoProjectHistory(grown)).toBe(false);
     expect(
-      applyProjectHistoryCommand(renamed, catalog, {
-        kind: 'RenameProject',
-        name: 'Renamed project',
+      applyProjectHistoryCommand(grown, catalog, {
+        kind: 'ConfigureRoutePrefix',
+        route,
+        configuredBiomeCount: 2,
       }),
-    ).toBe(renamed);
+    ).toBe(grown);
 
-    const undone = undoProjectHistory(renamed);
+    const undone = undoProjectHistory(grown);
     expect(undone.present).toBe(initial.present);
     expect(canRedoProjectHistory(undone)).toBe(true);
-    expect(redoProjectHistory(undone).present).toBe(renamed.present);
+    expect(redoProjectHistory(undone).present).toBe(grown.present);
   });
 
   it('clears redo after a new edit and preserves identity at history boundaries', () => {
     const initial = createProjectHistory(fProject());
-    const renamed = applyProjectHistoryCommand(initial, catalog, {
-      kind: 'RenameProject',
-      name: 'First name',
+    const route = createRouteAddress('Underworld');
+    const grown = applyProjectHistoryCommand(initial, catalog, {
+      kind: 'ConfigureRoutePrefix',
+      route,
+      configuredBiomeCount: 2,
     });
-    const undone = undoProjectHistory(renamed);
+    const undone = undoProjectHistory(grown);
     const replacement = applyProjectHistoryCommand(undone, catalog, {
-      kind: 'RenameProject',
-      name: 'Replacement name',
+      kind: 'ConfigureRoutePrefix',
+      route,
+      configuredBiomeCount: 3,
     });
 
     expect(replacement.future).toEqual([]);

@@ -583,9 +583,8 @@ stable indented JSON with a trailing newline:
 
 ```ts
 interface ProjectDocument {
-  schemaVersion: 38;
+  schemaVersion: 48;
   projectId: string;
-  name: string;
   catalogVersion: string;
   routes: readonly AuthoredRoutePlan[];
 }
@@ -597,9 +596,11 @@ ownership fail at decode contact. The codec preserves structurally
 representable incomplete and context-invalid authored choices; simulation
 findings, not fallback, describe context invalidity.
 
-Persistence excludes Redux state, editor tabs, graph positions, candidate sets,
-findings, simulation output, save baselines, autosave status, and an alternate
-profile wrapper.
+Persistence excludes filenames, Redux state, editor tabs, graph positions,
+candidate sets, findings, simulation output, save baselines, autosave status,
+and an alternate profile wrapper. The application profile session remembers
+the selected file's basename for later saves; it is transport metadata, not
+authored project identity.
 
 ## Undo and Redo
 
