@@ -23,10 +23,10 @@ rechecked on 2026-08-15; source details remain in the focused audit.
   reconciles only compatible cage keys.
 - It also owns a zero-through-capacity optional count, complete retained
   optional reward values, and one mixed action chronology for atomic cage
-  completions plus cage, optional, and Artificer-replacement interactions. The
-  current Fields-private chronology is incomplete for phase-produced NPCs;
+  encounters plus cage, optional, NPC/Gorgon, and Artificer-replacement
+  interactions. One entered-room chronology owns them all;
   [`ROOM_ACTION_ORDER_GAME_DATA_AUDIT.md`](../audits/ROOM_ACTION_ORDER_GAME_DATA_AUDIT.md)
-  owns its replacement by one entered-room chronology.
+  owns the source evidence.
 - `H_PreBoss01` is an atomic takeover Preboss. For a two-door predecessor it
   creates a Shop occurrence on the first exit and a counted free-reward
   occurrence on the second. Its batch has no ordinary batch reward store, so
@@ -103,16 +103,28 @@ Preboss free reward. A counted cage offer consumes its declaration-backed
 RunProgress support when its owning room is prepared; selecting another normal
 peer does not recreate that room's cages.
 
-The Passive phase is fixed first. Each cage-completion action then represents
-activation through completion as one indivisible planner step; the model does
-not permit pickup interaction during an active wave. A cage reward cannot be
-interacted with before its matching completion. Optional interactions may be
-placed before the first cage, between completed cages, or after the final cage.
-Required cage rewards must resolve, while optional pickups may remain on the
-ground. The same action order carries a later Artificer replacement pickup;
-there is no cage-only order or Fields-private acquisition fold. Phase-produced
-required NPC interactions, including Gorgon Athena, must join the later general
-room chronology rather than create another Fields-only order.
+The Passive phase is fixed entry evidence. The active cage count then creates a
+fixed sequence of two or three ordinal encounter cycles. Authored cage order
+chooses which cage occupies the first, second, and optional third cycle; it does
+not change the fixed `Start encounter -> End encounter` skeleton. Each cage
+action represents activation through completion as one indivisible planner
+step, and the model deliberately excludes pickup interaction during an active
+wave.
+
+A cage reward cannot be interacted with before its matching encounter ends,
+but leaving that reward unpicked does not block the next cage. Optional minor
+rewards may be picked before the first cage, between completed cages, or after
+the final cage. A phase-produced required contact that declares
+`BlockFieldsEncounterStart`, including Gorgon Athena, must resolve after its
+own encounter and before whichever cage is authored next. This barrier follows
+authored cage execution order, not `Cage01`/`Cage02` declaration order.
+
+After the final cage, Cleanup contains any remaining cage, optional, NPC, and
+dependent acquisition actions. Every required cage reward must resolve before
+exit use; optional rewards may remain on the ground. Room features become
+available through the final unlock sequence rather than between cage cycles.
+The same action order carries later Artificer replacement pickups; there is no
+cage-only order or Fields-private acquisition fold.
 
 ### Depth, force, and completion facts
 
@@ -162,7 +174,7 @@ offer is supported.
 The canonical product owns H catalog facts, authored Fields state, concrete
 encounter selection, cage and optional offer generation, the action chronology,
 shared acquisition dispositions including Artificer, semantic commands,
-validation, candidates, and workspace projection. NPC events and interactions
-beyond selected Nemesis combat and the fixed Echo Bridge trait offer, plus
-other unsupported player systems, remain outside the baseline until modeled
-explicitly.
+validation, candidates, and workspace projection. Declaration-supported
+phase-produced NPC contacts and Gorgon Athena participate in the same room
+chronology. Other NPC/random-event variants and unsupported player systems
+remain outside the baseline until modeled explicitly.

@@ -2,14 +2,18 @@
 
 ## Status
 
-Draft focused delivery plan on clean base
+Locked focused delivery plan on clean base
 `1d2af0cb37e18c95ba2bcdb25147f683b741f3be`.
 
 This document is temporary delivery authority. It is not linked from the
-README or stable design documents. It must receive one adversarial plan review
-before implementation is locked. After the implementation and durable closure
-land, absorb its lasting conclusions into the owning design, biome, and audit
-documents and delete this file.
+README or stable design documents. Its required adversarial review completed
+on 2026-08-19 with no model contradiction and the bounded Gate A/Gate B scope
+clarifications recorded below. The lifecycle concordance was then amended
+before Gate A review to lock the game-event correspondence, the single Cleanup
+interval, O inter-phase barriers, and Fields' fixed encounter-cycle skeleton.
+After the implementation and durable closure land, absorb its lasting
+conclusions into the owning design, biome, and audit documents and delete this
+file.
 
 The pending durable-closure gate in
 [`ROOM_ACTION_ORDER_IMPLEMENTATION.md`](./ROOM_ACTION_ORDER_IMPLEMENTATION.md)
@@ -81,9 +85,10 @@ The plan also restores a concise Shop authoring flow:
 - Encounter identity is fixed before its encounter begins. Encounter
   completion is distinct from later NPC interaction, room-reward pickup, and
   generated-pickup interaction.
-- Outgoing generation and exit usability are distinct lifecycle boundaries.
-  A required object can remain unresolved after outgoing doors have already
-  been generated.
+- Outgoing generation and exit usability remain distinct engine checkpoints.
+  They are not separate peer phases in the player-facing timeline. Cleanup is
+  the one final-room interval and contains those checkpoints at the exact
+  profile-owned positions.
 - Structural World Shops generate their outgoing decision before optional paid
   purchases settle.
 - Wells of Charon and Shrines of Hermes are room-local interactions unlocked
@@ -109,27 +114,50 @@ cleanup interactions.
 - The encounter picker appears at the derived `Start encounter` boundary for
   its phase. The fixed boundary gives the selection chronological meaning
   without persisting lifecycle events or a second order.
+- `Start encounter` is a closed mandatory start sequence around the exact
+  engine encounter activation. Devotion's chosen-source interaction and O's
+  wheel choice may be grouped into that sequence because no unrelated room
+  action, feature, or door can interleave there. No second `Combat started`
+  boundary is introduced.
 - Before-combat actions occur between room entry and encounter start.
 - NPC contacts, room rewards, deliveries, and other phase products occur after
   the matching encounter-end boundary according to their existing action
   dependencies.
+- `End encounter` consistently means combat ended and post-combat objects became
+  available. O's later required-object wait belongs to `Start next phase`, not
+  to a different meaning of encounter end.
 - An encounterless room omits encounter boundaries rather than inventing an
   empty encounter editor.
 
 ### Mourning Fields
 
-- A Fields room remains one physical occurrence with one global action order.
-- Each active cage-completion action remains the existing atomic
-  activation-through-combat simplification.
-- The matching encounter picker is shown immediately before that cage action;
-  the derived encounter-end boundary follows it.
+- A Fields room remains one physical occurrence with one global action order,
+  but its lifecycle skeleton is fixed rather than freely shaped.
+- The active cage count creates two or three ordinal encounter cycles. Authored
+  cage order chooses which cage occupies the first, second, and optional third
+  cycle.
+- Each cycle is exactly
+  `Start chosen cage encounter -> End chosen cage encounter`. The existing cage
+  action remains the atomic
+  activation-through-combat simplification, so no modeled action may occur
+  inside the active wave.
+- The matching encounter picker is shown at that cycle's Start boundary; the
+  derived End boundary follows the atomic cage action.
 - The passive entry phase remains declaration-owned. Passive Gorgon or other
   supported entry-phase contacts must not be lost merely because the compact
   player explanation emphasizes cages.
 - Optional minor rewards can be placed before the first cage, between completed
-  cages, or after the final cage.
+  cages, or after the final cage. The planner intentionally omits their
+  technically possible mid-combat pickup.
 - NPC/Gorgon contacts and cage rewards remain unavailable before their exact
-  cage completion. Required cage rewards must resolve before exit usability.
+  cage ends. An ordinary unpicked cage reward does not block the next cage.
+- A contact with `BlockFieldsEncounterStart`, including Gorgon Athena, must
+  resolve before the next authored cage starts. That dependency follows the
+  authored cage permutation, not declaration slot order.
+- After the final cage ends, Cleanup contains the remaining fluid actions. All
+  required cage rewards and dependent required pickups must resolve before exit
+  use; optional minors may remain. Room features are unavailable between cage
+  cycles and join only the final Cleanup interval.
 - Fields setup—active cages, cage reward identities, optional count, and
   optional reward identities—belongs to Overview. Interacting with those
   objects belongs only to Room Actions.
@@ -160,6 +188,10 @@ cleanup interactions.
 - Wheel 1 setup belongs after Intro and before Combat 1. Wheel 2 setup belongs
   after Combat 1 and before Combat 2. The final active phase has no following
   wheel editor.
+- `Start new phase` requires the preceding phase's complete required-object
+  cleanup. It is intentionally analogous to a room-transition barrier, but it
+  does not expose room features or doors. O has only one room-level Cleanup,
+  after the final active phase.
 - The selected wheel pickup stays after its matching combat. Outgoing
   generation continues to use the final active wheel's exact source offer
   point.
@@ -194,9 +226,28 @@ cleanup interactions.
 
 ## Locked Modeling Shape
 
-The decisions in this section are the intended implementation contract. The
-plan remains draft until adversarial review confirms that each decision matches
-the live code and owning audits.
+The decisions in this section are the locked implementation contract. The
+concordance amendment below supersedes conflicting earlier wording and must be
+reviewed against the live Gate A diff before that gate is committed.
+
+### Concordance correction before Gate A continuation
+
+The interrupted Gate A implementation must be reviewed and remediated against
+the following exact corrections before it can be committed:
+
+| Area                 | Required documentation/model correction                                                                                                                                                                       | Required implementation correction                                                                                                                                                                                |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Start encounter      | Treat the label as one closed mandatory start sequence around exact encounter activation. Devotion's chosen source and O's wheel choice may be grouped only because no unrelated interaction can occur there. | Place the boundary before the complete mandatory start sequence; do not allow ranked actions to straddle it and do not add a second combat-start seam.                                                            |
+| End encounter        | Give it one meaning in every combat profile: combat has ended and post-combat objects/effects are now observable.                                                                                             | Place the boundary before NPC, room-reward, wheel-reward, delivery, and other post-combat interactions rather than after the entire action window.                                                                |
+| O next phase         | Treat the prior phase's required-object wait as the gate for the next phase. No room feature or door is usable between Ship phases.                                                                           | Keep reward/NPC resolution after End encounter; publish the next wheel/start boundary only after all required actions in that phase clear. Render one final Cleanup after the last active phase.                  |
+| Cleanup and exit use | Present one Cleanup interval. Outgoing generation and exit usability remain exact engine checkpoints within or at its profile-owned edges, not peer player-facing phases.                                     | Remove the universal `exitUsable` timeline row while retaining its validation capability/checkpoint. Place Cleanup from the profile's final no-more-encounters point and preserve exact outgoing-generation rank. |
+| Fields structure     | Lock a two- or three-cycle ordinal skeleton whose cage identities are supplied by authored order. Actions remain fluid only before the first cycle, between cycles, and in final Cleanup.                     | Derive Fields cycle order from ranked active cage actions, bracket each atomic cage action with Start/End, and reject any action placement inside that atomic span.                                               |
+| Fields blockers      | An unpicked cage reward does not block a later cage. A same-phase `BlockFieldsEncounterStart` contact does, and its barrier follows whichever cage is authored next.                                          | Replace declaration-slot-based cross-cage contact dependencies with schedule/order-aware validation. Preserve same-cage availability and final required-reward exit barriers.                                     |
+
+Gate A remains schema-preserving. The persisted `completeFieldsCage` reference
+continues to name the atomic activation-through-completion action; the corrected
+timeline supplies its player-facing Start and End seams. This avoids inventing
+separately authored lifecycle events or a second Fields order.
 
 ### 1. Setup, chronology, and exits remain separate authorities
 
@@ -221,8 +272,8 @@ vocabulary must distinguish:
 - encounter end for an exact phase;
 - start of the next Ship phase and its exact wheel;
 - outgoing generation when declared;
-- cleanup/post-outgoing interaction availability; and
-- exit usable.
+- one final Cleanup interval; and
+- exit usability as a non-rendered capability/checkpoint.
 
 The product carries semantic keys, phase/wheel identity, and position relative
 to ranked actions. It does not return React tabs, component labels, picker
@@ -417,23 +468,21 @@ Illustrative presentation:
 Room entered
   optional pickups and passive contacts when ordered here
 
-Start Cage 1 encounter
-  Encounter: <exact Cage 1 picker>
-  Complete Cage 1
-End Cage 1 encounter
-  Cage 1 reward / NPC / optional pickups when ordered here
+Start first chosen cage encounter
+  Encounter: <picker for that exact cage>
+End first chosen cage encounter
+  its cage reward / NPC / optional pickups when ordered here
 
-Start Cage 2 encounter
+Start second chosen cage encounter
   ...
 
 Outgoing generation
 Cleanup
-Exit usable
 ```
 
-The illustration is not a hardcoded three-cage layout. Application assembly
-uses the declaration-owned active phase envelope, and inactive retained state
-remains repairable.
+The labels are ordinal authored execution slots, not a fixed `Cage01` then
+`Cage02` declaration order. Application assembly uses the active cage count and
+ranked cage permutation, and inactive retained state remains repairable.
 
 ### O ShipCombat occurrence
 
@@ -466,7 +515,6 @@ Combat 2 Actions             (three-phase only)
     Wheel 2 pickup / Icarus contact
   Outgoing generation
   Cleanup
-  Exit usable
 ```
 
 The final active phase owns outgoing generation. Two-phase ShipCombat places it
@@ -528,7 +576,11 @@ feat(planner): present room work through lifecycle tabs
 Deliver:
 
 - engine-owned closed lifecycle-boundary/timeline product;
+- corrected Start/End placement, one Cleanup interval, and non-rendered exit
+  usability checkpoint;
 - Standard, encounterless, Shop, Fields, and Ship timeline composition;
+- Fields ordinal cage cycles derived from authored cage order, including
+  order-aware blocking-contact barriers;
 - Overview/Actions/Doors workspace contracts;
 - O phase-specific Action tabs and inactive repair surface;
 - encounter controls at exact start boundaries;
@@ -541,6 +593,11 @@ Deliver:
 Gate A must not change authored schema, Shop trigger behavior, purchase
 participation, Travel/Gold persistence, Well/Shrine support, or canonical
 settlement.
+
+The tabbed Shop in Gate A therefore retains the complete current Room Action
+roster and its existing ranked/unranked membership presentation. Gate A does
+not add Purchased markers and does not filter unmarked initial offers out of
+Actions. Those two coupled participation changes land together in Gate B.
 
 Primary owners:
 
@@ -556,16 +613,21 @@ Acceptance witnesses:
    Start Encounter, then Doors.
 2. A no-encounter Shop omits encounter boundaries but shows outgoing generation
    before post-outgoing purchases.
-3. H optionals can remain before Cage 1, between cages, or after the last cage;
-   cage reward/NPC dependencies and exit barrier remain exact.
+3. H with two and three active cages renders one fixed ordinal Start/End cycle
+   per cage in authored cage order. Optionals can remain before the first,
+   between cycles, or after the last, with no modeled mid-combat position.
 4. Passive Gorgon contact remains visible and correctly placed.
-5. O two-phase and three-phase tabs place encounter, wheel editor, wheel choice,
-   pickup, outgoing generation, and exit boundaries exactly once.
-6. O 3-to-2 retains inactive Combat 2 rows in one repair surface and restores
+5. Reversing two H cages also reverses their lifecycle cycles. The first
+   cycle's blocking NPC must precede the second Start, while its unpicked cage
+   reward may remain until final Cleanup.
+6. O two-phase and three-phase tabs place encounter, wheel editor, wheel choice,
+   pickup, outgoing generation, and one final Cleanup exactly once; no
+   room-level Cleanup exists between phases.
+7. O 3-to-2 retains inactive Combat 2 rows in one repair surface and restores
    them unchanged on 2-to-3.
-7. A finding opens the exact Overview, phase Action, inactive repair, or Doors
+8. A finding opens the exact Overview, phase Action, inactive repair, or Doors
    tab without changing authored history.
-8. N side-room generation and visit ordering remain under the parent main-room
+9. N side-room generation and visit ordering remain under the parent main-room
    Overview, while each entered side occurrence owns only its own
    Overview/Actions/Doors tabs.
 
@@ -664,8 +726,9 @@ The completed change must remove, not preserve beside the new path:
 - finding navigation that opens only the containing occurrence without the
   exact tab/phase destination.
 
-Do not retain a compatibility projection, hidden legacy workbench, or schema-48
-decoder after the schema-49 cutover.
+Do not retain a compatibility projection or hidden legacy workbench. Schema 49
+remains strict and rejects prior versions; do not add a migration or
+compatibility decoder for schema 48.
 
 ## Explicit Non-Goals
 
@@ -688,13 +751,15 @@ decoder after the schema-49 cutover.
 
 Before locking implementation, challenge at least these risks:
 
-1. Does the proposed engine timeline represent before-combat, encounter-end,
-   outgoing-generation, post-outgoing cleanup, and exit usability without
-   duplicating lifecycle execution?
-2. Can H optional actions be partitioned visually without inventing phase
-   windows or losing passive Gorgon contacts?
-3. Does O retain one global order while phase tabs render each active or stale
-   row exactly once?
+1. Does the proposed engine timeline represent the closed Start sequence,
+   encounter end, exact outgoing generation, one Cleanup interval, and the
+   non-rendered exit-usability capability without duplicating lifecycle
+   execution?
+2. Can H derive its ordinal cage cycles from authored cage order while keeping
+   optional actions fluid, blocking contacts order-aware, ordinary cage rewards
+   nonblocking, and passive Gorgon provenance intact?
+3. Does O retain one global order and one final Cleanup while phase tabs render
+   each active or stale row exactly once?
 4. Can Room Doors move into a tab without breaking provisional first-edit,
    unselected target repair, additional exits, terminal stages, or semantic
    focus?
