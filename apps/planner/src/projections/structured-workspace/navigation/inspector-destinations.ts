@@ -242,6 +242,7 @@ function selectedRailKeysByFocusKey(
         for (const focusKey of nodeOwnedFocusKeys(entry.node)) {
           registerRailFocusKey(result, focusKey, entry.marker.focusKey);
         }
+        registerRailFocusKey(result, entry.focusMarker.focusKey, entry.marker.focusKey);
         break;
       case 'hubGroup':
         for (const focusKey of nodeOwnedFocusKeys(entry.node)) {

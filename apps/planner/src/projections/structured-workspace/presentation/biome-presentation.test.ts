@@ -344,6 +344,19 @@ describe('structured workspace biome presentation', () => {
     expect(rail.marker.findingCount).toBe(
       [...ownedMarkers.values()].reduce((total, marker) => total + marker.findingCount, 0),
     );
+    const selectedTarget = decision.targets.find((target) => target.selected);
+    if (selectedTarget === undefined) throw new Error('F selected continuation is missing');
+    const selectedWorkbench = presentation.biome.nodes.find(
+      (node) =>
+        node.kind === 'occurrenceWorkbench' &&
+        node.room.occurrenceId === selectedTarget.room.occurrenceId,
+    );
+    if (selectedWorkbench === undefined) throw new Error('F selected workbench is missing');
+    expect(rail.focusMarker?.focusKey).toBe(selectedTarget.room.marker.focusKey);
+    expect(presentation.focusDestinations.get(selectedTarget.room.marker.focusKey)).toMatchObject({
+      inspectorSubject: { kind: 'node', nodeKey: selectedWorkbench.key },
+      selectedRailKey: rail.marker.focusKey,
+    });
     expect(presentation.focusDestinations.get(decision.selection.focusKey)).toMatchObject({
       inspectorSubject: { kind: 'node', nodeKey: decision.key },
       selectedRailKey: rail.marker.focusKey,

@@ -681,7 +681,7 @@ describe('HubDecisionWorkbench', () => {
     );
   });
 
-  it('exposes a visited Medea encounter trait offer on its Hub room card', async () => {
+  it('keeps a visited Medea encounter trait offer out of the Hub room card', () => {
     const project = appendCompleteN(
       createProjectDocument(catalog, {
         projectId: 'hub-medea-trait-offer',
@@ -703,15 +703,11 @@ describe('HubDecisionWorkbench', () => {
         visitSlotKeys: ['combat05', 'miniBoss01', 'combat02', 'combat11', 'combat23', 'story'],
       },
     );
-    const view = renderHubDecisionWorkbench(project);
+    renderHubDecisionWorkbench(project);
     const story = screen.getByRole('article', { name: 'Medea Hub room' });
-    const launcher = within(story).getByRole('button', { name: /^Edit Trait:/ });
 
-    await view.user.click(launcher);
-
-    expect(view.application.store.getState().editorSession.traitDialogTarget).toEqual(
-      expect.objectContaining({ kind: 'traitOffer' }),
-    );
+    expect(within(story).queryByRole('button', { name: /^Edit Trait:/ })).toBeNull();
+    expect(within(story).getByRole('button', { name: 'Open details for Medea' })).toBeTruthy();
   });
 
   it('reveals the closed-room disclosure for exact closed-slot focus without authoring history', async () => {

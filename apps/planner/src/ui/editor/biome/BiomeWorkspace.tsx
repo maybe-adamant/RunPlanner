@@ -133,11 +133,14 @@ function FocusButton({
   accessibleLabel,
   children,
   marker,
+  focusMarker = marker,
   presentationMarker = marker,
   selected,
 }: {
   readonly accessibleLabel?: string;
   readonly children: ReactNode;
+  /** Exact navigation owner when presentation remains attached to another semantic stage. */
+  readonly focusMarker?: WorkspaceMarker;
   readonly marker: WorkspaceMarker;
   /** May retain a distinct staged-owner assessment while focus stays on a room. */
   readonly presentationMarker?: WorkspaceMarker;
@@ -153,7 +156,7 @@ function FocusButton({
       data-findings={presentationMarker.findingCount > 0}
       data-selected={selected}
       data-workspace-node={marker.focusKey}
-      onClick={() => dispatch(semanticOwnerFocused(marker.address))}
+      onClick={() => dispatch(semanticOwnerFocused(focusMarker.address))}
       type="button"
     >
       {children}
@@ -204,7 +207,7 @@ function RailNode({
   const selected = selectedRailKey === marker.focusKey;
   return (
     <div className="biome-rail-stop" data-kind={node.kind}>
-      <FocusButton marker={marker} selected={selected}>
+      <FocusButton focusMarker={entry.focusMarker ?? marker} marker={marker} selected={selected}>
         <span className="biome-rail-heading">
           <strong>{entry.label}</strong>
           <span className="biome-rail-status">

@@ -1936,6 +1936,12 @@ export interface WorkspaceRailSelectedTarget {
 
 export interface WorkspaceDecisionRailEntry {
   readonly kind: 'node';
+  /**
+   * A selected decision continues into its target occurrence stage. The rail
+   * keeps the decision marker for assessment while navigation uses this exact
+   * occurrence marker.
+   */
+  readonly focusMarker: WorkspaceMarker;
   readonly key: string;
   readonly label: string;
   /** Only direct room stages and Hub visits expose primary-reward context. */
@@ -1947,6 +1953,8 @@ export interface WorkspaceDecisionRailEntry {
 
 export interface WorkspaceStageRailEntry {
   readonly kind: 'node';
+  /** Exact occurrence or stage owner opened by this presentation stop. */
+  readonly focusMarker: WorkspaceMarker;
   readonly key: string;
   readonly label: string;
   /** Optional primary reward context for a directly rendered room stage. */

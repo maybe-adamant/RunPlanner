@@ -308,8 +308,11 @@ describe('surface product loop', () => {
     if (decisionRail === undefined) throw new Error('P Combat 02 decision rail node is missing');
     await view.user.click(decisionRail);
 
-    const offer = screen.getByRole('article', { name: 'Combat 02 room offer' });
-    await view.user.click(within(offer).getByRole('button', { name: 'Open Combat 02 room' }));
+    expect(
+      screen
+        .getByRole('complementary', { name: 'Details' })
+        .querySelector('.biome-occurrence-workbench > header h3')?.textContent,
+    ).toBe('Combat 02');
     const intro = screen.getByLabelText('Intro encounter phase');
     expect(screen.getByLabelText('Combat encounter phase')).toBeTruthy();
     await view.user.click(within(intro).getByRole('button', { name: 'Encounter' }));
@@ -863,7 +866,9 @@ describe('surface product loop', () => {
 
     await view.user.click(decisionRail);
 
-    expect(application.store.getState().editorSession.focusedSemanticOwner).toEqual(decisionOwner);
+    expect(application.store.getState().editorSession.focusedSemanticOwner?.kind).toBe(
+      'occurrence',
+    );
     expect(application.store.getState().projectWorkspace.history).toBe(historyBefore);
     expect(application.store.getState().projectWorkspace.assembly.evaluation).toBe(
       evaluationBefore,
@@ -871,7 +876,10 @@ describe('surface product loop', () => {
     expect(recovery.hasPendingAutosave()).toBe(false);
     expect(work.filter((event) => event.kind === 'projectEvaluation')).toEqual([]);
     expect(work.filter((event) => event.kind === 'queryBatch')).toEqual([]);
-    expect(screen.getByRole('heading', { level: 2, name: 'Decision 1' })).toBeTruthy();
-    expect(screen.getByRole('article', { name: 'Combat 04 room offer' })).toBeTruthy();
+    expect(
+      screen
+        .getByRole('complementary', { name: 'Details' })
+        .querySelector('.biome-occurrence-workbench > header h3'),
+    ).not.toBeNull();
   });
 });

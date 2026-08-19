@@ -245,11 +245,12 @@ workspace envelope, not a graph canvas or a second serialized UI tree.
 For ordinary biomes, the structure rail is an outline of authored decision
 points rather than an exhaustive entity index. Each decision appears once with
 its decision label and semantic assessment. When exactly one target is
-authored as selected, that stop may also carry the selected room label; when
-that room has one direct, compactly displayable reward, it carries a structured
-reward token as well. These are authored-selection context, not a claim that
-simulation entered the room. Selecting the decision shows every physical offer
-with room selection, reward selection, and picked state together.
+authored as selected, that stop navigates to the continuation occurrence stage
+and may also carry the selected room label; when that room has one direct,
+compactly displayable reward, it carries a structured reward token as well.
+These are authored-selection context, not a claim that simulation entered the
+room. The predecessor occurrence stage retains the complete outgoing-door
+surface with room selection, reward selection, and picked state together.
 Generated unpicked targets remain fully inspectable in that decision surface;
 their rewards still participate in sibling, bag, source, and possibility
 evaluation. For N, the center region remains the fixed Hub ranked board with
