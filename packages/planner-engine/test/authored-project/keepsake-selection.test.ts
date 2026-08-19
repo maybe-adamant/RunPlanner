@@ -19,7 +19,6 @@ describe('keepsake authored selections', () => {
   it('creates mandatory starting and retained Postboss defaults and round-trips replacements', () => {
     let project = createProjectDocument(catalog, {
       projectId: 'keepsake-authored',
-      name: 'Keepsake authored',
       configuredBiomeCounts: { Underworld: 1 },
     });
     const route = project.routes.find((candidate) => candidate.routeKey === 'Underworld');
@@ -48,7 +47,6 @@ describe('keepsake authored selections', () => {
   it('rejects an unknown persisted selection while preserving legal context-invalid replacements', () => {
     const project = createProjectDocument(catalog, {
       projectId: 'keepsake-codec',
-      name: 'Keepsake codec',
       configuredBiomeCounts: { Underworld: 1 },
     });
     const encoded = JSON.parse(encodeProjectDocument(project)) as {
@@ -64,7 +62,6 @@ describe('keepsake authored selections', () => {
   it('leaves Jeweled Pom unresolved and restores dormant authored results', () => {
     let project = createProjectDocument(catalog, {
       projectId: 'jeweled-pom-defaults',
-      name: 'Jeweled Pom defaults',
       configuredBiomeCounts: { Underworld: 2 },
     });
     const start = createRouteStartKeepsakeSelectionAddress('Underworld');
@@ -159,7 +156,6 @@ describe('keepsake authored selections', () => {
   it('retains an authored Experimental Hammer result across dormancy and loadout invalidation', () => {
     let project = createProjectDocument(catalog, {
       projectId: 'hammer-result-retention',
-      name: 'Hammer result retention',
       configuredBiomeCounts: { Underworld: 1 },
     });
     const start = createRouteStartKeepsakeSelectionAddress('Underworld');

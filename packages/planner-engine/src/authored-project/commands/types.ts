@@ -44,7 +44,6 @@ import type {
 } from '../traits';
 
 export type ProjectStateCommand =
-  | { readonly kind: 'RenameProject'; readonly name: string }
   | {
       readonly kind: 'ReplaceStartingKeepsake';
       readonly selection: Extract<KeepsakeSelectionAddress, { readonly owner: 'routeStart' }>;
@@ -437,5 +436,5 @@ export type ProjectCommand =
 
 export type BiomeOwnedProjectCommand = Exclude<
   ProjectCommand,
-  { readonly kind: 'RenameProject' | 'ConfigureRoutePrefix' }
+  { readonly kind: 'ConfigureRoutePrefix' }
 >;

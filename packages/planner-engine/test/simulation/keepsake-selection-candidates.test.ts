@@ -76,7 +76,6 @@ describe('keepsake selection candidates', () => {
   it('publishes the complete rank-III inventory at route start without inheriting baseline Fated restrictions', () => {
     const project = createProjectDocument(catalog, {
       projectId: 'keepsake-start-domain',
-      name: 'Keepsake start domain',
     });
     const session = createPreparedProjectCandidateSession(
       catalog,

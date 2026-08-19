@@ -72,7 +72,6 @@ describe('N Hub rewards, validation, and candidates', () => {
     const openingOnly = applyProjectCommand(
       createProjectDocument(catalog, {
         projectId: 'candidate-n-opening-domain',
-        name: 'N opening candidate domain',
         configuredBiomeCounts: { Surface: 1 },
       }),
       catalog,
@@ -1121,7 +1120,6 @@ describe('N Hub rewards, validation, and candidates', () => {
     const project = appendCompleteN(
       createProjectDocument(catalog, {
         projectId: 'n-story-board',
-        name: 'N Story Board',
         configuredBiomeCounts: { Surface: 1 },
       }),
       {

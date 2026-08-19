@@ -66,7 +66,6 @@ describe('structured workspace topology interaction assembly', () => {
   it('returns the exact topology-free start requirement without creating removal or takeover packages', () => {
     const project = createProjectDocument(catalog, {
       configuredBiomeCounts: { Underworld: 1 },
-      name: 'Topology-free F',
       projectId: 'topology-free-f',
     });
     const { assembly } = assemble(project, 'Underworld', 'F');
@@ -83,7 +82,6 @@ describe('structured workspace topology interaction assembly', () => {
     const project = appendNEntry(
       createProjectDocument(catalog, {
         configuredBiomeCounts: { Surface: 1 },
-        name: 'Terminal Hub takeover N',
         projectId: 'terminal-hub-takeover-n',
       }),
     );
@@ -139,7 +137,6 @@ describe('structured workspace topology interaction assembly', () => {
     const completedProject = appendCompleteN(
       createProjectDocument(catalog, {
         configuredBiomeCounts: { Surface: 1 },
-        name: 'Completed N',
         projectId: 'completed-n-topology-assembly',
       }),
       { includePreboss: false },

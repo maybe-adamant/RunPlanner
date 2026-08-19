@@ -942,6 +942,9 @@ export function BiomeWorkspace({ biome, focusByOwner, interactions }: BiomeWorks
     outgoingDecisionCandidate?.kind === 'takeoverBatch'
       ? outgoingDecisionCandidate
       : undefined;
+  const rendersOccurrenceWorkbench =
+    sourceOccurrence !== undefined ||
+    (subject?.kind === 'node' && subject.node.kind === 'occurrenceWorkbench');
 
   return (
     <div className="biome-workspace">
@@ -986,10 +989,12 @@ export function BiomeWorkspace({ biome, focusByOwner, interactions }: BiomeWorks
         />
       </section>
       <aside aria-label="Details" className="biome-inspector">
-        <header className="biome-inspector-heading">
-          <p className="eyebrow">Details</p>
-          <h2>{inspectorTitle}</h2>
-        </header>
+        {rendersOccurrenceWorkbench ? null : (
+          <header className="biome-inspector-heading">
+            <p className="eyebrow">Details</p>
+            <h2>{inspectorTitle}</h2>
+          </header>
+        )}
         {biome.entry === undefined ? null : <BiomeFieldControls fields={biome.fields} />}
         {biome.echoKeepsakeReplay === undefined ? null : (
           <ExperimentalHammerResultControl

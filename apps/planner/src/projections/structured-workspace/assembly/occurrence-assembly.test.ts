@@ -861,6 +861,23 @@ describe('structured workspace occurrence assembly', () => {
     });
   });
 
+  it('withholds an inactive unranked Infernal Contract action and insertion proposal', () => {
+    const shopId = createOccurrenceId('golden-f-preboss-shop');
+    const project = withFPrebossSelection(createGoldenFGHIProject(), 'exit1');
+    const room = assemble(project, 'Underworld', 'F', shopId, undefined, () => Object.freeze([]))
+      .assembly.node.room;
+    const isContract = (
+      reference: import('@run-planner/engine/authored-project').RoomActionReference,
+    ) =>
+      reference.kind === 'interactAcquisitionEntry' &&
+      reference.entryKey === 'infernalContractReward';
+
+    expect(room.roomActions?.rows.some((row) => isContract(row.reference))).toBe(false);
+    expect(room.roomActions?.proposals.some((proposal) => isContract(proposal.reference))).toBe(
+      false,
+    );
+  });
+
   it('projects a Gold duplicate ordered after its Travel refill source', () => {
     const shopId = createOccurrenceId('golden-f-preboss-shop');
     const base = withFPrebossSelection(createGoldenFGHIProject(), 'exit1');

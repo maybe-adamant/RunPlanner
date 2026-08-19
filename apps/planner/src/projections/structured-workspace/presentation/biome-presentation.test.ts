@@ -147,7 +147,6 @@ describe('structured workspace biome presentation', () => {
     const project = appendCompleteN(
       createProjectDocument(catalog, {
         configuredBiomeCounts: { Surface: 1 },
-        name: 'N run-state placement',
         projectId: 'n-run-state-placement',
       }),
       { includePreboss: true },
@@ -199,7 +198,6 @@ describe('structured workspace biome presentation', () => {
   it('presents the Hub only after it is authored, then nests only authored visit workbenches', () => {
     const empty = createProjectDocument(catalog, {
       configuredBiomeCounts: { Surface: 1 },
-      name: 'Empty N presentation',
       projectId: 'empty-n-presentation',
     });
     const emptyPresentation = present(empty, 'Surface', 'N');
@@ -528,7 +526,6 @@ describe('structured workspace biome presentation', () => {
   it('keeps completion landmarks outside an incomplete biome rail', () => {
     const empty = createProjectDocument(catalog, {
       configuredBiomeCounts: { Underworld: 1 },
-      name: 'Presentation completion outline',
       projectId: 'presentation-completion-outline',
     });
     const biome = present(empty, 'Underworld', 'F').presentation.biome;
@@ -541,7 +538,6 @@ describe('structured workspace biome presentation', () => {
     const initial = appendCompleteN(
       createProjectDocument(catalog, {
         configuredBiomeCounts: { Surface: 1 },
-        name: 'Hub visit presentation',
         projectId: 'hub-visit-presentation',
       }),
       { includePreboss: false, visitSlotKeys: nVisitSlotKeys.slice(0, 3) },

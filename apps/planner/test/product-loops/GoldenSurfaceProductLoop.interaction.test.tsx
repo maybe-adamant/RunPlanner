@@ -64,13 +64,20 @@ function createPersistence(): {
   readStoredJson(): string | null;
 } {
   let storedJson: string | null = null;
+  let storedFileName: string | null = null;
   return {
     profileFile: {
-      save: (_fileName, json) => {
+      save: (fileName, json) => {
+        storedFileName = fileName;
         storedJson = json;
         return Promise.resolve('saved');
       },
-      load: () => Promise.resolve(storedJson),
+      load: () =>
+        Promise.resolve(
+          storedJson === null || storedFileName === null
+            ? null
+            : { fileName: storedFileName, json: storedJson },
+        ),
     },
     readStoredJson: () => storedJson,
   };
@@ -309,10 +316,11 @@ describe('surface product loop', () => {
     await view.user.click(decisionRail);
 
     expect(
-      screen
-        .getByRole('complementary', { name: 'Details' })
-        .querySelector('.biome-occurrence-workbench > header h3')?.textContent,
-    ).toBe('Combat 02');
+      within(screen.getByRole('complementary', { name: 'Details' })).getByRole('heading', {
+        level: 3,
+        name: /^Entering Combat 02/,
+      }),
+    ).toBeTruthy();
     const intro = screen.getByLabelText('Intro encounter phase');
     expect(screen.getByLabelText('Combat encounter phase')).toBeTruthy();
     await view.user.click(within(intro).getByRole('button', { name: 'Encounter' }));
@@ -353,7 +361,6 @@ describe('surface product loop', () => {
     const authored = appendCompleteN(
       createProjectDocument(application.catalog, {
         configuredBiomeCounts: { Surface: 1 },
-        name: 'Hub undo surface',
         projectId: 'surface-product-hub-undo',
       }),
     );
@@ -425,7 +432,6 @@ describe('surface product loop', () => {
     const authored = appendCompleteN(
       createProjectDocument(application.catalog, {
         configuredBiomeCounts: { Surface: 1 },
-        name: 'Completed Hub membership repair surface',
         projectId: 'surface-product-completed-hub-membership-repair',
       }),
     );
@@ -515,7 +521,6 @@ describe('surface product loop', () => {
     const authored = appendCompleteN(
       createProjectDocument(application.catalog, {
         configuredBiomeCounts: { Surface: 1 },
-        name: 'Hub membership repair surface',
         projectId: 'surface-product-hub-membership-repair',
       }),
     );

@@ -322,7 +322,6 @@ export function targetOccurrenceId(
 function createCompleteFProject(): ProjectDocument {
   let project = createProjectDocument(catalog, {
     projectId: 'golden-fg',
-    name: 'Golden F/G route',
     configuredBiomeCounts: { Underworld: 2 },
   });
   project = applyProjectCommand(project, catalog, {
@@ -405,7 +404,6 @@ export function createFMidshopPomFrontierProject(): ProjectDocument {
   ]);
   let project = createProjectDocument(catalog, {
     projectId: 'midshop-pom-frontier',
-    name: 'Midshop Pom frontier',
     configuredBiomeCounts: { Underworld: 1 },
   });
   project = applyProjectCommand(project, catalog, {

@@ -216,7 +216,6 @@ describe('unified structured workspace projection facade', () => {
   it('registers a coarse finding against only its owning biome shell', () => {
     const authored = createProjectDocument(catalog, {
       configuredBiomeCounts: { Surface: 1 },
-      name: 'Facade finding routing',
       projectId: 'facade-finding-routing',
     });
     const assembly = simulateProjectAssembly(catalog, authored);

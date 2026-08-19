@@ -120,7 +120,6 @@ function expectBefore(first: Element, second: Element): void {
 function emptyFProject(): ProjectDocument {
   return createProjectDocument(catalog, {
     projectId: 'occurrence-workbench-empty-f',
-    name: 'Occurrence workbench empty F',
     configuredBiomeCounts: { Underworld: 1 },
   });
 }
@@ -135,7 +134,6 @@ function authoredAnomalyProject(): {
   const source = { kind: 'occurrence' as const, occurrenceId: start };
   let project = createProjectDocument(catalog, {
     projectId: 'occurrence-workbench-anomaly',
-    name: 'Occurrence workbench Anomaly',
     configuredBiomeCounts: { Underworld: 2 },
   });
   project = applyProjectCommand(project, catalog, {
@@ -361,7 +359,13 @@ describe('OccurrenceWorkbench', () => {
       address: expect.objectContaining({ kind: 'target' }),
       kind: 'targetRoomPicker',
     });
-    expect(screen.getByRole('heading', { level: 3, name: node.room.label })).toBeTruthy();
+    expect(
+      screen.getByRole('heading', {
+        level: 3,
+        name: new RegExp(`^Entering ${node.room.label}`),
+      }),
+    ).toBeTruthy();
+    expect(document.querySelector('.room-card-heading .room-kind')).toBeNull();
     expect(screen.queryByLabelText('Room')).toBeNull();
   });
 
@@ -377,6 +381,14 @@ describe('OccurrenceWorkbench', () => {
     const standardActions = screen.getByLabelText('Room Actions');
     expectBefore(standardEncounter, standardFeatures);
     expectBefore(standardFeatures, standardActions);
+    expect(within(standardEncounter).getAllByRole('heading', { name: 'Encounter' })).toHaveLength(
+      1,
+    );
+    expect(
+      within(standardFeatures)
+        .getAllByRole('heading')
+        .map((heading) => heading.textContent),
+    ).toEqual(['Room features']);
   });
 
   it('renders N Side rooms before Room Actions', () => {
@@ -394,7 +406,7 @@ describe('OccurrenceWorkbench', () => {
   }, 10_000);
 
   it('renders Fields setup before its one Room Actions board', () => {
-    renderStaticOccurrenceWorkbench(
+    renderOccurrenceWorkbench(
       createGoldenFGHIProject(),
       'Underworld',
       'H',
@@ -951,7 +963,9 @@ describe('OccurrenceWorkbench', () => {
     const cleared = screen.getByRole('checkbox', { name: 'Cleared' });
     expect((cleared as HTMLInputElement).checked).toBe(true);
     expect(screen.queryByLabelText('Reward')).toBeNull();
-    expect(screen.getByText(/Incoming door reward/)).toBeTruthy();
+    expect(
+      screen.getByRole('heading', { level: 3, name: /^Entering .* · Incoming Reward:/ }),
+    ).toBeTruthy();
     expect(screen.queryByLabelText('Map')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Restore Combat 01' })).toBeNull();
     await view.user.click(screen.getByRole('checkbox', { name: 'Cleared' }));
@@ -1017,31 +1031,28 @@ describe('OccurrenceWorkbench', () => {
     expect(screen.getByLabelText('Map')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Restore Combat 01' })).toBeTruthy();
   });
-  it('shows a Hub room main reward read-only and focuses its board owner without authoring', async () => {
+  it('summarizes a Hub room main reward in the room heading without another editor', () => {
     const view = renderOccurrenceWorkbench(
       createRepresentativeNOPQProject(),
       'Surface',
       'N',
       occurrenceById(nOccurrenceId('combat02')),
     );
-    const context = screen.getByLabelText('Hub reward');
-    expect(within(context).getByText('Big Max Magick')).toBeTruthy();
-    expect(within(context).queryByRole('button', { name: 'Reward' })).toBeNull();
-    const edit = within(context).getByRole('button', { name: 'Edit Hub reward' });
-    expect(edit.classList.contains('quiet-action')).toBe(true);
     const historyLength = view.application.store.getState().projectWorkspace.history.past.length;
-
-    await view.user.click(edit);
-
-    expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(
-      createIncomingRewardAddress(nBiome, nOccurrenceId('combat02')),
-    );
+    expect(
+      screen.getByRole('heading', {
+        level: 3,
+        name: 'Entering Combat 02 · Incoming Reward: Big Max Magick',
+      }),
+    ).toBeTruthy();
+    expect(screen.queryByLabelText('Hub reward')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Edit Hub reward' })).toBeNull();
     expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
       historyLength,
     );
   });
 
-  it('shows a fixed Hub reward context without an edit action', () => {
+  it('summarizes a fixed Hub reward in the room heading', () => {
     const project = createRepresentativeNProject({
       openSlotKeys: [
         'combat11',
@@ -1063,10 +1074,14 @@ describe('OccurrenceWorkbench', () => {
       occurrenceById(nOccurrenceId('story')),
     );
 
-    const context = screen.getByLabelText('Hub reward');
-    expect(within(context).getByText('Story')).toBeTruthy();
-    expect(within(context).queryByRole('button', { name: 'Edit Hub reward' })).toBeNull();
-    expect(within(context).queryByRole('button', { name: 'Reward' })).toBeNull();
+    expect(
+      screen.getByRole('heading', {
+        level: 3,
+        name: 'Entering Medea · Incoming Reward: Story',
+      }),
+    ).toBeTruthy();
+    expect(screen.queryByLabelText('Hub reward')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Edit Hub reward' })).toBeNull();
   });
 
   it('withholds dormant Ephyra side controls and leaves rooms without local detail compact', () => {
@@ -1904,7 +1919,23 @@ describe('OccurrenceWorkbench', () => {
     );
     expect(screen.getByRole('columnheader', { name: 'Offer' })).toBeTruthy();
     expect(screen.queryByText('Participation')).toBeNull();
-    expect(screen.getByRole('heading', { name: 'Preboss' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Entering Preboss' })).toBeTruthy();
+    cleanup();
+
+    const goldenView = renderOccurrenceWorkbench(
+      createGoldenFGHIProject(),
+      'Underworld',
+      'F',
+      occurrenceById(createOccurrenceId('golden-f-preboss-shop')),
+    );
+    const goldenNode = workspaceBiome(goldenView.application, 'Underworld', 'F').nodes.find(
+      (candidate): candidate is WorkspaceOccurrenceWorkbenchNode =>
+        candidate.kind === 'occurrenceWorkbench' &&
+        candidate.room.occurrenceId === createOccurrenceId('golden-f-preboss-shop'),
+    );
+    if (goldenNode === undefined) throw new Error('golden preboss workbench is missing');
+    expect(goldenNode.room.roomLocal).toMatchObject({ kind: 'shop', supplementalOffers: [] });
+    expect(screen.queryByText('Pick up infernalContractReward')).toBeNull();
   });
 
   it('renders and binds the applicable Shop Death Defiance repair control', async () => {

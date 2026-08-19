@@ -26,14 +26,17 @@ export function createBrowserProfileFileAdapter(
       }
       return Promise.resolve('saved');
     },
-    load(): Promise<string | null> {
+    load(): Promise<{ readonly fileName: string; readonly json: string } | null> {
       return new Promise((resolve, reject) => {
         const input = environment.document.createElement('input');
         input.accept = '.runplanner.json,.json,application/json';
         input.hidden = true;
         input.type = 'file';
         let settled = false;
-        const finish = (result: string | null, error?: unknown) => {
+        const finish = (
+          result: { readonly fileName: string; readonly json: string } | null,
+          error?: unknown,
+        ) => {
           if (settled) {
             return;
           }
@@ -54,7 +57,7 @@ export function createBrowserProfileFileAdapter(
               return;
             }
             void file.text().then(
-              (json) => finish(json),
+              (json) => finish(Object.freeze({ fileName: file.name, json })),
               (error: unknown) => finish(null, error),
             );
           },

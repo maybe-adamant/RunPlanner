@@ -1,8 +1,13 @@
 export type ProfileSaveResult = 'cancelled' | 'saved';
 
+export interface LoadedProfileFile {
+  readonly fileName: string;
+  readonly json: string;
+}
+
 export interface ProfileFileAdapter {
   save(suggestedFileName: string, json: string): Promise<ProfileSaveResult>;
-  load(): Promise<string | null>;
+  load(): Promise<LoadedProfileFile | null>;
 }
 
 export function createUnavailableProfileFileAdapter(): ProfileFileAdapter {

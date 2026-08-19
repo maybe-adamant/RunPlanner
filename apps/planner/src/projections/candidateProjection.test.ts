@@ -182,7 +182,6 @@ describe('candidate projection', () => {
   it('returns typed unavailable evidence when a target lies behind an incomplete upstream biome', () => {
     const project = createProjectDocument(catalog, {
       projectId: 'upstream',
-      name: 'Upstream',
       configuredBiomeCounts: { Underworld: 2 },
     });
     const withGStart = applyProjectCommand(project, catalog, {

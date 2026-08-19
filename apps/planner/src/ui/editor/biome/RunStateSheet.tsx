@@ -9,12 +9,10 @@ import { useAppDispatch } from '@planner/state/store';
 
 export function RunStateLauncher({ launcher }: { readonly launcher: WorkspaceRunStateLauncher }) {
   const dispatch = useAppDispatch();
-  const descriptionId = `run-state-unavailable-${launcher.owner.biomeKey}-${launcher.title.replaceAll(' ', '-')}`;
   const unavailable = launcher.availability === 'unavailable';
   return (
     <span className="run-state-launcher">
       <button
-        aria-describedby={unavailable ? descriptionId : undefined}
         className="quiet-action action-compact"
         data-run-state-launcher={JSON.stringify(launcher.owner)}
         disabled={unavailable}
@@ -25,11 +23,6 @@ export function RunStateLauncher({ launcher }: { readonly launcher: WorkspaceRun
       >
         Run State
       </button>
-      {unavailable ? (
-        <span className="run-state-unavailable" id={descriptionId} role="status">
-          {launcher.reason}
-        </span>
-      ) : null}
     </span>
   );
 }

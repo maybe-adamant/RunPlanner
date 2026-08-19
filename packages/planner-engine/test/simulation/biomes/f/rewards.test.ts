@@ -90,10 +90,9 @@ function complete(project: ProjectDocument): CompleteBiomeCompletenessResult {
   return result;
 }
 
-function emptyProject(name: string): ProjectDocument {
+function emptyProject(projectId: string): ProjectDocument {
   return createProjectDocument(catalog, {
-    projectId: name,
-    name,
+    projectId,
     configuredBiomeCounts: { Underworld: 1 },
   });
 }

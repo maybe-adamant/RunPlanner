@@ -22,7 +22,6 @@ export const fCombatId = createOccurrenceId('f-takeover-combat');
 export function createFProject(projectId = 'f-takeover-project'): ProjectDocument {
   return createProjectDocument(catalog, {
     projectId,
-    name: projectId,
     configuredBiomeCounts: { Underworld: 1 },
   });
 }

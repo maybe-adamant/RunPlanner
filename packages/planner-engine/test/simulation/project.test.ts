@@ -62,7 +62,6 @@ describe('project simulation composition', () => {
   it('reports an unconfigured project as empty rather than valid', () => {
     const project = createProjectDocument(catalog, {
       projectId: 'empty-project',
-      name: 'Empty Project',
     });
     const result = simulateProject(catalog, project);
 
@@ -86,7 +85,6 @@ describe('project simulation composition', () => {
   it('keeps the first incomplete biome active and leaves the configured suffix blocked', () => {
     const project = createProjectDocument(catalog, {
       projectId: 'incomplete-underworld-project',
-      name: 'Incomplete Underworld Project',
       configuredBiomeCounts: { Underworld: 2 },
     });
     const { result, route: underworld } = route(project, 'Underworld');

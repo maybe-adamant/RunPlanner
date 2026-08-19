@@ -72,9 +72,8 @@ Some terms are deliberately retained rather than translated mechanically:
 - `Eventual God` remains the intentional Blind Box picker concept documented in
   `docs/design/EDITOR_MODEL.md`; the compact reward summary omits the redundant
   `(eventual)` qualifier.
-- `Findings`, `Empty project`, `Not configured`, `Project editor`, and the
-  picker states `Required`, `Not evaluated`, and `Unavailable` are already
-  understandable product copy.
+- `Findings`, `Not configured`, and the picker states `Required`,
+  `Not evaluated`, and `Unavailable` are already understandable product copy.
 
 Use `Room selected` for authored selection and `Door taken` for an evaluated
 entry. Do not describe an authored selected room as entered merely because it
@@ -148,9 +147,9 @@ attributes that carry the same internal values.
 | `Selected route`                                                                                      | `Room selected`                                                             | `DecisionWorkbench.tsx`                                    |
 | `Entered route`                                                                                       | `Door taken`                                                                | `DecisionWorkbench.tsx`                                    |
 | `Unavailable retained offer` / `Retained authored offer` / `Generated offer`                          | `Unavailable saved room` / `Saved room` / `Offered room`                    | `DecisionWorkbench.tsx`                                    |
-| `Choose Exit <n> first.`                                                                              | `Choose Door <n> first.`                                                    | `structured-workspace/assembly/decision-assembly.ts`       |
-| `Select the batch reward store first.`                                                                | `Choose the reward pool first.`                                             | `structured-workspace/assembly/decision-assembly.ts`       |
-| `Select the Fields cage outcome first.`                                                               | `Choose the Fields door roll first.`                                        | `structured-workspace/assembly/decision-assembly.ts`       |
+| `Choose Exit <n> first.`                                                                              | Removed; control availability carries the prerequisite.                     | `DecisionWorkbench.tsx`                                    |
+| `Select the batch reward store first.`                                                                | Removed; control order carries the prerequisite.                            | `DecisionWorkbench.tsx`                                    |
+| `Select the Fields cage outcome first.`                                                               | Removed; control order carries the prerequisite.                            | `DecisionWorkbench.tsx`                                    |
 | `Reconcile unavailable exits`                                                                         | `Remove unavailable doors`                                                  | `DecisionWorkbench.tsx`                                    |
 | `Remove decision`                                                                                     | `Remove these doors`                                                        | `DecisionWorkbench.tsx`                                    |
 | `This retained exit is unavailable. Reconcile unavailable exits first.`                               | `This saved door is no longer available here. Fix the earlier route first.` | `DecisionWorkbench.tsx`                                    |

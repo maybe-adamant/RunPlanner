@@ -82,12 +82,15 @@ narrow widths.
 
 ### Desktop Sizing and Scroll Ownership
 
-At desktop widths, an active biome workspace fills the editor height remaining
-after findings and any route-context message. The workspace shell itself is
-not a vertical scrollport. Its Route structure and Details regions
-are independently sized vertical scrollports, so scrolling one never moves the
-other. A short structure rail does not advertise overflow merely because its
-connector decoration extends beyond a terminal stop.
+At desktop widths, the application shell occupies one viewport and gives the
+editor all height remaining below the compact project header and route tabs.
+The document itself is not a vertical scrollport. The route rail, Route
+structure, Details region, and bounded findings list own overflow at their
+respective presentation boundaries, so scrolling one never moves the others.
+The desktop shell uses the available widescreen width rather than constraining
+the authoring surface to a narrow content column. A short structure rail does
+not advertise overflow merely because its connector decoration extends beyond
+a terminal stop.
 
 The route overview remains ordinary editor-panel content and may use that
 panel's scroll container. At narrow widths the layout intentionally returns to
@@ -218,6 +221,12 @@ Room Actions chronology. Shops render inventory and conditions before Room
 features and Room Actions. A section is omitted when its projected product is
 empty.
 
+The occurrence header presents the room and any door-visible incoming reward as
+one compact `Entering <room> · Incoming Reward: <reward>` title. React does not
+render a second incoming-reward context block. A Room-features child renders
+its bound Add or Remove Chaos-gate/Zagreus-contract action directly, without a
+second child heading that repeats the action's subject.
+
 ShipCombat is the deliberate fourth shape. It renders Combat phase count,
 then Intro, Combat 1, and structurally active Combat 2 sections. Each phase
 contains its projected Encounter, declaration-attached reward wheel when
@@ -235,8 +244,9 @@ active groups and rendered exactly once in the Ship repair surface, preserving
 its finding, semantic focus, and explicit removal proposal.
 
 Room features is a closed application product containing the currently
-supported Chaos-gate and Zagreus-contract spawn controls. The resulting exits,
-their removal, and Anomaly identity/revert remain on the outgoing door cards.
+supported Chaos-gate and Zagreus-contract Add/Remove controls. The resulting
+exit card owns only decision selection, room navigation, and its remaining
+door-specific identity controls; Anomaly identity/revert remains on its door.
 Incoming room identity and door-visible reward are read-only context in an
 entered occurrence; their editor remains the predecessor's outgoing door.
 

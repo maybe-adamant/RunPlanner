@@ -116,7 +116,6 @@ function hubRailButton(container: ParentNode = document): HTMLButtonElement {
 function emptyProject(routeKey: 'Surface' | 'Underworld', count: number): ProjectDocument {
   return createProjectDocument(catalog, {
     projectId: `empty-${routeKey}-${count}`,
-    name: `Empty ${routeKey}`,
     configuredBiomeCounts: { [routeKey]: count },
   });
 }
@@ -262,14 +261,9 @@ describe('BiomeWorkspace', () => {
     const launcher = screen.getByRole('button', { name: 'Run State' });
     if (!(launcher instanceof HTMLButtonElement))
       throw new Error('Run State launcher is not a button');
-    const descriptionId = launcher.getAttribute('aria-describedby');
-
     expect(launcher.disabled).toBe(true);
-    expect(descriptionId).not.toBeNull();
-    const reason = descriptionId === null ? null : document.getElementById(descriptionId);
-    expect(reason?.textContent).toBe(
-      'Run State is unavailable because this decision has not been reached.',
-    );
+    expect(launcher.getAttribute('aria-describedby')).toBeNull();
+    expect(screen.queryByText(/Run State is unavailable/)).toBeNull();
     await user.click(launcher);
     expect(screen.queryByRole('region', { name: /State before/ })).toBeNull();
   });
@@ -461,13 +455,16 @@ describe('BiomeWorkspace', () => {
     await view.user.click(railButtonForMarker(view.container, opening.marker.focusKey));
     const inspector = screen.getByRole('complementary', { name: 'Details' });
     expect(inspector.querySelector('.biome-occurrence-workbench > header h3')?.textContent).toBe(
-      'Opening',
+      'Entering Opening',
     );
 
     await view.user.click(railButtonForMarker(view.container, preHubDecision.marker.focusKey));
-    expect(inspector.querySelector('.biome-occurrence-workbench > header h3')?.textContent).toBe(
-      'Pre-Hub',
-    );
+    expect(
+      within(inspector).getByRole('heading', {
+        level: 3,
+        name: 'Entering Pre-Hub · Incoming Reward: Boon · Ares',
+      }),
+    ).toBeTruthy();
     expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(
       preHub.room.marker.address,
     );
@@ -490,11 +487,17 @@ describe('BiomeWorkspace', () => {
       createOccurrenceAddress(nBiome, nOccurrenceId('combat02')),
     );
 
-    expect(screen.getAllByRole('heading', { name: 'Combat 02' })).toHaveLength(2);
+    expect(
+      screen.getByRole('heading', {
+        level: 3,
+        name: 'Entering Combat 02 · Incoming Reward: Big Max Magick',
+      }),
+    ).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Side rooms' })).toBeTruthy();
     expect(screen.getByText('Door 558353')).toBeTruthy();
     expect(screen.getByLabelText('Side Room 01 generation')).toBeTruthy();
     const inspector = screen.getByRole('complementary', { name: 'Details' });
+    expect(inspector.querySelector('.biome-inspector-heading')).toBeNull();
     expect(within(inspector).getAllByRole('button', { name: 'Reward' })).toHaveLength(2);
     await view.user.selectOptions(
       within(inspector).getByLabelText('Side Room 03 generation'),
@@ -518,35 +521,30 @@ describe('BiomeWorkspace', () => {
     expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(
       createOccurrenceAddress(nBiome, nLocalOccurrenceId('combat02', 'sideDoor1')),
     );
-    expect(within(inspector).getByText(/Incoming door reward:/)).toBeTruthy();
+    expect(
+      within(inspector).getByRole('heading', {
+        level: 3,
+        name: /^Entering .* · Incoming Reward:/,
+      }),
+    ).toBeTruthy();
     expect(within(inspector).queryByRole('button', { name: 'Reward' })).toBeNull();
   });
 
-  it('returns from local Hub reward context to the exact closed board picker without authoring', async () => {
+  it('summarizes the Hub door reward in the room heading without exposing another editor', async () => {
     const view = renderWorkspace(createRepresentativeNOPQProject(), 'Surface', 'N');
     await view.user.click(hubRailButton());
     await view.user.click(screen.getByRole('button', { name: /Visit 3 · Combat 02/ }));
 
     const inspector = screen.getByRole('complementary', { name: 'Details' });
-    const context = within(inspector).getByRole('region', { name: 'Hub reward' });
-    expect(within(context).getByText('Big Max Magick')).toBeTruthy();
-    const edit = within(context).getByRole('button', { name: 'Edit Hub reward' });
     const historyBefore = view.application.store.getState().projectWorkspace.history.past.length;
-
-    await view.user.click(edit);
-
-    const rewardOwner = createIncomingRewardAddress(nBiome, nOccurrenceId('combat02'));
-    await waitFor(() => {
-      const card = screen.getByRole('article', { name: 'Combat 02 Hub room' });
-      const trigger = within(card).getByRole('button', { name: 'Reward' });
-      expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(
-        rewardOwner,
-      );
-      expect(card.dataset.focusedMainReward).toBe('true');
-      expect(document.activeElement).toBe(trigger);
-      expect(trigger.getAttribute('aria-expanded')).toBe('false');
-    });
-    expect(screen.queryByRole('listbox')).toBeNull();
+    expect(
+      within(inspector).getByRole('heading', {
+        level: 3,
+        name: 'Entering Combat 02 · Incoming Reward: Big Max Magick',
+      }),
+    ).toBeTruthy();
+    expect(within(inspector).queryByRole('region', { name: 'Hub reward' })).toBeNull();
+    expect(within(inspector).queryByRole('button', { name: 'Edit Hub reward' })).toBeNull();
     expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
       historyBefore,
     );
@@ -750,7 +748,7 @@ describe('BiomeWorkspace', () => {
     expect(within(inspector).queryByRole('button', { name: 'Remove these doors' })).toBeNull();
     const before = view.application.store.getState().projectWorkspace.history.past.length;
 
-    const pool = within(inspector).getByRole('combobox', { name: 'Base reward pool' });
+    const pool = within(inspector).getByRole('combobox', { name: 'Reward Pool' });
     await view.user.click(pool);
     await waitFor(() =>
       expect(
@@ -1107,7 +1105,6 @@ describe('BiomeWorkspace', () => {
     const project = appendCompleteN(
       createProjectDocument(catalog, {
         projectId: 'workspace-n-completed-handoff',
-        name: 'N completed handoff',
         configuredBiomeCounts: { Surface: 1 },
       }),
       { includePreboss: false },
@@ -1353,7 +1350,7 @@ describe('BiomeWorkspace', () => {
     );
     const beforeInspector = screen.getByRole('complementary', { name: 'Details' });
     expect(
-      within(beforeInspector).getByRole('heading', { level: 3, name: 'Entrance' }),
+      within(beforeInspector).getByRole('heading', { level: 3, name: 'Entering Entrance' }),
     ).toBeTruthy();
 
     act(() =>

@@ -24,21 +24,18 @@ export function DoorRewardEditor({
     <div aria-label={`${door.room.label} door rewards`} className="door-reward-list">
       {door.rewardPreview.rewards.map((reward) => (
         <section className="room-state-with-marker" key={reward.key}>
-          {showRewardLabels ? (
-            <div className="owner-markers">
-              <span>{reward.label}</span>
-              <SemanticOwnerMarker address={reward.marker.address} />
-            </div>
-          ) : (
-            <SemanticOwnerMarker address={reward.marker.address} />
-          )}
+          <SemanticOwnerMarker address={reward.marker.address} />
           {reward.control === undefined ? (
-            <p className="fixed-room-state">{reward.summary}</p>
+            <div className="field-control field-control-inline door-fixed-reward">
+              <span>{showRewardLabels ? reward.label : 'Reward'}</span>
+              <span className="fixed-room-state">{reward.summary}</span>
+            </div>
           ) : (
             <RewardControlEditor
               control={reward.control}
               idPrefix={`${idPrefix}-${reward.key}`}
               interactions={interactions}
+              label={showRewardLabels ? reward.label : 'Reward'}
               showAcquisitionChildren={false}
             />
           )}

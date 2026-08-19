@@ -57,7 +57,6 @@ function project(
 ): ProjectDocument {
   return createProjectDocument(catalog, {
     projectId,
-    name: projectId,
     configuredBiomeCounts,
   });
 }

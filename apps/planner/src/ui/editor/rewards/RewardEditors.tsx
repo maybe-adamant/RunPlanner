@@ -19,6 +19,7 @@ interface RewardValueEditorProps {
   readonly candidateOwner: RewardCandidateOwner;
   readonly idPrefix: string;
   readonly interactions: WorkspaceInteractionCatalog;
+  readonly label?: string;
   readonly offer: ResolvedRewardOffer | null;
   readonly onReplace: (offer: ResolvedRewardOffer) => void;
   readonly initialStep?: RewardPickerStep;
@@ -47,6 +48,7 @@ export function RewardValueEditor({
   candidateOwner,
   idPrefix,
   interactions,
+  label = 'Reward',
   offer,
   onReplace,
   initialStep = 'type',
@@ -132,7 +134,8 @@ export function RewardValueEditor({
         choiceLabel={resolver.choiceLabel(active?.step ?? 'type', activeOffer)}
         closeOnSelect={false}
         id={`${idPrefix}-reward`}
-        label="Reward"
+        label={label}
+        layout="inline"
         loading={active !== undefined && domain.result === undefined}
         model={model}
         onOpenChange={(open) => {
@@ -156,6 +159,7 @@ export function CountedRewardEditor({
   offer,
   idPrefix,
   interactions,
+  label,
   onReplace,
   initialStep,
   unresolvedSeed,
@@ -165,6 +169,7 @@ export function CountedRewardEditor({
       candidateOwner={candidateOwner}
       idPrefix={idPrefix}
       interactions={interactions}
+      {...(label === undefined ? {} : { label })}
       offer={offer}
       onReplace={onReplace}
       {...(initialStep === undefined ? {} : { initialStep })}

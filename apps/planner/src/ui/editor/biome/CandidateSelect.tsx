@@ -39,7 +39,7 @@ export function CandidateSelect<T extends SelectValue>({
   };
 
   return (
-    <label className="field-control biome-candidate-select" htmlFor={id}>
+    <label className="field-control field-control-inline biome-candidate-select" htmlFor={id}>
       <span className="field-label-with-marker">
         {label}
         <SemanticOwnerMarker address={interaction.owner} />

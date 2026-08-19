@@ -23,11 +23,18 @@
   box-sizing: border-box;
 }
 
+html,
+body,
+#root {
+  height: 100%;
+}
+
 body {
   min-width: 320px;
   min-height: 100vh;
   margin: 0;
   background: radial-gradient(circle at 15% 0%, rgb(79 52 105 / 30%), transparent 38rem), #111216;
+  overflow: hidden;
 }
 
 button,
@@ -55,16 +62,27 @@ select:focus-visible {
 }
 
 .app-shell {
-  width: min(1560px, calc(100% - 32px));
+  display: flex;
+  width: min(1800px, calc(100% - 24px));
+  height: 100dvh;
+  min-height: 0;
+  flex-direction: column;
   margin: 0 auto;
-  padding: 24px 0;
+  padding: 12px 0;
+  overflow: hidden;
 }
 
 .app-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 18px;
+  gap: 10px;
+}
+
+.app-brand {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: baseline;
+  white-space: nowrap;
 }
 
 .app-header h1,
@@ -77,7 +95,7 @@ select:focus-visible {
 }
 
 .app-header h1 {
-  font-size: clamp(2rem, 4vw, 3rem);
+  font-size: clamp(1.75rem, 2.5vw, 2.25rem);
 }
 
 .eyebrow {
@@ -87,15 +105,6 @@ select:focus-visible {
   font-weight: 700;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-}
-
-.foundation-status {
-  padding: 5px 9px;
-  border: 1px solid rgb(226 185 113 / 35%);
-  border-radius: 999px;
-  color: #e2b971;
-  background: rgb(226 185 113 / 8%);
-  font-size: 0.8rem;
 }
 
 .status-badge {
@@ -130,12 +139,6 @@ select:focus-visible {
   border-color: rgb(132 130 143 / 42%);
   color: #aaa7b3;
   background: rgb(100 98 112 / 10%);
-}
-
-.header-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
 }
 
 .history-controls {
@@ -245,29 +248,14 @@ button:disabled {
 }
 
 .project-file-controls {
-  display: flex;
+  display: grid;
+  min-width: 0;
   min-height: 34px;
+  flex: 1 1 auto;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-top: 14px;
-}
-
-.project-name-control {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.project-name-control label {
-  color: #aaa7af;
-  font-size: 0.82rem;
-}
-
-.project-name-control input {
-  width: min(220px, 38vw);
-  padding: 5px 8px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  margin: 0;
 }
 
 .project-file-actions {
@@ -275,6 +263,21 @@ button:disabled {
   align-items: center;
   flex-wrap: wrap;
   gap: 6px;
+}
+
+.project-profile-feedback {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.project-profile-feedback .project-operation-result {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  text-align: right;
 }
 
 .profile-status {
@@ -311,13 +314,25 @@ button:disabled {
   color: #e7a1a1;
 }
 
+.app-navigation-bar {
+  display: flex;
+  min-width: 0;
+  align-items: flex-end;
+  margin-top: 8px;
+  border-bottom: 1px solid #303139;
+}
+
 .route-tabs {
   display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
   flex-wrap: wrap;
   gap: 4px;
-  margin-top: 22px;
-  padding-bottom: 1px;
-  border-bottom: 1px solid #303139;
+}
+
+.app-navigation-bar > .history-controls {
+  flex: 0 0 auto;
+  padding: 0 0 5px 12px;
 }
 
 .project-findings {
@@ -325,7 +340,7 @@ button:disabled {
   z-index: 20;
   top: 12px;
   display: flex;
-  max-height: min(34vh, 280px);
+  max-height: min(26dvh, 220px);
   box-sizing: border-box;
   flex-direction: column;
   margin-top: 12px;
@@ -444,10 +459,10 @@ button:disabled {
 
 .editor-workspace {
   display: grid;
-  grid-template-columns: 164px minmax(0, 1fr);
-  height: calc(100vh - 24px);
-  min-height: 380px;
-  margin-top: 20px;
+  grid-template-columns: 148px minmax(0, 1fr);
+  min-height: 0;
+  flex: 1 1 auto;
+  margin-top: 8px;
   border: 1px solid #2e2f38;
   border-radius: 12px;
   background: rgb(28 29 35 / 88%);
@@ -462,14 +477,13 @@ button:disabled {
 }
 
 .panel-navigation {
-  position: sticky;
-  top: 12px;
   display: flex;
-  max-height: calc(100vh - 24px);
+  height: 100%;
+  max-height: none;
   box-sizing: border-box;
   flex-direction: column;
   gap: 4px;
-  padding: 16px 10px;
+  padding: 12px 8px;
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
@@ -949,9 +963,9 @@ button:disabled {
   position: relative;
   display: grid;
   min-height: 0;
-  grid-template-columns: minmax(240px, 320px) minmax(0, 1fr);
+  grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr);
-  gap: 18px;
+  gap: 12px;
 }
 
 .run-state-sheet {
@@ -1074,7 +1088,7 @@ button:disabled {
 }
 
 .biome-structure-region {
-  padding-right: 18px;
+  padding-right: 12px;
   border-right: 1px solid #30313a;
   scrollbar-gutter: auto;
 }
@@ -1333,7 +1347,7 @@ button:disabled {
 }
 
 .biome-inspector {
-  padding-right: 14px;
+  padding-right: 8px;
 }
 
 .biome-inspector-heading {
@@ -1447,7 +1461,7 @@ button:disabled {
 
 .editor-panel,
 .settings-panel {
-  padding: clamp(20px, 3vw, 32px);
+  padding: clamp(14px, 1.5vw, 22px);
 }
 
 .editor-panel {
@@ -1466,7 +1480,7 @@ button:disabled {
 
 .editor-panel-content {
   min-height: 0;
-  padding: 14px 14px 0 0;
+  padding: 10px 10px 0 0;
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
@@ -1490,11 +1504,13 @@ button:disabled {
 }
 
 .settings-panel {
-  margin-top: 20px;
+  min-height: 0;
+  margin-top: 8px;
   border: 1px solid #2e2f38;
   border-radius: 12px;
   background: rgb(28 29 35 / 88%);
   box-shadow: 0 32px 80px rgb(0 0 0 / 24%);
+  overflow-y: auto;
 }
 
 .editor-panel h2,
@@ -1912,10 +1928,47 @@ select {
 
 .room-card-heading {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 14px;
-  margin-bottom: 14px;
+  margin: -4px -4px 14px;
+  padding: 10px 12px;
+  border: 1px solid rgb(145 119 174 / 32%);
+  border-left: 3px solid #9c7fbd;
+  border-radius: 9px;
+  background: linear-gradient(90deg, rgb(126 101 154 / 18%), rgb(151 104 39 / 7%));
+}
+
+.room-card-heading > h3 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  margin: 0;
+  color: #f6f0e7;
+  font-size: 1.05rem;
+  letter-spacing: 0.01em;
+}
+
+.room-heading-incoming-reward {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #f4e4c3;
+  font-size: 0.78rem;
+  line-height: 1.25;
+}
+
+.room-heading-separator {
+  color: #736c79;
+  font-weight: 400;
+}
+
+.room-heading-incoming-label {
+  color: #d6ad6b;
+  font-size: 0.74rem;
+  font-weight: 650;
 }
 
 .card-kicker {
@@ -1935,6 +1988,22 @@ select {
 .field-control {
   display: grid;
   gap: 5px;
+}
+
+.field-control-inline {
+  grid-template-columns: minmax(6.5rem, 7.5rem) minmax(0, 1fr);
+  align-items: center;
+  column-gap: 10px;
+}
+
+.field-control-inline > .contextual-picker-selected-explanation {
+  grid-column: 1 / -1;
+}
+
+.door-fixed-reward > .fixed-room-state {
+  margin: 0;
+  padding: 0;
+  border: 0;
 }
 
 .anomaly-outcome-control {
@@ -2049,13 +2118,6 @@ select {
   font-weight: 600;
 }
 
-.effective-reward-store > p {
-  margin: 5px 0 0;
-  color: #aaa5af;
-  font-size: 0.78rem;
-  line-height: 1.35;
-}
-
 .decision-heading h3,
 .frontier-actions h3 {
   margin: 0;
@@ -2069,15 +2131,6 @@ select {
   align-items: start;
   gap: 10px;
   padding: 12px 14px;
-}
-
-.decision-selection-heading {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  padding: 12px 14px 0;
-  color: #aaa7af;
-  font-size: 0.78rem;
 }
 
 .exit-row {
@@ -2135,6 +2188,16 @@ select {
 .exit-content {
   min-width: 0;
   padding: 14px;
+}
+
+.door-reward-slot {
+  min-height: 36px;
+}
+
+.additional-exit-room-state {
+  margin: 8px 0 0;
+  padding: 0;
+  border: 0;
 }
 
 .exit-heading,
@@ -2358,10 +2421,6 @@ select {
   margin-top: 0;
   padding-top: 0;
   border-top: 0;
-}
-
-.encounter-editor > .local-reward-heading {
-  margin-bottom: 0;
 }
 
 .encounter-phase-list {
@@ -2966,36 +3025,6 @@ select {
   gap: 7px;
 }
 
-.hub-reward-context {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px 12px;
-  margin: 0 0 12px;
-  padding: 9px 10px;
-  border: 1px solid #393a45;
-  border-radius: 9px;
-  background: rgb(255 255 255 / 2%);
-}
-
-.hub-reward-context-label {
-  color: #aaa7af;
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.hub-reward-summary {
-  min-width: 0;
-  color: #e6dfd5;
-  font-size: 0.9rem;
-}
-
-.hub-reward-context > .quiet-action {
-  margin-inline-start: auto;
-}
-
 .hub-roster-drag-preview {
   display: flex;
   position: fixed;
@@ -3242,9 +3271,22 @@ select {
 }
 
 @media (max-width: 700px) {
+  body {
+    overflow: auto;
+  }
+
+  .field-control-inline {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+  }
+
   .app-shell {
+    display: block;
     width: calc(100% - 24px);
+    height: auto;
+    min-height: 100dvh;
     padding: 24px 0;
+    overflow: visible;
   }
 
   .app-header {
@@ -3252,13 +3294,40 @@ select {
     flex-direction: column;
   }
 
-  .header-actions {
+  .app-header > .project-file-controls {
+    display: flex;
+    width: 100%;
+    justify-content: flex-start;
     flex-wrap: wrap;
+  }
+
+  .project-profile-feedback {
+    flex: 1 1 100%;
+    justify-content: flex-start;
+  }
+
+  .project-profile-feedback .project-operation-result {
+    text-align: left;
+  }
+
+  .app-navigation-bar {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .route-tabs {
+    flex-basis: 100%;
+  }
+
+  .app-navigation-bar > .history-controls {
+    padding: 8px 0;
   }
 
   .editor-workspace {
     height: auto;
+    min-height: 380px;
     grid-template-columns: 1fr;
+    margin-top: 20px;
   }
 
   .editor-panel {
@@ -3325,6 +3394,7 @@ select {
 
   .panel-navigation {
     position: static;
+    height: auto;
     max-height: none;
     flex-direction: row;
     flex-wrap: wrap;

@@ -123,8 +123,15 @@ function configureF(application: ReturnType<typeof createApplication>): void {
   );
 }
 
-function rename(application: ReturnType<typeof createApplication>, name: string): void {
-  application.store.dispatch(authoredProjectCommandDispatched({ kind: 'RenameProject', name }));
+function setFearRank(application: ReturnType<typeof createApplication>, rank: number): void {
+  application.store.dispatch(
+    authoredProjectCommandDispatched({
+      kind: 'ReplaceFearVowRank',
+      route: createRouteAddress('Underworld'),
+      vowKey: 'EnemyDamageShrineUpgrade',
+      rank,
+    }),
+  );
 }
 
 describe('profile status', () => {
@@ -140,7 +147,7 @@ describe('profile status', () => {
     await application.projectOperations.saveProfile();
     expect(selectProfileStatus(application.store.getState())).toBe('Clean');
 
-    rename(application, 'Changed');
+    setFearRank(application, 1);
     expect(selectProfileStatus(application.store.getState())).toBe('Dirty');
     application.store.dispatch(authoredProjectUndoRequested());
     expect(selectProfileStatus(application.store.getState())).toBe('Clean');
@@ -154,7 +161,6 @@ describe('autosave recovery lifecycle', () => {
   it('blocks and preserves schema-21 and stale-catalog autosaves without migrating either payload', () => {
     const fallback = createProjectDocument(catalog, {
       projectId: 'fallback',
-      name: 'Fallback',
       configuredBiomeCounts: { Underworld: 1 },
     });
     const current = JSON.parse(encodeProjectDocument(fallback)) as Record<string, unknown>;
@@ -185,17 +191,19 @@ describe('autosave recovery lifecycle', () => {
     const baselineJson = encodeProjectDocument(selectPresentProject(application.store.getState()));
 
     application.store.dispatch(settingsSelected());
-    application.store.dispatch(profileSaveSucceeded({ baselineJson }));
+    application.store.dispatch(
+      profileSaveSucceeded({ baselineJson, fileName: 'run-plan.runplanner.json' }),
+    );
     expect(scheduler.delays).toEqual([]);
 
     configureF(application);
     expect(scheduler.delays).toEqual([25]);
-    rename(application, 'Debounced');
+    setFearRank(application, 1);
     expect(scheduler.delays).toEqual([25, 25]);
     expect(scheduler.cancellationCount).toBe(1);
     expect(scheduler.pendingCount).toBe(1);
 
-    rename(application, 'Debounced');
+    setFearRank(application, 1);
     expect(scheduler.delays).toEqual([25, 25]);
     scheduler.flush();
     expect(recovery.writes).toEqual([
@@ -211,7 +219,6 @@ describe('autosave recovery lifecycle', () => {
   it('restores a valid project with fresh history and evaluation without writing on boot', () => {
     const source = createApplication();
     configureF(source);
-    rename(source, 'Recovered Route');
     const recoveredProject = selectPresentProject(source.store.getState());
     const recovery = createRecoveryFixture(encodeProjectDocument(recoveredProject));
     const scheduler = createSchedulerFixture();
@@ -236,7 +243,7 @@ describe('autosave recovery lifecycle', () => {
     expect(scheduler.delays).toEqual([]);
     expect(recovery.writes).toEqual([]);
 
-    rename(application, 'Recovered Edit');
+    setFearRank(application, 1);
     scheduler.flush();
     expect(selectProfileStatus(application.store.getState())).toBe('Recovered');
     expect(selectExplicitProfileBaselineJson(application.store.getState())).toBeNull();
@@ -296,7 +303,6 @@ describe('autosave recovery lifecycle', () => {
   it('restores a structurally valid activated I recovery', () => {
     const iProject = createProjectDocument(catalog, {
       projectId: 'i-recovery',
-      name: 'I Recovery',
       configuredBiomeCounts: { Underworld: 4 },
     });
     const recovery = createRecoveryFixture(encodeProjectDocument(iProject));
@@ -329,7 +335,7 @@ describe('autosave recovery lifecycle', () => {
     );
 
     recovery.writeError = null;
-    rename(application, 'Retry');
+    setFearRank(application, 1);
     scheduler.flush();
     expect(selectProfileSession(application.store.getState()).autosaveError).toBeNull();
     expect(recovery.writes).toHaveLength(1);
@@ -346,7 +352,7 @@ describe('autosave recovery lifecycle', () => {
       autosaveScheduler: scheduler,
       profileFile: {
         save: () => Promise.resolve('saved'),
-        load: () => Promise.resolve(validJson),
+        load: () => Promise.resolve({ fileName: 'valid-profile.runplanner.json', json: validJson }),
       },
     });
 
@@ -370,7 +376,7 @@ describe('autosave recovery lifecycle', () => {
       autosaveScheduler: createSchedulerFixture(),
       profileFile: {
         save: () => Promise.resolve('saved'),
-        load: () => Promise.resolve(validJson),
+        load: () => Promise.resolve({ fileName: 'valid-profile.runplanner.json', json: validJson }),
       },
     });
     const state = application.store.getState();

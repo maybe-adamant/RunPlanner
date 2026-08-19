@@ -52,11 +52,13 @@ function targetAddress(marker: WorkspaceMarker): TargetAddress {
 }
 
 function TargetRoomSelector({
+  ariaLabel,
   idPrefix,
   interactionKey,
   interactions,
   label,
 }: {
+  readonly ariaLabel?: string;
   readonly idPrefix: string;
   readonly interactionKey: string;
   readonly interactions: WorkspaceInteractionCatalog;
@@ -69,6 +71,7 @@ function TargetRoomSelector({
   }
   return (
     <RoomSelector
+      {...(ariaLabel === undefined ? {} : { ariaLabel })}
       idPrefix={idPrefix}
       interaction={interaction}
       label={label}
@@ -209,10 +212,11 @@ function TargetRow({
         door.room.roomPicker === undefined ||
         door.room.anomaly !== undefined ? null : (
           <TargetRoomSelector
+            ariaLabel={`Door ${target.index} room`}
             idPrefix={`target-${target.marker.focusKey}`}
             interactionKey={workspaceInteractionKey(door.room.roomPicker.address)}
             interactions={interactions}
-            label={`Door ${target.index} room`}
+            label="Room"
           />
         )}
         {node.targetInteraction === 'readOnly' ? (
@@ -222,11 +226,13 @@ function TargetRow({
             This saved door is no longer available here. Fix the earlier route first.
           </p>
         ) : null}
-        <DoorRewardEditor
-          door={door}
-          idPrefix={`door-${target.marker.focusKey}`}
-          interactions={interactions}
-        />
+        <div className="door-reward-slot">
+          <DoorRewardEditor
+            door={door}
+            idPrefix={`door-${target.marker.focusKey}`}
+            interactions={interactions}
+          />
+        </div>
         {target.anomalyTakeover === undefined ? null : (
           <button
             className="quiet-action action-compact"
@@ -278,32 +284,21 @@ function MissingTargetRow({
             <span className="neutral-status">Unspecified</span>
           </div>
         </div>
-        {target.authoring.kind === 'ready' || canEnterDecision ? (
-          <>
-            <TargetRoomSelector
-              idPrefix={`target-${target.marker.focusKey}`}
-              interactionKey={target.marker.focusKey}
-              interactions={interactions}
-              label={`Door ${target.index} room`}
-            />
-            {target.authoring.kind === 'ready' ? null : (
-              <p className="fixed-room-state">{target.authoring.message}</p>
-            )}
-          </>
-        ) : (
-          <label className="field-control" htmlFor={`target-${target.marker.focusKey}-waiting`}>
-            <span>{`Door ${target.index} room`}</span>
-            <select disabled id={`target-${target.marker.focusKey}-waiting`} value="">
-              <option value="">{target.authoring.message}</option>
-            </select>
-          </label>
+        {target.authoring.kind !== 'ready' && !canEnterDecision ? null : (
+          <TargetRoomSelector
+            ariaLabel={`Door ${target.index} room`}
+            idPrefix={`target-${target.marker.focusKey}`}
+            interactionKey={target.marker.focusKey}
+            interactions={interactions}
+            label="Room"
+          />
         )}
       </div>
     </article>
   );
 }
 
-/** The authored additional exit is rendered by the decision that owns it. */
+/** The authored additional exit card owns only selection and room navigation. */
 function ZagreusContractExit({
   control,
   interactions,
@@ -346,7 +341,6 @@ function ZagreusContractExit({
             <SemanticOwnerMarker address={control.owner} />
           </div>
         </div>
-        <p className="fixed-room-state">Room: {control.door.room.label}</p>
         <button
           className="quiet-action action-compact"
           onClick={() => dispatch(semanticOwnerFocused(control.door.room.address))}
@@ -354,20 +348,15 @@ function ZagreusContractExit({
         >
           Open {control.door.room.label} room
         </button>
-        <button
-          className="danger-action action-compact"
-          data-command="RemoveZagreusContract"
-          onClick={() => executeIntent(interaction.removeIntent)}
-          type="button"
-        >
-          Remove contract
-        </button>
+        <p className="fixed-room-state additional-exit-room-state">
+          Room: {control.door.room.label}
+        </p>
       </div>
     </article>
   );
 }
 
-/** Natural Chaos is a sibling exit: its map, fixed room facts, and removal stay together. */
+/** Natural Chaos keeps its door selection, navigation, and map identity together. */
 function NaturalChaosExit({
   control,
   interactions,
@@ -418,14 +407,6 @@ function NaturalChaosExit({
           Open {control.door.room.label} room
         </button>
         <NaturalChaosMapWorkbench control={control} interactions={interactions} />
-        <button
-          className="danger-action action-compact"
-          data-command="RemoveNaturalChaos"
-          onClick={() => executeIntent(interaction.removeIntent)}
-          type="button"
-        >
-          Remove Chaos gate
-        </button>
       </div>
     </article>
   );
@@ -559,7 +540,7 @@ function BatchSettings({
           <CandidateSelect
             id={`${node.key}-reward-store`}
             interaction={store}
-            label="Base reward pool"
+            label="Reward Pool"
             onReplace={(storeKey) => executeIntent(store.intentFor(storeKey))}
             placeholder="Select pool"
           />
@@ -568,7 +549,6 @@ function BatchSettings({
           <div className="effective-reward-store" role="status">
             <span>Effective reward pool</span>
             <strong>{node.effectiveRewardStore.label}</strong>
-            <p>A forced room in this decision overrides the base pool.</p>
           </div>
         )}
       </div>
@@ -673,16 +653,15 @@ export function BatchWorkbench({
         </div>
         <div className="owner-markers">
           <SemanticOwnerMarker address={node.owner} />
+          {hubTakeover === undefined ? (
+            <SemanticOwnerMarker address={exitSelectionAddress(node.selection)} />
+          ) : null}
           {node.runState === undefined ? null : <RunStateLauncher launcher={node.runState} />}
         </div>
       </header>
       <BatchSettings interactions={interactions} node={node} />
       {hubTakeover === undefined ? (
         <>
-          <div className="decision-selection-heading">
-            <span>Room selection</span>
-            <SemanticOwnerMarker address={exitSelectionAddress(node.selection)} />
-          </div>
           <div
             aria-label={`${label} room offers`}
             className="exit-list"

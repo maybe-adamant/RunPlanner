@@ -34,7 +34,6 @@ function currentNEntryProject() {
     appendNEntry(
       createProjectDocument(catalog, {
         projectId: 'n-b1-entry-baseline',
-        name: 'N B1 entry baseline',
         configuredBiomeCounts: { Surface: 1 },
       }),
     ),
@@ -44,7 +43,6 @@ function currentNEntryProject() {
 function blankNEntryProject() {
   let project = createProjectDocument(catalog, {
     projectId: 'n-b2-blank-entry-candidate',
-    name: 'N B2 blank entry candidate',
     configuredBiomeCounts: { Surface: 1 },
   });
   project = applyProjectCommand(project, catalog, {
@@ -93,7 +91,6 @@ describe('N B1 entry and terminal baseline', () => {
   it('keeps a fresh zero-target Hub open-set finding alongside an unresolved entry reward', () => {
     let project = createProjectDocument(catalog, {
       projectId: 'n-zero-target-hub-finding',
-      name: 'N zero-target Hub finding',
       configuredBiomeCounts: { Surface: 1 },
     });
     project = applyProjectCommand(project, catalog, {
@@ -189,7 +186,6 @@ describe('N B1 entry and terminal baseline', () => {
       appendCompleteN(
         createProjectDocument(catalog, {
           projectId: 'n-b1-lifecycle-baseline',
-          name: 'N B1 lifecycle baseline',
           configuredBiomeCounts: { Surface: 1 },
         }),
       ),
@@ -344,7 +340,6 @@ describe('N B1 entry and terminal baseline', () => {
     const completeHubWithoutHandoff = appendCompleteN(
       createProjectDocument(catalog, {
         projectId: 'n-b1-terminal-matrix',
-        name: 'N B1 terminal matrix',
         configuredBiomeCounts: { Surface: 1 },
       }),
       { includePreboss: false },
@@ -381,7 +376,6 @@ describe('N B1 entry and terminal baseline', () => {
     let project = appendCompleteN(
       createProjectDocument(catalog, {
         projectId: 'n-undersized-hub-handoff',
-        name: 'N undersized Hub handoff',
         configuredBiomeCounts: { Surface: 1 },
       }),
       { includePreboss: false },

@@ -11,6 +11,7 @@ import {
   createOccurrenceAddress,
   createOccurrenceId,
   createProjectDocument,
+  createRouteAddress,
   semanticAddressKey,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
@@ -317,7 +318,6 @@ describe('HubDecisionWorkbench', () => {
     const project = appendCompleteN(
       createProjectDocument(catalog, {
         projectId: 'hub-partial-ranked-board',
-        name: 'Hub partial ranked board',
         configuredBiomeCounts: { Surface: 1 },
       }),
       { includePreboss: false, visitSlotKeys: ['combat05', 'miniBoss01'] },
@@ -359,7 +359,6 @@ describe('HubDecisionWorkbench', () => {
     let project = appendNEntry(
       createProjectDocument(catalog, {
         projectId: 'hub-workbench-membership',
-        name: 'Hub workbench membership',
         configuredBiomeCounts: { Surface: 1 },
       }),
     );
@@ -396,7 +395,6 @@ describe('HubDecisionWorkbench', () => {
     const project = appendCompleteN(
       createProjectDocument(catalog, {
         projectId: 'hub-opening-attempt-lifecycle',
-        name: 'Hub opening attempt lifecycle',
         configuredBiomeCounts: { Surface: 1 },
       }),
     );
@@ -424,8 +422,10 @@ describe('HubDecisionWorkbench', () => {
     act(() =>
       application.store.dispatch(
         authoredProjectCommandDispatched({
-          kind: 'RenameProject',
-          name: 'Hub opening attempt replacement',
+          kind: 'ReplaceFearVowRank',
+          route: createRouteAddress('Surface'),
+          vowKey: 'EnemyDamageShrineUpgrade',
+          rank: 1,
         }),
       ),
     );
@@ -461,7 +461,6 @@ describe('HubDecisionWorkbench', () => {
     const project = appendCompleteN(
       createProjectDocument(catalog, {
         projectId: 'hub-keyboard-open-continuity',
-        name: 'Hub keyboard open continuity',
         configuredBiomeCounts: { Surface: 1 },
       }),
     );
@@ -503,7 +502,6 @@ describe('HubDecisionWorkbench', () => {
     const project = appendCompleteN(
       createProjectDocument(catalog, {
         projectId: 'hub-compact-unvisited-room',
-        name: 'Hub compact unvisited room',
         configuredBiomeCounts: { Surface: 1 },
       }),
     );
@@ -623,7 +621,6 @@ describe('HubDecisionWorkbench', () => {
     const project = appendCompleteN(
       createProjectDocument(catalog, {
         projectId: 'hub-room-detail-boundary',
-        name: 'Hub room detail boundary',
         configuredBiomeCounts: { Surface: 1 },
       }),
       {
@@ -685,7 +682,6 @@ describe('HubDecisionWorkbench', () => {
     const project = appendCompleteN(
       createProjectDocument(catalog, {
         projectId: 'hub-medea-trait-offer',
-        name: 'Hub Medea trait offer',
         configuredBiomeCounts: { Surface: 1 },
       }),
       {
@@ -714,7 +710,6 @@ describe('HubDecisionWorkbench', () => {
     const project = appendCompleteN(
       createProjectDocument(catalog, {
         projectId: 'hub-closed-focus-reveal',
-        name: 'Hub closed focus reveal',
         configuredBiomeCounts: { Surface: 1 },
       }),
     );
@@ -738,7 +733,12 @@ describe('HubDecisionWorkbench', () => {
     expect(disclosure.open).toBe(false);
     act(() =>
       view.application.store.dispatch(
-        authoredProjectCommandDispatched({ kind: 'RenameProject', name: 'Hub native disclosure' }),
+        authoredProjectCommandDispatched({
+          kind: 'ReplaceFearVowRank',
+          route: createRouteAddress('Surface'),
+          vowKey: 'EnemyDamageShrineUpgrade',
+          rank: 1,
+        }),
       ),
     );
     await waitFor(() =>
@@ -753,7 +753,6 @@ describe('HubDecisionWorkbench', () => {
     const project = appendCompleteN(
       createProjectDocument(catalog, {
         projectId: 'hub-visit-reward-context',
-        name: 'Hub visit reward context',
         configuredBiomeCounts: { Surface: 1 },
       }),
     );
@@ -796,7 +795,6 @@ describe('HubDecisionWorkbench', () => {
     const project = appendCompleteN(
       createProjectDocument(catalog, {
         projectId: 'hub-visit-commands',
-        name: 'Hub visit commands',
         configuredBiomeCounts: { Surface: 1 },
       }),
       { includePreboss: false, visitSlotKeys: ['combat05', 'miniBoss01'] },
@@ -840,7 +838,6 @@ describe('HubDecisionWorkbench', () => {
     const project = appendCompleteN(
       createProjectDocument(catalog, {
         projectId: 'hub-visit-membership-controls',
-        name: 'Hub visit membership controls',
         configuredBiomeCounts: { Surface: 1 },
       }),
       { includePreboss: false, visitSlotKeys: ['combat05', 'miniBoss01'] },
@@ -882,7 +879,6 @@ describe('HubDecisionWorkbench', () => {
     const project = appendCompleteN(
       createProjectDocument(catalog, {
         projectId: 'hub-transient-tail-order',
-        name: 'Hub transient tail order',
         configuredBiomeCounts: { Surface: 1 },
       }),
       { includePreboss: false },
@@ -921,7 +917,6 @@ describe('HubDecisionWorkbench', () => {
     const project = appendCompleteN(
       createProjectDocument(catalog, {
         projectId: 'hub-cross-cutoff-order',
-        name: 'Hub cross cutoff order',
         configuredBiomeCounts: { Surface: 1 },
       }),
       { includePreboss: false },
@@ -968,7 +963,6 @@ describe('HubDecisionWorkbench', () => {
     const project = appendCompleteN(
       createProjectDocument(catalog, {
         projectId: 'hub-pointer-semantic-reorder',
-        name: 'Hub pointer semantic reorder',
         configuredBiomeCounts: { Surface: 1 },
       }),
       { includePreboss: false },
@@ -1030,7 +1024,6 @@ describe('HubDecisionWorkbench', () => {
     const project = appendCompleteN(
       createProjectDocument(catalog, {
         projectId: 'hub-pointer-transient-tail',
-        name: 'Hub pointer transient tail',
         configuredBiomeCounts: { Surface: 1 },
       }),
       { includePreboss: false },
@@ -1077,7 +1070,6 @@ describe('HubDecisionWorkbench', () => {
     const project = appendCompleteN(
       createProjectDocument(catalog, {
         projectId: 'hub-pointer-next-visit',
-        name: 'Hub pointer next visit',
         configuredBiomeCounts: { Surface: 1 },
       }),
       { includePreboss: false, visitSlotKeys: ['combat05', 'miniBoss01'] },
@@ -1127,7 +1119,6 @@ describe('HubDecisionWorkbench', () => {
     const project = appendCompleteN(
       createProjectDocument(catalog, {
         projectId: 'hub-pointer-cancel',
-        name: 'Hub pointer cancel',
         configuredBiomeCounts: { Surface: 1 },
       }),
       { includePreboss: false },
@@ -1165,7 +1156,6 @@ describe('HubDecisionWorkbench', () => {
     const project = appendCompleteN(
       createProjectDocument(catalog, {
         projectId: 'hub-pointer-primary-ownership',
-        name: 'Hub pointer primary ownership',
         configuredBiomeCounts: { Surface: 1 },
       }),
       { includePreboss: false },
@@ -1252,7 +1242,6 @@ describe('HubDecisionWorkbench', () => {
     const project = appendCompleteN(
       createProjectDocument(catalog, {
         projectId: 'hub-pointer-document-scroll',
-        name: 'Hub pointer document scroll',
         configuredBiomeCounts: { Surface: 1 },
       }),
       { includePreboss: false },
@@ -1290,7 +1279,6 @@ describe('HubDecisionWorkbench', () => {
     const project = appendCompleteN(
       createProjectDocument(catalog, {
         projectId: 'hub-completed-handoff',
-        name: 'Hub completed handoff',
         configuredBiomeCounts: { Surface: 1 },
       }),
       { includePreboss: false },

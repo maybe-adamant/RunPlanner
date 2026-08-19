@@ -6,6 +6,7 @@ import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
 
 interface RoomSelectorProps {
+  readonly ariaLabel?: string;
   readonly disabled?: boolean;
   readonly disabledPlaceholder?: string;
   readonly idPrefix: string;
@@ -24,6 +25,7 @@ const emptyModel: ContextualPickerModel<RoomDeclaration> = Object.freeze({
  * Candidate work is intentionally deferred until its picker opens.
  */
 export function RoomSelector({
+  ariaLabel,
   disabled = false,
   disabledPlaceholder = 'Room limit reached',
   idPrefix,
@@ -37,9 +39,11 @@ export function RoomSelector({
 
   return (
     <ContextualPicker
+      {...(ariaLabel === undefined ? {} : { ariaLabel })}
       disabled={disabled}
       id={`${idPrefix}-room`}
       label={label}
+      layout="inline"
       loading={projection.pending}
       model={model}
       onOpenChange={(open) => {

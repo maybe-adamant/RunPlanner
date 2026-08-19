@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import {
   applyProjectCommand,
   createAllTogetherSetAddress,
@@ -217,9 +217,9 @@ describe('planner history interaction', () => {
     const { application, user } = renderPlannerForInteraction({
       companion: (
         <>
-          <input aria-label="Project name draft" defaultValue="Draft" />
+          <input aria-label="Text draft" defaultValue="Draft" />
           <div
-            aria-label="Project notes draft"
+            aria-label="Notes draft"
             contentEditable
             role="textbox"
             suppressContentEditableWarning
@@ -231,11 +231,11 @@ describe('planner history interaction', () => {
     });
     await user.selectOptions(screen.getByLabelText('Configure route up to'), '1');
 
-    const input = screen.getByRole('textbox', { name: 'Project name draft' });
+    const input = screen.getByRole('textbox', { name: 'Text draft' });
     expect(fireEvent.keyDown(input, { ctrlKey: true, key: 'z' })).toBe(true);
     expect(configuredBiomeCount(application)).toBe(1);
 
-    const editable = screen.getByRole('textbox', { name: 'Project notes draft' });
+    const editable = screen.getByRole('textbox', { name: 'Notes draft' });
     expect(fireEvent.keyDown(editable, { ctrlKey: true, key: 'z' })).toBe(true);
     expect(configuredBiomeCount(application)).toBe(1);
     expect(application.store.getState().projectWorkspace.history.past).toHaveLength(1);
@@ -1272,31 +1272,21 @@ describe('route loadout interaction', () => {
 });
 
 describe('project profile interaction', () => {
-  it('renames the project through one undoable semantic command', async () => {
-    const { application, user } = renderPlannerForInteraction();
-
-    await user.clear(screen.getByRole('textbox', { name: 'Project name' }));
-    await user.type(screen.getByRole('textbox', { name: 'Project name' }), 'Ocean Route');
-    await user.click(screen.getByRole('button', { name: 'Rename' }));
-
-    expect(application.store.getState().projectWorkspace.history.present.name).toBe('Ocean Route');
-    expect(application.store.getState().projectWorkspace.history.past).toHaveLength(1);
-    await user.click(screen.getByRole('button', { name: 'Undo' }));
-    expect(application.store.getState().projectWorkspace.history.present.name).toBe('Run Plan');
-    expect(screen.getByRole('textbox', { name: 'Project name' })).toHaveProperty(
-      'value',
-      'Run Plan',
-    );
-  });
-
   it('saves, replaces, and reloads the project through the visible profile controls', async () => {
     let profileJson: string | null = null;
+    let profileFileName: string | null = null;
     const profileFile: ProfileFileAdapter = {
-      save: (_fileName, json) => {
+      save: (fileName, json) => {
+        profileFileName = fileName;
         profileJson = json;
         return Promise.resolve('saved');
       },
-      load: () => Promise.resolve(profileJson),
+      load: () =>
+        Promise.resolve(
+          profileJson === null || profileFileName === null
+            ? null
+            : { fileName: profileFileName, json: profileJson },
+        ),
     };
     const application = createApplication({ profileFile });
     const { user } = renderPlannerForInteraction({ application });
@@ -1331,10 +1321,18 @@ describe('project profile interaction', () => {
     await user.click(screen.getByRole('button', { name: 'Save Profile' }));
     expect(await screen.findByText('Saved the profile.')).toBeTruthy();
     expect(screen.getByText('Clean')).toBeTruthy();
+    expect(profileFileName).toBe('run-plan.runplanner.json');
 
-    await user.clear(screen.getByRole('textbox', { name: 'Project name' }));
-    await user.type(screen.getByRole('textbox', { name: 'Project name' }), 'Edited after save');
-    await user.click(screen.getByRole('button', { name: 'Rename' }));
+    act(() => {
+      application.store.dispatch(
+        authoredProjectCommandDispatched({
+          kind: 'ReplaceFearVowRank',
+          route: createRouteAddress('Underworld'),
+          vowKey: 'EnemyDamageShrineUpgrade',
+          rank: 2,
+        }),
+      );
+    });
     expect(screen.getByText('Dirty')).toBeTruthy();
     expect(profileJson).not.toBeNull();
 
@@ -1415,7 +1413,7 @@ describe('project profile interaction', () => {
     const application = createApplication({
       profileFile: {
         save: () => Promise.resolve('saved'),
-        load: () => Promise.resolve('{not json'),
+        load: () => Promise.resolve({ fileName: 'broken.runplanner.json', json: '{not json' }),
       },
     });
     const workspace = application.store.getState().projectWorkspace;

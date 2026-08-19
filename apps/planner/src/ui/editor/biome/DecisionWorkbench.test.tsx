@@ -25,7 +25,10 @@ import {
   createApplication,
   type ApplicationEvaluationEvent,
 } from '@planner/composition/createApplication';
-import type { WorkspaceBiome } from '@planner/projections/structured-workspace';
+import type {
+  WorkspaceBiome,
+  WorkspaceOccurrenceWorkbenchNode,
+} from '@planner/projections/structured-workspace';
 import {
   authoredProjectReplaced,
   authoredProjectCommandDispatched,
@@ -58,6 +61,7 @@ import {
 import {
   renderBiomeClearAction,
   renderDecisionWorkbench,
+  renderOccurrenceWorkbench,
   renderStaticDecisionWorkbench,
   type DecisionWorkbenchNode,
   type DecisionWorkbenchSubject,
@@ -72,7 +76,6 @@ afterEach(() => {
 function emptyProject(routeKey: 'Surface' | 'Underworld'): ProjectDocument {
   return createProjectDocument(catalog, {
     projectId: `decision-workbench-empty-${routeKey}`,
-    name: `Decision workbench empty ${routeKey}`,
     configuredBiomeCounts: { [routeKey]: 1 },
   });
 }
@@ -96,6 +99,37 @@ function subjectForOwner(owner: SemanticAddress) {
       ? { frontier: biome.frontier, kind: 'frontier' }
       : undefined;
   };
+}
+
+function occurrenceForId(occurrenceId: string) {
+  return (biome: WorkspaceBiome) =>
+    biome.nodes.find(
+      (candidate): candidate is WorkspaceOccurrenceWorkbenchNode =>
+        candidate.kind === 'occurrenceWorkbench' && candidate.room.occurrenceId === occurrenceId,
+    );
+}
+
+function authoredNaturalChaosFixture() {
+  const base = createGoldenFGHIProject();
+  const located = base.routes.flatMap((route) =>
+    route.biomes.flatMap((plan) =>
+      (plan.topology?.occurrences ?? []).flatMap((occurrence) => {
+        const room = catalog.rooms.byKey[occurrence.gameName];
+        return room?.additionalExits.some((exit) => exit.kind === 'naturalChaos')
+          ? [{ occurrence, plan, route }]
+          : [];
+      }),
+    ),
+  )[0];
+  if (located === undefined) throw new Error('Golden natural Chaos source is missing');
+  const biome = createBiomeAddress(located.route.routeKey, located.plan.biomeKey);
+  const source = { kind: 'occurrence' as const, occurrenceId: located.occurrence.occurrenceId };
+  const project = applyProjectCommand(base, catalog, {
+    kind: 'AddNaturalChaos',
+    additional: createAdditionalExitAddress(biome, source.occurrenceId, 'naturalChaos'),
+    occurrenceId: createOccurrenceId('decision-workbench-natural-chaos'),
+  });
+  return { biome, located, project, source };
 }
 
 function currentFrontier(biome: WorkspaceBiome): DecisionWorkbenchSubject | undefined {
@@ -230,26 +264,7 @@ function requiredTakeoverOwner(
 
 describe('DecisionWorkbench', () => {
   it('renders an authored natural Chaos exit beside normal exits in its source decision', () => {
-    const base = createGoldenFGHIProject();
-    const located = base.routes.flatMap((route) =>
-      route.biomes.flatMap((plan) =>
-        (plan.topology?.occurrences ?? []).flatMap((occurrence) => {
-          const room = catalog.rooms.byKey[occurrence.gameName];
-          return room?.additionalExits.some((exit) => exit.kind === 'naturalChaos')
-            ? [{ occurrence, plan, route }]
-            : [];
-        }),
-      ),
-    )[0];
-    if (located === undefined) throw new Error('Golden natural Chaos source is missing');
-    const biome = createBiomeAddress(located.route.routeKey, located.plan.biomeKey);
-    const source = { kind: 'occurrence' as const, occurrenceId: located.occurrence.occurrenceId };
-    const additional = createAdditionalExitAddress(biome, source.occurrenceId, 'naturalChaos');
-    const project = applyProjectCommand(base, catalog, {
-      kind: 'AddNaturalChaos',
-      additional,
-      occurrenceId: createOccurrenceId('decision-workbench-natural-chaos'),
-    });
+    const { biome, located, project, source } = authoredNaturalChaosFixture();
     renderDecisionWorkbench(
       project,
       located.route.routeKey,
@@ -258,13 +273,44 @@ describe('DecisionWorkbench', () => {
     );
 
     const gate = screen.getByRole('article', { name: 'Chaos gate exit' });
+    const normalDoor = screen.getByRole('article', { name: 'Combat 02 room offer' });
+    expect(within(normalDoor).getByText('Room', { selector: 'label' })).toBeTruthy();
+    expect(within(normalDoor).queryByText('Door 1 room', { selector: 'label' })).toBeNull();
     expect(gate.dataset.picked).toBe('false');
     expect(within(gate).getByRole('heading', { level: 4, name: 'Chaos gate' })).toBeTruthy();
     expect((within(gate).getByLabelText('Map') as HTMLSelectElement).value).toBe('Chaos_01');
     expect(within(gate).getByRole('button', { name: 'Open Chaos 01 room' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Remove Chaos gate' })).toBeTruthy();
+    expect(within(gate).queryByRole('button', { name: 'Remove Chaos gate' })).toBeNull();
     expect(screen.getByLabelText('Take Chaos gate')).toBeTruthy();
     expect(within(gate).queryByRole('button', { name: 'Reward' })).toBeNull();
+  });
+
+  it('removes an authored natural Chaos exit from its source Room features', async () => {
+    const { located, project, source } = authoredNaturalChaosFixture();
+    const sourceView = renderOccurrenceWorkbench(
+      project,
+      located.route.routeKey,
+      located.plan.biomeKey,
+      occurrenceForId(source.occurrenceId),
+    );
+    const features = screen.getByLabelText('Room features');
+    const before = sourceView.application.store.getState().projectWorkspace.history.past.length;
+    await sourceView.user.click(
+      within(features).getByRole('button', { name: 'Remove Chaos gate' }),
+    );
+    expect(sourceView.application.store.getState().projectWorkspace.history.past).toHaveLength(
+      before + 1,
+    );
+    expect(
+      sourceView.application.store
+        .getState()
+        .projectWorkspace.history.present.routes.flatMap((route) => route.biomes)
+        .find((biomePlan) => biomePlan.biomeKey === located.plan.biomeKey)
+        ?.topology?.occurrences.find(
+          (occurrence) => occurrence.occurrenceId === source.occurrenceId,
+        )
+        ?.additionalExits?.some((exit) => exit.kind === 'naturalChaos') ?? false,
+    ).toBe(false);
   });
 
   it('renders an authored Zagreus exit in its owning decision, not the Midshop workbench', () => {
@@ -301,9 +347,26 @@ describe('DecisionWorkbench', () => {
       within(contract).getByRole('heading', { level: 4, name: 'Zagreus contract' }),
     ).toBeTruthy();
     expect(within(contract).getByText(/^Room: /)).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Remove contract' })).toBeTruthy();
+    expect(within(contract).queryByRole('button', { name: /Remove/ })).toBeNull();
     expect(screen.getByLabelText('Take Zagreus contract')).toBeTruthy();
     expect(within(contract).queryByRole('button', { name: 'Reward' })).toBeNull();
+    const open = within(contract).getByRole('button', { name: 'Open Zagreus room' });
+    const room = within(contract).getByText(/^Room: /);
+    expect(open.compareDocumentPosition(room) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
+    expect(contract.querySelector('hr')).toBeNull();
+    cleanup();
+
+    renderOccurrenceWorkbench(
+      project,
+      located.route.routeKey,
+      located.plan.biomeKey,
+      occurrenceForId(source.occurrenceId),
+    );
+    expect(
+      within(screen.getByLabelText('Room features')).getByRole('button', {
+        name: 'Remove Zagreus contract',
+      }),
+    ).toBeTruthy();
   });
 
   it('keeps the selected Midshop as a lightweight link to its occurrence workbench', () => {
@@ -425,9 +488,8 @@ describe('DecisionWorkbench', () => {
       'disabled',
       true,
     );
-    const later = screen.getByLabelText('Door 2 room') as HTMLSelectElement;
-    expect(later.disabled).toBe(true);
-    expect(later.textContent).toContain('Choose Door 1 first.');
+    expect(screen.queryByLabelText('Door 2 room')).toBeNull();
+    expect(screen.queryByText('Choose Door 1 first.')).toBeNull();
 
     await view.user.click(screen.getByRole('button', { name: 'Door 1 room' }));
     const possible = within(screen.getByRole('listbox'))
@@ -484,7 +546,7 @@ describe('DecisionWorkbench', () => {
     await waitFor(() =>
       expect(screen.getByRole('article', { name: 'Door 1 unspecified room offer' })).toBeTruthy(),
     );
-    expect((screen.getByLabelText('Door 2 room') as HTMLSelectElement).disabled).toBe(true);
+    expect(screen.queryByLabelText('Door 2 room')).toBeNull();
   });
 
   it('reanchors an authored downstream decision when its normal selected room changes', async () => {
@@ -669,7 +731,7 @@ describe('DecisionWorkbench', () => {
     const view = renderDecisionWorkbench(project, 'Underworld', 'H', subjectForOwner(owner));
 
     expect(screen.getByText('Fields door roll')).toBeTruthy();
-    expect(screen.getAllByText('Choose the Fields door roll first.')).not.toHaveLength(0);
+    expect(screen.queryByText('Choose the Fields door roll first.')).toBeNull();
     await view.user.click(screen.getByRole('button', { name: 'Door 1 room' }));
     const options = within(screen.getByRole('listbox')).getAllByRole('option');
     const preboss = options.find(
@@ -720,12 +782,17 @@ describe('DecisionWorkbench', () => {
     const combat03 = screen.getByRole('article', { name: 'Combat 03 room offer' });
     const combat09Offers = within(combat09).getByLabelText('Combat 09 door rewards');
     const combat03Offers = within(combat03).getByLabelText('Combat 03 door rewards');
-    expect(combat09Offers.textContent).toContain('Cage 1RewardHermes');
-    expect(combat09Offers.textContent).toContain('Cage 2RewardHammer');
-    expect(combat03Offers.textContent).toContain('Cage 1RewardMax Health');
-    expect(combat03Offers.textContent).toContain("Cage 2RewardSelene's Gift");
-    for (const card of [combat09, combat03]) {
-      expect(within(card).getAllByRole('button', { name: 'Reward' })).toHaveLength(2);
+    expect(combat09Offers.textContent).toContain('Cage 1Hermes');
+    expect(combat09Offers.textContent).toContain('Cage 2Hammer');
+    expect(combat03Offers.textContent).toContain('Cage 1Max Health');
+    expect(combat03Offers.textContent).toContain("Cage 2Selene's Gift");
+    for (const [card, offers] of [
+      [combat09, combat09Offers],
+      [combat03, combat03Offers],
+    ] as const) {
+      expect(within(card).getByRole('button', { name: 'Cage 1' })).toBeTruthy();
+      expect(within(card).getByRole('button', { name: 'Cage 2' })).toBeTruthy();
+      expect(offers.querySelectorAll('.field-control-inline')).toHaveLength(2);
     }
   });
 
@@ -805,9 +872,9 @@ describe('DecisionWorkbench', () => {
       'F',
       subjectForOwner(owner),
     );
-    await view.user.click(screen.getByLabelText('Base reward pool'));
+    await view.user.click(screen.getByLabelText('Reward Pool'));
     const values = Array.from(
-      (screen.getByLabelText('Base reward pool') as HTMLSelectElement).options,
+      (screen.getByLabelText('Reward Pool') as HTMLSelectElement).options,
     ).map((option) => option.value);
     expect(values).toContain('MetaProgress');
     expect(values).not.toContain('RunProgress');
@@ -827,13 +894,11 @@ describe('DecisionWorkbench', () => {
     );
     renderStaticDecisionWorkbench(project, 'Underworld', 'F', subjectForOwner(owner));
 
-    expect(screen.getByLabelText('Base reward pool')).toBeTruthy();
+    expect(screen.getByLabelText('Reward Pool')).toBeTruthy();
     const effectivePool = screen.getByRole('status');
     expect(within(effectivePool).getByText('Effective reward pool')).toBeTruthy();
     expect(within(effectivePool).getByText('Major Reward')).toBeTruthy();
-    expect(
-      within(effectivePool).getByText('A forced room in this decision overrides the base pool.'),
-    ).toBeTruthy();
+    expect(effectivePool.querySelector('p')).toBeNull();
   });
 
   it('labels authored-selected retained rooms without claiming evaluated entry', () => {
@@ -960,6 +1025,11 @@ describe('DecisionWorkbench', () => {
       if (preboss === undefined)
         throw new Error(`${fixture.biomeKey} has no forced Preboss choice`);
       await view.user.click(preboss);
+      if (fixture.biomeKey === 'O') {
+        const offer = screen.getByRole('article', { name: / room offer$/ });
+        expect(offer.querySelector('.door-reward-slot')).toBeTruthy();
+        expect(within(offer).queryByRole('button', { name: 'Reward' })).toBeNull();
+      }
       expect(work.filter((event) => event.kind === 'queryBatch')).toHaveLength(2);
       expect(
         workspaceBiome(view.application, fixture.routeKey, fixture.biomeKey).nodes.some(

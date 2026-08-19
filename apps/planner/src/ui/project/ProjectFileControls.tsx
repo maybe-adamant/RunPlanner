@@ -1,58 +1,13 @@
-import { useState, type FormEvent } from 'react';
-import { createProjectAddress } from '@run-planner/engine/authored-project';
+import { useState } from 'react';
 
 import type {
   ProjectOperation,
   ProjectOperationResult,
   ProjectOperations,
 } from '@planner/workspace/projectOperations';
-import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
-import {
-  selectPresentProject,
-  selectProfileSession,
-  selectProfileStatus,
-  useAppDispatch,
-  useAppSelector,
-} from '@planner/state/store';
-import { SemanticOwnerMarker } from '../feedback/EvaluationFeedback';
-
-const projectAddress = createProjectAddress();
-
-function ProjectNameControl({ projectName }: { readonly projectName: string }) {
-  const dispatch = useAppDispatch();
-  const [nameDraft, setNameDraft] = useState(projectName);
-  const submitName = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const name = nameDraft.trim();
-    if (name.length === 0 || name === projectName) {
-      return;
-    }
-    dispatch(authoredProjectCommandDispatched({ kind: 'RenameProject', name }));
-  };
-
-  return (
-    <form className="project-name-control" onSubmit={submitName}>
-      <label htmlFor="project-name">Project name</label>
-      <SemanticOwnerMarker address={projectAddress} />
-      <input
-        id="project-name"
-        onChange={(event) => setNameDraft(event.target.value)}
-        type="text"
-        value={nameDraft}
-      />
-      <button
-        className="secondary-action action-compact"
-        disabled={nameDraft.trim().length === 0 || nameDraft.trim() === projectName}
-        type="submit"
-      >
-        Rename
-      </button>
-    </form>
-  );
-}
+import { selectProfileSession, selectProfileStatus, useAppSelector } from '@planner/state/store';
 
 export function ProjectFileControls({ operations }: { readonly operations: ProjectOperations }) {
-  const project = useAppSelector(selectPresentProject);
   const profileSession = useAppSelector(selectProfileSession);
   const profileStatus = useAppSelector(selectProfileStatus);
   const [result, setResult] = useState<ProjectOperationResult | null>(null);
@@ -76,15 +31,35 @@ export function ProjectFileControls({ operations }: { readonly operations: Proje
       aria-busy={pendingOperation !== null}
       aria-label="Project profile"
     >
-      <ProjectNameControl key={project.name} projectName={project.name} />
-      <span
-        aria-label={`Profile status: ${profileStatus}`}
-        className="profile-status"
-        data-profile-status={profileStatus.toLowerCase()}
-        role="status"
-      >
-        {profileStatus}
-      </span>
+      <div className="project-profile-feedback">
+        <span
+          aria-label={`Profile status: ${profileStatus}`}
+          className="profile-status"
+          data-profile-status={profileStatus.toLowerCase()}
+          role="status"
+        >
+          {profileStatus}
+        </span>
+        {profileSession.recoveryError !== null && (
+          <p className="project-operation-result" data-status="failure" role="alert">
+            {profileSession.recoveryError}
+          </p>
+        )}
+        {profileSession.autosaveError !== null && (
+          <p className="project-operation-result" data-status="failure" role="alert">
+            {profileSession.autosaveError}
+          </p>
+        )}
+        {result !== null && (
+          <p
+            className="project-operation-result"
+            data-status={result.status}
+            role={result.status === 'failure' ? 'alert' : 'status'}
+          >
+            {result.message}
+          </p>
+        )}
+      </div>
       <div className="project-file-actions">
         <button
           className="danger-action action-compact"
@@ -119,25 +94,6 @@ export function ProjectFileControls({ operations }: { readonly operations: Proje
           </button>
         )}
       </div>
-      {profileSession.recoveryError !== null && (
-        <p className="project-operation-result" data-status="failure" role="alert">
-          {profileSession.recoveryError}
-        </p>
-      )}
-      {profileSession.autosaveError !== null && (
-        <p className="project-operation-result" data-status="failure" role="alert">
-          {profileSession.autosaveError}
-        </p>
-      )}
-      {result !== null && (
-        <p
-          className="project-operation-result"
-          data-status={result.status}
-          role={result.status === 'failure' ? 'alert' : 'status'}
-        >
-          {result.message}
-        </p>
-      )}
     </section>
   );
 }

@@ -224,7 +224,6 @@ function incompleteFPrefixProject() {
   const biome = createBiomeAddress('Underworld', 'F');
   let project = createProjectDocument(catalog, {
     projectId: 'unified-f-prefix',
-    name: 'Unified F prefix',
     configuredBiomeCounts: { Underworld: 1 },
   });
   const startId = createOccurrenceId('f-prefix-start');
@@ -363,7 +362,6 @@ function completeIProject() {
   const biome = createBiomeAddress('Underworld', 'I');
   let project = createProjectDocument(catalog, {
     projectId: 'unified-i',
-    name: 'Unified I',
     configuredBiomeCounts: { Underworld: 4 },
   });
   project = applyProjectCommand(project, catalog, {

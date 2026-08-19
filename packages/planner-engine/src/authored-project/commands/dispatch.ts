@@ -50,7 +50,6 @@ function applyUnchecked(
   command: ProjectCommand,
 ): ProjectDocument {
   switch (command.kind) {
-    case 'RenameProject':
     case 'ReplaceRouteLoadout':
     case 'ReplaceManualArcanaSelection':
     case 'ReplaceFearVowRank':

@@ -40,30 +40,7 @@ const operationLabels: Readonly<Record<ProjectOperation, string>> = Object.freez
   new: 'New project',
   saveProfile: 'Save Profile',
 });
-const reservedWindowsNames = new Set([
-  'aux',
-  'com1',
-  'com2',
-  'com3',
-  'com4',
-  'com5',
-  'com6',
-  'com7',
-  'com8',
-  'com9',
-  'con',
-  'lpt1',
-  'lpt2',
-  'lpt3',
-  'lpt4',
-  'lpt5',
-  'lpt6',
-  'lpt7',
-  'lpt8',
-  'lpt9',
-  'nul',
-  'prn',
-]);
+export const DEFAULT_PROFILE_FILE_NAME = 'run-plan.runplanner.json';
 
 function errorDetail(error: unknown): string {
   return error instanceof Error ? error.message : 'Unknown project operation failure';
@@ -85,18 +62,11 @@ function failure(operation: ProjectOperation, error: unknown): ProjectOperationR
   );
 }
 
-export function suggestedProfileFileName(projectName: string): string {
-  const normalized = projectName
-    .normalize('NFKD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 64)
-    .replace(/-+$/g, '');
-  const base = normalized.length === 0 ? 'run-plan' : normalized;
-  const safeBase = reservedWindowsNames.has(base) ? `run-plan-${base}` : base;
-  return `${safeBase}.runplanner.json`;
+function loadedProfileFileName(fileName: string): string {
+  if (fileName.trim().length === 0) {
+    throw new Error('Loaded profile filename must be non-blank');
+  }
+  return fileName;
 }
 
 export function createProjectOperations(
@@ -130,15 +100,14 @@ export function createProjectOperations(
     async saveProfile(): Promise<ProjectOperationResult> {
       try {
         const snapshot = currentProject();
+        const fileName =
+          selectProfileSession(options.store.getState()).fileName ?? DEFAULT_PROFILE_FILE_NAME;
         const baselineJson = encodeProjectDocument(snapshot);
-        const saveResult = await options.profileFile.save(
-          suggestedProfileFileName(snapshot.name),
-          baselineJson,
-        );
+        const saveResult = await options.profileFile.save(fileName, baselineJson);
         if (saveResult === 'cancelled') {
           return result('saveProfile', 'cancelled', 'Save Profile cancelled.');
         }
-        options.store.dispatch(profileSaveSucceeded({ baselineJson }));
+        options.store.dispatch(profileSaveSucceeded({ baselineJson, fileName }));
         return result('saveProfile', 'success', 'Saved the profile.');
       } catch (error) {
         return failure('saveProfile', error);
@@ -146,19 +115,20 @@ export function createProjectOperations(
     },
     async loadProfile(): Promise<ProjectOperationResult> {
       try {
-        const json = await options.profileFile.load();
-        if (json === null) {
+        const loaded = await options.profileFile.load();
+        if (loaded === null) {
           return result('loadProfile', 'cancelled', 'Load Profile cancelled.');
         }
-        const project = parseProjectDocument(json, options.catalog);
+        const project = parseProjectDocument(loaded.json, options.catalog);
         const baselineJson = encodeProjectDocument(project);
+        const fileName = loadedProfileFileName(loaded.fileName);
         if (selectProfileSession(options.store.getState()).recoveryStatus === 'blocked') {
           if (options.autosaveRecovery === undefined) {
             throw new Error('Autosave recovery is unavailable in this environment');
           }
           options.autosaveRecovery.clear();
         }
-        options.store.dispatch(profileLoadSucceeded({ project, baselineJson }));
+        options.store.dispatch(profileLoadSucceeded({ project, baselineJson, fileName }));
         return result('loadProfile', 'success', 'Loaded the profile.');
       } catch (error) {
         return failure('loadProfile', error);

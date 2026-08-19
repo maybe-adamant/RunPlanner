@@ -33,7 +33,6 @@ const startCases = [
 function projectFor(routeKey: string, count: number) {
   return createProjectDocument(catalog, {
     projectId: `defaults-${routeKey}-${count}`,
-    name: 'Defaults',
     configuredBiomeCounts: { [routeKey]: count },
   });
 }

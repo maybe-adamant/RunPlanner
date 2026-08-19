@@ -159,7 +159,6 @@ function selectedNaturalChaosFrontier(): {
   const chaosOccurrenceId = createOccurrenceId('candidate-natural-chaos-room');
   let project = createProjectDocument(catalog, {
     configuredBiomeCounts: { Underworld: 1 },
-    name: 'Selected natural Chaos candidate frontier',
     projectId: 'selected-natural-chaos-candidate-frontier',
   });
   project = applyProjectCommand(project, catalog, {

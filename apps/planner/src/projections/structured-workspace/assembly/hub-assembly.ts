@@ -485,10 +485,6 @@ function projectHubNode(
               : Object.freeze({
                   availability: 'unavailable' as const,
                   owner,
-                  reason:
-                    runState.reason === 'coverageNotReached'
-                      ? 'Run State is unavailable because this decision has not been reached.'
-                      : 'Run State is unavailable for this decision.',
                   title: 'Hub',
                 }),
         }),

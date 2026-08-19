@@ -1042,7 +1042,7 @@ Gate:
 - one explicit portable Save Profile/Load Profile workflow over normalized
   `ProjectDocument` JSON, replacing the temporary separate local and transfer
   operations from Phase 4;
-- project-name editing and safe suggested profile-filename normalization;
+- application-owned profile filename retention across load and save;
 - a separate debounced autosave/recovery channel;
 - normalized-fingerprint dirty state relative to the last successful explicit
   profile save/load baseline;
@@ -1059,10 +1059,12 @@ schema. The application receives two explicit adapters:
 - `ProfileFileAdapter` for user-directed Save Profile and Load Profile;
 - `AutosaveRecoveryAdapter` for browser-local crash/restart recovery.
 
-The browser profile adapter uses download/upload and derives a safe
-`.runplanner.json` filename from `project.name`. A later native adapter may use
-filesystem dialogs behind the same contract. Browser globals do not enter
-application or core code.
+The browser profile adapter uses download/upload. Load returns the selected
+file's basename with its JSON; the application profile session reuses that
+basename for later saves. New and recovery-only startup fall back to
+`run-plan.runplanner.json`. A later native adapter may use filesystem dialogs
+behind the same contract. Browser globals do not enter application or core
+code, and filenames do not enter the authored document.
 
 Successful explicit load establishes the loaded fingerprint baseline. A
 successful save establishes the fingerprint of the snapshot actually passed
@@ -1082,7 +1084,7 @@ until explicit Discard Autosave or a successful profile load.
 Focused coverage must prove:
 
 - profile save/load normalized-project and evaluation equality;
-- safe filename derivation from edited project names and pending-save snapshot
+- loaded-filename reuse, default-filename fallback, and pending-save snapshot
   semantics;
 - edit-to-dirty and undo-back-to-clean behavior;
 - valid startup recovery with fresh history and evaluation;
@@ -1191,8 +1193,8 @@ Deliver:
 
 - replacement of the temporary local-slot and JSON-transfer UI with injected
   `ProfileFileAdapter` Save Profile and Load Profile operations;
-- one semantic project-name command and an accessible project-name editor;
-- safe `.runplanner.json` suggested filename normalization;
+- application-session ownership of the loaded filename and a stable default
+  filename for new or recovered projects;
 - snapshot-accurate asynchronous save baselines and atomic capability-aware
   profile replacement;
 - browser download/upload adapters plus cancellation and failure coverage.

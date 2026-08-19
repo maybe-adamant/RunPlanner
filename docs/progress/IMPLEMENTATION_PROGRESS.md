@@ -777,9 +777,11 @@ injects one `ProfileFileAdapter`; the browser adapter implements Save Profile
 with an ephemeral download and Load Profile with a transient upload input,
 while browser globals remain confined to entrypoint composition.
 
-The normalized `ProjectDocument` remains the entire profile payload.
-`RenameProject` is one undoable project-root semantic command, and its committed
-name derives a bounded cross-platform-safe `.runplanner.json` suggestion.
+The normalized `ProjectDocument` remains the entire profile payload. Schema 48
+removes the redundant authored project name and its command. The application
+profile session instead retains the basename returned by explicit Load Profile;
+later saves reuse it, while New and recovery-only startup use
+`run-plan.runplanner.json`.
 Successful save establishes the exact serialized snapshot captured before the
 asynchronous adapter call, so a later edit cannot be mistaken for saved state.
 Successful load capability-decodes the complete document and atomically

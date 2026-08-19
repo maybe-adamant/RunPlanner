@@ -39,7 +39,6 @@ function project(): ProjectDocument {
   const initial = applyProjectCommand(
     createProjectDocument(catalog, {
       projectId: 'room-actions',
-      name: 'Room Actions',
       configuredBiomeCounts: { Underworld: 1 },
     }),
     catalog,

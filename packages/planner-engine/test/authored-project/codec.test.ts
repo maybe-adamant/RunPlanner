@@ -16,7 +16,6 @@ function encodedFStart(): Record<string, unknown> {
   const project = applyProjectCommand(
     createProjectDocument(catalog, {
       projectId: 'codec-f',
-      name: 'Codec F',
       configuredBiomeCounts: { Underworld: 1 },
     }),
     catalog,
@@ -86,9 +85,9 @@ const codecRejections: readonly {
 }[] = [
   { name: 'a null root', mutate: () => null },
   { name: 'an array root', mutate: () => [] },
-  { name: 'a schema-42 document', mutate: (document) => ({ ...document, schemaVersion: 42 }) },
+  { name: 'a schema-47 document', mutate: (document) => ({ ...document, schemaVersion: 47 }) },
   { name: 'a blank project ID', mutate: (document) => ({ ...document, projectId: ' ' }) },
-  { name: 'a blank project name', mutate: (document) => ({ ...document, name: ' ' }) },
+  { name: 'a legacy project name', mutate: (document) => ({ ...document, name: 'Legacy' }) },
   {
     name: 'an incompatible catalog version',
     mutate: (document) => ({ ...document, catalogVersion: 'incompatible' }),

@@ -1,6 +1,6 @@
 import type { BiomeLayout, Catalog, RoomDeclaration } from '../../catalog-schema';
 import type { AcquisitionSiteAddress, SemanticAddress } from '../addresses';
-import { createProjectAddress, semanticAddressKey } from '../addresses';
+import { semanticAddressKey } from '../addresses';
 import type {
   AuthoredBiomePlan,
   BiomeTopology,
@@ -35,8 +35,6 @@ export function projectCommandAddress(
   command: ProjectCommand,
 ): SemanticAddress | AcquisitionSiteAddress {
   switch (command.kind) {
-    case 'RenameProject':
-      return createProjectAddress();
     case 'ConfigureRoutePrefix':
     case 'ReplaceRouteLoadout':
     case 'ReplaceManualArcanaSelection':
