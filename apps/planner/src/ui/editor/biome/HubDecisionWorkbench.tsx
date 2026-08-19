@@ -28,7 +28,6 @@ import { SemanticOwnerMarker } from '@planner/ui/feedback/EvaluationFeedback';
 import { candidateMayBeAuthored } from '@planner/ui/feedback/candidatePresentation';
 import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorkspaceInteraction';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
-import { TraitOfferLauncher } from '../rewards/TraitOfferEditor';
 import { DoorRewardEditor } from './DoorRewardEditor';
 import { RunStateLauncher } from './RunStateSheet';
 
@@ -703,10 +702,6 @@ function OpenHubRoomCard({
   const rewardOwnerKey =
     reward === undefined ? undefined : semanticAddressKey(reward.marker.address);
   const focusedMainReward = rewardOwnerKey === focusedRewardOwnerKey;
-  const encounterTraitOffers =
-    slot.room?.encounterPhases.flatMap((phase) =>
-      phase.traitOffer === undefined ? [] : [phase.traitOffer],
-    ) ?? [];
   const canInspectLocalDetail = slot.visited && slot.room !== undefined;
   const visitPosition = ranking.authoredVisitOrder.indexOf(slot.hubSlotKey);
   const showSlotAssessment =
@@ -805,17 +800,6 @@ function OpenHubRoomCard({
             idPrefix={`hub-${slot.hubSlotKey}`}
             interactions={interactions}
           />
-        </div>
-      )}
-      {encounterTraitOffers.length === 0 ? null : (
-        <div className="trait-offer-launchers hub-room-trait-offers">
-          {encounterTraitOffers.map((traitOffer) => (
-            <TraitOfferLauncher
-              control={traitOffer}
-              interactions={interactions}
-              key={workspaceInteractionKey(traitOffer.address)}
-            />
-          ))}
         </div>
       )}
     </article>

@@ -431,6 +431,51 @@ describe('BiomeWorkspace', () => {
     );
   });
 
+  it('uses a selected decision rail stop to open its continuation occurrence stage', async () => {
+    const view = renderWorkspace(createRepresentativeNOPQProject(), 'Surface', 'N');
+    const biome = workspaceBiome(view.application, 'Surface', 'N');
+    const opening = biome.rail.find(
+      (entry) =>
+        entry.kind === 'node' &&
+        entry.node.kind === 'occurrenceWorkbench' &&
+        entry.node.room.gameName === 'N_Opening01',
+    );
+    const preHubDecision = biome.rail.find(
+      (entry) =>
+        entry.kind === 'node' &&
+        (entry.node.kind === 'ordinaryBatch' || entry.node.kind === 'mixedBatch') &&
+        entry.node.targets.some((target) => target.room.gameName === 'N_PreHub01'),
+    );
+    if (
+      opening?.kind !== 'node' ||
+      preHubDecision?.kind !== 'node' ||
+      (preHubDecision.node.kind !== 'ordinaryBatch' && preHubDecision.node.kind !== 'mixedBatch')
+    ) {
+      throw new Error('N Opening or Pre-Hub rail stop is missing');
+    }
+    const preHub = preHubDecision.node.targets.find(
+      (target) => target.selected && target.room.gameName === 'N_PreHub01',
+    );
+    if (preHub === undefined) throw new Error('N selected Pre-Hub continuation is missing');
+
+    await view.user.click(railButtonForMarker(view.container, opening.marker.focusKey));
+    const inspector = screen.getByRole('complementary', { name: 'Details' });
+    expect(inspector.querySelector('.biome-occurrence-workbench > header h3')?.textContent).toBe(
+      'Opening',
+    );
+
+    await view.user.click(railButtonForMarker(view.container, preHubDecision.marker.focusKey));
+    expect(inspector.querySelector('.biome-occurrence-workbench > header h3')?.textContent).toBe(
+      'Pre-Hub',
+    );
+    expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(
+      preHub.room.marker.address,
+    );
+    expect(
+      railButtonForMarker(view.container, preHubDecision.marker.focusKey).dataset.selected,
+    ).toBe('true');
+  });
+
   it('routes a keyboard-selected Hub rail visit to its occurrence-owned local detail workbench', async () => {
     const view = renderWorkspace(createRepresentativeNOPQProject(), 'Surface', 'N');
     await view.user.click(hubRailButton());
@@ -591,7 +636,7 @@ describe('BiomeWorkspace', () => {
     ).not.toBeNull();
   });
 
-  it('keeps semantic focus after an inspector reward edit and updates direct rail context', async () => {
+  it('updates decision rail context from the predecessor occurrence stage', async () => {
     const project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
       kind: 'RemoveExitDecision',
       decision: createExitDecisionAddress(pBiome, {
@@ -604,11 +649,27 @@ describe('BiomeWorkspace', () => {
       occurrenceId: pOccurrenceIds.intro,
     });
     const view = renderWorkspace(project, 'Surface', 'P');
+    const projected = workspaceBiome(view.application, 'Surface', 'P');
     const railDecision = railButtonForMarker(view.container, semanticAddressKey(owner));
-    await view.user.click(railDecision);
+    const sourceOccurrence = projected.nodes.find(
+      (node) =>
+        node.kind === 'occurrenceWorkbench' &&
+        owner.source.kind === 'occurrence' &&
+        node.room.occurrenceId === owner.source.occurrenceId,
+    );
+    const sourceRail = projected.rail.find(
+      (entry) =>
+        entry.kind === 'node' &&
+        sourceOccurrence !== undefined &&
+        entry.node.key === sourceOccurrence.key,
+    );
+    if (sourceOccurrence?.kind !== 'occurrenceWorkbench' || sourceRail?.kind !== 'node') {
+      throw new Error('P predecessor occurrence rail stage is missing');
+    }
+    await view.user.click(railButtonForMarker(view.container, sourceRail.marker.focusKey));
 
     const inspector = screen.getByRole('complementary', { name: 'Details' });
-    const decisionNode = workspaceBiome(view.application, 'Surface', 'P').nodes.find(
+    const decisionNode = projected.nodes.find(
       (node) =>
         (node.kind === 'ordinaryBatch' || node.kind === 'mixedBatch') &&
         semanticAddressKey(node.owner) === semanticAddressKey(owner),
@@ -639,7 +700,9 @@ describe('BiomeWorkspace', () => {
     const after = railDecision.querySelector<HTMLElement>('.biome-rail-selection');
     if (after === null) throw new Error('P updated room rail context is missing');
     expect(after.textContent).not.toBe(beforeText);
-    expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(owner);
+    expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(
+      sourceOccurrence.room.marker.address,
+    );
   });
 
   it('keeps the owning decision rail selected when the next physical target takes focus', async () => {
@@ -1235,7 +1298,10 @@ describe('BiomeWorkspace', () => {
     const door = within(inspector).getByRole('article', {
       name: `${story.room.label} room offer`,
     });
-    expect(within(door).getByText('Door reward')).toBeTruthy();
+    expect(within(door).queryByText('Door reward')).toBeNull();
+    expect(
+      door.querySelector('.door-reward-list .room-state-with-marker > .semantic-owner-marker'),
+    ).not.toBeNull();
   });
 
   it('moves keyboard focus through semantic owners without authoring a change', async () => {
@@ -1248,7 +1314,12 @@ describe('BiomeWorkspace', () => {
     target.focus();
     await view.user.keyboard('{Enter}');
     const focused = view.application.store.getState().editorSession.focusedSemanticOwner;
-    expect(focused?.kind).toBe('exitDecision');
+    const decision = workspaceBiome(view.application, 'Underworld', 'F').rail.find(
+      (entry) => entry.kind === 'node' && entry.label === 'Decision 1',
+    );
+    if (decision?.kind !== 'node') throw new Error('F Decision 1 projection is missing');
+    expect(focused).toEqual(decision.focusMarker.address);
+    expect(focused?.kind).toBe('occurrence');
   });
 
   it('navigates a guaranteed target finding to its owning decision workbench', () => {

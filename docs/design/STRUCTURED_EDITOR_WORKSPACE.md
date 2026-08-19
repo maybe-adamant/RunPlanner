@@ -169,14 +169,17 @@ semantic focus, finding navigation, coverage, and focused-inspector language.
 
 ### Focused Inspector
 
-The inspector renders the workbench containing the focused semantic owner and
-the controls that belong to it. An ordinary decision workbench includes its
-batch policy and every physical offer's picked state, room selector, and reward
-controls together. Focusing an ordinary target, occurrence, or reward opens that
-same decision workbench at its exact semantic control; it does not create a
-parallel room stop in the rail. Fixed entries and N visit-local details retain
-occurrence workbenches where they are player-facing stages or subordinate Hub
-navigation.
+The inspector renders the occurrence stage or exact structural workbench
+containing the focused semantic owner. An ordinary decision remains the
+outgoing-door section of its source occurrence and includes its batch policy
+and every physical offer's picked state, room selector, and reward controls.
+Before a decision has one selected continuation, its numbered rail stop opens
+that decision surface. Once exactly one target is selected, the same stop opens
+the selected target occurrence stage; the predecessor stage still owns and
+renders the outgoing door editor. Exact target, door-reward, and finding focus
+continues to open the semantic control that owns the value. Fixed entries and N
+visit-local details retain occurrence workbenches where they are player-facing
+stages or subordinate Hub navigation.
 
 Finding navigation selects the owning route and biome, focuses the semantic
 owner, and brings its inspector surface into view. The inspector never searches
@@ -517,12 +520,13 @@ Unpicked targets remain fully visible in the decision workbench because they
 still affect reward bags, sibling conflicts, source support, and possibility
 evaluation. They do not become equal-weight stops on the biome rail. A numbered
 decision stop always shows its decision identity and semantic assessment. When
-exactly one target is authored as selected, it may progressively add that room
-label; if its room-local surface has exactly one direct compact reward, it may
-add a structured reward token. The selected room remains useful context when
-the reward surface is multiple or not compactly representable, so room and
-reward cardinality are deliberately independent. Findings, evaluated entry,
-and physical availability never suppress this authored-selection context.
+exactly one target is authored as selected, it navigates to that continuation's
+occurrence stage and may progressively add that room label; if its room-local
+surface has exactly one direct compact reward, it may add a structured reward
+token. The selected room remains useful context when the reward surface is
+multiple or not compactly representable, so room and reward cardinality are
+deliberately independent. Findings, evaluated entry, and physical availability
+never suppress this authored-selection context.
 
 The rail product retains the resolved reward offer plus its current text
 fallback. React currently renders the fallback, while a later compact icon or

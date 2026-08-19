@@ -77,7 +77,7 @@ describe('Run State product loop', () => {
 
     await view.user.click(screen.getByRole('button', { name: 'Underworld' }));
     await view.user.click(screen.getByRole('button', { name: 'Erebus' }));
-    await view.user.click(screen.getByRole('button', { name: /^Decision 1Evaluated/ }));
+    await view.user.click(screen.getByRole('button', { name: /^OpeningEvaluated/ }));
     const launcher = screen.getAllByRole('button', { name: 'Run State' })[0];
     if (launcher === undefined) throw new Error('F Run State launcher is missing');
     expect(launcher.closest('.decision-heading')).not.toBeNull();

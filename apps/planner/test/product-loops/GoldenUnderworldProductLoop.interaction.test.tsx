@@ -826,8 +826,10 @@ describe('underworld product loop', () => {
     act(() => ordinary.focus());
     await view.user.keyboard('{Enter}');
     expect(
-      screen.getByRole('heading', { level: 3, name: 'Choose a room and reward' }),
-    ).toBeTruthy();
+      screen
+        .getByRole('complementary', { name: 'Details' })
+        .querySelector('.biome-occurrence-workbench > header h3'),
+    ).not.toBeNull();
 
     await view.user.click(screen.getByRole('button', { name: 'Oceanus' }));
     const gStructure = screen.getByRole('region', { name: 'Oceanus route structure' });
@@ -843,9 +845,7 @@ describe('underworld product loop', () => {
     const mixed = iStructure.querySelector<HTMLButtonElement>('[data-kind="mixedBatch"] button');
     if (mixed === null) throw new Error('I mixed batch rail node is missing');
     await view.user.click(mixed);
-    expect(
-      screen.getByRole('heading', { level: 3, name: 'Choose a room and reward' }),
-    ).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 3, name: 'Preboss' })).toBeTruthy();
 
     act(() =>
       application.store.dispatch(authoredProjectReplaced(createRepresentativeNOPQProject())),
@@ -858,7 +858,11 @@ describe('underworld product loop', () => {
     ).find((button) => button.textContent?.includes('Pre-Hub'));
     if (preHub === undefined) throw new Error('N PreHub rail stage is missing');
     await view.user.click(preHub);
-    expect(screen.getAllByRole('heading', { name: 'Pre-Hub' })).toHaveLength(1);
+    expect(
+      screen
+        .getByRole('complementary', { name: 'Details' })
+        .querySelector('.biome-occurrence-workbench > header h3')?.textContent,
+    ).toBe('Pre-Hub');
 
     const hub = nStructure.querySelector<HTMLButtonElement>('[data-kind="hubDecision"] button');
     if (hub === null) throw new Error('N Hub rail node is missing');

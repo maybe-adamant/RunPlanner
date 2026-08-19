@@ -19,14 +19,19 @@ export function DoorRewardEditor({
     return <p className="fixed-room-state">Reward hidden on this door.</p>;
   }
   if (door.rewardPreview.kind === 'none') return null;
+  const showRewardLabels = door.rewardPreview.rewards.length > 1;
   return (
     <div aria-label={`${door.room.label} door rewards`} className="door-reward-list">
       {door.rewardPreview.rewards.map((reward) => (
         <section className="room-state-with-marker" key={reward.key}>
-          <div className="owner-markers">
-            <span>{reward.label}</span>
+          {showRewardLabels ? (
+            <div className="owner-markers">
+              <span>{reward.label}</span>
+              <SemanticOwnerMarker address={reward.marker.address} />
+            </div>
+          ) : (
             <SemanticOwnerMarker address={reward.marker.address} />
-          </div>
+          )}
           {reward.control === undefined ? (
             <p className="fixed-room-state">{reward.summary}</p>
           ) : (

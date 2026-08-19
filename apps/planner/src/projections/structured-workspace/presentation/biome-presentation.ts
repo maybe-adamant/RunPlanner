@@ -193,6 +193,21 @@ function selectedTargetRailPresentation(
   });
 }
 
+function railFocusMarkerForNode(node: WorkspaceNode, marker: WorkspaceMarker): WorkspaceMarker {
+  if (node.kind === 'occurrenceWorkbench') return node.room.marker;
+  if (
+    node.kind !== 'ordinaryBatch' &&
+    node.kind !== 'mixedBatch' &&
+    node.kind !== 'takeoverBatch'
+  ) {
+    return marker;
+  }
+  const selectedTargets = node.targets.filter((target) => target.selected);
+  return selectedTargets.length === 1 && selectedTargets[0] !== undefined
+    ? selectedTargets[0].room.marker
+    : marker;
+}
+
 /**
  * The rail needs the visit's room-local workbench identity, while the Hub
  * board retains its distinct visit-order owner. Publishing both avoids making
@@ -331,16 +346,20 @@ export function presentWorkspaceBiome(
       decisionIndex += 1;
       const presentation = nodeRailPresentation(node, decisionIndex, node.key === entry?.key);
       const selectedTarget = selectedTargetRailPresentation(node);
+      const marker = decisionRailMarker(node);
       return Object.freeze({
+        focusMarker: railFocusMarkerForNode(node, marker),
         kind: 'node' as const,
         key: node.key,
         label: presentation.label,
-        marker: decisionRailMarker(node),
+        marker,
         node,
         ...(selectedTarget === undefined ? {} : { selectedTarget }),
       });
     }
     const presentation = nodeRailPresentation(node, undefined, node.key === entry?.key);
+    const marker =
+      node.kind === 'takeoverBatch' ? decisionRailMarker(node) : railMarkerForNode(node);
     const mainReward =
       semantic.progressionKind === 'hub' && node.kind === 'occurrenceWorkbench'
         ? node.key === entry?.key
@@ -349,10 +368,11 @@ export function presentWorkspaceBiome(
         : undefined;
     return Object.freeze({
       kind: 'node' as const,
+      focusMarker: railFocusMarkerForNode(node, marker),
       key: node.key,
       label: presentation.label,
       ...(mainReward === undefined ? {} : { mainReward }),
-      marker: node.kind === 'takeoverBatch' ? decisionRailMarker(node) : railMarkerForNode(node),
+      marker,
       node,
     });
   };
@@ -474,6 +494,7 @@ export function presentWorkspaceBiome(
       switch (entry.node.kind) {
         case 'ordinaryBatch':
           return Object.freeze({
+            focusMarker: entry.focusMarker,
             kind: 'node' as const,
             key: entry.key,
             label: entry.label,
@@ -483,6 +504,7 @@ export function presentWorkspaceBiome(
           });
         case 'mixedBatch':
           return Object.freeze({
+            focusMarker: entry.focusMarker,
             kind: 'node' as const,
             key: entry.key,
             label: entry.label,
@@ -492,6 +514,7 @@ export function presentWorkspaceBiome(
           });
         case 'takeoverBatch':
           return Object.freeze({
+            focusMarker: entry.focusMarker,
             kind: 'node' as const,
             key: entry.key,
             label: entry.label,
