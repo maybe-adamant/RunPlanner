@@ -401,7 +401,6 @@ describe('underworld product loop', () => {
         semanticOwnerFocused(createOccurrenceAddress(goldenFBiome, opening)),
       ),
     );
-    await view.user.click(screen.getByText('Customize'));
     await view.user.click(screen.getByRole('button', { name: 'Add Chaos gate' }));
 
     const topology = () =>

@@ -310,7 +310,6 @@ describe('surface product loop', () => {
 
     const offer = screen.getByRole('article', { name: 'Combat 02 room offer' });
     await view.user.click(within(offer).getByRole('button', { name: 'Open Combat 02 room' }));
-    await view.user.click(screen.getByText('Customize'));
     const intro = screen.getByLabelText('Intro encounter phase');
     expect(screen.getByLabelText('Combat encounter phase')).toBeTruthy();
     await view.user.click(within(intro).getByRole('button', { name: 'Encounter' }));

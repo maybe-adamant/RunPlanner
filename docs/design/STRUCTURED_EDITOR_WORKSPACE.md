@@ -205,6 +205,38 @@ semantic destination without producing no-op controls. This gives finding
 navigation and closure the same phase identity regardless of whether the
 presentation has a visible picker.
 
+### Direct Occurrence Workbenches
+
+The application publishes one closed occurrence-presentation union rather than
+a generic room-details disclosure. Standard rooms render Encounter, optional N
+Side rooms, Room features, and Room Actions in that order. Fields render
+Encounter, Fields setup, Room features, and the same occurrence-owned mixed
+Room Actions chronology. Shops render inventory and conditions before Room
+features and Room Actions. A section is omitted when its projected product is
+empty.
+
+ShipCombat is the deliberate fourth shape. It renders Combat phase count,
+then Intro, Combat 1, and structurally active Combat 2 sections. Each phase
+contains its projected Encounter, declaration-attached reward wheel when
+present for the following combat, and actions grouped by the engine-owned
+`RoomActionWindow`. Wheel 1's structural editor therefore appears under Intro,
+Wheel 2's under Combat 1 when active, and final Combat 2 has no following wheel
+editor. Choose and post-combat pickup actions do not move with that structural
+editor. The groups
+are views over one interaction and one authored order: global ranks, proposals,
+pointer drag, keyboard moves, and Undo are unchanged. The application copies
+the engine window onto projected rows and checkpoints and performs the closed
+Ship grouping; React does not derive lifecycle barriers or create another
+order. An action retained from a now-inactive Ship phase is excluded from those
+active groups and rendered exactly once in the Ship repair surface, preserving
+its finding, semantic focus, and explicit removal proposal.
+
+Room features is a closed application product containing the currently
+supported Chaos-gate and Zagreus-contract spawn controls. The resulting exits,
+their removal, and Anomaly identity/revert remain on the outgoing door cards.
+Incoming room identity and door-visible reward are read-only context in an
+entered occurrence; their editor remains the predecessor's outgoing door.
+
 ### Fields and Artificer Products
 
 A Fields occurrence workbench projects one optional-count control, one active

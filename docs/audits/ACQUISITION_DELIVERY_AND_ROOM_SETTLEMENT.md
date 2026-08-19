@@ -537,7 +537,7 @@ originating Shrine offer.
 
 The coherent surface is broader than “Purchases and Pickups” once an ordinary
 room reward can participate in the same order as a due delivery. A later plan
-may call it **Acquisitions**. It remains outside Customize and is projected at
+may call it **Acquisitions**. It remains in direct Room Actions and is projected at
 the nearest workbench that owns the exact settlement site:
 
 - an ordinary single-encounter occurrence shows one compact pre-outgoing row

@@ -642,10 +642,10 @@ fallback may keep settling a producer at encounter completion.
 
 ### 11. Gorgon preserves hosted provenance
 
-- With source-local Death Defiance false, Customize exposes ordinary hosted
+- With source-local Death Defiance false, the direct Encounter section exposes ordinary hosted
   encounter choices and no Gorgon action.
 - With Death Defiance true at an eligible pending phase, Gorgon Athena is the
-  sole valid effective choice shown by Customize.
+  sole valid effective choice shown by the direct Encounter section.
 - Selecting virtual Athena edits Gorgon semantic state, never
   `encounterKeyByPhase`.
 - Hosted encounter remains authority for lifecycle, counters, and Fig Leaf.
@@ -1399,13 +1399,17 @@ generation region. It contains no main-room acquisition, encounter result,
 Room Action result, side-room generation, or visit-order history. The six-room
 visit order must never be substituted for board generation order.
 
-Partial authoring remains total. Each open door may be repaired from that one
-Hub-generation product using the resolved peer identities already present on
-the board. An unresolved or invalid peer keeps the board incomplete or invalid,
-but does not hide or disable the other door editors. Complete selected
-validation still requires one supported complete board under the existing
-unordered-generation rules. It does not search future main/side-room
-chronology to decide whether a board edit can be made.
+Partial authoring remains total. Each open door is repaired from that one
+Hub-generation product after folding every other currently authored peer that
+can contribute once, then evaluating the focused reward last. Already-authored
+doors therefore consume counted pool entries immediately; the engine does not
+search peer subsets or allow the focused reward to precede a consumed peer. An
+unresolved peer remains absent, while an independently invalid peer keeps the
+board invalid but is omitted from the focused fold so it cannot hide or disable
+unrelated editors. Complete selected validation still requires one supported
+complete board under the existing unordered-generation rules. It does not
+search future main/side-room chronology to decide whether a board edit can be
+made.
 
 Opening and PreHub reward candidates follow the same generation-frontier
 principle at their own owners: candidate support is available before the first

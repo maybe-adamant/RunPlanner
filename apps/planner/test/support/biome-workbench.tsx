@@ -246,6 +246,7 @@ export function renderOccurrenceWorkbench(
         <OccurrenceWorkbench
           {...(node.incomingDoor === undefined ? {} : { incomingDoor: node.incomingDoor })}
           interactions={workspace.interactions}
+          {...(node.localVisit === undefined ? {} : { localVisit: node.localVisit })}
           presentation={node.inspectorPresentation}
           room={node.room}
         />
@@ -270,6 +271,7 @@ export function renderStaticOccurrenceWorkbench(
       <OccurrenceWorkbench
         {...(node.incomingDoor === undefined ? {} : { incomingDoor: node.incomingDoor })}
         interactions={workspace.interactions}
+        {...(node.localVisit === undefined ? {} : { localVisit: node.localVisit })}
         presentation={node.inspectorPresentation}
         room={node.room}
       />

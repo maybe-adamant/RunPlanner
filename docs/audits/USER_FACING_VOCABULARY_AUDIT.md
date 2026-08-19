@@ -247,6 +247,12 @@ needs its own inventory; the prior audit missed this surface.
 Existing destinations such as `Room reward`, `Reward pool`, `Reward wheel`,
 `Shop offer`, `Shop purchase`, `Open Hub rooms`, and `Boss` are already clear.
 
+Direct occurrence workbenches use the literal section names `Encounter`,
+`Side rooms`, `Fields setup`, `Room features`, `Shop inventory and conditions`,
+and `Room Actions`. Ship rooms use `Combat phase count`, `Intro`, `Combat 1`,
+and `Combat 2`. These labels identify the owned game-domain product directly;
+there is no generic room-details action in the active surface.
+
 ## Implementation Ownership and Test Witnesses
 
 Likely 5b.4 production owners:

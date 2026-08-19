@@ -2341,30 +2341,20 @@ select {
   border-top: 1px solid #353640;
 }
 
-.room-customization {
+.room-features-workbench,
+.fields-room-editor,
+.ephyra-side-editor,
+.room-actions-workbench {
   display: grid;
-  gap: 12px;
+  gap: 10px;
   margin-top: 12px;
   padding-top: 12px;
   border-top: 1px solid #353640;
 }
 
-.room-customization > summary {
-  width: fit-content;
-  color: #e2b971;
-  font-size: 0.84rem;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.room-customization-content {
-  display: grid;
-  gap: 12px;
-}
-
-.room-customization-content > .encounter-editor,
-.room-customization-content > .ephyra-side-editor,
-.room-customization-content > .shop-editor {
+.ship-phase .encounter-editor,
+.ship-phase .reward-wheel,
+.ship-combat-editor .room-actions-workbench {
   margin-top: 0;
   padding-top: 0;
   border-top: 0;
@@ -2411,10 +2401,32 @@ select {
   padding-top: 8px;
 }
 
-.reward-wheel-list,
+.ship-phase-list,
 .reward-wheel-offers {
   display: grid;
   gap: 8px;
+}
+
+.ship-phase {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid #3a3b45;
+  border-radius: 10px;
+  background: rgb(126 101 154 / 5%);
+}
+
+.ship-action-repairs {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid #79545a;
+  border-radius: 10px;
+  background: rgb(153 76 87 / 8%);
+}
+
+.ship-phase-actions-heading {
+  margin: 2px 0 0;
 }
 
 .reward-wheel {
@@ -2435,6 +2447,12 @@ select {
   margin: 0;
   color: #f2ede5;
   font-size: 0.82rem;
+}
+
+.local-reward-heading h6 {
+  margin: 0;
+  color: #f2ede5;
+  font-size: 0.78rem;
 }
 
 .hub-decision-workbench {

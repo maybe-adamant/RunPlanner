@@ -56,6 +56,7 @@ import type {
   ArcanaActivationOrigin,
   CanonicalBatch,
   ProjectEvaluationAssembly,
+  RoomActionWindow,
 } from '@run-planner/engine/simulation';
 import type { LevelResolutionCandidateProjection } from '../candidateProjection';
 
@@ -1091,6 +1092,8 @@ export interface WorkspaceRoomActionRow {
     readonly showOffer: boolean;
   };
   readonly stale: boolean;
+  /** Engine-owned lifecycle window used by closed presentation groupings. */
+  readonly window: RoomActionWindow;
   /** Exact encounter/Gorgon payload settled by this action. */
   readonly traitOffer?: WorkspaceTraitOfferControl;
   /** Exact wheel whose picked offer is chosen by this action. */
@@ -1103,6 +1106,8 @@ export interface WorkspaceRoomActions {
     readonly key: string;
     readonly label: string;
     readonly afterRank: number;
+    /** Engine-owned lifecycle window used by closed presentation groupings. */
+    readonly window: RoomActionWindow;
   }[];
   readonly interactionKey: string;
   readonly owner: OccurrenceAddress;
@@ -1134,6 +1139,8 @@ export interface WorkspaceRewardWheelOfferDescriptor {
 export interface WorkspaceRewardWheelDescriptor {
   readonly active: boolean;
   readonly address: RewardWheelAddress;
+  /** Declaration-owned combat phase whose completion settles this wheel. */
+  readonly encounterPhaseKey: string;
   readonly key: string;
   readonly label: string;
   readonly marker: WorkspaceMarker;
@@ -1312,6 +1319,8 @@ export type WorkspaceRoomLocal =
       readonly kind: 'ship';
       /** Authored structural activation for Ship Combat2, distinct from encounter identity. */
       readonly combatPhaseCount: 2 | 3;
+      /** Active declaration-owned encounter slots in their envelope order. */
+      readonly phases: readonly WorkspaceShipStructurePhase[];
       readonly wheels: readonly WorkspaceRewardWheelDescriptor[];
     }
   | {
@@ -1322,21 +1331,70 @@ export type WorkspaceRoomLocal =
       readonly deathDefianceCondition?: WorkspaceShopConditionControl;
     };
 
+export type WorkspaceRoomFeature =
+  | {
+      readonly kind: 'zagreusContract';
+      readonly control: WorkspaceZagreusSpawnControl;
+    }
+  | {
+      readonly kind: 'naturalChaos';
+      readonly control: WorkspaceNaturalChaosSpawnControl;
+    };
+
+export interface WorkspaceShipStructurePhase {
+  readonly key: string;
+  readonly label: string;
+  readonly rewardWheelKey?: string;
+}
+
+export interface WorkspaceShipPhasePresentation {
+  readonly actionRows: readonly WorkspaceRoomActionRow[];
+  readonly checkpoints: WorkspaceRoomActions['checkpoints'];
+  readonly encounter?: WorkspaceEncounterPhase;
+  readonly key: string;
+  readonly label: string;
+  readonly wheel?: WorkspaceRewardWheelDescriptor;
+}
+
+/** Closed, render-ready composition for one direct occurrence workbench. */
+export type WorkspaceRoomWorkbenchPresentation =
+  | {
+      readonly kind: 'standard';
+      readonly encounterPhases: readonly WorkspaceEncounterPhase[];
+      readonly features: readonly WorkspaceRoomFeature[];
+      readonly roomActions?: WorkspaceRoomActions;
+    }
+  | {
+      readonly kind: 'fields';
+      readonly encounterPhases: readonly WorkspaceEncounterPhase[];
+      readonly features: readonly WorkspaceRoomFeature[];
+      readonly fields: Extract<WorkspaceRoomLocal, { readonly kind: 'fields' }>;
+      readonly roomActions?: WorkspaceRoomActions;
+    }
+  | {
+      readonly kind: 'ship';
+      readonly combatPhaseCount: 2 | 3;
+      readonly features: readonly WorkspaceRoomFeature[];
+      readonly phases: readonly WorkspaceShipPhasePresentation[];
+      /** Retained inactive/obsolete rows remain visible once, outside active phases. */
+      readonly repairRows: readonly WorkspaceRoomActionRow[];
+      readonly roomActions?: WorkspaceRoomActions;
+    }
+  | {
+      readonly kind: 'shop';
+      readonly features: readonly WorkspaceRoomFeature[];
+      readonly roomActions?: WorkspaceRoomActions;
+      readonly shop: Extract<WorkspaceRoomLocal, { readonly kind: 'shop' }>;
+    };
+
 export interface WorkspaceRoomSummary {
   readonly address: OccurrenceAddress;
-  /** Exact semantic owners nested beneath the Customize disclosure. */
-  readonly customizationMarkers: readonly WorkspaceMarker[];
   /** Authored detail activation is deliberately separate from evaluated entry. */
   readonly detailsActive: boolean;
   /** Active pool-backed encounter phases in declaration/lifecycle order. */
   readonly encounterPhases: readonly WorkspaceEncounterPhase[];
   readonly entered: boolean;
   readonly gameName: string;
-  /**
-   * Whether this details-active room has a meaningful editable or diagnostic
-   * room-local surface. Main rewards remain outside this boundary.
-   */
-  readonly hasRoomLocalCustomization: boolean;
   readonly kind: RoomDeclaration['kind'];
   readonly label: string;
   /** All room-local owners used for inspector and rail containment routing. */
@@ -1344,6 +1402,7 @@ export interface WorkspaceRoomSummary {
   readonly marker: WorkspaceMarker;
   readonly occurrenceId: OccurrenceId;
   readonly roomLocal: WorkspaceRoomLocal;
+  readonly workbench: WorkspaceRoomWorkbenchPresentation;
   /** One shared entered-room chronology across every semantic participant. */
   readonly roomActions?: WorkspaceRoomActions;
   /**

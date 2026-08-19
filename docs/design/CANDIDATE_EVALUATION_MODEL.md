@@ -421,12 +421,16 @@ and invokes the existing reward authorities:
   acquisition, or shop findings.
 
 The large N Hub board has one focused-repair refinement. Selected simulation
-and the selected candidate still validate the complete atomic board. When that
-board has no supported ordering because several retained declaration defaults
-are invalid together, a changed focused reward may be supported from the
-board's pre-generation frontier without requiring unrelated siblings to become
-valid in the same edit. This authorizes one repair step; it does not publish a
-valid board, consume the remaining offers, or expose Hub visit candidates.
+still validates the complete atomic board under its supported hidden generation
+ordering. A focused edit instead starts from the board's pre-generation
+frontier, folds every other currently authored peer that can contribute once,
+then evaluates the proposed reward last. Counted entries consumed by an
+already-authored door are therefore unavailable immediately on later edits.
+An independently invalid peer is omitted from this focused fold, so it remains
+visible as a board error without disabling unrelated repair. The fold is
+linear in the number of open doors and never searches peer subsets or future
+Hub visits. It authorizes one edit; it does not publish a valid board or expose
+Hub visit candidates.
 
 The application may aggregate complete offer results into reward-type,
 Boon-source, and Devotion-source steps. It does not implement reward support.

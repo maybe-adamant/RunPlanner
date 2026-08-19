@@ -103,6 +103,9 @@ function assemble(
   derivedAcquisitionEntries?: Parameters<
     typeof assembleWorkspaceOccurrence
   >[0]['derivedAcquisitionEntries'],
+  evaluatedRoomTransform?: (
+    room: NonNullable<Parameters<typeof assembleWorkspaceOccurrence>[0]['evaluatedRoom']>,
+  ) => NonNullable<Parameters<typeof assembleWorkspaceOccurrence>[0]['evaluatedRoom']>,
 ) {
   const source = biomeSource(project, routeKey, biomeKey, gorgonSupport);
   const occurrence = source.occurrence(occurrenceId);
@@ -118,6 +121,10 @@ function assemble(
     }
     return undefined;
   })();
+  const projectedEvaluatedRoom =
+    evaluatedRoom === undefined || evaluatedRoomTransform === undefined
+      ? evaluatedRoom
+      : evaluatedRoomTransform(evaluatedRoom);
   const facts = createWorkspaceBiomeOccurrenceAssemblyFacts(source).occurrence(occurrenceId);
   if (facts === undefined) throw new Error(`${occurrenceId} facts are missing`);
   const fieldsFacts = fieldsFactsForOccurrence(source, occurrenceId);
@@ -141,7 +148,7 @@ function assemble(
     facts,
     levelResolutionAssessment: source.levelResolutionAssessment,
     derivedAcquisitionEntries: derivedAcquisitionEntries ?? source.derivedAcquisitionEntries,
-    ...(evaluatedRoom === undefined ? {} : { evaluatedRoom }),
+    ...(projectedEvaluatedRoom === undefined ? {} : { evaluatedRoom: projectedEvaluatedRoom }),
     markerDestinations: markers.emitter,
     ordinaryRewardForfeited: (owner) => source.ordinaryRewardForfeited(owner.address),
     occurrence,
@@ -334,7 +341,7 @@ describe('structured workspace occurrence assembly', () => {
     expect(encounter?.traitOffer?.address.owner).toEqual(phase);
   });
 
-  it('exposes a picked Arachne Story offer through the fixed-phase Customize surface', () => {
+  it('exposes a picked Arachne Story offer through the direct Encounter surface', () => {
     const occurrenceId = goldenFOccurrenceId(7, 1);
     const phase = createEncounterPhaseAddress(
       goldenFBiome,
@@ -360,8 +367,10 @@ describe('structured workspace occurrence assembly', () => {
         giver: { key: 'Arachne' },
       },
     });
-    expect(assembly.node.room.hasRoomLocalCustomization).toBe(true);
-    expect(assembly.node.room.customizationMarkers).toContain(encounter?.traitOffer?.marker);
+    expect(assembly.node.room.workbench).toMatchObject({
+      kind: 'standard',
+      encounterPhases: [expect.objectContaining({ traitOffer: encounter?.traitOffer })],
+    });
   });
 
   it('retains published dormant Fields and Ship controls with their occurrence-owned requirements', () => {
@@ -413,9 +422,10 @@ describe('structured workspace occurrence assembly', () => {
     expect(fields.node.room.localDetailMarkers).toContain(
       fields.node.room.roomLocal.cages[0]?.control.marker,
     );
-    expect(fields.node.room.customizationMarkers).not.toContain(
-      fields.node.room.roomLocal.cages[0]?.control.marker,
-    );
+    expect(fields.node.room.workbench).toMatchObject({
+      kind: 'fields',
+      fields: fields.node.room.roomLocal,
+    });
     expect(
       fields.node.room.roomLocal.cages.every(
         (cage) => Object.isFrozen(cage) && Object.isFrozen(cage.control),
@@ -468,6 +478,7 @@ describe('structured workspace occurrence assembly', () => {
     expect(
       ship.node.room.roomLocal.wheels.map((wheel) => [
         wheel.key,
+        wheel.encounterPhaseKey,
         wheel.label,
         wheel.active,
         wheel.offerCount,
@@ -475,16 +486,56 @@ describe('structured workspace occurrence assembly', () => {
         wheel.storeKey,
       ]),
     ).toEqual([
-      ['wheel1', 'Combat 1 reward', true, 1, 1, 'RunProgress'],
-      ['wheel2', 'Combat 2 reward', false, 1, 1, 'RunProgress'],
+      ['wheel1', 'Combat1', 'Combat 1 reward', true, 1, 1, 'RunProgress'],
+      ['wheel2', 'Combat2', 'Combat 2 reward', false, 1, 1, 'RunProgress'],
     ]);
     expect(ship.node.room.roomLocal.wheels[0]?.address).toEqual(
       createRewardWheelAddress(oBiome, oOccurrenceIds.combat04, 'wheel1'),
     );
     expect(ship.node.room.localDetailMarkers).toContain(ship.node.room.roomLocal.wheels[0]?.marker);
-    expect(ship.node.room.customizationMarkers).not.toContain(
-      ship.node.room.roomLocal.wheels[0]?.marker,
-    );
+    expect(ship.node.room.workbench).toMatchObject({
+      kind: 'ship',
+      combatPhaseCount: 2,
+      phases: [
+        expect.objectContaining({
+          key: 'Intro',
+          label: 'Intro',
+          wheel: ship.node.room.roomLocal.wheels[0],
+        }),
+        expect.objectContaining({
+          key: 'Combat1',
+          label: 'Combat 1',
+        }),
+      ],
+      repairRows: [],
+    });
+    if (ship.node.room.workbench.kind !== 'ship') throw new Error('Ship workbench is missing');
+    expect(ship.node.room.workbench.phases[1]?.wheel).toBeUndefined();
+    const shipActions = ship.node.room.roomActions;
+    if (shipActions === undefined) throw new Error('Ship room actions are withheld');
+    expect(
+      ship.node.room.workbench.phases.flatMap((phase) => phase.actionRows.map((row) => row.key)),
+    ).toEqual(shipActions.rows.filter((row) => !row.stale).map((row) => row.key));
+    expect(
+      ship.node.room.workbench.phases.flatMap((phase) =>
+        phase.checkpoints.map((checkpoint) => checkpoint.key),
+      ),
+    ).toEqual(expect.arrayContaining(shipActions.checkpoints.map((checkpoint) => checkpoint.key)));
+    expect(
+      ship.node.room.workbench.phases.flatMap((phase) =>
+        phase.checkpoints.map((checkpoint) => checkpoint.key),
+      ),
+    ).toHaveLength(shipActions.checkpoints.length);
+    expect(
+      ship.node.room.workbench.phases
+        .find((phase) => phase.key === 'Intro')
+        ?.checkpoints.map((checkpoint) => checkpoint.key),
+    ).not.toContain('outgoingGeneration');
+    expect(
+      ship.node.room.workbench.phases
+        .find((phase) => phase.key === 'Combat1')
+        ?.checkpoints.map((checkpoint) => checkpoint.key),
+    ).toContain('outgoingGeneration');
     expect(ship.node.room.roomLocal.wheels[0]?.offers[0]?.control.owner.address).toEqual(
       createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat04, 'wheel1', 'offer1'),
     );
@@ -511,6 +562,80 @@ describe('structured workspace occurrence assembly', () => {
         (requirement) => requirement.kind === 'shipCombatPhaseCount',
       ),
     ).toBe(true);
+  });
+
+  it('derives a three-phase Ship presentation and places outgoing generation in Combat 2', () => {
+    const occurrence = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
+    const project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+      kind: 'ReplaceShipEncounterCount',
+      occurrence,
+      encounterCount: 3,
+    });
+    const ship = assemble(project, 'Surface', 'O', oOccurrenceIds.combat07).assembly.node.room;
+    if (ship.roomLocal.kind !== 'ship' || ship.workbench.kind !== 'ship') {
+      throw new Error('Three-phase Ship workbench is missing');
+    }
+
+    expect(ship.roomLocal.phases).toEqual([
+      { key: 'Intro', label: 'Intro' },
+      { key: 'Combat1', label: 'Combat 1', rewardWheelKey: 'wheel1' },
+      { key: 'Combat2', label: 'Combat 2', rewardWheelKey: 'wheel2' },
+    ]);
+    expect(ship.workbench.phases.map((phase) => [phase.key, phase.label])).toEqual([
+      ['Intro', 'Intro'],
+      ['Combat1', 'Combat 1'],
+      ['Combat2', 'Combat 2'],
+    ]);
+    expect(ship.workbench.phases.map((phase) => phase.wheel?.key)).toEqual([
+      'wheel1',
+      'wheel2',
+      undefined,
+    ]);
+    expect(
+      ship.workbench.phases
+        .find((phase) => phase.key === 'Combat1')
+        ?.checkpoints.map((checkpoint) => checkpoint.key),
+    ).not.toContain('outgoingGeneration');
+    expect(
+      ship.workbench.phases
+        .find((phase) => phase.key === 'Combat2')
+        ?.checkpoints.map((checkpoint) => checkpoint.key),
+    ).toContain('outgoingGeneration');
+  });
+
+  it.each([
+    {
+      name: 'before-combat standard',
+      window: { kind: 'standard' as const, phase: 'beforeCombat' as const },
+    },
+    {
+      name: 'Fields',
+      window: { kind: 'fields' as const, phaseKey: 'Combat1' },
+    },
+  ])('rejects a $name lifecycle window in a Ship presentation', ({ window }) => {
+    expect(() =>
+      assemble(
+        createRepresentativeNOPQProject(),
+        'Surface',
+        'O',
+        oOccurrenceIds.combat04,
+        undefined,
+        undefined,
+        (evaluatedRoom) => {
+          const roster = evaluatedRoom.roomActionRoster;
+          if (roster === undefined || roster.checkpoints[0] === undefined) {
+            throw new Error('Ship Room Action checkpoint is missing');
+          }
+          return {
+            ...evaluatedRoom,
+            roomActionRoster: {
+              ...roster,
+              checkpoints: [{ ...roster.checkpoints[0], window }, ...roster.checkpoints.slice(1)],
+            },
+          };
+        },
+      ),
+    ).toThrow(/Ship room action published/);
   });
 
   it('keeps a selected Shop editable and withholds retained unpicked Shop inventory', () => {

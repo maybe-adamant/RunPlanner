@@ -375,7 +375,12 @@ export function roomActionContributions(options: {
         window:
           room.lifecycleProfileKey === 'WorldShopRoom'
             ? frozen({ kind: 'postOutgoing' })
-            : frozen({ kind: 'standard', phase: 'afterCombat' }),
+            : room.lifecycleProfileKey === 'ShipCombatRoom' && room.rewardWheels?.length
+              ? frozen({
+                  kind: 'shipPostCombat',
+                  wheelKey: room.rewardWheels[room.rewardWheels.length - 1]!.wheelKey,
+                })
+              : frozen({ kind: 'standard', phase: 'afterCombat' }),
       }),
     );
   }
