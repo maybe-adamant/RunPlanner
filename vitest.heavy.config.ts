@@ -2,15 +2,14 @@ import { availableParallelism } from 'node:os';
 import { defineConfig, mergeConfig } from 'vitest/config';
 
 import { sharedVitestConfig } from './vitest.shared';
-import { testInclude } from './vitest.test-lanes';
+import { heavyTestFiles } from './vitest.test-lanes';
 
 export default mergeConfig(
   sharedVitestConfig,
   defineConfig({
     test: {
-      // Simulation-heavy editor fixtures time out when Vitest fans out across every host core.
+      include: [...heavyTestFiles],
       maxWorkers: Math.min(2, availableParallelism()),
-      include: [...testInclude],
     },
   }),
 );
