@@ -37,6 +37,7 @@ import {
 import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
 import {
   createGoldenFGHIProject,
+  authorLegalTraitOffers,
   goldenHBiome,
   goldenFBiome,
   goldenFOccurrenceId,
@@ -381,6 +382,15 @@ describe('underworld product loop', () => {
       occurrenceId: opening,
       gameName: 'F_Opening01',
     });
+    project = applyProjectCommand(project, application.catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(goldenFBiome, opening),
+      value: {
+        rewardType: 'Boon',
+        payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+      },
+    });
+    project = authorLegalTraitOffers(project);
     application.store.dispatch(authoredProjectReplaced(project));
     const view = renderPlannerForInteraction({ application });
 
@@ -418,6 +428,30 @@ describe('underworld product loop', () => {
       .find((option) => option.getAttribute('aria-disabled') !== 'true');
     if (normalRoom === undefined) throw new Error('natural Chaos normal lane has no room choice');
     await view.user.click(normalRoom);
+    const normalDecision = topology()?.decisions.find(
+      (decision) =>
+        decision.kind === 'exit' &&
+        decision.source.kind === 'occurrence' &&
+        decision.source.occurrenceId === opening,
+    );
+    const normalTarget =
+      normalDecision?.kind === 'exit' ? normalDecision.normal.targets[0] : undefined;
+    if (normalTarget === undefined) throw new Error('natural Chaos normal target is missing');
+    const normalReward = createIncomingRewardAddress(goldenFBiome, normalTarget.occurrenceId);
+    const rewardInteraction = application
+      .selectStructuredWorkspace(application.store.getState())
+      .interactions.rewards.get(semanticAddressKey(normalReward));
+    if (rewardInteraction === undefined) throw new Error('natural Chaos reward editor is missing');
+    const rewardDomain = await rewardInteraction.load();
+    const supportedReward = rewardDomain.types.find(
+      (option) => option.evaluation.kind === 'incomingReward' && option.evaluation.result.supported,
+    )?.supportingOffer;
+    if (supportedReward === undefined) throw new Error('natural Chaos target has no valid reward');
+    act(() =>
+      application.store.dispatch(
+        authoredProjectCommandDispatched(rewardInteraction.intentFor(supportedReward).command),
+      ),
+    );
 
     const gate = await screen.findByRole('article', { name: 'Chaos gate exit' });
     await view.user.selectOptions(within(gate).getByLabelText('Map'), 'Chaos_06');
@@ -941,75 +975,31 @@ describe('underworld product loop', () => {
 
   it('takes a selected Zagreus contract through its automatic host return in the browser', async () => {
     const application = createApplication();
-    const fBiome = createBiomeAddress('Underworld', 'F');
-    const opening = createOccurrenceId('product-zagreus-opening');
-    const shop = createOccurrenceId('product-zagreus-shop');
+    const biome = goldenGBiome;
+    const shop = goldenGOccurrenceId(5, 1);
     const contract = createOccurrenceId('product-zagreus-contract');
     const returned = createOccurrenceId('product-zagreus-return');
-    const normalOne = createOccurrenceId('product-zagreus-normal-one');
-    const normalTwo = createOccurrenceId('product-zagreus-normal-two');
     const source = { kind: 'occurrence' as const, occurrenceId: shop };
-    const additional = createAdditionalExitAddress(fBiome, source.occurrenceId, 'zagreusContract');
-    let project = applyProjectCommand(
-      createProjectDocument(application.catalog, {
-        configuredBiomeCounts: { Underworld: 1 },
-        name: 'Zagreus product return',
-        projectId: 'product-zagreus-return',
-      }),
-      application.catalog,
-      {
-        biome: fBiome,
-        kind: 'CreateStart',
-        occurrenceId: opening,
-        gameName: 'F_Opening01',
-      },
-    );
-    project = applyProjectCommand(project, application.catalog, {
-      kind: 'CreateBatch',
-      decision: createExitDecisionAddress(fBiome, { kind: 'occurrence', occurrenceId: opening }),
-    });
-    project = applyProjectCommand(project, application.catalog, {
-      kind: 'ReplaceBatchRewardStore',
-      rewardStore: createBatchRewardStoreAddress(fBiome, {
-        kind: 'occurrence',
-        occurrenceId: opening,
-      }),
-      storeKey: 'RunProgress',
-    });
-    project = applyProjectCommand(project, application.catalog, {
-      kind: 'CreateTarget',
-      target: createTargetAddress(fBiome, { kind: 'occurrence', occurrenceId: opening }, 'exit1'),
-      occurrenceId: shop,
-      gameName: 'F_Shop01',
-    });
-    project = applyProjectCommand(project, application.catalog, {
+    const additional = createAdditionalExitAddress(biome, source.occurrenceId, 'zagreusContract');
+    let project = applyProjectCommand(createGoldenFGHIProject(), application.catalog, {
       kind: 'AddZagreusContract',
       additional,
       occurrenceId: contract,
     });
     project = applyProjectCommand(project, application.catalog, {
-      kind: 'ReplaceBatchRewardStore',
-      rewardStore: createBatchRewardStoreAddress(fBiome, source),
-      storeKey: 'RunProgress',
+      kind: 'RemoveExitDecision',
+      decision: createExitDecisionAddress(biome, {
+        kind: 'occurrence',
+        occurrenceId: goldenGOccurrenceId(6, 1),
+      }),
     });
-    project = applyProjectCommand(project, application.catalog, {
-      kind: 'CreateTarget',
-      target: createTargetAddress(fBiome, source, 'exit1'),
-      occurrenceId: normalOne,
-      gameName: 'F_Combat01',
-    });
-    project = applyProjectCommand(project, application.catalog, {
-      kind: 'CreateTarget',
-      target: createTargetAddress(fBiome, source, 'exit2'),
-      occurrenceId: normalTwo,
-      gameName: 'F_Combat02',
-    });
+    project = authorLegalTraitOffers(project);
     application.store.dispatch(authoredProjectReplaced(project));
     const view = renderPlannerForInteraction({ application });
     await view.user.click(screen.getByRole('button', { name: 'Underworld' }));
-    await view.user.click(screen.getByRole('button', { name: 'Erebus' }));
+    await view.user.click(screen.getByRole('button', { name: 'Oceanus' }));
     act(() =>
-      application.store.dispatch(semanticOwnerFocused(createExitDecisionAddress(fBiome, source))),
+      application.store.dispatch(semanticOwnerFocused(createExitDecisionAddress(biome, source))),
     );
 
     expect((screen.getByLabelText('Take Zagreus contract') as HTMLInputElement).checked).toBe(
@@ -1023,25 +1013,25 @@ describe('underworld product loop', () => {
     ).toBeNull();
     expect(within(contractWorkbench).queryByRole('button', { name: 'Reward' })).toBeNull();
     act(() =>
-      application.store.dispatch(semanticOwnerFocused(createExitDecisionAddress(fBiome, source))),
+      application.store.dispatch(semanticOwnerFocused(createExitDecisionAddress(biome, source))),
     );
     await view.user.click(screen.getByLabelText('Take Zagreus contract'));
     expect(
       screen.getByRole('article', { name: 'Zagreus contract exit' }).getAttribute('data-picked'),
     ).toBe('true');
     act(() =>
-      application.store.dispatch(semanticOwnerFocused(createOccurrenceAddress(fBiome, contract))),
+      application.store.dispatch(semanticOwnerFocused(createOccurrenceAddress(biome, contract))),
     );
     expect(within(contractWorkbench).getByRole('region', { name: 'Room Actions' })).toBeTruthy();
     expect(within(contractWorkbench).queryByText(/Incoming door reward/)).toBeNull();
     let selected = application.store.getState().projectWorkspace.history.present;
     selected = applyProjectCommand(selected, application.catalog, {
       kind: 'CreateBatch',
-      decision: createExitDecisionAddress(fBiome, { kind: 'occurrence', occurrenceId: contract }),
+      decision: createExitDecisionAddress(biome, { kind: 'occurrence', occurrenceId: contract }),
     });
     selected = applyProjectCommand(selected, application.catalog, {
       kind: 'ReplaceBatchRewardStore',
-      rewardStore: createBatchRewardStoreAddress(fBiome, {
+      rewardStore: createBatchRewardStoreAddress(biome, {
         kind: 'occurrence',
         occurrenceId: contract,
       }),
@@ -1049,22 +1039,22 @@ describe('underworld product loop', () => {
     });
     selected = applyProjectCommand(selected, application.catalog, {
       kind: 'CreateTarget',
-      target: createTargetAddress(fBiome, { kind: 'occurrence', occurrenceId: contract }, 'exit1'),
+      target: createTargetAddress(biome, { kind: 'occurrence', occurrenceId: contract }, 'exit1'),
       occurrenceId: returned,
-      gameName: 'F_Combat03',
+      gameName: 'G_Combat04',
     });
     const selectedEvaluation = simulateProject(application.catalog, selected);
-    const fEvaluation = selectedEvaluation.routes
+    const gEvaluation = selectedEvaluation.routes
       .find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'F');
+      ?.biomes.find((candidate) => candidate.biomeKey === 'G');
     if (
-      fEvaluation === undefined ||
-      (!('snapshot' in fEvaluation) && !('materializedPrefix' in fEvaluation))
+      gEvaluation === undefined ||
+      (!('snapshot' in gEvaluation) && !('materializedPrefix' in gEvaluation))
     ) {
-      throw new Error('Selected Zagreus contract must materialize an F prefix');
+      throw new Error('Selected Zagreus contract must materialize a G prefix');
     }
     const materialized =
-      'snapshot' in fEvaluation ? fEvaluation.snapshot : fEvaluation.materializedPrefix;
+      'snapshot' in gEvaluation ? gEvaluation.snapshot : gEvaluation.materializedPrefix;
     expect(
       materialized.decisions
         .filter((decision) => decision.kind === 'batch')

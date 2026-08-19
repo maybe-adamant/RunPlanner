@@ -70,9 +70,11 @@ import {
 } from '@run-planner/test-fixtures';
 
 let goldenFGHIProject: ReturnType<typeof createGoldenFGHIProject>;
+let representativeNOPQProject: ReturnType<typeof createRepresentativeNOPQProject>;
 
 beforeAll(() => {
   goldenFGHIProject = createGoldenFGHIProject();
+  representativeNOPQProject = createRepresentativeNOPQProject();
 });
 import { prepareRoomEncounterPhases } from '../../src/simulation/encounters/preparation';
 import {
@@ -1557,7 +1559,7 @@ describe('field NPC encounter requirements', () => {
     const intro = phase(pBiome, occurrenceId, 'Intro');
     const combat = phase(pBiome, occurrenceId, 'Combat');
     const unavailable = phase(pBiome, pOccurrenceId('P_Combat06', 2, 2), 'Combat');
-    let project = createRepresentativeNOPQProject();
+    let project = representativeNOPQProject;
     const originalState = authoredOccurrence(project, 'P', occurrenceId).state;
     const retainedCombat = authoredOccurrence(project, 'P', occurrenceId).encounters
       .encounterKeyByPhase.Combat;

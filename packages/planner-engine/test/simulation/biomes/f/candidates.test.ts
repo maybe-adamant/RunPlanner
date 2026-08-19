@@ -170,12 +170,20 @@ describe('F candidate support', () => {
       gameName: 'F_Opening01',
     });
     const reward = createIncomingRewardAddress(fBiome, fStartId);
+    const assembly = simulateProjectAssembly(catalog, project);
+    const biome = assembly.evaluation.routes[0]?.biomes[0];
+
+    expect(biome).toMatchObject({
+      authoring: 'incomplete',
+      coverage: { kind: 'prefix', blockedAt: reward },
+      findings: expect.arrayContaining([
+        expect.objectContaining({ code: 'rewardMissing', origin: reward }),
+      ]),
+    });
+    expect(biome).not.toHaveProperty('validity');
 
     expect(
-      createPreparedProjectCandidateSession(
-        catalog,
-        simulateProjectAssembly(catalog, project),
-      ).evaluate({
+      createPreparedProjectCandidateSession(catalog, assembly).evaluate({
         kind: 'incomingReward',
         reward,
         value: {

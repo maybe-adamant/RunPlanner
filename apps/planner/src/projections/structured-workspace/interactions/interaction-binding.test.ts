@@ -108,6 +108,14 @@ function enteredShopProject(): { readonly project: ProjectDocument; readonly sho
     gameName: 'F_Opening01',
   });
   project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: createIncomingRewardAddress(biome, start),
+    value: {
+      rewardType: 'Boon',
+      payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+    },
+  });
+  project = applyProjectCommand(project, catalog, {
     kind: 'CreateBatch',
     decision: createExitDecisionAddress(biome, { kind: 'occurrence', occurrenceId: start }),
   });
@@ -117,13 +125,18 @@ function enteredShopProject(): { readonly project: ProjectDocument; readonly sho
       kind: 'occurrence',
       occurrenceId: start,
     }),
-    storeKey: 'RunProgress',
+    storeKey: 'MetaProgress',
   });
   project = applyProjectCommand(project, catalog, {
     kind: 'CreateTarget',
     target: createTargetAddress(biome, { kind: 'occurrence', occurrenceId: start }, 'exit1'),
     occurrenceId: combat,
     gameName: 'F_Combat03',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: createIncomingRewardAddress(biome, combat),
+    value: { rewardType: 'GiftDrop' },
   });
   project = applyProjectCommand(project, catalog, {
     kind: 'CreateBatch',
@@ -157,7 +170,24 @@ function enteredShopProject(): { readonly project: ProjectDocument; readonly sho
     }),
     value: { kind: 'normal', exitKey: 'exit2' },
   });
-  return { project, shopId: shop };
+  for (const [offerKey, value] of [
+    [
+      'Boon',
+      {
+        rewardType: 'RandomLoot',
+        payload: { kind: 'BoonSource' as const, source: 'ZeusUpgrade' },
+      },
+    ],
+    ['MajorNonBoon', { rewardType: 'RoomRewardHealDrop' }],
+    ['Minor', { rewardType: 'MaxManaDrop' }],
+  ] as const) {
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceShopOffer',
+      offer: createShopOfferAddress(biome, shop, offerKey),
+      value,
+    });
+  }
+  return { project: authorLegalTraitOffers(project), shopId: shop };
 }
 
 function bind(

@@ -41,7 +41,7 @@ import {
   type ProjectEvaluation,
   type SemanticFinding,
 } from '@run-planner/engine/simulation';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 
 import {
   authorLegalTraitOffers,
@@ -95,6 +95,14 @@ import {
   type WorkspaceOrdinaryBatchNode,
   type WorkspaceTakeoverBatchNode,
 } from './structured-workspace';
+
+let goldenFGHIContractProject: ProjectDocument;
+let representativeNOPQContractProject: ProjectDocument;
+
+beforeAll(() => {
+  goldenFGHIContractProject = createGoldenFGHIProject();
+  representativeNOPQContractProject = createRepresentativeNOPQProject();
+});
 
 type WorkspaceBatchNode =
   WorkspaceMixedBatchNode | WorkspaceOrdinaryBatchNode | WorkspaceTakeoverBatchNode;
@@ -402,7 +410,7 @@ function withoutStructuralInteraction(
 
 describe('structured workspace overlay contract', () => {
   it('rejects duplicate authored topology identities before materialization', () => {
-    const fProject = createGoldenFGHIProject();
+    const fProject = goldenFGHIContractProject;
     const fEvaluation = simulateProject(catalog, fProject);
     const duplicateOccurrence = withMalformedAuthoredBiome(fProject, 'Underworld', 'F', (plan) => {
       const topology = plan.topology;
@@ -428,7 +436,7 @@ describe('structured workspace overlay contract', () => {
       };
     });
 
-    const nProject = createRepresentativeNOPQProject();
+    const nProject = representativeNOPQContractProject;
     const nEvaluation = simulateProject(catalog, nProject);
     const duplicateHub = withMalformedAuthoredBiome(nProject, 'Surface', 'N', (plan) => {
       const topology = plan.topology;
