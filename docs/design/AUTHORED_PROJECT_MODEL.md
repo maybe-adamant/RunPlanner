@@ -288,15 +288,23 @@ source policy is declaration-owned.
 
 ### Empty decision envelopes
 
-An occurrence-sourced normal batch with zero targets is an authored,
-uncommitted decision envelope. It has a stable decision address, remains on
-the selected spine, may retain declaration-owned ordinary setup (such as a
+An occurrence-sourced normal batch with zero targets remains a supported
+authored decision envelope. It has a stable decision address, remains on the
+selected spine, may retain declaration-owned ordinary setup (such as a
 reward-pool choice or H's Fields result), and is removable and undoable. It
 does not add a persisted mode, discriminator, or schema variant.
 
+The editor does not require authors to create that empty envelope as a separate
+step. At an uncommitted exit frontier it projects the declaration-owned empty
+shape without persisting a phantom decision. The first reward-pool, Fields
+outcome, or ordinary target edit atomically creates the envelope and applies
+that edit as one engine command and one history entry. A takeover choice uses
+the corresponding atomic takeover creation command. Undo therefore returns
+directly to the projected outgoing cards.
+
 The envelope is not a realized ordinary generated batch. It consumes neither
 ordinary batch/target progression nor a staged ordinal until its first
-ordinary target is created. `CreateBatch` can create the next envelope while
+ordinary target is created. The engine can explicitly create the next envelope while
 an ordinary slot remains. At the ordinary bound it can create one further
 empty envelope only when the selected source and layout admit a declared
 terminal resolution. F/G/H/O/P/Q admit a takeover Preboss; N admits its

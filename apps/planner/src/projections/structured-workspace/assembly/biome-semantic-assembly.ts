@@ -3,11 +3,13 @@ import {
   createBossCompletionArcanaAddress,
   createCompletionRoomAddress,
   createExitDecisionAddress,
+  createInitialExitDecision,
   createHubDecisionAddress,
   createKeepsakeEquipResultAddress,
   createEchoKeepsakeReplayAddress,
   createOccurrenceAddress,
   createPostbossKeepsakeSelectionAddress,
+  normalDecisionProgressionForLayout,
   semanticAddressKey,
   type AuthoredBiomePlan,
   type BiomeAddress,
@@ -55,7 +57,6 @@ import {
 import { assembleWorkspaceHub } from './hub-assembly';
 import {
   appendUniqueBatchInteractionRequirements,
-  appendUniqueFrontierInteractionRequirements,
   appendUniqueHubInteractionRequirements,
   appendUniqueHubTakeoverInteractionRequirements,
   appendUniqueOccurrenceInteractionRequirements,
@@ -63,7 +64,6 @@ import {
   appendUniqueTakeoverInteractionRequirements,
   appendUniqueTopologyRemovalInteractionRequirements,
   type WorkspaceBatchInteractionRequirement,
-  type WorkspaceFrontierInteractionRequirement,
   type WorkspaceHubInteractionRequirement,
   type WorkspaceHubTakeoverInteractionRequirement,
   type WorkspaceOccurrenceInteractionRequirement,
@@ -87,6 +87,7 @@ import {
   type WorkspaceOccurrenceAssemblyFact,
 } from './occurrence-facts';
 import type { WorkspaceDecisionBatchNode } from '../navigation/marker-ownership';
+import { workspaceDecisionOwnedMarkers } from '../navigation/marker-ownership';
 import type { WorkspaceBiomeSource } from '../source-index';
 import { assembleWorkspaceTopologyInteractions } from './topology-interaction-assembly';
 
@@ -108,10 +109,6 @@ export interface WorkspaceBiomeSemanticAssembly {
   };
   readonly fields: readonly WorkspaceBiomeField[];
   readonly frontier: WorkspaceAuthoringFrontier | null;
-  readonly frontierInteractionRequirements: ReadonlyMap<
-    string,
-    WorkspaceFrontierInteractionRequirement
-  >;
   readonly hubInteractionRequirements: ReadonlyMap<string, WorkspaceHubInteractionRequirement>;
   readonly hubTakeoverInteractionRequirements: ReadonlyMap<
     string,
@@ -285,10 +282,18 @@ function requireOccurrenceAssemblyFacts(
   return facts;
 }
 
+type WorkspaceExitDecisionFrontierSeed = Omit<
+  Extract<WorkspaceAuthoringFrontier, { readonly kind: 'exitDecision' }>,
+  'provisionalBatch'
+>;
+type WorkspaceAuthoringFrontierSeed =
+  | Exclude<WorkspaceAuthoringFrontier, { readonly kind: 'exitDecision' }>
+  | WorkspaceExitDecisionFrontierSeed;
+
 function authoringFrontier(
   source: WorkspaceBiomeSource,
   marker: WorkspaceMarkerDestinationEmitter,
-): WorkspaceAuthoringFrontier | null {
+): WorkspaceAuthoringFrontierSeed | null {
   const { biome, plan } = source;
   if (plan.topology === null) {
     return Object.freeze({
@@ -395,9 +400,9 @@ function appendHubAssembly(
 }
 
 function enrichFrontierPredecessor(
-  frontier: WorkspaceAuthoringFrontier | null,
+  frontier: WorkspaceAuthoringFrontierSeed | null,
   structuralNodes: readonly WorkspaceNode[],
-): WorkspaceAuthoringFrontier | null {
+): WorkspaceAuthoringFrontierSeed | null {
   if (frontier?.kind !== 'exitDecision' || frontier.owner.source.kind !== 'occurrence') {
     return frontier;
   }
@@ -460,14 +465,10 @@ export function assembleWorkspaceBiomeSemantics(
     string,
     WorkspaceTakeoverInteractionRequirement
   >();
-  const frontierInteractionRequirements = new Map<
-    string,
-    WorkspaceFrontierInteractionRequirement
-  >();
   const roomControls = new Map<string, WorkspaceRoomPickerControl>();
   const rewardControls = new Map<string, WorkspaceRewardControl>();
   const topologyInteractions = assembleWorkspaceTopologyInteractions({ catalog, source });
-  let frontier = authoringFrontier(source, markerDestinations);
+  const frontier = authoringFrontier(source, markerDestinations);
   const nextHubVisitIndex = frontier?.kind === 'hubVisit' ? frontier.owner.visitIndex : undefined;
   const fields = projectBiomeFields(biome, markerDestinations, plan, layout);
   let startRoomPicker: WorkspaceRoomPickerControl | undefined;
@@ -575,6 +576,7 @@ export function assembleWorkspaceBiomeSemantics(
                 }),
             kind: 'batch',
             markerDestinations,
+            persistence: 'authored',
             source,
           })
         : assembleWorkspaceDecision({
@@ -592,6 +594,7 @@ export function assembleWorkspaceBiomeSemantics(
                 }),
             kind: 'batch',
             markerDestinations,
+            persistence: 'authored',
             source,
           });
     appendDecisionAssembly(
@@ -644,7 +647,51 @@ export function assembleWorkspaceBiomeSemantics(
     projectAuthoredExitDecision(decision);
   }
   const structuralNodes = Object.freeze([...nodes]);
-  frontier = enrichFrontierPredecessor(frontier, structuralNodes);
+  const frontierSeed = enrichFrontierPredecessor(frontier, structuralNodes);
+  let resolvedFrontier: WorkspaceAuthoringFrontier | null;
+  if (frontierSeed?.kind === 'exitDecision') {
+    const progression = normalDecisionProgressionForLayout(layout);
+    if (progression === undefined || frontierSeed.owner.source.kind !== 'occurrence') {
+      resolvedFrontier = frontierSeed;
+    } else {
+      const sourceOccurrence = source.occurrence(frontierSeed.owner.source.occurrenceId);
+      if (sourceOccurrence === undefined) {
+        throw new StructuredWorkspaceProjectionContractError(
+          `${semanticAddressKey(frontierSeed.owner)} has no source occurrence`,
+        );
+      }
+      const sourceRoom = requireWorkspaceRoom(catalog, sourceOccurrence.gameName);
+      const provisionalDecision = createInitialExitDecision(
+        progression,
+        frontierSeed.owner.source,
+        sourceRoom.mode.kind === 'authored' ? sourceRoom.mode.templateKey : undefined,
+      ) as WorkspaceAuthoredBatchDecision;
+      const provisional = assembleWorkspaceDecision({
+        assembleOccurrence,
+        catalog,
+        decision: provisionalDecision,
+        kind: 'batch',
+        markerDestinations,
+        persistence: 'uncommitted',
+        source,
+      });
+      appendUniqueBatchInteractionRequirements(
+        batchInteractionRequirements,
+        provisional.batchInteractionRequirements,
+      );
+      appendUniqueRoomControls(roomControls, provisional.roomControls);
+      const sourceNodeKey = `occurrence:${semanticAddressKey(
+        createOccurrenceAddress(biome, sourceOccurrence.occurrenceId),
+      )}`;
+      markerDestinations.redirect(workspaceDecisionOwnedMarkers(provisional.batch), sourceNodeKey);
+      resolvedFrontier = Object.freeze({
+        ...frontierSeed,
+        provisionalBatch: provisional.batch,
+      });
+    }
+  } else {
+    resolvedFrontier = frontierSeed;
+  }
   const occurrenceOutgoing = new Map<OccurrenceId, WorkspaceOccurrenceStageOutgoing>();
   if (plan.topology !== null) {
     for (const occurrence of plan.topology.occurrences) {
@@ -662,8 +709,8 @@ export function assembleWorkspaceBiomeSemantics(
           break;
         case 'frontier': {
           if (
-            frontier?.kind !== 'exitDecision' ||
-            semanticAddressKey(frontier.owner) !== semanticAddressKey(status.owner)
+            resolvedFrontier?.kind !== 'exitDecision' ||
+            semanticAddressKey(resolvedFrontier.owner) !== semanticAddressKey(status.owner)
           ) {
             throw new StructuredWorkspaceProjectionContractError(
               `${semanticAddressKey(status.owner)} engine frontier has no matching workspace frontier`,
@@ -671,7 +718,7 @@ export function assembleWorkspaceBiomeSemantics(
           }
           occurrenceOutgoing.set(
             occurrence.occurrenceId,
-            Object.freeze({ kind: 'frontier' as const, frontier }),
+            Object.freeze({ kind: 'frontier' as const, frontier: resolvedFrontier }),
           );
           break;
         }
@@ -829,10 +876,6 @@ export function assembleWorkspaceBiomeSemantics(
     hubTakeoverInteractionRequirements,
     topologyInteractions.hubTakeoverInteractionRequirements,
   );
-  appendUniqueFrontierInteractionRequirements(
-    frontierInteractionRequirements,
-    topologyInteractions.frontierInteractionRequirements,
-  );
   const biomeMarker = markerDestinations.marker(biome, `biome:${biome.routeKey}:${plan.biomeKey}`);
   const preliminaryFocusDestinations = markerBuilder.destinations();
   return Object.freeze({
@@ -844,8 +887,7 @@ export function assembleWorkspaceBiomeSemantics(
     ...(entry === undefined ? {} : { entry }),
     ...(echoKeepsakeReplay === undefined ? {} : { echoKeepsakeReplay }),
     fields,
-    frontier,
-    frontierInteractionRequirements,
+    frontier: resolvedFrontier,
     hubInteractionRequirements,
     hubTakeoverInteractionRequirements,
     label: catalog.biomes.byKey[plan.biomeKey]?.label ?? plan.biomeKey,

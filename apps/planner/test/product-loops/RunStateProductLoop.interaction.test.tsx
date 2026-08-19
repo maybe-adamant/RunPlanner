@@ -2,7 +2,7 @@
 
 import { cleanup, screen, within } from '@testing-library/react';
 import { createProjectDocument } from '@run-planner/engine/authored-project';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 import {
   createApplication,
@@ -18,6 +18,20 @@ import {
 import { renderPlannerForInteraction } from '../fixtures/renderPlanner';
 
 afterEach(cleanup);
+
+const nRunStateEvents: ApplicationEvaluationEvent[] = [];
+let nRunStateApplication: PlannerApplication;
+let nRunStateTitles: readonly string[];
+
+beforeAll(() => {
+  nRunStateApplication = createApplication({
+    observeEvaluationWork: (event) => nRunStateEvents.push(event),
+  });
+  nRunStateApplication.store.dispatch(authoredProjectReplaced(createRepresentativeNOPQProject()));
+  nRunStateTitles = projectedRunStateTitles(nRunStateApplication, 'Surface', 'N');
+});
+
+afterAll(() => nRunStateApplication.dispose());
 
 function expectNoEvaluationWork(
   events: readonly ApplicationEvaluationEvent[],
@@ -89,14 +103,9 @@ describe('Run State product loop', () => {
   });
 
   it('keeps N Run State on the one outer Hub without placing it on inner visits', async () => {
-    const events: ApplicationEvaluationEvent[] = [];
-    const application = createApplication({ observeEvaluationWork: (event) => events.push(event) });
-    application.store.dispatch(authoredProjectReplaced(createRepresentativeNOPQProject()));
-    expect(projectedRunStateTitles(application, 'Surface', 'N')).toEqual([
-      'Decision 1',
-      'Hub',
-      'Preboss',
-    ]);
+    const application = nRunStateApplication;
+    const events = nRunStateEvents;
+    expect(nRunStateTitles).toEqual(['Decision 1', 'Hub', 'Preboss']);
     const view = renderPlannerForInteraction({ application });
 
     await view.user.click(screen.getByRole('button', { name: 'Surface' }));
@@ -127,7 +136,6 @@ describe('Run State product loop', () => {
     expect(screen.queryByRole('region', { name: /State before/ })).toBeNull();
     expect(document.activeElement).toBe(prebossLauncher);
     expectNoEvaluationWork(events, 'N Preboss Run State open/close');
-    application.dispose();
   });
 
   it('retains the visible completed-Hub Preboss handoff as one outer transition', async () => {

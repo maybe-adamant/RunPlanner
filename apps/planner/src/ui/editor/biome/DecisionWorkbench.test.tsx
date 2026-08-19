@@ -344,7 +344,7 @@ describe('DecisionWorkbench', () => {
     expect(screen.queryByText('Pom Slice')).toBeNull();
   });
 
-  it('authors the fixed N start through the ordinary batch frontier', async () => {
+  it('renders the ordinary outgoing cards immediately after the fixed N start', async () => {
     const view = renderDecisionWorkbench(emptyProject('Surface'), 'Surface', 'N', currentFrontier);
     expect(screen.getByText('Start with Opening')).toBeTruthy();
     expect(screen.queryByText('N_Opening01')).toBeNull();
@@ -360,13 +360,28 @@ describe('DecisionWorkbench', () => {
     expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(
       createOccurrenceAddress(nBiome, openingId),
     );
-    await waitFor(() =>
-      expect(screen.getByRole('button', { name: 'Add next decision' })).toBeTruthy(),
-    );
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Door 1 room' })).toBeTruthy());
+    expect(screen.queryByRole('button', { name: 'Add next decision' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Remove these doors' })).toBeNull();
     expect(screen.queryByText('Add Preboss doors')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Check Preboss rooms' })).toBeNull();
 
     expect(screen.queryByRole('button', { name: 'Add fixed next room' })).toBeNull();
+
+    const before = view.application.store.getState().projectWorkspace.history.past.length;
+    await view.user.click(screen.getByRole('button', { name: 'Door 1 room' }));
+    await view.user.click(within(screen.getByRole('listbox')).getByRole('option'));
+    await waitFor(() =>
+      expect(
+        view.application.store
+          .getState()
+          .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
+          ?.biomes.find((biome) => biome.biomeKey === 'N')?.topology?.decisions[0],
+      ).toMatchObject({ normal: { targets: [{ exitKey: 'prehub' }] } }),
+    );
+    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+      before + 1,
+    );
   });
 
   it('offers only engine-declared PreHub through N Opening’s ordinary picker', async () => {

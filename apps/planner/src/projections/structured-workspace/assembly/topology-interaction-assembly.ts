@@ -14,7 +14,6 @@ import type { Catalog } from '@run-planner/engine/catalog-schema';
 import { StructuredWorkspaceProjectionContractError } from '../contract';
 import {
   workspaceTakeoverInteractionRequirementKey,
-  type WorkspaceFrontierInteractionRequirement,
   type WorkspaceHubTakeoverInteractionRequirement,
   type WorkspaceStartInteractionRequirement,
   type WorkspaceTakeoverInteractionRequirement,
@@ -29,7 +28,6 @@ import { workspaceDeclaredPhysicalExitKeys } from './topology-presentation';
  * command requirements separate from decision and Hub presentation assembly.
  */
 export interface WorkspaceTopologyInteractionAssembly {
-  readonly frontierInteractionRequirements: readonly WorkspaceFrontierInteractionRequirement[];
   readonly hubTakeoverInteractionRequirements: readonly WorkspaceHubTakeoverInteractionRequirement[];
   readonly startInteractionRequirements: readonly WorkspaceStartInteractionRequirement[];
   readonly takeoverInteractionRequirements: readonly WorkspaceTakeoverInteractionRequirement[];
@@ -292,53 +290,11 @@ function hubTakeoverInteractionRequirements(
   return Object.freeze([...requirements.values()]);
 }
 
-/**
- * A generated frontier exposes one bound continuation: create the next
- * decision envelope. Door 1 then owns the room choice, including any atomic
- * normal-door takeover Preboss selection.
- */
-function frontierInteractionRequirements(
-  input: WorkspaceTopologyInteractionAssemblyInput,
-): readonly WorkspaceFrontierInteractionRequirement[] {
-  const { source } = input;
-  const { plan } = source;
-  const topology = plan.topology;
-  if (topology === null) return Object.freeze([]);
-  const completeness = source.completeness;
-  if (completeness.completion !== 'incomplete') return Object.freeze([]);
-  switch (completeness.frontier.kind) {
-    case 'exitDecision': {
-      const owner = completeness.frontier;
-      const existing = source.exitDecision(owner.source);
-      const structural =
-        existing === undefined && owner.source.kind === 'occurrence'
-          ? Object.freeze({ action: 'createBatch' as const })
-          : undefined;
-      if (structural === undefined) return Object.freeze([]);
-      return Object.freeze([
-        Object.freeze({
-          capabilities: Object.freeze({ structural: structural.action }),
-          kind: 'exitFrontier' as const,
-          owner,
-          structural,
-        }),
-      ]);
-    }
-    case 'hubDecision':
-      return Object.freeze([]);
-    case 'hubOpenSet':
-    case 'hubVisit':
-      return Object.freeze([]);
-  }
-  return Object.freeze([]);
-}
-
 export function assembleWorkspaceTopologyInteractions(
   input: WorkspaceTopologyInteractionAssemblyInput,
 ): WorkspaceTopologyInteractionAssembly {
   const takeover = takeoverInteractionRequirements(input);
   return Object.freeze({
-    frontierInteractionRequirements: frontierInteractionRequirements(input),
     hubTakeoverInteractionRequirements: hubTakeoverInteractionRequirements(input),
     startInteractionRequirements: startInteractionRequirements(input.source),
     takeoverInteractionRequirements: takeover,

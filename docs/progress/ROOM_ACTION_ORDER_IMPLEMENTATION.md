@@ -1296,8 +1296,13 @@ slice, not a new topology, reward, or chronology model.
   immediately after its workbench. After creating an Underworld opening room,
   the same inspector therefore shows the outgoing authoring frontier without a
   separate rail click, finding, Chaos gate, or `Move to next decision` action.
-- Authoring the frontier replaces that section in place with the outgoing door
-  cards. Door selection advances to the chosen target occurrence stage; it does
+- An authorable exit frontier renders the ordinary empty outgoing-door
+  workbench directly. The projected batch is not added to authored topology and
+  exposes no removal action. Its first reward-store, Fields-outcome,
+  ordinary-room, or takeover edit creates the decision and applies the edit in
+  one engine command and one undo step; React never dispatches `CreateBatch`
+  followed by another command. The authored door workbench replaces it in
+  place. Door selection advances to the chosen target occurrence stage; it does
   not detach the source workbench from its own outgoing section.
 - A blocked frontier remains visible with its exact finding/repair destination.
   A terminal occurrence shows an explicit terminal state. Hub-sourced handoffs

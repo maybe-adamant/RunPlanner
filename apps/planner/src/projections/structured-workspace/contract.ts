@@ -166,6 +166,27 @@ export interface WorkspaceCandidateInteraction<T> {
   readonly selected?: T;
 }
 
+export interface WorkspaceBatchRewardStoreInteraction extends WorkspaceCandidateInteraction<string> {
+  readonly intentFor: (
+    storeKey: string,
+  ) => WorkspaceCommandIntent<
+    Extract<ProjectCommand, { readonly kind: 'ReplaceBatchRewardStore' | 'InitializeExitDecision' }>
+  >;
+}
+
+export interface WorkspaceFieldsCageOutcomeInteraction extends WorkspaceCandidateInteraction<
+  'min' | 'max'
+> {
+  readonly intentFor: (
+    cageOutcome: 'min' | 'max',
+  ) => WorkspaceCommandIntent<
+    Extract<
+      ProjectCommand,
+      { readonly kind: 'ReplaceFieldsCageOutcome' | 'InitializeExitDecision' }
+    >
+  >;
+}
+
 export interface WorkspaceLocalVisitGenerationInteraction extends WorkspaceCandidateInteraction<SideRoomGeneration> {
   readonly intentFor: (
     generation: SideRoomGeneration,
@@ -671,7 +692,16 @@ type WorkspaceTargetRoomCommandIntent = WorkspaceCommandIntent<
 >;
 
 type WorkspaceDecisionEntryRoomCommandIntent = WorkspaceCommandIntent<
-  Extract<ProjectCommand, { readonly kind: 'CreateTarget' | 'ReplaceWithTakeoverBatch' }>
+  Extract<
+    ProjectCommand,
+    {
+      readonly kind:
+        | 'CreateTarget'
+        | 'ReplaceWithTakeoverBatch'
+        | 'InitializeExitDecision'
+        | 'CreateTakeoverBatch';
+    }
+  >
 >;
 
 /** A start remains an authored action even when its declaration fixes the room. */
@@ -691,24 +721,6 @@ export type WorkspaceStartInteraction =
       readonly load: () => ContextualPickerModel<RoomDeclaration>;
       readonly owner: BiomeAddress;
     };
-
-/** Structural creation supplies the exact catalog-owned command facts React needs. */
-export type WorkspaceStructuralInteraction = {
-  readonly action: 'createBatch';
-  readonly intent: WorkspaceCommandIntent<
-    Extract<ProjectCommand, { readonly kind: 'CreateBatch' }>
-  >;
-  readonly key: string;
-  readonly owner: ExitDecisionAddress;
-};
-
-/** Visible exit frontiers expose their complete structural continuation action. */
-export interface WorkspaceExitFrontierCapabilities {
-  readonly structural?: Extract<
-    WorkspaceStructuralInteraction,
-    { readonly owner: ExitDecisionAddress }
-  >['action'];
-}
 
 export interface WorkspaceTopologyRemovalInteraction {
   readonly intent: WorkspaceCommandIntent<
@@ -828,13 +840,12 @@ export interface WorkspaceInteractionCatalog {
   readonly naturalChaosSpawns: ReadonlyMap<string, WorkspaceNaturalChaosSpawnInteraction>;
   readonly zagreusContracts: ReadonlyMap<string, WorkspaceZagreusContractInteraction>;
   readonly zagreusSpawns: ReadonlyMap<string, WorkspaceZagreusSpawnInteraction>;
-  readonly batchRewardStores: ReadonlyMap<string, WorkspaceCandidateInteraction<string>>;
+  readonly batchRewardStores: ReadonlyMap<string, WorkspaceBatchRewardStoreInteraction>;
   readonly encounterPhases: ReadonlyMap<string, WorkspaceEncounterInteraction>;
   readonly figLeafSkips: ReadonlyMap<string, WorkspaceFigLeafInteraction>;
   readonly gorgonConditions: ReadonlyMap<string, WorkspaceGorgonConditionInteraction>;
-  readonly exitFrontierCapabilities: ReadonlyMap<string, WorkspaceExitFrontierCapabilities>;
   readonly exitSelections: ReadonlyMap<string, WorkspaceExitSelectionInteraction>;
-  readonly fieldsCageOutcomes: ReadonlyMap<string, WorkspaceCandidateInteraction<'min' | 'max'>>;
+  readonly fieldsCageOutcomes: ReadonlyMap<string, WorkspaceFieldsCageOutcomeInteraction>;
   readonly roomActions: ReadonlyMap<string, WorkspaceRoomActionInteraction>;
   readonly hubTakeovers: ReadonlyMap<string, WorkspaceHubTakeoverInteraction>;
   readonly hubSlots: ReadonlyMap<string, WorkspaceHubSlotInteraction>;
@@ -859,7 +870,6 @@ export interface WorkspaceInteractionCatalog {
   readonly localVisitOrders: ReadonlyMap<string, WorkspaceLocalVisitOrderInteraction>;
   readonly localVisitGenerations: ReadonlyMap<string, WorkspaceLocalVisitGenerationInteraction>;
   readonly starts: ReadonlyMap<string, WorkspaceStartInteraction>;
-  readonly structural: ReadonlyMap<string, WorkspaceStructuralInteraction>;
   readonly takeoverBatches: ReadonlyMap<string, WorkspaceTakeoverBatchInteraction>;
   readonly topologyRemovals: ReadonlyMap<string, WorkspaceTopologyRemovalInteraction>;
 }
@@ -986,6 +996,7 @@ export type WorkspaceRoomPickerControl =
        * an ordinary first target is locally ready to mutate.
        */
       readonly ordinaryTargetAuthoring: WorkspaceMissingTargetAuthoring;
+      readonly persistence: 'authored' | 'uncommitted';
       /**
        * The engine-owned static `CreateTarget` domain for this exact target.
        * It remains independent of evaluated candidate reachability, so an
@@ -1484,6 +1495,7 @@ interface WorkspaceBatchNodeBase {
   readonly marker: WorkspaceMarker;
   readonly missingTargets: readonly WorkspaceMissingPhysicalTarget[];
   readonly owner: ExitDecisionAddress;
+  readonly persistence: 'authored' | 'uncommitted';
   readonly repairIntent?: WorkspaceBatchRepairIntent;
   readonly rewardStore?: WorkspaceMarker;
   readonly selection: WorkspaceMarker;
@@ -1506,6 +1518,8 @@ export type WorkspaceAuthoringFrontier =
       readonly marker: WorkspaceMarker;
       readonly owner: ExitDecisionAddress;
       readonly predecessorNodeKey?: string;
+      readonly provisionalBatch?:
+        WorkspaceOrdinaryBatchNode | WorkspaceTakeoverBatchNode | WorkspaceMixedBatchNode;
     }
   | {
       readonly kind: 'hubVisit';

@@ -1,11 +1,10 @@
 import type { Catalog, RoomDeclaration } from '../../catalog-schema';
-import { createInitialBatchState } from '../batchState';
+import { createInitialExitDecision } from '../batchState';
 import type { ExitDecisionSourceAddress } from '../addresses';
 import type {
   AnomalyReplacementProvenance,
   AnomalyRoomState,
   AuthoredAdditionalExit,
-  BatchRewardStoreState,
   BiomeTopology,
   ExitDecision,
   ExitDecisionSource,
@@ -90,24 +89,6 @@ function updateTopology(
   topology: BiomeTopology,
 ): ProjectDocument {
   return withBiome(document, located, { ...located.plan, topology });
-}
-
-function initialRewardStore(
-  located: LocatedBiome,
-  sourceRoom: RoomDeclaration,
-): BatchRewardStoreState {
-  const progression = normalDecisionProgressionForLayout(located.layout);
-  const sourceRoomTemplateKey =
-    sourceRoom.mode.kind === 'authored' ? sourceRoom.mode.templateKey : undefined;
-  const policy =
-    progression !== undefined && sourceRoomTemplateKey !== undefined
-      ? (progression.rewardStoreOverrides.find(
-          (override) => override.sourceRoomTemplateKey === sourceRoomTemplateKey,
-        )?.policy ?? progression.rewardStorePolicy)
-      : { kind: 'none' as const };
-  return policy.kind === 'authoredBaseStore'
-    ? Object.freeze({ kind: 'authoredBaseStore', baseRewardStoreKey: null })
-    : Object.freeze({ kind: policy.kind });
 }
 
 function anomalyDescriptor(
@@ -541,22 +522,19 @@ function addZagreusContract(
     key: declaration.key,
     occurrenceId: command.occurrenceId,
   });
-  const nextDecision: ExitDecision = Object.freeze({
-    kind: 'exit',
-    source,
-    normal:
-      existing?.normal ??
-      Object.freeze({
-        kind: 'batch',
-        rewardStore: initialRewardStore(located, sourceRoom),
-        batchState: createInitialBatchState(progression.batchPolicy),
-        targets: Object.freeze([]),
-      }),
-    selection:
-      existing === undefined
-        ? Object.freeze({ kind: 'unresolved' })
-        : normalSelectionWithAdditional(existing.selection, existing),
-  });
+  const nextDecision: ExitDecision =
+    existing === undefined
+      ? createInitialExitDecision(
+          progression,
+          source,
+          sourceRoom.mode.kind === 'authored' ? sourceRoom.mode.templateKey : undefined,
+        )
+      : Object.freeze({
+          kind: 'exit',
+          source,
+          normal: existing.normal,
+          selection: normalSelectionWithAdditional(existing.selection, existing),
+        });
   const contractOccurrence: RoomOccurrence = Object.freeze({
     occurrenceId: command.occurrenceId,
     gameName: contractRoom.gameName,
@@ -709,22 +687,19 @@ function addNaturalChaos(
     key: declaration.key,
     occurrenceId: command.occurrenceId,
   });
-  const nextDecision: ExitDecision = Object.freeze({
-    kind: 'exit',
-    source,
-    normal:
-      existing?.normal ??
-      Object.freeze({
-        kind: 'batch',
-        rewardStore: initialRewardStore(located, sourceRoom),
-        batchState: createInitialBatchState(progression.batchPolicy),
-        targets: Object.freeze([]),
-      }),
-    selection:
-      existing === undefined
-        ? Object.freeze({ kind: 'unresolved' })
-        : normalSelectionWithAdditional(existing.selection, existing),
-  });
+  const nextDecision: ExitDecision =
+    existing === undefined
+      ? createInitialExitDecision(
+          progression,
+          source,
+          sourceRoom.mode.kind === 'authored' ? sourceRoom.mode.templateKey : undefined,
+        )
+      : Object.freeze({
+          kind: 'exit',
+          source,
+          normal: existing.normal,
+          selection: normalSelectionWithAdditional(existing.selection, existing),
+        });
   const chaosOccurrence: RoomOccurrence = Object.freeze({
     occurrenceId: command.occurrenceId,
     gameName: chaosRoom.gameName,

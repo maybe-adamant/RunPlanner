@@ -15,7 +15,7 @@ import {
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import { act, cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { createApplication, type PlannerApplication } from '@planner/composition/createApplication';
 import {
@@ -38,6 +38,11 @@ import {
 } from '@planner-test/support/biome-workbench';
 
 const browserPropertyRestorers: (() => void)[] = [];
+let representativeHubProject: ProjectDocument;
+
+beforeAll(() => {
+  representativeHubProject = createRepresentativeNOPQProject();
+});
 
 afterEach(() => {
   cleanup();
@@ -226,7 +231,7 @@ function withRetainedHubBehindMissingLink(project: ProjectDocument): ProjectDocu
 
 describe('HubDecisionWorkbench', () => {
   it('renders one ranked open-room board without the superseded visit timeline', () => {
-    renderStaticHubDecisionWorkbench(createRepresentativeNOPQProject());
+    renderStaticHubDecisionWorkbench(representativeHubProject);
 
     expect(screen.getByRole('region', { name: 'Ephyra Hub' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Hub traversal' })).toBeTruthy();
@@ -250,7 +255,7 @@ describe('HubDecisionWorkbench', () => {
   });
 
   it('renders every open room exactly once across the authored prefix and declaration tail', () => {
-    renderStaticHubDecisionWorkbench(createRepresentativeNOPQProject());
+    renderStaticHubDecisionWorkbench(representativeHubProject);
 
     const closedDisclosure = document.querySelector<HTMLDetailsElement>(
       '.hub-closed-room-disclosure',

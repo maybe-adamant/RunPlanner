@@ -1,8 +1,4 @@
-import type {
-  BatchRewardStoreAddress,
-  ExitSelectionAddress,
-  TargetAddress,
-} from '@run-planner/engine/authored-project';
+import type { ExitSelectionAddress, TargetAddress } from '@run-planner/engine/authored-project';
 import type { RoomDeclaration } from '@run-planner/engine/catalog-schema';
 
 import type { ContextualPickerModel } from '@planner/projections/contextualPicker';
@@ -79,15 +75,6 @@ function TargetRoomSelector({
       onSelect={(gameName) => executeIntent(interaction.intentFor(gameName))}
     />
   );
-}
-
-function batchRewardStoreAddress(marker: WorkspaceMarker): BatchRewardStoreAddress {
-  if (marker.address.kind !== 'batchRewardStore') {
-    throw new BiomeWorkspaceContractError(
-      'A batch reward-pool interaction must retain its batch-store owner.',
-    );
-  }
-  return marker.address;
 }
 
 function roomStatus(target: WorkspacePhysicalTarget): string {
@@ -550,7 +537,7 @@ function BatchSettings({
   readonly interactions: WorkspaceInteractionCatalog;
   readonly node: BatchNode;
 }) {
-  const dispatch = useAppDispatch();
+  const executeIntent = useCommandIntent();
   const store =
     node.rewardStore === undefined
       ? undefined
@@ -573,16 +560,7 @@ function BatchSettings({
             id={`${node.key}-reward-store`}
             interaction={store}
             label="Base reward pool"
-            onReplace={(storeKey) => {
-              const rewardStore = batchRewardStoreAddress(node.rewardStore!);
-              dispatch(
-                authoredProjectCommandDispatched({
-                  kind: 'ReplaceBatchRewardStore',
-                  rewardStore,
-                  storeKey,
-                }),
-              );
-            }}
+            onReplace={(storeKey) => executeIntent(store.intentFor(storeKey))}
             placeholder="Select pool"
           />
         )}
@@ -601,15 +579,7 @@ function BatchSettings({
               id={`${node.key}-fields-roll`}
               interaction={fields}
               label="Fields door roll"
-              onReplace={(cageOutcome) =>
-                dispatch(
-                  authoredProjectCommandDispatched({
-                    kind: 'ReplaceFieldsCageOutcome',
-                    decision: node.owner,
-                    cageOutcome,
-                  }),
-                )
-              }
+              onReplace={(cageOutcome) => executeIntent(fields.intentFor(cageOutcome))}
               placeholder="Select roll"
             />
           )}
@@ -667,14 +637,18 @@ export function BatchWorkbench({
     node.hubTakeover === undefined
       ? undefined
       : requireWorkspaceInteraction(interactions.hubTakeovers, node.hubTakeover.interactionKey);
-  const removal = requireWorkspaceInteraction(
-    interactions.topologyRemovals,
-    workspaceInteractionKey(node.owner),
-  );
+  const removal =
+    node.persistence === 'authored'
+      ? requireWorkspaceInteraction(
+          interactions.topologyRemovals,
+          workspaceInteractionKey(node.owner),
+        )
+      : undefined;
   const exitSelection =
-    node.targets.length === 1 &&
-    node.zagreusContract === undefined &&
-    node.naturalChaos === undefined
+    (node.persistence === 'uncommitted' && node.targets.length === 0) ||
+    (node.targets.length === 1 &&
+      node.zagreusContract === undefined &&
+      node.naturalChaos === undefined)
       ? undefined
       : requireWorkspaceInteraction(
           interactions.exitSelections,
@@ -757,7 +731,9 @@ export function BatchWorkbench({
       {takeover === undefined ? null : <TakeoverAction interaction={takeover} />}
       <div className="workbench-action-row">
         {node.repairIntent === undefined ? null : <ExactRepairAction intent={node.repairIntent} />}
-        <TopologyRemovalAction interaction={removal} label="Remove these doors" />
+        {removal === undefined ? null : (
+          <TopologyRemovalAction interaction={removal} label="Remove these doors" />
+        )}
       </div>
     </section>
   );
@@ -826,36 +802,13 @@ function ExitFrontier({
   readonly interactions: WorkspaceInteractionCatalog;
   readonly frontier: Extract<WorkspaceAuthoringFrontier, { readonly kind: 'exitDecision' }>;
 }) {
-  const executeIntent = useCommandIntent();
-  const capabilities = interactions.exitFrontierCapabilities.get(frontier.interactionKey);
-  const structural =
-    capabilities?.structural === undefined
-      ? undefined
-      : requireWorkspaceInteraction(interactions.structural, frontier.interactionKey);
-  if (structural !== undefined && structural.action !== capabilities?.structural) {
+  if (frontier.provisionalBatch === undefined) {
     throw new BiomeWorkspaceContractError(
-      'An exit frontier structural interaction must match its projected capability.',
+      'An ordinary exit frontier must provide its provisional door workbench.',
     );
   }
   return (
-    <section className="frontier-actions biome-exit-frontier">
-      <div>
-        <p className="card-kicker">Next step</p>
-        <h3>Continue from this room</h3>
-        <SemanticOwnerMarker address={frontier.owner} />
-      </div>
-      <div className="frontier-buttons">
-        {structural?.action === 'createBatch' ? (
-          <button
-            className="primary-action"
-            onClick={() => executeIntent(structural.intent)}
-            type="button"
-          >
-            Add next decision
-          </button>
-        ) : null}
-      </div>
-    </section>
+    <BatchWorkbench interactions={interactions} label="Doors" node={frontier.provisionalBatch} />
   );
 }
 

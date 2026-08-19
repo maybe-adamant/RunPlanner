@@ -4,10 +4,7 @@ import type { WorkspaceInteractionCatalog } from '@planner/projections/structure
 import type { ObservedWorkspaceProducts } from './observed-workspace';
 import { workspaceTestOwnerKey } from './test-keys';
 
-type OwnedInteractionMapName = Exclude<
-  keyof WorkspaceInteractionCatalog,
-  'exitFrontierCapabilities'
->;
+type OwnedInteractionMapName = keyof WorkspaceInteractionCatalog;
 type MapValue<T> = T extends ReadonlyMap<string, infer Value> ? Value : never;
 export type ObservedOwnedInteraction = MapValue<
   WorkspaceInteractionCatalog[OwnedInteractionMapName]

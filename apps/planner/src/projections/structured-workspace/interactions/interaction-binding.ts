@@ -65,11 +65,12 @@ import { requireWorkspaceRoom } from '../assembly/catalog-room';
 import { StructuredWorkspaceProjectionContractError, workspaceInteractionKey } from '../contract';
 import type {
   StructuredWorkspaceContextualServices,
+  WorkspaceBatchRewardStoreInteraction,
   WorkspaceCandidateInteraction,
   WorkspaceEncounterInteraction,
   WorkspaceFigLeafInteraction,
+  WorkspaceFieldsCageOutcomeInteraction,
   WorkspaceRoomActionInteraction,
-  WorkspaceExitFrontierCapabilities,
   WorkspaceExitSelectionInteraction,
   WorkspaceHubSlotInteraction,
   WorkspaceHubTakeoverInteraction,
@@ -93,7 +94,6 @@ import type {
   WorkspaceRoomInteraction,
   WorkspaceRoomPickerControl,
   WorkspaceStartInteraction,
-  WorkspaceStructuralInteraction,
   WorkspaceTakeoverBatchInteraction,
   WorkspaceTopologyRemovalInteraction,
   WorkspaceNaturalChaosExitInteraction,
@@ -103,7 +103,6 @@ import type {
 } from '../contract';
 import type {
   WorkspaceBatchInteractionRequirement,
-  WorkspaceFrontierInteractionRequirement,
   WorkspaceHubInteractionRequirement,
   WorkspaceHubTakeoverInteractionRequirement,
   WorkspaceOccurrenceInteractionRequirement,
@@ -243,10 +242,6 @@ export interface WorkspaceInteractionBindingInput {
   readonly assembly: ProjectEvaluationAssembly;
   readonly batchInteractionRequirements: ReadonlyMap<string, WorkspaceBatchInteractionRequirement>;
   readonly catalog: Catalog;
-  readonly frontierInteractionRequirements: ReadonlyMap<
-    string,
-    WorkspaceFrontierInteractionRequirement
-  >;
   readonly hubInteractionRequirements: ReadonlyMap<string, WorkspaceHubInteractionRequirement>;
   readonly hubTakeoverInteractionRequirements: ReadonlyMap<
     string,
@@ -718,9 +713,9 @@ function bindOccurrenceLocalInteractions(
 }
 
 interface WorkspaceBatchInteractionCatalog {
-  readonly batchRewardStores: ReadonlyMap<string, WorkspaceCandidateInteraction<string>>;
+  readonly batchRewardStores: ReadonlyMap<string, WorkspaceBatchRewardStoreInteraction>;
   readonly exitSelections: ReadonlyMap<string, WorkspaceExitSelectionInteraction>;
-  readonly fieldsCageOutcomes: ReadonlyMap<string, WorkspaceCandidateInteraction<'min' | 'max'>>;
+  readonly fieldsCageOutcomes: ReadonlyMap<string, WorkspaceFieldsCageOutcomeInteraction>;
   readonly zagreusContracts: ReadonlyMap<string, WorkspaceZagreusContractInteraction>;
   readonly naturalChaosExits: ReadonlyMap<string, WorkspaceNaturalChaosExitInteraction>;
 }
@@ -729,9 +724,9 @@ function bindBatchInteractions(
   candidates: CandidateProjectionSession,
   requirements: Iterable<WorkspaceBatchInteractionRequirement>,
 ): WorkspaceBatchInteractionCatalog {
-  const batchRewardStores = new Map<string, WorkspaceCandidateInteraction<string>>();
+  const batchRewardStores = new Map<string, WorkspaceBatchRewardStoreInteraction>();
   const exitSelections = new Map<string, WorkspaceExitSelectionInteraction>();
-  const fieldsCageOutcomes = new Map<string, WorkspaceCandidateInteraction<'min' | 'max'>>();
+  const fieldsCageOutcomes = new Map<string, WorkspaceFieldsCageOutcomeInteraction>();
   const zagreusContracts = new Map<string, WorkspaceZagreusContractInteraction>();
   const naturalChaosExits = new Map<string, WorkspaceNaturalChaosExitInteraction>();
   for (const requirement of requirements) {
@@ -764,14 +759,33 @@ function bindBatchInteractions(
         );
       }
       const storeKeys = Object.freeze(rewardStore.storeChoices.map((choice) => choice.value));
+      const candidate = candidateInteraction(
+        rewardStore.owner,
+        rewardStore.storeChoices,
+        rewardStore.selected,
+        () => candidates.batchRewardStores(rewardStore.owner, storeKeys),
+      );
       batchRewardStores.set(
         key,
-        candidateInteraction(
-          rewardStore.owner,
-          rewardStore.storeChoices,
-          rewardStore.selected,
-          () => candidates.batchRewardStores(rewardStore.owner, storeKeys),
-        ),
+        Object.freeze({
+          ...candidate,
+          intentFor: (storeKey: string) =>
+            Object.freeze({
+              command:
+                (requirement.persistence ?? 'authored') === 'authored'
+                  ? Object.freeze({
+                      kind: 'ReplaceBatchRewardStore' as const,
+                      rewardStore: rewardStore.owner,
+                      storeKey,
+                    })
+                  : Object.freeze({
+                      kind: 'InitializeExitDecision' as const,
+                      decision: requirement.owner,
+                      edit: Object.freeze({ kind: 'rewardStore' as const, storeKey }),
+                    }),
+              focus: Object.freeze({ owner: requirement.owner, timing: 'before' as const }),
+            }),
+        }),
       );
     }
     if (requirement.fieldsCageOutcome !== undefined) {
@@ -783,14 +797,33 @@ function bindBatchInteractions(
         );
       }
       const values = Object.freeze(fieldsCageOutcome.outcomeChoices.map((choice) => choice.value));
+      const candidate = candidateInteraction(
+        fieldsCageOutcome.owner,
+        fieldsCageOutcome.outcomeChoices,
+        fieldsCageOutcome.selected,
+        () => candidates.fieldsCageOutcomes(fieldsCageOutcome.owner, values),
+      );
       fieldsCageOutcomes.set(
         key,
-        candidateInteraction(
-          fieldsCageOutcome.owner,
-          fieldsCageOutcome.outcomeChoices,
-          fieldsCageOutcome.selected,
-          () => candidates.fieldsCageOutcomes(fieldsCageOutcome.owner, values),
-        ),
+        Object.freeze({
+          ...candidate,
+          intentFor: (cageOutcome: 'min' | 'max') =>
+            Object.freeze({
+              command:
+                (requirement.persistence ?? 'authored') === 'authored'
+                  ? Object.freeze({
+                      kind: 'ReplaceFieldsCageOutcome' as const,
+                      decision: requirement.owner,
+                      cageOutcome,
+                    })
+                  : Object.freeze({
+                      kind: 'InitializeExitDecision' as const,
+                      decision: requirement.owner,
+                      edit: Object.freeze({ kind: 'fieldsCageOutcome' as const, cageOutcome }),
+                    }),
+              focus: Object.freeze({ owner: requirement.owner, timing: 'before' as const }),
+            }),
+        }),
       );
     }
     if (requirement.zagreusContract !== undefined) {
@@ -1299,72 +1332,6 @@ function bindTakeoverBatchInteractions(
   return takeoverBatches;
 }
 
-interface WorkspaceFrontierInteractionCatalog {
-  readonly exitFrontierCapabilities: ReadonlyMap<string, WorkspaceExitFrontierCapabilities>;
-  readonly structural: ReadonlyMap<string, WorkspaceStructuralInteraction>;
-}
-
-function bindFrontierInteractions(
-  requirements: Iterable<WorkspaceFrontierInteractionRequirement>,
-): WorkspaceFrontierInteractionCatalog {
-  const exitFrontierCapabilities = new Map<string, WorkspaceExitFrontierCapabilities>();
-  const structural = new Map<string, WorkspaceStructuralInteraction>();
-  const bindStructural = (action: WorkspaceStructuralInteraction): void => {
-    if (structural.has(action.key)) {
-      throw new StructuredWorkspaceProjectionContractError(
-        `${action.key} has multiple bound structural frontier interactions`,
-      );
-    }
-    structural.set(action.key, action);
-  };
-  for (const requirement of requirements) {
-    const key = semanticAddressKey(requirement.owner);
-    switch (requirement.kind) {
-      case 'exitFrontier': {
-        const capabilities = requirement.capabilities;
-        if (capabilities.structural !== requirement.structural?.action) {
-          throw new StructuredWorkspaceProjectionContractError(
-            `${key} frontier structural capability disagrees with its requirement`,
-          );
-        }
-        if (capabilities.structural === undefined) {
-          throw new StructuredWorkspaceProjectionContractError(
-            `${key} frontier interaction requirement has no authoring capability`,
-          );
-        }
-        if (exitFrontierCapabilities.has(key)) {
-          throw new StructuredWorkspaceProjectionContractError(
-            `${key} has multiple bound exit frontier capability packages`,
-          );
-        }
-        exitFrontierCapabilities.set(key, capabilities);
-        switch (requirement.structural?.action) {
-          case undefined:
-            break;
-          case 'createBatch':
-            bindStructural(
-              Object.freeze({
-                action: 'createBatch' as const,
-                intent: Object.freeze({
-                  command: Object.freeze({
-                    decision: requirement.owner,
-                    kind: 'CreateBatch' as const,
-                  }),
-                  focus: Object.freeze({ owner: requirement.owner, timing: 'before' as const }),
-                }),
-                key,
-                owner: requirement.owner,
-              }),
-            );
-            break;
-        }
-        break;
-      }
-    }
-  }
-  return Object.freeze({ exitFrontierCapabilities, structural });
-}
-
 function candidateHasExecutableSupport(candidate: CandidateOptionProjection<unknown>): boolean {
   const support = candidateSupport(candidate);
   return support === 'forced' || support === 'possible';
@@ -1469,7 +1436,6 @@ export function bindWorkspaceInteractions(
     assembly,
     batchInteractionRequirements,
     catalog,
-    frontierInteractionRequirements,
     hubInteractionRequirements,
     hubTakeoverInteractionRequirements,
     occurrenceInteractionRequirements,
@@ -1538,9 +1504,6 @@ export function bindWorkspaceInteractions(
     allocateOccurrenceId,
     catalog,
     takeoverInteractionRequirements.values(),
-  );
-  const { exitFrontierCapabilities, structural } = bindFrontierInteractions(
-    frontierInteractionRequirements.values(),
   );
   const rooms = new Map<string, WorkspaceRoomInteraction>();
   for (const [key, control] of roomControls) {
@@ -1662,12 +1625,24 @@ export function bindWorkspaceInteractions(
             if (entry.kind === 'ordinary') {
               const occurrenceId = allocateOccurrenceId();
               return Object.freeze({
-                command: Object.freeze({
-                  gameName,
-                  kind: 'CreateTarget' as const,
-                  occurrenceId,
-                  target: control.address,
-                }),
+                command:
+                  control.persistence === 'authored'
+                    ? Object.freeze({
+                        gameName,
+                        kind: 'CreateTarget' as const,
+                        occurrenceId,
+                        target: control.address,
+                      })
+                    : Object.freeze({
+                        decision: control.decisionOwner,
+                        edit: Object.freeze({
+                          gameName,
+                          kind: 'target' as const,
+                          occurrenceId,
+                          target: control.address,
+                        }),
+                        kind: 'InitializeExitDecision' as const,
+                      }),
                 focus: Object.freeze({ owner: control.address, timing: 'after' as const }),
               });
             }
@@ -1676,14 +1651,17 @@ export function bindWorkspaceInteractions(
                 `${gameName} has no evaluated takeover evidence for ${key}`,
               );
             }
-            const command = createTakeoverBatchCommand({
-              action: 'replace',
+            const sharedTakeoverInput = {
               allocateOccurrenceId,
               decision: control.decisionOwner,
-              existingTargetOccurrenceIds: new Map(),
+              existingTargetOccurrenceIds: new Map<string, OccurrenceId>(),
               gameName,
               requiredExitKeys: entry.candidate.evaluation.result.requiredExitKeys,
-            });
+            };
+            const command =
+              control.persistence === 'authored'
+                ? createTakeoverBatchCommand({ action: 'replace', ...sharedTakeoverInput })
+                : createTakeoverBatchCommand({ action: 'create', ...sharedTakeoverInput });
             return Object.freeze({
               command,
               focus: Object.freeze({ owner: control.decisionOwner, timing: 'before' as const }),
@@ -2633,7 +2611,6 @@ export function bindWorkspaceInteractions(
     encounterPhases,
     figLeafSkips,
     gorgonConditions,
-    exitFrontierCapabilities,
     exitSelections,
     fieldsCageOutcomes,
     roomActions,
@@ -2660,7 +2637,6 @@ export function bindWorkspaceInteractions(
     zagreusContracts,
     zagreusSpawns,
     starts,
-    structural,
     takeoverBatches,
     topologyRemovals,
   });

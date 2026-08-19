@@ -30,7 +30,6 @@ import { createWorkspaceProjectSourceIndex, type WorkspaceBiomeSource } from './
 import { bindWorkspaceInteractions } from './interactions/interaction-binding';
 import {
   appendUniqueBatchInteractionRequirements,
-  appendUniqueFrontierInteractionRequirements,
   appendUniqueHubInteractionRequirements,
   appendUniqueHubTakeoverInteractionRequirements,
   appendUniqueOccurrenceInteractionRequirements,
@@ -38,7 +37,6 @@ import {
   appendUniqueTakeoverInteractionRequirements,
   appendUniqueTopologyRemovalInteractionRequirements,
   type WorkspaceBatchInteractionRequirement,
-  type WorkspaceFrontierInteractionRequirement,
   type WorkspaceHubInteractionRequirement,
   type WorkspaceHubTakeoverInteractionRequirement,
   type WorkspaceOccurrenceInteractionRequirement,
@@ -96,10 +94,6 @@ function projectBiome(
   readonly batchInteractionRequirements: ReadonlyMap<string, WorkspaceBatchInteractionRequirement>;
   readonly biome: WorkspaceBiome;
   readonly focusDestinations: ReadonlyMap<string, WorkspaceInspectorDestination>;
-  readonly frontierInteractionRequirements: ReadonlyMap<
-    string,
-    WorkspaceFrontierInteractionRequirement
-  >;
   readonly hubInteractionRequirements: ReadonlyMap<string, WorkspaceHubInteractionRequirement>;
   readonly hubTakeoverInteractionRequirements: ReadonlyMap<
     string,
@@ -133,7 +127,6 @@ function projectBiome(
     batchInteractionRequirements: semantic.batchInteractionRequirements,
     biome: presentation.biome,
     focusDestinations: presentation.focusDestinations,
-    frontierInteractionRequirements: semantic.frontierInteractionRequirements,
     hubInteractionRequirements: semantic.hubInteractionRequirements,
     hubTakeoverInteractionRequirements: semantic.hubTakeoverInteractionRequirements,
     occurrenceInteractionRequirements: semantic.occurrenceInteractionRequirements,
@@ -180,10 +173,6 @@ export function createStructuredWorkspaceProjection(
       const takeoverInteractionRequirements = new Map<
         string,
         WorkspaceTakeoverInteractionRequirement
-      >();
-      const frontierInteractionRequirements = new Map<
-        string,
-        WorkspaceFrontierInteractionRequirement
       >();
       const roomControls = new Map<string, WorkspaceRoomPickerControl>();
       const rewardControls = new Map<string, WorkspaceRewardControl>();
@@ -325,10 +314,6 @@ export function createStructuredWorkspaceProjection(
             takeoverInteractionRequirements,
             projected.takeoverInteractionRequirements.values(),
           );
-          appendUniqueFrontierInteractionRequirements(
-            frontierInteractionRequirements,
-            projected.frontierInteractionRequirements.values(),
-          );
           appendUniqueRoomControls(roomControls, projected.roomControls.values());
           appendUniqueRewardControls(rewardControls, projected.rewardControls.values());
           for (const rewardControl of projected.rewardControls.values()) {
@@ -460,7 +445,6 @@ export function createStructuredWorkspaceProjection(
         assembly,
         batchInteractionRequirements,
         catalog,
-        frontierInteractionRequirements,
         hubInteractionRequirements,
         hubTakeoverInteractionRequirements,
         occurrenceInteractionRequirements,

@@ -6,6 +6,7 @@ import {
   createOccurrenceAddress,
   createTargetAddress,
   ordinaryTargetAuthoringEligibility,
+  uncommittedOrdinaryTargetAuthoringEligibility,
   normalDecisionProgressionForLayout,
   selectedExitTarget,
   semanticAddressKey,
@@ -111,6 +112,8 @@ interface WorkspaceDecisionAssemblyBaseInput {
     readonly owner: HubDecisionAddress;
   };
   readonly markerDestinations: WorkspaceMarkerDestinationEmitter;
+  /** Tests and legacy direct callers default to authored; biome assembly is explicit. */
+  readonly persistence?: 'authored' | 'uncommitted';
   readonly source: WorkspaceBiomeSource;
 }
 
@@ -300,22 +303,31 @@ function missingTargetPrerequisite(
  */
 function ordinaryTargetGameNames(
   input: WorkspaceDecisionAssemblyBaseInput,
+  persistence: 'authored' | 'uncommitted',
   target: TargetAddress,
 ): readonly string[] {
   const topology = input.source.plan.topology;
   if (topology === null) return Object.freeze([]);
   return Object.freeze(
-    input.catalog.rooms.values.flatMap((room) =>
-      ordinaryTargetAuthoringEligibility(
-        input.catalog,
-        input.source.layout,
-        topology,
-        target,
-        room.gameName,
-      ).kind === 'authorable'
-        ? [room.gameName]
-        : [],
-    ),
+    input.catalog.rooms.values.flatMap((room) => {
+      const eligibility =
+        persistence === 'authored'
+          ? ordinaryTargetAuthoringEligibility(
+              input.catalog,
+              input.source.layout,
+              topology,
+              target,
+              room.gameName,
+            )
+          : uncommittedOrdinaryTargetAuthoringEligibility(
+              input.catalog,
+              input.source.layout,
+              topology,
+              target,
+              room.gameName,
+            );
+      return eligibility.kind === 'authorable' ? [room.gameName] : [];
+    }),
   );
 }
 
@@ -525,7 +537,12 @@ function roomControlsForBatch(
           decisionOwner,
           kind: 'decisionEntryRoomPicker' as const,
           ordinaryTargetAuthoring: missing.authoring,
-          ordinaryTargetGameNames: ordinaryTargetGameNames(input, address),
+          ordinaryTargetGameNames: ordinaryTargetGameNames(
+            input,
+            input.persistence ?? 'authored',
+            address,
+          ),
+          persistence: input.persistence ?? 'authored',
           takeoverGameNames:
             input.source.layout.progression.kind === 'generated'
               ? takeoverGameNames(input.catalog, input.source.plan.biomeKey)
@@ -554,9 +571,10 @@ function batchInteractionRequirements(
   batch: WorkspaceDecisionBatchNode,
 ): readonly WorkspaceBatchInteractionRequirement[] {
   const exitSelection =
-    decision.selection.kind === 'derived' &&
-    batch.zagreusContract === undefined &&
-    batch.naturalChaos === undefined
+    ((input.persistence ?? 'authored') === 'uncommitted' && batch.targets.length === 0) ||
+    (decision.selection.kind === 'derived' &&
+      batch.zagreusContract === undefined &&
+      batch.naturalChaos === undefined)
       ? undefined
       : Object.freeze({
           owner: createExitSelectionAddress(input.source.biome, decision.source),
@@ -633,6 +651,7 @@ function batchInteractionRequirements(
       ...(fieldsCageOutcome === undefined ? {} : { fieldsCageOutcome }),
       kind: 'batchControls' as const,
       owner: batch.owner,
+      persistence: input.persistence ?? 'authored',
       ...(rewardStore === undefined ? {} : { rewardStore }),
       ...(zagreusContract === undefined ? {} : { zagreusContract }),
       ...(naturalChaos === undefined ? {} : { naturalChaos }),
@@ -889,7 +908,8 @@ function assembleBatchDecision(
             assembly: chaosAssembly,
           });
         })();
-  const runState = input.source.runState(owner);
+  const runState =
+    (input.persistence ?? 'authored') === 'authored' ? input.source.runState(owner) : undefined;
   const base = {
     batchState: decision.normal.batchState,
     ...(effectiveRewardStore === undefined ? {} : { effectiveRewardStore }),
@@ -931,6 +951,7 @@ function assembleBatchDecision(
     marker: input.markerDestinations.marker(owner),
     missingTargets,
     owner,
+    persistence: input.persistence ?? 'authored',
     ...(repairIntent === undefined ? {} : { repairIntent }),
     ...(hasEditableAuthoredRewardStore
       ? {

@@ -77,7 +77,6 @@ describe('structured workspace topology interaction assembly', () => {
     expect(start.start.gameNames).toContain('F_Opening01');
     expect(assembly.topologyRemovalInteractionRequirements).toHaveLength(0);
     expect(assembly.takeoverInteractionRequirements).toHaveLength(0);
-    expect(assembly.frontierInteractionRequirements).toHaveLength(0);
   });
 
   it('publishes the exact terminal Hub takeover from the persisted PreHub envelope', () => {
@@ -283,22 +282,7 @@ describe('structured workspace topology interaction assembly', () => {
       const requirement = assembly.takeoverInteractionRequirements.find(
         (candidate) => semanticAddressKey(candidate.owner) === semanticAddressKey(owner),
       );
-      const frontier = assembly.frontierInteractionRequirements.find(
-        (candidate) =>
-          candidate.kind === 'exitFrontier' &&
-          semanticAddressKey(candidate.owner) === semanticAddressKey(owner),
-      );
-
       expect(requirement).toBeUndefined();
-      expect(frontier).toMatchObject({
-        capabilities: { structural: 'createBatch' },
-        kind: 'exitFrontier',
-        owner,
-        structural: { action: 'createBatch' },
-      });
-      if (frontier?.kind !== 'exitFrontier') {
-        throw new Error(biome.biomeKey + ' final decision frontier is missing');
-      }
     },
   );
 
@@ -315,18 +299,6 @@ describe('structured workspace topology interaction assembly', () => {
     const requirement = assembly.takeoverInteractionRequirements.find(
       (candidate) => semanticAddressKey(candidate.owner) === semanticAddressKey(owner),
     );
-    const frontier = assembly.frontierInteractionRequirements.find(
-      (candidate) =>
-        candidate.kind === 'exitFrontier' &&
-        semanticAddressKey(candidate.owner) === semanticAddressKey(owner),
-    );
-
     expect(requirement).toBeUndefined();
-    expect(frontier).toMatchObject({
-      capabilities: { structural: 'createBatch' },
-      kind: 'exitFrontier',
-      owner,
-      structural: { action: 'createBatch' },
-    });
   });
 });

@@ -217,7 +217,8 @@ rewriting their descriptions:
 - `Choose the batch outcome` becomes `Finish setting up these doors`.
 - `Add the next exit decision or select a declaration-owned Preboss batch.`
   becomes neutral `Continue this route` copy. Generated continuation is
-  `Add next decision`, and any supported Preboss is chosen from `Door 1 room`.
+  the inline empty door workbench, and any supported Preboss is chosen from
+  `Door 1 room`.
 - `Complete the open Hub set` becomes `Choose open Hub rooms`, with `Choose
 nine or ten Ephyra rooms to keep open in the Hub.`
 - `Complete the Hub visit order` becomes `Choose all six Hub visits`.
