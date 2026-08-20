@@ -29,7 +29,10 @@ import type {
   RoomActionWindow,
 } from './model';
 
-type RoomActionContributionRoom = Omit<CanonicalAuthoredRoom, 'roomActionRoster'>;
+type RoomActionContributionRoom = Omit<
+  CanonicalAuthoredRoom,
+  'roomActionRoster' | 'roomLifecycleTimeline'
+>;
 
 function frozen<T>(value: T): T {
   return Object.freeze(value);
@@ -449,7 +452,10 @@ export function roomActionContributions(options: {
     );
   }
   if (room.lifecycleProfileKey === 'FieldsCombatRoom') {
-    const phaseRank = new Map(room.encounterPhases.map((phase, index) => [phase.slotKey, index]));
+    const authoredOrder = new Map(
+      room.roomActions.order.map((reference, index) => [roomActionKey(reference), index]),
+    );
+    const phaseByKey = new Map(room.encounterPhases.map((phase) => [phase.slotKey, phase]));
     const contacts = all.filter(
       (entry): entry is RoomActionContribution =>
         entry.kind === 'action' &&
@@ -458,14 +464,34 @@ export function roomActionContributions(options: {
     return frozen(
       all.map((entry) => {
         if (entry.kind !== 'action' || entry.reference.kind !== 'completeFieldsCage') return entry;
-        const ownRank = phaseRank.get(entry.reference.phaseKey) ?? -1;
+        const ownCageKey = roomActionKey(entry.reference);
+        const ownPhaseKey = entry.reference.phaseKey;
+        const ownOrder = authoredOrder.get(ownCageKey);
         const barriers = contacts
           .filter((contact) => {
             const reference = contact.reference;
-            return (
-              (reference.kind === 'interactEncounter' || reference.kind === 'interactGorgon') &&
-              (phaseRank.get(reference.phaseKey) ?? ownRank) < ownRank
-            );
+            if (reference.kind !== 'interactEncounter' && reference.kind !== 'interactGorgon') {
+              return false;
+            }
+            const sourcePhase = phaseByKey.get(reference.phaseKey);
+            const sourceCage =
+              sourcePhase?.rewardAttachment?.kind === 'localReward'
+                ? Object.freeze({
+                    kind: 'completeFieldsCage' as const,
+                    phaseKey: sourcePhase.slotKey,
+                  })
+                : undefined;
+            // A passive blocking contact is available at room entry and must
+            // clear before the first cage, regardless of where its retained
+            // row currently sits. A cage-produced contact blocks only later
+            // cages in the authored permutation; an unpicked cage reward is
+            // deliberately not part of this contact set.
+            if (sourceCage === undefined) return true;
+            if (sourceCage.phaseKey === ownPhaseKey) return false;
+            const sourceOrder = authoredOrder.get(roomActionKey(sourceCage));
+            if (ownOrder === undefined) return sourceOrder !== undefined;
+            if (sourceOrder === undefined) return true;
+            return sourceOrder < ownOrder;
           })
           .map((contact) => frozen({ kind: 'afterAction' as const, action: contact.reference }));
         return frozen({ ...entry, dependencies: frozen([...entry.dependencies, ...barriers]) });
@@ -497,6 +523,20 @@ function assessOrder(
 ): readonly RoomActionRosterIssue[] {
   const issues: RoomActionRosterIssue[] = [];
   const indexes = new Map(order.map((reference, index) => [roomActionKey(reference), index]));
+  const checkpointAfterIndex = (checkpointKey: string): number => {
+    if (!checkpointKey.startsWith('nextPhaseUsable:')) return -1;
+    const checkpoint = checkpoints.get(checkpointKey);
+    if (checkpoint === undefined) return -1;
+    const required = [...active.values()].filter((entry) => entry.participation === 'required');
+    const wheelKey = checkpointKey.slice('nextPhaseUsable:'.length);
+    const matching = required.filter(
+      (entry) => entry.window.kind === 'shipPostCombat' && entry.window.wheelKey === wheelKey,
+    );
+    return matching.reduce(
+      (rank, entry) => Math.max(rank, indexes.get(roomActionKey(entry.reference)) ?? -1),
+      -1,
+    );
+  };
   for (const reference of order) {
     const entry = active.get(roomActionKey(reference));
     if (entry === undefined) {
@@ -530,11 +570,12 @@ function assessOrder(
         continue;
       }
       const ownRank = roomActionWindowRank(entry.window);
-      const checkpointRank = roomActionWindowRank(checkpoint.window);
+      const checkpointWindowRank = roomActionWindowRank(checkpoint.window);
       const valid =
         dependency.kind === 'afterCheckpoint'
-          ? ownRank >= checkpointRank
-          : ownRank <= checkpointRank;
+          ? ownRank >= checkpointWindowRank &&
+            indexes.get(roomActionKey(reference))! >= checkpointAfterIndex(dependency.checkpointKey)
+          : ownRank <= checkpointWindowRank;
       if (!valid) {
         issues.push(
           frozen({
@@ -719,22 +760,36 @@ export function assembleRoomActionRoster(options: {
         afterRank:
           entry.checkpointKey === 'outgoingGeneration'
             ? lastRequiredRank
-            : entry.checkpointKey === 'exitUsable'
-              ? rows.reduce(
-                  (rank, row) =>
-                    row.rank !== null && row.participation === 'required'
-                      ? Math.max(rank, row.rank)
-                      : rank,
-                  0,
-                )
-              : rows.reduce(
-                  (rank, row) =>
-                    row.rank !== null &&
-                    roomActionWindowRank(row.window) <= roomActionWindowRank(entry.window)
-                      ? Math.max(rank, row.rank)
-                      : rank,
-                  0,
-                ),
+            : entry.checkpointKey.startsWith('nextPhaseUsable:')
+              ? (() => {
+                  const wheelKey = entry.checkpointKey.slice('nextPhaseUsable:'.length);
+                  return rows.reduce(
+                    (rank, row) =>
+                      row.rank !== null &&
+                      row.participation === 'required' &&
+                      row.window.kind === 'shipPostCombat' &&
+                      row.window.wheelKey === wheelKey
+                        ? Math.max(rank, row.rank)
+                        : rank,
+                    0,
+                  );
+                })()
+              : entry.checkpointKey === 'exitUsable'
+                ? rows.reduce(
+                    (rank, row) =>
+                      row.rank !== null && row.participation === 'required'
+                        ? Math.max(rank, row.rank)
+                        : rank,
+                    0,
+                  )
+                : rows.reduce(
+                    (rank, row) =>
+                      row.rank !== null &&
+                      roomActionWindowRank(row.window) <= roomActionWindowRank(entry.window)
+                        ? Math.max(rank, row.rank)
+                        : rank,
+                    0,
+                  ),
       }),
     );
   return frozen({

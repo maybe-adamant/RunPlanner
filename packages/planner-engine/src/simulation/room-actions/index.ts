@@ -3,6 +3,7 @@ export {
   roomActionContributions,
   roomActionWindowRank,
 } from './assemble';
+export { assembleRoomLifecycleTimeline } from './timeline';
 export type {
   RoomActionCheckpoint,
   RoomActionCheckpointContribution,
@@ -16,3 +17,9 @@ export type {
   RoomActionRow,
   RoomActionWindow,
 } from './model';
+export type {
+  RoomLifecycleBoundary,
+  RoomLifecycleTimeline,
+  RoomLifecycleTimelineEntry,
+  RoomLifecycleTimelineInput,
+} from './timeline';

@@ -54,6 +54,7 @@ import type {
   FigLeafPhaseCandidateSupport,
   GorgonPhaseCandidateSupport,
   FieldsBatchFacts,
+  RoomLifecycleTimeline,
   SelectedLevelResolutionAssessment,
 } from '@run-planner/engine/simulation';
 import {
@@ -86,12 +87,18 @@ import {
   type WorkspaceRoomPickerControl,
   type WorkspaceRoomSummary,
   type WorkspaceRoomActions,
+  type WorkspaceRoomLifecycleTimeline,
+  type WorkspaceRoomLifecycleBoundary,
+  type WorkspaceRoomLifecycleTimelineEntry,
+  type WorkspaceRoomTab,
   type WorkspaceRoomActionRow,
   type WorkspaceRoomFeature,
   type WorkspaceRoomWorkbenchPresentation,
   type WorkspaceShipPhasePresentation,
   type WorkspaceShipStructurePhase,
+  type WorkspaceRewardWheelDescriptor,
   type WorkspaceShopSupplementalDescriptor,
+  type WorkspaceMarker,
 } from '../contract';
 import type { WorkspaceOccurrenceInteractionRequirement } from '../interactions/interaction-requirements';
 import {
@@ -155,6 +162,8 @@ export interface WorkspaceOccurrenceAssemblyInput {
   readonly markerDestinations: WorkspaceMarkerDestinationEmitter;
   readonly ordinaryRewardForfeited: (owner: RewardCandidateOwner) => boolean;
   readonly occurrence: RoomOccurrence;
+  /** Semantic entry ownership, independent of whether the entry room is selectable. */
+  readonly isEntry?: boolean;
   readonly roomPicker?: WorkspaceRoomPickerControl;
 }
 
@@ -176,6 +185,8 @@ export interface WorkspaceOccurrenceAssemblyRequest {
   /** Present only when this occurrence belongs to a configured Fields batch. */
   readonly fieldsBatchFacts?: FieldsBatchFacts;
   readonly occurrence: RoomOccurrence;
+  /** Semantic entry ownership, independent of whether the entry room is selectable. */
+  readonly isEntry?: boolean;
   readonly roomPicker?: WorkspaceRoomPickerControl;
 }
 
@@ -775,6 +786,10 @@ function activeEncounterPhasesForOwner(
     const retainedGorgon =
       gorgonResult?.deathDefianceConditionMet === true || gorgonResult?.athenaOffer !== undefined;
     const fixedPhase = domain.declaredEncounterKeys.length === 1;
+    const fieldsPassive =
+      room.mode.kind === 'authored' &&
+      room.mode.templateKey === 'FieldsCombat' &&
+      domain.slotKey === 'Passive';
     const fixedHasTraitOffer =
       fixedPhase &&
       input.catalog.encounterDefinitions.byKey[domain.selectedEncounterKey]?.traitOfferProducer !==
@@ -785,7 +800,8 @@ function activeEncounterPhasesForOwner(
       !authoredFigLeafSkip &&
       !fixedHasTraitOffer &&
       !gorgonSupported &&
-      !retainedGorgon
+      !retainedGorgon &&
+      !fieldsPassive
     )
       continue;
     const candidateChoices = Object.freeze(
@@ -1308,37 +1324,28 @@ function roomActionsForOccurrence(
   controls: readonly WorkspaceRewardControl[],
 ): WorkspaceRoomActions | undefined {
   const roster = input.evaluatedRoom?.roomActionRoster;
-  if (roster === undefined || input.evaluatedRoom?.entered !== true) return undefined;
+  const lifecycleTimeline = input.evaluatedRoom?.roomLifecycleTimeline;
+  if (
+    roster === undefined ||
+    lifecycleTimeline === undefined ||
+    input.evaluatedRoom?.entered !== true
+  )
+    return undefined;
   const owner = createOccurrenceAddress(input.biome, input.occurrence.occurrenceId);
-  const inactiveUnrankedContractKeys = new Set(
-    roster.rows.flatMap((row) =>
-      row.reference.kind === 'interactAcquisitionEntry' &&
-      row.reference.entryKey === INFERNAL_CONTRACT_ENTRY_KEY &&
-      roomLocal.kind === 'shop' &&
-      !roomLocal.supplementalOffers.some(
-        (supplemental) => supplemental.key === INFERNAL_CONTRACT_ENTRY_KEY,
-      ) &&
-      row.rank === null
-        ? [row.key]
-        : [],
-    ),
+  const presentedRows = roster.rows;
+  const proposals = roster.proposals.map((proposal, index) =>
+    Object.freeze({
+      kind: proposal.kind,
+      key: `${proposal.kind}:${index}:${roomActionKey(proposal.reference)}`,
+      label:
+        proposal.kind === 'remove'
+          ? 'Remove from room actions'
+          : `${proposal.kind === 'insert' ? 'Insert' : 'Move'} to position ${(proposal.toIndex ?? 0) + 1}`,
+      reference: proposal.reference,
+      structurallyAuthorable: proposal.structurallyAuthorable,
+      ...(proposal.toIndex === undefined ? {} : { toIndex: proposal.toIndex }),
+    }),
   );
-  const presentedRows = roster.rows.filter((row) => !inactiveUnrankedContractKeys.has(row.key));
-  const proposals = roster.proposals
-    .filter((proposal) => !inactiveUnrankedContractKeys.has(roomActionKey(proposal.reference)))
-    .map((proposal, index) =>
-      Object.freeze({
-        kind: proposal.kind,
-        key: `${proposal.kind}:${index}:${roomActionKey(proposal.reference)}`,
-        label:
-          proposal.kind === 'remove'
-            ? 'Remove from room actions'
-            : `${proposal.kind === 'insert' ? 'Insert' : 'Move'} to position ${(proposal.toIndex ?? 0) + 1}`,
-        reference: proposal.reference,
-        structurallyAuthorable: proposal.structurallyAuthorable,
-        ...(proposal.toIndex === undefined ? {} : { toIndex: proposal.toIndex }),
-      }),
-    );
   const proposalKeysByAction = new Map<string, string[]>();
   for (const proposal of proposals) {
     const key = roomActionKey(proposal.reference);
@@ -1386,7 +1393,92 @@ function roomActionsForOccurrence(
       ? Object.freeze({ ...control, ...children })
       : Object.freeze({ ...control, ...children });
   };
+  const projectedRows = Object.freeze(
+    presentedRows.map((row) => {
+      const address = createRoomActionAddress(input.biome, input.occurrence.occurrenceId, row.key);
+      const directControl = controlAt(row.owner);
+      const incomingControl =
+        row.reference.kind === 'interactIncomingReward' && row.owner.kind === 'acquisitionRole'
+          ? controlAt(row.owner.owner)
+          : undefined;
+      const wheelKey =
+        row.reference.kind === 'interactWheelReward' ? row.reference.wheelKey : undefined;
+      const wheel =
+        roomLocal.kind === 'ship'
+          ? roomLocal.wheels.find((candidate) => candidate.key === wheelKey)
+          : undefined;
+      const wheelControl = wheel?.offers.find(
+        (_offer, index) => index + 1 === wheel.pickedOfferIndex,
+      )?.control;
+      const rewardControl = directControl ?? incomingControl ?? wheelControl;
+      const phase = encounterPhases.find((candidate) =>
+        row.reference.kind === 'interactGorgon'
+          ? candidate.gorgonAthena !== undefined &&
+            semanticAddressKey(candidate.gorgonAthena.rewardOwner) === semanticAddressKey(row.owner)
+          : semanticAddressKey(candidate.address) === semanticAddressKey(row.owner),
+      );
+      const traitOffer =
+        row.reference.kind === 'interactEncounter'
+          ? phase?.traitOffer
+          : row.reference.kind === 'interactGorgon'
+            ? phase?.gorgonAthena
+            : undefined;
+      const resolvedRewardControl =
+        rewardControl === undefined
+          ? undefined
+          : row.reference.kind === 'interactIncomingReward'
+            ? controlForRole(rewardControl, row.reference.acquisitionRole)
+            : rewardControl;
+      return Object.freeze({
+        address,
+        issues: issuesFor(row.key),
+        key: row.key,
+        label: roomActionLabel(
+          input.catalog,
+          row.reference,
+          roomLocal,
+          encounterPhases,
+          resolvedRewardControl,
+        ),
+        marker: input.markerDestinations.marker(address),
+        proposalKeys: Object.freeze(proposalKeysByAction.get(row.key) ?? []),
+        reference: row.reference,
+        participation: row.participation,
+        rank: row.rank,
+        ...(row.stale || resolvedRewardControl === undefined
+          ? {}
+          : {
+              rewardPayload: Object.freeze({
+                control: resolvedRewardControl,
+                showOffer:
+                  (row.reference.kind === 'interactLocalReward' && roomLocal.kind !== 'fields') ||
+                  (row.reference.kind === 'interactAcquisitionEntry' &&
+                    input.occurrence.state.kind !== 'shop'),
+              }),
+            }),
+        stale: row.stale,
+        window: row.window,
+        ...(row.stale || traitOffer === undefined ? {} : { traitOffer }),
+        ...(row.stale ||
+        row.reference.kind !== 'chooseRewardWheel' ||
+        row.owner.kind !== 'rewardWheel'
+          ? {}
+          : { wheelPick: row.owner }),
+        executable: row.executable,
+      });
+    }),
+  );
+  const repairRows = Object.freeze(
+    lifecycleTimeline.repairRows.map(({ key }) => {
+      const projected = projectedRows.find((row) => row.key === key);
+      if (projected === undefined) {
+        throw new Error(`Room action timeline repair row ${key} has no projected row`);
+      }
+      return projected;
+    }),
+  );
   return Object.freeze({
+    timeline: projectRoomLifecycleTimeline(lifecycleTimeline),
     checkpoints: Object.freeze(
       roster.checkpoints.map((checkpoint) =>
         Object.freeze({
@@ -1400,89 +1492,51 @@ function roomActionsForOccurrence(
     interactionKey: semanticAddressKey(owner),
     owner,
     proposals: Object.freeze(proposals),
-    rows: Object.freeze(
-      presentedRows.map((row) => {
-        const address = createRoomActionAddress(
-          input.biome,
-          input.occurrence.occurrenceId,
-          row.key,
-        );
-        const directControl = controlAt(row.owner);
-        const incomingControl =
-          row.reference.kind === 'interactIncomingReward' && row.owner.kind === 'acquisitionRole'
-            ? controlAt(row.owner.owner)
-            : undefined;
-        const wheelKey =
-          row.reference.kind === 'interactWheelReward' ? row.reference.wheelKey : undefined;
-        const wheel =
-          roomLocal.kind === 'ship'
-            ? roomLocal.wheels.find((candidate) => candidate.key === wheelKey)
-            : undefined;
-        const wheelControl = wheel?.offers.find(
-          (_offer, index) => index + 1 === wheel.pickedOfferIndex,
-        )?.control;
-        const rewardControl = directControl ?? incomingControl ?? wheelControl;
-        const phase = encounterPhases.find((candidate) =>
-          row.reference.kind === 'interactGorgon'
-            ? candidate.gorgonAthena !== undefined &&
-              semanticAddressKey(candidate.gorgonAthena.rewardOwner) ===
-                semanticAddressKey(row.owner)
-            : semanticAddressKey(candidate.address) === semanticAddressKey(row.owner),
-        );
-        const traitOffer =
-          row.reference.kind === 'interactEncounter'
-            ? phase?.traitOffer
-            : row.reference.kind === 'interactGorgon'
-              ? phase?.gorgonAthena
-              : undefined;
-        const resolvedRewardControl =
-          rewardControl === undefined
-            ? undefined
-            : row.reference.kind === 'interactIncomingReward'
-              ? controlForRole(rewardControl, row.reference.acquisitionRole)
-              : rewardControl;
-        return Object.freeze({
-          address,
-          issues: issuesFor(row.key),
-          key: row.key,
-          label: roomActionLabel(
-            input.catalog,
-            row.reference,
-            roomLocal,
-            encounterPhases,
-            resolvedRewardControl,
-          ),
-          marker: input.markerDestinations.marker(address),
-          proposalKeys: Object.freeze(proposalKeysByAction.get(row.key) ?? []),
-          reference: row.reference,
-          participation: row.participation,
-          rank: row.rank,
-          ...(row.stale || resolvedRewardControl === undefined
-            ? {}
-            : {
-                rewardPayload: Object.freeze({
-                  control: resolvedRewardControl,
-                  showOffer:
-                    (row.reference.kind === 'interactLocalReward' &&
-                      (roomLocal.kind !== 'fields' ||
-                        row.reference.groupKey !== roomLocal.groupKey)) ||
-                    (row.reference.kind === 'interactAcquisitionEntry' &&
-                      input.occurrence.state.kind !== 'shop'),
-                }),
-              }),
-          stale: row.stale,
-          window: row.window,
-          ...(row.stale || traitOffer === undefined ? {} : { traitOffer }),
-          ...(row.stale ||
-          row.reference.kind !== 'chooseRewardWheel' ||
-          row.owner.kind !== 'rewardWheel'
-            ? {}
-            : { wheelPick: row.owner }),
-          executable: row.executable,
-        });
-      }),
+    repairRows,
+    rows: projectedRows,
+  });
+}
+
+function projectRoomLifecycleTimeline(
+  timeline: RoomLifecycleTimeline,
+): WorkspaceRoomLifecycleTimeline {
+  return Object.freeze({
+    boundaries: Object.freeze([...timeline.boundaries]),
+    entries: Object.freeze(
+      timeline.entries.map((entry) =>
+        entry.kind === 'boundary'
+          ? Object.freeze({
+              kind: 'boundary' as const,
+              boundary: entry.boundary,
+              placement: entry.placement,
+              rank: entry.rank,
+            })
+          : Object.freeze({
+              kind: 'action' as const,
+              actionKey: entry.action.key,
+              rank: entry.rank,
+              ...(entry.phaseKey === undefined ? {} : { phaseKey: entry.phaseKey }),
+            }),
+      ),
     ),
   });
+}
+
+function rewardChildMarkers(control: WorkspaceRewardControl): readonly WorkspaceMarker[] {
+  const markers: WorkspaceMarker[] = [];
+  for (const trait of control.traitOffers ?? []) {
+    markers.push(trait.marker);
+    if (trait.traitAcquisitionTarget !== undefined)
+      markers.push(trait.traitAcquisitionTarget.marker);
+    if (trait.circeResolution !== undefined) markers.push(trait.circeResolution.marker);
+    if (trait.echoPomTarget !== undefined) markers.push(trait.echoPomTarget.marker);
+    if (trait.echoLastRunBoon !== undefined) markers.push(trait.echoLastRunBoon.marker);
+    if (trait.echoLastReward !== undefined) markers.push(trait.echoLastReward.marker);
+    for (const set of trait.allTogetherSets ?? []) markers.push(set.marker);
+  }
+  for (const resolution of control.levelResolutions ?? []) markers.push(resolution.marker);
+  for (const conversion of control.conversions ?? []) markers.push(conversion.marker);
+  return Object.freeze(markers);
 }
 
 function roomLocalForOccurrence(
@@ -1826,6 +1880,7 @@ function presentedEncounterPhases(
   return Object.freeze(
     encounterPhases.filter(
       (phase) =>
+        phase.address.phaseKey === 'Passive' ||
         phase.customizable ||
         phase.marker.findingCount > 0 ||
         phase.traitOffer !== undefined ||
@@ -1892,73 +1947,99 @@ function shipWorkbenchPresentation(
   roomActions: WorkspaceRoomActions | undefined,
 ): WorkspaceRoomWorkbenchPresentation {
   const activeWheels = roomLocal.wheels.filter((wheel) => wheel.active);
-  for (const phase of roomLocal.phases) {
-    if (phase.rewardWheelKey === undefined) continue;
-    const wheel = activeWheels.find((candidate) => candidate.key === phase.rewardWheelKey);
-    if (wheel === undefined || wheel.encounterPhaseKey !== phase.key) {
+  for (const wheel of activeWheels) {
+    const phase = roomLocal.phases.find((candidate) => candidate.key === wheel.encounterPhaseKey);
+    if (phase?.rewardWheelKey !== wheel.key) {
       throw new StructuredWorkspaceProjectionContractError(
-        `Active Ship phase ${phase.key} has no matching projected wheel ${phase.rewardWheelKey}`,
+        `Ship wheel ${wheel.key} has no active declaration-owned encounter phase`,
       );
     }
   }
-  const phaseIndexForWheel = (wheelKey: string): number => {
-    const wheel = activeWheels.find((candidate) => candidate.key === wheelKey);
-    if (wheel === undefined) {
+  const phaseIndexForKey = (phaseKey: string): number => {
+    const index = roomLocal.phases.findIndex((phase) => phase.key === phaseKey);
+    if (index < 0) {
       throw new StructuredWorkspaceProjectionContractError(
-        `Ship room action references inactive wheel ${wheelKey}`,
+        `Ship timeline references unknown phase ${phaseKey}`,
       );
     }
-    const phaseIndex = roomLocal.phases.findIndex(
-      (phase) => phase.key === wheel.encounterPhaseKey && phase.rewardWheelKey === wheel.key,
-    );
-    if (phaseIndex >= 0) return phaseIndex;
-    throw new StructuredWorkspaceProjectionContractError(
-      `Ship wheel ${wheelKey} has no active declaration-owned encounter phase`,
-    );
+    return index;
   };
-  const phaseIndexForWindow = (window: WorkspaceRoomActionRow['window']): number => {
-    switch (window.kind) {
-      case 'shipPreCombat': {
-        const wheelPhaseIndex = phaseIndexForWheel(window.wheelKey);
-        if (wheelPhaseIndex > 0) return wheelPhaseIndex - 1;
-        throw new StructuredWorkspaceProjectionContractError(
-          `Ship pre-combat action ${window.wheelKey} has no preceding phase`,
-        );
-      }
-      case 'shipPostCombat':
-        return phaseIndexForWheel(window.wheelKey);
-      case 'postOutgoing':
-        return roomLocal.phases.length - 1;
-      case 'standard': {
-        if (window.phase !== 'afterCombat') {
-          throw new StructuredWorkspaceProjectionContractError(
-            `Ship room action published unsupported ${window.phase} standard window`,
-          );
-        }
+  const wheelForNextPhase = (phaseIndex: number): WorkspaceRewardWheelDescriptor | undefined => {
+    const nextPhase = roomLocal.phases[phaseIndex + 1];
+    return nextPhase?.rewardWheelKey === undefined
+      ? undefined
+      : activeWheels.find((wheel) => wheel.key === nextPhase.rewardWheelKey);
+  };
+  const boundaryPhaseIndex = (boundary: WorkspaceRoomLifecycleBoundary): number => {
+    switch (boundary.kind) {
+      case 'roomEntered':
         return 0;
-      }
-      case 'fields':
-        throw new StructuredWorkspaceProjectionContractError(
-          'Ship room action published a Fields lifecycle window',
+      case 'encounterStart':
+      case 'encounterEnd':
+        return phaseIndexForKey(boundary.phaseKey);
+      case 'nextPhase': {
+        const targetIndex = roomLocal.phases.findIndex(
+          (phase) => phase.rewardWheelKey === boundary.wheelKey,
         );
+        return targetIndex <= 0 ? 0 : targetIndex - 1;
+      }
+      case 'outgoingGeneration':
+      case 'cleanup':
+        return roomLocal.phases.length - 1;
     }
   };
-  const activeActionRows = roomActions?.rows.filter((row) => !row.stale) ?? [];
+  const checkpointKeyForBoundary = (boundary: WorkspaceRoomLifecycleBoundary): string => {
+    switch (boundary.kind) {
+      case 'encounterEnd':
+        return `combat:${boundary.phaseKey}`;
+      case 'nextPhase':
+        return `nextPhaseUsable:${boundary.wheelKey}`;
+      default:
+        return boundary.key;
+    }
+  };
+  const actionByKey = new Map(roomActions?.rows.map((row) => [row.key, row]) ?? []);
+  const phaseRows = roomLocal.phases.map(() => [] as WorkspaceRoomActionRow[]);
+  const phaseBoundaryEntries = roomLocal.phases.map(
+    () => [] as Extract<WorkspaceRoomLifecycleTimelineEntry, { readonly kind: 'boundary' }>[],
+  );
+  const phaseCheckpointEntries = roomLocal.phases.map(
+    () => [] as WorkspaceRoomActions['checkpoints'][number][],
+  );
+  if (roomActions !== undefined) {
+    let currentPhaseIndex = 0;
+    for (const entry of roomActions.timeline.entries) {
+      if (entry.kind === 'boundary') {
+        const phaseIndex = boundaryPhaseIndex(entry.boundary);
+        phaseBoundaryEntries[phaseIndex]!.push(entry);
+        if (entry.boundary.kind === 'encounterStart') currentPhaseIndex = phaseIndex;
+        continue;
+      }
+      const row = actionByKey.get(entry.actionKey);
+      if (row === undefined) continue;
+      const phaseIndex =
+        entry.phaseKey === undefined ? currentPhaseIndex : phaseIndexForKey(entry.phaseKey);
+      phaseRows[phaseIndex]!.push(row);
+    }
+    for (const checkpoint of roomActions.checkpoints) {
+      if (checkpoint.key === 'exitUsable') continue;
+      const matchingBoundary = roomActions.timeline.entries.find(
+        (entry) =>
+          entry.kind === 'boundary' && checkpointKeyForBoundary(entry.boundary) === checkpoint.key,
+      );
+      const phaseIndex =
+        matchingBoundary?.kind === 'boundary'
+          ? boundaryPhaseIndex(matchingBoundary.boundary)
+          : roomLocal.phases.length - 1;
+      phaseCheckpointEntries[phaseIndex]!.push(checkpoint);
+    }
+  }
   const phases: WorkspaceShipPhasePresentation[] = roomLocal.phases.map((phase, index) => {
     const encounter = encounterPhases.find((candidate) => candidate.address.phaseKey === phase.key);
-    const followingPhase = roomLocal.phases[index + 1];
-    const wheel = activeWheels.find(
-      (candidate) => candidate.encounterPhaseKey === followingPhase?.key,
-    );
+    const wheel = wheelForNextPhase(index);
     return Object.freeze({
-      actionRows: Object.freeze(
-        activeActionRows.filter((row) => phaseIndexForWindow(row.window) === index),
-      ),
-      checkpoints: Object.freeze(
-        roomActions?.checkpoints.filter(
-          (checkpoint) => phaseIndexForWindow(checkpoint.window) === index,
-        ) ?? [],
-      ),
+      actionRows: Object.freeze(phaseRows[index]!),
+      checkpoints: Object.freeze(phaseCheckpointEntries[index]!),
       ...(encounter === undefined ? {} : { encounter }),
       key: phase.key,
       label: phase.label,
@@ -1970,7 +2051,7 @@ function shipWorkbenchPresentation(
     features,
     kind: 'ship' as const,
     phases: Object.freeze(phases),
-    repairRows: Object.freeze(roomActions?.rows.filter((row) => row.stale) ?? []),
+    repairRows: Object.freeze(roomActions?.repairRows ?? []),
     ...(roomActions === undefined ? {} : { roomActions }),
   });
 }
@@ -2272,9 +2353,18 @@ export function assembleWorkspaceOccurrence(
   ]);
   const features = roomFeatures(input, room, zagreusSpawn, naturalChaosSpawn);
   const workbench = roomWorkbenchPresentation(encounterPhases, features, roomLocal, roomActions);
+  const entryReward =
+    input.isEntry === true
+      ? allRewardControls.find(
+          (control) =>
+            semanticAddressKey(control.owner.address) ===
+            semanticAddressKey(createIncomingRewardAddress(input.biome, occurrence.occurrenceId)),
+        )
+      : undefined;
   const roomSummary: WorkspaceRoomSummary = Object.freeze({
     address,
     detailsActive: input.facts.detailsActive,
+    ...(entryReward === undefined ? {} : { entryReward }),
     encounterPhases,
     entered,
     gameName: occurrence.gameName,
@@ -2329,6 +2419,90 @@ export function assembleWorkspaceOccurrence(
     marker: roomSummary.marker,
     room: roomSummary,
   });
+  const phaseTab = (phaseKey: string): WorkspaceRoomTab => {
+    if (roomLocal.kind !== 'ship') return 'actions';
+    const phaseIndex = roomLocal.phases.findIndex((phase) => phase.key === phaseKey);
+    switch (phaseIndex) {
+      case 0:
+        return 'shipIntroActions';
+      case 1:
+        return 'shipCombat1Actions';
+      case 2:
+        return 'shipCombat2Actions';
+      default:
+        return 'actions';
+    }
+  };
+  for (const phase of encounterPhases) {
+    input.markerDestinations.setRoomTab(
+      [
+        phase.marker,
+        ...(phase.traitOffer === undefined ? [] : [phase.traitOffer.marker]),
+        ...(phase.gorgonAthena === undefined ? [] : [phase.gorgonAthena.marker]),
+      ],
+      phaseTab(phase.address.phaseKey),
+    );
+  }
+  if (roomActions !== undefined) {
+    const shipRepairKeys = new Set(roomActions.repairRows.map((row) => row.key));
+    const timelineActionPhaseKeys = new Map(
+      roomActions.timeline.entries.flatMap((entry) =>
+        entry.kind === 'action' && entry.phaseKey !== undefined
+          ? [[entry.actionKey, entry.phaseKey] as const]
+          : [],
+      ),
+    );
+    for (const row of roomActions.rows) {
+      const wheelKey =
+        row.window.kind === 'shipPostCombat' || row.window.kind === 'shipPreCombat'
+          ? row.window.wheelKey
+          : undefined;
+      const tab =
+        roomLocal.kind === 'ship' && shipRepairKeys.has(row.key)
+          ? 'shipInactiveRepair'
+          : row.reference.kind === 'interactEncounter' || row.reference.kind === 'interactGorgon'
+            ? phaseTab(row.reference.phaseKey)
+            : roomLocal.kind === 'ship' && timelineActionPhaseKeys.has(row.key)
+              ? phaseTab(timelineActionPhaseKeys.get(row.key)!)
+              : wheelKey !== undefined
+                ? phaseTab(
+                    roomLocal.kind === 'ship'
+                      ? (roomLocal.phases.find((phase) => phase.rewardWheelKey === wheelKey)?.key ??
+                          '')
+                      : '',
+                  )
+                : 'actions';
+      input.markerDestinations.setRoomTab(
+        [
+          row.marker,
+          ...(row.rewardPayload === undefined
+            ? []
+            : [row.rewardPayload.control.marker, ...rewardChildMarkers(row.rewardPayload.control)]),
+        ],
+        tab,
+      );
+    }
+  }
+  if (roomLocal.kind === 'ship') {
+    for (const wheel of roomLocal.wheels) {
+      const workbenchPhase =
+        workbench.kind === 'ship'
+          ? workbench.phases.find((phase) => phase.wheel?.key === wheel.key)
+          : undefined;
+      if (wheel.active && workbenchPhase === undefined) {
+        throw new StructuredWorkspaceProjectionContractError(
+          `Ship wheel ${wheel.key} has no preceding workbench phase`,
+        );
+      }
+      const tab: WorkspaceRoomTab = !wheel.active
+        ? 'shipInactiveRepair'
+        : phaseTab(workbenchPhase!.key);
+      input.markerDestinations.setRoomTab(
+        [wheel.marker, ...wheel.offers.flatMap((offer) => [offer.control.marker])],
+        tab,
+      );
+    }
+  }
   const localInteractionRequirements = occurrenceInteractionRequirements(
     input.catalog,
     roomSummary,

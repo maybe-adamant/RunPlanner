@@ -150,6 +150,13 @@ export {
   type RoomActionWindow,
 } from './room-actions';
 export {
+  assembleRoomLifecycleTimeline,
+  type RoomLifecycleBoundary,
+  type RoomLifecycleTimeline,
+  type RoomLifecycleTimelineEntry,
+  type RoomLifecycleTimelineInput,
+} from './room-actions';
+export {
   type EncounterPhaseCandidateSupport,
   type EncounterPhaseSequenceStatus,
   encounterPhaseAuthoringDomainForRoom,

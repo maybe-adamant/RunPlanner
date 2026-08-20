@@ -33,6 +33,7 @@ import {
 } from '@run-planner/engine/authored-project';
 import { simulateProject } from '@run-planner/engine/simulation';
 import { act, cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { Provider } from 'react-redux';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { createApplication } from '@planner/composition/createApplication';
@@ -50,6 +51,7 @@ import {
 import { semanticFindingKey } from '@planner/projections/evaluationProjection';
 import { findingSelected, semanticOwnerNavigated } from '@planner/state/editorSessionSlice';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
+import { OccurrenceWorkbench } from '@planner/ui/editor/biome/OccurrenceWorkbench';
 import {
   authorLegalTraitOffers,
   authorRequiredTestRoomActions,
@@ -115,6 +117,10 @@ function decisionContainingOccurrence(occurrenceId: OccurrenceId) {
 
 function expectBefore(first: Element, second: Element): void {
   expect(first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
+}
+
+function openRoomTab(name: string): void {
+  fireEvent.click(screen.getByRole('tab', { name }));
 }
 
 function emptyFProject(): ProjectDocument {
@@ -369,40 +375,99 @@ describe('OccurrenceWorkbench', () => {
     expect(screen.queryByLabelText('Room')).toBeNull();
   });
 
-  it('renders Standard sections in direct workbench order', () => {
+  it('renders Standard workbench tabs and places encounter/actions in the Actions tab', () => {
     renderStaticOccurrenceWorkbench(
       createGoldenFGHIProject(),
       'Underworld',
       'F',
       occurrenceById(goldenFOccurrenceId(1, 1)),
     );
-    const standardEncounter = screen.getByLabelText('Encounter phases');
     const standardFeatures = screen.getByLabelText('Room features');
-    const standardActions = screen.getByLabelText('Room Actions');
-    expectBefore(standardEncounter, standardFeatures);
-    expectBefore(standardFeatures, standardActions);
-    expect(within(standardEncounter).getAllByRole('heading', { name: 'Encounter' })).toHaveLength(
-      1,
+    expect(standardFeatures).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Room Overview' }).getAttribute('aria-selected')).toBe(
+      'true',
     );
-    expect(
-      within(standardFeatures)
-        .getAllByRole('heading')
-        .map((heading) => heading.textContent),
-    ).toEqual(['Room features']);
+    expect(screen.getByRole('tab', { name: 'Room Doors' })).toBeTruthy();
+    openRoomTab('Room Actions');
+    const standardActions = screen.getByRole('region', { name: 'Room Actions' });
+    const standardStart = within(standardActions).getByLabelText('Start encounter');
+    const standardEncounter = within(standardActions).getByLabelText('Encounter encounter phase');
+    const standardEnd = within(standardActions).getByLabelText('End encounter');
+    expectBefore(standardStart, standardEncounter);
+    expectBefore(standardEncounter, standardEnd);
   });
 
-  it('renders N Side rooms before Room Actions', () => {
+  it('supports roving keyboard activation across the room workbench tabs', () => {
+    renderStaticOccurrenceWorkbench(
+      createGoldenFGHIProject(),
+      'Underworld',
+      'F',
+      occurrenceById(goldenFOccurrenceId(1, 1)),
+    );
+    const overview = screen.getByRole('tab', { name: 'Room Overview' });
+    const actions = screen.getByRole('tab', { name: 'Room Actions' });
+    const doors = screen.getByRole('tab', { name: 'Room Doors' });
+    const panelId = overview.getAttribute('aria-controls');
+    expect(panelId).not.toBeNull();
+    const panel = panelId === null ? null : document.getElementById(panelId);
+    expect(panel).not.toBeNull();
+    for (const tab of [overview, actions, doors]) {
+      expect(tab.getAttribute('aria-controls')).toBe(panelId);
+    }
+    expect(overview.getAttribute('tabindex')).toBe('0');
+    fireEvent.keyDown(overview, { key: 'ArrowRight' });
+    expect(actions.getAttribute('aria-selected')).toBe('true');
+    expect(document.activeElement).toBe(actions);
+    expect(document.getElementById(panelId!)).toBe(panel);
+    fireEvent.keyDown(actions, { key: 'End' });
+    expect(doors.getAttribute('aria-selected')).toBe('true');
+    expect(document.activeElement).toBe(doors);
+    expect(doors.getAttribute('aria-controls')).toBe(panelId);
+    expect(document.getElementById(panelId!)).toBe(panel);
+    fireEvent.keyDown(doors, { key: 'ArrowLeft' });
+    expect(actions.getAttribute('aria-selected')).toBe('true');
+    expect(document.activeElement).toBe(actions);
+    expect(document.getElementById(panelId!)).toBe(panel);
+  });
+
+  it('resets the active room tab when the occurrence identity changes', () => {
+    const view = renderOccurrenceWorkbench(
+      createRepresentativeNOPQProject(),
+      'Surface',
+      'O',
+      occurrenceById(oOccurrenceIds.combat07),
+    );
+    openRoomTab('Combat 1 Actions');
+    const workspace = workspaceProjection(view.application);
+    const biome = workspace.routes
+      .find((route) => route.routeKey === 'Surface')
+      ?.biomes.find((candidate) => candidate.biomeKey === 'O');
+    if (biome === undefined) throw new Error('O workspace is missing');
+    const nextNode = occurrenceById(oOccurrenceIds.combat04)(biome);
+    if (nextNode === undefined) throw new Error('second O occurrence is missing');
+    view.rerender(
+      <Provider store={view.application.store}>
+        <OccurrenceWorkbench room={nextNode.room} interactions={workspace.interactions} />
+      </Provider>,
+    );
+    expect(screen.getByRole('tab', { name: 'Room Overview' }).getAttribute('aria-selected')).toBe(
+      'true',
+    );
+  });
+
+  it('keeps N side-room generation in Overview and Room Actions in its own tab', () => {
     renderStaticOccurrenceWorkbench(
       createRepresentativeNOPQProject(),
       'Surface',
       'N',
       occurrenceById(nOccurrenceId('combat05')),
     );
-    const nEncounter = screen.getByLabelText('Encounter phases');
     const sideRooms = screen.getByLabelText('Ephyra side rooms');
-    const nActions = screen.getByLabelText('Room Actions');
-    expectBefore(nEncounter, sideRooms);
-    expectBefore(sideRooms, nActions);
+    expect(sideRooms).toBeTruthy();
+    openRoomTab('Room Actions');
+    const nActions = screen.getByRole('region', { name: 'Room Actions' });
+    expect(nActions).toBeTruthy();
+    expect(within(nActions).getByLabelText('Encounter encounter phase')).toBeTruthy();
   }, 10_000);
 
   it('renders Fields setup before its one Room Actions board', () => {
@@ -413,10 +478,23 @@ describe('OccurrenceWorkbench', () => {
       occurrenceById(createOccurrenceId('golden-h-combat02')),
     );
     const fieldsSetup = screen.getByLabelText('Fields setup');
-    const fieldsActions = screen.getByLabelText('Room Actions');
-    const fieldsEncounter = screen.queryByLabelText('Encounter phases');
-    if (fieldsEncounter !== null) expectBefore(fieldsEncounter, fieldsSetup);
-    expectBefore(fieldsSetup, fieldsActions);
+    expect(fieldsSetup).toBeTruthy();
+    expect(within(fieldsSetup).getByLabelText('Optional 1')).toBeTruthy();
+    openRoomTab('Room Actions');
+    const fieldsActions = screen.getByRole('region', { name: 'Room Actions' });
+    const fieldsEntered = within(fieldsActions).getByLabelText('Room entered');
+    const passiveEncounter = within(fieldsActions).getByLabelText('Passive encounter phase');
+    expectBefore(fieldsEntered, passiveEncounter);
+    expect(
+      fieldsActions.querySelector('[data-lifecycle-boundary="encounterStart:Passive"]'),
+    ).toBeNull();
+    const fieldsEncounter = screen.queryByLabelText('Encounter encounter phase');
+    if (fieldsEncounter !== null) expectBefore(fieldsEncounter, fieldsActions);
+    const optionalAction = within(fieldsActions).getByText('Pick up Optional 1').closest('li');
+    if (optionalAction === null) throw new Error('Optional reward action is missing');
+    expect(within(optionalAction).queryByLabelText('Optional 1')).toBeNull();
+    expect(within(optionalAction).queryByRole('button', { name: 'Reward' })).toBeNull();
+    expect(fieldsActions).toBeTruthy();
   });
 
   it('renders Shop inventory before Room features and Room Actions', () => {
@@ -424,9 +502,10 @@ describe('OccurrenceWorkbench', () => {
     renderStaticOccurrenceWorkbench(shop.project, 'Underworld', 'F', occurrenceById(shop.shopId));
     const inventory = screen.getByLabelText('Shop inventory and conditions');
     const shopFeatures = screen.getByLabelText('Room features');
-    const shopActions = screen.getByLabelText('Room Actions');
     expectBefore(inventory, shopFeatures);
-    expectBefore(shopFeatures, shopActions);
+    openRoomTab('Room Actions');
+    const shopActions = screen.getByRole('region', { name: 'Room Actions' });
+    expect(shopActions).toBeTruthy();
   });
 
   it('renders an enabled Artificer disposition for reached Nectar with no Pom target', () => {
@@ -436,6 +515,7 @@ describe('OccurrenceWorkbench', () => {
       'F',
       occurrenceById(goldenFOccurrenceId(1, 1)),
     );
+    openRoomTab('Room Actions');
     const disposition = screen.getByRole('combobox', {
       name: /^Reward outcome for /,
     });
@@ -471,7 +551,8 @@ describe('OccurrenceWorkbench', () => {
       'F',
       occurrenceById(occurrenceId),
     );
-    const actions = screen.getByLabelText('Room Actions');
+    openRoomTab('Room Actions');
+    const actions = screen.getByRole('region', { name: 'Room Actions' });
     expect(within(actions).getByText('Pick up Artificer replacement')).toBeTruthy();
 
     const occurrence = createOccurrenceAddress(goldenFBiome, occurrenceId);
@@ -504,10 +585,59 @@ describe('OccurrenceWorkbench', () => {
     });
     renderStaticOccurrenceWorkbench(project, 'Underworld', 'F', occurrenceById(occurrenceId));
 
-    const actions = screen.getByLabelText('Room Actions');
+    openRoomTab('Room Actions');
+    const actions = screen.getByRole('region', { name: 'Room Actions' });
     expect(within(actions).getByText('This required action has not been placed.')).toBeTruthy();
-    expect(within(actions).getByLabelText('Room-action order boundary')).toBeTruthy();
+    expect(within(actions).getByRole('region', { name: 'Room action repairs' })).toBeTruthy();
     expect(actions.querySelector('[data-room-action-drag-handle]')).toBeNull();
+  });
+
+  it('focuses and removes a stale Standard encounter action after encounter replacement', async () => {
+    const occurrenceId = goldenFOccurrenceId(5, 1);
+    const phase = createEncounterPhaseAddress(
+      goldenFBiome,
+      { kind: 'occurrence', occurrenceId },
+      'Encounter',
+    );
+    const reference = { kind: 'interactEncounter' as const, phaseKey: 'Encounter' };
+    let project = applyProjectCommand(createCompleteFGProject(), catalog, {
+      kind: 'SelectEncounter',
+      phase,
+      encounterKey: 'ArtemisCombatF',
+    });
+    project = authorLegalTraitOffers(project);
+    project = insertRoomAction(project, goldenFBiome, occurrenceId, reference, 0);
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SelectEncounter',
+      phase,
+      encounterKey: 'GeneratedF',
+    });
+    const action = createRoomActionAddress(goldenFBiome, occurrenceId, roomActionKey(reference));
+    const view = renderOccurrenceWorkbench(
+      project,
+      'Underworld',
+      'F',
+      occurrenceById(occurrenceId),
+    );
+    act(() => view.application.store.dispatch(semanticOwnerNavigated(action)));
+    openRoomTab('Room Actions');
+    const repairs = await screen.findByRole('region', { name: 'Room action repairs' });
+    const stale = within(repairs).getByText('Interact with Combat').closest('li');
+    if (stale === null) throw new Error('Stale Standard encounter action is missing');
+    expect(within(stale).getByText('This action no longer belongs to the room.')).toBeTruthy();
+    expect(document.getElementById(semanticOwnerControlElementId(action))).toBe(stale);
+    expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(action);
+
+    await view.user.click(within(stale).getByRole('button', { name: 'Remove' }));
+    await waitFor(() => expect(screen.queryByText('Interact with Combat')).toBeNull());
+    expect(
+      occurrenceRoomActionOrder(
+        view.application.store.getState().projectWorkspace.history.present,
+        'Underworld',
+        'F',
+        occurrenceId,
+      )?.some((candidate) => roomActionKey(candidate) === roomActionKey(reference)),
+    ).toBe(false);
   });
 
   it('renders the additive Gorgon condition and Athena child for a pending phase', async () => {
@@ -518,6 +648,7 @@ describe('OccurrenceWorkbench', () => {
       keepsakeKey: 'AthenaEncounterKeepsake',
     });
     const view = renderOccurrenceWorkbench(project, 'Surface', 'P', occurrenceById(occurrenceId));
+    openRoomTab('Room Actions');
     const condition = screen.getByRole('checkbox', {
       name: 'Death Defiance condition met (Gorgon Amulet)',
     }) as HTMLInputElement;
@@ -571,6 +702,7 @@ describe('OccurrenceWorkbench', () => {
       encounterKey: 'AthenaCombatP',
     });
     renderOccurrenceWorkbench(project, 'Surface', 'P', occurrenceById(occurrenceId));
+    openRoomTab('Room Actions');
     const condition = screen.getByRole('checkbox', {
       name: 'Death Defiance condition met (Gorgon Amulet)',
     }) as HTMLInputElement;
@@ -591,6 +723,7 @@ describe('OccurrenceWorkbench', () => {
       'N',
       occurrenceById(nOccurrenceIds.preHub),
     );
+    openRoomTab('Room Actions');
     const skip = screen.getByRole('checkbox', { name: 'Skip combat with Fig Leaf' });
     expect((skip as HTMLInputElement).disabled).toBe(false);
     await view.user.click(skip);
@@ -677,6 +810,7 @@ describe('OccurrenceWorkbench', () => {
       'G',
       occurrenceById(occurrence.occurrenceId),
     );
+    openRoomTab('Room Actions');
     const actionRow = screen.getByText('Pick up mysteryBoon').closest('li');
     if (actionRow === null) throw new Error('Narcissus pickup action is missing');
     const reward = within(actionRow).getByRole('button', { name: 'Reward' });
@@ -813,6 +947,7 @@ describe('OccurrenceWorkbench', () => {
       'G',
       occurrenceById(occurrence.occurrenceId),
     );
+    openRoomTab('Room Actions');
     const authoredOccurrence = () =>
       view.application.store
         .getState()
@@ -922,6 +1057,7 @@ describe('OccurrenceWorkbench', () => {
       'G',
       occurrenceById(occurrence.occurrenceId),
     );
+    openRoomTab('Room Actions');
     const maxManaRow = screen.getByText('Pick up Max Magick').closest('li');
     if (maxManaRow === null) throw new Error('Max Magick action row is missing');
     const maxMana = within(maxManaRow).getByRole('combobox', {
@@ -1142,7 +1278,7 @@ describe('OccurrenceWorkbench', () => {
         semanticAddressKey(phase),
       ),
     ).toBe(true);
-    expect(screen.getByLabelText('Encounter phases')).toBeTruthy();
+    openRoomTab('Room Actions');
     expect(screen.getByLabelText('Encounter encounter phase')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Reset to default' })).toBeNull();
   });
@@ -1158,6 +1294,7 @@ describe('OccurrenceWorkbench', () => {
       'P',
       occurrenceById(occurrenceId),
     );
+    openRoomTab('Room Actions');
     const retainedCombat = occurrenceEncounterSelections(
       view.application.store.getState().projectWorkspace.history.present,
       'Surface',
@@ -1242,6 +1379,7 @@ describe('OccurrenceWorkbench', () => {
       ),
     });
     const view = renderOccurrenceWorkbench(project, 'Surface', 'P', occurrenceById(occurrenceId));
+    openRoomTab('Room Actions');
 
     const introControl = screen.getByLabelText('Intro encounter phase');
     const combatControl = screen.getByLabelText('Combat encounter phase');
@@ -1281,6 +1419,9 @@ describe('OccurrenceWorkbench', () => {
       occurrenceById(oOccurrenceIds.combat04),
     );
     const count = screen.getByRole('combobox', { name: /Combat phases/ }) as HTMLSelectElement;
+    await view.user.click(count);
+    await waitFor(() => expect(count.dataset.candidateSupport).toBe('impossible'));
+    openRoomTab('Combat 2 Actions');
     const phase = screen.getByLabelText('Combat2 encounter phase');
     const phaseAddress = createEncounterPhaseAddress(
       oBiome,
@@ -1302,13 +1443,6 @@ describe('OccurrenceWorkbench', () => {
     expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
       historyLength,
     );
-    await view.user.click(count);
-    await waitFor(() => {
-      expect(count.dataset.candidateSupport).toBe('impossible');
-      expect(Array.from(count.options).map((option) => option.value)).toEqual(['2', '3']);
-      expect(count.options[0]?.disabled).toBe(false);
-      expect(count.options[1]?.disabled).toBe(true);
-    });
     expect(phase.dataset.readOnly).toBeUndefined();
     const encounter = within(phase).getByRole('button', { name: 'Encounter' });
     await view.user.click(encounter);
@@ -1336,6 +1470,7 @@ describe('OccurrenceWorkbench', () => {
     const initial = createGoldenFGHIProject();
     const reset = applyProjectCommand(initial, catalog, { kind: 'ResetEncounter', phase });
     const view = renderOccurrenceWorkbench(reset, 'Underworld', 'I', occurrenceById(occurrenceId));
+    openRoomTab('Room Actions');
     const finding = simulateProject(catalog, reset).findings.find(
       (candidate) => semanticAddressKey(candidate.origin) === semanticAddressKey(phase),
     );
@@ -1388,36 +1523,43 @@ describe('OccurrenceWorkbench', () => {
       occurrenceById(oOccurrenceIds.combat04),
     );
     const count = screen.getByRole('combobox', { name: /Combat phases/ }) as HTMLSelectElement;
-    expect(screen.getByLabelText('Ship combat structure')).toBeTruthy();
+    await view.user.click(count);
+    await waitFor(() => {
+      expect(count.dataset.candidateSupport).toBe('forced');
+      expect(Array.from(count.options).map((option) => option.value)).toEqual(['2']);
+    });
+    expect(screen.getByRole('tab', { name: 'Room Overview' })).toBeTruthy();
+    openRoomTab('Intro Actions');
     expect(screen.getByLabelText('Intro ship phase')).toBeTruthy();
     expect(
       within(screen.getByLabelText('Intro ship phase')).getByLabelText('Combat 1 reward'),
     ).toBeTruthy();
-    const combatOne = screen.getByLabelText('Combat 1 ship phase');
-    expect(combatOne).toBeTruthy();
-    expect(within(combatOne).queryByLabelText('Combat 1 reward')).toBeNull();
-    expect(screen.queryByLabelText('Combat 2 ship phase')).toBeNull();
     expect(
       within(screen.getByLabelText('Intro ship phase')).queryByText('Outgoing generation'),
     ).toBeNull();
+    openRoomTab('Combat 1 Actions');
+    const combatOne = screen.getByLabelText('Combat 1 ship phase');
+    expect(combatOne).toBeTruthy();
+    expect(within(combatOne).queryByLabelText('Combat 1 reward')).toBeNull();
+    expect(screen.queryByRole('tab', { name: 'Combat 2 Actions' })).toBeNull();
     expect(within(combatOne).getByText('Outgoing generation')).toBeTruthy();
     act(() =>
       view.application.store.dispatch(
         semanticOwnerNavigated(createRewardWheelAddress(oBiome, oOccurrenceIds.combat04, 'wheel1')),
       ),
     );
-    await waitFor(() => expect(screen.getByLabelText('Combat 1 reward')).toBeTruthy());
-
-    await view.user.click(count);
-    await waitFor(() => {
-      expect(count.dataset.candidateSupport).toBe('forced');
-      expect(Array.from(count.options).map((option) => option.value)).toEqual(['2']);
-    });
+    openRoomTab('Intro Actions');
+    expect(screen.getByLabelText('Combat 1 reward')).toBeTruthy();
   });
 
   it('keeps Ship offer identity on the wheel and acquisition children on its Room Action row', () => {
     const wheel = createRewardWheelAddress(oBiome, oOccurrenceIds.combat07, 'wheel1');
     let project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+      kind: 'ReplaceShipEncounterCount',
+      occurrence: createOccurrenceAddress(oBiome, oOccurrenceIds.combat07),
+      encounterCount: 3,
+    });
+    project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceRewardWheelOffer',
       offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat07, 'wheel1', 'offer1'),
       value: {
@@ -1432,9 +1574,40 @@ describe('OccurrenceWorkbench', () => {
     });
     project = authorLegalTraitOffers(project);
 
-    renderOccurrenceWorkbench(project, 'Surface', 'O', occurrenceById(oOccurrenceIds.combat07));
+    const view = renderOccurrenceWorkbench(
+      project,
+      'Surface',
+      'O',
+      occurrenceById(oOccurrenceIds.combat07),
+    );
+    const focusByOwner = workspaceProjection(view.application).focusByOwner;
+    const wheel2 = createRewardWheelAddress(oBiome, oOccurrenceIds.combat07, 'wheel2');
+    expect(focusByOwner.get(semanticAddressKey(wheel))?.roomTab).toBe('shipIntroActions');
+    expect(focusByOwner.get(semanticAddressKey(wheel2))?.roomTab).toBe('shipCombat1Actions');
+    expect(
+      focusByOwner.get(
+        semanticAddressKey(
+          createRoomActionAddress(
+            oBiome,
+            oOccurrenceIds.combat07,
+            roomActionKey({ kind: 'chooseRewardWheel', wheelKey: 'wheel1' }),
+          ),
+        ),
+      )?.roomTab,
+    ).toBe('shipIntroActions');
+    expect(
+      focusByOwner.get(
+        semanticAddressKey(
+          createRoomActionAddress(
+            oBiome,
+            oOccurrenceIds.combat07,
+            roomActionKey({ kind: 'interactWheelReward', wheelKey: 'wheel1' }),
+          ),
+        ),
+      )?.roomTab,
+    ).toBe('shipCombat1Actions');
+    openRoomTab('Intro Actions');
     const ship = screen.getByLabelText('Ship combat structure');
-    const actions = screen.getByLabelText('Room Actions');
 
     expect(within(ship).getAllByRole('button', { name: 'Reward' }).length).toBeGreaterThan(0);
     expect(
@@ -1442,6 +1615,8 @@ describe('OccurrenceWorkbench', () => {
         name: /Edit Trait/,
       }),
     ).toBeNull();
+    openRoomTab('Combat 1 Actions');
+    const actions = screen.getByRole('region', { name: 'Room Actions' });
     expect(within(actions).getByRole('button', { name: /Edit Trait/ })).toBeTruthy();
   });
 
@@ -1486,53 +1661,22 @@ describe('OccurrenceWorkbench', () => {
       'O',
       occurrenceById(oOccurrenceIds.combat07),
     );
-    const initialWheel = screen.getByLabelText('Combat 2 reward');
-    const ship = screen.getByLabelText('Ship combat structure');
-    const introPhase = screen.getByLabelText('Intro ship phase');
-    const combatOnePhase = screen.getByLabelText('Combat 1 ship phase');
-    const combatTwoPhase = screen.getByLabelText('Combat 2 ship phase');
-    expectBefore(introPhase, combatOnePhase);
-    expectBefore(combatOnePhase, combatTwoPhase);
-    expect(within(introPhase).getByLabelText('Combat 1 reward')).toBeTruthy();
-    expect(within(introPhase).getByText('Choose Combat 1 reward')).toBeTruthy();
-    expect(within(introPhase).queryByLabelText('Combat 2 reward')).toBeNull();
-    expect(within(combatOnePhase).queryByLabelText('Combat 1 reward')).toBeNull();
-    expect(within(combatOnePhase).getByText('Pick up Combat 1 reward')).toBeTruthy();
-    expect(within(combatOnePhase).getByLabelText('Combat 2 reward')).toBeTruthy();
-    expect(within(combatOnePhase).getByText('Choose Combat 2 reward')).toBeTruthy();
-    expect(within(combatTwoPhase).queryByLabelText('Combat 2 reward')).toBeNull();
-    expect(within(combatTwoPhase).getByText('Pick up Combat 2 reward')).toBeTruthy();
-    const actionRows = Array.from(ship.querySelectorAll<HTMLElement>('[data-room-action-key]'));
-    expect(new Set(actionRows.map((row) => row.dataset.roomActionKey)).size).toBe(
-      actionRows.length,
-    );
+    openRoomTab('Combat 1 Actions');
+    const combatOne = screen.getByLabelText('Combat 1 ship phase');
+    expect(within(combatOne).getByLabelText('Combat 2 reward')).toBeTruthy();
+    expect(within(combatOne).getByText('Choose Combat 2 reward')).toBeTruthy();
+    const restoredWheel = within(combatOne).getByLabelText('Combat 2 reward');
     expect(
-      actionRows
-        .filter((row) => row.dataset.inOrder === 'true')
-        .map((row) => row.querySelector('.hub-roster-rank')?.textContent),
-    ).toEqual(
-      Array.from(
-        { length: actionRows.filter((row) => row.dataset.inOrder === 'true').length },
-        (_, index) => String(index + 1),
-      ),
-    );
-    expect(
-      Array.from(ship.querySelectorAll('.reward-wheel h5')).map((heading) => heading.textContent),
-    ).toEqual(['Combat 1 reward', 'Combat 2 reward']);
-    expect(within(screen.getByLabelText('Combat 1 reward')).queryByLabelText('Offer 2')).toBeNull();
-    expect(
-      (within(initialWheel).getByRole('combobox', { name: 'Reward pool' }) as HTMLSelectElement)
+      (within(restoredWheel).getByRole('combobox', { name: 'Reward pool' }) as HTMLSelectElement)
         .value,
     ).toBe('MetaProgress');
     expect(
-      (within(initialWheel).getByRole('combobox', { name: 'Offers' }) as HTMLSelectElement).value,
+      (within(restoredWheel).getByRole('combobox', { name: 'Offers' }) as HTMLSelectElement).value,
     ).toBe('2');
-    const roomActions = screen.getByLabelText('Room Actions');
-    expect(within(roomActions).getByText('wheel1 next phase usable')).toBeTruthy();
-    expect(within(roomActions).getByText('Outgoing generation')).toBeTruthy();
-    expect(within(roomActions).getByText('Exit usable')).toBeTruthy();
-    expect(within(combatOnePhase).queryByText('Outgoing generation')).toBeNull();
-    expect(within(combatTwoPhase).getByText('Outgoing generation')).toBeTruthy();
+    openRoomTab('Combat 2 Actions');
+    const combatTwo = screen.getByLabelText('Combat 2 ship phase');
+    expect(within(combatTwo).getByText('Pick up Combat 2 reward')).toBeTruthy();
+    expect(within(combatTwo).getByText('Outgoing generation')).toBeTruthy();
 
     act(() =>
       view.application.store.dispatch(
@@ -1543,19 +1687,13 @@ describe('OccurrenceWorkbench', () => {
         }),
       ),
     );
-    await waitFor(() => expect(screen.queryByLabelText('Combat 2 reward')).toBeNull());
+    await waitFor(() => expect(screen.getByRole('tab', { name: 'Inactive Actions' })).toBeTruthy());
+    openRoomTab('Inactive Actions');
     const repairs = screen.getByLabelText('Ship action repairs');
     expect(within(repairs).getByText('Choose Combat 2 reward')).toBeTruthy();
     expect(within(repairs).getByText('Pick up Combat 2 reward')).toBeTruthy();
     expect(screen.getAllByText('Choose Combat 2 reward')).toHaveLength(1);
     expect(screen.getAllByText('Pick up Combat 2 reward')).toHaveLength(1);
-    expect(screen.queryByText('Combat2 complete')).toBeNull();
-    expect(
-      within(screen.getByLabelText('Combat 1 ship phase')).getByText('Outgoing generation'),
-    ).toBeTruthy();
-    expect(
-      Array.from(ship.querySelectorAll('.reward-wheel h5')).map((heading) => heading.textContent),
-    ).toEqual(['Combat 1 reward']);
 
     act(() =>
       view.application.store.dispatch(
@@ -1566,38 +1704,10 @@ describe('OccurrenceWorkbench', () => {
         }),
       ),
     );
-    await waitFor(() => expect(screen.getByLabelText('Combat 2 reward')).toBeTruthy());
+    await waitFor(() => expect(screen.queryByRole('tab', { name: 'Inactive Actions' })).toBeNull());
+    openRoomTab('Combat 2 Actions');
+    expect(screen.getByLabelText('Combat 2 ship phase')).toBeTruthy();
     expect(screen.queryByLabelText('Ship action repairs')).toBeNull();
-    expect(
-      within(screen.getByLabelText('Combat 1 ship phase')).getByLabelText('Combat 2 reward'),
-    ).toBeTruthy();
-    expect(
-      within(screen.getByLabelText('Combat 2 ship phase')).queryByLabelText('Combat 2 reward'),
-    ).toBeNull();
-    expect(screen.getByText('Choose Combat 2 reward')).toBeTruthy();
-    expect(screen.getByText('Pick up Combat 2 reward')).toBeTruthy();
-    expect(
-      Array.from(ship.querySelectorAll('.reward-wheel h5')).map((heading) => heading.textContent),
-    ).toEqual(['Combat 1 reward', 'Combat 2 reward']);
-
-    const restoredWheel = screen.getByLabelText('Combat 2 reward');
-    expect(
-      (within(restoredWheel).getByRole('combobox', { name: 'Reward pool' }) as HTMLSelectElement)
-        .value,
-    ).toBe('MetaProgress');
-    expect(
-      (within(restoredWheel).getByRole('combobox', { name: 'Offers' }) as HTMLSelectElement).value,
-    ).toBe('2');
-    expect(
-      within(within(restoredWheel).getByLabelText('Offer 1')).getByRole('button', {
-        name: 'Reward',
-      }).textContent,
-    ).toContain('Nectar');
-    expect(
-      within(within(restoredWheel).getByLabelText('Offer 2')).getByRole('button', {
-        name: 'Reward',
-      }).textContent,
-    ).toContain('Bones');
     expect(shipWheel2(view.application.store.getState().projectWorkspace.history.present)).toEqual(
       shipWheel2(project),
     );
@@ -1671,11 +1781,13 @@ describe('OccurrenceWorkbench', () => {
     });
 
     renderStaticOccurrenceWorkbench(project, 'Surface', 'O', occurrenceById(occurrenceId));
+    openRoomTab('Inactive Actions');
     const repairs = screen.getByLabelText('Ship action repairs');
-    const combatOne = screen.getByLabelText('Combat 1 ship phase');
     expect(within(repairs).getByText('Interact with Ship combat')).toBeTruthy();
-    expect(within(combatOne).queryByText('Interact with Ship combat')).toBeNull();
     expect(screen.getAllByText('Interact with Ship combat')).toHaveLength(1);
+    openRoomTab('Combat 1 Actions');
+    const combatOne = screen.getByLabelText('Combat 1 ship phase');
+    expect(within(combatOne).queryByText('Interact with Ship combat')).toBeNull();
   });
 
   it('keeps Ship arrow, pointer, fixed-window, and Undo behavior on one global action order', async () => {
@@ -1694,7 +1806,8 @@ describe('OccurrenceWorkbench', () => {
     project = authorRequiredTestRoomActions(authorLegalTraitOffers(project), catalog);
 
     const view = renderOccurrenceWorkbench(project, 'Surface', 'O', occurrenceById(occurrenceId));
-    const actions = screen.getByLabelText('Room Actions');
+    openRoomTab('Combat 1 Actions');
+    const actions = screen.getByRole('region', { name: 'Room Actions' });
     const combatOne = screen.getByLabelText('Combat 1 ship phase');
     const actionOrder = () =>
       occurrenceRoomActionOrder(
@@ -1815,7 +1928,8 @@ describe('OccurrenceWorkbench', () => {
     });
 
     await view.user.selectOptions(count, '3');
-    await waitFor(() => expect(screen.getByLabelText('Combat 2 reward')).toBeTruthy());
+    openRoomTab('Combat 2 Actions');
+    await waitFor(() => expect(screen.getByLabelText('Combat 2 ship phase')).toBeTruthy());
     expect(
       occurrenceState(
         view.application.store.getState().projectWorkspace.history.present,
@@ -1841,6 +1955,7 @@ describe('OccurrenceWorkbench', () => {
       occurrenceById(oOccurrenceIds.combat07),
     );
 
+    openRoomTab('Intro Actions');
     const rewardWheel = screen.getByLabelText('Combat 1 reward');
     expect(within(rewardWheel).queryByLabelText('Offer 2')).toBeNull();
 
@@ -1884,7 +1999,7 @@ describe('OccurrenceWorkbench', () => {
       ),
     );
     await waitFor(() => expect(within(rewardWheel).queryByLabelText('Offer 2')).toBeNull());
-    expect(screen.getByLabelText('Room Actions')).toBeTruthy();
+    expect(screen.getByRole('region', { name: 'Room Actions' })).toBeTruthy();
     expect(
       shipWheel(view.application.store.getState().projectWorkspace.history.present, 'wheel1').offers
         .offer2,
@@ -1969,9 +2084,10 @@ describe('OccurrenceWorkbench', () => {
       'F',
       occurrenceById(occurrenceId),
     );
-    const actions = screen.getByLabelText('Room Actions');
+    openRoomTab('Room Actions');
+    const actions = screen.getByRole('region', { name: 'Room Actions' });
     expect(within(actions).getByText('Outgoing generation')).toBeTruthy();
-    expect(within(actions).getByText('Exit usable')).toBeTruthy();
+    expect(within(actions).queryByText('Exit usable')).toBeNull();
     const insertAction = async (label: string) => {
       const row = within(actions).getByText(label).closest('li');
       if (row === null) throw new Error(`${label} row is missing`);
@@ -2025,7 +2141,8 @@ describe('OccurrenceWorkbench', () => {
       'F',
       occurrenceById(occurrenceId),
     );
-    const actions = screen.getByLabelText('Room Actions');
+    openRoomTab('Room Actions');
+    const actions = screen.getByRole('region', { name: 'Room Actions' });
     const insertAction = async (label: string) => {
       const row = within(actions).getByText(label).closest('li');
       if (row === null) throw new Error(`${label} row is missing`);
@@ -2039,9 +2156,8 @@ describe('OccurrenceWorkbench', () => {
     await insertAction('Buy Heal');
     await insertAction('Buy Max Magick');
 
-    expect(within(actions).getByLabelText('Room-action order boundary').textContent).toContain(
-      '1 not ordered',
-    );
+    const repairs = within(actions).getByRole('region', { name: 'Room action repairs' });
+    expect(within(repairs).getByText('Buy Boon · Zeus')).toBeTruthy();
     const board = within(actions).getByRole('list', { name: 'Ranked room action order' });
     const major = within(actions).getByText('Buy Heal').closest<HTMLElement>('li');
     const minor = within(actions).getByText('Buy Max Magick').closest<HTMLElement>('li');

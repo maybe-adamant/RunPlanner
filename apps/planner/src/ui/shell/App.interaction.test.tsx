@@ -671,8 +671,9 @@ describe('planner history interaction', () => {
     ).toMatchObject({ ownerAddress: gold, biomeKey: 'H' });
     const marker = document.getElementById(semanticOwnerElementId(gold));
     expect(marker).toBeTruthy();
-    expect(marker?.closest('tr')?.textContent).toContain('Gold Gold Gold duplicate of Offer 3');
-    expect(marker?.closest('tr')?.nextElementSibling?.textContent).toContain('Max Health');
+    const actionRow = marker?.closest('[data-room-action-key]');
+    expect(actionRow?.textContent).toContain('Gold Gold Gold duplicate of Offer 3');
+    expect(actionRow?.textContent).toContain('Shop purchase is unavailable');
   });
 
   it('opens and focuses the exact All Together set control from its finding', async () => {

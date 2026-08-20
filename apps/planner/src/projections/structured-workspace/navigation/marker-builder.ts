@@ -9,6 +9,7 @@ import {
   type WorkspaceAssessment,
   type WorkspaceInspectorDestination,
   type WorkspaceMarker,
+  type WorkspaceRoomTab,
 } from '../contract';
 
 /**
@@ -20,6 +21,7 @@ export interface WorkspaceMarkerDestinationEmitter {
   marker(address: SemanticAddress, nodeKey?: string): WorkspaceMarker;
   redirect(markers: Iterable<WorkspaceMarker>, nodeKey: string): void;
   redirectTo(marker: WorkspaceMarker, focus: WorkspaceMarker, nodeKey: string): void;
+  setRoomTab(markers: Iterable<WorkspaceMarker>, tab: WorkspaceRoomTab): void;
 }
 
 export interface WorkspaceBiomeMarkerDestinationBuilder {
@@ -109,6 +111,12 @@ export function createWorkspaceBiomeMarkerDestinationBuilder(
           routeKey: input.routeKey,
         }),
       );
+    },
+    setRoomTab(markers: Iterable<WorkspaceMarker>, tab: WorkspaceRoomTab): void {
+      for (const marker of markers) {
+        const destination = requireRegistered(marker);
+        destinations.set(marker.focusKey, Object.freeze({ ...destination, roomTab: tab }));
+      }
     },
   });
 
