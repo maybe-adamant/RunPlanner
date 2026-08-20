@@ -17,7 +17,7 @@ import {
   createGoldenFGHIProject,
   goldenFBiome,
   goldenFOccurrenceId,
-} from '@run-planner/test-fixtures';
+} from '@run-planner/test-fixtures/underworld';
 import {
   appendCompleteN,
   appendNEntry,
@@ -25,7 +25,7 @@ import {
   nBiome,
   nOccurrenceIds,
   nVisitSlotKeys,
-} from '@run-planner/test-fixtures';
+} from '@run-planner/test-fixtures/surface';
 import {
   createStructuredWorkspaceTestServices,
   requireWorkspaceBiome,

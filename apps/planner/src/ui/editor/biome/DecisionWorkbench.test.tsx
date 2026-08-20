@@ -34,8 +34,8 @@ import {
   authoredProjectCommandDispatched,
   authoredProjectUndoRequested,
 } from '@planner/state/projectWorkspaceSlice';
+import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 import {
-  authorLegalTraitOffers,
   createFMidshopPomFrontierProject,
   createGoldenFGHIProject,
   fMidshopPomShopId,
@@ -44,7 +44,7 @@ import {
   goldenFStartId,
   goldenGBiome,
   goldenHBiome,
-} from '@run-planner/test-fixtures';
+} from '@run-planner/test-fixtures/underworld';
 import {
   createRepresentativeNOPQProject,
   appendNEntry,
@@ -57,7 +57,7 @@ import {
   pOccurrenceIds,
   qBiome,
   qOccurrenceIds,
-} from '@run-planner/test-fixtures';
+} from '@run-planner/test-fixtures/surface';
 import {
   renderBiomeClearAction,
   renderDecisionWorkbench,

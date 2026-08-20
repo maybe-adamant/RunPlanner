@@ -26,21 +26,23 @@ import {
   encounterPhaseSequenceStatusForProjectEvaluationAssembly,
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
+import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
+import {
+  createCompleteFGProject,
+  goldenFBiome,
+  goldenFOccurrenceId,
+} from '@run-planner/test-fixtures/underworld';
 import {
   createRepresentativeNOProject,
   createRepresentativeNProject,
   createRepresentativeNOPProject,
-  createCompleteFGProject,
-  authorLegalTraitOffers,
-  goldenFBiome,
-  goldenFOccurrenceId,
   nOccurrenceId,
   oBiome,
   oOccurrenceIds,
   pBiome,
   pOccurrenceId,
   pOccurrenceIds,
-} from '@run-planner/test-fixtures';
+} from '@run-planner/test-fixtures/surface';
 
 import { createCompleteNProject } from '../support/complete-n-project';
 import { nBiome } from '../support/configured-projects';

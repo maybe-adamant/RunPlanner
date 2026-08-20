@@ -34,11 +34,11 @@ import { describe, expect, it } from 'vitest';
 
 import {
   createGoldenFGHIProject,
-  createRepresentativeNOPQProject,
   goldenFBiome,
   goldenFStartId,
   goldenFOccurrenceId,
-} from '@run-planner/test-fixtures';
+} from '@run-planner/test-fixtures/underworld';
+import { createRepresentativeNOPQProject } from '@run-planner/test-fixtures/surface';
 
 import { initializeTestRewardBranches } from '../support/arcana-fear';
 import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidate-artifacts';

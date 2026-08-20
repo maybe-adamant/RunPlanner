@@ -25,10 +25,9 @@ import {
   goldenGBiome,
   goldenHBiome,
   goldenIBiome,
-  nOccurrenceIds,
-  oOccurrenceIds,
-} from '@run-planner/test-fixtures';
-import { createRepresentativeNOPQProject } from '@run-planner/test-fixtures';
+} from '@run-planner/test-fixtures/underworld';
+import { nOccurrenceIds, oOccurrenceIds } from '@run-planner/test-fixtures/surface';
+import { createRepresentativeNOPQProject } from '@run-planner/test-fixtures/surface';
 import type { Catalog, RoomDeclaration } from '@run-planner/engine/catalog-schema';
 import {
   assembleWorkspaceDecision,

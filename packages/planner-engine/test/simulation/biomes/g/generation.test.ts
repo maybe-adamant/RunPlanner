@@ -23,7 +23,7 @@ import {
   goldenGBiome,
   goldenGOccurrenceId,
   goldenGStartId,
-} from '@run-planner/test-fixtures';
+} from '@run-planner/test-fixtures/underworld';
 
 function catalogWithRoom(room: RoomDeclaration): Catalog {
   return Object.freeze({

@@ -3,7 +3,7 @@ import { semanticAddressKey } from '@run-planner/engine/authored-project';
 import { simulateProject } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
-import { createRepresentativeNProject } from '@run-planner/test-fixtures';
+import { createRepresentativeNProject } from '@run-planner/test-fixtures/surface';
 
 function fixture() {
   const project = createRepresentativeNProject();

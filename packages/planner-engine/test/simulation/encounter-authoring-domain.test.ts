@@ -7,13 +7,12 @@ import {
 import { encounterPhaseAuthoringDomainForRoom } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
+import { createGoldenFGHIProject, goldenHBiome } from '@run-planner/test-fixtures/underworld';
 import {
-  createGoldenFGHIProject,
   createRepresentativeNOPQProject,
-  goldenHBiome,
   oBiome,
   oOccurrenceIds,
-} from '@run-planner/test-fixtures';
+} from '@run-planner/test-fixtures/surface';
 
 function occurrence(
   project: ProjectDocument,

@@ -8,6 +8,8 @@ import {
   createCompleteFGProject,
   createGoldenFGHProject,
   createGoldenFGHIProject,
+} from '@run-planner/test-fixtures/underworld';
+import {
   createRepresentativeNOProject,
   createRepresentativeNOPProject,
   createRepresentativeNOPQProject,
@@ -15,7 +17,7 @@ import {
   nFixedOccurrenceIds,
   nOccurrenceIds,
   nVisitSlotKeys,
-} from '@run-planner/test-fixtures';
+} from '@run-planner/test-fixtures/surface';
 
 function authoredDocumentDigest(value: unknown): string {
   return createHash('sha256').update(JSON.stringify(value)).digest('hex');

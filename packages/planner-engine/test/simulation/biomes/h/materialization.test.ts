@@ -44,10 +44,9 @@ import {
   authorTestArtificerReplacement,
   authorRequiredTestRoomActions,
   authorLegalTraitOffers,
-  createGoldenFGHProject,
-  goldenHStartId,
   replaceTestRoomActionOrder,
-} from '@run-planner/test-fixtures';
+} from '@run-planner/test-fixtures/shared';
+import { createGoldenFGHProject, goldenHStartId } from '@run-planner/test-fixtures/underworld';
 
 const biome = createBiomeAddress('Underworld', 'H');
 

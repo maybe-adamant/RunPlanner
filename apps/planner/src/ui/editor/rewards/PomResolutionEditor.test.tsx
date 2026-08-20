@@ -25,7 +25,7 @@ import type {
   LevelResolutionCandidateProjection,
 } from '@planner/projections/candidateProjection';
 import type { WorkspaceLevelResolutionInteraction } from '@planner/projections/structured-workspace';
-import { createGoldenFGHIProject, goldenFBiome } from '@run-planner/test-fixtures';
+import { createGoldenFGHIProject, goldenFBiome } from '@run-planner/test-fixtures/underworld';
 
 import {
   PomResolutionDialog,

@@ -19,14 +19,16 @@ import {
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
 
+import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 import {
   createCompleteFGProject,
   createGoldenFGHProject,
+} from '@run-planner/test-fixtures/underworld';
+import {
   createRepresentativeNOPQProject,
-  authorLegalTraitOffers,
   pBiome,
   pOccurrenceId,
-} from '@run-planner/test-fixtures';
+} from '@run-planner/test-fixtures/surface';
 
 let representativeNOPQProject: ReturnType<typeof createRepresentativeNOPQProject>;
 

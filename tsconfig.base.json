@@ -4,8 +4,23 @@
     "lib": ["ES2023"],
     "module": "ESNext",
     "moduleResolution": "Bundler",
+    "resolveJsonModule": true,
     "paths": {
-      "@run-planner/test-fixtures": ["./test/fixtures/authored-project/index.ts"]
+      "@run-planner/test-fixtures": ["./test/fixtures/authored-project/index.ts"],
+      "@run-planner/test-fixtures/shared": ["./test/fixtures/authored-project/shared.ts"],
+      "@run-planner/test-fixtures/underworld": [
+        "./test/fixtures/authored-project/routes/underworld.ts"
+      ],
+      "@run-planner/test-fixtures/surface": ["./test/fixtures/authored-project/routes/surface.ts"],
+      "@run-planner/test-fixtures/checkpoints/manifest": [
+        "./test/fixtures/authored-project/checkpoints/manifest.ts"
+      ],
+      "@run-planner/test-fixtures/checkpoints/underworld": [
+        "./test/fixtures/authored-project/checkpoints/underworld.ts"
+      ],
+      "@run-planner/test-fixtures/checkpoints/surface": [
+        "./test/fixtures/authored-project/checkpoints/surface.ts"
+      ]
     },
     "strict": true,
     "noEmit": true,

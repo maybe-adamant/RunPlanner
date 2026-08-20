@@ -23,14 +23,18 @@ import {
 } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
+import { requireTraits } from '@run-planner/test-fixtures/shared';
 import {
   createGoldenFGHIProject,
   goldenFBiome,
   goldenFOccurrenceId,
   goldenFStartId,
-  requireTraits,
-} from '@run-planner/test-fixtures';
-import { createRepresentativeNOPQProject, nBiome, nOccurrenceId } from '@run-planner/test-fixtures';
+} from '@run-planner/test-fixtures/underworld';
+import {
+  createRepresentativeNOPQProject,
+  nBiome,
+  nOccurrenceId,
+} from '@run-planner/test-fixtures/surface';
 import { noEncounterPhaseStatusCoverage } from '@planner-test/support/structured-workspace/encounter-phase-status';
 import { createWorkspaceProjectSourceIndex } from './source-index';
 

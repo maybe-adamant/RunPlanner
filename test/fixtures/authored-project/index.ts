@@ -1,5 +1,7 @@
-export * from './surface';
-export * from './combat08-artificer';
-export * from './trait-offers';
-export * from './underworld';
-export * from './room-actions';
+// Route fixtures are deliberately imported through their scoped aliases.
+// The root authority has no executable route dependency.
+export type {
+  TraitCandidateProbe,
+  TraitCandidateProbeOptions,
+  TraitCandidateSession,
+} from './shared';

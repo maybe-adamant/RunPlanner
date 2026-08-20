@@ -25,7 +25,7 @@ import {
 import {
   authorRequiredTestRoomActions,
   replaceTestShopOfferActions,
-} from '@run-planner/test-fixtures';
+} from '@run-planner/test-fixtures/shared';
 import {
   composeBiomeHistoryPrefix,
   materializeBiomePrefix,

@@ -17,7 +17,11 @@ import {
 } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
-import { createGoldenFGHIProject, goldenFBiome, goldenFStartId } from '@run-planner/test-fixtures';
+import {
+  createGoldenFGHIProject,
+  goldenFBiome,
+  goldenFStartId,
+} from '@run-planner/test-fixtures/underworld';
 
 import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidate-artifacts';
 import type { TraitOfferCandidateContext } from '../../src/simulation/traits';

@@ -18,7 +18,7 @@ import {
   createRepresentativeNOPQProject,
   qBiome,
   qOccurrenceIds,
-} from '@run-planner/test-fixtures';
+} from '@run-planner/test-fixtures/surface';
 
 function completeQ(project = createRepresentativeNOPQProject()) {
   const evaluation = simulateProject(catalog, project);

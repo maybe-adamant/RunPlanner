@@ -55,13 +55,15 @@ import { OccurrenceWorkbench } from '@planner/ui/editor/biome/OccurrenceWorkbenc
 import {
   authorLegalTraitOffers,
   authorRequiredTestRoomActions,
+} from '@run-planner/test-fixtures/shared';
+import {
   createGoldenFGHIProject,
   createCompleteFGProject,
   createFConversionFrontierProject,
   goldenFBiome,
   goldenFOccurrenceId,
   goldenGBiome,
-} from '@run-planner/test-fixtures';
+} from '@run-planner/test-fixtures/underworld';
 import {
   createRepresentativeNProject,
   createRepresentativeNOPQProject,
@@ -73,7 +75,7 @@ import {
   pBiome,
   pOccurrenceId,
   pOccurrenceIds,
-} from '@run-planner/test-fixtures';
+} from '@run-planner/test-fixtures/surface';
 import {
   renderOccurrenceWorkbench,
   renderDecisionWorkbench,

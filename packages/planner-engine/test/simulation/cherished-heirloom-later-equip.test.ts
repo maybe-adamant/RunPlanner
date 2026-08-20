@@ -10,7 +10,7 @@ import {
   createOccurrenceId,
   createPostbossKeepsakeSelectionAddress,
 } from '@run-planner/engine/authored-project';
-import { createGoldenFGHProject } from '@run-planner/test-fixtures';
+import { createGoldenFGHProject } from '@run-planner/test-fixtures/underworld';
 
 import { createArcanaFearState } from '../../src/simulation/arcana-fear';
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';

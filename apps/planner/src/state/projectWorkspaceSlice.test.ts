@@ -34,14 +34,14 @@ import {
   selectProjectEvaluation,
   selectProjectHistory,
 } from './store';
+import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 import {
   createCompleteFGProject,
   createGoldenFGHProject,
-  authorLegalTraitOffers,
   goldenFBiome,
   goldenFOccurrenceId,
   goldenHBiome,
-} from '@run-planner/test-fixtures';
+} from '@run-planner/test-fixtures/underworld';
 
 function createStore() {
   const assembleProjectEvaluation = vi.fn((project: ProjectDocument) =>

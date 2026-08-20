@@ -22,7 +22,7 @@ import {
   goldenGBiome,
   goldenGOccurrenceId,
   goldenHBiome,
-} from '@run-planner/test-fixtures';
+} from '@run-planner/test-fixtures/underworld';
 import {
   appendCompleteN,
   appendNEntry,
@@ -35,7 +35,7 @@ import {
   pOccurrenceId,
   qBiome,
   qOccurrenceIds,
-} from '@run-planner/test-fixtures';
+} from '@run-planner/test-fixtures/surface';
 import { createWorkspaceProjectSourceIndex, type WorkspaceBiomeSource } from '../source-index';
 import { assembleWorkspaceTopologyInteractions } from './topology-interaction-assembly';
 

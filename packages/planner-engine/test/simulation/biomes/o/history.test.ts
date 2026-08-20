@@ -8,7 +8,7 @@ import { simulateProject } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 import { settleOwnedAcquisitionSite } from '../../../../src/simulation/rewards/processing';
 
-import { createRepresentativeNOProject } from '@run-planner/test-fixtures';
+import { createRepresentativeNOProject } from '@run-planner/test-fixtures/surface';
 
 function fixture() {
   const project = createRepresentativeNOProject();

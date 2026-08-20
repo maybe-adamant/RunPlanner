@@ -7,7 +7,7 @@ import {
   createCompleteFGProject,
   goldenFBiome,
   goldenFOccurrenceId,
-} from '@run-planner/test-fixtures';
+} from '@run-planner/test-fixtures/underworld';
 
 const rewardAssemblyCalls = vi.hoisted(
   () => [] as { readonly biomeKey: string; readonly materializationKind: string }[],

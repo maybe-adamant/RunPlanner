@@ -25,20 +25,21 @@ import {
 } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
+import { authorRequiredTestRoomActions, requireTraits } from '@run-planner/test-fixtures/shared';
 import {
-  appendCompleteN,
-  authorRequiredTestRoomActions,
   createGoldenFGHIProject,
-  createRepresentativeNOPQProject,
   goldenFBiome,
   goldenIBiome,
+} from '@run-planner/test-fixtures/underworld';
+import {
+  appendCompleteN,
+  createRepresentativeNOPQProject,
   nBiome,
   nOccurrenceId,
   nOccurrenceIds,
   pBiome,
   pOccurrenceId,
-  requireTraits,
-} from '@run-planner/test-fixtures';
+} from '@run-planner/test-fixtures/surface';
 import { assembleWorkspaceBiomeSemantics } from './biome-semantic-assembly';
 import { createWorkspaceProjectSourceIndex, type WorkspaceBiomeSource } from '../source-index';
 

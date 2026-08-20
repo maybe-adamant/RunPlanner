@@ -20,11 +20,8 @@ import {
 
 import { createCompleteNProject } from '../support/complete-n-project';
 import { nBiome } from '../support/configured-projects';
-import {
-  createGoldenFGHIProject,
-  goldenIBiome,
-  replaceTestShopOfferActions,
-} from '@run-planner/test-fixtures';
+import { replaceTestShopOfferActions } from '@run-planner/test-fixtures/shared';
+import { createGoldenFGHIProject, goldenIBiome } from '@run-planner/test-fixtures/underworld';
 
 describe('authored-project Shop occurrence commands', () => {
   it('rejects a level-resolution child on Shop GiftDrop', () => {

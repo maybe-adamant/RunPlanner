@@ -9,7 +9,11 @@ import {
   createTraitOfferAddress,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
-import { createRepresentativeNOProject, oBiome, oOccurrenceIds } from '@run-planner/test-fixtures';
+import {
+  createRepresentativeNOProject,
+  oBiome,
+  oOccurrenceIds,
+} from '@run-planner/test-fixtures/surface';
 
 function shipState(project: ProjectDocument, occurrenceId = oOccurrenceIds.combat04) {
   const state = project.routes

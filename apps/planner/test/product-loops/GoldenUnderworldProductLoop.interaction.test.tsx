@@ -35,17 +35,17 @@ import {
   authoredProjectUndoRequested,
 } from '@planner/state/projectWorkspaceSlice';
 import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
+import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 import {
   createGoldenFGHIProject,
-  authorLegalTraitOffers,
   goldenHBiome,
   goldenFBiome,
   goldenFOccurrenceId,
   goldenFStartId,
   goldenGBiome,
   goldenGOccurrenceId,
-} from '@run-planner/test-fixtures';
-import { createRepresentativeNOPQProject } from '@run-planner/test-fixtures';
+} from '@run-planner/test-fixtures/underworld';
+import { createRepresentativeNOPQProject } from '@run-planner/test-fixtures/surface';
 import { renderPlannerForInteraction } from '../fixtures/renderPlanner';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 

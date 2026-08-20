@@ -33,7 +33,7 @@ import {
   nOpenSlotKeys,
   nOccurrenceId,
   nOccurrenceIds,
-} from '@run-planner/test-fixtures';
+} from '@run-planner/test-fixtures/surface';
 import {
   renderHubDecisionWorkbench,
   renderStaticHubDecisionWorkbench,

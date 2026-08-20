@@ -17,17 +17,19 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest
 import { createApplication } from '@planner/composition/createApplication';
 import { authoredProjectReplaced } from '@planner/state/projectWorkspaceSlice';
 import {
+  reachedTraitOffers,
+  prepareLegalPomTraitOffers,
+  traitCandidateSession,
+  supportedTraitOffer,
+} from '@run-planner/test-fixtures/shared';
+import {
   createGoldenFGHIProject,
   goldenFBiome,
   goldenFOccurrenceId,
   goldenGBiome,
   goldenGOccurrenceId,
   goldenHBiome,
-  reachedTraitOffers,
-  prepareLegalPomTraitOffers,
-  traitCandidateSession,
-  supportedTraitOffer,
-} from '@run-planner/test-fixtures';
+} from '@run-planner/test-fixtures/underworld';
 import { renderPlannerForInteraction } from '../fixtures/renderPlanner';
 
 type AuthoredTraitsOffer = Extract<AuthoredTraitOffer, { kind: 'traits' }>;

@@ -35,15 +35,17 @@ import { initializeTestRewardBranches } from '../support/arcana-fear';
 import { selectedTraitOfferProducts } from '../../src/simulation/rewards/biome';
 import { settleOwnedAcquisitionSite } from '../../src/simulation/rewards/processing';
 import { applyProjectCommand } from '@run-planner/engine/authored-project';
+import { replaceTestShopOfferActions } from '@run-planner/test-fixtures/shared';
 import {
   createFMidshopPomFrontierProject,
-  createRepresentativeNOPQProject,
   fMidshopPomShopId,
   goldenFBiome,
+} from '@run-planner/test-fixtures/underworld';
+import {
+  createRepresentativeNOPQProject,
   oBiome,
   oOccurrenceIds,
-  replaceTestShopOfferActions,
-} from '@run-planner/test-fixtures';
+} from '@run-planner/test-fixtures/surface';
 
 const owner = { kind: 'project' } as const;
 const levelAddress = createLevelResolutionAddress(

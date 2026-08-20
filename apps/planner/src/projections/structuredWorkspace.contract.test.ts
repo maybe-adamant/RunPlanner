@@ -46,9 +46,8 @@ import { beforeAll, describe, expect, it, vi } from 'vitest';
 import {
   authorLegalTraitOffers,
   authorRequiredTestRoomActions,
-  createGoldenFGHIProject,
-  goldenFBiome,
-} from '@run-planner/test-fixtures';
+} from '@run-planner/test-fixtures/shared';
+import { createGoldenFGHIProject, goldenFBiome } from '@run-planner/test-fixtures/underworld';
 import {
   appendNEntry,
   createRepresentativeNOPQProject,
@@ -57,7 +56,7 @@ import {
   nOccurrenceId,
   oBiome,
   oOccurrenceIds,
-} from '@run-planner/test-fixtures';
+} from '@run-planner/test-fixtures/surface';
 import {
   expectedWorkspaceEncounterPhaseLeafRequirements,
   expectedWorkspaceLeafRequirements,

@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest';
 
 import { projectRouteTraitOffers, projectTraitOfferFeedback } from './traitProjection';
 import { createStructuredWorkspaceTestServices } from '@planner-test/fixtures/structuredWorkspace';
-import { createGoldenFGHIProject } from '@run-planner/test-fixtures';
+import { createGoldenFGHIProject } from '@run-planner/test-fixtures/underworld';
 
 const { structuredWorkspace } = createStructuredWorkspaceTestServices();
 

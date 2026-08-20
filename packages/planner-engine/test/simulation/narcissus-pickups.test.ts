@@ -38,11 +38,13 @@ import {
 import {
   authorLegalTraitOffers,
   authorTestArtificerReplacement,
+  editTestRoomActionOrder,
+} from '@run-planner/test-fixtures/shared';
+import {
   createCompleteFGProject,
   createGoldenFGHIProject,
-  editTestRoomActionOrder,
   goldenGBiome,
-} from '@run-planner/test-fixtures';
+} from '@run-planner/test-fixtures/underworld';
 import { createCompleteNProject } from '../authored-project/support/complete-n-project';
 
 function narcissusOccurrence(project: ProjectDocument) {

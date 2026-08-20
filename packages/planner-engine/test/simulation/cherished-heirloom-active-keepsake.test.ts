@@ -6,7 +6,7 @@ import {
   createEncounterPhaseAddress,
   createOccurrenceId,
 } from '@run-planner/engine/authored-project';
-import { createGoldenFGHProject, goldenGBiome } from '@run-planner/test-fixtures';
+import { createGoldenFGHProject, goldenGBiome } from '@run-planner/test-fixtures/underworld';
 
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
 import { createArcanaFearState } from '../../src/simulation/arcana-fear';

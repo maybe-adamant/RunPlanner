@@ -36,9 +36,13 @@ import { settleOwnedAcquisitionSite } from '../../../../src/simulation/rewards/p
 import { describe, expect, it } from 'vitest';
 
 import {
+  replaceTestShopOfferActions,
+  authorLegalTraitOffers,
+  authorTestArtificerReplacement,
+} from '@run-planner/test-fixtures/shared';
+import {
   appendCompleteN,
   createRepresentativeNProject,
-  replaceTestShopOfferActions,
   nBiome,
   nLocalOccurrenceId,
   nLocalOccurrenceIdsBySlot,
@@ -46,9 +50,7 @@ import {
   nOccurrenceIds,
   nOpenSlotKeys,
   nVisitSlotKeys,
-  authorLegalTraitOffers,
-  authorTestArtificerReplacement,
-} from '@run-planner/test-fixtures';
+} from '@run-planner/test-fixtures/surface';
 
 function completeN(project = createRepresentativeNProject()) {
   project = authorLegalTraitOffers(project);

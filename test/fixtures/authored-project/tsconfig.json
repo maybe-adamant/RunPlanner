@@ -1,0 +1,18 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2023", "DOM"],
+    "types": ["node", "vitest/globals"],
+    "allowJs": false
+  },
+  "include": [
+    "./index.ts",
+    "./shared.ts",
+    "./routes/**/*.ts",
+    "./checkpoints/**/*.ts",
+    "./generation/**/*.ts",
+    "../authored-project/**/*.runplanner.json",
+    "../../../packages/planner-engine/src/**/*.ts",
+    "../../../packages/hades2-catalog/src/**/*.ts"
+  ]
+}

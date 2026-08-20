@@ -8,7 +8,7 @@ import {
   createRepresentativeNOPQProject,
   oBiome,
   oOccurrenceIds,
-} from '@run-planner/test-fixtures';
+} from '@run-planner/test-fixtures/surface';
 import { describe, expect, it } from 'vitest';
 
 const wheelOwner = createRewardWheelOfferAddress(

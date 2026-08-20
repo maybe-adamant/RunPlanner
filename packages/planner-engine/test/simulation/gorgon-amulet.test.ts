@@ -10,17 +10,21 @@ import {
 import { createArcanaFearState } from '../../src/simulation/arcana-fear';
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
 import {
-  createGoldenFGHProject,
-  createCompleteFGProject,
   authorLegalTraitOffers,
   authorRequiredTestRoomActions,
   replaceTestRoomActionOrder,
+} from '@run-planner/test-fixtures/shared';
+import {
+  createGoldenFGHProject,
+  createCompleteFGProject,
   goldenGBiome,
   goldenGOccurrenceId,
+} from '@run-planner/test-fixtures/underworld';
+import {
   createRepresentativeNOPProject,
   pBiome,
   pOccurrenceId,
-} from '@run-planner/test-fixtures';
+} from '@run-planner/test-fixtures/surface';
 import {
   applyProjectHistoryCommand,
   applyProjectCommand,

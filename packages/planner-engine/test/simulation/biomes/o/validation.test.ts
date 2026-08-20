@@ -25,13 +25,13 @@ import {
 } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
+import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
+import { authorSurfaceWorldShop } from '@run-planner/test-fixtures/surface';
 import {
-  authorLegalTraitOffers,
-  authorSurfaceWorldShop,
   createRepresentativeNOProject,
   oBiome,
   oOccurrenceIds,
-} from '@run-planner/test-fixtures';
+} from '@run-planner/test-fixtures/surface';
 
 function evaluateO(project = createRepresentativeNOProject()) {
   const evaluation = simulateProject(catalog, project);
