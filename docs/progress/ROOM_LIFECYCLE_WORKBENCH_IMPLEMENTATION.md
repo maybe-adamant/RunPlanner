@@ -3,10 +3,10 @@
 ## Status
 
 Locked focused delivery plan. Gate A landed as
-`ddada8bccf3acaf51dffd9264a3f0f6c73a242c7`; Gate A.1, Gate B, and Gate C
-remain. Gate A.1 was added after Gate A review exposed a useful consequence of
-the lifecycle tabs: Run State can now name exact room-local checkpoints instead
-of remaining a decision-only diagnostic.
+`ddada8bccf3acaf51dffd9264a3f0f6c73a242c7` and Gate A.1 landed as
+`3109c2b`. Gate B and Gate C remain. Gate A.1 was added after Gate A review
+exposed a useful consequence of the lifecycle tabs: Run State can now name
+exact room-local checkpoints instead of remaining a decision-only diagnostic.
 
 This document is temporary delivery authority. It is not linked from the
 README or stable design documents. Its required adversarial review completed
@@ -17,6 +17,14 @@ interval, O inter-phase barriers, and Fields' fixed encounter-cycle skeleton.
 After the implementation and durable closure land, absorb its lasting
 conclusions into the owning design, biome, and audit documents and delete this
 file.
+
+Gate B was narrowed again on 2026-08-20 after the Q final-Preboss Hermes
+delivery contact exposed a false premise in the source-intent design. The first
+eligible purchase identifies the source slot for Travel Deal or Gold Gold Gold,
+but the generated payload is legal against the exact history at that purchase,
+not against frozen Shop-entry history. Gate B therefore owns only Purchased
+participation and Action-row clutter reduction. It adds no Travel/Gold intent,
+payload, or schema authority.
 
 The pending durable-closure gate in
 [`ROOM_ACTION_ORDER_IMPLEMENTATION.md`](./ROOM_ACTION_ORDER_IMPLEMENTATION.md)
@@ -73,13 +81,10 @@ an explicit repair surface; phase deactivation must not erase or hide them.
 The plan also restores a concise Shop authoring flow:
 
 - Overview marks which initial Shop offers were purchased;
-- Room Actions orders only participating purchases and generated pickups;
-- when Travel Deal or Gold Gold Gold is active at Shop entry, Overview records
-  the player's intended trigger source;
-- the engine walk remains the sole authority for the source that actually
-  triggered each effect; and
-- mismatches between authored intent, effect rules, and chronology produce
-  exact retained-invalid findings instead of silently rewriting either side.
+- Room Actions orders only participating purchases and generated pickups; and
+- the engine walk remains the sole authority for both the purchase that
+  triggers Travel Deal or Gold Gold Gold and the exact history against which
+  its generated payload is evaluated.
 
 ## Source Facts and Planner Boundaries
 
@@ -222,24 +227,18 @@ cleanup interactions.
   one-use effect is active. `SpellDrop` is ineligible and does not consume the
   effect. A materialized Travel Deal refill can itself become Gold's eligible
   source; Infernal Contract cannot.
-- The Travel and Gold intended sources are independent authored intentions.
-  One generic `First purchase` field is incorrect.
-- Chronology derives the actual Travel and Gold sources. Intent never forces,
-  reorders, or substitutes that result.
-- Persist those intentions in one required, frozen
-  `ShopState.supplementalSourceIntents` container. The container is present and
-  empty by default; its `travelDealRefill` and `echoDoubleShopReward` fields are
-  independently optional. Each non-null field is a closed source reference:
-  Travel names one initial Shop offer, while Gold names either one initial Shop
-  offer or the materialized Travel refill. Intent belongs to Shop state because
-  it describes entry-time inventory/effect targeting. The concrete derived
-  payload remains owned by its exact `acquisitionSites.roomExit` entry, and
-  `roomActions.order` remains the only participation/chronology authority.
-- Source intent is structurally authorable even while its effect is inactive or
-  context-invalid. Setting a non-null intent ensures that its exact derived
-  acquisition entry exists without overwriting an existing payload. Clearing
-  or changing intent retains payload and authored action state for repair; it
-  never silently cascades or manufactures chronology.
+- Chronology derives the actual Travel and Gold sources. No persisted source
+  selector duplicates that authority.
+- The generated payload is evaluated against the exact history prefix at the
+  triggering purchase. A source slot chosen by first-purchase rules is not a
+  sufficient payload-authoring context.
+- Earlier same-room actions may change that context. The Q final-Preboss forced
+  Hermes delivery is the representative future contact: acquiring it before a
+  purchase may lock the god pool before Travel generates a refill, while
+  acquiring it afterward cannot retroactively change that refill.
+- Gate B changes only base-purchase participation and presentation. It leaves
+  all existing Travel/Gold commands, payloads, frontiers, findings, and
+  settlement rules untouched.
 
 ## Locked Modeling Shape
 
@@ -318,7 +317,7 @@ document or undo history. Ordinary occurrence entry defaults to Overview.
 
 Semantic focus overrides that default:
 
-- room setup, Shop inventory, room feature, Fields setup, and trigger-intent
+- room setup, Shop inventory/participation, room feature, and Fields setup
   findings open Overview;
 - encounter and active action findings open the exact Room Actions or O phase
   tab;
@@ -338,9 +337,6 @@ Checking an offer uses one engine-owned insertion intent with a declared stable
 default position. The intended default is after the currently ranked room
 actions, which is legal for the shared post-outgoing Shop window and remains
 freely reorderable afterward. Unchecking removes only that exact action.
-
-Removing a purchase does not cascade-delete Travel/Gold intent or payload. Any
-dependent intent becomes retained-invalid and receives a finding.
 
 The semantic participation command is one closed
 `ReplaceShopPurchaseParticipation` intent over an exact `ShopOfferAddress`.
@@ -362,128 +358,75 @@ generated supplemental pickup rows retain their existing generic insert/remove
 repair interactions. Direct command and proposal tests must prove this closed
 split.
 
-The semantic source command is one closed
-`ReplaceShopSupplementalSourceIntent` intent over the exact derived
-`AcquisitionEntryAddress`, with a closed source value or `null`. The command
-validates structural ownership only, preserves dormant/context-invalid intent,
-and ensures a non-null target has an addressable `roomExit` acquisition entry
-without replacing any existing payload, including an explicitly retained
-`null`. For an absent Travel entry the deterministic initial payload is
-`null`. For an absent Gold entry it is the source-derived authored reward
-default when the intended source has a concrete duplicable offer, otherwise
-`null`. Changing or clearing intent never replaces that initial or subsequently
-edited payload.
-
-`EditDerivedShopEntry` remains the payload command, but it no longer accepts a
-caller-supplied `sourceOfferKey`; the engine resolves the source exclusively
-from persisted Shop intent. When the entry key is absent, the wrapper first
-materializes the same deterministic initial payload and then applies the nested
-edit atomically. If that payload is `null`, only a nested
-`ReplaceAcquisitionEntryOffer` may establish reward identity; trait, Pom,
-disposition, or other child edits fail until a concrete reward exists. An
-existing key, including `null`, is never rematerialized. Command/undo witnesses
-must cover first selection, source change, clear, first nested edit, and payload
-retention.
-
-The selector domain is an engine-owned source-intent authoring product at the
-Shop activation/outgoing checkpoint, not the actual-settlement frontier. It
-must enumerate every structurally addressable initial offer, plus an authored
-Travel refill as a possible Gold source, and attach contextual validity,
-active-at-entry, and target-derived payload evidence. In particular,
-`SpellDrop` remains selectable and persistable for Gold so that its exact
-invalidity can be shown; an eligible-only UI list is not an authoring domain.
-Canonical settlement still derives the actual Travel/Gold source from the
-ordered actions and compares it with intent.
-
 If review proves that append cannot be a truthful structural default for every
-active Shop supplement, the engine must return the one supported toggle intent;
+active initial Shop offer, the engine must return the one supported toggle intent;
 the application may not choose among insertion proposals itself.
 
-### 6. Persist separate Travel and Gold source intentions
+### 6. Travel and Gold remain action-point-derived
 
-Advance the strict authored document to schema 49. Add optional retained source
-intent to the materialized `ShopState` using a closed semantic shape equivalent
-to:
+Gate B does not add a source selector, a source-intent field, an effective-source
+mode, or an Overview-owned Travel/Gold payload editor. The actual ordered
+actions remain the sole source authority:
 
-```ts
-interface ShopSupplementalSourceIntents {
-  readonly travelDealRefill?: {
-    readonly kind: 'shopOffer';
-    readonly offerKey: string;
-  };
-  readonly echoDoubleShopReward?:
-    | { readonly kind: 'shopOffer'; readonly offerKey: string }
-    | { readonly kind: 'travelDealRefill' };
-}
-```
+- the first accepted normal paid purchase triggers Travel Deal;
+- the first accepted Gold-eligible purchase triggers Gold Gold Gold according
+  to the game's own processing order;
+- a `SpellDrop` purchase may trigger Travel while leaving Gold available for a
+  later eligible purchase; and
+- a reached Travel refill may become Gold's source only through the real
+  chronology that generated and then purchased it.
 
-Codec and structural commands validate that referenced initial offers belong
-to the exact materialized Shop. They do not require the effect to be active or
-the source to be context-valid; those are simulation facts. Structurally
-representable intent survives upstream trait, purchase, and chronology edits.
+The source action does not by itself determine the dependent reward's complete
+candidate domain. Generation uses the exact history at that action point. Any
+earlier same-room acquisition may change god-pool closure, trait history, Pom
+targets, reward-bag eligibility, or another contextual requirement. Q's forced
+final-Preboss Hermes delivery is the representative contact: opening a delivered
+Hermes mystery reward before the World Shop purchase may lock a fourth god,
+while taking the purchase first evaluates Travel's refill before that lock.
 
-The controls appear only when the corresponding effect was active at Shop
-entry. Dormant retained intent remains persisted and reappears unchanged when
-the effect becomes active again.
+Therefore a future Travel/Gold presentation correction must consume an exact
+action-point candidate frontier. It must not approximate that frontier from
+Shop-entry history, a chosen source slot, or an existential completion of later
+actions. Reordering an earlier acquisition across the source purchase must
+re-evaluate the dependent payload at the new history prefix while preserving a
+structurally retained invalid payload for repair where the authored model
+supports it.
 
-### 7. Intent authoring and canonical settlement stay distinct
+This gate leaves the existing Travel/Gold authored payload, settlement,
+placeholder, and command paths unchanged. It neither blesses their current UI
+as the final design nor creates transitional compatibility state. Their later
+replacement belongs with delivery-aware, action-point authoring and must delete
+the superseded path in that complete slice.
 
-An engine-owned source-intent domain exposes structurally addressable sources
-and contextual evidence without asking React to inspect reward types or action
-order.
+### 7. Purchased markers do not settle purchases
 
-The target choice may prepare the dependent authored payload before chronology
-matches:
+Overview checkboxes author only participation. They do not acquire the offer,
+choose a Travel/Gold source, generate a dependent reward, or advance canonical
+history. The purchase occurs only when the engine walk reaches its ordered
+`interactShopOffer` action.
 
-- Travel evaluates the selected initial offer under the declared intention
-  that it is the first accepted normal paid purchase;
-- Gold copies the exact selected eligible source, including an already-authored
-  Travel refill source;
-- a Gold target of `SpellDrop` remains retained and invalid;
-- a Gold target of Travel remains unresolved until the Travel refill has enough
-  exact authored source detail to define the duplicate.
+Changing Purchased membership may therefore change which existing
+chronology-derived supplemental action becomes active or invalid. That result
+continues to come from the engine's current settlement product. The application
+does not predict it, and the participation command never cascades into a
+supplemental payload edit.
 
-This authoring product is not canonical run history. The simulator still walks
-the actual Room Action order, derives the actual trigger, and blocks the
-supplemental settlement when intent and chronology disagree.
+### 8. Gate B is schema-neutral
 
-### 8. Findings compare intent with actual chronology
+The existing strict authored schema remains unchanged. Purchased state is
+already represented by exact membership in occurrence-owned
+`roomActions.order`; a second persisted purchase set would be redundant. Gate B
+adds only the semantic participation command and its application projection.
+It adds no Shop envelope, retained source intent, or payload materialization
+basis.
 
-Publish exact findings for at least:
+### 9. Findings and navigation retain existing ownership
 
-- an active effect with no source intent;
-- an intended source that is not marked Purchased or never becomes active;
-- Travel intent that is not the first accepted normal purchase;
-- Gold intent that is not the first accepted eligible source;
-- an ineligible Gold source such as `SpellDrop`;
-- Gold targeting Travel when the refill is absent or unresolved; and
-- mutually incompatible Travel/Gold intentions.
-
-The intentions are compatible when chronology can satisfy both. In particular:
-
-- Travel and Gold may name the same initial offer when that offer is
-  Gold-eligible;
-- Travel may name `SpellDrop` while Gold names a later eligible source; and
-- Gold may name the Travel refill when the actual order first produces and then
-  acquires that refill before any other eligible Gold source consumes the
-  effect.
-
-Findings attach to the exact supplemental entry/source-intent semantic owner and
-navigate to Overview. The related action row may show the same evidence as a
-read-only marker or navigation affordance, but it must not host a second source
-selector.
-
-### 9. Dependent payload editors appear once
-
-Overview owns the complete Travel/Gold source-intent and dependent reward
-authoring surface. The Room Action row owns participation, position, and a
-read-only source/outcome summary. It does not duplicate reward, trait, Pom, or
-disposition editors.
-
-The existing caller-supplied `sourceOfferKey` command path must be retired once
-source intent is persisted. Derived-entry payload commands resolve their exact
-source from authored intent plus the engine-owned authoring domain; callers may
-not submit a contradictory source coordinate.
+Purchase-marker findings and stale participation repair attach to the exact
+Shop offer/Room Action owner and open the containing Overview or Actions
+surface as appropriate. Existing Travel/Gold findings continue to follow their
+current chronology and acquisition-entry ownership. Gate B does not translate
+them into Overview source-intent findings or move their payload editor.
 
 ### 10. Future Well and Shrine support fits without scaffolding
 
@@ -558,7 +501,7 @@ checkpoint.
 
 - read-only room and incoming reward context;
 - meaningful room-specific setup;
-- Shop inventory, purchase markers, conditions, and Travel/Gold intent;
+- Shop inventory, purchase markers, and conditions;
 - Fields cage/optional setup;
 - N main-room side-room generation and local visit ordering before Room
   features; and
@@ -643,14 +586,13 @@ after Combat 1; three-phase ShipCombat places it after Combat 2.
 
 Owns:
 
-- schema-49 Shop source intent and strict codec;
-- structural commands for source intent and Shop purchase participation;
+- the structural Shop purchase-participation command over
+  `roomActions.order`;
 - semantic lifecycle-boundary/timeline product;
 - exact H/O phase placement and inactive-row preservation;
-- Travel/Gold source-intent domains;
 - actual trigger derivation from canonical Room Action order;
-- cross-intent and intent-versus-chronology findings; and
-- derived-entry payload authoring from persisted source intent.
+- existing Travel/Gold settlement and action-point candidate authority; and
+- exact active/stale purchase-row support and proposals.
 
 It does not return tabs, UI labels, React components, or callbacks.
 
@@ -659,10 +601,10 @@ It does not return tabs, UI labels, React components, or callbacks.
 Owns:
 
 - adapting the engine timeline into Overview/Action/Doors workspace products;
-- joining exact encounter, wheel, reward, feature, purchase, and source-intent
+- joining exact encounter, wheel, reward, feature, and purchase
   interactions to their semantic positions;
 - closed semantic-owner-to-tab focus routing;
-- binding purchase markers and source selectors to complete engine intents; and
+- binding purchase markers to complete engine intents; and
 - ensuring every editable payload and every action row appears exactly once.
 
 It does not derive lifecycle placement, Shop trigger rules, Gold exclusions,
@@ -817,74 +759,61 @@ Acceptance witnesses:
    occurrence's own pre-exit snapshot includes its reached acquisition, and
    restoring the parent/Hub publishes no duplicate snapshot.
 
-### Gate B — Shop participation and source intent
+### Gate B — Shop purchase participation
 
 Intended commit:
 
 ```text
-feat(planner): author shop participation and effect targets
+feat(planner): author shop purchase participation
 ```
 
 Deliver:
 
-- strict schema 49 and exact codec/default updates;
-- required frozen `ShopState.supplementalSourceIntents` with independently
-  optional retained Travel/Gold source intent;
-- engine-owned Purchased toggle intents that write only `roomActions.order`;
-- Overview purchase markers and source selectors;
-- Actions filtered to participating base purchases plus active/stale/required
-  supplemental work;
-- an engine-owned structural source-intent domain that retains invalid and
-  inactive selections instead of filtering them out;
-- intent-aware derived payload authoring;
-- canonical intent-versus-order validation and findings;
-- exact navigation/undo/redo; and
-- deletion of `SelectDerivedShopEntry`, placeholder-only activation UX,
-  eligible-only selector policy, and caller-supplied derived source
-  coordinates.
+- one engine-owned Purchased toggle intent that writes only the exact base
+  `interactShopOffer` membership in `roomActions.order`;
+- Overview purchase markers for every materialized initial Shop offer;
+- Actions filtered to participating base purchases plus the existing
+  active/stale/required supplemental work;
+- specialized stale purchase repair through the same Purchased interaction;
+- ranked purchase movement without a second generic membership interaction;
+- exact marker/finding navigation and one-step undo/redo; and
+- deletion of unranked, unpurchased base Shop offers from both the active Action
+  timeline and generic repair surface.
+
+Explicitly do not add a schema version, Shop source intent, Travel/Gold selector,
+Gold authoring mode, target-driven payload frontier, or Overview-owned
+supplemental payload editor. Existing Travel/Gold settlement and authoring paths
+remain untouched in this gate.
 
 Primary owners:
 
-- authored Shop model/codec/command tests;
-- Shop reward-processing and Room Action tests;
-- Travel Deal/Gold/Contract source audit fixtures;
-- candidate-domain and finding tests;
+- authored Shop participation command tests;
+- Room Action structural-support, roster, and timeline tests;
 - structured-workspace binding/assembly tests;
 - Shop React tests; and
 - one complete World Shop product loop.
 
 Acceptance witnesses:
 
-1. Marking two offers Purchased adds only those two purchase actions; unmarked
-   inventory stays out of Actions. Generic Room Action insert/remove rejects
-   base `interactShopOffer`, while ranked purchases retain move proposals.
-2. Unmarking a target source removes its purchase action but retains Travel or
-   Gold intent/payload with an exact finding. A stale base purchase repairs
-   through the same participation intent, not a generic remove proposal,
-   including after room replacement removes the active Shop owner.
-3. Travel intent matches the first accepted normal purchase and rejects a later
-   target without reordering it.
-4. Gold skips `SpellDrop` without consuming its source opportunity and accepts
-   the next eligible purchased source.
-5. Travel may target `SpellDrop` while Gold targets a later eligible source.
-6. When Travel's target is Gold-eligible, a different Gold target produces a
-   cross-intent/chronology finding.
-7. Gold may target the Travel refill only after that refill has exact authored
-   source detail and chronology places it before another eligible Gold source.
-8. Infernal Contract neither satisfies Travel nor becomes a Gold source.
-9. Acquiring Travel Deal in the same Shop does not retroactively expose a
-   target control or refill.
-10. Upstream removal and restoration of Travel/Gold retains dormant intent and
-    payload.
-11. Source and payload editors appear once in Overview; Actions carries only
-    participation/order and a read-only summary.
-12. One semantic edit creates one undo step, and undo/redo restores membership,
-    target intent, payload, and finding focus coherently.
-13. First Travel intent creates an exact retained `null` payload; first Gold
-    intent creates its source-derived default when resolvable and `null`
-    otherwise. Changing/clearing intent and undo/redo never replace an existing
-    payload, including `null`; a first nested payload edit follows the locked
-    materialize-then-edit rule.
+1. Marking two offers Purchased adds only those exact two purchase actions;
+   unmarked inventory remains editable in Overview and absent from Actions.
+2. Unmarking removes only that purchase action. One edit is one undo step, and
+   undo/redo restores membership, order, marker focus, and rendered row.
+3. Generic Room Action insert/remove rejects base `interactShopOffer`; ranked
+   purchases retain move proposals and reorder normally.
+4. A stale base purchase repairs through the same `purchased: false` intent,
+   never a generic remove proposal, including after room replacement removes
+   the active Shop owner.
+5. Unranked initial Shop offers appear neither as active Action rows nor generic
+   repair rows. Existing supplemental pickup participation/repair remains
+   unchanged.
+6. Travel Deal, Gold Gold Gold, and Infernal Contract behavior is byte-for-byte
+   unchanged by toggling an unrelated base purchase except for the canonical
+   consequences of that changed action membership/order. No source selector or
+   new supplemental editor appears in Overview.
+7. One reached World Shop workflow can mark purchases, reorder them in Actions,
+   unmark one from Overview, and undo/redo without extra evaluation work or a
+   duplicate membership control.
 
 ### Gate C — Durable closure
 
@@ -900,7 +829,8 @@ After fresh adversarial review of Gates A and B:
   `EDITOR_MODEL.md`, and `STRUCTURED_EDITOR_WORKSPACE.md` with the final model;
 - update H/O and Shop/Travel/Gold planner dispositions without rewriting source
   facts;
-- record the schema and completed delivery in `IMPLEMENTATION_PROGRESS.md`;
+- record the unchanged schema and completed delivery in
+  `IMPLEMENTATION_PROGRESS.md`;
 - reconcile the still-pending closure record in
   `ROOM_ACTION_ORDER_IMPLEMENTATION.md`;
 - remove superseded wording, gate comments, and temporary compatibility paths;
@@ -918,33 +848,27 @@ The completed change must remove, not preserve beside the new path:
 - application-owned O phase placement that duplicates the engine timeline;
 - unpurchased initial Shop offers from the Action ordering surface;
 - unranked optional initial Shop offers from the repair-row surface;
-- Travel/Gold placeholder copy whose only repair is “order purchases first”;
-- `SelectDerivedShopEntry` and the placeholder frontier variants that support
-  it;
-- `eligibleSourceOfferKeys` as source-selector policy (actual settlement may
-  keep a private eligibility helper);
-- caller-supplied `sourceOfferKey` on derived Shop payload edits after source
-  intent becomes persisted authority;
-- duplicate Travel/Gold editors on both Overview and Action rows; and
 - finding navigation that opens only the containing occurrence without the
   exact tab/phase destination.
 
-Do not retain a compatibility projection or hidden legacy workbench. The
-existing codec is already strict and has no legacy decoder. Gate B bumps that
-single accepted version from schema 48 to schema 49 and must not add a schema-48
-migration or compatibility path.
+Do not retain a compatibility projection or hidden legacy workbench. Gate B is
+schema-neutral and must not add a persisted purchase set beside
+`roomActions.order`.
 
 ## Explicit Non-Goals
 
 - Implementing Wells of Charon or Shrines of Hermes.
 - Modeling prices, affordability, rerolls, discounts, delivery delay choice,
   rush, or pending SpellDrop.
-- Changing reward identity, trait, Pom, Artificer, Time Piece, Contract, or
-  Echo settlement rules beyond the source-intent contact described here.
+- Changing Travel Deal, Gold Gold Gold, Contract, Echo, reward identity, trait,
+  Pom, Artificer, or Time Piece settlement/authoring rules in Gate B.
+- Adding Travel/Gold source intent, source selectors, effective-source modes,
+  or Overview-owned generated payload editors.
+- Approximating a generated Shop payload from Shop-entry history rather than
+  its exact triggering action prefix.
 - Persisting UI tabs, expansions, scroll positions, or timeline labels.
 - Persisting fixed lifecycle events or encounter selection as Room Actions.
-- Auto-reordering purchases to satisfy Travel or Gold intent.
-- Auto-rewriting intent to match the current order.
+- Auto-reordering purchases to satisfy Travel or Gold.
 - Creating a generic lifecycle scripting language, effect registry, or React
   policy switch on biome names.
 - Reopening N Hub generation or visit chronology.
@@ -967,22 +891,17 @@ Before locking implementation, challenge at least these risks:
 4. Can Room Doors move into a tab without breaking provisional first-edit,
    unselected target repair, additional exits, terminal stages, or semantic
    focus?
-5. Is appending a newly marked purchase always a truthful default, including
-   Travel/Gold/Contract and retained stale rows?
-6. Is `ShopState` the correct persisted owner for supplemental source intent,
-   or should the exact acquisition site own it without introducing a generic
-   envelope?
-7. Can target-driven payload authoring remain branch-exact without an
-   existential candidate union or fabricated chronology?
-8. Does Gold targeting Travel preserve the source order in which Travel is
-   generated, acquired, and only then duplicated?
-9. Are active-at-entry trait facts used consistently so a same-Shop trait
-   acquisition cannot retroactively activate an effect?
-10. Do retained-invalid target and payload values remain visible and navigable
-    after upstream changes?
-11. Does tab routing stay application-owned and transient without making React
-    infer semantic ownership?
-12. Do future Well/Shrine contacts fit the lifecycle product without adding
+5. Is appending a newly marked purchase always a truthful structural default,
+   while canonical Travel/Gold consequences remain engine-derived from order?
+6. Can stale purchase membership always repair through Purchased without
+   exposing a second generic remove authority?
+7. Are unpurchased initial offers absent from both active rows and repair rows
+   without hiding generated supplemental repair?
+8. Does the gate leave every Travel/Gold command, payload, frontier, finding,
+   and settlement path unchanged?
+9. Does tab routing stay application-owned and transient without making React
+   infer semantic ownership?
+10. Do future Well/Shrine contacts fit the lifecycle product without adding
     speculative production scaffolding now?
 
 ## Verification Policy
