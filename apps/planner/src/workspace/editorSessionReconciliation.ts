@@ -124,14 +124,11 @@ export function createEditorSessionReconciliationCoordinator(options: {
     }
 
     const workspace = options.structuredWorkspace.project(assembly);
-    const availableRunStateOwnerKeys = new Set<string>();
-    for (const route of workspace.routes)
-      for (const biome of route.biomes)
-        for (const node of biome.nodes) {
-          if ('runState' in node && node.runState?.availability === 'available') {
-            availableRunStateOwnerKeys.add(semanticAddressKey(node.runState.owner));
-          }
-        }
+    const availableRunStateOwnerKeys = new Set(
+      [...workspace.runStateLaunchers].flatMap(([key, launcher]) =>
+        launcher.availability === 'available' ? [key] : [],
+      ),
+    );
     const reconciliation = deriveEditorSessionReconciliation({
       availableRunStateOwnerKeys,
       findings: assembly.evaluation.findings,

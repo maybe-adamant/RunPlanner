@@ -3,7 +3,9 @@ import {
   createEncounterPhaseAddress,
   createEchoLastRunBoonAddress,
   createOccurrenceId,
+  createOccurrenceAddress,
   createProjectAddress,
+  createRoomRunStateCheckpointAddress,
   createRouteAddress,
   createTraitOfferAddress,
 } from '@run-planner/engine/authored-project';
@@ -66,12 +68,13 @@ describe('editor session navigation', () => {
   });
 
   it('keeps Run State open/close transient and clears it on navigation', () => {
-    const owner = {
-      kind: 'exitDecision' as const,
-      routeKey: 'Underworld',
-      biomeKey: 'F',
-      source: { kind: 'occurrence' as const, occurrenceId: createOccurrenceId('run-state') },
-    };
+    const owner = createRoomRunStateCheckpointAddress(
+      createOccurrenceAddress(
+        createBiomeAddress('Underworld', 'F'),
+        createOccurrenceId('run-state'),
+      ),
+      { kind: 'beforeRoomExit' },
+    );
     const opened = reducer(undefined, runStateOpened(owner));
     expect(opened.runStateTarget).toEqual(owner);
     expect(reducer(opened, runStateClosed()).runStateTarget).toBeNull();

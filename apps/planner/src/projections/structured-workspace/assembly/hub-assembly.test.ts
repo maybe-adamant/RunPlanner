@@ -73,6 +73,7 @@ function hubKit(source: WorkspaceBiomeSource) {
       markerDestinations: markers.emitter,
       ordinaryRewardForfeited: (owner) => source.ordinaryRewardForfeited(owner.address),
       occurrence: input.occurrence,
+      runState: source.runState,
     });
   };
   const owner = createHubDecisionAddress(source.biome, descriptor.hubKey);

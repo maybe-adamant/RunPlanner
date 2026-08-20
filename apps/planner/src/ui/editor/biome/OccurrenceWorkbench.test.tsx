@@ -83,8 +83,11 @@ import {
   workspaceProjection,
 } from '@planner-test/support/biome-workbench';
 
-beforeAll(() => {
+let immutableRepresentativeNOPQProject: ProjectDocument;
+
+beforeAll(function prepareImmutableRepresentativeProjects() {
   createGoldenFGHIProject();
+  immutableRepresentativeNOPQProject = createRepresentativeNOPQProject();
 });
 
 afterEach(() => {
@@ -393,8 +396,46 @@ describe('OccurrenceWorkbench', () => {
     const standardStart = within(standardActions).getByLabelText('Start encounter');
     const standardEncounter = within(standardActions).getByLabelText('Encounter encounter phase');
     const standardEnd = within(standardActions).getByLabelText('End encounter');
+    const roomEntered = within(standardActions).getByLabelText('Room entered');
+    const entryRunState = within(standardActions).getByRole('button', { name: 'Run State' });
+    expectBefore(roomEntered, entryRunState);
+    expectBefore(entryRunState, standardStart);
     expectBefore(standardStart, standardEncounter);
     expectBefore(standardEncounter, standardEnd);
+    openRoomTab('Room Doors');
+    expect(
+      within(screen.getByRole('tabpanel', { name: 'Room Doors' })).getByRole('button', {
+        name: 'Run State',
+      }),
+    ).toBeTruthy();
+  });
+
+  it('places Ship Run State only at phase starts and the final pre-exit seam', () => {
+    renderStaticOccurrenceWorkbench(
+      immutableRepresentativeNOPQProject,
+      'Surface',
+      'O',
+      occurrenceById(oOccurrenceIds.combat04),
+    );
+    expect(screen.queryByRole('button', { name: 'Run State' })).toBeNull();
+    openRoomTab('Intro Actions');
+    expect(
+      within(screen.getByRole('region', { name: 'Room Actions' })).getByRole('button', {
+        name: 'Run State',
+      }),
+    ).toBeTruthy();
+    openRoomTab('Combat 1 Actions');
+    expect(
+      within(screen.getByRole('region', { name: 'Room Actions' })).getByRole('button', {
+        name: 'Run State',
+      }),
+    ).toBeTruthy();
+    openRoomTab('Room Doors');
+    expect(
+      within(screen.getByRole('tabpanel', { name: 'Room Doors' })).getByRole('button', {
+        name: 'Run State',
+      }),
+    ).toBeTruthy();
   });
 
   it('supports roving keyboard activation across the room workbench tabs', () => {

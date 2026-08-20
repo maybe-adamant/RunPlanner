@@ -73,6 +73,7 @@ function renderProjectedBiome(application: PlannerApplication, biome: WorkspaceB
         biome={biome}
         focusByOwner={workspace.focusByOwner}
         interactions={workspace.interactions}
+        runStateLaunchers={workspace.runStateLaunchers}
       />
     </Provider>,
   );
@@ -232,7 +233,7 @@ describe('BiomeWorkspace', () => {
     await user.click(rewardBagsSummary);
     expect(rewardBagsDisclosure.open).toBe(true);
     const bagSummary = within(sheet).getByText(/Major Reward \(RunProgress\)/);
-    expect(bagSummary.textContent).toMatch(/x4.*Eligible now x2.*Ineligible now x2/);
+    expect(bagSummary.textContent).toMatch(/x3.*Eligible now x1.*Ineligible now x2/);
     await user.click(bagSummary);
     await user.click(within(sheet).getAllByText(/Max Health \(MaxHealthDrop\)/)[0]!);
     expect(

@@ -22,7 +22,11 @@ import {
   nBiome,
 } from '@run-planner/test-fixtures';
 import { appendCompleteN, nOccurrenceId, nVisitSlotKeys } from '@run-planner/test-fixtures';
-import type { WorkspaceBiome, WorkspaceRailEntry } from '../contract';
+import type {
+  WorkspaceBiome,
+  WorkspaceOccurrenceWorkbenchNode,
+  WorkspaceRailEntry,
+} from '../contract';
 import { workspaceDecisionOwnedMarkers } from '../navigation/marker-ownership';
 import { summarizeRewardOffer } from '@planner/projections/rewardPicker';
 import { presentWorkspaceBiome } from './biome-presentation';
@@ -111,11 +115,10 @@ describe('structured workspace biome presentation', () => {
     });
   });
 
-  it('places exactly one Run State launcher on every reached F outer decision in engine order', () => {
+  it('retires ordinary outer-decision Run State launchers in favor of occurrence checkpoints', () => {
     const project = createGoldenFGHIProject();
-    const source = biomeSource(project, 'Underworld', 'F');
     const biome = present(project, 'Underworld', 'F').presentation.biome;
-    const launchers = biome.nodes.flatMap((node) =>
+    const decisionLaunchers = biome.nodes.flatMap((node) =>
       node.kind === 'ordinaryBatch' || node.kind === 'mixedBatch' || node.kind === 'takeoverBatch'
         ? node.runState === undefined
           ? []
@@ -123,24 +126,25 @@ describe('structured workspace biome presentation', () => {
         : [],
     );
 
-    expect(launchers.map((launcher) => launcher.title)).toEqual([
-      'Decision 1',
-      'Decision 2',
-      'Decision 3',
-      'Decision 4',
-      'Decision 5',
-      'Decision 6',
-      'Decision 7',
-      'Decision 8',
-      'Decision 9',
-      'Decision 10',
-      'Preboss',
-    ]);
-    expect(launchers.map((launcher) => semanticAddressKey(launcher.owner))).toEqual(
-      source.exitDecisions.map((decision) =>
-        semanticAddressKey(createExitDecisionAddress(source.biome, decision.source)),
-      ),
+    expect(decisionLaunchers).toEqual([]);
+    const occurrences = biome.nodes.filter(
+      (node): node is WorkspaceOccurrenceWorkbenchNode =>
+        node.kind === 'occurrenceWorkbench' && node.room.entered,
     );
+    expect(occurrences.length).toBeGreaterThan(0);
+    expect(
+      occurrences.every(
+        (node) =>
+          node.room.roomActions?.timeline.entries.some(
+            (entry) =>
+              entry.kind === 'boundary' &&
+              entry.runState?.owner.kind === 'roomRunStateCheckpoint' &&
+              entry.runState.owner.checkpoint.kind === 'roomEntered',
+          ) === true &&
+          node.room.beforeExitRunState?.owner.kind === 'roomRunStateCheckpoint' &&
+          node.room.beforeExitRunState.owner.checkpoint.kind === 'beforeRoomExit',
+      ),
+    ).toBe(true);
   });
 
   it('keeps Run State on N outer decisions and binds the completed-Hub handoff to visible Preboss', () => {
@@ -164,16 +168,13 @@ describe('structured workspace biome presentation', () => {
         return node.runState === undefined ? [] : [node.runState];
       return [];
     });
-    expect(launchers.map((launcher) => launcher.title)).toEqual(['Decision 1', 'Hub', 'Preboss']);
+    expect(launchers.map((launcher) => launcher.title)).toEqual(['Hub', 'Preboss']);
     const source = biomeSource(project, 'Surface', 'N');
-    const preHub = source.exitDecisions.find((decision) => decision.source.kind === 'occurrence');
     const handoff = source.exitDecisions.find(
       (decision) => decision.source.kind === 'hubDecision' && decision.source.decisionKey === 'hub',
     );
-    if (preHub === undefined || handoff === undefined)
-      throw new Error('N outer decision owners missing');
+    if (handoff === undefined) throw new Error('N Hub handoff owner missing');
     expect(launchers.map((launcher) => semanticAddressKey(launcher.owner))).toEqual([
-      semanticAddressKey(createExitDecisionAddress(source.biome, preHub.source)),
       semanticAddressKey(createHubDecisionAddress(source.biome, 'hub')),
       semanticAddressKey(createExitDecisionAddress(source.biome, handoff.source)),
     ]);

@@ -846,6 +846,7 @@ function RouteWorkspace({
               biome={activeBiomeProjection}
               focusByOwner={workspace.focusByOwner}
               interactions={interactions}
+              runStateLaunchers={workspace.runStateLaunchers}
             />
           )}
         </div>

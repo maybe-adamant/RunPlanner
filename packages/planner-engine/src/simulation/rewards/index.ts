@@ -26,8 +26,8 @@ export type {
   DecisionRewardBagConditionGroup,
   DecisionRewardBagEntryGroup,
   DecisionRewardBagState,
-  DecisionRunStateAvailability,
-  DecisionRunStateOwner,
-  DecisionRunStateSnapshot,
+  RunStateAvailability,
+  RunStateOwner,
+  RunStateSnapshot,
   DecisionTraitState,
 } from './run-state';

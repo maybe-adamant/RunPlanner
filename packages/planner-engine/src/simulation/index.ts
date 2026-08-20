@@ -244,9 +244,9 @@ export {
   type DecisionRewardBagConditionGroup,
   type DecisionRewardBagEntryGroup,
   type DecisionRewardBagState,
-  type DecisionRunStateAvailability,
-  type DecisionRunStateOwner,
-  type DecisionRunStateSnapshot,
+  type RunStateAvailability,
+  type RunStateOwner,
+  type RunStateSnapshot,
   type DecisionTraitState,
 } from './rewards';
 export {

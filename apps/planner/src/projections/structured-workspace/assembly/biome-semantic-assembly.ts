@@ -46,6 +46,7 @@ import {
   type WorkspaceOccurrenceStageOutgoing,
   type WorkspaceProjectionSource,
   type WorkspaceRewardControl,
+  type WorkspaceRunStateLauncher,
   type WorkspaceRoomPickerControl,
   type WorkspaceStatus,
 } from '../contract';
@@ -127,6 +128,7 @@ export interface WorkspaceBiomeSemanticAssembly {
   readonly progressionKind: BiomeLayout['progression']['kind'];
   readonly roomControls: ReadonlyMap<string, WorkspaceRoomPickerControl>;
   readonly rewardControls: ReadonlyMap<string, WorkspaceRewardControl>;
+  readonly runStateLaunchers: ReadonlyMap<string, WorkspaceRunStateLauncher>;
   readonly source: WorkspaceProjectionSource;
   readonly startInteractionRequirements: ReadonlyMap<string, WorkspaceStartInteractionRequirement>;
   readonly status: WorkspaceStatus;
@@ -509,6 +511,7 @@ export function assembleWorkspaceBiomeSemantics(
       markerDestinations,
       ordinaryRewardForfeited: (owner) => source.ordinaryRewardForfeited(owner.address),
       occurrence: request.occurrence,
+      runState: source.runState,
       ...(request.isEntry === true ? { isEntry: true } : {}),
       ...(request.roomPicker === undefined ? {} : { roomPicker: request.roomPicker }),
     });
@@ -880,6 +883,20 @@ export function assembleWorkspaceBiomeSemantics(
     topologyInteractions.hubTakeoverInteractionRequirements,
   );
   const biomeMarker = markerDestinations.marker(biome, `biome:${biome.routeKey}:${plan.biomeKey}`);
+  const runStateLaunchers = new Map<string, WorkspaceRunStateLauncher>();
+  const appendRunStateLauncher = (launcher: WorkspaceRunStateLauncher): void => {
+    const key = semanticAddressKey(launcher.owner);
+    if (runStateLaunchers.has(key)) {
+      throw new StructuredWorkspaceProjectionContractError(`${key} has duplicate Run State`);
+    }
+    runStateLaunchers.set(key, launcher);
+  };
+  for (const cached of occurrenceAssemblies.values()) {
+    for (const launcher of cached.assembly.runStateLaunchers) appendRunStateLauncher(launcher);
+  }
+  for (const node of completedNodes) {
+    if ('runState' in node && node.runState !== undefined) appendRunStateLauncher(node.runState);
+  }
   const preliminaryFocusDestinations = markerBuilder.destinations();
   return Object.freeze({
     biome,
@@ -902,6 +919,7 @@ export function assembleWorkspaceBiomeSemantics(
     progressionKind: layout.progression.kind,
     roomControls,
     rewardControls,
+    runStateLaunchers,
     source: sourceFor(evaluation),
     startInteractionRequirements,
     status: statusFor(evaluation),

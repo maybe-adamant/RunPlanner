@@ -4,6 +4,7 @@ import {
   createIncomingRewardAddress,
   createLocalRewardAddress,
   createRoomActionAddress,
+  createRoomRunStateCheckpointAddress,
   createOccurrenceAddress,
   createRewardWheelAddress,
   createRewardWheelOfferAddress,
@@ -29,6 +30,7 @@ import {
   type EncounterPhaseAddress,
   type RoomOccurrence,
   type SemanticAddress,
+  type RoomRunStateCheckpointAddress,
   type AuthoredRewardState,
   type LevelResolutionAddress,
   roomActionKey,
@@ -55,6 +57,8 @@ import type {
   GorgonPhaseCandidateSupport,
   FieldsBatchFacts,
   RoomLifecycleTimeline,
+  RunStateAvailability,
+  RunStateSnapshot,
   SelectedLevelResolutionAssessment,
 } from '@run-planner/engine/simulation';
 import {
@@ -99,6 +103,7 @@ import {
   type WorkspaceRewardWheelDescriptor,
   type WorkspaceShopSupplementalDescriptor,
   type WorkspaceMarker,
+  type WorkspaceRunStateLauncher,
 } from '../contract';
 import type { WorkspaceOccurrenceInteractionRequirement } from '../interactions/interaction-requirements';
 import {
@@ -107,6 +112,7 @@ import {
 } from '../navigation/marker-ownership';
 import type { WorkspaceMarkerDestinationEmitter } from '../navigation/marker-builder';
 import { workspaceRewardStoreLabel } from './reward-labels';
+import { presentRunState } from '../presentation/run-state';
 
 /**
  * The occurrence assembler consumes only the lifecycle facts needed to project
@@ -162,6 +168,13 @@ export interface WorkspaceOccurrenceAssemblyInput {
   readonly markerDestinations: WorkspaceMarkerDestinationEmitter;
   readonly ordinaryRewardForfeited: (owner: RewardCandidateOwner) => boolean;
   readonly occurrence: RoomOccurrence;
+  readonly runState: (owner: RoomRunStateCheckpointAddress) =>
+    | { readonly availability: 'available'; readonly snapshot: RunStateSnapshot }
+    | {
+        readonly availability: 'unavailable';
+        readonly reason?: RunStateAvailability['reason'];
+      }
+    | undefined;
   /** Semantic entry ownership, independent of whether the entry room is selectable. */
   readonly isEntry?: boolean;
   readonly roomPicker?: WorkspaceRoomPickerControl;
@@ -173,6 +186,7 @@ export interface WorkspaceOccurrenceAssembly {
   readonly occurrenceInteractionRequirements: readonly WorkspaceOccurrenceInteractionRequirement[];
   readonly roomControls: readonly WorkspaceRoomPickerControl[];
   readonly rewardControls: readonly WorkspaceRewardControl[];
+  readonly runStateLaunchers: readonly WorkspaceRunStateLauncher[];
 }
 
 /**
@@ -1478,7 +1492,7 @@ function roomActionsForOccurrence(
     }),
   );
   return Object.freeze({
-    timeline: projectRoomLifecycleTimeline(lifecycleTimeline),
+    timeline: projectRoomLifecycleTimeline(input, lifecycleTimeline, roomLocal),
     checkpoints: Object.freeze(
       roster.checkpoints.map((checkpoint) =>
         Object.freeze({
@@ -1498,8 +1512,34 @@ function roomActionsForOccurrence(
 }
 
 function projectRoomLifecycleTimeline(
+  input: WorkspaceOccurrenceAssemblyInput,
   timeline: RoomLifecycleTimeline,
+  roomLocal: WorkspaceRoomLocal,
 ): WorkspaceRoomLifecycleTimeline {
+  const occurrence = createOccurrenceAddress(input.biome, input.occurrence.occurrenceId);
+  const launcherForBoundary = (
+    boundary: WorkspaceRoomLifecycleBoundary,
+  ): WorkspaceRunStateLauncher | undefined => {
+    if (boundary.kind === 'roomEntered' && roomLocal.kind !== 'ship') {
+      return runStateLauncher(
+        input,
+        createRoomRunStateCheckpointAddress(occurrence, { kind: 'roomEntered' }),
+        `the first action in ${requireRoom(input.catalog, input.occurrence.gameName).label}`,
+      );
+    }
+    if (boundary.kind === 'encounterStart' && roomLocal.kind === 'ship') {
+      const phase = roomLocal.phases.find((candidate) => candidate.key === boundary.phaseKey);
+      return runStateLauncher(
+        input,
+        createRoomRunStateCheckpointAddress(occurrence, {
+          kind: 'beforeEncounterStart',
+          phaseKey: boundary.phaseKey,
+        }),
+        `${phase?.label ?? boundary.phaseKey} encounter`,
+      );
+    }
+    return undefined;
+  };
   return Object.freeze({
     boundaries: Object.freeze([...timeline.boundaries]),
     entries: Object.freeze(
@@ -1510,6 +1550,10 @@ function projectRoomLifecycleTimeline(
               boundary: entry.boundary,
               placement: entry.placement,
               rank: entry.rank,
+              ...(() => {
+                const runState = launcherForBoundary(entry.boundary);
+                return runState === undefined ? {} : { runState };
+              })(),
             })
           : Object.freeze({
               kind: 'action' as const,
@@ -1520,6 +1564,23 @@ function projectRoomLifecycleTimeline(
       ),
     ),
   });
+}
+
+function runStateLauncher(
+  input: WorkspaceOccurrenceAssemblyInput,
+  owner: RoomRunStateCheckpointAddress,
+  title: string,
+): WorkspaceRunStateLauncher | undefined {
+  const runState = input.runState(owner);
+  if (runState === undefined) return undefined;
+  return runState.availability === 'available'
+    ? Object.freeze({
+        availability: 'available' as const,
+        owner,
+        state: presentRunState(input.catalog, runState.snapshot),
+        title,
+      })
+    : Object.freeze({ availability: 'unavailable' as const, owner, title });
 }
 
 function rewardChildMarkers(control: WorkspaceRewardControl): readonly WorkspaceMarker[] {
@@ -2353,6 +2414,11 @@ export function assembleWorkspaceOccurrence(
   ]);
   const features = roomFeatures(input, room, zagreusSpawn, naturalChaosSpawn);
   const workbench = roomWorkbenchPresentation(encounterPhases, features, roomLocal, roomActions);
+  const beforeExitRunState = runStateLauncher(
+    input,
+    createRoomRunStateCheckpointAddress(address, { kind: 'beforeRoomExit' }),
+    `exiting ${room.label}`,
+  );
   const entryReward =
     input.isEntry === true
       ? allRewardControls.find(
@@ -2410,6 +2476,7 @@ export function assembleWorkspaceOccurrence(
     roomLocal,
     rewardControls: allRewardControls,
     workbench,
+    ...(beforeExitRunState === undefined ? {} : { beforeExitRunState }),
   });
   const node: WorkspaceOccurrenceWorkbenchNode = Object.freeze({
     inspectorPresentation: 'full' as const,
@@ -2508,10 +2575,17 @@ export function assembleWorkspaceOccurrence(
     roomSummary,
   );
   input.markerDestinations.redirect(workspaceOccurrenceOwnedMarkers(node.room), node.key);
+  const runStateLaunchers = Object.freeze([
+    ...(roomActions?.timeline.entries ?? []).flatMap((entry) =>
+      entry.kind === 'boundary' && entry.runState !== undefined ? [entry.runState] : [],
+    ),
+    ...(beforeExitRunState === undefined ? [] : [beforeExitRunState]),
+  ]);
   return Object.freeze({
     node,
     occurrenceInteractionRequirements: localInteractionRequirements,
     roomControls,
     rewardControls: allRewardControls,
+    runStateLaunchers,
   });
 }

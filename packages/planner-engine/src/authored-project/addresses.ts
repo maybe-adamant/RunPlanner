@@ -114,6 +114,16 @@ export interface RoomActionAddress extends BiomeOwnedAddress {
   readonly occurrenceId: OccurrenceId;
   readonly actionKey: string;
 }
+export type RoomRunStateCheckpoint =
+  | { readonly kind: 'roomEntered' }
+  | { readonly kind: 'beforeEncounterStart'; readonly phaseKey: string }
+  | { readonly kind: 'beforeRoomExit' };
+/** Derived room-lifecycle diagnostic owner. It is never authored or persisted. */
+export interface RoomRunStateCheckpointAddress extends BiomeOwnedAddress {
+  readonly kind: 'roomRunStateCheckpoint';
+  readonly occurrenceId: OccurrenceId;
+  readonly checkpoint: RoomRunStateCheckpoint;
+}
 export interface LocalVisitDecisionAddress extends BiomeOwnedAddress {
   readonly kind: 'localVisitDecision';
   readonly sourceOccurrenceId: OccurrenceId;
@@ -285,6 +295,7 @@ export type SemanticAddress =
   | HubDecisionAddress
   | LocalRewardAddress
   | RoomActionAddress
+  | RoomRunStateCheckpointAddress
   | LocalVisitDecisionAddress
   | LocalVisitSlotAddress
   | LocalVisitOrderAddress
@@ -521,6 +532,24 @@ export function createRoomActionAddress(
     ...owner(biome),
     occurrenceId,
     actionKey: nonBlank(actionKey, 'actionKey'),
+  });
+}
+export function createRoomRunStateCheckpointAddress(
+  occurrence: OccurrenceAddress,
+  checkpoint: RoomRunStateCheckpoint,
+): RoomRunStateCheckpointAddress {
+  return Object.freeze({
+    kind: 'roomRunStateCheckpoint',
+    routeKey: occurrence.routeKey,
+    biomeKey: occurrence.biomeKey,
+    occurrenceId: occurrence.occurrenceId,
+    checkpoint:
+      checkpoint.kind === 'beforeEncounterStart'
+        ? Object.freeze({
+            kind: checkpoint.kind,
+            phaseKey: nonBlank(checkpoint.phaseKey, 'phaseKey'),
+          })
+        : Object.freeze({ kind: checkpoint.kind }),
   });
 }
 export function createLocalVisitDecisionAddress(
@@ -851,6 +880,15 @@ export function semanticAddressKey(address: SemanticAddress): string {
       return JSON.stringify([...base, address.occurrenceId, address.groupKey, address.slotKey]);
     case 'roomAction':
       return JSON.stringify([...base, address.occurrenceId, address.actionKey]);
+    case 'roomRunStateCheckpoint':
+      return JSON.stringify([
+        ...base,
+        address.occurrenceId,
+        address.checkpoint.kind,
+        ...(address.checkpoint.kind === 'beforeEncounterStart'
+          ? [address.checkpoint.phaseKey]
+          : []),
+      ]);
     case 'localVisitDecision':
     case 'localVisitOrder':
       return JSON.stringify([...base, address.sourceOccurrenceId, address.groupKey]);

@@ -73,6 +73,7 @@ function WorkspaceHarness({
       biome={biome}
       focusByOwner={workspace.focusByOwner}
       interactions={workspace.interactions}
+      runStateLaunchers={workspace.runStateLaunchers}
     />
   );
 }

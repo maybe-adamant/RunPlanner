@@ -43,6 +43,7 @@ interface BiomeWorkspaceProps {
   readonly biome: WorkspaceBiome;
   readonly focusByOwner: StructuredWorkspaceProjection['focusByOwner'];
   readonly interactions: WorkspaceInteractionCatalog;
+  readonly runStateLaunchers: StructuredWorkspaceProjection['runStateLaunchers'];
 }
 
 type JeweledPomInteraction = Extract<
@@ -907,7 +908,12 @@ function CompletionOutline({
  * no catalog or authored-plan prop: structural facts and room-local state come
  * exclusively from the Slice 3a workspace envelope and semantic interactions.
  */
-export function BiomeWorkspace({ biome, focusByOwner, interactions }: BiomeWorkspaceProps) {
+export function BiomeWorkspace({
+  biome,
+  focusByOwner,
+  interactions,
+  runStateLaunchers,
+}: BiomeWorkspaceProps) {
   const runStateTarget = useAppSelector((state) => state.editorSession.runStateTarget);
   const focusedOwner = useAppSelector((state) => state.editorSession.focusedSemanticOwner);
   const scopedFocusedOwner =
@@ -943,17 +949,10 @@ export function BiomeWorkspace({ biome, focusByOwner, interactions }: BiomeWorks
           interactions.topologyRemovals,
           workspaceInteractionKey(biome.owner),
         );
-  const runStateNode =
+  const runState =
     runStateTarget === null || runStateTarget === undefined
       ? undefined
-      : biome.nodes.find(
-          (node) =>
-            'runState' in node &&
-            node.runState !== undefined &&
-            semanticAddressKey(node.runState.owner) === semanticAddressKey(runStateTarget),
-        );
-  const runState =
-    runStateNode !== undefined && 'runState' in runStateNode ? runStateNode.runState : undefined;
+      : runStateLaunchers.get(semanticAddressKey(runStateTarget));
   const selectedNodeKey = subject?.kind === 'node' ? subject.node.key : undefined;
   const selectedStage = biome.occurrenceStages.find((stage) => {
     if (stage.sourceOccurrenceNodeKey === selectedNodeKey) return true;

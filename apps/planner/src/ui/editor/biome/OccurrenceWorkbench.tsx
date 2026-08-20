@@ -920,10 +920,13 @@ function RoomActionsWorkbench({
     }
     return null;
   };
-  const renderBoundary = (boundary: WorkspaceRoomLifecycleBoundary) => (
-    <Fragment key={boundary.key}>
-      <LifecycleBoundaryRow boundary={boundary} />
-      {boundarySupplement(boundary)}
+  const renderBoundary = (
+    entry: Extract<WorkspaceRoomLifecycleTimelineEntry, { readonly kind: 'boundary' }>,
+  ) => (
+    <Fragment key={entry.boundary.key}>
+      <LifecycleBoundaryRow boundary={entry.boundary} />
+      {entry.runState === undefined ? null : <RunStateLauncher launcher={entry.runState} />}
+      {boundarySupplement(entry.boundary)}
     </Fragment>
   );
   const renderRow = (
@@ -1168,10 +1171,19 @@ function RoomActionsWorkbench({
                 const phaseBoundariesAt = (rank: number, placement: 'before' | 'after') =>
                   phaseBoundaryEntries
                     .filter((entry) => entry.rank === rank && entry.placement === placement)
-                    .map((entry) => renderBoundary(entry.boundary));
+                    .map(renderBoundary);
                 const matchedCheckpointRanks = new Set(
                   phaseRankedRows.flatMap((row) => (row.rank === null ? [] : [row.rank])),
                 );
+                const standaloneBoundariesBetween = (lowerRank: number, upperRank: number) =>
+                  phaseBoundaryEntries
+                    .filter(
+                      (entry) =>
+                        !matchedCheckpointRanks.has(entry.rank) &&
+                        entry.rank > lowerRank &&
+                        entry.rank < upperRank,
+                    )
+                    .map(renderBoundary);
                 const trailingCheckpoints = phase.checkpoints.filter(
                   (checkpoint) =>
                     actions?.timeline.boundaries.some(
@@ -1200,16 +1212,32 @@ function RoomActionsWorkbench({
                           aria-label={`${phase.label} room action order`}
                           className="room-action-list"
                         >
-                          {phaseBoundariesAt(0, 'before')}
+                          {phaseRankedRows.length === 0
+                            ? phaseBoundaryEntries.map(renderBoundary)
+                            : standaloneBoundariesBetween(
+                                Number.NEGATIVE_INFINITY,
+                                phaseRankedRows[0]?.rank ?? Number.POSITIVE_INFINITY,
+                              )}
                           {checkpointRows(0, phase.checkpoints)}
-                          {phaseRankedRows.map((row) => (
+                          {phaseRankedRows.map((row, index) => (
                             <Fragment key={row.key}>
+                              {index === 0
+                                ? null
+                                : standaloneBoundariesBetween(
+                                    phaseRankedRows[index - 1]?.rank ?? Number.NEGATIVE_INFINITY,
+                                    row.rank ?? Number.POSITIVE_INFINITY,
+                                  )}
                               {phaseBoundariesAt(row.rank!, 'before')}
                               {renderRow(row, phase.checkpoints)}
                               {phaseBoundariesAt(row.rank!, 'after')}
                             </Fragment>
                           ))}
-                          {phaseRankedRows.length === 0 ? phaseBoundariesAt(0, 'after') : null}
+                          {phaseRankedRows.length === 0
+                            ? null
+                            : standaloneBoundariesBetween(
+                                phaseRankedRows.at(-1)?.rank ?? Number.NEGATIVE_INFINITY,
+                                Number.POSITIVE_INFINITY,
+                              )}
                           {trailingCheckpoints.map((checkpoint) => (
                             <li
                               className="room-action-checkpoint"
@@ -1261,7 +1289,7 @@ function RoomActionsWorkbench({
   const actionByKey = new Map(actions.rows.map((row) => [row.key, row]));
   const timelineRows = actions.timeline.entries.flatMap((entry) => {
     if (entry.kind === 'boundary') {
-      return [renderBoundary(entry.boundary)];
+      return [renderBoundary(entry)];
     }
     const row = actionByKey.get(entry.actionKey);
     return row === undefined ? [] : [renderRow(row, [])];
@@ -1852,7 +1880,12 @@ export function OccurrenceWorkbench({
             />
           </>
         ) : activeTab === 'doors' ? (
-          (doors ?? <p className="fixed-room-state">No outgoing doors for this room.</p>)
+          <>
+            {room.beforeExitRunState === undefined ? null : (
+              <RunStateLauncher launcher={room.beforeExitRunState} />
+            )}
+            {doors ?? <p className="fixed-room-state">No outgoing doors for this room.</p>}
+          </>
         ) : activeTab === 'shipInactiveRepair' && room.workbench.kind === 'ship' ? (
           <RoomActionsWorkbench
             {...(room.workbench.roomActions === undefined

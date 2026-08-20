@@ -1,9 +1,10 @@
 import {
   createBiomeAddress,
-  createExitDecisionAddress,
   createIncomingRewardAddress,
   createLevelResolutionAddress,
   createOccurrenceId,
+  createOccurrenceAddress,
+  createRoomRunStateCheckpointAddress,
   semanticAddressKey,
   type SemanticAddress,
 } from '@run-planner/engine/authored-project';
@@ -84,10 +85,10 @@ describe('editor-session reconciliation', () => {
   });
 
   it('clears a stale Run State target when its exact published launcher disappears', () => {
-    const target = createExitDecisionAddress(owner, {
-      kind: 'occurrence',
-      occurrenceId: createOccurrenceId('stale-run-state'),
-    });
+    const target = createRoomRunStateCheckpointAddress(
+      createOccurrenceAddress(owner, createOccurrenceId('stale-run-state')),
+      { kind: 'roomEntered' },
+    );
     expect(
       deriveEditorSessionReconciliation({
         availableRunStateOwnerKeys: new Set(),

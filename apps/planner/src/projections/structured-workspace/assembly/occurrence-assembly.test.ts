@@ -152,6 +152,7 @@ function assemble(
     markerDestinations: markers.emitter,
     ordinaryRewardForfeited: (owner) => source.ordinaryRewardForfeited(owner.address),
     occurrence,
+    runState: source.runState,
   });
   return { assembly, markers, source };
 }
@@ -469,6 +470,18 @@ describe('structured workspace occurrence assembly', () => {
         owner: fields.node.room.address,
       }),
     );
+    const fieldsEntry = roomActions.timeline.entries.find(
+      (entry) => entry.kind === 'boundary' && entry.boundary.kind === 'roomEntered',
+    );
+    expect(fieldsEntry?.kind === 'boundary' && fieldsEntry.runState).toMatchObject({
+      availability: 'available',
+      owner: { kind: 'roomRunStateCheckpoint', checkpoint: { kind: 'roomEntered' } },
+    });
+    expect(fields.node.room.beforeExitRunState).toMatchObject({
+      availability: 'available',
+      owner: { kind: 'roomRunStateCheckpoint', checkpoint: { kind: 'beforeRoomExit' } },
+    });
+    expect(fields.runStateLaunchers).toHaveLength(2);
 
     expect(ship.node.room.roomLocal.kind).toBe('ship');
     if (ship.node.room.roomLocal.kind !== 'ship') throw new Error('Ship surface is missing');
@@ -570,6 +583,26 @@ describe('structured workspace occurrence assembly', () => {
         (requirement) => requirement.kind === 'shipCombatPhaseCount',
       ),
     ).toBe(true);
+    const shipBoundaryLaunchers = shipActions.timeline.entries.flatMap((entry) =>
+      entry.kind === 'boundary' && entry.runState !== undefined ? [entry.runState] : [],
+    );
+    expect(shipBoundaryLaunchers.map((launcher) => launcher.owner)).toEqual(
+      ship.node.room.encounterPhases.map((phase) => ({
+        kind: 'roomRunStateCheckpoint',
+        routeKey: oBiome.routeKey,
+        biomeKey: oBiome.biomeKey,
+        occurrenceId: oOccurrenceIds.combat04,
+        checkpoint: { kind: 'beforeEncounterStart', phaseKey: phase.address.phaseKey },
+      })),
+    );
+    expect(ship.runStateLaunchers).toHaveLength(ship.node.room.encounterPhases.length + 1);
+    expect(
+      ship.runStateLaunchers.some(
+        (launcher) =>
+          launcher.owner.kind === 'roomRunStateCheckpoint' &&
+          launcher.owner.checkpoint.kind === 'roomEntered',
+      ),
+    ).toBe(false);
   });
 
   it('derives a three-phase Ship presentation and places outgoing generation in Combat 2', () => {

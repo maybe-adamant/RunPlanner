@@ -2,6 +2,7 @@ import {
   semanticAddressKey,
   type ExitDecisionAddress,
   type HubDecisionAddress,
+  type RoomRunStateCheckpointAddress,
 } from '../../authored-project/addresses';
 import { optionIndex } from '../../authored-project/traits';
 import type { Catalog, TraitElement } from '../../catalog-schema';
@@ -19,7 +20,8 @@ import type { HistoryCounters, HistoryStateView } from '../history';
 import type { TraitHistoryState } from '../traits';
 import type { RewardBranchState } from './processing';
 
-export type DecisionRunStateOwner = ExitDecisionAddress | HubDecisionAddress;
+export type RunStateOwner =
+  ExitDecisionAddress | HubDecisionAddress | RoomRunStateCheckpointAddress;
 
 export interface DecisionGodPoolState {
   readonly acquiredSourceKeys: readonly string[];
@@ -67,10 +69,11 @@ export interface DecisionRewardBagState {
   readonly entries: readonly DecisionRewardBagEntryGroup[];
 }
 
-export interface DecisionRunStateSnapshot {
-  readonly owner: DecisionRunStateOwner;
+export interface RunStateSnapshot {
+  readonly owner: RunStateOwner;
   readonly historySequence: number;
-  readonly checkpoint: 'beforeTargetGeneration';
+  readonly checkpoint:
+    'beforeTargetGeneration' | 'roomEntered' | 'beforeEncounterStart' | 'beforeRoomExit';
   readonly godPool: DecisionGodPoolState;
   readonly traits: DecisionTraitState;
   readonly counters: DecisionCounterState;
@@ -88,30 +91,118 @@ export function forfeitStatus(
   return (state.fear.effectiveRanks.BoonSkipShrineUpgrade ?? 0) > 0 ? 'available' : 'inactive';
 }
 
-export interface DecisionRunStateAvailability {
-  readonly owner: DecisionRunStateOwner;
+export interface RunStateAvailability {
+  readonly owner: RunStateOwner;
   readonly availability: 'available' | 'unavailable';
   readonly reason?: 'coverageNotReached';
 }
 
-export interface DecisionRunStatePublication {
-  readonly snapshots: readonly DecisionRunStateSnapshot[];
-  readonly availability: readonly DecisionRunStateAvailability[];
+export interface RunStatePublication {
+  readonly snapshots: readonly RunStateSnapshot[];
+  readonly availability: readonly RunStateAvailability[];
 }
 
 interface RunStateContext {
   readonly catalog: Catalog;
-  readonly owner: DecisionRunStateOwner;
+  readonly owner: RunStateOwner;
   readonly historyView: HistoryStateView;
   readonly branches: readonly RewardBranchState[];
   readonly enteredBiomeCount: number;
   readonly rewardFacts: (history: RewardHistoryState) => RewardKernelFacts;
+  readonly derivationCache?: RunStateDerivationCache;
+  /** Exact source/view/shop/peer closure used by rewardFacts. Required with a shared cache. */
+  readonly factsContextToken?: object;
+}
+
+interface RunStateDerivationCache {
+  readonly objectIds: WeakMap<object, number>;
+  readonly traitsByHistory: WeakMap<TraitHistoryState, DecisionTraitState>;
+  readonly bagsByBranchState: Map<string, readonly DecisionRewardBagState[]>;
+  readonly bagCountsByState: WeakMap<RewardBranchState['bags'], string>;
+  readonly factsByContextHistory: Map<string, RewardKernelFacts>;
+  readonly godPoolByContextHistory: Map<string, DecisionGodPoolState>;
+  readonly bagEligibilityByContextHistory: Map<
+    string,
+    {
+      readonly signature: string;
+      readonly byStore: ReadonlyMap<string, readonly boolean[]>;
+    }
+  >;
+  readonly branchStateByIdentity: Map<
+    string,
+    {
+      readonly godPool: DecisionGodPoolState;
+      readonly traits: DecisionTraitState;
+      readonly arcanaFear: RewardBranchState['arcanaFear'];
+      readonly keepsakes: RewardBranchState['keepsakes'];
+      readonly forfeitStatus: 'inactive' | 'available' | 'consumed';
+    }
+  >;
+  nextObjectId: number;
+}
+
+export function createRunStateDerivationCache(): RunStateDerivationCache {
+  return {
+    objectIds: new WeakMap(),
+    traitsByHistory: new WeakMap(),
+    bagsByBranchState: new Map(),
+    bagCountsByState: new WeakMap(),
+    factsByContextHistory: new Map(),
+    godPoolByContextHistory: new Map(),
+    bagEligibilityByContextHistory: new Map(),
+    branchStateByIdentity: new Map(),
+    nextObjectId: 1,
+  };
+}
+
+function objectId(cache: RunStateDerivationCache, value: object): number {
+  const existing = cache.objectIds.get(value);
+  if (existing !== undefined) return existing;
+  const id = cache.nextObjectId;
+  cache.nextObjectId += 1;
+  cache.objectIds.set(value, id);
+  return id;
+}
+
+function rewardBagEligibilitySignature(
+  catalog: Catalog,
+  facts: RewardKernelFacts,
+): { readonly signature: string; readonly byStore: ReadonlyMap<string, readonly boolean[]> } {
+  const byStore = new Map(
+    catalog.rewards.stores.values.map(
+      (store) =>
+        [
+          store.key,
+          Object.freeze(
+            store.entries.map((entry) =>
+              entry.requirement === undefined ||
+              evaluateRequirement(entry.requirement, facts.requirements)
+                ? true
+                : false,
+            ),
+          ),
+        ] as const,
+    ),
+  );
+  return Object.freeze({
+    signature: catalog.rewards.stores.values
+      .flatMap((store) => byStore.get(store.key)?.map((eligible) => (eligible ? '1' : '0')) ?? [])
+      .join(''),
+    byStore,
+  });
+}
+
+function rewardBagCountSignature(catalog: Catalog, bags: RewardBranchState['bags']): string {
+  return catalog.rewards.stores.values
+    .map((store) => (bags[store.key]?.remainingEntryCounts ?? store.entries.map(() => 1)).join(','))
+    .join('|');
 }
 
 export function aggregateDecisionRewardBag(
   store: RewardStoreDeclaration,
   branches: readonly Pick<RewardBranchState, 'bags'>[],
   factsByBranch: readonly RewardKernelFacts[],
+  eligibilityByBranch?: readonly (readonly boolean[])[],
 ): DecisionRewardBagState {
   type BranchCondition = { readonly requirement?: RequirementExpression; count: number };
   type BranchGroup = {
@@ -120,39 +211,48 @@ export function aggregateDecisionRewardBag(
     total: number;
     readonly conditions: Map<string, BranchCondition>;
   };
-  const branchGroups: Map<string, BranchGroup>[] = [];
-  const storeTotals: number[] = [];
-  for (const [branchIndex, branch] of branches.entries()) {
-    const facts = factsByBranch[branchIndex];
-    if (facts === undefined) continue;
-    const bag = branch.bags[store.key];
-    const counts = bag?.remainingEntryCounts ?? store.entries.map(() => 1);
-    const effectiveGroups = new Map<string, BranchGroup>();
+  const entryDescriptors = store.entries.map((entry) => ({
+    entry,
+    conditionKey: JSON.stringify(entry.requirement),
+    eligibleKey: JSON.stringify([entry.rewardType, 'eligible']),
+    ineligibleKey: JSON.stringify([entry.rewardType, 'ineligible']),
+  }));
+  if (branches.length === 1) {
+    const branch = branches[0];
+    const facts = factsByBranch[0];
+    if (branch === undefined || facts === undefined) {
+      throw new Error(`run-state store ${store.key} has no branch facts`);
+    }
+    const counts = branch.bags[store.key]?.remainingEntryCounts ?? store.entries.map(() => 1);
+    const groups = new Map<string, BranchGroup>();
     let storeTotal = 0;
-    for (const [entryIndex, entry] of store.entries.entries()) {
+    for (const [entryIndex, descriptor] of entryDescriptors.entries()) {
+      const { entry } = descriptor;
       const requirement = entry.requirement;
       const eligibility =
-        requirement === undefined || evaluateRequirement(requirement, facts.requirements)
+        eligibilityByBranch?.[0]?.[entryIndex] === true ||
+        (eligibilityByBranch === undefined &&
+          (requirement === undefined || evaluateRequirement(requirement, facts.requirements)))
           ? 'eligible'
           : 'ineligible';
-      const key = JSON.stringify([entry.rewardType, eligibility]);
-      const conditionKey = JSON.stringify(requirement);
+      const key = eligibility === 'eligible' ? descriptor.eligibleKey : descriptor.ineligibleKey;
+      const conditionKey = descriptor.conditionKey;
       const remaining = counts[entryIndex] ?? 0;
       storeTotal += remaining;
-      let branchGroup = effectiveGroups.get(key);
-      if (branchGroup === undefined) {
-        branchGroup = {
+      let group = groups.get(key);
+      if (group === undefined) {
+        group = {
           rewardType: entry.rewardType,
           eligibility,
           total: 0,
           conditions: new Map(),
         };
-        effectiveGroups.set(key, branchGroup);
+        groups.set(key, group);
       }
-      branchGroup.total += remaining;
-      const condition = branchGroup.conditions.get(conditionKey);
+      group.total += remaining;
+      const condition = group.conditions.get(conditionKey);
       if (condition === undefined) {
-        branchGroup.conditions.set(conditionKey, {
+        group.conditions.set(conditionKey, {
           ...(requirement === undefined ? {} : { requirement }),
           count: remaining,
         });
@@ -160,55 +260,97 @@ export function aggregateDecisionRewardBag(
         condition.count += remaining;
       }
     }
-    branchGroups.push(effectiveGroups);
-    storeTotals.push(storeTotal);
+    return Object.freeze({
+      storeKey: store.key,
+      remaining: Object.freeze({ kind: 'exact' as const, count: storeTotal }),
+      entries: Object.freeze(
+        [...groups.values()].map((group) =>
+          Object.freeze({
+            rewardType: group.rewardType,
+            eligibility: group.eligibility,
+            remaining: Object.freeze({ kind: 'exact' as const, count: group.total }),
+            conditions: Object.freeze(
+              [...group.conditions.values()].map((condition) =>
+                Object.freeze({
+                  ...(condition.requirement === undefined
+                    ? {}
+                    : { requirement: condition.requirement }),
+                  remaining: Object.freeze({ kind: 'exact' as const, count: condition.count }),
+                }),
+              ),
+            ),
+          }),
+        ),
+      ),
+    });
   }
   const groups = new Map<
     string,
     {
       readonly rewardType: string;
       readonly eligibility: 'eligible' | 'ineligible';
-      readonly totalsByBranch: number[];
+      readonly totalsByBranch: Float64Array;
       readonly conditions: Map<
         string,
-        { readonly requirement?: RequirementExpression; countsByBranch: number[] }
+        { readonly requirement?: RequirementExpression; countsByBranch: Float64Array }
       >;
     }
   >();
-  for (const effectiveGroups of branchGroups) {
-    for (const [key, branchGroup] of effectiveGroups) {
-      if (!groups.has(key)) {
-        groups.set(key, {
-          rewardType: branchGroup.rewardType,
-          eligibility: branchGroup.eligibility,
-          totalsByBranch: Array(branchGroups.length).fill(0),
-          conditions: new Map(),
-        });
-      }
-      for (const [conditionKey, condition] of branchGroup.conditions) {
-        const group = groups.get(key)!;
-        if (!group.conditions.has(conditionKey)) {
-          group.conditions.set(conditionKey, {
-            ...(condition.requirement === undefined ? {} : { requirement: condition.requirement }),
-            countsByBranch: Array(branchGroups.length).fill(0),
-          });
-        }
-      }
+  const storeTotals = new Float64Array(branches.length);
+  for (const [branchIndex, branch] of branches.entries()) {
+    const facts = factsByBranch[branchIndex];
+    if (facts === undefined) {
+      throw new Error(`run-state store ${store.key} has no facts for branch ${branchIndex}`);
     }
-  }
-  for (const [branchIndex, effectiveGroups] of branchGroups.entries()) {
-    for (const [key, branchGroup] of effectiveGroups) {
-      const group = groups.get(key)!;
-      group.totalsByBranch[branchIndex] = branchGroup.total;
-      for (const [conditionKey, condition] of branchGroup.conditions) {
-        group.conditions.get(conditionKey)!.countsByBranch[branchIndex] = condition.count;
+    const bag = branch.bags[store.key];
+    const counts = bag?.remainingEntryCounts ?? store.entries.map(() => 1);
+    for (const [entryIndex, descriptor] of entryDescriptors.entries()) {
+      const { entry } = descriptor;
+      const requirement = entry.requirement;
+      const eligibility =
+        eligibilityByBranch?.[branchIndex]?.[entryIndex] === true ||
+        (eligibilityByBranch === undefined &&
+          (requirement === undefined || evaluateRequirement(requirement, facts.requirements)))
+          ? 'eligible'
+          : 'ineligible';
+      const key = eligibility === 'eligible' ? descriptor.eligibleKey : descriptor.ineligibleKey;
+      const conditionKey = descriptor.conditionKey;
+      const remaining = counts[entryIndex] ?? 0;
+      storeTotals[branchIndex] = (storeTotals[branchIndex] ?? 0) + remaining;
+      let group = groups.get(key);
+      if (group === undefined) {
+        group = {
+          rewardType: entry.rewardType,
+          eligibility,
+          totalsByBranch: new Float64Array(branches.length),
+          conditions: new Map(),
+        };
+        groups.set(key, group);
+      }
+      group.totalsByBranch[branchIndex] = (group.totalsByBranch[branchIndex] ?? 0) + remaining;
+      const condition = group.conditions.get(conditionKey);
+      if (condition === undefined) {
+        const countsByBranch = new Float64Array(branches.length);
+        countsByBranch[branchIndex] = remaining;
+        group.conditions.set(conditionKey, {
+          ...(requirement === undefined ? {} : { requirement }),
+          countsByBranch,
+        });
+      } else {
+        condition.countsByBranch[branchIndex] =
+          (condition.countsByBranch[branchIndex] ?? 0) + remaining;
       }
     }
   }
 
-  const count = (counts: readonly number[]): DecisionRewardBagCount => {
-    const min = Math.min(...counts);
-    const max = Math.max(...counts);
+  const count = (counts: ArrayLike<number>): DecisionRewardBagCount => {
+    let min = Number.POSITIVE_INFINITY;
+    let max = Number.NEGATIVE_INFINITY;
+    for (let index = 0; index < counts.length; index += 1) {
+      const value = counts[index] ?? 0;
+      if (value < min) min = value;
+      if (value > max) max = value;
+    }
     return min === max
       ? Object.freeze({ kind: 'exact' as const, count: min })
       : Object.freeze({ kind: 'range' as const, min, max });
@@ -328,21 +470,85 @@ function sourcePool(
   });
 }
 
-export function createRunState(context: RunStateContext): DecisionRunStateSnapshot | undefined {
+export function createRunState(context: RunStateContext): RunStateSnapshot | undefined {
   if (context.branches.length === 0) return undefined;
-  const factsByBranch = context.branches.map((branch) => context.rewardFacts(branch.history));
+  const derivationCache = context.derivationCache;
+  if (derivationCache !== undefined && context.factsContextToken === undefined) {
+    throw new Error('run-state shared derivation cache requires an exact facts context token');
+  }
+  const contextHistoryKeys = context.branches.map((branch) =>
+    derivationCache === undefined
+      ? undefined
+      : `${objectId(derivationCache, context.factsContextToken!)}:${objectId(derivationCache, branch.history)}`,
+  );
+  const factsByBranch = context.branches.map((branch, branchIndex) => {
+    const contextHistoryKey = contextHistoryKeys[branchIndex];
+    const cached =
+      contextHistoryKey === undefined
+        ? undefined
+        : derivationCache?.factsByContextHistory.get(contextHistoryKey);
+    if (cached !== undefined) return cached;
+    const facts = context.rewardFacts(branch.history);
+    if (contextHistoryKey !== undefined) {
+      derivationCache?.factsByContextHistory.set(contextHistoryKey, facts);
+    }
+    return facts;
+  });
   const branchStates = context.branches.map((branch, index) => {
     const facts = factsByBranch[index];
+    const contextHistoryKey = contextHistoryKeys[index];
     if (facts === undefined) {
       throw new Error('run-state branch has no reward facts');
     }
+    const cache = context.derivationCache;
+    const identityKey =
+      cache === undefined
+        ? undefined
+        : [
+            contextHistoryKey,
+            branch.traitHistory === undefined ? 0 : objectId(cache, branch.traitHistory),
+            objectId(cache, branch.arcanaFear),
+            objectId(cache, branch.keepsakes),
+          ].join(':');
+    let derived =
+      identityKey === undefined ? undefined : cache?.branchStateByIdentity.get(identityKey);
+    if (derived === undefined) {
+      const cachedGodPool =
+        contextHistoryKey === undefined
+          ? undefined
+          : cache?.godPoolByContextHistory.get(contextHistoryKey);
+      const godPool = cachedGodPool ?? sourcePool(context.catalog, facts);
+      if (cachedGodPool === undefined && contextHistoryKey !== undefined) {
+        cache?.godPoolByContextHistory.set(contextHistoryKey, godPool);
+      }
+      const cachedTraits =
+        branch.traitHistory === undefined
+          ? undefined
+          : cache?.traitsByHistory.get(branch.traitHistory);
+      const traits = cachedTraits ?? traitState(context.catalog, branch.traitHistory);
+      if (branch.traitHistory !== undefined && cachedTraits === undefined) {
+        cache?.traitsByHistory.set(branch.traitHistory, traits);
+      }
+      const forfeit = forfeitStatus(branch.arcanaFear);
+      derived = Object.freeze({
+        godPool,
+        traits,
+        arcanaFear: branch.arcanaFear,
+        keepsakes: branch.keepsakes,
+        forfeitStatus: forfeit,
+      });
+      if (identityKey !== undefined) {
+        cache?.branchStateByIdentity.set(identityKey, derived);
+      }
+    }
+    const counters = historyCounters(
+      context.historyView,
+      branch.history,
+      context.enteredBiomeCount,
+    );
     return Object.freeze({
-      godPool: sourcePool(context.catalog, facts),
-      traits: traitState(context.catalog, branch.traitHistory),
-      counters: historyCounters(context.historyView, branch.history, context.enteredBiomeCount),
-      arcanaFear: branch.arcanaFear,
-      keepsakes: branch.keepsakes,
-      forfeitStatus: forfeitStatus(branch.arcanaFear),
+      ...derived,
+      counters,
     });
   });
   const first = branchStates[0];
@@ -354,21 +560,68 @@ export function createRunState(context: RunStateContext): DecisionRunStateSnapsh
       );
     }
   }
+  const bagEligibilityByBranch = context.branches.map((branch, index) => {
+    const contextHistoryKey = contextHistoryKeys[index];
+    const cached =
+      contextHistoryKey === undefined
+        ? undefined
+        : derivationCache?.bagEligibilityByContextHistory.get(contextHistoryKey);
+    if (cached !== undefined) return cached;
+    const facts = factsByBranch[index];
+    if (facts === undefined) throw new Error('run-state branch has no reward facts');
+    const signature = rewardBagEligibilitySignature(context.catalog, facts);
+    if (contextHistoryKey !== undefined) {
+      derivationCache?.bagEligibilityByContextHistory.set(contextHistoryKey, signature);
+    }
+    return signature;
+  });
+  const bagCountsByBranch = context.branches.map((branch) => {
+    const cached = derivationCache?.bagCountsByState.get(branch.bags);
+    if (cached !== undefined) return cached;
+    const signature = rewardBagCountSignature(context.catalog, branch.bags);
+    derivationCache?.bagCountsByState.set(branch.bags, signature);
+    return signature;
+  });
+  const bagCacheKey =
+    derivationCache === undefined
+      ? undefined
+      : context.branches
+          .map(
+            (_branch, index) =>
+              `${bagCountsByBranch[index] ?? ''}:${bagEligibilityByBranch[index]?.signature ?? ''}`,
+          )
+          .join('|');
+  let bags =
+    bagCacheKey === undefined ? undefined : derivationCache?.bagsByBranchState.get(bagCacheKey);
+  if (bags === undefined) {
+    bags = Object.freeze(
+      context.catalog.rewards.stores.values.map((store) =>
+        aggregateDecisionRewardBag(
+          store,
+          context.branches,
+          factsByBranch,
+          bagEligibilityByBranch.map((eligibility) => eligibility.byStore.get(store.key) ?? []),
+        ),
+      ),
+    );
+    if (bagCacheKey !== undefined) {
+      derivationCache?.bagsByBranchState.set(bagCacheKey, bags);
+    }
+  }
   return Object.freeze({
     owner: context.owner,
     historySequence: context.historyView.sequence,
-    checkpoint: 'beforeTargetGeneration',
+    checkpoint:
+      context.owner.kind === 'roomRunStateCheckpoint'
+        ? context.owner.checkpoint.kind
+        : 'beforeTargetGeneration',
     godPool: first.godPool,
     traits: first.traits,
     counters: first.counters,
     arcanaFear: first.arcanaFear,
     keepsakes: first.keepsakes,
     forfeitStatus: first.forfeitStatus,
-    bags: Object.freeze(
-      context.catalog.rewards.stores.values.map((store) =>
-        aggregateDecisionRewardBag(store, context.branches, factsByBranch),
-      ),
-    ),
+    bags,
   });
 }
 
@@ -380,15 +633,15 @@ export function createRunState(context: RunStateContext): DecisionRunStateSnapsh
  * missing snapshot.
  */
 export function publishRunStateThroughCoverage(
-  discovered: readonly DecisionRunStateSnapshot[],
-  covered: readonly DecisionRunStateSnapshot[],
-  owners: readonly DecisionRunStateOwner[] = discovered.map((snapshot) => snapshot.owner),
-): DecisionRunStatePublication {
+  discovered: readonly RunStateSnapshot[],
+  covered: readonly RunStateSnapshot[],
+  owners: readonly RunStateOwner[] = discovered.map((snapshot) => snapshot.owner),
+): RunStatePublication {
   const coveredByOwner = new Map(
     covered.map((snapshot) => [semanticAddressKey(snapshot.owner), snapshot]),
   );
   const knownOwners = new Set<string>();
-  const availability: DecisionRunStateAvailability[] = [];
+  const availability: RunStateAvailability[] = [];
   for (const owner of owners) {
     const ownerKey = semanticAddressKey(owner);
     if (knownOwners.has(ownerKey)) continue;

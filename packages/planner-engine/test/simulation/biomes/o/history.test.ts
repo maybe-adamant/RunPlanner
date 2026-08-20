@@ -104,6 +104,13 @@ describe('O canonical materialization and lifecycle', () => {
       ]),
     );
     expect(view?.offerPoints?.map((offer) => offer.offerPoint)).toEqual(['wheel1']);
+    const encounterStarts = events.filter((event) => event.kind === 'encounterStarted');
+    expect(view?.encounterStarts.map((start) => start.phaseKey)).toEqual(
+      encounterStarts.map((event) => event.phaseKey),
+    );
+    expect(view?.encounterStarts.map((start) => start.before.sequence)).toEqual(
+      encounterStarts.map((event) => event.sequence - 1),
+    );
     expect(history.events[0]?.sequence).toBe(n.history.afterTransition.sequence + 1);
     expect(history.events[0]).toMatchObject({
       kind: 'biomeStarted',
