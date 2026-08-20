@@ -24,15 +24,17 @@ import { describe, expect, it } from 'vitest';
 
 import {
   createGoldenFGHIProject,
-  createRepresentativeNOPQProject,
   goldenFBiome,
   goldenFOccurrenceId,
+} from '@run-planner/test-fixtures/underworld';
+import {
+  createRepresentativeNOPQProject,
   nBiome,
   nLocalOccurrenceId,
   nOccurrenceId,
   oBiome,
   oOccurrenceIds,
-} from '@run-planner/test-fixtures';
+} from '@run-planner/test-fixtures/surface';
 import { resolveCountedRewardTypeDomain } from '../../src/simulation/rewards/authoring-domain';
 
 function plan(project: ProjectDocument, routeKey: string, biomeKey: string): AuthoredBiomePlan {

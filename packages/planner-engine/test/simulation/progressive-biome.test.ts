@@ -56,14 +56,16 @@ import {
   fStartId,
 } from './support/f-takeover-project';
 import {
+  authorLegalTraitOffers,
+  authorRequiredTestRoomActions,
+  authorTestArtificerReplacement,
+} from '@run-planner/test-fixtures/shared';
+import {
   createGoldenFGHProject,
   createGoldenFGHIProject,
   createCompleteFGProject,
   createFConversionFrontierProject,
   createFInvalidLaterConversionProject,
-  authorLegalTraitOffers,
-  authorRequiredTestRoomActions,
-  authorTestArtificerReplacement,
   goldenFBiome,
   goldenFStartId,
   goldenFOccurrenceId,
@@ -71,7 +73,7 @@ import {
   goldenGOccurrenceId,
   goldenHBiome,
   goldenIBiome,
-} from '@run-planner/test-fixtures';
+} from '@run-planner/test-fixtures/underworld';
 import {
   createRepresentativeNOPQProject,
   oBiome,
@@ -80,7 +82,7 @@ import {
   pOccurrenceId,
   qBiome,
   qOccurrenceIds,
-} from '@run-planner/test-fixtures';
+} from '@run-planner/test-fixtures/surface';
 
 function source(occurrenceId: OccurrenceId) {
   return { kind: 'occurrence' as const, occurrenceId };

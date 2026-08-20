@@ -36,14 +36,14 @@ import {
   fDecision,
   fStartId,
 } from '../../support/f-takeover-project';
+import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 import {
-  authorLegalTraitOffers,
   createCompleteFGProject,
   createFMidshopUnresolvedBlindBoxBeforePomProject,
   fMidshopPomShopId,
   goldenFBiome,
-} from '@run-planner/test-fixtures';
-import { replaceTestShopOfferActions } from '@run-planner/test-fixtures';
+} from '@run-planner/test-fixtures/underworld';
+import { replaceTestShopOfferActions } from '@run-planner/test-fixtures/shared';
 import {
   createFGenerationProject,
   fGenerationBaselineBatches,

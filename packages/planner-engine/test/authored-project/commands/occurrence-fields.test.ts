@@ -8,7 +8,7 @@ import {
   type FieldsCombatState,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
-import { createGoldenFGHProject, goldenHBiome } from '@run-planner/test-fixtures';
+import { createGoldenFGHProject, goldenHBiome } from '@run-planner/test-fixtures/underworld';
 
 function fieldsState(
   project: ProjectDocument,

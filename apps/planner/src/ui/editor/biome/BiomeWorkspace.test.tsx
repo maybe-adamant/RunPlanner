@@ -34,10 +34,10 @@ import {
   authoredProjectReplaced,
   authoredProjectUndoRequested,
 } from '@planner/state/projectWorkspaceSlice';
+import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 import {
   appendCompleteN,
   appendNEntry,
-  authorLegalTraitOffers,
   createRepresentativeNOPQProject,
   nBiome,
   nLocalOccurrenceId,
@@ -46,13 +46,13 @@ import {
   pBiome,
   pOccurrenceId,
   pOccurrenceIds,
-} from '@run-planner/test-fixtures';
+} from '@run-planner/test-fixtures/surface';
 import {
   createGoldenFGHIProject,
   goldenFBiome,
   goldenFOccurrenceId,
   goldenFStartId,
-} from '@run-planner/test-fixtures';
+} from '@run-planner/test-fixtures/underworld';
 import { BiomeWorkspace } from './BiomeWorkspace';
 import {
   renderWorkspace,

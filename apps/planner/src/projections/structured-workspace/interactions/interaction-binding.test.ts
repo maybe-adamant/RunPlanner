@@ -43,6 +43,10 @@ import {
 import { describe, expect, it, vi } from 'vitest';
 
 import {
+  authorLegalTraitOffers,
+  authorRequiredTestRoomActions,
+} from '@run-planner/test-fixtures/shared';
+import {
   createGoldenFGHIProject,
   createCompleteFGProject,
   createFConversionFrontierProject,
@@ -52,14 +56,14 @@ import {
   goldenGBiome,
   goldenHBiome,
   goldenIBiome,
+} from '@run-planner/test-fixtures/underworld';
+import {
   createRepresentativeNOPQProject,
   createRepresentativeNOPProject,
   createRepresentativeNOPQShopTraitProject,
   createRepresentativeNOProject,
   appendCompleteN,
   appendNEntry,
-  authorLegalTraitOffers,
-  authorRequiredTestRoomActions,
   nBiome,
   nLocalOccurrenceId,
   nOccurrenceId,
@@ -72,7 +76,7 @@ import {
   pOccurrenceIds,
   qBiome,
   qOccurrenceIds,
-} from '@run-planner/test-fixtures';
+} from '@run-planner/test-fixtures/surface';
 import { createCandidateSessionFactory } from '@planner/projections/candidateProjection';
 import type { CandidateProjectionSession } from '@planner/projections/candidateProjection';
 import { createContextualOptionResolver } from '@planner/projections/contextualOptions';

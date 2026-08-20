@@ -27,12 +27,12 @@ import {
   simulateProject,
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
+import { authorRequiredTestRoomActions } from '@run-planner/test-fixtures/shared';
 import {
   createGoldenFGHProject,
   createGoldenFGHIProject,
-  authorRequiredTestRoomActions,
   goldenHBiome,
-} from '@run-planner/test-fixtures';
+} from '@run-planner/test-fixtures/underworld';
 
 function evaluatedProject(project: ReturnType<typeof createGoldenFGHProject>) {
   return simulateProject(catalog, authorRequiredTestRoomActions(project, catalog));

@@ -10,11 +10,11 @@ import {
   type PlannerApplication,
 } from '@planner/composition/createApplication';
 import { authoredProjectReplaced } from '@planner/state/projectWorkspaceSlice';
+import { createGoldenFGHIProject } from '@run-planner/test-fixtures/underworld';
 import {
   appendCompleteN,
-  createGoldenFGHIProject,
   createRepresentativeNOPQProject,
-} from '@run-planner/test-fixtures';
+} from '@run-planner/test-fixtures/surface';
 import { renderPlannerForInteraction } from '../fixtures/renderPlanner';
 
 afterEach(cleanup);

@@ -28,8 +28,12 @@ import {
   createRepresentativeNOPQProject,
   nBiome,
   nOccurrenceId,
-} from '@run-planner/test-fixtures';
-import { createGoldenFGHIProject, goldenFBiome, goldenFStartId } from '@run-planner/test-fixtures';
+} from '@run-planner/test-fixtures/surface';
+import {
+  createGoldenFGHIProject,
+  goldenFBiome,
+  goldenFStartId,
+} from '@run-planner/test-fixtures/underworld';
 
 type LoadableInteraction = {
   readonly load: () => unknown | Promise<unknown>;

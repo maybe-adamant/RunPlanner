@@ -17,9 +17,8 @@ import {
 import {
   authorLegalTraitOffers,
   authorRequiredTestRoomActions,
-  createGoldenFGHIProject,
-  goldenHBiome,
-} from '@run-planner/test-fixtures';
+} from '@run-planner/test-fixtures/shared';
+import { createGoldenFGHIProject, goldenHBiome } from '@run-planner/test-fixtures/underworld';
 
 /** Bounded Golden H reauthoring that truthfully acquires Gold before its reached Preboss Shop. */
 export function createEchoGoldHPrebossProject(): ProjectDocument {

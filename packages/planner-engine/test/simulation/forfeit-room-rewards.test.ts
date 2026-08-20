@@ -9,11 +9,8 @@ import {
 } from '@run-planner/engine/authored-project';
 import { describe, expect, it } from 'vitest';
 
-import {
-  authorRequiredTestRoomActions,
-  createCompleteFGProject,
-  goldenFStartId,
-} from '@run-planner/test-fixtures';
+import { authorRequiredTestRoomActions } from '@run-planner/test-fixtures/shared';
+import { createCompleteFGProject, goldenFStartId } from '@run-planner/test-fixtures/underworld';
 import { simulateProject } from '../../src/simulation';
 import { createPreparedProjectCandidateSession } from '../../src/simulation/candidates';
 import { simulateProjectAssembly } from '../../src/simulation/project';

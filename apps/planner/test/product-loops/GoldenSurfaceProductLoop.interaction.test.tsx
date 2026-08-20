@@ -36,9 +36,14 @@ import {
 import { selectProfileStatus } from '@planner/state/store';
 import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
 import {
+  authorLegalTraitOffers,
+  reachedTraitOffers,
+  traitCandidateOptions,
+  type TraitCandidateProbe,
+} from '@run-planner/test-fixtures/shared';
+import {
   appendCompleteN,
   createRepresentativeNOPQProject,
-  authorLegalTraitOffers,
   createRepresentativeNOPQShopTraitProject,
   nBiome,
   nOccurrenceId,
@@ -48,10 +53,7 @@ import {
   pBiome,
   pOccurrenceId,
   pOccurrenceIds,
-  reachedTraitOffers,
-  traitCandidateOptions,
-  type TraitCandidateProbe,
-} from '@run-planner/test-fixtures';
+} from '@run-planner/test-fixtures/surface';
 import { renderPlannerForInteraction } from '../fixtures/renderPlanner';
 import { semanticOwnerElementId } from '@planner/ui/feedback/semanticOwner';
 

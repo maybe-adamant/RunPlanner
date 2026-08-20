@@ -20,13 +20,13 @@ import {
 } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
+import { replaceTestShopOfferActions } from '@run-planner/test-fixtures/shared';
 import {
   createRepresentativeNOPProject,
-  replaceTestShopOfferActions,
   pBiome,
   pOccurrenceId,
   pOccurrenceIds,
-} from '@run-planner/test-fixtures';
+} from '@run-planner/test-fixtures/surface';
 import { evaluateProgressiveBiomeAssembly } from '../../../../src/simulation/progressive/biome';
 
 const defaultRouteLoadout = createDefaultRouteLoadout(catalog);

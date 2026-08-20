@@ -11,13 +11,15 @@ import {
 } from '@run-planner/engine/authored-project';
 import {
   createGoldenFGHProject,
-  createRepresentativeNOProject,
   goldenFBiome,
   goldenFOccurrenceId,
   goldenHBiome,
+} from '@run-planner/test-fixtures/underworld';
+import {
+  createRepresentativeNOProject,
   oBiome,
   oOccurrenceIds,
-} from '@run-planner/test-fixtures';
+} from '@run-planner/test-fixtures/surface';
 
 import { createCompleteNProject } from '../support/complete-n-project';
 import { nBiome } from '../support/configured-projects';

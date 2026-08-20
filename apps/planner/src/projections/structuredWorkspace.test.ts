@@ -7,10 +7,8 @@ import {
 import { simulateProjectAssembly } from '@run-planner/engine/simulation';
 import { beforeAll, describe, expect, it } from 'vitest';
 
-import {
-  createGoldenFGHIProject,
-  createRepresentativeNOPQProject,
-} from '@run-planner/test-fixtures';
+import { createGoldenFGHIProject } from '@run-planner/test-fixtures/underworld';
+import { createRepresentativeNOPQProject } from '@run-planner/test-fixtures/surface';
 import { createCandidateSessionFactory } from './candidateProjection';
 import { createContextualOptionResolver } from './contextualOptions';
 import { createContextualPickerProjection } from './contextualPicker';

@@ -36,15 +36,15 @@ import {
   type HistoryStateView,
   type MaterializedBiomePrefix,
 } from '@run-planner/engine/simulation';
+import { authorRequiredTestRoomActions } from '@run-planner/test-fixtures/shared';
 import {
   createCompleteFGProject,
-  authorRequiredTestRoomActions,
   goldenFBiome,
   goldenFOccurrenceId,
   goldenGBiome,
   goldenGOccurrenceId,
   goldenGStartId,
-} from '@run-planner/test-fixtures';
+} from '@run-planner/test-fixtures/underworld';
 
 const fBiome = createBiomeAddress('Underworld', 'F');
 const gBiome = createBiomeAddress('Underworld', 'G');

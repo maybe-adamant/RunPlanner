@@ -16,11 +16,14 @@
     "desktop:dev": "npm run desktop:dev --workspace @run-planner/planner",
     "desktop:build": "npm run desktop:build --workspace @run-planner/planner",
     "build": "npm run build --workspace @run-planner/planner",
-    "typecheck": "npm run typecheck --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present && npm run typecheck:fixtures",
+    "typecheck:fixtures": "tsc --project test/fixtures/authored-project/tsconfig.json",
     "test": "npm run test:regular && npm run test:heavy",
     "test:regular": "vitest run --config vitest.regular.config.ts",
     "test:heavy": "vitest run --config vitest.heavy.config.ts",
     "test:changed": "vitest run --changed",
+    "test:fixtures:check": "vitest run --config vitest.fixtures.config.ts",
+    "test:fixtures:write": "vitest run --config vitest.fixtures.write.config.ts && npm run test:fixtures:check",
     "test:catalog": "vitest run packages/hades2-catalog/test",
     "test:engine": "vitest run packages/planner-engine/test",
     "test:planner": "vitest run apps/planner/src apps/planner/test/architecture apps/planner/test/support/structured-workspace",
@@ -31,7 +34,7 @@
     "lint": "eslint . --max-warnings=0",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "check": "npm run typecheck && npm run test && npm run lint && npm run format:check && npm run build"
+    "check": "npm run typecheck && npm run test:fixtures:check && npm run test && npm run lint && npm run format:check && npm run build"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

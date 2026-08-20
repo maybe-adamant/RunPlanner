@@ -24,8 +24,8 @@ import {
   authoredProjectCommandDispatched,
   authoredProjectReplaced,
 } from '@planner/state/projectWorkspaceSlice';
-import { createRepresentativeNOPQProject } from '@run-planner/test-fixtures';
-import { authorLegalTraitOffers } from '@run-planner/test-fixtures';
+import { createRepresentativeNOPQProject } from '@run-planner/test-fixtures/surface';
+import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 import { App } from './App';
 import { semanticOwnerElementId } from '../feedback/semanticOwner';
 

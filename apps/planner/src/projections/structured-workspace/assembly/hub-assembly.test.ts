@@ -21,7 +21,7 @@ import {
   nBiome,
   nOccurrenceId,
   nOccurrenceIds,
-} from '@run-planner/test-fixtures';
+} from '@run-planner/test-fixtures/surface';
 import { assembleWorkspaceHub } from './hub-assembly';
 import {
   assembleWorkspaceOccurrence,

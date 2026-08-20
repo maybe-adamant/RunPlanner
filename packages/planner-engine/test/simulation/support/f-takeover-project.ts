@@ -13,7 +13,7 @@ import {
   createTraitOfferAddress,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
-import { authorRequiredTestRoomActions } from '@run-planner/test-fixtures';
+import { authorRequiredTestRoomActions } from '@run-planner/test-fixtures/shared';
 
 export const fBiome = createBiomeAddress('Underworld', 'F');
 export const fStartId = createOccurrenceId('f-takeover-start');

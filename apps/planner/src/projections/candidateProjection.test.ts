@@ -17,7 +17,7 @@ import {
 } from '@run-planner/engine/simulation';
 import { describe, expect, it, vi } from 'vitest';
 
-import { createGoldenFGHIProject } from '@run-planner/test-fixtures';
+import { createGoldenFGHIProject } from '@run-planner/test-fixtures/underworld';
 import { candidateSupport, createCandidateSessionFactory } from './candidateProjection';
 
 const candidateTarget = createTargetAddress(

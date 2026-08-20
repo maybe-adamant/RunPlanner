@@ -8,7 +8,7 @@ import {
 } from '@run-planner/engine/authored-project';
 import { describe, expect, it } from 'vitest';
 
-import { createRepresentativeNProject } from '@run-planner/test-fixtures';
+import { createRepresentativeNProject } from '@run-planner/test-fixtures/surface';
 import { expectedWorkspaceStructuralControls } from './expected-structural-controls';
 
 const biome = createBiomeAddress('Surface', 'N');

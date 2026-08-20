@@ -29,15 +29,15 @@ import {
 import { simulateProjectAssembly } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
+import { editTestRoomActionOrder } from '@run-planner/test-fixtures/shared';
 import {
   createGoldenFGHProject,
   createGoldenFGHIProject,
   createCompleteFGProject,
-  editTestRoomActionOrder,
   goldenFBiome,
   goldenGBiome,
   goldenHBiome,
-} from '@run-planner/test-fixtures';
+} from '@run-planner/test-fixtures/underworld';
 import {
   appendCompleteN,
   appendNEntry,
@@ -46,7 +46,7 @@ import {
   nOccurrenceId,
   nOccurrenceIds,
   nVisitSlotKeys,
-} from '@run-planner/test-fixtures';
+} from '@run-planner/test-fixtures/surface';
 import {
   createStructuredWorkspaceTestServices,
   requireWorkspaceBiome,

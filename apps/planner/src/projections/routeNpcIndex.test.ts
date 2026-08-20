@@ -19,14 +19,16 @@ import { describe, expect, it } from 'vitest';
 import { createApplication } from '@planner/composition/createApplication';
 import { authoredProjectReplaced } from '@planner/state/projectWorkspaceSlice';
 import {
-  createCompleteFGProject,
   authorLegalTraitOffers,
   authorRequiredTestRoomActions,
+} from '@run-planner/test-fixtures/shared';
+import {
+  createCompleteFGProject,
   goldenFBiome,
   goldenFOccurrenceId,
   goldenGBiome,
   goldenGOccurrenceId,
-} from '@run-planner/test-fixtures';
+} from '@run-planner/test-fixtures/underworld';
 
 import { projectRouteNpcIndex, RouteNpcIndexProjectionContractError } from './routeNpcIndex';
 

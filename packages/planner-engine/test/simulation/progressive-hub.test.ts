@@ -29,14 +29,14 @@ import { evaluateProgressiveBiome } from '../../src/simulation/progressive/biome
 
 const defaultRouteLoadout = createDefaultRouteLoadout(catalog);
 
+import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 import {
-  authorLegalTraitOffers,
   createRepresentativeNProject,
   nBiome,
   nLocalOccurrenceId,
   nOccurrenceId,
   nOpenSlotKeys,
-} from '@run-planner/test-fixtures';
+} from '@run-planner/test-fixtures/surface';
 
 function progressiveLocalOccurrenceId(slotKey: string, localSlotKey: string) {
   return createOccurrenceId(`progressive-n-${slotKey}-${localSlotKey}`);

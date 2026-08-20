@@ -19,8 +19,12 @@ import { authoredProjectReplaced } from '@planner/state/projectWorkspaceSlice';
 import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
 import { useAppSelector } from '@planner/state/store';
 import { BiomeWorkspace } from '@planner/ui/editor/biome/BiomeWorkspace';
-import { createRepresentativeNOPQProject, nBiome, nOccurrenceId } from '@run-planner/test-fixtures';
-import { createGoldenFGHIProject } from '@run-planner/test-fixtures';
+import {
+  createRepresentativeNOPQProject,
+  nBiome,
+  nOccurrenceId,
+} from '@run-planner/test-fixtures/surface';
+import { createGoldenFGHIProject } from '@run-planner/test-fixtures/underworld';
 
 interface WorkspaceRenderCase {
   readonly biomeKey: string;

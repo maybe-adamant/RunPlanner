@@ -10,15 +10,17 @@ import {
   createShopOfferAddress,
   semanticAddressKey,
 } from '@run-planner/engine/authored-project';
+import { replaceTestShopOfferActions } from '@run-planner/test-fixtures/shared';
 import {
   createFMidshopPomFrontierProject,
-  createRepresentativeNOPProject,
   fMidshopPomShopId,
   goldenFBiome,
+} from '@run-planner/test-fixtures/underworld';
+import {
+  createRepresentativeNOPProject,
   pBiome,
   pOccurrenceIds,
-  replaceTestShopOfferActions,
-} from '@run-planner/test-fixtures';
+} from '@run-planner/test-fixtures/surface';
 
 import { createApplication } from '@planner/composition/createApplication';
 import { authoredProjectReplaced } from '@planner/state/projectWorkspaceSlice';

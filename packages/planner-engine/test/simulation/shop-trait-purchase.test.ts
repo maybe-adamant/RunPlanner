@@ -57,13 +57,12 @@ import {
 import { createKeepsakeState } from '../../src/simulation/keepsakes';
 import { simulateProject } from '../../src/simulation';
 import { createArcanaFearState } from '../../src/simulation/arcana-fear';
+import { createGoldenFGHIProject, goldenFBiome } from '@run-planner/test-fixtures/underworld';
 import {
   createRepresentativeNOPQShopTraitProject,
-  createGoldenFGHIProject,
-  goldenFBiome,
   pBiome,
   pOccurrenceIds,
-} from '@run-planner/test-fixtures';
+} from '@run-planner/test-fixtures/surface';
 
 const explicitWorldShopOffers: Readonly<Record<string, ResolvedRewardOffer>> = Object.freeze({
   Boon: Object.freeze({

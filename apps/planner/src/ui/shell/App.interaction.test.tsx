@@ -48,21 +48,25 @@ import {
 import { createEchoGoldHPrebossProject } from '@planner-test/fixtures/echoGoldShop';
 import { semanticOwnerElementId } from '../feedback/semanticOwner';
 import {
-  createCompleteFGProject,
-  createGoldenFGHIProject,
-  createRepresentativeNOPQProject,
-  pBiome,
-  pOccurrenceId,
-  pOccurrenceIds,
-  goldenFBiome,
-  goldenFOccurrenceId,
-  goldenGBiome,
-  goldenGOccurrenceId,
   reachedTraitOffers,
   authorLegalTraitOffers,
   prepareLegalPomTraitOffers,
   supportedTraitOffer,
-} from '@run-planner/test-fixtures';
+} from '@run-planner/test-fixtures/shared';
+import {
+  createCompleteFGProject,
+  createGoldenFGHIProject,
+  goldenFBiome,
+  goldenFOccurrenceId,
+  goldenGBiome,
+  goldenGOccurrenceId,
+} from '@run-planner/test-fixtures/underworld';
+import {
+  createRepresentativeNOPQProject,
+  pBiome,
+  pOccurrenceId,
+  pOccurrenceIds,
+} from '@run-planner/test-fixtures/surface';
 
 afterEach(cleanup);
 

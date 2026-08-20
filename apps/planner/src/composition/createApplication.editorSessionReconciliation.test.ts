@@ -20,7 +20,7 @@ import {
   nBiome,
   nOccurrenceId,
   nOpenSlotKeys,
-} from '@run-planner/test-fixtures';
+} from '@run-planner/test-fixtures/surface';
 import { createApplication } from './createApplication';
 
 const combat10Reward = createIncomingRewardAddress(nBiome, nOccurrenceId('combat10'));

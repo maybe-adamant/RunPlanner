@@ -14,18 +14,20 @@ import {
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
+import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 import {
   createCompleteFGProject,
   createGoldenFGHProject,
-  createRepresentativeNOPProject,
-  authorLegalTraitOffers,
   goldenFBiome,
   goldenFOccurrenceId,
+} from '@run-planner/test-fixtures/underworld';
+import {
+  createRepresentativeNOPProject,
   nOccurrenceIds,
   oOccurrenceIds,
   pBiome,
   pOccurrenceId,
-} from '@run-planner/test-fixtures';
+} from '@run-planner/test-fixtures/surface';
 
 type JsonRecord = Record<string, unknown>;
 

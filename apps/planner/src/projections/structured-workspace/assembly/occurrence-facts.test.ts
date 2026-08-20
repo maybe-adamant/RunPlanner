@@ -6,8 +6,11 @@ import {
 } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
-import { createGoldenFGHIProject, goldenFOccurrenceId } from '@run-planner/test-fixtures';
-import { createRepresentativeNOPQProject, nOccurrenceId } from '@run-planner/test-fixtures';
+import {
+  createGoldenFGHIProject,
+  goldenFOccurrenceId,
+} from '@run-planner/test-fixtures/underworld';
+import { createRepresentativeNOPQProject, nOccurrenceId } from '@run-planner/test-fixtures/surface';
 import { createWorkspaceBiomeOccurrenceAssemblyFacts } from './occurrence-facts';
 import { createWorkspaceProjectSourceIndex } from '../source-index';
 

@@ -21,13 +21,15 @@ import {
 import { describe, expect, it } from 'vitest';
 
 import {
-  appendCompleteN,
-  appendNEntry,
   authorLegalTraitOffers,
   authorRequiredTestRoomActions,
+} from '@run-planner/test-fixtures/shared';
+import {
+  appendCompleteN,
+  appendNEntry,
   nBiome,
   nOccurrenceIds,
-} from '@run-planner/test-fixtures';
+} from '@run-planner/test-fixtures/surface';
 
 function currentNEntryProject() {
   return authorLegalTraitOffers(

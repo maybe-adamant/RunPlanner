@@ -15,13 +15,15 @@ import { materializeBiomePrefix, simulateProject } from '@run-planner/engine/sim
 import { describe, expect, it } from 'vitest';
 
 import {
-  appendNEntry,
   authorLegalTraitOffers,
   authorRequiredTestRoomActions,
+} from '@run-planner/test-fixtures/shared';
+import {
+  appendNEntry,
   createRepresentativeNProject,
   nBiome,
   nOccurrenceIds,
-} from '@run-planner/test-fixtures';
+} from '@run-planner/test-fixtures/surface';
 
 function completeN() {
   const project = createRepresentativeNProject();

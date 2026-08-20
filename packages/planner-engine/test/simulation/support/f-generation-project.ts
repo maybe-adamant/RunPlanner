@@ -15,7 +15,7 @@ import {
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
-import { authorLegalTraitOffers } from '@run-planner/test-fixtures';
+import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 
 export const fGenerationBiome = createBiomeAddress('Underworld', 'F');
 export const fGenerationStartId = createOccurrenceId('possibility-start');

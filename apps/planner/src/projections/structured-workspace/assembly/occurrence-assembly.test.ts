@@ -28,17 +28,17 @@ import {
 } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
+import { authorRequiredTestRoomActions } from '@run-planner/test-fixtures/shared';
 import {
   createGoldenFGHIProject,
   createCompleteFGProject,
-  authorRequiredTestRoomActions,
   goldenFBiome,
   goldenFOccurrenceId,
   goldenFStartId,
   goldenGBiome,
   goldenHBiome,
   goldenIBiome,
-} from '@run-planner/test-fixtures';
+} from '@run-planner/test-fixtures/underworld';
 import {
   createRepresentativeNOPQProject,
   createRepresentativeNOPProject,
@@ -48,7 +48,7 @@ import {
   oOccurrenceIds,
   pBiome,
   pOccurrenceId,
-} from '@run-planner/test-fixtures';
+} from '@run-planner/test-fixtures/surface';
 import { assembleWorkspaceOccurrence } from './occurrence-assembly';
 import { createWorkspaceBiomeOccurrenceAssemblyFacts } from './occurrence-facts';
 import { createWorkspaceBiomeMarkerDestinationBuilder } from '../navigation/marker-builder';

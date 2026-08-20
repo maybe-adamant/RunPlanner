@@ -43,7 +43,7 @@ import {
   authorRequiredTestRoomActions,
   authorTestArtificerReplacement,
   replaceTestShopOfferActions,
-} from '@run-planner/test-fixtures';
+} from '@run-planner/test-fixtures/shared';
 
 import {
   createFGenerationProject,

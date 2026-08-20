@@ -16,18 +16,22 @@ import {
 import { describe, expect, it } from 'vitest';
 
 import {
+  authorLegalTraitOffers,
+  replaceTestRoomActionOrder,
+} from '@run-planner/test-fixtures/shared';
+import { authorSurfaceWorldShop } from '@run-planner/test-fixtures/surface';
+import {
   createCompleteFGProject,
   createGoldenFGHProject,
-  createRepresentativeNOProject,
-  createRepresentativeNProject,
-  authorLegalTraitOffers,
-  authorSurfaceWorldShop,
   goldenFStartId,
   goldenFOccurrenceId,
+} from '@run-planner/test-fixtures/underworld';
+import {
+  createRepresentativeNOProject,
+  createRepresentativeNProject,
   oBiome,
   oOccurrenceIds,
-  replaceTestRoomActionOrder,
-} from '@run-planner/test-fixtures';
+} from '@run-planner/test-fixtures/surface';
 import { createRewardHistoryState, type RewardKernelFacts } from '../../src/reward-kernel';
 import { deriveRouteLoadout } from '../../src/authored-project/loadout';
 import { initializeTestRewardBranches } from '../support/arcana-fear';

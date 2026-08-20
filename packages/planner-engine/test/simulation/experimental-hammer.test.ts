@@ -19,17 +19,19 @@ import {
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
 
+import { replaceTestRoomActionOrder } from '@run-planner/test-fixtures/shared';
 import {
   createCompleteFGProject,
   createGoldenFGHProject,
+} from '@run-planner/test-fixtures/underworld';
+import {
   createRepresentativeNProject,
   createRepresentativeNOProject,
   nBiome,
   nOccurrenceId,
   oBiome,
   oOccurrenceIds,
-  replaceTestRoomActionOrder,
-} from '@run-planner/test-fixtures';
+} from '@run-planner/test-fixtures/surface';
 import { evaluateBiomeRewardsAssemblyInternal } from '../../src/simulation/rewards/biome';
 import { evaluateKeepsakeEquipResultCandidate } from '../../src/simulation/candidates/keepsake-equip-result';
 import {

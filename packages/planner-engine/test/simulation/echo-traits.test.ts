@@ -33,12 +33,8 @@ import {
   derivedAcquisitionEntriesForProjectEvaluationAssembly,
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
-import {
-  authorLegalTraitOffers,
-  createGoldenFGHProject,
-  editTestRoomActionOrder,
-  goldenHBiome,
-} from '@run-planner/test-fixtures';
+import { authorLegalTraitOffers, editTestRoomActionOrder } from '@run-planner/test-fixtures/shared';
+import { createGoldenFGHProject, goldenHBiome } from '@run-planner/test-fixtures/underworld';
 import { describe, expect, it } from 'vitest';
 
 import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidate-artifacts';

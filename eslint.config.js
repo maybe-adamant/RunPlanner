@@ -63,7 +63,7 @@ const workspacePrivateFamilyImports = {
 const testSupportSyntaxRestrictions = [
   {
     selector:
-      ":matches(ImportDeclaration, ExportNamedDeclaration, ExportAllDeclaration, ImportExpression):matches([source.value=/^@planner-test/], [source.value='@run-planner/test-fixtures'])",
+      ':matches(ImportDeclaration, ExportNamedDeclaration, ExportAllDeclaration, ImportExpression):matches([source.value=/^@planner-test/], [source.value=/^@run-planner\\/test-fixtures(?:\\/|$)/])',
     message: 'Production source must not consume test fixtures or test support.',
   },
 ];

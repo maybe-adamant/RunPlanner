@@ -15,7 +15,7 @@ import {
   nOccurrenceIds,
   oOccurrenceIds,
   qOccurrenceIds,
-} from '@run-planner/test-fixtures';
+} from '@run-planner/test-fixtures/surface';
 
 import {
   declaredPhysicalExits,

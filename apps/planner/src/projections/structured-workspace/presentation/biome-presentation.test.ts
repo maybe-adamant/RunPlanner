@@ -16,12 +16,9 @@ import {
 } from '@run-planner/engine/simulation';
 import { beforeAll, describe, expect, it } from 'vitest';
 
-import {
-  createGoldenFGHIProject,
-  createRepresentativeNOPQProject,
-  nBiome,
-} from '@run-planner/test-fixtures';
-import { appendCompleteN, nOccurrenceId, nVisitSlotKeys } from '@run-planner/test-fixtures';
+import { createGoldenFGHIProject } from '@run-planner/test-fixtures/underworld';
+import { createRepresentativeNOPQProject, nBiome } from '@run-planner/test-fixtures/surface';
+import { appendCompleteN, nOccurrenceId, nVisitSlotKeys } from '@run-planner/test-fixtures/surface';
 import type {
   WorkspaceBiome,
   WorkspaceOccurrenceWorkbenchNode,

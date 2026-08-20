@@ -45,10 +45,10 @@ import type {
 import { TraitOfferEditor } from './TraitOfferEditor';
 import {
   createGoldenFGHIProject,
-  createRepresentativeNProject,
   goldenFBiome,
   goldenFStartId,
-} from '@run-planner/test-fixtures';
+} from '@run-planner/test-fixtures/underworld';
+import { createRepresentativeNProject } from '@run-planner/test-fixtures/surface';
 
 afterEach(cleanup);
 

@@ -29,15 +29,19 @@ import {
 import {
   authorLegalTraitOffers,
   authorRequiredTestRoomActions,
-  authorSurfaceWorldShop,
+} from '@run-planner/test-fixtures/shared';
+import { authorSurfaceWorldShop } from '@run-planner/test-fixtures/surface';
+import {
   createCompleteFGProject,
   createGoldenFGHProject,
+} from '@run-planner/test-fixtures/underworld';
+import {
   createRepresentativeNProject,
   oOccurrenceIds,
   createRepresentativeNOProject,
   createRepresentativeNOPProject,
   createRepresentativeNOPQProject,
-} from '@run-planner/test-fixtures';
+} from '@run-planner/test-fixtures/surface';
 
 function evaluatedProject(project: ReturnType<typeof createProjectDocument>) {
   return simulateProject(catalog, authorRequiredTestRoomActions(project, catalog));

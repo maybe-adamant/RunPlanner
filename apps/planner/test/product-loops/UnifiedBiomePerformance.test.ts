@@ -22,8 +22,8 @@ import {
   goldenGBiome,
   goldenGOccurrenceId,
   goldenGStartId,
-} from '@run-planner/test-fixtures';
-import { createRepresentativeNOPQProject, nBiome } from '@run-planner/test-fixtures';
+} from '@run-planner/test-fixtures/underworld';
+import { createRepresentativeNOPQProject, nBiome } from '@run-planner/test-fixtures/surface';
 
 const interactiveBudgetMs = 750;
 const cachedUndoBudgetMs = 50;

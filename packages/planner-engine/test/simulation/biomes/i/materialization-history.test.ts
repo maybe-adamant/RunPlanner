@@ -31,7 +31,7 @@ import {
 import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
-import { authorRequiredTestRoomActions } from '@run-planner/test-fixtures';
+import { authorRequiredTestRoomActions } from '@run-planner/test-fixtures/shared';
 
 const biome = createBiomeAddress('Underworld', 'I');
 

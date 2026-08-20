@@ -16,7 +16,7 @@ import {
 } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
-import { createCompleteFGProject, goldenFStartId } from '@run-planner/test-fixtures';
+import { createCompleteFGProject, goldenFStartId } from '@run-planner/test-fixtures/underworld';
 import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidate-artifacts';
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
 import { createArcanaFearState } from '../../src/simulation/arcana-fear';

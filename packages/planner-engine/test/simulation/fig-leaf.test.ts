@@ -21,8 +21,8 @@ import {
   simulateProject,
   simulateProjectAssembly,
 } from '../../src/simulation';
+import { createCompleteFGProject } from '@run-planner/test-fixtures/underworld';
 import {
-  createCompleteFGProject,
   createRepresentativeNProject,
   createRepresentativeNOProject,
   createRepresentativeNOPProject,
@@ -36,7 +36,7 @@ import {
   pOccurrenceId,
   qBiome,
   qOccurrenceIds,
-} from '@run-planner/test-fixtures';
+} from '@run-planner/test-fixtures/surface';
 import type { HistoryEvent } from '../../src/simulation/history/model';
 
 type EncounterLifecycleHistoryEvent = Extract<

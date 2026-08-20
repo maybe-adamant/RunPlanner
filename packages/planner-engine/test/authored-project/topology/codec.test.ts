@@ -24,7 +24,7 @@ import {
   undoProjectHistory,
 } from '@run-planner/engine/authored-project';
 import { composeBiomeHistoryPrefix, materializeBiomePrefix } from '@run-planner/engine/simulation';
-import { createRepresentativeNOPQProject } from '@run-planner/test-fixtures';
+import { createRepresentativeNOPQProject } from '@run-planner/test-fixtures/surface';
 
 import { createNormalDispositionByAcquisitionRole } from '../../../src/authored-project/reward-state';
 import { createCompleteNProject } from '../support/complete-n-project';

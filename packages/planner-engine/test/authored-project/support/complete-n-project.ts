@@ -1,5 +1,5 @@
 import { catalog } from '@run-planner/hades2-catalog';
-import { authorLegalTraitOffers } from '@run-planner/test-fixtures';
+import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 import {
   applyProjectCommand,
   createBiomeAddress,

@@ -48,6 +48,10 @@ import {
 import { beforeAll, describe, expect, it } from 'vitest';
 
 import {
+  authorLegalTraitOffers,
+  authorRequiredTestRoomActions,
+} from '@run-planner/test-fixtures/shared';
+import {
   createCompleteFGProject,
   createGoldenFGHProject,
   createGoldenFGHIProject,
@@ -57,6 +61,8 @@ import {
   goldenGOccurrenceId,
   goldenHBiome,
   goldenIBiome,
+} from '@run-planner/test-fixtures/underworld';
+import {
   nBiome,
   nOccurrenceId,
   oOccurrenceIds,
@@ -64,10 +70,8 @@ import {
   pOccurrenceId,
   createRepresentativeNProject,
   createRepresentativeNOPQProject,
-  authorLegalTraitOffers,
-  authorRequiredTestRoomActions,
   oBiome,
-} from '@run-planner/test-fixtures';
+} from '@run-planner/test-fixtures/surface';
 
 let goldenFGHIProject: ReturnType<typeof createGoldenFGHIProject>;
 let representativeNOPQProject: ReturnType<typeof createRepresentativeNOPQProject>;

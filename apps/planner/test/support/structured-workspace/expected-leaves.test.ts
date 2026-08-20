@@ -15,7 +15,7 @@ import {
   nBiome,
   nLocalOccurrenceId,
   nOccurrenceId,
-} from '@run-planner/test-fixtures';
+} from '@run-planner/test-fixtures/surface';
 import {
   expectedWorkspaceEncounterPhaseLeafRequirements,
   expectedWorkspaceLeafRequirements,

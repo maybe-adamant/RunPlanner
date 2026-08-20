@@ -21,14 +21,14 @@ import {
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
 
+import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 import {
   createRepresentativeNOProject,
   createRepresentativeNOPQProject,
   createRepresentativeNProject,
-  authorLegalTraitOffers,
   nBiome,
   nOccurrenceId,
-} from '@run-planner/test-fixtures';
+} from '@run-planner/test-fixtures/surface';
 import {
   createCompleteFGProject,
   createGoldenFGHIProject,
@@ -39,7 +39,7 @@ import {
   goldenGOccurrenceId,
   goldenGStartId,
   goldenIBiome,
-} from '@run-planner/test-fixtures';
+} from '@run-planner/test-fixtures/underworld';
 
 function route(project: ProjectDocument, routeKey: string) {
   const result = simulateProject(catalog, project);
