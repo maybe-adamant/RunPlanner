@@ -38,6 +38,29 @@ may lock the god pool before Travel generates a refill, while taking it after
 the purchase cannot retroactively change that payload. The planner does not yet
 implement Shrine inventory, pending delivery, rush, or forced delivery.
 
+The test fixture and suite optimization is complete. Canonical schema-48
+authored route prefixes now load through strict readable JSON checkpoints and
+route-scoped static loaders; generation-only command builders remain behind the
+explicit `npm run test:fixtures:check` drift gate, which also runs from the root
+`npm run check` outside the regular and heavy lanes. Command, codec,
+progressive-repair, history, and undo/redo tests remain command-driven, while
+cross-layer product coverage keeps one retained owner and representative
+boundary contact per behavior. The Gate B owner ledger removed only six
+duplicated product scenarios and retained the unique N Hub order/redo/autosave
+workflow.
+
+The post-Gate-B worker sweep selected four workers for both declared lanes.
+Regular four-worker cold runs passed 129 files and 1,557 tests at 78.84,
+78.79, and 79.41 seconds, with median peak RSS 3,086,464 KiB (median user CPU
+381.49 seconds). Heavy four-worker runs passed 28 files and 402 tests at
+69.11, 69.76, and 68.98 seconds, with median peak RSS 3,378,760 KiB (median
+user CPU 332.05 seconds). Heavy two workers remained green but measured
+126.33-134.21 seconds and median RSS 2,794,440 KiB. Regular eight workers
+failed all three cold repetitions with unchanged default five-second test
+timeouts under fixture contention; regular twelve failed its first run and
+regular sixteen was likewise nonviable under contention. Default timeouts,
+thread isolation, and lane membership remain unchanged.
+
 The earlier Narcissus, Fields, and Artificer phase completed authored schema 41. The locked audit/plan landed at `b054eb7`; the complete consequential
 Narcissus pickup surface landed at `888ebe1`; Fields cage action chronology
 landed at `1ecba06`; Fields optional pickups landed at `3415d7d`; and Artificer

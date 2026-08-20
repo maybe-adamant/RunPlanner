@@ -9,7 +9,9 @@ export default mergeConfig(
   defineConfig({
     test: {
       include: [...heavyTestFiles],
-      maxWorkers: Math.min(2, availableParallelism()),
+      // Heavy fixture consumers are stable at four workers after checkpoint
+      // loading; higher fan-out is not part of this lane's contract.
+      maxWorkers: Math.min(4, availableParallelism()),
     },
   }),
 );
