@@ -10,11 +10,9 @@ export default mergeConfig(
     test: {
       include: [...testInclude],
       exclude: [...heavyTestFiles],
-      maxWorkers: Math.min(
-        4,
-        availableParallelism(),
-        Math.max(2, Math.floor(availableParallelism() / 4)),
-      ),
+      // Four workers is the highest stable cold setting on the WSL host. Higher
+      // fan-out produces fixture contention and default five-second test timeouts.
+      maxWorkers: Math.min(4, availableParallelism()),
     },
   }),
 );

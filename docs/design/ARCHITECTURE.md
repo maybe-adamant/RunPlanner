@@ -348,6 +348,23 @@ runs pure package tests and focused UI-adapter tests. Type checking remains a
 separate required command because test transformation alone is not a type
 proof.
 
+Test-only authored-project checkpoints are strict, schema-encoded
+`ProjectDocument` inputs under `test/fixtures/authored-project/checkpoints/`.
+Static route-scoped loaders decode and freeze them through the production
+codec; tests never load serialized simulation, validation, workspace, Redux,
+or rendered output. Generation support is isolated from the normal import
+graph and is exercised by the explicit `npm run test:fixtures:check` gate,
+which the root `npm run check` runs outside the regular and heavy Vitest
+lanes. A test that owns command, codec, progressive-repair, history, or
+undo/redo semantics remains command-driven; other layers retain representative
+boundary contacts without copying the owning matrix.
+
+Regular and heavy Vitest lanes have explicit, non-overlapping file manifests
+in `vitest.test-lanes.ts`. The heavy lane is reserved for consumers whose
+fixture-backed cold cost justifies separate scheduling. Their worker caps are
+measured configuration, while the default timeout, hook timeout, thread-pool
+isolation, and lane semantics remain unchanged.
+
 ### shadcn/ui and Tailwind
 
 Adopt component source selectively for accessible interaction primitives and
