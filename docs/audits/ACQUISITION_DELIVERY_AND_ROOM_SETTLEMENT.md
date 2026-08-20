@@ -368,9 +368,9 @@ A planner may deliberately collapse the pre-outgoing checkpoint to
 reward-first, but that simplification changes trait-sensitive possibilities.
 For example, a delivered Pom may or may not see the trait acquired from the
 room reward, and an earlier delivered Boon may change the legal trait offer of
-the later reward. The accurate model is therefore one checkpoint-owned order
-containing the ordinary reward and every other acquisition available in that
-interval.
+the later reward. The accurate game model is therefore one ordered lifecycle
+window containing the ordinary reward and every other acquisition available in
+that interval.
 
 That accuracy does not require moving room or reward selection. It requires
 moving acquisition-owned children—trait offers, Pom targets, and comparable
@@ -402,8 +402,9 @@ Availability, participation, and order are three separate facts:
 ```text
 producer makes item available
   -> authored participation says whether it is acquired
-  -> lifecycle assigns its settlement checkpoint
-  -> one checkpoint-owned order folds all participating items sequentially
+  -> one occurrence-owned Room Action order fixes its chronology
+  -> lifecycle assigns each action to its supported checkpoint window
+  -> the simulator folds participating items sequentially
 ```
 
 The producer-specific participation controls remain intentionally small:
@@ -417,25 +418,23 @@ The producer-specific participation controls remain intentionally small:
   fact, while the later concrete pickup has its own participation fact only if
   that pickup can be left behind.
 
-Once participation is known, the settlement order is not partitioned by
-producer. A purchased Shop item, a picked optional drop, and a due required
-delivery at the same checkpoint all enter one room-owned ordered sequence and
-update reward and trait history in that sequence. This is necessary because
-an earlier acquisition may change the legality or concrete result of a later
-one.
-
-The sequence is scoped to one checkpoint, not to the whole room. It cannot
-move a pre-outgoing room reward or due delivery behind a post-outgoing Shop
-purchase or Narcissus pickup. The room settlement product composes the outputs
-of its checkpoint orders in declared lifecycle order.
+Once participation is known, chronology is not partitioned by producer or
+persisted acquisition site. A purchased Shop item, a picked optional drop, and
+a due required delivery enter one occurrence-owned `roomActions.order` and
+update reward and trait history in that sequence. This is necessary because an
+earlier acquisition may change the legality or concrete result of a later one.
+Lifecycle boundaries constrain which positions are valid: an action cannot move
+a pre-outgoing room reward or due delivery behind a post-outgoing Shop purchase
+or Narcissus pickup. Acquisition sites retain only sparse producer payload; they
+do not own another order.
 
 Under the planner's current sufficient-resource, no-restock baseline, a Shop
-keeps its purchased state as the authoring source for immediate offers. Its
-occurrence-owned acquisition-site order is the sole chronological authority:
-membership records participation and the order folds participating entries.
-That first-class settlement product normalizes Shop participation into the
-same acquired/not-acquired fact later mixed-source sites can use. No
-Shop-private acquisition order or replay remains alongside it.
+keeps its purchased state as the authoring source for immediate offers.
+Membership in the occurrence's `roomActions.order` is the sole purchased fact
+and chronological authority. Overview projects that membership as Purchased;
+Room Actions renders only participating offers plus stale repair rows. No
+Shop-private or acquisition-site order and no discarded replay remains beside
+that chronology.
 
 Future Well or Shop behavior that changes inventory, prices, or other
 non-acquisition state may still require a source-action order. That is a
@@ -608,8 +607,8 @@ The structural Shop lifecycle preserves the correct two snapshots:
 - pre-purchase history owns current outgoing generation; and
 - post-purchase history owns continuation into later rooms.
 
-Its occurrence-owned `roomExit` settlement order is the chronological owner
-for current Shop purchases. The same first-class settlement product can later
+Its occurrence-owned `roomActions.order` is the chronological owner for current
+Shop purchases. The same first-class chronology can later
 interleave purchased offers with delivered or spawned pickups without restoring
 a Shop-private execution path.
 
@@ -679,12 +678,11 @@ the closed output of each producer, and each authored producer family still
 owns its own selection, inventory, purchase, or condition state. The shared
 product carries acquisition work; it does not replace producer policy.
 
-The following was the pre-Gate-C implementation direction. Gate C delivered
-the Shop-specific part: `roomExit` is an occurrence-owned acquisition site,
-its order is first-class, and incomplete Midshop publication reaches that site
-through the bounded lifecycle prefix without a private replay. The remaining
-Narcissus, delivery, Well, and composite-room work should preserve the same
-separation:
+Schema 47 established one occurrence-owned `roomActions.order`; acquisition
+sites now retain only sparse payload state. Incomplete Midshop publication
+reaches the post-outgoing Shop action window through the bounded lifecycle
+prefix without a private replay. The remaining Narcissus, delivery, Well, and
+composite-room work should preserve the same separation:
 
 - a Narcissus declaration says which pickups a selected descriptor produces;
 - pickup-owned details such as a random Pom target or Mystery Boon offer live
@@ -697,11 +695,10 @@ separation:
 - room declarations derive their post-encounter acquisition points from their
   resolved structural encounter envelopes and declare any additional
   post-interaction points explicitly;
-- each optional concrete item has one participation fact while one
-  checkpoint-owned settlement order determines cross-producer acquisition
-  chronology;
-- composite rooms and Hub visits publish one settlement site per exact reached
-  checkpoint rather than one order per room occurrence;
+- each optional concrete item has one participation fact while one occurrence
+  Room Action order determines cross-producer acquisition chronology;
+- composite rooms and Hub visits may publish sparse payload sites at exact
+  reached checkpoints, but each entered occurrence retains one chronology;
 - the room settlement product publishes post-generation purchases without
   requiring a selected continuation;
 - a Shrine purchase creates retained pending-delivery state rather than a due
@@ -709,10 +706,10 @@ separation:
 - encounter completion advances pending-delivery counters and turns expired
   deliveries into due pickups at the declared room.
 
-The product must be ordered. The current Shop `roomExit` acquisition-site order
-is semantic, and future delivered or dropped items can interleave with Shop
-entries at the same checkpoint. A set, unordered sidecar, or one order per
-producer is insufficient.
+The product must be ordered. The current Shop `roomActions.order` is semantic,
+and future delivered or dropped items can interleave with Shop entries where
+lifecycle constraints permit. A set, unordered sidecar, persisted site order,
+or one order per producer is insufficient.
 
 Pending state must retain the payload and timing required to materialize the
 item. After materialization, eligibility, findings, undo/redo, and UI repair
@@ -801,14 +798,14 @@ trait; Gold later removes only its exact one-use outer acquisition.
    fact. Presentation may label it purchased or picked up according to the
    interaction; payload authorship may precede participation, and neither label
    nor payload presence decides chronology.
-6. Every participating item appears exactly once in its checkpoint's shared
-   settlement order; every nonparticipating item appears zero times.
+6. Every participating item appears exactly once in the occurrence's
+   `roomActions.order`; every nonparticipating item appears zero times.
 7. Immediate Shop and Well acquisitions affect the room settlement product
    even when the next decision is not yet authored.
 8. An inactive, unselected, unpurchased, unpicked, undelivered, or not-yet-due
    child contributes no acquisition, trait, counter, or active finding.
 9. Reward/purchase/drop/delivery order is preserved through one chronological
-   fold per lifecycle checkpoint.
+   room fold constrained by lifecycle checkpoints.
 10. Every active O/H encounter site and entered N main/side room-end site is
     addressed independently; Hub, restore, inactive phase, and unentered
     side-room state cannot publish one. A site may host acquisitions without
@@ -831,18 +828,18 @@ trait; Gold later removes only its exact one-use outer acquisition.
     does not decide which descriptors drop which items or when they settle.
 16. The active Midshop repair surface is the first-class room-local settlement
     product; no discarded replay duplicates it.
-17. The Shop-private purchase order is absent. The shared settlement order is
-    authoritative, and no parallel chronology may be introduced.
+17. The Shop-private purchase order is absent. The occurrence's
+    `roomActions.order` is authoritative, and no parallel chronology may be
+    introduced.
 18. The implementation does not replace room/reward selection or duplicate the
     reward kernel. It adapts the existing reward acquisition into the shared
     checkpoint order where chronology is observable and removes the superseded
     direct trait/Pom editor in the same vertical slice.
 19. Artificer source interaction and replacement acquisition are separate
     checkpoints. The source is not acquired; its complete source-owned
-    replacement enters the same shared fold only at a later required or
-    optional interaction. Fields carries that dependency in its one mixed
-    action chronology, and ordinary acquisition sites retain their existing
-    order.
+    replacement enters the same room fold only at a later required or optional
+    interaction. Fields carries that dependency in its one mixed action
+    chronology, while acquisition sites retain only sparse payload state.
 
 ## Explicit simplifications and remaining follow-up facts
 

@@ -106,8 +106,9 @@ or make `N_PreBoss01` an occurrence-sourced candidate.
   target state.
 - Nine or ten declaration-fixed Hub slots may be open. Exactly six distinct
   open slots are visited in authored order. A target occurrence remains owned
-  by its slot while its incoming reward, side rooms, and local entry order
-  remain occurrence-owned leaves.
+  by its slot while its incoming reward belongs to that occurrence. Its local
+  generation and visit order belong to a parent-sourced `LocalVisitDecision`;
+  each generated side target is a distinct occurrence.
 - Completing the six-visit predicate enables the declaration-fixed
   completed-Hub exit.
   Its persisted source is `{ kind: 'hubDecision', decisionKey: 'hub' }` and
@@ -125,12 +126,14 @@ receive their incoming offers when the board is created; only entered targets
 acquire those rewards. The supported shop lookup reads the open-board reward
 surface before validating the final Preboss shop.
 
-Entered combat targets own zero to three declaration-fixed side slots. Side
-generation and entry order are explicit room-local authored state. Generated
-side rewards resolve as one unordered sibling batch before entry; their
-availability order follows the declaration-backed rank used by the pressure
-rule. The pylon gate observes the declared spawn count, while leaving a target
-requires its spawned pylon to be completed.
+Entered combat targets expose zero to three declaration-fixed side slots through
+one parent-sourced `LocalVisitDecision`. It owns generation state and visit
+order; generated side rewards resolve as one unordered sibling batch before
+entry, and their availability order follows the declaration-backed rank used by
+the pressure rule. Each generated side target is a normal `RoomOccurrence` with
+its own encounter, reward payload, and Room Actions. The pylon gate observes
+the declared spawn count, while leaving a target requires its spawned pylon to
+be completed.
 
 ### Persistent board generation
 
@@ -189,26 +192,27 @@ the return to the persisted Hub are separate history events.
 An entered combat target can expose zero to three declaration-fixed side slots.
 Their generation is a parent-local unordered sibling region: all generated
 side offers are prepared together, availability pressure follows the declared
-rank, and one parent occurrence remains the authority across side-room
-restores. Side visits are not Hub visits and must not become a second global
-topology or a graph-canvas edge set.
+rank, and the parent-sourced local-visit decision remains the generation/order
+authority across restores. Side visits are not Hub visits and must not become
+a second global topology or a graph-canvas edge set. Once entered, however,
+each side occurrence owns its own lifecycle; restoring the parent or Hub does
+not replay it.
 
 ### Concrete encounter selection
 
-Every N room and local child binds its concrete encounter slots explicitly.
+Every N main and side-room occurrence binds its concrete encounter slots explicitly.
 Pool-backed main combat phases use `NEncountersDefault`,
 `NEncountersSmaller`, or `NEncountersBigger`, each of which supports
 `ArtemisCombatN` and `HeraclesCombatN` beside its ordinary definition. Opening,
 PreHub, Story, miniboss, Shop, Preboss, and completion bindings remain fixed
 or empty and are not NPC candidate surfaces.
 
-Ephyra side rooms retain parent-local encounter selections on their exact
-`LocalChildAddress`. Their SubRoom/Light sets and heavy fixed binding contain
-only their normalized ordinary or `Empty` identities; entering a generated
-side room activates its room-local encounter selection and editor control;
-generation alone exposes its reward but not an unassessed encounter picker.
-The retained authored selection reappears if that side room is entered again,
-without promoting it to global topology. Artemis and Heracles requirements use
+Ephyra side rooms own encounter selections on their distinct occurrence and
+exact `EncounterPhaseAddress`. Their SubRoom/Light sets and heavy fixed binding
+contain only their normalized ordinary or `Empty` identities; generation
+exposes the occurrence and its reward, while authored entry activates its
+room-local encounter and action workbench. The retained selection remains on
+that occurrence if visit order changes. Artemis and Heracles requirements use
 exact definition history, not a Hub-specific NPC ledger.
 
 When `ArtemisCombatN` is the selected active main-room definition, its exact

@@ -126,6 +126,13 @@ available through the final unlock sequence rather than between cage cycles.
 The same action order carries later Artificer replacement pickups; there is no
 cage-only order or Fields-private acquisition fold.
 
+The editor keeps cage and optional identities in Room Overview and renders the
+single chronology in Room Actions. Its engine-derived timeline brackets each
+ranked active `completeFieldsCage` with the exact ordinal Start/End boundaries;
+an unranked retained cage is repair work, not an active encounter cycle. Room
+Doors contains the unchanged outgoing decision. These tabs do not create a
+Fields-specific order or move cage rewards onto door contracts.
+
 ### Depth, force, and completion facts
 
 H keeps `biomeDepthCache`, `biomeEncounterDepth`, and room-history effects as

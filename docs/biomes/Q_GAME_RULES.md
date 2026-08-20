@@ -79,3 +79,10 @@ replay, external profile conditions, natural Chaos, optional actions,
 combat-wave details, and NPC event or interaction variants remain deliberately
 outside the product until they have explicit catalog and authored-state
 ownership.
+
+In particular, the source-backed final-Preboss forced Hermes delivery remains
+unimplemented. When that feature enters scope, its concrete pickup and the
+World Shop purchases must share the occurrence's one action chronology. A
+delivery before a purchase may change the exact Travel Deal or Gold Gold Gold
+payload frontier—for example by locking a fourth god into the pool—while a
+delivery after that purchase cannot alter an already-generated payload.

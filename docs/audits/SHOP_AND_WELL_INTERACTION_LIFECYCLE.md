@@ -189,6 +189,26 @@ The shared fact is the post-outgoing interaction boundary. The families do not
 share one acquisition behavior: World Shop and Well purchases are ordinarily
 immediate, while Shrine purchases ordinarily schedule later materialization.
 
+## Current planner disposition
+
+Structural World Shops are implemented at this timing boundary. Their initial
+inventory is authored in Room Overview, and exact `interactShopOffer`
+membership in the occurrence's `roomActions.order` is both the Purchased fact
+and purchase chronology. Unpurchased offers remain inventory but are absent
+from Room Actions; a stale purchase retains one specialized unpurchase repair.
+There is no second purchased set or Shop-private order.
+
+Travel Deal and Gold Gold Gold continue to derive their trigger from the true
+ordered purchase walk. The trigger slot does not freeze the generated payload's
+eligibility: that payload must use the exact history prefix at the triggering
+action. A future Q forced Hermes delivery before a World Shop purchase may
+therefore change god-pool closure seen by Travel; the same delivery after the
+purchase cannot change it retroactively.
+
+Wells and Shrines remain unimplemented. The chronology and exact-prefix rule
+are extension constraints, not implicit support for their inventory, purchase,
+rush, delay, delivery, or pickup behavior.
+
 ## Unresolved source questions
 
 Future evidence refreshes for Wells or Shrines should close these gaps:

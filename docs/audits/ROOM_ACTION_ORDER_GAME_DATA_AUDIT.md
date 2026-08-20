@@ -414,10 +414,10 @@ This is the same invariant already established for Shops, Narcissus, and
 Fields acquisitions. It applies to the broader room action roster, not only to
 items currently rendered under Acquisitions.
 
-## Current planner discrepancy
+## Pre-schema-47 planner discrepancy
 
-The current planner has the required semantic pieces, but divides them across
-three authorities that cannot express the source chronology together.
+At audit time, the planner had the required semantic pieces but divided them
+across three authorities that could not express the source chronology together.
 
 ### Encounter traits settle too early
 
@@ -443,7 +443,7 @@ separate cards.
 This is close to the required chronology but not general enough to be its
 authority.
 
-### Acquisitions owns a second partial order
+### Acquisitions owned a second partial order
 
 `RoomOccurrence.acquisitionSites.roomExit.order` ranks participating Shop,
 story-pickup, Echo, Narcissus, and generated acquisition entries at that site.
@@ -456,7 +456,7 @@ authored order does not.
 
 ### Artificer output is nested under the wrong owner
 
-The current `AcquisitionDisposition` persists
+The pre-schema-47 `AcquisitionDisposition` persisted
 `artificer { replacement: AuthoredRewardState | null }`. Application controls
 then edit the generated reward, its trait offer, and its Pom detail by replacing
 that whole source disposition. Although simulation derives a separate
@@ -481,7 +481,7 @@ world-object interaction is the distinct dependent chronology participant.
 
 ### O has fixed checkpoints but no unified phase-local action order
 
-The current O lifecycle correctly distinguishes Intro, Combat 1/`wheel1`, and
+The pre-schema-47 O lifecycle correctly distinguished Intro, Combat 1/`wheel1`, and
 optional Combat 2/`wheel2`, including offer generation before each combat and
 reward acquisition after completion. Encounter-owned Icarus traits still fold
 at encounter completion, however, rather than joining the same post-combat
@@ -523,7 +523,7 @@ only one action. The roster is derived from its declaration, resolved encounter
 envelope, produced objects, and retained authored participation. Unentered
 targets, dormant phases, and ungenerated children publish no active actions.
 
-The chronology absorbs the ordering responsibility currently split between
+The chronology absorbs the ordering responsibility previously split between
 Fields `actionOrder` and acquisition-site `order`. It does not retain either as
 a parallel semantic order.
 
@@ -553,9 +553,9 @@ effects.
 ### Source intent and produced-object authorship stay separate
 
 Normal pickup, Time Piece, and Artificer remain mutually exclusive outcomes of
-one source interaction. The later plan may encode that choice in the action row
-or in source-owned intent state, but it must not keep an Artificer replacement
-reward nested inside the source disposition.
+one source interaction. The source action owns that intent, while a generated
+Artificer replacement keeps its separate source-derived owner; the replacement
+reward is not nested inside the source disposition.
 
 For a normal pickup, the source action is also the concrete acquisition action
 and owns its trait/Pom detail. Time Piece destroys the source and produces Gold
@@ -707,7 +707,7 @@ Hub visit order selects Main B
 The indentation represents occurrence ownership, not nested rows in one room
 order. Restoring Main A or the Hub does not repeat their settled actions.
 
-## Ownership consequences for a later plan
+## Ownership consequences of the completed model
 
 | Concern                                                                | Authority                                                   |
 | ---------------------------------------------------------------------- | ----------------------------------------------------------- |
@@ -753,11 +753,12 @@ events. A correct planner must fold them in source order, preserve fixed
 dependencies, and let every action observe the history produced by earlier
 actions.
 
-The audit is sufficiently bounded to begin a locked implementation plan.
+The planner now implements this disposition through one occurrence-owned
+`roomActions.order`, one engine roster, and one engine lifecycle timeline.
 Ordinary combat-NPC, Gorgon Fields, optional participation, multiple-Artificer,
-O repeated-checkpoint, and N occurrence-boundary chronologies are the
-representative facts that the plan must preserve. H and O are the stress cases:
-H tests broad interleaving among already-present objects and sequential cage
-barriers, while O tests repeated pre-combat choices and required post-combat
-windows in one room. N is the control proving that complex traversal must not
-be flattened into room-local ordering.
+O repeated-checkpoint, and N occurrence-boundary chronologies remain the
+representative witnesses. H tests broad interleaving among already-present
+objects and sequential cage barriers; O tests repeated pre-combat choices and
+required post-combat windows; N proves that traversal is not flattened into
+room-local ordering. The stable audit remains the source authority rather than
+an open implementation checklist.

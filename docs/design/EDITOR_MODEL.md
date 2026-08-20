@@ -197,21 +197,30 @@ an unavailable evaluator cannot erase authored detail ownership. Dormant
 optional state is retained and becomes editable again if the same occurrence is
 reactivated.
 
-### Direct Room Workbenches and Encounter Phases
+### Lifecycle Room Workbenches and Encounter Phases
 
-A details-active room renders its meaningful room-local sections directly. No
-generic disclosure or presentation capability sits between the occurrence and
-its controls. The application projection publishes one closed Standard,
-Fields, Ship, or Shop composition; React renders that composition without
-switching on biome keys, room labels, or lifecycle-profile strings.
+A details-active room renders one tabbed occurrence workbench. The application
+projection publishes the closed Standard, Fields, Ship, or Shop composition;
+React renders that composition without switching on biome keys, room labels,
+or lifecycle-profile strings. The ordinary shape is Room Overview, Room
+Actions, and Room Doors. Tabs are transient editor-session state and do not
+move semantic ownership or enter authored history.
 
-Standard rooms render read-only room and incoming-door context, Encounter when
-present, Room features when present, and Room Actions when present. An N main
-room inserts its parent-owned Side rooms surface between Encounter and Room
-features. Fields render Encounter, Fields setup, Room features, and the one
-mixed Room Actions chronology. Shops render inventory and conditions, Room
-features, and Room Actions. Empty sections remain absent, and outgoing doors
-stay occurrence-stage siblings below the room body.
+Room Overview contains read-only incoming-door context and only meaningful
+room-local setup. An N main room keeps its parent-owned side-room generation
+and visit order there. Fields keeps cage and optional identities there. Shops
+keep inventory, conditions, and Purchased markers there. Room features remain
+Overview-owned. Room Actions renders the engine-owned lifecycle timeline and
+the one occurrence-owned action chronology; encounter controls attach to their
+exact Start encounter boundaries. Room Doors renders the existing total
+outgoing-stage product without changing decision, target, or reward ownership.
+Empty sections remain absent.
+
+ShipCombat uses Room Overview, Intro Actions, Combat 1 Actions, optional Combat
+2 Actions, and Room Doors. Encounter count stays in Overview. Each phase tab
+consumes the engine timeline, including its encounter picker and following
+wheel boundary; one inactive repair surface retains rows from a dormant phase.
+The tabs never create phase-local orders.
 
 The room header combines the room identity and any door-visible incoming reward
 in one line (`Entering <room> · Incoming Reward: <reward>`). It does not repeat
@@ -397,35 +406,44 @@ Chaos publishes its downstream continuation as the ordinary next-step frontier.
 React supplies no source, spacing, depth, map, reward, or return policy.
 
 A materialized Shop preserves declaration order for inventory rows while
-deriving `Purchased` membership from its one occurrence-owned
-`acquisitionSites.roomExit.order` list. Each inventory row exposes only that
-membership toggle; the containing Acquisitions workbench owns ordered move
-controls and publishes one complete replacement order. It uses the same ranked-
-prefix presentation as the Hub: numbered participant cards, compact arrow
-controls, pointer reordering, and a visible boundary before nonparticipants.
+deriving `Purchased` membership from exact `interactShopOffer` references in
+its one occurrence-owned `roomActions.order`. Each inventory row exposes only
+that membership toggle; Room Actions owns ranked move controls over
+participating purchases. It uses the same ranked-prefix presentation as the
+other room actions: numbered participant cards, compact arrow controls, and
+pointer reordering. Unpurchased initial offers remain editable in Overview and
+do not appear as active or generic repair rows in Actions.
 Membership changes are structural set edits and do not activate chronological candidate evaluation;
 the same rule applies to declaration-produced pickup and Fields interaction
 checkboxes. Candidate support is evaluated only for move proposals; impossible positions remain visible
 with their evidence, and a selected invalid order remains editable for repair.
-Per-offer Shop-purchase markers and finding destinations remain stable even
-though the aggregate acquisition-order candidate and order finding are owned by
-the exact `roomExit` AcquisitionSiteAddress. An individual purchase failure
-remains AcquisitionEntryAddress-owned when that is the semantic repair context.
+Per-offer Shop-purchase markers and finding destinations remain stable. A stale
+base purchase repairs through the same Purchased interaction, including after
+room replacement removes the active Shop owner; it never gains a second generic
+remove control. An individual purchase or generated-pickup failure remains
+owned by its exact action or acquisition-entry address.
 The Shop inventory row remains the sole editor for what was bought. Its
-Acquisitions row may edit acquisition-time trait, Pom, or disposition children,
+Room Actions row may edit acquisition-time trait, Pom, or disposition children,
 but cannot change the purchased reward identity. Producer-owned pickups such as
-Narcissus retain their outer reward editor in Acquisitions because that row is
+Narcissus retain their outer reward editor in Room Actions because that row is
 also the canonical payload owner.
 
 Every generated I preboss offer is a distinct Room Occurrence and follows that
 same contract; it does not introduce an I-specific shop mode.
 
-A declaration-produced optional pickup uses the same Acquisitions workbench as
-a Shop purchase: membership and position come from the exact settlement-site
-order, while the pickup row owns any reward, trait, or Pom repair controls.
+A declaration-produced optional pickup uses the same Room Actions chronology
+as a Shop purchase: membership and position come from the exact action
+reference, while the pickup row owns any reward, trait, or Pom repair controls.
 The Story or other producer control owns only the source choice. React never
 derives produced items from a selected trait key and never nests acquisition
 children inside the producer's trait dialog.
+
+Travel Deal and Gold Gold Gold source selection remains chronology-derived.
+Overview does not add a source selector or generated-payload approximation.
+Any future presentation that authors their dependent payload must consume the
+candidate frontier at the exact triggering action prefix; Shop-entry history
+and a first-purchase slot alone are insufficient when earlier same-room actions
+can change eligibility.
 
 An I combat target renders its derived Goal marker instead of a reward editor
 when the current simulation resolves Goal. Its complete potential Tartarus
@@ -726,7 +744,8 @@ Session state may include:
 - panel expansion;
 - selector category and search text;
 - zoom or viewport if a graph projection is introduced;
-- an exact open Run State decision target and its local disclosures.
+- an exact open Run State semantic owner—decision-generation or room-lifecycle
+  checkpoint—and its local disclosures.
 
 Session state must never be required to reconstruct the authored project.
 
@@ -741,11 +760,12 @@ failure, not ordinary stale session state. Native keyboard focus remains a
 local React concern and is not reconstructed from this session cleanup.
 
 An open Run State target is reconciled against the newly published set of
-available snapshot owners. If its exact launcher or snapshot disappears, it
-clears rather than rehoming to another decision. Route, panel, and semantic
-navigation also close the read-only sheet. Opening and closing it publish no
-authored command, persistence value, undo entry, candidate-session preparation,
-or project evaluation; the editor reads its already-published workspace product.
+available snapshot owners. If its exact decision-generation or lifecycle-
+checkpoint launcher or snapshot disappears, it clears rather than rehoming to
+another owner. Route, panel, and semantic navigation also close the read-only
+sheet. Opening and closing it publish no authored command, persistence value,
+undo entry, candidate-session preparation, or project evaluation; the editor
+reads its already-published workspace product.
 
 ## Profile Files, Autosave, and Dirty State
 

@@ -160,7 +160,7 @@ complete-valid route prefix
 Each route remains ordered. F must be complete and valid before G receives
 contextual evaluation, and N must be complete and valid before O receives it.
 Later biome pages stay fully editable, but their contextual room, store, peer,
-bag, wheel, Hub, and local-child states are unassessed. The editor must not
+bag, wheel, Hub, and side-room/local-visit states are unassessed. The editor must not
 derive a downstream seed from predecessor defaults, partial history, or
 hypothetical future completion.
 
