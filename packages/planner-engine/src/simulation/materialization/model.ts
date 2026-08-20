@@ -151,6 +151,7 @@ export interface CanonicalAuthoredRoom {
   /** Persisted occurrence chronology and its sole derived roster product. */
   readonly roomActions: RoomActionState;
   readonly roomActionRoster: import('../room-actions').RoomActionRoster;
+  readonly roomLifecycleTimeline: import('../room-actions').RoomLifecycleTimeline;
   readonly requiredObjects?: readonly RequiredRoomObjectDescriptor[];
   readonly clockworkReward?: 'goal' | 'nonGoal';
   readonly incomingReward?: CanonicalResolvedIncomingReward;

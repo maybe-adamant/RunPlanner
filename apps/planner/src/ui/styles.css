@@ -1951,6 +1951,53 @@ select {
   letter-spacing: 0.01em;
 }
 
+.room-workbench-tabs {
+  display: flex;
+  gap: 4px;
+  min-width: 0;
+  margin: 0 -4px 12px;
+  overflow-x: auto;
+  border-bottom: 1px solid #353640;
+  scrollbar-width: thin;
+}
+
+.room-workbench-tab {
+  flex: 0 0 auto;
+  padding: 8px 10px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  color: #aaa7af;
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.room-workbench-tab:hover,
+.room-workbench-tab[aria-selected='true'] {
+  color: #f3ede5;
+}
+
+.room-workbench-tab[aria-selected='true'] {
+  border-bottom-color: #e2b971;
+}
+
+.room-workbench-panel {
+  min-width: 0;
+}
+
+.room-action-lifecycle-boundary {
+  align-items: center;
+  background: rgb(255 255 255 / 3%);
+  border-block: 1px solid #353640;
+  color: #aaa7af;
+  display: flex;
+  gap: 0.5rem;
+  min-height: 2rem;
+  padding: 0.35rem 0.6rem;
+}
+
 .room-heading-incoming-reward {
   display: inline-flex;
   align-items: center;

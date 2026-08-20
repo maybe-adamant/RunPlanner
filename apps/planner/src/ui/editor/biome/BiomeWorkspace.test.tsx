@@ -322,6 +322,47 @@ describe('BiomeWorkspace', () => {
     expect(authoredStart()).toBe('F_Opening01');
   });
 
+  it('edits a selectable F entry reward beside identity and undoes exactly once', async () => {
+    const occurrenceId = createOccurrenceId('start-entry-reward');
+    const started = applyProjectCommand(emptyProject('Underworld', 1), catalog, {
+      biome: goldenFBiome,
+      gameName: 'F_Opening01',
+      kind: 'CreateStart',
+      occurrenceId,
+    });
+    const view = renderWorkspace(started, 'Underworld', 'F');
+    const identity = screen.getByRole('region', { name: 'Start room identity' });
+    const historyBefore = view.application.store.getState().projectWorkspace.history.past.length;
+
+    await view.user.click(within(identity).getByLabelText('Reward'));
+    const listbox = await screen.findByRole('listbox');
+    await view.user.click(within(listbox).getByText('Hammer'));
+
+    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+      historyBefore + 1,
+    );
+    expect(
+      view.application.store.getState().projectWorkspace.history.present.routes[0]?.biomes[0]
+        ?.topology?.occurrences[0]?.state,
+    ).toMatchObject({
+      kind: 'counted',
+      reward: { offer: { rewardType: 'WeaponUpgrade' } },
+    });
+    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
+    expect(
+      view.application.store.getState().projectWorkspace.history.present.routes[0]?.biomes[0]
+        ?.topology?.occurrences[0]?.state,
+    ).toMatchObject({ kind: 'counted', reward: null });
+  });
+
+  it('shows the fixed N entry reward without a start identity picker', async () => {
+    const view = renderWorkspace(createRepresentativeNOPQProject(), 'Surface', 'N');
+    await view.user.click(screen.getByRole('button', { name: /^Opening/ }));
+    const entryReward = screen.getByRole('region', { name: 'Entry reward' });
+    expect(within(entryReward).getByLabelText('Reward')).toBeTruthy();
+    expect(within(entryReward).queryByLabelText('Start room')).toBeNull();
+  });
+
   it('uses one concise player-facing name for the Hub rail stop', () => {
     renderWorkspace(createRepresentativeNOPQProject(), 'Surface', 'N');
 
@@ -680,6 +721,7 @@ describe('BiomeWorkspace', () => {
     const before = railDecision.querySelector<HTMLElement>('.biome-rail-selection');
     if (before === null) throw new Error('P selected room rail context is missing');
     const beforeText = before.textContent;
+    await view.user.click(within(inspector).getByRole('tab', { name: 'Room Doors' }));
     const pickedDoor = within(inspector).getByRole('article', {
       name: `${picked.door.room.label} room offer`,
     });
@@ -743,6 +785,7 @@ describe('BiomeWorkspace', () => {
     );
     const inspector = screen.getByRole('complementary', { name: 'Details' });
     expect(inspector.querySelector('.biome-occurrence-workbench')).not.toBeNull();
+    await view.user.click(within(inspector).getByRole('tab', { name: 'Room Doors' }));
     expect(within(inspector).getByText('Configure room offers')).toBeTruthy();
     expect(within(inspector).queryByText('Continue from this room')).toBeNull();
     expect(within(inspector).queryByRole('button', { name: 'Remove these doors' })).toBeNull();
@@ -793,17 +836,24 @@ describe('BiomeWorkspace', () => {
           ?.topology?.decisions,
       ).toEqual([]),
     );
+    const restoredInspector = screen.getByRole('complementary', { name: 'Details' });
+    await view.user.click(within(restoredInspector).getByRole('tab', { name: 'Room Doors' }));
     expect(screen.getByText('Configure room offers')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Remove these doors' })).toBeNull();
   });
 
-  it('renders topology-owned and terminal outgoing states on their exact N occurrences', () => {
+  it('renders topology-owned and terminal outgoing states on their exact N occurrences', async () => {
     const view = renderWorkspace(createRepresentativeNOPQProject(), 'Surface', 'N');
 
     act(() =>
       view.application.store.dispatch(
         semanticOwnerFocused(createOccurrenceAddress(nBiome, nOccurrenceId('combat02'))),
       ),
+    );
+    await view.user.click(
+      within(screen.getByRole('complementary', { name: 'Details' })).getByRole('tab', {
+        name: 'Room Doors',
+      }),
     );
     let outgoing = within(screen.getByRole('complementary', { name: 'Details' })).getByRole(
       'region',
@@ -817,6 +867,11 @@ describe('BiomeWorkspace', () => {
       view.application.store.dispatch(
         semanticOwnerFocused(createOccurrenceAddress(nBiome, nOccurrenceId('preboss'))),
       ),
+    );
+    await view.user.click(
+      within(screen.getByRole('complementary', { name: 'Details' })).getByRole('tab', {
+        name: 'Room Doors',
+      }),
     );
     outgoing = within(screen.getByRole('complementary', { name: 'Details' })).getByRole('region', {
       name: 'Outgoing doors',
@@ -1244,6 +1299,7 @@ describe('BiomeWorkspace', () => {
 
     await view.user.click(railDecision);
     const inspector = screen.getByRole('complementary', { name: 'Details' });
+    await view.user.click(within(inspector).getByRole('tab', { name: 'Room Doors' }));
     expect(within(inspector).getByRole('article', { name: 'Combat 02 room offer' })).toBeTruthy();
     expect(inspector.querySelector('.biome-batch-workbench')).not.toBeNull();
   });

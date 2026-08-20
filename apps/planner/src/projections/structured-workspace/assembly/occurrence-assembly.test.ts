@@ -460,7 +460,7 @@ describe('structured workspace occurrence assembly', () => {
       roomActions.rows.find(
         (row) => row.reference.kind === 'interactLocalReward' && row.reference.groupKey !== 'cages',
       )?.rewardPayload?.showOffer,
-    ).toBe(true);
+    ).toBe(false);
     expect(roomActions.proposals.length).toBeGreaterThan(0);
     expect(fields.node.room.localDetailMarkers).toContain(roomActions.rows[0]?.marker);
     expect(fields.occurrenceInteractionRequirements).toContainEqual(
@@ -520,12 +520,20 @@ describe('structured workspace occurrence assembly', () => {
       ship.node.room.workbench.phases.flatMap((phase) =>
         phase.checkpoints.map((checkpoint) => checkpoint.key),
       ),
-    ).toEqual(expect.arrayContaining(shipActions.checkpoints.map((checkpoint) => checkpoint.key)));
+    ).toEqual(
+      expect.arrayContaining(
+        shipActions.checkpoints
+          .filter((checkpoint) => checkpoint.key !== 'exitUsable')
+          .map((checkpoint) => checkpoint.key),
+      ),
+    );
     expect(
       ship.node.room.workbench.phases.flatMap((phase) =>
         phase.checkpoints.map((checkpoint) => checkpoint.key),
       ),
-    ).toHaveLength(shipActions.checkpoints.length);
+    ).toHaveLength(
+      shipActions.checkpoints.filter((checkpoint) => checkpoint.key !== 'exitUsable').length,
+    );
     expect(
       ship.node.room.workbench.phases
         .find((phase) => phase.key === 'Intro')
@@ -612,30 +620,29 @@ describe('structured workspace occurrence assembly', () => {
       name: 'Fields',
       window: { kind: 'fields' as const, phaseKey: 'Combat1' },
     },
-  ])('rejects a $name lifecycle window in a Ship presentation', ({ window }) => {
-    expect(() =>
-      assemble(
-        createRepresentativeNOPQProject(),
-        'Surface',
-        'O',
-        oOccurrenceIds.combat04,
-        undefined,
-        undefined,
-        (evaluatedRoom) => {
-          const roster = evaluatedRoom.roomActionRoster;
-          if (roster === undefined || roster.checkpoints[0] === undefined) {
-            throw new Error('Ship Room Action checkpoint is missing');
-          }
-          return {
-            ...evaluatedRoom,
-            roomActionRoster: {
-              ...roster,
-              checkpoints: [{ ...roster.checkpoints[0], window }, ...roster.checkpoints.slice(1)],
-            },
-          };
-        },
-      ),
-    ).toThrow(/Ship room action published/);
+  ])('keeps the engine timeline authoritative for a $name checkpoint window', ({ window }) => {
+    const assembled = assemble(
+      createRepresentativeNOPQProject(),
+      'Surface',
+      'O',
+      oOccurrenceIds.combat04,
+      undefined,
+      undefined,
+      (evaluatedRoom) => {
+        const roster = evaluatedRoom.roomActionRoster;
+        if (roster === undefined || roster.checkpoints[0] === undefined) {
+          throw new Error('Ship Room Action checkpoint is missing');
+        }
+        return {
+          ...evaluatedRoom,
+          roomActionRoster: {
+            ...roster,
+            checkpoints: [{ ...roster.checkpoints[0], window }, ...roster.checkpoints.slice(1)],
+          },
+        };
+      },
+    ).assembly.node.room;
+    expect(assembled.workbench.kind).toBe('ship');
   });
 
   it('keeps a selected Shop editable and withholds retained unpicked Shop inventory', () => {
@@ -861,7 +868,7 @@ describe('structured workspace occurrence assembly', () => {
     });
   });
 
-  it('withholds an inactive unranked Infernal Contract action and insertion proposal', () => {
+  it('retains an inactive unranked Infernal Contract action for repair', () => {
     const shopId = createOccurrenceId('golden-f-preboss-shop');
     const project = withFPrebossSelection(createGoldenFGHIProject(), 'exit1');
     const room = assemble(project, 'Underworld', 'F', shopId, undefined, () => Object.freeze([]))
@@ -872,9 +879,10 @@ describe('structured workspace occurrence assembly', () => {
       reference.kind === 'interactAcquisitionEntry' &&
       reference.entryKey === 'infernalContractReward';
 
-    expect(room.roomActions?.rows.some((row) => isContract(row.reference))).toBe(false);
+    expect(room.roomActions?.rows.some((row) => isContract(row.reference))).toBe(true);
+    expect(room.roomActions?.repairRows.some((row) => isContract(row.reference))).toBe(true);
     expect(room.roomActions?.proposals.some((proposal) => isContract(proposal.reference))).toBe(
-      false,
+      true,
     );
   });
 

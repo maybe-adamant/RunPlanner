@@ -1,5 +1,12 @@
 import type { OccurrenceAddress } from '@run-planner/engine/authored-project';
-import { Fragment, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import {
+  Fragment,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type ReactNode,
+} from 'react';
 import { candidateSupport, presentCandidateLabel } from '@planner/projections/candidateProjection';
 import {
   requireWorkspaceInteraction,
@@ -14,7 +21,11 @@ import {
   type WorkspaceLocalVisitDecision,
   type WorkspaceRoomSummary,
   type WorkspaceRoomActions,
+  type WorkspaceRoomLifecycleBoundary,
+  type WorkspaceRoomLifecycleTimeline,
+  type WorkspaceRoomLifecycleTimelineEntry,
   type WorkspaceRoomFeature,
+  type WorkspaceRoomTab,
   type WorkspaceRewardWheelDescriptor,
   type WorkspaceShipPhasePresentation,
   type WorkspaceNaturalChaosExitControl,
@@ -42,10 +53,10 @@ interface OccurrenceWorkbenchProps {
   readonly incomingDoor?: WorkspaceDoorContract;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly localVisit?: WorkspaceLocalVisitDecision;
-  /** Hub visits retain their editable main offer on the Hub board. */
-  readonly presentation: 'doorTarget' | 'full' | 'hubRoomLocal';
   readonly room: WorkspaceRoomSummary;
   readonly runState?: WorkspaceRunStateLauncher;
+  readonly initialTab?: WorkspaceRoomTab;
+  readonly doors?: ReactNode;
 }
 
 function LocalVisitOrderSelect({
@@ -377,35 +388,11 @@ function EncounterPhaseControl({
   );
 }
 
-function EncounterWorkbench({
-  idPrefix,
-  interactions,
-  phases,
-}: {
-  readonly idPrefix: string;
-  readonly interactions: WorkspaceInteractionCatalog;
-  readonly phases: readonly WorkspaceEncounterPhase[];
-}) {
-  if (phases.length === 0) return null;
-  return (
-    <section aria-label="Encounter phases" className="encounter-editor">
-      <div className="encounter-phase-list">
-        {phases.map((phase) => (
-          <EncounterPhaseControl
-            idPrefix={idPrefix}
-            interactions={interactions}
-            key={workspaceInteractionKey(phase.address)}
-            phase={phase}
-          />
-        ))}
-      </div>
-    </section>
-  );
-}
-
 function FieldsWorkbench({
+  interactions,
   room,
 }: {
+  readonly interactions: WorkspaceInteractionCatalog;
   readonly room: Extract<WorkspaceRoomSummary['roomLocal'], { readonly kind: 'fields' }>;
 }) {
   const dispatch = useAppDispatch();
@@ -436,6 +423,36 @@ function FieldsWorkbench({
           ))}
         </select>
       </label>
+      <div className="fields-reward-identities">
+        <div className="local-reward-heading">
+          <h5>Cage reward identities</h5>
+        </div>
+        {room.cages.map((cage) => (
+          <div className="fields-reward-identity" key={cage.key}>
+            <RewardControlEditor
+              control={cage.control}
+              idPrefix={`fields-${room.owner.occurrenceId}-cage-${cage.key}`}
+              interactions={interactions}
+              label={cage.label}
+              showAcquisitionChildren={false}
+            />
+          </div>
+        ))}
+        <div className="local-reward-heading">
+          <h5>Optional reward identities</h5>
+        </div>
+        {room.optionalRewards.map((reward) => (
+          <div className="fields-reward-identity" key={reward.key}>
+            <RewardControlEditor
+              control={reward.control}
+              idPrefix={`fields-${room.owner.occurrenceId}-optional-${reward.key}`}
+              interactions={interactions}
+              label={reward.label}
+              showAcquisitionChildren={false}
+            />
+          </div>
+        ))}
+      </div>
     </section>
   );
 }
@@ -681,17 +698,75 @@ function roomActionDropTargetFromPoint(
   });
 }
 
+function lifecycleBoundaryLabel(boundary: WorkspaceRoomLifecycleBoundary): string {
+  switch (boundary.kind) {
+    case 'roomEntered':
+      return 'Room entered';
+    case 'encounterStart':
+      return 'Start encounter';
+    case 'encounterEnd':
+      return 'End encounter';
+    case 'nextPhase':
+      return 'Start next phase';
+    case 'outgoingGeneration':
+      return 'Outgoing generation';
+    case 'cleanup':
+      return 'Cleanup';
+  }
+}
+
+function lifecycleBoundaryCheckpointKey(boundary: WorkspaceRoomLifecycleBoundary): string {
+  switch (boundary.kind) {
+    case 'encounterEnd':
+      return `combat:${boundary.phaseKey}`;
+    case 'nextPhase':
+      return `nextPhaseUsable:${boundary.wheelKey}`;
+    default:
+      return boundary.key;
+  }
+}
+
+function LifecycleBoundaryRow({ boundary }: { readonly boundary: WorkspaceRoomLifecycleBoundary }) {
+  return (
+    <li
+      aria-label={lifecycleBoundaryLabel(boundary)}
+      className="room-action-lifecycle-boundary"
+      data-lifecycle-boundary={boundary.key}
+    >
+      <span aria-hidden="true" className="hub-roster-rank">
+        ·
+      </span>
+      <strong>{lifecycleBoundaryLabel(boundary)}</strong>
+    </li>
+  );
+}
+
+function timelineBoundaryEntries(
+  timeline: WorkspaceRoomLifecycleTimeline,
+  include: (boundary: WorkspaceRoomLifecycleBoundary) => boolean,
+): readonly Extract<WorkspaceRoomLifecycleTimelineEntry, { readonly kind: 'boundary' }>[] {
+  return timeline.entries.filter(
+    (entry): entry is Extract<WorkspaceRoomLifecycleTimelineEntry, { readonly kind: 'boundary' }> =>
+      entry.kind === 'boundary' && include(entry.boundary),
+  );
+}
+
 function RoomActionsWorkbench({
   actions,
+  encounterPhases,
+  idPrefix,
   interactions,
   ship,
 }: {
   readonly actions?: WorkspaceRoomActions;
+  readonly encounterPhases?: readonly WorkspaceEncounterPhase[];
+  readonly idPrefix?: string;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly ship?: {
     readonly occurrence: OccurrenceAddress;
     readonly phases: readonly WorkspaceShipPhasePresentation[];
     readonly repairRows: readonly WorkspaceRoomActions['rows'][number][];
+    readonly phaseKey?: string;
   };
 }) {
   const dispatch = useAppDispatch();
@@ -706,9 +781,11 @@ function RoomActionsWorkbench({
     actions === undefined
       ? undefined
       : requireWorkspaceInteraction(interactions.roomActions, actions.interactionKey);
-  const rankedRows = actions?.rows.filter((row) => row.rank !== null) ?? [];
-  const unrankedRows = actions?.rows.filter((row) => row.rank === null) ?? [];
-  const rankedKeys = rankedRows.map((row) => row.key);
+  const rankedKeys =
+    actions?.timeline.entries.flatMap((entry) =>
+      entry.kind === 'action' ? [entry.actionKey] : [],
+    ) ?? [];
+  const rankedRows = actions?.rows.filter((row) => rankedKeys.includes(row.key)) ?? [];
   const ranking = reconcileRankedPrefix({
     authoredVisitOrder: rankedKeys,
     declarationOpenSlotKeys: rankedKeys,
@@ -799,6 +876,13 @@ function RoomActionsWorkbench({
     checkpoints: WorkspaceRoomActions['checkpoints'] = actions?.checkpoints ?? [],
   ) =>
     checkpoints
+      .filter((checkpoint) => checkpoint.key !== 'exitUsable')
+      .filter(
+        (checkpoint) =>
+          actions?.timeline.boundaries.some(
+            (boundary) => lifecycleBoundaryCheckpointKey(boundary) === checkpoint.key,
+          ) !== true,
+      )
       .filter((checkpoint) => checkpoint.afterRank === afterRank)
       .map((checkpoint) => (
         <li className="room-action-checkpoint" key={`checkpoint:${checkpoint.key}`}>
@@ -808,6 +892,40 @@ function RoomActionsWorkbench({
           <strong>{checkpoint.label}</strong>
         </li>
       ));
+  const encounterByPhase = new Map(
+    (encounterPhases ?? []).map((phase) => [phase.address.phaseKey, phase]),
+  );
+  const boundarySupplement = (boundary: WorkspaceRoomLifecycleBoundary): ReactNode => {
+    if (boundary.kind === 'roomEntered') {
+      const passive = encounterPhases?.find((phase) => phase.address.phaseKey === 'Passive');
+      return passive === undefined || idPrefix === undefined ? null : (
+        <EncounterPhaseControl idPrefix={idPrefix} interactions={interactions} phase={passive} />
+      );
+    }
+    if (boundary.kind === 'encounterStart') {
+      const phase = encounterByPhase.get(boundary.phaseKey);
+      return phase === undefined || idPrefix === undefined ? null : (
+        <EncounterPhaseControl idPrefix={idPrefix} interactions={interactions} phase={phase} />
+      );
+    }
+    if (boundary.kind === 'nextPhase' && ship !== undefined) {
+      const phase = ship.phases.find((candidate) => candidate.wheel?.key === boundary.wheelKey);
+      return phase?.wheel === undefined ? null : (
+        <RewardWheelWorkbench
+          interactions={interactions}
+          occurrence={ship.occurrence}
+          wheel={phase.wheel}
+        />
+      );
+    }
+    return null;
+  };
+  const renderBoundary = (boundary: WorkspaceRoomLifecycleBoundary) => (
+    <Fragment key={boundary.key}>
+      <LifecycleBoundaryRow boundary={boundary} />
+      {boundarySupplement(boundary)}
+    </Fragment>
+  );
   const renderRow = (
     row: WorkspaceRoomActions['rows'][number],
     checkpoints: WorkspaceRoomActions['checkpoints'] = actions?.checkpoints ?? [],
@@ -970,6 +1088,7 @@ function RoomActionsWorkbench({
               id={semanticOwnerControlElementId(rewardPayload.control.owner.address)}
               tabIndex={-1}
             >
+              <SemanticOwnerMarker address={rewardPayload.control.marker.address} />
               <RewardControlEditor
                 control={rewardPayload.control}
                 idPrefix={`room-action-${rewardPayload.control.marker.focusKey}`}
@@ -1004,29 +1123,8 @@ function RoomActionsWorkbench({
       </div>
     );
   if (ship !== undefined) {
-    const phaseCount = requireWorkspaceInteraction(
-      interactions.shipCombatPhaseCounts,
-      workspaceInteractionKey(ship.occurrence),
-    );
     return (
       <section aria-label="Ship combat structure" className="ship-combat-editor">
-        <div className="local-reward-heading">
-          <h4>Combat phase count</h4>
-        </div>
-        <CandidateSelect
-          id={`room-${ship.occurrence.occurrenceId}-combat-phase-count`}
-          interaction={phaseCount}
-          label="Combat phases"
-          onReplace={(encounterCount) =>
-            dispatch(
-              authoredProjectCommandDispatched({
-                kind: 'ReplaceShipEncounterCount',
-                occurrence: ship.occurrence,
-                encounterCount,
-              }),
-            )
-          }
-        />
         <section
           aria-label={actions === undefined ? undefined : 'Room Actions'}
           className="room-actions-workbench"
@@ -1042,78 +1140,104 @@ function RoomActionsWorkbench({
             }}
             {...pointerHandlers}
           >
-            {ship.phases.map((phase) => {
-              const phaseRankedRows = phase.actionRows.filter((row) => row.rank !== null);
-              const phaseUnrankedRows = phase.actionRows.filter((row) => row.rank === null);
-              const matchedCheckpointRanks = new Set(
-                phaseRankedRows.flatMap((row) => (row.rank === null ? [] : [row.rank])),
-              );
-              const trailingCheckpoints = phase.checkpoints.filter(
-                (checkpoint) =>
-                  checkpoint.afterRank !== 0 && !matchedCheckpointRanks.has(checkpoint.afterRank),
-              );
-              return (
-                <section
-                  aria-label={`${phase.label} ship phase`}
-                  className="ship-phase"
-                  key={phase.key}
-                >
-                  <div className="local-reward-heading">
-                    <h4>{phase.label}</h4>
-                  </div>
-                  {phase.encounter === undefined ? null : (
-                    <EncounterWorkbench
-                      idPrefix={`room-${ship.occurrence.occurrenceId}-${phase.key}`}
-                      interactions={interactions}
-                      phases={[phase.encounter]}
-                    />
-                  )}
-                  {phase.wheel === undefined ? null : (
-                    <RewardWheelWorkbench
-                      interactions={interactions}
-                      occurrence={ship.occurrence}
-                      wheel={phase.wheel}
-                    />
-                  )}
-                  {phase.actionRows.length === 0 && phase.checkpoints.length === 0 ? null : (
-                    <>
-                      <div className="local-reward-heading ship-phase-actions-heading">
-                        <h5>Actions</h5>
-                      </div>
-                      <ol
-                        aria-label={`${phase.label} room action order`}
-                        className="room-action-list"
-                      >
-                        {checkpointRows(0, phase.checkpoints)}
-                        {phaseRankedRows.map((row) => renderRow(row, phase.checkpoints))}
-                        {trailingCheckpoints.map((checkpoint) => (
-                          <li
-                            className="room-action-checkpoint"
-                            key={`checkpoint:${checkpoint.key}`}
-                          >
-                            <span aria-hidden="true" className="hub-roster-rank">
-                              ·
-                            </span>
-                            <strong>{checkpoint.label}</strong>
-                          </li>
-                        ))}
-                        {phaseUnrankedRows.length === 0 ? null : (
-                          <li
-                            aria-label="Room-action order boundary"
-                            className="hub-visit-boundary"
-                          >
-                            <span>Room action order ends here</span>
-                            <span>{phaseUnrankedRows.length} not ordered</span>
-                          </li>
-                        )}
-                        {phaseUnrankedRows.map((row) => renderRow(row, phase.checkpoints))}
-                      </ol>
-                    </>
-                  )}
-                </section>
-              );
-            })}
-            {ship.repairRows.length === 0 ? null : (
+            {ship.phases
+              .filter((phase) => ship.phaseKey === undefined || phase.key === ship.phaseKey)
+              .map((phase) => {
+                const phaseRankedRows = phase.actionRows.filter((row) => row.rank !== null);
+                const phaseUnrankedRows = phase.actionRows.filter((row) => row.rank === null);
+                const phaseIndex = ship.phases.findIndex(
+                  (candidate) => candidate.key === phase.key,
+                );
+                const phaseBoundaryEntries =
+                  actions === undefined
+                    ? []
+                    : timelineBoundaryEntries(actions.timeline, (boundary) => {
+                        switch (boundary.kind) {
+                          case 'roomEntered':
+                            return phaseIndex === 0;
+                          case 'encounterStart':
+                          case 'encounterEnd':
+                            return boundary.phaseKey === phase.key;
+                          case 'nextPhase':
+                            return phase.wheel?.key === boundary.wheelKey;
+                          case 'outgoingGeneration':
+                          case 'cleanup':
+                            return phaseIndex === ship.phases.length - 1;
+                        }
+                      });
+                const phaseBoundariesAt = (rank: number, placement: 'before' | 'after') =>
+                  phaseBoundaryEntries
+                    .filter((entry) => entry.rank === rank && entry.placement === placement)
+                    .map((entry) => renderBoundary(entry.boundary));
+                const matchedCheckpointRanks = new Set(
+                  phaseRankedRows.flatMap((row) => (row.rank === null ? [] : [row.rank])),
+                );
+                const trailingCheckpoints = phase.checkpoints.filter(
+                  (checkpoint) =>
+                    actions?.timeline.boundaries.some(
+                      (boundary) => lifecycleBoundaryCheckpointKey(boundary) === checkpoint.key,
+                    ) !== true &&
+                    checkpoint.afterRank !== 0 &&
+                    !matchedCheckpointRanks.has(checkpoint.afterRank),
+                );
+                return (
+                  <section
+                    aria-label={`${phase.label} ship phase`}
+                    className="ship-phase"
+                    key={phase.key}
+                  >
+                    <div className="local-reward-heading">
+                      <h4>{phase.label}</h4>
+                    </div>
+                    {phase.actionRows.length === 0 &&
+                    phase.checkpoints.length === 0 &&
+                    phaseBoundaryEntries.length === 0 ? null : (
+                      <>
+                        <div className="local-reward-heading ship-phase-actions-heading">
+                          <h5>Actions</h5>
+                        </div>
+                        <ol
+                          aria-label={`${phase.label} room action order`}
+                          className="room-action-list"
+                        >
+                          {phaseBoundariesAt(0, 'before')}
+                          {checkpointRows(0, phase.checkpoints)}
+                          {phaseRankedRows.map((row) => (
+                            <Fragment key={row.key}>
+                              {phaseBoundariesAt(row.rank!, 'before')}
+                              {renderRow(row, phase.checkpoints)}
+                              {phaseBoundariesAt(row.rank!, 'after')}
+                            </Fragment>
+                          ))}
+                          {phaseRankedRows.length === 0 ? phaseBoundariesAt(0, 'after') : null}
+                          {trailingCheckpoints.map((checkpoint) => (
+                            <li
+                              className="room-action-checkpoint"
+                              key={`checkpoint:${checkpoint.key}`}
+                            >
+                              <span aria-hidden="true" className="hub-roster-rank">
+                                ·
+                              </span>
+                              <strong>{checkpoint.label}</strong>
+                            </li>
+                          ))}
+                          {phaseUnrankedRows.length === 0 ? null : (
+                            <li
+                              aria-label="Room-action order boundary"
+                              className="hub-visit-boundary"
+                            >
+                              <span>Room action order ends here</span>
+                              <span>{phaseUnrankedRows.length} not ordered</span>
+                            </li>
+                          )}
+                          {phaseUnrankedRows.map((row) => renderRow(row, phase.checkpoints))}
+                        </ol>
+                      </>
+                    )}
+                  </section>
+                );
+              })}
+            {ship.phaseKey !== undefined || ship.repairRows.length === 0 ? null : (
               <section aria-label="Ship action repairs" className="ship-action-repairs">
                 <div className="local-reward-heading">
                   <h4>Inactive actions</h4>
@@ -1134,6 +1258,14 @@ function RoomActionsWorkbench({
     );
   }
   if (actions === undefined) return null;
+  const actionByKey = new Map(actions.rows.map((row) => [row.key, row]));
+  const timelineRows = actions.timeline.entries.flatMap((entry) => {
+    if (entry.kind === 'boundary') {
+      return [renderBoundary(entry.boundary)];
+    }
+    const row = actionByKey.get(entry.actionKey);
+    return row === undefined ? [] : [renderRow(row, [])];
+  });
   return (
     <section aria-label="Room Actions" className="room-actions-workbench">
       <header className="local-reward-heading">
@@ -1153,16 +1285,23 @@ function RoomActionsWorkbench({
           board.current = element;
         }}
       >
-        {checkpointRows(0)}
-        {rankedRows.map((row) => renderRow(row))}
-        {unrankedRows.length === 0 ? null : (
-          <li aria-label="Room-action order boundary" className="hub-visit-boundary">
-            <span>Room action order ends here</span>
-            <span>{unrankedRows.length} not ordered</span>
-          </li>
-        )}
-        {unrankedRows.map((row) => renderRow(row))}
+        {timelineRows}
+        {rankedRows.length === 0 ? checkpointRows(0) : null}
       </ol>
+      {actions.repairRows.length === 0 ? null : (
+        <section aria-label="Room action repairs" className="room-action-repairs">
+          <div className="local-reward-heading">
+            <h5>Action repairs</h5>
+          </div>
+          <p className="fixed-room-state">
+            These retained actions are not part of the active lifecycle order. Restore or remove
+            them explicitly.
+          </p>
+          <ol aria-label="Room action repairs" className="room-action-list">
+            {actions.repairRows.map((row) => renderRow(row))}
+          </ol>
+        </section>
+      )}
       {dragPreview}
     </section>
   );
@@ -1370,70 +1509,6 @@ export function AnomalyIdentityControls({ room }: { readonly room: WorkspaceRoom
   );
 }
 
-/**
- * Renders the complete reward-bearing state for one room offer without
- * introducing a second room card. Ordinary decisions use this directly so
- * room selection, reward selection, and picked state remain one surface.
- */
-export function RoomOfferEditor({
-  idPrefix,
-  interactions,
-  presentation,
-  room,
-}: {
-  readonly idPrefix: string;
-  readonly interactions: WorkspaceInteractionCatalog;
-  readonly presentation: 'doorTarget' | 'full' | 'hubRoomLocal';
-  readonly room: WorkspaceRoomSummary;
-}) {
-  const state = room.roomLocal;
-  const showMainReward = presentation === 'full';
-
-  return (
-    <>
-      {showMainReward && state.kind === 'none' ? (
-        <p className="fixed-room-state">No room reward.</p>
-      ) : null}
-      {showMainReward && state.kind === 'fixed' ? (
-        <div className="room-state-with-marker">
-          <SemanticOwnerMarker address={state.marker.address} />
-          {state.control === undefined ? (
-            <p className="fixed-room-state">Fixed reward: {state.summary}</p>
-          ) : (
-            <RewardControlEditor
-              control={state.control}
-              idPrefix={idPrefix}
-              interactions={interactions}
-              showAcquisitionChildren={false}
-            />
-          )}
-        </div>
-      ) : null}
-      {showMainReward && state.kind === 'incomingReward' ? (
-        <div className="room-state-with-marker">
-          <SemanticOwnerMarker address={state.control.marker.address} />
-          {state.clockworkReward === 'goal' ? (
-            <p className="fixed-room-state">Clockwork Goal</p>
-          ) : (
-            <>
-              {state.clockworkReward === 'nonGoal' ? (
-                <p className="fixed-room-state">Clockwork NonGoal</p>
-              ) : null}
-              <RewardControlEditor
-                control={state.control}
-                idPrefix={idPrefix}
-                interactions={interactions}
-                showAcquisitionChildren={false}
-              />
-            </>
-          )}
-        </div>
-      ) : null}
-      <AnomalyClearedControl room={room} />
-    </>
-  );
-}
-
 function RoomFeaturesWorkbench({
   features,
   interactions,
@@ -1475,90 +1550,148 @@ function RoomFeaturesWorkbench({
   );
 }
 
+function ShipCombatPhaseCountWorkbench({
+  occurrence,
+  interactions,
+}: {
+  readonly occurrence: OccurrenceAddress;
+  readonly interactions: WorkspaceInteractionCatalog;
+}) {
+  const dispatch = useAppDispatch();
+  const interaction = requireWorkspaceInteraction(
+    interactions.shipCombatPhaseCounts,
+    workspaceInteractionKey(occurrence),
+  );
+  return (
+    <section aria-label="Room overview" className="ship-combat-editor">
+      <div className="local-reward-heading">
+        <h4>Combat phases</h4>
+      </div>
+      <CandidateSelect
+        id={`room-${occurrence.occurrenceId}-combat-phase-count`}
+        interaction={interaction}
+        label="Combat phases"
+        onReplace={(encounterCount) =>
+          dispatch(
+            authoredProjectCommandDispatched({
+              kind: 'ReplaceShipEncounterCount',
+              occurrence,
+              encounterCount,
+            }),
+          )
+        }
+      />
+    </section>
+  );
+}
+
 function DirectRoomWorkbench({
   idPrefix,
   interactions,
   localVisit,
   room,
+  view,
+  shipPhaseKey,
 }: {
   readonly idPrefix: string;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly localVisit?: WorkspaceLocalVisitDecision;
   readonly room: WorkspaceRoomSummary;
+  readonly view: 'overview' | 'actions';
+  readonly shipPhaseKey?: string;
 }) {
   const workbench = room.workbench;
   switch (workbench.kind) {
     case 'standard':
       return (
         <>
-          <EncounterWorkbench
-            idPrefix={idPrefix}
-            interactions={interactions}
-            phases={workbench.encounterPhases}
-          />
-          {localVisit === undefined ? null : (
-            <LocalVisitWorkbench interactions={interactions} localVisit={localVisit} />
+          {view === 'overview' ? (
+            <>
+              {localVisit === undefined ? null : (
+                <LocalVisitWorkbench interactions={interactions} localVisit={localVisit} />
+              )}
+              <RoomFeaturesWorkbench features={workbench.features} interactions={interactions} />
+            </>
+          ) : (
+            <RoomActionsWorkbench
+              {...(workbench.roomActions === undefined ? {} : { actions: workbench.roomActions })}
+              encounterPhases={workbench.encounterPhases}
+              idPrefix={idPrefix}
+              interactions={interactions}
+            />
           )}
-          <RoomFeaturesWorkbench features={workbench.features} interactions={interactions} />
-          <RoomActionsWorkbench
-            {...(workbench.roomActions === undefined ? {} : { actions: workbench.roomActions })}
-            interactions={interactions}
-          />
         </>
       );
     case 'fields':
       return (
         <>
-          <EncounterWorkbench
-            idPrefix={idPrefix}
-            interactions={interactions}
-            phases={workbench.encounterPhases}
-          />
-          <FieldsWorkbench room={workbench.fields} />
-          {localVisit === undefined ? null : (
-            <LocalVisitWorkbench interactions={interactions} localVisit={localVisit} />
+          {view === 'overview' ? (
+            <>
+              <FieldsWorkbench interactions={interactions} room={workbench.fields} />
+              {localVisit === undefined ? null : (
+                <LocalVisitWorkbench interactions={interactions} localVisit={localVisit} />
+              )}
+              <RoomFeaturesWorkbench features={workbench.features} interactions={interactions} />
+            </>
+          ) : (
+            <RoomActionsWorkbench
+              {...(workbench.roomActions === undefined ? {} : { actions: workbench.roomActions })}
+              encounterPhases={workbench.encounterPhases}
+              idPrefix={idPrefix}
+              interactions={interactions}
+            />
           )}
-          <RoomFeaturesWorkbench features={workbench.features} interactions={interactions} />
-          <RoomActionsWorkbench
-            {...(workbench.roomActions === undefined ? {} : { actions: workbench.roomActions })}
-            interactions={interactions}
-          />
         </>
       );
     case 'shop':
       return (
         <>
-          <ShopWorkbench
-            interactions={interactions}
-            occurrence={room.address}
-            room={workbench.shop}
-          />
-          {localVisit === undefined ? null : (
-            <LocalVisitWorkbench interactions={interactions} localVisit={localVisit} />
+          {view === 'overview' ? (
+            <>
+              <ShopWorkbench
+                interactions={interactions}
+                occurrence={room.address}
+                room={workbench.shop}
+              />
+              {localVisit === undefined ? null : (
+                <LocalVisitWorkbench interactions={interactions} localVisit={localVisit} />
+              )}
+              <RoomFeaturesWorkbench features={workbench.features} interactions={interactions} />
+            </>
+          ) : (
+            <RoomActionsWorkbench
+              {...(workbench.roomActions === undefined ? {} : { actions: workbench.roomActions })}
+              idPrefix={idPrefix}
+              interactions={interactions}
+            />
           )}
-          <RoomFeaturesWorkbench features={workbench.features} interactions={interactions} />
-          <RoomActionsWorkbench
-            {...(workbench.roomActions === undefined ? {} : { actions: workbench.roomActions })}
-            interactions={interactions}
-          />
         </>
       );
     case 'ship':
       return (
         <>
-          <RoomActionsWorkbench
-            {...(workbench.roomActions === undefined ? {} : { actions: workbench.roomActions })}
-            interactions={interactions}
-            ship={{
-              occurrence: room.address,
-              phases: workbench.phases,
-              repairRows: workbench.repairRows,
-            }}
-          />
-          {localVisit === undefined ? null : (
-            <LocalVisitWorkbench interactions={interactions} localVisit={localVisit} />
+          {view === 'overview' ? (
+            <>
+              <ShipCombatPhaseCountWorkbench
+                occurrence={room.address}
+                interactions={interactions}
+              />
+              <RoomFeaturesWorkbench features={workbench.features} interactions={interactions} />
+            </>
+          ) : (
+            <RoomActionsWorkbench
+              {...(workbench.roomActions === undefined ? {} : { actions: workbench.roomActions })}
+              encounterPhases={room.encounterPhases}
+              idPrefix={idPrefix}
+              interactions={interactions}
+              ship={{
+                occurrence: room.address,
+                phases: workbench.phases,
+                repairRows: workbench.repairRows,
+                ...(shipPhaseKey === undefined ? {} : { phaseKey: shipPhaseKey }),
+              }}
+            />
           )}
-          <RoomFeaturesWorkbench features={workbench.features} interactions={interactions} />
         </>
       );
   }
@@ -1566,14 +1699,92 @@ function DirectRoomWorkbench({
 
 /** A room-local editor that consumes the structured workspace only. */
 export function OccurrenceWorkbench({
+  doors,
   incomingDoor,
+  initialTab,
   interactions,
   localVisit,
-  presentation,
   room,
   runState,
 }: OccurrenceWorkbenchProps) {
+  const requestedTab = initialTab ?? 'overview';
+  const roomIdentity = workspaceInteractionKey(room.address);
+  const [tabState, setTabState] = useState({
+    active: requestedTab,
+    roomIdentity,
+    requested: requestedTab,
+  });
+  const activeTab =
+    tabState.roomIdentity === roomIdentity && tabState.requested === requestedTab
+      ? tabState.active
+      : requestedTab;
+  const setActiveTab = (tab: WorkspaceRoomTab): void =>
+    setTabState({ active: tab, roomIdentity, requested: requestedTab });
   const idPrefix = `occurrence-${room.occurrenceId}`;
+  const tabId = (tab: WorkspaceRoomTab): string => `${idPrefix}-tab-${tab}`;
+  const panelId = `${idPrefix}-panel`;
+  const tabRefs = useRef<Partial<Record<WorkspaceRoomTab, HTMLButtonElement | null>>>({});
+  const tabOrder: WorkspaceRoomTab[] = [
+    'overview',
+    ...(room.workbench.kind === 'ship'
+      ? room.workbench.phases.map((_phase, index) =>
+          index === 0
+            ? ('shipIntroActions' as const)
+            : index === 1
+              ? ('shipCombat1Actions' as const)
+              : ('shipCombat2Actions' as const),
+        )
+      : ['actions' as const]),
+    ...(room.workbench.kind === 'ship' && room.workbench.repairRows.length > 0
+      ? (['shipInactiveRepair'] as const)
+      : []),
+    'doors',
+  ];
+  const onTabKeyDown = (event: ReactKeyboardEvent<HTMLButtonElement>, tab: WorkspaceRoomTab) => {
+    const currentIndex = tabOrder.indexOf(tab);
+    if (currentIndex < 0) return;
+    let nextIndex: number | undefined;
+    switch (event.key) {
+      case 'ArrowRight':
+        nextIndex = (currentIndex + 1) % tabOrder.length;
+        break;
+      case 'ArrowLeft':
+        nextIndex = (currentIndex - 1 + tabOrder.length) % tabOrder.length;
+        break;
+      case 'Home':
+        nextIndex = 0;
+        break;
+      case 'End':
+        nextIndex = tabOrder.length - 1;
+        break;
+      default:
+        return;
+    }
+    event.preventDefault();
+    const nextTab = tabOrder[nextIndex];
+    if (nextTab === undefined) return;
+    setActiveTab(nextTab);
+    tabRefs.current[nextTab]?.focus();
+  };
+  const tabButton = (tab: WorkspaceRoomTab, label: string, key?: string) => (
+    <button
+      aria-controls={panelId}
+      aria-selected={activeTab === tab}
+      className="room-workbench-tab"
+      id={tabId(tab)}
+      key={key ?? tab}
+      onClick={() => setActiveTab(tab)}
+      onKeyDown={(event) => onTabKeyDown(event, tab)}
+      ref={(element) => {
+        tabRefs.current[tab] = element;
+      }}
+      role="tab"
+      tabIndex={activeTab === tab ? 0 : -1}
+      type="button"
+    >
+      {label}
+    </button>
+  );
   const incomingRewards =
     incomingDoor?.rewardPreview.kind === 'visible' ? incomingDoor.rewardPreview.rewards : [];
   const incomingRewardSummary = incomingRewards.map((reward) => reward.summary).join(', ');
@@ -1604,18 +1815,81 @@ export function OccurrenceWorkbench({
           {runState === undefined ? null : <RunStateLauncher launcher={runState} />}
         </div>
       </header>
-      <RoomOfferEditor
-        idPrefix={idPrefix}
-        interactions={interactions}
-        presentation={presentation}
-        room={room}
-      />
-      <DirectRoomWorkbench
-        idPrefix={idPrefix}
-        interactions={interactions}
-        {...(localVisit === undefined ? {} : { localVisit })}
-        room={room}
-      />
+      <nav aria-label="Room workbench" className="room-workbench-tabs" role="tablist">
+        {tabButton('overview', 'Room Overview')}
+        {room.workbench.kind === 'ship'
+          ? room.workbench.phases.map((phase, index) => {
+              const tab: WorkspaceRoomTab =
+                index === 0
+                  ? 'shipIntroActions'
+                  : index === 1
+                    ? 'shipCombat1Actions'
+                    : 'shipCombat2Actions';
+              return tabButton(tab, `${phase.label} Actions`, phase.key);
+            })
+          : tabButton('actions', 'Room Actions')}
+        {room.workbench.kind === 'ship' && room.workbench.repairRows.length > 0
+          ? tabButton('shipInactiveRepair', 'Inactive Actions')
+          : null}
+        {tabButton('doors', 'Room Doors')}
+      </nav>
+      <section
+        aria-label={activeTab === 'doors' ? 'Room Doors' : 'Room workbench panel'}
+        aria-labelledby={tabId(activeTab)}
+        className="room-workbench-panel"
+        id={panelId}
+        role="tabpanel"
+      >
+        {activeTab === 'overview' ? (
+          <>
+            <AnomalyClearedControl room={room} />
+            <DirectRoomWorkbench
+              idPrefix={idPrefix}
+              interactions={interactions}
+              {...(localVisit === undefined ? {} : { localVisit })}
+              room={room}
+              view="overview"
+            />
+          </>
+        ) : activeTab === 'doors' ? (
+          (doors ?? <p className="fixed-room-state">No outgoing doors for this room.</p>)
+        ) : activeTab === 'shipInactiveRepair' && room.workbench.kind === 'ship' ? (
+          <RoomActionsWorkbench
+            {...(room.workbench.roomActions === undefined
+              ? {}
+              : { actions: room.workbench.roomActions })}
+            interactions={interactions}
+            ship={{
+              occurrence: room.address,
+              phases: [],
+              repairRows: room.workbench.repairRows,
+            }}
+          />
+        ) : room.workbench.kind === 'ship' ? (
+          <DirectRoomWorkbench
+            idPrefix={idPrefix}
+            interactions={interactions}
+            room={room}
+            {...(() => {
+              const shipPhaseKey =
+                activeTab === 'shipIntroActions'
+                  ? room.workbench.phases[0]?.key
+                  : activeTab === 'shipCombat1Actions'
+                    ? room.workbench.phases[1]?.key
+                    : room.workbench.phases[2]?.key;
+              return shipPhaseKey === undefined ? {} : { shipPhaseKey };
+            })()}
+            view="actions"
+          />
+        ) : (
+          <DirectRoomWorkbench
+            idPrefix={idPrefix}
+            interactions={interactions}
+            room={room}
+            view="actions"
+          />
+        )}
+      </section>
     </article>
   );
 }

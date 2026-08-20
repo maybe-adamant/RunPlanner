@@ -34,7 +34,11 @@ import {
 } from '../../authored-project/traits';
 import { activeRoomActionReferences } from '../../authored-project/room-actions';
 import { acquisitionSiteFromStorageKey } from '../../authored-project/artificer';
-import { assembleRoomActionRoster, roomActionContributions } from '../room-actions';
+import {
+  assembleRoomActionRoster,
+  assembleRoomLifecycleTimeline,
+  roomActionContributions,
+} from '../room-actions';
 
 function fail(detail: string): never {
   throw new Error(detail);
@@ -864,33 +868,41 @@ export function materializeAuthoredRoom(
           }),
         }),
     ...(clockworkReward === undefined ? {} : { clockworkReward }),
-  }) as Omit<CanonicalAuthoredRoom, 'roomActionRoster'>;
+  }) as Omit<CanonicalAuthoredRoom, 'roomActionRoster' | 'roomLifecycleTimeline'>;
+  const roomActionRoster = assembleRoomActionRoster({
+    owner: base.origin,
+    order: base.roomActions.order,
+    contributions: roomActionContributions({
+      catalog: context.catalog,
+      declaration: context.room,
+      room: base,
+      activeReferences: activeRoomActionReferences(
+        context.catalog,
+        context.biome,
+        context.occurrence,
+        {
+          activeEncounterSlotKeys: base.encounterPhases.map((phase) => phase.slotKey),
+          incomingRewardActive:
+            (base.incomingReward !== undefined &&
+              base.incomingReward.acquisitionEnabled !== false) ||
+            base.unresolvedIncomingReward !== undefined,
+          shopInventoryActive: base.entryState?.kind === 'shop',
+          ...(base.rewardWheels === undefined
+            ? {}
+            : { activeRewardWheelKeys: base.rewardWheels.map((wheel) => wheel.wheelKey) }),
+        },
+      ),
+    }),
+  });
+  const roomLifecycleTimeline = assembleRoomLifecycleTimeline({
+    owner: base.origin,
+    lifecycleProfileKey: base.lifecycleProfileKey,
+    encounterPhases: base.encounterPhases,
+    roomActionRoster,
+  });
   return Object.freeze({
     ...base,
-    roomActionRoster: assembleRoomActionRoster({
-      owner: base.origin,
-      order: base.roomActions.order,
-      contributions: roomActionContributions({
-        catalog: context.catalog,
-        declaration: context.room,
-        room: base,
-        activeReferences: activeRoomActionReferences(
-          context.catalog,
-          context.biome,
-          context.occurrence,
-          {
-            activeEncounterSlotKeys: base.encounterPhases.map((phase) => phase.slotKey),
-            incomingRewardActive:
-              (base.incomingReward !== undefined &&
-                base.incomingReward.acquisitionEnabled !== false) ||
-              base.unresolvedIncomingReward !== undefined,
-            shopInventoryActive: base.entryState?.kind === 'shop',
-            ...(base.rewardWheels === undefined
-              ? {}
-              : { activeRewardWheelKeys: base.rewardWheels.map((wheel) => wheel.wheelKey) }),
-          },
-        ),
-      }),
-    }),
+    roomActionRoster,
+    roomLifecycleTimeline,
   });
 }

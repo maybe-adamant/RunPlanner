@@ -160,6 +160,7 @@ function requireCompatibleOccurrenceAssemblyRequest(
     cached.occurrence !== request.occurrence ||
     cached.evaluatedRoom !== request.evaluatedRoom ||
     cached.fieldsBatchFacts !== request.fieldsBatchFacts ||
+    cached.isEntry !== request.isEntry ||
     cached.roomPicker !== request.roomPicker ||
     cached.anomalyReplacementRoomGameNames !== request.anomalyReplacementRoomGameNames
   ) {
@@ -508,6 +509,7 @@ export function assembleWorkspaceBiomeSemantics(
       markerDestinations,
       ordinaryRewardForfeited: (owner) => source.ordinaryRewardForfeited(owner.address),
       occurrence: request.occurrence,
+      ...(request.isEntry === true ? { isEntry: true } : {}),
       ...(request.roomPicker === undefined ? {} : { roomPicker: request.roomPicker }),
     });
     occurrenceAssemblies.set(request.occurrence.occurrenceId, Object.freeze({ assembly, request }));
@@ -533,6 +535,7 @@ export function assembleWorkspaceBiomeSemantics(
         Object.freeze({
           ...(source.entryRoom === undefined ? {} : { evaluatedRoom: source.entryRoom }),
           occurrence: start,
+          isEntry: true,
           ...(startRoomPicker === undefined ? {} : { roomPicker: startRoomPicker }),
         }),
       );

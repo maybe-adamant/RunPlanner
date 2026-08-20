@@ -85,6 +85,16 @@ export type WorkspaceAssessment = 'assessed' | 'blocked' | 'unassessed';
 export type WorkspaceProjectionSource = 'authored' | 'canonical' | 'progressive';
 export type WorkspaceStatus = 'blocked' | 'empty' | 'incomplete' | 'invalid' | 'valid';
 
+/** Transient destination for an entered-room workbench. */
+export type WorkspaceRoomTab =
+  | 'overview'
+  | 'actions'
+  | 'doors'
+  | 'shipIntroActions'
+  | 'shipCombat1Actions'
+  | 'shipCombat2Actions'
+  | 'shipInactiveRepair';
+
 export type WorkspacePayloadEditIntent<Command extends ProjectCommand> = WorkspaceCommandIntent<
   | Command
   | Extract<
@@ -130,6 +140,8 @@ export interface WorkspaceInspectorDestination {
    */
   readonly nodeKey: string;
   readonly ownerAddress: SemanticAddress;
+  /** Present when this owner belongs to a specific room-workbench tab. */
+  readonly roomTab?: WorkspaceRoomTab;
   readonly region: 'inspector' | 'routeRail' | 'structure';
   readonly routeKey?: string;
   /**
@@ -1102,6 +1114,7 @@ export interface WorkspaceRoomActionRow {
 }
 
 export interface WorkspaceRoomActions {
+  readonly timeline: WorkspaceRoomLifecycleTimeline;
   readonly checkpoints: readonly {
     readonly key: string;
     readonly label: string;
@@ -1113,6 +1126,36 @@ export interface WorkspaceRoomActions {
   readonly owner: OccurrenceAddress;
   readonly proposals: readonly WorkspaceRoomActionProposal[];
   readonly rows: readonly WorkspaceRoomActionRow[];
+  /** Retained stale/unranked rows rendered once outside active lifecycle order. */
+  readonly repairRows: readonly WorkspaceRoomActionRow[];
+}
+
+export type WorkspaceRoomLifecycleBoundary =
+  | { readonly kind: 'roomEntered'; readonly key: 'roomEntered' }
+  | { readonly kind: 'encounterStart'; readonly key: string; readonly phaseKey: string }
+  | { readonly kind: 'encounterEnd'; readonly key: string; readonly phaseKey: string }
+  | { readonly kind: 'nextPhase'; readonly key: string; readonly wheelKey: string }
+  | { readonly kind: 'outgoingGeneration'; readonly key: 'outgoingGeneration' }
+  | { readonly kind: 'cleanup'; readonly key: 'cleanup' };
+
+export type WorkspaceRoomLifecycleTimelineEntry =
+  | {
+      readonly kind: 'boundary';
+      readonly boundary: WorkspaceRoomLifecycleBoundary;
+      readonly rank: number;
+      readonly placement: 'before' | 'after';
+    }
+  | {
+      readonly kind: 'action';
+      readonly actionKey: string;
+      readonly rank: number;
+      /** Engine-owned phase grouping for multi-encounter room workbenches. */
+      readonly phaseKey?: string;
+    };
+
+export interface WorkspaceRoomLifecycleTimeline {
+  readonly entries: readonly WorkspaceRoomLifecycleTimelineEntry[];
+  readonly boundaries: readonly WorkspaceRoomLifecycleBoundary[];
 }
 
 export interface WorkspaceRoomActionInteraction {
@@ -1403,6 +1446,11 @@ export interface WorkspaceRoomSummary {
   readonly address: OccurrenceAddress;
   /** Authored detail activation is deliberately separate from evaluated entry. */
   readonly detailsActive: boolean;
+  /**
+   * The no-predecessor reward owned by an authored start occurrence. Ordinary
+   * entered rooms keep their predecessor-owned door reward read-only.
+   */
+  readonly entryReward?: WorkspaceRewardControl;
   /** Active pool-backed encounter phases in declaration/lifecycle order. */
   readonly encounterPhases: readonly WorkspaceEncounterPhase[];
   readonly entered: boolean;

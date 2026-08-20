@@ -321,6 +321,7 @@ describe('surface product loop', () => {
         name: /^Entering Combat 02/,
       }),
     ).toBeTruthy();
+    await view.user.click(screen.getByRole('tab', { name: 'Room Actions' }));
     const intro = screen.getByLabelText('Intro encounter phase');
     expect(screen.getByLabelText('Combat encounter phase')).toBeTruthy();
     await view.user.click(within(intro).getByRole('button', { name: 'Encounter' }));

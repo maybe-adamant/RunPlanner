@@ -494,6 +494,7 @@ describe('underworld product loop', () => {
         semanticOwnerFocused(createOccurrenceAddress(goldenFBiome, chaosOccurrenceId)),
       ),
     );
+    await view.user.click(screen.getByRole('tab', { name: 'Room Actions' }));
     expect(within(enteredChaos).getByRole('region', { name: 'Room Actions' })).toBeTruthy();
     expect(within(enteredChaos).queryByText(/Incoming door reward/)).toBeNull();
 
@@ -506,6 +507,7 @@ describe('underworld product loop', () => {
           decision.source.occurrenceId === chaosOccurrenceId,
       ),
     ).toBe(false);
+    await view.user.click(screen.getByRole('tab', { name: 'Room Doors' }));
     const rewardPool = screen.getByRole('combobox', { name: /Reward Pool/ });
     await view.user.click(rewardPool);
     let nextPool: HTMLOptionElement | undefined;
@@ -557,6 +559,7 @@ describe('underworld product loop', () => {
     await view.user.click(screen.getByRole('button', { name: 'Start biome' }));
     const structure = screen.getByRole('region', { name: 'Oceanus route structure' });
     await view.user.click(within(structure).getByRole('button', { name: /Continue route/ }));
+    await view.user.click(screen.getByRole('tab', { name: 'Room Doors' }));
     expect(screen.getByRole('button', { name: 'Door 1 room' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Remove these doors' })).toBeNull();
     expect(screen.queryByText('Add doors')).toBeNull();
@@ -598,7 +601,9 @@ describe('underworld product loop', () => {
       ),
     );
     await view.user.click(screen.getByRole('button', { name: /Next step.*Continue route/ }));
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Door 1 room' })).toBeTruthy());
+    await waitFor(() => expect(screen.getByRole('tab', { name: 'Room Doors' })).toBeTruthy());
+    await view.user.click(screen.getByRole('tab', { name: 'Room Doors' }));
+    expect(screen.getByRole('button', { name: 'Door 1 room' })).toBeTruthy();
 
     const topology = () =>
       application.store
@@ -646,7 +651,9 @@ describe('underworld product loop', () => {
     ).toEqual(['F_PreBoss01', 'F_PreBoss01']);
 
     await view.user.click(screen.getByRole('button', { name: 'Undo' }));
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Door 1 room' })).toBeTruthy());
+    await waitFor(() => expect(screen.getByRole('tab', { name: 'Room Doors' })).toBeTruthy());
+    await view.user.click(screen.getByRole('tab', { name: 'Room Doors' }));
+    expect(screen.getByRole('button', { name: 'Door 1 room' })).toBeTruthy();
     expect(terminalDecision()).toBeUndefined();
     expect(screen.queryByRole('button', { name: 'Remove these doors' })).toBeNull();
   });
@@ -966,7 +973,7 @@ describe('underworld product loop', () => {
       ),
     );
     const automaticReturn = screen.getByRole('group', {
-      name: /^Decision \d+ room offers$/,
+      name: 'Outgoing doors room offers',
     });
     expect(within(automaticReturn).getAllByRole('article')).toHaveLength(1);
     expect(within(automaticReturn).queryByRole('radio')).toBeNull();
@@ -1047,6 +1054,7 @@ describe('underworld product loop', () => {
     act(() =>
       application.store.dispatch(semanticOwnerFocused(createOccurrenceAddress(biome, contract))),
     );
+    await view.user.click(screen.getByRole('tab', { name: 'Room Actions' }));
     expect(within(contractWorkbench).getByRole('region', { name: 'Room Actions' })).toBeTruthy();
     expect(within(contractWorkbench).queryByText(/Incoming door reward/)).toBeNull();
     let selected = application.store.getState().projectWorkspace.history.present;

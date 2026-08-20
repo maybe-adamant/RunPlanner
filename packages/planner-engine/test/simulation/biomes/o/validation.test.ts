@@ -9,8 +9,10 @@ import {
   createRouteAddress,
   createRewardWheelAddress,
   createRewardWheelOfferAddress,
+  createRoomActionAddress,
   createTargetAddress,
   createTraitOfferAddress,
+  roomActionKey,
   semanticAddressKey,
 } from '@run-planner/engine/authored-project';
 import {
@@ -255,6 +257,22 @@ describe('selected O validation', () => {
     ).toMatchObject({ structurallyAuthorable: false });
     expect(sourceDecision.rewardStore).toMatchObject({ kind: 'sourceOfferPoint' });
     expect(sourceDecision.resolvedSharedRewardStoreKey).toBe('RunProgress');
+
+    const wheel2Choice = { kind: 'chooseRewardWheel' as const, wheelKey: 'wheel2' };
+    const invalidOrder = applyProjectCommand(project, catalog, {
+      kind: 'InsertRoomAction',
+      action: createRoomActionAddress(oBiome, oOccurrenceIds.combat07, roomActionKey(wheel2Choice)),
+      reference: wheel2Choice,
+      index: 0,
+    });
+    const invalidRoom = materializedORoom(invalidOrder, oOccurrenceIds.combat07);
+    expect(invalidRoom.roomActionRoster.issues).toContainEqual(
+      expect.objectContaining({
+        kind: 'dependency',
+        reference: wheel2Choice,
+        detail: 'afterCheckpoint nextPhaseUsable:wheel1',
+      }),
+    );
   });
 
   it('keeps dormant Wheel 2 out of a two-phase chronology and resolves outgoing from Wheel 1', () => {
