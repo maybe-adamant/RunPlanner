@@ -6,6 +6,7 @@ import {
   createLevelResolutionAddress,
   createOccurrenceAddress,
   createRoomActionAddress,
+  createShopOfferAddress,
   createTraitOfferAddress,
   decodeProjectDocument,
   roomActionKey,
@@ -185,7 +186,7 @@ export function authorRequiredTestRoomActions(
   );
 }
 
-/** Test-only aggregate adapter; production persists only insert/remove/move commands. */
+/** Test-only aggregate adapter over the closed Room Action membership commands. */
 export function replaceTestRoomActionOrder(
   initial: ProjectDocument,
   catalog: Catalog,
@@ -208,18 +209,38 @@ export function replaceTestRoomActionOrder(
     return initial;
   }
   for (const reference of [...occurrence.roomActions.order].reverse()) {
-    document = applyProjectCommand(document, catalog, {
-      kind: 'RemoveRoomAction',
-      action: createRoomActionAddress(biome, occurrenceId, roomActionKey(reference)),
-    });
+    document = applyProjectCommand(
+      document,
+      catalog,
+      reference.kind === 'interactShopOffer'
+        ? {
+            kind: 'ReplaceShopPurchaseParticipation',
+            offer: createShopOfferAddress(biome, occurrenceId, reference.offerKey),
+            purchased: false,
+          }
+        : {
+            kind: 'RemoveRoomAction',
+            action: createRoomActionAddress(biome, occurrenceId, roomActionKey(reference)),
+          },
+    );
   }
   for (const [index, reference] of references.entries()) {
-    document = applyProjectCommand(document, catalog, {
-      kind: 'InsertRoomAction',
-      action: createRoomActionAddress(biome, occurrenceId, roomActionKey(reference)),
-      reference,
-      index,
-    });
+    document = applyProjectCommand(
+      document,
+      catalog,
+      reference.kind === 'interactShopOffer'
+        ? {
+            kind: 'ReplaceShopPurchaseParticipation',
+            offer: createShopOfferAddress(biome, occurrenceId, reference.offerKey),
+            purchased: true,
+          }
+        : {
+            kind: 'InsertRoomAction',
+            action: createRoomActionAddress(biome, occurrenceId, roomActionKey(reference)),
+            reference,
+            index,
+          },
+    );
   }
   return document;
 }

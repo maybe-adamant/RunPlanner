@@ -102,6 +102,8 @@ export function projectCommandAddress(
     case 'RemoveRoomAction':
     case 'MoveRoomAction':
       return command.action;
+    case 'ReplaceShopPurchaseParticipation':
+      return command.offer;
     case 'ReplaceIncomingReward':
       return command.reward;
     case 'ReplaceLocalReward':

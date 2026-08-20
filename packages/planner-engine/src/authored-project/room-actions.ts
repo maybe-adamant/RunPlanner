@@ -207,10 +207,17 @@ export function activeRoomActionReferences(
     }
   }
   if (occurrence.state.kind === 'shop') {
-    if (scope?.shopInventoryActive === undefined || scope.shopInventoryActive)
+    if (scope?.shopInventoryActive === undefined || scope.shopInventoryActive) {
+      const purchasedKeys = new Set(
+        occurrence.roomActions.order.flatMap((reference) =>
+          reference.kind === 'interactShopOffer' ? [reference.offerKey] : [],
+        ),
+      );
       for (const offerKey of Object.keys(occurrence.state.shop?.offers ?? {})) {
+        if (!purchasedKeys.has(offerKey)) continue;
         references.push(Object.freeze({ kind: 'interactShopOffer', offerKey }));
       }
+    }
   }
   for (const phase of envelopeSlots) {
     if (activeEncounterSlots !== undefined && !activeEncounterSlots.has(phase.key)) continue;

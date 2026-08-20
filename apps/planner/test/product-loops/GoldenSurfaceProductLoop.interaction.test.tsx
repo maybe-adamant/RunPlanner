@@ -34,6 +34,7 @@ import {
   authoredProjectReplaced,
 } from '@planner/state/projectWorkspaceSlice';
 import { selectProfileStatus } from '@planner/state/store';
+import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
 import {
   appendCompleteN,
   createRepresentativeNOPQProject,
@@ -282,6 +283,64 @@ describe('surface product loop', () => {
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).queryByLabelText('option1 rarity')).toBeNull();
     expect(within(dialog).getByRole('button', { name: 'Close trait offer' })).toBeTruthy();
+    application.dispose();
+  });
+
+  it('authors a reached World Shop through Purchased, Actions ordering, and undoable removal', async () => {
+    const application = createApplication();
+    application.store.dispatch(authoredProjectReplaced(createRepresentativeNOPQProject()));
+    const view = renderPlannerForInteraction({ application });
+    await view.user.click(screen.getByRole('button', { name: 'Surface' }));
+    await view.user.click(screen.getByRole('button', { name: 'Olympus' }));
+    const shopNode = application
+      .selectStructuredWorkspace(application.store.getState())
+      .routes.find((route) => route.routeKey === 'Surface')
+      ?.biomes.find((biome) => biome.biomeKey === 'P')
+      ?.nodes.find(
+        (node) =>
+          node.kind === 'occurrenceWorkbench' &&
+          node.room.occurrenceId === pOccurrenceIds.prebossShop,
+      );
+    if (shopNode?.kind !== 'occurrenceWorkbench') throw new Error('P World Shop node is missing');
+    act(() => application.store.dispatch(semanticOwnerFocused(shopNode.marker.address)));
+
+    const offer2 = screen.getByRole('checkbox', { name: 'Purchased Offer 2' });
+    await view.user.click(offer2);
+    await view.user.click(screen.getByRole('checkbox', { name: 'Purchased Offer 3' }));
+    const order = () =>
+      currentProject(application)
+        .routes.find((route) => route.routeKey === 'Surface')
+        ?.biomes.find((biome) => biome.biomeKey === 'P')
+        ?.topology?.occurrences.find(
+          (occurrence) => occurrence.occurrenceId === pOccurrenceIds.prebossShop,
+        )?.roomActions.order;
+    expect(order()).toEqual([
+      { kind: 'interactShopOffer', offerKey: 'MajorNonBoon' },
+      { kind: 'interactShopOffer', offerKey: 'Minor' },
+    ]);
+
+    await view.user.click(screen.getByRole('tab', { name: 'Room Actions' }));
+    const actions = screen.getByRole('region', { name: 'Room Actions' });
+    const moveEarlier = within(actions)
+      .getAllByRole('button')
+      .find((button) => button.getAttribute('aria-label')?.endsWith('earlier'));
+    if (moveEarlier === undefined) throw new Error('ranked Shop purchase has no earlier move');
+    await view.user.click(moveEarlier);
+    expect(order()).toEqual([
+      { kind: 'interactShopOffer', offerKey: 'Minor' },
+      { kind: 'interactShopOffer', offerKey: 'MajorNonBoon' },
+    ]);
+
+    await view.user.click(screen.getByRole('tab', { name: 'Room Overview' }));
+    await view.user.click(screen.getByRole('checkbox', { name: 'Purchased Offer 2' }));
+    expect(order()).toEqual([{ kind: 'interactShopOffer', offerKey: 'Minor' }]);
+    await view.user.click(screen.getByRole('button', { name: 'Undo' }));
+    expect(order()).toEqual([
+      { kind: 'interactShopOffer', offerKey: 'Minor' },
+      { kind: 'interactShopOffer', offerKey: 'MajorNonBoon' },
+    ]);
+    await view.user.click(screen.getByRole('button', { name: 'Redo' }));
+    expect(order()).toEqual([{ kind: 'interactShopOffer', offerKey: 'Minor' }]);
     application.dispose();
   });
 

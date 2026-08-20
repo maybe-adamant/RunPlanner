@@ -15,6 +15,7 @@ import {
   type OccurrenceId,
   type ProjectCommand,
   type RewardWheelAddress,
+  type ShopOfferAddress,
   type SideRoomGeneration,
 } from '@run-planner/engine/authored-project';
 
@@ -94,6 +95,11 @@ export type WorkspaceOccurrenceInteractionRequirement =
       readonly kind: 'shopDeathDefianceCondition';
       readonly owner: OccurrenceAddress;
       readonly value: boolean;
+    }
+  | {
+      readonly kind: 'shopPurchaseParticipation';
+      readonly owner: ShopOfferAddress;
+      readonly purchased: boolean;
     };
 
 /**

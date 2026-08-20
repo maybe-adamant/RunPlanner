@@ -596,14 +596,13 @@ describe('planner history interaction', () => {
     application.store.dispatch(authoredProjectReplaced(createEchoGoldHPrebossProject()));
     application.store.dispatch(
       authoredProjectCommandDispatched({
-        kind: 'InsertRoomAction',
-        action: createRoomActionAddress(
+        kind: 'ReplaceShopPurchaseParticipation',
+        offer: createShopOfferAddress(
           { kind: 'biome', routeKey: 'Underworld', biomeKey: 'H' },
           shop.occurrenceId,
-          roomActionKey({ kind: 'interactShopOffer', offerKey: 'Minor' }),
+          'Minor',
         ),
-        reference: { kind: 'interactShopOffer', offerKey: 'Minor' },
-        index: 0,
+        purchased: true,
       }),
     );
     const derived = derivedAcquisitionEntriesForProjectEvaluationAssembly(
@@ -809,16 +808,10 @@ describe('planner history interaction', () => {
       offer: createShopOfferAddress(pBiome, pOccurrenceIds.prebossShop, 'MajorNonBoon'),
       value: { rewardType: 'WeaponUpgradeDrop' },
     });
-    const shopReference = { kind: 'interactShopOffer' as const, offerKey: 'MajorNonBoon' };
     project = applyProjectCommand(project, application.catalog, {
-      kind: 'InsertRoomAction',
-      action: createRoomActionAddress(
-        pBiome,
-        pOccurrenceIds.prebossShop,
-        roomActionKey(shopReference),
-      ),
-      reference: shopReference,
-      index: 0,
+      kind: 'ReplaceShopPurchaseParticipation',
+      offer: createShopOfferAddress(pBiome, pOccurrenceIds.prebossShop, 'MajorNonBoon'),
+      purchased: true,
     });
     application.store.dispatch(authoredProjectReplaced(project));
     const view = renderPlannerForInteraction({ application });
