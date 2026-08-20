@@ -12,7 +12,33 @@ by the owning design authorities and active delivery plans.
 
 ## Active Frontier
 
-The Narcissus, Fields, and Artificer phase is complete through authored schema 41. The locked audit/plan landed at `b054eb7`; the complete consequential
+The current persisted contract is strict schema 48. The occurrence/action
+delivery landed occurrence-backed door staging at `e1e3af0`, one unified room
+chronology at `f38247d`, the corrected door contract at `daa876f`, the opening
+reward frontier at `fdfd2dc`, the engine-walk N Hub board at `aa09c10`, and
+direct outgoing-frontier rendering at `b4be69f`. Every supported authored main
+or N side room is one occurrence; topology, door-visible identity, room-local
+payload, participation, and chronology have distinct owners.
+
+The lifecycle workbench delivery is complete. `ddada8b` added the engine-owned
+room timeline and Overview/Actions/Doors presentation, including Fields'
+authored cage permutation and O's phase tabs. `3109c2b` added derived room-entry,
+O pre-encounter, and pre-exit Run State checkpoints while retaining N's Hub and
+Preboss generation diagnostics. `d078b2e` made exact `interactShopOffer` membership in
+`roomActions.order` the sole Purchased fact, kept unpurchased inventory out of
+Actions, and retained specialized stale repair. These three changes are
+schema-neutral; no Shop source intent, second purchase set, Well, Shrine, or
+delivery state was added.
+
+Travel Deal and Gold Gold Gold remain derived from the true action order. Any
+future payload-authoring correction must evaluate the exact history prefix at
+the triggering action. Q's forced final-Preboss Hermes delivery is the
+representative contact: taking its concrete pickup before a World Shop purchase
+may lock the god pool before Travel generates a refill, while taking it after
+the purchase cannot retroactively change that payload. The planner does not yet
+implement Shrine inventory, pending delivery, rush, or forced delivery.
+
+The earlier Narcissus, Fields, and Artificer phase completed authored schema 41. The locked audit/plan landed at `b054eb7`; the complete consequential
 Narcissus pickup surface landed at `888ebe1`; Fields cage action chronology
 landed at `1ecba06`; Fields optional pickups landed at `3415d7d`; and Artificer
 landed at `2f97524`.
@@ -60,12 +86,12 @@ Gold persistence or compatibility decoder.
 
 All Together owns one complete four-pair result, directly grants each selected
 rarityless Infusion, and leaves god-pool history unchanged. Qualifying Shops
-retain their declaration-owned initial slots and use the existing `roomExit`
-site for the free Infernal Contract pedestal, the paid Travel refill, and the
-free Gold pickup. Supplemental payload/participation and chronology are
-separate: dormant Gold detail can be edited through the shared derived-entry
-materialization command without joining `roomExit.order`, while selection
-applies one engine-owned complete site proposal. Travel and Gold share the
+retain their declaration-owned initial slots and used the then-current
+`roomExit` site for the free Infernal Contract pedestal, the paid Travel refill,
+and the free Gold pickup. Supplemental payload/participation and chronology
+were separate: dormant Gold detail could be edited through the shared
+derived-entry materialization command without joining that site's order, while
+selection applied one engine-owned complete site proposal. Travel and Gold share the
 structural derived-entry product, order-proposal family, application
 `supplementalOffers` adapter, reward-control binding, and React renderer while
 retaining their distinct source-time frontiers.
@@ -76,8 +102,10 @@ pre-source-acquisition history even when later nested source detail is invalid;
 pre-kernel rejection leaves it armed. Its later free pickup uses ordinary
 acquisition and Time Piece behavior. Ordinary materialized payloads stay
 frozen; Pom alone regenerates when at least one stored `StackOnly` target has
-disappeared. Initial, Travel, Gold, and Contract entries weave through one
-Acquisitions chronology with atomic source rebind, move, and dependent removal.
+disappeared. At schema 38, Initial, Travel, Gold, and Contract entries wove
+through one Acquisitions chronology with atomic source rebind, move, and
+dependent removal. Schema 47 later absorbed that chronology into the
+occurrence's one `roomActions.order`.
 
 The remaining Shop-trait boundaries still defer Wells, exact Surface Shop
 delivery timing, numeric Shop costs/discounts, probability/RNG, challenge
@@ -2703,3 +2731,28 @@ retain Artificer and Time Piece choices on reached Nectar, Ashes, and Bones
 pickups without publishing controls past the evaluated prefix. The permanent
 `PRODUCT_POLISH.md` tracker owns the remaining product observations and marks
 unselected authorable reward slots as the next foundational audit.
+
+The room occurrence, chronology, lifecycle-workbench, lifecycle Run State, and
+Shop-participation delivery is durably closed at strict schema 48. The closure
+absorbed the two temporary plans into the authored, lifecycle, reward,
+simulation, editor/workspace, H/N/O/Q, and Shop/Travel/Gold authorities, then
+deleted both trackers. No production, test, fixture, build-configuration,
+persisted-schema, Well, Shrine, or delivery implementation changed in closure.
+
+The single declared `npm run check` passed all three workspace typechecks, then
+stopped in the regular test lane on two fixture-heavy wall-clock limits: 127 of
+129 files passed, with 1,554 tests passed, five skipped, one timed-out test, and
+one timed-out `beforeAll`; there were no assertion failures. A diagnostic full
+regular rerun passed 128 files and 1,559 tests but retained the one test's
+explicit 10-second timeout. Both affected files passed together in isolation
+(2 files, 12 tests).
+
+The configured heavy lane likewise exposed only explicit 5-second timeouts: 19
+of 28 files and 396 tests passed, with nine timed out. Serial isolation passed
+eight of those nine files and 131 of 132 tests; the remaining Run State UI test
+then passed alone in 4.95 seconds. Lint, repository formatting, and the
+production build passed (391 transformed modules). Vite retained the existing
+greater-than-500-kB chunk advisory. The declared complete gate is therefore
+truthfully non-green because of the known fixture-runtime limits, while every
+timed-out test passed in focused isolation. Timeout/configuration or fixture
+optimization remains separate follow-up work.

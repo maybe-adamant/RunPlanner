@@ -379,7 +379,17 @@ god-history mutation. Infernal Contract uses the fixed free
 Echo Gold uses the free `echoDoubleShopReward` pickup. The three supplemental
 entries share the existing room-exit acquisition site; payload/participation
 and chronology remain separate, and Travel/Gold source dependencies are
-resolved by one complete site-order product.
+resolved by the occurrence's one `roomActions.order`. Base initial purchases
+participate only through their exact `interactShopOffer` references; Overview's
+Purchased markers edit that membership without adding a second persisted set.
+
+The first accepted purchase identifies the Travel/Gold source slot, but it is
+not a complete payload context. Generated reward legality belongs to the exact
+history prefix at that source action. A future delivery-aware presentation must
+therefore account for earlier same-room acquisitions—including Q's forced
+final-Preboss Hermes delivery—rather than deriving candidates from Shop-entry
+history or a source selector. This disposition does not claim Shrine delivery
+support; that feature remains deferred.
 
 The planner continues to simplify resources and timing only where stated:
 costs and discounts are not simulated, Surface Shop delayed delivery remains

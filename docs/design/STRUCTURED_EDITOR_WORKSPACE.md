@@ -133,10 +133,10 @@ features, items, or other room-local products remain available through the conta
 decision or fixed-stage inspector unless a separate player-facing navigation
 need justifies another rail highlight.
 
-### Run State Join and Outer-Decision Placement
+### Run State Join and Lifecycle Placement
 
-The workspace joins each engine-published decision Run State snapshot to its
-exact semantic decision owner. A structurally eligible decision projects one
+The workspace joins each engine-published Run State snapshot to its exact
+semantic owner. A structurally eligible owner projects one
 launcher: an available launcher binds that exact snapshot, while an unreached
 launcher carries the engine coverage reason and binds no invented state.
 Presentation owns structural titles, catalog-backed labels, section ordering,
@@ -149,22 +149,32 @@ loadout or room list. Keepsake presentation joins the exact engine history to
 catalog labels as a biome-by-biome chronology; React does not reconstruct that
 sequence from current and removed inventories.
 
-Run State remains available through the covered decision that contains the
-first blocking value and unavailable afterward. The workspace consumes that
-engine-published coverage directly; it does not apply a second canonical or
-finding-order clamp.
+Run State remains available through the covered lifecycle checkpoint that
+precedes or contains the first blocking value and unavailable afterward. The
+workspace consumes that engine-published coverage directly; it does not apply
+a second canonical or finding-order clamp.
 
-The launcher belongs in the selected decision workbench header, never in the
-rail or on every room card. Ordinary generated decisions, including generated
-Preboss, follow the same owner rule. N has an explicit two-layer presentation:
+Only two decision-generation launchers remain public: the `HubDecisionAddress`
+before the Hub board is generated and the Hub-sourced `ExitDecisionAddress`
+before Preboss generation. Ordinary occurrence-sourced decisions do not retain
+a `beforeTargetGeneration` launcher on their door cards. Room-local lifecycle
+launchers attach
+to their semantic workbench seam: ordinary/H/Shop entry state at Room entered,
+each active O phase's pre-start state at its Start encounter boundary, and
+literal pre-exit state in Room Doors. An unavailable retained checkpoint stays
+visible and disabled; an occurrence absent from the materialized prefix owns no
+launcher. The workspace-level launcher index resolves the sheet without React
+scanning nested workbenches or reconstructing history.
+
+N has an explicit two-layer presentation:
 its outer chronology is Opening -> PreHub -> Hub -> Preboss, while Hub visits,
-slots, side rooms, restores, and local children are inner chronology. Opening
-remains a fixed stage. Run State checkpoints occur before PreHub, before Hub,
-and before Preboss; the one Hub launcher is owned by the Hub decision before
-board generation. The visible completed-Hub handoff remains the outer transition
-to Preboss, and any future outer decision follows the same generic owner rule.
-React consumes these projected owners and never distinguishes them from room
-names or rendered nesting.
+slots, side-room occurrences, and restores are inner chronology. Opening
+remains a fixed stage. Entered N occurrences use the same room-entry and
+pre-exit lifecycle launchers as other ordinary rooms. The Hub launcher is owned
+by the Hub decision before board generation, and the visible completed-Hub
+handoff owns the retained generation diagnostic before Preboss. React consumes
+these projected owners and never distinguishes them from room names or rendered
+nesting.
 
 The center region does not attempt to make ordinary decision topology and the
 Hub board look structurally identical. It does give both the same route rail,
@@ -192,7 +202,7 @@ for a rendered room label or decision number.
 
 Each structurally active pool-backed encounter phase is a first-class
 workspace owner. Its exact `EncounterPhaseAddress` resolves to the containing
-occurrence or local-child inspector, one marker, one focus destination, and—if
+occurrence inspector, one marker, one focus destination, and—if
 the declared set has meaningful choice cardinality—one bound selection
 interaction. The projector consumes the engine's context-free
 `EncounterPhaseAuthoringDomain`, whose activation comes from catalog,
@@ -211,15 +221,24 @@ semantic destination without producing no-op controls. This gives finding
 navigation and closure the same phase identity regardless of whether the
 presentation has a visible picker.
 
-### Direct Occurrence Workbenches
+### Lifecycle Occurrence Workbenches
 
 The application publishes one closed occurrence-presentation union rather than
-a generic room-details disclosure. Standard rooms render Encounter, optional N
-Side rooms, Room features, and Room Actions in that order. Fields render
-Encounter, Fields setup, Room features, and the same occurrence-owned mixed
-Room Actions chronology. Shops render inventory and conditions before Room
-features and Room Actions. A section is omitted when its projected product is
-empty.
+a generic room-details disclosure. Standard, Fields, and Shop occurrences
+render Room Overview, Room Actions, and Room Doors. Overview contains read-only
+incoming context and meaningful room-local setup: optional N Side rooms,
+Fields identities, Shop inventory and Purchased markers, and Room features.
+Actions consumes the engine lifecycle timeline plus the one occurrence-owned
+chronology. Doors consumes the unchanged total outgoing-stage product. A
+section is omitted when its projected product is empty.
+
+Manual tab selection is transient and defaults to Overview for a newly focused
+occurrence. Exact semantic focus overrides it: setup and purchase markers open
+Overview, active encounter/action owners open the matching Actions tab,
+inactive Ship actions open repair, and outgoing owners open Room Doors. The
+application publishes that closed destination; React does not parse addresses
+or labels. Tabs use one stable tabpanel identity and roving ArrowLeft,
+ArrowRight, Home, and End keyboard activation.
 
 The occurrence header presents the room and any door-visible incoming reward as
 one compact `Entering <room> · Incoming Reward: <reward>` title. React does not
@@ -227,21 +246,21 @@ render a second incoming-reward context block. A Room-features child renders
 its bound Add or Remove Chaos-gate/Zagreus-contract action directly, without a
 second child heading that repeats the action's subject.
 
-ShipCombat is the deliberate fourth shape. It renders Combat phase count,
-then Intro, Combat 1, and structurally active Combat 2 sections. Each phase
-contains its projected Encounter, declaration-attached reward wheel when
-present for the following combat, and actions grouped by the engine-owned
-`RoomActionWindow`. Wheel 1's structural editor therefore appears under Intro,
-Wheel 2's under Combat 1 when active, and final Combat 2 has no following wheel
-editor. Choose and post-combat pickup actions do not move with that structural
-editor. The groups
-are views over one interaction and one authored order: global ranks, proposals,
-pointer drag, keyboard moves, and Undo are unchanged. The application copies
-the engine window onto projected rows and checkpoints and performs the closed
-Ship grouping; React does not derive lifecycle barriers or create another
-order. An action retained from a now-inactive Ship phase is excluded from those
-active groups and rendered exactly once in the Ship repair surface, preserving
-its finding, semantic focus, and explicit removal proposal.
+ShipCombat is the deliberate fourth shape. It renders Room Overview, Intro
+Actions, Combat 1 Actions, structurally active Combat 2 Actions, and Room
+Doors. Overview owns encounter count and room features. Each phase tab contains
+its projected encounter control at Start encounter, its post-combat actions,
+and the declaration-attached wheel editor at the following `nextPhase`
+boundary. Wheel 1's structural editor therefore appears under Intro, Wheel 2's
+under Combat 1 when active, and final Combat 2 has no following wheel editor.
+Choose and post-combat pickup actions do not move with that structural editor.
+The groups are views over one interaction and one authored order: global ranks,
+proposals, pointer drag, keyboard moves, and Undo are unchanged. The application
+consumes engine-owned timeline action keys and phase attachments; React does
+not derive lifecycle barriers or create another order. An action retained from
+a now-inactive Ship phase is excluded from those active groups and rendered
+exactly once in the Ship repair surface, preserving its finding, semantic
+focus, and explicit removal proposal.
 
 Room features is a closed application product containing the currently
 supported Chaos-gate and Zagreus-contract Add/Remove controls. The resulting
@@ -768,20 +787,20 @@ one exact finding destination. The occurrence assembler derives these leaves
 from normalized acquisition roles; it does not switch on Hammer names or
 reconstruct lifecycle order. Room, local, wheel, Devotion, and Shop
 projections all reuse the same interaction package. A materialized Shop
-publishes ordinary paid-purchase trait and Pom controls only from active
-entries in its containing Acquisitions workbench. Unpurchased initial inventory
-exposes only `Purchased` membership; it has no acquisition-child control,
+publishes ordinary paid-purchase trait and Pom controls only from participating
+`interactShopOffer` rows in Room Actions. Unpurchased initial inventory exposes
+only `Purchased` membership in Overview; it has no acquisition-child control,
 finding, trait event, or equipped-state fold until its entry participates.
 The inventory remains the only reward-identity editor. Once purchased, its
-Acquisitions row exposes resolution children and chronology only; it cannot
+Room Actions row exposes resolution children and chronology only; it cannot
 turn the purchased Boon, Mystery Boon, Pom, or other item into another reward.
 
-The same workbench contains declaration-produced pickups such as Narcissus
+The same Room Actions chronology contains declaration-produced pickups such as Narcissus
 outputs. It derives entry labels, participation, order, reward controls, and
 exact acquisition children from the engine product. Producer cards may expose
 the outer Story choice or Shop inventory, but they do not duplicate pickup-
 owned trait or Pom editors. Mandatory singleton settlements remain compact and
-do not acquire an otherwise empty Acquisitions card.
+do not acquire an otherwise empty action card.
 
 The same closure applies to Artificer replacement children. Every reached
 replacement reward, trait offer, Pom resolution, disposition, and later pickup
@@ -829,8 +848,8 @@ Gold duplicate is the one exception to purchase-first child visibility: its
 stable supplemental Shop row is the sole complete reward editor, including
 boon, Pom, and Time Piece children, before `Picked up` is selected. Those edits
 dispatch the shared derived-Shop-entry command, which atomically persists the
-engine-owned default without adding the key to chronology. The Acquisitions
-workbench shows only the Gold chronology row after pickup participation is
+engine-owned default without adding the key to chronology. Room Actions shows
+only the Gold chronology row after pickup participation is
 selected; it never duplicates the reward editor.
 Gift's reached Hammer child uses the biome-start keepsake result described
 above. Each active child has one marker, bound semantic interaction, and exact
@@ -844,18 +863,19 @@ supplemental rows in Travel, Gold, Contract order when present. Travel and Gold
 reuse one `supplementalOffers` projection, one reward-control adapter, and one
 React renderer. Disabled placeholders expose instructions only; active rows
 carry engine-bound defaults, domains, semantic edits, findings, and complete
-participation proposals. One Acquisitions workbench owns the interleavable
+participation proposals. One Room Actions workbench owns the interleavable
 initial, Travel, Gold, and Contract chronology, including atomic source rebind,
 move, and dependent removal. The application does not infer a source or repair
 an order from rendered positions.
 
-Every Acquisitions workbench is hosted by the occurrence that owns its exact
-settlement site, including a Shop whose outgoing decision is authored later.
-It renders the shared ranked-prefix interaction used by the Hub: participating
-entries form a numbered draggable prefix with compact arrow controls, while
-optional nonparticipants remain below an explicit order boundary. Purchase or
-pickup checkboxes alone change membership; drag and arrows alone change the
-relative order of the existing participant set.
+Every Room Actions workbench is hosted by the occurrence that owns its exact
+chronology, including a Shop whose outgoing decision is authored later.
+Participating entries form a numbered draggable sequence with compact arrow
+controls. Initial Shop nonparticipants remain in Overview rather than below an
+Action-order boundary. Their Purchased toggles alone change base-purchase
+membership; drag and arrows alone change the relative order of existing
+participants. Generated optional pickups retain their existing action-owned
+participation and repair interactions.
 
 Complete-offer first-Olympian composition findings are projected through the
 same leaf and destination. They do not add a workspace mode or marker; the

@@ -68,13 +68,14 @@ rarityless Infusion from each non-exhausted declaration-owned pair without
 changing god-pool history. Qualifying World Shops retain their declaration-owned initial
 inventory and add the free Contract pedestal, one source-derived Travel refill,
 and Echo's stable `echoDoubleShopReward` pickup as supplemental rows. Payload
-and participation are authored on those rows, while one shared Acquisitions
-order owns chronology; Gold materializes from the first accepted paid
+and participation are authored on those rows, while one occurrence-owned Room
+Action order owns chronology; Gold materializes from the first accepted paid
 non-Spell purchase before that source's acquisition effects and may be picked
 up later among the other room entries.
 
-Authored schema 41 also closes the Narcissus, Mourning Fields, and Artificer
-surface. Narcissus exposes every pickup consequential to Time Piece or
+The current strict authored contract is schema 48. Its earlier schema-41
+Narcissus, Mourning Fields, and Artificer surface remains intact: Narcissus
+exposes every pickup consequential to Time Piece or
 Artificer, including producer-owned Psyche without adding it to a counted
 store. Each Fields combat room owns its exact optional-pickup capacity,
 retained optional inventory, and one action chronology that interleaves atomic

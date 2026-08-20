@@ -265,6 +265,15 @@ pending-delivery countdowns, rush, forced final-Preboss completion, or the
 pending-SpellDrop door block. Existing World Shop and Travel Deal support must
 not be interpreted as implicit Shrine support.
 
+The forced Q contact nevertheless fixes a future planner requirement. If a
+delivered Hermes pickup and a World Shop purchase coexist in `Q_PreBoss01`,
+their positions in the one room chronology determine the Travel Deal or Gold
+Gold Gold payload context. Delivery before the purchase may add a fourth god
+and lock the pool before a refill is generated; delivery after the purchase
+cannot retroactively constrain that refill. A future payload editor must use
+the triggering action's exact history prefix rather than Shop-entry history or
+only the selected source slot.
+
 This audit intentionally leaves authored shape and UX open. A later plan must
 decide how much numeric delay choice is useful while preserving the source
 distinction between purchase, delivery materialization, and concrete pickup.

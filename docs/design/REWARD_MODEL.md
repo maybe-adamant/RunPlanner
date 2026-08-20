@@ -512,7 +512,7 @@ Biome-specific slices add structural composition around these reward types:
 - a derived incoming realization for the I Goal/NonGoal branch;
 - `offerPoint` for O encounter wheels.
 
-Those wrappers coordinate bounded local children. They do not redefine bags,
+Those wrappers coordinate bounded local reward definitions. They do not redefine bags,
 reward types, concrete acquisitions, payloads, or peer/history validation.
 
 ### H Fields Cage Composition
@@ -723,9 +723,12 @@ rarity and price are deferred, both resolve the same authored `RandomLoot` plus
 source shape; the supporting entry stays in the derived assignment witness so
 two-offer groups still enforce without-replacement selection exactly.
 
-`acquisitionSites.roomExit.order: []` is complete authored state. The list contains distinct
-stable slot keys in the exact player-authored acquisition order; it controls
-acquisition, not whether an inventory offer exists. The ordinary `WorldShop` has three one-offer
+An empty occurrence `roomActions.order` is complete authored state for an
+optional Shop. Exact `interactShopOffer` references identify the participating
+initial slots and their player-authored acquisition order; they control
+purchase, not whether an inventory offer exists. Overview derives `Purchased`
+from that same membership, while sparse acquisition sites retain only generated
+pickup payloads. The ordinary `WorldShop` has three one-offer
 groups and therefore three stable slots whose current labels are `Offer 1`,
 `Offer 2`, and `Offer 3`; internal slot keys may remain category-bearing without
 leaking into presentation. `I_WorldShop` has five one-offer groups.
@@ -782,13 +785,13 @@ sufficient-resource and valid-use assumption. This deliberately admits some
 purchases that one concrete resource state could not make; it does not weaken
 offer-generation requirements or downstream acquisition effects.
 
-Purchase and pickup participation plus chronology are persisted in one
-occurrence-owned exact acquisition-site order, not Shop state or a simulation
-witness. Presence forms the unordered participant set exposed by Purchase and
-Picked up checkboxes; position is the later chronology. Membership insertion or
-deletion is structural, preserves the relative order of retained participants,
-and never requires the current chronology to settle. New participants append
-until the author uses the separate move controls. A Blind Box
+Purchase and pickup participation plus chronology are persisted in the
+occurrence's one exact `roomActions.order`, not Shop state, an acquisition-site
+order, or a simulation witness. Presence forms the unordered participant set
+exposed by Purchase and Picked up checkboxes; position is the later chronology.
+Membership insertion or deletion is structural, preserves the relative order
+of retained participants, and never requires the current chronology to settle.
+New participants append until the author uses the separate move controls. A Blind Box
 offer persists its intended eventual `BoonSource`, but source support is not
 validated while the box is merely offered. When the box is purchased, the
 simulator applies the one authored order, evaluates each purchase against the
@@ -799,18 +802,19 @@ Payload and order are deliberately separate. A dormant Travel or Gold entry
 may persist its complete reward and nested acquisition detail while absent from
 the order. Engine-owned derived-entry defaults and candidate products let one
 semantic command edit that payload without selecting it, or apply one complete
-site-level participation/order proposal. Travel/Gold dependencies are
+`roomActions.order` participation/order proposal. Travel/Gold dependencies are
 normalized together, so a source removal, rebind, move, or dependent removal
 is atomic and no row publishes a conflicting local order.
 
 The persisted order remains available to a later plan compiler without the
 compiler or simulator choosing a different witness order. The editor derives
-per-row membership and one ranked Acquisitions surface from the occurrence-
-owned list. That surface remains on the producing occurrence; an outgoing
-decision never adopts the source room's settlement site. For Shop entries, the
-inventory owns reward identity while Acquisitions owns only chronology and
-acquisition-time resolution children. Generated pickup entries whose payload
-is owned by the settlement row retain the full reward editor there.
+per-row membership and one ranked Room Actions surface from the
+occurrence-owned list. That surface remains on the producing occurrence; an
+outgoing decision never adopts the source room's chronology. For Shop entries,
+Overview inventory owns reward identity and its Purchased marker, while the
+participating action row owns chronology and acquisition-time resolution
+children. Generated pickup entries whose payload is owned by the action row
+retain the full reward editor there.
 
 ## Offer and Acquisition
 
@@ -831,9 +835,9 @@ chronological address. The reward kernel remains the sole authority that turns
 those roles into loot/use history, trait acquisition, and level effects.
 
 Mandatory ordinary entries use derived participation and chronology. Optional
-Shop purchases and spawned pickups use one authored site order, where presence
-is participation and position is chronology. Fields optional pickups apply the
-same membership-before-order invariant in their mixed action sequence. Shop inventory continues to own
+Shop purchases and spawned pickups use one authored `roomActions.order`, where
+presence is participation and position is chronology. Fields optional pickups
+apply the same membership-before-order invariant in that chronology. Shop inventory continues to own
 the purchased offers; a spawned pickup instead owns its exact authored reward
 and acquisition-time children at the site. No producer owns a parallel
 purchase or pickup order.
@@ -1059,7 +1063,7 @@ phase may own the same child when its selected Encounter Definition declares a
 concrete acquisition role (including payload-source, fixed, Devotion
 chosen/spurned, and purchased Shop roles); encounter providers resolve from
 their declaration. Neither path switches on a room, Shop, component, or
-rendered trait name. An unpicked room, dormant local child, unselected
+rendered trait name. An unpicked room, unentered side-room occurrence, unselected
 encounter definition or wheel result, or unpurchased Shop option owns no
 reached trait event.
 
@@ -1071,7 +1075,7 @@ does not enter equipped state. A valid trait outcome folds only its selected
 trait; valid Fallback Gold publishes its reached evaluation but emits no trait
 event or modeled acquisition. Devotion's chosen role therefore equips before
 combat and its spurned role observes that state after combat; Shop purchases
-fold in their occurrence-owned `roomExit` acquisition-site order.
+fold at their exact positions in the occurrence's `roomActions.order`.
 
 The first reached Olympian offer is a complete-offer composition point when
 the pre-offer `ordinaryBoonSlots` projection is empty. Its three alternatives
@@ -1108,7 +1112,7 @@ suppressing Denial stops new bans but never removes existing ones. Effective
 Vow of Forfeit is narrower: at the ordinary authored room's incoming `Boon` or
 `HermesUpgrade` settlement boundary it vetoes the first such acquisition in
 each biome. The authored offer and bag result remain, but concrete acquisition
-and its trait child stay dormant. Shops, Devotion, local children, and pickups
+and its trait child stay dormant. Shops, Devotion, side-room occurrences, and pickups
 do not trigger or consume Forfeit, and no consolation acquisition is modeled.
 The veto is an automatic `rewardForfeited` reward event beside Time Piece and
 Artificer outcomes, not an authored acquisition disposition or an

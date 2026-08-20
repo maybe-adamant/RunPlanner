@@ -228,6 +228,66 @@ not position a semantic boundary by comparing display labels, biome names, or
 incidental numeric action ranks when the lifecycle profile or roster already
 owns the relevant window/checkpoint relation.
 
+### Room Action roster boundary
+
+Semantic action producers contribute explicit `RoomActionContribution`
+products. The one `assembleRoomActionRoster` authority receives those
+contributions together with the occurrence's authored `roomActions.order` and
+returns the complete roster consumed by lifecycle, validation, candidate, and
+workspace products. Producers do not register callbacks, mutate a hidden
+registry, or communicate action membership through sidecar state.
+
+Roster assembly reconciles every authored and derived key exactly once:
+ranked active actions become the executable chronology, active but unranked
+actions remain explicit incomplete rows, and ranked keys whose action is no
+longer active remain stale repair rows. Invalid or incomplete authorship is
+therefore retained for correction rather than dropped or silently reordered.
+There is no parallel Fields, Shop, Acquisitions, or presentation-owned action
+assembler and no second order authority.
+
+### Derived authoring timeline
+
+The engine publishes one closed `RoomLifecycleTimeline` beside the
+`RoomActionRoster`. The roster remains authoritative for active action rows,
+dependencies, proposals, stale repair, and structural validity. The timeline
+places those exact roster keys around semantic `roomEntered`,
+`encounterStart`, `encounterEnd`, Ship `nextPhase`, outgoing-generation, and
+final `cleanup` boundaries. It may carry declaration-owned phase identity and
+before/action/after placement, but never tabs, labels, callbacks, or another
+eligibility/order calculation.
+
+The player-facing timeline renders one final Cleanup and does not render the
+`exitUsable` checkpoint as a peer row. Encounterless and Shop profiles omit
+invented encounter seams. Fields cycles derive only from ranked active cage
+actions, so retained unranked cages are repair rows rather than false active
+cycles. Ship phase grouping consumes the engine's phase attachment; the
+application does not place wheel or action rows by rank arithmetic.
+
+The editor presents this product through Room Overview, Room Actions, and Room
+Doors. Overview declares room-local setup, Actions resolves the one chronology,
+and Doors edits the occurrence-owned outgoing decision. These are transient
+views over unchanged semantic owners, not persisted lifecycle events or a
+second room model.
+
+### Lifecycle Run State checkpoints
+
+Room-local Run State is a derived diagnostic at exact lifecycle checkpoints.
+An ordinary occurrence publishes `roomEntered` and `beforeRoomExit`; a
+ShipCombat occurrence instead publishes one `beforeEncounterStart` checkpoint
+for each active phase plus `beforeRoomExit`. Entry consumes the existing entry
+history, each Ship phase consumes the history fold captured immediately before
+its `encounterStarted` event, and pre-exit consumes post-commit room-local
+settlement immediately before `roomExited`.
+
+These checkpoint addresses and snapshots are not authored or persisted. A
+structurally retained occurrence beyond progressive coverage may expose a
+disabled launcher, while an occurrence absent from the materialized prefix
+publishes none. The `beforeTargetGeneration` product remains internally useful
+for generation assessment, but only N's Hub-board and Hub-sourced Preboss
+generation exceptions retain public launchers. A literal pre-exit snapshot must
+not replace or relabel either exception. N parent and Hub restoration replay no
+lifecycle and therefore create no duplicate Run State checkpoint.
+
 ## Core Model
 
 A generated target and an entered room are different semantic objects in time.
@@ -445,10 +505,10 @@ their authored choice but emit no lifecycle product.
 
 `encounterStarted` applies only the resolved definition's encounter-depth
 effect. `encounterCompleted` stays at its declared later lifecycle point. N
-entered side rooms execute their local-child preparation and lifecycle in
+entered side-room occurrences execute their own preparation and lifecycle in
 authored `enteredOrdinal` order before the corresponding parent restore. The
 same ordered history therefore supports ordinary rooms, O/P/H multi-phase
-rooms, and N local children without a second encounter engine.
+rooms, and N side-room occurrences without a second encounter engine.
 
 ## Operations, Effects, and Events
 
@@ -505,7 +565,7 @@ kind is a catalog or construction error rather than a silent no-op.
 | `completeRequiredObjects` | State after the declared required-object work          | Emit paired completion facts and release the corresponding required-object blockers                          |
 | `advanceProducer`         | State at the producer's named point                    | Resolve acquisition roles, project loot/use history, and update acquisition-driven counters                  |
 | `generateOutgoingBatch`   | Current state before this room commits                 | Create targets sequentially, resolve incoming offers, consume counted bags, and apply offer projections      |
-| `settleAcquisitionPoint`  | Already-generated outgoing batch plus active inventory | Settle the exact occurrence-owned acquisition-site order without rewriting the batch                         |
+| `settleAcquisitionPoint`  | Already-generated outgoing batch plus active inventory | Execute the exact active Room Action acquisition references assigned to this lifecycle point                 |
 | `commitRoom`              | State after supported room-local work                  | Append declared room history, recompute depth caches, advance route ordinal, and record entered-store policy |
 | `exitRoom`                | Committed source state plus selected generated target  | Close the fragment and transfer control to the selected target's preparation                                 |
 
@@ -639,6 +699,22 @@ Shop inventory and the outgoing batch both observe pre-purchase acquisition
 history. The full generated inventory is the current-room shop option set while
 the outgoing batch is evaluated. Purchases update history only after that batch
 already exists.
+
+Purchase participation and order are both the exact `interactShopOffer`
+references in the occurrence's one `roomActions.order`. The editor's Purchased
+marker only inserts or removes that reference; the engine walk still performs
+the purchase when it reaches the ranked action. Unpurchased initial offers do
+not become active timeline or generic repair rows. A retained stale purchase
+remains removable through its specialized participation intent.
+
+Travel Deal and Gold Gold Gold continue to derive their trigger from that true
+action order. The selected source slot is not a complete payload-authoring
+context: the generated payload must be evaluated against the exact history
+prefix at the triggering action. In particular, a future forced Hermes
+delivery in `Q_PreBoss01` may lock the god pool if acquired before the World
+Shop purchase and cannot do so retroactively if acquired after it. Shrine
+delivery itself remains unimplemented; this trace is the representative rule a
+future delivery-aware Travel/Gold editor must preserve.
 
 The selected next room is therefore also already created and rewarded before
 the purchase. Shop acquisitions first affect generation when that selected
@@ -892,7 +968,7 @@ pre/post generation views.
 
 An operation may branch when several outcomes have positive support, including
 counted-bag explanations, generated-store outcomes, or reward-source outcomes
-within one authored acquisition-site settlement order. Each branch still has
+within one authored `roomActions.order`. Each branch still has
 one total event order. Equivalent post-operation states may be merged while
 retaining at least one witness.
 
@@ -1034,8 +1110,8 @@ commit predecessor
   -> validate/materialize shop inventory from preparation history
   -> enter shop
   -> generate outgoing batch from the same pre-purchase history
-  -> settle the occurrence-owned `roomExit` acquisition-site order and derive
-     exit history
+  -> execute participating Room Actions in the post-outgoing Shop window and
+     derive exit history
   -> commit and exit the shop
   -> prepare and enter the already-generated picked target
 ```

@@ -7,12 +7,21 @@ scope, biome topology, occurrence-local state, semantic addresses, commands,
 persistence, and history. Simulation algorithms, candidates, Redux state, and
 React rendering are separate concerns.
 
-## Schema 41 Boundary
+## Schema 48 Boundary
 
-Schema 41 is the sole persisted authored-project contract. The codec rejects
+Schema 48 is the sole persisted authored-project contract. The codec rejects
 every other schema version rather than manufacturing current topology or leaf
 state for a stale document. There is no migration path; catalog versions must
 match exactly.
+
+Schemas 46 and 47 completed the occurrence-owned topology and chronology
+cutover: every supported authored main or N side room is a `RoomOccurrence`,
+and every player-triggered room interaction is referenced from one
+occurrence-owned `roomActions.order`. Schema 48 removed the redundant authored
+project name; the profile filename is application session state. The lifecycle
+timeline, lifecycle Run State checkpoints, and Shop Purchased markers added
+after schema 48 are derived products over this state and did not change the
+persisted contract.
 
 There is one biome plan and one topology language. Production state and
 semantic addresses have no layout-specific plan family, completion-transition
@@ -39,7 +48,7 @@ interface BiomeTopology {
   decisions: readonly NextRoomDecision[];
 }
 
-type NextRoomDecision = ExitDecision | HubDecision;
+type NextRoomDecision = ExitDecision | HubDecision | LocalVisitDecision;
 ```
 
 `topology: null` is the only representation of a configured biome whose start
@@ -78,15 +87,22 @@ physical or semantic exit keys, never rendered indexes.
 `Hub Decision` owns N's persistent board: fixed-slot open references, ordered
 visits, and completion predicate. It does not own N Preboss room-local state.
 
+`Local Visit Decision` is parent-occurrence-owned topology for one declared N
+side-room group. It owns generated/not-generated slot membership and ordered
+references to the entered side occurrences. Each referenced side room is an
+ordinary `RoomOccurrence` that owns its own encounter, payload, Room Actions,
+and outgoing/return stage; the parent does not own a nested action list.
+
 `Preboss` is a Room Declaration role inside a normal-door batch, not a
 separate decision variant. Offering it does not complete a biome; selecting it
 does. Boss and optional Postboss rooms are catalog-derived completion tail
 rooms, not authored decisions or occurrences.
 
 Topology owns occurrence relationships and decisions. Room state owns rewards,
-Shop inventory and occurrence-owned exact acquisition-site order when materialized, exact concrete
-encounter selections, wheels, cages, and side-room state. UI state owns no
-domain topology.
+Shop inventory, one occurrence-owned Room Action order, exact concrete
+encounter selections, wheels, cages, and side-room state. Sparse acquisition
+sites own optional generated payloads, not a second chronology. UI state owns
+no domain topology.
 
 ## Route Scope
 
@@ -174,7 +190,7 @@ recreated acquisition's conversion, trait-offer, and level children; the
 replayed source descriptor remains derived history. Gold uses the sole stable
 `echoDoubleShopReward` key: its complete payload may persist sparsely in
 `pickupEntries` before participation, and it enters the existing Shop
-`roomExit.order` only when picked up. No source selector or source-keyed Gold
+`roomActions.order` only when picked up. No source selector or source-keyed Gold
 child is persisted. Gift's captured keepsake, replay schedule,
 and replay count remain chronological trait history; only a reached
 Experimental Hammer replay persists its selected-compatible or explicit
@@ -366,6 +382,12 @@ The completed-Hub batch is permitted only after the declared open-set and
 six-visit predicate holds. Its source is `{ kind: 'hubDecision', decisionKey: 'hub' }`, not
 a rendered visit index or synthetic N completion owner.
 
+Each entered main occurrence may own a `LocalVisitDecision` whose generated
+targets are distinct side-room occurrences. Generation and visit order remain
+parent topology, while each selected side occurrence executes its own room
+lifecycle. Parent and Hub restoration preserve the canonical walk without
+replaying either occurrence's already-settled actions.
+
 Closing an unvisited slot below the declared open-set minimum retains the
 already-authored visit sequence as an incomplete Hub board, but atomically
 removes the completed-Hub batch and every descendant it owns. The handoff may
@@ -379,29 +401,39 @@ encounter slots. Fixed slots and slots in an empty Encounter Envelope carry no
 redundant authored selection.
 Shop inventory is entry-time state: selecting a Shop occurrence materializes
 it; changing selection removes unselected inventory. Its materialized state
-owns declaration-keyed offers; the occurrence's exact `acquisitionSites.roomExit.order`
-owns purchase membership and order. A counted-free Preboss
-keeps its complete resolved offer regardless of selection.
+owns declaration-keyed offers. Exact `interactShopOffer` membership in the
+occurrence's `roomActions.order` is both the Purchased fact and the purchase
+order; no purchased set or Shop-private order is persisted. A counted-free
+Preboss keeps its complete resolved offer regardless of selection.
 
-An acquisition site is sparse occurrence-owned state for one exact authorable
-lifecycle point. Its `order` is both optional-entry participation and
-chronology: an entry appears once when acquired and is absent when skipped.
-Shop offers remain owned by Shop inventory, while a declaration-produced
-pickup stores its exact reward, trait-offer, and level-resolution children in
-the site's `pickupEntries`. Mandatory singleton room rewards have derived
-participation and order, so they do not create redundant persisted site state.
+An acquisition site is sparse occurrence-owned payload state for one exact
+authorable lifecycle point. A declaration-produced pickup stores its exact
+reward, trait-offer, and level-resolution children in the site's
+`pickupEntries`; its participation and chronology are represented only by the
+matching `interactAcquisitionEntry` in `roomActions.order`. Shop offers remain
+owned by Shop inventory, while their matching `interactShopOffer` references
+carry purchase participation and chronology. Mandatory singleton room rewards
+have derived participation and create no redundant persisted site state.
 Declaration-derived supplemental entries, currently Gold Gold Gold's free Shop
-duplicate and Travel Deal's refill, may also own sparse acquisition-time
-children at that site. A dormant payload may exist without participating;
-selection adds its fixed key to the same authored `order`, whose position alone
-owns chronology. Infernal Contract uses its own fixed supplemental key and the
-same site rather than extending declaration-owned Shop inventory.
-`ReplaceAcquisitionOrder` replaces one complete site order;
+duplicate and Travel Deal's refill, may own sparse acquisition-time children at
+the site. A dormant payload may exist without participating; adding its fixed
+Room Action reference alone joins chronology. Infernal Contract uses its own
+fixed supplemental key and the same payload site rather than extending
+declaration-owned Shop inventory.
+
+`ReplaceShopPurchaseParticipation` inserts or removes one exact base-Shop
+`interactShopOffer` reference. Generic Room Action insertion/removal rejects
+that reference family so Overview's Purchased marker is the sole membership
+interaction; ranked purchases remain movable with the ordinary Room Action
+commands. Removing participation remains accepted for a retained stale
+purchase after its Shop owner disappears, allowing exact repair without
+deleting unrelated actions. `MoveRoomAction` changes one ranked action's
+position within the complete chronology;
 `ReplaceAcquisitionEntryOffer` edits only a declaration-compatible materialized
 pickup. Neither command may infer entries from room names or rendered rows.
 `EditDerivedShopEntry` atomically installs one engine-supplied complete default
 for a dormant Travel or Gold row and applies one nested reward, trait, level, or
-conversion edit without changing `roomExit.order`. `SelectDerivedShopEntry`
+conversion edit without changing `roomActions.order`. `SelectDerivedShopEntry`
 atomically materializes the same default and applies one engine-supplied
 complete participation/order proposal. These are one shared command family,
 not effect-specific state or a second Shop chronology.
@@ -459,8 +491,9 @@ ordinary decision owns the fresh host continuation.
 
 Room-local commands address an occurrence and declaration-owned leaf key.
 They cover incoming rewards, Fields cages, Ship encounter counts and wheels,
-Ephyra side-room generation/order/rewards, Shop offers, and exact acquisition-site order. Leaf
-edits do not rewrite topology.
+Ephyra side-room generation/order/rewards, Shop offers, sparse acquisition
+payloads, and the exact occurrence-owned Room Action order. Leaf edits do not
+rewrite topology.
 
 ### Trait Offer Outcomes
 
@@ -484,10 +517,10 @@ retain ownership of the complete outer option.
 
 `RoomOccurrence.encounters.encounterKeyByPhase` persists the exact normalized
 Encounter Definition key for every pool-backed potential slot of that room's
-envelope. A parent-local N side room keeps the corresponding map on its own
-`EphyraSideRoomState.encounters`; it remains a local child, never an
-independent Room Occurrence or global topology entry. The map does not store
-an Encounter Set key, category sentinel, NPC family, or rendered phase ordinal.
+envelope. A generated N side room is an ordinary referenced occurrence and
+keeps the same map on that occurrence. The parent-sourced local-visit decision
+owns only generation and visit topology. The map does not store an Encounter
+Set key, category sentinel, NPC family, or rendered phase ordinal.
 
 Potential selections remain with their owning room through unpick/repick,
 side-room generation and entry-order changes, optional-slot trimming, Undo,
@@ -496,19 +529,20 @@ finding, history, counter, phase-owned reward effect, or NPC index row, but its
 selection remains ready for reactivation. Replacing a declaration reconciles
 only compatible stable phase keys and gives newly introduced or incompatible
 slots their declaration defaults. Deleting an occurrence deletes its owned
-selections and nested local-child state together.
+selections; deleting its parent-owned local-visit target removes the same
+occurrence and downstream state atomically.
 
 An active retained selection may become context-invalid after a different
 semantic edit. It remains persisted and repairable; the authored model never
 falls back to another definition. `SelectEncounter` accepts an exact member of
 the phase's declared Encounter Set at one structurally addressable occurrence
-or local child, including a dormant or context-invalid selection.
+including a dormant or context-invalid selection.
 `ResetEncounter` restores the set's static declared default even when that
 default is dormant or currently invalid; it is a reset, not an automatic
 repair.
 
 An Encounter Definition may additionally declare one `traitOfferProducer`.
-The owning room or local child then persists its complete offer outcome
+The owning room occurrence then persists its complete offer outcome
 sparsely at `encounters.traitOffersByPhase[phaseKey][encounterKey]`. A trait
 outcome contains one to three materialized options and a selected key that
 addresses one of them; a `fallbackGold` outcome instead owns only the giver
@@ -530,23 +564,25 @@ eligible equipped target before the offer can fold.
 Addresses are immutable discriminated values. `semanticAddressKey` is a
 canonical projection for maps and markers, not another identity source.
 
-| Owner                             | Address                                                                           |
-| --------------------------------- | --------------------------------------------------------------------------------- |
-| start and occurrence-local leaves | `OccurrenceAddress`                                                               |
-| room-sourced decision             | `ExitDecisionAddress` with occurrence source                                      |
-| N handoff decision                | `ExitDecisionAddress` with Hub source                                             |
-| normal target                     | `TargetAddress` with source and exit key                                          |
-| additional continuation           | `AdditionalExitAddress` with occurrence ID and declared additional-exit key       |
-| decision selection                | `ExitSelectionAddress` with source                                                |
-| batch reward store                | `BatchRewardStoreAddress` with source                                             |
-| Hub board                         | `HubDecisionAddress`                                                              |
-| Hub slot and visit                | `HubSlotAddress` and `HubVisitAddress`                                            |
-| local child/reward and wheel      | occurrence plus declaration-owned child key                                       |
-| pool-backed encounter phase       | `EncounterPhaseAddress` with occurrence or local-child owner and stable phase key |
-| derived completion                | `CompletionRoomAddress`                                                           |
+| Owner                             | Address                                                                     |
+| --------------------------------- | --------------------------------------------------------------------------- |
+| start and occurrence-local leaves | `OccurrenceAddress`                                                         |
+| room-sourced decision             | `ExitDecisionAddress` with occurrence source                                |
+| N handoff decision                | `ExitDecisionAddress` with Hub source                                       |
+| normal target                     | `TargetAddress` with source and exit key                                    |
+| additional continuation           | `AdditionalExitAddress` with occurrence ID and declared additional-exit key |
+| decision selection                | `ExitSelectionAddress` with source                                          |
+| batch reward store                | `BatchRewardStoreAddress` with source                                       |
+| Hub board                         | `HubDecisionAddress`                                                        |
+| Hub slot and visit                | `HubSlotAddress` and `HubVisitAddress`                                      |
+| local reward and wheel            | occurrence plus declaration-owned child key                                 |
+| N local visit topology            | parent occurrence, local group, and declaration-owned slot key              |
+| pool-backed encounter phase       | `EncounterPhaseAddress` with occurrence owner and stable phase key          |
+| derived completion                | `CompletionRoomAddress`                                                     |
 
 `ContinuationAddress`, `PickedAddress`, fixed-entry addresses, parent-only
-batch-store identity, and rendered target indexes are not schema-15 addresses.
+batch-store identity, and rendered target indexes are absent from the current
+semantic-address union.
 
 ## Commands
 

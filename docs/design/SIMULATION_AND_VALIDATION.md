@@ -15,7 +15,7 @@ it will not duplicate it.
 The possibility-support, materialization, reward-store, fixed-slot, and
 persistent-hub contracts in this document are globally locked by the completed
 F/G/P/Q/H/O/I/N audit set. All eight biomes participate in one public
-schema-41 decision-spine evaluator: completeness, materialization, lifecycle,
+schema-48 occurrence/topology evaluator: completeness, materialization, lifecycle,
 event-folded history, room generation, reward simulation, selected-plan
 validation, and candidate support consume the same explicit biome-evaluation
 products.
@@ -96,7 +96,7 @@ The normalized catalog contains immutable possible facts:
 - room identity, label, kind, template, exits, eligibility, force, and caps;
 - Encounter Envelopes, exact slot bindings, concrete Encounter Definitions,
   unique Encounter Sets, and room lifecycle timing;
-- local child slots;
+- local side-room slot descriptors;
 - reward types, payload domains, source-support policies, concrete acquisition
   declarations, stores, bags, bindings, and shops;
 - normalized current-run requirements whose kinds have registered evaluators;
@@ -121,7 +121,8 @@ research is tracked in audits and fixtures, not generic production
 
 Every configured biome topology crosses a structural contact boundary before
 semantic processing. Normalization checks bounded representation and produces
-one trusted topology of occurrence-owned exit decisions plus any
+one trusted topology of occurrence-owned exit decisions, parent-sourced N
+`LocalVisitDecision` links to distinct side-room occurrences, and any
 declaration-owned Hub decision.
 
 Malformed topology is a contract error, not an incomplete plan. Examples:
@@ -165,7 +166,7 @@ For the active biome:
 
 1. check structural contacts and derive the first incomplete semantic owner;
 2. materialize every fully authored entry, decision, target-generation point,
-   picked-room lifecycle, reward offer, and local child supported by that
+   picked-room lifecycle, reward offer, and referenced side-room occurrence supported by that
    authorship;
 3. fold those operations through the normal history, room-generation, reward,
    and counter authorities in declared chronology;
@@ -310,47 +311,43 @@ candidate capabilities are bounded to that assessment; coverage derives its
 `through` point from `assessmentPrefix ?? materializedPrefix`. Retained
 materialization alone never asserts that a later owner was reached.
 
-### Decision Run-State Snapshots
+### Run-State Snapshots
 
-The evaluation also publishes a data-only Run State snapshot for each reached
-outer decision at its exact `beforeTargetGeneration` checkpoint. The snapshot
-is one aligned view of the history and reward branches at that event: all prior
-picked-room lifecycle effects, prior offer-time bag consumption, acquisitions,
-traits, sources, and counters are present; none of the current decision's
-targets, rewards, peer exclusions, or target-local filters has been generated.
-Changing only current-decision authorship therefore cannot change its snapshot.
+Evaluation publishes data-only Run State snapshots at exact lifecycle owners.
+An ordinary occurrence owns `roomEntered` and `beforeRoomExit`; each active Ship
+phase owns `beforeEncounterStart`, and the Ship occurrence also owns
+`beforeRoomExit`. Each snapshot is one aligned view of history and reward
+branches at that event. Entry state includes the predecessor's completed fold,
+phase state includes everything before that encounter starts, and pre-exit
+state includes supported room work before leaving. Changing authorship after a
+checkpoint cannot rewrite its snapshot.
+
+Two generation diagnostics remain because N exposes those generation events as
+distinct workbench transitions: `HubDecisionAddress` owns the snapshot before
+the Hub board is generated, and a Hub-sourced `ExitDecisionAddress` owns the
+snapshot before Preboss generation. Ordinary occurrence-sourced exit decisions
+do not publish a competing decision-card launcher; their useful public views
+are the occurrence lifecycle checkpoints above.
 
 Snapshot availability is part of progressive coverage, not an application
-inference. A snapshot exists only when evaluation reached that exact
-checkpoint. Invalid or incomplete upstream ownership prevents later snapshots;
-an invalid value within the current decision and downstream incompleteness do
-not erase the already-reached pre-decision snapshot. Complete and progressive
-biome products expose the same snapshot vocabulary.
+inference. A structurally retained lifecycle owner beyond the assessment
+horizon is explicitly unavailable with `coverageNotReached`; an occurrence
+absent from `materializedPrefix` owns no launcher. Invalid or incomplete
+upstream ownership prevents later snapshots, while a failure after a reached
+checkpoint does not erase that checkpoint's state. Complete and progressive
+biome products expose the same vocabulary.
 
-Prefix and complete-blocked results enumerate every structurally eligible
-outer exit or Hub decision from the retained `materializedPrefix`. Owners with
-a covered pre-generation snapshot are explicitly `available`; later retained
-owners are explicitly `unavailable` with `coverageNotReached`. The blocked
-decision therefore keeps its snapshot when its pre-generation checkpoint was
-reached, while no later decision snapshot escapes. This publication is derived
-from the same assessment coverage as the rest of simulation; there is no
-canonical-only Run State filtering policy.
-
-Each snapshot retains its exact exit- or Hub-decision semantic owner,
-history sequence, checkpoint, ordinary god-pool state, canonical trait and
-element history, existing history counters, and the effective remaining counted
-reward bags. Bag eligibility means only that an entry's own requirement holds
-against exact pre-decision facts. It excludes current-target filters,
-forced-store resolution, peer/source exclusion, payload support, and
-target-local Shop conflicts, which do not yet exist at the checkpoint.
-Presentation aggregates branches first by reward type and eligibility for a
-compact row, then retains distinct condition groups for expanded detail; an
-eligible and ineligible copy never merge. Exact branch totals stay exact, while
-a real branch difference publishes a range. Lazy bags project as their
-declaration-owned initial contents without materializing a branch. The snapshot
-producer reuses existing source support, trait folds, counter projections, and
-requirement evaluation; it neither reconstructs history backwards nor creates a
-second diagnostic policy.
+Each snapshot retains its exact semantic owner, history sequence, checkpoint,
+ordinary god-pool state, canonical trait and element history, existing history
+counters, and the effective remaining counted reward bags. Bag eligibility
+means only that an entry's own requirement holds against the exact checkpoint
+facts. Presentation may aggregate equivalent branches for a compact row but
+must retain distinct condition groups; an eligible and ineligible copy never
+merge. Exact branch totals stay exact, while a real branch difference publishes
+a range. Lazy bags project as their declaration-owned initial contents without
+materializing a branch. The snapshot producer reuses existing source support,
+trait folds, counter projections, and requirement evaluation; it neither
+reconstructs history backwards nor creates a second diagnostic policy.
 
 Arcana/Fear state is one further progressive ledger in that same snapshot. It
 starts from the route's catalog-derived manual and ordinary automatic Arcana
@@ -509,7 +506,7 @@ A complete biome requires:
   top-level room;
 - complete entry-time room-local state for every picked occurrence that owns
   it;
-- complete active local child and encounter offer-point state;
+- complete active side-room occurrence and encounter offer-point state;
 - resolved reward offers, payloads, active shop offers, purchases, and
   modes;
 - complete biome-global and batch-global authored values.
@@ -549,8 +546,9 @@ dormant project state; undo may restore their prior authored snapshot.
 
 Generated unpicked targets participate because their rooms and incoming or
 free rewards were offered by the game. Their entry-materialized shop state is
-not required and emits no facts. On a picked shop occurrence,
-`acquisitionSites.roomExit.order: []` is complete state.
+not required and emits no facts. On a picked Shop occurrence, an empty
+`roomActions.order` is complete optional-purchase state: inventory still exists,
+but no initial offer is Purchased.
 
 ## Canonical Snapshots
 
@@ -614,7 +612,7 @@ completion rooms and their entered reward-store provenance.
 The materializer walks the normalized selected spine rather than the stored
 decision array. It may dispatch on normalized declaration policy, but never on
 a biome key, concrete game name, semantic address, or rendered UI shape. This
-preserves schema-15's non-authoritative decision-array order and keeps shared
+preserves non-authoritative persisted decision-array order and keeps shared
 history, generation, reward, candidate, and feedback consumers on the same
 product.
 
@@ -708,10 +706,11 @@ same physical generation sequence; it is not a separate completion-entry step.
 
 Each `CanonicalHubVisit` references the board's existing target. A local slot
 retains its physical door ID, availability rank, generated/not-generated
-result, optional entered ordinal, and parent-local semantic address. Generated
-slots expose their incoming offer whether or not entered; not-generated slots
-expose none. Parent and Hub restores reference existing rooms and never create
-another occurrence or replay a lifecycle offer.
+result, referenced side occurrence, and optional entered ordinal. Generated
+slots expose their occurrence and incoming offer whether or not entered;
+not-generated slots expose neither active reward nor lifecycle. Parent and Hub
+restores reference existing rooms and never create another occurrence or replay
+a lifecycle offer.
 
 PreHub is a declaration-fixed candidate in a bounded normal decision, while
 Hub is the only declaration-owned terminal result at the following depth-2
@@ -764,10 +763,15 @@ addressed continuation finding. H room legality, sequential forced pools, and
 cage reward support continue through the common declaration and reward
 validators rather than a parallel biome validator.
 
-A canonical room records authored occurrence ID, concrete game room identity,
-resolved encounter phases, room-local state, local children, offers,
-acquisitions, and return addresses. It does not copy labels, candidate arrays,
-eligibility predicates, or other declaration facts.
+A canonical authored room records its occurrence address and ID, game room
+identity, resolved encounter and lifecycle facts, entered state, Room Actions
+state plus its roster and timeline, and its supported room-local reward, wheel,
+Shop, pickup, or acquisition-site payloads when present. It does not copy
+labels, candidate arrays, eligibility predicates, or other declaration facts.
+Side-room topology is owned by `CanonicalHubVisit` and
+`MaterializedHubVisitFrontier` through `localSlots` and `enteredLocalRooms`;
+`CanonicalLocalVisitRoom` extends its canonical authored room only with the
+exact `localVisit` metadata.
 
 The canonical snapshot is not the eventual execution-plan JSON. It is a rich
 internal simulation product from which the app can later compile the smallest
@@ -1105,18 +1109,19 @@ producer-owned source and may own acquisition-time trait or level detail.
 Canonical simulation settles all current acquisition families through that
 one product. Ordinary room, Devotion, O wheel, H cage, and entered N main/side
 rewards have derived mandatory participation. Shop offers and declaration-
-produced pickups participate and run in their one authored site order. Each
-entry receives the branches produced by its predecessor, so legality and
-effects are progressive within the site; the simulator never searches another
-ordering to rescue an invalid authored sequence.
+produced pickups participate through exact action references in the
+occurrence's one authored `roomActions.order`. Each entry receives the branches
+produced by its predecessor, so legality and effects are progressive within the
+room chronology; the simulator never searches another ordering to rescue an
+invalid authored sequence.
 
 For an entered shop, evaluate ordered groups against the pre-generation fact
 snapshot, validate every authored offer against an eligible option entry, and
 enforce each group's `offerCount` without replacement. Positive weights do not
 change possibility support. After the inventory exists, generate and validate
 the room's outgoing batch from the same pre-purchase acquisition history and
-the complete generated current-room option set. Only then settle the
-occurrence-owned `roomExit` acquisition-site order. Exact affordability and
+the complete generated current-room option set. Only then execute participating
+Room Actions assigned to the post-outgoing Shop window. Exact affordability and
 resource state remain deferred under the sufficient-resource policy in
 `REWARD_MODEL.md`. Blind Box persists its intended source, but validates that
 source only if its entry participates in that order. The simulator evaluates
@@ -1133,12 +1138,12 @@ accepted-removal checkpoint Gold, when armed and the reward is not
 the pre-source-acquisition branch; invalid nested source detail afterward does
 not undo that checkpoint. Travel retains its own settled first-purchase refill
 frontier. Their later entries remain independently selectable and weave with
-Contract and other purchases in the one authored site order. A pre-kernel
+Contract and other purchases in the one authored `roomActions.order`. A pre-kernel
 rejection produces neither Gold consumption nor a derived Gold frontier.
 
 The candidate artifact for a reached Travel or Gold row contains its attested
 source, declaration-complete default, payload domain, and the shared complete
-site-level order proposals. It may also publish a dormant default settlement
+`roomActions.order` proposals. It may also publish a dormant default settlement
 so nested reward, boon, Pom, or Time Piece edits can materialize the payload
 without selecting the entry. Gold's ordinary payload remains frozen; only a
 Pom whose materialized `StackOnly` set lost at least one target regenerates
@@ -1404,9 +1409,9 @@ failure belongs to its exact `acquisitionEntry`, and is marked unavailable only
 when that leaf fails every reachable support branch. When each inventory slot
 remains individually possible but the complete authored inventory set has no
 joint witness, one finding belongs to the Shop occurrence with the participating
-offer keys in evidence. When a structurally valid exact acquisition order fails
-only as a sequence, its aggregate finding belongs to the exact
-`acquisitionSite`, with that authored order in evidence; supported sibling
+offer keys in evidence. When a structurally valid exact Room Action order fails
+only as a sequence, its aggregate finding belongs to the occurrence chronology
+owner, with that authored order in evidence; supported sibling
 entries are not marked invalid.
 
 Participation is structural and chronology is semantic. A Purchase, Picked up,
@@ -1606,8 +1611,8 @@ authored room in each biome records a `rewardForfeited` reward outcome, advances
 the processed frontier, and skips concrete acquisition and trait-child
 evaluation. This shares the reward-outcome stream used by Time Piece and
 Artificer without making Forfeit an authored or selectable disposition. The
-already-resolved offer and bag consumption remain. Shop, Devotion, local
-children, and pickups do not enter this veto; no substitute acquisition is
+already-resolved offer and bag consumption remain. Shop, Devotion, room-local
+rewards, and pickups do not enter this veto; no substitute acquisition is
 recorded. Per-biome usage resets when carried reward branches initialize the
 next biome, while configured/effective Fear and Circe suppression remain
 route-wide.
@@ -1648,7 +1653,7 @@ Required categories include:
 - one golden project, canonical snapshot, history, and finding set per focused
   biome scenario;
 - complete-valid, complete-blocked, incomplete-prefix, selected-invalid,
-  retained, and upstream-blocked schema-15 fixtures across F through Q;
+  retained, and upstream-blocked schema-48 fixtures across F through Q;
 - declaration-order target creation and non-authoritative persisted decision
   order;
 - ordinary target exclusion and source-owned candidate support for every
