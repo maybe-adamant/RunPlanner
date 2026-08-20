@@ -24,6 +24,7 @@ import {
   createProjectAddress,
   createRewardWheelAddress,
   createRewardWheelOfferAddress,
+  createRoomRunStateCheckpointAddress,
   createRouteAddress,
   createShopOfferAddress,
   createTargetAddress,
@@ -45,6 +46,13 @@ const addressCases: readonly { readonly name: string; readonly address: Semantic
   { name: 'biome field', address: createBiomeFieldAddress(fBiome, 'field') },
   { name: 'occurrence', address: createOccurrenceAddress(fBiome, fOccurrenceId) },
   { name: 'incoming reward', address: createIncomingRewardAddress(fBiome, fOccurrenceId) },
+  {
+    name: 'room Run State checkpoint',
+    address: createRoomRunStateCheckpointAddress(createOccurrenceAddress(fBiome, fOccurrenceId), {
+      kind: 'beforeEncounterStart',
+      phaseKey: 'Combat1',
+    }),
+  },
   { name: 'boss completion', address: createCompletionRoomAddress(fBiome, 'boss') },
   {
     name: 'boss completion Arcana child',
@@ -120,6 +128,19 @@ describe('semantic addresses', () => {
     ).toBe('["additionalExit","Underworld","F","address-f","zagreusContract"]');
     expect(semanticAddressKey(createExitDecisionAddress(nBiome, nHubSource))).toBe(
       '["exitDecision","Surface","N",{"kind":"hubDecision","decisionKey":"hub"}]',
+    );
+  });
+
+  it('keys derived room checkpoints by their closed lifecycle discriminator', () => {
+    expect(
+      semanticAddressKey(
+        createRoomRunStateCheckpointAddress(createOccurrenceAddress(fBiome, fOccurrenceId), {
+          kind: 'beforeEncounterStart',
+          phaseKey: 'Combat1',
+        }),
+      ),
+    ).toBe(
+      '["roomRunStateCheckpoint","Underworld","F","address-f","beforeEncounterStart","Combat1"]',
     );
   });
 

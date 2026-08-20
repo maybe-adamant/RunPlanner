@@ -1,12 +1,11 @@
 import { createSlice, type PayloadAction, type Reducer } from '@reduxjs/toolkit';
 import type {
-  ExitDecisionAddress,
-  HubDecisionAddress,
   SemanticAddress,
   TraitOfferAddress,
   LevelResolutionAddress,
 } from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
+import type { RunStateOwner } from '@run-planner/engine/simulation';
 
 export interface FindingSelection {
   readonly key: string;
@@ -45,8 +44,8 @@ export interface EditorSessionState {
   readonly traitDialogTarget?: TraitOfferAddress | null;
   /** Exact transient Pom dialog target; never part of authored history. */
   readonly levelResolutionDialogTarget?: LevelResolutionAddress | null;
-  /** Exact outer decision whose read-only Run State sheet is open. */
-  readonly runStateTarget?: ExitDecisionAddress | HubDecisionAddress | null;
+  /** Exact derived checkpoint or generation owner whose read-only Run State sheet is open. */
+  readonly runStateTarget?: RunStateOwner | null;
   /** Advances for every explicit semantic navigation, including repeat visits. */
   readonly semanticNavigationRevision: number;
 }
@@ -177,7 +176,7 @@ const editorSessionSlice = createSlice({
     levelResolutionDialogClosed(state) {
       state.levelResolutionDialogTarget = null;
     },
-    runStateOpened(state, action: PayloadAction<ExitDecisionAddress | HubDecisionAddress>) {
+    runStateOpened(state, action: PayloadAction<RunStateOwner>) {
       state.runStateTarget = action.payload;
     },
     runStateClosed(state) {

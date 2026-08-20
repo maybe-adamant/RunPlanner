@@ -48,8 +48,9 @@ import type {
   ProjectBiomeEvaluation,
   ProjectEvaluation,
   SemanticFinding,
-  DecisionRunStateAvailability,
-  DecisionRunStateSnapshot,
+  RunStateAvailability,
+  RunStateOwner,
+  RunStateSnapshot,
   SelectedLevelResolutionAssessment,
   OccurrenceOutgoingStatus,
 } from '@run-planner/engine/simulation';
@@ -121,11 +122,11 @@ export interface WorkspaceBiomeSource {
     readonly retainedSourceMismatch?: boolean;
     readonly eligibleSourceOfferKeys?: readonly string[];
   }[];
-  readonly runState: (owner: ExitDecisionAddress | HubDecisionAddress) =>
-    | { readonly availability: 'available'; readonly snapshot: DecisionRunStateSnapshot }
+  readonly runState: (owner: RunStateOwner) =>
+    | { readonly availability: 'available'; readonly snapshot: RunStateSnapshot }
     | {
         readonly availability: 'unavailable';
-        readonly reason?: DecisionRunStateAvailability['reason'];
+        readonly reason?: RunStateAvailability['reason'];
       }
     | undefined;
 }
@@ -686,13 +687,13 @@ function createWorkspaceBiomeSource(
     }
   }
   const findingsByOwner = indexFindings(evaluation?.findings ?? []);
-  const runStateAvailability = new Map<string, DecisionRunStateAvailability>(
+  const runStateAvailability = new Map<string, RunStateAvailability>(
     (evaluation !== undefined && 'rewards' in evaluation
       ? evaluation.rewards.runStateAvailability
       : []
     ).map((item) => [semanticAddressKey(item.owner), item] as const),
   );
-  const runStateSnapshots = new Map<string, DecisionRunStateSnapshot>(
+  const runStateSnapshots = new Map<string, RunStateSnapshot>(
     (evaluation !== undefined && 'rewards' in evaluation
       ? evaluation.rewards.runStateSnapshots
       : []
@@ -755,7 +756,7 @@ function createWorkspaceBiomeSource(
       forfeitedRewardOwnersByBranch.every((owners) => owners.has(semanticAddressKey(owner))),
     derivedAcquisitionEntries,
     plan,
-    runState: (owner: ExitDecisionAddress | HubDecisionAddress) => {
+    runState: (owner: RunStateOwner) => {
       const availability = runStateAvailability.get(semanticAddressKey(owner));
       if (availability === undefined) return undefined;
       const snapshot = runStateSnapshots.get(semanticAddressKey(owner));

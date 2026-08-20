@@ -22,16 +22,32 @@ afterEach(cleanup);
 const nRunStateEvents: ApplicationEvaluationEvent[] = [];
 let nRunStateApplication: PlannerApplication;
 let nRunStateTitles: readonly string[];
+const fRunStateEvents: ApplicationEvaluationEvent[] = [];
+let fRunStateApplication: PlannerApplication;
+let fRunStateTitles: readonly string[];
 
-beforeAll(() => {
+beforeAll(function prepareFRunStateApplication() {
+  fRunStateApplication = createApplication({
+    observeEvaluationWork: (event) => fRunStateEvents.push(event),
+  });
+  fRunStateApplication.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
+  fRunStateTitles = projectedRunStateTitles(fRunStateApplication, 'Underworld', 'F');
+  fRunStateEvents.length = 0;
+});
+
+beforeAll(function prepareNRunStateApplication() {
   nRunStateApplication = createApplication({
     observeEvaluationWork: (event) => nRunStateEvents.push(event),
   });
   nRunStateApplication.store.dispatch(authoredProjectReplaced(createRepresentativeNOPQProject()));
   nRunStateTitles = projectedRunStateTitles(nRunStateApplication, 'Surface', 'N');
+  nRunStateEvents.length = 0;
 });
 
-afterAll(() => nRunStateApplication.dispose());
+afterAll(function disposeRunStateApplications() {
+  fRunStateApplication.dispose();
+  nRunStateApplication.dispose();
+});
 
 function expectNoEvaluationWork(
   events: readonly ApplicationEvaluationEvent[],
@@ -46,47 +62,37 @@ function projectedRunStateTitles(
   biomeKey: string,
 ): readonly string[] {
   const workspace = application.selectStructuredWorkspace(application.store.getState());
-  const biome = workspace.routes
-    .find((route) => route.routeKey === routeKey)
-    ?.biomes.find((candidate) => candidate.owner.biomeKey === biomeKey);
-  if (biome === undefined) throw new Error(`${routeKey}/${biomeKey} workspace is missing`);
-  return biome.nodes.flatMap((node) =>
-    'runState' in node && node.runState ? [node.runState.title] : [],
-  );
+  return [...workspace.runStateLaunchers.values()]
+    .filter(
+      (launcher) => launcher.owner.routeKey === routeKey && launcher.owner.biomeKey === biomeKey,
+    )
+    .map((launcher) => launcher.title);
 }
 
 describe('Run State product loop', () => {
-  it('opens F from its outer-decision workbench and closes without new evaluation work', async () => {
-    const events: ApplicationEvaluationEvent[] = [];
-    const application = createApplication({ observeEvaluationWork: (event) => events.push(event) });
-    application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
-    expect(projectedRunStateTitles(application, 'Underworld', 'F')).toEqual([
-      'Decision 1',
-      'Decision 2',
-      'Decision 3',
-      'Decision 4',
-      'Decision 5',
-      'Decision 6',
-      'Decision 7',
-      'Decision 8',
-      'Decision 9',
-      'Decision 10',
-      'Preboss',
-    ]);
+  it('opens F at its room-entry and pre-exit lifecycle seams without new evaluation work', async () => {
+    const application = fRunStateApplication;
+    const events = fRunStateEvents;
+    const titles = fRunStateTitles;
+    expect(titles).toContain('the first action in Opening 01');
+    expect(titles).toContain('exiting Opening 01');
+    expect(titles).not.toContain('Decision 1');
     const view = renderPlannerForInteraction({ application });
 
     await view.user.click(screen.getByRole('button', { name: 'Underworld' }));
     await view.user.click(screen.getByRole('button', { name: 'Erebus' }));
     await view.user.click(screen.getByRole('button', { name: /^OpeningEvaluated/ }));
-    await view.user.click(screen.getByRole('tab', { name: 'Room Doors' }));
-    const launcher = screen.getAllByRole('button', { name: 'Run State' })[0];
-    if (launcher === undefined) throw new Error('F Run State launcher is missing');
-    expect(launcher.closest('.decision-heading')).not.toBeNull();
+    await view.user.click(screen.getByRole('tab', { name: 'Room Actions' }));
+    const actions = screen.getByRole('region', { name: 'Room Actions' });
+    const launcher = within(actions).getByRole('button', { name: 'Run State' });
+    expect(launcher.closest('.decision-heading')).toBeNull();
     expect(launcher.closest('.biome-rail')).toBeNull();
 
     events.length = 0;
     await view.user.click(launcher);
-    const sheet = screen.getByRole('region', { name: /State before Decision 1/ });
+    const sheet = screen.getByRole('region', {
+      name: 'State before the first action in Opening 01',
+    });
     expect(within(sheet).getByRole('heading', { name: 'Gods in pool' })).toBeTruthy();
     expect(within(sheet).getByRole('heading', { name: 'More Info' })).toBeTruthy();
     expect(within(sheet).getByText('Counters')).toBeTruthy();
@@ -96,17 +102,25 @@ describe('Run State product loop', () => {
     expect(document.activeElement).toBe(launcher);
     expectNoEvaluationWork(events, 'F Run State open/close');
 
-    await view.user.click(launcher);
+    await view.user.click(screen.getByRole('tab', { name: 'Room Doors' }));
+    const exitLauncher = screen.getByRole('button', { name: 'Run State' });
+    await view.user.click(exitLauncher);
+    expect(screen.getByRole('region', { name: 'State before exiting Opening 01' })).toBeTruthy();
+    await view.user.keyboard('{Escape}');
+    expectNoEvaluationWork(events, 'F pre-exit Run State open/close');
+
+    await view.user.click(exitLauncher);
     await view.user.click(screen.getByRole('button', { name: 'Oceanus' }));
     expect(screen.queryByRole('region', { name: /State before/ })).toBeNull();
     expectNoEvaluationWork(events, 'F Run State route reconciliation');
-    application.dispose();
   });
 
   it('keeps N Run State on the one outer Hub without placing it on inner visits', async () => {
     const application = nRunStateApplication;
     const events = nRunStateEvents;
-    expect(nRunStateTitles).toEqual(['Decision 1', 'Hub', 'Preboss']);
+    expect(nRunStateTitles).toContain('Hub');
+    expect(nRunStateTitles).toContain('Preboss');
+    expect(nRunStateTitles).not.toContain('Decision 1');
     const view = renderPlannerForInteraction({ application });
 
     await view.user.click(screen.getByRole('button', { name: 'Surface' }));

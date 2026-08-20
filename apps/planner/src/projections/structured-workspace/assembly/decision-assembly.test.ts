@@ -90,6 +90,7 @@ function decisionKit(source: WorkspaceBiomeSource) {
       markerDestinations: markers.emitter,
       ordinaryRewardForfeited: (owner) => source.ordinaryRewardForfeited(owner.address),
       occurrence: input.occurrence,
+      runState: source.runState,
       ...(input.roomPicker === undefined ? {} : { roomPicker: input.roomPicker }),
     });
   };
@@ -186,6 +187,7 @@ describe('structured workspace decision assembly', () => {
 
     if (assembly.kind !== 'batch')
       throw new Error('decision did not produce an ordinary batch assembly');
+    expect(assembly.batch.runState).toBeUndefined();
     expect(assembly.batch.targets.map((target) => target.index)).toEqual(
       [...assembly.batch.targets].map((target) => target.index).sort((left, right) => left - right),
     );

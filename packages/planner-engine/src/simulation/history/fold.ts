@@ -9,6 +9,7 @@ import type {
   HistoryLedgers,
   OfferPointView,
   AcquisitionPointView,
+  EncounterStartView,
   BiomeHistoryPrefix,
   ProgressiveRoomHistoryViews,
   HistoryStateView,
@@ -49,6 +50,7 @@ interface MutableRoomViews {
   readonly origin: RoomHistoryViews['origin'];
   preparation?: HistoryStateView;
   entry?: HistoryStateView;
+  readonly encounterStarts: EncounterStartView[];
   preOutgoing?: HistoryStateView;
   readonly offerPoints: OfferPointView[];
   readonly acquisitionPoints: AcquisitionPointView[];
@@ -191,6 +193,7 @@ function freezeProgressiveRoomViews(views: MutableRoomViews): ProgressiveRoomHis
     origin: views.origin,
     preparation: views.preparation,
     entry: views.entry,
+    encounterStarts: Object.freeze([...views.encounterStarts]),
     ...(views.offerPoints.length === 0
       ? {}
       : { offerPoints: Object.freeze([...views.offerPoints]) }),
@@ -428,6 +431,7 @@ function foldHistoryEventStream(
           preparation: stateView(event.sequence, ledgers),
           offerPoints: [],
           acquisitionPoints: [],
+          encounterStarts: [],
           targetGenerations: [],
         };
         viewsByOrigin.set(key, views);
@@ -508,6 +512,15 @@ function foldHistoryEventStream(
         if (activeEncounters.has(key)) {
           throw new HistoryFoldContractError(`${event.phaseKey} started more than once`);
         }
+        if (views.encounterStarts.some((candidate) => candidate.phaseKey === event.phaseKey)) {
+          throw new HistoryFoldContractError(`${event.phaseKey} has more than one pre-start view`);
+        }
+        views.encounterStarts.push(
+          Object.freeze({
+            phaseKey: event.phaseKey,
+            before: stateView(event.sequence - 1, ledgers),
+          }),
+        );
         activeEncounters.set(key, entry);
         ledgers.encounterStarts.push(entry);
         break;

@@ -1,6 +1,7 @@
 import type { Catalog } from '../catalog-schema';
 import {
   createBiomeAddress,
+  createRoomRunStateCheckpointAddress,
   semanticAddressKey,
   type BiomeAddress,
   type AcquisitionSiteAddress,
@@ -77,8 +78,8 @@ import type {
 } from './rewards/model';
 import {
   publishRunStateThroughCoverage,
-  type DecisionRunStateOwner,
-  type DecisionRunStateSnapshot,
+  type RunStateOwner,
+  type RunStateSnapshot,
 } from './rewards/run-state';
 import {
   resolveCountedRewardTypeDomain,
@@ -495,27 +496,72 @@ interface BiomeGenerationAssembly {
 }
 
 /**
- * Materialized prefixes can expose the current outer decision before it has a
- * reward-walk checkpoint. Keep that owner explicit so consumers never infer
- * unavailable from a missing snapshot. Hub visits are intentionally internal
- * chronology: their owner is not a Run State launcher.
+ * Materialized prefixes can expose structural Run State owners before the
+ * assessment walk reaches them. Keep those owners explicit so consumers never
+ * infer unavailable from a missing snapshot.
  */
 function structurallyEligibleRunStateOwners(
   prefix: MaterializedBiomePrefix,
-): readonly DecisionRunStateOwner[] {
+): readonly RunStateOwner[] {
   // Canonical decisions are the outer biome chronology. A Hub remains one
   // decision regardless of how many visits and local rooms it contains.
-  const owners: DecisionRunStateOwner[] = prefix.decisions.map((decision) => decision.origin);
+  const owners: RunStateOwner[] = prefix.decisions.map((decision) => decision.origin);
   if (prefix.frontier?.kind === 'hubBoard' || prefix.frontier?.kind === 'exitDecision') {
     owners.push(prefix.frontier.origin);
+  }
+  const enteredRooms: CanonicalAuthoredRoom[] = [];
+  const appendRoom = (room: CanonicalAuthoredRoom): void => {
+    if (!room.entered) return;
+    if (
+      enteredRooms.some(
+        (candidate) => semanticAddressKey(candidate.origin) === semanticAddressKey(room.origin),
+      )
+    )
+      return;
+    enteredRooms.push(room);
+  };
+  if (prefix.entryRoom !== undefined) appendRoom(prefix.entryRoom);
+  for (const decision of prefix.decisions) {
+    if (decision.kind === 'batch') {
+      for (const target of decision.targets) appendRoom(target.room);
+      for (const additional of decision.additional) appendRoom(additional.room);
+      continue;
+    }
+    for (const visit of decision.visits) {
+      appendRoom(visit.target.room);
+      for (const local of visit.enteredLocalRooms) appendRoom(local);
+    }
+  }
+  const activeHubVisit =
+    prefix.frontier?.kind === 'hubVisit' && 'phase' in prefix.frontier
+      ? prefix.frontier
+      : undefined;
+  if (activeHubVisit !== undefined) {
+    appendRoom(activeHubVisit.target.room);
+    for (const local of activeHubVisit.enteredLocalRooms) appendRoom(local);
+  }
+  for (const room of enteredRooms) {
+    if (room.lifecycleProfileKey === 'ShipCombatRoom') {
+      for (const phase of room.encounterPhases) {
+        owners.push(
+          createRoomRunStateCheckpointAddress(room.origin, {
+            kind: 'beforeEncounterStart',
+            phaseKey: phase.slotKey,
+          }),
+        );
+      }
+    } else {
+      owners.push(createRoomRunStateCheckpointAddress(room.origin, { kind: 'roomEntered' }));
+    }
+    owners.push(createRoomRunStateCheckpointAddress(room.origin, { kind: 'beforeRoomExit' }));
   }
   return Object.freeze(owners);
 }
 
 function reconcileRunStateAvailability(
   rewards: BiomeRewardSimulation,
-  covered: readonly DecisionRunStateSnapshot[],
-  owners: readonly DecisionRunStateOwner[],
+  covered: readonly RunStateSnapshot[],
+  owners: readonly RunStateOwner[],
 ): BiomeRewardSimulation {
   const publication = publishRunStateThroughCoverage(rewards.runStateSnapshots, covered, owners);
   return Object.freeze({

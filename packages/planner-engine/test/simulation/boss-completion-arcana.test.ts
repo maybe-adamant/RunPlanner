@@ -108,7 +108,11 @@ describe('Judgment Boss-completion lifecycle', () => {
         }),
       ]),
     );
-    expect(evaluated.rewards.runStateSnapshots).toHaveLength(3);
+    expect(
+      evaluated.rewards.runStateSnapshots.filter(
+        (snapshot) => snapshot.owner.kind !== 'roomRunStateCheckpoint',
+      ),
+    ).toHaveLength(3);
     expect(
       assembly.evaluation.routes.find((route) => route.routeKey === 'Surface')?.processing
         .blockedSuffix,

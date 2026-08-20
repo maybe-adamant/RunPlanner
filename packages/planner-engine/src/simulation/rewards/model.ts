@@ -13,7 +13,7 @@ import type {
   SelectedTraitOfferAssessment,
   TraitHistoryState,
 } from '../traits';
-import type { DecisionRunStateAvailability, DecisionRunStateSnapshot } from './run-state';
+import type { RunStateAvailability, RunStateSnapshot } from './run-state';
 import type { ArcanaFearState } from '../arcana-fear';
 import type { KeepsakeState } from '../keepsakes';
 import type { EncounterPhaseAddress } from '../../authored-project/addresses';
@@ -128,8 +128,8 @@ export interface BiomeRewardSimulation extends RewardSimulationBase {
   readonly storeSupport: readonly RewardStoreSupportEntry[];
   readonly targetHistory: readonly TargetRewardHistoryCheckpoint[];
   readonly rewardLookups: Readonly<Record<string, readonly string[]>>;
-  readonly runStateSnapshots: readonly DecisionRunStateSnapshot[];
-  readonly runStateAvailability: readonly DecisionRunStateAvailability[];
+  readonly runStateSnapshots: readonly RunStateSnapshot[];
+  readonly runStateAvailability: readonly RunStateAvailability[];
   readonly selectedTraitOffers: readonly SelectedTraitOfferAssessment[];
   readonly selectedLevelResolutions: readonly SelectedLevelResolutionAssessment[];
   readonly figLeafPhaseCandidates: readonly FigLeafPhaseCandidateSupport[];

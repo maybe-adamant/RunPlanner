@@ -1,5 +1,5 @@
 import { catalog } from '@run-planner/hades2-catalog';
-import { simulateProject } from '@run-planner/engine/simulation';
+import { simulateProject, type RunStateSnapshot } from '@run-planner/engine/simulation';
 import {
   applyProjectCommand,
   createBiomeAddress,
@@ -8,6 +8,8 @@ import {
   createExitDecisionAddress,
   createIncomingRewardAddress,
   createOccurrenceAddress,
+  createOccurrenceId,
+  createRoomRunStateCheckpointAddress,
   createRouteAddress,
   semanticAddressKey,
 } from '@run-planner/engine/authored-project';
@@ -18,21 +20,32 @@ import {
   createGoldenFGHProject,
   createRepresentativeNOProject,
   createRepresentativeNProject,
+  authorLegalTraitOffers,
+  authorSurfaceWorldShop,
   goldenFStartId,
   goldenFOccurrenceId,
   oBiome,
   oOccurrenceIds,
+  replaceTestRoomActionOrder,
 } from '@run-planner/test-fixtures';
 import { createRewardHistoryState, type RewardKernelFacts } from '../../src/reward-kernel';
 import { deriveRouteLoadout } from '../../src/authored-project/loadout';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
 import { evaluateProgressiveBiome } from '../../src/simulation/progressive/biome';
-import { aggregateDecisionRewardBag, createRunState } from '../../src/simulation/rewards/run-state';
+import {
+  aggregateDecisionRewardBag,
+  createRunState,
+  createRunStateDerivationCache,
+} from '../../src/simulation/rewards/run-state';
 import {
   attachTraitHistory,
   foldTraitHistoryEvents,
   type TraitOfferEvent,
 } from '../../src/simulation/traits';
+
+function decisionSnapshots(snapshots: readonly RunStateSnapshot[]): readonly RunStateSnapshot[] {
+  return snapshots.filter((snapshot) => snapshot.owner.kind !== 'roomRunStateCheckpoint');
+}
 
 function requirementFacts(ordinaryLootCount: number): RewardKernelFacts {
   return {
@@ -66,6 +79,168 @@ function requirementFacts(ordinaryLootCount: number): RewardKernelFacts {
 }
 
 describe('decision run-state snapshots', () => {
+  it('keeps facts-derived caches local to one exact checkpoint context', () => {
+    const history = createRewardHistoryState();
+    const branch = Object.freeze({
+      ...initializeTestRewardBranches()[0]!,
+      history,
+    });
+    const sharedCache = createRunStateDerivationCache();
+    const historyView = (sequence: number) => ({
+      sequence,
+      ledgers: {
+        roomCreations: [],
+        roomAppearances: [],
+        encounterRecords: [],
+        encounterStarts: [],
+        encounterCompletions: [],
+        enteredRewardStores: [],
+        requiredObjectSpawns: [],
+        requiredObjectCompletions: [],
+        roomRestores: [],
+        counters: {
+          biomeDepthCache: sequence,
+          biomeEncounterDepth: 0,
+          routeEncounterDepth: 0,
+          roomHistoryOrdinal: sequence,
+        },
+      },
+    });
+    const ownerA = createRoomRunStateCheckpointAddress(
+      createOccurrenceAddress(
+        createBiomeAddress('Underworld', 'F'),
+        createOccurrenceId('run-state-cache-source-a'),
+      ),
+      { kind: 'roomEntered' },
+    );
+    const ownerB = createRoomRunStateCheckpointAddress(
+      createOccurrenceAddress(
+        createBiomeAddress('Underworld', 'F'),
+        createOccurrenceId('run-state-cache-source-b'),
+      ),
+      { kind: 'roomEntered' },
+    );
+    const snapshot = (
+      owner: typeof ownerA,
+      view: ReturnType<typeof historyView>,
+      facts: RewardKernelFacts,
+      cached: boolean,
+    ) =>
+      createRunState({
+        catalog,
+        owner,
+        historyView: view,
+        branches: [branch],
+        enteredBiomeCount: 1,
+        rewardFacts: () => facts,
+        ...(cached
+          ? {
+              derivationCache: sharedCache,
+              factsContextToken: Object.freeze({ owner, view }),
+            }
+          : {}),
+      });
+    const viewA = historyView(1);
+    const viewB = historyView(2);
+    const factsA = requirementFacts(0);
+    const factsB = requirementFacts(1);
+    const uncachedA = snapshot(ownerA, viewA, factsA, false);
+    const uncachedB = snapshot(ownerB, viewB, factsB, false);
+    const cachedA = snapshot(ownerA, viewA, factsA, true);
+    const cachedB = snapshot(ownerB, viewB, factsB, true);
+
+    expect(cachedA).toEqual(uncachedA);
+    expect(cachedB).toEqual(uncachedB);
+    expect(cachedA?.godPool.acquiredSourceKeys).toEqual([]);
+    expect(cachedB?.godPool.acquiredSourceKeys).toContain('ApolloUpgrade');
+    expect(cachedA?.bags).not.toEqual(cachedB?.bags);
+  });
+
+  it('publishes distinct ordinary room-entry and pre-exit checkpoints', () => {
+    const evaluation = simulateProject(catalog, createCompleteFGProject());
+    const biome = evaluation.routes
+      .find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find((candidate) => candidate.biomeKey === 'F');
+    if (biome?.authoring !== 'complete' || biome.validity !== 'valid') {
+      throw new Error('F did not evaluate validly');
+    }
+    const room = biome.snapshot.entryRoom;
+    const history = biome.history.rooms.find(
+      (candidate) => semanticAddressKey(candidate.origin) === semanticAddressKey(room.origin),
+    );
+    const entryOwner = createRoomRunStateCheckpointAddress(room.origin, { kind: 'roomEntered' });
+    const exitOwner = createRoomRunStateCheckpointAddress(room.origin, {
+      kind: 'beforeRoomExit',
+    });
+    const entry = biome.rewards.runStateSnapshots.find(
+      (snapshot) => semanticAddressKey(snapshot.owner) === semanticAddressKey(entryOwner),
+    );
+    const exit = biome.rewards.runStateSnapshots.find(
+      (snapshot) => semanticAddressKey(snapshot.owner) === semanticAddressKey(exitOwner),
+    );
+    expect(entry).toMatchObject({
+      checkpoint: 'roomEntered',
+      historySequence: history?.entry.sequence,
+    });
+    expect(exit).toMatchObject({
+      checkpoint: 'beforeRoomExit',
+      historySequence: history?.postCommit.sequence,
+    });
+    expect(entry?.historySequence).toBeLessThan(exit?.historySequence ?? 0);
+  });
+
+  it('publishes Ship pre-start checkpoints from exact phase views without a room-entry owner', () => {
+    const evaluation = simulateProject(catalog, createRepresentativeNOProject());
+    const biome = evaluation.routes
+      .find((route) => route.routeKey === 'Surface')
+      ?.biomes.find((candidate) => candidate.biomeKey === 'O');
+    if (biome?.authoring !== 'complete' || biome.validity !== 'valid') {
+      throw new Error('O did not evaluate validly');
+    }
+    const room = biome.snapshot.decisions
+      .flatMap((decision) => (decision.kind === 'batch' ? decision.targets : []))
+      .map((target) => target.room)
+      .find((candidate) => candidate.occurrenceId === oOccurrenceIds.combat04);
+    if (room === undefined) throw new Error('O Combat04 is missing');
+    const history = biome.history.rooms.find(
+      (candidate) => semanticAddressKey(candidate.origin) === semanticAddressKey(room.origin),
+    );
+    const phaseSnapshots = biome.rewards.runStateSnapshots.filter(
+      (snapshot) =>
+        snapshot.owner.kind === 'roomRunStateCheckpoint' &&
+        snapshot.owner.occurrenceId === room.occurrenceId &&
+        snapshot.owner.checkpoint.kind === 'beforeEncounterStart',
+    );
+    expect(phaseSnapshots.map((snapshot) => snapshot.owner)).toEqual(
+      room.encounterPhases.map((phase) =>
+        createRoomRunStateCheckpointAddress(room.origin, {
+          kind: 'beforeEncounterStart',
+          phaseKey: phase.slotKey,
+        }),
+      ),
+    );
+    expect(phaseSnapshots.map((snapshot) => snapshot.historySequence)).toEqual(
+      history?.encounterStarts.map((phase) => phase.before.sequence),
+    );
+    expect(
+      biome.rewards.runStateSnapshots.some(
+        (snapshot) =>
+          snapshot.owner.kind === 'roomRunStateCheckpoint' &&
+          snapshot.owner.occurrenceId === room.occurrenceId &&
+          snapshot.owner.checkpoint.kind === 'roomEntered',
+      ),
+    ).toBe(false);
+    const wheel1 = history?.offerPoints?.find((offer) => offer.offerPoint === 'wheel1');
+    const combat1 = phaseSnapshots.find(
+      (snapshot) =>
+        snapshot.owner.kind === 'roomRunStateCheckpoint' &&
+        snapshot.owner.checkpoint.kind === 'beforeEncounterStart' &&
+        snapshot.owner.checkpoint.phaseKey === 'Combat1',
+    );
+    expect(combat1?.historySequence).toBeGreaterThanOrEqual(wheel1?.after.sequence ?? 0);
+    expect(combat1?.historySequence).toBeLessThan(wheel1?.acquisitionBefore?.sequence ?? Infinity);
+  });
+
   it('publishes snapshots for reached F decisions', () => {
     const evaluation = simulateProject(catalog, createCompleteFGProject());
     const biome = evaluation.routes
@@ -73,8 +248,9 @@ describe('decision run-state snapshots', () => {
       ?.biomes.find((candidate) => candidate.biomeKey === 'F');
     if (biome?.authoring !== 'complete') throw new Error('F did not evaluate');
     expect(biome.validity).toBe('valid');
-    expect(biome.rewards.runStateSnapshots.length).toBe(11);
-    const first = biome.rewards.runStateSnapshots[0]!;
+    const decisions = decisionSnapshots(biome.rewards.runStateSnapshots);
+    expect(decisions).toHaveLength(11);
+    const first = decisions[0]!;
     const runProgress = first.bags.find((bag) => bag.storeKey === 'RunProgress')!;
     expect(runProgress.entries.find((entry) => entry.rewardType === 'Boon')).toMatchObject({
       eligibility: 'eligible',
@@ -100,11 +276,12 @@ describe('decision run-state snapshots', () => {
     if (biome?.authoring !== 'complete' || biome.validity !== 'valid') {
       throw new Error('N did not evaluate validly');
     }
-    expect(biome.rewards.runStateSnapshots).toHaveLength(3);
-    expect(biome.rewards.runStateSnapshots.map((snapshot) => snapshot.owner)).toEqual(
+    const decisions = decisionSnapshots(biome.rewards.runStateSnapshots);
+    expect(decisions).toHaveLength(3);
+    expect(decisions.map((snapshot) => snapshot.owner)).toEqual(
       biome.snapshot.decisions.map((decision) => decision.origin),
     );
-    const [beforePreHub, beforeHub, beforePreboss] = biome.rewards.runStateSnapshots;
+    const [beforePreHub, beforeHub, beforePreboss] = decisions;
     expect(beforePreHub?.owner.kind).toBe('exitDecision');
     expect(beforeHub?.owner.kind).toBe('hubDecision');
     expect(beforePreboss?.owner.kind).toBe('exitDecision');
@@ -137,17 +314,119 @@ describe('decision run-state snapshots', () => {
     if (biome?.authoring !== 'incomplete' || !('rewards' in biome)) {
       throw new Error('N frontier did not remain incomplete');
     }
-    expect(biome.rewards.runStateSnapshots).toHaveLength(3);
-    const beforePreboss = biome.rewards.runStateSnapshots[2];
+    const decisions = decisionSnapshots(biome.rewards.runStateSnapshots);
+    expect(decisions).toHaveLength(3);
+    const beforePreboss = decisions[2];
     expect(beforePreboss?.owner).toMatchObject({
       kind: 'exitDecision',
       source: { kind: 'hubDecision', decisionKey: 'hub' },
     });
-    expect(biome.rewards.runStateAvailability).toHaveLength(3);
+    expect(
+      biome.rewards.runStateAvailability.filter(
+        (availability) => availability.owner.kind !== 'roomRunStateCheckpoint',
+      ),
+    ).toHaveLength(3);
     expect(biome.rewards.runStateAvailability).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ owner: beforePreboss?.owner, availability: 'available' }),
       ]),
+    );
+  });
+
+  it('keeps N main and side pre-exit checkpoints chronological without restore duplicates', () => {
+    const evaluation = simulateProject(catalog, createRepresentativeNProject());
+    const biome = evaluation.routes
+      .find((route) => route.routeKey === 'Surface')
+      ?.biomes.find((candidate) => candidate.biomeKey === 'N');
+    if (biome?.authoring !== 'complete' || biome.validity !== 'valid') {
+      throw new Error('N did not evaluate validly');
+    }
+    const hub = biome.snapshot.decisions.find((decision) => decision.kind === 'hub');
+    const visit =
+      hub?.kind === 'hub'
+        ? hub.visits.find((candidate) => candidate.enteredLocalRooms.length > 0)
+        : undefined;
+    const main = visit?.target.room;
+    const side = visit?.enteredLocalRooms[0];
+    if (main === undefined || side === undefined)
+      throw new Error('N fixture has no entered side room');
+    const checkpoints = biome.rewards.runStateSnapshots.filter(
+      (snapshot) =>
+        snapshot.owner.kind === 'roomRunStateCheckpoint' &&
+        snapshot.owner.checkpoint.kind === 'beforeRoomExit',
+    );
+    const mainSnapshots = checkpoints.filter(
+      (snapshot) =>
+        snapshot.owner.kind === 'roomRunStateCheckpoint' &&
+        snapshot.owner.occurrenceId === main.occurrenceId,
+    );
+    const sideSnapshots = checkpoints.filter(
+      (snapshot) =>
+        snapshot.owner.kind === 'roomRunStateCheckpoint' &&
+        snapshot.owner.occurrenceId === side.occurrenceId,
+    );
+    expect(mainSnapshots).toHaveLength(1);
+    expect(sideSnapshots).toHaveLength(1);
+    expect(mainSnapshots[0]!.historySequence).toBeLessThan(sideSnapshots[0]!.historySequence);
+    expect(
+      biome.history.ledgers.roomRestores.filter(
+        (restore) => semanticAddressKey(restore.origin) === semanticAddressKey(main.origin),
+      ).length,
+    ).toBeGreaterThan(0);
+  });
+
+  it('captures the literal Shop pre-exit checkpoint after final settlement', () => {
+    let project = applyProjectCommand(createRepresentativeNOProject(), catalog, {
+      kind: 'ReplaceOccurrenceRoom',
+      occurrence: createOccurrenceAddress(oBiome, oOccurrenceIds.devotion),
+      gameName: 'O_Shop01',
+    });
+    project = authorLegalTraitOffers(
+      replaceTestRoomActionOrder(
+        authorSurfaceWorldShop(project, oBiome, oOccurrenceIds.devotion),
+        catalog,
+        oBiome,
+        oOccurrenceIds.devotion,
+        [{ kind: 'interactShopOffer', offerKey: 'Boon' }],
+      ),
+    );
+    const biome = simulateProject(catalog, project)
+      .routes.find((route) => route.routeKey === 'Surface')
+      ?.biomes.find((candidate) => candidate.biomeKey === 'O');
+    if (biome?.authoring !== 'complete' || biome.validity !== 'valid') {
+      throw new Error('O Shop fixture did not evaluate validly');
+    }
+    const generationOwner = createExitDecisionAddress(oBiome, {
+      kind: 'occurrence',
+      occurrenceId: oOccurrenceIds.devotion,
+    });
+    const exitOwner = createRoomRunStateCheckpointAddress(
+      createOccurrenceAddress(oBiome, oOccurrenceIds.devotion),
+      { kind: 'beforeRoomExit' },
+    );
+    const generation = biome.rewards.runStateSnapshots.find(
+      (snapshot) => semanticAddressKey(snapshot.owner) === semanticAddressKey(generationOwner),
+    );
+    const exit = biome.rewards.runStateSnapshots.find(
+      (snapshot) => semanticAddressKey(snapshot.owner) === semanticAddressKey(exitOwner),
+    );
+    expect(generation?.checkpoint).toBe('beforeTargetGeneration');
+    expect(exit?.checkpoint).toBe('beforeRoomExit');
+    expect(exit?.historySequence).toBeGreaterThan(generation?.historySequence ?? 0);
+    const settledShopAcquisitions = biome.rewards.branches.flatMap((branch) =>
+      branch.events.filter(
+        (event) =>
+          event.kind === 'concreteAcquisition' &&
+          event.settlement?.site.owner.kind === 'occurrence' &&
+          event.settlement.site.owner.occurrenceId === oOccurrenceIds.devotion,
+      ),
+    );
+    expect(settledShopAcquisitions.length).toBeGreaterThan(0);
+    expect(
+      Math.max(...settledShopAcquisitions.map((event) => event.historySequence)),
+    ).toBeLessThanOrEqual(exit?.historySequence ?? -1);
+    expect(exit?.traits.upgradableTraitCount).toBeGreaterThan(
+      generation?.traits.upgradableTraitCount ?? -1,
     );
   });
 
@@ -191,6 +470,25 @@ describe('decision run-state snapshots', () => {
         }),
       ]),
     );
+    const retainedRoomOwner = createRoomRunStateCheckpointAddress(
+      createOccurrenceAddress(biomeAddress, goldenFOccurrenceId(2, 1)),
+      { kind: 'roomEntered' },
+    );
+    expect(biome.rewards.runStateAvailability).toContainEqual({
+      owner: retainedRoomOwner,
+      availability: 'unavailable',
+      reason: 'coverageNotReached',
+    });
+    const absentOwner = createRoomRunStateCheckpointAddress(
+      createOccurrenceAddress(biomeAddress, createOccurrenceId('absent-run-state-room')),
+      { kind: 'roomEntered' },
+    );
+    expect(
+      biome.rewards.runStateAvailability.some(
+        (availability) =>
+          semanticAddressKey(availability.owner) === semanticAddressKey(absentOwner),
+      ),
+    ).toBe(false);
   });
 
   it('keeps a decision pre-state stable for current edits but recomputes after upstream edits', () => {
@@ -238,8 +536,14 @@ describe('decision run-state snapshots', () => {
       enteredBiomeCount: 1,
       loadout: project.routes.find((route) => route.routeKey === 'Underworld')!.loadout,
     });
-    expect(progressive?.rewards.runStateSnapshots).toHaveLength(1);
-    const owner = progressive?.rewards.runStateSnapshots[0]?.owner;
+    const decisions = decisionSnapshots(progressive?.rewards.runStateSnapshots ?? []);
+    expect(decisions).toHaveLength(1);
+    expect(
+      (progressive?.rewards.runStateSnapshots ?? []).flatMap((snapshot) =>
+        snapshot.owner.kind === 'roomRunStateCheckpoint' ? [snapshot.owner.occurrenceId] : [],
+      ),
+    ).toEqual([goldenFStartId]);
+    const owner = decisions[0]?.owner;
     expect(owner?.kind).toBe('exitDecision');
     if (owner?.kind !== 'exitDecision') throw new Error('missing exit decision owner');
     expect(owner.source).toEqual({
@@ -294,11 +598,12 @@ describe('decision run-state snapshots', () => {
       blockedAt: createIncomingRewardAddress(biomeAddress, goldenFOccurrenceId(1, 1)),
     });
     expect('snapshot' in biome).toBe(false);
-    expect(biome.rewards.runStateSnapshots).toHaveLength(1);
-    expect(biome.rewards.runStateSnapshots[0]?.arcanaFear.arcana.active).toContainEqual(
+    const decisions = decisionSnapshots(biome.rewards.runStateSnapshots);
+    expect(decisions).toHaveLength(1);
+    expect(decisions[0]?.arcanaFear.arcana.active).toContainEqual(
       expect.objectContaining({ key: 'ChanneledCast', origin: 'manual', rarity: 'Epic' }),
     );
-    expect(biome.rewards.runStateSnapshots[0]?.arcanaFear.fear).toMatchObject({
+    expect(decisions[0]?.arcanaFear.fear).toMatchObject({
       configuredTotal: 3,
       effectiveRanks: { EnemyDamageShrineUpgrade: 2 },
     });
@@ -309,7 +614,10 @@ describe('decision run-state snapshots', () => {
       ]),
     );
     expect(
-      biome.rewards.runStateAvailability.filter((entry) => entry.availability === 'available'),
+      biome.rewards.runStateAvailability.filter(
+        (entry) =>
+          entry.owner.kind !== 'roomRunStateCheckpoint' && entry.availability === 'available',
+      ),
     ).toHaveLength(1);
     const laterOwner = createExitDecisionAddress(biomeAddress, {
       kind: 'occurrence',

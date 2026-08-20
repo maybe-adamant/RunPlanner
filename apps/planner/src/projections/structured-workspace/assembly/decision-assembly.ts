@@ -906,7 +906,9 @@ function assembleBatchDecision(
           });
         })();
   const runState =
-    (input.persistence ?? 'authored') === 'authored' ? input.source.runState(owner) : undefined;
+    (input.persistence ?? 'authored') === 'authored' && owner.source.kind === 'hubDecision'
+      ? input.source.runState(owner)
+      : undefined;
   const base = {
     batchState: decision.normal.batchState,
     ...(effectiveRewardStore === undefined ? {} : { effectiveRewardStore }),

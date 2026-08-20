@@ -1,9 +1,6 @@
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import type { RequirementExpression } from '@run-planner/engine/requirements';
-import type {
-  DecisionRewardBagCount,
-  DecisionRunStateSnapshot,
-} from '@run-planner/engine/simulation';
+import type { DecisionRewardBagCount, RunStateSnapshot } from '@run-planner/engine/simulation';
 import { artificerStatus } from '@run-planner/engine/simulation';
 
 import type {
@@ -106,7 +103,7 @@ function sourcePresentation(catalog: Catalog, sourceKey: string): WorkspaceRunSt
 
 function traitPresentation(
   catalog: Catalog,
-  equipped: DecisionRunStateSnapshot['traits']['equippedTraits'][string],
+  equipped: RunStateSnapshot['traits']['equippedTraits'][string],
 ) {
   const trait = catalog.traits.byKey[equipped.traitKey];
   return Object.freeze({
@@ -120,7 +117,7 @@ function traitPresentation(
 
 function bagSection(
   catalog: Catalog,
-  entries: DecisionRunStateSnapshot['bags'][number]['entries'],
+  entries: RunStateSnapshot['bags'][number]['entries'],
   eligibility: 'eligible' | 'ineligible',
 ): WorkspaceRunStateBagSection {
   const selected = entries.filter((entry) => entry.eligibility === eligibility);
@@ -152,7 +149,7 @@ function bagSection(
 /** Presentation joins only: the engine has already evaluated all bag conditions. */
 export function presentRunState(
   catalog: Catalog,
-  snapshot: DecisionRunStateSnapshot,
+  snapshot: RunStateSnapshot,
 ): WorkspaceRunStatePresentation {
   const coreTraitKeys = new Set(
     Object.values(snapshot.traits.ordinaryBoonSlots).map(({ traitKey }) => traitKey),

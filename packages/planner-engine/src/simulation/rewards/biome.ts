@@ -8,6 +8,7 @@ import {
   createAcquisitionEntryAddress,
   createEchoKeepsakeReplayAddress,
   createTargetAddress,
+  createRoomRunStateCheckpointAddress,
   semanticAddressKey,
   type BatchRewardStoreAddress,
   type AcquisitionSiteOwnerAddress,
@@ -104,8 +105,9 @@ import type {
 import { attachTraitHistory, createTraitHistoryState, foldTraitHistoryEvents } from '../traits';
 import {
   createRunState,
+  createRunStateDerivationCache,
   publishRunStateThroughCoverage,
-  type DecisionRunStateSnapshot,
+  type RunStateSnapshot,
 } from './run-state';
 import { createRewardFacts, createdPeerGameNames } from './facts';
 import {
@@ -1030,7 +1032,7 @@ interface BiomeRewardEvaluationAssembly {
 
 export interface TraitChildSettlementCheckpoint {
   readonly branches: readonly RewardBranch[];
-  readonly runStateSnapshots: readonly DecisionRunStateSnapshot[];
+  readonly runStateSnapshots: readonly RunStateSnapshot[];
 }
 
 export interface TraitChildSettlementCheckpoints {
@@ -1499,14 +1501,14 @@ export function evaluateBiomeRewardsAssemblyInternal(
   const findings = new Map<string, FindingRegionEntry>();
   const producerFrontiers = new Map<string, RewardProducerFrontier>();
   const shipLifecycleContexts = new Map<string, ShipLifecycleCandidateContext>();
-  const runStateSnapshotsByOwner = new Map<string, DecisionRunStateSnapshot>();
+  const runStateSnapshotsByOwner = new Map<string, RunStateSnapshot>();
   const traitChildSettlementBuilders = new Map<
     string,
     {
       readonly occurrenceOwner: SemanticAddress;
       readonly branches: RewardBranchState[];
       readonly candidateContexts: TraitOfferCandidateContext[];
-      readonly runStateSnapshots: Map<string, DecisionRunStateSnapshot>;
+      readonly runStateSnapshots: Map<string, RunStateSnapshot>;
     }
   >();
   function recordTraitChildSettlements(
@@ -1722,9 +1724,10 @@ export function evaluateBiomeRewardsAssemblyInternal(
     }
   }
   let pendingHubBoard: PendingHubBoardGeneration | undefined;
+  const runStateDerivationCache = createRunStateDerivationCache();
 
   function captureRunState(
-    owner: DecisionRunStateSnapshot['owner'],
+    owner: RunStateSnapshot['owner'],
     source: CanonicalRewardSource,
     view: HistoryStateView,
   ): void {
@@ -1742,6 +1745,11 @@ export function evaluateBiomeRewardsAssemblyInternal(
         : []
       ).map((offer) => offer.offer.rewardType),
     );
+    // One token represents this exact rewardFacts closure: current/source room,
+    // declaration, immutable view, entered-biome count, shop names, peer
+    // context, and reward lookups. It cannot alias a later checkpoint even
+    // when that checkpoint retains the same RewardHistoryState identity.
+    const factsContextToken = Object.freeze({});
     const snapshotFor = (checkpointBranches: readonly RewardBranchState[]) =>
       createRunState({
         catalog,
@@ -1749,6 +1757,8 @@ export function evaluateBiomeRewardsAssemblyInternal(
         historyView: view,
         branches: checkpointBranches,
         enteredBiomeCount,
+        derivationCache: runStateDerivationCache,
+        factsContextToken,
         rewardFacts: (branchHistory) =>
           rewardFacts(
             catalog,
@@ -1763,6 +1773,10 @@ export function evaluateBiomeRewardsAssemblyInternal(
       });
     const snapshot = snapshotFor(branches);
     if (snapshot !== undefined) runStateSnapshotsByOwner.set(ownerKey, snapshot);
+    // Trait-child candidate checkpoints retain only generation snapshots. Room
+    // lifecycle diagnostics are occurrence-local and never become a later
+    // candidate-generation authority.
+    if (owner.kind === 'roomRunStateCheckpoint') return;
     for (const checkpoint of traitChildSettlementBuilders.values()) {
       if (
         semanticAddressKey(checkpoint.occurrenceOwner) !== semanticAddressKey(source.origin) ||
@@ -2304,6 +2318,24 @@ export function evaluateBiomeRewardsAssemblyInternal(
     switch (event.kind) {
       case 'encounterStarted': {
         const room = rooms.get(semanticAddressKey(event.origin));
+        if (room?.kind === 'authored' && room.lifecycleProfileKey === 'ShipCombatRoom') {
+          const view = views
+            .get(semanticAddressKey(event.origin))
+            ?.encounterStarts.find((candidate) => candidate.phaseKey === event.phaseKey)?.before;
+          if (view === undefined) {
+            throw new BiomeRewardSimulationContractError(
+              `${room.gameName} ${event.phaseKey} has no pre-encounter Run State view`,
+            );
+          }
+          captureRunState(
+            createRoomRunStateCheckpointAddress(room.origin, {
+              kind: 'beforeEncounterStart',
+              phaseKey: event.phaseKey,
+            }),
+            room,
+            view,
+          );
+        }
         if (room !== undefined && room.kind === 'authored') {
           const phase = room.encounterPhases.find(
             (candidate) => candidate.slotKey === event.phaseKey,
@@ -2475,6 +2507,24 @@ export function evaluateBiomeRewardsAssemblyInternal(
           }
         }
         branches = advanceRewardBranches(branches, event.sequence);
+        break;
+      }
+      case 'roomEntered': {
+        branches = advanceRewardBranches(branches, event.sequence);
+        const room = rooms.get(semanticAddressKey(event.origin));
+        if (room?.kind === 'authored' && room.lifecycleProfileKey !== 'ShipCombatRoom') {
+          const view = views.get(semanticAddressKey(event.origin))?.entry;
+          if (view === undefined) {
+            throw new BiomeRewardSimulationContractError(
+              `${room.gameName} has no room-entry Run State view`,
+            );
+          }
+          captureRunState(
+            createRoomRunStateCheckpointAddress(room.origin, { kind: 'roomEntered' }),
+            room,
+            view,
+          );
+        }
         break;
       }
       case 'roomPrepared':
@@ -4964,6 +5014,19 @@ export function evaluateBiomeRewardsAssemblyInternal(
         if (room?.kind === 'authored' && room.entryState?.kind === 'shop') {
           branches = completePendingShopAcquisitionSite(branches, room.origin, fail);
         }
+        if (room?.kind === 'authored') {
+          const view = views.get(semanticAddressKey(event.origin))?.postCommit;
+          if (view === undefined) {
+            throw new BiomeRewardSimulationContractError(
+              `${room.gameName} has no pre-exit Run State view`,
+            );
+          }
+          captureRunState(
+            createRoomRunStateCheckpointAddress(room.origin, { kind: 'beforeRoomExit' }),
+            room,
+            view,
+          );
+        }
         branches = advanceRewardBranches(branches, event.sequence);
         break;
       }
@@ -5003,9 +5066,16 @@ export function evaluateBiomeRewardsAssemblyInternal(
     );
   }
   const levelCandidateContexts = new Map(traitProducts.levelCandidateContexts);
+  const discoveredRunStateSnapshots = Object.freeze(
+    [...runStateSnapshotsByOwner.values()].sort((left, right) => {
+      const leftRoom = left.owner.kind === 'roomRunStateCheckpoint';
+      const rightRoom = right.owner.kind === 'roomRunStateCheckpoint';
+      return leftRoom === rightRoom ? 0 : leftRoom ? 1 : -1;
+    }),
+  );
   const runStatePublication = publishRunStateThroughCoverage(
-    [...runStateSnapshotsByOwner.values()],
-    [...runStateSnapshotsByOwner.values()],
+    discoveredRunStateSnapshots,
+    discoveredRunStateSnapshots,
   );
   const traitChildSettlementProducts = new Map(
     [...traitChildSettlementBuilders].map(([key, checkpoint]) =>

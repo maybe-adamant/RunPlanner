@@ -56,6 +56,7 @@ import type {
   ArcanaActivationOrigin,
   CanonicalBatch,
   ProjectEvaluationAssembly,
+  RunStateOwner,
   RoomActionWindow,
 } from '@run-planner/engine/simulation';
 import type { LevelResolutionCandidateProjection } from '../candidateProjection';
@@ -1144,6 +1145,7 @@ export type WorkspaceRoomLifecycleTimelineEntry =
       readonly boundary: WorkspaceRoomLifecycleBoundary;
       readonly rank: number;
       readonly placement: 'before' | 'after';
+      readonly runState?: WorkspaceRunStateLauncher;
     }
   | {
       readonly kind: 'action';
@@ -1463,6 +1465,8 @@ export interface WorkspaceRoomSummary {
   readonly occurrenceId: OccurrenceId;
   readonly roomLocal: WorkspaceRoomLocal;
   readonly workbench: WorkspaceRoomWorkbenchPresentation;
+  /** Literal state immediately before this entered occurrence exits. */
+  readonly beforeExitRunState?: WorkspaceRunStateLauncher;
   /** One shared entered-room chronology across every semantic participant. */
   readonly roomActions?: WorkspaceRoomActions;
   /**
@@ -1708,14 +1712,14 @@ export interface WorkspaceHubDecisionNode {
 export type WorkspaceRunStateLauncher =
   | {
       readonly availability: 'available';
-      readonly owner: ExitDecisionAddress | HubDecisionAddress;
+      readonly owner: RunStateOwner;
       readonly state: WorkspaceRunStatePresentation;
       /** Final structured-stage title, never reconstructed by React. */
       readonly title: string;
     }
   | {
       readonly availability: 'unavailable';
-      readonly owner: ExitDecisionAddress | HubDecisionAddress;
+      readonly owner: RunStateOwner;
       readonly title: string;
     };
 
@@ -2074,6 +2078,7 @@ export interface StructuredWorkspaceProjection {
   readonly focusByOwner: ReadonlyMap<string, WorkspaceInspectorDestination>;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly marker: WorkspaceMarker;
+  readonly runStateLaunchers: ReadonlyMap<string, WorkspaceRunStateLauncher>;
   readonly routes: readonly WorkspaceRoute[];
   readonly status: WorkspaceStatus;
 }

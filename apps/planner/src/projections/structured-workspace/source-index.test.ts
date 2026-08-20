@@ -11,6 +11,7 @@ import {
   createLocalVisitSlotAddress,
   createOccurrenceId,
   createOccurrenceAddress,
+  createRoomRunStateCheckpointAddress,
   createTargetAddress,
   semanticAddressKey,
 } from '@run-planner/engine/authored-project';
@@ -353,6 +354,14 @@ describe('structured workspace source index', () => {
     const published = source.runState(owner);
 
     expect(published).toMatchObject({ availability: 'available', snapshot: { owner } });
+    const roomOwner = createRoomRunStateCheckpointAddress(
+      createOccurrenceAddress(goldenFBiome, goldenFStartId),
+      { kind: 'roomEntered' },
+    );
+    expect(source.runState(roomOwner)).toMatchObject({
+      availability: 'available',
+      snapshot: { owner: roomOwner, checkpoint: 'roomEntered' },
+    });
 
     const fEvaluation = evaluation.routes
       .find((route) => route.routeKey === 'Underworld')!

@@ -55,6 +55,7 @@ import type {
   WorkspaceLevelResolutionControl,
   WorkspaceCompletionNode,
   WorkspaceRoomPickerControl,
+  WorkspaceRunStateLauncher,
   WorkspaceStatus,
 } from './contract';
 import type { OccurrenceIdFactory } from '@planner/workspace/occurrenceIds';
@@ -105,6 +106,7 @@ function projectBiome(
   >;
   readonly roomControls: ReadonlyMap<string, WorkspaceRoomPickerControl>;
   readonly rewardControls: ReadonlyMap<string, WorkspaceRewardControl>;
+  readonly runStateLaunchers: ReadonlyMap<string, WorkspaceRunStateLauncher>;
   readonly startInteractionRequirements: ReadonlyMap<string, WorkspaceStartInteractionRequirement>;
   readonly takeoverInteractionRequirements: ReadonlyMap<
     string,
@@ -123,6 +125,12 @@ function projectBiome(
     keepsakeEquipResultSupported,
   );
   const presentation = presentWorkspaceBiome(catalog, semantic);
+  const runStateLaunchers = new Map(semantic.runStateLaunchers);
+  for (const node of presentation.biome.nodes) {
+    if ('runState' in node && node.runState !== undefined) {
+      runStateLaunchers.set(semanticAddressKey(node.runState.owner), node.runState);
+    }
+  }
   return Object.freeze({
     batchInteractionRequirements: semantic.batchInteractionRequirements,
     biome: presentation.biome,
@@ -132,6 +140,7 @@ function projectBiome(
     occurrenceInteractionRequirements: semantic.occurrenceInteractionRequirements,
     roomControls: semantic.roomControls,
     rewardControls: semantic.rewardControls,
+    runStateLaunchers,
     startInteractionRequirements: semantic.startInteractionRequirements,
     takeoverInteractionRequirements: semantic.takeoverInteractionRequirements,
     topologyRemovalInteractionRequirements: semantic.topologyRemovalInteractionRequirements,
@@ -155,6 +164,7 @@ export function createStructuredWorkspaceProjection(
       const existing = cache.get(assembly);
       if (existing !== undefined) return existing;
       const focusByOwner = new Map<string, WorkspaceInspectorDestination>();
+      const runStateLaunchers = new Map<string, WorkspaceRunStateLauncher>();
       const occurrenceInteractionRequirements = new Map<
         string,
         WorkspaceOccurrenceInteractionRequirement
@@ -276,6 +286,10 @@ export function createStructuredWorkspaceProjection(
             (address) => candidates.keepsakeEquipResult(address).length > 0,
           );
           appendUniqueFocusDestinations(focusByOwner, projected.focusDestinations.entries());
+          for (const [key, launcher] of projected.runStateLaunchers) {
+            if (runStateLaunchers.has(key)) throw new Error(`${key} has duplicate Run State`);
+            runStateLaunchers.set(key, launcher);
+          }
           if (projected.biome.echoKeepsakeReplay !== undefined) {
             const result = projected.biome.echoKeepsakeReplay.address;
             keepsakeEquipResultControls.set(
@@ -471,6 +485,7 @@ export function createStructuredWorkspaceProjection(
           findingCount: evaluation.findings.length,
           focusKey: semanticAddressKey(projectAddress),
         }),
+        runStateLaunchers,
         routes: Object.freeze(routes),
         status: evaluation.status,
       });

@@ -252,10 +252,16 @@ export interface AcquisitionPointView {
   readonly after: HistoryStateView;
 }
 
+export interface EncounterStartView {
+  readonly phaseKey: string;
+  readonly before: HistoryStateView;
+}
+
 export interface ProgressiveRoomHistoryViews {
   readonly origin: RoomHistoryOrigin;
   readonly preparation: HistoryStateView;
   readonly entry: HistoryStateView;
+  readonly encounterStarts: readonly EncounterStartView[];
   readonly offerPoints?: readonly OfferPointView[];
   readonly acquisitionPoints?: readonly AcquisitionPointView[];
   readonly preOutgoing?: HistoryStateView;

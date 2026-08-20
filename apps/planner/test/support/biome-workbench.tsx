@@ -139,6 +139,7 @@ export function renderWorkspace(
         biome={biome}
         focusByOwner={workspace.focusByOwner}
         interactions={workspace.interactions}
+        runStateLaunchers={workspace.runStateLaunchers}
       />
     ),
     application,
