@@ -796,7 +796,7 @@ describe('planner history interaction', () => {
     expect(application.store.getState().editorSession.traitDialogTarget).toEqual(target);
   });
 
-  it('edits ordinary, Hermes, room Hammer, and acquired Shop Hammer offers through shared controls', async () => {
+  it('edits ordinary, room Hammer, and acquired Shop Hammer offers through shared controls', async () => {
     const application = createApplication();
     let project = createRepresentativeNOPQProject();
     project = applyProjectCommand(project, application.catalog, {

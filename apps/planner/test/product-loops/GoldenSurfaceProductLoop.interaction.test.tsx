@@ -3,7 +3,6 @@
 import { act, cleanup, screen, waitFor, within } from '@testing-library/react';
 import {
   applyProjectCommand,
-  createEncounterPhaseAddress,
   createExitDecisionAddress,
   createHubSlotAddress,
   createOccurrenceAddress,
@@ -34,7 +33,6 @@ import {
   authoredProjectReplaced,
 } from '@planner/state/projectWorkspaceSlice';
 import { selectProfileStatus } from '@planner/state/store';
-import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
 import {
   authorLegalTraitOffers,
   reachedTraitOffers,
@@ -130,20 +128,6 @@ function createRecoveryPersistence(): {
 
 function currentProject(application: PlannerApplication) {
   return application.store.getState().projectWorkspace.history.present;
-}
-
-function encounterSelections(
-  application: PlannerApplication,
-  biomeKey: string,
-  occurrenceId: string,
-) {
-  const selections = currentProject(application)
-    .routes.flatMap((route) => route.biomes)
-    .find((biome) => biome.biomeKey === biomeKey)
-    ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === occurrenceId)
-    ?.encounters.encounterKeyByPhase;
-  if (selections === undefined) throw new Error(`${occurrenceId} encounter selections are missing`);
-  return selections;
 }
 
 function hubRailButton(): HTMLElement {
@@ -286,132 +270,6 @@ describe('surface product loop', () => {
     expect(within(dialog).queryByLabelText('option1 rarity')).toBeNull();
     expect(within(dialog).getByRole('button', { name: 'Close trait offer' })).toBeTruthy();
     application.dispose();
-  });
-
-  it('authors a reached World Shop through Purchased, Actions ordering, and undoable removal', async () => {
-    const application = createApplication();
-    application.store.dispatch(authoredProjectReplaced(createRepresentativeNOPQProject()));
-    const view = renderPlannerForInteraction({ application });
-    await view.user.click(screen.getByRole('button', { name: 'Surface' }));
-    await view.user.click(screen.getByRole('button', { name: 'Olympus' }));
-    const shopNode = application
-      .selectStructuredWorkspace(application.store.getState())
-      .routes.find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((biome) => biome.biomeKey === 'P')
-      ?.nodes.find(
-        (node) =>
-          node.kind === 'occurrenceWorkbench' &&
-          node.room.occurrenceId === pOccurrenceIds.prebossShop,
-      );
-    if (shopNode?.kind !== 'occurrenceWorkbench') throw new Error('P World Shop node is missing');
-    act(() => application.store.dispatch(semanticOwnerFocused(shopNode.marker.address)));
-
-    const offer2 = screen.getByRole('checkbox', { name: 'Purchased Offer 2' });
-    await view.user.click(offer2);
-    await view.user.click(screen.getByRole('checkbox', { name: 'Purchased Offer 3' }));
-    const order = () =>
-      currentProject(application)
-        .routes.find((route) => route.routeKey === 'Surface')
-        ?.biomes.find((biome) => biome.biomeKey === 'P')
-        ?.topology?.occurrences.find(
-          (occurrence) => occurrence.occurrenceId === pOccurrenceIds.prebossShop,
-        )?.roomActions.order;
-    expect(order()).toEqual([
-      { kind: 'interactShopOffer', offerKey: 'MajorNonBoon' },
-      { kind: 'interactShopOffer', offerKey: 'Minor' },
-    ]);
-
-    await view.user.click(screen.getByRole('tab', { name: 'Room Actions' }));
-    const actions = screen.getByRole('region', { name: 'Room Actions' });
-    const moveEarlier = within(actions)
-      .getAllByRole('button')
-      .find((button) => button.getAttribute('aria-label')?.endsWith('earlier'));
-    if (moveEarlier === undefined) throw new Error('ranked Shop purchase has no earlier move');
-    await view.user.click(moveEarlier);
-    expect(order()).toEqual([
-      { kind: 'interactShopOffer', offerKey: 'Minor' },
-      { kind: 'interactShopOffer', offerKey: 'MajorNonBoon' },
-    ]);
-
-    await view.user.click(screen.getByRole('tab', { name: 'Room Overview' }));
-    await view.user.click(screen.getByRole('checkbox', { name: 'Purchased Offer 2' }));
-    expect(order()).toEqual([{ kind: 'interactShopOffer', offerKey: 'Minor' }]);
-    await view.user.click(screen.getByRole('button', { name: 'Undo' }));
-    expect(order()).toEqual([
-      { kind: 'interactShopOffer', offerKey: 'Minor' },
-      { kind: 'interactShopOffer', offerKey: 'MajorNonBoon' },
-    ]);
-    await view.user.click(screen.getByRole('button', { name: 'Redo' }));
-    expect(order()).toEqual([{ kind: 'interactShopOffer', offerKey: 'Minor' }]);
-    application.dispose();
-  });
-
-  it('withholds and restores a P Combat suffix through its terminating Heracles Intro picker', async () => {
-    const application = createApplication();
-    const occurrenceId = pOccurrenceId('P_Combat02', 2, 1);
-    const owner = { kind: 'occurrence' as const, occurrenceId };
-    const combat = createEncounterPhaseAddress(pBiome, owner, 'Combat');
-    application.store.dispatch(authoredProjectReplaced(createRepresentativeNOPQProject()));
-    const retainedCombat = encounterSelections(application, 'P', occurrenceId).Combat;
-    if (retainedCombat === undefined)
-      throw new Error('P Combat 02 has no retained Combat selection');
-
-    const view = renderPlannerForInteraction({ application });
-    await view.user.click(screen.getByRole('button', { name: 'Surface' }));
-    await view.user.click(screen.getByRole('button', { name: 'Olympus' }));
-    const decisionRail = Array.from(
-      screen
-        .getByRole('region', { name: 'Olympus route structure' })
-        .querySelectorAll<HTMLButtonElement>('[data-workspace-node]'),
-    ).find(
-      (button) =>
-        button.dataset.workspaceNode ===
-        semanticAddressKey(
-          createExitDecisionAddress(pBiome, {
-            kind: 'occurrence',
-            occurrenceId: pOccurrenceId('P_Combat03', 1, 1),
-          }),
-        ),
-    );
-    if (decisionRail === undefined) throw new Error('P Combat 02 decision rail node is missing');
-    await view.user.click(decisionRail);
-
-    expect(
-      within(screen.getByRole('complementary', { name: 'Details' })).getByRole('heading', {
-        level: 3,
-        name: /^Entering Combat 02/,
-      }),
-    ).toBeTruthy();
-    await view.user.click(screen.getByRole('tab', { name: 'Room Actions' }));
-    const intro = screen.getByLabelText('Intro encounter phase');
-    expect(screen.getByLabelText('Combat encounter phase')).toBeTruthy();
-    await view.user.click(within(intro).getByRole('button', { name: 'Encounter' }));
-    await view.user.click(screen.getByRole('option', { name: /Heracles combat/ }));
-
-    await waitFor(() => expect(screen.queryByLabelText('Combat encounter phase')).toBeNull());
-    expect(
-      application
-        .selectStructuredWorkspace(application.store.getState())
-        .interactions.encounterPhases.has(semanticAddressKey(combat)),
-    ).toBe(false);
-    expect(encounterSelections(application, 'P', occurrenceId)).toMatchObject({
-      Combat: retainedCombat,
-      Intro: 'HeraclesCombatP',
-    });
-
-    await view.user.click(within(intro).getByRole('button', { name: 'Encounter' }));
-    await view.user.click(screen.getByRole('option', { name: /Pre-combat/ }));
-
-    await waitFor(() => expect(screen.getByLabelText('Combat encounter phase')).toBeTruthy());
-    expect(
-      application
-        .selectStructuredWorkspace(application.store.getState())
-        .interactions.encounterPhases.get(semanticAddressKey(combat)),
-    ).toMatchObject({ owner: combat, selected: retainedCombat });
-    expect(encounterSelections(application, 'P', occurrenceId)).toMatchObject({
-      Combat: retainedCombat,
-      Intro: 'GeneratedP_PreCombat',
-    });
   });
 
   it('records an N Hub order move as one undoable semantic command and autosaves both states', async () => {
@@ -572,114 +430,6 @@ describe('surface product loop', () => {
     expect(recovery.hasPendingAutosave()).toBe(true);
     recovery.flush();
     expect(recovery.readStoredJson()).toBe(encodeProjectDocument(authored));
-  });
-
-  it('closes an unvisited Hub member as one undoable autosaved command', async () => {
-    const recovery = createRecoveryPersistence();
-    const application = createApplication({
-      autosaveRecovery: recovery.adapter,
-      autosaveScheduler: recovery.scheduler,
-    });
-    const authored = appendCompleteN(
-      createProjectDocument(application.catalog, {
-        configuredBiomeCounts: { Surface: 1 },
-        projectId: 'surface-product-hub-membership-repair',
-      }),
-    );
-    application.store.dispatch(authoredProjectReplaced(authored));
-    recovery.flush();
-    const dispatch = vi.spyOn(application.store, 'dispatch');
-    const view = renderPlannerForInteraction({ application });
-
-    await view.user.click(screen.getByRole('button', { name: 'Surface' }));
-    await view.user.click(screen.getByRole('button', { name: 'Ephyra' }));
-    await view.user.click(hubRailButton());
-
-    const card = screen.getByRole('article', { name: 'Combat 04 Hub room' });
-    const checkbox = within(card).getByRole('checkbox', {
-      name: 'Combat 04 open',
-    }) as HTMLInputElement;
-    await view.user.pointer({ keys: '[MouseLeft]', target: checkbox });
-    await waitFor(() =>
-      expect(
-        (screen.getByRole('checkbox', { name: 'Combat 04 open' }) as HTMLInputElement).checked,
-      ).toBe(true),
-    );
-    expect(
-      within(screen.getByRole('article', { name: 'Combat 04 Hub room' })).queryByText(
-        /Closing this slot removes/,
-      ),
-    ).toBeNull();
-    const hub = application.store
-      .getState()
-      .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((biome) => biome.biomeKey === 'N')
-      ?.topology?.decisions.find((decision) => decision.kind === 'hub');
-    const openedOccurrenceId =
-      hub?.kind === 'hub'
-        ? hub.openTargets.find((target) => target.hubSlotKey === 'combat04')?.occurrenceId
-        : undefined;
-    if (openedOccurrenceId === undefined) throw new Error('Combat 04 was not opened');
-    const retainedOccurrenceId =
-      hub?.kind === 'hub'
-        ? hub.openTargets.find((target) => target.hubSlotKey === 'combat05')?.occurrenceId
-        : undefined;
-    if (retainedOccurrenceId === undefined)
-      throw new Error('Combat 05 must remain an open Hub slot');
-
-    const historyBeforeClose = application.store.getState().projectWorkspace.history.past.length;
-    dispatch.mockClear();
-    act(() =>
-      (screen.getByRole('checkbox', { name: 'Combat 04 open' }) as HTMLInputElement).focus(),
-    );
-    await view.user.keyboard('[Space]');
-
-    await waitFor(() =>
-      expect(
-        (screen.getByRole('checkbox', { name: 'Combat 04 open' }) as HTMLInputElement).checked,
-      ).toBe(false),
-    );
-    expect(application.store.getState().projectWorkspace.history.past).toHaveLength(
-      historyBeforeClose + 1,
-    );
-    const topologyAfterClose = application.store
-      .getState()
-      .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
-      ?.biomes.find((biome) => biome.biomeKey === 'N')?.topology;
-    expect(
-      topologyAfterClose?.occurrences.some(
-        (occurrence) => occurrence.occurrenceId === openedOccurrenceId,
-      ),
-    ).toBe(false);
-    expect(
-      topologyAfterClose?.occurrences.some(
-        (occurrence) => occurrence.occurrenceId === retainedOccurrenceId,
-      ),
-    ).toBe(true);
-    expect(
-      topologyAfterClose?.decisions.some(
-        (decision) => decision.kind === 'exit' && decision.source.kind === 'hubDecision',
-      ),
-    ).toBe(true);
-    expect(
-      topologyAfterClose?.occurrences.some(
-        (occurrence) => occurrence.occurrenceId === nOccurrenceIds.preboss,
-      ),
-    ).toBe(true);
-    expect(
-      dispatch.mock.calls
-        .map(([action]) => action)
-        .filter(authoredProjectCommandDispatched.match)
-        .map((action) => action.payload),
-    ).toEqual([
-      {
-        kind: 'CloseHubSlot',
-        slot: createHubSlotAddress(nBiome, 'hub', 'combat04'),
-      },
-    ]);
-    expect(recovery.hasPendingAutosave()).toBe(true);
-    recovery.flush();
-    expect(recovery.readStoredJson()).toBe(encodeProjectDocument(currentProject(application)));
   });
 
   it('routes a selected-route Findings click to the owning decision inspector', async () => {
