@@ -2,8 +2,11 @@
 
 ## Status
 
-Locked focused delivery plan on clean base
-`1d2af0cb37e18c95ba2bcdb25147f683b741f3be`.
+Locked focused delivery plan. Gate A landed as
+`ddada8bccf3acaf51dffd9264a3f0f6c73a242c7`; Gate A.1, Gate B, and Gate C
+remain. Gate A.1 was added after Gate A review exposed a useful consequence of
+the lifecycle tabs: Run State can now name exact room-local checkpoints instead
+of remaining a decision-only diagnostic.
 
 This document is temporary delivery authority. It is not linked from the
 README or stable design documents. Its required adversarial review completed
@@ -433,6 +436,53 @@ they will later use:
 Do not add empty Well/Shrine unions, registries, controls, or persisted fields
 in this implementation merely to reserve that future work.
 
+### 11. Run State checkpoints follow the lifecycle without replacing generation state
+
+Run State is a derived diagnostic over exact reward branches and history views.
+It is not authored state and does not enter undo/redo. Gate A.1 adds one closed,
+non-persisted room-checkpoint owner with three exact points:
+
+- `roomEntered`: after the room-entry event and before its first Room Action;
+- `beforeEncounterStart(phaseKey)`: after any preceding phase transition and
+  wheel materialization/choice, but before that phase's encounter-start
+  effects; and
+- `beforeRoomExit`: after all reached room-local settlement and immediately
+  before the room-exit event.
+
+The existing decision-owned `beforeTargetGeneration` snapshot remains a
+separate engine product because it explains the state that generated door
+identity and rewards. A literal `beforeRoomExit` snapshot must not replace or
+relabel it. Ordinary Room Doors presents the new pre-exit checkpoint; Hub board
+generation may continue to present the existing decision snapshot where no
+ordinary occurrence checkpoint is the truthful owner.
+
+The checkpoint owner is a derived semantic address containing the occurrence
+and exact checkpoint discriminator. It is not added to the authored codec and
+does not bump the schema. Non-Ship occurrences publish `roomEntered` and
+`beforeRoomExit`; ShipCombat publishes one `beforeEncounterStart` per active
+phase plus `beforeRoomExit`, with no separate Ship `roomEntered` owner. Intro's
+pre-start state is the Ship entry diagnostic.
+
+Progressive coverage enumerates structurally eligible checkpoint owners only
+from the retained `materializedPrefix`. Owners retained beyond the assessment
+frontier remain visible but disabled; authored occurrences absent from that
+prefix publish no launcher. React receives complete launchers and never
+reconstructs snapshots from events or room-action rows.
+
+The history fold owns an exact per-phase pre-start view captured immediately
+before each `encounterStarted` event. Run State consumes that product rather
+than refolding event prefixes or rebuilding counters. Entry consumes the
+existing room `entry` view. Pre-exit consumes `postCommit`; Shop capture occurs
+after `completePendingShopAcquisitionSite` and before the `roomExited` branch
+advance, preserving settlement semantics while including all final purchases.
+An N main occurrence's pre-exit view is the state before leaving that main
+occurrence into its first local visit or its topology-owned continuation. A
+later side-room acquisition belongs to that side occurrence's own checkpoints
+and is not retroactively included in the main-room snapshot. Parent and Hub
+restoration replay no lifecycle and create no additional main/Hub Run State
+snapshot. The persistent Hub room never receives a fabricated room-exit
+checkpoint.
+
 ## User-Facing Composition
 
 ### Standard, Shop, Fields, and N occurrences
@@ -630,6 +680,75 @@ Acceptance witnesses:
 9. N side-room generation and visit ordering remain under the parent main-room
    Overview, while each entered side occurrence owns only its own
    Overview/Actions/Doors tabs.
+
+### Gate A.1 — Lifecycle-checkpoint Run State
+
+Intended commit:
+
+```text
+feat(planner): expose room lifecycle run state
+```
+
+Deliver:
+
+- one derived, non-persisted room Run State checkpoint address;
+- exact engine snapshots and explicit progressive availability for room entry,
+  active O phase starts, and pre-exit;
+- preservation of the existing decision `beforeTargetGeneration` snapshot;
+- ordinary/H/Shop entry launchers at `Room entered` in Room Actions;
+- one launcher for each active O phase at its encounter-start seam;
+- one literal pre-exit launcher in Room Doors;
+- a workspace-level launcher index so sheet lookup and reconciliation do not
+  scan or infer nested React structure;
+- exact disabled behavior for unreached checkpoints; and
+- deletion of occurrence-sourced decision-card Run State placement superseded
+  by the room-local entry/pre-exit launchers. Both `HubDecisionAddress` board
+  generation and Hub-sourced `ExitDecisionAddress` before-Preboss launchers
+  remain generation-owned because neither has a truthful ordinary occurrence
+  replacement.
+
+Gate A.1 must not change authored schema, lifecycle execution, Room Action
+order, reward settlement, candidate eligibility, door generation, Hub
+chronology, or the contents of the Run State presentation. It may generalize
+the current decision-only owner/snapshot names, but it must keep generation and
+pre-exit checkpoints distinct.
+
+Primary owners:
+
+- history-fold per-phase checkpoint tests;
+- engine Run State snapshot/publication and progressive-coverage tests;
+- reward-walk witnesses at `roomEntered`, O `encounterStarted`, and
+  `roomExited`;
+- structured-workspace source/index/occurrence assembly tests;
+- editor-session reconciliation and Run State sheet lookup tests;
+- OccurrenceWorkbench lifecycle-placement tests; and
+- the Run State product loop.
+
+Acceptance witnesses:
+
+1. A reached ordinary combat exposes room-entry state in Actions and
+   pre-exit state in Doors; their history sequences and checkpoint identities
+   are distinct.
+2. A later occurrence retained in `materializedPrefix` but beyond assessment
+   coverage exposes its structural launchers disabled and creates no snapshot;
+   an occurrence absent from the prefix exposes no launcher.
+3. O exposes Intro, Combat 1, and active Combat 2 pre-start snapshots on their
+   exact phase tabs; it exposes no separate room-entry owner, and two-phase O
+   exposes no Combat 2 owner.
+4. Combat 1 state includes the resolved Wheel 1 transition but precedes Combat
+   1 encounter-start effects; Combat 2 follows the analogous Wheel 2 frontier.
+5. Post-outgoing Shop settlement appears in `beforeRoomExit` but not in the
+   retained `beforeTargetGeneration` snapshot.
+6. Opening and closing any launcher changes only transient editor state and
+   never authored history.
+7. Finding navigation/tab changes do not alter which checkpoint a launcher
+   opens.
+8. Before-Hub `HubDecisionAddress` and Hub-sourced before-Preboss
+   `ExitDecisionAddress` Run State remain generation-owned; neither is
+   fabricated as a room-exit checkpoint.
+9. An N main pre-exit snapshot excludes later side-room acquisitions; the side
+   occurrence's own pre-exit snapshot includes its reached acquisition, and
+   restoring the parent/Hub publishes no duplicate snapshot.
 
 ### Gate B — Shop participation and source intent
 
