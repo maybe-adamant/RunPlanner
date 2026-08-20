@@ -226,6 +226,20 @@ cleanup interactions.
   One generic `First purchase` field is incorrect.
 - Chronology derives the actual Travel and Gold sources. Intent never forces,
   reorders, or substitutes that result.
+- Persist those intentions in one required, frozen
+  `ShopState.supplementalSourceIntents` container. The container is present and
+  empty by default; its `travelDealRefill` and `echoDoubleShopReward` fields are
+  independently optional. Each non-null field is a closed source reference:
+  Travel names one initial Shop offer, while Gold names either one initial Shop
+  offer or the materialized Travel refill. Intent belongs to Shop state because
+  it describes entry-time inventory/effect targeting. The concrete derived
+  payload remains owned by its exact `acquisitionSites.roomExit` entry, and
+  `roomActions.order` remains the only participation/chronology authority.
+- Source intent is structurally authorable even while its effect is inactive or
+  context-invalid. Setting a non-null intent ensures that its exact derived
+  acquisition entry exists without overwriting an existing payload. Clearing
+  or changing intent retains payload and authored action state for repair; it
+  never silently cascades or manufactures chronology.
 
 ## Locked Modeling Shape
 
@@ -327,6 +341,59 @@ freely reorderable afterward. Unchecking removes only that exact action.
 
 Removing a purchase does not cascade-delete Travel/Gold intent or payload. Any
 dependent intent becomes retained-invalid and receives a finding.
+
+The semantic participation command is one closed
+`ReplaceShopPurchaseParticipation` intent over an exact `ShopOfferAddress`.
+`purchased: true` appends that offer's `interactShopOffer` reference at the
+declared default position and therefore requires a current materialized Shop
+plus an exact declaration-owned initial offer. `purchased: false` removes only
+the exact matching ordered `interactShopOffer`; it remains structurally
+accepted when the occurrence is no longer a Shop or the offer is no longer
+active so a room-replacement/deactivated-owner edit cannot strand stale
+chronology. It never removes another stale action. Overview owns the ordinary
+insert/remove interaction. Actions may move ranked base
+purchases but must not expose generic `InsertRoomAction`/`RemoveRoomAction`
+membership for them. Those generic commands reject `interactShopOffer`, and
+the Room Action roster emits no generic insert/remove proposal for a base Shop
+offer. A retained stale base-purchase row may expose the same
+`purchased: false` semantic repair intent, never a second removal authority.
+Unranked optional initial offers are neither active rows nor repair rows;
+generated supplemental pickup rows retain their existing generic insert/remove
+repair interactions. Direct command and proposal tests must prove this closed
+split.
+
+The semantic source command is one closed
+`ReplaceShopSupplementalSourceIntent` intent over the exact derived
+`AcquisitionEntryAddress`, with a closed source value or `null`. The command
+validates structural ownership only, preserves dormant/context-invalid intent,
+and ensures a non-null target has an addressable `roomExit` acquisition entry
+without replacing any existing payload, including an explicitly retained
+`null`. For an absent Travel entry the deterministic initial payload is
+`null`. For an absent Gold entry it is the source-derived authored reward
+default when the intended source has a concrete duplicable offer, otherwise
+`null`. Changing or clearing intent never replaces that initial or subsequently
+edited payload.
+
+`EditDerivedShopEntry` remains the payload command, but it no longer accepts a
+caller-supplied `sourceOfferKey`; the engine resolves the source exclusively
+from persisted Shop intent. When the entry key is absent, the wrapper first
+materializes the same deterministic initial payload and then applies the nested
+edit atomically. If that payload is `null`, only a nested
+`ReplaceAcquisitionEntryOffer` may establish reward identity; trait, Pom,
+disposition, or other child edits fail until a concrete reward exists. An
+existing key, including `null`, is never rematerialized. Command/undo witnesses
+must cover first selection, source change, clear, first nested edit, and payload
+retention.
+
+The selector domain is an engine-owned source-intent authoring product at the
+Shop activation/outgoing checkpoint, not the actual-settlement frontier. It
+must enumerate every structurally addressable initial offer, plus an authored
+Travel refill as a possible Gold source, and attach contextual validity,
+active-at-entry, and target-derived payload evidence. In particular,
+`SpellDrop` remains selectable and persistable for Gold so that its exact
+invalidity can be shown; an eligible-only UI list is not an authoring domain.
+Canonical settlement still derives the actual Travel/Gold source from the
+ordered actions and compares it with intent.
 
 If review proves that append cannot be a truthful structural default for every
 active Shop supplement, the engine must return the one supported toggle intent;
@@ -761,15 +828,19 @@ feat(planner): author shop participation and effect targets
 Deliver:
 
 - strict schema 49 and exact codec/default updates;
-- retained Travel/Gold source intent on materialized Shop state;
+- required frozen `ShopState.supplementalSourceIntents` with independently
+  optional retained Travel/Gold source intent;
 - engine-owned Purchased toggle intents that write only `roomActions.order`;
 - Overview purchase markers and source selectors;
 - Actions filtered to participating base purchases plus active/stale/required
   supplemental work;
+- an engine-owned structural source-intent domain that retains invalid and
+  inactive selections instead of filtering them out;
 - intent-aware derived payload authoring;
 - canonical intent-versus-order validation and findings;
 - exact navigation/undo/redo; and
-- deletion of placeholder-only activation UX and caller-supplied derived source
+- deletion of `SelectDerivedShopEntry`, placeholder-only activation UX,
+  eligible-only selector policy, and caller-supplied derived source
   coordinates.
 
 Primary owners:
@@ -785,9 +856,12 @@ Primary owners:
 Acceptance witnesses:
 
 1. Marking two offers Purchased adds only those two purchase actions; unmarked
-   inventory stays out of Actions.
+   inventory stays out of Actions. Generic Room Action insert/remove rejects
+   base `interactShopOffer`, while ranked purchases retain move proposals.
 2. Unmarking a target source removes its purchase action but retains Travel or
-   Gold intent/payload with an exact finding.
+   Gold intent/payload with an exact finding. A stale base purchase repairs
+   through the same participation intent, not a generic remove proposal,
+   including after room replacement removes the active Shop owner.
 3. Travel intent matches the first accepted normal purchase and rejects a later
    target without reordering it.
 4. Gold skips `SpellDrop` without consuming its source opportunity and accepts
@@ -806,6 +880,11 @@ Acceptance witnesses:
     participation/order and a read-only summary.
 12. One semantic edit creates one undo step, and undo/redo restores membership,
     target intent, payload, and finding focus coherently.
+13. First Travel intent creates an exact retained `null` payload; first Gold
+    intent creates its source-derived default when resolvable and `null`
+    otherwise. Changing/clearing intent and undo/redo never replace an existing
+    payload, including `null`; a first nested payload edit follows the locked
+    materialize-then-edit rule.
 
 ### Gate C — Durable closure
 
@@ -838,16 +917,22 @@ The completed change must remove, not preserve beside the new path:
   sections as the top-level occurrence composition;
 - application-owned O phase placement that duplicates the engine timeline;
 - unpurchased initial Shop offers from the Action ordering surface;
+- unranked optional initial Shop offers from the repair-row surface;
 - Travel/Gold placeholder copy whose only repair is “order purchases first”;
+- `SelectDerivedShopEntry` and the placeholder frontier variants that support
+  it;
+- `eligibleSourceOfferKeys` as source-selector policy (actual settlement may
+  keep a private eligibility helper);
 - caller-supplied `sourceOfferKey` on derived Shop payload edits after source
   intent becomes persisted authority;
 - duplicate Travel/Gold editors on both Overview and Action rows; and
 - finding navigation that opens only the containing occurrence without the
   exact tab/phase destination.
 
-Do not retain a compatibility projection or hidden legacy workbench. Schema 49
-remains strict and rejects prior versions; do not add a migration or
-compatibility decoder for schema 48.
+Do not retain a compatibility projection or hidden legacy workbench. The
+existing codec is already strict and has no legacy decoder. Gate B bumps that
+single accepted version from schema 48 to schema 49 and must not add a schema-48
+migration or compatibility path.
 
 ## Explicit Non-Goals
 
