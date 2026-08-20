@@ -21,6 +21,7 @@ import {
   type LocalVisitSlotAddress,
   type RoomActionAddress,
   type RoomActionReference,
+  type ShopOfferAddress,
   type OccurrenceAddress,
   type OccurrenceId,
   type ProjectCommand,
@@ -881,6 +882,10 @@ export interface WorkspaceInteractionCatalog {
     string,
     WorkspaceShopDeathDefianceConditionInteraction
   >;
+  readonly shopPurchaseParticipations: ReadonlyMap<
+    string,
+    WorkspaceShopPurchaseParticipationInteraction
+  >;
   readonly localVisitOrders: ReadonlyMap<string, WorkspaceLocalVisitOrderInteraction>;
   readonly localVisitGenerations: ReadonlyMap<string, WorkspaceLocalVisitGenerationInteraction>;
   readonly starts: ReadonlyMap<string, WorkspaceStartInteraction>;
@@ -911,6 +916,17 @@ export interface WorkspaceShopDeathDefianceConditionInteraction {
     value: boolean,
   ) => WorkspaceCommandIntent<
     Extract<ProjectCommand, { readonly kind: 'ReplaceShopDeathDefianceCondition' }>
+  >;
+}
+
+export interface WorkspaceShopPurchaseParticipationInteraction {
+  readonly key: string;
+  readonly owner: ShopOfferAddress;
+  readonly purchased: boolean;
+  readonly intentFor: (
+    purchased: boolean,
+  ) => WorkspaceCommandIntent<
+    Extract<ProjectCommand, { readonly kind: 'ReplaceShopPurchaseParticipation' }>
   >;
 }
 
@@ -1105,6 +1121,11 @@ export interface WorkspaceRoomActionRow {
     readonly showOffer: boolean;
   };
   readonly stale: boolean;
+  /** Specialized removal authority for a retained stale base Shop purchase. */
+  readonly shopParticipation?: {
+    readonly interactionKey: string;
+    readonly owner: ShopOfferAddress;
+  };
   /** Engine-owned lifecycle window used by closed presentation groupings. */
   readonly window: RoomActionWindow;
   /** Exact encounter/Gorgon payload settled by this action. */
@@ -1204,6 +1225,11 @@ export interface WorkspaceShopOfferDescriptor {
   readonly key: string;
   readonly label: string;
   readonly purchase: WorkspaceShopPurchaseDescriptor;
+  readonly participation: {
+    readonly interactionKey: string;
+    readonly owner: ShopOfferAddress;
+    readonly purchased: boolean;
+  };
   readonly rewardControl: WorkspaceExplicitRewardControl;
 }
 

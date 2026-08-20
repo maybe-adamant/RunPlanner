@@ -2031,19 +2031,21 @@ describe('structured workspace interaction binding', () => {
       owner: wheel,
       selected: 1,
     });
-    const shopActions = shop.roomActions.get(semanticAddressKey(shopOwner));
-    expect(shopActions).toMatchObject({ owner: shopOwner });
-    const insert = shopActions?.proposals.find(
-      (proposal) =>
-        proposal.kind === 'insert' &&
-        proposal.reference.kind === 'interactShopOffer' &&
-        proposal.reference.offerKey === 'MajorNonBoon',
+    expect(shop.roomActions.get(semanticAddressKey(shopOwner))).toMatchObject({
+      owner: shopOwner,
+    });
+    const major = createShopOfferAddress(
+      createBiomeAddress('Underworld', 'F'),
+      createOccurrenceId(enteredShop.shopId),
+      'MajorNonBoon',
     );
-    if (insert === undefined) throw new Error('Shop purchase insertion is missing');
-    expect(shopActions?.intentFor(insert.key)).toMatchObject({
+    const participation = shop.shopPurchaseParticipations.get(semanticAddressKey(major));
+    expect(participation).toMatchObject({ owner: major, purchased: false });
+    expect(participation?.intentFor(true)).toMatchObject({
       command: {
-        kind: 'InsertRoomAction',
-        reference: { kind: 'interactShopOffer', offerKey: 'MajorNonBoon' },
+        kind: 'ReplaceShopPurchaseParticipation',
+        offer: major,
+        purchased: true,
       },
     });
   });

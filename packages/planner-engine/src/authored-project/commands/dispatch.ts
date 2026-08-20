@@ -98,6 +98,7 @@ function applyUnchecked(
     case 'InsertRoomAction':
     case 'RemoveRoomAction':
     case 'MoveRoomAction':
+    case 'ReplaceShopPurchaseParticipation':
       return applyRoomActionCommand(
         document,
         catalog,

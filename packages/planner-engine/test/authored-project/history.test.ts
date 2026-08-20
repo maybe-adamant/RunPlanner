@@ -7,11 +7,10 @@ import {
   canUndoProjectHistory,
   createHubDecisionAddress,
   createRouteAddress,
-  createRoomActionAddress,
   createOccurrenceId,
   createProjectHistory,
+  createShopOfferAddress,
   redoProjectHistory,
-  roomActionKey,
   undoProjectHistory,
 } from '@run-planner/engine/authored-project';
 
@@ -69,16 +68,10 @@ describe('authored project history', () => {
 
   it('records a room-leaf edit as one atomic undoable snapshot', () => {
     const initial = createProjectHistory(createCompleteNProject());
-    const reference = { kind: 'interactShopOffer' as const, offerKey: 'Minor' };
     const ordered = applyProjectHistoryCommand(initial, catalog, {
-      kind: 'InsertRoomAction',
-      action: createRoomActionAddress(
-        nBiome,
-        createOccurrenceId('round-trip-n-preboss'),
-        roomActionKey(reference),
-      ),
-      reference,
-      index: 0,
+      kind: 'ReplaceShopPurchaseParticipation',
+      offer: createShopOfferAddress(nBiome, createOccurrenceId('round-trip-n-preboss'), 'Minor'),
+      purchased: true,
     });
 
     expect(ordered.past).toEqual([initial.present]);

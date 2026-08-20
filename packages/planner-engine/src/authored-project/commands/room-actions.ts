@@ -24,8 +24,54 @@ export function applyRoomActionCommand(
   command: RoomActionCommand,
 ): ProjectDocument {
   const topology = requireTopology(located.plan, command);
-  const occurrence = requireOccurrence(located.plan, command.action.occurrenceId, command);
+  const occurrenceId =
+    command.kind === 'ReplaceShopPurchaseParticipation'
+      ? command.offer.occurrenceId
+      : command.action.occurrenceId;
+  const occurrence = requireOccurrence(located.plan, occurrenceId, command);
   const order = occurrence.roomActions.order;
+  if (command.kind === 'ReplaceShopPurchaseParticipation') {
+    const reference = Object.freeze({
+      kind: 'interactShopOffer' as const,
+      offerKey: command.offer.offerKey,
+    });
+    const key = roomActionKey(reference);
+    const existingIndex = order.findIndex((candidate) => roomActionKey(candidate) === key);
+    if (!command.purchased) {
+      if (existingIndex < 0) return document;
+      return updateOccurrenceTopology(
+        document,
+        located,
+        replaceOccurrence(
+          topology,
+          Object.freeze({
+            ...occurrence,
+            roomActions: Object.freeze({
+              order: Object.freeze(order.filter((_, index) => index !== existingIndex)),
+            }),
+          }),
+        ),
+      );
+    }
+    if (existingIndex >= 0) return document;
+    if (occurrence.state.kind !== 'shop' || occurrence.state.shop === undefined) {
+      failCommand(command, `${occurrence.gameName} has no materialized shop inventory`);
+    }
+    if (occurrence.state.shop.offers[command.offer.offerKey] === undefined) {
+      failCommand(command, `unknown shop offer ${command.offer.offerKey}`);
+    }
+    return updateOccurrenceTopology(
+      document,
+      located,
+      replaceOccurrence(
+        topology,
+        Object.freeze({
+          ...occurrence,
+          roomActions: Object.freeze({ order: Object.freeze([...order, reference]) }),
+        }),
+      ),
+    );
+  }
   const existingIndex = order.findIndex(
     (reference) => roomActionKey(reference) === command.action.actionKey,
   );
@@ -33,6 +79,9 @@ export function applyRoomActionCommand(
   let nextOrder: RoomActionReference[];
   switch (command.kind) {
     case 'InsertRoomAction': {
+      if (command.reference.kind === 'interactShopOffer') {
+        failCommand(command, 'base Shop purchases use ReplaceShopPurchaseParticipation');
+      }
       const key = roomActionKey(command.reference);
       if (key !== command.action.actionKey) {
         failCommand(command, 'reference does not match the addressed room action');
@@ -55,6 +104,9 @@ export function applyRoomActionCommand(
     }
     case 'RemoveRoomAction':
       if (existingIndex < 0) failCommand(command, 'room action is not ordered');
+      if (order[existingIndex]?.kind === 'interactShopOffer') {
+        failCommand(command, 'base Shop purchases use ReplaceShopPurchaseParticipation');
+      }
       nextOrder = order.filter((_, index) => index !== existingIndex);
       break;
     case 'MoveRoomAction':

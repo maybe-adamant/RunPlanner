@@ -711,7 +711,9 @@ describe('structured workspace occurrence assembly', () => {
           Object.isFrozen(offer.rewardControl),
       ),
     ).toBe(true);
-    expect(selected.occurrenceInteractionRequirements[0]?.kind).toBe('roomActions');
+    expect(selected.occurrenceInteractionRequirements).toEqual(
+      expect.arrayContaining([expect.objectContaining({ kind: 'roomActions' })]),
+    );
     const selectedOffer = selected.node.room.roomLocal.offers.find(
       (offer) => offer.key === 'MajorNonBoon',
     );
@@ -804,9 +806,14 @@ describe('structured workspace occurrence assembly', () => {
         }),
       }),
     );
-    expect(result.occurrenceInteractionRequirements).toEqual([
-      expect.objectContaining({ kind: 'roomActions' }),
-    ]);
+    expect(result.occurrenceInteractionRequirements).toEqual(
+      expect.arrayContaining([expect.objectContaining({ kind: 'roomActions' })]),
+    );
+    expect(
+      result.occurrenceInteractionRequirements.filter(
+        (requirement) => requirement.kind === 'shopPurchaseParticipation',
+      ),
+    ).toHaveLength(3);
     expect(projected.markers.destinations().get(semanticAddressKey(duplicate))).toMatchObject({
       ownerAddress: duplicate,
       focusAddress: duplicate,

@@ -1471,6 +1471,21 @@ function roomActionsForOccurrence(
               }),
             }),
         stale: row.stale,
+        ...(row.reference.kind !== 'interactShopOffer'
+          ? {}
+          : {
+              shopParticipation: (() => {
+                const owner = createShopOfferAddress(
+                  input.biome,
+                  input.occurrence.occurrenceId,
+                  row.reference.offerKey,
+                );
+                return Object.freeze({
+                  interactionKey: semanticAddressKey(owner),
+                  owner,
+                });
+              })(),
+            }),
         window: row.window,
         ...(row.stale || traitOffer === undefined ? {} : { traitOffer }),
         ...(row.stale ||
@@ -1859,6 +1874,14 @@ function roomLocalForOccurrence(
             address: purchaseAddress,
             marker: input.markerDestinations.marker(purchaseAddress),
           }),
+          participation: Object.freeze({
+            interactionKey: semanticAddressKey(offerAddress),
+            owner: offerAddress,
+            purchased: occurrence.roomActions.order.some(
+              (reference) =>
+                reference.kind === 'interactShopOffer' && reference.offerKey === slot.key,
+            ),
+          }),
           rewardControl: requireProjectedRewardControl(controls, offerAddress, 'explicitReward'),
         });
       });
@@ -2175,6 +2198,19 @@ function occurrenceInteractionRequirements(
       Object.freeze({ kind: 'naturalChaosSpawn' as const, owner: room.naturalChaosSpawn.owner }),
     );
   }
+  const activeShopOwners = new Set<string>();
+  if (room.roomLocal.kind === 'shop' && room.roomLocal.materialized) {
+    for (const offer of room.roomLocal.offers) {
+      activeShopOwners.add(offer.participation.interactionKey);
+      requirements.push(
+        Object.freeze({
+          kind: 'shopPurchaseParticipation' as const,
+          owner: offer.participation.owner,
+          purchased: offer.participation.purchased,
+        }),
+      );
+    }
+  }
   if (room.roomActions !== undefined) {
     requirements.push(
       Object.freeze({
@@ -2183,6 +2219,17 @@ function occurrenceInteractionRequirements(
         proposals: room.roomActions.proposals,
       }),
     );
+    for (const row of room.roomActions.repairRows) {
+      if (row.shopParticipation === undefined) continue;
+      if (activeShopOwners.has(row.shopParticipation.interactionKey)) continue;
+      requirements.push(
+        Object.freeze({
+          kind: 'shopPurchaseParticipation' as const,
+          owner: row.shopParticipation.owner,
+          purchased: true,
+        }),
+      );
+    }
   }
 
   switch (room.roomLocal.kind) {

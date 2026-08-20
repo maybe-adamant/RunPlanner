@@ -2117,7 +2117,7 @@ describe('OccurrenceWorkbench', () => {
     );
   });
 
-  it('inserts, reorders, and removes Shop purchases through shared Room Actions', async () => {
+  it('marks Shop purchases in Overview, reorders them in Actions, and restores membership through undo', async () => {
     const { project, shopId: occurrenceId } = enteredShopProject();
     const view = renderOccurrenceWorkbench(
       project,
@@ -2125,22 +2125,14 @@ describe('OccurrenceWorkbench', () => {
       'F',
       occurrenceById(occurrenceId),
     );
-    openRoomTab('Room Actions');
-    const actions = screen.getByRole('region', { name: 'Room Actions' });
-    expect(within(actions).getByText('Outgoing generation')).toBeTruthy();
-    expect(within(actions).queryByText('Exit usable')).toBeNull();
-    const insertAction = async (label: string) => {
-      const row = within(actions).getByText(label).closest('li');
-      if (row === null) throw new Error(`${label} row is missing`);
-      const select = within(row).getByRole('combobox', { name: `Insert ${label}` });
-      const option = Array.from((select as HTMLSelectElement).options)
-        .filter((candidate) => candidate.value !== '' && !candidate.disabled)
-        .at(-1);
-      if (option === undefined) throw new Error(`${label} has no legal insertion`);
-      await view.user.selectOptions(select, option.value);
-    };
-    await insertAction('Buy Heal');
-    await insertAction('Buy Max Magick');
+    const heal = screen.getByRole('checkbox', { name: 'Purchased Offer 2' });
+    const mana = screen.getByRole('checkbox', { name: 'Purchased Offer 3' });
+    expect(
+      (screen.getByRole('checkbox', { name: 'Purchased Offer 1' }) as HTMLInputElement).checked,
+    ).toBe(false);
+    const historyBefore = view.application.store.getState().projectWorkspace.history.past.length;
+    await view.user.click(heal);
+    await view.user.click(mana);
     expect(
       occurrenceRoomActionOrder(
         view.application.store.getState().projectWorkspace.history.present,
@@ -2152,6 +2144,15 @@ describe('OccurrenceWorkbench', () => {
       { kind: 'interactShopOffer', offerKey: 'MajorNonBoon' },
       { kind: 'interactShopOffer', offerKey: 'Minor' },
     ]);
+    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+      historyBefore + 2,
+    );
+
+    openRoomTab('Room Actions');
+    const actions = screen.getByRole('region', { name: 'Room Actions' });
+    expect(within(actions).getByText('Outgoing generation')).toBeTruthy();
+    expect(within(actions).queryByText('Exit usable')).toBeNull();
+    expect(within(actions).queryByText('Buy Boon · Zeus')).toBeNull();
 
     const minor = within(actions).getByText('Buy Max Magick').closest('li');
     if (minor === null) throw new Error('Minor Shop action is missing');
@@ -2169,9 +2170,18 @@ describe('OccurrenceWorkbench', () => {
       { kind: 'interactShopOffer', offerKey: 'Minor' },
       { kind: 'interactShopOffer', offerKey: 'MajorNonBoon' },
     ]);
-    await view.user.click(within(minor).getByRole('button', { name: 'Remove' }));
-    expect(screen.queryByText('Acquisitions')).toBeNull();
-    expect(screen.queryByRole('checkbox', { name: /Purchase Offer/ })).toBeNull();
+    openRoomTab('Room Overview');
+    const reorderedHeal = screen.getByRole('checkbox', { name: 'Purchased Offer 2' });
+    await view.user.click(reorderedHeal);
+    expect((reorderedHeal as HTMLInputElement).checked).toBe(false);
+    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
+    expect(
+      (screen.getByRole('checkbox', { name: 'Purchased Offer 2' }) as HTMLInputElement).checked,
+    ).toBe(true);
+    act(() => view.application.store.dispatch(authoredProjectRedoRequested()));
+    expect(
+      (screen.getByRole('checkbox', { name: 'Purchased Offer 2' }) as HTMLInputElement).checked,
+    ).toBe(false);
   });
 
   it('reuses the ranked pointer language for Room Action peers and keeps unranked actions below a boundary', async () => {
@@ -2182,23 +2192,11 @@ describe('OccurrenceWorkbench', () => {
       'F',
       occurrenceById(occurrenceId),
     );
+    await view.user.click(screen.getByRole('checkbox', { name: 'Purchased Offer 2' }));
+    await view.user.click(screen.getByRole('checkbox', { name: 'Purchased Offer 3' }));
     openRoomTab('Room Actions');
     const actions = screen.getByRole('region', { name: 'Room Actions' });
-    const insertAction = async (label: string) => {
-      const row = within(actions).getByText(label).closest('li');
-      if (row === null) throw new Error(`${label} row is missing`);
-      const select = within(row).getByRole('combobox', { name: `Insert ${label}` });
-      const option = Array.from((select as HTMLSelectElement).options).find(
-        (candidate) => candidate.value !== '' && !candidate.disabled,
-      );
-      if (option === undefined) throw new Error(`${label} has no legal insertion`);
-      await view.user.selectOptions(select, option.value);
-    };
-    await insertAction('Buy Heal');
-    await insertAction('Buy Max Magick');
-
-    const repairs = within(actions).getByRole('region', { name: 'Room action repairs' });
-    expect(within(repairs).getByText('Buy Boon · Zeus')).toBeTruthy();
+    expect(within(actions).queryByRole('region', { name: 'Room action repairs' })).toBeNull();
     const board = within(actions).getByRole('list', { name: 'Ranked room action order' });
     const major = within(actions).getByText('Buy Heal').closest<HTMLElement>('li');
     const minor = within(actions).getByText('Buy Max Magick').closest<HTMLElement>('li');
@@ -2259,6 +2257,40 @@ describe('OccurrenceWorkbench', () => {
       ]),
     );
     expect(document.querySelector('.hub-roster-drag-preview')).toBeNull();
+  });
+
+  it('repairs a retained Shop purchase after its occurrence is no longer a Shop', async () => {
+    const entered = enteredShopProject();
+    const offer = createShopOfferAddress(goldenFBiome, entered.shopId, 'MajorNonBoon');
+    let project = applyProjectCommand(entered.project, catalog, {
+      kind: 'ReplaceShopPurchaseParticipation',
+      offer,
+      purchased: true,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceOccurrenceRoom',
+      occurrence: createOccurrenceAddress(goldenFBiome, entered.shopId),
+      gameName: 'F_Combat04',
+    });
+    const view = renderOccurrenceWorkbench(
+      project,
+      'Underworld',
+      'F',
+      occurrenceById(entered.shopId),
+    );
+    openRoomTab('Room Actions');
+    const repairs = screen.getByRole('region', { name: 'Room action repairs' });
+    expect(within(repairs).getByText('Buy MajorNonBoon')).toBeTruthy();
+    expect(within(repairs).queryByRole('button', { name: 'Remove' })).toBeNull();
+    await view.user.click(within(repairs).getByRole('button', { name: 'Unmark Purchased' }));
+    expect(
+      occurrenceRoomActionOrder(
+        view.application.store.getState().projectWorkspace.history.present,
+        'Underworld',
+        'F',
+        entered.shopId,
+      ),
+    ).toEqual([]);
   });
 
   it('renders an unpicked Shop as dormant without inventory controls', () => {

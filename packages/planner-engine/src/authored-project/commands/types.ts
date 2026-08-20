@@ -202,6 +202,12 @@ export type RoomActionCommand =
       readonly kind: 'MoveRoomAction';
       readonly action: RoomActionAddress;
       readonly toIndex: number;
+    }
+  | {
+      /** Replaces membership of one declaration-owned initial Shop purchase. */
+      readonly kind: 'ReplaceShopPurchaseParticipation';
+      readonly offer: ShopOfferAddress;
+      readonly purchased: boolean;
     };
 
 /**

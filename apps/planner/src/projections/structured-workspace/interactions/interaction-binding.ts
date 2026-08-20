@@ -91,6 +91,7 @@ import type {
   WorkspaceKeepsakeEquipResultInteraction,
   WorkspaceTraitOfferInteraction,
   WorkspaceShopDeathDefianceConditionInteraction,
+  WorkspaceShopPurchaseParticipationInteraction,
   WorkspaceRoomInteraction,
   WorkspaceRoomPickerControl,
   WorkspaceStartInteraction,
@@ -320,6 +321,10 @@ interface WorkspaceOccurrenceLocalInteractionCatalog {
     string,
     WorkspaceShopDeathDefianceConditionInteraction
   >;
+  readonly shopPurchaseParticipations: ReadonlyMap<
+    string,
+    WorkspaceShopPurchaseParticipationInteraction
+  >;
   readonly localVisitOrders: ReadonlyMap<string, WorkspaceLocalVisitOrderInteraction>;
   readonly localVisitGenerations: ReadonlyMap<string, WorkspaceLocalVisitGenerationInteraction>;
   readonly zagreusSpawns: ReadonlyMap<string, WorkspaceZagreusSpawnInteraction>;
@@ -346,6 +351,10 @@ function bindOccurrenceLocalInteractions(
   const shopDeathDefianceConditions = new Map<
     string,
     WorkspaceShopDeathDefianceConditionInteraction
+  >();
+  const shopPurchaseParticipations = new Map<
+    string,
+    WorkspaceShopPurchaseParticipationInteraction
   >();
   const localVisitOrders = new Map<string, WorkspaceLocalVisitOrderInteraction>();
   const localVisitGenerations = new Map<string, WorkspaceLocalVisitGenerationInteraction>();
@@ -549,6 +558,31 @@ function bindOccurrenceLocalInteractions(
         );
         break;
       }
+      case 'shopPurchaseParticipation': {
+        const key = semanticAddressKey(requirement.owner);
+        if (shopPurchaseParticipations.has(key)) {
+          throw new StructuredWorkspaceProjectionContractError(
+            `${key} has multiple bound Shop purchase-participation interactions`,
+          );
+        }
+        shopPurchaseParticipations.set(
+          key,
+          Object.freeze({
+            intentFor: (purchased: boolean) =>
+              Object.freeze({
+                command: Object.freeze({
+                  kind: 'ReplaceShopPurchaseParticipation' as const,
+                  offer: requirement.owner,
+                  purchased,
+                }),
+              }),
+            key,
+            owner: requirement.owner,
+            purchased: requirement.purchased,
+          }),
+        );
+        break;
+      }
       case 'localVisits': {
         const generationValues = Object.freeze(
           requirement.generationChoices.map((choice) => choice.value),
@@ -705,6 +739,7 @@ function bindOccurrenceLocalInteractions(
     rewardWheelStores,
     shipCombatPhaseCounts,
     shopDeathDefianceConditions,
+    shopPurchaseParticipations,
     localVisitOrders,
     localVisitGenerations,
     zagreusSpawns,
@@ -1463,6 +1498,7 @@ export function bindWorkspaceInteractions(
     rewardWheelStores,
     shipCombatPhaseCounts,
     shopDeathDefianceConditions,
+    shopPurchaseParticipations,
     localVisitOrders,
     localVisitGenerations,
     zagreusSpawns,
@@ -2632,6 +2668,7 @@ export function bindWorkspaceInteractions(
     rooms,
     shipCombatPhaseCounts,
     shopDeathDefianceConditions,
+    shopPurchaseParticipations,
     localVisitOrders,
     localVisitGenerations,
     zagreusContracts,

@@ -270,19 +270,26 @@ function wheelContributions(room: RoomActionContributionRoom): readonly RoomActi
   );
 }
 
-function shopContributions(room: RoomActionContributionRoom): readonly RoomActionContribution[] {
+function shopContributions(
+  room: RoomActionContributionRoom,
+  activeKeys: ReadonlySet<string>,
+): readonly RoomActionContribution[] {
   if (room.entryState?.kind !== 'shop') return frozen([]);
   return frozen(
-    [...room.entryState.offers, ...room.entryState.unresolvedOffers].map((offer) => {
+    [...room.entryState.offers, ...room.entryState.unresolvedOffers].flatMap((offer) => {
       const reference = frozen({ kind: 'interactShopOffer' as const, offerKey: offer.offerKey });
-      return contribution(
-        room,
-        reference,
-        'optional',
-        frozen({ kind: 'postOutgoing' }),
-        [],
-        offer.offerOrigin,
-      );
+      return activeKeys.has(roomActionKey(reference))
+        ? [
+            contribution(
+              room,
+              reference,
+              'optional',
+              frozen({ kind: 'postOutgoing' }),
+              [],
+              offer.offerOrigin,
+            ),
+          ]
+        : [];
     }),
   );
 }
@@ -407,7 +414,7 @@ export function roomActionContributions(options: {
     ...incomingRewardContributions(catalog, room),
     ...fieldsContributions(room),
     ...wheelContributions(room),
-    ...shopContributions(room),
+    ...shopContributions(room, authoritativeKeys),
     ...acquisitionEntryContributions(catalog, room, authoritativeKeys),
     ...encounterContributions(catalog, declaration, room),
     ...checkpoints,
@@ -677,6 +684,7 @@ export function assembleRoomActionRoster(options: {
   const authoredKeys = new Set(options.order.map(roomActionKey));
   for (const row of rows) {
     if (row.stale) {
+      if (row.reference.kind === 'interactShopOffer') continue;
       const fromIndex = options.order.findIndex(
         (reference) => roomActionKey(reference) === row.key,
       );
@@ -692,6 +700,7 @@ export function assembleRoomActionRoster(options: {
       continue;
     }
     if (row.rank !== null && row.participation === 'optional') {
+      if (row.reference.kind === 'interactShopOffer') continue;
       const fromIndex = row.rank - 1;
       proposals.push(
         frozen({

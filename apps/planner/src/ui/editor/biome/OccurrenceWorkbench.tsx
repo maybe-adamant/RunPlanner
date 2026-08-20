@@ -594,6 +594,22 @@ function ShopWorkbench({
                     <div className="owner-markers">
                       <span>{offer.label}</span>
                       <SemanticOwnerMarker address={offer.rewardControl.marker.address} />
+                      <label className="purchase-control">
+                        <input
+                          aria-label={`Purchased ${offer.label}`}
+                          checked={offer.participation.purchased}
+                          onChange={(event) =>
+                            executeIntent(
+                              requireWorkspaceInteraction(
+                                interactions.shopPurchaseParticipations,
+                                offer.participation.interactionKey,
+                              ).intentFor(event.target.checked),
+                            )
+                          }
+                          type="checkbox"
+                        />
+                        Purchased
+                      </label>
                     </div>
                   </th>
                 </tr>
@@ -1051,6 +1067,22 @@ function RoomActionsWorkbench({
                     Remove
                   </button>
                 )}
+                {row.stale && row.shopParticipation !== undefined ? (
+                  <button
+                    className="quiet-action action-compact"
+                    onClick={() =>
+                      executeIntent(
+                        requireWorkspaceInteraction(
+                          interactions.shopPurchaseParticipations,
+                          row.shopParticipation!.interactionKey,
+                        ).intentFor(false),
+                      )
+                    }
+                    type="button"
+                  >
+                    Unmark Purchased
+                  </button>
+                ) : null}
               </>
             )}
           </div>
