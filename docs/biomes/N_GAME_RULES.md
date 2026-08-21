@@ -53,7 +53,7 @@ The implemented model is:
 fixed N_Opening01
   -> width-one normal decision at biome depth 1
   -> selected N_PreHub01 occurrence and its RunProgress reward
-  -> terminal Hub takeover envelope at biome depth 2
+  -> terminal Hub decision-entry envelope at biome depth 2
   -> source-bearing persistent HubDecision
 ```
 
@@ -63,12 +63,12 @@ only through that N entry declaration; other `PreHub`, Hub-slot, side-room, or
 N room declarations do not become ordinary targets.
 
 After PreHub lifecycle advances the cache to depth 2, its source owns one
-zero-target terminal envelope. That envelope is not another ordinary batch. It
-admits only the required Hub takeover, admits no ordinary target or takeover
-Preboss, and is atomically replaced by a `HubDecision` carrying the exact
-PreHub occurrence source. The Hub's semantic key continues to own its one
-derived room, persistent board, open slots, visits, side rooms, restores, and
-reward lookup.
+zero-target terminal envelope. That envelope is not another ordinary batch. Its
+generic Door 1 room picker admits only the required Hub candidate, admits no
+ordinary target or takeover Preboss, and atomically replaces the envelope with
+a `HubDecision` carrying the exact PreHub occurrence source. The Hub's
+semantic key continues to own its one derived room, persistent board, open
+slots, visits, side rooms, restores, and reward lookup.
 
 This normalization intentionally replaces the literal linked-room mechanism
 with planner-observable depth, candidate, source, and lifecycle facts.
@@ -98,9 +98,9 @@ or make `N_PreBoss01` an occurrence-sourced candidate.
 - `N_Opening01` is the fixed authored start. Its width-one normal decision owns
   the stable `prehub` exit and the selected `N_PreHub01` occurrence.
 - The PreHub occurrence owns one exact zero-target terminal envelope. The
-  required Hub action atomically replaces it with the persistent Hub decision
-  identified by the semantic key `hub`; removing the Hub restores the exact
-  envelope.
+  required Hub candidate in the generic Door 1 room picker atomically replaces
+  it with the persistent Hub decision identified by the semantic key `hub`;
+  removing the Hub restores the exact envelope.
 - The Hub decision records the PreHub occurrence as its source and owns its
   open slot membership and ordered visit list; it does not own room-local
   target state.

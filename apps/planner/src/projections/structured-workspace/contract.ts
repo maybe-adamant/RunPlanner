@@ -714,7 +714,8 @@ type WorkspaceDecisionEntryRoomCommandIntent = WorkspaceCommandIntent<
         | 'CreateTarget'
         | 'ReplaceWithTakeoverBatch'
         | 'InitializeExitDecision'
-        | 'CreateTakeoverBatch';
+        | 'CreateTakeoverBatch'
+        | 'ReplaceWithHubDecision';
     }
   >
 >;
@@ -833,23 +834,6 @@ export type WorkspaceTakeoverBatchInteraction =
 
 type WorkspaceTakeoverCommandIntent = WorkspaceCommandIntent<TakeoverBatchCommand>;
 
-/**
- * The bounded N terminal preserves its empty authored decision until this
- * single engine-evaluated interaction replaces it with the persistent Hub.
- * Its candidate result controls affordance state, never whether the control is
- * projected at all.
- */
-export interface WorkspaceHubTakeoverInteraction {
-  readonly hub: HubDecisionAddress;
-  readonly intent: () => WorkspaceCommandIntent<
-    Extract<ProjectCommand, { readonly kind: 'ReplaceWithHubDecision' }>
-  >;
-  readonly key: string;
-  readonly label: string;
-  readonly load: () => CandidateOptionProjection<ExitDecisionAddress>;
-  readonly owner: ExitDecisionAddress;
-}
-
 export interface WorkspaceInteractionCatalog {
   readonly naturalChaosExits: ReadonlyMap<string, WorkspaceNaturalChaosExitInteraction>;
   readonly naturalChaosSpawns: ReadonlyMap<string, WorkspaceNaturalChaosSpawnInteraction>;
@@ -862,7 +846,6 @@ export interface WorkspaceInteractionCatalog {
   readonly exitSelections: ReadonlyMap<string, WorkspaceExitSelectionInteraction>;
   readonly fieldsCageOutcomes: ReadonlyMap<string, WorkspaceFieldsCageOutcomeInteraction>;
   readonly roomActions: ReadonlyMap<string, WorkspaceRoomActionInteraction>;
-  readonly hubTakeovers: ReadonlyMap<string, WorkspaceHubTakeoverInteraction>;
   readonly hubSlots: ReadonlyMap<string, WorkspaceHubSlotInteraction>;
   readonly hubVisitOrders: ReadonlyMap<string, WorkspaceHubVisitOrderInteraction>;
   readonly rewards: ReadonlyMap<string, WorkspaceRewardInteraction>;
@@ -1034,6 +1017,11 @@ export type WorkspaceRoomPickerControl =
        * beyond a terminal or staged progression bound.
        */
       readonly ordinaryTargetGameNames: readonly string[];
+      /** The declaration-owned terminal Hub candidate, when this is the bounded N frontier. */
+      readonly hub?: {
+        readonly decision: import('@run-planner/engine/authored-project').HubDecisionAddress;
+        readonly gameName: string;
+      };
       readonly takeoverGameNames: readonly string[];
     }
   | {
@@ -1626,12 +1614,6 @@ export interface WorkspaceEffectiveRewardStore {
   readonly storeKey: string;
 }
 
-/** The declared Hub continuation is owned by a terminal batch without a separate Hub node. */
-export interface WorkspaceHubTakeoverControl {
-  readonly interactionKey: string;
-  readonly marker: WorkspaceMarker;
-}
-
 interface WorkspaceBatchNodeBase {
   readonly batchState: CanonicalBatch['batchState'] | AuthoredBatchState;
   /** Present only when a forced room changes an evaluated authored base store. */
@@ -1641,8 +1623,6 @@ interface WorkspaceBatchNodeBase {
   readonly naturalChaos?: WorkspaceNaturalChaosExitControl;
   readonly zagreusContract?: WorkspaceZagreusContractControl;
   readonly fieldsCageOutcome?: WorkspaceMarker;
-  /** Present only for the declared exact terminal Hub envelope. */
-  readonly hubTakeover?: WorkspaceHubTakeoverControl;
   readonly key: string;
   readonly marker: WorkspaceMarker;
   readonly missingTargets: readonly WorkspaceMissingPhysicalTarget[];

@@ -143,7 +143,6 @@ function markersForNode(node: WorkspaceNode): readonly WorkspaceMarker[] {
     case 'mixedBatch':
     case 'takeoverBatch':
       appendMarker(markers, node.selection);
-      appendMarker(markers, node.hubTakeover?.marker);
       appendMarker(markers, node.zagreusContract?.marker);
       appendMarker(markers, node.naturalChaos?.marker);
       if (node.rewardStore !== undefined) appendMarker(markers, node.rewardStore);

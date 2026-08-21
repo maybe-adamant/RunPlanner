@@ -114,6 +114,7 @@ export type TopologyCommand =
       readonly edit:
         | { readonly kind: 'rewardStore'; readonly storeKey: string }
         | { readonly kind: 'fieldsCageOutcome'; readonly cageOutcome: 'min' | 'max' }
+        | { readonly kind: 'hub'; readonly hub: HubDecisionAddress }
         | {
             readonly kind: 'target';
             readonly target: TargetAddress;

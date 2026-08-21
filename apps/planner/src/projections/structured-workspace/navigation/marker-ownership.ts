@@ -141,7 +141,6 @@ export function workspaceDecisionOwnedMarkers(
   return Object.freeze([
     node.marker,
     node.selection,
-    ...(node.hubTakeover === undefined ? [] : [node.hubTakeover.marker]),
     ...(node.rewardStore === undefined ? [] : [node.rewardStore]),
     ...(node.zagreusContract === undefined ? [] : [node.zagreusContract.marker]),
     ...(node.naturalChaos === undefined ? [] : [node.naturalChaos.marker]),

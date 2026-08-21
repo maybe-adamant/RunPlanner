@@ -7,7 +7,6 @@ import {
   workspaceInteractionKey,
   type WorkspaceAuthoringFrontier,
   type WorkspaceBatchRepairIntent,
-  type WorkspaceHubTakeoverInteraction,
   type WorkspaceInteractionCatalog,
   type WorkspaceMarker,
   type WorkspaceMissingPhysicalTarget,
@@ -27,7 +26,6 @@ import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
 import { SemanticOwnerMarker } from '@planner/ui/feedback/EvaluationFeedback';
-import { candidateSupport } from '@planner/projections/candidateProjection';
 import { CandidateSelect } from './CandidateSelect';
 import { AnomalyIdentityControls, NaturalChaosMapWorkbench } from './OccurrenceWorkbench';
 import { RoomSelector } from './RoomSelector';
@@ -438,54 +436,6 @@ function TakeoverAction({
   }
 }
 
-/**
- * The terminal Hub control remains projected for every exact authored
- * envelope. Lazy candidate evidence affects only its affordance, while the
- * complete replacement command and post-publication focus remain bound by the
- * workspace interaction.
- */
-function HubTakeoverAction({
-  interaction,
-}: {
-  readonly interaction: WorkspaceHubTakeoverInteraction;
-}) {
-  const executeIntent = useCommandIntent();
-  const candidates = useWorkspaceInteraction(interaction);
-  const candidate = candidates.result;
-  const support = candidateSupport(candidate);
-  const disabled = candidate !== undefined && support !== 'forced' && support !== 'possible';
-  const activate = (): void => {
-    const loaded = candidates.result ?? candidates.activate();
-    const loadedSupport = candidateSupport(loaded);
-    if (loadedSupport !== 'forced' && loadedSupport !== 'possible') return;
-    executeIntent(interaction.intent());
-  };
-  return (
-    <section
-      className="takeover-action hub-takeover-action"
-      data-candidate-support={support}
-      data-presentation="hubTakeover"
-    >
-      <div className="owner-markers">
-        <h4>Continue to Hub</h4>
-        <SemanticOwnerMarker address={interaction.hub} />
-      </div>
-      <p className="fixed-room-state">The next room is fixed by this route.</p>
-      <button
-        aria-busy={candidates.pending || undefined}
-        className="primary-action"
-        disabled={disabled}
-        onClick={activate}
-        onFocus={candidates.activate}
-        onPointerDown={candidates.activate}
-        type="button"
-      >
-        {interaction.label}
-      </button>
-    </section>
-  );
-}
-
 function SelectedContinuationAction({ node }: { readonly node: BatchNode }) {
   const dispatch = useAppDispatch();
   const continuation = node.selectedContinuation;
@@ -607,10 +557,6 @@ export function BatchWorkbench({
     node.missingTargets.length === 0
       ? undefined
       : projectedTakeover;
-  const hubTakeover =
-    node.hubTakeover === undefined
-      ? undefined
-      : requireWorkspaceInteraction(interactions.hubTakeovers, node.hubTakeover.interactionKey);
   const removal =
     node.persistence === 'authored'
       ? requireWorkspaceInteraction(
@@ -637,74 +583,53 @@ export function BatchWorkbench({
       <header className="decision-heading">
         <div>
           <p className="card-kicker">{label}</p>
-          <h3>
-            {hubTakeover !== undefined
-              ? 'Continue to Hub'
-              : node.targets.length === 0
-                ? 'Configure room offers'
-                : 'Choose a room and reward'}
-          </h3>
+          <h3>{node.targets.length === 0 ? 'Choose a room' : 'Choose a room and reward'}</h3>
         </div>
         <div className="owner-markers">
           <SemanticOwnerMarker address={node.owner} />
-          {hubTakeover === undefined ? (
-            <SemanticOwnerMarker address={exitSelectionAddress(node.selection)} />
-          ) : null}
+          <SemanticOwnerMarker address={exitSelectionAddress(node.selection)} />
           {node.runState === undefined ? null : <RunStateLauncher launcher={node.runState} />}
         </div>
       </header>
       <BatchSettings interactions={interactions} node={node} />
-      {hubTakeover === undefined ? (
-        <>
-          <div
-            aria-label={`${label} room offers`}
-            className="exit-list"
-            role={exitSelection === undefined ? 'group' : 'radiogroup'}
-          >
-            {node.targets.map((target) => (
-              <TargetRow
-                interactions={interactions}
-                key={target.exitKey}
-                node={node}
-                target={target}
-              />
-            ))}
-            {node.kind === 'takeoverBatch' ? (
-              node.missingTargets.length === 0 ? null : (
-                <p className="fixed-room-state">Fix Preboss doors to restore the missing doors.</p>
-              )
-            ) : (
-              node.missingTargets.map((target) => (
-                <MissingTargetRow
-                  interactions={interactions}
-                  key={target.exitKey}
-                  target={target}
-                />
-              ))
-            )}
-            {node.zagreusContract === undefined ? null : (
-              <ZagreusContractExit
-                control={node.zagreusContract}
-                interactions={interactions}
-                selectionName={`selection-${node.key}`}
-              />
-            )}
-            {node.naturalChaos === undefined ? null : (
-              <NaturalChaosExit
-                control={node.naturalChaos}
-                interactions={interactions}
-                selectionName={`selection-${node.key}`}
-              />
-            )}
-          </div>
-        </>
-      ) : (
-        <HubTakeoverAction interaction={hubTakeover} />
-      )}
+      <div
+        aria-label={`${label} room offers`}
+        className="exit-list"
+        role={exitSelection === undefined ? 'group' : 'radiogroup'}
+      >
+        {node.targets.map((target) => (
+          <TargetRow interactions={interactions} key={target.exitKey} node={node} target={target} />
+        ))}
+        {node.kind === 'takeoverBatch' ? (
+          node.missingTargets.length === 0 ? null : (
+            <p className="fixed-room-state">Fix Preboss doors to restore the missing doors.</p>
+          )
+        ) : (
+          node.missingTargets.map((target) => (
+            <MissingTargetRow interactions={interactions} key={target.exitKey} target={target} />
+          ))
+        )}
+        {node.zagreusContract === undefined ? null : (
+          <ZagreusContractExit
+            control={node.zagreusContract}
+            interactions={interactions}
+            selectionName={`selection-${node.key}`}
+          />
+        )}
+        {node.naturalChaos === undefined ? null : (
+          <NaturalChaosExit
+            control={node.naturalChaos}
+            interactions={interactions}
+            selectionName={`selection-${node.key}`}
+          />
+        )}
+      </div>
       {takeover === undefined ? null : <TakeoverAction interaction={takeover} />}
       <div className="workbench-action-row">
         {node.repairIntent === undefined ? null : <ExactRepairAction intent={node.repairIntent} />}
-        {hubTakeover === undefined ? <SelectedContinuationAction node={node} /> : null}
+        {node.selectedContinuation === undefined ? null : (
+          <SelectedContinuationAction node={node} />
+        )}
         {removal === undefined ? null : (
           <TopologyRemovalAction interaction={removal} label="Remove these doors" />
         )}

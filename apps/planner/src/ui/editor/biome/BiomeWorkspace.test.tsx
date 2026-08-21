@@ -783,7 +783,7 @@ describe('BiomeWorkspace', () => {
     const inspector = screen.getByRole('complementary', { name: 'Details' });
     expect(inspector.querySelector('.biome-occurrence-workbench')).not.toBeNull();
     await view.user.click(within(inspector).getByRole('tab', { name: 'Room Doors' }));
-    expect(within(inspector).getByText('Configure room offers')).toBeTruthy();
+    expect(within(inspector).getByText('Choose a room')).toBeTruthy();
     expect(within(inspector).queryByText('Continue from this room')).toBeNull();
     expect(within(inspector).queryByRole('button', { name: 'Remove these doors' })).toBeNull();
     const before = view.application.store.getState().projectWorkspace.history.past.length;
@@ -835,7 +835,7 @@ describe('BiomeWorkspace', () => {
     );
     const restoredInspector = screen.getByRole('complementary', { name: 'Details' });
     await view.user.click(within(restoredInspector).getByRole('tab', { name: 'Room Doors' }));
-    expect(screen.getByText('Configure room offers')).toBeTruthy();
+    expect(screen.getByText('Choose a room')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Remove these doors' })).toBeNull();
   });
 
@@ -919,11 +919,9 @@ describe('BiomeWorkspace', () => {
     const view = renderWorkspace(terminalProject, 'Surface', 'N');
     act(() => view.application.store.dispatch(semanticOwnerFocused(terminalOwner)));
 
-    const action = await screen.findByRole('button', { name: 'Ephyra Hub' });
-    expect(screen.getAllByText('Continue to Hub')).toHaveLength(2);
-    expect(action.closest('.hub-takeover-action')?.getAttribute('data-candidate-support')).toBe(
-      'unavailable',
-    );
+    const picker = await screen.findByRole('button', { name: 'Door 1 room' });
+    await view.user.click(picker);
+    const action = await screen.findByText('Ephyra Hub');
     expect(
       workspaceBiome(view.application, 'Surface', 'N').nodes.some(
         (node) => node.kind === 'hubDecision',
@@ -948,16 +946,16 @@ describe('BiomeWorkspace', () => {
           node.kind === 'ordinaryBatch' &&
           semanticAddressKey(node.owner) === semanticAddressKey(terminalOwner),
       );
-      expect(restored?.kind === 'ordinaryBatch' ? restored.hubTakeover : undefined).toBeDefined();
+      expect(restored?.kind === 'ordinaryBatch' ? restored.targets : []).toHaveLength(0);
     });
     act(() => view.application.store.dispatch(semanticOwnerFocused(terminalOwner)));
-    expect(await screen.findByRole('button', { name: 'Ephyra Hub' })).toBeTruthy();
+    expect(await screen.findByRole('button', { name: 'Door 1 room' })).toBeTruthy();
 
     act(() => view.application.store.dispatch(authoredProjectRedoRequested()));
     await waitFor(() => expect(screen.getByRole('region', { name: 'Ephyra Hub' })).toBeTruthy());
   });
 
-  it('keeps the terminal Hub control visible when an invalid PreHub reward blocks evaluation', async () => {
+  it('keeps the terminal Hub candidate visible when an invalid PreHub reward blocks evaluation', async () => {
     const preHubReward = createIncomingRewardAddress(nBiome, nOccurrenceIds.preHub);
     const invalidPrefix = applyProjectCommand(loadSurfaceNEntryFrontierResolvedProject(), catalog, {
       kind: 'ReplaceIncomingReward',
@@ -983,19 +981,13 @@ describe('BiomeWorkspace', () => {
         origin: preHubReward,
       }),
     );
-    expect(terminal?.kind === 'ordinaryBatch' ? terminal.hubTakeover : undefined).toBeDefined();
+    expect(terminal?.kind === 'ordinaryBatch' ? terminal.targets : []).toHaveLength(0);
 
     act(() => view.application.store.dispatch(semanticOwnerFocused(terminalOwner)));
-    const action = (await screen.findByRole('button', { name: 'Ephyra Hub' })) as HTMLButtonElement;
-    await view.user.click(action);
-
-    await waitFor(() => {
-      expect(action.disabled).toBe(true);
-      expect(action.closest('.hub-takeover-action')?.getAttribute('data-candidate-support')).toBe(
-        'unavailable',
-      );
-    });
-    expect(screen.getByRole('button', { name: 'Ephyra Hub' })).toBe(action);
+    const picker = await screen.findByRole('button', { name: 'Door 1 room' });
+    await view.user.click(picker);
+    const action = await screen.findByText('Ephyra Hub');
+    expect(action.closest('[aria-disabled="true"]')).toBeTruthy();
     expect(
       workspaceBiome(view.application, 'Surface', 'N').nodes.some(
         (node) => node.kind === 'hubDecision',

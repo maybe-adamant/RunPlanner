@@ -4,6 +4,7 @@ import {
   createAllTogetherSetAddress,
   createBiomeAddress,
   createBatchRewardStoreAddress,
+  createAdditionalExitAddress,
   createCirceResolutionAddress,
   createEchoLastRunBoonAddress,
   createEchoLastRewardAddress,
@@ -91,6 +92,65 @@ const services = {
   rewardPicker: createRewardPickerProjection(catalog, contextualPicker),
   traitDomain: createTraitDomainProjection(catalog, contextualPicker),
 };
+
+function selectedNChaosFrontierProject(persistTerminalDecision = true): ProjectDocument {
+  const opening = createOccurrenceId('interaction-binding-n-chaos-opening');
+  const preHub = createOccurrenceId('interaction-binding-n-chaos-prehub');
+  const chaos = createOccurrenceId('interaction-binding-n-chaos-room');
+  let project = createProjectDocument(catalog, {
+    configuredBiomeCounts: { Surface: 1 },
+    projectId: 'interaction-binding-n-chaos-frontier',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateStart',
+    biome: nBiome,
+    occurrenceId: opening,
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: createIncomingRewardAddress(nBiome, opening),
+    value: {
+      rewardType: 'Boon',
+      payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+    },
+  });
+  project = authorLegalTraitOffers(project);
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateBatch',
+    decision: createExitDecisionAddress(nBiome, { kind: 'occurrence', occurrenceId: opening }),
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateTarget',
+    target: createTargetAddress(nBiome, { kind: 'occurrence', occurrenceId: opening }, 'prehub'),
+    occurrenceId: preHub,
+    gameName: 'N_PreHub01',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: createIncomingRewardAddress(nBiome, preHub),
+    value: {
+      rewardType: 'Boon',
+      payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+    },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'AddNaturalChaos',
+    additional: createAdditionalExitAddress(nBiome, opening, 'naturalChaos'),
+    occurrenceId: chaos,
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'SetExitSelection',
+    selection: createExitSelectionAddress(nBiome, { kind: 'occurrence', occurrenceId: opening }),
+    value: { kind: 'additional', additionalExitKey: 'naturalChaos' },
+  });
+  project = authorLegalTraitOffers(project);
+  return persistTerminalDecision
+    ? applyProjectCommand(project, catalog, {
+        kind: 'CreateBatch',
+        decision: createExitDecisionAddress(nBiome, { kind: 'occurrence', occurrenceId: chaos }),
+      })
+    : project;
+}
 
 function enteredShopProject(): { readonly project: ProjectDocument; readonly shopId: string } {
   const biome = createBiomeAddress('Underworld', 'F');
@@ -266,7 +326,6 @@ function bind(
       batchInteractionRequirements: assembly.batchInteractionRequirements,
       catalog,
       hubInteractionRequirements: assembly.hubInteractionRequirements,
-      hubTakeoverInteractionRequirements: assembly.hubTakeoverInteractionRequirements,
       occurrenceInteractionRequirements: assembly.occurrenceInteractionRequirements,
       rewardControls: assembly.rewardControls,
       traitControls,
@@ -1179,21 +1238,26 @@ describe('structured workspace interaction binding', () => {
     });
   });
 
-  it('binds the terminal Hub takeover and completed handoff to exact commands', () => {
+  it('binds the terminal Hub as the generic Door 1 choice and preserves completed handoff', () => {
     const boardProject = loadSurfaceNEntryFrontierResolvedProject();
     const hub = createHubDecisionAddress(nBiome, 'hub');
     const terminalOwner = createExitDecisionAddress(nBiome, {
       kind: 'occurrence',
       occurrenceId: nOccurrenceIds.preHub,
     });
-    const takeover = bind(boardProject, 'Surface', 'N').interactions.hubTakeovers.get(
-      semanticAddressKey(terminalOwner),
+    const terminalTarget = createTargetAddress(nBiome, terminalOwner.source, 'exit1');
+    const roomPicker = bind(boardProject, 'Surface', 'N').interactions.rooms.get(
+      semanticAddressKey(terminalTarget),
     );
-    if (takeover === undefined) throw new Error('terminal Hub takeover interaction is missing');
-    expect(takeover.owner).toEqual(terminalOwner);
-    expect(takeover.hub).toEqual(hub);
-    expect(takeover.load().evaluation).toMatchObject({ kind: 'hubTerminalTakeover' });
-    expect(takeover.intent()).toEqual({
+    if (roomPicker?.kind !== 'decisionEntryRoom') {
+      throw new Error('terminal Hub Door 1 room interaction is missing');
+    }
+    const hubChoice = roomPicker
+      .load()
+      .sections.flatMap((section) => section.items)
+      .find((item) => item.value.gameName === 'N_Hub');
+    expect(hubChoice).toMatchObject({ disabled: false, state: 'forced' });
+    expect(roomPicker.intentFor('N_Hub')).toEqual({
       command: { decision: terminalOwner, hub, kind: 'ReplaceWithHubDecision' },
       focus: { owner: hub, timing: 'after' },
     });
@@ -1223,6 +1287,94 @@ describe('structured workspace interaction binding', () => {
       focus: { owner: handoffOwner, timing: 'before' },
     });
     expect(allocated).toHaveLength(1);
+  });
+
+  it('binds selected N natural Chaos to the same sole Hub Door 1 choice', () => {
+    const project = selectedNChaosFrontierProject();
+    const chaos = createOccurrenceId('interaction-binding-n-chaos-room');
+    const terminalOwner = createExitDecisionAddress(nBiome, {
+      kind: 'occurrence',
+      occurrenceId: chaos,
+    });
+    const terminalTarget = createTargetAddress(nBiome, terminalOwner.source, 'exit1');
+    const roomPicker = bind(project, 'Surface', 'N').interactions.rooms.get(
+      semanticAddressKey(terminalTarget),
+    );
+    if (roomPicker?.kind !== 'decisionEntryRoom') {
+      throw new Error('selected natural Chaos Hub Door 1 room interaction is missing');
+    }
+    const items = roomPicker.load().sections.flatMap((section) => section.items);
+    expect(items.map((item) => item.value.gameName)).toEqual(['N_Hub']);
+    expect(items[0]).toMatchObject({ disabled: false, state: 'forced' });
+    expect(roomPicker.intentFor('N_Hub')).toEqual({
+      command: {
+        decision: terminalOwner,
+        hub: createHubDecisionAddress(nBiome, 'hub'),
+        kind: 'ReplaceWithHubDecision',
+      },
+      focus: { owner: createHubDecisionAddress(nBiome, 'hub'), timing: 'after' },
+    });
+    const authored = applyProjectCommand(project, catalog, roomPicker.intentFor('N_Hub').command);
+    const topology = authored.routes
+      .find((route) => route.routeKey === 'Surface')
+      ?.biomes.find((biome) => biome.biomeKey === 'N')?.topology;
+    expect(topology?.decisions).toContainEqual(
+      expect.objectContaining({
+        kind: 'hub',
+        source: { kind: 'occurrence', occurrenceId: chaos },
+      }),
+    );
+    expect(
+      topology?.decisions.some(
+        (decision) =>
+          decision.kind === 'exit' &&
+          decision.source.kind === 'occurrence' &&
+          decision.source.occurrenceId === chaos,
+      ),
+    ).toBe(false);
+  });
+
+  it('binds an uncommitted selected N natural Chaos frontier to one atomic Hub command', () => {
+    const project = selectedNChaosFrontierProject(false);
+    const chaos = createOccurrenceId('interaction-binding-n-chaos-room');
+    const terminalOwner = createExitDecisionAddress(nBiome, {
+      kind: 'occurrence',
+      occurrenceId: chaos,
+    });
+    const bound = bind(project, 'Surface', 'N');
+    const roomPicker = bound.interactions.rooms.get(
+      semanticAddressKey(createTargetAddress(nBiome, terminalOwner.source, 'exit1')),
+    );
+    if (roomPicker?.kind !== 'decisionEntryRoom') {
+      throw new Error('uncommitted natural Chaos Hub Door 1 room interaction is missing');
+    }
+    const items = roomPicker.load().sections.flatMap((section) => section.items);
+    expect(items).toEqual([
+      expect.objectContaining({ value: expect.objectContaining({ gameName: 'N_Hub' }) }),
+    ]);
+    expect(items[0]).toMatchObject({ disabled: false, state: 'unassessed' });
+    const intent = roomPicker.intentFor('N_Hub');
+    expect(intent).toEqual({
+      command: {
+        decision: terminalOwner,
+        edit: {
+          hub: createHubDecisionAddress(nBiome, 'hub'),
+          kind: 'hub',
+        },
+        kind: 'InitializeExitDecision',
+      },
+      focus: { owner: createHubDecisionAddress(nBiome, 'hub'), timing: 'after' },
+    });
+    const authored = applyProjectCommand(project, catalog, intent.command);
+    const topology = authored.routes
+      .find((route) => route.routeKey === 'Surface')
+      ?.biomes.find((biome) => biome.biomeKey === 'N')?.topology;
+    expect(topology?.decisions).toContainEqual(
+      expect.objectContaining({
+        kind: 'hub',
+        source: { kind: 'occurrence', occurrenceId: chaos },
+      }),
+    );
   });
 
   it('lazily binds the fixed start to one complete command and after-focus intent', () => {

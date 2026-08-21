@@ -5,6 +5,8 @@ import {
   exitDecisionForSource,
   hubTerminalTakeoverForSource,
   isExactTerminalTakeoverEnvelope,
+  ordinaryProgressionBatchLimit,
+  selectedOrdinaryBatchIndex,
 } from '../../authored-project/topology/query';
 import {
   hubTerminalTakeoverCandidateSupportAtFrontier,
@@ -24,8 +26,10 @@ import {
 
 /**
  * The bounded N entry has one terminal outcome, so callers ask for the
- * source-owned Hub result rather than proposing arbitrary room names. This
- * keeps N_PreBoss in the completed-Hub handoff domain where it belongs.
+ * source-owned Hub result rather than proposing arbitrary room names. The
+ * query also serves the uncommitted Door 1 frontier: the absence of a persisted
+ * decision at that exact selected-spine terminal is the state before the first
+ * atomic command creates and replaces its empty envelope.
  */
 export interface HubTerminalTakeoverCandidateQuery {
   readonly kind: 'hubTerminalTakeover';
@@ -65,9 +69,18 @@ function assertHubTerminalTakeoverDomain(
     );
   }
   const decision = exitDecisionForSource(topology, query.source.source);
-  if (decision === undefined || !isExactTerminalTakeoverEnvelope(decision)) {
+  if (decision !== undefined && !isExactTerminalTakeoverEnvelope(decision)) {
     throw new CandidateEvaluationContractError(
       `${semanticAddressKey(query.source)} has no exact terminal Hub envelope`,
+    );
+  }
+  if (
+    decision === undefined &&
+    selectedOrdinaryBatchIndex(topology, query.source.source.occurrenceId) !==
+      ordinaryProgressionBatchLimit(layout)
+  ) {
+    throw new CandidateEvaluationContractError(
+      `${semanticAddressKey(query.source)} is not the uncommitted bounded Hub frontier`,
     );
   }
 }

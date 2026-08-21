@@ -2,7 +2,6 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createExitDecisionAddress,
-  createHubDecisionAddress,
   createOccurrenceId,
   createProjectDocument,
   semanticAddressKey,
@@ -78,25 +77,10 @@ describe('structured workspace topology interaction assembly', () => {
     expect(assembly.takeoverInteractionRequirements).toHaveLength(0);
   });
 
-  it('publishes the exact terminal Hub takeover from the persisted PreHub envelope', () => {
+  it('leaves terminal Hub selection to the generic Door 1 room picker', () => {
     const project = loadSurfaceNEntryFrontierProject();
-    const owner = createExitDecisionAddress(nBiome, {
-      kind: 'occurrence',
-      occurrenceId: nOccurrenceIds.preHub,
-    });
     const { assembly } = assemble(project, 'Surface', 'N');
-    const takeover = assembly.hubTakeoverInteractionRequirements.find(
-      (requirement) =>
-        requirement.kind === 'hubTakeover' &&
-        semanticAddressKey(requirement.owner) === semanticAddressKey(owner),
-    );
-
-    expect(takeover).toEqual({
-      gameName: 'N_Hub',
-      hub: createHubDecisionAddress(nBiome, 'hub'),
-      kind: 'hubTakeover',
-      owner,
-    });
+    expect(assembly.takeoverInteractionRequirements).toHaveLength(0);
   });
 
   it('preserves generated takeover repair packages alongside their authored physical exits', () => {

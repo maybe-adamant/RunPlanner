@@ -946,7 +946,11 @@ function decodeHubDecision(
       `unknown occurrence ${source.occurrenceId}`,
     );
   }
-  requireHostRoom(sourceOccurrence, catalog, layout.biomeKey);
+  // A Hub source is normally the biome-owned PreHub occurrence, but a selected
+  // natural-Chaos detour can occupy the same terminal spine position. The
+  // selected-spine validation below proves that exact ownership and rejects
+  // every other foreign-room source.
+  requireKnownRoom(sourceOccurrence, catalog);
   const rawTargets = expectArray(value.openTargets, `${raw.path}.openTargets`);
   if (rawTargets.length > hub.openCount.max)
     failProjectDocument(`${raw.path}.openTargets`, `exceeds ${hub.openCount.max} Hub slots`);
@@ -1389,6 +1393,18 @@ export function decodeBiomeTopology(
   const selectedSpine = Object.freeze({
     startOccurrenceId,
     decisions: Object.freeze([...decisions]),
+    occurrences: Object.freeze(
+      [...occurrences.values()].map((occurrence) =>
+        Object.freeze({
+          occurrenceId: occurrence.occurrenceId,
+          additionalExits: decodeAdditionalExits(
+            occurrence.additionalExits,
+            occurrences,
+            `${occurrence.path}.additionalExits`,
+          ),
+        }),
+      ),
+    ),
   });
   for (const occurrence of occurrences.values()) {
     const room = requireKnownRoom(occurrence, catalog);

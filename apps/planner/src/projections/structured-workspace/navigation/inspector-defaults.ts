@@ -84,7 +84,6 @@ function incompleteDecision(
         isDecisionNode(node) &&
         node.source.kind !== 'hubDecision' &&
         (node.topologyState === 'partial' ||
-          node.hubTakeover !== undefined ||
           node.missingTargets.length > 0 ||
           (node.targets.length > 0 && !node.targets.some((target) => target.selected))),
     )

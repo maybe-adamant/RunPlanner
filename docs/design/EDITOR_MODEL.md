@@ -25,9 +25,9 @@ repair, or silently delete them merely to keep the view visually legal.
 The batch-level projection follows the locked all-biome project contract.
 F/G/P author an ordinary batch Reward Pool, H authors its Fields outcome, I
 authors one biome-wide Clockwork limit without a base store, O may derive its
-outgoing store from a source wheel, and Q owns no ordinary base store. N
-first projects its bounded PreHub decision and terminal Hub action, then its
-fixed Hub board. All variants use the same semantic command and finding
+outgoing store from a source wheel, and Q owns no ordinary base store. N first
+projects its bounded PreHub decision with Hub as the sole Door 1 room choice,
+then its fixed Hub board. All variants use the same semantic command and finding
 ownership rules.
 
 ## Application Shell
