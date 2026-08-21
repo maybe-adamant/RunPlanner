@@ -638,7 +638,7 @@ language, but its center is not an ordinary decision spine. The
   each open room's reward editor; Hub Timeline for the exact dense authored
   visit prefix (through six positions), compact next-position target for every
   remaining visit owner, presentation-only unvisited tail, and read-only
-  reward context; and Hub Exit for the existing completed-Hub handoff;
+  reward context; and Hub Exit's fixed `Preboss` card for the existing completed-Hub handoff;
 - side-room generation and entry state under visited parents;
 - derived Hub returns and parent restores;
 - the fixed completed-Hub handoff to the width-one Preboss Shop and its derived

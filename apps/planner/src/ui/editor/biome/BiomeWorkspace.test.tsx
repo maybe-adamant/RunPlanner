@@ -1166,8 +1166,8 @@ describe('BiomeWorkspace', () => {
     expect(screen.getByRole('tab', { name: 'Hub Exit' }).getAttribute('aria-selected')).toBe(
       'true',
     );
-    expect(screen.getByText('Continue to Preboss')).toBeTruthy();
-    await view.user.click(screen.getByRole('button', { name: 'Preboss' }));
+    expect(screen.getByRole('article', { name: 'Preboss room offer' })).toBeTruthy();
+    await view.user.click(screen.getByRole('button', { name: 'Open next room' }));
 
     const nPlan = view.application.store
       .getState()

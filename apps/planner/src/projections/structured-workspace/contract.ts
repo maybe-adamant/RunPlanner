@@ -1726,6 +1726,24 @@ export interface WorkspaceHubDecisionNode {
   readonly openSlotCount: { readonly current: number; readonly min: number; readonly max: number };
   readonly owner: HubDecisionAddress;
   readonly requiredVisitCount: number;
+  /** The declaration-owned fixed exit and its exact authored readiness state. */
+  readonly completedExit:
+    | {
+        readonly kind: 'locked';
+        readonly marker: WorkspaceMarker;
+        readonly targetLabel: string;
+      }
+    | {
+        readonly kind: 'ready';
+        readonly marker: WorkspaceMarker;
+        readonly targetLabel: string;
+      }
+    | {
+        readonly kind: 'opened';
+        readonly marker: WorkspaceMarker;
+        readonly target: { readonly label: string; readonly marker: WorkspaceMarker };
+        readonly targetLabel: string;
+      };
   readonly slots: readonly WorkspaceHubSlot[];
   readonly visits: readonly WorkspaceHubVisit[];
   readonly runState?: WorkspaceRunStateLauncher;

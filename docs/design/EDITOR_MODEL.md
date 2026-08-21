@@ -114,8 +114,10 @@ without changing its model: Hub Overview renders the complete fixed-slot set
 and exclusively owns both open/closed participation and each open room's main
 reward editor; Hub Timeline renders the exact authored visit prefix, compact
 next-visit target, visit cutoff, presentation-only tail, and read-only reward
-context; Hub Exit contains the existing completed-Hub Preboss handoff. It may
-not expose arbitrary room replacement for a fixed slot or persist a second
+context; Hub Exit presents the declaration-owned fixed target as one custom
+`Preboss` card. It stays visibly locked until the existing completed-Hub
+handoff capability is available, then exposes one `Open next room` action—no
+candidate picker or arbitrary room replacement. It may not persist a second
 door-count value.
 
 The Timeline roster makes rank, identity, traversal state, and reordering
