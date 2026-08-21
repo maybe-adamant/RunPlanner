@@ -362,6 +362,8 @@ describe('BiomeWorkspace', () => {
     const entryReward = screen.getByRole('region', { name: 'Entry reward' });
     expect(within(entryReward).getByLabelText('Reward')).toBeTruthy();
     expect(within(entryReward).queryByLabelText('Start room')).toBeNull();
+    expect(within(entryReward).queryByRole('heading', { name: 'Entry reward' })).toBeNull();
+    expect(within(entryReward).queryByRole('button', { name: /Edit Trait/ })).toBeNull();
   });
 
   it('uses one concise player-facing name for the Hub rail stop', () => {
@@ -502,11 +504,11 @@ describe('BiomeWorkspace', () => {
 
     await view.user.click(railButtonForMarker(view.container, preHubDecision.marker.focusKey));
     expect(
-      within(inspector).getByRole('heading', {
-        level: 3,
-        name: 'Entering Pre-Hub · Incoming Reward: Boon · Ares',
-      }),
+      within(inspector).getByRole('heading', { level: 3, name: 'Entering Pre-Hub' }),
     ).toBeTruthy();
+    expect(
+      within(inspector).getByRole('region', { name: 'Incoming reward' }).textContent,
+    ).toContain('Boon · Ares');
     expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(
       preHub.room.marker.address,
     );
@@ -529,12 +531,10 @@ describe('BiomeWorkspace', () => {
       createOccurrenceAddress(nBiome, nOccurrenceId('combat02')),
     );
 
-    expect(
-      screen.getByRole('heading', {
-        level: 3,
-        name: 'Entering Combat 02 · Incoming Reward: Big Max Magick',
-      }),
-    ).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 3, name: 'Entering Combat 02' })).toBeTruthy();
+    expect(screen.getByRole('region', { name: 'Incoming reward' }).textContent).toContain(
+      'Big Max Magick',
+    );
     expect(screen.getByRole('heading', { name: 'Side rooms' })).toBeTruthy();
     expect(screen.getByText('Door 558353')).toBeTruthy();
     expect(screen.getByLabelText('Side Room 01 generation')).toBeTruthy();
@@ -563,16 +563,12 @@ describe('BiomeWorkspace', () => {
     expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(
       createOccurrenceAddress(nBiome, nLocalOccurrenceId('combat02', 'sideDoor1')),
     );
-    expect(
-      within(inspector).getByRole('heading', {
-        level: 3,
-        name: /^Entering .* · Incoming Reward:/,
-      }),
-    ).toBeTruthy();
+    expect(within(inspector).getByRole('heading', { level: 3, name: /^Entering / })).toBeTruthy();
+    expect(within(inspector).getByRole('region', { name: 'Incoming reward' })).toBeTruthy();
     expect(within(inspector).queryByRole('button', { name: 'Reward' })).toBeNull();
   });
 
-  it('summarizes the Hub door reward in the room heading without exposing another editor', async () => {
+  it('summarizes the Hub door reward in Overview without exposing another editor', async () => {
     const view = renderWorkspace(loadSurfaceNOPQProject(), 'Surface', 'N');
     await view.user.click(hubRailButton());
     await view.user.click(screen.getByRole('button', { name: /Visit 3 · Combat 02/ }));
@@ -580,11 +576,11 @@ describe('BiomeWorkspace', () => {
     const inspector = screen.getByRole('complementary', { name: 'Details' });
     const historyBefore = view.application.store.getState().projectWorkspace.history.past.length;
     expect(
-      within(inspector).getByRole('heading', {
-        level: 3,
-        name: 'Entering Combat 02 · Incoming Reward: Big Max Magick',
-      }),
+      within(inspector).getByRole('heading', { level: 3, name: 'Entering Combat 02' }),
     ).toBeTruthy();
+    expect(
+      within(inspector).getByRole('region', { name: 'Incoming reward' }).textContent,
+    ).toContain('Big Max Magick');
     expect(within(inspector).queryByRole('region', { name: 'Hub reward' })).toBeNull();
     expect(within(inspector).queryByRole('button', { name: 'Edit Hub reward' })).toBeNull();
     expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(

@@ -394,15 +394,19 @@ describe('OccurrenceWorkbench', () => {
       'true',
     );
     expect(screen.getByRole('tab', { name: 'Room Doors' })).toBeTruthy();
+    const overviewRunState = screen.getByRole('button', { name: 'Run State' });
+    const entryOwner = overviewRunState.getAttribute('data-run-state-launcher');
+    expect(overviewRunState.closest('.room-tab-utility-bar')).not.toBeNull();
     openRoomTab('Room Actions');
     const standardActions = screen.getByRole('region', { name: 'Room Actions' });
     const standardStart = within(standardActions).getByLabelText('Start encounter');
     const standardEncounter = within(standardActions).getByLabelText('Encounter encounter phase');
     const standardEnd = within(standardActions).getByLabelText('End encounter');
     const roomEntered = within(standardActions).getByLabelText('Room entered');
-    const entryRunState = within(standardActions).getByRole('button', { name: 'Run State' });
-    expectBefore(roomEntered, entryRunState);
-    expectBefore(entryRunState, standardStart);
+    const entryRunState = screen.getByRole('button', { name: 'Run State' });
+    expect(entryRunState.getAttribute('data-run-state-launcher')).toBe(entryOwner);
+    expect(entryRunState.closest('.room-tab-utility-bar')).not.toBeNull();
+    expectBefore(entryRunState, roomEntered);
     expectBefore(standardStart, standardEncounter);
     expectBefore(standardEncounter, standardEnd);
     openRoomTab('Room Doors');
@@ -411,34 +415,33 @@ describe('OccurrenceWorkbench', () => {
         name: 'Run State',
       }),
     ).toBeTruthy();
+    expect(
+      screen.getByRole('button', { name: 'Run State' }).closest('.room-tab-utility-bar'),
+    ).not.toBeNull();
   });
 
-  it('places Ship Run State only at phase starts and the final pre-exit seam', () => {
+  it('places Ship Run State in one consistent tab utility slot', () => {
     renderStaticOccurrenceWorkbench(
       immutableRepresentativeNOPQProject,
       'Surface',
       'O',
       occurrenceById(oOccurrenceIds.combat04),
     );
-    expect(screen.queryByRole('button', { name: 'Run State' })).toBeNull();
+    const overview = screen.getByRole('button', { name: 'Run State' });
+    const introOwner = overview.getAttribute('data-run-state-launcher');
+    expect(overview.closest('.room-tab-utility-bar')).not.toBeNull();
     openRoomTab('Intro Actions');
-    expect(
-      within(screen.getByRole('region', { name: 'Room Actions' })).getByRole('button', {
-        name: 'Run State',
-      }),
-    ).toBeTruthy();
+    const intro = screen.getByRole('button', { name: 'Run State' });
+    expect(intro.getAttribute('data-run-state-launcher')).toBe(introOwner);
+    expect(intro.closest('.room-tab-utility-bar')).not.toBeNull();
     openRoomTab('Combat 1 Actions');
-    expect(
-      within(screen.getByRole('region', { name: 'Room Actions' })).getByRole('button', {
-        name: 'Run State',
-      }),
-    ).toBeTruthy();
+    const combat1 = screen.getByRole('button', { name: 'Run State' });
+    expect(combat1.getAttribute('data-run-state-launcher')).not.toBe(introOwner);
+    expect(combat1.closest('.room-tab-utility-bar')).not.toBeNull();
     openRoomTab('Room Doors');
-    expect(
-      within(screen.getByRole('tabpanel', { name: 'Room Doors' })).getByRole('button', {
-        name: 'Run State',
-      }),
-    ).toBeTruthy();
+    const doors = screen.getByRole('button', { name: 'Run State' });
+    expect(doors.getAttribute('data-run-state-launcher')).not.toBe(introOwner);
+    expect(doors.closest('.room-tab-utility-bar')).not.toBeNull();
   });
 
   it('supports roving keyboard activation across the room workbench tabs', () => {
@@ -1143,9 +1146,8 @@ describe('OccurrenceWorkbench', () => {
     const cleared = screen.getByRole('checkbox', { name: 'Cleared' });
     expect((cleared as HTMLInputElement).checked).toBe(true);
     expect(screen.queryByLabelText('Reward')).toBeNull();
-    expect(
-      screen.getByRole('heading', { level: 3, name: /^Entering .* · Incoming Reward:/ }),
-    ).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 3, name: /^Entering / })).toBeTruthy();
+    expect(screen.getByRole('region', { name: 'Incoming reward' })).toBeTruthy();
     expect(screen.queryByLabelText('Map')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Restore Combat 01' })).toBeNull();
     await view.user.click(screen.getByRole('checkbox', { name: 'Cleared' }));
@@ -1211,7 +1213,7 @@ describe('OccurrenceWorkbench', () => {
     expect(screen.getByLabelText('Map')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Restore Combat 01' })).toBeTruthy();
   });
-  it('summarizes a Hub room main reward in the room heading without another editor', () => {
+  it('summarizes a Hub room main reward in Overview without another editor', () => {
     const view = renderOccurrenceWorkbench(
       loadSurfaceNOPQProject(),
       'Surface',
@@ -1219,12 +1221,10 @@ describe('OccurrenceWorkbench', () => {
       occurrenceById(nOccurrenceId('combat02')),
     );
     const historyLength = view.application.store.getState().projectWorkspace.history.past.length;
-    expect(
-      screen.getByRole('heading', {
-        level: 3,
-        name: 'Entering Combat 02 · Incoming Reward: Big Max Magick',
-      }),
-    ).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 3, name: 'Entering Combat 02' })).toBeTruthy();
+    expect(screen.getByRole('region', { name: 'Incoming reward' }).textContent).toContain(
+      'Big Max Magick',
+    );
     expect(screen.queryByLabelText('Hub reward')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Edit Hub reward' })).toBeNull();
     expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
@@ -1232,7 +1232,7 @@ describe('OccurrenceWorkbench', () => {
     );
   });
 
-  it('summarizes a fixed Hub reward in the room heading', () => {
+  it('summarizes a fixed Hub reward in Overview', () => {
     const project = loadSurfaceNStoryBoardProject();
     renderStaticOccurrenceWorkbench(
       project,
@@ -1241,12 +1241,8 @@ describe('OccurrenceWorkbench', () => {
       occurrenceById(nOccurrenceId('story')),
     );
 
-    expect(
-      screen.getByRole('heading', {
-        level: 3,
-        name: 'Entering Medea · Incoming Reward: Story',
-      }),
-    ).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 3, name: 'Entering Medea' })).toBeTruthy();
+    expect(screen.getByRole('region', { name: 'Incoming reward' }).textContent).toContain('Story');
     expect(screen.queryByLabelText('Hub reward')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Edit Hub reward' })).toBeNull();
   });

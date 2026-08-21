@@ -158,13 +158,16 @@ Only two decision-generation launchers remain public: the `HubDecisionAddress`
 before the Hub board is generated and the Hub-sourced `ExitDecisionAddress`
 before Preboss generation. Ordinary occurrence-sourced decisions do not retain
 a `beforeTargetGeneration` launcher on their door cards. Room-local lifecycle
-launchers attach
-to their semantic workbench seam: ordinary/H/Shop entry state at Room entered,
-each active O phase's pre-start state at its Start encounter boundary, and
-literal pre-exit state in Room Doors. An unavailable retained checkpoint stays
-visible and disabled; an occurrence absent from the materialized prefix owns no
-launcher. The workspace-level launcher index resolves the sheet without React
-scanning nested workbenches or reconstructing history.
+launchers keep their exact engine owners while the application projects one
+consistent utility slot at the top of each tab panel. Ordinary/H/Shop Overview
+and Actions reuse the same Room-entered launcher. O Overview and Intro Actions
+reuse Intro's pre-start launcher, while each later phase tab uses that phase's
+pre-start launcher. Room Doors uses the literal pre-exit launcher. Inactive
+Actions is a repair surface and owns no lifecycle launcher. An unavailable
+retained checkpoint stays visible and disabled; an occurrence absent from the
+materialized prefix owns no launcher. The workspace-level launcher index
+resolves the sheet without React scanning nested workbenches or reconstructing
+history.
 
 N has an explicit two-layer presentation:
 its outer chronology is Opening -> PreHub -> Hub -> Preboss, while Hub visits,
@@ -240,11 +243,13 @@ application publishes that closed destination; React does not parse addresses
 or labels. Tabs use one stable tabpanel identity and roving ArrowLeft,
 ArrowRight, Home, and End keyboard activation.
 
-The occurrence header presents the room and any door-visible incoming reward as
-one compact `Entering <room> · Incoming Reward: <reward>` title. React does not
-render a second incoming-reward context block. A Room-features child renders
-its bound Add or Remove Chaos-gate/Zagreus-contract action directly, without a
-second child heading that repeats the action's subject.
+The occurrence header presents only the compact `Entering <room>` identity plus
+cross-tab markers or controls. Room Overview consumes the exact predecessor
+door preview and renders one compact read-only incoming-reward fact: its
+visible summary, `Hidden`, or `None`. React does not rediscover an offer from
+room-local state or expose an incoming-reward editor there. A Room-features
+child renders its bound Add or Remove Chaos-gate/Zagreus-contract action
+directly, without a second child heading that repeats the action's subject.
 
 ShipCombat is the deliberate fourth shape. It renders Room Overview, Intro
 Actions, Combat 1 Actions, structurally active Combat 2 Actions, and Room

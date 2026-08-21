@@ -214,7 +214,10 @@ Overview-owned. Room Actions renders the engine-owned lifecycle timeline and
 the one occurrence-owned action chronology; encounter controls attach to their
 exact Start encounter boundaries. Room Doors renders the existing total
 outgoing-stage product without changing decision, target, or reward ownership.
-Empty sections remain absent.
+Empty sections remain absent. One fixed utility slot at the top of each active
+tab presents its projected lifecycle Run State: Overview and ordinary Actions
+share the entry snapshot, each Ship Actions tab uses its phase-start snapshot,
+and Doors uses the pre-exit snapshot. Inactive Actions remains launcher-free.
 
 ShipCombat uses Room Overview, Intro Actions, Combat 1 Actions, optional Combat
 2 Actions, and Room Doors. Encounter count stays in Overview. Each phase tab
@@ -222,11 +225,13 @@ consumes the engine timeline, including its encounter picker and following
 wheel boundary; one inactive repair surface retains rows from a dormant phase.
 The tabs never create phase-local orders.
 
-The room header combines the room identity and any door-visible incoming reward
-in one line (`Entering <room> · Incoming Reward: <reward>`). It does not repeat
-either fact in a second details block. Room-feature children likewise render
-their bound action directly under `Room features`; they do not add a duplicate
-Chaos-gate or Zagreus-contract heading above that action.
+The room header is compact orientation and renders only `Entering <room>` plus
+cross-tab markers or controls. Room Overview renders the predecessor-owned
+incoming-door preview once as a compact read-only fact: the visible reward
+summary, `Hidden`, or `None`. It never rediscovers or edits that reward from
+room-local state. Room-feature children likewise render their bound action
+directly under `Room features`; they do not add a duplicate Chaos-gate or
+Zagreus-contract heading above that action.
 
 For encounter selection, meaningful means a set-backed phase with two or more
 declaration-owned choices; it does not mean that two candidates happen to be
