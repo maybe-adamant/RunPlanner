@@ -919,7 +919,79 @@ describe('structured workspace occurrence assembly', () => {
     });
   });
 
-  it('retains an inactive unranked Infernal Contract action for repair', () => {
+  it('retains a selected unavailable Infernal Contract action without inventing its editor', () => {
+    const shopId = createOccurrenceId('golden-f-preboss-shop');
+    const project = withFPrebossSelection(createGoldenFGHIProject(), 'exit1');
+    const retained: ProjectDocument = {
+      ...project,
+      routes: project.routes.map((route) =>
+        route.routeKey !== 'Underworld'
+          ? route
+          : {
+              ...route,
+              biomes: route.biomes.map((biome): typeof biome =>
+                biome.biomeKey !== 'F' || biome.topology === null
+                  ? biome
+                  : {
+                      ...biome,
+                      topology: {
+                        ...biome.topology,
+                        occurrences: biome.topology.occurrences.map(
+                          (occurrence): typeof occurrence =>
+                            occurrence.occurrenceId !== shopId
+                              ? occurrence
+                              : {
+                                  ...occurrence,
+                                  roomActions: {
+                                    order: [
+                                      ...occurrence.roomActions.order,
+                                      {
+                                        kind: 'interactAcquisitionEntry' as const,
+                                        siteKey: 'roomExit',
+                                        entryKey: 'infernalContractReward',
+                                      },
+                                    ],
+                                  },
+                                },
+                        ),
+                      },
+                    },
+              ),
+            },
+      ),
+    };
+    const result = assemble(retained, 'Underworld', 'F', shopId, undefined, () =>
+      Object.freeze([]),
+    );
+    const room = result.assembly.node.room;
+    const isContract = (
+      reference: import('@run-planner/engine/authored-project').RoomActionReference,
+    ) =>
+      reference.kind === 'interactAcquisitionEntry' &&
+      reference.entryKey === 'infernalContractReward';
+
+    expect(room.roomLocal).toMatchObject({ kind: 'shop', supplementalOffers: [] });
+    expect(room.roomActions?.rows.some((row) => isContract(row.reference))).toBe(true);
+    expect(room.roomActions?.repairRows.some((row) => isContract(row.reference))).toBe(false);
+    expect(room.roomActions?.proposals.some((proposal) => isContract(proposal.reference))).toBe(
+      true,
+    );
+    const site = createAcquisitionSiteAddress(
+      createOccurrenceAddress(goldenFBiome, shopId),
+      'roomExit',
+    );
+    const contract = createAcquisitionEntryAddress(site, 'infernalContractReward');
+    expect(result.markers.destinations().get(semanticAddressKey(contract))).toMatchObject({
+      focusAddress: { kind: 'roomAction' },
+      roomTab: 'actions',
+    });
+    expect(result.markers.destinations().get(semanticAddressKey(site))).toMatchObject({
+      focusAddress: { kind: 'roomAction' },
+      roomTab: 'actions',
+    });
+  });
+
+  it('omits an unearned Infernal Contract from actions and repairs', () => {
     const shopId = createOccurrenceId('golden-f-preboss-shop');
     const project = withFPrebossSelection(createGoldenFGHIProject(), 'exit1');
     const room = assemble(project, 'Underworld', 'F', shopId, undefined, () => Object.freeze([]))
@@ -930,10 +1002,10 @@ describe('structured workspace occurrence assembly', () => {
       reference.kind === 'interactAcquisitionEntry' &&
       reference.entryKey === 'infernalContractReward';
 
-    expect(room.roomActions?.rows.some((row) => isContract(row.reference))).toBe(true);
-    expect(room.roomActions?.repairRows.some((row) => isContract(row.reference))).toBe(true);
+    expect(room.roomActions?.rows.some((row) => isContract(row.reference))).toBe(false);
+    expect(room.roomActions?.repairRows.some((row) => isContract(row.reference))).toBe(false);
     expect(room.roomActions?.proposals.some((proposal) => isContract(proposal.reference))).toBe(
-      true,
+      false,
     );
   });
 
