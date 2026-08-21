@@ -424,8 +424,10 @@ The large N Hub board has one focused-repair refinement. Selected simulation
 still validates the complete atomic board under its supported hidden generation
 ordering. A focused edit instead starts from the board's pre-generation
 frontier, folds every other currently authored peer that can contribute once,
-then evaluates the proposed reward last. Counted entries consumed by an
-already-authored door are therefore unavailable immediately on later edits.
+then evaluates the proposed reward last with those supported identities as one
+unordered prior-offer set. Counted entries consumed by an already-authored door
+and ordinary god-source peer exclusions are therefore unavailable immediately
+on later edits.
 An independently invalid peer is omitted from this focused fold, so it remains
 visible as a board error without disabling unrelated repair. The fold is
 linear in the number of open doors and never searches peer subsets or future
