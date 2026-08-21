@@ -332,13 +332,13 @@ function EncounterPhaseControl({
   const gorgonControl =
     gorgonInteraction === undefined ? null : (
       <label className="field-control gorgon-condition-control">
+        <span>Death Defiance condition</span>
         <input
           checked={gorgonInteraction.selected}
           disabled={!gorgonInteraction.supported && !gorgonInteraction.selected}
           onChange={(event) => executeIntent(gorgonInteraction.intentFor(event.target.checked))}
           type="checkbox"
         />
-        <span>Death Defiance condition met (Gorgon Amulet)</span>
       </label>
     );
   if (!phase.customizable) {
@@ -355,9 +355,11 @@ function EncounterPhaseControl({
             <SemanticOwnerMarker address={phase.address} />
           </div>
         </div>
-        <p className="fixed-room-state">Encounter: {phase.selectedEncounter.label}</p>
-        {figLeafControl}
-        {gorgonControl}
+        <div className="encounter-phase-settings">
+          <p className="fixed-room-state">Encounter: {phase.selectedEncounter.label}</p>
+          {figLeafControl}
+          {gorgonControl}
+        </div>
       </section>
     );
   }
@@ -377,13 +379,15 @@ function EncounterPhaseControl({
           <SemanticOwnerMarker address={phase.address} />
         </div>
       </div>
-      <CustomizableEncounterPhaseControl
-        idPrefix={idPrefix}
-        interaction={interaction}
-        phase={phase}
-      />
-      {figLeafControl}
-      {gorgonControl}
+      <div className="encounter-phase-settings">
+        <CustomizableEncounterPhaseControl
+          idPrefix={idPrefix}
+          interaction={interaction}
+          phase={phase}
+        />
+        {figLeafControl}
+        {gorgonControl}
+      </div>
     </section>
   );
 }
@@ -681,17 +685,23 @@ interface PendingRoomActionPointerDrag {
 interface RoomActionPointerDrag {
   readonly actionKey: string;
   readonly pointerId: number;
-  readonly target: RankedPrefixDropTarget | undefined;
+  readonly target: RoomActionDropTarget | undefined;
   readonly x: number;
   readonly y: number;
 }
 
+type RoomActionDropTarget =
+  RankedPrefixDropTarget | { readonly kind: 'position'; readonly toIndex: number };
+
 function sameRoomActionDropTarget(
-  left: RankedPrefixDropTarget | undefined,
-  right: RankedPrefixDropTarget | undefined,
+  left: RoomActionDropTarget | undefined,
+  right: RoomActionDropTarget | undefined,
 ): boolean {
   if (left === right) return true;
   if (left === undefined || right === undefined || left.kind !== right.kind) return false;
+  if (left.kind === 'position' || right.kind === 'position') {
+    return left.kind === 'position' && right.kind === 'position' && left.toIndex === right.toIndex;
+  }
   if (left.kind === 'nextVisit' || right.kind === 'nextVisit') return true;
   return left.slotKey === right.slotKey;
 }
@@ -700,10 +710,16 @@ function roomActionDropTargetFromPoint(
   root: HTMLElement | null,
   x: number,
   y: number,
-): RankedPrefixDropTarget | undefined {
-  const row = document
-    .elementFromPoint?.(x, y)
-    ?.closest<HTMLElement>('[data-room-action-key][data-in-order="true"]');
+): RoomActionDropTarget | undefined {
+  const hit = document.elementFromPoint?.(x, y);
+  const boundary = hit?.closest<HTMLElement>('[data-room-action-drop-index]');
+  if (boundary !== null && boundary !== undefined && root?.contains(boundary) === true) {
+    const toIndex = Number(boundary.dataset.roomActionDropIndex);
+    if (Number.isInteger(toIndex) && toIndex >= 0) {
+      return Object.freeze({ kind: 'position' as const, toIndex });
+    }
+  }
+  const row = hit?.closest<HTMLElement>('[data-room-action-key][data-in-order="true"]');
   if (row === null || row === undefined || root?.contains(row) !== true) return undefined;
   const actionKey = row.dataset.roomActionKey;
   if (actionKey === undefined) return undefined;
@@ -742,12 +758,22 @@ function lifecycleBoundaryCheckpointKey(boundary: WorkspaceRoomLifecycleBoundary
   }
 }
 
-function LifecycleBoundaryRow({ boundary }: { readonly boundary: WorkspaceRoomLifecycleBoundary }) {
+function LifecycleBoundaryRow({
+  boundary,
+  dropIndex,
+  dropState,
+}: {
+  readonly boundary: WorkspaceRoomLifecycleBoundary;
+  readonly dropIndex: number;
+  readonly dropState?: 'available' | 'unavailable';
+}) {
   return (
     <li
       aria-label={lifecycleBoundaryLabel(boundary)}
       className="room-action-lifecycle-boundary"
+      data-drop-position={dropState}
       data-lifecycle-boundary={boundary.key}
+      data-room-action-drop-index={dropIndex}
     >
       <span aria-hidden="true" className="hub-roster-rank">
         ·
@@ -822,8 +848,9 @@ function RoomActionsWorkbench({
   };
   const proposalForDrop = (
     actionKey: string,
-    target: RankedPrefixDropTarget,
+    target: RoomActionDropTarget,
   ): WorkspaceRoomActions['proposals'][number] | undefined => {
+    if (target.kind === 'position') return proposalForMove(actionKey, target.toIndex);
     const result = dropRankedPrefixItem(ranking, rankedRows.length, actionKey, target);
     const toIndex = result?.proposedVisitOrder?.indexOf(actionKey);
     return toIndex === undefined || toIndex < 0 ? undefined : proposalForMove(actionKey, toIndex);
@@ -936,14 +963,31 @@ function RoomActionsWorkbench({
     }
     return null;
   };
+  const dropState = (target: RoomActionDropTarget) => {
+    if (!sameRoomActionDropTarget(pointerDrag?.target, target)) return undefined;
+    return proposalForDrop(pointerDrag!.actionKey, target)?.structurallyAuthorable === true
+      ? 'available'
+      : 'unavailable';
+  };
   const renderBoundary = (
     entry: Extract<WorkspaceRoomLifecycleTimelineEntry, { readonly kind: 'boundary' }>,
-  ) => (
-    <Fragment key={entry.boundary.key}>
-      <LifecycleBoundaryRow boundary={entry.boundary} />
-      {boundarySupplement(entry.boundary)}
-    </Fragment>
-  );
+  ) => {
+    const target = Object.freeze({
+      kind: 'position' as const,
+      toIndex: Math.max(0, entry.rank - (entry.placement === 'before' ? 1 : 0)),
+    });
+    const targetState = dropState(target);
+    return (
+      <Fragment key={entry.boundary.key}>
+        <LifecycleBoundaryRow
+          boundary={entry.boundary}
+          dropIndex={target.toIndex}
+          {...(targetState === undefined ? {} : { dropState: targetState })}
+        />
+        {boundarySupplement(entry.boundary)}
+      </Fragment>
+    );
+  };
   const renderRow = (
     row: WorkspaceRoomActions['rows'][number],
     checkpoints: WorkspaceRoomActions['checkpoints'] = actions?.checkpoints ?? [],
@@ -962,18 +1006,31 @@ function RoomActionsWorkbench({
     );
     const insertions = proposals.filter((proposal) => proposal.kind === 'insert');
     const rewardPayload = row.rewardPayload;
+    const artificerOutput = row.artificerOutput;
     const traitControl = row.traitOffer;
+    const inlineTraitControls = [
+      ...(traitControl === undefined ? [] : [traitControl]),
+      ...(rewardPayload?.control.traitOffers ?? []),
+    ];
+    const rewardPayloadHasVisibleBody =
+      rewardPayload !== undefined &&
+      (rewardPayload.showOffer ||
+        rewardPayload.control.acquisitionOutcome === 'forfeitedByVow' ||
+        (rewardPayload.showOwner && rewardPayload.control.marker.findingCount > 0) ||
+        (rewardPayload.control.levelResolutions?.length ?? 0) > 0 ||
+        (rewardPayload.control.conversions ?? []).some(
+          (conversion) =>
+            requireWorkspaceInteraction(
+              interactions.acquisitionConversions,
+              workspaceInteractionKey(conversion.address),
+            ).visible,
+        ) ||
+        artificerOutput !== undefined);
     const wheel = row.wheelPick;
     const canDrag =
       row.rank !== null &&
       rankedRows.length > 1 &&
       proposals.some((proposal) => proposal.kind === 'move');
-    const dropState = (target: RankedPrefixDropTarget) => {
-      if (!sameRoomActionDropTarget(pointerDrag?.target, target)) return undefined;
-      return proposalForDrop(pointerDrag!.actionKey, target)?.structurallyAuthorable === true
-        ? 'available'
-        : 'unavailable';
-    };
     return (
       <Fragment key={row.key}>
         <li
@@ -1006,6 +1063,13 @@ function RoomActionsWorkbench({
               {row.rank ?? '—'}
             </span>
             <strong>{row.label}</strong>
+            {inlineTraitControls.map((control) => (
+              <TraitOfferLauncher
+                control={control}
+                interactions={interactions}
+                key={workspaceInteractionKey(control.address)}
+              />
+            ))}
             <SemanticOwnerMarker address={row.address} />
             {row.stale ? <span className="neutral-status">stale</span> : null}
             {row.rank === null && row.participation === 'required' ? (
@@ -1025,7 +1089,7 @@ function RoomActionsWorkbench({
                 Restore required action
               </button>
             ) : row.rank === null ? (
-              <label className="field-control">
+              <label className="field-control field-control-inline room-action-position-control">
                 <span>Position</span>
                 <select
                   aria-label={`Insert ${row.label}`}
@@ -1122,25 +1186,45 @@ function RoomActionsWorkbench({
               }
             />
           )}
-          {traitControl === undefined ? null : (
-            <div className="acquisition-entry-resolution">
-              <TraitOfferLauncher control={traitControl} interactions={interactions} />
-            </div>
-          )}
           {rewardPayload === undefined ? null : (
             <div
               className="acquisition-entry-resolution"
-              id={semanticOwnerControlElementId(rewardPayload.control.owner.address)}
-              tabIndex={-1}
+              data-empty={!rewardPayloadHasVisibleBody || undefined}
+              {...(rewardPayload.showOwner
+                ? {
+                    id: semanticOwnerControlElementId(rewardPayload.control.owner.address),
+                    tabIndex: -1,
+                  }
+                : {})}
             >
-              <SemanticOwnerMarker address={rewardPayload.control.marker.address} />
-              <RewardControlEditor
-                control={rewardPayload.control}
-                idPrefix={`room-action-${rewardPayload.control.marker.focusKey}`}
-                interactions={interactions}
-                showAcquisitionChildren
-                showOffer={rewardPayload.showOffer}
-              />
+              {rewardPayload.showOwner ? (
+                <SemanticOwnerMarker address={rewardPayload.control.marker.address} />
+              ) : null}
+              <div className="room-action-outcome-controls">
+                <RewardControlEditor
+                  control={rewardPayload.control}
+                  idPrefix={`room-action-${rewardPayload.control.marker.focusKey}`}
+                  interactions={interactions}
+                  showAcquisitionChildren
+                  showOffer={rewardPayload.showOffer}
+                  showTraitOffers={false}
+                />
+                {artificerOutput === undefined ? null : (
+                  <div
+                    className="room-action-artificer-output"
+                    id={semanticOwnerControlElementId(artificerOutput.control.owner.address)}
+                    tabIndex={-1}
+                  >
+                    <SemanticOwnerMarker address={artificerOutput.control.marker.address} />
+                    <RewardControlEditor
+                      control={artificerOutput.control}
+                      idPrefix={`room-action-artificer-${artificerOutput.control.marker.focusKey}`}
+                      interactions={interactions}
+                      label={artificerOutput.label}
+                    />
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </li>
@@ -1190,7 +1274,6 @@ function RoomActionsWorkbench({
               .filter((phase) => ship.phaseKey === undefined || phase.key === ship.phaseKey)
               .map((phase) => {
                 const phaseRankedRows = phase.actionRows.filter((row) => row.rank !== null);
-                const phaseUnrankedRows = phase.actionRows.filter((row) => row.rank === null);
                 const phaseIndex = ship.phases.findIndex(
                   (candidate) => candidate.key === phase.key,
                 );
@@ -1289,15 +1372,21 @@ function RoomActionsWorkbench({
                               <strong>{checkpoint.label}</strong>
                             </li>
                           ))}
-                          {phaseUnrankedRows.length === 0 ? null : (
-                            <li aria-label="Room timeline boundary" className="hub-visit-boundary">
-                              <span>Room timeline ends here</span>
-                              <span>{phaseUnrankedRows.length} not ordered</span>
-                            </li>
-                          )}
-                          {phaseUnrankedRows.map((row) => renderRow(row, phase.checkpoints))}
                         </ol>
                       </>
+                    )}
+                    {phase.optionalRows.length === 0 ? null : (
+                      <section aria-label="Optional actions" className="room-action-optional-pool">
+                        <div className="local-reward-heading">
+                          <h5>Optional actions</h5>
+                        </div>
+                        <ol
+                          aria-label={`${phase.label} optional actions`}
+                          className="room-action-list"
+                        >
+                          {phase.optionalRows.map((row) => renderRow(row, phase.checkpoints))}
+                        </ol>
+                      </section>
                     )}
                   </section>
                 );
@@ -1353,6 +1442,16 @@ function RoomActionsWorkbench({
         {timelineRows}
         {rankedRows.length === 0 ? checkpointRows(0) : null}
       </ol>
+      {actions.optionalRows.length === 0 ? null : (
+        <section aria-label="Optional actions" className="room-action-optional-pool">
+          <div className="local-reward-heading">
+            <h5>Optional actions</h5>
+          </div>
+          <ol aria-label="Optional actions" className="room-action-list">
+            {actions.optionalRows.map((row) => renderRow(row))}
+          </ol>
+        </section>
+      )}
       {actions.repairRows.length === 0 ? null : (
         <section aria-label="Timeline repairs" className="room-action-repairs">
           <div className="local-reward-heading">

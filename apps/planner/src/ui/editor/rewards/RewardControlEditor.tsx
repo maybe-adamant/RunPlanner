@@ -18,6 +18,7 @@ export function RewardControlEditor({
   label = 'Reward',
   showOffer = true,
   showAcquisitionChildren = false,
+  showTraitOffers = true,
   offerStartStep,
 }: {
   readonly control: WorkspaceRewardControl;
@@ -27,6 +28,8 @@ export function RewardControlEditor({
   readonly showOffer?: boolean;
   /** Trait, level, and conversion controls belong to the owning Room Timeline row. */
   readonly showAcquisitionChildren?: boolean;
+  /** A Room Timeline row can promote trait launchers into its compact action heading. */
+  readonly showTraitOffers?: boolean;
   /** A fixed-type producer can expose its payload directly without a redundant type step. */
   readonly offerStartStep?: RewardPickerStep;
 }) {
@@ -76,13 +79,15 @@ export function RewardControlEditor({
         </p>
       ) : (
         <div className="trait-offer-launchers">
-          {(control.traitOffers ?? []).map((trait) => (
-            <TraitOfferLauncher
-              control={trait}
-              interactions={interactions}
-              key={workspaceInteractionKey(trait.address)}
-            />
-          ))}
+          {showTraitOffers
+            ? (control.traitOffers ?? []).map((trait) => (
+                <TraitOfferLauncher
+                  control={trait}
+                  interactions={interactions}
+                  key={workspaceInteractionKey(trait.address)}
+                />
+              ))
+            : null}
           {(control.levelResolutions ?? []).map((resolution) => (
             <PomResolutionLauncher
               control={resolution}
@@ -100,8 +105,8 @@ export function RewardControlEditor({
                 className="reward-acquisition-conversion"
                 key={workspaceInteractionKey(conversion.address)}
               >
-                <label>
-                  <span>{conversion.acquisitionRoleLabel} outcome</span>
+                <label className="reward-outcome-control">
+                  <span>Reward outcome</span>
                   <select
                     aria-label={`Reward outcome for ${conversion.acquisitionRoleLabel}`}
                     onChange={(event) => {

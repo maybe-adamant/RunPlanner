@@ -33,9 +33,11 @@ import {
   type SemanticAddress,
   type RoomRunStateCheckpointAddress,
   type AuthoredRewardState,
+  type AuthoredTraitOffer,
   type LevelResolutionAddress,
   roomActionKey,
   acquisitionSiteFromStorageKey,
+  artificerReplacementEntryKey,
   parseArtificerReplacementEntryKey,
   selectedPickupProducer,
   echoLastRewardPickupEntryKey,
@@ -105,6 +107,7 @@ import {
   type WorkspaceRewardWheelDescriptor,
   type WorkspaceShopSupplementalDescriptor,
   type WorkspaceMarker,
+  type WorkspaceTraitOfferStatus,
   type WorkspaceRunStateLauncher,
 } from '../contract';
 import type { WorkspaceOccurrenceInteractionRequirement } from '../interactions/interaction-requirements';
@@ -231,6 +234,19 @@ export function workspaceAcquisitionRoleLabel(acquisitionRole: string): string {
   }
 }
 
+function traitOfferStatus(
+  marker: WorkspaceMarker,
+  offer: AuthoredTraitOffer | null,
+  contextMarker = marker,
+  contextInvalid = false,
+): WorkspaceTraitOfferStatus {
+  return offer === null
+    ? 'unspecified'
+    : contextInvalid || marker.findingCount > 0 || contextMarker.findingCount > 0
+      ? 'invalid'
+      : 'valid';
+}
+
 function traitOfferControls(
   input: WorkspaceOccurrenceAssemblyInput,
   owner: RewardCandidateOwner,
@@ -249,14 +265,16 @@ function traitOfferControls(
     if (giver === undefined) continue;
     const address = createTraitOfferAddress(owner.address, acquisitionRole);
     if (offer === null) {
+      const marker = input.markerDestinations.marker(address);
       controls.push(
         Object.freeze({
           acquisitionRoleLabel: workspaceAcquisitionRoleLabel(acquisitionRole),
           address,
           giver,
-          marker: input.markerDestinations.marker(address),
+          marker,
           offer: null,
           rewardOwner: owner.address,
+          status: traitOfferStatus(marker, null),
         }),
       );
       continue;
@@ -321,14 +339,16 @@ function traitOfferControls(
               });
             }),
           );
+    const marker = input.markerDestinations.marker(address);
     controls.push(
       Object.freeze({
         acquisitionRoleLabel: workspaceAcquisitionRoleLabel(acquisitionRole),
         address,
         giver,
-        marker: input.markerDestinations.marker(address),
+        marker,
         offer,
         rewardOwner: owner.address,
+        status: traitOfferStatus(marker, offer),
         ...(traitAcquisitionTarget === undefined ? {} : { traitAcquisitionTarget }),
         ...(circeResolution === undefined ? {} : { circeResolution }),
         ...(allTogetherSets === undefined ? {} : { allTogetherSets }),
@@ -861,6 +881,9 @@ function activeEncounterPhasesForOwner(
       gorgonEffect?.kind === 'gorgonAmulet'
         ? input.catalog.traitGivers.byKey[gorgonEffect.providerKey]
         : undefined;
+    const gorgonTraitAddress = createTraitOfferAddress(gorgonPhaseAddress, 'gorgonAthena');
+    const gorgonTraitMarker = input.markerDestinations.marker(gorgonTraitAddress);
+    const gorgonPhaseMarker = input.markerDestinations.marker(gorgonPhaseAddress);
     const gorgonAthena =
       input.facts.detailsActive &&
       gorgonResult?.deathDefianceConditionMet === true &&
@@ -868,14 +891,18 @@ function activeEncounterPhasesForOwner(
       gorgonGiver !== undefined
         ? Object.freeze({
             acquisitionRoleLabel: 'Gorgon Athena',
-            address: createTraitOfferAddress(gorgonPhaseAddress, 'gorgonAthena'),
+            address: gorgonTraitAddress,
             giver: gorgonGiver,
-            marker: input.markerDestinations.marker(
-              createTraitOfferAddress(gorgonPhaseAddress, 'gorgonAthena'),
-            ),
+            marker: gorgonTraitMarker,
             offer: gorgonResult.athenaOffer === null ? null : gorgonAthenaOffer!,
             rarityEditable: false,
             rewardOwner: gorgonPhaseAddress,
+            status: traitOfferStatus(
+              gorgonTraitMarker,
+              gorgonResult.athenaOffer === null ? null : gorgonAthenaOffer!,
+              gorgonPhaseMarker,
+              gorgonSupport?.supported === false,
+            ),
           })
         : undefined;
     const giver =
@@ -884,15 +911,18 @@ function activeEncounterPhasesForOwner(
       authoredTraitOffer !== undefined && producer !== undefined && giver !== undefined
         ? (() => {
             const traitAddress = createTraitOfferAddress(address, 'selection');
-            if (authoredTraitOffer === null)
+            if (authoredTraitOffer === null) {
+              const marker = input.markerDestinations.marker(traitAddress);
               return Object.freeze({
                 acquisitionRoleLabel: 'Selection',
                 address: traitAddress,
                 giver,
-                marker: input.markerDestinations.marker(traitAddress),
+                marker,
                 offer: null,
                 rewardOwner: address,
+                status: traitOfferStatus(marker, null),
               });
+            }
             const selected =
               authoredTraitOffer.kind === 'traits'
                 ? traitOfferOption(authoredTraitOffer, authoredTraitOffer.selectedOptionKey)
@@ -1029,13 +1059,15 @@ function activeEncounterPhasesForOwner(
                           }),
                     });
                   })();
+            const marker = input.markerDestinations.marker(traitAddress);
             return Object.freeze({
               acquisitionRoleLabel: 'Selection',
               address: traitAddress,
               giver,
-              marker: input.markerDestinations.marker(traitAddress),
+              marker,
               offer: authoredTraitOffer,
               rewardOwner: address,
+              status: traitOfferStatus(marker, authoredTraitOffer),
               ...(traitAcquisitionTarget === undefined ? {} : { traitAcquisitionTarget }),
               ...(circeResolution === undefined ? {} : { circeResolution }),
               ...(echoPomTarget === undefined ? {} : { echoPomTarget }),
@@ -1264,6 +1296,24 @@ function roomActionLabel(
   encounterPhases: readonly WorkspaceEncounterPhase[],
   rewardControl: WorkspaceRewardControl | undefined,
 ): string {
+  const withRewardSummary = (label: string): string => {
+    if (rewardControl?.offer === null || rewardControl?.offer === undefined) return label;
+    const summary = summarizeRewardOffer(catalog, rewardControl.offer);
+    return label.endsWith(summary) ? label : `${label} · ${summary}`;
+  };
+  const pickupLabel = (subject: string): string => {
+    const outcome =
+      rewardControl?.conversions?.length === 1
+        ? rewardControl.conversions[0]?.value.kind
+        : undefined;
+    return withRewardSummary(
+      outcome === 'artificer'
+        ? `Transform ${subject} with Artificer`
+        : outcome === 'timePiece'
+          ? `Convert ${subject} to Gold`
+          : `Pick up ${subject}`,
+    );
+  };
   const phase =
     'phaseKey' in reference
       ? encounterPhases.find((candidate) => candidate.address.phaseKey === reference.phaseKey)
@@ -1272,7 +1322,7 @@ function roomActionLabel(
     case 'completeFieldsCage':
       return `Complete ${phase?.label ?? reference.phaseKey}`;
     case 'interactIncomingReward':
-      return `Pick up ${workspaceAcquisitionRoleLabel(reference.acquisitionRole)}`;
+      return pickupLabel(workspaceAcquisitionRoleLabel(reference.acquisitionRole));
     case 'interactLocalReward': {
       const local =
         roomLocal.kind !== 'fields'
@@ -1283,7 +1333,7 @@ function roomActionLabel(
                 candidate.control.owner.address.groupKey === reference.groupKey &&
                 candidate.control.owner.address.slotKey === reference.slotKey,
             );
-      return `Pick up ${local?.label ?? reference.slotKey}`;
+      return pickupLabel(local?.label ?? reference.slotKey);
     }
     case 'chooseRewardWheel': {
       const wheel =
@@ -1297,7 +1347,7 @@ function roomActionLabel(
         roomLocal.kind === 'ship'
           ? roomLocal.wheels.find((candidate) => candidate.key === reference.wheelKey)
           : undefined;
-      return `Pick up ${wheel?.label ?? `${reference.wheelKey} reward`}`;
+      return pickupLabel(wheel?.label ?? `${reference.wheelKey} reward`);
     }
     case 'interactShopOffer': {
       const offer =
@@ -1327,7 +1377,7 @@ function roomActionLabel(
         parseArtificerReplacementEntryKey(reference.entryKey) === undefined
           ? reference.entryKey
           : 'Artificer replacement';
-      return `Pick up ${supplemental?.label ?? rewardLabel ?? entryLabel}`;
+      return pickupLabel(supplemental?.label ?? rewardLabel ?? entryLabel);
     }
   }
 }
@@ -1458,6 +1508,28 @@ function roomActionsForOccurrence(
           : row.reference.kind === 'interactIncomingReward'
             ? controlForRole(rewardControl, row.reference.acquisitionRole)
             : rewardControl;
+      const artificerConversion = resolvedRewardControl?.conversions?.find(
+        (conversion) => conversion.value.kind === 'artificer',
+      );
+      const artificerOutput =
+        artificerConversion === undefined
+          ? undefined
+          : (() => {
+              const entryKey = artificerReplacementEntryKey(
+                artificerConversion.rewardOwner,
+                artificerConversion.address.acquisitionRole,
+              );
+              const replacementRow = presentedRows.find(
+                (candidate) =>
+                  candidate.reference.kind === 'interactAcquisitionEntry' &&
+                  candidate.reference.entryKey === entryKey,
+              );
+              if (replacementRow === undefined) return undefined;
+              return controlAt(replacementRow.owner);
+            })();
+      const isArtificerReplacement =
+        row.reference.kind === 'interactAcquisitionEntry' &&
+        parseArtificerReplacementEntryKey(row.reference.entryKey) !== undefined;
       return Object.freeze({
         address,
         issues: issuesFor(row.key),
@@ -1474,15 +1546,25 @@ function roomActionsForOccurrence(
         reference: row.reference,
         participation: row.participation,
         rank: row.rank,
+        ...(row.stale || artificerOutput === undefined
+          ? {}
+          : {
+              artificerOutput: Object.freeze({
+                control: artificerOutput,
+                label: 'Artificer item' as const,
+              }),
+            }),
         ...(row.stale || resolvedRewardControl === undefined
           ? {}
           : {
               rewardPayload: Object.freeze({
                 control: resolvedRewardControl,
+                showOwner: !isArtificerReplacement,
                 showOffer:
-                  (row.reference.kind === 'interactLocalReward' && roomLocal.kind !== 'fields') ||
-                  (row.reference.kind === 'interactAcquisitionEntry' &&
-                    input.occurrence.state.kind !== 'shop'),
+                  !isArtificerReplacement &&
+                  ((row.reference.kind === 'interactLocalReward' && roomLocal.kind !== 'fields') ||
+                    (row.reference.kind === 'interactAcquisitionEntry' &&
+                      input.occurrence.state.kind !== 'shop')),
               }),
             }),
         stale: row.stale,
@@ -1512,7 +1594,7 @@ function roomActionsForOccurrence(
       });
     }),
   );
-  const repairRows = Object.freeze(
+  const unrankedOrStaleRows = Object.freeze(
     lifecycleTimeline.repairRows.flatMap(({ key }) => {
       const projected = projectedRows.find((row) => row.key === key);
       if (projected === undefined && !suppressedActionKeys.has(key)) {
@@ -1521,6 +1603,13 @@ function roomActionsForOccurrence(
       return projected === undefined ? [] : [projected];
     }),
   );
+  const optionalRows = Object.freeze(
+    unrankedOrStaleRows.filter(
+      (row) => row.rank === null && !row.stale && row.participation === 'optional',
+    ),
+  );
+  const optionalKeys = new Set(optionalRows.map((row) => row.key));
+  const repairRows = Object.freeze(unrankedOrStaleRows.filter((row) => !optionalKeys.has(row.key)));
   const activeLifecycleTimeline = scopeRoomLifecycleTimeline(
     lifecycleTimeline,
     lifecycleTimeline.structure.activeEncounterSlotKeys.flatMap((phaseKey) => {
@@ -1546,6 +1635,7 @@ function roomActionsForOccurrence(
     ),
     interactionKey: semanticAddressKey(owner),
     owner,
+    optionalRows,
     proposals: Object.freeze(proposals),
     repairRows,
     rows: projectedRows,
@@ -2153,6 +2243,7 @@ function shipWorkbenchPresentation(
   };
   const actionByKey = new Map(roomActions?.rows.map((row) => [row.key, row]) ?? []);
   const phaseRows = roomLocal.phases.map(() => [] as WorkspaceRoomActionRow[]);
+  const phaseOptionalRows = roomLocal.phases.map(() => [] as WorkspaceRoomActionRow[]);
   const phaseBoundaryEntries = roomLocal.phases.map(
     () => [] as Extract<WorkspaceRoomLifecycleTimelineEntry, { readonly kind: 'boundary' }>[],
   );
@@ -2186,6 +2277,27 @@ function shipWorkbenchPresentation(
           : roomLocal.phases.length - 1;
       phaseCheckpointEntries[phaseIndex]!.push(checkpoint);
     }
+    for (const row of roomActions.optionalRows) {
+      const phaseIndex = (() => {
+        const window = row.window;
+        if (window.kind === 'shipPostCombat') {
+          return roomLocal.phases.findIndex((phase) => phase.rewardWheelKey === window.wheelKey);
+        }
+        if (window.kind === 'shipPreCombat') {
+          const targetIndex = roomLocal.phases.findIndex(
+            (phase) => phase.rewardWheelKey === window.wheelKey,
+          );
+          return Math.max(0, targetIndex - 1);
+        }
+        return roomLocal.phases.length - 1;
+      })();
+      if (phaseIndex < 0) {
+        throw new StructuredWorkspaceProjectionContractError(
+          `Ship optional action ${row.key} has no declaration-owned phase`,
+        );
+      }
+      phaseOptionalRows[phaseIndex]!.push(row);
+    }
   }
   const phases: WorkspaceShipPhasePresentation[] = roomLocal.phases.map((phase, index) => {
     const encounter = encounterPhases.find((candidate) => candidate.address.phaseKey === phase.key);
@@ -2196,6 +2308,7 @@ function shipWorkbenchPresentation(
       ...(encounter === undefined ? {} : { encounter }),
       key: phase.key,
       label: phase.label,
+      optionalRows: Object.freeze(phaseOptionalRows[index]!),
       ...(wheel === undefined ? {} : { wheel }),
     });
   });

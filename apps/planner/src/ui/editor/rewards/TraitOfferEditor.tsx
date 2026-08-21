@@ -1050,25 +1050,33 @@ export function TraitOfferLauncher({
     control.offer?.kind === 'traits'
       ? control.offer.options[OPTION_KEYS.indexOf(control.offer.selectedOptionKey)]
       : undefined;
-  const label =
+  const traitLabel =
     control.offer === null
-      ? 'Choose trait'
+      ? 'Choose Trait'
       : control.offer.kind === 'fallbackGold'
         ? 'Fallback Gold'
         : selected === undefined
-          ? 'Choose trait'
+          ? 'Choose Trait'
           : (interaction.choices.find((choice) => choice.value === selected.traitKey)?.label ??
             selected.traitKey);
-  const rarity = selected?.rarity === undefined ? '' : ` · ${selected.rarity}`;
+  const status = control.status;
+  const label = control.offer === null ? traitLabel : `Edit Trait · ${traitLabel}`;
+  const statusLabel =
+    status === 'unspecified'
+      ? 'trait is not selected'
+      : status === 'invalid'
+        ? 'trait configuration needs attention'
+        : 'trait configuration has no findings';
   return (
     <button
+      aria-label={`${label}; ${statusLabel}`}
       className="trait-offer-launcher quiet-action action-compact"
+      data-trait-status={status}
       id={launcherId(control.address)}
       onClick={() => dispatch(traitOfferDialogOpened(control.address))}
       type="button"
     >
-      Edit Trait: {label}
-      {rarity}
+      {label}
     </button>
   );
 }
