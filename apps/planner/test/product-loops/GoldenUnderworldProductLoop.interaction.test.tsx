@@ -767,6 +767,45 @@ describe('underworld product loop', () => {
     });
     expect(within(automaticReturn).getAllByRole('article')).toHaveLength(1);
     expect(within(automaticReturn).queryByRole('radio')).toBeNull();
+    expect(within(automaticReturn).queryByText('Reward hidden on this door.')).toBeNull();
+    const returnReward = createIncomingRewardAddress(goldenGBiome, returned);
+    const returnRewardOffer = () => {
+      const state = application.store
+        .getState()
+        .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
+        ?.biomes.find((biome) => biome.biomeKey === 'G')
+        ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === returned)?.state;
+      return state !== undefined && 'reward' in state
+        ? state.reward === null
+          ? null
+          : state.reward.offer
+        : undefined;
+    };
+    const missingReturnReward = () =>
+      application.store
+        .getState()
+        .projectWorkspace.assembly.evaluation.findings.some(
+          (finding) =>
+            finding.code === 'rewardMissing' &&
+            semanticAddressKey(finding.origin) === semanticAddressKey(returnReward),
+        );
+    expect(returnRewardOffer()).toBeNull();
+    await view.user.click(within(automaticReturn).getByRole('button', { name: 'Reward' }));
+    const replacement = within(await screen.findByRole('listbox'))
+      .getAllByRole('option')
+      .find(
+        (option) =>
+          option.getAttribute('aria-disabled') !== 'true' &&
+          option.getAttribute('data-selected-value') !== 'true' &&
+          !/Boon|Devotion|Blind Box/.test(option.textContent ?? ''),
+      );
+    if (replacement === undefined) throw new Error('Anomaly return has no supported reward');
+    await view.user.click(replacement);
+    await waitFor(() => {
+      expect(returnRewardOffer()).toBeDefined();
+      expect(returnRewardOffer()).not.toBeNull();
+      expect(missingReturnReward()).toBe(false);
+    });
     expect(screen.getByRole('button', { name: 'Open next room' })).toBeTruthy();
     const evaluation = simulateProject(application.catalog, failed);
     const gEvaluation = evaluation.routes

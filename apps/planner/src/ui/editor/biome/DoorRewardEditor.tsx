@@ -15,14 +15,20 @@ export function DoorRewardEditor({
   readonly idPrefix: string;
   readonly interactions: WorkspaceInteractionCatalog;
 }) {
-  if (door.rewardPreview.kind === 'hidden') {
+  const rewards =
+    door.rewardPreview.kind === 'visible'
+      ? door.rewardPreview.rewards
+      : door.rewardPreview.kind === 'hidden'
+        ? door.rewardPreview.authoringRewards
+        : [];
+  if (door.rewardPreview.kind === 'hidden' && rewards.length === 0) {
     return <p className="fixed-room-state">Reward hidden on this door.</p>;
   }
-  if (door.rewardPreview.kind === 'none') return null;
-  const showRewardLabels = door.rewardPreview.rewards.length > 1;
+  if (rewards.length === 0) return null;
+  const showRewardLabels = rewards.length > 1;
   return (
     <div aria-label={`${door.room.label} door rewards`} className="door-reward-list">
-      {door.rewardPreview.rewards.map((reward) => (
+      {rewards.map((reward) => (
         <section className="room-state-with-marker" key={reward.key}>
           <SemanticOwnerMarker address={reward.marker.address} />
           {reward.control === undefined ? (

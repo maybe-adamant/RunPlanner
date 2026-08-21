@@ -553,6 +553,10 @@ projected.
 Selecting a decision shows all of its physical offers together. Every authored
 offer keeps its room selector and reward editor at the same visual level,
 because the room and incoming reward jointly describe the offered door.
+The door contract keeps game preview visibility separate from planner
+authorship. An Anomaly or Zagreus automatic return remains hidden in game, but
+its freshly generated host reward still consumes the ordinary reward store and
+therefore retains its reward editor and finding destination in the decision.
 Single-choice controls live on those cards, and the picked card receives the
 strongest emphasis because it is the authored selected route. Evaluated entry
 is shown separately when materialization has actually reached that room.

@@ -157,7 +157,6 @@ attributes that carry the same internal values.
 | `This start room is declaration-fixed.`                                                               | `The game fixes the first room.`                                            | `DecisionWorkbench.tsx`                                    |
 | `Preboss batch` / `Repair Preboss batch`                                                              | `Preboss doors` / `Fix Preboss doors`                                       | `DecisionWorkbench.tsx`                                    |
 | Separate generated Preboss action or selector                                                         | Choose `Preboss` from the shared `Door 1 room` picker                       | `DecisionWorkbench.tsx`                                    |
-| `This Preboss batch is authored atomically.`                                                          | `These Preboss doors are changed together.`                                 | `DecisionWorkbench.tsx`                                    |
 | `Reconcile <label> against the current declaration-owned exits.`                                      | `Fix <label> to restore the missing doors.`                                 | `DecisionWorkbench.tsx`                                    |
 | `Missing Preboss exits are repaired atomically through the projected Preboss action.`                 | `Fix Preboss doors to restore the missing doors.`                           | `DecisionWorkbench.tsx`                                    |
 

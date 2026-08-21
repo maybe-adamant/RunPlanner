@@ -1307,7 +1307,10 @@ describe('structured workspace overlay contract', () => {
       gameName: batch.naturalChaos.door.room.gameName,
     });
     expect(batch.naturalChaos.door.room.occurrenceId).toBe(chaosId);
-    expect(batch.naturalChaos.door.rewardPreview).toEqual({ kind: 'hidden' });
+    expect(batch.naturalChaos.door.rewardPreview).toEqual({
+      kind: 'hidden',
+      authoringRewards: [],
+    });
     expect(projected.focusByOwner.get(semanticAddressKey(additional))?.nodeKey).toBe(batch.key);
     const chaosWorkbench = workspace?.nodes.find(
       (node) => node.kind === 'occurrenceWorkbench' && node.room.occurrenceId === chaosId,
@@ -1432,7 +1435,10 @@ describe('structured workspace overlay contract', () => {
         semanticAddressKey(node.owner) === semanticAddressKey(decision),
     );
     expect(selectedContract?.zagreusContract?.door.room.entered).toBe(true);
-    expect(selectedContract?.zagreusContract?.door.rewardPreview).toEqual({ kind: 'hidden' });
+    expect(selectedContract?.zagreusContract?.door.rewardPreview).toEqual({
+      kind: 'hidden',
+      authoringRewards: [],
+    });
     const contractPackages = observed.roomPackagesByOccurrence.get(contractId);
     expect(contractPackages).toHaveLength(1);
     expect(contractPackages?.[0]?.nodeKey).toBe(
@@ -1455,7 +1461,14 @@ describe('structured workspace overlay contract', () => {
           node.kind === 'takeoverBatch') &&
         semanticAddressKey(node.owner) === semanticAddressKey(contractDecision),
     );
-    expect(automaticReturn?.targets[0]?.door.rewardPreview).toEqual({ kind: 'hidden' });
+    const automaticReturnPreview = automaticReturn?.targets[0]?.door.rewardPreview;
+    expect(automaticReturnPreview?.kind).toBe('hidden');
+    if (automaticReturnPreview?.kind !== 'hidden') {
+      throw new Error('Zagreus automatic return must retain a hidden reward preview');
+    }
+    expect(automaticReturnPreview.authoringRewards).toHaveLength(1);
+    expect(automaticReturnPreview.authoringRewards[0]?.control).toBeDefined();
+    expect(automaticReturnPreview.authoringRewards[0]?.offer).toBeNull();
     expect(
       projected.interactions.zagreusContracts.get(semanticAddressKey(additional))?.owner,
     ).toEqual(additional);

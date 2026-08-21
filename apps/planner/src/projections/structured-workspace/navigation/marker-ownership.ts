@@ -146,11 +146,14 @@ export function workspaceDecisionOwnedMarkers(
     ...(node.zagreusContract === undefined ? [] : [node.zagreusContract.marker]),
     ...(node.naturalChaos === undefined ? [] : [node.naturalChaos.marker]),
     ...node.targets.map((target) => target.marker),
-    ...node.targets.flatMap((target) =>
-      target.door.rewardPreview.kind !== 'visible'
+    ...node.targets.flatMap((target) => {
+      const preview = target.door.rewardPreview;
+      return preview.kind === 'none'
         ? []
-        : target.door.rewardPreview.rewards.map((reward) => reward.marker),
-    ),
+        : (preview.kind === 'visible' ? preview.rewards : preview.authoringRewards).map(
+            (reward) => reward.marker,
+          );
+    }),
     ...node.missingTargets.map((target) => target.marker),
   ]);
 }

@@ -95,8 +95,12 @@ function appendDoorRewardMarkers(
   markers: WorkspaceMarker[],
   door: Extract<WorkspaceNode, { readonly kind: 'ordinaryBatch' }>['targets'][number]['door'],
 ): void {
-  if (door.rewardPreview.kind !== 'visible') return;
-  for (const reward of door.rewardPreview.rewards) appendMarker(markers, reward.marker);
+  if (door.rewardPreview.kind === 'none') return;
+  const rewards =
+    door.rewardPreview.kind === 'visible'
+      ? door.rewardPreview.rewards
+      : door.rewardPreview.authoringRewards;
+  for (const reward of rewards) appendMarker(markers, reward.marker);
 }
 
 /** Hub nodes publish only the declaration-defined main reward package for a room. */

@@ -1542,7 +1542,7 @@ export interface WorkspaceAnomalyControl {
   readonly success: boolean;
 }
 
-export interface WorkspaceDoorVisibleReward {
+export interface WorkspaceDoorReward {
   readonly control?: WorkspaceRewardControl;
   readonly key: string;
   readonly label: string;
@@ -1554,11 +1554,15 @@ export interface WorkspaceDoorVisibleReward {
 /** One immutable predecessor-owned physical-door handoff product. */
 export interface WorkspaceDoorContract {
   readonly rewardPreview:
-    | { readonly kind: 'hidden' }
+    | {
+        readonly kind: 'hidden';
+        /** Planner-owned reward controls that remain authorable despite the hidden game preview. */
+        readonly authoringRewards: readonly WorkspaceDoorReward[];
+      }
     | { readonly kind: 'none' }
     | {
         readonly kind: 'visible';
-        readonly rewards: readonly WorkspaceDoorVisibleReward[];
+        readonly rewards: readonly WorkspaceDoorReward[];
       };
   readonly room: WorkspaceRoomSummary;
 }
