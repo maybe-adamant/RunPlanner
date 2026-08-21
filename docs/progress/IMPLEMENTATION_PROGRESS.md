@@ -30,6 +30,15 @@ Actions, and retained specialized stale repair. These three changes are
 schema-neutral; no Shop source intent, second purchase set, Well, Shrine, or
 delivery state was added.
 
+Mandatory Room Action defaults are complete at `b422cf9`, following the locked
+plan at `5f11563`. Every semantic command that newly activates an engine-
+classified required action now inserts it at the canonical latest lifecycle
+position in the occurrence's existing `roomActions.order`. Active required
+rows are move-only; pre-existing malformed omissions retain one canonical
+restore interaction; dormant/stale rows and all optional participation remain
+explicit. The change is schema-48-neutral and adds no decode normalization,
+second chronology, command-to-simulation dependency, or Shop Purchased change.
+
 Travel Deal and Gold Gold Gold remain derived from the true action order. Any
 future payload-authoring correction must evaluate the exact history prefix at
 the triggering action. Q's forced final-Preboss Hermes delivery is the
@@ -2822,3 +2831,67 @@ all three workspace typechecks plus the fixture typecheck, checkpoint integrity
 tests in 71.11 seconds, lint, repository formatting, and the production build
 (391 transformed modules). Vite retained only the existing advisory that the
 single application chunk exceeds 500 kB.
+
+The mandatory Room Action default delivery is complete. The focused plan
+landed at `5f11563`; Gate A landed at `b422cf9`. One pure authored structural
+domain now owns active action identity, required/optional participation,
+lifecycle windows, dependencies, and checkpoints for both semantic commands
+and simulation. The command boundary compares the before/after structural
+domains and atomically schedules only newly required references at their latest
+legal positions. Standard, encounterless, Fields, Ship, N Opening, Echo,
+Gorgon, and required Artificer paths retain their exact lifecycle constraints.
+
+The closure audit found one persisted `roomActions.order`, one structural
+domain/scheduler, and no command import or invocation of simulation,
+materialization, evaluation, or candidate work. Schema 48 and its codec remain
+unchanged and continue accepting explicit missing-required repair state.
+Deactivation removes no authored row; reactivation reuses retained ranks.
+Shop Purchased, Fields minor, Narcissus, Travel, Gold, Contract, and optional
+Artificer participation retain their prior owners. Active required removal is
+rejected, while a missing required row retains one canonical restore intent and
+stale/optional removal remains reachable.
+
+The normal fixture path no longer implements production default policy:
+`authorRequiredTestRoomActions` and all calls are deleted. The retained exact
+test order transform uses ordinary membership/move commands and rejects a
+requested omission of an active required key. It invokes the production
+scheduler only to satisfy the engine's canonical malformed-repair command
+contract. Saved schema-48 JSON checkpoints were not mass-normalized.
+
+Independent Gate A review accepted two P2 findings. Context-free insertion had
+admitted dormant Fields and failed-Anomaly rows; the command now requires the
+exact structurally active domain, with three direct witnesses. Equal-window
+default insertion had ignored contribution-order tie-breaking; the scheduler
+now uses stable contribution order, with a parallel incoming-reward/Artemis
+witness. The bounded verification returned `READY`. A separate Chaos concern
+was cleared because `Empty_Chaos` remains noncombat and the lifecycle timeline
+does not invent Start/End encounter seams.
+
+Gate A changed 50 files by +2,544/-1,087 lines. Production changed
++1,265/-593 (net +672), concentrated in the two new engine authorities while
+the former 503-line simulation assembler policy was removed. Tests and test
+support changed +1,279/-494 (net +785), replacing repeated required-action
+setup with direct command, lifecycle, projection, and representative product
+witnesses. No schema, catalog declaration, persisted checkpoint, test timeout,
+worker configuration, or build configuration changed.
+
+Before review remediation, engine passed 86 files and 1,172 tests in 97.58
+seconds; planner passed 55/577 in 145.89 seconds; contract 8/49 in 30.45
+seconds; product 6/26 in 20.51 seconds; UI 12/221 in 69.62 seconds; and fixture
+integrity 1 file/6 tests in 1.58 seconds. After remediation, the focused command
+suite passed 15/15 and the combined owning set passed 5 files/80 tests. Final
+proportional reruns passed engine 86 files/1,175 tests in 98.71 seconds,
+planner 55/577 in 146.78 seconds, and product 6/26 in 21.16 seconds. All
+workspace and fixture typechecks, ESLint, repository formatting, diff checks,
+and the production build passed; Vite transformed 393 modules and retained
+only the existing greater-than-500-kB chunk advisory. No timeout failure or
+isolated diagnostic remained.
+
+The single authorized closure `npm run check` passed all three workspace
+typechecks plus the fixture typecheck; checkpoint integrity passed 1 file/6
+tests in 1.56 seconds; the regular lane passed 129 files/1,573 tests in 76.00
+seconds; and the heavy lane passed 27 files/390 tests in 66.44 seconds. ESLint,
+repository formatting, and the production build also passed. Vite transformed
+393 modules and retained only the existing greater-than-500-kB chunk advisory.
+The complete gate was run exactly once and was not rerun after this factual
+append.
