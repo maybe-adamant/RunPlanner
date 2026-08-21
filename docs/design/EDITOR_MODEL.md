@@ -109,21 +109,20 @@ The one Hub decision node projects:
 - findings and candidate state attached by semantic address.
 
 `HubDecisionWorkbench` is the sole N-specific renderer inside
-`BiomeWorkspace`. It arranges the Hub as one ranked board: the exact authored
-visit prefix, one compact next-visit target while that prefix is incomplete
-that retains each remaining visit's positional marker and assessment, a clear
-visit cutoff, and a presentation-only unvisited tail. It may not expose
-arbitrary room replacement for a fixed slot or persist a second door-count
-value. Open-set membership and visit order remain separate controls because
-every open, unvisited slot owns a real offered reward leaf.
+`BiomeWorkspace`. Its occurrence-like tabs make the persistent board readable
+without changing its model: Hub Overview renders the complete fixed-slot set
+and exclusively owns both open/closed participation and each open room's main
+reward editor; Hub Timeline renders the exact authored visit prefix, compact
+next-visit target, visit cutoff, presentation-only tail, and read-only reward
+context; Hub Exit contains the existing completed-Hub Preboss handoff. It may
+not expose arbitrary room replacement for a fixed slot or persist a second
+door-count value.
 
-The open board is a one-row-per-room roster. Its first line makes rank,
-identity, traversal state, membership, and reordering readable; its second
-line retains the existing selected main-reward control rather than inventing a
-new reward classification. This lets one room's local configuration expand
-without stretching unrelated rooms. The compact three-column closed-room
-disclosure is intentionally a different presentation because it has no active
-ranked traversal surface.
+The Timeline roster makes rank, identity, traversal state, and reordering
+readable. Membership and reward controls never appear there; closing a slot
+remains the single semantic operation that reconciles its authored occurrence
+and visit references. Its reward summary links the exact semantic owner back
+to the existing Overview editor without creating another ownership path.
 
 Membership controls create or remove the one authored occurrence owned by a
 fixed slot; visited slots cannot be closed until their visit references are

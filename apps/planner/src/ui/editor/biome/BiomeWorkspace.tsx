@@ -18,6 +18,7 @@ import {
   type WorkspaceRailReward,
   type WorkspaceRailSelectedTarget,
   type WorkspaceAuthoringFrontier,
+  type WorkspaceHubTab,
   type WorkspaceOccurrenceStageOutgoing,
   type WorkspaceRoomTab,
 } from '@planner/projections/structured-workspace';
@@ -660,6 +661,7 @@ function InspectorNode({
   node,
   outgoing,
   outgoingDecision,
+  hubTab,
   roomTab,
   sourceOccurrence,
 }: {
@@ -672,6 +674,7 @@ function InspectorNode({
     WorkspaceNode,
     { readonly kind: 'ordinaryBatch' | 'mixedBatch' | 'takeoverBatch' }
   >;
+  readonly hubTab?: WorkspaceHubTab;
   readonly sourceOccurrence?: Extract<WorkspaceNode, { readonly kind: 'occurrenceWorkbench' }>;
   readonly roomTab?: WorkspaceRoomTab;
 }) {
@@ -760,7 +763,14 @@ function InspectorNode({
     case 'completion':
       return <CompletionWorkbench interactions={interactions} node={node} />;
     case 'hubDecision':
-      return <HubDecisionWorkbench frontier={frontier} interactions={interactions} node={node} />;
+      return (
+        <HubDecisionWorkbench
+          frontier={frontier}
+          {...(hubTab === undefined ? {} : { initialTab: hubTab })}
+          interactions={interactions}
+          node={node}
+        />
+      );
   }
 }
 
@@ -1067,6 +1077,9 @@ export function BiomeWorkspace({
             {...(selectedStage === undefined ? {} : { outgoing: selectedStage.outgoing })}
             {...(outgoingDecision === undefined ? {} : { outgoingDecision })}
             {...(sourceOccurrence === undefined ? {} : { sourceOccurrence })}
+            {...(explicitDestination?.hubTab === undefined
+              ? {}
+              : { hubTab: explicitDestination.hubTab })}
             {...(explicitDestination?.roomTab === undefined
               ? {}
               : { roomTab: explicitDestination.roomTab })}

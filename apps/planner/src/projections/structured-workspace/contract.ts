@@ -97,6 +97,9 @@ export type WorkspaceRoomTab =
   | 'shipCombat2Actions'
   | 'shipInactiveRepair';
 
+/** Transient destination for one presentation surface of the persistent Hub board. */
+export type WorkspaceHubTab = 'overview' | 'timeline' | 'exit';
+
 export type WorkspacePayloadEditIntent<Command extends ProjectCommand> = WorkspaceCommandIntent<
   | Command
   | Extract<
@@ -144,6 +147,8 @@ export interface WorkspaceInspectorDestination {
   readonly ownerAddress: SemanticAddress;
   /** Present when this owner belongs to a specific room-workbench tab. */
   readonly roomTab?: WorkspaceRoomTab;
+  /** Present when this owner belongs to a specific Hub-workbench tab. */
+  readonly hubTab?: WorkspaceHubTab;
   readonly region: 'inspector' | 'routeRail' | 'structure';
   readonly routeKey?: string;
   /**

@@ -620,6 +620,9 @@ export function assembleWorkspaceBiomeSemantics(
     if (decision.source.kind !== 'hubDecision') continue;
     projectAuthoredExitDecision(decision);
   }
+  if (frontier?.kind === 'exitDecision' && frontier.owner.source.kind === 'hubDecision') {
+    markerDestinations.setHubTab([frontier.marker], 'exit');
+  }
   const structuralNodes = Object.freeze([...nodes]);
   const frontierSeed = enrichFrontierPredecessor(frontier, structuralNodes);
   let resolvedFrontier: WorkspaceAuthoringFrontier | null;

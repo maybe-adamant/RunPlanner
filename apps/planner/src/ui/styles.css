@@ -2595,59 +2595,18 @@ select {
   overflow: hidden;
 }
 
-.hub-closed-room-disclosure {
-  border: 1px solid #3a3b45;
-  border-radius: 12px;
-  background: rgb(13 14 18 / 32%);
-  overflow: visible;
-}
-
-.hub-closed-room-disclosure {
-  margin: 16px 6px 6px;
-}
-
-.hub-closed-room-disclosure > summary {
-  display: flex;
-  min-height: 42px;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  color: #ded9d0;
-  cursor: pointer;
-  list-style: none;
-  user-select: none;
-}
-
-.hub-closed-room-disclosure > summary::-webkit-details-marker {
-  display: none;
-}
-
-.hub-closed-room-disclosure > summary::before {
-  content: '›';
-  color: #e2b971;
-  font-size: 1.15rem;
-  line-height: 1;
-  transition: transform 120ms ease;
-}
-
-.hub-closed-room-disclosure[open] > summary::before {
-  transform: rotate(90deg);
-}
-
-.hub-closed-room-disclosure > summary:hover {
-  color: #fffaf2;
-  background: rgb(255 255 255 / 3%);
-}
-
-.hub-closed-room-disclosure > summary:focus-visible {
-  outline: 2px solid #e2b971;
-  outline-offset: 3px;
-}
-
 .hub-ranked-room-board {
   display: grid;
   position: relative;
   gap: 10px;
+  padding: 12px;
+}
+
+.hub-overview-room-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 8px;
   padding: 12px;
 }
 
@@ -2791,13 +2750,6 @@ select {
   text-align: end;
 }
 
-.hub-closed-room-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 7px;
-  padding: 0 12px 12px;
-}
-
 .hub-open-room-card {
   display: grid;
   position: relative;
@@ -2818,19 +2770,6 @@ select {
 .hub-open-room-card[data-focused-main-reward='true'] {
   border-color: rgb(174 152 202 / 72%);
   box-shadow: 0 0 0 2px rgb(174 152 202 / 14%);
-}
-
-.hub-closed-room-option {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  min-width: 0;
-  align-items: start;
-  gap: 8px;
-  padding: 9px 10px;
-  border: 1px solid #34353e;
-  border-radius: 9px;
-  color: #8e8b95;
-  background: rgb(10 11 14 / 35%);
 }
 
 .hub-slot-heading {
@@ -2860,6 +2799,23 @@ select {
   grid-template-columns: 28px 26px minmax(0, 1fr) auto auto;
   align-items: start;
   gap: 8px;
+}
+
+.hub-open-room-card[data-hub-card-presentation='overview'] .hub-roster-primary {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.hub-overview-reward-slot {
+  display: grid;
+  min-block-size: 78px;
+  align-items: start;
+}
+
+.hub-overview-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
 }
 
 .hub-roster-drag-handle {
@@ -3067,6 +3023,23 @@ select {
   grid-column: 1 / -1;
 }
 
+.hub-timeline-reward-preview {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 8px;
+  color: #aaa7af;
+  font-size: 0.8rem;
+}
+
+.hub-timeline-reward-preview strong {
+  min-width: 0;
+  color: #e7dfd5;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .hub-membership-control {
   display: flex;
   align-items: center;
@@ -3120,6 +3093,10 @@ select {
 }
 
 @container (max-width: 620px) {
+  .hub-overview-room-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .hub-roster-primary {
     grid-template-columns: 28px 24px minmax(0, 1fr) auto;
   }
@@ -3127,6 +3104,17 @@ select {
   .hub-roster-primary > .hub-membership-action {
     grid-column: 4;
     grid-row: 1;
+  }
+
+  .hub-open-room-card[data-hub-card-presentation='overview'] .hub-roster-primary {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .hub-open-room-card[data-hub-card-presentation='overview']
+    .hub-roster-primary
+    > .hub-membership-action {
+    grid-column: auto;
+    grid-row: auto;
   }
 
   .hub-roster-primary > .hub-rank-actions {
@@ -3137,36 +3125,6 @@ select {
 }
 
 @container (max-width: 500px) {
-  .hub-closed-room-grid {
-    gap: 5px;
-  }
-
-  .hub-closed-room-option {
-    gap: 6px;
-    padding: 7px;
-  }
-
-  .hub-closed-room-option .hub-slot-heading {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .hub-closed-room-option .hub-membership-action {
-    align-self: start;
-  }
-
-  .hub-closed-room-option .hub-membership-control {
-    min-inline-size: 28px;
-    min-block-size: 28px;
-    justify-content: center;
-    gap: 0;
-    padding: 4px;
-  }
-
-  .hub-closed-room-option .hub-membership-control-label {
-    display: none;
-  }
-
   .hub-visit-boundary {
     align-items: flex-start;
     flex-direction: column;

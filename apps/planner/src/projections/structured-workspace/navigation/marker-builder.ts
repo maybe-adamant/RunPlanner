@@ -7,6 +7,7 @@ import {
 import {
   StructuredWorkspaceProjectionContractError,
   type WorkspaceAssessment,
+  type WorkspaceHubTab,
   type WorkspaceInspectorDestination,
   type WorkspaceMarker,
   type WorkspaceRoomTab,
@@ -21,6 +22,7 @@ export interface WorkspaceMarkerDestinationEmitter {
   marker(address: SemanticAddress, nodeKey?: string): WorkspaceMarker;
   redirect(markers: Iterable<WorkspaceMarker>, nodeKey: string): void;
   redirectTo(marker: WorkspaceMarker, focus: WorkspaceMarker, nodeKey: string): void;
+  setHubTab(markers: Iterable<WorkspaceMarker>, tab: WorkspaceHubTab): void;
   setRoomTab(markers: Iterable<WorkspaceMarker>, tab: WorkspaceRoomTab): void;
 }
 
@@ -111,6 +113,12 @@ export function createWorkspaceBiomeMarkerDestinationBuilder(
           routeKey: input.routeKey,
         }),
       );
+    },
+    setHubTab(markers: Iterable<WorkspaceMarker>, tab: WorkspaceHubTab): void {
+      for (const marker of markers) {
+        const destination = requireRegistered(marker);
+        destinations.set(marker.focusKey, Object.freeze({ ...destination, hubTab: tab }));
+      }
     },
     setRoomTab(markers: Iterable<WorkspaceMarker>, tab: WorkspaceRoomTab): void {
       for (const marker of markers) {

@@ -132,7 +132,13 @@ function hubRoomDetailProject(): ProjectDocument {
 }
 
 function hubRoster(): HTMLElement {
+  selectHubTab('Hub Timeline');
   return screen.getByRole('group', { name: 'Ranked open Ephyra rooms' });
+}
+
+function selectHubTab(name: 'Hub Overview' | 'Hub Timeline' | 'Hub Exit'): void {
+  const tab = screen.getByRole('tab', { name });
+  if (tab.getAttribute('aria-selected') !== 'true') fireEvent.click(tab);
 }
 
 function hubCard(slotKey: string): HTMLElement {
@@ -272,13 +278,42 @@ function withRetainedHubBehindMissingLink(project: ProjectDocument): ProjectDocu
 }
 
 describe('HubDecisionWorkbench', () => {
+  it('separates participation, visit/reward editing, and the completed exit into occurrence-style tabs', () => {
+    renderStaticHubDecisionWorkbench(loadSurfaceNCompleteHubFrontierProject());
+
+    const overview = screen.getByRole('tab', { name: 'Hub Overview' });
+    const timeline = screen.getByRole('tab', { name: 'Hub Timeline' });
+    const exit = screen.getByRole('tab', { name: 'Hub Exit' });
+    expect(overview.getAttribute('aria-selected')).toBe('true');
+    expect(screen.getByRole('checkbox', { name: 'Combat 01 open' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Move Combat 01 later' })).toBeNull();
+    expect(screen.getAllByLabelText('Reward').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Open this room to edit its reward.')).toHaveLength(17);
+
+    fireEvent.keyDown(overview, { key: 'ArrowRight' });
+    expect(timeline.getAttribute('aria-selected')).toBe('true');
+    expect(screen.queryByRole('checkbox', { name: 'Combat 01 open' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Move Combat 01 later' })).toBeTruthy();
+    expect(screen.queryByLabelText('Reward')).toBeNull();
+    expect(screen.getByLabelText('Combat 01 reward preview').textContent).toContain(
+      'Big Max Health',
+    );
+
+    fireEvent.keyDown(timeline, { key: 'End' });
+    expect(exit.getAttribute('aria-selected')).toBe('true');
+    expect(screen.getByText('Continue to Preboss')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Move Combat 01 later' })).toBeNull();
+  });
+
   it('renders one ranked open-room board without the superseded visit timeline', () => {
     renderStaticHubDecisionWorkbench(representativeHubProject);
 
+    selectHubTab('Hub Timeline');
+
     expect(screen.getByRole('region', { name: 'Ephyra Hub' })).toBeTruthy();
-    expect(screen.getByRole('heading', { name: 'Hub traversal' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Hub visit order' })).toBeTruthy();
     expect(screen.queryByRole('heading', { name: 'Ranked Ephyra rooms' })).toBeNull();
-    expect(screen.getAllByLabelText(/Hub room$/)).toHaveLength(26);
+    expect(screen.getAllByLabelText(/Hub room$/)).toHaveLength(9);
     expect(document.querySelector('.hub-visit-timeline')).toBeNull();
     expect(document.querySelectorAll('.hub-visit-row')).toHaveLength(0);
     expect(screen.queryByText('Pylon visit order')).toBeNull();
@@ -298,6 +333,7 @@ describe('HubDecisionWorkbench', () => {
 
   it('renders every open room exactly once across the authored prefix and declaration tail', () => {
     renderStaticHubDecisionWorkbench(representativeHubProject);
+    selectHubTab('Hub Timeline');
 
     const closedDisclosure = document.querySelector<HTMLDetailsElement>(
       '.hub-closed-room-disclosure',
@@ -312,8 +348,8 @@ describe('HubDecisionWorkbench', () => {
     expect(new Set(openCards.map((card) => card.dataset.hubSlotKey)).size).toBe(openCards.length);
     expect(screen.getByText('Visit order ends here')).toBeTruthy();
     expect(screen.getByText('6 rooms traverse the pylons')).toBeTruthy();
-    expect(document.querySelectorAll('.hub-closed-room-option')).toHaveLength(17);
-    expect(closedDisclosure?.open).toBe(false);
+    expect(document.querySelectorAll('.hub-closed-room-option')).toHaveLength(0);
+    expect(closedDisclosure).toBeNull();
     expect(screen.getByText('9 open · 9–10 required')).toBeTruthy();
     expect(screen.getByText('6 of 6 planned')).toBeTruthy();
     expect(document.querySelector('.hub-slot-grid')).toBeNull();
@@ -334,16 +370,12 @@ describe('HubDecisionWorkbench', () => {
       expect(card.querySelector('.hub-main-reward')).not.toBeNull();
       expect(card.textContent).not.toContain('Evaluated');
     }
-    for (const option of document.querySelectorAll<HTMLElement>('.hub-closed-room-option')) {
-      expect(option.querySelector('.hub-main-reward')).toBeNull();
-      expect(option.querySelector('.semantic-focus-link')).toBeNull();
-      expect(option.textContent).not.toContain('This room is closed.');
-    }
   });
 
   it('keeps unplanned visit owners in one compact next-visit target', () => {
     const project = twoVisitHubProject();
     renderStaticHubDecisionWorkbench(project);
+    selectHubTab('Hub Timeline');
     const prefix = document.querySelector<HTMLElement>('.hub-ranked-visit-prefix');
     const tail = document.querySelector<HTMLElement>('.hub-ranked-tail');
 
@@ -388,12 +420,6 @@ describe('HubDecisionWorkbench', () => {
     });
     const view = renderHubDecisionWorkbench(project);
     await waitFor(() => expect(screen.getAllByLabelText(/Hub room$/)).toHaveLength(26));
-    const disclosure = document.querySelector<HTMLDetailsElement>('.hub-closed-room-disclosure');
-    const summary = disclosure?.querySelector<HTMLElement>('summary');
-    if (summary === null || summary === undefined) {
-      throw new Error('An empty authored Hub must render its closed-room disclosure.');
-    }
-    await view.user.click(summary);
     const firstClosed = screen.getByLabelText('Combat 01 open');
     act(() => firstClosed.focus());
     await view.user.keyboard('[Space]');
@@ -404,7 +430,7 @@ describe('HubDecisionWorkbench', () => {
         ),
       ).toBe(true),
     );
-    expect(document.activeElement).toBe(screen.getByLabelText('Combat 02 open'));
+    expect(document.activeElement).toBe(screen.getByLabelText('Combat 01 open'));
   });
 
   it('scopes a provisional opening identity to activation, cancellation, and projection replacement', async () => {
@@ -471,19 +497,6 @@ describe('HubDecisionWorkbench', () => {
   it('keeps keyboard opening in the closed-room batch at the maximum', async () => {
     const project = loadSurfaceNProject();
     const view = renderHubDecisionWorkbench(project);
-    const disclosure = document.querySelector<HTMLDetailsElement>('.hub-closed-room-disclosure');
-    const summary = disclosure?.querySelector<HTMLElement>('summary');
-    if (
-      disclosure === null ||
-      disclosure === undefined ||
-      summary === null ||
-      summary === undefined
-    ) {
-      throw new Error('The authored Hub must render its closed-room disclosure.');
-    }
-    await view.user.click(summary);
-    expect(disclosure.open).toBe(true);
-
     const opening = screen.getByRole('checkbox', { name: 'Combat 04 open' });
     act(() => opening.focus());
     await view.user.keyboard('[Space]');
@@ -497,11 +510,9 @@ describe('HubDecisionWorkbench', () => {
 
     const openedCard = screen.getByRole('article', { name: 'Combat 04 Hub room' });
     expect(view.application.store.getState().editorSession.focusedSemanticOwner).toBeNull();
-    expect(document.activeElement).toBe(summary);
-    expect(document.activeElement).not.toBe(
+    expect(document.activeElement).toBe(
       within(openedCard).getByRole('checkbox', { name: 'Combat 04 open' }),
     );
-    expect(disclosure.open).toBe(true);
   });
 
   it('opens, edits, and closes an unvisited room through its compact card', async () => {
@@ -509,7 +520,15 @@ describe('HubDecisionWorkbench', () => {
     const view = renderHubDecisionWorkbench(project);
     const closedCard = screen.getByRole('article', { name: 'Combat 04 Hub room' });
     const open = within(closedCard).getByRole('checkbox', { name: 'Combat 04 open' });
+    const overviewSlotOrder = (): readonly string[] =>
+      Array.from(
+        screen
+          .getByRole('group', { name: 'Hub room set' })
+          .querySelectorAll<HTMLElement>('[data-hub-slot-key]'),
+      ).flatMap((card) => (card.dataset.hubSlotKey === undefined ? [] : [card.dataset.hubSlotKey]));
+    const slotOrderBefore = overviewSlotOrder();
     expect(closedCard.querySelector('[data-assessment]')).toBeNull();
+    expect(within(closedCard).getByText('Open this room to edit its reward.')).toBeTruthy();
 
     await view.user.pointer({ keys: '[MouseLeft]', target: open });
     await waitFor(() =>
@@ -521,13 +540,13 @@ describe('HubDecisionWorkbench', () => {
     );
 
     const openedCard = screen.getByRole('article', { name: 'Combat 04 Hub room' });
+    expect(overviewSlotOrder()).toEqual(slotOrderBefore);
+    expect(within(openedCard).getByLabelText('Reward')).toBeTruthy();
+    expect(within(openedCard).queryByText('Open this room to edit its reward.')).toBeNull();
     expect(within(openedCard).queryByText(/Closing this slot removes/)).toBeNull();
-    expect(document.activeElement).not.toBe(
-      within(openedCard).getByRole('checkbox', { name: 'Combat 04 open' }),
-    );
+    expect(document.activeElement).not.toBe(openedCard);
     expect(view.application.store.getState().editorSession.focusedSemanticOwner).toBeNull();
     expect(screen.getByText('10 open · 9–10 required')).toBeTruthy();
-    expect(document.querySelectorAll('.hub-closed-room-option')).toHaveLength(16);
     const beforeReward = nHubOccurrence(view.application, 'combat04').state;
     await view.user.click(within(openedCard).getByLabelText('Reward'));
     const rewardTypes = within(
@@ -588,16 +607,15 @@ describe('HubDecisionWorkbench', () => {
       historyBeforeClose + 1,
     );
     expect(view.application.store.getState().editorSession.focusedSemanticOwner).toBeNull();
-    expect(document.querySelector<HTMLDetailsElement>('.hub-closed-room-disclosure')?.open).toBe(
-      false,
-    );
     expect(
-      screen
-        .getByRole('group', { name: 'Ranked open Ephyra rooms' })
-        .contains(document.activeElement),
+      screen.getByRole('group', { name: 'Hub room set' }).contains(document.activeElement),
     ).toBe(true);
     expect(screen.getByText('9 open · 9–10 required')).toBeTruthy();
-    expect(document.querySelectorAll('.hub-closed-room-option')).toHaveLength(17);
+    expect(
+      within(screen.getByRole('article', { name: 'Combat 04 Hub room' })).getByText(
+        'Open this room to edit its reward.',
+      ),
+    ).toBeTruthy();
     act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
     await waitFor(() =>
       expect(
@@ -669,42 +687,23 @@ describe('HubDecisionWorkbench', () => {
     expect(within(story).getByRole('button', { name: 'Open details for Medea' })).toBeTruthy();
   });
 
-  it('reveals the closed-room disclosure for exact closed-slot focus without authoring history', async () => {
+  it('keeps exact closed-slot focus visible in the complete Overview set without authoring history', () => {
     const project = loadSurfaceNProject();
     const view = renderHubDecisionWorkbench(project);
-    const disclosure = document.querySelector<HTMLDetailsElement>('.hub-closed-room-disclosure');
-    if (disclosure === null) throw new Error('closed Hub rooms disclosure is missing');
     const historyBefore = view.application.store.getState().projectWorkspace.history.past.length;
 
-    expect(disclosure.open).toBe(false);
     act(() =>
       view.application.store.dispatch(
         semanticOwnerFocused(createHubSlotAddress(nBiome, 'hub', 'combat04')),
       ),
     );
-    await waitFor(() => expect(disclosure.open).toBe(true));
+    expect(screen.getByRole('tab', { name: 'Hub Overview' }).getAttribute('aria-selected')).toBe(
+      'true',
+    );
+    expect(screen.getByRole('article', { name: 'Combat 04 Hub room' }).dataset.open).toBe('false');
     expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
       historyBefore,
     );
-
-    await view.user.click(within(disclosure).getByText('Closed rooms (17)'));
-    expect(disclosure.open).toBe(false);
-    act(() =>
-      view.application.store.dispatch(
-        authoredProjectCommandDispatched({
-          kind: 'ReplaceFearVowRank',
-          route: createRouteAddress('Surface'),
-          vowKey: 'EnemyDamageShrineUpgrade',
-          rank: 1,
-        }),
-      ),
-    );
-    await waitFor(() =>
-      expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
-        historyBefore + 1,
-      ),
-    );
-    expect(disclosure.open).toBe(false);
   });
 
   it('keeps the board-owned reward as the exact reward focus destination', () => {
@@ -728,6 +727,7 @@ describe('HubDecisionWorkbench', () => {
 
   it('keeps every positional visit marker in its exact ranked prefix card', () => {
     renderStaticHubDecisionWorkbench(loadSurfaceNOPQProject());
+    selectHubTab('Hub Timeline');
 
     const prefixCards = Array.from(
       document.querySelectorAll<HTMLElement>('.hub-ranked-visit-prefix .hub-open-room-card'),
@@ -819,6 +819,7 @@ describe('HubDecisionWorkbench', () => {
   it('keeps a keyboard tail-only move out of semantic history and command dispatch', async () => {
     const project = loadSurfaceNCompleteHubFrontierProject();
     const view = renderHubDecisionWorkbench(project);
+    selectHubTab('Hub Timeline');
     const dispatch = vi.spyOn(view.application.store, 'dispatch');
     const historyBefore = view.application.store.getState().projectWorkspace.history.past.length;
     const authoredBefore = [...nHubState(view.application).decision.visitOrder];
@@ -851,6 +852,7 @@ describe('HubDecisionWorkbench', () => {
   it('moves a room across the cutoff with one full order and preserves focus', async () => {
     const project = loadSurfaceNCompleteHubFrontierProject();
     const view = renderHubDecisionWorkbench(project);
+    selectHubTab('Hub Timeline');
     const dispatch = vi.spyOn(view.application.store, 'dispatch');
     const historyBefore = view.application.store.getState().projectWorkspace.history.past.length;
     const moved = screen.getByRole('button', { name: 'Move Combat 01 into visit 6' });
@@ -891,6 +893,7 @@ describe('HubDecisionWorkbench', () => {
   it('publishes a complete Hub order when a remaining room drops into the full prefix', async () => {
     const project = loadSurfaceNCompleteHubFrontierProject();
     const view = renderHubDecisionWorkbench(project);
+    selectHubTab('Hub Timeline');
     const dispatch = vi.spyOn(view.application.store, 'dispatch');
     const historyBefore = view.application.store.getState().projectWorkspace.history.past.length;
     dispatch.mockClear();
@@ -946,6 +949,7 @@ describe('HubDecisionWorkbench', () => {
   it('keeps a tail-only roster drag out of semantic history and command dispatch', async () => {
     const project = loadSurfaceNCompleteHubFrontierProject();
     const view = renderHubDecisionWorkbench(project);
+    selectHubTab('Hub Timeline');
     const dispatch = vi.spyOn(view.application.store, 'dispatch');
     const historyBefore = view.application.store.getState().projectWorkspace.history.past.length;
     const authoredBefore = [...nHubState(view.application).decision.visitOrder];
@@ -1171,6 +1175,7 @@ describe('HubDecisionWorkbench', () => {
   it('creates and undoes the completed-Hub handoff through its bound intent', async () => {
     const project = loadSurfaceNCompleteHubFrontierProject();
     const view = renderHubDecisionWorkbench(project);
+    selectHubTab('Hub Exit');
     const handoff = document.querySelector<HTMLElement>(
       '[data-presentation="completedHubHandoff"]',
     );
@@ -1215,8 +1220,9 @@ describe('HubDecisionWorkbench', () => {
       kind: 'ReplaceHubVisitOrder',
     });
     const view = renderHubDecisionWorkbench(project);
+    selectHubTab('Hub Timeline');
 
-    expect(screen.getAllByLabelText(/Hub room$/)).toHaveLength(26);
+    expect(screen.getAllByLabelText(/Hub room$/)).toHaveLength(9);
     const hub = workspaceBiome(view.application, 'Surface', 'N').nodes.find(
       (node) => node.kind === 'hubDecision',
     );
@@ -1229,9 +1235,6 @@ describe('HubDecisionWorkbench', () => {
         )}']`,
       );
     expect(invalidRewardMarker?.dataset.hasFindings).toBe('true');
-    expect(
-      document.querySelector(".hub-closed-room-option [data-assessment='unassessed']"),
-    ).not.toBeNull();
     expect(document.querySelectorAll('.hub-ranked-visit-prefix .hub-open-room-card')).toHaveLength(
       3,
     );

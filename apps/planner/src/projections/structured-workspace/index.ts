@@ -47,6 +47,7 @@ export type {
   WorkspaceRoomLifecycleTimelineEntry,
   WorkspaceRoomLifecycleBoundary,
   WorkspaceRoomTab,
+  WorkspaceHubTab,
   WorkspaceHubDecisionNode,
   WorkspaceHubSlot,
   WorkspaceHubSlotCloseInteraction,
