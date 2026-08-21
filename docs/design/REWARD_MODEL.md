@@ -808,7 +808,7 @@ is atomic and no row publishes a conflicting local order.
 
 The persisted order remains available to a later plan compiler without the
 compiler or simulator choosing a different witness order. The editor derives
-per-row membership and one ranked Room Actions surface from the
+per-row membership and one ranked Room Timeline surface from the
 occurrence-owned list. That surface remains on the producing occurrence; an
 outgoing decision never adopts the source room's chronology. For Shop entries,
 Overview inventory owns reward identity and its Purchased marker, while the

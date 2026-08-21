@@ -277,7 +277,7 @@ describe('Experimental Hammer', () => {
     ).toHaveLength(1);
   });
 
-  it('uses every real H encounter completion, including multiple phases owned by one room', () => {
+  it('uses every rigid H cage completion without treating Passive setup as an encounter cycle', () => {
     const project = replaceTestRoomActionOrder(
       createGoldenFGHProject(),
       catalog,
@@ -329,7 +329,7 @@ describe('Experimental Hammer', () => {
           event.origin.kind === 'occurrence' && event.origin.occurrenceId === 'golden-h-combat02',
       )
       .map((event) => event.phaseKey);
-    expect(combat02Phases).toEqual(['Passive', 'Cage02', 'Cage01']);
+    expect(combat02Phases).toEqual(['Cage02', 'Cage01']);
   });
 
   it('advances through a selected Story primary encounter', () => {

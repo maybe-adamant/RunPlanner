@@ -764,7 +764,7 @@ cage reward support continue through the common declaration and reward
 validators rather than a parallel biome validator.
 
 A canonical authored room records its occurrence address and ID, game room
-identity, resolved encounter and lifecycle facts, entered state, Room Actions
+identity, resolved encounter and lifecycle facts, entered state, `roomActions`
 state plus its roster and timeline, and its supported room-local reward, wheel,
 Shop, pickup, or acquisition-site payloads when present. It does not copy
 labels, candidate arrays, eligibility predicates, or other declaration facts.
@@ -1125,7 +1125,7 @@ enforce each group's `offerCount` without replacement. Positive weights do not
 change possibility support. After the inventory exists, generate and validate
 the room's outgoing batch from the same pre-purchase acquisition history and
 the complete generated current-room option set. Only then execute participating
-Room Actions assigned to the post-outgoing Shop window. Exact affordability and
+`roomActions.order` entries assigned to the post-outgoing Shop window. Exact affordability and
 resource state remain deferred under the sufficient-resource policy in
 `REWARD_MODEL.md`. Blind Box persists its intended source, but validates that
 source only if its entry participates in that order. The simulator evaluates

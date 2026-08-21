@@ -198,6 +198,7 @@ function materializeCountedRoom(context: AuthoredRoomMaterializationContext): Ma
   return Object.freeze({
     lifecycleProfileKey:
       context.lifecycleProfileKey ??
+      context.room.lifecycleProfileKey ??
       (context.room.encounterEnvelopeKey === 'PEncounter' ? 'PCombatRoom' : 'StandardRewardRoom'),
     ...materializedIncomingReward(
       context,
@@ -882,6 +883,7 @@ export function materializeAuthoredRoom(
     owner: base.origin,
     order: base.roomActions.order,
     contributions: roomActionDomain.contributions,
+    lifecycleStructure: roomActionDomain.lifecycleStructure,
     canonicalRequiredInsertions: roomActionDomain.contributions.flatMap((entry) => {
       if (
         entry.kind !== 'action' ||
@@ -909,8 +911,6 @@ export function materializeAuthoredRoom(
   });
   const roomLifecycleTimeline = assembleRoomLifecycleTimeline({
     owner: base.origin,
-    lifecycleProfileKey: base.lifecycleProfileKey,
-    encounterPhases: base.encounterPhases,
     roomActionRoster,
   });
   return Object.freeze({

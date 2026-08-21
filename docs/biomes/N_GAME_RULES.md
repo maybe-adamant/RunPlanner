@@ -131,7 +131,7 @@ one parent-sourced `LocalVisitDecision`. It owns generation state and visit
 order; generated side rewards resolve as one unordered sibling batch before
 entry, and their availability order follows the declaration-backed rank used by
 the pressure rule. Each generated side target is a normal `RoomOccurrence` with
-its own encounter, reward payload, and Room Actions. The pylon gate observes
+its own encounter, reward payload, `roomActions.order`, and Room Timeline. The pylon gate observes
 the declared spawn count, while leaving a target requires its spawned pylon to
 be completed.
 

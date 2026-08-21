@@ -160,7 +160,7 @@ before Preboss generation. Ordinary occurrence-sourced decisions do not retain
 a `beforeTargetGeneration` launcher on their door cards. Room-local lifecycle
 launchers keep their exact engine owners while the application projects one
 consistent utility slot at the top of each tab panel. Ordinary/H/Shop Overview
-and Actions reuse the same Room-entered launcher. O Overview and Intro Actions
+and Timeline reuse the same Room-entered launcher. O Overview and Intro Timeline
 reuse Intro's pre-start launcher, while each later phase tab uses that phase's
 pre-start launcher. Room Doors uses the literal pre-exit launcher. Inactive
 Actions is a repair surface and owns no lifecycle launcher. An unavailable
@@ -228,7 +228,7 @@ presentation has a visible picker.
 
 The application publishes one closed occurrence-presentation union rather than
 a generic room-details disclosure. Standard, Fields, and Shop occurrences
-render Room Overview, Room Actions, and Room Doors. Overview contains read-only
+render Room Overview, Room Timeline, and Room Doors. Overview contains read-only
 incoming context and meaningful room-local setup: optional N Side rooms,
 Fields identities, Shop inventory and Purchased markers, and Room features.
 Actions consumes the engine lifecycle timeline plus the one occurrence-owned
@@ -260,7 +260,7 @@ child renders its bound Add or Remove Chaos-gate/Zagreus-contract action
 directly, without a second child heading that repeats the action's subject.
 
 ShipCombat is the deliberate fourth shape. It renders Room Overview, Intro
-Actions, Combat 1 Actions, structurally active Combat 2 Actions, and Room
+Timeline, Combat 1 Timeline, structurally active Combat 2 Timeline, and Room
 Doors. Overview owns encounter count and room features. Each phase tab contains
 its projected encounter control at Start encounter, its post-combat actions,
 and the declaration-attached wheel editor at the following `nextPhase`
@@ -804,14 +804,14 @@ from normalized acquisition roles; it does not switch on Hammer names or
 reconstruct lifecycle order. Room, local, wheel, Devotion, and Shop
 projections all reuse the same interaction package. A materialized Shop
 publishes ordinary paid-purchase trait and Pom controls only from participating
-`interactShopOffer` rows in Room Actions. Unpurchased initial inventory exposes
+`interactShopOffer` rows in Room Timeline. Unpurchased initial inventory exposes
 only `Purchased` membership in Overview; it has no acquisition-child control,
 finding, trait event, or equipped-state fold until its entry participates.
 The inventory remains the only reward-identity editor. Once purchased, its
-Room Actions row exposes resolution children and chronology only; it cannot
+Room Timeline row exposes resolution children and chronology only; it cannot
 turn the purchased Boon, Mystery Boon, Pom, or other item into another reward.
 
-The same Room Actions chronology contains declaration-produced pickups such as Narcissus
+The same Room Timeline chronology contains declaration-produced pickups such as Narcissus
 outputs. It derives entry labels, required/optional classification, lifecycle
 windows, reward controls, and exact acquisition children from the engine
 product, while exact membership and chronology come from the occurrence's sole
@@ -866,7 +866,7 @@ Gold duplicate is the one exception to purchase-first child visibility: its
 stable supplemental Shop row is the sole complete reward editor, including
 boon, Pom, and Time Piece children, before `Picked up` is selected. Those edits
 dispatch the shared derived-Shop-entry command, which atomically persists the
-engine-owned default without adding the key to chronology. Room Actions shows
+engine-owned default without adding the key to chronology. Room Timeline shows
 only the Gold chronology row after pickup participation is
 selected; it never duplicates the reward editor.
 Gift's reached Hammer child uses the biome-start keepsake result described
@@ -881,12 +881,12 @@ supplemental rows in Travel, Gold, Contract order when present. Travel and Gold
 reuse one `supplementalOffers` projection, one reward-control adapter, and one
 React renderer. Disabled placeholders expose instructions only; active rows
 carry engine-bound defaults, domains, semantic edits, findings, and complete
-participation proposals. One Room Actions workbench owns the interleavable
+participation proposals. One Room Timeline workbench owns the interleavable
 initial, Travel, Gold, and Contract chronology, including atomic source rebind,
 move, and dependent removal. The application does not infer a source or repair
 an order from rendered positions.
 
-Every Room Actions workbench is hosted by the occurrence that owns its exact
+Every Room Timeline workbench is hosted by the occurrence that owns its exact
 chronology, including a Shop whose outgoing decision is authored later.
 Participating entries form a numbered draggable sequence with compact arrow
 controls. Initial Shop nonparticipants remain in Overview rather than below an

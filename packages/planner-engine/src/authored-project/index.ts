@@ -7,8 +7,10 @@ export {
 } from './artificer';
 export { activeRoomActionReferences } from './room-actions';
 export {
+  assembleRoomLifecycleStructure,
   assembleRoomActionDomain,
-  roomActionWindowRank,
+  roomLifecycleWindowOrdinal,
+  scopeRoomLifecycleStructure,
   type RoomActionCheckpointContribution,
   type RoomActionContribution,
   type RoomActionDependency,
@@ -16,6 +18,9 @@ export {
   type RoomActionDomainContribution,
   type RoomActionParticipation,
   type RoomActionWindow,
+  type RoomLifecycleStructure,
+  type RoomLifecycleStructurePhase,
+  type RoomLifecycleStructurePoint,
 } from './room-action-domain';
 export {
   reconcileNewRequiredRoomActions,

@@ -10,7 +10,8 @@ import type { RoomHistoryFragment, RoomLifecycleEvent, RoomLifecycleExecutionInp
 import { createBiomeAddress, createRoomActionAddress } from '../../authored-project/addresses';
 import type { RoomActionReference } from '../../authored-project/model';
 import { roomActionKey } from '../../authored-project/room-actions';
-import { roomActionWindowRank, type RoomActionRow } from '../room-actions';
+import { roomLifecycleWindowOrdinal } from '../../authored-project/room-action-domain';
+import type { RoomActionRow } from '../room-actions';
 
 type RoomLifecycleOperationKind = RoomLifecycleOperation['kind'];
 
@@ -515,6 +516,12 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
   if (roster === undefined) {
     throw new LifecycleExecutionContractError('room-action execution requires a roster');
   }
+  const lifecycleStructure = roster.lifecycleStructure;
+  if (lifecycleStructure.profileKey !== context.profile.key) {
+    throw new LifecycleExecutionContractError(
+      `${context.profile.key} received ${lifecycleStructure.profileKey} room-action structure`,
+    );
+  }
   if (context.input.origin.kind !== 'occurrence') {
     throw new LifecycleExecutionContractError('room actions must be occurrence-owned');
   }
@@ -607,14 +614,14 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
   ): ExecutionState => {
     let state = initial;
     const missingEarlier = firstMissingRequired(
-      (row) => roomActionWindowRank(row.window) < targetWindowRank,
+      (row) => roomLifecycleWindowOrdinal(lifecycleStructure, row.window) < targetWindowRank,
     );
     if (missingEarlier !== undefined) return blockAt(state, missingEarlier);
     while (cursor < rankedRows.length) {
       const row = rankedRows[cursor]!;
       if (row.key === targetKey) return state;
       if (!row.executable) return blockAt(state, row);
-      if (roomActionWindowRank(row.window) > targetWindowRank) break;
+      if (roomLifecycleWindowOrdinal(lifecycleStructure, row.window) > targetWindowRank) break;
       state = playerAction(row, operationIndex, state);
       cursor += 1;
     }
@@ -633,7 +640,7 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
     if (target.rank === null) return blockAt(initial, target);
     let state = consumeGenericBefore(
       key,
-      roomActionWindowRank(target.window),
+      roomLifecycleWindowOrdinal(lifecycleStructure, target.window),
       operationIndex,
       initial,
     );
@@ -654,7 +661,9 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
     while (cursor < rankedRows.length && rankedRows[cursor]!.rank! <= throughRank) {
       const row = rankedRows[cursor]!;
       const missingEarlier = firstMissingRequired(
-        (missing) => roomActionWindowRank(missing.window) < roomActionWindowRank(row.window),
+        (missing) =>
+          roomLifecycleWindowOrdinal(lifecycleStructure, missing.window) <
+          roomLifecycleWindowOrdinal(lifecycleStructure, row.window),
       );
       if (missingEarlier !== undefined) return blockAt(state, missingEarlier);
       if (!row.executable) return blockAt(state, row);
@@ -714,19 +723,18 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
   const encounterPhases = (
     phases: readonly ResolvedEncounterPhase[],
   ): readonly ResolvedEncounterPhase[] => {
-    if (context.profile.key !== 'FieldsCombatRoom') return phases;
     const byKey = new Map(phases.map((phase) => [phase.slotKey, phase]));
-    const fixed = phases.filter((phase) => phase.rewardAttachment?.kind !== 'localReward');
-    const ranked = rankedRows.flatMap((row) => {
-      if (row.reference.kind !== 'completeFieldsCage') return [];
-      const phase = byKey.get(row.reference.phaseKey);
-      return phase === undefined ? [] : [phase];
-    });
-    const rankedKeys = new Set(ranked.map((phase) => phase.slotKey));
-    const unranked = phases.filter(
-      (phase) => phase.rewardAttachment?.kind === 'localReward' && !rankedKeys.has(phase.slotKey),
+    return Object.freeze(
+      lifecycleStructure.phases.flatMap((phase) => {
+        const resolved = byKey.get(phase.phaseKey);
+        if (resolved === undefined) {
+          throw new LifecycleExecutionContractError(
+            `${lifecycleStructure.profileKey} structure selected missing phase ${phase.phaseKey}`,
+          );
+        }
+        return [resolved];
+      }),
     );
-    return Object.freeze([...fixed, ...ranked, ...unranked]);
   };
 
   const beforeEncounterPhase = (

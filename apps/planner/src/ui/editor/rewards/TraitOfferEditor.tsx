@@ -1016,7 +1016,7 @@ function TraitOfferSelectedOutcomeEditor({
             }}
             type="button"
           >
-            Configure in Room Actions
+            Configure in Room Timeline
           </button>
         </fieldset>
       )}

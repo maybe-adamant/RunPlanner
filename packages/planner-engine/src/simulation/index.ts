@@ -138,6 +138,7 @@ export {
 } from './lifecycle';
 export {
   assembleRoomActionRoster,
+  scopeRoomActionRoster,
   type RoomActionCheckpoint,
   type RoomActionContribution,
   type RoomActionDependency,
@@ -150,6 +151,7 @@ export {
 } from './room-actions';
 export {
   assembleRoomLifecycleTimeline,
+  scopeRoomLifecycleTimeline,
   type RoomLifecycleBoundary,
   type RoomLifecycleTimeline,
   type RoomLifecycleTimelineEntry,

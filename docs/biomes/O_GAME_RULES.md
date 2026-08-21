@@ -119,8 +119,8 @@ final active phase. The source evidence and relationship to wheel selection
 and room-local ordering are owned by
 [`ROOM_ACTION_ORDER_GAME_DATA_AUDIT.md`](../audits/ROOM_ACTION_ORDER_GAME_DATA_AUDIT.md).
 
-The editor renders Room Overview, Intro Actions, Combat 1 Actions, optional
-Combat 2 Actions, and Room Doors. Overview owns encounter count and room
+The editor renders Room Overview, Intro Timeline, Combat 1 Timeline, optional
+Combat 2 Timeline, and Room Doors. Overview owns encounter count and room
 features. Wheel 1 is configured at Intro's next-phase boundary and Wheel 2 at
 Combat 1's; choice and pickup actions remain at their engine timeline
 positions. A retained inactive Combat 2 action appears once in the repair

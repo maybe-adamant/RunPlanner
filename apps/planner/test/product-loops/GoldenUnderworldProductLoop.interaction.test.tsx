@@ -51,7 +51,7 @@ afterEach(() => {
 });
 
 describe('underworld product loop', () => {
-  it('creates a required pickup atomically and opens its move-only Room Actions workflow without evaluation work', async () => {
+  it('creates a required pickup atomically and opens its move-only Room Timeline workflow without evaluation work', async () => {
     const application = createApplication();
     const biome = createBiomeAddress('Underworld', 'F');
     const occurrenceId = createOccurrenceId('mandatory-default-product');
@@ -109,8 +109,8 @@ describe('underworld product loop', () => {
       ),
     );
     const evaluationBefore = application.store.getState().projectWorkspace.assembly.evaluation;
-    await view.user.click(screen.getByRole('tab', { name: 'Room Actions' }));
-    const actions = screen.getByRole('region', { name: 'Room Actions' });
+    await view.user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
+    const actions = screen.getByRole('region', { name: 'Room Timeline' });
     const requiredRow = within(actions)
       .getByText('Pick up Boon')
       .closest<HTMLElement>('[data-room-action-key]');
@@ -486,8 +486,8 @@ describe('underworld product loop', () => {
         semanticOwnerFocused(createOccurrenceAddress(goldenFBiome, chaosOccurrenceId)),
       ),
     );
-    await view.user.click(screen.getByRole('tab', { name: 'Room Actions' }));
-    expect(within(enteredChaos).getByRole('region', { name: 'Room Actions' })).toBeTruthy();
+    await view.user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
+    expect(within(enteredChaos).getByRole('region', { name: 'Room Timeline' })).toBeTruthy();
     expect(within(enteredChaos).queryByText(/Incoming door reward/)).toBeNull();
 
     await view.user.click(screen.getByRole('button', { name: /Next step.*Continue route/ }));
@@ -837,8 +837,8 @@ describe('underworld product loop', () => {
     act(() =>
       application.store.dispatch(semanticOwnerFocused(createOccurrenceAddress(biome, contract))),
     );
-    await view.user.click(screen.getByRole('tab', { name: 'Room Actions' }));
-    expect(within(contractWorkbench).getByRole('region', { name: 'Room Actions' })).toBeTruthy();
+    await view.user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
+    expect(within(contractWorkbench).getByRole('region', { name: 'Room Timeline' })).toBeTruthy();
     expect(within(contractWorkbench).queryByText(/Incoming door reward/)).toBeNull();
     let selected = application.store.getState().projectWorkspace.history.present;
     selected = applyProjectCommand(selected, application.catalog, {

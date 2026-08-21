@@ -210,7 +210,7 @@ Room Overview contains read-only incoming-door context and only meaningful
 room-local setup. An N main room keeps its parent-owned side-room generation
 and visit order there. Fields keeps cage and optional identities there. Shops
 keep inventory, conditions, and Purchased markers there. Room features remain
-Overview-owned. Room Actions renders the engine-owned lifecycle timeline and
+Overview-owned. Room Timeline renders the engine-owned lifecycle timeline and
 the one occurrence-owned action chronology; encounter controls attach to their
 exact Start encounter boundaries. Room Doors renders the existing total
 outgoing-stage product without changing decision, target, or reward ownership.
@@ -228,8 +228,8 @@ control bound to the engine's canonical late insertion, not a menu of
 application-chosen positions. Optional participation and stale-row repair keep
 their existing owning controls.
 
-ShipCombat uses Room Overview, Intro Actions, Combat 1 Actions, optional Combat
-2 Actions, and Room Doors. Encounter count stays in Overview. Each phase tab
+ShipCombat uses Room Overview, Intro Timeline, Combat 1 Timeline, optional Combat
+2 Timeline, and Room Doors. Encounter count stays in Overview. Each phase tab
 consumes the engine timeline, including its encounter picker and following
 wheel boundary; one inactive repair surface retains rows from a dormant phase.
 The tabs never create phase-local orders.
@@ -422,7 +422,7 @@ React supplies no source, spacing, depth, map, reward, or return policy.
 A materialized Shop preserves declaration order for inventory rows while
 deriving `Purchased` membership from exact `interactShopOffer` references in
 its one occurrence-owned `roomActions.order`. Each inventory row exposes only
-that membership toggle; Room Actions owns ranked move controls over
+that membership toggle; Room Timeline owns ranked move controls over
 participating purchases. It uses the same ranked-prefix presentation as the
 other room actions: numbered participant cards, compact arrow controls, and
 pointer reordering. Unpurchased initial offers remain editable in Overview and
@@ -437,15 +437,15 @@ room replacement removes the active Shop owner; it never gains a second generic
 remove control. An individual purchase or generated-pickup failure remains
 owned by its exact action or acquisition-entry address.
 The Shop inventory row remains the sole editor for what was bought. Its
-Room Actions row may edit acquisition-time trait, Pom, or disposition children,
+Room Timeline row may edit acquisition-time trait, Pom, or disposition children,
 but cannot change the purchased reward identity. Producer-owned pickups such as
-Narcissus retain their outer reward editor in Room Actions because that row is
+Narcissus retain their outer reward editor in Room Timeline because that row is
 also the canonical payload owner.
 
 Every generated I preboss offer is a distinct Room Occurrence and follows that
 same contract; it does not introduce an I-specific shop mode.
 
-A declaration-produced optional pickup uses the same Room Actions chronology
+A declaration-produced optional pickup uses the same Room Timeline chronology
 as a Shop purchase: membership and position come from the exact action
 reference, while the pickup row owns any reward, trait, or Pom repair controls.
 The Story or other producer control owns only the source choice. React never
@@ -639,7 +639,7 @@ Encounter count and active reward wheels are mandatory room structure. The
 application groups the active Ship envelope as Intro, Combat 1, and optional
 Combat 2 from declaration-owned phase/wheel attachments plus engine-owned Room
 Action windows. Each group renders its Encounter, wheel structure when present,
-and its view of the single global Room Actions chronology. A reward-wheel
+and its view of the single global Room Timeline chronology. A reward-wheel
 structural editor appears in the phase immediately before the combat named by
 its declaration-owned `encounterPhaseKey`: Wheel 1 under Intro and active Wheel
 2 under Combat 1. Its choose and pickup actions remain grouped by their own

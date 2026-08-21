@@ -11,7 +11,7 @@ import type {
 import {
   assembleRoomActionDomain,
   authoredRoomLifecycleProfileKey,
-  roomActionWindowRank,
+  roomLifecycleWindowOrdinal,
   type RoomActionContribution,
   type RoomActionDomain,
 } from './room-action-domain';
@@ -108,7 +108,9 @@ function score(
   action: RoomActionContribution,
 ): number {
   const reference = action.reference;
-  if (action.window.kind !== 'fields') return roomActionWindowRank(action.window) * 100;
+  if (action.window.kind !== 'fields') {
+    return roomLifecycleWindowOrdinal(domain.lifecycleStructure, action.window) * 100;
+  }
   const phaseOrder = fieldsPhaseOrder(catalog, domain, order);
   if (reference.kind === 'interactEncounter' || reference.kind === 'interactGorgon') {
     const ordinal = phaseOrder.indexOf(reference.phaseKey);
@@ -282,12 +284,7 @@ function roomActionDomainContext(
         (target) => target.occurrenceId === occurrence.occurrenceId,
       ),
   );
-  const role =
-    occurrence.occurrenceId === topology.startOccurrenceId && layout.progression.kind === 'hub'
-      ? 'ephyraOpening'
-      : isLocalVisit
-        ? 'ephyraSide'
-        : 'ordinary';
+  const role = isLocalVisit ? 'ephyraSide' : 'ordinary';
   const lifecycleProfileKey = authoredRoomLifecycleProfileKey(declaration, occurrence, role);
   if (declaration.mode.kind !== 'authored' || declaration.mode.templateKey !== 'FieldsCombat') {
     return frozen({ lifecycleProfileKey });

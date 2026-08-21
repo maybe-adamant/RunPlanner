@@ -5,7 +5,11 @@ import {
 } from '../../authored-project/addresses';
 import { roomActionKey } from '../../authored-project/room-actions';
 import type { RoomActionReference } from '../../authored-project/model';
-import { roomActionWindowRank } from '../../authored-project/room-action-domain';
+import {
+  roomLifecycleWindowOrdinal,
+  scopeRoomLifecycleStructure,
+  type RoomLifecycleStructure,
+} from '../../authored-project/room-action-domain';
 import type {
   RoomActionCheckpoint,
   RoomActionCheckpointContribution,
@@ -25,6 +29,7 @@ function assessOrder(
   order: readonly RoomActionReference[],
   active: ReadonlyMap<string, RoomActionContribution>,
   checkpoints: ReadonlyMap<string, RoomActionCheckpointContribution>,
+  lifecycleStructure: RoomLifecycleStructure,
 ): readonly RoomActionRosterIssue[] {
   const issues: RoomActionRosterIssue[] = [];
   const indexes = new Map(order.map((reference, index) => [roomActionKey(reference), index]));
@@ -74,8 +79,11 @@ function assessOrder(
         );
         continue;
       }
-      const ownRank = roomActionWindowRank(entry.window);
-      const checkpointWindowRank = roomActionWindowRank(checkpoint.window);
+      const ownRank = roomLifecycleWindowOrdinal(lifecycleStructure, entry.window);
+      const checkpointWindowRank = roomLifecycleWindowOrdinal(
+        lifecycleStructure,
+        checkpoint.window,
+      );
       const valid =
         dependency.kind === 'afterCheckpoint'
           ? ownRank >= checkpointWindowRank &&
@@ -104,7 +112,10 @@ function assessOrder(
   for (let index = 1; index < ranked.length; index += 1) {
     const left = ranked[index - 1]!;
     const right = ranked[index]!;
-    if (roomActionWindowRank(left.window) > roomActionWindowRank(right.window)) {
+    if (
+      roomLifecycleWindowOrdinal(lifecycleStructure, left.window) >
+      roomLifecycleWindowOrdinal(lifecycleStructure, right.window)
+    ) {
       issues.push(
         frozen({
           kind: 'window',
@@ -121,6 +132,7 @@ export function assembleRoomActionRoster(options: {
   readonly owner: OccurrenceAddress;
   readonly order: readonly RoomActionReference[];
   readonly contributions: readonly RoomActionRosterContribution[];
+  readonly lifecycleStructure: RoomLifecycleStructure;
   readonly canonicalRequiredInsertions?: readonly {
     readonly actionKey: string;
     readonly toIndex: number;
@@ -135,7 +147,12 @@ export function assembleRoomActionRoster(options: {
       .filter((entry): entry is RoomActionCheckpointContribution => entry.kind === 'checkpoint')
       .map((entry) => [entry.checkpointKey, entry]),
   );
-  const issues = assessOrder(options.order, active, checkpointContributions);
+  const issues = assessOrder(
+    options.order,
+    active,
+    checkpointContributions,
+    options.lifecycleStructure,
+  );
   const issueKeys = new Set(
     issues
       .filter((issue) => issue.kind !== 'unrankedRequired')
@@ -244,9 +261,12 @@ export function assembleRoomActionRoster(options: {
             reference: row.reference,
             toIndex,
             order: frozen(order),
-            structurallyAuthorable: !assessOrder(order, active, checkpointContributions).some(
-              (issue) => issue.kind === 'dependency' || issue.kind === 'window',
-            ),
+            structurallyAuthorable: !assessOrder(
+              order,
+              active,
+              checkpointContributions,
+              options.lifecycleStructure,
+            ).some((issue) => issue.kind === 'dependency' || issue.kind === 'window'),
           }),
         );
       }
@@ -267,9 +287,12 @@ export function assembleRoomActionRoster(options: {
           fromIndex,
           toIndex,
           order: frozen(order),
-          structurallyAuthorable: !assessOrder(order, active, checkpointContributions).some(
-            (issue) => issue.kind === 'dependency' || issue.kind === 'window',
-          ),
+          structurallyAuthorable: !assessOrder(
+            order,
+            active,
+            checkpointContributions,
+            options.lifecycleStructure,
+          ).some((issue) => issue.kind === 'dependency' || issue.kind === 'window'),
         }),
       );
     }
@@ -316,7 +339,8 @@ export function assembleRoomActionRoster(options: {
                 : rows.reduce(
                     (rank, row) =>
                       row.rank !== null &&
-                      roomActionWindowRank(row.window) <= roomActionWindowRank(entry.window)
+                      roomLifecycleWindowOrdinal(options.lifecycleStructure, row.window) <=
+                        roomLifecycleWindowOrdinal(options.lifecycleStructure, entry.window)
                         ? Math.max(rank, row.rank)
                         : rank,
                     0,
@@ -324,10 +348,35 @@ export function assembleRoomActionRoster(options: {
       }),
     );
   return frozen({
+    lifecycleStructure: options.lifecycleStructure,
     rows: frozen(rows),
     checkpoints: frozen(checkpoints),
     issues,
     proposals: frozen(proposals),
     valid: issues.length === 0,
+  });
+}
+
+/** Restrict execution to an engine-assessed active phase prefix without mutating authorship. */
+export function scopeRoomActionRoster(
+  roster: RoomActionRoster,
+  activePhaseKeys: readonly string[],
+): RoomActionRoster {
+  const lifecycleStructure = scopeRoomLifecycleStructure(
+    roster.lifecycleStructure,
+    activePhaseKeys,
+  );
+  if (lifecycleStructure === roster.lifecycleStructure) return roster;
+  const active = new Set(activePhaseKeys);
+  return frozen({
+    ...roster,
+    lifecycleStructure,
+    rows: frozen(
+      roster.rows.map((row) =>
+        'phaseKey' in row.reference && !active.has(row.reference.phaseKey)
+          ? frozen({ ...row, stale: true, executable: false })
+          : row,
+      ),
+    ),
   });
 }

@@ -4,6 +4,8 @@ import {
   createOccurrenceId,
   createRoomActionAddress,
   roomActionKey,
+  type RoomLifecycleStructure,
+  type RoomLifecycleStructurePhase,
   type RoomActionReference,
 } from '@run-planner/engine/authored-project';
 import {
@@ -30,12 +32,12 @@ it('declares the Gate A ordinary producer-point mapping without a room-flat fall
 
   expect({
     standard: points('StandardRewardRoom'),
-    ephyraOpeningAndPreHub: points('EphyraOpeningRoom'),
+    opening: points('OpeningRewardRoom'),
     devotion: points('DevotionRoom'),
     prebossFree: points('PrebossFreeRewardRoom'),
   }).toEqual({
     standard: ['beforeCombat', 'afterCombat', 'roomRewardPickup'],
-    ephyraOpeningAndPreHub: ['roomRewardPickup'],
+    opening: ['roomRewardPickup'],
     devotion: ['beforeCombat', 'afterCombat'],
     prebossFree: ['beforeCombat', 'afterCombat', 'roomRewardPickup'],
   });
@@ -126,10 +128,102 @@ function actionRoster(
     Extract<RoomActionRosterContribution, { readonly kind: 'action' }>,
     'kind' | 'owner'
   >[],
+  lifecycleProfileKey?: string,
+  phaseKeysOverride?: readonly string[],
 ) {
+  const profileKey =
+    lifecycleProfileKey ??
+    (contributions.some((entry) => entry.window.kind === 'fields')
+      ? 'FieldsCombatRoom'
+      : contributions.some(
+            (entry) =>
+              entry.window.kind === 'shipPreCombat' || entry.window.kind === 'shipPostCombat',
+          )
+        ? 'ShipCombatRoom'
+        : 'StandardRewardRoom');
+  const phaseKeys =
+    phaseKeysOverride === undefined
+      ? Array.from(
+          new Set(
+            contributions.flatMap((entry) => {
+              const reference = entry.reference;
+              if (
+                reference.kind === 'completeFieldsCage' ||
+                reference.kind === 'interactEncounter' ||
+                reference.kind === 'interactGorgon'
+              ) {
+                return [reference.phaseKey];
+              }
+              return [];
+            }),
+          ),
+        )
+      : [...phaseKeysOverride];
+  if (phaseKeysOverride === undefined && phaseKeys.length === 0 && profileKey !== 'ShipCombatRoom')
+    phaseKeys.push('Encounter');
+  const shipWheelKeys = Array.from(
+    new Set(
+      contributions.flatMap((entry) =>
+        entry.window.kind === 'shipPreCombat' || entry.window.kind === 'shipPostCombat'
+          ? [entry.window.wheelKey]
+          : [],
+      ),
+    ),
+  );
+  const phasesForStructure: readonly RoomLifecycleStructurePhase[] =
+    profileKey === 'ShipCombatRoom'
+      ? [
+          { phaseKey: 'Intro' },
+          ...shipWheelKeys.map((wheelKey, index) => ({
+            phaseKey: index === 0 ? 'Combat1' : 'Combat2',
+            rewardWheelKey: wheelKey,
+          })),
+        ]
+      : phaseKeys.map((phaseKey) => ({ phaseKey }));
+  const points: RoomLifecycleStructure['points'][number][] = [
+    Object.freeze({ kind: 'roomEntered', key: 'roomEntered' }),
+  ];
+  phasesForStructure.forEach((phase, index) => {
+    if (phase.rewardWheelKey !== undefined && index > 0) {
+      points.push(
+        Object.freeze({
+          kind: 'nextPhase',
+          key: `nextPhase:${phase.rewardWheelKey}`,
+          wheelKey: phase.rewardWheelKey,
+          previousWheelKey: phasesForStructure[index - 1]!.rewardWheelKey!,
+        }),
+      );
+    }
+    points.push(
+      Object.freeze({
+        kind: 'encounterStart',
+        key: `encounterStart:${phase.phaseKey}`,
+        phaseKey: phase.phaseKey,
+      }),
+      Object.freeze({
+        kind: 'encounterEnd',
+        key: `encounterEnd:${phase.phaseKey}`,
+        phaseKey: phase.phaseKey,
+      }),
+    );
+  });
+  if (profileKey === 'FieldsCombatRoom') {
+    points.push(Object.freeze({ kind: 'cleanup', key: 'cleanup' }));
+    points.push(Object.freeze({ kind: 'outgoingGeneration', key: 'outgoingGeneration' }));
+  } else {
+    points.push(Object.freeze({ kind: 'outgoingGeneration', key: 'outgoingGeneration' }));
+    points.push(Object.freeze({ kind: 'cleanup', key: 'cleanup' }));
+  }
+  const lifecycleStructure: RoomLifecycleStructure = Object.freeze({
+    profileKey,
+    activeEncounterSlotKeys: Object.freeze(phaseKeys),
+    phases: Object.freeze(phasesForStructure),
+    points: Object.freeze(points),
+  });
   return assembleRoomActionRoster({
     owner: actionOrigin,
     order,
+    lifecycleStructure,
     contributions: contributions.map((entry) => ({
       kind: 'action' as const,
       owner: createRoomActionAddress(
@@ -261,39 +355,45 @@ describe('single-room lifecycle execution', () => {
     );
   });
 
-  it('acquires the Ephyra opening reward before its delayed counting encounter', () => {
-    const fragment = executeRoomLifecycle(
-      catalog,
-      input({
-        origin: createOccurrenceAddress(
-          createBiomeAddress('Surface', 'N'),
-          createOccurrenceId('n-opening-lifecycle-fixture'),
-        ),
-        lifecycleProfileKey: 'EphyraOpeningRoom',
-        encounterEnvelopeKey: 'SingleEncounter',
-        encounterPhases: phases('SingleEncounter', ['OpeningGeneratedN']),
-      }),
-    );
+  it.each([
+    ['Underworld', 'F', 'OpeningGeneratedF'],
+    ['Surface', 'N', 'OpeningGeneratedN'],
+  ] as const)(
+    'acquires the %s %s opening reward before its delayed counting encounter',
+    (routeKey, biomeKey, encounterKey) => {
+      const fragment = executeRoomLifecycle(
+        catalog,
+        input({
+          origin: createOccurrenceAddress(
+            createBiomeAddress(routeKey, biomeKey),
+            createOccurrenceId(`${biomeKey.toLowerCase()}-opening-lifecycle-fixture`),
+          ),
+          lifecycleProfileKey: 'OpeningRewardRoom',
+          encounterEnvelopeKey: 'SingleEncounter',
+          encounterPhases: phases('SingleEncounter', [encounterKey]),
+        }),
+      );
 
-    expect(fragment.events.map((event) => event.kind)).toEqual([
-      'roomPrepared',
-      'encounterRecorded',
-      'roomEntered',
-      'producerPointReached',
-      'producerRoleAdvanced',
-      'encounterStarted',
-      'encounterDepthAdvanced',
-      'encounterCompleted',
-      'outgoingGenerationCheckpoint',
-      'roomCommitted',
-      'roomCountersAdvanced',
-      'roomExited',
-    ]);
-    expect(fragment.events[4]).toMatchObject({
-      kind: 'producerRoleAdvanced',
-      lifecyclePoint: 'roomRewardPickup',
-    });
-  });
+      expect(fragment.events.map((event) => event.kind)).toEqual([
+        'roomPrepared',
+        'encounterRecorded',
+        'roomEntered',
+        'producerPointReached',
+        'producerRoleAdvanced',
+        'encounterStarted',
+        'encounterDepthAdvanced',
+        'encounterCompleted',
+        'outgoingGenerationCheckpoint',
+        'roomCommitted',
+        'roomCountersAdvanced',
+        'roomExited',
+      ]);
+      expect(fragment.events[4]).toMatchObject({
+        kind: 'producerRoleAdvanced',
+        lifecyclePoint: 'roomRewardPickup',
+      });
+    },
+  );
 
   it('executes Ephyra Soul Pylon timing between room entry and outgoing generation', () => {
     const fragment = executeRoomLifecycle(
@@ -496,6 +596,18 @@ describe('single-room lifecycle execution', () => {
     const contactIndex = valid.events.findIndex(
       (event) => event.kind === 'encounterInteractionReached' && event.phaseKey === 'Cage01',
     );
+    expect(
+      valid.events.some(
+        (event) =>
+          (event.kind === 'encounterStarted' || event.kind === 'encounterCompleted') &&
+          event.phaseKey === 'Passive',
+      ),
+    ).toBe(false);
+    expect(
+      valid.events.some(
+        (event) => event.kind === 'encounterRecorded' && event.phaseKey === 'Passive',
+      ),
+    ).toBe(true);
     expect(completionIndex).toBeGreaterThanOrEqual(0);
     expect(contactIndex).toBeGreaterThan(completionIndex);
   });
@@ -598,6 +710,8 @@ describe('single-room lifecycle execution', () => {
                 dependencies: [],
               },
             ],
+            lifecycleProfileKey,
+            lifecycleProfileKey === 'PrebossFreeRewardRoom' ? [] : undefined,
           ),
         }),
       );

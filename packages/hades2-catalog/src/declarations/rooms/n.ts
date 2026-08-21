@@ -20,6 +20,7 @@ export const nRooms = [
     advancesExperimentalHammerUses: true,
     kind: 'Opening',
     mode: { kind: 'authored', templateKey: 'FixedOpening' },
+    lifecycleProfileKey: 'OpeningRewardRoom',
     additionalExits: [naturalChaosExit],
     structuralTags: [],
     exits: [{ index: 1, type: 'N_OpeningDoor' }],
