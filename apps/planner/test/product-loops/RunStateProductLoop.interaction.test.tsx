@@ -170,11 +170,10 @@ describe('Run State product loop', () => {
     await view.user.click(screen.getByRole('button', { name: 'Surface' }));
     await view.user.click(screen.getByRole('button', { name: 'Ephyra' }));
     await view.user.click(screen.getByRole('button', { name: /Hub.*visits/ }));
-    const handoff = document.querySelector<HTMLElement>(
-      '[data-presentation="completedHubHandoff"]',
-    );
+    await view.user.click(screen.getByRole('tab', { name: 'Hub Exit' }));
+    const handoff = document.querySelector<HTMLElement>('[data-hub-exit-door="true"]');
     if (handoff === null) throw new Error('completed Hub Preboss handoff is missing');
-    expect(within(handoff).getByText('Continue to Preboss')).toBeTruthy();
+    expect(within(handoff).getByRole('heading', { name: 'Preboss' })).toBeTruthy();
     expect(within(handoff).getByText('All required Hub visits are complete.')).toBeTruthy();
     application.dispose();
   });

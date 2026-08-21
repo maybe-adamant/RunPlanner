@@ -1,5 +1,6 @@
 import {
   createHubDecisionAddress,
+  createExitDecisionAddress,
   createHubOpenSetAddress,
   createHubSlotAddress,
   createHubVisitAddress,
@@ -8,8 +9,10 @@ import {
   createLocalVisitSlotAddress,
   createOccurrenceAddress,
   semanticAddressKey,
+  selectedExitTarget,
   type BiomeAddress,
   type BiomeTopology,
+  type ExitDecision,
   type HubDecision,
   type HubDecisionAddress,
   type LocalVisitDecision,
@@ -67,6 +70,8 @@ interface WorkspaceHubAssemblyBaseInput {
   readonly assembleOccurrence: WorkspaceOccurrenceAssembler;
   readonly biome: BiomeAddress;
   readonly catalog: Catalog;
+  /** The frontier-derived create capability for the fixed completed-Hub exit. */
+  readonly completedExitReady?: boolean;
   readonly descriptor: HubDecisionDescriptor;
   readonly markerDestinations: WorkspaceMarkerDestinationEmitter;
   readonly nextVisitIndex?: number;
@@ -456,6 +461,49 @@ function projectHubNode(
     });
   });
   const runState = input.source?.runState(owner);
+  const completedExitRoom = requireWorkspaceRoom(catalog, descriptor.completedExit.roomGameName);
+  const completedExitOwner = createExitDecisionAddress(biome, {
+    decisionKey: descriptor.hubKey,
+    kind: 'hubDecision',
+  });
+  const completedExitMarker = markerDestinations.marker(completedExitOwner);
+  const completedExitDecision = input.topology?.decisions.find(
+    (decision): decision is ExitDecision =>
+      decision.kind === 'exit' &&
+      decision.source.kind === 'hubDecision' &&
+      decision.source.decisionKey === descriptor.hubKey,
+  );
+  const completedExitTarget =
+    completedExitDecision === undefined ? undefined : selectedExitTarget(completedExitDecision);
+  if (completedExitDecision !== undefined && completedExitTarget === undefined) {
+    throw new StructuredWorkspaceProjectionContractError(
+      `${semanticAddressKey(completedExitOwner)} has no selected completed-Hub target`,
+    );
+  }
+  const completedExit =
+    completedExitTarget === undefined
+      ? input.completedExitReady === true
+        ? Object.freeze({
+            kind: 'ready' as const,
+            marker: completedExitMarker,
+            targetLabel: completedExitRoom.label,
+          })
+        : Object.freeze({
+            kind: 'locked' as const,
+            marker: completedExitMarker,
+            targetLabel: completedExitRoom.label,
+          })
+      : Object.freeze({
+          kind: 'opened' as const,
+          marker: completedExitMarker,
+          target: Object.freeze({
+            label: completedExitRoom.label,
+            marker: markerDestinations.marker(
+              createOccurrenceAddress(biome, completedExitTarget.occurrenceId),
+            ),
+          }),
+          targetLabel: completedExitRoom.label,
+        });
   const node = Object.freeze({
     authoring: 'authored' as const,
     kind: 'hubDecision' as const,
@@ -470,6 +518,7 @@ function projectHubNode(
     }),
     owner,
     requiredVisitCount: descriptor.requiredVisits,
+    completedExit,
     slots: Object.freeze(slots),
     visits: Object.freeze(visits),
     ...(runState === undefined
@@ -513,6 +562,8 @@ function projectHubNode(
     'overview',
   );
   markerDestinations.setHubTab(Object.freeze(node.visits.map((visit) => visit.marker)), 'timeline');
+  markerDestinations.redirect([completedExitMarker], node.key);
+  markerDestinations.setHubTab([completedExitMarker], 'exit');
   hubInteractionRequirements.push(
     Object.freeze({
       kind: 'hubControls' as const,

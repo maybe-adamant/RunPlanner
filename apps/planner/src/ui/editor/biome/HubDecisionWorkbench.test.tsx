@@ -301,8 +301,26 @@ describe('HubDecisionWorkbench', () => {
 
     fireEvent.keyDown(timeline, { key: 'End' });
     expect(exit.getAttribute('aria-selected')).toBe('true');
-    expect(screen.getByText('Continue to Preboss')).toBeTruthy();
+    expect(screen.getByRole('article', { name: 'Preboss room offer' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Open next room' })).not.toHaveProperty(
+      'disabled',
+      true,
+    );
     expect(screen.queryByRole('button', { name: 'Move Combat 01 later' })).toBeNull();
+  });
+
+  it('keeps the fixed Hub Preboss exit visible and locked before the handoff is ready', () => {
+    renderStaticHubDecisionWorkbench(twoVisitHubProject());
+    selectHubTab('Hub Exit');
+
+    const door = screen.getByRole('article', { name: 'Preboss room offer' });
+    expect(door.dataset.available).toBe('false');
+    expect(within(door).getByText('Locked')).toBeTruthy();
+    expect(within(door).getByRole('button', { name: 'Open next room' })).toHaveProperty(
+      'disabled',
+      true,
+    );
+    expect(within(door).queryByRole('button', { name: /Configure Room Offers/i })).toBeNull();
   });
 
   it('renders one ranked open-room board without the superseded visit timeline', () => {
@@ -1176,9 +1194,7 @@ describe('HubDecisionWorkbench', () => {
     const project = loadSurfaceNCompleteHubFrontierProject();
     const view = renderHubDecisionWorkbench(project);
     selectHubTab('Hub Exit');
-    const handoff = document.querySelector<HTMLElement>(
-      '[data-presentation="completedHubHandoff"]',
-    );
+    const handoff = document.querySelector<HTMLElement>('[data-hub-exit-door="true"]');
     if (handoff === null) throw new Error('completed Hub handoff control is missing');
     const historyBefore = view.application.store.getState().projectWorkspace.history.past.length;
     await view.user.click(within(handoff).getByRole('button'));
@@ -1200,6 +1216,16 @@ describe('HubDecisionWorkbench', () => {
       historyBefore + 1,
     );
     expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(owner);
+    const openedDoor = document.querySelector<HTMLElement>('[data-hub-exit-door="true"]');
+    if (openedDoor === null) throw new Error('opened Hub exit door is missing');
+    expect(openedDoor.dataset.hubExitState).toBe('opened');
+    expect(within(openedDoor).getByText('Opened')).toBeTruthy();
+    const historyAfterCreation =
+      view.application.store.getState().projectWorkspace.history.past.length;
+    await view.user.click(within(openedDoor).getByRole('button', { name: 'Open next room' }));
+    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+      historyAfterCreation,
+    );
     act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
     expect(
       nHubState(view.application).topology.decisions.some(
