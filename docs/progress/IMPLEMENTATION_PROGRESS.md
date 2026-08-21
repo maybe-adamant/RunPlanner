@@ -39,15 +39,19 @@ the purchase cannot retroactively change that payload. The planner does not yet
 implement Shrine inventory, pending delivery, rush, or forced delivery.
 
 The test fixture and suite optimization is complete. Canonical schema-48
-authored route prefixes now load through strict readable JSON checkpoints and
-route-scoped static loaders; generation-only command builders remain behind the
-explicit `npm run test:fixtures:check` drift gate, which also runs from the root
-`npm run check` outside the regular and heavy lanes. Command, codec,
+authored route prefixes and recurrent late-route frontiers now load from 14
+strict readable JSON checkpoints through route-scoped static imports and lazy
+frozen production-codec loaders. `84db578` deleted the permanent F-I/N-Q
+command-replay builders, fixture writer/equivalence graph, duplicate document
+digest suite, and obsolete fixture configurations. The explicit
+`npm run test:fixtures:check` gate, also run by root `npm run check`, owns exact
+manifest/registry/file closure, canonical bytes, metadata/hashes, incomplete
+and context-invalid retention, and cached-base immutability. Command, codec,
 progressive-repair, history, and undo/redo tests remain command-driven, while
 cross-layer product coverage keeps one retained owner and representative
-boundary contact per behavior. The Gate B owner ledger removed only six
-duplicated product scenarios and retained the unique N Hub order/redo/autosave
-workflow.
+boundary contact per behavior. The earlier owner ledger removed only six
+duplicated product scenarios and retained the unique N Hub
+order/redo/autosave workflow.
 
 The post-Gate-B worker sweep selected four workers for both declared lanes.
 Regular four-worker cold runs passed 129 files and 1,557 tests at 78.84,
@@ -2779,3 +2783,42 @@ greater-than-500-kB chunk advisory. The declared complete gate is therefore
 truthfully non-green because of the known fixture-runtime limits, while every
 timed-out test passed in focused isolation. Timeout/configuration or fixture
 optimization remains separate follow-up work.
+
+The JSON-first fixture correction closes that follow-up at `84db578`. Seven
+recurrent N Hub/entry and F Midshop frontier documents join the seven canonical
+route-prefix checkpoints, so normal late-route tests start from a named saved
+`ProjectDocument` and apply only the focused mutation they own. The correction
+deleted the 937-line Underworld and 637-line Surface full-route builders, the
+remaining full-state helper branches, fixture generation/writer/equivalence
+machinery, an unused Artificer builder, obsolete Vitest configurations, and the
+duplicate whole-document digest suite. It added 6,669 lines of readable saved
+JSON while the non-JSON test/configuration diff removed 3,632 lines and added
+965, a net reduction of 2,667 source/configuration lines.
+
+One typed manifest/registry closes all 14 files and their route-scoped static
+loaders. Integrity proves strict schema/catalog decode, exact canonical bytes
+and SHA-256, exact file-set coverage, stable frozen identity, fixed-N aliasing,
+retained incomplete/context-invalid states, and that focused commands do not
+mutate cached bases. The old shared full-route recipes and normal-path writer
+are gone; command-owned construction tests remain live. A future schema bump
+uses a temporary raw transformer in the schema commit and deletes it after
+strict decode, canonical rewrite, manifest update, semantic review, and the
+complete gate rather than restoring persistent command reconstruction.
+
+Before closure, fixture integrity passed 6/6; engine passed 86 files and 1,159
+tests in 100.21 seconds; planner passed 55/577 in 147.77 seconds; UI passed
+12/221; contract 8/49; and product 6/25. All workspace typechecks, lint,
+formatting, diff checks, and the production build passed. The fixture integrity
+body fell from the prior command-built characterization's 15.34 seconds to
+roughly 0.09 seconds.
+
+The first closure check attempt stopped during engine TypeScript before running
+tests because the new combined alternate-G witness accessed a complete-valid
+snapshot without first narrowing the complete-valid/complete-blocked result.
+That test-only typing defect was corrected with the exact validity guard; its
+focused file then passed 10/10. The final phase-closing `npm run check` passed
+all three workspace typechecks plus the fixture typecheck, checkpoint integrity
+6/6, regular 129 files and 1,558 tests in 76.70 seconds, heavy 27 files and 389
+tests in 71.11 seconds, lint, repository formatting, and the production build
+(391 transformed modules). Vite retained only the existing advisory that the
+single application chunk exceeds 500 kB.
