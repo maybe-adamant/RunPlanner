@@ -301,11 +301,11 @@ describe('G generation and takeover', () => {
         prebossSource: 'G_Combat14',
       }),
     );
+    if (g.validity !== 'valid') throw new Error('Alternate G fixture must be valid');
     const crawlerOrigin = createOccurrenceAddress(goldenGBiome, goldenGOccurrenceId(6, 1));
     const takeover = g.snapshot.decisions.at(-1);
 
     expect(result.status).toBe('valid');
-    expect(g.validity).toBe('valid');
     expect(
       g.history.ledgers.encounterStarts.find(
         (entry) => semanticAddressKey(entry.origin) === semanticAddressKey(crawlerOrigin),
