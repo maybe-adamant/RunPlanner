@@ -26,7 +26,6 @@ export const heavyTestFiles = Object.freeze([
   'apps/planner/test/architecture/candidateRenderPurity.interaction.test.tsx',
   'apps/planner/test/product-loops/GoldenUnderworldProductLoop.interaction.test.tsx',
   'apps/planner/test/product-loops/RunStateProductLoop.interaction.test.tsx',
-  'packages/planner-engine/test/simulation/authored-project-fixtures.test.ts',
   'packages/planner-engine/test/simulation/biomes/q/simulation.test.ts',
   'packages/planner-engine/test/simulation/encounter-authoring-domain.test.ts',
   'packages/planner-engine/test/simulation/experimental-hammer.test.ts',

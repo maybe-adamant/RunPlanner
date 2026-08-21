@@ -25,8 +25,8 @@ import {
   createGoldenFGHProject,
 } from '@run-planner/test-fixtures/underworld';
 import {
-  createRepresentativeNProject,
-  createRepresentativeNOProject,
+  loadSurfaceNProject,
+  loadSurfaceNOProject,
   nBiome,
   nOccurrenceId,
   oBiome,
@@ -408,7 +408,7 @@ describe('Experimental Hammer', () => {
   });
 
   it('advances once for every active O ordered phase', () => {
-    const project = createRepresentativeNOProject();
+    const project = loadSurfaceNOProject();
     const routePlan = project.routes.find((candidate) => candidate.routeKey === 'Surface');
     const evaluated = simulateProject(catalog, project)
       .routes.find((candidate) => candidate.routeKey === 'Surface')
@@ -458,7 +458,7 @@ describe('Experimental Hammer', () => {
       { kind: 'occurrence', occurrenceId: oOccurrenceIds.combat04 },
       'Intro',
     );
-    let project = applyProjectCommand(createRepresentativeNOProject(), catalog, {
+    let project = applyProjectCommand(loadSurfaceNOProject(), catalog, {
       kind: 'ReplaceStartingKeepsake',
       selection: start,
       keepsakeKey: 'SkipEncounterKeepsake',
@@ -621,7 +621,7 @@ describe('Experimental Hammer', () => {
   });
 
   it('does not spend an Experimental Hammer use for an entered N side room', () => {
-    const base = createRepresentativeNProject();
+    const base = loadSurfaceNProject();
     const withoutSide = applyProjectCommand(base, catalog, {
       kind: 'ReplaceLocalVisitOrder',
       order: createLocalVisitOrderAddress(nBiome, nOccurrenceId('combat05'), 'sideRooms'),

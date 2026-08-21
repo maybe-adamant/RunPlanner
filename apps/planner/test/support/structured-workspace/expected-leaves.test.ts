@@ -11,7 +11,7 @@ import {
 import { describe, expect, it } from 'vitest';
 
 import {
-  createRepresentativeNOPQProject,
+  loadSurfaceNOPQProject,
   nBiome,
   nLocalOccurrenceId,
   nOccurrenceId,
@@ -23,7 +23,7 @@ import {
 
 describe('structured workspace test expectations', () => {
   it('uses exact engine-published support to enumerate top-level and local encounter leaves', () => {
-    const project = createRepresentativeNOPQProject();
+    const project = loadSurfaceNOPQProject();
     const plan = project.routes
       .find((route) => route.routeKey === 'Surface')
       ?.biomes.find((biome) => biome.biomeKey === 'N');
@@ -79,7 +79,7 @@ describe('structured workspace test expectations', () => {
       'sideDoor1',
     );
     const localOccurrenceId = nLocalOccurrenceId('combat10', 'sideDoor1');
-    const project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+    const project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
       kind: 'SetLocalVisitGeneration',
       slot: localSlot,
       generation: 'generated',

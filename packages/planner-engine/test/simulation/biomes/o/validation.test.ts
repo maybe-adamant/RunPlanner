@@ -27,13 +27,9 @@ import { describe, expect, it } from 'vitest';
 
 import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 import { authorSurfaceWorldShop } from '@run-planner/test-fixtures/surface';
-import {
-  createRepresentativeNOProject,
-  oBiome,
-  oOccurrenceIds,
-} from '@run-planner/test-fixtures/surface';
+import { loadSurfaceNOProject, oBiome, oOccurrenceIds } from '@run-planner/test-fixtures/surface';
 
-function evaluateO(project = createRepresentativeNOProject()) {
+function evaluateO(project = loadSurfaceNOProject()) {
   const evaluation = simulateProject(catalog, project);
   const biome = evaluation.routes
     .find((route) => route.routeKey === 'Surface')
@@ -42,7 +38,7 @@ function evaluateO(project = createRepresentativeNOProject()) {
   return { project, evaluation, biome };
 }
 
-function evaluateValidO(project = createRepresentativeNOProject()) {
+function evaluateValidO(project = loadSurfaceNOProject()) {
   const result = evaluateO(project);
   if (result.biome.validity !== 'valid') {
     throw new Error(
@@ -56,7 +52,7 @@ function evaluateValidO(project = createRepresentativeNOProject()) {
   return { ...result, biome: result.biome };
 }
 
-function createEmptyTrialDecision(sourceProject = createRepresentativeNOProject()) {
+function createEmptyTrialDecision(sourceProject = loadSurfaceNOProject()) {
   const decision = createExitDecisionAddress(oBiome, {
     kind: 'occurrence',
     occurrenceId: oOccurrenceIds.combat01,
@@ -73,7 +69,7 @@ function createEmptyTrialDecision(sourceProject = createRepresentativeNOProject(
 }
 
 function materializedORoom(
-  project: ReturnType<typeof createRepresentativeNOProject>,
+  project: ReturnType<typeof loadSurfaceNOProject>,
   occurrenceId: typeof oOccurrenceIds.combat07,
 ) {
   const route = project.routes.find((candidate) => candidate.routeKey === 'Surface');
@@ -138,7 +134,7 @@ describe('selected O validation', () => {
     const predecessorWheel = createRewardWheelAddress(oBiome, oOccurrenceIds.combat04, 'wheel1');
     const wheel1 = createRewardWheelAddress(oBiome, oOccurrenceIds.combat07, 'wheel1');
     const wheel2 = createRewardWheelAddress(oBiome, oOccurrenceIds.combat07, 'wheel2');
-    let project = applyProjectCommand(createRepresentativeNOProject(), catalog, {
+    let project = applyProjectCommand(loadSurfaceNOProject(), catalog, {
       kind: 'ReplaceRewardWheelStore',
       wheel: predecessorWheel,
       storeKey: 'MetaProgress',
@@ -278,7 +274,7 @@ describe('selected O validation', () => {
   it('keeps dormant Wheel 2 out of a two-phase chronology and resolves outgoing from Wheel 1', () => {
     const predecessorWheel = createRewardWheelAddress(oBiome, oOccurrenceIds.combat04, 'wheel1');
     const wheel2 = createRewardWheelAddress(oBiome, oOccurrenceIds.combat07, 'wheel2');
-    let project = applyProjectCommand(createRepresentativeNOProject(), catalog, {
+    let project = applyProjectCommand(loadSurfaceNOProject(), catalog, {
       kind: 'ReplaceRewardWheelStore',
       wheel: predecessorWheel,
       storeKey: 'MetaProgress',
@@ -360,7 +356,7 @@ describe('selected O validation', () => {
   it('keeps a retained Combat2 NPC contact dormant across a 3 -> 2 -> 3 edit', () => {
     const occurrence = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
     const phase = createEncounterPhaseAddress(oBiome, occurrence, 'Combat2');
-    let withThree = applyProjectCommand(createRepresentativeNOProject(), catalog, {
+    let withThree = applyProjectCommand(loadSurfaceNOProject(), catalog, {
       kind: 'ReplaceShipEncounterCount',
       occurrence,
       encounterCount: 3,
@@ -403,7 +399,7 @@ describe('selected O validation', () => {
     const occurrence = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
     const wheel1 = createRewardWheelAddress(oBiome, oOccurrenceIds.combat07, 'wheel1');
     const wheel2 = createRewardWheelAddress(oBiome, oOccurrenceIds.combat07, 'wheel2');
-    let project = applyProjectCommand(createRepresentativeNOProject(), catalog, {
+    let project = applyProjectCommand(loadSurfaceNOProject(), catalog, {
       kind: 'ReplaceRewardWheelStore',
       wheel: wheel1,
       storeKey: 'MetaProgress',
@@ -454,7 +450,7 @@ describe('selected O validation', () => {
       kind: 'occurrence',
       occurrenceId: oOccurrenceIds.combat02,
     });
-    let project = applyProjectCommand(createRepresentativeNOProject(), catalog, {
+    let project = applyProjectCommand(loadSurfaceNOProject(), catalog, {
       kind: 'RemoveExitDecision',
       decision: terminalDecision,
     });
@@ -523,7 +519,7 @@ describe('selected O validation', () => {
 
   it('addresses an unavailable first-room Combat2 count at its exact phase', () => {
     const occurrence = createOccurrenceAddress(oBiome, oOccurrenceIds.combat04);
-    const project = applyProjectCommand(createRepresentativeNOProject(), catalog, {
+    const project = applyProjectCommand(loadSurfaceNOProject(), catalog, {
       kind: 'ReplaceShipEncounterCount',
       occurrence,
       encounterCount: 3,
@@ -590,7 +586,7 @@ describe('selected O validation', () => {
   });
 
   it('retains only the blocked Devotion role capability before its after-combat sibling', () => {
-    const base = authorLegalTraitOffers(createRepresentativeNOProject());
+    const base = authorLegalTraitOffers(loadSurfaceNOProject());
     const baseO = evaluateValidO(base).biome;
     const owner = createIncomingRewardAddress(oBiome, oOccurrenceIds.devotion);
     const selected = baseO.rewards.selectedTraitOffers.filter(
@@ -643,7 +639,7 @@ describe('selected O validation', () => {
 
   it('retains the invalid Combat2 owner for diagnosis while commands remain structural', () => {
     const occurrence = createOccurrenceAddress(oBiome, oOccurrenceIds.combat04);
-    const project = applyProjectCommand(createRepresentativeNOProject(), catalog, {
+    const project = applyProjectCommand(loadSurfaceNOProject(), catalog, {
       kind: 'ReplaceShipEncounterCount',
       occurrence,
       encounterCount: 3,
@@ -665,7 +661,7 @@ describe('selected O validation', () => {
 
   it('rejects replacement of the declaration-fixed Devotion reward type', () => {
     expect(() =>
-      applyProjectCommand(createRepresentativeNOProject(), catalog, {
+      applyProjectCommand(loadSurfaceNOProject(), catalog, {
         kind: 'ReplaceIncomingReward',
         reward: createIncomingRewardAddress(oBiome, oOccurrenceIds.devotion),
         value: { rewardType: 'WeaponUpgrade' },
@@ -674,7 +670,7 @@ describe('selected O validation', () => {
   });
 
   it('retains forced-pool and appearance-cap failures at their physical target owners', () => {
-    const forced = applyProjectCommand(createRepresentativeNOProject(), catalog, {
+    const forced = applyProjectCommand(loadSurfaceNOProject(), catalog, {
       kind: 'ReplaceOccurrenceRoom',
       occurrence: createOccurrenceAddress(oBiome, oOccurrenceIds.story),
       gameName: 'O_Combat03',
@@ -689,7 +685,7 @@ describe('selected O validation', () => {
       ),
     ).toMatchObject({ selectedPossible: false, selectedExclusionReasons: ['forcedPool'] });
 
-    const capped = applyProjectCommand(createRepresentativeNOProject(), catalog, {
+    const capped = applyProjectCommand(loadSurfaceNOProject(), catalog, {
       kind: 'ReplaceOccurrenceRoom',
       occurrence: createOccurrenceAddress(oBiome, oOccurrenceIds.combat02),
       gameName: 'O_Combat01',
@@ -709,7 +705,7 @@ describe('selected O validation', () => {
   });
 
   it('keeps a jointly overdrawn wheel failure attached to its concrete offer owner', () => {
-    let project = applyProjectCommand(createRepresentativeNOProject(), catalog, {
+    let project = applyProjectCommand(loadSurfaceNOProject(), catalog, {
       kind: 'ReplaceRewardWheelOfferCount',
       wheel: createRewardWheelAddress(oBiome, oOccurrenceIds.combat04, 'wheel1'),
       offerCount: 2,
@@ -740,7 +736,7 @@ describe('selected O validation', () => {
       'wheel1',
       'offer1',
     );
-    const project = applyProjectCommand(createRepresentativeNOProject(), catalog, {
+    const project = applyProjectCommand(loadSurfaceNOProject(), catalog, {
       kind: 'ReplaceRewardWheelStore',
       wheel,
       storeKey: 'MetaProgress',
@@ -907,7 +903,7 @@ describe('selected O validation', () => {
   });
 
   it('rejects a stale wheel2 Hammer after the route loadout changes', () => {
-    let project = createRepresentativeNOProject();
+    let project = loadSurfaceNOProject();
     const shipOwner = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
     const wheel = createRewardWheelAddress(oBiome, oOccurrenceIds.combat07, 'wheel2');
     project = applyProjectCommand(project, catalog, {
@@ -964,7 +960,7 @@ describe('selected O validation', () => {
   it('evaluates dormant wheel2 when a supported encounter-count candidate activates it', () => {
     const occurrence = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
     const wheel = createRewardWheelAddress(oBiome, oOccurrenceIds.combat07, 'wheel2');
-    let project = applyProjectCommand(createRepresentativeNOProject(), catalog, {
+    let project = applyProjectCommand(loadSurfaceNOProject(), catalog, {
       kind: 'ReplaceRewardWheelOfferCount',
       wheel,
       offerCount: 2,
@@ -1023,7 +1019,7 @@ describe('selected O validation', () => {
   });
 
   it('keeps Combat2 authorable while exposing its newly active unresolved wheel leaf', () => {
-    let project = applyProjectCommand(createRepresentativeNOProject(), catalog, {
+    let project = applyProjectCommand(loadSurfaceNOProject(), catalog, {
       kind: 'ReplaceRewardWheelOffer',
       offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat04, 'wheel1', 'offer1'),
       value: {
@@ -1100,7 +1096,7 @@ describe('selected O validation', () => {
       kind: 'occurrence',
       occurrenceId: oOccurrenceIds.combat02,
     });
-    let project = applyProjectCommand(createRepresentativeNOProject(), catalog, {
+    let project = applyProjectCommand(loadSurfaceNOProject(), catalog, {
       kind: 'RemoveExitDecision',
       decision,
     });

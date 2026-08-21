@@ -1,5 +1,3 @@
-import type { ProjectDocument } from '@run-planner/engine/authored-project';
-
 export interface AuthoredProjectCheckpointManifestEntry {
   readonly id: string;
   readonly file: string;
@@ -22,7 +20,7 @@ export const checkpointManifest = Object.freeze([
     schemaVersion: 48,
     catalogVersion: '0.27.0-arcana-fear-loadout',
     sha256: '464309464a8c980fb16d70db1675e33c50b025a2154ead38ed107ec70150164a',
-    provenance: 'createCompleteFGProject()',
+    provenance: 'saved canonical Underworld F/G checkpoint',
   },
   {
     id: 'underworld-fgh',
@@ -33,7 +31,7 @@ export const checkpointManifest = Object.freeze([
     schemaVersion: 48,
     catalogVersion: '0.27.0-arcana-fear-loadout',
     sha256: 'c698a42eb6e33fef3b814fca3f34f709608523a51c2a9bb271e13ca3ebba160e',
-    provenance: 'createGoldenFGHProject()',
+    provenance: 'saved canonical Underworld F/G/H checkpoint',
   },
   {
     id: 'underworld-fghi',
@@ -44,7 +42,18 @@ export const checkpointManifest = Object.freeze([
     schemaVersion: 48,
     catalogVersion: '0.27.0-arcana-fear-loadout',
     sha256: '009882fcee5e763900b3570cc82c9c9ee07360e222d90057f138176757851467',
-    provenance: 'createGoldenFGHIProject()',
+    provenance: 'saved canonical Underworld F/G/H/I checkpoint',
+  },
+  {
+    id: 'underworld-f-midshop-pom-frontier',
+    file: 'underworld-f-midshop-pom-frontier.runplanner.json',
+    route: 'Underworld',
+    configuredBiomePrefix: ['F'],
+    scenario: 'F Midshop Pom resolution frontier',
+    schemaVersion: 48,
+    catalogVersion: '0.27.0-arcana-fear-loadout',
+    sha256: '9c8acb455287100b3ee67c211a364c20290a1c35b53569af0116d370d26bed62',
+    provenance: 'saved canonical editor/generated checkpoint',
   },
   {
     id: 'surface-n',
@@ -55,7 +64,7 @@ export const checkpointManifest = Object.freeze([
     schemaVersion: 48,
     catalogVersion: '0.27.0-arcana-fear-loadout',
     sha256: 'f769871cf6a8acce6059b52c86bd36ffa12c8789e8015f72ef162cd05ec268a4',
-    provenance: 'createRepresentativeNProject()',
+    provenance: 'saved canonical editor/generated checkpoint',
   },
   {
     id: 'surface-no',
@@ -66,7 +75,7 @@ export const checkpointManifest = Object.freeze([
     schemaVersion: 48,
     catalogVersion: '0.27.0-arcana-fear-loadout',
     sha256: 'cf38175fa8efe1a574ac1f509ac3ed82005193619bbda5c81767baec24666952',
-    provenance: 'createRepresentativeNOProject()',
+    provenance: 'saved canonical editor/generated checkpoint',
   },
   {
     id: 'surface-nop',
@@ -77,7 +86,7 @@ export const checkpointManifest = Object.freeze([
     schemaVersion: 48,
     catalogVersion: '0.27.0-arcana-fear-loadout',
     sha256: '0b895c9df76429745c0e3ce47d9e66099f70489cb80a05dce226d0356dd27300',
-    provenance: 'createRepresentativeNOPProject()',
+    provenance: 'saved canonical editor/generated checkpoint',
   },
   {
     id: 'surface-nopq',
@@ -88,25 +97,74 @@ export const checkpointManifest = Object.freeze([
     schemaVersion: 48,
     catalogVersion: '0.27.0-arcana-fear-loadout',
     sha256: '128aa0a247077275db33e9366c6c024aa86ab125a5829d3f3e7449ffadd987dd',
-    provenance: 'createRepresentativeNOPQProject()',
+    provenance: 'saved canonical editor/generated checkpoint',
+  },
+  {
+    id: 'surface-n-entry-frontier',
+    file: 'surface-n-entry-frontier.runplanner.json',
+    route: 'Surface',
+    configuredBiomePrefix: ['N'],
+    scenario: 'N entry frontier with unresolved terminal envelope',
+    schemaVersion: 48,
+    catalogVersion: '0.27.0-arcana-fear-loadout',
+    sha256: 'a2651a51ac3f4930257a3d30227780ca4d4f25fd0f9157f4cea207e8b1250fff',
+    provenance: 'saved N entry frontier checkpoint',
+  },
+  {
+    id: 'surface-n-entry-frontier-resolved',
+    file: 'surface-n-entry-frontier-resolved.runplanner.json',
+    route: 'Surface',
+    configuredBiomePrefix: ['N'],
+    scenario: 'N entry frontier with trait-resolved terminal envelope',
+    schemaVersion: 48,
+    catalogVersion: '0.27.0-arcana-fear-loadout',
+    sha256: 'f5f00e3cc4bcce8697b6b10c9e7ce3af1808cf35154072b0ffa04668dc04a8d0',
+    provenance: 'saved N entry frontier checkpoint with resolved traits',
+  },
+  {
+    id: 'surface-n-complete-hub-frontier',
+    file: 'surface-n-complete-hub-frontier.runplanner.json',
+    route: 'Surface',
+    configuredBiomePrefix: ['N'],
+    scenario: 'N complete Hub frontier before Preboss handoff',
+    schemaVersion: 48,
+    catalogVersion: '0.27.0-arcana-fear-loadout',
+    sha256: 'e1ec396ce92d0f37e7868dc834cba0efe4bb6774867c6126d86ca2cc5f99658a',
+    provenance: 'saved normalized N complete Hub frontier checkpoint',
+  },
+  {
+    id: 'surface-n-partial-hub',
+    file: 'surface-n-partial-hub.runplanner.json',
+    route: 'Surface',
+    configuredBiomePrefix: ['N'],
+    scenario: 'N partial Hub visit-order frontier',
+    schemaVersion: 48,
+    catalogVersion: '0.27.0-arcana-fear-loadout',
+    sha256: 'a552423fbc1ad0b4d16251106d28039ef24934fe3e398c7769897a5d1196d0ba',
+    provenance: 'saved normalized N partial Hub frontier checkpoint',
+  },
+  {
+    id: 'surface-n-story-board',
+    file: 'surface-n-story-board.runplanner.json',
+    route: 'Surface',
+    configuredBiomePrefix: ['N'],
+    scenario: 'N Hub Story board with Story visit selected',
+    schemaVersion: 48,
+    catalogVersion: '0.27.0-arcana-fear-loadout',
+    sha256: 'f5c17293cd4d87474a37dd28e6fc11942502ed823fe5d3ff2706037a6fbb6e19',
+    provenance: 'saved normalized N Story board checkpoint',
+  },
+  {
+    id: 'surface-n-ten-open-invalid',
+    file: 'surface-n-ten-open-invalid.runplanner.json',
+    route: 'Surface',
+    configuredBiomePrefix: ['N'],
+    scenario: 'N Hub invalid ten-open board with reward mutation',
+    schemaVersion: 48,
+    catalogVersion: '0.27.0-arcana-fear-loadout',
+    sha256: 'd53c5f4502c7176783ed5ae631de82edfa18f7a648c7918e33cd399a2ed6957a',
+    provenance: 'saved N ten-open invalid checkpoint',
   },
 ] as const satisfies readonly AuthoredProjectCheckpointManifestEntry[]);
 
 export type AuthoredProjectCheckpointId = (typeof checkpointManifest)[number]['id'];
-
-export const checkpointManifestById: Readonly<
-  Record<AuthoredProjectCheckpointId, AuthoredProjectCheckpointManifestEntry>
-> = Object.freeze(
-  Object.fromEntries(checkpointManifest.map((entry) => [entry.id, entry])) as unknown as Record<
-    AuthoredProjectCheckpointId,
-    AuthoredProjectCheckpointManifestEntry
-  >,
-);
-
-export function checkpointManifestEntryFor(
-  id: AuthoredProjectCheckpointId,
-): AuthoredProjectCheckpointManifestEntry {
-  return checkpointManifestById[id];
-}
-
-export type CheckpointDocument = ProjectDocument;

@@ -49,8 +49,8 @@ import {
 } from '@run-planner/test-fixtures/shared';
 import { createGoldenFGHIProject, goldenFBiome } from '@run-planner/test-fixtures/underworld';
 import {
-  appendNEntry,
-  createRepresentativeNOPQProject,
+  loadSurfaceNEntryFrontierProject,
+  loadSurfaceNOPQProject,
   nBiome,
   nLocalOccurrenceId,
   nOccurrenceId,
@@ -100,7 +100,7 @@ let representativeNOPQContractProject: ProjectDocument;
 
 beforeAll(() => {
   goldenFGHIContractProject = createGoldenFGHIProject();
-  representativeNOPQContractProject = createRepresentativeNOPQProject();
+  representativeNOPQContractProject = loadSurfaceNOPQProject();
 });
 
 type WorkspaceBatchNode =
@@ -537,7 +537,7 @@ describe('structured workspace overlay contract', () => {
   });
 
   it('rejects a Hub visit whose evaluator room disagrees with its authored occurrence', () => {
-    const project = createRepresentativeNOPQProject();
+    const project = loadSurfaceNOPQProject();
     const evaluation = simulateProject(catalog, project);
     const malformed = withMalformedNSnapshot(evaluation, (snapshot) => {
       const hub = nHub(snapshot);
@@ -757,7 +757,7 @@ describe('structured workspace overlay contract', () => {
   }, 20_000);
 
   it('rejects a fine-grained finding on a withheld dormant Ephyra side leaf', () => {
-    const project = createRepresentativeNOPQProject();
+    const project = loadSurfaceNOPQProject();
     const evaluation = simulateProject(catalog, project);
     const finding = {
       code: 'sideRoomGenerationUnavailable',
@@ -789,7 +789,7 @@ describe('structured workspace overlay contract', () => {
       'sideDoor2',
     );
     const reward = createIncomingRewardAddress(nBiome, nLocalOccurrenceId('combat02', 'sideDoor2'));
-    const project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+    const project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
       kind: 'SetLocalVisitGeneration',
       slot: localVisitSlot,
       generation: 'notGenerated',
@@ -804,7 +804,7 @@ describe('structured workspace overlay contract', () => {
   });
 
   it('rejects an independently expected editable leaf omitted from projection products', () => {
-    const project = createRepresentativeNOPQProject();
+    const project = loadSurfaceNOPQProject();
     const plan = project.routes
       .find((route) => route.routeKey === 'Surface')
       ?.biomes.find((biome) => biome.biomeKey === 'N');
@@ -901,7 +901,7 @@ describe('structured workspace overlay contract', () => {
         projected: ReturnType<ReturnType<typeof projection>['project']>;
       }
     >();
-    for (const project of [createGoldenFGHIProject(), createRepresentativeNOPQProject()]) {
+    for (const project of [createGoldenFGHIProject(), loadSurfaceNOPQProject()]) {
       const assembly = simulateProjectAssembly(catalog, project);
       const projected = projection().project(assembly);
       for (const route of project.routes) {
@@ -967,7 +967,7 @@ describe('structured workspace overlay contract', () => {
       'wheel1',
       'offer1',
     );
-    let surface = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+    let surface = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
       kind: 'ReplaceRewardWheelOffer',
       offer: wheelOwner,
       value: {
@@ -1057,7 +1057,7 @@ describe('structured workspace overlay contract', () => {
   });
 
   it('closes exact top-level, local-child, and invalid active multi-choice Ship encounter phase leaves', () => {
-    const valid = createRepresentativeNOPQProject();
+    const valid = loadSurfaceNOPQProject();
     const validAssembly = simulateProjectAssembly(catalog, valid);
     const nPlan = valid.routes
       .find((route) => route.routeKey === 'Surface')
@@ -1169,7 +1169,7 @@ describe('structured workspace overlay contract', () => {
   });
 
   it('independently closes persisted decisions, targets, occurrences, and Hub ownership', () => {
-    for (const project of [createGoldenFGHIProject(), createRepresentativeNOPQProject()]) {
+    for (const project of [createGoldenFGHIProject(), loadSurfaceNOPQProject()]) {
       const projected = projectWorkspace(project);
       for (const route of project.routes) {
         for (const plan of route.biomes) {
@@ -1667,7 +1667,7 @@ describe('structured workspace overlay contract', () => {
       /target .* has no workspace marker/,
     );
 
-    const nProject = createRepresentativeNOPQProject();
+    const nProject = loadSurfaceNOPQProject();
     const nProjected = projectWorkspace(nProject);
     const nPlan = nProject.routes
       .find((route) => route.routeKey === 'Surface')
@@ -1808,10 +1808,10 @@ describe('structured workspace overlay contract', () => {
     const gFrontier = createStructuralFrontierProject('G');
     const hFrontier = createStructuralFrontierProject('H');
     const pFrontier = createStructuralFrontierProject('P');
-    const nTerminal = appendNEntry(emptyN);
+    const nTerminal = loadSurfaceNEntryFrontierProject();
     for (const project of [
       createGoldenFGHIProject(),
-      createRepresentativeNOPQProject(),
+      loadSurfaceNOPQProject(),
       emptyN,
       fFrontier,
       gFrontier,
@@ -1898,7 +1898,7 @@ describe('structured workspace overlay contract', () => {
     const gFrontier = createStructuralFrontierProject('G');
     const hFrontier = createStructuralFrontierProject('H');
     const pFrontier = createStructuralFrontierProject('P');
-    const nTerminal = appendNEntry(emptyN);
+    const nTerminal = loadSurfaceNEntryFrontierProject();
     const examples = new Map<
       ExpectedWorkspaceStructuralControl['kind'],
       {
@@ -1908,7 +1908,7 @@ describe('structured workspace overlay contract', () => {
     >();
     for (const project of [
       createGoldenFGHIProject(),
-      createRepresentativeNOPQProject(),
+      loadSurfaceNOPQProject(),
       emptyN,
       fFrontier,
       gFrontier,
@@ -1960,7 +1960,7 @@ describe('structured workspace overlay contract', () => {
       ).toThrow(/has no exact workspace interaction/);
     }
 
-    const surface = createRepresentativeNOPQProject();
+    const surface = loadSurfaceNOPQProject();
     const projected = projectWorkspace(surface);
     const hub = projected.routes
       .flatMap((route) => route.biomes)

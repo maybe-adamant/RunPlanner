@@ -14,19 +14,17 @@ import {
 import { materializeBiomePrefix, simulateProject } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
+import { authorRequiredTestRoomActions } from '@run-planner/test-fixtures/shared';
 import {
-  authorLegalTraitOffers,
-  authorRequiredTestRoomActions,
-} from '@run-planner/test-fixtures/shared';
-import {
-  appendNEntry,
-  createRepresentativeNProject,
+  loadSurfaceNEntryFrontierProject,
+  loadSurfaceNEntryFrontierResolvedProject,
+  loadSurfaceNProject,
   nBiome,
   nOccurrenceIds,
 } from '@run-planner/test-fixtures/surface';
 
 function completeN() {
-  const project = createRepresentativeNProject();
+  const project = loadSurfaceNProject();
   const evaluation = simulateProject(catalog, project);
   const biome = evaluation.routes
     .find((route) => route.routeKey === 'Surface')
@@ -37,7 +35,7 @@ function completeN() {
   return { project, evaluation, biome };
 }
 
-function traitContext(project: ReturnType<typeof createRepresentativeNProject>) {
+function traitContext(project: ReturnType<typeof loadSurfaceNProject>) {
   const route = project.routes.find((candidate) => candidate.routeKey === 'Surface');
   if (route === undefined) throw new Error('N fixture has no Surface route');
   return route.loadout;
@@ -194,14 +192,7 @@ describe('canonical N Hub materialization', () => {
   });
 
   it('keeps the selected PreHub terminal envelope explicit until its source-bearing Hub takeover', () => {
-    const project = authorLegalTraitOffers(
-      appendNEntry(
-        createProjectDocument(catalog, {
-          projectId: 'n-terminal-envelope',
-          configuredBiomeCounts: { Surface: 1 },
-        }),
-      ),
-    );
+    const project = loadSurfaceNEntryFrontierResolvedProject();
     const plan = project.routes
       .find((route) => route.routeKey === 'Surface')
       ?.biomes.find((biome) => biome.biomeKey === 'N');
@@ -252,23 +243,14 @@ describe('canonical N Hub materialization', () => {
   });
 
   it('materializes the Hub from its persisted predecessor rather than a room-name inference', () => {
-    const project = applyProjectCommand(
-      appendNEntry(
-        createProjectDocument(catalog, {
-          projectId: 'n-hub-source',
-          configuredBiomeCounts: { Surface: 1 },
-        }),
-      ),
-      catalog,
-      {
-        kind: 'ReplaceWithHubDecision',
-        decision: createExitDecisionAddress(nBiome, {
-          kind: 'occurrence',
-          occurrenceId: nOccurrenceIds.preHub,
-        }),
-        hub: createHubDecisionAddress(nBiome, 'hub'),
-      },
-    );
+    const project = applyProjectCommand(loadSurfaceNEntryFrontierProject(), catalog, {
+      kind: 'ReplaceWithHubDecision',
+      decision: createExitDecisionAddress(nBiome, {
+        kind: 'occurrence',
+        occurrenceId: nOccurrenceIds.preHub,
+      }),
+      hub: createHubDecisionAddress(nBiome, 'hub'),
+    });
     const plan = project.routes
       .find((route) => route.routeKey === 'Surface')
       ?.biomes.find((biome) => biome.biomeKey === 'N');
@@ -346,7 +328,7 @@ describe('canonical N Hub materialization', () => {
   });
 
   it('keeps a completed Hub composable at its Hub-owned handoff frontier', () => {
-    const withoutHandoff = applyProjectCommand(createRepresentativeNProject(), catalog, {
+    const withoutHandoff = applyProjectCommand(loadSurfaceNProject(), catalog, {
       kind: 'RemoveExitDecision',
       decision: createExitDecisionAddress(createBiomeAddress('Surface', 'N'), {
         kind: 'hubDecision',

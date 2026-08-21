@@ -20,26 +20,17 @@ import {
 } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
+import { authorRequiredTestRoomActions } from '@run-planner/test-fixtures/shared';
 import {
-  authorLegalTraitOffers,
-  authorRequiredTestRoomActions,
-} from '@run-planner/test-fixtures/shared';
-import {
-  appendCompleteN,
-  appendNEntry,
+  loadSurfaceNCompleteHubFrontierProject,
+  loadSurfaceNEntryFrontierResolvedProject,
+  loadSurfaceNProject,
   nBiome,
   nOccurrenceIds,
 } from '@run-planner/test-fixtures/surface';
 
 function currentNEntryProject() {
-  return authorLegalTraitOffers(
-    appendNEntry(
-      createProjectDocument(catalog, {
-        projectId: 'n-b1-entry-baseline',
-        configuredBiomeCounts: { Surface: 1 },
-      }),
-    ),
-  );
+  return loadSurfaceNEntryFrontierResolvedProject();
 }
 
 function blankNEntryProject() {
@@ -184,14 +175,7 @@ describe('N B1 entry and terminal baseline', () => {
       throw new Error('N entry baseline did not retain a composable prefix');
     }
     const entryBatch = biome.materializedPrefix.decisions[0];
-    const complete = nBiomeEvaluation(
-      appendCompleteN(
-        createProjectDocument(catalog, {
-          projectId: 'n-b1-lifecycle-baseline',
-          configuredBiomeCounts: { Surface: 1 },
-        }),
-      ),
-    );
+    const complete = nBiomeEvaluation(loadSurfaceNProject());
     if (complete.authoring !== 'complete') {
       throw new Error('N lifecycle baseline did not complete');
     }
@@ -339,13 +323,7 @@ describe('N B1 entry and terminal baseline', () => {
     ]);
     expect(openedBiome.materializedPrefix.frontier).toMatchObject({ kind: 'hubBoard' });
 
-    const completeHubWithoutHandoff = appendCompleteN(
-      createProjectDocument(catalog, {
-        projectId: 'n-b1-terminal-matrix',
-        configuredBiomeCounts: { Surface: 1 },
-      }),
-      { includePreboss: false },
-    );
+    const completeHubWithoutHandoff = loadSurfaceNCompleteHubFrontierProject();
     const completeHubCandidates = createPreparedProjectCandidateSession(
       catalog,
       simulateProjectAssembly(catalog, completeHubWithoutHandoff),
@@ -375,13 +353,7 @@ describe('N B1 entry and terminal baseline', () => {
       kind: 'hubDecision',
       decisionKey: 'hub',
     });
-    let project = appendCompleteN(
-      createProjectDocument(catalog, {
-        projectId: 'n-undersized-hub-handoff',
-        configuredBiomeCounts: { Surface: 1 },
-      }),
-      { includePreboss: false },
-    );
+    let project = loadSurfaceNCompleteHubFrontierProject();
     for (const hubSlotKey of ['combat10', 'combat03', 'combat01']) {
       project = applyProjectCommand(project, catalog, {
         kind: 'CloseHubSlot',

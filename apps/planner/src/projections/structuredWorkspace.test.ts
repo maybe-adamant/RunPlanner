@@ -8,7 +8,7 @@ import { simulateProjectAssembly } from '@run-planner/engine/simulation';
 import { beforeAll, describe, expect, it } from 'vitest';
 
 import { createGoldenFGHIProject } from '@run-planner/test-fixtures/underworld';
-import { createRepresentativeNOPQProject } from '@run-planner/test-fixtures/surface';
+import { loadSurfaceNOPQProject } from '@run-planner/test-fixtures/surface';
 import { createCandidateSessionFactory } from './candidateProjection';
 import { createContextualOptionResolver } from './contextualOptions';
 import { createContextualPickerProjection } from './contextualPicker';
@@ -55,7 +55,7 @@ let representativeWorkspaces:
 function representativeWorkspacePair() {
   representativeWorkspaces ??= Object.freeze({
     underworld: project(createGoldenFGHIProject()),
-    surface: project(createRepresentativeNOPQProject()),
+    surface: project(loadSurfaceNOPQProject()),
   });
   return representativeWorkspaces;
 }
@@ -201,7 +201,7 @@ describe('unified structured workspace projection facade', () => {
   it('rejects cloned and mixed assemblies at application boundaries', () => {
     const authored = createGoldenFGHIProject();
     const exact = simulateProjectAssembly(catalog, authored);
-    const other = simulateProjectAssembly(catalog, createRepresentativeNOPQProject());
+    const other = simulateProjectAssembly(catalog, loadSurfaceNOPQProject());
     const cloned = Object.freeze({ ...exact });
     const mixed = Object.freeze({ ...exact, evaluation: other.evaluation });
 

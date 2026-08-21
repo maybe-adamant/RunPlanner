@@ -24,7 +24,7 @@ import {
   undoProjectHistory,
 } from '@run-planner/engine/authored-project';
 import { composeBiomeHistoryPrefix, materializeBiomePrefix } from '@run-planner/engine/simulation';
-import { createRepresentativeNOPQProject } from '@run-planner/test-fixtures/surface';
+import { loadSurfaceNOPQProject } from '@run-planner/test-fixtures/surface';
 
 import { createNormalDispositionByAcquisitionRole } from '../../../src/authored-project/reward-state';
 import { createCompleteNProject } from '../support/complete-n-project';
@@ -722,14 +722,7 @@ describe('persisted authored topology codec', () => {
   it.each([
     ['H', 'Underworld', hBiome, completeHProject, 'complete-h-07', 'H_Combat02'],
     ['O', 'Surface', oBiome, completeOProject, 'complete-o-6', 'O_Combat01'],
-    [
-      'Q',
-      'Surface',
-      qBiome,
-      createRepresentativeNOPQProject,
-      'surface-q-second-miniboss-1',
-      'Q_Combat10',
-    ],
+    ['Q', 'Surface', qBiome, loadSurfaceNOPQProject, 'surface-q-second-miniboss-1', 'Q_Combat10'],
   ] as const)(
     'retains the declaration-admitted terminal %s envelope outside realized ordinary progression',
     (biomeKey, routeKey, biome, build, sourceOccurrenceId, ordinaryGameName) => {

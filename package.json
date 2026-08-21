@@ -23,7 +23,6 @@
     "test:heavy": "vitest run --config vitest.heavy.config.ts",
     "test:changed": "vitest run --changed",
     "test:fixtures:check": "vitest run --config vitest.fixtures.config.ts",
-    "test:fixtures:write": "vitest run --config vitest.fixtures.write.config.ts && npm run test:fixtures:check",
     "test:catalog": "vitest run packages/hades2-catalog/test",
     "test:engine": "vitest run packages/planner-engine/test",
     "test:planner": "vitest run apps/planner/src apps/planner/test/architecture apps/planner/test/support/structured-workspace",

@@ -20,11 +20,7 @@ import {
   goldenGBiome,
   goldenGOccurrenceId,
 } from '@run-planner/test-fixtures/underworld';
-import {
-  createRepresentativeNOPProject,
-  pBiome,
-  pOccurrenceId,
-} from '@run-planner/test-fixtures/surface';
+import { loadSurfaceNOPProject, pBiome, pOccurrenceId } from '@run-planner/test-fixtures/surface';
 import {
   applyProjectHistoryCommand,
   applyProjectCommand,
@@ -90,7 +86,7 @@ function authorGorgon(
 }
 
 function createCompleteRepresentativeNOPProject() {
-  return authorLegalTraitOffers(createRepresentativeNOPProject());
+  return authorLegalTraitOffers(loadSurfaceNOPProject());
 }
 
 function assembled(project: import('../../src/authored-project').ProjectDocument) {
@@ -497,7 +493,7 @@ describe('Gorgon Amulet lifecycle', () => {
       { kind: 'occurrence', occurrenceId: pOccurrenceId('P_Combat03', 1, 1) },
       'Combat',
     );
-    const initial = createRepresentativeNOPProject();
+    const initial = loadSurfaceNOPProject();
     const enabled = applyProjectCommand(initial, catalog, {
       kind: 'ReplaceGorgonDeathDefianceCondition',
       phase,
@@ -536,7 +532,7 @@ describe('Gorgon Amulet lifecycle', () => {
       { kind: 'occurrence', occurrenceId: pOccurrenceId('P_Combat03', 1, 1) },
       'Combat',
     );
-    const initial = createRepresentativeNOPProject();
+    const initial = loadSurfaceNOPProject();
     const enabled = applyProjectCommand(initial, catalog, {
       kind: 'ReplaceGorgonDeathDefianceCondition',
       phase,
@@ -568,7 +564,7 @@ describe('Gorgon Amulet lifecycle', () => {
       { kind: 'occurrence', occurrenceId: pOccurrenceId('P_Combat03', 1, 1) },
       'Combat',
     );
-    const initial = applyProjectCommand(createRepresentativeNOPProject(), catalog, {
+    const initial = applyProjectCommand(loadSurfaceNOPProject(), catalog, {
       kind: 'ReplaceGorgonDeathDefianceCondition',
       phase,
       value: true,
@@ -952,7 +948,7 @@ describe('Gorgon Amulet lifecycle', () => {
       { kind: 'occurrence', occurrenceId: pOccurrenceId('P_Combat12', 8, 1) },
       'Combat',
     );
-    let project = applyProjectCommand(createRepresentativeNOPProject(), catalog, {
+    let project = applyProjectCommand(loadSurfaceNOPProject(), catalog, {
       kind: 'ReplaceStartingKeepsake',
       selection: createRouteStartKeepsakeSelectionAddress('Surface'),
       keepsakeKey: 'AthenaEncounterKeepsake',
@@ -967,7 +963,7 @@ describe('Gorgon Amulet lifecycle', () => {
       phase,
       value: true,
     });
-    const baseline = assembled(createRepresentativeNOPProject()).evaluation;
+    const baseline = assembled(loadSurfaceNOPProject()).evaluation;
     const previous = baseline.routes
       .find((route) => route.routeKey === 'Surface')
       ?.biomes.find((biome) => biome.biomeKey === 'O');

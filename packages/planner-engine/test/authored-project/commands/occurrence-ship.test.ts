@@ -9,11 +9,7 @@ import {
   createTraitOfferAddress,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
-import {
-  createRepresentativeNOProject,
-  oBiome,
-  oOccurrenceIds,
-} from '@run-planner/test-fixtures/surface';
+import { loadSurfaceNOProject, oBiome, oOccurrenceIds } from '@run-planner/test-fixtures/surface';
 
 function shipState(project: ProjectDocument, occurrenceId = oOccurrenceIds.combat04) {
   const state = project.routes
@@ -36,7 +32,7 @@ describe('authored-project Ship occurrence commands', () => {
       rewardType: 'Boon' as const,
       payload: { kind: 'BoonSource' as const, source: 'ApolloUpgrade' },
     };
-    let project = applyProjectCommand(createRepresentativeNOProject(), catalog, {
+    let project = applyProjectCommand(loadSurfaceNOProject(), catalog, {
       kind: 'ReplaceRewardWheelOffer',
       offer,
       value,
@@ -63,7 +59,7 @@ describe('authored-project Ship occurrence commands', () => {
 
   it('replaces the encounter count and preserves identity for an unchanged count', () => {
     const occurrence = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
-    const initial = createRepresentativeNOProject();
+    const initial = loadSurfaceNOProject();
     const changed = applyProjectCommand(initial, catalog, {
       kind: 'ReplaceShipEncounterCount',
       occurrence,
@@ -94,7 +90,7 @@ describe('authored-project Ship occurrence commands', () => {
 
   it('replaces wheel offer count and picked index while clamping the active pick', () => {
     const wheel = createRewardWheelAddress(oBiome, oOccurrenceIds.combat04, 'wheel1');
-    let project = applyProjectCommand(createRepresentativeNOProject(), catalog, {
+    let project = applyProjectCommand(loadSurfaceNOProject(), catalog, {
       kind: 'ReplaceRewardWheelOfferCount',
       wheel,
       offerCount: 2,
@@ -135,7 +131,7 @@ describe('authored-project Ship occurrence commands', () => {
       'wheel1',
       'offer1',
     );
-    let project = applyProjectCommand(createRepresentativeNOProject(), catalog, {
+    let project = applyProjectCommand(loadSurfaceNOProject(), catalog, {
       kind: 'ReplaceRewardWheelStore',
       wheel,
       storeKey: 'MetaProgress',
@@ -160,7 +156,7 @@ describe('authored-project Ship occurrence commands', () => {
   });
 
   it('rejects wheel values outside declaration and active-offer bounds', () => {
-    const project = createRepresentativeNOProject();
+    const project = loadSurfaceNOProject();
     const wheel = createRewardWheelAddress(oBiome, oOccurrenceIds.combat04, 'wheel1');
     expect(() =>
       applyProjectCommand(project, catalog, {

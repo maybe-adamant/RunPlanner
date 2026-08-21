@@ -68,18 +68,18 @@ import {
   oOccurrenceIds,
   pBiome,
   pOccurrenceId,
-  createRepresentativeNProject,
-  createRepresentativeNOPQProject,
+  loadSurfaceNStoryBoardProject,
+  loadSurfaceNOPQProject,
   oBiome,
 } from '@run-planner/test-fixtures/surface';
 
 let goldenFGHIProject: ReturnType<typeof createGoldenFGHIProject>;
-let representativeNOPQProject: ReturnType<typeof createRepresentativeNOPQProject>;
+let representativeNOPQProject: ReturnType<typeof loadSurfaceNOPQProject>;
 let heraclesCombatFixture: ReturnType<typeof createHeraclesCombatFixture>;
 
 beforeAll(() => {
   goldenFGHIProject = createGoldenFGHIProject();
-  representativeNOPQProject = createRepresentativeNOPQProject();
+  representativeNOPQProject = loadSurfaceNOPQProject();
 });
 
 beforeAll(() => {
@@ -130,7 +130,7 @@ function select(project: ProjectDocument, owner: ReturnType<typeof phase>, encou
 }
 
 function surfaceProjectWithEnteredRankIHammer(): ProjectDocument {
-  const project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+  const project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
     kind: 'ReplaceHubVisitOrder',
     hub: createHubDecisionAddress(nBiome, 'hub'),
     hubSlotKeys: ['combat05', 'miniBoss01', 'combat02', 'combat11', 'combat23', 'combat03'],
@@ -144,7 +144,7 @@ function reachedPOutdoorIcarusFixture(): {
   readonly encounter: ReturnType<typeof phase>;
 } {
   const occurrenceId = pOccurrenceId('P_Combat07', 4, 1);
-  let project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+  let project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
     kind: 'ReplaceOccurrenceRoom',
     occurrence: createOccurrenceAddress(pBiome, pOccurrenceId('P_Combat11', 4, 2)),
     gameName: 'P_Combat07',
@@ -300,7 +300,7 @@ function oCombatPreparationFixture(): {
   readonly preparation: HistoryStateView;
   readonly room: CanonicalAuthoredRoom;
 } {
-  const result = simulateProject(catalog, createRepresentativeNOPQProject());
+  const result = simulateProject(catalog, loadSurfaceNOPQProject());
   const biome = result.routes
     .find((route) => route.routeKey === 'Surface')
     ?.biomes.find((candidate) => candidate.biomeKey === 'O');
@@ -328,7 +328,7 @@ function pCombatPreparationFixture(): {
   readonly preparation: HistoryStateView;
   readonly room: CanonicalAuthoredRoom;
 } {
-  const result = simulateProject(catalog, createRepresentativeNOPQProject());
+  const result = simulateProject(catalog, loadSurfaceNOPQProject());
   const biome = result.routes
     .find((route) => route.routeKey === 'Surface')
     ?.biomes.find((candidate) => candidate.biomeKey === 'P');
@@ -779,20 +779,7 @@ describe('field NPC encounter requirements', () => {
   });
 
   it('gates Medea Death Defiance curse candidates and acquires the selected Story curse chronologically', () => {
-    const project = createRepresentativeNProject({
-      openSlotKeys: [
-        'combat11',
-        'combat10',
-        'combat09',
-        'combat05',
-        'story',
-        'combat02',
-        'combat01',
-        'miniBoss01',
-        'combat23',
-      ],
-      visitSlotKeys: ['combat05', 'miniBoss01', 'combat02', 'combat11', 'combat23', 'story'],
-    });
+    const project = loadSurfaceNStoryBoardProject();
     const history = createTraitHistoryState();
     expect(
       traitCandidates(catalog, 'Medea', history, { deathDefianceConditionMet: false }).find(
@@ -947,7 +934,7 @@ describe('field NPC encounter requirements', () => {
   it('acquires selectable Dionysus rarity and Water without Olympian composition', () => {
     const storyId = pOccurrenceId('P_Story01', 7, 1);
     const storyPhase = phase(pBiome, storyId);
-    const initial = createRepresentativeNOPQProject();
+    const initial = loadSurfaceNOPQProject();
     const storyOffer = authoredOccurrence(initial, 'P', storyId).encounters.traitOffersByPhase
       ?.Encounter?.Story_Dionysus_01;
     expect(storyOffer).toMatchObject({ giverKey: 'Dionysus' });
@@ -1293,7 +1280,7 @@ describe('field NPC encounter requirements', () => {
     const intro = phase(oBiome, occurrenceId, 'Intro');
     const combat1 = phase(oBiome, occurrenceId, 'Combat1');
     const combat2 = phase(oBiome, occurrenceId, 'Combat2');
-    let withThreePhases = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+    let withThreePhases = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
       kind: 'ReplaceShipEncounterCount',
       occurrence: room,
       encounterCount: 3,
@@ -1386,7 +1373,7 @@ describe('field NPC encounter requirements', () => {
     const indoorOccurrenceId = pOccurrenceId('P_Combat10', 6, 1);
     const indoorIntro = phase(pBiome, pOccurrenceId('P_Combat02', 2, 1), 'Intro');
     const indoorCombat = phase(pBiome, indoorOccurrenceId, 'Combat');
-    const initial = createRepresentativeNOPQProject();
+    const initial = loadSurfaceNOPQProject();
 
     expect(support(initial, indoorIntro)?.candidateEncounterKeys).toContain('HeraclesCombatP');
     expect(support(initial, indoorIntro)?.candidateEncounterKeys).not.toContain('IcarusCombatP');
@@ -1530,7 +1517,7 @@ describe('field NPC encounter requirements', () => {
   it('uses the shared encounter-owned trait path for Athena across P phase dormancy and completion', () => {
     const occurrenceId = pOccurrenceId('P_Combat10', 6, 1);
     const athenaPhase = phase(pBiome, occurrenceId, 'Combat');
-    let project = createRepresentativeNOPQProject();
+    let project = loadSurfaceNOPQProject();
 
     expect(support(project, athenaPhase)?.candidateEncounterKeys).toContain('AthenaCombatP');
     project = select(project, athenaPhase, 'AthenaCombatP');

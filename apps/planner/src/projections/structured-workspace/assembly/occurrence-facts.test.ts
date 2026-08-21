@@ -10,7 +10,7 @@ import {
   createGoldenFGHIProject,
   goldenFOccurrenceId,
 } from '@run-planner/test-fixtures/underworld';
-import { createRepresentativeNOPQProject, nOccurrenceId } from '@run-planner/test-fixtures/surface';
+import { loadSurfaceNOPQProject, nOccurrenceId } from '@run-planner/test-fixtures/surface';
 import { createWorkspaceBiomeOccurrenceAssemblyFacts } from './occurrence-facts';
 import { createWorkspaceProjectSourceIndex } from '../source-index';
 
@@ -62,7 +62,7 @@ function withFPrebossSelection(
 describe('structured workspace occurrence assembly facts', () => {
   it('keeps authored detail activation separate from evaluated entry', () => {
     const facts = createWorkspaceBiomeOccurrenceAssemblyFacts(
-      biomeSource(createRepresentativeNOPQProject(), 'Surface', 'N'),
+      biomeSource(loadSurfaceNOPQProject(), 'Surface', 'N'),
     );
     const activeEphyra = nOccurrenceId('combat05');
     const dormantEphyra = nOccurrenceId('combat10');

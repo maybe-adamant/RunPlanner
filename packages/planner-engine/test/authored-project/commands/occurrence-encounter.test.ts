@@ -33,9 +33,9 @@ import {
   goldenFOccurrenceId,
 } from '@run-planner/test-fixtures/underworld';
 import {
-  createRepresentativeNOProject,
-  createRepresentativeNProject,
-  createRepresentativeNOPProject,
+  loadSurfaceNOProject,
+  loadSurfaceNStoryBoardProject,
+  loadSurfaceNOPProject,
   nOccurrenceId,
   oBiome,
   oOccurrenceIds,
@@ -214,7 +214,7 @@ describe('authored encounter occurrence commands', () => {
   });
 
   it('applies a valid top-level selection, resets it, and records one atomic history edit', () => {
-    const initial = createRepresentativeNOPProject();
+    const initial = loadSurfaceNOPProject();
     const assembly = withAssembly(initial);
     const support = encounterPhaseCandidateSupportForProjectEvaluationAssembly(
       assembly,
@@ -257,7 +257,7 @@ describe('authored encounter occurrence commands', () => {
   });
 
   it('retains a top-level selected encounter while its room is unpicked, then republishes it on repick', () => {
-    const initial = createRepresentativeNOPProject();
+    const initial = loadSurfaceNOPProject();
     const selected = applyProjectCommand(initial, catalog, {
       kind: 'SelectEncounter',
       phase: pIntroPhase,
@@ -323,10 +323,7 @@ describe('authored encounter occurrence commands', () => {
       'Encounter',
     );
     const visitSlotKeys = ['combat05', 'miniBoss01', 'combat02', 'combat11', 'combat23', 'story'];
-    let authored = createRepresentativeNProject({
-      openSlotKeys: [...visitSlotKeys, 'combat10', 'combat09', 'combat01'],
-      visitSlotKeys,
-    });
+    let authored = loadSurfaceNStoryBoardProject();
     authored = applyProjectCommand(authored, catalog, {
       kind: 'ReplaceTraitSelection',
       trait: createTraitOfferAddress(storyPhase, 'selection'),
@@ -440,7 +437,7 @@ describe('authored encounter occurrence commands', () => {
       { kind: 'occurrence', occurrenceId: pCombatId },
       'Intro',
     );
-    const top = applyProjectCommand(createRepresentativeNOPProject(), catalog, {
+    const top = applyProjectCommand(loadSurfaceNOPProject(), catalog, {
       kind: 'ReplaceFigLeafSkip',
       phase: topLevel,
       value: true,
@@ -490,7 +487,7 @@ describe('authored encounter occurrence commands', () => {
 
   it('retains the dormant O Combat2 selection across a 3 → 2 → 3 Ship count edit', () => {
     const ship = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
-    const withThree = applyProjectCommand(createRepresentativeNOProject(), catalog, {
+    const withThree = applyProjectCommand(loadSurfaceNOProject(), catalog, {
       kind: 'ReplaceShipEncounterCount',
       occurrence: ship,
       encounterCount: 3,
@@ -516,7 +513,7 @@ describe('authored encounter occurrence commands', () => {
   });
 
   it('keeps command acceptance structural while evaluation reports contextual invalidity', () => {
-    const topLevel = createRepresentativeNOPProject();
+    const topLevel = loadSurfaceNOPProject();
     const command = {
       kind: 'SelectEncounter' as const,
       phase: pIntroPhase,

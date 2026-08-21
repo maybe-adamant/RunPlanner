@@ -1,7 +1,6 @@
 // @vitest-environment jsdom
 
 import { cleanup, screen, within } from '@testing-library/react';
-import { createProjectDocument } from '@run-planner/engine/authored-project';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 import {
@@ -12,8 +11,8 @@ import {
 import { authoredProjectReplaced } from '@planner/state/projectWorkspaceSlice';
 import { createGoldenFGHIProject } from '@run-planner/test-fixtures/underworld';
 import {
-  appendCompleteN,
-  createRepresentativeNOPQProject,
+  loadSurfaceNCompleteHubFrontierProject,
+  loadSurfaceNOPQProject,
 } from '@run-planner/test-fixtures/surface';
 import { renderPlannerForInteraction } from '../fixtures/renderPlanner';
 
@@ -39,7 +38,7 @@ beforeAll(function prepareNRunStateApplication() {
   nRunStateApplication = createApplication({
     observeEvaluationWork: (event) => nRunStateEvents.push(event),
   });
-  nRunStateApplication.store.dispatch(authoredProjectReplaced(createRepresentativeNOPQProject()));
+  nRunStateApplication.store.dispatch(authoredProjectReplaced(loadSurfaceNOPQProject()));
   nRunStateTitles = projectedRunStateTitles(nRunStateApplication, 'Surface', 'N');
   nRunStateEvents.length = 0;
 });
@@ -155,13 +154,7 @@ describe('Run State product loop', () => {
 
   it('retains the visible completed-Hub Preboss handoff as one outer transition', async () => {
     const application = createApplication();
-    const project = appendCompleteN(
-      createProjectDocument(application.catalog, {
-        configuredBiomeCounts: { Surface: 1 },
-        projectId: 'run-state-n-handoff',
-      }),
-      { includePreboss: false },
-    );
+    const project = loadSurfaceNCompleteHubFrontierProject();
     application.store.dispatch(authoredProjectReplaced(project));
     const view = renderPlannerForInteraction({ application });
 

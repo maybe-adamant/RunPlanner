@@ -34,11 +34,11 @@ import {
   authoredProjectReplaced,
   authoredProjectUndoRequested,
 } from '@planner/state/projectWorkspaceSlice';
-import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 import {
-  appendCompleteN,
-  appendNEntry,
-  createRepresentativeNOPQProject,
+  loadSurfaceNCompleteHubFrontierProject,
+  loadSurfaceNEntryFrontierProject,
+  loadSurfaceNEntryFrontierResolvedProject,
+  loadSurfaceNOPQProject,
   nBiome,
   nLocalOccurrenceId,
   nOccurrenceId,
@@ -258,7 +258,7 @@ describe('BiomeWorkspace', () => {
   });
 
   it('renders an engine-unavailable Run State launcher as disabled and never opens its sheet', async () => {
-    const { user } = renderWorkspace(appendNEntry(emptyProject('Surface', 1)), 'Surface', 'N');
+    const { user } = renderWorkspace(loadSurfaceNEntryFrontierProject(), 'Surface', 'N');
     const launcher = screen.getByRole('button', { name: 'Run State' });
     if (!(launcher instanceof HTMLButtonElement))
       throw new Error('Run State launcher is not a button');
@@ -357,7 +357,7 @@ describe('BiomeWorkspace', () => {
   });
 
   it('shows the fixed N entry reward without a start identity picker', async () => {
-    const view = renderWorkspace(createRepresentativeNOPQProject(), 'Surface', 'N');
+    const view = renderWorkspace(loadSurfaceNOPQProject(), 'Surface', 'N');
     await view.user.click(screen.getByRole('button', { name: /^Opening/ }));
     const entryReward = screen.getByRole('region', { name: 'Entry reward' });
     expect(within(entryReward).getByLabelText('Reward')).toBeTruthy();
@@ -365,7 +365,7 @@ describe('BiomeWorkspace', () => {
   });
 
   it('uses one concise player-facing name for the Hub rail stop', () => {
-    renderWorkspace(createRepresentativeNOPQProject(), 'Surface', 'N');
+    renderWorkspace(loadSurfaceNOPQProject(), 'Surface', 'N');
 
     expect(screen.getByRole('button', { name: 'Hub, 6 of 6 visits, Evaluated' })).toBe(
       hubRailButton(),
@@ -388,7 +388,7 @@ describe('BiomeWorkspace', () => {
   });
 
   it('uses the same compact title-and-status row for the Hub and its visits', () => {
-    renderWorkspace(createRepresentativeNOPQProject(), 'Surface', 'N');
+    renderWorkspace(loadSurfaceNOPQProject(), 'Surface', 'N');
 
     const hub = hubRailButton();
     const hubHeading = hub.querySelector('.biome-rail-heading');
@@ -413,7 +413,7 @@ describe('BiomeWorkspace', () => {
   });
 
   it('renders Ephyra primary rewards on fixed stages, decision selections, and authored Hub visits', async () => {
-    const view = renderWorkspace(createRepresentativeNOPQProject(), 'Surface', 'N');
+    const view = renderWorkspace(loadSurfaceNOPQProject(), 'Surface', 'N');
     const biome = workspaceBiome(view.application, 'Surface', 'N');
     const opening = biome.rail.find(
       (entry) =>
@@ -468,7 +468,7 @@ describe('BiomeWorkspace', () => {
   });
 
   it('uses a selected decision rail stop to open its continuation occurrence stage', async () => {
-    const view = renderWorkspace(createRepresentativeNOPQProject(), 'Surface', 'N');
+    const view = renderWorkspace(loadSurfaceNOPQProject(), 'Surface', 'N');
     const biome = workspaceBiome(view.application, 'Surface', 'N');
     const opening = biome.rail.find(
       (entry) =>
@@ -516,7 +516,7 @@ describe('BiomeWorkspace', () => {
   });
 
   it('routes a keyboard-selected Hub rail visit to its occurrence-owned local detail workbench', async () => {
-    const view = renderWorkspace(createRepresentativeNOPQProject(), 'Surface', 'N');
+    const view = renderWorkspace(loadSurfaceNOPQProject(), 'Surface', 'N');
     await view.user.click(hubRailButton());
     const boardCard = screen.getByRole('article', { name: 'Combat 02 Hub room' });
     expect(within(boardCard).getByRole('button', { name: 'Reward' })).toBeTruthy();
@@ -573,7 +573,7 @@ describe('BiomeWorkspace', () => {
   });
 
   it('summarizes the Hub door reward in the room heading without exposing another editor', async () => {
-    const view = renderWorkspace(createRepresentativeNOPQProject(), 'Surface', 'N');
+    const view = renderWorkspace(loadSurfaceNOPQProject(), 'Surface', 'N');
     await view.user.click(hubRailButton());
     await view.user.click(screen.getByRole('button', { name: /Visit 3 · Combat 02/ }));
 
@@ -593,7 +593,7 @@ describe('BiomeWorkspace', () => {
   });
 
   it('keeps Hub visit and board focus represented by the nested rail', async () => {
-    const view = renderWorkspace(createRepresentativeNOPQProject(), 'Surface', 'N');
+    const view = renderWorkspace(loadSurfaceNOPQProject(), 'Surface', 'N');
     await view.user.click(hubRailButton());
     const railVisit = screen.getByRole('button', { name: /Visit 3 · Combat 02/ });
 
@@ -628,7 +628,7 @@ describe('BiomeWorkspace', () => {
 
   it('renders ordinary rails in semantic decision order and defaults to a decision inspector', () => {
     const underworld = createGoldenFGHIProject();
-    const surface = createRepresentativeNOPQProject();
+    const surface = loadSurfaceNOPQProject();
     const cases = [
       [underworld, 'Underworld', 'F'],
       [underworld, 'Underworld', 'G'],
@@ -677,7 +677,7 @@ describe('BiomeWorkspace', () => {
   });
 
   it('updates decision rail context from the predecessor occurrence stage', async () => {
-    const project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+    const project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
       kind: 'RemoveExitDecision',
       decision: createExitDecisionAddress(pBiome, {
         kind: 'occurrence',
@@ -844,7 +844,7 @@ describe('BiomeWorkspace', () => {
   });
 
   it('renders topology-owned and terminal outgoing states on their exact N occurrences', async () => {
-    const view = renderWorkspace(createRepresentativeNOPQProject(), 'Surface', 'N');
+    const view = renderWorkspace(loadSurfaceNOPQProject(), 'Surface', 'N');
 
     act(() =>
       view.application.store.dispatch(
@@ -914,7 +914,7 @@ describe('BiomeWorkspace', () => {
   });
 
   it('replaces the terminal PreHub decision with Hub and restores it through undo and redo', async () => {
-    const terminalProject = authorLegalTraitOffers(appendNEntry(emptyProject('Surface', 1)));
+    const terminalProject = loadSurfaceNEntryFrontierResolvedProject();
     const terminalOwner = createExitDecisionAddress(nBiome, {
       kind: 'occurrence',
       occurrenceId: nOccurrenceIds.preHub,
@@ -963,15 +963,11 @@ describe('BiomeWorkspace', () => {
 
   it('keeps the terminal Hub control visible when an invalid PreHub reward blocks evaluation', async () => {
     const preHubReward = createIncomingRewardAddress(nBiome, nOccurrenceIds.preHub);
-    const invalidPrefix = applyProjectCommand(
-      authorLegalTraitOffers(appendNEntry(emptyProject('Surface', 1))),
-      catalog,
-      {
-        kind: 'ReplaceIncomingReward',
-        reward: preHubReward,
-        value: { rewardType: 'TalentDrop' },
-      },
-    );
+    const invalidPrefix = applyProjectCommand(loadSurfaceNEntryFrontierResolvedProject(), catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: preHubReward,
+      value: { rewardType: 'TalentDrop' },
+    });
     const terminalOwner = createExitDecisionAddress(nBiome, {
       kind: 'occurrence',
       occurrenceId: nOccurrenceIds.preHub,
@@ -1126,7 +1122,7 @@ describe('BiomeWorkspace', () => {
     fApplication.dispose();
 
     const nApplication = createApplication();
-    nApplication.store.dispatch(authoredProjectReplaced(createRepresentativeNOPQProject()));
+    nApplication.store.dispatch(authoredProjectReplaced(loadSurfaceNOPQProject()));
     const nBiomeWorkspace = workspaceBiome(nApplication, 'Surface', 'N');
     const hub = nBiomeWorkspace.nodes.find(
       (node): node is Extract<WorkspaceNode, { readonly kind: 'hubDecision' }> =>
@@ -1158,13 +1154,7 @@ describe('BiomeWorkspace', () => {
   });
 
   it('routes an explicit completed-Hub handoff focus back to the Hub workbench and executes it', async () => {
-    const project = appendCompleteN(
-      createProjectDocument(catalog, {
-        projectId: 'workspace-n-completed-handoff',
-        configuredBiomeCounts: { Surface: 1 },
-      }),
-      { includePreboss: false },
-    );
+    const project = loadSurfaceNCompleteHubFrontierProject();
     const view = renderWorkspace(project, 'Surface', 'N');
     const handoff = createExitDecisionAddress(createBiomeAddress('Surface', 'N'), {
       kind: 'hubDecision',
@@ -1227,7 +1217,7 @@ describe('BiomeWorkspace', () => {
       kind: 'hubDecision',
       decisionKey: 'hub',
     });
-    const view = renderWorkspace(createRepresentativeNOPQProject(), 'Surface', 'N');
+    const view = renderWorkspace(loadSurfaceNOPQProject(), 'Surface', 'N');
     const structure = screen.getByRole('region', { name: 'Ephyra route structure' });
     expect(structure.querySelector('[data-kind="takeoverBatch"]')).toBeNull();
     await view.user.click(
@@ -1276,7 +1266,7 @@ describe('BiomeWorkspace', () => {
   });
 
   it('aggregates a target-owned finding onto its decision rail stop', async () => {
-    const project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+    const project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
       kind: 'ReplaceOccurrenceRoom',
       occurrence: createOccurrenceAddress(pBiome, pOccurrenceId('P_Combat03', 1, 1)),
       gameName: 'P_Combat02',
@@ -1333,7 +1323,7 @@ describe('BiomeWorkspace', () => {
   });
 
   it('focuses a fixed Story reward on its owning predecessor door', () => {
-    const project = createRepresentativeNOPQProject();
+    const project = loadSurfaceNOPQProject();
     const view = renderWorkspace(project, 'Surface', 'P');
     const storyOccurrenceId = pOccurrenceId('P_Story01', 7, 1);
     const story = workspaceBiome(view.application, 'Surface', 'P').nodes.find(
@@ -1382,7 +1372,7 @@ describe('BiomeWorkspace', () => {
       { kind: 'occurrence', occurrenceId: pOccurrenceIds.intro },
       'exit1',
     );
-    const project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+    const project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
       kind: 'ReplaceOccurrenceRoom',
       occurrence: createOccurrenceAddress(pBiome, pOccurrenceId('P_Combat03', 1, 1)),
       gameName: 'P_Combat02',
@@ -1423,7 +1413,7 @@ describe('BiomeWorkspace', () => {
   });
 
   it('keeps the reached Judgment picker line-separated and directly reopenable', () => {
-    const dormant = renderWorkspace(createRepresentativeNOPQProject(), 'Surface', 'N');
+    const dormant = renderWorkspace(loadSurfaceNOPQProject(), 'Surface', 'N');
     const dormantBoss = workspaceBiome(dormant.application, 'Surface', 'N').nodes.find(
       (node): node is Extract<WorkspaceNode, { readonly kind: 'completion' }> =>
         node.kind === 'completion' && node.role === 'boss',
@@ -1433,7 +1423,7 @@ describe('BiomeWorkspace', () => {
     cleanup();
     dormant.application.dispose();
 
-    const project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+    const project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
       kind: 'ReplaceManualArcanaSelection',
       route: createRouteAddress('Surface'),
       arcanaKeys: ['CastCount'],
@@ -1486,7 +1476,7 @@ describe('BiomeWorkspace', () => {
   });
 
   it('binds the reached Postboss keepsake selector through replacement and retention', async () => {
-    const view = renderWorkspace(createRepresentativeNOPQProject(), 'Surface', 'N');
+    const view = renderWorkspace(loadSurfaceNOPQProject(), 'Surface', 'N');
     const owner = createPostbossKeepsakeSelectionAddress(
       createCompletionRoomAddress(nBiome, 'postboss'),
     );

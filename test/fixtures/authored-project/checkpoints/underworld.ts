@@ -1,36 +1,33 @@
-import { catalog } from '@run-planner/hades2-catalog';
-import { decodeProjectDocument, type ProjectDocument } from '@run-planner/engine/authored-project';
+import type { ProjectDocument } from '@run-planner/engine/authored-project';
+import type { AuthoredProjectCheckpointId } from './manifest';
+import { checkpointArtifact, type CheckpointArtifact } from './loader';
 
-import fgRaw from './underworld-fg.runplanner.json';
-import fghRaw from './underworld-fgh.runplanner.json';
-import fghiRaw from './underworld-fghi.runplanner.json';
+import underworldFMidshopPomRaw from './underworld-f-midshop-pom-frontier.runplanner.json';
+import underworldFGRaw from './underworld-fg.runplanner.json';
+import underworldFGHRaw from './underworld-fgh.runplanner.json';
+import underworldFGHIRaw from './underworld-fghi.runplanner.json';
 
-function lazyCheckpoint(raw: unknown): () => ProjectDocument {
-  let cached: ProjectDocument | undefined;
-  return () => {
-    if (cached === undefined) cached = decodeProjectDocument(raw, catalog);
-    return cached;
-  };
-}
+type UnderworldCheckpointId = Extract<AuthoredProjectCheckpointId, `underworld-${string}`>;
 
-const loadFG = lazyCheckpoint(fgRaw);
-const loadFGH = lazyCheckpoint(fghRaw);
-const loadFGHI = lazyCheckpoint(fghiRaw);
+export const underworldCheckpointArtifacts = Object.freeze({
+  'underworld-fg': checkpointArtifact(underworldFGRaw),
+  'underworld-fgh': checkpointArtifact(underworldFGHRaw),
+  'underworld-fghi': checkpointArtifact(underworldFGHIRaw),
+  'underworld-f-midshop-pom-frontier': checkpointArtifact(underworldFMidshopPomRaw),
+} satisfies Readonly<Record<UnderworldCheckpointId, CheckpointArtifact>>);
 
 export function loadUnderworldFGCheckpoint(): ProjectDocument {
-  return loadFG();
+  return underworldCheckpointArtifacts['underworld-fg'].load();
 }
 
 export function loadUnderworldFGHCheckpoint(): ProjectDocument {
-  return loadFGH();
+  return underworldCheckpointArtifacts['underworld-fgh'].load();
 }
 
 export function loadUnderworldFGHICheckpoint(): ProjectDocument {
-  return loadFGHI();
+  return underworldCheckpointArtifacts['underworld-fghi'].load();
 }
 
-export const underworldCheckpointDocuments = Object.freeze({
-  fg: loadUnderworldFGCheckpoint,
-  fgh: loadUnderworldFGHCheckpoint,
-  fghi: loadUnderworldFGHICheckpoint,
-});
+export function loadUnderworldFMidshopPomFrontierCheckpoint(): ProjectDocument {
+  return underworldCheckpointArtifacts['underworld-f-midshop-pom-frontier'].load();
+}

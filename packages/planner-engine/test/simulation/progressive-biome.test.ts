@@ -75,7 +75,7 @@ import {
   goldenIBiome,
 } from '@run-planner/test-fixtures/underworld';
 import {
-  createRepresentativeNOPQProject,
+  loadSurfaceNOPQProject,
   oBiome,
   oOccurrenceIds,
   pBiome,
@@ -906,7 +906,7 @@ describe('progressive biome evaluation', () => {
   });
 
   it('carries opaque lifecycle artifacts through normal, prefix, clamped, and pre-clamp execution', () => {
-    const surface = createRepresentativeNOPQProject();
+    const surface = loadSurfaceNOPQProject();
     const prefixProject = incompleteAtMissingDecision(surface, oBiome, oOccurrenceIds.combat02);
     const owner = createOccurrenceAddress(oBiome, oOccurrenceIds.combat04);
     const normalAssembly = simulateProjectAssembly(catalog, surface);
@@ -1069,7 +1069,7 @@ describe('progressive biome evaluation', () => {
       biomeKey: 'O',
       routeKey: 'Surface',
       project: incompleteAtMissingDecision(
-        createRepresentativeNOPQProject(),
+        loadSurfaceNOPQProject(),
         oBiome,
         oOccurrenceIds.combat02,
       ),
@@ -1078,7 +1078,7 @@ describe('progressive biome evaluation', () => {
       biomeKey: 'P',
       routeKey: 'Surface',
       project: incompleteAtMissingDecision(
-        createRepresentativeNOPQProject(),
+        loadSurfaceNOPQProject(),
         pBiome,
         pOccurrenceId('P_Combat12', 8, 1),
       ),
@@ -1087,7 +1087,7 @@ describe('progressive biome evaluation', () => {
       biomeKey: 'Q',
       routeKey: 'Surface',
       project: incompleteAtMissingDecision(
-        createRepresentativeNOPQProject(),
+        loadSurfaceNOPQProject(),
         qBiome,
         qOccurrenceIds.secondMiniboss1,
       ),
@@ -1574,7 +1574,7 @@ describe('progressive biome evaluation', () => {
 
   it('strengthens the same complete routes to canonical products and remains deterministic', () => {
     const underworld = createGoldenFGHIProject();
-    const surface = createRepresentativeNOPQProject();
+    const surface = loadSurfaceNOPQProject();
     const firstUnderworld = simulateProject(catalog, underworld);
     const secondUnderworld = simulateProject(catalog, underworld);
     const surfaceResult = simulateProject(catalog, surface);

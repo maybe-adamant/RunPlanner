@@ -62,7 +62,7 @@ import {
   goldenGOccurrenceId,
 } from '@run-planner/test-fixtures/underworld';
 import {
-  createRepresentativeNOPQProject,
+  loadSurfaceNOPQProject,
   pBiome,
   pOccurrenceId,
   pOccurrenceIds,
@@ -798,7 +798,7 @@ describe('planner history interaction', () => {
 
   it('edits ordinary, room Hammer, and acquired Shop Hammer offers through shared controls', async () => {
     const application = createApplication();
-    let project = createRepresentativeNOPQProject();
+    let project = loadSurfaceNOPQProject();
     project = applyProjectCommand(project, application.catalog, {
       kind: 'SetExitSelection',
       selection: createExitSelectionAddress(pBiome, {

@@ -4,7 +4,6 @@ import {
   createExitDecisionAddress,
   createHubDecisionAddress,
   createIncomingRewardAddress,
-  createProjectDocument,
   semanticAddressKey,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
@@ -15,9 +14,9 @@ import {
 import { describe, expect, it } from 'vitest';
 
 import {
-  appendCompleteN,
-  appendNEntry,
-  createRepresentativeNOPQProject,
+  loadSurfaceNProject,
+  loadSurfaceNEntryFrontierProject,
+  loadSurfaceNOPQProject,
   nBiome,
   nOccurrenceId,
   nOccurrenceIds,
@@ -81,16 +80,9 @@ function hubKit(source: WorkspaceBiomeSource) {
   return { assembleOccurrence, descriptor, hub, markers, owner };
 }
 
-function emptyNProject(): ProjectDocument {
-  return createProjectDocument(catalog, {
-    configuredBiomeCounts: { Surface: 1 },
-    projectId: 'empty-n-hub-assembly',
-  });
-}
-
 describe('structured workspace Hub assembly', () => {
   it('returns the authored board, room-local workbenches, exact controls, and Hub reward redirects', () => {
-    const source = biomeSource(appendCompleteN(emptyNProject()));
+    const source = biomeSource(loadSurfaceNProject());
     const kit = hubKit(source);
     if (kit.hub === undefined) throw new Error('authored N Hub is missing');
     const evaluated = source.evaluatedHub(kit.owner);
@@ -180,7 +172,7 @@ describe('structured workspace Hub assembly', () => {
   });
 
   it('retains the authored Hub board and its room-local controls without an evaluator overlay', () => {
-    const source = biomeSource(appendCompleteN(emptyNProject()));
+    const source = biomeSource(loadSurfaceNProject());
     const kit = hubKit(source);
     if (kit.hub === undefined) throw new Error('authored N Hub is missing');
     const assembly = assembleWorkspaceHub({
@@ -214,7 +206,7 @@ describe('structured workspace Hub assembly', () => {
   });
 
   it('retains invalid Hub board state and the authored/next/locked visit suffix after visit removal', () => {
-    const invalidBoard = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+    const invalidBoard = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
       kind: 'ReplaceIncomingReward',
       reward: createIncomingRewardAddress(nBiome, nOccurrenceId('combat10')),
       value: { rewardType: 'WeaponUpgrade' },
@@ -313,7 +305,7 @@ describe('structured workspace Hub assembly', () => {
   });
 
   it('publishes authored Hub controls and the structural first visit before evaluation enters it', () => {
-    let project = appendNEntry(emptyNProject());
+    let project = loadSurfaceNEntryFrontierProject();
     project = applyProjectCommand(project, catalog, {
       decision: createExitDecisionAddress(nBiome, {
         kind: 'occurrence',

@@ -24,9 +24,9 @@ import {
   goldenHBiome,
 } from '@run-planner/test-fixtures/underworld';
 import {
-  appendCompleteN,
-  appendNEntry,
-  createRepresentativeNOPQProject,
+  loadSurfaceNCompleteHubFrontierProject,
+  loadSurfaceNEntryFrontierProject,
+  loadSurfaceNOPQProject,
   nBiome,
   nOccurrenceIds,
   oBiome,
@@ -79,12 +79,7 @@ describe('structured workspace topology interaction assembly', () => {
   });
 
   it('publishes the exact terminal Hub takeover from the persisted PreHub envelope', () => {
-    const project = appendNEntry(
-      createProjectDocument(catalog, {
-        configuredBiomeCounts: { Surface: 1 },
-        projectId: 'terminal-hub-takeover-n',
-      }),
-    );
+    const project = loadSurfaceNEntryFrontierProject();
     const owner = createExitDecisionAddress(nBiome, {
       kind: 'occurrence',
       occurrenceId: nOccurrenceIds.preHub,
@@ -118,7 +113,7 @@ describe('structured workspace topology interaction assembly', () => {
   });
 
   it('adapts N removal commands and its completed-Hub handoff without traversing rendered nodes', () => {
-    const representative = assemble(createRepresentativeNOPQProject(), 'Surface', 'N');
+    const representative = assemble(loadSurfaceNOPQProject(), 'Surface', 'N');
     const removals = representative.assembly.topologyRemovalInteractionRequirements[0]?.removals;
     const openingDecision = createExitDecisionAddress(nBiome, {
       kind: 'occurrence',
@@ -134,13 +129,7 @@ describe('structured workspace topology interaction assembly', () => {
       ),
     ).toBe(true);
 
-    const completedProject = appendCompleteN(
-      createProjectDocument(catalog, {
-        configuredBiomeCounts: { Surface: 1 },
-        projectId: 'completed-n-topology-assembly',
-      }),
-      { includePreboss: false },
-    );
+    const completedProject = loadSurfaceNCompleteHubFrontierProject();
     const completed = assemble(completedProject, 'Surface', 'N').assembly;
     const handoff = completed.takeoverInteractionRequirements.find(
       (requirement) => requirement.presentation === 'completedHubHandoff',
@@ -153,7 +142,7 @@ describe('structured workspace topology interaction assembly', () => {
   });
 
   it('publishes complete removal requirements without normal-batch takeover replacement', () => {
-    const n = assemble(createRepresentativeNOPQProject(), 'Surface', 'N').assembly;
+    const n = assemble(loadSurfaceNOPQProject(), 'Surface', 'N').assembly;
     const removals = n.topologyRemovalInteractionRequirements[0]?.removals;
     const openingDecision = createExitDecisionAddress(nBiome, {
       kind: 'occurrence',
@@ -210,21 +199,21 @@ describe('structured workspace topology interaction assembly', () => {
     {
       biome: nBiome,
       gameName: 'N_PreBoss01',
-      project: createRepresentativeNOPQProject,
+      project: loadSurfaceNOPQProject,
       routeKey: 'Surface',
       source: { decisionKey: 'hub', kind: 'hubDecision' as const },
     },
     {
       biome: oBiome,
       gameName: 'O_PreBoss01',
-      project: createRepresentativeNOPQProject,
+      project: loadSurfaceNOPQProject,
       routeKey: 'Surface',
       source: { kind: 'occurrence' as const, occurrenceId: oOccurrenceIds.combat02 },
     },
     {
       biome: pBiome,
       gameName: 'P_PreBoss01',
-      project: createRepresentativeNOPQProject,
+      project: loadSurfaceNOPQProject,
       routeKey: 'Surface',
       source: {
         kind: 'occurrence' as const,
@@ -234,7 +223,7 @@ describe('structured workspace topology interaction assembly', () => {
     {
       biome: qBiome,
       gameName: 'Q_PreBoss01',
-      project: createRepresentativeNOPQProject,
+      project: loadSurfaceNOPQProject,
       routeKey: 'Surface',
       source: { kind: 'occurrence' as const, occurrenceId: qOccurrenceIds.secondMiniboss1 },
     },
@@ -271,7 +260,7 @@ describe('structured workspace topology interaction assembly', () => {
         kind: 'occurrence',
         occurrenceId: parent,
       });
-      const project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+      const project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
         kind: 'RemoveExitDecision',
         decision: owner,
       });
@@ -288,7 +277,7 @@ describe('structured workspace topology interaction assembly', () => {
       kind: 'occurrence',
       occurrenceId: oOccurrenceIds.story,
     });
-    const project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+    const project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
       kind: 'RemoveExitDecision',
       decision: owner,
     });

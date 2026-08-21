@@ -23,9 +23,9 @@ import type {
 } from '@planner/projections/structured-workspace';
 import { createStructuredWorkspaceTestServices } from '../fixtures/structuredWorkspace';
 import {
-  appendCompleteN,
-  createRepresentativeNProject,
-  createRepresentativeNOPQProject,
+  loadSurfaceNCompleteHubFrontierProject,
+  loadSurfaceNProject,
+  loadSurfaceNOPQProject,
   nBiome,
   nOccurrenceId,
 } from '@run-planner/test-fixtures/surface';
@@ -95,7 +95,7 @@ function firstInteraction(
 describe('workspace candidate interaction families', () => {
   it('keeps an unrelated Hub door reward editor loadable under an invalid board peer', async () => {
     const invalidPeer = createIncomingRewardAddress(nBiome, nOccurrenceId('combat10'));
-    const project = applyProjectCommand(createRepresentativeNProject(), catalog, {
+    const project = applyProjectCommand(loadSurfaceNProject(), catalog, {
       kind: 'ReplaceIncomingReward',
       reward: invalidPeer,
       value: { rewardType: 'WeaponUpgrade' },
@@ -243,7 +243,7 @@ describe('workspace candidate interaction families', () => {
       yieldToHost: () => Promise.resolve(),
     });
     const underworld = createGoldenFGHIProject();
-    const surface = createRepresentativeNOPQProject();
+    const surface = loadSurfaceNOPQProject();
     const workspaces = [
       services.structuredWorkspace.project(evaluate(underworld)).interactions,
       services.structuredWorkspace.project(evaluate(surface)).interactions,
@@ -289,13 +289,7 @@ describe('workspace candidate interaction families', () => {
 
   it('retains only completed-Hub handoff and authored takeover repair as standalone actions', () => {
     const services = createStructuredWorkspaceTestServices();
-    const hubHandoffProject = appendCompleteN(
-      createProjectDocument(catalog, {
-        projectId: 'candidate-interaction-n-handoff',
-        configuredBiomeCounts: { Surface: 1 },
-      }),
-      { includePreboss: false },
-    );
+    const hubHandoffProject = loadSurfaceNCompleteHubFrontierProject();
     const hubHandoffInteractions = services.structuredWorkspace.project(
       simulateProjectAssembly(catalog, hubHandoffProject),
     ).interactions;

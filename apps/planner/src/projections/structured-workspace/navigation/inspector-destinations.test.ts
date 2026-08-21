@@ -39,9 +39,9 @@ import {
   goldenHBiome,
 } from '@run-planner/test-fixtures/underworld';
 import {
-  appendCompleteN,
-  appendNEntry,
-  createRepresentativeNOPQProject,
+  loadSurfaceNCompleteHubFrontierProject,
+  loadSurfaceNEntryFrontierProject,
+  loadSurfaceNOPQProject,
   nBiome,
   nOccurrenceId,
   nOccurrenceIds,
@@ -472,7 +472,7 @@ describe('workspace inspector destinations', () => {
   });
 
   it('routes nested trait owners to their containing Fields, Ephyra, Ship, and Shop workbenches', () => {
-    for (const document of [createGoldenFGHIProject(), createRepresentativeNOPQProject()]) {
+    for (const document of [createGoldenFGHIProject(), loadSurfaceNOPQProject()]) {
       const workspace = project(document);
       for (const route of workspace.routes) {
         for (const projectedBiome of route.biomes) {
@@ -510,7 +510,7 @@ describe('workspace inspector destinations', () => {
   }, 15_000);
 
   it('publishes distinct Chosen God and Spurned God role labels for Devotion traits', () => {
-    const workspace = project(createRepresentativeNOPQProject());
+    const workspace = project(loadSurfaceNOPQProject());
     const labels = new Set(
       [...workspace.interactions.traitOffers.values()].map(
         (interaction) => interaction.acquisitionRoleLabel,
@@ -598,7 +598,7 @@ describe('workspace inspector destinations', () => {
   });
 
   it('routes the terminal Hub owner to its persisted PreHub decision before the board exists', () => {
-    const terminal = project(appendNEntry(emptyProject('Surface', 1)));
+    const terminal = project(loadSurfaceNEntryFrontierProject());
     const n = biome(terminal, 'N');
     const owner = createExitDecisionAddress(nBiome, {
       kind: 'occurrence',
@@ -621,7 +621,7 @@ describe('workspace inspector destinations', () => {
   });
 
   it('binds Hub board, visit, handoff, and fixed-stage presentation without React ownership scans', () => {
-    const complete = project(createRepresentativeNOPQProject());
+    const complete = project(loadSurfaceNOPQProject());
     const n = biome(complete, 'N');
     const hub = n.nodes.find(
       (node): node is Extract<(typeof n.nodes)[number], { readonly kind: 'hubDecision' }> =>
@@ -759,7 +759,7 @@ describe('workspace inspector destinations', () => {
     }
 
     const truncated = project(
-      applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+      applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
         hub: createHubDecisionAddress(nBiome, 'hub'),
         hubSlotKeys: nVisitSlotKeys.slice(0, 3),
         kind: 'ReplaceHubVisitOrder',
@@ -777,15 +777,7 @@ describe('workspace inspector destinations', () => {
     expect(unroomedVisit.inspectorSubject).toEqual({ kind: 'node', nodeKey: truncatedHub.key });
     expect(unroomedVisit.selectedRailKey).toBeUndefined();
 
-    const handoff = project(
-      appendCompleteN(
-        createProjectDocument(catalog, {
-          projectId: 'inspector-destinations-handoff',
-          configuredBiomeCounts: { Surface: 1 },
-        }),
-        { includePreboss: false },
-      ),
-    );
+    const handoff = project(loadSurfaceNCompleteHubFrontierProject());
     const handoffN = biome(handoff, 'N');
     const handoffHub = handoffN.nodes.find(
       (node): node is Extract<(typeof handoffN.nodes)[number], { readonly kind: 'hubDecision' }> =>
@@ -829,7 +821,7 @@ describe('workspace inspector destinations', () => {
       });
     }
 
-    const surface = project(createRepresentativeNOPQProject());
+    const surface = project(loadSurfaceNOPQProject());
     const o = biome(surface, 'O');
     const shipDecision = o.nodes.find(
       (

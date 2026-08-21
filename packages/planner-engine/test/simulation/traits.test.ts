@@ -38,7 +38,7 @@ import {
   goldenFStartId,
   goldenFOccurrenceId,
 } from '@run-planner/test-fixtures/underworld';
-import { createRepresentativeNOPQProject } from '@run-planner/test-fixtures/surface';
+import { loadSurfaceNOPQProject } from '@run-planner/test-fixtures/surface';
 
 import { initializeTestRewardBranches } from '../support/arcana-fear';
 import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidate-artifacts';
@@ -1402,7 +1402,7 @@ describe('trait legality and derived facts', () => {
 
   it.each([
     ['Underworld', createGoldenFGHIProject],
-    ['Surface', createRepresentativeNOPQProject],
+    ['Surface', loadSurfaceNOPQProject],
   ] as const)(
     'carries concrete trait state across the complete %s route',
     (routeKey, createProject) => {
@@ -1747,7 +1747,7 @@ describe('reached trait offer chronology', () => {
     // protects the typed candidate product if a future branch producer diverges.
     const routes = [
       ['Underworld', createGoldenFGHIProject],
-      ['Surface', createRepresentativeNOPQProject],
+      ['Surface', loadSurfaceNOPQProject],
     ] as const;
     for (const [routeKey, createProject] of routes) {
       const traces = reachedTraitOffers(simulateProject(catalog, createProject())).filter(

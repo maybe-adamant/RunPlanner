@@ -8,11 +8,7 @@ import { encounterPhaseAuthoringDomainForRoom } from '@run-planner/engine/simula
 import { describe, expect, it } from 'vitest';
 
 import { createGoldenFGHIProject, goldenHBiome } from '@run-planner/test-fixtures/underworld';
-import {
-  createRepresentativeNOPQProject,
-  oBiome,
-  oOccurrenceIds,
-} from '@run-planner/test-fixtures/surface';
+import { loadSurfaceNOPQProject, oBiome, oOccurrenceIds } from '@run-planner/test-fixtures/surface';
 
 function occurrence(
   project: ProjectDocument,
@@ -36,12 +32,7 @@ function roomFor(value: RoomOccurrence) {
 
 describe('encounter phase authored domains', () => {
   it('uses the authored Ship encounter count to withhold Combat2', () => {
-    const value = occurrence(
-      createRepresentativeNOPQProject(),
-      'Surface',
-      'O',
-      oOccurrenceIds.combat04,
-    );
+    const value = occurrence(loadSurfaceNOPQProject(), 'Surface', 'O', oOccurrenceIds.combat04);
     const phases = encounterPhaseAuthoringDomainForRoom(
       catalog,
       oBiome,

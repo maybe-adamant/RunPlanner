@@ -20,11 +20,7 @@ import {
 } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
-import {
-  createRepresentativeNOProject,
-  oBiome,
-  oOccurrenceIds,
-} from '@run-planner/test-fixtures/surface';
+import { loadSurfaceNOProject, oBiome, oOccurrenceIds } from '@run-planner/test-fixtures/surface';
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
 import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidate-artifacts';
@@ -59,7 +55,7 @@ function withCirce(
   manualArcanaKeys: readonly string[] = [],
   fearRanks: Readonly<Record<string, number>> = {},
 ): ProjectDocument {
-  let project = createRepresentativeNOProject();
+  let project = loadSurfaceNOProject();
   project = applyProjectCommand(project, catalog, {
     kind: 'ReplaceManualArcanaSelection',
     route: surface,

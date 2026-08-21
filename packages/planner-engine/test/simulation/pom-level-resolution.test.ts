@@ -37,15 +37,11 @@ import { settleOwnedAcquisitionSite } from '../../src/simulation/rewards/process
 import { applyProjectCommand } from '@run-planner/engine/authored-project';
 import { replaceTestShopOfferActions } from '@run-planner/test-fixtures/shared';
 import {
-  createFMidshopPomFrontierProject,
+  loadUnderworldFMidshopPomFrontierProject,
   fMidshopPomShopId,
   goldenFBiome,
 } from '@run-planner/test-fixtures/underworld';
-import {
-  createRepresentativeNOPQProject,
-  oBiome,
-  oOccurrenceIds,
-} from '@run-planner/test-fixtures/surface';
+import { loadSurfaceNOPQProject, oBiome, oOccurrenceIds } from '@run-planner/test-fixtures/surface';
 
 const owner = { kind: 'project' } as const;
 const levelAddress = createLevelResolutionAddress(
@@ -458,7 +454,7 @@ describe('Pom level resolutions', () => {
       'offer1',
     );
     const address = createLevelResolutionAddress(wheelOwner, 'self');
-    const project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+    const project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
       kind: 'ReplaceRewardWheelOffer',
       offer: wheelOwner,
       value: { rewardType: 'StackUpgrade' },
@@ -476,7 +472,7 @@ describe('Pom level resolutions', () => {
 
   it('publishes a purchased Midshop Pom at the unresolved outgoing frontier', () => {
     const project = replaceTestShopOfferActions(
-      createFMidshopPomFrontierProject(),
+      loadUnderworldFMidshopPomFrontierProject(),
       catalog,
       createOccurrenceAddress(goldenFBiome, fMidshopPomShopId),
       ['Minor'],
@@ -546,7 +542,7 @@ describe('Pom level resolutions', () => {
       'self',
     );
     const frontier = replaceTestShopOfferActions(
-      createFMidshopPomFrontierProject(),
+      loadUnderworldFMidshopPomFrontierProject(),
       catalog,
       shop,
       ['Minor'],
@@ -650,9 +646,12 @@ describe('Pom level resolutions', () => {
       createShopOfferAddress(goldenFBiome, fMidshopPomShopId, 'Minor'),
       'self',
     );
-    let project = replaceTestShopOfferActions(createFMidshopPomFrontierProject(), catalog, shop, [
-      'Minor',
-    ]);
+    let project = replaceTestShopOfferActions(
+      loadUnderworldFMidshopPomFrontierProject(),
+      catalog,
+      shop,
+      ['Minor'],
+    );
     const prepared = simulateProjectAssembly(catalog, project);
     const targetTraitKey = levelResolutionCandidateForProjectEvaluationAssembly(prepared, address)
       ?.branches[0]?.eligibleTargetTraitKeys[0];

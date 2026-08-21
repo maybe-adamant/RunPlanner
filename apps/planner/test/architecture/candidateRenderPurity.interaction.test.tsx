@@ -19,11 +19,7 @@ import { authoredProjectReplaced } from '@planner/state/projectWorkspaceSlice';
 import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
 import { useAppSelector } from '@planner/state/store';
 import { BiomeWorkspace } from '@planner/ui/editor/biome/BiomeWorkspace';
-import {
-  createRepresentativeNOPQProject,
-  nBiome,
-  nOccurrenceId,
-} from '@run-planner/test-fixtures/surface';
+import { loadSurfaceNOPQProject, nBiome, nOccurrenceId } from '@run-planner/test-fixtures/surface';
 import { createGoldenFGHIProject } from '@run-planner/test-fixtures/underworld';
 
 interface WorkspaceRenderCase {
@@ -41,19 +37,19 @@ const cases: readonly WorkspaceRenderCase[] = [
   })),
   ...(['O', 'P', 'Q'] as const).map((biomeKey) => ({
     biomeKey,
-    project: () => createRepresentativeNOPQProject(),
+    project: () => loadSurfaceNOPQProject(),
     routeKey: 'Surface' as const,
   })),
   {
     biomeKey: 'N',
     focus: createHubDecisionAddress(nBiome, 'hub'),
-    project: () => createRepresentativeNOPQProject(),
+    project: () => loadSurfaceNOPQProject(),
     routeKey: 'Surface' as const,
   },
   {
     biomeKey: 'N',
     focus: createOccurrenceAddress(nBiome, nOccurrenceId('combat02')),
-    project: () => createRepresentativeNOPQProject(),
+    project: () => loadSurfaceNOPQProject(),
     routeKey: 'Surface' as const,
   },
 ];

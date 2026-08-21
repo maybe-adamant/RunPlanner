@@ -28,7 +28,7 @@ import {
   goldenFOccurrenceId,
 } from '@run-planner/test-fixtures/underworld';
 import {
-  createRepresentativeNOPQProject,
+  loadSurfaceNOPQProject,
   nBiome,
   nLocalOccurrenceId,
   nOccurrenceId,
@@ -371,7 +371,7 @@ describe('counted reward authoring domains', () => {
   });
 
   it('resolves evaluated Hub incoming and local owners through their exact semantic addresses', () => {
-    const project = createRepresentativeNOPQProject();
+    const project = loadSurfaceNOPQProject();
     const assembly = simulateProjectAssembly(catalog, project);
     const hubOccurrence = occurrence(project, 'Surface', 'N', 'N_Combat05');
     const incoming = countedRewardTypeDomain(
@@ -494,7 +494,7 @@ describe('counted reward authoring domains', () => {
       ),
     ).toContain('StackUpgrade');
 
-    const surface = withIncompleteHubVisits(createRepresentativeNOPQProject());
+    const surface = withIncompleteHubVisits(loadSurfaceNOPQProject());
     expect(
       countedRewardTypeDomain(
         catalog,
@@ -504,7 +504,7 @@ describe('counted reward authoring domains', () => {
       ),
     ).toContain('MaxHealthDrop');
 
-    const retainedHub = withRetainedHubBehindMissingLink(createRepresentativeNOPQProject());
+    const retainedHub = withRetainedHubBehindMissingLink(loadSurfaceNOPQProject());
     const retainedHubOccurrence = occurrence(retainedHub, 'Surface', 'N', 'N_Combat05');
     expect(
       countedRewardTypeDomain(

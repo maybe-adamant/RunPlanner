@@ -12,15 +12,11 @@ import {
 } from '@run-planner/engine/authored-project';
 import { replaceTestShopOfferActions } from '@run-planner/test-fixtures/shared';
 import {
-  createFMidshopPomFrontierProject,
+  loadUnderworldFMidshopPomFrontierProject,
   fMidshopPomShopId,
   goldenFBiome,
 } from '@run-planner/test-fixtures/underworld';
-import {
-  createRepresentativeNOPProject,
-  pBiome,
-  pOccurrenceIds,
-} from '@run-planner/test-fixtures/surface';
+import { loadSurfaceNOPProject, pBiome, pOccurrenceIds } from '@run-planner/test-fixtures/surface';
 
 import { createApplication } from '@planner/composition/createApplication';
 import { authoredProjectReplaced } from '@planner/state/projectWorkspaceSlice';
@@ -31,7 +27,7 @@ afterEach(cleanup);
 describe('Pom resolution product loop', () => {
   it('publishes the purchased Midshop Pom before its next decision is authored', () => {
     const application = createApplication();
-    const project = createFMidshopPomFrontierProject();
+    const project = loadUnderworldFMidshopPomFrontierProject();
     const offer = createShopOfferAddress(goldenFBiome, fMidshopPomShopId, 'Minor');
     application.store.dispatch(authoredProjectReplaced(project));
     const workspace = application.selectStructuredWorkspace(application.store.getState());
@@ -45,7 +41,7 @@ describe('Pom resolution product loop', () => {
 
   it('publishes and saves a purchased random Shop Pom only at its exact offer', async () => {
     const application = createApplication();
-    let project = createRepresentativeNOPProject();
+    let project = loadSurfaceNOPProject();
     const offer = createShopOfferAddress(pBiome, pOccurrenceIds.prebossShop, 'Minor');
     project = applyProjectCommand(project, application.catalog, {
       kind: 'ReplaceShopOffer',

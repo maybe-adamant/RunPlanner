@@ -8,10 +8,10 @@ import { simulateProject } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 import { settleOwnedAcquisitionSite } from '../../../../src/simulation/rewards/processing';
 
-import { createRepresentativeNOProject } from '@run-planner/test-fixtures/surface';
+import { loadSurfaceNOProject } from '@run-planner/test-fixtures/surface';
 
 function fixture() {
-  const project = createRepresentativeNOProject();
+  const project = loadSurfaceNOProject();
   const evaluation = simulateProject(catalog, project);
   const n = evaluation.routes
     .find((route) => route.routeKey === 'Surface')

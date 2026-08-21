@@ -24,7 +24,7 @@ import {
   authoredProjectCommandDispatched,
   authoredProjectReplaced,
 } from '@planner/state/projectWorkspaceSlice';
-import { createRepresentativeNOPQProject } from '@run-planner/test-fixtures/surface';
+import { loadSurfaceNOPQProject } from '@run-planner/test-fixtures/surface';
 import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 import { App } from './App';
 import { semanticOwnerElementId } from '../feedback/semanticOwner';
@@ -202,7 +202,7 @@ describe('App', () => {
 
   it('renders N’s Hub through the same workspace shell and preserves its board owners', () => {
     const application = createApplication();
-    application.store.dispatch(authoredProjectReplaced(createRepresentativeNOPQProject()));
+    application.store.dispatch(authoredProjectReplaced(loadSurfaceNOPQProject()));
     application.store.dispatch(
       routePanelSelected({ routeKey: 'Surface', panel: { kind: 'biome', biomeKey: 'N' } }),
     );

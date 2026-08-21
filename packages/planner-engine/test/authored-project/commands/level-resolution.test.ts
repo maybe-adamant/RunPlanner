@@ -4,11 +4,7 @@ import {
   createLevelResolutionAddress,
   createRewardWheelOfferAddress,
 } from '@run-planner/engine/authored-project';
-import {
-  createRepresentativeNOPQProject,
-  oBiome,
-  oOccurrenceIds,
-} from '@run-planner/test-fixtures/surface';
+import { loadSurfaceNOPQProject, oBiome, oOccurrenceIds } from '@run-planner/test-fixtures/surface';
 import { describe, expect, it } from 'vitest';
 
 const wheelOwner = createRewardWheelOfferAddress(
@@ -20,7 +16,7 @@ const wheelOwner = createRewardWheelOfferAddress(
 const resolution = createLevelResolutionAddress(wheelOwner, 'self');
 
 function pomProject() {
-  return applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+  return applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
     kind: 'ReplaceRewardWheelOffer',
     offer: wheelOwner,
     value: { rewardType: 'StackUpgrade' },

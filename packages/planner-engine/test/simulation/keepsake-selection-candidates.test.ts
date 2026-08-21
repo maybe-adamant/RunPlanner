@@ -24,16 +24,12 @@ import {
   createCompleteFGProject,
   createGoldenFGHProject,
 } from '@run-planner/test-fixtures/underworld';
-import {
-  createRepresentativeNOPQProject,
-  pBiome,
-  pOccurrenceId,
-} from '@run-planner/test-fixtures/surface';
+import { loadSurfaceNOPQProject, pBiome, pOccurrenceId } from '@run-planner/test-fixtures/surface';
 
-let representativeNOPQProject: ReturnType<typeof createRepresentativeNOPQProject>;
+let representativeNOPQProject: ReturnType<typeof loadSurfaceNOPQProject>;
 
 beforeAll(() => {
-  representativeNOPQProject = createRepresentativeNOPQProject();
+  representativeNOPQProject = loadSurfaceNOPQProject();
 });
 import { createEncounterPhaseAddress } from '@run-planner/engine/authored-project';
 import {

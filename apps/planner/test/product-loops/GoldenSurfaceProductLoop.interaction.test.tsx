@@ -6,7 +6,6 @@ import {
   createExitDecisionAddress,
   createHubSlotAddress,
   createOccurrenceAddress,
-  createProjectDocument,
   createShopOfferAddress,
   createTargetAddress,
   createTraitOfferAddress,
@@ -40,8 +39,8 @@ import {
   type TraitCandidateProbe,
 } from '@run-planner/test-fixtures/shared';
 import {
-  appendCompleteN,
-  createRepresentativeNOPQProject,
+  loadSurfaceNProject,
+  loadSurfaceNOPQProject,
   createRepresentativeNOPQShopTraitProject,
   nBiome,
   nOccurrenceId,
@@ -143,7 +142,7 @@ describe('surface product loop', () => {
       autosaveScheduler: recovery.scheduler,
       profileFile: persistence.profileFile,
     });
-    const authored = createRepresentativeNOPQProject();
+    const authored = loadSurfaceNOPQProject();
     application.store.dispatch(authoredProjectReplaced(authored));
     const view = renderPlannerForInteraction({ application });
 
@@ -278,12 +277,7 @@ describe('surface product loop', () => {
       autosaveRecovery: recovery.adapter,
       autosaveScheduler: recovery.scheduler,
     });
-    const authored = appendCompleteN(
-      createProjectDocument(application.catalog, {
-        configuredBiomeCounts: { Surface: 1 },
-        projectId: 'surface-product-hub-undo',
-      }),
-    );
+    const authored = loadSurfaceNProject();
     application.store.dispatch(authoredProjectReplaced(authored));
     recovery.flush();
     const view = renderPlannerForInteraction({ application });
@@ -349,12 +343,7 @@ describe('surface product loop', () => {
       autosaveRecovery: recovery.adapter,
       autosaveScheduler: recovery.scheduler,
     });
-    const authored = appendCompleteN(
-      createProjectDocument(application.catalog, {
-        configuredBiomeCounts: { Surface: 1 },
-        projectId: 'surface-product-completed-hub-membership-repair',
-      }),
-    );
+    const authored = loadSurfaceNProject();
     application.store.dispatch(authoredProjectReplaced(authored));
     recovery.flush();
     const dispatch = vi.spyOn(application.store, 'dispatch');
@@ -440,7 +429,7 @@ describe('surface product loop', () => {
       'exit1',
     );
     const invalidProject = applyProjectCommand(
-      authorLegalTraitOffers(createRepresentativeNOPQProject()),
+      authorLegalTraitOffers(loadSurfaceNOPQProject()),
       application.catalog,
       {
         kind: 'ReplaceOccurrenceRoom',
@@ -488,7 +477,7 @@ describe('surface product loop', () => {
     const application = createApplication({
       observeEvaluationWork: (event) => work.push(event),
     });
-    let authored = createRepresentativeNOPQProject();
+    let authored = loadSurfaceNOPQProject();
     let target:
       | {
           readonly address: TraitOfferOwnerAddress;
@@ -662,7 +651,7 @@ describe('surface product loop', () => {
       autosaveScheduler: recovery.scheduler,
       observeEvaluationWork: (event) => work.push(event),
     });
-    application.store.dispatch(authoredProjectReplaced(createRepresentativeNOPQProject()));
+    application.store.dispatch(authoredProjectReplaced(loadSurfaceNOPQProject()));
     recovery.flush();
     const view = renderPlannerForInteraction({ application });
 

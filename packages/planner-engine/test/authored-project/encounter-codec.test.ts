@@ -22,7 +22,7 @@ import {
   goldenFOccurrenceId,
 } from '@run-planner/test-fixtures/underworld';
 import {
-  createRepresentativeNOPProject,
+  loadSurfaceNOPProject,
   nOccurrenceIds,
   oOccurrenceIds,
   pBiome,
@@ -143,7 +143,7 @@ function allTogetherOffer(document: JsonRecord): JsonRecord {
 
 describe('schema-48 occurrence-owned encounter persistence', () => {
   it('round-trips the exact top-level and parent-local selections', () => {
-    const project = createRepresentativeNOPProject();
+    const project = loadSurfaceNOPProject();
     const decoded = decodeProjectDocument(encoded(project), catalog);
 
     expect(decoded).toEqual(project);
@@ -436,7 +436,7 @@ describe('schema-48 occurrence-owned encounter persistence', () => {
     ).reward as JsonRecord;
     const maxHealth = (occurrence(recursive, 'F', goldenFOccurrenceId(3, 1)).state as JsonRecord)
       .reward as JsonRecord;
-    const nested = structuredClone(maxHealth);
+    const nested = JSON.parse(JSON.stringify(maxHealth)) as JsonRecord;
     (maxHealth.dispositionByAcquisitionRole as JsonRecord).self = {
       kind: 'artificer',
       replacement: nested,
@@ -449,7 +449,7 @@ describe('schema-48 occurrence-owned encounter persistence', () => {
   });
 
   it('round-trips complete Fig Leaf phase maps as immutable nested state', () => {
-    const decoded = decodeProjectDocument(encoded(createRepresentativeNOPProject()), catalog);
+    const decoded = decodeProjectDocument(encoded(loadSurfaceNOPProject()), catalog);
     const occurrence = decoded.routes
       .find((route) => route.routeKey === 'Surface')
       ?.biomes.find((plan) => plan.biomeKey === 'P')
@@ -462,7 +462,7 @@ describe('schema-48 occurrence-owned encounter persistence', () => {
   });
 
   it('round-trips a strict Gorgon phase map and rejects malformed or misplaced children', () => {
-    const project = createRepresentativeNOPProject();
+    const project = loadSurfaceNOPProject();
     const document = encoded(project);
     const state = occurrence(document, 'P', pOccurrenceId('P_Combat03', 1, 1));
     expect(gorgonResults(state)).toEqual({ Combat: { deathDefianceConditionMet: false } });
@@ -646,28 +646,28 @@ describe('schema-48 occurrence-owned encounter persistence', () => {
   });
 
   it('rejects schema 18 rather than inventing a Pom migration', () => {
-    const document = encoded(createRepresentativeNOPProject());
+    const document = encoded(loadSurfaceNOPProject());
     document.schemaVersion = 18;
 
     expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 48, received 18');
   });
 
   it('rejects schema 21 rather than inventing a trait-offer migration', () => {
-    const document = encoded(createRepresentativeNOPProject());
+    const document = encoded(loadSurfaceNOPProject());
     document.schemaVersion = 21;
 
     expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 48, received 21');
   });
 
   it('rejects schema 29 rather than migrating the generic Gorgon child', () => {
-    const document = encoded(createRepresentativeNOPProject());
+    const document = encoded(loadSurfaceNOPProject());
     document.schemaVersion = 29;
 
     expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 48, received 29');
   });
 
   it('rejects schema 30 rather than inventing an Echo Pom target migration', () => {
-    const document = encoded(createRepresentativeNOPProject());
+    const document = encoded(loadSurfaceNOPProject());
     document.schemaVersion = 30;
 
     expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 48, received 30');
@@ -760,7 +760,7 @@ describe('schema-48 occurrence-owned encounter persistence', () => {
       message: 'figLeafSkipByPhase.Encounter: is not a project document field',
     },
   ])('rejects $label', ({ mutate, message }) => {
-    const document = encoded(createRepresentativeNOPProject());
+    const document = encoded(loadSurfaceNOPProject());
     mutate(document);
 
     expect(() => decodeProjectDocument(document, catalog)).toThrow(message);

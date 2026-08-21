@@ -17,8 +17,14 @@ import {
 import { beforeAll, describe, expect, it } from 'vitest';
 
 import { createGoldenFGHIProject } from '@run-planner/test-fixtures/underworld';
-import { createRepresentativeNOPQProject, nBiome } from '@run-planner/test-fixtures/surface';
-import { appendCompleteN, nOccurrenceId, nVisitSlotKeys } from '@run-planner/test-fixtures/surface';
+import {
+  loadSurfaceNProject,
+  loadSurfaceNPartialHubProject,
+  loadSurfaceNOPQProject,
+  nBiome,
+  nOccurrenceId,
+  nVisitSlotKeys,
+} from '@run-planner/test-fixtures/surface';
 import type {
   WorkspaceBiome,
   WorkspaceOccurrenceWorkbenchNode,
@@ -31,14 +37,14 @@ import { assembleWorkspaceBiomeSemantics } from '../assembly/biome-semantic-asse
 import { createWorkspaceProjectSourceIndex, type WorkspaceBiomeSource } from '../source-index';
 
 let goldenProject: ReturnType<typeof createGoldenFGHIProject>;
-let surfaceProject: ReturnType<typeof createRepresentativeNOPQProject>;
+let surfaceProject: ReturnType<typeof loadSurfaceNOPQProject>;
 let directRewardBiome: ReturnType<typeof present>['presentation']['biome'];
 let fieldsRewardBiome: ReturnType<typeof present>['presentation']['biome'];
 let fixedRewardBiome: ReturnType<typeof present>['presentation']['biome'];
 
 beforeAll(() => {
   goldenProject = createGoldenFGHIProject();
-  surfaceProject = createRepresentativeNOPQProject();
+  surfaceProject = loadSurfaceNOPQProject();
 });
 
 beforeAll(() => {
@@ -145,13 +151,7 @@ describe('structured workspace biome presentation', () => {
   });
 
   it('keeps Run State on N outer decisions and binds the completed-Hub handoff to visible Preboss', () => {
-    const project = appendCompleteN(
-      createProjectDocument(catalog, {
-        configuredBiomeCounts: { Surface: 1 },
-        projectId: 'n-run-state-placement',
-      }),
-      { includePreboss: true },
-    );
+    const project = loadSurfaceNProject();
     const biome = present(project, 'Surface', 'N').presentation.biome;
     const launchers = biome.nodes.flatMap((node) => {
       if (
@@ -207,7 +207,7 @@ describe('structured workspace biome presentation', () => {
       frontierFocusKey: emptyPresentation.presentation.biome.frontier?.marker.focusKey,
     });
 
-    const completePresentation = present(appendCompleteN(empty), 'Surface', 'N');
+    const completePresentation = present(loadSurfaceNProject(), 'Surface', 'N');
     const biome = completePresentation.presentation.biome;
     const hub = hubRailEntry(biome.rail);
 
@@ -466,7 +466,7 @@ describe('structured workspace biome presentation', () => {
 
   it('presents every generated biome as entry, numbered decision stops, and bounded Preboss', () => {
     const underworld = createGoldenFGHIProject();
-    const surface = createRepresentativeNOPQProject();
+    const surface = loadSurfaceNOPQProject();
     const expected = {
       F: {
         decisions: 10,
@@ -533,13 +533,7 @@ describe('structured workspace biome presentation', () => {
   });
 
   it('reprojects only authored Hub visit children after replacement and truncation', () => {
-    const initial = appendCompleteN(
-      createProjectDocument(catalog, {
-        configuredBiomeCounts: { Surface: 1 },
-        projectId: 'hub-visit-presentation',
-      }),
-      { includePreboss: false, visitSlotKeys: nVisitSlotKeys.slice(0, 3) },
-    );
+    const initial = loadSurfaceNPartialHubProject();
     const labels = (project: ProjectDocument) =>
       hubRailEntry(present(project, 'Surface', 'N').presentation.biome.rail).visits.map(
         (visit) => visit.label,

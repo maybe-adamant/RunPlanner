@@ -48,7 +48,7 @@ import {
   goldenFBiome,
   goldenFStartId,
 } from '@run-planner/test-fixtures/underworld';
-import { createRepresentativeNProject } from '@run-planner/test-fixtures/surface';
+import { loadSurfaceNStoryBoardProject } from '@run-planner/test-fixtures/surface';
 
 afterEach(cleanup);
 
@@ -1159,20 +1159,7 @@ describe('trait offer editor', () => {
 
   it('reevaluates a Medea draft immediately when its Death Defiance condition changes', async () => {
     const application = createApplication();
-    const project = createRepresentativeNProject({
-      openSlotKeys: [
-        'combat11',
-        'combat10',
-        'combat09',
-        'combat05',
-        'story',
-        'combat02',
-        'combat01',
-        'miniBoss01',
-        'combat23',
-      ],
-      visitSlotKeys: ['combat05', 'miniBoss01', 'combat02', 'combat11', 'combat23', 'story'],
-    });
+    const project = loadSurfaceNStoryBoardProject();
     application.store.dispatch(authoredProjectReplaced(project));
     const initialWorkspace = application.selectStructuredWorkspace(application.store.getState());
     const initial = [...initialWorkspace.interactions.traitOffers.values()].find(
