@@ -32,6 +32,7 @@ import { describe, expect, it } from 'vitest';
 import {
   createGoldenFGHIProject,
   createCompleteFGProject,
+  createFConversionFrontierProject,
   goldenFBiome,
   goldenFOccurrenceId,
   goldenFStartId,
@@ -366,6 +367,42 @@ describe('structured workspace occurrence assembly', () => {
       kind: 'standard',
       encounterPhases: [expect.objectContaining({ traitOffer: encounter?.traitOffer })],
     });
+  });
+
+  it('projects acquisition-time trait editing only while the exact reward role is picked up', () => {
+    const occurrenceId = goldenFOccurrenceId(1, 1);
+    const fixture = createFConversionFrontierProject('GiftDrop');
+    const normal = assemble(
+      fixture.project,
+      'Underworld',
+      'F',
+      occurrenceId,
+    ).assembly.node.room.roomActions?.rows.find(
+      (row) => row.reference.kind === 'interactIncomingReward',
+    );
+    expect(normal?.rewardPayload).toMatchObject({
+      inlineLevelResolutions: [expect.any(Object)],
+      inlineTraitOffers: [],
+    });
+
+    const converted = applyProjectCommand(fixture.project, catalog, {
+      kind: 'ReplaceAcquisitionDisposition',
+      acquisition: fixture.acquisition,
+      value: { kind: 'artificer' },
+    });
+    const artificer = assemble(
+      converted,
+      'Underworld',
+      'F',
+      occurrenceId,
+    ).assembly.node.room.roomActions?.rows.find(
+      (row) => row.reference.kind === 'interactIncomingReward',
+    );
+    expect(artificer?.rewardPayload).toMatchObject({
+      inlineLevelResolutions: [],
+      inlineTraitOffers: [],
+    });
+    expect(artificer?.artificerOutput).toBeDefined();
   });
 
   it('retains published dormant Fields and Ship controls with their occurrence-owned requirements', () => {
@@ -1199,8 +1236,8 @@ describe('structured workspace occurrence assembly', () => {
         ])
         .sort(([left], [right]) => left!.localeCompare(right!)),
     ).toEqual([
-      ['maxMana', 'Pick up Max Magick'],
-      ['psyche', 'Pick up Psyche'],
+      ['maxMana', 'Interact with Max Magick pickup'],
+      ['psyche', 'Interact with Psyche pickup'],
     ]);
     expect(
       actions?.rows

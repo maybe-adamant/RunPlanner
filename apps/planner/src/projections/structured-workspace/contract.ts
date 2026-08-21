@@ -378,6 +378,8 @@ export interface WorkspaceLevelResolutionControl {
   readonly settledEmptyNoOp: boolean;
   readonly marker: WorkspaceMarker;
   readonly rewardOwner: SemanticAddress;
+  /** The same compact unspecified/invalid/valid presentation used by trait launchers. */
+  readonly status: WorkspaceTraitOfferStatus;
   readonly value: AuthoredLevelResolution;
 }
 
@@ -1053,6 +1055,11 @@ interface WorkspaceRewardControlBase {
   readonly offerEditStartStep?: RewardPickerStep;
   /** Application-owned presentation fact; React does not infer identity authoring from offer shape. */
   readonly offerEditVisibility: 'hidden' | 'visible';
+  /** One exact engine-derived offer repair that replaces a misleading open-ended picker. */
+  readonly fixedOfferEdit?: {
+    readonly actionLabel: string;
+    readonly offer: ResolvedRewardOffer;
+  };
   /** Engine-attested retained identity disagreement requiring a visible repair path. */
   readonly retainedSourceMismatch: boolean;
   readonly owner: RewardCandidateOwner;
@@ -1120,6 +1127,9 @@ export interface WorkspaceRoomActionRow {
   /** Exact action-owned reward payload, never rediscovered from a rendered key. */
   readonly rewardPayload?: {
     readonly control: WorkspaceRewardControl;
+    /** Trait/Pom editing shown beside the action only while this role is actually acquired. */
+    readonly inlineLevelResolutions: readonly WorkspaceLevelResolutionControl[];
+    readonly inlineTraitOffers: readonly WorkspaceTraitOfferControl[];
     readonly showOwner: boolean;
     readonly showOffer: boolean;
   };

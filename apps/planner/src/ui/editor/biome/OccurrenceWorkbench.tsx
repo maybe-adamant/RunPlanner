@@ -42,6 +42,7 @@ import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
 import { RewardControlEditor } from '../rewards/RewardControlEditor';
+import { PomResolutionLauncher } from '../rewards/PomResolutionEditor';
 import { TraitOfferLauncher } from '../rewards/TraitOfferEditor';
 import { CandidateSelect } from './CandidateSelect';
 import { RunStateLauncher } from './RunStateSheet';
@@ -1048,11 +1049,12 @@ function RoomActionsWorkbench({
       return proposal === undefined ? [] : [proposal];
     });
     const removable = proposals.find((proposal) => proposal.kind === 'remove');
-    const movable = proposals.filter(
+    const moveEarlier = proposals.find(
       (proposal) =>
-        proposal.kind === 'move' &&
-        row.rank !== null &&
-        (proposal.toIndex === row.rank - 2 || proposal.toIndex === row.rank),
+        proposal.kind === 'move' && row.rank !== null && proposal.toIndex === row.rank - 2,
+    );
+    const moveLater = proposals.find(
+      (proposal) => proposal.kind === 'move' && row.rank !== null && proposal.toIndex === row.rank,
     );
     const insertions = proposals.filter((proposal) => proposal.kind === 'insert');
     const rewardPayload = row.rewardPayload;
@@ -1060,14 +1062,14 @@ function RoomActionsWorkbench({
     const traitControl = row.traitOffer;
     const inlineTraitControls = [
       ...(traitControl === undefined ? [] : [traitControl]),
-      ...(rewardPayload?.control.traitOffers ?? []),
+      ...(rewardPayload?.inlineTraitOffers ?? []),
     ];
+    const inlineLevelResolutions = rewardPayload?.inlineLevelResolutions ?? [];
     const rewardPayloadHasVisibleBody =
       rewardPayload !== undefined &&
       (rewardPayload.showOffer ||
         rewardPayload.control.acquisitionOutcome === 'forfeitedByVow' ||
         (rewardPayload.showOwner && rewardPayload.control.marker.findingCount > 0) ||
-        (rewardPayload.control.levelResolutions?.length ?? 0) > 0 ||
         (rewardPayload.control.conversions ?? []).some(
           (conversion) =>
             requireWorkspaceInteraction(
@@ -1081,6 +1083,32 @@ function RoomActionsWorkbench({
       row.rank !== null &&
       rankedRows.length > 1 &&
       proposals.some((proposal) => proposal.kind === 'move');
+    const staleShopRemoval = row.stale ? row.shopParticipation : undefined;
+    const removalEnabled =
+      removable?.structurallyAuthorable === true || staleShopRemoval !== undefined;
+    const removalExplanation = removalEnabled
+      ? `Remove ${row.label} from the timeline`
+      : row.rank === null
+        ? 'This action is not currently in the timeline.'
+        : row.shopParticipation !== undefined
+          ? 'Purchased membership is edited in Room Overview.'
+          : row.participation === 'required'
+            ? 'Required actions cannot be removed.'
+            : 'This action cannot be removed from its current state.';
+    const removeRow = (): void => {
+      if (removable?.structurallyAuthorable === true) {
+        apply(removable.key);
+        return;
+      }
+      if (staleShopRemoval !== undefined) {
+        executeIntent(
+          requireWorkspaceInteraction(
+            interactions.shopPurchaseParticipations,
+            staleShopRemoval.interactionKey,
+          ).intentFor(false),
+        );
+      }
+    };
     return (
       <Fragment key={row.key}>
         <li
@@ -1097,7 +1125,7 @@ function RoomActionsWorkbench({
           id={semanticOwnerControlElementId(row.address)}
           tabIndex={-1}
         >
-          <div className="owner-markers">
+          <div className="owner-markers room-action-identity">
             {canDrag ? (
               <span
                 aria-hidden="true"
@@ -1113,20 +1141,29 @@ function RoomActionsWorkbench({
               {row.rank ?? '—'}
             </span>
             <strong>{row.label}</strong>
-            {inlineTraitControls.map((control) => (
-              <TraitOfferLauncher
-                control={control}
-                interactions={interactions}
-                key={workspaceInteractionKey(control.address)}
-              />
-            ))}
             <SemanticOwnerMarker address={row.address} />
             {row.stale ? <span className="neutral-status">stale</span> : null}
             {row.rank === null && row.participation === 'required' ? (
               <span className="neutral-status">required</span>
             ) : null}
           </div>
-          <div className="hub-rank-actions">
+          <div className="hub-rank-actions room-action-controls">
+            <div className="room-action-inline-editors">
+              {inlineTraitControls.map((control) => (
+                <TraitOfferLauncher
+                  control={control}
+                  interactions={interactions}
+                  key={workspaceInteractionKey(control.address)}
+                />
+              ))}
+              {inlineLevelResolutions.map((control) => (
+                <PomResolutionLauncher
+                  control={control}
+                  interactions={interactions}
+                  key={workspaceInteractionKey(control.address)}
+                />
+              ))}
+            </div>
             {row.rank === null && row.participation === 'required' ? (
               <button
                 disabled={insertions.length !== 1 || insertions[0]?.structurallyAuthorable !== true}
@@ -1165,50 +1202,37 @@ function RoomActionsWorkbench({
               </label>
             ) : (
               <>
-                {movable.map((proposal) => (
+                {[
+                  { direction: 'earlier' as const, glyph: '↑', proposal: moveEarlier },
+                  { direction: 'later' as const, glyph: '↓', proposal: moveLater },
+                ].map(({ direction, glyph, proposal }) => (
                   <button
-                    aria-label={`Move ${row.label} ${
-                      row.rank !== null && proposal.toIndex === row.rank - 2 ? 'earlier' : 'later'
-                    }`}
+                    aria-label={`Move ${row.label} ${direction}`}
                     className="quiet-action hub-rank-action"
-                    disabled={!proposal.structurallyAuthorable}
-                    key={proposal.key}
-                    onClick={() => apply(proposal.key)}
+                    disabled={proposal?.structurallyAuthorable !== true}
+                    key={direction}
+                    onClick={() => {
+                      if (proposal !== undefined) apply(proposal.key);
+                    }}
                     type="button"
                   >
-                    <span aria-hidden="true">
-                      {row.rank !== null && proposal.toIndex === row.rank - 2 ? '↑' : '↓'}
-                    </span>
+                    <span aria-hidden="true">{glyph}</span>
                   </button>
                 ))}
-                {removable === undefined ? null : (
-                  <button
-                    className="quiet-action action-compact"
-                    disabled={!removable.structurallyAuthorable}
-                    onClick={() => apply(removable.key)}
-                    type="button"
-                  >
-                    Remove
-                  </button>
-                )}
-                {row.stale && row.shopParticipation !== undefined ? (
-                  <button
-                    className="quiet-action action-compact"
-                    onClick={() =>
-                      executeIntent(
-                        requireWorkspaceInteraction(
-                          interactions.shopPurchaseParticipations,
-                          row.shopParticipation!.interactionKey,
-                        ).intentFor(false),
-                      )
-                    }
-                    type="button"
-                  >
-                    Unmark Purchased
-                  </button>
-                ) : null}
               </>
             )}
+            <button
+              aria-label={`Remove ${row.label} from timeline`}
+              className={`${removalEnabled ? 'danger-action' : 'quiet-action'} room-action-delete`}
+              disabled={!removalEnabled}
+              onClick={removeRow}
+              title={removalExplanation}
+              type="button"
+            >
+              <svg aria-hidden="true" viewBox="0 0 16 16">
+                <path d="M3.5 4.5h9M6 2.5h4l.5 2h-5l.5-2Zm-1 2 .5 9h5l.5-9M7 7v4M9 7v4" />
+              </svg>
+            </button>
           </div>
           {row.issues.length === 0 ? null : (
             <ul className="room-action-issues">
@@ -1256,6 +1280,7 @@ function RoomActionsWorkbench({
                   idPrefix={`room-action-${rewardPayload.control.marker.focusKey}`}
                   interactions={interactions}
                   showAcquisitionChildren
+                  showLevelResolutions={false}
                   showOffer={rewardPayload.showOffer}
                   showTraitOffers={false}
                 />

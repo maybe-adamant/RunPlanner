@@ -102,7 +102,9 @@ describe('Pom resolution editor', () => {
         <PomResolutionLauncher control={projectedControl} interactions={workspace.interactions} />
       </Provider>,
     );
-    await user.click(screen.getByRole('button', { name: /Edit Pom: Choose target \+1/i }));
+    const launcher = screen.getByRole('button', { name: /Edit Pom: Choose target \+1/i });
+    expect(launcher.getAttribute('data-trait-status')).toBe('unspecified');
+    await user.click(launcher);
     expect(application.store.getState().editorSession.levelResolutionDialogTarget).toEqual(
       control.owner,
     );

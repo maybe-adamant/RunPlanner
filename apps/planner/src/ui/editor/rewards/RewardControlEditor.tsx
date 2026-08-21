@@ -18,6 +18,7 @@ export function RewardControlEditor({
   label = 'Reward',
   showOffer = true,
   showAcquisitionChildren = false,
+  showLevelResolutions = true,
   showTraitOffers = true,
   offerStartStep,
 }: {
@@ -28,6 +29,8 @@ export function RewardControlEditor({
   readonly showOffer?: boolean;
   /** Trait, level, and conversion controls belong to the owning Room Timeline row. */
   readonly showAcquisitionChildren?: boolean;
+  /** A Room Timeline row can promote Pom/level controls into its compact action heading. */
+  readonly showLevelResolutions?: boolean;
   /** A Room Timeline row can promote trait launchers into its compact action heading. */
   readonly showTraitOffers?: boolean;
   /** A fixed-type producer can expose its payload directly without a redundant type step. */
@@ -42,7 +45,15 @@ export function RewardControlEditor({
     executeIntent(interaction.intentFor(value));
   return (
     <>
-      {!showOffer ? null : control.kind === 'countedReward' ? (
+      {!showOffer ? null : control.fixedOfferEdit !== undefined ? (
+        <button
+          className="quiet-action action-compact"
+          onClick={() => onReplace(control.fixedOfferEdit!.offer)}
+          type="button"
+        >
+          {control.fixedOfferEdit.actionLabel}
+        </button>
+      ) : control.kind === 'countedReward' ? (
         <CountedRewardEditor
           candidateOwner={control.owner}
           idPrefix={idPrefix}
@@ -88,13 +99,15 @@ export function RewardControlEditor({
                 />
               ))
             : null}
-          {(control.levelResolutions ?? []).map((resolution) => (
-            <PomResolutionLauncher
-              control={resolution}
-              interactions={interactions}
-              key={workspaceInteractionKey(resolution.address)}
-            />
-          ))}
+          {showLevelResolutions
+            ? (control.levelResolutions ?? []).map((resolution) => (
+                <PomResolutionLauncher
+                  control={resolution}
+                  interactions={interactions}
+                  key={workspaceInteractionKey(resolution.address)}
+                />
+              ))
+            : null}
           {(control.conversions ?? []).map((conversion) => {
             const interaction = requireWorkspaceInteraction(
               interactions.acquisitionConversions,
@@ -105,10 +118,10 @@ export function RewardControlEditor({
                 className="reward-acquisition-conversion"
                 key={workspaceInteractionKey(conversion.address)}
               >
-                <label className="reward-outcome-control">
-                  <span>Reward outcome</span>
+                <label className="pickup-outcome-control">
+                  <span>Pickup outcome</span>
                   <select
-                    aria-label={`Reward outcome for ${conversion.acquisitionRoleLabel}`}
+                    aria-label={`Pickup outcome for ${conversion.acquisitionRoleLabel}`}
                     onChange={(event) => {
                       const kind = event.target.value;
                       if (kind === 'normal' || kind === 'timePiece') {

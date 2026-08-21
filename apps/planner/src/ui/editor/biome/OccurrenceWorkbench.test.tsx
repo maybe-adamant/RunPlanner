@@ -486,7 +486,7 @@ describe('OccurrenceWorkbench', () => {
       renderStaticOccurrenceWorkbench(project(), routeKey, biomeKey, occurrenceById(occurrenceId));
       openRoomTab('Room Timeline');
       const actions = screen.getByRole('region', { name: 'Room Timeline' });
-      const pickup = within(actions).getByText(/^Pick up /);
+      const pickup = within(actions).getByText(/^Interact with .* pickup/);
       const start = within(actions).getByLabelText('Start encounter');
       const end = within(actions).getByLabelText('End encounter');
       expectBefore(pickup, start);
@@ -613,9 +613,9 @@ describe('OccurrenceWorkbench', () => {
     if (fieldsEncounter !== null) expectBefore(fieldsEncounter, fieldsActions);
     const timeline = within(fieldsActions).getByRole('list', { name: 'Room timeline' });
     const optionalPool = within(fieldsActions).getByRole('region', { name: 'Optional actions' });
-    expect(within(timeline).queryByText(/^Pick up Optional 1 · .+/)).toBeNull();
+    expect(within(timeline).queryByText(/^Interact with Optional 1 pickup · .+/)).toBeNull();
     const optionalAction = within(optionalPool)
-      .getByText(/^Pick up Optional 1 · .+/)
+      .getByText(/^Interact with Optional 1 pickup · .+/)
       .closest('li');
     if (optionalAction === null) throw new Error('Optional reward action is missing');
     expect(within(optionalAction).queryByLabelText('Optional 1')).toBeNull();
@@ -664,6 +664,9 @@ describe('OccurrenceWorkbench', () => {
       ).toBe(true);
     }
     expect(within(timeline).queryByText(/^Complete Cage/)).toBeNull();
+    for (const row of timeline.querySelectorAll('[data-in-order="true"]')) {
+      expect(row.querySelectorAll('.hub-rank-action')).toHaveLength(2);
+    }
 
     const dropTargetSelector =
       '[data-room-action-drop-index], [data-room-action-key][data-in-order="true"]';
@@ -685,13 +688,13 @@ describe('OccurrenceWorkbench', () => {
     }
 
     const cagePickup = within(timeline)
-      .getByText(/^Pick up Cage 1 · /)
+      .getByText(/^Interact with Cage 1 pickup · /)
       .closest<HTMLElement>('[data-room-action-key]');
     if (cagePickup === null) throw new Error('Cage 1 pickup row is missing');
     expectBefore(ends[0]!, cagePickup);
     expect(cagePickup.querySelector('[data-room-action-drag-handle]')).not.toBeNull();
     const movePickupEarlier = within(cagePickup).getByRole('button', {
-      name: /^Move Pick up Cage 1 · .* earlier$/,
+      name: /^Move Interact with Cage 1 pickup · .* earlier$/,
     }) as HTMLButtonElement;
     expect(movePickupEarlier.disabled).toBe(false);
     await view.user.click(movePickupEarlier);
@@ -912,11 +915,11 @@ describe('OccurrenceWorkbench', () => {
     const actions = screen.getByRole('region', { name: 'Room Timeline' });
     const optionalPool = within(actions).getByRole('region', { name: 'Optional actions' });
     const initialOptional = within(optionalPool)
-      .getByText(/^Pick up Optional 1 · .+/)
+      .getByText(/^Interact with Optional 1 pickup · .+/)
       .closest<HTMLElement>('[data-room-action-key]');
     if (initialOptional === null) throw new Error('Optional 1 action is missing');
     const insertion = within(initialOptional).getByRole('combobox', {
-      name: /^Insert Pick up Optional 1/,
+      name: /^Insert Interact with Optional 1 pickup/,
     }) as HTMLSelectElement;
     expect(insertion.closest('label')?.classList.contains('field-control-inline')).toBe(true);
     const lastAvailable = Array.from(insertion.options).findLast(
@@ -925,9 +928,9 @@ describe('OccurrenceWorkbench', () => {
     if (lastAvailable === undefined) throw new Error('Optional 1 has no insertion proposal');
     await view.user.selectOptions(insertion, lastAvailable.value);
 
-    expect(within(optionalPool).queryByText(/^Pick up Optional 1 · .+/)).toBeNull();
+    expect(within(optionalPool).queryByText(/^Interact with Optional 1 pickup · .+/)).toBeNull();
     const orderedOptional = within(actions)
-      .getByText(/^Pick up Optional 1 · .+/)
+      .getByText(/^Interact with Optional 1 pickup · .+/)
       .closest<HTMLElement>('[data-room-action-key]');
     const roomEntered = within(actions).getByLabelText('Room entered');
     const board = within(actions).getByRole('list', { name: 'Room timeline' });
@@ -989,8 +992,8 @@ describe('OccurrenceWorkbench', () => {
     expect(shopActions).toBeTruthy();
   });
 
-  it('renders an enabled Artificer disposition for reached Nectar with no Pom target', () => {
-    renderStaticOccurrenceWorkbench(
+  it('keeps Nectar trait editing on its pickup line and hides it after Artificer conversion', async () => {
+    const view = renderOccurrenceWorkbench(
       createFConversionFrontierProject('GiftDrop').project,
       'Underworld',
       'F',
@@ -998,12 +1001,12 @@ describe('OccurrenceWorkbench', () => {
     );
     openRoomTab('Room Timeline');
     const disposition = screen.getByRole('combobox', {
-      name: /^Reward outcome for /,
+      name: /^Pickup outcome for /,
     });
     const outcomeControl = disposition.closest('label');
-    if (outcomeControl === null) throw new Error('Reward outcome control is missing');
-    expect(outcomeControl.classList.contains('reward-outcome-control')).toBe(true);
-    expect(within(outcomeControl).getByText('Reward outcome')).toBeTruthy();
+    if (outcomeControl === null) throw new Error('Pickup outcome control is missing');
+    expect(outcomeControl.classList.contains('pickup-outcome-control')).toBe(true);
+    expect(within(outcomeControl).getByText('Pickup outcome')).toBeTruthy();
     expect(within(disposition).getByRole('option', { name: 'Pick up reward' })).toBeTruthy();
     expect(
       (
@@ -1013,8 +1016,35 @@ describe('OccurrenceWorkbench', () => {
       ).disabled,
     ).toBe(false);
     expect(
-      screen.getByRole('button', { name: 'Edit Random Pom: No eligible traits' }),
-    ).toBeTruthy();
+      within(outcomeControl).queryByRole('button', {
+        name: 'Edit Pom: No eligible traits',
+      }),
+    ).toBeNull();
+    const pomLauncher = screen.getByRole('button', {
+      name: /Edit Pom: No eligible traits/,
+    });
+    expect(pomLauncher.getAttribute('data-trait-status')).toBe('valid');
+    const pickupRow = pomLauncher.closest<HTMLElement>('[data-room-action-key]');
+    if (pickupRow === null) throw new Error('Nectar pickup row is missing');
+    expect(
+      pickupRow
+        .querySelector(':scope > .room-action-controls > .room-action-inline-editors')
+        ?.contains(pomLauncher),
+    ).toBe(true);
+
+    await view.user.selectOptions(disposition, 'artificer');
+    await waitFor(() => {
+      const sourceAction = screen
+        .getByText(/^Interact with Reward pickup · /)
+        .closest<HTMLElement>('[data-room-action-key]');
+      if (sourceAction === null) throw new Error('Artificer source action is missing');
+      expect(
+        within(sourceAction).queryByRole('button', {
+          name: 'Edit Pom: No eligible traits',
+        }),
+      ).toBeNull();
+      expect(within(sourceAction).getByRole('button', { name: 'Artificer item' })).toBeTruthy();
+    });
   });
 
   it('authors an Artificer replacement through its exact Room Action acquisition site', () => {
@@ -1039,20 +1069,20 @@ describe('OccurrenceWorkbench', () => {
     openRoomTab('Room Timeline');
     const actions = screen.getByRole('region', { name: 'Room Timeline' });
     const sourceAction = within(actions)
-      .getByText(/^Transform Reward with Artificer · /)
+      .getByText(/^Interact with Reward pickup · /)
       .closest<HTMLElement>('[data-room-action-key]');
     const replacementAction = within(actions)
-      .getByText(/^Pick up Artificer replacement/)
+      .getByText(/^Interact with Artificer replacement pickup/)
       .closest<HTMLElement>('[data-room-action-key]');
     if (sourceAction === null || replacementAction === null)
       throw new Error('Artificer source/replacement actions are missing');
     expectBefore(sourceAction, replacementAction);
     expect(
-      within(sourceAction).getByRole('combobox', { name: /^Reward outcome for / }),
+      within(sourceAction).getByRole('combobox', { name: /^Pickup outcome for / }),
     ).toBeTruthy();
     expect(within(sourceAction).getByRole('button', { name: 'Artificer item' })).toBeTruthy();
     expect(
-      within(replacementAction).queryByRole('combobox', { name: /^Reward outcome for / }),
+      within(replacementAction).queryByRole('combobox', { name: /^Pickup outcome for / }),
     ).toBeNull();
     expect(within(replacementAction).queryByRole('button', { name: 'Artificer item' })).toBeNull();
 
@@ -1124,7 +1154,11 @@ describe('OccurrenceWorkbench', () => {
       .closest<HTMLElement>('[data-room-action-key]');
     if (repairRow === null) throw new Error('Required repair row is missing');
     expect(within(repairRow).queryByText('Position')).toBeNull();
-    expect(within(repairRow).queryByRole('button', { name: 'Remove' })).toBeNull();
+    const missingRequiredDelete = within(repairRow).getByRole('button', {
+      name: /Remove .* from timeline/,
+    });
+    expect((missingRequiredDelete as HTMLButtonElement).disabled).toBe(true);
+    expect(missingRequiredDelete.classList.contains('quiet-action')).toBe(true);
 
     const historyBefore = view.application.store.getState().projectWorkspace.history.past.length;
     await view.user.click(
@@ -1137,11 +1171,15 @@ describe('OccurrenceWorkbench', () => {
     );
     await waitFor(() => {
       const restored = screen
-        .getByText(/^Pick up Reward/)
+        .getByText(/^Interact with Reward pickup/)
         .closest<HTMLElement>('[data-room-action-key]');
       if (restored === null) throw new Error('Restored required row is missing');
       expect(within(restored).queryByText('Position')).toBeNull();
-      expect(within(restored).queryByRole('button', { name: 'Remove' })).toBeNull();
+      const requiredDelete = within(restored).getByRole('button', {
+        name: /Remove .* from timeline/,
+      });
+      expect((requiredDelete as HTMLButtonElement).disabled).toBe(true);
+      expect(requiredDelete.classList.contains('quiet-action')).toBe(true);
     });
 
     act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
@@ -1186,7 +1224,12 @@ describe('OccurrenceWorkbench', () => {
     expect(document.getElementById(semanticOwnerControlElementId(action))).toBe(stale);
     expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(action);
 
-    await view.user.click(within(stale).getByRole('button', { name: 'Remove' }));
+    const remove = within(stale).getByRole('button', {
+      name: 'Remove Interact with Combat from timeline',
+    });
+    expect((remove as HTMLButtonElement).disabled).toBe(false);
+    expect(remove.classList.contains('danger-action')).toBe(true);
+    await view.user.click(remove);
     await waitFor(() => expect(screen.queryByText('Interact with Combat')).toBeNull());
     expect(
       occurrenceRoomActionOrder(
@@ -1375,7 +1418,7 @@ describe('OccurrenceWorkbench', () => {
       occurrenceById(occurrence.occurrenceId),
     );
     openRoomTab('Room Timeline');
-    const actionRow = screen.getByText(/^Pick up mysteryBoon/).closest('li');
+    const actionRow = screen.getByText(/^Interact with Mystery Boon pickup/).closest('li');
     if (actionRow === null) throw new Error('Narcissus pickup action is missing');
     const reward = within(actionRow).getByRole('button', { name: 'Reward' });
     await view.user.click(reward);
@@ -1436,7 +1479,7 @@ describe('OccurrenceWorkbench', () => {
     expect(hasAcquiredMysteryBoon()).toBe(false);
 
     const insert = within(actionRow).getByRole('combobox', {
-      name: 'Insert Pick up Mystery Boon · Hestia',
+      name: 'Insert Interact with Mystery Boon pickup · Hestia',
     });
     const insertion = Array.from((insert as HTMLSelectElement).options).find(
       (option) => option.value !== '' && !option.disabled,
@@ -1461,7 +1504,7 @@ describe('OccurrenceWorkbench', () => {
       entryKey: 'mysteryBoon',
     });
     expect(hasAcquiredMysteryBoon()).toBe(true);
-    expect(screen.getByText('Pick up Mystery Boon · Hestia')).toBeTruthy();
+    expect(screen.getByText('Interact with Mystery Boon pickup · Hestia')).toBeTruthy();
   });
 
   it('picks up and Time Piece-converts Psyche as one undoable Narcissus row edit', async () => {
@@ -1521,9 +1564,12 @@ describe('OccurrenceWorkbench', () => {
           (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
         );
 
-    const psycheRow = screen.getByText(/^Pick up Psyche/).closest('li');
+    const psycheRow = screen.getByText(/^Interact with Psyche pickup/).closest('li');
     if (!(psycheRow instanceof HTMLElement)) throw new Error('Psyche acquisition row is missing');
-    const insert = within(psycheRow).getByRole('combobox', { name: /^Insert Pick up Psyche/ });
+    expect(within(psycheRow).queryByRole('button', { name: 'Reward' })).toBeNull();
+    const insert = within(psycheRow).getByRole('combobox', {
+      name: /^Insert Interact with Psyche pickup/,
+    });
     const insertion = Array.from((insert as HTMLSelectElement).options).find(
       (option) => option.value !== '' && !option.disabled,
     );
@@ -1534,11 +1580,12 @@ describe('OccurrenceWorkbench', () => {
       siteKey: 'roomExit',
       entryKey: 'psyche',
     });
-    const orderedPsycheRow = screen.getByText(/^Pick up Psyche/).closest('li');
+    const orderedPsycheRow = screen.getByText(/^Interact with Psyche pickup/).closest('li');
     if (!(orderedPsycheRow instanceof HTMLElement))
       throw new Error('Ordered Psyche acquisition row is missing');
+    expect(within(orderedPsycheRow).queryByRole('button', { name: 'Reward' })).toBeNull();
     await view.user.selectOptions(
-      within(orderedPsycheRow).getByLabelText(/Reward outcome/),
+      within(orderedPsycheRow).getByLabelText(/Pickup outcome/),
       'timePiece',
     );
     expect(
@@ -1622,10 +1669,10 @@ describe('OccurrenceWorkbench', () => {
       occurrenceById(occurrence.occurrenceId),
     );
     openRoomTab('Room Timeline');
-    const maxManaRow = screen.getByText(/^Pick up Max Magick/).closest('li');
+    const maxManaRow = screen.getByText(/^Interact with Max Magick pickup/).closest('li');
     if (maxManaRow === null) throw new Error('Max Magick action row is missing');
     const maxMana = within(maxManaRow).getByRole('combobox', {
-      name: /^Insert Pick up Max Magick/,
+      name: /^Insert Interact with Max Magick pickup/,
     });
     const insertion = Array.from((maxMana as HTMLSelectElement).options).find(
       (option) => option.textContent === 'Insert to position 3' && !option.disabled,
@@ -2164,7 +2211,11 @@ describe('OccurrenceWorkbench', () => {
     const traitLauncher = within(actions).getByRole('button', { name: /Edit Trait/ });
     const actionRow = traitLauncher.closest<HTMLElement>('[data-room-action-key]');
     if (actionRow === null) throw new Error('Wheel reward action row is missing');
-    expect(actionRow.querySelector(':scope > .owner-markers')?.contains(traitLauncher)).toBe(true);
+    expect(
+      actionRow
+        .querySelector(':scope > .room-action-controls > .room-action-inline-editors')
+        ?.contains(traitLauncher),
+    ).toBe(true);
     expect(
       actionRow.querySelector(':scope > .acquisition-entry-resolution')?.getAttribute('data-empty'),
     ).toBe('true');
@@ -2224,7 +2275,7 @@ describe('OccurrenceWorkbench', () => {
     ).toBe('2');
     openRoomTab('Combat 2 Timeline');
     const combatTwo = screen.getByLabelText('Combat 2 ship phase');
-    expect(within(combatTwo).getByText(/^Pick up Combat 2 reward/)).toBeTruthy();
+    expect(within(combatTwo).getByText(/^Interact with Combat 2 reward pickup/)).toBeTruthy();
     expect(within(combatTwo).getByText('Outgoing generation')).toBeTruthy();
 
     act(() =>
@@ -2240,9 +2291,9 @@ describe('OccurrenceWorkbench', () => {
     openRoomTab('Inactive Actions');
     const repairs = screen.getByLabelText('Ship action repairs');
     expect(within(repairs).getByText('Choose Combat 2 reward')).toBeTruthy();
-    expect(within(repairs).getByText(/^Pick up Combat 2 reward/)).toBeTruthy();
+    expect(within(repairs).getByText(/^Interact with Combat 2 reward pickup/)).toBeTruthy();
     expect(screen.getAllByText('Choose Combat 2 reward')).toHaveLength(1);
-    expect(screen.getAllByText(/^Pick up Combat 2 reward/)).toHaveLength(1);
+    expect(screen.getAllByText(/^Interact with Combat 2 reward pickup/)).toHaveLength(1);
 
     act(() =>
       view.application.store.dispatch(
@@ -2296,7 +2347,11 @@ describe('OccurrenceWorkbench', () => {
     expect(document.getElementById(semanticOwnerControlElementId(action))).toBe(staleNpc);
     expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(action);
 
-    await view.user.click(within(staleNpc).getByRole('button', { name: 'Remove' }));
+    await view.user.click(
+      within(staleNpc).getByRole('button', {
+        name: 'Remove Interact with Combat2 encounter from timeline',
+      }),
+    );
     await waitFor(() => expect(screen.queryByText('Interact with Combat2 encounter')).toBeNull());
     expect(
       occurrenceRoomActionOrder(
@@ -2392,7 +2447,7 @@ describe('OccurrenceWorkbench', () => {
     expect(actionOrder()).toEqual(initialOrder);
 
     const restoredIcarus = rowFor('Interact with Icarus combat');
-    const wheelPick = rowFor('Pick up Combat 1 reward');
+    const wheelPick = rowFor('Interact with Combat 1 reward pickup');
     const handle = restoredIcarus.querySelector<HTMLElement>('[data-room-action-drag-handle]');
     const board = actions.querySelector<HTMLElement>('.ship-phase-list');
     if (handle === null || board === null) throw new Error('Ship pointer board is missing');
@@ -2603,7 +2658,7 @@ describe('OccurrenceWorkbench', () => {
     expect(goldenNode.room.roomLocal).toMatchObject({ kind: 'shop', supplementalOffers: [] });
     openRoomTab('Room Timeline');
     const timeline = screen.getByRole('region', { name: 'Room Timeline' });
-    expect(within(timeline).queryByText('Pick up infernalContractReward')).toBeNull();
+    expect(within(timeline).queryByText('Interact with infernalContractReward pickup')).toBeNull();
     expect(within(timeline).queryByRole('region', { name: 'Timeline repairs' })).toBeNull();
   });
 
@@ -2794,8 +2849,12 @@ describe('OccurrenceWorkbench', () => {
     openRoomTab('Room Timeline');
     const repairs = screen.getByRole('region', { name: 'Timeline repairs' });
     expect(within(repairs).getByText('Buy MajorNonBoon')).toBeTruthy();
-    expect(within(repairs).queryByRole('button', { name: 'Remove' })).toBeNull();
-    await view.user.click(within(repairs).getByRole('button', { name: 'Unmark Purchased' }));
+    const remove = within(repairs).getByRole('button', {
+      name: 'Remove Buy MajorNonBoon from timeline',
+    });
+    expect((remove as HTMLButtonElement).disabled).toBe(false);
+    expect(remove.classList.contains('danger-action')).toBe(true);
+    await view.user.click(remove);
     expect(
       occurrenceRoomActionOrder(
         view.application.store.getState().projectWorkspace.history.present,

@@ -136,22 +136,30 @@ export function PomResolutionLauncher({
     workspaceInteractionKey(control.address),
   );
   const target = selectedTarget(control.value);
-  const prefix = control.value.kind === 'random' ? 'Edit Random Pom' : 'Edit Pom';
   const emptyNoOp = control.settledEmptyNoOp;
+  const label = `Edit Pom: ${
+    emptyNoOp
+      ? 'No eligible traits'
+      : target === null
+        ? 'Choose target'
+        : interaction.traitLabel(target)
+  }${emptyNoOp ? '' : levelCountLabel(interaction)}`;
+  const statusLabel =
+    control.status === 'unspecified'
+      ? 'Pom target is not selected'
+      : control.status === 'invalid'
+        ? 'Pom configuration needs attention'
+        : 'Pom configuration has no findings';
   return (
     <button
+      aria-label={`${label}; ${statusLabel}`}
       className="trait-offer-launcher quiet-action action-compact"
+      data-trait-status={control.status}
       id={launcherId(control.address)}
       onClick={() => dispatch(levelResolutionDialogOpened(control.address))}
       type="button"
     >
-      {prefix}:{' '}
-      {emptyNoOp
-        ? 'No eligible traits'
-        : target === null
-          ? 'Choose target'
-          : interaction.traitLabel(target)}
-      {emptyNoOp ? '' : levelCountLabel(interaction)}
+      {label}
     </button>
   );
 }
