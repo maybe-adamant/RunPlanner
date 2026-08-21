@@ -491,6 +491,7 @@ describe('OccurrenceWorkbench', () => {
       const end = within(actions).getByLabelText('End encounter');
       expectBefore(pickup, start);
       expectBefore(start, end);
+      expect(within(actions).queryByText('Outgoing generation')).toBeNull();
     },
   );
 
@@ -1072,7 +1073,7 @@ describe('OccurrenceWorkbench', () => {
       .getByText(/^Interact with Reward pickup · /)
       .closest<HTMLElement>('[data-room-action-key]');
     const replacementAction = within(actions)
-      .getByText(/^Interact with Artificer replacement pickup/)
+      .getByText(/^Interact with Artificer pickup/)
       .closest<HTMLElement>('[data-room-action-key]');
     if (sourceAction === null || replacementAction === null)
       throw new Error('Artificer source/replacement actions are missing');
@@ -2062,6 +2063,11 @@ describe('OccurrenceWorkbench', () => {
     const reset = applyProjectCommand(initial, catalog, { kind: 'ResetEncounter', phase });
     const view = renderOccurrenceWorkbench(reset, 'Underworld', 'I', occurrenceById(occurrenceId));
     openRoomTab('Room Timeline');
+    expect(
+      within(screen.getByRole('region', { name: 'Room Timeline' })).queryByText(
+        'Outgoing generation',
+      ),
+    ).toBeNull();
     const finding = simulateProject(catalog, reset).findings.find(
       (candidate) => semanticAddressKey(candidate.origin) === semanticAddressKey(phase),
     );
@@ -2126,14 +2132,15 @@ describe('OccurrenceWorkbench', () => {
       within(screen.getByLabelText('Intro ship phase')).getByLabelText('Combat 1 reward'),
     ).toBeTruthy();
     expect(
-      within(screen.getByLabelText('Intro ship phase')).queryByText('Outgoing generation'),
+      within(screen.getByLabelText('Intro ship phase')).queryByText('Cleanup · Doors open'),
     ).toBeNull();
     openRoomTab('Combat 1 Timeline');
     const combatOne = screen.getByLabelText('Combat 1 ship phase');
     expect(combatOne).toBeTruthy();
     expect(within(combatOne).queryByLabelText('Combat 1 reward')).toBeNull();
     expect(screen.queryByRole('tab', { name: 'Combat 2 Timeline' })).toBeNull();
-    expect(within(combatOne).getByText('Outgoing generation')).toBeTruthy();
+    expect(within(combatOne).getByText('Cleanup · Doors open')).toBeTruthy();
+    expect(within(combatOne).queryByText('Outgoing generation')).toBeNull();
     act(() =>
       view.application.store.dispatch(
         semanticOwnerNavigated(createRewardWheelAddress(oBiome, oOccurrenceIds.combat04, 'wheel1')),
@@ -2276,7 +2283,8 @@ describe('OccurrenceWorkbench', () => {
     openRoomTab('Combat 2 Timeline');
     const combatTwo = screen.getByLabelText('Combat 2 ship phase');
     expect(within(combatTwo).getByText(/^Interact with Combat 2 reward pickup/)).toBeTruthy();
-    expect(within(combatTwo).getByText('Outgoing generation')).toBeTruthy();
+    expect(within(combatTwo).getByText('Cleanup · Doors open')).toBeTruthy();
+    expect(within(combatTwo).queryByText('Outgoing generation')).toBeNull();
 
     act(() =>
       view.application.store.dispatch(
@@ -2718,7 +2726,8 @@ describe('OccurrenceWorkbench', () => {
 
     openRoomTab('Room Timeline');
     const actions = screen.getByRole('region', { name: 'Room Timeline' });
-    expect(within(actions).getByText('Outgoing generation')).toBeTruthy();
+    expect(within(actions).getByText('Cleanup · Doors open')).toBeTruthy();
+    expect(within(actions).queryByText('Outgoing generation')).toBeNull();
     expect(within(actions).queryByText('Exit usable')).toBeNull();
     expect(within(actions).queryByText('Buy Boon · Zeus')).toBeNull();
 

@@ -41,6 +41,7 @@ import {
   parseArtificerReplacementEntryKey,
   selectedPickupProducer,
   echoLastRewardPickupEntryKey,
+  parseEchoLastRewardPickupEntryKey,
   echoLastRewardPickupEntryKeys,
   ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
   INFERNAL_CONTRACT_ENTRY_KEY,
@@ -1380,12 +1381,14 @@ function roomActionLabel(
           ? roomLocal.supplementalOffers.find((candidate) => candidate.key === reference.entryKey)
           : undefined;
       const entryLabel =
-        parseArtificerReplacementEntryKey(reference.entryKey) === undefined
-          ? rewardControl?.kind === 'explicitReward' && rewardControl.rewardTypes.length === 1
-            ? (catalog.rewards.rewardTypes.byKey[rewardControl.rewardTypes[0]!]?.label ??
-              reference.entryKey)
-            : reference.entryKey
-          : 'Artificer replacement';
+        parseArtificerReplacementEntryKey(reference.entryKey) !== undefined
+          ? 'Artificer'
+          : parseEchoLastRewardPickupEntryKey(reference.entryKey) !== undefined
+            ? 'Reward Reward Reward replay'
+            : rewardControl?.kind === 'explicitReward' && rewardControl.rewardTypes.length === 1
+              ? (catalog.rewards.rewardTypes.byKey[rewardControl.rewardTypes[0]!]?.label ??
+                reference.entryKey)
+              : reference.entryKey;
       return pickupLabel(supplemental?.label ?? entryLabel);
     }
   }
@@ -1660,14 +1663,16 @@ function roomActionsForOccurrence(
       proposals,
     ),
     checkpoints: Object.freeze(
-      roster.checkpoints.map((checkpoint) =>
-        Object.freeze({
-          key: checkpoint.checkpointKey,
-          label: checkpoint.label,
-          afterRank: checkpoint.afterRank,
-          window: checkpoint.window,
-        }),
-      ),
+      roster.checkpoints
+        .filter((checkpoint) => checkpoint.checkpointKey !== 'outgoingGeneration')
+        .map((checkpoint) =>
+          Object.freeze({
+            key: checkpoint.checkpointKey,
+            label: checkpoint.label,
+            afterRank: checkpoint.afterRank,
+            window: checkpoint.window,
+          }),
+        ),
     ),
     interactionKey: semanticAddressKey(owner),
     owner,
@@ -2359,7 +2364,6 @@ function shipWorkbenchPresentation(
         );
         return targetIndex <= 0 ? 0 : targetIndex - 1;
       }
-      case 'outgoingGeneration':
       case 'cleanup':
         return roomLocal.phases.length - 1;
     }

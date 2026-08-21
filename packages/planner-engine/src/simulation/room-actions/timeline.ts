@@ -10,7 +10,10 @@ import { roomActionKey } from '../../authored-project/room-actions';
 import type { RoomActionRoster, RoomActionRow } from './model';
 
 export type RoomLifecycleBoundary =
-  | Exclude<RoomLifecycleStructurePoint, { readonly kind: 'nextPhase' }>
+  | Exclude<
+      RoomLifecycleStructurePoint,
+      { readonly kind: 'nextPhase' } | { readonly kind: 'outgoingGeneration' }
+    >
   | {
       readonly kind: 'nextPhase';
       readonly key: string;
@@ -76,13 +79,18 @@ function lastRank(
   return matches.length === 0 ? undefined : (matches[matches.length - 1]!.rank ?? undefined);
 }
 
-function publicBoundary(point: RoomLifecycleStructurePoint): RoomLifecycleBoundary {
+type VisibleRoomLifecycleStructurePoint = Exclude<
+  RoomLifecycleStructurePoint,
+  { readonly kind: 'outgoingGeneration' }
+>;
+
+function publicBoundary(point: VisibleRoomLifecycleStructurePoint): RoomLifecycleBoundary {
   if (point.kind !== 'nextPhase') return point;
   return Object.freeze({ kind: point.kind, key: point.key, wheelKey: point.wheelKey });
 }
 
 function boundaryEntry(
-  point: RoomLifecycleStructurePoint,
+  point: VisibleRoomLifecycleStructurePoint,
   rank: number,
   placement: 'before' | 'after',
 ): RoomLifecycleBoundaryEntry {
@@ -143,7 +151,9 @@ export function assembleRoomLifecycleTimeline(
     return undefined;
   };
 
-  const desiredBoundary = (point: RoomLifecycleStructurePoint): RoomLifecycleBoundaryEntry => {
+  const desiredBoundary = (
+    point: VisibleRoomLifecycleStructurePoint,
+  ): RoomLifecycleBoundaryEntry => {
     switch (point.kind) {
       case 'roomEntered':
         return boundaryEntry(point, 0, 'before');
@@ -235,53 +245,29 @@ export function assembleRoomLifecycleTimeline(
               checkpointRank(roster, `nextPhaseUsable:${point.previousWheelKey}`) ?? 0,
               'after',
             );
-      case 'outgoingGeneration':
-        return boundaryEntry(
-          point,
-          checkpointRank(roster, 'outgoingGeneration') ?? finalRank,
-          'after',
-        );
-      case 'cleanup': {
-        const fieldsCageRanks =
-          structure.profileKey === 'FieldsCombatRoom'
-            ? structure.phases
-                .map((phase) =>
-                  actionRank(roster, {
-                    kind: 'completeFieldsCage',
-                    phaseKey: phase.phaseKey,
-                  }),
-                )
-                .filter((rank): rank is number => rank !== undefined)
-            : [];
-        if (fieldsCageRanks.length > 0) {
-          return boundaryEntry(point, Math.max(...fieldsCageRanks), 'after');
-        }
-        const hasOutgoing = structure.points.some(
-          (candidate) => candidate.kind === 'outgoingGeneration',
-        );
-        return boundaryEntry(
-          point,
-          hasOutgoing ? (checkpointRank(roster, 'outgoingGeneration') ?? finalRank) : finalRank,
-          'after',
-        );
-      }
+      case 'cleanup':
+        return boundaryEntry(point, checkpointRank(roster, 'exitUsable') ?? finalRank, 'after');
     }
   };
 
   let precedingSlot = 0;
-  const boundaryEntries = structure.points.map((point) => {
-    const desired = desiredBoundary(point);
-    const desiredSlot = boundarySlot(desired);
-    const slot = Math.max(precedingSlot, desiredSlot);
-    precedingSlot = slot;
-    return Object.freeze({
-      entry:
-        slot === desiredSlot
-          ? desired
-          : Object.freeze({ ...desired, rank: slot, placement: 'after' as const }),
-      slot,
+  const boundaryEntries = structure.points
+    .filter(
+      (point): point is VisibleRoomLifecycleStructurePoint => point.kind !== 'outgoingGeneration',
+    )
+    .map((point) => {
+      const desired = desiredBoundary(point);
+      const desiredSlot = boundarySlot(desired);
+      const slot = Math.max(precedingSlot, desiredSlot);
+      precedingSlot = slot;
+      return Object.freeze({
+        entry:
+          slot === desiredSlot
+            ? desired
+            : Object.freeze({ ...desired, rank: slot, placement: 'after' as const }),
+        slot,
+      });
     });
-  });
   const boundaryBySlot = new Map<number, RoomLifecycleBoundaryEntry[]>();
   for (const { entry, slot } of boundaryEntries) {
     const at = boundaryBySlot.get(slot) ?? [];
@@ -338,7 +324,6 @@ export function scopeRoomLifecycleTimeline(
       case 'nextPhase':
         return activeWheelKeys.has(boundary.wheelKey);
       case 'roomEntered':
-      case 'outgoingGeneration':
       case 'cleanup':
         return true;
     }

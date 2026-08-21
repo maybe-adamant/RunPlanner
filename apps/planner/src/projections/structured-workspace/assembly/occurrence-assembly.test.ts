@@ -4,6 +4,7 @@ import {
   createEncounterPhaseAddress,
   createGorgonPhaseAddress,
   createExitDecisionAddress,
+  createExitSelectionAddress,
   createIncomingRewardAddress,
   createLocalRewardAddress,
   createOccurrenceAddress,
@@ -14,6 +15,7 @@ import {
   createAcquisitionEntryAddress,
   createAcquisitionSiteAddress,
   createTraitOfferAddress,
+  echoLastRewardPickupEntryKey,
   createRouteStartKeepsakeSelectionAddress,
   roomActionKey,
   semanticAddressKey,
@@ -200,6 +202,66 @@ function withFPrebossSelection(
 }
 
 describe('structured workspace occurrence assembly', () => {
+  it('labels a dormant Echo replay repair without exposing its persisted entry key', () => {
+    const bridgeId = createOccurrenceId('golden-h-bridge01');
+    const echoOwner = createTraitOfferAddress(
+      createEncounterPhaseAddress(
+        goldenHBiome,
+        { kind: 'occurrence', occurrenceId: bridgeId },
+        'Encounter',
+      ),
+      'selection',
+    );
+    const replayKey = echoLastRewardPickupEntryKey('Encounter', 'Story_Echo_01', 'option1');
+    const replayEntry = createAcquisitionEntryAddress(
+      createAcquisitionSiteAddress(createOccurrenceAddress(goldenHBiome, bridgeId), 'roomExit'),
+      replayKey,
+    );
+    let project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+      kind: 'SetExitSelection',
+      selection: createExitSelectionAddress(goldenHBiome, {
+        kind: 'occurrence',
+        occurrenceId: createOccurrenceId('golden-h-combat09'),
+      }),
+      value: { kind: 'normal', exitKey: 'exit2' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: echoOwner,
+      value: {
+        kind: 'traits',
+        giverKey: 'Echo',
+        options: [
+          { traitKey: 'EchoLastReward' },
+          { traitKey: 'DiminishingDodgeBoon' },
+          { traitKey: 'DiminishingHealthAndManaBoon' },
+        ],
+        selectedOptionKey: 'option1',
+        deathDefianceConditionMet: false,
+        rarificationActions: [],
+      },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceAcquisitionEntryOffer',
+      entry: replayEntry,
+      value: { rewardType: 'HeraUpgrade' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitSelection',
+      trait: echoOwner,
+      selectedOptionKey: 'option2',
+    });
+
+    const room = assemble(project, 'Underworld', 'H', bridgeId).assembly.node.room;
+    const replayRepair = room.roomActions?.repairRows.find(
+      (row) =>
+        row.reference.kind === 'interactAcquisitionEntry' && row.reference.entryKey === replayKey,
+    );
+
+    expect(replayRepair?.label).toBe('Interact with Reward Reward Reward replay pickup');
+    expect(replayRepair?.label).not.toContain('echoLastReward:');
+  });
+
   it('publishes pending Gorgon support and retains a context-invalid child for repair', () => {
     const phase = createEncounterPhaseAddress(
       pBiome,
@@ -248,6 +310,20 @@ describe('structured workspace occurrence assembly', () => {
         selectedOptionKey: 'option1',
       },
     });
+    engineAssembly = simulateProjectAssembly(catalog, project);
+    const consumed = assemble(
+      project,
+      'Surface',
+      'P',
+      pOccurrenceId('P_Combat12', 8, 1),
+      (candidate) =>
+        encounterPhaseGorgonSupportForProjectEvaluationAssembly(engineAssembly, candidate),
+    ).assembly.node.room.encounterPhases.find(
+      (candidate) => candidate.address.phaseKey === 'Combat',
+    );
+    expect(consumed?.gorgonCondition).toMatchObject({ supported: true, selected: true });
+    expect(consumed?.gorgonAthena).toMatchObject({ status: 'valid' });
+
     project = applyProjectCommand(project, catalog, {
       kind: 'SelectEncounter',
       phase,
@@ -594,6 +670,9 @@ describe('structured workspace occurrence assembly', () => {
     expect(ship.node.room.workbench.phases[1]?.wheel).toBeUndefined();
     const shipActions = ship.node.room.roomActions;
     if (shipActions === undefined) throw new Error('Ship room actions are withheld');
+    expect(shipActions.checkpoints.map((checkpoint) => checkpoint.key)).not.toContain(
+      'outgoingGeneration',
+    );
     expect(
       ship.node.room.workbench.phases.flatMap((phase) => phase.actionRows.map((row) => row.key)),
     ).toEqual(shipActions.rows.filter((row) => !row.stale).map((row) => row.key));
@@ -621,10 +700,10 @@ describe('structured workspace occurrence assembly', () => {
         ?.checkpoints.map((checkpoint) => checkpoint.key),
     ).not.toContain('outgoingGeneration');
     expect(
-      ship.node.room.workbench.phases
-        .find((phase) => phase.key === 'Combat1')
-        ?.checkpoints.map((checkpoint) => checkpoint.key),
-    ).toContain('outgoingGeneration');
+      ship.node.room.workbench.phases.flatMap((phase) =>
+        phase.checkpoints.map((checkpoint) => checkpoint.key),
+      ),
+    ).not.toContain('outgoingGeneration');
     expect(ship.node.room.roomLocal.wheels[0]?.offers[0]?.control.owner.address).toEqual(
       createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat04, 'wheel1', 'offer1'),
     );
@@ -686,7 +765,7 @@ describe('structured workspace occurrence assembly', () => {
     ).toBe(false);
   });
 
-  it('derives a three-phase Ship presentation and places outgoing generation in Combat 2', () => {
+  it('derives a three-phase Ship presentation without exposing outgoing generation', () => {
     const occurrence = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
     const project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
       kind: 'ReplaceShipEncounterCount',
@@ -719,10 +798,10 @@ describe('structured workspace occurrence assembly', () => {
         ?.checkpoints.map((checkpoint) => checkpoint.key),
     ).not.toContain('outgoingGeneration');
     expect(
-      ship.workbench.phases
-        .find((phase) => phase.key === 'Combat2')
-        ?.checkpoints.map((checkpoint) => checkpoint.key),
-    ).toContain('outgoingGeneration');
+      ship.workbench.phases.flatMap((phase) =>
+        phase.checkpoints.map((checkpoint) => checkpoint.key),
+      ),
+    ).not.toContain('outgoingGeneration');
   });
 
   it.each([

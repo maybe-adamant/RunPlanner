@@ -1047,6 +1047,7 @@ function traitOwnerAddress(origin: SemanticAddress): TraitOfferOwnerAddress | un
     case 'shopOffer':
       return origin;
     case 'encounterPhase':
+    case 'gorgonPhase':
       return origin;
     case 'acquisitionEntry':
       return origin;

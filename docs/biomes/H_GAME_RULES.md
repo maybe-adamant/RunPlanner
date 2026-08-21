@@ -119,12 +119,12 @@ the final cage. A phase-produced required contact that declares
 own encounter and before whichever cage is authored next. This barrier follows
 authored cage execution order, not `Cage01`/`Cage02` declaration order.
 
-After the final cage, Cleanup contains any remaining cage, optional, NPC, and
-dependent acquisition actions. Every required cage reward must resolve before
-exit use; optional rewards may remain on the ground. Room features become
-available through the final unlock sequence rather than between cage cycles.
-The same action order carries later Artificer replacement pickups; there is no
-cage-only order or Fields-private acquisition fold.
+After the final cage, every remaining required cage, NPC, and dependent
+acquisition action must resolve before exit use. **Cleanup · Doors open** begins
+at that exact readiness boundary. Eligible optional rewards and Artificer
+replacement pickups may be ordered before or after Cleanup; future door-open-
+only room features remain Cleanup-only. There is no cage-only order or
+Fields-private acquisition fold.
 
 The editor keeps cage and optional identities in Room Overview and renders the
 single chronology in Room Timeline. Its engine-derived timeline brackets each

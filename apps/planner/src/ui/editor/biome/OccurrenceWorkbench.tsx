@@ -742,10 +742,8 @@ function lifecycleBoundaryLabel(boundary: WorkspaceRoomLifecycleBoundary): strin
       return 'End encounter';
     case 'nextPhase':
       return 'Start next phase';
-    case 'outgoingGeneration':
-      return 'Outgoing generation';
     case 'cleanup':
-      return 'Cleanup';
+      return 'Cleanup · Doors open';
   }
 }
 
@@ -1364,7 +1362,6 @@ function RoomActionsWorkbench({
                             return boundary.phaseKey === phase.key;
                           case 'nextPhase':
                             return phase.wheel?.key === boundary.wheelKey;
-                          case 'outgoingGeneration':
                           case 'cleanup':
                             return phaseIndex === ship.phases.length - 1;
                         }

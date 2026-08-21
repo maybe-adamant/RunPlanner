@@ -125,7 +125,7 @@ features. Wheel 1 is configured at Intro's next-phase boundary and Wheel 2 at
 Combat 1's; choice and pickup actions remain at their engine timeline
 positions. A retained inactive Combat 2 action appears once in the repair
 surface. The phase tabs are views over one global `roomActions.order`, and only
-the final active phase reaches room-level Cleanup and outgoing doors.
+the final active phase reaches room-level **Cleanup · Doors open**.
 
 The remaining NPC event, interaction, reward, and external-profile paths are
 not encounter candidates. The raw source composition remains documented in the

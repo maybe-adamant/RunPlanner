@@ -426,6 +426,33 @@ export function echoLastRewardPickupEntryKey(
   return `echoLastReward:${phaseKey}:${encounterKey}:${optionKey}`;
 }
 
+/** Reattest one persisted Echo replay pickup key without exposing its encoding to consumers. */
+export function parseEchoLastRewardPickupEntryKey(key: string):
+  | {
+      readonly phaseKey: string;
+      readonly encounterKey: string;
+      readonly optionKey: TraitOptionKey;
+    }
+  | undefined {
+  const [kind, phaseKey, encounterKey, optionKey, ...remainder] = key.split(':');
+  if (
+    kind !== 'echoLastReward' ||
+    phaseKey === undefined ||
+    phaseKey.length === 0 ||
+    encounterKey === undefined ||
+    encounterKey.length === 0 ||
+    optionKey === undefined ||
+    !TRAIT_OPTION_KEYS.includes(optionKey as TraitOptionKey) ||
+    remainder.length > 0
+  )
+    return undefined;
+  return Object.freeze({
+    phaseKey,
+    encounterKey,
+    optionKey: optionKey as TraitOptionKey,
+  });
+}
+
 /** Every structurally owned Echo replay row, including dormant outer options. */
 export function echoLastRewardPickupEntryKeys(
   catalog: Catalog,

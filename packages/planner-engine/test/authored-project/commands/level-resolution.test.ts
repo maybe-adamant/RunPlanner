@@ -1,7 +1,13 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  acquisitionSiteStorageKey,
+  artificerAcquisitionSite,
+  artificerReplacementEntryKey,
+  createAcquisitionEntryAddress,
+  createAcquisitionRoleAddress,
   createLevelResolutionAddress,
+  createOccurrenceAddress,
   createRewardWheelOfferAddress,
 } from '@run-planner/engine/authored-project';
 import { loadSurfaceNOPQProject, oBiome, oOccurrenceIds } from '@run-planner/test-fixtures/surface';
@@ -57,5 +63,46 @@ describe('level-resolution commands', () => {
         },
       }),
     ).toThrow('Pom selected trait must be one of the offered traits');
+  });
+
+  it('updates a Pom resolution at its exact Artificer replacement site', () => {
+    const project = pomProject();
+    const acquisition = createAcquisitionRoleAddress(wheelOwner, 'self');
+    const occurrence = createOccurrenceAddress(oBiome, oOccurrenceIds.combat02);
+    const site = artificerAcquisitionSite(occurrence, wheelOwner);
+    const entryKey = artificerReplacementEntryKey(wheelOwner, 'self');
+    const entry = createAcquisitionEntryAddress(site, entryKey);
+    const withDisposition = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceAcquisitionDisposition',
+      acquisition,
+      value: { kind: 'artificer' },
+    });
+    const withPom = applyProjectCommand(withDisposition, catalog, {
+      kind: 'ReplaceAcquisitionEntryOffer',
+      entry,
+      value: { rewardType: 'StackUpgrade' },
+    });
+    const value = {
+      kind: 'choice' as const,
+      offeredTraitKeys: ['ApolloWeaponBoon'],
+      selectedTraitKey: 'ApolloWeaponBoon',
+    };
+
+    const updated = applyProjectCommand(withPom, catalog, {
+      kind: 'ReplaceLevelResolution',
+      levelResolution: createLevelResolutionAddress(entry, 'self'),
+      value,
+    });
+    const authoredOccurrence = updated.routes
+      .find((route) => route.routeKey === 'Surface')
+      ?.biomes.find((biome) => biome.biomeKey === 'O')
+      ?.topology?.occurrences.find(
+        (candidate) => candidate.occurrenceId === oOccurrenceIds.combat02,
+      );
+    expect(
+      authoredOccurrence?.acquisitionSites?.[acquisitionSiteStorageKey(site)]?.pickupEntries?.[
+        entryKey
+      ]?.levelResolutionsByAcquisitionRole?.self,
+    ).toEqual(value);
   });
 });

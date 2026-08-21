@@ -143,6 +143,7 @@ export {
   optionIndex,
   normalizeAllTogetherResult,
   echoLastRewardPickupEntryKey,
+  parseEchoLastRewardPickupEntryKey,
   echoLastRewardPickupEntryKeys,
   selectedPickupProducer,
   traitGiverForAcquisitionRole,
