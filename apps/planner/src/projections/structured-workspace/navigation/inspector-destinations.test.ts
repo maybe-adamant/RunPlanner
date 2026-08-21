@@ -605,9 +605,10 @@ describe('workspace inspector destinations', () => {
       throw new Error('terminal N Hub decision is missing');
     }
     expect(n.nodes.some((node) => node.kind === 'hubDecision')).toBe(false);
-    const railKey = railKeyForNode(n, batch.key);
     const hub = createHubDecisionAddress(nBiome, 'hub');
-    expectNodeRailDestination(terminal, hub, batch.key, railKey);
+    const hubDestination = destination(terminal, hub);
+    expect(hubDestination.inspectorSubject).toEqual({ kind: 'node', nodeKey: batch.key });
+    expect(hubDestination.selectedRailKey).toBeUndefined();
   });
 
   it('binds Hub board, visit, handoff, and fixed-stage presentation without React ownership scans', () => {
@@ -669,16 +670,19 @@ describe('workspace inspector destinations', () => {
     const visit = hubRail.visits.find((candidate) => candidate.visitIndex === 3);
     if (visit === undefined) throw new Error('N authored Hub visit 3 is missing');
     expect(destination(complete, createHubVisitAddress(nBiome, 'hub', 3))).toMatchObject({
+      hubTab: 'timeline',
       inspectorSubject: { kind: 'node', nodeKey: hub.key },
       selectedRailKey: visit.marker.focusKey,
     });
     expect(destination(complete, createHubSlotAddress(nBiome, 'hub', 'combat02'))).toMatchObject({
+      hubTab: 'overview',
       inspectorSubject: { kind: 'node', nodeKey: hub.key },
       selectedRailKey: hubRail.marker.focusKey,
     });
     expect(
       destination(complete, createIncomingRewardAddress(nBiome, nOccurrenceId('combat02'))),
     ).toMatchObject({
+      hubTab: 'overview',
       inspectorSubject: { kind: 'node', nodeKey: hub.key },
       selectedRailKey: hubRail.marker.focusKey,
     });
@@ -688,6 +692,7 @@ describe('workspace inspector destinations', () => {
       .find((trait) => trait.address.owner.kind === 'incomingReward');
     if (hubTrait === undefined) throw new Error('Hub main-reward trait marker is missing');
     expect(destination(complete, hubTrait.address)).toMatchObject({
+      hubTab: 'overview',
       inspectorSubject: { kind: 'node', nodeKey: hub.key },
       ownerAddress: hubTrait.address,
       selectedRailKey: hubRail.marker.focusKey,
@@ -764,6 +769,7 @@ describe('workspace inspector destinations', () => {
     );
     if (truncatedHub === undefined) throw new Error('truncated N Hub is missing');
     const unroomedVisit = destination(truncated, createHubVisitAddress(nBiome, 'hub', 4));
+    expect(unroomedVisit.hubTab).toBe('timeline');
     expect(unroomedVisit.inspectorSubject).toEqual({ kind: 'node', nodeKey: truncatedHub.key });
     expect(unroomedVisit.selectedRailKey).toBeUndefined();
 
@@ -775,6 +781,7 @@ describe('workspace inspector destinations', () => {
     );
     if (handoffHub === undefined) throw new Error('completed N Hub handoff board is missing');
     const handoffDestination = destination(handoff, handoffOwner);
+    expect(handoffDestination.hubTab).toBe('exit');
     expect(handoffDestination.inspectorSubject).toEqual({ kind: 'node', nodeKey: handoffHub.key });
     expect(handoffDestination.selectedRailKey).toBeUndefined();
   });

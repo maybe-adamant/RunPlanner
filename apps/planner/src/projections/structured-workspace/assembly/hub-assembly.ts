@@ -388,6 +388,7 @@ function projectHubNode(
       for (const mainReward of mainRewards) {
         redirectHubMainRewardFocus(markerDestinations, hubMarker, mainReward);
       }
+      markerDestinations.setHubTab(mainRewards, 'overview');
     }
     slotRequirements.push(
       target === undefined
@@ -507,6 +508,11 @@ function projectHubNode(
     ]),
     node.key,
   );
+  markerDestinations.setHubTab(
+    Object.freeze([node.marker, node.openSet, ...node.slots.map((slot) => slot.marker)]),
+    'overview',
+  );
+  markerDestinations.setHubTab(Object.freeze(node.visits.map((visit) => visit.marker)), 'timeline');
   hubInteractionRequirements.push(
     Object.freeze({
       kind: 'hubControls' as const,

@@ -634,13 +634,21 @@ language, but its center is not an ordinary decision spine. The
 - the persistent board over 26 declaration-fixed Hub slots, with nine or ten
   open members;
 - one complete room and incoming reward for each open slot;
-- one ranked open-room board: the exact dense authored visit prefix (through
-  six positions), one compact next-position target for every remaining visit
-  owner when incomplete, and a presentation-only unvisited tail;
+- Hub Overview for the complete fixed-slot set, open/closed membership, and
+  each open room's reward editor; Hub Timeline for the exact dense authored
+  visit prefix (through six positions), compact next-position target for every
+  remaining visit owner, presentation-only unvisited tail, and read-only
+  reward context; and Hub Exit for the existing completed-Hub handoff;
 - side-room generation and entry state under visited parents;
 - derived Hub returns and parent restores;
 - the fixed completed-Hub handoff to the width-one Preboss Shop and its derived
   completion sequence.
+
+Exact Hub inspector destinations also carry their presentation tab: Hub,
+slot-set, and board-reward owners open Overview; visit owners open Timeline;
+and the uncommitted completed-Hub handoff opens Exit. React consumes that
+explicit destination and does not infer tab ownership from semantic-address
+shapes.
 
 The board remains a joint generation region. Its authored prefix is the only
 traversal order; its unvisited tail is React-local presentation state and is
@@ -655,13 +663,13 @@ and unplanned visit positions. Tail-only moves are presentation changes;
 any prefix change dispatches one aggregate semantic command after the bound
 candidate interaction has evaluated the complete proposed prefix.
 
-Open Hub slots render as one ranked roster rather than a multi-column grid.
-The row's ordering and membership controls occupy its first line; its existing
-main-reward control occupies a second line so room-local detail can expand
-without changing a peer row's height. A visible pointer drag grip is an
-optional direct-manipulation surface, with named arrow controls retained for
-keyboard operation. Closed slots remain in their compact three-column
-disclosure grid.
+Hub Overview renders all 26 fixed slots in declaration order so membership
+changes never move a card. An open card exposes the existing main-reward
+editor; a closed card reserves the same reward region with an instruction to
+open the room, preventing row-height shifts when participation changes. Hub
+Timeline renders only open slots as a ranked roster with read-only reward
+summaries. A visible pointer drag grip is an optional direct-manipulation
+surface, with named arrow controls retained for keyboard operation.
 
 The N rail gives its fixed Opening and PreHub stages and each authored Hub
 visit one read-only primary-reward token when the room projects one. This is
@@ -934,8 +942,9 @@ The structured workspace is complete when:
 - ordinary-decision biomes show one labeled rail stop per decision, active
   frontier, Preboss structure, coverage, and findings without adding every
   room offer to the rail;
-- N shows one ranked board with an explicit visit-prefix cutoff through
-  `HubDecisionWorkbench` without acquiring ordinary-decision semantics;
+- N shows Hub Overview, Hub Timeline with an explicit visit-prefix cutoff, and
+  Hub Exit through `HubDecisionWorkbench` without acquiring ordinary-decision
+  semantics;
 - every ordinary decision exposes room, reward, and picked state together while
   preserving unpicked reward and finding state;
 - finding navigation focuses the exact semantic owner inside its owning

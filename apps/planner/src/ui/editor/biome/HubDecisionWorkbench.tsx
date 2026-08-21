@@ -1,4 +1,10 @@
-import { type PointerEvent as ReactPointerEvent, useLayoutEffect, useRef, useState } from 'react';
+import {
+  type KeyboardEvent as ReactKeyboardEvent,
+  type PointerEvent as ReactPointerEvent,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react';
 
 import { semanticAddressKey } from '@run-planner/engine/authored-project';
 import {
@@ -17,6 +23,7 @@ import {
   type WorkspaceHubSlot,
   type WorkspaceHubSlotInteraction,
   type WorkspaceHubSlotOpeningAttempt,
+  type WorkspaceHubTab,
   type WorkspaceHubVisitOrderInteraction,
   type WorkspaceInteractionCatalog,
   type WorkspaceMarker,
@@ -33,12 +40,20 @@ import { RunStateLauncher } from './RunStateSheet';
 
 interface HubDecisionWorkbenchProps {
   readonly frontier: WorkspaceAuthoringFrontier | null;
+  readonly initialTab?: WorkspaceHubTab;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly node: WorkspaceHubDecisionNode;
 }
 
 type HubMembershipInput = 'keyboard' | 'pointer';
 type HubMembershipSourceRegion = 'closed' | 'open';
+type HubRewardPresentation = 'editor' | 'preview';
+const hubWorkbenchTabs: readonly { readonly key: WorkspaceHubTab; readonly label: string }[] =
+  Object.freeze([
+    Object.freeze({ key: 'overview', label: 'Hub Overview' }),
+    Object.freeze({ key: 'timeline', label: 'Hub Timeline' }),
+    Object.freeze({ key: 'exit', label: 'Hub Exit' }),
+  ]);
 
 interface HubMembershipTransition {
   readonly input: HubMembershipInput;
@@ -197,27 +212,6 @@ function MarkerAssessment({ marker }: { readonly marker: WorkspaceMarker }) {
       {assessmentLabel(marker)}
     </span>
   );
-}
-
-function membershipSlotsNearestFirst(
-  slots: WorkspaceHubDecisionNode['slots'],
-  source: HubMembershipSourceRegion,
-  movedSlotKey: string,
-): readonly WorkspaceHubSlot[] {
-  const movedIndex = slots.findIndex((slot) => slot.hubSlotKey === movedSlotKey);
-  if (movedIndex === -1) return [];
-  const sourceOpen = source === 'open';
-  const sourceSlots = slots.filter((slot) => slot.open === sourceOpen);
-  const later = sourceSlots.filter(
-    (slot) => slots.findIndex((candidate) => candidate.hubSlotKey === slot.hubSlotKey) > movedIndex,
-  );
-  const earlier = sourceSlots
-    .filter(
-      (slot) =>
-        slots.findIndex((candidate) => candidate.hubSlotKey === slot.hubSlotKey) < movedIndex,
-    )
-    .reverse();
-  return Object.freeze([...later, ...earlier]);
 }
 
 function membershipControlIn(
@@ -672,13 +666,16 @@ function OpenHubRoomCard({
   visitOrderInteraction,
   visitMarker,
   slot,
+  showMembership = true,
+  showOrder = true,
+  rewardPresentation = 'editor',
 }: {
   readonly dropAfter: HubRosterDropState | undefined;
   readonly dropBefore: HubRosterDropState | undefined;
   readonly focusedRewardOwnerKey: string | undefined;
   readonly interactions: WorkspaceInteractionCatalog;
-  readonly onMembershipTransition: (transition: HubMembershipTransition) => void;
-  readonly onPointerDragStarted: (
+  readonly onMembershipTransition?: (transition: HubMembershipTransition) => void;
+  readonly onPointerDragStarted?: (
     event: ReactPointerEvent<HTMLSpanElement>,
     slotKey: string,
   ) => void;
@@ -693,6 +690,9 @@ function OpenHubRoomCard({
   readonly slot: WorkspaceHubSlot;
   readonly visitMarker?: WorkspaceMarker;
   readonly visitOrderInteraction: WorkspaceHubVisitOrderInteraction;
+  readonly showMembership?: boolean;
+  readonly showOrder?: boolean;
+  readonly rewardPresentation?: HubRewardPresentation;
 }) {
   const dispatch = useAppDispatch();
   const card = useRef<HTMLElement>(null);
@@ -715,10 +715,12 @@ function OpenHubRoomCard({
   useLayoutEffect(() => {
     if (!focusedMainReward) return;
     card.current?.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' });
-    card.current
-      ?.querySelector<HTMLButtonElement>('.hub-main-reward .contextual-picker-trigger')
-      ?.focus({ preventScroll: true });
-  }, [focusedMainReward]);
+    if (rewardPresentation === 'editor') {
+      card.current
+        ?.querySelector<HTMLButtonElement>('.hub-main-reward .contextual-picker-trigger')
+        ?.focus({ preventScroll: true });
+    }
+  }, [focusedMainReward, rewardPresentation]);
 
   return (
     <article
@@ -729,24 +731,29 @@ function OpenHubRoomCard({
       data-drop-before={dropBefore}
       data-focused-main-reward={focusedMainReward || undefined}
       data-hub-slot-key={slot.hubSlotKey}
+      data-hub-card-presentation={showOrder ? 'timeline' : 'overview'}
       data-open="true"
       data-visit-position={visitPosition === -1 ? undefined : visitPosition + 1}
       data-visited={slot.room?.entered}
       ref={card}
     >
       <div className="hub-roster-primary">
-        <span
-          aria-hidden="true"
-          className="hub-roster-drag-handle"
-          data-hub-roster-drag-handle
-          data-dragging={pointerDragging || undefined}
-          onPointerDown={(event) => onPointerDragStarted(event, slot.hubSlotKey)}
-        >
-          ⠿
-        </span>
-        <span aria-hidden="true" className="hub-roster-rank">
-          {visitPosition === -1 ? '—' : visitPosition + 1}
-        </span>
+        {!showOrder || onPointerDragStarted === undefined ? null : (
+          <span
+            aria-hidden="true"
+            className="hub-roster-drag-handle"
+            data-hub-roster-drag-handle
+            data-dragging={pointerDragging || undefined}
+            onPointerDown={(event) => onPointerDragStarted(event, slot.hubSlotKey)}
+          >
+            ⠿
+          </span>
+        )}
+        {!showOrder ? null : (
+          <span aria-hidden="true" className="hub-roster-rank">
+            {visitPosition === -1 ? '—' : visitPosition + 1}
+          </span>
+        )}
         <div className="hub-roster-identity">
           <div className="hub-slot-heading">
             <div className="owner-markers">
@@ -776,30 +783,45 @@ function OpenHubRoomCard({
             )}
           </div>
         </div>
-        <HubSlotMembershipControl
-          interactions={interactions}
-          onMembershipTransition={onMembershipTransition}
-          slot={slot}
-        />
-        <HubRoomOrderControls
-          interaction={visitOrderInteraction}
-          onApplied={onRankMove}
-          ranking={ranking}
-          requiredVisitCount={requiredVisitCount}
-          slot={slot}
-        />
+        {!showMembership || onMembershipTransition === undefined ? null : (
+          <HubSlotMembershipControl
+            interactions={interactions}
+            onMembershipTransition={onMembershipTransition}
+            slot={slot}
+          />
+        )}
+        {!showOrder ? null : (
+          <HubRoomOrderControls
+            interaction={visitOrderInteraction}
+            onApplied={onRankMove}
+            ranking={ranking}
+            requiredVisitCount={requiredVisitCount}
+            slot={slot}
+          />
+        )}
       </div>
       {rewards === undefined || rewards.length === 0 || slot.door === undefined ? null : (
         <div
-          className="hub-main-reward room-state-with-marker"
+          aria-label={`${slot.label} reward ${rewardPresentation}`}
+          className={`hub-main-reward room-state-with-marker${!showOrder ? ' hub-overview-reward-slot' : ''}`}
           data-focused-main-reward={focusedMainReward || undefined}
           data-hub-main-reward-owner={rewardOwnerKey}
         >
-          <DoorRewardEditor
-            door={slot.door}
-            idPrefix={`hub-${slot.hubSlotKey}`}
-            interactions={interactions}
-          />
+          {rewardPresentation === 'editor' ? (
+            <DoorRewardEditor
+              door={slot.door}
+              idPrefix={`hub-${slot.hubSlotKey}`}
+              interactions={interactions}
+            />
+          ) : (
+            <div className="hub-timeline-reward-preview">
+              <span>Reward</span>
+              <strong>{rewards.map((candidate) => candidate.summary).join(', ')}</strong>
+              {rewards.map((candidate) => (
+                <SemanticOwnerMarker address={candidate.marker.address} key={candidate.key} />
+              ))}
+            </div>
+          )}
         </div>
       )}
     </article>
@@ -818,14 +840,25 @@ function ClosedHubRoomOption({
   return (
     <article
       aria-label={`${slot.label} Hub room`}
-      className="hub-closed-room-option"
+      className="hub-slot-card hub-open-room-card"
+      data-hub-card-presentation="overview"
       data-hub-slot-key={slot.hubSlotKey}
       data-open="false"
     >
-      <div className="hub-slot-heading">
-        <div className="owner-markers">
-          <h3>{slot.label}</h3>
-          <SemanticOwnerMarker address={slot.marker.address} />
+      <div className="hub-roster-primary">
+        <div className="hub-roster-identity">
+          <div className="hub-slot-heading">
+            <div className="owner-markers">
+              <h3>{slot.label}</h3>
+              <SemanticOwnerMarker address={slot.marker.address} />
+            </div>
+          </div>
+          <div className="hub-slot-meta">
+            <div className="hub-slot-state">
+              <span className="room-kind">{slot.roomKind}</span>
+              <MarkerAssessment marker={slot.marker} />
+            </div>
+          </div>
         </div>
         <HubSlotMembershipControl
           interactions={interactions}
@@ -833,11 +866,8 @@ function ClosedHubRoomOption({
           slot={slot}
         />
       </div>
-      <div className="hub-slot-meta">
-        <div className="hub-slot-state">
-          <span className="room-kind">{slot.roomKind}</span>
-          <MarkerAssessment marker={slot.marker} />
-        </div>
+      <div className="hub-main-reward hub-overview-reward-slot">
+        <p className="fixed-room-state">Open this room to edit its reward.</p>
       </div>
     </article>
   );
@@ -872,13 +902,14 @@ function CompletedHubHandoff({
  * projected board/visit facts and semantic capabilities; no catalog, topology
  * or simulator product is re-read in the React layer.
  */
-export function HubDecisionWorkbench({ frontier, interactions, node }: HubDecisionWorkbenchProps) {
+export function HubDecisionWorkbench({
+  frontier,
+  initialTab,
+  interactions,
+  node,
+}: HubDecisionWorkbenchProps) {
   const executeIntent = useCommandIntent();
   const focusedOwner = useAppSelector((state) => state.editorSession.focusedSemanticOwner);
-  const selectedFinding = useAppSelector((state) => state.editorSession.selectedFinding);
-  const semanticNavigationRevision = useAppSelector(
-    (state) => state.editorSession.semanticNavigationRevision,
-  );
   const handoff =
     frontier?.kind === 'exitDecision' && frontier.owner.source.kind === 'hubDecision'
       ? requireWorkspaceInteraction(interactions.takeoverBatches, frontier.interactionKey)
@@ -888,7 +919,6 @@ export function HubDecisionWorkbench({ frontier, interactions, node }: HubDecisi
   }
   const titleId = `hub-${domId(node.marker.focusKey)}`;
   const openSlots = node.slots.filter((slot) => slot.open);
-  const closedSlots = node.slots.filter((slot) => !slot.open);
   const visitOrderInteraction = requireWorkspaceInteraction(
     interactions.hubVisitOrders,
     workspaceInteractionKey(node.owner),
@@ -925,27 +955,23 @@ export function HubDecisionWorkbench({ frontier, interactions, node }: HubDecisi
     interactions.topologyRemovals,
     workspaceInteractionKey(node.owner),
   );
-  const closedSlotOwnerKeys = new Set(
-    closedSlots.map((slot) => semanticAddressKey(slot.marker.address)),
-  );
   const focusedOwnerKey = focusedOwner === null ? undefined : semanticAddressKey(focusedOwner);
-  const selectedFindingOwnerKey =
-    selectedFinding === null ? undefined : semanticAddressKey(selectedFinding.origin);
-  const revealedClosedOwnerKey =
-    selectedFindingOwnerKey !== undefined && closedSlotOwnerKeys.has(selectedFindingOwnerKey)
-      ? selectedFindingOwnerKey
-      : focusedOwnerKey !== undefined && closedSlotOwnerKeys.has(focusedOwnerKey)
-        ? focusedOwnerKey
-        : undefined;
-  const closedRevealSignal =
-    revealedClosedOwnerKey === undefined
-      ? undefined
-      : selectedFindingOwnerKey === revealedClosedOwnerKey
-        ? `${revealedClosedOwnerKey}:${semanticNavigationRevision}`
-        : revealedClosedOwnerKey;
-  const closedDisclosure = useRef<HTMLDetailsElement>(null);
-  const openMembershipRegion = useRef<HTMLDivElement>(null);
-  const previousClosedReveal = useRef<string | undefined>(undefined);
+  const overviewOpenMembershipRegion = useRef<HTMLDivElement>(null);
+  const timelineRegion = useRef<HTMLDivElement>(null);
+  const tabList = useRef<HTMLElement>(null);
+  const requestedTab = initialTab ?? 'overview';
+  const hubIdentity = semanticAddressKey(node.owner);
+  const [tabState, setTabState] = useState({
+    active: requestedTab,
+    hubIdentity,
+    requested: requestedTab,
+  });
+  const activeTab =
+    tabState.hubIdentity === hubIdentity && tabState.requested === requestedTab
+      ? tabState.active
+      : requestedTab;
+  const setActiveTab = (tab: WorkspaceHubTab): void =>
+    setTabState({ active: tab, hubIdentity, requested: requestedTab });
   const pendingMembershipFocus = useRef<PendingHubMembershipFocus | undefined>(undefined);
   const pendingRankFocus = useRef<PendingHubRankFocus | undefined>(undefined);
   const pendingPointerDrag = useRef<PendingHubRosterPointerDrag | undefined>(undefined);
@@ -1000,12 +1026,8 @@ export function HubDecisionWorkbench({ frontier, interactions, node }: HubDecisi
       const active = activePointerDrag.current;
       const direction = pointerAutoScrollDirection.current;
       if (active === undefined || direction === 0) return;
-      scrollHubRoster(openMembershipRegion.current, direction);
-      const target = hubBoardDropTargetFromElement(
-        openMembershipRegion.current,
-        active.x,
-        active.y,
-      );
+      scrollHubRoster(timelineRegion.current, direction);
+      const target = hubBoardDropTargetFromElement(timelineRegion.current, active.x, active.y);
       if (!sameHubBoardDropTarget(active.target, target)) {
         const next = Object.freeze({ ...active, target });
         activePointerDrag.current = next;
@@ -1016,7 +1038,7 @@ export function HubDecisionWorkbench({ frontier, interactions, node }: HubDecisi
     pointerAutoScrollFrame.current = window.requestAnimationFrame(tick);
   };
   const updatePointerAutoScroll = (clientY: number): void => {
-    const direction = hubRosterScrollDirection(openMembershipRegion.current, clientY);
+    const direction = hubRosterScrollDirection(timelineRegion.current, clientY);
     if (direction === 0) {
       stopPointerAutoScroll();
       return;
@@ -1064,7 +1086,7 @@ export function HubDecisionWorkbench({ frontier, interactions, node }: HubDecisi
       if (distance < 6) return;
     }
     const target = hubBoardDropTargetFromElement(
-      openMembershipRegion.current,
+      timelineRegion.current,
       event.clientX,
       event.clientY,
     );
@@ -1091,7 +1113,7 @@ export function HubDecisionWorkbench({ frontier, interactions, node }: HubDecisi
     const target =
       active === undefined
         ? undefined
-        : hubBoardDropTargetFromElement(openMembershipRegion.current, event.clientX, event.clientY);
+        : hubBoardDropTargetFromElement(timelineRegion.current, event.clientX, event.clientY);
     clearPointerDrag(event.pointerId);
     if (active === undefined || target === undefined) return;
     const result = dropHubBoardRoom(ranking, node.requiredVisitCount, active.slotKey, target);
@@ -1145,7 +1167,7 @@ export function HubDecisionWorkbench({ frontier, interactions, node }: HubDecisi
           ? 'removeFromVisits'
           : pending.action;
     const card = Array.from(
-      openMembershipRegion.current?.querySelectorAll<HTMLElement>('[data-hub-slot-key]') ?? [],
+      timelineRegion.current?.querySelectorAll<HTMLElement>('[data-hub-slot-key]') ?? [],
     ).find((element) => element.dataset.hubSlotKey === pending.slotKey);
     const requestedControl = card?.querySelector<HTMLButtonElement>(
       `[data-hub-rank-action="${nextAction}"]`,
@@ -1159,23 +1181,9 @@ export function HubDecisionWorkbench({ frontier, interactions, node }: HubDecisi
     pendingRankFocus.current = undefined;
   }, [ranking, rankingStateKey]);
 
-  // The marker's own passive focus effect must never run while its native
-  // disclosure is closed. Imperatively revealing the local details element in
-  // a layout effect retains native open/closed ownership after the reveal.
-  useLayoutEffect(() => {
-    if (closedRevealSignal === undefined) {
-      previousClosedReveal.current = undefined;
-      return;
-    }
-    if (previousClosedReveal.current === closedRevealSignal) return;
-    closedDisclosure.current?.setAttribute('open', '');
-    previousClosedReveal.current = closedRevealSignal;
-  }, [closedRevealSignal]);
-
-  // Membership edits move a checkbox between the open-board and closed-room
-  // regions. Pointer changes retain their viewport. Keyboard changes continue
-  // in the source batch, instead of focusing the moved room and unexpectedly
-  // navigating the user away from the controls they were composing.
+  // Overview keeps every fixed slot in one stable declaration-ordered grid.
+  // After a keyboard membership edit remounts that card, restore focus to the
+  // same slot's checkbox without moving the user to a different row.
   useLayoutEffect(() => {
     const pending = pendingMembershipFocus.current;
     if (pending === undefined) return;
@@ -1186,172 +1194,255 @@ export function HubDecisionWorkbench({ frontier, interactions, node }: HubDecisi
       pendingMembershipFocus.current = undefined;
       return;
     }
-    const sourceRegion =
-      pending.source === 'open' ? openMembershipRegion.current : closedDisclosure.current;
-    const control = membershipSlotsNearestFirst(node.slots, pending.source, pending.slotKey)
-      .map((candidate) => membershipControlIn(sourceRegion, candidate.hubSlotKey))
-      .find((candidate) => candidate !== undefined);
+    const control = membershipControlIn(overviewOpenMembershipRegion.current, pending.slotKey);
     if (control !== undefined) {
       control.focus({ preventScroll: true });
-    } else if (pending.source === 'closed') {
-      // At the maximum open count the remaining closed controls cannot open.
-      // The disclosure summary is the stable nearby control.
-      closedDisclosure.current
-        ?.querySelector<HTMLElement>('summary')
-        ?.focus({ preventScroll: true });
     } else {
-      // When no other open room has an enabled close control, retain a
-      // visible, named focus anchor in the open board instead of moving down
-      // to the just-closed room.
-      openMembershipRegion.current?.focus({ preventScroll: true });
+      overviewOpenMembershipRegion.current?.focus({ preventScroll: true });
     }
     pendingMembershipFocus.current = undefined;
   }, [node.slots]);
 
+  const activateTab = (tab: WorkspaceHubTab): void => {
+    setActiveTab(tab);
+    tabList.current
+      ?.querySelector<HTMLButtonElement>(`[data-hub-workbench-tab="${tab}"]`)
+      ?.focus({ preventScroll: true });
+  };
+  const onTabKeyDown = (event: ReactKeyboardEvent<HTMLElement>): void => {
+    const current = hubWorkbenchTabs.findIndex((tab) => tab.key === activeTab);
+    if (current < 0) return;
+    let next: number | undefined;
+    if (event.key === 'ArrowLeft')
+      next = (current + hubWorkbenchTabs.length - 1) % hubWorkbenchTabs.length;
+    if (event.key === 'ArrowRight') next = (current + 1) % hubWorkbenchTabs.length;
+    if (event.key === 'Home') next = 0;
+    if (event.key === 'End') next = hubWorkbenchTabs.length - 1;
+    if (next === undefined) return;
+    event.preventDefault();
+    const tab = hubWorkbenchTabs[next];
+    if (tab !== undefined) activateTab(tab.key);
+  };
+
   return (
     <section className="hub-decision-workbench" aria-label="Ephyra Hub">
-      <section className="hub-board" aria-labelledby={`${titleId}-board-title`}>
-        <header className="decision-heading">
-          <div>
-            <div className="owner-markers">
-              <h3 id={`${titleId}-board-title`}>Hub traversal</h3>
-              <SemanticOwnerMarker address={node.owner} />
-              {node.runState === undefined ? null : <RunStateLauncher launcher={node.runState} />}
-              <SemanticOwnerMarker address={node.openSet.address} />
-            </div>
-          </div>
-          <div className="hub-board-status">
-            <span className="neutral-status">
-              {node.openSlotCount.current} open · {node.openSlotCount.min}–{node.openSlotCount.max}{' '}
-              required
-            </span>
-            <span className="neutral-status">
-              {authoredVisitCount} of {node.requiredVisitCount} planned
-            </span>
-            <MarkerAssessment marker={node.openSet} />
-          </div>
-        </header>
-        <p aria-live="polite" className="visually-hidden">
-          {rankAnnouncement}
-        </p>
-        <div
-          aria-label="Ranked open Ephyra rooms"
-          className="hub-ranked-room-board"
-          onLostPointerCapture={(event) => clearPointerDrag(event.pointerId)}
-          onPointerCancel={(event) => clearPointerDrag(event.pointerId)}
-          onPointerMove={updatePointerDrag}
-          onPointerUp={completePointerDrag}
-          ref={openMembershipRegion}
-          role="group"
-          tabIndex={-1}
-        >
-          <div aria-label="Planned visit order" className="hub-ranked-visit-prefix">
-            {plannedSlots.map((slot, index) => {
-              const visit = node.visits[index];
-              if (visit === undefined) {
-                throw new Error(`Hub visit ${index + 1} is missing from the workspace node.`);
-              }
-              return (
-                <OpenHubRoomCard
-                  dropAfter={hubRosterDropState(
-                    pointerDrag,
-                    ranking,
-                    node.requiredVisitCount,
-                    Object.freeze({ kind: 'afterSlot', slotKey: slot.hubSlotKey }),
-                  )}
-                  dropBefore={hubRosterDropState(
-                    pointerDrag,
-                    ranking,
-                    node.requiredVisitCount,
-                    Object.freeze({ kind: 'beforeSlot', slotKey: slot.hubSlotKey }),
-                  )}
-                  focusedRewardOwnerKey={focusedOwnerKey}
-                  interactions={interactions}
-                  key={slot.hubSlotKey}
-                  onMembershipTransition={continueKeyboardMembershipAfterTransition}
-                  onPointerDragStarted={beginPointerDrag}
-                  onRankMove={applyRankMove}
-                  pointerDragging={pointerDrag?.slotKey === slot.hubSlotKey}
-                  ranking={ranking}
-                  requiredVisitCount={node.requiredVisitCount}
-                  slot={slot}
-                  visitMarker={visit.marker}
-                  visitOrderInteraction={visitOrderInteraction}
-                />
-              );
-            })}
-            {unplannedVisits.length === 0 ? null : (
-              <HubNextVisitTarget
-                drag={pointerDrag}
-                ranking={ranking}
-                requiredVisitCount={node.requiredVisitCount}
-                visits={unplannedVisits}
-              />
-            )}
-          </div>
-          <div aria-label="Visit-order boundary" className="hub-visit-boundary">
-            <span>Visit order ends here</span>
-            <span>{node.requiredVisitCount} rooms traverse the pylons</span>
-          </div>
-          <div aria-label="Remaining open rooms" className="hub-ranked-tail">
-            {remainingSlots.map((slot) => (
-              <OpenHubRoomCard
-                dropAfter={hubRosterDropState(
-                  pointerDrag,
-                  ranking,
-                  node.requiredVisitCount,
-                  Object.freeze({ kind: 'afterSlot', slotKey: slot.hubSlotKey }),
-                )}
-                dropBefore={hubRosterDropState(
-                  pointerDrag,
-                  ranking,
-                  node.requiredVisitCount,
-                  Object.freeze({ kind: 'beforeSlot', slotKey: slot.hubSlotKey }),
-                )}
-                focusedRewardOwnerKey={focusedOwnerKey}
-                interactions={interactions}
-                key={slot.hubSlotKey}
-                onMembershipTransition={continueKeyboardMembershipAfterTransition}
-                onPointerDragStarted={beginPointerDrag}
-                onRankMove={applyRankMove}
-                pointerDragging={pointerDrag?.slotKey === slot.hubSlotKey}
-                ranking={ranking}
-                requiredVisitCount={node.requiredVisitCount}
-                slot={slot}
-                visitOrderInteraction={visitOrderInteraction}
-              />
-            ))}
-          </div>
-          {pointerDrag === undefined ? null : (
-            <div
-              aria-hidden="true"
-              className="hub-roster-drag-preview"
-              style={{
-                transform: `translate3d(${pointerDrag.x + 14}px, ${pointerDrag.y + 14}px, 0)`,
-              }}
-            >
-              <span>⠿</span>
-              {slotsByKey.get(pointerDrag.slotKey)?.label ?? 'Hub room'}
-            </div>
-          )}
+      <header className="decision-heading">
+        <div className="owner-markers">
+          <h3 id={`${titleId}-title`}>Ephyra Hub</h3>
+          <SemanticOwnerMarker address={node.owner} />
+          {node.runState === undefined ? null : <RunStateLauncher launcher={node.runState} />}
         </div>
+        <div className="hub-board-status">
+          <span className="neutral-status">
+            {node.openSlotCount.current} open · {node.openSlotCount.min}–{node.openSlotCount.max}{' '}
+            required
+          </span>
+          <span className="neutral-status">
+            {authoredVisitCount} of {node.requiredVisitCount} planned
+          </span>
+        </div>
+      </header>
+      <nav
+        aria-label="Hub workbench"
+        className="room-workbench-tabs"
+        onKeyDown={onTabKeyDown}
+        ref={tabList}
+        role="tablist"
+      >
+        {hubWorkbenchTabs.map((tab) => (
+          <button
+            aria-controls={`${titleId}-tabpanel`}
+            aria-selected={activeTab === tab.key}
+            className="room-workbench-tab"
+            data-hub-workbench-tab={tab.key}
+            id={`${titleId}-tab-${tab.key}`}
+            key={tab.key}
+            onClick={() => activateTab(tab.key)}
+            role="tab"
+            tabIndex={activeTab === tab.key ? 0 : -1}
+            type="button"
+          >
+            {tab.label}
+          </button>
+        ))}
+      </nav>
+      <section
+        aria-labelledby={`${titleId}-tab-${activeTab}`}
+        className="hub-workbench-tab-panel"
+        id={`${titleId}-tabpanel`}
+        role="tabpanel"
+      >
+        {activeTab === 'overview' ? (
+          <section className="hub-board" aria-label="Hub room participation">
+            <div className="hub-overview-heading">
+              <div className="owner-markers">
+                <h4>Open rooms</h4>
+                <SemanticOwnerMarker address={node.openSet.address} />
+                <MarkerAssessment marker={node.openSet} />
+              </div>
+            </div>
+            <p className="fixed-room-state">Open or close the rooms available on this Hub board.</p>
+            <div
+              aria-label="Hub room set"
+              className="hub-overview-room-grid"
+              ref={overviewOpenMembershipRegion}
+              role="group"
+              tabIndex={-1}
+            >
+              {node.slots.map((slot) =>
+                slot.open ? (
+                  <OpenHubRoomCard
+                    dropAfter={undefined}
+                    dropBefore={undefined}
+                    focusedRewardOwnerKey={focusedOwnerKey}
+                    interactions={interactions}
+                    key={slot.hubSlotKey}
+                    onMembershipTransition={continueKeyboardMembershipAfterTransition}
+                    onRankMove={applyRankMove}
+                    pointerDragging={false}
+                    ranking={ranking}
+                    requiredVisitCount={node.requiredVisitCount}
+                    showOrder={false}
+                    slot={slot}
+                    visitOrderInteraction={visitOrderInteraction}
+                  />
+                ) : (
+                  <ClosedHubRoomOption
+                    interactions={interactions}
+                    key={slot.hubSlotKey}
+                    onMembershipTransition={continueKeyboardMembershipAfterTransition}
+                    slot={slot}
+                  />
+                ),
+              )}
+            </div>
+          </section>
+        ) : null}
+        {activeTab === 'timeline' ? (
+          <section className="hub-board" aria-label="Hub visit timeline">
+            <div className="owner-markers">
+              <h4>Hub visit order</h4>
+            </div>
+            <p aria-live="polite" className="visually-hidden">
+              {rankAnnouncement}
+            </p>
+            <div
+              aria-label="Ranked open Ephyra rooms"
+              className="hub-ranked-room-board"
+              onLostPointerCapture={(event) => clearPointerDrag(event.pointerId)}
+              onPointerCancel={(event) => clearPointerDrag(event.pointerId)}
+              onPointerMove={updatePointerDrag}
+              onPointerUp={completePointerDrag}
+              ref={timelineRegion}
+              role="group"
+              tabIndex={-1}
+            >
+              <div aria-label="Planned visit order" className="hub-ranked-visit-prefix">
+                {plannedSlots.map((slot, index) => {
+                  const visit = node.visits[index];
+                  if (visit === undefined) {
+                    throw new Error(`Hub visit ${index + 1} is missing from the workspace node.`);
+                  }
+                  return (
+                    <OpenHubRoomCard
+                      dropAfter={hubRosterDropState(
+                        pointerDrag,
+                        ranking,
+                        node.requiredVisitCount,
+                        Object.freeze({ kind: 'afterSlot', slotKey: slot.hubSlotKey }),
+                      )}
+                      dropBefore={hubRosterDropState(
+                        pointerDrag,
+                        ranking,
+                        node.requiredVisitCount,
+                        Object.freeze({ kind: 'beforeSlot', slotKey: slot.hubSlotKey }),
+                      )}
+                      focusedRewardOwnerKey={focusedOwnerKey}
+                      interactions={interactions}
+                      key={slot.hubSlotKey}
+                      onPointerDragStarted={beginPointerDrag}
+                      onRankMove={applyRankMove}
+                      pointerDragging={pointerDrag?.slotKey === slot.hubSlotKey}
+                      ranking={ranking}
+                      requiredVisitCount={node.requiredVisitCount}
+                      rewardPresentation="preview"
+                      showMembership={false}
+                      slot={slot}
+                      visitMarker={visit.marker}
+                      visitOrderInteraction={visitOrderInteraction}
+                    />
+                  );
+                })}
+                {unplannedVisits.length === 0 ? null : (
+                  <HubNextVisitTarget
+                    drag={pointerDrag}
+                    ranking={ranking}
+                    requiredVisitCount={node.requiredVisitCount}
+                    visits={unplannedVisits}
+                  />
+                )}
+              </div>
+              <div aria-label="Visit-order boundary" className="hub-visit-boundary">
+                <span>Visit order ends here</span>
+                <span>{node.requiredVisitCount} rooms traverse the pylons</span>
+              </div>
+              <div aria-label="Remaining open rooms" className="hub-ranked-tail">
+                {remainingSlots.map((slot) => (
+                  <OpenHubRoomCard
+                    dropAfter={hubRosterDropState(
+                      pointerDrag,
+                      ranking,
+                      node.requiredVisitCount,
+                      Object.freeze({ kind: 'afterSlot', slotKey: slot.hubSlotKey }),
+                    )}
+                    dropBefore={hubRosterDropState(
+                      pointerDrag,
+                      ranking,
+                      node.requiredVisitCount,
+                      Object.freeze({ kind: 'beforeSlot', slotKey: slot.hubSlotKey }),
+                    )}
+                    focusedRewardOwnerKey={focusedOwnerKey}
+                    interactions={interactions}
+                    key={slot.hubSlotKey}
+                    onPointerDragStarted={beginPointerDrag}
+                    onRankMove={applyRankMove}
+                    pointerDragging={pointerDrag?.slotKey === slot.hubSlotKey}
+                    ranking={ranking}
+                    requiredVisitCount={node.requiredVisitCount}
+                    rewardPresentation="preview"
+                    showMembership={false}
+                    slot={slot}
+                    visitOrderInteraction={visitOrderInteraction}
+                  />
+                ))}
+              </div>
+              {pointerDrag === undefined ? null : (
+                <div
+                  aria-hidden="true"
+                  className="hub-roster-drag-preview"
+                  style={{
+                    transform: `translate3d(${pointerDrag.x + 14}px, ${pointerDrag.y + 14}px, 0)`,
+                  }}
+                >
+                  <span>⠿</span>
+                  {slotsByKey.get(pointerDrag.slotKey)?.label ?? 'Hub room'}
+                </div>
+              )}
+            </div>
+          </section>
+        ) : null}
+        {activeTab === 'exit' ? (
+          <section className="hub-board" aria-label="Hub exit">
+            {handoff === undefined ? (
+              <p className="fixed-room-state">
+                Complete the required Hub visits to open the Preboss exit.
+              </p>
+            ) : (
+              <CompletedHubHandoff interaction={handoff} />
+            )}
+          </section>
+        ) : null}
       </section>
-      {handoff === undefined ? null : <CompletedHubHandoff interaction={handoff} />}
-      {closedSlots.length === 0 ? null : (
-        <details className="hub-closed-room-disclosure" ref={closedDisclosure}>
-          <summary>Closed rooms ({closedSlots.length})</summary>
-          <div className="hub-closed-room-grid">
-            {closedSlots.map((slot) => (
-              <ClosedHubRoomOption
-                interactions={interactions}
-                key={slot.hubSlotKey}
-                onMembershipTransition={continueKeyboardMembershipAfterTransition}
-                slot={slot}
-              />
-            ))}
-          </div>
-        </details>
-      )}
       <div className="workbench-action-row">
         <button
           className="danger-action"

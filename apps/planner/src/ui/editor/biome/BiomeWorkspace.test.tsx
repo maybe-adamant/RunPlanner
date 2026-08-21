@@ -461,6 +461,7 @@ describe('BiomeWorkspace', () => {
       )?.textContent,
     ).toContain(firstVisit.mainReward.label);
     await view.user.click(hubRailButton());
+    await view.user.click(screen.getByRole('tab', { name: 'Hub Timeline' }));
     const hubCard = screen.getByRole('article', {
       name: `${firstVisit.node.room.label} Hub room`,
     });
@@ -520,8 +521,11 @@ describe('BiomeWorkspace', () => {
   it('routes a keyboard-selected Hub rail visit to its occurrence-owned local detail workbench', async () => {
     const view = renderWorkspace(loadSurfaceNOPQProject(), 'Surface', 'N');
     await view.user.click(hubRailButton());
+    await view.user.click(screen.getByRole('tab', { name: 'Hub Timeline' }));
     const boardCard = screen.getByRole('article', { name: 'Combat 02 Hub room' });
-    expect(within(boardCard).getByRole('button', { name: 'Reward' })).toBeTruthy();
+    expect(within(boardCard).getByLabelText('Combat 02 reward preview').textContent).toContain(
+      'Big Max Magick',
+    );
 
     const visit = screen.getByRole('button', { name: /Visit 3 · Combat 02/ });
     act(() => visit.focus());
@@ -598,6 +602,9 @@ describe('BiomeWorkspace', () => {
         semanticOwnerFocused(createHubVisitAddress(nBiome, 'hub', 3)),
       ),
     );
+    expect(screen.getByRole('tab', { name: 'Hub Timeline' }).getAttribute('aria-selected')).toBe(
+      'true',
+    );
     expect(railVisit.dataset.selected).toBe('true');
     expect(hubRailButton().dataset.selected).toBe('false');
 
@@ -605,6 +612,9 @@ describe('BiomeWorkspace', () => {
       view.application.store.dispatch(
         semanticOwnerFocused(createHubSlotAddress(nBiome, 'hub', 'combat02')),
       ),
+    );
+    expect(screen.getByRole('tab', { name: 'Hub Overview' }).getAttribute('aria-selected')).toBe(
+      'true',
     );
     expect(hubRailButton().dataset.selected).toBe('true');
     expect(screen.getByRole('button', { name: /Visit 3 · Combat 02/ }).dataset.selected).toBe(
@@ -615,6 +625,9 @@ describe('BiomeWorkspace', () => {
       view.application.store.dispatch(
         semanticOwnerFocused(createIncomingRewardAddress(nBiome, nOccurrenceId('combat02'))),
       ),
+    );
+    expect(screen.getByRole('tab', { name: 'Hub Overview' }).getAttribute('aria-selected')).toBe(
+      'true',
     );
     expect(hubRailButton().dataset.selected).toBe('true');
     expect(screen.getByRole('button', { name: /Visit 3 · Combat 02/ }).dataset.selected).toBe(
@@ -1135,7 +1148,7 @@ describe('BiomeWorkspace', () => {
     expect(
       within(screen.getByRole('complementary', { name: 'Details' })).getByRole('heading', {
         level: 3,
-        name: 'Hub traversal',
+        name: 'Ephyra Hub',
       }),
     ).toBeTruthy();
     nApplication.dispose();
@@ -1150,7 +1163,10 @@ describe('BiomeWorkspace', () => {
     });
 
     act(() => view.application.store.dispatch(semanticOwnerFocused(handoff)));
-    expect(screen.getByRole('heading', { name: 'Hub traversal' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Hub Exit' }).getAttribute('aria-selected')).toBe(
+      'true',
+    );
+    expect(screen.getByText('Continue to Preboss')).toBeTruthy();
     await view.user.click(screen.getByRole('button', { name: 'Preboss' }));
 
     const nPlan = view.application.store
