@@ -2,6 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Provider } from 'react-redux';
 
+import { installDevBrowserErrorReporter } from './diagnostics/devBrowserErrorReporter';
 import { createBrowserProfileFileAdapter } from './persistence/browserProfileFileAdapter';
 import {
   createBrowserAutosaveRecoveryAdapter,
@@ -11,6 +12,7 @@ import { createApplication } from './composition/createApplication';
 import './ui/styles.css';
 import { App } from './ui/shell/App';
 
+const devBrowserErrorReporter = installDevBrowserErrorReporter();
 const rootElement = document.getElementById('root');
 
 if (rootElement === null) {
@@ -32,7 +34,7 @@ const application = createApplication({
   }),
 });
 
-createRoot(rootElement).render(
+createRoot(rootElement, devBrowserErrorReporter?.rootOptions).render(
   <StrictMode>
     <Provider store={application.store}>
       <App
