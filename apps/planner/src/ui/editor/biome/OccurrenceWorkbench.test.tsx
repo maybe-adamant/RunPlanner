@@ -62,6 +62,7 @@ import {
   goldenFOccurrenceId,
   goldenFStartId,
   goldenGBiome,
+  goldenHBiome,
 } from '@run-planner/test-fixtures/underworld';
 import {
   loadSurfaceNProject,
@@ -84,6 +85,7 @@ import {
   workspaceBiome,
   workspaceProjection,
 } from '@planner-test/support/biome-workbench';
+import { replaceTestRoomActionOrder } from '@run-planner/test-fixtures/shared';
 
 let immutableRepresentativeNOPQProject: ProjectDocument;
 
@@ -220,6 +222,62 @@ function occurrenceRoomActionOrder(
     ?.biomes.find((biome) => biome.biomeKey === biomeKey)
     ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === occurrenceId)
     ?.roomActions.order;
+}
+
+function threeCageFieldsProject(): ProjectDocument {
+  const occurrenceId = createOccurrenceId('golden-h-combat02');
+  const expanded = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+    kind: 'ReplaceFieldsCageOutcome',
+    decision: createExitDecisionAddress(goldenHBiome, {
+      kind: 'occurrence',
+      occurrenceId: createOccurrenceId('golden-h-intro'),
+    }),
+    cageOutcome: 'max',
+  });
+  return replaceTestRoomActionOrder(expanded, catalog, goldenHBiome, occurrenceId, [
+    { kind: 'completeFieldsCage', phaseKey: 'Cage01' },
+    { kind: 'completeFieldsCage', phaseKey: 'Cage02' },
+    { kind: 'completeFieldsCage', phaseKey: 'Cage03' },
+    { kind: 'interactLocalReward', groupKey: 'cages', slotKey: 'cage1' },
+    { kind: 'interactLocalReward', groupKey: 'cages', slotKey: 'cage2' },
+    { kind: 'interactLocalReward', groupKey: 'cages', slotKey: 'cage3' },
+  ]);
+}
+
+function fieldsGorgonBarrierProject(): ProjectDocument {
+  const occurrenceId = createOccurrenceId('golden-h-combat02');
+  const phase = createEncounterPhaseAddress(
+    goldenHBiome,
+    { kind: 'occurrence', occurrenceId },
+    'Cage01',
+  );
+  let project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+    kind: 'ReplaceStartingKeepsake',
+    selection: createRouteStartKeepsakeSelectionAddress('Underworld'),
+    keepsakeKey: 'AthenaEncounterKeepsake',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceGorgonDeathDefianceCondition',
+    phase,
+    value: true,
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceGorgonAthenaOffer',
+    trait: createTraitOfferAddress(createGorgonPhaseAddress(phase), 'gorgonAthena'),
+    value: {
+      traitKeys: ['InvulnerabilityDashBoon', 'RetaliateInvulnerabilityBoon', 'FocusLastStandBoon'],
+      selectedOptionKey: 'option1',
+    },
+  });
+  return replaceTestRoomActionOrder(project, catalog, goldenHBiome, occurrenceId, [
+    { kind: 'interactLocalReward', groupKey: 'optionalRewards', slotKey: 'optional2' },
+    { kind: 'completeFieldsCage', phaseKey: 'Cage01' },
+    { kind: 'interactGorgon', phaseKey: 'Cage01' },
+    { kind: 'interactLocalReward', groupKey: 'optionalRewards', slotKey: 'optional1' },
+    { kind: 'completeFieldsCage', phaseKey: 'Cage02' },
+    { kind: 'interactLocalReward', groupKey: 'cages', slotKey: 'cage1' },
+    { kind: 'interactLocalReward', groupKey: 'cages', slotKey: 'cage2' },
+  ]);
 }
 
 function occurrenceEncounterSelections(
@@ -563,6 +621,283 @@ describe('OccurrenceWorkbench', () => {
     expect(within(optionalAction).queryByLabelText('Optional 1')).toBeNull();
     expect(within(optionalAction).queryByRole('button', { name: 'Reward' })).toBeNull();
     expect(fieldsActions).toBeTruthy();
+  });
+
+  it('projects three fixed Fields cycles with cage selectors and movable pickups', async () => {
+    const occurrenceId = createOccurrenceId('golden-h-combat02');
+    const view = renderOccurrenceWorkbench(
+      threeCageFieldsProject(),
+      'Underworld',
+      'H',
+      occurrenceById(occurrenceId),
+    );
+    openRoomTab('Room Timeline');
+    const actions = screen.getByRole('region', { name: 'Room Timeline' });
+    const timeline = within(actions).getByRole('list', { name: 'Room timeline' });
+    const starts = [1, 2, 3].map((ordinal) =>
+      within(timeline).getByLabelText(`Start encounter ${ordinal}`),
+    );
+    const ends = Array.from(
+      timeline.querySelectorAll<HTMLElement>('[data-lifecycle-boundary^="encounterEnd:"]'),
+    );
+    expect(ends).toHaveLength(3);
+    expect(
+      [1, 2, 3].map(
+        (ordinal) =>
+          (
+            within(starts[ordinal - 1]!).getByRole('combobox', {
+              name: `Cage for encounter ${ordinal}`,
+            }) as HTMLSelectElement
+          ).value,
+      ),
+    ).toEqual(['Cage01', 'Cage02', 'Cage03']);
+    for (const [index, start] of starts.entries()) {
+      const selector = within(start).getByRole('combobox', {
+        name: `Cage for encounter ${index + 1}`,
+      });
+      const options = within(selector).getAllByRole('option') as HTMLOptionElement[];
+      expect(options.find((option) => option.value === `Cage0${index + 1}`)?.disabled).toBe(true);
+      expect(
+        options
+          .filter((option) => option.value !== `Cage0${index + 1}`)
+          .every((option) => !option.disabled),
+      ).toBe(true);
+    }
+    expect(within(timeline).queryByText(/^Complete Cage/)).toBeNull();
+
+    const dropTargetSelector =
+      '[data-room-action-drop-index], [data-room-action-key][data-in-order="true"]';
+    const timelineChildren = Array.from(timeline.children);
+    for (const [index, start] of starts.entries()) {
+      const end = ends[index]!;
+      expectBefore(start, end);
+      const startIndex = timelineChildren.indexOf(start);
+      const endIndex = timelineChildren.indexOf(end);
+      expect(startIndex).toBeGreaterThanOrEqual(0);
+      expect(endIndex).toBeGreaterThan(startIndex);
+      const insertionTargets = timelineChildren
+        .slice(startIndex + 1, endIndex)
+        .flatMap((candidate) => [
+          ...(candidate.matches(dropTargetSelector) ? [candidate] : []),
+          ...candidate.querySelectorAll(dropTargetSelector),
+        ]);
+      expect(insertionTargets).toEqual([]);
+    }
+
+    const cagePickup = within(timeline)
+      .getByText(/^Pick up Cage 1 · /)
+      .closest<HTMLElement>('[data-room-action-key]');
+    if (cagePickup === null) throw new Error('Cage 1 pickup row is missing');
+    expectBefore(ends[0]!, cagePickup);
+    expect(cagePickup.querySelector('[data-room-action-drag-handle]')).not.toBeNull();
+    const movePickupEarlier = within(cagePickup).getByRole('button', {
+      name: /^Move Pick up Cage 1 · .* earlier$/,
+    }) as HTMLButtonElement;
+    expect(movePickupEarlier.disabled).toBe(false);
+    await view.user.click(movePickupEarlier);
+    await waitFor(() => {
+      const order = occurrenceRoomActionOrder(
+        view.application.store.getState().projectWorkspace.history.present,
+        'Underworld',
+        'H',
+        occurrenceId,
+      );
+      expect(
+        order?.flatMap((reference) =>
+          reference.kind === 'completeFieldsCage' ? [reference.phaseKey] : [],
+        ),
+      ).toEqual(['Cage01', 'Cage02', 'Cage03']);
+      expect(order?.[2]).toEqual({
+        groupKey: 'cages',
+        kind: 'interactLocalReward',
+        slotKey: 'cage1',
+      });
+    });
+    expect(within(actions).getByRole('region', { name: 'Optional actions' })).toBeTruthy();
+
+    const cageOneAction = createRoomActionAddress(
+      goldenHBiome,
+      occurrenceId,
+      roomActionKey({ kind: 'completeFieldsCage', phaseKey: 'Cage01' }),
+    );
+    expect(starts[0]?.getAttribute('id')).toBe(semanticOwnerControlElementId(cageOneAction));
+  });
+
+  it('moves a selected Fields cage into its fixed cycle as one undoable history step', async () => {
+    const occurrenceId = createOccurrenceId('golden-h-combat02');
+    const view = renderOccurrenceWorkbench(
+      threeCageFieldsProject(),
+      'Underworld',
+      'H',
+      occurrenceById(occurrenceId),
+    );
+    openRoomTab('Room Timeline');
+    const historyBefore = view.application.store.getState().projectWorkspace.history.past.length;
+    await view.user.selectOptions(
+      screen.getByRole('combobox', { name: 'Cage for encounter 1' }),
+      'Cage01',
+    );
+    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+      historyBefore,
+    );
+    await view.user.selectOptions(
+      screen.getByRole('combobox', { name: 'Cage for encounter 1' }),
+      'Cage03',
+    );
+
+    const cagePermutation = () =>
+      occurrenceRoomActionOrder(
+        view.application.store.getState().projectWorkspace.history.present,
+        'Underworld',
+        'H',
+        occurrenceId,
+      )?.flatMap((reference) =>
+        reference.kind === 'completeFieldsCage' ? [reference.phaseKey] : [],
+      );
+    await waitFor(() => expect(cagePermutation()).toEqual(['Cage03', 'Cage01', 'Cage02']));
+    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+      historyBefore + 1,
+    );
+    expect(
+      [1, 2, 3].map(
+        (ordinal) =>
+          (
+            screen.getByRole('combobox', {
+              name: `Cage for encounter ${ordinal}`,
+            }) as HTMLSelectElement
+          ).value,
+      ),
+    ).toEqual(['Cage03', 'Cage01', 'Cage02']);
+
+    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
+    await waitFor(() => expect(cagePermutation()).toEqual(['Cage01', 'Cage02', 'Cage03']));
+    expect(
+      (
+        screen.getByRole('combobox', {
+          name: 'Cage for encounter 1',
+        }) as HTMLSelectElement
+      ).value,
+    ).toBe('Cage01');
+  });
+
+  it('keeps a cage selectable across a retained cage-local Gorgon barrier', async () => {
+    const occurrenceId = createOccurrenceId('golden-h-combat02');
+    const view = renderOccurrenceWorkbench(
+      fieldsGorgonBarrierProject(),
+      'Underworld',
+      'H',
+      occurrenceById(occurrenceId),
+    );
+    openRoomTab('Room Timeline');
+    const selector = screen.getByRole('combobox', {
+      name: 'Cage for encounter 1',
+    }) as HTMLSelectElement;
+    const cageTwoOption = within(selector).getByRole('option', {
+      name: 'Cage02',
+    }) as HTMLOptionElement;
+    expect(cageTwoOption.disabled).toBe(false);
+
+    const projected = workspaceProjection(view.application)
+      .routes.find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find((biome) => biome.biomeKey === 'H')
+      ?.nodes.find(
+        (node) => node.kind === 'occurrenceWorkbench' && node.room.occurrenceId === occurrenceId,
+      );
+    if (projected?.kind !== 'occurrenceWorkbench') {
+      throw new Error('Fields Gorgon occurrence workbench is missing');
+    }
+    const roomActions = projected.room.roomActions;
+    const slot = roomActions?.timeline.entries.find(
+      (entry) => entry.kind === 'boundary' && entry.fieldsCageSlot?.slotOrdinal === 1,
+    );
+    const cageTwoChoice =
+      slot?.kind === 'boundary'
+        ? slot.fieldsCageSlot?.choices.find((choice) => choice.value === 'Cage02')
+        : undefined;
+    const genericProposal = roomActions?.proposals.find(
+      (proposal) => proposal.key === cageTwoChoice?.proposalKey,
+    );
+    expect(genericProposal).toMatchObject({ kind: 'move', structurallyAuthorable: false });
+
+    const historyBefore = view.application.store.getState().projectWorkspace.history.past.length;
+    await view.user.selectOptions(selector, 'Cage02');
+    await waitFor(() => {
+      const order = occurrenceRoomActionOrder(
+        view.application.store.getState().projectWorkspace.history.present,
+        'Underworld',
+        'H',
+        occurrenceId,
+      );
+      expect(
+        order?.flatMap((reference) =>
+          reference.kind === 'completeFieldsCage' ? [reference.phaseKey] : [],
+        ),
+      ).toEqual(['Cage02', 'Cage01']);
+      expect(order).toContainEqual({ kind: 'interactGorgon', phaseKey: 'Cage01' });
+    });
+    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+      historyBefore + 1,
+    );
+
+    const edited = workspaceProjection(view.application)
+      .routes.find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find((biome) => biome.biomeKey === 'H')
+      ?.nodes.find(
+        (node) => node.kind === 'occurrenceWorkbench' && node.room.occurrenceId === occurrenceId,
+      );
+    if (edited?.kind !== 'occurrenceWorkbench') {
+      throw new Error('Edited Fields Gorgon occurrence workbench is missing');
+    }
+    const gorgon = edited.room.roomActions?.rows.find(
+      (row) => row.reference.kind === 'interactGorgon' && row.reference.phaseKey === 'Cage01',
+    );
+    expect(gorgon).toMatchObject({ executable: true, issues: [], stale: false });
+  });
+
+  it('keeps a missing active Fields cage anchor in Timeline repairs', () => {
+    const occurrenceId = createOccurrenceId('golden-h-combat02');
+    const authored = threeCageFieldsProject();
+    const malformed = decodeProjectDocument(
+      {
+        ...authored,
+        routes: authored.routes.map((route) => ({
+          ...route,
+          biomes: route.biomes.map((biome) =>
+            biome.biomeKey !== 'H' || biome.topology === null
+              ? biome
+              : {
+                  ...biome,
+                  topology: {
+                    ...biome.topology,
+                    occurrences: biome.topology.occurrences.map((occurrence) =>
+                      occurrence.occurrenceId !== occurrenceId
+                        ? occurrence
+                        : {
+                            ...occurrence,
+                            roomActions: {
+                              order: occurrence.roomActions.order.filter(
+                                (reference) =>
+                                  reference.kind !== 'completeFieldsCage' ||
+                                  reference.phaseKey !== 'Cage03',
+                              ),
+                            },
+                          },
+                    ),
+                  },
+                },
+          ),
+        })),
+      },
+      catalog,
+    );
+    renderOccurrenceWorkbench(malformed, 'Underworld', 'H', occurrenceById(occurrenceId));
+    openRoomTab('Room Timeline');
+    const actions = screen.getByRole('region', { name: 'Room Timeline' });
+    const timeline = within(actions).getByRole('list', { name: 'Room timeline' });
+    const repairs = within(actions).getByRole('region', { name: 'Timeline repairs' });
+    expect(within(timeline).queryByText('Complete Cage03')).toBeNull();
+    expect(within(repairs).getByText('Complete Cage03')).toBeTruthy();
+    expect(within(repairs).getByText('This required action has not been placed.')).toBeTruthy();
   });
 
   it('accepts a Fields optional reward directly on the Room entered checkpoint', async () => {

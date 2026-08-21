@@ -21,6 +21,7 @@ import {
   type WorkspaceLocalVisitDecision,
   type WorkspaceRoomSummary,
   type WorkspaceRoomActions,
+  type WorkspaceFieldsCageSlotControl,
   type WorkspaceRoomLifecycleBoundary,
   type WorkspaceRoomLifecycleTimeline,
   type WorkspaceRoomLifecycleTimelineEntry,
@@ -762,23 +763,61 @@ function LifecycleBoundaryRow({
   boundary,
   dropIndex,
   dropState,
+  fieldsCageSlot,
+  onSelectFieldsCage,
 }: {
   readonly boundary: WorkspaceRoomLifecycleBoundary;
   readonly dropIndex: number;
   readonly dropState?: 'available' | 'unavailable';
+  readonly fieldsCageSlot?: WorkspaceFieldsCageSlotControl;
+  readonly onSelectFieldsCage?: (proposalKey: string) => void;
 }) {
+  const label =
+    fieldsCageSlot === undefined
+      ? lifecycleBoundaryLabel(boundary)
+      : `Start encounter ${fieldsCageSlot.slotOrdinal}`;
   return (
     <li
-      aria-label={lifecycleBoundaryLabel(boundary)}
+      aria-label={label}
       className="room-action-lifecycle-boundary"
       data-drop-position={dropState}
+      data-fields-cage-slot={fieldsCageSlot === undefined ? undefined : 'true'}
       data-lifecycle-boundary={boundary.key}
       data-room-action-drop-index={dropIndex}
+      {...(fieldsCageSlot === undefined
+        ? {}
+        : { id: semanticOwnerControlElementId(fieldsCageSlot.owner), tabIndex: -1 })}
     >
       <span aria-hidden="true" className="hub-roster-rank">
         ·
       </span>
-      <strong>{lifecycleBoundaryLabel(boundary)}</strong>
+      <strong>{label}</strong>
+      {fieldsCageSlot === undefined ? null : (
+        <label className="fields-cage-slot-control">
+          <span className="visually-hidden">Cage for encounter {fieldsCageSlot.slotOrdinal}</span>
+          <select
+            aria-label={`Cage for encounter ${fieldsCageSlot.slotOrdinal}`}
+            onChange={(event) => {
+              const choice = fieldsCageSlot.choices.find(
+                (candidate) => candidate.value === event.target.value,
+              );
+              if (choice?.proposalKey !== undefined) onSelectFieldsCage?.(choice.proposalKey);
+            }}
+            value={fieldsCageSlot.selected}
+          >
+            {fieldsCageSlot.choices.map((choice) => (
+              <option
+                disabled={choice.proposalKey === undefined}
+                key={choice.value}
+                value={choice.value}
+              >
+                {choice.label}
+              </option>
+            ))}
+          </select>
+          <SemanticOwnerMarker address={fieldsCageSlot.marker.address} />
+        </label>
+      )}
     </li>
   );
 }
@@ -844,6 +883,11 @@ function RoomActionsWorkbench({
   const apply = (proposalKey: string): void => {
     const proposal = interaction?.proposals.find((candidate) => candidate.key === proposalKey);
     if (interaction === undefined || proposal?.structurallyAuthorable !== true) return;
+    executeIntent(interaction.intentFor(proposalKey));
+  };
+  const applyFieldsCageSelection = (proposalKey: string): void => {
+    const proposal = interaction?.proposals.find((candidate) => candidate.key === proposalKey);
+    if (interaction === undefined || proposal?.kind !== 'move') return;
     executeIntent(interaction.intentFor(proposalKey));
   };
   const proposalForDrop = (
@@ -982,6 +1026,12 @@ function RoomActionsWorkbench({
         <LifecycleBoundaryRow
           boundary={entry.boundary}
           dropIndex={target.toIndex}
+          {...(entry.fieldsCageSlot === undefined
+            ? {}
+            : {
+                fieldsCageSlot: entry.fieldsCageSlot,
+                onSelectFieldsCage: applyFieldsCageSelection,
+              })}
           {...(targetState === undefined ? {} : { dropState: targetState })}
         />
         {boundarySupplement(entry.boundary)}
@@ -1417,6 +1467,7 @@ function RoomActionsWorkbench({
     if (entry.kind === 'boundary') {
       return [renderBoundary(entry)];
     }
+    if (entry.presentation === 'fieldsCageAnchor') return [];
     const row = actionByKey.get(entry.actionKey);
     return row === undefined ? [] : [renderRow(row, [])];
   });
