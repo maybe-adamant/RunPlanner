@@ -18,6 +18,7 @@ import {
   createCompleteFGProject,
   goldenGBiome,
   goldenGOccurrenceId,
+  goldenHBiome,
 } from '@run-planner/test-fixtures/underworld';
 import { loadSurfaceNOPProject, pBiome, pOccurrenceId } from '@run-planner/test-fixtures/surface';
 import {
@@ -295,6 +296,49 @@ describe('Gorgon Amulet lifecycle', () => {
     expect(catalog.encounterDefinitions.byKey.OpeningGeneratedN?.hostsGorgon).toBe(true);
     expect(catalog.encounterDefinitions.byKey.PreHubGeneratedN?.hostsGorgon).toBe(true);
     expect(catalog.rooms.byKey.N_Sub01?.blocksGorgon).toBe(true);
+  });
+
+  it('keeps every eligible Fields phase editable after the authored cage order changes', () => {
+    const occurrenceId = createOccurrenceId('golden-h-combat02');
+    const cage1 = createEncounterPhaseAddress(
+      goldenHBiome,
+      { kind: 'occurrence', occurrenceId },
+      'Cage01',
+    );
+    const cage2 = createEncounterPhaseAddress(
+      goldenHBiome,
+      { kind: 'occurrence', occurrenceId },
+      'Cage02',
+    );
+    let project = applyProjectCommand(createGoldenFGHProject(), catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: createRouteStartKeepsakeSelectionAddress('Underworld'),
+      keepsakeKey: 'AthenaEncounterKeepsake',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceGorgonDeathDefianceCondition',
+      phase: cage1,
+      value: true,
+    });
+    project = authorGorgon(project, cage1);
+
+    const occurrence = project.routes
+      .find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find((biome) => biome.biomeKey === 'H')
+      ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === occurrenceId);
+    expect(
+      occurrence?.roomActions.order
+        .filter((reference) => reference.kind === 'completeFieldsCage')
+        .map((reference) => reference.phaseKey),
+    ).toEqual(['Cage02', 'Cage01']);
+
+    const assembly = assembled(project);
+    expect(encounterPhaseGorgonSupportForProjectEvaluationAssembly(assembly, cage1)).toMatchObject({
+      supported: true,
+    });
+    expect(encounterPhaseGorgonSupportForProjectEvaluationAssembly(assembly, cage2)).toMatchObject({
+      supported: true,
+    });
   });
 
   it('preserves O/P chronology: opening and intro blockers precede positive generated phases', () => {
@@ -806,8 +850,36 @@ describe('Gorgon Amulet lifecycle', () => {
     pendingProject = authorGorgon(pendingProject, phase);
     const consumed = assembled(pendingProject);
     expect(encounterPhaseGorgonSupportForProjectEvaluationAssembly(consumed, phase)).toMatchObject({
-      supported: false,
+      supported: true,
       rarity: 'Epic',
+    });
+    const trait = createTraitOfferAddress(createGorgonPhaseAddress(phase), 'gorgonAthena');
+    const consumedP = consumed.evaluation.routes
+      .find((route) => route.routeKey === 'Surface')
+      ?.biomes.find((biome) => biome.biomeKey === 'P');
+    if (consumedP === undefined || !('rewards' in consumedP)) {
+      throw new Error('consumed Gorgon evaluation is missing');
+    }
+    const selected = consumedP.rewards.selectedTraitOffers.find(
+      (candidate) => semanticAddressKey(candidate.address) === semanticAddressKey(trait),
+    );
+    expect(selected).toMatchObject({ acquisitionRole: 'gorgonAthena', reached: true });
+    if (selected?.offer.kind !== 'traits') throw new Error('selected Gorgon offer is missing');
+    const session = createPreparedProjectCandidateSession(catalog, consumed);
+    expect(session.traitOfferStartingDraft(trait, 'Athena')).toMatchObject({
+      kind: 'traits',
+      giverKey: 'Athena',
+    });
+    expect(
+      session.evaluate({
+        kind: 'traitOfferFocusedOption',
+        trait,
+        value: selected.offer,
+        optionKey: selected.offer.selectedOptionKey,
+      }),
+    ).toMatchObject({
+      kind: 'traitOfferFocusedOption',
+      result: { supported: true },
     });
 
     const naturalFirst = authorLegalTraitOffers(

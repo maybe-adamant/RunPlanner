@@ -3152,6 +3152,11 @@ select {
   grid-column: 1 / -1;
 }
 
+.room-action-row > .acquisition-entry-resolution {
+  margin-top: 0;
+  padding-top: 5px;
+}
+
 .room-action-issues {
   display: grid;
   gap: 3px;

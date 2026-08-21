@@ -207,13 +207,8 @@ function actionRoster(
       }),
     );
   });
-  if (profileKey === 'FieldsCombatRoom') {
-    points.push(Object.freeze({ kind: 'cleanup', key: 'cleanup' }));
-    points.push(Object.freeze({ kind: 'outgoingGeneration', key: 'outgoingGeneration' }));
-  } else {
-    points.push(Object.freeze({ kind: 'outgoingGeneration', key: 'outgoingGeneration' }));
-    points.push(Object.freeze({ kind: 'cleanup', key: 'cleanup' }));
-  }
+  points.push(Object.freeze({ kind: 'outgoingGeneration', key: 'outgoingGeneration' }));
+  points.push(Object.freeze({ kind: 'cleanup', key: 'cleanup' }));
   const lifecycleStructure: RoomLifecycleStructure = Object.freeze({
     profileKey,
     activeEncounterSlotKeys: Object.freeze(phaseKeys),

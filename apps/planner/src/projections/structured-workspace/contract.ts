@@ -1172,7 +1172,6 @@ export type WorkspaceRoomLifecycleBoundary =
   | { readonly kind: 'encounterStart'; readonly key: string; readonly phaseKey: string }
   | { readonly kind: 'encounterEnd'; readonly key: string; readonly phaseKey: string }
   | { readonly kind: 'nextPhase'; readonly key: string; readonly wheelKey: string }
-  | { readonly kind: 'outgoingGeneration'; readonly key: 'outgoingGeneration' }
   | { readonly kind: 'cleanup'; readonly key: 'cleanup' };
 
 export type WorkspaceRoomLifecycleTimelineEntry =

@@ -209,8 +209,7 @@ export function evaluateEncounterCandidatesInternal(
         origin: exact.origin,
         supported:
           catalog.encounterDefinitions.byKey[support.selectedEncounterKey]?.hostsGorgon === true &&
-          gorgonStatus === 'pending' &&
-          privateGorgon.get(key)?.supported === true,
+          exact.supported,
         ...(exact.rarity === undefined ? {} : { rarity: exact.rarity }),
       }),
     );

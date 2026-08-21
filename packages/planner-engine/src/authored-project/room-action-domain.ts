@@ -502,13 +502,8 @@ export function assembleRoomLifecycleStructure(options: {
   const hasOutgoing = profile.operations.some(
     (operation) => operation.kind === 'generateOutgoingBatch',
   );
-  if (options.lifecycleProfileKey === 'FieldsCombatRoom') {
-    points.push(frozen({ kind: 'cleanup', key: 'cleanup' }));
-    if (hasOutgoing) points.push(frozen({ kind: 'outgoingGeneration', key: 'outgoingGeneration' }));
-  } else {
-    if (hasOutgoing) points.push(frozen({ kind: 'outgoingGeneration', key: 'outgoingGeneration' }));
-    points.push(frozen({ kind: 'cleanup', key: 'cleanup' }));
-  }
+  if (hasOutgoing) points.push(frozen({ kind: 'outgoingGeneration', key: 'outgoingGeneration' }));
+  points.push(frozen({ kind: 'cleanup', key: 'cleanup' }));
   return frozen({
     profileKey: options.lifecycleProfileKey,
     activeEncounterSlotKeys: frozen(activeSlots.map((slot) => slot.key)),

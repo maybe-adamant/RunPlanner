@@ -350,7 +350,7 @@ function replaceFieldsActions(
 }
 
 describe('H Fields materialization', () => {
-  it('defaults a command-created Fields room to declaration cage order with pickups deferred to cleanup', () => {
+  it('defaults a command-created Fields room with required pickups before doors-open Cleanup', () => {
     const occurrenceId = createOccurrenceId('h-materialized-combat02');
     const project = completeProject();
     const authored = plan(project).topology?.occurrences.find(
@@ -390,7 +390,7 @@ describe('H Fields materialization', () => {
       (entry) => entry.kind === 'boundary' && entry.boundary.kind === 'cleanup',
     );
     expect(cleanup).toBeGreaterThan(finalCageEnd);
-    expect(firstPickup).toBeGreaterThan(cleanup);
+    expect(firstPickup).toBeLessThan(cleanup);
     expect(room.roomActionRoster.issues).toEqual([]);
   });
 
@@ -435,7 +435,6 @@ describe('H Fields materialization', () => {
       'encounterStart:Cage02',
       'encounterEnd:Cage02',
       'cleanup',
-      'outgoingGeneration',
     ]);
   });
 

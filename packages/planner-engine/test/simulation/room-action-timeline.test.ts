@@ -130,13 +130,8 @@ function structure(
       }),
     );
   });
-  if (profileKey === 'FieldsCombatRoom') {
-    points.push(Object.freeze({ kind: 'cleanup', key: 'cleanup' }));
-    points.push(Object.freeze({ kind: 'outgoingGeneration', key: 'outgoingGeneration' }));
-  } else {
-    points.push(Object.freeze({ kind: 'outgoingGeneration', key: 'outgoingGeneration' }));
-    points.push(Object.freeze({ kind: 'cleanup', key: 'cleanup' }));
-  }
+  points.push(Object.freeze({ kind: 'outgoingGeneration', key: 'outgoingGeneration' }));
+  points.push(Object.freeze({ kind: 'cleanup', key: 'cleanup' }));
   return Object.freeze({
     profileKey,
     activeEncounterSlotKeys: Object.freeze(encounterPhases.map((phase) => phase.slotKey)),
@@ -208,7 +203,6 @@ describe('room lifecycle timeline', () => {
       'roomEntered',
       'encounterStart',
       'encounterEnd',
-      'outgoingGeneration',
       'cleanup',
     ]);
     expect(timeline.entries.filter((entry) => entry.kind === 'action')).toHaveLength(1);
@@ -267,14 +261,7 @@ describe('room lifecycle timeline', () => {
     const keys = timeline.entries.map((entry) =>
       entry.kind === 'action' ? entry.action.key : entry.boundary.kind,
     );
-    expect(keys).toEqual([
-      'roomEntered',
-      pickup.key,
-      'encounterStart',
-      'encounterEnd',
-      'outgoingGeneration',
-      'cleanup',
-    ]);
+    expect(keys).toEqual(['roomEntered', pickup.key, 'encounterStart', 'encounterEnd', 'cleanup']);
   });
 
   it('keeps lifecycle seams structural when authored action ranks contradict their windows', () => {
@@ -381,7 +368,6 @@ describe('room lifecycle timeline', () => {
       'encounterStart',
       'encounterEnd',
       'cleanup',
-      'outgoingGeneration',
     ]);
     expect(timeline.repairRows.map((row) => row.key)).toEqual([roomActionKey(cage)]);
   });
@@ -419,6 +405,54 @@ describe('room lifecycle timeline', () => {
       ),
     ).toMatchObject({ rank: 1 });
     expect(timeline.repairRows.map((row) => row.key)).toEqual([stale.key]);
+  });
+
+  it('places a late optional Fields Artificer pickup after Cleanup while keeping generation internal', () => {
+    const cage1 = Object.freeze({ kind: 'completeFieldsCage' as const, phaseKey: 'Cage01' });
+    const cage2 = Object.freeze({ kind: 'completeFieldsCage' as const, phaseKey: 'Cage02' });
+    const earlyOptional = Object.freeze({
+      kind: 'interactLocalReward' as const,
+      groupKey: 'optionalRewards',
+      slotKey: 'optional1',
+    });
+    const replacement = Object.freeze({
+      kind: 'interactAcquisitionEntry' as const,
+      siteKey: 'artificer-site',
+      entryKey: 'artificer-entry',
+    });
+    const timeline = assembleRoomLifecycleTimeline({
+      owner,
+      lifecycleProfileKey: 'FieldsCombatRoom',
+      encounterPhases: Object.freeze([encounter('Cage01'), encounter('Cage02')]),
+      roomActionRoster: roster({
+        rows: Object.freeze([
+          rankedRow(earlyOptional, { kind: 'fields' }, 1, 'optional'),
+          rankedRow(cage1, { kind: 'fields', phaseKey: 'Cage01' }, 2),
+          rankedRow(cage2, { kind: 'fields', phaseKey: 'Cage02' }, 3),
+          rankedRow(replacement, { kind: 'fields', phaseKey: 'Cage01' }, 4, 'optional'),
+        ]),
+        checkpoints: Object.freeze([
+          Object.freeze({
+            checkpointKey: 'outgoingGeneration',
+            label: 'Outgoing generation',
+            window: Object.freeze({ kind: 'fields' as const, phaseKey: 'Cage02' }),
+            afterRank: 3,
+          }),
+          Object.freeze({
+            checkpointKey: 'exitUsable',
+            label: 'Exit usable',
+            window: Object.freeze({ kind: 'fields' as const, phaseKey: 'Cage02' }),
+            afterRank: 3,
+          }),
+        ]),
+      }),
+    });
+    const visible = timeline.entries.map((entry) =>
+      entry.kind === 'action' ? entry.action.key : entry.boundary.kind,
+    );
+    expect(visible.indexOf(roomActionKey(earlyOptional))).toBeLessThan(visible.indexOf('cleanup'));
+    expect(visible.indexOf('cleanup')).toBeLessThan(visible.indexOf(roomActionKey(replacement)));
+    expect(visible).not.toContain('outgoingGeneration');
   });
 
   it('derives Fields cage cycles from authored completion order and keeps each cage atomic', () => {
@@ -485,7 +519,6 @@ describe('room lifecycle timeline', () => {
       'encounterStart:Cage01',
       'encounterEnd:Cage01',
       'cleanup:',
-      'outgoingGeneration:',
     ]);
     const cage2Start = timeline.entries.findIndex(
       (entry) => entry.kind === 'boundary' && entry.boundary.key === 'encounterStart:Cage02',
@@ -594,7 +627,6 @@ describe('room lifecycle timeline', () => {
       'nextPhase',
       'encounterStart',
       'encounterEnd',
-      'outgoingGeneration',
       'cleanup',
     ]);
     expect(
@@ -635,7 +667,7 @@ describe('room lifecycle timeline', () => {
     ).toMatchObject({ rank: 2, placement: 'after' });
   });
 
-  it('keeps a three-cage Fields permutation atomic with cleanup before outgoing generation', () => {
+  it('keeps a three-cage Fields permutation atomic with one visible Cleanup boundary', () => {
     const cage = (phaseKey: string) =>
       Object.freeze({ kind: 'completeFieldsCage' as const, phaseKey });
     const reward = (slotKey: string, rank: number) =>
@@ -697,7 +729,6 @@ describe('room lifecycle timeline', () => {
       'encounterStart:Cage02',
       'encounterEnd:Cage02',
       'cleanup:',
-      'outgoingGeneration:',
     ]);
     for (const [phaseKey, completionKey] of [
       ['Cage03', roomActionKey(cage3)],
