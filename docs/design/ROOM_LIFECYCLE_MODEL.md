@@ -245,6 +245,16 @@ therefore retained for correction rather than dropped or silently reordered.
 There is no parallel Fields, Shop, Acquisitions, or presentation-owned action
 assembler and no second order authority.
 
+The same pure structural action domain also classifies required participation
+for semantic commands. When a command newly activates required actions, the
+engine extends the one authored order with their deterministic latest legal
+schedule: lifecycle windows and dependencies constrain placement, existing
+rows keep their relative order, and stable contribution order breaks otherwise
+equal ties. An unrelated retained-invalid row or a pre-existing missing
+prerequisite does not reject the edit or become silently repaired. Missing
+required authorship remains a supported incomplete state with one canonical
+late restore position.
+
 ### Derived authoring timeline
 
 The engine publishes one closed `RoomLifecycleTimeline` beside the
@@ -639,7 +649,10 @@ exitRoom
 `N_Opening01` is not a standard reward-room ordering. Its encounter starts
 late and the room waits for its reward pickup first. `N_PreHub01` uses the
 standard combat-then-reward profile, while its encounter declaration keeps
-that combat non-counting.
+that combat non-counting. The mandatory-action scheduler reads this exact
+profile, so a newly created Opening places its incoming pickup before
+`startEncounter(OpeningGeneratedN)` rather than applying the ordinary
+after-combat reward alias.
 
 ### Ephyra Main Target
 

@@ -834,13 +834,18 @@ producer-owned source, declaration-owned acquisition roles, participation, and
 chronological address. The reward kernel remains the sole authority that turns
 those roles into loot/use history, trait acquisition, and level effects.
 
-Mandatory ordinary entries use derived participation and chronology. Optional
-Shop purchases and spawned pickups use one authored `roomActions.order`, where
-presence is participation and position is chronology. Fields optional pickups
-apply the same membership-before-order invariant in that chronology. Shop inventory continues to own
-the purchased offers; a spawned pickup instead owns its exact authored reward
-and acquisition-time children at the site. No producer owns a parallel
-purchase or pickup order.
+Mandatory ordinary entries derive their required classification and legal
+lifecycle window from the engine's structural action domain. The semantic
+command that activates one default-inserts its exact action reference into the
+occurrence's sole persisted `roomActions.order`, where membership and position
+are the required participation and chronology. Optional Shop purchases and
+spawned pickups use that same order but retain their explicit membership
+controls. Fields optionals apply the same membership-before-order invariant.
+Shop inventory continues to own the purchased offers; a spawned pickup instead
+owns its exact authored reward and acquisition-time children at the site. The
+action row references that semantic payload owner and does not duplicate its
+editor. A deliberately malformed missing-required reference remains explicit
+repair state. No producer owns a parallel purchase or pickup order.
 
 The lifecycle point is producer-specific. A normal room reward emits its
 concrete acquisition on pickup, a Devotion emits its chosen and spurned source
@@ -874,10 +879,12 @@ one exact currently reachable `RunProgress` bag entry with Devotion and Spell
 excluded, records the replacement offer, and destroys the source without
 folding its acquisition history. The complete replacement remains a separate
 source-owned entry and reaches this same concrete-acquisition fold only at its
-later required or optional checkpoint. Mandatory singleton rewards use a fixed
-later checkpoint; authored acquisition sites use their existing order; Fields
-uses its mixed room-action chronology. No pending registry, private order, or
-second bag transition exists.
+later required or optional checkpoint. Every replacement pickup uses the
+occurrence's sole `roomActions.order` within that declaration-owned lifecycle
+window: required membership is default-inserted by the activating command,
+while optional membership remains explicit. Fields uses that same mixed room-
+action chronology. No pending registry, private order, or second bag transition
+exists.
 
 Echo reuses the same boundary in two different ways. Reward Reward Reward
 reads the latest successfully settled acquisition whose concrete declaration

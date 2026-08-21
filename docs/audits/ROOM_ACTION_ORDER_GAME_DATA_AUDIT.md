@@ -597,6 +597,15 @@ row without erasing later retained authorship or hiding repair controls.
 Generated dependent actions retain source identity even while dormant. They
 join the active roster only when the earlier action actually produces them.
 
+The planner now makes mandatory participation the default of the same semantic
+command that structurally activates the action. One engine-owned scheduler
+extends the occurrence's existing order at the latest source-compatible
+lifecycle position; it does not infer required status in React or create a
+parallel mandatory order. This command guarantee does not rewrite source
+evidence or make missing-required documents malformed: an older or deliberately
+incomplete schema-48 document retains its omission and one explicit canonical
+repair, while an unrelated edit leaves that repair state unchanged.
+
 ### Authoring remains attached to the action's semantic owner
 
 Acquisition-time authoring belongs to the action that executes it:
@@ -754,7 +763,13 @@ dependencies, and let every action observe the history produced by earlier
 actions.
 
 The planner now implements this disposition through one occurrence-owned
-`roomActions.order`, one engine roster, and one engine lifecycle timeline.
+`roomActions.order`, one engine structural action domain/default scheduler, one
+roster, and one lifecycle timeline. Semantic commands close only the newly
+required membership delta before publishing a decoded document; simulation
+consumes the same structural contributions. Active required rows are move-only,
+while explicit malformed omissions remain repairable and optional Shop,
+Fields-minor, Narcissus, Travel, Gold, Contract, and optional Artificer
+participation retain their prior owners.
 Ordinary combat-NPC, Gorgon Fields, optional participation, multiple-Artificer,
 O repeated-checkpoint, and N occurrence-boundary chronologies remain the
 representative witnesses. H tests broad interleaving among already-present

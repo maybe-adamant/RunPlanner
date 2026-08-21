@@ -235,6 +235,14 @@ Actions consumes the engine lifecycle timeline plus the one occurrence-owned
 chronology. Doors consumes the unchanged total outgoing-stage product. A
 section is omitted when its projected product is empty.
 
+Required chronology rows arrive ranked from the activating semantic command
+and expose only engine-assessed moves. React renders no Position or generic
+Remove control for them. A retained malformed omission is the exception: its
+unranked required row exposes exactly one canonical restore intent supplied by
+the engine. The application binds that intent without selecting an insertion
+rank, while optional membership and stale removal remain on their established
+paths.
+
 Manual tab selection is transient and defaults to Overview for a newly focused
 occurrence. Exact semantic focus overrides it: setup and purchase markers open
 Overview, active encounter/action owners open the matching Actions tab,
@@ -288,12 +296,15 @@ repair.
 
 Every reached acquisition role reuses the shared disposition control for
 ordinary acquisition, Time Piece, and supported Artificer. Selecting Artificer
-publishes the complete replacement reward editor at its source-owned semantic
-address. Ordered sites expose its later pickup through their existing
-chronology; a mandatory singleton shows a fixed required replacement without a
-synthetic order control. React renders the engine's support, replacement
-domain, and complete command intents and does not evaluate eligibility or bag
-state.
+publishes the complete replacement reward editor at its exact generated-
+acquisition owner. Ordered sites expose its later pickup through their existing
+chronology. When that pickup is required, the activating command inserts its
+action reference in the sole persisted order and the workbench renders one
+move-only action card with no generic Remove or Position control; an optional
+replacement retains its explicit participation path. The action card contains
+the owner-bound editor rather than duplicating it elsewhere. React renders the
+engine's support, replacement domain, and complete command intents and does not
+evaluate eligibility or bag state.
 
 The control presents those authored choices as reward outcomes rather than
 exposing internal role vocabulary. An automatic Forfeit veto is not added to
@@ -801,11 +812,13 @@ Room Actions row exposes resolution children and chronology only; it cannot
 turn the purchased Boon, Mystery Boon, Pom, or other item into another reward.
 
 The same Room Actions chronology contains declaration-produced pickups such as Narcissus
-outputs. It derives entry labels, participation, order, reward controls, and
-exact acquisition children from the engine product. Producer cards may expose
-the outer Story choice or Shop inventory, but they do not duplicate pickup-
-owned trait or Pom editors. Mandatory singleton settlements remain compact and
-do not acquire an otherwise empty action card.
+outputs. It derives entry labels, required/optional classification, lifecycle
+windows, reward controls, and exact acquisition children from the engine
+product, while exact membership and chronology come from the occurrence's sole
+persisted order. Producer cards may expose the outer Story choice or Shop
+inventory, but they do not duplicate pickup-owned reward, trait, or Pom
+editors. A mandatory singleton renders one already-ranked, move-only action
+card; a malformed omission renders its one canonical restore repair instead.
 
 The same closure applies to Artificer replacement children. Every reached
 replacement reward, trait offer, Pom resolution, disposition, and later pickup

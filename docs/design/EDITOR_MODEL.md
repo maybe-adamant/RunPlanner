@@ -219,6 +219,15 @@ tab presents its projected lifecycle Run State: Overview and ordinary Actions
 share the entry snapshot, each Ship Actions tab uses its phase-start snapshot,
 and Doors uses the pre-exit snapshot. Inactive Actions remains launcher-free.
 
+A normal active required action is already ranked when its owner becomes
+structurally active. Its row is move-only within engine-published legal
+positions: it has neither a Position selector nor a generic Remove action.
+Deliberately malformed input that already omits a required action remains
+visible as repair state and exposes one direct `Restore required action`
+control bound to the engine's canonical late insertion, not a menu of
+application-chosen positions. Optional participation and stale-row repair keep
+their existing owning controls.
+
 ShipCombat uses Room Overview, Intro Actions, Combat 1 Actions, optional Combat
 2 Actions, and Room Doors. Encounter count stays in Overview. Each phase tab
 consumes the engine timeline, including its encounter picker and following

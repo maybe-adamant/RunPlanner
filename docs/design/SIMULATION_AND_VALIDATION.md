@@ -1108,12 +1108,16 @@ producer-owned source and may own acquisition-time trait or level detail.
 
 Canonical simulation settles all current acquisition families through that
 one product. Ordinary room, Devotion, O wheel, H cage, and entered N main/side
-rewards have derived mandatory participation. Shop offers and declaration-
-produced pickups participate through exact action references in the
-occurrence's one authored `roomActions.order`. Each entry receives the branches
-produced by its predecessor, so legality and effects are progressive within the
-room chronology; the simulator never searches another ordering to rescue an
-invalid authored sequence.
+rewards have engine-derived required classification and lifecycle windows. The
+activating semantic command default-inserts their exact required references in
+the occurrence's sole persisted `roomActions.order`; Shop offers and optional
+declaration-produced pickups join that same order through their explicit
+participation controls. Each entry receives the branches produced by its
+predecessor, so legality and effects are progressive within the persisted room
+chronology; the simulator never searches another ordering to rescue an invalid
+authored sequence. A deliberately missing required reference remains an
+incomplete, repairable authored state rather than being synthesized during
+simulation.
 
 For an entered shop, evaluate ordered groups against the pre-generation fact
 snapshot, validate every authored offer against an eligible option entry, and

@@ -21,7 +21,10 @@ occurrence-owned `roomActions.order`. Schema 48 removed the redundant authored
 project name; the profile filename is application session state. The lifecycle
 timeline, lifecycle Run State checkpoints, and Shop Purchased markers added
 after schema 48 are derived products over this state and did not change the
-persisted contract.
+persisted contract. Mandatory Room Action defaults likewise use the existing
+`roomActions.order`: semantic commands add newly active required references at
+their engine-owned canonical late position without adding a required-action
+set, derived order, or schema field.
 
 There is one biome plan and one topology language. Production state and
 semantic addresses have no layout-specific plan family, completion-transition
@@ -211,9 +214,11 @@ acquisition disposition: `normal`, `timePiece`, or `artificer` with a complete
 `RunProgress` replacement reward. The child belongs to its exact source and
 acquisition role. Ordinary ordered acquisition sites represent its later
 pickup with a collision-safe source-derived entry key; Fields uses its one
-room-action chronology. Mandatory singleton room rewards derive the later
-required pickup checkpoint and persist no synthetic one-row order. No pending
-Artificer map or remaining-use counter is authored.
+room-action chronology. Mandatory singleton room rewards derive their required
+classification and pickup checkpoint, but activation/default reconciliation
+persists the exact pickup reference in the occurrence's one shared
+`roomActions.order`; there is no separate or synthetic one-row order. No
+pending Artificer map or remaining-use counter is authored.
 
 ## Common Decision Model
 
@@ -413,7 +418,11 @@ reward, trait-offer, and level-resolution children in the site's
 matching `interactAcquisitionEntry` in `roomActions.order`. Shop offers remain
 owned by Shop inventory, while their matching `interactShopOffer` references
 carry purchase participation and chronology. Mandatory singleton room rewards
-have derived participation and create no redundant persisted site state.
+derive required classification and lifecycle timing and create no redundant
+persisted site state. Their activating semantic command nevertheless inserts
+the exact required action reference into the occurrence's sole
+`roomActions.order`; that row points back to the existing reward/acquisition
+owner rather than copying its payload.
 Declaration-derived supplemental entries, currently Gold Gold Gold's free Shop
 duplicate and Travel Deal's refill, may own sparse acquisition-time children at
 the site. A dormant payload may exist without participating; adding its fixed
@@ -437,6 +446,24 @@ conversion edit without changing `roomActions.order`. `SelectDerivedShopEntry`
 atomically materializes the same default and applies one engine-supplied
 complete participation/order proposal. These are one shared command family,
 not effect-specific state or a second Shop chronology.
+
+The engine classifies every structurally active Room Action as required or
+optional from the same action domain consumed by simulation. The semantic
+command that newly activates a required reference inserts it in the
+occurrence's order at the latest lifecycle-compatible position, preserving the
+relative sequence of retained rows; one command and one history entry therefore
+contain both the requested edit and its mandatory membership delta. Optional
+actions remain membership-controlled by their existing owner. An active
+required row may be moved within its legal range but cannot be generically
+removed.
+
+This guarantee is deliberately delta-only. A decoded or deliberately malformed
+schema-48 document may already omit a required reference, and an unrelated edit
+does not normalize that omission. Evaluation retains the missing-required
+finding and publishes one engine-owned canonical restore intent. Dormant and
+stale rows likewise remain authored until an explicit owning command removes
+them; reactivation of the same key reuses its retained position rather than
+adding a duplicate.
 
 A Fields combat occurrence owns three related but non-duplicated products:
 declaration-bounded cage reward values, a complete retained optional inventory
@@ -599,6 +626,13 @@ project evaluation, candidate capability, history or reward branch, encounter
 activation result, or contextual trait assessment. Contextual impossibility is
 derived validation truth, so an authored value remains persisted until an
 explicit semantic command changes or removes it.
+
+Before decoding a successful proposed document, the command boundary compares
+the structurally active Room Action domains before and after the edit and
+closes only the newly required delta. This pure authored-domain step does not
+invoke simulation or materialization. It may seed several newly active
+occurrences or one Fields/Ship cohort atomically, but it neither repairs
+pre-existing omissions nor removes rows made dormant by the command.
 
 The command language includes project and route commands; start, batch, target,
 takeover, selection, removal, and clear-topology commands; terminal Hub
