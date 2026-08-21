@@ -18,10 +18,7 @@ import { describe, expect, it } from 'vitest';
 
 import { createApplication } from '@planner/composition/createApplication';
 import { authoredProjectReplaced } from '@planner/state/projectWorkspaceSlice';
-import {
-  authorLegalTraitOffers,
-  authorRequiredTestRoomActions,
-} from '@run-planner/test-fixtures/shared';
+import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 import {
   createCompleteFGProject,
   goldenFBiome,
@@ -293,7 +290,7 @@ describe('route NPC index projection', () => {
       expect(localIndex.groups[0]?.entries.map((entry) => entry.phase)).toContainEqual(localPhase);
 
       const metadataFreeCatalog = withoutArtemisPresentationMetadata();
-      const authoredProject = authorRequiredTestRoomActions(project, catalog);
+      const authoredProject = project;
       const metadataFreeAssembly = simulateProjectAssembly(metadataFreeCatalog, authoredProject);
       expect(
         encounterPhaseCandidateSupportForProjectEvaluationAssembly(

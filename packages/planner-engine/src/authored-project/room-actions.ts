@@ -98,18 +98,6 @@ export function createEmptyRoomActionState(): RoomActionState {
   return Object.freeze({ order: Object.freeze([]) });
 }
 
-/** Closed authored structural domain used to reject invented insert commands. */
-export function roomActionReferenceSupported(
-  catalog: Catalog,
-  biome: import('./addresses').BiomeAddress,
-  occurrence: RoomOccurrence,
-  reference: RoomActionReference,
-): boolean {
-  return activeRoomActionReferences(catalog, biome, occurrence).some(
-    (candidate) => roomActionKey(candidate) === roomActionKey(reference),
-  );
-}
-
 /** Complete structural action domain for one authored occurrence. */
 export function activeRoomActionReferences(
   catalog: Catalog,

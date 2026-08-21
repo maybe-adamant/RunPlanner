@@ -14,10 +14,7 @@ import {
   createPreparedProjectCandidateSession,
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
-import {
-  authorLegalTraitOffers,
-  authorRequiredTestRoomActions,
-} from '@run-planner/test-fixtures/shared';
+import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 import { createGoldenFGHIProject, goldenHBiome } from '@run-planner/test-fixtures/underworld';
 
 /** Bounded Golden H reauthoring that truthfully acquires Gold before its reached Preboss Shop. */
@@ -68,7 +65,6 @@ export function createEchoGoldHPrebossProject(): ProjectDocument {
     occurrence: createOccurrenceAddress(goldenHBiome, forcedTarget),
     gameName: 'H_MiniBoss02',
   });
-  project = authorRequiredTestRoomActions(project, catalog);
   const forcedReward = createIncomingRewardAddress(goldenHBiome, forcedTarget);
   const rewardSession = createPreparedProjectCandidateSession(
     catalog,
@@ -97,7 +93,6 @@ export function createEchoGoldHPrebossProject(): ProjectDocument {
     reward: forcedReward,
     value: replacement.offer,
   });
-  project = authorRequiredTestRoomActions(project, catalog);
   const forcedTrait = createTraitOfferAddress(forcedReward, 'source');
   const traitDraft = createPreparedProjectCandidateSession(
     catalog,

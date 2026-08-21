@@ -15,11 +15,7 @@ import {
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
-import {
-  authorLegalTraitOffers,
-  authorRequiredTestRoomActions,
-  replaceTestShopOfferActions,
-} from '../shared';
+import { authorLegalTraitOffers, replaceTestShopOfferActions } from '../shared';
 import { authorTestArtificerReplacement } from '../room-actions';
 import {
   loadUnderworldFGCheckpoint,
@@ -122,7 +118,7 @@ export function createCompleteFGProject(options: GoldenGProjectOptions = {}): Pr
       });
     }
   }
-  return authorRequiredTestRoomActions(authorLegalTraitOffers(project), catalog);
+  return authorLegalTraitOffers(project);
 }
 
 export function createGoldenFGHProject(): ProjectDocument {
@@ -187,7 +183,7 @@ export function createFConversionFrontierProject(
     decision: createExitDecisionAddress(goldenFBiome, source(occurrenceId)),
   });
   return Object.freeze({
-    project: authorRequiredTestRoomActions(project, catalog),
+    project,
     acquisition: createAcquisitionRoleAddress(reward, 'self'),
     unreachedAcquisition: createAcquisitionRoleAddress(
       createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(2, 1)),
@@ -210,7 +206,7 @@ export function createFInvalidLaterConversionProject(): FConversionFrontierFixtu
     value: { rewardType: 'MetaCurrencyDrop' },
   });
   return Object.freeze({
-    project: authorRequiredTestRoomActions(project, catalog),
+    project,
     acquisition: createAcquisitionRoleAddress(reachedReward, 'self'),
     unreachedAcquisition: createAcquisitionRoleAddress(blockedReward, 'self'),
   });

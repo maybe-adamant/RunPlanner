@@ -6,6 +6,7 @@ import {
   applyProjectCommand,
   createAdditionalExitAddress,
   createBatchRewardStoreAddress,
+  createBiomeAddress,
   createExitDecisionAddress,
   createExitSelectionAddress,
   createEncounterPhaseAddress,
@@ -18,7 +19,10 @@ import {
   createRouteAddress,
   createTargetAddress,
   createTraitOfferAddress,
+  roomActionDomainForOccurrence,
+  roomActionKey,
   semanticAddressKey,
+  structurallyActiveOccurrenceIds,
   traitGiverForAcquisitionRole,
   type BiomeAddress,
   type OccurrenceId,
@@ -57,7 +61,6 @@ import {
 } from './support/f-takeover-project';
 import {
   authorLegalTraitOffers,
-  authorRequiredTestRoomActions,
   authorTestArtificerReplacement,
 } from '@run-planner/test-fixtures/shared';
 import {
@@ -476,7 +479,6 @@ describe('progressive biome evaluation', () => {
       if (replacement === undefined)
         throw new Error(`${replacementRewardType} Artificer replacement is missing`);
       project = authorTestArtificerReplacement(project, catalog, fixture.acquisition, replacement);
-      project = authorRequiredTestRoomActions(project, catalog);
       const assembly = simulateProjectAssembly(catalog, project);
       const role = Object.keys(replacement.traitOffersByAcquisitionRole)[0];
       if (role === undefined) throw new Error(`${replacementRewardType} has no trait role`);
@@ -1601,5 +1603,35 @@ describe('progressive biome evaluation', () => {
     }
     expect(Object.isFrozen(firstUnderworld)).toBe(true);
     expect(Object.isFrozen(firstUnderworld.routes)).toBe(true);
+  });
+
+  it('keeps every active occurrence in the representative F-through-Q fixtures closed over required actions', () => {
+    const missing: string[] = [];
+    for (const project of [createGoldenFGHIProject(), loadSurfaceNOPQProject()]) {
+      for (const route of project.routes) {
+        for (const plan of route.biomes) {
+          if (plan.topology === null) continue;
+          const biome = createBiomeAddress(route.routeKey, plan.biomeKey);
+          for (const occurrenceId of structurallyActiveOccurrenceIds(plan.topology)) {
+            const resolved = roomActionDomainForOccurrence(project, catalog, biome, occurrenceId);
+            if (resolved === undefined)
+              throw new Error(`missing active ${plan.biomeKey} occurrence`);
+            const authored = new Set(resolved.occurrence.roomActions.order.map(roomActionKey));
+            for (const contribution of resolved.domain.contributions) {
+              if (
+                contribution.kind === 'action' &&
+                contribution.participation === 'required' &&
+                !authored.has(roomActionKey(contribution.reference))
+              ) {
+                missing.push(
+                  `${route.routeKey}/${plan.biomeKey}/${occurrenceId}/${roomActionKey(contribution.reference)}`,
+                );
+              }
+            }
+          }
+        }
+      }
+    }
+    expect(missing).toEqual([]);
   });
 });

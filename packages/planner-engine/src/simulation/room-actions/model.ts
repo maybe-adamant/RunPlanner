@@ -1,35 +1,20 @@
 import type { SemanticAddress } from '../../authored-project/addresses';
 import type { RoomActionReference } from '../../authored-project/model';
+import type {
+  RoomActionCheckpointContribution,
+  RoomActionContribution,
+  RoomActionDependency,
+  RoomActionParticipation,
+  RoomActionWindow,
+} from '../../authored-project/room-action-domain';
 
-export type RoomActionParticipation = 'required' | 'optional';
-
-export type RoomActionWindow =
-  | { readonly kind: 'standard'; readonly phase: 'beforeCombat' | 'afterCombat' }
-  | { readonly kind: 'postOutgoing' }
-  | { readonly kind: 'fields'; readonly phaseKey?: string }
-  | { readonly kind: 'shipPreCombat'; readonly wheelKey: string }
-  | { readonly kind: 'shipPostCombat'; readonly wheelKey: string };
-
-export type RoomActionDependency =
-  | { readonly kind: 'afterAction'; readonly action: RoomActionReference }
-  | { readonly kind: 'afterCheckpoint'; readonly checkpointKey: string }
-  | { readonly kind: 'beforeCheckpoint'; readonly checkpointKey: string };
-
-export interface RoomActionContribution {
-  readonly kind: 'action';
-  readonly reference: RoomActionReference;
-  readonly owner: SemanticAddress;
-  readonly participation: RoomActionParticipation;
-  readonly window: RoomActionWindow;
-  readonly dependencies: readonly RoomActionDependency[];
-}
-
-export interface RoomActionCheckpointContribution {
-  readonly kind: 'checkpoint';
-  readonly checkpointKey: string;
-  readonly label: string;
-  readonly window: RoomActionWindow;
-}
+export type {
+  RoomActionCheckpointContribution,
+  RoomActionContribution,
+  RoomActionDependency,
+  RoomActionParticipation,
+  RoomActionWindow,
+} from '../../authored-project/room-action-domain';
 
 export type RoomActionRosterContribution =
   RoomActionContribution | RoomActionCheckpointContribution;

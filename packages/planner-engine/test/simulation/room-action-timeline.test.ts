@@ -106,6 +106,39 @@ describe('room lifecycle timeline', () => {
     expect(timeline.repairRows).toEqual([]);
   });
 
+  it('keeps required pre-combat work before Start and post-combat work after End', () => {
+    const before = rankedRow(
+      {
+        kind: 'interactIncomingReward',
+        producerPoint: 'roomEntrance',
+        acquisitionRole: 'source',
+      },
+      { kind: 'standard', phase: 'beforeCombat' },
+      1,
+    );
+    const after = rankedRow(
+      {
+        kind: 'interactIncomingReward',
+        producerPoint: 'roomRewardPickup',
+        acquisitionRole: 'source',
+      },
+      { kind: 'standard', phase: 'afterCombat' },
+      2,
+    );
+    const timeline = assembleRoomLifecycleTimeline({
+      owner,
+      lifecycleProfileKey: 'StandardCombatRoom',
+      encounterPhases: Object.freeze([encounter('Combat')]),
+      roomActionRoster: roster({ rows: Object.freeze([before, after]) }),
+    });
+    const keys = timeline.entries.map((entry) =>
+      entry.kind === 'action' ? entry.action.key : entry.boundary.kind,
+    );
+    expect(keys.indexOf(before.key)).toBeLessThan(keys.indexOf('encounterStart'));
+    expect(keys.indexOf('encounterStart')).toBeLessThan(keys.indexOf('encounterEnd'));
+    expect(keys.indexOf('encounterEnd')).toBeLessThan(keys.indexOf(after.key));
+  });
+
   it('retains unranked rows for repair without changing roster membership', () => {
     const row = Object.freeze({
       reference: Object.freeze({ kind: 'chooseRewardWheel' as const, wheelKey: 'wheel1' }),
@@ -417,7 +450,7 @@ describe('room lifecycle timeline', () => {
     expect(wheelTwoStart).toBeGreaterThan(wheelOnePickup);
     expect(wheelTwoStart).toBeLessThan(wheelTwoChoice);
     expect(combatTwoStart).toBeGreaterThan(wheelOnePickup);
-    expect(wheelTwoChoice).toBeGreaterThan(combatTwoStart);
+    expect(wheelTwoChoice).toBeLessThan(combatTwoStart);
     expect(
       timeline.entries.find(
         (entry) => entry.kind === 'boundary' && entry.boundary.key === 'nextPhase:wheel2',

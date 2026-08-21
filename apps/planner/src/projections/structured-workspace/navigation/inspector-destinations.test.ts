@@ -204,23 +204,15 @@ function echoReplayProject(child?: {
     .find((biome) => biome.biomeKey === 'H')
     ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === bridgeId);
   if (bridge === undefined) throw new Error('Golden H Echo bridge is missing');
-  const encounterAlreadyRanked = bridge.roomActions.order.some(
-    (reference) => roomActionKey(reference) === roomActionKey(encounterReference),
-  );
-  if (!encounterAlreadyRanked) {
-    document = applyProjectCommand(document, catalog, {
-      kind: 'InsertRoomAction',
-      action: createRoomActionAddress(goldenHBiome, bridgeId, roomActionKey(encounterReference)),
-      reference: encounterReference,
-      index: bridge.roomActions.order.length,
-    });
+  for (const reference of [encounterReference, pickupReference]) {
+    if (
+      !bridge.roomActions.order.some(
+        (candidate) => roomActionKey(candidate) === roomActionKey(reference),
+      )
+    ) {
+      throw new Error(`Echo activation did not rank ${roomActionKey(reference)}`);
+    }
   }
-  document = applyProjectCommand(document, catalog, {
-    kind: 'InsertRoomAction',
-    action: createRoomActionAddress(goldenHBiome, bridgeId, roomActionKey(pickupReference)),
-    reference: pickupReference,
-    index: bridge.roomActions.order.length + (encounterAlreadyRanked ? 0 : 1),
-  });
   if (child !== undefined) {
     document = applyProjectCommand(document, catalog, {
       kind: 'ReplaceAcquisitionEntryOffer',

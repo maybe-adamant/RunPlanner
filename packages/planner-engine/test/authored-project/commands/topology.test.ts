@@ -22,10 +22,7 @@ import {
   redoProjectHistory,
   undoProjectHistory,
 } from '@run-planner/engine/authored-project';
-import {
-  authorRequiredTestRoomActions,
-  replaceTestShopOfferActions,
-} from '@run-planner/test-fixtures/shared';
+import { replaceTestShopOfferActions } from '@run-planner/test-fixtures/shared';
 import {
   composeBiomeHistoryPrefix,
   materializeBiomePrefix,
@@ -986,7 +983,7 @@ describe('authored-project commands and topology', () => {
     ).toThrow(ProjectCommandContractError);
   });
 
-  it('re-anchors one selected ordinary continuation without rewriting its subtree or target packages', () => {
+  it('re-anchors one selected ordinary continuation without rewriting its subtree or target payload beyond activated defaults', () => {
     const openingId = createOccurrenceId('reanchor-opening');
     const sourceId = createOccurrenceId('reanchor-source');
     const priorId = createOccurrenceId('reanchor-prior');
@@ -1186,9 +1183,18 @@ describe('authored-project commands and topology', () => {
     expect(topology.occurrences.find((occurrence) => occurrence.occurrenceId === priorId)).toEqual(
       priorPackage,
     );
-    expect(topology.occurrences.find((occurrence) => occurrence.occurrenceId === nextId)).toEqual(
-      nextPackage,
-    );
+    expect(topology.occurrences.find((occurrence) => occurrence.occurrenceId === nextId)).toEqual({
+      ...nextPackage,
+      roomActions: {
+        order: [
+          {
+            kind: 'interactIncomingReward',
+            producerPoint: 'roomRewardPickup',
+            acquisitionRole: 'self',
+          },
+        ],
+      },
+    });
     expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(reanchored)), catalog)).toEqual(
       reanchored,
     );
@@ -1212,8 +1218,7 @@ describe('authored-project commands and topology', () => {
       parent: { occurrenceId: nextId },
     });
     expect(historyPrefix).not.toBeNull();
-    const evaluated = simulateProject(catalog, authorRequiredTestRoomActions(reanchored, catalog))
-      .routes[0]?.biomes[0];
+    const evaluated = simulateProject(catalog, reanchored).routes[0]?.biomes[0];
     if (evaluated === undefined || !('history' in evaluated)) {
       throw new Error('re-anchor simulation did not retain its reached history');
     }

@@ -1,6 +1,11 @@
 import type { Catalog } from '../../catalog-schema';
 import type { ProjectDocument, RoomActionReference } from '../model';
-import { roomActionKey, roomActionReferenceSupported } from '../room-actions';
+import { roomActionKey } from '../room-actions';
+import {
+  roomActionDomainForOccurrence,
+  scheduleRequiredRoomActions,
+  structurallyActiveOccurrenceIds,
+} from '../room-action-defaults';
 import { createBiomeAddress } from '../addresses';
 import { failCommand, requireOccurrence, requireTopology, type LocatedBiome } from './contract';
 import { replaceOccurrence, updateOccurrenceTopology } from './occurrence-mutation';
@@ -29,6 +34,15 @@ export function applyRoomActionCommand(
       ? command.offer.occurrenceId
       : command.action.occurrenceId;
   const occurrence = requireOccurrence(located.plan, occurrenceId, command);
+  const occurrenceIsActive = structurallyActiveOccurrenceIds(topology).has(occurrenceId);
+  const commandAddress =
+    command.kind === 'ReplaceShopPurchaseParticipation' ? command.offer : command.action;
+  const domain = roomActionDomainForOccurrence(
+    document,
+    catalog,
+    createBiomeAddress(commandAddress.routeKey, commandAddress.biomeKey),
+    occurrenceId,
+  )?.domain;
   const order = occurrence.roomActions.order;
   if (command.kind === 'ReplaceShopPurchaseParticipation') {
     const reference = Object.freeze({
@@ -86,18 +100,29 @@ export function applyRoomActionCommand(
       if (key !== command.action.actionKey) {
         failCommand(command, 'reference does not match the addressed room action');
       }
-      if (
-        !roomActionReferenceSupported(
-          catalog,
-          createBiomeAddress(command.action.routeKey, command.action.biomeKey),
-          occurrence,
-          command.reference,
-        )
-      ) {
+      const contribution = domain?.contributions.find(
+        (entry) =>
+          entry.kind === 'action' && roomActionKey(entry.reference) === command.action.actionKey,
+      );
+      if (!occurrenceIsActive || domain === undefined || contribution?.kind !== 'action') {
         failCommand(command, 'room action is not active for this occurrence');
       }
       if (existingIndex >= 0) failCommand(command, 'room action is already ordered');
       requireIndex(command, command.index, order.length, 'index');
+      if (contribution.participation === 'required') {
+        const canonical = scheduleRequiredRoomActions({
+          catalog,
+          domain,
+          order,
+          requiredKeys: new Set([command.action.actionKey]),
+        });
+        const canonicalIndex = canonical.findIndex(
+          (reference) => roomActionKey(reference) === command.action.actionKey,
+        );
+        if (command.index !== canonicalIndex) {
+          failCommand(command, `required room action canonical index is ${canonicalIndex}`);
+        }
+      }
       nextOrder = [...order];
       nextOrder.splice(command.index, 0, command.reference);
       break;
@@ -106,6 +131,17 @@ export function applyRoomActionCommand(
       if (existingIndex < 0) failCommand(command, 'room action is not ordered');
       if (order[existingIndex]?.kind === 'interactShopOffer') {
         failCommand(command, 'base Shop purchases use ReplaceShopPurchaseParticipation');
+      }
+      if (
+        occurrenceIsActive &&
+        domain?.contributions.some(
+          (entry) =>
+            entry.kind === 'action' &&
+            entry.participation === 'required' &&
+            roomActionKey(entry.reference) === command.action.actionKey,
+        )
+      ) {
+        failCommand(command, 'active required room action cannot be removed');
       }
       nextOrder = order.filter((_, index) => index !== existingIndex);
       break;

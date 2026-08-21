@@ -5,7 +5,24 @@ export {
   artificerReplacementEntryKey,
   parseArtificerReplacementEntryKey,
 } from './artificer';
-export { activeRoomActionReferences, roomActionReferenceSupported } from './room-actions';
+export { activeRoomActionReferences } from './room-actions';
+export {
+  assembleRoomActionDomain,
+  roomActionWindowRank,
+  type RoomActionCheckpointContribution,
+  type RoomActionContribution,
+  type RoomActionDependency,
+  type RoomActionDomain,
+  type RoomActionDomainContribution,
+  type RoomActionParticipation,
+  type RoomActionWindow,
+} from './room-action-domain';
+export {
+  reconcileNewRequiredRoomActions,
+  roomActionDomainForOccurrence,
+  scheduleRequiredRoomActions,
+  structurallyActiveOccurrenceIds,
+} from './room-action-defaults';
 export { deriveFieldsActiveCageCount, fieldsDefaultActiveCageCount } from './fields';
 export {
   decodeProjectDocument,

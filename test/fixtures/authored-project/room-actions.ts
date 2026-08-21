@@ -8,8 +8,10 @@ import {
   createRoomActionAddress,
   createShopOfferAddress,
   createTraitOfferAddress,
-  decodeProjectDocument,
+  roomActionDomainForOccurrence,
   roomActionKey,
+  scheduleRequiredRoomActions,
+  structurallyActiveOccurrenceIds,
   type AcquisitionRoleAddress,
   type AuthoredRewardState,
   type ProjectDocument,
@@ -17,174 +19,9 @@ import {
   type RoomActionReference,
 } from '@run-planner/engine/authored-project';
 import {
-  evaluateBiomeCompleteness,
-  assembleRoomActionRoster,
-  materializeBiome,
-  materializeBiomePrefix,
-  type RoomActionRoster,
-  type RoomActionRosterContribution,
-} from '@run-planner/engine/simulation';
-import {
   artificerAcquisitionSite,
   artificerReplacementEntryKey,
 } from '@run-planner/engine/authored-project';
-
-function materializedActionRosters(
-  project: ProjectDocument,
-  catalog: Catalog,
-): ReadonlyMap<string, RoomActionRoster> {
-  const result = new Map<string, RoomActionRoster>();
-  const visit = (value: unknown): void => {
-    if (value === null || typeof value !== 'object') return;
-    const candidate = value as {
-      readonly kind?: string;
-      readonly occurrenceId?: string;
-      readonly roomActionRoster?: RoomActionRoster;
-    };
-    if (
-      candidate.kind === 'authored' &&
-      candidate.occurrenceId !== undefined &&
-      candidate.roomActionRoster !== undefined
-    ) {
-      result.set(candidate.occurrenceId, candidate.roomActionRoster);
-    }
-    for (const child of Object.values(value)) visit(child);
-  };
-  for (const route of project.routes) {
-    for (const biomePlan of route.biomes) {
-      const biome = createBiomeAddress(route.routeKey, biomePlan.biomeKey);
-      const completeness = evaluateBiomeCompleteness(catalog, biome, biomePlan);
-      const materialized =
-        completeness.completion === 'complete'
-          ? materializeBiome(catalog, biome, completeness, route.loadout)
-          : materializeBiomePrefix(catalog, biome, biomePlan, route.loadout);
-      visit(materialized);
-    }
-  }
-  return result;
-}
-
-/** Populate declaration-required chronology in complete product fixtures only. */
-export function authorRequiredTestRoomActions(
-  initial: ProjectDocument,
-  catalog: Catalog,
-): ProjectDocument {
-  const rosters = materializedActionRosters(initial, catalog);
-  const orderByOccurrence = new Map<string, readonly RoomActionReference[]>();
-  for (const route of initial.routes) {
-    for (const biomePlan of route.biomes) {
-      const biome = createBiomeAddress(route.routeKey, biomePlan.biomeKey);
-      for (const occurrence of biomePlan.topology?.occurrences ?? []) {
-        const initialRoster = rosters.get(occurrence.occurrenceId);
-        if (initialRoster === undefined) continue;
-        const contributions: readonly RoomActionRosterContribution[] = Object.freeze([
-          ...initialRoster.rows.flatMap((row) =>
-            row.stale
-              ? []
-              : [
-                  {
-                    kind: 'action' as const,
-                    reference: row.reference,
-                    owner: row.owner,
-                    participation: row.participation,
-                    window: row.window,
-                    dependencies: row.dependencies,
-                  },
-                ],
-          ),
-          ...initialRoster.checkpoints.map((checkpoint) => ({
-            kind: 'checkpoint' as const,
-            checkpointKey: checkpoint.checkpointKey,
-            label: checkpoint.label,
-            window: checkpoint.window,
-          })),
-        ]);
-        const staleKeys = new Set(
-          initialRoster.rows.filter((row) => row.stale).map((row) => row.key),
-        );
-        let order: readonly RoomActionReference[] = occurrence.roomActions.order.filter(
-          (reference) => !staleKeys.has(roomActionKey(reference)),
-        );
-        for (let editCount = 0; editCount < contributions.length; editCount += 1) {
-          const roster = assembleRoomActionRoster({
-            owner: createOccurrenceAddress(biome, occurrence.occurrenceId),
-            order,
-            contributions,
-          });
-          const missing = roster.rows.find(
-            (row) => row.participation === 'required' && row.rank === null,
-          );
-          if (missing === undefined) break;
-          const proposal = roster.proposals.find(
-            (candidate) =>
-              candidate.kind === 'insert' &&
-              candidate.structurallyAuthorable &&
-              roomActionKey(candidate.reference) === missing.key,
-          );
-          if (proposal?.toIndex === undefined) {
-            throw new Error(`required room action ${missing.key} has no legal insertion proposal`);
-          }
-          order = proposal.order;
-        }
-        if (
-          order.length !== occurrence.roomActions.order.length ||
-          order.some(
-            (reference, index) =>
-              roomActionKey(reference) !== roomActionKey(occurrence.roomActions.order[index]!),
-          )
-        ) {
-          orderByOccurrence.set(
-            JSON.stringify([route.routeKey, biomePlan.biomeKey, occurrence.occurrenceId]),
-            order,
-          );
-        }
-      }
-    }
-  }
-  if (orderByOccurrence.size === 0) return initial;
-  return decodeProjectDocument(
-    Object.freeze({
-      ...initial,
-      routes: Object.freeze(
-        initial.routes.map((route) =>
-          Object.freeze({
-            ...route,
-            biomes: Object.freeze(
-              route.biomes.map((biomePlan) =>
-                biomePlan.topology === null
-                  ? biomePlan
-                  : Object.freeze({
-                      ...biomePlan,
-                      topology: Object.freeze({
-                        ...biomePlan.topology,
-                        occurrences: Object.freeze(
-                          biomePlan.topology.occurrences.map((occurrence) => {
-                            const order = orderByOccurrence.get(
-                              JSON.stringify([
-                                route.routeKey,
-                                biomePlan.biomeKey,
-                                occurrence.occurrenceId,
-                              ]),
-                            );
-                            return order === undefined
-                              ? occurrence
-                              : Object.freeze({
-                                  ...occurrence,
-                                  roomActions: Object.freeze({ order }),
-                                });
-                          }),
-                        ),
-                      }),
-                    }),
-              ),
-            ),
-          }),
-        ),
-      ),
-    }),
-    catalog,
-  );
-}
 
 /** Test-only aggregate adapter over the closed Room Action membership commands. */
 export function replaceTestRoomActionOrder(
@@ -200,6 +37,32 @@ export function replaceTestRoomActionOrder(
     ?.biomes.find((candidate) => candidate.biomeKey === biome.biomeKey)
     ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === occurrenceId);
   if (occurrence === undefined) throw new Error('test room-action occurrence is missing');
+  const requestedKeys = references.map(roomActionKey);
+  if (new Set(requestedKeys).size !== requestedKeys.length) {
+    throw new Error('test room-action order contains duplicate references');
+  }
+  const topology = initial.routes
+    .find((route) => route.routeKey === biome.routeKey)
+    ?.biomes.find((candidate) => candidate.biomeKey === biome.biomeKey)?.topology;
+  const domain = roomActionDomainForOccurrence(initial, catalog, biome, occurrenceId)?.domain;
+  if (topology === null || topology === undefined || domain === undefined) {
+    throw new Error('test room-action domain is missing');
+  }
+  if (structurallyActiveOccurrenceIds(topology).has(occurrenceId)) {
+    const requiredKeys = new Set(
+      domain.contributions.flatMap((entry) =>
+        entry.kind === 'action' && entry.participation === 'required'
+          ? [roomActionKey(entry.reference)]
+          : [],
+      ),
+    );
+    const omitted = [...requiredKeys].filter((key) => !requestedKeys.includes(key));
+    if (omitted.length > 0) {
+      throw new Error(
+        `test room-action order omits active required references ${omitted.join(', ')}`,
+      );
+    }
+  }
   if (
     occurrence.roomActions.order.length === references.length &&
     occurrence.roomActions.order.every(
@@ -208,7 +71,9 @@ export function replaceTestRoomActionOrder(
   ) {
     return initial;
   }
+  const requestedSet = new Set(requestedKeys);
   for (const reference of [...occurrence.roomActions.order].reverse()) {
+    if (requestedSet.has(roomActionKey(reference))) continue;
     document = applyProjectCommand(
       document,
       catalog,
@@ -224,7 +89,34 @@ export function replaceTestRoomActionOrder(
           },
     );
   }
-  for (const [index, reference] of references.entries()) {
+  const currentOccurrence = () =>
+    document.routes
+      .find((route) => route.routeKey === biome.routeKey)
+      ?.biomes.find((candidate) => candidate.biomeKey === biome.biomeKey)
+      ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === occurrenceId);
+  for (const reference of references) {
+    const current = currentOccurrence();
+    if (
+      current?.roomActions.order.some(
+        (candidate) => roomActionKey(candidate) === roomActionKey(reference),
+      )
+    ) {
+      continue;
+    }
+    const required = domain.contributions.some(
+      (entry) =>
+        entry.kind === 'action' &&
+        entry.participation === 'required' &&
+        roomActionKey(entry.reference) === roomActionKey(reference),
+    );
+    const index = required
+      ? scheduleRequiredRoomActions({
+          catalog,
+          domain,
+          order: current?.roomActions.order ?? [],
+          requiredKeys: new Set([roomActionKey(reference)]),
+        }).findIndex((candidate) => roomActionKey(candidate) === roomActionKey(reference))
+      : (current?.roomActions.order.length ?? 0);
     document = applyProjectCommand(
       document,
       catalog,
@@ -241,6 +133,21 @@ export function replaceTestRoomActionOrder(
             index,
           },
     );
+  }
+  for (const [toIndex, reference] of references.entries()) {
+    const current = currentOccurrence();
+    const fromIndex = current?.roomActions.order.findIndex(
+      (candidate) => roomActionKey(candidate) === roomActionKey(reference),
+    );
+    if (fromIndex === undefined || fromIndex < 0) {
+      throw new Error(`test room-action ${roomActionKey(reference)} was not inserted`);
+    }
+    if (fromIndex === toIndex) continue;
+    document = applyProjectCommand(document, catalog, {
+      kind: 'MoveRoomAction',
+      action: createRoomActionAddress(biome, occurrenceId, roomActionKey(reference)),
+      toIndex,
+    });
   }
   return document;
 }

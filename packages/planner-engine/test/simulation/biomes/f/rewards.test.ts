@@ -12,6 +12,7 @@ import {
   createOccurrenceId,
   createOccurrenceAddress,
   createRouteAddress,
+  createRoomActionAddress,
   createProjectDocument,
   createShopOfferAddress,
   createAcquisitionEntryAddress,
@@ -19,6 +20,7 @@ import {
   createTraitOfferAddress,
   createAcquisitionRoleAddress,
   createRouteStartKeepsakeSelectionAddress,
+  roomActionKey,
   semanticAddressKey,
   type OccurrenceId,
   type ProjectDocument,
@@ -40,7 +42,6 @@ import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   authorLegalTraitOffers,
-  authorRequiredTestRoomActions,
   authorTestArtificerReplacement,
   replaceTestShopOfferActions,
 } from '@run-planner/test-fixtures/shared';
@@ -212,6 +213,10 @@ function addTakeover(
   parentId: OccurrenceId,
   targetIds: readonly OccurrenceId[],
   pickedExitIndex = 1,
+  freeReward: ResolvedRewardOffer = {
+    rewardType: 'Boon',
+    payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+  },
 ): ProjectDocument {
   const decision = createExitDecisionAddress(biome, {
     kind: 'occurrence',
@@ -227,6 +232,9 @@ function addTakeover(
     targetOccurrenceIds,
   });
   if (targetIds.length > 1) {
+    next = replaceIncoming(next, targetIds[1]!, freeReward);
+  }
+  if (targetIds.length > 1) {
     next = applyProjectCommand(next, catalog, {
       kind: 'SetExitSelection',
       selection: createExitSelectionAddress(biome, decision.source),
@@ -236,11 +244,7 @@ function addTakeover(
   if (pickedExitIndex === 1) {
     next = authorWorldShop(next, targetIds[0]!);
   }
-  if (targetIds.length > 1) {
-    next = replaceIncoming(next, targetIds[1]!, {
-      rewardType: 'Boon',
-      payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
-    });
+  if (targetIds.length > 1 && freeReward.rewardType === 'Boon') {
     next = applyProjectCommand(next, catalog, {
       kind: 'ReplaceTraitOffer',
       trait: createTraitOfferAddress(createIncomingRewardAddress(biome, targetIds[1]!), 'source'),
@@ -487,10 +491,9 @@ function sameRoomAcquisitionProject(): ProjectDocument {
     stack,
     [createOccurrenceId('same-room-preboss-shop'), createOccurrenceId('same-room-preboss-free')],
     2,
+    { rewardType: 'MaxManaDrop' },
   );
-  return replaceIncoming(project, createOccurrenceId('same-room-preboss-free'), {
-    rewardType: 'MaxManaDrop',
-  });
+  return project;
 }
 
 function shopTimingProject(): ProjectDocument {
@@ -885,7 +888,19 @@ describe('F reward-history simulation', () => {
 
   it('treats the opening reward as a biome entry without a current-room predecessor', () => {
     const start = createOccurrenceId('ratio-start');
-    const project = replaceIncoming(ratioBoundaryProject(), start, { rewardType: 'SpellDrop' });
+    let project = replaceIncoming(ratioBoundaryProject(), start, { rewardType: 'SpellDrop' });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'RemoveRoomAction',
+      action: createRoomActionAddress(
+        biome,
+        start,
+        roomActionKey({
+          kind: 'interactIncomingReward',
+          producerPoint: 'roomRewardPickup',
+          acquisitionRole: 'source',
+        }),
+      ),
+    });
     const result = evaluate(project).rewards;
 
     expect(result.validity).toBe('valid');
@@ -1463,7 +1478,6 @@ describe('F reward-history simulation', () => {
         }),
       }),
     );
-    project = authorRequiredTestRoomActions(project, catalog);
     const result = evaluate(project).rewards;
     const branch = firstBranch(result);
     const expected = createAcquisitionEntryAddress(
@@ -1544,7 +1558,6 @@ describe('F reward-history simulation', () => {
       createOccurrenceId('retained-invalid-preboss-shop'),
       createOccurrenceId('retained-invalid-preboss-free'),
     ]);
-    project = authorRequiredTestRoomActions(project, catalog);
 
     expect(simulateProject(catalog, project).findings).toContainEqual(
       expect.objectContaining({ code: 'rewardBagEntryUnavailable', origin: reward }),
@@ -1555,7 +1568,6 @@ describe('F reward-history simulation', () => {
       occurrence: createOccurrenceAddress(biome, retainedCombat),
       gameName: 'F_Combat06',
     });
-    project = authorRequiredTestRoomActions(project, catalog);
 
     expect(
       fPlan(project).topology?.occurrences.find(

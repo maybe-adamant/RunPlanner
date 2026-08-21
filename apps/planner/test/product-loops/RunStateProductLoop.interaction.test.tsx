@@ -83,7 +83,9 @@ describe('Run State product loop', () => {
     await view.user.click(screen.getByRole('button', { name: /^OpeningEvaluated/ }));
     await view.user.click(screen.getByRole('tab', { name: 'Room Actions' }));
     const actions = screen.getByRole('region', { name: 'Room Actions' });
-    const launcher = within(actions).getByRole('button', { name: 'Run State' });
+    const workbench = actions.closest<HTMLElement>('.biome-occurrence-workbench');
+    if (workbench === null) throw new Error('Opening room workbench is missing');
+    const launcher = within(workbench).getByRole('button', { name: 'Run State' });
     expect(launcher.closest('.decision-heading')).toBeNull();
     expect(launcher.closest('.biome-rail')).toBeNull();
 
@@ -140,12 +142,19 @@ describe('Run State product loop', () => {
     expectNoEvaluationWork(events, 'N Hub Run State open/close');
 
     await view.user.click(screen.getByRole('button', { name: /^PrebossEvaluated/ }));
-    const prebossLauncher = screen.getByRole('button', { name: 'Run State' });
+    const prebossWorkbench = document.querySelector<HTMLElement>('.biome-occurrence-workbench');
+    if (prebossWorkbench === null) throw new Error('Preboss room workbench is missing');
+    const prebossLauncher = within(prebossWorkbench)
+      .getAllByRole('button', { name: 'Run State' })
+      .find((button) => button.dataset.runStateLauncher?.includes('roomRunStateCheckpoint'));
+    if (prebossLauncher === undefined) throw new Error('Preboss Run State is missing');
     expect(prebossLauncher.closest('.biome-occurrence-workbench')).not.toBeNull();
     expect(prebossLauncher.closest('.biome-rail')).toBeNull();
     events.length = 0;
     await view.user.click(prebossLauncher);
-    expect(screen.getByRole('region', { name: 'State before Preboss' })).toBeTruthy();
+    expect(
+      screen.getByRole('region', { name: 'State before the first action in Preboss' }),
+    ).toBeTruthy();
     await view.user.keyboard('{Escape}');
     expect(screen.queryByRole('region', { name: /State before/ })).toBeNull();
     expect(document.activeElement).toBe(prebossLauncher);

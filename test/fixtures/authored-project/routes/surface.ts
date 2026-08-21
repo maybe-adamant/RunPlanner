@@ -9,11 +9,7 @@ import {
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
-import {
-  authorLegalTraitOffers,
-  authorRequiredTestRoomActions,
-  replaceTestShopOfferActions,
-} from '../shared';
+import { authorLegalTraitOffers, replaceTestShopOfferActions } from '../shared';
 import {
   loadSurfaceNCheckpoint,
   loadSurfaceNCompleteHubFrontierCheckpoint,
@@ -196,5 +192,5 @@ export function createRepresentativeNOPQShopTraitProject(): ProjectDocument {
   return authorLegalTraitOffers(project);
 }
 
-export { authorLegalTraitOffers, authorRequiredTestRoomActions };
+export { authorLegalTraitOffers };
 export type { ResolvedRewardOffer };

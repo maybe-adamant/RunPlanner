@@ -17,11 +17,9 @@ import {
   createOccurrenceAddress,
   createOccurrenceId,
   createProjectDocument,
-  createRoomActionAddress,
   createTargetAddress,
   createTraitOfferAddress,
   echoLastRewardPickupEntryKey,
-  roomActionKey,
   semanticAddressKey,
 } from '@run-planner/engine/authored-project';
 import { simulateProject } from '@run-planner/engine/simulation';
@@ -53,6 +51,80 @@ afterEach(() => {
 });
 
 describe('underworld product loop', () => {
+  it('creates a required pickup atomically and opens its move-only Room Actions workflow without evaluation work', async () => {
+    const application = createApplication();
+    const biome = createBiomeAddress('Underworld', 'F');
+    const occurrenceId = createOccurrenceId('mandatory-default-product');
+    application.store.dispatch(
+      authoredProjectReplaced(
+        createProjectDocument(application.catalog, {
+          projectId: 'mandatory-default-product',
+          configuredBiomeCounts: { Underworld: 1 },
+        }),
+      ),
+    );
+    application.store.dispatch(
+      authoredProjectCommandDispatched({
+        kind: 'CreateStart',
+        biome,
+        occurrenceId,
+        gameName: 'F_Opening01',
+      }),
+    );
+    const beforeReward = application.store.getState().projectWorkspace.history.present;
+    const historyBefore = application.store.getState().projectWorkspace.history.past.length;
+    application.store.dispatch(
+      authoredProjectCommandDispatched({
+        kind: 'ReplaceIncomingReward',
+        reward: createIncomingRewardAddress(biome, occurrenceId),
+        value: {
+          rewardType: 'Boon',
+          payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+        },
+      }),
+    );
+    const authoredOccurrence = () =>
+      application.store
+        .getState()
+        .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
+        ?.biomes.find((plan) => plan.biomeKey === 'F')
+        ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === occurrenceId);
+    expect(authoredOccurrence()?.roomActions.order).toEqual([
+      {
+        kind: 'interactIncomingReward',
+        producerPoint: 'roomRewardPickup',
+        acquisitionRole: 'source',
+      },
+    ]);
+    expect(application.store.getState().projectWorkspace.history.past).toHaveLength(
+      historyBefore + 1,
+    );
+
+    const view = renderPlannerForInteraction({ application });
+    await view.user.click(screen.getByRole('button', { name: 'Underworld' }));
+    await view.user.click(screen.getByRole('button', { name: 'Erebus' }));
+    act(() =>
+      application.store.dispatch(
+        semanticOwnerFocused(createOccurrenceAddress(biome, occurrenceId)),
+      ),
+    );
+    const evaluationBefore = application.store.getState().projectWorkspace.assembly.evaluation;
+    await view.user.click(screen.getByRole('tab', { name: 'Room Actions' }));
+    const actions = screen.getByRole('region', { name: 'Room Actions' });
+    const requiredRow = within(actions)
+      .getByText('Pick up Boon')
+      .closest<HTMLElement>('[data-room-action-key]');
+    if (requiredRow === null) throw new Error('required pickup row is missing');
+    expect(within(requiredRow).queryByText('Position')).toBeNull();
+    expect(within(requiredRow).queryByRole('button', { name: 'Remove' })).toBeNull();
+    expect(application.store.getState().projectWorkspace.assembly.evaluation).toBe(
+      evaluationBefore,
+    );
+
+    await view.user.click(screen.getByRole('button', { name: 'Undo' }));
+    expect(application.store.getState().projectWorkspace.history.present).toBe(beforeReward);
+  });
+
   it('renders F through I through one shared biome workspace surface', async () => {
     const application = createApplication();
     application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
@@ -140,23 +212,6 @@ describe('underworld product loop', () => {
       kind: 'ReplaceLocalReward',
       reward: createLocalRewardAddress(goldenHBiome, combat09, 'cages', 'cage2'),
       value: { rewardType: 'MaxHealthDrop' },
-    });
-    const replayAction = Object.freeze({
-      kind: 'interactAcquisitionEntry' as const,
-      siteKey: 'roomExit',
-      entryKey: replayKey,
-    });
-    const currentOrder = project.routes
-      .find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'H')
-      ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === bridgeId)
-      ?.roomActions.order;
-    if (currentOrder === undefined) throw new Error('Echo room action order is missing');
-    project = applyProjectCommand(project, application.catalog, {
-      kind: 'InsertRoomAction',
-      action: createRoomActionAddress(goldenHBiome, bridgeId, roomActionKey(replayAction)),
-      reference: replayAction,
-      index: currentOrder.length,
     });
     const roomActionOrderBefore = project.routes
       .find((route) => route.routeKey === 'Underworld')

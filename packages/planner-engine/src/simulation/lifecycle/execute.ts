@@ -520,7 +520,7 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
   }
   const origin = context.input.origin;
   const rankedRows = roster.rows
-    .filter((row) => row.rank !== null)
+    .filter((row) => row.rank !== null && !row.stale)
     .sort((left, right) => left.rank! - right.rank!);
   let cursor = 0;
 
@@ -587,8 +587,12 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
           entryKey: row.reference.entryKey,
         });
       case 'completeFieldsCage':
-      case 'interactIncomingReward':
       case 'chooseRewardWheel':
+        throw new LifecycleExecutionContractError(
+          `${row.reference.kind} reached outside its declared lifecycle insertion point`,
+        );
+      case 'interactIncomingReward':
+        if (context.producerRewardLifecycle === undefined) return state;
         throw new LifecycleExecutionContractError(
           `${row.reference.kind} reached outside its declared lifecycle insertion point`,
         );

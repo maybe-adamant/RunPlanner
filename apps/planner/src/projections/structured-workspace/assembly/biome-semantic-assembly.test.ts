@@ -25,7 +25,7 @@ import {
 } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
-import { authorRequiredTestRoomActions, requireTraits } from '@run-planner/test-fixtures/shared';
+import { requireTraits } from '@run-planner/test-fixtures/shared';
 import {
   createGoldenFGHIProject,
   goldenFBiome,
@@ -48,7 +48,7 @@ function biomeSource(
   routeKey = 'Surface',
   biomeKey = 'N',
 ): WorkspaceBiomeSource {
-  const authoredProject = authorRequiredTestRoomActions(project, catalog);
+  const authoredProject = project;
   const assembly = simulateProjectAssembly(catalog, authoredProject);
   const source = createWorkspaceProjectSourceIndex(
     catalog,

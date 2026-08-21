@@ -138,7 +138,6 @@ export {
 } from './lifecycle';
 export {
   assembleRoomActionRoster,
-  roomActionContributions,
   type RoomActionCheckpoint,
   type RoomActionContribution,
   type RoomActionDependency,
