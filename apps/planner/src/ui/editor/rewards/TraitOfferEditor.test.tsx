@@ -1089,7 +1089,7 @@ describe('trait offer editor', () => {
     );
 
     expect(screen.getByText('Spawns: Gold')).toBeDefined();
-    expect(screen.getByRole('button', { name: 'Configure in Room Actions' })).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Configure in Room Timeline' })).toBeDefined();
     await user.click(screen.getByRole('button', { name: 'Save trait offer' }));
     const saved = commit.mock.calls[0]?.[0] as AuthoredTraitOfferTraits;
     expect(saved.options[0]).toEqual({ traitKey: 'EchoLastReward' });

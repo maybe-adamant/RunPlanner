@@ -1,6 +1,5 @@
-export { assembleRoomActionRoster } from './assemble';
-export { roomActionWindowRank } from '../../authored-project/room-action-domain';
-export { assembleRoomLifecycleTimeline } from './timeline';
+export { assembleRoomActionRoster, scopeRoomActionRoster } from './assemble';
+export { assembleRoomLifecycleTimeline, scopeRoomLifecycleTimeline } from './timeline';
 export type {
   RoomActionCheckpoint,
   RoomActionCheckpointContribution,

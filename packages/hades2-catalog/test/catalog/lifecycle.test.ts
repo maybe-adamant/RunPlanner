@@ -26,9 +26,9 @@ describe('room lifecycle catalog', () => {
   it('normalizes reusable lifecycle profiles as immutable catalog data', () => {
     expect(catalog.roomLifecycleProfiles.values.map((profile) => profile.key)).toEqual([
       'StandardRewardRoom',
+      'OpeningRewardRoom',
       'RewardlessCombatRoom',
       'PCombatRoom',
-      'EphyraOpeningRoom',
       'EphyraMainRoom',
       'EphyraSideRoom',
       'EphyraHubRoom',
@@ -48,6 +48,8 @@ describe('room lifecycle catalog', () => {
       kind: 'required',
       lifecycleProfileKeys: ['RoomReward'],
     });
+    expect(catalog.rooms.byKey.F_Opening01?.lifecycleProfileKey).toBe('OpeningRewardRoom');
+    expect(catalog.rooms.byKey.N_Opening01?.lifecycleProfileKey).toBe('OpeningRewardRoom');
     expect(catalog.roomLifecycleProfiles.byKey.ClockworkGoalRoom?.producer).toEqual({
       kind: 'none',
     });

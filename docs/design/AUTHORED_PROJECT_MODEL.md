@@ -93,7 +93,7 @@ visits, and completion predicate. It does not own N Preboss room-local state.
 `Local Visit Decision` is parent-occurrence-owned topology for one declared N
 side-room group. It owns generated/not-generated slot membership and ordered
 references to the entered side occurrences. Each referenced side room is an
-ordinary `RoomOccurrence` that owns its own encounter, payload, Room Actions,
+ordinary `RoomOccurrence` that owns its own encounter, payload, `roomActions`,
 and outgoing/return stage; the parent does not own a nested action list.
 
 `Preboss` is a Room Declaration role inside a normal-door batch, not a

@@ -655,11 +655,6 @@ function materializeStart(
     occurrence,
     role: 'ordinary',
     entered: true,
-    ...(layout.progression.kind === 'hub' &&
-    layout.start.kind === 'fixedAuthored' &&
-    room.gameName === layout.start.roomGameName
-      ? { lifecycleProfileKey: 'EphyraOpeningRoom' }
-      : {}),
     ...(loadout === undefined ? {} : { loadout }),
   });
 }

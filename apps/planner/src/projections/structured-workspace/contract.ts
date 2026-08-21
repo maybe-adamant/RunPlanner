@@ -490,7 +490,7 @@ export interface WorkspaceEchoLastRunBoonInteraction {
 export interface WorkspaceTraitOfferInteraction {
   readonly acquisitionRoleLabel: string;
   readonly choices: readonly WorkspaceInteractionChoice<string>[];
-  /** Read-only summary of the generated pickup owned by Room Actions. */
+  /** Read-only summary of the generated pickup owned by the Room Timeline. */
   readonly echoLastReward?: WorkspaceEchoLastRewardControl;
   readonly giver: TraitGiverDeclaration;
   readonly intentFor: (value: AuthoredTraitOffer) => WorkspacePayloadEditIntent<

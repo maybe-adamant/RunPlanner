@@ -17,7 +17,7 @@ import {
 } from './addresses';
 import { acquisitionSiteFromStorageKey, parseArtificerReplacementEntryKey } from './artificer';
 import type { RoomActionReference, RoomOccurrence } from './model';
-import { encounterEnvelopeSlots } from './room-state/encounters';
+import { encounterEnvelopeSlots, selectedEncounterDefinitionKey } from './room-state/encounters';
 import { activeRoomActionReferences, roomActionKey } from './room-actions';
 import { selectedPickupProducer } from './traits';
 
@@ -54,10 +54,36 @@ export interface RoomActionCheckpointContribution {
 export type RoomActionDomainContribution =
   RoomActionContribution | RoomActionCheckpointContribution;
 
+export interface RoomLifecycleStructurePhase {
+  readonly phaseKey: string;
+  readonly rewardWheelKey?: string;
+}
+
+export type RoomLifecycleStructurePoint =
+  | { readonly kind: 'roomEntered'; readonly key: 'roomEntered' }
+  | { readonly kind: 'encounterStart'; readonly key: string; readonly phaseKey: string }
+  | { readonly kind: 'encounterEnd'; readonly key: string; readonly phaseKey: string }
+  | {
+      readonly kind: 'nextPhase';
+      readonly key: string;
+      readonly wheelKey: string;
+      readonly previousWheelKey?: string;
+    }
+  | { readonly kind: 'outgoingGeneration'; readonly key: 'outgoingGeneration' }
+  | { readonly kind: 'cleanup'; readonly key: 'cleanup' };
+
+export interface RoomLifecycleStructure {
+  readonly profileKey: string;
+  readonly activeEncounterSlotKeys: readonly string[];
+  readonly phases: readonly RoomLifecycleStructurePhase[];
+  readonly points: readonly RoomLifecycleStructurePoint[];
+}
+
 export interface RoomActionDomain {
   readonly owner: ReturnType<typeof createOccurrenceAddress>;
   readonly declaration: RoomDeclaration;
   readonly lifecycleProfileKey: string;
+  readonly lifecycleStructure: RoomLifecycleStructure;
   readonly activeReferences: readonly RoomActionReference[];
   readonly contributions: readonly RoomActionDomainContribution[];
 }
@@ -377,59 +403,252 @@ function baseContribution(
   }
 }
 
+/** One profile-owned lifecycle skeleton; authored action ranks populate only its intervals. */
+export function assembleRoomLifecycleStructure(options: {
+  readonly catalog: Catalog;
+  readonly declaration: RoomDeclaration;
+  readonly occurrence: RoomOccurrence;
+  readonly lifecycleProfileKey: string;
+  readonly activeEncounterSlotKeys?: readonly string[];
+}): RoomLifecycleStructure {
+  const profile = options.catalog.roomLifecycleProfiles.byKey[options.lifecycleProfileKey];
+  if (profile === undefined) {
+    throw new Error(
+      `${options.occurrence.gameName} selected unknown lifecycle ${options.lifecycleProfileKey}`,
+    );
+  }
+  const activeSlotKeys =
+    options.activeEncounterSlotKeys === undefined
+      ? undefined
+      : new Set(options.activeEncounterSlotKeys);
+  const activeSlots = encounterEnvelopeSlots(
+    options.catalog,
+    options.declaration,
+    options.occurrence.gameName,
+  ).filter(
+    (slot, index) =>
+      (activeSlotKeys === undefined || activeSlotKeys.has(slot.key)) &&
+      (options.occurrence.state.kind !== 'shipCombat' ||
+        index < options.occurrence.state.encounterCount),
+  );
+  const combatSlots = activeSlots.filter((slot) => {
+    if (
+      options.lifecycleProfileKey === 'FieldsCombatRoom' &&
+      slot.rewardAttachment?.kind !== 'localReward'
+    ) {
+      return false;
+    }
+    const encounterKey = selectedEncounterDefinitionKey(
+      options.catalog,
+      options.declaration,
+      options.occurrence.encounters,
+      slot.key,
+      options.occurrence.gameName,
+    );
+    return options.catalog.encounterDefinitions.byKey[encounterKey]?.kind !== 'nonCombat';
+  });
+  const declaredPhases = combatSlots.map((slot) =>
+    frozen({
+      phaseKey: slot.key,
+      ...(slot.rewardAttachment?.kind === 'rewardWheel'
+        ? { rewardWheelKey: slot.rewardAttachment.key }
+        : {}),
+    }),
+  );
+  const phases =
+    options.lifecycleProfileKey === 'FieldsCombatRoom'
+      ? (() => {
+          const byKey = new Map(declaredPhases.map((phase) => [phase.phaseKey, phase]));
+          const ranked = options.occurrence.roomActions.order.flatMap((reference) =>
+            reference.kind === 'completeFieldsCage' && byKey.has(reference.phaseKey)
+              ? [byKey.get(reference.phaseKey)!]
+              : [],
+          );
+          const rankedKeys = new Set(ranked.map((phase) => phase.phaseKey));
+          return frozen([
+            ...ranked,
+            ...declaredPhases.filter((phase) => !rankedKeys.has(phase.phaseKey)),
+          ]);
+        })()
+      : frozen(declaredPhases);
+  const points: RoomLifecycleStructurePoint[] = [
+    frozen({ kind: 'roomEntered', key: 'roomEntered' }),
+  ];
+  phases.forEach((phase, index) => {
+    if (phase.rewardWheelKey !== undefined && index > 0) {
+      const previousWheelKey = phases[index - 1]?.rewardWheelKey;
+      points.push(
+        frozen({
+          kind: 'nextPhase',
+          key: `nextPhase:${phase.rewardWheelKey}`,
+          wheelKey: phase.rewardWheelKey,
+          ...(previousWheelKey === undefined ? {} : { previousWheelKey }),
+        }),
+      );
+    }
+    points.push(
+      frozen({
+        kind: 'encounterStart',
+        key: `encounterStart:${phase.phaseKey}`,
+        phaseKey: phase.phaseKey,
+      }),
+      frozen({
+        kind: 'encounterEnd',
+        key: `encounterEnd:${phase.phaseKey}`,
+        phaseKey: phase.phaseKey,
+      }),
+    );
+  });
+  const hasOutgoing = profile.operations.some(
+    (operation) => operation.kind === 'generateOutgoingBatch',
+  );
+  if (options.lifecycleProfileKey === 'FieldsCombatRoom') {
+    points.push(frozen({ kind: 'cleanup', key: 'cleanup' }));
+    if (hasOutgoing) points.push(frozen({ kind: 'outgoingGeneration', key: 'outgoingGeneration' }));
+  } else {
+    if (hasOutgoing) points.push(frozen({ kind: 'outgoingGeneration', key: 'outgoingGeneration' }));
+    points.push(frozen({ kind: 'cleanup', key: 'cleanup' }));
+  }
+  return frozen({
+    profileKey: options.lifecycleProfileKey,
+    activeEncounterSlotKeys: frozen(activeSlots.map((slot) => slot.key)),
+    phases: frozen(phases),
+    points: frozen(points),
+  });
+}
+
+/** Restrict one rigid structure to an engine-assessed active phase prefix. */
+export function scopeRoomLifecycleStructure(
+  structure: RoomLifecycleStructure,
+  activePhaseKeys: readonly string[],
+): RoomLifecycleStructure {
+  const active = new Set(activePhaseKeys);
+  const phases = structure.phases.filter((phase) => active.has(phase.phaseKey));
+  const activeWheelKeys = new Set(
+    phases.flatMap((phase) => (phase.rewardWheelKey === undefined ? [] : [phase.rewardWheelKey])),
+  );
+  const points = structure.points.filter((point) => {
+    switch (point.kind) {
+      case 'encounterStart':
+      case 'encounterEnd':
+        return active.has(point.phaseKey);
+      case 'nextPhase':
+        return activeWheelKeys.has(point.wheelKey);
+      case 'roomEntered':
+      case 'outgoingGeneration':
+      case 'cleanup':
+        return true;
+    }
+  });
+  if (
+    phases.length === structure.phases.length &&
+    points.length === structure.points.length &&
+    structure.activeEncounterSlotKeys.every((key) => active.has(key))
+  ) {
+    return structure;
+  }
+  return frozen({
+    profileKey: structure.profileKey,
+    activeEncounterSlotKeys: frozen(
+      structure.activeEncounterSlotKeys.filter((key) => active.has(key)),
+    ),
+    phases: frozen(phases),
+    points: frozen(points),
+  });
+}
+
+export function roomLifecycleWindowOrdinal(
+  structure: RoomLifecycleStructure,
+  window: RoomActionWindow,
+): number {
+  const pointIndex = (predicate: (point: RoomLifecycleStructurePoint) => boolean): number => {
+    const index = structure.points.findIndex(predicate);
+    return index < 0 ? 0 : index;
+  };
+  const beforePoint = (predicate: (point: RoomLifecycleStructurePoint) => boolean): number =>
+    pointIndex(predicate) * 2;
+  const afterPoint = (predicate: (point: RoomLifecycleStructurePoint) => boolean): number =>
+    pointIndex(predicate) * 2 + 1;
+  switch (window.kind) {
+    case 'standard':
+      return window.phase === 'beforeCombat'
+        ? beforePoint((point) => point.kind === 'encounterStart')
+        : afterPoint((point) => point.kind === 'encounterEnd');
+    case 'fields':
+      return 1;
+    case 'shipPreCombat':
+      return structure.points.some(
+        (point) => point.kind === 'nextPhase' && point.wheelKey === window.wheelKey,
+      )
+        ? afterPoint((point) => point.kind === 'nextPhase' && point.wheelKey === window.wheelKey)
+        : beforePoint(
+            (point) =>
+              point.kind === 'encounterStart' &&
+              structure.phases.some(
+                (phase) =>
+                  phase.phaseKey === point.phaseKey && phase.rewardWheelKey === window.wheelKey,
+              ),
+          );
+    case 'shipPostCombat':
+      return afterPoint(
+        (point) =>
+          point.kind === 'encounterEnd' &&
+          structure.phases.some(
+            (phase) =>
+              phase.phaseKey === point.phaseKey && phase.rewardWheelKey === window.wheelKey,
+          ),
+      );
+    case 'postOutgoing':
+      return afterPoint((point) => point.kind === 'outgoingGeneration');
+  }
+}
+
 function checkpoints(
   catalog: Catalog,
   declaration: RoomDeclaration,
   occurrence: RoomOccurrence,
-  lifecycleProfileKey: string,
-  activeEncounterSlotKeys?: readonly string[],
+  structure: RoomLifecycleStructure,
 ): readonly RoomActionCheckpointContribution[] {
-  const activeSlots =
-    activeEncounterSlotKeys === undefined ? undefined : new Set(activeEncounterSlotKeys);
-  const phases = encounterEnvelopeSlots(catalog, declaration, occurrence.gameName).filter(
-    (phase, index) =>
-      (activeSlots === undefined || activeSlots.has(phase.key)) &&
-      (occurrence.state.kind !== 'shipCombat' || index < occurrence.state.encounterCount),
+  const envelopeByKey = new Map(
+    encounterEnvelopeSlots(catalog, declaration, occurrence.gameName).map((phase) => [
+      phase.key,
+      phase,
+    ]),
   );
-  const result: RoomActionCheckpointContribution[] = phases.map((phase) =>
-    frozen({
+  const result: RoomActionCheckpointContribution[] = structure.phases.map((phase) => {
+    const attachment = envelopeByKey.get(phase.phaseKey)?.rewardAttachment;
+    return frozen({
       kind: 'checkpoint',
-      checkpointKey: `combat:${phase.key}`,
-      label: `${phase.key} complete`,
+      checkpointKey: `combat:${phase.phaseKey}`,
+      label: `${phase.phaseKey} complete`,
       window:
-        phase.rewardAttachment?.kind === 'rewardWheel'
-          ? frozen({ kind: 'shipPostCombat', wheelKey: phase.rewardAttachment.key })
-          : lifecycleProfileKey === 'FieldsCombatRoom'
-            ? frozen({ kind: 'fields', phaseKey: phase.key })
+        attachment?.kind === 'rewardWheel'
+          ? frozen({ kind: 'shipPostCombat', wheelKey: attachment.key })
+          : structure.profileKey === 'FieldsCombatRoom'
+            ? frozen({ kind: 'fields', phaseKey: phase.phaseKey })
             : frozen({ kind: 'standard', phase: 'afterCombat' }),
-    }),
-  );
-  if (occurrence.state.kind === 'shipCombat') {
-    const activeWheelKeys = Object.keys(occurrence.state.wheels).slice(
-      0,
-      occurrence.state.encounterCount === 2 ? 1 : 2,
-    );
-    for (const wheelKey of activeWheelKeys.slice(0, -1))
+    });
+  });
+  for (const point of structure.points) {
+    if (point.kind === 'nextPhase' && point.previousWheelKey !== undefined) {
       result.push(
         frozen({
           kind: 'checkpoint',
-          checkpointKey: `nextPhaseUsable:${wheelKey}`,
-          label: `${wheelKey} next phase usable`,
-          window: frozen({ kind: 'shipPostCombat', wheelKey }),
+          checkpointKey: `nextPhaseUsable:${point.previousWheelKey}`,
+          label: `${point.previousWheelKey} next phase usable`,
+          window: frozen({ kind: 'shipPostCombat', wheelKey: point.previousWheelKey }),
         }),
       );
+    }
   }
+  const finalPhase = structure.phases.at(-1);
   const finalWindow: RoomActionWindow =
-    lifecycleProfileKey === 'WorldShopRoom'
+    structure.profileKey === 'WorldShopRoom'
       ? frozen({ kind: 'postOutgoing' })
-      : occurrence.state.kind === 'shipCombat'
-        ? frozen({
-            kind: 'shipPostCombat',
-            wheelKey: occurrence.state.encounterCount === 2 ? 'wheel1' : 'wheel2',
-          })
+      : finalPhase?.rewardWheelKey !== undefined
+        ? frozen({ kind: 'shipPostCombat', wheelKey: finalPhase.rewardWheelKey })
         : frozen({ kind: 'standard', phase: 'afterCombat' });
-  const profile = catalog.roomLifecycleProfiles.byKey[lifecycleProfileKey];
-  if (profile?.operations.some((operation) => operation.kind === 'generateOutgoingBatch'))
+  if (structure.points.some((point) => point.kind === 'outgoingGeneration'))
     result.push(
       frozen({
         kind: 'checkpoint',
@@ -463,6 +682,15 @@ export function assembleRoomActionDomain(options: {
   if (declaration === undefined) throw new Error(`unknown room ${options.occurrence.gameName}`);
   const lifecycleProfileKey =
     options.lifecycleProfileKey ?? authoredRoomLifecycleProfileKey(declaration, options.occurrence);
+  const lifecycleStructure = assembleRoomLifecycleStructure({
+    catalog: options.catalog,
+    declaration,
+    occurrence: options.occurrence,
+    lifecycleProfileKey,
+    ...(options.activeEncounterSlotKeys === undefined
+      ? {}
+      : { activeEncounterSlotKeys: options.activeEncounterSlotKeys }),
+  });
   const activeReferences = activeRoomActionReferences(
     options.catalog,
     options.biome,
@@ -574,13 +802,7 @@ export function assembleRoomActionDomain(options: {
   }
   const contributions = frozen([
     ...actions,
-    ...checkpoints(
-      options.catalog,
-      declaration,
-      options.occurrence,
-      lifecycleProfileKey,
-      options.activeEncounterSlotKeys,
-    ),
+    ...checkpoints(options.catalog, declaration, options.occurrence, lifecycleStructure),
   ]);
   const contributedKeys = new Set(actions.map((action) => roomActionKey(action.reference)));
   const activeKeys = new Set(activeReferences.map(roomActionKey));
@@ -593,6 +815,7 @@ export function assembleRoomActionDomain(options: {
     owner: createOccurrenceAddress(options.biome, options.occurrence.occurrenceId),
     declaration,
     lifecycleProfileKey,
+    lifecycleStructure,
     activeReferences,
     contributions,
   });
@@ -602,9 +825,8 @@ export function assembleRoomActionDomain(options: {
 export function authoredRoomLifecycleProfileKey(
   declaration: RoomDeclaration,
   occurrence: RoomOccurrence,
-  role: 'ordinary' | 'ephyraOpening' | 'ephyraSide' = 'ordinary',
+  role: 'ordinary' | 'ephyraSide' = 'ordinary',
 ): string {
-  if (role === 'ephyraOpening') return 'EphyraOpeningRoom';
   if (role === 'ephyraSide') return 'EphyraSideRoom';
   if (declaration.lifecycleProfileKey !== undefined) return declaration.lifecycleProfileKey;
   if (declaration.mode.kind !== 'authored') return 'RewardlessRoom';
@@ -635,6 +857,7 @@ export function authoredRoomLifecycleProfileKey(
     case 'RewardlessCombat':
       return 'RewardlessCombatRoom';
     case 'FixedOpening':
+      return 'OpeningRewardRoom';
     case 'FixedPreHub':
     case 'Fountain':
     case 'Miniboss':
@@ -644,20 +867,5 @@ export function authoredRoomLifecycleProfileKey(
         : 'StandardRewardRoom';
     case 'Story':
       return 'StandardRewardRoom';
-  }
-}
-
-export function roomActionWindowRank(window: RoomActionWindow): number {
-  switch (window.kind) {
-    case 'standard':
-      return window.phase === 'beforeCombat' ? 10 : 30;
-    case 'fields':
-      return 30;
-    case 'shipPreCombat':
-      return window.wheelKey === 'wheel1' ? 10 : 40;
-    case 'shipPostCombat':
-      return window.wheelKey === 'wheel1' ? 30 : 60;
-    case 'postOutgoing':
-      return 80;
   }
 }

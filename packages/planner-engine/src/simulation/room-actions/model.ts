@@ -6,6 +6,7 @@ import type {
   RoomActionDependency,
   RoomActionParticipation,
   RoomActionWindow,
+  RoomLifecycleStructure,
 } from '../../authored-project/room-action-domain';
 
 export type {
@@ -59,6 +60,7 @@ export interface RoomActionCheckpoint {
 }
 
 export interface RoomActionRoster {
+  readonly lifecycleStructure: RoomLifecycleStructure;
   readonly rows: readonly RoomActionRow[];
   readonly checkpoints: readonly RoomActionCheckpoint[];
   readonly issues: readonly RoomActionRosterIssue[];

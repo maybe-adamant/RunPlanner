@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { assembleRoomLifecycleTimeline, type RoomActionRoster } from '../../src/simulation';
+import {
+  assembleRoomLifecycleTimeline as assembleTimeline,
+  type RoomActionRoster,
+} from '../../src/simulation';
 import { createOccurrenceId, type OccurrenceAddress } from '../../src/authored-project/addresses';
+import type { RoomLifecycleStructure } from '../../src/authored-project';
 import { roomActionKey } from '../../src/authored-project/room-actions';
 import type { RoomActionReference } from '../../src/authored-project/model';
 import type { ResolvedEncounterPhase } from '../../src/simulation/encounters';
@@ -15,6 +19,19 @@ const owner: OccurrenceAddress = Object.freeze({
 
 function roster(overrides: Partial<RoomActionRoster> = {}): RoomActionRoster {
   return Object.freeze({
+    lifecycleStructure: Object.freeze({
+      profileKey: 'StandardRewardRoom',
+      activeEncounterSlotKeys: Object.freeze([]),
+      phases: Object.freeze([]),
+      points: Object.freeze([
+        Object.freeze({ kind: 'roomEntered' as const, key: 'roomEntered' as const }),
+        Object.freeze({
+          kind: 'outgoingGeneration' as const,
+          key: 'outgoingGeneration' as const,
+        }),
+        Object.freeze({ kind: 'cleanup' as const, key: 'cleanup' as const }),
+      ]),
+    }),
     rows: Object.freeze([]),
     checkpoints: Object.freeze([
       Object.freeze({
@@ -52,6 +69,98 @@ const encounter = (slotKey: string): ResolvedEncounterPhase =>
     skipEndEncounterEffects: false,
     figLeafSkip: false,
   });
+
+function structure(
+  profileKey: string,
+  encounterPhases: readonly ResolvedEncounterPhase[],
+  roomActionRoster: RoomActionRoster,
+): RoomLifecycleStructure {
+  const declared = encounterPhases
+    .filter(
+      (phase) =>
+        phase.kind !== 'nonCombat' &&
+        (profileKey !== 'FieldsCombatRoom' || phase.rewardAttachment?.kind === 'localReward'),
+    )
+    .map((phase) =>
+      Object.freeze({
+        phaseKey: phase.slotKey,
+        ...(phase.rewardAttachment?.kind === 'rewardWheel'
+          ? { rewardWheelKey: phase.rewardAttachment.key }
+          : {}),
+      }),
+    );
+  const phases =
+    profileKey === 'FieldsCombatRoom'
+      ? (() => {
+          const byKey = new Map(declared.map((phase) => [phase.phaseKey, phase]));
+          const ranked = roomActionRoster.rows.flatMap((row) =>
+            row.reference.kind === 'completeFieldsCage' && byKey.has(row.reference.phaseKey)
+              ? [byKey.get(row.reference.phaseKey)!]
+              : [],
+          );
+          const rankedKeys = new Set(ranked.map((phase) => phase.phaseKey));
+          return [...ranked, ...declared.filter((phase) => !rankedKeys.has(phase.phaseKey))];
+        })()
+      : declared;
+  const points: RoomLifecycleStructure['points'][number][] = [
+    Object.freeze({ kind: 'roomEntered', key: 'roomEntered' }),
+  ];
+  phases.forEach((phase, index) => {
+    if (phase.rewardWheelKey !== undefined && index > 0) {
+      const previousWheelKey = phases[index - 1]?.rewardWheelKey;
+      points.push(
+        Object.freeze({
+          kind: 'nextPhase',
+          key: `nextPhase:${phase.rewardWheelKey}`,
+          wheelKey: phase.rewardWheelKey,
+          ...(previousWheelKey === undefined ? {} : { previousWheelKey }),
+        }),
+      );
+    }
+    points.push(
+      Object.freeze({
+        kind: 'encounterStart',
+        key: `encounterStart:${phase.phaseKey}`,
+        phaseKey: phase.phaseKey,
+      }),
+      Object.freeze({
+        kind: 'encounterEnd',
+        key: `encounterEnd:${phase.phaseKey}`,
+        phaseKey: phase.phaseKey,
+      }),
+    );
+  });
+  if (profileKey === 'FieldsCombatRoom') {
+    points.push(Object.freeze({ kind: 'cleanup', key: 'cleanup' }));
+    points.push(Object.freeze({ kind: 'outgoingGeneration', key: 'outgoingGeneration' }));
+  } else {
+    points.push(Object.freeze({ kind: 'outgoingGeneration', key: 'outgoingGeneration' }));
+    points.push(Object.freeze({ kind: 'cleanup', key: 'cleanup' }));
+  }
+  return Object.freeze({
+    profileKey,
+    activeEncounterSlotKeys: Object.freeze(encounterPhases.map((phase) => phase.slotKey)),
+    phases: Object.freeze(phases),
+    points: Object.freeze(points),
+  });
+}
+
+function assembleRoomLifecycleTimeline(input: {
+  readonly owner: OccurrenceAddress;
+  readonly lifecycleProfileKey: string;
+  readonly encounterPhases: readonly ResolvedEncounterPhase[];
+  readonly roomActionRoster: RoomActionRoster;
+}) {
+  const lifecycleStructure = structure(
+    input.lifecycleProfileKey,
+    input.encounterPhases,
+    input.roomActionRoster,
+  );
+  return assembleTimeline({
+    owner: input.owner,
+    roomActionRoster: Object.freeze({ ...input.roomActionRoster, lifecycleStructure }),
+  });
+}
 
 function rankedRow(
   reference: RoomActionReference,
@@ -139,6 +248,71 @@ describe('room lifecycle timeline', () => {
     expect(keys.indexOf('encounterEnd')).toBeLessThan(keys.indexOf(after.key));
   });
 
+  it('orders Start before End when the only ranked action is an opening pickup before combat', () => {
+    const pickup = rankedRow(
+      {
+        kind: 'interactIncomingReward',
+        producerPoint: 'roomRewardPickup',
+        acquisitionRole: 'source',
+      },
+      { kind: 'standard', phase: 'beforeCombat' },
+      1,
+    );
+    const timeline = assembleRoomLifecycleTimeline({
+      owner,
+      lifecycleProfileKey: 'OpeningRewardRoom',
+      encounterPhases: Object.freeze([encounter('Encounter')]),
+      roomActionRoster: roster({ rows: Object.freeze([pickup]) }),
+    });
+    const keys = timeline.entries.map((entry) =>
+      entry.kind === 'action' ? entry.action.key : entry.boundary.kind,
+    );
+    expect(keys).toEqual([
+      'roomEntered',
+      pickup.key,
+      'encounterStart',
+      'encounterEnd',
+      'outgoingGeneration',
+      'cleanup',
+    ]);
+  });
+
+  it('keeps lifecycle seams structural when authored action ranks contradict their windows', () => {
+    const postCombat = rankedRow(
+      {
+        kind: 'interactIncomingReward',
+        producerPoint: 'roomRewardPickup',
+        acquisitionRole: 'source',
+      },
+      { kind: 'standard', phase: 'afterCombat' },
+      1,
+    );
+    const preCombat = rankedRow(
+      {
+        kind: 'interactIncomingReward',
+        producerPoint: 'roomEntrance',
+        acquisitionRole: 'source',
+      },
+      { kind: 'standard', phase: 'beforeCombat' },
+      2,
+    );
+    const timeline = assembleRoomLifecycleTimeline({
+      owner,
+      lifecycleProfileKey: 'StandardRewardRoom',
+      encounterPhases: Object.freeze([encounter('Encounter')]),
+      roomActionRoster: roster({ rows: Object.freeze([postCombat, preCombat]) }),
+    });
+    const keys = timeline.entries.map((entry) =>
+      entry.kind === 'action' ? entry.action.key : entry.boundary.kind,
+    );
+
+    expect(keys.indexOf(postCombat.key)).toBeLessThan(keys.indexOf(preCombat.key));
+    expect(keys.indexOf('encounterStart')).toBeLessThan(keys.indexOf('encounterEnd'));
+    expect(
+      timeline.entries.filter((entry) => entry.kind === 'action').map((entry) => entry.rank),
+    ).toEqual([1, 2]);
+  });
+
   it('retains unranked rows for repair without changing roster membership', () => {
     const row = Object.freeze({
       reference: Object.freeze({ kind: 'chooseRewardWheel' as const, wheelKey: 'wheel1' }),
@@ -163,7 +337,7 @@ describe('room lifecycle timeline', () => {
     expect(timeline.entries.filter((entry) => entry.kind === 'action')).toHaveLength(0);
   });
 
-  it('keeps an unranked Fields cage in repair without creating a lifecycle cycle', () => {
+  it('keeps an unranked Fields cage in repair without erasing its rigid lifecycle cycle', () => {
     const cage = Object.freeze({ kind: 'completeFieldsCage' as const, phaseKey: 'Cage01' });
     const timeline = assembleRoomLifecycleTimeline({
       owner,
@@ -204,7 +378,10 @@ describe('room lifecycle timeline', () => {
     });
     expect(timeline.boundaries.map((boundary) => boundary.kind)).toEqual([
       'roomEntered',
+      'encounterStart',
+      'encounterEnd',
       'cleanup',
+      'outgoingGeneration',
     ]);
     expect(timeline.repairRows.map((row) => row.key)).toEqual([roomActionKey(cage)]);
   });

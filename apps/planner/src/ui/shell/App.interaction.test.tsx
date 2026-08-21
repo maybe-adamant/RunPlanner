@@ -324,7 +324,7 @@ describe('planner history interaction', () => {
     await waitFor(() => expect(document.activeElement).toBe(encounter));
 
     const traitAddress = createTraitOfferAddress(phase, 'selection');
-    const roomActions = screen.getByRole('region', { name: 'Room Actions' });
+    const roomActions = screen.getByRole('region', { name: 'Room Timeline' });
     const traitLauncher = within(roomActions).getByRole('button', { name: /Edit Trait:/ });
     await view.user.click(traitLauncher);
     const dialog = await screen.findByRole('dialog');

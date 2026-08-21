@@ -1,20 +1,21 @@
 import type { OccurrenceAddress } from '../../authored-project/addresses';
-import type { ResolvedEncounterPhase } from '../encounters';
 import type { RoomActionReference } from '../../authored-project/model';
+import type {
+  RoomLifecycleStructure,
+  RoomLifecycleStructurePhase,
+  RoomLifecycleStructurePoint,
+} from '../../authored-project/room-action-domain';
+import { scopeRoomLifecycleStructure } from '../../authored-project/room-action-domain';
 import { roomActionKey } from '../../authored-project/room-actions';
 import type { RoomActionRoster, RoomActionRow } from './model';
 
-/**
- * The fixed, semantic seams that make one entered room legible to the editor.
- * These are derived lifecycle facts; they are not authored actions.
- */
 export type RoomLifecycleBoundary =
-  | { readonly kind: 'roomEntered'; readonly key: 'roomEntered' }
-  | { readonly kind: 'encounterStart'; readonly key: string; readonly phaseKey: string }
-  | { readonly kind: 'encounterEnd'; readonly key: string; readonly phaseKey: string }
-  | { readonly kind: 'nextPhase'; readonly key: string; readonly wheelKey: string }
-  | { readonly kind: 'outgoingGeneration'; readonly key: 'outgoingGeneration' }
-  | { readonly kind: 'cleanup'; readonly key: 'cleanup' };
+  | Exclude<RoomLifecycleStructurePoint, { readonly kind: 'nextPhase' }>
+  | {
+      readonly kind: 'nextPhase';
+      readonly key: string;
+      readonly wheelKey: string;
+    };
 
 export type RoomLifecycleTimelineEntry =
   | {
@@ -39,6 +40,7 @@ type RoomLifecycleBoundaryEntry = Extract<
 
 export interface RoomLifecycleTimeline {
   readonly owner: OccurrenceAddress;
+  readonly structure: RoomLifecycleStructure;
   readonly entries: readonly RoomLifecycleTimelineEntry[];
   readonly boundaries: readonly RoomLifecycleBoundary[];
   /** Retained unranked/stale action rows remain available to a repair surface. */
@@ -47,45 +49,16 @@ export interface RoomLifecycleTimeline {
 
 export interface RoomLifecycleTimelineInput {
   readonly owner: OccurrenceAddress;
-  readonly lifecycleProfileKey: string;
-  readonly encounterPhases: readonly ResolvedEncounterPhase[];
   readonly roomActionRoster: RoomActionRoster;
 }
 
-function checkpointRank(roster: RoomActionRoster, key: string): number {
-  return roster.checkpoints.find((checkpoint) => checkpoint.checkpointKey === key)?.afterRank ?? 0;
+function checkpointRank(roster: RoomActionRoster, key: string): number | undefined {
+  return roster.checkpoints.find((checkpoint) => checkpoint.checkpointKey === key)?.afterRank;
 }
 
 function actionRank(roster: RoomActionRoster, reference: RoomActionReference): number | undefined {
   const key = roomActionKey(reference);
-  const row = roster.rows.find((candidate) => candidate.key === key);
-  return row?.rank ?? undefined;
-}
-
-function addBoundary(
-  boundaries: RoomLifecycleBoundaryEntry[],
-  boundary: RoomLifecycleBoundary,
-  rank: number,
-  placement: 'before' | 'after',
-): void {
-  boundaries.push(Object.freeze({ kind: 'boundary', boundary, rank, placement }));
-}
-
-function boundaryPriority(boundary: RoomLifecycleBoundary): number {
-  switch (boundary.kind) {
-    case 'roomEntered':
-      return 0;
-    case 'encounterStart':
-      return 15;
-    case 'encounterEnd':
-      return 5;
-    case 'nextPhase':
-      return 10;
-    case 'outgoingGeneration':
-      return 40;
-    case 'cleanup':
-      return 50;
-  }
+  return roster.rows.find((candidate) => candidate.key === key)?.rank ?? undefined;
 }
 
 function firstRank(
@@ -103,298 +76,283 @@ function lastRank(
   return matches.length === 0 ? undefined : (matches[matches.length - 1]!.rank ?? undefined);
 }
 
+function publicBoundary(point: RoomLifecycleStructurePoint): RoomLifecycleBoundary {
+  if (point.kind !== 'nextPhase') return point;
+  return Object.freeze({ kind: point.kind, key: point.key, wheelKey: point.wheelKey });
+}
+
+function boundaryEntry(
+  point: RoomLifecycleStructurePoint,
+  rank: number,
+  placement: 'before' | 'after',
+): RoomLifecycleBoundaryEntry {
+  return Object.freeze({
+    kind: 'boundary',
+    boundary: publicBoundary(point),
+    rank,
+    placement,
+  });
+}
+
+function boundarySlot(entry: RoomLifecycleBoundaryEntry): number {
+  return Math.max(0, entry.placement === 'before' ? entry.rank - 1 : entry.rank);
+}
+
 /**
- * Assemble the player-facing lifecycle seams from existing declaration phases
- * and the existing RoomActionRoster. This function does not assess candidates,
- * recalculate dependencies, or mutate the authored order.
+ * Populate one profile-owned lifecycle skeleton with the occurrence's exact
+ * authored action rows. Ranks choose inter-action slots; they never create or
+ * reorder lifecycle points.
  */
 export function assembleRoomLifecycleTimeline(
   input: RoomLifecycleTimelineInput,
 ): RoomLifecycleTimeline {
-  const { encounterPhases, roomActionRoster: roster } = input;
+  const { roomActionRoster: roster } = input;
+  const structure = roster.lifecycleStructure;
   const entries: RoomLifecycleTimelineEntry[] = [];
-  const boundaries: RoomLifecycleBoundaryEntry[] = [];
   const rankedRows = roster.rows
     .filter((row) => row.rank !== null && !row.stale)
     .sort((left, right) => left.rank! - right.rank!);
   const finalRank = rankedRows.reduce((rank, row) => Math.max(rank, row.rank!), 0);
+  const phaseByKey = new Map(structure.phases.map((phase) => [phase.phaseKey, phase]));
 
-  addBoundary(boundaries, Object.freeze({ kind: 'roomEntered', key: 'roomEntered' }), 0, 'before');
-
-  const profile = input.lifecycleProfileKey;
-  const activePhases = encounterPhases.filter((phase) => phase.kind !== 'nonCombat');
-  const rowsForPhase = (phase: ResolvedEncounterPhase): readonly RoomActionRow[] =>
+  const rowsForPhase = (phase: RoomLifecycleStructurePhase): readonly RoomActionRow[] =>
     rankedRows.filter((row) => {
-      if (phase.rewardAttachment?.kind === 'rewardWheel') {
+      if (phase.rewardWheelKey !== undefined) {
         return (
           (row.window.kind === 'shipPreCombat' || row.window.kind === 'shipPostCombat') &&
-          row.window.wheelKey === phase.rewardAttachment.key
+          row.window.wheelKey === phase.rewardWheelKey
         );
       }
-      if (profile === 'FieldsCombatRoom' && phase.rewardAttachment?.kind === 'localReward') {
-        return row.window.kind === 'fields' && row.window.phaseKey === phase.slotKey;
+      if (structure.profileKey === 'FieldsCombatRoom') {
+        return row.window.kind === 'fields' && row.window.phaseKey === phase.phaseKey;
       }
       return row.window.kind === 'standard';
     });
+
   const shipPhaseKeyForAction = (row: RoomActionRow): string | undefined => {
-    if (profile !== 'ShipCombatRoom') return undefined;
+    if (structure.profileKey !== 'ShipCombatRoom') return undefined;
     if (row.window.kind === 'shipPostCombat') {
       const wheelKey = row.window.wheelKey;
-      return activePhases.find(
-        (phase) =>
-          phase.rewardAttachment?.kind === 'rewardWheel' && phase.rewardAttachment.key === wheelKey,
-      )?.slotKey;
+      return structure.phases.find((phase) => phase.rewardWheelKey === wheelKey)?.phaseKey;
     }
     if (row.window.kind === 'shipPreCombat') {
       const wheelKey = row.window.wheelKey;
-      const targetIndex = activePhases.findIndex(
-        (phase) =>
-          phase.rewardAttachment?.kind === 'rewardWheel' && phase.rewardAttachment.key === wheelKey,
-      );
-      return targetIndex > 0 ? activePhases[targetIndex - 1]?.slotKey : undefined;
+      const targetIndex = structure.phases.findIndex((phase) => phase.rewardWheelKey === wheelKey);
+      return targetIndex > 0 ? structure.phases[targetIndex - 1]?.phaseKey : undefined;
     }
     return undefined;
   };
 
-  const addPhaseBoundaries = (phase: ResolvedEncounterPhase): void => {
-    const wheel =
-      phase.rewardAttachment?.kind === 'rewardWheel' ? phase.rewardAttachment : undefined;
-    const cage =
-      profile === 'FieldsCombatRoom' && phase.rewardAttachment?.kind === 'localReward'
-        ? Object.freeze({ kind: 'completeFieldsCage' as const, phaseKey: phase.slotKey })
-        : undefined;
-    const choose =
-      wheel === undefined
-        ? undefined
-        : Object.freeze({ kind: 'chooseRewardWheel' as const, wheelKey: wheel.key });
-    const lastPreCombatRank =
-      cage === undefined && choose === undefined
-        ? lastRank(
-            rankedRows,
-            (row) => row.window.kind === 'standard' && row.window.phase === 'beforeCombat',
-          )
-        : undefined;
-    const startRank =
-      cage === undefined
-        ? choose === undefined
-          ? (lastPreCombatRank ?? 0)
-          : (actionRank(roster, choose) ?? 0)
-        : (actionRank(roster, cage) ?? 0);
-    const startPlacement =
-      cage !== undefined
-        ? 'before'
-        : choose !== undefined || lastPreCombatRank !== undefined
-          ? 'after'
-          : 'before';
-    addBoundary(
-      boundaries,
-      Object.freeze({
-        kind: 'encounterStart',
-        key: `encounterStart:${phase.slotKey}`,
-        phaseKey: phase.slotKey,
-      }),
-      startRank,
-      startPlacement,
-    );
-
-    // Fields' grouped cage action is the complete activation-through-combat
-    // atomic span. Do not use reward rows to widen that span.
-    if (cage !== undefined) {
-      const cageRank = actionRank(roster, cage) ?? 0;
-      addBoundary(
-        boundaries,
-        Object.freeze({
-          kind: 'encounterEnd',
-          key: `encounterEnd:${phase.slotKey}`,
-          phaseKey: phase.slotKey,
-        }),
-        cageRank,
-        'after',
-      );
-      return;
+  const desiredBoundary = (point: RoomLifecycleStructurePoint): RoomLifecycleBoundaryEntry => {
+    switch (point.kind) {
+      case 'roomEntered':
+        return boundaryEntry(point, 0, 'before');
+      case 'encounterStart': {
+        const phase = phaseByKey.get(point.phaseKey);
+        if (phase === undefined) throw new Error(`unknown lifecycle phase ${point.phaseKey}`);
+        const cage =
+          structure.profileKey === 'FieldsCombatRoom'
+            ? Object.freeze({ kind: 'completeFieldsCage' as const, phaseKey: phase.phaseKey })
+            : undefined;
+        const choose =
+          phase.rewardWheelKey === undefined
+            ? undefined
+            : Object.freeze({
+                kind: 'chooseRewardWheel' as const,
+                wheelKey: phase.rewardWheelKey,
+              });
+        const lastPreCombatRank =
+          cage === undefined && choose === undefined
+            ? lastRank(
+                rankedRows,
+                (row) => row.window.kind === 'standard' && row.window.phase === 'beforeCombat',
+              )
+            : undefined;
+        const rank =
+          cage !== undefined
+            ? (actionRank(roster, cage) ?? 0)
+            : choose !== undefined
+              ? (actionRank(roster, choose) ?? 0)
+              : (lastPreCombatRank ?? 0);
+        return boundaryEntry(
+          point,
+          rank,
+          cage !== undefined
+            ? 'before'
+            : choose !== undefined || lastPreCombatRank !== undefined
+              ? 'after'
+              : 'before',
+        );
+      }
+      case 'encounterEnd': {
+        const phase = phaseByKey.get(point.phaseKey);
+        if (phase === undefined) throw new Error(`unknown lifecycle phase ${point.phaseKey}`);
+        if (structure.profileKey === 'FieldsCombatRoom') {
+          return boundaryEntry(
+            point,
+            actionRank(roster, {
+              kind: 'completeFieldsCage',
+              phaseKey: phase.phaseKey,
+            }) ?? 0,
+            'after',
+          );
+        }
+        const phaseRows = rowsForPhase(phase);
+        const firstPostCombatRank =
+          phase.rewardWheelKey === undefined
+            ? firstRank(
+                phaseRows,
+                (row) => row.window.kind === 'standard' && row.window.phase === 'afterCombat',
+              )
+            : firstRank(phaseRows, (row) => row.window.kind === 'shipPostCombat');
+        const rank =
+          firstPostCombatRank ??
+          actionRank(
+            roster,
+            phase.rewardWheelKey === undefined
+              ? Object.freeze({ kind: 'interactEncounter', phaseKey: phase.phaseKey })
+              : Object.freeze({
+                  kind: 'chooseRewardWheel',
+                  wheelKey: phase.rewardWheelKey,
+                }),
+          ) ??
+          lastRank(phaseRows, () => true) ??
+          0;
+        return boundaryEntry(point, rank, firstPostCombatRank === undefined ? 'after' : 'before');
+      }
+      case 'nextPhase':
+        return point.previousWheelKey === undefined
+          ? boundaryEntry(
+              point,
+              actionRank(roster, {
+                kind: 'chooseRewardWheel',
+                wheelKey: point.wheelKey,
+              }) ?? 0,
+              'before',
+            )
+          : boundaryEntry(
+              point,
+              checkpointRank(roster, `nextPhaseUsable:${point.previousWheelKey}`) ?? 0,
+              'after',
+            );
+      case 'outgoingGeneration':
+        return boundaryEntry(
+          point,
+          checkpointRank(roster, 'outgoingGeneration') ?? finalRank,
+          'after',
+        );
+      case 'cleanup': {
+        const fieldsCageRanks =
+          structure.profileKey === 'FieldsCombatRoom'
+            ? structure.phases
+                .map((phase) =>
+                  actionRank(roster, {
+                    kind: 'completeFieldsCage',
+                    phaseKey: phase.phaseKey,
+                  }),
+                )
+                .filter((rank): rank is number => rank !== undefined)
+            : [];
+        if (fieldsCageRanks.length > 0) {
+          return boundaryEntry(point, Math.max(...fieldsCageRanks), 'after');
+        }
+        const hasOutgoing = structure.points.some(
+          (candidate) => candidate.kind === 'outgoingGeneration',
+        );
+        return boundaryEntry(
+          point,
+          hasOutgoing ? (checkpointRank(roster, 'outgoingGeneration') ?? finalRank) : finalRank,
+          'after',
+        );
+      }
     }
-    const phaseRows = rowsForPhase(phase);
-    const firstPostCombatRank =
-      wheel === undefined
-        ? firstRank(
-            phaseRows,
-            (row) => row.window.kind === 'standard' && row.window.phase === 'afterCombat',
-          )
-        : firstRank(phaseRows, (row) => row.window.kind === 'shipPostCombat');
-    const endRank =
-      firstPostCombatRank ??
-      actionRank(
-        roster,
-        choose ?? Object.freeze({ kind: 'interactEncounter', phaseKey: phase.slotKey }),
-      ) ??
-      lastRank(phaseRows, () => true) ??
-      0;
-    const endPlacement = firstPostCombatRank === undefined ? 'after' : 'before';
-    addBoundary(
-      boundaries,
-      Object.freeze({
-        kind: 'encounterEnd',
-        key: `encounterEnd:${phase.slotKey}`,
-        phaseKey: phase.slotKey,
-      }),
-      endRank,
-      endPlacement,
-    );
   };
 
-  if (profile === 'FieldsCombatRoom') {
-    const cagePhases = activePhases.filter(
-      (phase) => phase.rewardAttachment?.kind === 'localReward',
-    );
-    const rankedCages = cagePhases
-      .flatMap((phase) => {
-        const rank = actionRank(roster, { kind: 'completeFieldsCage', phaseKey: phase.slotKey });
-        return rank === undefined ? [] : [{ phase, rank }];
-      })
-      .sort((left, right) => {
-        return left.rank - right.rank;
-      });
-    rankedCages.forEach(({ phase }) => addPhaseBoundaries(phase));
-  } else {
-    activePhases.forEach((phase) => addPhaseBoundaries(phase));
-    activePhases.forEach((phase, index) => {
-      const wheel =
-        phase.rewardAttachment?.kind === 'rewardWheel' ? phase.rewardAttachment : undefined;
-      if (wheel === undefined || index === 0) return;
-      const previousWheel = activePhases[index - 1]?.rewardAttachment;
-      addBoundary(
-        boundaries,
-        Object.freeze({
-          kind: 'nextPhase',
-          key: `nextPhase:${wheel.key}`,
-          wheelKey: wheel.key,
-        }),
-        previousWheel?.kind === 'rewardWheel'
-          ? checkpointRank(roster, `nextPhaseUsable:${previousWheel.key}`)
-          : (actionRank(
-              roster,
-              Object.freeze({ kind: 'chooseRewardWheel' as const, wheelKey: wheel.key }),
-            ) ?? 0),
-        previousWheel?.kind === 'rewardWheel' ? 'after' : 'before',
-      );
+  let precedingSlot = 0;
+  const boundaryEntries = structure.points.map((point) => {
+    const desired = desiredBoundary(point);
+    const desiredSlot = boundarySlot(desired);
+    const slot = Math.max(precedingSlot, desiredSlot);
+    precedingSlot = slot;
+    return Object.freeze({
+      entry:
+        slot === desiredSlot
+          ? desired
+          : Object.freeze({ ...desired, rank: slot, placement: 'after' as const }),
+      slot,
     });
+  });
+  const boundaryBySlot = new Map<number, RoomLifecycleBoundaryEntry[]>();
+  for (const { entry, slot } of boundaryEntries) {
+    const at = boundaryBySlot.get(slot) ?? [];
+    at.push(entry);
+    boundaryBySlot.set(slot, at);
   }
-
-  const hasOutgoing = roster.checkpoints.some(
-    (checkpoint) => checkpoint.checkpointKey === 'outgoingGeneration',
-  );
-  const fieldsCageRanks =
-    profile === 'FieldsCombatRoom'
-      ? activePhases
-          .filter((phase) => phase.rewardAttachment?.kind === 'localReward')
-          .map((phase) =>
-            actionRank(roster, { kind: 'completeFieldsCage', phaseKey: phase.slotKey }),
-          )
-          .filter((rank): rank is number => rank !== undefined)
-      : [];
-  const fieldsCleanupRank = fieldsCageRanks.length === 0 ? undefined : Math.max(...fieldsCageRanks);
-  if (hasOutgoing) {
-    addBoundary(
-      boundaries,
-      Object.freeze({ kind: 'outgoingGeneration', key: 'outgoingGeneration' }),
-      checkpointRank(roster, 'outgoingGeneration'),
-      'after',
-    );
-    if (fieldsCleanupRank === undefined) {
-      addBoundary(
-        boundaries,
-        Object.freeze({ kind: 'cleanup', key: 'cleanup' }),
-        checkpointRank(roster, 'outgoingGeneration'),
-        'after',
+  const rowByRank = new Map(rankedRows.map((row) => [row.rank!, row]));
+  const finalSlot = Math.max(finalRank, ...boundaryEntries.map(({ slot }) => slot));
+  for (let slot = 0; slot <= finalSlot; slot += 1) {
+    entries.push(...(boundaryBySlot.get(slot) ?? []));
+    const row = rowByRank.get(slot + 1);
+    if (row !== undefined) {
+      const phaseKey =
+        shipPhaseKeyForAction(row) ??
+        ('phaseKey' in row.reference ? row.reference.phaseKey : undefined);
+      entries.push(
+        Object.freeze({
+          kind: 'action',
+          action: row,
+          rank: row.rank!,
+          ...(phaseKey === undefined ? {} : { phaseKey }),
+        }),
       );
     }
   }
-  if (fieldsCleanupRank !== undefined) {
-    addBoundary(
-      boundaries,
-      Object.freeze({ kind: 'cleanup', key: 'cleanup' }),
-      fieldsCleanupRank,
-      'after',
-    );
-  } else if (!hasOutgoing) {
-    addBoundary(boundaries, Object.freeze({ kind: 'cleanup', key: 'cleanup' }), finalRank, 'after');
-  }
-
-  const boundaryEntries = boundaries.sort((left, right) => {
-    if (left.rank !== right.rank) return left.rank - right.rank;
-    if (left.placement !== right.placement) return left.placement === 'before' ? -1 : 1;
-    if (profile === 'FieldsCombatRoom') {
-      if (left.boundary.kind === 'cleanup' && right.boundary.kind === 'outgoingGeneration') {
-        return -1;
-      }
-      if (left.boundary.kind === 'outgoingGeneration' && right.boundary.kind === 'cleanup') {
-        return 1;
-      }
-    }
-    return boundaryPriority(left.boundary) - boundaryPriority(right.boundary);
-  });
-  const boundaryByRank = new Map<number, RoomLifecycleBoundaryEntry[]>();
-  for (const entry of boundaryEntries) {
-    const at = boundaryByRank.get(entry.rank) ?? [];
-    at.push(entry);
-    boundaryByRank.set(entry.rank, at);
-  }
-  for (const row of rankedRows) {
-    const rank = row.rank!;
-    const phaseKey = shipPhaseKeyForAction(row);
-    for (const boundary of boundaryByRank.get(rank) ?? []) {
-      if (boundary.placement === 'before') entries.push(boundary);
-    }
-    entries.push(
-      Object.freeze({
-        kind: 'action' as const,
-        action: row,
-        rank,
-        ...(phaseKey === undefined ? {} : { phaseKey }),
-      }),
-    );
-    for (const boundary of boundaryByRank.get(rank) ?? []) {
-      if (boundary.placement === 'after') entries.push(boundary);
-    }
-  }
-  for (const boundary of boundaryEntries) {
-    if (boundary.rank === 0 || boundary.rank > rankedRows.length) {
-      if (boundary.rank === 0 || !entries.includes(boundary)) entries.push(boundary);
-    }
-  }
-  entries.sort((left, right) => {
-    if (left.rank !== right.rank) return left.rank - right.rank;
-    if (left.kind !== right.kind) {
-      if (left.kind === 'boundary' && right.kind === 'action') {
-        return left.placement === 'before' ? -1 : 1;
-      }
-      if (left.kind === 'action' && right.kind === 'boundary') {
-        return right.placement === 'before' ? 1 : -1;
-      }
-    }
-    if (left.kind === 'boundary' && right.kind === 'boundary') {
-      if (left.placement !== right.placement) return left.placement === 'before' ? -1 : 1;
-      if (profile === 'FieldsCombatRoom') {
-        if (left.boundary.kind === 'cleanup' && right.boundary.kind === 'outgoingGeneration') {
-          return -1;
-        }
-        if (left.boundary.kind === 'outgoingGeneration' && right.boundary.kind === 'cleanup') {
-          return 1;
-        }
-      }
-      return boundaryPriority(left.boundary) - boundaryPriority(right.boundary);
-    }
-    return 0;
-  });
 
   return Object.freeze({
     owner: input.owner,
+    structure,
     entries: Object.freeze(entries),
-    boundaries: Object.freeze(
-      boundaryEntries
-        .map((entry) => (entry.kind === 'boundary' ? entry.boundary : null))
-        .filter((entry): entry is RoomLifecycleBoundary => entry !== null),
-    ),
+    boundaries: Object.freeze(boundaryEntries.map(({ entry }) => entry.boundary)),
     repairRows: Object.freeze(roster.rows.filter((row) => row.rank === null || row.stale)),
+  });
+}
+
+/** Apply an engine-assessed active phase prefix without reconstructing the skeleton in a consumer. */
+export function scopeRoomLifecycleTimeline(
+  timeline: RoomLifecycleTimeline,
+  activePhaseKeys: readonly string[],
+): RoomLifecycleTimeline {
+  const structure = scopeRoomLifecycleStructure(timeline.structure, activePhaseKeys);
+  if (structure === timeline.structure) return timeline;
+  const active = new Set(structure.activeEncounterSlotKeys);
+  const activeWheelKeys = new Set(
+    structure.phases.flatMap((phase) =>
+      phase.rewardWheelKey === undefined ? [] : [phase.rewardWheelKey],
+    ),
+  );
+  const boundaryActive = (boundary: RoomLifecycleBoundary): boolean => {
+    switch (boundary.kind) {
+      case 'encounterStart':
+      case 'encounterEnd':
+        return active.has(boundary.phaseKey);
+      case 'nextPhase':
+        return activeWheelKeys.has(boundary.wheelKey);
+      case 'roomEntered':
+      case 'outgoingGeneration':
+      case 'cleanup':
+        return true;
+    }
+  };
+  const entries = timeline.entries.filter(
+    (entry) =>
+      (entry.kind === 'boundary' && boundaryActive(entry.boundary)) ||
+      (entry.kind === 'action' && (entry.phaseKey === undefined || active.has(entry.phaseKey))),
+  );
+  return Object.freeze({
+    owner: timeline.owner,
+    structure,
+    entries: Object.freeze(entries),
+    boundaries: Object.freeze(timeline.boundaries.filter(boundaryActive)),
+    repairRows: timeline.repairRows,
   });
 }

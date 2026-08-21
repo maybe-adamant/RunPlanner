@@ -25,7 +25,7 @@ export function RewardControlEditor({
   readonly interactions: WorkspaceInteractionCatalog;
   readonly label?: string;
   readonly showOffer?: boolean;
-  /** Trait, level, and conversion controls belong to the owning Room Actions row. */
+  /** Trait, level, and conversion controls belong to the owning Room Timeline row. */
   readonly showAcquisitionChildren?: boolean;
   /** A fixed-type producer can expose its payload directly without a redundant type step. */
   readonly offerStartStep?: RewardPickerStep;

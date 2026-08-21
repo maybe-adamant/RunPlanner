@@ -1,6 +1,7 @@
 import {
   createAcquisitionSiteAddress,
   createAdditionalExitAddress,
+  createEncounterPhaseAddress,
   createIncomingRewardAddress,
   createLocalRewardAddress,
   createRoomActionAddress,
@@ -63,6 +64,7 @@ import type {
 } from '@run-planner/engine/simulation';
 import {
   encounterPhaseAuthoringDomainForRoom,
+  scopeRoomLifecycleTimeline,
   type EncounterPhaseAuthoringRoomOptions,
 } from '@run-planner/engine/simulation';
 
@@ -1353,7 +1355,7 @@ function roomActionsForOccurrence(
       key: `${proposal.kind}:${index}:${roomActionKey(proposal.reference)}`,
       label:
         proposal.kind === 'remove'
-          ? 'Remove from room actions'
+          ? 'Remove from timeline'
           : `${proposal.kind === 'insert' ? 'Insert' : 'Move'} to position ${(proposal.toIndex ?? 0) + 1}`,
       reference: proposal.reference,
       structurallyAuthorable: proposal.structurallyAuthorable,
@@ -1506,8 +1508,19 @@ function roomActionsForOccurrence(
       return projected;
     }),
   );
+  const activeLifecycleTimeline = scopeRoomLifecycleTimeline(
+    lifecycleTimeline,
+    lifecycleTimeline.structure.activeEncounterSlotKeys.flatMap((phaseKey) => {
+      const address = createEncounterPhaseAddress(
+        input.biome,
+        { kind: 'occurrence', occurrenceId: input.occurrence.occurrenceId },
+        phaseKey,
+      );
+      return input.encounterPhaseStatus(address)?.kind === 'dormantSuffix' ? [] : [phaseKey];
+    }),
+  );
   return Object.freeze({
-    timeline: projectRoomLifecycleTimeline(input, lifecycleTimeline, roomLocal),
+    timeline: projectRoomLifecycleTimeline(input, activeLifecycleTimeline, roomLocal),
     checkpoints: Object.freeze(
       roster.checkpoints.map((checkpoint) =>
         Object.freeze({

@@ -127,7 +127,7 @@ The same action order carries later Artificer replacement pickups; there is no
 cage-only order or Fields-private acquisition fold.
 
 The editor keeps cage and optional identities in Room Overview and renders the
-single chronology in Room Actions. Its engine-derived timeline brackets each
+single chronology in Room Timeline. Its engine-derived timeline brackets each
 ranked active `completeFieldsCage` with the exact ordinal Start/End boundaries;
 an unranked retained cage is repair work, not an active encounter cycle. Room
 Doors contains the unchanged outgoing decision. These tabs do not create a

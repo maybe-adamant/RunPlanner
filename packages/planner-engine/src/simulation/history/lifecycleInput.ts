@@ -1,6 +1,7 @@
 import type { Catalog } from '../../catalog-schema';
 import type { EnteredRewardStoreHistoryPolicy } from '../../reward-kernel/bindings';
 import type { RoomLifecycleExecutionInput } from '../lifecycle';
+import { scopeRoomActionRoster } from '../room-actions';
 import type {
   CanonicalAuthoredRoom,
   CanonicalCompletionRoom,
@@ -71,6 +72,13 @@ export function createRoomLifecycleInput(
               .map((wheel) => [wheel.wheelKey, wheel.storeKey]),
           ),
         );
+  const roomActionRoster =
+    room.kind !== 'authored'
+      ? undefined
+      : scopeRoomActionRoster(
+          room.roomActionRoster,
+          encounterPhases.map((phase) => phase.slotKey),
+        );
   return {
     origin: room.origin,
     lifecycleProfileKey: room.lifecycleProfileKey,
@@ -79,7 +87,7 @@ export function createRoomLifecycleInput(
     counterEffects: room.counterEffects,
     ...(requiredObjects === undefined ? {} : { requiredObjects }),
     ...(offerPointRewardStores === undefined ? {} : { offerPointRewardStores }),
-    ...(room.kind === 'authored' ? { roomActionRoster: room.roomActionRoster } : {}),
+    ...(roomActionRoster === undefined ? {} : { roomActionRoster }),
     ...(incomingReward === undefined
       ? {}
       : {

@@ -398,12 +398,12 @@ describe('DecisionWorkbench', () => {
       'F',
       subjectForOwner(createExitDecisionAddress(goldenFBiome, incomingDecision.source)),
     );
-    expect(screen.queryByRole('heading', { level: 4, name: 'Room Actions' })).toBeNull();
+    expect(screen.queryByRole('heading', { level: 4, name: 'Room Timeline' })).toBeNull();
     expect(screen.getByRole('button', { name: 'Open Midshop room' })).toBeTruthy();
 
     cleanup();
     renderDecisionWorkbench(project, 'Underworld', 'F', subjectForOwner(outgoingOwner));
-    expect(screen.queryByRole('heading', { level: 4, name: 'Room Actions' })).toBeNull();
+    expect(screen.queryByRole('heading', { level: 4, name: 'Room Timeline' })).toBeNull();
     expect(screen.queryByText('Pom Slice')).toBeNull();
   });
 

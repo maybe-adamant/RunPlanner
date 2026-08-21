@@ -423,6 +423,7 @@ describe('H Fields materialization', () => {
       .flatMap((batch) => batch.targets.map((target) => target.room))
       .find((candidate) => candidate.occurrenceId === occurrenceId);
     if (room === undefined) throw new Error('Fields blocker room is missing');
+    expect(room.roomActionRoster.lifecycleStructure).toBe(room.roomLifecycleTimeline.structure);
     expect(
       room.roomLifecycleTimeline.boundaries.map((boundary) =>
         'phaseKey' in boundary ? `${boundary.kind}:${boundary.phaseKey}` : boundary.kind,

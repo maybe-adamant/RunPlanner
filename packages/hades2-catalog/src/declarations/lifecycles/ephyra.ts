@@ -2,36 +2,6 @@ import type { RawRoomLifecycleProfileDeclaration } from '../types';
 
 export const ephyraRoomLifecycleProfiles = [
   {
-    key: 'EphyraOpeningRoom',
-    encounterEnvelopeKeys: ['SingleEncounter'],
-    producer: { kind: 'required', lifecycleProfileKeys: ['RoomReward'] },
-    operations: [
-      { kind: 'prepareRoom', effects: ['recordPreparation', 'recordEncounter'] },
-      { kind: 'enterRoom', effects: ['recordAppearance'] },
-      {
-        kind: 'advanceProducer',
-        point: 'roomRewardPickup',
-        effects: ['recordProducerPoint'],
-      },
-      {
-        kind: 'startEncounter',
-        encounter: { kind: 'only' },
-        effects: ['recordEncounterStart', 'advanceEncounterDepth'],
-      },
-      {
-        kind: 'completeEncounter',
-        encounter: { kind: 'only' },
-        effects: ['recordEncounterCompletion'],
-      },
-      { kind: 'generateOutgoingBatch', effects: ['recordOutgoingGeneration'] },
-      {
-        kind: 'commitRoom',
-        effects: ['recordCommit', 'advanceRoomCounters', 'recordEnteredRewardStore'],
-      },
-      { kind: 'exitRoom', effects: ['recordExit'] },
-    ],
-  },
-  {
     key: 'EphyraMainRoom',
     encounterEnvelopeKeys: ['SingleEncounter'],
     producer: { kind: 'required', lifecycleProfileKeys: ['RoomReward'] },

@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   createTargetAddress,
+  roomActionKey,
   semanticAddressKey,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
@@ -107,6 +108,42 @@ describe('F takeover materialization', () => {
       'f-takeover-preboss-shop',
       'f-takeover-preboss-free',
     ]);
+  });
+
+  it('uses the shared Opening lifecycle and renders pickup before Start before End', () => {
+    const opening = materialize(createCompleteFTakeoverProject()).entryRoom;
+    const entries = opening.roomLifecycleTimeline.entries;
+    const pickup = entries.findIndex(
+      (entry) =>
+        entry.kind === 'action' &&
+        entry.action.key ===
+          roomActionKey({
+            kind: 'interactIncomingReward',
+            producerPoint: 'roomRewardPickup',
+            acquisitionRole: 'source',
+          }),
+    );
+    const start = entries.findIndex(
+      (entry) => entry.kind === 'boundary' && entry.boundary.kind === 'encounterStart',
+    );
+    const end = entries.findIndex(
+      (entry) => entry.kind === 'boundary' && entry.boundary.kind === 'encounterEnd',
+    );
+
+    expect(opening.lifecycleProfileKey).toBe('OpeningRewardRoom');
+    expect(opening.roomActionRoster.lifecycleStructure).toBe(
+      opening.roomLifecycleTimeline.structure,
+    );
+    expect(opening.roomLifecycleTimeline.structure.points.map((point) => point.kind)).toEqual([
+      'roomEntered',
+      'encounterStart',
+      'encounterEnd',
+      'outgoingGeneration',
+      'cleanup',
+    ]);
+    expect(pickup).toBeGreaterThanOrEqual(0);
+    expect(pickup).toBeLessThan(start);
+    expect(start).toBeLessThan(end);
   });
 
   it('derives Shop/free roles and completion entry from the selected physical exit', () => {

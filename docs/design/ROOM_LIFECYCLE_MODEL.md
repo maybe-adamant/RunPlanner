@@ -255,26 +255,51 @@ prerequisite does not reject the edit or become silently repaired. Missing
 required authorship remains a supported incomplete state with one canonical
 late restore position.
 
-### Derived authoring timeline
+### Lifecycle structure and derived authoring timeline
 
-The engine publishes one closed `RoomLifecycleTimeline` beside the
-`RoomActionRoster`. The roster remains authoritative for active action rows,
-dependencies, proposals, stale repair, and structural validity. The timeline
-places those exact roster keys around semantic `roomEntered`,
-`encounterStart`, `encounterEnd`, Ship `nextPhase`, outgoing-generation, and
-final `cleanup` boundaries. It may carry declaration-owned phase identity and
-before/action/after placement, but never tabs, labels, callbacks, or another
-eligibility/order calculation.
+The pure action domain publishes one closed `RoomLifecycleStructure` from the
+resolved lifecycle profile and its active declaration-owned phase scope. Its
+ordered points are the rigid room skeleton: `roomEntered`, each exact
+`encounterStart` then `encounterEnd`, Ship `nextPhase` seams,
+outgoing-generation, and final `cleanup`. The same frozen structure is carried
+by the `RoomActionRoster` and consumed by required-action scheduling,
+lifecycle execution, checkpoint assembly, and `RoomLifecycleTimeline`.
+None of those consumers may reconstruct phase membership or boundary order
+from authored action ranks.
+
+When encounter preparation assesses a suffix as dormant, the engine scopes
+that same structure and roster to the assessed active phase prefix for both
+execution and workspace projection. An invalid terminating selection does not
+fabricate a shorter structure; its later phase remains available for repair.
+The application consumes the engine's phase status and scoping operation
+rather than deciding suffix activity from the selected encounter label.
+
+The roster remains authoritative for active action rows, dependencies,
+proposals, stale repair, and structural validity. The timeline places those
+exact roster keys into the structure's flexible intervals. It may carry
+declaration-owned phase identity and before/action/after placement, but never
+tabs, labels, callbacks, or another eligibility/order calculation.
+
+An action rank selects only the inter-action slot to which a boundary is
+anchored. The lifecycle profile and its active phase order independently own
+the structural boundary sequence: Room entered, each phase's Start then End,
+the next-phase seams between phases, and the profile-specific final seams. If
+retained-invalid action ranks imply contradictory boundary anchors, the
+timeline keeps the authored action order for repair and moves the later
+semantic boundary forward to the earliest compatible slot. It never sorts
+Start and End by display priority or permits End to precede its matching Start.
 
 The player-facing timeline renders one final Cleanup and does not render the
 `exitUsable` checkpoint as a peer row. Encounterless and Shop profiles omit
-invented encounter seams. Fields cycles derive only from ranked active cage
-actions, so retained unranked cages are repair rows rather than false active
-cycles. Ship phase grouping consumes the engine's phase attachment; the
-application does not place wheel or action rows by rank arithmetic.
+invented encounter seams. Fields Passive is Room Entered setup, while every
+structurally active cage owns a rigid Start/End cycle in the structure's
+authored cage permutation. A missing cage-completion action remains a repair
+row but cannot erase that cycle. Ship phase grouping consumes the same
+structure's phase attachment; the application does not place wheel or action
+rows by rank arithmetic.
 
-The editor presents this product through Room Overview, Room Actions, and Room
-Doors. Overview declares room-local setup, Actions resolves the one chronology,
+The editor presents this product through Room Overview, Room Timeline, and Room
+Doors. Overview declares room-local setup, Timeline resolves the one chronology,
 and Doors edits the occurrence-owned outgoing decision. These are transient
 views over unchanged semantic owners, not persisted lifecycle events or a
 second room model.
@@ -633,26 +658,25 @@ the outer Narcissus option. The consequential concrete set includes Ashes,
 Psyche, Bones, Max Magick, Max Health, and Death Defiance; each remains optional
 and independently ordered.
 
-### Ephyra Opening
+### Opening Reward Room
 
 ```text
 prepareRoom
 enterRoom
 advanceProducer(roomRewardPickup)
-startEncounter(OpeningGeneratedN)
-completeEncounter(OpeningGeneratedN)
+startEncounter(OpeningGeneratedF | OpeningGeneratedN)
+completeEncounter(OpeningGeneratedF | OpeningGeneratedN)
 generateOutgoingBatch
 commitRoom
 exitRoom
 ```
 
-`N_Opening01` is not a standard reward-room ordering. Its encounter starts
-late and the room waits for its reward pickup first. `N_PreHub01` uses the
-standard combat-then-reward profile, while its encounter declaration keeps
-that combat non-counting. The mandatory-action scheduler reads this exact
-profile, so a newly created Opening places its incoming pickup before
-`startEncounter(OpeningGeneratedN)` rather than applying the ordinary
-after-combat reward alias.
+F and N Opening declarations share this ordering. Their encounter starts late
+and the room waits for its reward pickup first. `N_PreHub01` uses the standard
+combat-then-reward profile, while its encounter declaration keeps that combat
+non-counting. The mandatory-action scheduler reads the Opening declaration's
+exact profile, so a newly created Opening places its incoming pickup before
+`startEncounter` rather than applying the ordinary after-combat reward alias.
 
 ### Ephyra Main Target
 
@@ -1123,7 +1147,7 @@ commit predecessor
   -> validate/materialize shop inventory from preparation history
   -> enter shop
   -> generate outgoing batch from the same pre-purchase history
-  -> execute participating Room Actions in the post-outgoing Shop window and
+  -> execute participating `roomActions.order` entries in the post-outgoing Shop window and
      derive exit history
   -> commit and exit the shop
   -> prepare and enter the already-generated picked target

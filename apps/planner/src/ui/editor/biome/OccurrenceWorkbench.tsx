@@ -1172,7 +1172,7 @@ function RoomActionsWorkbench({
     return (
       <section aria-label="Ship combat structure" className="ship-combat-editor">
         <section
-          aria-label={actions === undefined ? undefined : 'Room Actions'}
+          aria-label={actions === undefined ? undefined : 'Room Timeline'}
           className="room-actions-workbench"
         >
           {actions === undefined ? null : <SemanticOwnerMarker address={actions.owner} />}
@@ -1249,12 +1249,9 @@ function RoomActionsWorkbench({
                     phaseBoundaryEntries.length === 0 ? null : (
                       <>
                         <div className="local-reward-heading ship-phase-actions-heading">
-                          <h5>Actions</h5>
+                          <h5>Timeline</h5>
                         </div>
-                        <ol
-                          aria-label={`${phase.label} room action order`}
-                          className="room-action-list"
-                        >
+                        <ol aria-label={`${phase.label} timeline`} className="room-action-list">
                           {phaseRankedRows.length === 0
                             ? phaseBoundaryEntries.map(renderBoundary)
                             : standaloneBoundariesBetween(
@@ -1293,11 +1290,8 @@ function RoomActionsWorkbench({
                             </li>
                           ))}
                           {phaseUnrankedRows.length === 0 ? null : (
-                            <li
-                              aria-label="Room-action order boundary"
-                              className="hub-visit-boundary"
-                            >
-                              <span>Room action order ends here</span>
+                            <li aria-label="Room timeline boundary" className="hub-visit-boundary">
+                              <span>Room timeline ends here</span>
                               <span>{phaseUnrankedRows.length} not ordered</span>
                             </li>
                           )}
@@ -1338,10 +1332,10 @@ function RoomActionsWorkbench({
     return row === undefined ? [] : [renderRow(row, [])];
   });
   return (
-    <section aria-label="Room Actions" className="room-actions-workbench">
+    <section aria-label="Room Timeline" className="room-actions-workbench">
       <header className="local-reward-heading">
         <div className="owner-markers">
-          <h4>Room Actions</h4>
+          <h4>Room Timeline</h4>
           <SemanticOwnerMarker address={actions.owner} />
         </div>
       </header>
@@ -1349,7 +1343,7 @@ function RoomActionsWorkbench({
         {announcement}
       </p>
       <ol
-        aria-label="Ranked room action order"
+        aria-label="Room timeline"
         className="room-action-list"
         {...pointerHandlers}
         ref={(element) => {
@@ -1360,15 +1354,15 @@ function RoomActionsWorkbench({
         {rankedRows.length === 0 ? checkpointRows(0) : null}
       </ol>
       {actions.repairRows.length === 0 ? null : (
-        <section aria-label="Room action repairs" className="room-action-repairs">
+        <section aria-label="Timeline repairs" className="room-action-repairs">
           <div className="local-reward-heading">
-            <h5>Action repairs</h5>
+            <h5>Timeline repairs</h5>
           </div>
           <p className="fixed-room-state">
             These retained actions are not part of the active lifecycle order. Restore or remove
             them explicitly.
           </p>
-          <ol aria-label="Room action repairs" className="room-action-list">
+          <ol aria-label="Timeline repairs" className="room-action-list">
             {actions.repairRows.map((row) => renderRow(row))}
           </ol>
         </section>
@@ -1905,9 +1899,9 @@ export function OccurrenceWorkbench({
                   : index === 1
                     ? 'shipCombat1Actions'
                     : 'shipCombat2Actions';
-              return tabButton(tab, `${phase.label} Actions`, phase.key);
+              return tabButton(tab, `${phase.label} Timeline`, phase.key);
             })
-          : tabButton('actions', 'Room Actions')}
+          : tabButton('actions', 'Room Timeline')}
         {room.workbench.kind === 'ship' && room.workbench.repairRows.length > 0
           ? tabButton('shipInactiveRepair', 'Inactive Actions')
           : null}

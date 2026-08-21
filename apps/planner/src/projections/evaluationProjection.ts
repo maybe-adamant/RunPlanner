@@ -715,7 +715,7 @@ export function findingDestinationLabel(catalog: Catalog, origin: SemanticAddres
     case 'shopOffer':
       return `${biomeLabel} · Shop offer`;
     case 'acquisitionSite':
-      return `${biomeLabel} · Room Actions`;
+      return `${biomeLabel} · Room Timeline`;
     case 'acquisitionEntry':
       return `${biomeLabel} · Acquisition`;
     case 'traitOffer':

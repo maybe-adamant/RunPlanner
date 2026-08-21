@@ -140,8 +140,12 @@ describe('canonical N Hub materialization', () => {
     const start = entries.findIndex(
       (entry) => entry.kind === 'boundary' && entry.boundary.kind === 'encounterStart',
     );
+    const end = entries.findIndex(
+      (entry) => entry.kind === 'boundary' && entry.boundary.kind === 'encounterEnd',
+    );
     expect(pickup).toBeGreaterThanOrEqual(0);
     expect(pickup).toBeLessThan(start);
+    expect(start).toBeLessThan(end);
 
     expect(biome.materializedPrefix.frontier).toMatchObject({
       kind: 'exitDecision',
@@ -173,7 +177,7 @@ describe('canonical N Hub materialization', () => {
     expect(biome.snapshot.entryRoom).toMatchObject({
       occurrenceId: nOccurrenceIds.opening,
       gameName: 'N_Opening01',
-      lifecycleProfileKey: 'EphyraOpeningRoom',
+      lifecycleProfileKey: 'OpeningRewardRoom',
       incomingReward: { resolvedStoreKey: 'RunProgress' },
     });
     expect(biome.snapshot.decisions[0]).toMatchObject({

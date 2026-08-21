@@ -81,8 +81,8 @@ describe('Run State product loop', () => {
     await view.user.click(screen.getByRole('button', { name: 'Underworld' }));
     await view.user.click(screen.getByRole('button', { name: 'Erebus' }));
     await view.user.click(screen.getByRole('button', { name: /^OpeningEvaluated/ }));
-    await view.user.click(screen.getByRole('tab', { name: 'Room Actions' }));
-    const actions = screen.getByRole('region', { name: 'Room Actions' });
+    await view.user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
+    const actions = screen.getByRole('region', { name: 'Room Timeline' });
     const workbench = actions.closest<HTMLElement>('.biome-occurrence-workbench');
     if (workbench === null) throw new Error('Opening room workbench is missing');
     const launcher = within(workbench).getByRole('button', { name: 'Run State' });
