@@ -887,7 +887,10 @@ occurrence or route-settings substitute.
 
 A selected Echo option follows the same active-child rule. Pom, Boon, and
 Reward each publish one exact child in the containing trait inspector; Reward's
-generated acquisition descendants route back to that same owner. A reached
+generated acquisition descendants route back to that same owner. The exact
+history-derived Reward replay never exposes a generic reward picker: a missing
+or stale authored entry receives one engine-attested set/update action, while a
+matching entry has no redundant second-line editor. A reached
 Gold duplicate is the one exception to purchase-first child visibility: its
 stable supplemental Shop row is the sole complete reward editor, including
 boon, Pom, and Time Piece children, before `Picked up` is selected. Those edits

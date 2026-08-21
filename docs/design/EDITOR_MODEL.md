@@ -439,9 +439,17 @@ remove control. An individual purchase or generated-pickup failure remains
 owned by its exact action or acquisition-entry address.
 The Shop inventory row remains the sole editor for what was bought. Its
 Room Timeline row may edit acquisition-time trait, Pom, or disposition children,
-but cannot change the purchased reward identity. Producer-owned pickups such as
-Narcissus retain their outer reward editor in Room Timeline because that row is
-also the canonical payload owner.
+but cannot change the purchased reward identity. A producer-owned pickup retains
+an outer reward editor only when its payload remains authorable. A declaration-
+fixed Narcissus pickup has no false identity picker, while an unresolved Blind
+Box payload remains editable on its canonical Room Timeline row.
+The Timeline action title names the stable pickup interaction and does not change
+when Time Piece or Artificer is selected. That acquisition disposition is shown
+separately as `Pickup outcome`; trait and Pom launchers share one aligned compact
+trailing control strip and one unspecified/invalid/valid color language. Every
+Timeline action reserves the same compact deletion slot: an engine- or
+interaction-projected removal is red and enabled, while required actions and
+Overview-owned participation remain visibly grey and disabled.
 
 Every generated I preboss offer is a distinct Room Occurrence and follows that
 same contract; it does not introduce an I-specific shop mode.

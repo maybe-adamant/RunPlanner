@@ -656,14 +656,14 @@ button:disabled {
   margin-top: 0.45rem;
 }
 
-.reward-outcome-control {
+.pickup-outcome-control {
   display: inline-flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 8px;
 }
 
-.reward-outcome-control > span {
+.pickup-outcome-control > span {
   flex: 0 0 auto;
   color: #aaa7af;
   font-size: 0.78rem;
@@ -672,7 +672,7 @@ button:disabled {
   text-transform: uppercase;
 }
 
-.reward-outcome-control > select {
+.pickup-outcome-control > select {
   width: auto;
   min-width: 13rem;
 }
@@ -3081,6 +3081,8 @@ select {
 }
 
 .room-action-row {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
   margin-left: 24px;
   border-left: 2px solid rgb(174 152 202 / 36%);
 }
@@ -3095,13 +3097,53 @@ select {
   content: '';
 }
 
-.room-action-row > .owner-markers {
+.room-action-row > .room-action-identity {
   min-width: 0;
   flex-wrap: wrap;
 }
 
-.room-action-row > .owner-markers > .trait-offer-launcher {
-  margin-left: 4px;
+.room-action-inline-editors {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 0;
+  gap: 5px;
+}
+
+.room-action-inline-editors > .trait-offer-launcher {
+  width: max-content;
+  min-width: 13rem;
+  max-width: 18rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.room-action-row > .room-action-controls {
+  justify-content: flex-end;
+}
+
+.room-action-delete {
+  display: inline-grid;
+  width: 30px;
+  min-width: 30px;
+  height: 30px;
+  padding: 5px;
+  place-items: center;
+}
+
+.room-action-delete svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.4;
+}
+
+.room-action-delete:disabled {
+  opacity: 0.45;
 }
 
 .room-action-row > .acquisition-entry-resolution,
@@ -3120,6 +3162,18 @@ select {
   background: rgb(211 189 148 / 8%);
   font-size: 0.76rem;
   line-height: 1.35;
+}
+
+@media (max-width: 700px) {
+  .room-action-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .room-action-row > .room-action-controls {
+    grid-column: 1 / -1;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
 }
 
 .room-action-checkpoint {

@@ -112,11 +112,15 @@ describe('underworld product loop', () => {
     await view.user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
     const actions = screen.getByRole('region', { name: 'Room Timeline' });
     const requiredRow = within(actions)
-      .getByText('Pick up Boon')
+      .getByText('Interact with Boon pickup · Apollo')
       .closest<HTMLElement>('[data-room-action-key]');
     if (requiredRow === null) throw new Error('required pickup row is missing');
     expect(within(requiredRow).queryByText('Position')).toBeNull();
-    expect(within(requiredRow).queryByRole('button', { name: 'Remove' })).toBeNull();
+    const deleteButton = within(requiredRow).getByRole('button', {
+      name: 'Remove Interact with Boon pickup · Apollo from timeline',
+    });
+    expect((deleteButton as HTMLButtonElement).disabled).toBe(true);
+    expect(deleteButton.classList.contains('quiet-action')).toBe(true);
     expect(application.store.getState().projectWorkspace.assembly.evaluation).toBe(
       evaluationBefore,
     );
@@ -255,15 +259,11 @@ describe('underworld product loop', () => {
     const replayRow = document.getElementById(semanticOwnerControlElementId(replayEntry));
     if (!(replayRow instanceof HTMLElement))
       throw new Error('focused Echo Room Action row is missing');
-    const reward = within(replayRow).getByRole('button', { name: 'Reward' });
-    await view.user.click(reward);
-    expect(await screen.findByRole('listbox')).toBeTruthy();
-    act(() =>
-      application.store.dispatch(
-        authoredProjectCommandDispatched(
-          rewardInteraction.intentFor({ rewardType: repairRewardType }).command,
-        ),
-      ),
+    expect(within(replayRow).queryByRole('button', { name: 'Reward' })).toBeNull();
+    await view.user.click(
+      within(replayRow).getByRole('button', {
+        name: `Update replay reward · ${rewardInteraction.summary({ rewardType: repairRewardType })}`,
+      }),
     );
 
     const authoredOccurrence = () =>

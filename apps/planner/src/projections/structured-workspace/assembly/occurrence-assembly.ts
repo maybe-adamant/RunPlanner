@@ -384,22 +384,32 @@ function levelResolutionControls(
           `${semanticAddressKey(address)} has a reached Pom assessment without a level count`,
         );
       }
+      const marker = input.markerDestinations.marker(address);
+      const selectedTarget =
+        value.kind === 'choice' ? value.selectedTraitKey : value.targetTraitKey;
+      const settledEmptyNoOp =
+        value.kind === 'random' &&
+        value.targetTraitKey === null &&
+        assessment.branches.some(
+          (branch) =>
+            branch.emptyTargetAllowed &&
+            branch.eligibleTargetCount === 0 &&
+            branch.findings.length === 0,
+        );
       return [
         Object.freeze({
           acquisitionRoleLabel: workspaceAcquisitionRoleLabel(acquisitionRole),
           address,
           levelCount,
-          settledEmptyNoOp:
-            value.kind === 'random' &&
-            value.targetTraitKey === null &&
-            assessment.branches.some(
-              (branch) =>
-                branch.emptyTargetAllowed &&
-                branch.eligibleTargetCount === 0 &&
-                branch.findings.length === 0,
-            ),
-          marker: input.markerDestinations.marker(address),
+          settledEmptyNoOp,
+          marker,
           rewardOwner: owner.address,
+          status:
+            selectedTarget === null && !settledEmptyNoOp
+              ? ('unspecified' as const)
+              : marker.findingCount > 0
+                ? ('invalid' as const)
+                : ('valid' as const),
           value,
         }),
       ];
@@ -448,6 +458,8 @@ function rewardControl(
   explicitRewardTypes: readonly string[] = Object.freeze(offer === null ? [] : [offer.rewardType]),
   derivedShopEntryEdit?: WorkspaceRewardControl['derivedShopEntryEdit'],
   retainedSourceMismatch = false,
+  fixedOfferEdit?: WorkspaceRewardControl['fixedOfferEdit'],
+  suppressOfferPicker = false,
 ): WorkspaceRewardControl {
   const fixedRewardType =
     offer === null && explicitRewardTypes.length === 1 ? explicitRewardTypes[0] : undefined;
@@ -489,9 +501,14 @@ function rewardControl(
         offer,
         ...(offerEditStartStep === undefined ? {} : { offerEditStartStep }),
         offerEditVisibility:
-          offer === null || offer.payload !== undefined || retainedSourceMismatch
+          fixedOfferEdit !== undefined
             ? ('visible' as const)
-            : ('hidden' as const),
+            : suppressOfferPicker
+              ? ('hidden' as const)
+              : offer === null || offer.payload !== undefined || retainedSourceMismatch
+                ? ('visible' as const)
+                : ('hidden' as const),
+        ...(fixedOfferEdit === undefined ? {} : { fixedOfferEdit }),
         owner,
         retainedSourceMismatch,
         traitOffers:
@@ -1297,23 +1314,15 @@ function roomActionLabel(
   encounterPhases: readonly WorkspaceEncounterPhase[],
   rewardControl: WorkspaceRewardControl | undefined,
 ): string {
-  const withRewardSummary = (label: string): string => {
-    if (rewardControl?.offer === null || rewardControl?.offer === undefined) return label;
-    const summary = summarizeRewardOffer(catalog, rewardControl.offer);
-    return label.endsWith(summary) ? label : `${label} · ${summary}`;
-  };
   const pickupLabel = (subject: string): string => {
-    const outcome =
-      rewardControl?.conversions?.length === 1
-        ? rewardControl.conversions[0]?.value.kind
-        : undefined;
-    return withRewardSummary(
-      outcome === 'artificer'
-        ? `Transform ${subject} with Artificer`
-        : outcome === 'timePiece'
-          ? `Convert ${subject} to Gold`
-          : `Pick up ${subject}`,
-    );
+    if (rewardControl?.offer === null || rewardControl?.offer === undefined)
+      return `Interact with ${subject} pickup`;
+    const summary = summarizeRewardOffer(catalog, rewardControl.offer);
+    const label = `Interact with ${subject} pickup`;
+    if (summary === subject) return label;
+    return summary.startsWith(`${subject} · `)
+      ? `${label} · ${summary.slice(subject.length + 3)}`
+      : `${label} · ${summary}`;
   };
   const phase =
     'phaseKey' in reference
@@ -1370,15 +1379,14 @@ function roomActionLabel(
         roomLocal.kind === 'shop'
           ? roomLocal.supplementalOffers.find((candidate) => candidate.key === reference.entryKey)
           : undefined;
-      const rewardLabel =
-        rewardControl?.offer === null || rewardControl?.offer === undefined
-          ? undefined
-          : summarizeRewardOffer(catalog, rewardControl.offer);
       const entryLabel =
         parseArtificerReplacementEntryKey(reference.entryKey) === undefined
-          ? reference.entryKey
+          ? rewardControl?.kind === 'explicitReward' && rewardControl.rewardTypes.length === 1
+            ? (catalog.rewards.rewardTypes.byKey[rewardControl.rewardTypes[0]!]?.label ??
+              reference.entryKey)
+            : reference.entryKey
           : 'Artificer replacement';
-      return pickupLabel(supplemental?.label ?? rewardLabel ?? entryLabel);
+      return pickupLabel(supplemental?.label ?? entryLabel);
     }
   }
 }
@@ -1531,6 +1539,23 @@ function roomActionsForOccurrence(
       const isArtificerReplacement =
         row.reference.kind === 'interactAcquisitionEntry' &&
         parseArtificerReplacementEntryKey(row.reference.entryKey) !== undefined;
+      const roleIsAcquired = (acquisitionRole: string): boolean => {
+        if (resolvedRewardControl?.acquisitionOutcome === 'forfeitedByVow') return false;
+        const conversion = resolvedRewardControl?.conversions?.find(
+          (candidate) => candidate.address.acquisitionRole === acquisitionRole,
+        );
+        return conversion === undefined || conversion.value.kind === 'normal';
+      };
+      const inlineTraitOffers = Object.freeze(
+        (resolvedRewardControl?.traitOffers ?? []).filter((control) =>
+          roleIsAcquired(control.address.acquisitionRole),
+        ),
+      );
+      const inlineLevelResolutions = Object.freeze(
+        (resolvedRewardControl?.levelResolutions ?? []).filter((control) =>
+          roleIsAcquired(control.address.acquisitionRole),
+        ),
+      );
       return Object.freeze({
         address,
         issues: issuesFor(row.key),
@@ -1560,12 +1585,15 @@ function roomActionsForOccurrence(
           : {
               rewardPayload: Object.freeze({
                 control: resolvedRewardControl,
+                inlineLevelResolutions,
+                inlineTraitOffers,
                 showOwner: !isArtificerReplacement,
                 showOffer:
                   !isArtificerReplacement &&
                   ((row.reference.kind === 'interactLocalReward' && roomLocal.kind !== 'fields') ||
                     (row.reference.kind === 'interactAcquisitionEntry' &&
-                      input.occurrence.state.kind !== 'shop')),
+                      input.occurrence.state.kind !== 'shop' &&
+                      resolvedRewardControl.offerEditVisibility === 'visible')),
               }),
             }),
         stale: row.stale,
@@ -2695,6 +2723,15 @@ export function assembleWorkspaceOccurrence(
                 const capability = derivedEntries.find(
                   (entry) => entry.kind === 'echoLastReward' && entry.address.entryKey === key,
                 );
+                const fixedEchoOffer = capability?.fixedReward?.offer;
+                const fixedOfferEdit =
+                  fixedEchoOffer === undefined ||
+                  (reward !== null && capability?.retainedSourceMismatch !== true)
+                    ? undefined
+                    : Object.freeze({
+                        actionLabel: `${reward === null ? 'Set' : 'Update'} replay reward · ${summarizeRewardOffer(input.catalog, fixedEchoOffer)}`,
+                        offer: fixedEchoOffer,
+                      });
                 const rewardTypes =
                   capability?.rewardTypes ??
                   (pickup?.rewardType === undefined
@@ -2711,6 +2748,8 @@ export function assembleWorkspaceOccurrence(
                     rewardTypes,
                     undefined,
                     capability?.retainedSourceMismatch === true,
+                    fixedOfferEdit,
+                    structuralEchoKeys.has(key),
                   ) as WorkspaceExplicitRewardControl,
                 ];
               });
