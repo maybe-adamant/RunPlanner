@@ -2146,7 +2146,10 @@ describe('OccurrenceWorkbench', () => {
     );
     if (goldenNode === undefined) throw new Error('golden preboss workbench is missing');
     expect(goldenNode.room.roomLocal).toMatchObject({ kind: 'shop', supplementalOffers: [] });
-    expect(screen.queryByText('Pick up infernalContractReward')).toBeNull();
+    openRoomTab('Room Timeline');
+    const timeline = screen.getByRole('region', { name: 'Room Timeline' });
+    expect(within(timeline).queryByText('Pick up infernalContractReward')).toBeNull();
+    expect(within(timeline).queryByRole('region', { name: 'Timeline repairs' })).toBeNull();
   });
 
   it('renders and binds the applicable Shop Death Defiance repair control', async () => {

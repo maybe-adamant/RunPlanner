@@ -1224,15 +1224,14 @@ function contractSupplementalOffer(
   capability: WorkspaceDerivedAcquisitionEntry | undefined,
   context: ShopSupplementalAssemblyContext,
 ): WorkspaceShopSupplementalDescriptor | undefined {
-  const selected = context.selectedActionKeys.includes(INFERNAL_CONTRACT_ENTRY_KEY);
-  if (capability === undefined && !selected) return undefined;
+  if (capability === undefined) return undefined;
   const authored = context.pickupEntries[INFERNAL_CONTRACT_ENTRY_KEY];
   if (authored === undefined) {
     throw new StructuredWorkspaceProjectionContractError(
       `${context.roomGameName} contract opportunity has no structural child`,
     );
   }
-  if (capability?.rewardTypes === undefined) {
+  if (capability.rewardTypes === undefined) {
     throw new StructuredWorkspaceProjectionContractError(
       `${context.roomGameName} contract opportunity has no attested reward domain`,
     );
@@ -1348,20 +1347,34 @@ function roomActionsForOccurrence(
   )
     return undefined;
   const owner = createOccurrenceAddress(input.biome, input.occurrence.occurrenceId);
-  const presentedRows = roster.rows;
-  const proposals = roster.proposals.map((proposal, index) =>
-    Object.freeze({
-      kind: proposal.kind,
-      key: `${proposal.kind}:${index}:${roomActionKey(proposal.reference)}`,
-      label:
-        proposal.kind === 'remove'
-          ? 'Remove from timeline'
-          : `${proposal.kind === 'insert' ? 'Insert' : 'Move'} to position ${(proposal.toIndex ?? 0) + 1}`,
-      reference: proposal.reference,
-      structurallyAuthorable: proposal.structurallyAuthorable,
-      ...(proposal.toIndex === undefined ? {} : { toIndex: proposal.toIndex }),
-    }),
+  const contractAvailable =
+    roomLocal.kind === 'shop' &&
+    roomLocal.supplementalOffers.some((offer) => offer.kind === 'infernalContractReward');
+  const suppressUnavailableContract = (row: (typeof roster.rows)[number]): boolean =>
+    !contractAvailable &&
+    row.rank === null &&
+    row.reference.kind === 'interactAcquisitionEntry' &&
+    row.reference.entryKey === INFERNAL_CONTRACT_ENTRY_KEY;
+  const suppressedActionKeys = new Set(
+    roster.rows.filter(suppressUnavailableContract).map((row) => row.key),
   );
+  const presentedRows = roster.rows.filter((row) => !suppressUnavailableContract(row));
+  const presentedActionKeys = new Set(presentedRows.map((row) => row.key));
+  const proposals = roster.proposals
+    .filter((proposal) => presentedActionKeys.has(roomActionKey(proposal.reference)))
+    .map((proposal, index) =>
+      Object.freeze({
+        kind: proposal.kind,
+        key: `${proposal.kind}:${index}:${roomActionKey(proposal.reference)}`,
+        label:
+          proposal.kind === 'remove'
+            ? 'Remove from timeline'
+            : `${proposal.kind === 'insert' ? 'Insert' : 'Move'} to position ${(proposal.toIndex ?? 0) + 1}`,
+        reference: proposal.reference,
+        structurallyAuthorable: proposal.structurallyAuthorable,
+        ...(proposal.toIndex === undefined ? {} : { toIndex: proposal.toIndex }),
+      }),
+    );
   const proposalKeysByAction = new Map<string, string[]>();
   for (const proposal of proposals) {
     const key = roomActionKey(proposal.reference);
@@ -1500,12 +1513,12 @@ function roomActionsForOccurrence(
     }),
   );
   const repairRows = Object.freeze(
-    lifecycleTimeline.repairRows.map(({ key }) => {
+    lifecycleTimeline.repairRows.flatMap(({ key }) => {
       const projected = projectedRows.find((row) => row.key === key);
-      if (projected === undefined) {
+      if (projected === undefined && !suppressedActionKeys.has(key)) {
         throw new Error(`Room action timeline repair row ${key} has no projected row`);
       }
-      return projected;
+      return projected === undefined ? [] : [projected];
     }),
   );
   const activeLifecycleTimeline = scopeRoomLifecycleTimeline(
@@ -2610,6 +2623,30 @@ export function assembleWorkspaceOccurrence(
       ),
     );
     for (const row of roomActions.rows) {
+      const unavailableAcquisitionMarkers = (() => {
+        if (
+          row.rewardPayload !== undefined ||
+          row.reference.kind !== 'interactAcquisitionEntry' ||
+          row.reference.entryKey !== INFERNAL_CONTRACT_ENTRY_KEY
+        ) {
+          return Object.freeze([]);
+        }
+        const site = acquisitionSiteFromStorageKey(address, row.reference.siteKey);
+        if (site === undefined) {
+          throw new StructuredWorkspaceProjectionContractError(
+            `${row.key} has invalid acquisition site ${row.reference.siteKey}`,
+          );
+        }
+        return Object.freeze([
+          input.markerDestinations.marker(site),
+          input.markerDestinations.marker(
+            createAcquisitionEntryAddress(site, row.reference.entryKey),
+          ),
+        ]);
+      })();
+      for (const marker of unavailableAcquisitionMarkers) {
+        input.markerDestinations.redirectTo(marker, row.marker, node.key);
+      }
       const wheelKey =
         row.window.kind === 'shipPostCombat' || row.window.kind === 'shipPreCombat'
           ? row.window.wheelKey
@@ -2636,6 +2673,7 @@ export function assembleWorkspaceOccurrence(
           ...(row.rewardPayload === undefined
             ? []
             : [row.rewardPayload.control.marker, ...rewardChildMarkers(row.rewardPayload.control)]),
+          ...unavailableAcquisitionMarkers,
         ],
         tab,
       );
