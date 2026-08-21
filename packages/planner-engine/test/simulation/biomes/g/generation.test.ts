@@ -294,6 +294,29 @@ describe('G generation and takeover', () => {
     ]);
   });
 
+  it('composes the alternate miniboss and Preboss deltas from one saved F/G checkpoint', () => {
+    const { result, g } = completeG(
+      createCompleteFGProject({
+        pickedMiniboss: 'G_MiniBoss02',
+        prebossSource: 'G_Combat14',
+      }),
+    );
+    const crawlerOrigin = createOccurrenceAddress(goldenGBiome, goldenGOccurrenceId(6, 1));
+    const takeover = g.snapshot.decisions.at(-1);
+
+    expect(result.status).toBe('valid');
+    expect(g.validity).toBe('valid');
+    expect(
+      g.history.ledgers.encounterStarts.find(
+        (entry) => semanticAddressKey(entry.origin) === semanticAddressKey(crawlerOrigin),
+      ),
+    ).toMatchObject({ encounterKey: 'MiniBossCrawler', gameName: 'G_MiniBoss02' });
+    expect(takeover?.kind).toBe('batch');
+    expect(
+      takeover?.kind === 'batch' ? takeover.targets.map((target) => target.exit.exitKey) : [],
+    ).toEqual(['exit1', 'exit2', 'exit3']);
+  });
+
   it('retains a complete invalid G product at the exact target owner', () => {
     const project = applyProjectCommand(createCompleteFGProject(), catalog, {
       kind: 'ReplaceOccurrenceRoom',

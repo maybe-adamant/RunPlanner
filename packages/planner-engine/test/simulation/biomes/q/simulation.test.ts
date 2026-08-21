@@ -14,13 +14,9 @@ import {
 } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
-import {
-  createRepresentativeNOPQProject,
-  qBiome,
-  qOccurrenceIds,
-} from '@run-planner/test-fixtures/surface';
+import { loadSurfaceNOPQProject, qBiome, qOccurrenceIds } from '@run-planner/test-fixtures/surface';
 
-function completeQ(project = createRepresentativeNOPQProject()) {
+function completeQ(project = loadSurfaceNOPQProject()) {
   const evaluation = simulateProject(catalog, project);
   const route = evaluation.routes.find((candidate) => candidate.routeKey === 'Surface');
   const biome = route?.biomes.find((candidate) => candidate.biomeKey === 'Q');
@@ -119,7 +115,7 @@ describe('Q simulation', () => {
       kind: 'occurrence',
       occurrenceId: qOccurrenceIds.secondMiniboss1,
     });
-    let project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+    let project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
       kind: 'RemoveExitDecision',
       decision,
     });
@@ -137,7 +133,7 @@ describe('Q simulation', () => {
   });
 
   it('allows repeated room identities on independently generated Miniboss peers', () => {
-    const project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+    const project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
       kind: 'ReplaceOccurrenceRoom',
       occurrence: createOccurrenceAddress(qBiome, qOccurrenceIds.firstMiniboss2),
       gameName: 'Q_MiniBoss02',
@@ -153,7 +149,7 @@ describe('Q simulation', () => {
   });
 
   it('keeps counted Typhon depletion findings at the authored incoming-reward owners', () => {
-    let project = createRepresentativeNOPQProject();
+    let project = loadSurfaceNOPQProject();
     for (const occurrenceId of [
       qOccurrenceIds.firstMiniboss1,
       qOccurrenceIds.firstMiniboss2,

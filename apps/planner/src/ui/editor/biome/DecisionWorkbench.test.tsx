@@ -36,7 +36,7 @@ import {
 } from '@planner/state/projectWorkspaceSlice';
 import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 import {
-  createFMidshopPomFrontierProject,
+  loadUnderworldFMidshopPomFrontierProject,
   createGoldenFGHIProject,
   fMidshopPomShopId,
   goldenFBiome,
@@ -46,8 +46,8 @@ import {
   goldenHBiome,
 } from '@run-planner/test-fixtures/underworld';
 import {
-  createRepresentativeNOPQProject,
-  appendNEntry,
+  loadSurfaceNOPQProject,
+  loadSurfaceNEntryFrontierProject,
   nBiome,
   nOccurrenceIds,
   oBiome,
@@ -190,7 +190,7 @@ function fTwoDoorBatchProject(): {
 }
 
 function nOpeningPreHubProject(): ProjectDocument {
-  return appendNEntry(emptyProject('Surface'));
+  return loadSurfaceNEntryFrontierProject();
 }
 
 function nOpeningDecisionProject(): ProjectDocument {
@@ -370,7 +370,7 @@ describe('DecisionWorkbench', () => {
   });
 
   it('keeps the selected Midshop as a lightweight link to its occurrence workbench', () => {
-    let project = createFMidshopPomFrontierProject();
+    let project = loadUnderworldFMidshopPomFrontierProject();
     const outgoingOwner = createExitDecisionAddress(goldenFBiome, {
       kind: 'occurrence',
       occurrenceId: fMidshopPomShopId,
@@ -550,7 +550,7 @@ describe('DecisionWorkbench', () => {
   });
 
   it('reanchors an authored downstream decision when its normal selected room changes', async () => {
-    const project = createRepresentativeNOPQProject();
+    const project = loadSurfaceNOPQProject();
     const owner = createExitDecisionAddress(pBiome, {
       kind: 'occurrence',
       occurrenceId: pOccurrenceIds.intro,
@@ -610,7 +610,7 @@ describe('DecisionWorkbench', () => {
   }, 10_000);
 
   it('publishes room selection separately from occurrence-workbench navigation', async () => {
-    const project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+    const project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
       kind: 'RemoveExitDecision',
       decision: createExitDecisionAddress(pBiome, {
         kind: 'occurrence',
@@ -809,7 +809,7 @@ describe('DecisionWorkbench', () => {
         biome: pBiome,
         biomeKey: 'P',
         gameName: 'P_PreBoss01',
-        project: createRepresentativeNOPQProject(),
+        project: loadSurfaceNOPQProject(),
         routeKey: 'Surface',
       },
     ] as const;
@@ -971,7 +971,7 @@ describe('DecisionWorkbench', () => {
     cases.push({
       biomeKey: 'O',
       owner: oOwner,
-      project: applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+      project: applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
         kind: 'RemoveExitDecision',
         decision: oOwner,
       }),
@@ -982,7 +982,7 @@ describe('DecisionWorkbench', () => {
       kind: 'occurrence',
       occurrenceId: qOccurrenceIds.secondMiniboss1,
     });
-    const withoutQ = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+    const withoutQ = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
       kind: 'RemoveExitDecision',
       decision: qOwner,
     });
@@ -1045,7 +1045,7 @@ describe('DecisionWorkbench', () => {
       kind: 'occurrence',
       occurrenceId: qOccurrenceIds.secondMiniboss1,
     });
-    let project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+    let project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
       kind: 'RemoveExitDecision',
       decision: createExitDecisionAddress(oBiome, {
         kind: 'occurrence',

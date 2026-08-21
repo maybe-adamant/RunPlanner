@@ -16,19 +16,17 @@ import {
   authoredProjectReplaced,
 } from '../state/projectWorkspaceSlice';
 import {
-  createRepresentativeNProject,
+  loadSurfaceNProject,
+  loadSurfaceNTenOpenInvalidProject,
   nBiome,
   nOccurrenceId,
-  nOpenSlotKeys,
 } from '@run-planner/test-fixtures/surface';
 import { createApplication } from './createApplication';
 
 const combat10Reward = createIncomingRewardAddress(nBiome, nOccurrenceId('combat10'));
 
 function invalidTenOpenHubProject() {
-  const tenOpen = createRepresentativeNProject({
-    openSlotKeys: [...nOpenSlotKeys, 'combat04'],
-  });
+  const tenOpen = loadSurfaceNTenOpenInvalidProject();
   return applyProjectCommand(tenOpen, catalog, {
     kind: 'ReplaceIncomingReward',
     reward: combat10Reward,
@@ -114,7 +112,7 @@ describe('application editor-session reconciliation', () => {
   it('clears, rather than rehomes, an open Run State target after a published replacement removes its launcher', () => {
     const application = createApplication();
     try {
-      const project = createRepresentativeNProject();
+      const project = loadSurfaceNProject();
       application.store.dispatch(authoredProjectReplaced(project));
       const n = application
         .selectStructuredWorkspace(application.store.getState())
@@ -143,7 +141,7 @@ describe('application editor-session reconciliation', () => {
   it('retains the exact completed-Hub handoff target when its visible Preboss launcher survives publication', () => {
     const application = createApplication();
     try {
-      const project = createRepresentativeNProject();
+      const project = loadSurfaceNProject();
       application.store.dispatch(authoredProjectReplaced(project));
       const n = application
         .selectStructuredWorkspace(application.store.getState())

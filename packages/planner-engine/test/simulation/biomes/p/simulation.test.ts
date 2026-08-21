@@ -22,7 +22,7 @@ import { describe, expect, it } from 'vitest';
 
 import { replaceTestShopOfferActions } from '@run-planner/test-fixtures/shared';
 import {
-  createRepresentativeNOPProject,
+  loadSurfaceNOPProject,
   pBiome,
   pOccurrenceId,
   pOccurrenceIds,
@@ -32,7 +32,7 @@ import { evaluateProgressiveBiomeAssembly } from '../../../../src/simulation/pro
 const defaultRouteLoadout = createDefaultRouteLoadout(catalog);
 
 function completeP() {
-  const evaluation = simulateProject(catalog, createRepresentativeNOPProject());
+  const evaluation = simulateProject(catalog, loadSurfaceNOPProject());
   const route = evaluation.routes.find((candidate) => candidate.routeKey === 'Surface');
   const biome = route?.biomes.find((candidate) => candidate.biomeKey === 'P');
   if (biome?.authoring !== 'complete' || biome.validity !== 'valid') {
@@ -78,7 +78,7 @@ describe('P core loop', () => {
     expect(
       createPreparedProjectCandidateSession(
         catalog,
-        simulateProjectAssembly(catalog, createRepresentativeNOPProject()),
+        simulateProjectAssembly(catalog, loadSurfaceNOPProject()),
       ).evaluate({
         kind: 'takeoverPrebossBatch',
         source: preboss.origin,
@@ -116,7 +116,7 @@ describe('P core loop', () => {
   });
 
   it('keeps the terminal P default explicit across the declared depth-nine overlap', () => {
-    const project = createRepresentativeNOPProject();
+    const project = loadSurfaceNOPProject();
     const phase = createEncounterPhaseAddress(
       pBiome,
       { kind: 'occurrence', occurrenceId: pOccurrenceId('P_Combat12', 8, 1) },
@@ -137,7 +137,7 @@ describe('P core loop', () => {
 
   it('retains an incompatible outdoor choice at its occurrence owner and evaluates candidate support', () => {
     const firstTarget = pOccurrenceId('P_Combat03', 1, 1);
-    const project = applyProjectCommand(createRepresentativeNOPProject(), catalog, {
+    const project = applyProjectCommand(loadSurfaceNOPProject(), catalog, {
       kind: 'ReplaceOccurrenceRoom',
       occurrence: createOccurrenceAddress(pBiome, firstTarget),
       gameName: 'P_Combat02',
@@ -210,7 +210,7 @@ describe('P core loop', () => {
       ),
       'Boon',
     );
-    let project = createRepresentativeNOPProject();
+    let project = loadSurfaceNOPProject();
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceShopOffer',
       offer: createShopOfferAddress(pBiome, pOccurrenceIds.prebossShop, 'Boon'),

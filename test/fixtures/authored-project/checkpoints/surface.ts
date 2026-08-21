@@ -1,43 +1,69 @@
-import { catalog } from '@run-planner/hades2-catalog';
-import { decodeProjectDocument, type ProjectDocument } from '@run-planner/engine/authored-project';
+import type { ProjectDocument } from '@run-planner/engine/authored-project';
+import type { AuthoredProjectCheckpointId } from './manifest';
+import { checkpointArtifact, type CheckpointArtifact } from './loader';
 
-import nRaw from './surface-n.runplanner.json';
-import noRaw from './surface-no.runplanner.json';
-import nopRaw from './surface-nop.runplanner.json';
-import nopqRaw from './surface-nopq.runplanner.json';
+import surfaceNRaw from './surface-n.runplanner.json';
+import surfaceNORaw from './surface-no.runplanner.json';
+import surfaceNOPRaw from './surface-nop.runplanner.json';
+import surfaceNOPQRaw from './surface-nopq.runplanner.json';
+import surfaceNCompleteHubRaw from './surface-n-complete-hub-frontier.runplanner.json';
+import surfaceNEntryResolvedRaw from './surface-n-entry-frontier-resolved.runplanner.json';
+import surfaceNEntryRaw from './surface-n-entry-frontier.runplanner.json';
+import surfaceNPartialHubRaw from './surface-n-partial-hub.runplanner.json';
+import surfaceNStoryBoardRaw from './surface-n-story-board.runplanner.json';
+import surfaceNTenOpenInvalidRaw from './surface-n-ten-open-invalid.runplanner.json';
 
-function lazyCheckpoint(raw: unknown): () => ProjectDocument {
-  let cached: ProjectDocument | undefined;
-  return () => {
-    if (cached === undefined) cached = decodeProjectDocument(raw, catalog);
-    return cached;
-  };
-}
+type SurfaceCheckpointId = Extract<AuthoredProjectCheckpointId, `surface-${string}`>;
 
-const loadN = lazyCheckpoint(nRaw);
-const loadNO = lazyCheckpoint(noRaw);
-const loadNOP = lazyCheckpoint(nopRaw);
-const loadNOPQ = lazyCheckpoint(nopqRaw);
+export const surfaceCheckpointArtifacts = Object.freeze({
+  'surface-n': checkpointArtifact(surfaceNRaw),
+  'surface-no': checkpointArtifact(surfaceNORaw),
+  'surface-nop': checkpointArtifact(surfaceNOPRaw),
+  'surface-nopq': checkpointArtifact(surfaceNOPQRaw),
+  'surface-n-entry-frontier': checkpointArtifact(surfaceNEntryRaw),
+  'surface-n-entry-frontier-resolved': checkpointArtifact(surfaceNEntryResolvedRaw),
+  'surface-n-complete-hub-frontier': checkpointArtifact(surfaceNCompleteHubRaw),
+  'surface-n-partial-hub': checkpointArtifact(surfaceNPartialHubRaw),
+  'surface-n-story-board': checkpointArtifact(surfaceNStoryBoardRaw),
+  'surface-n-ten-open-invalid': checkpointArtifact(surfaceNTenOpenInvalidRaw),
+} satisfies Readonly<Record<SurfaceCheckpointId, CheckpointArtifact>>);
 
 export function loadSurfaceNCheckpoint(): ProjectDocument {
-  return loadN();
+  return surfaceCheckpointArtifacts['surface-n'].load();
 }
 
 export function loadSurfaceNOCheckpoint(): ProjectDocument {
-  return loadNO();
+  return surfaceCheckpointArtifacts['surface-no'].load();
 }
 
 export function loadSurfaceNOPCheckpoint(): ProjectDocument {
-  return loadNOP();
+  return surfaceCheckpointArtifacts['surface-nop'].load();
 }
 
 export function loadSurfaceNOPQCheckpoint(): ProjectDocument {
-  return loadNOPQ();
+  return surfaceCheckpointArtifacts['surface-nopq'].load();
 }
 
-export const surfaceCheckpointDocuments = Object.freeze({
-  n: loadSurfaceNCheckpoint,
-  no: loadSurfaceNOCheckpoint,
-  nop: loadSurfaceNOPCheckpoint,
-  nopq: loadSurfaceNOPQCheckpoint,
-});
+export function loadSurfaceNEntryFrontierCheckpoint(): ProjectDocument {
+  return surfaceCheckpointArtifacts['surface-n-entry-frontier'].load();
+}
+
+export function loadSurfaceNEntryFrontierResolvedCheckpoint(): ProjectDocument {
+  return surfaceCheckpointArtifacts['surface-n-entry-frontier-resolved'].load();
+}
+
+export function loadSurfaceNCompleteHubFrontierCheckpoint(): ProjectDocument {
+  return surfaceCheckpointArtifacts['surface-n-complete-hub-frontier'].load();
+}
+
+export function loadSurfaceNPartialHubCheckpoint(): ProjectDocument {
+  return surfaceCheckpointArtifacts['surface-n-partial-hub'].load();
+}
+
+export function loadSurfaceNStoryBoardCheckpoint(): ProjectDocument {
+  return surfaceCheckpointArtifacts['surface-n-story-board'].load();
+}
+
+export function loadSurfaceNTenOpenInvalidCheckpoint(): ProjectDocument {
+  return surfaceCheckpointArtifacts['surface-n-ten-open-invalid'].load();
+}

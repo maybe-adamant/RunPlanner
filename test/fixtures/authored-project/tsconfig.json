@@ -10,7 +10,7 @@
     "./shared.ts",
     "./routes/**/*.ts",
     "./checkpoints/**/*.ts",
-    "./generation/**/*.ts",
+    "./checkpoints/check.test.ts",
     "../authored-project/**/*.runplanner.json",
     "../../../packages/planner-engine/src/**/*.ts",
     "../../../packages/hades2-catalog/src/**/*.ts"

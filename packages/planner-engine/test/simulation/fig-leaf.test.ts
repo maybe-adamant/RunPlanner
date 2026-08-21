@@ -23,10 +23,10 @@ import {
 } from '../../src/simulation';
 import { createCompleteFGProject } from '@run-planner/test-fixtures/underworld';
 import {
-  createRepresentativeNProject,
-  createRepresentativeNOProject,
-  createRepresentativeNOPProject,
-  createRepresentativeNOPQProject,
+  loadSurfaceNProject,
+  loadSurfaceNOProject,
+  loadSurfaceNOPProject,
+  loadSurfaceNOPQProject,
   nBiome,
   nLocalOccurrenceId,
   nOccurrenceId,
@@ -135,10 +135,10 @@ describe('Fig Leaf state contract', () => {
   });
 
   it.each([
-    ['N', createRepresentativeNProject],
-    ['N/O', createRepresentativeNOProject],
-    ['N/O/P', createRepresentativeNOPProject],
-    ['N/O/P/Q', createRepresentativeNOPQProject],
+    ['N', loadSurfaceNProject],
+    ['N/O', loadSurfaceNOProject],
+    ['N/O/P', loadSurfaceNOPProject],
+    ['N/O/P/Q', loadSurfaceNOPQProject],
   ])('walks the real %s route with persistent Fig Leaf state', (_name, createProject) => {
     const evaluation = simulateProject(catalog, withFigLeaf(createProject()));
     const route = evaluation.routes.find((candidate) => candidate.biomes.length > 0);
@@ -150,7 +150,7 @@ describe('Fig Leaf state contract', () => {
   });
 
   it('publishes O phase opportunities independently and keeps P/Q declaration support narrow', () => {
-    const evaluation = simulateProject(catalog, withFigLeaf(createRepresentativeNOPQProject()));
+    const evaluation = simulateProject(catalog, withFigLeaf(loadSurfaceNOPQProject()));
     const route = evaluation.routes.find((candidate) => candidate.biomes.length > 0);
     if (route === undefined) throw new Error('route missing');
     const rewardBiomes = route.biomes.filter(
@@ -197,7 +197,7 @@ describe('Fig Leaf state contract', () => {
       { kind: 'occurrence', occurrenceId },
       'Combat1',
     );
-    let project = withFigLeaf(createRepresentativeNOProject());
+    let project = withFigLeaf(loadSurfaceNOProject());
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceFigLeafSkip',
       phase: intro,
@@ -241,7 +241,7 @@ describe('Fig Leaf state contract', () => {
       { kind: 'occurrence', occurrenceId: createOccurrenceId('surface-n-opening') },
       'Encounter',
     );
-    const project = applyProjectCommand(withFigLeaf(createRepresentativeNProject()), catalog, {
+    const project = applyProjectCommand(withFigLeaf(loadSurfaceNProject()), catalog, {
       kind: 'ReplaceFigLeafSkip',
       phase,
       value: true,
@@ -275,7 +275,7 @@ describe('Fig Leaf state contract', () => {
       { kind: 'occurrence', occurrenceId: qOccurrenceIds.foyer },
       'Encounter',
     );
-    const project = applyProjectCommand(withFigLeaf(createRepresentativeNOPQProject()), catalog, {
+    const project = applyProjectCommand(withFigLeaf(loadSurfaceNOPQProject()), catalog, {
       kind: 'ReplaceFigLeafSkip',
       phase,
       value: true,
@@ -368,7 +368,7 @@ describe('Fig Leaf state contract', () => {
         'Encounter',
       ),
     ];
-    let project = withFigLeaf(createRepresentativeNOPQProject());
+    let project = withFigLeaf(loadSurfaceNOPQProject());
     for (const phase of selections) {
       project = applyProjectCommand(project, catalog, {
         kind: 'ReplaceFigLeafSkip',
@@ -409,7 +409,7 @@ describe('Fig Leaf state contract', () => {
       { kind: 'occurrence', occurrenceId: nOccurrenceId('combat02') },
       'Encounter',
     );
-    const skipped = applyProjectCommand(withFigLeaf(createRepresentativeNOProject()), catalog, {
+    const skipped = applyProjectCommand(withFigLeaf(loadSurfaceNOProject()), catalog, {
       kind: 'ReplaceFigLeafSkip',
       phase: selectedPhase,
       value: true,
@@ -440,7 +440,7 @@ describe('Fig Leaf state contract', () => {
   });
 
   it('keeps Opening N blocked by biome-start ownership while publishing PreHub N support', () => {
-    const project = withFigLeaf(createRepresentativeNProject());
+    const project = withFigLeaf(loadSurfaceNProject());
     const assembly = simulateProjectAssembly(catalog, project);
     const opening = encounterPhaseFigLeafSupportForProjectEvaluationAssembly(
       assembly,
@@ -469,7 +469,7 @@ describe('Fig Leaf state contract', () => {
       { kind: 'occurrence', occurrenceId },
       'Combat',
     );
-    const selected = applyProjectCommand(withFigLeaf(createRepresentativeNOPQProject()), catalog, {
+    const selected = applyProjectCommand(withFigLeaf(loadSurfaceNOPQProject()), catalog, {
       kind: 'SelectEncounter',
       phase,
       encounterKey: 'AthenaCombatP',
@@ -482,7 +482,7 @@ describe('Fig Leaf state contract', () => {
   });
 
   it('keeps the real walker phase identities while suppressing a selected P precombat envelope', () => {
-    const base = withFigLeaf(createRepresentativeNOPProject());
+    const base = withFigLeaf(loadSurfaceNOPProject());
     const phase = createEncounterPhaseAddress(
       { kind: 'biome', routeKey: 'Surface', biomeKey: 'P' },
       { kind: 'occurrence', occurrenceId: createOccurrenceId('surface-p-1-1-p_combat03') },
@@ -547,7 +547,7 @@ describe('Fig Leaf state contract', () => {
   });
 
   it('retains an authored N side-room skip and reports the declaration blocker at its phase owner', () => {
-    const base = withFigLeaf(createRepresentativeNProject());
+    const base = withFigLeaf(loadSurfaceNProject());
     const phase = createEncounterPhaseAddress(
       nBiome,
       {

@@ -65,8 +65,9 @@ import {
   goldenGBiome,
 } from '@run-planner/test-fixtures/underworld';
 import {
-  createRepresentativeNProject,
-  createRepresentativeNOPQProject,
+  loadSurfaceNProject,
+  loadSurfaceNStoryBoardProject,
+  loadSurfaceNOPQProject,
   nBiome,
   nOccurrenceId,
   nOccurrenceIds,
@@ -89,7 +90,7 @@ let immutableRepresentativeNOPQProject: ProjectDocument;
 
 beforeAll(function prepareImmutableRepresentativeProjects() {
   createGoldenFGHIProject();
-  immutableRepresentativeNOPQProject = createRepresentativeNOPQProject();
+  immutableRepresentativeNOPQProject = loadSurfaceNOPQProject();
 });
 
 afterEach(() => {
@@ -475,7 +476,7 @@ describe('OccurrenceWorkbench', () => {
 
   it('resets the active room tab when the occurrence identity changes', () => {
     const view = renderOccurrenceWorkbench(
-      createRepresentativeNOPQProject(),
+      loadSurfaceNOPQProject(),
       'Surface',
       'O',
       occurrenceById(oOccurrenceIds.combat07),
@@ -500,7 +501,7 @@ describe('OccurrenceWorkbench', () => {
 
   it('keeps N side-room generation in Overview and Room Actions in its own tab', () => {
     renderStaticOccurrenceWorkbench(
-      createRepresentativeNOPQProject(),
+      loadSurfaceNOPQProject(),
       'Surface',
       'N',
       occurrenceById(nOccurrenceId('combat05')),
@@ -685,7 +686,7 @@ describe('OccurrenceWorkbench', () => {
 
   it('renders the additive Gorgon condition and Athena child for a pending phase', async () => {
     const occurrenceId = pOccurrenceId('P_Combat12', 8, 1);
-    const project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+    const project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
       kind: 'ReplaceStartingKeepsake',
       selection: createRouteStartKeepsakeSelectionAddress('Surface'),
       keepsakeKey: 'AthenaEncounterKeepsake',
@@ -717,7 +718,7 @@ describe('OccurrenceWorkbench', () => {
       { kind: 'occurrence', occurrenceId },
       'Combat',
     );
-    let project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+    let project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
       kind: 'ReplaceStartingKeepsake',
       selection: createRouteStartKeepsakeSelectionAddress('Surface'),
       keepsakeKey: 'AthenaEncounterKeepsake',
@@ -755,7 +756,7 @@ describe('OccurrenceWorkbench', () => {
   });
 
   it('renders and dispatches the phase-local Fig Leaf checkbox on a supported fixed phase', async () => {
-    const project = applyProjectCommand(createRepresentativeNProject(), catalog, {
+    const project = applyProjectCommand(loadSurfaceNProject(), catalog, {
       kind: 'ReplaceStartingKeepsake',
       selection: createRouteStartKeepsakeSelectionAddress('Surface'),
       keepsakeKey: 'SkipEncounterKeepsake',
@@ -1212,7 +1213,7 @@ describe('OccurrenceWorkbench', () => {
   });
   it('summarizes a Hub room main reward in the room heading without another editor', () => {
     const view = renderOccurrenceWorkbench(
-      createRepresentativeNOPQProject(),
+      loadSurfaceNOPQProject(),
       'Surface',
       'N',
       occurrenceById(nOccurrenceId('combat02')),
@@ -1232,20 +1233,7 @@ describe('OccurrenceWorkbench', () => {
   });
 
   it('summarizes a fixed Hub reward in the room heading', () => {
-    const project = createRepresentativeNProject({
-      openSlotKeys: [
-        'combat11',
-        'combat10',
-        'combat09',
-        'combat05',
-        'combat03',
-        'combat02',
-        'combat01',
-        'miniBoss01',
-        'story',
-      ],
-      visitSlotKeys: ['story', 'combat05', 'miniBoss01', 'combat02', 'combat11', 'combat09'],
-    });
+    const project = loadSurfaceNStoryBoardProject();
     renderStaticOccurrenceWorkbench(
       project,
       'Surface',
@@ -1265,7 +1253,7 @@ describe('OccurrenceWorkbench', () => {
 
   it('withholds dormant Ephyra side controls and leaves rooms without local detail compact', () => {
     renderStaticOccurrenceWorkbench(
-      createRepresentativeNOPQProject(),
+      loadSurfaceNOPQProject(),
       'Surface',
       'N',
       occurrenceById(nOccurrenceId('combat10')),
@@ -1280,7 +1268,7 @@ describe('OccurrenceWorkbench', () => {
     cleanup();
 
     renderStaticOccurrenceWorkbench(
-      createRepresentativeNOPQProject(),
+      loadSurfaceNOPQProject(),
       'Surface',
       'N',
       occurrenceById(nOccurrenceId('miniBoss01')),
@@ -1332,7 +1320,7 @@ describe('OccurrenceWorkbench', () => {
     const intro = createEncounterPhaseAddress(pBiome, owner, 'Intro');
     const combat = createEncounterPhaseAddress(pBiome, owner, 'Combat');
     const view = renderOccurrenceWorkbench(
-      createRepresentativeNOPQProject(),
+      loadSurfaceNOPQProject(),
       'Surface',
       'P',
       occurrenceById(occurrenceId),
@@ -1407,7 +1395,7 @@ describe('OccurrenceWorkbench', () => {
     const owner = { kind: 'occurrence' as const, occurrenceId };
     const intro = createEncounterPhaseAddress(pBiome, owner, 'Intro');
     const combat = createEncounterPhaseAddress(pBiome, owner, 'Combat');
-    let project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+    let project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
       encounterKey: 'HeraclesCombatP',
       kind: 'SelectEncounter',
       phase: intro,
@@ -1450,7 +1438,7 @@ describe('OccurrenceWorkbench', () => {
 
   it('retains an activation-invalid multi-choice Ship phase as an unavailable encounter selector', async () => {
     const occurrence = createOccurrenceAddress(oBiome, oOccurrenceIds.combat04);
-    const project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+    const project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
       encounterCount: 3,
       kind: 'ReplaceShipEncounterCount',
       occurrence,
@@ -1560,7 +1548,7 @@ describe('OccurrenceWorkbench', () => {
 
   it('withholds an unavailable opening Ship Combat2 count from new authoring', async () => {
     const view = renderOccurrenceWorkbench(
-      createRepresentativeNOPQProject(),
+      loadSurfaceNOPQProject(),
       'Surface',
       'O',
       occurrenceById(oOccurrenceIds.combat04),
@@ -1597,7 +1585,7 @@ describe('OccurrenceWorkbench', () => {
 
   it('keeps Ship offer identity on the wheel and acquisition children on its Room Action row', () => {
     const wheel = createRewardWheelAddress(oBiome, oOccurrenceIds.combat07, 'wheel1');
-    let project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+    let project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
       kind: 'ReplaceShipEncounterCount',
       occurrence: createOccurrenceAddress(oBiome, oOccurrenceIds.combat07),
       encounterCount: 3,
@@ -1666,7 +1654,7 @@ describe('OccurrenceWorkbench', () => {
   it('hides dormant Ship wheels and restores their authored configuration', async () => {
     const occurrence = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
     const wheel = createRewardWheelAddress(oBiome, oOccurrenceIds.combat07, 'wheel2');
-    let project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+    let project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
       kind: 'ReplaceShipEncounterCount',
       occurrence,
       encounterCount: 3,
@@ -1762,7 +1750,7 @@ describe('OccurrenceWorkbench', () => {
     const phase = createEncounterPhaseAddress(oBiome, occurrence, 'Combat2');
     const reference = { kind: 'interactEncounter' as const, phaseKey: 'Combat2' };
     const action = createRoomActionAddress(oBiome, occurrenceId, roomActionKey(reference));
-    let project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+    let project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
       kind: 'ReplaceShipEncounterCount',
       occurrence,
       encounterCount: 3,
@@ -1806,7 +1794,7 @@ describe('OccurrenceWorkbench', () => {
     const occurrenceId = oOccurrenceIds.combat01;
     const occurrence = createOccurrenceAddress(oBiome, occurrenceId);
     const phase = createEncounterPhaseAddress(oBiome, occurrence, 'Combat1');
-    let project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+    let project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
       kind: 'ReplaceShipEncounterCount',
       occurrence,
       encounterCount: 3,
@@ -1836,7 +1824,7 @@ describe('OccurrenceWorkbench', () => {
   it('keeps Ship arrow, pointer, fixed-window, and Undo behavior on one global action order', async () => {
     const occurrenceId = oOccurrenceIds.combat01;
     const occurrence = createOccurrenceAddress(oBiome, occurrenceId);
-    let project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+    let project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
       kind: 'ReplaceShipEncounterCount',
       occurrence,
       encounterCount: 3,
@@ -1940,7 +1928,7 @@ describe('OccurrenceWorkbench', () => {
   it('keeps a supported Ship phase count authorable when its dormant rewards need repair', async () => {
     const occurrence = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
     const wheel = createRewardWheelAddress(oBiome, oOccurrenceIds.combat07, 'wheel2');
-    let project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+    let project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
       kind: 'ReplaceRewardWheelOfferCount',
       wheel,
       offerCount: 2,
@@ -1992,7 +1980,7 @@ describe('OccurrenceWorkbench', () => {
       'offer2',
     );
     const view = renderOccurrenceWorkbench(
-      createRepresentativeNOPQProject(),
+      loadSurfaceNOPQProject(),
       'Surface',
       'O',
       occurrenceById(oOccurrenceIds.combat07),
@@ -2068,7 +2056,7 @@ describe('OccurrenceWorkbench', () => {
   });
 
   it('renders materialized Shop descriptors directly', () => {
-    const surface = createRepresentativeNOPQProject();
+    const surface = loadSurfaceNOPQProject();
     renderStaticOccurrenceWorkbench(
       surface,
       'Surface',

@@ -43,7 +43,7 @@ import {
   goldenGBiome,
   goldenGOccurrenceId,
 } from '@run-planner/test-fixtures/underworld';
-import { createRepresentativeNOPQProject } from '@run-planner/test-fixtures/surface';
+import { loadSurfaceNOPQProject } from '@run-planner/test-fixtures/surface';
 import { renderPlannerForInteraction } from '../fixtures/renderPlanner';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 
@@ -583,9 +583,7 @@ describe('underworld product loop', () => {
     await view.user.click(mixed);
     expect(screen.getByRole('heading', { level: 3, name: /^Entering Preboss/ })).toBeTruthy();
 
-    act(() =>
-      application.store.dispatch(authoredProjectReplaced(createRepresentativeNOPQProject())),
-    );
+    act(() => application.store.dispatch(authoredProjectReplaced(loadSurfaceNOPQProject())));
     await view.user.click(screen.getByRole('button', { name: 'Surface' }));
     await view.user.click(screen.getByRole('button', { name: 'Ephyra' }));
     const nStructure = screen.getByRole('region', { name: 'Ephyra route structure' });

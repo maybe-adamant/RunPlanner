@@ -30,11 +30,7 @@ import {
   goldenFOccurrenceId,
   goldenFStartId,
 } from '@run-planner/test-fixtures/underworld';
-import {
-  createRepresentativeNOPQProject,
-  nBiome,
-  nOccurrenceId,
-} from '@run-planner/test-fixtures/surface';
+import { loadSurfaceNOPQProject, nBiome, nOccurrenceId } from '@run-planner/test-fixtures/surface';
 import { noEncounterPhaseStatusCoverage } from '@planner-test/support/structured-workspace/encounter-phase-status';
 import { createWorkspaceProjectSourceIndex } from './source-index';
 
@@ -663,7 +659,7 @@ describe('structured workspace source index', () => {
   });
 
   it('maps Hub board, visit, and local owners without treating dormant authored details as local coverage', () => {
-    const project = createRepresentativeNOPQProject();
+    const project = loadSurfaceNOPQProject();
     const source = biomeSource(sourceIndexForExactProject(project), 'Surface', 'N');
     const visited = nOccurrenceId('combat05');
     const dormant = nOccurrenceId('combat10');
@@ -698,7 +694,7 @@ describe('structured workspace source index', () => {
   });
 
   it('publishes exact Hub, local-visit, and terminal occurrence outgoing owners', () => {
-    const project = createRepresentativeNOPQProject();
+    const project = loadSurfaceNOPQProject();
     const source = biomeSource(sourceIndexForExactProject(project), 'Surface', 'N');
     const main = nOccurrenceId('combat02');
     const localDecision = source.plan.topology?.decisions.find(
@@ -721,7 +717,7 @@ describe('structured workspace source index', () => {
 
   it('keeps evaluator products and findings addressed to authored owners', () => {
     const combat = nOccurrenceId('combat10');
-    const project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+    const project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
       kind: 'ReplaceIncomingReward',
       reward: createIncomingRewardAddress(nBiome, combat),
       value: { rewardType: 'WeaponUpgrade' },

@@ -58,12 +58,12 @@ import {
   goldenIBiome,
 } from '@run-planner/test-fixtures/underworld';
 import {
-  createRepresentativeNOPQProject,
-  createRepresentativeNOPProject,
+  loadSurfaceNOPQProject,
+  loadSurfaceNOPProject,
   createRepresentativeNOPQShopTraitProject,
-  createRepresentativeNOProject,
-  appendCompleteN,
-  appendNEntry,
+  loadSurfaceNOProject,
+  loadSurfaceNCompleteHubFrontierProject,
+  loadSurfaceNEntryFrontierResolvedProject,
   nBiome,
   nLocalOccurrenceId,
   nOccurrenceId,
@@ -319,7 +319,7 @@ function reachedEchoProject(): ProjectDocument {
 
 describe('structured workspace interaction binding', () => {
   it('binds the exact Gorgon condition replacement command', () => {
-    const project = applyProjectCommand(createRepresentativeNOPProject(), catalog, {
+    const project = applyProjectCommand(loadSurfaceNOPProject(), catalog, {
       kind: 'ReplaceStartingKeepsake',
       selection: createRouteStartKeepsakeSelectionAddress('Surface'),
       keepsakeKey: 'AthenaEncounterKeepsake',
@@ -345,7 +345,7 @@ describe('structured workspace interaction binding', () => {
       { kind: 'occurrence', occurrenceId: pOccurrenceId('P_Combat12', 8, 1) },
       'Combat',
     );
-    let project = applyProjectCommand(createRepresentativeNOPProject(), catalog, {
+    let project = applyProjectCommand(loadSurfaceNOPProject(), catalog, {
       kind: 'ReplaceStartingKeepsake',
       selection: createRouteStartKeepsakeSelectionAddress('Surface'),
       keepsakeKey: 'AthenaEncounterKeepsake',
@@ -431,7 +431,7 @@ describe('structured workspace interaction binding', () => {
   });
 
   it('binds Circe draft switches and the blocking finding to the exact resolution child', () => {
-    let project = createRepresentativeNOProject();
+    let project = loadSurfaceNOProject();
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceFearVowRank',
       route: createRouteAddress('Surface'),
@@ -1054,7 +1054,7 @@ describe('structured workspace interaction binding', () => {
   });
 
   it('binds one provisional Hub-slot identity per explicit opening attempt', () => {
-    const project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+    const project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
       hub: createHubDecisionAddress(nBiome, 'hub'),
       hubSlotKeys: nVisitSlotKeys.slice(0, 5),
       kind: 'ReplaceHubVisitOrder',
@@ -1096,7 +1096,7 @@ describe('structured workspace interaction binding', () => {
   });
 
   it('binds Hub closure and complete visit-order proposals to exact commands', () => {
-    const project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+    const project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
       hub: createHubDecisionAddress(nBiome, 'hub'),
       hubSlotKeys: nVisitSlotKeys.slice(0, 5),
       kind: 'ReplaceHubVisitOrder',
@@ -1146,7 +1146,7 @@ describe('structured workspace interaction binding', () => {
   });
 
   it('binds topology removals to exact commands with before-focus policy', () => {
-    const { interactions } = bind(createRepresentativeNOPQProject(), 'Surface', 'N');
+    const { interactions } = bind(loadSurfaceNOPQProject(), 'Surface', 'N');
     const clear = interactions.topologyRemovals.get(semanticAddressKey(nBiome));
     const openingOwner = createExitDecisionAddress(nBiome, {
       kind: 'occurrence',
@@ -1183,14 +1183,7 @@ describe('structured workspace interaction binding', () => {
   });
 
   it('binds the terminal Hub takeover and completed handoff to exact commands', () => {
-    const boardProject = authorLegalTraitOffers(
-      appendNEntry(
-        createProjectDocument(catalog, {
-          configuredBiomeCounts: { Surface: 1 },
-          projectId: 'bound-hub-board',
-        }),
-      ),
-    );
+    const boardProject = loadSurfaceNEntryFrontierResolvedProject();
     const hub = createHubDecisionAddress(nBiome, 'hub');
     const terminalOwner = createExitDecisionAddress(nBiome, {
       kind: 'occurrence',
@@ -1208,13 +1201,7 @@ describe('structured workspace interaction binding', () => {
       focus: { owner: hub, timing: 'after' },
     });
 
-    const handoffProject = appendCompleteN(
-      createProjectDocument(catalog, {
-        configuredBiomeCounts: { Surface: 1 },
-        projectId: 'bound-hub-handoff',
-      }),
-      { includePreboss: false },
-    );
+    const handoffProject = loadSurfaceNCompleteHubFrontierProject();
     const handoffOwner = createExitDecisionAddress(nBiome, {
       decisionKey: 'hub',
       kind: 'hubDecision',
@@ -1452,7 +1439,7 @@ describe('structured workspace interaction binding', () => {
   });
 
   it('binds all four reward owners to their exact no-focus replacement intents', () => {
-    const project = createRepresentativeNOPQProject();
+    const project = loadSurfaceNOPQProject();
     const surfaceInteractions = {
       N: bind(project, 'Surface', 'N').interactions,
       O: bind(project, 'Surface', 'O').interactions,
@@ -1729,7 +1716,7 @@ describe('structured workspace interaction binding', () => {
       kind: 'occurrence',
       occurrenceId: oOccurrenceIds.combat02,
     });
-    const withoutDecision = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+    const withoutDecision = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
       decision: owner,
       kind: 'RemoveExitDecision',
     });
@@ -1770,7 +1757,7 @@ describe('structured workspace interaction binding', () => {
       kind: 'occurrence',
       occurrenceId: qOccurrenceIds.secondMiniboss1,
     });
-    let project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+    let project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
       decision: createExitDecisionAddress(oBiome, {
         kind: 'occurrence',
         occurrenceId: oOccurrenceIds.combat02,
@@ -1963,7 +1950,7 @@ describe('structured workspace interaction binding', () => {
   });
 
   it('withholds dormant Ship Combat2 and binds its active declaration-invalid multi-choice semantic', () => {
-    const initial = createRepresentativeNOPQProject();
+    const initial = loadSurfaceNOPQProject();
     const occurrence = createOccurrenceAddress(oBiome, oOccurrenceIds.combat04);
     const combat2 = createEncounterPhaseAddress(
       oBiome,
@@ -2008,7 +1995,7 @@ describe('structured workspace interaction binding', () => {
   });
 
   it('binds Ship-wheel values and Shop actions from occurrence requirements', () => {
-    const surface = createRepresentativeNOPQProject();
+    const surface = loadSurfaceNOPQProject();
     const ship = bind(surface, 'Surface', 'O').interactions;
     const enteredShop = enteredShopProject();
     const shop = bind(enteredShop.project, 'Underworld', 'F').interactions;

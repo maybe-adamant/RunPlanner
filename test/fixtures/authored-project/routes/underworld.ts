@@ -2,34 +2,31 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createAcquisitionRoleAddress,
-  createBatchRewardStoreAddress,
   createBiomeAddress,
   createExitDecisionAddress,
-  createExitSelectionAddress,
   createIncomingRewardAddress,
   createLevelResolutionAddress,
   createOccurrenceAddress,
   createOccurrenceId,
-  createProjectDocument,
   createRouteStartKeepsakeSelectionAddress,
   createShopOfferAddress,
-  createTargetAddress,
   type BiomeAddress,
   type OccurrenceId,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import {
-  authorRequiredTestRoomActions,
   authorLegalTraitOffers,
+  authorRequiredTestRoomActions,
   replaceTestShopOfferActions,
 } from '../shared';
+import { authorTestArtificerReplacement } from '../room-actions';
 import {
   loadUnderworldFGCheckpoint,
   loadUnderworldFGHCheckpoint,
   loadUnderworldFGHICheckpoint,
+  loadUnderworldFMidshopPomFrontierCheckpoint,
 } from '../checkpoints/underworld';
-import { authorTestArtificerReplacement } from '../room-actions';
 
 export const goldenFBiome = createBiomeAddress('Underworld', 'F');
 export const goldenGBiome = createBiomeAddress('Underworld', 'G');
@@ -45,42 +42,6 @@ export interface GoldenGProjectOptions {
   readonly pickedMiniboss?: 'G_MiniBoss01' | 'G_MiniBoss02';
   readonly prebossSource?: 'G_Combat12' | 'G_Combat14';
 }
-
-interface BatchSpec {
-  readonly storeKey: 'MetaProgress' | 'RunProgress';
-  readonly targets: readonly { readonly gameName: string; readonly offer?: ResolvedRewardOffer }[];
-}
-
-const fBatches: readonly BatchSpec[] = [
-  {
-    storeKey: 'MetaProgress',
-    targets: [{ gameName: 'F_Combat02', offer: { rewardType: 'MetaCurrencyDrop' } }],
-  },
-  {
-    storeKey: 'RunProgress',
-    targets: [
-      {
-        gameName: 'F_Combat03',
-        offer: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
-      },
-      { gameName: 'F_Combat03', offer: { rewardType: 'MaxHealthDrop' } },
-    ],
-  },
-  {
-    storeKey: 'RunProgress',
-    targets: [
-      { gameName: 'F_Combat04', offer: { rewardType: 'MaxHealthDrop' } },
-      { gameName: 'F_Combat04', offer: { rewardType: 'MaxManaDrop' } },
-    ],
-  },
-  {
-    storeKey: 'RunProgress',
-    targets: [
-      { gameName: 'F_Combat05', offer: { rewardType: 'StackUpgrade' } },
-      { gameName: 'F_Combat11', offer: { rewardType: 'RoomMoneyDrop' } },
-    ],
-  },
-];
 
 export function goldenFOccurrenceId(batchIndex: number, exitIndex: number): OccurrenceId {
   return createOccurrenceId(`golden-f-b${batchIndex}-e${exitIndex}`);
@@ -98,6 +59,14 @@ export function targetOccurrenceId(
   return biomeKey === 'F'
     ? goldenFOccurrenceId(batchIndex, exitIndex)
     : goldenGOccurrenceId(batchIndex, exitIndex);
+}
+
+function source(occurrenceId: OccurrenceId) {
+  return { kind: 'occurrence' as const, occurrenceId };
+}
+
+export function loadUnderworldFGProject(): ProjectDocument {
+  return loadUnderworldFGCheckpoint();
 }
 
 export function createCompleteFGProject(options: GoldenGProjectOptions = {}): ProjectDocument {
@@ -170,73 +139,6 @@ interface FConversionFrontierFixture {
   readonly unreachedAcquisition: ReturnType<typeof createAcquisitionRoleAddress>;
 }
 
-function source(occurrenceId: OccurrenceId) {
-  return { kind: 'occurrence' as const, occurrenceId };
-}
-
-function authorWorldShop(
-  project: ProjectDocument,
-  biome: BiomeAddress,
-  occurrenceId: OccurrenceId,
-): ProjectDocument {
-  let next = project;
-  for (const [offerKey, value] of Object.entries({
-    Boon: {
-      rewardType: 'RandomLoot',
-      payload: { kind: 'BoonSource' as const, source: 'ApolloUpgrade' },
-    },
-    MajorNonBoon: { rewardType: 'RoomRewardHealDrop' },
-    Minor: { rewardType: 'MaxManaDrop' },
-  } satisfies Readonly<Record<string, ResolvedRewardOffer>>)) {
-    next = applyProjectCommand(next, catalog, {
-      kind: 'ReplaceShopOffer',
-      offer: createShopOfferAddress(biome, occurrenceId, offerKey),
-      value,
-    });
-  }
-  return next;
-}
-
-function appendBatch(
-  project: ProjectDocument,
-  biome: BiomeAddress,
-  parentOccurrenceId: OccurrenceId,
-  targets: readonly { readonly gameName: string; readonly offer?: ResolvedRewardOffer }[],
-  occurrenceId: (exitIndex: number) => OccurrenceId,
-  storeKey: 'MetaProgress' | 'RunProgress',
-): ProjectDocument {
-  const decision = createExitDecisionAddress(biome, source(parentOccurrenceId));
-  let next = applyProjectCommand(project, catalog, { kind: 'CreateBatch', decision });
-  next = applyProjectCommand(next, catalog, {
-    kind: 'ReplaceBatchRewardStore',
-    rewardStore: createBatchRewardStoreAddress(biome, decision.source),
-    storeKey,
-  });
-  for (const [offset, target] of targets.entries()) {
-    const id = occurrenceId(offset + 1);
-    next = applyProjectCommand(next, catalog, {
-      kind: 'CreateTarget',
-      target: createTargetAddress(biome, decision.source, `exit${offset + 1}`),
-      occurrenceId: id,
-      gameName: target.gameName,
-    });
-    if (target.offer !== undefined) {
-      next = applyProjectCommand(next, catalog, {
-        kind: 'ReplaceIncomingReward',
-        reward: createIncomingRewardAddress(biome, id),
-        value: target.offer,
-      });
-    }
-  }
-  return targets.length === 1
-    ? next
-    : applyProjectCommand(next, catalog, {
-        kind: 'SetExitSelection',
-        selection: createExitSelectionAddress(biome, decision.source),
-        value: { kind: 'normal', exitKey: 'exit1' },
-      });
-}
-
 function createFConversionLoadoutProject(): ProjectDocument {
   let project = applyProjectCommand(loadUnderworldFGCheckpoint(), catalog, {
     kind: 'ReplaceManualArcanaSelection',
@@ -245,9 +147,7 @@ function createFConversionLoadoutProject(): ProjectDocument {
   });
   project = applyProjectCommand(project, catalog, {
     kind: 'ReplaceStartingKeepsake',
-    selection: {
-      ...createRouteStartKeepsakeSelectionAddress('Underworld'),
-    },
+    selection: { ...createRouteStartKeepsakeSelectionAddress('Underworld') },
     keepsakeKey: 'GoldifyKeepsake',
   });
   for (const vowKey of ['BoonSkipShrineUpgrade', 'BanUnpickedBoonsShrineUpgrade'] as const) {
@@ -258,12 +158,11 @@ function createFConversionLoadoutProject(): ProjectDocument {
       rank: 1,
     });
   }
-  project = applyProjectCommand(project, catalog, {
+  return applyProjectCommand(project, catalog, {
     kind: 'ReplaceIncomingReward',
     reward: createIncomingRewardAddress(goldenFBiome, goldenFStartId),
     value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
   });
-  return project;
 }
 
 export function createFConversionFrontierProject(
@@ -317,73 +216,12 @@ export function createFInvalidLaterConversionProject(): FConversionFrontierFixtu
   });
 }
 
-export function createFMidshopPomFrontierProject(): ProjectDocument {
-  const start = createOccurrenceId('midshop-pom-start');
-  const batches: readonly {
-    readonly storeKey: 'MetaProgress' | 'RunProgress';
-    readonly targets: readonly {
-      readonly gameName: string;
-      readonly offer?: ResolvedRewardOffer;
-    }[];
-  }[] = [
-    ...fBatches.slice(0, 4),
-    {
-      storeKey: 'MetaProgress',
-      targets: [
-        { gameName: 'F_Shop01' },
-        { gameName: 'F_Combat11', offer: { rewardType: 'MetaCurrencyDrop' } },
-      ],
-    },
-  ];
-  let project = createProjectDocument(catalog, {
-    projectId: 'midshop-pom-frontier',
-    configuredBiomeCounts: { Underworld: 1 },
-  });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'CreateStart',
-    biome: goldenFBiome,
-    occurrenceId: start,
-    gameName: 'F_Opening01',
-  });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'ReplaceIncomingReward',
-    reward: createIncomingRewardAddress(goldenFBiome, start),
-    value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
-  });
-  let parent = start;
-  for (const [offset, batch] of batches.entries()) {
-    const batchIndex = offset + 1;
-    const occurrenceId = (exitIndex: number) =>
-      batchIndex === 5 && exitIndex === 1
-        ? fMidshopPomShopId
-        : createOccurrenceId(`midshop-pom-b${batchIndex}-e${exitIndex}`);
-    project = appendBatch(
-      project,
-      goldenFBiome,
-      parent,
-      batch.targets,
-      occurrenceId,
-      batch.storeKey,
-    );
-    parent = batchIndex === 5 ? fMidshopPomShopId : occurrenceId(1);
-  }
-  project = authorWorldShop(project, goldenFBiome, fMidshopPomShopId);
-  project = applyProjectCommand(project, catalog, {
-    kind: 'ReplaceShopOffer',
-    offer: createShopOfferAddress(goldenFBiome, fMidshopPomShopId, 'Minor'),
-    value: { rewardType: 'StoreRewardRandomStack' },
-  });
-  project = authorRequiredTestRoomActions(authorLegalTraitOffers(project), catalog);
-  return replaceTestShopOfferActions(
-    project,
-    catalog,
-    createOccurrenceAddress(goldenFBiome, fMidshopPomShopId),
-    ['Minor'],
-  );
+export function loadUnderworldFMidshopPomFrontierProject(): ProjectDocument {
+  return loadUnderworldFMidshopPomFrontierCheckpoint();
 }
 
 export function createFMidshopUnresolvedBlindBoxBeforePomProject(): ProjectDocument {
-  let project = createFMidshopPomFrontierProject();
+  let project = loadUnderworldFMidshopPomFrontierCheckpoint();
   project = applyProjectCommand(project, catalog, {
     kind: 'ReplaceShopOffer',
     offer: createShopOfferAddress(goldenFBiome, fMidshopPomShopId, 'Boon'),
@@ -401,4 +239,4 @@ export function createFMidshopUnresolvedBlindBoxBeforePomProject(): ProjectDocum
 }
 
 export { authorTestArtificerReplacement };
-export type { BiomeAddress };
+export type { BiomeAddress, ResolvedRewardOffer };

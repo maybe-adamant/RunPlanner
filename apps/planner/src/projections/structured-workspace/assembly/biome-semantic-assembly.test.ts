@@ -32,8 +32,8 @@ import {
   goldenIBiome,
 } from '@run-planner/test-fixtures/underworld';
 import {
-  appendCompleteN,
-  createRepresentativeNOPQProject,
+  loadSurfaceNProject,
+  loadSurfaceNOPQProject,
   nBiome,
   nOccurrenceId,
   nOccurrenceIds,
@@ -186,7 +186,7 @@ function batchTargets(assembly: ReturnType<typeof assembleWorkspaceBiomeSemantic
 
 describe('structured workspace biome semantic assembly', () => {
   it('publishes the Postboss keepsake child only when a configured successor reaches the rack', () => {
-    const source = biomeSource(createRepresentativeNOPQProject());
+    const source = biomeSource(loadSurfaceNOPQProject());
     const dormant = assembleWorkspaceBiomeSemantics(catalog, source);
     const reached = assembleWorkspaceBiomeSemantics(catalog, source, undefined, true);
     const dormantPostboss = dormant.completion.find((node) => node.role === 'postboss');
@@ -303,7 +303,7 @@ describe('structured workspace biome semantic assembly', () => {
   });
 
   it('composes N in authored Opening → PreHub → Hub → Preboss order without duplicate occurrences', () => {
-    const source = biomeSource(appendCompleteN(emptyNProject()));
+    const source = biomeSource(loadSurfaceNProject());
     const assembly = assembleWorkspaceBiomeSemantics(catalog, source);
 
     const opening = indexOfNode(
@@ -531,7 +531,7 @@ describe('structured workspace biome semantic assembly', () => {
   });
 
   it('keeps the full authored biome visible under a blocked progressive overlay', () => {
-    const invalid = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+    const invalid = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
       gameName: 'P_Combat02',
       kind: 'ReplaceOccurrenceRoom',
       occurrence: {
@@ -669,7 +669,7 @@ describe('structured workspace biome semantic assembly', () => {
     expect(retainedClockworkTarget).not.toHaveProperty('clockworkReward');
     expect(retainedClockworkTarget.room.roomLocal).not.toHaveProperty('clockworkReward');
 
-    const surface = createRepresentativeNOPQProject();
+    const surface = loadSurfaceNOPQProject();
     const blockedOSource = biomeSource(
       blockBiomeAtFirstBoon(surface, 'Surface', 'O'),
       'Surface',

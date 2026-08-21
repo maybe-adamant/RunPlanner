@@ -41,8 +41,8 @@ import {
   authorTestArtificerReplacement,
 } from '@run-planner/test-fixtures/shared';
 import {
-  appendCompleteN,
-  createRepresentativeNProject,
+  loadSurfaceNProject,
+  loadSurfaceNStoryBoardProject,
   nBiome,
   nLocalOccurrenceId,
   nLocalOccurrenceIdsBySlot,
@@ -52,7 +52,7 @@ import {
   nVisitSlotKeys,
 } from '@run-planner/test-fixtures/surface';
 
-function completeN(project = createRepresentativeNProject()) {
+function completeN(project = loadSurfaceNProject()) {
   project = authorLegalTraitOffers(project);
   const evaluation = simulateProject(catalog, project);
   const biome = evaluation.routes
@@ -62,7 +62,7 @@ function completeN(project = createRepresentativeNProject()) {
   return { project, evaluation, biome };
 }
 
-function validN(project = createRepresentativeNProject()) {
+function validN(project = loadSurfaceNProject()) {
   const result = completeN(project);
   if (result.biome.validity !== 'valid') throw new Error('N fixture did not complete-valid');
   return { ...result, biome: result.biome };
@@ -95,7 +95,7 @@ describe('N Hub rewards, validation, and candidates', () => {
       }),
     ).toThrow(/no declaration-owned takeover Preboss candidate domain/);
 
-    const withoutHandoff = applyProjectCommand(createRepresentativeNProject(), catalog, {
+    const withoutHandoff = applyProjectCommand(loadSurfaceNProject(), catalog, {
       kind: 'RemoveExitDecision',
       decision: createExitDecisionAddress(nBiome, {
         kind: 'hubDecision',
@@ -185,7 +185,7 @@ describe('N Hub rewards, validation, and candidates', () => {
 
   it('rejects an authored open set that violates the explicit miniboss constraint', () => {
     expect(() =>
-      applyProjectCommand(createRepresentativeNProject(), catalog, {
+      applyProjectCommand(loadSurfaceNProject(), catalog, {
         kind: 'OpenHubSlot',
         slot: createHubSlotAddress(nBiome, 'hub', 'miniBoss02'),
         occurrenceId: nOccurrenceId('miniBoss02'),
@@ -195,7 +195,7 @@ describe('N Hub rewards, validation, and candidates', () => {
   });
 
   it('keeps unavailable side generation and its local reward owner precise', () => {
-    let project = createRepresentativeNProject();
+    let project = loadSurfaceNProject();
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceLocalVisitOrder',
       order: createLocalVisitOrderAddress(nBiome, nOccurrenceId('combat05'), 'sideRooms'),
@@ -228,7 +228,7 @@ describe('N Hub rewards, validation, and candidates', () => {
   });
 
   it('keeps the blocked side-generation owner assessable for repair', () => {
-    let project = createRepresentativeNProject();
+    let project = loadSurfaceNProject();
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceLocalVisitOrder',
       order: createLocalVisitOrderAddress(nBiome, nOccurrenceId('combat05'), 'sideRooms'),
@@ -318,7 +318,7 @@ describe('N Hub rewards, validation, and candidates', () => {
   });
 
   it('keeps invalid board rewards attached to their incoming-reward owner', () => {
-    const project = applyProjectCommand(createRepresentativeNProject(), catalog, {
+    const project = applyProjectCommand(loadSurfaceNProject(), catalog, {
       kind: 'ReplaceIncomingReward',
       reward: createIncomingRewardAddress(nBiome, nOccurrenceId('combat10')),
       value: { rewardType: 'WeaponUpgrade' },
@@ -335,7 +335,7 @@ describe('N Hub rewards, validation, and candidates', () => {
   });
 
   it('retains the invalid board region while keeping structural Hub order proposals authorable', () => {
-    const project = applyProjectCommand(createRepresentativeNProject(), catalog, {
+    const project = applyProjectCommand(loadSurfaceNProject(), catalog, {
       kind: 'ReplaceIncomingReward',
       reward: createIncomingRewardAddress(nBiome, nOccurrenceId('combat10')),
       value: { rewardType: 'WeaponUpgrade' },
@@ -380,7 +380,7 @@ describe('N Hub rewards, validation, and candidates', () => {
   });
 
   it('assesses an aggregate visit prefix when current board findings block later evaluation', () => {
-    let project = applyProjectCommand(createRepresentativeNProject(), catalog, {
+    let project = applyProjectCommand(loadSurfaceNProject(), catalog, {
       kind: 'ReplaceIncomingReward',
       reward: createIncomingRewardAddress(nBiome, nOccurrenceId('combat10')),
       value: { rewardType: 'WeaponUpgrade' },
@@ -413,7 +413,7 @@ describe('N Hub rewards, validation, and candidates', () => {
   });
 
   it('permits the audited ten-target peer-source repeat without changing physical-board ownership', () => {
-    let project = applyProjectCommand(createRepresentativeNProject(), catalog, {
+    let project = applyProjectCommand(loadSurfaceNProject(), catalog, {
       kind: 'OpenHubSlot',
       slot: createHubSlotAddress(nBiome, 'hub', 'combat12'),
       occurrenceId: nOccurrenceId('combat12'),
@@ -460,7 +460,11 @@ describe('N Hub rewards, validation, and candidates', () => {
       combat23: 'AresUpgrade',
       miniBoss01: 'PoseidonUpgrade',
     } as const;
-    let project = createRepresentativeNProject({ visitSlotKeys: Object.keys(hubSources) });
+    let project = applyProjectCommand(loadSurfaceNProject(), catalog, {
+      kind: 'ReplaceHubVisitOrder',
+      hub: createHubDecisionAddress(nBiome, 'hub'),
+      hubSlotKeys: Object.keys(hubSources),
+    });
     for (const [occurrenceId, source] of [
       [nOccurrenceIds.opening, 'ApolloUpgrade'],
       [nOccurrenceIds.preHub, 'HeraUpgrade'],
@@ -496,7 +500,7 @@ describe('N Hub rewards, validation, and candidates', () => {
   });
 
   it('treats Hub board generation independently from its six-room acquisition order', () => {
-    let project = applyProjectCommand(createRepresentativeNProject(), catalog, {
+    let project = applyProjectCommand(loadSurfaceNProject(), catalog, {
       kind: 'OpenHubSlot',
       slot: createHubSlotAddress(nBiome, 'hub', 'story'),
       occurrenceId: nOccurrenceId('story'),
@@ -581,7 +585,7 @@ describe('N Hub rewards, validation, and candidates', () => {
   });
 
   it('assesses a resolved participant without existentially completing unresolved Hub peers', () => {
-    let project = applyProjectCommand(createRepresentativeNProject(), catalog, {
+    let project = applyProjectCommand(loadSurfaceNProject(), catalog, {
       kind: 'OpenHubSlot',
       slot: createHubSlotAddress(nBiome, 'hub', 'combat12'),
       occurrenceId: nOccurrenceId('combat12'),
@@ -626,7 +630,7 @@ describe('N Hub rewards, validation, and candidates', () => {
     const reward = createIncomingRewardAddress(nBiome, nOccurrenceId('combat09'));
     const result = createPreparedProjectCandidateSession(
       catalog,
-      simulateProjectAssembly(catalog, createRepresentativeNProject()),
+      simulateProjectAssembly(catalog, loadSurfaceNProject()),
     ).evaluate({
       kind: 'incomingReward',
       reward,
@@ -648,7 +652,7 @@ describe('N Hub rewards, validation, and candidates', () => {
   });
 
   it('uses the authored peer pool while keeping a complete invalid board repairable', () => {
-    let project = createRepresentativeNProject();
+    let project = loadSurfaceNProject();
     const repeatedDefault = {
       rewardType: 'Boon' as const,
       payload: { kind: 'BoonSource' as const, source: 'AphroditeUpgrade' },
@@ -692,7 +696,7 @@ describe('N Hub rewards, validation, and candidates', () => {
   });
 
   it('separates focused participant support from complete-board source failure', () => {
-    let project = applyProjectCommand(createRepresentativeNProject(), catalog, {
+    let project = applyProjectCommand(loadSurfaceNProject(), catalog, {
       kind: 'ReplaceIncomingReward',
       reward: createIncomingRewardAddress(nBiome, nOccurrenceId('combat11')),
       value: {
@@ -732,7 +736,7 @@ describe('N Hub rewards, validation, and candidates', () => {
 
   it('keeps unrelated board reward authoring available under a retained-invalid peer', () => {
     const invalidPeer = createIncomingRewardAddress(nBiome, nOccurrenceId('combat10'));
-    const project = applyProjectCommand(createRepresentativeNProject(), catalog, {
+    const project = applyProjectCommand(loadSurfaceNProject(), catalog, {
       kind: 'ReplaceIncomingReward',
       reward: invalidPeer,
       value: { rewardType: 'WeaponUpgrade' },
@@ -762,10 +766,10 @@ describe('N Hub rewards, validation, and candidates', () => {
     const value = { rewardType: 'SpellDrop' } as const;
     const baseline = createPreparedProjectCandidateSession(
       catalog,
-      simulateProjectAssembly(catalog, createRepresentativeNProject()),
+      simulateProjectAssembly(catalog, loadSurfaceNProject()),
     ).evaluate({ kind: 'incomingReward', reward, value });
 
-    let blocked = applyProjectCommand(createRepresentativeNProject(), catalog, {
+    let blocked = applyProjectCommand(loadSurfaceNProject(), catalog, {
       kind: 'ReplaceHubVisitOrder',
       hub: createHubDecisionAddress(nBiome, 'hub'),
       hubSlotKeys: ['combat02', 'combat05', 'miniBoss01', 'combat11', 'combat23', 'combat09'],
@@ -851,7 +855,7 @@ describe('N Hub rewards, validation, and candidates', () => {
   });
 
   it('propagates and acquires a trait-bearing active Ephyra local reward', () => {
-    const project = createRepresentativeNProject();
+    const project = loadSurfaceNProject();
     const route = project.routes.find((candidate) => candidate.routeKey === 'Surface');
     const plan = route?.biomes.find((candidate) => candidate.biomeKey === 'N');
     const topology = plan?.topology;
@@ -994,7 +998,7 @@ describe('N Hub rewards, validation, and candidates', () => {
   });
 
   it('keeps the peer-exclusion finding at the second conflicting local reward owner', () => {
-    let project = createRepresentativeNProject();
+    let project = loadSurfaceNProject();
     for (const slotKey of ['sideDoor1', 'sideDoor2'] as const) {
       project = applyProjectCommand(project, catalog, {
         kind: 'ReplaceIncomingReward',
@@ -1014,7 +1018,7 @@ describe('N Hub rewards, validation, and candidates', () => {
   });
 
   it('retains an entered local reward finding on local and aggregate Hub order candidates', () => {
-    let project = createRepresentativeNProject();
+    let project = loadSurfaceNProject();
     for (const slotKey of ['sideDoor1', 'sideDoor2'] as const) {
       project = applyProjectCommand(project, catalog, {
         kind: 'ReplaceIncomingReward',
@@ -1073,7 +1077,7 @@ describe('N Hub rewards, validation, and candidates', () => {
       { kind: 'occurrence', occurrenceId },
       'Encounter',
     );
-    let project = applyProjectCommand(createRepresentativeNProject(), catalog, {
+    let project = applyProjectCommand(loadSurfaceNProject(), catalog, {
       kind: 'ReplaceStartingKeepsake',
       selection: createRouteStartKeepsakeSelectionAddress('Surface'),
       keepsakeKey: 'SkipEncounterKeepsake',
@@ -1119,26 +1123,7 @@ describe('N Hub rewards, validation, and candidates', () => {
   });
 
   it('offers the fixed Story target without acquiring it or depleting the Hub bag', () => {
-    const project = appendCompleteN(
-      createProjectDocument(catalog, {
-        projectId: 'n-story-board',
-        configuredBiomeCounts: { Surface: 1 },
-      }),
-      {
-        openSlotKeys: [
-          'combat11',
-          'combat10',
-          'combat09',
-          'combat05',
-          'story',
-          'combat02',
-          'combat01',
-          'miniBoss01',
-          'combat23',
-        ],
-        visitSlotKeys: ['combat05', 'miniBoss01', 'combat02', 'combat11', 'combat23', 'story'],
-      },
-    );
+    const project = loadSurfaceNStoryBoardProject();
     const { biome } = validN(project);
     const hub = biome.snapshot.decisions.find((decision) => decision.kind === 'hub');
     if (hub?.kind !== 'hub') throw new Error('fixture lost Hub decision');
@@ -1183,7 +1168,7 @@ describe('N Hub rewards, validation, and candidates', () => {
       'Boon',
     ]);
 
-    let invalidProject = applyProjectCommand(createRepresentativeNProject(), catalog, {
+    let invalidProject = applyProjectCommand(loadSurfaceNProject(), catalog, {
       kind: 'ReplaceShopOffer',
       offer: createShopOfferAddress(nBiome, nOccurrenceIds.preboss, 'MajorNonBoon'),
       value: { rewardType: 'WeaponUpgradeDrop' },
@@ -1207,7 +1192,7 @@ describe('N Hub rewards, validation, and candidates', () => {
     );
 
     const purchasedProject = replaceTestShopOfferActions(
-      createRepresentativeNProject(),
+      loadSurfaceNProject(),
       catalog,
       createOccurrenceAddress(nBiome, nOccurrenceIds.preboss),
       ['Minor'],
@@ -1405,7 +1390,7 @@ describe('N Hub rewards, validation, and candidates', () => {
   });
 
   it('replays every proposed Hub visit and retains exact descendant findings as order evidence', () => {
-    let project = createRepresentativeNProject();
+    let project = loadSurfaceNProject();
     const combat05Group = createLocalVisitOrderAddress(
       nBiome,
       nOccurrenceId('combat05'),
@@ -1477,7 +1462,7 @@ describe('N Hub rewards, validation, and candidates', () => {
   });
 
   it('does not offer a visit-referenced slot for closure even when the board would retain its minimum size', () => {
-    const project = applyProjectCommand(createRepresentativeNProject(), catalog, {
+    const project = applyProjectCommand(loadSurfaceNProject(), catalog, {
       kind: 'OpenHubSlot',
       slot: createHubSlotAddress(nBiome, 'hub', 'combat12'),
       occurrenceId: nOccurrenceId('close-referenced-slot'),
@@ -1580,7 +1565,7 @@ describe('N Hub rewards, validation, and candidates', () => {
   });
 
   it('does not mutate reward ownership when replacing one local offer', () => {
-    const project = applyProjectCommand(createRepresentativeNProject(), catalog, {
+    const project = applyProjectCommand(loadSurfaceNProject(), catalog, {
       kind: 'ReplaceIncomingReward',
       reward: createIncomingRewardAddress(nBiome, nLocalOccurrenceId('combat02', 'sideDoor1')),
       value: { rewardType: 'RoomMoneyTinyDrop' },
@@ -1600,7 +1585,7 @@ describe('N Hub rewards, validation, and candidates', () => {
 
   it('keeps the Ephyra HubRewards bag independent from an Artificer conversion', () => {
     const owner = createIncomingRewardAddress(nBiome, nLocalOccurrenceId('combat02', 'sideDoor1'));
-    let project = applyProjectCommand(createRepresentativeNProject(), catalog, {
+    let project = applyProjectCommand(loadSurfaceNProject(), catalog, {
       kind: 'ReplaceManualArcanaSelection',
       route: createRouteAddress('Surface'),
       arcanaKeys: ['ChanneledCast', 'HealthRegen', 'BonusDodge', 'MetaToRunUpgrade'],

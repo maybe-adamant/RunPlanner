@@ -40,8 +40,8 @@ import {
   goldenIBiome,
 } from '@run-planner/test-fixtures/underworld';
 import {
-  createRepresentativeNOPQProject,
-  createRepresentativeNOPProject,
+  loadSurfaceNOPQProject,
+  loadSurfaceNOPProject,
   nBiome,
   nOccurrenceId,
   oBiome,
@@ -205,7 +205,7 @@ describe('structured workspace occurrence assembly', () => {
       { kind: 'occurrence', occurrenceId: pOccurrenceId('P_Combat12', 8, 1) },
       'Combat',
     );
-    let project = applyProjectCommand(createRepresentativeNOPProject(), catalog, {
+    let project = applyProjectCommand(loadSurfaceNOPProject(), catalog, {
       kind: 'ReplaceStartingKeepsake',
       selection: createRouteStartKeepsakeSelectionAddress('Surface'),
       keepsakeKey: 'AthenaEncounterKeepsake',
@@ -302,7 +302,7 @@ describe('structured workspace occurrence assembly', () => {
 
   it('publishes authored encounter choices without candidate support', () => {
     const nCombat = assemble(
-      createRepresentativeNOPQProject(),
+      loadSurfaceNOPQProject(),
       'Surface',
       'N',
       nOccurrenceId('combat05'),
@@ -382,7 +382,7 @@ describe('structured workspace occurrence assembly', () => {
       createOccurrenceId('golden-h-combat02'),
     ).assembly;
     const ship = assemble(
-      createRepresentativeNOPQProject(),
+      loadSurfaceNOPQProject(),
       'Surface',
       'O',
       oOccurrenceIds.combat04,
@@ -607,7 +607,7 @@ describe('structured workspace occurrence assembly', () => {
 
   it('derives a three-phase Ship presentation and places outgoing generation in Combat 2', () => {
     const occurrence = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
-    const project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+    const project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
       kind: 'ReplaceShipEncounterCount',
       occurrence,
       encounterCount: 3,
@@ -655,7 +655,7 @@ describe('structured workspace occurrence assembly', () => {
     },
   ])('keeps the engine timeline authoritative for a $name checkpoint window', ({ window }) => {
     const assembled = assemble(
-      createRepresentativeNOPQProject(),
+      loadSurfaceNOPQProject(),
       'Surface',
       'O',
       oOccurrenceIds.combat04,
@@ -1151,7 +1151,7 @@ describe('structured workspace occurrence assembly', () => {
   });
 
   it('publishes fixed Devotion and Story payloads without inventing editable controls', () => {
-    const project = createRepresentativeNOPQProject();
+    const project = loadSurfaceNOPQProject();
     const devotion = assemble(project, 'Surface', 'O', oOccurrenceIds.devotion).assembly.node.room;
     const story = assemble(project, 'Surface', 'P', pOccurrenceId('P_Story01', 7, 1)).assembly.node
       .room;
@@ -1205,7 +1205,7 @@ describe('structured workspace occurrence assembly', () => {
 
   it('does not need evaluation entry to preserve authored room-local controls', () => {
     const { assembly } = assemble(
-      createRepresentativeNOPQProject(),
+      loadSurfaceNOPQProject(),
       'Surface',
       'N',
       nOccurrenceId('combat05'),

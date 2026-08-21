@@ -36,11 +36,11 @@ import {
   createGoldenFGHProject,
 } from '@run-planner/test-fixtures/underworld';
 import {
-  createRepresentativeNProject,
+  loadSurfaceNProject,
   oOccurrenceIds,
-  createRepresentativeNOProject,
-  createRepresentativeNOPProject,
-  createRepresentativeNOPQProject,
+  loadSurfaceNOProject,
+  loadSurfaceNOPProject,
+  loadSurfaceNOPQProject,
 } from '@run-planner/test-fixtures/surface';
 
 function evaluatedProject(project: ReturnType<typeof createProjectDocument>) {
@@ -70,7 +70,7 @@ function legalHFieldsProject() {
 
 function legalOProject() {
   const biome = createBiomeAddress('Surface', 'O');
-  let project = applyProjectCommand(createRepresentativeNOProject(), catalog, {
+  let project = applyProjectCommand(loadSurfaceNOProject(), catalog, {
     kind: 'ReplaceOccurrenceRoom',
     occurrence: createOccurrenceAddress(biome, oOccurrenceIds.devotion),
     gameName: 'O_Shop01',
@@ -647,7 +647,7 @@ describe('unified biome simulation', () => {
       targets: [{ continuation: 'startsCompletion' }],
     });
 
-    const qProject = createRepresentativeNOPQProject();
+    const qProject = loadSurfaceNOPQProject();
     const qPlan = qProject.routes[1]?.biomes.find((candidate) => candidate.biomeKey === 'Q');
     if (qPlan === undefined) throw new Error('missing Q plan');
     const q = simulateProject(catalog, qProject).routes[1]?.biomes.find(
@@ -718,7 +718,7 @@ describe('unified biome simulation', () => {
 
   it.each([
     ['G', createCompleteFGProject(), 'Underworld'],
-    ['P', createRepresentativeNOPProject(), 'Surface'],
+    ['P', loadSurfaceNOPProject(), 'Surface'],
   ] as const)(
     'gives %s takeover batches their declaration-owned shop and free-reward roles',
     (biomeKey, project, routeKey) => {
@@ -745,7 +745,7 @@ describe('unified biome simulation', () => {
   );
 
   it('retains a Hub decision and its source-owned Preboss handoff in complete authorship', () => {
-    const evaluation = simulateProject(catalog, createRepresentativeNProject());
+    const evaluation = simulateProject(catalog, loadSurfaceNProject());
     const biome = evaluation.routes[1]?.biomes[0];
     expect(biome?.authoring).toBe('complete');
     if (biome?.authoring !== 'complete' || biome.validity !== 'valid') {

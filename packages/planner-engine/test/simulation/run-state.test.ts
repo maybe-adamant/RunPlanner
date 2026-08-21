@@ -27,8 +27,9 @@ import {
   goldenFOccurrenceId,
 } from '@run-planner/test-fixtures/underworld';
 import {
-  createRepresentativeNOProject,
-  createRepresentativeNProject,
+  loadSurfaceNOProject,
+  loadSurfaceNCompleteHubFrontierProject,
+  loadSurfaceNProject,
   oBiome,
   oOccurrenceIds,
 } from '@run-planner/test-fixtures/surface';
@@ -194,7 +195,7 @@ describe('decision run-state snapshots', () => {
   });
 
   it('publishes Ship pre-start checkpoints from exact phase views without a room-entry owner', () => {
-    const evaluation = simulateProject(catalog, createRepresentativeNOProject());
+    const evaluation = simulateProject(catalog, loadSurfaceNOProject());
     const biome = evaluation.routes
       .find((route) => route.routeKey === 'Surface')
       ?.biomes.find((candidate) => candidate.biomeKey === 'O');
@@ -273,7 +274,7 @@ describe('decision run-state snapshots', () => {
   });
 
   it('publishes every outer N decision while excluding Hub visits', () => {
-    const evaluation = simulateProject(catalog, createRepresentativeNProject());
+    const evaluation = simulateProject(catalog, loadSurfaceNProject());
     const biome = evaluation.routes
       .find((route) => route.routeKey === 'Surface')
       ?.biomes.find((candidate) => candidate.biomeKey === 'N');
@@ -308,10 +309,7 @@ describe('decision run-state snapshots', () => {
   });
 
   it('publishes the reached N Preboss frontier before its handoff is authored', () => {
-    const evaluation = simulateProject(
-      catalog,
-      createRepresentativeNProject({ includePreboss: false }),
-    );
+    const evaluation = simulateProject(catalog, loadSurfaceNCompleteHubFrontierProject());
     const biome = evaluation.routes
       .find((route) => route.routeKey === 'Surface')
       ?.biomes.find((candidate) => candidate.biomeKey === 'N');
@@ -338,7 +336,7 @@ describe('decision run-state snapshots', () => {
   });
 
   it('keeps N main and side pre-exit checkpoints chronological without restore duplicates', () => {
-    const evaluation = simulateProject(catalog, createRepresentativeNProject());
+    const evaluation = simulateProject(catalog, loadSurfaceNProject());
     const biome = evaluation.routes
       .find((route) => route.routeKey === 'Surface')
       ?.biomes.find((candidate) => candidate.biomeKey === 'N');
@@ -380,7 +378,7 @@ describe('decision run-state snapshots', () => {
   });
 
   it('captures the literal Shop pre-exit checkpoint after final settlement', () => {
-    let project = applyProjectCommand(createRepresentativeNOProject(), catalog, {
+    let project = applyProjectCommand(loadSurfaceNOProject(), catalog, {
       kind: 'ReplaceOccurrenceRoom',
       occurrence: createOccurrenceAddress(oBiome, oOccurrenceIds.devotion),
       gameName: 'O_Shop01',
@@ -705,7 +703,7 @@ describe('decision run-state snapshots', () => {
   });
 
   it('publishes encounter-blocked decision availability through the canonical frontier', () => {
-    const project = applyProjectCommand(createRepresentativeNOProject(), catalog, {
+    const project = applyProjectCommand(loadSurfaceNOProject(), catalog, {
       kind: 'ReplaceShipEncounterCount',
       occurrence: createOccurrenceAddress(oBiome, oOccurrenceIds.combat04),
       encounterCount: 3,

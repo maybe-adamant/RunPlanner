@@ -3,10 +3,10 @@ import { semanticAddressKey } from '@run-planner/engine/authored-project';
 import { simulateProject } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
-import { createRepresentativeNProject } from '@run-planner/test-fixtures/surface';
+import { loadSurfaceNProject } from '@run-planner/test-fixtures/surface';
 
 function fixture() {
-  const project = createRepresentativeNProject();
+  const project = loadSurfaceNProject();
   const biome = simulateProject(catalog, project)
     .routes.find((route) => route.routeKey === 'Surface')
     ?.biomes.find((candidate) => candidate.biomeKey === 'N');

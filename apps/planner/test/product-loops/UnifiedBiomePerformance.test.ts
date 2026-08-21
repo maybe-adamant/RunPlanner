@@ -23,16 +23,16 @@ import {
   goldenGOccurrenceId,
   goldenGStartId,
 } from '@run-planner/test-fixtures/underworld';
-import { createRepresentativeNOPQProject, nBiome } from '@run-planner/test-fixtures/surface';
+import { loadSurfaceNOPQProject, nBiome } from '@run-planner/test-fixtures/surface';
 
 const interactiveBudgetMs = 750;
 const cachedUndoBudgetMs = 50;
 let underworldProject: ReturnType<typeof createGoldenFGHIProject>;
-let surfaceProject: ReturnType<typeof createRepresentativeNOPQProject>;
+let surfaceProject: ReturnType<typeof loadSurfaceNOPQProject>;
 
 beforeAll(() => {
   underworldProject = createGoldenFGHIProject();
-  surfaceProject = createRepresentativeNOPQProject();
+  surfaceProject = loadSurfaceNOPQProject();
 });
 
 function measure<T>(operation: () => T): { readonly durationMs: number; readonly result: T } {

@@ -8,13 +8,13 @@ import {
 } from '@run-planner/engine/authored-project';
 import { describe, expect, it } from 'vitest';
 
-import { createRepresentativeNProject } from '@run-planner/test-fixtures/surface';
+import { loadSurfaceNProject } from '@run-planner/test-fixtures/surface';
 import { expectedWorkspaceStructuralControls } from './expected-structural-controls';
 
 const biome = createBiomeAddress('Surface', 'N');
 
 function nPlan() {
-  const plan = createRepresentativeNProject()
+  const plan = loadSurfaceNProject()
     .routes.find((route) => route.routeKey === biome.routeKey)
     ?.biomes.find((candidate) => candidate.biomeKey === biome.biomeKey);
   if (plan === undefined) throw new Error('Surface/N fixture is missing');

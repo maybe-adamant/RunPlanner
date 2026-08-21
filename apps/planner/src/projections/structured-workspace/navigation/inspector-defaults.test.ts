@@ -19,9 +19,9 @@ import {
   goldenFOccurrenceId,
 } from '@run-planner/test-fixtures/underworld';
 import {
-  appendCompleteN,
-  appendNEntry,
-  createRepresentativeNOPQProject,
+  loadSurfaceNCompleteHubFrontierProject,
+  loadSurfaceNEntryFrontierProject,
+  loadSurfaceNOPQProject,
   nBiome,
   nOccurrenceIds,
   nVisitSlotKeys,
@@ -53,7 +53,7 @@ function project(projectDocument: ProjectDocument) {
 beforeAll(() => {
   completeProject = createGoldenFGHIProject();
   completeWorkspace = project(completeProject);
-  surfaceWorkspace = project(createRepresentativeNOPQProject());
+  surfaceWorkspace = project(loadSurfaceNOPQProject());
 });
 
 function biome(projectDocument: ProjectDocument, biomeKey: string): WorkspaceBiome {
@@ -68,7 +68,7 @@ function emptyProject(routeKey: 'Surface' | 'Underworld', count: number): Projec
 }
 
 function nOpeningPreHubProject(): ProjectDocument {
-  return appendNEntry(emptyProject('Surface', 1));
+  return loadSurfaceNEntryFrontierProject();
 }
 
 function withUnresolvedFSelections(
@@ -255,7 +255,7 @@ describe('workspace inspector defaults', () => {
     expect(nodeByKey(fresh, fresh.defaultInspectorDestination.nodeKey).kind).toBe('hubDecision');
 
     const truncated = biome(
-      applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+      applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
         hub: createHubDecisionAddress(nBiome, 'hub'),
         hubSlotKeys: nVisitSlotKeys.slice(0, 3),
         kind: 'ReplaceHubVisitOrder',
@@ -271,16 +271,7 @@ describe('workspace inspector defaults', () => {
       'hubDecision',
     );
 
-    const handoff = biome(
-      appendCompleteN(
-        createProjectDocument(catalog, {
-          projectId: 'default-inspector-handoff',
-          configuredBiomeCounts: { Surface: 1 },
-        }),
-        { includePreboss: false },
-      ),
-      'N',
-    );
+    const handoff = biome(loadSurfaceNCompleteHubFrontierProject(), 'N');
     if (
       handoff.frontier?.kind !== 'exitDecision' ||
       handoff.frontier.owner.source.kind !== 'hubDecision'
@@ -293,7 +284,7 @@ describe('workspace inspector defaults', () => {
       'hubDecision',
     );
 
-    const complete = biome(createRepresentativeNOPQProject(), 'N');
+    const complete = biome(loadSurfaceNOPQProject(), 'N');
     const preboss = complete.nodes.find(
       (node) =>
         node.kind === 'occurrenceWorkbench' && node.room.occurrenceId === nOccurrenceIds.preboss,

@@ -31,7 +31,7 @@ const defaultRouteLoadout = createDefaultRouteLoadout(catalog);
 
 import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 import {
-  createRepresentativeNProject,
+  loadSurfaceNProject,
   nBiome,
   nLocalOccurrenceId,
   nOccurrenceId,
@@ -339,7 +339,7 @@ describe('Hub progressive biome evaluation', () => {
   );
 
   it('retains an explicit side-generation violation at the local visit boundary', () => {
-    let project = createRepresentativeNProject();
+    let project = loadSurfaceNProject();
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceLocalVisitOrder',
       order: createLocalVisitOrderAddress(nBiome, nOccurrenceId('combat05'), 'sideRooms'),
@@ -372,7 +372,7 @@ describe('Hub progressive biome evaluation', () => {
   });
 
   it('orders one Hub visit as target lifecycle, side generation, then local lifecycle', () => {
-    const base = createRepresentativeNProject();
+    const base = loadSurfaceNProject();
     let sideBlocked = applyProjectCommand(base, catalog, {
       kind: 'ReplaceLocalVisitOrder',
       order: createLocalVisitOrderAddress(nBiome, nOccurrenceId('combat05'), 'sideRooms'),
@@ -448,7 +448,7 @@ describe('Hub progressive biome evaluation', () => {
   it('stops the engine walk at a later main-room blocker without replaying prior restores', () => {
     const blockedOccurrence = nOccurrenceId('combat02');
     const laterOccurrence = nOccurrenceId('combat11');
-    const project = applyProjectCommand(createRepresentativeNProject(), catalog, {
+    const project = applyProjectCommand(loadSurfaceNProject(), catalog, {
       kind: 'SelectEncounter',
       phase: createEncounterPhaseAddress(
         nBiome,
@@ -501,7 +501,7 @@ describe('Hub progressive biome evaluation', () => {
     const firstSide = nLocalOccurrenceId('combat05', 'sideDoor2');
     const blockedSide = nLocalOccurrenceId('combat05', 'sideDoor1');
     const main = nOccurrenceId('combat05');
-    const project = applyProjectCommand(createRepresentativeNProject(), catalog, {
+    const project = applyProjectCommand(loadSurfaceNProject(), catalog, {
       kind: 'SelectEncounter',
       phase: createEncounterPhaseAddress(
         nBiome,
@@ -578,7 +578,7 @@ describe('Hub progressive biome evaluation', () => {
   });
 
   it('retains physical board targets and the active visit through their invalid regions', () => {
-    const boardProject = applyProjectCommand(createRepresentativeNProject(), catalog, {
+    const boardProject = applyProjectCommand(loadSurfaceNProject(), catalog, {
       kind: 'ReplaceIncomingReward',
       reward: createIncomingRewardAddress(nBiome, nOccurrenceId('combat10')),
       value: { rewardType: 'WeaponUpgrade' },
@@ -607,7 +607,7 @@ describe('Hub progressive biome evaluation', () => {
       }),
     );
 
-    let sideProject = createRepresentativeNProject();
+    let sideProject = loadSurfaceNProject();
     sideProject = applyProjectCommand(sideProject, catalog, {
       kind: 'ReplaceLocalVisitOrder',
       order: createLocalVisitOrderAddress(nBiome, nOccurrenceId('combat05'), 'sideRooms'),
@@ -651,7 +651,7 @@ describe('Hub progressive biome evaluation', () => {
   });
 
   it('blocks at invalid Hub board generation before a simultaneous first-visit failure', () => {
-    let project = createRepresentativeNProject();
+    let project = loadSurfaceNProject();
     const boardReward = createIncomingRewardAddress(nBiome, nOccurrenceId('combat10'));
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceIncomingReward',
@@ -694,7 +694,7 @@ describe('Hub progressive biome evaluation', () => {
   });
 
   it('stops a local reward-bag failure within side generation before Hub entry', () => {
-    let project = createRepresentativeNProject();
+    let project = loadSurfaceNProject();
     for (const slotKey of ['sideDoor1', 'sideDoor2'] as const) {
       project = applyProjectCommand(project, catalog, {
         kind: 'ReplaceIncomingReward',

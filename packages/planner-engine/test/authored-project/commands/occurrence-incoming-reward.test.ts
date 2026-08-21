@@ -17,11 +17,7 @@ import {
   goldenFOccurrenceId,
   goldenHBiome,
 } from '@run-planner/test-fixtures/underworld';
-import {
-  createRepresentativeNOProject,
-  oBiome,
-  oOccurrenceIds,
-} from '@run-planner/test-fixtures/surface';
+import { loadSurfaceNOProject, oBiome, oOccurrenceIds } from '@run-planner/test-fixtures/surface';
 
 import { createCompleteNProject } from '../support/complete-n-project';
 import { nBiome } from '../support/configured-projects';
@@ -355,7 +351,7 @@ describe('authored-project incoming reward commands', () => {
 
   it('replaces only the payload of a declaration-fixed reward', () => {
     const reward = createIncomingRewardAddress(oBiome, oOccurrenceIds.devotion);
-    const initial = createRepresentativeNOProject();
+    const initial = loadSurfaceNOProject();
     const changed = applyProjectCommand(initial, catalog, {
       kind: 'ReplaceIncomingReward',
       reward,

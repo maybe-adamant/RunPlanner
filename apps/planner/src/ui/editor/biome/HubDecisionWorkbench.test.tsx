@@ -10,7 +10,6 @@ import {
   createIncomingRewardAddress,
   createOccurrenceAddress,
   createOccurrenceId,
-  createProjectDocument,
   createRouteAddress,
   semanticAddressKey,
   type ProjectDocument,
@@ -25,12 +24,15 @@ import {
 } from '@planner/state/projectWorkspaceSlice';
 import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
 import {
-  appendCompleteN,
-  appendNEntry,
-  createRepresentativeNProject,
-  createRepresentativeNOPQProject,
+  loadSurfaceNCompleteHubFrontierProject,
+  loadSurfaceNEntryFrontierProject,
+  loadSurfaceNPartialHubProject,
+  loadSurfaceNProject,
+  loadSurfaceNStoryBoardProject,
+  loadSurfaceNTenOpenInvalidProject,
+  loadSurfaceNOPQProject,
   nBiome,
-  nOpenSlotKeys,
+  nLocalOccurrenceIdsBySlot,
   nOccurrenceId,
   nOccurrenceIds,
 } from '@run-planner/test-fixtures/surface';
@@ -45,18 +47,12 @@ let representativeHubProject: ProjectDocument;
 let invalidTenDoorHubProject: ProjectDocument;
 
 beforeAll(() => {
-  representativeHubProject = createRepresentativeNOPQProject();
-  invalidTenDoorHubProject = applyProjectCommand(
-    createRepresentativeNProject({
-      openSlotKeys: [...nOpenSlotKeys, 'combat04'],
-    }),
-    catalog,
-    {
-      kind: 'ReplaceIncomingReward',
-      reward: createIncomingRewardAddress(nBiome, nOccurrenceId('combat04')),
-      value: { rewardType: 'MaxHealthDropBig' },
-    },
-  );
+  representativeHubProject = loadSurfaceNOPQProject();
+  invalidTenDoorHubProject = applyProjectCommand(loadSurfaceNTenOpenInvalidProject(), catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: createIncomingRewardAddress(nBiome, nOccurrenceId('combat04')),
+    value: { rewardType: 'MaxHealthDropBig' },
+  });
 });
 
 afterEach(() => {
@@ -102,6 +98,37 @@ function nHubOccurrence(application: PlannerApplication, hubSlotKey: string) {
   );
   if (occurrence === undefined) throw new Error(`N Hub slot ${hubSlotKey} has no occurrence`);
   return occurrence;
+}
+
+function twoVisitHubProject(): ProjectDocument {
+  return applyProjectCommand(loadSurfaceNPartialHubProject(), catalog, {
+    kind: 'ReplaceHubVisitOrder',
+    hub: createHubDecisionAddress(nBiome, 'hub'),
+    hubSlotKeys: ['combat05', 'miniBoss01'],
+  });
+}
+
+function hubRoomDetailProject(): ProjectDocument {
+  let project = applyProjectCommand(loadSurfaceNProject(), catalog, {
+    kind: 'ReplaceHubVisitOrder',
+    hub: createHubDecisionAddress(nBiome, 'hub'),
+    hubSlotKeys: ['combat05', 'miniBoss01', 'combat02', 'combat11', 'combat09'],
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CloseHubSlot',
+    slot: createHubSlotAddress(nBiome, 'hub', 'combat23'),
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'OpenHubSlot',
+    slot: createHubSlotAddress(nBiome, 'hub', 'combat07'),
+    occurrenceId: nOccurrenceId('combat07'),
+    localOccurrenceIdsBySlot: nLocalOccurrenceIdsBySlot('combat07'),
+  });
+  return applyProjectCommand(project, catalog, {
+    kind: 'ReplaceHubVisitOrder',
+    hub: createHubDecisionAddress(nBiome, 'hub'),
+    hubSlotKeys: ['combat05', 'miniBoss01', 'combat02', 'combat11', 'combat07', 'combat09'],
+  });
 }
 
 function hubRoster(): HTMLElement {
@@ -315,13 +342,7 @@ describe('HubDecisionWorkbench', () => {
   });
 
   it('keeps unplanned visit owners in one compact next-visit target', () => {
-    const project = appendCompleteN(
-      createProjectDocument(catalog, {
-        projectId: 'hub-partial-ranked-board',
-        configuredBiomeCounts: { Surface: 1 },
-      }),
-      { includePreboss: false, visitSlotKeys: ['combat05', 'miniBoss01'] },
-    );
+    const project = twoVisitHubProject();
     renderStaticHubDecisionWorkbench(project);
     const prefix = document.querySelector<HTMLElement>('.hub-ranked-visit-prefix');
     const tail = document.querySelector<HTMLElement>('.hub-ranked-tail');
@@ -356,12 +377,7 @@ describe('HubDecisionWorkbench', () => {
   });
 
   it('keeps keyboard membership selection in its source batch after the Hub is authored', async () => {
-    let project = appendNEntry(
-      createProjectDocument(catalog, {
-        projectId: 'hub-workbench-membership',
-        configuredBiomeCounts: { Surface: 1 },
-      }),
-    );
+    let project = loadSurfaceNEntryFrontierProject();
     project = applyProjectCommand(project, catalog, {
       decision: createExitDecisionAddress(nBiome, {
         kind: 'occurrence',
@@ -392,12 +408,7 @@ describe('HubDecisionWorkbench', () => {
   });
 
   it('scopes a provisional opening identity to activation, cancellation, and projection replacement', async () => {
-    const project = appendCompleteN(
-      createProjectDocument(catalog, {
-        projectId: 'hub-opening-attempt-lifecycle',
-        configuredBiomeCounts: { Surface: 1 },
-      }),
-    );
+    const project = loadSurfaceNProject();
     const allocated: ReturnType<typeof createOccurrenceId>[] = [];
     const allocatedThrough = (count: number) =>
       Array.from({ length: count }, (_, index) =>
@@ -458,12 +469,7 @@ describe('HubDecisionWorkbench', () => {
   });
 
   it('keeps keyboard opening in the closed-room batch at the maximum', async () => {
-    const project = appendCompleteN(
-      createProjectDocument(catalog, {
-        projectId: 'hub-keyboard-open-continuity',
-        configuredBiomeCounts: { Surface: 1 },
-      }),
-    );
+    const project = loadSurfaceNProject();
     const view = renderHubDecisionWorkbench(project);
     const disclosure = document.querySelector<HTMLDetailsElement>('.hub-closed-room-disclosure');
     const summary = disclosure?.querySelector<HTMLElement>('summary');
@@ -499,12 +505,7 @@ describe('HubDecisionWorkbench', () => {
   });
 
   it('opens, edits, and closes an unvisited room through its compact card', async () => {
-    const project = appendCompleteN(
-      createProjectDocument(catalog, {
-        projectId: 'hub-compact-unvisited-room',
-        configuredBiomeCounts: { Surface: 1 },
-      }),
-    );
+    const project = loadSurfaceNProject();
     const view = renderHubDecisionWorkbench(project);
     const closedCard = screen.getByRole('article', { name: 'Combat 04 Hub room' });
     const open = within(closedCard).getByRole('checkbox', { name: 'Combat 04 open' });
@@ -618,26 +619,7 @@ describe('HubDecisionWorkbench', () => {
   });
 
   it('offers direct Room details for every visited Hub room workbench', async () => {
-    const project = appendCompleteN(
-      createProjectDocument(catalog, {
-        projectId: 'hub-room-detail-boundary',
-        configuredBiomeCounts: { Surface: 1 },
-      }),
-      {
-        openSlotKeys: [
-          'combat11',
-          'combat10',
-          'combat09',
-          'combat07',
-          'combat05',
-          'combat03',
-          'combat02',
-          'combat01',
-          'miniBoss01',
-        ],
-        visitSlotKeys: ['combat05', 'miniBoss01', 'combat02', 'combat11', 'combat07', 'combat09'],
-      },
-    );
+    const project = hubRoomDetailProject();
     const view = renderHubDecisionWorkbench(project);
 
     const sideRoomCombat = screen.getByRole('article', { name: 'Combat 05 Hub room' });
@@ -679,26 +661,7 @@ describe('HubDecisionWorkbench', () => {
   });
 
   it('keeps a visited Medea encounter trait offer out of the Hub room card', () => {
-    const project = appendCompleteN(
-      createProjectDocument(catalog, {
-        projectId: 'hub-medea-trait-offer',
-        configuredBiomeCounts: { Surface: 1 },
-      }),
-      {
-        openSlotKeys: [
-          'combat11',
-          'combat10',
-          'combat09',
-          'combat05',
-          'story',
-          'combat02',
-          'combat01',
-          'miniBoss01',
-          'combat23',
-        ],
-        visitSlotKeys: ['combat05', 'miniBoss01', 'combat02', 'combat11', 'combat23', 'story'],
-      },
-    );
+    const project = loadSurfaceNStoryBoardProject();
     renderHubDecisionWorkbench(project);
     const story = screen.getByRole('article', { name: 'Medea Hub room' });
 
@@ -707,12 +670,7 @@ describe('HubDecisionWorkbench', () => {
   });
 
   it('reveals the closed-room disclosure for exact closed-slot focus without authoring history', async () => {
-    const project = appendCompleteN(
-      createProjectDocument(catalog, {
-        projectId: 'hub-closed-focus-reveal',
-        configuredBiomeCounts: { Surface: 1 },
-      }),
-    );
+    const project = loadSurfaceNProject();
     const view = renderHubDecisionWorkbench(project);
     const disclosure = document.querySelector<HTMLDetailsElement>('.hub-closed-room-disclosure');
     if (disclosure === null) throw new Error('closed Hub rooms disclosure is missing');
@@ -750,12 +708,7 @@ describe('HubDecisionWorkbench', () => {
   });
 
   it('keeps the board-owned reward as the exact reward focus destination', () => {
-    const project = appendCompleteN(
-      createProjectDocument(catalog, {
-        projectId: 'hub-visit-reward-context',
-        configuredBiomeCounts: { Surface: 1 },
-      }),
-    );
+    const project = loadSurfaceNProject();
     const view = renderHubDecisionWorkbench(project);
     const combatCard = screen.getByRole('article', { name: 'Combat 05 Hub room' });
     const rewardOwner = createIncomingRewardAddress(nBiome, nOccurrenceId('combat05'));
@@ -774,7 +727,7 @@ describe('HubDecisionWorkbench', () => {
   });
 
   it('keeps every positional visit marker in its exact ranked prefix card', () => {
-    renderStaticHubDecisionWorkbench(createRepresentativeNOPQProject());
+    renderStaticHubDecisionWorkbench(loadSurfaceNOPQProject());
 
     const prefixCards = Array.from(
       document.querySelectorAll<HTMLElement>('.hub-ranked-visit-prefix .hub-open-room-card'),
@@ -792,13 +745,7 @@ describe('HubDecisionWorkbench', () => {
   });
 
   it('uses the keyboard rank fallback to dispatch one full ReplaceHubVisitOrder proposal', async () => {
-    const project = appendCompleteN(
-      createProjectDocument(catalog, {
-        projectId: 'hub-visit-commands',
-        configuredBiomeCounts: { Surface: 1 },
-      }),
-      { includePreboss: false, visitSlotKeys: ['combat05', 'miniBoss01'] },
-    );
+    const project = twoVisitHubProject();
     const view = renderHubDecisionWorkbench(project);
     const dispatch = vi.spyOn(view.application.store, 'dispatch');
     const historyBefore = view.application.store.getState().projectWorkspace.history.past.length;
@@ -835,13 +782,7 @@ describe('HubDecisionWorkbench', () => {
   });
 
   it('adds and removes an open room through explicit visited-room controls', async () => {
-    const project = appendCompleteN(
-      createProjectDocument(catalog, {
-        projectId: 'hub-visit-membership-controls',
-        configuredBiomeCounts: { Surface: 1 },
-      }),
-      { includePreboss: false, visitSlotKeys: ['combat05', 'miniBoss01'] },
-    );
+    const project = twoVisitHubProject();
     const view = renderHubDecisionWorkbench(project);
     const add = within(hubCard('combat01')).getByRole('button', {
       name: 'Add Combat 01 to visited rooms',
@@ -876,13 +817,7 @@ describe('HubDecisionWorkbench', () => {
   });
 
   it('keeps a keyboard tail-only move out of semantic history and command dispatch', async () => {
-    const project = appendCompleteN(
-      createProjectDocument(catalog, {
-        projectId: 'hub-transient-tail-order',
-        configuredBiomeCounts: { Surface: 1 },
-      }),
-      { includePreboss: false },
-    );
+    const project = loadSurfaceNCompleteHubFrontierProject();
     const view = renderHubDecisionWorkbench(project);
     const dispatch = vi.spyOn(view.application.store, 'dispatch');
     const historyBefore = view.application.store.getState().projectWorkspace.history.past.length;
@@ -914,13 +849,7 @@ describe('HubDecisionWorkbench', () => {
   });
 
   it('moves a room across the cutoff with one full order and preserves focus', async () => {
-    const project = appendCompleteN(
-      createProjectDocument(catalog, {
-        projectId: 'hub-cross-cutoff-order',
-        configuredBiomeCounts: { Surface: 1 },
-      }),
-      { includePreboss: false },
-    );
+    const project = loadSurfaceNCompleteHubFrontierProject();
     const view = renderHubDecisionWorkbench(project);
     const dispatch = vi.spyOn(view.application.store, 'dispatch');
     const historyBefore = view.application.store.getState().projectWorkspace.history.past.length;
@@ -960,13 +889,7 @@ describe('HubDecisionWorkbench', () => {
   });
 
   it('publishes a complete Hub order when a remaining room drops into the full prefix', async () => {
-    const project = appendCompleteN(
-      createProjectDocument(catalog, {
-        projectId: 'hub-pointer-semantic-reorder',
-        configuredBiomeCounts: { Surface: 1 },
-      }),
-      { includePreboss: false },
-    );
+    const project = loadSurfaceNCompleteHubFrontierProject();
     const view = renderHubDecisionWorkbench(project);
     const dispatch = vi.spyOn(view.application.store, 'dispatch');
     const historyBefore = view.application.store.getState().projectWorkspace.history.past.length;
@@ -1021,13 +944,7 @@ describe('HubDecisionWorkbench', () => {
   });
 
   it('keeps a tail-only roster drag out of semantic history and command dispatch', async () => {
-    const project = appendCompleteN(
-      createProjectDocument(catalog, {
-        projectId: 'hub-pointer-transient-tail',
-        configuredBiomeCounts: { Surface: 1 },
-      }),
-      { includePreboss: false },
-    );
+    const project = loadSurfaceNCompleteHubFrontierProject();
     const view = renderHubDecisionWorkbench(project);
     const dispatch = vi.spyOn(view.application.store, 'dispatch');
     const historyBefore = view.application.store.getState().projectWorkspace.history.past.length;
@@ -1067,13 +984,7 @@ describe('HubDecisionWorkbench', () => {
   });
 
   it('appends a tail room through the compact next-visit drop target', async () => {
-    const project = appendCompleteN(
-      createProjectDocument(catalog, {
-        projectId: 'hub-pointer-next-visit',
-        configuredBiomeCounts: { Surface: 1 },
-      }),
-      { includePreboss: false, visitSlotKeys: ['combat05', 'miniBoss01'] },
-    );
+    const project = twoVisitHubProject();
     const view = renderHubDecisionWorkbench(project);
     const dispatch = vi.spyOn(view.application.store, 'dispatch');
     const historyBefore = view.application.store.getState().projectWorkspace.history.past.length;
@@ -1116,13 +1027,7 @@ describe('HubDecisionWorkbench', () => {
   });
 
   it('cancels a roster drag without changing the authored or transient order', async () => {
-    const project = appendCompleteN(
-      createProjectDocument(catalog, {
-        projectId: 'hub-pointer-cancel',
-        configuredBiomeCounts: { Surface: 1 },
-      }),
-      { includePreboss: false },
-    );
+    const project = loadSurfaceNCompleteHubFrontierProject();
     const view = renderHubDecisionWorkbench(project);
     const dispatch = vi.spyOn(view.application.store, 'dispatch');
     const historyBefore = view.application.store.getState().projectWorkspace.history.past.length;
@@ -1153,13 +1058,7 @@ describe('HubDecisionWorkbench', () => {
   });
 
   it('keeps the original pointer source when a non-primary pointer begins during an active drag', async () => {
-    const project = appendCompleteN(
-      createProjectDocument(catalog, {
-        projectId: 'hub-pointer-primary-ownership',
-        configuredBiomeCounts: { Surface: 1 },
-      }),
-      { includePreboss: false },
-    );
+    const project = loadSurfaceNCompleteHubFrontierProject();
     const view = renderHubDecisionWorkbench(project);
     const dispatch = vi.spyOn(view.application.store, 'dispatch');
     const historyBefore = view.application.store.getState().projectWorkspace.history.past.length;
@@ -1239,13 +1138,7 @@ describe('HubDecisionWorkbench', () => {
     });
     replaceBrowserProperty(window, 'cancelAnimationFrame', () => undefined);
 
-    const project = appendCompleteN(
-      createProjectDocument(catalog, {
-        projectId: 'hub-pointer-document-scroll',
-        configuredBiomeCounts: { Surface: 1 },
-      }),
-      { includePreboss: false },
-    );
+    const project = loadSurfaceNCompleteHubFrontierProject();
     renderHubDecisionWorkbench(project);
     const board = hubRoster();
     const pointerId = 53;
@@ -1276,13 +1169,7 @@ describe('HubDecisionWorkbench', () => {
   });
 
   it('creates and undoes the completed-Hub handoff through its bound intent', async () => {
-    const project = appendCompleteN(
-      createProjectDocument(catalog, {
-        projectId: 'hub-completed-handoff',
-        configuredBiomeCounts: { Surface: 1 },
-      }),
-      { includePreboss: false },
-    );
+    const project = loadSurfaceNCompleteHubFrontierProject();
     const view = renderHubDecisionWorkbench(project);
     const handoff = document.querySelector<HTMLElement>(
       '[data-presentation="completedHubHandoff"]',
@@ -1317,7 +1204,7 @@ describe('HubDecisionWorkbench', () => {
   });
 
   it('keeps ranked cards and move controls visible at an invalid authored boundary', () => {
-    let project = applyProjectCommand(createRepresentativeNOPQProject(), catalog, {
+    let project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
       kind: 'ReplaceIncomingReward',
       reward: createIncomingRewardAddress(nBiome, nOccurrenceId('combat10')),
       value: { rewardType: 'WeaponUpgrade' },
@@ -1370,7 +1257,7 @@ describe('HubDecisionWorkbench', () => {
   });
 
   it('uses the rank for authored selection and reserves Entered for evaluated entry', () => {
-    const entered = renderStaticHubDecisionWorkbench(createRepresentativeNOPQProject());
+    const entered = renderStaticHubDecisionWorkbench(loadSurfaceNOPQProject());
     const enteredCard = within(entered.container).getByRole('article', {
       name: 'Combat 05 Hub room',
     });
@@ -1380,7 +1267,7 @@ describe('HubDecisionWorkbench', () => {
     cleanup();
 
     const view = renderHubDecisionWorkbench(
-      withRetainedHubBehindMissingLink(createRepresentativeNOPQProject()),
+      withRetainedHubBehindMissingLink(loadSurfaceNOPQProject()),
     );
     const hub = workspaceBiome(view.application, 'Surface', 'N').nodes.find(
       (node) => node.kind === 'hubDecision',

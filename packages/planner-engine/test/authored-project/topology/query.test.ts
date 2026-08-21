@@ -10,8 +10,8 @@ import {
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import {
-  createRepresentativeNOPQProject,
-  createRepresentativeNProject,
+  loadSurfaceNOPQProject,
+  loadSurfaceNProject,
   nOccurrenceIds,
   oOccurrenceIds,
   qOccurrenceIds,
@@ -89,7 +89,7 @@ describe('authored topology queries', () => {
   });
 
   it('looks up exact occurrence and Hub sources without conflating either address kind', () => {
-    const topology = topologyFor(createRepresentativeNProject(), 'N');
+    const topology = topologyFor(loadSurfaceNProject(), 'N');
 
     expect(
       exitDecisionForSource(topology, {
@@ -116,7 +116,7 @@ describe('authored topology queries', () => {
   });
 
   it('resolves normal, derived, explicit, and unresolved selections without repairing state', () => {
-    const surface = createRepresentativeNOPQProject();
+    const surface = loadSurfaceNOPQProject();
     const nTopology = topologyFor(surface, 'N');
     const oTopology = topologyFor(surface, 'O');
     const qTopology = topologyFor(surface, 'Q');
@@ -148,7 +148,7 @@ describe('authored topology queries', () => {
   });
 
   it('derives selected-spine ordinals independently of decision storage order', () => {
-    const topology = topologyFor(createRepresentativeNOPQProject(), 'Q');
+    const topology = topologyFor(loadSurfaceNOPQProject(), 'Q');
     const reordered = Object.freeze({
       ...topology,
       decisions: Object.freeze([...topology.decisions].reverse()),
@@ -179,7 +179,7 @@ describe('authored topology queries', () => {
   });
 
   it('preserves declaration-owned physical exits and bounded takeover transitions', () => {
-    const surface = createRepresentativeNOPQProject();
+    const surface = loadSurfaceNOPQProject();
     const nTopology = topologyFor(surface, 'N');
     const oTopology = topologyFor(surface, 'O');
     const qTopology = topologyFor(surface, 'Q');

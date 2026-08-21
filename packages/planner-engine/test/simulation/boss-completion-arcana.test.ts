@@ -16,7 +16,7 @@ import {
 } from '@run-planner/engine/authored-project';
 import { describe, expect, it } from 'vitest';
 
-import { createRepresentativeNOProject } from '@run-planner/test-fixtures/surface';
+import { loadSurfaceNOProject } from '@run-planner/test-fixtures/surface';
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
 import { evaluateBiomeRewardsAssemblyInternal } from '../../src/simulation/rewards/biome';
@@ -30,7 +30,7 @@ function judgmentOwner(biomeAddress = n) {
   return createBossCompletionArcanaAddress(createCompletionRoomAddress(biomeAddress, 'boss'));
 }
 
-function withJudgment(project = createRepresentativeNOProject()) {
+function withJudgment(project = loadSurfaceNOProject()) {
   return applyProjectCommand(project, catalog, {
     kind: 'ReplaceManualArcanaSelection',
     route: surface,
@@ -73,7 +73,7 @@ function evaluateNBossLifecycle(
   arcanaFear: ReturnType<typeof createArcanaFearState>,
   selected: readonly string[],
 ) {
-  const project = createRepresentativeNOProject();
+  const project = loadSurfaceNOProject();
   const evaluated = biome(simulateProject(catalog, project), 'N');
   if (evaluated.validity !== 'valid')
     throw new Error('N lifecycle fixture must start complete-valid');

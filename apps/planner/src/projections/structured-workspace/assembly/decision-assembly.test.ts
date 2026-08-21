@@ -27,7 +27,7 @@ import {
   goldenIBiome,
 } from '@run-planner/test-fixtures/underworld';
 import { nOccurrenceIds, oOccurrenceIds } from '@run-planner/test-fixtures/surface';
-import { createRepresentativeNOPQProject } from '@run-planner/test-fixtures/surface';
+import { loadSurfaceNOPQProject } from '@run-planner/test-fixtures/surface';
 import type { Catalog, RoomDeclaration } from '@run-planner/engine/catalog-schema';
 import {
   assembleWorkspaceDecision,
@@ -471,7 +471,7 @@ describe('structured workspace decision assembly', () => {
   });
 
   it('keeps ShipCombat wheel rewards phase-local instead of fabricating a door reward', () => {
-    const source = biomeSource(createRepresentativeNOPQProject(), 'Surface', 'O');
+    const source = biomeSource(loadSurfaceNOPQProject(), 'Surface', 'O');
     const decision = batchDecisionAt(source, oOccurrenceIds.intro);
     const evaluated = source.evaluatedBatch(
       createExitDecisionAddress(source.biome, decision.source),
@@ -761,10 +761,10 @@ describe('structured workspace decision assembly', () => {
     ['F', 'Underworld', createGoldenFGHIProject, 'F_PreBoss01'],
     ['G', 'Underworld', createGoldenFGHIProject, 'G_PreBoss01'],
     ['H', 'Underworld', createGoldenFGHIProject, 'H_PreBoss01'],
-    ['N', 'Surface', createRepresentativeNOPQProject, 'N_PreBoss01'],
-    ['O', 'Surface', createRepresentativeNOPQProject, 'O_PreBoss01'],
-    ['P', 'Surface', createRepresentativeNOPQProject, 'P_PreBoss01'],
-    ['Q', 'Surface', createRepresentativeNOPQProject, 'Q_PreBoss01'],
+    ['N', 'Surface', loadSurfaceNOPQProject, 'N_PreBoss01'],
+    ['O', 'Surface', loadSurfaceNOPQProject, 'O_PreBoss01'],
+    ['P', 'Surface', loadSurfaceNOPQProject, 'P_PreBoss01'],
+    ['Q', 'Surface', loadSurfaceNOPQProject, 'Q_PreBoss01'],
   ] as const)(
     'keeps %s Preboss takeover targets read-only at their decision boundary',
     (biomeKey, routeKey, project, prebossGameName) => {
@@ -801,7 +801,7 @@ describe('structured workspace decision assembly', () => {
   );
 
   it('keeps the ordinary PreHub target inside its opening decision package', () => {
-    const source = biomeSource(createRepresentativeNOPQProject(), 'Surface', 'N');
+    const source = biomeSource(loadSurfaceNOPQProject(), 'Surface', 'N');
     const decision = batchDecisionAt(source, nOccurrenceIds.opening);
     const owner = createExitDecisionAddress(source.biome, decision.source);
     const evaluated = source.evaluatedBatch(owner);

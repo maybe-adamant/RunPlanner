@@ -23,9 +23,9 @@ import {
 
 import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 import {
-  createRepresentativeNOProject,
-  createRepresentativeNOPQProject,
-  createRepresentativeNProject,
+  loadSurfaceNOProject,
+  loadSurfaceNOPQProject,
+  loadSurfaceNProject,
   nBiome,
   nOccurrenceId,
 } from '@run-planner/test-fixtures/surface';
@@ -301,7 +301,7 @@ describe('project simulation composition', () => {
   });
 
   it('composes N through Q with a completed Hub as the O history seed', () => {
-    const project = createRepresentativeNOPQProject();
+    const project = loadSurfaceNOPQProject();
     const { result, route: surface } = route(project, 'Surface');
     const [n, o, p, q] = surface.biomes;
     if (
@@ -357,7 +357,7 @@ describe('project simulation composition', () => {
       kind: 'ClearTopology',
       biome: goldenIBiome,
     });
-    const surfaceProject = applyProjectCommand(createRepresentativeNProject(), catalog, {
+    const surfaceProject = applyProjectCommand(loadSurfaceNProject(), catalog, {
       kind: 'ConfigureRoutePrefix',
       route: createRouteAddress('Surface'),
       configuredBiomeCount: 4,
@@ -455,7 +455,7 @@ describe('project simulation composition', () => {
   });
 
   it('blocks the Surface suffix after an invalid completed Hub without leaking its findings downstream', () => {
-    const project = applyProjectCommand(createRepresentativeNOProject(), catalog, {
+    const project = applyProjectCommand(loadSurfaceNOProject(), catalog, {
       kind: 'ReplaceIncomingReward',
       reward: createIncomingRewardAddress(nBiome, nOccurrenceId('combat10')),
       value: { rewardType: 'WeaponUpgrade' },
@@ -487,7 +487,7 @@ describe('project simulation composition', () => {
   });
 
   it('is deterministic, frozen, catalog-independent, and leaves authored project identity intact', () => {
-    const project = createRepresentativeNOPQProject();
+    const project = loadSurfaceNOPQProject();
     const before = JSON.stringify(project);
     const first = simulateProject(catalog, project);
     const second = simulateProject(catalog, project);
