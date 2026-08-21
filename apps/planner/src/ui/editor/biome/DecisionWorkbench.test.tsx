@@ -279,7 +279,11 @@ describe('DecisionWorkbench', () => {
     expect(gate.dataset.picked).toBe('false');
     expect(within(gate).getByRole('heading', { level: 4, name: 'Chaos gate' })).toBeTruthy();
     expect((within(gate).getByLabelText('Map') as HTMLSelectElement).value).toBe('Chaos_01');
-    expect(within(gate).getByRole('button', { name: 'Open Chaos 01 room' })).toBeTruthy();
+    expect(within(gate).queryByRole('button', { name: /^Open .* room$/ })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Open next room' })).toHaveProperty(
+      'disabled',
+      false,
+    );
     expect(within(gate).queryByRole('button', { name: 'Remove Chaos gate' })).toBeNull();
     expect(screen.getByLabelText('Take Chaos gate')).toBeTruthy();
     expect(within(gate).queryByRole('button', { name: 'Reward' })).toBeNull();
@@ -350,9 +354,10 @@ describe('DecisionWorkbench', () => {
     expect(within(contract).queryByRole('button', { name: /Remove/ })).toBeNull();
     expect(screen.getByLabelText('Take Zagreus contract')).toBeTruthy();
     expect(within(contract).queryByRole('button', { name: 'Reward' })).toBeNull();
-    const open = within(contract).getByRole('button', { name: 'Open Zagreus room' });
+    expect(within(contract).queryByRole('button', { name: /^Open .* room$/ })).toBeNull();
+    const open = screen.getByRole('button', { name: 'Open next room' });
     const room = within(contract).getByText(/^Room: /);
-    expect(open.compareDocumentPosition(room) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
+    expect(room.compareDocumentPosition(open) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
     expect(contract.querySelector('hr')).toBeNull();
     cleanup();
 
@@ -399,7 +404,10 @@ describe('DecisionWorkbench', () => {
       subjectForOwner(createExitDecisionAddress(goldenFBiome, incomingDecision.source)),
     );
     expect(screen.queryByRole('heading', { level: 4, name: 'Room Timeline' })).toBeNull();
-    expect(screen.getByRole('button', { name: 'Open Midshop room' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Open next room' })).toHaveProperty(
+      'disabled',
+      false,
+    );
 
     cleanup();
     renderDecisionWorkbench(project, 'Underworld', 'F', subjectForOwner(outgoingOwner));
@@ -513,7 +521,8 @@ describe('DecisionWorkbench', () => {
       '.biome-target-row:not([data-missing="true"])',
     );
     if (authoredOffer === null) throw new Error('F authored room offer is missing');
-    const openRoom = within(authoredOffer).getByRole('button', { name: /^Open .+ room$/ });
+    expect(within(authoredOffer).queryByRole('button', { name: /^Open .+ room$/ })).toBeNull();
+    const openRoom = screen.getByRole('button', { name: 'Open next room' });
     const authoredDecision = workspaceBiome(view.application, 'Underworld', 'F').nodes.find(
       (node) =>
         node.kind === 'ordinaryBatch' &&
@@ -640,7 +649,6 @@ describe('DecisionWorkbench', () => {
       historyBeforePick + 1,
     );
 
-    const selectedOffer = screen.getByRole('article', { name: `${roomLabel} room offer` });
     const selectedNode = workspaceBiome(view.application, 'Surface', 'P').nodes.find(
       (node) =>
         node.kind === 'ordinaryBatch' &&
@@ -651,9 +659,7 @@ describe('DecisionWorkbench', () => {
     if (selectedTarget === undefined) throw new Error('P selected target is missing');
     const historyBeforeOpen =
       view.application.store.getState().projectWorkspace.history.past.length;
-    await view.user.click(
-      within(selectedOffer).getByRole('button', { name: `Open ${roomLabel} room` }),
-    );
+    await view.user.click(screen.getByRole('button', { name: 'Open next room' }));
     expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
       historyBeforeOpen,
     );
@@ -950,7 +956,7 @@ describe('DecisionWorkbench', () => {
     expect(within(offer).getByText('Room selected')).toBeTruthy();
     expect(within(offer).queryByText('Door taken')).toBeNull();
     expect(selectedControl).not.toHaveProperty('disabled', true);
-    expect(within(offer).getByRole('button', { name: /^Open .+ room$/ })).not.toHaveProperty(
+    expect(screen.getByRole('button', { name: 'Open next room' })).not.toHaveProperty(
       'disabled',
       true,
     );
@@ -1243,11 +1249,7 @@ describe('DecisionWorkbench', () => {
     expect(
       screen.getByRole('heading', { level: 3, name: 'Choose a room and reward' }),
     ).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Open Preboss room' })).not.toHaveProperty(
-      'disabled',
-      true,
-    );
-    expect(screen.getByRole('button', { name: 'Open The Verminancer room' })).not.toHaveProperty(
+    expect(screen.getByRole('button', { name: 'Open next room' })).not.toHaveProperty(
       'disabled',
       true,
     );

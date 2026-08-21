@@ -449,7 +449,8 @@ describe('underworld product loop', () => {
     await view.user.click(screen.getByRole('button', { name: 'Undo' }));
     expect((within(gate).getByLabelText('Map') as HTMLSelectElement).value).toBe('Chaos_01');
     await view.user.selectOptions(within(gate).getByLabelText('Map'), 'Chaos_06');
-    await view.user.click(within(gate).getByRole('button', { name: 'Open Chaos 06 room' }));
+    await view.user.click(within(gate).getByLabelText('Take Chaos gate'));
+    await view.user.click(screen.getByRole('button', { name: 'Open next room' }));
     const enteredChaos = screen.getByRole('complementary', { name: 'Details' });
     expect(within(enteredChaos).queryByLabelText('Map')).toBeNull();
     expect(within(enteredChaos).queryByLabelText('Room')).toBeNull();
@@ -481,10 +482,16 @@ describe('underworld product loop', () => {
         authorLegalTraitOffers(application.store.getState().projectWorkspace.history.present),
       ),
     );
-    act(() =>
-      application.store.dispatch(
-        semanticOwnerFocused(createOccurrenceAddress(goldenFBiome, chaosOccurrenceId)),
-      ),
+    const erebusRail = screen
+      .getByRole('region', { name: 'Erebus route structure' })
+      .querySelector('.biome-rail');
+    const chaosRail = Array.from(
+      erebusRail?.querySelectorAll<HTMLButtonElement>('.biome-rail-node') ?? [],
+    ).find((button) => button.textContent?.includes('Chaos 06'));
+    if (chaosRail === undefined) throw new Error('selected Chaos rail context is missing');
+    await view.user.click(chaosRail);
+    expect(application.store.getState().editorSession.focusedSemanticOwner).toEqual(
+      createOccurrenceAddress(goldenFBiome, chaosOccurrenceId),
     );
     await view.user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
     expect(within(enteredChaos).getByRole('region', { name: 'Room Timeline' })).toBeTruthy();
@@ -760,9 +767,7 @@ describe('underworld product loop', () => {
     });
     expect(within(automaticReturn).getAllByRole('article')).toHaveLength(1);
     expect(within(automaticReturn).queryByRole('radio')).toBeNull();
-    expect(
-      within(automaticReturn).getByRole('button', { name: 'Open Combat 04 room' }),
-    ).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Open next room' })).toBeTruthy();
     const evaluation = simulateProject(application.catalog, failed);
     const gEvaluation = evaluation.routes
       .find((route) => route.routeKey === 'Underworld')
@@ -821,7 +826,8 @@ describe('underworld product loop', () => {
       false,
     );
     const contractCard = screen.getByRole('article', { name: 'Zagreus contract exit' });
-    await view.user.click(within(contractCard).getByRole('button', { name: /^Open .* room$/ }));
+    await view.user.click(within(contractCard).getByLabelText('Take Zagreus contract'));
+    await view.user.click(screen.getByRole('button', { name: 'Open next room' }));
     const contractWorkbench = screen.getByRole('complementary', { name: 'Details' });
     expect(
       within(contractWorkbench).queryByText(/Incoming door reward|Infernal Contract Boon/),
@@ -834,8 +840,16 @@ describe('underworld product loop', () => {
     expect(
       screen.getByRole('article', { name: 'Zagreus contract exit' }).getAttribute('data-picked'),
     ).toBe('true');
-    act(() =>
-      application.store.dispatch(semanticOwnerFocused(createOccurrenceAddress(biome, contract))),
+    const oceanusRail = screen
+      .getByRole('region', { name: 'Oceanus route structure' })
+      .querySelector('.biome-rail');
+    const contractRail = Array.from(
+      oceanusRail?.querySelectorAll<HTMLButtonElement>('.biome-rail-node') ?? [],
+    ).find((button) => button.textContent?.includes('Zagreus'));
+    if (contractRail === undefined) throw new Error('selected Zagreus rail context is missing');
+    await view.user.click(contractRail);
+    expect(application.store.getState().editorSession.focusedSemanticOwner).toEqual(
+      createOccurrenceAddress(biome, contract),
     );
     await view.user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
     expect(within(contractWorkbench).getByRole('region', { name: 'Room Timeline' })).toBeTruthy();

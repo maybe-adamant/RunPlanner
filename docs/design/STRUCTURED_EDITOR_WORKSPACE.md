@@ -585,6 +585,15 @@ inside the decision.
 Picked and unpicked targets use the same occurrence identity and semantic
 addresses. Visual grouping does not change ownership.
 
+The projection publishes one closed selected-continuation navigation product
+when exactly one normal, Chaos, Zagreus, or Preboss occurrence continuation is
+selected. It contains the occurrence-owned door and room marker only; it does
+not include Hub interactions or UI labels. The decision footer consumes that
+same product through one `Open next room` action immediately before
+`Remove these doors`. The action remains disabled until the product exists,
+then focuses the selected occurrence's Room Overview without creating authored
+history. Individual decision cards do not publish room-opening actions.
+
 The one-stop-per-decision rule applies only to rail presentation. It does not
 collapse, delete, or coarsen the decision's target, occurrence, reward,
 room-local, or finding products.

@@ -201,13 +201,6 @@ function TargetRow({
             <span className="neutral-status">{roomStatus(target)}</span>
           </div>
         </div>
-        <button
-          className="quiet-action action-compact"
-          onClick={() => dispatch(semanticOwnerFocused(door.room.address))}
-          type="button"
-        >
-          Open {door.room.label} room
-        </button>
         {node.targetInteraction !== 'replaceable' ||
         door.room.roomPicker === undefined ||
         door.room.anomaly !== undefined ? null : (
@@ -308,7 +301,6 @@ function ZagreusContractExit({
   readonly interactions: WorkspaceInteractionCatalog;
   readonly selectionName: string;
 }) {
-  const dispatch = useAppDispatch();
   const executeIntent = useCommandIntent();
   const interaction = requireWorkspaceInteraction(
     interactions.zagreusContracts,
@@ -341,13 +333,6 @@ function ZagreusContractExit({
             <SemanticOwnerMarker address={control.owner} />
           </div>
         </div>
-        <button
-          className="quiet-action action-compact"
-          onClick={() => dispatch(semanticOwnerFocused(control.door.room.address))}
-          type="button"
-        >
-          Open {control.door.room.label} room
-        </button>
         <p className="fixed-room-state additional-exit-room-state">
           Room: {control.door.room.label}
         </p>
@@ -366,7 +351,6 @@ function NaturalChaosExit({
   readonly interactions: WorkspaceInteractionCatalog;
   readonly selectionName: string;
 }) {
-  const dispatch = useAppDispatch();
   const executeIntent = useCommandIntent();
   const interaction = requireWorkspaceInteraction(
     interactions.naturalChaosExits,
@@ -399,13 +383,6 @@ function NaturalChaosExit({
             <SemanticOwnerMarker address={control.owner} />
           </div>
         </div>
-        <button
-          className="quiet-action action-compact"
-          onClick={() => dispatch(semanticOwnerFocused(control.door.room.address))}
-          type="button"
-        >
-          Open {control.door.room.label} room
-        </button>
         <NaturalChaosMapWorkbench control={control} interactions={interactions} />
       </div>
     </article>
@@ -508,6 +485,25 @@ function HubTakeoverAction({
         {interaction.label}
       </button>
     </section>
+  );
+}
+
+function SelectedContinuationAction({ node }: { readonly node: BatchNode }) {
+  const dispatch = useAppDispatch();
+  const continuation = node.selectedContinuation;
+  return (
+    <button
+      className="success-action"
+      disabled={continuation === undefined}
+      onClick={() => {
+        if (continuation !== undefined) {
+          dispatch(semanticOwnerFocused(continuation.marker.address));
+        }
+      }}
+      type="button"
+    >
+      Open next room
+    </button>
   );
 }
 
@@ -710,6 +706,7 @@ export function BatchWorkbench({
       {takeover === undefined ? null : <TakeoverAction interaction={takeover} />}
       <div className="workbench-action-row">
         {node.repairIntent === undefined ? null : <ExactRepairAction intent={node.repairIntent} />}
+        {hubTakeover === undefined ? <SelectedContinuationAction node={node} /> : null}
         {removal === undefined ? null : (
           <TopologyRemovalAction interaction={removal} label="Remove these doors" />
         )}
