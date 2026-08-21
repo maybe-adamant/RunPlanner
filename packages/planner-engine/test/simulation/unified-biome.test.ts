@@ -26,10 +26,7 @@ import {
   simulateProjectAssembly,
   simulateProject,
 } from '@run-planner/engine/simulation';
-import {
-  authorLegalTraitOffers,
-  authorRequiredTestRoomActions,
-} from '@run-planner/test-fixtures/shared';
+import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 import { authorSurfaceWorldShop } from '@run-planner/test-fixtures/surface';
 import {
   createCompleteFGProject,
@@ -44,11 +41,11 @@ import {
 } from '@run-planner/test-fixtures/surface';
 
 function evaluatedProject(project: ReturnType<typeof createProjectDocument>) {
-  return simulateProject(catalog, authorRequiredTestRoomActions(project, catalog));
+  return simulateProject(catalog, project);
 }
 
 function assembledProject(project: ReturnType<typeof createProjectDocument>) {
-  return simulateProjectAssembly(catalog, authorRequiredTestRoomActions(project, catalog));
+  return simulateProjectAssembly(catalog, project);
 }
 
 function traitContext(project: ReturnType<typeof createProjectDocument>, routeKey: string) {

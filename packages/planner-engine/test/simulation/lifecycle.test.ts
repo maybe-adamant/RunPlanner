@@ -143,6 +143,45 @@ function actionRoster(
 }
 
 describe('single-room lifecycle execution', () => {
+  it('ignores a retained ranked stale row while executing the active producer action', () => {
+    const stale = {
+      kind: 'interactIncomingReward' as const,
+      producerPoint: 'roomRewardPickup',
+      acquisitionRole: 'self' as const,
+    };
+    const active = {
+      kind: 'interactIncomingReward' as const,
+      producerPoint: 'roomRewardPickup',
+      acquisitionRole: 'source' as const,
+    };
+    const fragment = executeRoomLifecycle(
+      catalog,
+      input({
+        roomActionRoster: actionRoster(
+          origin,
+          [stale, active],
+          [
+            {
+              reference: active,
+              participation: 'required',
+              window: { kind: 'standard', phase: 'afterCombat' },
+              dependencies: [],
+            },
+          ],
+        ),
+      }),
+    );
+
+    expect(fragment.blockedAt).toBeUndefined();
+    expect(fragment.events).toContainEqual(
+      expect.objectContaining({
+        kind: 'producerRoleAdvanced',
+        role: 'source',
+        lifecyclePoint: 'roomRewardPickup',
+      }),
+    );
+  });
+
   it('advances the standard producer role before outgoing generation and commit effects', () => {
     const fragment = executeRoomLifecycle(catalog, input());
 

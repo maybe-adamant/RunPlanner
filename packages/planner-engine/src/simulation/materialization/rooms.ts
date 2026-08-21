@@ -32,13 +32,11 @@ import {
   echoLastRewardPickupEntryKeys,
   selectedPickupProducer,
 } from '../../authored-project/traits';
-import { activeRoomActionReferences } from '../../authored-project/room-actions';
+import { assembleRoomActionDomain } from '../../authored-project/room-action-domain';
+import { scheduleRequiredRoomActions } from '../../authored-project/room-action-defaults';
+import { roomActionKey } from '../../authored-project/room-actions';
 import { acquisitionSiteFromStorageKey } from '../../authored-project/artificer';
-import {
-  assembleRoomActionRoster,
-  assembleRoomLifecycleTimeline,
-  roomActionContributions,
-} from '../room-actions';
+import { assembleRoomActionRoster, assembleRoomLifecycleTimeline } from '../room-actions';
 
 function fail(detail: string): never {
   throw new Error(detail);
@@ -869,29 +867,44 @@ export function materializeAuthoredRoom(
         }),
     ...(clockworkReward === undefined ? {} : { clockworkReward }),
   }) as Omit<CanonicalAuthoredRoom, 'roomActionRoster' | 'roomLifecycleTimeline'>;
+  const roomActionDomain = assembleRoomActionDomain({
+    catalog: context.catalog,
+    biome: context.biome,
+    occurrence: context.occurrence,
+    lifecycleProfileKey: base.lifecycleProfileKey,
+    activeEncounterSlotKeys: base.encounterPhases.map((phase) => phase.slotKey),
+    shopInventoryActive: base.entryState?.kind === 'shop',
+    ...(base.rewardWheels === undefined
+      ? {}
+      : { activeRewardWheelKeys: base.rewardWheels.map((wheel) => wheel.wheelKey) }),
+  });
   const roomActionRoster = assembleRoomActionRoster({
     owner: base.origin,
     order: base.roomActions.order,
-    contributions: roomActionContributions({
-      catalog: context.catalog,
-      declaration: context.room,
-      room: base,
-      activeReferences: activeRoomActionReferences(
-        context.catalog,
-        context.biome,
-        context.occurrence,
+    contributions: roomActionDomain.contributions,
+    canonicalRequiredInsertions: roomActionDomain.contributions.flatMap((entry) => {
+      if (
+        entry.kind !== 'action' ||
+        entry.participation !== 'required' ||
+        base.roomActions.order.some(
+          (reference) => roomActionKey(reference) === roomActionKey(entry.reference),
+        )
+      ) {
+        return [];
+      }
+      const actionKey = roomActionKey(entry.reference);
+      const order = scheduleRequiredRoomActions({
+        catalog: context.catalog,
+        domain: roomActionDomain,
+        order: base.roomActions.order,
+        requiredKeys: new Set([actionKey]),
+      });
+      return [
         {
-          activeEncounterSlotKeys: base.encounterPhases.map((phase) => phase.slotKey),
-          incomingRewardActive:
-            (base.incomingReward !== undefined &&
-              base.incomingReward.acquisitionEnabled !== false) ||
-            base.unresolvedIncomingReward !== undefined,
-          shopInventoryActive: base.entryState?.kind === 'shop',
-          ...(base.rewardWheels === undefined
-            ? {}
-            : { activeRewardWheelKeys: base.rewardWheels.map((wheel) => wheel.wheelKey) }),
+          actionKey,
+          toIndex: order.findIndex((reference) => roomActionKey(reference) === actionKey),
         },
-      ),
+      ];
     }),
   });
   const roomLifecycleTimeline = assembleRoomLifecycleTimeline({

@@ -1013,7 +1013,18 @@ function RoomActionsWorkbench({
             ) : null}
           </div>
           <div className="hub-rank-actions">
-            {row.rank === null ? (
+            {row.rank === null && row.participation === 'required' ? (
+              <button
+                disabled={insertions.length !== 1 || insertions[0]?.structurallyAuthorable !== true}
+                onClick={() => {
+                  const restore = insertions[0];
+                  if (restore !== undefined) apply(restore.key);
+                }}
+                type="button"
+              >
+                Restore required action
+              </button>
+            ) : row.rank === null ? (
               <label className="field-control">
                 <span>Position</span>
                 <select

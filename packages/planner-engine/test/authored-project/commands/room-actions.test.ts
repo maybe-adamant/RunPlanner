@@ -8,22 +8,38 @@ import {
   artificerAcquisitionSite,
   artificerReplacementEntryKey,
   createAcquisitionRoleAddress,
+  createBatchRewardStoreAddress,
   createBiomeAddress,
+  createEncounterPhaseAddress,
+  createExitDecisionAddress,
+  createExitSelectionAddress,
   createIncomingRewardAddress,
   createOccurrenceId,
   createOccurrenceAddress,
   createProjectDocument,
   createProjectHistory,
+  createRouteAddress,
   createRoomActionAddress,
   createShopOfferAddress,
+  createTargetAddress,
+  decodeProjectDocument,
   redoProjectHistory,
   roomActionKey,
   undoProjectHistory,
   type ProjectDocument,
   type RoomActionReference,
 } from '@run-planner/engine/authored-project';
+import { materializeBiomePrefix } from '@run-planner/engine/simulation';
+import {
+  createCompleteFGProject,
+  createGoldenFGHProject,
+  goldenFBiome,
+  goldenFOccurrenceId,
+  goldenHBiome,
+} from '@run-planner/test-fixtures/underworld';
 
 import { createCompleteNProject } from '../support/complete-n-project';
+import { gBiome, gProject } from '../support/configured-projects';
 
 const biome = createBiomeAddress('Underworld', 'F');
 const occurrenceId = createOccurrenceId('room-actions-start');
@@ -38,8 +54,8 @@ function action(reference: RoomActionReference) {
   return createRoomActionAddress(biome, occurrenceId, roomActionKey(reference));
 }
 
-function project(): ProjectDocument {
-  const initial = applyProjectCommand(
+function unresolvedProject(): ProjectDocument {
+  return applyProjectCommand(
     createProjectDocument(catalog, {
       projectId: 'room-actions',
       configuredBiomeCounts: { Underworld: 1 },
@@ -52,7 +68,10 @@ function project(): ProjectDocument {
       gameName: 'F_Opening01',
     },
   );
-  return applyProjectCommand(initial, catalog, {
+}
+
+function project(): ProjectDocument {
+  return applyProjectCommand(unresolvedProject(), catalog, {
     kind: 'ReplaceIncomingReward',
     reward: createIncomingRewardAddress(biome, occurrenceId),
     value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
@@ -65,30 +84,57 @@ function occurrence(document: ProjectDocument) {
   return value;
 }
 
+function entryRoom(document: ProjectDocument) {
+  const route = document.routes[0];
+  const plan = route?.biomes[0];
+  if (route === undefined || plan === undefined) throw new Error('missing F authored biome');
+  const room = materializeBiomePrefix(catalog, biome, plan, route.loadout)?.entryRoom;
+  if (room === undefined) throw new Error('missing F materialized entry room');
+  return room;
+}
+
+function withoutRequiredRewardAction(document = project()): ProjectDocument {
+  return decodeProjectDocument(
+    {
+      ...document,
+      routes: document.routes.map((route) => ({
+        ...route,
+        biomes: route.biomes.map((plan) =>
+          plan.topology === null
+            ? plan
+            : {
+                ...plan,
+                topology: {
+                  ...plan.topology,
+                  occurrences: plan.topology.occurrences.map((candidate) =>
+                    candidate.occurrenceId === occurrenceId
+                      ? { ...candidate, roomActions: { order: [] } }
+                      : candidate,
+                  ),
+                },
+              },
+        ),
+      })),
+    },
+    catalog,
+  );
+}
+
 describe('room-action commands', () => {
-  it('inserts and removes an exact active reference without rewriting occurrence payload', () => {
+  it('defaults an active required reference and rejects its direct removal', () => {
     const initial = project();
     const original = occurrence(initial);
-    let document = applyProjectCommand(initial, catalog, {
-      kind: 'InsertRoomAction',
-      action: action(reward),
-      reference: reward,
-      index: 0,
-    });
-    document = applyProjectCommand(document, catalog, {
-      kind: 'RemoveRoomAction',
-      action: action(reward),
-    });
-
-    const edited = occurrence(document);
-    expect(edited.roomActions.order).toEqual([]);
-    expect(edited.state).toEqual(original.state);
-    expect(edited.encounters).toEqual(original.encounters);
-    expect(edited.additionalExits).toEqual(original.additionalExits);
+    expect(original.roomActions.order).toEqual([reward]);
+    expect(() =>
+      applyProjectCommand(initial, catalog, {
+        kind: 'RemoveRoomAction',
+        action: action(reward),
+      }),
+    ).toThrow('active required room action cannot be removed');
   });
 
   it('rejects mismatched references, duplicates, unknown rows, and invalid indices', () => {
-    const initial = project();
+    const initial = withoutRequiredRewardAction();
     expect(() =>
       applyProjectCommand(initial, catalog, {
         kind: 'InsertRoomAction',
@@ -143,24 +189,380 @@ describe('room-action commands', () => {
     ).toThrow('toIndex must be an integer from 0 through 0');
   });
 
+  it('rejects dormant contextual insertions while accepting an active Fields optional', () => {
+    const fieldsOccurrenceId = createOccurrenceId('golden-h-combat02');
+    const fields = createGoldenFGHProject();
+    const fieldsOccurrence = fields.routes
+      .find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find((plan) => plan.biomeKey === 'H')
+      ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === fieldsOccurrenceId);
+    if (fieldsOccurrence === undefined) throw new Error('missing active two-cage Fields room');
+    const dormantCage: RoomActionReference = {
+      kind: 'completeFieldsCage',
+      phaseKey: 'Cage03',
+    };
+    expect(() =>
+      applyProjectCommand(fields, catalog, {
+        kind: 'InsertRoomAction',
+        action: createRoomActionAddress(
+          goldenHBiome,
+          fieldsOccurrenceId,
+          roomActionKey(dormantCage),
+        ),
+        reference: dormantCage,
+        index: fieldsOccurrence.roomActions.order.length,
+      }),
+    ).toThrow('room action is not active for this occurrence');
+
+    const optional: RoomActionReference = {
+      kind: 'interactLocalReward',
+      groupKey: 'optionalRewards',
+      slotKey: 'optional1',
+    };
+    const inserted = applyProjectCommand(fields, catalog, {
+      kind: 'InsertRoomAction',
+      action: createRoomActionAddress(goldenHBiome, fieldsOccurrenceId, roomActionKey(optional)),
+      reference: optional,
+      index: fieldsOccurrence.roomActions.order.length,
+    });
+    expect(
+      inserted.routes
+        .find((route) => route.routeKey === 'Underworld')
+        ?.biomes.find((plan) => plan.biomeKey === 'H')
+        ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === fieldsOccurrenceId)
+        ?.roomActions.order,
+    ).toContainEqual(optional);
+  });
+
+  it('rejects reinserting a retained incoming reward after its Anomaly fails', () => {
+    const intro = createOccurrenceId('room-actions-g-intro');
+    const targetId = createOccurrenceId('room-actions-g-anomaly');
+    const source = { kind: 'occurrence' as const, occurrenceId: intro };
+    const decision = createExitDecisionAddress(gBiome, source);
+    let authored = applyProjectCommand(gProject(), catalog, {
+      kind: 'CreateStart',
+      biome: gBiome,
+      occurrenceId: intro,
+    });
+    authored = applyProjectCommand(authored, catalog, { kind: 'CreateBatch', decision });
+    authored = applyProjectCommand(authored, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(gBiome, source),
+      storeKey: 'RunProgress',
+    });
+    authored = applyProjectCommand(authored, catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(gBiome, source, 'exit1'),
+      occurrenceId: targetId,
+      gameName: 'G_Combat01',
+    });
+    authored = applyProjectCommand(authored, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(gBiome, targetId),
+      value: { rewardType: 'MaxHealthDrop' },
+    });
+    authored = applyProjectCommand(authored, catalog, {
+      kind: 'SwitchTargetToAnomaly',
+      target: createTargetAddress(gBiome, source, 'exit1'),
+    });
+    const failed = applyProjectCommand(authored, catalog, {
+      kind: 'ReplaceAnomalySuccess',
+      occurrence: createOccurrenceAddress(gBiome, targetId),
+      success: false,
+    });
+    const pickup: RoomActionReference = {
+      kind: 'interactIncomingReward',
+      producerPoint: 'roomRewardPickup',
+      acquisitionRole: 'self',
+    };
+    const pickupAddress = createRoomActionAddress(gBiome, targetId, roomActionKey(pickup));
+    const removed = applyProjectCommand(failed, catalog, {
+      kind: 'RemoveRoomAction',
+      action: pickupAddress,
+    });
+    expect(() =>
+      applyProjectCommand(removed, catalog, {
+        kind: 'InsertRoomAction',
+        action: pickupAddress,
+        reference: pickup,
+        index: 0,
+      }),
+    ).toThrow('room action is not active for this occurrence');
+  });
+
+  it('uses contribution ordinal for parallel required actions activated by one selection', () => {
+    const targetId = createOccurrenceId('room-actions-parallel-target');
+    const sourceId = createOccurrenceId('room-actions-parallel-source');
+    const openingSource = { kind: 'occurrence' as const, occurrenceId };
+    const openingDecision = createExitDecisionAddress(biome, openingSource);
+    let authored = applyProjectCommand(unresolvedProject(), catalog, {
+      kind: 'CreateBatch',
+      decision: openingDecision,
+    });
+    authored = applyProjectCommand(authored, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(biome, openingSource),
+      storeKey: 'RunProgress',
+    });
+    authored = applyProjectCommand(authored, catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(biome, openingSource, 'exit1'),
+      occurrenceId: sourceId,
+      gameName: 'F_Combat02',
+    });
+    const source = { kind: 'occurrence' as const, occurrenceId: sourceId };
+    const decision = createExitDecisionAddress(biome, source);
+    authored = applyProjectCommand(authored, catalog, { kind: 'CreateBatch', decision });
+    authored = applyProjectCommand(authored, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(biome, source),
+      storeKey: 'RunProgress',
+    });
+    authored = applyProjectCommand(authored, catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(biome, source, 'exit1'),
+      occurrenceId: targetId,
+      gameName: 'F_Combat06',
+    });
+    authored = applyProjectCommand(authored, catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(biome, source, 'exit2'),
+      occurrenceId: createOccurrenceId('room-actions-parallel-peer'),
+      gameName: 'F_Combat02',
+    });
+    authored = applyProjectCommand(authored, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(biome, targetId),
+      value: {
+        rewardType: 'Boon',
+        payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+      },
+    });
+    authored = applyProjectCommand(authored, catalog, {
+      kind: 'SelectEncounter',
+      phase: createEncounterPhaseAddress(
+        biome,
+        { kind: 'occurrence', occurrenceId: targetId },
+        'Encounter',
+      ),
+      encounterKey: 'ArtemisCombatF',
+    });
+    const targetOccurrence = (document: ProjectDocument) =>
+      document.routes[0]?.biomes[0]?.topology?.occurrences.find(
+        (candidate) => candidate.occurrenceId === targetId,
+      );
+    expect(targetOccurrence(authored)?.roomActions.order).toEqual([]);
+
+    const selected = applyProjectCommand(authored, catalog, {
+      kind: 'SetExitSelection',
+      selection: createExitSelectionAddress(biome, source),
+      value: { kind: 'normal', exitKey: 'exit1' },
+    });
+    expect(targetOccurrence(selected)?.roomActions.order).toEqual([
+      {
+        kind: 'interactIncomingReward',
+        producerPoint: 'roomRewardPickup',
+        acquisitionRole: 'source',
+      },
+      { kind: 'interactEncounter', phaseKey: 'Encounter' },
+    ]);
+  });
+
   it('records each effective order edit as one semantic history entry', () => {
-    const initial = createProjectHistory(project());
-    const inserted = applyProjectHistoryCommand(initial, catalog, {
+    const initial = createProjectHistory(unresolvedProject());
+    const activated = applyProjectHistoryCommand(initial, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(biome, occurrenceId),
+      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
+    });
+
+    expect(activated.past).toHaveLength(1);
+    expect(occurrence(activated.present).roomActions.order).toEqual([reward]);
+    const undone = undoProjectHistory(activated);
+    expect(undone.present).toBe(initial.present);
+    expect(redoProjectHistory(undone).present).toBe(activated.present);
+  });
+
+  it('keeps an existing omission through unrelated edits and restores it canonically in one history step', () => {
+    const malformed = withoutRequiredRewardAction();
+    const retained = applyProjectCommand(malformed, catalog, {
+      kind: 'ReplaceManualArcanaSelection',
+      route: createRouteAddress('Underworld'),
+      arcanaKeys: ['ChanneledCast'],
+    });
+    expect(occurrence(retained).roomActions.order).toEqual([]);
+
+    const roster = entryRoom(retained).roomActionRoster;
+    expect(roster.issues).toContainEqual({ kind: 'unrankedRequired', reference: reward });
+    const restores = roster.proposals.filter(
+      (proposal) =>
+        proposal.kind === 'insert' && roomActionKey(proposal.reference) === roomActionKey(reward),
+    );
+    expect(restores).toEqual([
+      expect.objectContaining({
+        kind: 'insert',
+        toIndex: 0,
+        structurallyAuthorable: true,
+      }),
+    ]);
+
+    const initial = createProjectHistory(retained);
+    const restored = applyProjectHistoryCommand(initial, catalog, {
       kind: 'InsertRoomAction',
       action: action(reward),
       reference: reward,
       index: 0,
     });
-    const removed = applyProjectHistoryCommand(inserted, catalog, {
-      kind: 'RemoveRoomAction',
-      action: action(reward),
+    expect(restored.past).toHaveLength(1);
+    expect(occurrence(restored.present).roomActions.order).toEqual([reward]);
+    expect(undoProjectHistory(restored).present).toBe(initial.present);
+  });
+
+  it('defaults a newly required dependent while retaining its already-missing prerequisite', () => {
+    const malformed = withoutRequiredRewardAction();
+    const source = createIncomingRewardAddress(biome, occurrenceId);
+    const acquisition = createAcquisitionRoleAddress(source, 'source');
+    const site = artificerAcquisitionSite(createOccurrenceAddress(biome, occurrenceId), source);
+    const replacement: RoomActionReference = {
+      kind: 'interactAcquisitionEntry',
+      siteKey: acquisitionSiteStorageKey(site),
+      entryKey: artificerReplacementEntryKey(source, 'source'),
+    };
+    const activated = applyProjectCommand(malformed, catalog, {
+      kind: 'ReplaceAcquisitionDisposition',
+      acquisition,
+      value: { kind: 'artificer' },
     });
 
-    expect(removed.past).toHaveLength(2);
-    expect(occurrence(removed.present).roomActions.order).toEqual([]);
-    const undone = undoProjectHistory(removed);
-    expect(undone.present).toBe(inserted.present);
-    expect(redoProjectHistory(undone).present).toBe(removed.present);
+    expect(occurrence(activated).roomActions.order).toEqual([replacement]);
+    const roster = entryRoom(activated).roomActionRoster;
+    expect(roster.issues).toEqual(
+      expect.arrayContaining([
+        { kind: 'unrankedRequired', reference: reward },
+        expect.objectContaining({ kind: 'dependency', reference: replacement }),
+      ]),
+    );
+    expect(
+      roster.proposals.filter(
+        (proposal) =>
+          proposal.kind === 'insert' && roomActionKey(proposal.reference) === roomActionKey(reward),
+      ),
+    ).toEqual([
+      expect.objectContaining({ kind: 'insert', toIndex: 0, structurallyAuthorable: true }),
+    ]);
+  });
+
+  it('adds encounter and Gorgon contacts atomically without duplicating retained reactivation', () => {
+    const combat = createCompleteFGProject();
+    const combatOccurrenceId = goldenFOccurrenceId(5, 1);
+    const phase = createEncounterPhaseAddress(
+      goldenFBiome,
+      { kind: 'occurrence', occurrenceId: combatOccurrenceId },
+      'Encounter',
+    );
+    const combatOccurrence = (document: ProjectDocument) => {
+      const candidate = document.routes
+        .find((route) => route.routeKey === 'Underworld')
+        ?.biomes.find((plan) => plan.biomeKey === 'F')
+        ?.topology?.occurrences.find(
+          (occurrence) => occurrence.occurrenceId === combatOccurrenceId,
+        );
+      if (candidate === undefined) throw new Error('missing F combat occurrence');
+      return candidate;
+    };
+    const encounter = { kind: 'interactEncounter' as const, phaseKey: 'Encounter' };
+    const selected = applyProjectHistoryCommand(createProjectHistory(combat), catalog, {
+      kind: 'SelectEncounter',
+      phase,
+      encounterKey: 'ArtemisCombatF',
+    });
+    expect(selected.past).toHaveLength(1);
+    expect(combatOccurrence(selected.present).roomActions.order).toContainEqual(encounter);
+    expect(undoProjectHistory(selected).present).toBe(combat);
+
+    const reset = applyProjectCommand(selected.present, catalog, {
+      kind: 'ResetEncounter',
+      phase,
+    });
+    const reselected = applyProjectCommand(reset, catalog, {
+      kind: 'SelectEncounter',
+      phase,
+      encounterKey: 'ArtemisCombatF',
+    });
+    expect(
+      combatOccurrence(reselected).roomActions.order.filter(
+        (reference) => roomActionKey(reference) === roomActionKey(encounter),
+      ),
+    ).toHaveLength(1);
+
+    const gorgon = { kind: 'interactGorgon' as const, phaseKey: 'Encounter' };
+    const gorgonHistory = applyProjectHistoryCommand(createProjectHistory(combat), catalog, {
+      kind: 'ReplaceGorgonDeathDefianceCondition',
+      phase,
+      value: true,
+    });
+    expect(gorgonHistory.past).toHaveLength(1);
+    expect(combatOccurrence(gorgonHistory.present).roomActions.order).toContainEqual(gorgon);
+    expect(undoProjectHistory(gorgonHistory).present).toBe(combat);
+  });
+
+  it('keeps optional non-Shop and stale rows explicitly removable', () => {
+    const fieldsOccurrenceId = createOccurrenceId('golden-h-combat02');
+    const optional: RoomActionReference = {
+      kind: 'interactLocalReward',
+      groupKey: 'optionalRewards',
+      slotKey: 'optional1',
+    };
+    const authored = createGoldenFGHProject();
+    const retained = decodeProjectDocument(
+      {
+        ...authored,
+        routes: authored.routes.map((route) => ({
+          ...route,
+          biomes: route.biomes.map((plan) =>
+            plan.topology === null
+              ? plan
+              : {
+                  ...plan,
+                  topology: {
+                    ...plan.topology,
+                    occurrences: plan.topology.occurrences.map((candidate) =>
+                      candidate.occurrenceId !== fieldsOccurrenceId
+                        ? candidate
+                        : {
+                            ...candidate,
+                            roomActions: {
+                              order: [...candidate.roomActions.order, optional, invented],
+                            },
+                          },
+                    ),
+                  },
+                },
+          ),
+        })),
+      },
+      catalog,
+    );
+    const withoutOptional = applyProjectCommand(retained, catalog, {
+      kind: 'RemoveRoomAction',
+      action: createRoomActionAddress(goldenHBiome, fieldsOccurrenceId, roomActionKey(optional)),
+    });
+    const fieldsOccurrence = (document: ProjectDocument) => {
+      const candidate = document.routes
+        .find((route) => route.routeKey === 'Underworld')
+        ?.biomes.find((plan) => plan.biomeKey === 'H')
+        ?.topology?.occurrences.find(
+          (occurrence) => occurrence.occurrenceId === fieldsOccurrenceId,
+        );
+      if (candidate === undefined) throw new Error('missing Fields occurrence');
+      return candidate;
+    };
+    expect(fieldsOccurrence(withoutOptional).roomActions.order).not.toContainEqual(optional);
+    const withoutStale = applyProjectCommand(withoutOptional, catalog, {
+      kind: 'RemoveRoomAction',
+      action: createRoomActionAddress(goldenHBiome, fieldsOccurrenceId, roomActionKey(invented)),
+    });
+    expect(fieldsOccurrence(withoutStale).roomActions.order).not.toContainEqual(invented);
   });
 
   it('keeps an Artificer replacement payload dormant while rejecting raw insertion until its source role reactivates', () => {
@@ -174,17 +576,12 @@ describe('room-action commands', () => {
       siteKey,
       entryKey,
     };
-    let active = applyProjectCommand(project(), catalog, {
+    const active = applyProjectCommand(project(), catalog, {
       kind: 'ReplaceAcquisitionDisposition',
       acquisition,
       value: { kind: 'artificer' },
     });
-    active = applyProjectCommand(active, catalog, {
-      kind: 'InsertRoomAction',
-      action: action(replacement),
-      reference: replacement,
-      index: 0,
-    });
+    expect(occurrence(active).roomActions.order).toContainEqual(replacement);
     let dormant = applyProjectCommand(active, catalog, {
       kind: 'ReplaceAcquisitionDisposition',
       acquisition,
@@ -212,14 +609,7 @@ describe('room-action commands', () => {
       acquisition,
       value: { kind: 'artificer' },
     });
-    expect(() =>
-      applyProjectCommand(restored, catalog, {
-        kind: 'InsertRoomAction',
-        action: action(replacement),
-        reference: replacement,
-        index: 0,
-      }),
-    ).not.toThrow();
+    expect(occurrence(restored).roomActions.order).toContainEqual(replacement);
     expect(occurrence(restored).acquisitionSites?.[siteKey]?.pickupEntries).toHaveProperty(
       entryKey,
       null,
@@ -227,13 +617,7 @@ describe('room-action commands', () => {
   });
 
   it('preserves authored chronology when room identity is replaced', () => {
-    const inserted = applyProjectCommand(project(), catalog, {
-      kind: 'InsertRoomAction',
-      action: action(reward),
-      reference: reward,
-      index: 0,
-    });
-    const replaced = applyProjectCommand(inserted, catalog, {
+    const replaced = applyProjectCommand(project(), catalog, {
       kind: 'ReplaceOccurrenceRoom',
       occurrence: createOccurrenceAddress(biome, occurrenceId),
       gameName: 'F_Opening02',

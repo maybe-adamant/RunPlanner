@@ -18,6 +18,7 @@ import {
   createRouteStartKeepsakeSelectionAddress,
   createTargetAddress,
   encodeProjectDocument,
+  roomActionKey,
   semanticAddressKey,
   type ExitDecision,
   type RoomActionReference,
@@ -42,7 +43,6 @@ import { catalog } from '@run-planner/hades2-catalog';
 
 import {
   authorTestArtificerReplacement,
-  authorRequiredTestRoomActions,
   authorLegalTraitOffers,
   replaceTestRoomActionOrder,
 } from '@run-planner/test-fixtures/shared';
@@ -350,6 +350,134 @@ function replaceFieldsActions(
 }
 
 describe('H Fields materialization', () => {
+  it('defaults a command-created Fields room to declaration cage order with pickups deferred to cleanup', () => {
+    const occurrenceId = createOccurrenceId('h-materialized-combat02');
+    const project = completeProject();
+    const authored = plan(project).topology?.occurrences.find(
+      (occurrence) => occurrence.occurrenceId === occurrenceId,
+    );
+    expect(authored?.roomActions.order).toEqual([
+      { kind: 'completeFieldsCage', phaseKey: 'Cage01' },
+      { kind: 'completeFieldsCage', phaseKey: 'Cage02' },
+      { kind: 'interactLocalReward', groupKey: 'cages', slotKey: 'cage1' },
+      { kind: 'interactLocalReward', groupKey: 'cages', slotKey: 'cage2' },
+    ]);
+    expect(
+      plan(project).topology?.occurrences.find(
+        (occurrence) => occurrence.occurrenceId === createOccurrenceId('h-materialized-combat03'),
+      )?.roomActions.order,
+    ).toEqual([]);
+
+    const room = ordinaryBatches(materialize(project))
+      .flatMap((batch) => batch.targets.map((target) => target.room))
+      .find((candidate) => candidate.occurrenceId === occurrenceId);
+    if (room === undefined) throw new Error('command-created Fields room is missing');
+    const entries = room.roomLifecycleTimeline.entries;
+    const finalCageEnd = entries.findIndex(
+      (entry) => entry.kind === 'boundary' && entry.boundary.key === 'encounterEnd:Cage02',
+    );
+    const firstPickup = entries.findIndex(
+      (entry) =>
+        entry.kind === 'action' &&
+        entry.action.key ===
+          roomActionKey({
+            kind: 'interactLocalReward',
+            groupKey: 'cages',
+            slotKey: 'cage1',
+          }),
+    );
+    const cleanup = entries.findIndex(
+      (entry) => entry.kind === 'boundary' && entry.boundary.kind === 'cleanup',
+    );
+    expect(cleanup).toBeGreaterThan(finalCageEnd);
+    expect(firstPickup).toBeGreaterThan(cleanup);
+    expect(room.roomActionRoster.issues).toEqual([]);
+  });
+
+  it('places Fields Passive and cage-produced blockers at their fixed cage barriers', () => {
+    const occurrenceId = createOccurrenceId('h-materialized-combat02');
+    const occurrence = createOccurrenceAddress(biome, occurrenceId);
+    let project = applyProjectCommand(completeProject(), catalog, {
+      kind: 'ReplaceGorgonDeathDefianceCondition',
+      phase: createEncounterPhaseAddress(biome, occurrence, 'Passive'),
+      value: true,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceGorgonDeathDefianceCondition',
+      phase: createEncounterPhaseAddress(biome, occurrence, 'Cage01'),
+      value: true,
+    });
+    const authored = plan(project).topology?.occurrences.find(
+      (candidate) => candidate.occurrenceId === occurrenceId,
+    );
+    expect(authored?.roomActions.order).toEqual([
+      { kind: 'interactGorgon', phaseKey: 'Passive' },
+      { kind: 'completeFieldsCage', phaseKey: 'Cage01' },
+      { kind: 'interactGorgon', phaseKey: 'Cage01' },
+      { kind: 'completeFieldsCage', phaseKey: 'Cage02' },
+      { kind: 'interactLocalReward', groupKey: 'cages', slotKey: 'cage1' },
+      { kind: 'interactLocalReward', groupKey: 'cages', slotKey: 'cage2' },
+    ]);
+
+    const room = ordinaryBatches(materialize(project))
+      .flatMap((batch) => batch.targets.map((target) => target.room))
+      .find((candidate) => candidate.occurrenceId === occurrenceId);
+    if (room === undefined) throw new Error('Fields blocker room is missing');
+    expect(
+      room.roomLifecycleTimeline.boundaries.map((boundary) =>
+        'phaseKey' in boundary ? `${boundary.kind}:${boundary.phaseKey}` : boundary.kind,
+      ),
+    ).toEqual([
+      'roomEntered',
+      'encounterStart:Cage01',
+      'encounterEnd:Cage01',
+      'encounterStart:Cage02',
+      'encounterEnd:Cage02',
+      'cleanup',
+      'outgoingGeneration',
+    ]);
+  });
+
+  it('extends a retained Fields cage permutation without defaulting its unselected peer', () => {
+    const selectedId = createOccurrenceId('h-materialized-combat09');
+    const unselectedId = createOccurrenceId('h-materialized-combat03');
+    const retained = [
+      { kind: 'completeFieldsCage' as const, phaseKey: 'Cage02' },
+      { kind: 'completeFieldsCage' as const, phaseKey: 'Cage01' },
+      { kind: 'interactLocalReward' as const, groupKey: 'cages', slotKey: 'cage1' },
+      { kind: 'interactLocalReward' as const, groupKey: 'cages', slotKey: 'cage2' },
+    ];
+    const initial = applyProjectCommand(completeProject(['min', 'min', 'max', 'min']), catalog, {
+      kind: 'ReplaceOccurrenceRoom',
+      occurrence: createOccurrenceAddress(biome, selectedId),
+      gameName: 'H_Combat05',
+    });
+    let project = replaceTestRoomActionOrder(initial, catalog, biome, selectedId, retained);
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceFieldsCageOutcome',
+      decision: createExitDecisionAddress(biome, {
+        kind: 'occurrence',
+        occurrenceId: createOccurrenceId('h-materialized-combat02'),
+      }),
+      cageOutcome: 'max',
+    });
+    const occurrences = plan(project).topology?.occurrences;
+    expect(
+      occurrences?.find((occurrence) => occurrence.occurrenceId === selectedId)?.roomActions.order,
+    ).toEqual([
+      retained[0],
+      retained[1],
+      { kind: 'completeFieldsCage', phaseKey: 'Cage03' },
+      retained[2],
+      retained[3],
+      { kind: 'interactLocalReward', groupKey: 'cages', slotKey: 'cage3' },
+    ]);
+    expect(
+      occurrences?.find((occurrence) => occurrence.occurrenceId === unselectedId)?.roomActions
+        .order,
+    ).toEqual([]);
+  });
+
   it('materializes only the selected optional prefix while retaining complete authored slots', () => {
     const project = createGoldenFGHProject();
     const occurrenceId = createOccurrenceId('golden-h-combat02');
@@ -685,7 +813,7 @@ describe('H Fields materialization', () => {
       route: createRouteAddress('Underworld'),
       arcanaKeys: ['ChanneledCast', 'HealthRegen', 'BonusDodge', 'MetaToRunUpgrade'],
     });
-    project = authorRequiredTestRoomActions(authorLegalTraitOffers(project), catalog);
+    project = authorLegalTraitOffers(project);
     for (const [index, slotKey] of sources.entries()) {
       const owner = createLocalRewardAddress(biome, occurrenceId, 'optionalRewards', slotKey);
       project = applyProjectCommand(project, catalog, {
@@ -756,6 +884,14 @@ describe('H Fields materialization', () => {
         entryKey: artificerReplacementEntryKey(sourceOwner, 'self'),
       };
     });
+    const defaultedKeys = new Set(
+      plan(project)
+        .topology?.occurrences.find((occurrence) => occurrence.occurrenceId === occurrenceId)
+        ?.roomActions.order.map(roomActionKey) ?? [],
+    );
+    for (const reference of [...sourceReferences, ...replacementReferences]) {
+      expect(defaultedKeys.has(roomActionKey(reference))).toBe(false);
+    }
     project = replaceFieldsActions(project, occurrenceId, (order) => [
       ...sourceReferences,
       ...replacementReferences,
@@ -820,7 +956,6 @@ describe('H Fields materialization', () => {
       createAcquisitionRoleAddress(cage, 'self'),
       replacement,
     );
-    project = authorRequiredTestRoomActions(project, catalog);
     const occurrence = plan(project).topology?.occurrences.find(
       (occurrence) => occurrence.occurrenceId === occurrenceId,
     );

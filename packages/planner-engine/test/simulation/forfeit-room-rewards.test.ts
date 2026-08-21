@@ -3,13 +3,14 @@ import {
   applyProjectCommand,
   createBiomeAddress,
   createIncomingRewardAddress,
+  createRoomActionAddress,
   createRouteAddress,
   createTraitOfferAddress,
+  roomActionKey,
   semanticAddressKey,
 } from '@run-planner/engine/authored-project';
 import { describe, expect, it } from 'vitest';
 
-import { authorRequiredTestRoomActions } from '@run-planner/test-fixtures/shared';
 import { createCompleteFGProject, goldenFStartId } from '@run-planner/test-fixtures/underworld';
 import { simulateProject } from '../../src/simulation';
 import { createPreparedProjectCandidateSession } from '../../src/simulation/candidates';
@@ -33,14 +34,28 @@ function simulated(rewardType: 'Boon' | 'HermesUpgrade') {
         ? { rewardType, payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } }
         : { rewardType },
   });
-  const result = simulateProject(catalog, authorRequiredTestRoomActions(project, catalog));
+  if (rewardType === 'HermesUpgrade') {
+    project = applyProjectCommand(project, catalog, {
+      kind: 'RemoveRoomAction',
+      action: createRoomActionAddress(
+        biome,
+        goldenFStartId,
+        roomActionKey({
+          kind: 'interactIncomingReward',
+          producerPoint: 'roomRewardPickup',
+          acquisitionRole: 'source',
+        }),
+      ),
+    });
+  }
+  const result = simulateProject(catalog, project);
   const f = result.routes.find((route) => route.routeKey === 'Underworld')?.biomes[0];
   if (f?.authoring !== 'complete') throw new Error('expected complete F simulation');
   return f.rewards;
 }
 
 function rewardsFor(project: ReturnType<typeof createCompleteFGProject>) {
-  const result = simulateProject(catalog, authorRequiredTestRoomActions(project, catalog));
+  const result = simulateProject(catalog, project);
   const f = result.routes.find((route) => route.routeKey === 'Underworld')?.biomes[0];
   if (f?.authoring !== 'complete') throw new Error('expected complete F simulation');
   return f.rewards;
@@ -159,7 +174,7 @@ describe('Vow of Forfeit ordinary room reward veto', () => {
     });
     const session = createPreparedProjectCandidateSession(
       catalog,
-      simulateProjectAssembly(catalog, authorRequiredTestRoomActions(project, catalog)),
+      simulateProjectAssembly(catalog, project),
     );
     expect(
       session.evaluate({

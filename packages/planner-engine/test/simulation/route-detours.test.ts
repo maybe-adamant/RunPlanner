@@ -36,7 +36,6 @@ import {
   type HistoryStateView,
   type MaterializedBiomePrefix,
 } from '@run-planner/engine/simulation';
-import { authorRequiredTestRoomActions } from '@run-planner/test-fixtures/shared';
 import {
   createCompleteFGProject,
   goldenFBiome,
@@ -77,7 +76,7 @@ function prefix(
   readonly snapshot: MaterializedBiomePrefix & { readonly entryRoom: CanonicalAuthoredRoom };
   readonly history: BiomeHistoryPrefix;
 } {
-  const authored = authorRequiredTestRoomActions(project, catalog);
+  const authored = project;
   const snapshot = materializeBiomePrefix(
     catalog,
     biome,

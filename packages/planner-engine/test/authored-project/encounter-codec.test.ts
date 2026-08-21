@@ -7,10 +7,12 @@ import {
   createGorgonPhaseAddress,
   createOccurrenceAddress,
   createIncomingRewardAddress,
+  createRoomActionAddress,
   createRouteStartKeepsakeSelectionAddress,
   createTraitOfferAddress,
   decodeProjectDocument,
   encodeProjectDocument,
+  roomActionKey,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
@@ -79,10 +81,22 @@ function arachneStoryProject(): ProjectDocument {
     createEncounterPhaseAddress(goldenFBiome, { kind: 'occurrence', occurrenceId }, 'Encounter'),
     'selection',
   );
-  const story = applyProjectCommand(createCompleteFGProject(), catalog, {
+  let story = applyProjectCommand(createCompleteFGProject(), catalog, {
     kind: 'ReplaceOccurrenceRoom',
     occurrence,
     gameName: 'F_Story01',
+  });
+  story = applyProjectCommand(story, catalog, {
+    kind: 'RemoveRoomAction',
+    action: createRoomActionAddress(
+      goldenFBiome,
+      occurrenceId,
+      roomActionKey({
+        kind: 'interactIncomingReward',
+        producerPoint: 'roomRewardPickup',
+        acquisitionRole: 'self',
+      }),
+    ),
   });
   return applyProjectCommand(authorLegalTraitOffers(story), catalog, {
     kind: 'ReplaceTraitSelection',

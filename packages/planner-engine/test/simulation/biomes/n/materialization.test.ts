@@ -8,13 +8,13 @@ import {
   createOccurrenceAddress,
   createProjectDocument,
   encodeProjectDocument,
+  roomActionKey,
   semanticAddressKey,
   createTraitOfferAddress,
 } from '@run-planner/engine/authored-project';
 import { materializeBiomePrefix, simulateProject } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
-import { authorRequiredTestRoomActions } from '@run-planner/test-fixtures/shared';
 import {
   loadSurfaceNEntryFrontierProject,
   loadSurfaceNEntryFrontierResolvedProject,
@@ -47,7 +47,7 @@ describe('canonical N Hub materialization', () => {
       projectId: 'n-incomplete',
       configuredBiomeCounts: { Surface: 1 },
     });
-    const biome = simulateProject(catalog, authorRequiredTestRoomActions(project, catalog))
+    const biome = simulateProject(catalog, project)
       .routes.find((route) => route.routeKey === 'Surface')
       ?.biomes.find((candidate) => candidate.biomeKey === 'N');
 
@@ -97,7 +97,21 @@ describe('canonical N Hub materialization', () => {
       decision: openingDecision,
     });
 
-    const biome = simulateProject(catalog, authorRequiredTestRoomActions(project, catalog))
+    const authoredOpening = project.routes
+      .find((route) => route.routeKey === 'Surface')
+      ?.biomes.find((plan) => plan.biomeKey === 'N')
+      ?.topology?.occurrences.find(
+        (occurrence) => occurrence.occurrenceId === nOccurrenceIds.opening,
+      );
+    expect(authoredOpening?.roomActions.order).toEqual([
+      {
+        kind: 'interactIncomingReward',
+        producerPoint: 'roomRewardPickup',
+        acquisitionRole: 'source',
+      },
+    ]);
+
+    const biome = simulateProject(catalog, project)
       .routes.find((route) => route.routeKey === 'Surface')
       ?.biomes.find((candidate) => candidate.biomeKey === 'N');
     if (
@@ -112,6 +126,22 @@ describe('canonical N Hub materialization', () => {
         semanticAddressKey(room.origin) ===
         semanticAddressKey(createOccurrenceAddress(nBiome, nOccurrenceIds.opening)),
     );
+    const entries = biome.materializedPrefix.entryRoom?.roomLifecycleTimeline.entries ?? [];
+    const pickup = entries.findIndex(
+      (entry) =>
+        entry.kind === 'action' &&
+        entry.action.key ===
+          roomActionKey({
+            kind: 'interactIncomingReward',
+            producerPoint: 'roomRewardPickup',
+            acquisitionRole: 'source',
+          }),
+    );
+    const start = entries.findIndex(
+      (entry) => entry.kind === 'boundary' && entry.boundary.kind === 'encounterStart',
+    );
+    expect(pickup).toBeGreaterThanOrEqual(0);
+    expect(pickup).toBeLessThan(start);
 
     expect(biome.materializedPrefix.frontier).toMatchObject({
       kind: 'exitDecision',
@@ -220,7 +250,7 @@ describe('canonical N Hub materialization', () => {
       hubContinuation: { kind: 'terminalTakeover', hubKey: 'hub' },
     });
 
-    const evaluation = simulateProject(catalog, authorRequiredTestRoomActions(project, catalog));
+    const evaluation = simulateProject(catalog, project);
     const biome = evaluation.routes
       .find((route) => route.routeKey === 'Surface')
       ?.biomes.find((candidate) => candidate.biomeKey === 'N');

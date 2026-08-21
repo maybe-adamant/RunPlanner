@@ -1,8 +1,5 @@
-export {
-  assembleRoomActionRoster,
-  roomActionContributions,
-  roomActionWindowRank,
-} from './assemble';
+export { assembleRoomActionRoster } from './assemble';
+export { roomActionWindowRank } from '../../authored-project/room-action-domain';
 export { assembleRoomLifecycleTimeline } from './timeline';
 export type {
   RoomActionCheckpoint,

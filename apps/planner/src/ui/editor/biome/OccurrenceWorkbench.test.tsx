@@ -25,6 +25,7 @@ import {
   createRewardWheelOfferAddress,
   createTraitOfferAddress,
   createTargetAddress,
+  decodeProjectDocument,
   semanticAddressKey,
   roomActionKey,
   type OccurrenceId,
@@ -52,10 +53,7 @@ import { semanticFindingKey } from '@planner/projections/evaluationProjection';
 import { findingSelected, semanticOwnerNavigated } from '@planner/state/editorSessionSlice';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import { OccurrenceWorkbench } from '@planner/ui/editor/biome/OccurrenceWorkbench';
-import {
-  authorLegalTraitOffers,
-  authorRequiredTestRoomActions,
-} from '@run-planner/test-fixtures/shared';
+import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 import {
   createGoldenFGHIProject,
   createCompleteFGProject,
@@ -621,22 +619,76 @@ describe('OccurrenceWorkbench', () => {
     });
   });
 
-  it('keeps an unranked required action visible with its engine-owned repair explanation', () => {
+  it('restores an unranked required action once without exposing remove or free insertion UI', async () => {
     const occurrenceId = goldenFOccurrenceId(1, 1);
     const authored = createFConversionFrontierProject('MetaCurrencyDrop').project;
     const reference = occurrenceRoomActionOrder(authored, 'Underworld', 'F', occurrenceId)?.[0];
     if (reference === undefined) throw new Error('Required incoming action is missing');
-    const project = applyProjectCommand(authored, catalog, {
-      kind: 'RemoveRoomAction',
-      action: createRoomActionAddress(goldenFBiome, occurrenceId, roomActionKey(reference)),
-    });
-    renderStaticOccurrenceWorkbench(project, 'Underworld', 'F', occurrenceById(occurrenceId));
+    const project = decodeProjectDocument(
+      {
+        ...authored,
+        routes: authored.routes.map((route) => ({
+          ...route,
+          biomes: route.biomes.map((biome) =>
+            biome.biomeKey !== 'F' || biome.topology === null
+              ? biome
+              : {
+                  ...biome,
+                  topology: {
+                    ...biome.topology,
+                    occurrences: biome.topology.occurrences.map((occurrence) =>
+                      occurrence.occurrenceId === occurrenceId
+                        ? { ...occurrence, roomActions: { order: [] } }
+                        : occurrence,
+                    ),
+                  },
+                },
+          ),
+        })),
+      },
+      catalog,
+    );
+    const view = renderOccurrenceWorkbench(
+      project,
+      'Underworld',
+      'F',
+      occurrenceById(occurrenceId),
+    );
 
     openRoomTab('Room Actions');
     const actions = screen.getByRole('region', { name: 'Room Actions' });
     expect(within(actions).getByText('This required action has not been placed.')).toBeTruthy();
     expect(within(actions).getByRole('region', { name: 'Room action repairs' })).toBeTruthy();
     expect(actions.querySelector('[data-room-action-drag-handle]')).toBeNull();
+    const repairRow = within(actions)
+      .getByText('This required action has not been placed.')
+      .closest<HTMLElement>('[data-room-action-key]');
+    if (repairRow === null) throw new Error('Required repair row is missing');
+    expect(within(repairRow).queryByText('Position')).toBeNull();
+    expect(within(repairRow).queryByRole('button', { name: 'Remove' })).toBeNull();
+
+    const historyBefore = view.application.store.getState().projectWorkspace.history.past.length;
+    await view.user.click(
+      within(repairRow).getByRole('button', { name: 'Restore required action' }),
+    );
+    await waitFor(() =>
+      expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+        historyBefore + 1,
+      ),
+    );
+    await waitFor(() => {
+      const restored = screen
+        .getByText('Pick up Reward')
+        .closest<HTMLElement>('[data-room-action-key]');
+      if (restored === null) throw new Error('Restored required row is missing');
+      expect(within(restored).queryByText('Position')).toBeNull();
+      expect(within(restored).queryByRole('button', { name: 'Remove' })).toBeNull();
+    });
+
+    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Restore required action' })).toBeTruthy(),
+    );
   });
 
   it('focuses and removes a stale Standard encounter action after encounter replacement', async () => {
@@ -755,7 +807,7 @@ describe('OccurrenceWorkbench', () => {
     }) as HTMLInputElement;
     expect(condition.checked).toBe(true);
     expect(condition.disabled).toBe(false);
-    expect(screen.getByRole('button', { name: 'Edit Trait: Divine Dash · Epic' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Edit Trait: Divine Dash' })).toBeTruthy();
   });
 
   it('renders and dispatches the phase-local Fig Leaf checkbox on a supported fixed phase', async () => {
@@ -1680,7 +1732,6 @@ describe('OccurrenceWorkbench', () => {
       offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat07, 'wheel2', 'offer2'),
       value: { rewardType: 'MetaCurrencyDrop' },
     });
-    project = authorRequiredTestRoomActions(project, catalog);
 
     const view = renderOccurrenceWorkbench(
       project,
@@ -1756,7 +1807,7 @@ describe('OccurrenceWorkbench', () => {
       phase,
       encounterKey: 'IcarusCombatO',
     });
-    project = authorRequiredTestRoomActions(authorLegalTraitOffers(project), catalog);
+    project = authorLegalTraitOffers(project);
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceShipEncounterCount',
       occurrence,
@@ -1800,7 +1851,7 @@ describe('OccurrenceWorkbench', () => {
       phase,
       encounterKey: 'IcarusCombatO',
     });
-    project = authorRequiredTestRoomActions(authorLegalTraitOffers(project), catalog);
+    project = authorLegalTraitOffers(project);
     project = applyProjectCommand(project, catalog, {
       kind: 'SelectEncounter',
       phase,
@@ -1830,7 +1881,7 @@ describe('OccurrenceWorkbench', () => {
       phase: createEncounterPhaseAddress(oBiome, occurrence, 'Combat1'),
       encounterKey: 'IcarusCombatO',
     });
-    project = authorRequiredTestRoomActions(authorLegalTraitOffers(project), catalog);
+    project = authorLegalTraitOffers(project);
 
     const view = renderOccurrenceWorkbench(project, 'Surface', 'O', occurrenceById(occurrenceId));
     openRoomTab('Combat 1 Actions');

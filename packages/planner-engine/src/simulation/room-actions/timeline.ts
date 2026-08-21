@@ -167,15 +167,25 @@ export function assembleRoomLifecycleTimeline(
       wheel === undefined
         ? undefined
         : Object.freeze({ kind: 'chooseRewardWheel' as const, wheelKey: wheel.key });
+    const lastPreCombatRank =
+      cage === undefined && choose === undefined
+        ? lastRank(
+            rankedRows,
+            (row) => row.window.kind === 'standard' && row.window.phase === 'beforeCombat',
+          )
+        : undefined;
     const startRank =
       cage === undefined
         ? choose === undefined
-          ? (firstRank(
-              rankedRows,
-              (row) => row.window.kind === 'standard' && row.window.phase === 'beforeCombat',
-            ) ?? 0)
+          ? (lastPreCombatRank ?? 0)
           : (actionRank(roster, choose) ?? 0)
         : (actionRank(roster, cage) ?? 0);
+    const startPlacement =
+      cage !== undefined
+        ? 'before'
+        : choose !== undefined || lastPreCombatRank !== undefined
+          ? 'after'
+          : 'before';
     addBoundary(
       boundaries,
       Object.freeze({
@@ -184,7 +194,7 @@ export function assembleRoomLifecycleTimeline(
         phaseKey: phase.slotKey,
       }),
       startRank,
-      'before',
+      startPlacement,
     );
 
     // Fields' grouped cage action is the complete activation-through-combat

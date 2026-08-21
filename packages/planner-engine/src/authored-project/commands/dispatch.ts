@@ -22,6 +22,7 @@ import { applyKeepsakeCommand } from './keepsake';
 import type { ProjectCommand } from './types';
 import { createAcquisitionEntryAddress, semanticAddressKey } from '../addresses';
 import { applyRoomActionCommand } from './room-actions';
+import { reconcileNewRequiredRoomActions } from '../room-action-defaults';
 
 function derivedPayloadEntryAddress(
   command: Extract<ProjectCommand, { readonly kind: 'EditDerivedShopEntry' }>['edit'],
@@ -207,7 +208,9 @@ export function applyProjectCommand(
 ): ProjectDocument {
   try {
     const proposal = applyUnchecked(document, catalog, command);
-    return proposal === document ? document : decodeProjectDocument(proposal, catalog);
+    if (proposal === document) return document;
+    const reconciled = reconcileNewRequiredRoomActions(document, proposal, catalog);
+    return decodeProjectDocument(reconciled, catalog);
   } catch (error) {
     if (error instanceof ProjectCommandContractError) throw error;
     if (error instanceof ProjectDocumentContractError) {

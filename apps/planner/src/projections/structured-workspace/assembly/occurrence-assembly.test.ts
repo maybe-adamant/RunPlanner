@@ -28,7 +28,6 @@ import {
 } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
-import { authorRequiredTestRoomActions } from '@run-planner/test-fixtures/shared';
 import {
   createGoldenFGHIProject,
   createCompleteFGProject,
@@ -62,7 +61,7 @@ function biomeSource(
     phase: import('@run-planner/engine/authored-project').EncounterPhaseAddress,
   ) => GorgonPhaseCandidateSupport | undefined,
 ) {
-  const authoredProject = authorRequiredTestRoomActions(project, catalog);
+  const authoredProject = project;
   const assembly = simulateProjectAssembly(catalog, authoredProject);
   const source = createWorkspaceProjectSourceIndex(
     catalog,
@@ -210,10 +209,7 @@ describe('structured workspace occurrence assembly', () => {
       selection: createRouteStartKeepsakeSelectionAddress('Surface'),
       keepsakeKey: 'AthenaEncounterKeepsake',
     });
-    let engineAssembly = simulateProjectAssembly(
-      catalog,
-      authorRequiredTestRoomActions(project, catalog),
-    );
+    let engineAssembly = simulateProjectAssembly(catalog, project);
     expect(
       encounterPhaseGorgonSupportForProjectEvaluationAssembly(engineAssembly, phase)?.supported,
     ).toBe(true);
@@ -255,10 +251,7 @@ describe('structured workspace occurrence assembly', () => {
       phase,
       encounterKey: 'AthenaCombatP',
     });
-    engineAssembly = simulateProjectAssembly(
-      catalog,
-      authorRequiredTestRoomActions(project, catalog),
-    );
+    engineAssembly = simulateProjectAssembly(catalog, project);
     const retained = assemble(
       project,
       'Surface',

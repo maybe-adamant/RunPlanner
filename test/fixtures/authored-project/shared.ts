@@ -14,7 +14,6 @@ export type {
   TraitCandidateSession,
 } from './trait-offers';
 export {
-  authorRequiredTestRoomActions,
   authorTestArtificerReplacement,
   editTestRoomActionOrder,
   replaceTestRoomActionOrder,

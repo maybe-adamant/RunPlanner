@@ -27,7 +27,6 @@ import {
   simulateProject,
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
-import { authorRequiredTestRoomActions } from '@run-planner/test-fixtures/shared';
 import {
   createGoldenFGHProject,
   createGoldenFGHIProject,
@@ -35,11 +34,11 @@ import {
 } from '@run-planner/test-fixtures/underworld';
 
 function evaluatedProject(project: ReturnType<typeof createGoldenFGHProject>) {
-  return simulateProject(catalog, authorRequiredTestRoomActions(project, catalog));
+  return simulateProject(catalog, project);
 }
 
 function assembledProject(project: ReturnType<typeof createGoldenFGHProject>) {
-  return simulateProjectAssembly(catalog, authorRequiredTestRoomActions(project, catalog));
+  return simulateProjectAssembly(catalog, project);
 }
 
 import { createArcanaFearState } from '../../src/simulation/arcana-fear';

@@ -43,10 +43,7 @@ import {
 } from '@run-planner/engine/simulation';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 
-import {
-  authorLegalTraitOffers,
-  authorRequiredTestRoomActions,
-} from '@run-planner/test-fixtures/shared';
+import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 import { createGoldenFGHIProject, goldenFBiome } from '@run-planner/test-fixtures/underworld';
 import {
   loadSurfaceNEntryFrontierProject,
@@ -716,10 +713,7 @@ describe('structured workspace overlay contract', () => {
   }, 20_000);
 
   it('projects the reached I Gift Hammer repair through its biome-owned control and destination', () => {
-    const project = authorRequiredTestRoomActions(
-      createGoldenEchoGiftHammerPendingProject(),
-      catalog,
-    );
+    const project = createGoldenEchoGiftHammerPendingProject();
     const assembly = simulateProjectAssembly(catalog, project);
     expect(assembly.evaluation.findings).toContainEqual(
       expect.objectContaining({

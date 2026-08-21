@@ -11,7 +11,6 @@ import { createArcanaFearState } from '../../src/simulation/arcana-fear';
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
 import {
   authorLegalTraitOffers,
-  authorRequiredTestRoomActions,
   replaceTestRoomActionOrder,
 } from '@run-planner/test-fixtures/shared';
 import {
@@ -90,26 +89,20 @@ function createCompleteRepresentativeNOPProject() {
 }
 
 function assembled(project: import('../../src/authored-project').ProjectDocument) {
-  return simulateProjectAssembly(catalog, authorRequiredTestRoomActions(project, catalog));
+  return simulateProjectAssembly(catalog, project);
 }
 
 function orderGoldenGorgonAfterIncoming(
   project: import('../../src/authored-project').ProjectDocument,
 ) {
-  return replaceTestRoomActionOrder(
-    authorRequiredTestRoomActions(project, catalog),
-    catalog,
-    goldenGBiome,
-    goldenGOccurrenceId(1, 1),
-    [
-      {
-        kind: 'interactIncomingReward',
-        producerPoint: 'roomRewardPickup',
-        acquisitionRole: 'source',
-      },
-      { kind: 'interactGorgon', phaseKey: 'Encounter' },
-    ],
-  );
+  return replaceTestRoomActionOrder(project, catalog, goldenGBiome, goldenGOccurrenceId(1, 1), [
+    {
+      kind: 'interactIncomingReward',
+      producerPoint: 'roomRewardPickup',
+      acquisitionRole: 'source',
+    },
+    { kind: 'interactGorgon', phaseKey: 'Encounter' },
+  ]);
 }
 
 describe('Gorgon Amulet lifecycle', () => {
@@ -161,7 +154,7 @@ describe('Gorgon Amulet lifecycle', () => {
     const baseline = simulateProject(catalog, createCompleteFGProject());
     const underworld = baseline.routes.find((route) => route.routeKey === 'Underworld');
     const previous = underworld?.biomes.find((biome) => biome.biomeKey === 'F');
-    const authoredProject = authorRequiredTestRoomActions(project, catalog);
+    const authoredProject = project;
     const route = authoredProject.routes.find((candidate) => candidate.routeKey === 'Underworld');
     const plan = route?.biomes.find((biome) => biome.biomeKey === 'G');
     if (
@@ -967,8 +960,8 @@ describe('Gorgon Amulet lifecycle', () => {
     const previous = baseline.routes
       .find((route) => route.routeKey === 'Surface')
       ?.biomes.find((biome) => biome.biomeKey === 'O');
-    const plan = authorRequiredTestRoomActions(project, catalog)
-      .routes.find((route) => route.routeKey === 'Surface')
+    const plan = project.routes
+      .find((route) => route.routeKey === 'Surface')
       ?.biomes.find((biome) => biome.biomeKey === 'P');
     expect(previous).toBeDefined();
     expect(plan).toBeDefined();

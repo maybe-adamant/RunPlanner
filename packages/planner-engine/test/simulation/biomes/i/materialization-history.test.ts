@@ -31,13 +31,13 @@ import {
 import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
-import { authorRequiredTestRoomActions } from '@run-planner/test-fixtures/shared';
 
 const biome = createBiomeAddress('Underworld', 'I');
 
 interface BatchTargetFixture {
   readonly occurrenceId: OccurrenceId;
   readonly gameName: string;
+  readonly reward?: IncomingRewardValue;
 }
 
 type IncomingRewardValue = Extract<
@@ -46,8 +46,8 @@ type IncomingRewardValue = Extract<
 >['value'];
 
 function plan(project: ProjectDocument): AuthoredBiomePlan {
-  const result = authorRequiredTestRoomActions(project, catalog)
-    .routes.find((route) => route.routeKey === 'Underworld')
+  const result = project.routes
+    .find((route) => route.routeKey === 'Underworld')
     ?.biomes.find((candidate) => candidate.biomeKey === 'I');
   if (result === undefined) {
     throw new Error('fixture lost I plan');
@@ -89,7 +89,7 @@ function appendBatch(
       next = applyProjectCommand(next, catalog, {
         kind: 'ReplaceIncomingReward',
         reward: createIncomingRewardAddress(biome, target.occurrenceId),
-        value: { rewardType: 'RoomMoneyTripleDrop' },
+        value: target.reward ?? { rewardType: 'RoomMoneyTripleDrop' },
       });
     }
   }
@@ -155,7 +155,11 @@ function completeProject(nonGoalOffer?: IncomingRewardValue): ProjectDocument {
     combat03,
     [
       { occurrenceId: occurrence('combat04'), gameName: 'I_Combat04' },
-      { occurrenceId: combat05, gameName: 'I_Combat05' },
+      {
+        occurrenceId: combat05,
+        gameName: 'I_Combat05',
+        ...(nonGoalOffer === undefined ? {} : { reward: nonGoalOffer }),
+      },
     ],
     2,
   );
@@ -200,13 +204,7 @@ function completeProject(nonGoalOffer?: IncomingRewardValue): ProjectDocument {
     [{ occurrenceId: occurrence('entered-preboss'), gameName: 'I_PreBoss02' }],
     1,
   );
-  return nonGoalOffer === undefined
-    ? project
-    : applyProjectCommand(project, catalog, {
-        kind: 'ReplaceIncomingReward',
-        reward: createIncomingRewardAddress(biome, combat05),
-        value: nonGoalOffer,
-      });
+  return project;
 }
 
 function projectWithPickedStory(): ProjectDocument {

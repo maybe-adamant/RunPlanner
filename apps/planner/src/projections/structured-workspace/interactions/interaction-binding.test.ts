@@ -42,10 +42,7 @@ import {
 } from '@run-planner/engine/simulation';
 import { describe, expect, it, vi } from 'vitest';
 
-import {
-  authorLegalTraitOffers,
-  authorRequiredTestRoomActions,
-} from '@run-planner/test-fixtures/shared';
+import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 import {
   createGoldenFGHIProject,
   createCompleteFGProject,
@@ -200,7 +197,7 @@ function bind(
   allocateOccurrenceId = () => createOccurrenceId('interaction-binding-start'),
   candidateSession?: CandidateProjectionSession,
 ) {
-  const authoredProject = authorRequiredTestRoomActions(project, catalog);
+  const authoredProject = project;
   const projectAssembly = simulateProjectAssembly(catalog, authoredProject);
   const evaluation = projectAssembly.evaluation;
   const source = createWorkspaceProjectSourceIndex(

@@ -385,7 +385,7 @@ describe('workspace candidate interaction families', () => {
       throw new Error('F direct entry has no unavailable takeover for this guard');
     }
 
-    expect(unavailableTakeover).toMatchObject({ disabled: true, state: 'unassessed' });
+    expect(unavailableTakeover).toMatchObject({ disabled: true, state: 'impossible' });
     expect(() => interaction.intentFor(unavailableTakeover.value.gameName)).toThrow(
       /not currently authorable/,
     );

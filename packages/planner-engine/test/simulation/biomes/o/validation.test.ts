@@ -1,11 +1,14 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  applyProjectHistoryCommand,
+  assembleRoomActionDomain,
   createBatchRewardStoreAddress,
   createEncounterPhaseAddress,
   createExitDecisionAddress,
   createIncomingRewardAddress,
   createOccurrenceAddress,
+  createProjectHistory,
   createRouteAddress,
   createRewardWheelAddress,
   createRewardWheelOfferAddress,
@@ -14,12 +17,12 @@ import {
   createTraitOfferAddress,
   roomActionKey,
   semanticAddressKey,
+  undoProjectHistory,
 } from '@run-planner/engine/authored-project';
 import {
   createPreparedProjectCandidateSession,
   evaluateBiomeCompleteness,
   materializeBiome,
-  roomActionContributions,
   simulateProjectAssembly,
   simulateProject,
 } from '@run-planner/engine/simulation';
@@ -87,6 +90,111 @@ function materializedORoom(
 }
 
 describe('selected O validation', () => {
+  it('adds the third-phase required cohort atomically and reuses retained ranks after reactivation', () => {
+    const occurrence = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
+    const initial = loadSurfaceNOProject();
+    const beforeOrder = initial.routes
+      .find((route) => route.routeKey === 'Surface')
+      ?.biomes.find((plan) => plan.biomeKey === 'O')
+      ?.topology?.occurrences.find(
+        (candidate) => candidate.occurrenceId === oOccurrenceIds.combat07,
+      )?.roomActions.order;
+    if (beforeOrder === undefined) throw new Error('two-phase Ship order is missing');
+    const initialHistory = createProjectHistory(initial);
+    const expandedHistory = applyProjectHistoryCommand(initialHistory, catalog, {
+      kind: 'ReplaceShipEncounterCount',
+      occurrence,
+      encounterCount: 3,
+    });
+    const expanded = expandedHistory.present;
+    const expandedOrder = expanded.routes
+      .find((route) => route.routeKey === 'Surface')
+      ?.biomes.find((plan) => plan.biomeKey === 'O')
+      ?.topology?.occurrences.find(
+        (candidate) => candidate.occurrenceId === oOccurrenceIds.combat07,
+      )?.roomActions.order;
+    expect(expandedHistory.past).toHaveLength(1);
+    expect(expandedOrder).toEqual([
+      ...beforeOrder,
+      { kind: 'chooseRewardWheel', wheelKey: 'wheel2' },
+      { kind: 'interactWheelReward', wheelKey: 'wheel2' },
+    ]);
+    expect(
+      materializedORoom(expanded, oOccurrenceIds.combat07).roomLifecycleTimeline.entries,
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: 'action',
+          action: expect.objectContaining({
+            key: roomActionKey({ kind: 'chooseRewardWheel', wheelKey: 'wheel2' }),
+          }),
+        }),
+        expect.objectContaining({
+          kind: 'action',
+          action: expect.objectContaining({
+            key: roomActionKey({ kind: 'interactWheelReward', wheelKey: 'wheel2' }),
+          }),
+        }),
+      ]),
+    );
+    expect(undoProjectHistory(expandedHistory).present).toBe(initialHistory.present);
+
+    const reduced = applyProjectCommand(expanded, catalog, {
+      kind: 'ReplaceShipEncounterCount',
+      occurrence,
+      encounterCount: 2,
+    });
+    const restored = applyProjectCommand(reduced, catalog, {
+      kind: 'ReplaceShipEncounterCount',
+      occurrence,
+      encounterCount: 3,
+    });
+    const restoredOrder = restored.routes
+      .find((route) => route.routeKey === 'Surface')
+      ?.biomes.find((plan) => plan.biomeKey === 'O')
+      ?.topology?.occurrences.find(
+        (candidate) => candidate.occurrenceId === oOccurrenceIds.combat07,
+      )?.roomActions.order;
+    expect(restoredOrder).toEqual(expandedOrder);
+  });
+
+  it('adds a newly required contact without repairing an unrelated retained Ship timing error', () => {
+    const occurrence = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
+    let project = applyProjectCommand(loadSurfaceNOProject(), catalog, {
+      kind: 'ReplaceShipEncounterCount',
+      occurrence,
+      encounterCount: 3,
+    });
+    const wheel2Choice = { kind: 'chooseRewardWheel' as const, wheelKey: 'wheel2' };
+    project = applyProjectCommand(project, catalog, {
+      kind: 'MoveRoomAction',
+      action: createRoomActionAddress(oBiome, oOccurrenceIds.combat07, roomActionKey(wheel2Choice)),
+      toIndex: 0,
+    });
+    const invalidBefore = materializedORoom(project, oOccurrenceIds.combat07);
+    expect(invalidBefore.roomActionRoster.issues).toContainEqual(
+      expect.objectContaining({ kind: 'window' }),
+    );
+    const retainedOrder = invalidBefore.roomActions.order;
+
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SelectEncounter',
+      phase: createEncounterPhaseAddress(oBiome, occurrence, 'Combat2'),
+      encounterKey: 'IcarusCombatO',
+    });
+    const after = materializedORoom(project, oOccurrenceIds.combat07);
+    const contact = { kind: 'interactEncounter' as const, phaseKey: 'Combat2' };
+    expect(
+      after.roomActions.order.filter(
+        (reference) => roomActionKey(reference) !== roomActionKey(contact),
+      ),
+    ).toEqual(retainedOrder);
+    expect(after.roomActions.order).toContainEqual(contact);
+    expect(after.roomActionRoster.issues).toContainEqual(
+      expect.objectContaining({ kind: 'window' }),
+    );
+  });
+
   it('validates the complete N/O prefix with exact Ship support and forced Preboss pressure', () => {
     const { project, evaluation, biome: o } = evaluateO();
 
@@ -205,30 +313,23 @@ describe('selected O validation', () => {
       { kind: 'chooseRewardWheel', wheelKey: 'wheel2' },
       { kind: 'interactWheelReward', wheelKey: 'wheel2' },
     ]);
-    const declaration = catalog.rooms.byKey[room.gameName];
-    if (declaration === undefined) throw new Error('Ship declaration is missing');
-    const activeReferences = room.roomActionRoster.rows
-      .filter((row) => !row.stale)
-      .map((row) => row.reference);
-    expect(() =>
-      roomActionContributions({
-        catalog,
-        declaration,
-        room,
-        activeReferences: [
-          ...activeReferences,
-          { kind: 'interactAcquisitionEntry', siteKey: 'missing', entryKey: 'missing' },
-        ],
-      }),
-    ).toThrow(/invented=\[\] missing=\[/);
-    expect(() =>
-      roomActionContributions({
-        catalog,
-        declaration,
-        room,
-        activeReferences: activeReferences.slice(1),
-      }),
-    ).toThrow(/invented=\[/);
+    const authoredOccurrence = project.routes
+      .find((route) => route.routeKey === 'Surface')
+      ?.biomes.find((plan) => plan.biomeKey === 'O')
+      ?.topology?.occurrences.find(
+        (candidate) => candidate.occurrenceId === oOccurrenceIds.combat07,
+      );
+    if (authoredOccurrence === undefined) throw new Error('authored Ship occurrence is missing');
+    const domain = assembleRoomActionDomain({
+      catalog,
+      biome: oBiome,
+      occurrence: authoredOccurrence,
+    });
+    expect(
+      domain.contributions
+        .filter((entry) => entry.kind === 'action')
+        .map((entry) => roomActionKey(entry.reference)),
+    ).toEqual(room.roomActionRoster.rows.filter((row) => !row.stale).map((row) => row.key));
     expect(room.roomActionRoster.checkpoints).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ checkpointKey: 'combat:Combat1', afterRank: 2 }),
@@ -256,10 +357,9 @@ describe('selected O validation', () => {
 
     const wheel2Choice = { kind: 'chooseRewardWheel' as const, wheelKey: 'wheel2' };
     const invalidOrder = applyProjectCommand(project, catalog, {
-      kind: 'InsertRoomAction',
+      kind: 'MoveRoomAction',
       action: createRoomActionAddress(oBiome, oOccurrenceIds.combat07, roomActionKey(wheel2Choice)),
-      reference: wheel2Choice,
-      index: 0,
+      toIndex: 0,
     });
     const invalidRoom = materializedORoom(invalidOrder, oOccurrenceIds.combat07);
     expect(invalidRoom.roomActionRoster.issues).toContainEqual(
@@ -481,6 +581,37 @@ describe('selected O validation', () => {
         },
       },
     });
+    for (const [occurrenceId, references] of [
+      [
+        oOccurrenceIds.devotion,
+        [
+          {
+            kind: 'interactIncomingReward' as const,
+            producerPoint: 'beforeCombat',
+            acquisitionRole: 'chosenSource',
+          },
+          {
+            kind: 'interactIncomingReward' as const,
+            producerPoint: 'afterCombat',
+            acquisitionRole: 'spurnedSource',
+          },
+        ],
+      ],
+      [
+        oOccurrenceIds.combat02,
+        [
+          { kind: 'chooseRewardWheel' as const, wheelKey: 'wheel1' },
+          { kind: 'interactWheelReward' as const, wheelKey: 'wheel1' },
+        ],
+      ],
+    ] as const) {
+      for (const reference of references) {
+        project = applyProjectCommand(project, catalog, {
+          kind: 'RemoveRoomAction',
+          action: createRoomActionAddress(oBiome, occurrenceId, roomActionKey(reference)),
+        });
+      }
+    }
     project = applyProjectCommand(project, catalog, {
       kind: 'CreateBatch',
       decision: terminalDecision,
