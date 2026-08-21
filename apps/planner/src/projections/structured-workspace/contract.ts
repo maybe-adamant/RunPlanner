@@ -287,6 +287,8 @@ export interface WorkspaceRewardInteraction {
 }
 
 /** One exact authored trait child beneath a reward owner. */
+export type WorkspaceTraitOfferStatus = 'unspecified' | 'invalid' | 'valid';
+
 export interface WorkspaceTraitOfferControl {
   /** Player-facing acquisition role (for example, Chosen God or Spurned God). */
   readonly acquisitionRoleLabel: string;
@@ -294,6 +296,8 @@ export interface WorkspaceTraitOfferControl {
   readonly giver: TraitGiverDeclaration;
   readonly marker: WorkspaceMarker;
   readonly offer: AuthoredTraitOffer | null;
+  /** Projection-owned compact state for the trait launcher presentation. */
+  readonly status: WorkspaceTraitOfferStatus;
   /** False for a declaration/chronology-resolved rarity such as Gorgon Athena. */
   readonly rarityEditable?: boolean;
   readonly rewardOwner: SemanticAddress;
@@ -1108,9 +1112,15 @@ export interface WorkspaceRoomActionRow {
   readonly reference: RoomActionReference;
   readonly participation: 'required' | 'optional';
   readonly rank: number | null;
+  /** Artificer output identity authored at this source transformation checkpoint. */
+  readonly artificerOutput?: {
+    readonly control: WorkspaceRewardControl;
+    readonly label: 'Artificer item';
+  };
   /** Exact action-owned reward payload, never rediscovered from a rendered key. */
   readonly rewardPayload?: {
     readonly control: WorkspaceRewardControl;
+    readonly showOwner: boolean;
     readonly showOffer: boolean;
   };
   readonly stale: boolean;
@@ -1141,7 +1151,9 @@ export interface WorkspaceRoomActions {
   readonly owner: OccurrenceAddress;
   readonly proposals: readonly WorkspaceRoomActionProposal[];
   readonly rows: readonly WorkspaceRoomActionRow[];
-  /** Retained stale/unranked rows rendered once outside active lifecycle order. */
+  /** Active optional actions that have not been inserted into the lifecycle order. */
+  readonly optionalRows: readonly WorkspaceRoomActionRow[];
+  /** Missing required or retained stale rows rendered once outside active lifecycle order. */
   readonly repairRows: readonly WorkspaceRoomActionRow[];
 }
 
@@ -1429,6 +1441,8 @@ export interface WorkspaceShipPhasePresentation {
   readonly encounter?: WorkspaceEncounterPhase;
   readonly key: string;
   readonly label: string;
+  /** Active optional actions owned by this phase but not yet inserted. */
+  readonly optionalRows: readonly WorkspaceRoomActionRow[];
   readonly wheel?: WorkspaceRewardWheelDescriptor;
 }
 

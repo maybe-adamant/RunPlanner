@@ -701,7 +701,7 @@ describe('HubDecisionWorkbench', () => {
     renderHubDecisionWorkbench(project);
     const story = screen.getByRole('article', { name: 'Medea Hub room' });
 
-    expect(within(story).queryByRole('button', { name: /^Edit Trait:/ })).toBeNull();
+    expect(within(story).queryByRole('button', { name: /^Edit Trait/ })).toBeNull();
     expect(within(story).getByRole('button', { name: 'Open details for Medea' })).toBeTruthy();
   });
 

@@ -325,7 +325,8 @@ describe('planner history interaction', () => {
 
     const traitAddress = createTraitOfferAddress(phase, 'selection');
     const roomActions = screen.getByRole('region', { name: 'Room Timeline' });
-    const traitLauncher = within(roomActions).getByRole('button', { name: /Edit Trait:/ });
+    const traitLauncher = within(roomActions).getByRole('button', { name: /Edit Trait/ });
+    expect(traitLauncher.getAttribute('data-trait-status')).toBe('valid');
     await view.user.click(traitLauncher);
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByRole('heading', { level: 2 }).textContent).toBe('Artemis');
@@ -354,7 +355,7 @@ describe('planner history interaction', () => {
       historyBeforeSave.past.length + 1,
     );
 
-    await view.user.click(within(roomActions).getByRole('button', { name: /Edit Trait:/ }));
+    await view.user.click(within(roomActions).getByRole('button', { name: /Edit Trait/ }));
     const completedDialog = await screen.findByRole('dialog');
     await view.user.click(
       within(completedDialog).getByRole('button', { name: 'Reset to unresolved' }),
@@ -381,7 +382,7 @@ describe('planner history interaction', () => {
     const view = renderPlannerForInteraction({ application });
 
     await view.user.click(screen.getByRole('button', { name: 'Traits' }));
-    const launcher = screen.getAllByRole('button', { name: /Edit Trait:/ })[0];
+    const launcher = screen.getAllByRole('button', { name: /Edit Trait/ })[0];
     if (launcher === undefined) throw new Error('route trait launcher is missing');
     launcher.focus();
     await view.user.keyboard('{Enter}');
@@ -413,7 +414,7 @@ describe('planner history interaction', () => {
     const view = renderPlannerForInteraction({ application });
 
     await view.user.click(screen.getByRole('button', { name: 'Traits' }));
-    const launcher = screen.getAllByRole('button', { name: /Edit Trait:/ })[0];
+    const launcher = screen.getAllByRole('button', { name: /Edit Trait/ })[0];
     if (launcher === undefined) throw new Error('route trait launcher is missing');
     await view.user.click(launcher);
     const dialog = await screen.findByRole('dialog');

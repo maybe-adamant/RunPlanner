@@ -455,6 +455,12 @@ describe('structured workspace occurrence assembly', () => {
         (row) => row.reference.kind === 'interactLocalReward' && row.reference.groupKey !== 'cages',
       )?.rewardPayload?.showOffer,
     ).toBe(false);
+    expect(
+      roomActions.optionalRows.map((row) =>
+        row.reference.kind === 'interactLocalReward' ? row.reference.slotKey : row.reference.kind,
+      ),
+    ).toEqual(['optional1', 'optional2']);
+    expect(roomActions.repairRows).toEqual([]);
     expect(roomActions.proposals.length).toBeGreaterThan(0);
     expect(fields.node.room.localDetailMarkers).toContain(roomActions.rows[0]?.marker);
     expect(fields.occurrenceInteractionRequirements).toContainEqual(
