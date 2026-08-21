@@ -19,6 +19,7 @@ import {
   type WorkspaceRailSelectedTarget,
   type WorkspaceRoomSummary,
   type WorkspaceRunStateLauncher,
+  type WorkspaceSelectedContinuationNavigation,
   type WorkspaceTakeoverBatchNode,
 } from '../contract';
 import { bindWorkspaceInspectorDestinations } from '../navigation/inspector-destinations';
@@ -155,6 +156,12 @@ function entryRailReward(
   catalog: Catalog,
   room: WorkspaceRoomSummary,
 ): WorkspaceRailReward | undefined {
+  if (room.entryReward?.offer !== null && room.entryReward?.offer !== undefined) {
+    return Object.freeze({
+      label: summarizeRewardOffer(catalog, room.entryReward.offer),
+      offer: room.entryReward.offer,
+    });
+  }
   if (room.roomLocal.kind === 'fixed') {
     return room.roomLocal.offer === null
       ? undefined
@@ -169,18 +176,47 @@ function entryRailReward(
   });
 }
 
+type BatchWithContinuations =
+  WorkspaceOrdinaryBatchNode | WorkspaceMixedBatchNode | WorkspaceTakeoverBatchNode;
+
+function selectedContinuationDoor(node: BatchWithContinuations): WorkspaceDoorContract | undefined {
+  const selectedDoors = [
+    ...node.targets.filter((target) => target.selected).map((target) => target.door),
+    ...(node.zagreusContract?.selected === true ? [node.zagreusContract.door] : []),
+    ...(node.naturalChaos?.selected === true ? [node.naturalChaos.door] : []),
+  ];
+  return selectedDoors.length === 1 ? selectedDoors[0] : undefined;
+}
+
+function selectedContinuationNavigation(
+  node: BatchWithContinuations,
+): WorkspaceSelectedContinuationNavigation | undefined {
+  const door = selectedContinuationDoor(node);
+  return door === undefined ? undefined : Object.freeze({ door, marker: door.room.marker });
+}
+
+function withSelectedContinuationNavigation(node: WorkspaceNode): WorkspaceNode {
+  if (
+    node.kind !== 'ordinaryBatch' &&
+    node.kind !== 'mixedBatch' &&
+    node.kind !== 'takeoverBatch'
+  ) {
+    return node;
+  }
+  if (node.source.kind === 'hubDecision') return node;
+  const selectedContinuation = selectedContinuationNavigation(node);
+  return Object.freeze({
+    ...node,
+    ...(selectedContinuation === undefined ? {} : { selectedContinuation }),
+  });
+}
+
 function selectedTargetRailPresentation(
   node: WorkspaceOrdinaryBatchNode | WorkspaceMixedBatchNode,
 ): WorkspaceRailSelectedTarget | undefined {
-  const selectedTargets = node.targets.filter((target) => target.selected);
-  if (selectedTargets.length !== 1) return undefined;
-  const [target] = selectedTargets;
-  if (target === undefined) {
-    throw new StructuredWorkspaceProjectionContractError(
-      `${node.key} has no selected target after cardinality check`,
-    );
-  }
-  const visible = target.door.rewardPreview;
+  const door = node.selectedContinuation?.door;
+  if (door === undefined) return undefined;
+  const visible = door.rewardPreview;
   const onlyReward =
     visible.kind === 'visible' && visible.rewards.length === 1 ? visible.rewards[0] : undefined;
   const reward =
@@ -189,7 +225,7 @@ function selectedTargetRailPresentation(
       : Object.freeze({ label: onlyReward.summary, offer: onlyReward.offer });
   return Object.freeze({
     ...(reward === undefined ? {} : { reward }),
-    roomLabel: target.door.room.label,
+    roomLabel: door.room.label,
   });
 }
 
@@ -202,6 +238,7 @@ function railFocusMarkerForNode(node: WorkspaceNode, marker: WorkspaceMarker): W
   ) {
     return marker;
   }
+  if (node.selectedContinuation !== undefined) return node.selectedContinuation.marker;
   const selectedTargets = node.targets.filter((target) => target.selected);
   return selectedTargets.length === 1 && selectedTargets[0] !== undefined
     ? selectedTargets[0].room.marker
@@ -297,18 +334,25 @@ export function presentWorkspaceBiome(
   catalog: Catalog,
   semantic: WorkspaceBiomeSemanticAssembly,
 ): WorkspaceBiomePresentation {
-  const { entry, frontier, structuralNodes } = semantic;
+  const { entry, frontier } = semantic;
+  const structuralNodes = semantic.structuralNodes.map(withSelectedContinuationNavigation);
   // A normal decision is itself a rail stop, so its authored target rooms stay
   // inside that decision card. A Hub-owned completed handoff is deliberately
   // different: its decision scaffold is suppressed in favor of the target
   // room's structural rail stage.
-  const normalDecisionTargetOccurrenceIds = new Set(
+  const decisionContinuationOccurrenceIds = new Set(
     structuralNodes.flatMap((node) =>
       (node.kind === 'ordinaryBatch' ||
         node.kind === 'mixedBatch' ||
         node.kind === 'takeoverBatch') &&
       node.source.kind !== 'hubDecision'
-        ? node.targets.map((target) => target.room.occurrenceId)
+        ? [
+            ...node.targets.map((target) => target.room.occurrenceId),
+            ...(node.zagreusContract === undefined
+              ? []
+              : [node.zagreusContract.door.room.occurrenceId]),
+            ...(node.naturalChaos === undefined ? [] : [node.naturalChaos.door.room.occurrenceId]),
+          ]
         : [],
     ),
   );
@@ -326,7 +370,7 @@ export function presentWorkspaceBiome(
       // Ordinary room offers belong inside their owning decision workbench,
       // including N's normalized PreHub target. Fixed entry and Hub-handoff
       // stages remain standalone rail context.
-      if (normalDecisionTargetOccurrenceIds.has(node.room.occurrenceId)) return false;
+      if (decisionContinuationOccurrenceIds.has(node.room.occurrenceId)) return false;
       return semantic.progressionKind === 'hub' || node.key === entry?.key;
     })
     .filter(
@@ -361,11 +405,13 @@ export function presentWorkspaceBiome(
     const marker =
       node.kind === 'takeoverBatch' ? decisionRailMarker(node) : railMarkerForNode(node);
     const mainReward =
-      semantic.progressionKind === 'hub' && node.kind === 'occurrenceWorkbench'
-        ? node.key === entry?.key
+      node.kind !== 'occurrenceWorkbench'
+        ? undefined
+        : node.key === entry?.key
           ? entryRailReward(catalog, node.room)
-          : mainRailRewardForDoor(node.incomingDoor)
-        : undefined;
+          : semantic.progressionKind === 'hub'
+            ? mainRailRewardForDoor(node.incomingDoor)
+            : undefined;
     return Object.freeze({
       kind: 'node' as const,
       focusMarker: railFocusMarkerForNode(node, marker),
@@ -396,7 +442,10 @@ export function presentWorkspaceBiome(
   }
   const titledStructuralNodes = Object.freeze(
     semantic.nodes.map((node) =>
-      titledNode(node, titleByNodeKey.get(node.key) ?? nodeRailPresentation(node, undefined).label),
+      titledNode(
+        withSelectedContinuationNavigation(node),
+        titleByNodeKey.get(node.key) ?? nodeRailPresentation(node, undefined).label,
+      ),
     ),
   );
   const handoffRunStateByOccurrence = new Map<OccurrenceId, WorkspaceRunStateLauncher>();

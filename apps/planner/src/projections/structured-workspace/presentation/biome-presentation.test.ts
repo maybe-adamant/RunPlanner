@@ -1,11 +1,15 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  createAdditionalExitAddress,
   createBiomeAddress,
   createEchoKeepsakeReplayAddress,
   createHubDecisionAddress,
   createExitDecisionAddress,
+  createExitSelectionAddress,
   createKeepsakeEquipResultAddress,
+  createOccurrenceAddress,
+  createOccurrenceId,
   createProjectDocument,
   semanticAddressKey,
   type ProjectDocument,
@@ -23,6 +27,7 @@ import {
   loadSurfaceNOPQProject,
   nBiome,
   nOccurrenceId,
+  nOccurrenceIds,
   nVisitSlotKeys,
 } from '@run-planner/test-fixtures/surface';
 import type {
@@ -354,6 +359,52 @@ describe('structured workspace biome presentation', () => {
       inspectorSubject: { kind: 'node', nodeKey: decision.key },
       selectedRailKey: rail.marker.focusKey,
     });
+  });
+
+  it('keeps selected N Opening Chaos on its decision rail stop without a duplicate room stop', () => {
+    const source = {
+      kind: 'occurrence' as const,
+      occurrenceId: nOccurrenceIds.opening,
+    };
+    const owner = createExitDecisionAddress(nBiome, source);
+    const additional = createAdditionalExitAddress(nBiome, source.occurrenceId, 'naturalChaos');
+    const chaosOccurrenceId = createOccurrenceId('presentation-n-opening-chaos');
+    let project = applyProjectCommand(loadSurfaceNProject(), catalog, {
+      kind: 'RemoveExitDecision',
+      decision: owner,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'AddNaturalChaos',
+      additional,
+      occurrenceId: chaosOccurrenceId,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetExitSelection',
+      selection: createExitSelectionAddress(nBiome, source),
+      value: { kind: 'additional', additionalExitKey: 'naturalChaos' },
+    });
+
+    const biome = present(project, 'Surface', 'N').presentation.biome;
+    const decision = biome.rail.find(
+      (entry): entry is Extract<WorkspaceRailEntry, { readonly kind: 'node' }> =>
+        entry.kind === 'node' &&
+        (entry.node.kind === 'ordinaryBatch' || entry.node.kind === 'mixedBatch') &&
+        semanticAddressKey(entry.node.owner) === semanticAddressKey(owner),
+    );
+    if (decision === undefined) throw new Error('N Opening decision rail entry is missing');
+
+    expect(decision.focusMarker.address).toEqual(
+      createOccurrenceAddress(nBiome, chaosOccurrenceId),
+    );
+    expect(decision.selectedTarget?.roomLabel).toMatch(/^Chaos/);
+    expect(
+      biome.rail.filter(
+        (entry) =>
+          entry.kind === 'node' &&
+          entry.node.kind === 'occurrenceWorkbench' &&
+          entry.node.room.occurrenceId === chaosOccurrenceId,
+      ),
+    ).toHaveLength(0);
   });
 
   it('progressively presents one selected room and its direct reward token', () => {

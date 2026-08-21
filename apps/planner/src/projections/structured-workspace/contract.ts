@@ -1581,6 +1581,12 @@ export interface WorkspacePhysicalTarget {
   };
 }
 
+/** One selected door continuation, shared by rail and decision navigation. */
+export interface WorkspaceSelectedContinuationNavigation {
+  readonly door: WorkspaceDoorContract;
+  readonly marker: WorkspaceMarker;
+}
+
 export type WorkspaceMissingTargetAuthoring =
   | { readonly kind: 'ready' }
   | {
@@ -1641,6 +1647,8 @@ interface WorkspaceBatchNodeBase {
   readonly repairIntent?: WorkspaceBatchRepairIntent;
   readonly rewardStore?: WorkspaceMarker;
   readonly selection: WorkspaceMarker;
+  /** Present only when exactly one normal or additional occurrence is selected. */
+  readonly selectedContinuation?: WorkspaceSelectedContinuationNavigation;
   readonly source: ExitDecisionSourceAddress;
   readonly targets: readonly WorkspacePhysicalTarget[];
   readonly topologyState: 'complete' | 'partial' | 'retained';
