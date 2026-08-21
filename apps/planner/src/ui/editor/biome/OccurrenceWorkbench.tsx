@@ -941,7 +941,6 @@ function RoomActionsWorkbench({
   ) => (
     <Fragment key={entry.boundary.key}>
       <LifecycleBoundaryRow boundary={entry.boundary} />
-      {entry.runState === undefined ? null : <RunStateLauncher launcher={entry.runState} />}
       {boundarySupplement(entry.boundary)}
     </Fragment>
   );
@@ -1128,6 +1127,7 @@ function RoomActionsWorkbench({
                 control={rewardPayload.control}
                 idPrefix={`room-action-${rewardPayload.control.marker.focusKey}`}
                 interactions={interactions}
+                showAcquisitionChildren
                 showOffer={rewardPayload.showOffer}
               />
             </div>
@@ -1757,6 +1757,33 @@ function DirectRoomWorkbench({
   }
 }
 
+function IncomingRewardOverview({
+  incomingDoor,
+}: {
+  readonly incomingDoor: WorkspaceDoorContract | undefined;
+}) {
+  if (incomingDoor === undefined) return null;
+  const preview = incomingDoor.rewardPreview;
+  const label =
+    preview.kind === 'visible' && preview.rewards.length > 1
+      ? 'Incoming Rewards'
+      : 'Incoming Reward';
+  const summary =
+    preview.kind === 'hidden'
+      ? 'Hidden'
+      : preview.kind === 'none'
+        ? 'None'
+        : preview.rewards.length === 0
+          ? 'None'
+          : preview.rewards.map((reward) => reward.summary).join(', ');
+  return (
+    <section aria-label="Incoming reward" className="room-overview-incoming-reward">
+      <span className="room-overview-incoming-label">{label}</span>
+      <strong>{summary}</strong>
+    </section>
+  );
+}
+
 /** A room-local editor that consumes the structured workspace only. */
 export function OccurrenceWorkbench({
   doors,
@@ -1845,31 +1872,13 @@ export function OccurrenceWorkbench({
       {label}
     </button>
   );
-  const incomingRewards =
-    incomingDoor?.rewardPreview.kind === 'visible' ? incomingDoor.rewardPreview.rewards : [];
-  const incomingRewardSummary = incomingRewards.map((reward) => reward.summary).join(', ');
-  const heading =
-    incomingRewardSummary === ''
-      ? `Entering ${room.label}`
-      : `Entering ${room.label} · ${
-          incomingRewards.length === 1 ? 'Incoming Reward' : 'Incoming Rewards'
-        }: ${incomingRewardSummary}`;
+  const heading = `Entering ${room.label}`;
+  const tabRunState = room.runStateByTab[activeTab];
 
   return (
     <article className="room-card biome-occurrence-workbench">
       <header className="room-card-heading">
-        <h3 aria-label={heading}>
-          <span>Entering {room.label}</span>
-          {incomingRewardSummary === '' ? null : (
-            <span aria-hidden="true" className="room-heading-incoming-reward">
-              <span className="room-heading-separator">·</span>
-              <span className="room-heading-incoming-label">
-                {incomingRewards.length === 1 ? 'Incoming Reward' : 'Incoming Rewards'}:
-              </span>
-              <strong>{incomingRewardSummary}</strong>
-            </span>
-          )}
-        </h3>
+        <h3 aria-label={heading}>{heading}</h3>
         <div className="owner-markers">
           <SemanticOwnerMarker address={room.address} />
           {runState === undefined ? null : <RunStateLauncher launcher={runState} />}
@@ -1900,8 +1909,14 @@ export function OccurrenceWorkbench({
         id={panelId}
         role="tabpanel"
       >
+        {tabRunState === undefined ? null : (
+          <div className="room-tab-utility-bar">
+            <RunStateLauncher launcher={tabRunState} />
+          </div>
+        )}
         {activeTab === 'overview' ? (
           <>
+            <IncomingRewardOverview incomingDoor={incomingDoor} />
             <AnomalyClearedControl room={room} />
             <DirectRoomWorkbench
               idPrefix={idPrefix}
@@ -1912,12 +1927,7 @@ export function OccurrenceWorkbench({
             />
           </>
         ) : activeTab === 'doors' ? (
-          <>
-            {room.beforeExitRunState === undefined ? null : (
-              <RunStateLauncher launcher={room.beforeExitRunState} />
-            )}
-            {doors ?? <p className="fixed-room-state">No outgoing doors for this room.</p>}
-          </>
+          (doors ?? <p className="fixed-room-state">No outgoing doors for this room.</p>)
         ) : activeTab === 'shipInactiveRepair' && room.workbench.kind === 'ship' ? (
           <RoomActionsWorkbench
             {...(room.workbench.roomActions === undefined

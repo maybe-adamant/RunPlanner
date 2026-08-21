@@ -1491,8 +1491,8 @@ export interface WorkspaceRoomSummary {
   readonly occurrenceId: OccurrenceId;
   readonly roomLocal: WorkspaceRoomLocal;
   readonly workbench: WorkspaceRoomWorkbenchPresentation;
-  /** Literal state immediately before this entered occurrence exits. */
-  readonly beforeExitRunState?: WorkspaceRunStateLauncher;
+  /** Closed tab placement for engine-owned lifecycle snapshots. */
+  readonly runStateByTab: Readonly<Partial<Record<WorkspaceRoomTab, WorkspaceRunStateLauncher>>>;
   /** One shared entered-room chronology across every semantic participant. */
   readonly roomActions?: WorkspaceRoomActions;
   /**

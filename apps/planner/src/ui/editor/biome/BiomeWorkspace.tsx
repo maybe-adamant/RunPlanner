@@ -816,14 +816,12 @@ function StartRoomIdentityEditor({
       )}
       {node.room.entryReward === undefined ? null : (
         <div aria-label="Entry reward" className="start-room-entry-reward">
-          <div className="local-reward-heading">
-            <h4>Entry reward</h4>
-          </div>
           <RewardControlEditor
             control={node.room.entryReward}
             idPrefix={`start-${node.room.occurrenceId}-entry-reward`}
             interactions={interactions}
             label="Reward"
+            showAcquisitionChildren={false}
           />
         </div>
       )}

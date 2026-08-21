@@ -1987,6 +1987,14 @@ select {
   min-width: 0;
 }
 
+.room-tab-utility-bar {
+  align-items: center;
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 0.55rem;
+  min-height: 1.8rem;
+}
+
 .room-action-lifecycle-boundary {
   align-items: center;
   background: rgb(255 255 255 / 3%);
@@ -1998,21 +2006,22 @@ select {
   padding: 0.35rem 0.6rem;
 }
 
-.room-heading-incoming-reward {
-  display: inline-flex;
+.room-overview-incoming-reward {
   align-items: center;
+  background: rgb(255 255 255 / 3%);
+  border: 1px solid #353640;
+  border-radius: 8px;
+  display: flex;
   gap: 5px;
   color: #f4e4c3;
   font-size: 0.78rem;
   line-height: 1.25;
+  margin-bottom: 0.7rem;
+  min-height: 2.2rem;
+  padding: 0.45rem 0.65rem;
 }
 
-.room-heading-separator {
-  color: #736c79;
-  font-weight: 400;
-}
-
-.room-heading-incoming-label {
+.room-overview-incoming-label {
   color: #d6ad6b;
   font-size: 0.74rem;
   font-weight: 650;

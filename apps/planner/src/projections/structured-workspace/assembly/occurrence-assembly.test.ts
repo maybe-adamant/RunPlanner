@@ -477,7 +477,12 @@ describe('structured workspace occurrence assembly', () => {
       availability: 'available',
       owner: { kind: 'roomRunStateCheckpoint', checkpoint: { kind: 'roomEntered' } },
     });
-    expect(fields.node.room.beforeExitRunState).toMatchObject({
+    expect(fields.node.room.runStateByTab.overview).toBe(fields.node.room.runStateByTab.actions);
+    expect(fields.node.room.runStateByTab.overview).toMatchObject({
+      availability: 'available',
+      owner: { kind: 'roomRunStateCheckpoint', checkpoint: { kind: 'roomEntered' } },
+    });
+    expect(fields.node.room.runStateByTab.doors).toMatchObject({
       availability: 'available',
       owner: { kind: 'roomRunStateCheckpoint', checkpoint: { kind: 'beforeRoomExit' } },
     });
@@ -595,6 +600,19 @@ describe('structured workspace occurrence assembly', () => {
         checkpoint: { kind: 'beforeEncounterStart', phaseKey: phase.address.phaseKey },
       })),
     );
+    expect(ship.node.room.runStateByTab.overview).toBe(
+      ship.node.room.runStateByTab.shipIntroActions,
+    );
+    expect(ship.node.room.runStateByTab.shipIntroActions?.owner).toMatchObject({
+      checkpoint: { kind: 'beforeEncounterStart', phaseKey: 'Intro' },
+    });
+    expect(ship.node.room.runStateByTab.shipCombat1Actions?.owner).toMatchObject({
+      checkpoint: { kind: 'beforeEncounterStart', phaseKey: 'Combat1' },
+    });
+    expect(ship.node.room.runStateByTab.doors?.owner).toMatchObject({
+      checkpoint: { kind: 'beforeRoomExit' },
+    });
+    expect(ship.node.room.runStateByTab.shipInactiveRepair).toBeUndefined();
     expect(ship.runStateLaunchers).toHaveLength(ship.node.room.encounterPhases.length + 1);
     expect(
       ship.runStateLaunchers.some(

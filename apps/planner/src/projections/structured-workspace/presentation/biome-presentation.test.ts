@@ -138,14 +138,11 @@ describe('structured workspace biome presentation', () => {
     expect(
       occurrences.every(
         (node) =>
-          node.room.roomActions?.timeline.entries.some(
-            (entry) =>
-              entry.kind === 'boundary' &&
-              entry.runState?.owner.kind === 'roomRunStateCheckpoint' &&
-              entry.runState.owner.checkpoint.kind === 'roomEntered',
-          ) === true &&
-          node.room.beforeExitRunState?.owner.kind === 'roomRunStateCheckpoint' &&
-          node.room.beforeExitRunState.owner.checkpoint.kind === 'beforeRoomExit',
+          node.room.runStateByTab.overview === node.room.runStateByTab.actions &&
+          node.room.runStateByTab.overview?.owner.kind === 'roomRunStateCheckpoint' &&
+          node.room.runStateByTab.overview.owner.checkpoint.kind === 'roomEntered' &&
+          node.room.runStateByTab.doors?.owner.kind === 'roomRunStateCheckpoint' &&
+          node.room.runStateByTab.doors.owner.checkpoint.kind === 'beforeRoomExit',
       ),
     ).toBe(true);
   });

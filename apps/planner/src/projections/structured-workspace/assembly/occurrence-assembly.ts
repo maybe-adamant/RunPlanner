@@ -1581,6 +1581,49 @@ function projectRoomLifecycleTimeline(
   });
 }
 
+function roomTabForPhase(roomLocal: WorkspaceRoomLocal, phaseKey: string): WorkspaceRoomTab {
+  if (roomLocal.kind !== 'ship') return 'actions';
+  switch (roomLocal.phases.findIndex((phase) => phase.key === phaseKey)) {
+    case 0:
+      return 'shipIntroActions';
+    case 1:
+      return 'shipCombat1Actions';
+    case 2:
+      return 'shipCombat2Actions';
+    default:
+      return 'actions';
+  }
+}
+
+function roomRunStateByTab(
+  roomLocal: WorkspaceRoomLocal,
+  roomActions: WorkspaceRoomActions | undefined,
+  beforeExit: WorkspaceRunStateLauncher | undefined,
+): Readonly<Partial<Record<WorkspaceRoomTab, WorkspaceRunStateLauncher>>> {
+  const byTab: Partial<Record<WorkspaceRoomTab, WorkspaceRunStateLauncher>> = {};
+  const lifecycleLaunchers = (roomActions?.timeline.entries ?? []).flatMap((entry) =>
+    entry.kind === 'boundary' && entry.runState !== undefined
+      ? [{ boundary: entry.boundary, launcher: entry.runState }]
+      : [],
+  );
+  if (roomLocal.kind === 'ship') {
+    for (const { boundary, launcher } of lifecycleLaunchers) {
+      if (boundary.kind !== 'encounterStart') continue;
+      const tab = roomTabForPhase(roomLocal, boundary.phaseKey);
+      byTab[tab] = launcher;
+      if (byTab.overview === undefined) byTab.overview = launcher;
+    }
+  } else {
+    const entry = lifecycleLaunchers.find(({ boundary }) => boundary.kind === 'roomEntered');
+    if (entry !== undefined) {
+      byTab.overview = entry.launcher;
+      byTab.actions = entry.launcher;
+    }
+  }
+  if (beforeExit !== undefined) byTab.doors = beforeExit;
+  return Object.freeze(byTab);
+}
+
 function runStateLauncher(
   input: WorkspaceOccurrenceAssemblyInput,
   owner: RoomRunStateCheckpointAddress,
@@ -2466,6 +2509,7 @@ export function assembleWorkspaceOccurrence(
     createRoomRunStateCheckpointAddress(address, { kind: 'beforeRoomExit' }),
     `exiting ${room.label}`,
   );
+  const runStateByTab = roomRunStateByTab(roomLocal, roomActions, beforeExitRunState);
   const entryReward =
     input.isEntry === true
       ? allRewardControls.find(
@@ -2522,8 +2566,8 @@ export function assembleWorkspaceOccurrence(
     ...(naturalChaosSpawn === undefined ? {} : { naturalChaosSpawn }),
     roomLocal,
     rewardControls: allRewardControls,
+    runStateByTab,
     workbench,
-    ...(beforeExitRunState === undefined ? {} : { beforeExitRunState }),
   });
   const node: WorkspaceOccurrenceWorkbenchNode = Object.freeze({
     inspectorPresentation: 'full' as const,
@@ -2533,20 +2577,6 @@ export function assembleWorkspaceOccurrence(
     marker: roomSummary.marker,
     room: roomSummary,
   });
-  const phaseTab = (phaseKey: string): WorkspaceRoomTab => {
-    if (roomLocal.kind !== 'ship') return 'actions';
-    const phaseIndex = roomLocal.phases.findIndex((phase) => phase.key === phaseKey);
-    switch (phaseIndex) {
-      case 0:
-        return 'shipIntroActions';
-      case 1:
-        return 'shipCombat1Actions';
-      case 2:
-        return 'shipCombat2Actions';
-      default:
-        return 'actions';
-    }
-  };
   for (const phase of encounterPhases) {
     input.markerDestinations.setRoomTab(
       [
@@ -2554,7 +2584,7 @@ export function assembleWorkspaceOccurrence(
         ...(phase.traitOffer === undefined ? [] : [phase.traitOffer.marker]),
         ...(phase.gorgonAthena === undefined ? [] : [phase.gorgonAthena.marker]),
       ],
-      phaseTab(phase.address.phaseKey),
+      roomTabForPhase(roomLocal, phase.address.phaseKey),
     );
   }
   if (roomActions !== undefined) {
@@ -2575,11 +2605,12 @@ export function assembleWorkspaceOccurrence(
         roomLocal.kind === 'ship' && shipRepairKeys.has(row.key)
           ? 'shipInactiveRepair'
           : row.reference.kind === 'interactEncounter' || row.reference.kind === 'interactGorgon'
-            ? phaseTab(row.reference.phaseKey)
+            ? roomTabForPhase(roomLocal, row.reference.phaseKey)
             : roomLocal.kind === 'ship' && timelineActionPhaseKeys.has(row.key)
-              ? phaseTab(timelineActionPhaseKeys.get(row.key)!)
+              ? roomTabForPhase(roomLocal, timelineActionPhaseKeys.get(row.key)!)
               : wheelKey !== undefined
-                ? phaseTab(
+                ? roomTabForPhase(
+                    roomLocal,
                     roomLocal.kind === 'ship'
                       ? (roomLocal.phases.find((phase) => phase.rewardWheelKey === wheelKey)?.key ??
                           '')
@@ -2610,7 +2641,7 @@ export function assembleWorkspaceOccurrence(
       }
       const tab: WorkspaceRoomTab = !wheel.active
         ? 'shipInactiveRepair'
-        : phaseTab(workbenchPhase!.key);
+        : roomTabForPhase(roomLocal, workbenchPhase!.key);
       input.markerDestinations.setRoomTab(
         [wheel.marker, ...wheel.offers.flatMap((offer) => [offer.control.marker])],
         tab,
