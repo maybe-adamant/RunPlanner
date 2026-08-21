@@ -251,6 +251,11 @@ npm run dev
 Activating `nvm` matters on systems where Windows npm also appears in the WSL
 `PATH`; workspace symlinks must be created by Linux npm.
 
+During `npm run dev`, uncaught browser errors, unhandled promise rejections, and
+React root errors are also mirrored to the Vite terminal with their browser and
+component stacks. Production builds do not install or publish this diagnostic
+relay.
+
 Run the complete validation suite with:
 
 ```bash
