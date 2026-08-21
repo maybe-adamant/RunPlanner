@@ -350,14 +350,32 @@ proof.
 
 Test-only authored-project checkpoints are strict, schema-encoded
 `ProjectDocument` inputs under `test/fixtures/authored-project/checkpoints/`.
-Static route-scoped loaders decode and freeze them through the production
-codec; tests never load serialized simulation, validation, workspace, Redux,
-or rendered output. Generation support is isolated from the normal import
-graph and is exercised by the explicit `npm run test:fixtures:check` gate,
-which the root `npm run check` runs outside the regular and heavy Vitest
-lanes. A test that owns command, codec, progressive-repair, history, or
-undo/redo semantics remains command-driven; other layers retain representative
-boundary contacts without copying the owning matrix.
+Static route-scoped imports feed lazy loaders that decode and freeze each
+checkpoint through the production codec; tests never load serialized
+simulation, validation, workspace, Redux, or rendered output. Reusable full
+route states have no permanent command-replay builder or writer beside the
+saved JSON. Route support may retain semantic IDs and focused one-to-few-command
+deltas from a checkpoint. A test that owns command, codec,
+progressive-repair, history, or undo/redo semantics remains command-driven;
+other layers retain representative boundary contacts without copying the
+owning matrix.
+
+The checkpoint manifest records stable identity, scenario intent, artifact
+provenance, route prefix, schema/catalog versions, and the SHA-256 of exact
+canonical bytes. `npm run test:fixtures:check`, also called by the root
+`npm run check`, proves manifest/registry/file closure, strict decode,
+canonical encoding, hashes, stable frozen loader identity, retained incomplete
+and context-invalid states, and non-mutating focused deltas. Static JSON import
+edges remain explicit so changed-file selection reaches normal consumers.
+
+Schema and catalog changes review this bounded saved-state corpus explicitly.
+A shape-only schema bump may use a temporary raw JSON transformer in that same
+schema commit: parse the prior documents as unknown, transform the exact shape,
+strict-decode with the new codec and catalog, canonical-encode the replacements,
+update manifest metadata and hashes, run fixture integrity and the complete
+gate, then delete the transformer. Semantic changes require a per-checkpoint
+intent decision; production compatibility decoding and a permanent fixture
+migration framework remain out of scope.
 
 Regular and heavy Vitest lanes have explicit, non-overlapping file manifests
 in `vitest.test-lanes.ts`. The heavy lane is reserved for consumers whose
