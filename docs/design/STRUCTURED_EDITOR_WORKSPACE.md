@@ -118,8 +118,9 @@ Every configured biome renders through one `BiomeWorkspace` composition over a
 `WorkspaceBiome` projection. Its exhaustive workspace-node union retains
 ordinary decisions, takeover and mixed Preboss batches, completion,
 occurrence-local workbenches, and the Hub decision without React inspecting
-authored topology. N's exact terminal decision carries a projected Hub
-takeover control rather than another node family. The projected rail
+authored topology. N's exact terminal decision carries a projected generic
+Door 1 room picker whose sole candidate is Hub rather than another node family.
+The projected rail
 deliberately exposes only player-facing biome stages and decision points;
 exhaustive node ownership does not imply one rail stop per node.
 `HubDecisionWorkbench` is the one N-specific workbench and is nested inside
@@ -543,8 +544,10 @@ when present, the Door 1 Room picker, and later physical doors waiting for
 sequential generation. A required reward pool
 or Fields roll can disable ordinary mutation locally, but it cannot hide a
 supported takeover option in that same Door 1 picker. Selecting an ordinary
-room reveals its mandatory room/reward leaves; selecting takeover replaces the
-envelope atomically with the declaration's Shop/free-offer shape. Findings
+room reveals its mandatory room/reward leaves; selecting the required Hub
+candidate replaces the envelope atomically with the persistent Hub decision.
+Selecting another supported takeover replaces the envelope atomically with the
+declaration's Shop/free-offer shape. Findings
 decorate those controls and never decide whether the structural control is
 projected.
 
@@ -605,7 +608,9 @@ room-local, or finding products.
 ### Variant-Owned Structure
 
 - F/G/P use the same Door 1 flow for ordinary rooms and their required atomic
-  normal-door takeover at the declaration-admitted terminal source.
+  normal-door takeover at the declaration-admitted terminal source. N uses the
+  same flow for its required Hub candidate after PreHub or selected natural
+  Chaos.
 - H retains four realized Fields decisions; its fifth empty decision can only
   resolve to the required takeover, even if its ordinary Fields setup is still
   unresolved.

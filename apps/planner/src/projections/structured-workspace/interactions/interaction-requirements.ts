@@ -227,18 +227,6 @@ export type WorkspaceTakeoverInteractionRequirement =
       readonly requiredExitKeys: readonly string[];
     };
 
-/**
- * One declared terminal candidate replaces its exact source envelope with the
- * persistent Hub decision. The requirement is emitted from authored topology,
- * independently of current candidate support.
- */
-export interface WorkspaceHubTakeoverInteractionRequirement {
-  readonly gameName: string;
-  readonly hub: HubDecisionAddress;
-  readonly kind: 'hubTakeover';
-  readonly owner: ExitDecisionAddress;
-}
-
 function occurrenceInteractionRequirementKey(
   requirement: WorkspaceOccurrenceInteractionRequirement,
 ): string {
@@ -265,12 +253,6 @@ function startInteractionRequirementKey(requirement: WorkspaceStartInteractionRe
 
 export function workspaceTakeoverInteractionRequirementKey(
   requirement: WorkspaceTakeoverInteractionRequirement,
-): string {
-  return `${requirement.kind}:${semanticAddressKey(requirement.owner)}`;
-}
-
-export function workspaceHubTakeoverInteractionRequirementKey(
-  requirement: WorkspaceHubTakeoverInteractionRequirement,
 ): string {
   return `${requirement.kind}:${semanticAddressKey(requirement.owner)}`;
 }
@@ -359,21 +341,6 @@ export function appendUniqueTakeoverInteractionRequirements(
     if (requirementsByIdentity.has(key)) {
       throw new StructuredWorkspaceProjectionContractError(
         `${key} has multiple projected takeover interaction requirements`,
-      );
-    }
-    requirementsByIdentity.set(key, requirement);
-  }
-}
-
-export function appendUniqueHubTakeoverInteractionRequirements(
-  requirementsByIdentity: Map<string, WorkspaceHubTakeoverInteractionRequirement>,
-  requirements: Iterable<WorkspaceHubTakeoverInteractionRequirement>,
-): void {
-  for (const requirement of requirements) {
-    const key = workspaceHubTakeoverInteractionRequirementKey(requirement);
-    if (requirementsByIdentity.has(key)) {
-      throw new StructuredWorkspaceProjectionContractError(
-        `${key} has multiple projected Hub takeover interaction requirements`,
       );
     }
     requirementsByIdentity.set(key, requirement);

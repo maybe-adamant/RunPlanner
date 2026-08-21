@@ -380,8 +380,6 @@ function withoutStructuralInteraction(
       return { ...interactions, exitSelections: without(interactions.exitSelections) };
     case 'fieldsCageOutcome':
       return { ...interactions, fieldsCageOutcomes: without(interactions.fieldsCageOutcomes) };
-    case 'hubTakeover':
-      return { ...interactions, hubTakeovers: without(interactions.hubTakeovers) };
     case 'hubSlot':
       return { ...interactions, hubSlots: without(interactions.hubSlots) };
     case 'hubVisitOrder':
@@ -1946,7 +1944,6 @@ describe('structured workspace overlay contract', () => {
         'decisionEntryRoomPicker',
         'exitSelection',
         'fieldsCageOutcome',
-        'hubTakeover',
         'hubSlot',
         'hubVisitOrder',
         'naturalChaosSpawn',

@@ -31,14 +31,12 @@ import { bindWorkspaceInteractions } from './interactions/interaction-binding';
 import {
   appendUniqueBatchInteractionRequirements,
   appendUniqueHubInteractionRequirements,
-  appendUniqueHubTakeoverInteractionRequirements,
   appendUniqueOccurrenceInteractionRequirements,
   appendUniqueStartInteractionRequirements,
   appendUniqueTakeoverInteractionRequirements,
   appendUniqueTopologyRemovalInteractionRequirements,
   type WorkspaceBatchInteractionRequirement,
   type WorkspaceHubInteractionRequirement,
-  type WorkspaceHubTakeoverInteractionRequirement,
   type WorkspaceOccurrenceInteractionRequirement,
   type WorkspaceStartInteractionRequirement,
   type WorkspaceTakeoverInteractionRequirement,
@@ -96,10 +94,6 @@ function projectBiome(
   readonly biome: WorkspaceBiome;
   readonly focusDestinations: ReadonlyMap<string, WorkspaceInspectorDestination>;
   readonly hubInteractionRequirements: ReadonlyMap<string, WorkspaceHubInteractionRequirement>;
-  readonly hubTakeoverInteractionRequirements: ReadonlyMap<
-    string,
-    WorkspaceHubTakeoverInteractionRequirement
-  >;
   readonly occurrenceInteractionRequirements: ReadonlyMap<
     string,
     WorkspaceOccurrenceInteractionRequirement
@@ -136,7 +130,6 @@ function projectBiome(
     biome: presentation.biome,
     focusDestinations: presentation.focusDestinations,
     hubInteractionRequirements: semantic.hubInteractionRequirements,
-    hubTakeoverInteractionRequirements: semantic.hubTakeoverInteractionRequirements,
     occurrenceInteractionRequirements: semantic.occurrenceInteractionRequirements,
     roomControls: semantic.roomControls,
     rewardControls: semantic.rewardControls,
@@ -171,10 +164,6 @@ export function createStructuredWorkspaceProjection(
       >();
       const batchInteractionRequirements = new Map<string, WorkspaceBatchInteractionRequirement>();
       const hubInteractionRequirements = new Map<string, WorkspaceHubInteractionRequirement>();
-      const hubTakeoverInteractionRequirements = new Map<
-        string,
-        WorkspaceHubTakeoverInteractionRequirement
-      >();
       const topologyRemovalInteractionRequirements = new Map<
         string,
         WorkspaceTopologyRemovalInteractionRequirement
@@ -311,10 +300,6 @@ export function createStructuredWorkspaceProjection(
           appendUniqueHubInteractionRequirements(
             hubInteractionRequirements,
             projected.hubInteractionRequirements.values(),
-          );
-          appendUniqueHubTakeoverInteractionRequirements(
-            hubTakeoverInteractionRequirements,
-            projected.hubTakeoverInteractionRequirements.values(),
           );
           appendUniqueTopologyRemovalInteractionRequirements(
             topologyRemovalInteractionRequirements,
@@ -460,7 +445,6 @@ export function createStructuredWorkspaceProjection(
         batchInteractionRequirements,
         catalog,
         hubInteractionRequirements,
-        hubTakeoverInteractionRequirements,
         occurrenceInteractionRequirements,
         rewardControls,
         traitControls,

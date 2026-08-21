@@ -329,7 +329,7 @@ ordinary target is created. The engine can explicitly create the next envelope w
 an ordinary slot remains. At the ordinary bound it can create one further
 empty envelope only when the selected source and layout admit a declared
 terminal resolution. F/G/H/O/P/Q admit a takeover Preboss; N admits its
-required Hub takeover after the bounded PreHub stage; I admits neither because
+required Hub candidate after the bounded PreHub stage; I admits neither because
 its Preboss is an ordinary retained peer. These exceptions belong to
 declaration-derived topology rules rather than the empty shape itself.
 

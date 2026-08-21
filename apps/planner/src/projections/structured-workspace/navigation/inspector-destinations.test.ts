@@ -601,14 +601,12 @@ describe('workspace inspector destinations', () => {
         node.kind === 'ordinaryBatch' &&
         semanticAddressKey(node.owner) === semanticAddressKey(owner),
     );
-    if (batch === undefined || batch.hubTakeover === undefined) {
-      throw new Error('terminal N Hub takeover batch is missing');
+    if (batch === undefined || batch.targets.length !== 0) {
+      throw new Error('terminal N Hub decision is missing');
     }
     expect(n.nodes.some((node) => node.kind === 'hubDecision')).toBe(false);
     const railKey = railKeyForNode(n, batch.key);
     const hub = createHubDecisionAddress(nBiome, 'hub');
-
-    expect(batch.hubTakeover.marker.address).toEqual(hub);
     expectNodeRailDestination(terminal, hub, batch.key, railKey);
   });
 

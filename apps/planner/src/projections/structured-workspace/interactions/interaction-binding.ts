@@ -73,7 +73,6 @@ import type {
   WorkspaceRoomActionInteraction,
   WorkspaceExitSelectionInteraction,
   WorkspaceHubSlotInteraction,
-  WorkspaceHubTakeoverInteraction,
   WorkspaceHubVisitOrderInteraction,
   WorkspaceHubVisitOrderProposal,
   WorkspaceInteractionCatalog,
@@ -105,7 +104,6 @@ import type {
 import type {
   WorkspaceBatchInteractionRequirement,
   WorkspaceHubInteractionRequirement,
-  WorkspaceHubTakeoverInteractionRequirement,
   WorkspaceOccurrenceInteractionRequirement,
   WorkspaceStartInteractionRequirement,
   WorkspaceTakeoverInteractionRequirement,
@@ -244,10 +242,6 @@ export interface WorkspaceInteractionBindingInput {
   readonly batchInteractionRequirements: ReadonlyMap<string, WorkspaceBatchInteractionRequirement>;
   readonly catalog: Catalog;
   readonly hubInteractionRequirements: ReadonlyMap<string, WorkspaceHubInteractionRequirement>;
-  readonly hubTakeoverInteractionRequirements: ReadonlyMap<
-    string,
-    WorkspaceHubTakeoverInteractionRequirement
-  >;
   readonly occurrenceInteractionRequirements: ReadonlyMap<
     string,
     WorkspaceOccurrenceInteractionRequirement
@@ -1117,69 +1111,6 @@ function bindHubInteractions(
   return Object.freeze({ hubSlots, hubVisitOrders });
 }
 
-/**
- * Binds the one terminal Hub result without rediscovering its source, depth,
- * or room. The requirement is structural; the lazy candidate is only the
- * affordance authority.
- */
-function bindHubTakeoverInteractions(
-  candidates: CandidateProjectionSession,
-  catalog: Catalog,
-  requirements: Iterable<WorkspaceHubTakeoverInteractionRequirement>,
-): ReadonlyMap<string, WorkspaceHubTakeoverInteraction> {
-  const hubTakeovers = new Map<string, WorkspaceHubTakeoverInteraction>();
-  for (const requirement of requirements) {
-    const key = semanticAddressKey(requirement.owner);
-    if (hubTakeovers.has(key)) {
-      throw new StructuredWorkspaceProjectionContractError(
-        `${key} has multiple bound Hub takeover interactions`,
-      );
-    }
-    let loaded: CandidateOptionProjection<WorkspaceHubTakeoverInteraction['owner']> | undefined;
-    const load = (): CandidateOptionProjection<WorkspaceHubTakeoverInteraction['owner']> =>
-      (loaded ??= candidates.hubTerminalTakeover(requirement.owner));
-    hubTakeovers.set(
-      key,
-      Object.freeze({
-        hub: requirement.hub,
-        intent: () => {
-          const candidate = load();
-          const support = candidateSupport(candidate);
-          if (support !== 'forced' && support !== 'possible') {
-            throw new StructuredWorkspaceProjectionContractError(
-              `${requirement.gameName} is not currently authorable for ${key}`,
-            );
-          }
-          if (candidate.evaluation.kind !== 'unavailable') {
-            if (
-              candidate.evaluation.kind !== 'hubTerminalTakeover' ||
-              candidate.evaluation.result.gameName !== requirement.gameName ||
-              candidate.evaluation.result.hubKey !== requirement.hub.hubKey
-            ) {
-              throw new StructuredWorkspaceProjectionContractError(
-                `${key} Hub takeover candidate disagrees with its declared terminal`,
-              );
-            }
-          }
-          return Object.freeze({
-            command: Object.freeze({
-              decision: requirement.owner,
-              hub: requirement.hub,
-              kind: 'ReplaceWithHubDecision' as const,
-            }),
-            focus: Object.freeze({ owner: requirement.hub, timing: 'after' as const }),
-          });
-        },
-        key,
-        label: requireWorkspaceRoom(catalog, requirement.gameName).label,
-        load,
-        owner: requirement.owner,
-      }),
-    );
-  }
-  return hubTakeovers;
-}
-
 function bindTopologyRemovalInteractions(
   requirements: Iterable<WorkspaceTopologyRemovalInteractionRequirement>,
 ): ReadonlyMap<string, WorkspaceTopologyRemovalInteraction> {
@@ -1398,6 +1329,11 @@ type WorkspaceDecisionEntryCandidate =
       readonly candidate: CandidateOptionProjection<string>;
       readonly kind: 'takeover';
       readonly room: RoomDeclaration;
+    }
+  | {
+      readonly candidate: CandidateOptionProjection<RoomDeclaration>;
+      readonly kind: 'hub';
+      readonly room: RoomDeclaration;
     };
 
 type WorkspaceDecisionEntryRoomControl = Extract<
@@ -1411,13 +1347,24 @@ type WorkspaceDecisionEntryRoomControl = Extract<
  * or incomplete prefix just like any other target picker when the engine's
  * exact static command domain admits it. Setup owned by this exact decision
  * can still block ordinary mutation. A takeover requires evaluated whole-batch
- * support because it needs the engine's required-exit product.
+ * support because it needs the engine's required-exit product. The structurally
+ * forced Hub is also authorable from an uncommitted decision when candidate
+ * coverage has not reached that exact checkpoint yet; its projected control
+ * and atomic engine command still validate the closed terminal. A persisted
+ * Hub envelope continues to require evaluated support.
  */
 function decisionEntryCandidateMayBeAuthored(
   entry: WorkspaceDecisionEntryCandidate,
   ordinaryTargetAuthoring: WorkspaceDecisionEntryRoomControl['ordinaryTargetAuthoring'],
   ordinaryTargetGameNames: WorkspaceDecisionEntryRoomControl['ordinaryTargetGameNames'],
+  persistence: WorkspaceDecisionEntryRoomControl['persistence'],
 ): boolean {
+  if (entry.kind === 'hub') {
+    return (
+      candidateHasExecutableSupport(entry.candidate) ||
+      (persistence === 'uncommitted' && entry.candidate.evaluation.kind === 'unavailable')
+    );
+  }
   if (entry.kind === 'takeover') return candidateHasExecutableSupport(entry.candidate);
   if (ordinaryTargetAuthoring.kind !== 'ready') return false;
   if (!ordinaryTargetGameNames.includes(entry.room.gameName)) return false;
@@ -1429,6 +1376,7 @@ function disableUnavailableDecisionEntryCandidates(
   candidates: readonly WorkspaceDecisionEntryCandidate[],
   ordinaryTargetAuthoring: WorkspaceDecisionEntryRoomControl['ordinaryTargetAuthoring'],
   ordinaryTargetGameNames: WorkspaceDecisionEntryRoomControl['ordinaryTargetGameNames'],
+  persistence: WorkspaceDecisionEntryRoomControl['persistence'],
 ): ContextualPickerModel<RoomDeclaration> {
   const candidatesByGameName = new Map(
     candidates.map((candidate) => [candidate.room.gameName, candidate] as const),
@@ -1445,6 +1393,7 @@ function disableUnavailableDecisionEntryCandidates(
           candidate,
           ordinaryTargetAuthoring,
           ordinaryTargetGameNames,
+          persistence,
         )
       ) {
         return item;
@@ -1472,7 +1421,6 @@ export function bindWorkspaceInteractions(
     batchInteractionRequirements,
     catalog,
     hubInteractionRequirements,
-    hubTakeoverInteractionRequirements,
     occurrenceInteractionRequirements,
     rewardControls,
     traitControls,
@@ -1520,11 +1468,6 @@ export function bindWorkspaceInteractions(
     allocateOccurrenceId,
     candidates,
     hubInteractionRequirements.values(),
-  );
-  const hubTakeovers = bindHubTakeoverInteractions(
-    candidates,
-    catalog,
-    hubTakeoverInteractionRequirements.values(),
   );
   const topologyRemovals = bindTopologyRemovalInteractions(
     topologyRemovalInteractionRequirements.values(),
@@ -1624,6 +1567,22 @@ export function bindWorkspaceInteractions(
                 room: requireWorkspaceRoom(catalog, candidate.value),
               }),
             ),
+          ...(control.hub === undefined
+            ? []
+            : [
+                (() => {
+                  const candidate = candidates.hubTerminalTakeover(control.decisionOwner);
+                  const room = requireWorkspaceRoom(catalog, control.hub.gameName);
+                  return Object.freeze({
+                    candidate: Object.freeze({
+                      evaluation: candidate.evaluation,
+                      value: room,
+                    }),
+                    kind: 'hub' as const,
+                    room,
+                  });
+                })(),
+              ]),
         ]));
       rooms.set(
         key,
@@ -1652,6 +1611,7 @@ export function bindWorkspaceInteractions(
                 entry,
                 control.ordinaryTargetAuthoring,
                 control.ordinaryTargetGameNames,
+                control.persistence,
               )
             ) {
               throw new StructuredWorkspaceProjectionContractError(
@@ -1680,6 +1640,56 @@ export function bindWorkspaceInteractions(
                         kind: 'InitializeExitDecision' as const,
                       }),
                 focus: Object.freeze({ owner: control.address, timing: 'after' as const }),
+              });
+            }
+            if (entry.kind === 'hub') {
+              const hub = control.hub;
+              if (hub === undefined) {
+                throw new StructuredWorkspaceProjectionContractError(
+                  `${gameName} has no structural Hub terminal for ${key}`,
+                );
+              }
+              if (
+                entry.candidate.evaluation.kind !== 'hubTerminalTakeover' &&
+                !(
+                  control.persistence === 'uncommitted' &&
+                  entry.candidate.evaluation.kind === 'unavailable'
+                )
+              ) {
+                throw new StructuredWorkspaceProjectionContractError(
+                  `${gameName} has no evaluated Hub terminal evidence for ${key}`,
+                );
+              }
+              const result =
+                entry.candidate.evaluation.kind === 'hubTerminalTakeover'
+                  ? entry.candidate.evaluation.result
+                  : undefined;
+              if (
+                result !== undefined &&
+                (result.gameName !== gameName || result.hubKey !== hub.decision.hubKey)
+              ) {
+                throw new StructuredWorkspaceProjectionContractError(
+                  `${gameName} Hub candidate disagrees with its declared terminal for ${key}`,
+                );
+              }
+              const command =
+                control.persistence === 'authored'
+                  ? Object.freeze({
+                      decision: control.decisionOwner,
+                      hub: hub.decision,
+                      kind: 'ReplaceWithHubDecision' as const,
+                    })
+                  : Object.freeze({
+                      decision: control.decisionOwner,
+                      edit: Object.freeze({
+                        hub: hub.decision,
+                        kind: 'hub' as const,
+                      }),
+                      kind: 'InitializeExitDecision' as const,
+                    });
+              return Object.freeze({
+                command,
+                focus: Object.freeze({ owner: hub.decision, timing: 'after' as const }),
               });
             }
             if (entry.candidate.evaluation.kind !== 'takeoverPrebossBatch') {
@@ -1724,6 +1734,7 @@ export function bindWorkspaceInteractions(
               loadCandidates(),
               control.ordinaryTargetAuthoring,
               control.ordinaryTargetGameNames,
+              control.persistence,
             );
             return model;
           },
@@ -2652,7 +2663,6 @@ export function bindWorkspaceInteractions(
     roomActions,
     naturalChaosExits,
     naturalChaosSpawns,
-    hubTakeovers,
     hubSlots,
     hubVisitOrders,
     rewards,

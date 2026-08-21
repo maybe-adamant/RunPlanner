@@ -59,14 +59,12 @@ import { assembleWorkspaceHub } from './hub-assembly';
 import {
   appendUniqueBatchInteractionRequirements,
   appendUniqueHubInteractionRequirements,
-  appendUniqueHubTakeoverInteractionRequirements,
   appendUniqueOccurrenceInteractionRequirements,
   appendUniqueStartInteractionRequirements,
   appendUniqueTakeoverInteractionRequirements,
   appendUniqueTopologyRemovalInteractionRequirements,
   type WorkspaceBatchInteractionRequirement,
   type WorkspaceHubInteractionRequirement,
-  type WorkspaceHubTakeoverInteractionRequirement,
   type WorkspaceOccurrenceInteractionRequirement,
   type WorkspaceStartInteractionRequirement,
   type WorkspaceTakeoverInteractionRequirement,
@@ -111,10 +109,6 @@ export interface WorkspaceBiomeSemanticAssembly {
   readonly fields: readonly WorkspaceBiomeField[];
   readonly frontier: WorkspaceAuthoringFrontier | null;
   readonly hubInteractionRequirements: ReadonlyMap<string, WorkspaceHubInteractionRequirement>;
-  readonly hubTakeoverInteractionRequirements: ReadonlyMap<
-    string,
-    WorkspaceHubTakeoverInteractionRequirement
-  >;
   readonly label: string;
   readonly marker: WorkspaceMarker;
   readonly nodes: readonly WorkspaceNode[];
@@ -455,10 +449,6 @@ export function assembleWorkspaceBiomeSemantics(
   >();
   const batchInteractionRequirements = new Map<string, WorkspaceBatchInteractionRequirement>();
   const hubInteractionRequirements = new Map<string, WorkspaceHubInteractionRequirement>();
-  const hubTakeoverInteractionRequirements = new Map<
-    string,
-    WorkspaceHubTakeoverInteractionRequirement
-  >();
   const topologyRemovalInteractionRequirements = new Map<
     string,
     WorkspaceTopologyRemovalInteractionRequirement
@@ -557,29 +547,15 @@ export function assembleWorkspaceBiomeSemantics(
       `${plan.biomeKey} has an evaluated entry without an authored start`,
     );
   }
-  const hubTakeoverRequirementByOwner = new Map(
-    topologyInteractions.hubTakeoverInteractionRequirements.map(
-      (requirement) => [semanticAddressKey(requirement.owner), requirement] as const,
-    ),
-  );
   const projectAuthoredExitDecision = (decision: ExitDecision): void => {
     const owner = createExitDecisionAddress(biome, decision.source);
     const evaluated = source.evaluatedBatch(owner);
-    const hubTakeover = hubTakeoverRequirementByOwner.get(semanticAddressKey(owner));
     const assembly: WorkspaceDecisionAssembly =
       evaluated === undefined
         ? assembleWorkspaceDecision({
             assembleOccurrence,
             catalog,
             decision: decision as WorkspaceAuthoredBatchDecision,
-            ...(hubTakeover === undefined
-              ? {}
-              : {
-                  hubTakeover: Object.freeze({
-                    interactionKey: semanticAddressKey(hubTakeover.owner),
-                    owner: hubTakeover.hub,
-                  }),
-                }),
             kind: 'batch',
             markerDestinations,
             persistence: 'authored',
@@ -590,14 +566,6 @@ export function assembleWorkspaceBiomeSemantics(
             catalog,
             decision: decision as WorkspaceAuthoredBatchDecision,
             evaluated,
-            ...(hubTakeover === undefined
-              ? {}
-              : {
-                  hubTakeover: Object.freeze({
-                    interactionKey: semanticAddressKey(hubTakeover.owner),
-                    owner: hubTakeover.hub,
-                  }),
-                }),
             kind: 'batch',
             markerDestinations,
             persistence: 'authored',
@@ -878,10 +846,6 @@ export function assembleWorkspaceBiomeSemantics(
     takeoverInteractionRequirements,
     topologyInteractions.takeoverInteractionRequirements,
   );
-  appendUniqueHubTakeoverInteractionRequirements(
-    hubTakeoverInteractionRequirements,
-    topologyInteractions.hubTakeoverInteractionRequirements,
-  );
   const biomeMarker = markerDestinations.marker(biome, `biome:${biome.routeKey}:${plan.biomeKey}`);
   const runStateLaunchers = new Map<string, WorkspaceRunStateLauncher>();
   const appendRunStateLauncher = (launcher: WorkspaceRunStateLauncher): void => {
@@ -909,7 +873,6 @@ export function assembleWorkspaceBiomeSemantics(
     fields,
     frontier: resolvedFrontier,
     hubInteractionRequirements,
-    hubTakeoverInteractionRequirements,
     label: catalog.biomes.byKey[plan.biomeKey]?.label ?? plan.biomeKey,
     marker: biomeMarker,
     nodes: completedNodes,

@@ -36,7 +36,6 @@ export type ExpectedWorkspaceStructuralControlKind =
   | 'decisionEntryRoomPicker'
   | 'exitSelection'
   | 'fieldsCageOutcome'
-  | 'hubTakeover'
   | 'hubSlot'
   | 'hubVisitOrder'
   | 'naturalChaosSpawn'
@@ -301,7 +300,8 @@ export function expectedWorkspaceStructuralControls(
       isExactTerminalTakeoverEnvelope(decision) &&
       hubTerminalTakeoverForSource(catalog, layout, topology, decision.source) !== undefined
     ) {
-      add('hubTakeover', ownerKey, owner);
+      const targetOwner = createTargetAddress(biome, decision.source, 'exit1');
+      add('decisionEntryRoomPicker', workspaceTestOwnerKey(targetOwner), targetOwner, owner);
     }
   }
 

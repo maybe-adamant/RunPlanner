@@ -226,14 +226,16 @@ describe('workspace inspector defaults', () => {
     );
   });
 
-  it('routes the terminal Hub action, authored board, and fixed Preboss detail to stable defaults', () => {
+  it('routes the terminal Hub candidate, authored board, and fixed Preboss detail to stable defaults', () => {
     const pending = biome(nOpeningPreHubProject(), 'N');
     const terminal = pending.nodes.find(
       (node) =>
         (node.kind === 'ordinaryBatch' ||
           node.kind === 'mixedBatch' ||
           node.kind === 'takeoverBatch') &&
-        node.hubTakeover !== undefined,
+        node.source.kind === 'occurrence' &&
+        node.source.occurrenceId === nOccurrenceIds.preHub &&
+        node.targets.length === 0,
     );
     if (terminal === undefined) throw new Error('N terminal Hub decision is missing');
     expectNode(pending.defaultInspectorDestination, terminal.key);

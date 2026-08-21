@@ -184,7 +184,6 @@ function nodeOwnedFocusKeys(node: WorkspaceNode): readonly string[] {
       return Object.freeze([
         node.marker.focusKey,
         node.selection.focusKey,
-        ...(node.hubTakeover === undefined ? [] : [node.hubTakeover.marker.focusKey]),
         ...(node.rewardStore === undefined ? [] : [node.rewardStore.focusKey]),
         ...node.targets.map((target) => target.marker.focusKey),
         ...node.missingTargets.map((target) => target.marker.focusKey),

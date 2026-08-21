@@ -632,6 +632,10 @@ export function hubTerminalTakeoverForSource(
   source: ExitDecisionSource,
 ): HubTerminalTakeoverForSource | undefined {
   if (layout.progression.kind !== 'hub' || source.kind !== 'occurrence') return undefined;
+  const additionalSource = topology.occurrences
+    ?.flatMap((occurrence) => occurrence.additionalExits)
+    .find((exit) => exit.occurrenceId === source.occurrenceId);
+  if (additionalSource !== undefined && additionalSource.kind !== 'naturalChaos') return undefined;
   const terminalOrdinal = ordinaryProgressionBatchLimit(layout);
   if (
     terminalOrdinal === undefined ||

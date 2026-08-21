@@ -48,8 +48,6 @@ export type {
   WorkspaceRoomLifecycleBoundary,
   WorkspaceRoomTab,
   WorkspaceHubDecisionNode,
-  WorkspaceHubTakeoverControl,
-  WorkspaceHubTakeoverInteraction,
   WorkspaceHubSlot,
   WorkspaceHubSlotCloseInteraction,
   WorkspaceHubSlotInteraction,

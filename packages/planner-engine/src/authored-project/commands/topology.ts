@@ -431,6 +431,12 @@ function initializeExitDecision(
   });
   const nextLocated = locateBiome(created, catalog, command);
   switch (command.edit.kind) {
+    case 'hub':
+      return replaceWithHubDecision(created, catalog, nextLocated, {
+        kind: 'ReplaceWithHubDecision',
+        decision: command.decision,
+        hub: command.edit.hub,
+      });
     case 'rewardStore':
       return replaceBatchRewardStore(created, catalog, nextLocated, {
         kind: 'ReplaceBatchRewardStore',

@@ -28,8 +28,6 @@ function expectedStructuralInteraction(
       return interactions.exitSelections.get(key);
     case 'fieldsCageOutcome':
       return interactions.fieldsCageOutcomes.get(key);
-    case 'hubTakeover':
-      return interactions.hubTakeovers.get(key);
     case 'hubSlot':
       return interactions.hubSlots.get(key);
     case 'hubVisitOrder':
@@ -176,14 +174,6 @@ function assertRenderedNodeControls(
           node.takeoverInteractionKey,
           node.owner,
           `takeover batch ${node.takeoverInteractionKey}`,
-        );
-      }
-      if (node.hubTakeover !== undefined) {
-        assertExactObservedInteraction(
-          interactions.hubTakeovers.get(node.hubTakeover.interactionKey),
-          node.hubTakeover.interactionKey,
-          node.owner,
-          `Hub takeover ${node.hubTakeover.interactionKey}`,
         );
       }
       if (node.zagreusContract !== undefined) {

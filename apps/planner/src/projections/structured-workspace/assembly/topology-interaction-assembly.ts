@@ -2,8 +2,6 @@ import {
   createExitDecisionAddress,
   createHubDecisionAddress,
   fixedWidthOneTakeoverTransitionForSource,
-  hubTerminalTakeoverForSource,
-  isExactTerminalTakeoverEnvelope,
   semanticAddressKey,
   type ExitDecision,
   type ExitDecisionSourceAddress,
@@ -14,7 +12,6 @@ import type { Catalog } from '@run-planner/engine/catalog-schema';
 import { StructuredWorkspaceProjectionContractError } from '../contract';
 import {
   workspaceTakeoverInteractionRequirementKey,
-  type WorkspaceHubTakeoverInteractionRequirement,
   type WorkspaceStartInteractionRequirement,
   type WorkspaceTakeoverInteractionRequirement,
   type WorkspaceTopologyRemovalInteractionRequirement,
@@ -28,7 +25,6 @@ import { workspaceDeclaredPhysicalExitKeys } from './topology-presentation';
  * command requirements separate from decision and Hub presentation assembly.
  */
 export interface WorkspaceTopologyInteractionAssembly {
-  readonly hubTakeoverInteractionRequirements: readonly WorkspaceHubTakeoverInteractionRequirement[];
   readonly startInteractionRequirements: readonly WorkspaceStartInteractionRequirement[];
   readonly takeoverInteractionRequirements: readonly WorkspaceTakeoverInteractionRequirement[];
   readonly topologyRemovalInteractionRequirements: readonly WorkspaceTopologyRemovalInteractionRequirement[];
@@ -255,47 +251,11 @@ function takeoverInteractionRequirements(
   return Object.freeze([...requirementsByOwner.values()]);
 }
 
-/**
- * A persisted exact terminal envelope is enough to publish the Hub action.
- * Candidate support is intentionally loaded later by binding; findings and
- * incomplete evaluation must not erase this authored control.
- */
-function hubTakeoverInteractionRequirements(
-  input: WorkspaceTopologyInteractionAssemblyInput,
-): readonly WorkspaceHubTakeoverInteractionRequirement[] {
-  const { catalog, source } = input;
-  const { biome, layout, plan } = source;
-  const topology = plan.topology;
-  if (topology === null) return Object.freeze([]);
-  const requirements = new Map<string, WorkspaceHubTakeoverInteractionRequirement>();
-  for (const decision of topology.decisions) {
-    if (decision.kind !== 'exit' || !isExactTerminalTakeoverEnvelope(decision)) continue;
-    const terminal = hubTerminalTakeoverForSource(catalog, layout, topology, decision.source);
-    if (terminal === undefined) continue;
-    const owner = createExitDecisionAddress(biome, decision.source);
-    const requirement: WorkspaceHubTakeoverInteractionRequirement = Object.freeze({
-      gameName: terminal.room.gameName,
-      hub: createHubDecisionAddress(biome, terminal.hubKey),
-      kind: 'hubTakeover' as const,
-      owner,
-    });
-    const key = semanticAddressKey(owner);
-    if (requirements.has(key)) {
-      throw new StructuredWorkspaceProjectionContractError(
-        `${key} has multiple projected Hub takeover requirements`,
-      );
-    }
-    requirements.set(key, requirement);
-  }
-  return Object.freeze([...requirements.values()]);
-}
-
 export function assembleWorkspaceTopologyInteractions(
   input: WorkspaceTopologyInteractionAssemblyInput,
 ): WorkspaceTopologyInteractionAssembly {
   const takeover = takeoverInteractionRequirements(input);
   return Object.freeze({
-    hubTakeoverInteractionRequirements: hubTakeoverInteractionRequirements(input),
     startInteractionRequirements: startInteractionRequirements(input.source),
     takeoverInteractionRequirements: takeover,
     topologyRemovalInteractionRequirements: topologyRemovalInteractionRequirements(input),

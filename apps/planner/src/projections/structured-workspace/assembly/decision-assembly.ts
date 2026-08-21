@@ -3,17 +3,18 @@ import {
   createAdditionalExitAddress,
   createExitDecisionAddress,
   createExitSelectionAddress,
+  createHubDecisionAddress,
   createOccurrenceAddress,
   createTargetAddress,
   ordinaryTargetAuthoringEligibility,
   uncommittedOrdinaryTargetAuthoringEligibility,
   normalDecisionProgressionForLayout,
+  hubTerminalTakeoverForSource,
   selectedExitTarget,
   semanticAddressKey,
   type DeclaredPhysicalExit,
   type ExitDecision,
   type ExitDecisionAddress,
-  type HubDecisionAddress,
   type OccurrenceId,
   type TargetAddress,
 } from '@run-planner/engine/authored-project';
@@ -106,11 +107,6 @@ type WorkspaceMissingTargetSetupPrerequisite = Extract<
 interface WorkspaceDecisionAssemblyBaseInput {
   readonly assembleOccurrence: WorkspaceOccurrenceAssembler;
   readonly catalog: Catalog;
-  /** A separately assembled terminal-Hub requirement for this exact decision. */
-  readonly hubTakeover?: {
-    readonly interactionKey: string;
-    readonly owner: HubDecisionAddress;
-  };
   readonly markerDestinations: WorkspaceMarkerDestinationEmitter;
   /** Tests and legacy direct callers default to authored; biome assembly is explicit. */
   readonly persistence?: 'authored' | 'uncommitted';
@@ -522,7 +518,38 @@ function roomControlsForBatch(
   const controls: WorkspaceRoomPickerControl[] = [];
   const orderedPhysical = [...physical].sort((left, right) => left.index - right.index);
   const firstPhysicalExitKey = orderedPhysical[0]?.exitKey;
+  const hubTerminal =
+    emptyNormalDecision &&
+    decision.normal.targets.length === 0 &&
+    decision.selection.kind !== 'additional' &&
+    input.source.plan.topology !== null
+      ? hubTerminalTakeoverForSource(
+          input.catalog,
+          input.source.layout,
+          input.source.plan.topology,
+          decision.source,
+        )
+      : undefined;
+  if (hubTerminal !== undefined) {
+    const address = createTargetAddress(input.source.biome, decision.source, 'exit1');
+    controls.push(
+      Object.freeze({
+        address,
+        decisionOwner,
+        hub: Object.freeze({
+          decision: createHubDecisionAddress(input.source.biome, hubTerminal.hubKey),
+          gameName: hubTerminal.room.gameName,
+        }),
+        kind: 'decisionEntryRoomPicker' as const,
+        ordinaryTargetAuthoring: Object.freeze({ kind: 'ready' as const }),
+        ordinaryTargetGameNames: Object.freeze([]),
+        persistence: input.persistence ?? 'authored',
+        takeoverGameNames: Object.freeze([]),
+      }),
+    );
+  }
   for (const exit of orderedPhysical) {
+    if (hubTerminal !== undefined) continue;
     const target = targetsByExit.get(exit.exitKey);
     if (target !== undefined) continue;
     const missing = missingByExit.get(exit.exitKey);
@@ -779,13 +806,37 @@ function assembleBatchDecision(
     new Set(decision.normal.targets.map((target) => target.exitKey)),
     missingTargetPrerequisite(input, decision, fieldsBatchOwnsOutcome),
   );
+  const terminalHub =
+    decision.normal.targets.length === 0 &&
+    decision.selection.kind !== 'additional' &&
+    input.source.plan.topology !== null
+      ? hubTerminalTakeoverForSource(
+          input.catalog,
+          input.source.layout,
+          input.source.plan.topology,
+          decision.source,
+        )
+      : undefined;
+  const visibleMissingTargets =
+    terminalHub === undefined
+      ? missingTargets
+      : Object.freeze([
+          Object.freeze({
+            authoring: Object.freeze({ kind: 'ready' as const }),
+            exitKey: 'exit1',
+            index: 1,
+            marker: input.markerDestinations.marker(
+              createTargetAddress(input.source.biome, decision.source, 'exit1'),
+            ),
+          }),
+        ]);
   const targetRoomControls = roomControlsForBatch(
     input,
     decision,
     kind,
     physical,
     targets,
-    missingTargets,
+    visibleMissingTargets,
   );
   const repairIntent = batchRepairIntentForUnavailableTargets(
     owner,
@@ -938,17 +989,9 @@ function assembleBatchDecision(
             selected: naturalChaos.selected,
           }),
         }),
-    ...(input.hubTakeover === undefined
-      ? {}
-      : {
-          hubTakeover: Object.freeze({
-            interactionKey: input.hubTakeover.interactionKey,
-            marker: input.markerDestinations.marker(input.hubTakeover.owner),
-          }),
-        }),
     key: `batch:${semanticAddressKey(owner)}`,
     marker: input.markerDestinations.marker(owner),
-    missingTargets,
+    missingTargets: visibleMissingTargets,
     owner,
     persistence: input.persistence ?? 'authored',
     ...(repairIntent === undefined ? {} : { repairIntent }),
