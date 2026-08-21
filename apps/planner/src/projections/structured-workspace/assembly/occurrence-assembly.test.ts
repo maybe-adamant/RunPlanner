@@ -15,6 +15,7 @@ import {
   createAcquisitionSiteAddress,
   createTraitOfferAddress,
   createRouteStartKeepsakeSelectionAddress,
+  roomActionKey,
   semanticAddressKey,
   type OccurrenceId,
   type ProjectDocument,
@@ -462,6 +463,32 @@ describe('structured workspace occurrence assembly', () => {
     ).toEqual(['optional1', 'optional2']);
     expect(roomActions.repairRows).toEqual([]);
     expect(roomActions.proposals.length).toBeGreaterThan(0);
+    expect(
+      roomActions.timeline.entries.flatMap((entry) =>
+        entry.kind === 'action' && entry.presentation === 'fieldsCageAnchor'
+          ? [entry.actionKey]
+          : [],
+      ),
+    ).toEqual([
+      roomActionKey({ kind: 'completeFieldsCage', phaseKey: 'Cage02' }),
+      roomActionKey({ kind: 'completeFieldsCage', phaseKey: 'Cage01' }),
+    ]);
+    expect(
+      roomActions.timeline.entries.flatMap((entry) =>
+        entry.kind === 'boundary' && entry.fieldsCageSlot !== undefined
+          ? [
+              {
+                selected: entry.fieldsCageSlot.selected,
+                slotOrdinal: entry.fieldsCageSlot.slotOrdinal,
+                values: entry.fieldsCageSlot.choices.map((choice) => choice.value),
+              },
+            ]
+          : [],
+      ),
+    ).toEqual([
+      { selected: 'Cage02', slotOrdinal: 1, values: ['Cage01', 'Cage02'] },
+      { selected: 'Cage01', slotOrdinal: 2, values: ['Cage01', 'Cage02'] },
+    ]);
     expect(fields.node.room.localDetailMarkers).toContain(roomActions.rows[0]?.marker);
     expect(fields.occurrenceInteractionRequirements).toContainEqual(
       expect.objectContaining({

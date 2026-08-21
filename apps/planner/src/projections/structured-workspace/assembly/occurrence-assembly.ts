@@ -95,6 +95,7 @@ import {
   type WorkspaceRoomPickerControl,
   type WorkspaceRoomSummary,
   type WorkspaceRoomActions,
+  type WorkspaceRoomActionProposal,
   type WorkspaceRoomLifecycleTimeline,
   type WorkspaceRoomLifecycleBoundary,
   type WorkspaceRoomLifecycleTimelineEntry,
@@ -1622,7 +1623,14 @@ function roomActionsForOccurrence(
     }),
   );
   return Object.freeze({
-    timeline: projectRoomLifecycleTimeline(input, activeLifecycleTimeline, roomLocal),
+    timeline: projectRoomLifecycleTimeline(
+      input,
+      activeLifecycleTimeline,
+      roomLocal,
+      encounterPhases,
+      projectedRows,
+      proposals,
+    ),
     checkpoints: Object.freeze(
       roster.checkpoints.map((checkpoint) =>
         Object.freeze({
@@ -1646,6 +1654,9 @@ function projectRoomLifecycleTimeline(
   input: WorkspaceOccurrenceAssemblyInput,
   timeline: RoomLifecycleTimeline,
   roomLocal: WorkspaceRoomLocal,
+  encounterPhases: readonly WorkspaceEncounterPhase[],
+  rows: readonly WorkspaceRoomActionRow[],
+  proposals: readonly WorkspaceRoomActionProposal[],
 ): WorkspaceRoomLifecycleTimeline {
   const occurrence = createOccurrenceAddress(input.biome, input.occurrence.occurrenceId);
   const launcherForBoundary = (
@@ -1671,6 +1682,91 @@ function projectRoomLifecycleTimeline(
     }
     return undefined;
   };
+  const timelineActionKeys = new Set(
+    timeline.entries.flatMap((entry) => (entry.kind === 'action' ? [entry.action.key] : [])),
+  );
+  const activeCageRows =
+    roomLocal.kind !== 'fields'
+      ? []
+      : rows
+          .filter(
+            (row) =>
+              row.reference.kind === 'completeFieldsCage' &&
+              row.rank !== null &&
+              !row.stale &&
+              timelineActionKeys.has(row.key),
+          )
+          .sort((left, right) => left.rank! - right.rank!);
+  const activeCageByPhase = new Map(
+    activeCageRows.map((row) => [
+      row.reference.kind === 'completeFieldsCage' ? row.reference.phaseKey : '',
+      row,
+    ]),
+  );
+  const cageChoiceRows = [...activeCageRows].sort((left, right) => {
+    const phaseIndex = (row: WorkspaceRoomActionRow): number => {
+      if (row.reference.kind !== 'completeFieldsCage') return Number.POSITIVE_INFINITY;
+      const phaseKey = row.reference.phaseKey;
+      return encounterPhases.findIndex((phase) => phase.address.phaseKey === phaseKey);
+    };
+    return phaseIndex(left) - phaseIndex(right);
+  });
+  const cageSlotByBoundaryKey = new Map(
+    timeline.entries
+      .flatMap((entry) =>
+        entry.kind === 'boundary' && entry.boundary.kind === 'encounterStart'
+          ? [entry.boundary]
+          : [],
+      )
+      .flatMap((boundary, index) => {
+        const selected = activeCageByPhase.get(boundary.phaseKey);
+        if (selected === undefined || selected.rank === null) return [];
+        const choices = cageChoiceRows.map((row) => {
+          if (row.reference.kind !== 'completeFieldsCage') {
+            throw new StructuredWorkspaceProjectionContractError(
+              `${row.key} is not a Fields cage-completion anchor`,
+            );
+          }
+          const phaseKey = row.reference.phaseKey;
+          const selectedChoice = row.key === selected.key;
+          const proposal = selectedChoice
+            ? undefined
+            : proposals.find(
+                (candidate) =>
+                  candidate.kind === 'move' &&
+                  roomActionKey(candidate.reference) === row.key &&
+                  candidate.toIndex === selected.rank! - 1,
+              );
+          if (!selectedChoice && proposal === undefined) {
+            throw new StructuredWorkspaceProjectionContractError(
+              `${row.key} cannot be projected into Fields encounter slot ${index + 1}`,
+            );
+          }
+          return Object.freeze({
+            label:
+              encounterPhases.find((phase) => phase.address.phaseKey === phaseKey)?.label ??
+              phaseKey,
+            ...(proposal === undefined ? {} : { proposalKey: proposal.key }),
+            value: phaseKey,
+          });
+        });
+        return [
+          [
+            boundary.key,
+            Object.freeze({
+              choices: Object.freeze(choices),
+              marker: selected.marker,
+              owner: selected.address,
+              selected: boundary.phaseKey,
+              slotOrdinal: index + 1,
+            }),
+          ] as const,
+        ];
+      }),
+  );
+  const representedCagePhases = new Set(
+    [...cageSlotByBoundaryKey.values()].map((slot) => slot.selected),
+  );
   return Object.freeze({
     boundaries: Object.freeze([...timeline.boundaries]),
     entries: Object.freeze(
@@ -1683,12 +1779,21 @@ function projectRoomLifecycleTimeline(
               rank: entry.rank,
               ...(() => {
                 const runState = launcherForBoundary(entry.boundary);
-                return runState === undefined ? {} : { runState };
+                const fieldsCageSlot = cageSlotByBoundaryKey.get(entry.boundary.key);
+                return {
+                  ...(runState === undefined ? {} : { runState }),
+                  ...(fieldsCageSlot === undefined ? {} : { fieldsCageSlot }),
+                };
               })(),
             })
           : Object.freeze({
               kind: 'action' as const,
               actionKey: entry.action.key,
+              presentation:
+                entry.action.reference.kind === 'completeFieldsCage' &&
+                representedCagePhases.has(entry.action.reference.phaseKey)
+                  ? ('fieldsCageAnchor' as const)
+                  : ('row' as const),
               rank: entry.rank,
               ...(entry.phaseKey === undefined ? {} : { phaseKey: entry.phaseKey }),
             }),

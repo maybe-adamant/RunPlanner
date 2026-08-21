@@ -1172,14 +1172,31 @@ export type WorkspaceRoomLifecycleTimelineEntry =
       readonly rank: number;
       readonly placement: 'before' | 'after';
       readonly runState?: WorkspaceRunStateLauncher;
+      /** Fields-only assignment of one hidden cage-completion anchor to this rigid cycle. */
+      readonly fieldsCageSlot?: WorkspaceFieldsCageSlotControl;
     }
   | {
       readonly kind: 'action';
       readonly actionKey: string;
       readonly rank: number;
+      /** Closed application presentation for rows represented by a lifecycle-boundary control. */
+      readonly presentation: 'row' | 'fieldsCageAnchor';
       /** Engine-owned phase grouping for multi-encounter room workbenches. */
       readonly phaseKey?: string;
     };
+
+export interface WorkspaceFieldsCageSlotControl {
+  readonly choices: readonly {
+    readonly label: string;
+    /** Absent for the selected no-op choice. */
+    readonly proposalKey?: string;
+    readonly value: string;
+  }[];
+  readonly marker: WorkspaceMarker;
+  readonly owner: RoomActionAddress;
+  readonly selected: string;
+  readonly slotOrdinal: number;
+}
 
 export interface WorkspaceRoomLifecycleTimeline {
   readonly entries: readonly WorkspaceRoomLifecycleTimelineEntry[];
