@@ -212,9 +212,7 @@ function TargetRow({
             label="Room"
           />
         )}
-        {node.targetInteraction === 'readOnly' ? (
-          <p className="fixed-room-state">These Preboss doors are changed together.</p>
-        ) : target.physicalState === 'unavailable' ? (
+        {node.targetInteraction !== 'readOnly' && target.physicalState === 'unavailable' ? (
           <p className="fixed-room-state">
             This saved door is no longer available here. Fix the earlier route first.
           </p>

@@ -41,7 +41,7 @@ export type {
   WorkspaceShipPhasePresentation,
   WorkspaceShipStructurePhase,
   WorkspaceDoorContract,
-  WorkspaceDoorVisibleReward,
+  WorkspaceDoorReward,
   WorkspaceRoomActions,
   WorkspaceRoomLifecycleTimeline,
   WorkspaceRoomLifecycleTimelineEntry,
