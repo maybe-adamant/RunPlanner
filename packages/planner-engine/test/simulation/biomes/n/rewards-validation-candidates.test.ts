@@ -676,7 +676,7 @@ describe('N Hub rewards, validation, and candidates', () => {
       kind: 'incomingReward',
       result: {
         supported: false,
-        findings: [expect.objectContaining({ code: 'rewardBagEntryUnavailable' })],
+        findings: [expect.objectContaining({ code: 'rewardSourceUnavailable' })],
       },
     });
     expect(
@@ -695,7 +695,7 @@ describe('N Hub rewards, validation, and candidates', () => {
     });
   });
 
-  it('separates focused participant support from complete-board source failure', () => {
+  it('uses authored Hub peers when evaluating a focused god source', () => {
     let project = applyProjectCommand(loadSurfaceNProject(), catalog, {
       kind: 'ReplaceIncomingReward',
       reward: createIncomingRewardAddress(nBiome, nOccurrenceId('combat11')),
@@ -719,7 +719,10 @@ describe('N Hub rewards, validation, and candidates', () => {
       }),
     ).toMatchObject({
       kind: 'incomingReward',
-      result: { supported: true, findings: [] },
+      result: {
+        supported: false,
+        findings: [expect.objectContaining({ code: 'rewardSourceUnavailable' })],
+      },
     });
 
     project = applyProjectCommand(project, catalog, {

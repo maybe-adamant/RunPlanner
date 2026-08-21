@@ -2454,9 +2454,10 @@ export function processOfferGenerationCohort(
 /**
  * Assess one new/edited participant after the board identities that are
  * already authored. Each supported peer contributes once to the generation
- * frontier; an independently invalid peer is omitted so it cannot suppress an
- * unrelated repair. This is deliberately linear. Complete unordered-cohort
- * validation remains owned by `processOfferGenerationCohort`.
+ * frontier and remains in the focused offer's unordered peer context; an
+ * independently invalid peer is omitted so it cannot suppress an unrelated
+ * repair. This is deliberately linear. Complete unordered-cohort validation
+ * remains owned by `processOfferGenerationCohort`.
  */
 export function processFocusedOfferAfterAuthoredPeers(
   branches: readonly RewardBranchState[],
@@ -2465,6 +2466,7 @@ export function processFocusedOfferAfterAuthoredPeers(
   findings: Map<string, FindingRegionEntry>,
 ): readonly RewardBranchState[] {
   let reached = branches;
+  const acceptedPeers: OfferProcessingPeer[] = [];
   for (const context of peerContexts) {
     const peerFindings = new Map<string, FindingRegionEntry>();
     const next = processRewardOffer(
@@ -2474,12 +2476,15 @@ export function processFocusedOfferAfterAuthoredPeers(
     );
     if (next.length === 0) continue;
     reached = mergeEquivalentRewardBranches(next);
+    acceptedPeers.push(
+      Object.freeze({ origin: context.reward.origin, offer: context.reward.offer }),
+    );
   }
 
   const focusedFindings = new Map<string, FindingRegionEntry>();
   const supported = processRewardOffer(
     reached,
-    { ...focusedContext, peers: Object.freeze([]) },
+    { ...focusedContext, peers: Object.freeze(acceptedPeers) },
     focusedFindings,
   );
   if (supported.length > 0) return supported;
