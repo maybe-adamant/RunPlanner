@@ -341,8 +341,18 @@ Five source effects intersect current planner authority:
    rarity-chance ledger. Common is suppressed only when the folded Rare chance
    is guaranteed.
 
+Ordinary and Rejected apply to eligible Olympian and Hermes source screens:
+the source checks `GodLoot or TreatAsGodLootByShops` and consumes the curse use
+when that screen closes. A structurally valid fallback-Gold result therefore
+still consumes one use of the active curse even though it equips no god trait.
+This is screen-resolution chronology, not a narrower count of successfully
+equipped Olympian boons.
+
 All other curse and benefit effects remain selected/matured trait history. The
-planner does not add damage, health, magick, money, resources, combat effects,
+traits themselves remain fully modeled catalog/authored identities with exact
+payload, eligibility, chronology, Run State visibility, and export identity;
+only their unsupported gameplay effects are simulation-neutral. The planner
+does not add damage, health, magick, money, resources, combat effects,
 door-preview state, or a partial Death Defiance ledger for them.
 
 ## Planner disposition
