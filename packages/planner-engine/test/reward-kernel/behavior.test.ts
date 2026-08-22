@@ -77,6 +77,12 @@ function facts(
   };
 }
 
+function shopFacts(enteredBiomes: number): RewardKernelFacts {
+  return facts([], {
+    counters: { ...requirementContext().counters, enteredBiomes },
+  });
+}
+
 function historyFromSources(sources: readonly string[]): RewardHistoryState {
   const counts = Object.freeze(Object.fromEntries(sources.map((source) => [source, 1])));
   const baseline = createRewardHistoryState();
@@ -673,6 +679,221 @@ describe('ordered shop transitions', () => {
   });
 
   it.each([
+    [1, 'first'],
+    [2, 'first'],
+    [3, 'second'],
+    [4, 'second'],
+  ] as const)(
+    'filters I and Q World Shop options at entered biome %d to the %s-half domain',
+    (enteredBiomes, phase) => {
+      const iProfile = rewardKernelCatalog.shops.byKey.I_WorldShop!;
+      const qProfile = rewardKernelCatalog.shops.byKey.Q_WorldShop!;
+      const iAuthored: readonly AuthoredShopOffer[] =
+        phase === 'first'
+          ? [
+              {
+                offer: {
+                  rewardType: 'RandomLoot',
+                  payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+                },
+              },
+              { offer: { rewardType: 'MaxHealthDrop' } },
+              { offer: { rewardType: 'RoomRewardHealDrop' } },
+              {
+                offer: {
+                  rewardType: 'BlindBoxLoot',
+                  payload: { kind: 'BoonSource', source: 'ZeusUpgrade' },
+                },
+              },
+              { offer: { rewardType: 'WeaponPointsRareDrop' } },
+            ]
+          : [
+              {
+                offer: {
+                  rewardType: 'RandomLoot',
+                  payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+                },
+              },
+              { offer: { rewardType: 'MaxHealthDrop' } },
+              { offer: { rewardType: 'HealBigDrop' } },
+              { offer: { rewardType: 'MaxHealthDropBig' } },
+              { offer: { rewardType: 'WeaponPointsRareDrop' } },
+            ];
+      const qAuthored: readonly AuthoredShopOffer[] =
+        phase === 'first'
+          ? [
+              {
+                offer: {
+                  rewardType: 'RandomLoot',
+                  payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+                },
+              },
+              {
+                offer: {
+                  rewardType: 'BlindBoxLoot',
+                  payload: { kind: 'BoonSource', source: 'ZeusUpgrade' },
+                },
+              },
+              {
+                offer: {
+                  rewardType: 'RandomLoot',
+                  payload: { kind: 'BoonSource', source: 'HestiaUpgrade' },
+                },
+              },
+              { offer: { rewardType: 'RoomRewardHealDrop' } },
+              { offer: { rewardType: 'WeaponUpgradeDrop' } },
+              { offer: { rewardType: 'WeaponPointsRareDrop' } },
+            ]
+          : [
+              {
+                offer: {
+                  rewardType: 'RandomLoot',
+                  payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+                },
+              },
+              {
+                offer: {
+                  rewardType: 'RandomLoot',
+                  payload: { kind: 'BoonSource', source: 'ZeusUpgrade' },
+                },
+              },
+              { offer: { rewardType: 'HealBigDrop' } },
+              { offer: { rewardType: 'HealBigDrop' } },
+              { offer: { rewardType: 'MaxHealthDropBig' } },
+              { offer: { rewardType: 'WeaponPointsRareDrop' } },
+            ];
+
+      const iWitness = findShopGenerationWitnesses(
+        rewardKernelCatalog,
+        iProfile,
+        iAuthored,
+        shopFacts(enteredBiomes),
+      )[0];
+      const qWitness = findShopGenerationWitnesses(
+        rewardKernelCatalog,
+        qProfile,
+        qAuthored,
+        shopFacts(enteredBiomes),
+      )[0];
+
+      expect(iWitness?.optionKeys).toEqual(
+        phase === 'first'
+          ? [
+              'RandomLoot',
+              'MaxHealthDrop',
+              'RoomRewardHealDrop',
+              'BlindBoxLoot',
+              'WeaponPointsRareDrop',
+            ]
+          : [
+              'BoostedRandomLoot',
+              'MaxHealthDrop',
+              'HealBigDrop',
+              'MaxHealthDropBig',
+              'WeaponPointsRareDrop',
+            ],
+      );
+      expect(qWitness?.optionKeys).toEqual(
+        phase === 'first'
+          ? [
+              'RandomLoot',
+              'BlindBoxLoot',
+              'RandomLoot',
+              'RoomRewardHealDrop',
+              'WeaponUpgradeDrop',
+              'WeaponPointsRareDrop',
+            ]
+          : [
+              'RandomLoot',
+              'BoostedRandomLoot',
+              'HealBigDrop',
+              'HealBigDrop',
+              'MaxHealthDropBig',
+              'WeaponPointsRareDrop',
+            ],
+      );
+      expect(qWitness?.optionKeys[0]).not.toBe(qWitness?.optionKeys[1]);
+    },
+  );
+
+  it('keeps phase-ineligible offers editable as indexed or joint generation failures', () => {
+    const iProfile = rewardKernelCatalog.shops.byKey.I_WorldShop!;
+    const iAuthored: readonly AuthoredShopOffer[] = [
+      { offer: { rewardType: 'StackUpgradeBig' } },
+      { offer: { rewardType: 'MaxHealthDrop' } },
+      { offer: { rewardType: 'HealBigDrop' } },
+      { offer: { rewardType: 'MaxHealthDropBig' } },
+      { offer: { rewardType: 'WeaponPointsRareDrop' } },
+    ];
+    const earlyUpgradableFacts = facts([], {
+      counters: { ...requirementContext().counters, enteredBiomes: 2, upgradableTraitCount: 1 },
+    });
+    expect(
+      evaluateShopGenerationSupport(rewardKernelCatalog, iProfile, iAuthored, earlyUpgradableFacts),
+    ).toMatchObject({ witnesses: [], unsupportedSlotIndexes: [0, 2, 3] });
+
+    const qProfile = rewardKernelCatalog.shops.byKey.Q_WorldShop!;
+    const qAuthored: readonly AuthoredShopOffer[] = [
+      {
+        offer: {
+          rewardType: 'RandomLoot',
+          payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+        },
+      },
+      {
+        offer: { rewardType: 'RandomLoot', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
+      },
+      {
+        offer: {
+          rewardType: 'RandomLoot',
+          payload: { kind: 'BoonSource', source: 'HestiaUpgrade' },
+        },
+      },
+      { offer: { rewardType: 'RoomRewardHealDrop' } },
+      { offer: { rewardType: 'WeaponUpgradeDrop' } },
+      { offer: { rewardType: 'WeaponPointsRareDrop' } },
+    ];
+    const support = evaluateShopGenerationSupport(
+      rewardKernelCatalog,
+      qProfile,
+      qAuthored,
+      shopFacts(2),
+    );
+    expect(support).toMatchObject({
+      witnesses: [],
+      unsupportedSlotIndexes: [],
+      jointlyUnavailable: true,
+    });
+  });
+
+  it('keeps WorldShop generation support unchanged across entered-biome phase boundaries', () => {
+    const profile = rewardKernelCatalog.shops.byKey.WorldShop!;
+    const authored: readonly AuthoredShopOffer[] = [
+      {
+        offer: {
+          rewardType: 'RandomLoot',
+          payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+        },
+      },
+      { offer: { rewardType: 'MaxHealthDrop' } },
+      { offer: { rewardType: 'MaxManaDrop' } },
+    ];
+    const witnesses = [1, 4].map((enteredBiomes) =>
+      evaluateShopGenerationSupport(
+        rewardKernelCatalog,
+        profile,
+        authored,
+        shopFacts(enteredBiomes),
+      ).witnesses.map((witness) => witness.optionKeys),
+    );
+
+    expect(witnesses).toEqual([
+      [['RandomLoot', 'MaxHealthDrop', 'MaxManaDrop']],
+      [['RandomLoot', 'MaxHealthDrop', 'MaxManaDrop']],
+    ]);
+  });
+
+  it.each([
     {
       profileKey: 'I_WorldShop',
       authored: [
@@ -716,8 +937,14 @@ describe('ordered shop transitions', () => {
     ({ profileKey, authored, lastStandSlot }) => {
       const profile = rewardKernelCatalog.shops.byKey[profileKey];
       if (profile === undefined) throw new Error(`missing ${profileKey}`);
-      const falseFacts = facts([], { authoredConditions: { deathDefianceConditionMet: false } });
-      const trueFacts = facts([], { authoredConditions: { deathDefianceConditionMet: true } });
+      const falseFacts = facts([], {
+        counters: { ...requirementContext().counters, enteredBiomes: 4 },
+        authoredConditions: { deathDefianceConditionMet: false },
+      });
+      const trueFacts = facts([], {
+        counters: { ...requirementContext().counters, enteredBiomes: 4 },
+        authoredConditions: { deathDefianceConditionMet: true },
+      });
 
       expect(
         evaluateShopGenerationSupport(rewardKernelCatalog, profile, authored, falseFacts),
@@ -844,11 +1071,16 @@ describe('ordered shop transitions', () => {
       { offer: { rewardType: 'MaxHealthDropBig' } },
       { offer: { rewardType: 'WeaponPointsRareDrop' } },
     ];
-    const witnesses = findShopGenerationWitnesses(rewardKernelCatalog, profile, authored, facts());
+    const witnesses = findShopGenerationWitnesses(
+      rewardKernelCatalog,
+      profile,
+      authored,
+      shopFacts(4),
+    );
     expect(witnesses).toHaveLength(2);
     expect(witnesses.map((witness) => witness.optionKeys.slice(0, 2))).toEqual([
-      ['BoostedRandomLoot', 'RandomLoot'],
       ['RandomLoot', 'BoostedRandomLoot'],
+      ['BoostedRandomLoot', 'RandomLoot'],
     ]);
   });
 
@@ -873,7 +1105,12 @@ describe('ordered shop transitions', () => {
       { offer: { rewardType: 'WeaponPointsRareDrop' } },
     ];
 
-    const support = evaluateShopGenerationSupport(rewardKernelCatalog, profile, authored, facts());
+    const support = evaluateShopGenerationSupport(
+      rewardKernelCatalog,
+      profile,
+      authored,
+      shopFacts(4),
+    );
 
     expect(support.witnesses).toEqual([]);
     expect(support.unsupportedSlotIndexes).toEqual([]);
@@ -890,7 +1127,7 @@ describe('ordered shop transitions', () => {
       { offer: { rewardType: 'MaxHealthDropBig' } },
       { offer: { rewardType: 'WeaponPointsRareDrop' } },
     ];
-    const baseFacts = facts();
+    const baseFacts = shopFacts(4);
     const witness = findShopGenerationWitnesses(
       rewardKernelCatalog,
       profile,
@@ -952,7 +1189,9 @@ describe('ordered shop transitions', () => {
       { offer: { rewardType: 'MaxHealthDropBig' } },
       { offer: { rewardType: 'WeaponPointsRareDrop' } },
     ];
-    const baseFacts = facts(initialSources);
+    const baseFacts = facts(initialSources, {
+      counters: { ...requirementContext().counters, enteredBiomes: 4 },
+    });
     const witnesses = findShopGenerationWitnesses(
       rewardKernelCatalog,
       profile,

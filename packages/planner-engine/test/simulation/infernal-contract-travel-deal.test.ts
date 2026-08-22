@@ -160,7 +160,7 @@ function baseFacts(): RewardKernelFacts {
         biomeDepthCache: 4,
         biomeEncounterDepth: 2,
         encounterDepth: 7,
-        enteredBiomes: 1,
+        enteredBiomes: 4,
         upgradableTraitCount: 1,
       },
       records: { biomeUseRecord: {}, lootTypeHistory: {}, roomsEntered: {}, useRecord: {} },

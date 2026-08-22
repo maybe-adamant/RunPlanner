@@ -3,12 +3,16 @@ import {
   deathDefianceConditionMet,
   hammerEarly,
   hammerLate,
+  inRunFirstHalf,
+  inRunSecondHalf,
   routeTalentLegal,
   shopHermesLegal,
   spellLegal,
   stackLegal,
   talentLegal,
 } from './requirements';
+import type { RequirementExpression } from '@run-planner/engine/requirements';
+
 import type { RawRewardKernelInput, RawShopOptionEntryDeclaration } from './types';
 
 function option(declaration: RawShopOptionEntryDeclaration): RawShopOptionEntryDeclaration {
@@ -19,6 +23,19 @@ function option(declaration: RawShopOptionEntryDeclaration): RawShopOptionEntryD
       gameName: declaration.rewardType,
     },
   };
+}
+
+function phaseOption(
+  phase: RequirementExpression,
+  declaration: RawShopOptionEntryDeclaration,
+): RawShopOptionEntryDeclaration {
+  return option({
+    ...declaration,
+    requirement:
+      declaration.requirement === undefined
+        ? phase
+        : { kind: 'all', requirements: [phase, declaration.requirement] },
+  });
 }
 
 const worldGroups = [
@@ -161,12 +178,17 @@ export const shops = [
         key: 'BoostedBoon',
         offerCount: 1,
         options: [
-          option({
+          phaseOption(inRunFirstHalf, {
+            key: 'RandomLoot',
+            rewardType: 'RandomLoot',
+            purchaseInteraction: { kind: 'resolvedOfferSource' },
+          }),
+          phaseOption(inRunSecondHalf, {
             key: 'BoostedRandomLoot',
             rewardType: 'RandomLoot',
             purchaseInteraction: { kind: 'resolvedOfferSource' },
           }),
-          option({
+          phaseOption(inRunSecondHalf, {
             key: 'StackUpgradeBig',
             rewardType: 'StackUpgradeBig',
             requirement: stackLegal,
@@ -219,11 +241,19 @@ export const shops = [
         key: 'Survival',
         offerCount: 1,
         options: [
-          option({
+          phaseOption(inRunFirstHalf, {
+            key: 'RoomRewardHealDrop',
+            rewardType: 'RoomRewardHealDrop',
+          }),
+          phaseOption(inRunFirstHalf, {
+            key: 'ArmorBoost',
+            rewardType: 'ArmorBoost',
+          }),
+          phaseOption(inRunSecondHalf, {
             key: 'HealBigDrop',
             rewardType: 'HealBigDrop',
           }),
-          option({
+          phaseOption(inRunSecondHalf, {
             key: 'ArmorBigBoost',
             rewardType: 'ArmorBigBoost',
           }),
@@ -239,27 +269,46 @@ export const shops = [
         key: 'PremiumProgress',
         offerCount: 1,
         options: [
-          option({
+          phaseOption(inRunFirstHalf, {
+            key: 'WeaponUpgradeDrop',
+            rewardType: 'WeaponUpgradeDrop',
+            purchaseInteraction: { kind: 'fixed', gameName: 'WeaponUpgrade' },
+            requirement: hammerEarly,
+          }),
+          phaseOption(inRunFirstHalf, {
+            key: 'RandomLoot',
+            rewardType: 'RandomLoot',
+            purchaseInteraction: { kind: 'resolvedOfferSource' },
+          }),
+          phaseOption(inRunFirstHalf, {
+            key: 'BlindBoxLoot',
+            rewardType: 'BlindBoxLoot',
+            acquisitionLifecycle: [
+              { role: 'box', lifecyclePoint: 'purchase' },
+              { role: 'hiddenSource', lifecyclePoint: 'afterUnwrap' },
+            ],
+          }),
+          phaseOption(inRunSecondHalf, {
             key: 'ShopHermesUpgrade',
             rewardType: 'ShopHermesUpgrade',
             purchaseInteraction: { kind: 'fixed', gameName: 'HermesUpgrade' },
             requirement: shopHermesLegal,
           }),
-          option({
+          phaseOption(inRunSecondHalf, {
             key: 'ChaosWeaponUpgrade',
             rewardType: 'ChaosWeaponUpgrade',
             requirement: chaosHammerLegal,
           }),
-          option({
+          phaseOption(inRunSecondHalf, {
             key: 'BoostedRandomLoot',
             rewardType: 'RandomLoot',
             purchaseInteraction: { kind: 'resolvedOfferSource' },
           }),
-          option({
+          phaseOption(inRunSecondHalf, {
             key: 'MaxHealthDropBig',
             rewardType: 'MaxHealthDropBig',
           }),
-          option({
+          phaseOption(inRunSecondHalf, {
             key: 'MaxManaDropBig',
             rewardType: 'MaxManaDropBig',
           }),
@@ -303,16 +352,6 @@ export const shops = [
         offerCount: 2,
         options: [
           option({
-            key: 'BoostedRandomLoot',
-            rewardType: 'RandomLoot',
-            purchaseInteraction: { kind: 'resolvedOfferSource' },
-          }),
-          option({
-            key: 'StackUpgradeBig',
-            rewardType: 'StackUpgradeBig',
-            requirement: stackLegal,
-          }),
-          option({
             key: 'RandomLoot',
             rewardType: 'RandomLoot',
             purchaseInteraction: { kind: 'resolvedOfferSource' },
@@ -324,6 +363,21 @@ export const shops = [
               { role: 'box', lifecyclePoint: 'purchase' },
               { role: 'hiddenSource', lifecyclePoint: 'afterUnwrap' },
             ],
+          }),
+          phaseOption(inRunFirstHalf, {
+            key: 'StackUpgrade',
+            rewardType: 'StackUpgrade',
+            requirement: stackLegal,
+          }),
+          phaseOption(inRunSecondHalf, {
+            key: 'BoostedRandomLoot',
+            rewardType: 'RandomLoot',
+            purchaseInteraction: { kind: 'resolvedOfferSource' },
+          }),
+          phaseOption(inRunSecondHalf, {
+            key: 'StackUpgradeBig',
+            rewardType: 'StackUpgradeBig',
+            requirement: stackLegal,
           }),
           option({
             key: 'MaxHealthDrop',
@@ -349,11 +403,16 @@ export const shops = [
         key: 'LargeSurvival',
         offerCount: 1,
         options: [
-          option({
+          phaseOption(inRunFirstHalf, {
+            key: 'RandomLoot',
+            rewardType: 'RandomLoot',
+            purchaseInteraction: { kind: 'resolvedOfferSource' },
+          }),
+          phaseOption(inRunSecondHalf, {
             key: 'HealBigDrop',
             rewardType: 'HealBigDrop',
           }),
-          option({
+          phaseOption(inRunSecondHalf, {
             key: 'ArmorBigBoost',
             rewardType: 'ArmorBigBoost',
           }),
@@ -363,11 +422,19 @@ export const shops = [
         key: 'Survival',
         offerCount: 1,
         options: [
-          option({
+          phaseOption(inRunFirstHalf, {
+            key: 'RoomRewardHealDrop',
+            rewardType: 'RoomRewardHealDrop',
+          }),
+          phaseOption(inRunFirstHalf, {
+            key: 'ArmorBoost',
+            rewardType: 'ArmorBoost',
+          }),
+          phaseOption(inRunSecondHalf, {
             key: 'HealBigDrop',
             rewardType: 'HealBigDrop',
           }),
-          option({
+          phaseOption(inRunSecondHalf, {
             key: 'ArmorBigBoost',
             rewardType: 'ArmorBigBoost',
           }),
@@ -383,27 +450,38 @@ export const shops = [
         key: 'PremiumProgress',
         offerCount: 1,
         options: [
-          option({
+          phaseOption(inRunFirstHalf, {
+            key: 'WeaponUpgradeDrop',
+            rewardType: 'WeaponUpgradeDrop',
+            purchaseInteraction: { kind: 'fixed', gameName: 'WeaponUpgrade' },
+            requirement: hammerEarly,
+          }),
+          phaseOption(inRunFirstHalf, {
+            key: 'RandomLoot',
+            rewardType: 'RandomLoot',
+            purchaseInteraction: { kind: 'resolvedOfferSource' },
+          }),
+          phaseOption(inRunSecondHalf, {
             key: 'ShopHermesUpgrade',
             rewardType: 'ShopHermesUpgrade',
             purchaseInteraction: { kind: 'fixed', gameName: 'HermesUpgrade' },
             requirement: shopHermesLegal,
           }),
-          option({
+          phaseOption(inRunSecondHalf, {
             key: 'ChaosWeaponUpgrade',
             rewardType: 'ChaosWeaponUpgrade',
             requirement: chaosHammerLegal,
           }),
-          option({
+          phaseOption(inRunSecondHalf, {
             key: 'BoostedRandomLoot',
             rewardType: 'RandomLoot',
             purchaseInteraction: { kind: 'resolvedOfferSource' },
           }),
-          option({
+          phaseOption(inRunSecondHalf, {
             key: 'MaxHealthDropBig',
             rewardType: 'MaxHealthDropBig',
           }),
-          option({
+          phaseOption(inRunSecondHalf, {
             key: 'MaxManaDropBig',
             rewardType: 'MaxManaDropBig',
           }),
