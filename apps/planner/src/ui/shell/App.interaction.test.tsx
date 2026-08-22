@@ -18,6 +18,7 @@ import {
   createShopOfferAddress,
   semanticAddressKey,
   roomActionKey,
+  decodeProjectDocument,
   encodeProjectDocument,
 } from '@run-planner/engine/authored-project';
 import { derivedAcquisitionEntriesForProjectEvaluationAssembly } from '@run-planner/engine/simulation';
@@ -55,6 +56,7 @@ import {
 } from '@run-planner/test-fixtures/shared';
 import {
   createCompleteFGProject,
+  createGoldenFGHProject,
   createGoldenFGHIProject,
   goldenFBiome,
   goldenFOccurrenceId,
@@ -517,6 +519,103 @@ describe('planner history interaction', () => {
     expect(within(dialog).getByRole('heading', { level: 2 }).textContent).toBe(
       restored.giver.label,
     );
+  });
+
+  it('opens the exact unresolved SpellDrop editor from its finding', async () => {
+    const application = createApplication();
+    const occurrenceId = goldenFOccurrenceId(10, 2);
+    const selected = applyProjectCommand(createGoldenFGHProject(), catalog, {
+      kind: 'SetExitSelection',
+      selection: createExitSelectionAddress(goldenFBiome, {
+        kind: 'occurrence',
+        occurrenceId: goldenFOccurrenceId(9, 1),
+      }),
+      value: { kind: 'normal', exitKey: 'exit2' },
+    });
+    const raw = JSON.parse(encodeProjectDocument(selected)) as {
+      routes: Array<{
+        routeKey: string;
+        biomes: Array<{
+          biomeKey: string;
+          topology: {
+            occurrences: Array<{
+              occurrenceId: string;
+              state: { reward?: { traitOffersByAcquisitionRole?: { self?: unknown } } };
+            }>;
+          } | null;
+        }>;
+      }>;
+    };
+    const rawOccurrence = raw.routes
+      .find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find((biome) => biome.biomeKey === 'F')
+      ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === occurrenceId);
+    if (rawOccurrence?.state.reward?.traitOffersByAcquisitionRole === undefined) {
+      throw new Error('SpellDrop fixture has no self child to unset');
+    }
+    rawOccurrence.state.reward.traitOffersByAcquisitionRole.self = null;
+    application.store.dispatch(authoredProjectReplaced(decodeProjectDocument(raw, catalog)));
+    const target = createTraitOfferAddress(
+      createIncomingRewardAddress(goldenFBiome, occurrenceId),
+      'self',
+    );
+    const finding = application.store
+      .getState()
+      .projectWorkspace.assembly.evaluation.findings.find(
+        (candidate) => semanticAddressKey(candidate.origin) === semanticAddressKey(target),
+      );
+    if (finding === undefined) throw new Error('reached SpellDrop missing finding is absent');
+    const view = renderPlannerForInteraction({ application });
+    const findings = screen.getByRole('heading', { name: 'Findings' }).closest('section');
+    if (findings === null) throw new Error('Findings panel is missing');
+    const findingButton = within(findings)
+      .getAllByRole('button')
+      .find((button) => button.textContent?.includes('trait'));
+    if (findingButton === undefined) throw new Error('SpellDrop finding is not presented');
+    await view.user.click(findingButton);
+    expect(application.store.getState().editorSession.traitDialogTarget).toEqual(target);
+    expect(application.store.getState().editorSession.focusedSemanticOwner).toEqual(target);
+    expect(await screen.findByRole('dialog')).toBeTruthy();
+    expect(
+      application
+        .selectStructuredWorkspace(application.store.getState())
+        .focusByOwner.get(semanticAddressKey(target)),
+    ).toMatchObject({ ownerAddress: target, traitDialogTarget: target });
+  });
+
+  it('keeps Selene-dormant SpellDrop children out of findings, markers, destinations, and interactions', () => {
+    const application = createApplication();
+    const occurrenceId = goldenFOccurrenceId(10, 2);
+    let project = applyProjectCommand(createGoldenFGHProject(), catalog, {
+      kind: 'SetExitSelection',
+      selection: createExitSelectionAddress(goldenFBiome, {
+        kind: 'occurrence',
+        occurrenceId: goldenFOccurrenceId(9, 1),
+      }),
+      value: { kind: 'normal', exitKey: 'exit2' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceRouteLoadout',
+      route: { kind: 'route', routeKey: 'Underworld' },
+      weaponKey: 'WeaponSuit',
+      aspectKey: 'SuitHexAspect',
+    });
+    application.store.dispatch(authoredProjectReplaced(project));
+    const target = createTraitOfferAddress(
+      createIncomingRewardAddress(goldenFBiome, occurrenceId),
+      'self',
+    );
+    const workspace = application.selectStructuredWorkspace(application.store.getState());
+    expect(
+      application.store
+        .getState()
+        .projectWorkspace.assembly.evaluation.findings.filter(
+          (finding) => semanticAddressKey(finding.origin) === semanticAddressKey(target),
+        ),
+    ).toEqual([]);
+    expect(workspace.interactions.traitOffers.has(semanticAddressKey(target))).toBe(false);
+    expect(workspace.focusByOwner.has(semanticAddressKey(target))).toBe(false);
+    application.dispose();
   });
 
   it('opens a reached-invalid trait finding with its exact marker and engine reason', async () => {

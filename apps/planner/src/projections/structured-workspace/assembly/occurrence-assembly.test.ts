@@ -17,6 +17,8 @@ import {
   createTraitOfferAddress,
   echoLastRewardPickupEntryKey,
   createRouteStartKeepsakeSelectionAddress,
+  decodeProjectDocument,
+  encodeProjectDocument,
   roomActionKey,
   semanticAddressKey,
   type OccurrenceId,
@@ -27,12 +29,14 @@ import {
   encounterPhaseSequenceStatusForProjectEvaluationAssembly,
   fieldsBatchFacts,
   simulateProjectAssembly,
+  traitOfferCandidateForProjectEvaluationAssembly,
   type GorgonPhaseCandidateSupport,
 } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
 import {
   createGoldenFGHIProject,
+  createGoldenFGHProject,
   createCompleteFGProject,
   createFConversionFrontierProject,
   goldenFBiome,
@@ -74,6 +78,8 @@ function biomeSource(
     (phase) => encounterPhaseSequenceStatusForProjectEvaluationAssembly(assembly, phase),
     undefined,
     gorgonSupport,
+    () => Object.freeze([]),
+    (address) => traitOfferCandidateForProjectEvaluationAssembly(assembly, address) !== undefined,
   )
     .routes.find((route) => route.routeKey === routeKey)
     ?.biomes.find((biome) => biome.plan.biomeKey === biomeKey);
@@ -150,6 +156,7 @@ function assemble(
     ...(fieldsFacts === undefined ? {} : { fieldsBatchFacts: fieldsFacts }),
     facts,
     levelResolutionAssessment: source.levelResolutionAssessment,
+    isActiveTraitOffer: source.isActiveTraitOffer,
     derivedAcquisitionEntries: derivedAcquisitionEntries ?? source.derivedAcquisitionEntries,
     ...(projectedEvaluatedRoom === undefined ? {} : { evaluatedRoom: projectedEvaluatedRoom }),
     markerDestinations: markers.emitter,
@@ -159,6 +166,104 @@ function assemble(
   });
   return { assembly, markers, source };
 }
+
+it('projects a selected SpellDrop child from exact engine candidate capability', () => {
+  const predecessor = goldenFOccurrenceId(9, 1);
+  const occurrenceId = goldenFOccurrenceId(10, 2);
+  const project = applyProjectCommand(createGoldenFGHProject(), catalog, {
+    kind: 'SetExitSelection',
+    selection: createExitSelectionAddress(goldenFBiome, {
+      kind: 'occurrence',
+      occurrenceId: predecessor,
+    }),
+    value: { kind: 'normal', exitKey: 'exit2' },
+  });
+  const assembled = assemble(project, 'Underworld', 'F', occurrenceId);
+  const address = createTraitOfferAddress(
+    createIncomingRewardAddress(goldenFBiome, occurrenceId),
+    'self',
+  );
+  expect(assembled.source.isActiveTraitOffer(address)).toBe(true);
+  expect(
+    assembled.assembly.rewardControls.flatMap((control) => control.traitOffers ?? []),
+  ).toContainEqual(expect.objectContaining({ address }));
+});
+
+it('retains the reached unresolved SpellDrop child as the exact repair control', () => {
+  const predecessor = goldenFOccurrenceId(9, 1);
+  const occurrenceId = goldenFOccurrenceId(10, 2);
+  const selected = applyProjectCommand(createGoldenFGHProject(), catalog, {
+    kind: 'SetExitSelection',
+    selection: createExitSelectionAddress(goldenFBiome, {
+      kind: 'occurrence',
+      occurrenceId: predecessor,
+    }),
+    value: { kind: 'normal', exitKey: 'exit2' },
+  });
+  // Commands deliberately have no reset-to-null path. Keep this malformed-but-editable
+  // fixture at the strict document boundary so the projection is tested against the
+  // persisted recovery state rather than a fabricated command.
+  const raw = JSON.parse(encodeProjectDocument(selected)) as {
+    routes: Array<{
+      routeKey: string;
+      biomes: Array<{
+        biomeKey: string;
+        topology: {
+          occurrences: Array<{
+            occurrenceId: string;
+            state: { reward?: { traitOffersByAcquisitionRole?: { self?: unknown } } };
+          }>;
+        } | null;
+      }>;
+    }>;
+  };
+  const rawOccurrence = raw.routes
+    .find((route) => route.routeKey === 'Underworld')
+    ?.biomes.find((biome) => biome.biomeKey === 'F')
+    ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === occurrenceId);
+  if (rawOccurrence?.state.reward?.traitOffersByAcquisitionRole === undefined) {
+    throw new Error('SpellDrop fixture has no self child to unset');
+  }
+  rawOccurrence.state.reward.traitOffersByAcquisitionRole.self = null;
+  const project = decodeProjectDocument(raw, catalog);
+  const assembled = assemble(project, 'Underworld', 'F', occurrenceId);
+  const address = createTraitOfferAddress(
+    createIncomingRewardAddress(goldenFBiome, occurrenceId),
+    'self',
+  );
+  expect(assembled.source.isActiveTraitOffer(address)).toBe(true);
+  expect(
+    assembled.assembly.rewardControls.flatMap((control) => control.traitOffers ?? []),
+  ).toContainEqual(expect.objectContaining({ address, offer: null, status: 'unspecified' }));
+});
+
+it('withholds a retained SpellDrop child under Selene through the route loadout', () => {
+  const predecessor = goldenFOccurrenceId(9, 1);
+  const occurrenceId = goldenFOccurrenceId(10, 2);
+  const reached = applyProjectCommand(createGoldenFGHProject(), catalog, {
+    kind: 'SetExitSelection',
+    selection: createExitSelectionAddress(goldenFBiome, {
+      kind: 'occurrence',
+      occurrenceId: predecessor,
+    }),
+    value: { kind: 'normal', exitKey: 'exit2' },
+  });
+  const selene = applyProjectCommand(reached, catalog, {
+    kind: 'ReplaceRouteLoadout',
+    route: { kind: 'route', routeKey: 'Underworld' },
+    weaponKey: 'WeaponSuit',
+    aspectKey: 'SuitHexAspect',
+  });
+  const address = createTraitOfferAddress(
+    createIncomingRewardAddress(goldenFBiome, occurrenceId),
+    'self',
+  );
+  const dormant = assemble(selene, 'Underworld', 'F', occurrenceId);
+  expect(dormant.source.isActiveTraitOffer(address)).toBe(false);
+  expect(
+    dormant.assembly.rewardControls.flatMap((control) => control.traitOffers ?? []),
+  ).not.toContainEqual(expect.objectContaining({ address }));
+});
 
 function withFPrebossSelection(
   project: ProjectDocument,

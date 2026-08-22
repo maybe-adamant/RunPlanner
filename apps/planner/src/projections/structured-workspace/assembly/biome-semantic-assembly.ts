@@ -501,6 +501,7 @@ export function assembleWorkspaceBiomeSemantics(
         : { fieldsBatchFacts: request.fieldsBatchFacts }),
       facts: requireOccurrenceAssemblyFacts(biome, occurrenceFacts, request.occurrence),
       levelResolutionAssessment: source.levelResolutionAssessment,
+      isActiveTraitOffer: source.isActiveTraitOffer,
       derivedAcquisitionEntries: source.derivedAcquisitionEntries,
       markerDestinations,
       ordinaryRewardForfeited: (owner) => source.ordinaryRewardForfeited(owner.address),

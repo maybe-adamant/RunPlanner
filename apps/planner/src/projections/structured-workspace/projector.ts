@@ -14,6 +14,7 @@ import {
   encounterPhaseGorgonSupportForProjectEvaluationAssembly,
   derivedAcquisitionEntriesForProjectEvaluationAssembly,
   blockedOccurrenceRoomForProjectEvaluationAssembly,
+  traitOfferCandidateForProjectEvaluationAssembly,
   type ProjectEvaluation,
   type ProjectEvaluationAssembly,
 } from '@run-planner/engine/simulation';
@@ -221,6 +222,16 @@ export function createStructuredWorkspaceProjection(
           } catch (error) {
             if (error instanceof Error && error.name === 'ProjectSimulationContractError') {
               return Object.freeze([]);
+            }
+            throw error;
+          }
+        },
+        (address) => {
+          try {
+            return traitOfferCandidateForProjectEvaluationAssembly(assembly, address) !== undefined;
+          } catch (error) {
+            if (error instanceof Error && error.name === 'ProjectSimulationContractError') {
+              return false;
             }
             throw error;
           }

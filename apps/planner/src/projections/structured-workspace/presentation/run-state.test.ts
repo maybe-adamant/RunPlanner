@@ -74,8 +74,14 @@ describe('Run State presentation', () => {
             sourceRole: 'main',
             traitKey: 'StaffDoubleAttackTrait',
           },
+          SpellMoonBeamTrait: {
+            giverKey: 'SpellDrop',
+            providerKind: 'spell',
+            sourceRole: 'directTraitGrant',
+            traitKey: 'SpellMoonBeamTrait',
+          },
         },
-        ordinaryBoonSlots: {
+        equippedSlots: {
           Melee: {
             giverKey: 'Apollo',
             providerKind: 'olympian',
@@ -83,6 +89,12 @@ describe('Run State presentation', () => {
             level: 3,
             sourceRole: 'main',
             traitKey: 'ApolloWeaponBoon',
+          },
+          Spell: {
+            giverKey: 'SpellDrop',
+            providerKind: 'spell',
+            sourceRole: 'directTraitGrant',
+            traitKey: 'SpellMoonBeamTrait',
           },
         },
         elementCounts: { Aether: 0, Air: 0, Earth: 0, Fire: 0, Water: 0 },
@@ -225,6 +237,11 @@ describe('Run State presentation', () => {
         { label: 'Cast', slotKey: 'Ranged' },
         { label: 'Sprint', slotKey: 'Rush' },
         { label: 'Magick', slotKey: 'Mana' },
+        {
+          label: 'Spell',
+          slotKey: 'Spell',
+          trait: { label: 'Sky Fall', traitKey: 'SpellMoonBeamTrait' },
+        },
       ],
       other: [
         {

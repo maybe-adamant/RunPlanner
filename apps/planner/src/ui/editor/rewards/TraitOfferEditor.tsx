@@ -738,6 +738,7 @@ function TraitOfferOptionEditor({
   interaction,
   optionKey,
   effectiveRarity,
+  spellOffer = false,
   rarifySupported,
   value,
   onUpdate,
@@ -746,6 +747,7 @@ function TraitOfferOptionEditor({
   readonly interaction: WorkspaceTraitOfferInteraction;
   readonly optionKey: AuthoredTraitOfferTraits['selectedOptionKey'];
   readonly effectiveRarity?: TraitRarity;
+  readonly spellOffer?: boolean;
   readonly rarifySupported: boolean;
   readonly value: AuthoredTraitOfferTraits;
   readonly onUpdate: (value: AuthoredTraitOfferTraits) => void;
@@ -784,9 +786,13 @@ function TraitOfferOptionEditor({
   };
   return (
     <fieldset className="trait-offer-option" key={optionKey}>
-      <legend>{optionKey.replace('option', 'Option ')}</legend>
+      <legend>
+        {spellOffer
+          ? optionKey.replace('option', 'Spell ')
+          : optionKey.replace('option', 'Option ')}
+      </legend>
       <ContextualPicker
-        ariaLabel={`${optionKey} trait`}
+        ariaLabel={`${spellOffer ? optionKey.replace('option', 'Spell ') : optionKey} trait`}
         id={`${idPrefix}-trait`}
         label="Trait"
         loading={loaded.pending}
@@ -817,20 +823,25 @@ function TraitOfferOptionEditor({
           {...(option.rarity === undefined ? {} : { triggerLabel: rarityLabel(option.rarity) })}
         />
       )}
-      <button
-        disabled={!rarifySupported}
-        onClick={() =>
-          onUpdate(
-            Object.freeze({
-              ...value,
-              rarificationActions: Object.freeze([...(value.rarificationActions ?? []), optionKey]),
-            }),
-          )
-        }
-        type="button"
-      >
-        Rarify
-      </button>
+      {spellOffer ? null : (
+        <button
+          disabled={!rarifySupported}
+          onClick={() =>
+            onUpdate(
+              Object.freeze({
+                ...value,
+                rarificationActions: Object.freeze([
+                  ...(value.rarificationActions ?? []),
+                  optionKey,
+                ]),
+              }),
+            )
+          }
+          type="button"
+        >
+          Rarify
+        </button>
+      )}
       {effectiveRarity === undefined ? null : <p>Effective rarity: {effectiveRarity}</p>}
       <label className="trait-option-selected">
         <input
@@ -1060,7 +1071,12 @@ export function TraitOfferLauncher({
           : (interaction.choices.find((choice) => choice.value === selected.traitKey)?.label ??
             selected.traitKey);
   const status = control.status;
-  const label = control.offer === null ? traitLabel : `Edit Trait · ${traitLabel}`;
+  const spellOffer = interaction.giver.providerKind === 'spell';
+  const label = spellOffer
+    ? 'Edit spell'
+    : control.offer === null
+      ? traitLabel
+      : `Edit Trait · ${traitLabel}`;
   const statusLabel =
     status === 'unspecified'
       ? 'trait is not selected'
@@ -1174,6 +1190,7 @@ function LoadedTraitOfferEditor({
   };
   const deathDefianceCondition =
     value.kind === 'traits' ? interaction.deathDefianceCondition : undefined;
+  const spellOffer = interaction.giver.providerKind === 'spell';
   const traitsStartingDraft = useMemo(
     () => (value.kind === 'fallbackGold' ? interaction.traitsStartingDraft?.() : undefined),
     [interaction, value],
@@ -1222,7 +1239,10 @@ function LoadedTraitOfferEditor({
   const fallbackGoldLoaded = fallbackGoldController.observe(fallbackGoldLoadable);
   const fallbackGoldSupport = candidateSupport(fallbackGoldLoaded.result?.[0]);
   useEffect(() => {
-    controller.activate(loadable);
+    // Rarityless SpellDrop offers have a closed engine-owned shape. Their
+    // editor only needs the authored three rows, so opening it must not issue
+    // a speculative candidate query.
+    if (!spellOffer) controller.activate(loadable);
     // Activation is deliberately tied to the opened dialog, not to render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadable]);
@@ -1237,7 +1257,7 @@ function LoadedTraitOfferEditor({
     const nextLoadable = traitOfferLoadable(interaction, nextValue);
     setValue(nextValue);
     setLoadable(nextLoadable);
-    controller.activate(nextLoadable);
+    if (!spellOffer) controller.activate(nextLoadable);
   };
   if (view === 'echoLastRunBoon' && value.kind === 'traits') {
     const selectedIndex = optionIndex(value.selectedOptionKey);
@@ -1308,6 +1328,7 @@ function LoadedTraitOfferEditor({
                       onUpdate={updateValue}
                       optionKey={optionKey}
                       rarifySupported={rarifySupported(optionKey)}
+                      spellOffer={spellOffer}
                       value={value}
                     />
                   ) : (
@@ -1318,6 +1339,7 @@ function LoadedTraitOfferEditor({
                       onUpdate={updateValue}
                       optionKey={optionKey}
                       rarifySupported={rarifySupported(optionKey)}
+                      spellOffer={spellOffer}
                       value={value}
                     />
                   )}
@@ -1372,33 +1394,38 @@ function LoadedTraitOfferEditor({
           )}
         </>
       )}
-      <section aria-label="Offer feedback" className="trait-offer-feedback" role="status">
-        <h3>Offer feedback</h3>
-        {!hasOptionFeedback && offerMessage === undefined ? (
-          <p className="trait-offer-feedback-empty">No current findings.</p>
-        ) : null}
-        {feedback.options.map((option, index) =>
-          option.reasons.length === 0 && option.replacement === undefined ? null : (
-            <div className="trait-offer-feedback-item" key={OPTION_KEYS[index]}>
-              <strong>Option {index + 1}</strong>
-              {option.reasons.length === 0 ? null : (
-                <ul className="trait-option-feedback" aria-label={`${OPTION_KEYS[index]} feedback`}>
-                  {option.reasons.map((reason) => (
-                    <li key={reason}>{reason}</li>
-                  ))}
-                </ul>
-              )}
-              {option.replacement === undefined ? null : (
-                <p className="trait-option-replacement">
-                  Replaces {option.replacement.replacedTraitLabel} · {option.replacement.oldRarity}{' '}
-                  to {option.replacement.requiredRarity}
-                </p>
-              )}
-            </div>
-          ),
-        )}
-        {offerMessage === undefined ? null : <p className="feedback-text">{offerMessage}</p>}
-      </section>
+      {spellOffer ? null : (
+        <section aria-label="Offer feedback" className="trait-offer-feedback" role="status">
+          <h3>Offer feedback</h3>
+          {!hasOptionFeedback && offerMessage === undefined ? (
+            <p className="trait-offer-feedback-empty">No current findings.</p>
+          ) : null}
+          {feedback.options.map((option, index) =>
+            option.reasons.length === 0 && option.replacement === undefined ? null : (
+              <div className="trait-offer-feedback-item" key={OPTION_KEYS[index]}>
+                <strong>Option {index + 1}</strong>
+                {option.reasons.length === 0 ? null : (
+                  <ul
+                    className="trait-option-feedback"
+                    aria-label={`${OPTION_KEYS[index]} feedback`}
+                  >
+                    {option.reasons.map((reason) => (
+                      <li key={reason}>{reason}</li>
+                    ))}
+                  </ul>
+                )}
+                {option.replacement === undefined ? null : (
+                  <p className="trait-option-replacement">
+                    Replaces {option.replacement.replacedTraitLabel} ·{' '}
+                    {option.replacement.oldRarity} to {option.replacement.requiredRarity}
+                  </p>
+                )}
+              </div>
+            ),
+          )}
+          {offerMessage === undefined ? null : <p className="feedback-text">{offerMessage}</p>}
+        </section>
+      )}
       <button
         className="primary-action"
         disabled={support === 'impossible'}

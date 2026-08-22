@@ -22,7 +22,6 @@ import {
   foldTraitHistoryEvents,
   isPomEligibleTrait,
   recordReachedTraitOffer,
-  recordAspectStartingTrait,
   isAspectSpellDropDormant,
   traitCandidates,
   targetedAcquisitionTargetKeys,
