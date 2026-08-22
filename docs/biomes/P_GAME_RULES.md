@@ -91,6 +91,11 @@ NPC events/interactions beyond selected combat, profile-gated variants, natural
 Chaos, weighted RNG replay, combat-wave details, rerolls, and optional
 interactions remain excluded until modeled explicitly.
 
+P miniboss declarations own their sparse boon-rarity room facts. An eligible
+Olympian or Hermes offer materialized in a reached miniboss consumes the room
+context through the shared offer-local ledger, including P's higher Duo and
+Legendary checks; the biome layer does not simulate a roll.
+
 ### Concrete encounter selection
 
 Ordinary P room-local composition has an `Intro` slot and a `Combat` slot.

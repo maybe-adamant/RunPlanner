@@ -598,14 +598,25 @@ repairable in the application picker. Target enumeration and selected-target
 validation share the engine predicate, including god-trait superchargeability
 and Hammer Rank-II capability.
 
-When the reached pre-acquisition history carries
-`minimumScalableGodTraitRarity`, a fresh Common candidate is additionally
-assessed against that derived floor only when its declaration supports Rare as
-a fresh rarity. The engine reports `rarityBelowActiveFloor` separately from
-`freshRarityUnavailable`; replacement candidates continue to use their exact
-next rarity and the existing shortage composition. The application consumes
-this finding through the ordinary trait-offer interaction and does not inspect
-Proper Upbringing or recount elements.
+For each fresh Olympian or Hermes option, the captured pre-acquisition context
+also retains the exact reached room, generated reward/Shop-item witness,
+active Arcana ranks, and active-Proper fact needed to derive the offer-local
+boon-rarity ledger. The engine intersects that immutable ledger with the
+trait's declared fresh-rarity support before composing the offer. A retained
+fresh value whose exact check is impossible receives the generic
+`rarityRollUnavailable` finding; a value never supported by the declaration
+continues to use `freshRarityUnavailable`. This is the sole fresh-rarity
+feasibility policy; Proper Upbringing contributes through the same numeric
+ledger as every other active offer source.
+
+The same branch-local result filters optional Duo/Legendary members in `H`.
+Positive or guaranteed high-tier checks make those variants possible but never
+mandatory, and support from another retained history branch is never unioned
+into the current offer. Replacement candidates continue to use their exact
+next rarity and existing shortage composition. The application consumes these
+findings through the ordinary trait-offer interaction and does not inspect
+rarity arithmetic, Proper Upbringing, room names, Shop profiles, or recount
+elements.
 
 For a first Olympian contact, the candidate product also carries
 branch-grouped complete-offer composition assessments. Non-priority options are

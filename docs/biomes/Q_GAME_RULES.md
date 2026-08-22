@@ -82,6 +82,12 @@ second-half standard inventory. A future Dream Dive implementation must
 update that fact producer for reordered history; it must not add a Q-local
 phase or alter the Shop declarations.
 
+Q miniboss declarations own the room-level sparse rarity override. Its Rare
+check is guaranteed, so a retained Common Q miniboss option is an invalid but
+repairable authored value while Rare and later supported checks remain
+candidate outcomes. The same offer-local ledger consumes an exact boosted Q
+Shop-item witness rather than inferring rarity from the Q profile.
+
 The canonical baseline retains the progressed-save summit maps, stage pools,
 physical door order, Typhon miniboss rewards, Shop lifecycle, and completion
 counters. Q binds exact concrete encounter definitions for its rooms, but no

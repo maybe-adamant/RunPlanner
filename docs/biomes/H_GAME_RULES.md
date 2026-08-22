@@ -160,6 +160,11 @@ unmodeled Shop interactions, combat-wave composition, rerolls, or
 profile-dependent variants. Those are explicit future modeling inputs, not
 hidden eligibility predicates.
 
+H miniboss room declarations own their sparse boon-rarity override. It applies
+to any eligible Olympian or Hermes offer materialized in the reached miniboss
+room, not only to its declared incoming reward; the offer-local ledger consumes
+the room fact while all other H room declarations remain unoverridden.
+
 ### Concrete encounter selection
 
 Fields rooms use one complete `FieldsEncounter` envelope: `Passive`,

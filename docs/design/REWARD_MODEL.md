@@ -209,8 +209,9 @@ Every payload-bearing reward type declares a complete payload default.
 Their role and lifecycle declarations distinguish offer-time source resolution
 from Blind Box's acquisition-time validation; a second payload domain would
 duplicate shape without expressing that timing. The distinct
-`BoostedRandomLoot` shop entry resolves an ordinary `RandomLoot` offer under the
-rarity-deferred model.
+`BoostedRandomLoot` shop entry resolves an ordinary `RandomLoot` offer while
+retaining its exact generated-item rarity context for the later trait-offer
+ledger.
 
 Defaults therefore recurse to a terminating value:
 
@@ -695,6 +696,7 @@ interface ShopOptionEntry {
   key: string;
   rewardType: RewardTypeGameName;
   requirement?: RequirementExpression;
+  boonRarityOverride?: BoonRarityOverride;
 }
 
 interface ShopSlot {
@@ -718,10 +720,13 @@ slot, not the randomly selected entry key; simulation validates that at least
 one eligible without-replacement entry assignment explains the authored
 offers.
 
-`RandomLoot` and `BoostedRandomLoot` remain distinct shop-option entries. While
-rarity and price are deferred, both resolve the same authored `RandomLoot` plus
-source shape; the supporting entry stays in the derived assignment witness so
-two-offer groups still enforce without-replacement selection exactly.
+`RandomLoot` and `BoostedRandomLoot` remain distinct shop-option entries. Both
+resolve the same authored `RandomLoot` plus source shape, but only the boosted
+entry carries its sparse item-owned boon-rarity override. The supporting entry
+stays in the derived `ShopGenerationWitness` so two-offer groups enforce
+without-replacement selection and later trait offers consume the exact item
+context. The reward model does not infer that context from a Shop profile,
+biome name, slot, or entered-biome count.
 
 An empty occurrence `roomActions.order` is complete authored state for an
 optional Shop. Exact `interactShopOffer` references identify the participating
@@ -748,8 +753,8 @@ The current fixed-route evaluator supplies `biomeIndex + 1` as
 `enteredBiomeCount`, which is equivalent for the supported fixed-order routes.
 A future Dream Dive implementation must change that fact producer to provide
 the actual reordered reached count through the existing engine input, not
-change Shop declarations. The exact generated option identity remains the
-future rarity-ledger handoff; rarity is not implemented here.
+change Shop declarations. The exact generated option identity is also the
+source witness consumed by the offer-local boon-rarity ledger.
 
 Supplemental Shop opportunities do not alter those profile slot counts.
 Qualifying Shops may additionally expose fixed `infernalContractReward`,

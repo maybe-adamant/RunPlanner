@@ -238,6 +238,11 @@ the commented midshop assignment, other NPC random/interaction or Shop/Bridge
 behavior, save/profile force predicates, optional actions, and
 automatic boss-drop state until they have modeled inputs and owners.
 
+N miniboss declarations own their sparse boon-rarity room fact. An eligible
+Olympian or Hermes offer materialized in one of those rooms consumes the room override;
+the model does not attach it only to the miniboss's incoming reward or infer it
+from the N route.
+
 ## Product boundary
 
 The product owns N catalog normalization, authored Hub decisions, concrete

@@ -135,6 +135,12 @@ Shop and miniboss force windows, shop predecessor-exit requirements, miniboss
 mutual exclusion, and creation caps remain explicit requirement trees. The
 layout engine does not special-case their names.
 
+Each F miniboss declaration also owns its sparse boon-rarity room fact. It
+applies to an eligible Olympian or Hermes offer materialized in that room,
+while F's below-guarantee Rare check preserves Common as a possible fresh
+rarity; the reward and candidate layers consume that declaration fact without
+inferring it from the room name.
+
 ## Reward-Store Projection
 
 F targets a MetaProgress entered-room ratio of `0.315` and uses adjustment

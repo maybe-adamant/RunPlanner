@@ -1642,17 +1642,36 @@ recorded. Per-biome usage resets when carried reward branches initialize the
 next biome, while configured/effective Fear and Circe suppression remain
 route-wide.
 
-The same replay folds the normalized Proper Upbringing rarity floor. After
-each reached acquisition or replacement it derives the post-selection element
+The same replay folds the normalized Proper Upbringing lifecycle. After each
+reached acquisition or replacement it derives the post-selection element
 ledger, detects each modeled effect's transition against the immediately prior
-replay state, promotes eligible Common boon-rarity traits once on
-activation, and publishes `minimumScalableGodTraitRarity` only while the
-effect remains active. Promotions are immutable replacement values and are
-recomputed into slots, elements, rarity counts, upgradeability, and all later
-trait predicates. A floor-aware fresh Common assessment reports
-`rarityBelowActiveFloor` when the declaration also supports Rare; Rare/Epic,
-fixed Common/Legendary/Duo and rarityless domains retain their existing rules.
-Invalid, unselected, dormant, and unreached offers do not enter this replay.
+replay state, promotes eligible Common boon-rarity traits once on activation,
+and publishes the exact `properUpbringingActive` fact only while the effect
+remains active. Promotions are immutable replacement values and are recomputed
+into slots, elements, rarity counts, upgradeability, and all later trait
+predicates. Deactivation removes only the future-offer contribution, and
+reactivation repeats the declaration-owned promotion pass. Invalid,
+unselected, dormant, and unreached offers do not enter this replay.
+
+At every fresh Olympian or Hermes offer frontier, simulation assembles one
+immutable `BoonRarityFacts` product from the catalog provider base, the current
+room's sparse override or the exact generated Shop-item override, active Arcana
+contributions, and the active Proper contribution. The existing pure ledger
+applies sparse fallback, sums all additions before multipliers, does not clamp
+the values, and intersects the result with the trait declaration's supported
+fresh rarities. A room override applies to any eligible boon materialized in
+that room, including a Hermes reward; it is not restricted to the room's
+declared incoming reward. Shop, Travel, and Gold paths retain exact generation
+witnesses so an ordinary and a boosted item cannot merge merely because their
+resolved reward type is the same.
+
+The ledger is derived at the offer point and is never persisted or incrementally
+updated. Impossible retained fresh values publish the generic
+`rarityRollUnavailable` finding, while structural unsupported values continue
+to use `freshRarityUnavailable`. Duo and Legendary remain optional high-tier
+offer members, and Heroic remains an existing transition rather than a fresh
+roll. Non-Olympian/Hermes providers retain their declaration-owned rarity
+policies.
 
 The current canonical trace still keeps `allSpellInvested = false` and
 `pendingSpellDrop = false` on their explicit Spell/Talent and Surface Shop

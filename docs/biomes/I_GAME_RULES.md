@@ -44,6 +44,12 @@ second-half standard inventory. A future Dream Dive implementation must
 update that fact producer for reordered history; it must not add an I-local
 phase or alter the Shop declarations.
 
+The exact generated I Shop item also owns the boon-rarity context consumed by a
+trait offer: ordinary `RandomLoot` uses the provider base, while a generated
+`BoostedRandomLoot` or second-half `ShopHermesUpgrade` carries the sparse
+boosted override. The ledger consumes the option witness rather than inferring
+rarity from I's biome or Shop profile.
+
 ## Clockwork and history facts
 
 The game-rule model keeps creation, appearance, entered history, goal updates,
