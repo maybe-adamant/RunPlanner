@@ -3,6 +3,8 @@ import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  applyProjectHistoryCommand,
+  createProjectHistory,
   createIncomingRewardAddress,
   createOccurrenceId,
   createRouteStartKeepsakeSelectionAddress,
@@ -10,6 +12,7 @@ import {
   createTraitOfferAddress,
   decodeProjectDocument,
   encodeProjectDocument,
+  undoProjectHistory,
 } from '@run-planner/engine/authored-project';
 import {
   createGoldenFGHProject,
@@ -23,6 +26,113 @@ import { createCompleteNProject } from '../support/complete-n-project';
 import { nBiome } from '../support/configured-projects';
 
 describe('authored-project incoming reward commands', () => {
+  it('strictly authors a three-choice rarityless SpellDrop self child', () => {
+    const reward = createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(1, 1));
+    let project = applyProjectCommand(createGoldenFGHProject(), catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward,
+      value: { rewardType: 'SpellDrop' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(reward, 'self'),
+      value: {
+        kind: 'traits',
+        giverKey: 'SpellDrop',
+        options: [
+          { traitKey: 'SpellPolymorphTrait' },
+          { traitKey: 'SpellMeteorTrait' },
+          { traitKey: 'SpellTransformTrait' },
+        ],
+        selectedOptionKey: 'option2',
+        rarificationActions: [],
+      },
+    });
+    const encoded = encodeProjectDocument(project);
+    expect(decodeProjectDocument(JSON.parse(encoded), catalog)).toEqual(project);
+
+    const initial = createProjectHistory(project);
+    const changed = applyProjectHistoryCommand(initial, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(reward, 'self'),
+      value: {
+        kind: 'traits',
+        giverKey: 'SpellDrop',
+        options: [
+          { traitKey: 'SpellMeteorTrait' },
+          { traitKey: 'SpellTransformTrait' },
+          { traitKey: 'SpellLeapTrait' },
+        ],
+        selectedOptionKey: 'option1',
+        rarificationActions: [],
+      },
+    });
+    expect(undoProjectHistory(changed).present).toBe(initial.present);
+  });
+
+  it.each([
+    [
+      'wrong giver',
+      'Apollo',
+      [
+        { traitKey: 'SpellPolymorphTrait' },
+        { traitKey: 'SpellMeteorTrait' },
+        { traitKey: 'SpellTransformTrait' },
+      ],
+    ],
+    [
+      'wrong count',
+      'SpellDrop',
+      [{ traitKey: 'SpellPolymorphTrait' }, { traitKey: 'SpellMeteorTrait' }],
+    ],
+    [
+      'duplicate option',
+      'SpellDrop',
+      [
+        { traitKey: 'SpellPolymorphTrait' },
+        { traitKey: 'SpellPolymorphTrait' },
+        { traitKey: 'SpellTransformTrait' },
+      ],
+    ],
+    [
+      'out-of-pool spell',
+      'SpellDrop',
+      [
+        { traitKey: 'SpellMoonBeamTrait' },
+        { traitKey: 'SpellMeteorTrait' },
+        { traitKey: 'SpellTransformTrait' },
+      ],
+    ],
+    [
+      'rarity-bearing spell',
+      'SpellDrop',
+      [
+        { traitKey: 'SpellPolymorphTrait', rarity: 'Common' },
+        { traitKey: 'SpellMeteorTrait' },
+        { traitKey: 'SpellTransformTrait' },
+      ],
+    ],
+  ] as const)('rejects SpellDrop self child with %s', (_label, giverKey, options) => {
+    const reward = createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(1, 1));
+    const project = applyProjectCommand(createGoldenFGHProject(), catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward,
+      value: { rewardType: 'SpellDrop' },
+    });
+    expect(() =>
+      applyProjectCommand(project, catalog, {
+        kind: 'ReplaceTraitOffer',
+        trait: createTraitOfferAddress(reward, 'self'),
+        value: {
+          kind: 'traits',
+          giverKey,
+          options,
+          selectedOptionKey: 'option1',
+          rarificationActions: [],
+        },
+      }),
+    ).toThrow();
+  });
   const apolloOffer = {
     kind: 'traits' as const,
     giverKey: 'Apollo',

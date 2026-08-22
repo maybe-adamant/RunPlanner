@@ -36,7 +36,7 @@ const rooms: readonly RawRoomDeclaration[] = [
 ];
 
 export const declarations = {
-  version: '0.27.0-arcana-fear-loadout',
+  version: '0.28.0-selene-spells',
   biomes,
   routes,
   arcanaCards,

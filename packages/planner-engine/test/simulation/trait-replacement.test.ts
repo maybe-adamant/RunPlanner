@@ -406,7 +406,7 @@ describe('derived Olympian trait replacement', () => {
     expect(applied.event?.replacementTransition?.replacedTraitKey).toBe('ZeusWeaponBoon');
     expect(applied.history.equippedTraits.ZeusWeaponBoon).toBeUndefined();
     expect(applied.history.equippedTraits.ApolloWeaponBoon?.rarity).toBe('Rare');
-    expect(applied.history.ordinaryBoonSlots.Melee?.traitKey).toBe('ApolloWeaponBoon');
+    expect(applied.history.equippedSlots.Melee?.traitKey).toBe('ApolloWeaponBoon');
     expect(applied.history.events).toHaveLength(2);
   });
 
@@ -573,7 +573,7 @@ describe('derived Olympian trait replacement', () => {
     expect(after.elementCounts).toEqual({ Aether: 0, Earth: 0, Air: 0, Fire: 1, Water: 0 });
     expect(after.godBoonRarityCounts).toEqual({ Rare: 1 });
     expect(after.upgradableTraitCount).toBe(1);
-    expect(after.ordinaryBoonSlots.Ranged?.traitKey).toBe('ApolloCastBoon');
+    expect(after.equippedSlots.Ranged?.traitKey).toBe('ApolloCastBoon');
   });
 
   it('limits replacements independently of ordinary option legality', () => {

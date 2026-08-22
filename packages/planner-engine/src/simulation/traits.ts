@@ -163,7 +163,8 @@ export interface TraitTargetedAcquisitionAssessment {
 export interface TraitHistoryState {
   readonly events: readonly TraitHistoryEvent[];
   readonly equippedTraits: Readonly<Record<string, EquippedTrait>>;
-  readonly ordinaryBoonSlots: Readonly<Record<string, EquippedTrait>>;
+  /** All six declaration-owned equipment slots. */
+  readonly equippedSlots: Readonly<Record<string, EquippedTrait>>;
   readonly elementCounts: Readonly<Record<TraitElement, number>>;
   readonly highestBaseElementCount: number;
   readonly godBoonRarityCounts: Readonly<Record<string, number>>;
@@ -182,6 +183,7 @@ export function isPomEligibleTrait(catalog: Catalog, traitKey: string): boolean 
 
 const emptyElements = Object.freeze({ Aether: 0, Earth: 0, Air: 0, Fire: 0, Water: 0 });
 const BASE_ELEMENTS: readonly TraitElement[] = Object.freeze(['Earth', 'Air', 'Fire', 'Water']);
+const ORDINARY_EQUIPMENT_SLOTS = new Set(['Melee', 'Secondary', 'Ranged', 'Rush', 'Mana']);
 
 function combinedElementFacts(
   fromTraits: ReturnType<typeof deriveFacts>,
@@ -205,7 +207,7 @@ export function createTraitHistoryState(): TraitHistoryState {
   return Object.freeze({
     events: Object.freeze([]),
     equippedTraits: Object.freeze({}),
-    ordinaryBoonSlots: Object.freeze({}),
+    equippedSlots: Object.freeze({}),
     elementCounts: emptyElements,
     highestBaseElementCount: 0,
     godBoonRarityCounts: Object.freeze({}),
@@ -225,7 +227,7 @@ function deriveFacts(catalog: Catalog, equippedTraits: Readonly<Record<string, E
     for (const [element, amount] of Object.entries(declaration.elementContributions)) {
       if (amount !== undefined) elements[element as TraitElement] += amount;
     }
-    if (declaration.ordinaryBoonSlot !== undefined) slots[declaration.ordinaryBoonSlot] = equipped;
+    if (declaration.equipmentSlot !== undefined) slots[declaration.equipmentSlot] = equipped;
     if (
       declaration.usesBoonRarity &&
       equipped.rarity !== undefined &&
@@ -242,12 +244,23 @@ function deriveFacts(catalog: Catalog, equippedTraits: Readonly<Record<string, E
     elements.Water,
   );
   return Object.freeze({
-    ordinaryBoonSlots: Object.freeze(slots),
+    equippedSlots: Object.freeze(slots),
     elementCounts: Object.freeze(elements),
     highestBaseElementCount,
     godBoonRarityCounts: Object.freeze(rarityCounts),
     upgradableTraitCount: upgradable,
   });
+}
+
+/** The ordinary five-slot view is derived from the one complete equipment ledger. */
+export function ordinaryEquippedSlots(
+  history: TraitHistoryState,
+): Readonly<Record<string, EquippedTrait>> {
+  return Object.freeze(
+    Object.fromEntries(
+      Object.entries(history.equippedSlots).filter(([slot]) => ORDINARY_EQUIPMENT_SLOTS.has(slot)),
+    ),
+  );
 }
 
 function activeRarityFloorSources(
@@ -380,10 +393,14 @@ export function foldTraitHistoryEvents(
         const giver =
           event.giverKey === undefined ? undefined : catalog.traitGivers.byKey[event.giverKey];
         const declaration = catalog.traits.byKey[event.traitKey];
+        const linkedAspectGrant = catalog.aspects.byKey[event.sourceTraitKey]?.startingTrait;
         if (
           declaration === undefined ||
           (event.giverKey !== undefined &&
-            (giver === undefined || !giver.traitKeys.includes(event.traitKey)))
+            (giver === undefined ||
+              (!giver.traitKeys.includes(event.traitKey) &&
+                (linkedAspectGrant?.traitKey !== event.traitKey ||
+                  linkedAspectGrant.giverKey !== event.giverKey))))
         )
           continue;
         equipped[event.traitKey] = Object.freeze({
@@ -401,6 +418,17 @@ export function foldTraitHistoryEvents(
       const giver = catalog.traitGivers.byKey[event.giverKey];
       const declaration = catalog.traits.byKey[option.traitKey];
       if (giver === undefined || declaration === undefined) continue;
+      // A malformed history must never accumulate two simultaneous traits in
+      // one declaration-owned equipment slot. Normal eligibility reports the
+      // invalid second offer earlier; this is the final fold attestation.
+      if (
+        event.replacementTransition === undefined &&
+        declaration.equipmentSlot === 'Spell' &&
+        Object.values(equipped).some(
+          (existing) => catalog.traits.byKey[existing.traitKey]?.equipmentSlot === 'Spell',
+        )
+      )
+        continue;
       const replacementLevel =
         event.replacementTransition === undefined
           ? undefined
@@ -555,11 +583,8 @@ function assessEchoLastRunBoonOption(
   if (history.bannedTraitKeys.includes(traitKey)) findings.push({ code: 'bannedTrait', traitKey });
   if (history.equippedTraits[traitKey] !== undefined)
     findings.push({ code: 'alreadyEquipped', traitKey });
-  if (
-    trait.ordinaryBoonSlot !== undefined &&
-    history.ordinaryBoonSlots[trait.ordinaryBoonSlot] !== undefined
-  )
-    findings.push({ code: 'occupiedBoonSlot', traitKey, detail: trait.ordinaryBoonSlot });
+  if (trait.equipmentSlot !== undefined && history.equippedSlots[trait.equipmentSlot] !== undefined)
+    findings.push({ code: 'occupiedBoonSlot', traitKey, detail: trait.equipmentSlot });
   if (requiresDeathDefianceCondition && context.deathDefianceConditionMet !== true)
     findings.push({ code: 'offerContext', traitKey, detail: 'deathDefianceConditionMet' });
   if (
@@ -967,7 +992,7 @@ export function assessTraitOfferComposition(
     selected === undefined ? [Object.freeze({ code: 'traitOfferSelectionUnavailable' })] : [];
   const giver = catalog.traitGivers.byKey[offer.giverKey];
   const applies =
-    giver?.providerKind === 'olympian' && Object.keys(before.ordinaryBoonSlots).length === 0;
+    giver?.providerKind === 'olympian' && Object.keys(ordinaryEquippedSlots(before)).length === 0;
   if (!applies || giver === undefined) {
     return Object.freeze({
       applies: false,
@@ -989,7 +1014,7 @@ export function assessTraitOfferComposition(
     }
   });
   const hasAttackOrSpecial = offer.options.some((option) => {
-    const slot = catalog.traits.byKey[option.traitKey]?.ordinaryBoonSlot;
+    const slot = catalog.traits.byKey[option.traitKey]?.equipmentSlot;
     return slot === 'Melee' || slot === 'Secondary';
   });
   if (!hasAttackOrSpecial) findings.push(Object.freeze({ code: 'missingAttackOrSpecial' }));
@@ -1211,6 +1236,39 @@ export function recordDirectTraitGrants(
     });
   });
   return foldTraitHistoryEvents(catalog, [...before.events, ...events]);
+}
+
+/** Folds the one catalog-linked Aspect starting trait before any room checkpoint. */
+export function recordAspectStartingTrait(
+  catalog: Catalog,
+  before: TraitHistoryState,
+  owner: SemanticAddress,
+  loadout: { readonly aspectKey: string },
+): TraitHistoryState {
+  const aspect = catalog.aspects.byKey[loadout.aspectKey];
+  const starting = aspect?.startingTrait;
+  if (starting === undefined) return before;
+  return foldTraitHistoryEvents(catalog, [
+    ...before.events,
+    Object.freeze({
+      kind: 'directTraitGrant' as const,
+      owner,
+      acquisitionRole: 'directTraitGrant' as const,
+      sequence: 0,
+      acquisitionPoint: 'routeStart',
+      sourceTraitKey: aspect!.key,
+      traitKey: starting.traitKey,
+      giverKey: starting.giverKey,
+    }),
+  ]);
+}
+
+/** Whether a concrete SpellDrop is routed to the Aspect-owned talent frontier. */
+export function isAspectSpellDropDormant(catalog: Catalog, aspectKey: string | undefined): boolean {
+  return (
+    aspectKey !== undefined &&
+    catalog.aspects.byKey[aspectKey]?.startingTrait?.giverKey === 'SpellDrop'
+  );
 }
 
 /** Appends one fixed rarityless trait installed by a concrete non-offer acquisition. */
@@ -1475,7 +1533,7 @@ function checkRequirement(
         ? undefined
         : { code: 'missingPrerequisite', detail: 'upgradableTrait' };
     case 'ordinaryBoonSlotOccupied':
-      return history.ordinaryBoonSlots[requirement.slot] !== undefined
+      return history.equippedSlots[requirement.slot] !== undefined
         ? undefined
         : { code: 'missingPrerequisite', detail: requirement.slot };
     case 'offerContext':
@@ -1622,11 +1680,8 @@ export function assessTraitOption(
   }
   if (context.devotionNoDuo && rarity === 'Duo')
     findings.push({ code: 'offerContext', traitKey, detail: 'devotionNoDuo' });
-  if (
-    trait.ordinaryBoonSlot !== undefined &&
-    history.ordinaryBoonSlots[trait.ordinaryBoonSlot] !== undefined
-  )
-    findings.push({ code: 'occupiedBoonSlot', traitKey, detail: trait.ordinaryBoonSlot });
+  if (trait.equipmentSlot !== undefined && history.equippedSlots[trait.equipmentSlot] !== undefined)
+    findings.push({ code: 'occupiedBoonSlot', traitKey, detail: trait.equipmentSlot });
   if (
     trait.hammerCompatibility !== undefined &&
     ((context.weaponKey !== undefined &&
@@ -1665,9 +1720,7 @@ export function assessTraitOption(
   )
     findings.push({ code: 'offerContext', traitKey, detail: 'echoKeepsakeExcluded' });
   const occupied =
-    trait.ordinaryBoonSlot === undefined
-      ? undefined
-      : history.ordinaryBoonSlots[trait.ordinaryBoonSlot];
+    trait.equipmentSlot === undefined ? undefined : history.equippedSlots[trait.equipmentSlot];
   const giver = context.resolvedProviderKey
     ? catalog.traitGivers.byKey[context.resolvedProviderKey]
     : undefined;
@@ -1679,7 +1732,7 @@ export function assessTraitOption(
     giver?.providerKind === 'olympian' &&
     priority &&
     history.equippedTraits[traitKey] === undefined;
-  if (replacementEligible && occupied !== undefined && trait.ordinaryBoonSlot !== undefined) {
+  if (replacementEligible && occupied !== undefined && trait.equipmentSlot !== undefined) {
     const requiredRarity =
       occupied.rarity === undefined
         ? undefined
@@ -1704,7 +1757,7 @@ export function assessTraitOption(
     } else if (nonSlotFindings.length === 0) {
       if (occupiedIndex >= 0) findings.splice(occupiedIndex, 1);
       replacementTransition = Object.freeze({
-        slot: trait.ordinaryBoonSlot,
+        slot: trait.equipmentSlot,
         replacedTraitKey: occupied.traitKey,
         oldRarity: occupied.rarity as TraitRarity,
         newTraitKey: traitKey,
@@ -1714,12 +1767,12 @@ export function assessTraitOption(
   } else if (
     context.ordinarySlotReplacement !== 'forbidden' &&
     occupied !== undefined &&
-    trait.ordinaryBoonSlot !== undefined
+    trait.equipmentSlot !== undefined
   ) {
     findings.push({
       code: 'replacementUnavailable',
       traitKey,
-      detail: trait.ordinaryBoonSlot,
+      detail: trait.equipmentSlot,
     });
   }
   // Ranked authored rarities are structurally allowed to retain an equipped
@@ -1900,7 +1953,7 @@ export function traitCandidates(
   const giver = catalog.traitGivers.byKey[giverKey];
   if (giver === undefined) return Object.freeze([]);
   const firstOlympian =
-    giver.providerKind === 'olympian' && Object.keys(history.ordinaryBoonSlots).length === 0;
+    giver.providerKind === 'olympian' && Object.keys(ordinaryEquippedSlots(history)).length === 0;
   const priority = new Set(giver.priorityTraitKeys);
   const addCompositionContext = (
     traitKey: string,
@@ -1967,9 +2020,7 @@ export function traitCandidates(
       const trait = catalog.traits.byKey[traitKey];
       if (trait?.rarityDomain.kind !== 'ranked') continue;
       const occupied =
-        trait.ordinaryBoonSlot === undefined
-          ? undefined
-          : history.ordinaryBoonSlots[trait.ordinaryBoonSlot];
+        trait.equipmentSlot === undefined ? undefined : history.equippedSlots[trait.equipmentSlot];
       if (occupied === undefined) continue;
       const required =
         occupied.rarity === undefined
@@ -2259,7 +2310,7 @@ function selectSelfContainedFirst(
 }
 
 function isAttackOrSpecial(catalog: Catalog, traitKey: string): boolean {
-  const slot = catalog.traits.byKey[traitKey]?.ordinaryBoonSlot;
+  const slot = catalog.traits.byKey[traitKey]?.equipmentSlot;
   return slot === 'Melee' || slot === 'Secondary';
 }
 

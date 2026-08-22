@@ -107,6 +107,8 @@ import {
   recordReachedTraitOffer,
   recordDirectTraitGrants,
   recordFixedAcquisitionTraitGrant,
+  recordAspectStartingTrait,
+  isAspectSpellDropDormant,
   directTraitSetOutcomes,
   type ReachedTraitOfferEvaluation,
   type ReachedLevelResolutionEvaluation,
@@ -623,6 +625,15 @@ function applyTraitOfferForAcquisitionInternal(
   readonly branch: RewardBranchState;
   readonly blockedChild?: ReachedTraitChildCheckpoint;
 } {
+  // Aspect of Selene routes a later Spell Drop into unsupported Path of Stars.
+  // The concrete acquisition still settles in the reward ledger; its base-spell
+  // child is deliberately dormant and must neither block nor change history.
+  if (
+    reward.offer?.rewardType === 'SpellDrop' &&
+    isAspectSpellDropDormant(catalog, reward.traitContext?.aspectKey) &&
+    role === 'self'
+  )
+    return Object.freeze({ branch });
   const authored = reward.traitOffersByAcquisitionRole?.[role];
   const authoredLevelResolution = reward.levelResolutionsByAcquisitionRole?.[role];
   const before = branch.traitHistory ?? createTraitHistoryState();
@@ -1789,19 +1800,32 @@ export function initializeRewardBranches(
       ),
       0,
     );
-    return Object.freeze([
-      applyExperimentalHammerEquipResult(
-        catalog,
-        pomApplied,
-        startingKeepsakeKey,
-        startingKeepsakeEquipResults,
-        createKeepsakeEquipResultAddress(
-          createRouteStartKeepsakeSelectionAddress(routeKey ?? 'route'),
-          'experimentalHammer',
-        ),
-        0,
-        loadout ?? { weaponKey: '', aspectKey: '' },
+    const initialized = applyExperimentalHammerEquipResult(
+      catalog,
+      pomApplied,
+      startingKeepsakeKey,
+      startingKeepsakeEquipResults,
+      createKeepsakeEquipResultAddress(
+        createRouteStartKeepsakeSelectionAddress(routeKey ?? 'route'),
+        'experimentalHammer',
       ),
+      0,
+      loadout ?? { weaponKey: '', aspectKey: '' },
+    );
+    const traitHistory = recordAspectStartingTrait(
+      catalog,
+      initialized.traitHistory ?? createTraitHistoryState(),
+      createRouteStartKeepsakeSelectionAddress(routeKey ?? 'route'),
+      loadout ?? { aspectKey: '' },
+    );
+    return Object.freeze([
+      traitHistory === initialized.traitHistory
+        ? initialized
+        : Object.freeze({
+            ...initialized,
+            history: attachTraitHistory(initialized.history, traitHistory),
+            traitHistory,
+          }),
     ]);
   }
   return Object.freeze(

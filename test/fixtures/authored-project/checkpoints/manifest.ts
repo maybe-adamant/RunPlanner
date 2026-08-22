@@ -4,7 +4,7 @@ export interface AuthoredProjectCheckpointManifestEntry {
   readonly route: 'Underworld' | 'Surface';
   readonly configuredBiomePrefix: readonly string[];
   readonly scenario: string;
-  readonly schemaVersion: 49;
+  readonly schemaVersion: 50;
   readonly catalogVersion: string;
   readonly sha256: string;
   readonly provenance: string;
@@ -17,9 +17,9 @@ export const checkpointManifest = Object.freeze([
     route: 'Underworld',
     configuredBiomePrefix: ['F', 'G'],
     scenario: 'Canonical Underworld F/G route prefix',
-    schemaVersion: 49,
-    catalogVersion: '0.27.0-arcana-fear-loadout',
-    sha256: 'b088a7c3842d681272daaa7c733a19449f4bdc52ea88d884957b88a95e60604c',
+    schemaVersion: 50,
+    catalogVersion: '0.28.0-selene-spells',
+    sha256: '41492492fa965635d3add3258144cfaa073880ab06dd0fe5b169d960c3b3670b',
     provenance: 'saved canonical Underworld F/G checkpoint',
   },
   {
@@ -28,9 +28,9 @@ export const checkpointManifest = Object.freeze([
     route: 'Underworld',
     configuredBiomePrefix: ['F', 'G', 'H'],
     scenario: 'Canonical Underworld F/G/H route prefix',
-    schemaVersion: 49,
-    catalogVersion: '0.27.0-arcana-fear-loadout',
-    sha256: 'c6d578156c0e091d4c11aa929f25f0893988027ab7dd788d05f02c0b29d2db82',
+    schemaVersion: 50,
+    catalogVersion: '0.28.0-selene-spells',
+    sha256: '5a9db861e334f55cb4b3b5db714d81a3e7f98d93d8874577b0971b3a8acbec23',
     provenance: 'saved canonical Underworld F/G/H checkpoint',
   },
   {
@@ -39,9 +39,9 @@ export const checkpointManifest = Object.freeze([
     route: 'Underworld',
     configuredBiomePrefix: ['F', 'G', 'H', 'I'],
     scenario: 'Canonical Underworld F/G/H/I route prefix',
-    schemaVersion: 49,
-    catalogVersion: '0.27.0-arcana-fear-loadout',
-    sha256: 'c8fd90ed1b7480a7f83b81440084dffdb7b92ca1b75a66f616de95f1a3091d78',
+    schemaVersion: 50,
+    catalogVersion: '0.28.0-selene-spells',
+    sha256: '718ec063f5921758266f01e10c2659b4ee015c2a7cb067dafb3297586e3292e0',
     provenance: 'saved canonical Underworld F/G/H/I checkpoint',
   },
   {
@@ -50,9 +50,9 @@ export const checkpointManifest = Object.freeze([
     route: 'Underworld',
     configuredBiomePrefix: ['F'],
     scenario: 'F Midshop Pom resolution frontier',
-    schemaVersion: 49,
-    catalogVersion: '0.27.0-arcana-fear-loadout',
-    sha256: '864bcab452f1065394640c68b58cd56ed13c67c836384516ec03a88435f1adf6',
+    schemaVersion: 50,
+    catalogVersion: '0.28.0-selene-spells',
+    sha256: 'e75720abca015468dfab78259667e66fa43f1553195a1429a74061021dd1984c',
     provenance: 'saved canonical editor/generated checkpoint',
   },
   {
@@ -61,9 +61,9 @@ export const checkpointManifest = Object.freeze([
     route: 'Surface',
     configuredBiomePrefix: ['N'],
     scenario: 'Canonical Surface N Hub route prefix',
-    schemaVersion: 49,
-    catalogVersion: '0.27.0-arcana-fear-loadout',
-    sha256: 'f1f25c9b4b7c01283bef5f34c686037b565b3b8b5985ac1844e930af49b836e0',
+    schemaVersion: 50,
+    catalogVersion: '0.28.0-selene-spells',
+    sha256: 'c3bd35a651ae946082b6c5dc238d2600acb60b97864fc97a86f36484d61434c1',
     provenance: 'saved canonical editor/generated checkpoint',
   },
   {
@@ -72,9 +72,9 @@ export const checkpointManifest = Object.freeze([
     route: 'Surface',
     configuredBiomePrefix: ['N', 'O'],
     scenario: 'Canonical Surface N/O route prefix',
-    schemaVersion: 49,
-    catalogVersion: '0.27.0-arcana-fear-loadout',
-    sha256: '389116088456d2dfa09cdede3f60acba50ac2deea5084472f5a80f242bc49c81',
+    schemaVersion: 50,
+    catalogVersion: '0.28.0-selene-spells',
+    sha256: '83244f7ac89953e88da106f666af68dad78acaee8ded1e5259be3393f89ea802',
     provenance: 'saved canonical editor/generated checkpoint',
   },
   {
@@ -83,9 +83,9 @@ export const checkpointManifest = Object.freeze([
     route: 'Surface',
     configuredBiomePrefix: ['N', 'O', 'P'],
     scenario: 'Canonical Surface N/O/P route prefix',
-    schemaVersion: 49,
-    catalogVersion: '0.27.0-arcana-fear-loadout',
-    sha256: '0a5d8724c8209a1917965bdfd904dc4bb55bed9f1705cf8faccf7424a664b228',
+    schemaVersion: 50,
+    catalogVersion: '0.28.0-selene-spells',
+    sha256: '559abf96d1eb8b6ba5c78c4e450dba7188de2de17c5b98611c61fddf436d47b2',
     provenance: 'saved canonical editor/generated checkpoint',
   },
   {
@@ -94,9 +94,9 @@ export const checkpointManifest = Object.freeze([
     route: 'Surface',
     configuredBiomePrefix: ['N', 'O', 'P', 'Q'],
     scenario: 'Canonical Surface N/O/P/Q route prefix',
-    schemaVersion: 49,
-    catalogVersion: '0.27.0-arcana-fear-loadout',
-    sha256: '4a9bd708dbf45db781aef6b1170f4f0c74fa921acc1805f5bb62cb66d4928616',
+    schemaVersion: 50,
+    catalogVersion: '0.28.0-selene-spells',
+    sha256: '67ee6c3f982b100d41b7dccf886ca1de551d94893a07cd0bc812f38c6e37cee6',
     provenance: 'saved canonical editor/generated checkpoint',
   },
   {
@@ -105,9 +105,9 @@ export const checkpointManifest = Object.freeze([
     route: 'Surface',
     configuredBiomePrefix: ['N'],
     scenario: 'N entry frontier with unresolved terminal envelope',
-    schemaVersion: 49,
-    catalogVersion: '0.27.0-arcana-fear-loadout',
-    sha256: '8d51b66a1b3a1d693af95e266e843ed4e9a2f1fec025c30e2bb509d59bec42f6',
+    schemaVersion: 50,
+    catalogVersion: '0.28.0-selene-spells',
+    sha256: 'd39b04a3b0e6885c99e8cd94890c694d129ee81f07a4a695118b821fb34fbd05',
     provenance: 'saved N entry frontier checkpoint',
   },
   {
@@ -116,9 +116,9 @@ export const checkpointManifest = Object.freeze([
     route: 'Surface',
     configuredBiomePrefix: ['N'],
     scenario: 'N entry frontier with trait-resolved terminal envelope',
-    schemaVersion: 49,
-    catalogVersion: '0.27.0-arcana-fear-loadout',
-    sha256: '05ee9d5f774eca0a9dd989d8f8aa85a7e5808a6ea4e71c31a7135012004c7e80',
+    schemaVersion: 50,
+    catalogVersion: '0.28.0-selene-spells',
+    sha256: '52227c3043b1e7ba7a2c884f7f122ccf7241ae8d1a5da6bb3c407db93dd12cbf',
     provenance: 'saved N entry frontier checkpoint with resolved traits',
   },
   {
@@ -127,9 +127,9 @@ export const checkpointManifest = Object.freeze([
     route: 'Surface',
     configuredBiomePrefix: ['N'],
     scenario: 'N complete Hub frontier before Preboss handoff',
-    schemaVersion: 49,
-    catalogVersion: '0.27.0-arcana-fear-loadout',
-    sha256: 'aa607a981e8605eb84d5fe118d50c24294e584fb39d4c87e72d35b44ccac1913',
+    schemaVersion: 50,
+    catalogVersion: '0.28.0-selene-spells',
+    sha256: 'bd2d40e0a7aaeb512d07c59289b627efc224346aaed3bca2df1e87a57bfdd8c9',
     provenance: 'saved normalized N complete Hub frontier checkpoint',
   },
   {
@@ -138,9 +138,9 @@ export const checkpointManifest = Object.freeze([
     route: 'Surface',
     configuredBiomePrefix: ['N'],
     scenario: 'N partial Hub visit-order frontier',
-    schemaVersion: 49,
-    catalogVersion: '0.27.0-arcana-fear-loadout',
-    sha256: '67ca35f277034b5a9ccaaae1c92f0d5ba17373754eda1802ca45e9aa35128342',
+    schemaVersion: 50,
+    catalogVersion: '0.28.0-selene-spells',
+    sha256: '69dc8038d633d1aa058e5ffe8ca2c67898f4841dd412b542a1a5acd7a0c6e25a',
     provenance: 'saved normalized N partial Hub frontier checkpoint',
   },
   {
@@ -149,9 +149,9 @@ export const checkpointManifest = Object.freeze([
     route: 'Surface',
     configuredBiomePrefix: ['N'],
     scenario: 'N Hub Story board with Story visit selected',
-    schemaVersion: 49,
-    catalogVersion: '0.27.0-arcana-fear-loadout',
-    sha256: '289d39a1293c29ad7e8e12665a211110ac1d85d322dbbededb56c476ef4f508c',
+    schemaVersion: 50,
+    catalogVersion: '0.28.0-selene-spells',
+    sha256: '73b6dc68f85bad00a3c52eb65812bbfc8986095e450f8003117e3b5ba484b5c7',
     provenance: 'saved normalized N Story board checkpoint',
   },
   {
@@ -160,11 +160,28 @@ export const checkpointManifest = Object.freeze([
     route: 'Surface',
     configuredBiomePrefix: ['N'],
     scenario: 'N Hub invalid ten-open board with reward mutation',
-    schemaVersion: 49,
-    catalogVersion: '0.27.0-arcana-fear-loadout',
-    sha256: '5859354fd029813595bf0f6eccebdcd00e227aff831014d2f053be182bb5ff28',
+    schemaVersion: 50,
+    catalogVersion: '0.28.0-selene-spells',
+    sha256: '65e4c061f47a7d06c3480c0f68afed7f91224d33ac0efe577357d5bbee7da11d',
     provenance: 'saved N ten-open invalid checkpoint',
   },
 ] as const satisfies readonly AuthoredProjectCheckpointManifestEntry[]);
+
+/** Explicit schema-50 SpellDrop migration intent; no fixture is mass-filled. */
+export const checkpointSpellDropIntents = Object.freeze([
+  ['surface-n-complete-hub-frontier', 'surface-n-combat09', 'SpellPolymorphTrait'],
+  ['surface-n-partial-hub', 'surface-n-combat09', 'SpellMeteorTrait'],
+  ['surface-n-story-board', 'surface-n-combat09', 'SpellTransformTrait'],
+  ['surface-n-ten-open-invalid', 'surface-n-combat09', 'SpellLeapTrait'],
+  ['surface-n', 'surface-n-combat09', 'SpellLaserTrait'],
+  ['surface-no', 'surface-n-combat09', 'SpellSummonTrait'],
+  ['surface-nop', 'surface-n-combat09', 'SpellTimeSlowTrait'],
+  ['surface-nopq', 'surface-n-combat09', 'SpellPotionTrait'],
+  ['underworld-fg', 'golden-f-b10-e2', 'SpellPolymorphTrait'],
+  ['underworld-fgh', 'golden-f-b10-e2', 'SpellMeteorTrait'],
+  ['underworld-fgh', 'golden-h-combat03', 'SpellTransformTrait'],
+  ['underworld-fghi', 'golden-f-b10-e2', 'SpellLeapTrait'],
+  ['underworld-fghi', 'golden-h-combat03', 'SpellLaserTrait'],
+] as const);
 
 export type AuthoredProjectCheckpointId = (typeof checkpointManifest)[number]['id'];

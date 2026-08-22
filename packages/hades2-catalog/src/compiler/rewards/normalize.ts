@@ -255,7 +255,6 @@ function normalizeAcquisitions(
     'StackUpgradeBig',
     'StackUpgradeTriple',
     'WeaponUpgrade',
-    'SpellDrop',
     'TrialUpgrade',
     'MaxHealthDrop',
     'MaxHealthDropBig',

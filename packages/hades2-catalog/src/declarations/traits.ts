@@ -19,7 +19,7 @@ export interface RawTraitDeclaration {
   readonly freshOfferRarities?: readonly TraitRarity[];
   readonly equippedRarities?: readonly TraitRarity[];
   readonly offerRequirements: readonly TraitRequirementExpression[];
-  readonly ordinaryBoonSlot?: TraitDeclaration['ordinaryBoonSlot'];
+  readonly equipmentSlot?: TraitDeclaration['equipmentSlot'];
   readonly elementContributions: TraitDeclaration['elementContributions'];
   readonly usesBoonRarity: boolean;
   readonly blockStacking: boolean;
@@ -48,12 +48,13 @@ export interface RawAspectDeclaration {
   readonly key: string;
   readonly label: string;
   readonly weaponKey: string;
+  readonly startingTrait?: { readonly traitKey: string; readonly giverKey: string };
 }
 
 export interface RawTraitGiverDeclaration {
   readonly key: string;
   readonly label: string;
-  readonly providerKind: 'olympian' | 'hermes' | 'hammer' | 'npc';
+  readonly providerKind: 'olympian' | 'hermes' | 'hammer' | 'npc' | 'spell';
   readonly traitKeys: readonly string[];
   readonly priorityTraitKeys: readonly string[];
   readonly rarityPolicy:

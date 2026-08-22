@@ -62,43 +62,55 @@ function authoredShopReward(
   });
   const source = offer.payload?.kind === 'BoonSource' ? offer.payload.source : undefined;
   const traitOffer =
-    source === 'ApolloUpgrade'
+    offer.rewardType === 'SpellDrop'
       ? Object.freeze({
           kind: 'traits' as const,
-          giverKey: 'Apollo',
+          giverKey: 'SpellDrop',
           options: Object.freeze([
-            { traitKey: 'ApolloWeaponBoon', rarity: 'Common' as const },
-            { traitKey: 'ApolloSpecialBoon', rarity: 'Common' as const },
-            { traitKey: 'ApolloCastBoon', rarity: 'Common' as const },
+            { traitKey: 'SpellPolymorphTrait' },
+            { traitKey: 'SpellMeteorTrait' },
+            { traitKey: 'SpellTransformTrait' },
           ] as const),
           selectedOptionKey: 'option1' as const,
           rarificationActions: Object.freeze([]),
         })
-      : source === 'HestiaUpgrade'
+      : source === 'ApolloUpgrade'
         ? Object.freeze({
             kind: 'traits' as const,
-            giverKey: 'Hestia',
+            giverKey: 'Apollo',
             options: Object.freeze([
-              { traitKey: 'HestiaWeaponBoon', rarity: 'Common' as const },
-              { traitKey: 'HestiaSpecialBoon', rarity: 'Common' as const },
-              { traitKey: 'HestiaCastBoon', rarity: 'Common' as const },
+              { traitKey: 'ApolloWeaponBoon', rarity: 'Common' as const },
+              { traitKey: 'ApolloSpecialBoon', rarity: 'Common' as const },
+              { traitKey: 'ApolloCastBoon', rarity: 'Common' as const },
             ] as const),
             selectedOptionKey: 'option1' as const,
             rarificationActions: Object.freeze([]),
           })
-        : source === 'ZeusUpgrade'
+        : source === 'HestiaUpgrade'
           ? Object.freeze({
               kind: 'traits' as const,
-              giverKey: 'Zeus',
+              giverKey: 'Hestia',
               options: Object.freeze([
-                { traitKey: 'ZeusWeaponBoon', rarity: 'Common' as const },
-                { traitKey: 'ZeusSpecialBoon', rarity: 'Common' as const },
-                { traitKey: 'ZeusCastBoon', rarity: 'Common' as const },
+                { traitKey: 'HestiaWeaponBoon', rarity: 'Common' as const },
+                { traitKey: 'HestiaSpecialBoon', rarity: 'Common' as const },
+                { traitKey: 'HestiaCastBoon', rarity: 'Common' as const },
               ] as const),
               selectedOptionKey: 'option1' as const,
               rarificationActions: Object.freeze([]),
             })
-          : undefined;
+          : source === 'ZeusUpgrade'
+            ? Object.freeze({
+                kind: 'traits' as const,
+                giverKey: 'Zeus',
+                options: Object.freeze([
+                  { traitKey: 'ZeusWeaponBoon', rarity: 'Common' as const },
+                  { traitKey: 'ZeusSpecialBoon', rarity: 'Common' as const },
+                  { traitKey: 'ZeusCastBoon', rarity: 'Common' as const },
+                ] as const),
+                selectedOptionKey: 'option1' as const,
+                rarificationActions: Object.freeze([]),
+              })
+            : undefined;
   return Object.freeze({
     ...state,
     traitOffersByAcquisitionRole: Object.freeze(
@@ -557,11 +569,7 @@ describe('Infernal Contract and Travel Deal chronology', () => {
   });
 
   it('lets Spell trigger Travel while Echo stays armed for the next paid non-Spell purchase', () => {
-    const spell = createUnresolvedAcquisitionRewardState(
-      catalog,
-      Object.freeze({ rewardType: 'SpellDrop' as const }),
-      { kind: 'shopProfile', key: 'WorldShop' },
-    );
+    const spell = authoredShopReward(Object.freeze({ rewardType: 'SpellDrop' as const }));
     const derived = settle({
       order: ['Minor'],
       travel: true,
@@ -612,11 +620,7 @@ describe('Infernal Contract and Travel Deal chronology', () => {
   });
 
   it('keeps Gold armed when the Travel paid entry fails indexed generation support', () => {
-    const spell = createUnresolvedAcquisitionRewardState(
-      catalog,
-      Object.freeze({ rewardType: 'SpellDrop' as const }),
-      { kind: 'shopProfile', key: 'WorldShop' },
-    );
+    const spell = authoredShopReward(Object.freeze({ rewardType: 'SpellDrop' as const }));
     const impossibleRefill = createUnresolvedAcquisitionRewardState(
       catalog,
       Object.freeze({ rewardType: 'MaxHealthDrop' as const }),
@@ -655,11 +659,7 @@ describe('Infernal Contract and Travel Deal chronology', () => {
   });
 
   it('lets the Spell-triggered Travel refill own the later Gold duplicate pickup', () => {
-    const spell = createUnresolvedAcquisitionRewardState(
-      catalog,
-      Object.freeze({ rewardType: 'SpellDrop' as const }),
-      { kind: 'shopProfile', key: 'WorldShop' },
-    );
+    const spell = authoredShopReward(Object.freeze({ rewardType: 'SpellDrop' as const }));
     const derived = settle({
       order: ['Minor'],
       travel: true,

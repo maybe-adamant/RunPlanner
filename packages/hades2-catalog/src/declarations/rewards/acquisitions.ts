@@ -116,7 +116,6 @@ export const acquisitions = [
     kind: 'loot',
     historyProjection: 'consumableAndUse',
     goldConversionEligible: true,
-    ...lastReward('SpellDrop'),
   },
   {
     gameName: 'MaxHealthDrop',

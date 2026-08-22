@@ -22,6 +22,7 @@ import { arcanaTraits } from './arcana';
 import { circeGiver, circeTraits } from './circe';
 import { echoGiver, echoTraits } from './echo';
 import { infernalContractTraits } from './infernal-contract';
+import { seleneGiver, seleneTraits } from './selene';
 
 const weapons = [
   {
@@ -104,7 +105,12 @@ const aspects = [
   { key: 'LobGunAspect', label: 'Aspect of Hel', weaponKey: 'WeaponLob' },
   { key: 'BaseSuitAspect', label: 'Aspect of Melinoë', weaponKey: 'WeaponSuit' },
   { key: 'SuitMarkCritAspect', label: 'Aspect of Nyx', weaponKey: 'WeaponSuit' },
-  { key: 'SuitHexAspect', label: 'Aspect of Selene', weaponKey: 'WeaponSuit' },
+  {
+    key: 'SuitHexAspect',
+    label: 'Aspect of Selene',
+    weaponKey: 'WeaponSuit',
+    startingTrait: { traitKey: 'SpellMoonBeamTrait', giverKey: 'SpellDrop' },
+  },
   { key: 'SuitComboAspect', label: 'Aspect of Shiva', weaponKey: 'WeaponSuit' },
 ] as const;
 const traits = [
@@ -112,6 +118,7 @@ const traits = [
   ...circeTraits,
   ...echoTraits,
   ...infernalContractTraits,
+  ...seleneTraits,
   ...aphroditeTraits,
   ...arachneTraits,
   ...artemisTraits,
@@ -155,6 +162,7 @@ const givers = [
   circeGiver,
   echoGiver,
   weaponUpgradeGiver,
+  seleneGiver,
 ] as const;
 
 export const traitCatalogInput: RawTraitCatalogInput = {
@@ -201,13 +209,6 @@ export const traitCatalogInput: RawTraitCatalogInput = {
     'MoonBeamAresTalent',
     'PolymorphZeusTalent',
     'PotionPoseidonTalent',
-    'SpellLaserTrait',
-    'SpellLeapTrait',
-    'SpellMeteorTrait',
-    'SpellMoonBeamTrait',
-    'SpellPolymorphTrait',
-    'SpellSummonTrait',
-    'SpellTransformTrait',
     'SummonHeraTalent',
     'TimeSlowDemeterTalent',
     'TransformAphroditeTalent',

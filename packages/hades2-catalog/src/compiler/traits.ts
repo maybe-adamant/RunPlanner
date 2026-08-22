@@ -38,6 +38,7 @@ const RARITIES = ['Common', 'Rare', 'Epic', 'Heroic', 'Legendary', 'Duo'] as con
 const IN_RUN_RARITIES = ['Common', 'Rare', 'Epic', 'Heroic'] as const;
 const FRESH_RARITIES = ['Common', 'Rare', 'Epic', 'Legendary', 'Duo'] as const;
 const ELEMENTS = ['Aether', 'Earth', 'Air', 'Fire', 'Water'] as const;
+const EQUIPMENT_SLOTS = ['Melee', 'Secondary', 'Ranged', 'Rush', 'Mana', 'Spell'] as const;
 const BASE_ELEMENTS = ['Earth', 'Air', 'Fire', 'Water'] as const;
 const CALLING_CARD_GIVERS = new Set([
   'Zeus',
@@ -401,10 +402,15 @@ function normalizeAspects(
     const weaponKey = requireNonEmpty(aspect.weaponKey, `${path}.weaponKey`);
     if (weapons.byKey[weaponKey] === undefined)
       fail(`${path}.weaponKey`, `unknown weapon ${weaponKey}`);
+    const startingTrait =
+      aspect.startingTrait === undefined
+        ? undefined
+        : normalizeAspectStartingTrait(aspect.startingTrait, `${path}.startingTrait`);
     return Object.freeze({
       key: requireNonEmpty(aspect.key, `${path}.key`),
       label: requireNonEmpty(aspect.label, `${path}.label`),
       weaponKey,
+      ...(startingTrait === undefined ? {} : { startingTrait }),
     });
   });
   const collection = createCollection(values, 'aspects', (aspect) => aspect.key);
@@ -423,6 +429,21 @@ function normalizeAspects(
       fail(`aspects.${aspect.key}`, 'is not declared by a weapon');
   }
   return collection;
+}
+
+function normalizeAspectStartingTrait(
+  raw: unknown,
+  path: string,
+): NonNullable<AspectDeclaration['startingTrait']> {
+  const value = requireObject(raw, path);
+  const keys = Object.keys(value);
+  if (keys.length !== 2 || !Object.hasOwn(value, 'traitKey') || !Object.hasOwn(value, 'giverKey')) {
+    fail(path, 'must contain exactly traitKey and giverKey');
+  }
+  return Object.freeze({
+    traitKey: requireNonEmpty(value.traitKey as string, `${path}.traitKey`),
+    giverKey: requireNonEmpty(value.giverKey as string, `${path}.giverKey`),
+  });
 }
 
 function normalizeTraits(
@@ -749,13 +770,13 @@ function normalizeTraits(
       label: requireNonEmpty(trait.label, `${path}.label`),
       rarityDomain,
       offerRequirements,
-      ...(trait.ordinaryBoonSlot === undefined
+      ...(trait.equipmentSlot === undefined
         ? {}
         : {
-            ordinaryBoonSlot: closedValue(
-              trait.ordinaryBoonSlot,
-              ORDINARY_SLOTS,
-              `${path}.ordinaryBoonSlot`,
+            equipmentSlot: closedValue(
+              trait.equipmentSlot,
+              EQUIPMENT_SLOTS,
+              `${path}.equipmentSlot`,
             ),
           }),
       elementContributions: Object.freeze(elementContributions),
@@ -798,7 +819,7 @@ function collectCoreGodTraitKeys(raw: RawTraitCatalogInput['givers']): ReadonlyS
     const giver = requireObject(value, path) as unknown as RawTraitGiverDeclaration;
     const providerKind = closedValue(
       giver.providerKind,
-      ['olympian', 'hermes', 'hammer', 'npc'] as const,
+      ['olympian', 'hermes', 'hammer', 'npc', 'spell'] as const,
       `${path}.providerKind`,
     );
     if (providerKind !== 'olympian') return;
@@ -865,7 +886,7 @@ function normalizeGivers(
     }
     const providerKind = closedValue(
       giver.providerKind,
-      ['olympian', 'hermes', 'hammer', 'npc'] as const,
+      ['olympian', 'hermes', 'hammer', 'npc', 'spell'] as const,
       `${path}.providerKind`,
     );
     const rarityPolicy = requireObject(
@@ -946,7 +967,7 @@ function normalizeGivers(
       if (priorityTraitKeys.length !== 5)
         fail(`${path}.priorityTraitKeys`, 'Olympian givers require exactly five priority traits');
       const prioritySlots = priorityTraitKeys.map(
-        (traitKey) => traits.byKey[traitKey]?.ordinaryBoonSlot,
+        (traitKey) => traits.byKey[traitKey]?.equipmentSlot,
       );
       if (
         prioritySlots.some((slot) => slot === undefined) ||
@@ -1254,6 +1275,24 @@ export function createTraitCatalog(input: RawTraitCatalogInput): TraitCatalog {
     }
   }
   const givers = normalizeGivers(input.givers, traits);
+  for (const aspect of aspects.values) {
+    const starting = aspect.startingTrait;
+    if (starting === undefined) continue;
+    const giver = givers.byKey[starting.giverKey];
+    if (giver === undefined)
+      fail(`aspects.${aspect.key}.startingTrait.giverKey`, 'unknown trait giver');
+    if (giver.providerKind !== 'spell')
+      fail(`aspects.${aspect.key}.startingTrait.giverKey`, 'must identify a spell provider');
+    if (traits.byKey[starting.traitKey] === undefined)
+      fail(`aspects.${aspect.key}.startingTrait.traitKey`, 'unknown trait');
+    if (traits.byKey[starting.traitKey]?.equipmentSlot !== 'Spell')
+      fail(`aspects.${aspect.key}.startingTrait.traitKey`, 'must occupy the Spell equipment slot');
+    if (giver.traitKeys.includes(starting.traitKey))
+      fail(
+        `aspects.${aspect.key}.startingTrait.traitKey`,
+        'must not belong to the normal spell pool',
+      );
+  }
   validateDirectTraitSets(traits, givers);
   validateTravelDeal(traits);
   const echoLastRunBoon = normalizeEchoLastRunBoon(input.echoLastRunBoon, traits, givers);

@@ -1,7 +1,7 @@
 {
-  "schemaVersion": 49,
+  "schemaVersion": 50,
   "projectId": "golden-fg",
-  "catalogVersion": "0.27.0-arcana-fear-loadout",
+  "catalogVersion": "0.28.0-selene-spells",
   "routes": [
     {
       "routeKey": "Underworld",
@@ -883,7 +883,25 @@
                     "offer": {
                       "rewardType": "SpellDrop"
                     },
-                    "traitOffersByAcquisitionRole": {},
+                    "traitOffersByAcquisitionRole": {
+                      "self": {
+                        "kind": "traits",
+                        "giverKey": "SpellDrop",
+                        "options": [
+                          {
+                            "traitKey": "SpellLeapTrait"
+                          },
+                          {
+                            "traitKey": "SpellLaserTrait"
+                          },
+                          {
+                            "traitKey": "SpellSummonTrait"
+                          }
+                        ],
+                        "selectedOptionKey": "option1",
+                        "rarificationActions": []
+                      }
+                    },
                     "dispositionByAcquisitionRole": {
                       "self": {
                         "kind": "normal"
@@ -2740,7 +2758,25 @@
                       "offer": {
                         "rewardType": "SpellDrop"
                       },
-                      "traitOffersByAcquisitionRole": {},
+                      "traitOffersByAcquisitionRole": {
+                        "self": {
+                          "kind": "traits",
+                          "giverKey": "SpellDrop",
+                          "options": [
+                            {
+                              "traitKey": "SpellLaserTrait"
+                            },
+                            {
+                              "traitKey": "SpellSummonTrait"
+                            },
+                            {
+                              "traitKey": "SpellTimeSlowTrait"
+                            }
+                          ],
+                          "selectedOptionKey": "option1",
+                          "rarificationActions": []
+                        }
+                      },
                       "dispositionByAcquisitionRole": {
                         "self": {
                           "kind": "normal"
