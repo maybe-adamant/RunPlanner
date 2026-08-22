@@ -4,9 +4,12 @@
 
 Locked delivery plan based on clean commit
 `9945192d3f4e60160489609b95ffcf87b3a60af8`. A fresh read-only adversarial
-review completed after the schema, lifecycle, fixture-migration, and
-completion-action contracts were amended; the final review verdict is READY
-with no remaining P1/P2 finding.
+review completed, followed by a main-session overengineering pass requested by
+the user. That pass removed the proposed participation/exit-blocking split and
+required-object lifecycle specialization. The plan now extends the existing
+Room Action machinery only: fountain is a new required participant; an
+authored keepsake replacement atomically owns one optional rack participant;
+and Retain means that rack interaction is absent.
 
 This is a temporary implementation plan. It is intentionally not linked from
 the README or from stable design authorities. Gate B must absorb the completed
@@ -62,6 +65,15 @@ This slice establishes the truthful Cleanup frontier that future Wells of
 Charon and Shrines of Hermes will consume. It does **not** implement either
 feature.
 
+The implementation budget is deliberately narrow. It may add the two action
+reference variants, one Postboss action-order field, one completion action
+address variant, exact fountain/rack action events, and the minimum catalog
+fact needed to identify a derived Postboss fountain. Everything else must extend the
+existing Room Action domain, scheduler, roster, timeline, command, lifecycle,
+projection, and React rendering paths. A completion-owner adapter is not a new
+policy owner. No generic feature framework or parallel completion-action
+infrastructure is permitted.
+
 ## Source Facts and Planner Boundaries
 
 ### Ordinary Reprieve
@@ -111,33 +123,30 @@ command, candidate, finding, fixture, or UI.
 
 ### 1. Catalog declarations own physical fountain presence
 
-Extend the normalized required-room-object declaration with one explicit
-health-fountain variant rather than inferring presence from a rendered room
-label, `RoomKind`, completion role, or React context:
+Do not add a second required-object system or general room-feature framework.
+The existing authored Fountain template is already the exact authority for
+F/G/I/O/P ordinary Reprieves. Add only the missing normalized physical fact
+for derived completion rooms, for example:
 
 ```ts
-type RequiredRoomObjectDescriptor =
-  | {
-      readonly key: 'SoulPylon';
-      readonly spawnTiming: 'roomEntry';
-      readonly completionRequirement: 'destroyBeforeExit';
-    }
-  | {
-      readonly key: 'HealthFountain';
-      readonly spawnTiming: 'roomEntry';
-      readonly completionRequirement: 'useBeforeExit';
-    };
+interface RoomDeclaration {
+  // existing fields
+  readonly hasHealthFountain: boolean;
+}
 ```
 
-Declare `HealthFountain` only on:
+The exact field name may follow the catalog's local naming conventions. It is
+one declaration fact consumed by the existing Room Action domain, not a new
+capability registry, action factory, or required-object lifecycle.
 
-- F/G/I/O/P ordinary Reprieves; and
-- F/G/H/N/O/P derived Postboss rooms.
+Normalize `true` only on F/G/H/N/O/P derived Postboss rooms. Ordinary
+Reprieves continue to derive fountain participation from their existing
+`mode: { kind: 'authored', templateKey: 'Fountain' }`; do not duplicate that
+fact on them unless compiler normalization requires one uniform field.
 
-Do not declare it on the modeled H Echo Bridge, the persistent N Hub, I/Q
-completion tails, or any room merely because it has a broad activation hook.
-Catalog compiler tests own exact declaration normalization and negative
-contacts.
+Do not infer a fountain on the modeled H Echo Bridge, the persistent N Hub,
+I/Q completion tails, or any room merely because it has a broad activation
+hook. Catalog tests own the exact positive and negative matrix.
 
 ### 2. Schema 49 adds one Postboss chronology
 
@@ -155,13 +164,13 @@ interface AuthoredBiomePlan {
 ```
 
 `postbossRoomActions` is required when the layout's Postboss room has at least
-one supported action capability: its room declaration owns `HealthFountain`,
+one supported action capability: its room declaration has a health fountain,
 or the biome declaration owns a Postboss keepsake rack. These remain separate
-catalog facts. The action domain contributes `useFountain` only from the room
-descriptor and contributes `interactKeepsakeRack` only from the rack capability
-plus an active replacement. In the current catalog both capabilities share the
-F/G/H/N/O/P set and I/Q own neither, but no engine or UI code may infer one from
-the other.
+catalog facts. The existing Room Action domain contributes `useFountain` only
+from the room's fountain fact and contributes `interactKeepsakeRack` only from
+the rack capability plus an active replacement. In the current catalog both
+capabilities share the F/G/H/N/O/P set and I/Q own neither, but no engine or UI
+code may infer one from the other.
 
 The field remains persisted but dormant while that biome is the configured
 route tail. `postbossKeepsakeDisposition` remains required only by rack
@@ -186,34 +195,22 @@ Extend the closed `RoomActionReference` union with:
 { readonly kind: 'interactKeepsakeRack' }
 ```
 
-`useFountain` has required chronology membership and blocks exit readiness
-whenever its active room domain contains the exact catalog descriptor.
-`interactKeepsakeRack` is absent while retaining. Once the existing Postboss
-disposition is `replace`, it has required chronology membership because that
-authored replacement cannot happen without the interaction, but it never
-blocks game exit readiness.
+`useFountain` uses the existing `participation: 'required'`. The existing
+roster therefore defaults it, prevents active removal, reports a missing row,
+and places Cleanup after it without a new blocking concept.
 
-Generalize the action contribution contract so those facts are not conflated:
+`interactKeepsakeRack` uses the existing `participation: 'optional'`. Retain
+means the action is absent. Replace means the action and replacement payload
+are authored atomically by `ReplacePostbossKeepsake`; the strict Postboss codec
+requires that relationship, so normal state cannot contain a replacement
+without its rack row or a rack row while retaining. Because the ranked rack is
+optional, the existing roster already permits it before or after the last
+required fountain and therefore before or after Cleanup.
 
-```ts
-interface RoomActionContribution {
-  readonly participation: 'required' | 'optional';
-  readonly exitBlocking: boolean;
-  // existing reference, lifecycle window, and dependency facts
-}
-```
-
-Existing action contributions preserve their current lifecycle-derived exit
-barrier; this gate must not reclassify Echo, Artificer, Fields, Ship, Shop, or
-other unrelated actions merely to populate the new field. The two new facts
-are explicit: fountain is `participation: 'required', exitBlocking: true`, and
-an active rack is `participation: 'required', exitBlocking: false`. Genuinely
-optional participation remains nonblocking.
-
-Missing required participation blocks canonical authored execution and gets
-one canonical insertion repair. Cleanup/`exitUsable` is derived only from the
-last ranked `exitBlocking` action. This is why a selected rack must be ranked
-exactly once but may legally appear after fountain-driven Cleanup.
+Do not add `exitBlocking`, a second participation enum, a selected-action
+obligation layer, or special missing-rack repair semantics. Fountain uses the
+required path that already exists. Rack uses the optional path that already
+exists, with its membership synchronized by the selection command.
 
 Both references pass through the same collision-safe key function, structural
 action-domain product, roster assembly, ordering assessment, proposal system,
@@ -274,12 +271,6 @@ structurally valid omission remains visible as one canonical Restore repair;
 the decoder does not silently insert it. Dormant final-biome state does not
 block evaluation and publishes no active action interaction.
 
-An active replacement with a missing rack row uses the same required-membership
-scheduler to expose exactly one canonical latest-position Restore. It blocks
-canonical plan execution at the rack owner, but it does not move the
-fountain-derived Cleanup barrier. Do not publish the multiple free insertion
-positions used by genuinely optional participation.
-
 ### 6. Keepsake selection owns optional rack membership atomically
 
 Keep `postbossKeepsakeDisposition` as the existing selection/payload owner and
@@ -300,54 +291,33 @@ payload into `RoomActionReference`.
 For a newly selected replacement, the latest legal default is after the
 fountain, inside Cleanup. The user may move it before the fountain.
 
-A structurally valid decoded `replace` value with a missing rack row remains
-incomplete and repairable through canonical `InsertRoomAction`. An active rack
-row is not generically removable; clearing it uses
-`ReplacePostbossKeepsake(...retain)` so payload and participation cannot
-diverge through normal editing. A retained stale rack row under `retain` stays
-repair-visible and may be removed without fabricating a replacement.
+A `replace` value with a missing rack row is structurally malformed under
+schema 49: the codec requires rack membership exactly when the disposition is
+`replace`. Generic Insert/Remove commands reject
+`interactKeepsakeRack`; the specialized keepsake command is the only normal
+membership owner. Clearing it uses `ReplacePostbossKeepsake(...retain)`, so
+payload and participation cannot diverge and no second repair interaction is
+needed.
 
-### 7. Lifecycle profiles spawn fountains but actions complete them
+### 7. Existing lifecycle schedules host the new actions
 
-Do not pass a fountain descriptor into an unchanged lifecycle profile. The
-current executor requires required-object operations to agree with its input,
-and the existing bulk `completeRequiredObjects` operation would falsely use the
-fountain outside the authored action.
+Do not add fountain-specific lifecycle profiles, required-object spawn or
+completion operations, or a second action executor. Ordinary Reprieve keeps
+its current Fountain/standard lifecycle. Postboss keeps the existing
+`PostBossRoom` lifecycle.
 
-Add explicit fountain-bearing lifecycle profiles in the existing declaration
-family:
+The existing Room Action scheduling seam inserts `useFountain` and the optional
+rack interaction into those lifecycles. Required participation already makes
+fountain the barrier before Cleanup. Executing the ranked fountain row emits
+one exact `fountainUsed` history event; no separate required-object event or
+ledger is introduced in this slice.
 
-- an ordinary Fountain reward profile with the same producer/automatic
-  noncombat sequence as the current Reprieve path plus
-  `spawnRequiredObjects` immediately after `roomEntered`; and
-- a Postboss fountain profile with `spawnRequiredObjects` after `roomEntered`,
-  followed by its hidden automatic noncombat Start/End sequence and then the
-  ranked action schedule.
-
-F/G/I/O/P Reprieve declarations select the ordinary fountain profile
-explicitly. H Echo Bridge and persistent N Hub do not.
-
-Postboss profile selection is activation-aware in completion materialization,
-not static on the room declaration: when `hasConfiguredSuccessor` activates a
-Postboss room carrying the `HealthFountain` descriptor, materialization selects
-the fountain-bearing Postboss profile and supplies that required-object input.
-A dormant configured tail uses the existing non-fountain `PostBossRoom`
-profile with no required-object input, spawn, action execution, or blocker.
-This closed profile choice is engine-owned and descriptor-driven; it is not a
-conditional React rule or a literal biome check. Final I/Q completion rooms do
-not select the fountain profile.
-
-Extend lifecycle validation by completion requirement:
-
-- `destroyBeforeExit` keeps its existing profile-owned spawn/bulk-completion
-  contract; and
-- `useBeforeExit` requires a profile spawn but forbids profile bulk completion.
-
-Executing the ranked `useFountain` action emits the exact `fountainUsed` event
-and completes only the matching `HealthFountain` required object at that same
-semantic action boundary. No generic profile operation, Cleanup transition, or
-room commit may complete it. The automatic noncombat sequence remains hidden
-from the player timeline but must finish before the first ranked action.
+For Postboss, the existing automatic noncombat Start/End sequence remains
+after `roomEntered` and before the first ranked player action. Completion
+materialization publishes and executes the Postboss action roster only when
+`hasConfiguredSuccessor` activates that room. A dormant configured tail keeps
+its persisted state but emits no action event or blocker. This is the existing
+dynamic completion boundary, not a new lifecycle-profile switch.
 
 ### 8. Schema migration preserves prior authored meaning
 
@@ -415,8 +385,8 @@ Hammer at the later rack action does not retroactively consume a use at room
 entry. This needs an exact regression and must not redefine the shared
 `roomEntered` event or its Run State checkpoint.
 
-Fountain use is initially effect-neutral except for its required-object and
-chronology meaning. Do not invent healing state, fountain damage, refill
+Fountain use is initially effect-neutral except for its required participation
+and chronology meaning. Do not invent healing state, fountain damage, refill
 effects, or an Aromatic Phial rarity target. The exact `fountainUsed` event and
 history prefix are the future contact for those separate effects.
 
@@ -437,7 +407,7 @@ It gains no authored order. Postboss remains a derived completion room but now
 uses the shared roster:
 
 ```text
-Room entered -> ranked actions -> Cleanup after last exit-blocking action
+Room entered -> ranked actions -> Cleanup after last required action
 ```
 
 The completion history composer must execute the shared roster instead of
@@ -460,9 +430,8 @@ The Postboss presentation must show:
 
 - `Room entered`;
 - required, move-only `Use fountain`;
-- move-only `Choose keepsake` only for an active replacement; replacement is
-  optional globally, but the row has required chronology membership once that
-  replacement is authored;
+- optional `Choose keepsake` only for an active replacement; it may move, but
+  Retain through the keepsake selector is its sole removal path;
 - the existing keepsake candidate selector and immediate equip-result editor
   attached to `Choose keepsake`;
 - `Cleanup · Doors open` immediately after the fountain; and
@@ -488,14 +457,13 @@ Known occurrence action references that no longer match the occurrence's
 current room still decode and project as stale removable repairs. Replacing a
 Fountain occurrence must not make its retained `useFountain` row codec-invalid.
 Completion orders remain closed to the two completion-supported references,
-but a rack row under `retain` is inactive/stale rather than an unknown or
-unsupported tag.
+and the codec requires rack membership to agree with replace/retain. That
+atomic relation is schema structure, not a second repairable participation
+state.
 
 The engine must retain and project:
 
 - missing active required fountain as an unranked required repair;
-- active replacement with a missing rack row as a canonical insertion repair;
-- stale rack row under `retain` as a removal repair;
 - dormant Postboss state on the current configured route tail; and
 - a retained invalid keepsake replacement with its exact candidate/finding.
 
@@ -514,6 +482,8 @@ This delivery does not add or change:
 - healing amounts, health state, fountain damage, fountain refresh, or
   Aromatic Phial's random rarity target;
 - an authored rack-open-without-replacement event;
+- a new required-object lifecycle, fountain lifecycle profile, action
+  participation dimension, or exit-blocking field;
 - Boss or Judgment action ordering;
 - Postboss as a synthetic occurrence or ordinary exit decision;
 - a generic feature/action framework for future room contacts;
@@ -535,11 +505,12 @@ effect or an unusable persisted contract.
 
 Gate A owns:
 
-1. explicit normalized `HealthFountain` required-object declarations;
+1. one normalized Postboss fountain-presence fact while ordinary Reprieve
+   continues using its existing Fountain template;
 2. schema-49 `postbossRoomActions`, strict codec/defaults, semantic addresses,
    commands, and temporary fixture migration;
-3. shared occurrence/completion Room Action domain, roster, scheduler,
-   proposals, timeline, repair, and exact lifecycle events;
+3. extension of the existing occurrence/completion Room Action domain, roster,
+   scheduler, proposals, timeline, repair, and exact action events;
 4. Postboss materialization, history, reward/keepsake execution, candidates,
    findings, and dynamic successor activation;
 5. ordinary Reprieve and Postboss application projection, interaction binding,
@@ -633,9 +604,9 @@ closed product.
 
 Gate A is not complete until the following behaviors have owning witnesses.
 
-1. Catalog normalization exposes `HealthFountain` on exact F/G/I/O/P
-   Reprieves and F/G/H/N/O/P Postboss declarations, but not H Echo Bridge,
-   persistent N Hub, I Postboss, or Q Postboss.
+1. Catalog normalization keeps F/G/I/O/P Reprieves on the existing Fountain
+   template and exposes the one Postboss fountain fact on F/G/H/N/O/P, but not
+   H Echo Bridge, persistent N Hub, I Postboss, or Q Postboss.
 2. Strict schema 49 requires `postbossRoomActions` on exact capable biomes,
    rejects schema 48, duplicate/unknown action references, and completion state
    on owners with no completion-action capability, while preserving
@@ -665,24 +636,24 @@ Gate A is not complete until the following behaviors have owning witnesses.
     before either player action. Equipping Experimental Hammer at the rack does
     not retroactively spend a Postboss entry use.
 11. Missing active fountain blocks at its exact action owner and exposes one
-    canonical Restore; missing active rack, stale retained rack, and retained
-    invalid replacement each remain visible and repairable without React
-    inference. Missing rack blocks canonical authored execution but never moves
-    Cleanup later than the fountain.
+    canonical Restore. Codec and commands maintain the exact
+    `replace <-> rack row` relation, while a context-invalid replacement remains
+    authored and repairable without React inference.
 12. Ordinary Fountain UI shows reward and `Use fountain` as compact move-only
     rows before Cleanup, supports both orders, and records a move as one
     semantic history step.
 13. Postboss UI shows the shared Room Timeline language with exact required
     fountain, optional `Choose keepsake`, candidate/equip child, Cleanup seam,
-    proposal controls, and one-step move/selection Undo; it has no encounter
-    boundaries or fixed-effect duplicate.
+    proposal controls, and one-step move/selection Undo; Retain is the sole
+    rack-removal path, and there are no encounter boundaries or fixed-effect
+    duplicates.
 14. Completion action, keepsake selection, equip result, and repair findings
     route to the exact Postboss inspector and action row.
 15. Boss/Judgment behavior and presentation remain unchanged.
-16. Fountain-bearing lifecycle profiles spawn the required object after
-    `roomEntered`; only the ranked action completes it. No bulk profile
-    operation, Cleanup, commit, dormant final state, H Echo Bridge, or N Hub
-    emits a fountain completion.
+16. The existing Reprieve and Postboss lifecycle profiles execute the ranked
+    action after automatic noncombat entry. No new required-object operation,
+    profile family, Cleanup/commit shortcut, dormant final state, H Echo
+    Bridge, or N Hub emits `fountainUsed`.
 17. No production or test symbol introduces a Well/Shrine action, placeholder,
     command, picker, or persisted state; only future Cleanup wording is added
     to durable documentation in Gate B.
@@ -699,7 +670,7 @@ Gate A is not complete until the following behaviors have owning witnesses.
   defaulting, both orders, removal rejection, canonical restore, and H/N
   negatives;
 - keepsake-selection command tests own rack atomicity, rank preservation,
-  retain removal, malformed repair, and Undo;
+  retain removal, codec membership equality, and Undo;
 - codec/default tests own schema-49 exactness and dormant final state.
 
 ### Simulation
