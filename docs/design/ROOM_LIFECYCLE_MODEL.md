@@ -130,6 +130,31 @@ encounter boundary therefore groups that closed mandatory sequence without
 moving the two producer roles: chosen remains before combat and spurned remains
 after End encounter.
 
+#### Noncombat and Story encounters
+
+The game still records and runs a Story encounter through `StartEncounter`,
+but its `EncounterType = NonCombat` skips combat start/end effects. The planner
+therefore preserves the encounter identity, history, NPC interaction, trait
+offer, and any exact pickup timing while omitting player-facing Start encounter
+and End encounter boundaries. This same rule applies to all `nonCombat` phase
+kinds. Only `combat`, `miniboss`, and `boss` phase kinds render a combat spine.
+
+#### Derived Boss completion and Judgment
+
+The derived Boss completion room has the fixed `BossRoom` lifecycle even though
+it is not an authored Room Occurrence. Its player-facing timeline is `Room
+entered -> Start encounter -> End encounter -> Cleanup · Doors open`. When
+Judgment is active, it is one engine-owned fixed effect immediately after End
+encounter, not a Room Action or persisted ordering value. Its exact existing
+Boss-completion Arcana address owns the editor, candidate frontier, finding,
+and semantic command.
+
+The derived Postboss completion uses the same timeline presentation without a
+combat interval: `Room entered -> Cleanup · Doors open`. A reached nonfinal
+Postboss inserts its fixed keepsake retain-or-replace effect between those
+boundaries. Immediate equip-result authoring stays attached to that effect;
+neither product creates an authored Room Action order.
+
 #### Mourning Fields
 
 `StartFieldsEncounter` rejects a new cage while another required encounter or

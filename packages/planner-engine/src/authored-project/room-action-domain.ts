@@ -1,4 +1,8 @@
-import type { Catalog, RoomDeclaration } from '../catalog-schema';
+import {
+  isCombatBearingEncounterPhaseKind,
+  type Catalog,
+  type RoomDeclaration,
+} from '../catalog-schema';
 import {
   createAcquisitionEntryAddress,
   createAcquisitionRoleAddress,
@@ -344,16 +348,28 @@ function baseContribution(
         lifecycleProfileKey === 'FieldsCombatRoom' && attachment?.kind === 'localReward'
           ? frozen({ kind: 'completeFieldsCage' as const, phaseKey: reference.phaseKey })
           : undefined;
+      const encounterKey = selectedEncounterDefinitionKey(
+        catalog,
+        declaration,
+        occurrence.encounters,
+        reference.phaseKey,
+        occurrence.gameName,
+      );
+      const phaseIsCombatBearing = isCombatBearingEncounterPhaseKind(
+        catalog.encounterDefinitions.byKey[encounterKey]?.kind ?? 'nonCombat',
+      );
       const dependencies: RoomActionDependency[] = [
         ...(cage === undefined ? [] : [frozen({ kind: 'afterAction' as const, action: cage })]),
         ...(lifecycleProfileKey === 'FieldsCombatRoom' && attachment === undefined
           ? []
-          : [
-              frozen({
-                kind: 'afterCheckpoint' as const,
-                checkpointKey: `combat:${reference.phaseKey}`,
-              }),
-            ]),
+          : phaseIsCombatBearing
+            ? [
+                frozen({
+                  kind: 'afterCheckpoint' as const,
+                  checkpointKey: `combat:${reference.phaseKey}`,
+                }),
+              ]
+            : []),
       ];
       const phaseOwner = createEncounterPhaseAddress(
         biome,
@@ -445,7 +461,8 @@ export function assembleRoomLifecycleStructure(options: {
       slot.key,
       options.occurrence.gameName,
     );
-    return options.catalog.encounterDefinitions.byKey[encounterKey]?.kind !== 'nonCombat';
+    const encounter = options.catalog.encounterDefinitions.byKey[encounterKey];
+    return encounter !== undefined && isCombatBearingEncounterPhaseKind(encounter.kind);
   });
   const declaredPhases = combatSlots.map((slot) =>
     frozen({

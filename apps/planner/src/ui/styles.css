@@ -1519,19 +1519,57 @@ button:disabled {
   line-height: 1.45;
 }
 
-.completion-judgment-control {
-  display: grid;
-  gap: 8px;
-  margin-top: 12px;
-  padding: 10px 12px 12px;
-  border: 1px solid #393a44;
-  border-radius: 8px;
+.completion-timeline-effect {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 4px 6px;
+  border: 0;
+  color: #e2d0a5;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
 }
 
-.completion-judgment-control legend {
-  padding: 0 5px;
-  color: #d8d3cb;
-  font-size: 0.82rem;
+.completion-timeline-effect:hover,
+.completion-timeline-effect:focus-visible {
+  color: #f1ddb0;
+  background: rgb(193 169 123 / 14%);
+}
+
+.completion-keepsake-control {
+  display: flex;
+  min-width: min(22rem, 42vw);
+  align-items: center;
+  gap: 6px;
+}
+
+.completion-timeline-effect-row > .field-control {
+  grid-column: 1 / -1;
+}
+
+.completion-judgment-popup {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+  padding: 12px;
+  border: 1px solid rgb(193 169 123 / 60%);
+  border-radius: 8px;
+  background: #1b1b22;
+  box-shadow: 0 10px 28px rgb(0 0 0 / 35%);
+}
+
+.completion-judgment-popup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.completion-judgment-popup h4 {
+  margin: 0;
+  color: #e2d0a5;
+  font-size: 0.84rem;
 }
 
 .completion-judgment-options {

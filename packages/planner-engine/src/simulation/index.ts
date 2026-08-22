@@ -150,9 +150,12 @@ export {
   type RoomActionWindow,
 } from './room-actions';
 export {
+  assembleCompletionRoomLifecycleTimeline,
   assembleRoomLifecycleTimeline,
   scopeRoomLifecycleTimeline,
   type RoomLifecycleBoundary,
+  type CompletionRoomLifecycleTimeline,
+  type CompletionRoomLifecycleTimelineEntry,
   type RoomLifecycleTimeline,
   type RoomLifecycleTimelineEntry,
   type RoomLifecycleTimelineInput,

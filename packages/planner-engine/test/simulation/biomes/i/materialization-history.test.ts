@@ -590,6 +590,14 @@ describe('canonical I Clockwork materialization and history', () => {
       },
     });
     expect(storyTarget?.room.clockworkReward).toBeUndefined();
+    expect(
+      storyTarget?.room.roomLifecycleTimeline.boundaries.map((boundary) => boundary.kind),
+    ).toEqual(['roomEntered', 'cleanup']);
+    expect(
+      storyTarget?.room.roomLifecycleTimeline.entries.some(
+        (entry) => entry.kind === 'action' && entry.action.reference.kind === 'interactEncounter',
+      ),
+    ).toBe(true);
     expect(snapshotBatches.slice(0, -1).map((batch) => batch.batchState)).toMatchObject([
       { goalsRemaining: 5, nonGoalRewardsAcquired: 0 },
       { goalsRemaining: 4, nonGoalRewardsAcquired: 0 },
