@@ -34,6 +34,16 @@ Its shop inventory is entry-time state. An unselected peer retains its
 occurrence and no inventory; selecting it materializes the declaration's
 complete shop inventory.
 
+`I_WorldShop` filters its option entries from the entered-biome history at
+entry: `enteredBiomes <= 2` admits first-half entries and `enteredBiomes >= 3`
+admits second-half entries. Phase-independent entries remain available, and
+the five groups and one-offer-per-group shape do not change. The current
+fixed-route evaluator supplies `biomeIndex + 1` as `enteredBiomeCount`, which
+is equivalent for I's supported fourth-biome route and preserves its existing
+second-half standard inventory. A future Dream Dive implementation must
+update that fact producer for reordered history; it must not add an I-local
+phase or alter the Shop declarations.
+
 ## Clockwork and history facts
 
 The game-rule model keeps creation, appearance, entered history, goal updates,
