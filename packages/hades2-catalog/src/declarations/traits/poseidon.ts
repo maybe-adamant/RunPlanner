@@ -15,7 +15,7 @@ export const poseidonTraits = [
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
-    ordinaryBoonSlot: 'Melee',
+    equipmentSlot: 'Melee',
   },
   {
     key: 'PoseidonSpecialBoon',
@@ -30,7 +30,7 @@ export const poseidonTraits = [
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
-    ordinaryBoonSlot: 'Secondary',
+    equipmentSlot: 'Secondary',
   },
   {
     key: 'PoseidonCastBoon',
@@ -45,7 +45,7 @@ export const poseidonTraits = [
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
-    ordinaryBoonSlot: 'Ranged',
+    equipmentSlot: 'Ranged',
   },
   {
     key: 'PoseidonSprintBoon',
@@ -60,7 +60,7 @@ export const poseidonTraits = [
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
-    ordinaryBoonSlot: 'Rush',
+    equipmentSlot: 'Rush',
   },
   {
     key: 'PoseidonManaBoon',
@@ -75,7 +75,7 @@ export const poseidonTraits = [
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
-    ordinaryBoonSlot: 'Mana',
+    equipmentSlot: 'Mana',
   },
   {
     key: 'EncounterStartOffenseBuffBoon',

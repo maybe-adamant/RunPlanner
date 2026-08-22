@@ -1,7 +1,7 @@
 {
-  "schemaVersion": 49,
+  "schemaVersion": 50,
   "projectId": "surface-1",
-  "catalogVersion": "0.27.0-arcana-fear-loadout",
+  "catalogVersion": "0.28.0-selene-spells",
   "routes": [
     {
       "routeKey": "Underworld",
@@ -380,7 +380,25 @@
                     "offer": {
                       "rewardType": "SpellDrop"
                     },
-                    "traitOffersByAcquisitionRole": {},
+                    "traitOffersByAcquisitionRole": {
+                      "self": {
+                        "kind": "traits",
+                        "giverKey": "SpellDrop",
+                        "options": [
+                          {
+                            "traitKey": "SpellMeteorTrait"
+                          },
+                          {
+                            "traitKey": "SpellTransformTrait"
+                          },
+                          {
+                            "traitKey": "SpellLeapTrait"
+                          }
+                        ],
+                        "selectedOptionKey": "option1",
+                        "rarificationActions": []
+                      }
+                    },
                     "dispositionByAcquisitionRole": {
                       "self": {
                         "kind": "normal"

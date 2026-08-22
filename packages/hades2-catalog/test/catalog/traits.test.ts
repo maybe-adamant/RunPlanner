@@ -610,6 +610,16 @@ const expectedGiverPools: Readonly<Record<string, readonly string[]>> = {
     'SupplyDropBoon',
     'UpgradeHammerBoon',
   ],
+  SpellDrop: [
+    'SpellPolymorphTrait',
+    'SpellMeteorTrait',
+    'SpellTransformTrait',
+    'SpellLeapTrait',
+    'SpellLaserTrait',
+    'SpellSummonTrait',
+    'SpellTimeSlowTrait',
+    'SpellPotionTrait',
+  ],
   WeaponUpgrade: [
     'StaffDoubleAttackTrait',
     'StaffLongAttackTrait',
@@ -713,13 +723,6 @@ const expectedDeferredTraitKeys = [
   'MoonBeamAresTalent',
   'PolymorphZeusTalent',
   'PotionPoseidonTalent',
-  'SpellLaserTrait',
-  'SpellLeapTrait',
-  'SpellMeteorTrait',
-  'SpellMoonBeamTrait',
-  'SpellPolymorphTrait',
-  'SpellSummonTrait',
-  'SpellTransformTrait',
   'SummonHeraTalent',
   'TimeSlowDemeterTalent',
   'TransformAphroditeTalent',
@@ -932,11 +935,64 @@ describe('trait offer catalog closure', () => {
     baseElements: catalog.traitBaseElements,
   };
 
+  it('declares Selene’s eight normal spells and Aspect-owned Sky Fall exactly', () => {
+    expect(traits.givers.byKey.SpellDrop).toMatchObject({
+      providerKind: 'spell',
+      traitKeys: [
+        'SpellPolymorphTrait',
+        'SpellMeteorTrait',
+        'SpellTransformTrait',
+        'SpellLeapTrait',
+        'SpellLaserTrait',
+        'SpellSummonTrait',
+        'SpellTimeSlowTrait',
+        'SpellPotionTrait',
+      ],
+    });
+    expect(traits.aspects.byKey.SuitHexAspect?.startingTrait).toEqual({
+      traitKey: 'SpellMoonBeamTrait',
+      giverKey: 'SpellDrop',
+    });
+    for (const key of [...traits.givers.byKey.SpellDrop!.traitKeys, 'SpellMoonBeamTrait'])
+      expect(traits.traits.byKey[key]?.equipmentSlot).toBe('Spell');
+  });
+
+  it('rejects malformed Aspect starting spell links', () => {
+    const mutate = (startingTrait: unknown) =>
+      createCatalog({
+        ...declarations,
+        traitCatalog: {
+          ...declarations.traitCatalog,
+          aspects: declarations.traitCatalog.aspects.map((aspect) =>
+            aspect.key === 'SuitHexAspect'
+              ? {
+                  ...aspect,
+                  startingTrait: startingTrait as { traitKey: string; giverKey: string },
+                }
+              : aspect,
+          ),
+        },
+      });
+    expect(() => mutate({ traitKey: 'UnknownSpell', giverKey: 'SpellDrop' })).toThrow(
+      /unknown trait/,
+    );
+    expect(() => mutate({ traitKey: 'SpellPolymorphTrait', giverKey: 'SpellDrop' })).toThrow(
+      /must not belong to the normal spell pool/,
+    );
+    expect(() => mutate({ traitKey: 'SpellMoonBeamTrait', giverKey: 'Apollo' })).toThrow(
+      /must identify a spell provider/,
+    );
+    expect(() =>
+      mutate({ traitKey: 'SpellMoonBeamTrait', giverKey: 'SpellDrop', extra: true }),
+    ).toThrow(/exactly traitKey and giverKey/);
+    expect(() => mutate({ traitKey: '', giverKey: 'SpellDrop' })).toThrow(/must not be empty/);
+  });
+
   it('declares the complete field-NPC provider surfaces', () => {
     expect(traits).toBeDefined();
     expect(traits?.weapons.values).toHaveLength(6);
     expect(traits?.aspects.values).toHaveLength(24);
-    expect(traits?.traits.values).toHaveLength(377);
+    expect(traits?.traits.values).toHaveLength(386);
     expect(traits?.givers.values.map((giver) => [giver.key, giver.traitKeys.length])).toEqual([
       ['Aphrodite', 22],
       ['Arachne', 8],
@@ -959,6 +1015,7 @@ describe('trait offer catalog closure', () => {
       ['Circe', 9],
       ['Echo', 8],
       ['WeaponUpgrade', 92],
+      ['SpellDrop', 8],
     ]);
     expect(
       Object.fromEntries(traits?.givers.values.map((giver) => [giver.key, giver.traitKeys])),
@@ -1319,7 +1376,7 @@ describe('trait offer catalog closure', () => {
     expect(traits?.givers.byKey.Zeus?.traitKeys).toContain('SprintEchoBoon');
     expect(traits?.traits.byKey.SprintEchoBoon).toBeDefined();
     expect(traits?.traits.byKey.SorceryCritBoon).toBeDefined();
-    expect(declarations.traitCatalog.deferredTraitKeys).toContain('SpellLaserTrait');
+    expect(declarations.traitCatalog.deferredTraitKeys).not.toContain('SpellLaserTrait');
     expect(traits?.traits.byKey.SorceryCritBoon?.rarityDomain).toEqual({
       kind: 'ranked',
       freshOfferRarities: ['Common', 'Rare', 'Epic'],
@@ -1357,7 +1414,7 @@ describe('trait offer catalog closure', () => {
         blockInRunRarify: true,
         excludeFromRarityCount: false,
       });
-      expect(traits.traits.byKey[traitKey]?.ordinaryBoonSlot).toBeUndefined();
+      expect(traits.traits.byKey[traitKey]?.equipmentSlot).toBeUndefined();
     }
     for (const traitKey of expectedGiverPools.Dionysus ?? []) {
       expect(traits.traits.byKey[traitKey]).toMatchObject({
@@ -1373,7 +1430,7 @@ describe('trait offer catalog closure', () => {
         blockInRunRarify: false,
         excludeFromRarityCount: false,
       });
-      expect(traits.traits.byKey[traitKey]?.ordinaryBoonSlot).toBeUndefined();
+      expect(traits.traits.byKey[traitKey]?.equipmentSlot).toBeUndefined();
     }
     expect(traits?.traits.byKey.FocusAttackDamageTrait?.offerRequirements).toEqual([
       { kind: 'ordinaryBoonSlotOccupied', slot: 'Melee' },
@@ -1430,8 +1487,8 @@ describe('trait offer catalog closure', () => {
     expect(
       Object.fromEntries(
         traits.traits.values
-          .filter((trait) => trait.ordinaryBoonSlot !== undefined)
-          .map((trait) => [trait.key, trait.ordinaryBoonSlot]),
+          .filter((trait) => trait.equipmentSlot !== undefined && trait.equipmentSlot !== 'Spell')
+          .map((trait) => [trait.key, trait.equipmentSlot]),
       ),
     ).toEqual(expectedOrdinarySlots);
 
@@ -1467,7 +1524,7 @@ describe('trait offer catalog closure', () => {
         label: actual.label,
         rarityDomain: actual.rarityDomain,
         offerRequirements: actual.offerRequirements,
-        ordinaryBoonSlot: actual.ordinaryBoonSlot,
+        equipmentSlot: actual.equipmentSlot,
         elementContributions: actual.elementContributions,
         usesBoonRarity: actual.usesBoonRarity,
         isCoreGodTrait: actual.isCoreGodTrait,
@@ -1488,7 +1545,7 @@ describe('trait offer catalog closure', () => {
               }
             : { kind: 'none' },
         offerRequirements: expected.offerRequirements,
-        ordinaryBoonSlot: expected.ordinaryBoonSlot,
+        equipmentSlot: expected.equipmentSlot,
         elementContributions: expected.elementContributions,
         usesBoonRarity: expected.usesBoonRarity,
         isCoreGodTrait: expectedCoreGodTraitKeys.has(expected.key),

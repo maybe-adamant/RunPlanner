@@ -15,7 +15,7 @@ export const aphroditeTraits = [
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
-    ordinaryBoonSlot: 'Melee',
+    equipmentSlot: 'Melee',
   },
   {
     key: 'AphroditeSpecialBoon',
@@ -30,7 +30,7 @@ export const aphroditeTraits = [
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
-    ordinaryBoonSlot: 'Secondary',
+    equipmentSlot: 'Secondary',
   },
   {
     key: 'AphroditeCastBoon',
@@ -45,7 +45,7 @@ export const aphroditeTraits = [
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
-    ordinaryBoonSlot: 'Ranged',
+    equipmentSlot: 'Ranged',
   },
   {
     key: 'AphroditeSprintBoon',
@@ -60,7 +60,7 @@ export const aphroditeTraits = [
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
-    ordinaryBoonSlot: 'Rush',
+    equipmentSlot: 'Rush',
   },
   {
     key: 'AphroditeManaBoon',
@@ -75,7 +75,7 @@ export const aphroditeTraits = [
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
-    ordinaryBoonSlot: 'Mana',
+    equipmentSlot: 'Mana',
   },
   {
     key: 'HighHealthOffenseBoon',

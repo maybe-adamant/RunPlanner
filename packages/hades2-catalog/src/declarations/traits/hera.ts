@@ -15,7 +15,7 @@ export const heraTraits = [
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
-    ordinaryBoonSlot: 'Melee',
+    equipmentSlot: 'Melee',
   },
   {
     key: 'HeraSpecialBoon',
@@ -30,7 +30,7 @@ export const heraTraits = [
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
-    ordinaryBoonSlot: 'Secondary',
+    equipmentSlot: 'Secondary',
   },
   {
     key: 'HeraCastBoon',
@@ -45,7 +45,7 @@ export const heraTraits = [
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
-    ordinaryBoonSlot: 'Ranged',
+    equipmentSlot: 'Ranged',
   },
   {
     key: 'HeraSprintBoon',
@@ -60,7 +60,7 @@ export const heraTraits = [
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
-    ordinaryBoonSlot: 'Rush',
+    equipmentSlot: 'Rush',
   },
   {
     key: 'HeraManaBoon',
@@ -75,7 +75,7 @@ export const heraTraits = [
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
-    ordinaryBoonSlot: 'Mana',
+    equipmentSlot: 'Mana',
   },
   {
     key: 'DamageShareRetaliateBoon',

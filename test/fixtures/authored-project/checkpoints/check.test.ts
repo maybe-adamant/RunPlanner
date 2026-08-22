@@ -10,7 +10,7 @@ import {
   encodeProjectDocument,
 } from '@run-planner/engine/authored-project';
 import { catalog } from '@run-planner/hades2-catalog';
-import { checkpointManifest } from './manifest';
+import { checkpointManifest, checkpointSpellDropIntents } from './manifest';
 import { checkpointRegistry, loadCheckpoint } from './registry';
 import { nFixedOccurrenceIds, nOccurrenceIds } from '../routes/surface';
 
@@ -22,6 +22,29 @@ function sha256(value: string): string {
 
 function checkpointPath(id: string): string {
   return resolve(checkpointDirectory, `${id}.runplanner.json`);
+}
+
+function spellDropSelections(value: unknown, occurrenceId?: string): readonly [string, string][] {
+  if (value === null || typeof value !== 'object') return [];
+  const record = value as Record<string, unknown>;
+  const owner = typeof record.occurrenceId === 'string' ? record.occurrenceId : occurrenceId;
+  const reward = record.offer as Record<string, unknown> | undefined;
+  const self = (record.traitOffersByAcquisitionRole as Record<string, unknown> | undefined)
+    ?.self as Record<string, unknown> | undefined;
+  const selected = self?.selectedOptionKey;
+  const options = self?.options as readonly Record<string, unknown>[] | undefined;
+  const result =
+    reward?.rewardType === 'SpellDrop' &&
+    owner !== undefined &&
+    selected === 'option1' &&
+    options?.[0]?.traitKey !== undefined
+      ? ([[owner, String(options[0].traitKey)] as const] satisfies readonly [string, string][])
+      : [];
+  const children = Array.isArray(value) ? value : Object.values(record);
+  return Object.freeze([
+    ...result,
+    ...children.flatMap((child) => spellDropSelections(child, owner)),
+  ]);
 }
 
 describe('authored-project checkpoint integrity', () => {
@@ -52,6 +75,15 @@ describe('authored-project checkpoint integrity', () => {
       expect(Object.isFrozen(document)).toBe(true);
       expect(decodeProjectDocument(JSON.parse(raw), catalog)).toBeDefined();
     }
+  });
+
+  it('closes every schema-50 SpellDrop migration against its explicit intent ledger', () => {
+    const actual = checkpointManifest.flatMap((entry) =>
+      spellDropSelections(JSON.parse(readFileSync(checkpointPath(entry.id), 'utf8'))).map(
+        ([owner, selected]) => [entry.id, owner, selected] as const,
+      ),
+    );
+    expect(actual.sort()).toEqual([...checkpointSpellDropIntents].sort());
   });
 
   it('keeps the fixed N alias and representative authored state addressable', () => {

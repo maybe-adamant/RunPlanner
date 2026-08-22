@@ -15,7 +15,7 @@ export const apolloTraits = [
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
-    ordinaryBoonSlot: 'Melee',
+    equipmentSlot: 'Melee',
   },
   {
     key: 'ApolloSpecialBoon',
@@ -30,7 +30,7 @@ export const apolloTraits = [
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
-    ordinaryBoonSlot: 'Secondary',
+    equipmentSlot: 'Secondary',
   },
   {
     key: 'ApolloCastBoon',
@@ -45,7 +45,7 @@ export const apolloTraits = [
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
-    ordinaryBoonSlot: 'Ranged',
+    equipmentSlot: 'Ranged',
   },
   {
     key: 'ApolloSprintBoon',
@@ -60,7 +60,7 @@ export const apolloTraits = [
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
-    ordinaryBoonSlot: 'Rush',
+    equipmentSlot: 'Rush',
   },
   {
     key: 'ApolloManaBoon',
@@ -75,7 +75,7 @@ export const apolloTraits = [
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
-    ordinaryBoonSlot: 'Mana',
+    equipmentSlot: 'Mana',
   },
   {
     key: 'ApolloRetaliateBoon',

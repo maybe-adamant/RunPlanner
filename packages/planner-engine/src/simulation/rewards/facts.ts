@@ -152,6 +152,9 @@ export function createRewardFacts({
           maxNonGoalRewards: maxNonGoalRewards!,
         }
       : undefined,
+    // Hermes Shrine delayed delivery is not modeled yet. Keep the source-owned
+    // requirement flag explicit at the supported baseline rather than infer it
+    // from unrelated Shop state; its contextual value arrives with that slice.
     flags: Object.freeze({ allSpellInvested: false, pendingSpellDrop: false }),
     authoredConditions:
       currentRoom?.kind === 'authored' &&

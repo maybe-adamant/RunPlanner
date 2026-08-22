@@ -1,6 +1,6 @@
 import type { CatalogCollection } from '../normalized/collection';
 
-export type TraitProviderKind = 'olympian' | 'hermes' | 'hammer' | 'npc';
+export type TraitProviderKind = 'olympian' | 'hermes' | 'hammer' | 'npc' | 'spell';
 
 /** Rarities that can exist on an equipped trait or a fresh offer. */
 export type TraitRarity = 'Common' | 'Rare' | 'Epic' | 'Heroic' | 'Legendary' | 'Duo';
@@ -55,6 +55,7 @@ export type TargetedTraitAcquisition =
   PromoteGodTraitToHeroicAcquisition | UpgradeHammerToRank2Acquisition;
 
 export type TraitOrdinaryBoonSlot = 'Melee' | 'Secondary' | 'Ranged' | 'Rush' | 'Mana';
+export type TraitEquipmentSlot = TraitOrdinaryBoonSlot | 'Spell';
 
 export type DirectTraitSetKey = 'earth' | 'fire' | 'air' | 'water';
 
@@ -179,6 +180,7 @@ export interface AspectDeclaration {
   readonly key: string;
   readonly label: string;
   readonly weaponKey: string;
+  readonly startingTrait?: { readonly traitKey: string; readonly giverKey: string };
 }
 
 export interface HammerCompatibility {
@@ -193,7 +195,7 @@ export interface TraitDeclaration {
   readonly label: string;
   readonly rarityDomain: TraitRarityDomain;
   readonly offerRequirements: readonly TraitRequirementExpression[];
-  readonly ordinaryBoonSlot?: TraitOrdinaryBoonSlot;
+  readonly equipmentSlot?: TraitEquipmentSlot;
   readonly elementContributions: Readonly<Partial<Record<TraitElement, number>>>;
   readonly usesBoonRarity: boolean;
   readonly isCoreGodTrait: boolean;

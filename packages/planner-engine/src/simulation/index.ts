@@ -366,6 +366,8 @@ export {
   evaluateReachedTraitOffer,
   recordReachedTraitOffer,
   recordDirectTraitGrants,
+  recordAspectStartingTrait,
+  isAspectSpellDropDormant,
   directTraitSetOutcomes,
   recordReachedLevelResolution,
   evaluateReachedLevelResolution,

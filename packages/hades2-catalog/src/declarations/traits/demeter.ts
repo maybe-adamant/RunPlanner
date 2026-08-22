@@ -15,7 +15,7 @@ export const demeterTraits = [
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
-    ordinaryBoonSlot: 'Melee',
+    equipmentSlot: 'Melee',
   },
   {
     key: 'DemeterSpecialBoon',
@@ -30,7 +30,7 @@ export const demeterTraits = [
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
-    ordinaryBoonSlot: 'Secondary',
+    equipmentSlot: 'Secondary',
   },
   {
     key: 'DemeterCastBoon',
@@ -45,7 +45,7 @@ export const demeterTraits = [
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
-    ordinaryBoonSlot: 'Ranged',
+    equipmentSlot: 'Ranged',
   },
   {
     key: 'DemeterSprintBoon',
@@ -60,7 +60,7 @@ export const demeterTraits = [
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
-    ordinaryBoonSlot: 'Rush',
+    equipmentSlot: 'Rush',
   },
   {
     key: 'DemeterManaBoon',
@@ -75,7 +75,7 @@ export const demeterTraits = [
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
-    ordinaryBoonSlot: 'Mana',
+    equipmentSlot: 'Mana',
   },
   {
     key: 'CastNovaBoon',

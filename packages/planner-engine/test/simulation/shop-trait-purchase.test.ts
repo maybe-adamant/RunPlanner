@@ -283,6 +283,23 @@ function completeShopFixtureReward(
   });
   return Object.freeze({
     ...base,
+    ...(offer.rewardType !== 'SpellDrop'
+      ? {}
+      : {
+          traitOffersByAcquisitionRole: Object.freeze({
+            self: Object.freeze({
+              kind: 'traits' as const,
+              giverKey: 'SpellDrop',
+              options: Object.freeze([
+                { traitKey: 'SpellPolymorphTrait' },
+                { traitKey: 'SpellMeteorTrait' },
+                { traitKey: 'SpellTransformTrait' },
+              ] as const),
+              selectedOptionKey: 'option1' as const,
+              rarificationActions: Object.freeze([]),
+            }),
+          }),
+        }),
     ...(base.levelResolutionsByAcquisitionRole === undefined
       ? {}
       : {
@@ -395,6 +412,10 @@ function echoGoldShop(
   if (baseState.kind !== 'shop' || baseState.shop === undefined)
     throw new Error('missing active Shop');
   const spellOffer = Object.freeze({ rewardType: 'SpellDrop' as const });
+  const spellReward =
+    options.replaceMinorWithSpell === true
+      ? completeShopFixtureReward(spellOffer, loadout, baseState.shop.profileKey)
+      : undefined;
   const offerOverrides: Readonly<Record<string, ResolvedRewardOffer>> = {
     ...(options.replaceMinorWithSpell ? { Minor: spellOffer } : {}),
     ...(options.offerOverrides ?? {}),
@@ -405,7 +426,8 @@ function echoGoldShop(
       Object.fromEntries(
         Object.entries(baseState.shop.offers).map(([key]) => {
           const override = offerOverrides[key];
-          const rewardOverride = options.rewardOverrides?.[key];
+          const rewardOverride =
+            options.rewardOverrides?.[key] ?? (key === 'Minor' ? spellReward : undefined);
           const explicitOffer = override ?? explicitWorldShopOffers[key];
           if (rewardOverride === undefined && explicitOffer === undefined) {
             throw new Error(`missing explicit World Shop fixture offer for ${key}`);

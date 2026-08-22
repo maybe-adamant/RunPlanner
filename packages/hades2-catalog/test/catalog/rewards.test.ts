@@ -695,7 +695,6 @@ describe('reward-kernel declaration parity', () => {
       'StackUpgradeBig',
       'StackUpgradeTriple',
       'WeaponUpgrade',
-      'SpellDrop',
       'MaxHealthDrop',
       'MaxHealthDropBig',
       'MaxManaDrop',
