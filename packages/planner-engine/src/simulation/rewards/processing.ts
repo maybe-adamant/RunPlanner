@@ -110,6 +110,7 @@ import {
   recordAspectStartingTrait,
   isAspectSpellDropDormant,
   directTraitSetOutcomes,
+  boonRarityFactsForOffer,
   type ReachedTraitOfferEvaluation,
   type ReachedLevelResolutionEvaluation,
   type TraitHistoryState,
@@ -670,13 +671,17 @@ function applyTraitOfferForAcquisitionInternal(
                 : {
                     candidateContext: Object.freeze({
                       before,
-                      context: Object.freeze({
-                        ...(reward.traitContext ?? {}),
-                        devotionNoDuo:
-                          reward.traitContext?.devotionNoDuo ??
-                          reward.offer?.rewardType === 'Devotion',
-                        resolvedProviderKey: giver,
-                      }),
+                      context: withBoonRarityFacts(
+                        catalog,
+                        branch,
+                        Object.freeze({
+                          ...(reward.traitContext ?? {}),
+                          devotionNoDuo:
+                            reward.traitContext?.devotionNoDuo ??
+                            reward.offer?.rewardType === 'Devotion',
+                          resolvedProviderKey: giver,
+                        }),
+                      ),
                       arcanaFear: branch.arcanaFear,
                       keepsakes: branch.keepsakes,
                     }),
@@ -688,15 +693,19 @@ function applyTraitOfferForAcquisitionInternal(
   const authoredContext =
     authored === undefined
       ? undefined
-      : {
-          ...(reward.traitContext ?? {}),
-          devotionNoDuo:
-            reward.traitContext?.devotionNoDuo ?? reward.offer?.rewardType === 'Devotion',
-          ...(authored.kind === 'fallbackGold' || authored.deathDefianceConditionMet === undefined
-            ? {}
-            : { deathDefianceConditionMet: authored.deathDefianceConditionMet }),
-          resolvedProviderKey: authored.giverKey,
-        };
+      : withBoonRarityFacts(
+          catalog,
+          branch,
+          Object.freeze({
+            ...(reward.traitContext ?? {}),
+            devotionNoDuo:
+              reward.traitContext?.devotionNoDuo ?? reward.offer?.rewardType === 'Devotion',
+            ...(authored.kind === 'fallbackGold' || authored.deathDefianceConditionMet === undefined
+              ? {}
+              : { deathDefianceConditionMet: authored.deathDefianceConditionMet }),
+            resolvedProviderKey: authored.giverKey,
+          }),
+        );
   const baseOffer =
     authored === undefined || authoredContext === undefined || options.directAcquisition === true
       ? undefined
@@ -819,15 +828,19 @@ function applyTraitOfferForAcquisitionInternal(
     }
   }
   if (effectiveAuthored === undefined) return Object.freeze({ branch: effectiveBranch });
-  const evaluationContext = Object.freeze({
-    ...(reward.traitContext ?? {}),
-    devotionNoDuo: reward.traitContext?.devotionNoDuo ?? reward.offer?.rewardType === 'Devotion',
-    ...(effectiveAuthored.kind === 'fallbackGold' ||
-    effectiveAuthored.deathDefianceConditionMet === undefined
-      ? {}
-      : { deathDefianceConditionMet: effectiveAuthored.deathDefianceConditionMet }),
-    resolvedProviderKey: effectiveAuthored.giverKey,
-  });
+  const evaluationContext = withBoonRarityFacts(
+    catalog,
+    effectiveBranch,
+    Object.freeze({
+      ...(reward.traitContext ?? {}),
+      devotionNoDuo: reward.traitContext?.devotionNoDuo ?? reward.offer?.rewardType === 'Devotion',
+      ...(effectiveAuthored.kind === 'fallbackGold' ||
+      effectiveAuthored.deathDefianceConditionMet === undefined
+        ? {}
+        : { deathDefianceConditionMet: effectiveAuthored.deathDefianceConditionMet }),
+      resolvedProviderKey: effectiveAuthored.giverKey,
+    }),
+  );
   const evaluation =
     echoLastRunBoon === undefined
       ? evaluateReachedTraitOffer(
@@ -1218,7 +1231,8 @@ function encounterPreOfferTraitContext(
   catalog: Catalog,
   branch: RewardBranchState,
   providerKey: string,
-  loadout: { readonly weaponKey: string; readonly aspectKey: string } | undefined,
+  loadout:
+    Pick<TraitOfferContext, 'weaponKey' | 'aspectKey' | 'boonRarityRoomOverride'> | undefined,
   deathDefianceConditionMet: boolean | undefined,
   freshRarityOverride: import('../../catalog-schema').TraitRarity | undefined,
 ): TraitOfferContext {
@@ -1244,6 +1258,24 @@ function encounterPreOfferTraitContext(
   });
 }
 
+function withBoonRarityFacts(
+  catalog: Catalog,
+  branch: RewardBranchState,
+  context: TraitOfferContext,
+): TraitOfferContext {
+  const facts = boonRarityFactsForOffer(
+    catalog,
+    branch.traitHistory ?? createTraitHistoryState(),
+    context,
+    branch.arcanaFear,
+  );
+  if (facts === undefined) return context;
+  return Object.freeze({
+    ...context,
+    boonRarityFacts: facts,
+  });
+}
+
 /** Settles one encounter-local trait offer and returns its exact child checkpoint when blocked. */
 export function settleEncounterTraitOffer(
   catalog: Catalog,
@@ -1257,7 +1289,7 @@ export function settleEncounterTraitOffer(
   deathDefianceConditionMet?: boolean,
   acquisitionRole = 'selection',
   freshRarityOverride?: import('../../catalog-schema').TraitRarity,
-  loadout?: { readonly weaponKey: string; readonly aspectKey: string },
+  loadout?: Pick<TraitOfferContext, 'weaponKey' | 'aspectKey' | 'boonRarityRoomOverride'>,
   directTraitSetBranchHistories?: readonly TraitHistoryState[],
   unresolvedProviderKey?: string,
 ): EncounterTraitOfferSettlement {
@@ -1645,7 +1677,7 @@ export function processEncounterTraitOffer(
   deathDefianceConditionMet?: boolean,
   acquisitionRole = 'selection',
   freshRarityOverride?: import('../../catalog-schema').TraitRarity,
-  loadout?: { readonly weaponKey: string; readonly aspectKey: string },
+  loadout?: Pick<TraitOfferContext, 'weaponKey' | 'aspectKey' | 'boonRarityRoomOverride'>,
 ): RewardBranchState {
   return settleEncounterTraitOffer(
     catalog,
@@ -3181,8 +3213,7 @@ export function settleShopAcquisitionSite(
             ? {}
             : { excludedPurchaseInteractionNames: refill.excludedNames },
         );
-        const witness = support[0];
-        if (witness === undefined) {
+        if (support.length === 0) {
           entryPurchaseFailureRecorded = true;
           addRewardFinding(
             findings,
@@ -3198,41 +3229,45 @@ export function settleShopAcquisitionSite(
         }
         const slot = profile.slots.values[refill.slotIndex]!;
         const group = profile.groups.byKey[slot.groupKey]!;
-        const optionKey = witness.optionKeys[refill.slotIndex];
-        const option = optionKey === undefined ? undefined : group.options.byKey[optionKey];
-        if (option === undefined) {
-          entryPurchaseFailureRecorded = true;
-          addRewardFinding(
-            findings,
-            rewardFinding(
-              'shopPurchaseUnavailable',
-              createAcquisitionEntryAddress(site, entryKey),
-              { kind: 'travelDealRefillUnavailable' },
-            ),
-            ownerRegion(room.origin),
-            context.findingChronology ?? historyChronology(historySequence),
-          );
-          continue;
+        const witnessByRarityContext = new Map<string, ShopGenerationWitness>();
+        for (const witness of support) {
+          const optionKey = witness.optionKeys[refill.slotIndex];
+          const option = optionKey === undefined ? undefined : group.options.byKey[optionKey];
+          if (option !== undefined)
+            witnessByRarityContext.set(JSON.stringify(option.boonRarityOverride ?? {}), witness);
         }
-        const refillOffer = Object.freeze({
-          offerKey: entryKey,
-          offerOrigin: createAcquisitionEntryAddress(site, entryKey),
-          offer: child.offer,
-          traitOffersByAcquisitionRole: child.traitOffersByAcquisitionRole,
-          ...(child.levelResolutionsByAcquisitionRole === undefined
-            ? {}
-            : { levelResolutionsByAcquisitionRole: child.levelResolutionsByAcquisitionRole }),
-          dispositionByAcquisitionRole: child.dispositionByAcquisitionRole,
-          ...(entry.offers[refill.slotIndex]?.traitContext === undefined
-            ? {}
-            : { traitContext: entry.offers[refill.slotIndex]!.traitContext }),
-        });
-        const bindings = option.acquisitionLifecycle.map((binding) =>
-          Object.freeze({ role: binding.role, lifecyclePoint: binding.lifecyclePoint }),
-        );
-        materializeGold(execution, refillOffer, bindings);
-        if (settlePaid(execution, refillOffer, bindings, agreementBranches)) {
-          survivors.push(execution);
+        for (const witness of witnessByRarityContext.values()) {
+          const optionKey = witness.optionKeys[refill.slotIndex];
+          const option = optionKey === undefined ? undefined : group.options.byKey[optionKey];
+          if (option === undefined) continue;
+          const refillExecution: ShopExecution = {
+            ...execution,
+            witness,
+            remainingSlotIndexes: Object.freeze([...execution.remainingSlotIndexes]),
+          };
+          const refillOffer = Object.freeze({
+            offerKey: entryKey,
+            offerOrigin: createAcquisitionEntryAddress(site, entryKey),
+            offer: child.offer,
+            traitOffersByAcquisitionRole: child.traitOffersByAcquisitionRole,
+            ...(child.levelResolutionsByAcquisitionRole === undefined
+              ? {}
+              : { levelResolutionsByAcquisitionRole: child.levelResolutionsByAcquisitionRole }),
+            dispositionByAcquisitionRole: child.dispositionByAcquisitionRole,
+            traitContext: Object.freeze({
+              ...(entry.offers[refill.slotIndex]?.traitContext ?? {}),
+              ...(option.boonRarityOverride === undefined
+                ? {}
+                : { boonRarityItemOverride: option.boonRarityOverride }),
+            }),
+          });
+          const bindings = option.acquisitionLifecycle.map((binding) =>
+            Object.freeze({ role: binding.role, lifecyclePoint: binding.lifecyclePoint }),
+          );
+          materializeGold(refillExecution, refillOffer, bindings);
+          if (settlePaid(refillExecution, refillOffer, bindings, agreementBranches)) {
+            survivors.push(refillExecution);
+          }
         }
         continue;
       }
@@ -3363,9 +3398,26 @@ export function settleShopAcquisitionSite(
       const bindings = purchase.acquisitions.map(({ event }) =>
         Object.freeze({ role: event.role, lifecyclePoint: event.lifecyclePoint }),
       );
+      const optionKey = execution.witness.optionKeys[slotIndex];
+      const shopOption =
+        optionKey === undefined
+          ? undefined
+          : profile.groups.byKey[profile.slots.values[slotIndex]!.groupKey]?.options.byKey[
+              optionKey
+            ];
+      const paidOffer =
+        shopOption?.boonRarityOverride === undefined
+          ? offer
+          : Object.freeze({
+              ...offer,
+              traitContext: Object.freeze({
+                ...(offer.traitContext ?? {}),
+                boonRarityItemOverride: shopOption.boonRarityOverride,
+              }),
+            });
       const prePurchaseTraits = execution.candidate.traitHistory;
-      materializeGold(execution, offer, bindings);
-      if (!settlePaid(execution, offer, bindings, agreementBranches)) continue;
+      materializeGold(execution, paidOffer, bindings);
+      if (!settlePaid(execution, paidOffer, bindings, agreementBranches)) continue;
       execution.remainingSlotIndexes = purchase.remainingSlotIndexes;
       if (!execution.firstNormalPurchaseSeen) {
         execution.firstNormalPurchaseSeen = true;

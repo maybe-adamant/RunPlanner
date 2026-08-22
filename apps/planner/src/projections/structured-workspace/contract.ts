@@ -1866,7 +1866,7 @@ export interface WorkspaceRunStatePresentation {
     readonly forfeitStatus: 'inactive' | 'available' | 'consumed';
   };
   readonly traits: {
-    readonly activeMinimumScalableRarity?: TraitRarity;
+    readonly properUpbringingActive?: true;
     readonly coreSlots: readonly WorkspaceRunStateCoreTraitSlot[];
     readonly other: readonly WorkspaceRunStateTrait[];
     readonly banned: readonly WorkspaceRunStateSource[];

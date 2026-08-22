@@ -622,6 +622,17 @@ function normalizeShopOption(
   rewardTypes: CatalogCollection<RewardTypeDeclaration>,
   path: string,
 ): ShopOptionEntry {
+  const boonRarityOverride = raw.boonRarityOverride;
+  if (boonRarityOverride !== undefined) {
+    for (const [key, value] of Object.entries(boonRarityOverride)) {
+      if (
+        !['Rare', 'Epic', 'Duo', 'Legendary'].includes(key) ||
+        typeof value !== 'number' ||
+        !Number.isFinite(value)
+      )
+        fail(`${path}.boonRarityOverride.${key}`, 'must be a finite supported boon rarity check');
+    }
+  }
   const rewardType = rewardTypes.byKey[raw.rewardType];
   if (rewardType === undefined) {
     fail(`${path}.rewardType`, `unknown reward type ${raw.rewardType}`);
@@ -677,6 +688,9 @@ function normalizeShopOption(
         }),
     acquisitionLifecycle,
     purchaseInteraction,
+    ...(boonRarityOverride === undefined
+      ? {}
+      : { boonRarityOverride: Object.freeze({ ...boonRarityOverride }) }),
   });
 }
 

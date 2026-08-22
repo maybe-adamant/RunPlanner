@@ -10,6 +10,10 @@ import type { CatalogCollection } from '../normalized/collection';
 
 export type {
   AspectDeclaration,
+  BoonRarityCheck,
+  BoonRarityContribution,
+  BoonRarityOverride,
+  BoonRarityValues,
   HammerCompatibility,
   TraitCatalog,
   TraitDeclaration,
@@ -24,6 +28,7 @@ export type {
   TraitRarity,
   TraitRequirementExpression,
   ScalableGodTraitRarityFloorEffect,
+  ProperUpbringingEffect,
   TargetedTraitAcquisition,
   TraitSelectedDisposition,
   DirectTraitSetDeclaration,
@@ -84,6 +89,9 @@ export interface ArcanaCardDeclaration {
     readonly Epic: 3;
     readonly Heroic: 4;
   }>;
+  readonly boonRarityContributions?: Readonly<
+    Record<'Common' | 'Rare' | 'Epic' | 'Heroic', import('./traits').BoonRarityContribution>
+  >;
 }
 
 export interface FearVowDeclaration {
@@ -514,6 +522,7 @@ export interface RoomDeclaration {
   readonly blockGiftBoons: boolean;
   /** Source-declared room-owned blocker for Gorgon Amulet. */
   readonly blocksGorgon: boolean;
+  readonly boonRarityOverride?: import('./traits').BoonRarityOverride;
   readonly prebossBatchPolicy?: PrebossBatchPolicy;
   readonly forcedRewardStoreKey?: string;
   readonly individualRewardStoreKey?: string;
@@ -820,6 +829,9 @@ export interface Catalog {
   readonly aspects: CatalogCollection<AspectDeclaration>;
   readonly traits: CatalogCollection<TraitDeclaration>;
   readonly traitGivers: CatalogCollection<TraitGiverDeclaration>;
+  readonly boonRarityBases: Readonly<
+    Record<'olympian' | 'hermes', import('./traits').BoonRarityValues>
+  >;
   readonly echoLastRunBoon: import('./traits').EchoLastRunBoonCatalog;
   readonly traitOfferContexts: CatalogCollection<TraitOfferContextDeclaration>;
   readonly traitRarityOrder: readonly ['Common', 'Rare', 'Epic', 'Heroic'];

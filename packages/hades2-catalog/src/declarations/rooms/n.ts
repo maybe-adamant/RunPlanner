@@ -1028,6 +1028,7 @@ export const nRooms = [
   },
   {
     gameName: 'N_MiniBoss01',
+    boonRarityOverride: { Rare: 0.9, Epic: 0.1, Legendary: 0.05 },
     label: 'Satyr Champion',
     roomSetKey: 'N',
     advancesExperimentalHammerUses: true,
@@ -1054,6 +1055,7 @@ export const nRooms = [
   },
   {
     gameName: 'N_MiniBoss02',
+    boonRarityOverride: { Rare: 0.9, Epic: 0.1, Legendary: 0.05 },
     label: 'Erymanthian Boar',
     roomSetKey: 'N',
     advancesExperimentalHammerUses: true,

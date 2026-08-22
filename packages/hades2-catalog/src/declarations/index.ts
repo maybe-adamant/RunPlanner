@@ -36,7 +36,7 @@ const rooms: readonly RawRoomDeclaration[] = [
 ];
 
 export const declarations = {
-  version: '0.29.0-world-shop-phase',
+  version: '0.30.0-boon-rarity-ledger',
   biomes,
   routes,
   arcanaCards,

@@ -4,6 +4,27 @@ import { catalog, createCatalog } from '@run-planner/hades2-catalog';
 import { declarations } from '@run-planner/hades2-catalog/test-support';
 
 describe('Arcana and Fear catalog', () => {
+  it('normalizes the closed four-rank boon-rarity contribution tables', () => {
+    expect(catalog.arcanaCards.byKey.RarityBoost?.boonRarityContributions).toEqual({
+      Common: { additive: { Rare: 0.3 }, multiplicative: { Legendary: 1.3 } },
+      Rare: { additive: { Rare: 0.4 }, multiplicative: { Legendary: 1.4 } },
+      Epic: { additive: { Rare: 0.5 }, multiplicative: { Legendary: 1.5 } },
+      Heroic: { additive: { Rare: 0.6 }, multiplicative: { Legendary: 1.6 } },
+    });
+    expect(catalog.arcanaCards.byKey.BonusRarity?.boonRarityContributions).toEqual({
+      Common: { additive: { Duo: 0.06 } },
+      Rare: { additive: { Duo: 0.08 } },
+      Epic: { additive: { Duo: 0.1 } },
+      Heroic: { additive: { Duo: 0.12 } },
+    });
+    expect(catalog.arcanaCards.byKey.EpicRarityBoost?.boonRarityContributions).toEqual({
+      Common: { additive: { Epic: 0.05 } },
+      Rare: { additive: { Epic: 0.1 } },
+      Heroic: { additive: { Epic: 0.2 } },
+      Epic: { additive: { Epic: 0.15 } },
+    });
+  });
+
   it('normalizes the complete rank-III board and ranked Vow inventory', () => {
     const arcanaMatrix = catalog.arcanaCards.values.map(
       (card) =>
@@ -302,6 +323,57 @@ describe('Arcana and Fear catalog', () => {
         ),
       }),
     ).toThrow(/must limit starting Grasp from 30 by 60, 40, 20, and 0 percent/);
+    for (const [name, mutate, message] of [
+      [
+        'an unrelated card contribution',
+        (card: (typeof declarations.arcanaCards)[number]) =>
+          card.key === 'CastCount'
+            ? {
+                ...card,
+                boonRarityContributions: {
+                  Common: {},
+                  Rare: {},
+                  Epic: {},
+                  Heroic: {},
+                },
+              }
+            : card,
+        /not supported for this Arcana card/,
+      ],
+      [
+        'an extra source rank',
+        (card: (typeof declarations.arcanaCards)[number]) =>
+          card.key === 'RarityBoost'
+            ? {
+                ...card,
+                boonRarityContributions: {
+                  ...card.boonRarityContributions!,
+                  Duo: {},
+                },
+              }
+            : card,
+        /must not declare unsupported source ranks/,
+      ],
+      [
+        'an extra contribution part',
+        (card: (typeof declarations.arcanaCards)[number]) =>
+          card.key === 'RarityBoost'
+            ? {
+                ...card,
+                boonRarityContributions: {
+                  ...card.boonRarityContributions!,
+                  Common: { ...card.boonRarityContributions!.Common, invalid: {} },
+                },
+              }
+            : card,
+        /must not declare unsupported contribution parts/,
+      ],
+    ] as const) {
+      expect(
+        () => createCatalog({ ...declarations, arcanaCards: declarations.arcanaCards.map(mutate) }),
+        name,
+      ).toThrow(message);
+    }
   });
 
   it('copies and freezes the normalized Forfeit effect without retaining caller-owned values', () => {

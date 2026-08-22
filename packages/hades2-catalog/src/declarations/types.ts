@@ -114,6 +114,7 @@ export interface RawArcanaCardDeclaration {
     readonly Epic: 3;
     readonly Heroic: 4;
   }>;
+  readonly boonRarityContributions?: import('@run-planner/engine/catalog-schema').ArcanaCardDeclaration['boonRarityContributions'];
 }
 export interface RawFearVowDeclaration {
   readonly key: string;
@@ -302,6 +303,7 @@ export interface RawRoomDeclaration {
   readonly blockGiftBoons?: boolean;
   /** The game room flag that suppresses Gorgon Amulet in this room. */
   readonly blocksGorgon?: boolean;
+  readonly boonRarityOverride?: import('@run-planner/engine/catalog-schema').BoonRarityOverride;
   readonly prebossBatchPolicy?: RawPrebossBatchPolicy;
   readonly forcedRewardStoreKey?: string;
   readonly individualRewardStoreKey?: string;

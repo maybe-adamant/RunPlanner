@@ -4154,7 +4154,12 @@ export function evaluateBiomeRewardsAssemblyInternal(
               history,
               branches,
               enteredBiomeCount,
-              routeLoadout,
+              Object.freeze({
+                ...routeLoadout,
+                ...(declaration.boonRarityOverride === undefined
+                  ? {}
+                  : { boonRarityRoomOverride: declaration.boonRarityOverride }),
+              }),
             ),
           );
         }
@@ -4540,7 +4545,12 @@ export function evaluateBiomeRewardsAssemblyInternal(
                 result.deathDefianceConditionMet,
                 'gorgonAthena',
                 gorgonSnapshot?.rarity,
-                routeLoadout,
+                Object.freeze({
+                  ...routeLoadout,
+                  ...(declaration.boonRarityOverride === undefined
+                    ? {}
+                    : { boonRarityRoomOverride: declaration.boonRarityOverride }),
+                }),
                 undefined,
                 gorgonEffect?.kind === 'gorgonAmulet' ? gorgonEffect.providerKey : undefined,
               ),
@@ -4821,7 +4831,12 @@ export function evaluateBiomeRewardsAssemblyInternal(
               undefined,
               'selection',
               undefined,
-              routeLoadout,
+              Object.freeze({
+                ...routeLoadout,
+                ...(declaration.boonRarityOverride === undefined
+                  ? {}
+                  : { boonRarityRoomOverride: declaration.boonRarityOverride }),
+              }),
               undefined,
               producer?.giverKey,
             ),
@@ -4860,7 +4875,12 @@ export function evaluateBiomeRewardsAssemblyInternal(
               undefined,
               'selection',
               undefined,
-              routeLoadout,
+              Object.freeze({
+                ...routeLoadout,
+                ...(declaration.boonRarityOverride === undefined
+                  ? {}
+                  : { boonRarityRoomOverride: declaration.boonRarityOverride }),
+              }),
               branches.map((candidate) => candidate.traitHistory ?? createTraitHistoryState()),
             ),
           );

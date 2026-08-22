@@ -734,6 +734,55 @@ describe('Infernal Contract and Travel Deal chronology', () => {
     ).toHaveLength(1);
   });
 
+  it('keeps the ordinary and boosted Q Travel refill witnesses separate', () => {
+    const derived = settle({
+      order: ['MixedProgress1'],
+      travel: true,
+      roomGameName: 'Q_PreBoss01',
+    });
+    const refill = derived.settlement.derivedEntryFrontiers?.find(
+      (entry) => entry.kind === 'travelDealRefill',
+    );
+    if (refill === undefined) throw new Error('missing Q Travel frontier');
+    const profile = catalog.rewards.shops.byKey.Q_WorldShop;
+    if (profile === undefined) throw new Error('missing Q World Shop');
+    expect(
+      new Set(
+        findShopIndexedGenerationWitnesses(
+          catalog.rewards,
+          profile,
+          0,
+          Object.freeze({
+            rewardType: 'RandomLoot' as const,
+            payload: Object.freeze({ kind: 'BoonSource' as const, source: 'ApolloUpgrade' }),
+          }),
+          baseFacts(),
+        ).map((witness) => witness.optionKeys[0]),
+      ),
+    ).toEqual(new Set(['RandomLoot', 'BoostedRandomLoot']));
+    const refillReward = authoredDerivedReward(
+      refill,
+      Object.freeze({
+        rewardType: 'RandomLoot' as const,
+        payload: Object.freeze({ kind: 'BoonSource' as const, source: 'ApolloUpgrade' }),
+      }),
+      'Q_WorldShop',
+    );
+    const settled = settle({
+      order: ['MixedProgress1', 'travelDealRefill'],
+      travel: true,
+      travelChild: refillReward,
+      roomGameName: 'Q_PreBoss01',
+    });
+    expect([...settled.findings.values()]).toEqual([]);
+    expect(settled.settlement.branches).toHaveLength(1);
+    expect(
+      settled.settlement.branches[0]?.traitEvaluations
+        ?.filter((evaluation) => evaluation.acquisitionRole === 'source')
+        .map((evaluation) => evaluation.context.boonRarityFacts?.itemOverride),
+    ).toEqual([undefined, { Rare: 0.9, Epic: 0.25, Legendary: 0.1 }]);
+  });
+
   it('withholds a derived refill capability when reached branches disagree', () => {
     const result = settle({ order: ['MajorNonBoon'], divergentTravel: true });
     const frontiers =

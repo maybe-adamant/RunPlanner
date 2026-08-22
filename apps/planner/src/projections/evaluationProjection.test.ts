@@ -61,7 +61,7 @@ const allFindingCodes = [
   'shopOfferUnavailable',
   'shopPurchaseUnavailable',
   'freshRarityUnavailable',
-  'rarityBelowActiveFloor',
+  'rarityRollUnavailable',
   'nonPriorityTrait',
   'missingAttackOrSpecial',
 ] as const satisfies readonly FindingCode[];
@@ -200,9 +200,9 @@ describe('evaluation presentation', () => {
         'This rarity is not offered when the trait is acquired fresh.',
       ],
       [
-        'rarityBelowActiveFloor',
-        'Rarity is below the active floor',
-        'Proper Upbringing keeps fresh scalable god-trait offers at Rare or higher.',
+        'rarityRollUnavailable',
+        'Rarity roll is unavailable',
+        'This fresh boon rarity cannot occur from the reached offer context.',
       ],
     ] as const satisfies readonly (readonly [FindingCode, string, string])[];
 

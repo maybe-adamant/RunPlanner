@@ -137,7 +137,7 @@ describe('trait option domain projection', () => {
                 Object.freeze({
                   blocksFocusedOption: true,
                   finding: Object.freeze({
-                    code: 'rarityBelowActiveFloor' as const,
+                    code: 'rarityRollUnavailable' as const,
                     traitKey: first,
                   }),
                   source: 'focusedOption' as const,
@@ -154,7 +154,7 @@ describe('trait option domain projection', () => {
 
     expect(itemValues(rarity)).toContain('Common');
     expect(rarity.selected?.state).toBe('impossible');
-    expect(rarity.selected?.explanation).toContain('Proper Upbringing');
+    expect(rarity.selected?.explanation).toContain('fresh boon rarity cannot occur');
     expect(projection.preferredOptionFor(first)?.rarity).toBe('Rare');
   });
 
@@ -258,7 +258,7 @@ describe('trait option domain projection', () => {
                   Object.freeze({
                     blocksFocusedOption: true,
                     finding: Object.freeze({
-                      code: 'rarityBelowActiveFloor' as const,
+                      code: 'rarityRollUnavailable' as const,
                       traitKey: first,
                     }),
                     source: 'focusedOption' as const,

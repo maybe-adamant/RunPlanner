@@ -7,7 +7,7 @@ import type {
   TraitGiverDeclaration,
   TraitOfferContextDeclaration,
   TraitRequirementExpression,
-  ScalableGodTraitRarityFloorEffect,
+  ProperUpbringingEffect,
   TargetedTraitAcquisition,
   TraitSelectedDisposition,
   TraitElement,
@@ -56,6 +56,8 @@ const CALLING_CARD_GIVERS = new Set([
   'Dionysus',
 ]);
 const ORDINARY_SLOTS = ['Melee', 'Secondary', 'Ranged', 'Rush', 'Mana'] as const;
+const BOON_RARITY_PROVIDER_KINDS = ['olympian', 'hermes'] as const;
+const BOON_RARITY_CHECKS = ['Rare', 'Epic', 'Duo', 'Legendary'] as const;
 const CONTEXTS = [
   'devotionNoDuo',
   'blockGiftBoons',
@@ -84,6 +86,40 @@ type RawTraitRequirement = {
   readonly context: unknown;
   readonly required: unknown;
 };
+
+function normalizeBoonRarityBases(
+  raw: RawTraitCatalogInput['boonRarityBases'],
+): TraitCatalog['boonRarityBases'] {
+  const bases = requireObject(raw, 'boonRarityBases');
+  if (
+    Object.keys(bases).length !== BOON_RARITY_PROVIDER_KINDS.length ||
+    BOON_RARITY_PROVIDER_KINDS.some((providerKind) => bases[providerKind] === undefined)
+  )
+    fail('boonRarityBases', 'must declare exactly olympian and hermes provider bases');
+  const normalized = Object.fromEntries(
+    BOON_RARITY_PROVIDER_KINDS.map((providerKind) => {
+      const value = requireObject(bases[providerKind], `boonRarityBases.${providerKind}`);
+      if (
+        Object.keys(value).length !== BOON_RARITY_CHECKS.length ||
+        BOON_RARITY_CHECKS.some((check) => value[check] === undefined)
+      )
+        fail(
+          `boonRarityBases.${providerKind}`,
+          'must declare exact Rare, Epic, Duo, and Legendary checks',
+        );
+      const checks = Object.fromEntries(
+        BOON_RARITY_CHECKS.map((check) => {
+          const chance = value[check];
+          if (typeof chance !== 'number' || !Number.isFinite(chance))
+            fail(`boonRarityBases.${providerKind}.${check}`, 'must be a finite number');
+          return [check, chance];
+        }),
+      );
+      return [providerKind, Object.freeze(checks)];
+    }),
+  );
+  return Object.freeze(normalized) as TraitCatalog['boonRarityBases'];
+}
 
 function closedValue<const Values extends readonly string[]>(
   value: unknown,
@@ -580,15 +616,29 @@ function normalizeTraits(
         ),
       ),
     );
-    let rarityFloorEffect: ScalableGodTraitRarityFloorEffect | undefined;
+    let rarityFloorEffect: ProperUpbringingEffect | undefined;
     if (trait.rarityFloorEffect !== undefined) {
       const effectPath = `${path}.rarityFloorEffect`;
+      if (trait.key !== 'ElementalRarityUpgradeBoon')
+        fail(effectPath, 'is reserved to ElementalRarityUpgradeBoon');
       if (isRarityless) fail(effectPath, 'rarityless traits cannot declare a rarity floor effect');
       const effect = requireObject(trait.rarityFloorEffect, effectPath) as unknown as {
         readonly activationElementMinimums?: unknown;
         readonly fromRarity?: unknown;
         readonly minimumRarity?: unknown;
+        readonly boonRarityContribution?: unknown;
       };
+      const effectKeys = [
+        'activationElementMinimums',
+        'fromRarity',
+        'minimumRarity',
+        'boonRarityContribution',
+      ];
+      if (
+        Object.keys(effect).length !== effectKeys.length ||
+        effectKeys.some((key) => !(key in effect))
+      )
+        fail(effectPath, 'must contain exactly the Proper Upbringing effect fields');
       const rawMinimums = requireObject(
         effect.activationElementMinimums,
         `${effectPath}.activationElementMinimums`,
@@ -623,10 +673,23 @@ function normalizeTraits(
         fail(`${effectPath}.minimumRarity`, 'must be Rare for a scalable god-trait floor');
       if (IN_RUN_RARITIES.indexOf(minimumRarity) <= IN_RUN_RARITIES.indexOf(fromRarity))
         fail(`${effectPath}.minimumRarity`, 'must follow fromRarity in the in-run rarity order');
+      const rawContribution = requireObject(
+        effect.boonRarityContribution,
+        `${effectPath}.boonRarityContribution`,
+      );
+      if (Object.keys(rawContribution).length !== 1 || rawContribution.additive === undefined)
+        fail(`${effectPath}.boonRarityContribution`, 'must contain exactly additive');
+      const rawAdditive = requireObject(
+        rawContribution.additive,
+        `${effectPath}.boonRarityContribution.additive`,
+      );
+      if (Object.keys(rawAdditive).length !== 1 || rawAdditive.Rare !== 1)
+        fail(`${effectPath}.boonRarityContribution.additive`, 'must contain exactly Rare: 1');
       rarityFloorEffect = Object.freeze({
         activationElementMinimums: Object.freeze(minimums),
         fromRarity: 'Common',
         minimumRarity: 'Rare',
+        boonRarityContribution: Object.freeze({ additive: Object.freeze({ Rare: 1 }) }),
       });
     }
     let targetedAcquisition: TargetedTraitAcquisition | undefined;
@@ -1269,12 +1332,18 @@ export function createTraitCatalog(input: RawTraitCatalogInput): TraitCatalog {
   const aspects = normalizeAspects(input.aspects, weapons);
   const coreGodTraitKeys = collectCoreGodTraitKeys(input.givers);
   const traits = normalizeTraits(input.traits, weapons, aspects, deferred, coreGodTraitKeys);
+  if (traits.byKey.ElementalRarityUpgradeBoon?.rarityFloorEffect === undefined)
+    fail(
+      'traits.ElementalRarityUpgradeBoon.rarityFloorEffect',
+      'must declare the Proper Upbringing effect',
+    );
   for (const key of declaredDeferred) {
     if (traits.byKey[key] !== undefined) {
       fail('deferredTraitKeys', `${key} is also an included trait`);
     }
   }
   const givers = normalizeGivers(input.givers, traits);
+  const boonRarityBases = normalizeBoonRarityBases(input.boonRarityBases);
   for (const aspect of aspects.values) {
     const starting = aspect.startingTrait;
     if (starting === undefined) continue;
@@ -1306,6 +1375,7 @@ export function createTraitCatalog(input: RawTraitCatalogInput): TraitCatalog {
     aspects,
     traits,
     givers,
+    boonRarityBases,
     echoLastRunBoon,
   });
 }

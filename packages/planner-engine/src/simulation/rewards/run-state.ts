@@ -37,7 +37,7 @@ export interface DecisionTraitState {
   readonly godBoonRarityCounts: TraitHistoryState['godBoonRarityCounts'];
   readonly upgradableTraitCount: number;
   readonly bannedTraitKeys: TraitHistoryState['bannedTraitKeys'];
-  readonly minimumScalableGodTraitRarity?: TraitHistoryState['minimumScalableGodTraitRarity'];
+  readonly properUpbringingActive?: TraitHistoryState['properUpbringingActive'];
   readonly echoShopDuplicateStatus?: 'pending' | 'consumed';
 }
 
@@ -420,9 +420,9 @@ function traitState(catalog: Catalog, history: TraitHistoryState | undefined): D
               ? ('consumed' as const)
               : ('pending' as const),
         }),
-    ...(source.minimumScalableGodTraitRarity === undefined
+    ...(source.properUpbringingActive === undefined
       ? {}
-      : { minimumScalableGodTraitRarity: source.minimumScalableGodTraitRarity }),
+      : { properUpbringingActive: source.properUpbringingActive }),
   });
 }
 

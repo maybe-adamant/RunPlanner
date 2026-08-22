@@ -186,6 +186,43 @@ describe('focused trait offer candidates', () => {
     });
   });
 
+  it('keeps a missing Q-style trait child candidate-backed with Common excluded and Rare supported', () => {
+    const qOverride = catalog.rooms.byKey.Q_MiniBoss02?.boonRarityOverride;
+    if (qOverride === undefined) throw new Error('missing Q Miniboss rarity override');
+    const value = offer(
+      'Apollo',
+      Object.freeze([
+        { traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
+        { traitKey: 'ApolloSpecialBoon', rarity: 'Rare' },
+        { traitKey: 'ApolloCastBoon', rarity: 'Rare' },
+      ]) as Extract<AuthoredTraitOffer, { kind: 'traits' }>['options'],
+    );
+    // This is the retained candidate context published for a missing child after
+    // `withBoonRarityFacts` resolves Q_Miniboss02's reached room facts.
+    const missingChildContext: TraitOfferCandidateContext = Object.freeze({
+      before: createTraitHistoryState(),
+      context: Object.freeze({
+        resolvedProviderKey: 'Apollo',
+        boonRarityFacts: {
+          providerBase: catalog.boonRarityBases.olympian,
+          roomOverride: qOverride,
+          contributions: [],
+        },
+      }),
+    });
+    const common = focused(value, 'option1', [missingChildContext]);
+    const rare = focused(value, 'option2', [missingChildContext]);
+    if (common.kind !== 'traitOfferFocusedOption' || rare.kind !== 'traitOfferFocusedOption')
+      throw new Error('missing child candidate context was unavailable');
+    expect(common.result.supported).toBe(false);
+    expect(common.result.evidence).toContainEqual(
+      expect.objectContaining({
+        finding: expect.objectContaining({ code: 'rarityRollUnavailable', detail: 'Common' }),
+      }),
+    );
+    expect(rare.result.supported).toBe(true);
+  });
+
   it('attributes duplicate offers to every participating focus without poisoning siblings', () => {
     const focusedDuplicate = offer(
       'Apollo',

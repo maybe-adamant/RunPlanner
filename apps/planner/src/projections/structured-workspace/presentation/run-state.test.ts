@@ -101,7 +101,7 @@ describe('Run State presentation', () => {
         godBoonRarityCounts: {},
         upgradableTraitCount: 1,
         bannedTraitKeys: ['ApolloSpecialBoon'],
-        minimumScalableGodTraitRarity: 'Rare',
+        properUpbringingActive: true,
         echoShopDuplicateStatus: 'pending',
       },
       counters: {
@@ -220,7 +220,7 @@ describe('Run State presentation', () => {
       gorgonRarity: 'Epic',
     });
     expect(state.traits).toMatchObject({
-      activeMinimumScalableRarity: 'Rare',
+      properUpbringingActive: true,
       echoShopDuplicateStatus: 'pending',
       coreSlots: [
         {

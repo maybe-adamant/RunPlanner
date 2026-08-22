@@ -148,14 +148,14 @@ const roomFacts = [
 ] as const;
 
 const normalizedBiomeSnapshotHashes = [
-  ['F', 'c4f7b492d9bfa924'],
-  ['G', '0672c1e3fea61ec9'],
-  ['H', '9a47c8cc90608ab0'],
-  ['I', 'e9a442353f2e1b04'],
-  ['N', '05a6dbafa216a153'],
-  ['O', 'ce89c2153d6dd574'],
-  ['P', '108ec52b18359482'],
-  ['Q', '82011d23c796162b'],
+  ['F', '96ce1042b3a05476'],
+  ['G', '1f55540626184ff5'],
+  ['H', '2938de4d9f3827e0'],
+  ['I', 'dc3012c36918064a'],
+  ['N', '90cfa96981bebc57'],
+  ['O', '1a97f7f33c47fafc'],
+  ['P', 'd8ddeb7abb38e80c'],
+  ['Q', '74a74bbb55c8e95d'],
 ] as const;
 
 function normalizedBiomeSnapshot(biomeKey: string) {
@@ -423,4 +423,33 @@ describe('catalog regression coverage retained through unified decisions', () =>
       expect(snapshotHash(normalizedBiomeSnapshot(biomeKey))).toBe(expectedHash);
     },
   );
+
+  it('declares the audited sparse F-Q Miniboss rarity overrides and no ordinary-room override', () => {
+    const expected = {
+      F_MiniBoss01: { Rare: 0.9, Epic: 0.07, Legendary: 0.05 },
+      F_MiniBoss02: { Rare: 0.9, Epic: 0.07, Legendary: 0.05 },
+      F_MiniBoss03: { Rare: 0.9, Epic: 0.07, Legendary: 0.05 },
+      G_MiniBoss01: { Rare: 0.9, Epic: 0.1, Legendary: 0.05 },
+      G_MiniBoss02: { Rare: 0.9, Epic: 0.1, Legendary: 0.05 },
+      G_MiniBoss03: { Rare: 0.9, Epic: 0.1, Legendary: 0.05 },
+      H_MiniBoss01: { Rare: 0.9, Epic: 0.1, Legendary: 0.05 },
+      H_MiniBoss02: { Rare: 0.9, Epic: 0.1, Legendary: 0.05 },
+      I_MiniBoss01: { Rare: 0.9, Epic: 0.1, Duo: 0.2, Legendary: 0.2 },
+      I_MiniBoss02: { Rare: 0.9, Epic: 0.1, Duo: 0.2, Legendary: 0.2 },
+      N_MiniBoss01: { Rare: 0.9, Epic: 0.1, Legendary: 0.05 },
+      N_MiniBoss02: { Rare: 0.9, Epic: 0.1, Legendary: 0.05 },
+      O_MiniBoss01: { Rare: 0.9, Epic: 0.1, Legendary: 0.05 },
+      O_MiniBoss02: { Rare: 0.9, Epic: 0.1, Legendary: 0.05 },
+      P_MiniBoss01: { Rare: 0.9, Epic: 0.1, Duo: 0.2, Legendary: 0.2 },
+      P_MiniBoss02: { Rare: 0.9, Epic: 0.1, Duo: 0.2, Legendary: 0.2 },
+      Q_MiniBoss02: { Rare: 1, Epic: 0.7, Duo: 0.2, Legendary: 0.2 },
+      Q_MiniBoss03: { Rare: 1, Epic: 0.7, Duo: 0.2, Legendary: 0.2 },
+      Q_MiniBoss04: { Rare: 1, Epic: 0.7, Duo: 0.2, Legendary: 0.2 },
+      Q_MiniBoss05: { Rare: 1, Epic: 0.7, Duo: 0.2, Legendary: 0.2 },
+    } as const;
+    for (const [gameName, override] of Object.entries(expected))
+      expect(catalog.rooms.byKey[gameName]?.boonRarityOverride).toEqual(override);
+    for (const gameName of ['F_Combat01', 'I_WorldShop', 'Q_Combat01'])
+      expect(catalog.rooms.byKey[gameName]?.boonRarityOverride).toBeUndefined();
+  });
 });

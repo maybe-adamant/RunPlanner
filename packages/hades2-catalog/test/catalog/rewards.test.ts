@@ -1141,6 +1141,37 @@ describe('reward-kernel declaration parity', () => {
     });
   });
 
+  it('attaches boosted rarity only to the exact second-half I/Q World Shop items', () => {
+    const boosted = { Rare: 0.9, Epic: 0.25, Legendary: 0.1 };
+    for (const profileKey of ['I_WorldShop', 'Q_WorldShop'] as const) {
+      const groups = rewardKernelCatalog.shops.byKey[profileKey]?.groups.values ?? [];
+      const options = groups.flatMap((group) => group.options.values);
+      expect(
+        options
+          .filter((option) => option.key === 'RandomLoot')
+          .some((option) => option.boonRarityOverride === undefined),
+      ).toBe(true);
+      expect(
+        options
+          .filter((option) => option.key === 'BoostedRandomLoot')
+          .map((option) => option.boonRarityOverride),
+      ).toEqual(expect.arrayContaining([boosted]));
+      expect(
+        options
+          .filter((option) => option.key === 'ShopHermesUpgrade')
+          .map((option) => option.boonRarityOverride),
+      ).toEqual(expect.arrayContaining([boosted]));
+    }
+    expect(
+      rewardKernelCatalog.shops.byKey.WorldShop?.groups.byKey.Boon?.options.byKey.RandomLoot
+        ?.boonRarityOverride,
+    ).toBeUndefined();
+    expect(
+      rewardKernelCatalog.shops.byKey.WorldShop?.groups.byKey.Boon?.options.byKey.ShopHermesUpgrade
+        ?.boonRarityOverride,
+    ).toBeUndefined();
+  });
+
   it('rejects malformed emitted shop slots and producer lifecycle overrides', () => {
     const worldShop = rewardKernelDeclarations.shops.find((shop) => shop.key === 'WorldShop');
     if (worldShop === undefined) {

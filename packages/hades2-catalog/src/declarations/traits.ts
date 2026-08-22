@@ -3,7 +3,7 @@ import type {
   TraitDeclaration,
   TraitRequirementExpression,
   TraitRarity,
-  ScalableGodTraitRarityFloorEffect,
+  ProperUpbringingEffect,
   TargetedTraitAcquisition,
   TraitSelectedDisposition,
 } from '@run-planner/engine/catalog-schema';
@@ -25,7 +25,7 @@ export interface RawTraitDeclaration {
   readonly blockStacking: boolean;
   readonly blockInRunRarify: boolean;
   readonly excludeFromRarityCount: boolean;
-  readonly rarityFloorEffect?: ScalableGodTraitRarityFloorEffect;
+  readonly rarityFloorEffect?: ProperUpbringingEffect;
   readonly targetedAcquisition?: TargetedTraitAcquisition;
   /** Omitted declarations retain ordinary persistent-trait equip behavior. */
   readonly selectedDisposition?: TraitSelectedDisposition;
@@ -77,6 +77,9 @@ export interface RawTraitCatalogInput {
   readonly aspects: readonly RawAspectDeclaration[];
   readonly traits: readonly RawTraitDeclaration[];
   readonly givers: readonly RawTraitGiverDeclaration[];
+  readonly boonRarityBases: Readonly<
+    Record<'olympian' | 'hermes', import('@run-planner/engine/catalog-schema').BoonRarityValues>
+  >;
   readonly echoLastRunBoon: {
     readonly sources: readonly {
       readonly giverKey: string;

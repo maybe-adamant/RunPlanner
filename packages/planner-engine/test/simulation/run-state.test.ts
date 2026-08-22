@@ -921,7 +921,7 @@ describe('decision run-state snapshots', () => {
       Fire: 2,
       Water: 2,
     });
-    expect(snapshot?.traits.minimumScalableGodTraitRarity).toBe('Rare');
+    expect(snapshot?.traits.properUpbringingActive).toBe(true);
     expect(snapshot?.counters.upgradableTraitCount).toBe(traits.upgradableTraitCount);
   });
 });

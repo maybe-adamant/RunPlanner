@@ -737,6 +737,7 @@ export const iRooms = [
   },
   {
     gameName: 'I_MiniBoss01',
+    boonRarityOverride: { Rare: 0.9, Epic: 0.1, Duo: 0.2, Legendary: 0.2 },
     label: 'The Verminancer',
     roomSetKey: 'I',
     advancesExperimentalHammerUses: true,
@@ -785,6 +786,7 @@ export const iRooms = [
   },
   {
     gameName: 'I_MiniBoss02',
+    boonRarityOverride: { Rare: 0.9, Epic: 0.1, Duo: 0.2, Legendary: 0.2 },
     label: 'Goldwrath',
     roomSetKey: 'I',
     advancesExperimentalHammerUses: true,

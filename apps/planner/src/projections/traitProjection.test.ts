@@ -298,7 +298,7 @@ describe('route trait projection', () => {
           assessments: [],
           findings: [
             {
-              code: 'rarityBelowActiveFloor' as const,
+              code: 'rarityRollUnavailable' as const,
               traitKey: 'ApolloWeaponBoon',
               detail: 'Rare',
             },
@@ -308,7 +308,7 @@ describe('route trait projection', () => {
     });
     expect(feedback.options[0]?.legal).toBe(false);
     expect(feedback.options[0]?.reasons).toEqual([
-      expect.stringContaining('Rarity is below the active floor'),
+      expect.stringContaining('Rarity roll is unavailable'),
     ]);
     expect(feedback.options[1]?.reasons).toEqual([]);
     expect(feedback.options[2]?.reasons).toEqual([]);

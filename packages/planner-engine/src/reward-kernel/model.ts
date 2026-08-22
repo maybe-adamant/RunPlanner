@@ -141,6 +141,8 @@ export interface ShopOptionEntry {
   readonly purchaseInteraction:
     | { readonly kind: 'fixed'; readonly gameName: string }
     | { readonly kind: 'resolvedOfferSource' };
+  /** Exact generated Shop item override, retained only by the generation witness. */
+  readonly boonRarityOverride?: import('../catalog-schema/traits').BoonRarityOverride;
 }
 
 export interface ShopGroupDeclaration {
