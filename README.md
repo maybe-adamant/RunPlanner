@@ -182,6 +182,8 @@ copied elsewhere.
 - Evidence and disposition:
   [reward audit](docs/audits/REWARD_GAME_DATA_AUDIT.md),
   [trait-offer pools and dependencies](docs/audits/TRAIT_OFFER_POOLS_AND_DEPENDENCIES.md),
+  [Selene spell audit](docs/audits/SELENE_SPELL_GAME_DATA_AUDIT.md),
+  [Chaos trait audit](docs/audits/CHAOS_TRAIT_GAME_DATA_AUDIT.md),
   [authored reward and trait defaults](docs/audits/AUTHORED_REWARD_AND_TRAIT_DEFAULTS_AUDIT.md),
   [acquisition delivery and room settlement](docs/audits/ACQUISITION_DELIVERY_AND_ROOM_SETTLEMENT.md),
   [room action order](docs/audits/ROOM_ACTION_ORDER_GAME_DATA_AUDIT.md),
