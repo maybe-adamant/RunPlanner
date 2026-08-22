@@ -188,13 +188,27 @@ const lifecycleEffectRegistry = Object.freeze({
       routeEncounterDepthDelta: 1,
     });
   },
-  recordEncounterCompletion: (context, state) =>
-    appendEvent(state, context, {
+  recordEncounterCompletion: (context, state) => {
+    const phase = requireEncounterPhase(context);
+    const completion = {
       kind: 'encounterCompleted',
-      phaseKey: requireEncounterPhase(context).slotKey,
+      phaseKey: phase.slotKey,
       execution: context.figLeafSkipped === true ? 'skippedByFigLeaf' : 'normal',
       figLeafSkipOwner: context.figLeafSkipOwner === true,
-    }),
+    } as const;
+    /**
+     * A derived biome Boss has one source-visible seam between its death and
+     * the generic encounter-end effects. It is not an authored lifecycle
+     * operation: completion rooms are fixed by the layout.
+     */
+    return context.input.origin.kind === 'completionRoom' && context.input.origin.role === 'boss'
+      ? appendEvent(
+          appendEvent(state, context, { ...completion, kind: 'bossDefeated' }),
+          context,
+          completion,
+        )
+      : appendEvent(state, context, completion);
+  },
   recordRequiredObjectCompletions: (context, state) => {
     const requiredObjects = context.input.requiredObjects;
     if (requiredObjects === undefined || requiredObjects.length === 0) {

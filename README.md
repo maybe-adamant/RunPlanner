@@ -190,6 +190,7 @@ copied elsewhere.
   [Fields optional rewards and Artificer audit](docs/audits/FIELDS_OPTIONAL_REWARDS_AND_ARTIFICER_GAME_DATA_AUDIT.md),
   [keepsake audit](docs/audits/KEEPSAKE_GAME_DATA_AUDIT.md),
   [Fountain and Postboss interaction lifecycle](docs/audits/FOUNTAIN_AND_POSTBOSS_INTERACTION_LIFECYCLE.md),
+  [boss completion reward lifecycle](docs/audits/BOSS_COMPLETION_REWARD_LIFECYCLE.md),
   [Echo Gift Gift Gift keepsake audit](docs/audits/ECHO_GIFT_GIFT_GIFT_KEEPSAKE_AUDIT.md),
   [Cherished Heirloom keepsake audit](docs/audits/CHERISHED_HEIRLOOM_KEEPSAKE_AUDIT.md),
   [Shop and Well interaction lifecycle](docs/audits/SHOP_AND_WELL_INTERACTION_LIFECYCLE.md),

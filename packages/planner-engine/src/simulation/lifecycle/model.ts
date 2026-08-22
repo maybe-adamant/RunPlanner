@@ -76,6 +76,13 @@ export type RoomLifecycleEvent =
       readonly figLeafSkipOwner: boolean;
     })
   | (RoomLifecycleEventBase & {
+      /** Fixed completion-room seam after a biome Boss dies, before encounter-end effects. */
+      readonly kind: 'bossDefeated';
+      readonly phaseKey: string;
+      readonly execution: 'normal' | 'skippedByFigLeaf';
+      readonly figLeafSkipOwner: boolean;
+    })
+  | (RoomLifecycleEventBase & {
       readonly kind: 'encounterInteractionReached';
       readonly phaseKey: string;
       readonly interaction: 'encounter' | 'gorgon';

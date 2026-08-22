@@ -4463,6 +4463,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
         branches = settlement.branches;
         break;
       }
+      case 'bossDefeated':
       case 'encounterInteractionReached':
       case 'encounterCompleted': {
         const room = rooms.get(semanticAddressKey(event.origin));
@@ -4635,7 +4636,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
           }
         }
         if (
-          event.kind === 'encounterCompleted' &&
+          event.kind === 'bossDefeated' &&
           event.origin.kind === 'completionRoom' &&
           event.origin.role === 'boss' &&
           enteredBiomeCount < fullRunBiomeCount
@@ -4775,7 +4776,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
           branches = settlement.branches;
           break;
         }
-        if (event.interaction === 'gorgon') {
+        if (event.kind === 'encounterInteractionReached' && event.interaction === 'gorgon') {
           branches = advanceRewardBranches(branches, event.sequence);
           break;
         }

@@ -781,7 +781,9 @@ export function assembleWorkspaceBiomeSemantics(
       }).entries.map((entry) =>
         entry.kind === 'boundary'
           ? Object.freeze({ kind: 'boundary' as const, boundary: entry.boundary })
-          : Object.freeze({ kind: 'fixedEffect' as const, effect: entry.effect }),
+          : entry.kind === 'bossDefeated'
+            ? Object.freeze({ kind: 'bossDefeated' as const, key: entry.key })
+            : Object.freeze({ kind: 'fixedEffect' as const, effect: entry.effect }),
       );
       const completionRooms =
         evaluation?.authoring === 'complete' && evaluation.validity === 'valid'
