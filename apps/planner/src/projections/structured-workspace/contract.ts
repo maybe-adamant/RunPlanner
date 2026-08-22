@@ -1943,6 +1943,17 @@ export interface WorkspaceCompletionNode {
   readonly role: CompletionRoomDescriptor['role'];
   readonly gameName: string;
   readonly label: string;
+  /** Engine-owned derived-room timeline; completion rooms never acquire an authored action order. */
+  readonly timeline?: readonly (
+    | {
+        readonly kind: 'boundary';
+        readonly boundary: WorkspaceRoomLifecycleBoundary;
+      }
+    | {
+        readonly kind: 'fixedEffect';
+        readonly effect: 'judgment' | 'keepsakeSelection';
+      }
+  )[];
   readonly judgment?: {
     readonly address: BossCompletionArcanaAddress;
     readonly inactiveArcanaKeys: readonly string[];

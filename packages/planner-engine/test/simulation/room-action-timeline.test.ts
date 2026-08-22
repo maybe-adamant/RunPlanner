@@ -1,9 +1,17 @@
 import { describe, expect, it } from 'vitest';
+import { catalog } from '@run-planner/hades2-catalog';
 import {
+  assembleCompletionRoomLifecycleTimeline,
   assembleRoomLifecycleTimeline as assembleTimeline,
   type RoomActionRoster,
 } from '../../src/simulation';
-import { createOccurrenceId, type OccurrenceAddress } from '../../src/authored-project/addresses';
+import {
+  createBossCompletionArcanaAddress,
+  createCompletionRoomAddress,
+  createOccurrenceId,
+  createPostbossKeepsakeSelectionAddress,
+  type OccurrenceAddress,
+} from '../../src/authored-project/addresses';
 import type { RoomLifecycleStructure } from '../../src/authored-project';
 import { roomActionKey } from '../../src/authored-project/room-actions';
 import type { RoomActionReference } from '../../src/authored-project/model';
@@ -177,6 +185,67 @@ function rankedRow(
 }
 
 describe('room lifecycle timeline', () => {
+  it('keeps Judgment as an engine-owned fixed effect after the derived Boss end seam', () => {
+    const completion = createCompletionRoomAddress(
+      { kind: 'biome', routeKey: 'Underworld', biomeKey: 'F' },
+      'boss',
+    );
+    const timeline = assembleCompletionRoomLifecycleTimeline({
+      catalog,
+      owner: completion,
+      roomGameName: 'F_Boss01',
+      judgment: createBossCompletionArcanaAddress(completion),
+    });
+    expect(timeline.entries).toEqual([
+      expect.objectContaining({
+        kind: 'boundary',
+        boundary: expect.objectContaining({ kind: 'roomEntered' }),
+      }),
+      expect.objectContaining({
+        kind: 'boundary',
+        boundary: expect.objectContaining({ kind: 'encounterStart' }),
+      }),
+      expect.objectContaining({
+        kind: 'boundary',
+        boundary: expect.objectContaining({ kind: 'encounterEnd' }),
+      }),
+      expect.objectContaining({ kind: 'fixedEffect', effect: 'judgment' }),
+      expect.objectContaining({
+        kind: 'boundary',
+        boundary: expect.objectContaining({ kind: 'cleanup' }),
+      }),
+    ]);
+  });
+
+  it('keeps the Postboss keepsake frontier inside a noncombat completion timeline', () => {
+    const completion = createCompletionRoomAddress(
+      { kind: 'biome', routeKey: 'Underworld', biomeKey: 'F' },
+      'postboss',
+    );
+    const keepsakeSelection = createPostbossKeepsakeSelectionAddress(completion);
+    const timeline = assembleCompletionRoomLifecycleTimeline({
+      catalog,
+      owner: completion,
+      roomGameName: 'F_PostBoss01',
+      keepsakeSelection,
+    });
+    expect(timeline.entries).toEqual([
+      expect.objectContaining({
+        kind: 'boundary',
+        boundary: expect.objectContaining({ kind: 'roomEntered' }),
+      }),
+      expect.objectContaining({
+        kind: 'fixedEffect',
+        effect: 'keepsakeSelection',
+        owner: keepsakeSelection,
+      }),
+      expect.objectContaining({
+        kind: 'boundary',
+        boundary: expect.objectContaining({ kind: 'cleanup' }),
+      }),
+    ]);
+  });
+
   it('places standard encounter seams around the existing ranked roster', () => {
     const row = Object.freeze({
       reference: Object.freeze({

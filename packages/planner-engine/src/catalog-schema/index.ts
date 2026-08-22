@@ -177,6 +177,17 @@ export interface KeepsakeDeclaration {
 export type EncounterPhaseKind = 'boss' | 'combat' | 'miniboss' | 'nonCombat' | 'story';
 
 /**
+ * Only these phase kinds create a player-facing combat interval. Story and
+ * other noncombat encounters still retain their game encounter identity for
+ * history and provider ownership, but never expose Start/End encounter UI.
+ */
+export function isCombatBearingEncounterPhaseKind(
+  kind: EncounterPhaseKind,
+): kind is 'boss' | 'combat' | 'miniboss' {
+  return kind === 'boss' || kind === 'combat' || kind === 'miniboss';
+}
+
+/**
  * The envelope declares that a slot is potentially present. The owning room
  * template evaluates its current structural activation from authored state;
  * lifecycle execution never uses this disposition as a second evaluator.

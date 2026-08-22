@@ -1,13 +1,24 @@
-import type { OccurrenceAddress } from '../../authored-project/addresses';
+import type {
+  BossCompletionArcanaAddress,
+  CompletionRoomAddress,
+  KeepsakeSelectionAddress,
+  OccurrenceAddress,
+} from '../../authored-project/addresses';
 import type { RoomActionReference } from '../../authored-project/model';
 import type {
   RoomLifecycleStructure,
   RoomLifecycleStructurePhase,
   RoomLifecycleStructurePoint,
 } from '../../authored-project/room-action-domain';
+import type { Catalog } from '../../catalog-schema';
 import { scopeRoomLifecycleStructure } from '../../authored-project/room-action-domain';
 import { roomActionKey } from '../../authored-project/room-actions';
 import type { RoomActionRoster, RoomActionRow } from './model';
+
+type PostbossKeepsakeSelectionAddress = Extract<
+  KeepsakeSelectionAddress,
+  { readonly owner: CompletionRoomAddress }
+>;
 
 export type RoomLifecycleBoundary =
   | Exclude<
@@ -53,6 +64,108 @@ export interface RoomLifecycleTimeline {
 export interface RoomLifecycleTimelineInput {
   readonly owner: OccurrenceAddress;
   readonly roomActionRoster: RoomActionRoster;
+}
+
+/** A derived completion room has lifecycle, but never an authored action order. */
+export type CompletionRoomLifecycleTimelineEntry =
+  | {
+      readonly kind: 'boundary';
+      readonly boundary: Extract<
+        RoomLifecycleBoundary,
+        { readonly kind: 'roomEntered' | 'encounterStart' | 'encounterEnd' | 'cleanup' }
+      >;
+    }
+  | {
+      readonly kind: 'fixedEffect';
+      readonly effect: 'judgment';
+      readonly owner: BossCompletionArcanaAddress;
+    }
+  | {
+      readonly kind: 'fixedEffect';
+      readonly effect: 'keepsakeSelection';
+      readonly owner: PostbossKeepsakeSelectionAddress;
+    };
+
+export interface CompletionRoomLifecycleTimeline {
+  readonly owner: CompletionRoomAddress;
+  readonly entries: readonly CompletionRoomLifecycleTimelineEntry[];
+}
+
+/**
+ * Completion rooms are derived canonical lifecycle rooms rather than authored
+ * occurrences. This keeps their visible spine and fixed post-Boss effects in
+ * the engine without inventing a RoomActionReference or editable ordering.
+ */
+export function assembleCompletionRoomLifecycleTimeline(input: {
+  readonly catalog: Catalog;
+  readonly owner: CompletionRoomAddress;
+  readonly roomGameName: string;
+  readonly judgment?: BossCompletionArcanaAddress;
+  readonly keepsakeSelection?: PostbossKeepsakeSelectionAddress;
+}): CompletionRoomLifecycleTimeline {
+  const room = input.catalog.rooms.byKey[input.roomGameName];
+  const phaseKey = room?.encounterSlotBindings[0]?.slotKey;
+  if (
+    room === undefined ||
+    room.mode.kind !== 'derived' ||
+    room.mode.classification !== 'completion' ||
+    phaseKey === undefined ||
+    room.encounterSlotBindings.length !== 1 ||
+    (room.kind !== 'Boss' && room.kind !== 'PostBoss')
+  ) {
+    throw new Error(`${input.roomGameName} is not a derived single-encounter completion room`);
+  }
+  const entries: CompletionRoomLifecycleTimelineEntry[] = [
+    Object.freeze({
+      kind: 'boundary' as const,
+      boundary: Object.freeze({ kind: 'roomEntered' as const, key: 'roomEntered' as const }),
+    }),
+  ];
+  if (room.kind === 'Boss') {
+    entries.push(
+      Object.freeze({
+        kind: 'boundary' as const,
+        boundary: Object.freeze({
+          kind: 'encounterStart' as const,
+          key: `encounterStart:${phaseKey}`,
+          phaseKey,
+        }),
+      }),
+      Object.freeze({
+        kind: 'boundary' as const,
+        boundary: Object.freeze({
+          kind: 'encounterEnd' as const,
+          key: `encounterEnd:${phaseKey}`,
+          phaseKey,
+        }),
+      }),
+    );
+  }
+  if (room.kind === 'Boss' && input.judgment !== undefined) {
+    entries.push(
+      Object.freeze({
+        kind: 'fixedEffect' as const,
+        effect: 'judgment' as const,
+        owner: input.judgment,
+      }),
+    );
+  }
+  if (room.kind === 'PostBoss' && input.keepsakeSelection !== undefined) {
+    entries.push(
+      Object.freeze({
+        kind: 'fixedEffect' as const,
+        effect: 'keepsakeSelection' as const,
+        owner: input.keepsakeSelection,
+      }),
+    );
+  }
+  entries.push(
+    Object.freeze({
+      kind: 'boundary' as const,
+      boundary: Object.freeze({ kind: 'cleanup' as const, key: 'cleanup' as const }),
+    }),
+  );
+  return Object.freeze({ owner: input.owner, entries: Object.freeze(entries) });
 }
 
 function checkpointRank(roster: RoomActionRoster, key: string): number | undefined {

@@ -167,7 +167,10 @@ three and its permanent Arcana rank scales that effect as follows:
 | 3             | Epic         | 5                                        |
 
 `TriggerPostBossEvents` calls the same `AddRandomMetaUpgrades` operation after
-a boss when the derived `PostBossCards` value is positive. Each trigger draws
+a boss when the derived `PostBossCards` value is positive and
+`CurrentRun.EnteredBiomes < GameData.FullRunBiomeCount`. The planner derives
+that full-run count from the catalog route structure rather than the currently
+configured authored prefix. Each trigger draws
 from the then-inactive set, so previously activated temporary cards cannot be
 drawn again.
 

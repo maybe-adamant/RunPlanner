@@ -16,7 +16,7 @@ import {
 } from '@run-planner/engine/authored-project';
 import { describe, expect, it } from 'vitest';
 
-import { loadSurfaceNOProject } from '@run-planner/test-fixtures/surface';
+import { loadSurfaceNOProject, loadSurfaceNOPQProject } from '@run-planner/test-fixtures/surface';
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
 import { evaluateBiomeRewardsAssemblyInternal } from '../../src/simulation/rewards/biome';
@@ -25,6 +25,8 @@ import { publicRewardBranch } from '../../src/simulation/rewards/processing';
 const surface = createRouteAddress('Surface');
 const n = createBiomeAddress('Surface', 'N');
 const o = createBiomeAddress('Surface', 'O');
+const p = createBiomeAddress('Surface', 'P');
+const q = createBiomeAddress('Surface', 'Q');
 
 function judgmentOwner(biomeAddress = n) {
   return createBossCompletionArcanaAddress(createCompletionRoomAddress(biomeAddress, 'boss'));
@@ -60,7 +62,7 @@ function withBossOutcome(
   });
 }
 
-function biome(evaluation: ReturnType<typeof simulateProject>, key: 'N' | 'O') {
+function biome(evaluation: ReturnType<typeof simulateProject>, key: 'N' | 'O' | 'P' | 'Q') {
   const value = evaluation.routes
     .find((route) => route.routeKey === 'Surface')
     ?.biomes.find((candidate) => candidate.biomeKey === key);
@@ -151,6 +153,35 @@ describe('Judgment Boss-completion lifecycle', () => {
     expect(active.filter((card) => card.key === first[0]).map((card) => card.origin)).toEqual([
       'temporary',
     ]);
+  });
+
+  it('uses the catalog route length rather than configured suffixes to suppress only the final Boss', () => {
+    const base = ['CastCount', 'SorceryRegenUpgrade', 'BonusRarity', 'CardDraw'];
+    const first = inactive(base, 5);
+    const second = inactive([...base, ...first], 5);
+    const third = inactive([...base, ...first, ...second], 5);
+    let project = withBossOutcome(withJudgment(loadSurfaceNOPQProject()), n, first);
+    project = withBossOutcome(project, o, second);
+    project = withBossOutcome(project, p, third);
+
+    const evaluation = simulateProject(catalog, project);
+    expect(biome(evaluation, 'P').validity).toBe('valid');
+    expect(biome(evaluation, 'Q').validity).toBe('valid');
+    expect(
+      biome(evaluation, 'Q').findings.some(
+        (finding) => finding.origin.kind === 'bossCompletionArcana',
+      ),
+    ).toBe(false);
+
+    const candidate = createPreparedProjectCandidateSession(
+      catalog,
+      simulateProjectAssembly(catalog, project),
+    ).evaluate({
+      kind: 'bossCompletionArcana',
+      completion: judgmentOwner(q),
+      arcanaKeys: [],
+    });
+    expect(candidate).toMatchObject({ kind: 'unavailable' });
   });
 
   it('reads Red-activated and Lapis-promoted Gate-B inputs through the clean Boss lifecycle seam', () => {

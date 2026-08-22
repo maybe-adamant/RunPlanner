@@ -358,11 +358,9 @@ function PostbossKeepsakeControl({
   const dispatch = useAppDispatch();
   const candidates = useWorkspaceInteraction(interaction);
   return (
-    <label className="field-control" htmlFor={`postboss-keepsake-${interaction.key}`}>
-      <span className="field-label-with-marker">
-        Keepsake <SemanticOwnerMarker address={interaction.owner} />
-      </span>
+    <div className="completion-keepsake-control">
       <select
+        aria-label="Keepsake"
         aria-busy={candidates.pending || undefined}
         id={`postboss-keepsake-${interaction.key}`}
         onFocus={candidates.activate}
@@ -395,7 +393,8 @@ function PostbossKeepsakeControl({
           );
         })}
       </select>
-    </label>
+      <SemanticOwnerMarker address={interaction.owner} />
+    </div>
   );
 }
 
@@ -407,6 +406,7 @@ function CompletionWorkbench({
   readonly node: WorkspaceCompletionNode;
 }) {
   const dispatch = useAppDispatch();
+  const [judgmentOpen, setJudgmentOpen] = useState(false);
   const control =
     node.judgment === undefined
       ? undefined
@@ -423,18 +423,127 @@ function CompletionWorkbench({
       : interactions.keepsakeEquipResults.get(
           workspaceInteractionKey(node.keepsakeSelection.equipResult.address),
         );
+  const fixedEffectRanks = new Map(
+    (node.timeline ?? [])
+      .filter((entry) => entry.kind === 'fixedEffect')
+      .map((entry, index) => [entry.effect, index + 1] as const),
+  );
+  const renderEquipResult = () =>
+    equipResult === undefined ? null : equipResult.owner.resultKind === 'jeweledPom' ? (
+      <JeweledPomResultControl
+        interaction={
+          equipResult as Extract<
+            WorkspaceKeepsakeEquipResultInteraction,
+            { readonly owner: { readonly resultKind: 'jeweledPom' } }
+          >
+        }
+      />
+    ) : (
+      <ExperimentalHammerResultControl
+        interaction={
+          equipResult as Extract<
+            WorkspaceKeepsakeEquipResultInteraction,
+            { readonly owner: { readonly resultKind: 'experimentalHammer' } }
+          >
+        }
+      />
+    );
   return (
     <article className="biome-completion-workbench">
       <p className="card-kicker">{node.role === 'postboss' ? 'Postboss' : 'Boss'}</p>
       <h3>{node.label}</h3>
       <SemanticOwnerMarker address={node.marker.address} />
-      <p>This room is added automatically after the biome.</p>
-      {control === undefined || node.judgment === undefined ? null : (
-        <fieldset className="completion-judgment-control">
-          <legend>
-            Judgment — choose {node.judgment.requiredCount} inactive Arcana cards
-            <SemanticOwnerMarker address={control.owner} />
-          </legend>
+      {node.timeline === undefined ? null : (
+        <section aria-label="Room Timeline" className="room-actions-workbench">
+          <header className="local-reward-heading">
+            <h4>Room Timeline</h4>
+          </header>
+          <ol aria-label="Room timeline" className="room-action-list">
+            {node.timeline.map((entry) => {
+              if (entry.kind === 'boundary') {
+                const label =
+                  entry.boundary.kind === 'roomEntered'
+                    ? 'Room entered'
+                    : entry.boundary.kind === 'encounterStart'
+                      ? 'Start encounter'
+                      : entry.boundary.kind === 'encounterEnd'
+                        ? 'End encounter'
+                        : 'Cleanup · Doors open';
+                return (
+                  <li
+                    aria-label={label}
+                    className="room-action-lifecycle-boundary"
+                    data-lifecycle-boundary={entry.boundary.key}
+                    key={entry.boundary.key}
+                  >
+                    <span aria-hidden="true" className="hub-roster-rank">
+                      ·
+                    </span>
+                    <strong>{label}</strong>
+                  </li>
+                );
+              }
+              const rank = fixedEffectRanks.get(entry.effect);
+              if (entry.effect === 'judgment') {
+                return control === undefined || node.judgment === undefined ? null : (
+                  <li
+                    aria-label={`Judgment — choose ${node.judgment.requiredCount} inactive Arcana cards`}
+                    className="hub-open-room-card room-action-row completion-timeline-effect-row"
+                    key={entry.effect}
+                  >
+                    <div className="owner-markers room-action-identity">
+                      <span aria-hidden="true" className="hub-roster-rank">
+                        {rank}
+                      </span>
+                      <button
+                        className="completion-timeline-effect"
+                        onClick={() => setJudgmentOpen(true)}
+                        type="button"
+                      >
+                        Judgment — choose {node.judgment.requiredCount} inactive Arcana cards
+                        <SemanticOwnerMarker address={control.owner} />
+                      </button>
+                    </div>
+                  </li>
+                );
+              }
+              return keepsake === undefined || node.keepsakeSelection === undefined ? null : (
+                <li
+                  aria-label="Choose keepsake"
+                  className="hub-open-room-card room-action-row completion-timeline-effect-row"
+                  key={entry.effect}
+                >
+                  <div className="owner-markers room-action-identity">
+                    <span aria-hidden="true" className="hub-roster-rank">
+                      {rank}
+                    </span>
+                    <strong>Choose keepsake</strong>
+                  </div>
+                  <div className="hub-rank-actions room-action-controls">
+                    <PostbossKeepsakeControl
+                      interaction={keepsake}
+                      value={node.keepsakeSelection.value}
+                    />
+                  </div>
+                  {renderEquipResult()}
+                </li>
+              );
+            })}
+          </ol>
+        </section>
+      )}
+      {judgmentOpen && control !== undefined && node.judgment !== undefined ? (
+        <div aria-label="Judgment editor" className="completion-judgment-popup" role="dialog">
+          <div className="completion-judgment-popup-header">
+            <h4>Judgment — choose {node.judgment.requiredCount} inactive Arcana cards</h4>
+            <button
+              aria-label="Close Judgment editor"
+              onClick={() => setJudgmentOpen(false)}
+              type="button"
+            >
+              Close
+            </button>
+          </div>
           <div className="completion-judgment-options">
             {control.choices
               .filter(
@@ -461,30 +570,8 @@ function CompletionWorkbench({
                 );
               })}
           </div>
-        </fieldset>
-      )}
-      {keepsake === undefined || node.keepsakeSelection === undefined ? null : (
-        <PostbossKeepsakeControl interaction={keepsake} value={node.keepsakeSelection.value} />
-      )}
-      {equipResult === undefined ? null : equipResult.owner.resultKind === 'jeweledPom' ? (
-        <JeweledPomResultControl
-          interaction={
-            equipResult as Extract<
-              WorkspaceKeepsakeEquipResultInteraction,
-              { readonly owner: { readonly resultKind: 'jeweledPom' } }
-            >
-          }
-        />
-      ) : (
-        <ExperimentalHammerResultControl
-          interaction={
-            equipResult as Extract<
-              WorkspaceKeepsakeEquipResultInteraction,
-              { readonly owner: { readonly resultKind: 'experimentalHammer' } }
-            >
-          }
-        />
-      )}
+        </div>
+      ) : null}
     </article>
   );
 }

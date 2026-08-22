@@ -1259,6 +1259,12 @@ export function evaluateBiomeRewardsAssemblyInternal(
   if (snapshot.biomeKey !== history.biomeKey || snapshot.routeKey !== history.routeKey) {
     throw new BiomeRewardSimulationContractError('reward inputs do not share one biome owner');
   }
+  const fullRunBiomeCount = catalog.routes.byKey[snapshot.routeKey]?.biomeKeys.length;
+  if (fullRunBiomeCount === undefined) {
+    throw new BiomeRewardSimulationContractError(
+      `${snapshot.routeKey} has no catalog route for Boss-completion effects`,
+    );
+  }
   const layout = requireRewardLayout(catalog, snapshot);
   const rewardLookup = hubRewardLookups(catalog, snapshot);
   const rooms = rewardRooms(snapshot);
@@ -4600,7 +4606,8 @@ export function evaluateBiomeRewardsAssemblyInternal(
         if (
           event.kind === 'encounterCompleted' &&
           event.origin.kind === 'completionRoom' &&
-          event.origin.role === 'boss'
+          event.origin.role === 'boss' &&
+          enteredBiomeCount < fullRunBiomeCount
         ) {
           const owner = createBossCompletionArcanaAddress(event.origin);
           const activeArcana = attestJudgmentArcanaFrontier(branches);

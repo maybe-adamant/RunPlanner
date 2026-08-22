@@ -1,5 +1,9 @@
 export { assembleRoomActionRoster, scopeRoomActionRoster } from './assemble';
-export { assembleRoomLifecycleTimeline, scopeRoomLifecycleTimeline } from './timeline';
+export {
+  assembleCompletionRoomLifecycleTimeline,
+  assembleRoomLifecycleTimeline,
+  scopeRoomLifecycleTimeline,
+} from './timeline';
 export type {
   RoomActionCheckpoint,
   RoomActionCheckpointContribution,
@@ -15,6 +19,8 @@ export type {
 } from './model';
 export type {
   RoomLifecycleBoundary,
+  CompletionRoomLifecycleTimeline,
+  CompletionRoomLifecycleTimelineEntry,
   RoomLifecycleTimeline,
   RoomLifecycleTimelineEntry,
   RoomLifecycleTimelineInput,

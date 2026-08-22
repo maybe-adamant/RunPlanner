@@ -26,6 +26,7 @@ import type {
   Catalog,
 } from '@run-planner/engine/catalog-schema';
 import type { ProjectBiomeEvaluation } from '@run-planner/engine/simulation';
+import { assembleCompletionRoomLifecycleTimeline } from '@run-planner/engine/simulation';
 
 import {
   appendUniqueRewardControls,
@@ -769,6 +770,19 @@ export function assembleWorkspaceBiomeSemantics(
         keepsakeSelectionAddress === undefined
           ? undefined
           : markerDestinations.marker(keepsakeSelectionAddress);
+      const timeline = assembleCompletionRoomLifecycleTimeline({
+        catalog,
+        owner: address,
+        roomGameName: descriptor.roomGameName,
+        ...(judgment === undefined ? {} : { judgment: judgment.address }),
+        ...(keepsakeSelectionAddress === undefined
+          ? {}
+          : { keepsakeSelection: keepsakeSelectionAddress }),
+      }).entries.map((entry) =>
+        entry.kind === 'boundary'
+          ? Object.freeze({ kind: 'boundary' as const, boundary: entry.boundary })
+          : Object.freeze({ kind: 'fixedEffect' as const, effect: entry.effect }),
+      );
       const replacementEffect =
         keepsakeSelectionAddress !== undefined && postbossKeepsakeDisposition?.kind === 'replace'
           ? catalog.keepsakes.byKey[postbossKeepsakeDisposition.keepsakeKey]?.effect
@@ -791,6 +805,7 @@ export function assembleWorkspaceBiomeSemantics(
         role: descriptor.role,
         gameName: descriptor.roomGameName,
         label: requireWorkspaceRoom(catalog, descriptor.roomGameName).label,
+        timeline: Object.freeze(timeline),
         ...(judgment === undefined ? {} : { judgment }),
         ...(keepsakeSelectionAddress === undefined ||
         keepsakeSelectionMarker === undefined ||

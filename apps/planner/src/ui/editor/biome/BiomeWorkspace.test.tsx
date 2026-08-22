@@ -27,6 +27,7 @@ import { Provider } from 'react-redux';
 
 import { createApplication, type PlannerApplication } from '@planner/composition/createApplication';
 import { semanticFindingKey } from '@planner/projections/evaluationProjection';
+import { semanticOwnerElementId } from '@planner/ui/feedback/semanticOwner';
 import type { WorkspaceBiome, WorkspaceNode } from '@planner/projections/structured-workspace';
 import { findingSelected, semanticOwnerFocused } from '@planner/state/editorSessionSlice';
 import {
@@ -1102,9 +1103,10 @@ describe('BiomeWorkspace', () => {
     expect(
       within(firstNodeInspector).getByRole('heading', { level: 2, name: first.label }),
     ).toBeTruthy();
+    expect(within(firstNodeInspector).getByRole('region', { name: 'Room Timeline' })).toBeTruthy();
     expect(
-      within(firstNodeInspector).getByText('This room is added automatically after the biome.'),
-    ).toBeTruthy();
+      within(firstNodeInspector).queryByText('This room is added automatically after the biome.'),
+    ).toBeNull();
     cleanup();
 
     const noSubjectDefault: WorkspaceBiome = {
@@ -1416,7 +1418,7 @@ describe('BiomeWorkspace', () => {
     expect(within(workbench).getByRole('article', { name: 'Combat 02 room offer' })).toBeTruthy();
   });
 
-  it('keeps the reached Judgment picker line-separated and directly reopenable', () => {
+  it('keeps the reached Judgment editor on the fixed Boss timeline and directly reopenable', () => {
     const dormant = renderWorkspace(loadSurfaceNOPQProject(), 'Surface', 'N');
     const dormantBoss = workspaceBiome(dormant.application, 'Surface', 'N').nodes.find(
       (node): node is Extract<WorkspaceNode, { readonly kind: 'completion' }> =>
@@ -1446,7 +1448,40 @@ describe('BiomeWorkspace', () => {
     act(() => view.application.store.dispatch(semanticOwnerFocused(owner)));
     expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(owner);
     const inspector = screen.getByRole('complementary', { name: 'Details' });
-    expect(within(inspector).getByText('Judgment — choose 5 inactive Arcana cards')).toBeTruthy();
+    const judgmentLauncher = within(inspector).getByRole('button', {
+      name: /Judgment — choose 5 inactive Arcana cards/,
+    });
+    const finding = view.application.store
+      .getState()
+      .projectWorkspace.assembly.evaluation.findings.find(
+        (candidate) =>
+          candidate.code === 'judgmentOutcomeMissing' &&
+          semanticAddressKey(candidate.origin) === semanticAddressKey(owner),
+      );
+    if (finding === undefined) throw new Error('Judgment finding is missing');
+    expect(document.getElementById(semanticOwnerElementId(owner))).toBeTruthy();
+    act(() =>
+      view.application.store.dispatch(
+        findingSelected({ key: semanticFindingKey(finding), origin: finding.origin }),
+      ),
+    );
+    expect(document.activeElement).toBe(document.getElementById(semanticOwnerElementId(owner)));
+    expect(inspector.querySelector('.completion-judgment-popup')).toBeNull();
+    expect(within(inspector).getByText('Start encounter')).toBeTruthy();
+    expect(within(inspector).getByText('End encounter')).toBeTruthy();
+    const timeline = within(inspector).getByRole('region', { name: 'Room Timeline' });
+    expect(timeline.classList.contains('room-actions-workbench')).toBe(true);
+    expect(
+      within(timeline).getByRole('listitem', {
+        name: /Judgment — choose 5 inactive Arcana cards/,
+      }),
+    ).toBeTruthy();
+    expect(
+      within(timeline)
+        .getByRole('listitem', { name: /Judgment — choose 5 inactive Arcana cards/ })
+        .querySelector('.hub-roster-rank')?.textContent,
+    ).toBe('1');
+    act(() => judgmentLauncher.click());
     const optionList = inspector.querySelector('.completion-judgment-options');
     if (optionList === null) throw new Error('Judgment options list is missing');
     expect(optionList.querySelectorAll(':scope > label')).toHaveLength(
@@ -1473,7 +1508,11 @@ describe('BiomeWorkspace', () => {
     );
     expect(within(inspector).queryByText('Judgment — choose 5 inactive Arcana cards')).toBeNull();
     act(() => screen.getByRole('button', { name: 'Open Boss completion' }).click());
-    expect(within(inspector).getByText('Judgment — choose 5 inactive Arcana cards')).toBeTruthy();
+    expect(
+      within(inspector).getByRole('button', {
+        name: /Judgment — choose 5 inactive Arcana cards/,
+      }),
+    ).toBeTruthy();
     expect(
       screen.getByRole('button', { name: 'Open Boss completion' }).getAttribute('aria-pressed'),
     ).toBe('true');
@@ -1485,7 +1524,15 @@ describe('BiomeWorkspace', () => {
       createCompletionRoomAddress(nBiome, 'postboss'),
     );
     act(() => view.application.store.dispatch(semanticOwnerFocused(owner)));
-    const selector = screen.getByRole<HTMLSelectElement>('combobox', { name: 'Keepsake' });
+    const timeline = screen.getByRole('region', { name: 'Room Timeline' });
+    expect(within(timeline).getByText('Room entered')).toBeTruthy();
+    expect(within(timeline).getByText('Choose keepsake')).toBeTruthy();
+    expect(within(timeline).getByText('Cleanup · Doors open')).toBeTruthy();
+    expect(within(timeline).queryByText('Start encounter')).toBeNull();
+    expect(within(timeline).queryByText('End encounter')).toBeNull();
+    const selector = within(timeline).getByRole<HTMLSelectElement>('combobox', {
+      name: 'Keepsake',
+    });
     fireEvent.focus(selector);
     await waitFor(() =>
       expect(
