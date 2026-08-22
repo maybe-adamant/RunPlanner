@@ -26,11 +26,14 @@ import {
   traitGiverUsesOfferContext,
   semanticAddressKey,
   type BiomeAddress,
+  type CompletionRoomAddress,
   type AcquisitionEntryAddress,
   type AcquisitionSiteAddress,
   type EncounterPhaseAddress,
   type RoomOccurrence,
+  type OccurrenceAddress,
   type SemanticAddress,
+  type RoomActionSemanticAddress,
   type RoomRunStateCheckpointAddress,
   type AuthoredRewardState,
   type AuthoredTraitOffer,
@@ -1391,7 +1394,145 @@ function roomActionLabel(
               : reference.entryKey;
       return pickupLabel(supplemental?.label ?? entryLabel);
     }
+    case 'useFountain':
+      return 'Use fountain';
+    case 'interactKeepsakeRack':
+      return 'Choose keepsake';
   }
+}
+
+/**
+ * Adapt the engine-owned roster and lifecycle products without re-owning their
+ * participation, repair, proposal, or timeline policy. Occurrence assembly
+ * enriches these rows with reward controls below; completion rooms use this
+ * base projection directly.
+ */
+export function assembleBaseWorkspaceRoomActions(input: {
+  readonly roster: import('@run-planner/engine/simulation').RoomActionRoster;
+  readonly lifecycleTimeline: RoomLifecycleTimeline;
+  readonly owner: OccurrenceAddress | CompletionRoomAddress;
+  readonly markerFor: (address: RoomActionSemanticAddress) => WorkspaceMarker;
+  readonly labelFor: (
+    reference: import('@run-planner/engine/authored-project').RoomActionReference,
+  ) => string;
+  readonly proposalFilter?: (
+    proposal: import('@run-planner/engine/simulation').RoomActionProposal,
+  ) => boolean;
+  readonly boundaryFilter?: (boundary: WorkspaceRoomLifecycleBoundary) => boolean;
+}): WorkspaceRoomActions {
+  const proposals = input.roster.proposals
+    .filter((proposal) => input.proposalFilter?.(proposal) ?? true)
+    .map((proposal, index) =>
+      Object.freeze({
+        kind: proposal.kind,
+        key: `${proposal.kind}:${index}:${roomActionKey(proposal.reference)}`,
+        label:
+          proposal.kind === 'remove'
+            ? 'Remove from timeline'
+            : `${proposal.kind === 'insert' ? 'Insert' : 'Move'} to position ${(proposal.toIndex ?? 0) + 1}`,
+        reference: proposal.reference,
+        structurallyAuthorable: proposal.structurallyAuthorable,
+        ...(proposal.toIndex === undefined ? {} : { toIndex: proposal.toIndex }),
+      }),
+    );
+  const keysByAction = new Map<string, string[]>();
+  for (const proposal of proposals) {
+    const key = roomActionKey(proposal.reference);
+    keysByAction.set(key, [...(keysByAction.get(key) ?? []), proposal.key]);
+  }
+  const issuesFor = (actionKey: string): readonly string[] =>
+    Object.freeze(
+      input.roster.issues.flatMap((issue) => {
+        if (roomActionKey(issue.reference) !== actionKey) return [];
+        switch (issue.kind) {
+          case 'dependency':
+            return [`Dependency: ${issue.detail}`];
+          case 'window':
+            return [`Timing: ${issue.detail}`];
+          case 'stale':
+            return ['This action no longer belongs to the room.'];
+          case 'unrankedRequired':
+            return ['This required action has not been placed.'];
+        }
+      }),
+    );
+  const rows = Object.freeze(
+    input.roster.rows.map((row) =>
+      Object.freeze({
+        address: row.owner as RoomActionSemanticAddress,
+        executable: row.executable,
+        issues: issuesFor(row.key),
+        key: row.key,
+        label: input.labelFor(row.reference),
+        marker: input.markerFor(row.owner as RoomActionSemanticAddress),
+        participation: row.participation,
+        proposalKeys: Object.freeze(keysByAction.get(row.key) ?? []),
+        rank: row.rank,
+        reference: row.reference,
+        stale: row.stale,
+        window: row.window,
+      }),
+    ),
+  );
+  const repair = input.lifecycleTimeline.repairRows.flatMap(({ key }) => {
+    const row = rows.find((candidate) => candidate.key === key);
+    return row === undefined ? [] : [row];
+  });
+  const optionalRows = Object.freeze(
+    repair.filter((row) => row.rank === null && !row.stale && row.participation === 'optional'),
+  );
+  const optionalKeys = new Set(optionalRows.map((row) => row.key));
+  const entries: WorkspaceRoomLifecycleTimeline['entries'][number][] = [];
+  for (const entry of input.lifecycleTimeline.entries) {
+    if (entry.kind === 'action') {
+      entries.push(
+        Object.freeze({
+          kind: 'action' as const,
+          actionKey: entry.action.key,
+          rank: entry.rank,
+          presentation: 'row' as const,
+          ...(entry.phaseKey === undefined ? {} : { phaseKey: entry.phaseKey }),
+        }),
+      );
+    } else if (input.boundaryFilter === undefined || input.boundaryFilter(entry.boundary)) {
+      entries.push(
+        Object.freeze({
+          kind: 'boundary' as const,
+          boundary: entry.boundary,
+          rank: entry.rank,
+          placement: entry.placement,
+        }),
+      );
+    }
+  }
+  return Object.freeze({
+    interactionKey: semanticAddressKey(input.owner),
+    owner: input.owner,
+    rows,
+    proposals: Object.freeze(proposals),
+    checkpoints: Object.freeze(
+      input.roster.checkpoints
+        .filter((checkpoint) => checkpoint.checkpointKey !== 'outgoingGeneration')
+        .map((checkpoint) =>
+          Object.freeze({
+            key: checkpoint.checkpointKey,
+            label: checkpoint.label,
+            afterRank: checkpoint.afterRank,
+            window: checkpoint.window,
+          }),
+        ),
+    ),
+    optionalRows,
+    repairRows: Object.freeze(repair.filter((row) => !optionalKeys.has(row.key))),
+    timeline: Object.freeze({
+      entries: Object.freeze(entries),
+      boundaries: Object.freeze(
+        input.lifecycleTimeline.boundaries.filter(
+          (boundary) => input.boundaryFilter?.(boundary) ?? true,
+        ),
+      ),
+    }),
+  });
 }
 
 function roomActionsForOccurrence(
@@ -1789,7 +1930,8 @@ function projectRoomLifecycleTimeline(
             Object.freeze({
               choices: Object.freeze(choices),
               marker: selected.marker,
-              owner: selected.address,
+              owner:
+                selected.address as import('@run-planner/engine/authored-project').RoomActionAddress,
               selected: boundary.phaseKey,
               slotOrdinal: index + 1,
             }),

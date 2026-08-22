@@ -1,7 +1,6 @@
 import type {
   BossCompletionArcanaAddress,
   CompletionRoomAddress,
-  KeepsakeSelectionAddress,
   OccurrenceAddress,
 } from '../../authored-project/addresses';
 import type { RoomActionReference } from '../../authored-project/model';
@@ -14,11 +13,6 @@ import type { Catalog } from '../../catalog-schema';
 import { scopeRoomLifecycleStructure } from '../../authored-project/room-action-domain';
 import { roomActionKey } from '../../authored-project/room-actions';
 import type { RoomActionRoster, RoomActionRow } from './model';
-
-type PostbossKeepsakeSelectionAddress = Extract<
-  KeepsakeSelectionAddress,
-  { readonly owner: CompletionRoomAddress }
->;
 
 export type RoomLifecycleBoundary =
   | Exclude<
@@ -53,7 +47,7 @@ type RoomLifecycleBoundaryEntry = Extract<
 >;
 
 export interface RoomLifecycleTimeline {
-  readonly owner: OccurrenceAddress;
+  readonly owner: OccurrenceAddress | CompletionRoomAddress;
   readonly structure: RoomLifecycleStructure;
   readonly entries: readonly RoomLifecycleTimelineEntry[];
   readonly boundaries: readonly RoomLifecycleBoundary[];
@@ -62,11 +56,11 @@ export interface RoomLifecycleTimeline {
 }
 
 export interface RoomLifecycleTimelineInput {
-  readonly owner: OccurrenceAddress;
+  readonly owner: OccurrenceAddress | CompletionRoomAddress;
   readonly roomActionRoster: RoomActionRoster;
 }
 
-/** A derived completion room has lifecycle, but never an authored action order. */
+/** Boss completion remains a derived fixed lifecycle timeline. */
 export type CompletionRoomLifecycleTimelineEntry =
   | {
       readonly kind: 'boundary';
@@ -79,11 +73,6 @@ export type CompletionRoomLifecycleTimelineEntry =
       readonly kind: 'fixedEffect';
       readonly effect: 'judgment';
       readonly owner: BossCompletionArcanaAddress;
-    }
-  | {
-      readonly kind: 'fixedEffect';
-      readonly effect: 'keepsakeSelection';
-      readonly owner: PostbossKeepsakeSelectionAddress;
     };
 
 export interface CompletionRoomLifecycleTimeline {
@@ -93,15 +82,14 @@ export interface CompletionRoomLifecycleTimeline {
 
 /**
  * Completion rooms are derived canonical lifecycle rooms rather than authored
- * occurrences. This keeps their visible spine and fixed post-Boss effects in
- * the engine without inventing a RoomActionReference or editable ordering.
+ * occurrences. Boss keeps its fixed effect; Postboss action chronology is
+ * published through the shared Room Action timeline instead.
  */
 export function assembleCompletionRoomLifecycleTimeline(input: {
   readonly catalog: Catalog;
   readonly owner: CompletionRoomAddress;
   readonly roomGameName: string;
   readonly judgment?: BossCompletionArcanaAddress;
-  readonly keepsakeSelection?: PostbossKeepsakeSelectionAddress;
 }): CompletionRoomLifecycleTimeline {
   const room = input.catalog.rooms.byKey[input.roomGameName];
   const phaseKey = room?.encounterSlotBindings[0]?.slotKey;
@@ -147,15 +135,6 @@ export function assembleCompletionRoomLifecycleTimeline(input: {
         kind: 'fixedEffect' as const,
         effect: 'judgment' as const,
         owner: input.judgment,
-      }),
-    );
-  }
-  if (room.kind === 'PostBoss' && input.keepsakeSelection !== undefined) {
-    entries.push(
-      Object.freeze({
-        kind: 'fixedEffect' as const,
-        effect: 'keepsakeSelection' as const,
-        owner: input.keepsakeSelection,
       }),
     );
   }

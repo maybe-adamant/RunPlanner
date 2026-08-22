@@ -5,7 +5,7 @@ import type {
   AuthoredTraitOffer,
 } from './traits';
 
-export const PROJECT_DOCUMENT_SCHEMA_VERSION = 48 as const;
+export const PROJECT_DOCUMENT_SCHEMA_VERSION = 49 as const;
 
 declare const occurrenceIdBrand: unique symbol;
 
@@ -109,7 +109,9 @@ export type RoomActionReference =
       readonly kind: 'interactAcquisitionEntry';
       readonly siteKey: string;
       readonly entryKey: string;
-    };
+    }
+  | { readonly kind: 'useFountain' }
+  | { readonly kind: 'interactKeepsakeRack' };
 
 export interface RoomActionState {
   readonly order: readonly RoomActionReference[];
@@ -313,6 +315,8 @@ export interface AuthoredBiomePlan {
   readonly bossCompletionArcanaKeys?: readonly string[];
   /** Present on physical ordinary-rack biomes, including a dormant final configured biome. */
   readonly postbossKeepsakeDisposition?: PostbossKeepsakeDisposition;
+  /** One derived Postboss chronology, dormant while this biome is the route tail. */
+  readonly postbossRoomActions?: RoomActionState;
   /** Dormant unless this Postboss selection replaces with a supported keepsake. */
   readonly keepsakeEquipResults?: AuthoredKeepsakeEquipResults;
   /** Dormant until Gift Gift Gift reaches a Hammer replay at this biome start. */

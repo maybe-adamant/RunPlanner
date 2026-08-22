@@ -29,7 +29,7 @@ import { FindingCount, SemanticOwnerMarker } from '@planner/ui/feedback/Evaluati
 import { AuthoringFrontier, BatchWorkbench, TopologyRemovalAction } from './DecisionWorkbench';
 import { BiomeFieldControls } from './BiomeFieldControls';
 import { HubDecisionWorkbench } from './HubDecisionWorkbench';
-import { OccurrenceWorkbench } from './OccurrenceWorkbench';
+import { OccurrenceWorkbench, RoomActionsWorkbench } from './OccurrenceWorkbench';
 import { RoomSelector } from './RoomSelector';
 import { RunStateSheet } from './RunStateSheet';
 import { RewardControlEditor } from '../rewards/RewardControlEditor';
@@ -453,7 +453,40 @@ function CompletionWorkbench({
       <p className="card-kicker">{node.role === 'postboss' ? 'Postboss' : 'Boss'}</p>
       <h3>{node.label}</h3>
       <SemanticOwnerMarker address={node.marker.address} />
-      {node.timeline === undefined ? null : (
+      {node.role === 'postboss' && node.roomActions !== undefined ? (
+        <>
+          <RoomActionsWorkbench
+            actions={node.roomActions}
+            interactions={interactions}
+            renderRowContent={(row) =>
+              row.reference.kind !== 'interactKeepsakeRack' ||
+              keepsake === undefined ||
+              node.keepsakeSelection === undefined ? null : (
+                <div className="completion-keepsake-action">
+                  <PostbossKeepsakeControl
+                    interaction={keepsake}
+                    value={node.keepsakeSelection.value}
+                  />
+                  {renderEquipResult()}
+                </div>
+              )
+            }
+          >
+            {keepsake === undefined ||
+            node.keepsakeSelection === undefined ||
+            node.keepsakeSelection.value.kind !== 'retain' ? null : (
+              <section aria-label="Choose keepsake" className="completion-keepsake-action">
+                <strong>Choose keepsake</strong>
+                <PostbossKeepsakeControl
+                  interaction={keepsake}
+                  value={node.keepsakeSelection.value}
+                />
+                {renderEquipResult()}
+              </section>
+            )}
+          </RoomActionsWorkbench>
+        </>
+      ) : node.timeline === undefined ? null : (
         <section aria-label="Room Timeline" className="room-actions-workbench">
           <header className="local-reward-heading">
             <h4>Room Timeline</h4>
@@ -507,27 +540,7 @@ function CompletionWorkbench({
                   </li>
                 );
               }
-              return keepsake === undefined || node.keepsakeSelection === undefined ? null : (
-                <li
-                  aria-label="Choose keepsake"
-                  className="hub-open-room-card room-action-row completion-timeline-effect-row"
-                  key={entry.effect}
-                >
-                  <div className="owner-markers room-action-identity">
-                    <span aria-hidden="true" className="hub-roster-rank">
-                      {rank}
-                    </span>
-                    <strong>Choose keepsake</strong>
-                  </div>
-                  <div className="hub-rank-actions room-action-controls">
-                    <PostbossKeepsakeControl
-                      interaction={keepsake}
-                      value={node.keepsakeSelection.value}
-                    />
-                  </div>
-                  {renderEquipResult()}
-                </li>
-              );
+              return null;
             })}
           </ol>
         </section>

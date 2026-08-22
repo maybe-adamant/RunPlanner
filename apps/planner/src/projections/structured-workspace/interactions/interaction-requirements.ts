@@ -3,6 +3,7 @@ import {
   type BatchRewardStoreAddress,
   type AdditionalExitAddress,
   type BiomeAddress,
+  type CompletionRoomAddress,
   type EncounterPhaseAddress,
   type ExitDecisionAddress,
   type ExitSelectionAddress,
@@ -88,7 +89,7 @@ export type WorkspaceOccurrenceInteractionRequirement =
     }
   | {
       readonly kind: 'roomActions';
-      readonly owner: OccurrenceAddress;
+      readonly owner: OccurrenceAddress | CompletionRoomAddress;
       readonly proposals: readonly WorkspaceRoomActionProposal[];
     }
   | {

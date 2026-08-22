@@ -1,5 +1,8 @@
 import type { Catalog, CompletionDescriptor, RoomDeclaration } from '../../catalog-schema';
 import { createCompletionRoomAddress, type BiomeAddress } from '../../authored-project/addresses';
+import { assembleCompletionRoomActionDomain } from '../../authored-project/room-action-domain';
+import { assembleRoomActionRoster, assembleRoomLifecycleTimeline } from '../room-actions';
+import type { RoomActionState } from '../../authored-project/model';
 import { createDefaultRoomEncounterState } from '../../authored-project/room-state/encounters';
 import { alwaysActiveEncounterSlotKeys, resolveEncounterPhases } from '../encounters';
 import type { CanonicalCompletionRoom } from './model';
@@ -17,6 +20,8 @@ interface CompletionMaterializationOptions {
   readonly completion: CompletionDescriptor;
   readonly enteredStorePolicy: CompletionEnteredStorePolicy;
   readonly lifecycleProducerPolicy: 'encounterCompatible' | 'noneOnly';
+  readonly postbossRoomActions?: RoomActionState;
+  readonly postbossKeepsakeRack?: boolean;
   readonly fail: (detail: string) => never;
 }
 
@@ -53,6 +58,8 @@ export function materializeCompletionRooms({
   completion,
   enteredStorePolicy,
   lifecycleProducerPolicy,
+  postbossRoomActions,
+  postbossKeepsakeRack,
   fail,
 }: CompletionMaterializationOptions): readonly CanonicalCompletionRoom[] {
   return Object.freeze(
@@ -87,9 +94,34 @@ export function materializeCompletionRooms({
         fail(`${room.gameName} cannot use lifecycle ${expected.lifecycleProfileKey}`);
       }
       const resolvedStoreKey = enteredRewardStoreKey(room, enteredStorePolicy, fail);
+      const origin = createCompletionRoomAddress(biome, descriptor.role);
+      const postbossOwner = origin as typeof origin & { readonly role: 'postboss' };
+      const actionDomain =
+        descriptor.role !== 'postboss' || postbossRoomActions === undefined
+          ? undefined
+          : assembleCompletionRoomActionDomain({
+              catalog,
+              biome,
+              roomGameName: room.gameName,
+              order: postbossRoomActions!.order,
+              hasKeepsakeRack: postbossKeepsakeRack === true,
+            });
+      const roomActionRoster =
+        actionDomain === undefined
+          ? undefined
+          : assembleRoomActionRoster({
+              owner: postbossOwner,
+              order: postbossRoomActions!.order,
+              contributions: actionDomain.contributions,
+              lifecycleStructure: actionDomain.lifecycleStructure,
+            });
+      const roomLifecycleTimeline =
+        roomActionRoster === undefined
+          ? undefined
+          : assembleRoomLifecycleTimeline({ owner: postbossOwner, roomActionRoster });
       return Object.freeze({
         kind: 'completion',
-        origin: createCompletionRoomAddress(biome, descriptor.role),
+        origin,
         role: descriptor.role,
         gameName: room.gameName,
         encounterEnvelopeKey: room.encounterEnvelopeKey,
@@ -104,6 +136,8 @@ export function materializeCompletionRooms({
         counterEffects: room.counters,
         ...(resolvedStoreKey === undefined ? {} : { enteredRewardStoreKey: resolvedStoreKey }),
         entered: true,
+        ...(roomActionRoster === undefined ? {} : { roomActionRoster }),
+        ...(roomLifecycleTimeline === undefined ? {} : { roomLifecycleTimeline }),
       });
     }),
   );

@@ -211,8 +211,8 @@ describe('App', () => {
     );
 
     const markup = appMarkup(application);
-    expect(markup).toContain('Hub traversal');
-    expect(markup).toContain('Visit order ends here');
+    expect(markup).toContain('Hub Overview');
+    expect(markup).toContain('Open rooms');
     expect(markup).toContain('data-open="true"');
     expect(markup).toContain(
       semanticOwnerElementId(createHubDecisionAddress(createBiomeAddress('Surface', 'N'), 'hub')),
@@ -308,7 +308,7 @@ describe('App', () => {
     expect(finding.origin).toEqual(openSet);
     expect(application.store.getState().editorSession.focusedSemanticOwner).toEqual(openSet);
     expect(application.store.getState().projectWorkspace.history).toBe(historyBeforeNavigation);
-    expect(markup).toContain('Hub traversal');
+    expect(markup).toContain('Hub Overview');
     expect(markup).toContain(semanticOwnerElementId(openSet));
   });
 

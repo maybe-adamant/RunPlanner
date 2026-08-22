@@ -384,14 +384,14 @@ describe('Experimental Hammer', () => {
     }
   });
 
-  it('grants 20 uses at the Postboss rack before Empty completion advances it to 19', () => {
+  it('grants 20 uses at the Postboss rack after automatic completion has entered', () => {
     const project = withPostbossHammer(createGoldenFGHProject());
     const evaluated = evaluatedBiome(project, 'F');
     const branch = evaluated.rewards.branches[0]!;
     expect(branch.keepsakes.experimentalHammers.at(-1)).toMatchObject({
       traitKey: 'StaffJumpSpecialTrait',
       active: true,
-      remainingUses: 19,
+      remainingUses: 20,
     });
     const equip = branch.traitHistory?.events.find(
       (event) => event.acquisitionRole === 'experimentalHammerEquip',
@@ -404,7 +404,7 @@ describe('Experimental Hammer', () => {
     );
     expect(equip).toBeDefined();
     expect(postbossCompletion).toBeDefined();
-    expect(equip!.sequence).toBeLessThan(postbossCompletion!.sequence);
+    expect(equip!.sequence).toBeGreaterThan(postbossCompletion!.sequence);
   });
 
   it('advances once for every active O ordered phase', () => {
@@ -488,7 +488,7 @@ describe('Experimental Hammer', () => {
     if (n === undefined || !('rewards' in n) || o === undefined || !('rewards' in o)) {
       throw new Error('expected valid N/O reward lifecycle');
     }
-    expect(n.rewards.branches[0]?.keepsakes.experimentalHammers.at(-1)?.remainingUses).toBe(19);
+    expect(n.rewards.branches[0]?.keepsakes.experimentalHammers.at(-1)?.remainingUses).toBe(20);
     const oCompletions = o.history.events.filter((event) => event.kind === 'encounterCompleted');
     expect(
       oCompletions.some(
@@ -500,13 +500,13 @@ describe('Experimental Hammer', () => {
       ),
     ).toBe(true);
     expect(o.rewards.branches[0]?.keepsakes.experimentalHammers.at(-1)?.remainingUses).toBe(
-      19 - oCompletions.length,
+      20 - oCompletions.length,
     );
   });
 
   it('keeps an unavailable Postboss Hammer replacement at its parent and does not reach its child', () => {
     const project = withPostbossHammer(createGoldenFGHProject());
-    const evaluated = evaluatedBiome(createGoldenFGHProject(), 'F');
+    const evaluated = evaluatedBiome(project, 'F');
     const plan = route(project).biomes.find((biome) => biome.biomeKey === 'F');
     if (plan?.postbossKeepsakeDisposition === undefined || plan.keepsakeEquipResults === undefined)
       throw new Error('expected authored F Hammer result');
@@ -527,8 +527,6 @@ describe('Experimental Hammer', () => {
       catalog,
       {
         ...evaluated.snapshot,
-        postbossKeepsakeDisposition: plan.postbossKeepsakeDisposition,
-        keepsakeEquipResults: plan.keepsakeEquipResults,
       },
       evaluated.history,
       1,
@@ -571,7 +569,7 @@ describe('Experimental Hammer', () => {
       ...alreadyEquipped,
       keepsakes: createKeepsakeState(catalog, 'ManaOverTimeRefundKeepsake', arcanaFear),
     };
-    const evaluated = evaluatedBiome(createGoldenFGHProject(), 'F');
+    const evaluated = evaluatedBiome(project, 'F');
     const plan = route(project).biomes.find((biome) => biome.biomeKey === 'F');
     if (plan?.postbossKeepsakeDisposition === undefined || plan.keepsakeEquipResults === undefined)
       throw new Error('expected authored F Hammer result');
@@ -579,8 +577,6 @@ describe('Experimental Hammer', () => {
       catalog,
       {
         ...evaluated.snapshot,
-        postbossKeepsakeDisposition: plan.postbossKeepsakeDisposition,
-        keepsakeEquipResults: plan.keepsakeEquipResults,
       },
       evaluated.history,
       1,

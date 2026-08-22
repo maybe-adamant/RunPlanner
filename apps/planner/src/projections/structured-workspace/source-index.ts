@@ -332,6 +332,7 @@ function appendPrefixOwners(
     // visits remain independently covered even if malformed state reuses it.
     appendDecisionOwners(keys, decision, omittedHubTargetKey);
   }
+  for (const room of prefix.completionRooms ?? []) appendCompletionRoomOwners(keys, room);
 
   if (frontier?.kind === 'exitDecision') {
     appendOwner(keys, frontier.origin);

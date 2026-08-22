@@ -1813,7 +1813,13 @@ export function evaluateProgressiveBiomeAssemblyBeforeClamp(
   plan: AuthoredBiomePlan,
   context: ProgressiveBiomeContext,
 ): ProgressiveBiomeEvaluationAssembly | null {
-  const initial = materializeBiomePrefix(catalog, biome, plan, context.loadout);
+  const initial = materializeBiomePrefix(
+    catalog,
+    biome,
+    plan,
+    context.loadout,
+    context.hasConfiguredSuccessor === true ? plan.postbossRoomActions : undefined,
+  );
   if (initial?.entryRoom === undefined) return null;
   const materializedPrefix = Object.freeze({
     ...initial,
@@ -1874,7 +1880,13 @@ export function evaluateProgressiveBiomeAssembly(
   plan: AuthoredBiomePlan,
   context: ProgressiveBiomeContext,
 ): ProgressiveBiomeEvaluationAssembly | null {
-  const initial = materializeBiomePrefix(catalog, biome, plan, context.loadout);
+  const initial = materializeBiomePrefix(
+    catalog,
+    biome,
+    plan,
+    context.loadout,
+    context.hasConfiguredSuccessor === true ? plan.postbossRoomActions : undefined,
+  );
   if (initial?.entryRoom === undefined) return null;
   const authoredPrefix = Object.freeze({
     ...initial,
@@ -1959,7 +1971,13 @@ export function evaluateProgressiveBiomeAssemblyFromSelectedProducts(
   context: ProgressiveBiomeContext,
   selectedProducts: ProgressiveBiomeSelectedProducts,
 ): ProgressiveBiomeEvaluationAssembly | null {
-  const initial = materializeBiomePrefix(catalog, biome, plan, context.loadout);
+  const initial = materializeBiomePrefix(
+    catalog,
+    biome,
+    plan,
+    context.loadout,
+    context.hasConfiguredSuccessor === true ? plan.postbossRoomActions : undefined,
+  );
   if (initial?.entryRoom === undefined) return null;
   const authoredPrefix = Object.freeze({
     ...initial,

@@ -22,7 +22,7 @@ import type {
   OccurrenceAddress,
   RewardWheelAddress,
   RewardWheelOfferAddress,
-  RoomActionAddress,
+  RoomActionSemanticAddress,
   RouteAddress,
   ShopOfferAddress,
   TraitOfferAddress,
@@ -194,14 +194,14 @@ export type RoomReplacementCommand = {
 export type RoomActionCommand =
   | {
       readonly kind: 'InsertRoomAction';
-      readonly action: RoomActionAddress;
+      readonly action: RoomActionSemanticAddress;
       readonly reference: RoomActionReference;
       readonly index: number;
     }
-  | { readonly kind: 'RemoveRoomAction'; readonly action: RoomActionAddress }
+  | { readonly kind: 'RemoveRoomAction'; readonly action: RoomActionSemanticAddress }
   | {
       readonly kind: 'MoveRoomAction';
-      readonly action: RoomActionAddress;
+      readonly action: RoomActionSemanticAddress;
       readonly toIndex: number;
     }
   | {

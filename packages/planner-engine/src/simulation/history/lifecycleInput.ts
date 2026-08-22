@@ -73,12 +73,14 @@ export function createRoomLifecycleInput(
           ),
         );
   const roomActionRoster =
-    room.kind !== 'authored'
-      ? undefined
-      : scopeRoomActionRoster(
-          room.roomActionRoster,
-          encounterPhases.map((phase) => phase.slotKey),
-        );
+    room.kind === 'completion'
+      ? room.roomActionRoster
+      : room.kind !== 'authored'
+        ? undefined
+        : scopeRoomActionRoster(
+            room.roomActionRoster,
+            encounterPhases.map((phase) => phase.slotKey),
+          );
   return {
     origin: room.origin,
     lifecycleProfileKey: room.lifecycleProfileKey,

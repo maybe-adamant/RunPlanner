@@ -5,9 +5,11 @@ import {
   applyProjectCommand,
   createBiomeAddress,
   createCompletionRoomAddress,
+  createCompletionRoomActionAddress,
   createKeepsakeEquipResultAddress,
   createPostbossKeepsakeSelectionAddress,
   createProjectDocument,
+  roomActionKey,
   createRouteStartKeepsakeSelectionAddress,
   type KeepsakeSelectionAddress,
 } from '@run-planner/engine/authored-project';
@@ -98,10 +100,7 @@ describe('keepsake selection candidates', () => {
     const retained = keepsakesAfter(createGoldenFGHProject(), 'F');
     expect(retained).toMatchObject({
       currentKey: 'ManaOverTimeRefundKeepsake',
-      history: [
-        { key: 'ManaOverTimeRefundKeepsake', kind: 'start' },
-        { key: 'ManaOverTimeRefundKeepsake', kind: 'retain' },
-      ],
+      history: [{ key: 'ManaOverTimeRefundKeepsake', kind: 'start' }],
       removedKeys: [],
       fatedStatus: 'Unknown',
     });
@@ -123,6 +122,73 @@ describe('keepsake selection candidates', () => {
       removedKeys: ['ManaOverTimeRefundKeepsake'],
       fatedStatus: 'Fated',
     });
+  });
+
+  it('executes Postboss fountain and rack actions in ranked lifecycle order, never at room creation', () => {
+    const replaced = applyProjectCommand(createGoldenFGHProject(), catalog, {
+      kind: 'ReplacePostbossKeepsake',
+      selection: fPostboss,
+      value: { kind: 'replace', keepsakeKey: 'ForceZeusBoonKeepsake' },
+    });
+    const f = simulateProjectAssembly(catalog, replaced)
+      .evaluation.routes.find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find((biome) => biome.biomeKey === 'F');
+    if (f === undefined || f.authoring !== 'complete' || f.validity !== 'valid')
+      throw new Error('expected reached F biome');
+    const postbossEvents = f.history.events.filter(
+      (event) =>
+        (event.kind === 'fountainUsed' || event.kind === 'keepsakeRackUsed') &&
+        event.origin.kind === 'completionRoom' &&
+        event.origin.role === 'postboss',
+    );
+    expect(postbossEvents.map((event) => event.kind)).toEqual(['fountainUsed', 'keepsakeRackUsed']);
+    const postbossCreated = f.history.events.find(
+      (event) =>
+        event.kind === 'roomCreated' &&
+        event.origin.kind === 'completionRoom' &&
+        event.origin.role === 'postboss',
+    );
+    expect(postbossCreated).toBeDefined();
+    expect(postbossCreated!.sequence).toBeLessThan(postbossEvents[0]!.sequence);
+    expect(postbossEvents[0]!.sequence).toBeLessThan(postbossEvents[1]!.sequence);
+    expect(keepsakesAfter(replaced, 'F')?.history).toContainEqual({
+      key: 'ForceZeusBoonKeepsake',
+      kind: 'replace',
+    });
+  });
+
+  it('applies the replacement at the rack even when the rack is ranked before the fountain', () => {
+    const completion = createCompletionRoomAddress(
+      createBiomeAddress('Underworld', 'F'),
+      'postboss',
+    ) as ReturnType<typeof createPostbossKeepsakeSelectionAddress>['owner'];
+    const rack = { kind: 'interactKeepsakeRack' as const };
+    const replaced = applyProjectCommand(createGoldenFGHProject(), catalog, {
+      kind: 'ReplacePostbossKeepsake',
+      selection: fPostboss,
+      value: { kind: 'replace', keepsakeKey: 'ForceZeusBoonKeepsake' },
+    });
+    const reordered = applyProjectCommand(replaced, catalog, {
+      kind: 'MoveRoomAction',
+      action: createCompletionRoomActionAddress(completion, roomActionKey(rack)),
+      toIndex: 0,
+    });
+    const f = simulateProjectAssembly(catalog, reordered)
+      .evaluation.routes.find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find((biome) => biome.biomeKey === 'F');
+    if (f === undefined || f.authoring !== 'complete' || f.validity !== 'valid')
+      throw new Error('expected reached F biome');
+    expect(
+      f.history.events
+        .filter(
+          (event) =>
+            (event.kind === 'fountainUsed' || event.kind === 'keepsakeRackUsed') &&
+            event.origin.kind === 'completionRoom' &&
+            event.origin.role === 'postboss',
+        )
+        .map((event) => event.kind),
+    ).toEqual(['keepsakeRackUsed', 'fountainUsed']);
+    expect(keepsakesAfter(reordered, 'F')?.currentKey).toBe('ForceZeusBoonKeepsake');
   });
 
   it('reports a persisted no-return selection without inventing a transition', () => {

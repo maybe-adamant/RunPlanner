@@ -7,9 +7,10 @@ Locked delivery plan based on clean commit
 review completed, followed by a main-session overengineering pass requested by
 the user. That pass removed the proposed participation/exit-blocking split and
 required-object lifecycle specialization. The plan now extends the existing
-Room Action machinery only: fountain is a new required participant; an
-authored keepsake replacement atomically owns one optional rack participant;
-and Retain means that rack interaction is absent.
+Room Action machinery only: fountain is a structural required participant on
+an active Postboss transition; an authored keepsake replacement atomically owns
+one optional rack participant; and Retain means that rack interaction is
+absent.
 
 This is a temporary implementation plan. It is intentionally not linked from
 the README or from stable design authorities. Gate B must absorb the completed
@@ -67,12 +68,11 @@ feature.
 
 The implementation budget is deliberately narrow. It may add the two action
 reference variants, one Postboss action-order field, one completion action
-address variant, exact fountain/rack action events, and the minimum catalog
-fact needed to identify a derived Postboss fountain. Everything else must extend the
-existing Room Action domain, scheduler, roster, timeline, command, lifecycle,
-projection, and React rendering paths. A completion-owner adapter is not a new
-policy owner. No generic feature framework or parallel completion-action
-infrastructure is permitted.
+address variant, and exact fountain/rack action events. Everything else must
+extend the existing Room Action domain, scheduler, roster, timeline, command,
+lifecycle, projection, and React rendering paths. A completion-owner adapter is
+not a new policy owner. No generic feature framework or parallel
+completion-action infrastructure is permitted.
 
 ## Source Facts and Planner Boundaries
 
@@ -95,10 +95,13 @@ on the sixth Soul Pylon.
 
 ### Nonfinal Postboss
 
-The current physical nonfinal Postboss set is F, G, H, N, O, and P. Each has a
-required fountain and an optional keepsake rack. The rack may be used on either
-side of the fountain. The last configured biome has no succeeding-biome
-Postboss interaction frontier.
+Every realized Postboss transition before another configured biome has a
+required fountain. This follows the structural completion role and route
+adjacency, not biome identity, room game name, or declaration metadata. It
+therefore remains true when a future route such as a Dream Dive reorders biomes
+or overrides the concrete Postboss room. The rack remains an independent biome
+capability and may be used on either side of the fountain. The last configured
+biome has no succeeding-biome Postboss interaction frontier.
 
 Activation must use route structure:
 
@@ -121,32 +124,19 @@ command, candidate, finding, fixture, or UI.
 
 ## Locked Cross-Cutting Decisions
 
-### 1. Catalog declarations own physical fountain presence
+### 1. The realized Postboss transition owns fountain presence
 
-Do not add a second required-object system or general room-feature framework.
-The existing authored Fountain template is already the exact authority for
-F/G/I/O/P ordinary Reprieves. Add only the missing normalized physical fact
-for derived completion rooms, for example:
+Do not add a declaration flag, second required-object system, or general
+room-feature framework. The existing authored Fountain template remains the
+authority for ordinary Reprieves. A derived completion room receives the
+fountain action from two structural facts already owned by simulation: its
+descriptor role is `postboss`, and its biome has a configured successor.
 
-```ts
-interface RoomDeclaration {
-  // existing fields
-  readonly hasHealthFountain: boolean;
-}
-```
-
-The exact field name may follow the catalog's local naming conventions. It is
-one declaration fact consumed by the existing Room Action domain, not a new
-capability registry, action factory, or required-object lifecycle.
-
-Normalize `true` only on F/G/H/N/O/P derived Postboss rooms. Ordinary
-Reprieves continue to derive fountain participation from their existing
-`mode: { kind: 'authored', templateKey: 'Fountain' }`; do not duplicate that
-fact on them unless compiler normalization requires one uniform field.
-
-Do not infer a fountain on the modeled H Echo Bridge, the persistent N Hub,
-I/Q completion tails, or any room merely because it has a broad activation
-hook. Catalog tests own the exact positive and negative matrix.
+Concrete room identity and biome order are deliberately irrelevant. This keeps
+future Dream Dive room overrides and reordered biome sequences on the same
+rule without copying fountain metadata into every possible replacement room.
+Do not infer a fountain on the modeled H Echo Bridge or persistent N Hub,
+because neither is the active Postboss completion transition.
 
 ### 2. Schema 49 adds one Postboss chronology
 
@@ -163,21 +153,16 @@ interface AuthoredBiomePlan {
 }
 ```
 
-`postbossRoomActions` is required when the layout's Postboss room has at least
-one supported action capability: its room declaration has a health fountain,
-or the biome declaration owns a Postboss keepsake rack. These remain separate
-catalog facts. The existing Room Action domain contributes `useFountain` only
-from the room's fountain fact and contributes `interactKeepsakeRack` only from
-the rack capability plus an active replacement. In the current catalog both
-capabilities share the F/G/H/N/O/P set and I/Q own neither, but no engine or UI
-code may infer one from the other.
+`postbossRoomActions` is required when the layout owns a Postboss completion
+descriptor. Its default contains `useFountain`; simulation activates that
+chronology only when the route has a configured successor. The existing Room
+Action domain contributes `interactKeepsakeRack` independently from the biome's
+rack capability plus an active replacement.
 
 The field remains persisted but dormant while that biome is the configured
 route tail. `postbossKeepsakeDisposition` remains required only by rack
-capability; a future fountain-only or rack-only Postboss can use the same
-independent rules without changing the chronology model. Catalog/compiler and
-codec tests attest the current six-biome coincidence explicitly rather than
-turning it into an implicit contract.
+capability. A future overridden Postboss therefore keeps its structural
+fountain chronology without gaining a rack or room-specific fountain flag.
 
 The state uses the same `RoomActionState` and `RoomActionReference` contracts as
 ordinary occurrences. There is no second order type, boolean
@@ -258,7 +243,7 @@ incoming reward -> fountain
 Both orders remain legal after a user move. Existing ranked relative order is
 never normalized by an unrelated command.
 
-New Postboss state defaults to:
+Every structural Postboss state defaults to:
 
 ```ts
 {
@@ -323,8 +308,8 @@ dynamic completion boundary, not a new lifecycle-profile switch.
 
 The schema-local fixture migration maps schema 48 to 49 as follows:
 
-- every physical-rack biome receives `postbossRoomActions`;
-- `retain` receives `[useFountain]`;
+- every biome with a Postboss descriptor receives `postbossRoomActions`;
+- every new Postboss order receives `[useFountain]`;
 - an existing `replace` receives `[interactKeepsakeRack, useFountain]`, because
   schema 48 always applied replacement before the newly modeled fountain;
 - every existing ordinary Reprieve occurrence receives a missing
@@ -337,8 +322,8 @@ to call schema-49 semantic code:
 
 1. parse each schema-48 checkpoint as `unknown`;
 2. mechanically set schema 49 and add the closed `postbossRoomActions` shape
-   from the old disposition (`retain -> [fountain]`,
-   `replace -> [rack, fountain]`);
+   to every Postboss-owning biome (`[fountain]`, or `[rack, fountain]` when the
+   old disposition was `replace`);
 3. strict-decode that structurally complete but potentially chronology-incomplete
    schema-49 document;
 4. invoke the production action domain/scheduler on the decoded exact Reprieve
@@ -505,7 +490,7 @@ effect or an unusable persisted contract.
 
 Gate A owns:
 
-1. one normalized Postboss fountain-presence fact while ordinary Reprieve
+1. structural Postboss fountain participation while ordinary Reprieve
    continues using its existing Fountain template;
 2. schema-49 `postbossRoomActions`, strict codec/defaults, semantic addresses,
    commands, and temporary fixture migration;
@@ -545,15 +530,6 @@ the same docs-only commit. Run the complete repository gate exactly once after
 Gate A review fixes and documentation are stable; record its truthful result.
 
 ## Primary Ownership and Expected Files
-
-### Catalog
-
-- `packages/planner-engine/src/catalog-schema/index.ts`
-- `packages/hades2-catalog/src/declarations/types.ts`
-- F/G/H/I/N/O/P/Q room declarations as required by the exact positive and
-  negative fountain set
-- `packages/hades2-catalog/src/compiler/rooms.ts`
-- catalog declaration/compiler tests
 
 ### Authored project and commands
 
@@ -604,9 +580,10 @@ closed product.
 
 Gate A is not complete until the following behaviors have owning witnesses.
 
-1. Catalog normalization keeps F/G/I/O/P Reprieves on the existing Fountain
-   template and exposes the one Postboss fountain fact on F/G/H/N/O/P, but not
-   H Echo Bridge, persistent N Hub, I Postboss, or Q Postboss.
+1. F/G/I/O/P Reprieves remain on the existing Fountain template. Every
+   structural Postboss chronology defaults a fountain, but only a Postboss with
+   a configured successor activates it; concrete room overrides, H Echo Bridge,
+   and persistent N Hub do not change that rule.
 2. Strict schema 49 requires `postbossRoomActions` on exact capable biomes,
    rejects schema 48, duplicate/unknown action references, and completion state
    on owners with no completion-action capability, while preserving
@@ -665,7 +642,8 @@ Gate A is not complete until the following behaviors have owning witnesses.
 
 ### Catalog and authored commands
 
-- catalog room/compiler tests own the complete fountain declaration matrix;
+- project defaults own structural Postboss chronology across concrete room
+  overrides and reordered route positions;
 - `authored-project/commands/room-actions.test.ts` owns required fountain
   defaulting, both orders, removal rejection, canonical restore, and H/N
   negatives;

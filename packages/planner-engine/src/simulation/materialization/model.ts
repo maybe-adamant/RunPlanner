@@ -214,6 +214,9 @@ export interface CanonicalCompletionRoom {
   readonly counterEffects: RoomCounterEffects;
   readonly enteredRewardStoreKey?: string;
   readonly entered: true;
+  /** Active derived Postboss chronology; absent for Boss and dormant route tails. */
+  readonly roomActionRoster?: import('../room-actions').RoomActionRoster;
+  readonly roomLifecycleTimeline?: import('../room-actions').RoomLifecycleTimeline;
 }
 
 export interface CanonicalHubRoom {

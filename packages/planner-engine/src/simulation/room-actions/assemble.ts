@@ -1,6 +1,8 @@
 import {
   createBiomeAddress,
+  createCompletionRoomActionAddress,
   createRoomActionAddress,
+  type CompletionRoomAddress,
   type OccurrenceAddress,
 } from '../../authored-project/addresses';
 import { roomActionKey } from '../../authored-project/room-actions';
@@ -129,7 +131,7 @@ function assessOrder(
 }
 
 export function assembleRoomActionRoster(options: {
-  readonly owner: OccurrenceAddress;
+  readonly owner: OccurrenceAddress | (CompletionRoomAddress & { readonly role: 'postboss' });
   readonly order: readonly RoomActionReference[];
   readonly contributions: readonly RoomActionRosterContribution[];
   readonly lifecycleStructure: RoomLifecycleStructure;
@@ -165,11 +167,13 @@ export function assembleRoomActionRoster(options: {
       key: roomActionKey(reference),
       owner:
         entry?.owner ??
-        createRoomActionAddress(
-          createBiomeAddress(options.owner.routeKey, options.owner.biomeKey),
-          options.owner.occurrenceId,
-          roomActionKey(reference),
-        ),
+        (options.owner.kind === 'occurrence'
+          ? createRoomActionAddress(
+              createBiomeAddress(options.owner.routeKey, options.owner.biomeKey),
+              options.owner.occurrenceId,
+              roomActionKey(reference),
+            )
+          : createCompletionRoomActionAddress(options.owner, roomActionKey(reference))),
       participation: entry?.participation ?? 'optional',
       window: entry?.window ?? frozen({ kind: 'standard', phase: 'afterCombat' }),
       dependencies: entry?.dependencies ?? frozen([]),

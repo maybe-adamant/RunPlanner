@@ -293,11 +293,12 @@ describe('Cherished Heirloom later keepsake equips', () => {
       kind: 'experimentalHammer',
       qualifyingEncounterUsesByRank: { Heroic: 30 },
     });
-    // Rack creation grants 30; the canonical Empty completion immediately after it consumes one.
+    // Postboss enters before the ranked rack action, so the new Hammer is not
+    // retroactively consumed by that automatic completion.
     expect(hammer).toMatchObject({
       active: true,
       traitKey: 'StaffJumpSpecialTrait',
-      remainingUses: 29,
+      remainingUses: 30,
     });
   });
 
@@ -313,7 +314,7 @@ describe('Cherished Heirloom later keepsake equips', () => {
     };
     const afterRetain = replayBiome(retainedProject, 'F', [retained]).branches[0]?.keepsakes;
     expect(afterRetain?.callingCard?.remainingCharges).toBe(2);
-    expect(afterRetain?.history.at(-1)).toEqual({ key: 'RarifyKeepsake', kind: 'retain' });
+    expect(afterRetain?.history.at(-1)).toEqual({ key: 'RarifyKeepsake', kind: 'start' });
 
     const neutral = directLaterEquip('BossPreDamageKeepsake');
     expect(neutral.rank).toBe('Epic');

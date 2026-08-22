@@ -4,7 +4,7 @@ export interface AuthoredProjectCheckpointManifestEntry {
   readonly route: 'Underworld' | 'Surface';
   readonly configuredBiomePrefix: readonly string[];
   readonly scenario: string;
-  readonly schemaVersion: 48;
+  readonly schemaVersion: 49;
   readonly catalogVersion: string;
   readonly sha256: string;
   readonly provenance: string;
@@ -17,9 +17,9 @@ export const checkpointManifest = Object.freeze([
     route: 'Underworld',
     configuredBiomePrefix: ['F', 'G'],
     scenario: 'Canonical Underworld F/G route prefix',
-    schemaVersion: 48,
+    schemaVersion: 49,
     catalogVersion: '0.27.0-arcana-fear-loadout',
-    sha256: '464309464a8c980fb16d70db1675e33c50b025a2154ead38ed107ec70150164a',
+    sha256: 'b088a7c3842d681272daaa7c733a19449f4bdc52ea88d884957b88a95e60604c',
     provenance: 'saved canonical Underworld F/G checkpoint',
   },
   {
@@ -28,9 +28,9 @@ export const checkpointManifest = Object.freeze([
     route: 'Underworld',
     configuredBiomePrefix: ['F', 'G', 'H'],
     scenario: 'Canonical Underworld F/G/H route prefix',
-    schemaVersion: 48,
+    schemaVersion: 49,
     catalogVersion: '0.27.0-arcana-fear-loadout',
-    sha256: 'c698a42eb6e33fef3b814fca3f34f709608523a51c2a9bb271e13ca3ebba160e',
+    sha256: 'c6d578156c0e091d4c11aa929f25f0893988027ab7dd788d05f02c0b29d2db82',
     provenance: 'saved canonical Underworld F/G/H checkpoint',
   },
   {
@@ -39,9 +39,9 @@ export const checkpointManifest = Object.freeze([
     route: 'Underworld',
     configuredBiomePrefix: ['F', 'G', 'H', 'I'],
     scenario: 'Canonical Underworld F/G/H/I route prefix',
-    schemaVersion: 48,
+    schemaVersion: 49,
     catalogVersion: '0.27.0-arcana-fear-loadout',
-    sha256: '009882fcee5e763900b3570cc82c9c9ee07360e222d90057f138176757851467',
+    sha256: 'c8fd90ed1b7480a7f83b81440084dffdb7b92ca1b75a66f616de95f1a3091d78',
     provenance: 'saved canonical Underworld F/G/H/I checkpoint',
   },
   {
@@ -50,9 +50,9 @@ export const checkpointManifest = Object.freeze([
     route: 'Underworld',
     configuredBiomePrefix: ['F'],
     scenario: 'F Midshop Pom resolution frontier',
-    schemaVersion: 48,
+    schemaVersion: 49,
     catalogVersion: '0.27.0-arcana-fear-loadout',
-    sha256: '9c8acb455287100b3ee67c211a364c20290a1c35b53569af0116d370d26bed62',
+    sha256: '864bcab452f1065394640c68b58cd56ed13c67c836384516ec03a88435f1adf6',
     provenance: 'saved canonical editor/generated checkpoint',
   },
   {
@@ -61,9 +61,9 @@ export const checkpointManifest = Object.freeze([
     route: 'Surface',
     configuredBiomePrefix: ['N'],
     scenario: 'Canonical Surface N Hub route prefix',
-    schemaVersion: 48,
+    schemaVersion: 49,
     catalogVersion: '0.27.0-arcana-fear-loadout',
-    sha256: 'f769871cf6a8acce6059b52c86bd36ffa12c8789e8015f72ef162cd05ec268a4',
+    sha256: 'f1f25c9b4b7c01283bef5f34c686037b565b3b8b5985ac1844e930af49b836e0',
     provenance: 'saved canonical editor/generated checkpoint',
   },
   {
@@ -72,9 +72,9 @@ export const checkpointManifest = Object.freeze([
     route: 'Surface',
     configuredBiomePrefix: ['N', 'O'],
     scenario: 'Canonical Surface N/O route prefix',
-    schemaVersion: 48,
+    schemaVersion: 49,
     catalogVersion: '0.27.0-arcana-fear-loadout',
-    sha256: 'cf38175fa8efe1a574ac1f509ac3ed82005193619bbda5c81767baec24666952',
+    sha256: '389116088456d2dfa09cdede3f60acba50ac2deea5084472f5a80f242bc49c81',
     provenance: 'saved canonical editor/generated checkpoint',
   },
   {
@@ -83,9 +83,9 @@ export const checkpointManifest = Object.freeze([
     route: 'Surface',
     configuredBiomePrefix: ['N', 'O', 'P'],
     scenario: 'Canonical Surface N/O/P route prefix',
-    schemaVersion: 48,
+    schemaVersion: 49,
     catalogVersion: '0.27.0-arcana-fear-loadout',
-    sha256: '0b895c9df76429745c0e3ce47d9e66099f70489cb80a05dce226d0356dd27300',
+    sha256: '0a5d8724c8209a1917965bdfd904dc4bb55bed9f1705cf8faccf7424a664b228',
     provenance: 'saved canonical editor/generated checkpoint',
   },
   {
@@ -94,9 +94,9 @@ export const checkpointManifest = Object.freeze([
     route: 'Surface',
     configuredBiomePrefix: ['N', 'O', 'P', 'Q'],
     scenario: 'Canonical Surface N/O/P/Q route prefix',
-    schemaVersion: 48,
+    schemaVersion: 49,
     catalogVersion: '0.27.0-arcana-fear-loadout',
-    sha256: '128aa0a247077275db33e9366c6c024aa86ab125a5829d3f3e7449ffadd987dd',
+    sha256: '4a9bd708dbf45db781aef6b1170f4f0c74fa921acc1805f5bb62cb66d4928616',
     provenance: 'saved canonical editor/generated checkpoint',
   },
   {
@@ -105,9 +105,9 @@ export const checkpointManifest = Object.freeze([
     route: 'Surface',
     configuredBiomePrefix: ['N'],
     scenario: 'N entry frontier with unresolved terminal envelope',
-    schemaVersion: 48,
+    schemaVersion: 49,
     catalogVersion: '0.27.0-arcana-fear-loadout',
-    sha256: 'a2651a51ac3f4930257a3d30227780ca4d4f25fd0f9157f4cea207e8b1250fff',
+    sha256: '8d51b66a1b3a1d693af95e266e843ed4e9a2f1fec025c30e2bb509d59bec42f6',
     provenance: 'saved N entry frontier checkpoint',
   },
   {
@@ -116,9 +116,9 @@ export const checkpointManifest = Object.freeze([
     route: 'Surface',
     configuredBiomePrefix: ['N'],
     scenario: 'N entry frontier with trait-resolved terminal envelope',
-    schemaVersion: 48,
+    schemaVersion: 49,
     catalogVersion: '0.27.0-arcana-fear-loadout',
-    sha256: 'f5f00e3cc4bcce8697b6b10c9e7ce3af1808cf35154072b0ffa04668dc04a8d0',
+    sha256: '05ee9d5f774eca0a9dd989d8f8aa85a7e5808a6ea4e71c31a7135012004c7e80',
     provenance: 'saved N entry frontier checkpoint with resolved traits',
   },
   {
@@ -127,9 +127,9 @@ export const checkpointManifest = Object.freeze([
     route: 'Surface',
     configuredBiomePrefix: ['N'],
     scenario: 'N complete Hub frontier before Preboss handoff',
-    schemaVersion: 48,
+    schemaVersion: 49,
     catalogVersion: '0.27.0-arcana-fear-loadout',
-    sha256: 'e1ec396ce92d0f37e7868dc834cba0efe4bb6774867c6126d86ca2cc5f99658a',
+    sha256: 'aa607a981e8605eb84d5fe118d50c24294e584fb39d4c87e72d35b44ccac1913',
     provenance: 'saved normalized N complete Hub frontier checkpoint',
   },
   {
@@ -138,9 +138,9 @@ export const checkpointManifest = Object.freeze([
     route: 'Surface',
     configuredBiomePrefix: ['N'],
     scenario: 'N partial Hub visit-order frontier',
-    schemaVersion: 48,
+    schemaVersion: 49,
     catalogVersion: '0.27.0-arcana-fear-loadout',
-    sha256: 'a552423fbc1ad0b4d16251106d28039ef24934fe3e398c7769897a5d1196d0ba',
+    sha256: '67ca35f277034b5a9ccaaae1c92f0d5ba17373754eda1802ca45e9aa35128342',
     provenance: 'saved normalized N partial Hub frontier checkpoint',
   },
   {
@@ -149,9 +149,9 @@ export const checkpointManifest = Object.freeze([
     route: 'Surface',
     configuredBiomePrefix: ['N'],
     scenario: 'N Hub Story board with Story visit selected',
-    schemaVersion: 48,
+    schemaVersion: 49,
     catalogVersion: '0.27.0-arcana-fear-loadout',
-    sha256: 'f5c17293cd4d87474a37dd28e6fc11942502ed823fe5d3ff2706037a6fbb6e19',
+    sha256: '289d39a1293c29ad7e8e12665a211110ac1d85d322dbbededb56c476ef4f508c',
     provenance: 'saved normalized N Story board checkpoint',
   },
   {
@@ -160,9 +160,9 @@ export const checkpointManifest = Object.freeze([
     route: 'Surface',
     configuredBiomePrefix: ['N'],
     scenario: 'N Hub invalid ten-open board with reward mutation',
-    schemaVersion: 48,
+    schemaVersion: 49,
     catalogVersion: '0.27.0-arcana-fear-loadout',
-    sha256: 'd53c5f4502c7176783ed5ae631de82edfa18f7a648c7918e33cd399a2ed6957a',
+    sha256: '5859354fd029813595bf0f6eccebdcd00e227aff831014d2f053be182bb5ff28',
     provenance: 'saved N ten-open invalid checkpoint',
   },
 ] as const satisfies readonly AuthoredProjectCheckpointManifestEntry[]);

@@ -848,6 +848,7 @@ function evaluateBiomeAssembly(
     context.loadout,
     plan.bossCompletionArcanaKeys,
     context.hasConfiguredSuccessor === true ? plan.postbossKeepsakeDisposition : undefined,
+    context.hasConfiguredSuccessor === true ? plan.postbossRoomActions : undefined,
     plan.keepsakeEquipResults,
     plan.echoKeepsakeReplayResults,
   );

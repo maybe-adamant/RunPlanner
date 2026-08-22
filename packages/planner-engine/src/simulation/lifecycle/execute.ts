@@ -7,7 +7,11 @@ import type {
 import type { ProducerRewardLifecycleDeclaration } from '../../reward-kernel/model';
 import type { ResolvedEncounterPhase } from '../encounters';
 import type { RoomHistoryFragment, RoomLifecycleEvent, RoomLifecycleExecutionInput } from './model';
-import { createBiomeAddress, createRoomActionAddress } from '../../authored-project/addresses';
+import {
+  createBiomeAddress,
+  createCompletionRoomActionAddress,
+  createRoomActionAddress,
+} from '../../authored-project/addresses';
 import type { RoomActionReference } from '../../authored-project/model';
 import { roomActionKey } from '../../authored-project/room-actions';
 import { roomLifecycleWindowOrdinal } from '../../authored-project/room-action-domain';
@@ -31,7 +35,7 @@ interface OperationContext extends ExecutionContext {
 
 interface ExecutionState {
   readonly events: readonly RoomLifecycleEvent[];
-  readonly blockedAt?: import('../../authored-project/addresses').RoomActionAddress;
+  readonly blockedAt?: import('../../authored-project/addresses').RoomActionSemanticAddress;
 }
 
 interface RoomActionSchedule {
@@ -522,9 +526,6 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
       `${context.profile.key} received ${lifecycleStructure.profileKey} room-action structure`,
     );
   }
-  if (context.input.origin.kind !== 'occurrence') {
-    throw new LifecycleExecutionContractError('room actions must be occurrence-owned');
-  }
   const origin = context.input.origin;
   const rankedRows = roster.rows
     .filter((row) => row.rank !== null && !row.stale)
@@ -534,11 +535,19 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
   const blockAt = (state: ExecutionState, row: RoomActionRow): ExecutionState =>
     Object.freeze({
       ...state,
-      blockedAt: createRoomActionAddress(
-        createBiomeAddress(origin.routeKey, origin.biomeKey),
-        origin.occurrenceId,
-        row.key,
-      ),
+      blockedAt:
+        origin.kind === 'occurrence'
+          ? createRoomActionAddress(
+              createBiomeAddress(origin.routeKey, origin.biomeKey),
+              origin.occurrenceId,
+              row.key,
+            )
+          : origin.kind === 'completionRoom' && origin.role === 'postboss'
+            ? createCompletionRoomActionAddress(
+                origin as typeof origin & { readonly role: 'postboss' },
+                row.key,
+              )
+            : (row.owner as import('../../authored-project/addresses').RoomActionSemanticAddress),
     });
 
   const firstMissingRequired = (predicate: (row: RoomActionRow) => boolean) =>
@@ -592,6 +601,17 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
           point: `acquisitionEntry:${row.reference.siteKey}:${row.reference.entryKey}`,
           siteKey: row.reference.siteKey,
           entryKey: row.reference.entryKey,
+        });
+      case 'useFountain':
+        return appendEvent(state, operationContext, {
+          kind: 'fountainUsed',
+          owner: row.owner as import('../../authored-project/addresses').RoomActionSemanticAddress,
+        });
+      case 'interactKeepsakeRack':
+        return appendEvent(state, operationContext, {
+          kind: 'keepsakeRackUsed',
+          owner:
+            row.owner as import('../../authored-project/addresses').CompletionRoomActionAddress,
         });
       case 'completeFieldsCage':
       case 'chooseRewardWheel':

@@ -7,7 +7,7 @@ import type {
   CompletionRoomAddress,
   HubRoomAddress,
   OccurrenceAddress,
-  RoomActionAddress,
+  RoomActionSemanticAddress,
 } from '../../authored-project/addresses';
 import type { ProducerLifecyclePointKey, ResolvedRewardOffer } from '../../reward-kernel/model';
 import type { ResolvedEncounterPhase } from '../encounters';
@@ -33,6 +33,14 @@ export type RoomLifecycleEvent =
       readonly enteredRewardStoreKey?: string;
     })
   | (RoomLifecycleEventBase & { readonly kind: 'roomEntered' })
+  | (RoomLifecycleEventBase & {
+      readonly kind: 'fountainUsed';
+      readonly owner: import('../../authored-project/addresses').RoomActionSemanticAddress;
+    })
+  | (RoomLifecycleEventBase & {
+      readonly kind: 'keepsakeRackUsed';
+      readonly owner: import('../../authored-project/addresses').CompletionRoomActionAddress;
+    })
   | (RoomLifecycleEventBase & {
       readonly kind: 'requiredObjectSpawned';
       readonly objectKey: RequiredRoomObjectDescriptor['key'];
@@ -136,5 +144,5 @@ export interface RoomHistoryFragment {
   readonly lifecycleProfileKey: string;
   readonly encounterEnvelopeKey: string;
   readonly events: readonly RoomLifecycleEvent[];
-  readonly blockedAt?: RoomActionAddress;
+  readonly blockedAt?: RoomActionSemanticAddress;
 }

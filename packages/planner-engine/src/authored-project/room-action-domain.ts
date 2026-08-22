@@ -14,9 +14,12 @@ import {
   createRewardWheelAddress,
   createRewardWheelOfferAddress,
   createRoomActionAddress,
+  createCompletionRoomActionAddress,
+  createCompletionRoomAddress,
   createShopOfferAddress,
   semanticAddressKey,
   type BiomeAddress,
+  type CompletionRoomAddress,
   type SemanticAddress,
 } from './addresses';
 import { acquisitionSiteFromStorageKey, parseArtificerReplacementEntryKey } from './artificer';
@@ -84,12 +87,78 @@ export interface RoomLifecycleStructure {
 }
 
 export interface RoomActionDomain {
-  readonly owner: ReturnType<typeof createOccurrenceAddress>;
+  readonly owner: ReturnType<typeof createOccurrenceAddress> | CompletionRoomAddress;
   readonly declaration: RoomDeclaration;
   readonly lifecycleProfileKey: string;
   readonly lifecycleStructure: RoomLifecycleStructure;
   readonly activeReferences: readonly RoomActionReference[];
   readonly contributions: readonly RoomActionDomainContribution[];
+}
+
+/** The derived Postboss owns the same closed Room Action vocabulary as an occurrence. */
+export function assembleCompletionRoomActionDomain(options: {
+  readonly catalog: Catalog;
+  readonly biome: BiomeAddress;
+  readonly roomGameName: string;
+  readonly order: readonly RoomActionReference[];
+  readonly hasKeepsakeRack: boolean;
+}): RoomActionDomain {
+  const declaration = options.catalog.rooms.byKey[options.roomGameName];
+  if (declaration === undefined) throw new Error(`unknown room ${options.roomGameName}`);
+  const owner = createCompletionRoomAddress(options.biome, 'postboss') as CompletionRoomAddress & {
+    readonly role: 'postboss';
+  };
+  const phaseKey = declaration.encounterSlotBindings[0]?.slotKey;
+  const lifecycleStructure: RoomLifecycleStructure = frozen({
+    profileKey: 'PostBossRoom',
+    activeEncounterSlotKeys: frozen(phaseKey === undefined ? [] : [phaseKey]),
+    phases: frozen(phaseKey === undefined ? [] : [frozen({ phaseKey })]),
+    points: frozen([
+      frozen({ kind: 'roomEntered' as const, key: 'roomEntered' as const }),
+      ...(phaseKey === undefined
+        ? []
+        : [
+            frozen({
+              kind: 'encounterStart' as const,
+              key: `encounterStart:${phaseKey}`,
+              phaseKey,
+            }),
+            frozen({ kind: 'encounterEnd' as const, key: `encounterEnd:${phaseKey}`, phaseKey }),
+          ]),
+      frozen({ kind: 'cleanup' as const, key: 'cleanup' as const }),
+    ]),
+  });
+  const references: RoomActionReference[] = [];
+  references.push(frozen({ kind: 'useFountain' }));
+  if (options.hasKeepsakeRack && options.order.some((ref) => ref.kind === 'interactKeepsakeRack'))
+    references.push(frozen({ kind: 'interactKeepsakeRack' }));
+  const contributions = references.map((reference) =>
+    frozen({
+      kind: 'action' as const,
+      reference,
+      owner: createCompletionRoomActionAddress(owner, roomActionKey(reference)),
+      participation:
+        reference.kind === 'useFountain' ? ('required' as const) : ('optional' as const),
+      window: frozen({ kind: 'standard' as const, phase: 'afterCombat' as const }),
+      dependencies: frozen([]),
+    }),
+  );
+  return frozen({
+    owner,
+    declaration,
+    lifecycleProfileKey: 'PostBossRoom',
+    lifecycleStructure,
+    activeReferences: frozen(references),
+    contributions: frozen([
+      ...contributions,
+      ...checkpoints(
+        options.catalog,
+        declaration,
+        { gameName: declaration.gameName, roomActions: { order: options.order } },
+        lifecycleStructure,
+      ),
+    ]),
+  });
 }
 
 function frozen<T>(value: T): T {
@@ -223,6 +292,22 @@ function baseContribution(
   reference: RoomActionReference,
 ): RoomActionContribution {
   switch (reference.kind) {
+    case 'useFountain':
+      return contribution(
+        biome,
+        occurrence,
+        reference,
+        'required',
+        frozen({ kind: 'standard', phase: 'afterCombat' }),
+      );
+    case 'interactKeepsakeRack':
+      return contribution(
+        biome,
+        occurrence,
+        reference,
+        'optional',
+        frozen({ kind: 'standard', phase: 'afterCombat' }),
+      );
     case 'completeFieldsCage':
       return contribution(biome, occurrence, reference, 'required', frozen({ kind: 'fields' }));
     case 'interactIncomingReward':
@@ -618,7 +703,7 @@ export function roomLifecycleWindowOrdinal(
 function checkpoints(
   catalog: Catalog,
   declaration: RoomDeclaration,
-  occurrence: RoomOccurrence,
+  occurrence: Pick<RoomOccurrence, 'gameName' | 'roomActions'>,
   structure: RoomLifecycleStructure,
 ): readonly RoomActionCheckpointContribution[] {
   const envelopeByKey = new Map(

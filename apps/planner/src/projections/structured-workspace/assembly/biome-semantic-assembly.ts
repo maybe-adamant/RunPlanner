@@ -10,6 +10,7 @@ import {
   createOccurrenceAddress,
   createPostbossKeepsakeSelectionAddress,
   normalDecisionProgressionForLayout,
+  roomActionKey,
   semanticAddressKey,
   type AuthoredBiomePlan,
   type BiomeAddress,
@@ -49,6 +50,7 @@ import {
   type WorkspaceRewardControl,
   type WorkspaceRunStateLauncher,
   type WorkspaceRoomPickerControl,
+  type WorkspaceRoomActions,
   type WorkspaceStatus,
 } from '../contract';
 import {
@@ -77,6 +79,7 @@ import {
 } from '../navigation/marker-builder';
 import {
   assembleWorkspaceOccurrence,
+  assembleBaseWorkspaceRoomActions,
   type WorkspaceOccurrenceAssembly,
   type WorkspaceOccurrenceAssembler,
   type WorkspaceOccurrenceAssemblyRequest,
@@ -775,14 +778,55 @@ export function assembleWorkspaceBiomeSemantics(
         owner: address,
         roomGameName: descriptor.roomGameName,
         ...(judgment === undefined ? {} : { judgment: judgment.address }),
-        ...(keepsakeSelectionAddress === undefined
-          ? {}
-          : { keepsakeSelection: keepsakeSelectionAddress }),
       }).entries.map((entry) =>
         entry.kind === 'boundary'
           ? Object.freeze({ kind: 'boundary' as const, boundary: entry.boundary })
           : Object.freeze({ kind: 'fixedEffect' as const, effect: entry.effect }),
       );
+      const completionRooms =
+        evaluation?.authoring === 'complete' && evaluation.validity === 'valid'
+          ? evaluation.snapshot.completionRooms
+          : evaluation !== undefined && 'materializedPrefix' in evaluation
+            ? (evaluation.assessmentPrefix ?? evaluation.materializedPrefix)?.completionRooms
+            : undefined;
+      const evaluatedPostboss =
+        descriptor.role === 'postboss'
+          ? completionRooms?.find((room) => room.role === 'postboss')
+          : undefined;
+      const postbossRoster = evaluatedPostboss?.roomActionRoster;
+      const postbossTimeline = evaluatedPostboss?.roomLifecycleTimeline;
+      // Rack membership is atomically owned by the keepsake selector; the
+      // shared timeline still owns its rank but must not offer a competing
+      // generic removal command.
+      const roomActions: WorkspaceRoomActions | undefined =
+        postbossRoster === undefined || postbossTimeline === undefined
+          ? undefined
+          : assembleBaseWorkspaceRoomActions({
+              roster: postbossRoster,
+              lifecycleTimeline: postbossTimeline,
+              owner: address,
+              markerFor: markerDestinations.marker,
+              labelFor: (reference) =>
+                reference.kind === 'useFountain'
+                  ? 'Use fountain'
+                  : reference.kind === 'interactKeepsakeRack'
+                    ? 'Choose keepsake'
+                    : roomActionKey(reference),
+              proposalFilter: (proposal) =>
+                !(proposal.kind === 'remove' && proposal.reference.kind === 'interactKeepsakeRack'),
+              boundaryFilter: (boundary) =>
+                boundary.kind === 'roomEntered' || boundary.kind === 'cleanup',
+            });
+      if (roomActions !== undefined) {
+        occurrenceInteractionRequirements.set(
+          semanticAddressKey(address),
+          Object.freeze({
+            kind: 'roomActions' as const,
+            owner: address,
+            proposals: roomActions.proposals,
+          }),
+        );
+      }
       const replacementEffect =
         keepsakeSelectionAddress !== undefined && postbossKeepsakeDisposition?.kind === 'replace'
           ? catalog.keepsakes.byKey[postbossKeepsakeDisposition.keepsakeKey]?.effect
@@ -805,6 +849,7 @@ export function assembleWorkspaceBiomeSemantics(
         role: descriptor.role,
         gameName: descriptor.roomGameName,
         label: requireWorkspaceRoom(catalog, descriptor.roomGameName).label,
+        ...(roomActions === undefined ? {} : { roomActions }),
         timeline: Object.freeze(timeline),
         ...(judgment === undefined ? {} : { judgment }),
         ...(keepsakeSelectionAddress === undefined ||
@@ -833,6 +878,7 @@ export function assembleWorkspaceBiomeSemantics(
           node.marker,
           ...(judgment === undefined ? [] : [judgment.marker]),
           ...(node.keepsakeSelection === undefined ? [] : [node.keepsakeSelection.marker]),
+          ...(node.roomActions === undefined ? [] : node.roomActions.rows.map((row) => row.marker)),
         ]),
         node.key,
       );
