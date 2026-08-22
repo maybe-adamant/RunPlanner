@@ -36,7 +36,7 @@ const rooms: readonly RawRoomDeclaration[] = [
 ];
 
 export const declarations = {
-  version: '0.28.0-selene-spells',
+  version: '0.29.0-world-shop-phase',
   biomes,
   routes,
   arcanaCards,

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 50,
   "projectId": "midshop-pom-frontier",
-  "catalogVersion": "0.28.0-selene-spells",
+  "catalogVersion": "0.29.0-world-shop-phase",
   "routes": [
     {
       "routeKey": "Underworld",

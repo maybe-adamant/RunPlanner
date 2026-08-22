@@ -149,3 +149,16 @@ export const largeEnteredBiomes: RequirementExpression = {
   axis: 'enteredBiomes',
   range: { min: 2 },
 };
+
+/** Source-named World Shop phase predicates over the entered-biome count. */
+export const inRunFirstHalf: RequirementExpression = {
+  kind: 'counterRange',
+  axis: 'enteredBiomes',
+  range: { max: 2 },
+};
+
+export const inRunSecondHalf: RequirementExpression = {
+  kind: 'counterRange',
+  axis: 'enteredBiomes',
+  range: { min: 3 },
+};
