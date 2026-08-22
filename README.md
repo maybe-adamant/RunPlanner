@@ -68,12 +68,12 @@ rarityless Infusion from each non-exhausted declaration-owned pair without
 changing god-pool history. Qualifying World Shops retain their declaration-owned initial
 inventory and add the free Contract pedestal, one source-derived Travel refill,
 and Echo's stable `echoDoubleShopReward` pickup as supplemental rows. Payload
-and participation are authored on those rows, while one occurrence-owned Room
-Action order owns chronology; Gold materializes from the first accepted paid
+and participation are authored on those rows, while one occurrence- or
+completion-owned Room Action order owns chronology; Gold materializes from the first accepted paid
 non-Spell purchase before that source's acquisition effects and may be picked
 up later among the other room entries.
 
-The current strict authored contract is schema 48. Its earlier schema-41
+The current strict authored contract is schema 49. Its earlier schema-41
 Narcissus, Mourning Fields, and Artificer surface remains intact: Narcissus
 exposes every pickup consequential to Time Piece or
 Artificer, including producer-owned Psyche without adding it to a counted
@@ -218,8 +218,9 @@ copied elsewhere.
   eight-choice delivery, All Together, Infernal Contract, Travel Deal, and the
   corrected Gold Shop chronology are complete. Narcissus pickup correction,
   Fields room chronology and optional rewards, and Artificer conversions are
-  complete through authored schema 41.
-  Shop inventory, supplemental reward payloads, purchase/pickup participation,
+  complete through authored schema 41. Fountain and reached nonfinal Postboss
+  interactions now use that shared chronology, with Cleanup · Doors open as
+  the future Well/Shrine contact frontier. Shop inventory, supplemental reward payloads, purchase/pickup participation,
   and room-local chronology remain distinct supported products. The ranked Hub
   follow-up and manual Shop UX acceptance close Phase 7. Phase 8 is complete
   with the successful `v0.1.0` tagged Windows portable release. Wells and exact

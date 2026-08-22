@@ -414,7 +414,7 @@ This is the same invariant already established for Shops, Narcissus, and
 Fields acquisitions. It applies to the broader room action roster, not only to
 items currently rendered under Acquisitions.
 
-## Pre-schema-47 planner discrepancy
+## Historical planner discrepancy before the unified chronology
 
 At audit time, the planner had the required semantic pieces but divided them
 across three authorities that could not express the source chronology together.
@@ -533,6 +533,15 @@ generation, commit, and exit. Authored state records only participation and
 relative chronology for the declaration-derived room actions whose order the
 player can affect.
 
+The same owner union now covers derived Postboss completion rooms. A reached
+nonfinal Postboss receives required `useFountain` and, when replacement is
+selected, optional `interactKeepsakeRack` under its exact completion action
+address. The completion roster uses the same lifecycle structure, ordering
+assessment, repair rows, and event fold as an occurrence; it does not borrow a
+Boss or Preboss occurrence ID and does not create a second completion order.
+The configured final-biome state remains dormant, while H Echo Bridge and the
+persistent N Hub remain outside this one-visit Postboss rule.
+
 ### Actions reference existing owners
 
 The general chronology is not a generic effect language. Each row references
@@ -603,8 +612,9 @@ extends the occurrence's existing order at the latest source-compatible
 lifecycle position; it does not infer required status in React or create a
 parallel mandatory order. This command guarantee does not rewrite source
 evidence or make missing-required documents malformed: an older or deliberately
-incomplete schema-48 document retains its omission and one explicit canonical
-repair, while an unrelated edit leaves that repair state unchanged.
+incomplete schema-49 document retains its omission and one explicit canonical
+repair, while an unrelated edit leaves that repair state unchanged. The same
+retained-invalid rule applies to the schema-49 Postboss completion owner.
 
 ### Authoring remains attached to the action's semantic owner
 
@@ -762,9 +772,9 @@ events. A correct planner must fold them in source order, preserve fixed
 dependencies, and let every action observe the history produced by earlier
 actions.
 
-The planner now implements this disposition through one occurrence-owned
-`roomActions.order`, one engine structural action domain/default scheduler, one
-roster, and one lifecycle timeline. Semantic commands close only the newly
+The planner now implements this disposition through one occurrence/completion-
+owned `roomActions.order`, one engine structural action domain/default
+scheduler, one roster, and one lifecycle timeline. Semantic commands close only the newly
 required membership delta before publishing a decoded document; simulation
 consumes the same structural contributions. Active required rows are move-only,
 while explicit malformed omissions remain repairable and optional Shop,

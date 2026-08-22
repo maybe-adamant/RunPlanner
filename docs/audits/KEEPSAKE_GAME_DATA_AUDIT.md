@@ -104,13 +104,15 @@ Consequently:
 - later actions in the postboss room and the next biome observe the new
   keepsake and any newly created retained effects.
 
-The planner does not need to simulate the rack or expose a general interaction
-order in the postboss room. Its deliberate timeline simplification is to treat
-the retain-or-replace choice as the first modeled action after room entry. The
-pre-room snapshot and boss completion therefore still see the old keepsake;
-all modeled postboss acquisitions and later state see the retained or newly
-equipped keepsake. This single fixed boundary is sufficient for the selected
-effects and must not grow into an authored rack-interaction sequence.
+The planner preserves this distinction through the reached nonfinal Postboss
+completion's shared Room Action order. The required fountain and optional rack
+interaction are ranked independently, so the exact source prefix determines
+whether the fountain observes the carried Boss keepsake or the newly equipped
+replacement. Boss completion and Postboss entry still see the old keepsake;
+immediate equip results occur only when the ranked rack action executes. Retain
+means that the optional rack participant is absent, while replacement adds it
+atomically. The action belongs to the exact completion owner rather than a
+synthetic room or a second keepsake chronology.
 
 At a normal rack the player can:
 
@@ -141,11 +143,10 @@ constraints:
    matters.
 
 Associating one selected key with each biome is a useful projection, but it is
-not the source chronology. The preceding postboss room has two meaningful
-states: the old keepsake on room entry, then the retained or newly equipped
-keepsake after the planner's fixed first-action boundary. The planner does not
-author other actions on either side of that boundary. The next biome begins
-with the post-swap selection already active.
+not the source chronology. The preceding postboss room has the old keepsake on
+entry, then the retained or newly equipped keepsake at the ranked rack action
+when replacement is selected. The next biome begins with the post-swap
+selection already active.
 
 Special free-swap rooms, packaged bounties that randomize the rack, and saved
 starting-keepsake profile features are separate modes. They do not alter the
@@ -931,10 +932,12 @@ authorship, simulation, and presentation slice for the settled effect subset.
 
 ## Current Planner Disposition
 
-The keepsake model is current through authored schema 35. All 33 identities
+The keepsake model is current through authored schema 49. All 33 identities
 participate in mandatory route-start selection, reached nonfinal Postboss
 retain-or-replace frontiers, ordered history, no-return legality, and their
-declared Fated role. Jeweled Pom, Experimental Hammer, Calling Card, Time Piece,
+declared Fated role. The reached Postboss replacement is an optional ranked
+rack action beside the required fountain, while retention has no rack
+participant. Jeweled Pom, Experimental Hammer, Calling Card, Time Piece,
 Fig Leaf, and Gorgon Amulet additionally own complete rank-I through rank-IV
 profiles and implement the effect contracts audited above. Ordinary player
 selection remains fixed at rank III.

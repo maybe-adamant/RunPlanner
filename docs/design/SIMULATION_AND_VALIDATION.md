@@ -15,7 +15,7 @@ it will not duplicate it.
 The possibility-support, materialization, reward-store, fixed-slot, and
 persistent-hub contracts in this document are globally locked by the completed
 F/G/P/Q/H/O/I/N audit set. All eight biomes participate in one public
-schema-48 occurrence/topology evaluator: completeness, materialization, lifecycle,
+schema-49 occurrence/topology evaluator: completeness, materialization, lifecycle,
 event-folded history, room generation, reward simulation, selected-plan
 validation, and candidate support consume the same explicit biome-evaluation
 products.
@@ -429,9 +429,10 @@ only those that reach zero. Branch equivalence includes the captured Gift key,
 replay count, exact replay descriptor, pending Gold trait, and complete Hammer
 collection rather than reconstructing them from presentation state.
 
-Judgment is a repeated transition at each reached Boss
-`encounterCompleted` point. Its selected canonical inactive-card set is
-validated and applied after the Boss and before Postboss or later-biome state;
+Judgment is a repeated transition at each reached Boss `bossDefeated` seam.
+Its selected canonical inactive-card set is validated and applied after the
+Boss defeat but before generic encounter-end effects, Postboss, or later-biome
+state;
 Epic Judgment requests five cards and Heroic Judgment requests six, each
 clamped by the then-inactive domain. Red Citrine, Lapis Lazuli Insight, and
 Black Night Banishment apply through the ordinary selected trait-acquisition
@@ -538,8 +539,11 @@ sequence containing distinct open slot keys. Side-room state is active only
 under visited combat targets: every declared local slot then has concrete
 generation state and reward state, and every generated slot has either one
 distinct entered ordinal or an explicit unentered result. The fixed preboss
-shop leaf must also be complete. Hub returns, parent restores, boss, and
-postboss require no authored occurrence records.
+shop leaf must also be complete. Hub returns, parent restores, Boss, and
+Postboss require no authored occurrence records. A structural Postboss still
+consumes its biome-owned `postbossRoomActions` order through the shared
+completion roster when a configured successor makes that completion reached;
+final-biome state remains persisted but dormant.
 
 Only referenced occurrences participate. Removed occurrences do not remain as
 dormant project state; undo may restore their prior authored snapshot.
@@ -1657,7 +1661,7 @@ Required categories include:
 - one golden project, canonical snapshot, history, and finding set per focused
   biome scenario;
 - complete-valid, complete-blocked, incomplete-prefix, selected-invalid,
-  retained, and upstream-blocked schema-48 fixtures across F through Q;
+  retained, and upstream-blocked schema-49 fixtures across F through Q;
 - declaration-order target creation and non-authoritative persisted decision
   order;
 - ordinary target exclusion and source-owned candidate support for every

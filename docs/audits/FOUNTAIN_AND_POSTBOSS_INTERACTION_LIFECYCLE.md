@@ -201,41 +201,34 @@ and optional room contacts may still change the history carried through the
 selected exit. Well and Shrine purchases do not belong in the pre-fountain
 room-entry interval.
 
-## Planner discrepancy and durable disposition
+## Planner disposition after schema 49 implementation
 
-The current planner has no fountain Room Action. Ordinary Fountain timelines
-can represent the required incoming reward, but not the parallel required
-fountain interaction. Derived Postboss timelines currently treat keepsake
-retention or replacement as a fixed first effect and have no authored local
-chronology.
+The planner now represents the source-backed order through the existing Room
+Action machinery. Ordinary Reprieve occurrences carry the required incoming
+reward and required `useFountain` references in their one
+`roomActions.order`; either order remains legal and Cleanup begins after both.
+Reached nonfinal Postboss completions carry the same completion-owned order:
+`useFountain` is required, while an active keepsake replacement atomically
+adds optional `interactKeepsakeRack`. The rack may be ranked before or after
+the fountain, so the exact prefix seen by Aromatic Phial and later contacts is
+preserved. Retain removes the rack participant; a configured final-biome
+Postboss keeps its persisted state dormant and emits no action or blocker.
 
-Those simplifications are insufficient for the source-backed order above:
-
-1. every supported active one-visit fountain needs one required interaction;
-2. ordinary Reprieve reward pickup and fountain use need a shared flexible
-   pre-Cleanup interval;
-3. nonfinal Postboss fountain use is required while keepsake replacement is
-   optional and orderable on either side of it;
-4. Cleanup begins at the exact exit-unlock frontier after all required objects
-   resolve;
-5. realized Wells and Shrines remain optional Cleanup interactions; and
-6. persistent N Hub behavior must be handled explicitly rather than inferred
-   from a broad room-kind label.
-
-The existing fixed-first Postboss keepsake simplification should not be treated
-as source truth in a follow-up implementation plan. A truthful model must
-preserve the exact action prefix seen by fountain, rack, and later cleanup
-contacts. It should not fabricate a fountain for the last configured biome,
-normalize the persistent N Hub into a one-visit room, or infer interaction
-presence in React.
+The shared completion owner and roster also preserve the source distinction
+between the automatic noncombat entry sequence and ranked player actions. The
+player-facing Postboss timeline omits those internal encounter boundaries but
+shows the required fountain, optional rack, and Cleanup · Doors open seam. The
+modeled H Echo Bridge and persistent N Hub remain outside this one-visit
+fountain set. Wells and Shrines remain future Cleanup contacts, not dormant
+planner actions.
 
 ## Bounded uncertainties and exclusions
 
 This audit intentionally does not settle:
 
-- the authored schema shape for derived Postboss chronology;
 - whether opening and closing a rack without replacement needs a distinct
-  authored event when it has no modeled effect;
+  authored event when it has no modeled effect; the planner currently treats
+  Retain as absence of a rack action;
 - the persistent N Hub fountain's eventual editor surface;
 - complete Well, Shrine, sell-trait-shop, natural-resource, or inspection
   interaction support;

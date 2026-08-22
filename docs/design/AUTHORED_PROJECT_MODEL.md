@@ -7,24 +7,30 @@ scope, biome topology, occurrence-local state, semantic addresses, commands,
 persistence, and history. Simulation algorithms, candidates, Redux state, and
 React rendering are separate concerns.
 
-## Schema 48 Boundary
+## Schema 49 Boundary
 
-Schema 48 is the sole persisted authored-project contract. The codec rejects
+Schema 49 is the sole persisted authored-project contract. The codec rejects
 every other schema version rather than manufacturing current topology or leaf
 state for a stale document. There is no migration path; catalog versions must
 match exactly.
 
 Schemas 46 and 47 completed the occurrence-owned topology and chronology
 cutover: every supported authored main or N side room is a `RoomOccurrence`,
-and every player-triggered room interaction is referenced from one
-occurrence-owned `roomActions.order`. Schema 48 removed the redundant authored
-project name; the profile filename is application session state. The lifecycle
-timeline, lifecycle Run State checkpoints, and Shop Purchased markers added
-after schema 48 are derived products over this state and did not change the
-persisted contract. Mandatory Room Action defaults likewise use the existing
-`roomActions.order`: semantic commands add newly active required references at
-their engine-owned canonical late position without adding a required-action
-set, derived order, or schema field.
+and every authored interaction in those ordinary occurrence rooms is referenced
+from one occurrence-owned `roomActions.order`. Derived completion rooms are
+the deliberate exception: Postboss actions are owned by the biome's
+`postbossRoomActions` state and exact completion action address. Schema 48
+removed the redundant authored
+project name; the profile filename is application session state. Schema 49 adds
+the structural Postboss `postbossRoomActions` order and the closed
+`useFountain`/`interactKeepsakeRack` references while keeping the same
+occurrence/completion action machinery. Ordinary room lifecycle timelines,
+Run State checkpoints, Shop Purchased markers, and the derived Boss
+`bossDefeated`/Judgment seam remain products over this authored state. Mandatory
+Room Action defaults likewise use the existing `roomActions.order`: semantic
+commands add newly active required references at their engine-owned canonical
+late position without adding a required-action set, derived order, or second
+chronology field.
 
 There is one biome plan and one topology language. Production state and
 semantic addresses have no layout-specific plan family, completion-transition
@@ -103,9 +109,10 @@ rooms, not authored decisions or occurrences.
 
 Topology owns occurrence relationships and decisions. Room state owns rewards,
 Shop inventory, one occurrence-owned Room Action order, exact concrete
-encounter selections, wheels, cages, and side-room state. Sparse acquisition
-sites own optional generated payloads, not a second chronology. UI state owns
-no domain topology.
+encounter selections, wheels, cages, and side-room state. The biome plan also
+owns the structural Postboss `postbossRoomActions` order for a derived
+completion owner. Sparse acquisition sites own optional generated payloads, not
+a second chronology. UI state owns no domain topology.
 
 ## Route Scope
 
@@ -155,11 +162,21 @@ a synthetic room, reward, or topology edge.
 ### Keepsake Authorship
 
 The route loadout's starting keepsake and each nonfinal F/G/H/N/O/P Postboss
-completion own one exact chronological selection. A Postboss value is either
-`retain` or `replace` with a catalog keepsake key. The value remains persisted
-while the configured route has no successor, but it becomes reached only when
-another modeled biome follows. I and Q own no final-route rack choice because
-no modeled consumer follows them.
+completion own one exact chronological selection and one structural
+`postbossRoomActions` order. A Postboss value is either `retain` or `replace`
+with a catalog keepsake key. The value remains persisted while the configured
+route has no successor, but it becomes reached only when another modeled biome
+follows. I and Q own no final-route rack choice because no modeled consumer
+follows them.
+
+Every structural Postboss state defaults to a `useFountain` action. The
+chronology is active only when that biome has a configured successor, so its
+state is dormant on the configured route tail and reactivates if a later biome
+is configured. Replacing a keepsake atomically adds the optional
+`interactKeepsakeRack` action; retaining removes that action while preserving
+any dormant keepsake-specific equip detail. The action order is the sole
+chronology owner, and the structural completion address owns its findings and
+history rather than a synthetic `RoomOccurrence`.
 
 Selection legality is contextual rather than codec policy. Unknown keys are
 malformed, while a structurally valid replacement that has already been
@@ -458,7 +475,7 @@ required row may be moved within its legal range but cannot be generically
 removed.
 
 This guarantee is deliberately delta-only. A decoded or deliberately malformed
-schema-48 document may already omit a required reference, and an unrelated edit
+schema-49 document may already omit a required reference, and an unrelated edit
 does not normalize that omission. Evaluation retains the missing-required
 finding and publishes one engine-owned canonical restore intent. Dormant and
 stale rows likewise remain authored until an explicit owning command removes
@@ -653,7 +670,7 @@ stable indented JSON with a trailing newline:
 
 ```ts
 interface ProjectDocument {
-  schemaVersion: 48;
+  schemaVersion: 49;
   projectId: string;
   catalogVersion: string;
   routes: readonly AuthoredRoutePlan[];
