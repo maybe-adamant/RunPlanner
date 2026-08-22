@@ -152,10 +152,23 @@ Arcana address owns the editor, candidate frontier, finding, and semantic
 command.
 
 The derived Postboss completion uses the same timeline presentation without a
-combat interval: `Room entered -> Cleanup · Doors open`. A reached nonfinal
-Postboss inserts its fixed keepsake retain-or-replace effect between those
-boundaries. Immediate equip-result authoring stays attached to that effect;
-neither product creates an authored Room Action order.
+combat interval. Its active nonfinal shape is `Room entered -> ranked actions
+-> Cleanup · Doors open`: `Use fountain` is required and a replacement's
+`Choose keepsake` rack action is optional. The rack may be ordered before or
+after the fountain; Cleanup follows the last required action. The completion
+engine still runs its automatic noncombat entry sequence after `roomEntered`
+and before the first ranked player action, but those internal boundaries are
+not rendered as encounter rows. The action roster and exact completion owner
+carry the persisted order, immediate equip result, findings, and history; the
+Postboss is not a fixed-first effect or a synthetic Room Occurrence.
+
+These interactions emit exact ranked-action events. `fountainUsed` carries a
+`RoomActionSemanticAddress`: an ordinary Reprieve event is owned by that
+occurrence, while a Postboss event is owned by its completion action address.
+`keepsakeRackUsed` carries a `CompletionRoomActionAddress` and is emitted only
+by the active Postboss rack action. The event owners are the same semantic
+owners consumed by the Room Action roster and history fold; neither event is
+reconstructed from a rendered row or a generic room checkpoint.
 
 #### Mourning Fields
 
@@ -259,9 +272,10 @@ owns the relevant window/checkpoint relation.
 
 Semantic action producers contribute explicit `RoomActionContribution`
 products. The one `assembleRoomActionRoster` authority receives those
-contributions together with the occurrence's authored `roomActions.order` and
-returns the complete roster consumed by lifecycle, validation, candidate, and
-workspace products. Producers do not register callbacks, mutate a hidden
+contributions together with the owning occurrence or completion owner's
+authored `roomActions.order` and returns the complete roster consumed by
+lifecycle, validation, candidate, and workspace products. Producers do not
+register callbacks, mutate a hidden
 registry, or communicate action membership through sidecar state.
 
 Roster assembly reconciles every authored and derived key exactly once:
@@ -429,10 +443,11 @@ predecessor's outgoing-generation state.
 : The state after every supported local acquisition and exit effect has run. It
 is threaded into the already-generated picked target's preparation.
 
-`Postboss keepsake frontier`
-: The fixed first modeled action after entering a reached nonfinal Postboss
-room. It retains or replaces the current keepsake before that room's primary
-encounter completion and later acquisitions are folded.
+`Postboss completion action`
+: A ranked action owned by a reached nonfinal Postboss completion. `Use fountain`
+is required; `Choose keepsake` is the optional rack interaction created by a
+replacement. Its position determines which equipped keepsake and fountain
+effects later actions observe.
 
 ## Ownership
 
@@ -457,17 +472,19 @@ The editor must not persist lifecycle operations or history snapshots.
 
 The route enters each derived Postboss room with the keepsake used for the Boss.
 Boss completion and Judgment therefore observe the old keepsake. When a
-successor biome is configured, the Postboss retain-or-replace disposition is
-then applied as the planner's fixed first modeled action. Immediate equip
-results occur at that boundary; the Postboss primary encounter completion,
-acquisitions, and next-biome seed observe the resulting keepsake state.
+successor biome is configured, the completion roster contains required
+`Use fountain`; a replacement also contributes optional `Choose keepsake`.
+The authored order may place the rack before or after the fountain. Immediate
+equip results occur when the rack action executes, so the fountain observes the
+old or new keepsake according to that order and later acquisitions observe the
+resulting state.
 
-This is a fixed lifecycle seam, not an authored rack room or general
-interaction-order list. In particular, a Postboss primary `Empty` encounter
-still completes after the rack action and advances any applicable
-encounter-use effect. Retention records chronology without replaying an equip
-result. I and Q may still walk their physical Postboss completion tail, but no
-meaningless final-route rack action is authored or simulated.
+The rack is a shared Room Action owned by the exact Postboss completion
+address, not a fixed lifecycle seam or a synthetic room. Retention records no
+rack action; replacing and returning to retain atomically adds or removes its
+optional membership while dormant equip detail remains authored. I and Q may
+still walk their physical Postboss completion tail, but no final-route action
+is active while there is no configured successor.
 
 ## Closed Operation Vocabulary
 

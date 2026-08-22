@@ -232,8 +232,9 @@ a generic room-details disclosure. Standard, Fields, and Shop occurrences
 render Room Overview, Room Timeline, and Room Doors. Overview contains read-only
 incoming context and meaningful room-local setup: optional N Side rooms,
 Fields identities, Shop inventory and Purchased markers, and Room features.
-Actions consumes the engine lifecycle timeline plus the one occurrence-owned
-chronology. Doors consumes the unchanged total outgoing-stage product. A
+Room Timeline consumes the engine lifecycle timeline plus the one
+occurrence-owned chronology. Doors consumes the unchanged total outgoing-stage
+product. A
 section is omitted when its projected product is empty.
 
 Required chronology rows arrive ranked from the activating semantic command
@@ -246,7 +247,7 @@ paths.
 
 Manual tab selection is transient and defaults to Overview for a newly focused
 occurrence. Exact semantic focus overrides it: setup and purchase markers open
-Overview, active encounter/action owners open the matching Actions tab,
+Overview, active encounter/action owners open the matching Room Timeline tab,
 inactive Ship actions open repair, and outgoing owners open Room Doors. The
 application publishes that closed destination; React does not parse addresses
 or labels. Tabs use one stable tabpanel identity and roving ArrowLeft,
@@ -882,13 +883,15 @@ Arcana/Fear ledger. Red, Lapis, and Black Night differ only in the engine
 domain product rendered by the shared trait surface. Switching a draft option
 updates this child in the existing dialog, while dormant detail remains owned
 by authored state. A reached derived Boss completion renders its engine-owned
-fixed lifecycle timeline. Judgment, when the catalog-run post-Boss condition is
-active, is the non-reorderable effect immediately after End encounter and
-launches its exact child control from the existing completion address. It is not
-a room occurrence, Room Action, or route-settings substitute. Postboss uses the
-same Room Timeline visual language without combat boundaries; its reached
-keepsake retain-or-replace control and any immediate equip result occupy one
-fixed timeline action between Room entered and Cleanup.
+fixed lifecycle timeline: `Room entered -> Start encounter -> Boss defeated ->
+End encounter -> Cleanup · Doors open`. Judgment, when active, is attached to
+the exact `Boss defeated` seam and launches its child control from the existing
+completion address. It is not a room occurrence, Room Action, or route-settings
+substitute. Postboss uses the same Room Timeline visual language without combat
+boundaries; its active nonfinal roster contains required `Use fountain` and
+optional `Choose keepsake` when replacing. The rack may move on either side of
+the fountain, and Cleanup follows the required action. Retain removes the rack
+participant through its existing semantic command.
 
 A selected Echo option follows the same active-child rule. Pom, Boon, and
 Reward each publish one exact child in the containing trait inspector; Reward's

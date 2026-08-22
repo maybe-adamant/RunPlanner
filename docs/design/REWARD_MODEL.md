@@ -834,6 +834,15 @@ producer-owned source, declaration-owned acquisition roles, participation, and
 chronological address. The reward kernel remains the sole authority that turns
 those roles into loot/use history, trait acquisition, and level effects.
 
+Completion-room settlement uses the same ranked Room Action product as an
+ordinary occurrence. A nonfinal Postboss contributes required `useFountain` and
+an optional `interactKeepsakeRack` only when a replacement is active. The rack
+action applies the selected keepsake and its immediate equip result at its
+ranked position; `useFountain` then observes either the carried Boss keepsake
+or the replacement according to the authored order. Retain omits the rack
+participant, and a configured final-biome Postboss keeps its persisted state
+dormant. No separate completion-room settlement order is used.
+
 Mandatory ordinary entries derive their required classification and legal
 lifecycle window from the engine's structural action domain. The semantic
 command that activates one default-inserts its exact action reference into the

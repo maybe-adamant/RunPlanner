@@ -204,7 +204,7 @@ A details-active room renders one tabbed occurrence workbench. The application
 projection publishes the closed Standard, Fields, Ship, or Shop composition;
 React renders that composition without switching on biome keys, room labels,
 or lifecycle-profile strings. The ordinary shape is Room Overview, Room
-Actions, and Room Doors. Tabs are transient editor-session state and do not
+Timeline, and Room Doors. Tabs are transient editor-session state and do not
 move semantic ownership or enter authored history.
 
 Room Overview contains read-only incoming-door context and only meaningful
@@ -216,9 +216,19 @@ the one occurrence-owned action chronology; encounter controls attach to their
 exact Start encounter boundaries. Room Doors renders the existing total
 outgoing-stage product without changing decision, target, or reward ownership.
 Empty sections remain absent. One fixed utility slot at the top of each active
-tab presents its projected lifecycle Run State: Overview and ordinary Actions
-share the entry snapshot, each Ship Actions tab uses its phase-start snapshot,
-and Doors uses the pre-exit snapshot. Inactive Actions remains launcher-free.
+tab presents its projected lifecycle Run State: Overview and ordinary Room
+Timeline share the entry snapshot, each Ship Timeline tab uses its phase-start
+snapshot, and Doors uses the pre-exit snapshot. An inactive Room Timeline
+remains launcher-free.
+
+Derived completion rooms use the same completion inspector and timeline
+language. Boss renders the fixed `Room entered -> Start encounter -> Boss
+defeated -> End encounter -> Cleanup · Doors open` spine, with Judgment attached
+to `Boss defeated` when active. A reached nonfinal Postboss renders the shared
+Room Timeline product at its exact completion owner: required `Use fountain`,
+optional `Choose keepsake` when replacing, and `Cleanup · Doors open` after the
+required action. Its rack and fountain rows are ranked by the engine; React
+does not infer the successor condition, action membership, or legal positions.
 
 A normal active required action is already ranked when its owner becomes
 structurally active. Its row is move-only within engine-published legal

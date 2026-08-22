@@ -12,7 +12,7 @@ by the owning design authorities and active delivery plans.
 
 ## Active Frontier
 
-The current persisted contract is strict schema 48. The occurrence/action
+The current persisted contract is strict schema 49. The occurrence/action
 delivery landed occurrence-backed door staging at `e1e3af0`, one unified room
 chronology at `f38247d`, the corrected door contract at `daa876f`, the opening
 reward frontier at `fdfd2dc`, the engine-walk N Hub board at `aa09c10`, and
@@ -21,12 +21,12 @@ or N side room is one occurrence; topology, door-visible identity, room-local
 payload, participation, and chronology have distinct owners.
 
 The lifecycle workbench delivery is complete. `ddada8b` added the engine-owned
-room timeline and Overview/Actions/Doors presentation, including Fields'
+room timeline and Overview/Timeline/Doors presentation, including Fields'
 authored cage permutation and O's phase tabs. `3109c2b` added derived room-entry,
 O pre-encounter, and pre-exit Run State checkpoints while retaining N's Hub and
 Preboss generation diagnostics. `d078b2e` made exact `interactShopOffer` membership in
 `roomActions.order` the sole Purchased fact, kept unpurchased inventory out of
-Actions, and retained specialized stale repair. These three changes are
+the Room Timeline, and retained specialized stale repair. These three changes are
 schema-neutral; no Shop source intent, second purchase set, Well, Shrine, or
 delivery state was added.
 
@@ -36,8 +36,20 @@ classified required action now inserts it at the canonical latest lifecycle
 position in the occurrence's existing `roomActions.order`. Active required
 rows are move-only; pre-existing malformed omissions retain one canonical
 restore interaction; dormant/stale rows and all optional participation remain
-explicit. The change is schema-48-neutral and adds no decode normalization,
-second chronology, command-to-simulation dependency, or Shop Purchased change.
+explicit. That slice was schema-neutral and added no decode normalization,
+second chronology, command-to-simulation dependency, or Shop Purchased change;
+its required-action scheduler is now reused by schema 49 completion actions.
+
+The Fountain/Postboss lifecycle delivery is complete through Gates A and A.1.
+`4eb3212` advanced the strict authored contract to schema 49 and extended the
+existing Room Action owner union to ordinary Reprieve and structural Postboss
+completion owners. Required `useFountain` participation, optional
+`interactKeepsakeRack` membership, atomic retain/replace synchronization,
+configured-successor activation, exact fountain/rack events, and shared
+Postboss Room Timeline projection are now implemented. The follow-up
+`f113245` added the derived `bossDefeated` seam, applies Judgment there, and
+keeps post-encounter delivery at End encounter. No Well, Shrine, H Echo Bridge,
+N Hub, boss-drop, Dream Dive, or authored Boss order was added.
 
 Travel Deal and Gold Gold Gold remain derived from the true action order. Any
 future payload-authoring correction must evaluate the exact history prefix at
@@ -47,7 +59,7 @@ may lock the god pool before Travel generates a refill, while taking it after
 the purchase cannot retroactively change that payload. The planner does not yet
 implement Shrine inventory, pending delivery, rush, or forced delivery.
 
-The test fixture and suite optimization is complete. Canonical schema-48
+The test fixture and suite optimization is complete. Canonical schema-49
 authored route prefixes and recurrent late-route frontiers now load from 14
 strict readable JSON checkpoints through route-scoped static imports and lazy
 frozen production-codec loaders. `84db578` deleted the permanent F-I/N-Q
@@ -2895,3 +2907,36 @@ repository formatting, and the production build also passed. Vite transformed
 393 modules and retained only the existing greater-than-500-kB chunk advisory.
 The complete gate was run exactly once and was not rerun after this factual
 append.
+
+The Fountain/Postboss lifecycle phase is closed at schema 49. Gate A
+(`4eb3212`) adds the required Reprieve fountain and structural Postboss
+completion chronology: `useFountain` is required, an active replacement owns
+the optional `interactKeepsakeRack`, and the shared completion owner projects
+the same Room Timeline and Cleanup · Doors open seam. Gate A.1 (`f113245`)
+adds the exact derived `bossDefeated` seam and applies Judgment there while
+keeping post-encounter delivery at End encounter. No Well, Shrine, H Echo
+Bridge, persistent N Hub, Boss action order, boss-drop, or Dream Dive model was
+added.
+
+Gate B absorbed those contracts into the durable authored-project, lifecycle,
+reward, simulation, editor/workspace, keepsake, fountain, and Room Action
+authorities. The temporary plan was deleted, its README link was never added,
+and no temporary-plan reference remains. Local Markdown links all resolve;
+changed durable documents pass Prettier and `git diff --check`. The exact
+closure command `npm run check` was run once on 2026-08-21 from `f113245` after
+documentation stabilization. All three workspace typechecks, fixture
+typecheck, and fixture integrity (6/6) passed. The regular test lane then
+stopped on two assertion failures in
+`apps/planner/test/product-loops/GoldenSurfaceProductLoop.interaction.test.tsx`:
+129 of 130 files and 1,595 of 1,597 tests passed. The failures are the stale
+`Hub traversal` heading and final Hub-visit move lookup. Because the regular
+lane failed, the command did not run the heavy tests, lint, format check, or
+production build. The authorized narrow remediation then changed only that
+product-loop test: it asserts the current Hub Overview/Open rooms surface and
+opens Hub Timeline before the visit move lookup. The focused file passed 1 file
+and 8 tests, with its Prettier and diff checks green. The complete
+`npm run check` was not rerun. The stages it had not reached were then run
+individually: the heavy lane passed 27 files/403 tests, ESLint and repository
+formatting passed, and the production build passed after transforming 395
+modules with only the existing greater-than-500-kB chunk advisory. No
+production, timeout, worker, or configuration file changed.
