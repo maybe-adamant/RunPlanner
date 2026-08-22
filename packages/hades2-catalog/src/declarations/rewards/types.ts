@@ -34,6 +34,7 @@ export interface RawConcreteAcquisitionDeclaration {
 export interface RawAcquisitionRoleDeclaration {
   readonly key: string;
   readonly resolution: AcquisitionRoleResolution;
+  readonly traitGiverKey?: string;
   readonly blocksGoldConversion?: boolean;
 }
 

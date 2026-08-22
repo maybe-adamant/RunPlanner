@@ -21,6 +21,11 @@ import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
 import { evaluateBiomeRewardsAssemblyInternal } from '../../src/simulation/rewards/biome';
 import { publicRewardBranch } from '../../src/simulation/rewards/processing';
+import {
+  attachTraitHistory,
+  createTraitHistoryState,
+  foldTraitHistoryEvents,
+} from '../../src/simulation/traits';
 
 const surface = createRouteAddress('Surface');
 const n = createBiomeAddress('Surface', 'N');
@@ -74,6 +79,7 @@ function biome(evaluation: ReturnType<typeof simulateProject>, key: 'N' | 'O' | 
 function evaluateNBossLifecycle(
   arcanaFear: ReturnType<typeof createArcanaFearState>,
   selected: readonly string[],
+  traitHistory = createTraitHistoryState(),
 ) {
   const project = loadSurfaceNOProject();
   const evaluated = biome(simulateProject(catalog, project), 'N');
@@ -88,7 +94,18 @@ function evaluateNBossLifecycle(
     evaluated.history,
     1,
     project.routes.find((route) => route.routeKey === 'Surface')!.loadout,
-    [publicRewardBranch(initializeTestRewardBranches(arcanaFear)[0]!)],
+    [
+      publicRewardBranch(
+        Object.freeze({
+          ...initializeTestRewardBranches(arcanaFear)[0]!,
+          history: attachTraitHistory(
+            initializeTestRewardBranches(arcanaFear)[0]!.history,
+            traitHistory,
+          ),
+          traitHistory,
+        }),
+      ),
+    ],
   );
 }
 
@@ -135,6 +152,97 @@ describe('Judgment Boss-completion lifecycle', () => {
       arcanaKeys: selected,
       sequence: defeated.sequence,
     });
+  });
+
+  it('keeps final-use Barren active through Boss-defeated Judgment, then restores Arcana without mutating it at encounter completion', () => {
+    const project = loadSurfaceNOProject();
+    const evaluated = biome(simulateProject(catalog, project), 'N');
+    const boss = evaluated.history.events.filter(
+      (event) =>
+        event.origin.kind === 'completionRoom' &&
+        event.origin.role === 'boss' &&
+        (event.kind === 'bossDefeated' || event.kind === 'encounterCompleted'),
+    );
+    const completed = boss.find(
+      (event): event is Extract<(typeof boss)[number], { readonly kind: 'encounterCompleted' }> =>
+        event.kind === 'encounterCompleted',
+    );
+    if (completed === undefined) throw new Error('N Boss completion seam is missing');
+    const seeded = activateTemporaryArcana(
+      catalog,
+      createArcanaFearState(catalog, createDefaultRouteLoadout(catalog)),
+      ['CardDraw'],
+      { owner: n, sequence: 1 },
+    );
+    if (!seeded.legal) throw new Error('Barren setup Arcana must be legal');
+    const barren = foldTraitHistoryEvents(catalog, [
+      Object.freeze({
+        kind: 'chaosPair' as const,
+        owner: n,
+        acquisitionRole: 'self',
+        sequence: completed.sequence - 7,
+        acquisitionPoint: 'reward',
+        acquisitionIdentity: 'barren-prerequisite',
+        offer: Object.freeze({
+          kind: 'chaos' as const,
+          giverKey: 'Chaos' as const,
+          curseKey: 'ChaosNoMoneyCurse',
+          duration: 3,
+          curseValues: Object.freeze({}),
+          blessingKey: 'ChaosElementalBlessing',
+          rarity: 'Common' as const,
+          blessingValues: Object.freeze({}),
+        }),
+      }),
+      ...[-6, -5, -4].map((offset) =>
+        Object.freeze({
+          kind: 'chaosClock' as const,
+          owner: n,
+          acquisitionRole: 'chaosClock' as const,
+          sequence: completed.sequence + offset,
+          clock: 'encounters' as const,
+        }),
+      ),
+      Object.freeze({
+        kind: 'chaosPair' as const,
+        owner: n,
+        acquisitionRole: 'self',
+        sequence: completed.sequence - 3,
+        acquisitionPoint: 'reward',
+        acquisitionIdentity: 'barren-final-boss-use',
+        offer: Object.freeze({
+          kind: 'chaos' as const,
+          giverKey: 'Chaos' as const,
+          curseKey: 'ChaosMetaUpgradeCurse',
+          duration: 3,
+          curseValues: Object.freeze({}),
+          blessingKey: 'ChaosElementalBlessing',
+          rarity: 'Heroic' as const,
+          blessingValues: Object.freeze({}),
+        }),
+      }),
+      ...[-2, -1].map((offset) =>
+        Object.freeze({
+          kind: 'chaosClock' as const,
+          owner: n,
+          acquisitionRole: 'chaosClock' as const,
+          sequence: completed.sequence + offset,
+          clock: 'encounters' as const,
+        }),
+      ),
+    ]);
+    const result = evaluateNBossLifecycle(seeded.state, inactive(['CardDraw'], 5), barren);
+    const branch = result.simulation.branches[0];
+    expect(
+      branch?.arcanaFear.events.some((event) => event.kind === 'temporaryArcanaActivated'),
+    ).toBe(true);
+    expect(
+      branch?.arcanaFear.events.filter((event) => event.kind === 'temporaryArcanaActivated'),
+    ).toHaveLength(1);
+    expect(branch?.traitHistory?.activeChaosCurses).toHaveLength(0);
+    expect(branch?.traitHistory?.maturedChaosBlessings).toContainEqual(
+      expect.objectContaining({ acquisitionIdentity: 'barren-final-boss-use' }),
+    );
   });
 
   it('retains the missing exact-set repair capability at the terminal Boss and suppresses Postboss/later-biome state', () => {

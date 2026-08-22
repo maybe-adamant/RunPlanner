@@ -22,11 +22,11 @@ function schema49Project() {
 
 test('49 -> 50 preserves the document and adds an unresolved SpellDrop child', () => {
   const source = schema49Project();
-  const result = migrateProjectDocument(source);
+  const result = migrateProjectDocument(source, 50);
 
   assert.equal(source.schemaVersion, 49);
   assert.equal(result.document.schemaVersion, 50);
-  assert.equal(result.document.catalogVersion, '0.28.0-selene-spells');
+  assert.equal(result.document.catalogVersion, '0.30.0-boon-rarity-ledger');
   assert.equal(result.document.routes[0].nestedReward.traitOffersByAcquisitionRole.self, null);
   assert.deepEqual(result.steps, ['49->50']);
   assert.deepEqual(result.changes['49->50'], { unresolvedSpellDropsAdded: 1 });
@@ -44,6 +44,18 @@ test('49 -> 50 retains an already-authored SpellDrop child', () => {
     authored,
   );
   assert.deepEqual(result.changes['49->50'], { unresolvedSpellDropsAdded: 0 });
+});
+
+test('50 -> 51 retains a TrialUpgrade as an explicit unresolved Chaos child', () => {
+  const source = schema49Project();
+  source.schemaVersion = 50;
+  source.catalogVersion = '0.30.0-boon-rarity-ledger';
+  source.routes[0].nestedReward.offer = { rewardType: 'TrialUpgrade' };
+  const result = migrateProjectDocument(source);
+  assert.equal(result.document.schemaVersion, 51);
+  assert.equal(result.document.catalogVersion, '0.31.0-chaos-traits');
+  assert.equal(result.document.routes[0].nestedReward.traitOffersByAcquisitionRole.self, null);
+  assert.deepEqual(result.changes['50->51'], { unresolvedTrialUpgradesAdded: 1 });
 });
 
 test('fails closed when a required migration step is absent', () => {

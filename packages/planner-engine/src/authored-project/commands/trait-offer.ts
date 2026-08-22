@@ -10,6 +10,7 @@ import {
   optionIndex,
   normalizeAuthoredEchoLastRunBoon,
   normalizeAllTogetherResult,
+  normalizeAuthoredChaosTraitOffer,
   type AuthoredGorgonAthenaOffer,
   type AuthoredTraitOffer,
   type AuthoredTraitOfferTraits,
@@ -191,6 +192,13 @@ function validateOffer(
       failCommand(command, `Fallback Gold is not supported by ${value.giverKey}`);
     return Object.freeze({ kind: 'fallbackGold', giverKey: value.giverKey });
   }
+  if (value.kind === 'chaos') {
+    try {
+      return normalizeAuthoredChaosTraitOffer(catalog, value);
+    } catch (error) {
+      return failCommand(command, error instanceof Error ? error.message : 'invalid Chaos pair');
+    }
+  }
   if (value.options.length < 1 || value.options.length > 3)
     failCommand(command, 'trait offers require one to three options');
   if (!traitOfferSupportsExhaustion(giver) && value.options.length !== 3)
@@ -340,6 +348,9 @@ function validateOffer(
     ) as AuthoredTraitOfferTraits['options'],
     selectedOptionKey: value.selectedOptionKey,
     rarificationActions: Object.freeze([...(value.rarificationActions ?? [])]),
+    ...(value.rejectedOptionKey === undefined
+      ? {}
+      : { rejectedOptionKey: value.rejectedOptionKey }),
     ...(conditionApplicable ? { deathDefianceConditionMet: value.deathDefianceConditionMet } : {}),
   });
 }

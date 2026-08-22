@@ -54,7 +54,7 @@ export interface RawAspectDeclaration {
 export interface RawTraitGiverDeclaration {
   readonly key: string;
   readonly label: string;
-  readonly providerKind: 'olympian' | 'hermes' | 'hammer' | 'npc' | 'spell';
+  readonly providerKind: 'olympian' | 'hermes' | 'hammer' | 'npc' | 'spell' | 'chaos';
   readonly traitKeys: readonly string[];
   readonly priorityTraitKeys: readonly string[];
   readonly rarityPolicy:
@@ -77,6 +77,11 @@ export interface RawTraitCatalogInput {
   readonly aspects: readonly RawAspectDeclaration[];
   readonly traits: readonly RawTraitDeclaration[];
   readonly givers: readonly RawTraitGiverDeclaration[];
+  /** Explicit game acquisition-name bindings; never inferred from giver names. */
+  readonly traitAcquisitionProviders: readonly {
+    readonly gameName: string;
+    readonly giverKey: string;
+  }[];
   readonly boonRarityBases: Readonly<
     Record<'olympian' | 'hermes', import('@run-planner/engine/catalog-schema').BoonRarityValues>
   >;
@@ -89,6 +94,10 @@ export interface RawTraitCatalogInput {
   };
   readonly offerContexts: readonly RawTraitOfferContextDeclaration[];
   readonly deferredTraitKeys: readonly string[];
+  readonly chaos: {
+    readonly curses: readonly import('@run-planner/engine/catalog-schema').ChaosCurseDeclaration[];
+    readonly blessings: readonly import('@run-planner/engine/catalog-schema').ChaosBlessingDeclaration[];
+  };
 }
 
 export type { TraitCatalog, TraitRequirementExpression, TraitRarity };

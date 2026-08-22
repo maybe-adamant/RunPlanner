@@ -19,6 +19,7 @@ import type {
   AuthoredTraitOffer,
   AuthoredTraitOfferTraits,
   AuthoredTraitOption,
+  AuthoredChaosTraitOffer,
   EquippedTrait,
   TraitOptionKey,
 } from '../authored-project/traits';
@@ -105,6 +106,46 @@ export interface TraitRemovalEvent {
   readonly acquisitionIdentity: string;
 }
 
+export interface ChaosCurseInstance {
+  readonly acquisitionIdentity: string;
+  readonly owner: SemanticAddress;
+  readonly curseKey: string;
+  readonly duration: number;
+  readonly remaining: number;
+  readonly clock: import('../catalog-schema').ChaosClockKind;
+  readonly semanticTag?: import('../catalog-schema').ChaosSemanticTag;
+  readonly curseValues: Readonly<Record<string, number>>;
+  readonly blessingKey: string;
+  readonly rarity: AuthoredChaosTraitOffer['rarity'];
+  readonly blessingValues: Readonly<Record<string, number>>;
+}
+
+export interface ChaosBlessingInstance {
+  readonly acquisitionIdentity: string;
+  readonly blessingKey: string;
+  readonly rarity: AuthoredChaosTraitOffer['rarity'];
+  readonly blessingValues: Readonly<Record<string, number>>;
+}
+
+export interface ChaosPairEvent {
+  readonly kind: 'chaosPair';
+  readonly owner: SemanticAddress;
+  readonly acquisitionRole: string;
+  readonly sequence: number;
+  readonly acquisitionPoint: string;
+  readonly acquisitionIdentity: string;
+  readonly offer: AuthoredChaosTraitOffer;
+}
+
+export interface ChaosClockEvent {
+  readonly kind: 'chaosClock';
+  readonly sequence: number;
+  readonly clock: import('../catalog-schema').ChaosClockKind;
+  /** The originating selected pair provides stable chronology ownership. */
+  readonly owner: SemanticAddress;
+  readonly acquisitionRole: 'chaosClock';
+}
+
 /** One declaration-owned Gift Gift Gift attempt at a succeeding biome start. */
 export interface EchoKeepsakeReplayEvent {
   readonly kind: 'echoKeepsakeReplay';
@@ -123,7 +164,9 @@ export type TraitHistoryEvent =
   | TraitElementContributionEvent
   | DirectTraitGrantEvent
   | TraitRemovalEvent
-  | EchoKeepsakeReplayEvent;
+  | EchoKeepsakeReplayEvent
+  | ChaosPairEvent
+  | ChaosClockEvent;
 
 export interface TraitReplacementTransition {
   readonly slot: string;
@@ -174,6 +217,8 @@ export interface TraitHistoryState {
   readonly bannedTraitKeys: readonly string[];
   /** Exact activation fact for Proper Upbringing's promotion and future offers. */
   readonly properUpbringingActive?: true;
+  readonly activeChaosCurses: readonly ChaosCurseInstance[];
+  readonly maturedChaosBlessings: readonly ChaosBlessingInstance[];
 }
 
 /** The sole supported Pom target predicate. */
@@ -214,6 +259,8 @@ export function createTraitHistoryState(): TraitHistoryState {
     godBoonRarityCounts: Object.freeze({}),
     upgradableTraitCount: 0,
     bannedTraitKeys: Object.freeze([]),
+    activeChaosCurses: Object.freeze([]),
+    maturedChaosBlessings: Object.freeze([]),
   });
 }
 
@@ -345,6 +392,8 @@ export function foldTraitHistoryEvents(
     Water: 0,
   };
   let activeSources: ReadonlySet<string> = new Set();
+  let activeChaos: ChaosCurseInstance[] = [];
+  const maturedChaos: ChaosBlessingInstance[] = [];
   // Stable ordering retains the producer/purchase chronology already encoded
   // by construction. A targeted acquisition appends its mutation immediately
   // after its own offer, so no global same-sequence reordering is required.
@@ -354,6 +403,58 @@ export function foldTraitHistoryEvents(
     const group: TraitHistoryEvent[] = [];
     while (ordered[index]?.sequence === sequence) group.push(ordered[index++]!);
     for (const event of group) {
+      if (event.kind === 'chaosPair') {
+        const curse = catalog.chaos.curses.byKey[event.offer.curseKey];
+        if (curse !== undefined)
+          activeChaos = [
+            ...activeChaos,
+            Object.freeze({
+              acquisitionIdentity: event.acquisitionIdentity,
+              owner: event.owner,
+              curseKey: event.offer.curseKey,
+              duration: event.offer.duration,
+              remaining: event.offer.duration,
+              clock: curse.clock,
+              ...(curse.semanticTag === undefined ? {} : { semanticTag: curse.semanticTag }),
+              curseValues: event.offer.curseValues,
+              blessingKey: event.offer.blessingKey,
+              rarity: event.offer.rarity,
+              blessingValues: event.offer.blessingValues,
+            }),
+          ];
+        continue;
+      }
+      if (event.kind === 'chaosClock') {
+        const survivors: ChaosCurseInstance[] = [];
+        for (const active of activeChaos) {
+          if (active.clock !== event.clock) {
+            survivors.push(active);
+            continue;
+          }
+          const remaining = active.remaining - 1;
+          if (remaining > 0) {
+            survivors.push(Object.freeze({ ...active, remaining }));
+            continue;
+          }
+          maturedChaos.push(
+            Object.freeze({
+              acquisitionIdentity: active.acquisitionIdentity,
+              blessingKey: active.blessingKey,
+              rarity: active.rarity,
+              blessingValues: active.blessingValues,
+            }),
+          );
+          const outcome = catalog.chaos.blessings.byKey[active.blessingKey]?.derivedOutcome;
+          if (outcome?.kind === 'creation')
+            for (const element of ['Aether', 'Earth', 'Air', 'Fire', 'Water'] as const)
+              pickupElements[element] +=
+                outcome.elementsPerElementByRarity[
+                  active.rarity === 'Legendary' ? 'Heroic' : active.rarity
+                ];
+        }
+        activeChaos = survivors;
+        continue;
+      }
       if (event.kind === 'levelMutation') {
         const target = equipped[event.targetTraitKey];
         if (
@@ -513,7 +614,30 @@ export function foldTraitHistoryEvents(
     equippedTraits: Object.freeze(equipped),
     ...derived,
     ...(activeSources.size === 0 ? {} : { properUpbringingActive: true as const }),
+    activeChaosCurses: Object.freeze(activeChaos),
+    maturedChaosBlessings: Object.freeze(maturedChaos),
   });
+}
+
+/** Advances only one already-recorded lifecycle checkpoint. */
+export function advanceChaosClock(
+  catalog: Catalog,
+  before: TraitHistoryState,
+  sequence: number,
+  clock: import('../catalog-schema').ChaosClockKind,
+): TraitHistoryState {
+  const owner = before.activeChaosCurses.find((active) => active.clock === clock)?.owner;
+  if (owner === undefined) return before;
+  return foldTraitHistoryEvents(catalog, [
+    ...before.events,
+    Object.freeze({
+      kind: 'chaosClock' as const,
+      sequence,
+      clock,
+      owner,
+      acquisitionRole: 'chaosClock' as const,
+    }),
+  ]);
 }
 
 export function traitDerivedFacts(history: TraitHistoryState) {
@@ -561,6 +685,22 @@ export interface TraitOfferContext {
   readonly boonRarityItemOverride?: import('../catalog-schema').BoonRarityOverride;
 }
 
+/** Applies the active Ordinary curse at the one source-screen frontier.
+ * The authored rows stay untouched: a retained non-Common row is assessed as
+ * invalid instead of being silently repaired. */
+export function chaosAdjustedTraitOfferContext(
+  catalog: Catalog,
+  history: TraitHistoryState,
+  offer: AuthoredTraitOffer,
+  context: TraitOfferContext,
+): TraitOfferContext {
+  if (offer.kind !== 'traits' || !hasActiveChaosSemanticTag(history, 'Ordinary')) return context;
+  const provider = catalog.traitGivers.byKey[offer.giverKey]?.providerKind;
+  return provider === 'olympian' || provider === 'hermes'
+    ? Object.freeze({ ...context, freshRarityOverride: 'Common' })
+    : context;
+}
+
 /** One branch-aware adapter from existing offer facts to the numeric ledger input. */
 export function boonRarityFactsForOffer(
   catalog: Catalog,
@@ -579,9 +719,14 @@ export function boonRarityFactsForOffer(
     context.freshRarityOverride !== undefined
   )
     return undefined;
+  const barrenActive = hasActiveChaosSemanticTag(history, 'Barren');
   const arcana =
     arcanaFear?.arcana.active.flatMap((active) => {
       const table = catalog.arcanaCards.byKey[active.key]?.boonRarityContributions;
+      // Barren suppresses every currently declared rarity contribution, not a
+      // hand-maintained card-name list. The Arcana state itself is untouched,
+      // so the independently-derived ledger restores it on maturation.
+      if (barrenActive && table !== undefined) return [];
       return table === undefined ? [] : [table[active.rarity]];
     }) ?? [];
   const traits =
@@ -592,6 +737,17 @@ export function boonRarityFactsForOffer(
             catalog.traits.byKey[equipped.traitKey]?.rarityFloorEffect?.boonRarityContribution;
           return contribution === undefined ? [] : [contribution];
         });
+  const favor = history.maturedChaosBlessings.flatMap((blessing) => {
+    if (catalog.chaos.blessings.byKey[blessing.blessingKey]?.semanticTag !== 'Favor') return [];
+    const rare = blessing.blessingValues.rareBonus;
+    return typeof rare === 'number'
+      ? [
+          Object.freeze({
+            additive: Object.freeze({ Rare: rare, Epic: 0.1, Duo: 0.1, Legendary: 0.1 }),
+          }),
+        ]
+      : [];
+  });
   return Object.freeze({
     providerBase: catalog.boonRarityBases[giver.providerKind],
     ...(context.boonRarityRoomOverride === undefined
@@ -600,8 +756,16 @@ export function boonRarityFactsForOffer(
     ...(context.boonRarityItemOverride === undefined
       ? {}
       : { itemOverride: context.boonRarityItemOverride }),
-    contributions: Object.freeze([...arcana, ...traits]),
+    contributions: Object.freeze([...arcana, ...traits, ...favor]),
   });
+}
+
+/** Exact derived fact; active Chaos state is history-owned and never persisted. */
+export function hasActiveChaosSemanticTag(
+  history: TraitHistoryState,
+  tag: import('../catalog-schema').ChaosSemanticTag,
+): boolean {
+  return history.activeChaosCurses.some((curse) => curse.semanticTag === tag);
 }
 
 export interface EchoLastRunBoonOutcome {
@@ -696,7 +860,14 @@ export interface TraitAssessment {
 /** Findings that belong to the complete first-Olympian offer, not one option's
  * ordinary trait legality.  A missing Attack/Special has no option owner. */
 export interface TraitOfferCompositionFinding {
-  readonly code: 'nonPriorityTrait' | 'missingAttackOrSpecial' | 'traitOfferSelectionUnavailable';
+  readonly code:
+    | 'nonPriorityTrait'
+    | 'missingAttackOrSpecial'
+    | 'traitOfferSelectionUnavailable'
+    | 'chaosOrdinaryRequiresCommon'
+    | 'chaosRejectedBlockMissing'
+    | 'chaosRejectedBlockUnavailable'
+    | 'chaosPairUnavailable';
   readonly traitKey?: string;
   readonly optionKey?: TraitOptionKey;
 }
@@ -921,14 +1092,79 @@ function evaluateReachedTraitOfferWithAssessments(
   rarificationBaseOffer?: AuthoredTraitOffer,
   assessments?: readonly TraitAssessment[],
 ): ReachedTraitOfferEvaluation {
+  const effectiveContext = chaosAdjustedTraitOfferContext(catalog, before, offer, context);
   // Exact one-result sources (for example, a keepsake equip) are direct
   // acquisitions, not a sparse ordinary offer. They retain the normal
   // trait-level assessment and history event path without inheriting the
   // three-choice offer-composition contract.
   const legalityOffer = rarificationBaseOffer ?? offer;
-  const composition = directAcquisition
+  const baseComposition = directAcquisition
     ? Object.freeze({ applies: false, legal: true, findings: Object.freeze([]) })
     : assessTraitOfferComposition(catalog, legalityOffer, before);
+  const composition = (() => {
+    if (offer.kind === 'chaos') {
+      const requirements = [
+        ...(catalog.chaos.curses.byKey[offer.curseKey]?.offerRequirements ?? []),
+        ...(catalog.chaos.blessings.byKey[offer.blessingKey]?.offerRequirements ?? []),
+      ];
+      const unavailable = requirements.some((requirement) => {
+        switch (requirement.kind) {
+          case 'matureChaosBlessing':
+            return before.maturedChaosBlessings.length === 0;
+          case 'elementMinimum':
+            return before.elementCounts[requirement.element] < requirement.minimum;
+          case 'notKeepsake':
+            return context.currentKeepsakeKey === requirement.keepsakeKey;
+          case 'notAspect':
+            return context.aspectKey === requirement.aspectKey;
+          case 'routeKey':
+            return !('routeKey' in address) || address.routeKey !== requirement.routeKey;
+        }
+      });
+      return unavailable
+        ? Object.freeze({
+            applies: true,
+            legal: false,
+            findings: Object.freeze([Object.freeze({ code: 'chaosPairUnavailable' as const })]),
+          })
+        : baseComposition;
+    }
+    if (offer.kind !== 'traits') return baseComposition;
+    const provider = catalog.traitGivers.byKey[offer.giverKey]?.providerKind;
+    if (provider !== 'olympian' && provider !== 'hermes') return baseComposition;
+    const chaosFindings: TraitOfferCompositionFinding[] = [];
+    if (
+      hasActiveChaosSemanticTag(before, 'Ordinary') &&
+      offer.options.some((option) => option.rarity !== 'Common')
+    )
+      chaosFindings.push(Object.freeze({ code: 'chaosOrdinaryRequiresCommon' }));
+    if (hasActiveChaosSemanticTag(before, 'Rejected')) {
+      const blocked = offer.rejectedOptionKey;
+      if (blocked === undefined)
+        chaosFindings.push(Object.freeze({ code: 'chaosRejectedBlockMissing' }));
+      else if (
+        blocked === offer.selectedOptionKey ||
+        offer.options[optionIndex(blocked)] === undefined
+      )
+        chaosFindings.push(
+          Object.freeze({ code: 'chaosRejectedBlockUnavailable', optionKey: blocked }),
+        );
+    } else if (offer.rejectedOptionKey !== undefined) {
+      chaosFindings.push(
+        Object.freeze({
+          code: 'chaosRejectedBlockUnavailable',
+          optionKey: offer.rejectedOptionKey,
+        }),
+      );
+    }
+    return chaosFindings.length === 0
+      ? baseComposition
+      : Object.freeze({
+          ...baseComposition,
+          legal: false,
+          findings: Object.freeze([...baseComposition.findings, ...chaosFindings]),
+        });
+  })();
   const replacementComposition = directAcquisition
     ? Object.freeze({
         applies: false,
@@ -938,17 +1174,17 @@ function evaluateReachedTraitOfferWithAssessments(
         replacementCount: 0,
         findings: Object.freeze([]),
       })
-    : assessTraitReplacementComposition(catalog, legalityOffer, before, context);
+    : assessTraitReplacementComposition(catalog, legalityOffer, before, effectiveContext);
   const targetedAcquisition = assessSelectedTargetedAcquisition(catalog, legalityOffer, before);
   return Object.freeze({
     address,
     acquisitionRole,
     before,
     offer,
-    context,
+    context: effectiveContext,
     ...(arcanaFear === undefined ? {} : { arcanaFear }),
     ...(keepsakes === undefined ? {} : { keepsakes }),
-    assessments: assessments ?? assessTraitOffer(catalog, legalityOffer, before, context),
+    assessments: assessments ?? assessTraitOffer(catalog, legalityOffer, before, effectiveContext),
     composition,
     replacementComposition,
     targetedAcquisition,
@@ -1034,7 +1270,7 @@ export function assessTraitOfferComposition(
   offer: AuthoredTraitOffer,
   before: TraitHistoryState,
 ): TraitOfferCompositionAssessment {
-  if (offer.kind === 'fallbackGold')
+  if (offer.kind !== 'traits')
     return Object.freeze({ applies: false, legal: true, findings: Object.freeze([]) });
   const selected = offer.options[optionIndex(offer.selectedOptionKey)];
   const selectionFindings: TraitOfferCompositionFinding[] =
@@ -1106,6 +1342,15 @@ export function assessTraitReplacementComposition(
       legal: applies && result.legal,
     });
   }
+  if (offer.kind !== 'traits')
+    return Object.freeze({
+      applies: false,
+      legal: true,
+      ordinaryCandidateCount: 0,
+      maximumReplacementCount: 0,
+      replacementCount: 0,
+      findings: Object.freeze([]),
+    });
   if (!applies || giver === undefined) {
     const sparse = offer.kind === 'traits' && offer.options.length !== 3;
     return Object.freeze({
@@ -1187,13 +1432,28 @@ export function recordReachedTraitOffer(
   acquisitionIdentity?: string,
   echoRepeatedKeepsakeKey?: string,
 ): { readonly history: TraitHistoryState; readonly event?: TraitOfferEvent } {
+  if (evaluation.offer.kind === 'chaos') {
+    if (!evaluation.composition.legal) return Object.freeze({ history: evaluation.before });
+    const identity = acquisitionIdentity ?? `chaos:${sequence}`;
+    const event: ChaosPairEvent = Object.freeze({
+      kind: 'chaosPair',
+      owner: evaluation.address,
+      acquisitionRole: evaluation.acquisitionRole,
+      sequence,
+      acquisitionPoint,
+      acquisitionIdentity: identity,
+      offer: evaluation.offer,
+    });
+    return Object.freeze({
+      history: foldTraitHistoryEvents(catalog, [...evaluation.before.events, event]),
+    });
+  }
   const valid =
     evaluation.composition.legal &&
     evaluation.replacementComposition.legal &&
     evaluation.assessments.every((assessment) => assessment.legal);
   if (!valid) return Object.freeze({ history: evaluation.before });
-  if (evaluation.offer.kind === 'fallbackGold')
-    return Object.freeze({ history: evaluation.before });
+  if (evaluation.offer.kind !== 'traits') return Object.freeze({ history: evaluation.before });
   const selectedOption = evaluation.offer.options[optionIndex(evaluation.offer.selectedOptionKey)];
   if (selectedOption === undefined) return Object.freeze({ history: evaluation.before });
   const selectedTraitKey = selectedOption.traitKey;
@@ -1859,7 +2119,7 @@ export function assessTraitOffer(
   history: TraitHistoryState,
   context: TraitOfferContext = {},
 ): readonly TraitAssessment[] {
-  if (offer.kind === 'fallbackGold') return Object.freeze([]);
+  if (offer.kind !== 'traits') return Object.freeze([]);
   const offerContext = { ...context, resolvedProviderKey: offer.giverKey };
   return Object.freeze(
     offer.options.map((option) =>
@@ -1908,7 +2168,7 @@ export function assessSelectedTargetedAcquisition(
   offer: AuthoredTraitOffer,
   history: TraitHistoryState,
 ): TraitTargetedAcquisitionAssessment {
-  if (offer.kind === 'fallbackGold')
+  if (offer.kind !== 'traits')
     return Object.freeze({ applies: false, legal: true, findings: Object.freeze([]) });
   const option = offer.options[optionIndex(offer.selectedOptionKey)];
   if (option === undefined) {

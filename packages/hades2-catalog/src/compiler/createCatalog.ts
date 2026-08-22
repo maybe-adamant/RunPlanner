@@ -176,6 +176,33 @@ export function createCatalog(input: RawCatalogInput): Catalog {
   validatePrebossBatchPolicies(biomeLayouts, rooms, exitCompatibilityPolicies);
   validateDerivedRoomOwnership(rooms, biomeLayouts);
   validateRewardLookupOwnership(rooms, biomeLayouts);
+  for (const reward of rewards.rewardTypes.values) {
+    for (const role of reward.acquisitionRoles.values) {
+      if (
+        role.traitGiverKey !== undefined &&
+        traitCatalog.givers.byKey[role.traitGiverKey] === undefined
+      )
+        fail(
+          `rewards.rewardTypes.${reward.gameName}.${role.key}.traitGiverKey`,
+          'references an unknown trait giver',
+        );
+    }
+  }
+  const trialRole = rewards.rewardTypes.byKey.TrialUpgrade?.acquisitionRoles.byKey.self;
+  if (trialRole?.traitGiverKey !== 'Chaos')
+    fail('rewards.rewardTypes.TrialUpgrade.self.traitGiverKey', 'must bind explicitly to Chaos');
+  const bindings = input.traitCatalog.traitAcquisitionProviders;
+  if (new Set(bindings.map((binding) => binding.gameName)).size !== bindings.length)
+    fail('traitCatalog.traitAcquisitionProviders', 'contains duplicate game-name bindings');
+  const traitGiverByAcquisitionGameName = Object.freeze(
+    Object.fromEntries(
+      bindings.map(({ gameName, giverKey }) => {
+        if (traitCatalog.givers.byKey[giverKey] === undefined)
+          fail(`traitCatalog.traitAcquisitionProviders.${gameName}`, 'references an unknown giver');
+        return [gameName, giverKey];
+      }),
+    ),
+  );
 
   return Object.freeze({
     version: input.version,
@@ -197,7 +224,9 @@ export function createCatalog(input: RawCatalogInput): Catalog {
     weapons: traitCatalog.weapons,
     aspects: traitCatalog.aspects,
     traits: traitCatalog.traits,
+    chaos: traitCatalog.chaos,
     traitGivers: traitCatalog.givers,
+    traitGiverByAcquisitionGameName,
     boonRarityBases: traitCatalog.boonRarityBases,
     echoLastRunBoon: traitCatalog.echoLastRunBoon,
     traitOfferContexts: traitCatalog.offerContexts,

@@ -39,6 +39,33 @@ export interface DecisionTraitState {
   readonly bannedTraitKeys: TraitHistoryState['bannedTraitKeys'];
   readonly properUpbringingActive?: TraitHistoryState['properUpbringingActive'];
   readonly echoShopDuplicateStatus?: 'pending' | 'consumed';
+  /** Derived selected-pair chronology; presentation does not replay lifecycle events. */
+  readonly chaos: {
+    readonly active: readonly DecisionActiveChaosState[];
+    readonly matured: readonly DecisionMaturedChaosState[];
+  };
+}
+
+export interface DecisionActiveChaosState {
+  readonly curseKey: string;
+  readonly curseLabel: string;
+  readonly blessingKey: string;
+  readonly blessingLabel: string;
+  readonly rarity: string;
+  readonly clock: 'encounters' | 'locations' | 'godBoonScreens';
+  readonly clockLabel: string;
+  readonly initial: number;
+  readonly remaining: number;
+  readonly curseValues: Readonly<Record<string, number>>;
+  readonly blessingValues: Readonly<Record<string, number>>;
+  readonly derivedOutcome?: import('../../catalog-schema').ChaosDerivedOutcome;
+}
+export interface DecisionMaturedChaosState {
+  readonly blessingKey: string;
+  readonly blessingLabel: string;
+  readonly rarity: string;
+  readonly blessingValues: Readonly<Record<string, number>>;
+  readonly derivedOutcome?: import('../../catalog-schema').ChaosDerivedOutcome;
 }
 
 export interface DecisionCounterState extends HistoryCounters {
@@ -391,6 +418,7 @@ function traitState(catalog: Catalog, history: TraitHistoryState | undefined): D
       godBoonRarityCounts: Object.freeze({}),
       upgradableTraitCount: 0,
       bannedTraitKeys: Object.freeze([]),
+      chaos: Object.freeze({ active: Object.freeze([]), matured: Object.freeze([]) }),
     });
   }
   const source = history;
@@ -412,6 +440,51 @@ function traitState(catalog: Catalog, history: TraitHistoryState | undefined): D
     godBoonRarityCounts: Object.freeze({ ...source.godBoonRarityCounts }),
     upgradableTraitCount: source.upgradableTraitCount,
     bannedTraitKeys: source.bannedTraitKeys,
+    chaos: Object.freeze({
+      active: Object.freeze(
+        source.activeChaosCurses.map((entry) => {
+          const curse = catalog.chaos.curses.byKey[entry.curseKey];
+          const blessing = catalog.chaos.blessings.byKey[entry.blessingKey];
+          return Object.freeze({
+            curseKey: entry.curseKey,
+            curseLabel: curse?.label ?? entry.curseKey,
+            blessingKey: entry.blessingKey,
+            blessingLabel: blessing?.label ?? entry.blessingKey,
+            rarity: entry.rarity,
+            clock: entry.clock,
+            clockLabel:
+              entry.clock === 'godBoonScreens'
+                ? 'God boon screens'
+                : entry.clock === 'locations'
+                  ? 'Locations'
+                  : 'Encounters',
+            initial: entry.duration,
+            remaining: entry.remaining,
+            curseValues: entry.curseValues,
+            blessingValues: entry.blessingValues,
+            ...(blessing?.derivedOutcome === undefined
+              ? {}
+              : { derivedOutcome: blessing.derivedOutcome }),
+          });
+        }),
+      ),
+      matured: Object.freeze(
+        source.maturedChaosBlessings.map((entry) =>
+          Object.freeze({
+            blessingKey: entry.blessingKey,
+            blessingLabel:
+              catalog.chaos.blessings.byKey[entry.blessingKey]?.label ?? entry.blessingKey,
+            rarity: entry.rarity,
+            blessingValues: entry.blessingValues,
+            ...(catalog.chaos.blessings.byKey[entry.blessingKey]?.derivedOutcome === undefined
+              ? {}
+              : {
+                  derivedOutcome: catalog.chaos.blessings.byKey[entry.blessingKey]!.derivedOutcome,
+                }),
+          }),
+        ),
+      ),
+    }),
     ...(echoShopTrait === undefined || !echoShopAcquired
       ? {}
       : {

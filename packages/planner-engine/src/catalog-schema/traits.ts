@@ -1,6 +1,95 @@
 import type { CatalogCollection } from '../normalized/collection';
 
-export type TraitProviderKind = 'olympian' | 'hermes' | 'hammer' | 'npc' | 'spell';
+export type TraitProviderKind = 'olympian' | 'hermes' | 'hammer' | 'npc' | 'spell' | 'chaos';
+
+/** Closed numeric operand metadata for the paired Chaos result.  This is
+ * deliberately declaration data, rather than a reusable modifier language. */
+export interface ChaosNumericOperand {
+  readonly key: string;
+  readonly label: string;
+  readonly minimum: number;
+  readonly maximum: number;
+  readonly step: number;
+  readonly integer?: true;
+  /** Blessing values are processed against the selected shared rarity. */
+  readonly byRarity?: Readonly<
+    Partial<
+      Record<
+        Extract<TraitRarity, 'Common' | 'Rare' | 'Epic' | 'Heroic' | 'Legendary'>,
+        ChaosNumericOperandDomain
+      >
+    >
+  >;
+}
+
+export interface ChaosNumericOperandDomain {
+  readonly minimum: number;
+  readonly maximum: number;
+  readonly step: number;
+  readonly integer?: true;
+}
+
+export type ChaosClockKind = 'encounters' | 'locations' | 'godBoonScreens';
+export type ChaosSemanticTag = 'Creation' | 'Favor' | 'Ordinary' | 'Rejected' | 'Barren';
+/** Closed source eligibility facts for a selected Chaos pair. */
+export type ChaosOfferRequirement =
+  | { readonly kind: 'matureChaosBlessing' }
+  | { readonly kind: 'elementMinimum'; readonly element: TraitElement; readonly minimum: number }
+  | { readonly kind: 'notKeepsake'; readonly keepsakeKey: string }
+  | { readonly kind: 'notAspect'; readonly aspectKey: string }
+  | { readonly kind: 'routeKey'; readonly routeKey: 'Underworld' };
+
+export interface ChaosCurseDeclaration {
+  readonly key: string;
+  readonly label: string;
+  readonly clock: ChaosClockKind;
+  readonly duration: ChaosNumericOperand;
+  readonly operands: readonly ChaosNumericOperand[];
+  readonly semanticTag?: ChaosSemanticTag;
+  readonly offerRequirements?: readonly ChaosOfferRequirement[];
+}
+
+export interface ChaosBlessingDeclaration {
+  readonly key: string;
+  readonly label: string;
+  readonly operands: readonly ChaosNumericOperand[];
+  readonly semanticTag?: ChaosSemanticTag;
+  readonly fixedRarity?: 'Legendary';
+  /** Closed, game-owned outcome facts for the small Chaos set whose values are
+   * fixed/derived rather than authored rolls. */
+  readonly derivedOutcome?: ChaosDerivedOutcome;
+  readonly offerRequirements?: readonly ChaosOfferRequirement[];
+}
+
+export type ChaosDerivedOutcome =
+  | {
+      readonly kind: 'creation';
+      readonly elementsPerElementByRarity: Readonly<
+        Record<'Common' | 'Rare' | 'Epic' | 'Heroic', number>
+      >;
+    }
+  | {
+      readonly kind: 'celerity';
+      readonly moveSpeedPercentByRarity: Readonly<
+        Record<'Common' | 'Rare' | 'Epic' | 'Heroic', number>
+      >;
+      readonly sprintVelocityByRarity: Readonly<
+        Record<'Common' | 'Rare' | 'Epic' | 'Heroic', number>
+      >;
+      readonly sprintCapByRarity: Readonly<Record<'Common' | 'Rare' | 'Epic' | 'Heroic', number>>;
+    }
+  | {
+      readonly kind: 'chant';
+      readonly damagePerAetherPercentByRarity: Readonly<
+        Record<'Common' | 'Rare' | 'Epic' | 'Heroic', number>
+      >;
+    }
+  | { readonly kind: 'defiance'; readonly healthPercent: 40; readonly magickPercent: 40 };
+
+export interface ChaosTraitCatalog {
+  readonly curses: CatalogCollection<ChaosCurseDeclaration>;
+  readonly blessings: CatalogCollection<ChaosBlessingDeclaration>;
+}
 
 /** Rarities that can exist on an equipped trait or a fresh offer. */
 export type TraitRarity = 'Common' | 'Rare' | 'Epic' | 'Heroic' | 'Legendary' | 'Duo';
@@ -275,5 +364,6 @@ export interface TraitCatalog {
   readonly givers: CatalogCollection<TraitGiverDeclaration>;
   /** Complete source base ledgers for the only fresh-roll providers this slice supports. */
   readonly boonRarityBases: Readonly<Record<'olympian' | 'hermes', BoonRarityValues>>;
+  readonly chaos: ChaosTraitCatalog;
   readonly echoLastRunBoon: EchoLastRunBoonCatalog;
 }

@@ -16,6 +16,14 @@ export type {
   BoonRarityValues,
   HammerCompatibility,
   TraitCatalog,
+  ChaosTraitCatalog,
+  ChaosCurseDeclaration,
+  ChaosBlessingDeclaration,
+  ChaosDerivedOutcome,
+  ChaosNumericOperand,
+  ChaosOfferRequirement,
+  ChaosClockKind,
+  ChaosSemanticTag,
   TraitDeclaration,
   TraitElement,
   EchoLastRunBoonCatalog,
@@ -828,7 +836,11 @@ export interface Catalog {
   readonly weapons: CatalogCollection<WeaponDeclaration>;
   readonly aspects: CatalogCollection<AspectDeclaration>;
   readonly traits: CatalogCollection<TraitDeclaration>;
+  /** Complete normalized Chaos declarations. */
+  readonly chaos: import('./traits').ChaosTraitCatalog;
   readonly traitGivers: CatalogCollection<TraitGiverDeclaration>;
+  /** Catalog-normalized source game names used by payload-source acquisition roles. */
+  readonly traitGiverByAcquisitionGameName: Readonly<Record<string, string>>;
   readonly boonRarityBases: Readonly<
     Record<'olympian' | 'hermes', import('./traits').BoonRarityValues>
   >;

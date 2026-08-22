@@ -55,7 +55,17 @@ export const rewardTypes = [
   directReward('LastStandDrop', 'Death Defiance', 'consumable'),
   directReward('ChaosWeaponUpgrade', 'Chaos Hammer', 'consumable'),
   directReward('InfernalContractBoon', 'Infernal Contract', 'loot'),
-  directReward('TrialUpgrade', 'Chaos Blessing', 'loot'),
+  {
+    gameName: 'TrialUpgrade',
+    label: 'Chaos Blessing',
+    acquisitionRoles: [
+      {
+        key: 'self',
+        resolution: { kind: 'self', acquisitionKind: 'loot' },
+        traitGiverKey: 'Chaos',
+      },
+    ],
+  },
   directReward('GiftDrop', 'Nectar', 'resource'),
   directReward('MetaCurrencyDrop', 'Bones', 'resource'),
   directReward('MetaCurrencyBigDrop', 'Big Bones', 'resource'),

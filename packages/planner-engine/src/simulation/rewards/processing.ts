@@ -94,6 +94,7 @@ import {
 import type { RewardBranch, RewardEvent } from './model';
 import {
   attachTraitHistory,
+  advanceChaosClock,
   createTraitHistoryState,
   foldTraitHistoryEvents,
   isPomEligibleTrait,
@@ -111,6 +112,7 @@ import {
   isAspectSpellDropDormant,
   directTraitSetOutcomes,
   boonRarityFactsForOffer,
+  hasActiveChaosSemanticTag,
   type ReachedTraitOfferEvaluation,
   type ReachedLevelResolutionEvaluation,
   type TraitHistoryState,
@@ -417,7 +419,12 @@ export function assessArtificerConversion(
   const artificerConversionEligible =
     catalog.rewards.acquisitions.byKey[acquisition.acquisition.gameName]
       ?.artificerConversionEligible === true;
-  const status = artificerStatus(catalog, branch.arcanaFear);
+  const status = hasActiveChaosSemanticTag(
+    branch.traitHistory ?? createTraitHistoryState(),
+    'Barren',
+  )
+    ? undefined
+    : artificerStatus(catalog, branch.arcanaFear);
   const evidence = Object.freeze({
     ...offerEvidence(source.offer),
     role: resolution.role,
@@ -602,6 +609,33 @@ interface EchoLastRunBoonSettlement {
   readonly outcome: EchoLastRunBoonOutcome;
 }
 
+function isEligibleChaosGodScreen(
+  catalog: Catalog,
+  offer: AuthoredTraitOffer | undefined,
+): boolean {
+  if (offer === undefined) return false;
+  const provider = catalog.traitGivers.byKey[offer.giverKey]?.providerKind;
+  return provider === 'olympian' || provider === 'hermes';
+}
+
+function consumeChaosGodScreen(
+  catalog: Catalog,
+  branch: RewardBranchState,
+  sequence: number,
+  offer: AuthoredTraitOffer | undefined,
+): RewardBranchState {
+  if (!isEligibleChaosGodScreen(catalog, offer)) return branch;
+  const before = branch.traitHistory ?? createTraitHistoryState();
+  const traitHistory = advanceChaosClock(catalog, before, sequence, 'godBoonScreens');
+  return traitHistory === before
+    ? branch
+    : Object.freeze({
+        ...branch,
+        traitHistory,
+        history: attachTraitHistory(branch.history, traitHistory),
+      });
+}
+
 function applyTraitOfferForAcquisitionInternal(
   catalog: Catalog,
   branch: RewardBranchState,
@@ -700,7 +734,7 @@ function applyTraitOfferForAcquisitionInternal(
             ...(reward.traitContext ?? {}),
             devotionNoDuo:
               reward.traitContext?.devotionNoDuo ?? reward.offer?.rewardType === 'Devotion',
-            ...(authored.kind === 'fallbackGold' || authored.deathDefianceConditionMet === undefined
+            ...(authored.kind !== 'traits' || authored.deathDefianceConditionMet === undefined
               ? {}
               : { deathDefianceConditionMet: authored.deathDefianceConditionMet }),
             resolvedProviderKey: authored.giverKey,
@@ -834,7 +868,7 @@ function applyTraitOfferForAcquisitionInternal(
     Object.freeze({
       ...(reward.traitContext ?? {}),
       devotionNoDuo: reward.traitContext?.devotionNoDuo ?? reward.offer?.rewardType === 'Devotion',
-      ...(effectiveAuthored.kind === 'fallbackGold' ||
+      ...(effectiveAuthored.kind !== 'traits' ||
       effectiveAuthored.deathDefianceConditionMet === undefined
         ? {}
         : { deathDefianceConditionMet: effectiveAuthored.deathDefianceConditionMet }),
@@ -881,9 +915,10 @@ function applyTraitOfferForAcquisitionInternal(
       : catalog.traits.byKey[selectedForIdentity.traitKey]?.selectedDisposition;
   const acquisitionIdentityOwner = traitOwnerAddress(reward.origin);
   const acquisitionIdentity =
-    selectedForIdentityDisposition?.kind === 'echo' &&
-    (selectedForIdentityDisposition.effect === 'doubleShop' ||
-      selectedForIdentityDisposition.effect === 'repeatKeepsake') &&
+    (effectiveAuthored.kind === 'chaos' ||
+      (selectedForIdentityDisposition?.kind === 'echo' &&
+        (selectedForIdentityDisposition.effect === 'doubleShop' ||
+          selectedForIdentityDisposition.effect === 'repeatKeepsake'))) &&
     acquisitionIdentityOwner !== undefined
       ? `${semanticAddressKey(createTraitOfferAddress(acquisitionIdentityOwner, role))}:${sequence}`
       : undefined;
@@ -987,10 +1022,30 @@ function applyTraitOfferForAcquisitionInternal(
   // A Calling Card row action settles at the offer frontier. A later
   // selected-only acquisition failure must not roll that already-valid spend
   // back, while an invalid base offer leaves `effectiveBranch` unchanged.
-  if (applied.event === undefined)
+  if (applied.event === undefined) {
+    const branchAfterOffer =
+      effectiveAuthored.kind === 'chaos' && applied.history !== before
+        ? Object.freeze({
+            ...effectiveBranch,
+            history: attachTraitHistory(effectiveBranch.history, applied.history),
+            traitHistory: applied.history,
+            traitEvaluations,
+          })
+        : Object.freeze({ ...effectiveBranch, traitEvaluations });
     return Object.freeze({
-      branch: Object.freeze({ ...effectiveBranch, traitEvaluations }),
+      branch: consumeChaosGodScreen(
+        catalog,
+        branchAfterOffer,
+        sequence,
+        evaluation.composition.legal &&
+          evaluation.replacementComposition.legal &&
+          evaluation.targetedAcquisition.legal &&
+          evaluation.assessments.every((assessment) => assessment.legal)
+          ? effectiveAuthored
+          : undefined,
+      ),
     });
+  }
   const selected = applied.event.options[optionIndex(applied.event.selectedOptionKey)];
   const pomLevels =
     branch.keepsakes.jeweledPom?.active === true &&
@@ -1132,13 +1187,18 @@ function applyTraitOfferForAcquisitionInternal(
         grants,
       );
   }
-  const settledBranch = Object.freeze({
-    ...effectiveBranch,
-    history: attachTraitHistory(branch.history, traitHistory),
-    traitHistory,
-    traitEvaluations,
-    keepsakes,
-  });
+  const settledBranch = consumeChaosGodScreen(
+    catalog,
+    Object.freeze({
+      ...effectiveBranch,
+      history: attachTraitHistory(branch.history, traitHistory),
+      traitHistory,
+      traitEvaluations,
+      keepsakes,
+    }),
+    sequence,
+    effectiveAuthored,
+  );
   return Object.freeze({
     branch: settledBranch,
     ...(blockedChildAddress === undefined
@@ -1324,7 +1384,7 @@ export function settleEncounterTraitOffer(
   }
   let blockedChild: EncounterTraitOfferSettlement['blockedChild'];
   const settledBranch = ((): RewardBranchState => {
-    if (offer.kind === 'fallbackGold') {
+    if (offer.kind !== 'traits') {
       return applyTraitOfferForAcquisition(
         catalog,
         branch,

@@ -425,7 +425,7 @@ function candidateFinding(
 function duplicateOfferedTraitFindings(
   offer: AuthoredTraitOffer,
 ): readonly TraitOfferCandidateFinding[] {
-  if (offer.kind === 'fallbackGold') return Object.freeze([]);
+  if (offer.kind !== 'traits') return Object.freeze([]);
   const optionKeysByTrait = new Map<string, TraitOptionKey[]>();
   const optionKeys: readonly TraitOptionKey[] = ['option1', 'option2', 'option3'];
   for (const [index, option] of offer.options.entries()) {
@@ -660,7 +660,7 @@ export function evaluateTraitOfferCandidate(
     (capability?.callingCard(query.value) ?? []).map((branch) =>
       Object.freeze({
         effectiveRarities:
-          branch.effectiveOffer.kind === 'fallbackGold'
+          branch.effectiveOffer.kind !== 'traits'
             ? Object.freeze([])
             : Object.freeze(branch.effectiveOffer.options.map((option) => option.rarity)),
         ...(branch.remainingCharges === undefined
@@ -687,7 +687,7 @@ export function evaluateTraitOfferFocusedOptionCandidate(
   candidateArtifacts: TraitOfferCandidateArtifacts | undefined,
   query: TraitOfferFocusedOptionCandidateQuery,
 ): TraitOfferFocusedOptionCandidateEvaluation {
-  if (query.value.kind === 'fallbackGold') return unavailableForTraitOffer(evaluation, query.trait);
+  if (query.value.kind !== 'traits') return unavailableForTraitOffer(evaluation, query.trait);
   const duplicateFindings = duplicateOfferedTraitFindings(query.value);
   const focusedDuplicate = duplicateFindings.some((finding) =>
     finding.optionKeys?.includes(query.optionKey),
@@ -709,7 +709,7 @@ export function evaluateTraitAcquisitionTargetDomain(
   candidateArtifacts: TraitOfferCandidateArtifacts | undefined,
   query: TraitAcquisitionTargetDomainQuery,
 ): TraitAcquisitionTargetDomainEvaluation {
-  if (query.value.kind === 'fallbackGold') return unavailableForTraitOffer(evaluation, query.trait);
+  if (query.value.kind !== 'traits') return unavailableForTraitOffer(evaluation, query.trait);
   const capability = candidateArtifacts?.at(query.trait);
   if (capability === undefined) return unavailableForTraitOffer(evaluation, query.trait);
   const option = query.value.options[optionIndex(query.optionKey)];

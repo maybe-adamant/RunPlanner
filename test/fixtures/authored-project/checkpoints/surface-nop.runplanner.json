@@ -1,7 +1,7 @@
 {
-  "schemaVersion": 50,
+  "schemaVersion": 51,
   "projectId": "surface-3",
-  "catalogVersion": "0.30.0-boon-rarity-ledger",
+  "catalogVersion": "0.31.0-chaos-traits",
   "routes": [
     {
       "routeKey": "Underworld",

@@ -4,9 +4,10 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { basename, dirname, extname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-const CURRENT_SCHEMA_VERSION = 50;
+const CURRENT_SCHEMA_VERSION = 51;
 const SCHEMA_49_CATALOG_VERSION = '0.27.0-arcana-fear-loadout';
-const SCHEMA_50_CATALOG_VERSION = '0.28.0-selene-spells';
+const SCHEMA_50_CATALOG_VERSION = '0.30.0-boon-rarity-ledger';
+const SCHEMA_51_CATALOG_VERSION = '0.31.0-chaos-traits';
 
 function expectRecord(value, label) {
   if (value === null || typeof value !== 'object' || Array.isArray(value)) {
@@ -59,7 +60,40 @@ function migrate49To50(document) {
   return { unresolvedSpellDropsAdded };
 }
 
-const migrations = new Map([[49, migrate49To50]]);
+function migrate50To51(document) {
+  if (document.catalogVersion !== SCHEMA_50_CATALOG_VERSION) {
+    throw new Error(
+      `schema 50 migration expects catalog ${SCHEMA_50_CATALOG_VERSION}, received ${String(document.catalogVersion)}`,
+    );
+  }
+  let unresolvedTrialUpgradesAdded = 0;
+  visitRecords(document, (record) => {
+    const offer = record.offer;
+    if (
+      offer === null ||
+      typeof offer !== 'object' ||
+      Array.isArray(offer) ||
+      offer.rewardType !== 'TrialUpgrade'
+    )
+      return;
+    const traitOffers = expectRecord(
+      record.traitOffersByAcquisitionRole,
+      'TrialUpgrade.traitOffersByAcquisitionRole',
+    );
+    if (!Object.hasOwn(traitOffers, 'self')) {
+      traitOffers.self = null;
+      unresolvedTrialUpgradesAdded += 1;
+    }
+  });
+  document.schemaVersion = 51;
+  document.catalogVersion = SCHEMA_51_CATALOG_VERSION;
+  return { unresolvedTrialUpgradesAdded };
+}
+
+const migrations = new Map([
+  [49, migrate49To50],
+  [50, migrate50To51],
+]);
 
 export function migrateProjectDocument(value, targetVersion = CURRENT_SCHEMA_VERSION) {
   const document = structuredClone(expectRecord(value, 'project document'));

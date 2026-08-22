@@ -761,6 +761,7 @@ describe('reward-kernel declaration parity', () => {
         {
           key: 'self',
           resolution: { kind: 'self', acquisitionKind: acquisition.kind },
+          ...(acquisition.gameName === 'TrialUpgrade' ? { traitGiverKey: 'Chaos' } : {}),
         },
       ]);
     }

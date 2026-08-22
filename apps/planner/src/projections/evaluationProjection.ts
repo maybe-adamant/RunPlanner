@@ -369,6 +369,23 @@ const findingCopy = {
     title: 'Trait banned by Vow of Denial',
     description: 'This trait was left unselected in an earlier Denial offer.',
   },
+  chaosOrdinaryRequiresCommon: {
+    title: 'Ordinary requires Common options',
+    description:
+      'While Ordinary is active, this eligible god-boon screen must retain only Common rarities.',
+  },
+  chaosRejectedBlockMissing: {
+    title: 'Rejected needs a blocked option',
+    description: 'Choose one visible, unselected option to block while Rejected is active.',
+  },
+  chaosRejectedBlockUnavailable: {
+    title: 'Rejected block is unavailable',
+    description: 'The blocked option must be visible and cannot be the selected option.',
+  },
+  chaosPairUnavailable: {
+    title: 'Chaos pair unavailable',
+    description: 'This selected Chaos pair does not meet its current run prerequisite.',
+  },
   callingCardRarificationUnavailable: {
     title: 'Calling Card cannot rarify this row',
     description: 'This rarification action is not available at the reached offer frontier.',
