@@ -43,9 +43,12 @@ Primary evidence comes from the installed game scripts:
   `BlockGiftBoons` fact.
 
 The audit uses the current progressed, non-bounty, non-dream baseline already
-established by the reward model. Selene Hex/Talent progression, Chaos
-blessings/curses, keepsakes, Arcana forcing, and prior-run Echo payload content
-are outside this inventory.
+established by the reward model. Selene Hex/Talent progression and Chaos
+blessings/curses are outside this inventory and are audited separately in
+[Selene spell game data](SELENE_SPELL_GAME_DATA_AUDIT.md) and
+[Chaos trait game data](CHAOS_TRAIT_GAME_DATA_AUDIT.md). Keepsakes, Arcana
+forcing, and prior-run Echo payload content are likewise outside this
+inventory.
 
 ## Reading the Inventory
 

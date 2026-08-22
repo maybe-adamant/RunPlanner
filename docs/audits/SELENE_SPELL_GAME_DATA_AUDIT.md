@@ -1,0 +1,151 @@
+# Selene Spell Game-Data Audit
+
+## Status and scope
+
+This is an implementation-free source audit of Selene's Spell Drop, the nine
+Hex identities, and Aspect of Selene's starting Sky Fall. It settles the
+choice domain and the run-state consequences needed before the planner turns
+`SpellDrop` from an effect-neutral consumable into a concrete trait-bearing
+reward.
+
+Path of Stars talent-tree authoring is outside this audit. The source contacts
+between a chosen Hex and later trait eligibility are included because concrete
+spell identity is already observable by the planner's trait-offer model.
+
+The evidence was checked on 2026-08-22 against the installed Hades II scripts:
+
+- `SpellData.lua`, especially the nine `SpellData` entries;
+- `SpellScreenLogic.lua`, especially `OpenSpellScreen`, `GetEligibleSpells`,
+  `CreateSpellButtons`, and `ChooseSpell`;
+- `SpellLogic.lua`, especially `PregenerateSpells`;
+- `TraitData_Spell.lua` and `TraitText.en.sjson` for the concrete spell traits
+  and player-facing names;
+- `TraitData_Aspect.lua` and `WeaponUpgradeLogic.lua` for `SuitHexAspect` and
+  its linked spell;
+- `RequirementsData.lua` for `SpellDropRequirements` and `TalentLegal`;
+- `RunData.lua` for the spell-to-trait initialization links;
+- `TraitData.lua`, `TraitData_Artemis.lua`, and `TraitData_Circe.lua` for
+  downstream trait requirements; and
+- `LootData_Selene.lua` for the Aspect-specific Selene interaction.
+
+## Nine identities, two acquisition paths
+
+The source declares exactly nine Hexes:
+
+| Spell key   | Trait key             | Player-facing name | Normal Spell Drop pool | Acquisition path |
+| ----------- | --------------------- | ------------------ | ---------------------- | ---------------- |
+| `Polymorph` | `SpellPolymorphTrait` | Twilight Curse     | yes                    | Spell selection  |
+| `Meteor`    | `SpellMeteorTrait`    | Total Eclipse      | yes                    | Spell selection  |
+| `Transform` | `SpellTransformTrait` | Dark Side          | yes                    | Spell selection  |
+| `Leap`      | `SpellLeapTrait`      | Wolf Howl          | yes                    | Spell selection  |
+| `Laser`     | `SpellLaserTrait`     | Lunar Ray          | yes                    | Spell selection  |
+| `Summon`    | `SpellSummonTrait`    | Night Bloom        | yes                    | Spell selection  |
+| `TimeSlow`  | `SpellTimeSlowTrait`  | Phase Shift        | yes                    | Spell selection  |
+| `Potion`    | `SpellPotionTrait`    | Moon Water         | yes                    | Spell selection  |
+| `MoonBeam`  | `SpellMoonBeamTrait`  | Sky Fall           | no                     | Aspect of Selene |
+
+`MoonBeam` has `GameStateRequirements = { Skip = true }`. It is not a ninth
+random alternative. `SuitHexAspect` instead declares `LinkedSpell =
+"MoonBeam"`; equipping that aspect adds `SpellMoonBeamTrait`, constructs its
+talent tree, and makes it the slotted spell before the route begins.
+
+The other eight are the complete normal Spell Drop domain under the planner's
+fully progressed baseline. Five of them (`Meteor`, `Transform`, `Leap`,
+`Summon`, and `Potion`) require a prior-run `SeleneFirstPickUp` record and no
+same-run first-pickup record. Twilight Curse, Lunar Ray, and Phase Shift have
+no corresponding progression gate. Those gates explain the first-ever Selene
+screen; they do not narrow the planner's established progressed-save pool.
+
+## Normal Spell Drop choice
+
+`GetEligibleSpells` filters the eight normal spell entries against their
+current requirements. `PregenerateSpells` then removes three random values
+from that eligible set, and `CreateSpellButtons` renders at most three. The
+three choices are therefore distinct alternatives against one pre-selection
+state.
+
+Selecting one choice equips exactly its `Spell*Trait` in the single `Spell`
+slot. The spell traits do not use ordinary boon rarity. The named
+`SpellDropRequirements` also require the current run not to have used a Spell
+Drop already, so the ordinary supported run chooses at most one Hex. This is
+not an ordinary Olympian giver and should not acquire a fabricated god-pool,
+rarity, Pom, or three-boon contract merely because both screens show three
+cards.
+
+The authored result needs enough information to preserve the real hidden
+choice surface: three distinct eligible spell identities and one selected
+identity. A shortcut that stores only the winner would lose the same
+offer-authorship and candidate-feedback contract already retained for other
+three-choice rewards.
+
+## Aspect of Selene
+
+The global `SpellDropRequirements` do not exclude `SuitHexAspect`. On using a
+Spell Drop, `OpenSpellScreen` checks that aspect first and routes directly to
+`OpenTalentScreen`; it does not open the spell-choice screen and does not
+replace Sky Fall. Selene's Aspect-specific dialogue describes the same rule:
+the aspect bearer already knows Sky Fall and reshapes it through Path of Stars.
+
+Some individual Shop replacement tables independently exclude
+`SuitHexAspect`; that is a store-local option rule, not evidence that the
+aspect can never receive a Spell Drop. The normal `RunProgress` Spell entry
+uses the named requirements and remains available to the aspect. Thus the
+planner rule is:
+
+- every other aspect starts with no spell and its first acquired Spell Drop
+  owns the eight-spell, three-choice selection; and
+- Aspect of Selene starts with Sky Fall, and a later Spell Drop is still
+  acquired but owns Path of Stars progression rather than trait selection.
+
+The current planner does not yet author Path of Stars. Until that separate
+slice exists, an Aspect-of-Selene Spell Drop may remain a concrete consumable
+and use record with an explicitly deferred talent outcome; it must not offer a
+second Hex or erase Sky Fall.
+
+## Existing downstream contacts
+
+Concrete spell identity is not merely descriptive. Seven spell traits—every
+normal spell except Phase Shift and Moon Water, plus aspect-owned Sky Fall—are
+positive prerequisites for:
+
+- Artemis's `SorceryCritBoon` (Whispered Prayer); and
+- Circe's `CirceSorceryDamageBoon` (Hymn to the Eye of Night).
+
+Those providers must read the equipped spell at their exact offer checkpoint.
+Aspect-owned Sky Fall is present from the run's initial loadout state; a normal
+Hex becomes present only after its Spell Drop is picked up and its selection
+is resolved. Merely generating or seeing the Spell Drop cannot satisfy either
+dependency.
+
+Moon Water separately carries three uses that refresh on fountain use. That is
+a real combat-resource effect, but current reward, candidate, and lifecycle
+state does not consume spell-use counts. Concrete Moon Water identity is in
+scope; its remaining-use simulation is not required to make spell-dependent
+trait eligibility exact.
+
+Path of Stars talents remain distinct equipped traits. In particular,
+`OlympianSpellCountBoon` depends on one of nine Olympian talent identities, not
+on a base Hex. Base-spell implementation must not synthesize those talents or
+claim that `AllSpellInvestedCache` is exact. The current explicit
+`allSpellInvested = false` support baseline remains until talent-tree
+authoring is audited and delivered.
+
+## Planner disposition
+
+The first implementation slice can be narrow and complete:
+
+1. declare all nine spell traits as real trait identities rather than deferred
+   operands;
+2. derive starting Sky Fall from the route's existing `SuitHexAspect` loadout;
+3. give a non-aspect Spell Drop its exact three-distinct-from-eight offer and
+   selected spell outcome;
+4. fold only the selected spell into equipped-trait history at pickup;
+5. let Artemis and Circe consume that history through their existing positive
+   dependency machinery; and
+6. preserve Aspect of Selene's Spell Drop as a no-new-spell Path-of-Stars
+   frontier until talent authoring is implemented.
+
+This slice does not need a second spell slot, a spell-use simulator, a talent
+tree, spell damage, or special React-owned eligibility. The catalog owns the
+nine identities and Aspect link, the engine owns contextual choice and history,
+and the editor only presents the engine's supported outcome.
