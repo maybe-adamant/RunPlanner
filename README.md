@@ -191,6 +191,8 @@ copied elsewhere.
   [trait-offer pools and dependencies](docs/audits/TRAIT_OFFER_POOLS_AND_DEPENDENCIES.md),
   [Selene spell audit](docs/audits/SELENE_SPELL_GAME_DATA_AUDIT.md),
   [Chaos trait audit](docs/audits/CHAOS_TRAIT_GAME_DATA_AUDIT.md),
+  [boon rarity ledger audit](docs/audits/BOON_RARITY_LEDGER_GAME_DATA_AUDIT.md),
+  [I/Q World Shop phase audit](docs/audits/I_Q_WORLD_SHOP_PHASE_GAME_DATA_AUDIT.md),
   [authored reward and trait defaults](docs/audits/AUTHORED_REWARD_AND_TRAIT_DEFAULTS_AUDIT.md),
   [acquisition delivery and room settlement](docs/audits/ACQUISITION_DELIVERY_AND_ROOM_SETTLEMENT.md),
   [room action order](docs/audits/ROOM_ACTION_ORDER_GAME_DATA_AUDIT.md),
