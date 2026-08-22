@@ -97,6 +97,10 @@ export interface WorkspaceBiomeSource {
   readonly findingsFor: (owner: SemanticAddress) => readonly SemanticFinding[];
   readonly hubDecision: (hubKey: string) => HubDecision | undefined;
   readonly isAssessed: (owner: SemanticAddress) => boolean;
+  /** Exact engine-reached trait child coverage; authored dormant children stay retained. */
+  readonly isActiveTraitOffer: (
+    owner: import('@run-planner/engine/authored-project').TraitOfferAddress,
+  ) => boolean;
   readonly levelResolutionAssessment: (
     owner: LevelResolutionAddress,
   ) => SelectedLevelResolutionAssessment | undefined;
@@ -608,6 +612,7 @@ function createWorkspaceBiomeSource(
   figLeafSupport: (phase: EncounterPhaseAddress) => FigLeafPhaseCandidateSupport | undefined,
   gorgonSupport: (phase: EncounterPhaseAddress) => GorgonPhaseCandidateSupport | undefined,
   derivedAcquisitionEntries: WorkspaceBiomeSource['derivedAcquisitionEntries'],
+  isActiveTraitOffer: WorkspaceBiomeSource['isActiveTraitOffer'],
   blockedOccurrenceRoom: (
     occurrence: ReturnType<typeof createOccurrenceAddress>,
   ) => CanonicalAuthoredRoom | undefined,
@@ -737,6 +742,7 @@ function createWorkspaceBiomeSource(
     hubDecision: (hubKey: string) =>
       hubDecisionsByKey.get(semanticAddressKey(createHubDecisionAddress(biome, hubKey))),
     isAssessed: coverage.isAssessed,
+    isActiveTraitOffer,
     levelResolutionAssessment: (owner: LevelResolutionAddress) =>
       levelResolutionAssessments.get(semanticAddressKey(owner)),
     layout,
@@ -793,6 +799,7 @@ export function createWorkspaceProjectSourceIndex(
     undefined,
   derivedAcquisitionEntries: WorkspaceBiomeSource['derivedAcquisitionEntries'] = () =>
     Object.freeze([]),
+  isActiveTraitOffer: WorkspaceBiomeSource['isActiveTraitOffer'] = () => false,
   blockedOccurrenceRoom: (
     occurrence: ReturnType<typeof createOccurrenceAddress>,
   ) => CanonicalAuthoredRoom | undefined = () => undefined,
@@ -815,6 +822,7 @@ export function createWorkspaceProjectSourceIndex(
                 figLeafSupport,
                 gorgonSupport,
                 derivedAcquisitionEntries,
+                isActiveTraitOffer,
                 blockedOccurrenceRoom,
               ),
             ),

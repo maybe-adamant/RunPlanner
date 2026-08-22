@@ -17,7 +17,7 @@ import {
   type RewardTypeDeclaration,
 } from '../../reward-kernel';
 import type { HistoryCounters, HistoryStateView } from '../history';
-import { ordinaryEquippedSlots, type TraitHistoryState } from '../traits';
+import type { TraitHistoryState } from '../traits';
 import type { RewardBranchState } from './processing';
 
 export type RunStateOwner =
@@ -31,9 +31,8 @@ export interface DecisionGodPoolState {
 
 export interface DecisionTraitState {
   readonly equippedTraits: TraitHistoryState['equippedTraits'];
-  readonly ordinaryBoonSlots: Readonly<
-    Record<string, import('../../authored-project/traits').EquippedTrait>
-  >;
+  /** The complete six-slot equipment ledger, including the rarityless Spell slot. */
+  readonly equippedSlots: TraitHistoryState['equippedSlots'];
   readonly elementCounts: Readonly<Record<TraitElement, number>>;
   readonly godBoonRarityCounts: TraitHistoryState['godBoonRarityCounts'];
   readonly upgradableTraitCount: number;
@@ -387,7 +386,7 @@ function traitState(catalog: Catalog, history: TraitHistoryState | undefined): D
   if (history === undefined) {
     return Object.freeze({
       equippedTraits: Object.freeze({}),
-      ordinaryBoonSlots: Object.freeze({}),
+      equippedSlots: Object.freeze({}),
       elementCounts: Object.freeze({ Aether: 0, Earth: 0, Air: 0, Fire: 0, Water: 0 }),
       godBoonRarityCounts: Object.freeze({}),
       upgradableTraitCount: 0,
@@ -408,7 +407,7 @@ function traitState(catalog: Catalog, history: TraitHistoryState | undefined): D
     });
   return Object.freeze({
     equippedTraits: Object.freeze({ ...source.equippedTraits }),
-    ordinaryBoonSlots: ordinaryEquippedSlots(source),
+    equippedSlots: Object.freeze({ ...source.equippedSlots }),
     elementCounts: Object.freeze({ ...source.elementCounts }),
     godBoonRarityCounts: Object.freeze({ ...source.godBoonRarityCounts }),
     upgradableTraitCount: source.upgradableTraitCount,

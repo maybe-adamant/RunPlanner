@@ -86,6 +86,7 @@ function decisionKit(source: WorkspaceBiomeSource) {
       ...(input.fieldsBatchFacts === undefined ? {} : { fieldsBatchFacts: input.fieldsBatchFacts }),
       facts: occurrenceFacts,
       levelResolutionAssessment: source.levelResolutionAssessment,
+      isActiveTraitOffer: source.isActiveTraitOffer,
       markerDestinations: markers.emitter,
       ordinaryRewardForfeited: (owner) => source.ordinaryRewardForfeited(owner.address),
       occurrence: input.occurrence,

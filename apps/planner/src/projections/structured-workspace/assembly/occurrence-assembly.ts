@@ -37,6 +37,7 @@ import {
   type RoomRunStateCheckpointAddress,
   type AuthoredRewardState,
   type AuthoredTraitOffer,
+  type TraitOfferAddress,
   type LevelResolutionAddress,
   roomActionKey,
   acquisitionSiteFromStorageKey,
@@ -172,6 +173,7 @@ export interface WorkspaceOccurrenceAssemblyInput {
   readonly levelResolutionAssessment: (
     owner: LevelResolutionAddress,
   ) => SelectedLevelResolutionAssessment | undefined;
+  readonly isActiveTraitOffer: (owner: TraitOfferAddress) => boolean;
   readonly derivedAcquisitionEntries?: (
     site: AcquisitionSiteAddress,
   ) => readonly WorkspaceDerivedAcquisitionEntry[];
@@ -269,6 +271,9 @@ function traitOfferControls(
     const giver = input.catalog.traitGivers.byKey[giverKey];
     if (giver === undefined) continue;
     const address = createTraitOfferAddress(owner.address, acquisitionRole);
+    // Exact engine candidate capability distinguishes reached spell children.
+    // Unreached authored children remain retained but publish no app controls.
+    if (giver.providerKind === 'spell' && !input.isActiveTraitOffer(address)) continue;
     if (offer === null) {
       const marker = input.markerDestinations.marker(address);
       controls.push(

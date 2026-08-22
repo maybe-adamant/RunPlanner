@@ -18,6 +18,7 @@ const coreTraitSlots = Object.freeze([
   Object.freeze({ label: 'Cast', slotKey: 'Ranged' }),
   Object.freeze({ label: 'Sprint', slotKey: 'Rush' }),
   Object.freeze({ label: 'Magick', slotKey: 'Mana' }),
+  Object.freeze({ label: 'Spell', slotKey: 'Spell' }),
 ] as const);
 
 function count(value: DecisionRewardBagCount): string {
@@ -152,7 +153,7 @@ export function presentRunState(
   snapshot: RunStateSnapshot,
 ): WorkspaceRunStatePresentation {
   const coreTraitKeys = new Set(
-    Object.values(snapshot.traits.ordinaryBoonSlots).map(({ traitKey }) => traitKey),
+    Object.values(snapshot.traits.equippedSlots).map(({ traitKey }) => traitKey),
   );
   const artificer = artificerStatus(catalog, snapshot.arcanaFear);
   return Object.freeze({
@@ -298,7 +299,7 @@ export function presentRunState(
         : { activeMinimumScalableRarity: snapshot.traits.minimumScalableGodTraitRarity }),
       coreSlots: Object.freeze(
         coreTraitSlots.map(({ label, slotKey }) => {
-          const equipped = snapshot.traits.ordinaryBoonSlots[slotKey];
+          const equipped = snapshot.traits.equippedSlots[slotKey];
           return Object.freeze({
             label,
             slotKey,

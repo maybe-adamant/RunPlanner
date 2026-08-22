@@ -8,6 +8,7 @@ import {
   type EncounterPhaseAddress,
   type KeepsakeEquipResultAddress,
   type LevelResolutionAddress,
+  type TraitOfferAddress,
   type SemanticAddress,
 } from '../authored-project/addresses';
 import type { CountedRewardBinding } from '../reward-kernel';
@@ -369,6 +370,16 @@ export function levelResolutionCandidateForProjectEvaluationAssembly(
   return candidateArtifactsForProjectEvaluationAssembly(assembly)
     .biomeAt(createBiomeAddress(address.routeKey, address.biomeKey))
     ?.levelResolutions.at(address);
+}
+
+/** Narrow supported candidate capability for one reached trait-offer child. */
+export function traitOfferCandidateForProjectEvaluationAssembly(
+  assembly: ProjectEvaluationAssembly,
+  address: TraitOfferAddress,
+) {
+  return candidateArtifactsForProjectEvaluationAssembly(assembly)
+    .biomeAt(createBiomeAddress(address.routeKey, address.biomeKey))
+    ?.traitOffers.at(address);
 }
 
 /**

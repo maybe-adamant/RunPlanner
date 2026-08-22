@@ -12,6 +12,7 @@ import {
   createAcquisitionEntryAddress,
   createAcquisitionSiteAddress,
   createIncomingRewardAddress,
+  createExitSelectionAddress,
   createRouteStartKeepsakeSelectionAddress,
   createTraitOfferAddress,
   semanticAddressKey,
@@ -32,7 +33,10 @@ import {
   createApplication,
   type ApplicationEvaluationEvent,
 } from '@planner/composition/createApplication';
-import { authoredProjectReplaced } from '@planner/state/projectWorkspaceSlice';
+import {
+  authoredProjectUndoRequested,
+  authoredProjectReplaced,
+} from '@planner/state/projectWorkspaceSlice';
 import {
   prepareTraitOptionDomain,
   type TraitOptionDomainProjection,
@@ -42,10 +46,12 @@ import type {
   WorkspaceInteractionCatalog,
   WorkspaceTraitOfferInteraction,
 } from '@planner/projections/structured-workspace';
-import { TraitOfferEditor } from './TraitOfferEditor';
+import { TraitOfferDialog, TraitOfferEditor } from './TraitOfferEditor';
 import {
+  createGoldenFGHProject,
   createGoldenFGHIProject,
   goldenFBiome,
+  goldenFOccurrenceId,
   goldenFStartId,
 } from '@run-planner/test-fixtures/underworld';
 import { loadSurfaceNStoryBoardProject } from '@run-planner/test-fixtures/surface';
@@ -110,6 +116,73 @@ function unavailablePickerModel<T>(
 }
 
 describe('trait offer editor', () => {
+  it('edits the real reached SpellDrop once, without new project evaluation, and supports Undo', async () => {
+    const events: ApplicationEvaluationEvent[] = [];
+    const application = createApplication({ observeEvaluationWork: (event) => events.push(event) });
+    const occurrenceId = goldenFOccurrenceId(10, 2);
+    const project = applyProjectCommand(createGoldenFGHProject(), application.catalog, {
+      kind: 'SetExitSelection',
+      selection: createExitSelectionAddress(goldenFBiome, {
+        kind: 'occurrence',
+        occurrenceId: goldenFOccurrenceId(9, 1),
+      }),
+      value: { kind: 'normal', exitKey: 'exit2' },
+    });
+    application.store.dispatch(authoredProjectReplaced(project));
+    const address = createTraitOfferAddress(
+      createIncomingRewardAddress(goldenFBiome, occurrenceId),
+      'self',
+    );
+    const workspace = application.selectStructuredWorkspace(application.store.getState());
+    expect(workspace.interactions.traitOffers.has(semanticAddressKey(address))).toBe(true);
+    events.length = 0;
+    render(
+      <Provider store={application.store}>
+        <TraitOfferDialog interactions={workspace.interactions} target={address} />
+      </Provider>,
+    );
+    expect(events).toEqual([]);
+    expect(screen.getByText('Spell 1')).toBeTruthy();
+    expect(screen.getByText('Spell 2')).toBeTruthy();
+    expect(screen.getByText('Spell 3')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Rarify' })).toBeNull();
+    expect(screen.queryByText(/^Rarity:/)).toBeNull();
+    expect(screen.queryByRole('status', { name: 'Offer feedback' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Add option' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Select Fallback Gold' })).toBeNull();
+
+    const historyDepth = application.store.getState().projectWorkspace.history.past.length;
+    const option2 = screen.getAllByRole('radio', { name: 'Selected' })[1];
+    if (option2 === undefined) throw new Error('Spell option 2 selector is missing');
+    await userEvent.setup().click(option2);
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Save trait offer' }));
+    expect(application.store.getState().projectWorkspace.history.past).toHaveLength(
+      historyDepth + 1,
+    );
+    const changedOccurrence = application.store
+      .getState()
+      .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find((biome) => biome.biomeKey === 'F')
+      ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === occurrenceId);
+    const changed =
+      changedOccurrence?.state.kind === 'counted' && changedOccurrence.state.reward !== null
+        ? changedOccurrence.state.reward.traitOffersByAcquisitionRole?.self
+        : undefined;
+    expect(changed).toMatchObject({ selectedOptionKey: 'option2' });
+    application.store.dispatch(authoredProjectUndoRequested());
+    const restoredOccurrence = application.store
+      .getState()
+      .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find((biome) => biome.biomeKey === 'F')
+      ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === occurrenceId);
+    const restored =
+      restoredOccurrence?.state.kind === 'counted' && restoredOccurrence.state.reward !== null
+        ? restoredOccurrence.state.reward.traitOffersByAcquisitionRole?.self
+        : undefined;
+    expect(restored).toMatchObject({ selectedOptionKey: 'option1' });
+    application.dispose();
+  });
+
   it('uses the Calling Card candidate to append ordered row actions through Heroic without mutating base rarity', async () => {
     const application = createApplication();
     const reward = createIncomingRewardAddress(goldenFBiome, goldenFStartId);
