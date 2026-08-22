@@ -737,8 +737,19 @@ offers.
 
 `WorldShop`, `I_WorldShop`, and `Q_WorldShop` are distinct profiles. N uses
 `WorldShop` but adds the declaration-owned `hubRewardLookup` requirements
-described above. Their specific later-biome rules move with the corresponding
-implementation slice.
+described above. `I_WorldShop` and `Q_WorldShop` consume the normalized
+entered-biome requirement at entry: counts through 2 admit first-half option
+entries, counts from 3 admit second-half entries, and phase-independent entries
+remain available. Requirements are conjoined at the option entry, so existing
+Hammer, Hermes, Spell, Talent, Last Stand, and other guards remain
+authoritative. Group and slot cardinality do not change; Q's first group still
+selects two distinct option keys without replacement after phase filtering.
+The current fixed-route evaluator supplies `biomeIndex + 1` as
+`enteredBiomeCount`, which is equivalent for the supported fixed-order routes.
+A future Dream Dive implementation must change that fact producer to provide
+the actual reordered reached count through the existing engine input, not
+change Shop declarations. The exact generated option identity remains the
+future rarity-ledger handoff; rarity is not implemented here.
 
 Supplemental Shop opportunities do not alter those profile slot counts.
 Qualifying Shops may additionally expose fixed `infernalContractReward`,

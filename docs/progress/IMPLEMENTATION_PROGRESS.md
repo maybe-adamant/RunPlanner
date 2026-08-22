@@ -2963,3 +2963,42 @@ individually: the heavy lane passed 27 files/403 tests, ESLint and repository
 formatting passed, and the production build passed after transforming 395
 modules with only the existing greater-than-500-kB chunk advisory. No
 production, timeout, worker, or configuration file changed.
+
+The I/Q World Shop phase correction is closed through Gate B on 2026-08-22.
+Gate A landed at `8ccdf50` (`fix(shop): honor entered-biome world shop
+phases`), and this Gate-B handoff started from that exact clean base
+`8ccdf50e1b8a845baae02b614798c987ed52b948`. It adds
+the source-named `enteredBiomes <= 2` and `enteredBiomes >= 3` option
+requirements, the complete audited I/Q matrices, Q's filtered two-distinct
+offer assignment, catalog `0.29.0-world-shop-phase`, and the mechanical
+checkpoint refresh. The authored schema remains 50. Gate A made no
+planner-engine or application production change, added no rarity behavior,
+and retained exact generated option identity as the later rarity-ledger
+witness handoff.
+
+The independent Gate-A review was accepted after bounded remediation for Q
+source order, the exact no-extra-guard matrix, WorldShop non-regression, and
+test diagnostics. Gate-A validation was green: catalog 188 tests (~1.7s),
+focused reward-kernel plus I/Q/Travel tests 70 (~4.5s), supplemental
+Shop/Echo/I/Q tests 90 (~18.4s), fixture integrity 7 (~1.5s), and workspace
+typecheck, ESLint, repository formatting, and `git diff --check`. No
+application, engine, test, fixture, schema, package, configuration, or
+README change was part of Gate B.
+
+Gate B absorbed the phase rule into the I/Q audit, I and Q biome authorities,
+and the smallest shared Shop reward authority. The durable rule records that
+the current fixed-route evaluator supplies `biomeIndex + 1` as
+`enteredBiomeCount`, which is equivalent today; a future Dream Dive must
+change that fact producer rather than the I/Q Shop declarations. Q retains
+witness-owned option identity and without-replacement selection. Rarity is
+not implemented. The temporary plan was deleted, was never linked from the
+README, and has no remaining reference.
+
+The single authorized phase-closing `npm run check` passed on 2026-08-22 after
+the durable documentation was stable. All three workspace typechecks and the
+fixture typecheck passed; fixture integrity passed 1 file/7 tests. The regular
+lane passed 130 files/1,619 tests in 72.51 seconds, and the heavy lane passed
+27 files/407 tests in 65.06 seconds. ESLint and repository formatting passed.
+The production build transformed 396 modules and retained only the existing
+greater-than-500-kB application-chunk advisory. This complete check was run
+exactly once and was not rerun after this factual append.
