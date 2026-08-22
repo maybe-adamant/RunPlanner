@@ -407,6 +407,7 @@ export const oRooms = [
   },
   {
     gameName: 'O_MiniBoss01',
+    boonRarityOverride: { Rare: 0.9, Epic: 0.1, Legendary: 0.05 },
     label: 'Charybdis',
     roomSetKey: 'O',
     advancesExperimentalHammerUses: true,
@@ -444,6 +445,7 @@ export const oRooms = [
   },
   {
     gameName: 'O_MiniBoss02',
+    boonRarityOverride: { Rare: 0.9, Epic: 0.1, Legendary: 0.05 },
     label: 'The Yargonaut',
     roomSetKey: 'O',
     advancesExperimentalHammerUses: true,

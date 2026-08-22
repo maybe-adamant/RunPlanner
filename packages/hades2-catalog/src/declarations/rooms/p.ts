@@ -791,6 +791,7 @@ export const pRooms = [
   },
   {
     gameName: 'P_MiniBoss01',
+    boonRarityOverride: { Rare: 0.9, Epic: 0.1, Duo: 0.2, Legendary: 0.2 },
     label: 'Talos',
     roomSetKey: 'P',
     advancesExperimentalHammerUses: true,
@@ -833,6 +834,7 @@ export const pRooms = [
   },
   {
     gameName: 'P_MiniBoss02',
+    boonRarityOverride: { Rare: 0.9, Epic: 0.1, Duo: 0.2, Legendary: 0.2 },
     label: 'Mega-Dracon',
     roomSetKey: 'P',
     advancesExperimentalHammerUses: true,

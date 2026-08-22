@@ -15,6 +15,8 @@ import type { RequirementExpression } from '@run-planner/engine/requirements';
 
 import type { RawRewardKernelInput, RawShopOptionEntryDeclaration } from './types';
 
+const boostedBoonRarity = { Rare: 0.9, Epic: 0.25, Legendary: 0.1 } as const;
+
 function option(declaration: RawShopOptionEntryDeclaration): RawShopOptionEntryDeclaration {
   return {
     ...declaration,
@@ -186,6 +188,7 @@ export const shops = [
           phaseOption(inRunSecondHalf, {
             key: 'BoostedRandomLoot',
             rewardType: 'RandomLoot',
+            boonRarityOverride: boostedBoonRarity,
             purchaseInteraction: { kind: 'resolvedOfferSource' },
           }),
           phaseOption(inRunSecondHalf, {
@@ -291,6 +294,7 @@ export const shops = [
           phaseOption(inRunSecondHalf, {
             key: 'ShopHermesUpgrade',
             rewardType: 'ShopHermesUpgrade',
+            boonRarityOverride: boostedBoonRarity,
             purchaseInteraction: { kind: 'fixed', gameName: 'HermesUpgrade' },
             requirement: shopHermesLegal,
           }),
@@ -302,6 +306,7 @@ export const shops = [
           phaseOption(inRunSecondHalf, {
             key: 'BoostedRandomLoot',
             rewardType: 'RandomLoot',
+            boonRarityOverride: boostedBoonRarity,
             purchaseInteraction: { kind: 'resolvedOfferSource' },
           }),
           phaseOption(inRunSecondHalf, {
@@ -372,6 +377,7 @@ export const shops = [
           phaseOption(inRunSecondHalf, {
             key: 'BoostedRandomLoot',
             rewardType: 'RandomLoot',
+            boonRarityOverride: boostedBoonRarity,
             purchaseInteraction: { kind: 'resolvedOfferSource' },
           }),
           phaseOption(inRunSecondHalf, {
@@ -464,6 +470,7 @@ export const shops = [
           phaseOption(inRunSecondHalf, {
             key: 'ShopHermesUpgrade',
             rewardType: 'ShopHermesUpgrade',
+            boonRarityOverride: boostedBoonRarity,
             purchaseInteraction: { kind: 'fixed', gameName: 'HermesUpgrade' },
             requirement: shopHermesLegal,
           }),
@@ -475,6 +482,7 @@ export const shops = [
           phaseOption(inRunSecondHalf, {
             key: 'BoostedRandomLoot',
             rewardType: 'RandomLoot',
+            boonRarityOverride: boostedBoonRarity,
             purchaseInteraction: { kind: 'resolvedOfferSource' },
           }),
           phaseOption(inRunSecondHalf, {

@@ -66,7 +66,7 @@ export type TraitFindingCode =
   | 'targetedAcquisitionTargetUnavailable'
   | 'occupiedBoonSlot'
   | 'freshRarityUnavailable'
-  | 'rarityBelowActiveFloor'
+  | 'rarityRollUnavailable'
   | 'replacementUnavailable'
   | 'replacementMaximumRarity'
   | 'replacementRarityMismatch'

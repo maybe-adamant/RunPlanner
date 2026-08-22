@@ -67,6 +67,7 @@ export interface RawShopOptionEntryDeclaration {
   readonly purchaseInteraction?:
     | { readonly kind: 'fixed'; readonly gameName: string }
     | { readonly kind: 'resolvedOfferSource' };
+  readonly boonRarityOverride?: import('@run-planner/engine/catalog-schema').BoonRarityOverride;
 }
 
 export interface RawShopGroupDeclaration {

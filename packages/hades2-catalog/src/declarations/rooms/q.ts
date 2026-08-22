@@ -417,6 +417,7 @@ export const qRooms = [
   },
   {
     gameName: 'Q_MiniBoss02',
+    boonRarityOverride: { Rare: 1, Epic: 0.7, Duo: 0.2, Legendary: 0.2 },
     label: 'Brute',
     roomSetKey: 'Q',
     advancesExperimentalHammerUses: true,
@@ -443,6 +444,7 @@ export const qRooms = [
   },
   {
     gameName: 'Q_MiniBoss05',
+    boonRarityOverride: { Rare: 1, Epic: 0.7, Duo: 0.2, Legendary: 0.2 },
     label: 'Stalker',
     roomSetKey: 'Q',
     advancesExperimentalHammerUses: true,
@@ -469,6 +471,7 @@ export const qRooms = [
   },
   {
     gameName: 'Q_MiniBoss03',
+    boonRarityOverride: { Rare: 1, Epic: 0.7, Duo: 0.2, Legendary: 0.2 },
     label: 'Tail',
     roomSetKey: 'Q',
     advancesExperimentalHammerUses: true,
@@ -495,6 +498,7 @@ export const qRooms = [
   },
   {
     gameName: 'Q_MiniBoss04',
+    boonRarityOverride: { Rare: 1, Epic: 0.7, Duo: 0.2, Legendary: 0.2 },
     label: 'Eye',
     roomSetKey: 'Q',
     advancesExperimentalHammerUses: true,

@@ -39,6 +39,22 @@ import {
   requirePositiveInteger,
 } from './common';
 import { fail } from './errors';
+
+function normalizeBoonRarityOverride(
+  raw: RawRoomDeclaration['boonRarityOverride'],
+  path: string,
+): RoomDeclaration['boonRarityOverride'] {
+  if (raw === undefined) return undefined;
+  for (const [key, amount] of Object.entries(raw)) {
+    if (
+      !['Rare', 'Epic', 'Duo', 'Legendary'].includes(key) ||
+      typeof amount !== 'number' ||
+      !Number.isFinite(amount)
+    )
+      fail(`${path}.${key}`, 'must be a finite supported boon rarity check');
+  }
+  return Object.freeze({ ...raw });
+}
 import { normalizeLocalChildren } from './descriptors';
 import {
   normalizeRequirement,
@@ -807,6 +823,10 @@ export function normalizeRooms(
         reward,
       });
     })();
+    const boonRarityOverride = normalizeBoonRarityOverride(
+      room.boonRarityOverride,
+      `${path}.boonRarityOverride`,
+    );
 
     return Object.freeze({
       gameName: room.gameName,
@@ -828,6 +848,7 @@ export function normalizeRooms(
       incomingReward,
       blockGiftBoons: room.blockGiftBoons ?? false,
       blocksGorgon: room.blocksGorgon ?? false,
+      ...(boonRarityOverride === undefined ? {} : { boonRarityOverride }),
       ...(prebossBatchPolicy === undefined ? {} : { prebossBatchPolicy }),
       encounterEnvelopeKey,
       advancesExperimentalHammerUses: room.advancesExperimentalHammerUses,

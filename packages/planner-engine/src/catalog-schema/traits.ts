@@ -5,6 +5,15 @@ export type TraitProviderKind = 'olympian' | 'hermes' | 'hammer' | 'npc' | 'spel
 /** Rarities that can exist on an equipped trait or a fresh offer. */
 export type TraitRarity = 'Common' | 'Rare' | 'Epic' | 'Heroic' | 'Legendary' | 'Duo';
 
+/** Ordered checks used only for fresh Olympian and Hermes boon rolls. */
+export type BoonRarityCheck = 'Rare' | 'Epic' | 'Duo' | 'Legendary';
+export type BoonRarityValues = Readonly<Record<BoonRarityCheck, number>>;
+export type BoonRarityOverride = Readonly<Partial<BoonRarityValues>>;
+export interface BoonRarityContribution {
+  readonly additive?: BoonRarityOverride;
+  readonly multiplicative?: BoonRarityOverride;
+}
+
 /** The player-facing boon-rarity vocabulary a declaration participates in.
  *
  * `none` is explicit for every planner-rarityless trait. It covers Hammers,
@@ -29,6 +38,10 @@ export interface ScalableGodTraitRarityFloorEffect {
   readonly activationElementMinimums: Readonly<Partial<Record<TraitElement, number>>>;
   readonly fromRarity: 'Common';
   readonly minimumRarity: 'Rare';
+}
+
+export interface ProperUpbringingEffect extends ScalableGodTraitRarityFloorEffect {
+  readonly boonRarityContribution: BoonRarityContribution;
 }
 
 /** One acquisition-time transition targeting exactly one equipped trait. */
@@ -202,7 +215,7 @@ export interface TraitDeclaration {
   readonly blockStacking: boolean;
   readonly blockInRunRarify: boolean;
   readonly excludeFromRarityCount: boolean;
-  readonly rarityFloorEffect?: ScalableGodTraitRarityFloorEffect;
+  readonly rarityFloorEffect?: ProperUpbringingEffect;
   readonly targetedAcquisition?: TargetedTraitAcquisition;
   readonly selectedDisposition: TraitSelectedDisposition;
   readonly selfExclusion?: string;
@@ -260,5 +273,7 @@ export interface TraitCatalog {
   readonly aspects: CatalogCollection<AspectDeclaration>;
   readonly traits: CatalogCollection<TraitDeclaration>;
   readonly givers: CatalogCollection<TraitGiverDeclaration>;
+  /** Complete source base ledgers for the only fresh-roll providers this slice supports. */
+  readonly boonRarityBases: Readonly<Record<'olympian' | 'hermes', BoonRarityValues>>;
   readonly echoLastRunBoon: EchoLastRunBoonCatalog;
 }

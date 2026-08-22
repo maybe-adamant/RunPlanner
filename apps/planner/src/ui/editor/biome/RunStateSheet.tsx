@@ -249,9 +249,7 @@ export function RunStateSheet({ launcher }: { readonly launcher: WorkspaceRunSta
             ))}
           </ul>
         )}
-        {state.traits.activeMinimumScalableRarity === undefined ? null : (
-          <p>Active minimum scalable rarity: {state.traits.activeMinimumScalableRarity}</p>
-        )}
+        {state.traits.properUpbringingActive === undefined ? null : <p>Proper Upbringing active</p>}
         {state.traits.echoShopDuplicateStatus === undefined ? null : (
           <p>
             Gold Gold Gold:{' '}

@@ -294,9 +294,9 @@ export function presentRunState(
       ...(snapshot.traits.echoShopDuplicateStatus === undefined
         ? {}
         : { echoShopDuplicateStatus: snapshot.traits.echoShopDuplicateStatus }),
-      ...(snapshot.traits.minimumScalableGodTraitRarity === undefined
+      ...(snapshot.traits.properUpbringingActive === undefined
         ? {}
-        : { activeMinimumScalableRarity: snapshot.traits.minimumScalableGodTraitRarity }),
+        : { properUpbringingActive: true as const }),
       coreSlots: Object.freeze(
         coreTraitSlots.map(({ label, slotKey }) => {
           const equipped = snapshot.traits.equippedSlots[slotKey];

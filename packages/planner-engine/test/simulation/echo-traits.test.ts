@@ -887,7 +887,7 @@ describe('Echo Gate B Boon Boon Boon', () => {
 
     const floorHistory = Object.freeze({
       ...createTraitHistoryState(),
-      minimumScalableGodTraitRarity: 'Rare' as const,
+      properUpbringingActive: true as const,
     });
     const floored = echoLastRunBoonOutcomes(catalog, floorHistory).find(
       (outcome) =>
@@ -1120,7 +1120,7 @@ describe('Echo Gate B Boon Boon Boon', () => {
     const ordinary = createTraitHistoryState();
     const floored = Object.freeze({
       ...createTraitHistoryState(),
-      minimumScalableGodTraitRarity: 'Rare' as const,
+      properUpbringingActive: true as const,
     });
     const child = echoBoonChild(
       Object.freeze([

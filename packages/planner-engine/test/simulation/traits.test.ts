@@ -17,13 +17,17 @@ import {
   assessTraitOffer,
   assessSelectedTargetedAcquisition,
   assessTraitOfferComposition,
+  assessTraitOfferDomainComposition,
   createTraitHistoryState,
   evaluateReachedTraitOffer,
   foldTraitHistoryEvents,
   isPomEligibleTrait,
   recordReachedTraitOffer,
+  promoteArcana,
   isAspectSpellDropDormant,
   traitCandidates,
+  boonRarityFactsForOffer,
+  traitOfferCompositionDomains,
   targetedAcquisitionTargetKeys,
   type ProjectEvaluation,
   type SelectedTraitOfferAssessment,
@@ -1088,7 +1092,7 @@ describe('Proper Upbringing rarity lifecycle', () => {
       before = acquireLegalTrait(before, giverKey, traitKey, 'Common');
     }
     const proper = acquireLegalTrait(before, 'Hera', 'ElementalRarityUpgradeBoon', 'Common');
-    expect(proper.minimumScalableGodTraitRarity).toBeUndefined();
+    expect(proper.properUpbringingActive).toBeUndefined();
     const offer: AuthoredTraitOffer = {
       kind: 'traits',
       giverKey: 'Hera',
@@ -1168,8 +1172,8 @@ describe('Proper Upbringing rarity lifecycle', () => {
     expect(
       assessTraitOption(catalog, 'ElementalRarityUpgradeBoon', oneEach, {}, 'Common').legal,
     ).toBe(true);
-    expect(oneEach.minimumScalableGodTraitRarity).toBeUndefined();
-    expect(activeHistory().minimumScalableGodTraitRarity).toBe('Rare');
+    expect(oneEach.properUpbringingActive).toBeUndefined();
+    expect(activeHistory().properUpbringingActive).toBe(true);
   });
 
   it('activates when a later acquisition supplies the final base element', () => {
@@ -1184,7 +1188,7 @@ describe('Proper Upbringing rarity lifecycle', () => {
       { giverKey: 'Hera', traitKey: 'ElementalRarityUpgradeBoon', rarity: 'Common' as const },
       { giverKey: 'Poseidon', traitKey: 'PoseidonWeaponBoon', rarity: 'Common' as const },
     ]);
-    expect(history.minimumScalableGodTraitRarity).toBe('Rare');
+    expect(history.properUpbringingActive).toBe(true);
     expect(history.equippedTraits.PoseidonWeaponBoon?.rarity).toBe('Rare');
   });
 
@@ -1227,26 +1231,93 @@ describe('Proper Upbringing rarity lifecycle', () => {
     ]);
     expect(withFixed.equippedTraits.ElementalDamageBoon?.rarity).toBe('Common');
     expect(history.equippedTraits.ApolloWeaponBoon?.rarity).toBe('Rare');
-    expect(history.minimumScalableGodTraitRarity).toBe('Rare');
+    expect(history.properUpbringingActive).toBe(true);
   });
 
   it('rejects fresh Common below the floor but keeps Rare/Epic and fixed domains', () => {
     const history = activeHistory();
+    const apolloContext = {
+      resolvedProviderKey: 'Apollo',
+      boonRarityFacts: boonRarityFactsForOffer(catalog, history, {
+        resolvedProviderKey: 'Apollo',
+      })!,
+    };
     expect(
-      assessTraitOption(catalog, 'ApolloManaBoon', history, {}, 'Common').findings,
-    ).toContainEqual(expect.objectContaining({ code: 'rarityBelowActiveFloor' }));
+      assessTraitOption(catalog, 'ApolloManaBoon', history, apolloContext, 'Common').findings,
+    ).toContainEqual(expect.objectContaining({ code: 'rarityRollUnavailable' }));
     expect(
-      assessTraitOption(catalog, 'ApolloManaBoon', history, {}, 'Rare').findings,
-    ).not.toContainEqual(expect.objectContaining({ code: 'rarityBelowActiveFloor' }));
+      assessTraitOption(catalog, 'ApolloManaBoon', history, apolloContext, 'Rare').findings,
+    ).not.toContainEqual(expect.objectContaining({ code: 'rarityRollUnavailable' }));
     expect(
-      assessTraitOption(catalog, 'ApolloManaBoon', history, {}, 'Epic').findings,
-    ).not.toContainEqual(expect.objectContaining({ code: 'rarityBelowActiveFloor' }));
+      assessTraitOption(catalog, 'ApolloManaBoon', history, apolloContext, 'Epic').findings,
+    ).not.toContainEqual(expect.objectContaining({ code: 'rarityRollUnavailable' }));
+    const hermesContext = {
+      resolvedProviderKey: 'Hermes',
+      boonRarityFacts: boonRarityFactsForOffer(catalog, history, {
+        resolvedProviderKey: 'Hermes',
+      })!,
+    };
+    expect(
+      assessTraitOption(catalog, 'HermesCastDiscountBoon', history, hermesContext, 'Common')
+        .findings,
+    ).toContainEqual(expect.objectContaining({ code: 'rarityRollUnavailable' }));
     expect(
       assessTraitOption(catalog, 'ElementalDamageBoon', history, {}, 'Common').findings,
-    ).not.toContainEqual(expect.objectContaining({ code: 'rarityBelowActiveFloor' }));
+    ).not.toContainEqual(expect.objectContaining({ code: 'rarityRollUnavailable' }));
     expect(
       assessTraitOption(catalog, 'AllElementalBoon', history, {}, 'Legendary').findings,
-    ).not.toContainEqual(expect.objectContaining({ code: 'rarityBelowActiveFloor' }));
+    ).not.toContainEqual(expect.objectContaining({ code: 'rarityRollUnavailable' }));
+  });
+
+  it('applies a Q-style guaranteed Rare check to Proper Upbringing before it activates', () => {
+    const history = twoEachHistory();
+    const context = {
+      resolvedProviderKey: 'Hera',
+      boonRarityFacts: boonRarityFactsForOffer(catalog, history, {
+        resolvedProviderKey: 'Hera',
+        boonRarityRoomOverride: { Rare: 1, Epic: 0.7, Duo: 0.2, Legendary: 0.2 },
+      })!,
+    };
+    expect(history.properUpbringingActive).toBeUndefined();
+    expect(
+      assessTraitOption(catalog, 'ElementalRarityUpgradeBoon', history, context, 'Common').findings,
+    ).toContainEqual(expect.objectContaining({ code: 'rarityRollUnavailable' }));
+    expect(
+      assessTraitOption(catalog, 'ElementalRarityUpgradeBoon', history, context, 'Rare').findings,
+    ).not.toContainEqual(expect.objectContaining({ code: 'rarityRollUnavailable' }));
+  });
+
+  it('derives real active rank-III and Lapis rank-IV Arcana contributions at an offer frontier', () => {
+    const loadout = createDefaultRouteLoadout(catalog);
+    const active = createArcanaFearState(catalog, {
+      ...loadout,
+      manualArcanaKeys: ['RarityBoost'],
+    });
+    const rankIII = boonRarityFactsForOffer(
+      catalog,
+      createTraitHistoryState(),
+      { resolvedProviderKey: 'Apollo' },
+      active,
+    );
+    expect(rankIII?.contributions).toContainEqual({
+      additive: { Rare: 0.5 },
+      multiplicative: { Legendary: 1.5 },
+    });
+    const promoted = promoteArcana(catalog, active, ['RarityBoost'], {
+      owner,
+      sequence: 1,
+    });
+    if (!promoted.legal) throw new Error('Lapis promotion must be legal');
+    const rankIV = boonRarityFactsForOffer(
+      catalog,
+      createTraitHistoryState(),
+      { resolvedProviderKey: 'Apollo' },
+      promoted.state,
+    );
+    expect(rankIV?.contributions).toContainEqual({
+      additive: { Rare: 0.6 },
+      multiplicative: { Legendary: 1.6 },
+    });
   });
 
   it('reactivates for a Common acquired while inactive and replays independently', () => {
@@ -1258,9 +1329,9 @@ describe('Proper Upbringing rarity lifecycle', () => {
         { giverKey: 'Hera', traitKey: 'ElementalRarityUpgradeBoon', rarity: 'Common' as const },
       ]).events,
     ]);
-    expect(withoutSource.minimumScalableGodTraitRarity).toBe('Rare');
+    expect(withoutSource.properUpbringingActive).toBe(true);
     const replay = foldTraitHistoryEvents(catalog, events);
-    expect(replay.minimumScalableGodTraitRarity).toBeUndefined();
+    expect(replay.properUpbringingActive).toBeUndefined();
     expect(replay.equippedTraits.ApolloWeaponBoon?.rarity).toBe('Common');
     expect(foldTraitHistoryEvents(catalog, withoutSource.events)).toEqual(withoutSource);
   });
@@ -1268,7 +1339,7 @@ describe('Proper Upbringing rarity lifecycle', () => {
   it('removes only the future floor on deactivation and promotes a Common on reactivation', () => {
     const activated = activeHistory();
     const deactivated = acquireLegalTrait(activated, 'Hera', 'HeraWeaponBoon', 'Epic');
-    expect(deactivated.minimumScalableGodTraitRarity).toBeUndefined();
+    expect(deactivated.properUpbringingActive).toBeUndefined();
     expect(deactivated.equippedTraits.HermesWeaponBoon?.rarity).toBe('Rare');
     expect(deactivated.equippedTraits.ApolloWeaponBoon).toBeUndefined();
     expect(deactivated.equippedTraits.HeraWeaponBoon?.rarity).toBe('Epic');
@@ -1283,7 +1354,7 @@ describe('Proper Upbringing rarity lifecycle', () => {
       requiredRarity: 'Epic',
     });
     const reactivated = acquireLegalTrait(deactivated, 'Hermes', 'SlowProjectileBoon', 'Common');
-    expect(reactivated.minimumScalableGodTraitRarity).toBe('Rare');
+    expect(reactivated.properUpbringingActive).toBe(true);
     expect(reactivated.equippedTraits.SlowProjectileBoon?.rarity).toBe('Rare');
     expect(reactivated.equippedTraits.HeraWeaponBoon?.rarity).toBe('Epic');
   });
@@ -1298,18 +1369,23 @@ describe('Proper Upbringing rarity lifecycle', () => {
       'Epic',
     );
     expect(replacement.findings).not.toContainEqual(
-      expect.objectContaining({ code: 'rarityBelowActiveFloor' }),
+      expect.objectContaining({ code: 'rarityRollUnavailable' }),
     );
     expect(replacement.replacementTransition?.requiredRarity).toBe('Epic');
     const common = assessTraitOption(
       catalog,
       'HeraSpecialBoon',
       history,
-      { resolvedProviderKey: 'Hera' },
+      {
+        resolvedProviderKey: 'Hera',
+        boonRarityFacts: boonRarityFactsForOffer(catalog, history, {
+          resolvedProviderKey: 'Hera',
+        })!,
+      },
       'Common',
     );
     expect(common.findings).toContainEqual(
-      expect.objectContaining({ code: 'rarityBelowActiveFloor' }),
+      expect.objectContaining({ code: 'rarityRollUnavailable' }),
     );
   });
 
@@ -1319,7 +1395,7 @@ describe('Proper Upbringing rarity lifecycle', () => {
       { giverKey: 'Hera', traitKey: 'ElementalRarityUpgradeBoon', rarity: 'Common' as const },
     ]).events[0]!;
     const dormant = foldTraitHistoryEvents(catalog, initial.events);
-    expect(dormant.minimumScalableGodTraitRarity).toBeUndefined();
+    expect(dormant.properUpbringingActive).toBeUndefined();
     const invalidOffer = evaluateReachedTraitOffer(
       catalog,
       owner,
@@ -1344,9 +1420,172 @@ describe('Proper Upbringing rarity lifecycle', () => {
       { ...source, sequence: 9 },
     ]);
     const branchB = foldTraitHistoryEvents(catalog, initial.events);
-    expect(branchA.minimumScalableGodTraitRarity).toBe('Rare');
-    expect(branchB.minimumScalableGodTraitRarity).toBeUndefined();
+    expect(branchA.properUpbringingActive).toBe(true);
+    expect(branchB.properUpbringingActive).toBeUndefined();
     expect(foldTraitHistoryEvents(catalog, [...branchA.events])).toEqual(branchA);
+  });
+});
+
+describe('rarity-aware high-tier composition', () => {
+  const timeStop = catalog.traits.byKey.TimeStopLastStandBoon;
+  const duo = catalog.traits.byKey.ApolloSecondStageCastBoon;
+  const hermes = catalog.traitGivers.byKey.Hermes;
+  if (timeStop === undefined || duo === undefined || hermes === undefined)
+    throw new Error('missing Hermes Legendary fixture');
+  const highTierCatalog = Object.freeze({
+    ...catalog,
+    traits: Object.freeze({
+      ...catalog.traits,
+      values: Object.freeze(
+        catalog.traits.values.map((trait) =>
+          trait.key === timeStop.key || trait.key === duo.key
+            ? Object.freeze({ ...trait, offerRequirements: Object.freeze([]) })
+            : trait,
+        ),
+      ),
+      byKey: Object.freeze({
+        ...catalog.traits.byKey,
+        [timeStop.key]: Object.freeze({ ...timeStop, offerRequirements: Object.freeze([]) }),
+        [duo.key]: Object.freeze({ ...duo, offerRequirements: Object.freeze([]) }),
+      }),
+    }),
+    traitGivers: Object.freeze({
+      ...catalog.traitGivers,
+      values: Object.freeze(
+        catalog.traitGivers.values.map((giver) =>
+          giver.key === 'Hermes'
+            ? Object.freeze({ ...giver, traitKeys: Object.freeze([timeStop.key, duo.key]) })
+            : giver,
+        ),
+      ),
+      byKey: Object.freeze({
+        ...catalog.traitGivers.byKey,
+        Hermes: Object.freeze({ ...hermes, traitKeys: Object.freeze([timeStop.key, duo.key]) }),
+      }),
+    }),
+  });
+  const possibleContext = {
+    boonRarityFacts: {
+      providerBase: { Rare: 0.06, Epic: 0.03, Duo: 0, Legendary: 0.01 },
+      contributions: [],
+    },
+  } as const;
+  const impossibleContext = {
+    boonRarityFacts: {
+      providerBase: { Rare: 0.06, Epic: 0.03, Duo: 0, Legendary: 0.01 },
+      roomOverride: { Legendary: 0 },
+      contributions: [],
+    },
+  } as const;
+  const duoContext = {
+    boonRarityFacts: {
+      providerBase: { Rare: 0.06, Epic: 0.03, Duo: 0, Legendary: 0.01 },
+      roomOverride: { Duo: 0.2, Legendary: 0 },
+      contributions: [],
+    },
+  } as const;
+
+  it('keeps high-tier support branch-local, excludes impossible checks, and never requires H', () => {
+    const history = createTraitHistoryState();
+    expect(
+      traitOfferCompositionDomains(highTierCatalog, 'Hermes', history, impossibleContext).highTier,
+    ).toEqual([]);
+    expect(
+      traitOfferCompositionDomains(
+        highTierCatalog,
+        'Hermes',
+        history,
+        possibleContext,
+      ).highTier.map((candidate) => [candidate.traitKey, candidate.rarity]),
+    ).toEqual([[timeStop.key, 'Legendary']]);
+    expect(
+      traitOfferCompositionDomains(highTierCatalog, 'Hermes', history, duoContext).highTier.map(
+        (candidate) => [candidate.traitKey, candidate.rarity],
+      ),
+    ).toEqual([[duo.key, 'Duo']]);
+    // Re-reading the impossible branch must not inherit support cached for the possible one.
+    expect(
+      traitOfferCompositionDomains(highTierCatalog, 'Hermes', history, impossibleContext).highTier,
+    ).toEqual([]);
+    expect(
+      assessTraitOfferDomainComposition({
+        ordinaryKeys: ['ordinary1', 'ordinary2'],
+        highTierKeys: [timeStop.key],
+        replacementKeys: [],
+        authored: [
+          { traitKey: 'ordinary1', kind: 'ordinary' },
+          { traitKey: 'ordinary2', kind: 'ordinary' },
+        ],
+        fallbackGold: false,
+      }).legal,
+    ).toBe(true);
+  });
+});
+
+describe('rarity offer settlement contacts', () => {
+  it('keeps Common possible in F Miniboss but excludes it in Q Miniboss', () => {
+    const history = createTraitHistoryState();
+    const fOverride = catalog.rooms.byKey.F_MiniBoss01?.boonRarityOverride;
+    const qOverride = catalog.rooms.byKey.Q_MiniBoss02?.boonRarityOverride;
+    if (fOverride === undefined || qOverride === undefined)
+      throw new Error('missing audited Miniboss rarity overrides');
+    const contextFor = (boonRarityRoomOverride: typeof fOverride) => ({
+      resolvedProviderKey: 'Apollo',
+      boonRarityFacts: boonRarityFactsForOffer(catalog, history, {
+        resolvedProviderKey: 'Apollo',
+        boonRarityRoomOverride,
+      })!,
+    });
+    expect(
+      assessTraitOption(catalog, 'ApolloWeaponBoon', history, contextFor(fOverride), 'Common')
+        .findings,
+    ).not.toContainEqual(expect.objectContaining({ code: 'rarityRollUnavailable' }));
+    expect(
+      assessTraitOption(catalog, 'ApolloWeaponBoon', history, contextFor(qOverride), 'Common')
+        .findings,
+    ).toContainEqual(expect.objectContaining({ code: 'rarityRollUnavailable', detail: 'Common' }));
+  });
+
+  it('settles a Hermes offer in a Miniboss with the room override, not the room reward provider', () => {
+    const occurrenceId = createOccurrenceId('rarity-hermes-miniboss');
+    const room = catalog.rooms.byKey.Q_MiniBoss02;
+    if (room?.boonRarityOverride === undefined)
+      throw new Error('missing Q Miniboss rarity override');
+    const settled = settleTestRoomReward(
+      createBiomeAddress('Surface', 'Q'),
+      occurrenceId,
+      initializeTestRewardBranches(),
+      {
+        origin: createIncomingRewardAddress(createBiomeAddress('Surface', 'Q'), occurrenceId),
+        offer: { rewardType: 'HermesUpgrade' },
+        producerLifecycleKey: 'RoomReward',
+        instanceProvenance: 'free',
+        traitContext: { boonRarityRoomOverride: room.boonRarityOverride },
+        traitOffersByAcquisitionRole: {
+          self: {
+            kind: 'traits',
+            giverKey: 'Hermes',
+            options: [
+              { traitKey: 'HermesWeaponBoon', rarity: 'Common' },
+              { traitKey: 'HermesSpecialBoon', rarity: 'Common' },
+              { traitKey: 'HermesCastDiscountBoon', rarity: 'Common' },
+            ],
+            selectedOptionKey: 'option1',
+            rarificationActions: [],
+          },
+        },
+      },
+      1,
+      (history) => factsWithHistory(baseFacts(), history, new Set()),
+      new Map(),
+    )[0]!;
+    expect(settled.traitEvaluations?.[0]?.context.boonRarityFacts).toMatchObject({
+      providerBase: { Rare: 0.06, Epic: 0.03, Duo: 0, Legendary: 0.01 },
+      roomOverride: { Rare: 1, Epic: 0.7, Duo: 0.2, Legendary: 0.2 },
+    });
+    expect(settled.traitEvaluations?.[0]?.assessments[0]?.findings).toContainEqual(
+      expect.objectContaining({ code: 'rarityRollUnavailable', detail: 'Common' }),
+    );
   });
 });
 

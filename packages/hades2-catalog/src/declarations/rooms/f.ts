@@ -805,6 +805,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   },
   {
     gameName: 'F_MiniBoss01',
+    boonRarityOverride: { Rare: 0.9, Epic: 0.07, Legendary: 0.05 },
     label: 'Root-Stalker',
     roomSetKey: 'F',
     advancesExperimentalHammerUses: true,
@@ -843,6 +844,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   },
   {
     gameName: 'F_MiniBoss02',
+    boonRarityOverride: { Rare: 0.9, Epic: 0.07, Legendary: 0.05 },
     label: 'Shadow-Spiller',
     roomSetKey: 'F',
     advancesExperimentalHammerUses: true,
@@ -881,6 +883,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   },
   {
     gameName: 'F_MiniBoss03',
+    boonRarityOverride: { Rare: 0.9, Epic: 0.07, Legendary: 0.05 },
     label: 'Master-Slicer',
     roomSetKey: 'F',
     advancesExperimentalHammerUses: true,

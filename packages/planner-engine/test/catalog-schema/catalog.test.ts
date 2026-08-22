@@ -54,6 +54,10 @@ describe('summarizeCatalog', () => {
       aspects: emptyCollection(),
       traits: emptyCollection(),
       traitGivers: emptyCollection(),
+      boonRarityBases: {
+        olympian: { Rare: 0.1, Epic: 0.05, Duo: 0.12, Legendary: 0.1 },
+        hermes: { Rare: 0.06, Epic: 0.03, Duo: 0, Legendary: 0.01 },
+      },
       echoLastRunBoon: { variants: emptyCollection() },
       traitOfferContexts: emptyCollection(),
       traitRarityOrder: ['Common', 'Rare', 'Epic', 'Heroic'],

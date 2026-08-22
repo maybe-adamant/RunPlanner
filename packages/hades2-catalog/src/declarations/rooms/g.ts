@@ -693,6 +693,7 @@ export const gRooms = [
   },
   {
     gameName: 'G_MiniBoss01',
+    boonRarityOverride: { Rare: 0.9, Epic: 0.1, Legendary: 0.05 },
     label: 'Deep Serpent',
     roomSetKey: 'G',
     advancesExperimentalHammerUses: true,
@@ -735,6 +736,7 @@ export const gRooms = [
   },
   {
     gameName: 'G_MiniBoss02',
+    boonRarityOverride: { Rare: 0.9, Epic: 0.1, Legendary: 0.05 },
     label: 'King Vermin',
     roomSetKey: 'G',
     advancesExperimentalHammerUses: true,
@@ -774,6 +776,7 @@ export const gRooms = [
   },
   {
     gameName: 'G_MiniBoss03',
+    boonRarityOverride: { Rare: 0.9, Epic: 0.1, Legendary: 0.05 },
     label: 'Hellifish',
     roomSetKey: 'G',
     advancesExperimentalHammerUses: true,

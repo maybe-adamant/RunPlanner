@@ -72,6 +72,16 @@ const explicitWorldShopOffers: Readonly<Record<string, ResolvedRewardOffer>> = O
   MajorNonBoon: Object.freeze({ rewardType: 'MaxHealthDrop' }),
   Minor: Object.freeze({ rewardType: 'MaxManaDrop' }),
 });
+const explicitIWorldShopOffers: Readonly<Record<string, ResolvedRewardOffer>> = Object.freeze({
+  BoostedBoon: Object.freeze({
+    rewardType: 'RandomLoot',
+    payload: Object.freeze({ kind: 'BoonSource', source: 'ApolloUpgrade' }),
+  }),
+  MixedProgress: Object.freeze({ rewardType: 'MaxHealthDrop' }),
+  Survival: Object.freeze({ rewardType: 'HealBigDrop' }),
+  PremiumProgress: Object.freeze({ rewardType: 'MaxHealthDropBig' }),
+  MetaProgress: Object.freeze({ rewardType: 'CardUpgradePointsDrop' }),
+});
 
 const biome = createBiomeAddress('Underworld', 'F');
 const shopId = createOccurrenceId('stale-purchased-hammer-shop');
@@ -399,13 +409,15 @@ function echoGoldShop(
     >;
     readonly duplicateTraitKeys?: readonly [string, string, string];
     readonly withPomTarget?: boolean;
+    readonly roomGameName?: 'F_Shop01' | 'I_PreBoss02';
   } = {},
 ) {
-  const room = catalog.rooms.byKey.F_Shop01;
+  const room = catalog.rooms.byKey[options.roomGameName ?? 'F_Shop01'];
   if (room === undefined) throw new Error('missing F Shop declaration');
+  const roomBiome = room.gameName === 'I_PreBoss02' ? createBiomeAddress('Underworld', 'I') : biome;
   const loadout = { weaponKey: 'WeaponStaff', aspectKey: 'StaffBase' };
   const baseState = createDefaultRoomState(catalog, room, {
-    role: 'ordinary',
+    role: room.gameName === 'I_PreBoss02' ? 'prebossShop' : 'ordinary',
     entryActive: true,
     loadout,
   });
@@ -428,7 +440,11 @@ function echoGoldShop(
           const override = offerOverrides[key];
           const rewardOverride =
             options.rewardOverrides?.[key] ?? (key === 'Minor' ? spellReward : undefined);
-          const explicitOffer = override ?? explicitWorldShopOffers[key];
+          const explicitOffer =
+            override ??
+            (room.gameName === 'I_PreBoss02'
+              ? explicitIWorldShopOffers[key]
+              : explicitWorldShopOffers[key]);
           if (rewardOverride === undefined && explicitOffer === undefined) {
             throw new Error(`missing explicit World Shop fixture offer for ${key}`);
           }
@@ -507,7 +523,7 @@ function echoGoldShop(
           ),
         });
   const occurrenceId = options.occurrenceId ?? shopId;
-  const occurrenceAddress = createOccurrenceAddress(biome, occurrenceId);
+  const occurrenceAddress = createOccurrenceAddress(roomBiome, occurrenceId);
   const duplicateSource = createAcquisitionEntryAddress(
     createAcquisitionSiteAddress(occurrenceAddress, 'roomExit'),
     ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
@@ -565,10 +581,10 @@ function echoGoldShop(
   });
   const canonical = materializeAuthoredRoom({
     catalog,
-    biome,
+    biome: roomBiome,
     room,
     occurrence,
-    role: 'ordinary',
+    role: room.gameName === 'I_PreBoss02' ? 'prebossShop' : 'ordinary',
     entered: true,
     lifecycleProfileKey: 'WorldShopRoom',
     loadout,
@@ -600,7 +616,20 @@ function echoGoldShop(
   const facts = (
     history: ReturnType<typeof createRewardHistoryState>,
     currentRoomShopOptionNames: ReadonlySet<string> = new Set(),
-  ) => factsWithHistory(baseFacts(), history, currentRoomShopOptionNames);
+  ) =>
+    factsWithHistory(
+      room.gameName === 'I_PreBoss02'
+        ? {
+            ...baseFacts(),
+            requirements: {
+              ...baseFacts().requirements,
+              counters: { ...baseFacts().requirements.counters, enteredBiomes: 3 },
+            },
+          }
+        : baseFacts(),
+      history,
+      currentRoomShopOptionNames,
+    );
   const inventoryFindings = new Map();
   const inventory = processShopInventory(
     seeded,
@@ -854,6 +883,23 @@ describe('Echo Gate D Gold Gold Gold', () => {
     expect(
       converted.settlement.branches[0]?.traitHistory?.equippedTraits.EchoDoubleShop,
     ).toBeUndefined();
+  });
+
+  it('preserves the exact boosted paid-item rarity context for the Echo Gold duplicate', () => {
+    const result = echoGoldShop(['BoostedBoon', ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY], {
+      roomGameName: 'I_PreBoss02',
+      includeDuplicate: true,
+      duplicateSelectOption2: true,
+    });
+    expect([...result.findings.values()]).toEqual([]);
+    expect(
+      result.settlement.branches[0]?.traitEvaluations
+        ?.filter((evaluation) => evaluation.acquisitionRole === 'source')
+        .map((evaluation) => evaluation.context.boonRarityFacts?.itemOverride),
+    ).toEqual([
+      { Rare: 0.9, Epic: 0.25, Legendary: 0.1 },
+      { Rare: 0.9, Epic: 0.25, Legendary: 0.1 },
+    ]);
   });
 
   it('lets Artificer convert the free Echo Gold duplicate and materialize its exact replacement', () => {

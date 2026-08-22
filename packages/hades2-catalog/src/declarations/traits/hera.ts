@@ -262,6 +262,7 @@ export const heraTraits = [
       },
       fromRarity: 'Common',
       minimumRarity: 'Rare',
+      boonRarityContribution: { additive: { Rare: 1 } },
     },
   },
   {

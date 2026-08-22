@@ -719,6 +719,7 @@ export const hRooms = [
   },
   {
     gameName: 'H_MiniBoss01',
+    boonRarityOverride: { Rare: 0.9, Epic: 0.1, Legendary: 0.05 },
     label: 'Phantom',
     roomSetKey: 'H',
     advancesExperimentalHammerUses: true,
@@ -755,6 +756,7 @@ export const hRooms = [
   },
   {
     gameName: 'H_MiniBoss02',
+    boonRarityOverride: { Rare: 0.9, Epic: 0.1, Legendary: 0.05 },
     label: 'Queen Lamia',
     roomSetKey: 'H',
     advancesExperimentalHammerUses: true,

@@ -1,4 +1,11 @@
 export {
+  deriveBoonRarityLedger,
+  boonRarityRollUnavailable,
+  BOON_RARITY_CHECKS,
+  type BoonRarityFacts,
+  type BoonRarityLedger,
+} from './boon-rarity';
+export {
   createArcanaFearState,
   activateTemporaryArcana,
   promoteArcana,
@@ -370,6 +377,7 @@ export {
   recordAspectStartingTrait,
   isAspectSpellDropDormant,
   directTraitSetOutcomes,
+  boonRarityFactsForOffer,
   recordReachedLevelResolution,
   evaluateReachedLevelResolution,
   nextRarity,

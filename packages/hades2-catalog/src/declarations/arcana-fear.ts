@@ -11,6 +11,7 @@ const card = (
   postBossActivationCounts?: RawArcanaCardDeclaration['postBossActivationCounts'],
   fatedIncompatible = false,
   artificerCapacityByRarity?: RawArcanaCardDeclaration['artificerCapacityByRarity'],
+  boonRarityContributions?: RawArcanaCardDeclaration['boonRarityContributions'],
 ): RawArcanaCardDeclaration => ({
   key,
   label,
@@ -23,6 +24,7 @@ const card = (
   ...(postBossActivationCounts === undefined ? {} : { postBossActivationCounts }),
   fatedIncompatible,
   ...(artificerCapacityByRarity === undefined ? {} : { artificerCapacityByRarity }),
+  ...(boonRarityContributions === undefined ? {} : { boonRarityContributions }),
 });
 const automatic = (
   rule: Exclude<RawArcanaCardDeclaration['activation'], { readonly kind: 'manual' }>['rule'],
@@ -84,7 +86,24 @@ export const arcanaCards = [
     false,
     { Epic: 3, Heroic: 4 },
   ),
-  card('RarityBoost', 'Excellence', 'RarityBoostMetaUpgrade', 4, 4, 5),
+  card(
+    'RarityBoost',
+    'Excellence',
+    'RarityBoostMetaUpgrade',
+    4,
+    4,
+    5,
+    { kind: 'manual' },
+    undefined,
+    false,
+    undefined,
+    {
+      Common: { additive: { Rare: 0.3 }, multiplicative: { Legendary: 1.3 } },
+      Rare: { additive: { Rare: 0.4 }, multiplicative: { Legendary: 1.4 } },
+      Epic: { additive: { Rare: 0.5 }, multiplicative: { Legendary: 1.5 } },
+      Heroic: { additive: { Rare: 0.6 }, multiplicative: { Legendary: 1.6 } },
+    },
+  ),
   card(
     'BonusRarity',
     'The Queen',
@@ -93,6 +112,15 @@ export const arcanaCards = [
     5,
     0,
     automatic({ kind: 'manualCostMultiplicityAtMost', maximum: 2 }),
+    undefined,
+    false,
+    undefined,
+    {
+      Common: { additive: { Duo: 0.06 } },
+      Rare: { additive: { Duo: 0.08 } },
+      Epic: { additive: { Duo: 0.1 } },
+      Heroic: { additive: { Duo: 0.12 } },
+    },
   ),
   card(
     'TradeOff',
@@ -125,6 +153,15 @@ export const arcanaCards = [
     4,
     0,
     automatic({ kind: 'completeOtherRowOrColumn' }),
+    undefined,
+    false,
+    undefined,
+    {
+      Common: { additive: { Epic: 0.05 } },
+      Rare: { additive: { Epic: 0.1 } },
+      Epic: { additive: { Epic: 0.15 } },
+      Heroic: { additive: { Epic: 0.2 } },
+    },
   ),
   card(
     'CardDraw',

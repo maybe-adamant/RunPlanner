@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { catalog, createCatalog } from '../../src';
 import { declarations } from '../../src/declarations';
 import type { RawTraitDeclaration, RawTraitGiverDeclaration } from '../../src/declarations/traits';
-import type { ScalableGodTraitRarityFloorEffect } from '@run-planner/engine/catalog-schema';
+import type { ProperUpbringingEffect } from '@run-planner/engine/catalog-schema';
 
 const expectedPositiveRequirementOwners = [
   'CirceSorceryDamageBoon',
@@ -924,6 +924,46 @@ const expectedOfferRequirements: Readonly<Record<string, string>> = {
 };
 
 describe('trait offer catalog closure', () => {
+  it('normalizes one closed audited Olympian and Hermes boon-rarity base table', () => {
+    expect(catalog.boonRarityBases.olympian).toEqual({
+      Rare: 0.1,
+      Epic: 0.05,
+      Duo: 0.12,
+      Legendary: 0.1,
+    });
+    expect(catalog.boonRarityBases.hermes).toEqual({
+      Rare: 0.06,
+      Epic: 0.03,
+      Duo: 0,
+      Legendary: 0.01,
+    });
+    expect(catalog.traitGivers.byKey.Apollo).not.toHaveProperty('boonRarityBase');
+    expect(catalog.traitGivers.byKey.Hermes).not.toHaveProperty('boonRarityBase');
+  });
+
+  it('rejects incomplete, extra, and non-finite provider base declarations', () => {
+    const malformed = (boonRarityBases: object) =>
+      createCatalog({
+        ...declarations,
+        traitCatalog: { ...declarations.traitCatalog, boonRarityBases: boonRarityBases as never },
+      });
+    expect(() =>
+      malformed({ olympian: declarations.traitCatalog.boonRarityBases.olympian }),
+    ).toThrow(/exactly olympian and hermes/);
+    expect(() =>
+      malformed({
+        ...declarations.traitCatalog.boonRarityBases,
+        npc: declarations.traitCatalog.boonRarityBases.hermes,
+      }),
+    ).toThrow(/exactly olympian and hermes/);
+    expect(() =>
+      malformed({
+        ...declarations.traitCatalog.boonRarityBases,
+        hermes: { ...declarations.traitCatalog.boonRarityBases.hermes, Duo: Number.NaN },
+      }),
+    ).toThrow(/finite number/);
+  });
+
   const traits = {
     weapons: catalog.weapons,
     aspects: catalog.aspects,
@@ -1661,6 +1701,7 @@ describe('trait offer catalog closure', () => {
     });
     expect(traits.traits.byKey.ElementalRarityUpgradeBoon?.rarityFloorEffect).toEqual({
       activationElementMinimums: { Fire: 2, Earth: 2, Air: 2, Water: 2 },
+      boonRarityContribution: { additive: { Rare: 1 } },
       fromRarity: 'Common',
       minimumRarity: 'Rare',
     });
@@ -1691,20 +1732,26 @@ describe('trait offer catalog closure', () => {
               ? {
                   ...trait,
                   // Deliberately malformed values enter through the raw declaration boundary.
-                  rarityFloorEffect: effect as unknown as ScalableGodTraitRarityFloorEffect,
+                  rarityFloorEffect: effect as unknown as ProperUpbringingEffect,
                 }
               : trait,
           ),
         },
       });
     expect(() =>
-      malformed({ fromRarity: 'Common', minimumRarity: 'Rare', activationElementMinimums: {} }),
+      malformed({
+        fromRarity: 'Common',
+        minimumRarity: 'Rare',
+        activationElementMinimums: {},
+        boonRarityContribution: { additive: { Rare: 1 } },
+      }),
     ).toThrow(/must not be empty/);
     expect(() =>
       malformed({
         fromRarity: 'Common',
         minimumRarity: 'Rare',
         activationElementMinimums: { Lightning: 2 },
+        boonRarityContribution: { additive: { Rare: 1 } },
       }),
     ).toThrow(/unknown|must be one of/);
     expect(() =>
@@ -1712,6 +1759,7 @@ describe('trait offer catalog closure', () => {
         fromRarity: 'Common',
         minimumRarity: 'Rare',
         activationElementMinimums: { Fire: 0 },
+        boonRarityContribution: { additive: { Rare: 1 } },
       }),
     ).toThrow(/positive integer/);
     expect(() =>
@@ -1719,6 +1767,7 @@ describe('trait offer catalog closure', () => {
         fromRarity: 'Epic',
         minimumRarity: 'Rare',
         activationElementMinimums: { Fire: 2 },
+        boonRarityContribution: { additive: { Rare: 1 } },
       }),
     ).toThrow(/must be Common/);
     expect(() =>
@@ -1726,8 +1775,32 @@ describe('trait offer catalog closure', () => {
         fromRarity: 'Common',
         minimumRarity: 'Common',
         activationElementMinimums: { Fire: 2 },
+        boonRarityContribution: { additive: { Rare: 1 } },
       }),
     ).toThrow(/must be Rare|must follow/);
+    expect(() =>
+      malformed({
+        fromRarity: 'Common',
+        minimumRarity: 'Rare',
+        activationElementMinimums: { Fire: 2 },
+      }),
+    ).toThrow(/exactly the Proper Upbringing effect fields/);
+    expect(() =>
+      malformed({
+        fromRarity: 'Common',
+        minimumRarity: 'Rare',
+        activationElementMinimums: { Fire: 2 },
+        boonRarityContribution: { additive: { Rare: 1, Epic: 0 } },
+      }),
+    ).toThrow(/exactly Rare: 1/);
+    expect(() =>
+      malformed({
+        fromRarity: 'Common',
+        minimumRarity: 'Rare',
+        activationElementMinimums: { Fire: 2 },
+        boonRarityContribution: { additive: { Rare: 0 } },
+      }),
+    ).toThrow(/exactly Rare: 1/);
     const hammer = declarations.traitCatalog.traits.find(
       (trait) => trait.hammerCompatibility !== undefined,
     );
@@ -1745,13 +1818,27 @@ describe('trait offer catalog closure', () => {
                     fromRarity: 'Common',
                     minimumRarity: 'Rare',
                     activationElementMinimums: { Fire: 2 },
+                    boonRarityContribution: { additive: { Rare: 1 } },
                   },
                 }
               : trait,
           ),
         },
       }),
-    ).toThrow(/rarityless traits cannot declare/);
+    ).toThrow(/reserved to ElementalRarityUpgradeBoon/);
+    expect(() =>
+      createCatalog({
+        ...declarations,
+        traitCatalog: {
+          ...declarations.traitCatalog,
+          traits: declarations.traitCatalog.traits.map((trait) =>
+            trait.key === 'HeraWeaponBoon'
+              ? { ...trait, rarityFloorEffect: proper.rarityFloorEffect! }
+              : trait,
+          ),
+        },
+      }),
+    ).toThrow(/reserved to ElementalRarityUpgradeBoon/);
   });
 
   it('rejects unknown pools at the catalog boundary', () => {

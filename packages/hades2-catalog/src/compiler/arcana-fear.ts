@@ -29,6 +29,38 @@ export function normalizeArcanaCards(
     if (card.permanentRank !== 3) fail(`${path}.permanentRank`, 'must be rank III');
     const postBossActivationCounts = card.postBossActivationCounts;
     const artificerCapacityByRarity = card.artificerCapacityByRarity;
+    const boonRarityContributions = card.boonRarityContributions;
+    if (boonRarityContributions !== undefined) {
+      if (!['RarityBoost', 'BonusRarity', 'EpicRarityBoost'].includes(card.key))
+        fail(`${path}.boonRarityContributions`, 'is not supported for this Arcana card');
+      const ranks = ['Common', 'Rare', 'Epic', 'Heroic'] as const;
+      const checks = new Set(['Rare', 'Epic', 'Duo', 'Legendary']);
+      if (
+        Object.keys(boonRarityContributions).some(
+          (rank) => !ranks.includes(rank as (typeof ranks)[number]),
+        )
+      )
+        fail(`${path}.boonRarityContributions`, 'must not declare unsupported source ranks');
+      if (!ranks.every((rank) => boonRarityContributions[rank] !== undefined))
+        fail(`${path}.boonRarityContributions`, 'must declare all four source ranks');
+      for (const rank of ranks) {
+        if (
+          Object.keys(boonRarityContributions[rank]).some(
+            (part) => part !== 'additive' && part !== 'multiplicative',
+          )
+        )
+          fail(
+            `${path}.boonRarityContributions.${rank}`,
+            'must not declare unsupported contribution parts',
+          );
+        for (const part of ['additive', 'multiplicative'] as const) {
+          for (const [check, value] of Object.entries(boonRarityContributions[rank][part] ?? {})) {
+            if (!checks.has(check) || typeof value !== 'number' || !Number.isFinite(value))
+              fail(`${path}.boonRarityContributions.${rank}.${part}.${check}`, 'must be finite');
+          }
+        }
+      }
+    }
     if (card.key === 'CardDraw') {
       if (
         postBossActivationCounts === undefined ||
@@ -109,8 +141,10 @@ export function normalizeArcanaCards(
             kind: 'automatic' as const,
             rule: Object.freeze({ ...card.activation.rule }),
           });
+    const { boonRarityContributions: _rawBoonRarityContributions, ...normalizedCard } = card;
+    void _rawBoonRarityContributions;
     return Object.freeze({
-      ...card,
+      ...normalizedCard,
       fatedIncompatible: card.fatedIncompatible === true,
       activation,
       ...(postBossActivationCounts === undefined
@@ -119,6 +153,29 @@ export function normalizeArcanaCards(
       ...(artificerCapacityByRarity === undefined
         ? {}
         : { artificerCapacityByRarity: Object.freeze({ ...artificerCapacityByRarity }) }),
+      ...(boonRarityContributions === undefined
+        ? {}
+        : {
+            boonRarityContributions: Object.freeze(
+              Object.fromEntries(
+                (['Common', 'Rare', 'Epic', 'Heroic'] as const).map((rank) => [
+                  rank,
+                  Object.freeze({
+                    ...(boonRarityContributions[rank].additive === undefined
+                      ? {}
+                      : { additive: Object.freeze({ ...boonRarityContributions[rank].additive }) }),
+                    ...(boonRarityContributions[rank].multiplicative === undefined
+                      ? {}
+                      : {
+                          multiplicative: Object.freeze({
+                            ...boonRarityContributions[rank].multiplicative,
+                          }),
+                        }),
+                  }),
+                ]),
+              ),
+            ) as NonNullable<ArcanaCardDeclaration['boonRarityContributions']>,
+          }),
     });
   });
   if (values.length !== 25) fail('arcanaCards', 'must declare all 25 cards');

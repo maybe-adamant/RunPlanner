@@ -124,6 +124,9 @@ function traitContextForOffer(
   return Object.freeze({
     ...context.loadout,
     blockGiftBoons: context.room.blockGiftBoons,
+    ...(context.room.boonRarityOverride === undefined
+      ? {}
+      : { boonRarityRoomOverride: context.room.boonRarityOverride }),
     devotionNoDuo: offer.rewardType === 'Devotion',
   });
 }
@@ -533,6 +536,9 @@ export function materializeShipCombatState(
               traitContext: Object.freeze({
                 ...loadout,
                 blockGiftBoons: room.blockGiftBoons,
+                ...(room.boonRarityOverride === undefined
+                  ? {}
+                  : { boonRarityRoomOverride: room.boonRarityOverride }),
                 devotionNoDuo: reward.offer.rewardType === 'Devotion',
               }),
             }),

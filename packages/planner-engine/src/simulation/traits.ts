@@ -26,6 +26,7 @@ import type { RewardHistoryState } from '../reward-kernel/model';
 import type { ArcanaFearState } from './arcana-fear';
 import type { KeepsakeState } from './keepsakes';
 import type { TraitFindingCode } from './model';
+import { boonRarityRollUnavailable, type BoonRarityFacts } from './boon-rarity';
 export type { TraitFindingCode } from './model';
 import {
   optionIndex,
@@ -171,8 +172,8 @@ export interface TraitHistoryState {
   readonly upgradableTraitCount: number;
   /** Route-wide exact trait keys excluded from later offer eligibility. */
   readonly bannedTraitKeys: readonly string[];
-  /** Derived floor for fresh scalable god-trait offers. */
-  readonly minimumScalableGodTraitRarity?: 'Rare';
+  /** Exact activation fact for Proper Upbringing's promotion and future offers. */
+  readonly properUpbringingActive?: true;
 }
 
 /** The sole supported Pom target predicate. */
@@ -511,7 +512,7 @@ export function foldTraitHistoryEvents(
     bannedTraitKeys: Object.freeze([...bannedTraitKeys]),
     equippedTraits: Object.freeze(equipped),
     ...derived,
-    ...(activeSources.size === 0 ? {} : { minimumScalableGodTraitRarity: 'Rare' as const }),
+    ...(activeSources.size === 0 ? {} : { properUpbringingActive: true as const }),
   });
 }
 
@@ -554,6 +555,53 @@ export interface TraitOfferContext {
   readonly ordinarySlotReplacement?: 'forbidden';
   /** Exact chronological keepsake held at this acquisition frontier. */
   readonly currentKeepsakeKey?: string;
+  /** Derived, offer-local numeric rarity facts for fresh Olympian/Hermes rolls. */
+  readonly boonRarityFacts?: BoonRarityFacts;
+  readonly boonRarityRoomOverride?: import('../catalog-schema').BoonRarityOverride;
+  readonly boonRarityItemOverride?: import('../catalog-schema').BoonRarityOverride;
+}
+
+/** One branch-aware adapter from existing offer facts to the numeric ledger input. */
+export function boonRarityFactsForOffer(
+  catalog: Catalog,
+  history: TraitHistoryState,
+  context: TraitOfferContext,
+  arcanaFear?: ArcanaFearState,
+): BoonRarityFacts | undefined {
+  if (context.boonRarityFacts !== undefined) return context.boonRarityFacts;
+  const giver =
+    context.resolvedProviderKey === undefined
+      ? undefined
+      : catalog.traitGivers.byKey[context.resolvedProviderKey];
+  if (
+    giver === undefined ||
+    (giver.providerKind !== 'olympian' && giver.providerKind !== 'hermes') ||
+    context.freshRarityOverride !== undefined
+  )
+    return undefined;
+  const arcana =
+    arcanaFear?.arcana.active.flatMap((active) => {
+      const table = catalog.arcanaCards.byKey[active.key]?.boonRarityContributions;
+      return table === undefined ? [] : [table[active.rarity]];
+    }) ?? [];
+  const traits =
+    history.properUpbringingActive !== true
+      ? []
+      : Object.values(history.equippedTraits).flatMap((equipped) => {
+          const contribution =
+            catalog.traits.byKey[equipped.traitKey]?.rarityFloorEffect?.boonRarityContribution;
+          return contribution === undefined ? [] : [contribution];
+        });
+  return Object.freeze({
+    providerBase: catalog.boonRarityBases[giver.providerKind],
+    ...(context.boonRarityRoomOverride === undefined
+      ? {}
+      : { roomOverride: context.boonRarityRoomOverride }),
+    ...(context.boonRarityItemOverride === undefined
+      ? {}
+      : { itemOverride: context.boonRarityItemOverride }),
+    contributions: Object.freeze([...arcana, ...traits]),
+  });
 }
 
 export interface EchoLastRunBoonOutcome {
@@ -607,7 +655,7 @@ export function echoLastRunBoonOutcomes(
       if (trait?.rarityDomain.kind !== 'ranked') return [];
       return trait.rarityDomain.equippedRarities.map((rarity) => {
         const effectiveRarity =
-          rarity === 'Common' && history.minimumScalableGodTraitRarity === 'Rare'
+          rarity === 'Common' && history.properUpbringingActive === true
             ? ('Rare' as const)
             : rarity;
         return Object.freeze({
@@ -706,6 +754,7 @@ function compositionDomainCacheKey(giverKey: string, context: TraitOfferContext)
     context.circeRemovableFearVow,
     context.manualArcanaGraspCost,
     context.currentKeepsakeKey,
+    context.boonRarityFacts,
   ]);
 }
 
@@ -1692,14 +1741,18 @@ export function assessTraitOption(
     findings.push({ code: 'wrongHammerLoadout', traitKey });
   let replacementTransition: TraitReplacementTransition | undefined;
   if (
-    history.minimumScalableGodTraitRarity !== undefined &&
-    rarity === 'Common' &&
+    context.boonRarityFacts !== undefined &&
+    rarity !== undefined &&
     trait.usesBoonRarity &&
     trait.rarityDomain.kind === 'ranked' &&
-    trait.rarityDomain.freshOfferRarities.includes('Rare')
-  ) {
-    findings.push({ code: 'rarityBelowActiveFloor', traitKey, detail: 'Rare' });
-  }
+    trait.rarityDomain.freshOfferRarities.includes(rarity) &&
+    boonRarityRollUnavailable(
+      context.boonRarityFacts,
+      rarity,
+      trait.rarityDomain.freshOfferRarities,
+    )
+  )
+    findings.push({ code: 'rarityRollUnavailable', traitKey, detail: rarity });
   if (
     trait.selectedDisposition.kind === 'echo' &&
     trait.selectedDisposition.effect === 'lastRunBoon' &&

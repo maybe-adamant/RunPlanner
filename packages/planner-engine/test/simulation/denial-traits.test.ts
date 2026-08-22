@@ -149,6 +149,40 @@ describe('Vow of Denial trait history', () => {
     );
     expect(recordReachedTraitOffer(catalog, npc, 1, 'test').event?.bannedTraitKeys).toBeUndefined();
   });
+
+  it('does not derive Denial bans or acquisition history from a rarity-impossible fresh offer', () => {
+    const rarityInvalid = evaluateReachedTraitOffer(
+      catalog,
+      owner,
+      'test',
+      {
+        kind: 'traits',
+        giverKey: 'Apollo',
+        options: [
+          { traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
+          { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
+          { traitKey: 'ApolloCastBoon', rarity: 'Common' },
+        ],
+        selectedOptionKey: 'option1',
+      },
+      createTraitHistoryState(),
+      {
+        boonRarityFacts: {
+          providerBase: { Rare: 0.1, Epic: 0.05, Duo: 0.12, Legendary: 0.1 },
+          roomOverride: { Rare: 1 },
+          contributions: [],
+        },
+      },
+      1,
+      denialState(),
+    );
+    expect(rarityInvalid.assessments[0]?.findings).toContainEqual(
+      expect.objectContaining({ code: 'rarityRollUnavailable' }),
+    );
+    expect(recordReachedTraitOffer(catalog, rarityInvalid, 1, 'test')).toEqual({
+      history: createTraitHistoryState(),
+    });
+  });
   it('keeps the catalog participant boundary exact and applies the same valid transition to Hermes', () => {
     expect(
       catalog.traitGivers.values
