@@ -612,9 +612,9 @@ extends the occurrence's existing order at the latest source-compatible
 lifecycle position; it does not infer required status in React or create a
 parallel mandatory order. This command guarantee does not rewrite source
 evidence or make missing-required documents malformed: an older or deliberately
-incomplete schema-49 document retains its omission and one explicit canonical
+incomplete schema-50 document retains its omission and one explicit canonical
 repair, while an unrelated edit leaves that repair state unchanged. The same
-retained-invalid rule applies to the schema-49 Postboss completion owner.
+retained-invalid rule applies to the schema-50 Postboss completion owner.
 
 ### Authoring remains attached to the action's semantic owner
 

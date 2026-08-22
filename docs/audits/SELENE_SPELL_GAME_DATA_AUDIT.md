@@ -171,22 +171,32 @@ current incorrect claim that Spell Drop is replayable.
 
 ## Planner disposition
 
-The first implementation slice can be narrow and complete:
+Completed in schema 50 by `5261efd` (engine/catalog) and `2b86e31`
+(application/editor):
 
-1. declare all nine spell traits as real trait identities rather than deferred
-   operands;
-2. derive starting Sky Fall from the route's existing `SuitHexAspect` loadout;
-3. give a non-aspect Spell Drop its exact three-distinct-from-eight offer and
-   selected spell outcome;
-4. fold only the selected spell into equipped-trait history at pickup;
-5. let Artemis and Circe consume that history through their existing positive
-   dependency machinery; and
-6. preserve Aspect of Selene's Spell Drop as a no-new-spell Path-of-Stars
-   frontier until talent authoring is implemented; and
-7. remove Spell Drop from Echo's last-reward recreation domain without
-   changing Talent Drop replay.
+1. all nine base Hexes are real, rarityless `Spell`-slot traits, and the
+   ordered normal `SpellDrop` pool contains exactly the other eight;
+2. `SuitHexAspect` alone links Sky Fall as a route-start direct trait grant;
+3. a normal Spell Drop owns the existing `self` trait-offer child with three
+   distinct normal spells and one selected outcome, which equips only at its
+   reached acquisition settlement;
+4. the shared six-slot equipped-trait ledger preserves the original five-slot
+   ordinary-boon subset, so Artemis and Circe consume the exact chronological
+   spell history without making Hexes ordinary boons;
+5. an Aspect-of-Selene Spell Drop preserves its acquired consumable history
+   while its child is dormant for deferred Path of Stars authoring; it emits no
+   selector, finding, or second equipped spell and reactivates if the aspect
+   changes; and
+6. Spell Drop is absent from Echo's last-reward recreation domain while Talent
+   Drop remains present.
 
-This slice does not need a second spell slot, a spell-use simulator, a talent
-tree, spell damage, or special React-owned eligibility. The catalog owns the
-nine identities and Aspect link, the engine owns contextual choice and history,
-and the editor only presents the engine's supported outcome.
+The editor presents the engine-owned active child as `Edit spell` through the
+existing trait-offer capability, semantic command, finding navigation, and
+Undo path. It does not own the pool or aspect rule, and opening the dialog does
+not query candidate evaluation.
+
+This delivery intentionally excludes a second spell slot, spell-use simulation,
+Path of Stars talents, spell damage, Dream-run rotation, and special React
+eligibility. Shrine delayed delivery is also unmodeled: `pendingSpellDrop`
+remains an explicit false supported-baseline fact and must not be inferred from
+Shop state. These exclusions do not alter the source facts above.

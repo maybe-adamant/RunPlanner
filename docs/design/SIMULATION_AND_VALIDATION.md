@@ -15,7 +15,7 @@ it will not duplicate it.
 The possibility-support, materialization, reward-store, fixed-slot, and
 persistent-hub contracts in this document are globally locked by the completed
 F/G/P/Q/H/O/I/N audit set. All eight biomes participate in one public
-schema-49 occurrence/topology evaluator: completeness, materialization, lifecycle,
+schema-50 occurrence/topology evaluator: completeness, materialization, lifecycle,
 event-folded history, room generation, reward simulation, selected-plan
 validation, and candidate support consume the same explicit biome-evaluation
 products.
@@ -1520,6 +1520,16 @@ contains the complete generated inventory while that shop's outgoing doors are
 generated. Purchases occur afterward and first affect generation when the
 already-generated next room reaches its outgoing checkpoint.
 
+Route initialization also folds an aspect-linked starting trait through the
+same direct-trait-grant history vocabulary used by later trait history. Aspect
+of Selene therefore equips Sky Fall in the shared `Spell` slot before the first
+room; other aspects leave that sixth slot empty. A normal Spell Drop fills it
+only when its reached `self` trait offer is valid and selected at acquisition.
+An Aspect-of-Selene Spell Drop still records its consumable acquisition, but
+its persisted trait child is dormant for the unsupported Path of Stars outcome
+and cannot replace Sky Fall. The five ordinary slots remain the only inputs to
+ordinary priority, replacement, rarity, Pom, and god-pool rules.
+
 For a validated downstream G, the route evaluator carries F's room, encounter,
 reward-bag, global acquisition, offer, and route-counter state forward. It then
 applies G's layout-declared biome-local counter baselines and clears only the
@@ -1540,6 +1550,13 @@ state. The ledger carries concrete ranked rarity (including equipped `Heroic`)
 and an independent Rank I/II value instead of rarity for Hammers, then derives
 ordinary slot occupancy, element totals, highest base-element count, god-boon
 rarity counts, and `upgradableTraitCount`.
+
+The ledger is complete over the six equipment slots `Melee`, `Secondary`,
+`Ranged`, `Rush`, `Mana`, and `Spell`; ordinary-boon views derive only the
+first five. The normal Spell Drop provider has fixed three rarityless options,
+so it uses the ordinary trait-offer assessment/settlement machinery without
+Olympian/Hermes composition, rarity, fallback, replacement, target, or god-pool
+policy.
 
 `upgradableTraitCount` is no longer an ordinary-source increment and is never
 used as a shadow eligibility model. It and the distinct Boon Growth and Boon
@@ -1661,7 +1678,7 @@ Required categories include:
 - one golden project, canonical snapshot, history, and finding set per focused
   biome scenario;
 - complete-valid, complete-blocked, incomplete-prefix, selected-invalid,
-  retained, and upstream-blocked schema-49 fixtures across F through Q;
+  retained, and upstream-blocked schema-50 fixtures across F through Q;
 - declaration-order target creation and non-authoritative persisted decision
   order;
 - ordinary target exclusion and source-owned candidate support for every

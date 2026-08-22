@@ -847,6 +847,12 @@ inventory, but they do not duplicate pickup-owned reward, trait, or Pom
 editors. A mandatory singleton renders one already-ranked, move-only action
 card; a malformed omission renders its one canonical restore repair instead.
 
+Activation is determined by the exact engine trait-offer candidate capability,
+not by a UI inference from selected trait history. Thus a normal reached Spell
+Drop projects its exact `self` trait leaf, interaction, marker, and finding
+destination, while the retained Path-of-Stars child of an Aspect-of-Selene
+Spell Drop is absent from all four until it becomes active again.
+
 The same closure applies to Artificer replacement children. Every reached
 replacement reward, trait offer, Pom resolution, disposition, and later pickup
 has one containing inspector, bound interaction, and exact finding destination.

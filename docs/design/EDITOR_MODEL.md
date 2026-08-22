@@ -900,6 +900,14 @@ text, while rarityless NPC and Hammer rows omit rarity entirely. Giver
 labels, selected trait labels, contextual support,
 and findings are presentation products derived from catalog and engine outputs.
 
+The same surface presents an active Selene `SpellDrop` as `Edit spell`: three
+rarityless rows and no fallback, sparse, rarity, replacement, target, or
+god-pool controls. It still binds the existing complete `ReplaceTraitOffer`
+semantic edit and exact finding destination. Opening the dialog does not
+evaluate a candidate domain; focused editing invokes the already-bound engine
+capability lazily. A dormant Aspect-of-Selene Spell Drop child projects no
+control or missing-offer finding.
+
 First-Olympian composition findings use the same `TraitOfferAddress` and
 existing finding presentation path. The editor adds no mode or persisted state:
 whether the rule applies comes from the engine's selected-offer assessment

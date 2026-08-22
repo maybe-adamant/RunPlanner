@@ -73,7 +73,7 @@ completion-owned Room Action order owns chronology; Gold materializes from the f
 non-Spell purchase before that source's acquisition effects and may be picked
 up later among the other room entries.
 
-The current strict authored contract is schema 49. Its earlier schema-41
+The current strict authored contract is schema 50. Its earlier schema-41
 Narcissus, Mourning Fields, and Artificer surface remains intact: Narcissus
 exposes every pickup consequential to Time Piece or
 Artificer, including producer-owned Psyche without adding it to a counted
@@ -90,6 +90,13 @@ source without acquiring it, and creates a separately acquired replacement.
 Epic supplies three uses; Lazuli's Heroic promotion preserves spent-use
 evidence and adds one remaining use. Paid Shop items and Echo's Reward Reward
 Reward recreation remain ineligible.
+
+Selene's nine base Hexes are real rarityless traits. Normal Spell Drops use
+the ordered eight-spell domain and settle one selected spell into the shared
+sixth `Spell` equipment slot; Sky Fall is the Aspect of Selene's linked
+starting trait. Aspect-owned later Spell Drops retain their acquisition while
+their unsupported Path of Stars child is dormant. Spell Drop is not an Echo
+last-reward replay source, while Talent Drop remains replayable.
 
 ## Architecture
 

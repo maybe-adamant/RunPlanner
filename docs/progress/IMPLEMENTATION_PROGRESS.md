@@ -12,7 +12,7 @@ by the owning design authorities and active delivery plans.
 
 ## Active Frontier
 
-The current persisted contract is strict schema 49. The occurrence/action
+The current persisted contract is strict schema 50. The occurrence/action
 delivery landed occurrence-backed door staging at `e1e3af0`, one unified room
 chronology at `f38247d`, the corrected door contract at `daa876f`, the opening
 reward frontier at `fdfd2dc`, the engine-walk N Hub board at `aa09c10`, and
@@ -59,7 +59,7 @@ may lock the god pool before Travel generates a refill, while taking it after
 the purchase cannot retroactively change that payload. The planner does not yet
 implement Shrine inventory, pending delivery, rush, or forced delivery.
 
-The test fixture and suite optimization is complete. Canonical schema-49
+The test fixture and suite optimization is complete. Canonical schema-50
 authored route prefixes and recurrent late-route frontiers now load from 14
 strict readable JSON checkpoints through route-scoped static imports and lazy
 frozen production-codec loaders. `84db578` deleted the permanent F-I/N-Q
@@ -2917,6 +2917,29 @@ adds the exact derived `bossDefeated` seam and applies Judgment there while
 keeping post-encounter delivery at End encounter. No Well, Shrine, H Echo
 Bridge, persistent N Hub, Boss action order, boss-drop, or Dream Dive model was
 added.
+
+The Selene base-spell delivery is complete at strict schema 50. The locked
+audit/plan landed at `5203bb5`; Gate A (`5261efd`) adds the nine real
+rarityless spell traits, the ordered normal eight-spell `SpellDrop` provider,
+the Aspect-of-Selene Sky Fall link, the shared six-slot `equippedSlots` ledger,
+exact Spell Drop self-child ownership, normal/aspect settlement chronology,
+and the Echo replay correction. Gate B (`2b86e31`) projects the engine-owned
+active child through the existing `Edit spell` trait-offer, finding-navigation,
+Undo, and Run State surfaces. Aspect-owned Path of Stars children remain
+dormant; no React code owns aspect identity or the spell pool. `SpellDrop` is
+not Echo-replayable, while `TalentDrop` remains replayable. Shrine delayed
+delivery, `pendingSpellDrop` state, Path of Stars talents, and Dream-run spell
+rotation remain explicitly unmodeled.
+
+The single authorized Selene closure `npm run check` was run once on
+2026-08-22 after durable-document absorption. All three workspace typechecks
+and the fixture typecheck passed; fixture integrity passed 1 file/7 tests.
+The regular and heavy test lanes, ESLint, repository formatting, and the
+production build completed green. Vite transformed 396 modules and retained
+only the existing greater-than-500-kB application-chunk advisory. The command
+was not rerun after this factual append. The terminal wrapper did not retain
+the regular/heavy summary lines after the single run, so this record does not
+claim aggregate file/test totals or lane durations for those two lanes.
 
 Gate B absorbed those contracts into the durable authored-project, lifecycle,
 reward, simulation, editor/workspace, keepsake, fountain, and Room Action

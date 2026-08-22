@@ -743,10 +743,10 @@ and port-verification history.
 ## Trait Offer Catalog
 
 The normalized catalog owns the supported trait-offer providers. It contains
-six weapon declarations, their 24 aspect declarations, 376 included trait
-declarations, and 21 giver declarations: the nine Olympians, Hermes,
+six weapon declarations, their 24 aspect declarations, 385 included trait
+declarations, and 22 giver declarations: the nine Olympians, Hermes,
 `WeaponUpgrade`, Artemis, Athena, Icarus, Arachne, Medea, Hades, Dionysus,
-Narcissus, Circe, and Echo. Arcana card traits are declaration-backed run-state
+Narcissus, Circe, Echo, and Selene's `SpellDrop`. Arcana card traits are declaration-backed run-state
 traits rather than a giver pool. Trait declarations are
 giver-neutral facts: fresh and equipped rarity domains, exact offer
 requirements, ordinary boon slot, element contributions, boon-rarity and
@@ -774,8 +774,12 @@ not make Artemis or Athena ordinary Olympian providers: field-NPC offers do not
 participate in the first-Olympian composition rule, ordinary-slot replacement
 composition, god-pool source history, or reward-source support.
 
-The normalized catalog contains 294 memberships across the 20 non-Hammer givers and 92
-memberships under the Hammer giver. Echo contributes exactly eight
+The normalized catalog contains 302 memberships across the 21 non-Hammer givers and 92
+memberships under the Hammer giver. Selene's `SpellDrop` giver is a rarityless
+`spell` provider with an ordered eight-trait pool; its ninth base trait, Sky
+Fall, is outside that pool and is linked only by `SuitHexAspect` as its
+starting trait. Every spell occupies the shared `Spell` equipment slot, which
+is distinct from the original five ordinary-boon slots. Echo contributes exactly eight
 player-rarityless identities: Reward, Boon, Survive, Pom, Evade, Fight, Gold,
 and Gift. Their selected dispositions close direct numeric/no-op behavior,
 greatest-level Pom targeting, the giver-preserving previous-run approximation,
@@ -838,7 +842,7 @@ unknown requirement operands, duplicate or cross-provider pool members,
 invalid rarity policies or domains, incompatible defaults, unknown contexts,
 missing loadout defaults, malformed targeted acquisitions, and malformed
 Hammer compatibility. Requirement operands
-that name deferred NPC, Story, Spell, or Talent providers remain exact keys in
+that name deferred NPC, Story, or Talent providers remain exact keys in
 the declaration but do not create placeholder offerable traits. The closed
 context vocabulary is `devotionNoDuo` and the room-owned `BlockGiftBoons`
 flag; room names and acquisition timing never enter trait declarations.
