@@ -23,10 +23,14 @@ The evidence was checked on 2026-08-22 against the installed Hades II scripts:
 - `TraitData_Aspect.lua` and `WeaponUpgradeLogic.lua` for `SuitHexAspect` and
   its linked spell;
 - `RequirementsData.lua` for `SpellDropRequirements` and `TalentLegal`;
+- `StoreData.lua`, `StoreLogic.lua`, and `SurfaceShopLogic.lua` for store,
+  duplicate-purchase, offered-reward, and pending-delivery guards;
 - `RunData.lua` for the spell-to-trait initialization links;
 - `TraitData.lua`, `TraitData_Artemis.lua`, and `TraitData_Circe.lua` for
   downstream trait requirements; and
-- `LootData_Selene.lua` for the Aspect-specific Selene interaction.
+- `LootData_Selene.lua` for the Aspect-specific Selene interaction; and
+- `EventLogic.lua`, `InteractLogic.lua`, and `ConsumableData.lua` for Echo's
+  `LastReward` boundary.
 
 ## Nine identities, two acquisition paths
 
@@ -77,6 +81,28 @@ choice surface: three distinct eligible spell identities and one selected
 identity. A shortcut that stores only the winner would lose the same
 offer-authorship and candidate-feedback contract already retained for other
 three-choice rewards.
+
+## Second-Spell-Drop guards
+
+The ordinary named requirement rejects Spell Drop when the current store
+already contains one, the room's chosen reward is Spell Drop, the run has used
+one, or a Hermes delivery has one pending. Store-specific tables repeat the
+relevant guards and additionally consult the Hub reward lookup or the room's
+already-offered rewards. These checks prevent simultaneous doors, Hub rooms,
+Shop offers, and Travel Deal refills from manufacturing a second normal Spell
+Drop before the first is used.
+
+Two trait effects close other duplication paths. `RemoveStoreItem` skips Spell
+Drop when Gold Gold Gold would duplicate the first World Shop purchase, and
+Reward Reward Reward cannot recreate Spell Drop because it never becomes
+`CurrentRun.LastReward`. Artificer likewise excludes Spell Drop from its
+replacement domain. Aspect of Selene is the separate non-duplication case: a
+later Spell Drop opens Path of Stars instead of offering another base Hex.
+
+The planner should retain these source-owned guards at their actual reward and
+settlement checkpoints. A single equipped Spell slot is still the correct
+derived trait state, but it is not a substitute for modeling why a second
+normal Spell Drop is unavailable.
 
 ## Aspect of Selene
 
@@ -130,6 +156,19 @@ claim that `AllSpellInvestedCache` is exact. The current explicit
 `allSpellInvested = false` support baseline remains until talent-tree
 authoring is audited and delivered.
 
+## Echo replay boundary
+
+Reward Reward Reward cannot recreate a Spell Drop. Echo recreates only
+`CurrentRun.LastReward`; a consumable becomes that value only when its
+declaration has `LastRewardEligible`. `SpellDrop` does not have that flag, and
+`OpenSpellScreen` records its consumable/use history without assigning it to
+`LastReward`. The normal one-Spell-Drop rule therefore has no Echo exception.
+
+`TalentDrop` is deliberately different: its consumable declaration does have
+`LastRewardEligible = true`, so Path of Stars currency may be Echo's recreated
+last reward. The planner must preserve Talent Drop replay while removing its
+current incorrect claim that Spell Drop is replayable.
+
 ## Planner disposition
 
 The first implementation slice can be narrow and complete:
@@ -143,7 +182,9 @@ The first implementation slice can be narrow and complete:
 5. let Artemis and Circe consume that history through their existing positive
    dependency machinery; and
 6. preserve Aspect of Selene's Spell Drop as a no-new-spell Path-of-Stars
-   frontier until talent authoring is implemented.
+   frontier until talent authoring is implemented; and
+7. remove Spell Drop from Echo's last-reward recreation domain without
+   changing Talent Drop replay.
 
 This slice does not need a second spell slot, a spell-use simulator, a talent
 tree, spell damage, or special React-owned eligibility. The catalog owns the
