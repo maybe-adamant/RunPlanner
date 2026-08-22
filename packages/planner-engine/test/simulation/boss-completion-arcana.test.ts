@@ -93,6 +93,50 @@ function evaluateNBossLifecycle(
 }
 
 describe('Judgment Boss-completion lifecycle', () => {
+  it('applies Judgment at the Boss-defeated history event before generic encounter completion', () => {
+    const project = loadSurfaceNOProject();
+    const evaluated = biome(simulateProject(catalog, project), 'N');
+    const bossEvents = evaluated.history.events.filter(
+      (event) =>
+        event.origin.kind === 'completionRoom' &&
+        event.origin.role === 'boss' &&
+        (event.kind === 'bossDefeated' || event.kind === 'encounterCompleted'),
+    );
+    const defeated = bossEvents.find(
+      (event): event is Extract<(typeof bossEvents)[number], { readonly kind: 'bossDefeated' }> =>
+        event.kind === 'bossDefeated',
+    );
+    const completed = bossEvents.find(
+      (
+        event,
+      ): event is Extract<(typeof bossEvents)[number], { readonly kind: 'encounterCompleted' }> =>
+        event.kind === 'encounterCompleted',
+    );
+    if (defeated === undefined || completed === undefined)
+      throw new Error('N Boss lifecycle is missing its fixed completion seams');
+
+    const loadout = createDefaultRouteLoadout(catalog);
+    const seededJudgment = activateTemporaryArcana(
+      catalog,
+      createArcanaFearState(catalog, loadout),
+      ['CardDraw'],
+      { owner: n, sequence: 1 },
+    );
+    if (!seededJudgment.legal) throw new Error('Judgment test setup must be legal');
+    const selected = inactive(['CardDraw'], 5);
+    const result = evaluateNBossLifecycle(seededJudgment.state, selected);
+    const activation = result.simulation.branches[0]?.arcanaFear.events.find(
+      (event) => event.kind === 'temporaryArcanaActivated' && event.sequence === defeated.sequence,
+    );
+
+    expect(defeated.sequence).toBeLessThan(completed.sequence);
+    expect(activation).toMatchObject({
+      kind: 'temporaryArcanaActivated',
+      arcanaKeys: selected,
+      sequence: defeated.sequence,
+    });
+  });
+
   it('retains the missing exact-set repair capability at the terminal Boss and suppresses Postboss/later-biome state', () => {
     const project = withJudgment();
     const assembly = simulateProjectAssembly(catalog, project);

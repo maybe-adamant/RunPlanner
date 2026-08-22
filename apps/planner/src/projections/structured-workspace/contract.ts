@@ -1956,6 +1956,10 @@ export interface WorkspaceCompletionNode {
         readonly kind: 'fixedEffect';
         readonly effect: 'judgment';
       }
+    | {
+        readonly kind: 'bossDefeated';
+        readonly key: 'bossDefeated';
+      }
   )[];
   readonly judgment?: {
     readonly address: BossCompletionArcanaAddress;

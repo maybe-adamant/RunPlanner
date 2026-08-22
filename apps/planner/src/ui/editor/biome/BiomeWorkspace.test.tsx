@@ -1471,6 +1471,7 @@ describe('BiomeWorkspace', () => {
     expect(document.activeElement).toBe(document.getElementById(semanticOwnerElementId(owner)));
     expect(inspector.querySelector('.completion-judgment-popup')).toBeNull();
     expect(within(inspector).getByText('Start encounter')).toBeTruthy();
+    expect(within(inspector).getByText('Boss defeated')).toBeTruthy();
     expect(within(inspector).getByText('End encounter')).toBeTruthy();
     const timeline = within(inspector).getByRole('region', { name: 'Room Timeline' });
     expect(timeline.classList.contains('room-actions-workbench')).toBe(true);
@@ -1484,6 +1485,12 @@ describe('BiomeWorkspace', () => {
         .getByRole('listitem', { name: /Judgment — choose 5 inactive Arcana cards/ })
         .querySelector('.hub-roster-rank')?.textContent,
     ).toBe('1');
+    const timelineEntries = Array.from(timeline.querySelectorAll('ol > li'));
+    expect(
+      timelineEntries.findIndex((entry) => entry.getAttribute('aria-label') === 'Boss defeated'),
+    ).toBeLessThan(
+      timelineEntries.findIndex((entry) => entry.getAttribute('aria-label') === 'End encounter'),
+    );
     act(() => judgmentLauncher.click());
     const optionList = inspector.querySelector('.completion-judgment-options');
     if (optionList === null) throw new Error('Judgment options list is missing');

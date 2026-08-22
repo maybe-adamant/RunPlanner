@@ -143,11 +143,13 @@ kinds. Only `combat`, `miniboss`, and `boss` phase kinds render a combat spine.
 
 The derived Boss completion room has the fixed `BossRoom` lifecycle even though
 it is not an authored Room Occurrence. Its player-facing timeline is `Room
-entered -> Start encounter -> End encounter -> Cleanup · Doors open`. When
-Judgment is active, it is one engine-owned fixed effect immediately after End
-encounter, not a Room Action or persisted ordering value. Its exact existing
-Boss-completion Arcana address owns the editor, candidate frontier, finding,
-and semantic command.
+entered -> Start encounter -> Boss defeated -> End encounter -> Cleanup · Doors
+open`. `Boss defeated` is an exact derived seam before generic encounter-end
+effects. When Judgment is active, it is one engine-owned fixed effect at that
+seam, not a Room Action or persisted ordering value. End encounter remains the
+later seam for post-encounter delivery. Its exact existing Boss-completion
+Arcana address owns the editor, candidate frontier, finding, and semantic
+command.
 
 The derived Postboss completion uses the same timeline presentation without a
 combat interval: `Room entered -> Cleanup · Doors open`. A reached nonfinal

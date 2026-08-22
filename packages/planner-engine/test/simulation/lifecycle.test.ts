@@ -1,5 +1,6 @@
 import {
   createBiomeAddress,
+  createCompletionRoomAddress,
   createOccurrenceAddress,
   createOccurrenceId,
   createRoomActionAddress,
@@ -232,6 +233,26 @@ function actionRoster(
 }
 
 describe('single-room lifecycle execution', () => {
+  it('emits the derived Boss-defeated seam before generic encounter completion', () => {
+    const bossOrigin = createCompletionRoomAddress(createBiomeAddress('Underworld', 'F'), 'boss');
+    const events = executeRoomLifecycle(
+      catalog,
+      inputWithoutProducer({
+        origin: bossOrigin,
+        lifecycleProfileKey: 'BossRoom',
+        encounterEnvelopeKey: 'SingleEncounter',
+        encounterPhases: phases('SingleEncounter', ['BossHecate01']),
+      }),
+    ).events;
+    const defeated = events.findIndex((event) => event.kind === 'bossDefeated');
+    const completed = events.findIndex((event) => event.kind === 'encounterCompleted');
+
+    expect(defeated).toBeGreaterThan(
+      events.findIndex((event) => event.kind === 'encounterStarted'),
+    );
+    expect(completed).toBe(defeated + 1);
+  });
+
   it('ignores a retained ranked stale row while executing the active producer action', () => {
     const stale = {
       kind: 'interactIncomingReward' as const,

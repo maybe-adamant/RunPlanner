@@ -184,7 +184,7 @@ function rankedRow(
 }
 
 describe('room lifecycle timeline', () => {
-  it('keeps Judgment as an engine-owned fixed effect after the derived Boss end seam', () => {
+  it('keeps Judgment as an engine-owned fixed effect at the derived Boss-defeated seam', () => {
     const completion = createCompletionRoomAddress(
       { kind: 'biome', routeKey: 'Underworld', biomeKey: 'F' },
       'boss',
@@ -204,11 +204,12 @@ describe('room lifecycle timeline', () => {
         kind: 'boundary',
         boundary: expect.objectContaining({ kind: 'encounterStart' }),
       }),
+      expect.objectContaining({ kind: 'bossDefeated' }),
+      expect.objectContaining({ kind: 'fixedEffect', effect: 'judgment' }),
       expect.objectContaining({
         kind: 'boundary',
         boundary: expect.objectContaining({ kind: 'encounterEnd' }),
       }),
-      expect.objectContaining({ kind: 'fixedEffect', effect: 'judgment' }),
       expect.objectContaining({
         kind: 'boundary',
         boundary: expect.objectContaining({ kind: 'cleanup' }),

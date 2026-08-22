@@ -516,6 +516,21 @@ function CompletionWorkbench({
                   </li>
                 );
               }
+              if (entry.kind === 'bossDefeated') {
+                return (
+                  <li
+                    aria-label="Boss defeated"
+                    className="room-action-lifecycle-boundary"
+                    data-lifecycle-boundary={entry.key}
+                    key={entry.key}
+                  >
+                    <span aria-hidden="true" className="hub-roster-rank">
+                      ·
+                    </span>
+                    <strong>Boss defeated</strong>
+                  </li>
+                );
+              }
               const rank = fixedEffectRanks.get(entry.effect);
               if (entry.effect === 'judgment') {
                 return control === undefined || node.judgment === undefined ? null : (

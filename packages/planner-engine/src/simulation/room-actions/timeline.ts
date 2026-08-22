@@ -70,6 +70,10 @@ export type CompletionRoomLifecycleTimelineEntry =
       >;
     }
   | {
+      readonly kind: 'bossDefeated';
+      readonly key: 'bossDefeated';
+    }
+  | {
       readonly kind: 'fixedEffect';
       readonly effect: 'judgment';
       readonly owner: BossCompletionArcanaAddress;
@@ -120,21 +124,25 @@ export function assembleCompletionRoomLifecycleTimeline(input: {
         }),
       }),
       Object.freeze({
+        kind: 'bossDefeated' as const,
+        key: 'bossDefeated' as const,
+      }),
+      ...(input.judgment === undefined
+        ? []
+        : [
+            Object.freeze({
+              kind: 'fixedEffect' as const,
+              effect: 'judgment' as const,
+              owner: input.judgment,
+            }),
+          ]),
+      Object.freeze({
         kind: 'boundary' as const,
         boundary: Object.freeze({
           kind: 'encounterEnd' as const,
           key: `encounterEnd:${phaseKey}`,
           phaseKey,
         }),
-      }),
-    );
-  }
-  if (room.kind === 'Boss' && input.judgment !== undefined) {
-    entries.push(
-      Object.freeze({
-        kind: 'fixedEffect' as const,
-        effect: 'judgment' as const,
-        owner: input.judgment,
       }),
     );
   }
