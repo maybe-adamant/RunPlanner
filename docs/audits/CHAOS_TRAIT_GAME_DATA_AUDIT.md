@@ -15,14 +15,17 @@ The evidence was checked on 2026-08-22 against the installed Hades II scripts:
 - `LootData_Chaos.lua` for the complete permanent and temporary pools;
 - `TraitData_Chaos.lua` and `TraitText.en.sjson` for identities, requirements,
   clocks, effects, and player-facing names;
-- `TraitLogic.lua`, especially `GetEligibleTransformingTrait` and
-  `SetTransformingTraitsOnLoot`;
+- `TraitLogic.lua`, especially `GetEligibleTransformingTrait`,
+  `SetTransformingTraitsOnLoot`, `GetProcessedTraitData`, and
+  `GetProcessedValue`;
 - `UpgradeChoiceLogic.lua` for option construction, selection, and the
   curse-owned pending blessing;
 - `RoomLogic.lua` and `TraitLogic.lua` for encounter, room, and trait-use
   expiration;
 - `RunLogic.lua` and `PowersLogic.lua` for Expiring's real-time path and
-  Chaos's keepsake-owned blessing path; and
+  Chaos's keepsake-owned blessing path;
+- `RoomLogic.lua`, `HeroData.lua`, `MetaUpgradeData.lua`, and
+  `TraitData_MetaUpgrade.lua` for the ordered rarity-chance ledger; and
 - `RequirementsData.lua` for the progressed legacy-trait baseline.
 
 ## Eligibility baseline
@@ -58,10 +61,10 @@ identity therefore may repeat across the three visible alternatives.
 
 The picker is not three independent choices made in sequence. The game offers
 three already-paired curse/blessing alternatives and the player selects one
-pair. A planner editor may present the selected outcome through three compact
-fields—curse, blessing, and maturity value—but engine validation must assess
-the pair against one pre-pickup context and must not imply that the game first
-chooses a curse and then grants a free blessing choice.
+pair. A planner editor may present the selected pair through compact identity,
+rarity, duration, and declaration-owned value fields, but engine validation
+must assess the complete pair against one pre-pickup context and must not imply
+that the game first chooses a curse and then grants a free blessing choice.
 
 Ordinary pairs can be Common, Rare, or Epic. `ChaosLastStandBlessing` has only
 Legendary rarity. `ChaosMetaUpgradeCurse` marks its paired option as Heroic
@@ -74,26 +77,89 @@ processed blessing under that curse's `OnExpire.TraitData`. The blessing is not
 yet an equipped trait and must not contribute elements, satisfy trait
 requirements, or qualify later Chaos legendaries during the curse interval.
 
+## Numeric outcomes are processed when the pair is selected
+
+The shared rarity applies to the blessing, not the curse. Chaos curses declare
+no `RarityLevels`, so their duration and effect rolls use their source ranges
+unchanged even though `GetProcessedTraitData` receives the option rarity. A
+blessing's rarity multiplier scales its declared values before the processed
+blessing is stored under the curse.
+
+For every `BaseMin`/`BaseMax` field, the source draws a separate random float.
+It then applies the rarity multiplier and normalizes the result as follows:
+
+- `SourceIsMultiplier` scales the delta from `1`, rather than the multiplier
+  itself;
+- `AsInt` rounds to an integer;
+- `ToNearest` floors to the declared step;
+- all other processed values round to two decimal places unless they declare a
+  different precision; and
+- `MaximumValue` clamps after rounding.
+
+Nested values are processed in stable key order for deterministic RNG use, but
+two declarations with the same range are still two independent rolls unless
+one explicitly uses `DeriveSource`/`DeriveValueFrom`. The processed curse and
+pending blessing therefore already contain the exact gameplay operands before
+the player leaves the Chaos screen.
+
+This produces a closed payload shape rather than a universal pair of numeric
+sliders:
+
+- all 17 curses have exactly one rolled duration;
+- 9 curses also have exactly one independently rolled effect value;
+- all 16 blessings have a concrete processed numeric result or fixed effect;
+- 12 blessings make at least one independent magnitude roll;
+- 11 of those blessings make exactly one independent magnitude roll;
+- Revelation has two independently rolled values from the same source range;
+  and
+- Creation, Celerity, Chant, and Defiance derive their numeric result from
+  rarity or context without a second within-rarity magnitude roll.
+
+The declaration must therefore identify zero, one, or more named numeric
+results and whether each result is independently variable or derived from
+rarity/context. A consumer may present the common one-variable case compactly,
+but it must not imply within-rarity variation where the source has none or
+collapse Revelation's two runtime rolls into one value.
+
 ## Blessing inventory and planner consequences
 
-| Key                         | Name       | Source effect after maturation                               | Current planner consequence  |
-| --------------------------- | ---------- | ------------------------------------------------------------ | ---------------------------- |
-| `ChaosWeaponBlessing`       | Strike     | Attack damage                                                | combat-only                  |
-| `ChaosSpecialBlessing`      | Flourish   | Special damage                                               | combat-only                  |
-| `ChaosCastBlessing`         | Chasm      | Cast damage                                                  | combat-only                  |
-| `ChaosHealthBlessing`       | Soul       | add Max Health                                               | health not simulated         |
-| `ChaosManaBlessing`         | Mind       | add Max Magick                                               | magick not simulated         |
-| `ChaosManaOverTimeBlessing` | Will       | magick regeneration                                          | combat-only                  |
-| `ChaosExSpeedBlessing`      | Revelation | faster Omega charging                                        | combat-only                  |
-| `ChaosRarityBlessing`       | Favor      | raises later god-boon rarity chances                         | may eliminate Common         |
-| `ChaosMoneyBlessing`        | Affluence  | multiplies money gained                                      | money not simulated          |
-| `ChaosElementalBlessing`    | Creation   | add every element                                            | must affect element history  |
-| `ChaosManaCostBlessing`     | Talent     | reduces Omega magick costs                                   | combat-only                  |
-| `ChaosSpeedBlessing`        | Celerity   | movement and Sprint speed                                    | combat-only                  |
-| `ChaosDoorHealBlessing`     | Revival    | heal whenever leaving a room                                 | health not simulated         |
-| `ChaosHarvestBlessing`      | Discovery  | chance to double tool resources; unavailable in Dream/bounty | resources not simulated      |
-| `ChaosOmegaDamageBlessing`  | Chant      | Omega damage per Aether; requires at least one Aether        | eligibility is element-based |
-| `ChaosLastStandBlessing`    | Defiance   | add one Death Defiance; requires a prior Chaos blessing      | trait history only           |
+Processed ranges below are the final gameplay values after rarity scaling and
+normalization. `C/R/E/H` means Common, Rare, Epic, and Heroic.
+
+| Key                         | Name       | Numeric result and source of variation                                                                      | Processed range or deterministic result by rarity                                                                                                                 | Current planner consequence  |
+| --------------------------- | ---------- | ----------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
+| `ChaosWeaponBlessing`       | Strike     | Attack multiplier                                                                                           | damage bonus C `20–50%`; R `30–75%`; E `40–100%`; H `50–125%`                                                                                                     | combat-only                  |
+| `ChaosSpecialBlessing`      | Flourish   | Special multiplier                                                                                          | damage bonus C `30–60%`; R `45–90%`; E `60–120%`; H `75–150%`                                                                                                     | combat-only                  |
+| `ChaosCastBlessing`         | Chasm      | Cast multiplier                                                                                             | damage bonus C `20–50%`; R `30–75%`; E `40–100%`; H `50–125%`                                                                                                     | combat-only                  |
+| `ChaosHealthBlessing`       | Soul       | Max Health added                                                                                            | integer C `26–35`; R `52–70`; E `78–105`; H `104–140`                                                                                                             | health not simulated         |
+| `ChaosManaBlessing`         | Mind       | Max Magick added                                                                                            | integer C `30–40`; R `45–60`; E `60–80`; H `75–100`                                                                                                               | magick not simulated         |
+| `ChaosManaOverTimeBlessing` | Will       | Magick restored per second                                                                                  | integer C `4–6`; R `8–12`; E `12–18`; H `16–24`                                                                                                                   | combat-only                  |
+| `ChaosExSpeedBlessing`      | Revelation | **Two independent rolls:** the reported all-weapon/Omega multiplier and a second weapon-property multiplier | both processed multiplier ranges are C `0.85–0.90`; R `0.78–0.85`; E `0.70–0.80`; H `0.63–0.75`, equivalent to `10–15%`, `15–22%`, `20–30%`, and `25–37%` faster  | combat-only                  |
+| `ChaosRarityBlessing`       | Favor      | Rare-chance bonus                                                                                           | C `40–50%`; R `54–67%`; E `67–84%`; H `80–100%`; fixed `+10%` Epic, Duo, and Legendary chances are not additional rolls                                           | may eliminate Common         |
+| `ChaosMoneyBlessing`        | Affluence  | Money multiplier                                                                                            | value increase C `40–60%`; R `80–120%`; E `120–180%`; H `160–240%`, floored to `5%` steps                                                                         | money not simulated          |
+| `ChaosElementalBlessing`    | Creation   | element count; selected by shared rarity, with no within-rarity roll                                        | deterministic `+1/+2/+3/+4` of every element at C/R/E/H                                                                                                           | must affect element history  |
+| `ChaosManaCostBlessing`     | Talent     | Magick-cost multiplier                                                                                      | cost reduction C `20–30%`; R `30–45%`; E `40–60%`; H `50–75%`, floored to `5%` steps                                                                              | combat-only                  |
+| `ChaosSpeedBlessing`        | Celerity   | move/Sprint values; selected by shared rarity, with no within-rarity roll                                   | deterministic move-speed bonus `15/20/25/30%`, Sprint velocity `297/396/495/594`, and Sprint cap `133.5/178/222.5/267` at C/R/E/H                                 | combat-only                  |
+| `ChaosDoorHealBlessing`     | Revival    | Health restored per room exit                                                                               | integer C `3–4`; R `9–12`; E `15–20`; H `21–28`                                                                                                                   | health not simulated         |
+| `ChaosHarvestBlessing`      | Discovery  | Double-resource chance                                                                                      | C `56–70%`; R `64–80%`; E `72–90%`; H `80–100%`, rounded to `1%` and capped at `100%`; doubled amount is fixed at `+100%`                                         | resources not simulated      |
+| `ChaosOmegaDamageBlessing`  | Chant      | per-Aether damage value; selected by shared rarity and Aether context, with no within-rarity roll           | deterministic per-Aether damage bonus `30/36/42/48%` at C/R/E/H; total is `1 + per-Aether delta × current Aether count` and is re-derived when that count changes | eligibility is element-based |
+| `ChaosLastStandBlessing`    | Defiance   | fixed effect                                                                                                | fixed Legendary; adds one Death Defiance with fixed `40%` Health and Magick restoration                                                                           | trait history only           |
+
+Revelation is the only blessing that defeats a literal one-slider payload.
+`WeaponSpeedMultiplier.Value` supplies the reported value, while a separate
+`PropertyChanges` entry rolls the same `0.85–0.90` range again for a narrower
+weapon set. Both tables are independently traversed by `GetProcessedTraitData`;
+there is no `DeriveValueFrom` link between them. A faithful game export must
+retain both processed multipliers even if the editor keeps the unreported one
+in an advanced or compact secondary control.
+
+Celerity and Chant do have concrete numeric outcomes. Celerity's selected
+rarity fixes its move/Sprint values; Chant's selected rarity fixes its
+per-Aether value and current Aether fixes its total. Their declarations use
+`BaseValue` plus fixed rarity `Multiplier` entries, so neither performs a
+second `RandomFloat` magnitude draw within one rarity. The editor should show
+their exact numeric result, but there is no source range for a variable slider
+after rarity and context are fixed.
 
 Creation is directly material to the current simulator. Its rarity levels add
 one, two, three, or four of **each** element at Common, Rare, Epic, or Heroic.
@@ -105,32 +171,38 @@ for any already-equipped Chaos blessing. A pending blessing inside an active
 curse does not pass that test. Repeated natural-Chaos visits must therefore
 evaluate against exact matured history, not merely prior `TrialUpgrade` use.
 
-Favor usually changes probability without changing the supported possibility
-set, but its exact Heroic roll has one planner-visible edge. The base Rare
-chance is 10%. Heroic Favor contributes 80–100 percentage points to Rare, so
-an exact bonus of at least 90 percentage points makes the Rare roll guaranteed
-and Common impossible. Common, Rare, and Epic Favor cannot reach that
-threshold. The planner does not need a general probability engine, but it must
-retain whether the Heroic Favor outcome makes Rare guaranteed and suppress
-Common when the combined Rare chance reaches 100% or more. Favor rarity alone
-is insufficient because the Heroic value range straddles the threshold; the
-raw percentage does not otherwise need to enter planner state.
+Favor's exact Rare-chance roll belongs in the same ordered rarity-chance ledger
+as every other source. The ordinary god-boon baseline is Rare `10%`, Epic `5%`,
+Duo `12%`, and Legendary `10%`. Additive `RarityBonus` effects are applied to
+that baseline before `MultiplicativeRarityBonus` effects. Favor adds its rolled
+Rare value plus fixed `10%` Epic, Duo, and Legendary values. Excellence adds
+Rare chance and multiplies Legendary chance; Divinity adds Epic chance. The
+ledger must consume the active Arcana rank and exact processed Favor roll,
+rather than a Chaos-specific `Rare guaranteed` boolean.
+
+Heroic Favor contributes `80–100%` Rare chance. With the ordinary `10%` Rare
+baseline, an exact Favor bonus of at least `90%` makes the Rare check guaranteed
+and Common impossible even without Excellence. Lower Heroic rolls can still
+become guaranteed after other additive rarity sources are folded. Common, Rare,
+and Epic Favor do not reach that threshold by themselves, but the ledger—not
+the Favor declaration in isolation—owns the final feasibility result.
+
+Proper Upbringing contributes its active `GodLootOnly` Rare `+1` to this same
+chance ledger. It also performs a separate chronological transition that
+promotes eligible already-equipped Common traits to Rare when its elemental
+requirement becomes active. The ledger contribution and already-owned promotion
+must share exact element/trait history without being collapsed into one
+`minimum rarity` shortcut. The complete source facts remain owned by the
+[boon rarity ledger audit](BOON_RARITY_LEDGER_GAME_DATA_AUDIT.md).
 
 Heroic eligibility remains acquisition-contextual rather than a universal
 authoring option. In an ordinary `TrialUpgrade`, Common/Rare/Epic are the normal
 rarities, but Barren's `UpgradePairedRarity` forces its paired blessing to
-Heroic; a Barren/Favor alternative can therefore reach this edge directly.
-The independently audited Cherished Heirloom plus Transcendent Embryo path can
-also produce a Heroic Favor later. Both paths must consume the same Favor
-effect semantics, while their offer/equip authorities remain responsible for
-whether Heroic is actually obtainable.
-
-The contextual authoring shape therefore extends by one outcome only when the
-selected or granted trait is Heroic Favor: **Rare guaranteed** or **Common
-still possible**. Barren/Favor exposes that child after the paired Chaos
-selection. A future rank-IV Transcendent Embryo Favor result exposes the same
-child after the keepsake roll. Non-Heroic Favor never exposes it and always
-leaves Common feasible.
+Heroic; a Barren/Favor alternative can therefore contribute the Heroic range
+directly. The independently audited Cherished Heirloom plus Transcendent Embryo
+path can also produce a Heroic Favor later. Both paths feed the same exact
+Favor effect into the rarity ledger while retaining their separate authority
+over how Heroic became obtainable.
 
 Defiance remains a real Death Defiance source in the game, but this Chaos slice
 does not add a partial Death Defiance ledger. It records Defiance as matured
@@ -147,37 +219,71 @@ called effect-neutral.
 Most curses inherit a random three-to-five-encounter duration, but the pool is
 not governed by one universal encounter clock.
 
-| Key                          | Name         | Expiration clock                  | Source effect and relevant eligibility                   |
-| ---------------------------- | ------------ | --------------------------------- | -------------------------------------------------------- |
-| `ChaosNoMoneyCurse`          | Pauper's     | 3–5 encounters                    | blocks money gain                                        |
-| `ChaosHealthCurse`           | Atrophic     | 3–5 encounters                    | lowers Max Health; excluded with White Antler            |
-| `ChaosDamageCurse`           | Excruciating | 3–5 encounters                    | increases damage taken                                   |
-| `ChaosPrimaryAttackCurse`    | Maimed       | 3–5 encounters                    | Attack damages player; excluded with Aspect of Supay     |
-| `ChaosSecondaryAttackCurse`  | Flayed       | 3–5 encounters                    | Special damages player; excluded with Aspect of Supay    |
-| `ChaosDeathWeaponCurse`      | Caustic      | 3–5 encounters                    | slain foes throw death projectiles                       |
-| `ChaosSpeedCurse`            | Slothful     | 3–5 encounters                    | movement and Sprint penalty                              |
-| `ChaosExAttackCurse`         | Gagged       | 3–5 encounters                    | Omega use damages player                                 |
-| `ChaosCastCurse`             | Addled       | 3–5 encounters                    | Cast damages player                                      |
-| `ChaosDashCurse`             | Neurotic     | 3–5 encounters                    | Dash drains magick                                       |
-| `ChaosManaFocusCurse`        | Fixated      | 3–5 encounters                    | magick use reserves magick until next room               |
-| `ChaosStunCurse`             | Paralyzing   | 3–5 encounters                    | taking damage stuns player                               |
-| `ChaosTimeCurse`             | Expiring     | 2–3 encounters **or** 120 seconds | timeout deals 500 damage and removes the curse           |
-| `ChaosMetaUpgradeCurse`      | Barren       | 3–6 encounters                    | disables Arcana; requires a prior matured Chaos blessing |
-| `ChaosHiddenRoomRewardCurse` | Enshrouded   | 4–6 locations                     | hides door reward previews; Underworld-only source gate  |
-| `ChaosCommonCurse`           | Ordinary     | 2–3 god-boon pickups              | forces those god offers to Common                        |
-| `ChaosRestrictBoonCurse`     | Rejected     | 2–4 god-boon pickups              | removes one choice from those god offers                 |
+| Key                          | Name         | Rolled duration        | Independently rolled curse effect  | Fixed/derived source effect and eligibility                     |
+| ---------------------------- | ------------ | ---------------------- | ---------------------------------- | --------------------------------------------------------------- |
+| `ChaosNoMoneyCurse`          | Pauper's     | `3–5` encounters       | none                               | blocks money gain                                               |
+| `ChaosHealthCurse`           | Atrophic     | `3–5` encounters       | Max Health `-29` to `-20`, integer | excluded with White Antler                                      |
+| `ChaosDamageCurse`           | Excruciating | `3–5` encounters       | damage taken `+20–50%`             | --                                                              |
+| `ChaosPrimaryAttackCurse`    | Maimed       | `3–5` encounters       | self-damage `3–6`, integer         | excluded with Aspect of Supay                                   |
+| `ChaosSecondaryAttackCurse`  | Flayed       | `3–5` encounters       | self-damage `3–6`, integer         | excluded with Aspect of Supay                                   |
+| `ChaosDeathWeaponCurse`      | Caustic      | `3–5` encounters       | none                               | slain foes throw death projectiles                              |
+| `ChaosSpeedCurse`            | Slothful     | `3–5` encounters       | movement multiplier `0.40–0.60`    | Sprint effects derive from that one roll; Apollo cap is fixed   |
+| `ChaosExAttackCurse`         | Gagged       | `3–5` encounters       | self-damage `5–8`, integer         | --                                                              |
+| `ChaosCastCurse`             | Addled       | `3–5` encounters       | self-damage `3–6`, integer         | --                                                              |
+| `ChaosDashCurse`             | Neurotic     | `3–5` encounters       | Magick loss `10–20`, integer       | --                                                              |
+| `ChaosManaFocusCurse`        | Fixated      | `3–5` encounters       | none                               | Magick use reserves Magick until the next room                  |
+| `ChaosStunCurse`             | Paralyzing   | `3–5` encounters       | stun duration `0.50–1.40` sec      | actual value is rounded to `0.01`; tooltip displays one decimal |
+| `ChaosTimeCurse`             | Expiring     | `2–3` encounters       | none                               | fixed `120` sec timer and `500` timeout damage                  |
+| `ChaosMetaUpgradeCurse`      | Barren       | `3–6` encounters       | none                               | disables Arcana; requires a prior matured Chaos blessing        |
+| `ChaosHiddenRoomRewardCurse` | Enshrouded   | `4–6` locations        | none                               | hides door reward previews; Underworld-only source gate         |
+| `ChaosCommonCurse`           | Ordinary     | `2–3` god-boon pickups | none                               | forces those god offers to Common                               |
+| `ChaosRestrictBoonCurse`     | Rejected     | `2–4` god-boon pickups | none                               | blocks one of three generated choices from selection            |
+
+Every curse therefore needs its exact duration value. Only Atrophic,
+Excruciating, Maimed, Flayed, Slothful, Gagged, Addled, Neurotic, and
+Paralyzing need a second authored numeric operand. Slothful is still a
+one-operand case because its Sprint-property values explicitly derive from its
+single movement-speed roll.
 
 For encounter-counted curses, `EndEncounterEffects` decrements the curse only
 for a real primary encounter or active encounter override, unless the room
 suppresses encounter uses. This naturally counts individual active Fields cage
 encounters and does not count the presentation-only/fake encounters that the
 planner has removed from noncombat rooms. Optional challenge encounters are
-not silently equivalent to the room's primary encounter.
+not silently equivalent to the room's primary encounter. This is an
+encounter-completion event count, not subtraction from
+`CurrentRun.BiomeEncounterDepth`: that cache advances at encounter start only
+for encounters declaring `CountsForRoomEncounterDepth` and resets between
+biomes, while a Chaos curse can remain active across that boundary.
 
-Enshrouded decrements on room transition through `UsesAsRooms`. Ordinary and
-Rejected decrement only when a qualifying god-loot screen is resolved; Chaos
-itself is not god loot. Their maturity points therefore depend on authored
-room and reward chronology, not on a room-depth subtraction.
+Enshrouded decrements once in `LeaveRoom` when the player takes the door to the
+next room, including the departure from the Chaos room in which it was
+acquired. It does not read `CurrentRun.BiomeDepthCache`. That cache is rebuilt
+from biome-local room history and resets between biomes; it merely correlates
+with successive room departures on a simple linear path. Ordinary and Rejected
+decrement only when a qualifying god-loot screen is resolved; Chaos itself is
+not god loot. Their maturity points therefore depend on authored lifecycle and
+reward events, not on subtraction from either depth cache.
+
+Rejected does not reduce generation to two identities. `SetTraitsOnLoot` still
+fills the ordinary god offer to `GetTotalLootChoices()`—three options. The
+screen then creates one index for every generated option, removes only
+`CalcNumLootChoices()` indices from that blocked set, and leaves one randomly
+chosen index blocked while Rejected is active. The third option is visible and
+processed, enters `GameState.TraitsSeen`, and receives the `TraitLocked`
+interaction block; the player may select either of the other two. Its lock
+overlay supports only the locked hover presentation. It does not run the normal
+`MouseOverBoonButton` path, does not become `screen.MouseOverButton`, and
+therefore cannot expose or receive the Rarify action. The option is visible but
+neither selectable nor Rarifiable.
+
+This distinction is material with Vow of Denial. After selection, Denial
+iterates every other button in the three-option `screen.UpgradeButtons` array
+without excluding `screen.BlockedIndexes`. At its current two-ban rank, it bans
+both unpicked identities for the rest of the night, including the option that
+Rejected made unselectable. A faithful authored offer therefore retains all
+three concrete identities plus the exact blocked identity; it must not collapse
+the offer to a two-option array.
 
 Expiring carries both an encounter count and a live 120-second timer. Clearing
 the required encounters matures it normally. If the timer reaches zero first,
@@ -202,11 +308,12 @@ TrialUpgrade selected
   -> curse removed and blessing equipped at expiration
 ```
 
-The authored state must preserve the selected curse, selected blessing,
-rarity, and exact rolled duration. The maturity **position** is derived by
-folding subsequent encounter completions, room transitions, or god-boon
-pickups. It is not a draggable Room Timeline action and should not be stored as
-an independently chosen room coordinate.
+The authored state must preserve the selected curse, selected blessing, shared
+rarity, exact rolled duration, and the declaration-owned rolled operands named
+in the two inventories above. The maturity **position** is derived by folding
+subsequent encounter completions, room transitions, or god-boon pickups. It is
+not a draggable Room Timeline action and should not be stored as an
+independently chosen room coordinate.
 
 For encounter clocks, the exact transition belongs to encounter-end history.
 This makes later same-room actions observe the mature blessing when the source
@@ -222,16 +329,17 @@ Five source effects intersect current planner authority:
    Chant eligibility after maturation.
 2. **Ordinary** forces the next counted Olympian offers to Common. It affects
    option rarity, not merely tooltip text.
-3. **Rejected** makes one fewer choice selectable in each counted Olympian
-   offer, normally reducing a three-choice offer to two. The authored
-   trait-offer contract must allow the engine-owned reduced shape while it is
-   active.
+3. **Rejected** keeps three generated Olympian identities but makes one exact
+   option unselectable. The authored trait-offer contract must retain that
+   blocked option because it is still seen and can be consumed by Vow of
+   Denial's unpicked-trait ban.
 4. **Barren** removes active Arcana until maturity and restores them on
    expiration. The required supported consequences are that Artificer uses are
    unavailable and Judgment does not trigger while Barren is active; this does
    not authorize a new matrix of unrelated Arcana effects.
-5. **Favor** suppresses Common only for an exact roll whose resulting Rare
-   chance is guaranteed. Other Favor rolls remain probability-only.
+5. **Favor** contributes its exact processed rarity bonuses to the ordered
+   rarity-chance ledger. Common is suppressed only when the folded Rare chance
+   is guaranteed.
 
 All other curse and benefit effects remain selected/matured trait history. The
 planner does not add damage, health, magick, money, resources, combat effects,
@@ -240,10 +348,17 @@ door-preview state, or a partial Death Defiance ledger for them.
 ## Planner disposition
 
 Chaos requires a separate implementation gate after Selene. A faithful gate
-must own one selected paired outcome, a pending curse-to-blessing state, exact
-curse-specific counters, and maturation in the history fold. It must not reuse
-the ordinary one-trait offer shape as though the curse and blessing were both
-immediately equipped.
+must own one selected paired outcome, the exact declaration-owned numeric
+operands, a pending curse-to-blessing state, exact curse-specific counters, and
+maturation in the history fold. It must not reuse the ordinary one-trait offer
+shape as though the curse and blessing were both immediately equipped.
+
+The source evidence does not support a fixed `{ curseMagnitude,
+benefitMagnitude }` schema. The stable semantic shape is a closed curse key,
+one duration value, that curse's zero-or-one named effect value, a closed
+blessing key, shared rarity, and that blessing's declaration-owned zero, one,
+or two named roll values. Rarity- and history-derived deterministic values are
+recomputed from their authorities rather than redundantly authored.
 
 The first complete Chaos pool models exactly the five consequences named
 above. Claiming all 17 curses while treating Ordinary, Rejected, and Barren as

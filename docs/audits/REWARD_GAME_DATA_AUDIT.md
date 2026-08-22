@@ -556,7 +556,9 @@ author the same resolved-offer identity.
 
 Normal route order guarantees that I and Q preboss shops use their second-half
 branches. First-half options remain game evidence but are declaration-time
-impossible for these route positions.
+impossible for these route positions. The complete phase-sensitive matrices
+and their future reordered-biome disposition are owned by the focused
+[`I_Q_WORLD_SHOP_PHASE_GAME_DATA_AUDIT.md`](I_Q_WORLD_SHOP_PHASE_GAME_DATA_AUDIT.md).
 
 `I_WorldShop` emits one offer from each group:
 
