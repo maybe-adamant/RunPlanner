@@ -160,9 +160,14 @@ describe('surface product loop', () => {
         validatedBiomeCount: 4,
       },
     });
-    expect(screen.getByRole('heading', { name: 'Hub traversal' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Hub Overview' }).getAttribute('aria-selected')).toBe(
+      'true',
+    );
+    expect(screen.getByRole('heading', { name: 'Open rooms' })).toBeTruthy();
     expect(screen.getAllByRole('checkbox', { name: / open$/ })).toHaveLength(26);
-    expect(document.querySelectorAll('.hub-open-room-card')).toHaveLength(9);
+    expect(
+      document.querySelectorAll('[data-hub-card-presentation="overview"][data-open="true"]'),
+    ).toHaveLength(9);
     expect(document.body.textContent).not.toContain('N_Combat');
 
     for (const [label, structure] of [
@@ -285,6 +290,7 @@ describe('surface product loop', () => {
     await view.user.click(screen.getByRole('button', { name: 'Surface' }));
     await view.user.click(screen.getByRole('button', { name: 'Ephyra' }));
     await view.user.click(hubRailButton());
+    await view.user.click(screen.getByRole('tab', { name: 'Hub Timeline' }));
 
     const moveFinalVisit = screen.getByRole('button', { name: 'Move Combat 09 earlier' });
     const historyBefore = application.store.getState().projectWorkspace.history.past.length;
