@@ -93,6 +93,8 @@ export type AcquisitionRoleResolution =
 export interface AcquisitionRoleDeclaration {
   readonly key: string;
   readonly resolution: AcquisitionRoleResolution;
+  /** Explicit normalized provider binding; avoids game-name discovery in the engine. */
+  readonly traitGiverKey?: string;
   /** Source lifecycle exposes no independent special-interact window for this role. */
   readonly blocksGoldConversion?: true;
 }

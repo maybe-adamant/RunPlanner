@@ -103,6 +103,7 @@ describe('Run State presentation', () => {
         bannedTraitKeys: ['ApolloSpecialBoon'],
         properUpbringingActive: true,
         echoShopDuplicateStatus: 'pending',
+        chaos: { active: [], matured: [] },
       },
       counters: {
         biomeDepthCache: 0,

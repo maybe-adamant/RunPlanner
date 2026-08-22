@@ -1466,7 +1466,7 @@ describe('trait offer editor', () => {
           }),
         ]),
       optionDomain: (value: AuthoredTraitOffer, optionKey: 'option1' | 'option2' | 'option3') => {
-        if (value.kind === 'fallbackGold') throw new Error('traits expected');
+        if (value.kind !== 'traits') throw new Error('traits expected');
         const option = value.options[0]!;
         const ownsTarget = optionKey === 'option1' && option.traitKey === 'BoonDecayBoon';
         const targetAddress = createTraitAcquisitionTargetAddress(base.owner, optionKey);

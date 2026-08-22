@@ -102,7 +102,13 @@ import type {
   SelectedTraitOfferAssessment,
   TraitOfferCandidateContext,
 } from '../traits';
-import { attachTraitHistory, createTraitHistoryState, foldTraitHistoryEvents } from '../traits';
+import {
+  advanceChaosClock,
+  attachTraitHistory,
+  createTraitHistoryState,
+  foldTraitHistoryEvents,
+  hasActiveChaosSemanticTag,
+} from '../traits';
 import {
   createRunState,
   createRunStateDerivationCache,
@@ -248,6 +254,30 @@ import {
 
 type CanonicalRewardRoom = CanonicalAuthoredRoom;
 type CanonicalRewardSource = CanonicalRewardRoom | CanonicalHubRoom;
+
+/** Applies one real lifecycle checkpoint to every active matching Chaos curse.
+ * The trait fold owns atomic expiry/maturation; branch sequencing remains the
+ * existing reward-history authority. */
+function advanceChaosClockAt(
+  catalog: Catalog,
+  branches: readonly RewardBranchState[],
+  sequence: number,
+  clock: import('../../catalog-schema').ChaosClockKind,
+): readonly RewardBranchState[] {
+  return Object.freeze(
+    branches.map((branch) => {
+      const before = branch.traitHistory ?? createTraitHistoryState();
+      const traitHistory = advanceChaosClock(catalog, before, sequence, clock);
+      return traitHistory === before
+        ? branch
+        : Object.freeze({
+            ...branch,
+            traitHistory,
+            history: attachTraitHistory(branch.history, traitHistory),
+          });
+    }),
+  );
+}
 
 interface IncomingOfferCandidateContext {
   readonly context: OfferProcessingContext;
@@ -4652,8 +4682,18 @@ export function evaluateBiomeRewardsAssemblyInternal(
           enteredBiomeCount < fullRunBiomeCount
         ) {
           const owner = createBossCompletionArcanaAddress(event.origin);
-          const activeArcana = attestJudgmentArcanaFrontier(branches);
-          const firstArcanaFear = branches[0]?.arcanaFear;
+          // Barren suppresses Judgment at this exact seam.  The later
+          // encounter completion may mature Barren, but cannot retroactively
+          // re-enable this boss-defeated effect.
+          const judgmentBranches = branches.filter(
+            (branch) =>
+              !hasActiveChaosSemanticTag(
+                branch.traitHistory ?? createTraitHistoryState(),
+                'Barren',
+              ),
+          );
+          const activeArcana = attestJudgmentArcanaFrontier(judgmentBranches);
+          const firstArcanaFear = judgmentBranches[0]?.arcanaFear;
           const requiredCount =
             activeArcana === undefined || firstArcanaFear === undefined
               ? undefined
@@ -4664,7 +4704,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
               Object.freeze({
                 inactiveArcanaKeys: inactiveArcanaKeys(catalog, firstArcanaFear).filter(
                   (key) =>
-                    branches[0]?.keepsakes.fatedStatus !== 'Fated' ||
+                    judgmentBranches[0]?.keepsakes.fatedStatus !== 'Fated' ||
                     catalog.arcanaCards.byKey[key]?.fatedIncompatible !== true,
                 ),
                 requiredCount,
@@ -4673,6 +4713,13 @@ export function evaluateBiomeRewardsAssemblyInternal(
           }
           branches = Object.freeze(
             branches.flatMap((branch) => {
+              if (
+                hasActiveChaosSemanticTag(
+                  branch.traitHistory ?? createTraitHistoryState(),
+                  'Barren',
+                )
+              )
+                return [advanceRewardBranches([branch], event.sequence)[0]!];
               const required = judgmentRequiredCount(catalog, branch.arcanaFear);
               if (required === undefined)
                 return [advanceRewardBranches([branch], event.sequence)[0]!];
@@ -4726,6 +4773,26 @@ export function evaluateBiomeRewardsAssemblyInternal(
             }),
           );
           break;
+        }
+        if (event.kind === 'encounterCompleted') {
+          // Encounter clocks expire before any later reward delivery at this
+          // same checkpoint, including ordinary Fig Leaf skips. The one
+          // exception is a skipped phase that explicitly suppresses end
+          // effects (the P cascade); it did not execute this checkpoint.
+          const eventPhaseIndex =
+            room?.encounterPhases.findIndex((candidate) => candidate.slotKey === event.phaseKey) ??
+            -1;
+          const skipOwnerIndex =
+            room?.encounterPhases.findIndex(
+              (candidate) => candidate.figLeafSkip === true && candidate.canEncounterSkip,
+            ) ?? -1;
+          const suppressSkippedCascadeClock =
+            event.execution === 'skippedByFigLeaf' &&
+            skipOwnerIndex >= 0 &&
+            eventPhaseIndex >= skipOwnerIndex &&
+            room?.encounterPhases[skipOwnerIndex]?.skipEndEncounterEffects === true;
+          if (!suppressSkippedCascadeClock)
+            branches = advanceChaosClockAt(catalog, branches, event.sequence, 'encounters');
         }
         const roomView = views.get(semanticAddressKey(event.origin));
         if (room === undefined || declaration === undefined || roomView === undefined) {
@@ -4887,16 +4954,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
           for (const settlement of settlements) {
             const checkpoint = settlement.blockedChild;
             if (checkpoint === undefined) continue;
-            const key = semanticAddressKey(checkpoint.address);
-            const current = traitChildSettlementBuilders.get(key);
-            if (current === undefined)
-              traitChildSettlementBuilders.set(key, {
-                occurrenceOwner: room.origin,
-                branches: [checkpoint.branch],
-                candidateContexts: [],
-                runStateSnapshots: new Map(),
-              });
-            else current.branches.push(checkpoint.branch);
+            recordTraitChildSettlements([checkpoint], room.origin);
           }
           branches = Object.freeze(settlements.map((settlement) => settlement.branch));
         }
@@ -5087,6 +5145,9 @@ export function evaluateBiomeRewardsAssemblyInternal(
             view,
           );
         }
+        // The pre-exit snapshot above intentionally observes Enshrouded
+        // before its departure use.  The next room sees a resulting maturity.
+        branches = advanceChaosClockAt(catalog, branches, event.sequence, 'locations');
         branches = advanceRewardBranches(branches, event.sequence);
         break;
       }

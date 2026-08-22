@@ -357,6 +357,11 @@ function normalizeRewardTypes(
           return Object.freeze({
             key: requireNonEmpty(role.key, `${rolePath}.key`),
             resolution: normalizeRoleResolution(role.resolution, `${rolePath}.resolution`),
+            ...(role.traitGiverKey === undefined
+              ? {}
+              : {
+                  traitGiverKey: requireNonEmpty(role.traitGiverKey, `${rolePath}.traitGiverKey`),
+                }),
             ...(role.blocksGoldConversion === true ? { blocksGoldConversion: true as const } : {}),
           });
         })(),

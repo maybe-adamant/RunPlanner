@@ -1962,7 +1962,7 @@ export function bindWorkspaceInteractions(
       ReturnType<WorkspaceTraitOfferInteraction['optionDomain']>
     >();
     const optionDomain = (value: AuthoredTraitOffer, optionKey: TraitOptionKey) => {
-      if (value.kind === 'fallbackGold') {
+      if (value.kind !== 'traits') {
         throw new StructuredWorkspaceProjectionContractError(
           `${semanticAddressKey(control.address)} Fallback Gold has no trait option domain`,
         );

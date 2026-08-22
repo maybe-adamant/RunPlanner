@@ -41,6 +41,8 @@ import {
 } from './declaration';
 import {
   traitOfferSupportsExhaustion,
+  traitGiverForAcquisitionRole,
+  normalizeAuthoredChaosTraitOffer,
   type AuthoredLevelResolution,
   type AuthoredTraitOffer,
   type AuthoredTraitOfferTraits,
@@ -132,12 +134,6 @@ function decodeOffer(value: unknown, catalog: Catalog, path: string): ResolvedRe
   });
 }
 
-function traitGiverForSource(catalog: Catalog, source: string) {
-  return catalog.traitGivers.byKey[
-    source === 'WeaponUpgrade' ? source : source.replace(/Upgrade$/, '')
-  ];
-}
-
 function expectedTraitRoles(
   catalog: Catalog,
   offer: ResolvedRewardOffer,
@@ -146,16 +142,8 @@ function expectedTraitRoles(
   if (declaration === undefined) return {};
   const result: Record<string, string> = {};
   for (const role of declaration.acquisitionRoles.values) {
-    let source: string | undefined;
-    if (role.resolution.kind === 'self') source = declaration.gameName;
-    else if (role.resolution.kind === 'fixed') source = role.resolution.acquisition.gameName;
-    else {
-      const value =
-        offer.payload?.[role.resolution.field as keyof NonNullable<typeof offer.payload>];
-      if (typeof value === 'string') source = value;
-    }
-    if (source !== undefined && traitGiverForSource(catalog, source) !== undefined)
-      result[role.key] = traitGiverForSource(catalog, source)!.key;
+    const giverKey = traitGiverForAcquisitionRole(catalog, offer, role.key);
+    if (giverKey !== undefined) result[role.key] = giverKey;
   }
   return result;
 }
@@ -188,6 +176,58 @@ function decodeTraitOffers(
     const giver = catalog.traitGivers.byKey[giverKey];
     if (giver === undefined) failProjectDocument(rolePath, `unknown giver ${giverKey}`);
     const kind = expectString(record.kind, `${rolePath}.kind`);
+    if (kind === 'chaos') {
+      if (giverKey !== 'Chaos')
+        failProjectDocument(rolePath, 'Chaos pairs require the Chaos provider');
+      expectExactKeys(
+        record,
+        [
+          'kind',
+          'giverKey',
+          'curseKey',
+          'duration',
+          'curseValues',
+          'blessingKey',
+          'rarity',
+          'blessingValues',
+        ],
+        rolePath,
+      );
+      const rawValues = (key: 'curseValues' | 'blessingValues') => {
+        const values = expectRecord(record[key], `${rolePath}.${key}`);
+        return Object.fromEntries(
+          Object.entries(values).map(([name, raw]) => {
+            if (typeof raw !== 'number')
+              failProjectDocument(`${rolePath}.${key}.${name}`, 'must be a number');
+            return [name, raw] as const;
+          }),
+        );
+      };
+      try {
+        result[roleKey] = normalizeAuthoredChaosTraitOffer(catalog, {
+          kind: 'chaos',
+          giverKey: 'Chaos',
+          curseKey: expectString(record.curseKey, `${rolePath}.curseKey`),
+          duration:
+            typeof record.duration === 'number'
+              ? record.duration
+              : failProjectDocument(`${rolePath}.duration`, 'must be a number'),
+          curseValues: rawValues('curseValues'),
+          blessingKey: expectString(record.blessingKey, `${rolePath}.blessingKey`),
+          rarity: expectString(record.rarity, `${rolePath}.rarity`) as Extract<
+            import('../../catalog-schema').TraitRarity,
+            'Common' | 'Rare' | 'Epic' | 'Heroic' | 'Legendary'
+          >,
+          blessingValues: rawValues('blessingValues'),
+        });
+      } catch (error) {
+        failProjectDocument(
+          rolePath,
+          error instanceof Error ? error.message : 'invalid Chaos pair',
+        );
+      }
+      continue;
+    }
     if (kind === 'fallbackGold') {
       expectExactKeys(record, ['kind', 'giverKey'], rolePath);
       if (!traitOfferSupportsExhaustion(giver))
@@ -205,6 +245,7 @@ function decodeTraitOffers(
         'options',
         'selectedOptionKey',
         'rarificationActions',
+        ...(record.rejectedOptionKey === undefined ? [] : ['rejectedOptionKey']),
         ...(conditionApplicable ? ['deathDefianceConditionMet'] : []),
       ],
       rolePath,
@@ -443,12 +484,24 @@ function decodeTraitOffers(
         `${rolePath}.selectedOptionKey`,
         'must select option1, option2, or option3',
       );
+    const rejectedOptionKey =
+      record.rejectedOptionKey === undefined
+        ? undefined
+        : expectString(record.rejectedOptionKey, `${rolePath}.rejectedOptionKey`);
+    if (
+      rejectedOptionKey !== undefined &&
+      !(TRAIT_OPTION_KEYS as readonly string[]).includes(rejectedOptionKey)
+    )
+      failProjectDocument(`${rolePath}.rejectedOptionKey`, 'must name an option row');
     result[roleKey] = Object.freeze({
       kind: 'traits',
       giverKey,
       options: Object.freeze(options) as AuthoredTraitOfferTraits['options'],
       selectedOptionKey: selected as AuthoredTraitOfferTraits['selectedOptionKey'],
       rarificationActions: Object.freeze(rarificationActions),
+      ...(rejectedOptionKey === undefined
+        ? {}
+        : { rejectedOptionKey: rejectedOptionKey as TraitOptionKey }),
       ...(conditionApplicable
         ? {
             deathDefianceConditionMet: expectBoolean(

@@ -36,7 +36,7 @@ const rooms: readonly RawRoomDeclaration[] = [
 ];
 
 export const declarations = {
-  version: '0.30.0-boon-rarity-ledger',
+  version: '0.31.0-chaos-traits',
   biomes,
   routes,
   arcanaCards,

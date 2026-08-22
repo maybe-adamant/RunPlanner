@@ -223,6 +223,9 @@ function traitOfferRevision(interaction: WorkspaceTraitOfferInteraction): string
   if (interaction.value.kind === 'fallbackGold') {
     return `${interaction.giver.key}|fallbackGold`;
   }
+  if (interaction.value.kind === 'chaos') {
+    return `${interaction.giver.key}|chaos|${interaction.value.curseKey}|${interaction.value.blessingKey}|${interaction.value.rarity}`;
+  }
   return [
     interaction.giver.key,
     interaction.choices.map((choice) => choice.value).join(','),
@@ -808,7 +811,7 @@ function TraitOfferOptionEditor({
         option.rarity === undefined ? null : (
           <p className="trait-offer-fixed-rarity">Rarity: {rarityLabel(option.rarity)}</p>
         )
-      ) : (
+      ) : value.kind !== 'traits' ? null : (
         <ContextualPicker
           ariaLabel={`${optionKey} rarity`}
           id={`${idPrefix}-rarity`}
@@ -1312,7 +1315,7 @@ function LoadedTraitOfferEditor({
             Return to traits
           </button>
         </section>
-      ) : (
+      ) : value.kind !== 'traits' ? null : (
         <>
           <div className="trait-offer-options">
             {value.options.map((_, index) => {

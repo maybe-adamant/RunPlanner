@@ -325,7 +325,7 @@ function offerWithFocusedOption(
   optionKey: TraitOptionKey,
   option: AuthoredTraitOption,
 ): AuthoredTraitOffer {
-  if (value.kind === 'fallbackGold') return value;
+  if (value.kind !== 'traits') return value;
   const index = optionKey === 'option1' ? 0 : optionKey === 'option2' ? 1 : 2;
   const options = [...value.options] as AuthoredTraitOption[];
   options[index] = Object.freeze({ ...option });

@@ -23,6 +23,7 @@ import { circeGiver, circeTraits } from './circe';
 import { echoGiver, echoTraits } from './echo';
 import { infernalContractTraits } from './infernal-contract';
 import { seleneGiver, seleneTraits } from './selene';
+import { chaosBlessings, chaosCurses, chaosGiver, chaosTraits } from './chaos';
 
 const weapons = [
   {
@@ -138,6 +139,7 @@ const traits = [
   ...medeaTraits,
   ...narcissusTraits,
   ...weaponUpgradeTraits,
+  ...chaosTraits,
 ] as const;
 
 const givers = [
@@ -163,13 +165,63 @@ const givers = [
   echoGiver,
   weaponUpgradeGiver,
   seleneGiver,
+  chaosGiver,
 ] as const;
+
+const traitAcquisitionProviders = [
+  ['Aphrodite', 'Aphrodite'],
+  ['AphroditeUpgrade', 'Aphrodite'],
+  ['Arachne', 'Arachne'],
+  ['ArachneUpgrade', 'Arachne'],
+  ['Artemis', 'Artemis'],
+  ['ArtemisUpgrade', 'Artemis'],
+  ['Athena', 'Athena'],
+  ['AthenaUpgrade', 'Athena'],
+  ['Icarus', 'Icarus'],
+  ['IcarusUpgrade', 'Icarus'],
+  ['Apollo', 'Apollo'],
+  ['ApolloUpgrade', 'Apollo'],
+  ['Ares', 'Ares'],
+  ['AresUpgrade', 'Ares'],
+  ['Demeter', 'Demeter'],
+  ['DemeterUpgrade', 'Demeter'],
+  ['Dionysus', 'Dionysus'],
+  ['DionysusUpgrade', 'Dionysus'],
+  ['Hades', 'Hades'],
+  ['HadesUpgrade', 'Hades'],
+  ['Hephaestus', 'Hephaestus'],
+  ['HephaestusUpgrade', 'Hephaestus'],
+  ['Hera', 'Hera'],
+  ['HeraUpgrade', 'Hera'],
+  ['Hestia', 'Hestia'],
+  ['HestiaUpgrade', 'Hestia'],
+  ['Poseidon', 'Poseidon'],
+  ['PoseidonUpgrade', 'Poseidon'],
+  ['Zeus', 'Zeus'],
+  ['ZeusUpgrade', 'Zeus'],
+  ['Hermes', 'Hermes'],
+  ['HermesUpgrade', 'Hermes'],
+  ['Medea', 'Medea'],
+  ['MedeaUpgrade', 'Medea'],
+  ['Narcissus', 'Narcissus'],
+  ['NarcissusUpgrade', 'Narcissus'],
+  ['Circe', 'Circe'],
+  ['CirceUpgrade', 'Circe'],
+  ['Echo', 'Echo'],
+  ['EchoUpgrade', 'Echo'],
+  ['WeaponUpgrade', 'WeaponUpgrade'],
+  ['SpellDrop', 'SpellDrop'],
+] as const satisfies readonly (readonly [string, string])[];
 
 export const traitCatalogInput: RawTraitCatalogInput = {
   weapons,
   aspects,
   traits,
   givers,
+  traitAcquisitionProviders: traitAcquisitionProviders.map(([gameName, giverKey]) => ({
+    gameName,
+    giverKey,
+  })),
   boonRarityBases: {
     olympian: { Rare: 0.1, Epic: 0.05, Duo: 0.12, Legendary: 0.1 },
     hermes: { Rare: 0.06, Epic: 0.03, Duo: 0, Legendary: 0.01 },
@@ -217,4 +269,5 @@ export const traitCatalogInput: RawTraitCatalogInput = {
     'TimeSlowDemeterTalent',
     'TransformAphroditeTalent',
   ],
+  chaos: { curses: chaosCurses, blessings: chaosBlessings },
 };

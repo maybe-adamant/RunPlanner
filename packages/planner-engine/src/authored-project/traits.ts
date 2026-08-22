@@ -81,6 +81,8 @@ export interface AuthoredTraitOfferTraits {
   readonly rarificationActions?: readonly TraitOptionKey[];
   /** Present only when this giver's normalized offer requirements consume it. */
   readonly deathDefianceConditionMet?: boolean;
+  /** Rejected keeps this exact generated row visible but unavailable. */
+  readonly rejectedOptionKey?: TraitOptionKey;
 }
 
 export interface AuthoredTraitOfferFallbackGold {
@@ -88,8 +90,22 @@ export interface AuthoredTraitOfferFallbackGold {
   readonly giverKey: string;
 }
 
-export type AuthoredTraitOffer = AuthoredTraitOfferTraits | AuthoredTraitOfferFallbackGold;
 export type TraitOptionKey = 'option1' | 'option2' | 'option3';
+
+/** The one selected transforming Chaos row.  Numeric records are declaration-closed. */
+export interface AuthoredChaosTraitOffer {
+  readonly kind: 'chaos';
+  readonly giverKey: 'Chaos';
+  readonly curseKey: string;
+  readonly duration: number;
+  readonly curseValues: Readonly<Record<string, number>>;
+  readonly blessingKey: string;
+  readonly rarity: Extract<TraitRarity, 'Common' | 'Rare' | 'Epic' | 'Heroic' | 'Legendary'>;
+  readonly blessingValues: Readonly<Record<string, number>>;
+}
+
+export type AuthoredTraitOffer =
+  AuthoredTraitOfferTraits | AuthoredTraitOfferFallbackGold | AuthoredChaosTraitOffer;
 
 /** Gorgon persists only author decisions; provider and rarity are chronological facts. */
 export interface AuthoredGorgonAthenaOffer {
@@ -219,6 +235,89 @@ export function traitOfferOption(
   return offer.kind === 'traits' ? offer.options[optionIndex(key)] : undefined;
 }
 
+function normalizeChaosValues(
+  expected: readonly import('../catalog-schema').ChaosNumericOperand[],
+  value: Readonly<Record<string, number>>,
+  label: string,
+): Readonly<Record<string, number>> {
+  const keys = Object.keys(value);
+  if (
+    keys.length !== expected.length ||
+    expected.some((operand) => !Object.hasOwn(value, operand.key))
+  )
+    throw new Error(`${label} values must contain exactly the declaration operands`);
+  for (const operand of expected) {
+    const numeric = value[operand.key];
+    if (numeric === undefined) throw new Error(`${label}.${operand.key} is required`);
+    if (!Number.isFinite(numeric) || numeric < operand.minimum || numeric > operand.maximum)
+      throw new Error(`${label}.${operand.key} is outside its declared domain`);
+    if (operand.integer === true && !Number.isInteger(numeric))
+      throw new Error(`${label}.${operand.key} must be an integer`);
+    const steps = (numeric - operand.minimum) / operand.step;
+    if (Math.abs(steps - Math.round(steps)) > 1e-8)
+      throw new Error(`${label}.${operand.key} is not on its declared step`);
+  }
+  return Object.freeze(
+    Object.fromEntries(expected.map((operand) => [operand.key, value[operand.key]!])),
+  );
+}
+
+function chaosOperandsAtRarity(
+  operands: readonly import('../catalog-schema').ChaosNumericOperand[],
+  rarity: AuthoredChaosTraitOffer['rarity'],
+): readonly import('../catalog-schema').ChaosNumericOperand[] {
+  return operands.map((operand) => {
+    const domain = operand.byRarity?.[rarity];
+    if (domain === undefined) return operand;
+    return Object.freeze({
+      key: operand.key,
+      label: operand.label,
+      minimum: domain.minimum,
+      maximum: domain.maximum,
+      step: domain.step,
+      ...(domain.integer === true ? { integer: true as const } : {}),
+    });
+  });
+}
+
+export function normalizeAuthoredChaosTraitOffer(
+  catalog: Catalog,
+  value: AuthoredChaosTraitOffer,
+): AuthoredChaosTraitOffer {
+  if (value.giverKey !== 'Chaos') throw new Error('Chaos pairs require the Chaos provider');
+  const curse = catalog.chaos.curses.byKey[value.curseKey];
+  const blessing = catalog.chaos.blessings.byKey[value.blessingKey];
+  if (curse === undefined || blessing === undefined)
+    throw new Error('unknown Chaos curse or blessing');
+  const rarity = value.rarity;
+  const legal =
+    blessing.fixedRarity === 'Legendary'
+      ? rarity === 'Legendary'
+      : curse.semanticTag === 'Barren'
+        ? rarity === 'Heroic'
+        : rarity === 'Common' || rarity === 'Rare' || rarity === 'Epic';
+  if (!legal) throw new Error('Chaos pair rarity is not legal for this selected pair');
+  const duration = normalizeChaosValues(
+    [curse.duration],
+    { duration: value.duration },
+    'duration',
+  ).duration!;
+  return Object.freeze({
+    kind: 'chaos',
+    giverKey: 'Chaos',
+    curseKey: curse.key,
+    duration,
+    curseValues: normalizeChaosValues(curse.operands, value.curseValues, 'curseValues'),
+    blessingKey: blessing.key,
+    rarity,
+    blessingValues: normalizeChaosValues(
+      chaosOperandsAtRarity(blessing.operands, rarity),
+      value.blessingValues,
+      'blessingValues',
+    ),
+  });
+}
+
 export function traitOfferSupportsExhaustion(giver: {
   readonly providerKind: TraitProviderKind;
 }): boolean {
@@ -255,11 +354,6 @@ export function traitGiverUsesOfferContext(
   );
 }
 
-function giverForAcquisition(catalog: Catalog, gameName: string) {
-  const key = gameName === 'WeaponUpgrade' ? 'WeaponUpgrade' : gameName.replace(/Upgrade$/, '');
-  return catalog.traitGivers.byKey[key];
-}
-
 /** Resolves the catalog-owned provider for one reward acquisition role. */
 export function traitGiverForAcquisitionRole(
   catalog: Catalog,
@@ -271,6 +365,7 @@ export function traitGiverForAcquisitionRole(
     (candidate) => candidate.key === acquisitionRole,
   );
   if (declaration === undefined || role === undefined) return undefined;
+  if (role.traitGiverKey !== undefined) return catalog.traitGivers.byKey[role.traitGiverKey]?.key;
   let source: string | undefined;
   if (role.resolution.kind === 'self') source = declaration.gameName;
   else if (role.resolution.kind === 'fixed') source = role.resolution.acquisition.gameName;
@@ -278,7 +373,8 @@ export function traitGiverForAcquisitionRole(
     const value = offer.payload?.[role.resolution.field as keyof NonNullable<typeof offer.payload>];
     if (typeof value === 'string') source = value;
   }
-  return source === undefined ? undefined : giverForAcquisition(catalog, source)?.key;
+  const key = source === undefined ? undefined : catalog.traitGiverByAcquisitionGameName[source];
+  return key === undefined ? undefined : catalog.traitGivers.byKey[key]?.key;
 }
 
 /**
@@ -461,7 +557,7 @@ export function echoLastRewardPickupEntryKeys(
   return Object.freeze(
     Object.entries(encounters.traitOffersByPhase ?? {}).flatMap(([phaseKey, offers]) =>
       Object.entries(offers).flatMap(([encounterKey, offer]) =>
-        offer === null || offer.kind === 'fallbackGold'
+        offer?.kind !== 'traits'
           ? []
           : offer.options.flatMap((option, index) => {
               const disposition = catalog.traits.byKey[option.traitKey]?.selectedDisposition;
@@ -489,7 +585,7 @@ export function selectedPickupProducer(
     encounters.traitOffersByPhase ?? {},
   ).flatMap(([phaseKey, offers]) =>
     Object.entries(offers).flatMap(([encounterKey, offer]): readonly SelectedPickupProducer[] => {
-      if (offer === null || offer.kind === 'fallbackGold') return [];
+      if (offer?.kind !== 'traits') return [];
       const selected = offer.options[optionIndex(offer.selectedOptionKey)];
       if (selected === undefined) return [];
       const traitKey = selected.traitKey;

@@ -140,6 +140,7 @@ export function projectTraitOfferFeedback(
   if (evaluation.kind !== 'traitOffer') {
     return Object.freeze({ options: Object.freeze([]), support });
   }
+  if (offer.kind !== 'traits') return Object.freeze({ options: Object.freeze([]), support });
   const findingsByTrait = new Map<string, string[]>();
   const findingsByOption = new Map<string, string[]>();
   const contextMessages = new Set<string>();
@@ -406,7 +407,7 @@ export function projectRouteTraitOffers(
     const address = trace.address;
     const key = semanticAddressKey(address);
     const control = interactions.traitOffers.get(key);
-    if (trace.offer.kind === 'fallbackGold') continue;
+    if (trace.offer.kind !== 'traits') continue;
     const option =
       trace.offer.options[
         trace.offer.selectedOptionKey === 'option1'

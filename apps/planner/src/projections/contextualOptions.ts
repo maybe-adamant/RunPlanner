@@ -217,6 +217,23 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
   const sibling = siblingExplanation(catalog, finding);
   if (sibling !== undefined) return sibling;
   switch (finding.code) {
+    case 'chaosOrdinaryRequiresCommon':
+      return {
+        kind: 'trait',
+        message: 'Ordinary forces every option on this god-boon screen to Common.',
+      };
+    case 'chaosRejectedBlockMissing':
+      return { kind: 'trait', message: 'Rejected requires one visible option to be blocked.' };
+    case 'chaosRejectedBlockUnavailable':
+      return {
+        kind: 'trait',
+        message: 'The Rejected block must name an unselected visible option.',
+      };
+    case 'chaosPairUnavailable':
+      return {
+        kind: 'trait',
+        message: 'This Chaos pair needs a prerequisite that is not yet active.',
+      };
     case 'callingCardRarificationUnavailable':
       return { kind: 'trait', message: 'Calling Card cannot rarify this option here.' };
     case 'timePieceConversionUnavailable':

@@ -80,7 +80,7 @@ export function prepareTraitOptionDomain(
   draft: AuthoredTraitOffer,
   focusedOptionKey: TraitOptionKey,
 ): PreparedTraitOptionDomain {
-  if (draft.kind === 'fallbackGold') throw new Error('Fallback Gold has no trait option domain');
+  if (draft.kind !== 'traits') throw new Error('This offer has no ordinary trait option domain');
   let variants: readonly AuthoredTraitOption[] = Object.freeze([]);
   for (const traitKey of giver.traitKeys) {
     const trait = catalog.traits.byKey[traitKey];
@@ -242,8 +242,7 @@ export function createTraitDomainProjection(
       return prepared;
     },
     project(giver, draft, prepared, candidates, targetCandidates) {
-      if (draft.kind === 'fallbackGold')
-        throw new Error('Fallback Gold has no trait option domain');
+      if (draft.kind !== 'traits') throw new Error('Fallback Gold has no trait option domain');
       const selected = draft.options[optionIndex(prepared.optionKey)];
       if (selected === undefined) throw new Error(`Trait offer is missing ${prepared.optionKey}`);
       const visible = Object.freeze(

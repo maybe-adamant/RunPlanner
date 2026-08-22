@@ -98,6 +98,21 @@ describe('authored-project checkpoint integrity', () => {
     expect(
       checkpointManifest.some((entry) => entry.id === 'underworld-f-midshop-pom-frontier'),
     ).toBe(true);
+    const chaos = loadCheckpoint('natural-chaos-unresolved-trial');
+    const occurrences = chaos.routes[0]?.biomes[0]?.topology?.occurrences;
+    const chaosRoom = occurrences?.find(
+      (occurrence) => occurrence.occurrenceId === 'fixture-chaos-room',
+    );
+    expect(checkpointManifest).toHaveLength(16);
+    expect(chaosRoom?.gameName).toMatch(/^Chaos_/);
+    expect(chaosRoom?.state).toMatchObject({
+      kind: 'fixed',
+      reward: {
+        offer: { rewardType: 'TrialUpgrade' },
+        traitOffersByAcquisitionRole: { self: null },
+      },
+    });
+    expect(loadCheckpoint('g-tail-chaos-timepiece-echo')).toBeDefined();
   });
 
   it('retains authored incomplete and invalid states while allowing focused deltas', () => {

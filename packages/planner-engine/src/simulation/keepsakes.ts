@@ -748,6 +748,7 @@ export function evaluateCallingCardOffer(
       state.fatedStatus !== 'Fated' ||
       remaining === 0 ||
       !catalog.traitGivers.byKey[offer.giverKey]?.callingCardMenu ||
+      offer.rejectedOptionKey === key ||
       trait === undefined ||
       trait.blockInRunRarify ||
       next === undefined

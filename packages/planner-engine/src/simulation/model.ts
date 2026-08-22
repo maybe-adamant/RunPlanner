@@ -91,7 +91,11 @@ export type TraitFindingCode =
   | 'echoLastRunBoonOptionUnavailable'
   | 'echoShopDuplicateChildMissing'
   | 'allTogetherResultMissing'
-  | 'allTogetherResultUnavailable';
+  | 'allTogetherResultUnavailable'
+  | 'chaosOrdinaryRequiresCommon'
+  | 'chaosRejectedBlockMissing'
+  | 'chaosRejectedBlockUnavailable'
+  | 'chaosPairUnavailable';
 
 export type FindingCode =
   | CompletenessFindingCode

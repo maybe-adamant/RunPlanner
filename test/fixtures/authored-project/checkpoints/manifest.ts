@@ -4,7 +4,7 @@ export interface AuthoredProjectCheckpointManifestEntry {
   readonly route: 'Underworld' | 'Surface';
   readonly configuredBiomePrefix: readonly string[];
   readonly scenario: string;
-  readonly schemaVersion: 50;
+  readonly schemaVersion: 51;
   readonly catalogVersion: string;
   readonly sha256: string;
   readonly provenance: string;
@@ -17,9 +17,9 @@ export const checkpointManifest = Object.freeze([
     route: 'Underworld',
     configuredBiomePrefix: ['F', 'G'],
     scenario: 'Canonical Underworld F/G route prefix',
-    schemaVersion: 50,
-    catalogVersion: '0.30.0-boon-rarity-ledger',
-    sha256: '84aa2016ff9e02a472015fcc931de4f7a9de3b2cc9d34d53f69d1c0414462a83',
+    schemaVersion: 51,
+    catalogVersion: '0.31.0-chaos-traits',
+    sha256: '607aed4e543bdfa7d5a6c73debdaee6a422710795aa8c6d607128140e3a51dea',
     provenance: 'saved canonical Underworld F/G checkpoint',
   },
   {
@@ -28,9 +28,9 @@ export const checkpointManifest = Object.freeze([
     route: 'Underworld',
     configuredBiomePrefix: ['F', 'G', 'H'],
     scenario: 'Canonical Underworld F/G/H route prefix',
-    schemaVersion: 50,
-    catalogVersion: '0.30.0-boon-rarity-ledger',
-    sha256: 'c66f2954f7a78ff51701681c180d14bfb98ee6350e8de4fe33f9b72bda63f409',
+    schemaVersion: 51,
+    catalogVersion: '0.31.0-chaos-traits',
+    sha256: 'e5231dcff5d79a15b0199e911041f5b5778926fdac2185e31df60609b4394989',
     provenance: 'saved canonical Underworld F/G/H checkpoint',
   },
   {
@@ -39,9 +39,9 @@ export const checkpointManifest = Object.freeze([
     route: 'Underworld',
     configuredBiomePrefix: ['F', 'G', 'H', 'I'],
     scenario: 'Canonical Underworld F/G/H/I route prefix',
-    schemaVersion: 50,
-    catalogVersion: '0.30.0-boon-rarity-ledger',
-    sha256: '3891f1c93673523bb31ee65b8542ee81ce2c378884039f39dacc9ae010104579',
+    schemaVersion: 51,
+    catalogVersion: '0.31.0-chaos-traits',
+    sha256: '1e599e42014eba73097db8af936a15e9b669aefc5f91b05749f94fef5ca987c3',
     provenance: 'saved canonical Underworld F/G/H/I checkpoint',
   },
   {
@@ -50,9 +50,9 @@ export const checkpointManifest = Object.freeze([
     route: 'Underworld',
     configuredBiomePrefix: ['F'],
     scenario: 'F Midshop Pom resolution frontier',
-    schemaVersion: 50,
-    catalogVersion: '0.30.0-boon-rarity-ledger',
-    sha256: 'ad4f30ecd4a5d0055d24c1aa4dc4921ab7c915d19449d2656718eb294f77f70d',
+    schemaVersion: 51,
+    catalogVersion: '0.31.0-chaos-traits',
+    sha256: 'b3d8b71ced54e72a815a503a60a77daf4878db283e1649adcdd05cc7d32d28f3',
     provenance: 'saved canonical editor/generated checkpoint',
   },
   {
@@ -61,9 +61,9 @@ export const checkpointManifest = Object.freeze([
     route: 'Surface',
     configuredBiomePrefix: ['N'],
     scenario: 'Canonical Surface N Hub route prefix',
-    schemaVersion: 50,
-    catalogVersion: '0.30.0-boon-rarity-ledger',
-    sha256: '3e877d6d872f40d14268ba16ddcb5e1efa6f1a8070841f4ff3f11d69e263970b',
+    schemaVersion: 51,
+    catalogVersion: '0.31.0-chaos-traits',
+    sha256: '65d2e2530c6c6fb276c34d439ac4218aa7d99eea8895f82effc9395cb6f719dd',
     provenance: 'saved canonical editor/generated checkpoint',
   },
   {
@@ -72,9 +72,9 @@ export const checkpointManifest = Object.freeze([
     route: 'Surface',
     configuredBiomePrefix: ['N', 'O'],
     scenario: 'Canonical Surface N/O route prefix',
-    schemaVersion: 50,
-    catalogVersion: '0.30.0-boon-rarity-ledger',
-    sha256: '786de837ba860c97e991bc46ec92edc9bea115844790a21a61444a485e03c76a',
+    schemaVersion: 51,
+    catalogVersion: '0.31.0-chaos-traits',
+    sha256: '7300aa12267b03989c1f7d8937d098bc4e4250de606ffc95e3e356eea75fe031',
     provenance: 'saved canonical editor/generated checkpoint',
   },
   {
@@ -83,9 +83,9 @@ export const checkpointManifest = Object.freeze([
     route: 'Surface',
     configuredBiomePrefix: ['N', 'O', 'P'],
     scenario: 'Canonical Surface N/O/P route prefix',
-    schemaVersion: 50,
-    catalogVersion: '0.30.0-boon-rarity-ledger',
-    sha256: 'aa2cb3860ec0b4b2714572812b87cc47b9ec663daf59ca22050d291d99f724bc',
+    schemaVersion: 51,
+    catalogVersion: '0.31.0-chaos-traits',
+    sha256: '7cfcab4740f918d079f9f6c7075353badbe1867564423e8a1011dce0d104a383',
     provenance: 'saved canonical editor/generated checkpoint',
   },
   {
@@ -94,9 +94,9 @@ export const checkpointManifest = Object.freeze([
     route: 'Surface',
     configuredBiomePrefix: ['N', 'O', 'P', 'Q'],
     scenario: 'Canonical Surface N/O/P/Q route prefix',
-    schemaVersion: 50,
-    catalogVersion: '0.30.0-boon-rarity-ledger',
-    sha256: '3c43c562723a7916cc314c0ee4380b4cee153689370b5fef80c250807c46679b',
+    schemaVersion: 51,
+    catalogVersion: '0.31.0-chaos-traits',
+    sha256: '2200f9d20bc5ed28f59309f2aaa1f853c84393ca5168ffb912922cf6dba2af57',
     provenance: 'saved canonical editor/generated checkpoint',
   },
   {
@@ -105,9 +105,9 @@ export const checkpointManifest = Object.freeze([
     route: 'Surface',
     configuredBiomePrefix: ['N'],
     scenario: 'N entry frontier with unresolved terminal envelope',
-    schemaVersion: 50,
-    catalogVersion: '0.30.0-boon-rarity-ledger',
-    sha256: '3ebcb75e13aa99879bd8f5c201a506d872da48d17d25f002b65a85915db3b959',
+    schemaVersion: 51,
+    catalogVersion: '0.31.0-chaos-traits',
+    sha256: 'c1428ecb015aace4a4cd4068387e9da8bdf1de3d58b0a0ca58720bc57ceec52b',
     provenance: 'saved N entry frontier checkpoint',
   },
   {
@@ -116,9 +116,9 @@ export const checkpointManifest = Object.freeze([
     route: 'Surface',
     configuredBiomePrefix: ['N'],
     scenario: 'N entry frontier with trait-resolved terminal envelope',
-    schemaVersion: 50,
-    catalogVersion: '0.30.0-boon-rarity-ledger',
-    sha256: 'fc464fcc90c8e4a86497fd30d756b43016037fcab62db1702686bd9e977b9b9a',
+    schemaVersion: 51,
+    catalogVersion: '0.31.0-chaos-traits',
+    sha256: 'c457fbe894d1830dcf928b88a9debff897a5e89c146bea464b699619edcf2cd4',
     provenance: 'saved N entry frontier checkpoint with resolved traits',
   },
   {
@@ -127,9 +127,9 @@ export const checkpointManifest = Object.freeze([
     route: 'Surface',
     configuredBiomePrefix: ['N'],
     scenario: 'N complete Hub frontier before Preboss handoff',
-    schemaVersion: 50,
-    catalogVersion: '0.30.0-boon-rarity-ledger',
-    sha256: 'feab81e6937702e795cc7ab34aef9ce9230d9790a13d5038395f827f749b4065',
+    schemaVersion: 51,
+    catalogVersion: '0.31.0-chaos-traits',
+    sha256: 'e5e7ee2363d4c152a1325f240a51bd6821099435871857c893a35e83bae19de6',
     provenance: 'saved normalized N complete Hub frontier checkpoint',
   },
   {
@@ -138,9 +138,9 @@ export const checkpointManifest = Object.freeze([
     route: 'Surface',
     configuredBiomePrefix: ['N'],
     scenario: 'N partial Hub visit-order frontier',
-    schemaVersion: 50,
-    catalogVersion: '0.30.0-boon-rarity-ledger',
-    sha256: '94077026652351760e53feec9c359c75094a57352e9d829c4e3919ce129e62e6',
+    schemaVersion: 51,
+    catalogVersion: '0.31.0-chaos-traits',
+    sha256: 'd471e462f0676a2a31779a98c0da007941aa5eb2413e1666db4bae49d1e0fc11',
     provenance: 'saved normalized N partial Hub frontier checkpoint',
   },
   {
@@ -149,9 +149,9 @@ export const checkpointManifest = Object.freeze([
     route: 'Surface',
     configuredBiomePrefix: ['N'],
     scenario: 'N Hub Story board with Story visit selected',
-    schemaVersion: 50,
-    catalogVersion: '0.30.0-boon-rarity-ledger',
-    sha256: '76c460feee64de10e8ca8397cf992ec2a1c1913fd0eae69cd4a5c18e62a0f273',
+    schemaVersion: 51,
+    catalogVersion: '0.31.0-chaos-traits',
+    sha256: 'eb99a0d14add1e10b55627e4c9ad89a3450bb71292dd429f6e6c265f628b6826',
     provenance: 'saved normalized N Story board checkpoint',
   },
   {
@@ -160,10 +160,32 @@ export const checkpointManifest = Object.freeze([
     route: 'Surface',
     configuredBiomePrefix: ['N'],
     scenario: 'N Hub invalid ten-open board with reward mutation',
-    schemaVersion: 50,
-    catalogVersion: '0.30.0-boon-rarity-ledger',
-    sha256: 'ac054c4e5cf5fcfc7d526c0b0755b2488b8d792f83c881616de428519809cdc7',
+    schemaVersion: 51,
+    catalogVersion: '0.31.0-chaos-traits',
+    sha256: 'ca1053c8e312dadfb10cbf1472d1bd16f28ce0f7bf653e050939d06dd7f126d1',
     provenance: 'saved N ten-open invalid checkpoint',
+  },
+  {
+    id: 'natural-chaos-unresolved-trial',
+    file: 'natural-chaos-unresolved-trial.runplanner.json',
+    route: 'Underworld',
+    configuredBiomePrefix: ['F'],
+    scenario: 'Selected natural Chaos room with unresolved TrialUpgrade child and ordinary return',
+    schemaVersion: 51,
+    catalogVersion: '0.31.0-chaos-traits',
+    sha256: '2e778ad2b29081672b7d14f7d6dbd4c41f1c9301b795afd1468263c03cf712e7',
+    provenance: 'command-authored natural Chaos required-pickup frontier',
+  },
+  {
+    id: 'g-tail-chaos-timepiece-echo',
+    file: 'g-tail-chaos-timepiece-echo.runplanner.json',
+    route: 'Underworld',
+    configuredBiomePrefix: ['F', 'G', 'H'],
+    scenario: 'G-tail natural Chaos survives Time Piece Fields into Echo Reward Reward Reward',
+    schemaVersion: 51,
+    catalogVersion: '0.31.0-chaos-traits',
+    sha256: '9d3c5168fb7f58bf767e0455bd8b9646f9bdd000e4f357015efd54b383767644',
+    provenance: 'command-authored G Chaos, Time Piece Fields, and Echo replay checkpoint',
   },
 ] as const satisfies readonly AuthoredProjectCheckpointManifestEntry[]);
 
@@ -182,6 +204,8 @@ export const checkpointSpellDropIntents = Object.freeze([
   ['underworld-fgh', 'golden-h-combat03', 'SpellTransformTrait'],
   ['underworld-fghi', 'golden-f-b10-e2', 'SpellLeapTrait'],
   ['underworld-fghi', 'golden-h-combat03', 'SpellLaserTrait'],
+  ['g-tail-chaos-timepiece-echo', 'golden-f-b10-e2', 'SpellMeteorTrait'],
+  ['g-tail-chaos-timepiece-echo', 'golden-h-combat03', 'SpellTransformTrait'],
 ] as const);
 
 export type AuthoredProjectCheckpointId = (typeof checkpointManifest)[number]['id'];

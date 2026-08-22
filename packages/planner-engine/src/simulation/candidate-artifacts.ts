@@ -45,6 +45,7 @@ import {
   echoPomGreatestLevelTraitKeys,
   echoLastRunBoonOutcomes,
   directTraitSetOutcomes,
+  chaosAdjustedTraitOfferContext,
 } from './traits';
 import type { KeepsakeState } from './keepsakes';
 import { evaluateCallingCardOffer } from './keepsakes';
@@ -134,6 +135,30 @@ export interface TraitOfferCandidateCapability {
     optionKey: TraitOptionKey,
     setKey: import('../catalog-schema').DirectTraitSetKey,
   ) => readonly (readonly (string | null)[])[];
+  /** Closed Chaos restrictions at this exact pre-offer frontier. */
+  readonly chaosOfferRules: (value?: AuthoredTraitOffer) => readonly {
+    readonly ordinaryRequiresCommon: boolean;
+    readonly rejectedBlockRequired: boolean;
+    readonly rejectedBlockableOptionKeys: readonly TraitOptionKey[];
+  }[];
+  /** Declaration-owned complete-pair domains for the specialized Chaos editor. */
+  readonly chaosPairDomains: (pair: {
+    readonly curseKey: string;
+    readonly blessingKey: string;
+  }) => readonly {
+    readonly curseKeys: readonly string[];
+    readonly blessingKeys: readonly string[];
+    readonly rarities: readonly import('../catalog-schema').TraitRarity[];
+    readonly curseDurations: Readonly<
+      Record<string, { readonly minimum: number; readonly maximum: number; readonly step: number }>
+    >;
+    readonly curseOperands: Readonly<
+      Record<string, readonly import('../catalog-schema').ChaosNumericOperand[]>
+    >;
+    readonly blessingOperands: Readonly<
+      Record<string, readonly import('../catalog-schema').ChaosNumericOperand[]>
+    >;
+  }[];
 }
 
 export interface TraitOfferCandidateArtifacts {
@@ -495,14 +520,17 @@ export function createRoomTargetCandidateArtifacts(
 
 /** Candidate-authored conditions replace the persisted offer facts captured at this frontier. */
 function traitOfferCandidateContext(
+  catalog: Catalog,
+  history: TraitHistoryState,
   context: TraitOfferContext,
   value: AuthoredTraitOffer,
 ): TraitOfferContext {
-  if (value.kind === 'fallbackGold') return context;
+  const adjusted = chaosAdjustedTraitOfferContext(catalog, history, value, context);
+  if (value.kind !== 'traits') return adjusted;
   return value.deathDefianceConditionMet === undefined
-    ? context
+    ? adjusted
     : Object.freeze({
-        ...context,
+        ...adjusted,
         deathDefianceConditionMet: value.deathDefianceConditionMet,
       });
 }
@@ -622,7 +650,7 @@ export function createTraitOfferCandidateArtifacts(
                 catalog,
                 value,
                 context.before,
-                traitOfferCandidateContext(context.context, value),
+                traitOfferCandidateContext(catalog, context.before, context.context, value),
               );
               // Calling Card acts only after the authored (rolled) offer is
               // accepted. Its derived effective rarity is deliberately not a
@@ -648,7 +676,7 @@ export function createTraitOfferCandidateArtifacts(
                 catalog,
                 value,
                 context.before,
-                traitOfferCandidateContext(context.context, value),
+                traitOfferCandidateContext(catalog, context.before, context.context, value),
               );
               const result =
                 keepsakes === undefined
@@ -675,7 +703,12 @@ export function createTraitOfferCandidateArtifacts(
                             catalog,
                             attempted,
                             context.before,
-                            traitOfferCandidateContext(context.context, attempted),
+                            traitOfferCandidateContext(
+                              catalog,
+                              context.before,
+                              context.context,
+                              attempted,
+                            ),
                           );
                           const attempt = evaluateCallingCardOffer(
                             catalog,
@@ -709,14 +742,14 @@ export function createTraitOfferCandidateArtifacts(
             })
             .find((draft): draft is NonNullable<typeof draft> => draft !== undefined),
         nextTraitOptionDraft: (value: AuthoredTraitOffer) => {
-          if (value.kind === 'fallbackGold') return undefined;
+          if (value.kind !== 'traits') return undefined;
           return branchContexts
             .map((context) =>
               nextTraitOfferDraft(
                 catalog,
                 value,
                 context.before,
-                traitOfferCandidateContext(context.context, value),
+                traitOfferCandidateContext(catalog, context.before, context.context, value),
               ),
             )
             .find((draft): draft is NonNullable<typeof draft> => draft !== undefined);
@@ -728,7 +761,7 @@ export function createTraitOfferCandidateArtifacts(
                 catalog,
                 value,
                 context.before,
-                traitOfferCandidateContext(context.context, value),
+                traitOfferCandidateContext(catalog, context.before, context.context, value),
               ),
             )
             .find((draft): draft is NonNullable<typeof draft> => draft !== undefined),
@@ -737,7 +770,7 @@ export function createTraitOfferCandidateArtifacts(
         targetedAcquisitionTargets: (value: AuthoredTraitOffer, optionKey: TraitOptionKey) =>
           Object.freeze(
             branchContexts.map((context) => {
-              if (value.kind === 'fallbackGold')
+              if (value.kind !== 'traits')
                 return Object.freeze({
                   sourceSupported: false,
                   targetTraitKeys: Object.freeze([]),
@@ -753,7 +786,7 @@ export function createTraitOfferCandidateArtifacts(
                 catalog,
                 value,
                 context.before,
-                traitOfferCandidateContext(context.context, value),
+                traitOfferCandidateContext(catalog, context.before, context.context, value),
               )[optionIndex(optionKey)];
               return Object.freeze({
                 sourceSupported: sourceAssessment?.legal ?? false,
@@ -774,7 +807,7 @@ export function createTraitOfferCandidateArtifacts(
               readonly vowKeys: readonly string[];
               readonly outerAvailable: boolean;
             }>((context) => {
-              if (value.kind === 'fallbackGold') return [];
+              if (value.kind !== 'traits') return [];
               const option = value.options[optionIndex(optionKey)];
               const effect =
                 option === undefined
@@ -787,7 +820,7 @@ export function createTraitOfferCandidateArtifacts(
         echoPomTargets: (value: AuthoredTraitOffer, optionKey: TraitOptionKey) =>
           Object.freeze(
             branchContexts.flatMap((context) => {
-              if (value.kind === 'fallbackGold') return [];
+              if (value.kind !== 'traits') return [];
               const option = value.options[optionIndex(optionKey)];
               if (option === undefined) return [];
               const disposition = catalog.traits.byKey[option.traitKey]?.selectedDisposition;
@@ -798,7 +831,7 @@ export function createTraitOfferCandidateArtifacts(
         echoLastRunBoon: (value: AuthoredTraitOffer, optionKey: TraitOptionKey) =>
           Object.freeze(
             branchContexts.flatMap((context) => {
-              if (value.kind === 'fallbackGold') return [];
+              if (value.kind !== 'traits') return [];
               const option = value.options[optionIndex(optionKey)];
               if (option === undefined) return [];
               const disposition = catalog.traits.byKey[option.traitKey]?.selectedDisposition;
@@ -807,7 +840,7 @@ export function createTraitOfferCandidateArtifacts(
                 echoLastRunBoonOutcomes(
                   catalog,
                   context.before,
-                  traitOfferCandidateContext(context.context, value),
+                  traitOfferCandidateContext(catalog, context.before, context.context, value),
                 ),
               ];
             }),
@@ -819,12 +852,97 @@ export function createTraitOfferCandidateArtifacts(
         ) =>
           Object.freeze(
             branchContexts.flatMap((context) => {
-              if (value.kind === 'fallbackGold') return [];
+              if (value.kind !== 'traits') return [];
               const option = value.options[optionIndex(optionKey)];
               if (option === undefined) return [];
               const disposition = catalog.traits.byKey[option.traitKey]?.selectedDisposition;
               if (disposition?.kind !== 'directTraitSets') return [];
               return [directTraitSetOutcomes(catalog, context.before, option.traitKey, setKey)];
+            }),
+          ),
+        chaosOfferRules: (value?: AuthoredTraitOffer) =>
+          Object.freeze(
+            branchContexts.map((context) => {
+              const ordinary = context.before.activeChaosCurses.some(
+                (curse) => curse.semanticTag === 'Ordinary',
+              );
+              const rejected = context.before.activeChaosCurses.some(
+                (curse) => curse.semanticTag === 'Rejected',
+              );
+              return Object.freeze({
+                ordinaryRequiresCommon: ordinary,
+                rejectedBlockRequired: rejected,
+                rejectedBlockableOptionKeys: Object.freeze(
+                  !rejected
+                    ? []
+                    : (['option1', 'option2', 'option3'] as const)
+                        .slice(0, value?.kind === 'traits' ? value.options.length : 3)
+                        .filter(
+                          (key) => value?.kind !== 'traits' || key !== value.selectedOptionKey,
+                        ),
+                ),
+              });
+            }),
+          ),
+        chaosPairDomains: (pair: { readonly curseKey: string; readonly blessingKey: string }) =>
+          Object.freeze(
+            branchContexts.map((context) => {
+              const eligible = <
+                T extends {
+                  readonly offerRequirements?: readonly import('../catalog-schema').ChaosOfferRequirement[];
+                },
+              >(
+                entry: T,
+              ) =>
+                !(entry.offerRequirements ?? []).some((requirement) => {
+                  switch (requirement.kind) {
+                    case 'matureChaosBlessing':
+                      return context.before.maturedChaosBlessings.length === 0;
+                    case 'elementMinimum':
+                      return (
+                        context.before.elementCounts[requirement.element] < requirement.minimum
+                      );
+                    case 'notKeepsake':
+                      return context.context.currentKeepsakeKey === requirement.keepsakeKey;
+                    case 'notAspect':
+                      return context.context.aspectKey === requirement.aspectKey;
+                    case 'routeKey':
+                      return address.routeKey !== requirement.routeKey;
+                  }
+                });
+              const curses = catalog.chaos.curses.values.filter(eligible);
+              const blessings = catalog.chaos.blessings.values.filter(eligible);
+              return Object.freeze({
+                curseKeys: Object.freeze(curses.map((curse) => curse.key)),
+                blessingKeys: Object.freeze(blessings.map((blessing) => blessing.key)),
+                rarities: Object.freeze(
+                  catalog.chaos.blessings.byKey[pair.blessingKey]?.fixedRarity === 'Legendary'
+                    ? (['Legendary'] as const)
+                    : catalog.chaos.curses.byKey[pair.curseKey]?.semanticTag === 'Barren'
+                      ? (['Heroic'] as const)
+                      : (['Common', 'Rare', 'Epic'] as const),
+                ),
+                curseDurations: Object.freeze(
+                  Object.fromEntries(
+                    curses.map((curse) => [
+                      curse.key,
+                      Object.freeze({
+                        minimum: curse.duration.minimum,
+                        maximum: curse.duration.maximum,
+                        step: curse.duration.step,
+                      }),
+                    ]),
+                  ),
+                ),
+                curseOperands: Object.freeze(
+                  Object.fromEntries(curses.map((curse) => [curse.key, curse.operands])),
+                ),
+                blessingOperands: Object.freeze(
+                  Object.fromEntries(
+                    blessings.map((blessing) => [blessing.key, blessing.operands]),
+                  ),
+                ),
+              });
             }),
           ),
       });
