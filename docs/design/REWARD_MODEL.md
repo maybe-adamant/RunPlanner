@@ -921,6 +921,12 @@ regenerates its `StackOnly` options at pickup when at least one stored target is
 no longer equipped; if every stored target remains, its materialized options
 stay fixed.
 
+`SpellDrop` deliberately has no last-reward recreation descriptor, so a
+settled spell selection never becomes Reward Reward Reward's replay source.
+`TalentDrop` retains its declaration-owned replay descriptor. This is an
+acquisition-catalog and reward-history boundary, not an Echo presentation
+filter.
+
 Fixed and forced producers do not borrow requirements from a same-named
 counted bag entry. A forced Devotion is validated as a fixed Devotion producer,
 not through `Devotion`'s `RunProgress` bag-entry requirements.
@@ -1181,8 +1187,10 @@ predicate used to enumerate its target domain. Hammer rank is independent of
 rarity. No generic trait-effect interpreter, provider switch, or second NPC
 acquisition ledger is introduced.
 
-Spell/Talent and Surface Shop delivery flags remain on their existing explicit
-deferred boundary; they are not inferred from trait state.
+`pendingSpellDrop` remains an explicit, currently unmodeled Shrine-delivery
+fact. It is false in the supported baseline and must not be inferred from Shop
+state or from the equipped Spell slot. Talent delivery and Surface Shop delivery
+flags likewise remain on their explicit deferred boundaries.
 
 The editor only renders normalized domains and simulation results. It does not
 recompute reward legality.

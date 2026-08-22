@@ -569,6 +569,13 @@ offers publish neither. Public reward branches carry reachable reward state,
 trait history, and events downstream, but do not carry diagnostic trait-offer
 assessment traces or candidate contexts.
 
+A normal `SpellDrop` is one such fixed-three, rarityless trait-offer
+capability. The engine exposes its exact self-child capability and candidates;
+the application does not duplicate the eight-spell pool or inspect loadout
+identity. An Aspect-of-Selene Spell Drop instead has a contextually dormant
+child for the deferred Path of Stars outcome, so it publishes neither a
+trait-offer candidate capability nor a missing-child finding.
+
 The returned findings cover prerequisite, negative predicate, context,
 element, rarity-count, targeted-acquisition source and exact-target,
 occupied-slot, wrong-loadout, and acquired-Hammer exclusion rules. For an

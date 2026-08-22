@@ -932,7 +932,7 @@ authorship, simulation, and presentation slice for the settled effect subset.
 
 ## Current Planner Disposition
 
-The keepsake model is current through authored schema 49. All 33 identities
+The keepsake model is current through authored schema 50. All 33 identities
 participate in mandatory route-start selection, reached nonfinal Postboss
 retain-or-replace frontiers, ordered history, no-return legality, and their
 declared Fated role. The reached Postboss replacement is an optional ranked

@@ -475,7 +475,7 @@ required row may be moved within its legal range but cannot be generically
 removed.
 
 This guarantee is deliberately delta-only. A decoded or deliberately malformed
-schema-49 document may already omit a required reference, and an unrelated edit
+schema-50 document may already omit a required reference, and an unrelated edit
 does not normalize that omission. Evaluation retains the missing-required
 finding and publishes one engine-owned canonical restore intent. Dormant and
 stale rows likewise remain authored until an explicit owning command removes
@@ -549,6 +549,14 @@ selected key, rarity, target, Circe resolution, or Death Defiance condition.
 Only Olympian and Hermes givers support sparse or fallback outcomes. Defaults
 for every giver remain complete three-option trait outcomes, and an upstream
 edit may retain a context-invalid outcome for explicit repair.
+
+`SpellDrop` uses that same `traits` shape at its existing `self` acquisition
+role: exactly three distinct, rarityless options from Selene's ordered
+eight-spell provider pool and one selected option. It is not a separate spell
+offer model. Under Aspect of Selene, that persisted child is structurally
+present but contextually dormant for the deferred Path of Stars outcome;
+`null` is complete there, while a retained non-null child stays preserved for
+reactivation after the aspect changes.
 
 When the selected trait is All Together, that exact option additionally owns
 one complete result keyed by its four declaration-owned sets. Each value is one
