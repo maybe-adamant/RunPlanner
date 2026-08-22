@@ -42,6 +42,7 @@ import {
   type AuthoredCirceResolution,
   type LevelResolutionAddress,
   type BossCompletionArcanaAddress,
+  type CompletionRoomAddress,
   type KeepsakeSelectionAddress,
   type KeepsakeEquipResultAddress,
   type TraitOptionKey,
@@ -1109,7 +1110,7 @@ export interface WorkspaceRoomActionProposal {
 }
 
 export interface WorkspaceRoomActionRow {
-  readonly address: RoomActionAddress;
+  readonly address: import('@run-planner/engine/authored-project').RoomActionSemanticAddress;
   /** Engine-owned dependency/window evidence adapted into concise row copy. */
   readonly issues: readonly string[];
   readonly key: string;
@@ -1158,7 +1159,7 @@ export interface WorkspaceRoomActions {
     readonly window: RoomActionWindow;
   }[];
   readonly interactionKey: string;
-  readonly owner: OccurrenceAddress;
+  readonly owner: OccurrenceAddress | CompletionRoomAddress;
   readonly proposals: readonly WorkspaceRoomActionProposal[];
   readonly rows: readonly WorkspaceRoomActionRow[];
   /** Active optional actions that have not been inserted into the lifecycle order. */
@@ -1222,7 +1223,7 @@ export interface WorkspaceRoomActionInteraction {
     >
   >;
   readonly key: string;
-  readonly owner: OccurrenceAddress;
+  readonly owner: OccurrenceAddress | CompletionRoomAddress;
   readonly proposals: readonly WorkspaceRoomActionProposal[];
 }
 
@@ -1943,7 +1944,9 @@ export interface WorkspaceCompletionNode {
   readonly role: CompletionRoomDescriptor['role'];
   readonly gameName: string;
   readonly label: string;
-  /** Engine-owned derived-room timeline; completion rooms never acquire an authored action order. */
+  /** Postboss reuses the ordinary Room Action timeline projection. */
+  readonly roomActions?: WorkspaceRoomActions;
+  /** Boss's engine-owned fixed lifecycle timeline. Postboss uses roomActions. */
   readonly timeline?: readonly (
     | {
         readonly kind: 'boundary';
@@ -1951,7 +1954,7 @@ export interface WorkspaceCompletionNode {
       }
     | {
         readonly kind: 'fixedEffect';
-        readonly effect: 'judgment' | 'keepsakeSelection';
+        readonly effect: 'judgment';
       }
   )[];
   readonly judgment?: {

@@ -4,12 +4,16 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   applyProjectHistoryCommand,
+  assembleRoomActionDomain,
+  activeRoomActionReferences,
   acquisitionSiteStorageKey,
   artificerAcquisitionSite,
   artificerReplacementEntryKey,
   createAcquisitionRoleAddress,
   createBatchRewardStoreAddress,
   createBiomeAddress,
+  createCompletionRoomActionAddress,
+  createCompletionRoomAddress,
   createEncounterPhaseAddress,
   createExitDecisionAddress,
   createExitSelectionAddress,
@@ -18,6 +22,7 @@ import {
   createOccurrenceAddress,
   createProjectDocument,
   createProjectHistory,
+  createPostbossKeepsakeSelectionAddress,
   createRouteAddress,
   createRoomActionAddress,
   createShopOfferAddress,
@@ -29,7 +34,11 @@ import {
   type ProjectDocument,
   type RoomActionReference,
 } from '@run-planner/engine/authored-project';
-import { materializeBiomePrefix } from '@run-planner/engine/simulation';
+import {
+  assembleRoomActionRoster,
+  assembleRoomLifecycleTimeline,
+  materializeBiomePrefix,
+} from '@run-planner/engine/simulation';
 import {
   createCompleteFGProject,
   createGoldenFGHProject,
@@ -131,6 +140,98 @@ describe('room-action commands', () => {
         action: action(reward),
       }),
     ).toThrow('active required room action cannot be removed');
+  });
+
+  it('reconciles a normal Reprieve to reward then fountain, while both ranked orders remain Cleanup-valid', () => {
+    const reprieveId = createOccurrenceId('room-actions-reprieve');
+    let authored = applyProjectCommand(
+      createProjectDocument(catalog, {
+        projectId: 'room-actions-reprieve',
+        configuredBiomeCounts: { Underworld: 1 },
+      }),
+      catalog,
+      { kind: 'CreateStart', biome, occurrenceId, gameName: 'F_Opening01' },
+    );
+    const opening = { kind: 'occurrence' as const, occurrenceId };
+    const decision = createExitDecisionAddress(biome, opening);
+    authored = applyProjectCommand(authored, catalog, { kind: 'CreateBatch', decision });
+    authored = applyProjectCommand(authored, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(biome, opening),
+      storeKey: 'RunProgress',
+    });
+    authored = applyProjectCommand(authored, catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(biome, opening, 'exit1'),
+      occurrenceId: reprieveId,
+      gameName: 'F_Reprieve01',
+    });
+    authored = applyProjectCommand(authored, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(biome, reprieveId),
+      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
+    });
+    const reprieve = authored.routes[0]?.biomes[0]?.topology?.occurrences.find(
+      (candidate) => candidate.occurrenceId === reprieveId,
+    );
+    if (reprieve === undefined) throw new Error('normal Reprieve target is missing');
+    const pickup: RoomActionReference = {
+      kind: 'interactIncomingReward',
+      producerPoint: 'roomRewardPickup',
+      acquisitionRole: 'source',
+    };
+    const fountain: RoomActionReference = { kind: 'useFountain' };
+    expect(reprieve.roomActions.order).toEqual([pickup, fountain]);
+    expect(() =>
+      applyProjectCommand(authored, catalog, {
+        kind: 'RemoveRoomAction',
+        action: createRoomActionAddress(biome, reprieveId, roomActionKey(fountain)),
+      }),
+    ).toThrow('active required room action cannot be removed');
+
+    const reversed = applyProjectCommand(authored, catalog, {
+      kind: 'MoveRoomAction',
+      action: createRoomActionAddress(biome, reprieveId, roomActionKey(fountain)),
+      toIndex: 0,
+    });
+    const reversedReprieve = reversed.routes[0]?.biomes[0]?.topology?.occurrences.find(
+      (candidate) => candidate.occurrenceId === reprieveId,
+    );
+    if (reversedReprieve === undefined) throw new Error('moved Reprieve target is missing');
+
+    for (const candidate of [reprieve, reversedReprieve]) {
+      const domain = assembleRoomActionDomain({ catalog, biome, occurrence: candidate });
+      const roster = assembleRoomActionRoster({
+        owner: createOccurrenceAddress(biome, candidate.occurrenceId),
+        order: candidate.roomActions.order,
+        contributions: domain.contributions,
+        lifecycleStructure: domain.lifecycleStructure,
+      });
+      expect(roster.valid).toBe(true);
+      const timeline = assembleRoomLifecycleTimeline({
+        owner: createOccurrenceAddress(biome, candidate.occurrenceId),
+        roomActionRoster: roster,
+      });
+      const actionRanks = timeline.entries
+        .filter((entry) => entry.kind === 'action')
+        .map((entry) => entry.action.rank);
+      const cleanup = timeline.entries.findIndex(
+        (entry) => entry.kind === 'boundary' && entry.boundary.kind === 'cleanup',
+      );
+      const lastAction = timeline.entries.reduce(
+        (index, entry, entryIndex) => (entry.kind === 'action' ? entryIndex : index),
+        -1,
+      );
+      expect(actionRanks).toEqual([1, 2]);
+      expect(cleanup).toBeGreaterThan(lastAction);
+    }
+
+    const echo = createGoldenFGHProject()
+      .routes.find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find((plan) => plan.biomeKey === 'H')
+      ?.topology?.occurrences.find((candidate) => candidate.gameName === 'H_Bridge01');
+    if (echo === undefined) throw new Error('H Echo bridge occurrence is missing');
+    expect(activeRoomActionReferences(catalog, goldenHBiome, echo)).not.toContainEqual(fountain);
   });
 
   it('rejects mismatched references, duplicates, unknown rows, and invalid indices', () => {
@@ -712,5 +813,47 @@ describe('room-action commands', () => {
         purchased: true,
       }),
     ).toThrow('unknown shop offer invented');
+  });
+
+  it('keeps the Postboss rack membership atomic while its ranked action moves in one undo step', () => {
+    const completion = createCompletionRoomAddress(biome, 'postboss') as ReturnType<
+      typeof createPostbossKeepsakeSelectionAddress
+    >['owner'];
+    const rack = { kind: 'interactKeepsakeRack' as const };
+    const action = createCompletionRoomActionAddress(completion, roomActionKey(rack));
+    const retained = createGoldenFGHProject();
+    const replaced = applyProjectCommand(retained, catalog, {
+      kind: 'ReplacePostbossKeepsake',
+      selection: createPostbossKeepsakeSelectionAddress(completion),
+      value: { kind: 'replace', keepsakeKey: 'ForceZeusBoonKeepsake' },
+    });
+    expect(replaced.routes[0]?.biomes[0]?.postbossRoomActions?.order).toEqual([
+      { kind: 'useFountain' },
+      rack,
+    ]);
+    expect(() =>
+      applyProjectCommand(replaced, catalog, { kind: 'RemoveRoomAction', action }),
+    ).toThrow('ReplacePostbossKeepsake');
+
+    const history = applyProjectHistoryCommand(createProjectHistory(replaced), catalog, {
+      kind: 'MoveRoomAction',
+      action,
+      toIndex: 0,
+    });
+    expect(history.past).toHaveLength(1);
+    expect(history.present.routes[0]?.biomes[0]?.postbossRoomActions?.order).toEqual([
+      rack,
+      { kind: 'useFountain' },
+    ]);
+    expect(undoProjectHistory(history).present).toBe(replaced);
+
+    const retainedAgain = applyProjectCommand(replaced, catalog, {
+      kind: 'ReplacePostbossKeepsake',
+      selection: createPostbossKeepsakeSelectionAddress(completion),
+      value: { kind: 'retain' },
+    });
+    expect(retainedAgain.routes[0]?.biomes[0]?.postbossRoomActions?.order).toEqual([
+      { kind: 'useFountain' },
+    ]);
   });
 });

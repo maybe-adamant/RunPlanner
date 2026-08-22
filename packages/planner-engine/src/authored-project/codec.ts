@@ -1,7 +1,8 @@
 import type { Catalog, RouteDeclaration } from '../catalog-schema';
 import { decodeBiomeState } from './biomeState';
 import { assessStartingArcanaGrasp } from './loadout';
-import { decodeBiomeTopology } from './topology/codec';
+import { postbossCapabilities } from './postboss-capabilities';
+import { decodeBiomeTopology, decodeRoomActionState } from './topology/codec';
 import {
   PROJECT_DOCUMENT_SCHEMA_VERSION,
   type AuthoredBiomePlan,
@@ -140,6 +141,7 @@ function decodeBiomePlan(
       'topology',
       'bossCompletionArcanaKeys',
       'postbossKeepsakeDisposition',
+      'postbossRoomActions',
       'keepsakeEquipResults',
       'echoKeepsakeReplayResults',
     ],
@@ -166,7 +168,8 @@ function decodeBiomePlan(
     plan.topology === null
       ? null
       : decodeBiomeTopology(plan.topology, catalog, layout, `${path}.topology`);
-  const canOwnPostbossKeepsake = catalog.biomes.byKey[biomeKey]?.hasPostbossKeepsakeRack === true;
+  const postboss = postbossCapabilities(catalog, biomeKey);
+  const canOwnPostbossKeepsake = postboss.hasKeepsakeRack;
   const rawDisposition = plan.postbossKeepsakeDisposition;
   if (canOwnPostbossKeepsake !== (rawDisposition !== undefined))
     fail(
@@ -191,6 +194,31 @@ function decodeBiomePlan(
       postbossKeepsakeDisposition = Object.freeze({ kind: 'replace', keepsakeKey });
     } else fail(`${path}.postbossKeepsakeDisposition.kind`, 'must be retain or replace');
   }
+  const canOwnPostbossActions = postboss.hasRoomActions;
+  if (canOwnPostbossActions !== (plan.postbossRoomActions !== undefined))
+    fail(`${path}.postbossRoomActions`, canOwnPostbossActions ? 'is required' : 'is not supported');
+  const postbossRoomActions =
+    plan.postbossRoomActions === undefined
+      ? undefined
+      : decodeRoomActionState(plan.postbossRoomActions, `${path}.postbossRoomActions`);
+  if (postbossRoomActions !== undefined) {
+    const allowed = new Set<import('./model').RoomActionReference['kind']>([
+      ...(postboss.hasPostbossRoom ? ['useFountain' as const] : []),
+      ...(canOwnPostbossKeepsake ? ['interactKeepsakeRack' as const] : []),
+    ]);
+    for (const reference of postbossRoomActions.order) {
+      if (!allowed.has(reference.kind))
+        fail(`${path}.postbossRoomActions.order`, `${reference.kind} is not supported by Postboss`);
+    }
+    const rackOrdered = postbossRoomActions.order.some(
+      (reference) => reference.kind === 'interactKeepsakeRack',
+    );
+    if ((postbossKeepsakeDisposition?.kind === 'replace') !== rackOrdered)
+      fail(
+        `${path}.postbossRoomActions.order`,
+        'keepsake rack membership must match the Postboss disposition',
+      );
+  }
   return Object.freeze({
     biomeKey,
     state: decodeBiomeState(plan.state, layout, `${path}.state`),
@@ -205,6 +233,7 @@ function decodeBiomePlan(
           ),
         }),
     ...(postbossKeepsakeDisposition === undefined ? {} : { postbossKeepsakeDisposition }),
+    ...(postbossRoomActions === undefined ? {} : { postbossRoomActions }),
     ...(plan.keepsakeEquipResults === undefined
       ? {}
       : {

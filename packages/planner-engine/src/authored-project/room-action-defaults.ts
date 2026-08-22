@@ -177,6 +177,9 @@ export function scheduleRequiredRoomActions(options: {
     (entry): entry is RoomActionContribution => entry.kind === 'action',
   );
   const byKey = new Map(activeActions.map((action) => [roomActionKey(action.reference), action]));
+  const contributionOrdinal = new Map(
+    activeActions.map((action, index) => [roomActionKey(action.reference), index]),
+  );
   const cohort = activeActions.filter(
     (action) =>
       action.participation === 'required' &&
@@ -206,7 +209,10 @@ export function scheduleRequiredRoomActions(options: {
       );
       if (
         retainedDependsOnAction ||
-        score(options.catalog, options.domain, result, retained) > actionScore
+        score(options.catalog, options.domain, result, retained) > actionScore ||
+        (score(options.catalog, options.domain, result, retained) === actionScore &&
+          (contributionOrdinal.get(roomActionKey(retained.reference)) ?? Number.MAX_SAFE_INTEGER) >
+            (contributionOrdinal.get(roomActionKey(action.reference)) ?? Number.MAX_SAFE_INTEGER))
       ) {
         upperBound = index;
         break;

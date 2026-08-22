@@ -155,17 +155,17 @@ function allTogetherOffer(document: JsonRecord): JsonRecord {
   return (reward.traitOffersByAcquisitionRole as JsonRecord).source as JsonRecord;
 }
 
-describe('schema-48 occurrence-owned encounter persistence', () => {
+describe('schema-49 occurrence-owned encounter persistence', () => {
   it('round-trips the exact top-level and parent-local selections', () => {
     const project = loadSurfaceNOPProject();
     const decoded = decodeProjectDocument(encoded(project), catalog);
 
     expect(decoded).toEqual(project);
-    expect(decoded.schemaVersion).toBe(48);
+    expect(decoded.schemaVersion).toBe(49);
   });
 
   it.each(['infernalContractReward', 'travelDealRefill', 'echoDoubleShopReward'] as const)(
-    'rejects reserved initial Shop slot key %s at the schema-48 codec boundary',
+    'rejects reserved initial Shop slot key %s at the schema-49 codec boundary',
     (reservedKey) => {
       const world = catalog.rewards.shops.byKey.WorldShop;
       const first = world?.slots.values[0];
@@ -288,7 +288,7 @@ describe('schema-48 occurrence-owned encounter persistence', () => {
 
     const decoded = decodeProjectDocument(encoded(project), catalog);
     expect(decoded).toEqual(project);
-    expect(encoded(decoded)).toMatchObject({ schemaVersion: 48 });
+    expect(encoded(decoded)).toMatchObject({ schemaVersion: 49 });
   });
 
   it('round-trips one atomically replaced exact All Together map and legal null', () => {
@@ -384,28 +384,28 @@ describe('schema-48 occurrence-owned encounter persistence', () => {
     ).toBeDefined();
   });
 
-  it('rejects schema 47 at the strict schema-48 boundary', () => {
+  it('rejects schema 47 at the strict schema-49 boundary', () => {
     const document = encoded(allTogetherProject());
     document.schemaVersion = 47;
-    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 48, received 47');
+    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 49, received 47');
   });
 
   it('rejects schema 35 rather than inventing an All Together child migration', () => {
     const document = encoded(allTogetherProject());
     document.schemaVersion = 35;
-    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 48, received 35');
+    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 49, received 35');
   });
 
   it('rejects schema 37 rather than migrating source-keyed Gold chronology', () => {
     const document = encoded(createCompleteFGProject());
     document.schemaVersion = 37;
-    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 48, received 37');
+    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 49, received 37');
   });
 
   it('rejects schema 39 rather than inventing Fields optional rewards', () => {
     const document = encoded(createGoldenFGHProject());
     document.schemaVersion = 40;
-    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 48, received 40');
+    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 49, received 40');
   });
 
   it('requires an exact persisted acquisition disposition map for every reward role', () => {
@@ -663,28 +663,28 @@ describe('schema-48 occurrence-owned encounter persistence', () => {
     const document = encoded(loadSurfaceNOPProject());
     document.schemaVersion = 18;
 
-    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 48, received 18');
+    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 49, received 18');
   });
 
   it('rejects schema 21 rather than inventing a trait-offer migration', () => {
     const document = encoded(loadSurfaceNOPProject());
     document.schemaVersion = 21;
 
-    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 48, received 21');
+    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 49, received 21');
   });
 
   it('rejects schema 29 rather than migrating the generic Gorgon child', () => {
     const document = encoded(loadSurfaceNOPProject());
     document.schemaVersion = 29;
 
-    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 48, received 29');
+    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 49, received 29');
   });
 
   it('rejects schema 30 rather than inventing an Echo Pom target migration', () => {
     const document = encoded(loadSurfaceNOPProject());
     document.schemaVersion = 30;
 
-    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 48, received 30');
+    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 49, received 30');
   });
 
   it.each([

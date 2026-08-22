@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 48,
+  "schemaVersion": 49,
   "projectId": "surface-2",
   "catalogVersion": "0.27.0-arcana-fear-loadout",
   "routes": [
@@ -1430,6 +1430,13 @@
           },
           "postbossKeepsakeDisposition": {
             "kind": "retain"
+          },
+          "postbossRoomActions": {
+            "order": [
+              {
+                "kind": "useFountain"
+              }
+            ]
           }
         },
         {
@@ -2134,6 +2141,13 @@
           },
           "postbossKeepsakeDisposition": {
             "kind": "retain"
+          },
+          "postbossRoomActions": {
+            "order": [
+              {
+                "kind": "useFountain"
+              }
+            ]
           }
         }
       ]

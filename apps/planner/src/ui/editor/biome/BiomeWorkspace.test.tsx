@@ -6,6 +6,7 @@ import {
   createBatchRewardStoreAddress,
   createBiomeAddress,
   createBossCompletionArcanaAddress,
+  createCompletionRoomActionAddress,
   createCompletionRoomAddress,
   createPostbossKeepsakeSelectionAddress,
   createExitDecisionAddress,
@@ -16,8 +17,10 @@ import {
   createOccurrenceAddress,
   createOccurrenceId,
   createProjectDocument,
+  decodeProjectDocument,
   createRouteAddress,
   createTargetAddress,
+  roomActionKey,
   semanticAddressKey,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
@@ -1547,12 +1550,86 @@ describe('BiomeWorkspace', () => {
         .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
         ?.biomes.find((biome) => biome.biomeKey === 'N')?.postbossKeepsakeDisposition,
     ).toEqual({ kind: 'replace', keepsakeKey: 'BossPreDamageKeepsake' });
-    fireEvent.change(selector, { target: { value: '' } });
+    await waitFor(() =>
+      expect(
+        within(timeline).getByRole('button', { name: 'Move Choose keepsake earlier' }),
+      ).toBeTruthy(),
+    );
+    const rankedSelector = within(timeline).getByRole<HTMLSelectElement>('combobox', {
+      name: 'Keepsake',
+    });
+    expect(
+      rankedSelector.closest('[data-room-action-key]')?.getAttribute('data-room-action-key'),
+    ).toBe('["interactKeepsakeRack"]');
+    const beforeMove = view.application.store.getState().projectWorkspace.history.past.length;
+    fireEvent.click(within(timeline).getByRole('button', { name: 'Move Choose keepsake earlier' }));
+    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+      beforeMove + 1,
+    );
+    fireEvent.change(
+      within(timeline).getByRole<HTMLSelectElement>('combobox', { name: 'Keepsake' }),
+      { target: { value: '' } },
+    );
     expect(
       view.application.store
         .getState()
         .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
         ?.biomes.find((biome) => biome.biomeKey === 'N')?.postbossKeepsakeDisposition,
     ).toEqual({ kind: 'retain' });
+  });
+
+  it('restores an omitted nonfinal Postboss fountain action through its completion owner', async () => {
+    const project = decodeProjectDocument(
+      {
+        ...loadSurfaceNOPQProject(),
+        routes: loadSurfaceNOPQProject().routes.map((route) => ({
+          ...route,
+          biomes: route.biomes.map((biome) =>
+            biome.biomeKey === 'N' ? { ...biome, postbossRoomActions: { order: [] } } : biome,
+          ),
+        })),
+      },
+      catalog,
+    );
+    const view = renderWorkspace(project, 'Surface', 'N');
+    const completion = createCompletionRoomAddress(nBiome, 'postboss') as ReturnType<
+      typeof createPostbossKeepsakeSelectionAddress
+    >['owner'];
+    const fountain = { kind: 'useFountain' as const };
+    const action = createCompletionRoomActionAddress(completion, roomActionKey(fountain));
+    const postboss = workspaceBiome(view.application, 'Surface', 'N').nodes.find(
+      (node): node is Extract<WorkspaceNode, { readonly kind: 'completion' }> =>
+        node.kind === 'completion' && node.role === 'postboss',
+    );
+    if (postboss?.roomActions === undefined) throw new Error('N Postboss actions are missing');
+    expect(postboss.roomActions.repairRows).toHaveLength(1);
+    expect(postboss.roomActions.repairRows[0]?.reference).toEqual(fountain);
+    expect(postboss.roomActions.repairRows[0]?.address).toEqual(action);
+
+    act(() => view.application.store.dispatch(semanticOwnerFocused(action)));
+    expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(action);
+    expect(document.getElementById(semanticOwnerElementId(action))).toBeTruthy();
+    const timeline = screen.getByRole('region', { name: 'Room Timeline' });
+    const repair = within(timeline)
+      .getByText('This required action has not been placed.')
+      .closest<HTMLElement>('[data-room-action-key]');
+    if (repair === null) throw new Error('Postboss fountain repair is missing');
+    expect(repair.dataset.roomActionKey).toBe(roomActionKey(fountain));
+
+    const before = view.application.store.getState().projectWorkspace.history.past.length;
+    await view.user.click(within(repair).getByRole('button', { name: 'Restore required action' }));
+    await waitFor(() =>
+      expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+        before + 1,
+      ),
+    );
+    expect(
+      view.application.store
+        .getState()
+        .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
+        ?.biomes.find((biome) => biome.biomeKey === 'N')?.postbossRoomActions?.order,
+    ).toEqual([fountain]);
+    expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(action);
+    expect(document.getElementById(semanticOwnerElementId(action))).toBeTruthy();
   });
 });

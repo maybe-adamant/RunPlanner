@@ -831,17 +831,22 @@ function timelineBoundaryEntries(
   );
 }
 
-function RoomActionsWorkbench({
+export function RoomActionsWorkbench({
   actions,
+  children,
   encounterPhases,
   idPrefix,
   interactions,
+  renderRowContent,
   ship,
 }: {
   readonly actions?: WorkspaceRoomActions;
+  readonly children?: ReactNode;
   readonly encounterPhases?: readonly WorkspaceEncounterPhase[];
   readonly idPrefix?: string;
   readonly interactions: WorkspaceInteractionCatalog;
+  /** Consumer-owned leaf editor for one exact shared timeline row. */
+  readonly renderRowContent?: (row: WorkspaceRoomActions['rows'][number]) => ReactNode;
   readonly ship?: {
     readonly occurrence: OccurrenceAddress;
     readonly phases: readonly WorkspaceShipPhasePresentation[];
@@ -1300,6 +1305,7 @@ function RoomActionsWorkbench({
               </div>
             </div>
           )}
+          {renderRowContent?.(row)}
         </li>
         {row.rank === null ? null : checkpointRows(row.rank, checkpoints)}
       </Fragment>
@@ -1515,6 +1521,7 @@ function RoomActionsWorkbench({
         {timelineRows}
         {rankedRows.length === 0 ? checkpointRows(0) : null}
       </ol>
+      {children}
       {actions.optionalRows.length === 0 ? null : (
         <section aria-label="Optional actions" className="room-action-optional-pool">
           <div className="local-reward-heading">

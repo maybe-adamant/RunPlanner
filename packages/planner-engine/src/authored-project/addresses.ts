@@ -114,6 +114,13 @@ export interface RoomActionAddress extends BiomeOwnedAddress {
   readonly occurrenceId: OccurrenceId;
   readonly actionKey: string;
 }
+/** One exact persisted row in a derived Postboss completion chronology. */
+export interface CompletionRoomActionAddress extends BiomeOwnedAddress {
+  readonly kind: 'completionRoomAction';
+  readonly completion: CompletionRoomAddress & { readonly role: 'postboss' };
+  readonly actionKey: string;
+}
+export type RoomActionSemanticAddress = RoomActionAddress | CompletionRoomActionAddress;
 export type RoomRunStateCheckpoint =
   | { readonly kind: 'roomEntered' }
   | { readonly kind: 'beforeEncounterStart'; readonly phaseKey: string }
@@ -295,6 +302,7 @@ export type SemanticAddress =
   | HubDecisionAddress
   | LocalRewardAddress
   | RoomActionAddress
+  | CompletionRoomActionAddress
   | RoomRunStateCheckpointAddress
   | LocalVisitDecisionAddress
   | LocalVisitSlotAddress
@@ -531,6 +539,18 @@ export function createRoomActionAddress(
     kind: 'roomAction',
     ...owner(biome),
     occurrenceId,
+    actionKey: nonBlank(actionKey, 'actionKey'),
+  });
+}
+export function createCompletionRoomActionAddress(
+  completion: CompletionRoomAddress & { readonly role: 'postboss' },
+  actionKey: string,
+): CompletionRoomActionAddress {
+  return Object.freeze({
+    kind: 'completionRoomAction',
+    routeKey: completion.routeKey,
+    biomeKey: completion.biomeKey,
+    completion: Object.freeze({ ...completion, role: 'postboss' as const }),
     actionKey: nonBlank(actionKey, 'actionKey'),
   });
 }
@@ -880,6 +900,8 @@ export function semanticAddressKey(address: SemanticAddress): string {
       return JSON.stringify([...base, address.occurrenceId, address.groupKey, address.slotKey]);
     case 'roomAction':
       return JSON.stringify([...base, address.occurrenceId, address.actionKey]);
+    case 'completionRoomAction':
+      return JSON.stringify([...base, semanticAddressKey(address.completion), address.actionKey]);
     case 'roomRunStateCheckpoint':
       return JSON.stringify([
         ...base,

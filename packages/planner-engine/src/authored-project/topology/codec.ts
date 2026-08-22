@@ -90,6 +90,10 @@ function occurrenceId(value: unknown, path: string): OccurrenceId {
 function decodeRoomActionReference(value: unknown, path: string): RoomActionReference {
   const reference = expectRecord(value, path);
   const kind = expectString(reference.kind, `${path}.kind`);
+  if (kind === 'useFountain' || kind === 'interactKeepsakeRack') {
+    expectExactKeys(reference, ['kind'], path);
+    return Object.freeze({ kind });
+  }
   if (kind === 'completeFieldsCage' || kind === 'interactEncounter' || kind === 'interactGorgon') {
     expectExactKeys(reference, ['kind', 'phaseKey'], path);
     return Object.freeze({
@@ -138,7 +142,7 @@ function decodeRoomActionReference(value: unknown, path: string): RoomActionRefe
   failProjectDocument(`${path}.kind`, `unknown room action ${kind}`);
 }
 
-function decodeRoomActionState(value: unknown, path: string): RoomActionState {
+export function decodeRoomActionState(value: unknown, path: string): RoomActionState {
   const state = expectRecord(value, path);
   expectExactKeys(state, ['order'], path);
   const seen = new Set<string>();

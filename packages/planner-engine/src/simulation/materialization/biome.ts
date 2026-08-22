@@ -684,6 +684,7 @@ function completionTailForSelectedPreboss(
   biome: BiomeAddress,
   layout: BiomeLayout,
   preboss: CanonicalAuthoredRoom,
+  postbossRoomActions?: AuthoredBiomePlan['postbossRoomActions'],
 ): CanonicalBiome['completionRooms'] {
   return materializeCompletionRooms({
     catalog,
@@ -696,6 +697,8 @@ function completionTailForSelectedPreboss(
         : { resolvedOfferStoreKey: preboss.incomingReward.resolvedStoreKey }),
     },
     lifecycleProducerPolicy: 'encounterCompatible',
+    postbossKeepsakeRack: catalog.biomes.byKey[layout.biomeKey]?.hasPostbossKeepsakeRack === true,
+    ...(postbossRoomActions === undefined ? {} : { postbossRoomActions }),
     fail,
   });
 }
@@ -868,6 +871,7 @@ export function materializeBiomePrefix(
   biome: BiomeAddress,
   plan: AuthoredBiomePlan,
   loadout: RouteWeaponAspectLoadout,
+  postbossRoomActions?: AuthoredBiomePlan['postbossRoomActions'],
 ): MaterializedBiomePrefix | null {
   loadout = requireLoadout(loadout);
   const layout = requireLayout(catalog, biome);
@@ -986,7 +990,13 @@ export function materializeBiomePrefix(
           decisions,
           undefined,
           selected?.kind === 'normal' && selected.target.continuation === 'startsCompletion'
-            ? completionTailForSelectedPreboss(catalog, biome, layout, selected.target.room)
+            ? completionTailForSelectedPreboss(
+                catalog,
+                biome,
+                layout,
+                selected.target.room,
+                postbossRoomActions,
+              )
             : undefined,
         );
       }
@@ -1066,7 +1076,13 @@ export function materializeBiomePrefix(
         entryRoom,
         decisions,
         undefined,
-        completionTailForSelectedPreboss(catalog, biome, layout, selected.target.room),
+        completionTailForSelectedPreboss(
+          catalog,
+          biome,
+          layout,
+          selected.target.room,
+          postbossRoomActions,
+        ),
       );
     }
     current = selected.kind === 'normal' ? selected.target.room : selected.continuation.room;
@@ -1081,6 +1097,7 @@ export function materializeBiome(
   loadout: RouteWeaponAspectLoadout,
   bossCompletionArcanaKeys: readonly string[] = [],
   postbossKeepsakeDisposition?: import('../../authored-project/model').PostbossKeepsakeDisposition,
+  postbossRoomActions?: import('../../authored-project/model').RoomActionState,
   keepsakeEquipResults?: import('../../authored-project/model').AuthoredKeepsakeEquipResults,
   echoKeepsakeReplayResults?: Pick<
     import('../../authored-project/model').AuthoredKeepsakeEquipResults,
@@ -1182,6 +1199,8 @@ export function materializeBiome(
         : { resolvedOfferStoreKey: enteredPreboss.incomingReward.resolvedStoreKey }),
     },
     lifecycleProducerPolicy: 'encounterCompatible',
+    ...(postbossRoomActions === undefined ? {} : { postbossRoomActions }),
+    postbossKeepsakeRack: catalog.biomes.byKey[layout.biomeKey]?.hasPostbossKeepsakeRack === true,
     fail,
   });
   return Object.freeze({

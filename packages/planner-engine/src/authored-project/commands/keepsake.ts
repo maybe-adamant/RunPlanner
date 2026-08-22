@@ -1,5 +1,6 @@
 import type { Catalog } from '../../catalog-schema';
 import type { AuthoredKeepsakeEquipResults, ProjectDocument } from '../model';
+import { postbossCapabilities } from '../postboss-capabilities';
 import { failCommand, locateBiome, withBiome } from './contract';
 import type {
   ExperimentalHammerEquipResultCommand,
@@ -181,9 +182,24 @@ export function applyKeepsakeCommand(
     catalog.keepsakes.byKey[command.value.keepsakeKey] === undefined
   )
     failCommand(command, `unknown keepsake ${command.value.keepsakeKey}`);
+  const capabilities = postbossCapabilities(catalog, located.plan.biomeKey);
+  const fountain = Object.freeze({ kind: 'useFountain' as const });
+  const rack = Object.freeze({ kind: 'interactKeepsakeRack' as const });
+  const existingOrder =
+    located.plan.postbossRoomActions?.order ??
+    Object.freeze(capabilities.hasPostbossRoom ? [fountain] : []);
+  const nextOrder =
+    command.value.kind === 'replace'
+      ? existingOrder.some((reference) => reference.kind === 'interactKeepsakeRack')
+        ? existingOrder
+        : Object.freeze([...existingOrder, rack])
+      : Object.freeze(
+          existingOrder.filter((reference) => reference.kind !== 'interactKeepsakeRack'),
+        );
   return withBiome(document, located, {
     ...located.plan,
     postbossKeepsakeDisposition: command.value,
+    postbossRoomActions: Object.freeze({ order: nextOrder }),
   });
 }
 

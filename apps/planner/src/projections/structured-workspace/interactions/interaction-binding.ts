@@ -2,6 +2,7 @@ import {
   createOccurrenceAddress,
   createBiomeAddress,
   createRoomActionAddress,
+  createCompletionRoomActionAddress,
   createCirceResolutionAddress,
   createTraitAcquisitionTargetAddress,
   createEchoPomTargetAddress,
@@ -514,11 +515,19 @@ function bindOccurrenceLocalInteractions(
                   `${proposalKey} is not a room-action proposal for ${key}`,
                 );
               }
-              const action = createRoomActionAddress(
-                createBiomeAddress(requirement.owner.routeKey, requirement.owner.biomeKey),
-                requirement.owner.occurrenceId,
-                roomActionKey(proposal.reference),
-              );
+              const action =
+                requirement.owner.kind === 'occurrence'
+                  ? createRoomActionAddress(
+                      createBiomeAddress(requirement.owner.routeKey, requirement.owner.biomeKey),
+                      requirement.owner.occurrenceId,
+                      roomActionKey(proposal.reference),
+                    )
+                  : createCompletionRoomActionAddress(
+                      requirement.owner as import('@run-planner/engine/authored-project').CompletionRoomAddress & {
+                        readonly role: 'postboss';
+                      },
+                      roomActionKey(proposal.reference),
+                    );
               if (proposal.kind === 'remove') {
                 return Object.freeze({
                   command: Object.freeze({ kind: 'RemoveRoomAction' as const, action }),

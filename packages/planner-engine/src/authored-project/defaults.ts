@@ -4,6 +4,7 @@ import { decodeProjectDocument } from './codec';
 import { PROJECT_DOCUMENT_SCHEMA_VERSION, type ProjectDocument } from './model';
 import { ProjectDocumentContractError } from './validation';
 import { createDefaultRouteLoadout } from './loadout';
+import { postbossCapabilities } from './postboss-capabilities';
 
 export interface CreateProjectDocumentOptions {
   readonly projectId: string;
@@ -51,12 +52,22 @@ export function createProjectDocument(
             `${biomeKey} has no authored plan initializer`,
           );
         }
+        const postboss = postbossCapabilities(catalog, biomeKey);
         return {
           biomeKey,
           state: createInitialBiomeState(layout),
           topology: null,
-          ...(catalog.biomes.byKey[biomeKey]?.hasPostbossKeepsakeRack
-            ? { postbossKeepsakeDisposition: { kind: 'retain' as const } }
+          ...(postboss.hasKeepsakeRack
+            ? {
+                postbossKeepsakeDisposition: { kind: 'retain' as const },
+              }
+            : {}),
+          ...(postboss.hasRoomActions
+            ? {
+                postbossRoomActions: {
+                  order: postboss.hasPostbossRoom ? [{ kind: 'useFountain' as const }] : [],
+                },
+              }
             : {}),
         };
       }),

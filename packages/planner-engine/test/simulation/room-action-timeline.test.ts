@@ -9,7 +9,6 @@ import {
   createBossCompletionArcanaAddress,
   createCompletionRoomAddress,
   createOccurrenceId,
-  createPostbossKeepsakeSelectionAddress,
   type OccurrenceAddress,
 } from '../../src/authored-project/addresses';
 import type { RoomLifecycleStructure } from '../../src/authored-project';
@@ -217,27 +216,20 @@ describe('room lifecycle timeline', () => {
     ]);
   });
 
-  it('keeps the Postboss keepsake frontier inside a noncombat completion timeline', () => {
+  it('keeps the Postboss fixed completion spine free of keepsake effects', () => {
     const completion = createCompletionRoomAddress(
       { kind: 'biome', routeKey: 'Underworld', biomeKey: 'F' },
       'postboss',
     );
-    const keepsakeSelection = createPostbossKeepsakeSelectionAddress(completion);
     const timeline = assembleCompletionRoomLifecycleTimeline({
       catalog,
       owner: completion,
       roomGameName: 'F_PostBoss01',
-      keepsakeSelection,
     });
     expect(timeline.entries).toEqual([
       expect.objectContaining({
         kind: 'boundary',
         boundary: expect.objectContaining({ kind: 'roomEntered' }),
-      }),
-      expect.objectContaining({
-        kind: 'fixedEffect',
-        effect: 'keepsakeSelection',
-        owner: keepsakeSelection,
       }),
       expect.objectContaining({
         kind: 'boundary',

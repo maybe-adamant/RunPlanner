@@ -2537,7 +2537,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
       case 'roomPrepared':
         branches = beginRewardRoom(branches, event.sequence);
         break;
-      case 'roomCreated': {
+      case 'keepsakeRackUsed': {
         if (
           event.origin.kind === 'completionRoom' &&
           event.origin.role === 'postboss' &&
@@ -2810,6 +2810,37 @@ export function evaluateBiomeRewardsAssemblyInternal(
             );
             branches = Object.freeze(rackTransitions.map((transition) => transition.branch));
           }
+        }
+        break;
+      }
+      case 'roomCreated': {
+        // Candidate evaluation needs the precise pre-rack frontier even while
+        // Retain leaves the optional rack action absent.  Do not apply a
+        // disposition here: ranked `keepsakeRackUsed` is the sole mutation
+        // point for a replacement and its immediate result.
+        if (
+          event.origin.kind === 'completionRoom' &&
+          event.origin.role === 'postboss' &&
+          snapshot.kind === 'biome' &&
+          snapshot.postbossKeepsakeDisposition !== undefined
+        ) {
+          const selection = createPostbossKeepsakeSelectionAddress(event.origin);
+          const historyAtRack = views.get(semanticAddressKey(event.origin))?.entry;
+          keepsakeSelectionContexts.set(
+            semanticAddressKey(selection),
+            Object.freeze({
+              state: branches[0]!.keepsakes,
+              encounterBlockedKeepsakeKeys: Object.freeze([
+                ...new Set(
+                  historyAtRack?.ledgers.encounterRecords.flatMap(
+                    (encounter) =>
+                      catalog.encounterDefinitions.byKey[encounter.encounterKey]
+                        ?.blocksKeepsakeSelectionKeys ?? [],
+                  ) ?? [],
+                ),
+              ]),
+            }),
+          );
         }
         if (event.source === 'generatedTarget' && event.parentOrigin.kind === 'hubRoom') {
           const handoff = batchesByParent.get(semanticAddressKey(event.parentOrigin));
