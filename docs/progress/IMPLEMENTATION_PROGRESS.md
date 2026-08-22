@@ -3002,3 +3002,45 @@ lane passed 130 files/1,619 tests in 72.51 seconds, and the heavy lane passed
 The production build transformed 396 modules and retained only the existing
 greater-than-500-kB application-chunk advisory. This complete check was run
 exactly once and was not rerun after this factual append.
+
+## Boon rarity ledger closure
+
+The boon rarity ledger implementation is closed through Gate A on 2026-08-22
+at `0cbcce2` (`feat(rarity): model boon rarity feasibility`), from the locked
+plan base `b86313e`. The authored document remains schema 50 and the catalog
+advances to `0.30.0-boon-rarity-ledger`. The delivered contract is one
+immutable offer-local ledger for fresh Olympian and Hermes offers: catalog-owned
+provider bases, exact F-Q Miniboss room declarations, exact I/Q generated-item
+overrides, four-rank Excellence/The Queen/Divinity contributions, and Proper
+Upbringing's declaration-owned future `Rare +1`. Room context takes precedence
+over item context; sparse keys fall back to the provider base; additions precede
+multipliers; values are not normalized or clamped; and no ledger or random
+result is persisted.
+
+Existing candidate, finding, replacement, Calling Card, Gorgon, Echo, NPC,
+Hammer, Selene, Shop, Travel, and Gold authorities remain the owners of their
+existing rarity behavior. Fresh impossible retained values use the generic
+`rarityRollUnavailable` finding, while Duo and Legendary remain optional
+high-tier outcomes and Heroic remains a non-fresh transition. The checkpoint
+corpus was refreshed mechanically, with only the three Q Miniboss Common
+choices in `surface-nopq` corrected to Rare.
+
+Gate-A final validation was green: catalog 9 files/193 tests, engine 87
+files/1,223 tests, fixtures 1 file/7 tests, planner 56 files/602 tests, and
+product 6 files/26 tests. Workspace and fixture typechecks, ESLint, repository
+formatting, `git diff --check`, and the production build passed. Vite
+transformed 397 modules and retained only the existing greater-than-500-kB
+application-chunk advisory.
+
+Gate B absorbed the landed contract into the boon-rarity audit, catalog,
+reward, simulation, candidate, editor, Arcana, and F-Q/I/Q biome authorities.
+The temporary plan was deleted, was never linked from the README, and no
+temporary-plan reference remains. The durable authorities retain these
+non-goals: no probability simulation or percentage UI, fresh Heroic rolls,
+Chaos Favor/Ordinary, Yarn or Well consumption, Shrine delivery, Dream Dive,
+Transcendent Embryo, or generic effect interpretation.
+
+By user direction, Gate B is docs-only and did not rerun `npm run check` or any
+runtime test lane. The Gate-A validation above is the final runtime evidence;
+Gate-B verification is limited to Markdown formatting, local link resolution,
+stale-reference scans, and `git diff --check` after the factual append.

@@ -223,22 +223,22 @@ order-independence evidence establishes:
 - no ordinary `WorldShop` option changes merely because F, G, N, or P is
   reached later.
 
-The following rarity slice should then consume the exact `RandomLoot`,
-`BoostedRandomLoot`, or boosted Hermes item produced by this Shop authority.
-It should not reevaluate Shop phase eligibility.
+The landed catalog `0.30.0-boon-rarity-ledger` and its engine-owned rarity
+ledger consume the exact `RandomLoot`, `BoostedRandomLoot`, or boosted Hermes
+item produced by this Shop authority at the trait-offer frontier. The ledger
+does not reevaluate Shop phase eligibility or infer the item context from the
+Shop profile, biome key, or count; the option witness remains the source of
+truth.
 
-Gate A did not add rarity implementation, rarity arithmetic, or rarity
-filtering. The later rarity witness consumes the exact generated option
-identity; it does not infer phase from the Shop profile, biome key, or count.
 The live fixed-route evaluator currently supplies `biomeIndex + 1` as
 `enteredBiomeCount`, which is equivalent to the entered-biome count for the
 supported fixed-order routes. A future Dream Dive implementation must change
 that fact producer to supply the actual reordered reached count through the
 existing engine input; it must not change the I/Q Shop declarations.
 
-The correction made no planner-engine or application production change. The
-existing engine candidate, finding, structural decode, and repair paths remain
-the authorities for retained phase-ineligible offers and joint Q
+The earlier phase correction made no planner-engine or application production
+change. The existing engine candidate, finding, structural decode, and repair
+paths remain the authorities for retained phase-ineligible offers and joint Q
 unavailability.
 
 ## Explicit non-goals
@@ -250,5 +250,4 @@ This audit does not require:
 - probability weights or deterministic Shop RNG;
 - prices, affordability, discounts, or rerolls;
 - external progression/save predicates that remain outside the planner;
-- Stygian Well or Shrine of Hermes implementation; or
-- boon rarity-ledger implementation.
+- Stygian Well or Shrine of Hermes implementation.

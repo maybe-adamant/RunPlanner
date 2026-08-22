@@ -169,6 +169,13 @@ exclusive from entered-room history.
 minimum two-exit predecessor requirement. These remain separate declaration
 facts.
 
+Each G miniboss declaration additionally owns its sparse boon-rarity room
+fact, which applies to any eligible Olympian or Hermes offer materialized
+there. If delayed room-local Hermes delivery is modeled in a future slice, it
+must supply its actual reached room to the same ledger rather than assume the
+earlier purchase room. The offer-local ledger does not infer rarity from the
+reward label or room name.
+
 The fixed `Story` producer describes the incoming door offer for
 `G_Story01`. Entering that room also presents Narcissus's internal benefit
 choice. The selected rarityless descriptor may create independent optional

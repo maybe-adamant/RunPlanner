@@ -977,11 +977,16 @@ Run State presents the engine-folded banned-trait labels and Forfeit's
 current-biome inactive, available, or consumed status. React neither accumulates
 unselected Denial options nor infers Forfeit eligibility from rendered rooms.
 
-The existing trait-offer surface also presents the engine's
-`rarityBelowActiveFloor` finding as ordinary option feedback. A retained
-authored Common option remains visible and repairable after an upstream
-acquisition activates Proper Upbringing; no activation control, special panel,
-or React-side rarity filtering is introduced.
+The existing trait-offer surface presents the engine's generic
+`rarityRollUnavailable` finding as ordinary option feedback. A retained
+authored value remains visible and repairable when its exact room, generated
+item, Arcana, or active-Proper context makes that fresh rarity impossible;
+structurally unsupported values continue to use `freshRarityUnavailable`.
+Contextual picker availability comes from the bound candidate artifact, so
+React does not calculate percentages, inspect Proper Upbringing, infer
+Miniboss or Shop context, or introduce an activation control or special panel.
+Run State may show the engine-derived `Proper Upbringing active` status, but it
+does not display a global rarity ledger.
 
 ## Initial F Editor Acceptance
 

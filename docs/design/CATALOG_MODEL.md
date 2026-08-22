@@ -325,6 +325,12 @@ Room declarations do not own:
 - copied encounter phases;
 - runtime instructions.
 
+Miniboss declarations in F through Q additionally own their audited sparse
+boon-rarity overrides. This is a room fact, not a copied property on the
+room's incoming reward or on each trait giver; any eligible Olympian or Hermes
+offer materialized in that room consumes the room context at its offer
+frontier.
+
 A bounded reward-slot descriptor owns stable physical slot keys, the raw map
 capacity, the effective maximum clamped to the modeled slot surface, and one
 normalized counted-reward binding. The occurrence persists a complete value
@@ -758,7 +764,11 @@ default triple (one provider default for Olympian, Hermes, and field-NPC givers
 and one per weapon/aspect loadout for Hammers). The `none` policy covers every
 planner-rarityless provider, including Icarus and Hammers; Hammer Rank I/II and
 internal NPC scaling remain independent. `Heroic` remains in the normalized
-equipped rarity order but is never a fresh authored choice.
+equipped rarity order but is never a fresh authored choice. The catalog also
+owns one complete provider-base table for Olympian and Hermes fresh boon checks
+(`Rare`, `Epic`, `Duo`, and `Legendary`), which the engine resolves before
+applying contextual overrides and active contributions. It does not copy those
+bases onto individual givers.
 
 Targeted acquisition is likewise a closed catalog fact, not a general effect
 registry. Bridal Glow declares promotion of one eligible equipped god trait to
@@ -809,8 +819,10 @@ the persistent `FieldsOptionalRewards` producer binding.
 
 Arcana cards and Fear Vows are separate normalized catalog collections. Card
 declarations own their board location, permanent rank-III baseline, Grasp cost,
-and ordinary activation rule; Judgment additionally declares its Epic and
-Heroic post-Boss activation counts. Vows own bounded incremental Fear ranks
+and ordinary activation rule; the rarity cards Excellence, The Queen, and
+Divinity additionally own their complete rank-I through rank-IV additive or
+multiplicative boon-rarity contribution tables. Judgment additionally declares
+its Epic and Heroic post-Boss activation counts. Vows own bounded incremental Fear ranks
 and whether Circe may suppress them. Three modeled Vows own closed effect
 declarations: Denial bans up to two displayed unselected traits, Forfeit
 prevents one qualifying ordinary-room Boon or Hermes acquisition per biome,
@@ -823,11 +835,12 @@ three effect-backed traits carry one closed selected-disposition descriptor
 only; their live target domains and effects remain simulation-owned.
 
 `ElementalRarityUpgradeBoon` also declares the narrow `rarityFloorEffect`
-product. Its activation minimums are the four base elements at `2`, and its
+product. Its activation minimums are the four base elements at `2`, its
 closed `Common`-to-`Rare` transition is validated and deep-frozen by the
-compiler. This declaration is the catalog fact consumed by the engine's
-chronological rarity lifecycle; it is not a generic trait-effect registry or
-an authored-state field.
+compiler, and its future-offer contribution is the exact `GodLootOnly`
+additive `Rare +1`. This declaration is the catalog fact consumed by the
+engine's chronological rarity lifecycle and offer-local ledger; it is not a
+generic trait-effect registry or an authored-state field.
 
 The nine Olympian priority sets each cover the five ordinary slots; Hermes,
 Hammer, and field-NPC givers normalize an explicitly empty set. Catalog

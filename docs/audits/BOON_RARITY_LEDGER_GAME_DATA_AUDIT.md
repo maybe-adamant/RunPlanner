@@ -214,10 +214,12 @@ choice receives a special selection-time upgrade if the first selected choice
 activated Proper Upbringing after the second choice had already been generated
 as Common.
 
-The existing planner's `minimumScalableGodTraitRarity: Rare` is therefore a
-correct projection of Proper Upbringing in isolation. It is not a sufficient
-general rarity authority once room/item overrides, Arcana, and future Chaos
-effects must compose numerically.
+Before the rarity-ledger slice, a Proper-only
+`minimumScalableGodTraitRarity: Rare` projection captured this effect in
+isolation. Gate A replaced that special case with the declaration's exact
+numeric contribution in the general offer-local ledger, so room/item
+overrides, Arcana, and future Chaos effects can compose without another floor
+authority.
 
 ## Yarn of Ariadne
 
@@ -312,40 +314,55 @@ therefore does not manufacture a boosted F Shop offer. The boost remains an
 exact property of a generated `BoostedRandomLoot` item or an item whose own
 `UpgradeChance` installed the same override.
 
-The current catalog distinguishes `RandomLoot` and `BoostedRandomLoot` option
-keys but does not normalize their rarity override or the first-/second-half
-World Shop eligibility. That is a current planner gap, not a source
-uncertainty.
+The catalog now normalizes the exact generated-item distinction: `RandomLoot`
+uses the provider base and `BoostedRandomLoot` carries the sparse boosted
+override. I/Q phase eligibility remains an option-entry requirement owned by
+the Shop phase slice; the rarity ledger consumes the resulting option witness
+at the offer frontier. This keeps the source fact separate from Shop profile
+or biome-name inference.
 
 ## Planner disposition
 
-The cohesive correction should introduce one engine-owned rarity-chance
-ledger at an exact trait-offer frontier. Its inputs are:
+The cohesive correction is implemented as one engine-owned rarity-chance ledger
+at an exact trait-offer frontier. Its inputs are:
 
 1. the provider base (`BoonData` or `HermesData`);
 2. the exact current room override, otherwise the exact reward/shop-item
    override;
 3. active additive effects, including the resolved ranks of Excellence, The
-   Queen, Divinity, Proper Upbringing, and any unconsumed Yarn of Ariadne; and
+   Queen, and Divinity plus Proper Upbringing; a future Well slice may add
+   unconsumed Yarn of Ariadne at this same frontier; and
 4. active multiplicative effects.
 
-The engine then intersects that numeric ledger with the exact trait's declared
-rarity support and returns possible authored rarities plus reasons for excluded
-rarities. It must not simulate or persist RNG outcomes.
+The engine intersects that numeric ledger with the exact trait's declared
+rarity support and returns possible authored rarities. Candidate evaluation
+turns an impossible retained authored rarity into the generic
+`rarityRollUnavailable` finding while preserving the existing structural
+`freshRarityUnavailable` distinction. It does not simulate or persist RNG
+outcomes.
 
 Ownership consequences:
 
 - the catalog owns base tables, sparse room/item overrides, Arcana rank
-  contributions, and declaration rarity support;
-- chronological simulation owns active Arcana, Proper Upbringing, unconsumed
-  Yarn, the reached room, dynamic biome count, and the exact reward source at
-  the offer frontier;
+  contributions, Proper's exact contribution, and declaration rarity support;
+- chronological simulation owns active Arcana, Proper Upbringing, the reached
+  room, dynamic biome count, and the exact reward source at the offer frontier;
 - candidate evaluation owns the possible/impossible rarity result; and
 - React renders that result without recomputing chance arithmetic.
 
+Gate A landed this contract at catalog version
+`0.30.0-boon-rarity-ledger`. Miniboss overrides are normalized on the exact
+F-Q room declarations, and I/Q boosted rarity is normalized on the exact
+generated Shop option entries. Room context wins over item context; sparse
+missing keys fall back to the provider base; additive contributions precede
+multiplicative contributions; and no ledger is persisted.
+
 Proper Upbringing's promotion of already equipped Common traits remains a
-separate chronological transition. The general ledger replaces only its
-special-case future-offer floor.
+separate chronological transition. The general ledger consumes its active
+declaration-owned `Rare +1` contribution for future Olympian and Hermes offers
+and replaces only the old special-case future-offer floor. Run State exposes
+only the existing active-Proper fact; it does not show a global ledger or
+chance percentages.
 
 The implementation should preserve these exact contacts:
 
@@ -359,6 +376,13 @@ The implementation should preserve these exact contacts:
 - ordinary versus boosted World Shop boon items and always-boosted
   second-half World Shop Hermes; and
 - dynamic `EnteredBiomes` first-/second-half selection.
+
+The implementation deliberately leaves Yarn's declaration, purchase,
+remaining-use state, and consumption boundary deferred. When that Well slice
+exists, it can add Yarn's audited contribution to the same offer-local facts
+without introducing another rarity authority. Chaos Favor/Ordinary likewise
+remain future consumers; this slice adds no forced-Common or Heroic-fresh-roll
+behavior.
 
 ## Explicit non-goals
 

@@ -92,6 +92,10 @@ WorldShop and then the derived `O_Boss01`, `O_PostBoss01` tail. Weighted replay,
 NPC random/interaction behavior, optional actions, and automatic boss drops
 remain outside the canonical projection.
 
+O miniboss declarations own their sparse boon-rarity room facts. The exact
+offer-local ledger applies that room context to any eligible Olympian or Hermes
+offer materialized there; it is not derived from the room's reward label.
+
 ### Concrete encounter selection
 
 `OEncountersIntros` permits `HeraclesCombatO` only at Intro;
