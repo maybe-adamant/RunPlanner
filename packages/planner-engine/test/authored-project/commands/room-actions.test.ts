@@ -18,6 +18,7 @@ import {
   createExitDecisionAddress,
   createExitSelectionAddress,
   createIncomingRewardAddress,
+  createLocalRewardAddress,
   createOccurrenceId,
   createOccurrenceAddress,
   createProjectDocument,
@@ -519,7 +520,7 @@ describe('room-action commands', () => {
     expect(undoProjectHistory(restored).present).toBe(initial.present);
   });
 
-  it('defaults a newly required dependent while retaining its already-missing prerequisite', () => {
+  it('keeps an Artificer replacement dormant when its source action is absent', () => {
     const malformed = withoutRequiredRewardAction();
     const source = createIncomingRewardAddress(biome, occurrenceId);
     const acquisition = createAcquisitionRoleAddress(source, 'source');
@@ -535,14 +536,12 @@ describe('room-action commands', () => {
       value: { kind: 'artificer' },
     });
 
-    expect(occurrence(activated).roomActions.order).toEqual([replacement]);
+    expect(occurrence(activated).roomActions.order).toEqual([]);
     const roster = entryRoom(activated).roomActionRoster;
     expect(roster.issues).toEqual(
-      expect.arrayContaining([
-        { kind: 'unrankedRequired', reference: reward },
-        expect.objectContaining({ kind: 'dependency', reference: replacement }),
-      ]),
+      expect.arrayContaining([{ kind: 'unrankedRequired', reference: reward }]),
     );
+    expect(roster.rows).not.toContainEqual(expect.objectContaining({ reference: replacement }));
     expect(
       roster.proposals.filter(
         (proposal) =>
@@ -551,6 +550,153 @@ describe('room-action commands', () => {
     ).toEqual([
       expect.objectContaining({ kind: 'insert', toIndex: 0, structurallyAuthorable: true }),
     ]);
+  });
+
+  it('activates a required Artificer replacement only after an optional source participates', () => {
+    const fieldsOccurrenceId = createOccurrenceId('golden-h-combat02');
+    const source = createLocalRewardAddress(
+      goldenHBiome,
+      fieldsOccurrenceId,
+      'optionalRewards',
+      'optional1',
+    );
+    const sourceReference: RoomActionReference = {
+      kind: 'interactLocalReward',
+      groupKey: 'optionalRewards',
+      slotKey: 'optional1',
+    };
+    const replacementSite = artificerAcquisitionSite(
+      createOccurrenceAddress(goldenHBiome, fieldsOccurrenceId),
+      source,
+    );
+    const replacement: RoomActionReference = {
+      kind: 'interactAcquisitionEntry',
+      siteKey: acquisitionSiteStorageKey(replacementSite),
+      entryKey: artificerReplacementEntryKey(source, 'self'),
+    };
+    const sourceAction = createRoomActionAddress(
+      goldenHBiome,
+      fieldsOccurrenceId,
+      roomActionKey(sourceReference),
+    );
+    const replacementAction = createRoomActionAddress(
+      goldenHBiome,
+      fieldsOccurrenceId,
+      roomActionKey(replacement),
+    );
+    let dormant = applyProjectCommand(createGoldenFGHProject(), catalog, {
+      kind: 'ReplaceAcquisitionDisposition',
+      acquisition: createAcquisitionRoleAddress(source, 'self'),
+      value: { kind: 'artificer' },
+    });
+    const fields = (document: ProjectDocument) => {
+      const occurrence = document.routes
+        .find((route) => route.routeKey === 'Underworld')
+        ?.biomes.find((plan) => plan.biomeKey === 'H')
+        ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === fieldsOccurrenceId);
+      if (occurrence === undefined) throw new Error('Fields occurrence is missing');
+      return occurrence;
+    };
+    expect(fields(dormant).roomActions.order).not.toContainEqual(sourceReference);
+    expect(fields(dormant).roomActions.order).not.toContainEqual(replacement);
+    expect(fields(dormant).acquisitionSites?.[replacement.siteKey]?.pickupEntries).toHaveProperty(
+      replacement.entryKey,
+      null,
+    );
+
+    dormant = applyProjectCommand(dormant, catalog, {
+      kind: 'InsertRoomAction',
+      action: sourceAction,
+      reference: sourceReference,
+      index: 0,
+    });
+    const order = fields(dormant).roomActions.order;
+    expect(order).toContainEqual(sourceReference);
+    expect(order).toContainEqual(replacement);
+    expect(
+      order.findIndex((reference) => roomActionKey(reference) === roomActionKey(sourceReference)),
+    ).toBeLessThan(
+      order.findIndex((reference) => roomActionKey(reference) === roomActionKey(replacement)),
+    );
+    const domain = assembleRoomActionDomain({
+      catalog,
+      biome: goldenHBiome,
+      occurrence: fields(dormant),
+    });
+    expect(domain.contributions).toContainEqual(
+      expect.objectContaining({
+        kind: 'action',
+        reference: replacement,
+        participation: 'required',
+        dependencies: [{ kind: 'afterAction', action: sourceReference }],
+      }),
+    );
+    expect(() =>
+      applyProjectCommand(dormant, catalog, {
+        kind: 'RemoveRoomAction',
+        action: replacementAction,
+      }),
+    ).toThrow('active required room action cannot be removed');
+    const deactivated = applyProjectCommand(dormant, catalog, {
+      kind: 'RemoveRoomAction',
+      action: sourceAction,
+    });
+    expect(
+      assembleRoomActionDomain({
+        catalog,
+        biome: goldenHBiome,
+        occurrence: fields(deactivated),
+      }).contributions,
+    ).not.toContainEqual(expect.objectContaining({ kind: 'action', reference: replacement }));
+    expect(
+      fields(deactivated).acquisitionSites?.[replacement.siteKey]?.pickupEntries,
+    ).toHaveProperty(replacement.entryKey, null);
+  });
+
+  it('undoes the Artificer required-replacement activation as one semantic edit', () => {
+    const fieldsOccurrenceId = createOccurrenceId('golden-h-combat02');
+    const source = createLocalRewardAddress(
+      goldenHBiome,
+      fieldsOccurrenceId,
+      'optionalRewards',
+      'optional1',
+    );
+    const sourceReference: RoomActionReference = {
+      kind: 'interactLocalReward',
+      groupKey: 'optionalRewards',
+      slotKey: 'optional1',
+    };
+    const withSource = applyProjectCommand(createGoldenFGHProject(), catalog, {
+      kind: 'InsertRoomAction',
+      action: createRoomActionAddress(
+        goldenHBiome,
+        fieldsOccurrenceId,
+        roomActionKey(sourceReference),
+      ),
+      reference: sourceReference,
+      index: 0,
+    });
+    const history = applyProjectHistoryCommand(createProjectHistory(withSource), catalog, {
+      kind: 'ReplaceAcquisitionDisposition',
+      acquisition: createAcquisitionRoleAddress(source, 'self'),
+      value: { kind: 'artificer' },
+    });
+    const replacement: RoomActionReference = {
+      kind: 'interactAcquisitionEntry',
+      siteKey: acquisitionSiteStorageKey(
+        artificerAcquisitionSite(createOccurrenceAddress(goldenHBiome, fieldsOccurrenceId), source),
+      ),
+      entryKey: artificerReplacementEntryKey(source, 'self'),
+    };
+    expect(history.past).toHaveLength(1);
+    expect(
+      history.present.routes
+        .find((route) => route.routeKey === 'Underworld')
+        ?.biomes.find((plan) => plan.biomeKey === 'H')
+        ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === fieldsOccurrenceId)
+        ?.roomActions.order,
+    ).toContainEqual(replacement);
+    expect(undoProjectHistory(history).present).toBe(withSource);
   });
 
   it('adds encounter and Gorgon contacts atomically without duplicating retained reactivation', () => {
