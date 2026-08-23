@@ -345,6 +345,15 @@ export type AcquisitionSiteCommand =
 
 export type EncounterOccurrenceCommand =
   | {
+      /** One P-room setup edit owns both persisted setup positions. */
+      readonly kind: 'ReplacePEncounterSequence';
+      /** The P Intro phase is the sole semantic owner of this atomic edit. */
+      readonly phase: EncounterPhaseAddress;
+      readonly introEncounterKey: string;
+      /** Omitted only when Intro terminates the existing Combat suffix. */
+      readonly combatEncounterKey?: string;
+    }
+  | {
       readonly kind: 'SelectEncounter';
       readonly phase: EncounterPhaseAddress;
       readonly encounterKey: string;

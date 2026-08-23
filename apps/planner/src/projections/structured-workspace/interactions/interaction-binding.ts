@@ -69,6 +69,7 @@ import type {
   WorkspaceBatchRewardStoreInteraction,
   WorkspaceCandidateInteraction,
   WorkspaceEncounterInteraction,
+  WorkspacePEncounterSequenceInteraction,
   WorkspaceFigLeafInteraction,
   WorkspaceFieldsCageOutcomeInteraction,
   WorkspaceRoomActionInteraction,
@@ -302,6 +303,7 @@ function candidateInteraction<T>(
 
 interface WorkspaceOccurrenceLocalInteractionCatalog {
   readonly encounterPhases: ReadonlyMap<string, WorkspaceEncounterInteraction>;
+  readonly pEncounterSequences: ReadonlyMap<string, WorkspacePEncounterSequenceInteraction>;
   readonly figLeafSkips: ReadonlyMap<string, WorkspaceFigLeafInteraction>;
   readonly gorgonConditions: ReadonlyMap<
     string,
@@ -333,6 +335,7 @@ function bindOccurrenceLocalInteractions(
   requirements: Iterable<WorkspaceOccurrenceInteractionRequirement>,
 ): WorkspaceOccurrenceLocalInteractionCatalog {
   const encounterPhases = new Map<string, WorkspaceEncounterInteraction>();
+  const pEncounterSequences = new Map<string, WorkspacePEncounterSequenceInteraction>();
   const figLeafSkips = new Map<string, WorkspaceFigLeafInteraction>();
   const gorgonConditions = new Map<
     string,
@@ -370,6 +373,66 @@ function bindOccurrenceLocalInteractions(
   };
   for (const requirement of requirements) {
     switch (requirement.kind) {
+      case 'pEncounterSequence': {
+        const key = semanticAddressKey(requirement.owner);
+        if (pEncounterSequences.has(key)) {
+          throw new StructuredWorkspaceProjectionContractError(
+            `${key} has multiple bound P encounter sequence interactions`,
+          );
+        }
+        let model: ReturnType<WorkspacePEncounterSequenceInteraction['load']>;
+        pEncounterSequences.set(
+          key,
+          Object.freeze({
+            key,
+            owner: requirement.owner,
+            selectedIntroEncounterKey: requirement.selectedIntroEncounterKey,
+            selectedCombatEncounterKey: requirement.selectedCombatEncounterKey,
+            load: () =>
+              (model ??= (() => {
+                const domain = candidates.pEncounterSequence(
+                  requirement.owner,
+                  requirement.introChoices.map((choice) => choice.value),
+                  requirement.combatChoices.map((choice) => choice.value),
+                );
+                if (domain === undefined) return undefined;
+                return Object.freeze({
+                  first: projectEncounterPicker(
+                    contextualPicker,
+                    requirement.introChoices,
+                    requirement.selectedIntroEncounterKey,
+                    domain.first,
+                  ),
+                  terminalFor: (firstEncounterKey: string) => {
+                    const terminal = domain.terminalFor(firstEncounterKey);
+                    if (terminal.kind === 'terminated') {
+                      return Object.freeze({ kind: 'terminated' as const });
+                    }
+                    return Object.freeze({
+                      kind: terminal.kind,
+                      model: projectEncounterPicker(
+                        contextualPicker,
+                        requirement.combatChoices,
+                        requirement.selectedCombatEncounterKey,
+                        terminal.options,
+                      ),
+                    });
+                  },
+                });
+              })()),
+            intentFor: (introEncounterKey: string, combatEncounterKey?: string) =>
+              Object.freeze({
+                command: Object.freeze({
+                  kind: 'ReplacePEncounterSequence' as const,
+                  phase: requirement.firstPosition,
+                  introEncounterKey,
+                  ...(combatEncounterKey === undefined ? {} : { combatEncounterKey }),
+                }),
+              }),
+          }),
+        );
+        break;
+      }
       case 'naturalChaosSpawn': {
         const key = semanticAddressKey(requirement.owner);
         if (naturalChaosSpawns.has(key)) {
@@ -422,12 +485,12 @@ function bindOccurrenceLocalInteractions(
         for (const phase of requirement.phases) {
           const key = semanticAddressKey(phase.owner);
           const encounterKeys = Object.freeze(phase.candidateChoices.map((choice) => choice.value));
-          if (encounterKeys.length > 1 && encounterPhases.has(key)) {
+          if (phase.selectionEnabled && encounterKeys.length > 1 && encounterPhases.has(key)) {
             throw new StructuredWorkspaceProjectionContractError(
               `${key} has multiple bound encounter phase interactions`,
             );
           }
-          if (encounterKeys.length > 1) {
+          if (phase.selectionEnabled && encounterKeys.length > 1) {
             let model: ContextualPickerModel<string> | undefined;
             encounterPhases.set(
               key,
@@ -734,6 +797,7 @@ function bindOccurrenceLocalInteractions(
   }
   return Object.freeze({
     encounterPhases,
+    pEncounterSequences,
     roomActions,
     figLeafSkips,
     gorgonConditions,
@@ -1447,6 +1511,7 @@ export function bindWorkspaceInteractions(
   const candidates = services.candidateSessions.bind(assembly);
   const {
     encounterPhases,
+    pEncounterSequences,
     roomActions,
     figLeafSkips,
     gorgonConditions,
@@ -2665,6 +2730,7 @@ export function bindWorkspaceInteractions(
   return Object.freeze({
     batchRewardStores,
     encounterPhases,
+    pEncounterSequences,
     figLeafSkips,
     gorgonConditions,
     exitSelections,

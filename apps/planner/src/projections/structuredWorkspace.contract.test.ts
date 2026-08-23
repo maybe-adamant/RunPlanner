@@ -141,6 +141,18 @@ vi.mock('@run-planner/engine/simulation', async (importOriginal) => {
         return undefined;
       }
     },
+    pEncounterSequenceCandidateForProjectEvaluationAssembly: (
+      ...args: Parameters<typeof actual.pEncounterSequenceCandidateForProjectEvaluationAssembly>
+    ) => {
+      try {
+        return actual.pEncounterSequenceCandidateForProjectEvaluationAssembly(...args);
+      } catch {
+        // The deliberately forged evaluator overlay does not carry the exact
+        // P sequence capability. Preserve its production provenance guard so
+        // the malformed-overlay assertion remains the first contract failure.
+        return undefined;
+      }
+    },
     encounterPhaseSequenceStatusForProjectEvaluationAssembly: (
       ...args: Parameters<typeof actual.encounterPhaseSequenceStatusForProjectEvaluationAssembly>
     ) => {

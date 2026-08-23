@@ -54,11 +54,22 @@ export type WorkspaceOccurrenceInteractionRequirement =
       }[];
     }
   | {
+      readonly kind: 'pEncounterSequence';
+      readonly owner: OccurrenceAddress;
+      readonly firstPosition: EncounterPhaseAddress;
+      readonly introChoices: readonly WorkspaceInteractionChoice<string>[];
+      readonly combatChoices: readonly WorkspaceInteractionChoice<string>[];
+      readonly selectedIntroEncounterKey: string;
+      readonly selectedCombatEncounterKey: string;
+    }
+  | {
       /** One active exact pool-backed phase, never a profile or rendered ordinal. */
       readonly kind: 'encounterPhases';
       readonly owner: OccurrenceAddress;
       readonly phases: readonly {
         readonly candidateChoices: readonly WorkspaceInteractionChoice<string>[];
+        /** A composite authoring product may retain phase-local children without a generic selector. */
+        readonly selectionEnabled: boolean;
         readonly owner: EncounterPhaseAddress;
         readonly selectedEncounterKey: string;
         readonly figLeaf?: {

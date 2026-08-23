@@ -396,6 +396,16 @@ export function encounterPhaseCandidateSupportForProjectEvaluationAssembly(
     ?.encounters.at(phase);
 }
 
+/** One exact P two-position authoring domain from the evaluation that reached it. */
+export function pEncounterSequenceCandidateForProjectEvaluationAssembly(
+  assembly: ProjectEvaluationAssembly,
+  occurrence: import('../authored-project/addresses').OccurrenceAddress,
+) {
+  return candidateArtifactsForProjectEvaluationAssembly(assembly)
+    .biomeAt(createBiomeAddress(occurrence.routeKey, occurrence.biomeKey))
+    ?.encounters.pSequenceAt(occurrence);
+}
+
 /** Narrow Fig Leaf capability for one exact phase owner. */
 export function encounterPhaseFigLeafSupportForProjectEvaluationAssembly(
   assembly: ProjectEvaluationAssembly,

@@ -1875,7 +1875,7 @@ describe('OccurrenceWorkbench', () => {
     expect(screen.queryByRole('button', { name: 'Reset to default' })).toBeNull();
   });
 
-  it('withholds and restores the P Combat suffix after a terminating Heracles Intro selection', async () => {
+  it('edits P setup through one atomic dialog and retains dormant Combat after Heracles', async () => {
     const occurrenceId = pOccurrenceId('P_Combat02', 2, 1);
     const owner = { kind: 'occurrence' as const, occurrenceId };
     const intro = createEncounterPhaseAddress(pBiome, owner, 'Intro');
@@ -1897,18 +1897,27 @@ describe('OccurrenceWorkbench', () => {
     if (retainedCombat === undefined)
       throw new Error('P Combat 02 has no retained Combat selection');
 
-    const introControl = screen.getByLabelText('Intro encounter phase');
-    expect(screen.getByLabelText('Combat encounter phase')).toBeTruthy();
+    expect(screen.queryByLabelText('Intro encounter phase')).toBeNull();
+    expect(screen.queryByLabelText('Combat encounter phase')).toBeNull();
+    await view.user.click(screen.getByRole('button', { name: 'Edit encounter' }));
+    const dialog = screen.getByRole('dialog', { name: 'P encounter editor' });
+    expect(within(dialog).getByLabelText('Pre-combat')).toBeTruthy();
+    expect(within(dialog).getByLabelText('Combat')).toBeTruthy();
     expect(
       workspaceProjection(view.application).interactions.encounterPhases.has(
         semanticAddressKey(combat),
       ),
-    ).toBe(true);
+    ).toBe(false);
+    expect(
+      workspaceProjection(view.application).interactions.encounterPhases.has(
+        semanticAddressKey(intro),
+      ),
+    ).toBe(false);
 
-    await view.user.click(within(introControl).getByRole('button', { name: 'Encounter' }));
+    await view.user.click(within(dialog).getByRole('button', { name: /Pre-combat/ }));
     await view.user.click(screen.getByRole('option', { name: /Heracles combat/ }));
+    await view.user.click(within(dialog).getByRole('button', { name: 'Save encounter' }));
 
-    await waitFor(() => expect(screen.queryByLabelText('Combat encounter phase')).toBeNull());
     expect(
       occurrenceEncounterSelections(
         view.application.store.getState().projectWorkspace.history.present,
@@ -1918,18 +1927,20 @@ describe('OccurrenceWorkbench', () => {
       ),
     ).toMatchObject({ Combat: retainedCombat, Intro: 'HeraclesCombatP' });
     expect(
-      workspaceProjection(view.application).interactions.encounterPhases.has(
-        semanticAddressKey(combat),
+      workspaceProjection(view.application).interactions.pEncounterSequences.has(
+        semanticAddressKey(createOccurrenceAddress(pBiome, occurrenceId)),
       ),
-    ).toBe(false);
+    ).toBe(true);
     expect(workspaceProjection(view.application).focusByOwner.has(semanticAddressKey(combat))).toBe(
       false,
     );
 
-    await view.user.click(within(introControl).getByRole('button', { name: 'Encounter' }));
-    await view.user.click(screen.getByRole('option', { name: /Pre-combat/ }));
+    await view.user.click(screen.getByRole('button', { name: 'Edit encounter' }));
+    const restoredDialog = screen.getByRole('dialog', { name: 'P encounter editor' });
+    await view.user.click(within(restoredDialog).getByRole('button', { name: /Pre-combat/ }));
+    await view.user.click(screen.getByRole('option', { name: /^Pre-combat$/ }));
+    await view.user.click(within(restoredDialog).getByRole('button', { name: 'Save encounter' }));
 
-    await waitFor(() => expect(screen.getByLabelText('Combat encounter phase')).toBeTruthy());
     expect(
       occurrenceEncounterSelections(
         view.application.store.getState().projectWorkspace.history.present,
@@ -1938,24 +1949,16 @@ describe('OccurrenceWorkbench', () => {
         occurrenceId,
       ),
     ).toMatchObject({ Combat: retainedCombat, Intro: 'GeneratedP_PreCombat' });
-    expect(
-      workspaceProjection(view.application).interactions.encounterPhases.get(
-        semanticAddressKey(combat),
-      ),
-    ).toMatchObject({
-      owner: combat,
-      selected: retainedCombat,
-    });
+    expect(screen.getByRole('button', { name: 'Edit encounter' })).toBeTruthy();
     expect(workspaceProjection(view.application).focusByOwner.has(semanticAddressKey(intro))).toBe(
       true,
     );
   });
 
-  it('keeps P Combat interactive when the selected Heracles Intro is invalid', async () => {
+  it('keeps a context-invalid P setup visible and repairable in its atomic editor', async () => {
     const occurrenceId = pOccurrenceId('P_Combat02', 2, 1);
     const owner = { kind: 'occurrence' as const, occurrenceId };
     const intro = createEncounterPhaseAddress(pBiome, owner, 'Intro');
-    const combat = createEncounterPhaseAddress(pBiome, owner, 'Combat');
     let project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
       encounterKey: 'HeraclesCombatP',
       kind: 'SelectEncounter',
@@ -1973,28 +1976,17 @@ describe('OccurrenceWorkbench', () => {
     const view = renderOccurrenceWorkbench(project, 'Surface', 'P', occurrenceById(occurrenceId));
     openRoomTab('Room Timeline');
 
-    const introControl = screen.getByLabelText('Intro encounter phase');
-    const combatControl = screen.getByLabelText('Combat encounter phase');
+    await view.user.click(screen.getByRole('button', { name: 'Edit encounter' }));
+    const dialog = screen.getByRole('dialog', { name: 'P encounter editor' });
+    const introPicker = within(dialog).getByLabelText('Pre-combat');
+    await view.user.click(introPicker);
+    await waitFor(() =>
+      expect(introPicker.getAttribute('data-candidate-state')).toBe('impossible'),
+    );
     expect(
-      workspaceProjection(view.application).interactions.encounterPhases.has(
-        semanticAddressKey(combat),
-      ),
-    ).toBe(true);
-    await view.user.click(within(introControl).getByRole('button', { name: 'Encounter' }));
-    await waitFor(() =>
-      expect(
-        within(introControl)
-          .getByRole('button', { name: 'Encounter' })
-          .getAttribute('data-candidate-state'),
-      ).toBe('impossible'),
-    );
-
-    const combatPicker = within(combatControl).getByRole('button', { name: 'Encounter' });
-    expect((combatPicker as HTMLButtonElement).disabled).toBe(false);
-    await view.user.click(combatPicker);
-    await waitFor(() =>
-      expect(combatPicker.getAttribute('data-candidate-state')).toBe('unassessed'),
-    );
+      (within(dialog).getByRole('button', { name: 'Save encounter' }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(false);
   });
 
   it('retains an activation-invalid multi-choice Ship phase as an unavailable encounter selector', async () => {

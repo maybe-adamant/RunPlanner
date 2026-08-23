@@ -123,6 +123,7 @@ export function projectCommandAddress(
       return command.site;
     case 'ReplaceAcquisitionEntryOffer':
       return command.entry;
+    case 'ReplacePEncounterSequence':
     case 'SelectEncounter':
     case 'ResetEncounter':
     case 'ReplaceFigLeafSkip':
