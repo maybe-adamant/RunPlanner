@@ -261,6 +261,7 @@ function normalizeAcquisitions(
     'MaxManaDrop',
     'MaxManaDropBig',
     'RoomMoneyDrop',
+    'RoomMoneySmallDrop',
     'RoomMoneyTripleDrop',
     'TalentDrop',
     'TalentBigDrop',

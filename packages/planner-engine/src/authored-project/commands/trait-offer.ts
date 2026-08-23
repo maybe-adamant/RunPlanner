@@ -2,9 +2,8 @@ import type { Catalog } from '../../catalog-schema';
 import {
   traitGiverForAcquisitionRole,
   traitGiverUsesOfferContext,
-  createSelectedPickupEntries,
-  echoLastRewardPickupEntryKeys,
-  selectedPickupProducer,
+  reconcileSelectedPickupProducerState,
+  selectedPickupProducerForEntry,
   traitOfferSupportsExhaustion,
   traitOfferOption,
   optionIndex,
@@ -15,12 +14,17 @@ import {
   type AuthoredTraitOffer,
   type AuthoredTraitOfferTraits,
 } from '../traits';
-import type { AcquisitionEntryAddress, TraitOfferAddress } from '../addresses';
+import {
+  createBiomeAddress,
+  type AcquisitionEntryAddress,
+  type TraitOfferAddress,
+} from '../addresses';
 import type { ProjectDocument, RoomOccurrence, AuthoredRewardState } from '../model';
 import type { AuthoredLevelResolution } from '../traits';
 import { selectedEncounterDefinitionKey } from '../room-state/encounters';
 import { requireShipCombatWheels } from '../room-state/declaration';
 import { incomingLevelEffectSource } from '../room-state/level-effects';
+import { parseArtificerReplacementEntryKey } from '../artificer';
 import { failCommand, requireOccurrence, requireTopology, type LocatedBiome } from './contract';
 import { sameOccurrenceValue } from './occurrence-leaf-value';
 import { replaceOccurrence, updateOccurrenceTopology } from './occurrence-mutation';
@@ -79,54 +83,6 @@ function validateGorgonAthenaOffer(
   });
 }
 
-function reconcileSelectedPickupEntries(
-  catalog: Catalog,
-  occurrence: RoomOccurrence,
-): RoomOccurrence {
-  const producer = selectedPickupProducer(catalog, occurrence.encounters);
-  const echoKeys = new Set(echoLastRewardPickupEntryKeys(catalog, occurrence.encounters));
-  const defaults: Readonly<Record<string, AuthoredRewardState | null>> =
-    producer === undefined ? Object.freeze({}) : createSelectedPickupEntries(catalog, producer);
-  const current = occurrence.acquisitionSites?.roomExit;
-  const existing = current?.pickupEntries ?? {};
-  const pickupEntries = Object.freeze(
-    Object.fromEntries([
-      ...Object.entries(existing).filter(([key]) => echoKeys.has(key)),
-      ...Object.entries(defaults).map(([key, fallback]) => {
-        const retained = existing[key];
-        return [
-          key,
-          fallback === null
-            ? (retained ?? null)
-            : retained !== null && retained?.offer.rewardType === fallback.offer.rewardType
-              ? retained
-              : fallback,
-        ] as const;
-      }),
-    ]),
-  );
-  if (Object.keys(pickupEntries).length === 0) {
-    if (current?.pickupEntries === undefined) return occurrence;
-    const nextSites = { ...(occurrence.acquisitionSites ?? {}) };
-    delete nextSites.roomExit;
-    const without = { ...occurrence };
-    delete without.acquisitionSites;
-    return Object.freeze({
-      ...without,
-      ...(Object.keys(nextSites).length === 0
-        ? {}
-        : { acquisitionSites: Object.freeze(nextSites) }),
-    });
-  }
-  return Object.freeze({
-    ...occurrence,
-    acquisitionSites: Object.freeze({
-      ...(occurrence.acquisitionSites ?? {}),
-      roomExit: Object.freeze({ pickupEntries }),
-    }),
-  });
-}
-
 export interface LocatedTraitReward {
   readonly reward: AuthoredRewardState;
   readonly levelEffectSource: LevelResolutionEffectSource;
@@ -148,18 +104,9 @@ function pickupEntrySource(
   owner: AcquisitionEntryAddress,
   command: TraitOfferCommand,
 ): LocatedTraitReward {
-  const exactSite = owner.site.pointKey !== 'roomExit';
-  const entry = exactSite
-    ? authoredAcquisitionEntryAtSite(occurrence, owner.site, owner.entryKey)
-    : authoredAcquisitionEntry(catalog, occurrence, owner.entryKey);
+  const entry = authoredAcquisitionEntryAtSite(occurrence, owner.site, owner.entryKey);
   if (entry === undefined || entry === null)
     failCommand(command, `missing or unresolved pickup entry ${owner.entryKey}`);
-  if (exactSite) {
-    return Object.freeze({
-      reward: entry,
-      levelEffectSource: { kind: 'producerLifecycle' as const, key: 'RoomReward' },
-    });
-  }
   if (occurrence.state.kind === 'shop' && occurrence.state.shop !== undefined)
     return Object.freeze({
       reward: entry,
@@ -168,7 +115,18 @@ function pickupEntrySource(
         key: occurrence.state.shop.profileKey,
       },
     });
-  const producer = selectedPickupProducer(catalog, occurrence.encounters);
+  if (parseArtificerReplacementEntryKey(owner.entryKey) !== undefined)
+    return Object.freeze({
+      reward: entry,
+      levelEffectSource: { kind: 'producerLifecycle' as const, key: 'RoomReward' },
+    });
+  const producer = selectedPickupProducerForEntry(
+    catalog,
+    createBiomeAddress(owner.routeKey, owner.biomeKey),
+    occurrence,
+    owner.site.pointKey,
+    owner.entryKey,
+  );
   if (producer === undefined) failCommand(command, 'pickup entry has no unique selected producer');
   return Object.freeze({
     reward: entry,
@@ -806,8 +764,9 @@ export function applyTraitOfferCommand(
         }),
       });
     }
-    const reconciled = reconcileSelectedPickupEntries(
+    const reconciled = reconcileSelectedPickupProducerState(
       catalog,
+      createBiomeAddress(trait.routeKey, trait.biomeKey),
       Object.freeze({ ...occurrence, encounters: nextEncounters }),
     );
     return updateOccurrenceTopology(document, located, replaceOccurrence(topology, reconciled));
@@ -883,9 +842,17 @@ export function applyTraitOfferCommand(
     command,
     value,
   );
+  const nextOccurrence = Object.freeze({ ...occurrence, state });
   return updateOccurrenceTopology(
     document,
     located,
-    replaceOccurrence(topology, Object.freeze({ ...occurrence, state })),
+    replaceOccurrence(
+      topology,
+      reconcileSelectedPickupProducerState(
+        catalog,
+        createBiomeAddress(trait.routeKey, trait.biomeKey),
+        nextOccurrence,
+      ),
+    ),
   );
 }

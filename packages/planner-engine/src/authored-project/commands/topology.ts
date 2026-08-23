@@ -25,7 +25,6 @@ import type {
 import { requireEphyraSideRooms, type RoomOccurrenceRole } from '../room-state/declaration';
 import { createDefaultRoomState } from '../room-state/defaults';
 import { createDefaultRoomEncounterState } from '../room-state/encounters';
-import { createSelectedPickupEntries, selectedPickupProducer } from '../traits';
 import {
   admitsTerminalTakeoverEnvelope,
   hostContinuationExitForDetourRoom,
@@ -205,11 +204,6 @@ function defaultOccurrence(
     room,
     `occurrences.${occurrenceId}.encounters`,
   );
-  const pickupProducer = selectedPickupProducer(catalog, encounters);
-  const pickupEntries =
-    pickupProducer === undefined
-      ? Object.freeze({})
-      : createSelectedPickupEntries(catalog, pickupProducer);
   const contractEntries = createInfernalContractEntries(catalog, room.gameName);
   return Object.freeze({
     occurrenceId,
@@ -225,13 +219,7 @@ function defaultOccurrence(
             }),
           }),
         }
-      : Object.keys(pickupEntries).length > 0
-        ? {
-            acquisitionSites: Object.freeze({
-              roomExit: Object.freeze({ pickupEntries }),
-            }),
-          }
-        : {}),
+      : {}),
     encounters,
     roomActions: createEmptyRoomActionState(),
     additionalExits: Object.freeze([]),

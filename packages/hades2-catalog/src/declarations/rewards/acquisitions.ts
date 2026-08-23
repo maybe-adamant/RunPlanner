@@ -171,12 +171,19 @@ export const acquisitions = [
     ...lastReward('RoomMoneyDrop'),
   },
   {
+    gameName: 'RoomMoneySmallDrop',
+    kind: 'consumable',
+    historyProjection: 'consumableAndUse',
+    ...lastReward('RoomMoneySmallDrop'),
+  },
+  {
     gameName: 'RoomMoneyTripleDrop',
     kind: 'consumable',
     historyProjection: 'consumableAndUse',
     ...lastReward('RoomMoneyTripleDrop'),
   },
   { gameName: 'RoomMoneyTinyDrop', kind: 'consumable', historyProjection: 'consumableAndUse' },
+  { gameName: 'HealDropMinor', kind: 'consumable', historyProjection: 'consumableAndUse' },
   {
     gameName: 'TalentDrop',
     kind: 'consumable',

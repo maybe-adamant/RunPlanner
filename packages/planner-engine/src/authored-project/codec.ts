@@ -116,6 +116,7 @@ export { ProjectDocumentContractError } from './validation';
 function decodeBiomePlan(
   value: unknown,
   path: string,
+  routeKey: string,
   expectedBiomeKey: string,
   catalog: Catalog,
 ): AuthoredBiomePlan {
@@ -180,7 +181,7 @@ function decodeBiomePlan(
   const topology =
     plan.topology === null
       ? null
-      : decodeBiomeTopology(plan.topology, catalog, layout, `${path}.topology`);
+      : decodeBiomeTopology(plan.topology, catalog, layout, routeKey, `${path}.topology`);
   const postboss = postbossCapabilities(catalog, biomeKey);
   const canOwnPostbossKeepsake = postboss.hasKeepsakeRack;
   const rawDisposition = plan.postbossKeepsakeDisposition;
@@ -372,7 +373,7 @@ function decodeRoutePlan(
     if (expectedBiomeKey === undefined) {
       fail(`${path}.biomes[${index}]`, 'has no matching route biome');
     }
-    return decodeBiomePlan(biome, `${path}.biomes[${index}]`, expectedBiomeKey, catalog);
+    return decodeBiomePlan(biome, `${path}.biomes[${index}]`, routeKey, expectedBiomeKey, catalog);
   });
 
   return Object.freeze({

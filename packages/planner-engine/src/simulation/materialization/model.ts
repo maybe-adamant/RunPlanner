@@ -184,11 +184,8 @@ export interface CanonicalAuthoredRoom {
   >[];
   readonly rewardWheels?: readonly CanonicalRewardWheel[];
   readonly entryState?: CanonicalShopEntryState;
-  readonly pickupSite?: {
-    readonly entries: Readonly<
-      Record<string, import('../../authored-project/model').AuthoredRewardState | null>
-    >;
-  };
+  /** Active producer instances feeding the shared acquisition-site pipeline. */
+  readonly pickupProducers?: readonly import('../../authored-project/traits').SelectedPickupProducer[];
   /** Every exact persisted acquisition site; chronology addresses site and entry independently. */
   readonly acquisitionSites: Readonly<
     Record<

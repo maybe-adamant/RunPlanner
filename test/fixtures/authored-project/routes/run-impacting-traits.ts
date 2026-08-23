@@ -31,6 +31,25 @@ function replaceBoon(
   });
 }
 
+function replaceDirectTrait(
+  project: ProjectDocument,
+  occurrenceId: ReturnType<typeof nOccurrenceId>,
+  rewardType: string,
+  offer: AuthoredTraitOfferTraits,
+): ProjectDocument {
+  const reward = createIncomingRewardAddress(nBiome, occurrenceId);
+  const withReward = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward,
+    value: { rewardType },
+  });
+  return applyProjectCommand(withReward, catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait: createTraitOfferAddress(reward, 'self'),
+    value: offer,
+  });
+}
+
 function replaceUnvisitedBoonSource(
   project: ProjectDocument,
   occurrenceId: ReturnType<typeof nOccurrenceId>,
@@ -233,4 +252,30 @@ export function createSurfaceNSteadyGrowthFrontier(): ProjectDocument {
     targetTraitKey: 'ApolloWeaponBoon',
   });
   return project;
+}
+
+export function createSurfaceNQuickBuckCheckpoint(): ProjectDocument {
+  return replaceDirectTrait(loadSurfaceNCheckpoint(), nOccurrenceIds.opening, 'HermesUpgrade', {
+    kind: 'traits',
+    giverKey: 'Hermes',
+    options: [
+      { traitKey: 'MoneyMultiplierBoon', rarity: 'Common' },
+      { traitKey: 'HermesWeaponBoon', rarity: 'Common' },
+      { traitKey: 'HermesSpecialBoon', rarity: 'Common' },
+    ],
+    selectedOptionKey: 'option1',
+  });
+}
+
+export function createSurfaceNBuriedTreasureCheckpoint(): ProjectDocument {
+  return replaceBoon(loadSurfaceNCheckpoint(), nOccurrenceIds.preHub, 'PoseidonUpgrade', {
+    kind: 'traits',
+    giverKey: 'Poseidon',
+    options: [
+      { traitKey: 'RoomRewardBonusBoon', rarity: 'Common' },
+      { traitKey: 'PoseidonWeaponBoon', rarity: 'Common' },
+      { traitKey: 'PoseidonSpecialBoon', rarity: 'Common' },
+    ],
+    selectedOptionKey: 'option1',
+  });
 }

@@ -76,7 +76,7 @@ export const narcissusTraits = [
     key: 'NarcissusF',
     label: "Fates' Trimmings",
     offerRequirements: [],
-    selectedDisposition: { kind: 'noOp' },
+    selectedDisposition: { kind: 'equip' },
   },
   {
     ...raritylessNpcTrait,

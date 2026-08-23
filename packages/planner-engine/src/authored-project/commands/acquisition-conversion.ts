@@ -9,7 +9,7 @@ import { failCommand, requireOccurrence, requireTopology, type LocatedBiome } fr
 import { replaceOccurrence, updateOccurrenceTopology } from './occurrence-mutation';
 import type { AcquisitionDispositionCommand } from './types';
 import { createNormalDispositionByAcquisitionRole } from '../reward-state';
-import { authoredAcquisitionEntry, replaceAuthoredAcquisitionEntry } from '../shop';
+import { authoredAcquisitionEntryAtSite, replaceAuthoredAcquisitionEntryAtSite } from '../shop';
 import {
   acquisitionSiteStorageKey,
   artificerAcquisitionSite,
@@ -123,14 +123,18 @@ export function applyAcquisitionDispositionCommand(
       failCommand(command, 'Gorgon phase has no acquisition conversion surface');
       break;
     case 'acquisitionEntry': {
-      const site = occurrence.acquisitionSites?.roomExit;
-      const entry = authoredAcquisitionEntry(catalog, occurrence, owner.entryKey);
-      if (site === undefined || entry === undefined || entry === null)
+      const entry = authoredAcquisitionEntryAtSite(occurrence, owner.site, owner.entryKey);
+      if (entry === undefined || entry === null)
         failCommand(command, 'missing or unresolved pickup entry');
       const replaced = replaceOccurrence(
         topology,
         retainArtificerReplacementEntry(
-          replaceAuthoredAcquisitionEntry(occurrence, owner.entryKey, replace(entry)),
+          replaceAuthoredAcquisitionEntryAtSite(
+            occurrence,
+            owner.site,
+            owner.entryKey,
+            replace(entry),
+          ),
           located,
           owner,
           role,

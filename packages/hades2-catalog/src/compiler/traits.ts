@@ -725,14 +725,22 @@ function normalizeSelectedDisposition(
     const entry = requireObject(pickup, `${path}.pickups[${index}]`) as {
       readonly key?: unknown;
       readonly rewardType?: unknown;
+      readonly excludeStorySource?: unknown;
     };
-    if (Object.keys(entry).length !== 2)
-      fail(`${path}.pickups[${index}]`, 'must contain key and rewardType');
+    if (
+      Object.keys(entry).length !== (entry.excludeStorySource === undefined ? 2 : 3) ||
+      (entry.excludeStorySource !== undefined && entry.excludeStorySource !== true)
+    )
+      fail(
+        `${path}.pickups[${index}]`,
+        'must contain key, rewardType, and an optional true excludeStorySource',
+      );
     if (typeof entry.key !== 'string' || typeof entry.rewardType !== 'string')
       fail(`${path}.pickups[${index}]`, 'key and rewardType must be strings');
     return Object.freeze({
       key: requireNonEmpty(entry.key, `${path}.pickups[${index}].key`),
       rewardType: requireNonEmpty(entry.rewardType, `${path}.pickups[${index}].rewardType`),
+      ...(entry.excludeStorySource === true ? { excludeStorySource: true as const } : {}),
     });
   });
   if (

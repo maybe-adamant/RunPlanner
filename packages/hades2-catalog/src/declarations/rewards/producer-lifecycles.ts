@@ -12,6 +12,7 @@ export const producerLifecycles = [
       'MaxManaDropBig',
       'MaxManaDropSmall',
       'RoomMoneyDrop',
+      'RoomMoneySmallDrop',
       'RoomMoneyTripleDrop',
       'RoomMoneyTinyDrop',
       'StackUpgrade',
@@ -84,6 +85,7 @@ export const producerLifecycles = [
       'MaxManaDrop',
       'MaxManaDropBig',
       'RoomMoneyDrop',
+      'RoomMoneySmallDrop',
       'RoomMoneyTripleDrop',
       'TalentDrop',
       'TalentBigDrop',
@@ -117,6 +119,7 @@ export const producerLifecycles = [
         'MaxManaDrop',
         'MaxManaDropBig',
         'RoomMoneyDrop',
+        'RoomMoneySmallDrop',
         'RoomMoneyTripleDrop',
         'TalentDrop',
         'TalentBigDrop',
@@ -163,6 +166,29 @@ export const producerLifecycles = [
       'MetaCurrencyDrop',
     ],
     defaultLifecyclePoint: 'roomExit',
+  },
+  {
+    key: 'GeneratedTraitPickup',
+    rewardTypes: [
+      'RoomMoneyDrop',
+      'RoomMoneySmallDrop',
+      'RoomMoneyTinyDrop',
+      'HealDropMinor',
+      'MetaCurrencyDrop',
+    ],
+    defaultLifecyclePoint: 'roomRewardPickup',
+    overrides: [
+      {
+        rewardType: 'MetaCurrencyDrop',
+        acquisitionLifecycle: [
+          {
+            role: 'self',
+            lifecyclePoint: 'roomRewardPickup',
+            blocksArtificerConversion: true,
+          },
+        ],
+      },
+    ],
   },
   {
     key: 'ZagPedestal',

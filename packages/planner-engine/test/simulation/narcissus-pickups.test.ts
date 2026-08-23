@@ -26,7 +26,7 @@ import {
   type ProjectDocument,
   undoProjectHistory,
 } from '@run-planner/engine/authored-project';
-import { selectedPickupProducer } from '@run-planner/engine/authored-project';
+import { selectedPickupProducers } from '@run-planner/engine/authored-project';
 import {
   blockedOccurrenceRoomForProjectEvaluationAssembly,
   createPreparedProjectCandidateSession,
@@ -130,17 +130,29 @@ function narcissusOutgoingBatch(project: ProjectDocument) {
 
 function pickupEntry(project: ProjectDocument, key: string) {
   const occurrence = narcissusOccurrence(project);
+  const siteKey = Object.entries(occurrence.acquisitionSites ?? {}).find(([, site]) =>
+    Object.hasOwn(site.pickupEntries ?? {}, key),
+  )?.[0];
+  if (siteKey === undefined) throw new Error(`Narcissus has no ${key} pickup entry`);
   return createAcquisitionEntryAddress(
     createAcquisitionSiteAddress(
       createOccurrenceAddress(goldenGBiome, occurrence.occurrenceId),
-      'roomExit',
+      siteKey,
     ),
     key,
   );
 }
 
 function pickupSite(project: ProjectDocument) {
-  return pickupEntry(project, 'placeholder').site;
+  const occurrence = narcissusOccurrence(project);
+  const siteKey = Object.entries(occurrence.acquisitionSites ?? {}).find(
+    ([, site]) => Object.keys(site.pickupEntries ?? {}).length > 0,
+  )?.[0];
+  if (siteKey === undefined) throw new Error('Narcissus has no generated pickup site');
+  return createAcquisitionSiteAddress(
+    createOccurrenceAddress(goldenGBiome, occurrence.occurrenceId),
+    siteKey,
+  );
 }
 
 describe('Narcissus pickup producer', () => {
@@ -263,10 +275,7 @@ describe('Narcissus pickup producer', () => {
       'NarcissusE',
     ]);
     const occurrence = narcissusOccurrence(project);
-    const site = createAcquisitionSiteAddress(
-      createOccurrenceAddress(goldenGBiome, occurrence.occurrenceId),
-      'roomExit',
-    );
+    const site = pickupEntry(project, 'psyche').site;
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceAcquisitionDisposition',
       acquisition: createAcquisitionRoleAddress(
@@ -286,7 +295,12 @@ describe('Narcissus pickup producer', () => {
       (row) =>
         row.reference.kind === 'interactAcquisitionEntry' && row.reference.entryKey === 'maxMana',
     );
-    expect(maxMana).toMatchObject({ participation: 'optional', rank: null, stale: false });
+    expect(maxMana).toMatchObject({
+      participation: 'optional',
+      window: { kind: 'postOutgoing' },
+      rank: null,
+      stale: false,
+    });
     expect(
       blocked?.roomActionRoster.proposals.some(
         (proposal) =>
@@ -343,7 +357,8 @@ describe('Narcissus pickup producer', () => {
         'NarcissusC',
         'NarcissusF',
       ]);
-      expect(narcissusOccurrence(project).acquisitionSites?.roomExit).toMatchObject({
+      const site = pickupSite(project);
+      expect(narcissusOccurrence(project).acquisitionSites?.[site.pointKey]).toMatchObject({
         pickupEntries,
       });
     }
@@ -360,7 +375,7 @@ describe('Narcissus pickup producer', () => {
     const absent = evaluatedG(project);
     expect(narcissusOccurrence(project).roomActions.order).not.toContainEqual({
       kind: 'interactAcquisitionEntry',
-      siteKey: 'roomExit',
+      siteKey: site.pointKey,
       entryKey: 'lastStand',
     });
     project = replacePickupActions(project, site, ['lastStand']);
@@ -417,6 +432,7 @@ describe('Narcissus pickup producer', () => {
           event.owner.entryKey === 'mysteryBoon',
       ),
     ).toBe(true);
+    expect(normalBranch?.traitHistory?.equippedTraits.NarcissusI).toBeDefined();
     const box = createAcquisitionRoleAddress(entry, 'box');
     const hiddenSource = createAcquisitionRoleAddress(entry, 'hiddenSource');
     const cases = [
@@ -473,51 +489,75 @@ describe('Narcissus pickup producer', () => {
     }
   });
 
-  it('keeps the descriptor out of equipped history and settles selected elemental pickups at G room exit', () => {
-    let project = selectNarcissus(createGoldenFGHIProject(), [
+  it('equips the selected Narcissus trait and settles its elemental pickups', () => {
+    const project = selectNarcissus(createGoldenFGHIProject(), [
       'NarcissusG',
       'NarcissusB',
       'NarcissusC',
     ]);
     const occurrence = narcissusOccurrence(project);
-    const site = createAcquisitionSiteAddress(
-      createOccurrenceAddress(goldenGBiome, occurrence.occurrenceId),
-      'roomExit',
-    );
-    expect(occurrence.acquisitionSites?.roomExit).toMatchObject({
+    const site = pickupEntry(project, 'elementalBoost1').site;
+    expect(occurrence.acquisitionSites?.[site.pointKey]).toMatchObject({
       pickupEntries: {
         elementalBoost1: { offer: { rewardType: 'ElementalBoost' } },
         elementalBoost2: { offer: { rewardType: 'ElementalBoost' } },
       },
     });
 
-    project = replacePickupActions(project, site, ['elementalBoost2', 'elementalBoost1']);
     const simulation = simulateProject(catalog, project);
     const g = simulation.routes
       .find((route) => route.routeKey === 'Underworld')
       ?.biomes.find((biome) => biome.biomeKey === 'G');
     if (g?.authoring !== 'complete') throw new Error('Golden G did not simulate');
     const histories = g.rewards.branches.map((branch) => branch.traitHistory);
-    expect(histories[0]?.events.filter((event) => event.kind === 'elementContribution')).toEqual([
-      expect.objectContaining({ owner: expect.objectContaining({ entryKey: 'elementalBoost2' }) }),
-      expect.objectContaining({ owner: expect.objectContaining({ entryKey: 'elementalBoost1' }) }),
-    ]);
-    expect(histories.every((history) => history?.equippedTraits.NarcissusG === undefined)).toBe(
+    expect(histories[0]?.events.filter((event) => event.kind === 'elementContribution')).toEqual(
+      [],
+    );
+    expect(histories.every((history) => history?.equippedTraits.NarcissusG !== undefined)).toBe(
       true,
     );
     expect(
-      histories.every(
-        (history) =>
-          !history?.events.some(
-            (event) =>
-              event.kind === 'traitOffer' &&
-              event.owner.kind === 'encounterPhase' &&
-              event.owner.phaseKey === 'Encounter' &&
-              event.giverKey === 'Narcissus',
-          ),
+      histories.every((history) =>
+        history?.events.some(
+          (event) =>
+            event.kind === 'traitOffer' &&
+            event.owner.kind === 'encounterPhase' &&
+            event.owner.phaseKey === 'Encounter' &&
+            event.giverKey === 'Narcissus',
+        ),
       ),
     ).toBe(true);
   });
+
+  it.each([
+    ['A', false],
+    ['B', false],
+    ['C', false],
+    ['D', false],
+    ['E', false],
+    ['F', false],
+    ['G', false],
+    ['H', true],
+  ] as const)(
+    'records Narcissus%s as an equipped trait, including empty F',
+    (suffix, deathDefianceConditionMet) => {
+      const traitKey = `Narcissus${suffix}`;
+      const options = ['NarcissusA', 'NarcissusB', 'NarcissusC', 'NarcissusD'].filter(
+        (candidate) => candidate !== traitKey,
+      );
+      while (options.length < 3) options.push('NarcissusD');
+      const project = selectNarcissus(
+        createGoldenFGHIProject(),
+        [traitKey, ...options.slice(0, 2)] as [string, string, string],
+        deathDefianceConditionMet,
+      );
+      const histories = evaluatedG(project).rewards.branches.map((branch) => branch.traitHistory);
+      expect(histories).not.toHaveLength(0);
+      expect(histories.every((history) => history?.equippedTraits[traitKey] !== undefined)).toBe(
+        true,
+      );
+    },
+  );
 
   it('materializes Precious Metals Gold as a source-faithful Currency pickup', () => {
     let project = selectNarcissus(createGoldenFGHIProject(), [
@@ -525,7 +565,8 @@ describe('Narcissus pickup producer', () => {
       'NarcissusB',
       'NarcissusD',
     ]);
-    expect(narcissusOccurrence(project).acquisitionSites?.roomExit).toMatchObject({
+    const site = pickupSite(project);
+    expect(narcissusOccurrence(project).acquisitionSites?.[site.pointKey]).toMatchObject({
       pickupEntries: { currency: { offer: { rewardType: 'Currency' } } },
     });
 
@@ -545,7 +586,8 @@ describe('Narcissus pickup producer', () => {
       'NarcissusD',
       'NarcissusE',
     ]);
-    expect(narcissusOccurrence(project).acquisitionSites?.roomExit).toMatchObject({
+    const site = pickupSite(project);
+    expect(narcissusOccurrence(project).acquisitionSites?.[site.pointKey]).toMatchObject({
       pickupEntries: {
         pom: {
           offer: { rewardType: 'StoreRewardRandomStack' },
@@ -572,7 +614,8 @@ describe('Narcissus pickup producer', () => {
       ['NarcissusH', 'NarcissusB', 'NarcissusC'],
       true,
     );
-    expect(narcissusOccurrence(enabled).acquisitionSites?.roomExit).toMatchObject({
+    const site = pickupSite(enabled);
+    expect(narcissusOccurrence(enabled).acquisitionSites?.[site.pointKey]).toMatchObject({
       pickupEntries: { lastStand: { offer: { rewardType: 'LastStandDrop' } } },
     });
   });
@@ -585,9 +628,10 @@ describe('Narcissus pickup producer', () => {
     ]);
     const occurrence = narcissusOccurrence(project);
     const history = createProjectHistory(project);
+    const site = pickupEntry(project, 'elementalBoost1').site;
     const reference = {
       kind: 'interactAcquisitionEntry' as const,
-      siteKey: 'roomExit',
+      siteKey: site.pointKey,
       entryKey: 'elementalBoost1',
     };
     const ordered = applyProjectHistoryCommand(history, catalog, {
@@ -608,7 +652,7 @@ describe('Narcissus pickup producer', () => {
     expect(narcissusOccurrence(redone)).toMatchObject({
       roomActions: { order: expect.arrayContaining([reference]) },
       acquisitionSites: {
-        roomExit: {
+        [site.pointKey]: {
           pickupEntries: {
             elementalBoost1: { offer: { rewardType: 'ElementalBoost' } },
             elementalBoost2: { offer: { rewardType: 'ElementalBoost' } },
@@ -625,14 +669,8 @@ describe('Narcissus pickup producer', () => {
       'NarcissusC',
     ]);
     const occurrence = narcissusOccurrence(project);
-    project = replacePickupActions(
-      project,
-      createAcquisitionSiteAddress(
-        createOccurrenceAddress(goldenGBiome, occurrence.occurrenceId),
-        'roomExit',
-      ),
-      ['elementalBoost2'],
-    );
+    const site = pickupEntry(project, 'elementalBoost2').site;
+    project = replacePickupActions(project, site, ['elementalBoost2']);
     const history = createProjectHistory(project);
     const reconciled = applyProjectHistoryCommand(history, catalog, {
       kind: 'ReplaceTraitOffer',
@@ -657,17 +695,19 @@ describe('Narcissus pickup producer', () => {
       },
     });
     expect(
-      narcissusOccurrence(reconciled.present).acquisitionSites?.roomExit?.pickupEntries,
+      narcissusOccurrence(reconciled.present).acquisitionSites?.[
+        pickupSite(reconciled.present).pointKey
+      ]?.pickupEntries,
     ).toEqual(expect.objectContaining({ pom: expect.any(Object) }));
-    expect(narcissusOccurrence(reconciled.present).roomActions.order).toContainEqual({
+    expect(narcissusOccurrence(reconciled.present).roomActions.order).not.toContainEqual({
       kind: 'interactAcquisitionEntry',
-      siteKey: 'roomExit',
+      siteKey: site.pointKey,
       entryKey: 'elementalBoost2',
     });
     expect(undoProjectHistory(reconciled).present).toBe(history.present);
   });
 
-  it('round-trips schema-20 site-owned pickups and rejects an unknown entry', () => {
+  it('round-trips source-scoped pickups and rejects an unknown entry', () => {
     const project = selectNarcissus(createGoldenFGHIProject(), [
       'NarcissusG',
       'NarcissusB',
@@ -682,14 +722,38 @@ describe('Narcissus pickup producer', () => {
     const story = encoded.routes[0]!.biomes[1]!.topology!.occurrences.find(
       (entry) => entry.gameName === 'G_Story01',
     )!;
+    const sourceSiteKey = pickupSite(project).pointKey;
     const site = (
-      story.acquisitionSites as { roomExit: { pickupEntries: Record<string, unknown> } }
-    ).roomExit;
+      story.acquisitionSites as Record<string, { pickupEntries: Record<string, unknown> }>
+    )[sourceSiteKey];
+    if (site === undefined) throw new Error('encoded Narcissus source site is missing');
     site.pickupEntries.extra = { offer: { rewardType: 'ElementalBoost' } };
     expect(() => decodeProjectDocument(encoded, catalog)).toThrow(/pickupEntries/);
+
+    const forged = JSON.parse(encodeProjectDocument(project)) as typeof encoded;
+    const forgedStory = forged.routes[0]!.biomes[1]!.topology!.occurrences.find(
+      (entry) => entry.gameName === 'G_Story01',
+    )!;
+    (forgedStory.acquisitionSites as Record<string, unknown>)['traitGenerated:forged:option1'] = {
+      pickupEntries: {},
+    };
+    expect(() => decodeProjectDocument(forged, catalog)).toThrow(
+      /does not name a selected generated-pickup source/,
+    );
+
+    const malformed = JSON.parse(encodeProjectDocument(project)) as typeof encoded;
+    const malformedStory = malformed.routes[0]!.biomes[1]!.topology!.occurrences.find(
+      (entry) => entry.gameName === 'G_Story01',
+    )!;
+    (malformedStory.acquisitionSites as Record<string, unknown>)['traitGenerated:'] = {
+      pickupEntries: {},
+    };
+    expect(() => decodeProjectDocument(malformed, catalog)).toThrow(
+      /invalid generated-pickup site key/,
+    );
   });
 
-  it('rejects a selected pickup producer whose schema-20 site omits pickupEntries', () => {
+  it('rejects a selected pickup producer whose source-scoped site omits pickupEntries', () => {
     const project = selectNarcissus(createGoldenFGHIProject(), [
       'NarcissusG',
       'NarcissusB',
@@ -703,8 +767,11 @@ describe('Narcissus pickup producer', () => {
     const story = encoded.routes[0]!.biomes[1]!.topology!.occurrences.find(
       (entry) => entry.gameName === 'G_Story01',
     )!;
-    delete (story.acquisitionSites as { roomExit: Record<string, unknown> }).roomExit.pickupEntries;
-    expect(() => decodeProjectDocument(encoded, catalog)).toThrow(/requires pickupEntries/);
+    const sourceSiteKey = pickupSite(project).pointKey;
+    const site = (story.acquisitionSites as Record<string, Record<string, unknown>>)[sourceSiteKey];
+    if (site === undefined) throw new Error('encoded Narcissus source site is missing');
+    delete site.pickupEntries;
+    expect(() => decodeProjectDocument(encoded, catalog)).toThrow(/pickupEntries/);
   });
 
   it('preserves ordinary Shop schema-34 state and rejects non-derived pickup entries', () => {
@@ -740,7 +807,8 @@ describe('Narcissus pickup producer', () => {
       'NarcissusC',
     ]);
     const occurrence = narcissusOccurrence(project);
-    const entry = occurrence.acquisitionSites?.roomExit?.pickupEntries?.mysteryBoon;
+    const pickup = pickupEntry(project, 'mysteryBoon');
+    const entry = occurrence.acquisitionSites?.[pickup.site.pointKey]?.pickupEntries?.mysteryBoon;
     expect(entry).toBeNull();
     let simulation = simulateProject(catalog, project);
     let g = simulation.routes
@@ -755,13 +823,7 @@ describe('Narcissus pickup producer', () => {
 
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceAcquisitionEntryOffer',
-      entry: createAcquisitionEntryAddress(
-        createAcquisitionSiteAddress(
-          createOccurrenceAddress(goldenGBiome, occurrence.occurrenceId),
-          'roomExit',
-        ),
-        'mysteryBoon',
-      ),
+      entry: pickup,
       value: {
         rewardType: 'BlindBoxLoot',
         payload: { kind: 'BoonSource', source: 'HestiaUpgrade' },
@@ -769,16 +831,7 @@ describe('Narcissus pickup producer', () => {
     });
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceTraitOffer',
-      trait: createTraitOfferAddress(
-        createAcquisitionEntryAddress(
-          createAcquisitionSiteAddress(
-            createOccurrenceAddress(goldenGBiome, occurrence.occurrenceId),
-            'roomExit',
-          ),
-          'mysteryBoon',
-        ),
-        'hiddenSource',
-      ),
+      trait: createTraitOfferAddress(pickup, 'hiddenSource'),
       value: {
         kind: 'traits',
         giverKey: 'Hestia',
@@ -790,14 +843,7 @@ describe('Narcissus pickup producer', () => {
         selectedOptionKey: 'option1',
       },
     });
-    project = replacePickupActions(
-      project,
-      createAcquisitionSiteAddress(
-        createOccurrenceAddress(goldenGBiome, occurrence.occurrenceId),
-        'roomExit',
-      ),
-      ['mysteryBoon'],
-    );
+    project = replacePickupActions(project, pickup.site, ['mysteryBoon']);
     simulation = simulateProject(catalog, project);
     g = simulation.routes
       .find((route) => route.routeKey === 'Underworld')
@@ -809,6 +855,64 @@ describe('Narcissus pickup producer', () => {
           owner: expect.objectContaining({ kind: 'acquisitionEntry', entryKey: 'mysteryBoon' }),
         }),
       }),
+    );
+  });
+
+  it('derives Buried Treasure from the real Narcissus Story BlindBox source without Bones', () => {
+    let project = selectNarcissus(createGoldenFGHIProject(), [
+      'NarcissusI',
+      'NarcissusB',
+      'NarcissusC',
+    ]);
+    const mysteryBoon = pickupEntry(project, 'mysteryBoon');
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceAcquisitionEntryOffer',
+      entry: mysteryBoon,
+      value: {
+        rewardType: 'BlindBoxLoot',
+        payload: { kind: 'BoonSource', source: 'PoseidonUpgrade' },
+      },
+    });
+    const hiddenSource = createTraitOfferAddress(mysteryBoon, 'hiddenSource');
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: hiddenSource,
+      value: {
+        kind: 'traits',
+        giverKey: 'Poseidon',
+        options: [
+          { traitKey: 'RoomRewardBonusBoon', rarity: 'Common' },
+          { traitKey: 'PoseidonWeaponBoon', rarity: 'Common' },
+          { traitKey: 'PoseidonSpecialBoon', rarity: 'Common' },
+        ],
+        selectedOptionKey: 'option1',
+        rarificationActions: [],
+      },
+    });
+    const producer = selectedPickupProducers(
+      catalog,
+      goldenGBiome,
+      narcissusOccurrence(project),
+    ).find((candidate) => candidate.traitKey === 'RoomRewardBonusBoon');
+    expect(producer?.pickups.map((pickup) => pickup.key)).toEqual([
+      'smallGold',
+      'tinyGold1',
+      'tinyGold2',
+      'minorHeal1',
+      'minorHeal2',
+    ]);
+    if (producer === undefined) throw new Error('Buried Treasure producer is missing');
+    expect(narcissusOccurrence(project).acquisitionSites?.[producer.siteKey]).toMatchObject({
+      pickupEntries: {
+        smallGold: { offer: { rewardType: 'RoomMoneySmallDrop' } },
+        tinyGold1: { offer: { rewardType: 'RoomMoneyTinyDrop' } },
+        tinyGold2: { offer: { rewardType: 'RoomMoneyTinyDrop' } },
+        minorHeal1: { offer: { rewardType: 'HealDropMinor' } },
+        minorHeal2: { offer: { rewardType: 'HealDropMinor' } },
+      },
+    });
+    expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog)).toEqual(
+      project,
     );
   });
 
@@ -869,9 +973,10 @@ describe('Narcissus pickup producer', () => {
       }),
     });
 
-    expect(narcissusOccurrence(incomplete).acquisitionSites?.roomExit?.pickupEntries).toEqual(
-      occurrence.acquisitionSites?.roomExit?.pickupEntries,
-    );
+    const site = pickupSite(completed);
+    expect(
+      narcissusOccurrence(incomplete).acquisitionSites?.[site.pointKey]?.pickupEntries,
+    ).toEqual(occurrence.acquisitionSites?.[site.pointKey]?.pickupEntries);
     const incompleteG = evaluatedG(incomplete);
     expect(incompleteG.authoring).toBe('incomplete');
     const selectedChild = (project: ProjectDocument) =>
@@ -1038,14 +1143,7 @@ describe('Narcissus pickup producer', () => {
       'NarcissusB',
       'NarcissusC',
     ]);
-    const occurrence = narcissusOccurrence(project);
-    const entry = createAcquisitionEntryAddress(
-      createAcquisitionSiteAddress(
-        createOccurrenceAddress(goldenGBiome, occurrence.occurrenceId),
-        'roomExit',
-      ),
-      'mysteryBoon',
-    );
+    const entry = pickupEntry(project, 'mysteryBoon');
     project = replacePickupActions(project, entry.site, ['mysteryBoon']);
     const session = createPreparedProjectCandidateSession(
       catalog,
@@ -1081,8 +1179,8 @@ describe('Narcissus pickup producer', () => {
       },
     });
     expect(
-      narcissusOccurrence(applied).acquisitionSites?.roomExit?.pickupEntries?.mysteryBoon
-        ?.traitOffersByAcquisitionRole.hiddenSource?.giverKey,
+      narcissusOccurrence(applied).acquisitionSites?.[entry.site.pointKey]?.pickupEntries
+        ?.mysteryBoon?.traitOffersByAcquisitionRole.hiddenSource?.giverKey,
     ).toBe('Hestia');
     const appliedG = simulateProject(catalog, applied)
       .routes.find((route) => route.routeKey === 'Underworld')
@@ -1107,16 +1205,10 @@ describe('Narcissus pickup producer', () => {
       'NarcissusC',
     ]);
     const occurrence = narcissusOccurrence(project);
-    const entry = createAcquisitionEntryAddress(
-      createAcquisitionSiteAddress(
-        createOccurrenceAddress(goldenGBiome, occurrence.occurrenceId),
-        'roomExit',
-      ),
-      'mysteryBoon',
-    );
+    const entry = pickupEntry(project, 'mysteryBoon');
     expect(occurrence.roomActions.order).not.toContainEqual({
       kind: 'interactAcquisitionEntry',
-      siteKey: 'roomExit',
+      siteKey: entry.site.pointKey,
       entryKey: 'mysteryBoon',
     });
     const assembly = simulateProjectAssembly(catalog, project);
@@ -1160,27 +1252,31 @@ describe('Narcissus pickup producer', () => {
     const selected = occurrence.encounters.traitOffersByPhase?.Encounter?.Story_Narcissus_01;
     if (selected === undefined) throw new Error('Narcissus encounter offer is missing');
     expect(
-      selectedPickupProducer(
+      selectedPickupProducers(
         catalog,
+        goldenGBiome,
         Object.freeze({
-          ...occurrence.encounters,
-          traitOffersByPhase: Object.freeze({
-            Other: Object.freeze({
-              unrelated: Object.freeze({
-                kind: 'traits',
-                giverKey: 'Apollo',
-                options: [
-                  { traitKey: 'ApolloWeaponBoon', rarity: 'Common' as const },
-                  { traitKey: 'ApolloSpecialBoon', rarity: 'Common' as const },
-                  { traitKey: 'ApolloCastBoon', rarity: 'Common' as const },
-                ] as const,
-                selectedOptionKey: 'option1' as const,
+          ...occurrence,
+          encounters: Object.freeze({
+            ...occurrence.encounters,
+            traitOffersByPhase: Object.freeze({
+              Other: Object.freeze({
+                unrelated: Object.freeze({
+                  kind: 'traits',
+                  giverKey: 'Apollo',
+                  options: [
+                    { traitKey: 'ApolloWeaponBoon', rarity: 'Common' as const },
+                    { traitKey: 'ApolloSpecialBoon', rarity: 'Common' as const },
+                    { traitKey: 'ApolloCastBoon', rarity: 'Common' as const },
+                  ] as const,
+                  selectedOptionKey: 'option1' as const,
+                }),
               }),
+              ...(occurrence.encounters.traitOffersByPhase ?? {}),
             }),
-            ...(occurrence.encounters.traitOffersByPhase ?? {}),
           }),
         }),
-      ),
+      ).find((producer) => producer.traitKey === 'NarcissusI'),
     ).toMatchObject({ traitKey: 'NarcissusI', producerLifecycleKey: 'NarcissusPickup' });
   });
 });

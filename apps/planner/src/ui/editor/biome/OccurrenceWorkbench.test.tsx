@@ -29,6 +29,7 @@ import {
   decodeProjectDocument,
   semanticAddressKey,
   roomActionKey,
+  selectedPickupProducers,
   type OccurrenceId,
   type ProjectDocument,
   type RoomActionReference,
@@ -227,6 +228,19 @@ function occurrenceRoomActionOrder(
     ?.biomes.find((biome) => biome.biomeKey === biomeKey)
     ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === occurrenceId)
     ?.roomActions.order;
+}
+
+function selectedNarcissusPickupSite(project: ProjectDocument, occurrenceId: OccurrenceId): string {
+  const occurrence = project.routes
+    .find((route) => route.routeKey === 'Underworld')
+    ?.biomes.find((biome) => biome.biomeKey === 'G')
+    ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === occurrenceId);
+  if (occurrence === undefined) throw new Error('Narcissus occurrence is missing');
+  const producer = selectedPickupProducers(catalog, goldenGBiome, occurrence).find((candidate) =>
+    candidate.traitKey.startsWith('Narcissus'),
+  );
+  if (producer === undefined) throw new Error('selected Narcissus pickup producer is missing');
+  return producer.siteKey;
 }
 
 function threeCageFieldsProject(): ProjectDocument {
@@ -1567,10 +1581,11 @@ describe('OccurrenceWorkbench', () => {
       { kind: 'interactEncounter', phaseKey: 'Encounter' },
       0,
     );
+    const narcissusSite = selectedNarcissusPickupSite(project, occurrence.occurrenceId);
     const mysteryBoon = createAcquisitionEntryAddress(
       createAcquisitionSiteAddress(
         createOccurrenceAddress(goldenGBiome, occurrence.occurrenceId),
-        'roomExit',
+        narcissusSite,
       ),
       'mysteryBoon',
     );
@@ -1597,7 +1612,7 @@ describe('OccurrenceWorkbench', () => {
         );
     await waitFor(() =>
       expect(
-        authoredOccurrence()?.acquisitionSites?.roomExit?.pickupEntries?.mysteryBoon,
+        authoredOccurrence()?.acquisitionSites?.[narcissusSite]?.pickupEntries?.mysteryBoon,
       ).toMatchObject({
         offer: { payload: { kind: 'BoonSource', source: 'HestiaUpgrade' } },
         traitOffersByAcquisitionRole: { hiddenSource: null },
@@ -1651,7 +1666,7 @@ describe('OccurrenceWorkbench', () => {
     await view.user.selectOptions(insert, insertion.value);
     expect(authoredOccurrence()?.roomActions.order).toEqual([
       { kind: 'interactEncounter', phaseKey: 'Encounter' },
-      { kind: 'interactAcquisitionEntry', siteKey: 'roomExit', entryKey: 'mysteryBoon' },
+      { kind: 'interactAcquisitionEntry', siteKey: narcissusSite, entryKey: 'mysteryBoon' },
     ]);
     expect(hasAcquiredMysteryBoon()).toBe(true);
 
@@ -1663,7 +1678,7 @@ describe('OccurrenceWorkbench', () => {
     act(() => view.application.store.dispatch(authoredProjectRedoRequested()));
     expect(authoredOccurrence()?.roomActions.order.at(-1)).toEqual({
       kind: 'interactAcquisitionEntry',
-      siteKey: 'roomExit',
+      siteKey: narcissusSite,
       entryKey: 'mysteryBoon',
     });
     expect(hasAcquiredMysteryBoon()).toBe(true);
@@ -1711,6 +1726,7 @@ describe('OccurrenceWorkbench', () => {
       { kind: 'interactEncounter', phaseKey: 'Encounter' },
       0,
     );
+    const narcissusSite = selectedNarcissusPickupSite(project, occurrence.occurrenceId);
     const view = renderOccurrenceWorkbench(
       project,
       'Underworld',
@@ -1740,7 +1756,7 @@ describe('OccurrenceWorkbench', () => {
     await view.user.selectOptions(insert, insertion.value);
     expect(authoredOccurrence()?.roomActions.order.at(-1)).toEqual({
       kind: 'interactAcquisitionEntry',
-      siteKey: 'roomExit',
+      siteKey: narcissusSite,
       entryKey: 'psyche',
     });
     const orderedPsycheRow = screen.getByText(/^Interact with Psyche pickup/).closest('li');
@@ -1752,7 +1768,7 @@ describe('OccurrenceWorkbench', () => {
       'timePiece',
     );
     expect(
-      authoredOccurrence()?.acquisitionSites?.roomExit?.pickupEntries?.psyche
+      authoredOccurrence()?.acquisitionSites?.[narcissusSite]?.pickupEntries?.psyche
         ?.dispositionByAcquisitionRole.self,
     ).toEqual({
       kind: 'timePiece',
@@ -1760,12 +1776,12 @@ describe('OccurrenceWorkbench', () => {
 
     act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
     expect(
-      authoredOccurrence()?.acquisitionSites?.roomExit?.pickupEntries?.psyche
+      authoredOccurrence()?.acquisitionSites?.[narcissusSite]?.pickupEntries?.psyche
         ?.dispositionByAcquisitionRole.self,
     ).toEqual({ kind: 'normal' });
     act(() => view.application.store.dispatch(authoredProjectRedoRequested()));
     expect(
-      authoredOccurrence()?.acquisitionSites?.roomExit?.pickupEntries?.psyche
+      authoredOccurrence()?.acquisitionSites?.[narcissusSite]?.pickupEntries?.psyche
         ?.dispositionByAcquisitionRole.self,
     ).toEqual({ kind: 'timePiece' });
   });
@@ -1799,9 +1815,10 @@ describe('OccurrenceWorkbench', () => {
         deathDefianceConditionMet: false,
       },
     });
+    const narcissusSite = selectedNarcissusPickupSite(project, occurrence.occurrenceId);
     const site = createAcquisitionSiteAddress(
       createOccurrenceAddress(goldenGBiome, occurrence.occurrenceId),
-      'roomExit',
+      narcissusSite,
     );
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceAcquisitionDisposition',
@@ -1822,7 +1839,7 @@ describe('OccurrenceWorkbench', () => {
       project,
       goldenGBiome,
       occurrence.occurrenceId,
-      { kind: 'interactAcquisitionEntry', siteKey: 'roomExit', entryKey: 'psyche' },
+      { kind: 'interactAcquisitionEntry', siteKey: narcissusSite, entryKey: 'psyche' },
       1,
     );
     const view = renderOccurrenceWorkbench(
@@ -1854,7 +1871,7 @@ describe('OccurrenceWorkbench', () => {
         ?.roomActions.order.at(-1),
     ).toEqual({
       kind: 'interactAcquisitionEntry',
-      siteKey: 'roomExit',
+      siteKey: narcissusSite,
       entryKey: 'maxMana',
     });
   });

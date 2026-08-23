@@ -52,11 +52,16 @@ import {
   loadSurfaceNOPProject,
   nBiome,
   nOccurrenceId,
+  nOccurrenceIds,
   oBiome,
   oOccurrenceIds,
   pBiome,
   pOccurrenceId,
 } from '@run-planner/test-fixtures/surface';
+import {
+  loadSurfaceNBuriedTreasureCheckpoint,
+  loadSurfaceNQuickBuckCheckpoint,
+} from '@run-planner/test-fixtures/checkpoints/surface';
 import { assembleWorkspaceOccurrence } from './occurrence-assembly';
 import { createWorkspaceBiomeOccurrenceAssemblyFacts } from './occurrence-facts';
 import { createWorkspaceBiomeMarkerDestinationBuilder } from '../navigation/marker-builder';
@@ -1511,9 +1516,19 @@ describe('structured workspace occurrence assembly', () => {
         deathDefianceConditionMet: false,
       },
     });
+    const current = project.routes
+      .flatMap((route) => route.biomes)
+      .find((biome) => biome.biomeKey === 'G')
+      ?.topology?.occurrences.find(
+        (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
+      );
+    const siteKey = Object.entries(current?.acquisitionSites ?? {}).find(([, state]) =>
+      Object.hasOwn(state.pickupEntries ?? {}, 'mysteryBoon'),
+    )?.[0];
+    if (siteKey === undefined) throw new Error('Narcissus has no source-scoped mystery pickup');
     const site = createAcquisitionSiteAddress(
       createOccurrenceAddress(goldenGBiome, occurrence.occurrenceId),
-      'roomExit',
+      siteKey,
     );
     const result = assemble(project, 'Underworld', 'G', occurrence.occurrenceId).assembly;
     const entry = result.node.room.roomActions?.rows.find(
@@ -1532,6 +1547,36 @@ describe('structured workspace occurrence assembly', () => {
       authoringSeed: { rewardType: 'BlindBoxLoot' },
     });
     expect(entry?.rewardPayload?.control.traitOffers).toEqual([]);
+  });
+
+  it('projects manifest-backed Quick Buck and Buried Treasure through ordinary acquisition rows', () => {
+    const quick = assemble(
+      loadSurfaceNQuickBuckCheckpoint(),
+      'Surface',
+      'N',
+      nOccurrenceId('opening'),
+    ).assembly.node.room.roomActions;
+    const buried = assemble(
+      loadSurfaceNBuriedTreasureCheckpoint(),
+      'Surface',
+      'N',
+      nOccurrenceIds.preHub,
+    ).assembly.node.room.roomActions;
+    const pickupKeys = (rows: typeof quick) =>
+      rows?.rows.flatMap((row) =>
+        row.reference.kind === 'interactAcquisitionEntry' ? [row.reference.entryKey] : [],
+      );
+    expect(pickupKeys(quick)).toContain('quickBuckGold');
+    expect(pickupKeys(buried)).toEqual(
+      expect.arrayContaining([
+        'smallGold',
+        'tinyGold1',
+        'tinyGold2',
+        'minorHeal1',
+        'minorHeal2',
+        'bones',
+      ]),
+    );
   });
 
   it('publishes fixed Devotion and Story payloads without inventing editable controls', () => {

@@ -20,6 +20,7 @@ import {
   semanticAddressKey,
   roomActionKey,
   echoLastRewardPickupEntryKey,
+  traitGeneratedPickupSiteKey,
   type AuthoredEchoLastRunBoonOffer,
   type AuthoredTraitOfferTraits,
 } from '@run-planner/engine/authored-project';
@@ -2245,6 +2246,150 @@ describe('Echo Gate C Reward Reward Reward', () => {
     expect(() => decodeProjectDocument(retired, catalog)).toThrow(
       /echoLastReward: is not a project document field/,
     );
+
+    const forged = JSON.parse(encodeProjectDocument(project)) as JsonRecord;
+    const route = (forged.routes as JsonRecord[])[0]!;
+    const biome = (route.biomes as JsonRecord[]).find((candidate) => candidate.biomeKey === 'H')!;
+    const topology = biome.topology as JsonRecord;
+    const bridge = (topology.occurrences as JsonRecord[]).find(
+      (candidate) => candidate.occurrenceId === bridgeId,
+    )!;
+    const sites = bridge.acquisitionSites as JsonRecord;
+    const roomExit = sites.roomExit as JsonRecord;
+    const entries = roomExit.pickupEntries as JsonRecord;
+    entries['echoLastReward:Encounter:forged:option1'] = null;
+    expect(() => decodeProjectDocument(forged, catalog)).toThrow(
+      /does not name a declaration-owned Echo Last Reward entry/,
+    );
+  });
+
+  it('retains a nested Echo Quick Buck site and authored action through an outer switch', () => {
+    const selectedReward = createLocalRewardAddress(
+      goldenHBiome,
+      createOccurrenceId('golden-h-combat09'),
+      'cages',
+      'cage2',
+    );
+    const siblingReward = createLocalRewardAddress(
+      goldenHBiome,
+      createOccurrenceId('golden-h-combat03'),
+      'cages',
+      'cage1',
+    );
+    let project = applyProjectCommand(selectGoldenBridge(), catalog, {
+      kind: 'ReplaceLocalReward',
+      reward: siblingReward,
+      value: { rewardType: 'WeaponUpgrade' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceLocalReward',
+      reward: selectedReward,
+      value: { rewardType: 'HermesUpgrade' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(selectedReward, 'self'),
+      value: {
+        kind: 'traits',
+        giverKey: 'Hermes',
+        options: [
+          { traitKey: 'DodgeChanceBoon', rarity: 'Common' },
+          { traitKey: 'SlowProjectileBoon', rarity: 'Common' },
+          { traitKey: 'SprintShieldBoon', rarity: 'Common' },
+        ],
+        selectedOptionKey: 'option1',
+        rarificationActions: [],
+      },
+    });
+    project = makeBridgeOutgoingEligible(placeCombat09Cage2Last(project));
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: echoOwner,
+      value: echoRewardOffer(),
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceAcquisitionEntryOffer',
+      entry: echoReplayEntry(),
+      value: { rewardType: 'HermesUpgrade' },
+    });
+    const replayTrait = createTraitOfferAddress(echoReplayEntry(), 'self');
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: replayTrait,
+      value: {
+        kind: 'traits',
+        giverKey: 'Hermes',
+        options: [
+          { traitKey: 'MoneyMultiplierBoon', rarity: 'Common' },
+          { traitKey: 'DodgeChanceBoon', rarity: 'Common' },
+          { traitKey: 'SlowProjectileBoon', rarity: 'Common' },
+        ],
+        selectedOptionKey: 'option1',
+        rarificationActions: [],
+      },
+    });
+    const siteKey = traitGeneratedPickupSiteKey(replayTrait, 'option1');
+    const reference = {
+      kind: 'interactAcquisitionEntry' as const,
+      siteKey,
+      entryKey: 'quickBuckGold',
+    };
+    const bridge = project.routes[0]!.biomes.find(
+      (biome) => biome.biomeKey === 'H',
+    )!.topology!.occurrences.find((occurrence) => occurrence.occurrenceId === bridgeId)!;
+    project = applyProjectCommand(project, catalog, {
+      kind: 'InsertRoomAction',
+      action: createRoomActionAddress(goldenHBiome, bridgeId, roomActionKey(reference)),
+      reference,
+      index: bridge.roomActions.order.length,
+    });
+    expect(
+      project.routes[0]!.biomes.find((biome) => biome.biomeKey === 'H')!.topology!.occurrences.find(
+        (occurrence) => occurrence.occurrenceId === bridgeId,
+      )?.acquisitionSites?.[siteKey],
+    ).toMatchObject({
+      pickupEntries: { quickBuckGold: { offer: { rewardType: 'RoomMoneyDrop' } } },
+    });
+    expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog)).toEqual(
+      project,
+    );
+    const generatedRow = bridgeRoom(project).roomActionRoster.rows.find(
+      (candidate) =>
+        candidate.reference.kind === 'interactAcquisitionEntry' &&
+        candidate.reference.siteKey === siteKey &&
+        candidate.reference.entryKey === 'quickBuckGold',
+    );
+    expect(generatedRow).toMatchObject({
+      participation: 'optional',
+      window: { kind: 'postOutgoing' },
+      dependencies: [
+        {
+          kind: 'afterAction',
+          action: {
+            kind: 'interactAcquisitionEntry',
+            siteKey: 'roomExit',
+            entryKey: echoReplayEntryKey,
+          },
+        },
+      ],
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitSelection',
+      trait: echoOwner,
+      selectedOptionKey: 'option2',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitSelection',
+      trait: echoOwner,
+      selectedOptionKey: 'option1',
+    });
+    const restored = project.routes[0]!.biomes.find(
+      (biome) => biome.biomeKey === 'H',
+    )!.topology!.occurrences.find((occurrence) => occurrence.occurrenceId === bridgeId)!;
+    expect(restored.acquisitionSites?.[siteKey]).toMatchObject({
+      pickupEntries: { quickBuckGold: { offer: { rewardType: 'RoomMoneyDrop' } } },
+    });
+    expect(restored.roomActions.order).toContainEqual(reference);
   });
 
   it('supports Time Piece through the shared required replay acquisition role', () => {

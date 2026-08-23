@@ -26,7 +26,7 @@ import { acquisitionSiteFromStorageKey, parseArtificerReplacementEntryKey } from
 import type { RoomActionReference, RoomOccurrence } from './model';
 import { encounterEnvelopeSlots, selectedEncounterDefinitionKey } from './room-state/encounters';
 import { activeRoomActionReferences, roomActionKey } from './room-actions';
-import { selectedPickupProducer } from './traits';
+import { selectedPickupProducerForEntry } from './traits';
 
 export type RoomActionParticipation = 'required' | 'optional';
 
@@ -476,7 +476,13 @@ function baseContribution(
       );
     }
     case 'interactAcquisitionEntry': {
-      const producer = selectedPickupProducer(catalog, occurrence.encounters);
+      const producer = selectedPickupProducerForEntry(
+        catalog,
+        biome,
+        occurrence,
+        reference.siteKey,
+        reference.entryKey,
+      );
       const required =
         producer?.pickups.some((pickup) => pickup.key === reference.entryKey && pickup.required) ??
         false;
@@ -489,17 +495,14 @@ function baseContribution(
         occurrence,
         reference,
         required ? 'required' : 'optional',
-        reference.siteKey === 'roomExit'
+        producer?.placement === 'roomExit' ||
+          producer?.source.owner.kind === 'shopOffer' ||
+          reference.siteKey === 'roomExit'
           ? frozen({ kind: 'postOutgoing' })
           : frozen({ kind: 'standard', phase: 'afterCombat' }),
-        producer?.pickups.some((pickup) => pickup.key === reference.entryKey)
-          ? [
-              frozen({
-                kind: 'afterAction',
-                action: frozen({ kind: 'interactEncounter', phaseKey: producer.sourcePhaseKey }),
-              }),
-            ]
-          : [],
+        producer === undefined
+          ? []
+          : [frozen({ kind: 'afterAction', action: producer.sourceAction })],
         site === undefined
           ? actionOwner(biome, occurrence, reference)
           : createAcquisitionEntryAddress(site, reference.entryKey),
@@ -821,42 +824,74 @@ export function assembleRoomActionDomain(options: {
       reference,
     ),
   );
-  const sourceActions = new Map<string, RoomActionContribution>();
-  for (const action of actions) {
-    const sourceOwner = action.owner.kind === 'acquisitionRole' ? action.owner.owner : action.owner;
-    const acquisitionRole =
-      action.owner.kind === 'acquisitionRole' ? action.owner.acquisitionRole : 'self';
-    sourceActions.set(
-      artificerSourceActionKey(semanticAddressKey(sourceOwner), acquisitionRole),
-      action,
-    );
-  }
   const sourceRewards = acquisitionSourceRewards(options.biome, options.occurrence);
   const orderedActionKeys = new Set(options.occurrence.roomActions.order.map(roomActionKey));
-  actions = actions.flatMap((action) => {
-    if (action.reference.kind !== 'interactAcquisitionEntry') return [action];
-    const parsed = parseArtificerReplacementEntryKey(action.reference.entryKey);
-    if (parsed === undefined) return [action];
-    const source = sourceActions.get(
-      artificerSourceActionKey(parsed.sourceKey, parsed.acquisitionRole),
-    );
-    if (source === undefined || !orderedActionKeys.has(roomActionKey(source.reference))) return [];
-    const disposition = sourceRewards.get(parsed.sourceKey)?.dispositionByAcquisitionRole[
-      parsed.acquisitionRole
-    ];
-    if (disposition?.kind !== 'artificer') return [];
-    return [
-      frozen({
-        ...action,
-        participation: 'required' as const,
-        window: source.window,
-        dependencies: frozen([
-          ...action.dependencies,
-          frozen({ kind: 'afterAction' as const, action: source.reference }),
-        ]),
-      }),
-    ];
-  });
+  // Generated pickup actions inherit the exact lifecycle window of their
+  // source acquisition. Iterate through the finite action list so a nested
+  // Echo replay inherits its parent source before its own child does.
+  for (let round = 0; round < actions.length; round += 1) {
+    const sourceActions = new Map<string, RoomActionContribution>();
+    const sourceActionsByReference = new Map<string, RoomActionContribution>();
+    for (const action of actions) {
+      sourceActionsByReference.set(roomActionKey(action.reference), action);
+      const sourceOwner =
+        action.owner.kind === 'acquisitionRole' ? action.owner.owner : action.owner;
+      const acquisitionRole =
+        action.owner.kind === 'acquisitionRole' ? action.owner.acquisitionRole : 'self';
+      sourceActions.set(
+        artificerSourceActionKey(semanticAddressKey(sourceOwner), acquisitionRole),
+        action,
+      );
+    }
+    actions = actions.flatMap((action) => {
+      if (action.reference.kind !== 'interactAcquisitionEntry') return [action];
+      const parsed = parseArtificerReplacementEntryKey(action.reference.entryKey);
+      const producer =
+        parsed === undefined
+          ? selectedPickupProducerForEntry(
+              options.catalog,
+              options.biome,
+              options.occurrence,
+              action.reference.siteKey,
+              action.reference.entryKey,
+            )
+          : undefined;
+      if (parsed === undefined && producer === undefined) return [action];
+      const source =
+        parsed === undefined
+          ? producer === undefined
+            ? undefined
+            : sourceActionsByReference.get(roomActionKey(producer.sourceAction))
+          : sourceActions.get(artificerSourceActionKey(parsed.sourceKey, parsed.acquisitionRole));
+      if (source === undefined || !orderedActionKeys.has(roomActionKey(source.reference)))
+        return [];
+      if (parsed === undefined && producer?.placement !== 'afterSource') return [action];
+      if (
+        parsed !== undefined &&
+        sourceRewards.get(parsed.sourceKey)?.dispositionByAcquisitionRole[parsed.acquisitionRole]
+          ?.kind !== 'artificer'
+      )
+        return [];
+      const dependencies = action.dependencies.some(
+        (dependency) =>
+          dependency.kind === 'afterAction' &&
+          roomActionKey(dependency.action) === roomActionKey(source.reference),
+      )
+        ? action.dependencies
+        : frozen([
+            ...action.dependencies,
+            frozen({ kind: 'afterAction' as const, action: source.reference }),
+          ]);
+      return [
+        frozen({
+          ...action,
+          ...(parsed === undefined ? {} : { participation: 'required' as const }),
+          window: source.window,
+          dependencies,
+        }),
+      ];
+    });
+  }
   if (lifecycleProfileKey === 'FieldsCombatRoom') {
     const authoredOrder = new Map(
       options.occurrence.roomActions.order.map((reference, index) => [

@@ -11,7 +11,8 @@ import {
   semanticAddressKey,
 } from './addresses';
 import { acquisitionSiteFromStorageKey, parseArtificerReplacementEntryKey } from './artificer';
-import { echoLastRewardPickupEntryKeys, selectedPickupProducer } from './traits';
+import { echoLastRewardPickupEntryKeys, activeSelectedPickupProducers } from './traits';
+export { roomActionKey } from './room-action-key';
 
 function artificerSourceDispositions(
   biome: import('./addresses').BiomeAddress,
@@ -71,30 +72,6 @@ function artificerSourceDispositions(
       add(createAcquisitionEntryAddress(address, entryKey), reward);
   }
   return sources;
-}
-
-/** Stable collision-safe identity for one closed room-action reference. */
-export function roomActionKey(reference: RoomActionReference): string {
-  switch (reference.kind) {
-    case 'completeFieldsCage':
-    case 'interactEncounter':
-    case 'interactGorgon':
-      return JSON.stringify([reference.kind, reference.phaseKey]);
-    case 'interactIncomingReward':
-      return JSON.stringify([reference.kind, reference.producerPoint, reference.acquisitionRole]);
-    case 'interactLocalReward':
-      return JSON.stringify([reference.kind, reference.groupKey, reference.slotKey]);
-    case 'chooseRewardWheel':
-    case 'interactWheelReward':
-      return JSON.stringify([reference.kind, reference.wheelKey]);
-    case 'interactShopOffer':
-      return JSON.stringify([reference.kind, reference.offerKey]);
-    case 'interactAcquisitionEntry':
-      return JSON.stringify([reference.kind, reference.siteKey, reference.entryKey]);
-    case 'useFountain':
-    case 'interactKeepsakeRack':
-      return JSON.stringify([reference.kind]);
-  }
 }
 
 export function createEmptyRoomActionState(): RoomActionState {
@@ -236,12 +213,22 @@ export function activeRoomActionReferences(
     echoLastRewardPickupEntryKeys(catalog, occurrence.encounters),
   );
   const activePickupEntries = new Set(
-    selectedPickupProducer(catalog, occurrence.encounters)?.pickups.map((pickup) => pickup.key) ??
-      [],
+    activeSelectedPickupProducers(catalog, biome, occurrence).flatMap((producer) =>
+      producer.pickups.map((pickup) => JSON.stringify([producer.siteKey, pickup.key])),
+    ),
   );
   for (const [siteKey, site] of Object.entries(occurrence.acquisitionSites ?? {})) {
     for (const entryKey of Object.keys(site.pickupEntries ?? {})) {
-      if (structuralEchoEntries.has(entryKey) && !activePickupEntries.has(entryKey)) continue;
+      if (
+        structuralEchoEntries.has(entryKey) &&
+        !activePickupEntries.has(JSON.stringify([siteKey, entryKey]))
+      )
+        continue;
+      if (
+        siteKey.startsWith('traitGenerated:') &&
+        !activePickupEntries.has(JSON.stringify([siteKey, entryKey]))
+      )
+        continue;
       const artificer = parseArtificerReplacementEntryKey(entryKey);
       if (
         artificer !== undefined &&

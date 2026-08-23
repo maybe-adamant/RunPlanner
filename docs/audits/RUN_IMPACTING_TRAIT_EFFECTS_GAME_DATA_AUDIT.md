@@ -398,10 +398,9 @@ These contacts mean the trait is not effectless:
 - all of the generated objects are normally optional pickups whose acquisition
   order can matter.
 
-The current bounded disposition is to leave Buried Treasure sim-neutral until
-the Sea Star and optional generated-pickup chronology is modeled. Its lack of
-Artificer candidates is settled and should not create a placeholder Artificer
-action.
+The bounded Planner disposition is to model Buried Treasure through the shared
+optional generated-pickup chronology. Its lack of Artificer candidates is
+settled and should not create a placeholder Artificer action.
 
 ## Quick Buck boundary
 
@@ -423,10 +422,10 @@ simulate carried-money arithmetic. The immediate pickup still has a supported
 Echo-history consequence, and its Sea Star result can create another such
 pickup interaction.
 
-The current disposition is to defer Quick Buck with Sea Star and Buried
-Treasure. Those three effects should share the eventual generated-pickup and
-optional-acquisition chronology rather than adding an isolated Quick Buck
-action now. The Dream Dive boss teleport edge remains recorded by
+The bounded Planner disposition models Quick Buck through the shared optional
+generated-pickup chronology. Sea Star remains deferred; it will reuse that
+same acquisition path rather than adding an isolated Quick Buck action. The
+Dream Dive boss teleport edge remains recorded by
 [Boss completion reward lifecycle](BOSS_COMPLETION_REWARD_LIFECYCLE.md).
 
 ## Current Planner boundary
@@ -451,11 +450,8 @@ consumed by Pom-derived and in-run rarity-target paths, while Proper Upbringing
 keeps its source-specific Common-to-Rare behavior.
 
 Sea Star does not yet publish or settle a duplicate pickup. Buried Treasure
-does not yet create its generated pickup set, and Quick Buck does not yet
-create its generated money pickup. Those effects remain deliberately deferred
-until the shared generated-pickup, optional-acquisition, Sea Star, Echo, and
-money chronology is modeled; their source contacts and Artificer boundary are
-retained above.
+and Quick Buck use the shared generated-pickup optional-acquisition path;
+their source contacts and Artificer boundary are retained above.
 
 ## Bounded follow-up questions
 

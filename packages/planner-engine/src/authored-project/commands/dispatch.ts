@@ -21,9 +21,58 @@ import { applyBossCompletionCommand } from './boss-completion';
 import { applySteadyGrowthCommand } from './steady-growth';
 import { applyKeepsakeCommand } from './keepsake';
 import type { ProjectCommand } from './types';
-import { createAcquisitionEntryAddress, semanticAddressKey } from '../addresses';
+import {
+  createAcquisitionEntryAddress,
+  createBiomeAddress,
+  semanticAddressKey,
+} from '../addresses';
 import { applyRoomActionCommand } from './room-actions';
 import { reconcileNewRequiredRoomActions } from '../room-action-defaults';
+import { reconcileSelectedPickupProducerState } from '../traits';
+
+/**
+ * Generated pickup sites are derived from their exact source acquisition. Run
+ * the one occurrence-local reconciliation after every semantic command so a
+ * source replacement cannot leave orphan sites or actions behind.
+ */
+function reconcileGeneratedPickupProducerState(
+  previous: ProjectDocument,
+  document: ProjectDocument,
+  catalog: Catalog,
+): ProjectDocument {
+  let changed = false;
+  const routes = document.routes.map((route) => {
+    const previousRoute = previous.routes.find(
+      (candidate) => candidate.routeKey === route.routeKey,
+    );
+    const biomes = route.biomes.map((plan) => {
+      if (plan.topology === null) return plan;
+      const previousPlan = previousRoute?.biomes.find(
+        (candidate) => candidate.biomeKey === plan.biomeKey,
+      );
+      const biome = createBiomeAddress(route.routeKey, plan.biomeKey);
+      let occurrencesChanged = false;
+      const occurrences = plan.topology.occurrences.map((occurrence) => {
+        const previousOccurrence = previousPlan?.topology?.occurrences.find(
+          (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
+        );
+        if (previousOccurrence === occurrence) return occurrence;
+        const reconciled = reconcileSelectedPickupProducerState(catalog, biome, occurrence);
+        if (reconciled !== occurrence) occurrencesChanged = true;
+        return reconciled;
+      });
+      if (!occurrencesChanged) return plan;
+      changed = true;
+      return Object.freeze({
+        ...plan,
+        topology: Object.freeze({ ...plan.topology, occurrences: Object.freeze(occurrences) }),
+      });
+    });
+    if (!biomes.some((biome, index) => biome !== route.biomes[index])) return route;
+    return Object.freeze({ ...route, biomes: Object.freeze(biomes) });
+  });
+  return changed ? Object.freeze({ ...document, routes: Object.freeze(routes) }) : document;
+}
 
 function derivedPayloadEntryAddress(
   command: Extract<ProjectCommand, { readonly kind: 'EditDerivedShopEntry' }>['edit'],
@@ -217,7 +266,20 @@ export function applyProjectCommand(
   try {
     const proposal = applyUnchecked(document, catalog, command);
     if (proposal === document) return document;
-    const reconciled = reconcileNewRequiredRoomActions(document, proposal, catalog);
+    // First close normal source actions, then derive source-owned pickup sites,
+    // then schedule the newly active generated actions. This is one ordered
+    // command-local composition rather than an ambient fixed-point pass.
+    const withSourceActions = reconcileNewRequiredRoomActions(document, proposal, catalog);
+    const withGeneratedPickupState = reconcileGeneratedPickupProducerState(
+      document,
+      withSourceActions,
+      catalog,
+    );
+    const reconciled = reconcileNewRequiredRoomActions(
+      withSourceActions,
+      withGeneratedPickupState,
+      catalog,
+    );
     return decodeProjectDocument(reconciled, catalog);
   } catch (error) {
     if (error instanceof ProjectCommandContractError) throw error;

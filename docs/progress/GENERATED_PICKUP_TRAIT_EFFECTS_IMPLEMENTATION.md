@@ -147,9 +147,9 @@ simulation enumerate active producer instances and call that same authority;
 they do not add trait-specific settlement functions. Once all current owners
 use the generic acquisition-site product, remove the singular
 `CanonicalAuthoredRoom.pickupSite` compatibility projection and the
-`roomExit`-only selected-producer branches it supported. Narcissus keeps its
-current `roomExit` address and behavior as one producer instance; reuse does
-not mean forcing every producer onto the same lifecycle point.
+`roomExit`-only selected-producer branches it supported. Every active
+pickup-producing trait uses its exact source-scoped site; reuse does not mean
+forcing every producer onto the same lifecycle point.
 
 This generalization must leave one acquisition-entry settlement authority, one
 candidate/finding family, and one workspace acquisition-row family. A new
@@ -183,16 +183,12 @@ an Artificer-specific order or replacement queue.
 
 ### Quick Buck and Buried Treasure equip and produce pickups
 
-The current `producePickups` selected disposition is used by Narcissus
-descriptors, which do not enter equipped-trait history. Extend that exact
-closed disposition with an explicit `equipsSelection` boolean:
+`producePickups` is a normal equipped-trait disposition. Narcissus, Quick
+Buck, and Buried Treasure all enter trait history; its exact closed payload
+only declares the producer lifecycle and pickups that follow acquisition.
 
-- every Narcissus declaration states `false`;
-- Quick Buck and Buried Treasure state `true`.
-
-The engine equips only the latter two while keeping one bounded pickup
-declaration shape. Do not infer this distinction from provider kind or trait
-key, and do not add a general composition-of-effects language.
+Do not infer behavior from provider kind or trait key, and do not add a
+general composition-of-effects language.
 
 Quick Buck declares one fixed generated entry:
 
@@ -252,9 +248,9 @@ room-ending fact.
 
 The plural producer-instance projection supports every reached trait
 acquisition owner. An occurrence may own multiple generated sites, but every
-site has one semantic source acquisition and one declared producer. Keep
-Narcissus's post-outgoing `roomExit` behavior unchanged through the shared
-projection rather than a Narcissus-specific branch.
+site has one semantic source acquisition and one declared producer. Narcissus
+uses the same source-scoped projection rather than a Narcissus-specific
+branch.
 
 An ordinary selection command atomically establishes or removes the fixed
 generated site for its selected producer. It also reconciles only the actions
@@ -401,11 +397,11 @@ site-key constructors/parsers for:
 - Sea Star duplicate sites.
 
 These keys are addresses for instances of the existing acquisition-site
-shape, not new persisted site variants. Keep the existing Artificer site and
-Narcissus `roomExit` site distinct. The decoder must identify each supported
-site owner explicitly; it must not treat every non-`roomExit` site as
-Artificer and must reject unknown encodings, duplicate semantic owners,
-foreign entries, and malformed source addresses.
+shape, not new persisted site variants. Keep generated-trait and Artificer
+sites distinct. The decoder must identify each supported site owner
+explicitly; it must not treat every non-`roomExit` site as Artificer and must
+reject unknown encodings, duplicate semantic owners, foreign entries, and
+malformed source addresses.
 
 Use semantic commands for:
 
@@ -503,7 +499,7 @@ normal eligible pickup participates
 
 ### Deliverables
 
-- catalog `producePickups.equipsSelection` closure;
+- catalog `producePickups` closure;
 - exact Quick Buck and Buried Treasure declarations, concrete acquisitions,
   producer lifecycle bindings, Bones override, and catalog regression;
 - pluralize the existing producer-instance adapter, migrate Narcissus and Echo
