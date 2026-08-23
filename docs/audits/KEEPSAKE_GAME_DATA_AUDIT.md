@@ -5,9 +5,11 @@
 Source-fact audit completed against the installed Hades II scripts on
 2026-08-12, amended on 2026-08-13 with the exact encounter-use decrement
 boundary, and amended on 2026-08-14 with Experimental Hammer's exhausted equip
-result. This document records the ordinary keepsake inventory, rank model,
-equip/swap lifecycle, and the effect surfaces that may contact systems already
-modeled by the planner.
+result. A focused 2026-08-23 reread against installed Steam build `24556151`
+corrected the NonCombat/`SkipEndEncounterEffects` boundary and confirmed P Fig
+Leaf propagation. This document records the ordinary keepsake inventory, rank
+model, equip/swap lifecycle, and the effect surfaces that may contact systems
+already modeled by the planner.
 
 This is not an implementation plan. It records the source-backed first effect
 frontier, but it does not choose a persisted schema, editor layout, module
@@ -510,37 +512,28 @@ domain is empty. Missing authored result state remains incomplete and is not
 equivalent to exhaustion.
 
 The acquired Hammer is a separate equipped trait with 20 encounter uses. The
-source decrement is broader than combat or encounter depth. At encounter end,
-`RoomLogic.EndEncounterEffects` advances an encounter-use trait when the
-completed encounter is either the room's current primary encounter or
+source decrement belongs specifically to `RoomLogic.EndEncounterEffects`,
+after encounter completion. That path advances an encounter-use trait when the
+resolved encounter is either the room's current primary encounter or
 `MapState.EncounterOverride`, unless the room declaration has
-`IgnoreEncounterUses`. It does not test `EncounterType` or
-`CountsForRoomEncounterDepth`. At zero, the game removes the Hammer trait.
+`IgnoreEncounterUses`. A noncombat encounter or a declaration with
+`SkipEndEncounterEffects` completes without running this checkpoint. At zero,
+the game removes the Hammer trait.
 
-Consequently, the following currently modeled primary or override completions
-each reduce the duration by one:
+Consequently, the currently modeled positive checkpoints include ordinary
+combat, miniboss, and boss encounters; every O phase whose declaration permits
+end effects, including its non-counting Intro; the terminal P combat but not
+its end-effect-suppressed pre-combat; and H cage encounters executed through
+`MapState.EncounterOverride`. Story, Fountain, Shop, `Empty`, and Postboss
+noncombat completions do not reduce the duration. Encounter depth and encounter
+completion are therefore both insufficient proxies for this source rule.
 
-- ordinary combat, miniboss, and boss encounters;
-- Story encounters, including those inheriting `NonCombat` or `Empty`;
-- `HealthRestore` Fountain/Reprieve encounters and `Shop` encounters, both of
-  which inherit `NonCombat`;
-- primary `Empty` encounters used by biome intros, hubs, and Postboss rooms;
-- each successive primary phase in a room's ordered encounter sequence; and
-- H cage encounters executed through `MapState.EncounterOverride`.
-
-This decrement occurs at encounter completion, not when the player later talks
-to an NPC, uses a fountain, buys an item, or takes a room reward. An encounter
-whose execution is skipped but whose completion lifecycle is preserved still
-advances the duration.
-
-Live planner preflight found one implementation discrepancy with that source
-rule. `WorldShopRoom` and `RewardlessRoom` currently record their fixed
-encounter envelope but do not start or complete it, so their room declarations'
-positive encounter-use fact cannot reach the Experimental Hammer fold. Their
-fixed `Shop` or `Empty` encounter completion must be restored before those rows
-can have a truthful selected-route simulation witness. Story, Fountain,
-Boss/Postboss, ordered-phase, and H-cage lifecycles already publish their real
-completion events.
+The decrement occurs at the explicit end-effect checkpoint, not when the
+player later talks to an NPC, uses a fountain, buys an item, or takes a room
+reward. Fig Leaf suppresses enemy-spawn execution rather than this checkpoint:
+a skipped phase whose declaration still permits end effects advances the
+duration, while P's skipped pre-combat does not and its skipped terminal combat
+does.
 
 The source guard does not advance for a separate `ChallengeEncounter`, but
 Challenge switches are outside the planner's modeled route and impose no
@@ -553,14 +546,10 @@ The source search found no equivalent flag on the other currently modeled room
 families. This is an explicit room-use distinction, not a combat-kind,
 presentation, or encounter-depth distinction.
 
-Postboss rooms are encounter-free in the ordinary combat and reward sense, but
-their primary `Empty` encounter still reaches the source encounter-use
-decrement. A temporary Hammer that is present when that `Empty` encounter
-completes therefore loses one use. The fixed retain-or-replace rack transition
-always precedes the Postboss primary encounter completion; there is no authored
-Postboss interaction-order choice. Therefore a Hammer granted at that rack
-begins at 20 uses and reaches the next biome with 19, while an already-retained
-temporary Hammer likewise advances once after the rack.
+Postboss's primary noncombat completion does not reach the source encounter-use
+decrement. A temporary Hammer granted at the reached rack therefore begins at
+20 uses and reaches the next biome with 20; retaining an already-active Hammer
+does not spend another use in Postboss.
 
 The temporary Hammer is not tied to continued occupation of the keepsake slot.
 Replacing Experimental Hammer at a later postboss rack removes the keepsake but
@@ -648,6 +637,14 @@ skippable and leaves the later generated phase non-skippable because it is no
 longer first. In O, a non-skippable Heracles intro does not by itself block a
 later ordinary ship combat unless a declaration supplies the explicit
 room-wide block.
+
+Successful skip propagation changes only execution. Every prepared P phase
+still starts and completes. The pre-combat phase remains
+`SkipEndEncounterEffects`, while the terminal phase still reaches end effects
+and advances encounter-use consumers such as Experimental Hammer and
+encounter-counted Chaos curses. The planner owns one Fig Leaf result at the
+eligible first phase and derives that ordered event sequence from declarations;
+it does not encode a P-specific consumer exception.
 
 N does not create a separate Fig Leaf rule. Each visited main-room or side-room
 combat remains an exact encounter phase at which the declaration can be
@@ -932,7 +929,7 @@ authorship, simulation, and presentation slice for the settled effect subset.
 
 ## Current Planner Disposition
 
-The keepsake model is current through authored schema 50. All 33 identities
+The keepsake model is current through authored schema 51. All 33 identities
 participate in mandatory route-start selection, reached nonfinal Postboss
 retain-or-replace frontiers, ordered history, no-return legality, and their
 declared Fated role. The reached Postboss replacement is an optional ranked
@@ -962,4 +959,6 @@ successful acquisition owns an independent temporary-Hammer instance.
 The implementation retains one branch-owned keepsake state and routes each
 effect through its existing trait, acquisition, encounter, or lifecycle
 authority. It has no generic effect registry, second route history, authored
-rank, or React-owned keepsake-key policy.
+rank, or React-owned keepsake-key policy. Experimental Hammer duration now
+consumes the explicit `encounterEndEffectsApplied` event, while Fig Leaf keeps
+phase completion identities and changes only the addressed execution result.

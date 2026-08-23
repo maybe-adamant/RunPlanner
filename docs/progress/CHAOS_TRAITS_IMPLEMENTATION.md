@@ -2,13 +2,15 @@
 
 ## Status
 
-Locked delivery plan grounded on clean base
-`0b4ae57ac7c7fee98fb15134ba00545225681588`. The plan was checked against the
-source-complete Chaos trait audit, the landed boon-rarity ledger, natural-Chaos
-topology, reward-child authoring, trait history, Arcana/Fear state, exact room
-lifecycle events, trait-offer candidates, Run State, the contextual trait
-editor, and the schema-50 checkpoint corpus. Independent adversarial review
-found no remaining P1/P2 correction.
+Implementation landed at `bea2e5b` (`feat(chaos): model paired traits and
+maturation`) on authored schema 51 from clean base
+`0b4ae57ac7c7fee98fb15134ba00545225681588`. The implementation gate was checked
+against the source-complete Chaos trait audit, the landed boon-rarity ledger,
+natural-Chaos topology, reward-child authoring, trait history, Arcana/Fear
+state, exact room lifecycle events, trait-offer candidates, Run State, the
+contextual trait editor, and the schema-50 checkpoint corpus. Independent
+adversarial review found no remaining P1/P2 correction. Durable Chaos closure
+and deletion of this temporary plan remain separately pending.
 
 This is a temporary implementation plan. It must not be linked from the README
 or stable design documents. At closure, absorb the completed model into the
@@ -41,8 +43,8 @@ The user-visible result is:
   and only the numeric operands actually rolled by those declarations;
 - Run State shows active curses, pending blessings, remaining clock uses, and
   matured Chaos blessings;
-- maturation follows existing encounter-end, room-exit, and eligible god-loot
-  screen checkpoints rather than a draggable Room Timeline action;
+- maturation follows qualifying encounter-end-effect, room-exit, and eligible
+  god-loot screen checkpoints rather than a draggable Room Timeline action;
 - Creation contributes elements only after maturation;
 - Favor contributes its exact processed value to the landed rarity ledger;
 - Ordinary forces affected offers to Common while active;
@@ -199,7 +201,8 @@ repeated instances into one trait-key record.
 Do not add a timing axis, depth-counter approximation, timer service, or Room
 Timeline action.
 
-Encounter clocks consume existing real `encounterCompleted` events:
+Encounter clocks consume existing qualifying `encounterEndEffectsApplied`
+events, after the earlier distinct `encounterCompleted` fact:
 
 - combat, miniboss, boss, Devotion, C-boss, and individual active Fields cage
   encounters count;
@@ -208,12 +211,16 @@ Encounter clocks consume existing real `encounterCompleted` events:
   encounter; and
 - `skipEndEncounterEffects` remains authoritative.
 
-Advance and mature encounter-counted curses immediately after the exact
-encounter completes and before later same-checkpoint reward, delivery, or
-interaction settlement. The existing boss sequence remains:
+Advance and mature encounter-counted curses at the exact qualifying end-effect
+checkpoint and before later reward, delivery, or interaction settlement. The
+existing boss sequence remains:
 
 ```text
-bossDefeated -> Judgment -> encounterCompleted -> possible Chaos maturity
+bossDefeated
+  -> Judgment
+  -> encounterCompleted
+  -> encounterEndEffectsApplied
+  -> possible Chaos maturity
 ```
 
 Therefore Barren still suppresses Judgment when the boss encounter itself is

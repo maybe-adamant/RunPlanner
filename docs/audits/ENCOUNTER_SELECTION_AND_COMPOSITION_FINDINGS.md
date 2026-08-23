@@ -14,6 +14,12 @@ The audit was refreshed on 2026-08-03 against the installed Steam build:
 - script timestamps: 2026-08-01;
 - route biomes: F, G, H, I, N, O, P, and Q.
 
+The P ordered-encounter setup, execution, Fig Leaf propagation, and
+end-effect paths were reread directly on 2026-08-23 against installed Steam
+build `24556151`. That focused reread confirmed the P facts and source
+disposition recorded below; the remaining encounter matrices retain their
+2026-08-03 evidence date.
+
 The scope is:
 
 - combat-bearing room and phase encounter pools;
@@ -343,6 +349,43 @@ The P field-NPC effects are asymmetric:
 The O Heracles effect differs: `HeraclesCombatO` makes the Intro position
 counting but does not block the later O combat positions.
 
+### P ordered execution and end effects
+
+The build-24556151 reread confirms that P is an ordinary use of the game's
+generic multiple-encounter protocol, not a separate composition system.
+`SetupRoomMultipleEncountersData` chooses and records the positions in order.
+A selected `BlockMultipleEncounters` member terminates construction of the
+remaining suffix; the room runner later starts and completes every constructed
+member in order before setting `AllEncountersCompleted` and allowing exit
+readiness to proceed.
+
+`GeneratedP_PreCombat` is a real selected, started, and completed first
+position. It is non-counting and declares `SkipEndEncounterEffects`, so its
+completion does not run the encounter-use/end-effect checkpoint. The later
+`GeneratedP` position is counting and becomes independently unskippable after
+another position through `CanEncounterSkipIfNotFirst = false`.
+`HeraclesCombatP` is counting and declares `BlockMultipleEncounters`, so a
+valid Heracles first selection is the complete active sequence and the second
+position is neither constructed nor recorded.
+
+A successful Fig Leaf roll at the P pre-combat position marks every already
+constructed room encounter as spawn-skipped. Later positions carry the
+multi-encounter propagation marker and do not consume another Fig Leaf use.
+Both P positions still start and complete: the first still suppresses end
+effects, while the terminal position still runs them. Skipped execution is
+therefore distinct from completion and from the later end-effect checkpoint.
+
+| P result                          | Active sequence                      | Encounter-depth advances | End-effect checkpoints |
+| --------------------------------- | ------------------------------------ | -----------------------: | ---------------------: |
+| normal, Athena, Icarus, or Gorgon | pre-combat, terminal                 |                        1 |         1, at terminal |
+| Heracles                          | Heracles                             |                        1 |                      1 |
+| successful Fig Leaf               | skipped pre-combat, skipped terminal |                        1 |         1, at terminal |
+
+O remains the control case: its ordinary Intro is non-counting but does not
+declare `SkipEndEncounterEffects`, so its Intro and every later active combat
+run their own end-effect checkpoint. Encounter depth, encounter completion,
+and end effects are three independent source facts.
+
 ## Field-NPC Source Matrix
 
 ### Concrete placements and encounter effects
@@ -569,3 +612,28 @@ probes should separately test pool narrowing, exact types, and exact waves.
 
 These probes are evidence work. They do not imply a planner schema or runtime
 adapter design.
+
+## Current planner disposition
+
+The planner keeps P's exact `Intro` and `Combat` selections in the ordinary
+phase-based authored state. Shared sequential preparation records the valid
+first position before evaluating the second, and the normalized
+`terminateSuffix` fact represents `BlockMultipleEncounters`. The generic room
+lifecycle executes only that prepared active prefix. Fig Leaf remains owned by
+the exact eligible first phase and propagates skipped execution without
+removing either completion identity.
+
+Encounter completion now emits its own history fact, followed by
+`encounterEndEffectsApplied` only when the resolved declaration permits the
+game's end effects. Encounter-counted Chaos maturation and Experimental Hammer
+duration consume that later event. Neither consumer contains P, phase-index,
+or Fig Leaf timing policy.
+
+The editor exposes one engine-backed P interaction over those two persisted
+positions. Its terminal domain is evaluated after the proposed first choice;
+a terminating Heracles choice has no active terminal field, while its dormant
+stored Combat choice remains available for a later reversible edit. One
+`ReplacePEncounterSequence` command saves both active selections and creates
+one Undo unit. Exact Fig Leaf, Gorgon, and terminal trait-offer children retain
+their phase owners. No P preset, variant enum, composition descriptor, or
+second runtime sequence is persisted.

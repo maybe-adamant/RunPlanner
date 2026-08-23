@@ -98,11 +98,19 @@ Legendary checks; the biome layer does not simulate a roll.
 
 ### Concrete encounter selection
 
-Ordinary P room-local composition has an `Intro` slot and a `Combat` slot.
+Ordinary P room-local composition uses the game's ordered multiple-encounter
+protocol. The declaration supplies an `Intro` first position and a `Combat`
+terminal position; preparation chooses and records each active position in
+order, and execution starts and completes the prepared prefix in that same
+order. `GeneratedP_PreCombat` is a real first encounter phase. It is
+non-counting and suppresses encounter-end effects, but it still starts and
+completes before the terminal phase.
+
 `HeraclesCombatP` is selectable only from the declaration-bound first-position
 support and, when valid, counts for encounter depth and terminates the
-remaining Combat suffix. The trimmed Combat selection remains dormant and
-returns unchanged if the Intro selection changes.
+remaining Combat suffix through the normalized source
+`BlockMultipleEncounters` fact. The trimmed Combat selection remains dormant
+and returns unchanged if the Intro selection changes.
 
 `IcarusCombatP` and `AthenaCombatP` are Combat-slot definitions. Their normal
 requirements retain the source indoor/outdoor and exact-history distinctions;
@@ -116,6 +124,23 @@ corresponding three-choice trait offer and folds the selected trait at encounter
 completion. Athena uses selectable Common/Rare/Epic rarity. Icarus is
 player-rarityless, and Latest Model may target one exact eligible equipped
 Rank-I Hammer for the shared Rank-II transition.
+
+Encounter completion and encounter-end effects are distinct checkpoints. A
+normal P room advances encounter depth once and runs end effects only after the
+terminal Combat completes. A successful Fig Leaf result at the eligible Intro
+suppresses enemy spawns across both prepared positions without removing either
+start/completion identity or the terminal end-effect checkpoint. Heracles runs
+one start/completion/end-effect sequence. Encounter-counted Chaos curses and
+Experimental Hammer duration consume the end-effect checkpoint, not P phase
+names, encounter depth, or completion alone.
+
+The authored model retains the exact `Intro` and `Combat` phase selections,
+while the editor presents one occurrence-owned P encounter dialog. The engine
+evaluates terminal candidates only after the proposed first choice. Saving a
+normal pair or a terminating Heracles choice is one atomic semantic command
+and one Undo unit; Fig Leaf, Gorgon, and terminal trait offers remain attached
+to their exact phase owners. This presentation adds no P variant or second
+composition model.
 
 ## Product boundary
 
