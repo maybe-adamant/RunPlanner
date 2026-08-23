@@ -837,8 +837,8 @@ trait; Gold later removes only its exact one-use outer acquisition.
     direct trait/Pom editor in the same vertical slice.
 19. Artificer source interaction and replacement acquisition are separate
     checkpoints. The source is not acquired; its complete source-owned
-    replacement enters the same room fold only at a later required or optional
-    interaction. Fields carries that dependency in its one mixed action
+    replacement enters the same room fold only at a later required interaction.
+    Fields carries that dependency in its one mixed action
     chronology, while acquisition sites retain only sparse payload state.
 
 ## Explicit simplifications and remaining follow-up facts

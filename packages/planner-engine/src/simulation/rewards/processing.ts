@@ -4299,7 +4299,7 @@ export function settlePickupAcquisitionSite(
           sourceOrigin: source.address,
           sourceReward: source.reward,
           acquisitionRole: parsed.acquisitionRole,
-          participation: 'optional',
+          participation: 'mandatory',
           historySequence: request.historySequence,
           facts: request.facts,
           ...(request.findingChronology === undefined

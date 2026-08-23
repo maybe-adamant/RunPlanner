@@ -173,6 +173,10 @@ function actionOwner(
   return createRoomActionAddress(biome, occurrence.occurrenceId, roomActionKey(reference));
 }
 
+function artificerSourceActionKey(sourceKey: string, acquisitionRole: string): string {
+  return JSON.stringify([sourceKey, acquisitionRole]);
+}
+
 function contribution(
   biome: BiomeAddress,
   occurrence: RoomOccurrence,
@@ -788,7 +792,7 @@ export function assembleRoomActionDomain(options: {
       ? {}
       : { activeEncounterSlotKeys: options.activeEncounterSlotKeys }),
   });
-  const activeReferences = activeRoomActionReferences(
+  const structuralReferences = activeRoomActionReferences(
     options.catalog,
     options.biome,
     options.occurrence,
@@ -807,7 +811,7 @@ export function assembleRoomActionDomain(options: {
         : { shopInventoryActive: options.shopInventoryActive }),
     },
   );
-  let actions = activeReferences.map((reference) =>
+  let actions = structuralReferences.map((reference) =>
     baseContribution(
       options.catalog,
       options.biome,
@@ -820,28 +824,38 @@ export function assembleRoomActionDomain(options: {
   const sourceActions = new Map<string, RoomActionContribution>();
   for (const action of actions) {
     const sourceOwner = action.owner.kind === 'acquisitionRole' ? action.owner.owner : action.owner;
-    sourceActions.set(semanticAddressKey(sourceOwner), action);
+    const acquisitionRole =
+      action.owner.kind === 'acquisitionRole' ? action.owner.acquisitionRole : 'self';
+    sourceActions.set(
+      artificerSourceActionKey(semanticAddressKey(sourceOwner), acquisitionRole),
+      action,
+    );
   }
   const sourceRewards = acquisitionSourceRewards(options.biome, options.occurrence);
-  actions = actions.map((action) => {
-    if (action.reference.kind !== 'interactAcquisitionEntry') return action;
+  const orderedActionKeys = new Set(options.occurrence.roomActions.order.map(roomActionKey));
+  actions = actions.flatMap((action) => {
+    if (action.reference.kind !== 'interactAcquisitionEntry') return [action];
     const parsed = parseArtificerReplacementEntryKey(action.reference.entryKey);
-    if (parsed === undefined) return action;
-    const source = sourceActions.get(parsed.sourceKey);
-    if (source === undefined) return action;
+    if (parsed === undefined) return [action];
+    const source = sourceActions.get(
+      artificerSourceActionKey(parsed.sourceKey, parsed.acquisitionRole),
+    );
+    if (source === undefined || !orderedActionKeys.has(roomActionKey(source.reference))) return [];
     const disposition = sourceRewards.get(parsed.sourceKey)?.dispositionByAcquisitionRole[
       parsed.acquisitionRole
     ];
-    if (disposition?.kind !== 'artificer') return action;
-    return frozen({
-      ...action,
-      participation: source.participation,
-      window: source.window,
-      dependencies: frozen([
-        ...action.dependencies,
-        frozen({ kind: 'afterAction' as const, action: source.reference }),
-      ]),
-    });
+    if (disposition?.kind !== 'artificer') return [];
+    return [
+      frozen({
+        ...action,
+        participation: 'required' as const,
+        window: source.window,
+        dependencies: frozen([
+          ...action.dependencies,
+          frozen({ kind: 'afterAction' as const, action: source.reference }),
+        ]),
+      }),
+    ];
   });
   if (lifecycleProfileKey === 'FieldsCombatRoom') {
     const authoredOrder = new Map(
@@ -901,6 +915,7 @@ export function assembleRoomActionDomain(options: {
     ...actions,
     ...checkpoints(options.catalog, declaration, options.occurrence, lifecycleStructure),
   ]);
+  const activeReferences = frozen(actions.map((action) => action.reference));
   const contributedKeys = new Set(actions.map((action) => roomActionKey(action.reference)));
   const activeKeys = new Set(activeReferences.map(roomActionKey));
   if (
