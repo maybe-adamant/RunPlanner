@@ -1426,13 +1426,13 @@ export function evaluateBiomeRewardsAssemblyInternal(
     }
   }
 
-  function advanceExperimentalHammerForCompletion(
-    branchesAtCompletion: readonly RewardBranchState[],
+  function advanceExperimentalHammerForEndEffects(
+    branchesAtEndEffects: readonly RewardBranchState[],
     owner: SemanticAddress,
     sequence: number,
   ): readonly RewardBranchState[] {
     return Object.freeze(
-      branchesAtCompletion.map((branch) => {
+      branchesAtEndEffects.map((branch) => {
         const advanced = advanceExperimentalHammers(branch.keepsakes);
         if (advanced.state === branch.keepsakes) return branch;
         if (advanced.expired.length === 0)
@@ -1446,7 +1446,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
               owner,
               acquisitionRole: 'experimentalHammerExpiry',
               sequence,
-              acquisitionPoint: 'encounterCompleted',
+              acquisitionPoint: 'encounterEndEffectsApplied',
               traitKey: expired.traitKey,
               acquisitionIdentity: expired.acquisitionIdentity,
             }),
@@ -4514,13 +4514,6 @@ export function evaluateBiomeRewardsAssemblyInternal(
             ? undefined
             : catalog.rooms.byKey[(room ?? completionRoom)!.gameName];
         if (
-          event.kind === 'encounterCompleted' &&
-          declaration?.advancesExperimentalHammerUses === true &&
-          !(room?.lifecycleProfileKey === 'FieldsCombatRoom' && event.phaseKey === 'Passive')
-        ) {
-          branches = advanceExperimentalHammerForCompletion(branches, event.origin, event.sequence);
-        }
-        if (
           event.kind === 'encounterInteractionReached' &&
           event.interaction === 'gorgon' &&
           room !== undefined &&
@@ -4774,26 +4767,6 @@ export function evaluateBiomeRewardsAssemblyInternal(
           );
           break;
         }
-        if (event.kind === 'encounterCompleted') {
-          // Encounter clocks expire before any later reward delivery at this
-          // same checkpoint, including ordinary Fig Leaf skips. The one
-          // exception is a skipped phase that explicitly suppresses end
-          // effects (the P cascade); it did not execute this checkpoint.
-          const eventPhaseIndex =
-            room?.encounterPhases.findIndex((candidate) => candidate.slotKey === event.phaseKey) ??
-            -1;
-          const skipOwnerIndex =
-            room?.encounterPhases.findIndex(
-              (candidate) => candidate.figLeafSkip === true && candidate.canEncounterSkip,
-            ) ?? -1;
-          const suppressSkippedCascadeClock =
-            event.execution === 'skippedByFigLeaf' &&
-            skipOwnerIndex >= 0 &&
-            eventPhaseIndex >= skipOwnerIndex &&
-            room?.encounterPhases[skipOwnerIndex]?.skipEndEncounterEffects === true;
-          if (!suppressSkippedCascadeClock)
-            branches = advanceChaosClockAt(catalog, branches, event.sequence, 'encounters');
-        }
         const roomView = views.get(semanticAddressKey(event.origin));
         if (room === undefined || declaration === undefined || roomView === undefined) {
           branches = advanceRewardBranches(branches, event.sequence);
@@ -4958,6 +4931,29 @@ export function evaluateBiomeRewardsAssemblyInternal(
           }
           branches = Object.freeze(settlements.map((settlement) => settlement.branch));
         }
+        break;
+      }
+      case 'encounterEndEffectsApplied': {
+        const room = rooms.get(semanticAddressKey(event.origin));
+        const completionRoom =
+          event.origin.kind === 'completionRoom'
+            ? snapshot.completionRooms?.find(
+                (candidate) =>
+                  semanticAddressKey(candidate.origin) === semanticAddressKey(event.origin),
+              )
+            : undefined;
+        const declaration =
+          room === undefined && completionRoom === undefined
+            ? undefined
+            : catalog.rooms.byKey[(room ?? completionRoom)!.gameName];
+        if (
+          declaration?.advancesExperimentalHammerUses === true &&
+          !(room?.lifecycleProfileKey === 'FieldsCombatRoom' && event.phaseKey === 'Passive')
+        ) {
+          branches = advanceExperimentalHammerForEndEffects(branches, event.origin, event.sequence);
+        }
+        branches = advanceChaosClockAt(catalog, branches, event.sequence, 'encounters');
+        branches = advanceRewardBranches(branches, event.sequence);
         break;
       }
       case 'acquisitionPointReached': {

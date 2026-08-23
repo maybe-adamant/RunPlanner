@@ -260,6 +260,11 @@ function foldHistoryEventStream(
   const encounterEnvelopesByOrigin = new Map<string, string>();
   const recordedEncounters = new Map<string, EncounterHistoryEntry>();
   const activeEncounters = new Map<string, EncounterHistoryEntry>();
+  const completedEncounters = new Map<
+    string,
+    Extract<HistoryEvent, { readonly kind: 'encounterCompleted' }>
+  >();
+  const endEffectsApplied = new Set<string>();
   const advancedEncounterDepths = new Set<string>();
   const activeRequiredObjects = new Set<string>();
   const viewsByOrigin = new Map<string, MutableRoomViews>();
@@ -623,7 +628,24 @@ function foldHistoryEventStream(
           );
         }
         activeEncounters.delete(key);
+        completedEncounters.set(key, event);
         ledgers.encounterCompletions.push(Object.freeze({ ...started, sequence: event.sequence }));
+        break;
+      }
+      case 'encounterEndEffectsApplied': {
+        const key = encounterKey(event);
+        const completion = completedEncounters.get(key);
+        if (
+          completion === undefined ||
+          completion.execution !== event.execution ||
+          completion.figLeafSkipOwner !== event.figLeafSkipOwner ||
+          endEffectsApplied.has(key)
+        ) {
+          throw new HistoryFoldContractError(
+            `${event.phaseKey} applied duplicate or unmatched encounter end effects`,
+          );
+        }
+        endEffectsApplied.add(key);
         break;
       }
       case 'requiredObjectCompleted': {

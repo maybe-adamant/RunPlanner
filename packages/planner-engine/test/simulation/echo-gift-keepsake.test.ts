@@ -426,7 +426,7 @@ describe('Echo Gift Gift Gift', () => {
         owner: replayOwner,
         acquisitionRole: 'experimentalHammerExpiry',
         sequence: 20,
-        acquisitionPoint: 'encounterCompleted',
+        acquisitionPoint: 'encounterEndEffectsApplied',
         traitKey: 'StaffLongAttackTrait',
         acquisitionIdentity: existingIdentity,
       },

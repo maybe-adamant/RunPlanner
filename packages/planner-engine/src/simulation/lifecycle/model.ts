@@ -76,6 +76,16 @@ export type RoomLifecycleEvent =
       readonly figLeafSkipOwner: boolean;
     })
   | (RoomLifecycleEventBase & {
+      /**
+       * The resolved encounter's EndEncounterEffects completed. Noncombat and
+       * source-declared skip-end-effect phases deliberately do not emit it.
+       */
+      readonly kind: 'encounterEndEffectsApplied';
+      readonly phaseKey: string;
+      readonly execution: 'normal' | 'skippedByFigLeaf';
+      readonly figLeafSkipOwner: boolean;
+    })
+  | (RoomLifecycleEventBase & {
       /** Fixed completion-room seam after a biome Boss dies, before encounter-end effects. */
       readonly kind: 'bossDefeated';
       readonly phaseKey: string;
