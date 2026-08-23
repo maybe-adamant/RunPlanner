@@ -284,12 +284,16 @@ Choosing Time Piece or Artificer before normal pickup does not also roll Sea
 Star: those handlers destroy or replace the source instead of calling the
 normal consumable-use branch.
 
-Artificer preserves the source's required/optional participation and carries
-forward `CanDuplicate` only when the generated replacement is itself
-duplication-capable. A duplication-capable source converted into a compatible
-replacement can consequently roll Sea Star when that replacement is later
-picked up; a non-duplicable source cannot gain Sea Star eligibility merely by
-conversion.
+Artificer does not preserve optional participation. Its ordinary replacement
+producer creates a required Run Progress reward, even when the transformed
+source was optional. It carries forward the source's `CanDuplicate` value only
+when the generated replacement is itself duplication-capable. A
+duplication-capable source converted into a compatible replacement can
+consequently roll Sea Star when that replacement is later picked up; a
+non-duplicable source cannot gain Sea Star eligibility merely by conversion.
+If Sea Star already retained the source, that same instance has
+`CanDuplicate = false`, so a later Artificer replacement cannot regain the
+eligibility.
 
 ### Loot branch: create a fresh required object
 
@@ -301,8 +305,11 @@ loot object of the same game name at the old location. The new object:
 - receives freshly generated choice/context data;
 - has `CanDuplicate = false`; and
 - does not inherit the source object's price, shop status, generated options,
-  rarity context, stack payload, or `DoesNotBlockExit` state unless the fresh
-  declaration and `CreateLoot` defaults independently provide them.
+  rarity context, stack payload, or `DoesNotBlockExit` state.
+
+The Sea Star call supplies no `DoesNotBlockExit` override, so this fresh Pom is
+unconditionally required. A required source Pom therefore remains required,
+while an optional or paid source Pom produces a fresh required second Pom.
 
 This second object also cannot recursively trigger Sea Star. It can still use
 capabilities owned by its fresh declaration; for example, a fresh Pom remains
@@ -351,12 +358,38 @@ These are normally optional room objects. `GiveRandomConsumables` has a narrow
 Dream Run exception that makes them required when the current room explicitly
 permits a Dream reward.
 
+The producer is started after the trait has been inserted into the run and
+waits `0.5` seconds before creating the objects in the declaration order above.
+A future teleporting-room model must therefore be able to end the room before
+these delayed pickups materialize. This audit does not add Dream Dive or
+teleport-room state to the current Planner.
+
 The Meta Currency entry explicitly overrides `MetaConversionEligible` to
 false, and `GiveRandomConsumables` applies that override to the spawned
 object. The money and minor-heal entries do not carry Artificer eligibility.
 No immediate Buried Treasure pickup is therefore an Artificer candidate.
 
-That does not make the trait permanently effectless:
+The exact supported capability matrix is:
+
+| Generated pickup               | Count | Sea Star | Echo last reward | Time Piece | Artificer |
+| ------------------------------ | ----: | -------- | ---------------- | ---------- | --------- |
+| `RoomMoneySmallDrop`           |     1 | yes      | yes              | no         | no        |
+| `RoomMoneyTinyDrop`            |     2 | yes      | no               | no         | no        |
+| `HealDropMinor`                |     2 | no       | no               | no         | no        |
+| conditional `MetaCurrencyDrop` |     1 | yes      | yes              | yes        | no        |
+
+Like other run-progress `MetaCurrencyDrop` objects, the Buried Treasure Bones
+can add Max Magick when the corresponding external World Upgrade is active.
+This is not a Buried-specific producer effect. The Planner treats that numeric
+Magick amount as simulation-neutral, so the generated pickup reuses ordinary
+Bones history without adding a profile-progression input or Max-Magick ledger.
+
+Buried Treasure also multiplies later Money, Ashes, Psyche, and Bones amounts.
+Those numeric resource quantities are outside the current simulation, so this
+ongoing multiplier remains recorded trait history without another run-state
+ledger. It does not change the generated-pickup chronology above.
+
+These contacts mean the trait is not effectless:
 
 - eligible money and Meta Currency objects can interact with Sea Star;
 - eligible pickups can affect Echo's last-reward state;
@@ -374,8 +407,9 @@ action.
 
 Quick Buck calls the same `GiveRandomConsumables` producer on acquisition. It
 uses `NotRequiredPickup = true` and creates exactly one `RoomMoneyDrop` after a
-short presentation delay. The same narrow Dream Run required-object exception
-described for Buried Treasure applies.
+`0.2`-second delay. The same narrow Dream Run required-object exception
+described for Buried Treasure applies, as does the future teleport-before-spawn
+boundary.
 
 The generated money object is:
 
