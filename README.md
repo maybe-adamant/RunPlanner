@@ -207,6 +207,7 @@ copied elsewhere.
   [Shop and Well interaction lifecycle](docs/audits/SHOP_AND_WELL_INTERACTION_LIFECYCLE.md),
   [Stygian Well audit](docs/audits/STYGIAN_WELL_GAME_DATA_AUDIT.md),
   [Shrine of Hermes delivery audit](docs/audits/HERMES_SHRINE_DELIVERY_GAME_DATA_AUDIT.md),
+  [run-impacting trait effects audit](docs/audits/RUN_IMPACTING_TRAIT_EFFECTS_GAME_DATA_AUDIT.md),
   [natural-resource element audit](docs/audits/NATURAL_RESOURCE_ELEMENT_GAME_DATA_AUDIT.md),
   [Ephyra side-room findings](docs/audits/N_SIDE_ROOM_FINDINGS.md),
   [encounter selection and composition findings](docs/audits/ENCOUNTER_SELECTION_AND_COMPOSITION_FINDINGS.md),
