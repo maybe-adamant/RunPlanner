@@ -929,6 +929,21 @@ target domain; a missing or stale selected target remains visible for repair
 and keeps Save disabled. React does not infer a target, traverse equipped
 history, or switch on Bridal Glow, Latest Model, Icarus, or Hammer names.
 
+Natural Selection reuses the existing selected-trait compound-outcome language:
+one complete ordered target sequence is edited beneath the selected option and
+saved through the ordinary `ReplaceTraitOffer` command. The engine capability
+decides the next legal round-robin position and whether a short sequence is
+complete; React does not derive target exclusion or early exhaustion. Ransom
+offers render a read-only engine-derived removal/level preview with no
+persisted result or editor. Steady Growth renders a fixed automatic timeline
+effect with the existing contextual target picker; it is not a Pom, a Room
+Action, or a draggable/removable authored effect. The distinct
+`previouslyPicked` finding uses the normal trait-offer feedback path.
+
+Run State presents Steady Growth's derived progress and rarity interval from
+the equipped trait ledger; React does not count checkpoints or predict future
+thresholds.
+
 Picker activation evaluates one focused option domain with every materialized
 sibling held fixed. Sibling findings therefore remain visible in the complete
 feedback panel without falsely disabling unrelated focused repairs. Trait and

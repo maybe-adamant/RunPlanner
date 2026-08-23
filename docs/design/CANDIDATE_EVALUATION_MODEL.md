@@ -598,6 +598,21 @@ repairable in the application picker. Target enumeration and selected-target
 validation share the engine predicate, including god-trait superchargeability
 and Hammer Rank-II capability.
 
+The same project-bound candidate session exposes the three run-impacting
+trait products. Natural Selection's capability evaluates the next position of
+one ordered one-to-eight target sequence against the complete pre-acquisition
+frontier, including round completion and cooldown-capped target removal; it
+does not expose eight independent Pom domains. A selected Ransom exposes only a
+data-only current-frontier assessment—removed keys, distinct count, level
+bonus, buffed targets, and resulting history—because no authored random result
+exists. Steady Growth exposes reached threshold owners and an opaque rarity
+target capability. An empty target domain is a legal no-op; a reached nonempty
+domain requires a target and retains a missing or stale value for repair.
+
+These products are branch-local and engine-owned. The application cannot
+recalculate provider membership, round-robin eligibility, encounter progress,
+rarity targets, or Ransom totals.
+
 For each fresh Olympian or Hermes option, the captured pre-acquisition context
 also retains the exact reached room, generated reward/Shop-item witness,
 active Arcana ranks, and active-Proper fact needed to derive the offer-local

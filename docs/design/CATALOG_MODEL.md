@@ -779,6 +779,31 @@ declarations support it. Icarus Attack and Special traits express their
 occupied-slot prerequisites through the ordinary slot vocabulary instead of
 naming other providers' traits.
 
+Four run-impacting selected dispositions are also closed declaration facts.
+Natural Selection owns the five ordinary boon slots and eight-level
+round-robin result; Queen's and King's Ransom own opposite Hera/Zeus provider
+indices and a `4`-level gain per removed identity; and Steady Growth owns its
+rarity-dependent qualifying-end-effect intervals (`6/5/4/3` for
+Common/Rare/Epic/Heroic). These declarations are normalized as explicit
+dispositions and are not a generic effect registry. The three source
+`BlockOfferIfPreviouslyPicked` identities—Bridal Glow, Buried Treasure, and
+Cherished Heirloom—carry a declaration-owned one-time-offer flag that the
+engine evaluates from selected-trait history, including after removal.
+
+The three cooldown-capped Hephaestus core traits additionally own complete
+maximum in-run upgrade levels by equipped rarity:
+
+| Trait                   | Common | Rare | Epic | Heroic |
+| ----------------------- | -----: | ---: | ---: | -----: |
+| `HephaestusWeaponBoon`  |      9 |    7 |    5 |      3 |
+| `HephaestusSpecialBoon` |     11 |    9 |    7 |      5 |
+| `HephaestusSprintBoon`  |      8 |    7 |    6 |      5 |
+
+One engine predicate consumes those declaration values for Pom-derived level
+targets, Natural Selection, Bridal Glow, and Steady Growth. Proper Upbringing's
+direct Common-to-Rare floor intentionally remains outside that in-run
+effectiveness predicate.
+
 Field NPCs use the explicit `fieldNpc` provider kind. Character identity does
 not make Artemis or Athena ordinary Olympian providers: field-NPC offers do not
 participate in the first-Olympian composition rule, ordinary-slot replacement

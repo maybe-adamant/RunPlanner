@@ -43,10 +43,11 @@ Primary evidence comes from the installed game scripts:
   `BlockGiftBoons` fact.
 
 The audit uses the current progressed, non-bounty, non-dream baseline already
-established by the reward model. Selene Hex/Talent progression and Chaos
-blessings/curses are outside this inventory and are audited separately in
-[Selene spell game data](SELENE_SPELL_GAME_DATA_AUDIT.md) and
-[Chaos trait game data](CHAOS_TRAIT_GAME_DATA_AUDIT.md). Keepsakes, Arcana
+established by the reward model. Selene spell progression and Chaos
+blessing/curse effect details are audited separately in [Selene spell game
+data](SELENE_SPELL_GAME_DATA_AUDIT.md) and [Chaos trait game
+data](CHAOS_TRAIT_GAME_DATA_AUDIT.md), while their SpellDrop and Chaos provider
+identities are included in the normalized catalog inventory. Keepsakes, Arcana
 forcing, and prior-run Echo payload content are likewise outside this
 inventory.
 
@@ -273,7 +274,8 @@ equipped domains; the comment does not override that declaration. Its
 declaration also requires one of `SpellLaserTrait`, `SpellLeapTrait`, `SpellSummonTrait`,
 `SpellMeteorTrait`, `SpellTransformTrait`, `SpellMoonBeamTrait`, or
 `SpellPolymorphTrait`, plus the `ArtemisGrantsReward01` narrative flag. The
-spell operands remain deferred evidence, not placeholder production traits.
+SpellDrop is the production provider for these eight spell identities; their
+progression and effect details remain in the separate Selene audit.
 All nine contribute one `Air` or `Earth` element as inherited by the source
 trait declarations; `FocusCritBoon` is explicitly non-stacking. Artemis has no
 Olympian priority/replacement policy and uses the non-Olympian field-NPC
@@ -1001,15 +1003,17 @@ requires the target's current `UnmodifiedCooldown` to be strictly greater than
 `2`. The source cooldown curves reduce to these exact pre-acquisition level
 limits:
 
-| Target                                       |   Common |    Rare |    Epic |
-| -------------------------------------------- | -------: | ------: | ------: |
-| Hephaestus Attack — `HephaestusWeaponBoon`   |  level 9 | level 7 | level 5 |
-| Hephaestus Special — `HephaestusSpecialBoon` | level 11 | level 9 | level 7 |
-| Hephaestus Sprint — `HephaestusSprintBoon`   |  level 8 | level 7 | level 6 |
+| Target                                       |   Common |    Rare |    Epic |  Heroic |
+| -------------------------------------------- | -------: | ------: | ------: | ------: |
+| Hephaestus Attack — `HephaestusWeaponBoon`   |  level 9 | level 7 | level 5 | level 3 |
+| Hephaestus Special — `HephaestusSpecialBoon` | level 11 | level 9 | level 7 | level 5 |
+| Hephaestus Sprint — `HephaestusSprintBoon`   |  level 8 | level 7 | level 6 | level 5 |
 
-Each cell is the highest still-eligible level at that rarity. Heroic is always
-ineligible because the generic next-rarity requirement fails before the
-cooldown branch. These limits are a narrow offer-legality mapping; they do not
+Each cell is the highest still-effective level at that rarity. Pom and Natural
+Selection use these caps for level-up eligibility, including the Heroic cells.
+Bridal Glow and Steady Growth also consult the same caps when selecting a
+rarity-promotion target, but their separate next-rarity requirement excludes a
+Heroic target. These limits are a narrow offer-legality mapping; they do not
 require the planner to simulate combat cooldown values.
 
 ### Other direct condition dispositions
@@ -1178,10 +1182,12 @@ the preceding rows come from `TraitRequirements`.
 9. Loot/use history remains independently meaningful. This inventory supports
    an additive trait event ledger and folded equipped-trait state; it does not
    justify replacing the existing exact loot ledgers.
-10. The closure inventory contains 21 givers, 386 giver-to-trait memberships,
-    351 unique trait keys, and 76 in-scope traits with positive
-    equipped-trait prerequisites. The broader source graph contains 77 such
-    owners after retaining the remaining deferred Athena spell-state rows.
+10. The closure inventory contains 23 givers, 427 giver-to-trait memberships,
+    419 unique included trait declarations, and 76 in-scope traits with
+    positive equipped-trait prerequisites. Those memberships comprise 335
+    memberships across 22 non-Hammer givers plus 92 `WeaponUpgrade`
+    memberships. The broader source graph contains 77 such owners after
+    retaining the remaining deferred Athena talent-state rows.
 
 ## Olympian Replacement Source Closure
 
@@ -1214,26 +1220,29 @@ The supported trait-offer catalog consumes the following declaration facts
 from the installed scripts. These are normalized without
 moving any lifecycle, authored-state, or simulation policy into declarations:
 
-| Normalized fact               | Source authority and closure result                                                                                                                                                                                                                                                                                     |
-| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| trait labels                  | English `TraitText.en.sjson` `DisplayName` for every included Olympian, Hermes, field-NPC, and Hammer key                                                                                                                                                                                                               |
-| fresh/equipped rarity domains | player-facing boon rarity only: ordinary scalable offers are `Common/Rare/Epic`, equipped state retains `Heroic`, and Legendary/Duo retain their sole rarity; Hammers and the audited rarityless NPC providers use `none`, while their independent Hammer rank or internal NPC scaling stays separate                   |
-| ordinary boon slots           | direct `Slot` declarations, limited to `Melee`, `Secondary`, `Ranged`, `Rush`, and `Mana`                                                                                                                                                                                                                               |
-| element contributions         | inherited `AirBoon`, `FireBoon`, `EarthBoon`, `WaterBoon`, and `AetherBoon` facts plus direct multi-element declarations; base elements are `Earth`, `Air`, `Fire`, and `Water`                                                                                                                                         |
-| god-trait/rareness flags      | the core-god versus broader boon-rarity distinction plus inherited `LegendaryTrait`, `SynergyTrait`, and `UnityTrait` facts, including `BlockStacking`, `BlockInRunRarify`, and `ExcludeFromRarityCount`; Hammer traits belong to neither trait classification                                                          |
-| self-exclusion                | no included trait declares a distinct `RequiredFalseTrait`; the optional field remains absent rather than being invented                                                                                                                                                                                                |
-| offer requirements            | all 76 in-scope positive dependency rows are retained as exact game-key operands (aliases are expanded from `LinkedTraitData`); the broader source graph has 77 owners including the remaining deferred Athena spell-state rows; Hammer and cast-family `HasNone` predicates are explicit negative requirements         |
-| element thresholds            | all ten audited infusion thresholds are represented: `ElementalUnifiedBoon`, `ElementalRarityUpgradeBoon`, `ElementalDamageBoon`, `ElementalOlympianDamageBoon`, `ElementalBaseDamageBoon`, `ElementalRallyBoon`, `ElementalDamageFloorBoon`, `ElementalDodgeBoon`, `ElementalDamageCapBoon`, and `ElementalHealthBoon` |
-| rarity-derived predicates     | `CommonGlobalDamageBoon` requires zero derived Common god-boon count; `BoonGrowthBoon` and `BoonDecayBoon` retain distinct rarifiable and superchargeable predicates                                                                                                                                                    |
-| Pom/level facts               | the plain core-god plus non-`BlockStacking` target domain, visible `+1`/`+2`/`+3` Pom surfaces, exact random `+1` target, folded equipped level, replacement transfer, Bridal Glow's rarity-scaled grant and missing-stack adjustment, and its three exact Hephaestus limits                                            |
-| offer context                 | `devotionNoDuo` blocks `Duo` rarity; `blockGiftBoons` consumes the room-owned `BlockGiftBoons` flag for `PlantHealthBoon`, `RoomRewardBonusBoon`, and `MoneyMultiplierBoon`; no trait names a room                                                                                                                      |
+| Normalized fact               | Source authority and closure result                                                                                                                                                                                                                                                                                                                                                    |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| trait labels                  | English `TraitText.en.sjson` `DisplayName` for every included Olympian, Hermes, field-NPC, and Hammer key                                                                                                                                                                                                                                                                              |
+| fresh/equipped rarity domains | player-facing boon rarity only: ordinary scalable offers are `Common/Rare/Epic`, equipped state retains `Heroic`, and Legendary/Duo retain their sole rarity; Hammers and the audited rarityless NPC providers use `none`, while their independent Hammer rank or internal NPC scaling stays separate                                                                                  |
+| ordinary boon slots           | direct `Slot` declarations, limited to `Melee`, `Secondary`, `Ranged`, `Rush`, and `Mana`                                                                                                                                                                                                                                                                                              |
+| element contributions         | inherited `AirBoon`, `FireBoon`, `EarthBoon`, `WaterBoon`, and `AetherBoon` facts plus direct multi-element declarations; base elements are `Earth`, `Air`, `Fire`, and `Water`                                                                                                                                                                                                        |
+| god-trait/rareness flags      | the core-god versus broader boon-rarity distinction plus inherited `LegendaryTrait`, `SynergyTrait`, and `UnityTrait` facts, including `BlockStacking`, `BlockInRunRarify`, and `ExcludeFromRarityCount`; Hammer traits belong to neither trait classification                                                                                                                         |
+| self-exclusion                | no included trait declares a distinct `RequiredFalseTrait`; the optional field remains absent rather than being invented                                                                                                                                                                                                                                                               |
+| offer requirements            | all 76 in-scope positive dependency rows are retained as exact game-key operands (aliases are expanded from `LinkedTraitData`); the broader source graph has 77 owners including the remaining deferred Athena talent-state rows; Hammer and cast-family `HasNone` predicates are explicit negative requirements                                                                       |
+| element thresholds            | all ten audited infusion thresholds are represented: `ElementalUnifiedBoon`, `ElementalRarityUpgradeBoon`, `ElementalDamageBoon`, `ElementalOlympianDamageBoon`, `ElementalBaseDamageBoon`, `ElementalRallyBoon`, `ElementalDamageFloorBoon`, `ElementalDodgeBoon`, `ElementalDamageCapBoon`, and `ElementalHealthBoon`                                                                |
+| rarity-derived predicates     | `CommonGlobalDamageBoon` requires zero derived Common god-boon count; `BoonGrowthBoon` and `BoonDecayBoon` retain distinct rarifiable and superchargeable predicates                                                                                                                                                                                                                   |
+| Pom/level facts               | the plain core-god plus non-`BlockStacking` target domain, visible `+1`/`+2`/`+3` Pom surfaces, exact random `+1` target, folded equipped level, replacement transfer, Natural Selection's ordered eight-level allocation, Ransom level mutations, Bridal Glow's rarity-scaled grant and missing-stack adjustment, Steady Growth rarity targets, and the four-rarity Hephaestus limits |
+| offer context                 | `devotionNoDuo` blocks `Duo` rarity; `blockGiftBoons` consumes the room-owned `BlockGiftBoons` flag for `PlantHealthBoon`, `RoomRewardBonusBoon`, and `MoneyMultiplierBoon`; no trait names a room                                                                                                                                                                                     |
 
-The current normalized inventory has six weapons, 24 weapon/aspect pairs, 376
-unique included trait declarations, 294 memberships across 20 non-Hammer
-givers, 92 Hammer memberships under the twenty-first giver, and one
-loadout-keyed Hammer default triple for each of the 24 pairs. Deferred
-spell/talent operands remain exact keys
-only. Artemis, Athena, and Icarus are the modeled field-NPC providers;
+The current normalized inventory has six weapons, 24 weapon/aspect pairs, 23
+givers, 427 giver-to-trait memberships, and 419 unique included trait
+declarations. Those memberships comprise 335 across 22 non-Hammer givers plus
+92 `WeaponUpgrade` memberships, with one loadout-keyed Hammer default triple
+for each of the 24 pairs. SpellDrop is an eight-trait production provider and
+Chaos is a 33-identity paired provider; their detailed spell and
+curse/blessing effects remain in the separate audits. The nine Athena talent
+operands remain exact deferred keys only. Artemis, Athena, and Icarus are the
+modeled field-NPC providers;
 Arachne, Medea, Hades, Dionysus, Narcissus, and Circe are modeled Story
 providers. Narcissus's nine choices remain effect-backed rather than persistent
 inventory. Circe's nine rarityless choices are production catalog entries;
@@ -1241,9 +1250,7 @@ its Red, Lapis, and Black Night target behavior is owned by the Arcana/Fear
 simulation contract. Echo's complete eight-choice inventory is production
 catalog data. All eight outer identities are player-rarityless and their
 direct, replay, pending-Shop, and captured-keepsake dispositions are implemented
-through their owning authorities. Spell
-and Talent providers remain outside
-the production trait catalog. Other source
+through their owning authorities. Other source
 predicates retain the dispositions above or the previously recorded
 progressed-baseline and mechanical-effect deferrals. Newly discovered
 predicates are explicitly listed above rather than covered by a no-unlisted

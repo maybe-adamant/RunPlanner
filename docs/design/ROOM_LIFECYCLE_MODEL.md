@@ -147,10 +147,11 @@ it is not an authored Room Occurrence. Its player-facing timeline is `Room
 entered -> Start encounter -> Boss defeated -> End encounter -> Cleanup · Doors
 open`. `Boss defeated` is an exact derived seam before generic encounter-end
 effects. When Judgment is active, it is one engine-owned fixed effect at that
-seam, not a Room Action or persisted ordering value. End encounter remains the
-later seam for post-encounter delivery. Its exact existing Boss-completion
-Arcana address owns the editor, candidate frontier, finding, and semantic
-command.
+seam, not a Room Action or persisted ordering value. Its exact existing
+Boss-completion Arcana address owns the editor, candidate frontier, finding,
+and semantic command. End encounter remains the later seam for post-encounter
+delivery. A reached Steady Growth threshold then settles after End encounter
+and before Cleanup.
 
 The derived Postboss completion uses the same timeline presentation without a
 combat interval. Its active nonfinal shape is `Room entered -> ranked actions
@@ -594,6 +595,13 @@ and lifecycle in authored `enteredOrdinal` order before the corresponding
 parent restore. The same ordered history therefore supports ordinary rooms,
 O/P/H multi-phase rooms, and N side-room occurrences without a second
 encounter engine.
+
+Steady Growth consumes this existing `encounterEndEffectsApplied` seam. Each
+qualifying emitted event advances every equipped Steady Growth acquisition
+once; source-declared skipped subrooms do not advance it. A reached threshold
+settles its authored rarity target immediately at that checkpoint and publishes
+one fixed automatic timeline effect after End encounter. It is not a movable
+Room Action, and it does not introduce a second lifecycle clock or scheduler.
 
 ## Operations, Effects, and Events
 

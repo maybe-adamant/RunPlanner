@@ -2,8 +2,11 @@
 
 ## Status and scope
 
-This is an implementation-free source audit for seven trait identities that the Planner
-currently records in trait history without reproducing their full run effects:
+This is a source audit for seven trait identities. The source facts below remain
+authoritative; the Planner now reproduces the bounded Natural Selection, Queen's
+Ransom, King's Ransom, and Steady Growth effects described here. Sea Star, the
+bounded Buried Treasure contact, and Quick Buck remain deferred generated-pickup
+effects:
 
 - Natural Selection (`GoodStuffBoon`);
 - Queen's Ransom (`SuperSacrificeBoonHera`);
@@ -89,13 +92,11 @@ levels among the surviving targets.
 
 ### Planner disposition
 
-Natural Selection is not faithfully represented by eight unconstrained Pom
-target choices. A future authored result should represent one legal source
-distribution from the acquisition frontier: the exact eligible trait set, one
-initial ordering or its equivalent legal final allocation, and the resulting
-level changes. Existing trait level history is the natural destination for
-those changes; no separate permanent Natural Selection state is needed after
-the acquisition resolves.
+Natural Selection is represented by one authored legal source distribution from
+the acquisition frontier: the ordered successful allocation and its resulting
+level changes. It is not eight unconstrained Pom choices. Existing trait level
+history owns the settled mutations; no separate permanent Natural Selection
+state remains after acquisition.
 
 ## Queen's Ransom and King's Ransom
 
@@ -155,10 +156,10 @@ historical run facts.
 ### Planner disposition
 
 Both Ransoms are deterministic transforms of the exact current trait frontier
-at acquisition. The Planner should derive the removed set from declaration
-provider membership, not from acquisition origin, then apply ordinary trait
-removal semantics and the resulting `4 x N` level increase to every eligible
-buff-provider trait. No additional random authored result is required.
+at acquisition. The Planner derives the removed set from declaration provider
+membership, not from acquisition origin, then applies ordinary trait removal
+semantics and the resulting `4 x N` level increase to every eligible
+buff-provider trait. No additional random authored result is persisted.
 
 Trait removal is the material new history operation. Removal must preserve the
 past acquisition/provider evidence while changing the current equipped trait
@@ -226,11 +227,11 @@ pickup or player choice at the threshold.
 
 ### Planner disposition
 
-Steady Growth should retain its interval progress in derived trait history and
-advance at qualifying encounter-end-effect checkpoints. At each threshold,
-the selected eligible rarity target is the authored random outcome; applying
-that result is forced and automatic. The existing rarity replacement semantics
-should own the actual Common-to-Rare, Rare-to-Epic, or Epic-to-Heroic change.
+Steady Growth retains interval progress in derived trait history and advances
+at qualifying encounter-end-effect checkpoints. At each threshold, the
+selected eligible rarity target is the authored random outcome; applying that
+result is forced and automatic. Existing rarity replacement semantics own the
+actual Common-to-Rare, Rare-to-Epic, or Epic-to-Heroic change.
 
 ## Sea Star
 
@@ -396,23 +397,31 @@ action now. The Dream Dive boss teleport edge remains recorded by
 
 ## Current Planner boundary
 
-The catalog currently declares all seven trait identities and their offer
-requirements, and ordinary selected-trait history records their acquisition.
-The Planner also already has reusable primitives for trait levels, rarity
-replacement, provider membership, encounter-end-effect events, Artificer,
-Time Piece, and required versus optional room actions.
+The catalog declares all seven trait identities and their offer requirements,
+and ordinary selected-trait history records their acquisition. The Planner
+also owns reusable primitives for trait levels, rarity replacement, provider
+membership, encounter-end-effect events, Artificer, Time Piece, and required
+versus optional room actions.
 
-The effects audited here are not yet reproduced:
+The run-impacting trait delivery now reproduces the three implemented effects
+in this audit: Natural Selection, the two Ransoms, and Steady Growth. Natural
+Selection persists one legal ordered allocation and folds its
+level mutations; Ransoms derive current provider-indexed removals and the
+`4 x removedCount` level gain; and Steady Growth derives its acquisition-
+identity clock from qualifying `encounterEndEffectsApplied` checkpoints and
+settles one authored rarity target at each reached threshold. The three
+declaration-owned `BlockOfferIfPreviouslyPicked` traits retain selected-offer
+history after removal, matching the source guard without adding a mutable
+picked ledger. The shared Hephaestus rarity/level limits are declaration facts
+consumed by Pom-derived and in-run rarity-target paths, while Proper Upbringing
+keeps its source-specific Common-to-Rare behavior.
 
-- Natural Selection does not distribute its eight levels;
-- Ransoms do not remove traits or apply the derived level gain;
-- Steady Growth does not retain or mature its interval clock;
-- Sea Star does not publish or settle a duplicate pickup;
-- Buried Treasure does not create its generated pickup set; and
-- Quick Buck does not create its generated money pickup.
-
-Until those effects are implemented, the trait identities remain valid run
-history but their resulting simulated state is incomplete.
+Sea Star does not yet publish or settle a duplicate pickup. Buried Treasure
+does not yet create its generated pickup set, and Quick Buck does not yet
+create its generated money pickup. Those effects remain deliberately deferred
+until the shared generated-pickup, optional-acquisition, Sea Star, Echo, and
+money chronology is modeled; their source contacts and Artificer boundary are
+retained above.
 
 ## Bounded follow-up questions
 

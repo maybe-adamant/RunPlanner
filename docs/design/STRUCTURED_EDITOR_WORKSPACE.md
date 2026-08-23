@@ -149,6 +149,9 @@ progressive Arcana/Fear ledger; the workspace does not infer it from the route
 loadout or room list. Keepsake presentation joins the exact engine history to
 catalog labels as a biome-by-biome chronology; React does not reconstruct that
 sequence from current and removed inventories.
+Steady Growth progress and its rarity-dependent interval are joined from the
+same equipped-trait snapshot; the workspace does not count lifecycle events or
+predict a future automatic target.
 
 Run State remains available through the covered lifecycle checkpoint that
 precedes or contains the first blocking value and unavailable afterward. The
@@ -896,6 +899,17 @@ for returning from fallback and appending a position. Fallback owns no
 option-local expected leaf, and removing a trailing row never creates a
 placeholder owner.
 
+The same leaf owns the supported run-impacting trait contacts. Natural
+Selection uses the shared compound-outcome presentation for one ordered
+one-to-eight target sequence and saves it as one complete trait-offer edit;
+the bound engine domain decides round-robin continuation and exhaustion.
+Ransoms expose a read-only derived preview of removed keys, count, level gain,
+and buffed targets. Steady Growth exposes one fixed automatic timeline row at
+the reached `encounterEndEffectsApplied` checkpoint and binds a rarity-target
+picker only when the engine publishes a nonempty domain. The row has no order,
+move, remove, or participation control. Retained invalid values remain at the
+exact semantic owner, while dormant and unreached phases publish no control.
+
 A selected Circe effect option adds one exact resolution child beneath the
 same trait leaf. The workspace publishes its value, exact marker and finding
 destination, and a lazy engine-backed domain loader; it does not expose the
@@ -904,7 +918,8 @@ domain product rendered by the shared trait surface. Switching a draft option
 updates this child in the existing dialog, while dormant detail remains owned
 by authored state. A reached derived Boss completion renders its engine-owned
 fixed lifecycle timeline: `Room entered -> Start encounter -> Boss defeated ->
-End encounter -> Cleanup · Doors open`. Judgment, when active, is attached to
+End encounter -> [Steady Growth, when reached] -> Cleanup · Doors open`.
+Judgment, when active, is attached to
 the exact `Boss defeated` seam and launches its child control from the existing
 completion address. It is not a room occurrence, Room Action, or route-settings
 substitute. Postboss uses the same Room Timeline visual language without combat

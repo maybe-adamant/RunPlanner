@@ -444,6 +444,27 @@ Circe-removable Vow. An invalid exact outcome blocks at its child address,
 does not equip the effect-backed trait, and retains its pre-effect candidate
 context for repair.
 
+Run-impacting trait effects use the same chronological trait fold. Natural
+Selection equips its selected identity and appends the authored one-to-eight
+level-mutation sequence against one immutable pre-acquisition frontier; its
+round-robin legality and Hephaestus effectiveness limits are engine policy.
+Each Ransom first equips, then removes every current trait key in the opposite
+provider index and applies `4 x removedCount` to every surviving eligible trait
+in the buffed provider index. Removal changes current equipped facts without
+erasing acquisition, provider, Denial, or loot history. Steady Growth retains
+only derived acquisition-identity progress, advances at qualifying
+`encounterEndEffectsApplied` events, and settles a reached target through the
+existing rarity-mutation fold. The shared declaration-owned Hephaestus level
+limits are consumed by Pom, Natural Selection, Bridal Glow, and Steady Growth;
+Proper Upbringing's direct rarity-floor transition intentionally remains
+outside that helper.
+
+Trait history also derives `previouslyPickedTraitKeys` from selected trait-offer
+events. The three declaration-flagged one-time traits—Bridal Glow, Buried
+Treasure, and Cherished Heirloom—remain in that set after a later Ransom
+removal, so candidate eligibility reports a distinct `previouslyPicked`
+finding instead of treating removal as a fresh offer.
+
 If a covered selected value has no supporting pre-state, alternatives at that
 owner may still use its last valid pre-decision view for repair. Contextual
 claims after an unsupported upstream state remain unavailable; materialized
@@ -828,6 +849,12 @@ Fig Leaf's execution result does not suppress it by itself. Encounter-counted
 Chaos maturation and Experimental Hammer duration consume that later event,
 while encounter-local trait settlement and other completion-owned products
 remain on completion.
+
+Steady Growth is another consumer of this event, not a new lifecycle event. A
+qualifying checkpoint advances each equipped acquisition once, and a reached
+threshold inserts its automatic rarity mutation after End encounter and before
+Cleanup. Boss Judgment remains attached to `bossDefeated` before that later
+end-effects seam.
 
 The lifecycle profile owns operation order. Encounter, room, reward, and layout
 declarations own the typed effects invoked by those operations. The simulator

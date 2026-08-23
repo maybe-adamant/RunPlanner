@@ -7,12 +7,16 @@ scope, biome topology, occurrence-local state, semantic addresses, commands,
 persistence, and history. Simulation algorithms, candidates, Redux state, and
 React rendering are separate concerns.
 
-## Schema 49 Boundary
+## Schema 52 Boundary
 
-Schema 49 is the sole persisted authored-project contract. The codec rejects
+Schema 52 is the sole persisted authored-project contract. The codec rejects
 every other schema version rather than manufacturing current topology or leaf
-state for a stale document. There is no migration path; catalog versions must
-match exactly.
+state for a stale document. The migration CLI performs the explicit 49-to-50,
+50-to-51, and 51-to-52 migrations outside the production decoder, and also
+updates the schema-52 catalog metadata from
+`0.32.0-run-impacting-traits` to `0.32.1-run-impacting-traits` without
+inventing authored outcomes. Catalog versions must match exactly after
+migration.
 
 Schemas 46 and 47 completed the occurrence-owned topology and chronology
 cutover: every supported authored main or N side room is a `RoomOccurrence`,
@@ -31,6 +35,11 @@ Room Action defaults likewise use the existing `roomActions.order`: semantic
 commands add newly active required references at their engine-owned canonical
 late position without adding a required-action set, derived order, or second
 chronology field.
+
+Schema 50 adds the boon-rarity ledger contacts, schema 51 adds the closed Chaos
+trait outcome, and schema 52 adds the Natural Selection result and sparse Steady
+Growth target contacts described below. Their derived history, progress, Ransom
+removals, and automatic rarity mutations remain outside the persisted document.
 
 There is one biome plan and one topology language. Production state and
 semantic addresses have no layout-specific plan family, completion-transition
@@ -565,6 +574,21 @@ bag, provider-history choice, or separate child offer is persisted. A semantic
 command replaces one set result while ordinary trait selection and undo/redo
 retain ownership of the complete outer option.
 
+Natural Selection uses the same selected-trait outcome owner and persists one
+nonempty ordered `naturalSelectionTargets` sequence of one to eight known trait
+keys on the selected option. The sequence is the complete successful
+round-robin allocation, not eight independent Pom choices. Echo Boon Boon
+Boon's nested previous-run approximation may carry the same result. Ransom
+outcomes persist no removal set or level total.
+
+Steady Growth persists only reached random targets: ordinary occurrences use a
+sparse `steadyGrowthTargetByPhase` map, while a derived Boss completion uses
+`bossCompletionSteadyGrowthTarget`. A missing target is unresolved only at a
+reached nonempty threshold; an empty target domain is a derived no-op. The
+semantic `ReplaceSteadyGrowthTarget` command owns one exact phase/contact and
+preserves retained invalid known keys for repair. Progress and threshold
+settlement are derived from trait history.
+
 ### Concrete Encounter Selections
 
 `RoomOccurrence.encounters.encounterKeyByPhase` persists the exact normalized
@@ -678,7 +702,7 @@ stable indented JSON with a trailing newline:
 
 ```ts
 interface ProjectDocument {
-  schemaVersion: 49;
+  schemaVersion: 52;
   projectId: string;
   catalogVersion: string;
   routes: readonly AuthoredRoutePlan[];
