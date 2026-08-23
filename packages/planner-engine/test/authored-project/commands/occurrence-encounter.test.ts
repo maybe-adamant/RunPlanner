@@ -23,7 +23,6 @@ import {
 } from '@run-planner/engine/authored-project';
 import {
   encounterPhaseCandidateSupportForProjectEvaluationAssembly,
-  pEncounterSequenceCandidateForProjectEvaluationAssembly,
   encounterPhaseSequenceStatusForProjectEvaluationAssembly,
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
@@ -255,6 +254,28 @@ describe('authored encounter occurrence commands', () => {
     });
     expect(undoProjectHistory(reset).present).toBe(selected.present);
     expect(redoProjectHistory(undoProjectHistory(reset)).present).toBe(reset.present);
+  });
+
+  it('preserves a Combat trait child when an ordinary traitless Intro edit changes P', () => {
+    const withAthenaCombat = applyProjectCommand(loadSurfaceNOPProject(), catalog, {
+      kind: 'SelectEncounter',
+      phase: pCombatPhase,
+      encounterKey: 'AthenaCombatP',
+    });
+    expect(
+      occurrence(withAthenaCombat, 'P', pCombatId).encounters.traitOffersByPhase?.Combat
+        ?.AthenaCombatP,
+    ).toBeNull();
+
+    const withChangedIntro = applyProjectCommand(withAthenaCombat, catalog, {
+      kind: 'SelectEncounter',
+      phase: pIntroPhase,
+      encounterKey: 'P_Combat03_PreCombat01',
+    });
+
+    expect(
+      occurrence(withChangedIntro, 'P', pCombatId).encounters.traitOffersByPhase,
+    ).toMatchObject({ Combat: { AthenaCombatP: null } });
   });
 
   it('retains a top-level selected encounter while its room is unpicked, then republishes it on repick', () => {
@@ -569,85 +590,5 @@ describe('authored encounter occurrence commands', () => {
         }),
       ).encounters.encounterKeyByPhase,
     ).toEqual({ Encounter: 'GeneratedNSubRoom_Bigger' });
-  });
-
-  it('authors P setup atomically, retains Heracles Combat, and restores both selections in one undo', () => {
-    const initial = createProjectHistory(authorLegalTraitOffers(loadSurfaceNOPProject()));
-    const normal = applyProjectHistoryCommand(initial, catalog, {
-      kind: 'ReplacePEncounterSequence',
-      phase: pIntroPhase,
-      introEncounterKey: 'GeneratedP_PreCombat',
-      combatEncounterKey: 'IcarusCombatP',
-    });
-    expect(normal.past).toHaveLength(1);
-    expect(occurrence(normal.present, 'P', pCombatId).encounters.encounterKeyByPhase).toMatchObject(
-      {
-        Intro: 'GeneratedP_PreCombat',
-        Combat: 'IcarusCombatP',
-      },
-    );
-    expect(
-      occurrence(normal.present, 'P', pCombatId).encounters.traitOffersByPhase?.Combat
-        ?.IcarusCombatP,
-    ).toBeNull();
-
-    const restored = undoProjectHistory(normal);
-    expect(restored.present).toBe(initial.present);
-    expect(occurrence(restored.present, 'P', pCombatId).encounters).toEqual(
-      occurrence(initial.present, 'P', pCombatId).encounters,
-    );
-
-    const heracles = applyProjectHistoryCommand(normal, catalog, {
-      kind: 'ReplacePEncounterSequence',
-      phase: pIntroPhase,
-      introEncounterKey: 'HeraclesCombatP',
-    });
-    expect(
-      occurrence(heracles.present, 'P', pCombatId).encounters.encounterKeyByPhase,
-    ).toMatchObject({
-      Intro: 'HeraclesCombatP',
-      Combat: 'IcarusCombatP',
-    });
-    expect(undoProjectHistory(heracles).present).toBe(normal.present);
-  });
-
-  it('publishes P terminal support only after its exact proposed Intro record', () => {
-    const initial = loadSurfaceNOPProject();
-    const owner = createOccurrenceAddress(pBiome, pCombatId);
-    const domain = pEncounterSequenceCandidateForProjectEvaluationAssembly(
-      withAssembly(initial),
-      owner,
-    );
-    expect(domain?.first.origin).toEqual(pIntroPhase);
-    expect(domain?.terminalFor('HeraclesCombatP')).toEqual({ kind: 'terminated' });
-    expect(domain?.terminalFor('GeneratedP_PreCombat')).toMatchObject({
-      kind: 'available',
-      support: { origin: pCombatPhase },
-    });
-
-    let retainedInvalid = applyProjectCommand(initial, catalog, {
-      kind: 'SelectEncounter',
-      phase: createEncounterPhaseAddress(
-        nBiome,
-        { kind: 'occurrence', occurrenceId: nOccurrenceId('combat05') },
-        'Encounter',
-      ),
-      encounterKey: 'HeraclesCombatN',
-    });
-    retainedInvalid = applyProjectCommand(retainedInvalid, catalog, {
-      kind: 'ReplacePEncounterSequence',
-      phase: pIntroPhase,
-      introEncounterKey: 'HeraclesCombatP',
-    });
-    const invalidDomain = pEncounterSequenceCandidateForProjectEvaluationAssembly(
-      withAssembly(retainedInvalid),
-      owner,
-    );
-    expect(invalidDomain?.first.selectedPossible).toBe(false);
-    expect(invalidDomain?.terminalFor('HeraclesCombatP')).toEqual({ kind: 'terminated' });
-    expect(invalidDomain?.terminalFor('GeneratedP_PreCombat')).toMatchObject({
-      kind: 'available',
-      support: { origin: pCombatPhase },
-    });
   });
 });

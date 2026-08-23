@@ -1019,17 +1019,13 @@ records, so later structurally active phase controls remain correctable from
 their reached prefix. A structurally dormant potential slot retains authored
 state but publishes no candidate, finding, history, or editor control.
 
-P retains those ordinary exact phase owners but also publishes one bounded
-occurrence-level authoring capability for its two-position envelope. The first
-candidate domain is evaluated at the pre-room frontier. For each proposed
-non-terminating first choice, the terminal domain is evaluated only after that
-choice has extended the room's preparation record; a valid terminating choice
-publishes no active terminal domain. The corresponding semantic command
-atomically replaces the active `Intro` and `Combat` selections, initializing a
-new terminal trait child through the existing phase-default rule. A terminating
-first choice preserves the dormant stored Combat state. This is a candidate
-and command surface over the existing phase model, not a flattened
-cross-product or another P execution model.
+P uses those ordinary exact phase owners directly. The `Intro` candidate domain
+is evaluated at the pre-room frontier; after a valid, non-terminating first
+selection extends the room preparation, the exact `Combat` phase owns its own
+candidate domain. A terminating first selection leaves Combat dormant while
+preserving its stored authored state. The sequential phase commands and their
+existing phase-default behavior remain the only command path—there is no
+flattened cross-product, composite command, or second P execution model.
 
 This is normal selected-plan validation, not an NPC evaluator or a second
 history. Candidate assessment and correction remain part of the existing

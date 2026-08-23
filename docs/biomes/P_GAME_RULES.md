@@ -134,13 +134,14 @@ one start/completion/end-effect sequence. Encounter-counted Chaos curses and
 Experimental Hammer duration consume the end-effect checkpoint, not P phase
 names, encounter depth, or completion alone.
 
-The authored model retains the exact `Intro` and `Combat` phase selections,
-while the editor presents one occurrence-owned P encounter dialog. The engine
-evaluates terminal candidates only after the proposed first choice. Saving a
-normal pair or a terminating Heracles choice is one atomic semantic command
-and one Undo unit; Fig Leaf, Gorgon, and terminal trait offers remain attached
-to their exact phase owners. This presentation adds no P variant or second
-composition model.
+The authored model retains the exact `Intro` and `Combat` phase selections.
+The editor presents them as the sequential **Opening encounter** and
+**Follow-up encounter** controls. The engine evaluates the second position
+only after the selected first choice; Heracles withholds the follow-up control
+while preserving its dormant authored selection. Each edit remains the ordinary
+exact-phase command and Undo unit. Fig Leaf, Gorgon, and terminal trait offers
+remain attached to their exact phase owners. This presentation adds no P
+variant or second composition model.
 
 ## Product boundary
 

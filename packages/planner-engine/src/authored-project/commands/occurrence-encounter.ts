@@ -16,7 +16,7 @@ function selectableBinding(
   catalog: Catalog,
   room: RoomDeclaration,
   phase: EncounterPhaseAddress,
-  command: Exclude<EncounterOccurrenceCommand, { readonly kind: 'ReplacePEncounterSequence' }>,
+  command: EncounterOccurrenceCommand,
 ): Extract<EncounterSlotBinding, { readonly kind: 'set' }> {
   const binding = encounterBindingsBySlot(catalog, room, room.gameName).get(phase.phaseKey);
   if (binding === undefined) {
@@ -46,7 +46,7 @@ function updatedSelections(
   room: RoomDeclaration,
   current: RoomEncounterState,
   phase: EncounterPhaseAddress,
-  command: Exclude<EncounterOccurrenceCommand, { readonly kind: 'ReplacePEncounterSequence' }>,
+  command: EncounterOccurrenceCommand,
 ): RoomEncounterState {
   if (
     command.kind === 'ReplaceFigLeafSkip' ||
@@ -150,7 +150,7 @@ function replaceTopLevel(
   document: ProjectDocument,
   catalog: Catalog,
   located: LocatedBiome,
-  command: Exclude<EncounterOccurrenceCommand, { readonly kind: 'ReplacePEncounterSequence' }>,
+  command: EncounterOccurrenceCommand,
 ): ProjectDocument {
   const topology = requireTopology(located.plan, command);
   const occurrence = requireOccurrence(located.plan, command.phase.owner.occurrenceId, command);
@@ -172,79 +172,6 @@ function replaceTopLevel(
   );
 }
 
-function replacePSequence(
-  document: ProjectDocument,
-  catalog: Catalog,
-  located: LocatedBiome,
-  command: Extract<EncounterOccurrenceCommand, { readonly kind: 'ReplacePEncounterSequence' }>,
-): ProjectDocument {
-  if (command.phase.phaseKey !== 'Intro') {
-    failCommand(command, 'P encounter sequence must be owned by the Intro phase');
-  }
-  const topology = requireTopology(located.plan, command);
-  const occurrence = requireOccurrence(located.plan, command.phase.owner.occurrenceId, command);
-  const room = requireRoom(catalog, occurrence.gameName, located.layout.biomeKey, command);
-  const bindings = encounterBindingsBySlot(catalog, room, room.gameName);
-  const intro = bindings.get('Intro');
-  const combat = bindings.get('Combat');
-  if (
-    room.encounterEnvelopeKey !== 'PEncounter' ||
-    intro?.kind !== 'set' ||
-    combat?.kind !== 'set'
-  ) {
-    failCommand(command, `${room.gameName} is not a P two-position encounter room`);
-  }
-  const introPhase: EncounterPhaseAddress = command.phase;
-  const afterIntro = updatedSelections(catalog, room, occurrence.encounters, introPhase, {
-    kind: 'SelectEncounter',
-    phase: introPhase,
-    encounterKey: command.introEncounterKey,
-  });
-  const introDefinition = catalog.encounterDefinitions.byKey[command.introEncounterKey];
-  if (introDefinition?.sequenceEffect?.kind === 'terminateSuffix') {
-    if (command.combatEncounterKey !== undefined) {
-      failCommand(command, 'terminating P Intro selections cannot author Combat');
-    }
-    return updateOccurrenceTopology(
-      document,
-      located,
-      replaceOccurrence(topology, Object.freeze({ ...occurrence, encounters: afterIntro })),
-    );
-  }
-  if (command.combatEncounterKey === undefined) {
-    failCommand(command, 'non-terminating P Intro selections require Combat');
-  }
-  const combatPhase: EncounterPhaseAddress = Object.freeze({
-    ...command.phase,
-    phaseKey: 'Combat',
-  });
-  const selectedCombat = updatedSelections(catalog, room, afterIntro, combatPhase, {
-    kind: 'SelectEncounter',
-    phase: combatPhase,
-    encounterKey: command.combatEncounterKey,
-  });
-  const encounters =
-    catalog.encounterDefinitions.byKey[command.combatEncounterKey]?.traitOfferProducer ===
-      undefined ||
-    selectedCombat.traitOffersByPhase?.Combat?.[command.combatEncounterKey] !== undefined
-      ? selectedCombat
-      : Object.freeze({
-          ...selectedCombat,
-          traitOffersByPhase: Object.freeze({
-            ...(selectedCombat.traitOffersByPhase ?? {}),
-            Combat: Object.freeze({
-              ...(selectedCombat.traitOffersByPhase?.Combat ?? {}),
-              [command.combatEncounterKey]: null,
-            }),
-          }),
-        });
-  return updateOccurrenceTopology(
-    document,
-    located,
-    replaceOccurrence(topology, Object.freeze({ ...occurrence, encounters })),
-  );
-}
-
 /**
  * Encounter commands mutate only exact persisted room-instance state. Dynamic
  * candidate legality is published by simulation; a retained selection may be
@@ -256,8 +183,5 @@ export function applyEncounterOccurrenceCommand(
   located: LocatedBiome,
   command: EncounterOccurrenceCommand,
 ): ProjectDocument {
-  if (command.kind === 'ReplacePEncounterSequence') {
-    return replacePSequence(document, catalog, located, command);
-  }
   return replaceTopLevel(document, catalog, located, command);
 }

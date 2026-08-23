@@ -853,7 +853,6 @@ function retainBlockedRegionProducts(
           statusAt: retainedArtifacts.encounters.statusAt,
           gorgonAt: retainedArtifacts.encounters.gorgonAt,
           figLeafAt: retainedArtifacts.encounters.figLeafAt,
-          pSequenceAt: retainedArtifacts.encounters.pSequenceAt,
           roomAt: (owner: OccurrenceAddress) =>
             occurrenceOwner !== undefined &&
             semanticAddressKey(owner) === semanticAddressKey(occurrenceOwner)

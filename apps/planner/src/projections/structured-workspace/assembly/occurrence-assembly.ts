@@ -166,9 +166,6 @@ export interface WorkspaceOccurrenceAssemblyInput {
   readonly gorgonSupport?: (
     phase: EncounterPhaseAddress,
   ) => GorgonPhaseCandidateSupport | undefined;
-  readonly pEncounterSequenceSupport?: (
-    occurrence: OccurrenceAddress,
-  ) => import('@run-planner/engine/simulation').PEncounterSequenceCandidateSupport | undefined;
   readonly evaluatedRoom?: CanonicalAuthoredRoom;
   /** Shared decision-owned Fields derivation for this target occurrence. */
   readonly fieldsBatchFacts?: FieldsBatchFacts;
@@ -1131,7 +1128,14 @@ function activeEncounterPhasesForOwner(
         address,
         candidateChoices,
         customizable: domain.declaredEncounterKeys.length > 1,
-        label: domain.slotKey,
+        label:
+          room.encounterEnvelopeKey === 'PEncounter'
+            ? domain.slotKey === 'Intro'
+              ? 'Opening encounter'
+              : domain.slotKey === 'Combat'
+                ? 'Follow-up encounter'
+                : domain.slotKey
+            : domain.slotKey,
         marker: input.markerDestinations.marker(address),
         ...(figLeafSupport !== undefined || authoredFigLeafSkip
           ? {
@@ -2380,13 +2384,10 @@ function roomLocalForOccurrence(
 function encounterPhaseInteractionRequirement(
   owner: WorkspaceRoomSummary['address'],
   phases: readonly WorkspaceEncounterPhase[],
-  pSequence: WorkspaceRoomSummary['pEncounterSequence'] | undefined,
 ): WorkspaceOccurrenceInteractionRequirement | undefined {
   const interactivePhases = phases.filter(
     (phase) =>
-      (!pSequence && phase.customizable) ||
-      phase.figLeaf !== undefined ||
-      phase.gorgonCondition !== undefined,
+      phase.customizable || phase.figLeaf !== undefined || phase.gorgonCondition !== undefined,
   );
   if (interactivePhases.length === 0) return undefined;
   return Object.freeze({
@@ -2396,7 +2397,6 @@ function encounterPhaseInteractionRequirement(
       interactivePhases.map((phase) =>
         Object.freeze({
           candidateChoices: phase.candidateChoices,
-          selectionEnabled: pSequence === undefined,
           owner: phase.address,
           selectedEncounterKey: phase.selectedEncounter.key,
           ...(phase.figLeaf === undefined
@@ -2667,23 +2667,9 @@ function occurrenceInteractionRequirements(
   room: WorkspaceRoomSummary,
 ): readonly WorkspaceOccurrenceInteractionRequirement[] {
   const requirements: WorkspaceOccurrenceInteractionRequirement[] = [];
-  if (room.pEncounterSequence !== undefined) {
-    requirements.push(
-      Object.freeze({
-        kind: 'pEncounterSequence' as const,
-        owner: room.pEncounterSequence.owner,
-        firstPosition: room.pEncounterSequence.firstPosition,
-        introChoices: room.pEncounterSequence.introChoices,
-        combatChoices: room.pEncounterSequence.combatChoices,
-        selectedIntroEncounterKey: room.pEncounterSequence.selectedIntroEncounterKey,
-        selectedCombatEncounterKey: room.pEncounterSequence.selectedCombatEncounterKey,
-      }),
-    );
-  }
   const topLevelEncounterRequirement = encounterPhaseInteractionRequirement(
     room.address,
     room.encounterPhases,
-    room.pEncounterSequence,
   );
   if (topLevelEncounterRequirement !== undefined) requirements.push(topLevelEncounterRequirement);
 
@@ -2816,7 +2802,7 @@ export function assembleWorkspaceOccurrence(
   const rewardControls = controlsForOccurrence(input, room);
   const roomControls =
     input.roomPicker === undefined ? Object.freeze([]) : Object.freeze([input.roomPicker]);
-  const activeEncounterPhases = input.facts.detailsActive
+  const encounterPhases = input.facts.detailsActive
     ? activeEncounterPhasesForOwner(
         input,
         room,
@@ -2834,38 +2820,6 @@ export function assembleWorkspaceOccurrence(
         },
       )
     : Object.freeze([]);
-  const pEncounterSequence = input.facts.detailsActive
-    ? (() => {
-        const domain = input.pEncounterSequenceSupport?.(address);
-        if (domain === undefined) return undefined;
-        const choices = (keys: readonly string[]) =>
-          Object.freeze(
-            keys.map((key) => {
-              const definition = input.catalog.encounterDefinitions.byKey[key];
-              if (definition === undefined) {
-                throw new StructuredWorkspaceProjectionContractError(
-                  `${semanticAddressKey(address)} has no encounter definition ${key}`,
-                );
-              }
-              return Object.freeze({ label: definition.label, value: key });
-            }),
-          );
-        return Object.freeze({
-          owner: domain.owner,
-          firstPosition: domain.firstPosition.origin,
-          introChoices: choices(domain.firstPosition.declaredEncounterKeys),
-          combatChoices: choices(domain.terminalPosition.declaredEncounterKeys),
-          selectedIntroEncounterKey: domain.firstPosition.selectedEncounterKey,
-          selectedCombatEncounterKey: domain.terminalPosition.selectedEncounterKey,
-        });
-      })()
-    : undefined;
-  const encounterPhases =
-    pEncounterSequence === undefined
-      ? activeEncounterPhases
-      : Object.freeze(
-          activeEncounterPhases.map((phase) => Object.freeze({ ...phase, customizable: false })),
-        );
   const roomLocal = roomLocalForOccurrence(input, room, rewardControls);
   const zagreusDeclaration = room.additionalExits.find(
     (candidate) => candidate.kind === 'zagreusContract',
@@ -3022,7 +2976,6 @@ export function assembleWorkspaceOccurrence(
     detailsActive: input.facts.detailsActive,
     ...(entryReward === undefined ? {} : { entryReward }),
     encounterPhases,
-    ...(pEncounterSequence === undefined ? {} : { pEncounterSequence }),
     entered,
     gameName: occurrence.gameName,
     kind: room.kind,

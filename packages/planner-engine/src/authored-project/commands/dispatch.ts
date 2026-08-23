@@ -188,7 +188,6 @@ function applyUnchecked(
         locateBiome(document, catalog, command),
         command,
       );
-    case 'ReplacePEncounterSequence':
     case 'SelectEncounter':
     case 'ResetEncounter':
     case 'ReplaceFigLeafSkip':
