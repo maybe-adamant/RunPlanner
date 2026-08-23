@@ -175,6 +175,10 @@ const findingCopy = {
     title: 'Trait is already equipped',
     description: 'This trait cannot be offered again while it is equipped.',
   },
+  previouslyPicked: {
+    title: 'Trait was already picked',
+    description: 'This one-time trait cannot be offered again after it was picked earlier.',
+  },
   missingPrerequisite: {
     title: 'Trait prerequisite is missing',
     description: 'The current equipped-trait history does not satisfy this prerequisite.',

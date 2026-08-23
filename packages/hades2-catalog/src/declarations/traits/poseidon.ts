@@ -108,6 +108,7 @@ export const poseidonTraits = [
     },
     usesBoonRarity: true,
     blockStacking: true,
+    blockOfferIfPreviouslyPicked: true,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
   },

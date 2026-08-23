@@ -257,6 +257,8 @@ export interface TraitHistoryState {
   readonly upgradableTraitCount: number;
   /** Route-wide exact trait keys excluded from later offer eligibility. */
   readonly bannedTraitKeys: readonly string[];
+  /** Exact traits selected from prior offer screens, including traits later removed. */
+  readonly previouslyPickedTraitKeys: readonly string[];
   /** Exact activation fact for Proper Upbringing's promotion and future offers. */
   readonly properUpbringingActive?: true;
   readonly activeChaosCurses: readonly ChaosCurseInstance[];
@@ -421,6 +423,7 @@ export function createTraitHistoryState(): TraitHistoryState {
     godBoonRarityCounts: Object.freeze({}),
     upgradableTraitCount: 0,
     bannedTraitKeys: Object.freeze([]),
+    previouslyPickedTraitKeys: Object.freeze([]),
     activeChaosCurses: Object.freeze([]),
     maturedChaosBlessings: Object.freeze([]),
   });
@@ -565,6 +568,7 @@ export function foldTraitHistoryEvents(
 ): TraitHistoryState {
   const equipped: Record<string, EquippedTrait> = {};
   const bannedTraitKeys = new Set<string>();
+  const previouslyPickedTraitKeys = new Set<string>();
   const pickupElements: Record<TraitElement, number> = {
     Aether: 0,
     Earth: 0,
@@ -728,6 +732,7 @@ export function foldTraitHistoryEvents(
       }
       const option = event.options[optionIndex(event.selectedOptionKey)];
       for (const traitKey of event.bannedTraitKeys ?? []) bannedTraitKeys.add(traitKey);
+      if (option !== undefined) previouslyPickedTraitKeys.add(option.traitKey);
       if (option === undefined || equipped[option.traitKey] !== undefined) continue;
       const giver = catalog.traitGivers.byKey[event.giverKey];
       const declaration = catalog.traits.byKey[option.traitKey];
@@ -824,6 +829,7 @@ export function foldTraitHistoryEvents(
   return Object.freeze({
     events: Object.freeze(ordered),
     bannedTraitKeys: Object.freeze([...bannedTraitKeys]),
+    previouslyPickedTraitKeys: Object.freeze([...previouslyPickedTraitKeys]),
     equippedTraits: Object.freeze(equipped),
     ...derived,
     ...(activeSources.size === 0 ? {} : { properUpbringingActive: true as const }),
@@ -1166,6 +1172,12 @@ function assessEchoLastRunBoonOption(
   if (history.bannedTraitKeys.includes(traitKey)) findings.push({ code: 'bannedTrait', traitKey });
   if (history.equippedTraits[traitKey] !== undefined)
     findings.push({ code: 'alreadyEquipped', traitKey });
+  if (
+    trait.blockOfferIfPreviouslyPicked &&
+    history.equippedTraits[traitKey] === undefined &&
+    history.previouslyPickedTraitKeys.includes(traitKey)
+  )
+    findings.push({ code: 'previouslyPicked', traitKey });
   if (trait.equipmentSlot !== undefined && history.equippedSlots[trait.equipmentSlot] !== undefined)
     findings.push({ code: 'occupiedBoonSlot', traitKey, detail: trait.equipmentSlot });
   if (requiresDeathDefianceCondition && context.deathDefianceConditionMet !== true)
@@ -2527,6 +2539,12 @@ export function assessTraitOption(
   if (history.bannedTraitKeys.includes(traitKey)) findings.push({ code: 'bannedTrait', traitKey });
   if (history.equippedTraits[traitKey] !== undefined)
     findings.push({ code: 'alreadyEquipped', traitKey });
+  if (
+    trait.blockOfferIfPreviouslyPicked &&
+    history.equippedTraits[traitKey] === undefined &&
+    history.previouslyPickedTraitKeys.includes(traitKey)
+  )
+    findings.push({ code: 'previouslyPicked', traitKey });
   for (const requirement of trait.offerRequirements) {
     const failure = checkRequirement(catalog, requirement, trait, history, context);
     if (failure !== undefined) findings.push({ ...failure, traitKey });

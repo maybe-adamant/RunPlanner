@@ -1014,15 +1014,15 @@ require the planner to simulate combat cooldown values.
 
 ### Other direct condition dispositions
 
-| Source condition                                   | Normalized disposition                                                                        |
-| -------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| already equipped                                   | modeled from exact equipped keys                                                              |
-| `BlockOfferIfPreviouslyPicked`                     | equivalent to already equipped under the slice's no-sale/no-replacement lifecycle             |
-| `PlantHealthBoon` shovel, bounty, and dream checks | collapsed by the progressed, non-bounty, non-dream baseline; `BlockGiftBoons` remains modeled |
-| `WeaponUpgradeBoon` progression gate               | collapsed by the progressed baseline                                                          |
-| `UnityTrait` progression and narrative gates       | collapsed by the progressed baseline; element thresholds remain modeled                       |
-| mechanical activation/effect requirements          | deferred because this slice models offer legality, not trait effects                          |
-| Hephaestus cooldown/level exception in Boon Decay  | exact rarity/level limits above; no general combat-cooldown simulation is implied             |
+| Source condition                                   | Normalized disposition                                                                                                          |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| already equipped                                   | modeled from exact equipped keys                                                                                                |
+| `BlockOfferIfPreviouslyPicked`                     | declaration-owned for Bridal Glow, Buried Treasure, and Cherished Heirloom; prior selected-offer history survives later removal |
+| `PlantHealthBoon` shovel, bounty, and dream checks | collapsed by the progressed, non-bounty, non-dream baseline; `BlockGiftBoons` remains modeled                                   |
+| `WeaponUpgradeBoon` progression gate               | collapsed by the progressed baseline                                                                                            |
+| `UnityTrait` progression and narrative gates       | collapsed by the progressed baseline; element thresholds remain modeled                                                         |
+| mechanical activation/effect requirements          | deferred because this slice models offer legality, not trait effects                                                            |
+| Hephaestus cooldown/level exception in Boon Decay  | exact rarity/level limits above; no general combat-cooldown simulation is implied                                               |
 
 ## Positive Equipped-Trait Dependency Graph
 

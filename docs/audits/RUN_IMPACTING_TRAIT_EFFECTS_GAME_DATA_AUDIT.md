@@ -164,6 +164,12 @@ Trait removal is the material new history operation. Removal must preserve the
 past acquisition/provider evidence while changing the current equipped trait
 state, matching the game's distinction.
 
+That preserved history also owns the source `BlockOfferIfPreviouslyPicked`
+guard. Bridal Glow, Buried Treasure, and Cherished Heirloom cannot be offered
+again after an earlier selection even if a Ransom later removes the equipped
+trait; ordinary removed traits remain eligible under their other current
+requirements.
+
 ## Steady Growth
 
 ### Rarity-dependent interval
