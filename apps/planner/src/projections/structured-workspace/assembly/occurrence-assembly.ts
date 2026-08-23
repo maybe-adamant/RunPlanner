@@ -751,15 +751,27 @@ function controlsForOccurrence(
         fixedRewardType === undefined
           ? undefined
           : input.catalog.rewards.rewardTypes.byKey[fixedRewardType];
-      if (rewardType?.payloadDomain !== undefined) {
+      const reward = occurrence.state.reward;
+      const hasAuthoredAcquisitionChildren =
+        reward !== null &&
+        (Object.keys(reward.traitOffersByAcquisitionRole).length > 0 ||
+          Object.keys(reward.levelResolutionsByAcquisitionRole ?? {}).length > 0 ||
+          Object.values(reward.dispositionByAcquisitionRole).some(
+            (disposition) => disposition.kind !== 'normal',
+          ));
+      if (rewardType?.payloadDomain !== undefined || hasAuthoredAcquisitionChildren) {
         controls.push(
           rewardControl(
             input,
             { kind: 'incomingReward', address: incoming },
             undefined,
             offer,
-            occurrence.state.reward,
-            Object.freeze([fixedRewardType!]),
+            reward,
+            Object.freeze(offer === null ? [] : [offer.rewardType]),
+            undefined,
+            false,
+            undefined,
+            rewardType?.payloadDomain === undefined,
           ),
         );
       }
