@@ -5,6 +5,7 @@ import {
   createBatchRewardStoreAddress,
   createBiomeAddress,
   createBiomeFieldAddress,
+  createCompletionRoomAddress,
   createEncounterPhaseAddress,
   createEchoKeepsakeReplayAddress,
   createExitDecisionAddress,
@@ -13,6 +14,7 @@ import {
   createKeepsakeEquipResultAddress,
   createOccurrenceId,
   createProjectDocument,
+  createSteadyGrowthOutcomeAddress,
   createTargetAddress,
   createTraitOfferAddress,
   semanticAddressKey,
@@ -185,6 +187,56 @@ function batchTargets(assembly: ReturnType<typeof assembleWorkspaceBiomeSemantic
 }
 
 describe('structured workspace biome semantic assembly', () => {
+  it('assembles a real Boss completion contact from an engine Steady Growth outcome', () => {
+    const completionBase = createCompletionRoomAddress(nBiome, 'boss');
+    if (completionBase.role !== 'boss') throw new Error('N completion lost its Boss role');
+    const completion = Object.freeze({ ...completionBase, role: 'boss' as const });
+    const outcome = createSteadyGrowthOutcomeAddress(completion, 'Encounter');
+    const project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
+      kind: 'ReplaceSteadyGrowthTarget',
+      outcome,
+      targetTraitKey: 'ApolloWeaponBoon',
+    });
+    const source = biomeSource(project);
+    if (source.evaluation === undefined || !('rewards' in source.evaluation))
+      throw new Error('N evaluation has no rewards product');
+    const rewards = Object.freeze({
+      ...source.evaluation.rewards,
+      steadyGrowthOutcomes: Object.freeze([
+        Object.freeze({
+          address: outcome,
+          sourceTraitKey: 'BoonGrowthBoon',
+          phaseKey: 'Encounter',
+          requiredIntervals: Object.freeze([4]),
+          progressBefore: Object.freeze([1]),
+        }),
+      ]),
+    });
+    const withOutcome = Object.freeze({
+      ...source,
+      evaluation: Object.freeze({ ...source.evaluation, rewards }),
+    });
+    const assembly = assembleWorkspaceBiomeSemantics(catalog, withOutcome, {
+      inactiveArcanaKeys: ['CastCount'],
+      requiredCount: 5,
+    });
+    const boss = assembly.completion.find((node) => node.role === 'boss');
+    if (boss === undefined) throw new Error('N Boss completion is missing');
+    expect(boss.steadyGrowth).toMatchObject({
+      address: outcome,
+      targetTraitKey: 'ApolloWeaponBoon',
+    });
+    expect(boss.timeline?.map((entry) => entry.kind)).toEqual([
+      'boundary',
+      'boundary',
+      'bossDefeated',
+      'fixedEffect',
+      'boundary',
+      'steadyGrowth',
+      'boundary',
+    ]);
+  });
+
   it('publishes the Postboss keepsake child only when a configured successor reaches the rack', () => {
     const source = biomeSource(loadSurfaceNOPQProject());
     const dormant = assembleWorkspaceBiomeSemantics(catalog, source);

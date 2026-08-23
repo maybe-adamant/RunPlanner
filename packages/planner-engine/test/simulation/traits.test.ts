@@ -769,6 +769,24 @@ describe('Boon Growth and Boon Decay target predicates', () => {
       nextTargetTraitKeys: ['HephaestusWeaponBoon'],
     });
   });
+  it('publishes only the next member of the retained Natural Selection round order', () => {
+    const before = historyFrom([
+      { giverKey: 'Apollo', traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
+      { giverKey: 'Demeter', traitKey: 'DemeterSpecialBoon', rarity: 'Common' },
+    ]);
+
+    expect(
+      assessNaturalSelectionTargets(catalog, before, 8, naturalSelectionSlots, [
+        'ApolloWeaponBoon',
+        'DemeterSpecialBoon',
+        'ApolloWeaponBoon',
+      ]),
+    ).toMatchObject({
+      legal: true,
+      complete: false,
+      nextTargetTraitKeys: ['DemeterSpecialBoon'],
+    });
+  });
   it.each([
     ['Hermes', 'HermesWeaponBoon'],
     ['Artemis', 'SupportingFireBoon'],

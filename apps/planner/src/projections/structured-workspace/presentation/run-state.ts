@@ -105,6 +105,7 @@ function sourcePresentation(catalog: Catalog, sourceKey: string): WorkspaceRunSt
 function traitPresentation(
   catalog: Catalog,
   equipped: RunStateSnapshot['traits']['equippedTraits'][string],
+  steadyGrowth: RunStateSnapshot['traits']['steadyGrowth'],
 ) {
   const trait = catalog.traits.byKey[equipped.traitKey];
   return Object.freeze({
@@ -112,6 +113,12 @@ function traitPresentation(
     ...(equipped.rarity === undefined ? {} : { rarity: equipped.rarity }),
     ...(equipped.level === undefined ? {} : { level: equipped.level }),
     ...(equipped.hammerRank === undefined ? {} : { hammerRank: equipped.hammerRank }),
+    ...(steadyGrowth?.[equipped.traitKey] === undefined
+      ? {}
+      : {
+          steadyGrowthInterval: steadyGrowth[equipped.traitKey]!.interval,
+          steadyGrowthProgress: steadyGrowth[equipped.traitKey]!.progress,
+        }),
     traitKey: equipped.traitKey,
   });
 }
@@ -303,14 +310,16 @@ export function presentRunState(
           return Object.freeze({
             label,
             slotKey,
-            ...(equipped === undefined ? {} : { trait: traitPresentation(catalog, equipped) }),
+            ...(equipped === undefined
+              ? {}
+              : { trait: traitPresentation(catalog, equipped, snapshot.traits.steadyGrowth) }),
           });
         }),
       ),
       other: Object.freeze(
         Object.values(snapshot.traits.equippedTraits)
           .filter(({ traitKey }) => !coreTraitKeys.has(traitKey))
-          .map((equipped) => traitPresentation(catalog, equipped)),
+          .map((equipped) => traitPresentation(catalog, equipped, snapshot.traits.steadyGrowth)),
       ),
       banned: Object.freeze(
         snapshot.traits.bannedTraitKeys.map((key) =>

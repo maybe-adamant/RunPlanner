@@ -227,7 +227,7 @@ export function RunStateSheet({ launcher }: { readonly launcher: WorkspaceRunSta
               <dd>
                 {slot.trait === undefined
                   ? 'None'
-                  : `${slot.trait.label}${slot.trait.rarity === undefined ? '' : ` · ${slot.trait.rarity}`}${slot.trait.level === undefined ? '' : ` · Lv. ${slot.trait.level}`}${slot.trait.hammerRank === undefined ? '' : ` · ${slot.trait.hammerRank === 'RankII' ? 'Rank II' : 'Rank I'}`}`}
+                  : `${slot.trait.label}${slot.trait.rarity === undefined ? '' : ` · ${slot.trait.rarity}`}${slot.trait.level === undefined ? '' : ` · Lv. ${slot.trait.level}`}${slot.trait.hammerRank === undefined ? '' : ` · ${slot.trait.hammerRank === 'RankII' ? 'Rank II' : 'Rank I'}`}${slot.trait.steadyGrowthInterval === undefined ? '' : ` · Steady Growth ${slot.trait.steadyGrowthProgress ?? 0}/${slot.trait.steadyGrowthInterval}`}`}
               </dd>
             </div>
           ))}
@@ -245,6 +245,9 @@ export function RunStateSheet({ launcher }: { readonly launcher: WorkspaceRunSta
                 {trait.hammerRank === undefined
                   ? ''
                   : ` · ${trait.hammerRank === 'RankII' ? 'Rank II' : 'Rank I'}`}
+                {trait.steadyGrowthInterval === undefined
+                  ? ''
+                  : ` · Steady Growth ${trait.steadyGrowthProgress ?? 0}/${trait.steadyGrowthInterval}`}
               </li>
             ))}
           </ul>

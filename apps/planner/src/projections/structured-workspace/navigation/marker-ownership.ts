@@ -21,6 +21,7 @@ function rewardControlMarkers(control: {
     readonly echoLastRunBoon?: { readonly marker: WorkspaceMarker };
     readonly echoLastReward?: { readonly marker: WorkspaceMarker };
     readonly allTogetherSets?: readonly { readonly marker: WorkspaceMarker }[];
+    readonly naturalSelection?: { readonly marker: WorkspaceMarker };
   }[];
   readonly levelResolutions?: readonly { readonly marker: WorkspaceMarker }[];
 }): readonly WorkspaceMarker[] {
@@ -34,6 +35,7 @@ function rewardControlMarkers(control: {
       ...(trait.echoLastRunBoon === undefined ? [] : [trait.echoLastRunBoon.marker]),
       ...(trait.echoLastReward === undefined ? [] : [trait.echoLastReward.marker]),
       ...(trait.allTogetherSets ?? []).map((set) => set.marker),
+      ...(trait.naturalSelection === undefined ? [] : [trait.naturalSelection.marker]),
     ]),
     ...(control.levelResolutions ?? []).map((resolution) => resolution.marker),
   ]);
@@ -108,6 +110,9 @@ export function workspaceOccurrenceOwnedMarkers(
               ? []
               : [phase.traitOffer.echoLastReward.marker]),
             ...(phase.traitOffer.allTogetherSets ?? []).map((set) => set.marker),
+            ...(phase.traitOffer.naturalSelection === undefined
+              ? []
+              : [phase.traitOffer.naturalSelection.marker]),
           ]),
       ...(phase.gorgonAthena === undefined ? [] : [phase.gorgonAthena.marker]),
     ]),
@@ -123,11 +128,13 @@ export function workspaceOccurrenceOwnedMarkers(
         ...(trait.echoLastRunBoon === undefined ? [] : [trait.echoLastRunBoon.marker]),
         ...(trait.echoLastReward === undefined ? [] : [trait.echoLastReward.marker]),
         ...(trait.allTogetherSets ?? []).map((set) => set.marker),
+        ...(trait.naturalSelection === undefined ? [] : [trait.naturalSelection.marker]),
       ]),
       ...(control.levelResolutions ?? []).map((resolution) => resolution.marker),
     ]),
     ...workspaceLocalDetailMarkers(room.roomLocal),
     ...(room.roomActions?.rows.map((row) => row.marker) ?? []),
+    ...(room.roomActions?.steadyGrowth?.map((effect) => effect.marker) ?? []),
     ...(room.zagreusSpawn === undefined ? [] : [room.zagreusSpawn.marker]),
     ...(room.naturalChaosSpawn === undefined ? [] : [room.naturalChaosSpawn.marker]),
     ...(room.roomLocal.kind === 'fixed' ? [room.roomLocal.marker] : []),
@@ -175,6 +182,7 @@ export function workspaceHubMainRewardMarkers(
           ...(trait.echoLastRunBoon === undefined ? [] : [trait.echoLastRunBoon.marker]),
           ...(trait.echoLastReward === undefined ? [] : [trait.echoLastReward.marker]),
           ...(trait.allTogetherSets ?? []).map((set) => set.marker),
+          ...(trait.naturalSelection === undefined ? [] : [trait.naturalSelection.marker]),
         ]),
         ...(room.roomLocal.control?.levelResolutions ?? []).map((resolution) => resolution.marker),
       ]);

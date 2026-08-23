@@ -90,6 +90,8 @@ import type {
   WorkspaceKeepsakeSelectionInteraction,
   WorkspaceKeepsakeEquipResultInteraction,
   WorkspaceTraitOfferInteraction,
+  WorkspaceNaturalSelectionInteraction,
+  WorkspaceSteadyGrowthInteraction,
   WorkspaceShopDeathDefianceConditionInteraction,
   WorkspaceShopPurchaseParticipationInteraction,
   WorkspaceRoomInteraction,
@@ -250,6 +252,10 @@ export interface WorkspaceInteractionBindingInput {
   readonly rewardControls: ReadonlyMap<string, WorkspaceRewardControl>;
   readonly traitControls?: ReadonlyMap<string, WorkspaceTraitOfferControl>;
   readonly levelResolutionControls?: ReadonlyMap<string, WorkspaceLevelResolutionControl>;
+  readonly steadyGrowthControls?: ReadonlyMap<
+    string,
+    import('../contract').WorkspaceSteadyGrowthControl
+  >;
   readonly bossCompletionArcanaControls?: ReadonlyMap<
     string,
     { readonly address: BossCompletionArcanaAddress; readonly value: readonly string[] }
@@ -1434,6 +1440,7 @@ export function bindWorkspaceInteractions(
     rewardControls,
     traitControls,
     levelResolutionControls,
+    steadyGrowthControls,
     bossCompletionArcanaControls,
     keepsakeSelectionControls,
     keepsakeEquipResultControls,
@@ -1844,6 +1851,7 @@ export function bindWorkspaceInteractions(
 
   const effectiveTraitControls = new Map(traitControls ?? []);
   const effectiveLevelResolutionControls = new Map(levelResolutionControls ?? []);
+  const effectiveSteadyGrowthControls = new Map(steadyGrowthControls ?? []);
   for (const control of rewardControls.values()) {
     for (const trait of control.traitOffers ?? [])
       effectiveTraitControls.set(workspaceInteractionKey(trait.address), trait);
@@ -2050,6 +2058,10 @@ export function bindWorkspaceInteractions(
                 });
               }),
             )
+          : undefined;
+      const naturalSelectionControl =
+        value.selectedOptionKey === optionKey && control.naturalSelection?.optionKey === optionKey
+          ? control.naturalSelection
           : undefined;
       let projected: ReturnType<typeof services.traitDomain.project> | undefined;
       const bound = Object.freeze({
@@ -2365,6 +2377,53 @@ export function bindWorkspaceInteractions(
                 ),
               ),
             }),
+        ...(naturalSelectionControl === undefined
+          ? {}
+          : {
+              naturalSelection: Object.freeze({
+                control: naturalSelectionControl,
+                forOffer: (offer: AuthoredTraitOfferTraits, retainedTargetKey?: string) =>
+                  Object.freeze({
+                    load: () => {
+                      const evaluated = candidates.naturalSelectionResult(
+                        naturalSelectionControl.address,
+                        offer,
+                        offer.options[optionIndex(optionKey)]?.naturalSelectionTargets,
+                      );
+                      if (evaluated.kind !== 'naturalSelectionResult') return undefined;
+                      const currentTargets: readonly string[] = [
+                        ...(offer.options[optionIndex(optionKey)]?.naturalSelectionTargets ?? []),
+                        ...(retainedTargetKey === undefined ? [] : [retainedTargetKey]),
+                      ];
+                      const available = new Set(evaluated.result.nextTargetTraitKeys);
+                      const targetCandidates = Object.freeze(
+                        [
+                          ...new Set([...evaluated.result.nextTargetTraitKeys, ...currentTargets]),
+                        ].map((traitKey) =>
+                          Object.freeze({
+                            value: traitKey,
+                            support: available.has(traitKey)
+                              ? ('possible' as const)
+                              : ('impossible' as const),
+                            branchSupport: evaluated.result.branchSupport,
+                            selected: traitKey === retainedTargetKey,
+                            ...(available.has(traitKey) ? {} : { reason: 'unavailable' as const }),
+                          }),
+                        ),
+                      );
+                      return Object.freeze({
+                        complete: evaluated.result.complete,
+                        picker: projectDirectTraitOutcomePicker(
+                          targetCandidates,
+                          (traitKey) => catalog.traits.byKey[traitKey]?.label ?? traitKey,
+                          (traitKey) => traitKey,
+                        ),
+                      });
+                    },
+                  }),
+                traitLabel: (traitKey: string) => catalog.traits.byKey[traitKey]?.label ?? traitKey,
+              } satisfies WorkspaceNaturalSelectionInteraction),
+            }),
         load() {
           if (projected !== undefined) return projected;
           const focused = candidates.traitOfferFocusedOptions(
@@ -2431,6 +2490,21 @@ export function bindWorkspaceInteractions(
             }
           : {}),
         optionDomain,
+        ransomAssessment: (value: AuthoredTraitOffer) => {
+          if (value.kind !== 'traits') return undefined;
+          const evaluated = candidates.ransomAssessment(control.address, value);
+          if (evaluated.kind !== 'ransomAssessment') return undefined;
+          const first = evaluated.result.assessments[0];
+          if (!evaluated.result.branchAgreement || first === undefined)
+            return Object.freeze({ branchAgreement: false });
+          return Object.freeze({
+            branchAgreement: evaluated.result.branchAgreement,
+            buffedTraitKeys: first.buffedTraitKeys,
+            levelBonus: first.levelBonus,
+            removedCount: first.removedCount,
+            removedTraitKeys: first.removedTraitKeys,
+          });
+        },
         traitLabel: (traitKey: string) => catalog.traits.byKey[traitKey]?.label ?? traitKey,
         selectedIntent: (selectedOptionKey: AuthoredTraitOfferTraits['selectedOptionKey']) =>
           derivedShopPayloadIntent(
@@ -2475,6 +2549,60 @@ export function bindWorkspaceInteractions(
         owner: control.address,
         traitLabel: (traitKey: string) => catalog.traits.byKey[traitKey]?.label ?? traitKey,
         value: control.value,
+      }),
+    );
+  }
+  const steadyGrowth = new Map<string, WorkspaceSteadyGrowthInteraction>();
+  for (const [key, control] of effectiveSteadyGrowthControls) {
+    steadyGrowth.set(
+      key,
+      Object.freeze({
+        key,
+        owner: control.address,
+        intentFor: (targetTraitKey: string | null) =>
+          Object.freeze({
+            command: Object.freeze({
+              kind: 'ReplaceSteadyGrowthTarget' as const,
+              outcome: control.address,
+              targetTraitKey,
+            }),
+          }),
+        forTarget: (targetTraitKey: string | null | undefined = control.targetTraitKey) =>
+          Object.freeze({
+            load: () => {
+              const evaluated = candidates.steadyGrowthOutcome(control.address, targetTraitKey);
+              if (evaluated.kind !== 'steadyGrowthOutcome') return undefined;
+              return Object.freeze({
+                emptyNoOp: evaluated.result.emptyNoOp,
+                picker: projectDirectTraitOutcomePicker(
+                  [
+                    ...new Set([
+                      ...evaluated.result.eligibleTargetKeys,
+                      ...(targetTraitKey === null || targetTraitKey === undefined
+                        ? []
+                        : [targetTraitKey]),
+                    ]),
+                  ].map((traitKey) =>
+                    Object.freeze({
+                      value: traitKey,
+                      support: evaluated.result.eligibleTargetKeys.includes(traitKey)
+                        ? ('possible' as const)
+                        : ('impossible' as const),
+                      branchSupport: evaluated.result.branchSupport,
+                      selected: traitKey === (targetTraitKey ?? undefined),
+                      ...(evaluated.result.eligibleTargetKeys.includes(traitKey)
+                        ? {}
+                        : { reason: 'unavailable' as const }),
+                    }),
+                  ),
+                  (traitKey) => catalog.traits.byKey[traitKey]?.label ?? traitKey,
+                  (traitKey) => traitKey,
+                ),
+                selectedPossible: evaluated.result.selectedPossible,
+              });
+            },
+          }),
+        traitLabel: (traitKey: string) => catalog.traits.byKey[traitKey]?.label ?? traitKey,
       }),
     );
   }
@@ -2678,6 +2806,7 @@ export function bindWorkspaceInteractions(
     acquisitionConversions,
     traitOffers,
     levelResolutions,
+    steadyGrowth,
     bossCompletionArcana,
     keepsakeSelections,
     keepsakeEquipResults,

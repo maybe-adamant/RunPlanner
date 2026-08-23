@@ -178,6 +178,10 @@ export function createStructuredWorkspaceProjection(
       const rewardControls = new Map<string, WorkspaceRewardControl>();
       const traitControls = new Map<string, WorkspaceTraitOfferControl>();
       const levelResolutionControls = new Map<string, WorkspaceLevelResolutionControl>();
+      const steadyGrowthControls = new Map<
+        string,
+        import('./contract').WorkspaceSteadyGrowthControl
+      >();
       const bossCompletionArcanaControls = new Map<
         string,
         NonNullable<WorkspaceCompletionNode['judgment']>
@@ -349,6 +353,17 @@ export function createStructuredWorkspaceProjection(
                 node.judgment,
               );
             }
+            if (node.kind === 'completion' && node.steadyGrowth !== undefined) {
+              steadyGrowthControls.set(
+                semanticAddressKey(node.steadyGrowth.address),
+                node.steadyGrowth,
+              );
+            }
+            if (node.kind === 'occurrenceWorkbench') {
+              for (const control of node.room.roomActions?.steadyGrowth ?? []) {
+                steadyGrowthControls.set(semanticAddressKey(control.address), control);
+              }
+            }
             if (node.kind === 'completion' && node.keepsakeSelection !== undefined) {
               keepsakeSelectionControls.set(
                 semanticAddressKey(node.keepsakeSelection.address),
@@ -460,6 +475,7 @@ export function createStructuredWorkspaceProjection(
         rewardControls,
         traitControls,
         levelResolutionControls,
+        steadyGrowthControls,
         bossCompletionArcanaControls,
         keepsakeSelectionControls,
         keepsakeEquipResultControls,

@@ -20,6 +20,7 @@ import {
   createEchoLastRunBoonAddress,
   createEchoLastRewardAddress,
   createAllTogetherSetAddress,
+  createNaturalSelectionResultAddress,
   createLevelResolutionAddress,
   createAcquisitionRoleAddress,
   traitOfferOption,
@@ -70,6 +71,7 @@ import type {
   SelectedLevelResolutionAssessment,
 } from '@run-planner/engine/simulation';
 import {
+  appendSteadyGrowthTimelineEffects,
   encounterPhaseAuthoringDomainForRoom,
   scopeRoomLifecycleTimeline,
   type EncounterPhaseAuthoringRoomOptions,
@@ -114,7 +116,9 @@ import {
   type WorkspaceShopSupplementalDescriptor,
   type WorkspaceMarker,
   type WorkspaceTraitOfferStatus,
+  type WorkspaceNaturalSelectionControl,
   type WorkspaceRunStateLauncher,
+  type WorkspaceSteadyGrowthControl,
 } from '../contract';
 import type { WorkspaceOccurrenceInteractionRequirement } from '../interactions/interaction-requirements';
 import {
@@ -173,6 +177,7 @@ export interface WorkspaceOccurrenceAssemblyInput {
   readonly levelResolutionAssessment: (
     owner: LevelResolutionAddress,
   ) => SelectedLevelResolutionAssessment | undefined;
+  readonly steadyGrowthOutcomes?: readonly import('@run-planner/engine/simulation').BiomeRewardSimulation['steadyGrowthOutcomes'][number][];
   readonly isActiveTraitOffer: (owner: TraitOfferAddress) => boolean;
   readonly derivedAcquisitionEntries?: (
     site: AcquisitionSiteAddress,
@@ -349,6 +354,21 @@ function traitOfferControls(
               });
             }),
           );
+    const naturalSelection =
+      offer.kind !== 'traits' || selectedDisposition?.kind !== 'naturalSelection'
+        ? undefined
+        : (() => {
+            const naturalAddress = createNaturalSelectionResultAddress(
+              address,
+              offer.selectedOptionKey,
+            );
+            return Object.freeze({
+              address: naturalAddress,
+              marker: input.markerDestinations.marker(naturalAddress),
+              optionKey: offer.selectedOptionKey,
+              slotCount: selectedDisposition.levelCount,
+            }) satisfies WorkspaceNaturalSelectionControl;
+          })();
     const marker = input.markerDestinations.marker(address);
     controls.push(
       Object.freeze({
@@ -362,6 +382,7 @@ function traitOfferControls(
         ...(traitAcquisitionTarget === undefined ? {} : { traitAcquisitionTarget }),
         ...(circeResolution === undefined ? {} : { circeResolution }),
         ...(allTogetherSets === undefined ? {} : { allTogetherSets }),
+        ...(naturalSelection === undefined ? {} : { naturalSelection }),
         ...(offer.kind === 'traits' &&
         traitGiverUsesOfferContext(input.catalog, giver.key, 'deathDefianceConditionMet')
           ? {
@@ -1518,7 +1539,10 @@ export function assembleBaseWorkspaceRoomActions(input: {
           ...(entry.phaseKey === undefined ? {} : { phaseKey: entry.phaseKey }),
         }),
       );
-    } else if (input.boundaryFilter === undefined || input.boundaryFilter(entry.boundary)) {
+    } else if (
+      entry.kind === 'boundary' &&
+      (input.boundaryFilter === undefined || input.boundaryFilter(entry.boundary))
+    ) {
       entries.push(
         Object.freeze({
           kind: 'boundary' as const,
@@ -1807,8 +1831,14 @@ function roomActionsForOccurrence(
   );
   const optionalKeys = new Set(optionalRows.map((row) => row.key));
   const repairRows = Object.freeze(unrankedOrStaleRows.filter((row) => !optionalKeys.has(row.key)));
+  const steadyGrowthOutcomes = (input.steadyGrowthOutcomes ?? []).filter(
+    (outcome) => semanticAddressKey(outcome.address.owner) === semanticAddressKey(owner),
+  );
   const activeLifecycleTimeline = scopeRoomLifecycleTimeline(
-    lifecycleTimeline,
+    appendSteadyGrowthTimelineEffects(
+      lifecycleTimeline,
+      steadyGrowthOutcomes.map((outcome) => outcome.address),
+    ),
     lifecycleTimeline.structure.activeEncounterSlotKeys.flatMap((phaseKey) => {
       const address = createEncounterPhaseAddress(
         input.biome,
@@ -1818,15 +1848,45 @@ function roomActionsForOccurrence(
       return input.encounterPhaseStatus(address)?.kind === 'dormantSuffix' ? [] : [phaseKey];
     }),
   );
+  const steadyGrowthOutcomeByAddress = new Map(
+    steadyGrowthOutcomes.map((outcome) => [semanticAddressKey(outcome.address), outcome] as const),
+  );
+  const steadyGrowth = Object.freeze(
+    activeLifecycleTimeline.entries.flatMap((entry) => {
+      if (entry.kind !== 'automaticEffect') return [];
+      const outcome = steadyGrowthOutcomeByAddress.get(semanticAddressKey(entry.address));
+      if (outcome === undefined) {
+        throw new StructuredWorkspaceProjectionContractError(
+          `${semanticAddressKey(entry.address)} has no Steady Growth outcome metadata`,
+        );
+      }
+      return [
+        Object.freeze({
+          address: outcome.address,
+          marker: input.markerDestinations.marker(outcome.address),
+          phaseKey: outcome.phaseKey,
+          ...(input.occurrence.encounters.steadyGrowthTargetByPhase?.[outcome.phaseKey] ===
+          undefined
+            ? {}
+            : {
+                targetTraitKey:
+                  input.occurrence.encounters.steadyGrowthTargetByPhase[outcome.phaseKey],
+              }),
+        }),
+      ];
+    }),
+  );
+  const projectedTimeline = projectRoomLifecycleTimeline(
+    input,
+    activeLifecycleTimeline,
+    roomLocal,
+    encounterPhases,
+    projectedRows,
+    proposals,
+    steadyGrowth,
+  );
   return Object.freeze({
-    timeline: projectRoomLifecycleTimeline(
-      input,
-      activeLifecycleTimeline,
-      roomLocal,
-      encounterPhases,
-      projectedRows,
-      proposals,
-    ),
+    timeline: projectedTimeline,
     checkpoints: Object.freeze(
       roster.checkpoints
         .filter((checkpoint) => checkpoint.checkpointKey !== 'outgoingGeneration')
@@ -1845,6 +1905,7 @@ function roomActionsForOccurrence(
     proposals: Object.freeze(proposals),
     repairRows,
     rows: projectedRows,
+    ...(steadyGrowth.length === 0 ? {} : { steadyGrowth }),
   });
 }
 
@@ -1855,6 +1916,7 @@ function projectRoomLifecycleTimeline(
   encounterPhases: readonly WorkspaceEncounterPhase[],
   rows: readonly WorkspaceRoomActionRow[],
   proposals: readonly WorkspaceRoomActionProposal[],
+  steadyGrowth: readonly WorkspaceSteadyGrowthControl[],
 ): WorkspaceRoomLifecycleTimeline {
   const occurrence = createOccurrenceAddress(input.biome, input.occurrence.occurrenceId);
   const launcherForBoundary = (
@@ -1966,38 +2028,57 @@ function projectRoomLifecycleTimeline(
   const representedCagePhases = new Set(
     [...cageSlotByBoundaryKey.values()].map((slot) => slot.selected),
   );
+  const entries: WorkspaceRoomLifecycleTimelineEntry[] = [];
+  for (const entry of timeline.entries) {
+    if (entry.kind === 'boundary') {
+      const runState = launcherForBoundary(entry.boundary);
+      const fieldsCageSlot = cageSlotByBoundaryKey.get(entry.boundary.key);
+      entries.push(
+        Object.freeze({
+          kind: 'boundary' as const,
+          boundary: entry.boundary,
+          placement: entry.placement,
+          rank: entry.rank,
+          ...(runState === undefined ? {} : { runState }),
+          ...(fieldsCageSlot === undefined ? {} : { fieldsCageSlot }),
+        }),
+      );
+      continue;
+    }
+    if (entry.kind === 'automaticEffect') {
+      const control = steadyGrowth.find(
+        (candidate) => semanticAddressKey(candidate.address) === semanticAddressKey(entry.address),
+      );
+      if (control !== undefined) {
+        entries.push(
+          Object.freeze({
+            kind: 'automaticEffect' as const,
+            effect: 'steadyGrowth' as const,
+            address: control.address,
+            phaseKey: control.phaseKey,
+            rank: entry.rank,
+          }),
+        );
+      }
+      continue;
+    }
+    entries.push(
+      Object.freeze({
+        kind: 'action' as const,
+        actionKey: entry.action.key,
+        presentation:
+          entry.action.reference.kind === 'completeFieldsCage' &&
+          representedCagePhases.has(entry.action.reference.phaseKey)
+            ? ('fieldsCageAnchor' as const)
+            : ('row' as const),
+        rank: entry.rank,
+        ...(entry.phaseKey === undefined ? {} : { phaseKey: entry.phaseKey }),
+      }),
+    );
+  }
   return Object.freeze({
     boundaries: Object.freeze([...timeline.boundaries]),
-    entries: Object.freeze(
-      timeline.entries.map((entry) =>
-        entry.kind === 'boundary'
-          ? Object.freeze({
-              kind: 'boundary' as const,
-              boundary: entry.boundary,
-              placement: entry.placement,
-              rank: entry.rank,
-              ...(() => {
-                const runState = launcherForBoundary(entry.boundary);
-                const fieldsCageSlot = cageSlotByBoundaryKey.get(entry.boundary.key);
-                return {
-                  ...(runState === undefined ? {} : { runState }),
-                  ...(fieldsCageSlot === undefined ? {} : { fieldsCageSlot }),
-                };
-              })(),
-            })
-          : Object.freeze({
-              kind: 'action' as const,
-              actionKey: entry.action.key,
-              presentation:
-                entry.action.reference.kind === 'completeFieldsCage' &&
-                representedCagePhases.has(entry.action.reference.phaseKey)
-                  ? ('fieldsCageAnchor' as const)
-                  : ('row' as const),
-              rank: entry.rank,
-              ...(entry.phaseKey === undefined ? {} : { phaseKey: entry.phaseKey }),
-            }),
-      ),
-    ),
+    entries: Object.freeze(entries),
   });
 }
 
@@ -2550,6 +2631,9 @@ function shipWorkbenchPresentation(
   const phaseBoundaryEntries = roomLocal.phases.map(
     () => [] as Extract<WorkspaceRoomLifecycleTimelineEntry, { readonly kind: 'boundary' }>[],
   );
+  const phaseTimelineEntries = roomLocal.phases.map(
+    () => [] as WorkspaceRoomLifecycleTimelineEntry[],
+  );
   const phaseCheckpointEntries = roomLocal.phases.map(
     () => [] as WorkspaceRoomActions['checkpoints'][number][],
   );
@@ -2559,13 +2643,19 @@ function shipWorkbenchPresentation(
       if (entry.kind === 'boundary') {
         const phaseIndex = boundaryPhaseIndex(entry.boundary);
         phaseBoundaryEntries[phaseIndex]!.push(entry);
+        phaseTimelineEntries[phaseIndex]!.push(entry);
         if (entry.boundary.kind === 'encounterStart') currentPhaseIndex = phaseIndex;
+        continue;
+      }
+      if (entry.kind === 'automaticEffect') {
+        phaseTimelineEntries[phaseIndexForKey(entry.phaseKey)]!.push(entry);
         continue;
       }
       const row = actionByKey.get(entry.actionKey);
       if (row === undefined) continue;
       const phaseIndex =
         entry.phaseKey === undefined ? currentPhaseIndex : phaseIndexForKey(entry.phaseKey);
+      phaseTimelineEntries[phaseIndex]!.push(entry);
       phaseRows[phaseIndex]!.push(row);
     }
     for (const checkpoint of roomActions.checkpoints) {
@@ -2611,6 +2701,7 @@ function shipWorkbenchPresentation(
       ...(encounter === undefined ? {} : { encounter }),
       key: phase.key,
       label: phase.label,
+      timeline: Object.freeze(phaseTimelineEntries[index]!),
       optionalRows: Object.freeze(phaseOptionalRows[index]!),
       ...(wheel === undefined ? {} : { wheel }),
     });
@@ -3041,6 +3132,12 @@ export function assembleWorkspaceOccurrence(
     );
   }
   if (roomActions !== undefined) {
+    for (const effect of roomActions.steadyGrowth ?? []) {
+      input.markerDestinations.setRoomTab(
+        [effect.marker],
+        roomLocal.kind === 'ship' ? roomTabForPhase(roomLocal, effect.phaseKey) : 'actions',
+      );
+    }
     const shipRepairKeys = new Set(roomActions.repairRows.map((row) => row.key));
     const timelineActionPhaseKeys = new Map(
       roomActions.timeline.entries.flatMap((entry) =>

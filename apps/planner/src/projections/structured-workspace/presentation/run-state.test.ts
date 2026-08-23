@@ -103,6 +103,7 @@ describe('Run State presentation', () => {
         bannedTraitKeys: ['ApolloSpecialBoon'],
         properUpbringingActive: true,
         echoShopDuplicateStatus: 'pending',
+        steadyGrowth: { ApolloWeaponBoon: { progress: 2, interval: 6 } },
         chaos: { active: [], matured: [] },
       },
       counters: {
@@ -232,6 +233,8 @@ describe('Run State presentation', () => {
             traitKey: 'ApolloWeaponBoon',
             rarity: 'Rare',
             level: 3,
+            steadyGrowthProgress: 2,
+            steadyGrowthInterval: 6,
           },
         },
         { label: 'Special', slotKey: 'Secondary' },

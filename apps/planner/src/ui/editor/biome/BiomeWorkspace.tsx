@@ -29,7 +29,11 @@ import { FindingCount, SemanticOwnerMarker } from '@planner/ui/feedback/Evaluati
 import { AuthoringFrontier, BatchWorkbench, TopologyRemovalAction } from './DecisionWorkbench';
 import { BiomeFieldControls } from './BiomeFieldControls';
 import { HubDecisionWorkbench } from './HubDecisionWorkbench';
-import { OccurrenceWorkbench, RoomActionsWorkbench } from './OccurrenceWorkbench';
+import {
+  OccurrenceWorkbench,
+  RoomActionsWorkbench,
+  SteadyGrowthEffectRow,
+} from './OccurrenceWorkbench';
 import { RoomSelector } from './RoomSelector';
 import { RunStateSheet } from './RunStateSheet';
 import { RewardControlEditor } from '../rewards/RewardControlEditor';
@@ -529,6 +533,16 @@ function CompletionWorkbench({
                     </span>
                     <strong>Boss defeated</strong>
                   </li>
+                );
+              }
+              if (entry.kind === 'steadyGrowth') {
+                const steadyGrowth = node.steadyGrowth;
+                return steadyGrowth === undefined ? null : (
+                  <SteadyGrowthEffectRow
+                    control={steadyGrowth}
+                    interactions={interactions}
+                    key={workspaceInteractionKey(steadyGrowth.address)}
+                  />
                 );
               }
               const rank = fixedEffectRanks.get(entry.effect);

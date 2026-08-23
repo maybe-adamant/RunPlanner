@@ -23,6 +23,7 @@ import {
   createProjectDocument,
   createRewardWheelAddress,
   createRewardWheelOfferAddress,
+  createSteadyGrowthOutcomeAddress,
   createTraitOfferAddress,
   createTargetAddress,
   decodeProjectDocument,
@@ -33,7 +34,7 @@ import {
   type RoomActionReference,
 } from '@run-planner/engine/authored-project';
 import { simulateProject } from '@run-planner/engine/simulation';
-import { act, cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { Provider } from 'react-redux';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
@@ -43,6 +44,7 @@ import type {
   WorkspaceMixedBatchNode,
   WorkspaceOccurrenceWorkbenchNode,
   WorkspaceOrdinaryBatchNode,
+  WorkspaceInteractionCatalog,
 } from '@planner/projections/structured-workspace';
 import {
   authoredProjectCommandDispatched,
@@ -52,7 +54,10 @@ import {
 import { semanticFindingKey } from '@planner/projections/evaluationProjection';
 import { findingSelected, semanticOwnerNavigated } from '@planner/state/editorSessionSlice';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
-import { OccurrenceWorkbench } from '@planner/ui/editor/biome/OccurrenceWorkbench';
+import {
+  OccurrenceWorkbench,
+  SteadyGrowthEffectRow,
+} from '@planner/ui/editor/biome/OccurrenceWorkbench';
 import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 import {
   createGoldenFGHIProject,
@@ -409,6 +414,163 @@ function enteredShopProject(): {
 }
 
 describe('OccurrenceWorkbench', () => {
+  it('reopens the shared Steady Growth target picker on exact finding navigation', async () => {
+    const application = createApplication();
+    const outcome = createSteadyGrowthOutcomeAddress(
+      createOccurrenceAddress(goldenFBiome, goldenFOccurrenceId(1, 1)),
+      'Encounter',
+    );
+    const control = {
+      address: outcome,
+      marker: Object.freeze({
+        address: outcome,
+        assessment: 'assessed' as const,
+        findingCount: 1,
+        focusKey: 'test-steady-growth-row',
+      }),
+      phaseKey: 'Encounter',
+    };
+    const interaction = {
+      key: semanticAddressKey(outcome),
+      owner: outcome,
+      intentFor: () => ({
+        command: {
+          kind: 'ReplaceSteadyGrowthTarget' as const,
+          outcome,
+          targetTraitKey: 'ApolloWeaponBoon',
+        },
+      }),
+      forTarget: () => ({
+        load: () => ({
+          emptyNoOp: false,
+          picker: {
+            sections: [
+              {
+                key: 'eligible',
+                kind: 'category' as const,
+                label: 'Eligible traits',
+                collapsible: false,
+                items: [
+                  {
+                    key: 'ApolloWeaponBoon',
+                    label: 'Apollo Attack',
+                    value: 'ApolloWeaponBoon',
+                    state: 'possible' as const,
+                    selected: false,
+                    disabled: false,
+                  },
+                ],
+              },
+            ],
+          },
+          selectedPossible: true,
+        }),
+      }),
+      traitLabel: (traitKey: string) => traitKey,
+    };
+    application.store.dispatch(semanticOwnerNavigated(outcome));
+    const workspace = application.selectStructuredWorkspace(application.store.getState());
+    const interactions = {
+      ...workspace.interactions,
+      steadyGrowth: new Map([[semanticAddressKey(outcome), interaction]]),
+    } as unknown as WorkspaceInteractionCatalog;
+    render(
+      <Provider store={application.store}>
+        <SteadyGrowthEffectRow control={control} interactions={interactions} />
+      </Provider>,
+    );
+    const picker = await screen.findByLabelText('Steady Growth target');
+    await waitFor(() => expect(picker.getAttribute('aria-expanded')).toBe('true'));
+    expect(picker.id).toBe(semanticOwnerControlElementId(outcome));
+    application.dispose();
+  });
+
+  it('keeps a stale Steady Growth target visible and exposes its exact clear command', async () => {
+    const application = createApplication();
+    vi.spyOn(application.store, 'dispatch').mockImplementation(() => undefined as never);
+    const outcome = createSteadyGrowthOutcomeAddress(
+      createOccurrenceAddress(nBiome, nOccurrenceIds.opening),
+      'Encounter',
+    );
+    const clearIntent = vi.fn(() => ({
+      command: {
+        kind: 'ReplaceSteadyGrowthTarget' as const,
+        outcome,
+        targetTraitKey: null,
+      },
+    }));
+    const control = {
+      address: outcome,
+      marker: Object.freeze({
+        address: outcome,
+        assessment: 'assessed' as const,
+        findingCount: 1,
+        focusKey: 'test-steady-growth-retained-row',
+      }),
+      phaseKey: 'Encounter',
+      targetTraitKey: 'HestiaWeaponBoon',
+    };
+    const interaction = {
+      key: semanticAddressKey(outcome),
+      owner: outcome,
+      intentFor: clearIntent,
+      forTarget: () => ({
+        load: () => ({
+          emptyNoOp: true,
+          picker: {
+            selected: {
+              key: 'HestiaWeaponBoon',
+              label: 'Hestia Attack',
+              value: 'HestiaWeaponBoon',
+              state: 'impossible' as const,
+              selected: true,
+              disabled: true,
+            },
+            sections: [
+              {
+                key: 'selected-invalid',
+                kind: 'selectedInvalid' as const,
+                label: 'Current target',
+                collapsible: false,
+                items: [
+                  {
+                    key: 'HestiaWeaponBoon',
+                    label: 'Hestia Attack',
+                    value: 'HestiaWeaponBoon',
+                    state: 'impossible' as const,
+                    selected: true,
+                    disabled: true,
+                  },
+                ],
+              },
+            ],
+          },
+          selectedPossible: false,
+        }),
+      }),
+      traitLabel: (traitKey: string) => traitKey,
+    };
+    const workspace = application.selectStructuredWorkspace(application.store.getState());
+    const interactions = {
+      ...workspace.interactions,
+      steadyGrowth: new Map([[semanticAddressKey(outcome), interaction]]),
+    } as unknown as WorkspaceInteractionCatalog;
+    render(
+      <Provider store={application.store}>
+        <SteadyGrowthEffectRow control={control} interactions={interactions} />
+      </Provider>,
+    );
+    expect(await screen.findByLabelText('Steady Growth target')).toBeTruthy();
+    expect(screen.queryByText('No eligible trait (no-op)')).toBeNull();
+    await screen.findByRole('button', { name: 'Clear recorded target' }).then((button) =>
+      act(() => {
+        button.click();
+      }),
+    );
+    expect(clearIntent).toHaveBeenCalledWith(null);
+    application.dispose();
+  });
+
   it('presents an incoming ordinary room identity read-only under its target-owned door control', () => {
     const occurrenceId = goldenFOccurrenceId(1, 1);
     const view = renderOccurrenceWorkbench(

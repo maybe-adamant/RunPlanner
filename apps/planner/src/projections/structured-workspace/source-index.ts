@@ -104,6 +104,7 @@ export interface WorkspaceBiomeSource {
   readonly levelResolutionAssessment: (
     owner: LevelResolutionAddress,
   ) => SelectedLevelResolutionAssessment | undefined;
+  readonly steadyGrowthOutcomes: readonly import('@run-planner/engine/simulation').BiomeRewardSimulation['steadyGrowthOutcomes'][number][];
   readonly occurrence: (occurrenceId: OccurrenceId) => RoomOccurrence | undefined;
   /** Closed engine-owned outgoing state for one exact retained occurrence. */
   readonly outgoingStatus: (occurrenceId: OccurrenceId) => OccurrenceOutgoingStatus;
@@ -711,6 +712,10 @@ function createWorkspaceBiomeSource(
       : []
     ).map((assessment) => [semanticAddressKey(assessment.address), assessment] as const),
   );
+  const steadyGrowthOutcomes =
+    evaluation !== undefined && 'rewards' in evaluation
+      ? evaluation.rewards.steadyGrowthOutcomes
+      : Object.freeze([]);
   const rewardBranches =
     evaluation !== undefined && 'rewards' in evaluation ? evaluation.rewards.branches : [];
   const forfeitedRewardOwnersByBranch = rewardBranches.map(
@@ -745,6 +750,7 @@ function createWorkspaceBiomeSource(
     isActiveTraitOffer,
     levelResolutionAssessment: (owner: LevelResolutionAddress) =>
       levelResolutionAssessments.get(semanticAddressKey(owner)),
+    steadyGrowthOutcomes,
     layout,
     blockedOccurrenceRoom: (occurrenceId: OccurrenceId) =>
       blockedOccurrenceRoom(createOccurrenceAddress(biome, occurrenceId)),

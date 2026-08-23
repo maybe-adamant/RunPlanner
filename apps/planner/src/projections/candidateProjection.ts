@@ -11,6 +11,9 @@ import {
   type EchoPomTargetDomainEvaluation,
   type EchoLastRunBoonDomainEvaluation,
   type AllTogetherSetDomainEvaluation,
+  type NaturalSelectionResultCandidateEvaluation,
+  type RansomAssessmentCandidateEvaluation,
+  type EvaluatedSteadyGrowthOutcomeCandidate,
   type ProjectCandidateEvaluation,
   type ProjectCandidateQuery,
   type ProjectCandidateSession,
@@ -47,6 +50,8 @@ import {
   type SideRoomGeneration,
   type TraitOfferAddress,
   type LevelResolutionAddress,
+  type NaturalSelectionResultAddress,
+  type SteadyGrowthOutcomeAddress,
   type TraitOptionKey,
   type TargetAddress,
 } from '@run-planner/engine/authored-project';
@@ -252,6 +257,24 @@ export interface CandidateProjectionSession {
     optionKey: TraitOptionKey,
     setKey: import('@run-planner/engine/catalog-schema').DirectTraitSetKey,
   ) => AllTogetherSetDomainEvaluation;
+  /** Exact engine-backed Natural Selection child capability. */
+  readonly naturalSelectionResult: (
+    owner: NaturalSelectionResultAddress,
+    value: AuthoredTraitOffer,
+    targets: readonly string[] | undefined,
+  ) => NaturalSelectionResultCandidateEvaluation;
+  /** Exact engine-derived Ransom acquisition assessment. */
+  readonly ransomAssessment: (
+    owner: TraitOfferAddress,
+    value: AuthoredTraitOffer,
+  ) => RansomAssessmentCandidateEvaluation;
+  /** Exact engine-backed Steady Growth threshold capability. */
+  readonly steadyGrowthOutcome: (
+    owner: SteadyGrowthOutcomeAddress,
+    targetTraitKey: string | null | undefined,
+  ) =>
+    | EvaluatedSteadyGrowthOutcomeCandidate
+    | import('@run-planner/engine/simulation').CandidateContextUnavailable;
   /**
    * Exact declaration-owned Pom capability. The engine retains the correlated
    * branch histories; application presentation only adapts its returned data.
@@ -959,6 +982,34 @@ export function createCandidateSessionFactory(
           optionKey,
           setKey,
         }),
+      naturalSelectionResult: (
+        result: NaturalSelectionResultAddress,
+        value: AuthoredTraitOffer,
+        targets: readonly string[] | undefined,
+      ) =>
+        requireProjectCache(cache, assembly, catalog, options).evaluator.evaluate({
+          kind: 'naturalSelectionResult',
+          result,
+          value,
+          targets,
+        }) as NaturalSelectionResultCandidateEvaluation,
+      ransomAssessment: (trait: TraitOfferAddress, value: AuthoredTraitOffer) =>
+        requireProjectCache(cache, assembly, catalog, options).evaluator.evaluate({
+          kind: 'ransomAssessment',
+          trait,
+          value,
+        }) as RansomAssessmentCandidateEvaluation,
+      steadyGrowthOutcome: (
+        outcome: SteadyGrowthOutcomeAddress,
+        targetTraitKey: string | null | undefined,
+      ) =>
+        requireProjectCache(cache, assembly, catalog, options).evaluator.evaluate({
+          kind: 'steadyGrowthOutcome',
+          outcome,
+          targetTraitKey,
+        }) as
+          | EvaluatedSteadyGrowthOutcomeCandidate
+          | import('@run-planner/engine/simulation').CandidateContextUnavailable,
       levelResolution: (owner: LevelResolutionAddress, value: AuthoredLevelResolution) => {
         const capability = levelResolutionCandidateForProjectEvaluationAssembly(assembly, owner);
         if (capability === undefined) return undefined;

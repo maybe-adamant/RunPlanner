@@ -1,4 +1,5 @@
 import type {
+  SteadyGrowthOutcomeAddress,
   BossCompletionArcanaAddress,
   CompletionRoomAddress,
   OccurrenceAddress,
@@ -12,6 +13,7 @@ import type {
 import type { Catalog } from '../../catalog-schema';
 import { scopeRoomLifecycleStructure } from '../../authored-project/room-action-domain';
 import { roomActionKey } from '../../authored-project/room-actions';
+import { semanticAddressKey } from '../../authored-project/addresses';
 import type { RoomActionRoster, RoomActionRow } from './model';
 
 export type RoomLifecycleBoundary =
@@ -39,6 +41,14 @@ export type RoomLifecycleTimelineEntry =
       readonly rank: number;
       /** Engine-owned phase grouping for multi-encounter room workbenches. */
       readonly phaseKey?: string;
+    }
+  | {
+      readonly kind: 'automaticEffect';
+      readonly effect: 'steadyGrowth';
+      readonly address: SteadyGrowthOutcomeAddress;
+      readonly boundary: Extract<RoomLifecycleBoundary, { readonly kind: 'encounterEnd' }>;
+      readonly rank: number;
+      readonly phaseKey: string;
     };
 
 type RoomLifecycleBoundaryEntry = Extract<
@@ -77,6 +87,13 @@ export type CompletionRoomLifecycleTimelineEntry =
       readonly kind: 'fixedEffect';
       readonly effect: 'judgment';
       readonly owner: BossCompletionArcanaAddress;
+    }
+  | {
+      readonly kind: 'automaticEffect';
+      readonly effect: 'steadyGrowth';
+      readonly address: SteadyGrowthOutcomeAddress;
+      readonly boundary: Extract<RoomLifecycleBoundary, { readonly kind: 'encounterEnd' }>;
+      readonly phaseKey: string;
     };
 
 export interface CompletionRoomLifecycleTimeline {
@@ -153,6 +170,69 @@ export function assembleCompletionRoomLifecycleTimeline(input: {
     }),
   );
   return Object.freeze({ owner: input.owner, entries: Object.freeze(entries) });
+}
+
+/**
+ * Add reached Steady Growth checkpoints to the engine-owned room timeline.
+ * The effect is fixed immediately after its phase's encounter end; consumers
+ * only adapt the resulting entry into their presentation contract.
+ */
+export function appendSteadyGrowthTimelineEffects(
+  timeline: RoomLifecycleTimeline,
+  outcomes: readonly SteadyGrowthOutcomeAddress[],
+): RoomLifecycleTimeline {
+  const owned = outcomes.filter(
+    (outcome) => semanticAddressKey(outcome.owner) === semanticAddressKey(timeline.owner),
+  );
+  if (owned.length === 0) return timeline;
+  const entries: RoomLifecycleTimelineEntry[] = [];
+  for (const entry of timeline.entries) {
+    entries.push(entry);
+    if (entry.kind !== 'boundary' || entry.boundary.kind !== 'encounterEnd') continue;
+    for (const outcome of owned) {
+      if (outcome.phaseKey !== entry.boundary.phaseKey) continue;
+      entries.push(
+        Object.freeze({
+          kind: 'automaticEffect' as const,
+          effect: 'steadyGrowth' as const,
+          address: outcome,
+          boundary: entry.boundary,
+          phaseKey: outcome.phaseKey,
+          rank: entry.rank,
+        }),
+      );
+    }
+  }
+  return Object.freeze({ ...timeline, entries: Object.freeze(entries) });
+}
+
+/** Add reached Steady Growth to a derived Boss completion timeline. */
+export function appendSteadyGrowthCompletionTimelineEffects(
+  timeline: CompletionRoomLifecycleTimeline,
+  outcomes: readonly SteadyGrowthOutcomeAddress[],
+): CompletionRoomLifecycleTimeline {
+  const owned = outcomes.filter(
+    (outcome) => semanticAddressKey(outcome.owner) === semanticAddressKey(timeline.owner),
+  );
+  if (owned.length === 0) return timeline;
+  const entries: CompletionRoomLifecycleTimelineEntry[] = [];
+  for (const entry of timeline.entries) {
+    entries.push(entry);
+    if (entry.kind !== 'boundary' || entry.boundary.kind !== 'encounterEnd') continue;
+    for (const outcome of owned) {
+      if (outcome.phaseKey !== entry.boundary.phaseKey) continue;
+      entries.push(
+        Object.freeze({
+          kind: 'automaticEffect' as const,
+          effect: 'steadyGrowth' as const,
+          address: outcome,
+          boundary: entry.boundary,
+          phaseKey: outcome.phaseKey,
+        }),
+      );
+    }
+  }
+  return Object.freeze({ ...timeline, entries: Object.freeze(entries) });
 }
 
 function checkpointRank(roster: RoomActionRoster, key: string): number | undefined {
@@ -431,7 +511,8 @@ export function scopeRoomLifecycleTimeline(
   const entries = timeline.entries.filter(
     (entry) =>
       (entry.kind === 'boundary' && boundaryActive(entry.boundary)) ||
-      (entry.kind === 'action' && (entry.phaseKey === undefined || active.has(entry.phaseKey))),
+      (entry.kind === 'action' && (entry.phaseKey === undefined || active.has(entry.phaseKey))) ||
+      (entry.kind === 'automaticEffect' && active.has(entry.phaseKey)),
   );
   return Object.freeze({
     owner: timeline.owner,

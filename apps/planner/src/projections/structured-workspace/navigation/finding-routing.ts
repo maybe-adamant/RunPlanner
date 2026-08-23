@@ -45,6 +45,7 @@ export function isFineGrainedFindingOwner(address: SemanticAddress): boolean {
     case 'bossCompletionArcana':
     case 'acquisitionSite':
     case 'acquisitionEntry':
+    case 'steadyGrowthOutcome':
       return true;
     case 'keepsakeEquipResult':
       return (
