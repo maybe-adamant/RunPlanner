@@ -18,6 +18,7 @@ import { applyLevelResolutionCommand } from './level-resolution';
 import { applyAcquisitionSiteCommand, materializeDerivedShopEntry } from './acquisition-site';
 import { applyAcquisitionDispositionCommand } from './acquisition-conversion';
 import { applyBossCompletionCommand } from './boss-completion';
+import { applySteadyGrowthCommand } from './steady-growth';
 import { applyKeepsakeCommand } from './keepsake';
 import type { ProjectCommand } from './types';
 import { createAcquisitionEntryAddress, semanticAddressKey } from '../addresses';
@@ -183,6 +184,13 @@ function applyUnchecked(
       );
     case 'ReplaceBossCompletionArcana':
       return applyBossCompletionCommand(
+        document,
+        catalog,
+        locateBiome(document, catalog, command),
+        command,
+      );
+    case 'ReplaceSteadyGrowthTarget':
+      return applySteadyGrowthCommand(
         document,
         catalog,
         locateBiome(document, catalog, command),

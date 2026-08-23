@@ -4,10 +4,11 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { basename, dirname, extname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-const CURRENT_SCHEMA_VERSION = 51;
+const CURRENT_SCHEMA_VERSION = 52;
 const SCHEMA_49_CATALOG_VERSION = '0.27.0-arcana-fear-loadout';
 const SCHEMA_50_CATALOG_VERSION = '0.30.0-boon-rarity-ledger';
 const SCHEMA_51_CATALOG_VERSION = '0.31.0-chaos-traits';
+const SCHEMA_52_CATALOG_VERSION = '0.32.0-run-impacting-traits';
 
 function expectRecord(value, label) {
   if (value === null || typeof value !== 'object' || Array.isArray(value)) {
@@ -90,9 +91,21 @@ function migrate50To51(document) {
   return { unresolvedTrialUpgradesAdded };
 }
 
+function migrate51To52(document) {
+  if (document.catalogVersion !== SCHEMA_51_CATALOG_VERSION) {
+    throw new Error(
+      `schema 51 migration expects catalog ${SCHEMA_51_CATALOG_VERSION}, received ${String(document.catalogVersion)}`,
+    );
+  }
+  document.schemaVersion = 52;
+  document.catalogVersion = SCHEMA_52_CATALOG_VERSION;
+  return {};
+}
+
 const migrations = new Map([
   [49, migrate49To50],
   [50, migrate50To51],
+  [51, migrate51To52],
 ]);
 
 export function migrateProjectDocument(value, targetVersion = CURRENT_SCHEMA_VERSION) {

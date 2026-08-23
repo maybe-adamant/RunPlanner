@@ -154,6 +154,7 @@ describe('Jeweled Pom', () => {
         acquisitionRole: 'jeweledPomCleanup',
         sequence: 3,
         acquisitionPoint: 'keepsakeFatedInvalidation',
+        match: 'acquisitionIdentity' as const,
         traitKey: 'HadesLifestealBoon',
         acquisitionIdentity,
       }),

@@ -427,6 +427,7 @@ describe('Echo Gift Gift Gift', () => {
         acquisitionRole: 'experimentalHammerExpiry',
         sequence: 20,
         acquisitionPoint: 'encounterEndEffectsApplied',
+        match: 'acquisitionIdentity' as const,
         traitKey: 'StaffLongAttackTrait',
         acquisitionIdentity: existingIdentity,
       },

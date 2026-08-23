@@ -1106,6 +1106,7 @@ export const nRooms = [
   {
     gameName: 'N_Sub01',
     blocksGorgon: true,
+    skipRoomsPerUpgrade: true,
     label: 'Side Room 01',
     roomSetKey: 'N',
     advancesExperimentalHammerUses: false,
@@ -1132,6 +1133,7 @@ export const nRooms = [
   {
     gameName: 'N_Sub02',
     blocksGorgon: true,
+    skipRoomsPerUpgrade: true,
     label: 'Side Room 02',
     roomSetKey: 'N',
     advancesExperimentalHammerUses: false,
@@ -1158,6 +1160,7 @@ export const nRooms = [
   {
     gameName: 'N_Sub03',
     blocksGorgon: true,
+    skipRoomsPerUpgrade: true,
     label: 'Side Room 03',
     roomSetKey: 'N',
     advancesExperimentalHammerUses: false,
@@ -1184,6 +1187,7 @@ export const nRooms = [
   {
     gameName: 'N_Sub04',
     blocksGorgon: true,
+    skipRoomsPerUpgrade: true,
     label: 'Side Room 04',
     roomSetKey: 'N',
     advancesExperimentalHammerUses: false,
@@ -1210,6 +1214,7 @@ export const nRooms = [
   {
     gameName: 'N_Sub05',
     blocksGorgon: true,
+    skipRoomsPerUpgrade: true,
     label: 'Side Room 05',
     roomSetKey: 'N',
     advancesExperimentalHammerUses: false,
@@ -1236,6 +1241,7 @@ export const nRooms = [
   {
     gameName: 'N_Sub06',
     blocksGorgon: true,
+    skipRoomsPerUpgrade: true,
     label: 'Side Room 06',
     roomSetKey: 'N',
     advancesExperimentalHammerUses: false,
@@ -1262,6 +1268,7 @@ export const nRooms = [
   {
     gameName: 'N_Sub07',
     blocksGorgon: true,
+    skipRoomsPerUpgrade: true,
     label: 'Side Room 07',
     roomSetKey: 'N',
     advancesExperimentalHammerUses: false,
@@ -1288,6 +1295,7 @@ export const nRooms = [
   {
     gameName: 'N_Sub08',
     blocksGorgon: true,
+    skipRoomsPerUpgrade: true,
     label: 'Side Room 08',
     roomSetKey: 'N',
     advancesExperimentalHammerUses: false,
@@ -1314,6 +1322,7 @@ export const nRooms = [
   {
     gameName: 'N_Sub09',
     blocksGorgon: true,
+    skipRoomsPerUpgrade: true,
     label: 'Side Room 09',
     roomSetKey: 'N',
     advancesExperimentalHammerUses: false,
@@ -1344,6 +1353,7 @@ export const nRooms = [
   {
     gameName: 'N_Sub10',
     blocksGorgon: true,
+    skipRoomsPerUpgrade: true,
     label: 'Side Room 10',
     roomSetKey: 'N',
     advancesExperimentalHammerUses: true,
@@ -1374,6 +1384,7 @@ export const nRooms = [
   {
     gameName: 'N_Sub11',
     blocksGorgon: true,
+    skipRoomsPerUpgrade: true,
     label: 'Side Room 11',
     roomSetKey: 'N',
     advancesExperimentalHammerUses: true,
@@ -1404,6 +1415,7 @@ export const nRooms = [
   {
     gameName: 'N_Sub12',
     blocksGorgon: true,
+    skipRoomsPerUpgrade: true,
     label: 'Side Room 12',
     roomSetKey: 'N',
     advancesExperimentalHammerUses: true,
@@ -1430,6 +1442,7 @@ export const nRooms = [
   {
     gameName: 'N_Sub13',
     blocksGorgon: true,
+    skipRoomsPerUpgrade: true,
     label: 'Side Room 13',
     roomSetKey: 'N',
     advancesExperimentalHammerUses: true,
@@ -1456,6 +1469,7 @@ export const nRooms = [
   {
     gameName: 'N_Sub14',
     blocksGorgon: true,
+    skipRoomsPerUpgrade: true,
     label: 'Side Room 14',
     roomSetKey: 'N',
     advancesExperimentalHammerUses: true,
@@ -1486,6 +1500,7 @@ export const nRooms = [
   {
     gameName: 'N_Sub15',
     blocksGorgon: true,
+    skipRoomsPerUpgrade: true,
     label: 'Side Room 15',
     roomSetKey: 'N',
     advancesExperimentalHammerUses: true,

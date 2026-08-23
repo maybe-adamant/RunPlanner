@@ -858,6 +858,7 @@ function evaluateBiomeAssembly(
     completeness,
     context.loadout,
     plan.bossCompletionArcanaKeys,
+    plan.bossCompletionSteadyGrowthTarget,
     context.hasConfiguredSuccessor === true ? plan.postbossKeepsakeDisposition : undefined,
     context.hasConfiguredSuccessor === true ? plan.postbossRoomActions : undefined,
     plan.keepsakeEquipResults,
@@ -989,6 +990,7 @@ function evaluateBiomeAssembly(
         rewards.keepsakeEquipResultArtifacts,
         rewards.acquisitionConversionArtifacts,
         rewards.derivedAcquisitionEntryArtifacts,
+        rewards.steadyGrowthArtifacts,
       ),
     });
   }
@@ -1016,6 +1018,7 @@ function evaluateBiomeAssembly(
         rewards.keepsakeEquipResultArtifacts,
         rewards.acquisitionConversionArtifacts,
         rewards.derivedAcquisitionEntryArtifacts,
+        rewards.steadyGrowthArtifacts,
       ),
       history: Object.freeze({
         routeKey: history.routeKey,

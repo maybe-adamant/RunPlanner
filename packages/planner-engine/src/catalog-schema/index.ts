@@ -537,6 +537,8 @@ export interface RoomDeclaration {
   readonly enteredRewardStoreHistory: EnteredRewardStoreHistoryPolicy;
   readonly encounterEnvelopeKey: string;
   readonly advancesExperimentalHammerUses: boolean;
+  /** Source `SkipRoomsPerUpgrade`; suppresses Steady Growth's end-effects clock. */
+  readonly skipRoomsPerUpgrade: boolean;
   readonly encounterSlotBindings: readonly EncounterSlotBinding[];
   readonly counters: RoomCounterEffects;
   readonly caps: RoomCaps;

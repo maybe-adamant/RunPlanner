@@ -2,8 +2,12 @@
 
 ## Status
 
-Locked delivery plan grounded on base commit `e828577` and the source-complete
-[run-impacting trait effects audit](../audits/RUN_IMPACTING_TRAIT_EFFECTS_GAME_DATA_AUDIT.md).
+Locked delivery plan grounded on base commit `e828577`, the source-complete
+[run-impacting trait effects audit](../audits/RUN_IMPACTING_TRAIT_EFFECTS_GAME_DATA_AUDIT.md),
+and the existing Pom, Hephaestus cooldown, and Proper Upbringing evidence in
+[trait offer pools and dependencies](../audits/TRAIT_OFFER_POOLS_AND_DEPENDENCIES.md)
+and the
+[boon rarity ledger audit](../audits/BOON_RARITY_LEDGER_GAME_DATA_AUDIT.md).
 The audit and this plan must be committed before execution begins.
 
 This is temporary delivery authority. It must not be linked from `README.md`
@@ -29,8 +33,9 @@ Owning stable authorities are:
 
 Make the three bounded trait effects real in chronological simulation:
 
-1. Natural Selection distributes exactly eight levels through one legal
-   round-robin core-slot outcome authored at its acquisition;
+1. Natural Selection distributes up to eight successful levels through one
+   legal round-robin core-slot outcome authored at its acquisition, stopping
+   early only when every target has become ineffective;
 2. Queen's and King's Ransom deterministically remove the opposite provider's
    current traits and grant `4 x removed identities` levels to every eligible
    trait from the buffed provider; and
@@ -40,8 +45,9 @@ Make the three bounded trait effects real in chronological simulation:
 
 The resulting user experience is:
 
-- Natural Selection exposes one selected-trait outcome editor that walks the
-  eight legal level targets and shows the resulting per-trait allocation;
+- Natural Selection exposes one selected-trait outcome editor that walks up to
+  eight legal level targets, stops only when its engine domain is exhausted,
+  and shows the resulting per-trait allocation;
 - each Ransom shows a read-only acquisition preview because its exact removals
   and level gains are derived from the current run frontier; and
 - a reached Steady Growth threshold appears as a fixed automatic row after the
@@ -61,8 +67,9 @@ action order.
 - provider-indexed Ransom removal and deterministic level mutation;
 - Steady Growth derived progress, phase-owned authored target, candidate,
   finding, focus, fixed timeline row, and Run State preview;
-- shared Hephaestus rarity-upgrade limits consumed by both Bridal Glow and
-  Steady Growth;
+- declaration-owned Hephaestus in-run upgrade limits consumed by ordinary
+  Poms, Natural Selection, Bridal Glow, and Steady Growth, while Proper
+  Upbringing retains its separate source-backed rarity-floor behavior;
 - schema `51 -> 52`, catalog version `0.31.0-chaos-traits ->
 0.32.0-run-impacting-traits`, checkpoint migration, and migration CLI
   support;
@@ -81,10 +88,12 @@ action order.
   optional-pickup loss;
 - a generic trait-effect registry, callback DSL, scheduler, timer service, or
   effect-state bag;
-- changing ordinary Pom target eligibility beyond the existing supported
-  core-god collapse;
-- modeling every combat-value curve or Natural Selection saturation edge that
-  the current Pom model deliberately omits;
+- broadening ordinary Pom target eligibility beyond the existing supported
+  core-god collapse; this slice does correct the three declaration-owned
+  Hephaestus cooldown-cap exclusions already shared by the game's Pom-derived
+  and in-run rarity-upgrade paths;
+- modeling any other combat-value curve or Natural Selection saturation edge
+  that the current Pom model deliberately omits;
 - making Steady Growth draggable, removable, optional, or part of
   `roomActions.order`;
 - changing encounter composition, Fig Leaf, Chaos clock, Experimental Hammer,
@@ -102,7 +111,8 @@ turn into a claim that they are effectless.
 Replace the three traits' current ordinary-equip-only declarations with three
 closed normalized disposition families:
 
-- Natural Selection equips, then distributes exactly eight core-slot levels;
+- Natural Selection equips, then distributes up to eight successful core-slot
+  levels;
 - each Ransom equips, then sacrifices one declared provider index and grants a
   declared number of levels per removed identity to the other provider; and
 - Steady Growth equips with its exact rarity-to-interval table and advances
@@ -134,41 +144,48 @@ eligible Natural Selection target
   = occupied ordinary core slot
   + core-god trait
   + not blockStacking
+  + next level remains effective under any declaration-owned in-run upgrade limit
 ```
 
-The normalized catalog does not model the complete numeric tooltip curves
-used by the game's final saturation check. Therefore this slice treats every
-currently supported eligible core trait as effective for all eight increments,
-matching the existing Pom model. Later combat-value modeling may narrow that
-domain without changing the round-robin ownership established here.
+The normalized catalog does not model the complete numeric tooltip curves used
+by the game's final saturation check. This slice retains that collapse except
+for the three Hephaestus cooldown traits whose exact rarity/level thresholds
+are already source-backed and shared with ordinary Pom eligibility. A
+Hephaestus target leaves the Natural Selection domain as soon as its next level
+would no longer improve the two-second-capped cooldown. The remaining targets
+continue the same round without requiring the now-ineligible target, and no
+remaining target may repeat until the other still-eligible members of that
+round have received an increment.
 
-Persist one complete eight-target sequence beneath the selected Natural
-Selection option:
+Natural Selection, normal Poms, Bridal Glow, and Steady Growth must all consume
+one engine-owned eligibility helper over the target declaration and current
+rarity/level. Natural Selection must not copy the Hephaestus table into its
+result assessment or React draft.
+
+Persist one complete nonempty successful-target sequence beneath the selected
+Natural Selection option:
 
 ```ts
-naturalSelectionTargets?: readonly [
-  string,
-  string,
-  string,
-  string,
-  string,
-  string,
-  string,
-  string,
-];
+naturalSelectionTargets?: readonly string[];
 ```
 
-The sequence is the exact successful increment order, not eight independent
-choices. Simulation validates it against one immutable pre-acquisition trait
-frontier:
+The structural length is `1..8`. The sequence is the exact successful
+increment order, not eight independent choices. The game can stop below eight:
+its offer gate requires only one currently effective slotted target, while
+`DistributeLevels` removes targets whose next processed value would not change
+and terminates when the shuffled list becomes empty. Simulation validates the
+authored sequence against one immutable pre-acquisition trait frontier:
 
 - every key is currently equipped and Natural-Selection-eligible;
 - each round uses every eligible key exactly once before any key repeats; and
-- the sequence contains exactly eight increments.
+- the stable relative order comes from the first shuffled round and survives
+  later dynamic target removal; and
+- the sequence contains eight increments unless its exact engine-backed next
+  target domain is empty after the final authored increment.
 
-The selected option equips Natural Selection first, then appends eight ordered
-level-mutation events at the same acquisition checkpoint. Later history sees
-the resulting levels immediately.
+The selected option equips Natural Selection first, then appends one to eight
+ordered level-mutation events at the same acquisition checkpoint. Later
+history sees the resulting levels immediately.
 
 The authored value belongs to one exact `NaturalSelectionResultAddress` under
 the existing `TraitOfferAddress` and option key. The existing whole-offer
@@ -195,9 +212,14 @@ level-bearing trait
   + member of a normalized Olympian giver
   + not blockStacking
 
-Pom/Natural-Selection target
+Pom target
   = level-bearing trait
   + isCoreGodTrait
+  + next level remains effective under any declaration-owned in-run upgrade limit
+
+Natural-Selection target
+  = Pom target
+  + equipmentSlot is one of the disposition's five declared ordinary slots
 ```
 
 Fresh level-bearing traits start at level `1`; level remains a derived folded
@@ -301,12 +323,40 @@ domain; when it is the sole eligible target, it remains selectable. An empty
 domain produces the derived no-target outcome and does not block continuation.
 
 The three Hephaestus cooldown limits currently live under Bridal Glow's
-targeted acquisition declaration even though the source predicate is shared by
-`AddRarityToTraits`. Move those limits onto the target trait declarations and
-make both Bridal Glow and Steady Growth consume the same authority. Preserve
-the exact existing Common/Rare/Epic level tables. At or below the level that
-represents a two-second unmodified cooldown, the Hephaestus trait is not a
-Steady Growth target.
+targeted acquisition declaration even though the game applies the same
+two-second effectiveness boundary to ordinary Pom-derived level increments and
+to `AddRarityToTraits`. Move one complete closed table onto each affected
+target trait declaration:
+
+| Target                                       | Common | Rare | Epic | Heroic |
+| -------------------------------------------- | -----: | ---: | ---: | -----: |
+| Hephaestus Attack — `HephaestusWeaponBoon`   |      9 |    7 |    5 |      3 |
+| Hephaestus Special — `HephaestusSpecialBoon` |     11 |    9 |    7 |      5 |
+| Hephaestus Sprint — `HephaestusSprintBoon`   |      8 |    7 |    6 |      5 |
+
+Each cell is the maximum current level from which another source-backed in-run
+upgrade remains effective. The catalog compiler requires all four equipped
+rarities and rejects this field on any other trait. One engine-owned helper
+consumes the table for:
+
+- ordinary Pom target eligibility;
+- Natural Selection's next-position target eligibility;
+- Bridal Glow's rarity target eligibility; and
+- Steady Growth's rarity target eligibility.
+
+The caller retains its other rules: Poms and Natural Selection still require
+their core/Pom target domain, while Bridal Glow and Steady Growth still require
+a next rarity and their own source-specific constraints. The table is not a
+generic rarity-mutation prohibition.
+
+Proper Upbringing deliberately does not consume this helper. Its source
+`UpgradeAllCommon` path promotes eligible equipped Common god traits to Rare
+without consulting `UnmodifiedCooldown` or whether the processed value would
+change. It can therefore promote a cooldown-capped Common Hephaestus trait to
+Rare while leaving its effective cooldown unchanged. That promoted trait
+remains unavailable to later Pom, Natural Selection, Bridal Glow, and Steady
+Growth targeting whenever its current Rare level is beyond the declaration's
+Rare threshold.
 
 After a valid target is selected:
 
@@ -332,11 +382,11 @@ Advance the strict authored document once, from schema `51` to `52`.
 
 ### Natural Selection
 
-Add the complete eight-target result to ordinary `AuthoredTraitOption` and the
-existing Echo last-run nested option shape. Structural decoding requires an
-array of exactly eight known nonblank trait keys. Contextual round legality and
-current eligibility remain simulation policy so upstream edits can retain an
-invalid but repairable sequence.
+Add the complete successful-target result to ordinary `AuthoredTraitOption` and
+the existing Echo last-run nested option shape. Structural decoding requires a
+nonempty array of at most eight known nonblank trait keys. Contextual order,
+early-completion legality, and current eligibility remain simulation policy so
+upstream edits can retain an invalid but repairable sequence.
 
 ### Steady Growth
 
@@ -391,17 +441,20 @@ Do not switch on reward game names or create source-specific effect handlers.
 
 Publish one exact candidate capability at `NaturalSelectionResultAddress`.
 Given the current complete draft prefix, it returns only targets legal for the
-next round-robin position. The application may walk that capability through an
-eight-step transient draft, but it cannot derive which keys remain in the
-round.
+next round-robin position and whether the prefix is complete. Completion is
+true at eight targets, or earlier only when the next-target domain is empty.
+The application may walk that capability through an up-to-eight-step transient
+draft, but it cannot derive which keys remain in the round or decide that a
+short prefix is complete.
 
-The complete selected assessment validates all eight positions against one
-pre-acquisition history. Branch support must preserve one complete sequence;
-the application cannot union per-position candidates from incompatible
-branches.
+The complete selected assessment validates every authored position and its
+terminal condition against one pre-acquisition history. Branch support must
+preserve one complete sequence; the application cannot union per-position
+candidates from incompatible branches.
 
 Findings distinguish missing and unavailable complete results and route to the
-selected trait dialog. A valid result appends exactly eight level mutations.
+selected trait dialog. A valid result appends exactly the one to eight authored
+level mutations.
 
 ### Ransom derived product
 
@@ -441,11 +494,12 @@ no finding, control, marker, or history mutation.
 ### Natural Selection
 
 Render its active result in the existing selected-trait outcome region. Use a
-compound contextual draft with eight positions and one final whole-offer
-commit. This is the same interaction language already used by All Together:
-one compact outcome summary, an active contextual picker, local incomplete
-draft state, and one complete trait-offer save. Do not add a second Natural
-Selection dialog or a parallel compound-draft controller.
+compound contextual draft with up to eight positions and one final whole-offer
+commit. The engine capability decides whether another position is required or
+the current short result is complete. This is the same interaction language
+already used by All Together: one compact outcome summary, an active contextual
+picker, local incomplete draft state, and one complete trait-offer save. Do not
+add a second Natural Selection dialog or a parallel compound-draft controller.
 
 Narrowly extract the existing `AllTogetherOutcomeEditor` workflow into a
 shared selected-trait compound-outcome presentation used by both consumers.
@@ -458,11 +512,11 @@ Keep only presentation mechanics in that shared leaf:
 - one callback when the complete authored result is ready.
 
 All Together continues to supply its four independent declaration-set rows and
-domains. Natural Selection supplies eight ordered positions and reloads the
-next engine-backed domain against the current complete draft prefix. The
-shared React leaf does not infer round completion, candidate exclusion, set
-membership, or whether one draft is supported. Those remain in their existing
-engine/application owners.
+domains. Natural Selection supplies up to eight ordered positions and reloads
+the next engine-backed domain against the current complete draft prefix. The
+shared React leaf does not infer early completion, round completion, candidate
+exclusion, set membership, or whether one draft is supported. Those remain in
+their existing engine/application owners.
 
 The Natural Selection summary aggregates repeated targets into resulting
 per-trait level counts so it stays compact instead of rendering eight verbose
@@ -539,10 +593,12 @@ Deliver one coherent engine-owned semantic slice:
 - catalog version `0.32.0-run-impacting-traits` and strict declaration/compiler
   products;
 - level-bearing versus Pom-target predicates;
-- target-owned Hephaestus rarity-upgrade limits and Bridal Glow reuse;
+- target-owned Hephaestus in-run upgrade limits and shared consumption by
+  Poms, Natural Selection, Bridal Glow, and Steady Growth, with Proper
+  Upbringing explicitly outside that restriction;
 - schema 52, migration CLI, checkpoint migration, exact addresses and commands;
-- Natural Selection result assessment, candidates, findings, and eight level
-  mutations;
+- Natural Selection result assessment, candidates, findings, and one-to-eight
+  successful level mutations;
 - Ransom removal/level transforms and derived assessment;
 - Steady Growth progress, end-effects settlement, authored target candidates,
   findings, and rarity mutation;
@@ -556,8 +612,9 @@ Primary Gate-A tests:
 - schema-52 codec, migration, canonical encode, command, one-step Undo, and
   retained-invalid tests;
 - Natural Selection one/five-target round matrices, no repeat before a round
-  completes, exact eight mutations, dormant child, branch agreement, and Echo
-  nested acquisition contact;
+  completes, stable surviving order, ordinary eight-mutation completion,
+  source-valid early exhaustion, invalid voluntary early stop, dormant child,
+  branch agreement, and Echo nested acquisition contact;
 - Ransom Apollo/Zeus Duo origin-independence, distinct removal count,
   non-core buff target, block-stacking exclusion, self retention, opposite
   direction, and unchanged historical provider/use facts;
@@ -567,8 +624,17 @@ Primary Gate-A tests:
   N subroom exclusion, multi-encounter phases, acquisition timing, empty and
   nonempty target domains, self low-priority rule, Hephaestus two-second
   exclusion, progress credit after rarity change, Boss ordering, and removal;
-- exact progressive-prefix repair at an occurrence threshold and a Boss
-  threshold; and
+- exact Common/Rare/Epic/Heroic Hephaestus boundaries through ordinary Pom and
+  Natural Selection level targets plus Bridal Glow and Steady Growth rarity
+  targets, including dynamic Natural Selection removal after a target reaches
+  its cap;
+- Proper Upbringing promotion of a cooldown-capped Common Hephaestus trait to
+  Rare without making the shared in-run upgrade helper a universal rarity
+  guard;
+- branch-local missing/unavailable Steady threshold artifacts at ordinary and
+  Boss owners, exact sparse command/Undo contacts for both owner shapes, and
+  the shared progressive child-retention path witnessed once by the real
+  Natural Selection workflow; and
 - fixture migration/integrity.
 
 During implementation use focused catalog/engine/fixture tests and changed-file
@@ -606,8 +672,8 @@ Primary Gate-B tests:
 - interaction binding dispatches one complete Natural Selection offer and one
   exact Steady target command;
 - selected/unselected Natural child ownership and finding navigation;
-- one real trait-dialog workflow with eight legal positions, one history entry,
-  and Undo;
+- one real trait-dialog workflow with eight legal positions, one early-exhausted
+  result, one history entry per saved result, and Undo;
 - an unchanged All Together workflow through the extracted shared compound
   presentation;
 - one Ransom acquisition preview whose labels and totals come from engine data;
@@ -663,11 +729,16 @@ The implementation is not accepted if it:
   Steady progress snapshots;
 - lets Natural Selection repeat a target before the current eligible round is
   exhausted;
+- lets Natural Selection stop below eight while an engine-backed next target
+  remains, or fabricates further targets after the domain is exhausted;
 - derives Ransom membership from acquisition origin instead of provider index
   membership;
 - broadens ordinary Pom eligibility while expanding the level-bearing ledger;
-- duplicates the Hephaestus cooldown limits under both Bridal Glow and Steady
-  Growth;
+- duplicates the Hephaestus cooldown limits in any Pom, Natural Selection,
+  Bridal Glow, or Steady Growth consumer instead of reading the target
+  declaration;
+- applies the Hephaestus in-run upgrade threshold to Proper Upbringing or any
+  other rarity transition whose source path does not consult that check;
 - treats `encounterCompleted` as the Steady Growth clock;
 - creates an authored/movable Room Action for Steady Growth;
 - invents a generic automatic-effect scheduler or generic trait-effect DSL;

@@ -23,6 +23,7 @@ import {
   expectArray,
   expectBoolean,
   expectExactKeys,
+  expectNonBlankString,
   expectRecord,
   expectString,
   failProjectDocument,
@@ -254,6 +255,7 @@ export function decodeEncounterTraitOffer(
     const hasEchoPomTarget = 'echoPomTarget' in option;
     const hasEchoLastRunBoon = 'echoLastRunBoon' in option;
     const hasAllTogetherResult = 'allTogetherResult' in option;
+    const hasNaturalSelectionTargets = 'naturalSelectionTargets' in option;
     expectExactKeys(
       option,
       [
@@ -264,6 +266,7 @@ export function decodeEncounterTraitOffer(
         ...(hasEchoPomTarget ? ['echoPomTarget'] : []),
         ...(hasEchoLastRunBoon ? ['echoLastRunBoon'] : []),
         ...(hasAllTogetherResult ? ['allTogetherResult'] : []),
+        ...(hasNaturalSelectionTargets ? ['naturalSelectionTargets'] : []),
       ],
       `${path}.options.${optionKey}`,
     );
@@ -436,6 +439,37 @@ export function decodeEncounterTraitOffer(
           `${path}.options.${optionKey}.allTogetherResult`,
         )
       : undefined;
+    const naturalSelectionTargets = hasNaturalSelectionTargets
+      ? (() => {
+          const values = expectArray(
+            option.naturalSelectionTargets,
+            `${path}.options.${optionKey}.naturalSelectionTargets`,
+          );
+          if (values.length < 1 || values.length > 8)
+            failProjectDocument(
+              `${path}.options.${optionKey}.naturalSelectionTargets`,
+              'requires one to eight trait keys',
+            );
+          const keys = values.map((value, index) => {
+            const traitKey = expectNonBlankString(
+              value,
+              `${path}.options.${optionKey}.naturalSelectionTargets[${index}]`,
+            );
+            if (catalog.traits.byKey[traitKey] === undefined)
+              failProjectDocument(
+                `${path}.options.${optionKey}.naturalSelectionTargets[${index}]`,
+                'unknown trait',
+              );
+            return traitKey;
+          });
+          if (trait.selectedDisposition.kind !== 'naturalSelection')
+            failProjectDocument(
+              `${path}.options.${optionKey}.naturalSelectionTargets`,
+              'is supported only by Natural Selection',
+            );
+          return Object.freeze(keys) as AuthoredTraitOption['naturalSelectionTargets'];
+        })()
+      : undefined;
     const decodedOption: AuthoredTraitOption =
       rarity === undefined
         ? {
@@ -445,6 +479,7 @@ export function decodeEncounterTraitOffer(
             ...(hasEchoPomTarget ? { echoPomTarget: echoPomTarget! } : {}),
             ...(echoLastRunBoon === undefined ? {} : { echoLastRunBoon }),
             ...(allTogetherResult === undefined ? {} : { allTogetherResult }),
+            ...(naturalSelectionTargets === undefined ? {} : { naturalSelectionTargets }),
           }
         : {
             traitKey,
@@ -454,6 +489,7 @@ export function decodeEncounterTraitOffer(
             ...(hasEchoPomTarget ? { echoPomTarget: echoPomTarget! } : {}),
             ...(echoLastRunBoon === undefined ? {} : { echoLastRunBoon }),
             ...(allTogetherResult === undefined ? {} : { allTogetherResult }),
+            ...(naturalSelectionTargets === undefined ? {} : { naturalSelectionTargets }),
           };
     options.push(Object.freeze(decodedOption));
   }
@@ -535,9 +571,13 @@ export function decodeRoomEncounterState(
   const state = expectRecord(value, path);
   expectExactKeys(
     state,
-    state.traitOffersByPhase === undefined
-      ? ['encounterKeyByPhase', 'figLeafSkipByPhase', 'gorgonResultByPhase']
-      : ['encounterKeyByPhase', 'traitOffersByPhase', 'figLeafSkipByPhase', 'gorgonResultByPhase'],
+    [
+      'encounterKeyByPhase',
+      'figLeafSkipByPhase',
+      'gorgonResultByPhase',
+      ...(state.traitOffersByPhase === undefined ? [] : ['traitOffersByPhase']),
+      ...(state.steadyGrowthTargetByPhase === undefined ? [] : ['steadyGrowthTargetByPhase']),
+    ],
     path,
   );
   const rawSelections = expectRecord(state.encounterKeyByPhase, `${path}.encounterKeyByPhase`);
@@ -577,6 +617,21 @@ export function decodeRoomEncounterState(
       rawSkips[phaseKey],
       `${path}.figLeafSkipByPhase.${phaseKey}`,
     );
+  }
+  const steadyGrowthTargetByPhase: Record<string, string> = {};
+  if (state.steadyGrowthTargetByPhase !== undefined) {
+    const rawTargets = expectRecord(
+      state.steadyGrowthTargetByPhase,
+      `${path}.steadyGrowthTargetByPhase`,
+    );
+    for (const [phaseKey, value] of Object.entries(rawTargets)) {
+      if (!bindings.has(phaseKey))
+        failProjectDocument(`${path}.steadyGrowthTargetByPhase.${phaseKey}`, 'unknown phase');
+      const traitKey = expectNonBlankString(value, `${path}.steadyGrowthTargetByPhase.${phaseKey}`);
+      if (catalog.traits.byKey[traitKey] === undefined)
+        failProjectDocument(`${path}.steadyGrowthTargetByPhase.${phaseKey}`, 'unknown trait');
+      steadyGrowthTargetByPhase[phaseKey] = traitKey;
+    }
   }
   const rawGorgon = expectRecord(state.gorgonResultByPhase, `${path}.gorgonResultByPhase`);
   const gorgonResultByPhase: Record<string, import('../model').AuthoredGorgonPhaseResult> = {};
@@ -709,6 +764,9 @@ export function decodeRoomEncounterState(
   return Object.freeze({
     encounterKeyByPhase: Object.freeze(encounterKeyByPhase),
     figLeafSkipByPhase: Object.freeze(figLeafSkipByPhase),
+    ...(Object.keys(steadyGrowthTargetByPhase).length === 0
+      ? {}
+      : { steadyGrowthTargetByPhase: Object.freeze(steadyGrowthTargetByPhase) }),
     gorgonResultByPhase: Object.freeze(gorgonResultByPhase),
     ...(Object.keys(traitOffersByPhase).length === 0
       ? {}

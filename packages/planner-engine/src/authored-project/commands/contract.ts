@@ -46,6 +46,8 @@ export function projectCommandAddress(
       return command.field;
     case 'ReplaceBossCompletionArcana':
       return command.completion;
+    case 'ReplaceSteadyGrowthTarget':
+      return command.outcome;
     case 'ReplacePostbossKeepsake':
       return command.selection;
     case 'ReplaceJeweledPomEquipResult':

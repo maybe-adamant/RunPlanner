@@ -37,7 +37,7 @@ test('49 -> 50 retains an already-authored SpellDrop child', () => {
   const authored = { kind: 'traits', giverKey: 'SpellDrop' };
   source.routes[0].nestedReward.traitOffersByAcquisitionRole.self = authored;
 
-  const result = migrateProjectDocument(source);
+  const result = migrateProjectDocument(source, 50);
 
   assert.deepEqual(
     result.document.routes[0].nestedReward.traitOffersByAcquisitionRole.self,
@@ -51,7 +51,7 @@ test('50 -> 51 retains a TrialUpgrade as an explicit unresolved Chaos child', ()
   source.schemaVersion = 50;
   source.catalogVersion = '0.30.0-boon-rarity-ledger';
   source.routes[0].nestedReward.offer = { rewardType: 'TrialUpgrade' };
-  const result = migrateProjectDocument(source);
+  const result = migrateProjectDocument(source, 51);
   assert.equal(result.document.schemaVersion, 51);
   assert.equal(result.document.catalogVersion, '0.31.0-chaos-traits');
   assert.equal(result.document.routes[0].nestedReward.traitOffersByAcquisitionRole.self, null);
@@ -63,4 +63,14 @@ test('fails closed when a required migration step is absent', () => {
   source.schemaVersion = 48;
 
   assert.throws(() => migrateProjectDocument(source), /no migration is registered for schema 48/);
+});
+
+test('51 -> 52 changes only schema and catalog metadata', () => {
+  const source = schema49Project();
+  source.schemaVersion = 51;
+  source.catalogVersion = '0.31.0-chaos-traits';
+  const result = migrateProjectDocument(source);
+  assert.equal(result.document.schemaVersion, 52);
+  assert.equal(result.document.catalogVersion, '0.32.0-run-impacting-traits');
+  assert.deepEqual(result.changes['51->52'], {});
 });

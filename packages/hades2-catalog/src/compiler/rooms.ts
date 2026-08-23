@@ -528,6 +528,9 @@ export function normalizeRooms(
     if (typeof room.advancesExperimentalHammerUses !== 'boolean') {
       fail(`${path}.advancesExperimentalHammerUses`, 'must be a boolean');
     }
+    if (room.skipRoomsPerUpgrade !== undefined && typeof room.skipRoomsPerUpgrade !== 'boolean') {
+      fail(`${path}.skipRoomsPerUpgrade`, 'must be a boolean when declared');
+    }
     const mode = validateMode(room, path);
     const encounterEnvelopeKey = requireNonEmpty(
       room.encounterEnvelopeKey,
@@ -852,6 +855,7 @@ export function normalizeRooms(
       ...(prebossBatchPolicy === undefined ? {} : { prebossBatchPolicy }),
       encounterEnvelopeKey,
       advancesExperimentalHammerUses: room.advancesExperimentalHammerUses,
+      skipRoomsPerUpgrade: room.skipRoomsPerUpgrade ?? false,
       encounterSlotBindings,
       ...(forcedRewardStoreKey === undefined ? {} : { forcedRewardStoreKey }),
       ...(individualRewardStoreKey === undefined ? {} : { individualRewardStoreKey }),

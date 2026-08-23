@@ -342,6 +342,9 @@ function candidateOptionEvaluation(
     evaluation.kind === 'traitAcquisitionTargetDomain' ||
     evaluation.kind === 'circeResolutionDomain' ||
     evaluation.kind === 'echoPomTargetDomain' ||
+    evaluation.kind === 'naturalSelectionResult' ||
+    evaluation.kind === 'ransomAssessment' ||
+    evaluation.kind === 'steadyGrowthOutcome' ||
     evaluation.kind === 'echoLastRunBoonDomain' ||
     evaluation.kind === 'allTogetherSetDomain'
   ) {
@@ -1141,6 +1144,8 @@ function candidateSelectedPossible(evaluation: CandidateProjectionEvaluation): b
       return evaluation.result.selectedPossible;
     case 'acquisitionConversion':
       return evaluation.result.timePieceSupported || evaluation.result.artificerSupported;
+    case 'steadyGrowthOutcome':
+      return evaluation.result.selectedPossible;
     default:
       return evaluation.result.selectedPossible;
   }
@@ -1156,6 +1161,7 @@ function candidateForced(
     case 'keepsakeSelection':
     case 'keepsakeEquipResult':
     case 'acquisitionConversion':
+    case 'steadyGrowthOutcome':
       return false;
     case 'roomTarget':
       return (

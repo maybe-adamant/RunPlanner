@@ -23,6 +23,7 @@ import {
   expectExactKeys,
   expectArray,
   expectBoolean,
+  expectNonBlankString,
   expectPositiveInteger,
   expectRecord,
   expectString,
@@ -264,6 +265,7 @@ function decodeTraitOffers(
       if (index >= optionsRaw.length) break;
       const option = expectRecord(optionsRaw[index], `${rolePath}.options.${key}`);
       const hasAllTogetherResult = 'allTogetherResult' in option;
+      const hasNaturalSelectionTargets = 'naturalSelectionTargets' in option;
       expectExactKeys(
         option,
         [
@@ -274,6 +276,7 @@ function decodeTraitOffers(
           ...('echoPomTarget' in option ? ['echoPomTarget'] : []),
           ...('echoLastRunBoon' in option ? ['echoLastRunBoon'] : []),
           ...('allTogetherResult' in option ? ['allTogetherResult'] : []),
+          ...(hasNaturalSelectionTargets ? ['naturalSelectionTargets'] : []),
         ],
         `${rolePath}.options.${key}`,
       );
@@ -454,6 +457,37 @@ function decodeTraitOffers(
             `${rolePath}.options.${key}.allTogetherResult`,
           )
         : undefined;
+      const naturalSelectionTargets = hasNaturalSelectionTargets
+        ? (() => {
+            const values = expectArray(
+              option.naturalSelectionTargets,
+              `${rolePath}.options.${key}.naturalSelectionTargets`,
+            );
+            if (values.length < 1 || values.length > 8)
+              failProjectDocument(
+                `${rolePath}.options.${key}.naturalSelectionTargets`,
+                'requires one to eight trait keys',
+              );
+            const targets = values.map((value, index) => {
+              const traitKey = expectNonBlankString(
+                value,
+                `${rolePath}.options.${key}.naturalSelectionTargets[${index}]`,
+              );
+              if (catalog.traits.byKey[traitKey] === undefined)
+                failProjectDocument(
+                  `${rolePath}.options.${key}.naturalSelectionTargets[${index}]`,
+                  'unknown trait',
+                );
+              return traitKey;
+            });
+            if (trait.selectedDisposition.kind !== 'naturalSelection')
+              failProjectDocument(
+                `${rolePath}.options.${key}.naturalSelectionTargets`,
+                'is supported only by Natural Selection',
+              );
+            return Object.freeze(targets) as AuthoredTraitOption['naturalSelectionTargets'];
+          })()
+        : undefined;
       options.push(
         Object.freeze({
           traitKey,
@@ -463,6 +497,7 @@ function decodeTraitOffers(
           ...(hasEchoPomTarget ? { echoPomTarget: echoPomTarget! } : {}),
           ...(echoLastRunBoon === undefined ? {} : { echoLastRunBoon }),
           ...(allTogetherResult === undefined ? {} : { allTogetherResult }),
+          ...(naturalSelectionTargets === undefined ? {} : { naturalSelectionTargets }),
         }),
       );
     }

@@ -19,6 +19,8 @@ export interface AuthoredTraitOption {
   readonly echoLastRunBoon?: AuthoredEchoLastRunBoonOffer;
   /** All Together's complete one-result-per-source-set outcome when authored. */
   readonly allTogetherResult?: AuthoredAllTogetherResult;
+  /** Natural Selection's complete ordered successful-increment outcome. */
+  readonly naturalSelectionTargets?: OneToEight<string>;
 }
 
 export type AuthoredAllTogetherResult = Readonly<
@@ -58,6 +60,7 @@ export interface AuthoredEchoLastRunBoonOption {
   readonly rarity: TraitRarity;
   /** Declaration-owned selected-acquisition detail, currently Bridal Glow's exact target. */
   readonly targetTraitKey?: string;
+  readonly naturalSelectionTargets?: AuthoredTraitOption['naturalSelectionTargets'];
 }
 
 export interface AuthoredEchoLastRunBoonOffer {
@@ -71,6 +74,15 @@ export type AuthoredCirceResolution =
   | { readonly kind: 'disableFear'; readonly vowKey: string | null };
 
 export type OneToThree<T> = readonly [T] | readonly [T, T] | readonly [T, T, T];
+export type OneToEight<T> =
+  | readonly [T]
+  | readonly [T, T]
+  | readonly [T, T, T]
+  | readonly [T, T, T, T]
+  | readonly [T, T, T, T, T]
+  | readonly [T, T, T, T, T, T]
+  | readonly [T, T, T, T, T, T, T]
+  | readonly [T, T, T, T, T, T, T, T];
 
 export interface AuthoredTraitOfferTraits {
   readonly kind: 'traits';
@@ -142,6 +154,8 @@ export interface EquippedTrait {
   readonly echoRepeatedKeepsakeKey?: string;
   /** Count of declaration-owned biome-start replay attempts recorded in trait history. */
   readonly echoKeepsakeReplayCount?: number;
+  /** Derived retained credit for this exact Steady Growth acquisition. */
+  readonly steadyGrowthProgress?: number;
 }
 
 /** Exact authored outcome for one declaration-owned Pom acquisition role. */
@@ -215,11 +229,22 @@ export function normalizeAuthoredEchoLastRunBoon(
       throw new Error(`unknown Echo last-run acquisition target ${String(option.targetTraitKey)}`);
     if (option.targetTraitKey !== undefined && trait.targetedAcquisition === undefined)
       throw new Error(`${option.traitKey} does not support an Echo last-run acquisition target`);
+    if (option.naturalSelectionTargets !== undefined) {
+      if (trait.selectedDisposition.kind !== 'naturalSelection')
+        throw new Error(`${option.traitKey} does not support an Echo Natural Selection result`);
+      if (option.naturalSelectionTargets.length < 1 || option.naturalSelectionTargets.length > 8)
+        throw new Error('Echo Natural Selection result requires one to eight targets');
+      if (option.naturalSelectionTargets.some((key) => catalog.traits.byKey[key] === undefined))
+        throw new Error('Echo Natural Selection result has an unknown target');
+    }
     return Object.freeze({
       giverKey: option.giverKey,
       traitKey: option.traitKey,
       rarity: option.rarity,
       ...(option.targetTraitKey === undefined ? {} : { targetTraitKey: option.targetTraitKey }),
+      ...(option.naturalSelectionTargets === undefined
+        ? {}
+        : { naturalSelectionTargets: option.naturalSelectionTargets }),
     });
   });
   return Object.freeze({

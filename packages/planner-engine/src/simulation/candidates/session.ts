@@ -87,6 +87,8 @@ import {
   evaluateTraitAcquisitionTargetDomain,
   evaluateCirceResolutionDomain,
   evaluateEchoPomTargetDomain,
+  evaluateNaturalSelectionResultCandidate,
+  evaluateRansomAssessmentCandidate,
   evaluateEchoLastRunBoonDomain,
   evaluateAllTogetherSetDomain,
   type CirceResolutionDomainEvaluation,
@@ -95,6 +97,12 @@ import {
   type EvaluatedEchoPomTargetDomain,
   type EchoPomTargetDomainEvaluation,
   type EchoPomTargetDomainQuery,
+  type NaturalSelectionResultCandidateQuery,
+  type NaturalSelectionResultCandidateEvaluation,
+  type EvaluatedNaturalSelectionResultCandidate,
+  type EvaluatedRansomAssessmentCandidate,
+  type RansomAssessmentCandidateQuery,
+  type RansomAssessmentCandidateEvaluation,
   type EchoLastRunBoonDomainQuery,
   type EchoLastRunBoonDomainEvaluation,
   type EvaluatedEchoLastRunBoonDomain,
@@ -127,6 +135,11 @@ import {
   type AcquisitionConversionCandidateQuery,
   type EvaluatedAcquisitionConversionCandidate,
 } from './acquisition-conversion';
+import {
+  evaluateSteadyGrowthOutcomeCandidate,
+  type EvaluatedSteadyGrowthOutcomeCandidate,
+  type SteadyGrowthOutcomeCandidateQuery,
+} from './steady-growth';
 
 export type ProjectCandidateQuery =
   | BatchRewardStoreCandidateQuery
@@ -152,17 +165,21 @@ export type ProjectCandidateQuery =
   | BossCompletionArcanaCandidateQuery
   | KeepsakeSelectionCandidateQuery
   | KeepsakeEquipResultCandidateQuery
-  | AcquisitionConversionCandidateQuery;
+  | AcquisitionConversionCandidateQuery
+  | SteadyGrowthOutcomeCandidateQuery;
 
 /** Candidate-session-only query vocabulary, including focused trait support. */
 export type ProjectCandidateSessionQuery =
   | ProjectCandidateQuery
   | TraitOfferFocusedOptionCandidateQuery
+  | RansomAssessmentCandidateQuery
   | TraitAcquisitionTargetDomainQuery
   | CirceResolutionDomainQuery
   | EchoPomTargetDomainQuery
+  | NaturalSelectionResultCandidateQuery
   | EchoLastRunBoonDomainQuery
-  | AllTogetherSetDomainQuery;
+  | AllTogetherSetDomainQuery
+  | SteadyGrowthOutcomeCandidateQuery;
 
 export type ProjectCandidateEvaluation =
   | CandidateContextUnavailable
@@ -189,15 +206,18 @@ export type ProjectCandidateEvaluation =
   | EvaluatedBossCompletionArcanaCandidate
   | EvaluatedKeepsakeSelectionCandidate
   | EvaluatedKeepsakeEquipResultCandidate
-  | EvaluatedAcquisitionConversionCandidate;
+  | EvaluatedAcquisitionConversionCandidate
+  | EvaluatedSteadyGrowthOutcomeCandidate;
 
 /** Result vocabulary corresponding to `ProjectCandidateSessionQuery`. */
 export type ProjectCandidateSessionEvaluation =
   | ProjectCandidateEvaluation
   | EvaluatedTraitOfferFocusedOptionCandidate
+  | EvaluatedRansomAssessmentCandidate
   | EvaluatedTraitAcquisitionTargetDomain
   | EvaluatedCirceResolutionDomain
   | EvaluatedEchoPomTargetDomain
+  | EvaluatedNaturalSelectionResultCandidate
   | EvaluatedEchoLastRunBoonDomain
   | EvaluatedAllTogetherSetDomain;
 
@@ -223,6 +243,10 @@ export interface ProjectCandidateSession {
     (
       queries: readonly TraitOfferFocusedOptionCandidateQuery[],
     ): readonly TraitOfferFocusedOptionCandidateEvaluation[];
+    (query: RansomAssessmentCandidateQuery): RansomAssessmentCandidateEvaluation;
+    (
+      queries: readonly RansomAssessmentCandidateQuery[],
+    ): readonly RansomAssessmentCandidateEvaluation[];
     (query: TraitAcquisitionTargetDomainQuery): TraitAcquisitionTargetDomainEvaluation;
     (
       queries: readonly TraitAcquisitionTargetDomainQuery[],
@@ -231,6 +255,10 @@ export interface ProjectCandidateSession {
     (queries: readonly CirceResolutionDomainQuery[]): readonly CirceResolutionDomainEvaluation[];
     (query: EchoPomTargetDomainQuery): EchoPomTargetDomainEvaluation;
     (queries: readonly EchoPomTargetDomainQuery[]): readonly EchoPomTargetDomainEvaluation[];
+    (query: NaturalSelectionResultCandidateQuery): NaturalSelectionResultCandidateEvaluation;
+    (
+      queries: readonly NaturalSelectionResultCandidateQuery[],
+    ): readonly NaturalSelectionResultCandidateEvaluation[];
     (query: EchoLastRunBoonDomainQuery): EchoLastRunBoonDomainEvaluation;
     (queries: readonly EchoLastRunBoonDomainQuery[]): readonly EchoLastRunBoonDomainEvaluation[];
     (query: AllTogetherSetDomainQuery): AllTogetherSetDomainEvaluation;
@@ -281,6 +309,16 @@ function evaluateCandidateQuery(
         candidateArtifacts.biomeAt(
           createBiomeAddress(query.acquisition.routeKey, query.acquisition.biomeKey),
         )?.acquisitionConversions,
+        query,
+      );
+    case 'steadyGrowthOutcome':
+      return evaluateSteadyGrowthOutcomeCandidate(
+        catalog,
+        project,
+        evaluation,
+        candidateArtifacts.biomeAt(
+          createBiomeAddress(query.outcome.routeKey, query.outcome.biomeKey),
+        )?.steadyGrowth,
         query,
       );
     case 'keepsakeEquipResult':
@@ -439,6 +477,15 @@ function evaluateCandidateQuery(
           ?.traitOffers,
         query,
       );
+    case 'ransomAssessment':
+      return evaluateRansomAssessmentCandidate(
+        catalog,
+        project,
+        evaluation,
+        candidateArtifacts.biomeAt(createBiomeAddress(query.trait.routeKey, query.trait.biomeKey))
+          ?.traitOffers,
+        query,
+      );
     case 'traitAcquisitionTargetDomain':
       return evaluateTraitAcquisitionTargetDomain(
         catalog,
@@ -463,6 +510,15 @@ function evaluateCandidateQuery(
         project,
         evaluation,
         candidateArtifacts.biomeAt(createBiomeAddress(query.trait.routeKey, query.trait.biomeKey))
+          ?.traitOffers,
+        query,
+      );
+    case 'naturalSelectionResult':
+      return evaluateNaturalSelectionResultCandidate(
+        catalog,
+        project,
+        evaluation,
+        candidateArtifacts.biomeAt(createBiomeAddress(query.result.routeKey, query.result.biomeKey))
           ?.traitOffers,
         query,
       );
@@ -506,6 +562,10 @@ export function createPreparedProjectCandidateSession(
   function evaluate(
     queries: readonly TraitOfferFocusedOptionCandidateQuery[],
   ): readonly TraitOfferFocusedOptionCandidateEvaluation[];
+  function evaluate(query: RansomAssessmentCandidateQuery): RansomAssessmentCandidateEvaluation;
+  function evaluate(
+    queries: readonly RansomAssessmentCandidateQuery[],
+  ): readonly RansomAssessmentCandidateEvaluation[];
   function evaluate(
     query: TraitAcquisitionTargetDomainQuery,
   ): TraitAcquisitionTargetDomainEvaluation;
@@ -520,6 +580,12 @@ export function createPreparedProjectCandidateSession(
   function evaluate(
     queries: readonly EchoPomTargetDomainQuery[],
   ): readonly EchoPomTargetDomainEvaluation[];
+  function evaluate(
+    query: NaturalSelectionResultCandidateQuery,
+  ): NaturalSelectionResultCandidateEvaluation;
+  function evaluate(
+    queries: readonly NaturalSelectionResultCandidateQuery[],
+  ): readonly NaturalSelectionResultCandidateEvaluation[];
   function evaluate(query: EchoLastRunBoonDomainQuery): EchoLastRunBoonDomainEvaluation;
   function evaluate(
     queries: readonly EchoLastRunBoonDomainQuery[],

@@ -1694,11 +1694,24 @@ describe('trait offer catalog closure', () => {
     expect(traits?.traits.byKey.BoonDecayBoon?.targetedAcquisition).toEqual({
       kind: 'promoteGodTraitToHeroic',
       target: 'superchargeableGodTrait',
-      maximumEligibleLevelByTraitAndRarity: {
-        HephaestusWeaponBoon: { Common: 9, Rare: 7, Epic: 5 },
-        HephaestusSpecialBoon: { Common: 11, Rare: 9, Epic: 7 },
-        HephaestusSprintBoon: { Common: 8, Rare: 7, Epic: 6 },
-      },
+    });
+    expect(traits?.traits.byKey.HephaestusWeaponBoon?.maximumEligibleLevelByRarity).toEqual({
+      Common: 9,
+      Rare: 7,
+      Epic: 5,
+      Heroic: 3,
+    });
+    expect(traits?.traits.byKey.HephaestusSpecialBoon?.maximumEligibleLevelByRarity).toEqual({
+      Common: 11,
+      Rare: 9,
+      Epic: 7,
+      Heroic: 5,
+    });
+    expect(traits?.traits.byKey.HephaestusSprintBoon?.maximumEligibleLevelByRarity).toEqual({
+      Common: 8,
+      Rare: 7,
+      Epic: 6,
+      Heroic: 5,
     });
     expect(traits?.traits.byKey.ElementalUnifiedBoon?.offerRequirements).toContainEqual({
       kind: 'highestBaseElementCount',
@@ -2527,34 +2540,43 @@ describe('trait offer catalog closure', () => {
   });
 
   it.each([
-    ['unknown target', { MissingTrait: { Common: 1, Rare: 1, Epic: 1 } }, /unknown trait/],
-    ['non-Pom target', { HephaestusManaBoon: { Common: 1, Rare: 1, Epic: 1 } }, /Pom-eligible/],
-    ['partial rarities', { HephaestusWeaponBoon: { Common: 1, Rare: 1 } }, /cover exactly/],
     [
-      'Heroic rarity',
-      { HephaestusWeaponBoon: { Common: 1, Rare: 1, Epic: 1, Heroic: 1 } },
-      /cover exactly|fresh/,
+      'moved to another core trait',
+      'ApolloWeaponBoon',
+      { Common: 1, Rare: 1, Epic: 1, Heroic: 1 },
+      /reserved/,
     ],
-    ['zero cap', { HephaestusWeaponBoon: { Common: 0, Rare: 1, Epic: 1 } }, /positive integer/],
-  ] as const)('rejects malformed Bridal Glow caps: %s', (_name, caps, message) => {
-    const malformed = {
-      ...declarations,
-      traitCatalog: {
-        ...declarations.traitCatalog,
-        traits: declarations.traitCatalog.traits.map((trait) =>
-          trait.key === 'BoonDecayBoon'
-            ? {
-                ...trait,
-                targetedAcquisition: {
-                  kind: 'promoteGodTraitToHeroic',
-                  target: 'superchargeableGodTrait',
-                  maximumEligibleLevelByTraitAndRarity: caps,
-                } as never,
-              }
-            : trait,
-        ),
-      },
-    };
-    expect(() => createCatalog(malformed)).toThrow(message);
-  });
+    [
+      'moved to a non-Pom trait',
+      'HephaestusManaBoon',
+      { Common: 1, Rare: 1, Epic: 1, Heroic: 1 },
+      /reserved/,
+    ],
+    ['partial rarities', 'HephaestusWeaponBoon', { Common: 1, Rare: 1, Epic: 1 }, /cover exactly/],
+    [
+      'zero cap',
+      'HephaestusWeaponBoon',
+      { Common: 0, Rare: 1, Epic: 1, Heroic: 1 },
+      /positive integer/,
+    ],
+  ] as const)(
+    'rejects malformed declaration-owned cooldown upgrade limits: %s',
+    (_name, traitKey, caps, message) => {
+      const malformed = {
+        ...declarations,
+        traitCatalog: {
+          ...declarations.traitCatalog,
+          traits: declarations.traitCatalog.traits.map((trait) =>
+            trait.key === traitKey
+              ? {
+                  ...trait,
+                  maximumEligibleLevelByRarity: caps as never,
+                }
+              : trait,
+          ),
+        },
+      };
+      expect(() => createCatalog(malformed)).toThrow(message);
+    },
+  );
 });

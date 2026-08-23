@@ -15,6 +15,7 @@ export const hephaestusTraits = [
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
+    maximumEligibleLevelByRarity: { Common: 9, Rare: 7, Epic: 5, Heroic: 3 },
     equipmentSlot: 'Melee',
   },
   {
@@ -30,6 +31,7 @@ export const hephaestusTraits = [
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
+    maximumEligibleLevelByRarity: { Common: 11, Rare: 9, Epic: 7, Heroic: 5 },
     equipmentSlot: 'Secondary',
   },
   {
@@ -60,6 +62,7 @@ export const hephaestusTraits = [
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
+    maximumEligibleLevelByRarity: { Common: 8, Rare: 7, Epic: 6, Heroic: 5 },
     equipmentSlot: 'Rush',
   },
   {

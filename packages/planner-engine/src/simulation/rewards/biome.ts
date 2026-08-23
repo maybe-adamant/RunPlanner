@@ -9,6 +9,7 @@ import {
   createEchoKeepsakeReplayAddress,
   createTargetAddress,
   createRoomRunStateCheckpointAddress,
+  createSteadyGrowthOutcomeAddress,
   semanticAddressKey,
   type BatchRewardStoreAddress,
   type AcquisitionSiteOwnerAddress,
@@ -16,6 +17,7 @@ import {
   type SemanticAddress,
   type TraitOfferAddress,
   type TraitOfferOwnerAddress,
+  type SteadyGrowthOutcomeAddress,
   type TargetAddress,
 } from '../../authored-project/addresses';
 import type {
@@ -93,6 +95,7 @@ import {
   createTraitOfferCandidateArtifacts,
   createAcquisitionConversionCandidateArtifacts,
   createDerivedAcquisitionEntryCandidateArtifacts,
+  createSteadyGrowthCandidateArtifacts,
   attestDerivedAcquisitionEntryCandidateCapability,
 } from '../candidate-artifacts';
 import type {
@@ -104,6 +107,9 @@ import type {
 } from '../traits';
 import {
   advanceChaosClock,
+  advanceSteadyGrowthProgress,
+  settleSteadyGrowthThreshold,
+  type ReachedSteadyGrowthThreshold,
   attachTraitHistory,
   createTraitHistoryState,
   foldTraitHistoryEvents,
@@ -277,6 +283,90 @@ function advanceChaosClockAt(
           });
     }),
   );
+}
+
+/** Steady Growth consumes only the already-emitted qualifying end-effects event. */
+function advanceSteadyGrowthAt(
+  catalog: Catalog,
+  branches: readonly RewardBranchState[],
+  owner: SteadyGrowthOutcomeAddress['owner'],
+  phaseKey: string,
+  targetTraitKey: string | undefined,
+  sequence: number,
+): {
+  readonly branches: readonly RewardBranchState[];
+  readonly blocked: readonly {
+    readonly address: SteadyGrowthOutcomeAddress;
+    readonly branch: RewardBranchState;
+    readonly threshold: ReachedSteadyGrowthThreshold;
+    readonly targetTraitKey: string | undefined;
+  }[];
+  readonly thresholds: readonly {
+    readonly address: SteadyGrowthOutcomeAddress;
+    readonly threshold: ReachedSteadyGrowthThreshold;
+  }[];
+} {
+  const next: RewardBranchState[] = [];
+  const blocked: {
+    readonly address: SteadyGrowthOutcomeAddress;
+    readonly branch: RewardBranchState;
+    readonly threshold: ReachedSteadyGrowthThreshold;
+    readonly targetTraitKey: string | undefined;
+  }[] = [];
+  const thresholds: {
+    readonly address: SteadyGrowthOutcomeAddress;
+    readonly threshold: ReachedSteadyGrowthThreshold;
+  }[] = [];
+  for (const branch of branches) {
+    const before = branch.traitHistory ?? createTraitHistoryState();
+    const advanced = advanceSteadyGrowthProgress(catalog, before, owner, sequence);
+    let traitHistory = advanced.history;
+    let blockedAtThreshold = false;
+    for (const threshold of advanced.thresholds) {
+      const address = createSteadyGrowthOutcomeAddress(owner, phaseKey);
+      thresholds.push(Object.freeze({ address, threshold }));
+      const settled = settleSteadyGrowthThreshold(
+        catalog,
+        traitHistory,
+        owner,
+        sequence,
+        threshold,
+        targetTraitKey,
+      );
+      if (!settled.assessment.legal) {
+        blocked.push(
+          Object.freeze({
+            address,
+            branch: Object.freeze({
+              ...branch,
+              traitHistory,
+              history: attachTraitHistory(branch.history, traitHistory),
+            }),
+            threshold,
+            targetTraitKey,
+          }),
+        );
+        blockedAtThreshold = true;
+        break;
+      }
+      traitHistory = settled.history;
+    }
+    if (!blockedAtThreshold)
+      next.push(
+        traitHistory === before
+          ? branch
+          : Object.freeze({
+              ...branch,
+              traitHistory,
+              history: attachTraitHistory(branch.history, traitHistory),
+            }),
+      );
+  }
+  return Object.freeze({
+    branches: Object.freeze(next),
+    blocked: Object.freeze(blocked),
+    thresholds: Object.freeze(thresholds),
+  });
 }
 
 interface IncomingOfferCandidateContext {
@@ -1056,6 +1146,7 @@ interface BiomeRewardEvaluationAssembly {
   readonly keepsakeEquipResultArtifacts: import('../candidate-artifacts').KeepsakeEquipResultCandidateArtifacts;
   readonly acquisitionConversionArtifacts: import('../candidate-artifacts').AcquisitionConversionCandidateArtifacts;
   readonly derivedAcquisitionEntryArtifacts: import('../candidate-artifacts').DerivedAcquisitionEntryCandidateArtifacts;
+  readonly steadyGrowthArtifacts: import('../candidate-artifacts').SteadyGrowthCandidateArtifacts;
   readonly traitChildSettlementCheckpoints: TraitChildSettlementCheckpoints;
   readonly findingRegions: readonly FindingRegionEntry[];
 }
@@ -1449,6 +1540,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
               acquisitionPoint: 'encounterEndEffectsApplied',
               traitKey: expired.traitKey,
               acquisitionIdentity: expired.acquisitionIdentity,
+              match: 'acquisitionIdentity' as const,
             }),
           ),
         ]);
@@ -1548,6 +1640,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
       readonly runStateSnapshots: Map<string, RunStateSnapshot>;
     }
   >();
+  const steadyGrowthCandidateContexts = new Map<string, ReachedSteadyGrowthThreshold[]>();
   function recordTraitChildSettlements(
     checkpoints: readonly ReachedTraitChildCheckpoint[] | undefined,
     occurrenceOwner: SemanticAddress,
@@ -2677,6 +2770,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
                 acquisitionPoint: 'keepsakeFatedInvalidation',
                 traitKey: branch.keepsakes.jeweledPom.grantedTraitKey,
                 acquisitionIdentity: branch.keepsakes.jeweledPom.acquisitionIdentity,
+                match: 'acquisitionIdentity' as const,
               }),
             ]);
             return Object.freeze({
@@ -4953,7 +5047,68 @@ export function evaluateBiomeRewardsAssemblyInternal(
           branches = advanceExperimentalHammerForEndEffects(branches, event.origin, event.sequence);
         }
         branches = advanceChaosClockAt(catalog, branches, event.sequence, 'encounters');
-        branches = advanceRewardBranches(branches, event.sequence);
+        let steadyOwner: SteadyGrowthOutcomeAddress['owner'] | undefined;
+        if (event.origin.kind === 'occurrence') steadyOwner = event.origin;
+        else if (event.origin.kind === 'completionRoom' && event.origin.role === 'boss')
+          steadyOwner = event.origin as Extract<
+            SteadyGrowthOutcomeAddress['owner'],
+            { readonly kind: 'completionRoom' }
+          >;
+        const steadyGrowthTarget =
+          event.origin.kind === 'completionRoom'
+            ? snapshot.kind === 'biome'
+              ? snapshot.bossCompletionSteadyGrowthTarget
+              : undefined
+            : room?.kind === 'authored'
+              ? room.encounters.steadyGrowthTargetByPhase?.[event.phaseKey]
+              : undefined;
+        const steadyAdvance =
+          steadyOwner === undefined
+            ? undefined
+            : advanceSteadyGrowthAt(
+                catalog,
+                branches,
+                steadyOwner,
+                event.phaseKey,
+                steadyGrowthTarget,
+                event.sequence,
+              );
+        if (steadyAdvance === undefined) {
+          branches = advanceRewardBranches(branches, event.sequence);
+          break;
+        }
+        for (const { address, threshold } of steadyAdvance.thresholds) {
+          const key = semanticAddressKey(address);
+          const current = steadyGrowthCandidateContexts.get(key) ?? [];
+          current.push(threshold);
+          steadyGrowthCandidateContexts.set(key, current);
+        }
+        for (const blocked of steadyAdvance.blocked) {
+          recordTraitChildSettlements(
+            [Object.freeze({ address: blocked.address, branch: blocked.branch })],
+            event.origin,
+          );
+          addRewardFinding(
+            findings,
+            rewardFinding(
+              blocked.targetTraitKey === undefined
+                ? 'steadyGrowthOutcomeMissing'
+                : 'steadyGrowthOutcomeUnavailable',
+              blocked.address,
+              Object.freeze({
+                sourceTraitKey: blocked.threshold.traitKey,
+                requiredInterval: blocked.threshold.requiredInterval,
+                eligibleTargetKeys: blocked.threshold.eligibleTargetKeys,
+                ...(blocked.targetTraitKey === undefined
+                  ? {}
+                  : { targetTraitKey: blocked.targetTraitKey }),
+              }),
+            ),
+            ownerRegion(event.origin),
+            Object.freeze({ kind: 'history', sequence: event.sequence, boundary: 'at' }),
+          );
+        }
+        branches = advanceRewardBranches(steadyAdvance.branches, event.sequence);
         break;
       }
       case 'acquisitionPointReached': {
@@ -5257,6 +5412,10 @@ export function evaluateBiomeRewardsAssemblyInternal(
     ),
     derivedAcquisitionEntryArtifacts: createDerivedAcquisitionEntryCandidateArtifacts(
       derivedAcquisitionEntryContexts,
+    ),
+    steadyGrowthArtifacts: createSteadyGrowthCandidateArtifacts(
+      catalog,
+      steadyGrowthCandidateContexts,
     ),
     traitChildSettlementCheckpoints,
     findingRegions: Object.freeze(immutableFindingRegions),

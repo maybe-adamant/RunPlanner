@@ -2,6 +2,7 @@ import type {
   Catalog,
   TraitDeclaration,
   TraitElement,
+  TraitOrdinaryBoonSlot,
   TraitRarity,
   TraitRequirementExpression,
 } from '../catalog-schema';
@@ -71,6 +72,32 @@ export interface TraitLevelMutationEvent {
   readonly replacementTransition?: never;
   readonly targetedAcquisitionTransition?: never;
 }
+export interface SteadyGrowthProgressEvent {
+  readonly kind: 'steadyGrowthProgress';
+  readonly owner: SemanticAddress;
+  readonly acquisitionRole: 'steadyGrowth';
+  readonly sequence: number;
+  readonly acquisitionPoint: 'encounterEndEffectsApplied';
+  readonly traitKey: string;
+  readonly acquisitionIdentity: string;
+  readonly oldProgress: number;
+  readonly newProgress: number;
+  readonly requiredInterval: number;
+}
+/** One automatic Steady Growth promotion at its owning end-effects checkpoint. */
+export interface TraitRarityMutationEvent {
+  readonly kind: 'rarityMutation';
+  readonly owner: SemanticAddress;
+  readonly acquisitionRole: 'steadyGrowth';
+  readonly sequence: number;
+  readonly acquisitionPoint: 'encounterEndEffectsApplied';
+  readonly sourceTraitKey: string;
+  readonly targetTraitKey: string;
+  readonly oldRarity: TraitRarity;
+  readonly newRarity: TraitRarity;
+  /** A reached Steady threshold reset its source before self-promotion. */
+  readonly resetSteadyGrowthProgress?: true;
+}
 
 /** Concrete non-trait acquisition contribution, retained in the same ordered
  * trait facts ledger so later offer requirements see it. */
@@ -103,7 +130,9 @@ export interface TraitRemovalEvent {
   readonly sequence: number;
   readonly acquisitionPoint: string;
   readonly traitKey: string;
-  readonly acquisitionIdentity: string;
+  readonly acquisitionIdentity?: string;
+  /** Existing lifecycle cleanup is identity-owned; Ransom removes current key membership. */
+  readonly match: 'acquisitionIdentity' | 'currentTraitKey';
 }
 
 export interface ChaosCurseInstance {
@@ -161,6 +190,8 @@ export interface EchoKeepsakeReplayEvent {
 export type TraitHistoryEvent =
   | TraitOfferEvent
   | TraitLevelMutationEvent
+  | SteadyGrowthProgressEvent
+  | TraitRarityMutationEvent
   | TraitElementContributionEvent
   | DirectTraitGrantEvent
   | TraitRemovalEvent
@@ -204,6 +235,17 @@ export interface TraitTargetedAcquisitionAssessment {
   readonly transition?: TraitTargetedAcquisitionTransition;
 }
 
+/** Data-only result of one Ransom after its outer trait has been equipped. */
+export interface RansomAssessment {
+  readonly applies: boolean;
+  readonly events: readonly (TraitRemovalEvent | TraitLevelMutationEvent)[];
+  readonly removedTraitKeys: readonly string[];
+  readonly removedCount: number;
+  readonly levelBonus: number;
+  readonly buffedTraitKeys: readonly string[];
+  readonly resultingHistory: TraitHistoryState;
+}
+
 export interface TraitHistoryState {
   readonly events: readonly TraitHistoryEvent[];
   readonly equippedTraits: Readonly<Record<string, EquippedTrait>>;
@@ -221,10 +263,130 @@ export interface TraitHistoryState {
   readonly maturedChaosBlessings: readonly ChaosBlessingInstance[];
 }
 
+/** Traits whose existing level can be mutated by run effects. */
+export function isLevelBearingTrait(catalog: Catalog, traitKey: string): boolean {
+  const declaration = catalog.traits.byKey[traitKey];
+  return (
+    declaration?.isCoreGodTrait === true &&
+    declaration.rarityDomain.kind === 'ranked' &&
+    !declaration.blockStacking
+  );
+}
 /** The sole supported Pom target predicate. */
 export function isPomEligibleTrait(catalog: Catalog, traitKey: string): boolean {
   const declaration = catalog.traits.byKey[traitKey];
-  return declaration?.isCoreGodTrait === true && !declaration.blockStacking;
+  return declaration?.isCoreGodTrait === true && isLevelBearingTrait(catalog, traitKey);
+}
+
+/**
+ * Whether one additional in-run level or rarity mutation can still improve an
+ * equipped trait. Most traits have no declared cap; the three cooldown-bound
+ * Hephaestus traits provide the exact current-level boundary.
+ *
+ * Proper Upbringing deliberately does not consume this predicate: its source
+ * path directly promotes every eligible Common trait to Rare.
+ */
+export function hasEffectiveInRunUpgrade(
+  catalog: Catalog,
+  traitKey: string,
+  trait: Pick<EquippedTrait, 'rarity' | 'level'>,
+): boolean {
+  if (trait.rarity === undefined || trait.level === undefined) return true;
+  if (
+    trait.rarity !== 'Common' &&
+    trait.rarity !== 'Rare' &&
+    trait.rarity !== 'Epic' &&
+    trait.rarity !== 'Heroic'
+  )
+    return true;
+  const maximum = catalog.traits.byKey[traitKey]?.maximumEligibleLevelByRarity?.[trait.rarity];
+  return maximum === undefined || trait.level <= maximum;
+}
+
+/** The full current-frontier domain shared by Poms and Natural Selection. */
+export function isPomUpgradeTarget(
+  catalog: Catalog,
+  trait: EquippedTrait | undefined,
+): trait is EquippedTrait & { readonly level: number } {
+  return (
+    trait !== undefined &&
+    trait.level !== undefined &&
+    isPomEligibleTrait(catalog, trait.traitKey) &&
+    hasEffectiveInRunUpgrade(catalog, trait.traitKey, trait)
+  );
+}
+
+/** Computes the declaration-owned provider-index transform without consulting acquisition origin. */
+export function assessRansom(
+  catalog: Catalog,
+  before: TraitHistoryState,
+  sourceTraitKey: string,
+  owner: SemanticAddress,
+  acquisitionRole: string,
+  sequence: number,
+  acquisitionPoint: string,
+): RansomAssessment {
+  const disposition = catalog.traits.byKey[sourceTraitKey]?.selectedDisposition;
+  if (disposition?.kind !== 'ransom')
+    return Object.freeze({
+      applies: false,
+      events: Object.freeze([]),
+      removedTraitKeys: Object.freeze([]),
+      removedCount: 0,
+      levelBonus: 0,
+      buffedTraitKeys: Object.freeze([]),
+      resultingHistory: before,
+    });
+  const removedTraitKeys = Object.values(before.equippedTraits)
+    .filter((trait) =>
+      catalog.traitGivers.byKey[disposition.removeGiverKey]?.traitKeys.includes(trait.traitKey),
+    )
+    .map((trait) => trait.traitKey);
+  const removals: TraitRemovalEvent[] = removedTraitKeys.map((traitKey) =>
+    Object.freeze({
+      kind: 'traitRemoval' as const,
+      owner,
+      acquisitionRole,
+      sequence,
+      acquisitionPoint,
+      traitKey,
+      match: 'currentTraitKey' as const,
+    }),
+  );
+  const afterRemoval = foldTraitHistoryEvents(catalog, [...before.events, ...removals]);
+  const levelBonus = removedTraitKeys.length * disposition.levelsPerRemovedIdentity;
+  const buffed = Object.values(afterRemoval.equippedTraits).filter(
+    (trait) =>
+      catalog.traitGivers.byKey[disposition.buffGiverKey]?.traitKeys.includes(trait.traitKey) &&
+      isLevelBearingTrait(catalog, trait.traitKey) &&
+      trait.level !== undefined,
+  );
+  const mutations: TraitLevelMutationEvent[] = buffed.map((trait) =>
+    Object.freeze({
+      kind: 'levelMutation' as const,
+      owner,
+      acquisitionRole,
+      sequence,
+      acquisitionPoint,
+      sourceTraitKey,
+      targetTraitKey: trait.traitKey,
+      oldLevel: trait.level!,
+      newLevel: trait.level! + levelBonus,
+    }),
+  );
+  return Object.freeze({
+    applies: true,
+    events: Object.freeze([...removals, ...mutations]),
+    removedTraitKeys: Object.freeze(removedTraitKeys),
+    removedCount: removedTraitKeys.length,
+    levelBonus,
+    buffedTraitKeys: Object.freeze(buffed.map((trait) => trait.traitKey)),
+    resultingHistory: foldTraitHistoryEvents(catalog, [
+      ...before.events,
+      ...removals,
+      ...mutations,
+    ]),
+  });
 }
 
 const emptyElements = Object.freeze({ Aether: 0, Earth: 0, Air: 0, Fire: 0, Water: 0 });
@@ -283,7 +445,7 @@ function deriveFacts(catalog: Catalog, equippedTraits: Readonly<Record<string, E
     ) {
       rarityCounts[equipped.rarity] = (rarityCounts[equipped.rarity] ?? 0) + 1;
     }
-    if (isPomEligibleTrait(catalog, equipped.traitKey)) upgradable += 1;
+    if (isPomUpgradeTarget(catalog, equipped)) upgradable += 1;
   }
   const highestBaseElementCount = Math.max(
     elements.Earth,
@@ -329,6 +491,25 @@ function activeRarityFloorSources(
   return active;
 }
 
+function withRarityAndSteadyGrowthCredit(
+  catalog: Catalog,
+  trait: EquippedTrait,
+  rarity: TraitRarity,
+  resetSteadyGrowthProgress = false,
+): EquippedTrait {
+  const disposition = catalog.traits.byKey[trait.traitKey]?.selectedDisposition;
+  if (disposition?.kind !== 'steadyGrowth' || trait.rarity === undefined)
+    return Object.freeze({ ...trait, rarity });
+  const oldInterval = disposition.intervalsByRarity[trait.rarity as 'Common'];
+  const newInterval = disposition.intervalsByRarity[rarity as 'Common'];
+  if (oldInterval === undefined || newInterval === undefined)
+    return Object.freeze({ ...trait, rarity });
+  const progress = resetSteadyGrowthProgress
+    ? 0
+    : newInterval - Math.min(oldInterval - (trait.steadyGrowthProgress ?? 0), newInterval);
+  return Object.freeze({ ...trait, rarity, steadyGrowthProgress: progress });
+}
+
 function promoteActiveFloorTargets(
   catalog: Catalog,
   equippedTraits: Record<string, EquippedTrait>,
@@ -359,7 +540,7 @@ function promoteActiveFloorTargets(
       )
     )
       continue;
-    equippedTraits[traitKey] = Object.freeze({ ...equipped, rarity: 'Rare' });
+    equippedTraits[traitKey] = withRarityAndSteadyGrowthCredit(catalog, equipped, 'Rare');
     promotedKeys.push(traitKey);
   }
   for (const event of events) {
@@ -461,10 +642,38 @@ export function foldTraitHistoryEvents(
           target !== undefined &&
           target.level === event.oldLevel &&
           event.newLevel > event.oldLevel &&
-          isPomEligibleTrait(catalog, event.targetTraitKey)
+          isLevelBearingTrait(catalog, event.targetTraitKey)
         ) {
           equipped[event.targetTraitKey] = Object.freeze({ ...target, level: event.newLevel });
         }
+        continue;
+      }
+      if (event.kind === 'steadyGrowthProgress') {
+        const target = equipped[event.traitKey];
+        if (
+          target?.acquisitionIdentity === event.acquisitionIdentity &&
+          (target.steadyGrowthProgress ?? 0) === event.oldProgress &&
+          event.newProgress >= 0 &&
+          event.newProgress < event.requiredInterval
+        )
+          equipped[event.traitKey] = Object.freeze({
+            ...target,
+            steadyGrowthProgress: event.newProgress,
+          });
+        continue;
+      }
+      if (event.kind === 'rarityMutation') {
+        const target = equipped[event.targetTraitKey];
+        if (
+          target?.rarity === event.oldRarity &&
+          nextRarity(catalog, event.targetTraitKey, event.oldRarity) === event.newRarity
+        )
+          equipped[event.targetTraitKey] = withRarityAndSteadyGrowthCredit(
+            catalog,
+            target,
+            event.newRarity,
+            event.resetSteadyGrowthProgress === true,
+          );
         continue;
       }
       if (event.kind === 'elementContribution') {
@@ -474,7 +683,10 @@ export function foldTraitHistoryEvents(
         continue;
       }
       if (event.kind === 'traitRemoval') {
-        if (equipped[event.traitKey]?.acquisitionIdentity === event.acquisitionIdentity)
+        if (
+          event.match === 'currentTraitKey' ||
+          equipped[event.traitKey]?.acquisitionIdentity === event.acquisitionIdentity
+        )
           delete equipped[event.traitKey];
         continue;
       }
@@ -509,7 +721,7 @@ export function foldTraitHistoryEvents(
           traitKey: event.traitKey,
           giverKey: giver?.key ?? event.sourceTraitKey,
           providerKind: giver?.providerKind ?? 'npc',
-          ...(isPomEligibleTrait(catalog, event.traitKey) ? { level: 1 } : {}),
+          ...(isLevelBearingTrait(catalog, event.traitKey) ? { level: 1 } : {}),
           sourceRole: event.acquisitionRole,
         });
         continue;
@@ -543,7 +755,7 @@ export function foldTraitHistoryEvents(
         giverKey: giver.key,
         providerKind: giver.providerKind,
         ...(option.rarity === undefined ? {} : { rarity: option.rarity }),
-        ...(isPomEligibleTrait(catalog, option.traitKey) ? { level: 1 } : {}),
+        ...(isLevelBearingTrait(catalog, option.traitKey) ? { level: 1 } : {}),
         ...(declaration.hammerCompatibility === undefined ? {} : { hammerRank: 'RankI' as const }),
         sourceRole: event.acquisitionRole,
         ...(event.acquisitionIdentity === undefined
@@ -562,10 +774,11 @@ export function foldTraitHistoryEvents(
         if (target !== undefined) {
           switch (targeted.kind) {
             case 'promoteGodTraitToHeroic':
-              equipped[targeted.targetTraitKey] = Object.freeze({
-                ...target,
-                rarity: targeted.newRarity,
-              });
+              equipped[targeted.targetTraitKey] = withRarityAndSteadyGrowthCredit(
+                catalog,
+                target,
+                targeted.newRarity,
+              );
               break;
             case 'upgradeHammerToRank2':
               equipped[targeted.targetTraitKey] = Object.freeze({
@@ -638,6 +851,164 @@ export function advanceChaosClock(
       acquisitionRole: 'chaosClock' as const,
     }),
   ]);
+}
+
+export interface ReachedSteadyGrowthThreshold {
+  readonly traitKey: string;
+  readonly acquisitionIdentity: string;
+  readonly requiredInterval: number;
+  /** Immutable pre-checkpoint frontier; candidates and settlement share it. */
+  readonly before: TraitHistoryState;
+  readonly eligibleTargetKeys: readonly string[];
+}
+
+export interface SteadyGrowthTargetAssessment {
+  readonly legal: boolean;
+  readonly targetTraitKey: string | null;
+  readonly eligibleTargetKeys: readonly string[];
+  readonly nextRarity?: TraitRarity;
+}
+
+/** Assesses the exact random result from one already-reached threshold frontier. */
+export function assessSteadyGrowthTarget(
+  catalog: Catalog,
+  threshold: ReachedSteadyGrowthThreshold,
+  targetTraitKey: string | null | undefined,
+): SteadyGrowthTargetAssessment {
+  if (threshold.eligibleTargetKeys.length === 0)
+    return Object.freeze({
+      legal: targetTraitKey === null || targetTraitKey === undefined,
+      targetTraitKey: null,
+      eligibleTargetKeys: threshold.eligibleTargetKeys,
+    });
+  if (targetTraitKey === null || targetTraitKey === undefined)
+    return Object.freeze({
+      legal: false,
+      targetTraitKey: null,
+      eligibleTargetKeys: threshold.eligibleTargetKeys,
+    });
+  if (!threshold.eligibleTargetKeys.includes(targetTraitKey))
+    return Object.freeze({
+      legal: false,
+      targetTraitKey,
+      eligibleTargetKeys: threshold.eligibleTargetKeys,
+    });
+  const current = threshold.before.equippedTraits[targetTraitKey];
+  const next =
+    current?.rarity === undefined ? undefined : nextRarity(catalog, targetTraitKey, current.rarity);
+  return Object.freeze({
+    legal: next !== undefined,
+    targetTraitKey,
+    eligibleTargetKeys: threshold.eligibleTargetKeys,
+    ...(next === undefined ? {} : { nextRarity: next }),
+  });
+}
+
+/** Applies the forced result without introducing a second effect scheduler. */
+export function settleSteadyGrowthThreshold(
+  catalog: Catalog,
+  history: TraitHistoryState,
+  owner: SemanticAddress,
+  sequence: number,
+  threshold: ReachedSteadyGrowthThreshold,
+  targetTraitKey: string | null | undefined,
+): { readonly history: TraitHistoryState; readonly assessment: SteadyGrowthTargetAssessment } {
+  const assessment = assessSteadyGrowthTarget(catalog, threshold, targetTraitKey);
+  if (
+    !assessment.legal ||
+    assessment.targetTraitKey === null ||
+    assessment.nextRarity === undefined
+  )
+    return Object.freeze({ history, assessment });
+  const target = history.equippedTraits[assessment.targetTraitKey];
+  if (target?.rarity === undefined) return Object.freeze({ history, assessment });
+  const event: TraitRarityMutationEvent = Object.freeze({
+    kind: 'rarityMutation',
+    owner,
+    acquisitionRole: 'steadyGrowth',
+    sequence,
+    acquisitionPoint: 'encounterEndEffectsApplied',
+    sourceTraitKey: threshold.traitKey,
+    targetTraitKey: assessment.targetTraitKey,
+    oldRarity: target.rarity,
+    newRarity: assessment.nextRarity,
+    ...(assessment.targetTraitKey === threshold.traitKey
+      ? { resetSteadyGrowthProgress: true as const }
+      : {}),
+  });
+  return Object.freeze({
+    history: foldTraitHistoryEvents(catalog, [...history.events, event]),
+    assessment,
+  });
+}
+
+/** Folds one already-emitted qualifying encounter-end-effects checkpoint. */
+export function advanceSteadyGrowthProgress(
+  catalog: Catalog,
+  before: TraitHistoryState,
+  owner: SemanticAddress,
+  sequence: number,
+): {
+  readonly history: TraitHistoryState;
+  readonly thresholds: readonly ReachedSteadyGrowthThreshold[];
+} {
+  const events: SteadyGrowthProgressEvent[] = [];
+  const thresholds: ReachedSteadyGrowthThreshold[] = [];
+  for (const trait of Object.values(before.equippedTraits)) {
+    const disposition = catalog.traits.byKey[trait.traitKey]?.selectedDisposition;
+    if (
+      disposition?.kind !== 'steadyGrowth' ||
+      trait.acquisitionIdentity === undefined ||
+      trait.rarity === undefined ||
+      disposition.intervalsByRarity[trait.rarity as 'Common'] === undefined
+    )
+      continue;
+    const requiredInterval = disposition.intervalsByRarity[trait.rarity as 'Common'];
+    const oldProgress = trait.steadyGrowthProgress ?? 0;
+    const reached = oldProgress + 1 >= requiredInterval;
+    events.push(
+      Object.freeze({
+        kind: 'steadyGrowthProgress',
+        owner,
+        acquisitionRole: 'steadyGrowth',
+        sequence,
+        acquisitionPoint: 'encounterEndEffectsApplied',
+        traitKey: trait.traitKey,
+        acquisitionIdentity: trait.acquisitionIdentity,
+        oldProgress,
+        newProgress: reached ? 0 : oldProgress + 1,
+        requiredInterval,
+      }),
+    );
+    if (!reached) continue;
+    const candidates = Object.values(before.equippedTraits).filter((candidate) => {
+      const declaration = catalog.traits.byKey[candidate.traitKey];
+      return (
+        declaration?.usesBoonRarity === true &&
+        candidate.rarity !== undefined &&
+        !declaration.blockInRunRarify &&
+        nextRarity(catalog, candidate.traitKey, candidate.rarity) !== undefined &&
+        hasEffectiveInRunUpgrade(catalog, candidate.traitKey, candidate)
+      );
+    });
+    const eligibleTargetKeys = candidates
+      .filter((candidate) => candidates.length === 1 || candidate.traitKey !== trait.traitKey)
+      .map((candidate) => candidate.traitKey);
+    thresholds.push(
+      Object.freeze({
+        traitKey: trait.traitKey,
+        acquisitionIdentity: trait.acquisitionIdentity,
+        requiredInterval,
+        before,
+        eligibleTargetKeys: Object.freeze(eligibleTargetKeys),
+      }),
+    );
+  }
+  return Object.freeze({
+    history:
+      events.length === 0 ? before : foldTraitHistoryEvents(catalog, [...before.events, ...events]),
+    thresholds: Object.freeze(thresholds),
+  });
 }
 
 export function traitDerivedFacts(history: TraitHistoryState) {
@@ -1431,7 +1802,11 @@ export function recordReachedTraitOffer(
   acquisitionPoint: string,
   acquisitionIdentity?: string,
   echoRepeatedKeepsakeKey?: string,
-): { readonly history: TraitHistoryState; readonly event?: TraitOfferEvent } {
+): {
+  readonly history: TraitHistoryState;
+  readonly event?: TraitOfferEvent;
+  readonly ransomAssessment?: RansomAssessment;
+} {
   if (evaluation.offer.kind === 'chaos') {
     if (!evaluation.composition.legal) return Object.freeze({ history: evaluation.before });
     const identity = acquisitionIdentity ?? `chaos:${sequence}`;
@@ -1468,7 +1843,10 @@ export function recordReachedTraitOffer(
     selectedDisposition?.kind !== 'circe' &&
     selectedDisposition?.kind !== 'echo' &&
     selectedDisposition?.kind !== 'advanceCurrentKeepsake' &&
-    selectedDisposition?.kind !== 'worldShopRestock'
+    selectedDisposition?.kind !== 'worldShopRestock' &&
+    selectedDisposition?.kind !== 'naturalSelection' &&
+    selectedDisposition?.kind !== 'ransom' &&
+    selectedDisposition?.kind !== 'steadyGrowth'
   ) {
     return Object.freeze({ history: evaluation.before });
   }
@@ -1509,12 +1887,55 @@ export function recordReachedTraitOffer(
           newLevel: transition.newLevel,
         })
       : undefined;
-  const history = foldTraitHistoryEvents(catalog, [
-    ...evaluation.before.events,
+  const immediate: TraitHistoryEvent[] = [event, ...(mutation === undefined ? [] : [mutation])];
+  if (selectedDisposition?.kind === 'naturalSelection') {
+    const targets = selectedOption.naturalSelectionTargets;
+    const assessment = assessNaturalSelectionTargets(
+      catalog,
+      evaluation.before,
+      selectedDisposition.levelCount,
+      selectedDisposition.slots,
+      targets,
+    );
+    if (!assessment.legal || !assessment.complete)
+      return Object.freeze({ history: evaluation.before, event });
+    for (const { targetTraitKey, oldLevel, newLevel } of assessment.steps) {
+      immediate.push(
+        Object.freeze({
+          kind: 'levelMutation',
+          owner: evaluation.address,
+          acquisitionRole: evaluation.acquisitionRole,
+          sequence,
+          acquisitionPoint,
+          sourceTraitKey: selectedTraitKey,
+          targetTraitKey,
+          oldLevel,
+          newLevel,
+        }),
+      );
+    }
+  }
+  const ransomAssessment =
+    selectedDisposition?.kind !== 'ransom'
+      ? undefined
+      : assessRansom(
+          catalog,
+          foldTraitHistoryEvents(catalog, [...evaluation.before.events, ...immediate]),
+          selectedTraitKey,
+          evaluation.address,
+          evaluation.acquisitionRole,
+          sequence,
+          acquisitionPoint,
+        );
+  if (ransomAssessment !== undefined) {
+    immediate.push(...ransomAssessment.events);
+  }
+  const history = foldTraitHistoryEvents(catalog, [...evaluation.before.events, ...immediate]);
+  return Object.freeze({
+    history,
     event,
-    ...(mutation === undefined ? [] : [mutation]),
-  ]);
-  return Object.freeze({ history, event });
+    ...(ransomAssessment === undefined ? {} : { ransomAssessment }),
+  });
 }
 
 /** Appends fixed direct grants without ordinary offer, rarity, Calling Card,
@@ -1628,8 +2049,8 @@ export function echoPomGreatestLevelTraitKeys(
   catalog: Catalog,
   history: TraitHistoryState,
 ): readonly string[] {
-  const eligible = Object.values(history.equippedTraits).filter(
-    (trait) => isPomEligibleTrait(catalog, trait.traitKey) && trait.level !== undefined,
+  const eligible = Object.values(history.equippedTraits).filter((trait) =>
+    isPomUpgradeTarget(catalog, trait),
   );
   const greatest = Math.max(0, ...eligible.map((trait) => trait.level ?? 0));
   return Object.freeze(
@@ -1661,21 +2082,12 @@ export function recordReachedLevelResolution(
           new Set(offered).size === offered.length &&
           target !== null &&
           offered.includes(target) &&
-          offered.every(
-            (traitKey) =>
-              isPomEligibleTrait(catalog, traitKey) &&
-              before.equippedTraits[traitKey] !== undefined,
-          )
+          offered.every((traitKey) => isPomUpgradeTarget(catalog, before.equippedTraits[traitKey]))
         : target !== null || (emptyTargetAllowed && noEligibleTarget);
   if (emptyTargetAllowed && noEligibleTarget && value.kind === 'random' && target === null) {
     return Object.freeze({ history: before });
   }
-  if (
-    !complete ||
-    target === null ||
-    !isPomEligibleTrait(catalog, target) ||
-    before.equippedTraits[target] === undefined
-  )
+  if (!complete || target === null || !isPomUpgradeTarget(catalog, before.equippedTraits[target]))
     return Object.freeze({ history: before });
   const equipped = before.equippedTraits[target];
   if (equipped?.level === undefined) return Object.freeze({ history: before });
@@ -1730,7 +2142,9 @@ export function pomEligibleTargetKeys(
   history: TraitHistoryState,
 ): readonly string[] {
   return Object.freeze(
-    Object.keys(history.equippedTraits).filter((traitKey) => isPomEligibleTrait(catalog, traitKey)),
+    Object.values(history.equippedTraits)
+      .filter((trait) => isPomUpgradeTarget(catalog, trait))
+      .map((trait) => trait.traitKey),
   );
 }
 export function evaluateReachedLevelResolution(
@@ -1757,15 +2171,14 @@ export function evaluateReachedLevelResolution(
       findings.push('selectedTargetNotOffered');
     if (
       value.offeredTraitKeys.some(
-        (traitKey) =>
-          !isPomEligibleTrait(catalog, traitKey) || before.equippedTraits[traitKey] === undefined,
+        (traitKey) => !isPomUpgradeTarget(catalog, before.equippedTraits[traitKey]),
       )
     )
       findings.push('targetUnavailable');
   }
   if (
     target !== null &&
-    (!isPomEligibleTrait(catalog, target) || before.equippedTraits[target] === undefined) &&
+    !isPomUpgradeTarget(catalog, before.equippedTraits[target]) &&
     !findings.includes('targetUnavailable')
   )
     findings.push('targetUnavailable');
@@ -1877,7 +2290,7 @@ function traitFor(catalog: Catalog, key: string) {
 
 function superchargeableGodTraitTargetKeys(
   catalog: Catalog,
-  sourceTraitKey: string,
+  _sourceTraitKey: string,
   history: TraitHistoryState,
 ): readonly string[] {
   return Object.freeze(
@@ -1889,26 +2302,11 @@ function superchargeableGodTraitTargetKeys(
         equipped.rarity !== undefined &&
         nextRarity(catalog, declaration.key, equipped.rarity) !== undefined &&
         !declaration.blockInRunRarify &&
-        withinTargetLevelLimit(catalog, sourceTraitKey, declaration.key, equipped)
+        hasEffectiveInRunUpgrade(catalog, declaration.key, equipped)
         ? [declaration.key]
         : [];
     }),
   );
-}
-
-function withinTargetLevelLimit(
-  catalog: Catalog,
-  sourceTraitKey: string,
-  targetTraitKey: string,
-  target: EquippedTrait,
-): boolean {
-  const acquisition = catalog.traits.byKey[sourceTraitKey]?.targetedAcquisition;
-  if (acquisition?.kind !== 'promoteGodTraitToHeroic') return true;
-  const maximum =
-    target.rarity === undefined
-      ? undefined
-      : acquisition.maximumEligibleLevelByTraitAndRarity?.[targetTraitKey]?.[target.rarity];
-  return maximum === undefined || target.level === undefined || target.level <= maximum;
 }
 
 function bridalGlowAddedLevels(rarity: TraitRarity | undefined): number {
@@ -1958,6 +2356,153 @@ export function targetedAcquisitionTargetKeys(
     case 'upgradeHammerToRank2':
       return upgradableHammerTargetKeys(catalog, history);
   }
+}
+
+export interface NaturalSelectionStep {
+  readonly targetTraitKey: string;
+  readonly oldLevel: number;
+  readonly newLevel: number;
+}
+
+export interface NaturalSelectionTargetAssessment {
+  readonly legal: boolean;
+  /** A legal prefix is complete only at eight successes or a true empty next domain. */
+  readonly complete: boolean;
+  readonly steps: readonly NaturalSelectionStep[];
+  readonly nextTargetTraitKeys: readonly string[];
+}
+
+/**
+ * Validates Natural Selection against its immutable pre-acquisition frontier.
+ * The initial author-selected round is the game's one shuffled order. The
+ * currently simulated prefix only removes a cooldown-capped Hephaestus target
+ * at the precise increment that makes further upgrades ineffective; later
+ * turns retain the same surviving cyclic order and never become persisted
+ * effect state.
+ */
+export function assessNaturalSelectionTargets(
+  catalog: Catalog,
+  before: TraitHistoryState,
+  levelCount: number,
+  slots: readonly TraitOrdinaryBoonSlot[],
+  targets: readonly string[] | undefined,
+): NaturalSelectionTargetAssessment {
+  const simulated = new Map(
+    Object.values(before.equippedTraits).map((trait) => [trait.traitKey, trait]),
+  );
+  const initiallyEligible = [...simulated.values()]
+    .filter((trait) => {
+      const slot = catalog.traits.byKey[trait.traitKey]?.equipmentSlot;
+      return (
+        slot !== undefined &&
+        slot !== 'Spell' &&
+        slots.includes(slot) &&
+        isPomUpgradeTarget(catalog, trait)
+      );
+    })
+    .map((trait) => trait.traitKey);
+  if (initiallyEligible.length === 0 || initiallyEligible.length > levelCount)
+    return Object.freeze({
+      legal: false,
+      complete: false,
+      steps: Object.freeze([]),
+      nextTargetTraitKeys: Object.freeze([]),
+    });
+  if (targets === undefined || targets.length === 0)
+    return Object.freeze({
+      legal: false,
+      complete: false,
+      steps: Object.freeze([]),
+      nextTargetTraitKeys: Object.freeze(initiallyEligible),
+    });
+  if (targets.length > levelCount)
+    return Object.freeze({
+      legal: false,
+      complete: false,
+      steps: Object.freeze([]),
+      nextTargetTraitKeys: Object.freeze([]),
+    });
+  if (targets.length < initiallyEligible.length) {
+    const prefix = targets;
+    if (
+      new Set(prefix).size !== prefix.length ||
+      prefix.some((traitKey) => !initiallyEligible.includes(traitKey))
+    )
+      return Object.freeze({
+        legal: false,
+        complete: false,
+        steps: Object.freeze([]),
+        nextTargetTraitKeys: Object.freeze([]),
+      });
+    return Object.freeze({
+      legal: true,
+      complete: false,
+      steps: Object.freeze(
+        prefix.map((targetTraitKey) => {
+          const target = simulated.get(targetTraitKey)!;
+          return Object.freeze({
+            targetTraitKey,
+            oldLevel: target.level!,
+            newLevel: target.level! + 1,
+          });
+        }),
+      ),
+      nextTargetTraitKeys: Object.freeze(initiallyEligible.filter((key) => !prefix.includes(key))),
+    });
+  }
+  const stableOrder = targets.slice(0, initiallyEligible.length);
+  if (
+    new Set(stableOrder).size !== stableOrder.length ||
+    stableOrder.some((traitKey) => !initiallyEligible.includes(traitKey)) ||
+    initiallyEligible.some((traitKey) => !stableOrder.includes(traitKey))
+  )
+    return Object.freeze({
+      legal: false,
+      complete: false,
+      steps: Object.freeze([]),
+      nextTargetTraitKeys: Object.freeze([]),
+    });
+  let cursor = 0;
+  const steps: NaturalSelectionStep[] = [];
+  for (const targetTraitKey of targets) {
+    let target: EquippedTrait | undefined;
+    for (let attempts = 0; attempts < stableOrder.length; attempts += 1) {
+      const candidateKey = stableOrder[cursor]!;
+      cursor = (cursor + 1) % stableOrder.length;
+      const candidate = simulated.get(candidateKey);
+      if (isPomUpgradeTarget(catalog, candidate)) {
+        target = candidate;
+        break;
+      }
+    }
+    if (target?.traitKey !== targetTraitKey)
+      return Object.freeze({
+        legal: false,
+        complete: false,
+        steps: Object.freeze([]),
+        nextTargetTraitKeys: Object.freeze([]),
+      });
+    if (target.level === undefined)
+      return Object.freeze({
+        legal: false,
+        complete: false,
+        steps: Object.freeze([]),
+        nextTargetTraitKeys: Object.freeze([]),
+      });
+    const oldLevel = target.level;
+    const newLevel = oldLevel + 1;
+    simulated.set(targetTraitKey, Object.freeze({ ...target, level: newLevel }));
+    steps.push(Object.freeze({ targetTraitKey, oldLevel, newLevel }));
+  }
+  const nextTargetTraitKeys = stableOrder.filter((key) =>
+    isPomUpgradeTarget(catalog, simulated.get(key)),
+  );
+  return Object.freeze({
+    legal: true,
+    complete: targets.length === levelCount || nextTargetTraitKeys.length === 0,
+    steps: Object.freeze(steps),
+    nextTargetTraitKeys: Object.freeze(nextTargetTraitKeys),
+  });
 }
 
 export function assessTraitOption(
