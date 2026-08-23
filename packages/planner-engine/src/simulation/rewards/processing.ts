@@ -2897,7 +2897,7 @@ export function settleShopAcquisitionSite(
   }
   const branchCohortSize = executions.length;
   const contractDescriptor = declaration.infernalContractReward;
-  const contractChild = room.pickupSite?.entries[INFERNAL_CONTRACT_ENTRY_KEY];
+  const contractChild = room.acquisitionSites.roomExit?.entries[INFERNAL_CONTRACT_ENTRY_KEY];
   if (contractDescriptor !== undefined && contractChild !== undefined) {
     for (const execution of executions) {
       if (execution.candidate.traitHistory?.equippedTraits.InfernalContractBoon !== undefined) {
@@ -3039,7 +3039,7 @@ export function settleShopAcquisitionSite(
     goldDisposition.effect === 'doubleShop' &&
     !goldDisposition.excludedRewardTypes.includes(offer.rewardType);
   const eligibleGoldSourceOfferKeys = (): readonly string[] => {
-    const travel = room.pickupSite?.entries[TRAVEL_DEAL_REFILL_ENTRY_KEY];
+    const travel = room.acquisitionSites.roomExit?.entries[TRAVEL_DEAL_REFILL_ENTRY_KEY];
     return Object.freeze([
       ...entry.offers.flatMap((offer) => (goldSourceEligible(offer.offer) ? [offer.offerKey] : [])),
       ...(travel !== undefined && travel !== null && goldSourceEligible(travel.offer)
@@ -3224,7 +3224,7 @@ export function settleShopAcquisitionSite(
     for (const execution of executions) {
       if (entryKey === INFERNAL_CONTRACT_ENTRY_KEY) {
         const descriptor = declaration.infernalContractReward;
-        const child = room.pickupSite?.entries[entryKey];
+        const child = room.acquisitionSites.roomExit?.entries[entryKey];
         if (
           descriptor === undefined ||
           child === undefined ||
@@ -3292,7 +3292,7 @@ export function settleShopAcquisitionSite(
 
       if (entryKey === TRAVEL_DEAL_REFILL_ENTRY_KEY) {
         const refill = execution.travelRefill;
-        const authoredChild = room.pickupSite?.entries[entryKey];
+        const authoredChild = room.acquisitionSites.roomExit?.entries[entryKey];
         const child = authoredChild;
         if (refill === undefined || child === undefined) {
           entryPurchaseFailureRecorded = true;
@@ -3389,7 +3389,7 @@ export function settleShopAcquisitionSite(
 
       if (entryKey === ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY) {
         const materialization = execution.goldMaterialization;
-        const authoredChild = room.pickupSite?.entries[entryKey];
+        const authoredChild = room.acquisitionSites.roomExit?.entries[entryKey];
         const child = authoredChild;
         if (materialization === undefined || child === undefined) {
           entryPurchaseFailureRecorded = true;
@@ -3657,7 +3657,7 @@ export function settleShopAcquisitionSite(
       (context.order ?? []).map((offerKey) => {
         const offer = entry.offers.find((candidate) => candidate.offerKey === offerKey);
         if (offer === undefined) {
-          const supplemental = room.pickupSite?.entries[offerKey];
+          const supplemental = room.acquisitionSites.roomExit?.entries[offerKey];
           const artificerReplacement = parseArtificerReplacementEntryKey(offerKey);
           if (
             supplemental === undefined &&
@@ -4108,6 +4108,7 @@ export function settlePickupAcquisitionSite(
   branches: readonly RewardBranchState[],
   request: {
     readonly siteOwner: AcquisitionSiteOwnerAddress;
+    readonly site: AcquisitionSiteAddress;
     readonly entries: Readonly<Record<string, AuthoredRewardState | null>>;
     readonly order: readonly string[];
     readonly producerLifecycleKey: string;
@@ -4129,7 +4130,7 @@ export function settlePickupAcquisitionSite(
   },
   findings: Map<string, FindingRegionEntry>,
 ): AcquisitionSettlementProduct {
-  const site = createAcquisitionSiteAddress(request.siteOwner, 'roomExit');
+  const site = request.site;
   const definitions = new Map<
     string,
     {
@@ -4294,7 +4295,7 @@ export function settlePickupAcquisitionSite(
         current,
         {
           siteOwner: request.siteOwner,
-          pointKey: 'roomExit',
+          pointKey: site.pointKey,
           sourceEntryKey: parsed.sourceKey,
           sourceOrigin: source.address,
           sourceReward: source.reward,

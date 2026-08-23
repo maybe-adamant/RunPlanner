@@ -24,7 +24,14 @@ import type {
 import { roomActionKey } from '../room-actions';
 import { parseArtificerReplacementEntryKey } from '../artificer';
 import { decodeNullableRewardState, decodeRoomState } from '../room-state/codec';
-import { echoLastRewardPickupEntryKeys, selectedPickupProducer } from '../traits';
+import {
+  echoLastRewardPickupEntryKeys,
+  parseEchoLastRewardPickupEntryKey,
+  parseTraitGeneratedPickupSiteKey,
+  selectedPickupProducers,
+  type SelectedPickupProducer,
+} from '../traits';
+import { createBiomeAddress } from '../addresses';
 import {
   ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
   INFERNAL_CONTRACT_ENTRY_KEY,
@@ -326,7 +333,7 @@ function decodeAcquisitionSites(
   value: unknown,
   occurrence: RawOccurrence,
   catalog: Catalog,
-  pickupProducerLifecycleKey: string | undefined,
+  pickupProducers: readonly SelectedPickupProducer[],
   echoLastRewardEntryKeys: ReadonlySet<string>,
   shopProfileKey: string | undefined,
 ): Readonly<
@@ -344,8 +351,20 @@ function decodeAcquisitionSites(
       readonly pickupEntries?: Readonly<Record<string, AuthoredRewardState | null>>;
     }
   > = {};
+  const producerByEntry = new Map<string, SelectedPickupProducer>();
+  for (const producer of pickupProducers) {
+    for (const pickup of producer.pickups) {
+      producerByEntry.set(`${producer.siteKey}\u0000${pickup.key}`, producer);
+    }
+  }
   for (const [pointKey, rawSite] of Object.entries(sites)) {
-    const artificerSite = pointKey !== 'roomExit';
+    const generatedTraitSite = parseTraitGeneratedPickupSiteKey(pointKey) !== undefined;
+    if (pointKey.startsWith('traitGenerated:') && !generatedTraitSite)
+      failProjectDocument(
+        `${occurrence.path}.acquisitionSites.${pointKey}`,
+        'has an invalid generated-pickup site key',
+      );
+    const artificerSite = pointKey !== 'roomExit' && !generatedTraitSite;
     const site = expectRecord(rawSite, `${occurrence.path}.acquisitionSites.${pointKey}`);
     const hasPickups = site.pickupEntries !== undefined;
     expectExactKeys(
@@ -353,12 +372,26 @@ function decodeAcquisitionSites(
       hasPickups ? ['pickupEntries'] : [],
       `${occurrence.path}.acquisitionSites.${pointKey}`,
     );
+    const retainedEchoEntry =
+      hasPickups &&
+      Object.keys(
+        expectRecord(
+          site.pickupEntries,
+          `${occurrence.path}.acquisitionSites.${pointKey}.pickupEntries`,
+        ),
+      ).some((key) => echoLastRewardEntryKeys.has(key));
+    const expectedEntries = Object.keys(site.pickupEntries ?? {});
+    const hasProducer = expectedEntries.some((entryKey) =>
+      producerByEntry.has(`${pointKey}\u0000${entryKey}`),
+    );
     if (
       hasPickups &&
-      pickupProducerLifecycleKey === undefined &&
+      !hasProducer &&
       echoLastRewardEntryKeys.size === 0 &&
+      !retainedEchoEntry &&
       shopProfileKey === undefined &&
-      !artificerSite
+      !artificerSite &&
+      !generatedTraitSite
     )
       failProjectDocument(
         `${occurrence.path}.acquisitionSites.${pointKey}.pickupEntries`,
@@ -385,7 +418,8 @@ function decodeAcquisitionSites(
                         kind: 'producerLifecycle',
                         key: echoLastRewardEntryKeys.has(key)
                           ? 'EchoLastReward'
-                          : pickupProducerLifecycleKey!,
+                          : (producerByEntry.get(`${pointKey}\u0000${key}`)?.producerLifecycleKey ??
+                            ''),
                       }
                     : key === INFERNAL_CONTRACT_ENTRY_KEY
                       ? {
@@ -1270,6 +1304,7 @@ export function decodeBiomeTopology(
   value: unknown,
   catalog: Catalog,
   layout: BiomeLayout,
+  routeKey: string,
   path: string,
 ): BiomeTopology {
   const topology = expectRecord(value, path);
@@ -1642,29 +1677,111 @@ export function decodeBiomeTopology(
       room,
       `${rawOccurrence.path}.encounters`,
     );
-    let pickupProducer: ReturnType<typeof selectedPickupProducer>;
-    try {
-      pickupProducer = selectedPickupProducer(catalog, encounters);
-    } catch (error) {
-      failProjectDocument(
-        `${rawOccurrence.path}.encounters`,
-        error instanceof Error ? error.message : 'has invalid pickup producers',
-      );
-    }
+    const occurrenceWithoutAcquisitionSites: RoomOccurrence = Object.freeze({
+      occurrenceId: rawOccurrence.occurrenceId,
+      gameName: room.gameName,
+      ...(owner.anomalyReplacement === undefined
+        ? {}
+        : { anomalyReplacement: owner.anomalyReplacement }),
+      state,
+      encounters,
+      roomActions: Object.freeze({ order: Object.freeze([]) }),
+      additionalExits: Object.freeze([]),
+    });
     const echoEntryKeys = new Set(echoLastRewardPickupEntryKeys(catalog, encounters));
+    const biomeAddress = createBiomeAddress(routeKey, layout.biomeKey);
+    // Decode structural sites and then their declaration-owned generated children
+    // to a bounded fixed point. A generated source may itself contain a selected
+    // producer (for example a Narcissus BlindBox source), so one preliminary
+    // pass is not sufficient to establish nested ownership on reload.
+    let occurrenceWithPreliminarySites = occurrenceWithoutAcquisitionSites;
+    if (rawOccurrence.hasAcquisitionSites) {
+      const rawSites = expectRecord(
+        rawOccurrence.acquisitionSites,
+        `${rawOccurrence.path}.acquisitionSites`,
+      );
+      let previousIncludedKeys: readonly string[] = Object.freeze([]);
+      for (let round = 0; round <= Object.keys(rawSites).length; round += 1) {
+        const preliminaryPickupProducers = selectedPickupProducers(
+          catalog,
+          biomeAddress,
+          occurrenceWithPreliminarySites,
+        );
+        const ownedGeneratedSiteKeys = new Set(
+          preliminaryPickupProducers
+            .filter((producer) => producer.siteKey.startsWith('traitGenerated:'))
+            .map((producer) => producer.siteKey),
+        );
+        const includedEntries = Object.entries(rawSites).filter(
+          ([siteKey]) =>
+            !siteKey.startsWith('traitGenerated:') || ownedGeneratedSiteKeys.has(siteKey),
+        );
+        const includedKeys = includedEntries.map(([siteKey]) => siteKey).sort();
+        if (
+          includedKeys.length === previousIncludedKeys.length &&
+          includedKeys.every((siteKey, index) => siteKey === previousIncludedKeys[index])
+        )
+          break;
+        previousIncludedKeys = Object.freeze(includedKeys);
+        const preliminaryAcquisitionSites =
+          includedEntries.length === 0
+            ? undefined
+            : decodeAcquisitionSites(
+                Object.fromEntries(includedEntries),
+                rawOccurrence,
+                catalog,
+                preliminaryPickupProducers,
+                echoEntryKeys,
+                state.kind === 'shop' ? state.shop?.profileKey : undefined,
+              );
+        occurrenceWithPreliminarySites = Object.freeze({
+          ...occurrenceWithoutAcquisitionSites,
+          ...(preliminaryAcquisitionSites === undefined
+            ? {}
+            : { acquisitionSites: preliminaryAcquisitionSites }),
+        });
+      }
+    }
+    const pickupProducers = selectedPickupProducers(
+      catalog,
+      biomeAddress,
+      occurrenceWithPreliminarySites,
+    );
     const acquisitionSites = rawOccurrence.hasAcquisitionSites
       ? decodeAcquisitionSites(
           rawOccurrence.acquisitionSites,
           rawOccurrence,
           catalog,
-          pickupProducer?.producerLifecycleKey,
+          pickupProducers,
           echoEntryKeys,
           state.kind === 'shop' ? state.shop?.profileKey : undefined,
         )
       : undefined;
+    const producerSiteKeys = new Set(
+      pickupProducers
+        .filter((producer) => producer.siteKey.startsWith('traitGenerated:'))
+        .map((producer) => producer.siteKey),
+    );
+    for (const [siteKey, site] of Object.entries(acquisitionSites ?? {})) {
+      if (parseTraitGeneratedPickupSiteKey(siteKey) !== undefined && !producerSiteKeys.has(siteKey))
+        failProjectDocument(
+          `${rawOccurrence.path}.acquisitionSites.${siteKey}`,
+          'does not name a selected generated-pickup source',
+        );
+      for (const entryKey of Object.keys(site.pickupEntries ?? {}))
+        if (
+          parseEchoLastRewardPickupEntryKey(entryKey) !== undefined &&
+          !echoEntryKeys.has(entryKey)
+        )
+          failProjectDocument(
+            `${rawOccurrence.path}.acquisitionSites.${siteKey}.pickupEntries.${entryKey}`,
+            'does not name a declaration-owned Echo Last Reward entry',
+          );
+    }
     const invalidArtificerSite = Object.entries(acquisitionSites ?? {}).some(
       ([siteKey, site]) =>
         siteKey !== 'roomExit' &&
+        parseTraitGeneratedPickupSiteKey(siteKey) === undefined &&
         Object.keys(site.pickupEntries ?? {}).some(
           (entryKey) => parseArtificerReplacementEntryKey(entryKey) === undefined,
         ),
@@ -1717,10 +1834,16 @@ export function decodeBiomeTopology(
           'must contain exactly the declaration-owned Infernal Contract entry',
         );
     } else {
-      const expected = pickupProducer?.pickups ?? [];
+      const expected = pickupProducers
+        .filter((producer) => producer.siteKey === 'roomExit')
+        .flatMap((producer) => producer.pickups);
+      const retainedEchoEntryKeys = Object.keys(
+        acquisitionSites?.roomExit?.pickupEntries ?? {},
+      ).filter((key) => parseEchoLastRewardPickupEntryKey(key) !== undefined);
       const structurallyOwnedKeys = new Set([
         ...expected.map((pickup) => pickup.key),
         ...echoEntryKeys,
+        ...retainedEchoEntryKeys,
       ]);
       if (structurallyOwnedKeys.size === 0 && acquisitionSites?.roomExit !== undefined) {
         failProjectDocument(
@@ -1752,6 +1875,30 @@ export function decodeBiomeTopology(
         )
           failProjectDocument(
             `${rawOccurrence.path}.acquisitionSites.roomExit.pickupEntries`,
+            'does not match selected descriptor pickups',
+          );
+      }
+      for (const producer of pickupProducers.filter(
+        (candidate) => candidate.siteKey !== 'roomExit',
+      )) {
+        const entries = acquisitionSites?.[producer.siteKey]?.pickupEntries;
+        if (
+          entries === undefined ||
+          Object.keys(entries).some(
+            (key) => !producer.pickups.some((pickup) => pickup.key === key),
+          ) ||
+          producer.pickups.some((pickup) => {
+            const entry = entries[pickup.key];
+            return (
+              entry === undefined ||
+              (pickup.rewardType !== undefined &&
+                entry !== null &&
+                entry.offer.rewardType !== pickup.rewardType)
+            );
+          })
+        )
+          failProjectDocument(
+            `${rawOccurrence.path}.acquisitionSites.${producer.siteKey}.pickupEntries`,
             'does not match selected descriptor pickups',
           );
       }

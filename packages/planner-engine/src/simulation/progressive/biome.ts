@@ -857,15 +857,43 @@ function retainBlockedRegionProducts(
                   retainedArtifacts.roomTargets.at(target));
           },
         });
+  const blockedDerivedProducerCapability =
+    blockedDerivedAcquisitionAt === undefined || blockedDerivedAcquisitionCapability === undefined
+      ? undefined
+      : Object.freeze({
+          acquisitionHorizon: 'ownEnteredLifecycle' as const,
+          evaluateOffer: (
+            owner: RewardProducerOwnerAddress,
+            offer: import('../../reward-kernel').ResolvedRewardOffer,
+          ) => {
+            const fixedOffer = blockedDerivedAcquisitionCapability.fixedReward?.offer;
+            const supported =
+              semanticAddressKey(owner) === semanticAddressKey(blockedDerivedAcquisitionAt) &&
+              (blockedDerivedAcquisitionCapability.rewardTypes?.includes(offer.rewardType) ??
+                false) &&
+              (fixedOffer === undefined || JSON.stringify(fixedOffer) === JSON.stringify(offer));
+            return Object.freeze({ findings: Object.freeze([]), supported });
+          },
+        });
   const rewardProducers: RewardProducerCandidateArtifacts =
-    rewardCapability === undefined
+    rewardCapability === undefined && blockedDerivedProducerCapability === undefined
       ? retainedArtifacts.rewardProducers
       : Object.freeze({
-          at: (owner: RewardProducerOwnerAddress) =>
-            rewardOwner !== undefined &&
-            semanticAddressKey(owner) === semanticAddressKey(rewardOwner)
-              ? rewardCapability
-              : retainedArtifacts.rewardProducers.at(owner),
+          at: (owner: RewardProducerOwnerAddress) => {
+            if (
+              rewardOwner !== undefined &&
+              rewardCapability !== undefined &&
+              semanticAddressKey(owner) === semanticAddressKey(rewardOwner)
+            )
+              return rewardCapability;
+            if (
+              blockedDerivedAcquisitionAt !== undefined &&
+              blockedDerivedProducerCapability !== undefined &&
+              semanticAddressKey(owner) === semanticAddressKey(blockedDerivedAcquisitionAt)
+            )
+              return blockedDerivedProducerCapability;
+            return retainedArtifacts.rewardProducers.at(owner);
+          },
         });
   const roomLifecycles =
     shipCapability === undefined

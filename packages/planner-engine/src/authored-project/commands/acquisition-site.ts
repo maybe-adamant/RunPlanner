@@ -7,7 +7,7 @@ import type { AcquisitionSiteCommand, DerivedShopEntryEditCommand } from './type
 import {
   createUnresolvedAcquisitionRewardState,
   createUnresolvedPickupRewardState,
-  selectedPickupProducer,
+  selectedPickupProducers,
 } from '../traits';
 import {
   authoredAcquisitionEntry,
@@ -96,10 +96,48 @@ export function applyAcquisitionSiteCommand(
     if (site.owner.kind !== 'occurrence') failCommand(command, 'is not an authorable pickup entry');
     const topology = requireTopology(located.plan, command);
     const occurrence = requireOccurrence(located.plan, site.owner.occurrenceId, command);
+    const siteProducer = selectedPickupProducers(
+      catalog,
+      { kind: 'biome', routeKey: site.routeKey, biomeKey: site.biomeKey },
+      occurrence,
+    ).find(
+      (candidate) =>
+        candidate.siteKey === site.pointKey &&
+        candidate.pickups.some((pickup) => pickup.key === command.entry.entryKey),
+    );
     if (site.pointKey !== 'roomExit') {
       const parsed = parseArtificerReplacementEntryKey(command.entry.entryKey);
       const entry = authoredAcquisitionEntryAtSite(occurrence, site, command.entry.entryKey);
       const runProgress = catalog.rewards.stores.byKey.RunProgress;
+      if (parsed === undefined && siteProducer !== undefined) {
+        // A payload-bearing fixed pickup is structurally materialized as null
+        // until the user supplies its exact offer.  Its source-scoped producer
+        // still owns that unresolved entry.
+        if (entry === undefined) failCommand(command, 'does not own a materialized pickup entry');
+        const pickup = siteProducer.pickups.find(
+          (candidate) => candidate.key === command.entry.entryKey,
+        );
+        if (pickup?.rewardType !== undefined && pickup.rewardType !== command.value.rewardType)
+          failCommand(command, `must retain declared reward type ${pickup.rewardType}`);
+        if (entry !== null && sameOccurrenceValue(entry.offer, command.value)) return document;
+        return updateOccurrenceTopology(
+          document,
+          located,
+          replaceOccurrence(
+            topology,
+            replaceAuthoredAcquisitionEntryAtSite(
+              occurrence,
+              site,
+              command.entry.entryKey,
+              createUnresolvedPickupRewardState(
+                catalog,
+                command.value,
+                siteProducer.producerLifecycleKey,
+              ),
+            ),
+          ),
+        );
+      }
       if (parsed === undefined || entry === undefined)
         failCommand(command, 'does not own an Artificer replacement entry');
       if (
@@ -123,7 +161,15 @@ export function applyAcquisitionSiteCommand(
     }
     const pickupEntries = occurrence.acquisitionSites?.roomExit?.pickupEntries;
     const entry = authoredAcquisitionEntry(catalog, occurrence, command.entry.entryKey);
-    const producer = selectedPickupProducer(catalog, occurrence.encounters);
+    const producer = selectedPickupProducers(
+      catalog,
+      { kind: 'biome', routeKey: site.routeKey, biomeKey: site.biomeKey },
+      occurrence,
+    ).find(
+      (candidate) =>
+        candidate.siteKey === 'roomExit' &&
+        candidate.pickups.some((pickup) => pickup.key === command.entry.entryKey),
+    );
     const pickup = producer?.pickups.find((candidate) => candidate.key === command.entry.entryKey);
     const supplementalEntry =
       command.entry.entryKey === INFERNAL_CONTRACT_ENTRY_KEY ||

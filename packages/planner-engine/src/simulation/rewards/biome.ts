@@ -4,7 +4,6 @@ import {
   createGorgonPhaseAddress,
   createBiomeAddress,
   createTraitOfferAddress,
-  createAcquisitionSiteAddress,
   createAcquisitionEntryAddress,
   createEchoKeepsakeReplayAddress,
   createTargetAddress,
@@ -35,7 +34,6 @@ import {
   createUnresolvedAcquisitionRewardState,
   createUnresolvedPickupRewardState,
   materializeGorgonAthenaOffer,
-  selectedPickupProducer,
 } from '../../authored-project/traits';
 import {
   encounterEnvelopeSlots,
@@ -1979,23 +1977,34 @@ export function evaluateBiomeRewardsAssemblyInternal(
     sourceBranches: readonly RewardBranchState[],
     historySequence: number,
     targetFindings: Map<string, FindingRegionEntry>,
-    onlyEntryKey?: string,
+    onlyEntry?: { readonly siteKey: string; readonly entryKey: string },
     completeShopAfterOrder = true,
     activationOnly = false,
   ): readonly RewardBranchState[] {
-    if (room.pickupSite === undefined && room.entryState?.kind !== 'shop') {
+    if (Object.keys(room.acquisitionSites).length === 0 && room.entryState?.kind !== 'shop') {
       return sourceBranches;
     }
-    if (room.pickupSite !== undefined && room.entryState?.kind !== 'shop') {
-      const producer = selectedPickupProducer(catalog, room.encounters);
-      if (producer === undefined) fail('pickup site has no selected pickup producer');
+    if (room.entryState?.kind !== 'shop') {
+      const selectedSiteKey = onlyEntry?.siteKey ?? Object.keys(room.acquisitionSites)[0];
+      const selectedSite =
+        selectedSiteKey === undefined ? undefined : room.acquisitionSites[selectedSiteKey];
+      if (selectedSite === undefined) return sourceBranches;
+      const producer = room.pickupProducers?.find(
+        (candidate) => candidate.siteKey === selectedSiteKey,
+      );
+      if (producer === undefined) return sourceBranches;
+      const sourceWasNormallyAcquired = producer.sourceNormal;
+      // A selected producer is structural authoring detail. Its pickup site
+      // becomes live only for that exact normal participating acquisition;
+      // Time Piece, Artificer, and an unpicked optional source do not create it.
+      if (!sourceWasNormallyAcquired) return sourceBranches;
       const requiredEntryKeys = new Set(
         producer.pickups.filter((pickup) => pickup.required).map((pickup) => pickup.key),
       );
       const echoReplay = producer.traitKey === 'EchoLastReward';
       const replayEntryKey = echoReplay ? producer.pickups[0]?.key : undefined;
       const replayEntry =
-        replayEntryKey === undefined ? undefined : room.pickupSite.entries[replayEntryKey];
+        replayEntryKey === undefined ? undefined : selectedSite.entries[replayEntryKey];
       const replaySources = echoReplay
         ? sourceBranches.map((branch) => branch.history.lastRewardRecreation)
         : Object.freeze([]);
@@ -2031,10 +2040,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
         'localRoomLifecycle',
       );
       if (echoReplay && replayEntryKey !== undefined && agreedReplay !== undefined) {
-        const replayAddress = createAcquisitionEntryAddress(
-          createAcquisitionSiteAddress(room.origin, 'roomExit'),
-          replayEntryKey,
-        );
+        const replayAddress = createAcquisitionEntryAddress(selectedSite.address, replayEntryKey);
         const fixedReward = createUnresolvedAcquisitionRewardState(catalog, agreedReplay.offer, {
           kind: 'producerLifecycle',
           key: 'EchoLastReward',
@@ -2057,10 +2063,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
         );
       }
       if (replaySourceMismatch && replayEntryKey !== undefined) {
-        const replayAddress = createAcquisitionEntryAddress(
-          createAcquisitionSiteAddress(room.origin, 'roomExit'),
-          replayEntryKey,
-        );
+        const replayAddress = createAcquisitionEntryAddress(selectedSite.address, replayEntryKey);
         addRewardFinding(
           targetFindings,
           rewardFinding('rewardSourceUnavailable', replayAddress, {
@@ -2072,27 +2075,30 @@ export function evaluateBiomeRewardsAssemblyInternal(
         );
       }
       const pickupEntries =
-        onlyEntryKey === undefined
-          ? room.pickupSite.entries
-          : Object.freeze({ [onlyEntryKey]: room.pickupSite.entries[onlyEntryKey] ?? null });
+        onlyEntry === undefined || onlyEntry.entryKey.length === 0
+          ? selectedSite.entries
+          : Object.freeze({
+              [onlyEntry.entryKey]: selectedSite.entries[onlyEntry.entryKey] ?? null,
+            });
       const settled = settlePickupAcquisitionSite(
         catalog,
         sourceBranches,
         {
           siteOwner: room.origin,
+          site: selectedSite.address,
           entries: pickupEntries,
           order: activationOnly
             ? Object.freeze([])
-            : onlyEntryKey === undefined
+            : onlyEntry === undefined || onlyEntry.entryKey.length === 0
               ? Object.freeze(
                   room.roomActions.order.flatMap((reference) =>
                     reference.kind === 'interactAcquisitionEntry' &&
-                    reference.siteKey === 'roomExit'
+                    reference.siteKey === selectedSiteKey
                       ? [reference.entryKey]
                       : [],
                   ),
                 )
-              : Object.freeze([onlyEntryKey]),
+              : Object.freeze([onlyEntry.entryKey]),
           producerLifecycleKey: producer.producerLifecycleKey,
           requiredEntryKeys,
           historySequence,
@@ -2154,6 +2160,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
                 frontier.branchesBeforeEntry,
                 {
                   siteOwner: room.origin,
+                  site: selectedSite.address,
                   entries: Object.freeze({
                     [frontier.address.entryKey]: createUnresolvedPickupRewardState(
                       catalog,
@@ -2164,7 +2171,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
                   order: room.roomActions.order.some(
                     (reference) =>
                       reference.kind === 'interactAcquisitionEntry' &&
-                      reference.siteKey === 'roomExit' &&
+                      reference.siteKey === selectedSiteKey &&
                       reference.entryKey === frontier.address.entryKey,
                   )
                     ? Object.freeze([frontier.address.entryKey])
@@ -2205,13 +2212,13 @@ export function evaluateBiomeRewardsAssemblyInternal(
         room: settlementRoom,
         order: activationOnly
           ? Object.freeze([])
-          : onlyEntryKey === undefined
+          : onlyEntry === undefined
             ? Object.freeze(
                 room.roomActions.order.flatMap((reference) =>
                   reference.kind === 'interactShopOffer' ? [reference.offerKey] : [],
                 ),
               )
-            : Object.freeze([onlyEntryKey]),
+            : Object.freeze([onlyEntry.entryKey]),
         completeAfterOrder: completeShopAfterOrder,
         declaration,
         historySequence,
@@ -3783,19 +3790,33 @@ export function evaluateBiomeRewardsAssemblyInternal(
         }
         if (
           source.kind === 'authored' &&
-          (source.pickupSite !== undefined || source.entryState?.kind === 'shop')
+          (Object.keys(source.acquisitionSites).length > 0 || source.entryState?.kind === 'shop')
         ) {
-          branches = settleAuthoredAcquisitionSite(
-            source,
-            declaration,
-            sourceViews,
-            branches,
-            event.sequence,
-            findings,
-            undefined,
-            source.entryState?.kind !== 'shop',
-            true,
-          );
+          if (source.entryState?.kind === 'shop')
+            branches = settleAuthoredAcquisitionSite(
+              source,
+              declaration,
+              sourceViews,
+              branches,
+              event.sequence,
+              findings,
+              undefined,
+              false,
+              true,
+            );
+          else
+            for (const siteKey of Object.keys(source.acquisitionSites))
+              branches = settleAuthoredAcquisitionSite(
+                source,
+                declaration,
+                sourceViews,
+                branches,
+                event.sequence,
+                findings,
+                { siteKey, entryKey: '' },
+                true,
+                true,
+              );
         }
         const batch = batchesByParent.get(semanticAddressKey(event.origin));
         const hubDecision = hubDecisionsBySource.get(semanticAddressKey(event.origin));
@@ -5241,11 +5262,6 @@ export function evaluateBiomeRewardsAssemblyInternal(
             break;
           }
         }
-        const actionEntryKey = event.point.startsWith('shopOffer:')
-          ? event.point.slice('shopOffer:'.length)
-          : event.point.startsWith('acquisitionEntry:')
-            ? event.point.slice('acquisitionEntry:'.length).split(':').slice(1).join(':')
-            : undefined;
         const currentRow = room.roomActionRoster.rows.find(
           (row) =>
             row.rank !== null &&
@@ -5256,6 +5272,12 @@ export function evaluateBiomeRewardsAssemblyInternal(
                   ? `acquisitionEntry:${row.reference.siteKey}:${row.reference.entryKey}`
                   : ''),
         );
+        const actionEntry =
+          currentRow?.reference.kind === 'interactAcquisitionEntry'
+            ? { siteKey: currentRow.reference.siteKey, entryKey: currentRow.reference.entryKey }
+            : currentRow?.reference.kind === 'interactShopOffer'
+              ? { siteKey: 'roomExit', entryKey: currentRow.reference.offerKey }
+              : undefined;
         const currentRank = currentRow?.rank ?? undefined;
         const completeShopAfterOrder =
           room.entryState?.kind !== 'shop' ||
@@ -5275,7 +5297,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
           branches,
           event.sequence,
           findings,
-          actionEntryKey,
+          actionEntry,
           completeShopAfterOrder,
         );
         break;

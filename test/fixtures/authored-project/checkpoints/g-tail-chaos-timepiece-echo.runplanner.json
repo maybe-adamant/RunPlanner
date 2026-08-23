@@ -1,7 +1,7 @@
 {
   "schemaVersion": 52,
   "projectId": "golden-fg",
-  "catalogVersion": "0.32.1-run-impacting-traits",
+  "catalogVersion": "0.33.0-generated-trait-pickups",
   "routes": [
     {
       "routeKey": "Underworld",
@@ -1595,7 +1595,7 @@
                   ]
                 },
                 "acquisitionSites": {
-                  "roomExit": {
+                  "traitGenerated:%5B%22traitOffer%22%2C%22Underworld%22%2C%22G%22%2C%22%5B%5C%22encounterPhase%5C%22%2C%5C%22Underworld%5C%22%2C%5C%22G%5C%22%2C%7B%5C%22kind%5C%22%3A%5C%22occurrence%5C%22%2C%5C%22occurrenceId%5C%22%3A%5C%22golden-g-b3-e1%5C%22%7D%2C%5C%22Encounter%5C%22%5D%22%2C%22Story_Narcissus_01%22%5D:option1": {
                     "pickupEntries": {
                       "pom": {
                         "offer": {

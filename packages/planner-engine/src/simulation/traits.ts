@@ -1845,9 +1845,8 @@ export function recordReachedTraitOffer(
   if (selectedOption === undefined) return Object.freeze({ history: evaluation.before });
   const selectedTraitKey = selectedOption.traitKey;
   // Every reached offer is assessed and retained in the evaluation trace.
-  // Only declarations that equip their selection may mutate the canonical
-  // equipped-trait history; descriptors and pickup producers remain
-  // observational at this boundary.
+  // A selected pickup-producing trait is an ordinary equipped trait; its
+  // generated pickups are a later acquisition-site effect.
   const selectedDisposition = catalog.traits.byKey[selectedTraitKey]?.selectedDisposition;
   if (
     selectedDisposition?.kind !== 'equip' &&
@@ -1858,7 +1857,8 @@ export function recordReachedTraitOffer(
     selectedDisposition?.kind !== 'worldShopRestock' &&
     selectedDisposition?.kind !== 'naturalSelection' &&
     selectedDisposition?.kind !== 'ransom' &&
-    selectedDisposition?.kind !== 'steadyGrowth'
+    selectedDisposition?.kind !== 'steadyGrowth' &&
+    selectedDisposition?.kind !== 'producePickups'
   ) {
     return Object.freeze({ history: evaluation.before });
   }

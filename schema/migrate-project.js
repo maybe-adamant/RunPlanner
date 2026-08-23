@@ -9,7 +9,19 @@ const SCHEMA_49_CATALOG_VERSION = '0.27.0-arcana-fear-loadout';
 const SCHEMA_50_CATALOG_VERSION = '0.30.0-boon-rarity-ledger';
 const SCHEMA_51_CATALOG_VERSION = '0.31.0-chaos-traits';
 const SCHEMA_52_INITIAL_CATALOG_VERSION = '0.32.0-run-impacting-traits';
-const SCHEMA_52_CATALOG_VERSION = '0.32.1-run-impacting-traits';
+const SCHEMA_52_RUN_IMPACTING_TRAITS_CATALOG_VERSION = '0.32.1-run-impacting-traits';
+const SCHEMA_52_CATALOG_VERSION = '0.33.0-generated-trait-pickups';
+
+const NARCISSUS_PICKUP_KEYS = {
+  NarcissusA: ['pom'],
+  NarcissusB: ['ashes'],
+  NarcissusC: ['currency'],
+  NarcissusD: ['psyche', 'maxMana'],
+  NarcissusE: ['bones', 'maxHealth'],
+  NarcissusG: ['elementalBoost1', 'elementalBoost2'],
+  NarcissusH: ['lastStand'],
+  NarcissusI: ['mysteryBoon'],
+};
 
 function expectRecord(value, label) {
   if (value === null || typeof value !== 'object' || Array.isArray(value)) {
@@ -103,15 +115,92 @@ function migrate51To52(document) {
   return {};
 }
 
+function traitGeneratedSiteKey(
+  routeKey,
+  biomeKey,
+  occurrenceId,
+  phaseKey,
+  encounterKey,
+  optionKey,
+) {
+  const encounter = JSON.stringify([
+    'encounterPhase',
+    routeKey,
+    biomeKey,
+    { kind: 'occurrence', occurrenceId },
+    phaseKey,
+  ]);
+  const source = JSON.stringify(['traitOffer', routeKey, biomeKey, encounter, encounterKey]);
+  return `traitGenerated:${encodeURIComponent(source)}:${optionKey}`;
+}
+
+function migrateLegacyNarcissusPickupSites(document) {
+  let generatedPickupSitesMoved = 0;
+  for (const route of document.routes ?? []) {
+    for (const biome of route.biomes ?? []) {
+      for (const occurrence of biome.topology?.occurrences ?? []) {
+        const roomExitEntries = occurrence.acquisitionSites?.roomExit?.pickupEntries;
+        if (roomExitEntries === undefined) continue;
+        for (const [phaseKey, offers] of Object.entries(
+          occurrence.encounters?.traitOffersByPhase ?? {},
+        )) {
+          for (const [encounterKey, offer] of Object.entries(offers)) {
+            if (offer === null || typeof offer !== 'object' || Array.isArray(offer)) continue;
+            const options = offer.options;
+            const selectedOptionKey = offer.selectedOptionKey;
+            if (!Array.isArray(options) || typeof selectedOptionKey !== 'string') continue;
+            const optionIndex = Number(selectedOptionKey.replace('option', '')) - 1;
+            const traitKey = options[optionIndex]?.traitKey;
+            const pickupKeys = NARCISSUS_PICKUP_KEYS[traitKey];
+            if (
+              pickupKeys === undefined ||
+              !pickupKeys.some((key) => Object.hasOwn(roomExitEntries, key))
+            )
+              continue;
+            const siteKey = traitGeneratedSiteKey(
+              route.routeKey,
+              biome.biomeKey,
+              occurrence.occurrenceId,
+              phaseKey,
+              encounterKey,
+              selectedOptionKey,
+            );
+            const site = occurrence.acquisitionSites[siteKey] ?? { pickupEntries: {} };
+            for (const pickupKey of pickupKeys) {
+              if (!Object.hasOwn(roomExitEntries, pickupKey)) continue;
+              site.pickupEntries[pickupKey] = roomExitEntries[pickupKey];
+              delete roomExitEntries[pickupKey];
+            }
+            occurrence.acquisitionSites[siteKey] = site;
+            generatedPickupSitesMoved += 1;
+          }
+        }
+        if (Object.keys(roomExitEntries).length === 0) delete occurrence.acquisitionSites.roomExit;
+      }
+    }
+  }
+  return generatedPickupSitesMoved;
+}
+
 function migrateSchema52Catalog(document) {
-  if (document.catalogVersion === SCHEMA_52_CATALOG_VERSION) return false;
-  if (document.catalogVersion !== SCHEMA_52_INITIAL_CATALOG_VERSION) {
-    throw new Error(
-      `schema 52 migration expects catalog ${SCHEMA_52_INITIAL_CATALOG_VERSION}, received ${String(document.catalogVersion)}`,
+  const migrations = [];
+  if (document.catalogVersion === SCHEMA_52_INITIAL_CATALOG_VERSION) {
+    document.catalogVersion = SCHEMA_52_RUN_IMPACTING_TRAITS_CATALOG_VERSION;
+    migrations.push(`${SCHEMA_52_INITIAL_CATALOG_VERSION}->${document.catalogVersion}`);
+  }
+  if (document.catalogVersion === SCHEMA_52_RUN_IMPACTING_TRAITS_CATALOG_VERSION) {
+    document.catalogVersion = SCHEMA_52_CATALOG_VERSION;
+    migrations.push(
+      `${SCHEMA_52_RUN_IMPACTING_TRAITS_CATALOG_VERSION}->${document.catalogVersion}`,
     );
   }
-  document.catalogVersion = SCHEMA_52_CATALOG_VERSION;
-  return true;
+  if (document.catalogVersion !== SCHEMA_52_CATALOG_VERSION) {
+    throw new Error(
+      `schema 52 migration expects catalog ${SCHEMA_52_INITIAL_CATALOG_VERSION}, ${SCHEMA_52_RUN_IMPACTING_TRAITS_CATALOG_VERSION}, or ${SCHEMA_52_CATALOG_VERSION}; received ${String(document.catalogVersion)}`,
+    );
+  }
+  const generatedPickupSitesMoved = migrateLegacyNarcissusPickupSites(document);
+  return { migrations, generatedPickupSitesMoved };
 }
 
 const migrations = new Map([
@@ -144,10 +233,17 @@ export function migrateProjectDocument(value, targetVersion = CURRENT_SCHEMA_VER
     steps.push(`${from}->${from + 1}`);
     changes[`${from}->${from + 1}`] = stepChanges;
   }
-  if (document.schemaVersion === 52 && targetVersion === 52 && migrateSchema52Catalog(document)) {
-    const step = `${SCHEMA_52_INITIAL_CATALOG_VERSION}->${SCHEMA_52_CATALOG_VERSION}`;
-    steps.push(step);
-    changes[step] = {};
+  if (document.schemaVersion === 52 && targetVersion === 52) {
+    const catalogMigration = migrateSchema52Catalog(document);
+    for (const step of catalogMigration.migrations) {
+      steps.push(step);
+      changes[step] = {};
+    }
+    if (catalogMigration.generatedPickupSitesMoved > 0) {
+      changes['generatedPickupSites'] = {
+        moved: catalogMigration.generatedPickupSitesMoved,
+      };
+    }
   }
 
   return Object.freeze({

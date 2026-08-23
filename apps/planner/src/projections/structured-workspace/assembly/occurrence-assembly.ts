@@ -44,7 +44,7 @@ import {
   acquisitionSiteFromStorageKey,
   artificerReplacementEntryKey,
   parseArtificerReplacementEntryKey,
-  selectedPickupProducer,
+  activeSelectedPickupProducers,
   echoLastRewardPickupEntryKey,
   parseEchoLastRewardPickupEntryKey,
   echoLastRewardPickupEntryKeys,
@@ -2957,9 +2957,19 @@ export function assembleWorkspaceOccurrence(
     !input.facts.detailsActive || occurrence.acquisitionSites === undefined
       ? Object.freeze([])
       : (() => {
-          const pickupProducer = selectedPickupProducer(input.catalog, occurrence.encounters);
-          const activePickups = pickupProducer?.pickups ?? Object.freeze([]);
-          const activeKeys = new Set(activePickups.map((pickup) => pickup.key));
+          const pickupProducers = activeSelectedPickupProducers(
+            input.catalog,
+            input.biome,
+            occurrence,
+          );
+          const activePickups = pickupProducers.flatMap((producer) =>
+            producer.pickups.map((pickup) =>
+              Object.freeze({ ...pickup, siteKey: producer.siteKey }),
+            ),
+          );
+          const activeKeys = new Set(
+            activePickups.map((pickup) => `${pickup.siteKey}\u0000${pickup.key}`),
+          );
           const structuralEchoKeys = new Set(
             echoLastRewardPickupEntryKeys(input.catalog, occurrence.encounters),
           );
@@ -2974,13 +2984,16 @@ export function assembleWorkspaceOccurrence(
               }
               const derivedEntries = input.derivedAcquisitionEntries?.(site) ?? Object.freeze([]);
               return Object.entries(state.pickupEntries ?? {}).flatMap(([key, reward]) => {
-                if (siteKey === 'roomExit' && structuralEchoKeys.has(key) && !activeKeys.has(key)) {
+                if (
+                  siteKey === 'roomExit' &&
+                  structuralEchoKeys.has(key) &&
+                  !activeKeys.has(`${siteKey}\u0000${key}`)
+                ) {
                   return [];
                 }
-                const pickup =
-                  siteKey === 'roomExit'
-                    ? activePickups.find((candidate) => candidate.key === key)
-                    : undefined;
+                const pickup = activePickups.find(
+                  (candidate) => candidate.siteKey === siteKey && candidate.key === key,
+                );
                 const capability = derivedEntries.find(
                   (entry) => entry.kind === 'echoLastReward' && entry.address.entryKey === key,
                 );

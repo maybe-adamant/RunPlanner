@@ -111,6 +111,18 @@ export const poseidonTraits = [
     blockOfferIfPreviouslyPicked: true,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
+    selectedDisposition: {
+      kind: 'producePickups',
+      producerLifecycleKey: 'GeneratedTraitPickup',
+      pickups: [
+        { key: 'smallGold', rewardType: 'RoomMoneySmallDrop' },
+        { key: 'tinyGold1', rewardType: 'RoomMoneyTinyDrop' },
+        { key: 'tinyGold2', rewardType: 'RoomMoneyTinyDrop' },
+        { key: 'minorHeal1', rewardType: 'HealDropMinor' },
+        { key: 'minorHeal2', rewardType: 'HealDropMinor' },
+        { key: 'bones', rewardType: 'MetaCurrencyDrop', excludeStorySource: true },
+      ],
+    },
   },
   {
     key: 'FocusDamageShaveBoon',

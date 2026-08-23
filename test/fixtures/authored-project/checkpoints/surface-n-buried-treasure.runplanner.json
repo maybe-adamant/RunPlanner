@@ -140,24 +140,24 @@
                       "rewardType": "Boon",
                       "payload": {
                         "kind": "BoonSource",
-                        "source": "AresUpgrade"
+                        "source": "PoseidonUpgrade"
                       }
                     },
                     "traitOffersByAcquisitionRole": {
                       "source": {
                         "kind": "traits",
-                        "giverKey": "Ares",
+                        "giverKey": "Poseidon",
                         "options": [
                           {
-                            "traitKey": "AresSpecialBoon",
+                            "traitKey": "RoomRewardBonusBoon",
                             "rarity": "Common"
                           },
                           {
-                            "traitKey": "AresCastBoon",
+                            "traitKey": "PoseidonWeaponBoon",
                             "rarity": "Common"
                           },
                           {
-                            "traitKey": "AresSprintBoon",
+                            "traitKey": "PoseidonSpecialBoon",
                             "rarity": "Common"
                           }
                         ],
@@ -191,6 +191,78 @@
                       "acquisitionRole": "source"
                     }
                   ]
+                },
+                "acquisitionSites": {
+                  "traitGenerated:%5B%22traitOffer%22%2C%22Surface%22%2C%22N%22%2C%22%5B%5C%22incomingReward%5C%22%2C%5C%22Surface%5C%22%2C%5C%22N%5C%22%2C%5C%22surface-n-prehub%5C%22%5D%22%2C%22source%22%5D:option1": {
+                    "pickupEntries": {
+                      "smallGold": {
+                        "offer": {
+                          "rewardType": "RoomMoneySmallDrop"
+                        },
+                        "traitOffersByAcquisitionRole": {},
+                        "dispositionByAcquisitionRole": {
+                          "self": {
+                            "kind": "normal"
+                          }
+                        }
+                      },
+                      "tinyGold1": {
+                        "offer": {
+                          "rewardType": "RoomMoneyTinyDrop"
+                        },
+                        "traitOffersByAcquisitionRole": {},
+                        "dispositionByAcquisitionRole": {
+                          "self": {
+                            "kind": "normal"
+                          }
+                        }
+                      },
+                      "tinyGold2": {
+                        "offer": {
+                          "rewardType": "RoomMoneyTinyDrop"
+                        },
+                        "traitOffersByAcquisitionRole": {},
+                        "dispositionByAcquisitionRole": {
+                          "self": {
+                            "kind": "normal"
+                          }
+                        }
+                      },
+                      "minorHeal1": {
+                        "offer": {
+                          "rewardType": "HealDropMinor"
+                        },
+                        "traitOffersByAcquisitionRole": {},
+                        "dispositionByAcquisitionRole": {
+                          "self": {
+                            "kind": "normal"
+                          }
+                        }
+                      },
+                      "minorHeal2": {
+                        "offer": {
+                          "rewardType": "HealDropMinor"
+                        },
+                        "traitOffersByAcquisitionRole": {},
+                        "dispositionByAcquisitionRole": {
+                          "self": {
+                            "kind": "normal"
+                          }
+                        }
+                      },
+                      "bones": {
+                        "offer": {
+                          "rewardType": "MetaCurrencyDrop"
+                        },
+                        "traitOffersByAcquisitionRole": {},
+                        "dispositionByAcquisitionRole": {
+                          "self": {
+                            "kind": "normal"
+                          }
+                        }
+                      }
+                    }
+                  }
                 },
                 "additionalExits": []
               },
@@ -411,13 +483,13 @@
                         "giverKey": "SpellDrop",
                         "options": [
                           {
-                            "traitKey": "SpellTransformTrait"
-                          },
-                          {
-                            "traitKey": "SpellLeapTrait"
-                          },
-                          {
                             "traitKey": "SpellLaserTrait"
+                          },
+                          {
+                            "traitKey": "SpellSummonTrait"
+                          },
+                          {
+                            "traitKey": "SpellTimeSlowTrait"
                           }
                         ],
                         "selectedOptionKey": "option1",
@@ -712,54 +784,70 @@
                 "additionalExits": []
               },
               {
-                "occurrenceId": "surface-n-story",
-                "gameName": "N_Story01",
+                "occurrenceId": "surface-n-combat03",
+                "gameName": "N_Combat03",
                 "state": {
-                  "kind": "fixed",
+                  "kind": "ephyraCombat",
                   "reward": {
                     "offer": {
-                      "rewardType": "Story"
+                      "rewardType": "WeaponUpgrade"
                     },
-                    "traitOffersByAcquisitionRole": {},
-                    "dispositionByAcquisitionRole": {}
+                    "traitOffersByAcquisitionRole": {
+                      "self": null
+                    },
+                    "dispositionByAcquisitionRole": {
+                      "self": {
+                        "kind": "normal"
+                      }
+                    }
                   }
                 },
                 "encounters": {
-                  "encounterKeyByPhase": {},
+                  "encounterKeyByPhase": {
+                    "Encounter": "GeneratedN"
+                  },
                   "figLeafSkipByPhase": {
                     "Encounter": false
                   },
-                  "gorgonResultByPhase": {},
-                  "traitOffersByPhase": {
+                  "gorgonResultByPhase": {
                     "Encounter": {
-                      "Story_Medea_01": {
-                        "kind": "traits",
-                        "giverKey": "Medea",
-                        "options": [
-                          {
-                            "traitKey": "HealingOnDeathCurse"
-                          },
-                          {
-                            "traitKey": "MoneyOnDeathCurse"
-                          },
-                          {
-                            "traitKey": "ManaOverTimeCurse"
-                          }
-                        ],
-                        "selectedOptionKey": "option1",
-                        "rarificationActions": [],
-                        "deathDefianceConditionMet": false
-                      }
+                      "deathDefianceConditionMet": false
                     }
                   }
                 },
                 "roomActions": {
                   "order": [
                     {
-                      "kind": "interactEncounter",
-                      "phaseKey": "Encounter"
+                      "kind": "interactIncomingReward",
+                      "producerPoint": "roomRewardPickup",
+                      "acquisitionRole": "self"
                     }
                   ]
+                },
+                "additionalExits": []
+              },
+              {
+                "occurrenceId": "surface-n-combat03-sideDoor1",
+                "gameName": "N_Sub04",
+                "state": {
+                  "kind": "counted",
+                  "reward": null
+                },
+                "encounters": {
+                  "encounterKeyByPhase": {
+                    "Encounter": "GeneratedNSubRoom"
+                  },
+                  "figLeafSkipByPhase": {
+                    "Encounter": false
+                  },
+                  "gorgonResultByPhase": {
+                    "Encounter": {
+                      "deathDefianceConditionMet": false
+                    }
+                  }
+                },
+                "roomActions": {
+                  "order": []
                 },
                 "additionalExits": []
               },
@@ -1253,8 +1341,8 @@
                     "occurrenceId": "surface-n-combat05"
                   },
                   {
-                    "hubSlotKey": "story",
-                    "occurrenceId": "surface-n-story"
+                    "hubSlotKey": "combat03",
+                    "occurrenceId": "surface-n-combat03"
                   },
                   {
                     "hubSlotKey": "combat02",
@@ -1279,7 +1367,7 @@
                   "combat02",
                   "combat11",
                   "combat23",
-                  "story"
+                  "combat09"
                 ]
               },
               {
@@ -1354,6 +1442,18 @@
                   "surface-n-combat05-sideDoor2",
                   "surface-n-combat05-sideDoor1"
                 ]
+              },
+              {
+                "kind": "localVisit",
+                "sourceOccurrenceId": "surface-n-combat03",
+                "groupKey": "sideRooms",
+                "targetsBySlot": {
+                  "sideDoor1": {
+                    "occurrenceId": "surface-n-combat03-sideDoor1",
+                    "generation": "notGenerated"
+                  }
+                },
+                "visitOrder": []
               },
               {
                 "kind": "localVisit",

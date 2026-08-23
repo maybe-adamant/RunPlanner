@@ -1798,9 +1798,19 @@ describe('structured workspace interaction binding', () => {
         deathDefianceConditionMet: false,
       },
     });
+    const current = project.routes
+      .flatMap((route) => route.biomes)
+      .find((biome) => biome.biomeKey === 'G')
+      ?.topology?.occurrences.find(
+        (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
+      );
+    const siteKey = Object.entries(current?.acquisitionSites ?? {}).find(([, state]) =>
+      Object.hasOwn(state.pickupEntries ?? {}, 'mysteryBoon'),
+    )?.[0];
+    if (siteKey === undefined) throw new Error('Narcissus has no source-scoped mystery pickup');
     const site = createAcquisitionSiteAddress(
       createOccurrenceAddress(goldenGBiome, occurrence.occurrenceId),
-      'roomExit',
+      siteKey,
     );
     const entry = createAcquisitionEntryAddress(site, 'mysteryBoon');
     const interaction = bind(project, 'Underworld', 'G').interactions.rewards.get(

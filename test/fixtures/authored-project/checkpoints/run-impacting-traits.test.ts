@@ -3,6 +3,7 @@ import {
   createOccurrenceId,
   createOccurrenceAddress,
   encodeProjectDocument,
+  selectedPickupProducers,
 } from '@run-planner/engine/authored-project';
 import {
   blockedOccurrenceRoomForProjectEvaluationAssembly,
@@ -13,24 +14,64 @@ import { describe, expect, it } from 'vitest';
 
 import {
   loadSurfaceNNaturalSelectionFrontierCheckpoint,
+  loadSurfaceNBuriedTreasureCheckpoint,
+  loadSurfaceNQuickBuckCheckpoint,
   loadSurfaceNQueensRansomCheckpoint,
   loadSurfaceNSteadyGrowthFrontierCheckpoint,
 } from './surface';
 import {
   createSurfaceNNaturalSelectionFrontier,
+  createSurfaceNBuriedTreasureCheckpoint,
+  createSurfaceNQuickBuckCheckpoint,
   createSurfaceNQueensRansomCheckpoint,
   createSurfaceNSteadyGrowthFrontier,
 } from '../routes/run-impacting-traits';
+import { nBiome } from '../routes/surface';
 
 describe('run-impacting trait checkpoint recipes', () => {
   it('attests each saved checkpoint to its semantic-command recipe', () => {
     for (const [saved, built] of [
       [loadSurfaceNNaturalSelectionFrontierCheckpoint(), createSurfaceNNaturalSelectionFrontier()],
+      [loadSurfaceNQuickBuckCheckpoint(), createSurfaceNQuickBuckCheckpoint()],
+      [loadSurfaceNBuriedTreasureCheckpoint(), createSurfaceNBuriedTreasureCheckpoint()],
       [loadSurfaceNQueensRansomCheckpoint(), createSurfaceNQueensRansomCheckpoint()],
       [loadSurfaceNSteadyGrowthFrontierCheckpoint(), createSurfaceNSteadyGrowthFrontier()],
     ] as const) {
       expect(encodeProjectDocument(saved)).toBe(encodeProjectDocument(built));
     }
+  });
+
+  it('retains compact N Quick Buck and Buried Treasure pickup workflows at their source owners', () => {
+    const generatedEntries = (project: ReturnType<typeof createSurfaceNQuickBuckCheckpoint>) =>
+      project.routes
+        .find((route) => route.routeKey === 'Surface')
+        ?.biomes.find((biome) => biome.biomeKey === 'N')
+        ?.topology?.occurrences.flatMap((occurrence) =>
+          Object.entries(occurrence.acquisitionSites ?? {}).flatMap(([siteKey, site]) =>
+            siteKey.startsWith('traitGenerated:')
+              ? [[occurrence.occurrenceId, Object.keys(site.pickupEntries ?? {})] as const]
+              : [],
+          ),
+        ) ?? [];
+    expect(generatedEntries(createSurfaceNQuickBuckCheckpoint())).toEqual([
+      ['surface-n-opening', ['quickBuckGold']],
+    ]);
+    expect(generatedEntries(createSurfaceNBuriedTreasureCheckpoint())).toEqual([
+      [
+        'surface-n-prehub',
+        ['smallGold', 'tinyGold1', 'tinyGold2', 'minorHeal1', 'minorHeal2', 'bones'],
+      ],
+    ]);
+    const producerPlacement = (project: ReturnType<typeof createSurfaceNQuickBuckCheckpoint>) => {
+      const occurrence = project.routes
+        .find((route) => route.routeKey === 'Surface')
+        ?.biomes.find((biome) => biome.biomeKey === 'N')
+        ?.topology?.occurrences.find((candidate) => candidate.acquisitionSites !== undefined);
+      if (occurrence === undefined) throw new Error('Generated-pickup source owner is missing');
+      return selectedPickupProducers(catalog, nBiome, occurrence)[0]?.placement;
+    };
+    expect(producerPlacement(createSurfaceNQuickBuckCheckpoint())).toBe('afterSource');
+    expect(producerPlacement(createSurfaceNBuriedTreasureCheckpoint())).toBe('afterSource');
   });
 
   it('reaches a selected Natural Selection child as the exact repair frontier', () => {

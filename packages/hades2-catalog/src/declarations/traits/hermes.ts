@@ -119,6 +119,11 @@ export const hermesTraits = [
     blockStacking: false,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
+    selectedDisposition: {
+      kind: 'producePickups',
+      producerLifecycleKey: 'GeneratedTraitPickup',
+      pickups: [{ key: 'quickBuckGold', rewardType: 'RoomMoneyDrop' }],
+    },
   },
   {
     key: 'TimedKillBuffBoon',

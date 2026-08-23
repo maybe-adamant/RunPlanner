@@ -13,7 +13,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createApplication } from '@planner/composition/createApplication';
 import { authoredProjectReplaced } from '@planner/state/projectWorkspaceSlice';
 import {
+  loadSurfaceNBuriedTreasureCheckpoint,
   loadSurfaceNNaturalSelectionFrontierCheckpoint,
+  loadSurfaceNQuickBuckCheckpoint,
   loadSurfaceNQueensRansomCheckpoint,
   loadSurfaceNSteadyGrowthFrontierCheckpoint,
 } from '@run-planner/test-fixtures/checkpoints/surface';
@@ -55,6 +57,40 @@ function findingButton(index: number): HTMLElement {
 }
 
 describe('run-impacting trait product loops', () => {
+  it('loads the manifest-backed generated-pickup workflows through existing Room Action rows', async () => {
+    const application = createApplication();
+    application.store.dispatch(authoredProjectReplaced(loadSurfaceNQuickBuckCheckpoint()));
+    const view = renderPlannerForInteraction({ application });
+
+    await view.user.click(screen.getByRole('button', { name: 'Surface' }));
+    await view.user.click(screen.getByRole('button', { name: 'Ephyra' }));
+    const ephyraStructure = screen.getByRole('region', { name: 'Ephyra route structure' });
+    const roomButton = (label: string) => {
+      const button = Array.from(
+        ephyraStructure.querySelectorAll<HTMLButtonElement>('[data-workspace-node]'),
+      ).find((candidate) => candidate.textContent?.includes(label));
+      if (button === undefined) throw new Error(`Ephyra ${label} room is missing`);
+      return button;
+    };
+    const pickupRow = (entryKey: string) =>
+      document.querySelector<HTMLElement>(`[data-room-action-key*="${entryKey}"]`);
+    await view.user.click(roomButton('Opening'));
+    await view.user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
+    await waitFor(() => expect(pickupRow('quickBuckGold')).not.toBeNull());
+
+    application.store.dispatch(authoredProjectReplaced(loadSurfaceNBuriedTreasureCheckpoint()));
+    await view.user.click(roomButton('Pre-Hub'));
+    await view.user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
+    await waitFor(() =>
+      expect(
+        ['smallGold', 'tinyGold1', 'tinyGold2', 'minorHeal1', 'minorHeal2', 'bones'].every(
+          (entryKey) => pickupRow(entryKey) !== null,
+        ),
+      ).toBe(true),
+    );
+    application.dispose();
+  });
+
   it('repairs the manifest-backed Natural Selection result as one offer edit and Undo restores it', async () => {
     const application = createApplication();
     const authored = loadSurfaceNNaturalSelectionFrontierCheckpoint();

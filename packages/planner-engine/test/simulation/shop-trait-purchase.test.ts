@@ -953,8 +953,8 @@ describe('Echo Gate D Gold Gold Gold', () => {
     expect(
       result.duplicateKey === undefined
         ? undefined
-        : result.canonical.pickupSite?.entries[result.duplicateKey]?.traitOffersByAcquisitionRole
-            .hiddenSource,
+        : result.canonical.acquisitionSites.roomExit?.entries[result.duplicateKey]
+            ?.traitOffersByAcquisitionRole.hiddenSource,
     ).toMatchObject({ giverKey: 'Hestia', selectedOptionKey: 'option2' });
     const branch = result.settlement.branches[0];
     expect([...result.findings.values()]).toEqual([]);

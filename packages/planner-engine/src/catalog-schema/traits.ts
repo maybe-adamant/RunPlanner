@@ -231,6 +231,8 @@ export type TraitSelectedDisposition =
 export interface TraitPickupDeclaration {
   readonly key: string;
   readonly rewardType: string;
+  /** Buried Treasure's Bones drop does not exist when the source is a Story reward. */
+  readonly excludeStorySource?: true;
 }
 
 export type TraitOfferContextKey =

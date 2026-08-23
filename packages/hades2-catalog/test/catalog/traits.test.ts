@@ -2451,7 +2451,7 @@ describe('trait offer catalog closure', () => {
     expect('deferredTraitKeys' in normalized).toBe(false);
   });
 
-  it('declares the complete Narcissus disposition table without modeled outer effects', () => {
+  it('declares the complete equipped Narcissus disposition table', () => {
     const table = Object.fromEntries(
       ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'].map((suffix) => {
         const trait = catalog.traits.byKey[`Narcissus${suffix}`];
@@ -2486,7 +2486,7 @@ describe('trait offer catalog closure', () => {
           { key: 'maxHealth', rewardType: 'MaxHealthDrop' },
         ],
       }),
-      F: { kind: 'noOp' },
+      F: { kind: 'equip' },
       G: expect.objectContaining({
         kind: 'producePickups',
         pickups: [
@@ -2502,6 +2502,26 @@ describe('trait offer catalog closure', () => {
         kind: 'producePickups',
         pickups: [{ key: 'mysteryBoon', rewardType: 'BlindBoxLoot' }],
       }),
+    });
+  });
+
+  it('declares Quick Buck and Buried Treasure as exact generated-pickup traits', () => {
+    expect(catalog.traits.byKey.MoneyMultiplierBoon?.selectedDisposition).toEqual({
+      kind: 'producePickups',
+      producerLifecycleKey: 'GeneratedTraitPickup',
+      pickups: [{ key: 'quickBuckGold', rewardType: 'RoomMoneyDrop' }],
+    });
+    expect(catalog.traits.byKey.RoomRewardBonusBoon?.selectedDisposition).toEqual({
+      kind: 'producePickups',
+      producerLifecycleKey: 'GeneratedTraitPickup',
+      pickups: [
+        { key: 'smallGold', rewardType: 'RoomMoneySmallDrop' },
+        { key: 'tinyGold1', rewardType: 'RoomMoneyTinyDrop' },
+        { key: 'tinyGold2', rewardType: 'RoomMoneyTinyDrop' },
+        { key: 'minorHeal1', rewardType: 'HealDropMinor' },
+        { key: 'minorHeal2', rewardType: 'HealDropMinor' },
+        { key: 'bones', rewardType: 'MetaCurrencyDrop', excludeStorySource: true },
+      ],
     });
   });
 

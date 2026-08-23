@@ -73,27 +73,23 @@
                   "kind": "counted",
                   "reward": {
                     "offer": {
-                      "rewardType": "Boon",
-                      "payload": {
-                        "kind": "BoonSource",
-                        "source": "ApolloUpgrade"
-                      }
+                      "rewardType": "HermesUpgrade"
                     },
                     "traitOffersByAcquisitionRole": {
-                      "source": {
+                      "self": {
                         "kind": "traits",
-                        "giverKey": "Apollo",
+                        "giverKey": "Hermes",
                         "options": [
                           {
-                            "traitKey": "ApolloWeaponBoon",
+                            "traitKey": "MoneyMultiplierBoon",
                             "rarity": "Common"
                           },
                           {
-                            "traitKey": "ApolloSpecialBoon",
+                            "traitKey": "HermesWeaponBoon",
                             "rarity": "Common"
                           },
                           {
-                            "traitKey": "ApolloCastBoon",
+                            "traitKey": "HermesSpecialBoon",
                             "rarity": "Common"
                           }
                         ],
@@ -102,7 +98,7 @@
                       }
                     },
                     "dispositionByAcquisitionRole": {
-                      "source": {
+                      "self": {
                         "kind": "normal"
                       }
                     }
@@ -125,8 +121,30 @@
                       "kind": "interactIncomingReward",
                       "producerPoint": "roomRewardPickup",
                       "acquisitionRole": "source"
+                    },
+                    {
+                      "kind": "interactIncomingReward",
+                      "producerPoint": "roomRewardPickup",
+                      "acquisitionRole": "self"
                     }
                   ]
+                },
+                "acquisitionSites": {
+                  "traitGenerated:%5B%22traitOffer%22%2C%22Surface%22%2C%22N%22%2C%22%5B%5C%22incomingReward%5C%22%2C%5C%22Surface%5C%22%2C%5C%22N%5C%22%2C%5C%22surface-n-opening%5C%22%5D%22%2C%22self%22%5D:option1": {
+                    "pickupEntries": {
+                      "quickBuckGold": {
+                        "offer": {
+                          "rewardType": "RoomMoneyDrop"
+                        },
+                        "traitOffersByAcquisitionRole": {},
+                        "dispositionByAcquisitionRole": {
+                          "self": {
+                            "kind": "normal"
+                          }
+                        }
+                      }
+                    }
+                  }
                 },
                 "additionalExits": []
               },
@@ -411,13 +429,13 @@
                         "giverKey": "SpellDrop",
                         "options": [
                           {
-                            "traitKey": "SpellTransformTrait"
-                          },
-                          {
-                            "traitKey": "SpellLeapTrait"
-                          },
-                          {
                             "traitKey": "SpellLaserTrait"
+                          },
+                          {
+                            "traitKey": "SpellSummonTrait"
+                          },
+                          {
+                            "traitKey": "SpellTimeSlowTrait"
                           }
                         ],
                         "selectedOptionKey": "option1",
@@ -712,54 +730,70 @@
                 "additionalExits": []
               },
               {
-                "occurrenceId": "surface-n-story",
-                "gameName": "N_Story01",
+                "occurrenceId": "surface-n-combat03",
+                "gameName": "N_Combat03",
                 "state": {
-                  "kind": "fixed",
+                  "kind": "ephyraCombat",
                   "reward": {
                     "offer": {
-                      "rewardType": "Story"
+                      "rewardType": "WeaponUpgrade"
                     },
-                    "traitOffersByAcquisitionRole": {},
-                    "dispositionByAcquisitionRole": {}
+                    "traitOffersByAcquisitionRole": {
+                      "self": null
+                    },
+                    "dispositionByAcquisitionRole": {
+                      "self": {
+                        "kind": "normal"
+                      }
+                    }
                   }
                 },
                 "encounters": {
-                  "encounterKeyByPhase": {},
+                  "encounterKeyByPhase": {
+                    "Encounter": "GeneratedN"
+                  },
                   "figLeafSkipByPhase": {
                     "Encounter": false
                   },
-                  "gorgonResultByPhase": {},
-                  "traitOffersByPhase": {
+                  "gorgonResultByPhase": {
                     "Encounter": {
-                      "Story_Medea_01": {
-                        "kind": "traits",
-                        "giverKey": "Medea",
-                        "options": [
-                          {
-                            "traitKey": "HealingOnDeathCurse"
-                          },
-                          {
-                            "traitKey": "MoneyOnDeathCurse"
-                          },
-                          {
-                            "traitKey": "ManaOverTimeCurse"
-                          }
-                        ],
-                        "selectedOptionKey": "option1",
-                        "rarificationActions": [],
-                        "deathDefianceConditionMet": false
-                      }
+                      "deathDefianceConditionMet": false
                     }
                   }
                 },
                 "roomActions": {
                   "order": [
                     {
-                      "kind": "interactEncounter",
-                      "phaseKey": "Encounter"
+                      "kind": "interactIncomingReward",
+                      "producerPoint": "roomRewardPickup",
+                      "acquisitionRole": "self"
                     }
                   ]
+                },
+                "additionalExits": []
+              },
+              {
+                "occurrenceId": "surface-n-combat03-sideDoor1",
+                "gameName": "N_Sub04",
+                "state": {
+                  "kind": "counted",
+                  "reward": null
+                },
+                "encounters": {
+                  "encounterKeyByPhase": {
+                    "Encounter": "GeneratedNSubRoom"
+                  },
+                  "figLeafSkipByPhase": {
+                    "Encounter": false
+                  },
+                  "gorgonResultByPhase": {
+                    "Encounter": {
+                      "deathDefianceConditionMet": false
+                    }
+                  }
+                },
+                "roomActions": {
+                  "order": []
                 },
                 "additionalExits": []
               },
@@ -1253,8 +1287,8 @@
                     "occurrenceId": "surface-n-combat05"
                   },
                   {
-                    "hubSlotKey": "story",
-                    "occurrenceId": "surface-n-story"
+                    "hubSlotKey": "combat03",
+                    "occurrenceId": "surface-n-combat03"
                   },
                   {
                     "hubSlotKey": "combat02",
@@ -1279,7 +1313,7 @@
                   "combat02",
                   "combat11",
                   "combat23",
-                  "story"
+                  "combat09"
                 ]
               },
               {
@@ -1354,6 +1388,18 @@
                   "surface-n-combat05-sideDoor2",
                   "surface-n-combat05-sideDoor1"
                 ]
+              },
+              {
+                "kind": "localVisit",
+                "sourceOccurrenceId": "surface-n-combat03",
+                "groupKey": "sideRooms",
+                "targetsBySlot": {
+                  "sideDoor1": {
+                    "occurrenceId": "surface-n-combat03-sideDoor1",
+                    "generation": "notGenerated"
+                  }
+                },
+                "visitOrder": []
               },
               {
                 "kind": "localVisit",

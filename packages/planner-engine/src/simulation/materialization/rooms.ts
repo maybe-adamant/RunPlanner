@@ -30,7 +30,7 @@ import type { TraitOfferContext } from '../traits';
 import type { ResolvedRewardOffer } from '../../reward-kernel/model';
 import {
   echoLastRewardPickupEntryKeys,
-  selectedPickupProducer,
+  activeSelectedPickupProducers,
 } from '../../authored-project/traits';
 import { assembleRoomActionDomain } from '../../authored-project/room-action-domain';
 import { scheduleRequiredRoomActions } from '../../authored-project/room-action-defaults';
@@ -797,25 +797,23 @@ export function materializeAuthoredRoom(
     );
   const clockworkReward = leaf.clockworkReward ?? context.clockworkReward;
   requireLifecycleSelection(context.catalog, context.room, leaf, context.room.encounterEnvelopeKey);
-  const pickupProducer = selectedPickupProducer(context.catalog, context.occurrence.encounters);
-  const activePickupKeys = new Set(pickupProducer?.pickups.map((pickup) => pickup.key) ?? []);
+  const pickupProducers = activeSelectedPickupProducers(
+    context.catalog,
+    context.biome,
+    context.occurrence,
+  );
+  const activePickupEntries = new Set(
+    pickupProducers.flatMap((producer) =>
+      producer.pickups.map((pickup) => `${producer.siteKey}\u0000${pickup.key}`),
+    ),
+  );
   const structuralEchoPickupKeys = new Set(
     echoLastRewardPickupEntryKeys(context.catalog, context.occurrence.encounters),
   );
-  const pickupIsActive = (key: string): boolean =>
-    !structuralEchoPickupKeys.has(key) || activePickupKeys.has(key);
-  const authoredPickupSite = context.occurrence.acquisitionSites?.roomExit;
-  const authoredPickupEntries = authoredPickupSite?.pickupEntries;
-  const activePickupEntries =
-    authoredPickupEntries === undefined
-      ? undefined
-      : context.occurrence.state.kind === 'shop'
-        ? authoredPickupEntries
-        : Object.freeze(
-            Object.fromEntries(
-              Object.entries(authoredPickupEntries).filter(([key]) => pickupIsActive(key)),
-            ),
-          );
+  const pickupIsActive = (siteKey: string, key: string): boolean =>
+    context.occurrence.state.kind === 'shop' ||
+    (!structuralEchoPickupKeys.has(key) && !siteKey.startsWith('traitGenerated:')) ||
+    activePickupEntries.has(`${siteKey}\u0000${key}`);
   const base = Object.freeze({
     kind: 'authored',
     origin: createOccurrenceAddress(context.biome, context.occurrence.occurrenceId),
@@ -833,17 +831,30 @@ export function materializeAuthoredRoom(
     roomActions: context.occurrence.roomActions,
     acquisitionSites: Object.freeze(
       Object.fromEntries(
-        Object.entries(context.occurrence.acquisitionSites ?? {}).map(([siteKey, site]) => [
-          siteKey,
-          Object.freeze({
-            address:
-              acquisitionSiteFromStorageKey(
-                createOccurrenceAddress(context.biome, context.occurrence.occurrenceId),
-                siteKey,
-              ) ?? fail(`${context.room.gameName} has an invalid acquisition site key`),
-            entries: site.pickupEntries ?? Object.freeze({}),
-          }),
-        ]),
+        Object.entries(context.occurrence.acquisitionSites ?? {}).flatMap(([siteKey, site]) => {
+          const entries = Object.freeze(
+            Object.fromEntries(
+              Object.entries(site.pickupEntries ?? {}).filter(([key]) =>
+                pickupIsActive(siteKey, key),
+              ),
+            ),
+          );
+          return Object.keys(entries).length === 0
+            ? []
+            : [
+                [
+                  siteKey,
+                  Object.freeze({
+                    address:
+                      acquisitionSiteFromStorageKey(
+                        createOccurrenceAddress(context.biome, context.occurrence.occurrenceId),
+                        siteKey,
+                      ) ?? fail(`${context.room.gameName} has an invalid acquisition site key`),
+                    entries,
+                  }),
+                ] as const,
+              ];
+        }),
       ),
     ),
     ...(context.room.requiredObjects === undefined
@@ -865,13 +876,7 @@ export function materializeAuthoredRoom(
       : { unresolvedFieldsOptionalRewards: leaf.unresolvedFieldsOptionalRewards }),
     ...(leaf.rewardWheels === undefined ? {} : { rewardWheels: leaf.rewardWheels }),
     ...(leaf.entryState === undefined ? {} : { entryState: leaf.entryState }),
-    ...(activePickupEntries === undefined || Object.keys(activePickupEntries).length === 0
-      ? {}
-      : {
-          pickupSite: Object.freeze({
-            entries: activePickupEntries,
-          }),
-        }),
+    ...(pickupProducers.length === 0 ? {} : { pickupProducers }),
     ...(clockworkReward === undefined ? {} : { clockworkReward }),
   }) as Omit<CanonicalAuthoredRoom, 'roomActionRoster' | 'roomLifecycleTimeline'>;
   const roomActionDomain = assembleRoomActionDomain({

@@ -619,12 +619,14 @@ describe('reward-kernel declaration parity', () => {
       MaxManaDropSmall: 'Small Max Magick',
       Currency: 'Gold',
       RoomMoneyDrop: 'Gold',
+      RoomMoneySmallDrop: 'Small Gold',
       RoomMoneyTripleDrop: 'Triple Gold',
       RoomMoneyTinyDrop: 'Tiny Gold',
       TalentDrop: 'Path of Stars',
       TalentBigDrop: 'Big Path of Stars',
       MinorTalentDrop: 'Minor Path of Stars',
       RoomRewardHealDrop: 'Heal',
+      HealDropMinor: 'Minor Heal',
       HealBigDrop: 'Big Heal',
       ArmorBoost: 'Armor',
       ArmorBigBoost: 'Big Armor',
@@ -827,8 +829,10 @@ describe('reward-kernel declaration parity', () => {
       'MaxManaDropSmall',
       'Currency',
       'RoomMoneyDrop',
+      'RoomMoneySmallDrop',
       'RoomMoneyTripleDrop',
       'RoomMoneyTinyDrop',
+      'HealDropMinor',
       'TalentDrop',
       'TalentBigDrop',
       'MinorTalentDrop',
@@ -861,7 +865,7 @@ describe('reward-kernel declaration parity', () => {
       'CardUpgradePointsDrop',
       'CharonPointsDrop',
     ]);
-    expect(rewardKernelCatalog.acquisitions.values).toHaveLength(53);
+    expect(rewardKernelCatalog.acquisitions.values).toHaveLength(55);
   });
 
   it('declares the exact Echo last-reward replay matrix and recreation lifecycle', () => {
@@ -885,6 +889,7 @@ describe('reward-kernel declaration parity', () => {
       'MaxManaDrop',
       'MaxManaDropBig',
       'RoomMoneyDrop',
+      'RoomMoneySmallDrop',
       'RoomMoneyTripleDrop',
       'TalentDrop',
       'TalentBigDrop',
@@ -1122,6 +1127,51 @@ describe('reward-kernel declaration parity', () => {
           : [{ role: 'self', lifecyclePoint: 'roomExit' }],
       ]),
     );
+  });
+
+  it('normalizes the exact generated trait pickup lifecycle and replay/conversion facts', () => {
+    const generated = rewardKernelCatalog.producerLifecycles.byKey.GeneratedTraitPickup;
+    expect(
+      generated?.rewardTypes.values.map((reward) => [
+        reward.rewardType,
+        reward.acquisitionLifecycle,
+      ]),
+    ).toEqual([
+      ['RoomMoneyDrop', [{ role: 'self', lifecyclePoint: 'roomRewardPickup' }]],
+      ['RoomMoneySmallDrop', [{ role: 'self', lifecyclePoint: 'roomRewardPickup' }]],
+      ['RoomMoneyTinyDrop', [{ role: 'self', lifecyclePoint: 'roomRewardPickup' }]],
+      ['HealDropMinor', [{ role: 'self', lifecyclePoint: 'roomRewardPickup' }]],
+      [
+        'MetaCurrencyDrop',
+        [
+          {
+            role: 'self',
+            lifecyclePoint: 'roomRewardPickup',
+            blocksArtificerConversion: true,
+          },
+        ],
+      ],
+    ]);
+    expect(rewardKernelCatalog.acquisitions.byKey.RoomMoneyDrop?.lastRewardRecreation).toEqual({
+      offer: { rewardType: 'RoomMoneyDrop' },
+      producerLifecycleKey: 'EchoLastReward',
+    });
+    expect(rewardKernelCatalog.acquisitions.byKey.RoomMoneySmallDrop?.lastRewardRecreation).toEqual(
+      {
+        offer: { rewardType: 'RoomMoneySmallDrop' },
+        producerLifecycleKey: 'EchoLastReward',
+      },
+    );
+    expect(rewardKernelCatalog.acquisitions.byKey.MetaCurrencyDrop?.lastRewardRecreation).toEqual({
+      offer: { rewardType: 'MetaCurrencyDrop' },
+      producerLifecycleKey: 'EchoLastReward',
+    });
+    expect(
+      rewardKernelCatalog.acquisitions.byKey.RoomMoneyTinyDrop?.lastRewardRecreation,
+    ).toBeUndefined();
+    expect(
+      rewardKernelCatalog.acquisitions.byKey.HealDropMinor?.lastRewardRecreation,
+    ).toBeUndefined();
   });
 
   it('normalizes the fixed Contract grant and exact Travel purchase interaction identities', () => {

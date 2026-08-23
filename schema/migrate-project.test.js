@@ -71,11 +71,12 @@ test('51 -> 52 changes only schema and catalog metadata', () => {
   source.catalogVersion = '0.31.0-chaos-traits';
   const result = migrateProjectDocument(source);
   assert.equal(result.document.schemaVersion, 52);
-  assert.equal(result.document.catalogVersion, '0.32.1-run-impacting-traits');
+  assert.equal(result.document.catalogVersion, '0.33.0-generated-trait-pickups');
   assert.deepEqual(result.changes['51->52'], {});
   assert.deepEqual(result.steps, [
     '51->52',
     '0.32.0-run-impacting-traits->0.32.1-run-impacting-traits',
+    '0.32.1-run-impacting-traits->0.33.0-generated-trait-pickups',
   ]);
 });
 
@@ -85,7 +86,19 @@ test('52 catalog migration changes only catalog metadata', () => {
   source.catalogVersion = '0.32.0-run-impacting-traits';
   const result = migrateProjectDocument(source);
   assert.equal(result.document.schemaVersion, 52);
-  assert.equal(result.document.catalogVersion, '0.32.1-run-impacting-traits');
+  assert.equal(result.document.catalogVersion, '0.33.0-generated-trait-pickups');
   assert.deepEqual(result.document.routes, source.routes);
-  assert.deepEqual(result.steps, ['0.32.0-run-impacting-traits->0.32.1-run-impacting-traits']);
+  assert.deepEqual(result.steps, [
+    '0.32.0-run-impacting-traits->0.32.1-run-impacting-traits',
+    '0.32.1-run-impacting-traits->0.33.0-generated-trait-pickups',
+  ]);
+});
+
+test('52 catalog migration advances the prior run-impacting-traits catalog metadata', () => {
+  const source = schema49Project();
+  source.schemaVersion = 52;
+  source.catalogVersion = '0.32.1-run-impacting-traits';
+  const result = migrateProjectDocument(source);
+  assert.equal(result.document.catalogVersion, '0.33.0-generated-trait-pickups');
+  assert.deepEqual(result.steps, ['0.32.1-run-impacting-traits->0.33.0-generated-trait-pickups']);
 });
