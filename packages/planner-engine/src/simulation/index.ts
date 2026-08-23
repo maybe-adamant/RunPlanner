@@ -169,6 +169,7 @@ export {
 } from './room-actions';
 export {
   type EncounterPhaseCandidateSupport,
+  type PEncounterSequenceCandidateSupport,
   type EncounterPhaseSequenceStatus,
   encounterPhaseAuthoringDomainForRoom,
   type EncounterPhaseAuthoringDomain,
@@ -323,6 +324,7 @@ export {
   levelResolutionCandidateForProjectEvaluationAssembly,
   traitOfferCandidateForProjectEvaluationAssembly,
   encounterPhaseCandidateSupportForProjectEvaluationAssembly,
+  pEncounterSequenceCandidateForProjectEvaluationAssembly,
   encounterPhaseFigLeafSupportForProjectEvaluationAssembly,
   encounterPhaseGorgonSupportForProjectEvaluationAssembly,
   encounterPhaseSequenceStatusForProjectEvaluationAssembly,

@@ -495,6 +495,7 @@ export function assembleWorkspaceBiomeSemantics(
       encounterPhaseStatus: source.encounterPhaseStatus,
       figLeafSupport: source.figLeafSupport,
       gorgonSupport: source.gorgonSupport,
+      pEncounterSequenceSupport: source.pEncounterSequenceSupport,
       ...(evaluatedRoom === undefined ? {} : { evaluatedRoom }),
       ...(request.fieldsBatchFacts === undefined
         ? {}

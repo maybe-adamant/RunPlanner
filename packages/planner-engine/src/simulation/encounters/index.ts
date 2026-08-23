@@ -24,6 +24,7 @@ export {
   type EncounterCandidateEvaluation,
   type EncounterCandidateBoundary,
   type EncounterRoomCandidateCapability,
+  type PEncounterSequenceCandidateSupport,
 } from './candidates';
 export {
   encounterPhaseAuthoringDomainForRoom,

@@ -2,6 +2,7 @@ import {
   countedRewardTypeDomain,
   createPreparedProjectCandidateSession,
   encounterPhaseCandidateSupportForProjectEvaluationAssembly,
+  pEncounterSequenceCandidateForProjectEvaluationAssembly,
   type CandidateEvaluationEvent,
   type EvaluatedTraitAcquisitionTargetCandidate,
   type EvaluatedTraitOfferFocusedOptionCandidate,
@@ -118,6 +119,46 @@ export interface CandidateOptionProjection<
   readonly evaluation: Evaluation;
 }
 
+/**
+ * Adapts an exact engine encounter-support product into the application
+ * picker contract. Callers retain their own cache/lifecycle policy; this
+ * helper only projects the supplied support and declaration-owned values.
+ */
+function projectEncounterOptions(
+  support: ReturnType<typeof encounterPhaseCandidateSupportForProjectEvaluationAssembly>,
+  encounterKeys: readonly string[],
+): readonly CandidateOptionProjection<string, EncounterCandidateProjectionEvaluation>[] {
+  const candidateKeys = support?.candidateEncounterKeys ?? [];
+  return Object.freeze(
+    encounterKeys.map((encounterKey) => {
+      const result =
+        support === undefined
+          ? Object.freeze({
+              evidence: Object.freeze({ kind: 'coverageUnavailable' as const }),
+              support: 'unavailable' as const,
+            })
+          : !support.activationSatisfied
+            ? Object.freeze({
+                evidence: Object.freeze({ kind: 'inactiveSlot' as const }),
+                support: 'impossible' as const,
+              })
+            : candidateKeys.includes(encounterKey)
+              ? Object.freeze({
+                  evidence: Object.freeze({ kind: 'supported' as const }),
+                  support: (candidateKeys.length === 1 ? 'forced' : 'possible') as CandidateSupport,
+                })
+              : Object.freeze({
+                  evidence: Object.freeze({ kind: 'requirementsExcluded' as const }),
+                  support: 'impossible' as const,
+                });
+      return Object.freeze({
+        value: encounterKey,
+        evaluation: Object.freeze({ kind: 'encounter' as const, result }),
+      });
+    }),
+  );
+}
+
 export interface CandidateProjectionSession {
   readonly project: ProjectDocument;
   readonly evaluation: ProjectEvaluation;
@@ -147,6 +188,27 @@ export interface CandidateProjectionSession {
     phase: EncounterPhaseAddress,
     encounterKeys: readonly string[],
   ) => readonly CandidateOptionProjection<string, EncounterCandidateProjectionEvaluation>[];
+  readonly pEncounterSequence: (
+    occurrence: OccurrenceAddress,
+    firstEncounterKeys: readonly string[],
+    terminalEncounterKeys: readonly string[],
+  ) =>
+    | {
+        readonly first: readonly CandidateOptionProjection<
+          string,
+          EncounterCandidateProjectionEvaluation
+        >[];
+        readonly terminalFor: (firstEncounterKey: string) =>
+          | { readonly kind: 'terminated' }
+          | {
+              readonly kind: 'available' | 'blocked';
+              readonly options: readonly CandidateOptionProjection<
+                string,
+                EncounterCandidateProjectionEvaluation
+              >[];
+            };
+      }
+    | undefined;
   readonly batchRewardStores: (
     rewardStore: BatchRewardStoreAddress,
     storeKeys: readonly string[],
@@ -612,40 +674,7 @@ export function createCandidateSessionFactory(
       >[];
     }
     const support = encounterPhaseCandidateSupportForProjectEvaluationAssembly(assembly, phase);
-    const candidateKeys = support?.candidateEncounterKeys ?? [];
-    const projected = Object.freeze(
-      encounterKeys.map((encounterKey) => {
-        const result =
-          support === undefined
-            ? Object.freeze({
-                evidence: Object.freeze({ kind: 'coverageUnavailable' as const }),
-                support: 'unavailable' as const,
-              })
-            : !support.activationSatisfied
-              ? Object.freeze({
-                  evidence: Object.freeze({ kind: 'inactiveSlot' as const }),
-                  support: 'impossible' as const,
-                })
-              : candidateKeys.includes(encounterKey)
-                ? Object.freeze({
-                    evidence: Object.freeze({ kind: 'supported' as const }),
-                    support: (candidateKeys.length === 1
-                      ? 'forced'
-                      : 'possible') as CandidateSupport,
-                  })
-                : Object.freeze({
-                    evidence: Object.freeze({ kind: 'requirementsExcluded' as const }),
-                    support: 'impossible' as const,
-                  });
-        return Object.freeze({
-          value: encounterKey,
-          evaluation: Object.freeze({
-            kind: 'encounter' as const,
-            result,
-          }),
-        });
-      }),
-    );
+    const projected = projectEncounterOptions(support, encounterKeys);
     projectCache.options.set(key, projected);
     return projected;
   };
@@ -676,6 +705,32 @@ export function createCandidateSessionFactory(
         roomTargetsFor(assembly, target, rooms),
       encounterPhases: (phase: EncounterPhaseAddress, encounterKeys: readonly string[]) =>
         encounterPhasesFor(assembly, phase, encounterKeys),
+      pEncounterSequence: (
+        occurrence: OccurrenceAddress,
+        firstEncounterKeys: readonly string[],
+        terminalEncounterKeys: readonly string[],
+      ) => {
+        const support = pEncounterSequenceCandidateForProjectEvaluationAssembly(
+          assembly,
+          occurrence,
+        );
+        if (support === undefined) return undefined;
+        return Object.freeze({
+          first: projectEncounterOptions(support.first, firstEncounterKeys),
+          terminalFor: (firstEncounterKey: string) => {
+            const terminal = support.terminalFor(firstEncounterKey);
+            if (terminal.kind === 'terminated')
+              return Object.freeze({ kind: 'terminated' as const });
+            return Object.freeze({
+              kind: terminal.kind,
+              options: projectEncounterOptions(
+                terminal.kind === 'available' ? terminal.support : undefined,
+                terminalEncounterKeys,
+              ),
+            });
+          },
+        });
+      },
       batchRewardStores: (rewardStore: BatchRewardStoreAddress, storeKeys: readonly string[]) =>
         projectOptions(
           cache,

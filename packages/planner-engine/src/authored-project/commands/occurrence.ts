@@ -32,6 +32,7 @@ export function applyOccurrenceCommand(
     case 'ReplaceShopOffer':
     case 'ReplaceShopDeathDefianceCondition':
       return applyShopOccurrenceCommand(document, catalog, located, command);
+    case 'ReplacePEncounterSequence':
     case 'SelectEncounter':
     case 'ResetEncounter':
     case 'ReplaceFigLeafSkip':
