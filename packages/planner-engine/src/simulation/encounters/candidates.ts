@@ -3,10 +3,6 @@ import {
   type EncounterPhaseAddress,
   type OccurrenceAddress,
 } from '../../authored-project/addresses';
-import {
-  encounterBindingsBySlot,
-  encounterSetForBinding,
-} from '../../authored-project/room-state/encounters';
 import { projectRoomPreparationCheckpoint } from '../history/facts';
 import type { HistoryStateView } from '../history/model';
 import type { CanonicalAuthoredRoom, CanonicalLocalVisitRoom } from '../materialization';
@@ -24,7 +20,6 @@ import {
   type PreparedEncounterPhases,
 } from './preparation';
 import type { ResolvedEncounterPhase } from './model';
-import { resolveEncounterPhases } from './resolve';
 import type { Catalog } from '../../catalog-schema';
 import type { FigLeafPhaseCandidateSupport } from '../rewards/model';
 import { assessGorgonCandidate, type GorgonLifecycleStatus } from '../keepsakes';
@@ -42,35 +37,6 @@ export interface EncounterCandidateArtifacts {
    */
   readonly roomAt: (origin: OccurrenceAddress) => EncounterRoomCandidateCapability | undefined;
   readonly figLeafAt: (origin: EncounterPhaseAddress) => FigLeafPhaseCandidateSupport | undefined;
-  /** Exact sequential P setup support for one eligible two-position room. */
-  readonly pSequenceAt: (
-    origin: OccurrenceAddress,
-  ) => PEncounterSequenceCandidateSupport | undefined;
-}
-
-/**
- * The P editor's authoring domain. The second choice is evaluated only after
- * the proposed first selection has extended the room's preparation record.
- */
-export interface PEncounterSequenceCandidateSupport {
-  readonly owner: OccurrenceAddress;
-  readonly firstPosition: {
-    readonly origin: EncounterPhaseAddress;
-    readonly declaredEncounterKeys: readonly string[];
-    readonly selectedEncounterKey: string;
-  };
-  readonly terminalPosition: {
-    readonly origin: EncounterPhaseAddress;
-    readonly declaredEncounterKeys: readonly string[];
-    readonly selectedEncounterKey: string;
-  };
-  readonly first: EncounterPhaseCandidateSupport;
-  readonly terminalFor: (
-    firstEncounterKey: string,
-  ) =>
-    | { readonly kind: 'terminated' }
-    | { readonly kind: 'available'; readonly support: EncounterPhaseCandidateSupport }
-    | { readonly kind: 'blocked' };
 }
 
 /**
@@ -144,7 +110,6 @@ export function evaluateEncounterCandidatesInternal(
   const entries = new Map<string, EncounterPhaseCandidateSupport>();
   const statuses = new Map<string, EncounterPhaseSequenceStatus>();
   const roomsByOwner = new Map<string, EncounterRoomCandidateCapability>();
-  const pSequences = new Map<string, PEncounterSequenceCandidateSupport>();
   const findings: SemanticFinding[] = [];
   const findingChronologies = new Map<string, HistoryFindingChronology>();
   for (const room of rooms) {
@@ -209,86 +174,6 @@ export function evaluateEncounterCandidatesInternal(
       if (entries.has(key)) throw new Error(`duplicate encounter candidate ${key}`);
       entries.set(key, support);
     }
-    if (
-      room.encounterEnvelopeKey === 'PEncounter' &&
-      room.encounterPhases[0]?.slotKey === 'Intro' &&
-      room.encounterPhases[1]?.slotKey === 'Combat'
-    ) {
-      const first = prepared.candidates.find((candidate) => candidate.origin.phaseKey === 'Intro');
-      if (first !== undefined) {
-        const declaration = catalog.rooms.byKey[room.gameName];
-        if (declaration === undefined) {
-          throw new Error(`P encounter candidate lost declaration ${room.gameName}`);
-        }
-        const bindings = encounterBindingsBySlot(catalog, declaration, declaration.gameName);
-        const introBinding = bindings.get('Intro');
-        const combatBinding = bindings.get('Combat');
-        if (introBinding?.kind !== 'set' || combatBinding?.kind !== 'set') {
-          throw new Error(`${room.gameName} P encounter positions must be pooled`);
-        }
-        const introOrigin = first.origin;
-        const combatOrigin = Object.freeze({ ...first.origin, phaseKey: 'Combat' });
-        const roomKey = semanticAddressKey(room.origin);
-        pSequences.set(
-          roomKey,
-          Object.freeze({
-            first,
-            owner: room.origin,
-            firstPosition: Object.freeze({
-              origin: introOrigin,
-              declaredEncounterKeys: encounterSetForBinding(
-                catalog,
-                introBinding,
-                declaration.gameName,
-              ).encounterDefinitionKeys,
-              selectedEncounterKey: room.encounters.encounterKeyByPhase.Intro!,
-            }),
-            terminalPosition: Object.freeze({
-              origin: combatOrigin,
-              declaredEncounterKeys: encounterSetForBinding(
-                catalog,
-                combatBinding,
-                declaration.gameName,
-              ).encounterDefinitionKeys,
-              selectedEncounterKey: room.encounters.encounterKeyByPhase.Combat!,
-            }),
-            terminalFor: (firstEncounterKey: string) => {
-              if (
-                catalog.encounterDefinitions.byKey[firstEncounterKey]?.sequenceEffect?.kind ===
-                'terminateSuffix'
-              ) {
-                return Object.freeze({ kind: 'terminated' as const });
-              }
-              const replacement = Object.freeze({
-                ...room.encounters,
-                encounterKeyByPhase: Object.freeze({
-                  ...room.encounters.encounterKeyByPhase,
-                  Intro: firstEncounterKey,
-                }),
-              });
-              const phases = resolveEncounterPhases(
-                catalog,
-                declaration,
-                replacement,
-                ['Intro', 'Combat'],
-                declaration.gameName,
-              );
-              const next = prepareRoomEncounterPhases(
-                catalog,
-                Object.freeze({ ...room, encounters: replacement, encounterPhases: phases }),
-                context,
-              );
-              const support = next.candidates.find(
-                (candidate) => candidate.origin.phaseKey === 'Combat',
-              );
-              return support === undefined
-                ? Object.freeze({ kind: 'blocked' as const })
-                : Object.freeze({ kind: 'available' as const, support });
-            },
-          }),
-        );
-      }
-    }
     for (const entry of prepared.statuses) {
       const key = semanticAddressKey(entry.origin);
       if (statuses.has(key)) throw new Error(`duplicate encounter phase status ${key}`);
@@ -311,7 +196,6 @@ export function evaluateEncounterCandidatesInternal(
   const privateFigLeaf = new Map(
     figLeafCandidates.map((candidate) => [semanticAddressKey(candidate.origin), candidate]),
   );
-  const privatePSequences = new Map(pSequences);
   const privateGorgon = new Map(
     gorgonPhaseCandidates.map((candidate) => [semanticAddressKey(candidate.origin), candidate]),
   );
@@ -337,7 +221,6 @@ export function evaluateEncounterCandidatesInternal(
       gorgonAt: (origin: EncounterPhaseAddress) => gorgonSupport.get(semanticAddressKey(origin)),
       roomAt: (origin: OccurrenceAddress) => privateRooms.get(semanticAddressKey(origin)),
       figLeafAt: (origin: EncounterPhaseAddress) => privateFigLeaf.get(semanticAddressKey(origin)),
-      pSequenceAt: (origin: OccurrenceAddress) => privatePSequences.get(semanticAddressKey(origin)),
     }),
     findings: Object.freeze(findings),
     findingRegions: Object.freeze(

@@ -3059,25 +3059,31 @@ with its non-counting Intro and every later active combat applying end effects.
 Boss Judgment stays before completion/end effects, while terminal
 encounter-local offers remain completion-owned.
 
-Gate A.1 landed at `11eb863` (`fix(editor): make P encounter editing atomic`).
-Persistence and simulation remain exact phase-based products. The engine adds
-one bounded sequential P authoring capability and one atomic
-`ReplacePEncounterSequence` command; the application renders its two active
-positions in one dialog and creates one Undo unit. A terminating Heracles
-choice retains dormant Combat authorship, retained-invalid phase values remain
-repairable, and Fig Leaf, Gorgon, terminal trait offers, O, Fields, and other
-encounter envelopes retain their prior semantic owners and editor paths. No
-schema/catalog bump, P variant, preset, composition descriptor, lifecycle DSL,
-or second runtime sequence was added.
+The initial Gate A.1 atomic P-editor experiment at `11eb863` was subsequently
+removed because its occurrence-level command and dialog did not justify their
+extra machinery. The current product keeps the existing exact phase controls:
+**Opening encounter** for `Intro`, then **Follow-up encounter** for `Combat`.
+The second control is naturally withheld by the existing sequential preparation
+when Heracles terminates the suffix, while its persisted Combat value remains
+dormant and restores through a later ordinary Intro edit. Retained-invalid
+phase values, Fig Leaf, Gorgon, terminal trait offers, O, Fields, and all
+other envelopes retain their prior owners and editor paths. Each selection is
+an ordinary exact-phase command and Undo unit. No schema/catalog bump, P
+variant, preset, composition descriptor, lifecycle DSL, or second runtime
+sequence was added.
 
 Gate-A validation passed its focused owning set at 104/104 tests, the complete
 engine lane at 89 files/1,248 tests, and product at 6/26. Root and planner
 typechecks, changed-file ESLint, repository formatting, and `git diff --check`
-also passed. Gate-A.1 final validation passed engine at 89 files/1,250 tests in
-104.04 seconds, planner at 56/602 in 157.15 seconds, and product at 6/26 in
-20.35 seconds. Root typecheck, lint, repository formatting, `git diff --check`,
-and production build passed; Vite transformed 398 modules and retained only
-the existing greater-than-500-kB chunk advisory.
+also passed. The superseded atomic-editor experiment passed engine at 89
+files/1,250 tests in 104.04 seconds, planner at 56/602 in 157.15 seconds, and
+product at 6/26 in 20.35 seconds; root typecheck, lint, repository formatting,
+`git diff --check`, and the production build also passed. The later phase-native
+replacement passed its final focused command/UI boundary at 2 files/60 tests,
+the planner lane at 56 files/602 tests in 151.77 seconds, engine and planner
+typechecks, changed-file ESLint and Prettier, and `git diff --check`. The full
+engine and complete repository lanes were not rerun for that deletion-focused
+follow-up.
 
 This Gate B absorbs the build-24556151 source confirmation and the landed
 contracts into the encounter-composition audit, P rules, room lifecycle,

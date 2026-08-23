@@ -629,11 +629,11 @@ game's end effects. Encounter-counted Chaos maturation and Experimental Hammer
 duration consume that later event. Neither consumer contains P, phase-index,
 or Fig Leaf timing policy.
 
-The editor exposes one engine-backed P interaction over those two persisted
-positions. Its terminal domain is evaluated after the proposed first choice;
-a terminating Heracles choice has no active terminal field, while its dormant
-stored Combat choice remains available for a later reversible edit. One
-`ReplacePEncounterSequence` command saves both active selections and creates
-one Undo unit. Exact Fig Leaf, Gorgon, and terminal trait-offer children retain
-their phase owners. No P preset, variant enum, composition descriptor, or
-second runtime sequence is persisted.
+The editor exposes those two persisted positions through their ordinary,
+sequential phase controls: **Opening encounter** for `Intro` and **Follow-up
+encounter** for `Combat`. The second control is evaluated only after the
+selected first phase has extended the room preparation; a terminating Heracles
+selection withholds it while retaining the dormant stored Combat selection for
+a later ordinary edit. Exact Fig Leaf, Gorgon, and terminal trait-offer
+children retain their phase owners. No P preset, variant enum, composition
+descriptor, second runtime sequence, or composite command is persisted.

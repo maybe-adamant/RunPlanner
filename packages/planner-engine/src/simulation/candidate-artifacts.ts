@@ -64,7 +64,6 @@ function emptyEncounterCandidateArtifacts(): EncounterCandidateArtifacts {
     gorgonAt: () => undefined,
     roomAt: () => undefined,
     figLeafAt: () => undefined,
-    pSequenceAt: () => undefined,
   });
 }
 

@@ -248,31 +248,6 @@ export interface WorkspaceEncounterInteraction {
   readonly selected: string;
 }
 
-/** One atomic authoring control for P's ordered Intro then Combat setup. */
-export interface WorkspacePEncounterSequenceInteraction {
-  readonly key: string;
-  readonly owner: OccurrenceAddress;
-  readonly selectedIntroEncounterKey: string;
-  readonly selectedCombatEncounterKey: string;
-  readonly load: () =>
-    | {
-        readonly first: ContextualPickerModel<string>;
-        readonly terminalFor: (firstEncounterKey: string) =>
-          | { readonly kind: 'terminated' }
-          | {
-              readonly kind: 'available' | 'blocked';
-              readonly model: ContextualPickerModel<string>;
-            };
-      }
-    | undefined;
-  readonly intentFor: (
-    introEncounterKey: string,
-    combatEncounterKey?: string,
-  ) => WorkspaceCommandIntent<
-    Extract<ProjectCommand, { readonly kind: 'ReplacePEncounterSequence' }>
-  >;
-}
-
 /** Phase-local Fig Leaf choice; eligibility is supplied by the engine. */
 export interface WorkspaceFigLeafInteraction {
   readonly intentFor: (
@@ -878,7 +853,6 @@ export interface WorkspaceInteractionCatalog {
   readonly zagreusSpawns: ReadonlyMap<string, WorkspaceZagreusSpawnInteraction>;
   readonly batchRewardStores: ReadonlyMap<string, WorkspaceBatchRewardStoreInteraction>;
   readonly encounterPhases: ReadonlyMap<string, WorkspaceEncounterInteraction>;
-  readonly pEncounterSequences: ReadonlyMap<string, WorkspacePEncounterSequenceInteraction>;
   readonly figLeafSkips: ReadonlyMap<string, WorkspaceFigLeafInteraction>;
   readonly gorgonConditions: ReadonlyMap<string, WorkspaceGorgonConditionInteraction>;
   readonly exitSelections: ReadonlyMap<string, WorkspaceExitSelectionInteraction>;
@@ -1541,15 +1515,6 @@ export interface WorkspaceRoomSummary {
   readonly entryReward?: WorkspaceRewardControl;
   /** Active pool-backed encounter phases in declaration/lifecycle order. */
   readonly encounterPhases: readonly WorkspaceEncounterPhase[];
-  /** P's source-backed two-position setup, rendered as one atomic editor. */
-  readonly pEncounterSequence?: {
-    readonly combatChoices: readonly WorkspaceInteractionChoice<string>[];
-    readonly firstPosition: EncounterPhaseAddress;
-    readonly introChoices: readonly WorkspaceInteractionChoice<string>[];
-    readonly owner: OccurrenceAddress;
-    readonly selectedCombatEncounterKey: string;
-    readonly selectedIntroEncounterKey: string;
-  };
   readonly entered: boolean;
   readonly gameName: string;
   readonly kind: RoomDeclaration['kind'];

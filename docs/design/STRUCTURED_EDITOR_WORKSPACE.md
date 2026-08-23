@@ -225,22 +225,19 @@ semantic destination without producing no-op controls. This gives finding
 navigation and closure the same phase identity regardless of whether the
 presentation has a visible picker.
 
-P is the bounded presentation exception over that same phase model. The engine
-publishes one occurrence-owned sequential authoring capability whose first
-domain is evaluated at the room frontier and whose terminal domain is evaluated
-after the proposed first choice. The occurrence workbench renders one
-`Configure encounter` dialog with Pre-combat and Combat fields and dispatches
-one atomic command on Save. A terminating Heracles choice hides the inactive
-Combat field while retaining its dormant persisted value for a later edit.
-The application does not flatten candidate pairs or infer Heracles, P room
-names, phase legality, or sequence termination.
+P uses the same exact-phase presentation. Its workspace labels are **Opening
+encounter** for `Intro` and **Follow-up encounter** for `Combat`.
+The ordinary candidate pipeline evaluates Combat only after a valid,
+non-terminating Intro selection; a terminating Heracles choice naturally
+withholds the dormant suffix. The application renders the two existing phase
+controls and does not flatten candidate pairs or infer Heracles, P room names,
+phase legality, or sequence termination.
 
-The exact Intro and Combat addresses remain the semantic owners underneath
-that one editor. Timeline phases, retained-invalid findings, Fig Leaf, Gorgon,
-and terminal trait offers keep their existing markers, focus destinations, and
-child interactions. Only the two competing generic phase-selection controls
-are suppressed for P; no lifecycle or child ownership moves to the composite
-dialog.
+The exact Intro and Combat addresses remain the semantic owners. Timeline
+phases, retained-invalid findings, Fig Leaf, Gorgon, and terminal trait offers
+keep their existing markers, focus destinations, and child interactions. Each
+phase selection keeps its ordinary semantic command and Undo unit; no lifecycle
+or child ownership moves to a composite editor.
 
 ### Lifecycle Occurrence Workbenches
 

@@ -16,7 +16,6 @@ import {
   type RankedPrefixDropTarget,
   type WorkspaceDoorContract,
   type WorkspaceEncounterInteraction,
-  type WorkspacePEncounterSequenceInteraction,
   type WorkspaceEncounterPhase,
   type WorkspaceInteractionCatalog,
   type WorkspaceLocalVisitDecision,
@@ -344,10 +343,13 @@ function EncounterPhaseControl({
         />
       </label>
     );
+  const ariaLabel = phase.label.endsWith('encounter')
+    ? `${phase.label} phase`
+    : `${phase.label} encounter phase`;
   if (!phase.customizable) {
     return (
       <section
-        aria-label={`${phase.label} encounter phase`}
+        aria-label={ariaLabel}
         className="encounter-phase-control"
         data-read-only="true"
         id={semanticOwnerControlElementId(phase.address)}
@@ -372,7 +374,7 @@ function EncounterPhaseControl({
   );
   return (
     <section
-      aria-label={`${phase.label} encounter phase`}
+      aria-label={ariaLabel}
       className="encounter-phase-control"
       id={semanticOwnerControlElementId(phase.address)}
     >
@@ -391,123 +393,6 @@ function EncounterPhaseControl({
         {figLeafControl}
         {gorgonControl}
       </div>
-    </section>
-  );
-}
-
-function PEncounterSequenceEditor({
-  idPrefix,
-  interactions,
-  room,
-}: {
-  readonly idPrefix: string;
-  readonly interactions: WorkspaceInteractionCatalog;
-  readonly room: WorkspaceRoomSummary;
-}) {
-  const sequence = room.pEncounterSequence;
-  if (sequence === undefined) return null;
-  return (
-    <PEncounterSequenceEditorContent
-      idPrefix={idPrefix}
-      interactions={interactions}
-      room={room}
-      sequence={sequence}
-    />
-  );
-}
-
-function PEncounterSequenceEditorContent({
-  idPrefix,
-  interactions,
-  room,
-  sequence,
-}: {
-  readonly idPrefix: string;
-  readonly interactions: WorkspaceInteractionCatalog;
-  readonly room: WorkspaceRoomSummary;
-  readonly sequence: NonNullable<WorkspaceRoomSummary['pEncounterSequence']>;
-}) {
-  const executeIntent = useCommandIntent();
-  const [open, setOpen] = useState(false);
-  const [intro, setIntro] = useState('');
-  const [combat, setCombat] = useState('');
-  const interaction = requireWorkspaceInteraction(
-    interactions.pEncounterSequences,
-    workspaceInteractionKey(sequence.owner),
-  ) as WorkspacePEncounterSequenceInteraction;
-  const candidates = useWorkspaceInteraction(interaction);
-  const model = open ? candidates.result : undefined;
-  const terminal = model?.terminalFor(intro);
-  return (
-    <section aria-label="P encounter setup" className="encounter-phase-control">
-      <div className="local-reward-heading">
-        <h4>Encounter</h4>
-        <button
-          className="quiet-action action-compact"
-          onClick={() => {
-            candidates.activate();
-            setIntro(interaction.selectedIntroEncounterKey);
-            setCombat(interaction.selectedCombatEncounterKey);
-            setOpen(true);
-          }}
-          type="button"
-        >
-          Edit encounter
-        </button>
-      </div>
-      {open ? (
-        <dialog aria-label="P encounter editor" open>
-          <h3>Configure encounter</h3>
-          <ContextualPicker
-            id={`${idPrefix}-p-intro`}
-            label="Pre-combat"
-            layout="inline"
-            model={model?.first ?? emptyEncounterPicker}
-            onSelect={setIntro}
-            placeholder="Choose pre-combat"
-            triggerLabel={
-              room.pEncounterSequence?.introChoices.find((choice) => choice.value === intro)
-                ?.label ?? intro
-            }
-          />
-          {terminal?.kind === 'terminated' ? (
-            <p className="fixed-room-state">This selection ends the room's encounter sequence.</p>
-          ) : (
-            <ContextualPicker
-              id={`${idPrefix}-p-combat`}
-              label="Combat"
-              layout="inline"
-              model={terminal?.model ?? emptyEncounterPicker}
-              onSelect={setCombat}
-              placeholder="Choose combat"
-              triggerLabel={
-                room.pEncounterSequence?.combatChoices.find((choice) => choice.value === combat)
-                  ?.label ?? combat
-              }
-            />
-          )}
-          <div className="dialog-actions">
-            <button onClick={() => setOpen(false)} type="button">
-              Cancel
-            </button>
-            <button
-              disabled={candidates.pending || model === undefined}
-              onClick={() => {
-                executeIntent(
-                  interaction.intentFor(
-                    intro,
-                    terminal?.kind === 'terminated' ? undefined : combat,
-                  ),
-                );
-                setOpen(false);
-              }}
-              type="button"
-            >
-              Save encounter
-            </button>
-          </div>
-        </dialog>
-      ) : null}
     </section>
   );
 }
@@ -1975,19 +1860,12 @@ function DirectRoomWorkbench({
               <RoomFeaturesWorkbench features={workbench.features} interactions={interactions} />
             </>
           ) : (
-            <>
-              <PEncounterSequenceEditor
-                idPrefix={idPrefix}
-                interactions={interactions}
-                room={room}
-              />
-              <RoomActionsWorkbench
-                {...(workbench.roomActions === undefined ? {} : { actions: workbench.roomActions })}
-                encounterPhases={workbench.encounterPhases}
-                idPrefix={idPrefix}
-                interactions={interactions}
-              />
-            </>
+            <RoomActionsWorkbench
+              {...(workbench.roomActions === undefined ? {} : { actions: workbench.roomActions })}
+              encounterPhases={workbench.encounterPhases}
+              idPrefix={idPrefix}
+              interactions={interactions}
+            />
           )}
         </>
       );

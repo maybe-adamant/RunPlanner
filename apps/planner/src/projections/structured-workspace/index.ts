@@ -25,7 +25,6 @@ export type {
   WorkspaceCompletionNode,
   WorkspaceDefaultInspectorDestination,
   WorkspaceEncounterInteraction,
-  WorkspacePEncounterSequenceInteraction,
   WorkspaceEncounterPhase,
   WorkspaceLocalVisitDecision,
   WorkspaceLocalVisitGenerationInteraction,

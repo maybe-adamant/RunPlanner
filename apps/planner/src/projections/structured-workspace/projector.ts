@@ -10,7 +10,6 @@ import type { Catalog } from '@run-planner/engine/catalog-schema';
 import {
   assertProjectEvaluationAssembly,
   encounterPhaseSequenceStatusForProjectEvaluationAssembly,
-  pEncounterSequenceCandidateForProjectEvaluationAssembly,
   encounterPhaseFigLeafSupportForProjectEvaluationAssembly,
   encounterPhaseGorgonSupportForProjectEvaluationAssembly,
   derivedAcquisitionEntriesForProjectEvaluationAssembly,
@@ -238,8 +237,6 @@ export function createStructuredWorkspaceProjection(
           }
         },
         (occurrence) => blockedOccurrenceRoomForProjectEvaluationAssembly(assembly, occurrence),
-        (occurrence) =>
-          pEncounterSequenceCandidateForProjectEvaluationAssembly(assembly, occurrence),
       );
       const routes = sources.routes.map((routeSource) => {
         const authoredRoute = project.routes.find(

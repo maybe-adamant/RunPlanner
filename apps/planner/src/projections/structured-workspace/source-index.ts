@@ -20,7 +20,6 @@ import {
   type HubDecision,
   type HubDecisionAddress,
   type OccurrenceId,
-  type OccurrenceAddress,
   type ProjectDocument,
   type RoomOccurrence,
   type SemanticAddress,
@@ -82,9 +81,6 @@ export interface WorkspaceBiomeSource {
   ) => FigLeafPhaseCandidateSupport | undefined;
   /** Exact engine-published reached/pending Gorgon capability. */
   readonly gorgonSupport: (phase: EncounterPhaseAddress) => GorgonPhaseCandidateSupport | undefined;
-  readonly pEncounterSequenceSupport: (
-    occurrence: OccurrenceAddress,
-  ) => import('@run-planner/engine/simulation').PEncounterSequenceCandidateSupport | undefined;
   readonly evaluation: ProjectBiomeEvaluation | undefined;
   readonly exitDecisions: readonly ExitDecision[];
   readonly findings: readonly SemanticFinding[];
@@ -620,7 +616,6 @@ function createWorkspaceBiomeSource(
   blockedOccurrenceRoom: (
     occurrence: ReturnType<typeof createOccurrenceAddress>,
   ) => CanonicalAuthoredRoom | undefined,
-  pEncounterSequenceSupport: WorkspaceBiomeSource['pEncounterSequenceSupport'],
 ): WorkspaceBiomeSource {
   const biome = createBiomeAddress(routeKey, plan.biomeKey);
   const layout = catalog.biomeLayouts.byKey[plan.biomeKey];
@@ -732,7 +727,6 @@ function createWorkspaceBiomeSource(
     encounterPhaseStatus,
     figLeafSupport,
     gorgonSupport,
-    pEncounterSequenceSupport,
     ...(overlay.entryRoom === undefined ? {} : { entryRoom: overlay.entryRoom }),
     evaluation,
     evaluatedAdditional: (owner: ExitDecisionAddress) =>
@@ -809,7 +803,6 @@ export function createWorkspaceProjectSourceIndex(
   blockedOccurrenceRoom: (
     occurrence: ReturnType<typeof createOccurrenceAddress>,
   ) => CanonicalAuthoredRoom | undefined = () => undefined,
-  pEncounterSequenceSupport: WorkspaceBiomeSource['pEncounterSequenceSupport'] = () => undefined,
 ): WorkspaceProjectSourceIndex {
   return Object.freeze({
     routes: Object.freeze(
@@ -831,7 +824,6 @@ export function createWorkspaceProjectSourceIndex(
                 derivedAcquisitionEntries,
                 isActiveTraitOffer,
                 blockedOccurrenceRoom,
-                pEncounterSequenceSupport,
               ),
             ),
           ),
