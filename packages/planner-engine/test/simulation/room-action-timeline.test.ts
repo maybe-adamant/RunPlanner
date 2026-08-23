@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   assembleCompletionRoomLifecycleTimeline,
+  appendSteadyGrowthCompletionTimelineEffects,
+  appendSteadyGrowthTimelineEffects,
   assembleRoomLifecycleTimeline as assembleTimeline,
   type RoomActionRoster,
 } from '../../src/simulation';
@@ -9,6 +11,7 @@ import {
   createBossCompletionArcanaAddress,
   createCompletionRoomAddress,
   createOccurrenceId,
+  createSteadyGrowthOutcomeAddress,
   type OccurrenceAddress,
 } from '../../src/authored-project/addresses';
 import type { RoomLifecycleStructure } from '../../src/authored-project';
@@ -184,6 +187,54 @@ function rankedRow(
 }
 
 describe('room lifecycle timeline', () => {
+  it('places reached Steady Growth immediately after its encounter end', () => {
+    const timeline = assembleRoomLifecycleTimeline({
+      owner,
+      lifecycleProfileKey: 'StandardCombatRoom',
+      encounterPhases: Object.freeze([encounter('Combat')]),
+      roomActionRoster: roster(),
+    });
+    const outcome = createSteadyGrowthOutcomeAddress(owner, 'Combat');
+    const enriched = appendSteadyGrowthTimelineEffects(timeline, [outcome]);
+    const entryKinds = enriched.entries.map((entry) => entry.kind);
+    const endIndex = enriched.entries.findIndex(
+      (entry) => entry.kind === 'boundary' && entry.boundary.kind === 'encounterEnd',
+    );
+    expect(entryKinds[endIndex + 1]).toBe('automaticEffect');
+    expect(enriched.entries[endIndex + 1]).toMatchObject({
+      address: outcome,
+      effect: 'steadyGrowth',
+      phaseKey: 'Combat',
+    });
+  });
+
+  it('keeps each multi-encounter Steady Growth checkpoint with its own phase', () => {
+    const timeline = assembleRoomLifecycleTimeline({
+      owner,
+      lifecycleProfileKey: 'StandardCombatRoom',
+      encounterPhases: Object.freeze([encounter('Combat1'), encounter('Combat2')]),
+      roomActionRoster: roster(),
+    });
+    const outcomes = [
+      createSteadyGrowthOutcomeAddress(owner, 'Combat1'),
+      createSteadyGrowthOutcomeAddress(owner, 'Combat2'),
+    ];
+    const enriched = appendSteadyGrowthTimelineEffects(timeline, outcomes);
+    const entries = enriched.entries;
+    for (const outcome of outcomes) {
+      const effectIndex = entries.findIndex(
+        (entry) => entry.kind === 'automaticEffect' && entry.address === outcome,
+      );
+      const endIndex = entries.findIndex(
+        (entry) =>
+          entry.kind === 'boundary' &&
+          entry.boundary.kind === 'encounterEnd' &&
+          entry.boundary.phaseKey === outcome.phaseKey,
+      );
+      expect(effectIndex).toBe(endIndex + 1);
+    }
+  });
+
   it('keeps Judgment as an engine-owned fixed effect at the derived Boss-defeated seam', () => {
     const completion = createCompletionRoomAddress(
       { kind: 'biome', routeKey: 'Underworld', biomeKey: 'F' },
@@ -195,7 +246,12 @@ describe('room lifecycle timeline', () => {
       roomGameName: 'F_Boss01',
       judgment: createBossCompletionArcanaAddress(completion),
     });
-    expect(timeline.entries).toEqual([
+    const outcome = createSteadyGrowthOutcomeAddress(
+      Object.freeze({ ...completion, role: 'boss' }),
+      'Encounter',
+    );
+    const enriched = appendSteadyGrowthCompletionTimelineEffects(timeline, [outcome]);
+    expect(enriched.entries).toEqual([
       expect.objectContaining({
         kind: 'boundary',
         boundary: expect.objectContaining({ kind: 'roomEntered' }),
@@ -210,6 +266,7 @@ describe('room lifecycle timeline', () => {
         kind: 'boundary',
         boundary: expect.objectContaining({ kind: 'encounterEnd' }),
       }),
+      expect.objectContaining({ kind: 'automaticEffect', address: outcome }),
       expect.objectContaining({
         kind: 'boundary',
         boundary: expect.objectContaining({ kind: 'cleanup' }),

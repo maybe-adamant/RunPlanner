@@ -1,6 +1,8 @@
-import type { OccurrenceAddress } from '@run-planner/engine/authored-project';
+import { semanticAddressKey, type OccurrenceAddress } from '@run-planner/engine/authored-project';
 import {
   Fragment,
+  useEffect,
+  useMemo,
   useRef,
   useState,
   type PointerEvent as ReactPointerEvent,
@@ -23,7 +25,6 @@ import {
   type WorkspaceRoomActions,
   type WorkspaceFieldsCageSlotControl,
   type WorkspaceRoomLifecycleBoundary,
-  type WorkspaceRoomLifecycleTimeline,
   type WorkspaceRoomLifecycleTimelineEntry,
   type WorkspaceRoomFeature,
   type WorkspaceRoomTab,
@@ -31,18 +32,23 @@ import {
   type WorkspaceShipPhasePresentation,
   type WorkspaceNaturalChaosExitControl,
   type WorkspaceRunStateLauncher,
+  type WorkspaceSteadyGrowthControl,
+  type WorkspaceSteadyGrowthDomain,
 } from '@planner/projections/structured-workspace';
 import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
 import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
-import { useAppDispatch } from '@planner/state/store';
+import { useAppDispatch, useAppSelector } from '@planner/state/store';
 import { SemanticOwnerMarker } from '@planner/ui/feedback/EvaluationFeedback';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import { candidateMayBeAuthored } from '@planner/ui/feedback/candidatePresentation';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
-import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
+import {
+  useWorkspaceInteraction,
+  useWorkspaceInteractionController,
+} from '@planner/ui/controls/useWorkspaceInteraction';
 import { RewardControlEditor } from '../rewards/RewardControlEditor';
-import { PomResolutionLauncher } from '../rewards/PomResolutionEditor';
+import { PomResolutionLauncher, RandomTraitTargetPicker } from '../rewards/PomResolutionEditor';
 import { TraitOfferLauncher } from '../rewards/TraitOfferEditor';
 import { CandidateSelect } from './CandidateSelect';
 import { RunStateLauncher } from './RunStateSheet';
@@ -824,13 +830,83 @@ function LifecycleBoundaryRow({
   );
 }
 
-function timelineBoundaryEntries(
-  timeline: WorkspaceRoomLifecycleTimeline,
-  include: (boundary: WorkspaceRoomLifecycleBoundary) => boolean,
-): readonly Extract<WorkspaceRoomLifecycleTimelineEntry, { readonly kind: 'boundary' }>[] {
-  return timeline.entries.filter(
-    (entry): entry is Extract<WorkspaceRoomLifecycleTimelineEntry, { readonly kind: 'boundary' }> =>
-      entry.kind === 'boundary' && include(entry.boundary),
+export function SteadyGrowthEffectRow({
+  control,
+  interactions,
+}: {
+  readonly control: WorkspaceSteadyGrowthControl;
+  readonly interactions: WorkspaceInteractionCatalog;
+}) {
+  const executeIntent = useCommandIntent();
+  const focusedSemanticOwner = useAppSelector((state) => state.editorSession.focusedSemanticOwner);
+  const semanticNavigationRevision = useAppSelector(
+    (state) => state.editorSession.semanticNavigationRevision,
+  );
+  const [manualOpen, setManualOpen] = useState(false);
+  const [closedAtNavigationRevision, setClosedAtNavigationRevision] = useState<number>();
+  const interaction = requireWorkspaceInteraction(
+    interactions.steadyGrowth,
+    workspaceInteractionKey(control.address),
+  );
+  const loadable = useMemo(
+    () => interaction.forTarget(control.targetTraitKey),
+    [control.targetTraitKey, interaction],
+  );
+  const controller = useWorkspaceInteractionController<WorkspaceSteadyGrowthDomain | undefined>();
+  const loaded = controller.observe(loadable);
+  useEffect(() => {
+    controller.activate(loadable);
+  }, [controller, loadable]);
+  const domain = loaded.result;
+  const selected = control.targetTraitKey ?? '';
+  const focused =
+    focusedSemanticOwner?.kind === 'steadyGrowthOutcome' &&
+    semanticAddressKey(focusedSemanticOwner) === semanticAddressKey(control.address);
+  const open = manualOpen || (focused && closedAtNavigationRevision !== semanticNavigationRevision);
+  const onOpenChange = (nextOpen: boolean): void => {
+    setManualOpen(nextOpen);
+    if (!nextOpen && focused) setClosedAtNavigationRevision(semanticNavigationRevision);
+  };
+  return (
+    <li
+      aria-label="Steady Growth"
+      className="room-action-row completion-timeline-effect-row"
+      data-steady-growth={control.address.phaseKey}
+    >
+      <div className="owner-markers room-action-identity">
+        <span aria-hidden="true" className="hub-roster-rank">
+          ·
+        </span>
+        <strong>Steady Growth</strong>
+        {domain?.emptyNoOp === true && control.targetTraitKey === undefined ? (
+          <span>No eligible trait (no-op)</span>
+        ) : (
+          <RandomTraitTargetPicker
+            ariaLabel="Steady Growth target"
+            id={semanticOwnerControlElementId(control.address)}
+            interaction={interaction}
+            model={domain?.picker ?? { sections: Object.freeze([]) }}
+            onSelect={(target) => executeIntent(interaction.intentFor(target))}
+            onOpenChange={onOpenChange}
+            open={open}
+            selected={selected === '' ? null : selected}
+          />
+        )}
+        {domain?.selectedPossible === false && selected !== '' ? (
+          <>
+            <span className="finding-badge">Needs repair</span>
+            <button
+              className="quiet-action"
+              onClick={() => executeIntent(interaction.intentFor(null))}
+              type="button"
+            >
+              Clear recorded target
+            </button>
+          </>
+        ) : null}
+        <SemanticOwnerMarker address={control.address} />
+      </div>
+    </li>
   );
 }
 
@@ -1355,49 +1431,39 @@ export function RoomActionsWorkbench({
             {ship.phases
               .filter((phase) => ship.phaseKey === undefined || phase.key === ship.phaseKey)
               .map((phase) => {
-                const phaseRankedRows = phase.actionRows.filter((row) => row.rank !== null);
-                const phaseIndex = ship.phases.findIndex(
-                  (candidate) => candidate.key === phase.key,
+                const timelineActionRanks = new Set(
+                  phase.timeline.flatMap((entry) => (entry.kind === 'action' ? [entry.rank] : [])),
                 );
-                const phaseBoundaryEntries =
-                  actions === undefined
-                    ? []
-                    : timelineBoundaryEntries(actions.timeline, (boundary) => {
-                        switch (boundary.kind) {
-                          case 'roomEntered':
-                            return phaseIndex === 0;
-                          case 'encounterStart':
-                          case 'encounterEnd':
-                            return boundary.phaseKey === phase.key;
-                          case 'nextPhase':
-                            return phase.wheel?.key === boundary.wheelKey;
-                          case 'cleanup':
-                            return phaseIndex === ship.phases.length - 1;
-                        }
-                      });
-                const phaseBoundariesAt = (rank: number, placement: 'before' | 'after') =>
-                  phaseBoundaryEntries
-                    .filter((entry) => entry.rank === rank && entry.placement === placement)
-                    .map(renderBoundary);
-                const matchedCheckpointRanks = new Set(
-                  phaseRankedRows.flatMap((row) => (row.rank === null ? [] : [row.rank])),
-                );
-                const standaloneBoundariesBetween = (lowerRank: number, upperRank: number) =>
-                  phaseBoundaryEntries
-                    .filter(
-                      (entry) =>
-                        !matchedCheckpointRanks.has(entry.rank) &&
-                        entry.rank > lowerRank &&
-                        entry.rank < upperRank,
-                    )
-                    .map(renderBoundary);
+                const renderPhaseTimelineEntry = (
+                  entry: WorkspaceRoomLifecycleTimelineEntry,
+                ): ReactNode[] => {
+                  if (entry.kind === 'boundary') return [renderBoundary(entry)];
+                  if (entry.kind === 'automaticEffect') {
+                    const control = actions?.steadyGrowth?.find(
+                      (candidate) =>
+                        workspaceInteractionKey(candidate.address) ===
+                        workspaceInteractionKey(entry.address),
+                    );
+                    return control === undefined
+                      ? []
+                      : [
+                          <SteadyGrowthEffectRow
+                            control={control}
+                            interactions={interactions}
+                            key={workspaceInteractionKey(control.address)}
+                          />,
+                        ];
+                  }
+                  const row = actions?.rows.find((candidate) => candidate.key === entry.actionKey);
+                  return row === undefined ? [] : [renderRow(row, phase.checkpoints)];
+                };
                 const trailingCheckpoints = phase.checkpoints.filter(
                   (checkpoint) =>
                     actions?.timeline.boundaries.some(
                       (boundary) => lifecycleBoundaryCheckpointKey(boundary) === checkpoint.key,
                     ) !== true &&
                     checkpoint.afterRank !== 0 &&
-                    !matchedCheckpointRanks.has(checkpoint.afterRank),
+                    !timelineActionRanks.has(checkpoint.afterRank),
                 );
                 return (
                   <section
@@ -1410,38 +1476,14 @@ export function RoomActionsWorkbench({
                     </div>
                     {phase.actionRows.length === 0 &&
                     phase.checkpoints.length === 0 &&
-                    phaseBoundaryEntries.length === 0 ? null : (
+                    phase.timeline.length === 0 ? null : (
                       <>
                         <div className="local-reward-heading ship-phase-actions-heading">
                           <h5>Timeline</h5>
                         </div>
                         <ol aria-label={`${phase.label} timeline`} className="room-action-list">
-                          {phaseRankedRows.length === 0
-                            ? phaseBoundaryEntries.map(renderBoundary)
-                            : standaloneBoundariesBetween(
-                                Number.NEGATIVE_INFINITY,
-                                phaseRankedRows[0]?.rank ?? Number.POSITIVE_INFINITY,
-                              )}
                           {checkpointRows(0, phase.checkpoints)}
-                          {phaseRankedRows.map((row, index) => (
-                            <Fragment key={row.key}>
-                              {index === 0
-                                ? null
-                                : standaloneBoundariesBetween(
-                                    phaseRankedRows[index - 1]?.rank ?? Number.NEGATIVE_INFINITY,
-                                    row.rank ?? Number.POSITIVE_INFINITY,
-                                  )}
-                              {phaseBoundariesAt(row.rank!, 'before')}
-                              {renderRow(row, phase.checkpoints)}
-                              {phaseBoundariesAt(row.rank!, 'after')}
-                            </Fragment>
-                          ))}
-                          {phaseRankedRows.length === 0
-                            ? null
-                            : standaloneBoundariesBetween(
-                                phaseRankedRows.at(-1)?.rank ?? Number.NEGATIVE_INFINITY,
-                                Number.POSITIVE_INFINITY,
-                              )}
+                          {phase.timeline.flatMap(renderPhaseTimelineEntry)}
                           {trailingCheckpoints.map((checkpoint) => (
                             <li
                               className="room-action-checkpoint"
@@ -1497,6 +1539,21 @@ export function RoomActionsWorkbench({
   const timelineRows = actions.timeline.entries.flatMap((entry) => {
     if (entry.kind === 'boundary') {
       return [renderBoundary(entry)];
+    }
+    if (entry.kind === 'automaticEffect') {
+      const control = actions.steadyGrowth?.find(
+        (candidate) =>
+          workspaceInteractionKey(candidate.address) === workspaceInteractionKey(entry.address),
+      );
+      return control === undefined
+        ? []
+        : [
+            <SteadyGrowthEffectRow
+              control={control}
+              interactions={interactions}
+              key={workspaceInteractionKey(control.address)}
+            />,
+          ];
     }
     if (entry.presentation === 'fieldsCageAnchor') return [];
     const row = actionByKey.get(entry.actionKey);

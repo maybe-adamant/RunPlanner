@@ -3,6 +3,7 @@ import {
   optionIndex,
   type AuthoredTraitOffer,
   type AuthoredTraitOfferTraits,
+  type AuthoredTraitOption,
   type AuthoredEchoLastRunBoonOffer,
   type AuthoredAllTogetherResult,
   type TraitOfferAddress,
@@ -25,6 +26,8 @@ import {
   type WorkspaceEchoLastRunBoonTraitIdentity,
   type WorkspaceAllTogetherSetInteraction,
   type WorkspaceAllTogetherSetDomain,
+  type WorkspaceNaturalSelectionDomain,
+  type WorkspaceNaturalSelectionInteraction,
   type WorkspaceTraitOfferInteraction,
   type WorkspaceTraitOfferControl,
 } from '@planner/projections/structured-workspace';
@@ -35,6 +38,7 @@ import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorkspaceInteraction';
 import { SemanticOwnerMarker } from '@planner/ui/feedback/EvaluationFeedback';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
+import { CompoundOutcomeEditor } from './CompoundOutcomeEditor';
 
 const OPTION_KEYS = ['option1', 'option2', 'option3'] as const;
 
@@ -167,28 +171,25 @@ function AllTogetherOutcomeEditor({
   };
 
   return (
-    <fieldset className="trait-selected-outcome-detail">
-      <legend>Elemental grants</legend>
-      <div className="trait-outcome-summary-list">
-        {interactions.map((interaction, setIndex) => {
-          const key = interaction.control.setKey;
-          const value = draft[key];
-          const label = Object.prototype.hasOwnProperty.call(draft, key)
-            ? (draftLabels[key] ?? (value === null ? 'No grant' : 'Configured'))
-            : 'Unspecified';
-          return (
-            <button
-              className="quiet-action action-compact"
-              id={semanticOwnerControlElementId(interaction.control.address)}
-              key={key}
-              onClick={() => begin(setIndex)}
-              type="button"
-            >
-              {key[0]!.toUpperCase() + key.slice(1)}: {label}
-            </button>
-          );
-        })}
-      </div>
+    <CompoundOutcomeEditor
+      activeIndex={activeIndex}
+      complete={complete}
+      legend="Elemental grants"
+      onBegin={begin}
+      rows={interactions.map((interaction) => {
+        const key = interaction.control.setKey;
+        const value = draft[key];
+        const label = Object.prototype.hasOwnProperty.call(draft, key)
+          ? (draftLabels[key] ?? (value === null ? 'No grant' : 'Configured'))
+          : 'Unspecified';
+        return {
+          key,
+          label: `${key[0]!.toUpperCase() + key.slice(1)}: ${label}`,
+          controlId: semanticOwnerControlElementId(interaction.control.address),
+        };
+      })}
+      startLabel="Choose all grants"
+    >
       {activeInteraction === undefined ? null : (
         <AllTogetherSetPicker
           interaction={activeInteraction}
@@ -197,12 +198,152 @@ function AllTogetherOutcomeEditor({
           onSelect={choose}
         />
       )}
-      {!complete && activeIndex === undefined ? (
-        <button className="quiet-action action-compact" onClick={() => begin()} type="button">
-          Choose all grants
-        </button>
-      ) : null}
-    </fieldset>
+    </CompoundOutcomeEditor>
+  );
+}
+
+function naturalSelectionOptionWithTargets(
+  source: AuthoredTraitOption,
+  targets: readonly string[],
+): AuthoredTraitOption {
+  const { naturalSelectionTargets, ...base } = source;
+  void naturalSelectionTargets;
+  return {
+    ...base,
+    ...(targets.length === 0
+      ? {}
+      : {
+          naturalSelectionTargets: targets as AuthoredTraitOption['naturalSelectionTargets'],
+        }),
+  } as AuthoredTraitOption;
+}
+
+function NaturalSelectionOutcomeEditor({
+  interaction,
+  offer,
+  optionIndex: index,
+  onSelect,
+}: {
+  readonly interaction: WorkspaceNaturalSelectionInteraction;
+  readonly offer: AuthoredTraitOfferTraits;
+  readonly optionIndex: number;
+  readonly onSelect: (targets: readonly string[]) => void;
+}) {
+  const option = offer.options[index];
+  const initial = option?.naturalSelectionTargets ?? Object.freeze([]);
+  const [draft, setDraft] = useState<readonly string[]>(initial);
+  const [retainedTarget, setRetainedTarget] = useState<string>();
+  const [activeIndex, setActiveIndex] = useState<number>();
+  const draftOffer = useMemo(
+    () =>
+      option === undefined
+        ? offer
+        : replaceOption(offer, index, naturalSelectionOptionWithTargets(option, draft)),
+    [draft, index, offer, option],
+  );
+  const loadable = useMemo(
+    () => interaction.forOffer(draftOffer, retainedTarget),
+    [draftOffer, interaction, retainedTarget],
+  );
+  const controller = useWorkspaceInteractionController<
+    WorkspaceNaturalSelectionDomain | undefined
+  >();
+  const nextDomainController = useWorkspaceInteractionController<
+    WorkspaceNaturalSelectionDomain | undefined
+  >();
+  const loaded = controller.observe(loadable);
+  useEffect(() => {
+    controller.activate(loadable);
+  }, [controller, loadable]);
+  const domain = loaded.result;
+  const slotCount = interaction.control.slotCount;
+  const complete = domain?.complete === true;
+  const begin = (slotIndex = draft.length): void => {
+    const authored = option?.naturalSelectionTargets ?? Object.freeze([]);
+    const prefix = [...authored].slice(0, Math.min(slotIndex, slotCount - 1));
+    setDraft(Object.freeze(prefix));
+    setRetainedTarget(authored[slotIndex]);
+    setActiveIndex(prefix.length);
+  };
+  const cancel = (): void => {
+    setDraft(option?.naturalSelectionTargets ?? Object.freeze([]));
+    setRetainedTarget(undefined);
+    setActiveIndex(undefined);
+  };
+  const choose = (traitKey: string): void => {
+    if (activeIndex === undefined) return;
+    setRetainedTarget(undefined);
+    const next = Object.freeze([
+      ...draft.slice(0, activeIndex),
+      traitKey,
+      ...draft.slice(activeIndex + 1),
+    ]);
+    setDraft(next);
+    const nextDomain = nextDomainController.activate(
+      interaction.forOffer(
+        replaceOption(draftOffer, index, naturalSelectionOptionWithTargets(option!, next)),
+      ),
+    );
+    if (nextDomain?.complete === true || next.length >= slotCount) {
+      setActiveIndex(undefined);
+      onSelect(next);
+    } else {
+      setActiveIndex(next.length);
+    }
+  };
+  const visibleCount = complete
+    ? draft.length
+    : Math.min(slotCount, Math.max(1, draft.length + (activeIndex === undefined ? 0 : 1)));
+  const rows = Array.from({ length: visibleCount }, (_, rowIndex) => {
+    const target = draft[rowIndex] ?? (rowIndex === activeIndex ? retainedTarget : undefined);
+    const retained = rowIndex === activeIndex && retainedTarget !== undefined;
+    return {
+      key: `position-${rowIndex + 1}`,
+      label: `Position ${rowIndex + 1}: ${target === undefined ? 'Unspecified' : interaction.traitLabel(target)}${retained ? ' (retained)' : ''}`,
+      ...(rowIndex === 0
+        ? { controlId: semanticOwnerControlElementId(interaction.control.address) }
+        : {}),
+    };
+  });
+  const repeated = [...new Set(draft)].flatMap((traitKey) => {
+    const count = draft.filter((candidate) => candidate === traitKey).length;
+    return count > 1 ? [`${interaction.traitLabel(traitKey)} ×${count}`] : [];
+  });
+  return (
+    <>
+      {repeated.length === 0 ? null : (
+        <p className="trait-selected-outcome-detail">Repeated targets: {repeated.join(', ')}</p>
+      )}
+      <CompoundOutcomeEditor
+        activeIndex={activeIndex}
+        complete={complete}
+        legend="Natural Selection targets"
+        onBegin={begin}
+        rows={rows}
+        startLabel="Choose all targets"
+      >
+        {domain === undefined ? (
+          <p className="feedback-text">
+            {loaded.pending ? 'Evaluating targets…' : 'Targets unavailable.'}
+          </p>
+        ) : (
+          <ContextualPicker
+            cancelLabel="Cancel"
+            choiceLabel={`Target ${Math.min((activeIndex ?? 0) + 1, slotCount)} of ${slotCount}`}
+            closeOnSelect={false}
+            id={`${semanticOwnerControlElementId(interaction.control.address)}-picker`}
+            label="Trait"
+            model={domain.picker}
+            onOpenChange={(open) => {
+              if (!open) cancel();
+            }}
+            onSelect={choose}
+            open={true}
+            placeholder="Choose an eligible core trait"
+          />
+        )}
+      </CompoundOutcomeEditor>
+    </>
   );
 }
 
@@ -236,7 +377,7 @@ function traitOfferRevision(interaction: WorkspaceTraitOfferInteraction): string
             'echoPomTarget' in option ? (option.echoPomTarget ?? 'none') : ''
           }:${'echoLastRunBoon' in option ? JSON.stringify(option.echoLastRunBoon) : ''}:${
             'allTogetherResult' in option ? JSON.stringify(option.allTogetherResult) : ''
-          }`,
+          }:${'naturalSelectionTargets' in option ? JSON.stringify(option.naturalSelectionTargets) : ''}`,
       )
       .join(','),
     interaction.value.selectedOptionKey,
@@ -924,13 +1065,16 @@ function TraitOfferSelectedOutcomeEditor({
   ]);
 
   const targetDomain = optionDomain.result;
+  const ransomAssessment = interaction.ransomAssessment(value);
   const hasOutcome =
     loadable.hasTargetPicker ||
     loadable.circeResolution !== undefined ||
     loadable.echoPomTarget !== undefined ||
     loadable.echoLastRunBoon !== undefined ||
     interaction.echoLastReward !== undefined ||
-    loadable.allTogetherSets !== undefined;
+    loadable.allTogetherSets !== undefined ||
+    loadable.naturalSelection !== undefined ||
+    ransomAssessment !== undefined;
   if (!hasOutcome) return null;
   return (
     <section aria-label="Selected trait outcome" className="trait-selected-outcome">
@@ -1043,6 +1187,46 @@ function TraitOfferSelectedOutcomeEditor({
             onUpdate(replaceOption(value, selectedIndex, { ...option, allTogetherResult }))
           }
         />
+      )}
+      {loadable.naturalSelection === undefined ? null : (
+        <NaturalSelectionOutcomeEditor
+          interaction={loadable.naturalSelection}
+          offer={value}
+          optionIndex={selectedIndex}
+          onSelect={(targets) =>
+            onUpdate(
+              replaceOption(
+                value,
+                selectedIndex,
+                naturalSelectionOptionWithTargets(option, targets),
+              ),
+            )
+          }
+        />
+      )}
+      {ransomAssessment === undefined ? null : (
+        <fieldset className="trait-selected-outcome-detail" aria-label="Ransom preview">
+          <legend>Ransom preview</legend>
+          {!ransomAssessment.branchAgreement ? (
+            <p className="feedback-text">Ransom result differs across current route branches.</p>
+          ) : (
+            <>
+              <p>
+                Removes {ransomAssessment.removedCount} opposing traits and grants +
+                {ransomAssessment.levelBonus} levels to{' '}
+                {ransomAssessment.buffedTraitKeys.length === 0
+                  ? 'no retained traits'
+                  : ransomAssessment.buffedTraitKeys.map(interaction.traitLabel).join(', ')}
+              </p>
+              {ransomAssessment.removedTraitKeys.length === 0 ? null : (
+                <p className="trait-selected-outcome-detail">
+                  Removed:{' '}
+                  {ransomAssessment.removedTraitKeys.map(interaction.traitLabel).join(', ')}
+                </p>
+              )}
+            </>
+          )}
+        </fieldset>
       )}
     </section>
   );
@@ -1502,7 +1686,8 @@ export function TraitOfferDialog({
         focusedSemanticOwner?.kind === 'traitAcquisitionTarget' ||
         focusedSemanticOwner?.kind === 'circeResolution' ||
         focusedSemanticOwner?.kind === 'echoPomTarget' ||
-        focusedSemanticOwner?.kind === 'echoLastRunBoon') &&
+        focusedSemanticOwner?.kind === 'echoLastRunBoon' ||
+        focusedSemanticOwner?.kind === 'naturalSelectionResult') &&
       semanticAddressKey(focusedSemanticOwner.trait) === semanticAddressKey(target)
         ? document.getElementById(semanticOwnerControlElementId(focusedSemanticOwner))
         : null;

@@ -37,6 +37,8 @@ import {
   type EchoLastRunBoonAddress,
   type EchoLastRewardAddress,
   type AllTogetherSetAddress,
+  type NaturalSelectionResultAddress,
+  type SteadyGrowthOutcomeAddress,
   type AuthoredEchoLastRunBoonOffer,
   type AuthoredEchoLastRunBoonOption,
   type AuthoredCirceResolution,
@@ -311,6 +313,7 @@ export interface WorkspaceTraitOfferControl {
   readonly echoLastRunBoon?: WorkspaceEchoLastRunBoonControl;
   readonly echoLastReward?: WorkspaceEchoLastRewardControl;
   readonly allTogetherSets?: readonly WorkspaceAllTogetherSetControl[];
+  readonly naturalSelection?: WorkspaceNaturalSelectionControl;
   readonly deathDefianceCondition?: {
     readonly value: boolean;
   };
@@ -371,6 +374,14 @@ export interface WorkspaceAllTogetherSetControl {
   readonly valueLabel?: string;
 }
 
+/** Exact selected Natural Selection child beneath one trait option. */
+export interface WorkspaceNaturalSelectionControl {
+  readonly address: NaturalSelectionResultAddress;
+  readonly marker: WorkspaceMarker;
+  readonly optionKey: TraitOptionKey;
+  readonly slotCount: number;
+}
+
 /** One exact declaration-owned Pom child beneath an active reward owner. */
 export interface WorkspaceLevelResolutionControl {
   readonly acquisitionRoleLabel: string;
@@ -395,6 +406,7 @@ export interface WorkspaceTraitOptionDomainInteraction {
   readonly echoPomTarget?: WorkspaceEchoPomTargetInteraction;
   readonly echoLastRunBoon?: WorkspaceEchoLastRunBoonInteraction;
   readonly allTogetherSets?: readonly WorkspaceAllTogetherSetInteraction[];
+  readonly naturalSelection?: WorkspaceNaturalSelectionInteraction;
 }
 
 export interface WorkspaceAllTogetherSetDomain {
@@ -407,6 +419,32 @@ export interface WorkspaceAllTogetherSetInteraction {
     readonly load: () => WorkspaceAllTogetherSetDomain | undefined;
   };
 }
+
+export interface WorkspaceNaturalSelectionDomain {
+  readonly complete: boolean;
+  readonly picker: ContextualPickerModel<string>;
+}
+
+export interface WorkspaceNaturalSelectionInteraction {
+  readonly control: WorkspaceNaturalSelectionControl;
+  readonly forOffer: (
+    offer: AuthoredTraitOfferTraits,
+    retainedTargetKey?: string,
+  ) => {
+    readonly load: () => WorkspaceNaturalSelectionDomain | undefined;
+  };
+  readonly traitLabel: (traitKey: string) => string;
+}
+
+export type WorkspaceRansomAssessment =
+  | { readonly branchAgreement: false }
+  | {
+      readonly branchAgreement: true;
+      readonly buffedTraitKeys: readonly string[];
+      readonly levelBonus: number;
+      readonly removedCount: number;
+      readonly removedTraitKeys: readonly string[];
+    };
 
 export interface WorkspaceCirceResolutionDomain {
   readonly arcanaPicker: ContextualPickerModel<string>;
@@ -529,6 +567,7 @@ export interface WorkspaceTraitOfferInteraction {
     value: AuthoredTraitOffer,
     optionKey: TraitOptionKey,
   ) => WorkspaceTraitOptionDomainInteraction;
+  readonly ransomAssessment: (value: AuthoredTraitOffer) => WorkspaceRansomAssessment | undefined;
   /** Application-owned labels for trait keys carried by engine evidence. */
   readonly traitLabel: (traitKey: string) => string;
   readonly selectedIntent: (
@@ -864,6 +903,7 @@ export interface WorkspaceInteractionCatalog {
   readonly acquisitionConversions: ReadonlyMap<string, WorkspaceAcquisitionConversionInteraction>;
   readonly traitOffers: ReadonlyMap<string, WorkspaceTraitOfferInteraction>;
   readonly levelResolutions: ReadonlyMap<string, WorkspaceLevelResolutionInteraction>;
+  readonly steadyGrowth: ReadonlyMap<string, WorkspaceSteadyGrowthInteraction>;
   readonly bossCompletionArcana: ReadonlyMap<string, WorkspaceBossCompletionArcanaInteraction>;
   readonly keepsakeSelections: ReadonlyMap<string, WorkspaceKeepsakeSelectionInteraction>;
   readonly keepsakeEquipResults: ReadonlyMap<string, WorkspaceKeepsakeEquipResultInteraction>;
@@ -1166,6 +1206,7 @@ export interface WorkspaceRoomActions {
   readonly optionalRows: readonly WorkspaceRoomActionRow[];
   /** Missing required or retained stale rows rendered once outside active lifecycle order. */
   readonly repairRows: readonly WorkspaceRoomActionRow[];
+  readonly steadyGrowth?: readonly WorkspaceSteadyGrowthControl[];
 }
 
 export type WorkspaceRoomLifecycleBoundary =
@@ -1193,7 +1234,41 @@ export type WorkspaceRoomLifecycleTimelineEntry =
       readonly presentation: 'row' | 'fieldsCageAnchor';
       /** Engine-owned phase grouping for multi-encounter room workbenches. */
       readonly phaseKey?: string;
+    }
+  | {
+      readonly kind: 'automaticEffect';
+      readonly effect: 'steadyGrowth';
+      readonly address: SteadyGrowthOutcomeAddress;
+      readonly rank: number;
+      readonly phaseKey: string;
     };
+
+export interface WorkspaceSteadyGrowthControl {
+  readonly address: SteadyGrowthOutcomeAddress;
+  readonly marker: WorkspaceMarker;
+  readonly phaseKey: string;
+  readonly targetTraitKey?: string;
+}
+
+export interface WorkspaceSteadyGrowthDomain {
+  readonly emptyNoOp: boolean;
+  readonly picker: ContextualPickerModel<string>;
+  readonly selectedPossible: boolean;
+}
+
+export interface WorkspaceSteadyGrowthInteraction {
+  readonly key: string;
+  readonly owner: SteadyGrowthOutcomeAddress;
+  readonly intentFor: (
+    targetTraitKey: string | null,
+  ) => WorkspaceCommandIntent<
+    Extract<ProjectCommand, { readonly kind: 'ReplaceSteadyGrowthTarget' }>
+  >;
+  readonly forTarget: (targetTraitKey?: string | null) => {
+    readonly load: () => WorkspaceSteadyGrowthDomain | undefined;
+  };
+  readonly traitLabel: (traitKey: string) => string;
+}
 
 export interface WorkspaceFieldsCageSlotControl {
   readonly choices: readonly {
@@ -1468,6 +1543,8 @@ export interface WorkspaceShipPhasePresentation {
   readonly encounter?: WorkspaceEncounterPhase;
   readonly key: string;
   readonly label: string;
+  /** Engine-ordered lifecycle entries owned by this phase, including automatic effects. */
+  readonly timeline: readonly WorkspaceRoomLifecycleTimelineEntry[];
   /** Active optional actions owned by this phase but not yet inserted. */
   readonly optionalRows: readonly WorkspaceRoomActionRow[];
   readonly wheel?: WorkspaceRewardWheelDescriptor;
@@ -1885,6 +1962,8 @@ export interface WorkspaceRunStateTrait {
   readonly level?: number;
   readonly hammerRank?: 'RankI' | 'RankII';
   readonly traitKey: string;
+  readonly steadyGrowthProgress?: number;
+  readonly steadyGrowthInterval?: number;
 }
 
 export interface WorkspaceRunStateCoreTraitSlot {
@@ -1957,6 +2036,11 @@ export interface WorkspaceCompletionNode {
         readonly effect: 'judgment';
       }
     | {
+        readonly kind: 'steadyGrowth';
+        readonly address: SteadyGrowthOutcomeAddress;
+        readonly phaseKey: string;
+      }
+    | {
         readonly kind: 'bossDefeated';
         readonly key: 'bossDefeated';
       }
@@ -1968,6 +2052,7 @@ export interface WorkspaceCompletionNode {
     readonly requiredCount: number;
     readonly value: readonly string[];
   };
+  readonly steadyGrowth?: WorkspaceSteadyGrowthControl;
   readonly keepsakeSelection?: {
     readonly address: KeepsakeSelectionAddress;
     readonly equipResult?: {

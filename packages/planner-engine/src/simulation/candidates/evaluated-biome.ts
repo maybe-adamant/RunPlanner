@@ -1,4 +1,4 @@
-import type { SemanticAddress } from '../../authored-project/addresses';
+import { semanticAddressKey, type SemanticAddress } from '../../authored-project/addresses';
 import type { ProjectDocument } from '../../authored-project/model';
 import type {
   CompleteBlockedBiomeProjectEvaluation,
@@ -98,7 +98,7 @@ export function completeBiomeCount(
 export function prefixAuthoredRooms(
   prefix: MaterializedBiomePrefix,
 ): readonly CanonicalAuthoredRoom[] {
-  return Object.freeze([
+  const rooms = [
     ...(prefix.entryRoom === undefined ? [] : [prefix.entryRoom]),
     ...prefix.decisions.flatMap((decision): readonly CanonicalAuthoredRoom[] => {
       switch (decision.kind) {
@@ -108,11 +108,23 @@ export function prefixAuthoredRooms(
             ...decision.additional.map((continuation) => continuation.room),
           ];
         case 'hub':
-          return decision.board.targets.map((target) => target.room);
+          return [
+            ...decision.board.targets.map((target) => target.room),
+            ...decision.visits.flatMap((visit) => [visit.target.room, ...visit.enteredLocalRooms]),
+          ];
       }
     }),
     ...(prefix.frontier?.kind === 'exitDecision'
       ? prefix.frontier.additional.map((continuation) => continuation.room)
       : []),
-  ]);
+  ];
+  const seen = new Set<string>();
+  return Object.freeze(
+    rooms.filter((room) => {
+      const key = semanticAddressKey(room.origin);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    }),
+  );
 }

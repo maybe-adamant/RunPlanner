@@ -166,6 +166,8 @@ export {
 } from './room-actions';
 export {
   assembleCompletionRoomLifecycleTimeline,
+  appendSteadyGrowthTimelineEffects,
+  appendSteadyGrowthCompletionTimelineEffects,
   assembleRoomLifecycleTimeline,
   scopeRoomLifecycleTimeline,
   type RoomLifecycleBoundary,

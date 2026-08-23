@@ -1641,6 +1641,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
     }
   >();
   const steadyGrowthCandidateContexts = new Map<string, ReachedSteadyGrowthThreshold[]>();
+  const steadyGrowthOutcomeAddresses = new Map<string, SteadyGrowthOutcomeAddress>();
   function recordTraitChildSettlements(
     checkpoints: readonly ReachedTraitChildCheckpoint[] | undefined,
     occurrenceOwner: SemanticAddress,
@@ -5079,6 +5080,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
         }
         for (const { address, threshold } of steadyAdvance.thresholds) {
           const key = semanticAddressKey(address);
+          steadyGrowthOutcomeAddresses.set(key, address);
           const current = steadyGrowthCandidateContexts.get(key) ?? [];
           current.push(threshold);
           steadyGrowthCandidateContexts.set(key, current);
@@ -5379,6 +5381,29 @@ export function evaluateBiomeRewardsAssemblyInternal(
     selectedLevelResolutions: traitProducts.selectedLevelResolutions,
     figLeafPhaseCandidates: Object.freeze([...figLeafPhaseCandidates.values()]),
     gorgonPhaseCandidates: Object.freeze([...gorgonPhaseCandidates.values()]),
+    steadyGrowthOutcomes: Object.freeze(
+      [...steadyGrowthCandidateContexts.entries()].flatMap(([key, thresholds]) => {
+        const address = steadyGrowthOutcomeAddresses.get(key);
+        const first = thresholds[0];
+        if (address === undefined || first === undefined) return [];
+        return [
+          Object.freeze({
+            address,
+            sourceTraitKey: first.traitKey,
+            phaseKey: address.phaseKey,
+            requiredIntervals: Object.freeze(
+              thresholds.map((threshold) => threshold.requiredInterval),
+            ),
+            progressBefore: Object.freeze(
+              thresholds.map(
+                (threshold) =>
+                  threshold.before.equippedTraits[threshold.traitKey]?.steadyGrowthProgress ?? 0,
+              ),
+            ),
+          }),
+        ];
+      }),
+    ),
     derivedAcquisitionEntries: Object.freeze(
       [...derivedAcquisitionEntryContexts.values()].flatMap((frontiers) => {
         const first = frontiers[0];

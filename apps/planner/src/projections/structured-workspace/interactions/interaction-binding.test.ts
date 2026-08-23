@@ -13,6 +13,7 @@ import {
   createExitDecisionAddress,
   createHubDecisionAddress,
   createIncomingRewardAddress,
+  createNaturalSelectionResultAddress,
   createExitSelectionAddress,
   createOccurrenceAddress,
   createOccurrenceId,
@@ -25,6 +26,7 @@ import {
   createAcquisitionRoleAddress,
   createAcquisitionSiteAddress,
   createRouteStartKeepsakeSelectionAddress,
+  createSteadyGrowthOutcomeAddress,
   createTraitOfferAddress,
   createTargetAddress,
   semanticAddressKey,
@@ -77,6 +79,7 @@ import {
 } from '@run-planner/test-fixtures/surface';
 import { createCandidateSessionFactory } from '@planner/projections/candidateProjection';
 import type { CandidateProjectionSession } from '@planner/projections/candidateProjection';
+import type { WorkspaceSteadyGrowthControl } from '../contract';
 import { createContextualOptionResolver } from '@planner/projections/contextualOptions';
 import { createContextualPickerProjection } from '@planner/projections/contextualPicker';
 import { createRewardPickerProjection } from '@planner/projections/rewardPicker';
@@ -256,6 +259,7 @@ function bind(
   biomeKey: string,
   allocateOccurrenceId = () => createOccurrenceId('interaction-binding-start'),
   candidateSession?: CandidateProjectionSession,
+  steadyGrowthControls?: ReadonlyMap<string, WorkspaceSteadyGrowthControl>,
 ) {
   const authoredProject = project;
   const projectAssembly = simulateProjectAssembly(catalog, authoredProject);
@@ -331,6 +335,7 @@ function bind(
       traitControls,
       roomControls: assembly.roomControls,
       services: interactionServices,
+      ...(steadyGrowthControls === undefined ? {} : { steadyGrowthControls }),
       startInteractionRequirements: assembly.startInteractionRequirements,
       takeoverInteractionRequirements: assembly.takeoverInteractionRequirements,
       topologyRemovalInteractionRequirements: assembly.topologyRemovalInteractionRequirements,
@@ -750,6 +755,143 @@ describe('structured workspace interaction binding', () => {
         semanticAddressKey(createAllTogetherSetAddress(trait, 'option1', 'earth')),
       ),
     ).toBe(false);
+  });
+
+  it('binds Natural Selection to one exact child command and retains its engine-backed domain', () => {
+    const reward = createIncomingRewardAddress(goldenFBiome, goldenFStartId);
+    const trait = createTraitOfferAddress(reward, 'source');
+    let project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward,
+      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'DemeterUpgrade' } },
+    });
+    const value: AuthoredTraitOfferTraits = Object.freeze({
+      kind: 'traits',
+      giverKey: 'Demeter',
+      options: Object.freeze([
+        Object.freeze({ traitKey: 'GoodStuffBoon', rarity: 'Duo' as const }),
+        Object.freeze({ traitKey: 'DemeterSpecialBoon', rarity: 'Epic' as const }),
+        Object.freeze({ traitKey: 'ReserveManaHitShieldBoon', rarity: 'Epic' as const }),
+      ]) as AuthoredTraitOfferTraits['options'],
+      selectedOptionKey: 'option1',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait,
+      value,
+    });
+    const baseCandidateSession = createCandidateSessionFactory(catalog).bind(
+      simulateProjectAssembly(catalog, project),
+    );
+    const candidateSession = Object.freeze({
+      ...baseCandidateSession,
+      naturalSelectionResult: () =>
+        Object.freeze({
+          kind: 'naturalSelectionResult' as const,
+          result: Object.freeze({
+            branchSupport: Object.freeze([false]),
+            complete: false,
+            findings: Object.freeze([]),
+            nextTargetTraitKeys: Object.freeze(['ApolloWeaponBoon']),
+            supported: false,
+          }),
+        }),
+    }) as CandidateProjectionSession;
+    const bound = bind(project, 'Underworld', 'F', undefined, candidateSession);
+    const interaction = bound.interactions.traitOffers.get(semanticAddressKey(trait));
+    if (interaction === undefined) throw new Error('Natural Selection interaction is missing');
+    const natural = interaction.optionDomain(value, 'option1').naturalSelection;
+    if (natural === undefined) throw new Error('Natural Selection child is missing');
+    expect(natural.control.address).toEqual(createNaturalSelectionResultAddress(trait, 'option1'));
+    const domain = natural.forOffer(value).load();
+    expect(domain?.complete).toBe(false);
+    const retained = natural.forOffer(value, 'HestiaWeaponBoon').load();
+    const retainedItem = retained?.picker.sections
+      .flatMap((section) => section.items)
+      .find((item) => item.value === 'HestiaWeaponBoon');
+    expect(retainedItem).toMatchObject({ selected: true, state: 'impossible' });
+    const nextValue = Object.freeze({
+      ...value,
+      options: Object.freeze([
+        Object.freeze({ ...value.options[0]!, naturalSelectionTargets: ['ApolloWeaponBoon'] }),
+        ...value.options.slice(1),
+      ]) as unknown as AuthoredTraitOfferTraits['options'],
+    });
+    const command = interaction.intentFor(nextValue).command;
+    expect(command).toMatchObject({
+      kind: 'ReplaceTraitOffer',
+      trait,
+      value: {
+        kind: 'traits',
+        options: [
+          { naturalSelectionTargets: ['ApolloWeaponBoon'] },
+          expect.anything(),
+          expect.anything(),
+        ],
+      },
+    });
+  });
+
+  it('binds Steady Growth to its phase-owned candidate and exact target command', () => {
+    const project = createGoldenFGHIProject();
+    const owner = createOccurrenceAddress(goldenFBiome, goldenFOccurrenceId(1, 1));
+    const outcome = createSteadyGrowthOutcomeAddress(owner, 'Encounter');
+    const control: WorkspaceSteadyGrowthControl = Object.freeze({
+      address: outcome,
+      marker: Object.freeze({
+        address: outcome,
+        assessment: 'assessed' as const,
+        findingCount: 0,
+        focusKey: 'test-steady-growth',
+      }),
+      phaseKey: 'Encounter',
+    });
+    const baseCandidateSession = createCandidateSessionFactory(catalog).bind(
+      simulateProjectAssembly(catalog, project),
+    );
+    const candidateSession = Object.freeze({
+      ...baseCandidateSession,
+      steadyGrowthOutcome: () =>
+        Object.freeze({
+          kind: 'steadyGrowthOutcome' as const,
+          result: Object.freeze({
+            requiredIntervals: Object.freeze([6]),
+            branchSupport: Object.freeze([true]),
+            eligibleTargetKeys: Object.freeze(['ApolloWeaponBoon']),
+            emptyNoOp: false,
+            findings: Object.freeze([]),
+            selectedPossible: true,
+          }),
+        }),
+    }) as CandidateProjectionSession;
+    const bound = bind(
+      project,
+      'Underworld',
+      'F',
+      undefined,
+      candidateSession,
+      new Map([[semanticAddressKey(outcome), control]]),
+    );
+    const interaction = bound.interactions.steadyGrowth.get(semanticAddressKey(outcome));
+    if (interaction === undefined) throw new Error('Steady Growth interaction is missing');
+    expect(
+      interaction
+        .forTarget()
+        .load()
+        ?.picker.sections.flatMap((section) => section.items)
+        .map((item) => item.value),
+    ).toEqual(['ApolloWeaponBoon']);
+    const retainedDomain = interaction.forTarget('HestiaWeaponBoon').load();
+    expect(
+      retainedDomain?.picker.sections
+        .flatMap((section) => section.items)
+        .find((item) => item.value === 'HestiaWeaponBoon'),
+    ).toMatchObject({ selected: true, state: 'impossible' });
+    expect(interaction.intentFor('ApolloWeaponBoon').command).toEqual({
+      kind: 'ReplaceSteadyGrowthTarget',
+      outcome,
+      targetTraitKey: 'ApolloWeaponBoon',
+    });
   });
 
   it('adapts engine-owned Echo Boon distinctness into contextual row domains', () => {

@@ -12,6 +12,9 @@ import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import { authorLegalTraitOffers, replaceTestShopOfferActions } from '../shared';
 import {
   loadSurfaceNCheckpoint,
+  loadSurfaceNNaturalSelectionFrontierCheckpoint,
+  loadSurfaceNQueensRansomCheckpoint,
+  loadSurfaceNSteadyGrowthFrontierCheckpoint,
   loadSurfaceNCompleteHubFrontierCheckpoint,
   loadSurfaceNEntryFrontierCheckpoint,
   loadSurfaceNEntryFrontierResolvedCheckpoint,
@@ -115,6 +118,18 @@ export function pOccurrenceId(
 
 export function loadSurfaceNProject(): ProjectDocument {
   return loadSurfaceNCheckpoint();
+}
+
+export function loadSurfaceNNaturalSelectionFrontierProject(): ProjectDocument {
+  return loadSurfaceNNaturalSelectionFrontierCheckpoint();
+}
+
+export function loadSurfaceNQueensRansomProject(): ProjectDocument {
+  return loadSurfaceNQueensRansomCheckpoint();
+}
+
+export function loadSurfaceNSteadyGrowthFrontierProject(): ProjectDocument {
+  return loadSurfaceNSteadyGrowthFrontierCheckpoint();
 }
 
 export function loadSurfaceNEntryFrontierProject(): ProjectDocument {

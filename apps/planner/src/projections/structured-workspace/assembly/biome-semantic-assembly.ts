@@ -27,7 +27,10 @@ import type {
   Catalog,
 } from '@run-planner/engine/catalog-schema';
 import type { ProjectBiomeEvaluation } from '@run-planner/engine/simulation';
-import { assembleCompletionRoomLifecycleTimeline } from '@run-planner/engine/simulation';
+import {
+  appendSteadyGrowthCompletionTimelineEffects,
+  assembleCompletionRoomLifecycleTimeline,
+} from '@run-planner/engine/simulation';
 
 import {
   appendUniqueRewardControls,
@@ -501,6 +504,7 @@ export function assembleWorkspaceBiomeSemantics(
         : { fieldsBatchFacts: request.fieldsBatchFacts }),
       facts: requireOccurrenceAssemblyFacts(biome, occurrenceFacts, request.occurrence),
       levelResolutionAssessment: source.levelResolutionAssessment,
+      steadyGrowthOutcomes: source.steadyGrowthOutcomes,
       isActiveTraitOffer: source.isActiveTraitOffer,
       derivedAcquisitionEntries: source.derivedAcquisitionEntries,
       markerDestinations,
@@ -774,18 +778,52 @@ export function assembleWorkspaceBiomeSemantics(
         keepsakeSelectionAddress === undefined
           ? undefined
           : markerDestinations.marker(keepsakeSelectionAddress);
-      const timeline = assembleCompletionRoomLifecycleTimeline({
-        catalog,
-        owner: address,
-        roomGameName: descriptor.roomGameName,
-        ...(judgment === undefined ? {} : { judgment: judgment.address }),
-      }).entries.map((entry) =>
-        entry.kind === 'boundary'
-          ? Object.freeze({ kind: 'boundary' as const, boundary: entry.boundary })
-          : entry.kind === 'bossDefeated'
-            ? Object.freeze({ kind: 'bossDefeated' as const, key: entry.key })
-            : Object.freeze({ kind: 'fixedEffect' as const, effect: entry.effect }),
+      const completionSteadyGrowth =
+        descriptor.role !== 'boss'
+          ? undefined
+          : (evaluation !== undefined && 'rewards' in evaluation
+              ? evaluation.rewards.steadyGrowthOutcomes
+              : Object.freeze([])
+            ).find(
+              (outcome) =>
+                outcome.address.owner.kind === 'completionRoom' &&
+                outcome.address.owner.role === 'boss',
+            );
+      const steadyGrowth =
+        completionSteadyGrowth === undefined
+          ? undefined
+          : Object.freeze({
+              address: completionSteadyGrowth.address,
+              marker: markerDestinations.marker(completionSteadyGrowth.address),
+              phaseKey: completionSteadyGrowth.phaseKey,
+              ...(plan.bossCompletionSteadyGrowthTarget === undefined
+                ? {}
+                : { targetTraitKey: plan.bossCompletionSteadyGrowthTarget }),
+            });
+      const completionTimeline = appendSteadyGrowthCompletionTimelineEffects(
+        assembleCompletionRoomLifecycleTimeline({
+          catalog,
+          owner: address,
+          roomGameName: descriptor.roomGameName,
+          ...(judgment === undefined ? {} : { judgment: judgment.address }),
+        }),
+        steadyGrowth === undefined ? [] : [steadyGrowth.address],
       );
+      const timeline = completionTimeline.entries.map((entry) => {
+        const projected =
+          entry.kind === 'boundary'
+            ? Object.freeze({ kind: 'boundary' as const, boundary: entry.boundary })
+            : entry.kind === 'bossDefeated'
+              ? Object.freeze({ kind: 'bossDefeated' as const, key: entry.key })
+              : entry.kind === 'fixedEffect'
+                ? Object.freeze({ kind: 'fixedEffect' as const, effect: entry.effect })
+                : Object.freeze({
+                    kind: 'steadyGrowth' as const,
+                    address: entry.address,
+                    phaseKey: entry.phaseKey,
+                  });
+        return projected;
+      });
       const completionRooms =
         evaluation?.authoring === 'complete' && evaluation.validity === 'valid'
           ? evaluation.snapshot.completionRooms
@@ -855,6 +893,7 @@ export function assembleWorkspaceBiomeSemantics(
         ...(roomActions === undefined ? {} : { roomActions }),
         timeline: Object.freeze(timeline),
         ...(judgment === undefined ? {} : { judgment }),
+        ...(steadyGrowth === undefined ? {} : { steadyGrowth }),
         ...(keepsakeSelectionAddress === undefined ||
         keepsakeSelectionMarker === undefined ||
         postbossKeepsakeDisposition === undefined
@@ -880,6 +919,7 @@ export function assembleWorkspaceBiomeSemantics(
         Object.freeze([
           node.marker,
           ...(judgment === undefined ? [] : [judgment.marker]),
+          ...(steadyGrowth === undefined ? [] : [steadyGrowth.marker]),
           ...(node.keepsakeSelection === undefined ? [] : [node.keepsakeSelection.marker]),
           ...(node.roomActions === undefined ? [] : node.roomActions.rows.map((row) => row.marker)),
         ]),

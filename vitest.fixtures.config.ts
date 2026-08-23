@@ -6,7 +6,10 @@ export default mergeConfig(
   sharedVitestConfig,
   defineConfig({
     test: {
-      include: ['test/fixtures/authored-project/checkpoints/check.test.ts'],
+      include: [
+        'test/fixtures/authored-project/checkpoints/check.test.ts',
+        'test/fixtures/authored-project/checkpoints/run-impacting-traits.test.ts',
+      ],
       maxWorkers: 1,
     },
   }),

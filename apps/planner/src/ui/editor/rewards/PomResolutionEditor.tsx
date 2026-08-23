@@ -123,6 +123,41 @@ function candidatePicker(
   });
 }
 
+/** Shared single-target presentation leaf for random Pom-like effects. */
+export function RandomTraitTargetPicker({
+  ariaLabel,
+  id,
+  interaction,
+  model,
+  onOpenChange,
+  onSelect,
+  open,
+  selected,
+}: {
+  readonly ariaLabel: string;
+  readonly id: string;
+  readonly interaction: { readonly traitLabel: (traitKey: string) => string };
+  readonly model: ContextualPickerModel<string>;
+  readonly onOpenChange?: (open: boolean) => void;
+  readonly onSelect: (targetTraitKey: string) => void;
+  readonly open?: boolean;
+  readonly selected: string | null;
+}) {
+  return (
+    <ContextualPicker
+      ariaLabel={ariaLabel}
+      id={id}
+      label="Recorded target"
+      model={model}
+      onSelect={onSelect}
+      {...(onOpenChange === undefined ? {} : { onOpenChange })}
+      {...(open === undefined ? {} : { open })}
+      placeholder="Choose a trait"
+      {...(selected === null ? {} : { triggerLabel: interaction.traitLabel(selected) })}
+    />
+  );
+}
+
 export function PomResolutionLauncher({
   control,
   interactions,
@@ -357,17 +392,16 @@ export function PomResolutionEditor({
           </button>
         </div>
       ) : (
-        <ContextualPicker
+        <RandomTraitTargetPicker
           ariaLabel="Recorded random Pom target"
           id={`${domKey}-pom-target`}
-          label="Recorded target"
+          interaction={interaction}
           model={candidatePicker(interaction, activeGroup, randomTarget, [])}
           onSelect={(target) => {
             setRandomTarget(target);
             evaluateDraft(Object.freeze({ kind: 'random', targetTraitKey: target }));
           }}
-          placeholder="Choose a trait"
-          {...(randomTarget === null ? {} : { triggerLabel: interaction.traitLabel(randomTarget) })}
+          selected={randomTarget}
         />
       )}
       <section aria-label="Pom feedback" className="trait-offer-feedback" role="status">

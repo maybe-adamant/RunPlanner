@@ -16,6 +16,7 @@ import {
   type KeepsakeEquipResultAddress,
   type AcquisitionRoleAddress,
   type AcquisitionEntryAddress,
+  type SteadyGrowthOutcomeAddress,
 } from '../../authored-project/addresses';
 import type { AuthoredBiomePlan, RouteLoadout } from '../../authored-project/model';
 import { evaluateBiomeRoomGenerationAssemblyInternal } from '../generation/biome';
@@ -36,6 +37,7 @@ import {
   type DerivedAcquisitionEntryCandidateArtifacts,
   type KeepsakeEquipResultCandidateArtifacts,
   type KeepsakeSelectionCandidateArtifacts,
+  type SteadyGrowthCandidateArtifacts,
 } from '../candidate-artifacts';
 import {
   composeBiomeHistoryPrefixWithEncounterValidation,
@@ -301,6 +303,9 @@ function derivedAcquisitionEntryAncestor(
 
 export function occurrenceOwnerAddress(address: SemanticAddress): OccurrenceAddress | undefined {
   if (address.kind === 'occurrence') return address;
+  if (address.kind === 'steadyGrowthOutcome') {
+    return address.owner.kind === 'occurrence' ? address.owner : undefined;
+  }
   // A room-exit settlement finding is addressed to its atomic entry, whose
   // occurrence owner is intentionally one layer further out through its
   // exact site. Keep that ancestry when a settlement itself is the first
@@ -543,6 +548,8 @@ function retainBlockedRegionProducts(
     blockedAt.kind === 'levelResolution' ? blockedAt : undefined;
   const blockedBossCompletionAt: BossCompletionArcanaAddress | undefined =
     blockedAt.kind === 'bossCompletionArcana' ? blockedAt : undefined;
+  const blockedSteadyGrowthAt: SteadyGrowthOutcomeAddress | undefined =
+    blockedAt.kind === 'steadyGrowthOutcome' ? blockedAt : undefined;
   const blockedKeepsakeAt: KeepsakeSelectionAddress | undefined =
     blockedAt.kind === 'keepsakeSelection' ? blockedAt : undefined;
   const blockedKeepsakeEquipResultAt: KeepsakeEquipResultAddress | undefined =
@@ -694,6 +701,20 @@ function retainBlockedRegionProducts(
             semanticAddressKey(address) === semanticAddressKey(blockedBossCompletionAt)
               ? blockedBossCapability
               : retainedArtifacts.bossCompletionArcana.at(address),
+        });
+  const blockedSteadyGrowthCapability =
+    blockedSteadyGrowthAt === undefined
+      ? undefined
+      : (selectedArtifacts.steadyGrowth.at(blockedSteadyGrowthAt) ??
+        blockedArtifacts.steadyGrowth.at(blockedSteadyGrowthAt));
+  const steadyGrowth: SteadyGrowthCandidateArtifacts =
+    blockedSteadyGrowthAt === undefined || blockedSteadyGrowthCapability === undefined
+      ? retainedArtifacts.steadyGrowth
+      : Object.freeze({
+          at: (address: SteadyGrowthOutcomeAddress) =>
+            semanticAddressKey(address) === semanticAddressKey(blockedSteadyGrowthAt)
+              ? blockedSteadyGrowthCapability
+              : retainedArtifacts.steadyGrowth.at(address),
         });
   const blockedKeepsakeCapability =
     blockedKeepsakeAt === undefined
@@ -884,7 +905,7 @@ function retainBlockedRegionProducts(
     keepsakeEquipResults,
     acquisitionConversions,
     derivedAcquisitionEntries,
-    retainedArtifacts.steadyGrowth,
+    steadyGrowth,
   );
   return Object.freeze({
     rewards:
@@ -992,6 +1013,7 @@ function findingOwnerOrigin(finding: SemanticFinding): SemanticAddress {
     origin.kind === 'echoLastRunBoon' ||
     origin.kind === 'echoLastReward' ||
     origin.kind === 'allTogetherSet' ||
+    origin.kind === 'steadyGrowthOutcome' ||
     origin.kind === 'acquisitionEntry' ||
     origin.kind === 'acquisitionSite'
   ) {
@@ -1027,6 +1049,7 @@ export function ownsOccurrence(origin: SemanticAddress, occurrenceId: string): b
     origin.kind === 'echoLastRunBoon' ||
     origin.kind === 'echoLastReward' ||
     origin.kind === 'allTogetherSet' ||
+    origin.kind === 'steadyGrowthOutcome' ||
     origin.kind === 'acquisitionEntry' ||
     origin.kind === 'acquisitionSite'
   )
@@ -2120,7 +2143,7 @@ function clampSelectedProducts(
       retainedInteractions.keepsakeEquipResults,
       retainedInteractions.acquisitionConversions,
       retainedInteractions.derivedAcquisitionEntries,
-      evaluated.candidateArtifacts.steadyGrowth,
+      retainedInteractions.steadyGrowth,
     ),
   });
 }

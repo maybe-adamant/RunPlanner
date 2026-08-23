@@ -39,6 +39,10 @@ export interface DecisionTraitState {
   readonly bannedTraitKeys: TraitHistoryState['bannedTraitKeys'];
   readonly properUpbringingActive?: TraitHistoryState['properUpbringingActive'];
   readonly echoShopDuplicateStatus?: 'pending' | 'consumed';
+  /** Engine-derived Steady Growth progress and current rarity interval. */
+  readonly steadyGrowth?: Readonly<
+    Record<string, { readonly progress: number; readonly interval: number }>
+  >;
   /** Derived selected-pair chronology; presentation does not replay lifecycle events. */
   readonly chaos: {
     readonly active: readonly DecisionActiveChaosState[];
@@ -433,6 +437,24 @@ function traitState(catalog: Catalog, history: TraitHistoryState | undefined): D
       if (event.kind !== 'traitOffer') return false;
       return event.options[optionIndex(event.selectedOptionKey)]?.traitKey === echoShopTrait.key;
     });
+  const steadyGrowth = Object.fromEntries(
+    Object.values(source.equippedTraits).flatMap((equipped) => {
+      const disposition = catalog.traits.byKey[equipped.traitKey]?.selectedDisposition;
+      if (disposition?.kind !== 'steadyGrowth') return [];
+      const rarity = equipped.rarity;
+      if (rarity === undefined || !(rarity in disposition.intervalsByRarity)) return [];
+      return [
+        [
+          equipped.traitKey,
+          Object.freeze({
+            interval:
+              disposition.intervalsByRarity[rarity as keyof typeof disposition.intervalsByRarity],
+            progress: equipped.steadyGrowthProgress ?? 0,
+          }),
+        ] as const,
+      ];
+    }),
+  );
   return Object.freeze({
     equippedTraits: Object.freeze({ ...source.equippedTraits }),
     equippedSlots: Object.freeze({ ...source.equippedSlots }),
@@ -440,6 +462,9 @@ function traitState(catalog: Catalog, history: TraitHistoryState | undefined): D
     godBoonRarityCounts: Object.freeze({ ...source.godBoonRarityCounts }),
     upgradableTraitCount: source.upgradableTraitCount,
     bannedTraitKeys: source.bannedTraitKeys,
+    ...(Object.keys(steadyGrowth).length === 0
+      ? {}
+      : { steadyGrowth: Object.freeze(steadyGrowth) }),
     chaos: Object.freeze({
       active: Object.freeze(
         source.activeChaosCurses.map((entry) => {

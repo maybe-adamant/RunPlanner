@@ -2494,9 +2494,14 @@ export function assessNaturalSelectionTargets(
     simulated.set(targetTraitKey, Object.freeze({ ...target, level: newLevel }));
     steps.push(Object.freeze({ targetTraitKey, oldLevel, newLevel }));
   }
-  const nextTargetTraitKeys = stableOrder.filter((key) =>
-    isPomUpgradeTarget(catalog, simulated.get(key)),
-  );
+  const nextTargetTraitKeys: string[] = [];
+  for (let attempts = 0; attempts < stableOrder.length; attempts += 1) {
+    const candidateKey = stableOrder[(cursor + attempts) % stableOrder.length]!;
+    if (isPomUpgradeTarget(catalog, simulated.get(candidateKey))) {
+      nextTargetTraitKeys.push(candidateKey);
+      break;
+    }
+  }
   return Object.freeze({
     legal: true,
     complete: targets.length === levelCount || nextTargetTraitKeys.length === 0,

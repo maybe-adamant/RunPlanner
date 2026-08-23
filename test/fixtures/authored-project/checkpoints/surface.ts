@@ -3,6 +3,9 @@ import type { AuthoredProjectCheckpointId } from './manifest';
 import { checkpointArtifact, type CheckpointArtifact } from './loader';
 
 import surfaceNRaw from './surface-n.runplanner.json';
+import surfaceNNaturalSelectionRaw from './surface-n-natural-selection-frontier.runplanner.json';
+import surfaceNQueensRansomRaw from './surface-n-queens-ransom.runplanner.json';
+import surfaceNSteadyGrowthRaw from './surface-n-steady-growth-frontier.runplanner.json';
 import surfaceNORaw from './surface-no.runplanner.json';
 import surfaceNOPRaw from './surface-nop.runplanner.json';
 import surfaceNOPQRaw from './surface-nopq.runplanner.json';
@@ -17,6 +20,9 @@ type SurfaceCheckpointId = Extract<AuthoredProjectCheckpointId, `surface-${strin
 
 export const surfaceCheckpointArtifacts = Object.freeze({
   'surface-n': checkpointArtifact(surfaceNRaw),
+  'surface-n-natural-selection-frontier': checkpointArtifact(surfaceNNaturalSelectionRaw),
+  'surface-n-queens-ransom': checkpointArtifact(surfaceNQueensRansomRaw),
+  'surface-n-steady-growth-frontier': checkpointArtifact(surfaceNSteadyGrowthRaw),
   'surface-no': checkpointArtifact(surfaceNORaw),
   'surface-nop': checkpointArtifact(surfaceNOPRaw),
   'surface-nopq': checkpointArtifact(surfaceNOPQRaw),
@@ -30,6 +36,18 @@ export const surfaceCheckpointArtifacts = Object.freeze({
 
 export function loadSurfaceNCheckpoint(): ProjectDocument {
   return surfaceCheckpointArtifacts['surface-n'].load();
+}
+
+export function loadSurfaceNNaturalSelectionFrontierCheckpoint(): ProjectDocument {
+  return surfaceCheckpointArtifacts['surface-n-natural-selection-frontier'].load();
+}
+
+export function loadSurfaceNQueensRansomCheckpoint(): ProjectDocument {
+  return surfaceCheckpointArtifacts['surface-n-queens-ransom'].load();
+}
+
+export function loadSurfaceNSteadyGrowthFrontierCheckpoint(): ProjectDocument {
+  return surfaceCheckpointArtifacts['surface-n-steady-growth-frontier'].load();
 }
 
 export function loadSurfaceNOCheckpoint(): ProjectDocument {

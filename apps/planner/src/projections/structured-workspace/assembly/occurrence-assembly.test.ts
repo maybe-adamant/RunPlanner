@@ -14,6 +14,7 @@ import {
   createShopOfferAddress,
   createAcquisitionEntryAddress,
   createAcquisitionSiteAddress,
+  createSteadyGrowthOutcomeAddress,
   createTraitOfferAddress,
   echoLastRewardPickupEntryKey,
   createRouteStartKeepsakeSelectionAddress,
@@ -115,6 +116,7 @@ function assemble(
   evaluatedRoomTransform?: (
     room: NonNullable<Parameters<typeof assembleWorkspaceOccurrence>[0]['evaluatedRoom']>,
   ) => NonNullable<Parameters<typeof assembleWorkspaceOccurrence>[0]['evaluatedRoom']>,
+  steadyGrowthOutcomes?: Parameters<typeof assembleWorkspaceOccurrence>[0]['steadyGrowthOutcomes'],
 ) {
   const source = biomeSource(project, routeKey, biomeKey, gorgonSupport);
   const occurrence = source.occurrence(occurrenceId);
@@ -159,6 +161,7 @@ function assemble(
     isActiveTraitOffer: source.isActiveTraitOffer,
     derivedAcquisitionEntries: derivedAcquisitionEntries ?? source.derivedAcquisitionEntries,
     ...(projectedEvaluatedRoom === undefined ? {} : { evaluatedRoom: projectedEvaluatedRoom }),
+    ...(steadyGrowthOutcomes === undefined ? {} : { steadyGrowthOutcomes }),
     markerDestinations: markers.emitter,
     ordinaryRewardForfeited: (owner) => source.ordinaryRewardForfeited(owner.address),
     occurrence,
@@ -187,6 +190,50 @@ it('projects a selected SpellDrop child from exact engine candidate capability',
   expect(
     assembled.assembly.rewardControls.flatMap((control) => control.traitOffers ?? []),
   ).toContainEqual(expect.objectContaining({ address }));
+});
+
+it('carries a reached O Ship Steady Growth effect in engine timeline order', () => {
+  const occurrenceId = oOccurrenceIds.combat04;
+  const owner = createOccurrenceAddress(oBiome, occurrenceId);
+  const outcome = createSteadyGrowthOutcomeAddress(owner, 'Combat1');
+  const project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
+    kind: 'ReplaceSteadyGrowthTarget',
+    outcome,
+    targetTraitKey: 'ApolloWeaponBoon',
+  });
+  const assembled = assemble(
+    project,
+    'Surface',
+    'O',
+    occurrenceId,
+    undefined,
+    undefined,
+    undefined,
+    [
+      Object.freeze({
+        address: outcome,
+        sourceTraitKey: 'BoonGrowthBoon',
+        phaseKey: 'Combat1',
+        requiredIntervals: Object.freeze([4]),
+        progressBefore: Object.freeze([1]),
+      }),
+    ],
+  );
+  if (assembled.assembly.node.room.workbench.kind !== 'ship')
+    throw new Error('O Combat04 is not a Ship workbench');
+  const phase = assembled.assembly.node.room.workbench.phases.find(
+    (candidate) => candidate.key === 'Combat1',
+  );
+  if (phase === undefined) throw new Error('O Combat04 Combat1 phase is missing');
+  const endIndex = phase.timeline.findIndex(
+    (entry) => entry.kind === 'boundary' && entry.boundary.kind === 'encounterEnd',
+  );
+  const steadyIndex = phase.timeline.findIndex((entry) => entry.kind === 'automaticEffect');
+  expect(endIndex).toBeGreaterThanOrEqual(0);
+  expect(steadyIndex).toBe(endIndex + 1);
+  expect(assembled.assembly.node.room.roomActions?.steadyGrowth).toEqual([
+    expect.objectContaining({ address: outcome, targetTraitKey: 'ApolloWeaponBoon' }),
+  ]);
 });
 
 it('retains the reached unresolved SpellDrop child as the exact repair control', () => {

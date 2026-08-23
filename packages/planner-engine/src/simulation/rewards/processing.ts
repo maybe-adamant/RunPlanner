@@ -918,6 +918,7 @@ function applyTraitOfferForAcquisitionInternal(
   const acquisitionIdentityOwner = traitOwnerAddress(reward.origin);
   const acquisitionIdentity =
     (effectiveAuthored.kind === 'chaos' ||
+      selectedForIdentityDisposition?.kind === 'steadyGrowth' ||
       (selectedForIdentityDisposition?.kind === 'echo' &&
         (selectedForIdentityDisposition.effect === 'doubleShop' ||
           selectedForIdentityDisposition.effect === 'repeatKeepsake'))) &&

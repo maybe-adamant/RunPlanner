@@ -1,5 +1,7 @@
 export { assembleRoomActionRoster, scopeRoomActionRoster } from './assemble';
 export {
+  appendSteadyGrowthCompletionTimelineEffects,
+  appendSteadyGrowthTimelineEffects,
   assembleCompletionRoomLifecycleTimeline,
   assembleRoomLifecycleTimeline,
   scopeRoomLifecycleTimeline,

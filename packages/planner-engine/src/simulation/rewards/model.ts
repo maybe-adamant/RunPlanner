@@ -4,6 +4,7 @@ import type {
   AcquisitionSiteAddress,
   BatchRewardStoreAddress,
   SemanticAddress,
+  SteadyGrowthOutcomeAddress,
   TargetAddress,
 } from '../../authored-project/addresses';
 import type { ConcreteAcquisitionEvent, ResolvedRewardOffer } from '../../reward-kernel/model';
@@ -134,6 +135,14 @@ export interface BiomeRewardSimulation extends RewardSimulationBase {
   readonly selectedLevelResolutions: readonly SelectedLevelResolutionAssessment[];
   readonly figLeafPhaseCandidates: readonly FigLeafPhaseCandidateSupport[];
   readonly gorgonPhaseCandidates: readonly GorgonPhaseCandidateSupport[];
+  /** Exact reached automatic Steady Growth checkpoints for workspace timelines. */
+  readonly steadyGrowthOutcomes: readonly {
+    readonly address: SteadyGrowthOutcomeAddress;
+    readonly sourceTraitKey: string;
+    readonly phaseKey: string;
+    readonly requiredIntervals: readonly number[];
+    readonly progressBefore: readonly number[];
+  }[];
   readonly derivedAcquisitionEntries: readonly {
     readonly address: import('../../authored-project/addresses').AcquisitionEntryAddress;
     readonly kind: import('./processing').DerivedAcquisitionEntryFrontier['kind'];
