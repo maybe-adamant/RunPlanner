@@ -213,14 +213,22 @@ The generic target tests remain next-rarity support, non-`BlockStacking`, and
 the existing core-god declaration authority. The three Hephaestus targets also
 consume their catalog-declared maximum eligible level by current rarity:
 
-| Target                                       | Common | Rare | Epic |
-| -------------------------------------------- | -----: | ---: | ---: |
-| Hephaestus Attack — `HephaestusWeaponBoon`   |      9 |    7 |    5 |
-| Hephaestus Special — `HephaestusSpecialBoon` |     11 |    9 |    7 |
-| Hephaestus Sprint — `HephaestusSprintBoon`   |      8 |    7 |    6 |
+| Target                                       | Common | Rare | Epic | Heroic |
+| -------------------------------------------- | -----: | ---: | ---: | -----: |
+| Hephaestus Attack — `HephaestusWeaponBoon`   |      9 |    7 |    5 |      3 |
+| Hephaestus Special — `HephaestusSpecialBoon` |     11 |    9 |    7 |      5 |
+| Hephaestus Sprint — `HephaestusSprintBoon`   |      8 |    7 |    6 |      5 |
 
-Heroic targets fail the generic next-rarity rule. The table is a narrow target
-eligibility fact; do not add general combat cooldown state to the planner.
+The table is declaration-owned and consumed by the shared in-run upgrade
+predicate used by ordinary Poms, Natural Selection, Bridal Glow, and Steady
+Growth. The Common/Rare/Epic/Heroic cells all matter for level-up
+effectiveness, including Pom and Natural Selection targeting. Bridal Glow and
+Steady Growth additionally require a valid next rarity, so a Heroic trait
+cannot be their rarity-promotion target. Proper Upbringing deliberately does
+not use this predicate: its direct Common-to-Rare floor can promote a
+cooldown-capped Common Hephaestus trait to Rare even when the effective
+cooldown does not change. Do not add general combat cooldown state to the
+planner.
 
 Whenever Proper Upbringing promotes an equipped Common Bridal Glow to Rare,
 including during the same acquisition that activates the floor, the replayed

@@ -73,7 +73,7 @@ completion-owned Room Action order owns chronology; Gold materializes from the f
 non-Spell purchase before that source's acquisition effects and may be picked
 up later among the other room entries.
 
-The current strict authored contract is schema 50. Its earlier schema-41
+The current strict authored contract is schema 52. Its earlier schema-41
 Narcissus, Mourning Fields, and Artificer surface remains intact: Narcissus
 exposes every pickup consequential to Time Piece or
 Artificer, including producer-owned Psyche without adding it to a counted
@@ -97,6 +97,17 @@ sixth `Spell` equipment slot; Sky Fall is the Aspect of Selene's linked
 starting trait. Aspect-owned later Spell Drops retain their acquisition while
 their unsupported Path of Stars child is dormant. Spell Drop is not an Echo
 last-reward replay source, while Talent Drop remains replayable.
+
+Natural Selection, Queen's Ransom, King's Ransom, and Steady Growth are also
+supported run-impacting trait outcomes. Natural Selection authors one legal
+ordered allocation of up to eight core-slot levels; each Ransom derives its
+provider-indexed removals and level gain from the current trait frontier; and
+Steady Growth advances from qualifying encounter-end-effect checkpoints and
+authors only a reached automatic rarity target. The three declaration-owned
+`BlockOfferIfPreviouslyPicked` traits retain selected-offer history after later
+removal, so they cannot be offered again. Sea Star, Buried Treasure, and Quick
+Buck remain deliberately deferred with their source contacts retained in the
+run-impacting trait audit.
 
 ## Architecture
 

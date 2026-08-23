@@ -12,13 +12,26 @@ by the owning design authorities and active delivery plans.
 
 ## Active Frontier
 
-The current persisted contract is strict schema 51. The occurrence/action
+The current persisted contract is strict schema 52 with catalog
+`0.32.1-run-impacting-traits`. The occurrence/action
 delivery landed occurrence-backed door staging at `e1e3af0`, one unified room
 chronology at `f38247d`, the corrected door contract at `daa876f`, the opening
 reward frontier at `fdfd2dc`, the engine-walk N Hub board at `aa09c10`, and
 direct outgoing-frontier rendering at `b4be69f`. Every supported authored main
 or N side room is one occurrence; topology, door-visible identity, room-local
 payload, participation, and chronology have distinct owners.
+
+The run-impacting trait phase is now landed. `525c1b5` (`feat(traits): model
+selection ransom and steady growth effects`) delivers the catalog, schema-52
+authored contacts, chronological Natural Selection/Ransom/Steady Growth
+simulation, candidate products, shared Hephaestus level limits, and checkpoint
+migrations. `95dbe88` (`feat(editor): author automatic trait outcomes`) adds
+the compound Natural Selection editor, read-only Ransom preview, fixed Steady
+Growth timeline rows, target interaction, Run State projection, and product
+fixtures. `2fee722` (`fix(traits): preserve one-time offer history`) advances
+the catalog-only correction to `0.32.1-run-impacting-traits` and preserves
+selected-offer history for Bridal Glow, Buried Treasure, and Cherished
+Heirloom after removal.
 
 The lifecycle workbench delivery is complete. `ddada8b` added the engine-owned
 room timeline and Overview/Timeline/Doors presentation, including Fields'
@@ -3100,3 +3113,42 @@ build at 398 transformed modules. The build retained only the existing
 greater-than-500-kB chunk advisory. The factual append afterward was checked
 with Markdown formatting, local-link resolution, stale-reference scans, and
 `git diff --check`; the complete gate was not rerun.
+
+## Run-impacting trait effects closure
+
+The Natural Selection/Ransom/Steady Growth phase is complete through Gates A
+and B on 2026-08-23. The locked plan landed at `c2c87ba` from base `e828577`.
+Gate A landed at `525c1b5` and owns the closed catalog dispositions, strict
+schema-52 authored contacts, Natural Selection's ordered level allocation,
+provider-indexed Ransom removal and level transforms, Steady Growth's
+`encounterEndEffectsApplied` clock and rarity mutation, declaration-owned
+Hephaestus cooldown limits, candidate/findings products, and migrations. Gate B
+landed at `95dbe88` and owns the application compound-outcome presentation,
+Ransom preview, fixed Steady Growth timeline interaction, Run State progress,
+finding routing, and representative checkpoint/product witnesses.
+
+The focused correction `2fee722` then advanced the catalog to
+`0.32.1-run-impacting-traits`. Selected trait-offer history now retains the
+source `BlockOfferIfPreviouslyPicked` guard after Ransom removal, with a
+distinct candidate finding; the authored schema remains 52. Sea Star, Buried
+Treasure, and Quick Buck generated-pickup behavior remain explicitly deferred
+to their shared optional-pickup and money chronology slice.
+
+Recorded implementation validation is limited to the owning and changed lanes:
+the engine lane passed 90 files/1,266 tests, the catalog lane passed 203 tests,
+focused catalog/trait coverage passed 127 tests, fixture integrity passed 11
+tests, and schema migration tests passed 6 tests. Workspace typechecks,
+repository typecheck, ESLint, formatting, production build, and
+`git diff --check` also passed during implementation and correction review.
+These are implementation results, not a closure-gate substitute.
+
+Gate C is documentation-only durable absorption into the catalog, authored,
+lifecycle, simulation, candidate, editor, structured-workspace, level/Pom, and
+source-audit authorities. The temporary plan is deleted and was never linked
+from README. The single complete `npm run check` closure gate passed after the
+final review: workspace and fixture typechecks; fixture integrity at 2 files/11
+tests; the regular lane at 135 files/1,694 tests; the heavy lane at 27 files/417
+tests; ESLint; repository-wide Prettier; and the production build at 401
+transformed modules. The build retained only the existing greater-than-500-kB
+chunk advisory. This factual result was appended afterward and checked with
+Markdown formatting and `git diff --check`; the complete gate was not rerun.
