@@ -424,8 +424,9 @@ charges every biome, Experimental Hammer waits until the captured keepsake is
 no longer current and then consumes one selected-or-exhausted attempt, and all
 other eligible keys are effect-neutral. The keepsake ledger retains every
 successful temporary Hammer as a distinct acquisition-identity-keyed instance;
-qualifying encounter completion decrements all active instances and expires
-only those that reach zero. Branch equivalence includes the captured Gift key,
+each qualifying `encounterEndEffectsApplied` checkpoint decrements all active
+instances and expires only those that reach zero. Branch equivalence includes
+the captured Gift key,
 replay count, exact replay descriptor, pending Gold trait, and complete Hammer
 collection rather than reconstructing them from presentation state.
 
@@ -791,6 +792,7 @@ aggregates. The canonical operation order comes from
 room.prepare
 room.enter
 room.start_encounter / room.complete_encounter
+room.encounter_end_effects, when the resolved phase permits them
 room.offer_point / room.advance_producer, when declared
 room.generate_outgoing
 remaining room-local operations
@@ -815,7 +817,17 @@ reward.offer_projection, when declared
 combat.complete
 concrete_acquisition.emit
 encounter.complete
+encounter.end_effects_applied
 ```
+
+`encounterCompleted` and `encounterEndEffectsApplied` are distinct addressed
+facts. Completion exists for every executed active phase, including noncombat,
+Fig Leaf-skipped, and declaration-owned end-effect-suppressed phases. The later
+event exists only when the resolved declaration permits `EndEncounterEffects`;
+Fig Leaf's execution result does not suppress it by itself. Encounter-counted
+Chaos maturation and Experimental Hammer duration consume that later event,
+while encounter-local trait settlement and other completion-owned products
+remain on completion.
 
 The lifecycle profile owns operation order. Encounter, room, reward, and layout
 declarations own the typed effects invoked by those operations. The simulator
@@ -1006,6 +1018,18 @@ execution at that phase. Earlier valid phases may retain their preparation
 records, so later structurally active phase controls remain correctable from
 their reached prefix. A structurally dormant potential slot retains authored
 state but publishes no candidate, finding, history, or editor control.
+
+P retains those ordinary exact phase owners but also publishes one bounded
+occurrence-level authoring capability for its two-position envelope. The first
+candidate domain is evaluated at the pre-room frontier. For each proposed
+non-terminating first choice, the terminal domain is evaluated only after that
+choice has extended the room's preparation record; a valid terminating choice
+publishes no active terminal domain. The corresponding semantic command
+atomically replaces the active `Intro` and `Combat` selections, initializing a
+new terminal trait child through the existing phase-default rule. A terminating
+first choice preserves the dormant stored Combat state. This is a candidate
+and command surface over the existing phase model, not a flattened
+cross-product or another P execution model.
 
 This is normal selected-plan validation, not an NPC evaluator or a second
 history. Candidate assessment and correction remain part of the existing

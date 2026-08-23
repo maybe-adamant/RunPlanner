@@ -250,11 +250,12 @@ for a real primary encounter or active encounter override, unless the room
 suppresses encounter uses. This naturally counts individual active Fields cage
 encounters and does not count the presentation-only/fake encounters that the
 planner has removed from noncombat rooms. Optional challenge encounters are
-not silently equivalent to the room's primary encounter. This is an
-encounter-completion event count, not subtraction from
-`CurrentRun.BiomeEncounterDepth`: that cache advances at encounter start only
-for encounters declaring `CountsForRoomEncounterDepth` and resets between
-biomes, while a Chaos curse can remain active across that boundary.
+not silently equivalent to the room's primary encounter. This is a count of
+qualifying encounter-end-effect checkpoints after the earlier
+completion fact, not subtraction from `CurrentRun.BiomeEncounterDepth`: that
+cache advances at encounter start only for encounters declaring
+`CountsForRoomEncounterDepth` and resets between biomes, while a Chaos curse
+can remain active across that boundary.
 
 Enshrouded decrements once in `LeaveRoom` when the player takes the door to the
 next room, including the departure from the Chaos room in which it was
@@ -311,15 +312,19 @@ TrialUpgrade selected
 The authored state must preserve the selected curse, selected blessing, shared
 rarity, exact rolled duration, and the declaration-owned rolled operands named
 in the two inventories above. The maturity **position** is derived by folding
-subsequent encounter completions, room transitions, or god-boon pickups. It is
-not a draggable Room Timeline action and should not be stored as an
+subsequent qualifying encounter-end-effect checkpoints, room transitions, or
+god-boon pickups. The preceding encounter completion remains a distinct fact.
+Maturity is not a draggable Room Timeline action and should not be stored as an
 independently chosen room coordinate.
 
-For encounter clocks, the exact transition belongs to encounter-end history.
-This makes later same-room actions observe the mature blessing when the source
-does. An implementation plan must lock its ordering against other
-encounter-end effects and deliveries rather than assigning maturation to room
-entry or generic Cleanup.
+For encounter clocks, the exact transition consumes
+`encounterEndEffectsApplied`, the explicit checkpoint after encounter
+completion. This makes later same-room actions observe the mature blessing
+when the source does without treating every completion or encounter-depth
+advance as equivalent. Noncombat and declaration-owned
+`SkipEndEncounterEffects` phases do not advance the clock. Fig Leaf-skipped
+execution still advances it when the resolved phase permits end effects; in P,
+only the terminal phase does so.
 
 ## Effects that cannot remain cosmetic
 
@@ -357,11 +362,13 @@ door-preview state, or a partial Death Defiance ledger for them.
 
 ## Planner disposition
 
-Chaos requires a separate implementation gate after Selene. A faithful gate
-must own one selected paired outcome, the exact declaration-owned numeric
-operands, a pending curse-to-blessing state, exact curse-specific counters, and
-maturation in the history fold. It must not reuse the ordinary one-trait offer
-shape as though the curse and blessing were both immediately equipped.
+The Chaos paired-trait model is implemented at authored schema 51. One selected
+outcome owns its curse, blessing, shared rarity, duration, and the exact
+declaration-owned numeric operands. Acquisition equips the curse with a
+pending blessing; the shared history fold derives maturation from the exact
+encounter-end-effect, room-departure, or qualifying god-offer checkpoints. It
+does not reuse the ordinary one-trait offer shape as though both halves were
+immediately equipped.
 
 The source evidence does not support a fixed `{ curseMagnitude,
 benefitMagnitude }` schema. The stable semantic shape is a closed curse key,
@@ -370,15 +377,17 @@ blessing key, shared rarity, and that blessing's declaration-owned zero, one,
 or two named roll values. Rarity- and history-derived deterministic values are
 recomputed from their authorities rather than redundantly authored.
 
-The first complete Chaos pool models exactly the five consequences named
-above. Claiming all 17 curses while treating Ordinary, Rejected, and Barren as
-cosmetic would be incorrect. Claiming all 16 blessings while omitting
-Creation's elements or Favor's guaranteed-Rare edge would likewise be
-incorrect.
+All 17 curses and 16 blessings remain real authored trait history. The five
+consequences named above are active in their owning existing authorities:
+Creation adds elements on maturation; Ordinary constrains fresh god-offer
+rarity; Rejected retains the blocked third option and Vow of Denial contact;
+Barren temporarily suppresses Arcana consequences including Artificer and
+Judgment; and Favor contributes to the offer-local rarity ledger.
 
 All selected traits and matured benefits still remain available to later Chaos
 eligibility, trait history, and Run State even when their gameplay effect is
 outside the simulator. Maturity is derived through encounter counting,
 location counting, or qualifying god-boon-pickup counting according to the
 source curse. Expiring deliberately uses the encounter-count path and assumes
-success; no authored timer outcome is added.
+success; no authored timer outcome is added. Trial Upgrade is a direct
+acquisition and is not an Echo Reward Reward Reward replay source.

@@ -12,7 +12,7 @@ by the owning design authorities and active delivery plans.
 
 ## Active Frontier
 
-The current persisted contract is strict schema 50. The occurrence/action
+The current persisted contract is strict schema 51. The occurrence/action
 delivery landed occurrence-backed door staging at `e1e3af0`, one unified room
 chronology at `f38247d`, the corrected door contract at `daa876f`, the opening
 reward frontier at `fdfd2dc`, the engine-walk N Hub board at `aa09c10`, and
@@ -3044,3 +3044,53 @@ By user direction, Gate B is docs-only and did not rerun `npm run check` or any
 runtime test lane. The Gate-A validation above is the final runtime evidence;
 Gate-B verification is limited to Markdown formatting, local link resolution,
 stale-reference scans, and `git diff --check` after the factual append.
+
+## P ordered encounter lifecycle closure
+
+The P ordered-encounter correction is complete through both code gates on
+2026-08-23. The replacement plan landed at `a58f2f3`. Gate A landed at
+`25c9da3` (`fix(lifecycle): distinguish encounter end effects`): the generic
+lifecycle now records encounter completion separately from
+`encounterEndEffectsApplied`, and encounter-counted Chaos maturation plus
+Experimental Hammer duration consume the latter. Normal and Fig Leaf P run
+both prepared phases but apply end effects only at terminal Combat; Heracles
+terminates the suffix and applies one checkpoint. O remains the non-P control,
+with its non-counting Intro and every later active combat applying end effects.
+Boss Judgment stays before completion/end effects, while terminal
+encounter-local offers remain completion-owned.
+
+Gate A.1 landed at `11eb863` (`fix(editor): make P encounter editing atomic`).
+Persistence and simulation remain exact phase-based products. The engine adds
+one bounded sequential P authoring capability and one atomic
+`ReplacePEncounterSequence` command; the application renders its two active
+positions in one dialog and creates one Undo unit. A terminating Heracles
+choice retains dormant Combat authorship, retained-invalid phase values remain
+repairable, and Fig Leaf, Gorgon, terminal trait offers, O, Fields, and other
+encounter envelopes retain their prior semantic owners and editor paths. No
+schema/catalog bump, P variant, preset, composition descriptor, lifecycle DSL,
+or second runtime sequence was added.
+
+Gate-A validation passed its focused owning set at 104/104 tests, the complete
+engine lane at 89 files/1,248 tests, and product at 6/26. Root and planner
+typechecks, changed-file ESLint, repository formatting, and `git diff --check`
+also passed. Gate-A.1 final validation passed engine at 89 files/1,250 tests in
+104.04 seconds, planner at 56/602 in 157.15 seconds, and product at 6/26 in
+20.35 seconds. Root typecheck, lint, repository formatting, `git diff --check`,
+and production build passed; Vite transformed 398 modules and retained only
+the existing greater-than-500-kB chunk advisory.
+
+This Gate B absorbs the build-24556151 source confirmation and the landed
+contracts into the encounter-composition audit, P rules, room lifecycle,
+simulation/validation, structured workspace, keepsake, Chaos, and delivery
+authorities. The temporary plan is deleted and was never linked from README.
+Gate-B documentation verification passed Markdown formatting, local link
+resolution, stale-plan-reference scans, and `git diff --check` without rerunning
+an intermediate code lane. The one complete repository closure gate then ran
+exactly once through `npm run check` and passed: workspace and fixture
+typechecks; fixture integrity at 1 file/7 tests in 1.65 seconds; the regular
+lane at 133 files/1,671 tests in 81.53 seconds; the heavy lane at 27 files/408
+tests in 93.88 seconds; ESLint; repository-wide Prettier; and the production
+build at 398 transformed modules. The build retained only the existing
+greater-than-500-kB chunk advisory. The factual append afterward was checked
+with Markdown formatting, local-link resolution, stale-reference scans, and
+`git diff --check`; the complete gate was not rerun.

@@ -225,6 +225,23 @@ semantic destination without producing no-op controls. This gives finding
 navigation and closure the same phase identity regardless of whether the
 presentation has a visible picker.
 
+P is the bounded presentation exception over that same phase model. The engine
+publishes one occurrence-owned sequential authoring capability whose first
+domain is evaluated at the room frontier and whose terminal domain is evaluated
+after the proposed first choice. The occurrence workbench renders one
+`Configure encounter` dialog with Pre-combat and Combat fields and dispatches
+one atomic command on Save. A terminating Heracles choice hides the inactive
+Combat field while retaining its dormant persisted value for a later edit.
+The application does not flatten candidate pairs or infer Heracles, P room
+names, phase legality, or sequence termination.
+
+The exact Intro and Combat addresses remain the semantic owners underneath
+that one editor. Timeline phases, retained-invalid findings, Fig Leaf, Gorgon,
+and terminal trait offers keep their existing markers, focus destinations, and
+child interactions. Only the two competing generic phase-selection controls
+are suppressed for P; no lifecycle or child ownership moves to the composite
+dialog.
+
 ### Lifecycle Occurrence Workbenches
 
 The application publishes one closed occurrence-presentation union rather than
