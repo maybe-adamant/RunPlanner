@@ -56,6 +56,7 @@ export type TraitFindingCode =
   | 'callingCardRarificationUnavailable'
   | 'traitOfferMissing'
   | 'alreadyEquipped'
+  | 'previouslyPicked'
   | 'bannedTrait'
   | 'missingPrerequisite'
   | 'negativePrerequisite'

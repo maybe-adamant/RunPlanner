@@ -316,6 +316,8 @@ export interface TraitDeclaration {
   readonly usesBoonRarity: boolean;
   readonly isCoreGodTrait: boolean;
   readonly blockStacking: boolean;
+  /** Source `BlockOfferIfPreviouslyPicked`; survives later trait removal. */
+  readonly blockOfferIfPreviouslyPicked: boolean;
   readonly blockInRunRarify: boolean;
   readonly excludeFromRarityCount: boolean;
   readonly rarityFloorEffect?: ProperUpbringingEffect;

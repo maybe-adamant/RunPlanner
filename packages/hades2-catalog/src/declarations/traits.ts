@@ -23,6 +23,7 @@ export interface RawTraitDeclaration {
   readonly elementContributions: TraitDeclaration['elementContributions'];
   readonly usesBoonRarity: boolean;
   readonly blockStacking: boolean;
+  readonly blockOfferIfPreviouslyPicked?: boolean;
   readonly blockInRunRarify: boolean;
   readonly excludeFromRarityCount: boolean;
   readonly rarityFloorEffect?: ProperUpbringingEffect;

@@ -384,6 +384,8 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
       };
     case 'alreadyEquipped':
       return { kind: 'trait', message: 'This trait is already equipped.' };
+    case 'previouslyPicked':
+      return { kind: 'trait', message: 'This one-time trait was already picked earlier.' };
     case 'bannedTrait':
       return { kind: 'trait', message: 'This trait was banned by Vow of Denial.' };
     case 'missingPrerequisite':

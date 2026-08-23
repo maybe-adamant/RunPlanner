@@ -36,7 +36,7 @@ const rooms: readonly RawRoomDeclaration[] = [
 ];
 
 export const declarations = {
-  version: '0.32.0-run-impacting-traits',
+  version: '0.32.1-run-impacting-traits',
   biomes,
   routes,
   arcanaCards,

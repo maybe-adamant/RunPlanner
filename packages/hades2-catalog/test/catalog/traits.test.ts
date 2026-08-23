@@ -928,6 +928,52 @@ const expectedOfferRequirements: Readonly<Record<string, string>> = {
 };
 
 describe('trait offer catalog closure', () => {
+  it('declares the exact three traits blocked after any prior pickup', () => {
+    expect(
+      catalog.traits.values
+        .filter((trait) => trait.blockOfferIfPreviouslyPicked)
+        .map((trait) => trait.key)
+        .sort(),
+    ).toEqual(['BoonDecayBoon', 'KeepsakeLevelBoon', 'RoomRewardBonusBoon']);
+  });
+
+  it('rejects a non-boolean previously-picked declaration flag', () => {
+    expect(() =>
+      createCatalog({
+        ...declarations,
+        traitCatalog: {
+          ...declarations.traitCatalog,
+          traits: declarations.traitCatalog.traits.map((trait) =>
+            trait.key === 'BoonDecayBoon'
+              ? { ...trait, blockOfferIfPreviouslyPicked: 'yes' as never }
+              : trait,
+          ),
+        },
+      }),
+    ).toThrow(/blockOfferIfPreviouslyPicked.*boolean/);
+  });
+
+  it('rejects missing and extra previously-picked declaration ownership', () => {
+    const mutate = (traitKey: string, value: boolean | undefined) =>
+      createCatalog({
+        ...declarations,
+        traitCatalog: {
+          ...declarations.traitCatalog,
+          traits: declarations.traitCatalog.traits.map((trait) =>
+            trait.key !== traitKey
+              ? trait
+              : ({ ...trait, blockOfferIfPreviouslyPicked: value } as RawTraitDeclaration),
+          ),
+        },
+      });
+    expect(() => mutate('BoonDecayBoon', undefined)).toThrow(
+      /BoonDecayBoon\.blockOfferIfPreviouslyPicked.*required/,
+    );
+    expect(() => mutate('HeraWeaponBoon', true)).toThrow(
+      /HeraWeaponBoon\.blockOfferIfPreviouslyPicked.*reserved/,
+    );
+  });
+
   it('normalizes one closed audited Olympian and Hermes boon-rarity base table', () => {
     expect(catalog.boonRarityBases.olympian).toEqual({
       Rare: 0.1,

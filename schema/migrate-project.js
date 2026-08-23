@@ -8,7 +8,8 @@ const CURRENT_SCHEMA_VERSION = 52;
 const SCHEMA_49_CATALOG_VERSION = '0.27.0-arcana-fear-loadout';
 const SCHEMA_50_CATALOG_VERSION = '0.30.0-boon-rarity-ledger';
 const SCHEMA_51_CATALOG_VERSION = '0.31.0-chaos-traits';
-const SCHEMA_52_CATALOG_VERSION = '0.32.0-run-impacting-traits';
+const SCHEMA_52_INITIAL_CATALOG_VERSION = '0.32.0-run-impacting-traits';
+const SCHEMA_52_CATALOG_VERSION = '0.32.1-run-impacting-traits';
 
 function expectRecord(value, label) {
   if (value === null || typeof value !== 'object' || Array.isArray(value)) {
@@ -98,8 +99,19 @@ function migrate51To52(document) {
     );
   }
   document.schemaVersion = 52;
-  document.catalogVersion = SCHEMA_52_CATALOG_VERSION;
+  document.catalogVersion = SCHEMA_52_INITIAL_CATALOG_VERSION;
   return {};
+}
+
+function migrateSchema52Catalog(document) {
+  if (document.catalogVersion === SCHEMA_52_CATALOG_VERSION) return false;
+  if (document.catalogVersion !== SCHEMA_52_INITIAL_CATALOG_VERSION) {
+    throw new Error(
+      `schema 52 migration expects catalog ${SCHEMA_52_INITIAL_CATALOG_VERSION}, received ${String(document.catalogVersion)}`,
+    );
+  }
+  document.catalogVersion = SCHEMA_52_CATALOG_VERSION;
+  return true;
 }
 
 const migrations = new Map([
@@ -131,6 +143,11 @@ export function migrateProjectDocument(value, targetVersion = CURRENT_SCHEMA_VER
     }
     steps.push(`${from}->${from + 1}`);
     changes[`${from}->${from + 1}`] = stepChanges;
+  }
+  if (document.schemaVersion === 52 && targetVersion === 52 && migrateSchema52Catalog(document)) {
+    const step = `${SCHEMA_52_INITIAL_CATALOG_VERSION}->${SCHEMA_52_CATALOG_VERSION}`;
+    steps.push(step);
+    changes[step] = {};
   }
 
   return Object.freeze({

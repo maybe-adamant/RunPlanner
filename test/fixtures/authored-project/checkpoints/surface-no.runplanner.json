@@ -1,7 +1,7 @@
 {
   "schemaVersion": 52,
   "projectId": "surface-2",
-  "catalogVersion": "0.32.0-run-impacting-traits",
+  "catalogVersion": "0.32.1-run-impacting-traits",
   "routes": [
     {
       "routeKey": "Underworld",

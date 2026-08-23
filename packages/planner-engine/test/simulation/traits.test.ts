@@ -393,6 +393,41 @@ function findingCode(traitKey: string, history: ReturnType<typeof createTraitHis
 }
 
 describe('Boon Growth and Boon Decay target predicates', () => {
+  it('keeps one-time pickup history after King’s Ransom removes Bridal Glow', () => {
+    const before = historyFrom([
+      { giverKey: 'Hera', traitKey: 'HeraWeaponBoon', rarity: 'Common' },
+      { giverKey: 'Hera', traitKey: 'BoonDecayBoon', rarity: 'Common' },
+      { giverKey: 'Hera', traitKey: 'DamageShareRetaliateBoon', rarity: 'Common' },
+      { giverKey: 'Zeus', traitKey: 'ZeusWeaponBoon', rarity: 'Common' },
+    ]);
+    const assessment = assessRansom(
+      catalog,
+      before,
+      'SuperSacrificeBoonZeus',
+      owner,
+      'test',
+      5,
+      'test',
+    );
+
+    expect(assessment.removedTraitKeys).toEqual([
+      'HeraWeaponBoon',
+      'BoonDecayBoon',
+      'DamageShareRetaliateBoon',
+    ]);
+    expect(assessment.resultingHistory.equippedTraits.BoonDecayBoon).toBeUndefined();
+    expect(assessment.resultingHistory.previouslyPickedTraitKeys).toContain('BoonDecayBoon');
+    expect(assessTraitOption(catalog, 'BoonDecayBoon', assessment.resultingHistory)).toMatchObject({
+      legal: false,
+      findings: expect.arrayContaining([
+        expect.objectContaining({ code: 'previouslyPicked', traitKey: 'BoonDecayBoon' }),
+      ]),
+    });
+    expect(
+      assessTraitOption(catalog, 'DamageShareRetaliateBoon', assessment.resultingHistory).findings,
+    ).not.toContainEqual(expect.objectContaining({ code: 'previouslyPicked' }));
+  });
+
   it('exposes the Ransom transform as one data-only provider-indexed assessment', () => {
     const before = historyFrom([
       { giverKey: 'Hera', traitKey: 'HeraWeaponBoon', rarity: 'Common' },

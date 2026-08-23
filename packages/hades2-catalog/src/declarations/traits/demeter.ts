@@ -345,6 +345,7 @@ export const demeterTraits = [
     },
     usesBoonRarity: true,
     blockStacking: true,
+    blockOfferIfPreviouslyPicked: true,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
     selectedDisposition: {

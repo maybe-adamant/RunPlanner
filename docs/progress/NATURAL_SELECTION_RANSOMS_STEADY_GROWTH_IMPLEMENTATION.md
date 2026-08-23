@@ -71,8 +71,9 @@ action order.
   Poms, Natural Selection, Bridal Glow, and Steady Growth, while Proper
   Upbringing retains its separate source-backed rarity-floor behavior;
 - schema `51 -> 52`, catalog version `0.31.0-chaos-traits ->
-0.32.0-run-impacting-traits`, checkpoint migration, and migration CLI
-  support;
+0.32.0-run-impacting-traits`, the catalog-only
+  `0.32.1-run-impacting-traits` picked-history correction, checkpoint
+  migration, and migration CLI support;
 - ordinary reward, Shop, Devotion, Echo Reward Reward Reward, and Echo Boon
   Boon Boon acquisition contacts wherever the selected trait can legally
   occur;
@@ -590,8 +591,9 @@ count events or predict the threshold.
 
 Deliver one coherent engine-owned semantic slice:
 
-- catalog version `0.32.0-run-impacting-traits` and strict declaration/compiler
-  products;
+- catalog version `0.32.1-run-impacting-traits` and strict
+  declaration/compiler products, including the exact three
+  `BlockOfferIfPreviouslyPicked` identities;
 - level-bearing versus Pom-target predicates;
 - target-owned Hephaestus in-run upgrade limits and shared consumption by
   Poms, Natural Selection, Bridal Glow, and Steady Growth, with Proper

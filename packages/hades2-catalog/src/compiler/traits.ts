@@ -44,6 +44,11 @@ const COOLDOWN_CAPPED_IN_RUN_UPGRADE_TRAITS = new Set([
   'HephaestusSpecialBoon',
   'HephaestusSprintBoon',
 ]);
+const BLOCK_OFFER_IF_PREVIOUSLY_PICKED_TRAITS = new Set([
+  'BoonDecayBoon',
+  'KeepsakeLevelBoon',
+  'RoomRewardBonusBoon',
+]);
 const FRESH_RARITIES = ['Common', 'Rare', 'Epic', 'Legendary', 'Duo'] as const;
 const ELEMENTS = ['Aether', 'Earth', 'Air', 'Fire', 'Water'] as const;
 const EQUIPMENT_SLOTS = ['Melee', 'Secondary', 'Ranged', 'Rush', 'Mana', 'Spell'] as const;
@@ -1264,6 +1269,13 @@ function normalizeTraits(
       usesBoonRarity,
       isCoreGodTrait,
       blockStacking: requireBoolean(trait.blockStacking, `${path}.blockStacking`),
+      blockOfferIfPreviouslyPicked:
+        trait.blockOfferIfPreviouslyPicked === undefined
+          ? false
+          : requireBoolean(
+              trait.blockOfferIfPreviouslyPicked,
+              `${path}.blockOfferIfPreviouslyPicked`,
+            ),
       blockInRunRarify: requireBoolean(trait.blockInRunRarify, `${path}.blockInRunRarify`),
       excludeFromRarityCount: requireBoolean(
         trait.excludeFromRarityCount,
@@ -1280,6 +1292,17 @@ function normalizeTraits(
     });
   });
   const collection = createCollection(values, 'traits', (trait) => trait.key);
+  for (const trait of collection.values) {
+    const expected = BLOCK_OFFER_IF_PREVIOUSLY_PICKED_TRAITS.has(trait.key);
+    if (trait.blockOfferIfPreviouslyPicked !== expected) {
+      fail(
+        `traits.${trait.key}.blockOfferIfPreviouslyPicked`,
+        expected
+          ? 'is required by the source declaration'
+          : 'is reserved to Bridal Glow, Buried Treasure, and Cherished Heirloom',
+      );
+    }
+  }
   // Re-run requirements now that exact included keys are known.
   for (const trait of collection.values) {
     trait.offerRequirements.forEach((requirement, index) =>

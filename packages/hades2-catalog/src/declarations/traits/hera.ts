@@ -121,6 +121,7 @@ export const heraTraits = [
     },
     usesBoonRarity: true,
     blockStacking: true,
+    blockOfferIfPreviouslyPicked: true,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
     targetedAcquisition: {
