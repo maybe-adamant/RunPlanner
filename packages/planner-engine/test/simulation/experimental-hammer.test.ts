@@ -27,6 +27,7 @@ import {
 import {
   loadSurfaceNProject,
   loadSurfaceNOProject,
+  loadSurfaceNOPProject,
   nBiome,
   nOccurrenceId,
   oBiome,
@@ -128,12 +129,12 @@ function withPostbossNeutralReplacement(project: ReturnType<typeof createGoldenF
   });
 }
 
-function lifecycleCompletions(
+function lifecycleEndEffects(
   project: ReturnType<typeof createCompleteFGProject>,
   key: 'F' | 'G' | 'H',
 ) {
   return evaluatedBiome(project, key).history.events.filter(
-    (event) => event.kind === 'encounterCompleted',
+    (event) => event.kind === 'encounterEndEffectsApplied',
   );
 }
 
@@ -245,7 +246,7 @@ describe('Experimental Hammer', () => {
     expect(branch.traitHistory?.equippedTraits.StaffLongAttackTrait?.rarity).toBeUndefined();
   });
 
-  it('uses the production encounterCompleted lifecycle hook to expire and remove the exact acquisition', () => {
+  it('uses the production end-effects lifecycle hook to expire and remove the exact acquisition', () => {
     const project = createCompleteFGProject();
     const result = replayThroughRealLifecycle(project, 'F', 1);
     const branch = result.branches[0]!;
@@ -257,12 +258,12 @@ describe('Experimental Hammer', () => {
     expect(branch.traitHistory?.events).toContainEqual(
       expect.objectContaining({
         acquisitionRole: 'experimentalHammerExpiry',
-        acquisitionPoint: 'encounterCompleted',
+        acquisitionPoint: 'encounterEndEffectsApplied',
       }),
     );
   });
 
-  it('consumes every qualifying completion in the real room lifecycle, rather than a room counter', () => {
+  it('consumes every qualifying end-effects checkpoint in the real room lifecycle, rather than a room counter', () => {
     const project = createCompleteFGProject();
     const result = replayThroughRealLifecycle(project, 'F', 2);
     const branch = result.branches[0]!;
@@ -277,7 +278,7 @@ describe('Experimental Hammer', () => {
     ).toHaveLength(1);
   });
 
-  it('uses every rigid H cage completion without treating Passive setup as an encounter cycle', () => {
+  it('uses every rigid H cage end-effects checkpoint without treating Passive setup as an encounter cycle', () => {
     const project = replaceTestRoomActionOrder(
       createGoldenFGHProject(),
       catalog,
@@ -290,9 +291,9 @@ describe('Experimental Hammer', () => {
         { kind: 'interactLocalReward', groupKey: 'cages', slotKey: 'cage2' },
       ],
     );
-    const completions = lifecycleCompletions(project, 'H');
-    const distinctOwners = new Set(completions.map((event) => JSON.stringify(event.origin)));
-    expect(completions.length).toBeGreaterThan(distinctOwners.size);
+    const endEffects = lifecycleEndEffects(project, 'H');
+    const distinctOwners = new Set(endEffects.map((event) => JSON.stringify(event.origin)));
+    expect(endEffects.length).toBeGreaterThan(distinctOwners.size);
 
     const g = evaluatedBiome(project, 'G');
     const branch = applyExperimentalHammerEquipResult(
@@ -315,15 +316,13 @@ describe('Experimental Hammer', () => {
       route(project).loadout,
       [branch],
     ).simulation;
-    const hammerCompletions = completions.filter((event) => event.phaseKey !== 'Passive');
     expect(
       result.branches.every(
         (branch) =>
-          branch.keepsakes.experimentalHammers.at(-1)?.remainingUses ===
-          20 - hammerCompletions.length,
+          branch.keepsakes.experimentalHammers.at(-1)?.remainingUses === 20 - endEffects.length,
       ),
     ).toBe(true);
-    const combat02Phases = completions
+    const combat02Phases = endEffects
       .filter(
         (event) =>
           event.origin.kind === 'occurrence' && event.origin.occurrenceId === 'golden-h-combat02',
@@ -332,12 +331,12 @@ describe('Experimental Hammer', () => {
     expect(combat02Phases).toEqual(['Cage02', 'Cage01']);
   });
 
-  it('advances through a selected Story primary encounter', () => {
+  it('advances only for the resolved end-effects checkpoints across Story rooms', () => {
     const project = createCompleteFGProject();
     const evaluated = evaluatedBiome(project, 'G');
-    const completions = lifecycleCompletions(project, 'G');
+    const endEffects = lifecycleEndEffects(project, 'G');
     expect(
-      completions.some(
+      endEffects.some(
         (event) =>
           event.origin.kind === 'occurrence' && event.origin.occurrenceId === 'golden-g-b3-e1',
       ),
@@ -353,35 +352,35 @@ describe('Experimental Hammer', () => {
     expect(
       result.branches.every(
         (branch) =>
-          branch.keepsakes.experimentalHammers.at(-1)?.remainingUses === 20 - completions.length,
+          branch.keepsakes.experimentalHammers.at(-1)?.remainingUses === 20 - endEffects.length,
       ),
     ).toBe(true);
   });
 
-  it('expires at the exact boss and Postboss completion owners', () => {
+  it('expires at the Boss end-effects owner but not the noncombat Postboss completion', () => {
     const project = createCompleteFGProject();
-    const completions = lifecycleCompletions(project, 'F');
-    const usesThrough = (role: 'boss' | 'postboss') => {
-      const index = completions.findIndex(
-        (event) => event.origin.kind === 'completionRoom' && event.origin.role === role,
-      );
-      if (index < 0) throw new Error(`missing ${role} completion`);
-      return index + 1;
-    };
-    for (const role of ['boss', 'postboss'] as const) {
-      const branch = replayThroughRealLifecycle(project, 'F', usesThrough(role)).branches[0]!;
-      expect(branch.keepsakes.experimentalHammers.at(-1)).toMatchObject({
-        active: false,
-        remainingUses: 0,
-      });
-      expect(branch.traitHistory?.events).toContainEqual(
-        expect.objectContaining({
-          kind: 'traitRemoval',
-          acquisitionRole: 'experimentalHammerExpiry',
-          owner: expect.objectContaining({ kind: 'completionRoom', role }),
-        }),
-      );
-    }
+    const endEffects = lifecycleEndEffects(project, 'F');
+    const bossIndex = endEffects.findIndex(
+      (event) => event.origin.kind === 'completionRoom' && event.origin.role === 'boss',
+    );
+    if (bossIndex < 0) throw new Error('missing Boss end-effects checkpoint');
+    expect(
+      endEffects.some(
+        (event) => event.origin.kind === 'completionRoom' && event.origin.role === 'postboss',
+      ),
+    ).toBe(false);
+    const branch = replayThroughRealLifecycle(project, 'F', bossIndex + 1).branches[0]!;
+    expect(branch.keepsakes.experimentalHammers.at(-1)).toMatchObject({
+      active: false,
+      remainingUses: 0,
+    });
+    expect(branch.traitHistory?.events).toContainEqual(
+      expect.objectContaining({
+        kind: 'traitRemoval',
+        acquisitionRole: 'experimentalHammerExpiry',
+        owner: expect.objectContaining({ kind: 'completionRoom', role: 'boss' }),
+      }),
+    );
   });
 
   it('grants 20 uses at the Postboss rack after automatic completion has entered', () => {
@@ -420,11 +419,11 @@ describe('Experimental Hammer', () => {
     ) {
       throw new Error('expected valid O lifecycle fixture');
     }
-    const completions = evaluated.history.events.filter(
-      (event) => event.kind === 'encounterCompleted',
+    const endEffects = evaluated.history.events.filter(
+      (event) => event.kind === 'encounterEndEffectsApplied',
     );
     expect(
-      completions
+      endEffects
         .filter(
           (event) =>
             event.origin.kind === 'occurrence' &&
@@ -443,12 +442,12 @@ describe('Experimental Hammer', () => {
     expect(
       result.branches.every(
         (branch) =>
-          branch.keepsakes.experimentalHammers.at(-1)?.remainingUses === 20 - completions.length,
+          branch.keepsakes.experimentalHammers.at(-1)?.remainingUses === 20 - endEffects.length,
       ),
     ).toBe(true);
   });
 
-  it('advances for a Fig Leaf-preserved skipped completion', () => {
+  it('advances for a Fig Leaf-preserved skipped end-effects checkpoint', () => {
     const start = createRouteStartKeepsakeSelectionAddress('Surface');
     const rack = createPostbossKeepsakeSelectionAddress(
       createCompletionRoomAddress(nBiome, 'postboss'),
@@ -489,9 +488,11 @@ describe('Experimental Hammer', () => {
       throw new Error('expected valid N/O reward lifecycle');
     }
     expect(n.rewards.branches[0]?.keepsakes.experimentalHammers.at(-1)?.remainingUses).toBe(20);
-    const oCompletions = o.history.events.filter((event) => event.kind === 'encounterCompleted');
+    const oEndEffects = o.history.events.filter(
+      (event) => event.kind === 'encounterEndEffectsApplied',
+    );
     expect(
-      oCompletions.some(
+      oEndEffects.some(
         (event) =>
           event.origin.kind === 'occurrence' &&
           event.origin.occurrenceId === oOccurrenceIds.combat04 &&
@@ -500,8 +501,67 @@ describe('Experimental Hammer', () => {
       ),
     ).toBe(true);
     expect(o.rewards.branches[0]?.keepsakes.experimentalHammers.at(-1)?.remainingUses).toBe(
-      20 - oCompletions.length,
+      20 - oEndEffects.length,
     );
+  });
+
+  it('advances once at the terminal P end-effects checkpoint in normal and Fig Leaf sequences', () => {
+    const start = createRouteStartKeepsakeSelectionAddress('Surface');
+    const rack = createPostbossKeepsakeSelectionAddress(
+      createCompletionRoomAddress(oBiome, 'postboss'),
+    );
+    const pIntro = createEncounterPhaseAddress(
+      createBiomeAddress('Surface', 'P'),
+      { kind: 'occurrence', occurrenceId: createOccurrenceId('surface-p-1-1-p_combat03') },
+      'Intro',
+    );
+    const withHammer = (project: ReturnType<typeof loadSurfaceNOPProject>) => {
+      const equipped = applyProjectCommand(project, catalog, {
+        kind: 'ReplacePostbossKeepsake',
+        selection: rack,
+        value: { kind: 'replace', keepsakeKey: 'TempHammerKeepsake' },
+      });
+      return applyProjectCommand(equipped, catalog, {
+        kind: 'ReplaceExperimentalHammerEquipResult',
+        result: createKeepsakeEquipResultAddress(rack, 'experimentalHammer'),
+        value: { kind: 'selected', traitKey: 'StaffJumpSpecialTrait' },
+      });
+    };
+    const normal = simulateProject(catalog, withHammer(loadSurfaceNOPProject()));
+    let skipped = applyProjectCommand(loadSurfaceNOPProject(), catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: start,
+      keepsakeKey: 'SkipEncounterKeepsake',
+    });
+    skipped = withHammer(skipped);
+    skipped = applyProjectCommand(skipped, catalog, {
+      kind: 'ReplaceFigLeafSkip',
+      phase: pIntro,
+      value: true,
+    });
+
+    for (const [label, evaluation] of [
+      ['normal', normal],
+      ['figLeaf', simulateProject(catalog, skipped)],
+    ] as const) {
+      const p = evaluation.routes
+        .find((candidate) => candidate.routeKey === 'Surface')
+        ?.biomes.find((candidate) => candidate.biomeKey === 'P');
+      if (p === undefined || !('rewards' in p)) throw new Error(`${label} P evaluation missing`);
+      const endEffects = p.history.events.filter(
+        (event) => event.kind === 'encounterEndEffectsApplied',
+      );
+      const selected = endEffects.filter(
+        (event) =>
+          event.origin.kind === 'occurrence' &&
+          event.origin.occurrenceId === 'surface-p-1-1-p_combat03',
+      );
+      expect(selected.map((event) => event.phaseKey)).toEqual(['Combat']);
+      expect(p.rewards.branches[0]?.keepsakes.experimentalHammers.at(-1)?.remainingUses).toBe(
+        20 - endEffects.length,
+      );
+      if (label === 'figLeaf') expect(selected[0]).toMatchObject({ execution: 'skippedByFigLeaf' });
+    }
   });
 
   it('keeps an unavailable Postboss Hammer replacement at its parent and does not reach its child', () => {

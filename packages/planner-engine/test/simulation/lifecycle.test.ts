@@ -233,7 +233,7 @@ function actionRoster(
 }
 
 describe('single-room lifecycle execution', () => {
-  it('emits the derived Boss-defeated seam before generic encounter completion', () => {
+  it('emits the derived Boss-defeated seam before completion and end effects', () => {
     const bossOrigin = createCompletionRoomAddress(createBiomeAddress('Underworld', 'F'), 'boss');
     const events = executeRoomLifecycle(
       catalog,
@@ -246,11 +246,43 @@ describe('single-room lifecycle execution', () => {
     ).events;
     const defeated = events.findIndex((event) => event.kind === 'bossDefeated');
     const completed = events.findIndex((event) => event.kind === 'encounterCompleted');
+    const endEffects = events.findIndex((event) => event.kind === 'encounterEndEffectsApplied');
 
     expect(defeated).toBeGreaterThan(
       events.findIndex((event) => event.kind === 'encounterStarted'),
     );
     expect(completed).toBe(defeated + 1);
+    expect(endEffects).toBe(completed + 1);
+  });
+
+  it('derives end effects from each resolved phase rather than P depth or sequence position', () => {
+    const normalP = executeRoomLifecycle(
+      catalog,
+      input({
+        lifecycleProfileKey: 'PCombatRoom',
+        encounterEnvelopeKey: 'PEncounter',
+        encounterPhases: phases('PEncounter', ['GeneratedP_PreCombat', 'GeneratedP']),
+      }),
+    ).events;
+    const heraclesP = executeRoomLifecycle(
+      catalog,
+      input({
+        lifecycleProfileKey: 'PCombatRoom',
+        encounterEnvelopeKey: 'PEncounter',
+        encounterPhases: phases('PEncounter', ['HeraclesCombatP']),
+      }),
+    ).events;
+
+    expect(
+      normalP
+        .filter((event) => event.kind === 'encounterEndEffectsApplied')
+        .map((event) => event.phaseKey),
+    ).toEqual(['Combat']);
+    expect(
+      heraclesP
+        .filter((event) => event.kind === 'encounterEndEffectsApplied')
+        .map((event) => event.phaseKey),
+    ).toEqual(['Intro']);
   });
 
   it('ignores a retained ranked stale row while executing the active producer action', () => {
@@ -303,6 +335,7 @@ describe('single-room lifecycle execution', () => {
       'encounterStarted',
       'encounterDepthAdvanced',
       'encounterCompleted',
+      'encounterEndEffectsApplied',
       'producerPointReached',
       'producerPointReached',
       'producerRoleAdvanced',
@@ -311,19 +344,19 @@ describe('single-room lifecycle execution', () => {
       'roomCountersAdvanced',
       'roomExited',
     ]);
-    expect(fragment.events[9]).toMatchObject({
+    expect(fragment.events[10]).toMatchObject({
       kind: 'producerRoleAdvanced',
       rewardType: 'Boon',
       role: 'source',
       lifecyclePoint: 'roomRewardPickup',
     });
-    expect(fragment.events[12]).toMatchObject({
+    expect(fragment.events[13]).toMatchObject({
       kind: 'roomCountersAdvanced',
       biomeDepthCacheDelta: 1,
       roomHistoryOrdinalDelta: 1,
     });
     expect(fragment.events.map((event) => event.sequence)).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
     ]);
     expect(fragment.events.every((event) => event.origin === origin)).toBe(true);
     expect(Object.isFrozen(fragment)).toBe(true);
@@ -399,6 +432,7 @@ describe('single-room lifecycle execution', () => {
         'encounterStarted',
         'encounterDepthAdvanced',
         'encounterCompleted',
+        'encounterEndEffectsApplied',
         'outgoingGenerationCheckpoint',
         'roomCommitted',
         'roomCountersAdvanced',
@@ -441,6 +475,7 @@ describe('single-room lifecycle execution', () => {
       'encounterStarted',
       'encounterDepthAdvanced',
       'encounterCompleted',
+      'encounterEndEffectsApplied',
       'requiredObjectCompleted',
       'producerPointReached',
       'producerPointReached',
@@ -455,7 +490,7 @@ describe('single-room lifecycle execution', () => {
       objectKey: 'SoulPylon',
       completionRequirement: 'destroyBeforeExit',
     });
-    expect(fragment.events[8]).toMatchObject({
+    expect(fragment.events[9]).toMatchObject({
       kind: 'requiredObjectCompleted',
       objectKey: 'SoulPylon',
     });

@@ -535,6 +535,18 @@ describe('Fig Leaf state contract', () => {
         .filter((event) => event.phaseKey === 'Combat')
         .every((event) => !event.figLeafSkipOwner),
     ).toBe(true);
+    const selectedEndEffects = p.history.events.filter(
+      (event) =>
+        event.kind === 'encounterEndEffectsApplied' &&
+        event.origin.kind === 'occurrence' &&
+        event.origin.occurrenceId === createOccurrenceId('surface-p-1-1-p_combat03'),
+    );
+    expect(selectedEndEffects).toHaveLength(1);
+    expect(selectedEndEffects[0]).toMatchObject({
+      phaseKey: 'Combat',
+      execution: 'skippedByFigLeaf',
+      figLeafSkipOwner: false,
+    });
     expect(encounters.length).toBeGreaterThan(0);
     expect(new Set(encounters.map((event) => event.origin.kind)).size).toBeGreaterThan(0);
     expect(

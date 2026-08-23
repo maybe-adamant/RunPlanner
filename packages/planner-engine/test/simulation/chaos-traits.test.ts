@@ -2,9 +2,12 @@ import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
 import {
+  applyProjectCommand,
   createBiomeAddress,
+  createEncounterPhaseAddress,
   createIncomingRewardAddress,
   createOccurrenceId,
+  createRouteStartKeepsakeSelectionAddress,
   createTraitOfferAddress,
   semanticAddressKey,
 } from '@run-planner/engine/authored-project';
@@ -17,6 +20,7 @@ import {
   recordReachedTraitOffer,
   attachTraitHistory,
 } from '../../src/simulation/traits';
+import { simulateProject } from '../../src/simulation';
 import { evaluateCallingCardOffer } from '../../src/simulation/keepsakes';
 import { createKeepsakeState } from '../../src/simulation/keepsakes';
 import { boonRarityRollUnavailable } from '../../src/simulation/boon-rarity';
@@ -34,6 +38,8 @@ import type {
 } from '../../src/authored-project/traits';
 import { normalizeAuthoredChaosTraitOffer } from '../../src/authored-project/traits';
 import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidate-artifacts';
+import { evaluateBiomeRewardsAssemblyInternal } from '../../src/simulation/rewards/biome';
+import { loadSurfaceNOPProject } from '@run-planner/test-fixtures/surface';
 
 const owner = createBiomeAddress('Underworld', 'F');
 const rewardOwner = createIncomingRewardAddress(owner, createOccurrenceId('chaos-test-reward'));
@@ -579,5 +585,87 @@ describe('Chaos paired-trait history', () => {
     expect(settled.traitHistory?.activeChaosCurses).toMatchObject([
       { curseKey: 'ChaosNoMoneyCurse', remaining: 3 },
     ]);
+  });
+
+  it('advances an encounter-clocked curse once at the terminal P end-effects checkpoint for normal and Fig Leaf execution', () => {
+    const pIntro = createEncounterPhaseAddress(
+      createBiomeAddress('Surface', 'P'),
+      {
+        kind: 'occurrence',
+        occurrenceId: createOccurrenceId('surface-p-1-1-p_combat03'),
+      },
+      'Intro',
+    );
+    let figLeafProject = applyProjectCommand(loadSurfaceNOPProject(), catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: createRouteStartKeepsakeSelectionAddress('Surface'),
+      keepsakeKey: 'SkipEncounterKeepsake',
+    });
+    figLeafProject = applyProjectCommand(figLeafProject, catalog, {
+      kind: 'ReplaceFigLeafSkip',
+      phase: pIntro,
+      value: true,
+    });
+
+    for (const [label, project] of [
+      ['normal', loadSurfaceNOPProject()],
+      ['figLeaf', figLeafProject],
+    ] as const) {
+      const route = project.routes.find((candidate) => candidate.routeKey === 'Surface');
+      const p = simulateProject(catalog, project)
+        .routes.find((candidate) => candidate.routeKey === 'Surface')
+        ?.biomes.find((candidate) => candidate.biomeKey === 'P');
+      if (
+        route === undefined ||
+        p === undefined ||
+        p.authoring !== 'complete' ||
+        p.validity !== 'valid'
+      ) {
+        throw new Error(`${label} P lifecycle fixture is incomplete`);
+      }
+      const terminal = p.history.events.filter(
+        (event) =>
+          event.kind === 'encounterEndEffectsApplied' &&
+          event.origin.kind === 'occurrence' &&
+          event.origin.occurrenceId === 'surface-p-1-1-p_combat03',
+      );
+      expect(terminal).toHaveLength(1);
+      expect(terminal[0]).toMatchObject({
+        phaseKey: 'Combat',
+        execution: label === 'figLeaf' ? 'skippedByFigLeaf' : 'normal',
+      });
+
+      const oneUseRemaining = [2, 3].reduce(
+        (history, sequence) => advanceChaosClock(catalog, history, sequence, 'encounters'),
+        pairHistory(chaos('ChaosNoMoneyCurse', 'ChaosElementalBlessing')),
+      );
+      const terminalHistory = Object.freeze({
+        ...p.history,
+        events: Object.freeze(
+          p.history.events.filter(
+            (event) =>
+              event.origin.kind === 'occurrence' &&
+              event.origin.occurrenceId === 'surface-p-1-1-p_combat03',
+          ),
+        ),
+      });
+      const result = evaluateBiomeRewardsAssemblyInternal(
+        catalog,
+        p.snapshot,
+        terminalHistory,
+        3,
+        route.loadout,
+        [branchWithHistory(oneUseRemaining)],
+      ).simulation;
+      const newEncounterClocks =
+        result.branches[0]?.traitHistory?.events.filter(
+          (event) =>
+            event.kind === 'chaosClock' && event.sequence > 3 && event.clock === 'encounters',
+        ) ?? [];
+      expect(newEncounterClocks).toEqual([
+        expect.objectContaining({ sequence: terminal[0]?.sequence }),
+      ]);
+      expect(result.branches[0]?.traitHistory?.activeChaosCurses).toHaveLength(0);
+    }
   });
 });

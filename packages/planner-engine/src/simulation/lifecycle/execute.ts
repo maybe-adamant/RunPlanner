@@ -201,13 +201,20 @@ const lifecycleEffectRegistry = Object.freeze({
      * the generic encounter-end effects. It is not an authored lifecycle
      * operation: completion rooms are fixed by the layout.
      */
-    return context.input.origin.kind === 'completionRoom' && context.input.origin.role === 'boss'
-      ? appendEvent(
-          appendEvent(state, context, { ...completion, kind: 'bossDefeated' }),
-          context,
-          completion,
-        )
-      : appendEvent(state, context, completion);
+    const completed =
+      context.input.origin.kind === 'completionRoom' && context.input.origin.role === 'boss'
+        ? appendEvent(
+            appendEvent(state, context, { ...completion, kind: 'bossDefeated' }),
+            context,
+            completion,
+          )
+        : appendEvent(state, context, completion);
+    return phase.kind === 'nonCombat' || phase.skipEndEncounterEffects
+      ? completed
+      : appendEvent(completed, context, {
+          ...completion,
+          kind: 'encounterEndEffectsApplied',
+        });
   },
   recordRequiredObjectCompletions: (context, state) => {
     const requiredObjects = context.input.requiredObjects;

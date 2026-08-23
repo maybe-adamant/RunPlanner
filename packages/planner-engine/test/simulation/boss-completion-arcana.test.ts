@@ -154,20 +154,30 @@ describe('Judgment Boss-completion lifecycle', () => {
     });
   });
 
-  it('keeps final-use Barren active through Boss-defeated Judgment, then restores Arcana without mutating it at encounter completion', () => {
+  it('keeps final-use Barren active through Boss-defeated Judgment, then matures it at end effects', () => {
     const project = loadSurfaceNOProject();
     const evaluated = biome(simulateProject(catalog, project), 'N');
     const boss = evaluated.history.events.filter(
       (event) =>
         event.origin.kind === 'completionRoom' &&
         event.origin.role === 'boss' &&
-        (event.kind === 'bossDefeated' || event.kind === 'encounterCompleted'),
+        (event.kind === 'bossDefeated' ||
+          event.kind === 'encounterCompleted' ||
+          event.kind === 'encounterEndEffectsApplied'),
     );
     const completed = boss.find(
       (event): event is Extract<(typeof boss)[number], { readonly kind: 'encounterCompleted' }> =>
         event.kind === 'encounterCompleted',
     );
-    if (completed === undefined) throw new Error('N Boss completion seam is missing');
+    const endEffects = boss.find(
+      (
+        event,
+      ): event is Extract<(typeof boss)[number], { readonly kind: 'encounterEndEffectsApplied' }> =>
+        event.kind === 'encounterEndEffectsApplied',
+    );
+    if (completed === undefined || endEffects === undefined)
+      throw new Error('N Boss completion/end-effects seams are missing');
+    expect(endEffects.sequence).toBe(completed.sequence + 1);
     const seeded = activateTemporaryArcana(
       catalog,
       createArcanaFearState(catalog, createDefaultRouteLoadout(catalog)),

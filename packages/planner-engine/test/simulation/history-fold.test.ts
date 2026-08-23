@@ -123,6 +123,35 @@ describe('history fold encounter checkpoint closure', () => {
     expect(history.ledgers.encounterCompletions).toHaveLength(1);
   });
 
+  it('accepts end effects only once after their matching completion', () => {
+    const events = canonicalEvents();
+    const completed = events.find((event) => event.kind === 'encounterCompleted');
+    if (completed === undefined) throw new Error('canonical completion missing');
+    const endEffects = {
+      kind: 'encounterEndEffectsApplied' as const,
+      origin,
+      operationIndex: completed.operationIndex,
+      phaseKey: completed.phaseKey,
+      execution: completed.execution,
+      figLeafSkipOwner: completed.figLeafSkipOwner,
+    };
+    const valid = numbered([...events.slice(0, 8), endEffects, ...events.slice(8)]);
+    expect(foldHistoryEvents(valid).ledgers.encounterCompletions).toHaveLength(1);
+
+    const malformed = numbered([...events.slice(0, 7), endEffects, ...events.slice(7)]);
+    expect(() => foldHistoryEvents(malformed)).toThrow(
+      new HistoryFoldContractError(
+        'Encounter applied duplicate or unmatched encounter end effects',
+      ),
+    );
+    const duplicate = numbered([...events.slice(0, 8), endEffects, endEffects, ...events.slice(8)]);
+    expect(() => foldHistoryEvents(duplicate)).toThrow(
+      new HistoryFoldContractError(
+        'Encounter applied duplicate or unmatched encounter end effects',
+      ),
+    );
+  });
+
   it('rejects an encounter record before room preparation', () => {
     const events = canonicalEvents();
     const malformed = numbered([
