@@ -128,6 +128,10 @@ export const demeterTraits = [
     blockStacking: true,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
+    selectedDisposition: {
+      kind: 'steadyGrowth',
+      intervalsByRarity: { Common: 6, Rare: 5, Epic: 4, Heroic: 3 },
+    },
   },
   {
     key: 'ReserveManaHitShieldBoon',
@@ -396,6 +400,11 @@ export const demeterTraits = [
     blockStacking: true,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
+    selectedDisposition: {
+      kind: 'naturalSelection',
+      slots: ['Melee', 'Secondary', 'Ranged', 'Rush', 'Mana'],
+      levelCount: 8,
+    },
   },
   {
     key: 'BurnConsumeBoon',

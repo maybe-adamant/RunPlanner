@@ -39,6 +39,11 @@ import type {
 
 const RARITIES = ['Common', 'Rare', 'Epic', 'Heroic', 'Legendary', 'Duo'] as const;
 const IN_RUN_RARITIES = ['Common', 'Rare', 'Epic', 'Heroic'] as const;
+const COOLDOWN_CAPPED_IN_RUN_UPGRADE_TRAITS = new Set([
+  'HephaestusWeaponBoon',
+  'HephaestusSpecialBoon',
+  'HephaestusSprintBoon',
+]);
 const FRESH_RARITIES = ['Common', 'Rare', 'Epic', 'Legendary', 'Duo'] as const;
 const ELEMENTS = ['Aether', 'Earth', 'Air', 'Fire', 'Water'] as const;
 const EQUIPMENT_SLOTS = ['Melee', 'Secondary', 'Ranged', 'Rush', 'Mana', 'Spell'] as const;
@@ -447,6 +452,9 @@ const SELECTED_DISPOSITIONS = [
   'circe',
   'echo',
   'worldShopRestock',
+  'naturalSelection',
+  'ransom',
+  'steadyGrowth',
 ] as const;
 type RawTraitRequirement = {
   readonly kind: string;
@@ -522,8 +530,64 @@ function normalizeSelectedDisposition(
     readonly sets?: unknown;
     readonly refillCount?: unknown;
     readonly discountByRarity?: unknown;
+    readonly slots?: unknown;
+    readonly levelCount?: unknown;
+    readonly removeGiverKey?: unknown;
+    readonly buffGiverKey?: unknown;
+    readonly levelsPerRemovedIdentity?: unknown;
+    readonly intervalsByRarity?: unknown;
   };
   const kind = closedValue(value.kind, SELECTED_DISPOSITIONS, `${path}.kind`);
+  if (kind === 'naturalSelection') {
+    const slots = requireArray(value.slots, `${path}.slots`);
+    const expected = ['Melee', 'Secondary', 'Ranged', 'Rush', 'Mana'] as const;
+    if (
+      Object.keys(value).length !== 3 ||
+      value.levelCount !== 8 ||
+      slots.length !== expected.length ||
+      slots.some((slot, index) => slot !== expected[index])
+    )
+      fail(path, 'naturalSelection requires the exact five core slots and levelCount 8');
+    return Object.freeze({
+      kind,
+      slots: Object.freeze([...expected]) as Extract<
+        TraitSelectedDisposition,
+        { readonly kind: 'naturalSelection' }
+      >['slots'],
+      levelCount: 8,
+    });
+  }
+  if (kind === 'ransom') {
+    if (Object.keys(value).length !== 4 || value.levelsPerRemovedIdentity !== 4)
+      fail(path, 'ransom requires its two giver keys and level factor 4');
+    const removeGiverKey = closedValue(
+      value.removeGiverKey,
+      ['Hera', 'Zeus'] as const,
+      `${path}.removeGiverKey`,
+    );
+    const buffGiverKey = closedValue(
+      value.buffGiverKey,
+      ['Hera', 'Zeus'] as const,
+      `${path}.buffGiverKey`,
+    );
+    if (removeGiverKey === buffGiverKey) fail(path, 'ransom givers must oppose each other');
+    return Object.freeze({ kind, removeGiverKey, buffGiverKey, levelsPerRemovedIdentity: 4 });
+  }
+  if (kind === 'steadyGrowth') {
+    if (Object.keys(value).length !== 2)
+      fail(path, 'steadyGrowth requires only kind and intervalsByRarity');
+    const intervals = requireObject(value.intervalsByRarity, `${path}.intervalsByRarity`);
+    const expected = { Common: 6, Rare: 5, Epic: 4, Heroic: 3 } as const;
+    if (
+      Object.keys(intervals).length !== 4 ||
+      Object.entries(expected).some(([rarity, interval]) => intervals[rarity] !== interval)
+    )
+      fail(
+        `${path}.intervalsByRarity`,
+        'must declare exact Common 6, Rare 5, Epic 4, Heroic 3 intervals',
+      );
+    return Object.freeze({ kind, intervalsByRarity: Object.freeze(expected) });
+  }
   if (kind === 'worldShopRestock') {
     if (Object.keys(value).length !== 3 || value.refillCount !== 1)
       fail(path, 'worldShopRestock requires kind, refillCount 1, and discountByRarity');
@@ -1074,7 +1138,6 @@ function normalizeTraits(
       const acquisition = requireObject(trait.targetedAcquisition, acquisitionPath) as unknown as {
         readonly kind?: unknown;
         readonly target?: unknown;
-        readonly maximumEligibleLevelByTraitAndRarity?: unknown;
       };
       const kind = closedValue(
         acquisition.kind,
@@ -1094,77 +1157,9 @@ function normalizeTraits(
               `${acquisitionPath}.target`,
             );
       if (kind === 'promoteGodTraitToHeroic') {
-        const rawLimits = acquisition.maximumEligibleLevelByTraitAndRarity;
-        let maximumEligibleLevelByTraitAndRarity:
-          Readonly<Record<string, Readonly<Partial<Record<TraitRarity, number>>>>> | undefined;
-        if (rawLimits !== undefined) {
-          const limits = requireObject(
-            rawLimits,
-            `${acquisitionPath}.maximumEligibleLevelByTraitAndRarity`,
-          );
-          const normalized: Record<string, Readonly<Partial<Record<TraitRarity, number>>>> = {};
-          for (const [targetTraitKey, rawByRarity] of Object.entries(limits)) {
-            const targetTrait = declarations.find((candidate) => candidate.key === targetTraitKey);
-            if (targetTrait === undefined)
-              fail(
-                `${acquisitionPath}.maximumEligibleLevelByTraitAndRarity.${targetTraitKey}`,
-                'unknown trait',
-              );
-            if (!coreGodTraitKeys.has(targetTraitKey) || targetTrait.blockStacking) {
-              fail(
-                `${acquisitionPath}.maximumEligibleLevelByTraitAndRarity.${targetTraitKey}`,
-                'must be a Pom-eligible core god trait',
-              );
-            }
-            const byRarity = requireObject(
-              rawByRarity,
-              `${acquisitionPath}.maximumEligibleLevelByTraitAndRarity.${targetTraitKey}`,
-            );
-            const normalizedByRarity: Partial<Record<TraitRarity, number>> = {};
-            for (const [rarity, maximum] of Object.entries(byRarity)) {
-              const normalizedRarity = closedValue(
-                rarity,
-                IN_RUN_RARITIES,
-                `${acquisitionPath}.maximumEligibleLevelByTraitAndRarity.${targetTraitKey}.${rarity}`,
-              );
-              if (!targetTrait.equippedRarities?.includes(normalizedRarity)) {
-                fail(
-                  `${acquisitionPath}.maximumEligibleLevelByTraitAndRarity.${targetTraitKey}.${rarity}`,
-                  'must be an equipped rarity of the target trait',
-                );
-              }
-              normalizedByRarity[normalizedRarity] = requirePositiveInteger(
-                maximum as number,
-                `${acquisitionPath}.maximumEligibleLevelByTraitAndRarity.${targetTraitKey}.${rarity}`,
-              );
-            }
-            if (Object.keys(normalizedByRarity).length === 0)
-              fail(
-                `${acquisitionPath}.maximumEligibleLevelByTraitAndRarity.${targetTraitKey}`,
-                'must not be empty',
-              );
-            const freshRarities = targetTrait.freshOfferRarities ?? [];
-            if (
-              Object.keys(normalizedByRarity).length !== freshRarities.length ||
-              freshRarities.some((rarity) => normalizedByRarity[rarity] === undefined)
-            ) {
-              fail(
-                `${acquisitionPath}.maximumEligibleLevelByTraitAndRarity.${targetTraitKey}`,
-                'must cover exactly the target fresh ranked rarities',
-              );
-            }
-            normalized[targetTraitKey] = Object.freeze(normalizedByRarity);
-          }
-          if (Object.keys(normalized).length === 0)
-            fail(`${acquisitionPath}.maximumEligibleLevelByTraitAndRarity`, 'must not be empty');
-          maximumEligibleLevelByTraitAndRarity = Object.freeze(normalized);
-        }
         targetedAcquisition = Object.freeze({
           kind,
           target: target as 'superchargeableGodTrait',
-          ...(maximumEligibleLevelByTraitAndRarity === undefined
-            ? {}
-            : { maximumEligibleLevelByTraitAndRarity }),
         });
       } else {
         targetedAcquisition = Object.freeze({ kind, target: target as 'upgradableHammer' });
@@ -1187,6 +1182,55 @@ function normalizeTraits(
       trait.selectedDisposition,
       `${path}.selectedDisposition`,
     );
+    let maximumEligibleLevelByRarity:
+      | Readonly<Record<Extract<TraitRarity, 'Common' | 'Rare' | 'Epic' | 'Heroic'>, number>>
+      | undefined;
+    if (trait.maximumEligibleLevelByRarity !== undefined) {
+      if (!COOLDOWN_CAPPED_IN_RUN_UPGRADE_TRAITS.has(trait.key))
+        fail(
+          `${path}.maximumEligibleLevelByRarity`,
+          'is reserved for the three cooldown-capped Hephaestus core traits',
+        );
+      if (!isCoreGodTrait || trait.blockStacking)
+        fail(`${path}.maximumEligibleLevelByRarity`, 'requires a Pom-eligible core god trait');
+      const rawLimits = requireObject(
+        trait.maximumEligibleLevelByRarity,
+        `${path}.maximumEligibleLevelByRarity`,
+      );
+      const normalized: Partial<Record<TraitRarity, number>> = {};
+      for (const [rarity, maximum] of Object.entries(rawLimits)) {
+        const normalizedRarity = closedValue(
+          rarity,
+          IN_RUN_RARITIES,
+          `${path}.maximumEligibleLevelByRarity.${rarity}`,
+        );
+        if (!equippedRarities.includes(normalizedRarity))
+          fail(
+            `${path}.maximumEligibleLevelByRarity.${rarity}`,
+            'must be an equipped rarity of this trait',
+          );
+        normalized[normalizedRarity] = requirePositiveInteger(
+          maximum as number,
+          `${path}.maximumEligibleLevelByRarity.${rarity}`,
+        );
+      }
+      if (
+        Object.keys(normalized).length !== equippedRarities.length ||
+        equippedRarities.some((rarity) => normalized[rarity] === undefined)
+      )
+        fail(
+          `${path}.maximumEligibleLevelByRarity`,
+          'must cover exactly this trait equipped ranked rarities',
+        );
+      maximumEligibleLevelByRarity = Object.freeze(
+        normalized as Record<Extract<TraitRarity, 'Common' | 'Rare' | 'Epic' | 'Heroic'>, number>,
+      );
+    } else if (COOLDOWN_CAPPED_IN_RUN_UPGRADE_TRAITS.has(trait.key)) {
+      fail(
+        `${path}.maximumEligibleLevelByRarity`,
+        'is required for the cooldown-capped Hephaestus core traits',
+      );
+    }
     if (
       trait.key === 'KeepsakeLevelBoon' &&
       selectedDisposition.kind !== 'advanceCurrentKeepsake'
@@ -1227,6 +1271,7 @@ function normalizeTraits(
       ),
       ...(rarityFloorEffect === undefined ? {} : { rarityFloorEffect }),
       ...(targetedAcquisition === undefined ? {} : { targetedAcquisition }),
+      ...(maximumEligibleLevelByRarity === undefined ? {} : { maximumEligibleLevelByRarity }),
       ...(trait.selfExclusion === undefined
         ? {}
         : { selfExclusion: requireNonEmpty(trait.selfExclusion, `${path}.selfExclusion`) }),

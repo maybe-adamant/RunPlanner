@@ -48,7 +48,9 @@ export type RewardGenerationFindingCode =
   | 'artificerConversionUnavailable'
   | 'artificerReplacementUnavailable'
   | 'keepsakeEquipResultMissing'
-  | 'keepsakeEquipResultUnavailable';
+  | 'keepsakeEquipResultUnavailable'
+  | 'steadyGrowthOutcomeMissing'
+  | 'steadyGrowthOutcomeUnavailable';
 
 export type TraitFindingCode =
   | 'callingCardRarificationUnavailable'
@@ -78,6 +80,8 @@ export type TraitFindingCode =
   | 'fallbackGoldUnavailable'
   | 'traitOfferSelectionUnavailable'
   | 'wrongHammerLoadout'
+  | 'naturalSelectionResultMissing'
+  | 'naturalSelectionResultUnavailable'
   | 'nonPriorityTrait'
   | 'missingAttackOrSpecial'
   | 'circeResolutionMissing'

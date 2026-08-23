@@ -252,6 +252,14 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
     case 'echoPomNoTargetUnavailable':
     case 'echoPomTargetUnavailable':
       return { kind: 'trait', message: 'Choose a greatest-level Pom-eligible trait.' };
+    case 'naturalSelectionResultMissing':
+      return { kind: 'trait', message: 'Choose the successful Natural Selection level targets.' };
+    case 'naturalSelectionResultUnavailable':
+      return { kind: 'trait', message: 'Repair this Natural Selection target sequence.' };
+    case 'steadyGrowthOutcomeMissing':
+      return { kind: 'trait', message: 'Choose the Steady Growth rarity target.' };
+    case 'steadyGrowthOutcomeUnavailable':
+      return { kind: 'trait', message: 'Choose a trait eligible for a rarity increase.' };
     case 'echoLastRunBoonMissing':
       return { kind: 'trait', message: 'Author one to three previous-run boon outcomes.' };
     case 'echoLastRunBoonOptionUnavailable':

@@ -3,13 +3,15 @@ import {
   type BiomeAddress,
   type LevelResolutionAddress,
   type TraitOfferAddress,
+  type NaturalSelectionResultAddress,
   type TargetAddress,
   type BossCompletionArcanaAddress,
   type KeepsakeSelectionAddress,
   type KeepsakeEquipResultAddress,
+  type SteadyGrowthOutcomeAddress,
   type AcquisitionRoleAddress,
 } from '../authored-project/addresses';
-import type { Catalog } from '../catalog-schema';
+import type { Catalog, TraitOrdinaryBoonSlot } from '../catalog-schema';
 import type {
   AuthoredLevelResolution,
   AuthoredTraitOffer,
@@ -42,10 +44,18 @@ import {
   evaluateReachedLevelResolution,
   pomEligibleTargetKeys,
   type TraitHistoryState,
+  type ReachedSteadyGrowthThreshold,
+  type SteadyGrowthTargetAssessment,
+  assessSteadyGrowthTarget,
   echoPomGreatestLevelTraitKeys,
   echoLastRunBoonOutcomes,
   directTraitSetOutcomes,
   chaosAdjustedTraitOfferContext,
+  assessNaturalSelectionTargets,
+  type NaturalSelectionTargetAssessment,
+  evaluateReachedTraitOffer,
+  recordReachedTraitOffer,
+  type RansomAssessment,
 } from './traits';
 import type { KeepsakeState } from './keepsakes';
 import { evaluateCallingCardOffer } from './keepsakes';
@@ -135,6 +145,14 @@ export interface TraitOfferCandidateCapability {
     optionKey: TraitOptionKey,
     setKey: import('../catalog-schema').DirectTraitSetKey,
   ) => readonly (readonly (string | null)[])[];
+  /** Exact selected Natural Selection result assessment at this child frontier. */
+  readonly naturalSelectionTargets: (
+    levelCount: number,
+    slots: readonly TraitOrdinaryBoonSlot[],
+    targets: readonly string[] | undefined,
+  ) => readonly NaturalSelectionTargetAssessment[];
+  /** Data-only current-frontier transform for a selected Ransom. */
+  readonly ransom: (value: AuthoredTraitOffer) => readonly RansomAssessment[];
   /** Closed Chaos restrictions at this exact pre-offer frontier. */
   readonly chaosOfferRules: (value?: AuthoredTraitOffer) => readonly {
     readonly ordinaryRequiresCommon: boolean;
@@ -162,7 +180,9 @@ export interface TraitOfferCandidateCapability {
 }
 
 export interface TraitOfferCandidateArtifacts {
-  readonly at: (address: TraitOfferAddress) => TraitOfferCandidateCapability | undefined;
+  readonly at: (
+    address: TraitOfferAddress | NaturalSelectionResultAddress,
+  ) => TraitOfferCandidateCapability | undefined;
 }
 
 export interface LevelResolutionCandidateBranch {
@@ -202,6 +222,41 @@ export interface BossCompletionArcanaCandidateArtifacts {
   readonly at: (
     address: BossCompletionArcanaAddress,
   ) => BossCompletionArcanaCandidateCapability | undefined;
+}
+
+/** Exact threshold frontiers retained at one automatic Steady Growth row. */
+export interface SteadyGrowthCandidateCapability {
+  readonly thresholds: readonly ReachedSteadyGrowthThreshold[];
+  readonly evaluate: (
+    targetTraitKey: string | null | undefined,
+  ) => readonly SteadyGrowthTargetAssessment[];
+}
+export interface SteadyGrowthCandidateArtifacts {
+  readonly at: (address: SteadyGrowthOutcomeAddress) => SteadyGrowthCandidateCapability | undefined;
+}
+export function createSteadyGrowthCandidateArtifacts(
+  catalog: Catalog,
+  contexts: ReadonlyMap<string, readonly ReachedSteadyGrowthThreshold[]>,
+): SteadyGrowthCandidateArtifacts {
+  const privateContexts = new Map(contexts);
+  return Object.freeze({
+    at: (address: SteadyGrowthOutcomeAddress) => {
+      const thresholds = privateContexts.get(semanticAddressKey(address));
+      if (thresholds === undefined) return undefined;
+      return Object.freeze({
+        thresholds,
+        evaluate: (targetTraitKey: string | null | undefined) =>
+          Object.freeze(
+            thresholds.map((threshold) =>
+              assessSteadyGrowthTarget(catalog, threshold, targetTraitKey),
+            ),
+          ),
+      });
+    },
+  });
+}
+function createEmptySteadyGrowthCandidateArtifacts(): SteadyGrowthCandidateArtifacts {
+  return Object.freeze({ at: () => undefined });
 }
 
 /**
@@ -251,6 +306,7 @@ export interface BiomeCandidateArtifacts {
   readonly keepsakeEquipResults: KeepsakeEquipResultCandidateArtifacts;
   readonly acquisitionConversions: AcquisitionConversionCandidateArtifacts;
   readonly derivedAcquisitionEntries: DerivedAcquisitionEntryCandidateArtifacts;
+  readonly steadyGrowth: SteadyGrowthCandidateArtifacts;
 }
 
 export interface DerivedAcquisitionEntryCandidateCapability {
@@ -554,6 +610,7 @@ export function createBiomeCandidateArtifacts(
   ),
   acquisitionConversions: AcquisitionConversionCandidateArtifacts = createEmptyAcquisitionConversionCandidateArtifacts(),
   derivedAcquisitionEntries: DerivedAcquisitionEntryCandidateArtifacts = createEmptyDerivedAcquisitionEntryCandidateArtifacts(),
+  steadyGrowth: SteadyGrowthCandidateArtifacts = createEmptySteadyGrowthCandidateArtifacts(),
 ): BiomeCandidateArtifacts {
   return Object.freeze({
     origin,
@@ -568,6 +625,7 @@ export function createBiomeCandidateArtifacts(
     keepsakeEquipResults,
     acquisitionConversions,
     derivedAcquisitionEntries,
+    steadyGrowth,
   });
 }
 
@@ -639,7 +697,7 @@ export function createTraitOfferCandidateArtifacts(
 ): TraitOfferCandidateArtifacts {
   const privateContexts = new Map(contexts);
   return Object.freeze({
-    at: (address: TraitOfferAddress) => {
+    at: (address: TraitOfferAddress | NaturalSelectionResultAddress) => {
       const branchContexts = privateContexts.get(semanticAddressKey(address));
       if (branchContexts === undefined) return undefined;
       return Object.freeze({
@@ -858,6 +916,37 @@ export function createTraitOfferCandidateArtifacts(
               const disposition = catalog.traits.byKey[option.traitKey]?.selectedDisposition;
               if (disposition?.kind !== 'directTraitSets') return [];
               return [directTraitSetOutcomes(catalog, context.before, option.traitKey, setKey)];
+            }),
+          ),
+        naturalSelectionTargets: (
+          levelCount: number,
+          slots: readonly TraitOrdinaryBoonSlot[],
+          targets: readonly string[] | undefined,
+        ) =>
+          Object.freeze(
+            branchContexts.map((context) =>
+              assessNaturalSelectionTargets(catalog, context.before, levelCount, slots, targets),
+            ),
+          ),
+        ransom: (value: AuthoredTraitOffer) =>
+          Object.freeze(
+            branchContexts.flatMap((context) => {
+              const evaluation = evaluateReachedTraitOffer(
+                catalog,
+                address.kind === 'traitOffer' ? address : address.trait,
+                address.kind === 'traitOffer'
+                  ? address.acquisitionRole
+                  : address.trait.acquisitionRole,
+                value,
+                context.before,
+                traitOfferCandidateContext(catalog, context.before, context.context, value),
+                0,
+                context.arcanaFear,
+                false,
+                context.keepsakes,
+              );
+              const applied = recordReachedTraitOffer(catalog, evaluation, 0, 'candidate');
+              return applied.ransomAssessment === undefined ? [] : [applied.ransomAssessment];
             }),
           ),
         chaosOfferRules: (value?: AuthoredTraitOffer) =>

@@ -408,6 +408,22 @@ const findingCopy = {
     title: 'Fig Leaf skip unavailable',
     description: 'This combat cannot be skipped with the remaining Fig Leaf uses.',
   },
+  naturalSelectionResultMissing: {
+    title: 'Natural Selection result missing',
+    description: 'Choose the successful level targets for this selected trait.',
+  },
+  naturalSelectionResultUnavailable: {
+    title: 'Natural Selection result unavailable',
+    description: 'Repair this sequence using the current eligible target order.',
+  },
+  steadyGrowthOutcomeMissing: {
+    title: 'Steady Growth target missing',
+    description: 'Choose the rarity target at this completed encounter.',
+  },
+  steadyGrowthOutcomeUnavailable: {
+    title: 'Steady Growth target unavailable',
+    description: 'Choose a trait that can gain rarity at this checkpoint.',
+  },
 } as const satisfies Readonly<Record<FindingCode, FindingPresentation>>;
 
 const projectStatusCopy = {
@@ -741,6 +757,10 @@ export function findingDestinationLabel(catalog: Catalog, origin: SemanticAddres
       return `${biomeLabel} · Trait offer`;
     case 'traitAcquisitionTarget':
       return `${biomeLabel} · Acquisition target`;
+    case 'naturalSelectionResult':
+      return `${biomeLabel} · Natural Selection result`;
+    case 'steadyGrowthOutcome':
+      return `${biomeLabel} · Steady Growth outcome`;
     case 'acquisitionRole':
       return `${biomeLabel} · Acquisition`;
     case 'circeResolution':

@@ -10,6 +10,7 @@ import {
   createCirceResolutionAddress,
   createTraitAcquisitionTargetAddress,
   createEchoPomTargetAddress,
+  createNaturalSelectionResultAddress,
   createEchoLastRunBoonAddress,
   createAllTogetherSetAddress,
   createLevelResolutionAddress,
@@ -97,12 +98,13 @@ import {
   advanceChaosClock,
   createTraitHistoryState,
   foldTraitHistoryEvents,
-  isPomEligibleTrait,
+  isPomUpgradeTarget,
   echoPomGreatestLevelTraitKeys,
   echoLastRunBoonOutcomes,
   evaluateReachedEchoLastRunBoonOffer,
   evaluateReachedTraitOffer,
   assessTraitOfferBeforeRarification,
+  assessNaturalSelectionTargets,
   evaluateReachedLevelResolution,
   recordReachedLevelResolution,
   recordReachedTraitOffer,
@@ -1050,7 +1052,7 @@ function applyTraitOfferForAcquisitionInternal(
   const pomLevels =
     branch.keepsakes.jeweledPom?.active === true &&
     selected !== undefined &&
-    isPomEligibleTrait(catalog, selected.traitKey)
+    isPomUpgradeTarget(catalog, applied.history.equippedTraits[selected.traitKey])
       ? branch.keepsakes.jeweledPom.levels
       : undefined;
   let traitHistory =
@@ -1081,6 +1083,54 @@ function applyTraitOfferForAcquisitionInternal(
       ? advanceCurrentKeepsake(catalog, effectiveBranch.keepsakes, selectedDisposition.rankBonus)
       : effectiveBranch.keepsakes;
   let blockedChildAddress: SemanticAddress | undefined;
+  let blockedChildCandidateContext: import('../traits').TraitOfferCandidateContext | undefined;
+  if (selectedDisposition?.kind === 'naturalSelection' && selected !== undefined) {
+    const owner = traitOwnerAddress(reward.origin);
+    if (owner !== undefined) {
+      const traitAddress = createTraitOfferAddress(owner, role);
+      const address = createNaturalSelectionResultAddress(
+        traitAddress,
+        applied.event.selectedOptionKey,
+      );
+      const assessment = assessNaturalSelectionTargets(
+        catalog,
+        evaluation.before,
+        selectedDisposition.levelCount,
+        selectedDisposition.slots,
+        selected.naturalSelectionTargets,
+      );
+      if (!assessment.legal || !assessment.complete) {
+        blockedChildAddress = address;
+        blockedChildCandidateContext = Object.freeze({
+          before: evaluation.before,
+          context: withBoonRarityFacts(
+            catalog,
+            branch,
+            Object.freeze({
+              ...(reward.traitContext ?? {}),
+              resolvedProviderKey: evaluation.offer.giverKey,
+            }),
+          ),
+          arcanaFear: branch.arcanaFear,
+          keepsakes: branch.keepsakes,
+        });
+        if (findings !== undefined)
+          addTraitChildFinding(
+            findings,
+            address,
+            lifecyclePoint,
+            sequence,
+            selected.naturalSelectionTargets === undefined
+              ? 'naturalSelectionResultMissing'
+              : 'naturalSelectionResultUnavailable',
+            selected.traitKey,
+            assessment.legal ? 'incomplete' : 'unavailable',
+            findingChronology,
+            ownerRegion(traitAddress),
+          );
+      }
+    }
+  }
   if (
     evaluation.targetedAcquisition.applies &&
     !evaluation.targetedAcquisition.legal &&
@@ -1207,6 +1257,9 @@ function applyTraitOfferForAcquisitionInternal(
           blockedChild: Object.freeze({
             address: blockedChildAddress,
             branch: settledBranch,
+            ...(blockedChildCandidateContext === undefined
+              ? {}
+              : { candidateContext: blockedChildCandidateContext }),
           }),
         }),
   });
@@ -3025,6 +3078,7 @@ export function settleShopAcquisitionSite(
         acquisitionPoint: 'shopDuplicateMaterialized',
         traitKey: pending.traitKey,
         acquisitionIdentity: pending.acquisitionIdentity,
+        match: 'acquisitionIdentity' as const,
       }),
     ]);
     execution.candidate = Object.freeze({
@@ -3038,9 +3092,9 @@ export function settleShopAcquisitionSite(
       sourceOffer: offer,
       sourceTraitHistory: beforeTraits,
       sourcePomEligibleTraitKeys: Object.freeze(
-        Object.keys(beforeTraits.equippedTraits).filter((traitKey) =>
-          isPomEligibleTrait(catalog, traitKey),
-        ),
+        Object.values(beforeTraits.equippedTraits)
+          .filter((trait) => isPomUpgradeTarget(catalog, trait))
+          .map((trait) => trait.traitKey),
       ),
     });
     const branchesBeforeEntry = Object.freeze([execution.candidate]);

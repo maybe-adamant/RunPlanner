@@ -1,5 +1,8 @@
 import type { Catalog } from '../../catalog-schema';
-import type { TraitOfferAddress } from '../../authored-project/addresses';
+import type {
+  NaturalSelectionResultAddress,
+  TraitOfferAddress,
+} from '../../authored-project/addresses';
 import {
   optionIndex,
   type AuthoredTraitOffer,
@@ -100,6 +103,42 @@ export interface EchoPomTargetDomainQuery {
   readonly value: AuthoredTraitOffer;
   readonly optionKey: TraitOptionKey;
 }
+
+/** Exact selected Natural Selection sequence beneath one chosen trait option. */
+export interface NaturalSelectionResultCandidateQuery {
+  readonly kind: 'naturalSelectionResult';
+  readonly result: NaturalSelectionResultAddress;
+  readonly value: AuthoredTraitOffer;
+  readonly targets: readonly string[] | undefined;
+}
+
+/** Read-only derived transform for a selected King's or Queen's Ransom. */
+export interface RansomAssessmentCandidateQuery {
+  readonly kind: 'ransomAssessment';
+  readonly trait: TraitOfferAddress;
+  readonly value: AuthoredTraitOffer;
+}
+export interface EvaluatedRansomAssessmentCandidate {
+  readonly kind: 'ransomAssessment';
+  readonly result: {
+    readonly assessments: readonly import('../traits').RansomAssessment[];
+    readonly branchAgreement: boolean;
+  };
+}
+export type RansomAssessmentCandidateEvaluation =
+  CandidateContextUnavailable | EvaluatedRansomAssessmentCandidate;
+export interface EvaluatedNaturalSelectionResultCandidate {
+  readonly kind: 'naturalSelectionResult';
+  readonly result: {
+    readonly supported: boolean;
+    readonly complete: boolean;
+    readonly nextTargetTraitKeys: readonly string[];
+    readonly branchSupport: readonly boolean[];
+    readonly findings: readonly TraitOfferCandidateFinding[];
+  };
+}
+export type NaturalSelectionResultCandidateEvaluation =
+  CandidateContextUnavailable | EvaluatedNaturalSelectionResultCandidate;
 export interface EvaluatedEchoPomTargetDomain {
   readonly kind: 'echoPomTargetDomain';
   readonly result: {
@@ -860,6 +899,104 @@ export function evaluateEchoPomTargetDomain(
       candidates,
       emptyNoOpAllowed: candidates.some(
         (candidate) => candidate.value === null && candidate.support !== 'impossible',
+      ),
+    }),
+  });
+}
+
+export function evaluateNaturalSelectionResultCandidate(
+  _catalog: Catalog,
+  _project: ProjectDocument,
+  evaluation: ProjectEvaluation,
+  candidateArtifacts: TraitOfferCandidateArtifacts | undefined,
+  query: NaturalSelectionResultCandidateQuery,
+): NaturalSelectionResultCandidateEvaluation {
+  const capability = candidateArtifacts?.at(query.result);
+  if (capability === undefined) return unavailableForTraitOffer(evaluation, query.result.trait);
+  const selected =
+    query.value.kind === 'traits'
+      ? query.value.options[optionIndex(query.result.optionKey)]
+      : undefined;
+  const disposition =
+    selected === undefined
+      ? undefined
+      : _catalog.traits.byKey[selected.traitKey]?.selectedDisposition;
+  if (disposition?.kind !== 'naturalSelection')
+    return unavailableForTraitOffer(evaluation, query.result.trait);
+  const assessments = capability.naturalSelectionTargets(
+    disposition.levelCount,
+    disposition.slots,
+    query.targets,
+  );
+  const first = assessments[0];
+  if (first === undefined) return unavailableForTraitOffer(evaluation, query.result.trait);
+  const branchSupport = Object.freeze(
+    assessments.map((assessment) => assessment.legal && assessment.complete),
+  );
+  const supported = branchSupport.length > 0 && branchSupport.every(Boolean);
+  const complete = assessments.every((assessment) => assessment.complete);
+  const nextTargetTraitKeys = assessments.every(
+    (assessment) =>
+      JSON.stringify(assessment.nextTargetTraitKeys) === JSON.stringify(first.nextTargetTraitKeys),
+  )
+    ? first.nextTargetTraitKeys
+    : Object.freeze([]);
+  return Object.freeze({
+    kind: 'naturalSelectionResult',
+    result: Object.freeze({
+      supported,
+      complete,
+      nextTargetTraitKeys,
+      branchSupport,
+      findings: Object.freeze(
+        supported
+          ? []
+          : [
+              Object.freeze({
+                code:
+                  query.targets === undefined
+                    ? ('naturalSelectionResultMissing' as const)
+                    : ('naturalSelectionResultUnavailable' as const),
+                detail: assessments.some((assessment) => assessment.legal)
+                  ? 'incomplete'
+                  : 'unavailable',
+              }),
+            ],
+      ),
+    }),
+  });
+}
+
+export function evaluateRansomAssessmentCandidate(
+  _catalog: Catalog,
+  _project: ProjectDocument,
+  evaluation: ProjectEvaluation,
+  candidateArtifacts: TraitOfferCandidateArtifacts | undefined,
+  query: RansomAssessmentCandidateQuery,
+): RansomAssessmentCandidateEvaluation {
+  const capability = candidateArtifacts?.at(query.trait);
+  if (capability === undefined) return unavailableForTraitOffer(evaluation, query.trait);
+  const assessments = capability.ransom(query.value);
+  if (assessments.length === 0) return unavailableForTraitOffer(evaluation, query.trait);
+  const first = assessments[0]!;
+  return Object.freeze({
+    kind: 'ransomAssessment',
+    result: Object.freeze({
+      assessments,
+      branchAgreement: assessments.every(
+        (assessment) =>
+          JSON.stringify({
+            removedTraitKeys: assessment.removedTraitKeys,
+            removedCount: assessment.removedCount,
+            levelBonus: assessment.levelBonus,
+            buffedTraitKeys: assessment.buffedTraitKeys,
+          }) ===
+          JSON.stringify({
+            removedTraitKeys: first.removedTraitKeys,
+            removedCount: first.removedCount,
+            levelBonus: first.levelBonus,
+            buffedTraitKeys: first.buffedTraitKeys,
+          }),
       ),
     }),
   });

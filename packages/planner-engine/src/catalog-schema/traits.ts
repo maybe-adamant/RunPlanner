@@ -93,6 +93,7 @@ export interface ChaosTraitCatalog {
 
 /** Rarities that can exist on an equipped trait or a fresh offer. */
 export type TraitRarity = 'Common' | 'Rare' | 'Epic' | 'Heroic' | 'Legendary' | 'Duo';
+export type InRunTraitRarity = Extract<TraitRarity, 'Common' | 'Rare' | 'Epic' | 'Heroic'>;
 
 /** Ordered checks used only for fresh Olympian and Hermes boon rolls. */
 export type BoonRarityCheck = 'Rare' | 'Epic' | 'Duo' | 'Legendary';
@@ -137,14 +138,6 @@ export interface ProperUpbringingEffect extends ScalableGodTraitRarityFloorEffec
 export interface PromoteGodTraitToHeroicAcquisition {
   readonly kind: 'promoteGodTraitToHeroic';
   readonly target: 'superchargeableGodTrait';
-  /**
-   * Source-declared cooldown caps for the small set of Heroic promotions
-   * whose current Pom level constrains the transition. This remains a
-   * targeted-acquisition fact, not a general combat-value model.
-   */
-  readonly maximumEligibleLevelByTraitAndRarity?: Readonly<
-    Record<string, Readonly<Partial<Record<TraitRarity, number>>>>
-  >;
 }
 
 /** Player-facing Rank II progression for one eligible equipped Daedalus Hammer. */
@@ -172,6 +165,27 @@ export interface DirectTraitSetDeclaration {
  * modeled run effect. Pickup detail remains owned by the acquisition entry. */
 export type TraitSelectedDisposition =
   | { readonly kind: 'equip' }
+  | {
+      readonly kind: 'naturalSelection';
+      readonly slots: readonly [
+        TraitOrdinaryBoonSlot,
+        TraitOrdinaryBoonSlot,
+        TraitOrdinaryBoonSlot,
+        TraitOrdinaryBoonSlot,
+        TraitOrdinaryBoonSlot,
+      ];
+      readonly levelCount: 8;
+    }
+  | {
+      readonly kind: 'ransom';
+      readonly removeGiverKey: 'Hera' | 'Zeus';
+      readonly buffGiverKey: 'Hera' | 'Zeus';
+      readonly levelsPerRemovedIdentity: 4;
+    }
+  | {
+      readonly kind: 'steadyGrowth';
+      readonly intervalsByRarity: Readonly<Record<'Common' | 'Rare' | 'Epic' | 'Heroic', number>>;
+    }
   | {
       /** Equips the outer trait, then resolves one direct rarityless grant per set. */
       readonly kind: 'directTraitSets';
@@ -306,6 +320,12 @@ export interface TraitDeclaration {
   readonly excludeFromRarityCount: boolean;
   readonly rarityFloorEffect?: ProperUpbringingEffect;
   readonly targetedAcquisition?: TargetedTraitAcquisition;
+  /**
+   * The largest current level from which an in-run level or rarity upgrade
+   * still changes this trait. This is intentionally declaration-owned so
+   * Pom-derived effects and generic in-run rarity promotion agree.
+   */
+  readonly maximumEligibleLevelByRarity?: Readonly<Record<InRunTraitRarity, number>>;
   readonly selectedDisposition: TraitSelectedDisposition;
   readonly selfExclusion?: string;
   readonly hammerCompatibility?: HammerCompatibility;

@@ -3,10 +3,12 @@ import {
   applyProjectCommand,
   createBiomeAddress,
   createIncomingRewardAddress,
+  createNaturalSelectionResultAddress,
   createTraitAcquisitionTargetAddress,
   createOccurrenceAddress,
   createOccurrenceId,
   createTraitOfferAddress,
+  createSteadyGrowthOutcomeAddress,
   semanticAddressKey,
   type AuthoredTraitOffer,
   type SemanticAddress,
@@ -21,7 +23,11 @@ import {
   createTraitHistoryState,
   evaluateReachedTraitOffer,
   foldTraitHistoryEvents,
+  hasEffectiveInRunUpgrade,
   isPomEligibleTrait,
+  isPomUpgradeTarget,
+  assessNaturalSelectionTargets,
+  assessRansom,
   recordReachedTraitOffer,
   promoteArcana,
   isAspectSpellDropDormant,
@@ -48,7 +54,11 @@ import { loadSurfaceNOPQProject } from '@run-planner/test-fixtures/surface';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
 import { createArcanaFearState } from '../../src/simulation/arcana-fear';
-import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidate-artifacts';
+import {
+  createSteadyGrowthCandidateArtifacts,
+  createTraitOfferCandidateArtifacts,
+} from '../../src/simulation/candidate-artifacts';
+import { evaluateNaturalSelectionResultCandidate } from '../../src/simulation/candidates/trait-offer';
 import {
   initializeRewardBranches,
   settleEncounterTraitOffer,
@@ -65,6 +75,7 @@ import {
 } from '../../src/simulation';
 
 const owner = { kind: 'project' } as SemanticAddress;
+const naturalSelectionSlots = ['Melee', 'Secondary', 'Ranged', 'Rush', 'Mana'] as const;
 
 function settleTestRoomReward(
   biome: ReturnType<typeof createBiomeAddress>,
@@ -382,6 +393,126 @@ function findingCode(traitKey: string, history: ReturnType<typeof createTraitHis
 }
 
 describe('Boon Growth and Boon Decay target predicates', () => {
+  it('exposes the Ransom transform as one data-only provider-indexed assessment', () => {
+    const before = historyFrom([
+      { giverKey: 'Hera', traitKey: 'HeraWeaponBoon', rarity: 'Common' },
+      { giverKey: 'Zeus', traitKey: 'ZeusWeaponBoon', rarity: 'Common' },
+    ]);
+    const assessment = assessRansom(
+      catalog,
+      before,
+      'SuperSacrificeBoonZeus',
+      owner,
+      'test',
+      3,
+      'test',
+    );
+    expect(assessment).toMatchObject({
+      applies: true,
+      removedTraitKeys: ['HeraWeaponBoon'],
+      removedCount: 1,
+      levelBonus: 4,
+      buffedTraitKeys: ['ZeusWeaponBoon'],
+    });
+    expect(assessment.resultingHistory.equippedTraits.HeraWeaponBoon).toBeUndefined();
+    expect(assessment.resultingHistory.equippedTraits.ZeusWeaponBoon?.level).toBe(5);
+  });
+
+  it('buffs a ranked non-priority Olympian passive through the same normalized giver identity', () => {
+    const before = historyFrom([
+      { giverKey: 'Hera', traitKey: 'HeraWeaponBoon', rarity: 'Common' },
+      { giverKey: 'Zeus', traitKey: 'ZeusManaBoltBoon', rarity: 'Common' },
+    ]);
+    const assessment = assessRansom(
+      catalog,
+      before,
+      'SuperSacrificeBoonZeus',
+      owner,
+      'test',
+      3,
+      'test',
+    );
+    expect(catalog.traitGivers.byKey.Zeus?.priorityTraitKeys).not.toContain('ZeusManaBoltBoon');
+    expect(isPomEligibleTrait(catalog, 'ZeusManaBoltBoon')).toBe(true);
+    expect(assessment).toMatchObject({
+      applies: true,
+      removedCount: 1,
+      levelBonus: 4,
+      buffedTraitKeys: ['ZeusManaBoltBoon'],
+    });
+    expect(assessment.resultingHistory.equippedTraits.ZeusManaBoltBoon?.level).toBe(5);
+  });
+
+  it('requires one Steady Growth target to work for every reached branch', () => {
+    const biome = createBiomeAddress('Underworld', 'F');
+    const outcome = createSteadyGrowthOutcomeAddress(
+      createOccurrenceAddress(biome, createOccurrenceId('steady-branch')),
+      'Combat',
+    );
+    const before = historyWith('Apollo', 'ApolloWeaponBoon', 'Common');
+    const threshold = {
+      traitKey: 'BoonGrowthBoon',
+      acquisitionIdentity: 'steady',
+      requiredInterval: 6,
+      before,
+      eligibleTargetKeys: Object.freeze(['ApolloWeaponBoon']),
+    } as const;
+    const noTargetThreshold = Object.freeze({
+      ...threshold,
+      eligibleTargetKeys: Object.freeze([]),
+    });
+    const artifacts = createSteadyGrowthCandidateArtifacts(
+      catalog,
+      new Map([[semanticAddressKey(outcome), Object.freeze([threshold, noTargetThreshold])]]),
+    );
+    expect(
+      artifacts
+        .at(outcome)
+        ?.evaluate('ApolloWeaponBoon')
+        .map((entry) => entry.legal),
+    ).toEqual([true, false]);
+  });
+
+  it("uses Natural Selection's declaration-owned level count for its child domain", () => {
+    const biome = createBiomeAddress('Underworld', 'F');
+    const trait = createTraitOfferAddress(
+      createIncomingRewardAddress(biome, createOccurrenceId('natural-level-count')),
+      'source',
+    );
+    const result = createNaturalSelectionResultAddress(trait, 'option1');
+    const before = historyWith('Apollo', 'ApolloWeaponBoon', 'Common');
+    const artifacts = createTraitOfferCandidateArtifacts(
+      catalog,
+      new Map([
+        [
+          semanticAddressKey(result),
+          Object.freeze([Object.freeze({ before, context: Object.freeze({}) })]),
+        ],
+      ]),
+    );
+    const value: AuthoredTraitOffer = Object.freeze({
+      kind: 'traits',
+      giverKey: 'Demeter',
+      options: Object.freeze([
+        { traitKey: 'GoodStuffBoon', rarity: 'Duo' },
+        { traitKey: 'BoonGrowthBoon', rarity: 'Common' },
+        { traitKey: 'SlowProjectileBoon', rarity: 'Common' },
+      ]) as Extract<AuthoredTraitOffer, { readonly kind: 'traits' }>['options'],
+      selectedOptionKey: 'option1',
+    });
+    expect(
+      evaluateNaturalSelectionResultCandidate(catalog, {} as never, {} as never, artifacts, {
+        kind: 'naturalSelectionResult',
+        result,
+        value,
+        targets: undefined,
+      }),
+    ).toMatchObject({
+      kind: 'naturalSelectionResult',
+      result: { complete: false, nextTargetTraitKeys: ['ApolloWeaponBoon'] },
+    });
+  });
+
   it('requires one generic Pom-eligible trait for Narcissus A', () => {
     expect(
       assessTraitOption(catalog, 'NarcissusA', createTraitHistoryState()).findings,
@@ -476,16 +607,17 @@ describe('Boon Growth and Boon Decay target predicates', () => {
   });
 
   it.each([
-    ['HephaestusWeaponBoon', 'Hephaestus', 9, 7, 5],
-    ['HephaestusSpecialBoon', 'Hephaestus', 11, 9, 7],
-    ['HephaestusSprintBoon', 'Hephaestus', 8, 7, 6],
+    ['HephaestusWeaponBoon', 'Hephaestus', 9, 7, 5, 3],
+    ['HephaestusSpecialBoon', 'Hephaestus', 11, 9, 7, 5],
+    ['HephaestusSprintBoon', 'Hephaestus', 8, 7, 6, 5],
   ] as const)(
-    'enforces Bridal Glow level caps for %s at every rarity boundary',
-    (traitKey, giverKey, commonLimit, rareLimit, epicLimit) => {
+    'shares the %s level caps across in-run upgrade consumers at every rarity boundary',
+    (traitKey, giverKey, commonLimit, rareLimit, epicLimit, heroicLimit) => {
       for (const [rarity, limit] of [
         ['Common', commonLimit],
         ['Rare', rareLimit],
         ['Epic', epicLimit],
+        ['Heroic', heroicLimit],
       ] as const) {
         const atLimit = foldTraitHistoryEvents(catalog, [
           {
@@ -504,26 +636,139 @@ describe('Boon Growth and Boon Decay target predicates', () => {
           },
           levelMutation(1, traitKey, 1, limit),
         ]);
-        expect(targetedAcquisitionTargetKeys(catalog, 'BoonDecayBoon', atLimit)).toContain(
-          traitKey,
+        expect(hasEffectiveInRunUpgrade(catalog, traitKey, atLimit.equippedTraits[traitKey]!)).toBe(
+          true,
         );
+        if (rarity !== 'Heroic')
+          expect(targetedAcquisitionTargetKeys(catalog, 'BoonDecayBoon', atLimit)).toContain(
+            traitKey,
+          );
         const aboveLimit = foldTraitHistoryEvents(catalog, [
           atLimit.events.find((event) => event.kind === 'traitOffer')!,
           levelMutation(1, traitKey, 1, limit + 1),
         ]);
+        expect(
+          hasEffectiveInRunUpgrade(catalog, traitKey, aboveLimit.equippedTraits[traitKey]!),
+        ).toBe(false);
         expect(targetedAcquisitionTargetKeys(catalog, 'BoonDecayBoon', aboveLimit)).not.toContain(
           traitKey,
         );
       }
-      expect(
-        targetedAcquisitionTargetKeys(
-          catalog,
-          'BoonDecayBoon',
-          historyWith(giverKey, traitKey, 'Heroic'),
-        ),
-      ).not.toContain(traitKey);
     },
   );
+
+  it('keeps Natural Selection on its first shuffled order while removing a newly capped target', () => {
+    const seeded = foldTraitHistoryEvents(catalog, [
+      {
+        kind: 'traitOffer',
+        owner,
+        acquisitionRole: 'seed',
+        sequence: 1,
+        giverKey: 'Hephaestus',
+        options: Object.freeze([
+          { traitKey: 'HephaestusWeaponBoon', rarity: 'Common' },
+          { traitKey: 'MassiveDamageBoon', rarity: 'Common' },
+          { traitKey: 'AntiArmorBoon', rarity: 'Common' },
+        ]) as TraitOfferEvent['options'],
+        selectedOptionKey: 'option1',
+        acquisitionPoint: 'test',
+      },
+      levelMutation(2, 'HephaestusWeaponBoon', 1, 9),
+      {
+        kind: 'traitOffer',
+        owner,
+        acquisitionRole: 'seed',
+        sequence: 3,
+        giverKey: 'Apollo',
+        options: Object.freeze([
+          { traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
+          { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
+          { traitKey: 'ApolloCastBoon', rarity: 'Common' },
+        ]) as TraitOfferEvent['options'],
+        selectedOptionKey: 'option1',
+        acquisitionPoint: 'test',
+      },
+    ]);
+    expect(
+      assessNaturalSelectionTargets(catalog, seeded, 8, naturalSelectionSlots, [
+        'HephaestusWeaponBoon',
+        'ApolloWeaponBoon',
+        'ApolloWeaponBoon',
+        'ApolloWeaponBoon',
+        'ApolloWeaponBoon',
+        'ApolloWeaponBoon',
+        'ApolloWeaponBoon',
+        'ApolloWeaponBoon',
+      ]),
+    ).toMatchObject({ legal: true });
+    expect(
+      assessNaturalSelectionTargets(catalog, seeded, 8, naturalSelectionSlots, [
+        'HephaestusWeaponBoon',
+        'ApolloWeaponBoon',
+        'ApolloWeaponBoon',
+        'HephaestusWeaponBoon',
+        'ApolloWeaponBoon',
+        'ApolloWeaponBoon',
+        'ApolloWeaponBoon',
+        'ApolloWeaponBoon',
+      ]),
+    ).toMatchObject({ legal: false });
+  });
+
+  it('limits Natural Selection to its declared ordinary slots while leaving Pom-eligible passives level-bearing', () => {
+    const before = historyFrom([
+      { giverKey: 'Zeus', traitKey: 'ZeusWeaponBoon', rarity: 'Common' },
+      { giverKey: 'Zeus', traitKey: 'ZeusManaBoltBoon', rarity: 'Common' },
+    ]);
+
+    expect(isPomUpgradeTarget(catalog, before.equippedTraits.ZeusManaBoltBoon)).toBe(true);
+    expect(
+      assessNaturalSelectionTargets(catalog, before, 8, naturalSelectionSlots, undefined),
+    ).toMatchObject({
+      legal: false,
+      complete: false,
+      nextTargetTraitKeys: ['ZeusWeaponBoon'],
+    });
+  });
+
+  it('allows Natural Selection to finish below eight only after its next domain becomes empty', () => {
+    const capped = foldTraitHistoryEvents(catalog, [
+      {
+        kind: 'traitOffer',
+        owner,
+        acquisitionRole: 'seed',
+        sequence: 1,
+        giverKey: 'Hephaestus',
+        options: Object.freeze([
+          { traitKey: 'HephaestusWeaponBoon', rarity: 'Common' },
+          { traitKey: 'MassiveDamageBoon', rarity: 'Common' },
+          { traitKey: 'AntiArmorBoon', rarity: 'Common' },
+        ]) as TraitOfferEvent['options'],
+        selectedOptionKey: 'option1',
+        acquisitionPoint: 'test',
+      },
+      levelMutation(2, 'HephaestusWeaponBoon', 1, 9),
+    ]);
+    expect(
+      assessNaturalSelectionTargets(catalog, capped, 8, naturalSelectionSlots, [
+        'HephaestusWeaponBoon',
+      ]),
+    ).toMatchObject({ legal: true, complete: true, nextTargetTraitKeys: [] });
+
+    const unresolved = foldTraitHistoryEvents(catalog, [
+      capped.events[0]!,
+      levelMutation(2, 'HephaestusWeaponBoon', 1, 8),
+    ]);
+    expect(
+      assessNaturalSelectionTargets(catalog, unresolved, 8, naturalSelectionSlots, [
+        'HephaestusWeaponBoon',
+      ]),
+    ).toMatchObject({
+      legal: true,
+      complete: false,
+      nextTargetTraitKeys: ['HephaestusWeaponBoon'],
+    });
+  });
   it.each([
     ['Hermes', 'HermesWeaponBoon'],
     ['Artemis', 'SupportingFireBoon'],
@@ -1077,6 +1322,36 @@ describe('Proper Upbringing rarity lifecycle', () => {
   function activeHistory() {
     return acquireLegalTrait(twoEachHistory(), 'Hera', 'ElementalRarityUpgradeBoon', 'Common');
   }
+
+  it('lets Proper Upbringing promote a cooldown-capped Common trait while Pom targeting excludes it', () => {
+    const capped = foldTraitHistoryEvents(catalog, [
+      ...twoEachHistory().events,
+      {
+        kind: 'traitOffer',
+        owner,
+        acquisitionRole: 'seed',
+        sequence: 9,
+        giverKey: 'Hephaestus',
+        options: Object.freeze([
+          { traitKey: 'HephaestusWeaponBoon', rarity: 'Common' },
+          { traitKey: 'MassiveDamageBoon', rarity: 'Common' },
+          { traitKey: 'AntiArmorBoon', rarity: 'Common' },
+        ]) as TraitOfferEvent['options'],
+        selectedOptionKey: 'option1',
+        acquisitionPoint: 'test',
+      },
+      levelMutation(10, 'HephaestusWeaponBoon', 1, 10),
+    ]);
+    expect(isPomUpgradeTarget(catalog, capped.equippedTraits.HephaestusWeaponBoon)).toBe(false);
+
+    const promoted = acquireLegalTrait(capped, 'Hera', 'ElementalRarityUpgradeBoon', 'Common');
+    expect(promoted.properUpbringingActive).toBe(true);
+    expect(promoted.equippedTraits.HephaestusWeaponBoon).toMatchObject({
+      rarity: 'Rare',
+      level: 10,
+    });
+    expect(isPomUpgradeTarget(catalog, promoted.equippedTraits.HephaestusWeaponBoon)).toBe(false);
+  });
 
   it('applies Bridal Glow before same-boundary Proper Upbringing credit', () => {
     let before = createTraitHistoryState();

@@ -10,6 +10,7 @@ import {
   expectArray,
   expectExactKeys,
   expectRecord,
+  expectNonBlankString,
   expectString,
   failProjectDocument,
 } from '../validation';
@@ -34,6 +35,7 @@ export function decodeEchoLastRunBoon(
         'traitKey',
         'rarity',
         ...(option.targetTraitKey === undefined ? [] : ['targetTraitKey']),
+        ...(option.naturalSelectionTargets === undefined ? [] : ['naturalSelectionTargets']),
       ],
       optionPath,
     );
@@ -44,6 +46,29 @@ export function decodeEchoLastRunBoon(
       ...(option.targetTraitKey === undefined
         ? {}
         : { targetTraitKey: expectString(option.targetTraitKey, `${optionPath}.targetTraitKey`) }),
+      ...(option.naturalSelectionTargets === undefined
+        ? {}
+        : (() => {
+            const targets = expectArray(
+              option.naturalSelectionTargets,
+              `${optionPath}.naturalSelectionTargets`,
+            );
+            if (targets.length < 1 || targets.length > 8)
+              failProjectDocument(
+                `${optionPath}.naturalSelectionTargets`,
+                'requires one to eight trait keys',
+              );
+            return {
+              naturalSelectionTargets: Object.freeze(
+                targets.map((target, targetIndex) =>
+                  expectNonBlankString(
+                    target,
+                    `${optionPath}.naturalSelectionTargets[${targetIndex}]`,
+                  ),
+                ),
+              ) as AuthoredEchoLastRunBoonOption['naturalSelectionTargets'],
+            };
+          })()),
     }) satisfies AuthoredEchoLastRunBoonOption;
   });
   const selectedOptionKey = expectString(

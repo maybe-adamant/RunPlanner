@@ -311,6 +311,12 @@ export const zeusTraits = [
     blockStacking: true,
     blockInRunRarify: false,
     excludeFromRarityCount: false,
+    selectedDisposition: {
+      kind: 'ransom',
+      removeGiverKey: 'Hera',
+      buffGiverKey: 'Zeus',
+      levelsPerRemovedIdentity: 4,
+    },
   },
 ] as const satisfies readonly RawTraitDeclaration[];
 

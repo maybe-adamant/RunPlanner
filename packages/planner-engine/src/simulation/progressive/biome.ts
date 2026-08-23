@@ -11,6 +11,7 @@ import {
   type TargetAddress,
   type LevelResolutionAddress,
   type TraitOfferAddress,
+  type NaturalSelectionResultAddress,
   type KeepsakeSelectionAddress,
   type KeepsakeEquipResultAddress,
   type AcquisitionRoleAddress,
@@ -529,13 +530,15 @@ function retainBlockedRegionProducts(
   const blockedTraitAt: TraitOfferAddress | undefined =
     blockedAt.kind === 'traitOffer'
       ? blockedAt
-      : blockedAt.kind === 'traitAcquisitionTarget' ||
-          blockedAt.kind === 'circeResolution' ||
-          blockedAt.kind === 'echoPomTarget' ||
-          blockedAt.kind === 'echoLastRunBoon' ||
-          blockedAt.kind === 'echoLastReward'
+      : blockedAt.kind === 'naturalSelectionResult'
         ? blockedAt.trait
-        : undefined;
+        : blockedAt.kind === 'traitAcquisitionTarget' ||
+            blockedAt.kind === 'circeResolution' ||
+            blockedAt.kind === 'echoPomTarget' ||
+            blockedAt.kind === 'echoLastRunBoon' ||
+            blockedAt.kind === 'echoLastReward'
+          ? blockedAt.trait
+          : undefined;
   const blockedLevelAt: LevelResolutionAddress | undefined =
     blockedAt.kind === 'levelResolution' ? blockedAt : undefined;
   const blockedBossCompletionAt: BossCompletionArcanaAddress | undefined =
@@ -547,6 +550,9 @@ function retainBlockedRegionProducts(
   const blockedAcquisitionAt = acquisitionRoleAncestor(blockedAt);
   const blockedDerivedAcquisitionAt = derivedAcquisitionEntryAncestor(blockedAt);
   const blockedKey = blockedTraitAt === undefined ? undefined : semanticAddressKey(blockedTraitAt);
+  const blockedTraitCapabilityAddress:
+    TraitOfferAddress | NaturalSelectionResultAddress | undefined =
+    blockedAt.kind === 'naturalSelectionResult' ? blockedAt : blockedTraitAt;
   const selectedOfferPrefix: SelectedTraitOfferAssessment[] = [];
   if (blockedKey !== undefined) {
     for (const offer of selectedRewards.selectedTraitOffers) {
@@ -638,17 +644,23 @@ function retainBlockedRegionProducts(
         ? selectedRewards.branches
         : undefined;
   const blockedCapability =
-    blockedTraitAt === undefined
+    blockedTraitCapabilityAddress === undefined
       ? undefined
-      : (selectedArtifacts.traitOffers.at(blockedTraitAt) ??
-        blockedArtifacts.traitOffers.at(blockedTraitAt));
+      : (selectedArtifacts.traitOffers.at(blockedTraitCapabilityAddress) ??
+        blockedArtifacts.traitOffers.at(blockedTraitCapabilityAddress));
   const retainedTraitKeys = new Set(
     selectedTraitOffers.map((offer) => semanticAddressKey(offer.address)),
   );
   const traitOffers: TraitOfferCandidateArtifacts = Object.freeze({
-    at: (address: TraitOfferAddress) => {
+    at: (
+      address:
+        | TraitOfferAddress
+        | import('../../authored-project/addresses').NaturalSelectionResultAddress,
+    ) => {
       const key = semanticAddressKey(address);
-      return blockedKey !== undefined && key === blockedKey && blockedCapability !== undefined
+      return blockedTraitCapabilityAddress !== undefined &&
+        key === semanticAddressKey(blockedTraitCapabilityAddress) &&
+        blockedCapability !== undefined
         ? blockedCapability
         : retainedTraitKeys.has(key)
           ? retainedArtifacts.traitOffers.at(address)
@@ -872,6 +884,7 @@ function retainBlockedRegionProducts(
     keepsakeEquipResults,
     acquisitionConversions,
     derivedAcquisitionEntries,
+    retainedArtifacts.steadyGrowth,
   );
   return Object.freeze({
     rewards:
@@ -970,6 +983,7 @@ function findingOwnerOrigin(finding: SemanticFinding): SemanticAddress {
   let origin = finding.origin;
   while (
     origin.kind === 'traitOffer' ||
+    origin.kind === 'naturalSelectionResult' ||
     origin.kind === 'levelResolution' ||
     origin.kind === 'acquisitionRole' ||
     origin.kind === 'traitAcquisitionTarget' ||
@@ -988,7 +1002,8 @@ function findingOwnerOrigin(finding: SemanticFinding): SemanticAddress {
           ? origin.site
           : origin.kind === 'acquisitionSite'
             ? origin.owner
-            : origin.kind === 'traitAcquisitionTarget' ||
+            : origin.kind === 'naturalSelectionResult' ||
+                origin.kind === 'traitAcquisitionTarget' ||
                 origin.kind === 'circeResolution' ||
                 origin.kind === 'echoPomTarget' ||
                 origin.kind === 'echoLastRunBoon' ||
@@ -1003,6 +1018,7 @@ function findingOwnerOrigin(finding: SemanticFinding): SemanticAddress {
 export function ownsOccurrence(origin: SemanticAddress, occurrenceId: string): boolean {
   if (
     origin.kind === 'traitOffer' ||
+    origin.kind === 'naturalSelectionResult' ||
     origin.kind === 'levelResolution' ||
     origin.kind === 'acquisitionRole' ||
     origin.kind === 'traitAcquisitionTarget' ||
@@ -1021,7 +1037,8 @@ export function ownsOccurrence(origin: SemanticAddress, occurrenceId: string): b
           ? origin.site
           : origin.kind === 'acquisitionSite'
             ? origin.owner
-            : origin.kind === 'traitAcquisitionTarget' ||
+            : origin.kind === 'naturalSelectionResult' ||
+                origin.kind === 'traitAcquisitionTarget' ||
                 origin.kind === 'circeResolution' ||
                 origin.kind === 'echoPomTarget' ||
                 origin.kind === 'echoLastRunBoon' ||
@@ -1956,6 +1973,7 @@ export function evaluateProgressiveBiomeAssembly(
       evaluated.candidateArtifacts.keepsakeEquipResults,
       evaluated.candidateArtifacts.acquisitionConversions,
       evaluated.candidateArtifacts.derivedAcquisitionEntries,
+      evaluated.candidateArtifacts.steadyGrowth,
     ),
   });
 }
@@ -2102,6 +2120,7 @@ function clampSelectedProducts(
       retainedInteractions.keepsakeEquipResults,
       retainedInteractions.acquisitionConversions,
       retainedInteractions.derivedAcquisitionEntries,
+      evaluated.candidateArtifacts.steadyGrowth,
     ),
   });
 }

@@ -28,6 +28,7 @@ import type {
   TraitOfferAddress,
   AcquisitionRoleAddress,
   LevelResolutionAddress,
+  SteadyGrowthOutcomeAddress,
   TargetAddress,
 } from '../addresses';
 import type {
@@ -81,6 +82,11 @@ export type BossCompletionCommand = {
   readonly kind: 'ReplaceBossCompletionArcana';
   readonly completion: BossCompletionArcanaAddress;
   readonly arcanaKeys: readonly string[];
+};
+export type SteadyGrowthCommand = {
+  readonly kind: 'ReplaceSteadyGrowthTarget';
+  readonly outcome: SteadyGrowthOutcomeAddress;
+  readonly targetTraitKey: string | null;
 };
 export type KeepsakeCommand = {
   readonly kind: 'ReplacePostbossKeepsake';
@@ -427,6 +433,7 @@ export type OccurrenceLeafCommand =
 export type ProjectCommand =
   | ProjectStateCommand
   | BossCompletionCommand
+  | SteadyGrowthCommand
   | KeepsakeCommand
   | KeepsakeEquipResultCommand
   | ExperimentalHammerEquipResultCommand

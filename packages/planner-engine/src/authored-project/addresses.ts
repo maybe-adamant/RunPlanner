@@ -257,6 +257,23 @@ export interface EchoPomTargetAddress extends BiomeOwnedAddress {
   readonly trait: TraitOfferAddress;
   readonly optionKey: 'option1' | 'option2' | 'option3';
 }
+/** Natural Selection's single ordered successful-increment result. */
+export interface NaturalSelectionResultAddress extends BiomeOwnedAddress {
+  readonly kind: 'naturalSelectionResult';
+  readonly trait: TraitOfferAddress;
+  readonly optionKey: 'option1' | 'option2' | 'option3';
+}
+/** One automatic end-effects rarity outcome, owned by an ordinary phase or Boss completion. */
+export interface SteadyGrowthOutcomeAddress extends BiomeOwnedAddress {
+  readonly kind: 'steadyGrowthOutcome';
+  /**
+   * The ordinary occurrence or derived Boss that emitted the end-effects
+   * checkpoint. `phaseKey` below is the sole phase identity; keeping an
+   * EncounterPhaseAddress here would permit contradictory double phase keys.
+   */
+  readonly owner: OccurrenceAddress | (CompletionRoomAddress & { readonly role: 'boss' });
+  readonly phaseKey: string;
+}
 /** Echo Boon Boon Boon's complete mixed-provider child beneath the selected outer row. */
 export interface EchoLastRunBoonAddress extends BiomeOwnedAddress {
   readonly kind: 'echoLastRunBoon';
@@ -321,6 +338,8 @@ export type SemanticAddress =
   | TraitOfferAddress
   | AcquisitionRoleAddress
   | TraitAcquisitionTargetAddress
+  | NaturalSelectionResultAddress
+  | SteadyGrowthOutcomeAddress
   | CirceResolutionAddress
   | EchoPomTargetAddress
   | EchoLastRunBoonAddress
@@ -796,6 +815,30 @@ export function createEchoPomTargetAddress(
     optionKey,
   });
 }
+export function createNaturalSelectionResultAddress(
+  trait: TraitOfferAddress,
+  optionKey: NaturalSelectionResultAddress['optionKey'],
+): NaturalSelectionResultAddress {
+  return Object.freeze({
+    kind: 'naturalSelectionResult',
+    routeKey: trait.routeKey,
+    biomeKey: trait.biomeKey,
+    trait,
+    optionKey,
+  });
+}
+export function createSteadyGrowthOutcomeAddress(
+  owner: SteadyGrowthOutcomeAddress['owner'],
+  phaseKey: string,
+): SteadyGrowthOutcomeAddress {
+  return Object.freeze({
+    kind: 'steadyGrowthOutcome',
+    routeKey: owner.routeKey,
+    biomeKey: owner.biomeKey,
+    owner,
+    phaseKey: nonBlank(phaseKey, 'phaseKey'),
+  });
+}
 export function createEchoLastRunBoonAddress(
   trait: TraitOfferAddress,
   optionKey: EchoLastRunBoonAddress['optionKey'],
@@ -941,9 +984,12 @@ export function semanticAddressKey(address: SemanticAddress): string {
     case 'traitAcquisitionTarget':
     case 'circeResolution':
     case 'echoPomTarget':
+    case 'naturalSelectionResult':
     case 'echoLastRunBoon':
     case 'echoLastReward':
       return JSON.stringify([...base, semanticAddressKey(address.trait), address.optionKey]);
+    case 'steadyGrowthOutcome':
+      return JSON.stringify([...base, semanticAddressKey(address.owner), address.phaseKey]);
     case 'allTogetherSet':
       return JSON.stringify([
         ...base,

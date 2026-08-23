@@ -120,7 +120,17 @@ export type {
   TraitOfferFocusedOptionCandidateEvaluation,
   TraitOfferFocusedOptionCandidateQuery,
   TraitOfferFocusedOptionEvidence,
+  NaturalSelectionResultCandidateQuery,
+  NaturalSelectionResultCandidateEvaluation,
+  EvaluatedNaturalSelectionResultCandidate,
+  RansomAssessmentCandidateQuery,
+  RansomAssessmentCandidateEvaluation,
+  EvaluatedRansomAssessmentCandidate,
 } from './trait-offer';
+export type {
+  SteadyGrowthOutcomeCandidateQuery,
+  EvaluatedSteadyGrowthOutcomeCandidate,
+} from './steady-growth';
 export {
   evaluateEchoLastRunBoonDraftSupport,
   echoLastRunBoonRarityCandidates,

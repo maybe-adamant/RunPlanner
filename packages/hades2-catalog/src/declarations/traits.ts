@@ -27,6 +27,7 @@ export interface RawTraitDeclaration {
   readonly excludeFromRarityCount: boolean;
   readonly rarityFloorEffect?: ProperUpbringingEffect;
   readonly targetedAcquisition?: TargetedTraitAcquisition;
+  readonly maximumEligibleLevelByRarity?: TraitDeclaration['maximumEligibleLevelByRarity'];
   /** Omitted declarations retain ordinary persistent-trait equip behavior. */
   readonly selectedDisposition?: TraitSelectedDisposition;
   readonly selfExclusion?: string;

@@ -311,6 +311,8 @@ export interface RawRoomDeclaration {
   readonly encounterEnvelopeKey: string;
   /** Exact room-level policy for temporary Hammer encounter uses. */
   readonly advancesExperimentalHammerUses: boolean;
+  /** Source `SkipRoomsPerUpgrade`, used by Steady Growth at end effects. */
+  readonly skipRoomsPerUpgrade?: boolean;
   readonly encounterSlotBindings: readonly RawEncounterSlotBinding[];
   readonly counters: RoomCounterEffects;
   readonly caps: RoomCaps;

@@ -5,7 +5,7 @@ import type {
   AuthoredTraitOffer,
 } from './traits';
 
-export const PROJECT_DOCUMENT_SCHEMA_VERSION = 51 as const;
+export const PROJECT_DOCUMENT_SCHEMA_VERSION = 52 as const;
 
 declare const occurrenceIdBrand: unique symbol;
 
@@ -148,6 +148,8 @@ export interface RoomEncounterState {
   readonly encounterKeyByPhase: Readonly<Record<string, string>>;
   /** Complete declaration-owned phase-local Fig Leaf dispositions, including fixed slots. */
   readonly figLeafSkipByPhase: Readonly<Record<string, boolean>>;
+  /** Sparse automatic Steady Growth targets keyed to a reached end-effects phase. */
+  readonly steadyGrowthTargetByPhase?: Readonly<Record<string, string>>;
   /** Complete declaration-owned Gorgon condition/result for each phase. */
   /** Schema-29 documents always encode this map; optional keeps hand-built legacy fixtures decodable. */
   readonly gorgonResultByPhase?: Readonly<Record<string, AuthoredGorgonPhaseResult>>;
@@ -313,6 +315,8 @@ export interface AuthoredBiomePlan {
   readonly topology: BiomeTopology | null;
   /** Dormant unless Judgment is active at this biome's Boss completion. */
   readonly bossCompletionArcanaKeys?: readonly string[];
+  /** One automatic Boss end-effects rarity target, dormant until its threshold. */
+  readonly bossCompletionSteadyGrowthTarget?: string;
   /** Present on physical ordinary-rack biomes, including a dormant final configured biome. */
   readonly postbossKeepsakeDisposition?: PostbossKeepsakeDisposition;
   /** One derived Postboss chronology, dormant while this biome is the route tail. */

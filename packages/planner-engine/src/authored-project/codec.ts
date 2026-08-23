@@ -140,6 +140,7 @@ function decodeBiomePlan(
       'state',
       'topology',
       'bossCompletionArcanaKeys',
+      'bossCompletionSteadyGrowthTarget',
       'postbossKeepsakeDisposition',
       'postbossRoomActions',
       'keepsakeEquipResults',
@@ -164,6 +165,18 @@ function decodeBiomePlan(
     if (bossSet.has(key)) fail(`${path}.bossCompletionArcanaKeys[${index}]`, `duplicates ${key}`);
     bossSet.add(key);
   }
+  const bossCompletionSteadyGrowthTarget =
+    plan.bossCompletionSteadyGrowthTarget === undefined
+      ? undefined
+      : expectNonBlankString(
+          plan.bossCompletionSteadyGrowthTarget,
+          `${path}.bossCompletionSteadyGrowthTarget`,
+        );
+  if (
+    bossCompletionSteadyGrowthTarget !== undefined &&
+    catalog.traits.byKey[bossCompletionSteadyGrowthTarget] === undefined
+  )
+    fail(`${path}.bossCompletionSteadyGrowthTarget`, 'unknown trait');
   const topology =
     plan.topology === null
       ? null
@@ -232,6 +245,7 @@ function decodeBiomePlan(
               .map((card) => card.key),
           ),
         }),
+    ...(bossCompletionSteadyGrowthTarget === undefined ? {} : { bossCompletionSteadyGrowthTarget }),
     ...(postbossKeepsakeDisposition === undefined ? {} : { postbossKeepsakeDisposition }),
     ...(postbossRoomActions === undefined ? {} : { postbossRoomActions }),
     ...(plan.keepsakeEquipResults === undefined

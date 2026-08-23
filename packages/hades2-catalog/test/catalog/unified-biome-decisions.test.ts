@@ -10,7 +10,7 @@ function input(): RawCatalogInput {
 describe('unified biome decisions catalog', () => {
   it('normalizes every supported biome through unified catalog declarations', () => {
     const catalog = createCatalog(declarations);
-    expect(catalog.version).toBe('0.31.0-chaos-traits');
+    expect(catalog.version).toBe('0.32.0-run-impacting-traits');
     expect(catalog.biomeLayouts.values.map((layout) => layout.biomeKey)).toEqual([
       'F',
       'G',

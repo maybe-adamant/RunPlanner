@@ -392,6 +392,8 @@ export interface CanonicalBiome {
   readonly completionRooms: readonly CanonicalCompletionRoom[];
   readonly biomeState: CanonicalBiomeState;
   readonly bossCompletionArcanaKeys: readonly string[];
+  /** Dormant until Steady Growth reaches the Boss end-effects threshold. */
+  readonly bossCompletionSteadyGrowthTarget?: string;
   readonly postbossKeepsakeDisposition?: import('../../authored-project/model').PostbossKeepsakeDisposition;
   readonly keepsakeEquipResults?: import('../../authored-project/model').AuthoredKeepsakeEquipResults;
   readonly echoKeepsakeReplayResults?: Pick<
