@@ -147,7 +147,7 @@ describe('Nemesis random events', () => {
           break;
         case 'damageContestFailure':
           value = { kind: 'damageContest', result: 'failure' };
-          rewardType = capability.branches[0]?.damageContestFailureRewardType ?? '';
+          rewardType = capability.damageContestFailureRewardType;
           optional = true;
           break;
       }

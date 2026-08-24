@@ -25,6 +25,7 @@ import {
   goldenFOccurrenceId,
   goldenGBiome,
   goldenGOccurrenceId,
+  loadNemesisTraitTradeCheckpoint,
 } from '@run-planner/test-fixtures/underworld';
 
 import { projectRouteNpcIndex, RouteNpcIndexProjectionContractError } from './routeNpcIndex';
@@ -159,6 +160,29 @@ describe('route NPC index projection', () => {
             expect.objectContaining({
               encounterKey: 'NemesisCombatF',
               label: 'Nemesis combat',
+              locationLabel: 'Erebus · Encounter',
+              phase: fNemesisPhase,
+            }),
+          ],
+        },
+      ]);
+    } finally {
+      fixture.application.dispose();
+    }
+  });
+
+  it('projects the random event through the same Nemesis metadata group', () => {
+    const fixture = routeIndexFixture(loadNemesisTraitTradeCheckpoint());
+    try {
+      expect(
+        projectRouteNpcIndex(catalog, fixture.route, fixture.workspace.focusByOwner).groups,
+      ).toEqual([
+        {
+          presentationKey: 'Nemesis',
+          entries: [
+            expect.objectContaining({
+              encounterKey: 'NemesisRandomEvent',
+              label: 'Nemesis event',
               locationLabel: 'Erebus · Encounter',
               phase: fNemesisPhase,
             }),

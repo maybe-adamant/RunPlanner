@@ -10,6 +10,7 @@ import {
   type BiomeAddress,
   type BiomeFieldAddress,
   type EncounterPhaseAddress,
+  type NemesisRandomEventAddress,
   type ExitDecisionAddress,
   type ExitDecisionSourceAddress,
   type HubDecisionAddress,
@@ -48,6 +49,7 @@ import {
   type KeepsakeSelectionAddress,
   type KeepsakeEquipResultAddress,
   type TraitOptionKey,
+  type AuthoredNemesisRandomEventOutcome,
 } from '@run-planner/engine/authored-project';
 import type {
   CompletionRoomDescriptor,
@@ -248,6 +250,49 @@ export interface WorkspaceEncounterInteraction {
     Extract<ProjectCommand, { readonly kind: 'ResetEncounter' }>
   >;
   readonly selected: string;
+}
+export interface WorkspaceNemesisEventInteraction {
+  readonly intentFor: (
+    value: AuthoredNemesisRandomEventOutcome | null,
+    reward: ResolvedRewardOffer | null,
+  ) => WorkspaceCommandIntent<
+    Extract<ProjectCommand, { readonly kind: 'ReplaceNemesisRandomEventOutcome' }>
+  >;
+  readonly key: string;
+  readonly owner: NemesisRandomEventAddress;
+  readonly load: () => WorkspaceNemesisEventDomain | undefined;
+  readonly reward: ResolvedRewardOffer | null;
+  readonly value: AuthoredNemesisRandomEventOutcome | null;
+}
+
+/** Application adaptation of the engine's branch-correlated Nemesis capability. */
+export interface WorkspaceNemesisEventDomain {
+  readonly familyKeys: readonly AuthoredNemesisRandomEventOutcome['kind'][];
+  readonly goldTradeResponses: readonly ('accept' | 'decline')[];
+  readonly damageTradeResponses: readonly ('accept' | 'decline')[];
+  readonly traitTradeResponses: readonly ('accept' | 'decline')[];
+  readonly damageContestResults: readonly ('success' | 'failure')[];
+  readonly freeItemRewardTypes: readonly string[];
+  readonly goldTradeRewardTypes: readonly string[];
+  readonly damageTradeRewardTypes: readonly string[];
+  readonly traitTradeTraitKeys: readonly string[];
+  readonly damageContestSuccessRewardTypes: readonly string[];
+  readonly traitTradeRewardType: string;
+  readonly damageContestFailureRewardType: string;
+}
+
+/** Complete application-owned mapping for H's binary Passive-slot feature. */
+export interface WorkspaceNemesisFeatureInteraction {
+  readonly key: string;
+  readonly owner: EncounterPhaseAddress;
+  readonly intent: WorkspaceCommandIntent<
+    Extract<
+      ProjectCommand,
+      {
+        readonly kind: 'SelectEncounter' | 'ResetEncounter';
+      }
+    >
+  >;
 }
 
 /** Phase-local Fig Leaf choice; eligibility is supplied by the engine. */
@@ -892,6 +937,8 @@ export interface WorkspaceInteractionCatalog {
   readonly zagreusSpawns: ReadonlyMap<string, WorkspaceZagreusSpawnInteraction>;
   readonly batchRewardStores: ReadonlyMap<string, WorkspaceBatchRewardStoreInteraction>;
   readonly encounterPhases: ReadonlyMap<string, WorkspaceEncounterInteraction>;
+  readonly nemesisEvents: ReadonlyMap<string, WorkspaceNemesisEventInteraction>;
+  readonly nemesisFeatures: ReadonlyMap<string, WorkspaceNemesisFeatureInteraction>;
   readonly figLeafSkips: ReadonlyMap<string, WorkspaceFigLeafInteraction>;
   readonly gorgonConditions: ReadonlyMap<string, WorkspaceGorgonConditionInteraction>;
   readonly exitSelections: ReadonlyMap<string, WorkspaceExitSelectionInteraction>;
@@ -1416,8 +1463,15 @@ export interface WorkspaceEncounterPhase {
    * phase owners, but cannot create a meaningful encounter selection UI.
    */
   readonly customizable: boolean;
+  /** H Passive selection is presented by the room-feature control, not a second picker. */
+  readonly nemesisFeature?: {
+    readonly encounterKey: string;
+    readonly selected: boolean;
+  };
   readonly label: string;
   readonly marker: WorkspaceMarker;
+  /** Application-owned placement for the phase editor in the room timeline. */
+  readonly timelineAnchor: 'roomEntered' | 'encounterStart' | 'action';
   readonly figLeaf?: {
     readonly interactionKey: string;
     readonly selected: boolean;
@@ -1436,6 +1490,11 @@ export interface WorkspaceEncounterPhase {
   readonly selectedEncounter: {
     readonly key: string;
     readonly label: string;
+  };
+  readonly nemesisEvent?: {
+    readonly owner: NemesisRandomEventAddress;
+    readonly reward: ResolvedRewardOffer | null;
+    readonly value: AuthoredNemesisRandomEventOutcome | null;
   };
 }
 
@@ -1515,6 +1574,11 @@ export type WorkspaceRoomLocal =
     };
 
 export type WorkspaceRoomFeature =
+  | {
+      readonly kind: 'nemesisEvent';
+      readonly action: 'add' | 'remove';
+      readonly interactionKey: string;
+    }
   | {
       readonly kind: 'zagreusContract';
       readonly action: 'add';

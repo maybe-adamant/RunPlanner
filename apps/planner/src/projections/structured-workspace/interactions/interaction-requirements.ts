@@ -5,6 +5,8 @@ import {
   type BiomeAddress,
   type CompletionRoomAddress,
   type EncounterPhaseAddress,
+  type NemesisRandomEventAddress,
+  type AuthoredNemesisRandomEventOutcome,
   type ExitDecisionAddress,
   type ExitSelectionAddress,
   type HubDecisionAddress,
@@ -61,6 +63,16 @@ export type WorkspaceOccurrenceInteractionRequirement =
         readonly candidateChoices: readonly WorkspaceInteractionChoice<string>[];
         readonly owner: EncounterPhaseAddress;
         readonly selectedEncounterKey: string;
+        readonly selectionEnabled: boolean;
+        readonly nemesisFeature?: {
+          readonly encounterKey: string;
+          readonly selected: boolean;
+        };
+        readonly nemesisEvent?: {
+          readonly owner: NemesisRandomEventAddress;
+          readonly reward: import('@run-planner/engine/reward-kernel').ResolvedRewardOffer | null;
+          readonly value: AuthoredNemesisRandomEventOutcome | null;
+        };
         readonly figLeaf?: {
           readonly selected: boolean;
           readonly supported: boolean;

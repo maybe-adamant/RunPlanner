@@ -5316,7 +5316,6 @@ export function evaluateBiomeRewardsAssemblyInternal(
                         : true,
                   ),
                 ),
-                damageContestFailureRewardType: policy.damageContest.failureResultRewardType,
                 traitTradeTraitKeys: Object.freeze(traitDomain(branch)),
               });
             });
@@ -5331,6 +5330,12 @@ export function evaluateBiomeRewardsAssemblyInternal(
                   'traitTrade',
                   'damageContest',
                 ] as const),
+                goldTradeResponses: policy.goldTrade.response,
+                damageTradeResponses: policy.damageTrade.response,
+                traitTradeResponses: policy.traitTrade.response,
+                damageContestResults: Object.freeze(['success', 'failure'] as const),
+                traitTradeRewardType: policy.traitTrade.fixedResultRewardType,
+                damageContestFailureRewardType: policy.damageContest.failureResultRewardType,
                 branches: Object.freeze(branchAssessments),
               }),
             );
@@ -5369,7 +5374,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
                   case 'damageContest':
                     return outcome.result === 'success'
                       ? assessment.damageContestSuccessRewardTypes.includes(rewardType)
-                      : assessment.damageContestFailureRewardType === rewardType;
+                      : policy?.damageContest.failureResultRewardType === rewardType;
                   case 'traitTrade':
                     return (
                       rewardType === policy?.traitTrade.fixedResultRewardType &&

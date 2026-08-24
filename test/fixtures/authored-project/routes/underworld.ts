@@ -235,4 +235,8 @@ export function createFMidshopUnresolvedBlindBoxBeforePomProject(): ProjectDocum
 }
 
 export { authorTestArtificerReplacement };
+export {
+  loadNemesisFieldsCheckpoint,
+  loadNemesisTraitTradeCheckpoint,
+} from '../checkpoints/underworld';
 export type { BiomeAddress, ResolvedRewardOffer };

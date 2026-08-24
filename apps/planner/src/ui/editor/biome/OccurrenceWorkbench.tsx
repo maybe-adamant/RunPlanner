@@ -53,6 +53,7 @@ import { TraitOfferLauncher } from '../rewards/TraitOfferEditor';
 import { CandidateSelect } from './CandidateSelect';
 import { RunStateLauncher } from './RunStateSheet';
 import { DoorRewardEditor } from './DoorRewardEditor';
+import { NemesisEventEditor } from './NemesisEventEditor';
 
 const emptyEncounterPicker: import('@planner/projections/contextualPicker').ContextualPickerModel<string> =
   Object.freeze({ sections: Object.freeze([]) });
@@ -352,6 +353,20 @@ function EncounterPhaseControl({
   const ariaLabel = phase.label.endsWith('encounter')
     ? `${phase.label} phase`
     : `${phase.label} encounter phase`;
+  const nemesisEditor =
+    phase.nemesisEvent === undefined
+      ? null
+      : (() => {
+          const interaction = interactions.nemesisEvents.get(
+            workspaceInteractionKey(phase.nemesisEvent.owner),
+          );
+          return interaction === undefined ? null : (
+            <NemesisEventEditor
+              interaction={interaction}
+              key={`${interaction.key}:${JSON.stringify(interaction.value)}`}
+            />
+          );
+        })();
   if (!phase.customizable) {
     return (
       <section
@@ -370,6 +385,7 @@ function EncounterPhaseControl({
           <p className="fixed-room-state">Encounter: {phase.selectedEncounter.label}</p>
           {figLeafControl}
           {gorgonControl}
+          {nemesisEditor}
         </div>
       </section>
     );
@@ -398,6 +414,7 @@ function EncounterPhaseControl({
         />
         {figLeafControl}
         {gorgonControl}
+        {nemesisEditor}
       </div>
     </section>
   );
@@ -940,7 +957,21 @@ export function RoomActionsWorkbench({
   const activePointerDrag = useRef<RoomActionPointerDrag | undefined>(undefined);
   const [pointerDrag, setPointerDrag] = useState<RoomActionPointerDrag | undefined>(undefined);
   const [announcement, setAnnouncement] = useState('');
-  if (actions === undefined && ship === undefined) return null;
+  if (actions === undefined && ship === undefined) {
+    if (encounterPhases === undefined || idPrefix === undefined) return null;
+    return (
+      <section aria-label="Room Timeline" className="room-actions-workbench">
+        {encounterPhases.map((phase) => (
+          <EncounterPhaseControl
+            idPrefix={idPrefix}
+            interactions={interactions}
+            key={workspaceInteractionKey(phase.address)}
+            phase={phase}
+          />
+        ))}
+      </section>
+    );
+  }
   const interaction =
     actions === undefined
       ? undefined
@@ -1067,14 +1098,16 @@ export function RoomActionsWorkbench({
   );
   const boundarySupplement = (boundary: WorkspaceRoomLifecycleBoundary): ReactNode => {
     if (boundary.kind === 'roomEntered') {
-      const passive = encounterPhases?.find((phase) => phase.address.phaseKey === 'Passive');
-      return passive === undefined || idPrefix === undefined ? null : (
-        <EncounterPhaseControl idPrefix={idPrefix} interactions={interactions} phase={passive} />
+      const phase = encounterPhases?.find(
+        (candidate) => candidate.timelineAnchor === 'roomEntered',
+      );
+      return phase === undefined || idPrefix === undefined ? null : (
+        <EncounterPhaseControl idPrefix={idPrefix} interactions={interactions} phase={phase} />
       );
     }
     if (boundary.kind === 'encounterStart') {
       const phase = encounterByPhase.get(boundary.phaseKey);
-      return phase === undefined || idPrefix === undefined ? null : (
+      return phase?.timelineAnchor !== 'encounterStart' || idPrefix === undefined ? null : (
         <EncounterPhaseControl idPrefix={idPrefix} interactions={interactions} phase={phase} />
       );
     }
@@ -1089,6 +1122,13 @@ export function RoomActionsWorkbench({
       );
     }
     return null;
+  };
+  const encounterActionSupplement = (row: WorkspaceRoomActions['rows'][number]): ReactNode => {
+    if (row.reference.kind !== 'interactEncounter' || idPrefix === undefined) return null;
+    const phase = encounterByPhase.get(row.reference.phaseKey);
+    return phase?.timelineAnchor !== 'action' ? null : (
+      <EncounterPhaseControl idPrefix={idPrefix} interactions={interactions} phase={phase} />
+    );
   };
   const dropState = (target: RoomActionDropTarget) => {
     if (!sameRoomActionDropTarget(pointerDrag?.target, target)) return undefined;
@@ -1385,6 +1425,7 @@ export function RoomActionsWorkbench({
             </div>
           )}
           {renderRowContent?.(row)}
+          {encounterActionSupplement(row)}
         </li>
         {row.rank === null ? null : checkpointRows(row.rank, checkpoints)}
       </Fragment>
@@ -1820,6 +1861,7 @@ function RoomFeaturesWorkbench({
   readonly features: readonly WorkspaceRoomFeature[];
   readonly interactions: WorkspaceInteractionCatalog;
 }) {
+  const executeIntent = useCommandIntent();
   if (features.length === 0) return null;
   return (
     <section aria-label="Room features" className="room-features-workbench">
@@ -1828,6 +1870,21 @@ function RoomFeaturesWorkbench({
       </div>
       {features.map((feature) => {
         switch (feature.kind) {
+          case 'nemesisEvent': {
+            const interaction = requireWorkspaceInteraction(
+              interactions.nemesisFeatures,
+              feature.interactionKey,
+            );
+            return (
+              <button
+                key={feature.interactionKey}
+                onClick={() => executeIntent(interaction.intent)}
+                type="button"
+              >
+                {feature.action === 'add' ? 'Add Nemesis event' : 'Remove Nemesis event'}
+              </button>
+            );
+          }
           case 'zagreusContract':
             return (
               <ZagreusSpawnWorkbench

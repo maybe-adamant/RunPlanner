@@ -40,6 +40,8 @@ import {
   evaluateEchoLastRunBoonDraftSupport,
   echoLastRunBoonRarityCandidates,
   echoLastRunBoonTraitCandidatesForRow,
+  nemesisRandomEventCandidateSupportForProjectEvaluationAssembly,
+  type NemesisRandomEventCandidateSupport,
   type ProjectEvaluationAssembly,
 } from '@run-planner/engine/simulation';
 
@@ -71,6 +73,8 @@ import type {
   WorkspaceBatchRewardStoreInteraction,
   WorkspaceCandidateInteraction,
   WorkspaceEncounterInteraction,
+  WorkspaceNemesisEventDomain,
+  WorkspaceNemesisFeatureInteraction,
   WorkspaceFigLeafInteraction,
   WorkspaceFieldsCageOutcomeInteraction,
   WorkspaceRoomActionInteraction,
@@ -310,6 +314,11 @@ function candidateInteraction<T>(
 
 interface WorkspaceOccurrenceLocalInteractionCatalog {
   readonly encounterPhases: ReadonlyMap<string, WorkspaceEncounterInteraction>;
+  readonly nemesisEvents: ReadonlyMap<
+    string,
+    import('../contract').WorkspaceNemesisEventInteraction
+  >;
+  readonly nemesisFeatures: ReadonlyMap<string, WorkspaceNemesisFeatureInteraction>;
   readonly figLeafSkips: ReadonlyMap<string, WorkspaceFigLeafInteraction>;
   readonly gorgonConditions: ReadonlyMap<
     string,
@@ -334,13 +343,64 @@ interface WorkspaceOccurrenceLocalInteractionCatalog {
   readonly naturalChaosSpawns: ReadonlyMap<string, WorkspaceNaturalChaosSpawnInteraction>;
 }
 
+function intersectNemesisBranchValues(
+  support: NemesisRandomEventCandidateSupport,
+  select: (branch: NemesisRandomEventCandidateSupport['branches'][number]) => readonly string[],
+): readonly string[] {
+  const first = support.branches[0];
+  if (first === undefined) return Object.freeze([]);
+  return Object.freeze(
+    select(first).filter((value) =>
+      support.branches.every((branch) => select(branch).includes(value)),
+    ),
+  );
+}
+
+function projectNemesisEventDomain(
+  support: NemesisRandomEventCandidateSupport | undefined,
+): WorkspaceNemesisEventDomain | undefined {
+  if (support === undefined) return undefined;
+  return Object.freeze({
+    familyKeys: support.familyKeys,
+    goldTradeResponses: support.goldTradeResponses,
+    damageTradeResponses: support.damageTradeResponses,
+    traitTradeResponses: support.traitTradeResponses,
+    damageContestResults: support.damageContestResults,
+    freeItemRewardTypes: intersectNemesisBranchValues(
+      support,
+      (branch) => branch.freeItemRewardTypes,
+    ),
+    goldTradeRewardTypes: intersectNemesisBranchValues(
+      support,
+      (branch) => branch.goldTradeRewardTypes,
+    ),
+    damageTradeRewardTypes: intersectNemesisBranchValues(
+      support,
+      (branch) => branch.damageTradeRewardTypes,
+    ),
+    traitTradeTraitKeys: intersectNemesisBranchValues(
+      support,
+      (branch) => branch.traitTradeTraitKeys,
+    ),
+    damageContestSuccessRewardTypes: intersectNemesisBranchValues(
+      support,
+      (branch) => branch.damageContestSuccessRewardTypes,
+    ),
+    traitTradeRewardType: support.traitTradeRewardType,
+    damageContestFailureRewardType: support.damageContestFailureRewardType,
+  });
+}
+
 function bindOccurrenceLocalInteractions(
   allocateOccurrenceId: OccurrenceIdFactory,
+  assembly: ProjectEvaluationAssembly,
   candidates: CandidateProjectionSession,
   contextualPicker: StructuredWorkspaceContextualServices['contextualPicker'],
   requirements: Iterable<WorkspaceOccurrenceInteractionRequirement>,
 ): WorkspaceOccurrenceLocalInteractionCatalog {
   const encounterPhases = new Map<string, WorkspaceEncounterInteraction>();
+  const nemesisEvents = new Map<string, import('../contract').WorkspaceNemesisEventInteraction>();
+  const nemesisFeatures = new Map<string, WorkspaceNemesisFeatureInteraction>();
   const figLeafSkips = new Map<string, WorkspaceFigLeafInteraction>();
   const gorgonConditions = new Map<
     string,
@@ -430,12 +490,12 @@ function bindOccurrenceLocalInteractions(
         for (const phase of requirement.phases) {
           const key = semanticAddressKey(phase.owner);
           const encounterKeys = Object.freeze(phase.candidateChoices.map((choice) => choice.value));
-          if (encounterKeys.length > 1 && encounterPhases.has(key)) {
+          if (phase.selectionEnabled && encounterKeys.length > 1 && encounterPhases.has(key)) {
             throw new StructuredWorkspaceProjectionContractError(
               `${key} has multiple bound encounter phase interactions`,
             );
           }
-          if (encounterKeys.length > 1) {
+          if (phase.selectionEnabled && encounterKeys.length > 1) {
             let model: ContextualPickerModel<string> | undefined;
             encounterPhases.set(
               key,
@@ -499,6 +559,60 @@ function bindOccurrenceLocalInteractions(
                 owner: phase.owner,
                 selected: phase.gorgonCondition.selected,
                 supported: phase.gorgonCondition.supported,
+              }),
+            );
+          }
+          if (phase.nemesisEvent !== undefined) {
+            const event = phase.nemesisEvent;
+            const key = semanticAddressKey(event.owner);
+            nemesisEvents.set(
+              key,
+              Object.freeze({
+                key,
+                owner: event.owner,
+                reward: event.reward,
+                value: event.value,
+                load: () =>
+                  projectNemesisEventDomain(
+                    nemesisRandomEventCandidateSupportForProjectEvaluationAssembly(
+                      assembly,
+                      event.owner,
+                    ),
+                  ),
+                intentFor: (
+                  value:
+                    | import('@run-planner/engine/authored-project').AuthoredNemesisRandomEventOutcome
+                    | null,
+                  reward: ResolvedRewardOffer | null,
+                ) =>
+                  Object.freeze({
+                    command: Object.freeze({
+                      kind: 'ReplaceNemesisRandomEventOutcome' as const,
+                      event: event.owner,
+                      value,
+                      reward,
+                    }),
+                  }),
+              }),
+            );
+          }
+          if (phase.nemesisFeature !== undefined) {
+            const key = workspaceInteractionKey(phase.owner);
+            nemesisFeatures.set(
+              key,
+              Object.freeze({
+                key,
+                owner: phase.owner,
+                intent: Object.freeze({
+                  command: phase.nemesisFeature.selected
+                    ? Object.freeze({ kind: 'ResetEncounter' as const, phase: phase.owner })
+                    : Object.freeze({
+                        kind: 'SelectEncounter' as const,
+                        phase: phase.owner,
+                        encounterKey: phase.nemesisFeature.encounterKey,
+                      }),
+                  focus: Object.freeze({ owner: phase.owner, timing: 'after' as const }),
+                }),
               }),
             );
           }
@@ -742,6 +856,8 @@ function bindOccurrenceLocalInteractions(
   }
   return Object.freeze({
     encounterPhases,
+    nemesisEvents,
+    nemesisFeatures,
     roomActions,
     figLeafSkips,
     gorgonConditions,
@@ -1456,6 +1572,8 @@ export function bindWorkspaceInteractions(
   const candidates = services.candidateSessions.bind(assembly);
   const {
     encounterPhases,
+    nemesisEvents,
+    nemesisFeatures,
     roomActions,
     figLeafSkips,
     gorgonConditions,
@@ -1471,6 +1589,7 @@ export function bindWorkspaceInteractions(
     naturalChaosSpawns,
   } = bindOccurrenceLocalInteractions(
     allocateOccurrenceId,
+    assembly,
     candidates,
     services.contextualPicker,
     occurrenceInteractionRequirements.values(),
@@ -2830,6 +2949,8 @@ export function bindWorkspaceInteractions(
   return Object.freeze({
     batchRewardStores,
     encounterPhases,
+    nemesisEvents,
+    nemesisFeatures,
     figLeafSkips,
     gorgonConditions,
     exitSelections,

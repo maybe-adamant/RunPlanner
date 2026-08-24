@@ -43,6 +43,13 @@ export interface NemesisRandomEventCandidateSupport {
   readonly familyKeys: readonly (
     'freeItem' | 'goldTrade' | 'damageTrade' | 'traitTrade' | 'damageContest'
   )[];
+  /** Declaration-owned closed controls; UI does not infer these policy values. */
+  readonly goldTradeResponses: readonly ('accept' | 'decline')[];
+  readonly damageTradeResponses: readonly ('accept' | 'decline')[];
+  readonly traitTradeResponses: readonly ('accept' | 'decline')[];
+  readonly damageContestResults: readonly ('success' | 'failure')[];
+  readonly traitTradeRewardType: string;
+  readonly damageContestFailureRewardType: string;
   /**
    * One exact assessment per reachable reward-history branch. Domains must not
    * be flattened: a result and a trait target are correlated within a branch.
@@ -55,7 +62,6 @@ export interface NemesisRandomEventBranchAssessment {
   readonly goldTradeRewardTypes: readonly string[];
   readonly damageTradeRewardTypes: readonly string[];
   readonly damageContestSuccessRewardTypes: readonly string[];
-  readonly damageContestFailureRewardType: string;
   /** Common eligible traits take precedence; otherwise this is the eligible God-trait domain. */
   readonly traitTradeTraitKeys: readonly string[];
 }
