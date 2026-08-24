@@ -2,201 +2,244 @@
 
 ## Status and scope
 
-This is an implementation-free source audit for the Well of Charon, referred
-to in player-facing discussion as the Stygian Well. It records host-room
-eligibility, spacing, inventory, interaction timing, Travel Deal contact, and
-Spark of Ixion. It does not define planner state, commands, simulation APIs,
-UI, gates, or an implementation sequence.
+This is an implementation-free source audit for the Well of Charon, called the
+Stygian Well in player-facing discussion. It records the live `RoomShop`
+inventory, physical appearance, interaction timing, purchase behavior, and the
+subset of effects that changes the planner's modeled run state. It does not
+define planner schema, commands, simulation APIs, UI, delivery gates, or an
+implementation sequence.
 
-The evidence was checked on 2026-08-16 against the installed Hades II scripts.
-Primary sources are:
+The evidence was refreshed on 2026-08-24 against the installed Hades II
+scripts. Primary sources are:
 
-- `RoomData.lua` and `RoomDataF/G/H/I.lua`;
-- `RoomLogic.lua`, especially `HandleSecretSpawns`, `IsWellShopEligible`,
-  `IsSecretDoorEligible`, and `DoUnlockRoomExits`;
-- `RequirementsLogic.lua` and `RequirementsData.lua`;
-- `StoreData.lua` and `StoreLogic.lua`; and
-- `TraitData_Store.lua` and `TraitLogic.lua`.
+- `StoreData.lua:14-118` and `StoreLogic.lua:436-438, 1101-1201`;
+- `TraitData_Store.lua:15-510` and `ConsumableData.lua:944-955,
+1202-1529`;
+- `RoomData.lua:572-587`, `RequirementsLogic.lua:1231-1254`, and
+  `RoomLogic.lua:4056-4069, 4891-4918`; and
+- `TraitLogic.lua:1766-1807`, `UpgradeChoiceLogic.lua:1124-1141`, and
+  `ROUTE_DETOUR_FINDINGS.md` and `BOON_RARITY_LEDGER_GAME_DATA_AUDIT.md`
+  for the already-audited downstream rules.
 
-The shared room-interaction chronology is summarized in
-`SHOP_AND_WELL_INTERACTION_LIFECYCLE.md`. This focused audit owns the detailed
-Well facts.
+`SHOP_AND_WELL_INTERACTION_LIFECYCLE.md` owns the shared room-interaction
+chronology. This focused audit owns the complete Well pool and its disposition.
 
-## Appearance and spacing
+## Appearance, physical realization, and interaction boundary
 
-The base Well declaration has:
+The base Well declaration has `WellShopSpawnChance = 0.15`, requires the Well
+upgrade, biome depth at least three, an underworld route, and a run-depth gap
+of at least four from `LastWellShopDepth`. Thus three intervening rooms
+separate two ordinary Wells. A realized Well also needs an available physical
+`ChallengeSwitchBase`; `HandleSecretSpawns` claims that slot and records the
+current depth. Forced Wells share that later spacing history.
 
-- `WellShopSpawnChance = 0.15`;
-- the `WorldUpgradeWellShops` unlock requirement;
-- `BiomeDepthCache >= 3`;
-- an underworld-route requirement expressed as no reached `N` biome; and
-- `RequiredMinRoomsSinceEvent(Event = "WellShop", Count = 4)`.
+The ordinary host family is F/G/H/I; I overrides its inherited chance to
+`0.08`. F/G/H each declare a forced Postboss Well, conditional on
+`WorldUpgradePostBossWellShops`; the installed I declarations have no matching
+forced Postboss Well. See `RoomDataF.lua:2561-2640`,
+`RoomDataG.lua:1053-1123`, `RoomDataH.lua:1900-1986`, and
+`RoomLogic.lua:4891-4905`.
 
-`RequiredMinRoomsSinceEvent` compares the current run depth with
-`LastWellShopDepth`. A new Well is legal once the depth difference is at least
-four. In route terms, three intervening rooms separate the two Well rooms.
-This is more precise than describing the rule as either “three-room spacing”
-or “four rooms between Wells.”
-
-An actual spawn also requires a physical `ChallengeSwitchBase` in the loaded
-map. `HandleSecretSpawns` installs the Well into that slot and records the
-current depth as `LastWellShopDepth`. Forced Wells therefore participate in
-the same later spacing history.
-
-The ordinary underworld host family is F/G/H/I. I overrides the inherited
-chance to `0.08`. F/G/H each declare one forced Postboss Well:
-
-| Room           | Chance | Forced | Additional requirement          |
-| -------------- | -----: | :----: | ------------------------------- |
-| `F_PostBoss01` |    1.0 |  yes   | `WorldUpgradePostBossWellShops` |
-| `G_PostBoss01` |    1.0 |  yes   | `WorldUpgradePostBossWellShops` |
-| `H_PostBoss01` |    1.0 |  yes   | `WorldUpgradePostBossWellShops` |
-
-The installed I declarations do not define an equivalent forced Postboss
-Well. I supports ordinary Wells through its room family and reduced chance,
-but the broad statement “every underworld Postboss has a Well” is not literally
-true of the current declaration set.
-
-## Room chronology
-
-An eligible Well is created during room setup but remains locked during active
-combat. `DoUnlockRoomExits` first completes the room's outgoing-generation
-boundary and then marks the Well usable. In an H Fields room this means the
-Well is not a between-cage interaction: it becomes usable after the room's
-combat sequence reaches its exit-unlock boundary.
-
-The relevant ordering is:
+The obstacle is present during room setup but locked through combat.
+`DoUnlockRoomExits` first completes outgoing generation, then makes the Well
+usable (`RoomLogic.lua:4056-4061`). A purchase therefore cannot alter doors
+or rewards already generated in the host room:
 
 ```text
-enter room and determine Well presence
-  -> finish the room's required combat lifecycle
-  -> generate and reveal outgoing exits
-  -> unlock the Well
-  -> make zero or more Well purchases
-  -> enter the selected next room
+enter and materialize Well inventory
+  -> resolve encounter and incoming reward
+  -> generate outgoing exits
+  -> unlock Well; make zero or more purchases
+  -> enter selected next room
 ```
 
-A Well purchase cannot retroactively change outgoing doors already generated
-in its room. Its acquired item or retained trait may affect later rooms.
+`HandleStorePurchase` applies a successful purchase immediately. This says
+nothing about gold affordability or numerical combat, health, Magick, or
+meta-resource results; those are separate facts and are deliberately deferred
+unless noted below.
 
-## Inventory
+## Inventory and purchase facts
 
-`StoreData.RoomShop` has `MaxOffers = 3`. It requests exactly one offer from a
-weighted healing/defensive group, then fills the remaining available slots
-from its other eligible trait and consumable declarations without treating
-positive weight as a support exclusion.
+`RoomShop` has at most three offers. It first requests exactly one member of
+the eight-entry healing/defensive weighted group, then fills remaining
+available slots from its ten traits and seven consumables
+(`StoreData.lua:14-88`). The following is the complete live, 25-identity pool;
+individual game-state and purchase requirements still determine whether an
+identity is eligible on a particular visit.
 
-The healing/defensive group is:
+| Identity                                          | Exact game effect                                                                               | Current planner disposition                                                         |
+| ------------------------------------------------- | ----------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `ArmorBoostStore`                                 | Grants 20 armor.                                                                                | Defer: armor/combat state.                                                          |
+| `DamageSelfDrop`                                  | Pays gold for 10–30 health damage, at 1.1–1.8 gold per health.                                  | Defer: health and economy.                                                          |
+| `HealDropRange`                                   | Heals 21–39% of maximum health.                                                                 | Defer: health.                                                                      |
+| `EmptyMaxHealthShopItem`                          | Adds 25 maximum health without healing.                                                         | Defer: health.                                                                      |
+| `FirstHitHealTrait`                               | The next hit heals 100% of its damage; stacking adds uses.                                      | Defer: health/combat.                                                               |
+| `TemporaryDoorHealTrait`                          | Heals 10% of maximum health after each of the next three room transitions.                      | Defer: health.                                                                      |
+| `TemporaryHealExpirationTrait`                    | After four encounters, heals 50% of maximum health on expiry.                                   | Defer: health.                                                                      |
+| `LastStandShopItem`                               | Adds a distinct Last Stand that restores 40% health and Magick.                                 | Consequential: existing Last Stand capacity; defer health/Magick values.            |
+| `TemporaryImprovedSecondaryTrait`                 | Multiplies secondary damage by 1.40 for five encounters.                                        | Defer: combat.                                                                      |
+| `TemporaryImprovedCastTrait`                      | Multiplies Cast damage by 1.35 for five encounters.                                             | Defer: combat.                                                                      |
+| `TemporaryMoveSpeedTrait`                         | Multiplies movement speed by 1.20 for eight encounters.                                         | Defer: combat/movement.                                                             |
+| `TemporaryBoonRarityTrait` (Yarn of Ariadne)      | Gives one eligible God-loot offer +1.0 Rare, +0.25 Epic, +0.10 Duo, and +0.10 Legendary chance. | Consequential: rarity ledger.                                                       |
+| `TemporaryImprovedExTrait`                        | Multiplies Omega damage by 1.50 for six encounters.                                             | Defer: combat.                                                                      |
+| `TemporaryImprovedDefenseTrait`                   | Multiplies incoming health damage by 0.90 for five encounters.                                  | Defer: combat/health.                                                               |
+| `TemporaryDiscountTrait`                          | Multiplies Store costs by 0.70 for six encounters.                                              | Consequential only for later Well eligibility; defer economy.                       |
+| `TemporaryForcedSecretDoorTrait` (Spark of Ixion) | Adds one forced secret-door use.                                                                | Consequential: Chaos topology.                                                      |
+| `TemporaryEmptySlotDamageTrait`                   | Triples damage for six encounters while a core slot is empty.                                   | Consequential only for later Well eligibility; defer combat.                        |
+| `ExtendedShopTrait`                               | Makes the next whitelisted temporary Well trait last for two boss uses.                         | Consequential when extending either eligibility-blocking trait; otherwise deferred. |
+| `MetaCurrencyRange`                               | Grants 20–40 Bones.                                                                             | Defer: meta resource.                                                               |
+| `MetaCardPointsCommonRange`                       | Grants 6–12 Ashes.                                                                              | Defer: meta resource.                                                               |
+| `MemPointsCommonRange`                            | Grants 20–30 Psyche.                                                                            | Defer: meta resource.                                                               |
+| `SeedMysteryRange`                                | Grants two Mystery Seeds.                                                                       | Defer: meta resource.                                                               |
+| `RandomStoreItem`                                 | Immediately awards one eligible item from a closed nine-trait/seven-consumable nested pool.     | Consequential for nested Yarn, Discount, or Last Stand outcomes.                    |
+| `LimitedManaRegenDrop`                            | Regenerates 500 Magick over three seconds.                                                      | Defer: Magick.                                                                      |
+| `LimitedSwapTraitDrop` (Sacrificial Hymn)         | Adds one forced-replacement use; its replacement gains two levels and the next rarity tier.     | Consequential: next eligible trait offer.                                           |
 
-- `ArmorBoostStore`;
-- `DamageSelfDrop`;
-- `HealDropRange`;
-- `EmptyMaxHealthShopItem`;
-- `FirstHitHealTrait`;
-- `TemporaryDoorHealTrait`;
-- `TemporaryHealExpirationTrait`; and
-- `LastStandShopItem`.
+The raw effects and values are declared in `TraitData_Store.lua:15-510` and
+`ConsumableData.lua:944-955, 1202-1529`. The table's disposition is a planner
+scope decision, not a claim that the deferred identities are mechanically
+identical or unavailable in the game.
 
-The additional temporary-trait family is:
+`RandomStoreItem` chooses one currently eligible identity from a separate
+nine-trait/seven-consumable nested pool (`ConsumableData.lua:1490-1529`; award
+logic in `StoreLogic.lua:1366-1411`). That nested trait list includes
+`TemporaryBoonRarityTrait`, `TemporaryDiscountTrait`, and `LastStandShopItem`,
+so Twist can produce any of those consequential states. It does not list
+Spark, Sacrificial Hymn, `TemporaryEmptySlotDamageTrait`, or
+`ExtendedShopTrait`. Its other possible results remain deferred under the
+table above.
 
-- `TemporaryImprovedSecondaryTrait`;
-- `TemporaryImprovedCastTrait`;
-- `TemporaryMoveSpeedTrait`;
-- `TemporaryBoonRarityTrait`;
-- `TemporaryImprovedExTrait`;
-- `TemporaryImprovedDefenseTrait`;
-- `TemporaryDiscountTrait`;
-- `TemporaryForcedSecretDoorTrait`;
-- `TemporaryEmptySlotDamageTrait`; and
-- `ExtendedShopTrait`.
+Travel Deal (`FirstPurchaseDiscount`) affects a Well's first purchase in two
+ways: it applies its first-purchase price treatment and replaces that physical
+slot with a fresh `RoomShop` option, excluding current inventory names before
+the game's ordinary fallback (`StoreLogic.lua:1184-1201`). The refill is a new
+option, not a duplicate of the purchase. Gold Gold Gold and Infernal Contract
+are World Shop mechanisms and do not add a Well option or duplicate a Well
+purchase.
 
-The additional consumable family is:
+A Well purchase is one atomic purchase lifecycle. It does not become an
+ordinary free pickup and therefore does not invoke pickup-only alternate
+interactions such as Time Piece, Artificer, Sea Star, or Echo's last-reward
+recording.
 
-- `MetaCurrencyRange`;
-- `MetaCardPointsCommonRange`;
-- `MemPointsCommonRange`;
-- `SeedMysteryRange`;
-- `RandomStoreItem`;
-- `LimitedManaRegenDrop`; and
-- `LimitedSwapTraitDrop`.
+## Repeated offers and overlapping uses
 
-Individual declarations retain their own game-state and purchase
-requirements. This audit records the complete raw pool, not a claim that every
-entry is simultaneously eligible.
+The Well has no general rule excluding an identity merely because the hero
+already holds or previously purchased it. Initial generation selects distinct
+identities for the three visible positions, and a Travel Deal refill excludes
+the purchased and still-visible names in that Well. A later Well starts from
+the declared pool again and may offer an identity purchased on an earlier
+visit.
 
-## Purchases and Shop-trait interaction
+Most temporary Well traits can therefore overlap. `HandleStorePurchase` adds a
+new retained trait instance unless the declaration owns different stacking
+behavior. `FirstHitHealTrait` explicitly combines another purchase into its
+remaining-use count. `LimitedSwapTraitDrop` adds one use to the existing
+`LimitedSwapBonusTrait`. Repeated Spark and Yarn purchases create additional
+one-use instances; Spark consumes one instance per forced gate, while every
+held Yarn contributes to an eligible offer and only one Yarn instance is
+consumed when that offer closes (`StoreLogic.lua:1206-1222`,
+`EventLogic.lua:1779-1787`, and `TraitLogic.lua:400-451`).
 
-`HandleStorePurchase` applies a successful Well purchase immediately. Traits
-are added to the hero; consumables are spawned and consumed through their
-declared behavior. Gold costs and numeric combat/healing effects are separate
-from the possibility and chronology facts recorded here.
+The source has three relevant exceptions to an unrestricted-repeat summary:
 
-Travel Deal is `FirstPurchaseDiscount`. It has two source contacts at a Well:
+- `TemporaryDiscountTrait` is ineligible while the same trait is held;
+- `TemporaryEmptySlotDamageTrait` is likewise ineligible while held and also
+  requires an empty primary or secondary core slot; and
+- `LastStandShopItem` can be offered and purchased only while a Last Stand is
+  missing.
 
-1. the first purchase receives the first-purchase price treatment; and
-2. that first purchase replaces its physical index with a freshly generated
-   `RoomShop` option, using the current inventory names as exclusions before
-   the source's ordinary fallback behavior.
+The first two exceptions depend on temporary active-state expiration; the
+third depends on the existing Last Stand capacity state. They are
+declaration-specific requirements, not evidence for a global nonstacking Well
+rule.
 
-The refill is a new Well option, not a copy of the purchased item. Travel Deal
-is not itself a `RoomShop` pool entry, so this consequence requires it to have
-been acquired before the Well purchase.
+Those exceptions do not require a parallel expiry subsystem. Discount and
+Empty Slot use the same encounter-use countdown shape as other modeled timed
+effects, and Last Stand can reuse the planner's existing capacity state. One
+narrow interaction extends the eligibility lifetime: if an active
+`ExtendedShopTrait` applies to Discount or Empty Slot, that purchase changes
+from six encounter uses to two boss uses and consumes one Extended use
+(`StoreLogic.lua:886-889, 1206-1217`). Extended purchases applied to the other
+whitelisted, sim-neutral effects do not otherwise make their duration modeled.
 
-Echo Gold Gold Gold is not invoked by `HandleStorePurchase`; its duplicate
-hook belongs to the World Shop purchase path. Infernal Contract is likewise a
-World Shop pedestal mechanism and does not add a Well slot.
+## The three direct consequential identities
 
-## Spark of Ixion
+### Spark of Ixion
 
-Spark of Ixion is `TemporaryForcedSecretDoorTrait`:
+Spark is `TemporaryForcedSecretDoorTrait`: a one-use `ForceSecretDoor` trait.
+It requires the first Chaos pickup and rejects Dream runs
+(`TraitData_Store.lua:301-322`). Repeated acquisitions may retain multiple
+one-use instances. A forced gate consumes one use when it is actually created,
+not on purchase.
 
-- it is a one-use Well trait with `ForceSecretDoor = true`;
-- offering it requires the first Chaos pickup to have occurred;
-- it is unavailable in Dream runs; and
-- each successful forced-gate creation consumes one held trait use through
-  `UseHeroTraitsWithValue("ForceSecretDoor", true)`.
+The forced branch is evaluated before natural chance and ordinary
+secret-door requirements. It still needs a physical `SecretPoint`, rejects the
+explicit Preboss, boss, Postboss, `I_Intro`, and Anomaly cases, and waits past
+any ineligible map. It then creates a zero-health-cost Chaos gate, consumes one
+Spark use, and records the host in ordinary secret-door history. The resulting
+host restarts the natural ten-room Chaos lookback; there is no distinct reset
+operation. `ROUTE_DETOUR_FINDINGS.md` records the exact forced-branch source
+walk and remains the detailed authority for its route consequences.
 
-Repeated Spark acquisitions may leave multiple held one-use trait instances.
-Gate creation consumes one use rather than clearing every held instance.
+### Yarn of Ariadne
 
-While a Spark use is available, `IsSecretDoorEligible` takes the forced branch
-before natural chance and ordinary `SecretDoorRequirements`. The forced branch
-still requires:
-
-- a physical `SecretPoint` in the current map;
-- a room outside the explicit Preboss, boss, Postboss, and `I_Intro`
-  exclusions; and
-- a room set other than `Anomaly`.
-
-The force branch can therefore bypass natural chance, natural biome/depth
-restrictions, and the ordinary recent-Chaos check. The trait waits through
-ineligible maps and is consumed when the first eligible gate is actually
-created. A forced gate has zero health cost.
-
-Both natural and forced gate creation set the host room's `ForceSecretDoor`
-marker. `NoRecentChaosEncounter` rejects natural gates when that marker exists
-in the previous ten rooms. Spark therefore restarts the natural ten-room
-spacing through ordinary room history; there is no separate mutable “Chaos
-cooldown reset” operation.
-
-The resulting chronology is:
+Yarn is `TemporaryBoonRarityTrait`, with `GodLootOnly`, one remaining use, and
+the declared additive Rare/Epic/Duo/Legendary contribution
+(`TraitData_Store.lua:282-300`). It is eligible for Olympian and Hermes offers.
+The exact lifecycle is:
 
 ```text
-buy Spark at a Well
-  -> retain one forced-gate use
-  -> enter rooms until one has a legal SecretPoint host
-  -> create a zero-cost Chaos gate and consume one use
-  -> record the host as a recent secret-door room
-  -> natural Chaos eligibility observes a fresh ten-room history window
+buy Yarn
+  -> retain one temporary RarityBonus use
+  -> construct the next eligible God boon offer without IgnoreTempRarityBonus
+  -> apply Yarn to the complete offer's rarity ledger
+  -> consume one RarityBonus when that choice screen closes
 ```
+
+The selected option is not the consumption condition. An offer that ignores
+temporary rarity bonuses neither receives nor consumes Yarn. The full values
+and offer-local lifecycle are owned by
+`BOON_RARITY_LEDGER_GAME_DATA_AUDIT.md`.
+
+### Sacrificial Hymn
+
+Sacrificial Hymn is the player-facing `LimitedSwapTraitDrop`. Its immediate
+use calls `AddLimitedSwapTrait(Amount = 1)`, which creates the nonstacking
+`LimitedSwapBonusTrait` with `ForceSwaps`, one use, and
+`ExchangeLevelBonus = 2` (`ConsumableData.lua:1314-1327`,
+`EventLogic.lua:1779-1787`, and `TraitData_Store.lua:489-508`).
+
+When a boon is generated, a held forced-swap use makes the generator attempt
+`GetReplacementTraits`. That function returns one random eligible replacement
+from the possible set; a nonempty result marks the offer to use the trait. An
+empty result falls back to its normal priority path and leaves the use intact
+(`TraitLogic.lua:1791-1815`; selection in
+`UpgradeChoiceLogic.lua:795-822`). When a marked boon choice screen closes, it
+consumes one use whether the player selected the replacement or not
+(`UpgradeChoiceLogic.lua:1134-1141`). A replacement receives the next rarity
+tier and its displayed stack level uses the displaced trait's existing count
+plus the two-level bonus (`UpgradeChoiceLogic.lua:321-327, 795-822`).
+
+Thus Hymn is neither an immediate forced boon acquisition nor a permanent
+replacement rule. It is a one-use, next-eligible-offer generator rule, and
+its player choice remains optional.
 
 ## Current planner disposition
 
-The planner does not yet model Well presence, Well inventory, Well purchase
-chronology, temporary Well traits, or Spark's forced Chaos state. Existing
-World Shop, Travel Deal, Gold Gold Gold, Infernal Contract, and natural Chaos
-models must not be interpreted as implicit Well support.
+The planner does not yet model Well presence, inventory, purchases, or any
+temporary Well state. Spark, Yarn, and Sacrificial Hymn remain the three direct
+rule-changing Well identities. Exact future Well-offer eligibility additionally
+requires the already-supported encounter countdown and Last Stand state for
+Discount, Empty Slot, and Last Stand, plus Extended's narrow conversion of the
+first two to boss-use lifetimes. Twist can award Yarn, Discount, or Last Stand
+through its nested pool. Their combat, health-restoration, Magick, price, and
+gold values remain deferred.
 
-This audit intentionally leaves implementation choices open. A later plan may
-select a consequential subset of the full Well pool, but that simplification
-must preserve the source distinctions recorded above.
+Same-Well generation retains distinct visible identities and Travel Deal
+refill exclusions. Across separate Wells, repeat eligibility follows the held
+state above rather than a global purchased-name ban. Repeated Spark, Yarn,
+Hymn, and consequential Twist outcomes retain their exact use semantics.
+Existing World Shop, Travel Deal, Gold Gold Gold, Infernal Contract, natural
+Chaos, rarity ledger, Last Stand, and trait-replacement models are not implicit
+Well support.
