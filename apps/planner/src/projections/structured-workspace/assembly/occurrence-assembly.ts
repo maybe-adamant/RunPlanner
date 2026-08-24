@@ -202,6 +202,7 @@ export interface WorkspaceOccurrenceAssemblyInput {
         readonly reason?: RunStateAvailability['reason'];
       }
     | undefined;
+  readonly resourceAuthoring?: import('@run-planner/engine/simulation').RouteResourceAuthoring;
   /** Semantic entry ownership, independent of whether the entry room is selectable. */
   readonly isEntry?: boolean;
   readonly roomPicker?: WorkspaceRoomPickerControl;
@@ -2814,6 +2815,15 @@ function occurrenceInteractionRequirements(
       Object.freeze({ kind: 'naturalChaosSpawn' as const, owner: room.naturalChaosSpawn.owner }),
     );
   }
+  if (room.resources !== undefined) {
+    requirements.push(
+      Object.freeze({
+        kind: 'resourcePlacements' as const,
+        owner: room.address,
+        resources: room.resources,
+      }),
+    );
+  }
   const activeShopOwners = new Set<string>();
   if (room.roomLocal.kind === 'shop' && room.roomLocal.materialized) {
     for (const offer of room.roomLocal.offers) {
@@ -3220,6 +3230,47 @@ export function assembleWorkspaceOccurrence(
     ...(naturalChaosSpawn === undefined ? {} : { naturalChaosSpawn }),
     roomLocal,
     rewardControls: allRewardControls,
+    ...(input.resourceAuthoring === undefined
+      ? {}
+      : {
+          resources: Object.freeze(
+            (
+              [
+                ...new Set([
+                  ...room.resourcePointSupport.families,
+                  ...(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing'] as const).filter((family) => {
+                    const placement = input.resourceAuthoring!.placements[family];
+                    return (
+                      placement?.biomeKey === input.biome.biomeKey &&
+                      placement.occurrenceId === occurrence.occurrenceId
+                    );
+                  }),
+                ]),
+              ] as import('@run-planner/engine/catalog-schema').ResourceFamily[]
+            ).map((family) => {
+              const placement = input.resourceAuthoring!.placements[family];
+              const here =
+                placement?.biomeKey === input.biome.biomeKey &&
+                placement.occurrenceId === occurrence.occurrenceId;
+              return Object.freeze({
+                family,
+                action: here
+                  ? ('remove' as const)
+                  : placement === null
+                    ? ('add' as const)
+                    : ('move' as const),
+                interactionKey: `${semanticAddressKey(input.biome)}:resource:${input.occurrence.occurrenceId}:${family}`,
+                legal: here
+                  ? input.resourceAuthoring!.assessmentByFamily[family]?.legal === true
+                  : input.resourceAuthoring!.legalTargetsByFamily[family].some(
+                      (target) =>
+                        target.biomeKey === input.biome.biomeKey &&
+                        target.occurrenceId === occurrence.occurrenceId,
+                    ),
+              });
+            }),
+          ),
+        }),
     runStateByTab,
     workbench,
   });

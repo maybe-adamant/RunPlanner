@@ -99,6 +99,24 @@ describe('App', () => {
     expect(markup).not.toContain('Route settings');
   });
 
+  it('renders the four-row read-only resource index for the selected route', () => {
+    const application = createApplication();
+    application.store.dispatch(
+      routePanelSelected({ routeKey: 'Surface', panel: { kind: 'resources' } }),
+    );
+
+    const markup = appMarkup(application);
+    expect(application.store.getState().editorSession.activePanelByRoute.Surface).toEqual({
+      kind: 'resources',
+    });
+    expect(markup).toContain('Route outcomes');
+    expect(markup).toContain('No selected success');
+    expect(markup).toContain('Mining');
+    expect(markup).toContain('Spirit');
+    expect(markup).toContain('Seed');
+    expect(markup).toContain('Fishing');
+  });
+
   it('presents the configured route extent and included biomes', () => {
     const application = createApplication();
     application.store.dispatch(

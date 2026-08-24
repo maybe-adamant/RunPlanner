@@ -452,6 +452,18 @@ export function createStructuredWorkspaceProjection(
               }),
             ),
           ),
+          resources: Object.freeze(
+            (['Pickaxe', 'Exorcism', 'Shovel', 'Fishing'] as const).map((family) => {
+              const placement = routeSource.resourceAuthoring.placements[family];
+              const assessment = routeSource.resourceAuthoring.assessmentByFamily[family];
+              return Object.freeze({
+                family,
+                ...(placement === null ? {} : { placement }),
+                reasons: assessment?.reasons ?? Object.freeze([]),
+                valid: assessment?.legal ?? placement === null,
+              });
+            }),
+          ),
           routeKey: routeSource.routeKey,
           status:
             routeSource.evaluation === undefined ? 'blocked' : routeStatus(routeSource.evaluation),

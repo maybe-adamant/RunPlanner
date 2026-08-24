@@ -1,8 +1,10 @@
 import type { RawRoomDeclaration } from '../types';
+import { normalResourcePointSupport } from '../resources';
 
 export const iRooms = [
   {
     gameName: 'I_Intro',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Entrance',
     roomSetKey: 'I',
     advancesExperimentalHammerUses: true,
@@ -20,6 +22,7 @@ export const iRooms = [
   },
   {
     gameName: 'I_Story01',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Hades',
     roomSetKey: 'I',
     advancesExperimentalHammerUses: true,
@@ -50,6 +53,7 @@ export const iRooms = [
   },
   {
     gameName: 'I_Combat01',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 01',
     roomSetKey: 'I',
     advancesExperimentalHammerUses: true,
@@ -79,6 +83,7 @@ export const iRooms = [
   },
   {
     gameName: 'I_Combat02',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 02',
     roomSetKey: 'I',
     advancesExperimentalHammerUses: true,
@@ -104,6 +109,7 @@ export const iRooms = [
   },
   {
     gameName: 'I_Combat03',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 03',
     roomSetKey: 'I',
     advancesExperimentalHammerUses: true,
@@ -133,6 +139,7 @@ export const iRooms = [
   },
   {
     gameName: 'I_Combat04',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 04',
     roomSetKey: 'I',
     advancesExperimentalHammerUses: true,
@@ -162,6 +169,7 @@ export const iRooms = [
   },
   {
     gameName: 'I_Combat05',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 05',
     roomSetKey: 'I',
     advancesExperimentalHammerUses: true,
@@ -187,6 +195,7 @@ export const iRooms = [
   },
   {
     gameName: 'I_Combat06',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 06',
     roomSetKey: 'I',
     advancesExperimentalHammerUses: true,
@@ -212,6 +221,7 @@ export const iRooms = [
   },
   {
     gameName: 'I_Combat07',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 07',
     roomSetKey: 'I',
     advancesExperimentalHammerUses: true,
@@ -237,6 +247,7 @@ export const iRooms = [
   },
   {
     gameName: 'I_Combat08',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 08',
     roomSetKey: 'I',
     advancesExperimentalHammerUses: true,
@@ -262,6 +273,7 @@ export const iRooms = [
   },
   {
     gameName: 'I_Combat09',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 09',
     roomSetKey: 'I',
     advancesExperimentalHammerUses: true,
@@ -291,6 +303,7 @@ export const iRooms = [
   },
   {
     gameName: 'I_Combat10',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 10',
     roomSetKey: 'I',
     advancesExperimentalHammerUses: true,
@@ -320,6 +333,7 @@ export const iRooms = [
   },
   {
     gameName: 'I_Combat11',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 11',
     roomSetKey: 'I',
     advancesExperimentalHammerUses: true,
@@ -349,6 +363,7 @@ export const iRooms = [
   },
   {
     gameName: 'I_Combat12',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 12',
     roomSetKey: 'I',
     advancesExperimentalHammerUses: true,
@@ -378,6 +393,7 @@ export const iRooms = [
   },
   {
     gameName: 'I_Combat13',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 13',
     roomSetKey: 'I',
     advancesExperimentalHammerUses: true,
@@ -403,6 +419,7 @@ export const iRooms = [
   },
   {
     gameName: 'I_Combat14',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 14',
     roomSetKey: 'I',
     advancesExperimentalHammerUses: true,
@@ -428,6 +445,7 @@ export const iRooms = [
   },
   {
     gameName: 'I_Combat15',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 15',
     roomSetKey: 'I',
     advancesExperimentalHammerUses: true,
@@ -457,6 +475,7 @@ export const iRooms = [
   },
   {
     gameName: 'I_Combat16',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 16',
     roomSetKey: 'I',
     advancesExperimentalHammerUses: true,
@@ -482,6 +501,7 @@ export const iRooms = [
   },
   {
     gameName: 'I_Combat17',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 17',
     roomSetKey: 'I',
     advancesExperimentalHammerUses: true,
@@ -507,6 +527,7 @@ export const iRooms = [
   },
   {
     gameName: 'I_Combat18',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 18',
     roomSetKey: 'I',
     advancesExperimentalHammerUses: true,
@@ -536,6 +557,7 @@ export const iRooms = [
   },
   {
     gameName: 'I_Combat19',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 19',
     roomSetKey: 'I',
     advancesExperimentalHammerUses: true,
@@ -561,6 +583,7 @@ export const iRooms = [
   },
   {
     gameName: 'I_Combat20',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 20',
     roomSetKey: 'I',
     advancesExperimentalHammerUses: true,
@@ -586,6 +609,7 @@ export const iRooms = [
   },
   {
     gameName: 'I_Combat21',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 21',
     roomSetKey: 'I',
     advancesExperimentalHammerUses: true,
@@ -615,6 +639,7 @@ export const iRooms = [
   },
   {
     gameName: 'I_Combat22',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 22',
     roomSetKey: 'I',
     advancesExperimentalHammerUses: true,
@@ -644,6 +669,7 @@ export const iRooms = [
   },
   {
     gameName: 'I_Combat23',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 23',
     roomSetKey: 'I',
     advancesExperimentalHammerUses: true,
@@ -669,6 +695,7 @@ export const iRooms = [
   },
   {
     gameName: 'I_Combat24',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 24',
     roomSetKey: 'I',
     advancesExperimentalHammerUses: true,
@@ -696,6 +723,7 @@ export const iRooms = [
 
   {
     gameName: 'I_Reprieve01',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Fountain',
     roomSetKey: 'I',
     advancesExperimentalHammerUses: true,
@@ -737,6 +765,7 @@ export const iRooms = [
   },
   {
     gameName: 'I_MiniBoss01',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     boonRarityOverride: { Rare: 0.9, Epic: 0.1, Duo: 0.2, Legendary: 0.2 },
     label: 'The Verminancer',
     roomSetKey: 'I',
@@ -786,6 +815,7 @@ export const iRooms = [
   },
   {
     gameName: 'I_MiniBoss02',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     boonRarityOverride: { Rare: 0.9, Epic: 0.1, Duo: 0.2, Legendary: 0.2 },
     label: 'Goldwrath',
     roomSetKey: 'I',
@@ -835,6 +865,7 @@ export const iRooms = [
   },
   {
     gameName: 'I_PreBoss02',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Preboss',
     roomSetKey: 'I',
     advancesExperimentalHammerUses: true,
@@ -872,6 +903,7 @@ export const iRooms = [
   },
   {
     gameName: 'I_Boss01',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Chronos',
     roomSetKey: 'I',
     advancesExperimentalHammerUses: true,
@@ -890,6 +922,7 @@ export const iRooms = [
   },
   {
     gameName: 'I_PostBoss01',
+    resourcePointSupport: normalResourcePointSupport([]),
     label: 'Postboss',
     roomSetKey: 'I',
     advancesExperimentalHammerUses: true,

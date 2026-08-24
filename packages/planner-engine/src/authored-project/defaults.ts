@@ -1,7 +1,11 @@
 import type { Catalog } from '../catalog-schema';
 import { createInitialBiomeState } from './biomeState';
 import { decodeProjectDocument } from './codec';
-import { PROJECT_DOCUMENT_SCHEMA_VERSION, type ProjectDocument } from './model';
+import {
+  PROJECT_DOCUMENT_SCHEMA_VERSION,
+  type ProjectDocument,
+  type ResourcePlacements,
+} from './model';
 import { ProjectDocumentContractError } from './validation';
 import { createDefaultRouteLoadout } from './loadout';
 import { createDefaultCompletionOccurrences } from './room-state/defaults';
@@ -10,6 +14,14 @@ export interface CreateProjectDocumentOptions {
   readonly projectId: string;
   readonly configuredBiomeCounts?: Readonly<Record<string, number | undefined>>;
 }
+
+/** Explicit empty route resource record for direct, route-less evaluation adapters. */
+export const EMPTY_RESOURCE_PLACEMENTS: ResourcePlacements = Object.freeze({
+  Pickaxe: null,
+  Exorcism: null,
+  Shovel: null,
+  Fishing: null,
+});
 
 export function createProjectDocument(
   catalog: Catalog,
@@ -45,6 +57,7 @@ export function createProjectDocument(
     return {
       routeKey: route.key,
       loadout,
+      resourcePlacements: EMPTY_RESOURCE_PLACEMENTS,
       biomes: route.biomeKeys.slice(0, configuredCount).map((biomeKey) => {
         const layout = catalog.biomeLayouts.byKey[biomeKey];
         if (layout === undefined) {

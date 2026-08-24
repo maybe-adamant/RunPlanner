@@ -28,6 +28,7 @@ import {
 } from '@run-planner/engine/simulation';
 import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 import { authorSurfaceWorldShop } from '@run-planner/test-fixtures/surface';
+import { EMPTY_RESOURCE_PLACEMENTS } from '../../src/authored-project/defaults';
 import {
   createCompleteFGProject,
   createGoldenFGHProject,
@@ -632,6 +633,7 @@ describe('unified biome simulation', () => {
     if (oPlan === undefined) throw new Error('missing O plan');
     const o = evaluateBiome(catalog, 'Surface', oPlan, {
       enteredBiomeCount: 2,
+      resourcePlacements: EMPTY_RESOURCE_PLACEMENTS,
       loadout: traitContext(oProject, 'Surface'),
     });
     expect(o.authoring).toBe('complete');
@@ -672,6 +674,7 @@ describe('unified biome simulation', () => {
     expect(
       evaluateBiome(catalog, 'Surface', reversed, {
         enteredBiomeCount: 4,
+        resourcePlacements: EMPTY_RESOURCE_PLACEMENTS,
         loadout: traitContext(qProject, 'Surface'),
       }).authoring,
     ).toBe('complete');
@@ -683,6 +686,7 @@ describe('unified biome simulation', () => {
     if (plan === undefined) throw new Error('missing I plan');
     const biome = evaluateBiome(catalog, 'Underworld', plan, {
       enteredBiomeCount: 4,
+      resourcePlacements: EMPTY_RESOURCE_PLACEMENTS,
       loadout: traitContext(project, 'Underworld'),
     });
     if (biome.authoring !== 'complete') throw new Error('I should remain structurally complete');

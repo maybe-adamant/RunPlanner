@@ -38,6 +38,7 @@ import {
   loadSurfaceNCompleteHubFrontierProject,
   loadSurfaceNEntryFrontierProject,
   loadSurfaceNEntryFrontierResolvedProject,
+  loadSurfaceNResourcesProject,
   loadSurfaceNOPQProject,
   nBiome,
   nLocalOccurrenceId,
@@ -364,6 +365,27 @@ describe('BiomeWorkspace', () => {
     expect(within(entryReward).queryByLabelText('Start room')).toBeNull();
     expect(within(entryReward).queryByRole('heading', { name: 'Entry reward' })).toBeNull();
     expect(within(entryReward).queryByRole('button', { name: /Edit Trait/ })).toBeNull();
+  });
+
+  it('binds a room-local selected resource removal to one semantic edit and undo', async () => {
+    const view = renderWorkspace(loadSurfaceNResourcesProject(), 'Surface', 'N');
+    await view.user.click(screen.getByRole('button', { name: /^Opening/ }));
+    const resources = screen.getByRole('region', { name: 'Resources' });
+    const historyBefore = view.application.store.getState().projectWorkspace.history.past.length;
+
+    await view.user.click(within(resources).getByRole('button', { name: 'Remove Mining' }));
+    const selected = () =>
+      view.application.store
+        .getState()
+        .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
+        ?.resourcePlacements.Pickaxe;
+    expect(selected()).toBeNull();
+    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+      historyBefore + 1,
+    );
+
+    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
+    expect(selected()).toEqual({ biomeKey: 'N', occurrenceId: 'surface-n-opening' });
   });
 
   it('uses one concise player-facing name for the Hub rail stop', () => {

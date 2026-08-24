@@ -1,10 +1,16 @@
 {
-  "schemaVersion": 55,
+  "schemaVersion": 56,
   "projectId": "midshop-pom-frontier",
-  "catalogVersion": "0.37.0-automatic-completion-occurrences",
+  "catalogVersion": "0.38.0-selected-resource-successes",
   "routes": [
     {
       "routeKey": "Underworld",
+      "resourcePlacements": {
+        "Pickaxe": null,
+        "Exorcism": null,
+        "Shovel": null,
+        "Fishing": null
+      },
       "loadout": {
         "weaponKey": "WeaponStaffSwing",
         "aspectKey": "BaseStaffAspect",
@@ -738,6 +744,12 @@
     },
     {
       "routeKey": "Surface",
+      "resourcePlacements": {
+        "Pickaxe": null,
+        "Exorcism": null,
+        "Shovel": null,
+        "Fishing": null
+      },
       "loadout": {
         "weaponKey": "WeaponStaffSwing",
         "aspectKey": "BaseStaffAspect",

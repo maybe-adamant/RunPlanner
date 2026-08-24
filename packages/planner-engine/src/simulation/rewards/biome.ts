@@ -25,9 +25,11 @@ import {
 } from '../../authored-project/addresses';
 import type {
   AuthoredRewardState,
+  ResourcePlacements,
   RouteLoadout,
   ShipCombatState,
 } from '../../authored-project/model';
+import { EMPTY_RESOURCE_PLACEMENTS } from '../../authored-project/defaults';
 import {
   acquisitionSiteStorageKey,
   artificerAcquisitionSite,
@@ -1458,7 +1460,8 @@ export function evaluateBiomeRewardsAssemblyInternal(
   history: BiomeRewardHistory,
   enteredBiomeCount: number,
   routeLoadout: RouteLoadout,
-  initialBranches?: readonly RewardBranch[],
+  initialBranches: readonly RewardBranch[] | undefined = undefined,
+  resourcePlacements: ResourcePlacements = EMPTY_RESOURCE_PLACEMENTS,
 ): BiomeRewardEvaluationAssembly {
   if (snapshot.biomeKey !== history.biomeKey || snapshot.routeKey !== history.routeKey) {
     throw new BiomeRewardSimulationContractError('reward inputs do not share one biome owner');
@@ -5865,6 +5868,53 @@ export function evaluateBiomeRewardsAssemblyInternal(
             room,
             view,
           );
+          const placements = Object.entries(resourcePlacements).filter(([family, value]) => {
+            if (
+              value?.biomeKey !== room.origin.biomeKey ||
+              value.occurrenceId !== room.origin.occurrenceId
+            )
+              return false;
+            // Replacement retains its authored address for repair, but never
+            // fabricates a success in a room that no longer supports it.
+            return (
+              catalog.rooms.byKey[room.gameName]?.resourcePointSupport.families.includes(
+                family as import('../../catalog-schema').ResourceFamily,
+              ) ?? false
+            );
+          }) as readonly [
+            import('../../catalog-schema').ResourceFamily,
+            NonNullable<ResourcePlacements[import('../../catalog-schema').ResourceFamily]>,
+          ][];
+          if (placements.length > 0) {
+            branches = branches.map((branch) => {
+              const priorTraits = branch.traitHistory ?? createTraitHistoryState();
+              const events = placements.map(([family]) => {
+                const source =
+                  catalog.rooms.byKey[room.gameName]?.resourcePointSupport.rules[family];
+                if (source === undefined)
+                  throw new BiomeRewardSimulationContractError(
+                    `resource ${family} has no declaration rule in ${room.gameName}`,
+                  );
+                return Object.freeze({
+                  kind: 'elementContribution' as const,
+                  owner: room.origin,
+                  acquisitionRole: `resource:${source.grantedTraitKey}`,
+                  sequence: event.sequence,
+                  acquisitionPoint: 'roomExited',
+                  contributions: Object.freeze({ [source.element]: 1 }),
+                });
+              });
+              const traitHistory = foldTraitHistoryEvents(catalog, [
+                ...priorTraits.events,
+                ...events,
+              ]);
+              return Object.freeze({
+                ...branch,
+                traitHistory,
+                history: attachTraitHistory(branch.history, traitHistory),
+              });
+            });
+          }
         }
         // The pre-exit snapshot above intentionally observes Enshrouded
         // before its departure use.  The next room sees a resulting maturity.
@@ -6025,6 +6075,7 @@ export function evaluateBiomeRewards(
   enteredBiomeCount: number,
   routeLoadout: RouteLoadout,
   initialBranches?: readonly RewardBranch[],
+  resourcePlacements: ResourcePlacements = EMPTY_RESOURCE_PLACEMENTS,
 ): BiomeRewardSimulation {
   return evaluateBiomeRewardsAssemblyInternal(
     catalog,
@@ -6033,6 +6084,7 @@ export function evaluateBiomeRewards(
     enteredBiomeCount,
     routeLoadout,
     initialBranches,
+    resourcePlacements,
   ).simulation;
 }
 
@@ -6043,6 +6095,7 @@ export function evaluateBiomeRewardsAssembly(
   enteredBiomeCount: number,
   routeLoadout: RouteLoadout,
   initialBranches?: readonly RewardBranch[],
+  resourcePlacements: ResourcePlacements = EMPTY_RESOURCE_PLACEMENTS,
 ): BiomeRewardSimulation {
   return evaluateBiomeRewardsAssemblyInternal(
     catalog,
@@ -6051,5 +6104,6 @@ export function evaluateBiomeRewardsAssembly(
     enteredBiomeCount,
     routeLoadout,
     initialBranches,
+    resourcePlacements,
   ).simulation;
 }

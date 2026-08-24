@@ -28,6 +28,7 @@ import {
   pOccurrenceIds,
 } from '@run-planner/test-fixtures/surface';
 import { evaluateProgressiveBiomeAssembly } from '../../../../src/simulation/progressive/biome';
+import { EMPTY_RESOURCE_PLACEMENTS } from '../../../../src/authored-project/defaults';
 
 const defaultRouteLoadout = createDefaultRouteLoadout(catalog);
 
@@ -242,6 +243,7 @@ describe('P core loop', () => {
       previous?.authoring === 'complete' && previous.validity === 'valid' && plan !== undefined
         ? evaluateProgressiveBiomeAssembly(catalog, pBiome, plan, {
             enteredBiomeCount: 3,
+            resourcePlacements: EMPTY_RESOURCE_PLACEMENTS,
             loadout: defaultRouteLoadout,
             seed: {
               history: previous.history,

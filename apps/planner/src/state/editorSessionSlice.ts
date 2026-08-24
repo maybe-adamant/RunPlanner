@@ -28,6 +28,7 @@ export type RoutePanel =
   | { readonly kind: 'overview' }
   | { readonly kind: 'npcIndex' }
   | { readonly kind: 'traits' }
+  | { readonly kind: 'resources' }
   | { readonly kind: 'biome'; readonly biomeKey: string };
 
 export interface RoutePanelSelection {

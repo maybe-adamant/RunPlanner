@@ -19,6 +19,7 @@ import {
   loadSurfaceNEntryFrontierCheckpoint,
   loadSurfaceNEntryFrontierResolvedCheckpoint,
   loadSurfaceNPartialHubCheckpoint,
+  loadSurfaceNResourcesCheckpoint,
   loadSurfaceNStoryBoardCheckpoint,
   loadSurfaceNTenOpenInvalidCheckpoint,
   loadSurfaceNOCheckpoint,
@@ -130,6 +131,10 @@ export function loadSurfaceNQueensRansomProject(): ProjectDocument {
 
 export function loadSurfaceNSteadyGrowthFrontierProject(): ProjectDocument {
   return loadSurfaceNSteadyGrowthFrontierCheckpoint();
+}
+
+export function loadSurfaceNResourcesProject(): ProjectDocument {
+  return loadSurfaceNResourcesCheckpoint();
 }
 
 export function loadSurfaceNEntryFrontierProject(): ProjectDocument {

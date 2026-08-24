@@ -19,7 +19,11 @@ import {
   type SteadyGrowthOutcomeAddress,
   type NemesisRandomEventAddress,
 } from '../../authored-project/addresses';
-import type { AuthoredBiomePlan, RouteLoadout } from '../../authored-project/model';
+import type {
+  AuthoredBiomePlan,
+  RouteLoadout,
+  ResourcePlacements,
+} from '../../authored-project/model';
 import { evaluateBiomeRoomGenerationAssemblyInternal } from '../generation/biome';
 import { evaluateHubDecisionGenerationInternal } from '../generation/hub';
 import type {
@@ -123,6 +127,8 @@ export interface ProgressiveBiomeContext {
   readonly enteredBiomeCount: number;
   /** A Postboss rack is reached only when this configured route continues. */
   readonly loadout: RouteLoadout;
+  /** Direct biome evaluators supply the explicit empty record; route simulation supplies its owned record. */
+  readonly resourcePlacements: ResourcePlacements;
   readonly seed?: ProgressiveSeed;
 }
 
@@ -473,6 +479,7 @@ function products(
     context.enteredBiomeCount,
     context.loadout,
     context.seed?.rewardBranches,
+    context.resourcePlacements,
   );
   const roomGeneration = generation(
     catalog,

@@ -110,6 +110,99 @@ function normalizeCaps(caps: RoomCaps, path: string): RoomCaps {
   });
 }
 
+function normalizeResourcePointSupport(
+  raw: RawRoomDeclaration,
+  path: string,
+): RoomDeclaration['resourcePointSupport'] {
+  const support = raw.resourcePointSupport;
+  if (support === undefined)
+    fail(`${path}.resourcePointSupport`, 'must declare source-backed resource support');
+  const families = ['Pickaxe', 'Exorcism', 'Shovel', 'Fishing'] as const;
+  const known = new Set(families);
+  const supportKeys = new Set(['families', 'capacity', 'ignoresBiomeLimit', 'rules']);
+  if (Object.keys(support).some((key) => !supportKeys.has(key))) {
+    fail(`${path}.resourcePointSupport`, 'contains unknown field');
+  }
+  if (support.families.some((family) => !known.has(family)))
+    fail(`${path}.resourcePointSupport.families`, 'contains unknown family');
+  if (new Set(support.families).size !== support.families.length)
+    fail(`${path}.resourcePointSupport.families`, 'must not contain duplicate families');
+  if (support.capacity !== 'simpleComplex' && support.capacity !== 'allTools')
+    fail(`${path}.resourcePointSupport.capacity`, 'must be simpleComplex or allTools');
+  if (support.ignoresBiomeLimit !== undefined && support.ignoresBiomeLimit !== true)
+    fail(`${path}.resourcePointSupport.ignoresBiomeLimit`, 'must be true when present');
+  if (
+    Object.keys(support.rules).length !== families.length ||
+    families.some((family) => !(family in support.rules))
+  ) {
+    fail(`${path}.resourcePointSupport.rules`, 'must contain exactly every resource family');
+  }
+  const rules: Record<
+    string,
+    RoomDeclaration['resourcePointSupport']['rules'][(typeof families)[number]]
+  > = {};
+  for (const family of families) {
+    const rule = support.rules[family];
+    const ruleKeys = new Set([
+      'grantedTraitKey',
+      'element',
+      'sameFamilyLookback',
+      'crossFamilyLookback',
+    ]);
+    if (Object.keys(rule ?? {}).some((key) => !ruleKeys.has(key))) {
+      fail(`${path}.resourcePointSupport.rules.${family}`, 'contains unknown field');
+    }
+    if (
+      rule === undefined ||
+      typeof rule.grantedTraitKey !== 'string' ||
+      rule.grantedTraitKey.trim() === ''
+    )
+      fail(`${path}.resourcePointSupport.rules.${family}`, 'must declare a granted trait key');
+    if (!['Fire', 'Air', 'Earth', 'Water'].includes(rule.element))
+      fail(`${path}.resourcePointSupport.rules.${family}.element`, 'must be a supported element');
+    if (!Number.isInteger(rule.sameFamilyLookback) || rule.sameFamilyLookback < 0)
+      fail(
+        `${path}.resourcePointSupport.rules.${family}.sameFamilyLookback`,
+        'must be a non-negative integer',
+      );
+    const cross = rule.crossFamilyLookback;
+    if (
+      cross === null ||
+      typeof cross !== 'object' ||
+      Array.isArray(cross) ||
+      Object.keys(cross).length !== families.length ||
+      Object.keys(cross).some((key) => !known.has(key as (typeof families)[number])) ||
+      families.some((key) => !(key in cross))
+    )
+      fail(
+        `${path}.resourcePointSupport.rules.${family}.crossFamilyLookback`,
+        'must contain exactly every resource family',
+      );
+    const crossFamilyLookback: Record<string, number> = {};
+    for (const other of families) {
+      const value = cross[other];
+      if (!Number.isInteger(value) || value < 0)
+        fail(
+          `${path}.resourcePointSupport.rules.${family}.crossFamilyLookback.${other}`,
+          'must be a non-negative integer',
+        );
+      crossFamilyLookback[other] = value;
+    }
+    rules[family] = Object.freeze({
+      grantedTraitKey: rule.grantedTraitKey,
+      element: rule.element,
+      sameFamilyLookback: rule.sameFamilyLookback,
+      crossFamilyLookback: Object.freeze(crossFamilyLookback),
+    });
+  }
+  return Object.freeze({
+    families: Object.freeze([...support.families]),
+    capacity: support.capacity,
+    rules: Object.freeze(rules),
+    ...(support.ignoresBiomeLimit === true ? { ignoresBiomeLimit: true } : {}),
+  });
+}
+
 const roomTemplateKinds = {
   Anomaly: 'Combat',
   Chaos: 'Combat',
@@ -888,6 +981,7 @@ export function normalizeRooms(
         ),
       }),
       caps: normalizeCaps(room.caps, `${path}.caps`),
+      resourcePointSupport: normalizeResourcePointSupport(room, path),
       ...(eligibility === undefined ? {} : { eligibility }),
       ...(room.force === undefined
         ? {}

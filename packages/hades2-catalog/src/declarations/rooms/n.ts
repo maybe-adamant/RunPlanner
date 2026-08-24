@@ -1,4 +1,5 @@
 import type { RawRoomDeclaration } from '../types';
+import { nResourcePointSupport } from '../resources';
 
 const naturalChaosExit = {
   kind: 'naturalChaos' as const,
@@ -15,6 +16,7 @@ const soulPylon = {
 export const nRooms = [
   {
     gameName: 'N_Opening01',
+    resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Opening',
     roomSetKey: 'N',
     advancesExperimentalHammerUses: true,
@@ -46,6 +48,7 @@ export const nRooms = [
   },
   {
     gameName: 'N_PreHub01',
+    resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Pre-Hub',
     roomSetKey: 'N',
     advancesExperimentalHammerUses: true,
@@ -80,6 +83,7 @@ export const nRooms = [
   },
   {
     gameName: 'N_Hub',
+    resourcePointSupport: nResourcePointSupport([]),
     label: 'Ephyra Hub',
     roomSetKey: 'N',
     advancesExperimentalHammerUses: true,
@@ -96,6 +100,7 @@ export const nRooms = [
   },
   {
     gameName: 'N_Combat01',
+    resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 01',
     roomSetKey: 'N',
     advancesExperimentalHammerUses: true,
@@ -122,6 +127,7 @@ export const nRooms = [
   },
   {
     gameName: 'N_Combat02',
+    resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 02',
     roomSetKey: 'N',
     advancesExperimentalHammerUses: true,
@@ -170,6 +176,7 @@ export const nRooms = [
   },
   {
     gameName: 'N_Combat03',
+    resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 03',
     roomSetKey: 'N',
     advancesExperimentalHammerUses: true,
@@ -212,6 +219,7 @@ export const nRooms = [
   },
   {
     gameName: 'N_Combat04',
+    resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 04',
     roomSetKey: 'N',
     advancesExperimentalHammerUses: true,
@@ -260,6 +268,7 @@ export const nRooms = [
   },
   {
     gameName: 'N_Combat05',
+    resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 05',
     roomSetKey: 'N',
     advancesExperimentalHammerUses: true,
@@ -314,6 +323,7 @@ export const nRooms = [
   },
   {
     gameName: 'N_Combat06',
+    resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 06',
     roomSetKey: 'N',
     advancesExperimentalHammerUses: true,
@@ -362,6 +372,7 @@ export const nRooms = [
   },
   {
     gameName: 'N_Combat07',
+    resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 07',
     roomSetKey: 'N',
     advancesExperimentalHammerUses: true,
@@ -388,6 +399,7 @@ export const nRooms = [
   },
   {
     gameName: 'N_Combat08',
+    resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Shovel']),
     label: 'Combat 08',
     roomSetKey: 'N',
     advancesExperimentalHammerUses: true,
@@ -414,6 +426,7 @@ export const nRooms = [
   },
   {
     gameName: 'N_Combat09',
+    resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 09',
     roomSetKey: 'N',
     advancesExperimentalHammerUses: true,
@@ -468,6 +481,7 @@ export const nRooms = [
   },
   {
     gameName: 'N_Combat10',
+    resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 10',
     roomSetKey: 'N',
     advancesExperimentalHammerUses: true,
@@ -516,6 +530,7 @@ export const nRooms = [
   },
   {
     gameName: 'N_Combat11',
+    resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 11',
     roomSetKey: 'N',
     advancesExperimentalHammerUses: true,
@@ -558,6 +573,7 @@ export const nRooms = [
   },
   {
     gameName: 'N_Combat12',
+    resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 12',
     roomSetKey: 'N',
     advancesExperimentalHammerUses: true,
@@ -612,6 +628,7 @@ export const nRooms = [
   },
   {
     gameName: 'N_Combat13',
+    resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 13',
     roomSetKey: 'N',
     advancesExperimentalHammerUses: true,
@@ -638,6 +655,7 @@ export const nRooms = [
   },
   {
     gameName: 'N_Combat14',
+    resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 14',
     roomSetKey: 'N',
     advancesExperimentalHammerUses: true,
@@ -664,6 +682,7 @@ export const nRooms = [
   },
   {
     gameName: 'N_Combat15',
+    resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 15',
     roomSetKey: 'N',
     advancesExperimentalHammerUses: true,
@@ -706,6 +725,7 @@ export const nRooms = [
   },
   {
     gameName: 'N_Combat16',
+    resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 16',
     roomSetKey: 'N',
     advancesExperimentalHammerUses: true,
@@ -748,6 +768,7 @@ export const nRooms = [
   },
   {
     gameName: 'N_Combat17',
+    resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 17',
     roomSetKey: 'N',
     advancesExperimentalHammerUses: true,
@@ -790,6 +811,7 @@ export const nRooms = [
   },
   {
     gameName: 'N_Combat18',
+    resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 18',
     roomSetKey: 'N',
     advancesExperimentalHammerUses: true,
@@ -832,6 +854,7 @@ export const nRooms = [
   },
   {
     gameName: 'N_Combat19',
+    resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 19',
     roomSetKey: 'N',
     advancesExperimentalHammerUses: true,
@@ -858,6 +881,7 @@ export const nRooms = [
   },
   {
     gameName: 'N_Combat20',
+    resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 20',
     roomSetKey: 'N',
     advancesExperimentalHammerUses: true,
@@ -900,6 +924,7 @@ export const nRooms = [
   },
   {
     gameName: 'N_Combat21',
+    resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 21',
     roomSetKey: 'N',
     advancesExperimentalHammerUses: true,
@@ -926,6 +951,7 @@ export const nRooms = [
   },
   {
     gameName: 'N_Combat22',
+    resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 22',
     roomSetKey: 'N',
     advancesExperimentalHammerUses: true,
@@ -974,6 +1000,7 @@ export const nRooms = [
   },
   {
     gameName: 'N_Combat23',
+    resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 23',
     roomSetKey: 'N',
     advancesExperimentalHammerUses: true,
@@ -1028,6 +1055,7 @@ export const nRooms = [
   },
   {
     gameName: 'N_MiniBoss01',
+    resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     boonRarityOverride: { Rare: 0.9, Epic: 0.1, Legendary: 0.05 },
     label: 'Satyr Champion',
     roomSetKey: 'N',
@@ -1055,6 +1083,7 @@ export const nRooms = [
   },
   {
     gameName: 'N_MiniBoss02',
+    resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     boonRarityOverride: { Rare: 0.9, Epic: 0.1, Legendary: 0.05 },
     label: 'Erymanthian Boar',
     roomSetKey: 'N',
@@ -1082,6 +1111,9 @@ export const nRooms = [
   },
   {
     gameName: 'N_Story01',
+    resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing'], {
+      ignoresBiomeLimit: true,
+    }),
     label: 'Medea',
     roomSetKey: 'N',
     advancesExperimentalHammerUses: true,
@@ -1105,6 +1137,7 @@ export const nRooms = [
   },
   {
     gameName: 'N_Sub01',
+    resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     blocksGorgon: true,
     skipRoomsPerUpgrade: true,
     label: 'Side Room 01',
@@ -1132,6 +1165,7 @@ export const nRooms = [
   },
   {
     gameName: 'N_Sub02',
+    resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     blocksGorgon: true,
     skipRoomsPerUpgrade: true,
     label: 'Side Room 02',
@@ -1159,6 +1193,7 @@ export const nRooms = [
   },
   {
     gameName: 'N_Sub03',
+    resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     blocksGorgon: true,
     skipRoomsPerUpgrade: true,
     label: 'Side Room 03',
@@ -1186,6 +1221,7 @@ export const nRooms = [
   },
   {
     gameName: 'N_Sub04',
+    resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     blocksGorgon: true,
     skipRoomsPerUpgrade: true,
     label: 'Side Room 04',
@@ -1213,6 +1249,7 @@ export const nRooms = [
   },
   {
     gameName: 'N_Sub05',
+    resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     blocksGorgon: true,
     skipRoomsPerUpgrade: true,
     label: 'Side Room 05',
@@ -1240,6 +1277,7 @@ export const nRooms = [
   },
   {
     gameName: 'N_Sub06',
+    resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     blocksGorgon: true,
     skipRoomsPerUpgrade: true,
     label: 'Side Room 06',
@@ -1267,6 +1305,7 @@ export const nRooms = [
   },
   {
     gameName: 'N_Sub07',
+    resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     blocksGorgon: true,
     skipRoomsPerUpgrade: true,
     label: 'Side Room 07',
@@ -1294,6 +1333,7 @@ export const nRooms = [
   },
   {
     gameName: 'N_Sub08',
+    resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     blocksGorgon: true,
     skipRoomsPerUpgrade: true,
     label: 'Side Room 08',
@@ -1321,6 +1361,7 @@ export const nRooms = [
   },
   {
     gameName: 'N_Sub09',
+    resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     blocksGorgon: true,
     skipRoomsPerUpgrade: true,
     label: 'Side Room 09',
@@ -1352,6 +1393,7 @@ export const nRooms = [
   },
   {
     gameName: 'N_Sub10',
+    resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     blocksGorgon: true,
     skipRoomsPerUpgrade: true,
     label: 'Side Room 10',
@@ -1383,6 +1425,7 @@ export const nRooms = [
   },
   {
     gameName: 'N_Sub11',
+    resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     blocksGorgon: true,
     skipRoomsPerUpgrade: true,
     label: 'Side Room 11',
@@ -1414,6 +1457,7 @@ export const nRooms = [
   },
   {
     gameName: 'N_Sub12',
+    resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     blocksGorgon: true,
     skipRoomsPerUpgrade: true,
     label: 'Side Room 12',
@@ -1441,6 +1485,7 @@ export const nRooms = [
   },
   {
     gameName: 'N_Sub13',
+    resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     blocksGorgon: true,
     skipRoomsPerUpgrade: true,
     label: 'Side Room 13',
@@ -1468,6 +1513,7 @@ export const nRooms = [
   },
   {
     gameName: 'N_Sub14',
+    resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     blocksGorgon: true,
     skipRoomsPerUpgrade: true,
     label: 'Side Room 14',
@@ -1499,6 +1545,7 @@ export const nRooms = [
   },
   {
     gameName: 'N_Sub15',
+    resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     blocksGorgon: true,
     skipRoomsPerUpgrade: true,
     label: 'Side Room 15',
@@ -1526,6 +1573,7 @@ export const nRooms = [
   },
   {
     gameName: 'N_PreBoss01',
+    resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Preboss',
     roomSetKey: 'N',
     advancesExperimentalHammerUses: true,
@@ -1573,6 +1621,7 @@ export const nRooms = [
   },
   {
     gameName: 'N_Boss01',
+    resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Polyphemus',
     roomSetKey: 'N',
     advancesExperimentalHammerUses: true,
@@ -1591,6 +1640,7 @@ export const nRooms = [
   },
   {
     gameName: 'N_PostBoss01',
+    resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Postboss',
     hasKeepsakeRack: true,
     hasRequiredFountain: true,

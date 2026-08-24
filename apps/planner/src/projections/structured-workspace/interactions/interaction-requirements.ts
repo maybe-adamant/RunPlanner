@@ -112,6 +112,17 @@ export type WorkspaceOccurrenceInteractionRequirement =
       readonly kind: 'shopPurchaseParticipation';
       readonly owner: ShopOfferAddress;
       readonly purchased: boolean;
+    }
+  | {
+      /** Route-owned selected successes are controlled at their exact host room. */
+      readonly kind: 'resourcePlacements';
+      readonly owner: OccurrenceAddress;
+      readonly resources: readonly {
+        readonly family: import('@run-planner/engine/catalog-schema').ResourceFamily;
+        readonly action: 'add' | 'move' | 'remove';
+        readonly interactionKey: string;
+        readonly legal: boolean;
+      }[];
     };
 
 /**

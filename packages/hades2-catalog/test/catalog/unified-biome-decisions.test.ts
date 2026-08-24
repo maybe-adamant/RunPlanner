@@ -10,7 +10,7 @@ function input(): RawCatalogInput {
 describe('unified biome decisions catalog', () => {
   it('normalizes every supported biome through unified catalog declarations', () => {
     const catalog = createCatalog(declarations);
-    expect(catalog.version).toBe('0.37.0-automatic-completion-occurrences');
+    expect(catalog.version).toBe('0.38.0-selected-resource-successes');
     expect(catalog.biomeLayouts.values.map((layout) => layout.biomeKey)).toEqual([
       'F',
       'G',

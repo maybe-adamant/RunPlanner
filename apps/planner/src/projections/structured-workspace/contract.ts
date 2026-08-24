@@ -959,6 +959,7 @@ export interface WorkspaceInteractionCatalog {
     string,
     WorkspaceShopPurchaseParticipationInteraction
   >;
+  readonly resourcePlacements: ReadonlyMap<string, WorkspaceResourcePlacementInteraction>;
   readonly localVisitOrders: ReadonlyMap<string, WorkspaceLocalVisitOrderInteraction>;
   readonly localVisitGenerations: ReadonlyMap<string, WorkspaceLocalVisitGenerationInteraction>;
   readonly starts: ReadonlyMap<string, WorkspaceStartInteraction>;
@@ -995,6 +996,15 @@ export interface WorkspaceShopPurchaseParticipationInteraction {
   ) => WorkspaceCommandIntent<
     Extract<ProjectCommand, { readonly kind: 'ReplaceShopPurchaseParticipation' }>
   >;
+}
+
+/** A complete route command bound to one resource-family control at its host room. */
+export interface WorkspaceResourcePlacementInteraction {
+  readonly intent: WorkspaceCommandIntent<
+    Extract<ProjectCommand, { readonly kind: 'ReplaceResourcePlacement' }>
+  >;
+  readonly key: string;
+  readonly owner: OccurrenceAddress;
 }
 
 /** The Midshop workbench presents the declared additional door without making it a normal target. */
@@ -1667,6 +1677,13 @@ export interface WorkspaceRoomSummary {
   /** Declared natural Chaos spawn capability; the authored door remains occurrence-owned. */
   readonly naturalChaosSpawn?: WorkspaceNaturalChaosSpawnControl;
   readonly rewardControls: readonly WorkspaceRewardControl[];
+  /** Route-owned selected successful tool interactions, presented at their exact room. */
+  readonly resources?: readonly {
+    readonly family: import('@run-planner/engine/catalog-schema').ResourceFamily;
+    readonly action: 'add' | 'move' | 'remove';
+    readonly interactionKey: string;
+    readonly legal: boolean;
+  }[];
   readonly roomPicker?: WorkspaceRoomPickerControl;
   /** A Boss-only fixed effect at its ordinary Boss-defeated lifecycle seam. */
   readonly judgment?: {
@@ -2279,6 +2296,13 @@ export interface WorkspaceRoute {
   readonly label: string;
   readonly marker: WorkspaceMarker;
   readonly rail: readonly WorkspaceRouteRailBiome[];
+  /** Assessed route-owned selected successful resource outcomes. */
+  readonly resources: readonly {
+    readonly family: import('@run-planner/engine/catalog-schema').ResourceFamily;
+    readonly placement?: { readonly biomeKey: string; readonly occurrenceId: OccurrenceId };
+    readonly reasons: readonly string[];
+    readonly valid: boolean;
+  }[];
   readonly routeKey: string;
   readonly status: WorkspaceStatus;
 }

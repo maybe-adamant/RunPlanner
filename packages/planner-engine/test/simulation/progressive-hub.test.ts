@@ -26,6 +26,7 @@ import {
 import { describe, expect, it } from 'vitest';
 
 import { evaluateProgressiveBiome } from '../../src/simulation/progressive/biome';
+import { EMPTY_RESOURCE_PLACEMENTS } from '../../src/authored-project/defaults';
 
 const defaultRouteLoadout = createDefaultRouteLoadout(catalog);
 
@@ -239,6 +240,7 @@ function progressiveN(project: ReturnType<typeof openHub>) {
   if (plan === undefined) throw new Error('project lost authored N');
   const progressive = evaluateProgressiveBiome(catalog, nBiome, plan, {
     enteredBiomeCount: 1,
+    resourcePlacements: EMPTY_RESOURCE_PLACEMENTS,
     loadout: defaultRouteLoadout,
   });
   if (progressive === null) throw new Error('N did not produce a progressive prefix');

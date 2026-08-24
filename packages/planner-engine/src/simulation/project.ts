@@ -1,6 +1,7 @@
 import type { Catalog } from '../catalog-schema';
 import {
   createBiomeAddress,
+  createOccurrenceAddress,
   createRoomRunStateCheckpointAddress,
   semanticAddressKey,
   type BiomeAddress,
@@ -72,6 +73,7 @@ import {
   type BiomeGenerationValidation,
   type ProgressiveBiomeContext,
 } from './progressive/biome';
+import { effectiveRouteResourcePlacements, routeResourceAuthoring } from './resources';
 import { prefixAuthoredRooms } from './candidates/evaluated-biome';
 import { evaluateBiomeRewardsAssemblyInternal } from './rewards/biome';
 import type {
@@ -784,6 +786,7 @@ export function replayProjectBiomeFromEvaluatedPredecessor(
   return evaluateBiome(catalog, route.routeKey, plan, {
     enteredBiomeCount: biomeIndex + 1,
     loadout: route.loadout,
+    resourcePlacements: effectiveRouteResourcePlacements(catalog, route),
     ...(previous === undefined
       ? {}
       : {
@@ -956,6 +959,7 @@ function evaluateBiomeAssembly(
     context.enteredBiomeCount,
     context.loadout,
     context.seed?.rewardBranches,
+    context.resourcePlacements,
   );
   const roomGeneration = generation(
     catalog,
@@ -1157,6 +1161,51 @@ function summarizeRoute(
   });
 }
 
+function retainInvalidResourceEvaluation(
+  evaluation: ProjectBiomeEvaluation,
+  resourceFindings: readonly SemanticFinding[],
+): ProjectBiomeEvaluation {
+  const findings = Object.freeze([...evaluation.findings, ...resourceFindings]);
+  if (evaluation.authoring === 'incomplete' || evaluation.validity === 'invalid') {
+    return Object.freeze({ ...evaluation, validity: 'invalid' as const, findings });
+  }
+  const materializedPrefix: MaterializedBiomePrefix = Object.freeze({
+    kind: 'biomePrefix',
+    routeKey: evaluation.snapshot.routeKey,
+    biomeKey: evaluation.snapshot.biomeKey,
+    entryRoom: evaluation.snapshot.entryRoom,
+    decisions: evaluation.snapshot.decisions,
+    automaticRooms: evaluation.snapshot.automaticRooms,
+    biomeState: evaluation.snapshot.biomeState,
+    ...(evaluation.snapshot.echoKeepsakeReplayResults === undefined
+      ? {}
+      : { echoKeepsakeReplayResults: evaluation.snapshot.echoKeepsakeReplayResults }),
+  });
+  const history: BiomeHistoryPrefix = Object.freeze({
+    routeKey: evaluation.history.routeKey,
+    biomeKey: evaluation.history.biomeKey,
+    events: evaluation.history.events,
+    ledgers: evaluation.history.ledgers,
+    rooms: evaluation.history.rooms,
+    current: evaluation.history.biomeCompletion,
+  });
+  return Object.freeze({
+    biomeKey: evaluation.biomeKey,
+    origin: evaluation.origin,
+    authoring: 'complete',
+    validity: 'invalid',
+    coverage: Object.freeze({
+      kind: 'prefix',
+      through: materializedBiomePrefixCoveragePoint(materializedPrefix),
+    }),
+    materializedPrefix,
+    history,
+    roomGeneration: evaluation.roomGeneration,
+    rewards: evaluation.rewards,
+    findings,
+  });
+}
+
 interface RouteProjectEvaluationAssembly {
   readonly evaluation: ProjectRouteEvaluation;
   readonly candidateArtifacts: readonly BiomeCandidateArtifacts[];
@@ -1183,6 +1232,26 @@ function evaluateRouteAssembly(
     string,
     import('./candidate-artifacts').KeepsakeEquipResultCandidateCapability
   >();
+  const resourceAuthoring = routeResourceAuthoring(catalog, route);
+  const resourceFindingsByBiome = new Map<string, SemanticFinding[]>();
+  for (const family of ['Pickaxe', 'Exorcism', 'Shovel', 'Fishing'] as const) {
+    const placement = resourceAuthoring.placements[family];
+    const assessment = resourceAuthoring.assessmentByFamily[family];
+    if (placement === null || assessment?.legal === true) continue;
+    const finding = Object.freeze({
+      code: 'resourcePlacementUnavailable' as const,
+      severity: 'error' as const,
+      phase: 'roomGeneration' as const,
+      origin: createOccurrenceAddress(
+        createBiomeAddress(route.routeKey, placement.biomeKey),
+        placement.occurrenceId,
+      ),
+      evidence: Object.freeze({ family, reasons: assessment?.reasons ?? [] }),
+    });
+    const atBiome = resourceFindingsByBiome.get(placement.biomeKey) ?? [];
+    atBiome.push(finding);
+    resourceFindingsByBiome.set(placement.biomeKey, atBiome);
+  }
   const routeStart = createRouteStartKeepsakeSelectionAddress(route.routeKey);
   routeStartKeepsakes.set(
     semanticAddressKey(routeStart),
@@ -1277,10 +1346,15 @@ function evaluateRouteAssembly(
     const context = Object.freeze({
       enteredBiomeCount: index + 1,
       loadout: route.loadout,
+      resourcePlacements: effectiveRouteResourcePlacements(catalog, route),
       ...(seed === undefined ? {} : { seed }),
     });
     const assembled = evaluateBiomeAssembly(catalog, route.routeKey, plan, context);
-    const evaluation = assembled.evaluation;
+    const resourceFindings = resourceFindingsByBiome.get(plan.biomeKey) ?? [];
+    const evaluation =
+      resourceFindings.length === 0
+        ? assembled.evaluation
+        : retainInvalidResourceEvaluation(assembled.evaluation, resourceFindings);
     evaluations.push(evaluation);
     candidateArtifacts.push(assembled.candidateArtifacts);
     findings.push(...evaluation.findings);

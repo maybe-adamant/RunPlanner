@@ -34,6 +34,7 @@ import {
 } from '@run-planner/test-fixtures/surface';
 import { createRewardHistoryState, type RewardKernelFacts } from '../../src/reward-kernel';
 import { deriveRouteLoadout } from '../../src/authored-project/loadout';
+import { EMPTY_RESOURCE_PLACEMENTS } from '../../src/authored-project/defaults';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
 import { evaluateProgressiveBiome } from '../../src/simulation/progressive/biome';
 import {
@@ -535,6 +536,7 @@ describe('decision run-state snapshots', () => {
     if (plan === undefined) throw new Error('missing F plan');
     const progressive = evaluateProgressiveBiome(catalog, biomeAddress, plan, {
       enteredBiomeCount: 1,
+      resourcePlacements: EMPTY_RESOURCE_PLACEMENTS,
       loadout: project.routes.find((route) => route.routeKey === 'Underworld')!.loadout,
     });
     const decisions = decisionSnapshots(progressive?.rewards.runStateSnapshots ?? []);

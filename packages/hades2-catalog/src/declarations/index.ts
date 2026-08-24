@@ -36,7 +36,7 @@ const rooms: readonly RawRoomDeclaration[] = [
 ];
 
 export const declarations = {
-  version: '0.37.0-automatic-completion-occurrences',
+  version: '0.38.0-selected-resource-successes',
   biomes,
   routes,
   arcanaCards,

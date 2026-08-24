@@ -63,6 +63,7 @@ import { ProjectFileControls } from '../project/ProjectFileControls';
 import { ProjectHistoryControls } from '../project/ProjectHistoryControls';
 import { RouteNpcIndex } from './RouteNpcIndex';
 import { RouteTraitsPanel } from './RouteTraitsPanel';
+import { RouteResourcesPanel } from './RouteResourcesPanel';
 import { TraitOfferDialog } from '../editor/rewards/TraitOfferEditor';
 import { PomResolutionDialog } from '../editor/rewards/PomResolutionEditor';
 import { projectRouteTraitOffers } from '@planner/projections/traitProjection';
@@ -704,6 +705,22 @@ function RouteWorkspace({
           >
             Traits
           </button>
+          <button
+            aria-current={activePanel.kind === 'resources' ? 'page' : undefined}
+            className="panel-navigation-item"
+            data-active={activePanel.kind === 'resources'}
+            onClick={() =>
+              dispatch(
+                routePanelSelected({
+                  routeKey: workspaceRoute.routeKey,
+                  panel: { kind: 'resources' },
+                }),
+              )
+            }
+            type="button"
+          >
+            Resources
+          </button>
           {workspaceRoute.rail.map((biomeProjection) => {
             const biomeFeedback = feedback.biomes.get(biomeProjection.biomeKey);
             if (biomeFeedback === undefined) {
@@ -789,6 +806,8 @@ function RouteWorkspace({
             <RouteNpcIndex index={npcIndex} onNavigate={navigateNpcIndexEntry} />
           ) : activePanel.kind === 'traits' ? (
             <RouteTraitsPanel interactions={interactions} rows={traitRows} />
+          ) : activePanel.kind === 'resources' ? (
+            <RouteResourcesPanel route={workspaceRoute} />
           ) : activeBiomeProjection === undefined ? (
             <RouteOverview
               catalog={catalog}

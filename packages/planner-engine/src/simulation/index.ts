@@ -1,4 +1,11 @@
 export {
+  assessResourcePlacement,
+  routeResourceAuthoring,
+  type ResourceEnteredRoom,
+  type ResourcePlacementLegality,
+  type RouteResourceAuthoring,
+} from './resources';
+export {
   fieldsOptionalRewardCountSupport,
   type FieldsOptionalRewardCountSupport,
 } from './fields-optional-count';

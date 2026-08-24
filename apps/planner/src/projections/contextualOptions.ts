@@ -217,6 +217,8 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
   const sibling = siblingExplanation(catalog, finding);
   if (sibling !== undefined) return sibling;
   switch (finding.code) {
+    case 'resourcePlacementUnavailable':
+      return { kind: 'generic', message: 'This selected resource success needs repair.' };
     case 'chaosOrdinaryRequiresCommon':
       return {
         kind: 'trait',

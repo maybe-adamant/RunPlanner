@@ -1,4 +1,5 @@
 import type { RawRoomDeclaration } from '../types';
+import { hResourcePointSupport } from '../resources';
 
 const fieldsOptionalRewardCapacities = {
   H_Combat01: 4,
@@ -35,6 +36,7 @@ function fieldsOptionalRewards(gameName: keyof typeof fieldsOptionalRewardCapaci
 export const hRooms = [
   {
     gameName: 'H_Intro',
+    resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Entrance',
     roomSetKey: 'H',
     advancesExperimentalHammerUses: true,
@@ -52,6 +54,7 @@ export const hRooms = [
   },
   {
     gameName: 'H_Combat01',
+    resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 01',
     roomSetKey: 'H',
     advancesExperimentalHammerUses: true,
@@ -92,6 +95,7 @@ export const hRooms = [
   },
   {
     gameName: 'H_Combat02',
+    resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 02',
     roomSetKey: 'H',
     advancesExperimentalHammerUses: true,
@@ -140,6 +144,7 @@ export const hRooms = [
   },
   {
     gameName: 'H_Combat03',
+    resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 03',
     roomSetKey: 'H',
     advancesExperimentalHammerUses: true,
@@ -183,6 +188,7 @@ export const hRooms = [
   },
   {
     gameName: 'H_Combat04',
+    resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 04',
     roomSetKey: 'H',
     advancesExperimentalHammerUses: true,
@@ -226,6 +232,7 @@ export const hRooms = [
   },
   {
     gameName: 'H_Combat05',
+    resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 05',
     roomSetKey: 'H',
     advancesExperimentalHammerUses: true,
@@ -269,6 +276,7 @@ export const hRooms = [
   },
   {
     gameName: 'H_Combat06',
+    resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 06',
     roomSetKey: 'H',
     advancesExperimentalHammerUses: true,
@@ -312,6 +320,7 @@ export const hRooms = [
   },
   {
     gameName: 'H_Combat07',
+    resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 07',
     roomSetKey: 'H',
     advancesExperimentalHammerUses: true,
@@ -355,6 +364,7 @@ export const hRooms = [
   },
   {
     gameName: 'H_Combat08',
+    resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 08',
     roomSetKey: 'H',
     advancesExperimentalHammerUses: true,
@@ -398,6 +408,7 @@ export const hRooms = [
   },
   {
     gameName: 'H_Combat09',
+    resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 09',
     roomSetKey: 'H',
     advancesExperimentalHammerUses: true,
@@ -446,6 +457,7 @@ export const hRooms = [
   },
   {
     gameName: 'H_Combat10',
+    resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 10',
     roomSetKey: 'H',
     advancesExperimentalHammerUses: true,
@@ -489,6 +501,7 @@ export const hRooms = [
   },
   {
     gameName: 'H_Combat11',
+    resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 11',
     roomSetKey: 'H',
     advancesExperimentalHammerUses: true,
@@ -532,6 +545,7 @@ export const hRooms = [
   },
   {
     gameName: 'H_Combat12',
+    resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 12',
     roomSetKey: 'H',
     advancesExperimentalHammerUses: true,
@@ -575,6 +589,7 @@ export const hRooms = [
   },
   {
     gameName: 'H_Combat13',
+    resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 13',
     roomSetKey: 'H',
     advancesExperimentalHammerUses: true,
@@ -623,6 +638,7 @@ export const hRooms = [
   },
   {
     gameName: 'H_Combat14',
+    resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 14',
     roomSetKey: 'H',
     advancesExperimentalHammerUses: true,
@@ -671,6 +687,7 @@ export const hRooms = [
   },
   {
     gameName: 'H_Combat15',
+    resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 15',
     roomSetKey: 'H',
     advancesExperimentalHammerUses: true,
@@ -719,6 +736,7 @@ export const hRooms = [
   },
   {
     gameName: 'H_MiniBoss01',
+    resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     boonRarityOverride: { Rare: 0.9, Epic: 0.1, Legendary: 0.05 },
     label: 'Phantom',
     roomSetKey: 'H',
@@ -756,6 +774,7 @@ export const hRooms = [
   },
   {
     gameName: 'H_MiniBoss02',
+    resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     boonRarityOverride: { Rare: 0.9, Epic: 0.1, Legendary: 0.05 },
     label: 'Queen Lamia',
     roomSetKey: 'H',
@@ -790,6 +809,7 @@ export const hRooms = [
   },
   {
     gameName: 'H_Bridge01',
+    resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Echo',
     roomSetKey: 'H',
     advancesExperimentalHammerUses: true,
@@ -842,6 +862,7 @@ export const hRooms = [
   },
   {
     gameName: 'H_PreBoss01',
+    resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Preboss',
     roomSetKey: 'H',
     advancesExperimentalHammerUses: true,
@@ -917,6 +938,7 @@ export const hRooms = [
   },
   {
     gameName: 'H_Boss01',
+    resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Cerberus',
     roomSetKey: 'H',
     advancesExperimentalHammerUses: true,
@@ -936,6 +958,7 @@ export const hRooms = [
   },
   {
     gameName: 'H_PostBoss01',
+    resourcePointSupport: hResourcePointSupport([]),
     label: 'Postboss',
     hasKeepsakeRack: true,
     hasRequiredFountain: true,

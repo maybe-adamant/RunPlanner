@@ -504,6 +504,7 @@ export function assembleWorkspaceBiomeSemantics(
       ordinaryRewardForfeited: (owner) => source.ordinaryRewardForfeited(owner.address),
       occurrence: request.occurrence,
       runState: source.runState,
+      resourceAuthoring: source.resourceAuthoring,
       ...(request.isEntry === true ? { isEntry: true } : {}),
       ...(request.roomPicker === undefined ? {} : { roomPicker: request.roomPicker }),
     });

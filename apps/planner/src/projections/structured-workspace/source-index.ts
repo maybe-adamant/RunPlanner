@@ -52,11 +52,13 @@ import type {
   RunStateSnapshot,
   SelectedLevelResolutionAssessment,
   OccurrenceOutgoingStatus,
+  RouteResourceAuthoring,
 } from '@run-planner/engine/simulation';
 import {
   evaluateBiomeCompleteness,
   evaluateOccurrenceOutgoingStatus,
   materializedBiomePrefixCoveragePoint,
+  routeResourceAuthoring,
 } from '@run-planner/engine/simulation';
 
 import { StructuredWorkspaceProjectionContractError } from './contract';
@@ -133,11 +135,13 @@ export interface WorkspaceBiomeSource {
         readonly reason?: RunStateAvailability['reason'];
       }
     | undefined;
+  readonly resourceAuthoring: RouteResourceAuthoring;
 }
 
 export interface WorkspaceRouteSource {
   readonly biomes: readonly WorkspaceBiomeSource[];
   readonly evaluation: ProjectEvaluation['routes'][number] | undefined;
+  readonly resourceAuthoring: RouteResourceAuthoring;
   readonly routeKey: string;
 }
 
@@ -627,6 +631,7 @@ function createWorkspaceBiomeSource(
   blockedOccurrenceRoom: (
     occurrence: ReturnType<typeof createOccurrenceAddress>,
   ) => CanonicalAuthoredRoom | undefined,
+  resourceAuthoring: RouteResourceAuthoring,
 ): WorkspaceBiomeSource {
   const biome = createBiomeAddress(routeKey, plan.biomeKey);
   const layout = catalog.biomeLayouts.byKey[plan.biomeKey];
@@ -781,6 +786,7 @@ function createWorkspaceBiomeSource(
       forfeitedRewardOwnersByBranch.every((owners) => owners.has(semanticAddressKey(owner))),
     derivedAcquisitionEntries,
     plan,
+    resourceAuthoring,
     runState: (owner: RunStateOwner) => {
       const availability = runStateAvailability.get(semanticAddressKey(owner));
       if (availability === undefined) return undefined;
@@ -825,6 +831,7 @@ export function createWorkspaceProjectSourceIndex(
   return Object.freeze({
     routes: Object.freeze(
       project.routes.map((route) => {
+        const resources = routeResourceAuthoring(catalog, route);
         const routeEvaluation = evaluation.routes.find(
           (candidate) => candidate.routeKey === route.routeKey,
         );
@@ -843,10 +850,12 @@ export function createWorkspaceProjectSourceIndex(
                 derivedAcquisitionEntries,
                 isActiveTraitOffer,
                 blockedOccurrenceRoom,
+                resources,
               ),
             ),
           ),
           evaluation: routeEvaluation,
+          resourceAuthoring: resources,
           routeKey: route.routeKey,
         });
       }),

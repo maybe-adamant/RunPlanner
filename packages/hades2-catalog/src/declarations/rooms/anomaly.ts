@@ -1,4 +1,5 @@
 import type { RawRoomDeclaration } from '../types';
+import { normalResourcePointSupport } from '../resources';
 
 /**
  * These maps are declared by the game's Anomaly room set even though their
@@ -8,6 +9,7 @@ import type { RawRoomDeclaration } from '../types';
 export const anomalyRooms = [
   {
     gameName: 'B_Combat01',
+    resourcePointSupport: normalResourcePointSupport([]),
     label: 'Anomaly 01',
     roomSetKey: 'Anomaly',
     advancesExperimentalHammerUses: true,
@@ -33,6 +35,7 @@ export const anomalyRooms = [
   },
   {
     gameName: 'B_Combat05',
+    resourcePointSupport: normalResourcePointSupport([]),
     label: 'Anomaly 05',
     roomSetKey: 'Anomaly',
     advancesExperimentalHammerUses: true,
@@ -58,6 +61,7 @@ export const anomalyRooms = [
   },
   {
     gameName: 'B_Combat06',
+    resourcePointSupport: normalResourcePointSupport([]),
     label: 'Anomaly 06',
     roomSetKey: 'Anomaly',
     advancesExperimentalHammerUses: true,
@@ -83,6 +87,7 @@ export const anomalyRooms = [
   },
   {
     gameName: 'B_Combat07',
+    resourcePointSupport: normalResourcePointSupport([]),
     label: 'Anomaly 07',
     roomSetKey: 'Anomaly',
     advancesExperimentalHammerUses: true,
@@ -108,6 +113,7 @@ export const anomalyRooms = [
   },
   {
     gameName: 'B_Combat08',
+    resourcePointSupport: normalResourcePointSupport([]),
     label: 'Anomaly 08',
     roomSetKey: 'Anomaly',
     advancesExperimentalHammerUses: true,
@@ -133,6 +139,7 @@ export const anomalyRooms = [
   },
   {
     gameName: 'B_Combat10',
+    resourcePointSupport: normalResourcePointSupport([]),
     label: 'Anomaly 10',
     roomSetKey: 'Anomaly',
     advancesExperimentalHammerUses: true,
@@ -158,6 +165,7 @@ export const anomalyRooms = [
   },
   {
     gameName: 'B_Combat21',
+    resourcePointSupport: normalResourcePointSupport([]),
     label: 'Anomaly 21',
     roomSetKey: 'Anomaly',
     advancesExperimentalHammerUses: true,

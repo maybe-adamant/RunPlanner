@@ -1,4 +1,5 @@
 import type { RawRoomDeclaration } from '../types';
+import { chaosResourcePointSupport } from '../resources';
 
 const chaosMaps = ['Chaos_01', 'Chaos_02', 'Chaos_03', 'Chaos_04', 'Chaos_05', 'Chaos_06'] as const;
 
@@ -6,6 +7,9 @@ export const chaosRooms = chaosMaps.map(
   (gameName, index) =>
     ({
       gameName,
+      resourcePointSupport: chaosResourcePointSupport(['Pickaxe', 'Shovel', 'Fishing'], {
+        ignoresBiomeLimit: true,
+      }),
       label: `Chaos ${String(index + 1).padStart(2, '0')}`,
       roomSetKey: 'Chaos',
       advancesExperimentalHammerUses: true,

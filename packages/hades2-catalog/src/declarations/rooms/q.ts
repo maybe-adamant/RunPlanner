@@ -1,8 +1,10 @@
 import type { RawRoomDeclaration } from '../types';
+import { normalResourcePointSupport } from '../resources';
 
 export const qRooms = [
   {
     gameName: 'Q_Intro',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Entrance',
     roomSetKey: 'Q',
     advancesExperimentalHammerUses: true,
@@ -25,6 +27,7 @@ export const qRooms = [
   },
   {
     gameName: 'Q_Combat01',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 01',
     roomSetKey: 'Q',
     advancesExperimentalHammerUses: true,
@@ -48,6 +51,7 @@ export const qRooms = [
   },
   {
     gameName: 'Q_Combat02',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 02',
     roomSetKey: 'Q',
     advancesExperimentalHammerUses: true,
@@ -71,6 +75,7 @@ export const qRooms = [
   },
   {
     gameName: 'Q_Combat03',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 03',
     roomSetKey: 'Q',
     advancesExperimentalHammerUses: true,
@@ -98,6 +103,7 @@ export const qRooms = [
   },
   {
     gameName: 'Q_Combat04',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 04',
     roomSetKey: 'Q',
     advancesExperimentalHammerUses: true,
@@ -121,6 +127,7 @@ export const qRooms = [
   },
   {
     gameName: 'Q_Combat05',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 05',
     roomSetKey: 'Q',
     advancesExperimentalHammerUses: true,
@@ -148,6 +155,7 @@ export const qRooms = [
   },
   {
     gameName: 'Q_Combat06',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 06',
     roomSetKey: 'Q',
     advancesExperimentalHammerUses: true,
@@ -171,6 +179,7 @@ export const qRooms = [
   },
   {
     gameName: 'Q_Combat07',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 07',
     roomSetKey: 'Q',
     advancesExperimentalHammerUses: true,
@@ -194,6 +203,7 @@ export const qRooms = [
   },
   {
     gameName: 'Q_Combat08',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 08',
     roomSetKey: 'Q',
     advancesExperimentalHammerUses: true,
@@ -217,6 +227,7 @@ export const qRooms = [
   },
   {
     gameName: 'Q_Combat09',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 09',
     roomSetKey: 'Q',
     advancesExperimentalHammerUses: true,
@@ -240,6 +251,7 @@ export const qRooms = [
   },
   {
     gameName: 'Q_Combat10',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 10',
     roomSetKey: 'Q',
     advancesExperimentalHammerUses: true,
@@ -263,6 +275,7 @@ export const qRooms = [
   },
   {
     gameName: 'Q_Combat11',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 11',
     roomSetKey: 'Q',
     advancesExperimentalHammerUses: true,
@@ -286,6 +299,7 @@ export const qRooms = [
   },
   {
     gameName: 'Q_Combat12',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 12',
     roomSetKey: 'Q',
     advancesExperimentalHammerUses: true,
@@ -313,6 +327,7 @@ export const qRooms = [
   },
   {
     gameName: 'Q_Combat13',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 13',
     roomSetKey: 'Q',
     advancesExperimentalHammerUses: true,
@@ -340,6 +355,7 @@ export const qRooms = [
   },
   {
     gameName: 'Q_Combat14',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 14',
     roomSetKey: 'Q',
     advancesExperimentalHammerUses: true,
@@ -367,6 +383,7 @@ export const qRooms = [
   },
   {
     gameName: 'Q_Combat15',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 15',
     roomSetKey: 'Q',
     advancesExperimentalHammerUses: true,
@@ -394,6 +411,7 @@ export const qRooms = [
   },
   {
     gameName: 'Q_Combat16',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 16',
     roomSetKey: 'Q',
     advancesExperimentalHammerUses: true,
@@ -417,6 +435,7 @@ export const qRooms = [
   },
   {
     gameName: 'Q_MiniBoss02',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     boonRarityOverride: { Rare: 1, Epic: 0.7, Duo: 0.2, Legendary: 0.2 },
     label: 'Brute',
     roomSetKey: 'Q',
@@ -444,6 +463,7 @@ export const qRooms = [
   },
   {
     gameName: 'Q_MiniBoss05',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     boonRarityOverride: { Rare: 1, Epic: 0.7, Duo: 0.2, Legendary: 0.2 },
     label: 'Stalker',
     roomSetKey: 'Q',
@@ -471,6 +491,7 @@ export const qRooms = [
   },
   {
     gameName: 'Q_MiniBoss03',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     boonRarityOverride: { Rare: 1, Epic: 0.7, Duo: 0.2, Legendary: 0.2 },
     label: 'Tail',
     roomSetKey: 'Q',
@@ -498,6 +519,7 @@ export const qRooms = [
   },
   {
     gameName: 'Q_MiniBoss04',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     boonRarityOverride: { Rare: 1, Epic: 0.7, Duo: 0.2, Legendary: 0.2 },
     label: 'Eye',
     roomSetKey: 'Q',
@@ -525,6 +547,7 @@ export const qRooms = [
   },
   {
     gameName: 'Q_PreBoss01',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Preboss',
     roomSetKey: 'Q',
     advancesExperimentalHammerUses: true,
@@ -566,6 +589,7 @@ export const qRooms = [
   },
   {
     gameName: 'Q_Boss01',
+    resourcePointSupport: normalResourcePointSupport([]),
     label: 'Typhon',
     roomSetKey: 'Q',
     advancesExperimentalHammerUses: true,
