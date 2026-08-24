@@ -1,4 +1,5 @@
 import type { RawRoomDeclaration } from '../types';
+import { normalResourcePointSupport } from '../resources';
 
 /**
  * C_Boss01 remains a real room occurrence in its selected Midshop's host
@@ -8,6 +9,7 @@ import type { RawRoomDeclaration } from '../types';
 export const cRooms = [
   {
     gameName: 'C_Boss01',
+    resourcePointSupport: normalResourcePointSupport([]),
     label: 'Zagreus',
     roomSetKey: 'C',
     advancesExperimentalHammerUses: true,

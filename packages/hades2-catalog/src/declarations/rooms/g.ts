@@ -1,4 +1,5 @@
 import type { RawRoomDeclaration } from '../types';
+import { normalResourcePointSupport } from '../resources';
 
 const naturalChaosExit = {
   kind: 'naturalChaos' as const,
@@ -9,6 +10,7 @@ const naturalChaosExit = {
 export const gRooms = [
   {
     gameName: 'G_Intro',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Entrance',
     roomSetKey: 'G',
     advancesExperimentalHammerUses: true,
@@ -27,6 +29,7 @@ export const gRooms = [
   },
   {
     gameName: 'G_Combat01',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 01',
     roomSetKey: 'G',
     advancesExperimentalHammerUses: true,
@@ -60,6 +63,7 @@ export const gRooms = [
   },
   {
     gameName: 'G_Combat02',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 02',
     roomSetKey: 'G',
     advancesExperimentalHammerUses: true,
@@ -89,6 +93,7 @@ export const gRooms = [
   },
   {
     gameName: 'G_Combat03',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 03',
     roomSetKey: 'G',
     advancesExperimentalHammerUses: true,
@@ -123,6 +128,7 @@ export const gRooms = [
   },
   {
     gameName: 'G_Combat04',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 04',
     roomSetKey: 'G',
     advancesExperimentalHammerUses: true,
@@ -156,6 +162,7 @@ export const gRooms = [
   },
   {
     gameName: 'G_Combat05',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 05',
     roomSetKey: 'G',
     advancesExperimentalHammerUses: true,
@@ -190,6 +197,7 @@ export const gRooms = [
   },
   {
     gameName: 'G_Combat06',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 06',
     roomSetKey: 'G',
     advancesExperimentalHammerUses: true,
@@ -223,6 +231,7 @@ export const gRooms = [
   },
   {
     gameName: 'G_Combat07',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 07',
     roomSetKey: 'G',
     advancesExperimentalHammerUses: true,
@@ -256,6 +265,7 @@ export const gRooms = [
   },
   {
     gameName: 'G_Combat08',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 08',
     roomSetKey: 'G',
     advancesExperimentalHammerUses: true,
@@ -289,6 +299,7 @@ export const gRooms = [
   },
   {
     gameName: 'G_Combat09',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 09',
     roomSetKey: 'G',
     advancesExperimentalHammerUses: true,
@@ -323,6 +334,7 @@ export const gRooms = [
   },
   {
     gameName: 'G_Combat10',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 10',
     roomSetKey: 'G',
     advancesExperimentalHammerUses: true,
@@ -356,6 +368,7 @@ export const gRooms = [
   },
   {
     gameName: 'G_Combat11',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 11',
     roomSetKey: 'G',
     advancesExperimentalHammerUses: true,
@@ -389,6 +402,7 @@ export const gRooms = [
   },
   {
     gameName: 'G_Combat12',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 12',
     roomSetKey: 'G',
     advancesExperimentalHammerUses: true,
@@ -422,6 +436,7 @@ export const gRooms = [
   },
   {
     gameName: 'G_Combat13',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 13',
     roomSetKey: 'G',
     advancesExperimentalHammerUses: true,
@@ -455,6 +470,7 @@ export const gRooms = [
   },
   {
     gameName: 'G_Combat14',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 14',
     roomSetKey: 'G',
     advancesExperimentalHammerUses: true,
@@ -489,6 +505,7 @@ export const gRooms = [
   },
   {
     gameName: 'G_Combat15',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 15',
     roomSetKey: 'G',
     advancesExperimentalHammerUses: true,
@@ -523,6 +540,7 @@ export const gRooms = [
   },
   {
     gameName: 'G_Combat16',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 16',
     roomSetKey: 'G',
     advancesExperimentalHammerUses: true,
@@ -556,6 +574,7 @@ export const gRooms = [
   },
   {
     gameName: 'G_Combat17',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 17',
     roomSetKey: 'G',
     advancesExperimentalHammerUses: true,
@@ -590,6 +609,7 @@ export const gRooms = [
   },
   {
     gameName: 'G_Combat18',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 18',
     roomSetKey: 'G',
     advancesExperimentalHammerUses: true,
@@ -626,6 +646,7 @@ export const gRooms = [
   },
   {
     gameName: 'G_Combat19',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 19',
     roomSetKey: 'G',
     advancesExperimentalHammerUses: true,
@@ -659,6 +680,7 @@ export const gRooms = [
   },
   {
     gameName: 'G_Combat20',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 20',
     roomSetKey: 'G',
     advancesExperimentalHammerUses: true,
@@ -693,6 +715,7 @@ export const gRooms = [
   },
   {
     gameName: 'G_MiniBoss01',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     boonRarityOverride: { Rare: 0.9, Epic: 0.1, Legendary: 0.05 },
     label: 'Deep Serpent',
     roomSetKey: 'G',
@@ -736,6 +759,7 @@ export const gRooms = [
   },
   {
     gameName: 'G_MiniBoss02',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     boonRarityOverride: { Rare: 0.9, Epic: 0.1, Legendary: 0.05 },
     label: 'King Vermin',
     roomSetKey: 'G',
@@ -776,6 +800,7 @@ export const gRooms = [
   },
   {
     gameName: 'G_MiniBoss03',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     boonRarityOverride: { Rare: 0.9, Epic: 0.1, Legendary: 0.05 },
     label: 'Hellifish',
     roomSetKey: 'G',
@@ -819,6 +844,9 @@ export const gRooms = [
   },
   {
     gameName: 'G_Story01',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing'], {
+      ignoresBiomeLimit: true,
+    }),
     label: 'Narcissus',
     roomSetKey: 'G',
     advancesExperimentalHammerUses: true,
@@ -844,6 +872,9 @@ export const gRooms = [
   },
   {
     gameName: 'G_Reprieve01',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing'], {
+      ignoresBiomeLimit: true,
+    }),
     label: 'Fountain',
     roomSetKey: 'G',
     advancesExperimentalHammerUses: true,
@@ -877,6 +908,7 @@ export const gRooms = [
   },
   {
     gameName: 'G_Shop01',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Midshop',
     roomSetKey: 'G',
     advancesExperimentalHammerUses: true,
@@ -921,6 +953,7 @@ export const gRooms = [
   },
   {
     gameName: 'G_PreBoss01',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Preboss',
     roomSetKey: 'G',
     advancesExperimentalHammerUses: true,
@@ -975,6 +1008,7 @@ export const gRooms = [
   },
   {
     gameName: 'G_Boss01',
+    resourcePointSupport: normalResourcePointSupport([]),
     label: 'Scylla and the Sirens',
     roomSetKey: 'G',
     advancesExperimentalHammerUses: true,
@@ -993,6 +1027,7 @@ export const gRooms = [
   },
   {
     gameName: 'G_PostBoss01',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Postboss',
     hasKeepsakeRack: true,
     hasRequiredFountain: true,

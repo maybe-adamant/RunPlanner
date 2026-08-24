@@ -40,6 +40,8 @@ export function projectCommandAddress(
     case 'ReplaceManualArcanaSelection':
     case 'ReplaceFearVowRank':
       return command.route;
+    case 'ReplaceResourcePlacement':
+      return command.route;
     case 'ReplaceStartingKeepsake':
       return command.selection;
     case 'ReplaceBiomeField':

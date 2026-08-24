@@ -1,5 +1,5 @@
 import { semanticAddressKey, type SemanticAddress } from '@run-planner/engine/authored-project';
-import { useState, type ReactNode } from 'react';
+import { Fragment, useState, type ReactNode } from 'react';
 
 import {
   requireWorkspaceInteraction,
@@ -35,6 +35,7 @@ import { RunStateSheet } from './RunStateSheet';
 import { RewardControlEditor } from '../rewards/RewardControlEditor';
 import { BiomeWorkspaceContractError } from './workspaceContract';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
+import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import {
   candidateMayBeAuthored,
   candidateSelectState,
@@ -522,10 +523,67 @@ function roomOverviewContent(
   const hasTimelineAction = room.roomActions?.rows.some(
     (row) => row.reference.kind === 'interactKeepsakeRack',
   );
-  return selection === undefined || hasTimelineAction ? null : (
-    <section aria-label="Keepsake Rack" className="room-keepsake-rack">
-      <h4>Keepsake Rack</h4>
-      <KeepsakeRackTimelineContent interactions={interactions} selection={selection} />
+  return (
+    <>
+      <RoomResourceControls interactions={interactions} room={room} />
+      {selection === undefined || hasTimelineAction ? null : (
+        <section aria-label="Keepsake Rack" className="room-keepsake-rack">
+          <h4>Keepsake Rack</h4>
+          <KeepsakeRackTimelineContent interactions={interactions} selection={selection} />
+        </section>
+      )}
+    </>
+  );
+}
+
+function resourceFamilyLabel(
+  family: import('@run-planner/engine/catalog-schema').ResourceFamily,
+): string {
+  switch (family) {
+    case 'Pickaxe':
+      return 'Mining';
+    case 'Exorcism':
+      return 'Spirit';
+    case 'Shovel':
+      return 'Seed';
+    case 'Fishing':
+      return 'Fishing';
+  }
+}
+
+function RoomResourceControls({
+  interactions,
+  room,
+}: {
+  readonly interactions: WorkspaceInteractionCatalog;
+  readonly room: WorkspaceRoomSummary;
+}): ReactNode {
+  const dispatchIntent = useCommandIntent();
+  if (room.resources === undefined || room.resources.length === 0) return null;
+  return (
+    <section aria-label="Resources" className="room-keepsake-rack">
+      <h4>Resources</h4>
+      {room.resources.map((resource) => (
+        <Fragment key={resource.family}>
+          <button
+            disabled={!resource.legal && resource.action !== 'remove'}
+            onClick={() =>
+              dispatchIntent(
+                requireWorkspaceInteraction(
+                  interactions.resourcePlacements,
+                  resource.interactionKey,
+                ).intent,
+              )
+            }
+            type="button"
+          >
+            {resource.action === 'remove'
+              ? `Remove ${resourceFamilyLabel(resource.family)}`
+              : `${resource.action === 'move' ? 'Move' : 'Add'} ${resourceFamilyLabel(resource.family)}`}
+          </button>
+          {!resource.legal ? <span role="status">Repair required</span> : null}
+        </Fragment>
+      ))}
     </section>
   );
 }

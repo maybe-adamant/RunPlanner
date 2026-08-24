@@ -23,6 +23,7 @@ export type CompletenessFindingCode =
 export type RoomGenerationFindingCode =
   | 'fieldsCageOutcomeUnavailable'
   | 'hubOpenSlotUnavailable'
+  | 'resourcePlacementUnavailable'
   | 'sideRoomGenerationUnavailable'
   | 'targetRoomSupportEmpty'
   | 'targetRoomUnavailable';

@@ -549,6 +549,23 @@ export interface RoomCaps {
   readonly maxCreationsThisRun?: number;
   readonly maxCreationsPerRoom?: number;
 }
+export type ResourceFamily = 'Pickaxe' | 'Exorcism' | 'Shovel' | 'Fishing';
+export interface ResourcePointSupport {
+  readonly families: readonly ResourceFamily[];
+  readonly capacity: 'simpleComplex' | 'allTools';
+  readonly ignoresBiomeLimit?: boolean;
+  readonly rules: Readonly<
+    Record<
+      ResourceFamily,
+      {
+        readonly grantedTraitKey: string;
+        readonly element: 'Fire' | 'Air' | 'Earth' | 'Water';
+        readonly sameFamilyLookback: number;
+        readonly crossFamilyLookback: Readonly<Record<ResourceFamily, number>>;
+      }
+    >
+  >;
+}
 
 export interface RequiredRoomObjectDescriptor {
   readonly key: 'SoulPylon';
@@ -609,6 +626,7 @@ export interface RoomDeclaration {
   readonly encounterSlotBindings: readonly EncounterSlotBinding[];
   readonly counters: RoomCounterEffects;
   readonly caps: RoomCaps;
+  readonly resourcePointSupport: ResourcePointSupport;
   readonly eligibility?: RequirementExpression;
   readonly force?: RoomForce;
   readonly requiredObjects?: readonly RequiredRoomObjectDescriptor[];

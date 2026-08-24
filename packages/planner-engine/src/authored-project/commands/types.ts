@@ -78,6 +78,13 @@ export type ProjectStateCommand =
       readonly value: AuthoredFieldValue;
     };
 
+export type ResourcePlacementCommand = {
+  readonly kind: 'ReplaceResourcePlacement';
+  readonly route: RouteAddress;
+  readonly family: import('../../catalog-schema').ResourceFamily;
+  readonly value: import('../model').ResourcePlacement | null;
+};
+
 export type JudgmentArcanaCommand = {
   readonly kind: 'ReplaceJudgmentArcana';
   readonly judgment: JudgmentArcanaAddress;
@@ -441,6 +448,7 @@ export type OccurrenceLeafCommand =
 
 export type ProjectCommand =
   | ProjectStateCommand
+  | ResourcePlacementCommand
   | JudgmentArcanaCommand
   | SteadyGrowthCommand
   | KeepsakeCommand

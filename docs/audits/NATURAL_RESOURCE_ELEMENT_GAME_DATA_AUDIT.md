@@ -135,8 +135,10 @@ The default source requirements protect these lookback windows:
 | Air     | Exorcism         | no Exorcism point in the previous 6 rooms |
 | Water   | Fishing          | no Fishing point in the previous 5 rooms  |
 
-Exorcism additionally requires no Fishing point in the immediately previous
-room, and Fishing requires no Exorcism point there. Each family normally has a
+Every family additionally excludes every other tool-point family in the
+immediately previous room. N expands every off-diagonal window to three rooms;
+H uses a two-room same-family window, while N uses same-family windows 12
+(Shovel/Pickaxe), 16 (Exorcism), and 14 (Fishing). Each family normally has a
 per-biome spawn limit of one; a matching familiar tool raises that limit by
 one. Room declarations can force points or explicitly ignore the biome limit.
 
@@ -165,6 +167,34 @@ auto-harvest and before an element roll:
 | Ordinary room                                            | Shovel, Pickaxe, Exorcism, and Fishing when the room declaration and their requirements allow them | At most one simple point (Shovel or Pickaxe, except that two forced simple points may coexist) and at most one complex point (Exorcism or Fishing); one simple and one complex point may coexist. |
 | Ordinary room with `AllowOnlyOneToolHarvestableResource` | Any of the same four that succeeds its own requirements                                            | At most one tool-backed point across all four families.                                                                                                                                           |
 | Chaos                                                    | Shovel, Pickaxe, and Fishing; its base declaration disables Exorcism                               | At most one tool-backed point across the declared Chaos families. Chaos ignores the ordinary biome-resource limits, but still applies this all-tool capacity.                                     |
+
+### Enumerated declaration evidence
+
+The default source tables enable all four families in F/G/H/I/P/Q, Shovel,
+Pickaxe, and Exorcism in N/O, and Shovel/Pickaxe/Fishing in Chaos. The exact
+overrides are: F disables Fishing in MiniBoss01/02, Combat02/03/09/22, Boss01,
+and PostBoss01; G Boss01 disables every family; H disables Fishing in
+MiniBoss01, Combat05/09/13, Boss01 and disables every family in PostBoss01; I
+disables Fishing in Combat02/03/04/05/08/09/15/16/18/20/21/22, MiniBoss01/03,
+and Story01 (MiniBoss02 explicitly enables Fishing); N enables Fishing only in
+Opening01, Shop01, PreBoss01, Combat16, and Story01, disables all Hub points,
+disables Fishing in Sub01–15, and
+disables Exorcism in Combat08; O enables Fishing only in Intro, Boss01,
+Devotion01, Reprieve01, and Story01 and disables all PostBoss01 points; P
+disables Fishing in Combat02/04/08/09/12/18/19, MiniBoss01/02, and Boss01 and
+disables Exorcism in Combat09; Q disables Fishing in Combat03/08 and every
+family in Boss01. Chaos_01–06 inherit the Chaos base table.
+
+The source additionally has conditional `*PointForceRequirements` at F Opening
+and Boss; G/H/I/P/Q PreBoss; I Boss; N PreHub and Boss; and O Boss. Those
+predicates depend on unmodeled profile, familiar, or meta-resource state, so
+the selected-success abstraction records them as source evidence only and does
+not synthesize guaranteed physical points. F/G Reprieve
+and Story, N Story, and O Reprieve/Story ignore the biome limit. This evidence
+comes from `RoomDataF.lua` through `RoomDataQ.lua` and `RoomDataChaos.lua`;
+the ordinary one-simple/one-complex and Chaos all-tool arbitration comes from
+`RunLogic.lua`, while exit collection uses the same tool success authority in
+`HarvestLogic.lua`.
 
 These are resource-point constraints, not element-roll cooldowns. A point that
 spawned and failed its 50% element roll still participates in the spacing and
@@ -227,9 +257,16 @@ room-exit chronology: after room-local Cleanup interactions and exit selection,
 but before the next room starts. The planner assumes the automatic-collection
 upgrade for this representation; it does not model manual completion timing.
 
-The planner already has element-count and infusion evaluation, but does not yet
-model these selected-success placements or their room-exit chronology. It will
-not model failed rolls, meta-only points, resource-point probabilities, the
+The catalog owns the exact normalized support matrix. Every raw room
+declaration explicitly names its supported families (including an empty list),
+while shared normal/H/N/Chaos profile constructors own the repeated
+trait-to-element mapping, lookback matrix, and capacity shape. The planner
+consumes that normalized matrix; it does not infer support from biome letters,
+room labels, room-name sets, or editor presentation.
+
+The planner models these selected-success placements and their room-exit
+chronology through the existing element-count and infusion history. It does not
+model failed rolls, meta-only points, resource-point probabilities, the
 familiar's extra spawn capacity, or manual-versus-auto interaction choice.
 An authored selected placement that later becomes impossible through an edit or
 a fixed modeled predecessor is retained as invalid and reported for repair; it

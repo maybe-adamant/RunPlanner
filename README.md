@@ -73,7 +73,7 @@ completion-owned Room Action order owns chronology; Gold materializes from the f
 non-Spell purchase before that source's acquisition effects and may be picked
 up later among the other room entries.
 
-The current strict authored contract is schema 54. Its earlier schema-41
+The current strict authored contract is schema 56. Its earlier schema-41
 Narcissus, Mourning Fields, and Artificer surface remains intact: Narcissus
 exposes every pickup consequential to Time Piece or
 Artificer, including producer-owned Psyche without adding it to a counted

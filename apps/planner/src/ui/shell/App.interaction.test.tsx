@@ -71,6 +71,7 @@ import {
 } from '@run-planner/test-fixtures/underworld';
 import {
   loadSurfaceNOPQProject,
+  loadSurfaceNResourcesProject,
   pBiome,
   pOccurrenceId,
   pOccurrenceIds,
@@ -575,6 +576,33 @@ describe('planner history interaction', () => {
       throw new Error('restored Artemis offer must contain traits');
     }
     expect(restoredInteraction.value.selectedOptionKey).toBe('option2');
+  });
+
+  it('navigates a resource index row to its exact selected room without authoring history', async () => {
+    const application = createApplication();
+    application.store.dispatch(authoredProjectReplaced(loadSurfaceNResourcesProject()));
+    application.store.dispatch(
+      routePanelSelected({ routeKey: 'Surface', panel: { kind: 'resources' } }),
+    );
+    const view = renderPlannerForInteraction({ application });
+    const historyBeforeNavigation = application.store.getState().projectWorkspace.history;
+
+    const miningRow = screen.getByText('Mining').closest('li');
+    if (miningRow === null) throw new Error('Mining resource row is missing');
+    await view.user.click(within(miningRow).getByRole('button', { name: 'Inspect placement' }));
+
+    expect(application.store.getState().editorSession).toMatchObject({
+      activeRouteKey: 'Surface',
+      focusedSemanticOwner: createOccurrenceAddress(
+        { kind: 'biome', routeKey: 'Surface', biomeKey: 'N' },
+        createOccurrenceId('surface-n-opening'),
+      ),
+    });
+    expect(application.store.getState().editorSession.activePanelByRoute.Surface).toEqual({
+      kind: 'biome',
+      biomeKey: 'N',
+    });
+    expect(application.store.getState().projectWorkspace.history).toBe(historyBeforeNavigation);
   });
 
   it('authors and undoes the exact Sea Star checkbox row in the room timeline', async () => {

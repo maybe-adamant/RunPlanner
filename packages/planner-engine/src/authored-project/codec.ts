@@ -376,12 +376,18 @@ function decodeRoutePlan(
   const arcanaCards = catalog.arcanaCards;
   const fearVows = catalog.fearVows;
   const plan = expectRecord(value, path);
-  expectExactKeys(plan, ['routeKey', 'loadout', 'biomes'], path);
+  expectExactKeys(plan, ['routeKey', 'loadout', 'resourcePlacements', 'biomes'], path);
 
   const routeKey = expectString(plan.routeKey, `${path}.routeKey`);
   if (routeKey !== route.key) {
     fail(`${path}.routeKey`, `expected ${route.key}, received ${routeKey}`);
   }
+  const rawResources = expectRecord(plan.resourcePlacements, `${path}.resourcePlacements`);
+  expectExactKeys(
+    rawResources,
+    ['Pickaxe', 'Exorcism', 'Shovel', 'Fishing'],
+    `${path}.resourcePlacements`,
+  );
 
   const loadout = expectRecord(plan.loadout, `${path}.loadout`);
   expectExactKeys(
@@ -467,9 +473,41 @@ function decodeRoutePlan(
     }
     return decodeBiomePlan(biome, `${path}.biomes[${index}]`, routeKey, expectedBiomeKey, catalog);
   });
+  const resourcePlacements = Object.freeze(
+    Object.fromEntries(
+      (['Pickaxe', 'Exorcism', 'Shovel', 'Fishing'] as const).map((family) => {
+        const value = rawResources[family];
+        if (value === null) return [family, null];
+        const placement = expectRecord(value, `${path}.resourcePlacements.${family}`);
+        expectExactKeys(
+          placement,
+          ['biomeKey', 'occurrenceId'],
+          `${path}.resourcePlacements.${family}`,
+        );
+        const biomeKey = expectString(
+          placement.biomeKey,
+          `${path}.resourcePlacements.${family}.biomeKey`,
+        );
+        const occurrenceId = expectString(
+          placement.occurrenceId,
+          `${path}.resourcePlacements.${family}.occurrenceId`,
+        ) as import('./model').OccurrenceId;
+        const biome = biomes.find((candidate) => candidate.biomeKey === biomeKey);
+        if (
+          biome === undefined ||
+          ![...(biome.topology?.occurrences ?? []), ...biome.completionOccurrences].some(
+            (candidate) => candidate.occurrenceId === occurrenceId,
+          )
+        )
+          fail(`${path}.resourcePlacements.${family}`, 'must target an existing occurrence');
+        return [family, Object.freeze({ biomeKey, occurrenceId })];
+      }),
+    ) as import('./model').ResourcePlacements,
+  );
 
   return Object.freeze({
     routeKey,
+    resourcePlacements,
     loadout: Object.freeze({
       weaponKey,
       aspectKey,

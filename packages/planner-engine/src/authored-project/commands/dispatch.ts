@@ -21,6 +21,7 @@ import { applySeaStarResultCommand } from './sea-star';
 import { applyJudgmentArcanaCommand } from './judgment-arcana';
 import { applySteadyGrowthCommand } from './steady-growth';
 import { applyKeepsakeCommand } from './keepsake';
+import { applyResourcePlacementCommand } from './resources';
 import type { ProjectCommand } from './types';
 import {
   createAcquisitionEntryAddress,
@@ -75,6 +76,34 @@ function reconcileGeneratedPickupProducerState(
   return changed ? Object.freeze({ ...document, routes: Object.freeze(routes) }) : document;
 }
 
+/** Topology owns occurrence lifetime. A route-owned resource singleton retains
+ * through room replacement, but is removed atomically when its exact target is
+ * structurally deleted. */
+function reconcileResourcePlacementTopology(document: ProjectDocument): ProjectDocument {
+  let changed = false;
+  const routes = document.routes.map((route) => {
+    const existing = new Set(
+      route.biomes.flatMap((biome) =>
+        [...(biome.topology?.occurrences ?? []), ...biome.completionOccurrences].map(
+          (occurrence) => `${biome.biomeKey}:${occurrence.occurrenceId}`,
+        ),
+      ),
+    );
+    const next = { ...route.resourcePlacements };
+    let routeChanged = false;
+    for (const [family, placement] of Object.entries(route.resourcePlacements)) {
+      if (placement !== null && !existing.has(`${placement.biomeKey}:${placement.occurrenceId}`)) {
+        next[family as keyof typeof next] = null;
+        routeChanged = true;
+      }
+    }
+    if (!routeChanged) return route;
+    changed = true;
+    return Object.freeze({ ...route, resourcePlacements: Object.freeze(next) });
+  });
+  return changed ? Object.freeze({ ...document, routes: Object.freeze(routes) }) : document;
+}
+
 function derivedPayloadEntryAddress(
   command: Extract<ProjectCommand, { readonly kind: 'EditDerivedShopEntry' }>['edit'],
 ) {
@@ -102,6 +131,8 @@ function applyUnchecked(
   command: ProjectCommand,
 ): ProjectDocument {
   switch (command.kind) {
+    case 'ReplaceResourcePlacement':
+      return applyResourcePlacementCommand(document, catalog, command);
     case 'ReplaceRouteLoadout':
     case 'ReplaceManualArcanaSelection':
     case 'ReplaceFearVowRank':
@@ -277,7 +308,12 @@ export function applyProjectCommand(
     // First close normal source actions, then derive source-owned pickup sites,
     // then schedule the newly active generated actions. This is one ordered
     // command-local composition rather than an ambient fixed-point pass.
-    const withSourceActions = reconcileNewRequiredRoomActions(document, proposal, catalog);
+    const withTopologyImpact = reconcileResourcePlacementTopology(proposal);
+    const withSourceActions = reconcileNewRequiredRoomActions(
+      document,
+      withTopologyImpact,
+      catalog,
+    );
     const withGeneratedPickupState = reconcileGeneratedPickupProducerState(
       document,
       withSourceActions,

@@ -10,6 +10,7 @@ import {
   encodeProjectDocument,
 } from '@run-planner/engine/authored-project';
 import { catalog } from '@run-planner/hades2-catalog';
+import { routeResourceAuthoring, simulateProject } from '@run-planner/engine/simulation';
 import { checkpointManifest, checkpointSpellDropIntents } from './manifest';
 import { checkpointRegistry, loadCheckpoint } from './registry';
 import { nFixedOccurrenceIds, nOccurrenceIds } from '../routes/surface';
@@ -103,7 +104,7 @@ describe('authored-project checkpoint integrity', () => {
     const chaosRoom = occurrences?.find(
       (occurrence) => occurrence.occurrenceId === 'fixture-chaos-room',
     );
-    expect(checkpointManifest).toHaveLength(24);
+    expect(checkpointManifest).toHaveLength(25);
     expect(chaosRoom?.gameName).toMatch(/^Chaos_/);
     expect(chaosRoom?.state).toMatchObject({
       kind: 'fixed',
@@ -113,6 +114,41 @@ describe('authored-project checkpoint integrity', () => {
       },
     });
     expect(loadCheckpoint('g-tail-chaos-timepiece-echo')).toBeDefined();
+  });
+
+  it('keeps the selected N resource-success checkpoint legal, including its side-room Spirit host', () => {
+    const project = loadCheckpoint('surface-n-resources');
+    const route = project.routes.find((candidate) => candidate.routeKey === 'Surface');
+    if (route === undefined) throw new Error('Surface route is missing');
+    const authoring = routeResourceAuthoring(catalog, route);
+    expect(authoring.assessmentByFamily.Pickaxe).toEqual({ legal: true, reasons: [] });
+    expect(authoring.assessmentByFamily.Exorcism).toEqual({ legal: true, reasons: [] });
+    expect(authoring.assessmentByFamily.Shovel).toEqual({ legal: true, reasons: [] });
+    expect(authoring.placements.Exorcism).toEqual({
+      biomeKey: 'N',
+      occurrenceId: 'surface-n-combat11-sideDoor1',
+    });
+
+    const evaluation = simulateProject(catalog, project);
+    const n = evaluation.routes
+      .find((candidate) => candidate.routeKey === 'Surface')
+      ?.biomes.find((candidate) => candidate.biomeKey === 'N');
+    if (n?.authoring !== 'complete' || n.validity !== 'valid')
+      throw new Error('resource checkpoint did not evaluate as a valid complete N');
+    const beforeOpeningExit = n.rewards.runStateSnapshots.find(
+      (snapshot) =>
+        snapshot.owner.kind === 'roomRunStateCheckpoint' &&
+        snapshot.owner.occurrenceId === 'surface-n-opening' &&
+        snapshot.owner.checkpoint.kind === 'beforeRoomExit',
+    );
+    const nextRoomEntry = n.rewards.runStateSnapshots.find(
+      (snapshot) =>
+        snapshot.owner.kind === 'roomRunStateCheckpoint' &&
+        snapshot.owner.occurrenceId === 'surface-n-prehub' &&
+        snapshot.owner.checkpoint.kind === 'roomEntered',
+    );
+    expect(beforeOpeningExit?.traits.elementCounts.Fire).toBe(0);
+    expect(nextRoomEntry?.traits.elementCounts.Fire).toBe(1);
   });
 
   it('retains authored incomplete and invalid states while allowing focused deltas', () => {

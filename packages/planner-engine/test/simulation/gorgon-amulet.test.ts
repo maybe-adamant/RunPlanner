@@ -9,6 +9,7 @@ import {
 } from '../../src/simulation/keepsakes';
 import { createArcanaFearState } from '../../src/simulation/arcana-fear';
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
+import { EMPTY_RESOURCE_PLACEMENTS } from '../../src/authored-project/defaults';
 import {
   authorLegalTraitOffers,
   replaceTestRoomActionOrder,
@@ -174,6 +175,7 @@ describe('Gorgon Amulet lifecycle', () => {
     }));
     const progressive = evaluateProgressiveBiomeAssembly(catalog, goldenGBiome, plan, {
       enteredBiomeCount: 2,
+      resourcePlacements: EMPTY_RESOURCE_PLACEMENTS,
       loadout: route.loadout,
       seed: { history: previous.history, rewardBranches: initialBranches },
     });
@@ -1057,6 +1059,7 @@ describe('Gorgon Amulet lifecycle', () => {
     );
     const progressive = evaluateProgressiveBiomeAssembly(catalog, pBiome, plan, {
       enteredBiomeCount: 3,
+      resourcePlacements: EMPTY_RESOURCE_PLACEMENTS,
       loadout: createDefaultRouteLoadout(catalog),
       seed: { history: previous.history, rewardBranches },
     });

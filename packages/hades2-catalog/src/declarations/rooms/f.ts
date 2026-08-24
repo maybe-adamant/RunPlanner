@@ -1,4 +1,5 @@
 import type { RawRoomDeclaration } from '../types';
+import { normalResourcePointSupport } from '../resources';
 
 const naturalChaosExit = {
   kind: 'naturalChaos' as const,
@@ -9,6 +10,7 @@ const naturalChaosExit = {
 const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   {
     gameName: 'F_Opening01',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Opening 01',
     roomSetKey: 'F',
     advancesExperimentalHammerUses: true,
@@ -40,6 +42,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   },
   {
     gameName: 'F_Opening02',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Opening 02',
     roomSetKey: 'F',
     advancesExperimentalHammerUses: true,
@@ -71,6 +74,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   },
   {
     gameName: 'F_Opening03',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Opening 03',
     roomSetKey: 'F',
     advancesExperimentalHammerUses: true,
@@ -102,6 +106,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   },
   {
     gameName: 'F_Combat01',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 01',
     roomSetKey: 'F',
     advancesExperimentalHammerUses: true,
@@ -133,6 +138,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   },
   {
     gameName: 'F_Combat02',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 02',
     roomSetKey: 'F',
     advancesExperimentalHammerUses: true,
@@ -166,6 +172,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   },
   {
     gameName: 'F_Combat03',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 03',
     roomSetKey: 'F',
     advancesExperimentalHammerUses: true,
@@ -199,6 +206,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   },
   {
     gameName: 'F_Combat04',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 04',
     roomSetKey: 'F',
     advancesExperimentalHammerUses: true,
@@ -232,6 +240,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   },
   {
     gameName: 'F_Combat05',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 05',
     roomSetKey: 'F',
     advancesExperimentalHammerUses: true,
@@ -265,6 +274,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   },
   {
     gameName: 'F_Combat06',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 06',
     roomSetKey: 'F',
     advancesExperimentalHammerUses: true,
@@ -293,6 +303,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   },
   {
     gameName: 'F_Combat07',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 07',
     roomSetKey: 'F',
     advancesExperimentalHammerUses: true,
@@ -321,6 +332,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   },
   {
     gameName: 'F_Combat08',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 08',
     roomSetKey: 'F',
     advancesExperimentalHammerUses: true,
@@ -354,6 +366,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   },
   {
     gameName: 'F_Combat09',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 09',
     roomSetKey: 'F',
     advancesExperimentalHammerUses: true,
@@ -384,6 +397,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   },
   {
     gameName: 'F_Combat10',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 10',
     roomSetKey: 'F',
     advancesExperimentalHammerUses: true,
@@ -414,6 +428,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   },
   {
     gameName: 'F_Combat11',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 11',
     roomSetKey: 'F',
     advancesExperimentalHammerUses: true,
@@ -447,6 +462,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   },
   {
     gameName: 'F_Combat12',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 12',
     roomSetKey: 'F',
     advancesExperimentalHammerUses: true,
@@ -480,6 +496,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   },
   {
     gameName: 'F_Combat13',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 13',
     roomSetKey: 'F',
     advancesExperimentalHammerUses: true,
@@ -508,6 +525,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   },
   {
     gameName: 'F_Combat14',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 14',
     roomSetKey: 'F',
     advancesExperimentalHammerUses: true,
@@ -541,6 +559,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   },
   {
     gameName: 'F_Combat15',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 15',
     roomSetKey: 'F',
     advancesExperimentalHammerUses: true,
@@ -574,6 +593,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   },
   {
     gameName: 'F_Combat16',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 16',
     roomSetKey: 'F',
     advancesExperimentalHammerUses: true,
@@ -607,6 +627,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   },
   {
     gameName: 'F_Combat17',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 17',
     roomSetKey: 'F',
     advancesExperimentalHammerUses: true,
@@ -640,6 +661,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   },
   {
     gameName: 'F_Combat18',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 18',
     roomSetKey: 'F',
     advancesExperimentalHammerUses: true,
@@ -673,6 +695,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   },
   {
     gameName: 'F_Combat19',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 19',
     roomSetKey: 'F',
     advancesExperimentalHammerUses: true,
@@ -706,6 +729,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   },
   {
     gameName: 'F_Combat20',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 20',
     roomSetKey: 'F',
     advancesExperimentalHammerUses: true,
@@ -739,6 +763,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   },
   {
     gameName: 'F_Combat21',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 21',
     roomSetKey: 'F',
     advancesExperimentalHammerUses: true,
@@ -772,6 +797,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   },
   {
     gameName: 'F_Combat22',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 22',
     roomSetKey: 'F',
     advancesExperimentalHammerUses: true,
@@ -805,6 +831,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   },
   {
     gameName: 'F_MiniBoss01',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     boonRarityOverride: { Rare: 0.9, Epic: 0.07, Legendary: 0.05 },
     label: 'Root-Stalker',
     roomSetKey: 'F',
@@ -844,6 +871,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   },
   {
     gameName: 'F_MiniBoss02',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     boonRarityOverride: { Rare: 0.9, Epic: 0.07, Legendary: 0.05 },
     label: 'Shadow-Spiller',
     roomSetKey: 'F',
@@ -883,6 +911,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   },
   {
     gameName: 'F_MiniBoss03',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     boonRarityOverride: { Rare: 0.9, Epic: 0.07, Legendary: 0.05 },
     label: 'Master-Slicer',
     roomSetKey: 'F',
@@ -922,6 +951,9 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   },
   {
     gameName: 'F_Story01',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing'], {
+      ignoresBiomeLimit: true,
+    }),
     label: 'Arachne',
     roomSetKey: 'F',
     advancesExperimentalHammerUses: true,
@@ -949,6 +981,9 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   },
   {
     gameName: 'F_Reprieve01',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing'], {
+      ignoresBiomeLimit: true,
+    }),
     label: 'Fountain',
     roomSetKey: 'F',
     advancesExperimentalHammerUses: true,
@@ -982,6 +1017,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   },
   {
     gameName: 'F_Shop01',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Midshop',
     roomSetKey: 'F',
     advancesExperimentalHammerUses: true,
@@ -1026,6 +1062,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   },
   {
     gameName: 'F_PreBoss01',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Preboss',
     roomSetKey: 'F',
     advancesExperimentalHammerUses: true,
@@ -1080,6 +1117,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   },
   {
     gameName: 'F_Boss01',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Hecate',
     roomSetKey: 'F',
     advancesExperimentalHammerUses: true,
@@ -1098,6 +1136,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
   },
   {
     gameName: 'F_PostBoss01',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Postboss',
     hasKeepsakeRack: true,
     hasRequiredFountain: true,

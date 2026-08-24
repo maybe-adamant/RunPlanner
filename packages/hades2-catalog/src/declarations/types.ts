@@ -384,6 +384,8 @@ export interface RawRoomDeclaration {
   readonly encounterSlotBindings: readonly RawEncounterSlotBinding[];
   readonly counters: RoomCounterEffects;
   readonly caps: RoomCaps;
+  /** Exact source-backed point support, declared beside this room literal. */
+  readonly resourcePointSupport: import('@run-planner/engine/catalog-schema').ResourcePointSupport;
   readonly eligibility?: RequirementExpression;
   readonly force?: RoomForce;
   readonly requiredObjects?: readonly RequiredRoomObjectDescriptor[];

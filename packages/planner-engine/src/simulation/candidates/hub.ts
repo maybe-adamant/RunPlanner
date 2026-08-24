@@ -30,6 +30,7 @@ import {
   evaluateProgressiveBiomeBeforeClamp,
   ownsOccurrence,
 } from '../progressive/biome';
+import { effectiveRouteResourcePlacements } from '../resources';
 import {
   coverageUnavailable,
   unavailableForBiome,
@@ -165,6 +166,7 @@ function previousCompleteValidBiome(
 
 /** Context for the Hub's bounded authored-alternative replay only. */
 function hubAlternativeContext(
+  catalog: Catalog,
   project: ProjectDocument,
   evaluation: ProjectEvaluation,
   routeKey: string,
@@ -178,6 +180,7 @@ function hubAlternativeContext(
   return Object.freeze({
     enteredBiomeCount: completeBiomeCount(evaluation, routeKey, biomeKey),
     loadout: route.loadout,
+    resourcePlacements: effectiveRouteResourcePlacements(catalog, route),
     ...(previous === undefined
       ? {}
       : {
@@ -332,7 +335,7 @@ function hubRegionEvaluation(
     catalog,
     createBiomeAddress(routeKey, biomeKey),
     regionalPlan,
-    hubAlternativeContext(project, evaluation, routeKey, biomeKey),
+    hubAlternativeContext(catalog, project, evaluation, routeKey, biomeKey),
   );
 }
 
@@ -356,7 +359,7 @@ function hubVisitOrderEvaluation(
     catalog,
     createBiomeAddress(routeKey, biomeKey),
     regionalPlan,
-    hubAlternativeContext(project, evaluation, routeKey, biomeKey),
+    hubAlternativeContext(catalog, project, evaluation, routeKey, biomeKey),
   );
 }
 

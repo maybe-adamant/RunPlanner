@@ -1,8 +1,10 @@
 import type { RawRoomDeclaration } from '../types';
+import { normalResourcePointSupport } from '../resources';
 
 export const oRooms = [
   {
     gameName: 'O_Intro',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Entrance',
     roomSetKey: 'O',
     advancesExperimentalHammerUses: true,
@@ -20,6 +22,7 @@ export const oRooms = [
   },
   {
     gameName: 'O_Combat01',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 01',
     roomSetKey: 'O',
     advancesExperimentalHammerUses: true,
@@ -47,6 +50,7 @@ export const oRooms = [
   },
   {
     gameName: 'O_Combat02',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 02',
     roomSetKey: 'O',
     advancesExperimentalHammerUses: true,
@@ -74,6 +78,7 @@ export const oRooms = [
   },
   {
     gameName: 'O_Combat03',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 03',
     roomSetKey: 'O',
     advancesExperimentalHammerUses: true,
@@ -101,6 +106,7 @@ export const oRooms = [
   },
   {
     gameName: 'O_Combat04',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 04',
     roomSetKey: 'O',
     advancesExperimentalHammerUses: true,
@@ -122,6 +128,7 @@ export const oRooms = [
   },
   {
     gameName: 'O_Combat05',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 05',
     roomSetKey: 'O',
     advancesExperimentalHammerUses: true,
@@ -149,6 +156,7 @@ export const oRooms = [
   },
   {
     gameName: 'O_Combat06',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 06',
     roomSetKey: 'O',
     advancesExperimentalHammerUses: true,
@@ -176,6 +184,7 @@ export const oRooms = [
   },
   {
     gameName: 'O_Combat07',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 07',
     roomSetKey: 'O',
     advancesExperimentalHammerUses: true,
@@ -197,6 +206,7 @@ export const oRooms = [
   },
   {
     gameName: 'O_Combat08',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 08',
     roomSetKey: 'O',
     advancesExperimentalHammerUses: true,
@@ -224,6 +234,7 @@ export const oRooms = [
   },
   {
     gameName: 'O_Combat09',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 09',
     roomSetKey: 'O',
     advancesExperimentalHammerUses: true,
@@ -251,6 +262,7 @@ export const oRooms = [
   },
   {
     gameName: 'O_Combat10',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 10',
     roomSetKey: 'O',
     advancesExperimentalHammerUses: true,
@@ -278,6 +290,7 @@ export const oRooms = [
   },
   {
     gameName: 'O_Combat11',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 11',
     roomSetKey: 'O',
     advancesExperimentalHammerUses: true,
@@ -299,6 +312,7 @@ export const oRooms = [
   },
   {
     gameName: 'O_Combat12',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 12',
     roomSetKey: 'O',
     advancesExperimentalHammerUses: true,
@@ -326,6 +340,7 @@ export const oRooms = [
   },
   {
     gameName: 'O_Combat13',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 13',
     roomSetKey: 'O',
     advancesExperimentalHammerUses: true,
@@ -359,6 +374,7 @@ export const oRooms = [
   },
   {
     gameName: 'O_Combat14',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 14',
     roomSetKey: 'O',
     advancesExperimentalHammerUses: true,
@@ -386,6 +402,7 @@ export const oRooms = [
   },
   {
     gameName: 'O_Combat15',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 15',
     roomSetKey: 'O',
     advancesExperimentalHammerUses: true,
@@ -407,6 +424,7 @@ export const oRooms = [
   },
   {
     gameName: 'O_MiniBoss01',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     boonRarityOverride: { Rare: 0.9, Epic: 0.1, Legendary: 0.05 },
     label: 'Charybdis',
     roomSetKey: 'O',
@@ -445,6 +463,7 @@ export const oRooms = [
   },
   {
     gameName: 'O_MiniBoss02',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     boonRarityOverride: { Rare: 0.9, Epic: 0.1, Legendary: 0.05 },
     label: 'The Yargonaut',
     roomSetKey: 'O',
@@ -483,6 +502,7 @@ export const oRooms = [
   },
   {
     gameName: 'O_Shop01',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Midshop',
     roomSetKey: 'O',
     advancesExperimentalHammerUses: true,
@@ -537,6 +557,9 @@ export const oRooms = [
   },
   {
     gameName: 'O_Reprieve01',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing'], {
+      ignoresBiomeLimit: true,
+    }),
     label: 'Fountain',
     roomSetKey: 'O',
     advancesExperimentalHammerUses: true,
@@ -566,6 +589,9 @@ export const oRooms = [
   },
   {
     gameName: 'O_Story01',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing'], {
+      ignoresBiomeLimit: true,
+    }),
     label: 'Circe',
     roomSetKey: 'O',
     advancesExperimentalHammerUses: true,
@@ -610,6 +636,7 @@ export const oRooms = [
   },
   {
     gameName: 'O_Devotion01',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Trial',
     roomSetKey: 'O',
     advancesExperimentalHammerUses: true,
@@ -654,6 +681,7 @@ export const oRooms = [
   },
   {
     gameName: 'O_PreBoss01',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Preboss',
     roomSetKey: 'O',
     advancesExperimentalHammerUses: true,
@@ -695,6 +723,7 @@ export const oRooms = [
   },
   {
     gameName: 'O_Boss01',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Eris',
     roomSetKey: 'O',
     advancesExperimentalHammerUses: true,
@@ -713,6 +742,7 @@ export const oRooms = [
   },
   {
     gameName: 'O_PostBoss01',
+    resourcePointSupport: normalResourcePointSupport([]),
     label: 'Postboss',
     hasKeepsakeRack: true,
     hasRequiredFountain: true,

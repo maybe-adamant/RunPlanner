@@ -50,6 +50,7 @@ import {
   evaluateProgressiveBiomeAssemblyBeforeClamp,
 } from '../../src/simulation/progressive/biome';
 import { candidateArtifactsForProjectEvaluationAssembly } from '../../src/simulation/project';
+import { EMPTY_RESOURCE_PLACEMENTS } from '../../src/authored-project/defaults';
 
 const defaultRouteLoadout = createDefaultRouteLoadout(catalog);
 import {
@@ -721,11 +722,13 @@ describe('progressive biome evaluation', () => {
     const seed = { history: previous.history, rewardBranches: previous.rewards.branches };
     const clamped = evaluateProgressiveBiomeAssembly(catalog, goldenGBiome, plan, {
       enteredBiomeCount: 2,
+      resourcePlacements: EMPTY_RESOURCE_PLACEMENTS,
       loadout: defaultRouteLoadout,
       seed,
     });
     const beforeClamp = evaluateProgressiveBiomeAssemblyBeforeClamp(catalog, goldenGBiome, plan, {
       enteredBiomeCount: 2,
+      resourcePlacements: EMPTY_RESOURCE_PLACEMENTS,
       loadout: defaultRouteLoadout,
       seed,
     });
@@ -782,6 +785,7 @@ describe('progressive biome evaluation', () => {
     };
     const blockedClamped = evaluateProgressiveBiomeAssembly(catalog, goldenGBiome, blockedPlan, {
       enteredBiomeCount: 2,
+      resourcePlacements: EMPTY_RESOURCE_PLACEMENTS,
       loadout: defaultRouteLoadout,
       seed: blockedSeed,
     });
@@ -791,6 +795,7 @@ describe('progressive biome evaluation', () => {
       blockedPlan,
       {
         enteredBiomeCount: 2,
+        resourcePlacements: EMPTY_RESOURCE_PLACEMENTS,
         loadout: defaultRouteLoadout,
         seed: blockedSeed,
       },
@@ -943,11 +948,13 @@ describe('progressive biome evaluation', () => {
     const seed = { history: previous.history, rewardBranches: previous.rewards.branches };
     const clamped = evaluateProgressiveBiomeAssembly(catalog, oBiome, plan, {
       enteredBiomeCount: 2,
+      resourcePlacements: EMPTY_RESOURCE_PLACEMENTS,
       loadout: defaultRouteLoadout,
       seed,
     });
     const beforeClamp = evaluateProgressiveBiomeAssemblyBeforeClamp(catalog, oBiome, plan, {
       enteredBiomeCount: 2,
+      resourcePlacements: EMPTY_RESOURCE_PLACEMENTS,
       loadout: defaultRouteLoadout,
       seed,
     });

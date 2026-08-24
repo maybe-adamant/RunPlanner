@@ -1,4 +1,5 @@
 import type { RawRoomDeclaration } from '../types';
+import { normalResourcePointSupport } from '../resources';
 
 const naturalChaosExit = {
   kind: 'naturalChaos' as const,
@@ -14,6 +15,7 @@ const naturalChaosExit = {
 export const pRooms = [
   {
     gameName: 'P_Intro',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Entrance',
     roomSetKey: 'P',
     advancesExperimentalHammerUses: true,
@@ -36,6 +38,7 @@ export const pRooms = [
   },
   {
     gameName: 'P_Combat01',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 01',
     roomSetKey: 'P',
     advancesExperimentalHammerUses: true,
@@ -74,6 +77,7 @@ export const pRooms = [
   },
   {
     gameName: 'P_Combat02',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 02',
     roomSetKey: 'P',
     advancesExperimentalHammerUses: true,
@@ -107,6 +111,7 @@ export const pRooms = [
   },
   {
     gameName: 'P_Combat03',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 03',
     roomSetKey: 'P',
     advancesExperimentalHammerUses: true,
@@ -145,6 +150,7 @@ export const pRooms = [
   },
   {
     gameName: 'P_Combat04',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 04',
     roomSetKey: 'P',
     advancesExperimentalHammerUses: true,
@@ -178,6 +184,7 @@ export const pRooms = [
   },
   {
     gameName: 'P_Combat05',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 05',
     roomSetKey: 'P',
     advancesExperimentalHammerUses: true,
@@ -211,6 +218,7 @@ export const pRooms = [
   },
   {
     gameName: 'P_Combat06',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 06',
     roomSetKey: 'P',
     advancesExperimentalHammerUses: true,
@@ -244,6 +252,7 @@ export const pRooms = [
   },
   {
     gameName: 'P_Combat07',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 07',
     roomSetKey: 'P',
     advancesExperimentalHammerUses: true,
@@ -277,6 +286,7 @@ export const pRooms = [
   },
   {
     gameName: 'P_Combat08',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 08',
     roomSetKey: 'P',
     advancesExperimentalHammerUses: true,
@@ -310,6 +320,7 @@ export const pRooms = [
   },
   {
     gameName: 'P_Combat09',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Shovel']),
     label: 'Combat 09',
     roomSetKey: 'P',
     advancesExperimentalHammerUses: true,
@@ -343,6 +354,7 @@ export const pRooms = [
   },
   {
     gameName: 'P_Combat10',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 10',
     roomSetKey: 'P',
     advancesExperimentalHammerUses: true,
@@ -376,6 +388,7 @@ export const pRooms = [
   },
   {
     gameName: 'P_Combat11',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 11',
     roomSetKey: 'P',
     advancesExperimentalHammerUses: true,
@@ -409,6 +422,7 @@ export const pRooms = [
   },
   {
     gameName: 'P_Combat12',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 12',
     roomSetKey: 'P',
     advancesExperimentalHammerUses: true,
@@ -442,6 +456,7 @@ export const pRooms = [
   },
   {
     gameName: 'P_Combat13',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 13',
     roomSetKey: 'P',
     advancesExperimentalHammerUses: true,
@@ -475,6 +490,7 @@ export const pRooms = [
   },
   {
     gameName: 'P_Combat14',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 14',
     roomSetKey: 'P',
     advancesExperimentalHammerUses: true,
@@ -508,6 +524,7 @@ export const pRooms = [
   },
   {
     gameName: 'P_Combat15',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 15',
     roomSetKey: 'P',
     advancesExperimentalHammerUses: true,
@@ -541,6 +558,7 @@ export const pRooms = [
   },
   {
     gameName: 'P_Combat16',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 16',
     roomSetKey: 'P',
     advancesExperimentalHammerUses: true,
@@ -574,6 +592,7 @@ export const pRooms = [
   },
   {
     gameName: 'P_Combat17',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 17',
     roomSetKey: 'P',
     advancesExperimentalHammerUses: true,
@@ -612,6 +631,7 @@ export const pRooms = [
   },
   {
     gameName: 'P_Combat18',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 18',
     roomSetKey: 'P',
     advancesExperimentalHammerUses: true,
@@ -650,6 +670,7 @@ export const pRooms = [
   },
   {
     gameName: 'P_Combat19',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 19',
     roomSetKey: 'P',
     advancesExperimentalHammerUses: true,
@@ -683,6 +704,7 @@ export const pRooms = [
   },
   {
     gameName: 'P_Story01',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Dionysus',
     roomSetKey: 'P',
     advancesExperimentalHammerUses: true,
@@ -715,6 +737,7 @@ export const pRooms = [
   },
   {
     gameName: 'P_Reprieve01',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Fountain',
     roomSetKey: 'P',
     advancesExperimentalHammerUses: true,
@@ -748,6 +771,7 @@ export const pRooms = [
   },
   {
     gameName: 'P_Shop01',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Midshop',
     roomSetKey: 'P',
     advancesExperimentalHammerUses: true,
@@ -791,6 +815,7 @@ export const pRooms = [
   },
   {
     gameName: 'P_MiniBoss01',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     boonRarityOverride: { Rare: 0.9, Epic: 0.1, Duo: 0.2, Legendary: 0.2 },
     label: 'Talos',
     roomSetKey: 'P',
@@ -834,6 +859,7 @@ export const pRooms = [
   },
   {
     gameName: 'P_MiniBoss02',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     boonRarityOverride: { Rare: 0.9, Epic: 0.1, Duo: 0.2, Legendary: 0.2 },
     label: 'Mega-Dracon',
     roomSetKey: 'P',
@@ -874,6 +900,7 @@ export const pRooms = [
   },
   {
     gameName: 'P_PreBoss01',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Preboss',
     roomSetKey: 'P',
     advancesExperimentalHammerUses: true,
@@ -928,6 +955,7 @@ export const pRooms = [
   },
   {
     gameName: 'P_Boss01',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Prometheus',
     roomSetKey: 'P',
     advancesExperimentalHammerUses: true,
@@ -946,6 +974,7 @@ export const pRooms = [
   },
   {
     gameName: 'P_PostBoss01',
+    resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Postboss',
     hasKeepsakeRack: true,
     hasRequiredFountain: true,

@@ -9,6 +9,7 @@ import {
 import { createGoldenFGHProject, goldenGBiome } from '@run-planner/test-fixtures/underworld';
 
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
+import { EMPTY_RESOURCE_PLACEMENTS } from '../../src/authored-project/defaults';
 import { createArcanaFearState } from '../../src/simulation/arcana-fear';
 import {
   applyKeepsakeDisposition,
@@ -445,6 +446,7 @@ describe('Cherished Heirloom active keepsake advance', () => {
     });
     const input = {
       enteredBiomeCount: 2,
+      resourcePlacements: EMPTY_RESOURCE_PLACEMENTS,
       loadout: route.loadout,
       seed: { history: previous.history, rewardBranches: [rewardBranch] },
     } as const;

@@ -100,6 +100,7 @@ import type {
   WorkspaceShopPurchaseParticipationInteraction,
   WorkspaceRoomInteraction,
   WorkspaceRoomPickerControl,
+  WorkspaceResourcePlacementInteraction,
   WorkspaceStartInteraction,
   WorkspaceTakeoverBatchInteraction,
   WorkspaceTopologyRemovalInteraction,
@@ -335,6 +336,7 @@ interface WorkspaceOccurrenceLocalInteractionCatalog {
   readonly localVisitGenerations: ReadonlyMap<string, WorkspaceLocalVisitGenerationInteraction>;
   readonly zagreusSpawns: ReadonlyMap<string, WorkspaceZagreusSpawnInteraction>;
   readonly naturalChaosSpawns: ReadonlyMap<string, WorkspaceNaturalChaosSpawnInteraction>;
+  readonly resourcePlacements: ReadonlyMap<string, WorkspaceResourcePlacementInteraction>;
 }
 
 function intersectNemesisBranchValues(
@@ -413,6 +415,7 @@ function bindOccurrenceLocalInteractions(
   const localVisitGenerations = new Map<string, WorkspaceLocalVisitGenerationInteraction>();
   const zagreusSpawns = new Map<string, WorkspaceZagreusSpawnInteraction>();
   const naturalChaosSpawns = new Map<string, WorkspaceNaturalChaosSpawnInteraction>();
+  const resourcePlacements = new Map<string, WorkspaceResourcePlacementInteraction>();
   const set = <T>(
     target: Map<string, WorkspaceCandidateInteraction<T>>,
     key: string,
@@ -428,6 +431,41 @@ function bindOccurrenceLocalInteractions(
   };
   for (const requirement of requirements) {
     switch (requirement.kind) {
+      case 'resourcePlacements': {
+        for (const resource of requirement.resources) {
+          const { interactionKey: key } = resource;
+          if (resourcePlacements.has(key)) {
+            throw new StructuredWorkspaceProjectionContractError(
+              `${key} has multiple bound resource-placement interactions`,
+            );
+          }
+          resourcePlacements.set(
+            key,
+            Object.freeze({
+              intent: Object.freeze({
+                command: Object.freeze({
+                  kind: 'ReplaceResourcePlacement' as const,
+                  route: Object.freeze({
+                    kind: 'route' as const,
+                    routeKey: requirement.owner.routeKey,
+                  }),
+                  family: resource.family,
+                  value:
+                    resource.action === 'remove'
+                      ? null
+                      : Object.freeze({
+                          biomeKey: requirement.owner.biomeKey,
+                          occurrenceId: requirement.owner.occurrenceId,
+                        }),
+                }),
+              }),
+              key,
+              owner: requirement.owner,
+            }),
+          );
+        }
+        break;
+      }
       case 'naturalChaosSpawn': {
         const key = semanticAddressKey(requirement.owner);
         if (naturalChaosSpawns.has(key)) {
@@ -827,6 +865,7 @@ function bindOccurrenceLocalInteractions(
     localVisitGenerations,
     zagreusSpawns,
     naturalChaosSpawns,
+    resourcePlacements,
   });
 }
 
@@ -1542,6 +1581,7 @@ export function bindWorkspaceInteractions(
     localVisitGenerations,
     zagreusSpawns,
     naturalChaosSpawns,
+    resourcePlacements,
   } = bindOccurrenceLocalInteractions(
     allocateOccurrenceId,
     assembly,
@@ -2903,6 +2943,7 @@ export function bindWorkspaceInteractions(
     roomActions,
     naturalChaosExits,
     naturalChaosSpawns,
+    resourcePlacements,
     hubSlots,
     hubVisitOrders,
     rewards,

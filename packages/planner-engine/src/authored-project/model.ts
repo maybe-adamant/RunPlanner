@@ -5,7 +5,14 @@ import type {
   AuthoredTraitOffer,
 } from './traits';
 
-export const PROJECT_DOCUMENT_SCHEMA_VERSION = 55 as const;
+export const PROJECT_DOCUMENT_SCHEMA_VERSION = 56 as const;
+export type ResourceFamily = import('../catalog-schema').ResourceFamily;
+/** Route ownership supplies the route key; the selected host is exact and durable. */
+export interface ResourcePlacement {
+  readonly biomeKey: string;
+  readonly occurrenceId: OccurrenceId;
+}
+export type ResourcePlacements = Readonly<Record<ResourceFamily, ResourcePlacement | null>>;
 
 declare const occurrenceIdBrand: unique symbol;
 
@@ -343,6 +350,7 @@ export interface AuthoredBiomePlan {
 export interface AuthoredRoutePlan {
   readonly routeKey: string;
   readonly loadout: RouteLoadout;
+  readonly resourcePlacements: ResourcePlacements;
   readonly biomes: readonly AuthoredBiomePlan[];
 }
 

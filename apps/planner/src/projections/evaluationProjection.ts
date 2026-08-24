@@ -436,6 +436,11 @@ const findingCopy = {
     title: 'Nemesis needs one reward position',
     description: 'Reduce optional rewards by one while the Nemesis room feature is active.',
   },
+  resourcePlacementUnavailable: {
+    title: 'Resource success needs repair',
+    description:
+      'Move or remove this selected success so its room, spacing, and capacity remain legal.',
+  },
   nemesisOutcomeMissing: {
     title: 'Choose the Nemesis event result',
     description: 'Record what Nemesis asks or offers at this interaction.',

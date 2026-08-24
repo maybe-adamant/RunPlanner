@@ -7,15 +7,15 @@ scope, biome topology, occurrence-local state, semantic addresses, commands,
 persistence, and history. Simulation algorithms, candidates, Redux state, and
 React rendering are separate concerns.
 
-## Schema 55 Boundary
+## Schema 56 Boundary
 
-Schema 55 is the sole persisted authored-project contract. The codec rejects
+Schema 56 is the sole persisted authored-project contract. The codec rejects
 every other schema version rather than manufacturing current topology or leaf
 state for a stale document. The migration CLI performs the explicit 49-to-50,
-50-to-51, 51-to-52, 52-to-53, 53-to-54, and 54-to-55 migrations outside the production
+50-to-51, 51-to-52, 52-to-53, 53-to-54, 54-to-55, and 55-to-56 migrations outside the production
 decoder, and also updates the earlier catalog metadata from
 `0.32.0-run-impacting-traits` through
-`0.37.0-automatic-completion-occurrences` without inventing authored outcomes. Catalog
+`0.38.0-selected-resource-successes` without inventing authored outcomes. Catalog
 versions must match exactly after migration.
 
 Schemas 46 and 47 completed the occurrence-owned topology and chronology
@@ -48,6 +48,11 @@ automatic `RoomOccurrence`s with ordinary encounter, acquisition-site, Room
 Action, and optional Postboss rack leaves. The strict codec validates fixed
 IDs, room names, automatic mode, none state, no additional exits, and collision
 with editable topology.
+
+Schema 56 adds a complete, route-owned four-family selected-resource record.
+Each value is null or an exact `(biomeKey, occurrenceId)` address. Structural
+topology deletion clears its exact target; room replacement retains the address
+for contextual repair. The resource result itself remains simulation output.
 
 There is one biome plan and one topology language. Production state and
 semantic addresses have no layout-specific plan family, completion-transition

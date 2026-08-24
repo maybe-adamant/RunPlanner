@@ -8,7 +8,15 @@ dormant generic Death Defiance authored-condition path. Gate B is complete at
 schema 55 after independent review restored progressive-prefix ownership and
 the full Judgment lifecycle matrix. Its bounded lanes passed catalog 208/208,
 checkpoint 17/17, migration 10/10, engine 1,316/1,316, and planner 619/619,
-with workspace typecheck, formatting, and diff checks clean. Gate C is next.
+with workspace typecheck, formatting, and diff checks clean. Gate C is complete
+at schema 56 after independent review restored persistent-Hub participation in
+resource spacing, made the source exception matrix readable, and ensured a
+retained-invalid placement blocks execution-plan eligibility. One route-level
+selected success is owned per family; exact room declarations own their visible
+support; and the room-exit element contribution affects the next room without
+retroactively changing the exited room. Its focused catalog, engine,
+planner/UI, migration, fixture, typecheck, formatting, and diff lanes are
+recorded with the Gate C delivery result below.
 
 The locked plan remains grounded on the clean source-audit baseline
 `eb278f98d445b288f1378086bbb83a3b3af78964`. Its pre-execution reviews closed
@@ -554,10 +562,12 @@ Intended commit: `feat(resources): model selected element successes`
 
 ### Catalog and authored model
 
-- Declare exact room support for Pickaxe, Exorcism, Shovel, and Fishing,
-  including room overrides, Chaos exclusions, simple/complex/all-tool capacity,
-  same-family lookback, cross-family previous-room exclusion, and per-biome
-  capacity.
+- Every raw room declaration explicitly owns its exact Pickaxe, Exorcism,
+  Shovel, and Fishing family list, including `[]`; shared normal/H/N/Chaos
+  profile constructors own the repeated element mapping, simple/complex versus
+  Chaos all-tool capacity, and spacing matrices. There is no room-name table
+  or prefix inference. Exact room-level biome-limit exceptions remain beside
+  that room declaration.
 - Add one route-owned zero-or-one placement per family in schema 56. Each value
   points to an exact occurrence address. Route ownership reflects the run-wide
   singleton; room projection presents the positive placement as that
@@ -572,7 +582,7 @@ Intended commit: `feat(resources): model selected element successes`
 
 - Candidate authority returns exact legal occurrence targets from declaration
   support and the selected route walk. It protects the source point's complete
-  lookback, biome count, same-room capacity, Fish/Exorcism exclusion, and Chaos
+  lookback, biome count, same-room capacity, the full directional cross-family exclusion matrix, and Chaos
   all-tool envelope.
 - The selected-route walk must include ordinary, local, Hub, Chaos, and
   automatic completion occurrences in real entered order. Do not approximate
@@ -608,6 +618,27 @@ Intended commit: `feat(resources): model selected element successes`
   command binding, and undo/redo.
 - Add one short N-based checkpoint route showing multiple families, a side-room
   placement, and next-room element visibility.
+
+### Delivery result — complete after independent review
+
+- Removed room-name and biome-prefix resource inference. Every raw room now
+  declares its family list locally, including empty support; strict compiler
+  coverage independently rejects missing support, unknown fields/families,
+  duplicates, invalid capacity, and a false biome-limit escape hatch.
+- `surface-n-resources` records legal Mining, Spirit, and Seed successes,
+  including a reached side-room Spirit host. Its fixture witness observes Fire
+  absent at the host's pre-exit checkpoint and present when the following room
+  enters.
+- Review remediation retains every entered physical room as a spacing ordinal,
+  including N's persistent Hub, while only occurrence-backed rooms can be
+  selected. An unavailable retained placement now invalidates its containing
+  biome and route, blocks execution-plan eligibility, grants no element, and
+  remains available for exact repair.
+- Focused validation passed: the exact catalog resource matrix, resource
+  command/simulation tests, checkpoint integrity, resource-index navigation,
+  room-local removal plus undo, all schema migrations, workspace typecheck,
+  changed-file formatting, and `git diff --check`. The complete repository gate
+  remains reserved for final phase closure.
 
 ## Gate D — Purging Pool
 
