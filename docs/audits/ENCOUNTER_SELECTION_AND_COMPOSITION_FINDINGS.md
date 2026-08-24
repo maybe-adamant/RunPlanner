@@ -4,8 +4,8 @@
 
 This document is the stable source-evidence authority for Hades II encounter
 selection and composition facts relevant to Run Planner. It records what the
-game declares and when the game performs each transition. It does not decide
-which distinctions the planner will model, simplify, defer, or expose.
+game declares and when the game performs each transition. Source facts remain
+separate from the explicit Planner dispositions recorded for completed audits.
 
 The audit was refreshed on 2026-08-03 against the installed Steam build:
 
@@ -19,6 +19,11 @@ end-effect paths were reread directly on 2026-08-23 against installed Steam
 build `24556151`. That focused reread confirmed the P facts and source
 disposition recorded below; the remaining encounter matrices retain their
 2026-08-03 evidence date.
+
+The Nemesis combat, random-event, generated-reward, and Fields-capacity paths
+were also reread directly on 2026-08-23 against installed Steam build
+`24556151`. That focused amendment replaces the earlier partial Nemesis notes
+with the closed matrix and Planner disposition below.
 
 The scope is:
 
@@ -64,8 +69,17 @@ The primary evidence is the installed game scripts:
 - `EncounterData_Unique.lua`;
 - `RequirementsData.lua`;
 - `NPCData.lua` and the family-specific NPC data files;
+- `EncounterLogic.lua`;
 - `InteractLogic.lua`;
 - `EventLogic.lua`;
+- `NarrativeLogic.lua`;
+- `RequirementsLogic.lua`;
+- `TradeLogic.lua`;
+- `SellTraitLogic.lua`;
+- `ConsumableData.lua`;
+- `LootData.lua`;
+- `GiftLogic.lua`;
+- `PowersLogic.lua`;
 - `NarrativeData.lua`.
 
 ## Encounter Selection Lifecycle
@@ -390,26 +404,26 @@ and end effects are three independent source facts.
 
 ### Concrete placements and encounter effects
 
-| Family / mode   | Biome | Source set or position             | Standard concrete key      | Counts encounter depth | Sequence or reward effect                                               |
-| --------------- | ----- | ---------------------------------- | -------------------------- | ---------------------- | ----------------------------------------------------------------------- |
-| Artemis combat  | F     | `FEncountersDefault`               | `ArtemisCombatF`           | yes                    | none                                                                    |
-| Artemis combat  | G     | `GEncountersDefault`               | `ArtemisCombatG`           | yes                    | none                                                                    |
-| Artemis combat  | N     | N default/smaller/bigger sets      | `ArtemisCombatN`           | yes                    | none                                                                    |
-| Heracles combat | N     | N default/smaller/bigger sets      | `HeraclesCombatN`          | yes                    | none                                                                    |
-| Heracles combat | O     | `OEncountersIntros`                | `HeraclesCombatO`          | yes                    | turns the normally non-counting Intro into a counting encounter         |
-| Heracles combat | P     | P first position                   | `HeraclesCombatP`          | yes                    | blocks the later main position                                          |
-| Icarus combat   | O     | `OEncountersDefault`               | `IcarusCombatO`            | yes                    | can occupy either active O main combat position                         |
-| Icarus combat   | P     | `PEncountersDefault`               | `IcarusCombatP`            | yes                    | Outdoor room requirement                                                |
-| Athena combat   | P     | `PEncountersDefault`               | `AthenaCombatP`            | yes                    | none                                                                    |
-| Arachne cocoon  | F     | `FEncountersDefault`               | `ArachneCombatF`           | no                     | replaces a normally counting combat                                     |
-| Arachne cocoon  | G     | `GEncountersDefault`               | `ArachneCombatG`           | no                     | replaces a normally counting combat                                     |
-| Nemesis combat  | F     | `FEncountersDefault`               | `NemesisCombatF`           | yes                    | kill-race wager can add or remove up to 100 Gold                        |
-| Nemesis combat  | G     | `GEncountersDefault`               | `NemesisCombatG`           | yes                    | same kill-race wager                                                    |
-| Nemesis combat  | H     | `HEncountersDefault` cage position | `NemesisCombatH`           | yes                    | preserves the cage reward; kill-race wager remains                      |
-| Nemesis combat  | I     | I default/smaller sets             | `NemesisCombatI`           | yes                    | preserves the room reward; kill-race wager remains                      |
-| Nemesis random  | F/G   | F/G default set                    | `NemesisRandomEvent`       | no                     | replaces combat and suppresses the inherited ordinary room-reward spawn |
-| Nemesis random  | H     | H passive set                      | `NemesisRandomEvent`       | no                     | replaces passive work; cage encounters and cage rewards remain          |
-| Nemesis Bridge  | H     | `H_Bridge01` legal support         | `BridgeNemesisRandomEvent` | no                     | Bridge-specific fixed-room composition                                  |
+| Family / mode   | Biome | Source set or position             | Standard concrete key      | Counts encounter depth | Sequence or reward effect                                                                       |
+| --------------- | ----- | ---------------------------------- | -------------------------- | ---------------------- | ----------------------------------------------------------------------------------------------- |
+| Artemis combat  | F     | `FEncountersDefault`               | `ArtemisCombatF`           | yes                    | none                                                                                            |
+| Artemis combat  | G     | `GEncountersDefault`               | `ArtemisCombatG`           | yes                    | none                                                                                            |
+| Artemis combat  | N     | N default/smaller/bigger sets      | `ArtemisCombatN`           | yes                    | none                                                                                            |
+| Heracles combat | N     | N default/smaller/bigger sets      | `HeraclesCombatN`          | yes                    | none                                                                                            |
+| Heracles combat | O     | `OEncountersIntros`                | `HeraclesCombatO`          | yes                    | turns the normally non-counting Intro into a counting encounter                                 |
+| Heracles combat | P     | P first position                   | `HeraclesCombatP`          | yes                    | blocks the later main position                                                                  |
+| Icarus combat   | O     | `OEncountersDefault`               | `IcarusCombatO`            | yes                    | can occupy either active O main combat position                                                 |
+| Icarus combat   | P     | `PEncountersDefault`               | `IcarusCombatP`            | yes                    | Outdoor room requirement                                                                        |
+| Athena combat   | P     | `PEncountersDefault`               | `AthenaCombatP`            | yes                    | none                                                                                            |
+| Arachne cocoon  | F     | `FEncountersDefault`               | `ArachneCombatF`           | no                     | replaces a normally counting combat                                                             |
+| Arachne cocoon  | G     | `GEncountersDefault`               | `ArachneCombatG`           | no                     | replaces a normally counting combat                                                             |
+| Nemesis combat  | F     | `FEncountersDefault`               | `NemesisCombatF`           | yes                    | kill-race wager can add or remove up to 100 Gold                                                |
+| Nemesis combat  | G     | `GEncountersDefault`               | `NemesisCombatG`           | yes                    | same kill-race wager                                                                            |
+| Nemesis combat  | H     | `HEncountersDefault` cage position | `NemesisCombatH`           | yes                    | preserves the cage reward; kill-race wager remains                                              |
+| Nemesis combat  | I     | I default/smaller sets             | `NemesisCombatI`           | yes                    | preserves the room reward; kill-race wager remains                                              |
+| Nemesis random  | F/G   | F/G default set                    | `NemesisRandomEvent`       | no                     | replaces combat and suppresses the inherited ordinary room-reward spawn                         |
+| Nemesis random  | H     | H passive set                      | `NemesisRandomEvent`       | no                     | selected instead of the generated passive identity; separate optional-reward generation remains |
+| Nemesis Bridge  | H     | `H_Bridge01` legal support         | `BridgeNemesisRandomEvent` | no                     | Bridge-specific fixed-room composition                                                          |
 
 No Q named encounter set contains one of these field-NPC encounters.
 
@@ -516,55 +530,253 @@ Nemesis uses two selection checkpoints:
 
 1. encounter preparation can choose combat or `NemesisRandomEvent` from a
    legal encounter list;
-2. interacting with Nemesis during `NemesisRandomEvent` chooses an eligible
-   text-line behavior that supplies a cost, challenge, and result.
+2. interacting with Nemesis during `NemesisRandomEvent` causes the narrative
+   system to choose one eligible interaction family and its realized request
+   or offer. The player chooses only the response where that family has an
+   accept/decline decision.
 
-The ordinary random event has five behavior families:
+`GetRandomEligibleTextLines` owns the second random choice. The interaction
+family is therefore a realized game outcome, not a menu from which the player
+chooses. External dialogue and profile-history requirements affect which lines
+can be selected, but do not change the five ordinary mechanical families.
 
-| Interaction family   | Ordinary biomes | Player cost or challenge       | Result                                                      | Additional requirements                                 |
-| -------------------- | --------------- | ------------------------------ | ----------------------------------------------------------- | ------------------------------------------------------- |
-| free item            | F, G, H         | none                           | random health, healing, death-defiance, or armor consumable | Bridge uses a separate premium free-item realization    |
-| buy item             | F, G, H         | randomized Gold price          | generated health, mana, Pom, or Hammer offer                | insufficient Gold prevents acceptance                   |
-| take damage for item | F, G, H         | randomized direct damage       | generated health, mana, Pom, Gold, or Psyche offer          | repeat lines require no available hit shield            |
-| give trait for item  | F, G, H         | one eligible Olympian trait    | `RoomMoneyTripleDrop`                                       | requires a sellable god trait                           |
-| damage contest       | F, G, H         | deal 1,000 damage in 5 seconds | success reward pool or consolation reward                   | 2,000 damage changes presentation, not the success pool |
+### Biome placement and ordinary reward delivery
 
-The random event is absent from I encounter sets. Most ordinary text-line
-behaviors exclude `H_Bridge01`; the Bridge uses its separate realization.
+| Biome | Clean combat placement | Random-event placement | Ordinary room or cage reward                                                          |
+| ----- | ---------------------- | ---------------------- | ------------------------------------------------------------------------------------- |
+| F     | main encounter         | main encounter         | combat spawns the incoming door reward; random event suppresses its spawn             |
+| G     | main encounter         | main encounter         | combat spawns the incoming door reward; random event suppresses its spawn             |
+| H     | one cage encounter     | passive encounter slot | combat leaves that cage's reward intact; random event leaves every cage reward intact |
+| I     | main encounter         | absent                 | combat spawns the incoming door reward                                                |
 
-### F/G reward suppression
+`EncounterSets.lua` declares one clean combat member for each of F, G, H, and
+I. F and G each also contain two weighted `NemesisRandomEvent` entries. H
+declares the random event in both passive sets, while I has no random-event
+member.
 
-The incoming door reward is chosen before encounter selection and remains
-available to `RequireNotRoomReward` eligibility. `NonCombat` normally inherits
-`EncounterEventsDefault`, whose final event calls `SpawnRoomReward`.
-`NemesisRandomEvent` assigns `UnthreadedEvents = {}`, replacing the inherited
-event list. The ordinary room reward is therefore not spawned. The selected
-Nemesis interaction supplies the effective benefit or trade result.
+For F and G, the incoming door reward and its exact source are selected before
+the room encounter. That draw remains visible to the random event's
+`RequireNotRoomReward` exclusion. `NemesisRandomEvent` then replaces the
+inherited `NonCombat` event list with `UnthreadedEvents = {}`, so the already
+drawn incoming reward is not spawned. Encounter selection does not refund or
+replace the reward-bag draw.
 
-### H Fields behavior
+The clean F, G, and I combat event sequences call `SpawnRoomReward` before
+settling the Nemesis kill-race wager. H combat uses its Fields-specific event
+sequence and does not spawn a second reward because the active cage already
+owns one. This is the clean combat behavior the Planner currently models.
 
-H has no singular main-room reward. The random event replaces the non-counting
-passive encounter, while active cage encounters and their rewards remain.
+Combat and random-event occurrences share `NoRecentNemesisEncounter`: the
+source looks back 99 rooms across the Nemesis combat variants, the ordinary
+random event, and the Bridge event. They also share the six-room
+`NoRecentFieldNPCEncounter` spacing rule. The ordinary random event is limited
+to one occurrence per biome, and H separately excludes a second H combat or
+random event in that biome.
 
-`BlockMaxBonusRewards` can reserve an NPC position by reducing optional Fields
-bonus positions when every point would otherwise be occupied. This does not
-identify or rewrite one particular cage reward. The Fields-only
-`MoneyDropStore = 25` caps ordinary enemy Gold drops; it is not a room-reward
-replacement declaration.
+### Ordinary random-event family matrix
 
-`NemesisCombatH` is a separate counting member of `HEncountersDefault` and can
-occupy a cage encounter.
+| Family         | Game-selected request or result                                                                     | Player response                                                            | Produced pickup                                                                                     |
+| -------------- | --------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| free item      | one eligible `EmptyMaxHealthDrop`, `HealDrop`, `LastStandDrop`, or `ArmorBoost`                     | none                                                                       | optional                                                                                            |
+| Gold trade     | one eligible health, magick, Pom, or Hammer item plus an inclusive rolled Gold price                | accept or decline; insufficient Gold disables accept                       | required on accept; absent on decline                                                               |
+| damage trade   | one eligible health, magick, Pom, Gold, or `TalentDrop` item plus an inclusive rolled damage amount | accept or decline; the source deals pure damage before creating the reward | required on surviving accept; absent on decline or death                                            |
+| trait trade    | one eligible equipped god trait, preferring Common when any exist                                   | accept or decline                                                          | removes that exact trait and creates required `RoomMoneyTripleDrop` on accept; no change on decline |
+| damage contest | success or failure, then one eligible result from the corresponding pool                            | deal damage after starting the five-second contest                         | optional                                                                                            |
 
-### Shop and combat-wager behavior
+The free-item pool includes `LastStandDrop` only while `MissingLastStand` is
+true. It has no accept/decline step.
 
-`NemesisShopping` and `HeraclesShopping` are Shop-owned events. They are not
-members of ordinary combat-phase selection merely because the same NPC can
-appear there.
+The Gold-trade result and price domains in `NPCData.lua` are:
 
-After a Nemesis combat kill race, `HandleNemesisEncounterReward` compares
-Melinoe and Nemesis kills. The result can add or remove a wager of up to 100
-Gold; a tie leaves Gold unchanged. This economy effect exists in addition to
-the combat encounter identity.
+| Result             | Entered-biome condition                           | Inclusive Gold price |
+| ------------------ | ------------------------------------------------- | -------------------- |
+| `MaxHealthDrop`    | `EnteredBiomes <= 2`                              | 105–130              |
+| `MaxHealthDropBig` | `EnteredBiomes > 2`                               | 230–255              |
+| `MaxManaDrop`      | `EnteredBiomes <= 2`                              | 80–105               |
+| `MaxManaDropBig`   | `EnteredBiomes > 2`                               | 180–205              |
+| `StackUpgrade`     | `EnteredBiomes <= 1` and Pom legal                | 80–105               |
+| `StackUpgradeBig`  | `EnteredBiomes > 1` and Pom legal                 | 280–305              |
+| `WeaponUpgrade`    | an early- or late-Hammer requirement is satisfied | 180–205              |
+
+The damage-trade pool uses the same health and magick split at two entered
+biomes and the same Pom split after one entered biome. The early result costs
+10–20 damage; each corresponding late result costs 20–40. `RoomMoneyDrop`
+uses 10–20 through the first entered biome and 20–40 afterward. `TalentDrop`
+always costs 10–20 and is present only when `TalentLegal` is true. The repeat
+interaction family also requires `NoHitShieldAvailable`. The current source
+offers Path of Stars (`TalentDrop`), not Psyche.
+
+The trait trade is eligible only when the hero owns a rarity-bearing trait for
+which `IsGodTrait(..., ForShop = true)` succeeds. Trade construction selects
+exactly one trait, randomly among Common candidates when any exist and
+otherwise randomly among all eligible candidates. Acceptance removes that
+exact trait before creating the Gold pickup.
+
+The damage contest starts its five-second timer on the first hit. At 1,000
+damage, it selects one eligible `MaxHealthDrop`, `MaxManaDrop`, `StackUpgrade`,
+`RoomMoneyDrop`, or `TalentDrop`; Pom and Path of Stars retain their ordinary
+legality requirements. Failure produces `RoomRewardConsolationPrize`. Reaching
+2,000 damage changes presentation only and does not alter the success pool.
+
+### Interaction gate and generated-pickup behavior
+
+Spawning Nemesis adds the NPC to `MapState.RoomRequiredObjects`. Ordinary
+dialogue clears that required object after the interaction. The damage contest
+deliberately skips the ordinary clear and releases the gate only after its
+timer and result resolve. Thus the Nemesis contact is required even when its
+generated item is optional.
+
+Accepted trades add their generated result to `RoomRequiredObjects`. Free-item
+and damage-contest results do not, so those pickups remain optional. Generated
+consumables use the ordinary pickup path with `NPCDrop = true`; that flag
+disables the usual Money/health reward multipliers but does not create a
+Nemesis-specific acquisition lifecycle.
+
+The exact concrete declaration continues to determine pickup capabilities:
+
+| Result identity                        | Sea Star | Time Piece | Artificer | Echo last reward |
+| -------------------------------------- | -------- | ---------- | --------- | ---------------- |
+| `EmptyMaxHealthDrop`                   | yes      | yes        | no        | no               |
+| `HealDrop`                             | yes      | no         | no        | no               |
+| `LastStandDrop`                        | yes      | yes        | no        | no               |
+| `ArmorBoost`                           | yes      | yes        | no        | no               |
+| `MaxHealthDrop`, `MaxHealthDropBig`    | yes      | yes        | no        | yes              |
+| `MaxManaDrop`, `MaxManaDropBig`        | yes      | yes        | no        | yes              |
+| `StackUpgrade`, `StackUpgradeBig`      | yes      | yes        | no        | yes              |
+| `WeaponUpgrade`                        | no       | yes        | no        | yes              |
+| `RoomMoneyDrop`, `RoomMoneyTripleDrop` | yes      | no         | no        | yes              |
+| `TalentDrop`                           | yes      | yes        | no        | yes              |
+| `RoomRewardConsolationPrize`           | yes      | yes        | no        | no               |
+
+These capabilities apply at the actual generated pickup. Converting the item
+first prevents its normal pickup, Sea Star roll, and last-reward update. None
+of the ordinary Nemesis results inherits `MetaConversionEligible`, so none is
+an Artificer source. A Nemesis Gold or damage trade is not a Shop purchase: the
+accepted exchange creates a later required pickup and that pickup retains its
+ordinary declaration capabilities.
+
+### H Fields capacity and chronology
+
+H generates and locks its cage rewards first. It then generates optional
+Fields rewards independently. When `BlockMaxBonusRewards` is active and the
+optional result count would occupy every physical bonus spawn point,
+`GenerateOptionalRewards` clamps that count to `#BonusRewardSpawnPoints - 1`.
+This reserves one physical position for Nemesis; it does not disable the
+separate optional-reward generator, consume a Fields optional-reward bag entry,
+or remove a cage reward. The clamp is conditional: when chance rolls already
+produce fewer optional rewards than the number of physical points, no count is
+decremented.
+
+The normalized H declarations expose physical optional capacities from two to
+four. Enabling the random event therefore leaves up to `capacity - 1` ordinary
+optional rewards. For example, a four-position room can contain Nemesis and up
+to three generated optional rewards.
+
+Nemesis does not declare `BlockFieldsEncounterStart`. The required interaction
+may therefore occur before, between, or after cage interactions, but it must
+resolve before room exit. `NemesisCombatH` remains a separate counting cage
+encounter and is not this passive room feature.
+
+The Fields-only `MoneyDropStore = 25` caps ordinary enemy Gold drops during the
+random event. It is not a room-reward replacement or a generated event pickup.
+
+### Adjacent behavior excluded from the random-event model
+
+`BridgeNemesisRandomEvent` is a separate, one-time progression encounter with
+its own premium free-item pool. It is outside the Planner's run-local Nemesis
+model.
+
+`NemesisShopping` is Shop-owned behavior. Nemesis takes long enough to buy an
+item that the player can purchase an intended offer first; modeling shop theft
+would add timing without improving route validity, so it is excluded. The
+current source event steals one Shop item and then calls
+`NemesisTeleportExitPresentation`; it does not call `NemesisTakeRoomExit` or
+disable an offered exit.
+
+After an ordinary random event, `NemesisTakeRoomExit` first filters the offered
+doors to exits without an encounter cost and whose health cost, if any, the
+player can afford. With one or fewer eligible exits, Nemesis teleports away and
+steals nothing. With two or more, the game randomly chooses one; it can be the
+Planner's intended continuation unless the player has already begun using it.
+
+A Chaos gate participates in this calculation. `HandleSecretSpawns` creates it
+as `ObstacleData.SecretDoor`, assigns its Chaos room through
+`AssignRoomToExitDoor`, and therefore inserts it into
+`MapState.OfferedExitDoors`. It has a health cost and no encounter cost, so it
+is eligible for Nemesis only while current health is strictly greater than the
+gate cost. If stolen, its `TrialUpgrade` reward identity is recorded in
+`NemesisTakeExitRecord` like any other offered exit.
+
+The Planner does not model current health. It therefore treats every authored
+natural Chaos gate as affordable and includes it in the eligible-exit count.
+
+The authored Zagreus Contract special exit does not participate in door theft.
+In source it is also assigned through `AssignRoomToExitDoor` and can coexist
+with `NemesisShopping` in a supported Shop room. That Shop event uses its
+separate item-theft path and teleports Nemesis away; it never invokes the door
+theft function. Conversely, Nemesis combat and `NemesisRandomEvent`, which do
+invoke door theft, are not Shop-room encounters. The Planner therefore protects
+every Shop exit, including a selected or unselected Zagreus Contract, and
+excludes `zagreusContract` from Nemesis's eligible-exit count.
+
+The Planner makes this timing race simulation-neutral. A room with one eligible
+exit has no theft. In a room with two or three eligible exits, the authored
+selected continuation is protected and Nemesis is treated as taking one of the
+nonselected exits. Because the removed exit cannot affect the authored route,
+the Planner persists no theft state. This conclusion follows directly from the
+source branch: theft is unreachable with one eligible exit, while two or more
+eligible exits guarantee at least one other candidate after protecting exactly
+one authored continuation. A selected Chaos continuation receives the same
+protection; an eligible unselected Chaos gate can be the simulation-neutral
+stolen alternative.
+
+After a clean Nemesis combat kill race, `HandleNemesisEncounterReward` compares
+Melinoe and Nemesis kills. It can add or remove a wager of up to 100 Gold; a tie
+does nothing. The encounter and ordinary reward timing are modeled, while the
+scalar wager outcome remains deferred.
+
+### Settled Planner disposition
+
+- The existing clean Nemesis combat representation remains the complete I
+  model and remains available in F, G, and H.
+- F and G persist one realized Nemesis encounter subtype: clean combat or one
+  of the five random-event families. A random event suppresses delivery of the
+  already-drawn incoming reward while preserving its exact identity and
+  reward-bag consumption.
+- Although the game selects H Nemesis instead of the generated passive
+  encounter identity, the Planner persists it as an additive required room
+  feature because the separate optional-reward generator still runs. Nemesis
+  sets the optional-reward upper bound to `capacity - 1`; it does not remove an
+  already generated reward when the chance-rolled count is lower. It leaves
+  cage rewards untouched and can be ordered freely among room interactions
+  before exit. Retained authored states exceeding the resulting upper bound
+  remain repairable rather than being silently truncated.
+- One route-wide Nemesis occurrence rule covers clean combat and ordinary
+  random events. The shared six-room field-NPC spacing rule also applies.
+- The Planner authors the realized family and request or result rather than
+  simulating profile history, text-line selection, or RNG. Free item and
+  contest persist the selected item; Gold and damage trades also persist their
+  bounded rolled amount and accept/decline response; trait trade persists the
+  selected eligible trait and response. Scalar Gold affordability, health,
+  death, and the 2,000-damage presentation tier remain outside simulation.
+- Event-generated rewards use the ordinary acquisition and pickup semantics
+  for their concrete declarations. Requiredness comes from the event family,
+  trait trade reuses ordinary trait removal, and pickup alternatives remain
+  available only at the actual pickup.
+- Door theft is simulation-neutral: it is absent with one eligible exit, while
+  a multiple-exit room protects the authored continuation and assigns theft to
+  a nonselected exit. Authored natural Chaos always counts as eligible because
+  health is unmodeled. A Zagreus Contract exit never counts: it can coexist
+  with the separate Nemesis Shop event, but that event steals an item rather
+  than a door, so every Shop exit is protected. Bridge progression, Shop theft,
+  and combat-wager economy are not added to the authored Nemesis state.
+
+At the audited Planner boundary, the four clean combat identities are present,
+but the route exclusion still names only those four identities. The ordinary
+random event, its H room feature, its source/result state, and its generated
+pickups are not modeled. The normalized reward catalog also lacks the exact
+`EmptyMaxHealthDrop`, `HealDrop`, and `RoomRewardConsolationPrize` identities;
+similarly named existing rewards are not substitutes for those source objects.
 
 ## Enemy-Composition Pipeline
 
@@ -613,7 +825,7 @@ probes should separately test pool narrowing, exact types, and exact waves.
 These probes are evidence work. They do not imply a planner schema or runtime
 adapter design.
 
-## Current planner disposition
+## Current P planner disposition
 
 The planner keeps P's exact `Intro` and `Combat` selections in the ordinary
 phase-based authored state. Shared sequential preparation records the valid
