@@ -823,6 +823,18 @@ export function materializeAuthoredRoom(
           siteKey,
         ))) ||
     activePickupEntries.has(`${siteKey}\u0000${key}`);
+  // Anomaly and the Nemesis event are both evaluated acquisition dispositions:
+  // the authored incoming draw remains intact, but its lifecycle producer is
+  // disabled while the selected encounter owns the room's required contact.
+  const suppressesIncomingReward = selectedEncounterPhases.some(
+    (phase) =>
+      context.catalog.encounterDefinitions.byKey[phase.encounterKey]?.suppressesIncomingReward ===
+      true,
+  );
+  const incomingReward =
+    leaf.incomingReward === undefined || !suppressesIncomingReward
+      ? leaf.incomingReward
+      : Object.freeze({ ...leaf.incomingReward, acquisitionEnabled: false });
   const base = Object.freeze({
     kind: 'authored',
     origin: createOccurrenceAddress(context.biome, context.occurrence.occurrenceId),
@@ -869,7 +881,7 @@ export function materializeAuthoredRoom(
     ...(context.room.requiredObjects === undefined
       ? {}
       : { requiredObjects: context.room.requiredObjects }),
-    ...(leaf.incomingReward === undefined ? {} : { incomingReward: leaf.incomingReward }),
+    ...(incomingReward === undefined ? {} : { incomingReward }),
     ...(leaf.unresolvedIncomingReward === undefined
       ? {}
       : { unresolvedIncomingReward: leaf.unresolvedIncomingReward }),
@@ -880,6 +892,9 @@ export function materializeAuthoredRoom(
     ...(leaf.fieldsOptionalRewards === undefined
       ? {}
       : { fieldsOptionalRewards: leaf.fieldsOptionalRewards }),
+    ...(context.occurrence.state.kind !== 'fieldsCombat'
+      ? {}
+      : { fieldsOptionalRewardCount: context.occurrence.state.optionalRewardCount }),
     ...(leaf.unresolvedFieldsOptionalRewards === undefined
       ? {}
       : { unresolvedFieldsOptionalRewards: leaf.unresolvedFieldsOptionalRewards }),
@@ -893,6 +908,7 @@ export function materializeAuthoredRoom(
     biome: context.biome,
     occurrence: context.occurrence,
     lifecycleProfileKey: base.lifecycleProfileKey,
+    incomingRewardActive: base.incomingReward?.acquisitionEnabled !== false,
     activeEncounterSlotKeys: base.encounterPhases.map((phase) => phase.slotKey),
     shopInventoryActive: base.entryState?.kind === 'shop',
     ...(base.rewardWheels === undefined

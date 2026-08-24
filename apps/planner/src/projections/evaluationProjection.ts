@@ -432,6 +432,18 @@ const findingCopy = {
     title: 'Steady Growth target unavailable',
     description: 'Choose a trait that can gain rarity at this checkpoint.',
   },
+  fieldsOptionalCapacityUnavailable: {
+    title: 'Nemesis needs one reward position',
+    description: 'Reduce optional rewards by one while the Nemesis room feature is active.',
+  },
+  nemesisOutcomeMissing: {
+    title: 'Choose the Nemesis event result',
+    description: 'Record what Nemesis asks or offers at this interaction.',
+  },
+  nemesisOutcomeUnavailable: {
+    title: 'Nemesis event result unavailable',
+    description: 'Choose a result supported by every reached branch at this interaction.',
+  },
 } as const satisfies Readonly<Record<FindingCode, FindingPresentation>>;
 
 const projectStatusCopy = {

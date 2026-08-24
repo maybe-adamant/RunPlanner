@@ -1,6 +1,7 @@
 import {
   semanticAddressKey,
   type EncounterPhaseAddress,
+  type NemesisRandomEventAddress,
   type OccurrenceAddress,
 } from '../../authored-project/addresses';
 import { projectRoomPreparationCheckpoint } from '../history/facts';
@@ -24,6 +25,7 @@ import type { Catalog } from '../../catalog-schema';
 import type { FigLeafPhaseCandidateSupport } from '../rewards/model';
 import { assessGorgonCandidate, type GorgonLifecycleStatus } from '../keepsakes';
 import type { GorgonPhaseCandidateSupport } from '../rewards/model';
+import type { NemesisRandomEventCandidateSupport } from '../rewards/model';
 
 /** Private capability from the exact simulation assembly. */
 export interface EncounterCandidateArtifacts {
@@ -31,6 +33,10 @@ export interface EncounterCandidateArtifacts {
   readonly statusAt: (origin: EncounterPhaseAddress) => EncounterPhaseSequenceStatus | undefined;
   /** Exact reached/pending Gorgon control capability for this phase. */
   readonly gorgonAt: (origin: EncounterPhaseAddress) => GorgonPhaseCandidateSupport | undefined;
+  /** Exact branch-correlated Nemesis event capability at its interaction owner. */
+  readonly nemesisAt: (
+    origin: NemesisRandomEventAddress,
+  ) => NemesisRandomEventCandidateSupport | undefined;
   /**
    * A top-level room's exact preparation checkpoint, retained for structural
    * authoring candidates that materialize a different encounter envelope.
@@ -106,6 +112,7 @@ export function evaluateEncounterCandidatesInternal(
   figLeafCandidates: readonly FigLeafPhaseCandidateSupport[] = [],
   gorgonStatus: GorgonLifecycleStatus | undefined = undefined,
   gorgonPhaseCandidates: readonly GorgonPhaseCandidateSupport[] = [],
+  nemesisRandomEventCandidates: readonly NemesisRandomEventCandidateSupport[] = [],
 ): EncounterCandidateEvaluation & { readonly findingRegions: readonly FindingRegionEntry[] } {
   const entries = new Map<string, EncounterPhaseCandidateSupport>();
   const statuses = new Map<string, EncounterPhaseSequenceStatus>();
@@ -199,6 +206,12 @@ export function evaluateEncounterCandidatesInternal(
   const privateGorgon = new Map(
     gorgonPhaseCandidates.map((candidate) => [semanticAddressKey(candidate.origin), candidate]),
   );
+  const privateNemesis = new Map(
+    nemesisRandomEventCandidates.map((candidate) => [
+      semanticAddressKey(candidate.origin),
+      candidate,
+    ]),
+  );
   const gorgonSupport = new Map<string, GorgonPhaseCandidateSupport>();
   for (const [key, support] of entries) {
     const exact = privateGorgon.get(key);
@@ -219,6 +232,8 @@ export function evaluateEncounterCandidatesInternal(
       at: (origin: EncounterPhaseAddress) => privateEntries.get(semanticAddressKey(origin)),
       statusAt: (origin: EncounterPhaseAddress) => privateStatuses.get(semanticAddressKey(origin)),
       gorgonAt: (origin: EncounterPhaseAddress) => gorgonSupport.get(semanticAddressKey(origin)),
+      nemesisAt: (origin: NemesisRandomEventAddress) =>
+        privateNemesis.get(semanticAddressKey(origin)),
       roomAt: (origin: OccurrenceAddress) => privateRooms.get(semanticAddressKey(origin)),
       figLeafAt: (origin: EncounterPhaseAddress) => privateFigLeaf.get(semanticAddressKey(origin)),
     }),

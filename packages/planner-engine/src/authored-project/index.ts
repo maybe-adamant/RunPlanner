@@ -244,6 +244,7 @@ export {
   type AuthoredFieldValue,
   type AuthoredRoomState,
   type AuthoredRewardState,
+  type AuthoredNemesisRandomEventOutcome,
   type AcquisitionDisposition,
   type TraitOffersByAcquisitionRole,
   type AuthoredRoutePlan,

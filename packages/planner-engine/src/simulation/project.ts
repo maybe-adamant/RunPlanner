@@ -6,6 +6,7 @@ import {
   type BiomeAddress,
   type AcquisitionSiteAddress,
   type EncounterPhaseAddress,
+  type NemesisRandomEventAddress,
   type KeepsakeEquipResultAddress,
   type LevelResolutionAddress,
   type TraitOfferAddress,
@@ -61,6 +62,7 @@ import type {
   EncounterPhaseCandidateSupport,
   EncounterPhaseSequenceStatus,
 } from './encounters/preparation';
+import type { NemesisRandomEventCandidateSupport } from './rewards/model';
 import { isAcquisitionAuthorshipMissingFinding, type SemanticFinding } from './model';
 import type { FindingRegionEntry } from './finding-regions';
 import {
@@ -416,6 +418,16 @@ export function encounterPhaseGorgonSupportForProjectEvaluationAssembly(
     ?.encounters.gorgonAt(phase);
 }
 
+/** Exact branch-correlated candidate capability for one reached Nemesis event. */
+export function nemesisRandomEventCandidateSupportForProjectEvaluationAssembly(
+  assembly: ProjectEvaluationAssembly,
+  event: NemesisRandomEventAddress,
+): NemesisRandomEventCandidateSupport | undefined {
+  return candidateArtifactsForProjectEvaluationAssembly(assembly)
+    .biomeAt(createBiomeAddress(event.routeKey, event.biomeKey))
+    ?.encounters.nemesisAt(event);
+}
+
 /**
  * Supported exact-assembly query for one structurally declared encounter
  * phase. Unlike candidate support, this preserves the distinction between an
@@ -626,6 +638,7 @@ function generation(
     rewards.figLeafPhaseCandidates,
     gorgonStatus,
     rewards.gorgonPhaseCandidates,
+    rewards.nemesisRandomEventCandidates,
   );
   const encounterArtifacts = encounters.artifacts;
   const validation: BiomeGenerationValidation = Object.freeze({
@@ -959,6 +972,19 @@ function evaluateBiomeAssembly(
     rewards.traitOfferArtifacts,
     rewards.levelResolutionArtifacts,
   );
+  const nemesisByOwner = new Map(
+    rewards.simulation.nemesisRandomEventCandidates.map((candidate) => [
+      semanticAddressKey(candidate.origin),
+      candidate,
+    ]),
+  );
+  // Reward simulation reaches the actual interaction frontier, while
+  // encounter preparation owns the rest of the encounter capability. Compose
+  // the one narrow event surface here without exposing either artifact map.
+  const encounterArtifacts = Object.freeze({
+    ...roomGeneration.candidateArtifacts.encounters,
+    nemesisAt: (event: NemesisRandomEventAddress) => nemesisByOwner.get(semanticAddressKey(event)),
+  });
   const findings = Object.freeze([
     ...roomGeneration.validation.findings,
     ...rewards.simulation.findings,
@@ -982,7 +1008,7 @@ function evaluateBiomeAssembly(
         roomGeneration.candidateArtifacts.roomTargets,
         roomGeneration.candidateArtifacts.rewardProducers,
         roomGeneration.candidateArtifacts.roomLifecycles,
-        roomGeneration.candidateArtifacts.encounters,
+        encounterArtifacts,
         roomGeneration.candidateArtifacts.traitOffers,
         roomGeneration.candidateArtifacts.levelResolutions,
         rewards.bossCompletionArcanaArtifacts,
@@ -1010,7 +1036,7 @@ function evaluateBiomeAssembly(
         roomGeneration.candidateArtifacts.roomTargets,
         roomGeneration.candidateArtifacts.rewardProducers,
         roomGeneration.candidateArtifacts.roomLifecycles,
-        roomGeneration.candidateArtifacts.encounters,
+        encounterArtifacts,
         roomGeneration.candidateArtifacts.traitOffers,
         roomGeneration.candidateArtifacts.levelResolutions,
         rewards.bossCompletionArcanaArtifacts,

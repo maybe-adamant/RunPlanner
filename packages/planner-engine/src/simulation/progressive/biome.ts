@@ -17,6 +17,7 @@ import {
   type AcquisitionRoleAddress,
   type AcquisitionEntryAddress,
   type SteadyGrowthOutcomeAddress,
+  type NemesisRandomEventAddress,
 } from '../../authored-project/addresses';
 import type { AuthoredBiomePlan, RouteLoadout } from '../../authored-project/model';
 import { evaluateBiomeRoomGenerationAssemblyInternal } from '../generation/biome';
@@ -191,6 +192,7 @@ function generation(
     rewards.figLeafPhaseCandidates,
     attestGorgonBranchState(rewards.branches),
     rewards.gorgonPhaseCandidates,
+    rewards.nemesisRandomEventCandidates,
   );
   const validation: BiomeGenerationValidation = Object.freeze({
     validity:
@@ -550,6 +552,8 @@ function retainBlockedRegionProducts(
     blockedAt.kind === 'bossCompletionArcana' ? blockedAt : undefined;
   const blockedSteadyGrowthAt: SteadyGrowthOutcomeAddress | undefined =
     blockedAt.kind === 'steadyGrowthOutcome' ? blockedAt : undefined;
+  const blockedNemesisAt: NemesisRandomEventAddress | undefined =
+    blockedAt.kind === 'nemesisRandomEvent' ? blockedAt : undefined;
   const blockedKeepsakeAt: KeepsakeSelectionAddress | undefined =
     blockedAt.kind === 'keepsakeSelection' ? blockedAt : undefined;
   const blockedKeepsakeEquipResultAt: KeepsakeEquipResultAddress | undefined =
@@ -906,19 +910,35 @@ function retainBlockedRegionProducts(
               ? shipCapability
               : retainedArtifacts.roomLifecycles.shipAt(owner),
         });
-  const encounters: EncounterCandidateArtifacts =
+  const encounterBase: EncounterCandidateArtifacts =
     encounterCapability === undefined
       ? retainedArtifacts.encounters
       : Object.freeze({
           at: retainedArtifacts.encounters.at,
           statusAt: retainedArtifacts.encounters.statusAt,
           gorgonAt: retainedArtifacts.encounters.gorgonAt,
+          nemesisAt: retainedArtifacts.encounters.nemesisAt,
           figLeafAt: retainedArtifacts.encounters.figLeafAt,
           roomAt: (owner: OccurrenceAddress) =>
             occurrenceOwner !== undefined &&
             semanticAddressKey(owner) === semanticAddressKey(occurrenceOwner)
               ? encounterCapability
               : retainedArtifacts.encounters.roomAt(owner),
+        });
+  const blockedNemesisCapability =
+    blockedNemesisAt === undefined
+      ? undefined
+      : (selectedArtifacts.encounters.nemesisAt(blockedNemesisAt) ??
+        blockedArtifacts.encounters.nemesisAt(blockedNemesisAt));
+  const encounters: EncounterCandidateArtifacts =
+    blockedNemesisAt === undefined || blockedNemesisCapability === undefined
+      ? encounterBase
+      : Object.freeze({
+          ...encounterBase,
+          nemesisAt: (address: NemesisRandomEventAddress) =>
+            semanticAddressKey(address) === semanticAddressKey(blockedNemesisAt)
+              ? blockedNemesisCapability
+              : retainedArtifacts.encounters.nemesisAt(address),
         });
   const artifacts = createBiomeCandidateArtifacts(
     retainedArtifacts.origin,
@@ -1041,6 +1061,7 @@ function findingOwnerOrigin(finding: SemanticFinding): SemanticAddress {
     origin.kind === 'echoLastRunBoon' ||
     origin.kind === 'echoLastReward' ||
     origin.kind === 'allTogetherSet' ||
+    origin.kind === 'nemesisRandomEvent' ||
     origin.kind === 'steadyGrowthOutcome' ||
     origin.kind === 'acquisitionEntry' ||
     origin.kind === 'acquisitionSite'
@@ -1048,19 +1069,21 @@ function findingOwnerOrigin(finding: SemanticFinding): SemanticAddress {
     origin =
       origin.kind === 'acquisitionRole'
         ? origin.owner
-        : origin.kind === 'acquisitionEntry'
-          ? origin.site
-          : origin.kind === 'acquisitionSite'
-            ? origin.owner
-            : origin.kind === 'naturalSelectionResult' ||
-                origin.kind === 'traitAcquisitionTarget' ||
-                origin.kind === 'circeResolution' ||
-                origin.kind === 'echoPomTarget' ||
-                origin.kind === 'echoLastRunBoon' ||
-                origin.kind === 'echoLastReward' ||
-                origin.kind === 'allTogetherSet'
-              ? origin.trait
-              : origin.owner;
+        : origin.kind === 'nemesisRandomEvent'
+          ? origin.encounter
+          : origin.kind === 'acquisitionEntry'
+            ? origin.site
+            : origin.kind === 'acquisitionSite'
+              ? origin.owner
+              : origin.kind === 'naturalSelectionResult' ||
+                  origin.kind === 'traitAcquisitionTarget' ||
+                  origin.kind === 'circeResolution' ||
+                  origin.kind === 'echoPomTarget' ||
+                  origin.kind === 'echoLastRunBoon' ||
+                  origin.kind === 'echoLastReward' ||
+                  origin.kind === 'allTogetherSet'
+                ? origin.trait
+                : origin.owner;
   }
   return origin;
 }
@@ -1077,6 +1100,7 @@ export function ownsOccurrence(origin: SemanticAddress, occurrenceId: string): b
     origin.kind === 'echoLastRunBoon' ||
     origin.kind === 'echoLastReward' ||
     origin.kind === 'allTogetherSet' ||
+    origin.kind === 'nemesisRandomEvent' ||
     origin.kind === 'steadyGrowthOutcome' ||
     origin.kind === 'acquisitionEntry' ||
     origin.kind === 'acquisitionSite'
@@ -1084,19 +1108,21 @@ export function ownsOccurrence(origin: SemanticAddress, occurrenceId: string): b
     return ownsOccurrence(
       origin.kind === 'acquisitionRole'
         ? origin.owner
-        : origin.kind === 'acquisitionEntry'
-          ? origin.site
-          : origin.kind === 'acquisitionSite'
-            ? origin.owner
-            : origin.kind === 'naturalSelectionResult' ||
-                origin.kind === 'traitAcquisitionTarget' ||
-                origin.kind === 'circeResolution' ||
-                origin.kind === 'echoPomTarget' ||
-                origin.kind === 'echoLastRunBoon' ||
-                origin.kind === 'echoLastReward' ||
-                origin.kind === 'allTogetherSet'
-              ? origin.trait
-              : origin.owner,
+        : origin.kind === 'nemesisRandomEvent'
+          ? origin.encounter
+          : origin.kind === 'acquisitionEntry'
+            ? origin.site
+            : origin.kind === 'acquisitionSite'
+              ? origin.owner
+              : origin.kind === 'naturalSelectionResult' ||
+                  origin.kind === 'traitAcquisitionTarget' ||
+                  origin.kind === 'circeResolution' ||
+                  origin.kind === 'echoPomTarget' ||
+                  origin.kind === 'echoLastRunBoon' ||
+                  origin.kind === 'echoLastReward' ||
+                  origin.kind === 'allTogetherSet'
+                ? origin.trait
+                : origin.owner,
       occurrenceId,
     );
   if ('occurrenceId' in origin && origin.occurrenceId === occurrenceId) return true;

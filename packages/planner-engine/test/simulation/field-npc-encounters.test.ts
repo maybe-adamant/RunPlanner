@@ -8,6 +8,7 @@ import {
   createIncomingRewardAddress,
   createLocalVisitOrderAddress,
   createLocalVisitSlotAddress,
+  createNemesisRandomEventAddress,
   createTraitOfferAddress,
   createOccurrenceId,
   createOccurrenceAddress,
@@ -35,6 +36,7 @@ import type {
 } from '@run-planner/engine/catalog-schema';
 import {
   encounterPhaseCandidateSupportForProjectEvaluationAssembly,
+  nemesisRandomEventCandidateSupportForProjectEvaluationAssembly,
   encounterPhaseSequenceStatusForProjectEvaluationAssembly,
   createPreparedProjectCandidateSession,
   simulateProject,
@@ -1127,10 +1129,11 @@ describe('field NPC encounter requirements', () => {
     );
   });
 
-  it('keeps Nemesis combat route-once, shared-six spaced, and independent from ordinary rewards', () => {
+  it('keeps Nemesis combat and random events route-once, shared-six spaced, and independent from ordinary rewards', () => {
     const nemesisF = phase(goldenFBiome, goldenFOccurrenceId(5, 1));
     const followingArtemis = phase(goldenFBiome, goldenFOccurrenceId(7, 1));
     const nemesisG = phase(goldenGBiome, goldenGOccurrenceId(4, 1));
+    const nemesisH = phase(goldenHBiome, createOccurrenceId('golden-h-combat05'), 'Passive');
     const nemesisI = phase(goldenIBiome, createOccurrenceId('golden-i-combat09'));
     const initial = createGoldenFGHIProject();
     const retainedIncomingReward = authoredOccurrence(
@@ -1172,10 +1175,64 @@ describe('field NPC encounter requirements', () => {
     expect(support(withNemesis, nemesisG)?.candidateEncounterKeys).not.toContain('NemesisCombatG');
     expect(support(withNemesis, nemesisI)?.candidateEncounterKeys).not.toContain('NemesisCombatI');
 
+    const withRandomEvent = applyProjectCommand(
+      select(initial, nemesisF, 'NemesisRandomEvent'),
+      catalog,
+      {
+        kind: 'ReplaceNemesisRandomEventOutcome',
+        event: createNemesisRandomEventAddress(nemesisF),
+        value: { kind: 'freeItem' },
+        reward: { rewardType: 'ArmorBoost' },
+      },
+    );
+    expect(support(withRandomEvent, followingArtemis)?.candidateEncounterKeys).not.toContain(
+      'NemesisRandomEvent',
+    );
+    expect(support(withRandomEvent, followingArtemis)?.candidateEncounterKeys).not.toContain(
+      'NemesisCombatF',
+    );
+    expect(support(withRandomEvent, nemesisG)?.candidateEncounterKeys).not.toContain(
+      'NemesisRandomEvent',
+    );
+    expect(support(withRandomEvent, nemesisG)?.candidateEncounterKeys).not.toContain(
+      'NemesisCombatG',
+    );
+    expect(support(withRandomEvent, nemesisH)?.candidateEncounterKeys).not.toContain(
+      'NemesisRandomEvent',
+    );
+    expect(support(withRandomEvent, nemesisI)?.candidateEncounterKeys).not.toContain(
+      'NemesisCombatI',
+    );
+
     const withArachne = select(initial, nemesisF, 'ArachneCombatF');
     expect(support(withArachne, followingArtemis)?.candidateEncounterKeys).toContain(
       'ArtemisCombatF',
     );
+  }, 10_000);
+
+  it('publishes the random-event interaction domain at its exact owner without flattening branches', () => {
+    const nemesisF = phase(goldenFBiome, goldenFOccurrenceId(5, 1));
+    const initial = createGoldenFGHIProject();
+    expect(support(initial, nemesisF)?.candidateEncounterKeys).toContain('NemesisRandomEvent');
+    const selected = select(initial, nemesisF, 'NemesisRandomEvent');
+    const assembly = simulateProjectAssembly(catalog, selected);
+    const capability = nemesisRandomEventCandidateSupportForProjectEvaluationAssembly(
+      assembly,
+      createNemesisRandomEventAddress(nemesisF),
+    );
+    expect(capability?.branches.length).toBeGreaterThan(0);
+    expect(capability?.familyKeys).toEqual([
+      'freeItem',
+      'goldTrade',
+      'damageTrade',
+      'traitTrade',
+      'damageContest',
+    ]);
+    expect(
+      assembly.evaluation.routes
+        .flatMap((route) => route.biomes)
+        .find((biome) => biome.origin.biomeKey === 'F')?.findings,
+    ).toContainEqual(expect.objectContaining({ code: 'nemesisOutcomeMissing' }));
   }, 10_000);
 
   it('records Nemesis Cage01 before evaluating Cage02 without starting its depth effect', () => {

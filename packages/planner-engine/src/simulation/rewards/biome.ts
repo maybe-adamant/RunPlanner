@@ -1,6 +1,9 @@
 import type { Catalog, BiomeLayout, RoomDeclaration } from '../../catalog-schema';
+import { evaluateRequirement } from '../../requirements';
+import { fieldsOptionalRewardCountSupport } from '../fields-optional-count';
 import {
   createEncounterPhaseAddress,
+  createNemesisRandomEventAddress,
   createGorgonPhaseAddress,
   createBiomeAddress,
   createTraitOfferAddress,
@@ -1457,6 +1460,10 @@ export function evaluateBiomeRewardsAssemblyInternal(
   >();
   const figLeafPhaseCandidates = new Map<string, import('./model').FigLeafPhaseCandidateSupport>();
   const gorgonPhaseCandidates = new Map<string, import('./model').GorgonPhaseCandidateSupport>();
+  const nemesisRandomEventCandidates = new Map<
+    string,
+    import('./model').NemesisRandomEventCandidateSupport
+  >();
   const blockedGorgonPhases = new Set<string>();
   let gorgonEvaluationBlocked = false;
   const eligibleGorgonPhases = new Set<string>();
@@ -1665,6 +1672,34 @@ export function evaluateBiomeRewardsAssemblyInternal(
     }
   >();
   const findings = new Map<string, FindingRegionEntry>();
+  // H's event is a passive room feature, not a replacement for any cage or
+  // optional leaf.  Keep an over-cap authored count materialized for repair,
+  // but make the one reserved physical optional position an evaluated error.
+  for (const room of rooms.values()) {
+    if (room.kind !== 'authored' || room.fieldsOptionalRewardCount === undefined) continue;
+    const passive = createEncounterPhaseAddress(
+      createBiomeAddress(room.origin.routeKey, room.origin.biomeKey),
+      { kind: 'occurrence' as const, occurrenceId: room.occurrenceId },
+      'Passive',
+    );
+    const owner = createNemesisRandomEventAddress(passive);
+    const support = fieldsOptionalRewardCountSupport(catalog, room, room.origin);
+    if (
+      support === undefined ||
+      !support.reservesNemesisPosition ||
+      room.fieldsOptionalRewardCount <= support.effectiveMaximum
+    )
+      continue;
+    addRewardFinding(
+      findings,
+      rewardFinding('fieldsOptionalCapacityUnavailable', owner, {
+        physicalCapacity: support.physicalMaximum,
+        effectiveCapacity: support.effectiveMaximum,
+        selectedCount: room.fieldsOptionalRewardCount,
+      }),
+      ownerRegion(owner),
+    );
+  }
   const producerFrontiers = new Map<string, RewardProducerFrontier>();
   const shipLifecycleContexts = new Map<string, ShipLifecycleCandidateContext>();
   const runStateSnapshotsByOwner = new Map<string, RunStateSnapshot>();
@@ -5179,6 +5214,211 @@ export function evaluateBiomeRewardsAssemblyInternal(
           event.phaseKey,
           semanticAddressKey(event.origin),
         );
+        // Nemesis uses the existing encounter interaction as its only source
+        // action.  Its accepted trait trade is intentionally a plain
+        // current-trait removal: the generated Triple Gold entry remains a
+        // later, ordinary acquisition action and therefore observes the
+        // post-removal trait frontier just like every other pickup.
+        if (
+          event.kind === 'encounterInteractionReached' &&
+          event.interaction === 'encounter' &&
+          selectedEncounterKey === 'NemesisRandomEvent'
+        ) {
+          const outcome = room.encounters.nemesisRandomEventByPhase?.[event.phaseKey];
+          const eventOwner = createNemesisRandomEventAddress(
+            createEncounterPhaseAddress(
+              createBiomeAddress(room.origin.routeKey, room.origin.biomeKey),
+              { kind: 'occurrence' as const, occurrenceId: room.occurrenceId },
+              event.phaseKey,
+            ),
+          );
+          const policy = catalog.encounterDefinitions.byKey.NemesisRandomEvent?.nemesisRandomEvent;
+          if (policy !== undefined) {
+            const traitDomain = (branch: RewardBranchState) => {
+              const traits = branch.traitHistory ?? createTraitHistoryState();
+              const eligible = Object.values(traits.equippedTraits).filter((equipped) => {
+                const declaration = catalog.traits.byKey[equipped.traitKey];
+                return (
+                  declaration !== undefined &&
+                  equipped.providerKind === 'olympian' &&
+                  equipped.rarity !== undefined
+                );
+              });
+              const common = eligible.filter((equipped) => equipped.rarity === 'Common');
+              return (common.length === 0 ? eligible : common).map((equipped) => equipped.traitKey);
+            };
+            const branchAssessments = branches.map((branch) => {
+              const facts = rewardFacts(
+                catalog,
+                room,
+                room,
+                declaration,
+                roomView.preOutgoing ?? roomView.entry,
+                branch.history,
+                enteredBiomeCount,
+              );
+              const runProgressLegal = (rewardType: string) => {
+                const canonicalRewardType =
+                  rewardType === 'StackUpgradeBig' ? 'StackUpgrade' : rewardType;
+                const entries = catalog.rewards.stores.byKey.RunProgress?.entries.filter(
+                  (entry) => entry.rewardType === canonicalRewardType,
+                );
+                // Plain consumable results are declaration-owned and have no
+                // RunProgress gate. For the three gated event categories,
+                // reuse the normalized store requirements rather than mirror
+                // Hammer, Pom, or Path policy here.
+                return (
+                  entries === undefined ||
+                  entries.length === 0 ||
+                  entries.some(
+                    (entry) =>
+                      entry.requirement === undefined ||
+                      evaluateRequirement(entry.requirement, facts.requirements),
+                  )
+                );
+              };
+              // NPCData names TalentLegal (rather than routeTalentLegal).
+              // The non-Shop event has no current-shop exclusion, leaving the
+              // source predicate's Spell Drop and all-invested facts.
+              const talentLegal =
+                (facts.requirements.records.useRecord.SpellDrop ?? 0) >= 1 &&
+                facts.requirements.flags.allSpellInvested !== true;
+              const applicable = (variant: {
+                readonly rewardType: string;
+                readonly enteredBiome: { readonly min?: number; readonly max?: number };
+                readonly requirement: string;
+              }) =>
+                (variant.enteredBiome.min === undefined ||
+                  enteredBiomeCount >= variant.enteredBiome.min) &&
+                (variant.enteredBiome.max === undefined ||
+                  enteredBiomeCount <= variant.enteredBiome.max) &&
+                (variant.requirement === 'none' ||
+                  (variant.requirement === 'pomLegal' && runProgressLegal('StackUpgrade')) ||
+                  (variant.requirement === 'hammerEarlyOrLate' &&
+                    runProgressLegal('WeaponUpgrade')) ||
+                  (variant.requirement === 'talentLegal' && talentLegal));
+              return Object.freeze({
+                freeItemRewardTypes: Object.freeze([...policy.freeItem.resultRewardTypes]),
+                goldTradeRewardTypes: Object.freeze(
+                  policy.goldTrade.variants.filter(applicable).map((variant) => variant.rewardType),
+                ),
+                damageTradeRewardTypes: Object.freeze(
+                  policy.damageTrade.variants
+                    .filter(applicable)
+                    .map((variant) => variant.rewardType),
+                ),
+                damageContestSuccessRewardTypes: Object.freeze(
+                  policy.damageContest.successResultRewardTypes.filter((rewardType) =>
+                    rewardType === 'StackUpgrade'
+                      ? runProgressLegal('StackUpgrade')
+                      : rewardType === 'TalentDrop'
+                        ? talentLegal
+                        : true,
+                  ),
+                ),
+                damageContestFailureRewardType: policy.damageContest.failureResultRewardType,
+                traitTradeTraitKeys: Object.freeze(traitDomain(branch)),
+              });
+            });
+            nemesisRandomEventCandidates.set(
+              semanticAddressKey(eventOwner),
+              Object.freeze({
+                origin: eventOwner,
+                familyKeys: Object.freeze([
+                  'freeItem',
+                  'goldTrade',
+                  'damageTrade',
+                  'traitTrade',
+                  'damageContest',
+                ] as const),
+                branches: Object.freeze(branchAssessments),
+              }),
+            );
+          }
+          if (outcome === null || outcome === undefined) {
+            addRewardFinding(
+              findings,
+              rewardFinding('nemesisOutcomeMissing', eventOwner, {}),
+              ownerRegion(eventOwner),
+              rewardFindingChronologyForRoom(
+                snapshot,
+                room.origin,
+                event.sequence,
+                'localRoomLifecycle',
+              ),
+            );
+          } else {
+            const assessments = nemesisRandomEventCandidates.get(
+              semanticAddressKey(eventOwner),
+            )?.branches;
+            const outcomeLegal =
+              assessments !== undefined &&
+              assessments.every((assessment) => {
+                const result =
+                  room.acquisitionSites?.[`nemesisGenerated:${encodeURIComponent(event.phaseKey)}`]
+                    ?.entries.result;
+                const rewardType = result?.offer.rewardType;
+                if (rewardType === undefined) return false;
+                switch (outcome.kind) {
+                  case 'freeItem':
+                    return assessment.freeItemRewardTypes.includes(rewardType);
+                  case 'goldTrade':
+                    return assessment.goldTradeRewardTypes.includes(rewardType);
+                  case 'damageTrade':
+                    return assessment.damageTradeRewardTypes.includes(rewardType);
+                  case 'damageContest':
+                    return outcome.result === 'success'
+                      ? assessment.damageContestSuccessRewardTypes.includes(rewardType)
+                      : assessment.damageContestFailureRewardType === rewardType;
+                  case 'traitTrade':
+                    return (
+                      rewardType === policy?.traitTrade.fixedResultRewardType &&
+                      assessment.traitTradeTraitKeys.includes(outcome.traitKey)
+                    );
+                }
+              });
+            if (!outcomeLegal) {
+              addRewardFinding(
+                findings,
+                rewardFinding('nemesisOutcomeUnavailable', eventOwner, { kind: outcome.kind }),
+                ownerRegion(eventOwner),
+                rewardFindingChronologyForRoom(
+                  snapshot,
+                  room.origin,
+                  event.sequence,
+                  'localRoomLifecycle',
+                ),
+              );
+            } else if (outcome.kind === 'traitTrade' && outcome.response === 'accept') {
+              branches = Object.freeze(
+                branches.map((branch) => {
+                  const before = branch.traitHistory ?? createTraitHistoryState();
+                  const traitHistory = foldTraitHistoryEvents(catalog, [
+                    ...before.events,
+                    Object.freeze({
+                      kind: 'traitRemoval' as const,
+                      owner: createEncounterPhaseAddress(
+                        createBiomeAddress(room.origin.routeKey, room.origin.biomeKey),
+                        { kind: 'occurrence' as const, occurrenceId: room.occurrenceId },
+                        event.phaseKey,
+                      ),
+                      acquisitionRole: 'nemesisTraitTrade',
+                      sequence: event.sequence,
+                      acquisitionPoint: 'encounterInteraction',
+                      traitKey: outcome.traitKey,
+                      match: 'currentTraitKey' as const,
+                    }),
+                  ]);
+                  return Object.freeze({
+                    ...branch,
+                    history: attachTraitHistory(branch.history, traitHistory),
+                    traitHistory,
+                  });
+                }),
+              );
+            }
+          }
+        }
         const authoredEncounterOffer =
           selectedEncounterKey === undefined
             ? undefined
@@ -5631,6 +5871,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
     selectedLevelResolutions: traitProducts.selectedLevelResolutions,
     figLeafPhaseCandidates: Object.freeze([...figLeafPhaseCandidates.values()]),
     gorgonPhaseCandidates: Object.freeze([...gorgonPhaseCandidates.values()]),
+    nemesisRandomEventCandidates: Object.freeze([...nemesisRandomEventCandidates.values()]),
     steadyGrowthOutcomes: Object.freeze(
       [...steadyGrowthCandidateContexts.entries()].flatMap(([key, thresholds]) => {
         const address = steadyGrowthOutcomeAddresses.get(key);

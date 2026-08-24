@@ -174,6 +174,8 @@ export interface CanonicalAuthoredRoom {
     | 'traitContext'
   >[];
   readonly fieldsOptionalRewards?: readonly CanonicalFieldsOptionalReward[];
+  /** Persisted Fields count, retained independently from resolved optional leaves. */
+  readonly fieldsOptionalRewardCount?: number;
   readonly unresolvedFieldsOptionalRewards?: readonly Omit<
     CanonicalFieldsOptionalReward,
     | 'offer'
