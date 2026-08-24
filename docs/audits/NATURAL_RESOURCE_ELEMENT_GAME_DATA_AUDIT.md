@@ -120,7 +120,7 @@ element-count and infusion logic. The accompanying meta resource is not the
 modeled effect; the element trait is a real run-progress mutation even though
 the gathering activity is primarily a meta-progression interaction.
 
-## Resource-point spacing that can block a chosen success
+## Resource-point spacing and placement capacity
 
 The element roll happens only after the underlying resource point has spawned
 and been completed. Point generation therefore has an earlier eligibility
@@ -128,32 +128,61 @@ boundary that matters even when meta-resource outcomes are ignored.
 
 The default source requirements protect these lookback windows:
 
-| Element | Resource point | Same-family lookback requirement          |
-| ------- | -------------- | ----------------------------------------- |
-| Earth   | Shovel         | no Shovel point in the previous 4 rooms   |
-| Fire    | Pickaxe        | no Pickaxe point in the previous 4 rooms  |
-| Air     | Exorcism       | no Exorcism point in the previous 6 rooms |
-| Water   | Fishing        | no Fishing point in the previous 5 rooms  |
+| Element | Successful point | Same-family lookback requirement          |
+| ------- | ---------------- | ----------------------------------------- |
+| Earth   | Shovel           | no Shovel point in the previous 4 rooms   |
+| Fire    | Pickaxe          | no Pickaxe point in the previous 4 rooms  |
+| Air     | Exorcism         | no Exorcism point in the previous 6 rooms |
+| Water   | Fishing          | no Fishing point in the previous 5 rooms  |
 
 Exorcism additionally requires no Fishing point in the immediately previous
 room, and Fishing requires no Exorcism point there. Each family normally has a
 per-biome spawn limit of one; a matching familiar tool raises that limit by
 one. Room declarations can force points or explicitly ignore the biome limit.
 
-At room creation, ordinary rooms also resolve Shovel versus Pickaxe to at most
-one simple tool point and Exorcism versus Fishing to at most one complex tool
-point. Rooms with `AllowOnlyOneToolHarvestableResource` narrow that to one
-tool-backed point across all four families.
+The room-family defaults yield this availability matrix before the spacing,
+capacity, and per-biome checks above are applied:
+
+| Tool-point family | Default ordinary room families | Chaos declaration |
+| ----------------- | ------------------------------ | ----------------- |
+| Pickaxe / Mine    | F, G, H, I, N, O, P, Q         | Yes               |
+| Exorcism / Spirit | F, G, H, I, N, O, P, Q         | No                |
+| Shovel / Dig      | F, G, H, I, N, O, P, Q         | Yes               |
+| Fishing / Fish    | F, G, H, I, P, Q               | Yes               |
+
+Individual room declarations can override those family defaults in either
+direction. In particular, N and O default Fishing to false but each contains
+specific rooms with `HasFishingPoint = true`; those rooms remain legal Water
+success hosts. Many rooms in otherwise enabled families explicitly disable
+one or all point kinds. Chaos explicitly disables Exorcism but can declare the
+other three families.
+
+The placement matrix is a point-generation rule, before manual completion or
+auto-harvest and before an element roll:
+
+| Room kind                                                | Tool-point families declared by source                                                             | Capacity after point generation                                                                                                                                                                   |
+| -------------------------------------------------------- | -------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Ordinary room                                            | Shovel, Pickaxe, Exorcism, and Fishing when the room declaration and their requirements allow them | At most one simple point (Shovel or Pickaxe, except that two forced simple points may coexist) and at most one complex point (Exorcism or Fishing); one simple and one complex point may coexist. |
+| Ordinary room with `AllowOnlyOneToolHarvestableResource` | Any of the same four that succeeds its own requirements                                            | At most one tool-backed point across all four families.                                                                                                                                           |
+| Chaos                                                    | Shovel, Pickaxe, and Fishing; its base declaration disables Exorcism                               | At most one tool-backed point across the declared Chaos families. Chaos ignores the ordinary biome-resource limits, but still applies this all-tool capacity.                                     |
 
 These are resource-point constraints, not element-roll cooldowns. A point that
 spawned and failed its 50% element roll still participates in the spacing and
 biome-count facts that can prevent a later point.
 
-## Chosen planner simplification
+## Planner alternatives
 
-The planner only needs the placement of a successful element roll. It may
-therefore represent each tool family as a protected zero-or-one successful
-event for the run:
+The later planner can name the source object a Room Feature and describe its
+automatic collection as a room-exit timeline effect. That vocabulary clarifies
+where the consequence is presented and when it takes effect; it does not
+change the source abstraction that an element comes only from a successfully
+completed point.
+
+Two possible outcome representations follow from the source facts.
+
+### A. Protected selected-success singleton
+
+For each tool family, author at most one successful interaction for the run:
 
 ```text
 choose one declaration-eligible room for the successful tool interaction
@@ -170,18 +199,41 @@ suppressed must still make an incompatible placement unavailable. This is an
 explicit authored-outcome abstraction, not a claim that the game preselects
 which point will win the 50% roll.
 
-The four families remain independent, so the run may contain up to four such
-singletons. Their placement must still obey the source's same-room simple,
-complex, or all-tool capacity described above.
+### B. Physical point Room Features plus an element-granted choice
 
-## Current planner disposition
+This alternative would represent every physical Mine, Exorcism, Dig, or Fish
+point as a Room Feature, then distinguish the point that grants the element.
+It preserves visible resource presence, but it is a larger source abstraction:
+no-element points still consume same-family spacing, per-biome limits, and the
+ordinary simple, complex, or Chaos all-tool capacity. It also has to settle
+whether each point was completed manually or remains for automatic harvest at
+room exit before knowing whether its roll occurred. Omitting those no-element
+points while keeping their per-point representation would make later selected
+placements falsely available.
 
-The planner already has element-count and infusion evaluation, but it does not
-yet model the protected successful singletons or their interaction chronology.
-It will not model failed rolls, meta-only nodes, resource-point probabilities,
-or the familiar's extra spawn capacity. The selected-success protection must
-remain truthful against fixed modeled predecessors even though ordinary hidden
-random points are omitted.
+Accordingly, a free global element checkbox is not faithful, nor is a free
+checkbox on every independently added physical point. Four `Add` controls may
+be useful application wording only when each means “add the selected successful
+Mine, Exorcism, Dig, or Fish interaction” and is subject to the protected
+placement rules of alternative A.
+
+## Chosen planner disposition
+
+The planner chooses alternative A: one protected zero-or-one successful
+singleton per upgraded tool family. The four families remain independent, so a
+run may contain up to one Fire, Air, Earth, and Water singleton. Selected
+placements obey the matrix above and gain their element during auto-harvest's
+room-exit chronology: after room-local Cleanup interactions and exit selection,
+but before the next room starts. The planner assumes the automatic-collection
+upgrade for this representation; it does not model manual completion timing.
+
+The planner already has element-count and infusion evaluation, but does not yet
+model these selected-success placements or their room-exit chronology. It will
+not model failed rolls, meta-only points, resource-point probabilities, the
+familiar's extra spawn capacity, or manual-versus-auto interaction choice.
+An authored selected placement that later becomes impossible through an edit or
+a fixed modeled predecessor is retained as invalid and reported for repair; it
+is not silently removed, moved, or converted into a no-element point.
 
 The abstraction must not attribute Earth to ordinary flora harvesting. It also
 must not describe the game rule itself as one fixed roll per run: the singleton
