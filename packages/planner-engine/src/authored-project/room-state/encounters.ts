@@ -19,6 +19,7 @@ import { decodeEchoLastRunBoon } from './echo-last-run';
 import { decodeAllTogetherResult } from './all-together';
 import { TRAIT_OPTION_KEYS, traitGiverUsesOfferContext } from '../traits';
 import type { RoomEncounterState } from '../model';
+import type { AuthoredNemesisRandomEventOutcome } from '../model';
 import {
   expectArray,
   expectBoolean,
@@ -576,6 +577,7 @@ export function decodeRoomEncounterState(
       'figLeafSkipByPhase',
       'gorgonResultByPhase',
       ...(state.traitOffersByPhase === undefined ? [] : ['traitOffersByPhase']),
+      ...(state.nemesisRandomEventByPhase === undefined ? [] : ['nemesisRandomEventByPhase']),
       ...(state.steadyGrowthTargetByPhase === undefined ? [] : ['steadyGrowthTargetByPhase']),
     ],
     path,
@@ -761,6 +763,46 @@ export function decodeRoomEncounterState(
         'is required for the selected trait-producing encounter',
       );
   }
+  const nemesisRandomEventByPhase: Record<string, AuthoredNemesisRandomEventOutcome | null> = {};
+  if (state.nemesisRandomEventByPhase !== undefined) {
+    const rawByPhase = expectRecord(
+      state.nemesisRandomEventByPhase,
+      `${path}.nemesisRandomEventByPhase`,
+    );
+    for (const [phaseKey, rawOutcome] of Object.entries(rawByPhase)) {
+      const binding = bindings.get(phaseKey);
+      if (binding === undefined || binding.kind !== 'set')
+        failProjectDocument(
+          `${path}.nemesisRandomEventByPhase.${phaseKey}`,
+          'has no selectable event phase',
+        );
+      const set = encounterSetForBinding(
+        catalog,
+        binding,
+        `${path}.nemesisRandomEventByPhase.${phaseKey}`,
+      );
+      if (!set.encounterDefinitionKeys.includes('NemesisRandomEvent'))
+        failProjectDocument(
+          `${path}.nemesisRandomEventByPhase.${phaseKey}`,
+          'does not own NemesisRandomEvent',
+        );
+      nemesisRandomEventByPhase[phaseKey] =
+        rawOutcome === null
+          ? null
+          : decodeNemesisRandomEventOutcome(
+              rawOutcome,
+              catalog,
+              `${path}.nemesisRandomEventByPhase.${phaseKey}`,
+            );
+    }
+  }
+  for (const [phaseKey, encounterKey] of Object.entries(encounterKeyByPhase)) {
+    if (encounterKey === 'NemesisRandomEvent' && nemesisRandomEventByPhase[phaseKey] === undefined)
+      failProjectDocument(
+        `${path}.nemesisRandomEventByPhase.${phaseKey}`,
+        'is required for the selected Nemesis random event',
+      );
+  }
   return Object.freeze({
     encounterKeyByPhase: Object.freeze(encounterKeyByPhase),
     figLeafSkipByPhase: Object.freeze(figLeafSkipByPhase),
@@ -771,7 +813,63 @@ export function decodeRoomEncounterState(
     ...(Object.keys(traitOffersByPhase).length === 0
       ? {}
       : { traitOffersByPhase: Object.freeze(traitOffersByPhase) }),
+    ...(Object.keys(nemesisRandomEventByPhase).length === 0
+      ? {}
+      : { nemesisRandomEventByPhase: Object.freeze(nemesisRandomEventByPhase) }),
   });
+}
+
+function decodeNemesisRandomEventOutcome(
+  value: unknown,
+  catalog: Catalog,
+  path: string,
+): AuthoredNemesisRandomEventOutcome {
+  const record = expectRecord(value, path);
+  const kind = expectString(record.kind, `${path}.kind`);
+  switch (kind) {
+    case 'freeItem':
+      expectExactKeys(record, ['kind'], path);
+      return Object.freeze({ kind });
+    case 'goldTrade':
+      expectExactKeys(record, ['kind', 'response'], path);
+      return Object.freeze({
+        kind,
+        response: decodeNemesisResponse(record.response, `${path}.response`),
+      });
+    case 'damageTrade':
+      expectExactKeys(record, ['kind', 'response'], path);
+      return Object.freeze({
+        kind,
+        response: decodeNemesisResponse(record.response, `${path}.response`),
+      });
+    case 'traitTrade': {
+      expectExactKeys(record, ['kind', 'traitKey', 'response'], path);
+      const traitKey = expectNonBlankString(record.traitKey, `${path}.traitKey`);
+      if (catalog.traits.byKey[traitKey] === undefined)
+        failProjectDocument(`${path}.traitKey`, 'unknown trait');
+      return Object.freeze({
+        kind,
+        traitKey,
+        response: decodeNemesisResponse(record.response, `${path}.response`),
+      });
+    }
+    case 'damageContest': {
+      expectExactKeys(record, ['kind', 'result'], path);
+      const result = expectString(record.result, `${path}.result`);
+      if (result !== 'success' && result !== 'failure')
+        failProjectDocument(`${path}.result`, 'must be success or failure');
+      return Object.freeze({ kind, result });
+    }
+    default:
+      failProjectDocument(`${path}.kind`, 'must be a closed Nemesis event outcome');
+  }
+}
+
+function decodeNemesisResponse(value: unknown, path: string): 'accept' | 'decline' {
+  const response = expectString(value, path);
+  if (response !== 'accept' && response !== 'decline')
+    failProjectDocument(path, 'must be accept or decline');
+  return response;
 }
 
 /**

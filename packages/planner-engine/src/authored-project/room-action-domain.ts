@@ -447,7 +447,7 @@ function baseContribution(
         reference,
         required ? 'required' : 'optional',
         producer?.placement === 'roomExit' ||
-          producer?.source.owner.kind === 'shopOffer' ||
+          (producer?.source.kind === 'traitOffer' && producer.source.owner.kind === 'shopOffer') ||
           reference.siteKey === 'roomExit'
           ? frozen({ kind: 'postOutgoing' })
           : frozen({ kind: 'standard', phase: 'afterCombat' }),

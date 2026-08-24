@@ -5,7 +5,12 @@ import type { Catalog } from '@run-planner/engine/catalog-schema';
 import {
   applyProjectCommand,
   applyProjectHistoryCommand,
+  activeRoomActionReferences,
+  createAcquisitionEntryAddress,
+  createAcquisitionRoleAddress,
+  createAcquisitionSiteAddress,
   createEncounterPhaseAddress,
+  createNemesisRandomEventAddress,
   createExitDecisionAddress,
   createExitSelectionAddress,
   createHubDecisionAddress,
@@ -141,6 +146,188 @@ function enteredNLocalProject(): ProjectDocument {
 }
 
 describe('authored encounter occurrence commands', () => {
+  it('authors the closed Nemesis outcome atomically, retains declined detail, and restores it through selection and undo', () => {
+    const phase = createEncounterPhaseAddress(
+      goldenFBiome,
+      { kind: 'occurrence', occurrenceId: goldenFOccurrenceId(5, 1) },
+      'Encounter',
+    );
+    const event = createNemesisRandomEventAddress(phase);
+    const initial = createCompleteFGProject();
+    const selected = applyProjectCommand(initial, catalog, {
+      kind: 'SelectEncounter',
+      phase,
+      encounterKey: 'NemesisRandomEvent',
+    });
+    const unresolved = occurrence(selected, 'F', goldenFOccurrenceId(5, 1));
+    expect(unresolved.encounters.nemesisRandomEventByPhase?.Encounter).toBeNull();
+    expect(unresolved.acquisitionSites?.['nemesisGenerated:Encounter']).toBeUndefined();
+    expect(activeRoomActionReferences(catalog, goldenFBiome, unresolved)).toContainEqual({
+      kind: 'interactEncounter',
+      phaseKey: 'Encounter',
+    });
+
+    const declined = applyProjectCommand(selected, catalog, {
+      kind: 'ReplaceNemesisRandomEventOutcome',
+      event,
+      value: { kind: 'goldTrade', response: 'decline' },
+      reward: { rewardType: 'MaxHealthDrop' },
+    });
+    const declinedOccurrence = occurrence(declined, 'F', goldenFOccurrenceId(5, 1));
+    expect(
+      declinedOccurrence.acquisitionSites?.['nemesisGenerated:Encounter']?.pickupEntries?.result
+        ?.offer,
+    ).toEqual({ rewardType: 'MaxHealthDrop' });
+    expect(
+      activeRoomActionReferences(catalog, goldenFBiome, declinedOccurrence),
+    ).not.toContainEqual({
+      kind: 'interactAcquisitionEntry',
+      siteKey: 'nemesisGenerated:Encounter',
+      entryKey: 'result',
+    });
+
+    const entry = createAcquisitionEntryAddress(
+      createAcquisitionSiteAddress(
+        createOccurrenceAddress(goldenFBiome, goldenFOccurrenceId(5, 1)),
+        'nemesisGenerated:Encounter',
+      ),
+      'result',
+    );
+    const detailed = applyProjectCommand(declined, catalog, {
+      kind: 'ReplaceAcquisitionDisposition',
+      acquisition: createAcquisitionRoleAddress(entry, 'self'),
+      value: { kind: 'timePiece' },
+    });
+    const restoredDetail = applyProjectCommand(detailed, catalog, {
+      kind: 'ReplaceNemesisRandomEventOutcome',
+      event,
+      value: { kind: 'goldTrade', response: 'accept' },
+      reward: { rewardType: 'MaxHealthDrop' },
+    });
+    expect(
+      restoredDetail.routes[0]?.biomes[0]?.topology?.occurrences.find(
+        (candidate) => candidate.occurrenceId === goldenFOccurrenceId(5, 1),
+      )?.acquisitionSites?.['nemesisGenerated:Encounter']?.pickupEntries?.result
+        ?.dispositionByAcquisitionRole.self,
+    ).toEqual({ kind: 'timePiece' });
+
+    const away = applyProjectCommand(declined, catalog, {
+      kind: 'SelectEncounter',
+      phase,
+      encounterKey: 'GeneratedF',
+    });
+    expect(
+      activeRoomActionReferences(
+        catalog,
+        goldenFBiome,
+        occurrence(away, 'F', goldenFOccurrenceId(5, 1)),
+      ),
+    ).not.toContainEqual({ kind: 'interactEncounter', phaseKey: 'Encounter' });
+    const restored = applyProjectCommand(away, catalog, {
+      kind: 'SelectEncounter',
+      phase,
+      encounterKey: 'NemesisRandomEvent',
+    });
+    expect(
+      occurrence(restored, 'F', goldenFOccurrenceId(5, 1)).acquisitionSites?.[
+        'nemesisGenerated:Encounter'
+      ],
+    ).toEqual(declinedOccurrence.acquisitionSites?.['nemesisGenerated:Encounter']);
+    const reset = applyProjectCommand(restored, catalog, { kind: 'ResetEncounter', phase });
+    expect(
+      occurrence(reset, 'F', goldenFOccurrenceId(5, 1)).encounters.encounterKeyByPhase.Encounter,
+    ).toBe('GeneratedF');
+
+    const history = applyProjectHistoryCommand(createProjectHistory(selected), catalog, {
+      kind: 'ReplaceNemesisRandomEventOutcome',
+      event,
+      value: { kind: 'traitTrade', traitKey: 'ApolloSpecialBoon', response: 'accept' },
+      reward: { rewardType: 'RoomMoneyTripleDrop' },
+    });
+    expect(undoProjectHistory(history).present).toBe(selected);
+  });
+
+  it.each([
+    [{ kind: 'freeItem' }, { rewardType: 'ArmorBoost' }],
+    [{ kind: 'goldTrade', response: 'accept' }, { rewardType: 'MaxHealthDropBig' }],
+    [{ kind: 'damageTrade', response: 'accept' }, { rewardType: 'TalentDrop' }],
+    [
+      { kind: 'traitTrade', traitKey: 'ApolloSpecialBoon', response: 'accept' },
+      { rewardType: 'RoomMoneyTripleDrop' },
+    ],
+    [{ kind: 'damageContest', result: 'failure' }, { rewardType: 'RoomRewardConsolationPrize' }],
+  ] as const)('accepts the declaration-owned Nemesis branch %#', (value, reward) => {
+    const phase = createEncounterPhaseAddress(
+      goldenFBiome,
+      { kind: 'occurrence', occurrenceId: goldenFOccurrenceId(5, 1) },
+      'Encounter',
+    );
+    const selected = applyProjectCommand(createCompleteFGProject(), catalog, {
+      kind: 'SelectEncounter',
+      phase,
+      encounterKey: 'NemesisRandomEvent',
+    });
+    const changed = applyProjectCommand(selected, catalog, {
+      kind: 'ReplaceNemesisRandomEventOutcome',
+      event: createNemesisRandomEventAddress(phase),
+      value,
+      reward,
+    });
+    expect(
+      occurrence(changed, 'F', goldenFOccurrenceId(5, 1)).acquisitionSites?.[
+        'nemesisGenerated:Encounter'
+      ]?.pickupEntries?.result?.offer,
+    ).toEqual(reward);
+    expect(
+      activeRoomActionReferences(
+        catalog,
+        goldenFBiome,
+        occurrence(changed, 'F', goldenFOccurrenceId(5, 1)),
+      ),
+    ).toContainEqual({
+      kind: 'interactAcquisitionEntry',
+      siteKey: 'nemesisGenerated:Encounter',
+      entryKey: 'result',
+    });
+  });
+
+  it('rejects impossible Nemesis result ownership atomically', () => {
+    const phase = createEncounterPhaseAddress(
+      goldenFBiome,
+      { kind: 'occurrence', occurrenceId: goldenFOccurrenceId(5, 1) },
+      'Encounter',
+    );
+    const selected = applyProjectCommand(createCompleteFGProject(), catalog, {
+      kind: 'SelectEncounter',
+      phase,
+      encounterKey: 'NemesisRandomEvent',
+    });
+    const event = createNemesisRandomEventAddress(phase);
+    for (const command of [
+      { value: { kind: 'freeItem' } as const, reward: null },
+      {
+        value: { kind: 'goldTrade', response: 'accept' } as const,
+        reward: { rewardType: 'ArmorBoost' },
+      },
+      {
+        value: { kind: 'traitTrade', traitKey: 'ApolloSpecialBoon', response: 'accept' } as const,
+        reward: { rewardType: 'RoomMoneyDrop' },
+      },
+      {
+        value: { kind: 'damageContest', result: 'failure' } as const,
+        reward: { rewardType: 'MaxHealthDrop' },
+      },
+    ]) {
+      expect(() =>
+        applyProjectCommand(selected, catalog, {
+          kind: 'ReplaceNemesisRandomEventOutcome',
+          event,
+          ...command,
+        }),
+      ).toThrowError(expect.objectContaining({ commandKind: 'ReplaceNemesisRandomEventOutcome' }));
+    }
+    expect(selected).toBe(selected);
+  });
   it('rejects an invalid selected option key for an encounter-owned trait offer', () => {
     const phase = createEncounterPhaseAddress(
       goldenFBiome,

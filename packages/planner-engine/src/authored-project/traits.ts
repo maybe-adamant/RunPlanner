@@ -5,6 +5,7 @@ import {
   createAcquisitionEntryAddress,
   createEncounterPhaseAddress,
   createGorgonPhaseAddress,
+  createNemesisRandomEventAddress,
   createIncomingRewardAddress,
   createLocalRewardAddress,
   createOccurrenceAddress,
@@ -14,6 +15,7 @@ import {
   semanticAddressKey,
   type BiomeAddress,
   type TraitOfferAddress,
+  type NemesisRandomEventAddress,
   type TraitOfferOwnerAddress,
 } from './addresses';
 import { acquisitionSiteFromStorageKey } from './artificer';
@@ -544,12 +546,12 @@ function createUnresolvedAcquisitionRewardStateForEffect(
 }
 
 export interface SelectedPickupProducer {
-  readonly traitKey: string;
+  readonly traitKey?: string;
   readonly producerLifecycleKey: string;
   /** Whether this instance follows its source action or the room-exit placement declared by its lifecycle. */
   readonly placement: 'afterSource' | 'roomExit';
   /** Exact trait acquisition that creates this producer instance. */
-  readonly source: TraitOfferAddress;
+  readonly source: TraitOfferAddress | NemesisRandomEventAddress;
   readonly sourceAction: RoomActionReference;
   /** The exact source is a normal participating acquisition, not a conversion or dormant optional. */
   readonly sourceNormal: boolean;
@@ -561,6 +563,20 @@ export interface SelectedPickupProducer {
     readonly rewardType?: string;
     readonly required: boolean;
   }[];
+}
+
+export function nemesisGeneratedPickupSiteKey(phaseKey: string): string {
+  return `nemesisGenerated:${encodeURIComponent(phaseKey)}`;
+}
+export function parseNemesisGeneratedPickupSiteKey(key: string): string | undefined {
+  const [kind, phase, ...rest] = key.split(':');
+  if (kind !== 'nemesisGenerated' || phase === undefined || rest.length !== 0) return undefined;
+  try {
+    const value = decodeURIComponent(phase);
+    return value.length === 0 ? undefined : value;
+  } catch {
+    return undefined;
+  }
 }
 
 /** Collision-safe site key for one selected equipping trait's fixed pickups. */
@@ -882,8 +898,8 @@ export function selectedPickupProducers(
   biome: BiomeAddress,
   occurrence: RoomOccurrence,
 ): readonly SelectedPickupProducer[] {
-  return Object.freeze(
-    traitPickupOffers(catalog, biome, occurrence).flatMap(
+  return Object.freeze([
+    ...traitPickupOffers(catalog, biome, occurrence).flatMap(
       ({ source, sourceAction, sourceNormal, sourceIsStory, offer }) => {
         const echoKey =
           source.owner.kind === 'encounterPhase'
@@ -904,6 +920,54 @@ export function selectedPickupProducers(
         );
       },
     ),
+    ...nemesisPickupProducers(catalog, biome, occurrence),
+  ]);
+}
+
+function nemesisPickupProducers(
+  catalog: Catalog,
+  biome: BiomeAddress,
+  occurrence: RoomOccurrence,
+): readonly SelectedPickupProducer[] {
+  const actions = new Set(occurrence.roomActions.order.map(roomActionKey));
+  return Object.entries(occurrence.encounters.nemesisRandomEventByPhase ?? {}).flatMap(
+    ([phaseKey, outcome]) => {
+      if (outcome === undefined || outcome === null) return [];
+      const declined = 'response' in outcome && outcome.response === 'decline';
+      const policy = catalog.encounterDefinitions.byKey.NemesisRandomEvent?.nemesisRandomEvent;
+      if (policy === undefined) return [];
+      const required =
+        !declined &&
+        (outcome.kind === 'goldTrade'
+          ? policy.goldTrade.pickupRequiredOnAccept
+          : outcome.kind === 'damageTrade'
+            ? policy.damageTrade.pickupRequiredOnAccept
+            : outcome.kind === 'traitTrade'
+              ? policy.traitTrade.pickupRequiredOnAccept
+              : outcome.kind === 'freeItem'
+                ? policy.freeItem.pickupRequired
+                : policy.damageContest.pickupRequired);
+      return [
+        Object.freeze({
+          producerLifecycleKey: 'NemesisEventPickup',
+          placement: 'afterSource' as const,
+          source: createNemesisRandomEventAddress(
+            createEncounterPhaseAddress(
+              biome,
+              { kind: 'occurrence', occurrenceId: occurrence.occurrenceId },
+              phaseKey,
+            ),
+          ),
+          sourceAction: Object.freeze({ kind: 'interactEncounter' as const, phaseKey }),
+          sourceNormal:
+            occurrence.encounters.encounterKeyByPhase[phaseKey] === 'NemesisRandomEvent' &&
+            !declined &&
+            actions.has(roomActionKey({ kind: 'interactEncounter', phaseKey })),
+          siteKey: nemesisGeneratedPickupSiteKey(phaseKey),
+          pickups: Object.freeze([Object.freeze({ key: 'result', required })]),
+        }),
+      ];
+    },
   );
 }
 
@@ -973,7 +1037,10 @@ export function reconcileSelectedPickupProducerState(
     else nextSites.roomExit = Object.freeze({ pickupEntries: Object.freeze(retained) });
   }
   for (const siteKey of Object.keys(nextSites))
-    if (siteKey.startsWith('traitGenerated:') && !selectedSiteKeys.has(siteKey))
+    if (
+      (siteKey.startsWith('traitGenerated:') || siteKey.startsWith('nemesisGenerated:')) &&
+      !selectedSiteKeys.has(siteKey)
+    )
       delete nextSites[siteKey];
   for (const producer of producers) {
     const current = nextSites[producer.siteKey];
@@ -1007,7 +1074,11 @@ export function reconcileSelectedPickupProducerState(
   const nextActions = occurrence.roomActions.order.filter((reference) => {
     if (reference.kind !== 'interactAcquisitionEntry') return true;
     const key = `${reference.siteKey}\u0000${reference.entryKey}`;
-    if (reference.siteKey.startsWith('traitGenerated:')) return structuralEntries.has(key);
+    if (
+      reference.siteKey.startsWith('traitGenerated:') ||
+      reference.siteKey.startsWith('nemesisGenerated:')
+    )
+      return structuralEntries.has(key);
     if (reference.siteKey === 'roomExit' && echoKeys.has(reference.entryKey))
       return structuralEntries.has(key) || echoKeys.has(reference.entryKey);
     return true;

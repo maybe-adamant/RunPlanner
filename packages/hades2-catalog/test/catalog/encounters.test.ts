@@ -59,6 +59,7 @@ describe('encounter envelope catalog', () => {
       'ArtemisCombatF',
       'ArachneCombatF',
       'NemesisCombatF',
+      'NemesisRandomEvent',
       'MiniBossTreant',
       'MiniBossFogEmitter',
       'MiniBossAssassin',
@@ -292,12 +293,14 @@ describe('encounter envelope catalog', () => {
       'ArtemisCombatF',
       'ArachneCombatF',
       'NemesisCombatF',
+      'NemesisRandomEvent',
     ]);
     expect(catalog.encounterSets.byKey.GEncountersDefault?.encounterDefinitionKeys).toEqual([
       'GeneratedG',
       'ArtemisCombatG',
       'ArachneCombatG',
       'NemesisCombatG',
+      'NemesisRandomEvent',
     ]);
     expect(catalog.encounterSets.byKey.HEncountersDefault?.encounterDefinitionKeys).toEqual([
       'GeneratedH',
@@ -425,7 +428,15 @@ describe('encounter envelope catalog', () => {
         npcPresentationKey: 'Nemesis',
       });
     }
-    expect(catalog.encounterDefinitions.byKey).not.toHaveProperty('NemesisRandomEvent');
+    expect(catalog.encounterDefinitions.byKey.NemesisRandomEvent).toMatchObject({
+      key: 'NemesisRandomEvent',
+      kind: 'nonCombat',
+      countsEncounterDepth: false,
+      blocksGorgon: true,
+      npcPresentationKey: 'Nemesis',
+      requiresInteraction: true,
+      suppressesIncomingReward: true,
+    });
     expect(catalog.encounterDefinitions.byKey).not.toHaveProperty('BridgeNemesisRandomEvent');
     expect(catalog.encounterDefinitions.byKey).not.toHaveProperty('NemesisShopping');
     const artemisRequirements = catalog.encounterDefinitions.byKey.ArtemisCombatF?.requirements;
@@ -454,6 +465,7 @@ describe('encounter envelope catalog', () => {
         'NemesisCombatG',
         'NemesisCombatH',
         'NemesisCombatI',
+        'NemesisRandomEvent',
       ],
       roomWindow: 6,
       range: { max: 0 },
@@ -503,10 +515,17 @@ describe('encounter envelope catalog', () => {
       'NemesisCombatG',
       'NemesisCombatH',
       'NemesisCombatI',
+      'NemesisRandomEvent',
     ];
     const heraclesKeys = ['HeraclesCombatN', 'HeraclesCombatO', 'HeraclesCombatP'];
     const icarusKeys = ['IcarusCombatO', 'IcarusCombatP'];
-    const nemesisKeys = ['NemesisCombatF', 'NemesisCombatG', 'NemesisCombatH', 'NemesisCombatI'];
+    const nemesisKeys = [
+      'NemesisCombatF',
+      'NemesisCombatG',
+      'NemesisCombatH',
+      'NemesisCombatI',
+      'NemesisRandomEvent',
+    ];
     const requirementsFor = (key: string) => {
       const requirements = catalog.encounterDefinitions.byKey[key]?.requirements;
       if (requirements?.kind !== 'all') {
@@ -801,5 +820,347 @@ describe('encounter envelope catalog', () => {
         'unknown room structural tag Unknown',
       ),
     );
+  });
+
+  it('closes the one Nemesis random-event descriptor and its F/G/H placement', () => {
+    const catalog = createCatalog(declarations);
+    expect(catalog.encounterDefinitions.byKey.NemesisRandomEvent?.nemesisRandomEvent).toEqual({
+      freeItem: {
+        resultRewardTypes: ['EmptyMaxHealthDrop', 'HealDrop', 'LastStandDrop', 'ArmorBoost'],
+        conditionalResultRewardType: 'LastStandDrop',
+        response: 'none',
+        pickupRequired: false,
+      },
+      goldTrade: {
+        variants: [
+          { rewardType: 'MaxHealthDrop', enteredBiome: { max: 2 }, requirement: 'none' },
+          { rewardType: 'MaxHealthDropBig', enteredBiome: { min: 3 }, requirement: 'none' },
+          { rewardType: 'MaxManaDrop', enteredBiome: { max: 2 }, requirement: 'none' },
+          { rewardType: 'MaxManaDropBig', enteredBiome: { min: 3 }, requirement: 'none' },
+          { rewardType: 'StackUpgrade', enteredBiome: { max: 1 }, requirement: 'pomLegal' },
+          { rewardType: 'StackUpgradeBig', enteredBiome: { min: 2 }, requirement: 'pomLegal' },
+          {
+            rewardType: 'WeaponUpgrade',
+            enteredBiome: {},
+            requirement: 'hammerEarlyOrLate',
+          },
+        ],
+        response: ['accept', 'decline'],
+        pickupRequiredOnAccept: true,
+      },
+      damageTrade: {
+        variants: [
+          { rewardType: 'MaxHealthDrop', enteredBiome: { max: 2 }, requirement: 'none' },
+          { rewardType: 'MaxHealthDropBig', enteredBiome: { min: 3 }, requirement: 'none' },
+          { rewardType: 'MaxManaDrop', enteredBiome: { max: 2 }, requirement: 'none' },
+          { rewardType: 'MaxManaDropBig', enteredBiome: { min: 3 }, requirement: 'none' },
+          { rewardType: 'StackUpgrade', enteredBiome: { max: 1 }, requirement: 'pomLegal' },
+          { rewardType: 'StackUpgradeBig', enteredBiome: { min: 2 }, requirement: 'pomLegal' },
+          { rewardType: 'RoomMoneyDrop', enteredBiome: { max: 1 }, requirement: 'none' },
+          { rewardType: 'RoomMoneyDrop', enteredBiome: { min: 2 }, requirement: 'none' },
+          { rewardType: 'TalentDrop', enteredBiome: {}, requirement: 'talentLegal' },
+        ],
+        response: ['accept', 'decline'],
+        pickupRequiredOnAccept: true,
+      },
+      traitTrade: {
+        response: ['accept', 'decline'],
+        pickupRequiredOnAccept: true,
+        fixedResultRewardType: 'RoomMoneyTripleDrop',
+        traitSelection: 'eligibleGodTraitCommonPriority',
+      },
+      damageContest: {
+        successResultRewardTypes: [
+          'MaxHealthDrop',
+          'MaxManaDrop',
+          'StackUpgrade',
+          'RoomMoneyDrop',
+          'TalentDrop',
+        ],
+        failureResultRewardType: 'RoomRewardConsolationPrize',
+        response: 'none',
+        pickupRequired: false,
+      },
+      hOptionalCapacityReservation: 1,
+    });
+    expect(catalog.encounterDefinitions.byKey.NemesisRandomEvent).toMatchObject({
+      key: 'NemesisRandomEvent',
+      kind: 'nonCombat',
+      countsEncounterDepth: false,
+      requiresInteraction: true,
+      suppressesIncomingReward: true,
+      nemesisRandomEvent: {
+        hOptionalCapacityReservation: 1,
+        freeItem: {
+          resultRewardTypes: ['EmptyMaxHealthDrop', 'HealDrop', 'LastStandDrop', 'ArmorBoost'],
+          conditionalResultRewardType: 'LastStandDrop',
+          response: 'none',
+          pickupRequired: false,
+        },
+        traitTrade: {
+          response: ['accept', 'decline'],
+          fixedResultRewardType: 'RoomMoneyTripleDrop',
+          pickupRequiredOnAccept: true,
+          traitSelection: 'eligibleGodTraitCommonPriority',
+        },
+        damageContest: {
+          successResultRewardTypes: [
+            'MaxHealthDrop',
+            'MaxManaDrop',
+            'StackUpgrade',
+            'RoomMoneyDrop',
+            'TalentDrop',
+          ],
+          failureResultRewardType: 'RoomRewardConsolationPrize',
+          response: 'none',
+          pickupRequired: false,
+        },
+      },
+      requirements: {
+        kind: 'all',
+        requirements: [
+          { kind: 'counterRange', axis: 'biomeDepthCache', range: { min: 4 } },
+          {
+            kind: 'currentRoomRewardExcludes',
+            rewardTypes: [
+              'Boon',
+              'SpellDrop',
+              'Devotion',
+              'HermesUpgrade',
+              'WeaponUpgrade',
+              'StackUpgrade',
+              'TalentDrop',
+            ],
+          },
+          {
+            kind: 'encounterKeyCount',
+            scope: 'route',
+            encounterKeys: [
+              'NemesisCombatF',
+              'NemesisCombatG',
+              'NemesisCombatH',
+              'NemesisCombatI',
+              'NemesisRandomEvent',
+            ],
+            range: { max: 0 },
+          },
+          {
+            kind: 'previousRoomEncounterKeyCount',
+            encounterKeys: [
+              'ArtemisCombatF',
+              'ArtemisCombatG',
+              'ArtemisCombatN',
+              'HeraclesCombatN',
+              'HeraclesCombatO',
+              'HeraclesCombatP',
+              'IcarusCombatO',
+              'IcarusCombatP',
+              'AthenaCombatP',
+              'NemesisCombatF',
+              'NemesisCombatG',
+              'NemesisCombatH',
+              'NemesisCombatI',
+              'NemesisRandomEvent',
+            ],
+            roomWindow: 6,
+            range: { max: 0 },
+          },
+        ],
+      },
+    });
+    expect(
+      Object.entries(catalog.encounterSets.byKey)
+        .filter(([, set]) => set.encounterDefinitionKeys.includes('NemesisRandomEvent'))
+        .map(([key]) => key)
+        .sort(),
+    ).toEqual([
+      'FEncountersDefault',
+      'GEncountersDefault',
+      'HEncountersPassive',
+      'HEncountersPassiveSmall',
+    ]);
+    expect(catalog.encounterSets.byKey.IEncountersDefault?.encounterDefinitionKeys).not.toContain(
+      'NemesisRandomEvent',
+    );
+
+    const mutateEvent = (mutate: (event: Record<string, unknown>) => unknown) => {
+      const broken = input();
+      const index = broken.encounterDefinitions.findIndex(
+        (definition) => definition.key === 'NemesisRandomEvent',
+      );
+      if (index < 0) throw new Error('Nemesis event declaration is missing');
+      (broken.encounterDefinitions as unknown as unknown[])[index] = mutate(
+        broken.encounterDefinitions[index] as unknown as Record<string, unknown>,
+      );
+      return broken;
+    };
+    expect(() =>
+      createCatalog(
+        mutateEvent((event) => {
+          const withoutDescriptor = { ...event };
+          delete withoutDescriptor.nemesisRandomEvent;
+          return withoutDescriptor;
+        }),
+      ),
+    ).toThrow(CatalogContractError);
+    expect(() =>
+      createCatalog(
+        mutateEvent((event) => ({
+          ...event,
+          nemesisRandomEvent: {
+            ...(event.nemesisRandomEvent as Record<string, unknown>),
+            freeItem: {
+              ...(event.nemesisRandomEvent as { freeItem: Record<string, unknown> }).freeItem,
+              conditionalResultRewardType: 'ArmorBoost',
+            },
+          },
+        })),
+      ),
+    ).toThrow(CatalogContractError);
+    expect(() =>
+      createCatalog(
+        mutateEvent((event) => ({
+          ...event,
+          nemesisRandomEvent: {
+            ...(event.nemesisRandomEvent as Record<string, unknown>),
+            traitTrade: {
+              ...(event.nemesisRandomEvent as { traitTrade: Record<string, unknown> }).traitTrade,
+              response: ['accept', 'decline', 'other'],
+            },
+          },
+        })),
+      ),
+    ).toThrow(CatalogContractError);
+    expect(() =>
+      createCatalog(
+        mutateEvent((event) => ({
+          ...event,
+          nemesisRandomEvent: {
+            ...(event.nemesisRandomEvent as Record<string, unknown>),
+            hOptionalCapacityReservation: 2,
+          },
+        })),
+      ),
+    ).toThrow(CatalogContractError);
+    expect(() =>
+      createCatalog(mutateEvent((event) => ({ ...event, requiresInteraction: false }))),
+    ).toThrow(CatalogContractError);
+    // Runtime compiler mutation probes intentionally bypass declaration typing.
+    /* eslint-disable @typescript-eslint/no-explicit-any */
+    const mutatePolicy = (mutate: (policy: Record<string, any>) => unknown) =>
+      createCatalog(
+        mutateEvent((event) => ({
+          ...event,
+          nemesisRandomEvent: mutate(
+            (event as { nemesisRandomEvent: Record<string, any> }).nemesisRandomEvent,
+          ),
+        })),
+      );
+    expect(() =>
+      mutatePolicy((policy) => ({
+        ...policy,
+        damageTrade: {
+          ...policy.damageTrade,
+          variants: [
+            { ...policy.damageTrade.variants[0], damage: { min: 1, max: 2 } },
+            ...policy.damageTrade.variants.slice(1),
+          ],
+        },
+      })),
+    ).toThrow(CatalogContractError);
+    expect(() => mutatePolicy((policy) => ({ ...policy, inventedFamily: {} }))).toThrow(
+      CatalogContractError,
+    );
+    expect(() =>
+      mutatePolicy((policy) => ({
+        ...policy,
+        freeItem: { ...policy.freeItem, unexpected: true },
+      })),
+    ).toThrow(CatalogContractError);
+    expect(() =>
+      mutatePolicy((policy) => ({
+        ...policy,
+        goldTrade: {
+          ...policy.goldTrade,
+          variants: [
+            { ...policy.goldTrade.variants[0], goldPrice: { min: 1, max: 2 } },
+            ...policy.goldTrade.variants.slice(1),
+          ],
+        },
+      })),
+    ).toThrow(CatalogContractError);
+    expect(() =>
+      mutatePolicy((policy) => ({
+        ...policy,
+        damageTrade: {
+          ...policy.damageTrade,
+          variants: [
+            {
+              ...policy.damageTrade.variants[0],
+              enteredBiome: { ...policy.damageTrade.variants[0].enteredBiome, unexpected: true },
+            },
+            ...policy.damageTrade.variants.slice(1),
+          ],
+        },
+      })),
+    ).toThrow(CatalogContractError);
+    expect(() =>
+      createCatalog(mutateEvent((event) => ({ ...event, npcPresentationKey: 'Other' }))),
+    ).toThrow(CatalogContractError);
+
+    const duplicateDescriptor = mutateEvent((event) => event);
+    (duplicateDescriptor.encounterDefinitions as any[])[0] = {
+      ...(duplicateDescriptor.encounterDefinitions[0] as any),
+      nemesisRandomEvent: (
+        duplicateDescriptor.encounterDefinitions.find(
+          (entry: any) => entry.key === 'NemesisRandomEvent',
+        ) as any
+      ).nemesisRandomEvent,
+    };
+    expect(() => createCatalog(duplicateDescriptor)).toThrow(CatalogContractError);
+    const duplicateSuppression = mutateEvent((event) => event);
+    (duplicateSuppression.encounterDefinitions as any[])[0] = {
+      ...(duplicateSuppression.encounterDefinitions[0] as any),
+      suppressesIncomingReward: true,
+    };
+    expect(() => createCatalog(duplicateSuppression)).toThrow(CatalogContractError);
+
+    const invalidCapability = input();
+    const emptyMaxHealth = invalidCapability.rewardKernel.acquisitions.find(
+      (acquisition) => acquisition.gameName === 'EmptyMaxHealthDrop',
+    );
+    if (emptyMaxHealth === undefined) throw new Error('EmptyMaxHealthDrop acquisition is missing');
+    (emptyMaxHealth as { canDuplicate: boolean }).canDuplicate = false;
+    expect(() => createCatalog(invalidCapability)).toThrow(CatalogContractError);
+
+    const invalidLifecycle = input();
+    const lifecycle = invalidLifecycle.rewardKernel.producerLifecycles.find(
+      (candidate) => candidate.key === 'NemesisEventPickup',
+    );
+    const maxHealthOverride = lifecycle?.overrides?.find(
+      (candidate) => candidate.rewardType === 'MaxHealthDrop',
+    );
+    if (maxHealthOverride === undefined)
+      throw new Error('Nemesis MaxHealthDrop override is missing');
+    (maxHealthOverride as unknown as { acquisitionLifecycle: unknown[] }).acquisitionLifecycle = [
+      { role: 'self', lifecyclePoint: 'roomRewardPickup' },
+    ];
+    expect(() => createCatalog(invalidLifecycle)).toThrow(CatalogContractError);
+    /* eslint-enable @typescript-eslint/no-explicit-any */
+
+    const moved = input();
+    const fSet = moved.encounterSets.find((set) => set.key === 'FEncountersDefault');
+    if (fSet === undefined) throw new Error('F default encounter set is missing');
+    (fSet as unknown as { encounterDefinitionKeys: string[] }).encounterDefinitionKeys =
+      fSet.encounterDefinitionKeys.filter((key) => key !== 'NemesisRandomEvent');
+    expect(() => createCatalog(moved)).toThrow(CatalogContractError);
+    const extra = input();
+    const iSet = extra.encounterSets.find((set) => set.key === 'IEncountersDefault');
+    if (iSet === undefined) throw new Error('I default encounter set is missing');
+    (iSet as unknown as { encounterDefinitionKeys: string[] }).encounterDefinitionKeys = [
+      ...iSet.encounterDefinitionKeys,
+      'NemesisRandomEvent',
+    ];
+    expect(() => createCatalog(extra)).toThrow(CatalogContractError);
   });
 });

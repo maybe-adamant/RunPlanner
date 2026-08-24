@@ -255,6 +255,7 @@ function applyUnchecked(
       );
     case 'SelectEncounter':
     case 'ResetEncounter':
+    case 'ReplaceNemesisRandomEventOutcome':
     case 'ReplaceFigLeafSkip':
     case 'ReplaceGorgonDeathDefianceCondition':
       return applyOccurrenceCommand(

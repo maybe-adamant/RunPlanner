@@ -10,7 +10,63 @@ import {
   type LocatedBiome,
 } from './contract';
 import { replaceOccurrence, updateOccurrenceTopology } from './occurrence-mutation';
+import { createUnresolvedPickupRewardState, nemesisGeneratedPickupSiteKey } from '../traits';
+import { sameOccurrenceValue } from './occurrence-leaf-value';
 import type { EncounterOccurrenceCommand } from './types';
+
+function validateNemesisOutcomeCommand(
+  catalog: Catalog,
+  command: Extract<
+    EncounterOccurrenceCommand,
+    { readonly kind: 'ReplaceNemesisRandomEventOutcome' }
+  >,
+): void {
+  const policy = catalog.encounterDefinitions.byKey.NemesisRandomEvent?.nemesisRandomEvent;
+  if (policy === undefined) failCommand(command, 'catalog has no Nemesis random-event policy');
+  if (command.value === null) {
+    if (command.reward !== null) failCommand(command, 'an unresolved event has no result reward');
+    return;
+  }
+  if (command.reward === null)
+    failCommand(command, 'a concrete event outcome requires its concrete result reward');
+  const rewardType = command.reward.rewardType;
+  const outcome = command.value;
+  switch (outcome.kind) {
+    case 'freeItem':
+      if (!(policy.freeItem.resultRewardTypes as readonly string[]).includes(rewardType))
+        failCommand(command, 'free item result is outside its declared pool');
+      return;
+    case 'goldTrade': {
+      const variant = policy.goldTrade.variants.find(
+        (candidate) => candidate.rewardType === rewardType,
+      );
+      if (variant === undefined)
+        failCommand(command, 'Gold trade result is outside its declared pool');
+      return;
+    }
+    case 'damageTrade': {
+      const variant = policy.damageTrade.variants.find(
+        (candidate) => candidate.rewardType === rewardType,
+      );
+      if (variant === undefined)
+        failCommand(command, 'damage trade result is outside its declared pool');
+      return;
+    }
+    case 'traitTrade':
+      if (rewardType !== policy.traitTrade.fixedResultRewardType)
+        failCommand(command, 'trait trade must produce fixed Triple Gold');
+      return;
+    case 'damageContest':
+      if (outcome.result === 'failure') {
+        if (rewardType !== policy.damageContest.failureResultRewardType)
+          failCommand(command, 'contest failure must produce fixed Consolation');
+      } else if (
+        !(policy.damageContest.successResultRewardTypes as readonly string[]).includes(rewardType)
+      )
+        failCommand(command, 'contest success result is outside its declared pool');
+      return;
+  }
+}
 
 function selectableBinding(
   catalog: Catalog,
@@ -50,6 +106,7 @@ function updatedSelections(
 ): RoomEncounterState {
   if (
     command.kind === 'ReplaceFigLeafSkip' ||
+    command.kind === 'ReplaceNemesisRandomEventOutcome' ||
     command.kind === 'ReplaceGorgonDeathDefianceCondition'
   )
     return current;
@@ -82,6 +139,15 @@ function updatedSelections(
   if (gorgonSlotOwnedByDeclaration(catalog, binding, room.gameName)) {
     gorgonResultByPhase[phase.phaseKey] ??= { deathDefianceConditionMet: false };
   }
+  const priorNemesis = current.nemesisRandomEventByPhase ?? {};
+  const nemesisRandomEventByPhase =
+    encounterKey === 'NemesisRandomEvent' &&
+    (command.kind === 'ResetEncounter' || priorNemesis[phase.phaseKey] === undefined)
+      ? Object.freeze({
+          ...priorNemesis,
+          [phase.phaseKey]: null,
+        })
+      : current.nemesisRandomEventByPhase;
   return Object.freeze({
     encounterKeyByPhase: Object.freeze({
       ...current.encounterKeyByPhase,
@@ -90,6 +156,34 @@ function updatedSelections(
     figLeafSkipByPhase: current.figLeafSkipByPhase,
     gorgonResultByPhase: Object.freeze(gorgonResultByPhase),
     ...(traitOffersByPhase === undefined ? {} : { traitOffersByPhase }),
+    ...(nemesisRandomEventByPhase === undefined ? {} : { nemesisRandomEventByPhase }),
+  });
+}
+
+function updatedNemesisRandomEvent(
+  catalog: Catalog,
+  room: RoomDeclaration,
+  current: RoomEncounterState,
+  phase: EncounterPhaseAddress,
+  command: EncounterOccurrenceCommand,
+): RoomEncounterState {
+  if (command.kind !== 'ReplaceNemesisRandomEventOutcome') return current;
+  if (command.event.encounter.phaseKey !== phase.phaseKey)
+    failCommand(command, 'event owner must match its encounter phase');
+  const binding = selectableBinding(catalog, room, phase, command);
+  const set = encounterSetForBinding(catalog, binding, room.gameName);
+  if (!set.encounterDefinitionKeys.includes('NemesisRandomEvent'))
+    failCommand(command, `${phase.phaseKey} does not support NemesisRandomEvent`);
+  const selected = current.encounterKeyByPhase[phase.phaseKey];
+  if (selected !== 'NemesisRandomEvent')
+    failCommand(command, `${phase.phaseKey} has not selected NemesisRandomEvent`);
+  validateNemesisOutcomeCommand(catalog, command);
+  return Object.freeze({
+    ...current,
+    nemesisRandomEventByPhase: Object.freeze({
+      ...(current.nemesisRandomEventByPhase ?? {}),
+      [phase.phaseKey]: command.value,
+    }),
   });
 }
 
@@ -153,22 +247,44 @@ function replaceTopLevel(
   command: EncounterOccurrenceCommand,
 ): ProjectDocument {
   const topology = requireTopology(located.plan, command);
-  const occurrence = requireOccurrence(located.plan, command.phase.owner.occurrenceId, command);
+  const phase =
+    command.kind === 'ReplaceNemesisRandomEventOutcome' ? command.event.encounter : command.phase;
+  const occurrence = requireOccurrence(located.plan, phase.owner.occurrenceId, command);
   const room = requireRoom(catalog, occurrence.gameName, located.layout.biomeKey, command);
-  const encounters = updatedSelections(
-    catalog,
-    room,
-    occurrence.encounters,
-    command.phase,
-    command,
-  );
-  const withFigLeaf = updatedFigLeafSkip(catalog, room, encounters, command.phase, command);
-  const withGorgon = updatedGorgonResult(catalog, room, withFigLeaf, command.phase, command);
-  if (withGorgon === occurrence.encounters) return document;
+  const encounters = updatedSelections(catalog, room, occurrence.encounters, phase, command);
+  const withFigLeaf = updatedFigLeafSkip(catalog, room, encounters, phase, command);
+  const withGorgon = updatedGorgonResult(catalog, room, withFigLeaf, phase, command);
+  const withNemesis = updatedNemesisRandomEvent(catalog, room, withGorgon, phase, command);
+  if (withNemesis === occurrence.encounters) return document;
+  const withEventSite =
+    command.kind !== 'ReplaceNemesisRandomEventOutcome'
+      ? occurrence
+      : (() => {
+          const siteKey = nemesisGeneratedPickupSiteKey(phase.phaseKey);
+          const prior = occurrence.acquisitionSites?.[siteKey]?.pickupEntries?.result;
+          const sameOffer =
+            prior !== undefined &&
+            prior !== null &&
+            command.reward !== null &&
+            sameOccurrenceValue(prior.offer, command.reward);
+          const reward =
+            command.value !== null && command.reward !== null
+              ? sameOffer
+                ? prior
+                : createUnresolvedPickupRewardState(catalog, command.reward, 'NemesisEventPickup')
+              : null;
+          return Object.freeze({
+            ...occurrence,
+            acquisitionSites: Object.freeze({
+              ...(occurrence.acquisitionSites ?? {}),
+              [siteKey]: Object.freeze({ pickupEntries: Object.freeze({ result: reward }) }),
+            }),
+          });
+        })();
   return updateOccurrenceTopology(
     document,
     located,
-    replaceOccurrence(topology, Object.freeze({ ...occurrence, encounters: withGorgon })),
+    replaceOccurrence(topology, Object.freeze({ ...withEventSite, encounters: withNemesis })),
   );
 }
 

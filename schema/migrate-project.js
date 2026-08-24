@@ -4,7 +4,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { basename, dirname, extname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-const CURRENT_SCHEMA_VERSION = 52;
+const CURRENT_SCHEMA_VERSION = 53;
 const SCHEMA_49_CATALOG_VERSION = '0.27.0-arcana-fear-loadout';
 const SCHEMA_50_CATALOG_VERSION = '0.30.0-boon-rarity-ledger';
 const SCHEMA_51_CATALOG_VERSION = '0.31.0-chaos-traits';
@@ -12,6 +12,7 @@ const SCHEMA_52_INITIAL_CATALOG_VERSION = '0.32.0-run-impacting-traits';
 const SCHEMA_52_RUN_IMPACTING_TRAITS_CATALOG_VERSION = '0.32.1-run-impacting-traits';
 const SCHEMA_52_GENERATED_TRAIT_PICKUPS_CATALOG_VERSION = '0.33.0-generated-trait-pickups';
 const SCHEMA_52_CATALOG_VERSION = '0.34.0-sea-star';
+const SCHEMA_53_CATALOG_VERSION = '0.35.0-nemesis-random-events';
 
 const NARCISSUS_PICKUP_KEYS = {
   NarcissusA: ['pom'],
@@ -210,10 +211,21 @@ function migrateSchema52Catalog(document) {
   return { migrations, generatedPickupSitesMoved };
 }
 
+function migrate52To53(document) {
+  const catalogMigration = migrateSchema52Catalog(document);
+  document.schemaVersion = 53;
+  document.catalogVersion = SCHEMA_53_CATALOG_VERSION;
+  return {
+    catalogMigrations: catalogMigration.migrations,
+    generatedPickupSitesMoved: catalogMigration.generatedPickupSitesMoved,
+  };
+}
+
 const migrations = new Map([
   [49, migrate49To50],
   [50, migrate50To51],
   [51, migrate51To52],
+  [52, migrate52To53],
 ]);
 
 export function migrateProjectDocument(value, targetVersion = CURRENT_SCHEMA_VERSION) {
