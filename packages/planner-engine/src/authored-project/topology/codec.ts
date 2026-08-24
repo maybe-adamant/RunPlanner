@@ -23,6 +23,13 @@ import type {
 } from '../model';
 import { roomActionKey } from '../room-actions';
 import { parseArtificerReplacementEntryKey } from '../artificer';
+import { authoredAcquisitionSources } from '../acquisition-sources';
+import {
+  createSeaStarDuplicateRewardState,
+  SEA_STAR_DUPLICATE_ENTRY_KEY,
+  parseSeaStarDuplicateSiteKey,
+} from '../sea-star';
+import { resolveAcquisitionRole } from '../../reward-kernel/history';
 import { decodeNullableRewardState, decodeRoomState } from '../room-state/codec';
 import {
   echoLastRewardPickupEntryKeys,
@@ -31,7 +38,7 @@ import {
   selectedPickupProducers,
   type SelectedPickupProducer,
 } from '../traits';
-import { createBiomeAddress } from '../addresses';
+import { createBiomeAddress, semanticAddressKey } from '../addresses';
 import {
   ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
   INFERNAL_CONTRACT_ENTRY_KEY,
@@ -88,6 +95,27 @@ interface OccurrenceOwner {
 interface RawDecision {
   readonly value: Record<string, unknown>;
   readonly path: string;
+}
+
+function sameStructuredValue(left: unknown, right: unknown): boolean {
+  if (left === right) return true;
+  if (typeof left !== 'object' || left === null || typeof right !== 'object' || right === null)
+    return false;
+  if (Array.isArray(left) || Array.isArray(right)) {
+    if (!Array.isArray(left) || !Array.isArray(right) || left.length !== right.length) return false;
+    return left.every((value, index) => sameStructuredValue(value, right[index]));
+  }
+  const leftRecord = left as Record<string, unknown>;
+  const rightRecord = right as Record<string, unknown>;
+  const leftKeys = Object.keys(leftRecord).sort();
+  const rightKeys = Object.keys(rightRecord).sort();
+  return (
+    leftKeys.length === rightKeys.length &&
+    leftKeys.every(
+      (key, index) =>
+        key === rightKeys[index] && sameStructuredValue(leftRecord[key], rightRecord[key]),
+    )
+  );
 }
 
 function occurrenceId(value: unknown, path: string): OccurrenceId {
@@ -359,12 +387,13 @@ function decodeAcquisitionSites(
   }
   for (const [pointKey, rawSite] of Object.entries(sites)) {
     const generatedTraitSite = parseTraitGeneratedPickupSiteKey(pointKey) !== undefined;
+    const seaStarDuplicateSite = parseSeaStarDuplicateSiteKey(pointKey) !== undefined;
     if (pointKey.startsWith('traitGenerated:') && !generatedTraitSite)
       failProjectDocument(
         `${occurrence.path}.acquisitionSites.${pointKey}`,
         'has an invalid generated-pickup site key',
       );
-    const artificerSite = pointKey !== 'roomExit' && !generatedTraitSite;
+    const artificerSite = pointKey !== 'roomExit' && !generatedTraitSite && !seaStarDuplicateSite;
     const site = expectRecord(rawSite, `${occurrence.path}.acquisitionSites.${pointKey}`);
     const hasPickups = site.pickupEntries !== undefined;
     expectExactKeys(
@@ -391,7 +420,8 @@ function decodeAcquisitionSites(
       !retainedEchoEntry &&
       shopProfileKey === undefined &&
       !artificerSite &&
-      !generatedTraitSite
+      !generatedTraitSite &&
+      !seaStarDuplicateSite
     )
       failProjectDocument(
         `${occurrence.path}.acquisitionSites.${pointKey}.pickupEntries`,
@@ -411,7 +441,7 @@ function decodeAcquisitionSites(
                 raw,
                 catalog,
                 `${occurrence.path}.acquisitionSites.${pointKey}.pickupEntries.${key}`,
-                artificerSite
+                artificerSite || seaStarDuplicateSite
                   ? { kind: 'producerLifecycle', key: 'RoomReward' }
                   : shopProfileKey === undefined
                     ? {
@@ -429,7 +459,9 @@ function decodeAcquisitionSites(
                               ?.producerLifecycleKey ?? '',
                         }
                       : { kind: 'shopProfile', key: shopProfileKey },
-                artificerSite || echoLastRewardEntryKeys.has(key) ? false : true,
+                artificerSite || seaStarDuplicateSite || echoLastRewardEntryKeys.has(key)
+                  ? false
+                  : true,
               ),
             ]),
           ),
@@ -1768,6 +1800,15 @@ export function decodeBiomeTopology(
           `${rawOccurrence.path}.acquisitionSites.${siteKey}`,
           'does not name a selected generated-pickup source',
         );
+      if (
+        parseSeaStarDuplicateSiteKey(siteKey) !== undefined &&
+        (Object.keys(site.pickupEntries ?? {}).length !== 1 ||
+          site.pickupEntries?.[SEA_STAR_DUPLICATE_ENTRY_KEY] === undefined)
+      )
+        failProjectDocument(
+          `${rawOccurrence.path}.acquisitionSites.${siteKey}.pickupEntries`,
+          'must contain exactly the closed Sea Star duplicate entry',
+        );
       for (const entryKey of Object.keys(site.pickupEntries ?? {}))
         if (
           parseEchoLastRewardPickupEntryKey(entryKey) !== undefined &&
@@ -1782,6 +1823,7 @@ export function decodeBiomeTopology(
       ([siteKey, site]) =>
         siteKey !== 'roomExit' &&
         parseTraitGeneratedPickupSiteKey(siteKey) === undefined &&
+        parseSeaStarDuplicateSiteKey(siteKey) === undefined &&
         Object.keys(site.pickupEntries ?? {}).some(
           (entryKey) => parseArtificerReplacementEntryKey(entryKey) === undefined,
         ),
@@ -1903,7 +1945,11 @@ export function decodeBiomeTopology(
           );
       }
     }
-    return Object.freeze({
+    const decodedRoomActions = decodeRoomActionState(
+      rawOccurrence.roomActions,
+      `${rawOccurrence.path}.roomActions`,
+    );
+    const decodedOccurrence = Object.freeze({
       occurrenceId: rawOccurrence.occurrenceId,
       gameName: room.gameName,
       ...(owner.anomalyReplacement === undefined
@@ -1911,10 +1957,7 @@ export function decodeBiomeTopology(
         : { anomalyReplacement: owner.anomalyReplacement }),
       state,
       encounters,
-      roomActions: decodeRoomActionState(
-        rawOccurrence.roomActions,
-        `${rawOccurrence.path}.roomActions`,
-      ),
+      roomActions: decodedRoomActions,
       ...(acquisitionSites === undefined ? {} : { acquisitionSites }),
       additionalExits: decodeAdditionalExits(
         rawOccurrence.additionalExits,
@@ -1922,6 +1965,73 @@ export function decodeBiomeTopology(
         `${rawOccurrence.path}.additionalExits`,
       ),
     });
+    for (const [siteKey, site] of Object.entries(acquisitionSites ?? {})) {
+      const seaStar = parseSeaStarDuplicateSiteKey(siteKey);
+      if (seaStar === undefined) continue;
+      const source = authoredAcquisitionSources(biomeAddress, decodedOccurrence).find(
+        (source) =>
+          semanticAddressKey(source.acquisition.owner) === seaStar.sourceKey &&
+          source.acquisition.acquisitionRole === seaStar.acquisitionRole,
+      );
+      if (source === undefined)
+        failProjectDocument(
+          `${rawOccurrence.path}.acquisitionSites.${siteKey}`,
+          'does not name an authored acquisition source',
+        );
+      if (
+        source.acquisition.owner.kind === 'acquisitionEntry' &&
+        source.acquisition.owner.site.pointKey.startsWith('seaStarDuplicate:')
+      )
+        failProjectDocument(
+          `${rawOccurrence.path}.acquisitionSites.${siteKey}`,
+          'cannot duplicate a Sea Star duplicate',
+        );
+      const resolved = resolveAcquisitionRole(
+        catalog.rewards,
+        source.reward.offer,
+        seaStar.acquisitionRole,
+        'roomRewardPickup',
+      );
+      if (catalog.rewards.acquisitions.byKey[resolved.acquisition.gameName]?.canDuplicate !== true)
+        failProjectDocument(
+          `${rawOccurrence.path}.acquisitionSites.${siteKey}`,
+          'source declaration cannot duplicate',
+        );
+      const duplicate = site.pickupEntries?.[SEA_STAR_DUPLICATE_ENTRY_KEY];
+      if (duplicate === undefined || duplicate === null)
+        failProjectDocument(
+          `${rawOccurrence.path}.acquisitionSites.${siteKey}.pickupEntries`,
+          'must contain a concrete Sea Star duplicate',
+        );
+      const expectedDuplicate = createSeaStarDuplicateRewardState(
+        catalog,
+        source.reward,
+        seaStar.acquisitionRole,
+      );
+      // The generated identity is closed, but a fresh full Pom is its own
+      // acquisition: its disposition and unresolved level child can be edited
+      // exactly as any other reached Pom. Retained objects keep their offer.
+      if (!sameStructuredValue(duplicate.offer, expectedDuplicate.offer))
+        failProjectDocument(
+          `${rawOccurrence.path}.acquisitionSites.${siteKey}.pickupEntries.${SEA_STAR_DUPLICATE_ENTRY_KEY}`,
+          'does not match the Sea Star retained-or-fresh duplicate shape',
+        );
+      const expectedAction = Object.freeze({
+        kind: 'interactAcquisitionEntry' as const,
+        siteKey,
+        entryKey: SEA_STAR_DUPLICATE_ENTRY_KEY,
+      });
+      if (
+        decodedRoomActions.order.filter(
+          (reference) => roomActionKey(reference) === roomActionKey(expectedAction),
+        ).length !== 1
+      )
+        failProjectDocument(
+          `${rawOccurrence.path}.roomActions.order`,
+          'must retain the exact Sea Star duplicate action',
+        );
+    }
+    return decodedOccurrence;
   });
   return Object.freeze({
     startOccurrenceId,

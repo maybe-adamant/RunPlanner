@@ -1194,7 +1194,11 @@ function candidateSelectedPossible(evaluation: CandidateProjectionEvaluation): b
     case 'keepsakeSelection':
       return evaluation.result.selectedPossible;
     case 'acquisitionConversion':
-      return evaluation.result.timePieceSupported || evaluation.result.artificerSupported;
+      return (
+        evaluation.result.timePieceSupported ||
+        evaluation.result.artificerSupported ||
+        evaluation.result.seaStarSupported
+      );
     case 'steadyGrowthOutcome':
       return evaluation.result.selectedPossible;
     default:

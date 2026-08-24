@@ -1858,7 +1858,8 @@ export function recordReachedTraitOffer(
     selectedDisposition?.kind !== 'naturalSelection' &&
     selectedDisposition?.kind !== 'ransom' &&
     selectedDisposition?.kind !== 'steadyGrowth' &&
-    selectedDisposition?.kind !== 'producePickups'
+    selectedDisposition?.kind !== 'producePickups' &&
+    selectedDisposition?.kind !== 'seaStar'
   ) {
     return Object.freeze({ history: evaluation.before });
   }

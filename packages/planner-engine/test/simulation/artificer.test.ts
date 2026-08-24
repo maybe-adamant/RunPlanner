@@ -3,6 +3,7 @@ import {
   artificerAcquisitionSite,
   artificerReplacementEntryKey,
   createAcquisitionEntryAddress,
+  createAcquisitionSiteAddress,
   createBiomeAddress,
   createIncomingRewardAddress,
   createOccurrenceAddress,
@@ -25,11 +26,15 @@ import {
 } from '../../src/simulation/arcana-fear';
 import {
   assessArtificerConversion,
+  assessSeaStarDuplication,
+  assessTimePieceConversion,
   initializeRewardBranches,
   settleArtificerReplacementAcquisition,
   settleOwnedAcquisitionSite,
+  settlePickupAcquisitionSite,
   type RewardBranchState,
 } from '../../src/simulation/rewards/processing';
+import { createTraitHistoryState } from '../../src/simulation/traits';
 
 const biome = createBiomeAddress('Underworld', 'H');
 const loadout = createDefaultRouteLoadout(catalog);
@@ -166,6 +171,172 @@ function convert(
 }
 
 describe('The Artificer', () => {
+  it('keeps Sea Star eligibility at the exact normal duplicate-capable source frontier', () => {
+    const [base] = initialBranches();
+    const branch = Object.freeze({
+      ...base!,
+      traitHistory: Object.freeze({
+        ...createTraitHistoryState(),
+        equippedTraits: Object.freeze({
+          DoubleRewardBoon: Object.freeze({
+            traitKey: 'DoubleRewardBoon',
+            giverKey: 'Poseidon',
+            providerKind: 'olympian' as const,
+            rarity: 'Common' as const,
+            sourceRole: 'selection',
+          }),
+        }),
+      }),
+    });
+    const source = (
+      rewardType: string,
+      disposition: 'normal' | 'timePiece' | 'artificer' = 'normal',
+      role = 'self',
+      instanceProvenance: 'free' | 'paid' = 'free',
+    ) =>
+      Object.freeze({
+        origin: createIncomingRewardAddress(biome, createOccurrenceId(`sea-star-${rewardType}`)),
+        offer: Object.freeze({ rewardType }),
+        producerLifecycleKey: 'RoomReward',
+        instanceProvenance,
+        dispositionByAcquisitionRole: Object.freeze({
+          [role]: Object.freeze({ kind: disposition }),
+        }),
+      });
+    const resolution = Object.freeze({ role: 'self', lifecyclePoint: 'roomRewardPickup' as const });
+
+    expect(assessSeaStarDuplication(catalog, branch, source('GiftDrop'), resolution)).toMatchObject(
+      {
+        supported: true,
+      },
+    );
+    expect(
+      [branch, base!].map((candidate) =>
+        assessSeaStarDuplication(catalog, candidate, source('GiftDrop'), resolution),
+      ),
+    ).toMatchObject([{ supported: true }, { supported: false }]);
+    expect(
+      assessSeaStarDuplication(catalog, branch, source('GiftDrop', 'timePiece'), resolution),
+    ).toMatchObject({ supported: false, evidence: { normalDisposition: false } });
+    expect(
+      assessSeaStarDuplication(catalog, branch, source('GiftDrop', 'artificer'), resolution),
+    ).toMatchObject({ supported: false, evidence: { normalDisposition: false } });
+    expect(
+      assessSeaStarDuplication(
+        catalog,
+        branch,
+        source('StackUpgrade', 'normal', 'self', 'paid'),
+        resolution,
+      ),
+    ).toMatchObject({ supported: false, evidence: { instanceProvenance: 'paid' } });
+    expect(
+      assessSeaStarDuplication(
+        catalog,
+        branch,
+        Object.freeze({
+          ...source('Boon', 'normal', 'source'),
+          offer: Object.freeze({
+            rewardType: 'Boon',
+            payload: Object.freeze({ kind: 'BoonSource', source: 'AphroditeUpgrade' }),
+          }),
+        }),
+        Object.freeze({ role: 'source', lifecyclePoint: 'roomRewardPickup' as const }),
+      ),
+    ).toMatchObject({ supported: false, evidence: { canDuplicate: false } });
+    expect(
+      assessSeaStarDuplication(
+        catalog,
+        branch,
+        Object.freeze({ ...source('GiftDrop'), blocksSeaStarDuplication: true as const }),
+        resolution,
+      ),
+    ).toMatchObject({ supported: false, evidence: { blocksSeaStarDuplication: true } });
+  });
+
+  it('settles the retained Sea Star object as its own optional second pickup and blocks recursion', () => {
+    const occurrenceId = createOccurrenceId('sea-star-retained');
+    const siteOwner = createOccurrenceAddress(biome, occurrenceId);
+    const site = createAcquisitionSiteAddress(siteOwner, 'seaStarDuplicate:test:self');
+    const retained = createUnresolvedAcquisitionRewardState(
+      catalog,
+      { rewardType: 'GiftDrop' },
+      { kind: 'producerLifecycle', key: 'RoomReward' },
+    );
+    const product = settlePickupAcquisitionSite(
+      catalog,
+      initialBranches(),
+      {
+        siteOwner,
+        site,
+        entries: Object.freeze({ seaStarDuplicate: retained }),
+        order: Object.freeze(['seaStarDuplicate']),
+        producerLifecycleKey: 'RoomReward',
+        requiredEntryKeys: new Set(),
+        seaStarDuplicateEntryKeys: new Set(['seaStarDuplicate']),
+        historySequence: 1,
+        facts: (history) => factsWithHistory(facts(), history, new Set()),
+      },
+      new Map(),
+    );
+    expect(product.entries[0]?.participation).toBe('optional');
+    expect(product.branches[0]?.history.consumableRecord.GiftDrop).toBe(1);
+    expect(product.roleFrontiers?.[0]?.source.blocksSeaStarDuplication).toBe(true);
+  });
+
+  it('keeps a Sea Star-retained Buried Treasure Bones pickup on its parent lifecycle', () => {
+    const occurrenceId = createOccurrenceId('sea-star-buried-bones');
+    const siteOwner = createOccurrenceAddress(biome, occurrenceId);
+    const site = createAcquisitionSiteAddress(siteOwner, 'seaStarDuplicate:buried-bones:self');
+    const retained = createUnresolvedAcquisitionRewardState(
+      catalog,
+      { rewardType: 'MetaCurrencyDrop' },
+      { kind: 'producerLifecycle', key: 'GeneratedTraitPickup' },
+    );
+    const product = settlePickupAcquisitionSite(
+      catalog,
+      initialBranches(),
+      {
+        siteOwner,
+        site,
+        entries: Object.freeze({ seaStarDuplicate: retained }),
+        order: Object.freeze(['seaStarDuplicate']),
+        producerLifecycleKey: 'GeneratedTraitPickup',
+        requiredEntryKeys: new Set(),
+        seaStarDuplicateEntryKeys: new Set(['seaStarDuplicate']),
+        historySequence: 1,
+        facts: (history) => factsWithHistory(facts(), history, new Set()),
+      },
+      new Map(),
+    );
+    const frontier = product.roleFrontiers?.[0];
+    if (frontier === undefined) throw new Error('missing retained Bones role frontier');
+    expect(frontier.source.producerLifecycleKey).toBe('GeneratedTraitPickup');
+    expect(
+      assessArtificerConversion(catalog, frontier.branchesBeforeRole[0]!, frontier.source, {
+        role: frontier.address.acquisitionRole,
+        lifecyclePoint: frontier.lifecyclePoint,
+        blocksArtificerConversion: true,
+      }),
+    ).toMatchObject({ supported: false, evidence: { blocksArtificerConversion: true } });
+    const timePieceBranch = Object.freeze({
+      ...frontier.branchesBeforeRole[0]!,
+      keepsakes: Object.freeze({
+        ...frontier.branchesBeforeRole[0]!.keepsakes,
+        fatedStatus: 'Fated' as const,
+        timePiece: Object.freeze({ remainingCharges: 1 }),
+      }),
+    });
+    expect(
+      assessTimePieceConversion(
+        catalog,
+        timePieceBranch,
+        frontier.source,
+        frontier.address.acquisitionRole,
+        frontier.lifecyclePoint,
+      ),
+    ).toMatchObject({ supported: true });
+  });
+
   it('requires an exact eligible free source and honors producer overrides', () => {
     const branch = initialBranches()[0]!;
     const origin = createIncomingRewardAddress(biome, createOccurrenceId('artificer-source'));

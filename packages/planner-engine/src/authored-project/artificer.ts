@@ -47,7 +47,9 @@ export function artificerAcquisitionSite(
 
 /** Collision-safe persisted key for one exact occurrence-owned acquisition site. */
 export function acquisitionSiteStorageKey(site: AcquisitionSiteAddress): string {
-  return site.pointKey === 'roomExit' || site.pointKey.startsWith('traitGenerated:')
+  return site.pointKey === 'roomExit' ||
+    site.pointKey.startsWith('traitGenerated:') ||
+    site.pointKey.startsWith('seaStarDuplicate:')
     ? site.pointKey
     : semanticAddressKey(site);
 }
@@ -61,6 +63,8 @@ export function acquisitionSiteFromStorageKey(
   // Trait-generated sites are closed and reattested by the trait adapter/codec;
   // this parser only reconstructs the existing acquisition-site address.
   if (storageKey.startsWith('traitGenerated:'))
+    return createAcquisitionSiteAddress(occurrence, storageKey);
+  if (storageKey.startsWith('seaStarDuplicate:'))
     return createAcquisitionSiteAddress(occurrence, storageKey);
   try {
     const value: unknown = JSON.parse(storageKey);

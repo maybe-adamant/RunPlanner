@@ -9,7 +9,51 @@ function lastReward(rewardType: string) {
   });
 }
 
-export const acquisitions = [
+/** Exact `CanDuplicate` source facts.  Consumable inheritance is expanded here
+ * so the catalog remains a complete declaration rather than engine policy. */
+const CAN_DUPLICATE = new Set<string>([
+  'StackUpgrade',
+  'StackUpgradeBig',
+  'StackUpgradeTriple',
+  'MaxHealthDrop',
+  'MaxHealthDropBig',
+  'MaxHealthDropSmall',
+  'EmptyMaxHealthSmallDrop',
+  'MaxManaDrop',
+  'MaxManaDropBig',
+  'MaxManaDropSmall',
+  'Currency',
+  'RoomMoneyDrop',
+  'RoomMoneySmallDrop',
+  'RoomMoneyTripleDrop',
+  'RoomMoneyTinyDrop',
+  'TalentDrop',
+  'TalentBigDrop',
+  'MinorTalentDrop',
+  'RoomRewardHealDrop',
+  'HealBigDrop',
+  'ArmorBoost',
+  'ArmorBigBoost',
+  'AirBoost',
+  'EarthBoost',
+  'FireBoost',
+  'WaterBoost',
+  'ElementalBoost',
+  'StoreRewardRandomStack',
+  'LastStandDrop',
+  'ChaosWeaponUpgrade',
+  'GiftDrop',
+  'MetaCurrencyDrop',
+  'MetaCurrencyBigDrop',
+  'MetaCardPointsCommonDrop',
+  'MetaCardPointsCommonBigDrop',
+  'MemPointsCommonDrop',
+  'WeaponPointsRareDrop',
+  'CardUpgradePointsDrop',
+  'CharonPointsDrop',
+]);
+
+const rawAcquisitions = [
   {
     gameName: 'AphroditeUpgrade',
     kind: 'loot',
@@ -313,4 +357,8 @@ export const acquisitions = [
   { gameName: 'WeaponPointsRareDrop', kind: 'resource', historyProjection: 'consumableAndUse' },
   { gameName: 'CardUpgradePointsDrop', kind: 'resource', historyProjection: 'consumableAndUse' },
   { gameName: 'CharonPointsDrop', kind: 'resource', historyProjection: 'consumableAndUse' },
-] as const satisfies readonly RawConcreteAcquisitionDeclaration[];
+] as const;
+
+export const acquisitions = rawAcquisitions.map((acquisition) =>
+  Object.freeze({ ...acquisition, canDuplicate: CAN_DUPLICATE.has(acquisition.gameName) }),
+) satisfies readonly RawConcreteAcquisitionDeclaration[];

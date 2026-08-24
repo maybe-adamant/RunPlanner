@@ -36,7 +36,7 @@ const rooms: readonly RawRoomDeclaration[] = [
 ];
 
 export const declarations = {
-  version: '0.33.0-generated-trait-pickups',
+  version: '0.34.0-sea-star',
   biomes,
   routes,
   arcanaCards,

@@ -4,11 +4,18 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   applyProjectHistoryCommand,
+  assembleRoomActionDomain,
   createProjectHistory,
   createIncomingRewardAddress,
+  createOccurrenceAddress,
   createOccurrenceId,
   createRouteStartKeepsakeSelectionAddress,
+  createAcquisitionEntryAddress,
+  createAcquisitionSiteAddress,
   createAcquisitionRoleAddress,
+  seaStarDuplicateSiteKey,
+  SEA_STAR_DUPLICATE_ENTRY_KEY,
+  seaStarDuplicateSourceIsActive,
   createTraitOfferAddress,
   decodeProjectDocument,
   encodeProjectDocument,
@@ -20,7 +27,14 @@ import {
   goldenFOccurrenceId,
   goldenHBiome,
 } from '@run-planner/test-fixtures/underworld';
-import { loadSurfaceNOProject, oBiome, oOccurrenceIds } from '@run-planner/test-fixtures/surface';
+import {
+  loadSurfaceNOProject,
+  loadSurfaceNOPQProject,
+  oBiome,
+  oOccurrenceIds,
+  pBiome,
+  pOccurrenceIds,
+} from '@run-planner/test-fixtures/surface';
 
 import { createCompleteNProject } from '../support/complete-n-project';
 import { nBiome } from '../support/configured-projects';
@@ -166,6 +180,249 @@ describe('authored-project incoming reward commands', () => {
       payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
     });
     expect(state.reward.dispositionByAcquisitionRole).toEqual({ source: { kind: 'timePiece' } });
+  });
+
+  it('authors one source-scoped Sea Star child and removes it again with one Undoable command', () => {
+    const reward = createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(1, 1));
+    const acquisition = createAcquisitionRoleAddress(reward, 'self');
+    const project = applyProjectCommand(createGoldenFGHProject(), catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward,
+      value: { rewardType: 'RoomMoneyDrop' },
+    });
+    const initial = createProjectHistory(project);
+    const procced = applyProjectHistoryCommand(initial, catalog, {
+      kind: 'ReplaceSeaStarResult',
+      acquisition,
+      procced: true,
+    });
+    const occurrence = procced.present.routes[0]!.biomes[0]!.topology!.occurrences.find(
+      (candidate) => candidate.occurrenceId === goldenFOccurrenceId(1, 1),
+    );
+    const siteKey = seaStarDuplicateSiteKey(acquisition);
+    expect(occurrence?.acquisitionSites?.[siteKey]?.pickupEntries).toHaveProperty(
+      SEA_STAR_DUPLICATE_ENTRY_KEY,
+    );
+    expect(occurrence?.roomActions.order).toContainEqual({
+      kind: 'interactAcquisitionEntry',
+      siteKey,
+      entryKey: SEA_STAR_DUPLICATE_ENTRY_KEY,
+    });
+    if (occurrence === undefined) throw new Error('Sea Star source occurrence is missing');
+    const domain = assembleRoomActionDomain({ catalog, biome: goldenFBiome, occurrence });
+    const source = domain.contributions.find(
+      (entry) =>
+        entry.kind === 'action' &&
+        entry.reference.kind === 'interactIncomingReward' &&
+        entry.reference.acquisitionRole === 'self',
+    );
+    const child = domain.contributions.find(
+      (entry) =>
+        entry.kind === 'action' &&
+        entry.reference.kind === 'interactAcquisitionEntry' &&
+        entry.reference.siteKey === siteKey,
+    );
+    expect(child).toMatchObject({
+      kind: 'action',
+      participation: source?.kind === 'action' ? source.participation : undefined,
+      window: source?.kind === 'action' ? source.window : undefined,
+      dependencies: [
+        {
+          kind: 'afterAction',
+          action: source?.kind === 'action' ? source.reference : undefined,
+        },
+      ],
+    });
+    expect(
+      decodeProjectDocument(JSON.parse(encodeProjectDocument(procced.present)), catalog),
+    ).toEqual(procced.present);
+    const cleared = applyProjectHistoryCommand(procced, catalog, {
+      kind: 'ReplaceSeaStarResult',
+      acquisition,
+      procced: false,
+    });
+    expect(
+      cleared.present.routes[0]!.biomes[0]!.topology!.occurrences.find(
+        (candidate) => candidate.occurrenceId === goldenFOccurrenceId(1, 1),
+      )?.acquisitionSites?.[siteKey],
+    ).toBeUndefined();
+    expect(undoProjectHistory(cleared).present).toBe(procced.present);
+  });
+
+  it('keeps a retained Sea Star child dormant while its parent uses Time Piece', () => {
+    const reward = createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(1, 1));
+    const acquisition = createAcquisitionRoleAddress(reward, 'self');
+    let project = applyProjectCommand(createGoldenFGHProject(), catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward,
+      value: { rewardType: 'RoomMoneyDrop' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceSeaStarResult',
+      acquisition,
+      procced: true,
+    });
+    const occurrence = () =>
+      project.routes[0]!.biomes[0]!.topology!.occurrences.find(
+        (candidate) => candidate.occurrenceId === goldenFOccurrenceId(1, 1),
+      )!;
+    const siteKey = seaStarDuplicateSiteKey(acquisition);
+    expect(seaStarDuplicateSourceIsActive(catalog, goldenFBiome, occurrence(), siteKey)).toBe(true);
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceAcquisitionDisposition',
+      acquisition,
+      value: { kind: 'timePiece' },
+    });
+    expect(occurrence().acquisitionSites?.[siteKey]).toBeDefined();
+    expect(seaStarDuplicateSourceIsActive(catalog, goldenFBiome, occurrence(), siteKey)).toBe(
+      false,
+    );
+  });
+
+  it('keeps a free generated pickup inside a Shop eligible for its own Sea Star child', () => {
+    const shop = loadSurfaceNOPQProject()
+      .routes.find((route) => route.routeKey === 'Surface')
+      ?.biomes.find((biome) => biome.biomeKey === 'P')
+      ?.topology?.occurrences.find(
+        (occurrence) => occurrence.occurrenceId === pOccurrenceIds.prebossShop,
+      );
+    const shopState = shop?.state;
+    const minorReward =
+      shopState?.kind === 'shop' ? shopState.shop?.offers.Minor?.reward : undefined;
+    if (shop === undefined || minorReward === undefined)
+      throw new Error('nested Shop pickup source is missing');
+    const occurrence = createOccurrenceAddress(pBiome, shop.occurrenceId);
+    const sourceSiteKey = 'traitGenerated:shop-free-pickup';
+    const source = createAcquisitionRoleAddress(
+      createAcquisitionEntryAddress(
+        createAcquisitionSiteAddress(occurrence, sourceSiteKey),
+        'quickBuckGold',
+      ),
+      'self',
+    );
+    const duplicateSiteKey = seaStarDuplicateSiteKey(source);
+    const nestedFreePickup = Object.freeze({
+      ...shop,
+      acquisitionSites: Object.freeze({
+        ...(shop.acquisitionSites ?? {}),
+        [sourceSiteKey]: Object.freeze({
+          pickupEntries: Object.freeze({ quickBuckGold: minorReward }),
+        }),
+        [duplicateSiteKey]: Object.freeze({
+          pickupEntries: Object.freeze({
+            [SEA_STAR_DUPLICATE_ENTRY_KEY]: minorReward,
+          }),
+        }),
+      }),
+      roomActions: Object.freeze({
+        order: Object.freeze([
+          ...shop.roomActions.order,
+          Object.freeze({
+            kind: 'interactAcquisitionEntry' as const,
+            siteKey: sourceSiteKey,
+            entryKey: 'quickBuckGold',
+          }),
+          Object.freeze({
+            kind: 'interactAcquisitionEntry' as const,
+            siteKey: duplicateSiteKey,
+            entryKey: SEA_STAR_DUPLICATE_ENTRY_KEY,
+          }),
+        ]),
+      }),
+    });
+
+    expect(
+      seaStarDuplicateSourceIsActive(catalog, pBiome, nestedFreePickup, duplicateSiteKey),
+    ).toBe(true);
+  });
+
+  it('authors a full Pom Sea Star result as one fresh required acquisition', () => {
+    const reward = createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(1, 1));
+    const acquisition = createAcquisitionRoleAddress(reward, 'self');
+    const project = applyProjectCommand(createGoldenFGHProject(), catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward,
+      value: { rewardType: 'StackUpgrade' },
+    });
+    const source = project.routes[0]!.biomes[0]!.topology!.occurrences.find(
+      (candidate) => candidate.occurrenceId === goldenFOccurrenceId(1, 1),
+    )?.state;
+    if (source?.kind !== 'counted' || source.reward === null)
+      throw new Error('full Pom source reward is missing');
+
+    const initial = createProjectHistory(project);
+    const procced = applyProjectHistoryCommand(initial, catalog, {
+      kind: 'ReplaceSeaStarResult',
+      acquisition,
+      procced: true,
+    });
+    const siteKey = seaStarDuplicateSiteKey(acquisition);
+    const occurrence = procced.present.routes[0]!.biomes[0]!.topology!.occurrences.find(
+      (candidate) => candidate.occurrenceId === goldenFOccurrenceId(1, 1),
+    );
+    if (occurrence === undefined) throw new Error('full Pom source occurrence is missing');
+    const duplicate =
+      occurrence.acquisitionSites?.[siteKey]?.pickupEntries?.[SEA_STAR_DUPLICATE_ENTRY_KEY];
+    if (duplicate === undefined || duplicate === null)
+      throw new Error('full Pom Sea Star result is missing');
+
+    // A full Pom is a new required RoomReward acquisition: it does not retain
+    // the parent resolution object or any source-specific child state.
+    expect(duplicate).toEqual({
+      offer: { rewardType: 'StackUpgrade' },
+      dispositionByAcquisitionRole: { self: { kind: 'normal' } },
+      traitOffersByAcquisitionRole: {},
+      levelResolutionsByAcquisitionRole: {
+        self: { kind: 'choice', offeredTraitKeys: [], selectedTraitKey: null },
+      },
+    });
+    expect(duplicate).not.toBe(source.reward);
+    expect(duplicate.levelResolutionsByAcquisitionRole).not.toBe(
+      source.reward.levelResolutionsByAcquisitionRole,
+    );
+
+    const duplicateAddress = createAcquisitionRoleAddress(
+      createAcquisitionEntryAddress(
+        createAcquisitionSiteAddress(
+          createOccurrenceAddress(goldenFBiome, goldenFOccurrenceId(1, 1)),
+          siteKey,
+        ),
+        SEA_STAR_DUPLICATE_ENTRY_KEY,
+      ),
+      'self',
+    );
+    const domain = assembleRoomActionDomain({ catalog, biome: goldenFBiome, occurrence });
+    const child = domain.contributions.find(
+      (entry) =>
+        entry.kind === 'action' &&
+        entry.reference.kind === 'interactAcquisitionEntry' &&
+        entry.reference.siteKey === siteKey &&
+        entry.reference.entryKey === SEA_STAR_DUPLICATE_ENTRY_KEY,
+    );
+    expect(child).toMatchObject({
+      participation: 'required',
+      dependencies: [
+        {
+          kind: 'afterAction',
+          action: {
+            kind: 'interactIncomingReward',
+            acquisitionRole: 'self',
+          },
+        },
+      ],
+    });
+    const timePieced = applyProjectCommand(procced.present, catalog, {
+      kind: 'ReplaceAcquisitionDisposition',
+      acquisition: duplicateAddress,
+      value: { kind: 'timePiece' },
+    });
+    expect(
+      timePieced.routes[0]!.biomes[0]!.topology!.occurrences.find(
+        (candidate) => candidate.occurrenceId === goldenFOccurrenceId(1, 1),
+      )?.acquisitionSites?.[siteKey]?.pickupEntries?.[SEA_STAR_DUPLICATE_ENTRY_KEY]
+        ?.dispositionByAcquisitionRole.self,
+    ).toEqual({ kind: 'timePiece' });
+    expect(undoProjectHistory(procced).present).toBe(initial.present);
   });
 
   it('preserves base rarities and the exact ordered Calling Card ledger in one offer command', () => {

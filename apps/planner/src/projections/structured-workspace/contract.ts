@@ -933,11 +933,16 @@ export interface WorkspaceAcquisitionConversionInteraction {
   /** Gold is enabled only when every reached engine branch supports it. */
   readonly timePieceSupported: boolean;
   readonly artificerSupported: boolean;
+  readonly seaStarSupported: boolean;
+  readonly seaStarProcced: boolean;
   readonly intentFor: (
     value: import('@run-planner/engine/authored-project').AcquisitionDisposition,
   ) => WorkspacePayloadEditIntent<
     Extract<ProjectCommand, { readonly kind: 'ReplaceAcquisitionDisposition' }>
   >;
+  readonly seaStarIntentFor: (
+    procced: boolean,
+  ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceSeaStarResult' }>>;
   readonly key: string;
   readonly owner: AcquisitionRoleAddress;
   readonly value: import('@run-planner/engine/authored-project').AcquisitionDisposition;

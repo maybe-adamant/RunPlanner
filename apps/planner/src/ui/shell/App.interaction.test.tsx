@@ -5,18 +5,24 @@ import {
   applyProjectCommand,
   createAllTogetherSetAddress,
   createAcquisitionEntryAddress,
+  createAcquisitionRoleAddress,
   createAcquisitionSiteAddress,
+  createBatchRewardStoreAddress,
   createEncounterPhaseAddress,
+  createExitDecisionAddress,
   createExitSelectionAddress,
   createIncomingRewardAddress,
   createOccurrenceAddress,
   createRoomActionAddress,
   createOccurrenceId,
+  createProjectDocument,
   createRouteAddress,
+  createTargetAddress,
   createTraitOfferAddress,
   createTraitAcquisitionTargetAddress,
   createShopOfferAddress,
   semanticAddressKey,
+  seaStarDuplicateSiteKey,
   roomActionKey,
   decodeProjectDocument,
   encodeProjectDocument,
@@ -94,6 +100,199 @@ function projectWithArtemisInErebus() {
         encounterKey: 'ArtemisCombatF',
       }),
     ),
+  };
+}
+
+function seaStarRewardFixture() {
+  const start = createOccurrenceId('sea-star-app-start');
+  const preSeaStar = createOccurrenceId('sea-star-app-pre-trait');
+  const seaStar = createOccurrenceId('sea-star-app-trait');
+  const target = createOccurrenceId('sea-star-app-target');
+  const startReward = createIncomingRewardAddress(goldenFBiome, start);
+  const preSeaStarReward = createIncomingRewardAddress(goldenFBiome, preSeaStar);
+  const seaStarReward = createIncomingRewardAddress(goldenFBiome, seaStar);
+  const targetReward = createIncomingRewardAddress(goldenFBiome, target);
+  let project = createProjectDocument(catalog, {
+    projectId: 'sea-star-app-workflow',
+    configuredBiomeCounts: { Underworld: 1 },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateStart',
+    biome: goldenFBiome,
+    occurrenceId: start,
+    gameName: 'F_Opening01',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: startReward,
+    value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'PoseidonUpgrade' } },
+  });
+  project = authorLegalTraitOffers(project);
+  const openingOffer = supportedTraitOffer(
+    project,
+    createTraitOfferAddress(startReward, 'source'),
+    'Poseidon',
+    'PoseidonWeaponBoon',
+  );
+  if (openingOffer === undefined) throw new Error('Sea Star fixture has no opening Poseidon offer');
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait: createTraitOfferAddress(startReward, 'source'),
+    value: openingOffer,
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateBatch',
+    decision: createExitDecisionAddress(goldenFBiome, { kind: 'occurrence', occurrenceId: start }),
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceBatchRewardStore',
+    rewardStore: createBatchRewardStoreAddress(goldenFBiome, {
+      kind: 'occurrence',
+      occurrenceId: start,
+    }),
+    storeKey: 'MetaProgress',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateTarget',
+    target: createTargetAddress(goldenFBiome, { kind: 'occurrence', occurrenceId: start }, 'exit1'),
+    occurrenceId: preSeaStar,
+    gameName: 'F_Combat02',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: preSeaStarReward,
+    value: { rewardType: 'MetaCurrencyDrop' },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateBatch',
+    decision: createExitDecisionAddress(goldenFBiome, {
+      kind: 'occurrence',
+      occurrenceId: preSeaStar,
+    }),
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceBatchRewardStore',
+    rewardStore: createBatchRewardStoreAddress(goldenFBiome, {
+      kind: 'occurrence',
+      occurrenceId: preSeaStar,
+    }),
+    storeKey: 'RunProgress',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateTarget',
+    target: createTargetAddress(
+      goldenFBiome,
+      { kind: 'occurrence', occurrenceId: preSeaStar },
+      'exit1',
+    ),
+    occurrenceId: seaStar,
+    gameName: 'F_Combat03',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateTarget',
+    target: createTargetAddress(
+      goldenFBiome,
+      { kind: 'occurrence', occurrenceId: preSeaStar },
+      'exit2',
+    ),
+    occurrenceId: createOccurrenceId('sea-star-app-pre-trait-sibling'),
+    gameName: 'F_Combat03',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: createIncomingRewardAddress(
+      goldenFBiome,
+      createOccurrenceId('sea-star-app-pre-trait-sibling'),
+    ),
+    value: { rewardType: 'MaxManaDrop' },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'SetExitSelection',
+    selection: createExitSelectionAddress(goldenFBiome, {
+      kind: 'occurrence',
+      occurrenceId: preSeaStar,
+    }),
+    value: { kind: 'normal', exitKey: 'exit1' },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: seaStarReward,
+    value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'PoseidonUpgrade' } },
+  });
+  project = authorLegalTraitOffers(project);
+  const seaStarOffer = supportedTraitOffer(
+    project,
+    createTraitOfferAddress(seaStarReward, 'source'),
+    'Poseidon',
+    'DoubleRewardBoon',
+  );
+  if (seaStarOffer === undefined) throw new Error('Sea Star fixture has no later Poseidon offer');
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait: createTraitOfferAddress(seaStarReward, 'source'),
+    value: seaStarOffer,
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateBatch',
+    decision: createExitDecisionAddress(goldenFBiome, {
+      kind: 'occurrence',
+      occurrenceId: seaStar,
+    }),
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceBatchRewardStore',
+    rewardStore: createBatchRewardStoreAddress(goldenFBiome, {
+      kind: 'occurrence',
+      occurrenceId: seaStar,
+    }),
+    storeKey: 'RunProgress',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateTarget',
+    target: createTargetAddress(
+      goldenFBiome,
+      { kind: 'occurrence', occurrenceId: seaStar },
+      'exit1',
+    ),
+    occurrenceId: target,
+    gameName: 'F_Combat04',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateTarget',
+    target: createTargetAddress(
+      goldenFBiome,
+      { kind: 'occurrence', occurrenceId: seaStar },
+      'exit2',
+    ),
+    occurrenceId: createOccurrenceId('sea-star-app-trait-sibling'),
+    gameName: 'F_Combat04',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: createIncomingRewardAddress(
+      goldenFBiome,
+      createOccurrenceId('sea-star-app-trait-sibling'),
+    ),
+    value: { rewardType: 'WeaponUpgrade' },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'SetExitSelection',
+    selection: createExitSelectionAddress(goldenFBiome, {
+      kind: 'occurrence',
+      occurrenceId: seaStar,
+    }),
+    value: { kind: 'normal', exitKey: 'exit1' },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: targetReward,
+    value: { rewardType: 'RoomMoneyDrop' },
+  });
+  return {
+    project,
+    targetReward,
+    targetAcquisition: createAcquisitionRoleAddress(targetReward, 'self'),
+    target,
   };
 }
 
@@ -376,6 +575,74 @@ describe('planner history interaction', () => {
       throw new Error('restored Artemis offer must contain traits');
     }
     expect(restoredInteraction.value.selectedOptionKey).toBe('option2');
+  });
+
+  it('authors and undoes the exact Sea Star checkbox row in the room timeline', async () => {
+    const { project, target, targetAcquisition, targetReward } = seaStarRewardFixture();
+    const application = createApplication();
+    application.store.dispatch(authoredProjectReplaced(project));
+    application.store.dispatch(
+      routePanelSelected({
+        routeKey: 'Underworld',
+        panel: { kind: 'biome', biomeKey: 'F' },
+      }),
+    );
+    application.store.dispatch(semanticOwnerFocused(targetAcquisition));
+    const conversion = application
+      .selectStructuredWorkspace(application.store.getState())
+      .interactions.acquisitionConversions.get(semanticAddressKey(targetAcquisition));
+    if (conversion === undefined)
+      throw new Error(
+        `Sea Star target conversion is absent: ${application.store
+          .getState()
+          .projectWorkspace.assembly.evaluation.findings.map((finding) => finding.code)
+          .join(', ')}`,
+      );
+    expect(conversion.seaStarSupported).toBe(true);
+    const view = renderPlannerForInteraction({ application });
+
+    const checkbox = await screen.findByRole('checkbox', {
+      name: 'Sea Star procced for Reward',
+    });
+    expect(checkbox).toHaveProperty('checked', false);
+    const historyBefore = application.store.getState().projectWorkspace.history.past.length;
+    await view.user.click(checkbox);
+
+    await waitFor(() => expect(checkbox).toHaveProperty('checked', true));
+    expect(application.store.getState().projectWorkspace.history.past).toHaveLength(
+      historyBefore + 1,
+    );
+    const siteKey = seaStarDuplicateSiteKey(targetAcquisition);
+    const child = createAcquisitionEntryAddress(
+      createAcquisitionSiteAddress(createOccurrenceAddress(goldenFBiome, target), siteKey),
+      'seaStarDuplicate',
+    );
+    await waitFor(() =>
+      expect(document.getElementById(semanticOwnerElementId(child))).not.toBeNull(),
+    );
+    const childRow = document
+      .getElementById(semanticOwnerElementId(child))
+      ?.closest('[data-room-action-key]');
+    expect(childRow?.textContent).toContain('seaStarDuplicate pickup');
+    expect(
+      application.store
+        .getState()
+        .projectWorkspace.history.present.routes[0]!.biomes[0]!.topology!.occurrences.find(
+          (occurrence) => occurrence.occurrenceId === target,
+        )?.acquisitionSites?.[siteKey]?.pickupEntries?.seaStarDuplicate?.offer,
+    ).toEqual({ rewardType: 'RoomMoneyDrop' });
+
+    await view.user.click(screen.getByRole('button', { name: 'Undo' }));
+    await waitFor(() => expect(checkbox).toHaveProperty('checked', false));
+    expect(document.getElementById(semanticOwnerElementId(child))).toBeNull();
+    expect(
+      application.store
+        .getState()
+        .projectWorkspace.history.present.routes[0]!.biomes[0]!.topology!.occurrences.find(
+          (occurrence) => occurrence.occurrenceId === target,
+        )?.acquisitionSites?.[siteKey],
+    ).toBeUndefined();
+    expect(semanticAddressKey(targetReward)).toBe(semanticAddressKey(targetAcquisition.owner));
   });
 
   it('hands a route trait row through exact biome navigation and restores focus on Escape', async () => {

@@ -301,10 +301,11 @@ At one reached acquisition role, Sea Star support exists only when all are
 true at its pre-acquisition frontier:
 
 1. Sea Star is currently equipped;
-2. the source disposition is normal pickup, not Time Piece or Artificer;
-3. the resolved concrete acquisition declares `canDuplicate`;
-4. the producer instance has not disabled duplication; and
-5. the source is not itself a Sea Star second acquisition.
+2. the acquisition lifecycle is a free pickup, not a purchase;
+3. the source disposition is normal pickup, not Time Piece or Artificer;
+4. the resolved concrete acquisition declares `canDuplicate`;
+5. the producer instance has not disabled duplication; and
+6. the source is not itself a Sea Star second acquisition.
 
 If Sea Star is removed after a successful proc, the already-materialized
 second object remains. Current equipped state controls whether the roll can
@@ -361,8 +362,8 @@ first Pom and creates a fresh full Pom of the same game name.
 
 The second Pom:
 
-- is required regardless of whether the first Pom was required, optional, or
-  paid;
+- is required regardless of whether the free source Pom was required or
+  optional;
 - owns a fresh unresolved Pom result and therefore a separately authored
   target/choice;
 - inherits declaration-owned Time Piece capability;
@@ -581,8 +582,9 @@ normal eligible pickup participates
   optional;
 - Pom Slice retains its original participation and authors an independent
   second random level target;
-- required, optional, and paid full Poms all create a fresh required Pom with
-  an independent result and Time Piece support;
+- required and optional free full Poms create a fresh required Pom with an
+  independent result and Time Piece support, while purchased Poms expose no
+  Sea Star result;
 - an Artificer replacement exposes Sea Star only under the exact two-sided
   capability rule, and never after the source was already retained;
 - switching the parent disposition deactivates without acquiring the dormant

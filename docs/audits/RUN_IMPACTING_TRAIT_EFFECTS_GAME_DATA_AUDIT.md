@@ -309,7 +309,14 @@ loot object of the same game name at the old location. The new object:
 
 The Sea Star call supplies no `DoesNotBlockExit` override, so this fresh Pom is
 unconditionally required. A required source Pom therefore remains required,
-while an optional or paid source Pom produces a fresh required second Pom.
+while an optional free source Pom produces a fresh required second Pom.
+
+Shop purchases do not enter this branch. `FillInShopOptions` represents a shop
+Pom as a consumable store option, and `SpawnStoreItemInWorld` explicitly sets
+the spawned store object's `CanDuplicate` to false (`StoreLogic.lua`, the
+`itemData.Type == "Consumable"` branch). This is an instance override of the
+Pom declaration's base `CanDuplicate = true`: purchases cannot trigger Sea
+Star, including purchased Poms.
 
 This second object also cannot recursively trigger Sea Star. It can still use
 capabilities owned by its fresh declaration; for example, a fresh Pom remains

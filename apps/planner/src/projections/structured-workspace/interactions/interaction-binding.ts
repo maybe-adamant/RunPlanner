@@ -11,6 +11,8 @@ import {
   optionIndex,
   semanticAddressKey,
   roomActionKey,
+  seaStarDuplicateSiteKey,
+  SEA_STAR_DUPLICATE_ENTRY_KEY,
   type OccurrenceId,
   type SemanticAddress,
   type SideRoomGeneration,
@@ -1909,6 +1911,27 @@ export function bindWorkspaceInteractions(
       const key = workspaceInteractionKey(conversion.address);
       const evaluated =
         evaluatedConversions.get(key) ?? candidates.acquisitionConversion(conversion.address);
+      const owner = conversion.address.owner;
+      const occurrenceId =
+        owner.kind === 'acquisitionEntry'
+          ? owner.site.owner.kind === 'occurrence'
+            ? owner.site.owner.occurrenceId
+            : undefined
+          : owner.kind === 'encounterPhase'
+            ? owner.owner.occurrenceId
+            : owner.kind === 'gorgonPhase'
+              ? owner.encounter.owner.occurrenceId
+              : owner.occurrenceId;
+      const occurrence =
+        occurrenceId === undefined
+          ? undefined
+          : project.routes
+              .find((route) => route.routeKey === conversion.address.routeKey)
+              ?.biomes.find((biome) => biome.biomeKey === conversion.address.biomeKey)
+              ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === occurrenceId);
+      const seaStarProcced =
+        occurrence?.acquisitionSites?.[seaStarDuplicateSiteKey(conversion.address)]
+          ?.pickupEntries?.[SEA_STAR_DUPLICATE_ENTRY_KEY] !== undefined;
       acquisitionConversions.set(
         key,
         Object.freeze({
@@ -1917,15 +1940,19 @@ export function bindWorkspaceInteractions(
               ? {
                   timePieceSupported: evaluated.result.timePieceSupported,
                   artificerSupported: evaluated.result.artificerSupported,
+                  seaStarSupported: evaluated.result.seaStarSupported,
                   visible:
                     evaluated.result.timePieceSupported ||
                     evaluated.result.artificerSupported ||
+                    evaluated.result.seaStarSupported ||
+                    seaStarProcced ||
                     conversion.value.kind !== 'normal',
                 }
               : {
                   timePieceSupported: false,
                   artificerSupported: false,
-                  visible: conversion.value.kind !== 'normal',
+                  seaStarSupported: false,
+                  visible: seaStarProcced || conversion.value.kind !== 'normal',
                 };
           })(),
           intentFor: (
@@ -1939,8 +1966,18 @@ export function bindWorkspaceInteractions(
                 value,
               }),
             ),
+          seaStarIntentFor: (procced: boolean) =>
+            Object.freeze({
+              command: Object.freeze({
+                kind: 'ReplaceSeaStarResult' as const,
+                acquisition: conversion.address,
+                procced,
+              }),
+              focus: Object.freeze({ owner: conversion.address, timing: 'after' as const }),
+            }),
           key,
           owner: conversion.address,
+          seaStarProcced,
           value: conversion.value,
         }),
       );

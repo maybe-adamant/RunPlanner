@@ -36,6 +36,7 @@ import { assembleRoomActionDomain } from '../../authored-project/room-action-dom
 import { scheduleRequiredRoomActions } from '../../authored-project/room-action-defaults';
 import { roomActionKey } from '../../authored-project/room-actions';
 import { acquisitionSiteFromStorageKey } from '../../authored-project/artificer';
+import { seaStarDuplicateSourceIsActive } from '../../authored-project/sea-star';
 import { assembleRoomActionRoster, assembleRoomLifecycleTimeline } from '../room-actions';
 
 function fail(detail: string): never {
@@ -812,7 +813,15 @@ export function materializeAuthoredRoom(
   );
   const pickupIsActive = (siteKey: string, key: string): boolean =>
     context.occurrence.state.kind === 'shop' ||
-    (!structuralEchoPickupKeys.has(key) && !siteKey.startsWith('traitGenerated:')) ||
+    (!structuralEchoPickupKeys.has(key) &&
+      !siteKey.startsWith('traitGenerated:') &&
+      (!siteKey.startsWith('seaStarDuplicate:') ||
+        seaStarDuplicateSourceIsActive(
+          context.catalog,
+          context.biome,
+          context.occurrence,
+          siteKey,
+        ))) ||
     activePickupEntries.has(`${siteKey}\u0000${key}`);
   const base = Object.freeze({
     kind: 'authored',

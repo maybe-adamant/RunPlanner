@@ -5,6 +5,13 @@ export {
   artificerReplacementEntryKey,
   parseArtificerReplacementEntryKey,
 } from './artificer';
+export {
+  SEA_STAR_DUPLICATE_ENTRY_KEY,
+  seaStarDuplicateAcquisitionSite,
+  seaStarDuplicateSiteKey,
+  parseSeaStarDuplicateSiteKey,
+  seaStarDuplicateSourceIsActive,
+} from './sea-star';
 export { activeRoomActionReferences } from './room-actions';
 export {
   assembleRoomLifecycleStructure,

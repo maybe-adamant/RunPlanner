@@ -26,6 +26,72 @@ function replaceRewardType(
 }
 
 describe('reward-kernel declaration parity', () => {
+  it('normalizes declaration-owned Sea Star capability without reward-kind inference', () => {
+    expect(
+      rewardKernelCatalog.acquisitions.values
+        .filter((acquisition) => acquisition.canDuplicate)
+        .map((acquisition) => acquisition.gameName)
+        .sort(),
+    ).toEqual(
+      [
+        'AirBoost',
+        'ArmorBigBoost',
+        'ArmorBoost',
+        'CardUpgradePointsDrop',
+        'ChaosWeaponUpgrade',
+        'CharonPointsDrop',
+        'Currency',
+        'EarthBoost',
+        'ElementalBoost',
+        'EmptyMaxHealthSmallDrop',
+        'FireBoost',
+        'GiftDrop',
+        'HealBigDrop',
+        'LastStandDrop',
+        'MaxHealthDrop',
+        'MaxHealthDropBig',
+        'MaxHealthDropSmall',
+        'MaxManaDrop',
+        'MaxManaDropBig',
+        'MaxManaDropSmall',
+        'MemPointsCommonDrop',
+        'MetaCardPointsCommonBigDrop',
+        'MetaCardPointsCommonDrop',
+        'MetaCurrencyBigDrop',
+        'MetaCurrencyDrop',
+        'MinorTalentDrop',
+        'RoomMoneyDrop',
+        'RoomMoneySmallDrop',
+        'RoomMoneyTinyDrop',
+        'RoomMoneyTripleDrop',
+        'RoomRewardHealDrop',
+        'StackUpgrade',
+        'StackUpgradeBig',
+        'StackUpgradeTriple',
+        'StoreRewardRandomStack',
+        'TalentBigDrop',
+        'TalentDrop',
+        'WaterBoost',
+        'WeaponPointsRareDrop',
+      ].sort(),
+    );
+    expect(rewardKernelCatalog.acquisitions.byKey.StackUpgrade?.canDuplicate).toBe(true);
+    expect(rewardKernelCatalog.acquisitions.byKey.HealDropMinor?.canDuplicate).toBe(false);
+    expect(rewardKernelCatalog.acquisitions.byKey.WeaponUpgrade?.canDuplicate).toBe(false);
+    expect(() =>
+      createRewardKernelCatalog(
+        rawInput({
+          ...rewardKernelDeclarations,
+          acquisitions: rewardKernelDeclarations.acquisitions.map((acquisition) =>
+            acquisition.gameName === 'RoomMoneyDrop'
+              ? ({ ...acquisition, canDuplicate: undefined } as unknown)
+              : acquisition,
+          ),
+        }),
+      ),
+    ).toThrow('canDuplicate');
+  });
+
   it('declares the exact concrete Artificer source family', () => {
     expect(
       rewardKernelCatalog.acquisitions.values

@@ -61,6 +61,8 @@ export interface ConcreteAcquisitionDeclaration extends ConcreteAcquisitionAddre
   readonly goldConversionEligible: boolean;
   /** Source MetaConversionEligible capability, before producer/cost overrides. */
   readonly artificerConversionEligible: boolean;
+  /** Exact source CanDuplicate fact.  This is intentionally independent of kind and conversions. */
+  readonly canDuplicate: boolean;
   /** Exact source-backed reconstruction used when this settled pickup becomes Echo's LastReward. */
   readonly lastRewardRecreation?: {
     readonly offer: ResolvedRewardOffer;
