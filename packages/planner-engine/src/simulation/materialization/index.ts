@@ -19,7 +19,6 @@ export type {
   CanonicalBatchState,
   CanonicalBatchRewardStore,
   CanonicalBiomeState,
-  CanonicalCompletionRoom,
   CanonicalBiome,
   CanonicalDecision,
   BiomeMaterialization,

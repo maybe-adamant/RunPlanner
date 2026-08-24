@@ -4,11 +4,12 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createBiomeAddress,
-  createCompletionRoomAddress,
-  createCompletionRoomActionAddress,
   createKeepsakeEquipResultAddress,
+  createOccurrenceAddress,
+  createOccurrenceId,
   createPostbossKeepsakeSelectionAddress,
   createProjectDocument,
+  createRoomActionAddress,
   roomActionKey,
   createRouteStartKeepsakeSelectionAddress,
   type KeepsakeSelectionAddress,
@@ -42,14 +43,21 @@ import { circeResolutionDomain } from '../../src/simulation/arcana-fear';
 
 type PostbossSelection = Extract<KeepsakeSelectionAddress, { readonly owner: object }>;
 
+function postbossOccurrence(biome: ReturnType<typeof createBiomeAddress>) {
+  return createOccurrenceAddress(
+    biome,
+    createOccurrenceId(`completion:${biome.biomeKey}:postboss`),
+  );
+}
+
 const fPostboss: PostbossSelection = createPostbossKeepsakeSelectionAddress(
-  createCompletionRoomAddress(createBiomeAddress('Underworld', 'F'), 'postboss'),
+  postbossOccurrence(createBiomeAddress('Underworld', 'F')),
 );
 const gPostboss: PostbossSelection = createPostbossKeepsakeSelectionAddress(
-  createCompletionRoomAddress(createBiomeAddress('Underworld', 'G'), 'postboss'),
+  postbossOccurrence(createBiomeAddress('Underworld', 'G')),
 );
 const pPostboss: PostbossSelection = createPostbossKeepsakeSelectionAddress(
-  createCompletionRoomAddress(createBiomeAddress('Surface', 'P'), 'postboss'),
+  postbossOccurrence(createBiomeAddress('Surface', 'P')),
 );
 
 function withPomResult(
@@ -138,15 +146,15 @@ describe('keepsake selection candidates', () => {
     const postbossEvents = f.history.events.filter(
       (event) =>
         (event.kind === 'fountainUsed' || event.kind === 'keepsakeRackUsed') &&
-        event.origin.kind === 'completionRoom' &&
-        event.origin.role === 'postboss',
+        event.origin.kind === 'occurrence' &&
+        event.origin.occurrenceId === 'completion:F:postboss',
     );
     expect(postbossEvents.map((event) => event.kind)).toEqual(['fountainUsed', 'keepsakeRackUsed']);
     const postbossCreated = f.history.events.find(
       (event) =>
         event.kind === 'roomCreated' &&
-        event.origin.kind === 'completionRoom' &&
-        event.origin.role === 'postboss',
+        event.origin.kind === 'occurrence' &&
+        event.origin.occurrenceId === 'completion:F:postboss',
     );
     expect(postbossCreated).toBeDefined();
     expect(postbossCreated!.sequence).toBeLessThan(postbossEvents[0]!.sequence);
@@ -158,10 +166,7 @@ describe('keepsake selection candidates', () => {
   });
 
   it('applies the replacement at the rack even when the rack is ranked before the fountain', () => {
-    const completion = createCompletionRoomAddress(
-      createBiomeAddress('Underworld', 'F'),
-      'postboss',
-    ) as ReturnType<typeof createPostbossKeepsakeSelectionAddress>['owner'];
+    const completion = postbossOccurrence(createBiomeAddress('Underworld', 'F'));
     const rack = { kind: 'interactKeepsakeRack' as const };
     const replaced = applyProjectCommand(createGoldenFGHProject(), catalog, {
       kind: 'ReplacePostbossKeepsake',
@@ -170,7 +175,11 @@ describe('keepsake selection candidates', () => {
     });
     const reordered = applyProjectCommand(replaced, catalog, {
       kind: 'MoveRoomAction',
-      action: createCompletionRoomActionAddress(completion, roomActionKey(rack)),
+      action: createRoomActionAddress(
+        createBiomeAddress(completion.routeKey, completion.biomeKey),
+        completion.occurrenceId,
+        roomActionKey(rack),
+      ),
       toIndex: 0,
     });
     const f = simulateProjectAssembly(catalog, reordered)
@@ -183,8 +192,8 @@ describe('keepsake selection candidates', () => {
         .filter(
           (event) =>
             (event.kind === 'fountainUsed' || event.kind === 'keepsakeRackUsed') &&
-            event.origin.kind === 'completionRoom' &&
-            event.origin.role === 'postboss',
+            event.origin.kind === 'occurrence' &&
+            event.origin.occurrenceId === 'completion:F:postboss',
         )
         .map((event) => event.kind),
     ).toEqual(['keepsakeRackUsed', 'fountainUsed']);
@@ -254,11 +263,11 @@ describe('keepsake selection candidates', () => {
     });
   });
 
-  it('keeps a final Postboss disposition dormant until a successor reaches it', () => {
+  it('keeps the final Postboss rack active with or without a configured successor', () => {
     const finalProject = applyProjectCommand(createCompleteFGProject(), catalog, {
       kind: 'ReplacePostbossKeepsake',
       selection: gPostboss,
-      value: { kind: 'replace', keepsakeKey: 'HadesAndPersephoneKeepsake' },
+      value: { kind: 'replace', keepsakeKey: 'BossPreDamageKeepsake' },
     });
     const finalSession = createPreparedProjectCandidateSession(
       catalog,
@@ -267,17 +276,16 @@ describe('keepsake selection candidates', () => {
     expect(
       finalSession.evaluate({ kind: 'keepsakeSelection', selection: gPostboss }),
     ).toMatchObject({
-      kind: 'unavailable',
+      kind: 'keepsakeSelection',
+      result: { currentKey: 'ManaOverTimeRefundKeepsake' },
     });
+    expect(keepsakesAfter(finalProject, 'G')?.currentKey).toBe('BossPreDamageKeepsake');
 
-    const reachedProject = withPomResult(
-      applyProjectCommand(createGoldenFGHProject(), catalog, {
-        kind: 'ReplacePostbossKeepsake',
-        selection: gPostboss,
-        value: { kind: 'replace', keepsakeKey: 'HadesAndPersephoneKeepsake' },
-      }),
-      gPostboss,
-    );
+    const reachedProject = applyProjectCommand(createGoldenFGHProject(), catalog, {
+      kind: 'ReplacePostbossKeepsake',
+      selection: gPostboss,
+      value: { kind: 'replace', keepsakeKey: 'BossPreDamageKeepsake' },
+    });
     const reachedSession = createPreparedProjectCandidateSession(
       catalog,
       simulateProjectAssembly(catalog, reachedProject),
@@ -288,7 +296,7 @@ describe('keepsake selection candidates', () => {
       kind: 'keepsakeSelection',
       result: { currentKey: 'ManaOverTimeRefundKeepsake' },
     });
-    expect(keepsakesAfter(reachedProject, 'H')?.currentKey).toBe('HadesAndPersephoneKeepsake');
+    expect(keepsakesAfter(reachedProject, 'H')?.currentKey).toBe('BossPreDamageKeepsake');
   });
 
   it('keeps effect-deferred identities as exact history while only Fated roles change state', () => {

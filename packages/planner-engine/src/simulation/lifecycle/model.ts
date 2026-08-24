@@ -4,7 +4,6 @@ import type {
   RoomCounterEffects,
 } from '../../catalog-schema';
 import type {
-  CompletionRoomAddress,
   HubRoomAddress,
   OccurrenceAddress,
   RoomActionSemanticAddress,
@@ -13,7 +12,7 @@ import type { ProducerLifecyclePointKey, ResolvedRewardOffer } from '../../rewar
 import type { ResolvedEncounterPhase } from '../encounters';
 import type { RoomActionRoster } from '../room-actions';
 
-export type RoomHistoryOrigin = CompletionRoomAddress | HubRoomAddress | OccurrenceAddress;
+export type RoomHistoryOrigin = HubRoomAddress | OccurrenceAddress;
 
 interface RoomLifecycleEventBase {
   readonly sequence: number;
@@ -39,7 +38,7 @@ export type RoomLifecycleEvent =
     })
   | (RoomLifecycleEventBase & {
       readonly kind: 'keepsakeRackUsed';
-      readonly owner: import('../../authored-project/addresses').CompletionRoomActionAddress;
+      readonly owner: import('../../authored-project/addresses').RoomActionSemanticAddress;
     })
   | (RoomLifecycleEventBase & {
       readonly kind: 'requiredObjectSpawned';
@@ -86,7 +85,7 @@ export type RoomLifecycleEvent =
       readonly figLeafSkipOwner: boolean;
     })
   | (RoomLifecycleEventBase & {
-      /** Fixed completion-room seam after a biome Boss dies, before encounter-end effects. */
+      /** Fixed automatic-Boss seam after defeat, before encounter-end effects. */
       readonly kind: 'bossDefeated';
       readonly phaseKey: string;
       readonly execution: 'normal' | 'skippedByFigLeaf';
@@ -152,7 +151,7 @@ export interface RoomLifecycleExecutionInput {
   readonly requiredObjects?: readonly RequiredRoomObjectDescriptor[];
   readonly enteredRewardStoreKey?: string;
   readonly offerPointRewardStores?: Readonly<Record<string, string>>;
-  /** Present for authored occurrences; completion/hub lifecycles remain profile-only. */
+  /** Present for occurrence rooms, including automatic Boss and Postboss rooms. */
   readonly roomActionRoster?: RoomActionRoster;
 }
 

@@ -13,8 +13,6 @@ import {
   createAcquisitionRoleAddress,
   createBatchRewardStoreAddress,
   createBiomeAddress,
-  createCompletionRoomActionAddress,
-  createCompletionRoomAddress,
   createEncounterPhaseAddress,
   createNemesisRandomEventAddress,
   createExitDecisionAddress,
@@ -1010,24 +1008,23 @@ describe('room-action commands', () => {
   });
 
   it('keeps the Postboss rack membership atomic while its ranked action moves in one undo step', () => {
-    const completion = createCompletionRoomAddress(biome, 'postboss') as ReturnType<
-      typeof createPostbossKeepsakeSelectionAddress
-    >['owner'];
+    const completion = createOccurrenceAddress(biome, createOccurrenceId('completion:F:postboss'));
     const rack = { kind: 'interactKeepsakeRack' as const };
-    const action = createCompletionRoomActionAddress(completion, roomActionKey(rack));
+    const action = createRoomActionAddress(biome, completion.occurrenceId, roomActionKey(rack));
     const retained = createGoldenFGHProject();
     const replaced = applyProjectCommand(retained, catalog, {
       kind: 'ReplacePostbossKeepsake',
       selection: createPostbossKeepsakeSelectionAddress(completion),
       value: { kind: 'replace', keepsakeKey: 'ForceZeusBoonKeepsake' },
     });
-    expect(replaced.routes[0]?.biomes[0]?.postbossRoomActions?.order).toEqual([
-      { kind: 'useFountain' },
-      rack,
-    ]);
+    expect(
+      replaced.routes[0]?.biomes[0]?.completionOccurrences.find(
+        (occurrence) => occurrence.occurrenceId === completion.occurrenceId,
+      )?.roomActions.order,
+    ).toEqual([{ kind: 'useFountain' }, rack]);
     expect(() =>
       applyProjectCommand(replaced, catalog, { kind: 'RemoveRoomAction', action }),
-    ).toThrow('ReplacePostbossKeepsake');
+    ).toThrow('must include required interactKeepsakeRack action');
 
     const history = applyProjectHistoryCommand(createProjectHistory(replaced), catalog, {
       kind: 'MoveRoomAction',
@@ -1035,10 +1032,11 @@ describe('room-action commands', () => {
       toIndex: 0,
     });
     expect(history.past).toHaveLength(1);
-    expect(history.present.routes[0]?.biomes[0]?.postbossRoomActions?.order).toEqual([
-      rack,
-      { kind: 'useFountain' },
-    ]);
+    expect(
+      history.present.routes[0]?.biomes[0]?.completionOccurrences.find(
+        (occurrence) => occurrence.occurrenceId === completion.occurrenceId,
+      )?.roomActions.order,
+    ).toEqual([rack, { kind: 'useFountain' }]);
     expect(undoProjectHistory(history).present).toBe(replaced);
 
     const retainedAgain = applyProjectCommand(replaced, catalog, {
@@ -1046,8 +1044,10 @@ describe('room-action commands', () => {
       selection: createPostbossKeepsakeSelectionAddress(completion),
       value: { kind: 'retain' },
     });
-    expect(retainedAgain.routes[0]?.biomes[0]?.postbossRoomActions?.order).toEqual([
-      { kind: 'useFountain' },
-    ]);
+    expect(
+      retainedAgain.routes[0]?.biomes[0]?.completionOccurrences.find(
+        (occurrence) => occurrence.occurrenceId === completion.occurrenceId,
+      )?.roomActions.order,
+    ).toEqual([{ kind: 'useFountain' }]);
   });
 });

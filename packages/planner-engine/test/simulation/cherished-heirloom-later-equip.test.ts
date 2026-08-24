@@ -4,10 +4,10 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createBiomeAddress,
-  createCompletionRoomAddress,
   createEncounterPhaseAddress,
   createKeepsakeEquipResultAddress,
   createOccurrenceId,
+  createOccurrenceAddress,
   createPostbossKeepsakeSelectionAddress,
 } from '@run-planner/engine/authored-project';
 import { createGoldenFGHProject } from '@run-planner/test-fixtures/underworld';
@@ -108,7 +108,10 @@ function cherishedBranch(startingKeepsakeKey = 'ManaOverTimeRefundKeepsake'): Re
 
 function postbossOwner(biomeKey = 'F') {
   return createPostbossKeepsakeSelectionAddress(
-    createCompletionRoomAddress(createBiomeAddress('Underworld', biomeKey), 'postboss'),
+    createOccurrenceAddress(
+      createBiomeAddress('Underworld', biomeKey),
+      createOccurrenceId(`completion:${biomeKey}:postboss`),
+    ),
   );
 }
 

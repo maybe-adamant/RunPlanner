@@ -5,8 +5,7 @@ import {
   createAdditionalExitAddress,
   createBiomeAddress,
   createBiomeFieldAddress,
-  createBossCompletionArcanaAddress,
-  createCompletionRoomAddress,
+  createJudgmentArcanaAddress,
   createExitDecisionAddress,
   createExitSelectionAddress,
   createHubDecisionAddress,
@@ -53,12 +52,21 @@ const addressCases: readonly { readonly name: string; readonly address: Semantic
       phaseKey: 'Combat1',
     }),
   },
-  { name: 'boss completion', address: createCompletionRoomAddress(fBiome, 'boss') },
   {
-    name: 'boss completion Arcana child',
-    address: createBossCompletionArcanaAddress(createCompletionRoomAddress(fBiome, 'boss')),
+    name: 'automatic Boss occurrence',
+    address: createOccurrenceAddress(fBiome, createOccurrenceId('completion:F:boss')),
   },
-  { name: 'postboss completion', address: createCompletionRoomAddress(fBiome, 'postboss') },
+  {
+    name: 'Boss Judgment Arcana child',
+    address: createJudgmentArcanaAddress(
+      createOccurrenceAddress(fBiome, createOccurrenceId('completion:F:boss')),
+      'Encounter',
+    ),
+  },
+  {
+    name: 'automatic Postboss occurrence',
+    address: createOccurrenceAddress(fBiome, createOccurrenceId('completion:F:postboss')),
+  },
   { name: 'occurrence exit decision', address: createExitDecisionAddress(fBiome, fSource) },
   { name: 'Hub exit decision', address: createExitDecisionAddress(nBiome, nHubSource) },
   { name: 'exit selection', address: createExitSelectionAddress(fBiome, fSource) },
@@ -144,13 +152,13 @@ describe('semantic addresses', () => {
     );
   });
 
-  it('owns Boss-completion Arcana beneath the Boss completion room only', () => {
-    const boss = createCompletionRoomAddress(fBiome, 'boss');
-    const child = createBossCompletionArcanaAddress(boss);
-    expect(child.completion).toEqual(boss);
-    expect(JSON.parse(semanticAddressKey(child)).at(-1)).toBe(semanticAddressKey(boss));
-    expect(() =>
-      createBossCompletionArcanaAddress(createCompletionRoomAddress(fBiome, 'postboss')),
-    ).toThrow('Boss-completion Arcana must be owned by the Boss completion room');
+  it('owns Judgment beneath the exact automatic Boss occurrence and phase', () => {
+    const boss = createOccurrenceAddress(fBiome, createOccurrenceId('completion:F:boss'));
+    const judgment = createJudgmentArcanaAddress(boss, 'Encounter');
+    expect(judgment.occurrenceId).toBe(boss.occurrenceId);
+    expect(JSON.parse(semanticAddressKey(judgment)).slice(-2)).toEqual([
+      'completion:F:boss',
+      'Encounter',
+    ]);
   });
 });

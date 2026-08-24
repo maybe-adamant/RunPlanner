@@ -563,6 +563,7 @@ function structurallyEligibleRunStateOwners(
     appendRoom(activeHubVisit.target.room);
     for (const local of activeHubVisit.enteredLocalRooms) appendRoom(local);
   }
+  for (const room of prefix.automaticRooms ?? []) appendRoom(room);
   for (const room of enteredRooms) {
     if (room.lifecycleProfileKey === 'ShipCombatRoom') {
       for (const phase of room.encounterPhases) {
@@ -782,7 +783,6 @@ export function replayProjectBiomeFromEvaluatedPredecessor(
   }
   return evaluateBiome(catalog, route.routeKey, plan, {
     enteredBiomeCount: biomeIndex + 1,
-    hasConfiguredSuccessor: biomeIndex + 1 < route.biomes.length,
     loadout: route.loadout,
     ...(previous === undefined
       ? {}
@@ -870,11 +870,7 @@ function evaluateBiomeAssembly(
     origin,
     completeness,
     context.loadout,
-    plan.bossCompletionArcanaKeys,
-    plan.bossCompletionSteadyGrowthTarget,
-    context.hasConfiguredSuccessor === true ? plan.postbossKeepsakeDisposition : undefined,
-    context.hasConfiguredSuccessor === true ? plan.postbossRoomActions : undefined,
-    plan.keepsakeEquipResults,
+    plan.completionOccurrences,
     plan.echoKeepsakeReplayResults,
   );
   const seed: HistoryStateView | undefined = context.seed?.history.afterTransition;
@@ -1011,7 +1007,7 @@ function evaluateBiomeAssembly(
         encounterArtifacts,
         roomGeneration.candidateArtifacts.traitOffers,
         roomGeneration.candidateArtifacts.levelResolutions,
-        rewards.bossCompletionArcanaArtifacts,
+        rewards.judgmentArcanaArtifacts,
         rewards.keepsakeSelectionArtifacts,
         rewards.keepsakeEquipResultArtifacts,
         rewards.acquisitionConversionArtifacts,
@@ -1039,7 +1035,7 @@ function evaluateBiomeAssembly(
         encounterArtifacts,
         roomGeneration.candidateArtifacts.traitOffers,
         roomGeneration.candidateArtifacts.levelResolutions,
-        rewards.bossCompletionArcanaArtifacts,
+        rewards.judgmentArcanaArtifacts,
         rewards.keepsakeSelectionArtifacts,
         rewards.keepsakeEquipResultArtifacts,
         rewards.acquisitionConversionArtifacts,
@@ -1280,7 +1276,6 @@ function evaluateRouteAssembly(
         : undefined;
     const context = Object.freeze({
       enteredBiomeCount: index + 1,
-      hasConfiguredSuccessor: index + 1 < route.biomes.length,
       loadout: route.loadout,
       ...(seed === undefined ? {} : { seed }),
     });

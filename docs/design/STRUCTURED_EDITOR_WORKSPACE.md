@@ -350,9 +350,10 @@ document and reappear if an upstream edit makes the veto no longer apply.
 
 ### Keepsake Products
 
-Route Settings projects the mandatory starting selection, and each reached
-nonfinal Postboss completion projects its retain-or-replace selection. Immediate
-Jeweled Pom and Experimental Hammer results appear beneath that exact selection.
+Route Settings projects the mandatory starting selection, and each automatic
+Postboss occurrence with a declared rack projects its retain-or-replace
+selection, including at the configured route tail. Immediate Jeweled Pom and
+Experimental Hammer results appear beneath that exact selection.
 Calling Card actions remain on trait-offer rows, Time Piece conversions remain
 on acquisition roles, and Fig Leaf plus Gorgon controls remain on exact
 encounter phases. Each reached product has one bound interaction, finding
@@ -560,7 +561,7 @@ For F/G/H/I/O/P/Q, the center region presents a concise decision-point rail:
 - the active continuation frontier;
 - retained downstream structure after an invalid upstream edit;
 - a layout-owned Preboss stage where it is distinct from an ordinary decision;
-- completion rooms as a separate derived outline.
+- layout-fixed automatic Boss/Postboss occurrences in their declared order.
 
 The rail is not a freeform graph. Its visual position is derived from semantic
 topology and never persisted.

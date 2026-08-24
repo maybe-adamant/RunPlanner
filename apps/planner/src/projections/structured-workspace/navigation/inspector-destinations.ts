@@ -203,8 +203,6 @@ function nodeOwnedFocusKeys(node: WorkspaceNode): readonly string[] {
               ]),
         ]),
       ]);
-    case 'completion':
-      return Object.freeze([node.marker.focusKey]);
   }
 }
 

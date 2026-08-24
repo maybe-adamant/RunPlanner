@@ -845,19 +845,19 @@ purchased shop slot               -> purchase-time concrete acquisition(s)
 
 Every reached concrete acquisition is applied through one canonical settlement
 product. A settlement site is the exact lifecycle point inside its occurrence,
-local reward, wheel, Hub visit, or completion room. Each entry retains its
+local reward, wheel, or Hub visit. Each entry retains its
 producer-owned source, declaration-owned acquisition roles, participation, and
 chronological address. The reward kernel remains the sole authority that turns
 those roles into loot/use history, trait acquisition, and level effects.
 
-Completion-room settlement uses the same ranked Room Action product as an
-ordinary occurrence. A nonfinal Postboss contributes required `useFountain` and
-an optional `interactKeepsakeRack` only when a replacement is active. The rack
-action applies the selected keepsake and its immediate equip result at its
-ranked position; `useFountain` then observes either the carried Boss keepsake
-or the replacement according to the authored order. Retain omits the rack
-participant, and a configured final-biome Postboss keeps its persisted state
-dormant. No separate completion-room settlement order is used.
+Automatic Postboss settlement uses the ordinary occurrence-owned ranked Room
+Action product. Every declared Postboss fountain contributes required
+`useFountain`; `interactKeepsakeRack` is also required when a replacement is
+active. The rack action applies the selected keepsake and its immediate equip
+result at its ranked position, so `useFountain` observes either the carried
+Boss keepsake or the replacement according to the authored order. Retain omits
+the rack participant. The configured route-tail Postboss remains active with
+the same occurrence ownership and chronology.
 
 Mandatory ordinary entries derive their required classification and legal
 lifecycle window from the engine's structural action domain. The semantic

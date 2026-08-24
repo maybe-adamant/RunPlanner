@@ -148,14 +148,14 @@ const roomFacts = [
 ] as const;
 
 const normalizedBiomeSnapshotHashes = [
-  ['F', 'bf1b7de39b4c2bd8'],
-  ['G', '778ed9aa3a6e6245'],
-  ['H', 'b0cb237c5620ce20'],
-  ['I', '8ffc444a6c11bb1c'],
-  ['N', '9934f87e14462935'],
-  ['O', 'd6624f748b12b5db'],
-  ['P', '3a1457c91fe3a507'],
-  ['Q', '864bef59ba3e5808'],
+  ['F', 'a7e008b4ab038ca2'],
+  ['G', '2760dc0f2ad7f32d'],
+  ['H', 'ef3ab425e22d3466'],
+  ['I', '21b7abae948aa606'],
+  ['N', 'a2c6176946191474'],
+  ['O', 'e90872b57bef6426'],
+  ['P', 'ca55bc2adea5de4d'],
+  ['Q', 'e36de255fd7f40dc'],
 ] as const;
 
 function normalizedBiomeSnapshot(biomeKey: string) {
@@ -235,12 +235,12 @@ describe('catalog regression coverage retained through unified decisions', () =>
   );
 
   it.each(biomeContracts)(
-    '$biomeKey completion declarations stay biome-local and derived',
+    '$biomeKey completion declarations stay biome-local and automatic',
     (fixture) => {
       for (const gameName of fixture.completion) {
         expect(catalog.rooms.byKey[gameName]).toMatchObject({
           roomSetKey: fixture.biomeKey,
-          mode: { kind: 'derived', classification: 'completion' },
+          mode: { kind: 'automatic' },
         });
       }
     },
@@ -371,10 +371,7 @@ describe('catalog regression coverage retained through unified decisions', () =>
       expect(room).toMatchObject({
         roomSetKey: biomeKey,
         kind,
-        mode:
-          kind === 'Boss'
-            ? { kind: 'derived', classification: 'completion' }
-            : { kind: 'authored' },
+        mode: kind === 'Boss' ? { kind: 'automatic', role: 'boss' } : { kind: 'authored' },
       });
       expect(room?.exits).toHaveLength(exitCount);
       expect(room?.exits.map((exit) => exit.index)).toEqual(

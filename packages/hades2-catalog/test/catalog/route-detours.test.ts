@@ -137,7 +137,7 @@ describe('route detour catalog declarations', () => {
   it('keeps detour room-set identity separate from the supported route layouts', () => {
     const catalog = createCatalog(declarations);
 
-    expect(catalog.version).toBe('0.36.0-runtime-offer-fallback');
+    expect(catalog.version).toBe('0.37.0-automatic-completion-occurrences');
     expect(catalog.biomes.values.map((biome) => biome.key)).not.toContain('Anomaly');
     expect(catalog.biomes.values.map((biome) => biome.key)).not.toContain('C');
     expect(catalog.biomeLayouts.values.map((layout) => layout.biomeKey)).not.toContain('Anomaly');

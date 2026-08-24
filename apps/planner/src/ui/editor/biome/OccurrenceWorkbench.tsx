@@ -66,6 +66,12 @@ interface OccurrenceWorkbenchProps {
   readonly runState?: WorkspaceRunStateLauncher;
   readonly initialTab?: WorkspaceRoomTab;
   readonly doors?: ReactNode;
+  /** Exact room-owned controls available before an optional lifecycle action exists. */
+  readonly renderRoomOverviewContent?: () => ReactNode;
+  /** Exact room-owned additions to ordinary lifecycle rows. */
+  readonly renderRoomActionRowContent?: (row: WorkspaceRoomActions['rows'][number]) => ReactNode;
+  /** Exact room-owned additions to ordinary lifecycle boundaries. */
+  readonly renderLifecycleBoundaryContent?: (boundary: WorkspaceRoomLifecycleBoundary) => ReactNode;
 }
 
 function LocalVisitOrderSelect({
@@ -749,6 +755,8 @@ function lifecycleBoundaryLabel(boundary: WorkspaceRoomLifecycleBoundary): strin
       return 'Start encounter';
     case 'encounterEnd':
       return 'End encounter';
+    case 'bossDefeated':
+      return 'Boss defeated';
     case 'nextPhase':
       return 'Start next phase';
     case 'cleanup':
@@ -870,7 +878,7 @@ export function SteadyGrowthEffectRow({
   return (
     <li
       aria-label="Steady Growth"
-      className="room-action-row completion-timeline-effect-row"
+      className="room-action-row room-timeline-effect-row"
       data-steady-growth={control.address.phaseKey}
     >
       <div className="owner-markers room-action-identity">
@@ -917,6 +925,7 @@ export function RoomActionsWorkbench({
   idPrefix,
   interactions,
   renderRowContent,
+  renderBoundaryContent,
   ship,
 }: {
   readonly actions?: WorkspaceRoomActions;
@@ -926,6 +935,7 @@ export function RoomActionsWorkbench({
   readonly interactions: WorkspaceInteractionCatalog;
   /** Consumer-owned leaf editor for one exact shared timeline row. */
   readonly renderRowContent?: (row: WorkspaceRoomActions['rows'][number]) => ReactNode;
+  readonly renderBoundaryContent?: (boundary: WorkspaceRoomLifecycleBoundary) => ReactNode;
   readonly ship?: {
     readonly occurrence: OccurrenceAddress;
     readonly phases: readonly WorkspaceShipPhasePresentation[];
@@ -1141,6 +1151,7 @@ export function RoomActionsWorkbench({
           {...(targetState === undefined ? {} : { dropState: targetState })}
         />
         {boundarySupplement(entry.boundary)}
+        {renderBoundaryContent?.(entry.boundary)}
       </Fragment>
     );
   };
@@ -1254,6 +1265,7 @@ export function RoomActionsWorkbench({
           </div>
           <div className="hub-rank-actions room-action-controls">
             <div className="room-action-inline-editors">
+              {renderRowContent?.(row)}
               {inlineTraitControls.map((control) => (
                 <TraitOfferLauncher
                   control={control}
@@ -1407,7 +1419,6 @@ export function RoomActionsWorkbench({
               </div>
             </div>
           )}
-          {renderRowContent?.(row)}
           {encounterActionSupplement(row)}
         </li>
         {row.rank === null ? null : checkpointRows(row.rank, checkpoints)}
@@ -1936,6 +1947,9 @@ function DirectRoomWorkbench({
   room,
   view,
   shipPhaseKey,
+  renderRoomActionRowContent,
+  renderLifecycleBoundaryContent,
+  renderRoomOverviewContent,
 }: {
   readonly idPrefix: string;
   readonly interactions: WorkspaceInteractionCatalog;
@@ -1943,6 +1957,9 @@ function DirectRoomWorkbench({
   readonly room: WorkspaceRoomSummary;
   readonly view: 'overview' | 'actions';
   readonly shipPhaseKey?: string;
+  readonly renderRoomActionRowContent?: (row: WorkspaceRoomActions['rows'][number]) => ReactNode;
+  readonly renderLifecycleBoundaryContent?: (boundary: WorkspaceRoomLifecycleBoundary) => ReactNode;
+  readonly renderRoomOverviewContent?: () => ReactNode;
 }) {
   const workbench = room.workbench;
   switch (workbench.kind) {
@@ -1954,6 +1971,7 @@ function DirectRoomWorkbench({
               {localVisit === undefined ? null : (
                 <LocalVisitWorkbench interactions={interactions} localVisit={localVisit} />
               )}
+              {renderRoomOverviewContent?.()}
               <RoomFeaturesWorkbench features={workbench.features} interactions={interactions} />
             </>
           ) : (
@@ -1962,6 +1980,12 @@ function DirectRoomWorkbench({
               encounterPhases={workbench.encounterPhases}
               idPrefix={idPrefix}
               interactions={interactions}
+              {...(renderRoomActionRowContent === undefined
+                ? {}
+                : { renderRowContent: renderRoomActionRowContent })}
+              {...(renderLifecycleBoundaryContent === undefined
+                ? {}
+                : { renderBoundaryContent: renderLifecycleBoundaryContent })}
             />
           )}
         </>
@@ -1975,6 +1999,7 @@ function DirectRoomWorkbench({
               {localVisit === undefined ? null : (
                 <LocalVisitWorkbench interactions={interactions} localVisit={localVisit} />
               )}
+              {renderRoomOverviewContent?.()}
               <RoomFeaturesWorkbench features={workbench.features} interactions={interactions} />
             </>
           ) : (
@@ -1983,6 +2008,12 @@ function DirectRoomWorkbench({
               encounterPhases={workbench.encounterPhases}
               idPrefix={idPrefix}
               interactions={interactions}
+              {...(renderRoomActionRowContent === undefined
+                ? {}
+                : { renderRowContent: renderRoomActionRowContent })}
+              {...(renderLifecycleBoundaryContent === undefined
+                ? {}
+                : { renderBoundaryContent: renderLifecycleBoundaryContent })}
             />
           )}
         </>
@@ -1996,6 +2027,7 @@ function DirectRoomWorkbench({
               {localVisit === undefined ? null : (
                 <LocalVisitWorkbench interactions={interactions} localVisit={localVisit} />
               )}
+              {renderRoomOverviewContent?.()}
               <RoomFeaturesWorkbench features={workbench.features} interactions={interactions} />
             </>
           ) : (
@@ -2003,6 +2035,12 @@ function DirectRoomWorkbench({
               {...(workbench.roomActions === undefined ? {} : { actions: workbench.roomActions })}
               idPrefix={idPrefix}
               interactions={interactions}
+              {...(renderRoomActionRowContent === undefined
+                ? {}
+                : { renderRowContent: renderRoomActionRowContent })}
+              {...(renderLifecycleBoundaryContent === undefined
+                ? {}
+                : { renderBoundaryContent: renderLifecycleBoundaryContent })}
             />
           )}
         </>
@@ -2016,6 +2054,7 @@ function DirectRoomWorkbench({
                 occurrence={room.address}
                 interactions={interactions}
               />
+              {renderRoomOverviewContent?.()}
               <RoomFeaturesWorkbench features={workbench.features} interactions={interactions} />
             </>
           ) : (
@@ -2024,6 +2063,12 @@ function DirectRoomWorkbench({
               encounterPhases={room.encounterPhases}
               idPrefix={idPrefix}
               interactions={interactions}
+              {...(renderRoomActionRowContent === undefined
+                ? {}
+                : { renderRowContent: renderRoomActionRowContent })}
+              {...(renderLifecycleBoundaryContent === undefined
+                ? {}
+                : { renderBoundaryContent: renderLifecycleBoundaryContent })}
               ship={{
                 occurrence: room.address,
                 phases: workbench.phases,
@@ -2072,6 +2117,9 @@ export function OccurrenceWorkbench({
   interactions,
   localVisit,
   room,
+  renderRoomActionRowContent,
+  renderLifecycleBoundaryContent,
+  renderRoomOverviewContent,
   runState,
 }: OccurrenceWorkbenchProps) {
   const requestedTab = initialTab ?? 'overview';
@@ -2203,6 +2251,11 @@ export function OccurrenceWorkbench({
               interactions={interactions}
               {...(localVisit === undefined ? {} : { localVisit })}
               room={room}
+              {...(renderRoomActionRowContent === undefined ? {} : { renderRoomActionRowContent })}
+              {...(renderLifecycleBoundaryContent === undefined
+                ? {}
+                : { renderLifecycleBoundaryContent })}
+              {...(renderRoomOverviewContent === undefined ? {} : { renderRoomOverviewContent })}
               view="overview"
             />
           </>
@@ -2225,6 +2278,10 @@ export function OccurrenceWorkbench({
             idPrefix={idPrefix}
             interactions={interactions}
             room={room}
+            {...(renderRoomActionRowContent === undefined ? {} : { renderRoomActionRowContent })}
+            {...(renderLifecycleBoundaryContent === undefined
+              ? {}
+              : { renderLifecycleBoundaryContent })}
             {...(() => {
               const shipPhaseKey =
                 activeTab === 'shipIntroActions'
@@ -2241,6 +2298,10 @@ export function OccurrenceWorkbench({
             idPrefix={idPrefix}
             interactions={interactions}
             room={room}
+            {...(renderRoomActionRowContent === undefined ? {} : { renderRoomActionRowContent })}
+            {...(renderLifecycleBoundaryContent === undefined
+              ? {}
+              : { renderLifecycleBoundaryContent })}
             view="actions"
           />
         )}

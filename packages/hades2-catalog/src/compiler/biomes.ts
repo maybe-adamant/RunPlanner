@@ -10,7 +10,6 @@ export function normalizeBiomes(
     return Object.freeze({
       key: requireNonEmpty(biome.key, `${path}.key`),
       label: requireNonEmpty(biome.label, `${path}.label`),
-      hasPostbossKeepsakeRack: biome.hasPostbossKeepsakeRack,
     });
   });
   return createCollection(biomes, 'biomes', (biome) => biome.key);

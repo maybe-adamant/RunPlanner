@@ -28,7 +28,12 @@ export function activeRoomActionReferences(
   const room = catalog.rooms.byKey[occurrence.gameName];
   if (room === undefined) return Object.freeze([]);
   const references: RoomActionReference[] = [];
-  const hasFountain = room.mode.kind === 'authored' && room.mode.templateKey === 'Fountain';
+  // Reprieve rooms and automatic Postboss rooms both expose the same
+  // occurrence-owned Fountain interaction.  The declaration fact, rather than
+  // the old completion role, is the authoritative source.
+  const hasFountain =
+    room.hasRequiredFountain ||
+    (room.mode.kind === 'authored' && room.mode.templateKey === 'Fountain');
   const envelopeSlots = encounterEnvelopeSlots(catalog, room, occurrence.gameName);
   const activeEncounterSlots =
     scope?.activeEncounterSlotKeys !== undefined
@@ -101,6 +106,8 @@ export function activeRoomActionReferences(
   }
   // A Reprieve's authored reward is its room-entry pickup; fountain use follows it by default.
   if (hasFountain) references.push(Object.freeze({ kind: 'useFountain' }));
+  if (occurrence.keepsakeRack?.disposition.kind === 'replace')
+    references.push(Object.freeze({ kind: 'interactKeepsakeRack' }));
   if (occurrence.state.kind === 'shipCombat') {
     const activeWheels =
       scope?.activeRewardWheelKeys !== undefined

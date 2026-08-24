@@ -1,7 +1,8 @@
 import {
   createAllTogetherSetAddress,
   createBiomeAddress,
-  createCompletionRoomAddress,
+  createOccurrenceAddress,
+  createOccurrenceId,
   createEncounterPhaseAddress,
   createGorgonPhaseAddress,
   createHubDecisionAddress,
@@ -9,7 +10,6 @@ import {
   createTraitOfferAddress,
   createKeepsakeEquipResultAddress,
   createLocalVisitSlotAddress,
-  createOccurrenceId,
   createPostbossKeepsakeSelectionAddress,
   createRouteStartKeepsakeSelectionAddress,
   semanticAddressKey,
@@ -210,7 +210,7 @@ describe('fine-grained finding routing', () => {
 
   it('requires a Postboss equip result to route through its exact completion inspector', () => {
     const selection = createPostbossKeepsakeSelectionAddress(
-      createCompletionRoomAddress(biome, 'postboss'),
+      createOccurrenceAddress(biome, createOccurrenceId('completion:N:postboss')),
     );
     const result = createKeepsakeEquipResultAddress(selection, 'experimentalHammer');
     const finding = {

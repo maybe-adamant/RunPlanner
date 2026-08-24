@@ -8,7 +8,11 @@ import {
   withBiome,
   type LocatedBiome,
 } from './contract';
-import { replaceOccurrence, updateOccurrenceTopology } from './occurrence-mutation';
+import {
+  replaceOccurrence,
+  updateOccurrence,
+  updateOccurrenceTopology,
+} from './occurrence-mutation';
 import type { SteadyGrowthCommand } from './types';
 import { encounterBindingsBySlot } from '../room-state/encounters';
 
@@ -22,38 +26,6 @@ export function applySteadyGrowthCommand(
   const target = command.targetTraitKey;
   if (target !== null && catalog.traits.byKey[target] === undefined)
     failCommand(command, `unknown trait ${target}`);
-  if (command.outcome.owner.kind === 'completionRoom') {
-    if (command.outcome.owner.role !== 'boss')
-      failCommand(command, 'Steady Growth Boss outcome is invalid');
-    const descriptor = located.layout.completion.rooms.find((room) => room.role === 'boss');
-    if (descriptor === undefined) failCommand(command, 'biome has no Boss completion room');
-    const room = catalog.rooms.byKey[descriptor.roomGameName];
-    if (
-      room === undefined ||
-      room.roomSetKey !== located.layout.biomeKey ||
-      room.mode.kind !== 'derived' ||
-      room.mode.classification !== 'completion' ||
-      room.kind !== 'Boss'
-    )
-      failCommand(command, `${descriptor.roomGameName} is not this biome's Boss completion room`);
-    const phaseKeys = [...encounterBindingsBySlot(catalog, room, room.gameName).keys()];
-    if (phaseKeys.length !== 1 || phaseKeys[0] !== command.outcome.phaseKey)
-      failCommand(
-        command,
-        `${room.gameName} has no Boss encounter phase ${command.outcome.phaseKey}`,
-      );
-    const current = located.plan.bossCompletionSteadyGrowthTarget ?? null;
-    if (current === target) return document;
-    if (target === null) {
-      const { bossCompletionSteadyGrowthTarget, ...plan } = located.plan;
-      void bossCompletionSteadyGrowthTarget;
-      return withBiome(document, located, plan);
-    }
-    return withBiome(document, located, {
-      ...located.plan,
-      bossCompletionSteadyGrowthTarget: target,
-    });
-  }
   const topology = requireTopology(located.plan, command);
   const occurrence = requireOccurrence(located.plan, command.outcome.owner.occurrenceId, command);
   const phaseKey = command.outcome.phaseKey;
@@ -73,12 +45,8 @@ export function applySteadyGrowthCommand(
           return rest;
         })()
       : { ...occurrence.encounters, steadyGrowthTargetByPhase: Object.freeze(next) };
-  return updateOccurrenceTopology(
-    document,
-    located,
-    replaceOccurrence(topology, {
-      ...occurrence,
-      encounters,
-    }),
-  );
+  return updateOccurrence(document, located, {
+    ...occurrence,
+    encounters,
+  });
 }

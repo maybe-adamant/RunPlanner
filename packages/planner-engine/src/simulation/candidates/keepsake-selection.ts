@@ -73,11 +73,15 @@ export function evaluateKeepsakeSelectionCandidate(
   const route = _project.routes.find(
     (candidate) => candidate.routeKey === query.selection.routeKey,
   );
+  const postbossOwner = query.selection.owner === 'routeStart' ? undefined : query.selection.owner;
   const disposition =
-    query.selection.owner === 'routeStart'
+    postbossOwner === undefined
       ? undefined
-      : route?.biomes.find((biome) => biome.biomeKey === query.selection.biomeKey)
-          ?.postbossKeepsakeDisposition;
+      : route?.biomes
+          .find((biome) => biome.biomeKey === query.selection.biomeKey)
+          ?.completionOccurrences.find(
+            (occurrence) => occurrence.occurrenceId === postbossOwner.occurrenceId,
+          )?.keepsakeRack?.disposition;
   const authoredKey =
     query.selection.owner === 'routeStart'
       ? route?.loadout.startingKeepsakeKey

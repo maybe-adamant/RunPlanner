@@ -281,12 +281,12 @@ import {
   judgmentRequiredCount,
 } from '../arcana-fear';
 import {
-  createBossCompletionArcanaAddress,
+  createJudgmentArcanaAddress,
   createKeepsakeEquipResultAddress,
   createPostbossKeepsakeSelectionAddress,
 } from '../../authored-project/addresses';
 import {
-  createBossCompletionArcanaCandidateArtifacts,
+  createJudgmentArcanaCandidateArtifacts,
   createKeepsakeSelectionCandidateArtifacts,
   createKeepsakeEquipResultCandidateArtifacts,
 } from '../candidate-artifacts';
@@ -696,6 +696,7 @@ function rewardRooms(snapshot: BiomeRewardSnapshot): ReadonlyMap<string, Canonic
     ),
     ...frontierAdditional(snapshot).map((continuation) => continuation.room),
     ...hubFrontierRooms(snapshot),
+    ...(snapshot.automaticRooms ?? []),
   ];
   return new Map(rooms.map((room) => [semanticAddressKey(room.origin), room]));
 }
@@ -1174,7 +1175,7 @@ interface BiomeRewardEvaluationAssembly {
   readonly lifecycleArtifacts: RoomLifecycleCandidateArtifacts;
   readonly traitOfferArtifacts: import('../candidate-artifacts').TraitOfferCandidateArtifacts;
   readonly levelResolutionArtifacts: import('../candidate-artifacts').LevelResolutionCandidateArtifacts;
-  readonly bossCompletionArcanaArtifacts: import('../candidate-artifacts').BossCompletionArcanaCandidateArtifacts;
+  readonly judgmentArcanaArtifacts: import('../candidate-artifacts').JudgmentArcanaCandidateArtifacts;
   readonly keepsakeSelectionArtifacts: import('../candidate-artifacts').KeepsakeSelectionCandidateArtifacts;
   readonly keepsakeEquipResultArtifacts: import('../candidate-artifacts').KeepsakeEquipResultCandidateArtifacts;
   readonly acquisitionConversionArtifacts: import('../candidate-artifacts').AcquisitionConversionCandidateArtifacts;
@@ -1465,7 +1466,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
   const fullRunBiomeCount = catalog.routes.byKey[snapshot.routeKey]?.biomeKeys.length;
   if (fullRunBiomeCount === undefined) {
     throw new BiomeRewardSimulationContractError(
-      `${snapshot.routeKey} has no catalog route for Boss-completion effects`,
+      `${snapshot.routeKey} has no catalog route for Boss Judgment effects`,
     );
   }
   const layout = requireRewardLayout(catalog, snapshot);
@@ -1492,9 +1493,9 @@ export function evaluateBiomeRewardsAssemblyInternal(
       event.kind === 'emptyOutgoingGenerationCompleted' ? [semanticAddressKey(event.origin)] : [],
     ),
   );
-  const bossCompletionArcanaContexts = new Map<
+  const judgmentArcanaContexts = new Map<
     string,
-    import('../candidate-artifacts').BossCompletionArcanaCandidateCapability
+    import('../candidate-artifacts').JudgmentArcanaCandidateCapability
   >();
   const keepsakeSelectionContexts = new Map<
     string,
@@ -3004,13 +3005,11 @@ export function evaluateBiomeRewardsAssemblyInternal(
         branches = beginRewardRoom(branches, event.sequence);
         break;
       case 'keepsakeRackUsed': {
-        if (
-          event.origin.kind === 'completionRoom' &&
-          event.origin.role === 'postboss' &&
-          snapshot.kind === 'biome' &&
-          snapshot.postbossKeepsakeDisposition !== undefined
-        ) {
-          const disposition = snapshot.postbossKeepsakeDisposition;
+        const rackRoom = rooms.get(semanticAddressKey(event.origin));
+        if (rackRoom?.kind === 'authored' && rackRoom.keepsakeRack !== undefined) {
+          const rack = rackRoom.keepsakeRack;
+          const disposition = rack.disposition;
+          if (event.origin.kind !== 'occurrence') break;
           const selection = createPostbossKeepsakeSelectionAddress(event.origin);
           const historyAtRack = views.get(semanticAddressKey(event.origin))?.entry;
           keepsakeSelectionContexts.set(
@@ -3138,7 +3137,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
               const result = createKeepsakeEquipResultAddress(selection, 'jeweledPom');
               if (
                 successfulReplacementBranches.length > 0 &&
-                snapshot.keepsakeEquipResults?.jeweledPom === undefined
+                rack.equipResults?.jeweledPom === undefined
               ) {
                 addRewardFinding(
                   findings,
@@ -3153,7 +3152,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
                   (branch) =>
                     !assessJeweledPomEquipResult(
                       catalog,
-                      snapshot.keepsakeEquipResults!.jeweledPom!,
+                      rack.equipResults!.jeweledPom!,
                       branch.traitHistory ?? createTraitHistoryState(),
                       branch.keepsakes.fatedStatus,
                     ).legal,
@@ -3194,7 +3193,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
               const result = createKeepsakeEquipResultAddress(selection, 'experimentalHammer');
               if (
                 successfulReplacementBranches.length > 0 &&
-                snapshot.keepsakeEquipResults?.experimentalHammer === undefined
+                rack.equipResults?.experimentalHammer === undefined
               ) {
                 addRewardFinding(
                   findings,
@@ -3209,7 +3208,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
                   (branch) =>
                     !assessExperimentalHammerEquipResult(
                       catalog,
-                      snapshot.keepsakeEquipResults!.experimentalHammer!,
+                      rack.equipResults!.experimentalHammer!,
                       branch.traitHistory ?? createTraitHistoryState(),
                       routeLoadout,
                     ).legal,
@@ -3251,7 +3250,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
                       catalog,
                       transition.branch,
                       disposition.keepsakeKey,
-                      snapshot.keepsakeEquipResults,
+                      rack.equipResults,
                       createKeepsakeEquipResultAddress(selection, 'jeweledPom'),
                       event.sequence,
                       transition.equippedRank,
@@ -3267,7 +3266,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
                       catalog,
                       transition.branch,
                       disposition.keepsakeKey,
-                      snapshot.keepsakeEquipResults,
+                      rack.equipResults,
                       createKeepsakeEquipResultAddress(selection, 'experimentalHammer'),
                       event.sequence,
                       routeLoadout,
@@ -3285,12 +3284,9 @@ export function evaluateBiomeRewardsAssemblyInternal(
         // Retain leaves the optional rack action absent.  Do not apply a
         // disposition here: ranked `keepsakeRackUsed` is the sole mutation
         // point for a replacement and its immediate result.
-        if (
-          event.origin.kind === 'completionRoom' &&
-          event.origin.role === 'postboss' &&
-          snapshot.kind === 'biome' &&
-          snapshot.postbossKeepsakeDisposition !== undefined
-        ) {
+        const rackRoom = rooms.get(semanticAddressKey(event.origin));
+        if (rackRoom?.kind === 'authored' && rackRoom.keepsakeRack !== undefined) {
+          if (event.origin.kind !== 'occurrence') break;
           const selection = createPostbossKeepsakeSelectionAddress(event.origin);
           const historyAtRack = views.get(semanticAddressKey(event.origin))?.entry;
           keepsakeSelectionContexts.set(
@@ -4959,17 +4955,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
       case 'encounterInteractionReached':
       case 'encounterCompleted': {
         const room = rooms.get(semanticAddressKey(event.origin));
-        const completionRoom =
-          event.origin.kind === 'completionRoom'
-            ? snapshot.completionRooms?.find(
-                (candidate) =>
-                  semanticAddressKey(candidate.origin) === semanticAddressKey(event.origin),
-              )
-            : undefined;
-        const declaration =
-          room === undefined && completionRoom === undefined
-            ? undefined
-            : catalog.rooms.byKey[(room ?? completionRoom)!.gameName];
+        const declaration = room === undefined ? undefined : catalog.rooms.byKey[room.gameName];
         if (
           event.kind === 'encounterInteractionReached' &&
           event.interaction === 'gorgon' &&
@@ -5125,11 +5111,17 @@ export function evaluateBiomeRewardsAssemblyInternal(
         }
         if (
           event.kind === 'bossDefeated' &&
-          event.origin.kind === 'completionRoom' &&
-          event.origin.role === 'boss' &&
+          room?.kind === 'authored' &&
+          (() => {
+            const declaration = catalog.rooms.byKey[room.gameName];
+            return declaration?.mode.kind === 'automatic' && declaration.mode.role === 'boss';
+          })() &&
           enteredBiomeCount < fullRunBiomeCount
         ) {
-          const owner = createBossCompletionArcanaAddress(event.origin);
+          const owner = createJudgmentArcanaAddress(
+            event.origin as import('../../authored-project/addresses').OccurrenceAddress,
+            event.phaseKey,
+          );
           // Barren suppresses Judgment at this exact seam.  The later
           // encounter completion may mature Barren, but cannot retroactively
           // re-enable this boss-defeated effect.
@@ -5147,7 +5139,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
               ? undefined
               : judgmentRequiredCount(catalog, firstArcanaFear);
           if (requiredCount !== undefined && firstArcanaFear !== undefined) {
-            bossCompletionArcanaContexts.set(
+            judgmentArcanaContexts.set(
               semanticAddressKey(owner),
               Object.freeze({
                 inactiveArcanaKeys: inactiveArcanaKeys(catalog, firstArcanaFear).filter(
@@ -5171,7 +5163,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
               const required = judgmentRequiredCount(catalog, branch.arcanaFear);
               if (required === undefined)
                 return [advanceRewardBranches([branch], event.sequence)[0]!];
-              const selected = snapshot.kind === 'biome' ? snapshot.bossCompletionArcanaKeys : [];
+              const selected = room.encounters.judgmentArcanaKeysByPhase?.[event.phaseKey] ?? [];
               if (selected.length !== required) {
                 addRewardFinding(
                   findings,
@@ -5622,17 +5614,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
       }
       case 'encounterEndEffectsApplied': {
         const room = rooms.get(semanticAddressKey(event.origin));
-        const completionRoom =
-          event.origin.kind === 'completionRoom'
-            ? snapshot.completionRooms?.find(
-                (candidate) =>
-                  semanticAddressKey(candidate.origin) === semanticAddressKey(event.origin),
-              )
-            : undefined;
-        const declaration =
-          room === undefined && completionRoom === undefined
-            ? undefined
-            : catalog.rooms.byKey[(room ?? completionRoom)!.gameName];
+        const declaration = room === undefined ? undefined : catalog.rooms.byKey[room.gameName];
         if (
           declaration?.advancesExperimentalHammerUses === true &&
           !(room?.lifecycleProfileKey === 'FieldsCombatRoom' && event.phaseKey === 'Passive')
@@ -5640,21 +5622,12 @@ export function evaluateBiomeRewardsAssemblyInternal(
           branches = advanceExperimentalHammerForEndEffects(branches, event.origin, event.sequence);
         }
         branches = advanceChaosClockAt(catalog, branches, event.sequence, 'encounters');
-        let steadyOwner: SteadyGrowthOutcomeAddress['owner'] | undefined;
-        if (event.origin.kind === 'occurrence') steadyOwner = event.origin;
-        else if (event.origin.kind === 'completionRoom' && event.origin.role === 'boss')
-          steadyOwner = event.origin as Extract<
-            SteadyGrowthOutcomeAddress['owner'],
-            { readonly kind: 'completionRoom' }
-          >;
+        const steadyOwner: SteadyGrowthOutcomeAddress['owner'] | undefined =
+          event.origin.kind === 'occurrence' ? event.origin : undefined;
         const steadyGrowthTarget =
-          event.origin.kind === 'completionRoom'
-            ? snapshot.kind === 'biome'
-              ? snapshot.bossCompletionSteadyGrowthTarget
-              : undefined
-            : room?.kind === 'authored'
-              ? room.encounters.steadyGrowthTargetByPhase?.[event.phaseKey]
-              : undefined;
+          room?.kind === 'authored'
+            ? room.encounters.steadyGrowthTargetByPhase?.[event.phaseKey]
+            : undefined;
         const steadyAdvance =
           steadyOwner === undefined
             ? undefined
@@ -6023,9 +5996,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
       catalog,
       levelCandidateContexts,
     ),
-    bossCompletionArcanaArtifacts: createBossCompletionArcanaCandidateArtifacts(
-      bossCompletionArcanaContexts,
-    ),
+    judgmentArcanaArtifacts: createJudgmentArcanaCandidateArtifacts(judgmentArcanaContexts),
     keepsakeSelectionArtifacts:
       createKeepsakeSelectionCandidateArtifacts(keepsakeSelectionContexts),
     keepsakeEquipResultArtifacts: createKeepsakeEquipResultCandidateArtifacts(

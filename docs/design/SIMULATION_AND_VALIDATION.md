@@ -100,7 +100,7 @@ The normalized catalog contains immutable possible facts:
 - reward types, payload domains, source-support policies, concrete acquisition
   declarations, stores, bags, bindings, and shops;
 - normalized current-run requirements whose kinds have registered evaluators;
-- normal-door batch, Preboss, and completion policies.
+- normal-door batch, Preboss, and automatic-tail policies.
 
 Catalog construction fails for:
 
@@ -561,11 +561,10 @@ sequence containing distinct open slot keys. Side-room state is active only
 under visited combat targets: every declared local slot then has concrete
 generation state and reward state, and every generated slot has either one
 distinct entered ordinal or an explicit unentered result. The fixed preboss
-shop leaf must also be complete. Hub returns, parent restores, Boss, and
-Postboss require no authored occurrence records. A structural Postboss still
-consumes its biome-owned `postbossRoomActions` order through the shared
-completion roster when a configured successor makes that completion reached;
-final-biome state remains persisted but dormant.
+shop leaf must also be complete. Hub returns and parent restores are derived;
+Boss and Postboss are declaration-fixed automatic occurrences. A reached
+Postboss consumes its own `roomActions` order through the ordinary occurrence
+roster, including at a configured route tail.
 
 Only referenced occurrences participate. Removed occurrences do not remain as
 dormant project state; undo may restore their prior authored snapshot.
@@ -590,7 +589,7 @@ interface CanonicalBiome {
   biomeKey: string;
   entryRoom: CanonicalAuthoredRoom;
   decisions: CanonicalDecision[];
-  completionRooms: CanonicalCompletionRoom[];
+  automaticRooms: CanonicalAuthoredRoom[];
   biomeState: CanonicalBiomeState;
 }
 
@@ -625,15 +624,15 @@ exit order, not by persisted insertion order or decision-array position.
 its open board, and its selected visits.
 
 ```text
-entry room -> selected decision spine -> selected Preboss -> completion rooms
+entry room -> selected decision spine -> selected Preboss -> automatic rooms
 ```
 
 The selected Preboss is a `CanonicalTarget` within its declaration-owned
 normal-door batch. Its continuation is `startsCompletion`; every unpicked
 target is a `deadLeaf`, and a picked ordinary target is `continuesSpine`.
-There is no parallel completion-entry snapshot or adapter. Completion
-materialization starts from the selected Preboss and carries only the declared
-completion rooms and their entered reward-store provenance.
+There is no parallel completion-entry snapshot or adapter. Automatic room
+materialization starts from the selected Preboss and carries the declared
+automatic occurrences and their entered reward-store provenance.
 
 The materializer walks the normalized selected spine rather than the stored
 decision array. It may dispatch on normalized declaration policy, but never on
@@ -822,7 +821,7 @@ room.exit
 
 selected Preboss enters
 layout completion sequence begins
-each derived completion declaration enters and commits in order
+each automatic Boss/Postboss declaration enters and commits in order
 biome.complete
 next biome entry or route completion
 ```
@@ -891,7 +890,7 @@ for each authored main visit:
     restore the same main occurrence
   restore the same Hub room
 enter fixed authored PreBoss and resolve its shop
-walk derived Boss and PostBoss completion
+walk automatic Boss and Postboss occurrences
 ```
 
 The hub lookup is produced before the first selected visit and remains based on
@@ -981,9 +980,10 @@ Important consequences:
   outgoing generation observes it before the same room's later commit;
 - outgoing generation reads the source's pre-commit depth caches, while the
   picked target's preparation reads the post-commit caches;
-- fixed completion rooms contribute their declared room-history ordinals even
-  though they are derived rather than authored topology;
-- each derived completion room applies its declaration-owned reward-store
+- automatic Boss/Postboss occurrences contribute their declared room-history
+  ordinals even though their layout order is fixed rather than editable
+  topology;
+- each automatic Boss/Postboss room applies its declaration-owned reward-store
   history policy instead of a simulator room-name exception;
 - the next biome reads route-wide history only after those fixed transitions
   and the declared biome reset events have been applied;

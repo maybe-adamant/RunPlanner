@@ -44,8 +44,8 @@ export function projectCommandAddress(
       return command.selection;
     case 'ReplaceBiomeField':
       return command.field;
-    case 'ReplaceBossCompletionArcana':
-      return command.completion;
+    case 'ReplaceJudgmentArcana':
+      return command.judgment;
     case 'ReplaceSteadyGrowthTarget':
       return command.outcome;
     case 'ReplacePostbossKeepsake':
@@ -186,9 +186,9 @@ export function requireOccurrence(
   occurrenceId: OccurrenceId,
   command: ProjectCommand,
 ): RoomOccurrence {
-  const occurrence = requireTopology(plan, command).occurrences.find(
-    (candidate) => candidate.occurrenceId === occurrenceId,
-  );
+  const occurrence =
+    plan.topology?.occurrences.find((candidate) => candidate.occurrenceId === occurrenceId) ??
+    plan.completionOccurrences.find((candidate) => candidate.occurrenceId === occurrenceId);
   if (occurrence === undefined) failCommand(command, `unknown occurrence ${occurrenceId}`);
   return occurrence;
 }
@@ -204,7 +204,6 @@ export function requireRoom(
   if (room.roomSetKey !== biomeKey) {
     failCommand(command, `${gameName} belongs to ${room.roomSetKey}`);
   }
-  if (room.mode.kind !== 'authored') failCommand(command, `${gameName} is layout-derived`);
   return room;
 }
 

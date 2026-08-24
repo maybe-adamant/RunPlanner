@@ -15,14 +15,14 @@ import {
 import { fBiome, fProject, iBiome, iProject } from '../support/configured-projects';
 
 describe('authored-project project-state commands', () => {
-  it('seeds Postboss room actions from the Postboss room capability independently of rack disposition', () => {
+  it('seeds Postboss room actions from its exact automatic room declaration', () => {
     const withoutRack = {
       ...catalog,
-      biomes: {
-        ...catalog.biomes,
+      rooms: {
+        ...catalog.rooms,
         byKey: {
-          ...catalog.biomes.byKey,
-          F: { ...catalog.biomes.byKey.F!, hasPostbossKeepsakeRack: false },
+          ...catalog.rooms.byKey,
+          F_PostBoss01: { ...catalog.rooms.byKey.F_PostBoss01!, hasKeepsakeRack: false },
         },
       },
     };
@@ -30,13 +30,14 @@ describe('authored-project project-state commands', () => {
       projectId: 'fountain-without-rack',
       configuredBiomeCounts: { Underworld: 1 },
     });
-    expect(document.routes[0]?.biomes[0]).toMatchObject({
-      postbossRoomActions: { order: [{ kind: 'useFountain' }] },
-    });
-    expect(document.routes[0]?.biomes[0]?.postbossKeepsakeDisposition).toBeUndefined();
+    const postboss = document.routes[0]?.biomes[0]?.completionOccurrences.find(
+      (occurrence) => occurrence.occurrenceId === 'completion:F:postboss',
+    );
+    expect(postboss?.roomActions).toEqual({ order: [{ kind: 'useFountain' }] });
+    expect(postboss?.keepsakeRack).toBeUndefined();
   });
 
-  it('seeds fountain chronology from the Postboss role when a route overrides the room', () => {
+  it('seeds fountain chronology from the exact configured automatic Postboss room', () => {
     const replacementGameName = catalog.biomeLayouts.byKey.G!.completion.rooms.find(
       (room) => room.role === 'postboss',
     )!.roomGameName;
@@ -63,9 +64,11 @@ describe('authored-project project-state commands', () => {
       projectId: 'overridden-postboss',
       configuredBiomeCounts: { Underworld: 1 },
     });
-    expect(project.routes[0]?.biomes[0]?.postbossRoomActions).toEqual({
-      order: [{ kind: 'useFountain' }],
-    });
+    expect(
+      project.routes[0]?.biomes[0]?.completionOccurrences.find(
+        (occurrence) => occurrence.occurrenceId === 'completion:F:postboss',
+      )?.roomActions,
+    ).toEqual({ order: [{ kind: 'useFountain' }] });
   });
 
   it.each([
@@ -155,28 +158,17 @@ describe('authored-project project-state commands', () => {
 
     expect(grown.routes[0]?.biomes.map((biome) => biome.biomeKey)).toEqual(['F', 'G', 'H', 'I']);
     expect(grown.routes[0]?.biomes[0]).toEqual(retainedF);
-    expect(grown.routes[0]?.biomes.slice(1)).toEqual([
-      {
-        biomeKey: 'G',
-        state: {},
-        topology: null,
-        postbossKeepsakeDisposition: { kind: 'retain' },
-        postbossRoomActions: { order: [{ kind: 'useFountain' }] },
-      },
-      {
-        biomeKey: 'H',
-        state: {},
-        topology: null,
-        postbossKeepsakeDisposition: { kind: 'retain' },
-        postbossRoomActions: { order: [{ kind: 'useFountain' }] },
-      },
-      {
-        biomeKey: 'I',
-        state: { maxNonGoalRewards: null },
-        topology: null,
-        postbossRoomActions: { order: [{ kind: 'useFountain' }] },
-      },
-    ]);
+    for (const biome of grown.routes[0]?.biomes.slice(1) ?? []) {
+      expect(biome.topology).toBeNull();
+      expect(biome.completionOccurrences.map((occurrence) => occurrence.occurrenceId)).toEqual([
+        `completion:${biome.biomeKey}:boss`,
+        `completion:${biome.biomeKey}:postboss`,
+      ]);
+    }
+    expect(grown.routes[0]?.biomes[3]).toMatchObject({
+      biomeKey: 'I',
+      state: { maxNonGoalRewards: null },
+    });
     expect(
       applyProjectCommand(grown, catalog, {
         kind: 'ConfigureRoutePrefix',

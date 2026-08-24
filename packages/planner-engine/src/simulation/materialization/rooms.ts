@@ -64,7 +64,7 @@ type AuthoredTemplateKey =
   | 'StandardCombat'
   | 'Story';
 
-export type AuthoredRoomRole = 'ordinary' | 'prebossFreeReward' | 'prebossShop';
+export type AuthoredRoomRole = 'ordinary' | 'prebossFreeReward' | 'prebossShop' | 'automatic';
 
 export interface AuthoredRoomMaterializationContext {
   readonly catalog: Catalog;
@@ -779,10 +779,14 @@ function requireLifecycleSelection(
 export function materializeAuthoredRoom(
   context: AuthoredRoomMaterializationContext,
 ): CanonicalAuthoredRoom {
-  if (context.room.mode.kind !== 'authored') {
-    fail(`${context.room.gameName} is not an authored room`);
-  }
-  const leaf = authoredMaterializer(context.room.mode.templateKey, context.room.gameName)(context);
+  if (context.room.mode.kind === 'derived')
+    fail(`${context.room.gameName} is not an occurrence room`);
+  const leaf: MaterializedRoomLeaf =
+    context.room.mode.kind === 'automatic'
+      ? Object.freeze({
+          lifecycleProfileKey: context.room.mode.role === 'boss' ? 'BossRoom' : 'PostBossRoom',
+        })
+      : authoredMaterializer(context.room.mode.templateKey, context.room.gameName)(context);
   const selectedEncounterPhases =
     leaf.encounterPhases ??
     resolveEncounterPhases(
@@ -847,6 +851,9 @@ export function materializeAuthoredRoom(
     counterEffects: context.room.counters,
     entered: context.entered,
     roomActions: context.occurrence.roomActions,
+    ...(context.occurrence.keepsakeRack === undefined
+      ? {}
+      : { keepsakeRack: context.occurrence.keepsakeRack }),
     acquisitionSites: Object.freeze(
       Object.fromEntries(
         Object.entries(context.occurrence.acquisitionSites ?? {}).flatMap(([siteKey, site]) => {

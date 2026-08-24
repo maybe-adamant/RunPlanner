@@ -82,7 +82,6 @@ function titledNode(node: WorkspaceNode, title: string): WorkspaceNode {
     case 'mixedBatch':
     case 'takeoverBatch':
       return withRunStateTitle(node, title);
-    case 'completion':
     case 'occurrenceWorkbench':
       return node;
   }
@@ -129,8 +128,6 @@ function nodeRailPresentation(
       return { label: `Decision ${decisionIndex ?? 1}` };
     case 'takeoverBatch':
       return { label: 'Preboss' };
-    case 'completion':
-      return { label: node.label };
     case 'hubDecision':
       return { label: 'Hub' };
   }
@@ -571,7 +568,6 @@ export function presentWorkspaceBiome(
             node: withRunStateTitle(entry.node, entry.label),
             ...(entry.mainReward === undefined ? {} : { mainReward: entry.mainReward }),
           });
-        case 'completion':
         case 'occurrenceWorkbench':
         case 'hubDecision':
           return entry;
@@ -591,7 +587,6 @@ export function presentWorkspaceBiome(
   const defaultInspector = defaultInspectorDestination(inspectorDefaults);
   const biome = Object.freeze({
     biomeKey: semantic.biomeKey,
-    completion: semantic.completion,
     completionOutline: semantic.completionOutline,
     defaultInspectorDestination: defaultInspector,
     ...(entry === undefined ? {} : { entry }),

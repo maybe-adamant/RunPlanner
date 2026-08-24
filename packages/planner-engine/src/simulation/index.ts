@@ -169,14 +169,10 @@ export {
   type RoomActionWindow,
 } from './room-actions';
 export {
-  assembleCompletionRoomLifecycleTimeline,
   appendSteadyGrowthTimelineEffects,
-  appendSteadyGrowthCompletionTimelineEffects,
   assembleRoomLifecycleTimeline,
   scopeRoomLifecycleTimeline,
   type RoomLifecycleBoundary,
-  type CompletionRoomLifecycleTimeline,
-  type CompletionRoomLifecycleTimelineEntry,
   type RoomLifecycleTimeline,
   type RoomLifecycleTimelineEntry,
   type RoomLifecycleTimelineInput,
@@ -290,7 +286,6 @@ export {
   type CanonicalBatchState,
   type CanonicalBiome,
   type CanonicalBiomeState,
-  type CanonicalCompletionRoom,
   type CanonicalDecision,
   type CanonicalHubBoard,
   type CanonicalHubDecision,

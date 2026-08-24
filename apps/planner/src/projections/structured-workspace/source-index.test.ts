@@ -712,7 +712,9 @@ describe('structured workspace source index', () => {
       kind: 'topologyOwned',
       topology: 'localVisit',
     });
-    expect(source.outgoingStatus(nOccurrenceId('preboss'))).toMatchObject({ kind: 'terminal' });
+    expect(source.outgoingStatus(nOccurrenceId('preboss'))).toMatchObject({
+      kind: 'fixedAutomatic',
+    });
   });
 
   it('keeps evaluator products and findings addressed to authored owners', () => {

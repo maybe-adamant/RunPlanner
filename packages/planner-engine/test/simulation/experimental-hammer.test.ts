@@ -4,11 +4,11 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createBiomeAddress,
-  createCompletionRoomAddress,
   createEncounterPhaseAddress,
   createKeepsakeEquipResultAddress,
   createLocalVisitOrderAddress,
   createOccurrenceId,
+  createOccurrenceAddress,
   createPostbossKeepsakeSelectionAddress,
   createRouteStartKeepsakeSelectionAddress,
 } from '@run-planner/engine/authored-project';
@@ -47,6 +47,13 @@ function route(project: ReturnType<typeof createCompleteFGProject>) {
   const value = project.routes.find((candidate) => candidate.routeKey === 'Underworld');
   if (value === undefined) throw new Error('missing Underworld route');
   return value;
+}
+
+function automaticOccurrence(
+  biome: ReturnType<typeof createBiomeAddress>,
+  role: 'boss' | 'postboss',
+) {
+  return createOccurrenceAddress(biome, createOccurrenceId(`completion:${biome.biomeKey}:${role}`));
 }
 
 function evaluatedBiome(project: ReturnType<typeof createCompleteFGProject>, key: 'F' | 'G' | 'H') {
@@ -105,7 +112,7 @@ function replayThroughRealLifecycle(
 
 function withPostbossHammer(project: ReturnType<typeof createGoldenFGHProject>) {
   const selection = createPostbossKeepsakeSelectionAddress(
-    createCompletionRoomAddress(createBiomeAddress('Underworld', 'F'), 'postboss'),
+    automaticOccurrence(createBiomeAddress('Underworld', 'F'), 'postboss'),
   );
   const selected = applyProjectCommand(project, catalog, {
     kind: 'ReplacePostbossKeepsake',
@@ -123,7 +130,7 @@ function withPostbossNeutralReplacement(project: ReturnType<typeof createGoldenF
   return applyProjectCommand(project, catalog, {
     kind: 'ReplacePostbossKeepsake',
     selection: createPostbossKeepsakeSelectionAddress(
-      createCompletionRoomAddress(createBiomeAddress('Underworld', 'F'), 'postboss'),
+      automaticOccurrence(createBiomeAddress('Underworld', 'F'), 'postboss'),
     ),
     value: { kind: 'replace', keepsakeKey: 'BossPreDamageKeepsake' },
   });
@@ -361,12 +368,15 @@ describe('Experimental Hammer', () => {
     const project = createCompleteFGProject();
     const endEffects = lifecycleEndEffects(project, 'F');
     const bossIndex = endEffects.findIndex(
-      (event) => event.origin.kind === 'completionRoom' && event.origin.role === 'boss',
+      (event) =>
+        event.origin.kind === 'occurrence' && event.origin.occurrenceId === 'completion:F:boss',
     );
     if (bossIndex < 0) throw new Error('missing Boss end-effects checkpoint');
     expect(
       endEffects.some(
-        (event) => event.origin.kind === 'completionRoom' && event.origin.role === 'postboss',
+        (event) =>
+          event.origin.kind === 'occurrence' &&
+          event.origin.occurrenceId === 'completion:F:postboss',
       ),
     ).toBe(false);
     const branch = replayThroughRealLifecycle(project, 'F', bossIndex + 1).branches[0]!;
@@ -378,7 +388,7 @@ describe('Experimental Hammer', () => {
       expect.objectContaining({
         kind: 'traitRemoval',
         acquisitionRole: 'experimentalHammerExpiry',
-        owner: expect.objectContaining({ kind: 'completionRoom', role: 'boss' }),
+        owner: expect.objectContaining({ kind: 'occurrence', occurrenceId: 'completion:F:boss' }),
       }),
     );
   });
@@ -398,8 +408,8 @@ describe('Experimental Hammer', () => {
     const postbossCompletion = evaluated.history.events.find(
       (event) =>
         event.kind === 'encounterCompleted' &&
-        event.origin.kind === 'completionRoom' &&
-        event.origin.role === 'postboss',
+        event.origin.kind === 'occurrence' &&
+        event.origin.occurrenceId === 'completion:F:postboss',
     );
     expect(equip).toBeDefined();
     expect(postbossCompletion).toBeDefined();
@@ -449,9 +459,7 @@ describe('Experimental Hammer', () => {
 
   it('advances for a Fig Leaf-preserved skipped end-effects checkpoint', () => {
     const start = createRouteStartKeepsakeSelectionAddress('Surface');
-    const rack = createPostbossKeepsakeSelectionAddress(
-      createCompletionRoomAddress(nBiome, 'postboss'),
-    );
+    const rack = createPostbossKeepsakeSelectionAddress(automaticOccurrence(nBiome, 'postboss'));
     const skippedPhase = createEncounterPhaseAddress(
       oBiome,
       { kind: 'occurrence', occurrenceId: oOccurrenceIds.combat04 },
@@ -507,9 +515,7 @@ describe('Experimental Hammer', () => {
 
   it('advances once at the terminal P end-effects checkpoint in normal and Fig Leaf sequences', () => {
     const start = createRouteStartKeepsakeSelectionAddress('Surface');
-    const rack = createPostbossKeepsakeSelectionAddress(
-      createCompletionRoomAddress(oBiome, 'postboss'),
-    );
+    const rack = createPostbossKeepsakeSelectionAddress(automaticOccurrence(oBiome, 'postboss'));
     const pIntro = createEncounterPhaseAddress(
       createBiomeAddress('Surface', 'P'),
       { kind: 'occurrence', occurrenceId: createOccurrenceId('surface-p-1-1-p_combat03') },
@@ -568,7 +574,10 @@ describe('Experimental Hammer', () => {
     const project = withPostbossHammer(createGoldenFGHProject());
     const evaluated = evaluatedBiome(project, 'F');
     const plan = route(project).biomes.find((biome) => biome.biomeKey === 'F');
-    if (plan?.postbossKeepsakeDisposition === undefined || plan.keepsakeEquipResults === undefined)
+    const rack = plan?.completionOccurrences.find(
+      (occurrence) => occurrence.occurrenceId === 'completion:F:postboss',
+    )?.keepsakeRack;
+    if (rack?.disposition.kind !== 'replace' || rack.equipResults === undefined)
       throw new Error('expected authored F Hammer result');
     const seed = initializeRewardBranches(
       undefined,
@@ -594,7 +603,7 @@ describe('Experimental Hammer', () => {
       [carried],
     );
     const selection = createPostbossKeepsakeSelectionAddress(
-      createCompletionRoomAddress(createBiomeAddress('Underworld', 'F'), 'postboss'),
+      automaticOccurrence(createBiomeAddress('Underworld', 'F'), 'postboss'),
     );
     const branch = assembly.simulation.branches[0]!;
     expect(assembly.simulation.findings).toContainEqual(
@@ -609,7 +618,7 @@ describe('Experimental Hammer', () => {
 
   it('preserves a context-invalid authored Hammer child and exposes another compatible result', () => {
     const selection = createPostbossKeepsakeSelectionAddress(
-      createCompletionRoomAddress(createBiomeAddress('Underworld', 'F'), 'postboss'),
+      automaticOccurrence(createBiomeAddress('Underworld', 'F'), 'postboss'),
     );
     let project = applyProjectCommand(createGoldenFGHProject(), catalog, {
       kind: 'ReplacePostbossKeepsake',
@@ -631,7 +640,10 @@ describe('Experimental Hammer', () => {
     };
     const evaluated = evaluatedBiome(project, 'F');
     const plan = route(project).biomes.find((biome) => biome.biomeKey === 'F');
-    if (plan?.postbossKeepsakeDisposition === undefined || plan.keepsakeEquipResults === undefined)
+    const rack = plan?.completionOccurrences.find(
+      (occurrence) => occurrence.occurrenceId === 'completion:F:postboss',
+    )?.keepsakeRack;
+    if (rack?.disposition.kind !== 'replace' || rack.equipResults === undefined)
       throw new Error('expected authored F Hammer result');
     const rewards = evaluateBiomeRewardsAssemblyInternal(
       catalog,
@@ -645,8 +657,11 @@ describe('Experimental Hammer', () => {
     );
     const result = createKeepsakeEquipResultAddress(selection, 'experimentalHammer');
     expect(
-      route(project).biomes.find((biome) => biome.biomeKey === 'F')?.keepsakeEquipResults
-        ?.experimentalHammer,
+      route(project)
+        .biomes.find((biome) => biome.biomeKey === 'F')
+        ?.completionOccurrences.find(
+          (occurrence) => occurrence.occurrenceId === 'completion:F:postboss',
+        )?.keepsakeRack?.equipResults?.experimentalHammer,
     ).toEqual(authoredResult);
     expect(rewards.simulation.findings).toContainEqual(
       expect.objectContaining({ code: 'keepsakeEquipResultUnavailable', origin: result }),
@@ -808,7 +823,7 @@ describe('Experimental Hammer', () => {
 
   it('keeps missing and incompatible Postboss Hammer results at their exact repair owner', () => {
     const selection = createPostbossKeepsakeSelectionAddress(
-      createCompletionRoomAddress(createBiomeAddress('Underworld', 'F'), 'postboss'),
+      automaticOccurrence(createBiomeAddress('Underworld', 'F'), 'postboss'),
     );
     const project = applyProjectCommand(createGoldenFGHProject(), catalog, {
       kind: 'ReplacePostbossKeepsake',
@@ -835,12 +850,22 @@ describe('Experimental Hammer', () => {
                   ? biome
                   : {
                       ...biome,
-                      keepsakeEquipResults: {
-                        experimentalHammer: {
-                          kind: 'selected' as const,
-                          traitKey: 'ApolloWeaponBoon',
-                        },
-                      },
+                      completionOccurrences: biome.completionOccurrences.map((occurrence) =>
+                        occurrence.occurrenceId !== 'completion:F:postboss'
+                          ? occurrence
+                          : {
+                              ...occurrence,
+                              keepsakeRack: {
+                                ...occurrence.keepsakeRack!,
+                                equipResults: {
+                                  experimentalHammer: {
+                                    kind: 'selected' as const,
+                                    traitKey: 'ApolloWeaponBoon',
+                                  },
+                                },
+                              },
+                            },
+                      ),
                     },
               ),
             },
@@ -865,9 +890,19 @@ describe('Experimental Hammer', () => {
                   ? biome
                   : {
                       ...biome,
-                      keepsakeEquipResults: {
-                        experimentalHammer: { kind: 'exhausted' as const },
-                      },
+                      completionOccurrences: biome.completionOccurrences.map((occurrence) =>
+                        occurrence.occurrenceId !== 'completion:F:postboss'
+                          ? occurrence
+                          : {
+                              ...occurrence,
+                              keepsakeRack: {
+                                ...occurrence.keepsakeRack!,
+                                equipResults: {
+                                  experimentalHammer: { kind: 'exhausted' as const },
+                                },
+                              },
+                            },
+                      ),
                     },
               ),
             },

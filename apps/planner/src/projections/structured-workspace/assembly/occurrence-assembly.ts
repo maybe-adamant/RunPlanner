@@ -2,6 +2,7 @@ import {
   createAcquisitionSiteAddress,
   createAdditionalExitAddress,
   createEncounterPhaseAddress,
+  createJudgmentArcanaAddress,
   createIncomingRewardAddress,
   createLocalRewardAddress,
   createRoomActionAddress,
@@ -11,6 +12,7 @@ import {
   createRewardWheelOfferAddress,
   createShopOfferAddress,
   createAcquisitionEntryAddress,
+  createKeepsakeEquipResultAddress,
   createTraitOfferAddress,
   createGorgonPhaseAddress,
   createNemesisRandomEventAddress,
@@ -21,6 +23,7 @@ import {
   createEchoPomTargetAddress,
   createEchoLastRunBoonAddress,
   createEchoLastRewardAddress,
+  createPostbossKeepsakeSelectionAddress,
   createAllTogetherSetAddress,
   createNaturalSelectionResultAddress,
   createLevelResolutionAddress,
@@ -28,7 +31,6 @@ import {
   traitOfferOption,
   semanticAddressKey,
   type BiomeAddress,
-  type CompletionRoomAddress,
   type AcquisitionEntryAddress,
   type AcquisitionSiteAddress,
   type EncounterPhaseAddress,
@@ -41,6 +43,7 @@ import {
   type AuthoredTraitOffer,
   type TraitOfferAddress,
   type LevelResolutionAddress,
+  type KeepsakeEquipResultAddress,
   roomActionKey,
   acquisitionSiteFromStorageKey,
   artificerReplacementEntryKey,
@@ -181,6 +184,11 @@ export interface WorkspaceOccurrenceAssemblyInput {
   ) => SelectedLevelResolutionAssessment | undefined;
   readonly steadyGrowthOutcomes?: readonly import('@run-planner/engine/simulation').BiomeRewardSimulation['steadyGrowthOutcomes'][number][];
   readonly isActiveTraitOffer: (owner: TraitOfferAddress) => boolean;
+  readonly judgmentArcanaCapability?: (
+    address: import('@run-planner/engine/authored-project').JudgmentArcanaAddress,
+  ) =>
+    { readonly inactiveArcanaKeys: readonly string[]; readonly requiredCount: number } | undefined;
+  readonly keepsakeEquipResultSupported?: (address: KeepsakeEquipResultAddress) => boolean;
   readonly derivedAcquisitionEntries?: (
     site: AcquisitionSiteAddress,
   ) => readonly WorkspaceDerivedAcquisitionEntry[];
@@ -1459,13 +1467,12 @@ function roomActionLabel(
 /**
  * Adapt the engine-owned roster and lifecycle products without re-owning their
  * participation, repair, proposal, or timeline policy. Occurrence assembly
- * enriches these rows with reward controls below; completion rooms use this
- * base projection directly.
+ * enriches these rows with reward controls below.
  */
 export function assembleBaseWorkspaceRoomActions(input: {
   readonly roster: import('@run-planner/engine/simulation').RoomActionRoster;
   readonly lifecycleTimeline: RoomLifecycleTimeline;
-  readonly owner: OccurrenceAddress | CompletionRoomAddress;
+  readonly owner: OccurrenceAddress;
   readonly markerFor: (address: RoomActionSemanticAddress) => WorkspaceMarker;
   readonly labelFor: (
     reference: import('@run-planner/engine/authored-project').RoomActionReference,
@@ -2636,6 +2643,8 @@ function shipWorkbenchPresentation(
       case 'encounterStart':
       case 'encounterEnd':
         return phaseIndexForKey(boundary.phaseKey);
+      case 'bossDefeated':
+        return phaseIndexForKey(boundary.phaseKey);
       case 'nextPhase': {
         const targetIndex = roomLocal.phases.findIndex(
           (phase) => phase.rewardWheelKey === boundary.wheelKey,
@@ -3074,6 +3083,57 @@ export function assembleWorkspaceOccurrence(
     encounterPhases,
     allRewardControls,
   );
+  const judgment = (() => {
+    if (room.kind !== 'Boss' || !input.facts.detailsActive) return undefined;
+    const bossDefeated = input.evaluatedRoom?.roomLifecycleTimeline.boundaries.find(
+      (boundary) => boundary.kind === 'bossDefeated',
+    );
+    if (bossDefeated === undefined) return undefined;
+    const phaseKey = bossDefeated.phaseKey;
+    const address = createJudgmentArcanaAddress(
+      createOccurrenceAddress(input.biome, occurrence.occurrenceId),
+      phaseKey,
+    );
+    const capability = input.judgmentArcanaCapability?.(address);
+    if (capability === undefined) return undefined;
+    return Object.freeze({
+      address,
+      inactiveArcanaKeys: capability.inactiveArcanaKeys,
+      marker: input.markerDestinations.marker(address),
+      requiredCount: capability.requiredCount,
+      value: occurrence.encounters.judgmentArcanaKeysByPhase?.[phaseKey] ?? Object.freeze([]),
+    });
+  })();
+  const keepsakeSelection =
+    !input.facts.detailsActive || occurrence.keepsakeRack === undefined
+      ? undefined
+      : (() => {
+          const address = createPostbossKeepsakeSelectionAddress(
+            createOccurrenceAddress(input.biome, occurrence.occurrenceId),
+          );
+          const effect =
+            occurrence.keepsakeRack.disposition.kind !== 'replace'
+              ? undefined
+              : input.catalog.keepsakes.byKey[occurrence.keepsakeRack.disposition.keepsakeKey]
+                  ?.effect;
+          const resultAddress =
+            effect?.kind === 'jeweledPom' || effect?.kind === 'experimentalHammer'
+              ? createKeepsakeEquipResultAddress(address, effect.kind)
+              : undefined;
+          return Object.freeze({
+            address,
+            ...(resultAddress === undefined || !input.keepsakeEquipResultSupported?.(resultAddress)
+              ? {}
+              : {
+                  equipResult: Object.freeze({
+                    address: resultAddress,
+                    marker: input.markerDestinations.marker(resultAddress),
+                  }),
+                }),
+            marker: input.markerDestinations.marker(address),
+            value: occurrence.keepsakeRack.disposition,
+          });
+        })();
   const localDetailMarkers = Object.freeze([
     ...encounterPhases.flatMap((phase) => [
       phase.marker,
@@ -3082,6 +3142,15 @@ export function assembleWorkspaceOccurrence(
     ]),
     ...workspaceLocalDetailMarkers(roomLocal),
     ...(roomActions?.rows.map((row) => row.marker) ?? []),
+    ...(judgment === undefined ? [] : [judgment.marker]),
+    ...(keepsakeSelection === undefined
+      ? []
+      : [
+          keepsakeSelection.marker,
+          ...(keepsakeSelection.equipResult === undefined
+            ? []
+            : [keepsakeSelection.equipResult.marker]),
+        ]),
     ...(zagreusSpawn === undefined ? [] : [zagreusSpawn.marker]),
     ...(naturalChaosSpawn === undefined ? [] : [naturalChaosSpawn.marker]),
   ]);
@@ -3105,6 +3174,8 @@ export function assembleWorkspaceOccurrence(
     address,
     detailsActive: input.facts.detailsActive,
     ...(entryReward === undefined ? {} : { entryReward }),
+    ...(judgment === undefined ? {} : { judgment }),
+    ...(keepsakeSelection === undefined ? {} : { keepsakeSelection }),
     encounterPhases,
     entered,
     gameName: occurrence.gameName,
@@ -3169,6 +3240,30 @@ export function assembleWorkspaceOccurrence(
       ],
       roomTabForPhase(roomLocal, phase.address.phaseKey),
     );
+  }
+  if (judgment !== undefined) {
+    input.markerDestinations.setRoomTab([judgment.marker], 'actions');
+  }
+  if (keepsakeSelection !== undefined) {
+    const keepsakeActionInTimeline = roomActions?.rows.some(
+      (row) => row.reference.kind === 'interactKeepsakeRack',
+    );
+    input.markerDestinations.setRoomTab(
+      [
+        keepsakeSelection.marker,
+        ...(keepsakeSelection.equipResult === undefined
+          ? []
+          : [keepsakeSelection.equipResult.marker]),
+      ],
+      keepsakeActionInTimeline ? 'actions' : 'overview',
+    );
+    if (keepsakeSelection.equipResult !== undefined) {
+      input.markerDestinations.redirectTo(
+        keepsakeSelection.equipResult.marker,
+        keepsakeSelection.marker,
+        node.key,
+      );
+    }
   }
   if (roomActions !== undefined) {
     for (const effect of roomActions.steadyGrowth ?? []) {

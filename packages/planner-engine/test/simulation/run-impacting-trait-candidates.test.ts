@@ -3,7 +3,6 @@ import {
   applyProjectCommand,
   applyProjectHistoryCommand,
   createBiomeAddress,
-  createCompletionRoomAddress,
   createIncomingRewardAddress,
   createNaturalSelectionResultAddress,
   createOccurrenceAddress,
@@ -81,12 +80,8 @@ function selectedNaturalOffer(): Extract<AuthoredTraitOffer, { readonly kind: 't
   });
 }
 
-function bossCompletionOwner(
-  biome: BiomeAddress,
-): Extract<SteadyGrowthOutcomeAddress['owner'], { readonly kind: 'completionRoom' }> {
-  const completion = createCompletionRoomAddress(biome, 'boss');
-  if (completion.role !== 'boss') throw new Error('Boss completion address lost its role');
-  return Object.freeze({ ...completion, role: 'boss' });
+function bossCompletionOwner(biome: BiomeAddress): SteadyGrowthOutcomeAddress['owner'] {
+  return createOccurrenceAddress(biome, createOccurrenceId(`completion:${biome.biomeKey}:boss`));
 }
 
 function cycleEight(
@@ -416,7 +411,10 @@ describe('run-impacting trait candidate contacts', () => {
     expect(
       selected.present.routes
         .find((route) => route.routeKey === 'Surface')
-        ?.biomes.find((candidate) => candidate.biomeKey === 'N')?.bossCompletionSteadyGrowthTarget,
+        ?.biomes.find((candidate) => candidate.biomeKey === 'N')
+        ?.completionOccurrences.find(
+          (occurrence) => occurrence.occurrenceId === bossOwner.occurrenceId,
+        )?.encounters.steadyGrowthTargetByPhase?.Encounter,
     ).toBe('ApolloWeaponBoon');
     expect(() =>
       applyProjectCommand(selected.present, catalog, {
@@ -424,7 +422,7 @@ describe('run-impacting trait candidate contacts', () => {
         outcome: createSteadyGrowthOutcomeAddress(bossOwner, 'NotBoss'),
         targetTraitKey: 'ApolloWeaponBoon',
       }),
-    ).toThrow(/has no Boss encounter phase NotBoss/);
+    ).toThrow(/has no encounter phase NotBoss/);
 
     const cleared = applyProjectHistoryCommand(selected, catalog, {
       kind: 'ReplaceSteadyGrowthTarget',

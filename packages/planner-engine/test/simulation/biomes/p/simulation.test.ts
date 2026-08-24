@@ -64,7 +64,7 @@ describe('P core loop', () => {
         { room: { gameName: 'P_PreBoss01' } },
       ],
     });
-    expect(p.snapshot.completionRooms.map((room) => room.gameName)).toEqual([
+    expect(p.snapshot.automaticRooms.map((room) => room.gameName)).toEqual([
       'P_Boss01',
       'P_PostBoss01',
     ]);

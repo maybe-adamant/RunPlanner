@@ -34,7 +34,6 @@ import type {
   CanonicalAuthoredRoom,
   CanonicalBatch,
   CanonicalBiome,
-  CanonicalCompletionRoom,
   CanonicalDecision,
   CanonicalHubDecision,
   CanonicalHubTarget,
@@ -292,10 +291,6 @@ function appendDecisionOwners(
   }
 }
 
-function appendCompletionRoomOwners(keys: Set<string>, room: CanonicalCompletionRoom): void {
-  appendOwner(keys, room.origin);
-}
-
 function isHubVisitFrontier(
   frontier: MaterializedBiomePrefix['frontier'],
 ): frontier is WorkspaceHubVisitFrontier {
@@ -337,7 +332,7 @@ function appendPrefixOwners(
     // visits remain independently covered even if malformed state reuses it.
     appendDecisionOwners(keys, decision, omittedHubTargetKey);
   }
-  for (const room of prefix.completionRooms ?? []) appendCompletionRoomOwners(keys, room);
+  for (const room of prefix.automaticRooms ?? []) appendAuthoredRoomOwners(keys, room);
 
   if (frontier?.kind === 'exitDecision') {
     appendOwner(keys, frontier.origin);
@@ -380,7 +375,7 @@ function createWorkspaceEvaluatedOwnerCoverage(
     const snapshot = evaluation.snapshot;
     appendAuthoredRoomOwners(keys, snapshot.entryRoom);
     for (const decision of snapshot.decisions) appendDecisionOwners(keys, decision);
-    for (const room of snapshot.completionRooms) appendCompletionRoomOwners(keys, room);
+    for (const room of snapshot.automaticRooms) appendAuthoredRoomOwners(keys, room);
   } else {
     if (!hasMaterializedPrefix(evaluation)) {
       throw new StructuredWorkspaceProjectionContractError(
@@ -430,6 +425,7 @@ function partialBatchFromPrefix(prefix: MaterializedBiomePrefix): CanonicalBatch
 
 interface EvaluatedBiomeOverlay {
   readonly additional: ReadonlyMap<string, readonly CanonicalAdditionalContinuation[]>;
+  readonly automaticRooms: ReadonlyMap<OccurrenceId, CanonicalAuthoredRoom>;
   readonly batches: ReadonlyMap<string, WorkspaceEvaluatedBatchOverlay>;
   readonly entryRoom?: CanonicalAuthoredRoom;
   readonly hubs: ReadonlyMap<string, CanonicalHubDecision>;
@@ -440,6 +436,7 @@ function evaluatedBiomeOverlay(
   coverage: WorkspaceEvaluatedOwnerCoverageIndex,
 ): EvaluatedBiomeOverlay {
   const additional = new Map<string, readonly CanonicalAdditionalContinuation[]>();
+  const automaticRooms = new Map<OccurrenceId, CanonicalAuthoredRoom>();
   const batches = new Map<string, WorkspaceEvaluatedBatchOverlay>();
   const hubs = new Map<string, CanonicalHubDecision>();
   const insert = <T>(map: Map<string, T>, key: string, value: T, label: string): void => {
@@ -501,8 +498,17 @@ function evaluatedBiomeOverlay(
     }
     additional.set(key, snapshot.frontier.additional);
   }
+  for (const room of snapshot?.automaticRooms ?? []) {
+    if (automaticRooms.has(room.occurrenceId)) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${room.occurrenceId} has duplicate automatic room overlay`,
+      );
+    }
+    automaticRooms.set(room.occurrenceId, room);
+  }
   return Object.freeze({
     additional,
+    automaticRooms,
     batches,
     ...(snapshot?.entryRoom === undefined ? {} : { entryRoom: snapshot.entryRoom }),
     hubs,
@@ -525,6 +531,9 @@ function requireOverlayWithinCoverage(
   };
   if (overlay.entryRoom !== undefined) {
     requireOwners('entry overlay', (keys) => appendAuthoredRoomOwners(keys, overlay.entryRoom!));
+  }
+  for (const room of overlay.automaticRooms.values()) {
+    requireOwners('automatic room overlay', (keys) => appendAuthoredRoomOwners(keys, room));
   }
   for (const { batch } of overlay.batches.values()) {
     requireOwners('batch overlay', (keys) => appendBatchOwners(keys, batch));
@@ -607,6 +616,7 @@ function authoredExitDecisionsInTopologyOrder(
 function createWorkspaceBiomeSource(
   catalog: Catalog,
   routeKey: string,
+  configuredBiomeKeys: readonly string[],
   plan: AuthoredBiomePlan,
   evaluation: ProjectBiomeEvaluation | undefined,
   encounterPhaseStatus: (phase: EncounterPhaseAddress) => EncounterPhaseSequenceStatus | undefined,
@@ -627,16 +637,16 @@ function createWorkspaceBiomeSource(
   const exitDecisionsByOwner = new Map<string, ExitDecision>();
   const hubDecisionsByKey = new Map<string, HubDecision>();
   const topology = plan.topology;
-  if (topology !== null) {
-    for (const occurrence of topology.occurrences) {
-      if (occurrencesById.has(occurrence.occurrenceId)) {
-        throw new StructuredWorkspaceProjectionContractError(
-          semanticAddressKey(createOccurrenceAddress(biome, occurrence.occurrenceId)) +
-            ' has duplicate authored occurrence identity',
-        );
-      }
-      occurrencesById.set(occurrence.occurrenceId, occurrence);
+  for (const occurrence of [...(topology?.occurrences ?? []), ...plan.completionOccurrences]) {
+    if (occurrencesById.has(occurrence.occurrenceId)) {
+      throw new StructuredWorkspaceProjectionContractError(
+        semanticAddressKey(createOccurrenceAddress(biome, occurrence.occurrenceId)) +
+          ' has duplicate authored occurrence identity',
+      );
     }
+    occurrencesById.set(occurrence.occurrenceId, occurrence);
+  }
+  if (topology !== null) {
     for (const decision of topology.decisions) {
       if (decision.kind === 'exit') {
         const key = semanticAddressKey(createExitDecisionAddress(biome, decision.source));
@@ -753,6 +763,7 @@ function createWorkspaceBiomeSource(
     steadyGrowthOutcomes,
     layout,
     blockedOccurrenceRoom: (occurrenceId: OccurrenceId) =>
+      overlay.automaticRooms.get(occurrenceId) ??
       blockedOccurrenceRoom(createOccurrenceAddress(biome, occurrenceId)),
     occurrence: (occurrenceId: OccurrenceId) => occurrencesById.get(occurrenceId),
     outgoingStatus: (occurrenceId: OccurrenceId) =>
@@ -761,6 +772,7 @@ function createWorkspaceBiomeSource(
         catalog,
         completeness,
         findings: evaluation?.findings ?? Object.freeze([]),
+        configuredBiomeKeys,
         occurrenceId,
         plan,
       }),
@@ -822,6 +834,7 @@ export function createWorkspaceProjectSourceIndex(
               createWorkspaceBiomeSource(
                 catalog,
                 route.routeKey,
+                route.biomes.map((candidate) => candidate.biomeKey),
                 plan,
                 routeEvaluation?.biomes.find((candidate) => candidate.biomeKey === plan.biomeKey),
                 encounterPhaseStatus,

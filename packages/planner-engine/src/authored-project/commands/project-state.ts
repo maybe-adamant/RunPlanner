@@ -2,7 +2,7 @@ import type { Catalog } from '../../catalog-schema';
 import { createInitialBiomeState, replaceBiomeStateField } from '../biomeState';
 import { assessStartingArcanaGrasp } from '../loadout';
 import type { ProjectDocument } from '../model';
-import { postbossCapabilities } from '../postboss-capabilities';
+import { createDefaultCompletionOccurrences } from '../room-state/defaults';
 
 import { failCommand, locateBiome, withBiome } from './contract';
 import type { ProjectStateCommand } from './types';
@@ -71,23 +71,11 @@ function configureRoutePrefix(
       if (layout === undefined) {
         failCommand(command, `${biomeKey} has no authored plan initializer`);
       }
-      const postboss = postbossCapabilities(catalog, biomeKey);
       return {
         biomeKey,
         state: createInitialBiomeState(layout),
         topology: null,
-        ...(postboss.hasKeepsakeRack
-          ? {
-              postbossKeepsakeDisposition: { kind: 'retain' as const },
-            }
-          : {}),
-        ...(postboss.hasRoomActions
-          ? {
-              postbossRoomActions: {
-                order: postboss.hasPostbossRoom ? [{ kind: 'useFountain' as const }] : [],
-              },
-            }
-          : {}),
+        completionOccurrences: createDefaultCompletionOccurrences(catalog, biomeKey, route.loadout),
       };
     });
   const replacement = { ...route, biomes: [...retainedBiomes, ...addedBiomes] };

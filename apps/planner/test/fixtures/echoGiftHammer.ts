@@ -2,7 +2,6 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createBiomeAddress,
-  createCompletionRoomAddress,
   createEncounterPhaseAddress,
   createEchoKeepsakeReplayAddress,
   createExitSelectionAddress,
@@ -127,7 +126,7 @@ export function createGoldenEchoGiftHammerPendingProject(): ProjectDocument {
   return applyProjectCommand(project, catalog, {
     kind: 'ReplacePostbossKeepsake',
     selection: createPostbossKeepsakeSelectionAddress(
-      createCompletionRoomAddress(goldenHBiome, 'postboss'),
+      createOccurrenceAddress(goldenHBiome, createOccurrenceId('completion:H:postboss')),
     ),
     value: { kind: 'replace', keepsakeKey: 'ManaOverTimeRefundKeepsake' },
   });

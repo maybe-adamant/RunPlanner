@@ -4,7 +4,11 @@
 
 Execution is active from locked plan commit `74f70a7f`. Gate A is complete at
 schema 54 after independent review and one bounded remediation pass deleted the
-dormant generic Death Defiance authored-condition path. Gate B is next.
+dormant generic Death Defiance authored-condition path. Gate B is complete at
+schema 55 after independent review restored progressive-prefix ownership and
+the full Judgment lifecycle matrix. Its bounded lanes passed catalog 208/208,
+checkpoint 17/17, migration 10/10, engine 1,316/1,316, and planner 619/619,
+with workspace typecheck, formatting, and diff checks clean. Gate C is next.
 
 The locked plan remains grounded on the clean source-audit baseline
 `eb278f98d445b288f1378086bbb83a3b3af78964`. Its pre-execution reviews closed

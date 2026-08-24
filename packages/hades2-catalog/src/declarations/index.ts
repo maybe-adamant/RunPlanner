@@ -36,7 +36,7 @@ const rooms: readonly RawRoomDeclaration[] = [
 ];
 
 export const declarations = {
-  version: '0.36.0-runtime-offer-fallback',
+  version: '0.37.0-automatic-completion-occurrences',
   biomes,
   routes,
   arcanaCards,

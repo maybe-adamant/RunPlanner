@@ -183,8 +183,6 @@ function markersForNode(node: WorkspaceNode): readonly WorkspaceMarker[] {
       }
       markers.push(...roomMarkers(node.room));
       break;
-    case 'completion':
-      break;
     default:
       unreachable(node);
   }
@@ -205,8 +203,6 @@ function roomPackagesForNode(node: WorkspaceNode): readonly ObservedWorkspaceRoo
       return Object.freeze(
         node.slots.flatMap((slot) => (slot.room === undefined ? [] : packageFor(slot.room))),
       );
-    case 'completion':
-      return Object.freeze([]);
     default:
       return unreachable(node);
   }

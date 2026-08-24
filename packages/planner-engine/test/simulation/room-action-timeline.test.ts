@@ -1,15 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
-  assembleCompletionRoomLifecycleTimeline,
-  appendSteadyGrowthCompletionTimelineEffects,
   appendSteadyGrowthTimelineEffects,
   assembleRoomLifecycleTimeline as assembleTimeline,
   type RoomActionRoster,
 } from '../../src/simulation';
 import {
-  createBossCompletionArcanaAddress,
-  createCompletionRoomAddress,
   createOccurrenceId,
   createSteadyGrowthOutcomeAddress,
   type OccurrenceAddress,
@@ -233,67 +229,6 @@ describe('room lifecycle timeline', () => {
       );
       expect(effectIndex).toBe(endIndex + 1);
     }
-  });
-
-  it('keeps Judgment as an engine-owned fixed effect at the derived Boss-defeated seam', () => {
-    const completion = createCompletionRoomAddress(
-      { kind: 'biome', routeKey: 'Underworld', biomeKey: 'F' },
-      'boss',
-    );
-    const timeline = assembleCompletionRoomLifecycleTimeline({
-      catalog,
-      owner: completion,
-      roomGameName: 'F_Boss01',
-      judgment: createBossCompletionArcanaAddress(completion),
-    });
-    const outcome = createSteadyGrowthOutcomeAddress(
-      Object.freeze({ ...completion, role: 'boss' }),
-      'Encounter',
-    );
-    const enriched = appendSteadyGrowthCompletionTimelineEffects(timeline, [outcome]);
-    expect(enriched.entries).toEqual([
-      expect.objectContaining({
-        kind: 'boundary',
-        boundary: expect.objectContaining({ kind: 'roomEntered' }),
-      }),
-      expect.objectContaining({
-        kind: 'boundary',
-        boundary: expect.objectContaining({ kind: 'encounterStart' }),
-      }),
-      expect.objectContaining({ kind: 'bossDefeated' }),
-      expect.objectContaining({ kind: 'fixedEffect', effect: 'judgment' }),
-      expect.objectContaining({
-        kind: 'boundary',
-        boundary: expect.objectContaining({ kind: 'encounterEnd' }),
-      }),
-      expect.objectContaining({ kind: 'automaticEffect', address: outcome }),
-      expect.objectContaining({
-        kind: 'boundary',
-        boundary: expect.objectContaining({ kind: 'cleanup' }),
-      }),
-    ]);
-  });
-
-  it('keeps the Postboss fixed completion spine free of keepsake effects', () => {
-    const completion = createCompletionRoomAddress(
-      { kind: 'biome', routeKey: 'Underworld', biomeKey: 'F' },
-      'postboss',
-    );
-    const timeline = assembleCompletionRoomLifecycleTimeline({
-      catalog,
-      owner: completion,
-      roomGameName: 'F_PostBoss01',
-    });
-    expect(timeline.entries).toEqual([
-      expect.objectContaining({
-        kind: 'boundary',
-        boundary: expect.objectContaining({ kind: 'roomEntered' }),
-      }),
-      expect.objectContaining({
-        kind: 'boundary',
-        boundary: expect.objectContaining({ kind: 'cleanup' }),
-      }),
-    ]);
   });
 
   it('places standard encounter seams around the existing ranked roster', () => {

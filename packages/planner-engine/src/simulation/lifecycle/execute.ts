@@ -7,11 +7,7 @@ import type {
 import type { ProducerRewardLifecycleDeclaration } from '../../reward-kernel/model';
 import type { ResolvedEncounterPhase } from '../encounters';
 import type { RoomHistoryFragment, RoomLifecycleEvent, RoomLifecycleExecutionInput } from './model';
-import {
-  createBiomeAddress,
-  createCompletionRoomActionAddress,
-  createRoomActionAddress,
-} from '../../authored-project/addresses';
+import { createBiomeAddress, createRoomActionAddress } from '../../authored-project/addresses';
 import type { RoomActionReference } from '../../authored-project/model';
 import { roomActionKey } from '../../authored-project/room-actions';
 import { roomLifecycleWindowOrdinal } from '../../authored-project/room-action-domain';
@@ -196,13 +192,8 @@ const lifecycleEffectRegistry = Object.freeze({
       execution: context.figLeafSkipped === true ? 'skippedByFigLeaf' : 'normal',
       figLeafSkipOwner: context.figLeafSkipOwner === true,
     } as const;
-    /**
-     * A derived biome Boss has one source-visible seam between its death and
-     * the generic encounter-end effects. It is not an authored lifecycle
-     * operation: completion rooms are fixed by the layout.
-     */
     const completed =
-      context.input.origin.kind === 'completionRoom' && context.input.origin.role === 'boss'
+      context.input.lifecycleProfileKey === 'BossRoom'
         ? appendEvent(
             appendEvent(state, context, { ...completion, kind: 'bossDefeated' }),
             context,
@@ -563,12 +554,7 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
               origin.occurrenceId,
               row.key,
             )
-          : origin.kind === 'completionRoom' && origin.role === 'postboss'
-            ? createCompletionRoomActionAddress(
-                origin as typeof origin & { readonly role: 'postboss' },
-                row.key,
-              )
-            : (row.owner as import('../../authored-project/addresses').RoomActionSemanticAddress),
+          : (row.owner as import('../../authored-project/addresses').RoomActionSemanticAddress),
     });
 
   const firstMissingRequired = (predicate: (row: RoomActionRow) => boolean) =>
@@ -631,8 +617,7 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
       case 'interactKeepsakeRack':
         return appendEvent(state, operationContext, {
           kind: 'keepsakeRackUsed',
-          owner:
-            row.owner as import('../../authored-project/addresses').CompletionRoomActionAddress,
+          owner: row.owner as import('../../authored-project/addresses').RoomActionSemanticAddress,
         });
       case 'completeFieldsCage':
       case 'chooseRewardWheel':

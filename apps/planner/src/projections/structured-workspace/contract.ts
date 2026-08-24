@@ -44,15 +44,13 @@ import {
   type AuthoredEchoLastRunBoonOption,
   type AuthoredCirceResolution,
   type LevelResolutionAddress,
-  type BossCompletionArcanaAddress,
-  type CompletionRoomAddress,
+  type JudgmentArcanaAddress,
   type KeepsakeSelectionAddress,
   type KeepsakeEquipResultAddress,
   type TraitOptionKey,
   type AuthoredNemesisRandomEventOutcome,
 } from '@run-planner/engine/authored-project';
 import type {
-  CompletionRoomDescriptor,
   RoomDeclaration,
   TraitGiverDeclaration,
   TraitRarity,
@@ -658,17 +656,15 @@ export interface WorkspaceLevelResolutionInteraction {
   readonly value: AuthoredLevelResolution;
 }
 
-/** Atomic exact-set authoring at one reached Boss completion. */
-export interface WorkspaceBossCompletionArcanaInteraction {
+/** Atomic exact-set authoring at one reached Boss-defeated occurrence seam. */
+export interface WorkspaceJudgmentArcanaInteraction {
   readonly choices: readonly WorkspaceInteractionChoice<string>[];
   readonly intentFor: (
     arcanaKeys: readonly string[],
-  ) => WorkspaceCommandIntent<
-    Extract<ProjectCommand, { readonly kind: 'ReplaceBossCompletionArcana' }>
-  >;
+  ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceJudgmentArcana' }>>;
   readonly key: string;
   readonly load: (arcanaKeys?: readonly string[]) => CandidateProjectionEvaluation;
-  readonly owner: BossCompletionArcanaAddress;
+  readonly owner: JudgmentArcanaAddress;
   readonly value: readonly string[];
 }
 
@@ -950,7 +946,7 @@ export interface WorkspaceInteractionCatalog {
   readonly traitOffers: ReadonlyMap<string, WorkspaceTraitOfferInteraction>;
   readonly levelResolutions: ReadonlyMap<string, WorkspaceLevelResolutionInteraction>;
   readonly steadyGrowth: ReadonlyMap<string, WorkspaceSteadyGrowthInteraction>;
-  readonly bossCompletionArcana: ReadonlyMap<string, WorkspaceBossCompletionArcanaInteraction>;
+  readonly judgmentArcana: ReadonlyMap<string, WorkspaceJudgmentArcanaInteraction>;
   readonly keepsakeSelections: ReadonlyMap<string, WorkspaceKeepsakeSelectionInteraction>;
   readonly keepsakeEquipResults: ReadonlyMap<string, WorkspaceKeepsakeEquipResultInteraction>;
   readonly rewardWheelOfferCounts: ReadonlyMap<string, WorkspaceCandidateInteraction<number>>;
@@ -1235,7 +1231,7 @@ export interface WorkspaceRoomActions {
     readonly window: RoomActionWindow;
   }[];
   readonly interactionKey: string;
-  readonly owner: OccurrenceAddress | CompletionRoomAddress;
+  readonly owner: OccurrenceAddress;
   readonly proposals: readonly WorkspaceRoomActionProposal[];
   readonly rows: readonly WorkspaceRoomActionRow[];
   /** Active optional actions that have not been inserted into the lifecycle order. */
@@ -1248,6 +1244,7 @@ export interface WorkspaceRoomActions {
 export type WorkspaceRoomLifecycleBoundary =
   | { readonly kind: 'roomEntered'; readonly key: 'roomEntered' }
   | { readonly kind: 'encounterStart'; readonly key: string; readonly phaseKey: string }
+  | { readonly kind: 'bossDefeated'; readonly key: string; readonly phaseKey: string }
   | { readonly kind: 'encounterEnd'; readonly key: string; readonly phaseKey: string }
   | { readonly kind: 'nextPhase'; readonly key: string; readonly wheelKey: string }
   | { readonly kind: 'cleanup'; readonly key: 'cleanup' };
@@ -1334,7 +1331,7 @@ export interface WorkspaceRoomActionInteraction {
     >
   >;
   readonly key: string;
-  readonly owner: OccurrenceAddress | CompletionRoomAddress;
+  readonly owner: OccurrenceAddress;
   readonly proposals: readonly WorkspaceRoomActionProposal[];
 }
 
@@ -1671,6 +1668,25 @@ export interface WorkspaceRoomSummary {
   readonly naturalChaosSpawn?: WorkspaceNaturalChaosSpawnControl;
   readonly rewardControls: readonly WorkspaceRewardControl[];
   readonly roomPicker?: WorkspaceRoomPickerControl;
+  /** A Boss-only fixed effect at its ordinary Boss-defeated lifecycle seam. */
+  readonly judgment?: {
+    readonly address: JudgmentArcanaAddress;
+    readonly inactiveArcanaKeys: readonly string[];
+    readonly marker: WorkspaceMarker;
+    readonly requiredCount: number;
+    readonly value: readonly string[];
+  };
+  /** A Postboss-only ordinary room-local rack selection. */
+  readonly keepsakeSelection?: {
+    readonly address: KeepsakeSelectionAddress;
+    readonly equipResult?: {
+      readonly address: KeepsakeEquipResultAddress;
+      readonly marker: WorkspaceMarker;
+    };
+    readonly marker: WorkspaceMarker;
+    readonly value:
+      { readonly kind: 'retain' } | { readonly kind: 'replace'; readonly keepsakeKey: string };
+  };
 }
 
 export interface WorkspaceZagreusContractControl {
@@ -2069,55 +2085,6 @@ export interface WorkspaceOccurrenceWorkbenchNode {
   readonly room: WorkspaceRoomSummary;
 }
 
-export interface WorkspaceCompletionNode {
-  readonly kind: 'completion';
-  readonly key: string;
-  readonly marker: WorkspaceMarker;
-  readonly role: CompletionRoomDescriptor['role'];
-  readonly gameName: string;
-  readonly label: string;
-  /** Postboss reuses the ordinary Room Action timeline projection. */
-  readonly roomActions?: WorkspaceRoomActions;
-  /** Boss's engine-owned fixed lifecycle timeline. Postboss uses roomActions. */
-  readonly timeline?: readonly (
-    | {
-        readonly kind: 'boundary';
-        readonly boundary: WorkspaceRoomLifecycleBoundary;
-      }
-    | {
-        readonly kind: 'fixedEffect';
-        readonly effect: 'judgment';
-      }
-    | {
-        readonly kind: 'steadyGrowth';
-        readonly address: SteadyGrowthOutcomeAddress;
-        readonly phaseKey: string;
-      }
-    | {
-        readonly kind: 'bossDefeated';
-        readonly key: 'bossDefeated';
-      }
-  )[];
-  readonly judgment?: {
-    readonly address: BossCompletionArcanaAddress;
-    readonly inactiveArcanaKeys: readonly string[];
-    readonly marker: WorkspaceMarker;
-    readonly requiredCount: number;
-    readonly value: readonly string[];
-  };
-  readonly steadyGrowth?: WorkspaceSteadyGrowthControl;
-  readonly keepsakeSelection?: {
-    readonly address: KeepsakeSelectionAddress;
-    readonly equipResult?: {
-      readonly address: KeepsakeEquipResultAddress;
-      readonly marker: WorkspaceMarker;
-    };
-    readonly marker: WorkspaceMarker;
-    readonly value:
-      { readonly kind: 'retain' } | { readonly kind: 'replace'; readonly keepsakeKey: string };
-  };
-}
-
 export type WorkspaceBiomeField =
   | {
       readonly address: BiomeFieldAddress;
@@ -2152,8 +2119,7 @@ export type WorkspaceNode =
   | WorkspaceTakeoverBatchNode
   | WorkspaceMixedBatchNode
   | WorkspaceHubDecisionNode
-  | WorkspaceOccurrenceWorkbenchNode
-  | WorkspaceCompletionNode;
+  | WorkspaceOccurrenceWorkbenchNode;
 
 export type WorkspaceOccurrenceStageOutgoing =
   | {
@@ -2176,6 +2142,12 @@ export type WorkspaceOccurrenceStageOutgoing =
     }
   | {
       readonly kind: 'terminal';
+      readonly label: string;
+      readonly marker: WorkspaceMarker;
+    }
+  | {
+      /** Engine-declared automatic continuation, rendered as a fixed exit. */
+      readonly kind: 'fixedAutomatic';
       readonly label: string;
       readonly marker: WorkspaceMarker;
     };
@@ -2273,8 +2245,8 @@ export type WorkspaceRailEntry =
 
 export interface WorkspaceBiome {
   readonly biomeKey: string;
-  readonly completion: readonly WorkspaceCompletionNode[];
-  readonly completionOutline: readonly WorkspaceCompletionNode[];
+  /** Automatic Boss/Postboss occurrence workbenches in fixed outline order. */
+  readonly completionOutline: readonly WorkspaceOccurrenceWorkbenchNode[];
   /** Explicitly null only when this workspace has no renderable subject. */
   readonly defaultInspectorDestination: WorkspaceDefaultInspectorDestination | null;
   readonly entry?: WorkspaceOccurrenceWorkbenchNode;

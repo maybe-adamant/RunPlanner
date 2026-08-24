@@ -1,8 +1,6 @@
 export { assembleRoomActionRoster, scopeRoomActionRoster } from './assemble';
 export {
-  appendSteadyGrowthCompletionTimelineEffects,
   appendSteadyGrowthTimelineEffects,
-  assembleCompletionRoomLifecycleTimeline,
   assembleRoomLifecycleTimeline,
   scopeRoomLifecycleTimeline,
 } from './timeline';
@@ -21,8 +19,6 @@ export type {
 } from './model';
 export type {
   RoomLifecycleBoundary,
-  CompletionRoomLifecycleTimeline,
-  CompletionRoomLifecycleTimelineEntry,
   RoomLifecycleTimeline,
   RoomLifecycleTimelineEntry,
   RoomLifecycleTimelineInput,

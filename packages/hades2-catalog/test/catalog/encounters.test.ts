@@ -657,7 +657,7 @@ describe('encounter envelope catalog', () => {
     const fixedRooms = catalog.rooms.values.filter(
       (room) =>
         (room.mode.kind === 'authored' && fixedTemplates.has(room.mode.templateKey)) ||
-        (room.mode.kind === 'derived' && room.mode.classification === 'completion'),
+        room.mode.kind === 'automatic',
     );
 
     expect(fixedRooms).not.toHaveLength(0);

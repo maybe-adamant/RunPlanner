@@ -59,8 +59,6 @@ export type { RoomStructuralTag } from '../requirements/model';
 export interface BiomeDeclaration {
   readonly key: string;
   readonly label: string;
-  /** Whether this biome's derived Postboss room owns the ordinary in-run rack. */
-  readonly hasPostbossKeepsakeRack: boolean;
 }
 
 export interface RouteDeclaration {
@@ -477,10 +475,12 @@ export type RoomTemplateKey =
   | 'StandardCombat'
   | 'Story';
 
-export type DerivedRoomClassification = 'completion' | 'hub';
+export type DerivedRoomClassification = 'hub';
 
 export type RoomMode =
   | { readonly kind: 'authored'; readonly templateKey: RoomTemplateKey }
+  /** A declaration-fixed physical room persisted as an automatic occurrence. */
+  | { readonly kind: 'automatic'; readonly role: 'boss' | 'postboss' }
   | { readonly kind: 'derived'; readonly classification: DerivedRoomClassification };
 
 export type ExitCompatibilityPolicy =
@@ -593,6 +593,10 @@ export interface RoomDeclaration {
   readonly blockGiftBoons: boolean;
   /** Source-declared room-owned blocker for Gorgon Amulet. */
   readonly blocksGorgon: boolean;
+  /** Exact physical Postboss rack presence, independent of route position. */
+  readonly hasKeepsakeRack: boolean;
+  /** Exact physical fountain requirement for this room. */
+  readonly hasRequiredFountain: boolean;
   readonly boonRarityOverride?: import('./traits').BoonRarityOverride;
   readonly prebossBatchPolicy?: PrebossBatchPolicy;
   readonly forcedRewardStoreKey?: string;

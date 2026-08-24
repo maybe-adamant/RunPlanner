@@ -5,13 +5,13 @@ import {
   createBatchRewardStoreAddress,
   createBiomeAddress,
   createBiomeFieldAddress,
-  createCompletionRoomAddress,
   createEncounterPhaseAddress,
   createEchoKeepsakeReplayAddress,
   createExitDecisionAddress,
   createExitSelectionAddress,
   createIncomingRewardAddress,
   createKeepsakeEquipResultAddress,
+  createOccurrenceAddress,
   createOccurrenceId,
   createProjectDocument,
   createSteadyGrowthOutcomeAddress,
@@ -188,9 +188,7 @@ function batchTargets(assembly: ReturnType<typeof assembleWorkspaceBiomeSemantic
 
 describe('structured workspace biome semantic assembly', () => {
   it('assembles a real Boss completion contact from an engine Steady Growth outcome', () => {
-    const completionBase = createCompletionRoomAddress(nBiome, 'boss');
-    if (completionBase.role !== 'boss') throw new Error('N completion lost its Boss role');
-    const completion = Object.freeze({ ...completionBase, role: 'boss' as const });
+    const completion = createOccurrenceAddress(nBiome, createOccurrenceId('completion:N:boss'));
     const outcome = createSteadyGrowthOutcomeAddress(completion, 'Encounter');
     const project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
       kind: 'ReplaceSteadyGrowthTarget',
@@ -215,37 +213,35 @@ describe('structured workspace biome semantic assembly', () => {
     const withOutcome = Object.freeze({
       ...source,
       evaluation: Object.freeze({ ...source.evaluation, rewards }),
+      steadyGrowthOutcomes: rewards.steadyGrowthOutcomes,
     });
-    const assembly = assembleWorkspaceBiomeSemantics(catalog, withOutcome, {
+    const assembly = assembleWorkspaceBiomeSemantics(catalog, withOutcome, undefined, () => ({
       inactiveArcanaKeys: ['CastCount'],
       requiredCount: 5,
-    });
-    const boss = assembly.completion.find((node) => node.role === 'boss');
+    }));
+    const boss = assembly.completionOutline.find((node) => node.room.kind === 'Boss');
     if (boss === undefined) throw new Error('N Boss completion is missing');
-    expect(boss.steadyGrowth).toMatchObject({
-      address: outcome,
-      targetTraitKey: 'ApolloWeaponBoon',
-    });
-    expect(boss.timeline?.map((entry) => entry.kind)).toEqual([
-      'boundary',
-      'boundary',
-      'bossDefeated',
-      'fixedEffect',
-      'boundary',
-      'steadyGrowth',
-      'boundary',
+    expect(boss.room.roomActions?.steadyGrowth).toMatchObject([
+      expect.objectContaining({
+        address: outcome,
+        targetTraitKey: 'ApolloWeaponBoon',
+      }),
     ]);
   });
 
-  it('publishes the Postboss keepsake child only when a configured successor reaches the rack', () => {
+  it('publishes the Postboss keepsake selector independently of successor assessment', () => {
     const source = biomeSource(loadSurfaceNOPQProject());
-    const dormant = assembleWorkspaceBiomeSemantics(catalog, source);
-    const reached = assembleWorkspaceBiomeSemantics(catalog, source, undefined, true);
-    const dormantPostboss = dormant.completion.find((node) => node.role === 'postboss');
-    const reachedPostboss = reached.completion.find((node) => node.role === 'postboss');
+    const configuredTail = assembleWorkspaceBiomeSemantics(catalog, source);
+    const reached = assembleWorkspaceBiomeSemantics(catalog, source, () => true);
+    const configuredTailPostboss = configuredTail.completionOutline.find(
+      (node) => node.room.kind === 'PostBoss',
+    );
+    const reachedPostboss = reached.completionOutline.find((node) => node.room.kind === 'PostBoss');
 
-    expect(dormantPostboss).not.toHaveProperty('keepsakeSelection');
-    expect(reachedPostboss?.keepsakeSelection).toMatchObject({
+    expect(configuredTailPostboss?.room.keepsakeSelection).toMatchObject({
+      value: { kind: 'retain' },
+    });
+    expect(reachedPostboss?.room.keepsakeSelection).toMatchObject({
       value: { kind: 'retain' },
     });
   });
@@ -259,8 +255,6 @@ describe('structured workspace biome semantic assembly', () => {
     const assembly = assembleWorkspaceBiomeSemantics(
       catalog,
       source,
-      undefined,
-      false,
       (address) => semanticAddressKey(address) === semanticAddressKey(expected),
     );
     expect(assembly.echoKeepsakeReplay?.address).toEqual(expected);
@@ -435,7 +429,7 @@ describe('structured workspace biome semantic assembly', () => {
     );
     expect(new Set(occurrenceIds)).toEqual(
       new Set(
-        source.plan.topology?.occurrences
+        [...(source.plan.topology?.occurrences ?? []), ...source.plan.completionOccurrences]
           .filter((occurrence) => !notGeneratedLocalOccurrences.has(occurrence.occurrenceId))
           .map((occurrence) => occurrence.occurrenceId),
       ),
@@ -446,7 +440,7 @@ describe('structured workspace biome semantic assembly', () => {
     expect(assembly.takeoverInteractionRequirements.size).toBeGreaterThan(0);
 
     const hubNode = assembly.nodes.find((node) => node.kind === 'hubDecision');
-    const completion = assembly.completion[0];
+    const completion = assembly.completionOutline[0];
     if (hubNode === undefined || completion === undefined) {
       throw new Error('N Hub or completion node is missing');
     }

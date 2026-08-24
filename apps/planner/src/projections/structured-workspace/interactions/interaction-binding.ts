@@ -2,7 +2,6 @@ import {
   createOccurrenceAddress,
   createBiomeAddress,
   createRoomActionAddress,
-  createCompletionRoomActionAddress,
   createCirceResolutionAddress,
   createTraitAcquisitionTargetAddress,
   createEchoPomTargetAddress,
@@ -19,7 +18,7 @@ import {
   type TargetAddress,
   type TraitOfferAddress,
   type LevelResolutionAddress,
-  type BossCompletionArcanaAddress,
+  type JudgmentArcanaAddress,
   type KeepsakeSelectionAddress,
   type KeepsakeEquipResultAddress,
   type DerivedShopEntryEditCommand,
@@ -92,7 +91,7 @@ import type {
   WorkspaceTraitOfferControl,
   WorkspaceLevelResolutionControl,
   WorkspaceLevelResolutionInteraction,
-  WorkspaceBossCompletionArcanaInteraction,
+  WorkspaceJudgmentArcanaInteraction,
   WorkspaceKeepsakeSelectionInteraction,
   WorkspaceKeepsakeEquipResultInteraction,
   WorkspaceTraitOfferInteraction,
@@ -261,9 +260,9 @@ export interface WorkspaceInteractionBindingInput {
     string,
     import('../contract').WorkspaceSteadyGrowthControl
   >;
-  readonly bossCompletionArcanaControls?: ReadonlyMap<
+  readonly judgmentArcanaControls?: ReadonlyMap<
     string,
-    { readonly address: BossCompletionArcanaAddress; readonly value: readonly string[] }
+    { readonly address: JudgmentArcanaAddress; readonly value: readonly string[] }
   >;
   readonly keepsakeSelectionControls?: ReadonlyMap<
     string,
@@ -628,19 +627,11 @@ function bindOccurrenceLocalInteractions(
                   `${proposalKey} is not a room-action proposal for ${key}`,
                 );
               }
-              const action =
-                requirement.owner.kind === 'occurrence'
-                  ? createRoomActionAddress(
-                      createBiomeAddress(requirement.owner.routeKey, requirement.owner.biomeKey),
-                      requirement.owner.occurrenceId,
-                      roomActionKey(proposal.reference),
-                    )
-                  : createCompletionRoomActionAddress(
-                      requirement.owner as import('@run-planner/engine/authored-project').CompletionRoomAddress & {
-                        readonly role: 'postboss';
-                      },
-                      roomActionKey(proposal.reference),
-                    );
+              const action = createRoomActionAddress(
+                createBiomeAddress(requirement.owner.routeKey, requirement.owner.biomeKey),
+                requirement.owner.occurrenceId,
+                roomActionKey(proposal.reference),
+              );
               if (proposal.kind === 'remove') {
                 return Object.freeze({
                   command: Object.freeze({ kind: 'RemoveRoomAction' as const, action }),
@@ -1524,7 +1515,7 @@ export function bindWorkspaceInteractions(
     traitControls,
     levelResolutionControls,
     steadyGrowthControls,
-    bossCompletionArcanaControls,
+    judgmentArcanaControls,
     keepsakeSelectionControls,
     keepsakeEquipResultControls,
     roomControls,
@@ -2726,9 +2717,9 @@ export function bindWorkspaceInteractions(
       }),
     );
   }
-  const bossCompletionArcana = new Map<string, WorkspaceBossCompletionArcanaInteraction>();
-  for (const [key, control] of bossCompletionArcanaControls ?? []) {
-    bossCompletionArcana.set(
+  const judgmentArcana = new Map<string, WorkspaceJudgmentArcanaInteraction>();
+  for (const [key, control] of judgmentArcanaControls ?? []) {
+    judgmentArcana.set(
       key,
       Object.freeze({
         choices: Object.freeze(
@@ -2739,14 +2730,14 @@ export function bindWorkspaceInteractions(
         intentFor: (arcanaKeys: readonly string[]) =>
           Object.freeze({
             command: Object.freeze({
-              kind: 'ReplaceBossCompletionArcana' as const,
-              completion: control.address,
+              kind: 'ReplaceJudgmentArcana' as const,
+              judgment: control.address,
               arcanaKeys: Object.freeze([...arcanaKeys]),
             }),
           }),
         key,
         load: (arcanaKeys = control.value) =>
-          candidates.bossCompletionArcana(control.address, arcanaKeys),
+          candidates.judgmentArcana(control.address, arcanaKeys),
         owner: control.address,
         value: control.value,
       }),
@@ -2775,7 +2766,7 @@ export function bindWorkspaceInteractions(
                   selection: control.address as Extract<
                     KeepsakeSelectionAddress,
                     {
-                      readonly owner: import('@run-planner/engine/authored-project').CompletionRoomAddress;
+                      readonly owner: import('@run-planner/engine/authored-project').OccurrenceAddress;
                     }
                   >,
                   value: Object.freeze({ kind: 'replace' as const, keepsakeKey }),
@@ -2798,7 +2789,7 @@ export function bindWorkspaceInteractions(
                     selection: control.address as Extract<
                       KeepsakeSelectionAddress,
                       {
-                        readonly owner: import('@run-planner/engine/authored-project').CompletionRoomAddress;
+                        readonly owner: import('@run-planner/engine/authored-project').OccurrenceAddress;
                       }
                     >,
                     value: Object.freeze({ kind: 'retain' as const }),
@@ -2919,7 +2910,7 @@ export function bindWorkspaceInteractions(
     traitOffers,
     levelResolutions,
     steadyGrowth,
-    bossCompletionArcana,
+    judgmentArcana,
     keepsakeSelections,
     keepsakeEquipResults,
     rewardWheelOfferCounts,

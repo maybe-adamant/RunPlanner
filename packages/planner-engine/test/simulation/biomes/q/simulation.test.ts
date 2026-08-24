@@ -53,7 +53,7 @@ describe('Q simulation', () => {
       'none',
       'none',
     ]);
-    expect(q.snapshot.completionRooms.map((room) => room.gameName)).toEqual(['Q_Boss01']);
+    expect(q.snapshot.automaticRooms.map((room) => room.gameName)).toEqual(['Q_Boss01']);
     expect(q.history.afterTransition.ledgers.counters).toMatchObject({
       biomeDepthCache: 0,
       biomeEncounterDepth: 0,

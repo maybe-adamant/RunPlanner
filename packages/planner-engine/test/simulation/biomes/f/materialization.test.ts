@@ -162,7 +162,10 @@ describe('F takeover materialization', () => {
       ['shop', 'startsCompletion'],
       [undefined, 'deadLeaf'],
     ]);
-    expect(snapshot.completionRooms.map((room) => room.role)).toEqual(['boss', 'postboss']);
+    expect(snapshot.automaticRooms.map((room) => room.occurrenceId)).toEqual([
+      'completion:F:boss',
+      'completion:F:postboss',
+    ]);
   });
 
   it('keeps an unpicked Shop dormant when the free-reward peer starts completion', () => {

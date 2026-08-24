@@ -1,7 +1,7 @@
 import type { Catalog } from '../../catalog-schema';
 import type { AuthoredKeepsakeEquipResults, ProjectDocument } from '../model';
-import { postbossCapabilities } from '../postboss-capabilities';
-import { failCommand, locateBiome, withBiome } from './contract';
+import { failCommand, locateBiome, requireOccurrence, withBiome } from './contract';
+import { updateOccurrence } from './occurrence-mutation';
 import type {
   ExperimentalHammerEquipResultCommand,
   KeepsakeCommand,
@@ -78,15 +78,19 @@ export function applyKeepsakeCommand(
       selection,
       value: { kind: 'retain' },
     });
+    const occurrence = requireOccurrence(located.plan, selection.owner.occurrenceId, command);
     if (
-      located.plan.postbossKeepsakeDisposition?.kind !== 'replace' ||
-      catalog.keepsakes.byKey[located.plan.postbossKeepsakeDisposition.keepsakeKey]?.effect
-        ?.kind !== 'experimentalHammer'
+      occurrence.keepsakeRack?.disposition.kind !== 'replace' ||
+      catalog.keepsakes.byKey[occurrence.keepsakeRack.disposition.keepsakeKey]?.effect?.kind !==
+        'experimentalHammer'
     )
       failCommand(command, 'result does not match the current selection');
-    return withBiome(document, located, {
-      ...located.plan,
-      keepsakeEquipResults: update(located.plan.keepsakeEquipResults),
+    return updateOccurrence(document, located, {
+      ...occurrence,
+      keepsakeRack: {
+        ...occurrence.keepsakeRack!,
+        equipResults: update(occurrence.keepsakeRack?.equipResults),
+      },
     });
   }
   if (command.kind === 'ReplaceJeweledPomEquipResult') {
@@ -154,35 +158,35 @@ export function applyKeepsakeCommand(
       selection,
       value: { kind: 'retain' },
     });
-    if (located.plan.postbossKeepsakeDisposition === undefined)
+    const occurrence = requireOccurrence(located.plan, selection.owner.occurrenceId, command);
+    if (occurrence.keepsakeRack === undefined)
       failCommand(command, 'biome has no ordinary Postboss rack');
     if (
-      located.plan.postbossKeepsakeDisposition.kind !== 'replace' ||
-      located.plan.postbossKeepsakeDisposition.keepsakeKey !==
-        descriptorOwnerKey(catalog, descriptor)
+      occurrence.keepsakeRack.disposition.kind !== 'replace' ||
+      occurrence.keepsakeRack.disposition.keepsakeKey !== descriptorOwnerKey(catalog, descriptor)
     )
       failCommand(command, 'result does not match the current selection');
-    return withBiome(document, located, {
-      ...located.plan,
-      keepsakeEquipResults: { ...located.plan.keepsakeEquipResults, jeweledPom: completeValue },
+    return updateOccurrence(document, located, {
+      ...occurrence,
+      keepsakeRack: {
+        ...occurrence.keepsakeRack,
+        equipResults: { ...occurrence.keepsakeRack.equipResults, jeweledPom: completeValue },
+      },
     });
   }
   const located = locateBiome(document, catalog, command);
   if (command.selection.owner.biomeKey !== located.plan.biomeKey)
     failCommand(command, 'selection does not own this Postboss biome');
-  if (located.plan.postbossKeepsakeDisposition === undefined)
+  const occurrence = requireOccurrence(located.plan, command.selection.owner.occurrenceId, command);
+  if (occurrence.keepsakeRack === undefined)
     failCommand(command, 'biome has no ordinary Postboss rack');
   if (
     command.value.kind === 'replace' &&
     catalog.keepsakes.byKey[command.value.keepsakeKey] === undefined
   )
     failCommand(command, `unknown keepsake ${command.value.keepsakeKey}`);
-  const capabilities = postbossCapabilities(catalog, located.plan.biomeKey);
-  const fountain = Object.freeze({ kind: 'useFountain' as const });
   const rack = Object.freeze({ kind: 'interactKeepsakeRack' as const });
-  const existingOrder =
-    located.plan.postbossRoomActions?.order ??
-    Object.freeze(capabilities.hasPostbossRoom ? [fountain] : []);
+  const existingOrder = occurrence.roomActions.order;
   const nextOrder =
     command.value.kind === 'replace'
       ? existingOrder.some((reference) => reference.kind === 'interactKeepsakeRack')
@@ -191,10 +195,10 @@ export function applyKeepsakeCommand(
       : Object.freeze(
           existingOrder.filter((reference) => reference.kind !== 'interactKeepsakeRack'),
         );
-  return withBiome(document, located, {
-    ...located.plan,
-    postbossKeepsakeDisposition: command.value,
-    postbossRoomActions: Object.freeze({ order: nextOrder }),
+  return updateOccurrence(document, located, {
+    ...occurrence,
+    keepsakeRack: Object.freeze({ ...occurrence.keepsakeRack, disposition: command.value }),
+    roomActions: Object.freeze({ order: nextOrder }),
   });
 }
 

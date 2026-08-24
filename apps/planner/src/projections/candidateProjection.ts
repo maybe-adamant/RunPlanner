@@ -29,7 +29,7 @@ import {
   type AuthoredTraitOption,
   type BatchRewardStoreAddress,
   type BiomeAddress,
-  type BossCompletionArcanaAddress,
+  type JudgmentArcanaAddress,
   type KeepsakeSelectionAddress,
   type KeepsakeEquipResultAddress,
   type AcquisitionRoleAddress,
@@ -284,8 +284,8 @@ export interface CandidateProjectionSession {
     value: AuthoredLevelResolution,
   ) => LevelResolutionCandidateProjection | undefined;
   /** One atomic exact Judgment selection, assessed against its pre-effect domain. */
-  readonly bossCompletionArcana: (
-    owner: BossCompletionArcanaAddress,
+  readonly judgmentArcana: (
+    owner: JudgmentArcanaAddress,
     arcanaKeys: readonly string[],
   ) => CandidateProjectionEvaluation;
   /** Exact engine-captured keepsake frontier, projected one option at a time for controls. */
@@ -1049,10 +1049,10 @@ export function createCandidateSessionFactory(
           ),
         });
       },
-      bossCompletionArcana: (owner: BossCompletionArcanaAddress, arcanaKeys: readonly string[]) =>
+      judgmentArcana: (owner: JudgmentArcanaAddress, arcanaKeys: readonly string[]) =>
         requireProjectCache(cache, assembly, catalog, options).evaluator.evaluate({
-          kind: 'bossCompletionArcana',
-          completion: owner,
+          kind: 'judgmentArcana',
+          judgment: owner,
           arcanaKeys,
         }),
       keepsakeSelections: (owner: KeepsakeSelectionAddress) => {
@@ -1189,7 +1189,7 @@ function candidateSelectedPossible(evaluation: CandidateProjectionEvaluation): b
     case 'traitOfferFocusedOption':
     case 'traitAcquisitionTarget':
       return evaluation.result.supported;
-    case 'bossCompletionArcana':
+    case 'judgmentArcana':
       return evaluation.result.selectedPossible;
     case 'keepsakeSelection':
       return evaluation.result.selectedPossible;
@@ -1212,7 +1212,7 @@ function candidateForced(
   switch (evaluation.kind) {
     case 'encounter':
       return evaluation.result.support === 'forced';
-    case 'bossCompletionArcana':
+    case 'judgmentArcana':
     case 'keepsakeSelection':
     case 'keepsakeEquipResult':
     case 'acquisitionConversion':

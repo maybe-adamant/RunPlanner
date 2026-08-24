@@ -21,12 +21,12 @@ describe('summarizeCatalog', () => {
       version: 'fixture-1',
       biomes: {
         values: [
-          { key: 'A', label: 'Biome A', hasPostbossKeepsakeRack: false },
-          { key: 'B', label: 'Biome B', hasPostbossKeepsakeRack: false },
+          { key: 'A', label: 'Biome A' },
+          { key: 'B', label: 'Biome B' },
         ],
         byKey: {
-          A: { key: 'A', label: 'Biome A', hasPostbossKeepsakeRack: false },
-          B: { key: 'B', label: 'Biome B', hasPostbossKeepsakeRack: false },
+          A: { key: 'A', label: 'Biome A' },
+          B: { key: 'B', label: 'Biome B' },
         },
       },
       routes: { values: [route], byKey: { FixtureRoute: route } },

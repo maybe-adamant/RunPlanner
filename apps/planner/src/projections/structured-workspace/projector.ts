@@ -1,10 +1,7 @@
 import {
-  createBossCompletionArcanaAddress,
-  createCompletionRoomAddress,
   createKeepsakeEquipResultAddress,
   createRouteStartKeepsakeSelectionAddress,
   semanticAddressKey,
-  type KeepsakeEquipResultAddress,
 } from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import {
@@ -52,7 +49,6 @@ import type {
   WorkspaceRewardControl,
   WorkspaceTraitOfferControl,
   WorkspaceLevelResolutionControl,
-  WorkspaceCompletionNode,
   WorkspaceRoomPickerControl,
   WorkspaceRunStateLauncher,
   WorkspaceStatus,
@@ -84,12 +80,13 @@ function appendEncounterTraitControls(
 function projectBiome(
   catalog: Catalog,
   source: WorkspaceBiomeSource,
-  bossCompletionArcanaCapability?: {
-    readonly inactiveArcanaKeys: readonly string[];
-    readonly requiredCount: number;
-  },
-  postbossKeepsakeReached = false,
-  keepsakeEquipResultSupported: (address: KeepsakeEquipResultAddress) => boolean = () => false,
+  keepsakeEquipResultSupported: (
+    address: import('@run-planner/engine/authored-project').KeepsakeEquipResultAddress,
+  ) => boolean,
+  judgmentArcanaCapability: (
+    address: import('@run-planner/engine/authored-project').JudgmentArcanaAddress,
+  ) =>
+    { readonly inactiveArcanaKeys: readonly string[]; readonly requiredCount: number } | undefined,
 ): {
   readonly batchInteractionRequirements: ReadonlyMap<string, WorkspaceBatchInteractionRequirement>;
   readonly biome: WorkspaceBiome;
@@ -115,9 +112,8 @@ function projectBiome(
   const semantic = assembleWorkspaceBiomeSemantics(
     catalog,
     source,
-    bossCompletionArcanaCapability,
-    postbossKeepsakeReached,
     keepsakeEquipResultSupported,
+    judgmentArcanaCapability,
   );
   const presentation = presentWorkspaceBiome(catalog, semantic);
   const runStateLaunchers = new Map(semantic.runStateLaunchers);
@@ -182,9 +178,9 @@ export function createStructuredWorkspaceProjection(
         string,
         import('./contract').WorkspaceSteadyGrowthControl
       >();
-      const bossCompletionArcanaControls = new Map<
+      const judgmentArcanaControls = new Map<
         string,
-        NonNullable<WorkspaceCompletionNode['judgment']>
+        NonNullable<import('./contract').WorkspaceRoomSummary['judgment']>
       >();
       const keepsakeSelectionControls = new Map<
         string,
@@ -274,20 +270,21 @@ export function createStructuredWorkspaceProjection(
             }),
           );
         }
-        const biomes = routeSource.biomes.map((biomeSource, biomeIndex) => {
-          const bossCompletionAddress = createBossCompletionArcanaAddress(
-            createCompletionRoomAddress(biomeSource.biome, 'boss'),
-          );
-          const bossCompletion = candidates.bossCompletionArcana(
-            bossCompletionAddress,
-            biomeSource.plan.bossCompletionArcanaKeys ?? Object.freeze([]),
-          );
+        const biomes = routeSource.biomes.map((biomeSource) => {
           const projected = projectBiome(
             catalog,
             biomeSource,
-            bossCompletion.kind === 'bossCompletionArcana' ? bossCompletion.result : undefined,
-            biomeIndex + 1 < routeSource.biomes.length,
             (address) => candidates.keepsakeEquipResult(address).length > 0,
+            (address) => {
+              const occurrence = biomeSource.occurrence(address.occurrenceId);
+              if (occurrence === undefined) return undefined;
+              const candidate = candidates.judgmentArcana(
+                address,
+                occurrence.encounters.judgmentArcanaKeysByPhase?.[address.phaseKey] ??
+                  Object.freeze([]),
+              );
+              return candidate.kind === 'judgmentArcana' ? candidate.result : undefined;
+            },
           );
           appendUniqueFocusDestinations(focusByOwner, projected.focusDestinations.entries());
           for (const [key, launcher] of projected.runStateLaunchers) {
@@ -347,38 +344,33 @@ export function createStructuredWorkspaceProjection(
             }
           }
           for (const node of projected.biome.nodes) {
-            if (node.kind === 'completion' && node.judgment !== undefined) {
-              bossCompletionArcanaControls.set(
-                semanticAddressKey(node.judgment.address),
-                node.judgment,
-              );
-            }
-            if (node.kind === 'completion' && node.steadyGrowth !== undefined) {
-              steadyGrowthControls.set(
-                semanticAddressKey(node.steadyGrowth.address),
-                node.steadyGrowth,
-              );
-            }
             if (node.kind === 'occurrenceWorkbench') {
+              if (node.room.judgment !== undefined) {
+                judgmentArcanaControls.set(
+                  semanticAddressKey(node.room.judgment.address),
+                  node.room.judgment,
+                );
+              }
               for (const control of node.room.roomActions?.steadyGrowth ?? []) {
                 steadyGrowthControls.set(semanticAddressKey(control.address), control);
               }
             }
-            if (node.kind === 'completion' && node.keepsakeSelection !== undefined) {
+            if (node.kind === 'occurrenceWorkbench' && node.room.keepsakeSelection !== undefined) {
               keepsakeSelectionControls.set(
-                semanticAddressKey(node.keepsakeSelection.address),
+                semanticAddressKey(node.room.keepsakeSelection.address),
                 Object.freeze({
-                  address: node.keepsakeSelection.address,
-                  value: node.keepsakeSelection.value,
+                  address: node.room.keepsakeSelection.address,
+                  value: node.room.keepsakeSelection.value,
                 }),
               );
-              const equipResult = node.keepsakeSelection.equipResult;
+              const equipResult = node.room.keepsakeSelection.equipResult;
               if (equipResult !== undefined) {
                 keepsakeEquipResultControls.set(
                   semanticAddressKey(equipResult.address),
                   Object.freeze({
                     address: equipResult.address,
-                    value: biomeSource.plan.keepsakeEquipResults?.[equipResult.address.resultKind],
+                    value: biomeSource.occurrence(node.room.occurrenceId)?.keepsakeRack
+                      ?.equipResults?.[equipResult.address.resultKind],
                   }),
                 );
               }
@@ -476,7 +468,7 @@ export function createStructuredWorkspaceProjection(
         traitControls,
         levelResolutionControls,
         steadyGrowthControls,
-        bossCompletionArcanaControls,
+        judgmentArcanaControls,
         keepsakeSelectionControls,
         keepsakeEquipResultControls,
         roomControls,

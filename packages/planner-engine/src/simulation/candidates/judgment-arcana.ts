@@ -1,18 +1,18 @@
 import type { Catalog } from '../../catalog-schema';
-import type { BossCompletionArcanaAddress } from '../../authored-project/addresses';
+import type { JudgmentArcanaAddress } from '../../authored-project/addresses';
 import type { ProjectDocument } from '../../authored-project/model';
-import type { BossCompletionArcanaCandidateArtifacts } from '../candidate-artifacts';
+import type { JudgmentArcanaCandidateArtifacts } from '../candidate-artifacts';
 import type { ProjectEvaluation } from '../project';
 import type { SemanticFinding } from '../model';
 import { unavailableForBiome, type CandidateContextUnavailable } from './availability';
 
-export interface BossCompletionArcanaCandidateQuery {
-  readonly kind: 'bossCompletionArcana';
-  readonly completion: BossCompletionArcanaAddress;
+export interface JudgmentArcanaCandidateQuery {
+  readonly kind: 'judgmentArcana';
+  readonly judgment: JudgmentArcanaAddress;
   readonly arcanaKeys: readonly string[];
 }
-export interface EvaluatedBossCompletionArcanaCandidate {
-  readonly kind: 'bossCompletionArcana';
+export interface EvaluatedJudgmentArcanaCandidate {
+  readonly kind: 'judgmentArcana';
   readonly result: {
     readonly requiredCount: number;
     readonly inactiveArcanaKeys: readonly string[];
@@ -20,20 +20,20 @@ export interface EvaluatedBossCompletionArcanaCandidate {
     readonly findings: readonly SemanticFinding[];
   };
 }
-export function evaluateBossCompletionArcanaCandidate(
+export function evaluateJudgmentArcanaCandidate(
   catalog: Catalog,
   _project: ProjectDocument,
   evaluation: ProjectEvaluation,
-  artifacts: BossCompletionArcanaCandidateArtifacts | undefined,
-  query: BossCompletionArcanaCandidateQuery,
-): CandidateContextUnavailable | EvaluatedBossCompletionArcanaCandidate {
-  const capability = artifacts?.at(query.completion);
+  artifacts: JudgmentArcanaCandidateArtifacts | undefined,
+  query: JudgmentArcanaCandidateQuery,
+): CandidateContextUnavailable | EvaluatedJudgmentArcanaCandidate {
+  const capability = artifacts?.at(query.judgment);
   if (capability === undefined)
     return unavailableForBiome(
       evaluation,
-      query.completion.routeKey,
-      query.completion.biomeKey,
-      query.completion,
+      query.judgment.routeKey,
+      query.judgment.biomeKey,
+      query.judgment,
       'afterRoomLifecycle',
     );
   const seen = new Set<string>();
@@ -43,7 +43,7 @@ export function evaluateBossCompletionArcanaCandidate(
       code,
       severity: 'error' as const,
       phase: 'rewardGeneration' as const,
-      origin: query.completion,
+      origin: query.judgment,
       evidence: Object.freeze(evidence),
     });
   for (const key of query.arcanaKeys) {
@@ -63,7 +63,7 @@ export function evaluateBossCompletionArcanaCandidate(
       }),
     );
   return Object.freeze({
-    kind: 'bossCompletionArcana',
+    kind: 'judgmentArcana',
     result: Object.freeze({
       requiredCount: capability.requiredCount,
       inactiveArcanaKeys: capability.inactiveArcanaKeys,

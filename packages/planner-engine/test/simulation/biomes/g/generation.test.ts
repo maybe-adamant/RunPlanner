@@ -5,7 +5,9 @@ import {
   applyProjectCommand,
   createBatchRewardStoreAddress,
   createExitDecisionAddress,
+  createExitSelectionAddress,
   createIncomingRewardAddress,
+  createOccurrenceId,
   createOccurrenceAddress,
   createTargetAddress,
   semanticAddressKey,
@@ -24,6 +26,7 @@ import {
   goldenGOccurrenceId,
   goldenGStartId,
 } from '@run-planner/test-fixtures/underworld';
+import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 
 function catalogWithRoom(room: RoomDeclaration): Catalog {
   return Object.freeze({
@@ -50,6 +53,37 @@ function completeG(project = createCompleteFGProject()) {
 }
 
 describe('G generation and takeover', () => {
+  it('carries F Postboss through G Intro and a selected G Preboss free reward', () => {
+    let project = createCompleteFGProject({ prebossSource: 'G_Combat14' });
+    const source = { kind: 'occurrence' as const, occurrenceId: goldenGOccurrenceId(7, 1) };
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetExitSelection',
+      selection: createExitSelectionAddress(goldenGBiome, source),
+      value: { kind: 'normal', exitKey: 'exit2' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(
+        goldenGBiome,
+        createOccurrenceId('golden-g-preboss-free-2'),
+      ),
+      value: { rewardType: 'HermesUpgrade' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(
+        goldenGBiome,
+        createOccurrenceId('golden-g-preboss-free-3'),
+      ),
+      value: { rewardType: 'StackUpgrade' },
+    });
+    const result = simulateProject(catalog, authorLegalTraitOffers(project));
+    const g = result.routes[0]?.biomes.find((biome) => biome.biomeKey === 'G');
+
+    expect(result.findings).toEqual([]);
+    expect(g).toMatchObject({ authoring: 'complete', validity: 'valid' });
+  });
+
   it('does not let an aggregate-invalid three-door takeover suppress ordinary Door 1 support', () => {
     let project = createCompleteFGProject();
     const plan = project.routes
@@ -142,7 +176,7 @@ describe('G generation and takeover', () => {
       gameName: 'G_Intro',
       lifecycleProfileKey: 'RewardlessRoom',
     });
-    expect(g.snapshot.completionRooms.map((room) => room.gameName)).toEqual([
+    expect(g.snapshot.automaticRooms.map((room) => room.gameName)).toEqual([
       'G_Boss01',
       'G_PostBoss01',
     ]);

@@ -4,13 +4,12 @@ import type { RoomLifecycleExecutionInput } from '../lifecycle';
 import { scopeRoomActionRoster } from '../room-actions';
 import type {
   CanonicalAuthoredRoom,
-  CanonicalCompletionRoom,
   CanonicalHubRoom,
   CanonicalLocalVisitRoom,
 } from '../materialization';
 
 export type CanonicalLifecycleRoom =
-  CanonicalAuthoredRoom | CanonicalCompletionRoom | CanonicalHubRoom | CanonicalLocalVisitRoom;
+  CanonicalAuthoredRoom | CanonicalHubRoom | CanonicalLocalVisitRoom;
 
 export class HistoryLifecycleInputContractError extends Error {
   constructor(detail: string) {
@@ -33,11 +32,9 @@ function enteredStoreKey(
       return undefined;
     case 'resolvedOffer': {
       const resolvedStoreKey =
-        room.kind === 'completion'
-          ? room.enteredRewardStoreKey
-          : 'incomingReward' in room
-            ? room.incomingReward?.resolvedStoreKey
-            : undefined;
+        room.kind === 'authored'
+          ? (room.enteredRewardStoreKey ?? room.incomingReward?.resolvedStoreKey)
+          : undefined;
       if (resolvedStoreKey === undefined) {
         throw new HistoryLifecycleInputContractError(
           `${room.gameName} requires resolved entered-store provenance`,
@@ -73,14 +70,12 @@ export function createRoomLifecycleInput(
           ),
         );
   const roomActionRoster =
-    room.kind === 'completion'
-      ? room.roomActionRoster
-      : room.kind !== 'authored'
-        ? undefined
-        : scopeRoomActionRoster(
-            room.roomActionRoster,
-            encounterPhases.map((phase) => phase.slotKey),
-          );
+    room.kind !== 'authored'
+      ? undefined
+      : scopeRoomActionRoster(
+          room.roomActionRoster,
+          encounterPhases.map((phase) => phase.slotKey),
+        );
   return {
     origin: room.origin,
     lifecycleProfileKey: room.lifecycleProfileKey,
