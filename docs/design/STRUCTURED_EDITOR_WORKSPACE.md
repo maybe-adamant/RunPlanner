@@ -325,6 +325,17 @@ the owner-bound editor rather than duplicating it elsewhere. React renders the
 engine's support, replacement domain, and complete command intents and does not
 evaluate eligibility or bag state.
 
+The same outcome neighborhood exposes the engine-projected `Sea Star procced`
+control only for a reached supported normal free pickup. Checking it creates
+one ordinary generated acquisition row after its source; unchecking removes it
+through the source-scoped semantic command. The reused acquisition row owns a
+second-use consumable/resource's independent outcome detail or a fresh full
+Pom's unresolved detail, requiredness, and Time Piece control. A retained
+invalid result remains visible at its source with the engine finding and repair
+intent but does not fabricate a child row. React never decides free-versus-paid
+status, duplication capability, recursion, lifecycle inheritance, or Pom
+freshness.
+
 The control presents those authored choices as reward outcomes rather than
 exposing internal role vocabulary. An automatic Forfeit veto is not added to
 the authored disposition union: the engine records it in the same reward-event

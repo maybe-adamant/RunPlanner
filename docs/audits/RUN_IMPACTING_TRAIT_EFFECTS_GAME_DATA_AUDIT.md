@@ -3,10 +3,7 @@
 ## Status and scope
 
 This is a source audit for seven trait identities. The source facts below remain
-authoritative; the Planner now reproduces the bounded Natural Selection, Queen's
-Ransom, King's Ransom, and Steady Growth effects described here. Sea Star, the
-bounded Buried Treasure contact, and Quick Buck remain deferred generated-pickup
-effects:
+authoritative; the Planner now reproduces the bounded effects described here:
 
 - Natural Selection (`GoodStuffBoon`);
 - Queen's Ransom (`SuperSacrificeBoonHera`);
@@ -430,9 +427,9 @@ Echo-history consequence, and its Sea Star result can create another such
 pickup interaction.
 
 The bounded Planner disposition models Quick Buck through the shared optional
-generated-pickup chronology. Sea Star remains deferred; it will reuse that
-same acquisition path rather than adding an isolated Quick Buck action. The
-Dream Dive boss teleport edge remains recorded by
+generated-pickup chronology. Its eligible money pickup participates in the
+same Sea Star and Echo-last-reward acquisition path rather than adding an
+isolated Quick Buck action. The Dream Dive boss teleport edge remains recorded by
 [Boss completion reward lifecycle](BOSS_COMPLETION_REWARD_LIFECYCLE.md).
 
 ## Current Planner boundary
@@ -456,26 +453,31 @@ picked ledger. The shared Hephaestus rarity/level limits are declaration facts
 consumed by Pom-derived and in-run rarity-target paths, while Proper Upbringing
 keeps its source-specific Common-to-Rare behavior.
 
-Sea Star does not yet publish or settle a duplicate pickup. Buried Treasure
-and Quick Buck use the shared generated-pickup optional-acquisition path;
-their source contacts and Artificer boundary are retained above.
+Sea Star publishes one authored duplicate-or-not result only at an eligible
+normal free acquisition frontier. A retained consumable/resource duplicate is
+one more acquisition of the same object with its exact producer lifecycle
+capabilities; a full-Pom loot duplicate is a fresh required RoomReward Pom
+with fresh unresolved detail. Neither duplicate may recurse. Direct Shop
+purchases are atomic paid instances and cannot expose Time Piece, Artificer,
+or Sea Star, while a free generated acquisition-entry pickup in a Shop room
+remains a pickup. Buried Treasure and Quick Buck use the shared generated-
+pickup optional-acquisition path; their exact Artificer and Sea Star boundaries
+are retained above. All Narcissus traits now enter equipped history normally;
+their shared generated-pickup entries retain their existing source contacts.
 
 ## Bounded follow-up questions
 
 The core source rules above are settled. A later implementation audit should
 close these contact matrices without changing the model:
 
-- enumerate `CanDuplicate`, `GoldConversionEligible`, and
-  `MetaConversionEligible` for every reward identity the Planner currently
-  supports;
 - attest Natural Selection allocations when a target saturates during a
   multi-pass distribution;
 - verify current-trait removal contacts for every already-modeled effectful
   trait that may be removed by a Ransom; and
-- enumerate which Buried Treasure pickups update the Planner's supported Echo
-  last-reward and run-progress histories; and
-- carry Quick Buck's optional money object through the same generated-pickup,
-  Sea Star, and Echo-last-reward matrix.
+- revisit the Dream-required and teleport-before-delayed-spawn behavior when a
+  future Dream Dive model adds the necessary room facts; and
+- add newly supported acquisition identities to the closed duplication and
+  conversion-capability declaration audit before exposing them to Sea Star.
 
 These are declaration and consumer-coverage questions, not reasons to add a
 generic reward-copy abstraction or a generic trait-effect language.

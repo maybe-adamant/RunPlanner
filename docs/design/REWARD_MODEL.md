@@ -872,6 +872,24 @@ action row references that semantic payload owner and does not duplicate its
 editor. A deliberately malformed missing-required reference remains explicit
 repair state. No producer owns a parallel purchase or pickup order.
 
+Declaration-produced and interaction-produced pickups use this same settlement
+site and action order. Narcissus, Quick Buck, Buried Treasure, Artificer, Echo
+last-reward, and Sea Star differ only in their source owner, lifecycle binding,
+and requiredness; each generated entry is still one ordinary concrete
+acquisition. Quick Buck and Buried Treasure entries are optional. Artificer
+replacements and fresh full-Pom Sea Star duplicates are required. A retained
+Sea Star consumable/resource duplicate keeps the exact source participation,
+producer-lifecycle conversion capabilities, and concrete identity for its
+second use; only its Sea Star capability is cleared. A fresh full Pom instead
+uses the `RoomReward` lifecycle with fresh unresolved Pom detail and no copied
+Shop or source payload state.
+
+Paid Shop entries are a different lifecycle: purchase is their sole atomic
+interaction and cannot open Time Piece, Artificer, Sea Star, or another
+post-purchase pickup action. A Shop room may nevertheless contain a separate
+free acquisition-entry pickup; that entry is evaluated from its own source
+lifecycle and can expose the ordinary pickup alternatives.
+
 The lifecycle point is producer-specific. A normal room reward emits its
 concrete acquisition on pickup, a Devotion emits its chosen and spurned source
 at distinct points, and a purchased Blind Box first emits its box use and then
@@ -889,13 +907,14 @@ entry and advances exactly its purchased slots through purchase-time
 acquisition.
 
 Narcissus demonstrates the producer/acquisition distinction. The selected
-player-rarityless descriptor may emit zero or more declaration-owned pickups at the
-Story room's post-outgoing `roomExit` site. The descriptor never enters
-equipped-trait history. A random Pom target or Mystery Boon offer belongs to
-the concrete produced pickup and is evaluated only when that entry participates
-in the site's exact order. Ashes, Psyche, and Bones are independent concrete
-pickups beside Max Magick, Max Health, and Death Defiance; Psyche owns ordinary
-consumable/use and last-reward history but no counted-store membership.
+player-rarityless trait enters equipped history and may emit zero or more
+declaration-owned pickups at the Story room's post-outgoing `roomExit` site.
+Its producer descriptor owns no separate nested outcome control. A random Pom
+target or Mystery Boon offer belongs to the concrete produced pickup and is
+evaluated only when that entry participates in the site's exact order. Ashes,
+Psyche, and Bones are independent concrete pickups beside Max Magick, Max
+Health, and Death Defiance; Psyche owns ordinary consumable/use and
+last-reward history but no counted-store membership.
 
 Normal acquisition, Time Piece, and Artificer are one mutually exclusive
 disposition on each exact acquisition role. Artificer is supported only for a

@@ -790,6 +790,17 @@ dispositions and are not a generic effect registry. The three source
 Cherished Heirloom—carry a declaration-owned one-time-offer flag that the
 engine evaluates from selected-trait history, including after removal.
 
+The remaining three run-impacting trait dispositions are likewise closed.
+Quick Buck and Buried Treasure each declare one `producePickups` producer
+lifecycle and its exact named concrete pickup entries; the catalog validates
+their complete ordered lists, including Buried Treasure's Story exclusion for
+Bones and its producer-local Artificer override. Sea Star declares only that
+the selected trait enables duplication. Exact duplication remains a concrete
+acquisition fact: every supported acquisition explicitly declares
+`canDuplicate`, while producer lifecycle and instance provenance may narrow
+that base capability. These descriptors do not form a generic trait-effect or
+reward-copy language.
+
 The three cooldown-capped Hephaestus core traits additionally own complete
 maximum in-run upgrade levels by equipped rarity:
 
@@ -841,6 +852,14 @@ The supported source family is Nectar, ordinary and Big Bones, ordinary and
 Big Ashes, and producer-owned Psyche; Psyche is not inserted into a counted
 store. Room declarations separately own exact Fields optional capacities and
 the persistent `FieldsOptionalRewards` producer binding.
+
+Concrete acquisition declarations also own the exact history projection and
+base Time Piece, Artificer, Echo-last-reward, and Sea Star capability facts.
+The declaration fact is not enough to make a live interaction: a direct Shop
+purchase is an atomic paid instance and exposes none of the free-pickup
+alternative interactions. Conversely, a free acquisition-entry pickup created
+inside a Shop occurrence keeps its own producer lifecycle and is evaluated as
+a pickup rather than as a purchase.
 
 Arcana cards and Fear Vows are separate normalized catalog collections. Card
 declarations own their board location, permanent rank-III baseline, Grasp cost,

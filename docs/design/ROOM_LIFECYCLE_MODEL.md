@@ -707,15 +707,24 @@ commitRoom
 exitRoom
 ```
 
-The selected Narcissus descriptor is resolved during the encounter-owned trait
-choice. It is not itself an equipped trait or concrete reward. Any declared
-pickups it produces settle at the occurrence-owned `roomExit` point after the
-outgoing batch is frozen. Their authored order therefore affects later route
-state without regenerating the current doors. A pickup owns its exact reward,
-trait offer, or level-resolution child; those children are not nested under
-the outer Narcissus option. The consequential concrete set includes Ashes,
-Psyche, Bones, Max Magick, Max Health, and Death Defiance; each remains optional
-and independently ordered.
+The selected Narcissus trait is resolved during the encounter-owned choice and
+enters equipped history. Its declaration-owned pickup producer settles at the
+occurrence-owned `roomExit` point after the outgoing batch is frozen. Their
+authored order therefore affects later route state without regenerating the
+current doors. A pickup owns its exact reward, trait offer, or level-resolution
+child; those children are not nested under the outer Narcissus option. The
+consequential concrete set includes Ashes, Psyche, Bones, Max Magick, Max
+Health, and Death Defiance; each remains optional and independently ordered.
+
+The same acquisition-entry seam hosts all current generated pickups. A normal
+Quick Buck, Buried Treasure, or equipping Narcissus acquisition activates its
+declaration-owned entries at its declared pickup window; source selection alone
+does not. Sea Star adds one later source-scoped entry after an eligible normal
+free pickup. The source action and generated action remain in the occurrence's
+one ordered Room Action roster, so a generated result can affect later rooms
+without regenerating the current outgoing batch. Direct Shop purchase actions
+remain atomic and do not emit any alternate pickup interaction; a free entry
+generated in that Shop room is a distinct pickup action.
 
 ### Opening Reward Room
 
@@ -802,6 +811,13 @@ marker only inserts or removes that reference; the engine walk still performs
 the purchase when it reaches the ranked action. Unpurchased initial offers do
 not become active timeline or generic repair rows. A retained stale purchase
 remains removable through its specialized participation intent.
+
+The Shop purchase action settles the paid acquisition completely. It does not
+become an acquisition-entry source or expose Time Piece, Artificer, or Sea
+Star. This applies to Shop Poms as well: their declaration can be duplicable
+in a free lifecycle, while the paid instance cannot duplicate. Free
+declaration-produced entries in the same Shop occurrence are independent
+pickup actions and retain their own capabilities.
 
 Travel Deal and Gold Gold Gold continue to derive their trigger from that true
 action order. The selected source slot is not a complete payload-authoring
