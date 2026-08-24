@@ -98,16 +98,21 @@ starting trait. Aspect-owned later Spell Drops retain their acquisition while
 their unsupported Path of Stars child is dormant. Spell Drop is not an Echo
 last-reward replay source, while Talent Drop remains replayable.
 
-Natural Selection, Queen's Ransom, King's Ransom, and Steady Growth are also
-supported run-impacting trait outcomes. Natural Selection authors one legal
+Natural Selection, Queen's Ransom, King's Ransom, Steady Growth, Sea Star,
+Buried Treasure, and Quick Buck are also supported run-impacting trait
+outcomes. Natural Selection authors one legal
 ordered allocation of up to eight core-slot levels; each Ransom derives its
 provider-indexed removals and level gain from the current trait frontier; and
 Steady Growth advances from qualifying encounter-end-effect checkpoints and
 authors only a reached automatic rarity target. The three declaration-owned
 `BlockOfferIfPreviouslyPicked` traits retain selected-offer history after later
-removal, so they cannot be offered again. Sea Star, Buried Treasure, and Quick
-Buck remain deliberately deferred with their source contacts retained in the
-run-impacting trait audit.
+removal, so they cannot be offered again. Quick Buck and Buried Treasure create
+their declaration-owned optional pickups through the shared acquisition
+timeline; all Narcissus traits equip normally. Sea Star authors a realized
+duplicate at an eligible free pickup: retained consumables/resources get one
+second use while a free full Pom creates a fresh required Pom. Purchases are
+atomic and cannot trigger Time Piece, Artificer, or Sea Star, although a free
+generated pickup in a Shop room remains an ordinary pickup.
 
 ## Architecture
 

@@ -427,11 +427,12 @@ NPCs' scaled combat numbers remain outside scope.
 
 #### Narcissus effect inventory
 
-Narcissus's nine player-rarityless menu entries are choice keys whose acquisition
-functions create benefits. They are not nine persistent equipped traits.
-External tool, dialogue, lifetime-resource, and unlock predicates collapse
-under the progressed baseline; the current-run predicates and outputs below do
-not.
+Narcissus's nine player-rarityless menu entries are trait identities whose
+acquisition functions create benefits. Each selected identity also enters the
+Planner's equipped-trait history, while its declaration-owned pickup producer
+owns the separate generated acquisitions. External tool, dialogue,
+lifetime-resource, and unlock predicates collapse under the progressed
+baseline; the current-run predicates and outputs below do not.
 
 | Choice       | Label                 | Current-run eligibility                            | Exact source output and supported consequence                                                                                                                    |
 | ------------ | --------------------- | -------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |

@@ -2684,12 +2684,12 @@ decision exists, so purchased trait and Pom repairs are immediately available
 without moving purchases earlier in game time.
 
 Narcissus is the second authored consumer of that seam. Its selected
-player-rarityless descriptor may materialize exact `roomExit` pickups, but the
-descriptor never enters equipped state and owns no nested outcome controls.
-Pickup entries own their concrete reward, fresh trait offer, or level target
-and settle after the current outgoing batch in one authored order. Currency,
-Life, Magick, Last Stand, random Pom, two Elemental Boosts, and Blind Box use
-the existing reward, trait, element, and level authorities. Inactive or skipped
+player-rarityless trait may materialize exact `roomExit` pickups and enters
+equipped history, while its producer owns no nested outcome controls. Pickup
+entries own their concrete reward, fresh trait offer, or level target and settle
+after the current outgoing batch in one authored order. Currency, Life,
+Magick, Last Stand, random Pom, two Elemental Boosts, and Blind Box use the
+existing reward, trait, element, and level authorities. Inactive or skipped
 pickups emit no history, finding, or acquisition child.
 
 The delivery changed production by +2,761/-839 lines from the locked plan
@@ -3152,3 +3152,56 @@ tests; ESLint; repository-wide Prettier; and the production build at 401
 transformed modules. The build retained only the existing greater-than-500-kB
 chunk advisory. This factual result was appended afterward and checked with
 Markdown formatting and `git diff --check`; the complete gate was not rerun.
+
+## Generated-pickup trait effects closure
+
+The shared generated-pickup phase is complete through implementation Gates A
+through C on 2026-08-23, from the locked plan `c72df5d`. Gate A
+(`454bdf0`) corrected Artificer: converting an optional source still creates a
+required replacement pickup in the source lifecycle window. Gate B
+(`edc6d7d`) generalized the existing acquisition-entry pipeline to exact
+source-scoped producer instances, migrated Narcissus and Echo Last Reward
+through it, made every Narcissus trait equip normally, and added Quick Buck's
+and Buried Treasure's declaration-owned optional pickups. Gate C (`4f9546f`)
+adds declaration-attested Sea Star capability, source-scoped non-recursive
+duplicate results, same-object consumable/resource second use, fresh required
+full-Pom duplication, and the shared candidate, finding, codec, Undo, timeline,
+and workspace contacts.
+
+Direct Shop purchases are now explicitly modeled as atomic paid acquisitions:
+they cannot expose Time Piece, Artificer, or Sea Star. A free generated
+acquisition-entry pickup in a Shop occurrence remains a pickup and therefore
+uses its own lifecycle capabilities. Retained Sea Star consumable/resource
+duplicates preserve their source producer-lifecycle conversion capabilities;
+fresh full Poms instead use a required `RoomReward` lifecycle and fresh
+unresolved Pom detail. No generic clone tree, second chronology, timer model,
+or resource-amount ledger was introduced.
+
+Recorded implementation validation is limited to the executed lanes. Gate A
+passed its focused four-file Vitest set (79 tests), root typecheck, ESLint,
+targeted Prettier, and `git diff --check`. Gate B passed catalog 205 tests,
+fixture integrity 12 tests, schema migration 7 tests, engine 90 files/1,278
+tests, planner 56 files/614 tests, contract 8 files/49 tests, product 7
+files/30 tests, root typecheck, ESLint, formatting, build, and diff checks.
+After review remediation, Gate C passed catalog 9 files/206 tests, schema
+migration 7 tests, fixture integrity 2 files/13 tests, engine 90 files/1,285
+tests, planner 56 files/617 tests, contract 8 files/49 tests, product 7
+files/30 tests, UI 12 files/242 tests, root typecheck, ESLint,
+`format:check`, build, and `git diff --check`. These results precede the one
+authorized complete closure gate.
+
+The first closure attempt exposed the existing Nemesis integration witness at
+the generic five-second test limit. The performance follow-up `7ef3dd4` scopes
+Sea Star's branch-local source attestation to exact authored duplicate sites
+instead of carrying it through every acquisition. The owning heavy lane then
+passed all 27 files/418 tests. A post-fix closure retry still reached 5.041
+seconds under full-suite contention, just beyond the generic five-second
+limit. Commit `139d8fc` therefore gives that deliberately broad
+route-once/spacing integration witness an explicit ten-second test budget; its
+assertions and production behavior are unchanged.
+
+The final `npm run check` passed on 2026-08-23: workspace and fixture
+typechecking; fixture integrity 2 files/13 tests; the regular suite 135
+files/1,720 tests; the heavy suite 27 files/418 tests; ESLint; repository-wide
+Prettier; and the production build at 405 transformed modules. The build
+retained only the existing greater-than-500-kB chunk advisory.

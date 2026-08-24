@@ -14,9 +14,9 @@ every other schema version rather than manufacturing current topology or leaf
 state for a stale document. The migration CLI performs the explicit 49-to-50,
 50-to-51, and 51-to-52 migrations outside the production decoder, and also
 updates the schema-52 catalog metadata from
-`0.32.0-run-impacting-traits` to `0.32.1-run-impacting-traits` without
-inventing authored outcomes. Catalog versions must match exactly after
-migration.
+`0.32.0-run-impacting-traits` through
+`0.34.0-sea-star` without inventing authored outcomes. Catalog versions must
+match exactly after migration.
 
 Schemas 46 and 47 completed the occurrence-owned topology and chronology
 cutover: every supported authored main or N side room is a `RoomOccurrence`,
@@ -455,6 +455,16 @@ the site. A dormant payload may exist without participating; adding its fixed
 Room Action reference alone joins chronology. Infernal Contract uses its own
 fixed supplemental key and the same payload site rather than extending
 declaration-owned Shop inventory.
+
+Trait-generated and Sea Star duplicate sites are closed source-scoped site
+keys, not new site variants. A selected Quick Buck, Buried Treasure, or
+equipping Narcissus trait owns its exact generated entries after its normal
+trait acquisition. A Sea Star result owns at most one non-recursive duplicate
+entry at its normal source acquisition role; toggling that result adds or
+removes the entry and its ordinary Room Action as one semantic command and one
+undo step. A retained result that becomes inactive remains authored for repair
+but has no active child action. The persisted entry is ordinary
+`AuthoredRewardState`, so no reward-copy tree or second timeline is needed.
 
 `ReplaceShopPurchaseParticipation` inserts or removes one exact base-Shop
 `interactShopOffer` reference. Generic Room Action insertion/removal rejects

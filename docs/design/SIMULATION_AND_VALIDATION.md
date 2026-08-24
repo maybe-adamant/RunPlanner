@@ -1247,6 +1247,24 @@ State derives Artificer's Epic/Heroic capacity, spent count, and remaining
 count from the active Arcana state; Lazuli changes rarity without resetting
 the evidence.
 
+Sea Star is assessed at that same exact normal-acquisition frontier, never as
+an ambient reward-category rule. Support requires equipped Sea Star, a free
+participating instance, the resolved concrete declaration's `canDuplicate`,
+the producer's instance capability, and no prior Sea Star duplicate. A
+positive authored result records one source-scoped entry. The branch-local
+pre-acquisition assessment remains attached to that source, so later trait
+changes cannot retroactively invalidate a result that was already realized.
+An unsupported retained paid or otherwise inactive result publishes one
+source-role repair finding but does not activate a duplicate action.
+
+For consumable/resource sources, the duplicate settles as a second normal use
+of the same concrete object, preserving its source lifecycle conversion
+capabilities and participation while disabling recursion. For duplicable full
+Pom loot, it settles as a fresh required `RoomReward` object with independently
+authored Pom detail and ordinary Time Piece support. A paid purchase has no Sea
+Star, Time Piece, or Artificer branch, even when its base declaration supports
+those alternatives in a free lifecycle.
+
 For each generated batch:
 
 1. derive the possible base stores from the biome ratio policy and current
