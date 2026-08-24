@@ -88,6 +88,14 @@ The first group is:
 | `LastStandDrop`      |   1.50 |
 | `GiftDrop`           |   0.15 |
 
+`LastStandDrop` retains `MissingLastStand` both while the offer is generated
+and when it is purchased (`ConsumableData.lua:822-872`). This is the same
+missing-capacity predicate used by the Well's `LastStandShopItem`; their raw
+item names and pickup timing differ, but the eligibility fact is shared.
+`FillInShopOptions` filters ineligible entries before its weighted selection,
+so a failed Last Stand requirement leaves the other eligible first-group items
+available rather than assigning a fixed replacement (`StoreLogic.lua:179-250`).
+
 The second group is:
 
 - `SpellDrop`;

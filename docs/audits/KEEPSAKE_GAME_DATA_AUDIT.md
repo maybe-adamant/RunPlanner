@@ -709,14 +709,13 @@ phases are positive. P's opening and pre-combat declarations are blocked while
 the later `GeneratedP` and `GeneratedP_Large` declarations are positive.
 
 The planner does not simulate a Death Defiance count. Gorgon Amulet therefore
-reuses the existing source-local authored condition
-`deathDefianceConditionMet` on the exact eligible encounter phase. `true`
-means the source predicate "no remaining Death Defiance" is satisfied at that
-frontier; `false` leaves the pending keepsake effect unconsumed so a later
-eligible phase may receive Athena. The same local fact is available to the
-resulting Athena offer for traits whose own requirements inspect the missing
-Death Defiance condition. This is not a route loadout flag and must not create
-a synthetic Death Defiance ledger.
+retains one source-local authored trigger fact on the exact eligible encounter
+phase. Satisfied means the source predicate "no remaining Death Defiance" is
+true at that frontier; unsatisfied leaves the pending keepsake effect unconsumed
+so a later eligible phase may receive Athena. The fact controls encounter
+timing only. It is not reused by the resulting Athena offer, which follows the
+[runtime fallback audit](RUNTIME_OFFER_FALLBACK_AUDIT.md), and it must not
+become a route loadout flag or synthetic Death Defiance ledger.
 
 A hosted combat skipped by Fig Leaf cannot consume Gorgon Amulet:
 `HandleAthenaSpawn` returns before decrementing the pending use when enemy

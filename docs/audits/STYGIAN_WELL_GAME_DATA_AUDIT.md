@@ -150,18 +150,41 @@ The source has three relevant exceptions to an unrestricted-repeat summary:
   missing.
 
 The first two exceptions depend on temporary active-state expiration; the
-third depends on the existing Last Stand capacity state. They are
-declaration-specific requirements, not evidence for a global nonstacking Well
-rule.
+third depends on whether a Last Stand is missing at that exact generation and
+purchase frontier. They are declaration-specific requirements, not evidence
+for a global nonstacking Well rule.
 
 Those exceptions do not require a parallel expiry subsystem. Discount and
 Empty Slot use the same encounter-use countdown shape as other modeled timed
-effects, and Last Stand can reuse the planner's existing capacity state. One
-narrow interaction extends the eligibility lifetime: if an active
-`ExtendedShopTrait` applies to Discount or Empty Slot, that purchase changes
-from six encounter uses to two boss uses and consumes one Extended use
-(`StoreLogic.lua:886-889, 1206-1217`). Extended purchases applied to the other
-whitelisted, sim-neutral effects do not otherwise make their duration modeled.
+effects. The planner does not derive a route-wide Death Defiance capacity
+ledger. The [runtime fallback audit](RUNTIME_OFFER_FALLBACK_AUDIT.md) instead
+keeps Last Stand as the preferred result and owns pool-local safe alternatives
+for initial inventory, a Travel Deal refill, and a Twist result without
+inventing health/death simulation.
+
+One narrow interaction extends temporary-trait lifetime. The exact
+`ExtendedShopTrait.ValidPermanentItemsLookup` whitelist is:
+
+- `TemporaryDoorHealTrait`;
+- `TemporaryImprovedSecondaryTrait`;
+- `TemporaryImprovedCastTrait`;
+- `TemporaryMoveSpeedTrait`;
+- `TemporaryImprovedExTrait`;
+- `TemporaryImprovedDefenseTrait`;
+- `TemporaryDiscountTrait`; and
+- `TemporaryEmptySlotDamageTrait`.
+
+When an active Extended use applies to a direct Well purchase of one of those
+eight traits, `HandleStorePurchase` changes that purchased instance to two
+boss uses and consumes an Extended use (`TraitData_Store.lua:15-39`;
+`StoreLogic.lua:886-889, 1206-1217`). Discount and Empty Slot are the two
+whitelisted identities whose extended active lifetime changes current planner
+offer eligibility. The other six still consume Extended, but their resulting
+duration remains sim-neutral. Extended itself, Spark, Yarn, Sacrificial Hymn,
+Last Stand, `FirstHitHealTrait`, `TemporaryHealExpirationTrait`, and every
+consumable are outside the whitelist. Twist awards its nested result through a
+separate consumable path and does not make that result a direct
+`MakePermanent` purchase, so it neither receives nor consumes Extended.
 
 ## The three direct consequential identities
 
@@ -230,11 +253,17 @@ its player choice remains optional.
 The planner does not yet model Well presence, inventory, purchases, or any
 temporary Well state. Spark, Yarn, and Sacrificial Hymn remain the three direct
 rule-changing Well identities. Exact future Well-offer eligibility additionally
-requires the already-supported encounter countdown and Last Stand state for
-Discount, Empty Slot, and Last Stand, plus Extended's narrow conversion of the
-first two to boss-use lifetimes. Twist can award Yarn, Discount, or Last Stand
-through its nested pool. Their combat, health-restoration, Magick, price, and
-gold values remain deferred.
+requires encounter- or boss-use lifetime state for Discount and Empty Slot and
+the source's missing-Last-Stand requirement at each applicable slot or
+nested-result frontier. That runtime requirement does not become authored
+state; the shared fallback disposition owns it.
+Extended applies to the exact eight-identity whitelist above; only
+Discount and Empty Slot need their extended boss-use lifetime simulated, while
+the other six still consume a use. That consumption remains consequential run
+state because it prevents a later Discount or Empty Slot purchase from using
+the same Extended charge. Twist can award Yarn, Discount, or Last Stand through
+its nested pool. Their combat, health-restoration, Magick, price, and gold
+values remain deferred.
 
 Same-Well generation retains distinct visible identities and Travel Deal
 refill exclusions. Across separate Wells, repeat eligibility follows the held
