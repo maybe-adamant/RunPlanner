@@ -117,6 +117,154 @@ export const fEncounterDefinitions = [
     },
   },
   {
+    key: 'NemesisRandomEvent',
+    label: 'Nemesis event',
+    kind: 'nonCombat',
+    countsEncounterDepth: false,
+    blocksGorgon: true,
+    npcPresentationKey: 'Nemesis',
+    requiresInteraction: true,
+    suppressesIncomingReward: true,
+    nemesisRandomEvent: {
+      freeItem: {
+        resultRewardTypes: ['EmptyMaxHealthDrop', 'HealDrop', 'LastStandDrop', 'ArmorBoost'],
+        conditionalResultRewardType: 'LastStandDrop',
+        response: 'none',
+        pickupRequired: false,
+      },
+      goldTrade: {
+        variants: [
+          {
+            rewardType: 'MaxHealthDrop',
+            enteredBiome: { max: 2 },
+            requirement: 'none',
+          },
+          {
+            rewardType: 'MaxHealthDropBig',
+            enteredBiome: { min: 3 },
+            requirement: 'none',
+          },
+          {
+            rewardType: 'MaxManaDrop',
+            enteredBiome: { max: 2 },
+            requirement: 'none',
+          },
+          {
+            rewardType: 'MaxManaDropBig',
+            enteredBiome: { min: 3 },
+            requirement: 'none',
+          },
+          {
+            rewardType: 'StackUpgrade',
+            enteredBiome: { max: 1 },
+            requirement: 'pomLegal',
+          },
+          {
+            rewardType: 'StackUpgradeBig',
+            enteredBiome: { min: 2 },
+            requirement: 'pomLegal',
+          },
+          {
+            rewardType: 'WeaponUpgrade',
+            enteredBiome: {},
+            requirement: 'hammerEarlyOrLate',
+          },
+        ],
+        response: ['accept', 'decline'],
+        pickupRequiredOnAccept: true,
+      },
+      damageTrade: {
+        variants: [
+          {
+            rewardType: 'MaxHealthDrop',
+            enteredBiome: { max: 2 },
+            requirement: 'none',
+          },
+          {
+            rewardType: 'MaxHealthDropBig',
+            enteredBiome: { min: 3 },
+            requirement: 'none',
+          },
+          {
+            rewardType: 'MaxManaDrop',
+            enteredBiome: { max: 2 },
+            requirement: 'none',
+          },
+          {
+            rewardType: 'MaxManaDropBig',
+            enteredBiome: { min: 3 },
+            requirement: 'none',
+          },
+          {
+            rewardType: 'StackUpgrade',
+            enteredBiome: { max: 1 },
+            requirement: 'pomLegal',
+          },
+          {
+            rewardType: 'StackUpgradeBig',
+            enteredBiome: { min: 2 },
+            requirement: 'pomLegal',
+          },
+          {
+            rewardType: 'RoomMoneyDrop',
+            enteredBiome: { max: 1 },
+            requirement: 'none',
+          },
+          {
+            rewardType: 'RoomMoneyDrop',
+            enteredBiome: { min: 2 },
+            requirement: 'none',
+          },
+          {
+            rewardType: 'TalentDrop',
+            enteredBiome: {},
+            requirement: 'talentLegal',
+          },
+        ],
+        response: ['accept', 'decline'],
+        pickupRequiredOnAccept: true,
+      },
+      traitTrade: {
+        response: ['accept', 'decline'],
+        pickupRequiredOnAccept: true,
+        fixedResultRewardType: 'RoomMoneyTripleDrop',
+        traitSelection: 'eligibleGodTraitCommonPriority',
+      },
+      damageContest: {
+        successResultRewardTypes: [
+          'MaxHealthDrop',
+          'MaxManaDrop',
+          'StackUpgrade',
+          'RoomMoneyDrop',
+          'TalentDrop',
+        ],
+        failureResultRewardType: 'RoomRewardConsolationPrize',
+        response: 'none',
+        pickupRequired: false,
+      },
+      hOptionalCapacityReservation: 1,
+    },
+    requirements: {
+      kind: 'all',
+      requirements: [
+        { kind: 'counterRange', axis: 'biomeDepthCache', range: { min: 4 } },
+        { kind: 'currentRoomRewardExcludes', rewardTypes: nemesisIncomingRewardExclusions },
+        {
+          kind: 'encounterKeyCount',
+          scope: 'route',
+          encounterKeys: nemesisEncounterKeys,
+          range: { max: 0 },
+        },
+        {
+          kind: 'previousRoomEncounterKeyCount',
+          encounterKeys: supportedFieldNpcEncounterKeys,
+          roomWindow: 6,
+          range: { max: 0 },
+        },
+      ],
+    },
+  },
+  {
     key: 'Story_Arachne_01',
     label: 'Arachne story',
     kind: 'story',
@@ -160,7 +308,13 @@ export const fEncounterDefinitions = [
 export const fEncounterSets = [
   {
     key: 'FEncountersDefault',
-    encounterDefinitionKeys: ['GeneratedF', 'ArtemisCombatF', 'ArachneCombatF', 'NemesisCombatF'],
+    encounterDefinitionKeys: [
+      'GeneratedF',
+      'ArtemisCombatF',
+      'ArachneCombatF',
+      'NemesisCombatF',
+      'NemesisRandomEvent',
+    ],
     defaultEncounterDefinitionKey: 'GeneratedF',
   },
 ] as const satisfies readonly RawEncounterSetDeclaration[];

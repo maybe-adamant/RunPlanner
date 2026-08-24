@@ -35,6 +35,8 @@ import {
   echoLastRewardPickupEntryKeys,
   parseEchoLastRewardPickupEntryKey,
   parseTraitGeneratedPickupSiteKey,
+  parseNemesisGeneratedPickupSiteKey,
+  nemesisGeneratedPickupSiteKey,
   selectedPickupProducers,
   type SelectedPickupProducer,
 } from '../traits';
@@ -387,13 +389,23 @@ function decodeAcquisitionSites(
   }
   for (const [pointKey, rawSite] of Object.entries(sites)) {
     const generatedTraitSite = parseTraitGeneratedPickupSiteKey(pointKey) !== undefined;
+    const generatedNemesisSite = parseNemesisGeneratedPickupSiteKey(pointKey) !== undefined;
     const seaStarDuplicateSite = parseSeaStarDuplicateSiteKey(pointKey) !== undefined;
     if (pointKey.startsWith('traitGenerated:') && !generatedTraitSite)
       failProjectDocument(
         `${occurrence.path}.acquisitionSites.${pointKey}`,
         'has an invalid generated-pickup site key',
       );
-    const artificerSite = pointKey !== 'roomExit' && !generatedTraitSite && !seaStarDuplicateSite;
+    if (pointKey.startsWith('nemesisGenerated:') && !generatedNemesisSite)
+      failProjectDocument(
+        `${occurrence.path}.acquisitionSites.${pointKey}`,
+        'has an invalid Nemesis generated-pickup site key',
+      );
+    const artificerSite =
+      pointKey !== 'roomExit' &&
+      !generatedTraitSite &&
+      !generatedNemesisSite &&
+      !seaStarDuplicateSite;
     const site = expectRecord(rawSite, `${occurrence.path}.acquisitionSites.${pointKey}`);
     const hasPickups = site.pickupEntries !== undefined;
     expectExactKeys(
@@ -421,6 +433,7 @@ function decodeAcquisitionSites(
       shopProfileKey === undefined &&
       !artificerSite &&
       !generatedTraitSite &&
+      !generatedNemesisSite &&
       !seaStarDuplicateSite
     )
       failProjectDocument(
@@ -1741,12 +1754,17 @@ export function decodeBiomeTopology(
         );
         const ownedGeneratedSiteKeys = new Set(
           preliminaryPickupProducers
-            .filter((producer) => producer.siteKey.startsWith('traitGenerated:'))
+            .filter(
+              (producer) =>
+                producer.siteKey.startsWith('traitGenerated:') ||
+                producer.siteKey.startsWith('nemesisGenerated:'),
+            )
             .map((producer) => producer.siteKey),
         );
         const includedEntries = Object.entries(rawSites).filter(
           ([siteKey]) =>
-            !siteKey.startsWith('traitGenerated:') || ownedGeneratedSiteKeys.has(siteKey),
+            (!siteKey.startsWith('traitGenerated:') && !siteKey.startsWith('nemesisGenerated:')) ||
+            ownedGeneratedSiteKeys.has(siteKey),
         );
         const includedKeys = includedEntries.map(([siteKey]) => siteKey).sort();
         if (
@@ -1791,14 +1809,66 @@ export function decodeBiomeTopology(
       : undefined;
     const producerSiteKeys = new Set(
       pickupProducers
-        .filter((producer) => producer.siteKey.startsWith('traitGenerated:'))
+        .filter(
+          (producer) =>
+            producer.siteKey.startsWith('traitGenerated:') ||
+            producer.siteKey.startsWith('nemesisGenerated:'),
+        )
         .map((producer) => producer.siteKey),
     );
+    const nemesisPolicy = catalog.encounterDefinitions.byKey.NemesisRandomEvent?.nemesisRandomEvent;
+    for (const [phaseKey, outcome] of Object.entries(encounters.nemesisRandomEventByPhase ?? {})) {
+      const sitePath = `${rawOccurrence.path}.acquisitionSites.${nemesisGeneratedPickupSiteKey(phaseKey)}.pickupEntries.result`;
+      const result =
+        acquisitionSites?.[nemesisGeneratedPickupSiteKey(phaseKey)]?.pickupEntries?.result;
+      if (outcome === null) {
+        if (result !== undefined && result !== null)
+          failProjectDocument(sitePath, 'an unresolved Nemesis event must not own a result reward');
+        continue;
+      }
+      if (nemesisPolicy === undefined)
+        failProjectDocument(sitePath, 'catalog has no Nemesis event policy');
+      if (result === undefined || result === null)
+        failProjectDocument(
+          sitePath,
+          'a concrete Nemesis outcome must own exactly one concrete result reward',
+        );
+      const rewardType = result.offer.rewardType;
+      const valid =
+        outcome.kind === 'freeItem'
+          ? (nemesisPolicy.freeItem.resultRewardTypes as readonly string[]).includes(rewardType)
+          : outcome.kind === 'goldTrade'
+            ? nemesisPolicy.goldTrade.variants.some((variant) => variant.rewardType === rewardType)
+            : outcome.kind === 'damageTrade'
+              ? nemesisPolicy.damageTrade.variants.some(
+                  (variant) => variant.rewardType === rewardType,
+                )
+              : outcome.kind === 'traitTrade'
+                ? rewardType === nemesisPolicy.traitTrade.fixedResultRewardType
+                : outcome.result === 'failure'
+                  ? rewardType === nemesisPolicy.damageContest.failureResultRewardType
+                  : (
+                      nemesisPolicy.damageContest.successResultRewardTypes as readonly string[]
+                    ).includes(rewardType);
+      if (!valid)
+        failProjectDocument(
+          sitePath,
+          'does not match its declared Nemesis family and result relation',
+        );
+    }
     for (const [siteKey, site] of Object.entries(acquisitionSites ?? {})) {
       if (parseTraitGeneratedPickupSiteKey(siteKey) !== undefined && !producerSiteKeys.has(siteKey))
         failProjectDocument(
           `${rawOccurrence.path}.acquisitionSites.${siteKey}`,
           'does not name a selected generated-pickup source',
+        );
+      if (
+        parseNemesisGeneratedPickupSiteKey(siteKey) !== undefined &&
+        !producerSiteKeys.has(siteKey)
+      )
+        failProjectDocument(
+          `${rawOccurrence.path}.acquisitionSites.${siteKey}`,
+          'does not name a selected Nemesis event source',
         );
       if (
         parseSeaStarDuplicateSiteKey(siteKey) !== undefined &&
@@ -1823,6 +1893,7 @@ export function decodeBiomeTopology(
       ([siteKey, site]) =>
         siteKey !== 'roomExit' &&
         parseTraitGeneratedPickupSiteKey(siteKey) === undefined &&
+        parseNemesisGeneratedPickupSiteKey(siteKey) === undefined &&
         parseSeaStarDuplicateSiteKey(siteKey) === undefined &&
         Object.keys(site.pickupEntries ?? {}).some(
           (entryKey) => parseArtificerReplacementEntryKey(entryKey) === undefined,

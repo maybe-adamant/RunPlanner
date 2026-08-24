@@ -107,12 +107,13 @@ export const icarusEncounterKeys = ['IcarusCombatO', 'IcarusCombatP'] as const;
 
 export const athenaEncounterKeys = ['AthenaCombatP'] as const;
 
-/** Nemesis route exclusion is permanently limited to its four combat variants. */
+/** One route-wide Nemesis occurrence rule covers clean combat and the ordinary event. */
 export const nemesisEncounterKeys = [
   'NemesisCombatF',
   'NemesisCombatG',
   'NemesisCombatH',
   'NemesisCombatI',
+  'NemesisRandomEvent',
 ] as const;
 
 /**

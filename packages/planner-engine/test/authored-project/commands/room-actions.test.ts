@@ -6,6 +6,7 @@ import {
   applyProjectHistoryCommand,
   assembleRoomActionDomain,
   activeRoomActionReferences,
+  authoredAcquisitionSources,
   acquisitionSiteStorageKey,
   artificerAcquisitionSite,
   artificerReplacementEntryKey,
@@ -15,6 +16,7 @@ import {
   createCompletionRoomActionAddress,
   createCompletionRoomAddress,
   createEncounterPhaseAddress,
+  createNemesisRandomEventAddress,
   createExitDecisionAddress,
   createExitSelectionAddress,
   createIncomingRewardAddress,
@@ -131,6 +133,52 @@ function withoutRequiredRewardAction(document = project()): ProjectDocument {
 }
 
 describe('room-action commands', () => {
+  it('projects a concrete Nemesis result as an ordinary acquisition entry with its exact action owner', () => {
+    const phase = createEncounterPhaseAddress(
+      goldenFBiome,
+      { kind: 'occurrence', occurrenceId: goldenFOccurrenceId(5, 1) },
+      'Encounter',
+    );
+    let project = applyProjectCommand(createCompleteFGProject(), catalog, {
+      kind: 'SelectEncounter',
+      phase,
+      encounterKey: 'NemesisRandomEvent',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceNemesisRandomEventOutcome',
+      event: createNemesisRandomEventAddress(phase),
+      value: { kind: 'freeItem' },
+      reward: { rewardType: 'ArmorBoost' },
+    });
+    const eventOccurrence = project.routes[0]?.biomes[0]?.topology?.occurrences.find(
+      (candidate) => candidate.occurrenceId === goldenFOccurrenceId(5, 1),
+    );
+    if (eventOccurrence === undefined) throw new Error('missing Nemesis occurrence');
+    const source = authoredAcquisitionSources(goldenFBiome, eventOccurrence).find(
+      (candidate) => candidate.acquisition.owner.kind === 'acquisitionEntry',
+    );
+    expect(source?.acquisition.owner).toMatchObject({
+      kind: 'acquisitionEntry',
+      entryKey: 'result',
+      site: { pointKey: 'nemesisGenerated:Encounter' },
+    });
+    const domain = assembleRoomActionDomain({
+      catalog,
+      biome: goldenFBiome,
+      occurrence: eventOccurrence,
+    });
+    expect(domain.contributions).toContainEqual(
+      expect.objectContaining({
+        kind: 'action',
+        reference: {
+          kind: 'interactAcquisitionEntry',
+          siteKey: 'nemesisGenerated:Encounter',
+          entryKey: 'result',
+        },
+        owner: source?.acquisition.owner,
+      }),
+    );
+  });
   it('defaults an active required reference and rejects its direct removal', () => {
     const initial = project();
     const original = occurrence(initial);

@@ -120,12 +120,12 @@ export const hEncounterSets = [
   },
   {
     key: 'HEncountersPassive',
-    encounterDefinitionKeys: ['GeneratedH_Passive'],
+    encounterDefinitionKeys: ['GeneratedH_Passive', 'NemesisRandomEvent'],
     defaultEncounterDefinitionKey: 'GeneratedH_Passive',
   },
   {
     key: 'HEncountersPassiveSmall',
-    encounterDefinitionKeys: ['GeneratedH_PassiveSmall'],
+    encounterDefinitionKeys: ['GeneratedH_PassiveSmall', 'NemesisRandomEvent'],
     defaultEncounterDefinitionKey: 'GeneratedH_PassiveSmall',
   },
 ] as const satisfies readonly RawEncounterSetDeclaration[];

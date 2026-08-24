@@ -683,6 +683,7 @@ function localRewardDestinationLabel(groupKey: string, slotKey: string): string 
 }
 
 export function findingDestinationLabel(catalog: Catalog, origin: SemanticAddress): string {
+  if (origin.kind === 'nemesisRandomEvent') return 'Nemesis event';
   if (origin.kind === 'project') {
     return 'Project';
   }

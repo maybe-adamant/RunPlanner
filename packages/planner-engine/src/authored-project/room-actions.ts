@@ -135,7 +135,7 @@ export function activeRoomActionReferences(
       occurrence.gameName,
     );
     const definition = key === undefined ? undefined : catalog.encounterDefinitions.byKey[key];
-    if (definition?.traitOfferProducer !== undefined)
+    if (definition?.traitOfferProducer !== undefined || definition?.requiresInteraction === true)
       references.push(Object.freeze({ kind: 'interactEncounter', phaseKey: phase.key }));
     if (
       occurrence.encounters.gorgonResultByPhase?.[phase.key]?.deathDefianceConditionMet === true
@@ -165,7 +165,7 @@ export function activeRoomActionReferences(
       )
         continue;
       if (
-        siteKey.startsWith('traitGenerated:') &&
+        (siteKey.startsWith('traitGenerated:') || siteKey.startsWith('nemesisGenerated:')) &&
         !activePickupEntries.has(JSON.stringify([siteKey, entryKey]))
       )
         continue;

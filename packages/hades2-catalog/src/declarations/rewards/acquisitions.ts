@@ -19,6 +19,7 @@ const CAN_DUPLICATE = new Set<string>([
   'MaxHealthDropBig',
   'MaxHealthDropSmall',
   'EmptyMaxHealthSmallDrop',
+  'EmptyMaxHealthDrop',
   'MaxManaDrop',
   'MaxManaDropBig',
   'MaxManaDropSmall',
@@ -31,6 +32,8 @@ const CAN_DUPLICATE = new Set<string>([
   'TalentBigDrop',
   'MinorTalentDrop',
   'RoomRewardHealDrop',
+  'HealDrop',
+  'RoomRewardConsolationPrize',
   'HealBigDrop',
   'ArmorBoost',
   'ArmorBigBoost',
@@ -188,6 +191,12 @@ const rawAcquisitions = [
     goldConversionEligible: true,
   },
   {
+    gameName: 'EmptyMaxHealthDrop',
+    kind: 'consumable',
+    historyProjection: 'consumableAndUse',
+    goldConversionEligible: true,
+  },
+  {
     gameName: 'MaxManaDrop',
     kind: 'consumable',
     historyProjection: 'consumableAndUse',
@@ -228,6 +237,7 @@ const rawAcquisitions = [
   },
   { gameName: 'RoomMoneyTinyDrop', kind: 'consumable', historyProjection: 'consumableAndUse' },
   { gameName: 'HealDropMinor', kind: 'consumable', historyProjection: 'consumableAndUse' },
+  { gameName: 'HealDrop', kind: 'consumable', historyProjection: 'consumableAndUse' },
   {
     gameName: 'TalentDrop',
     kind: 'consumable',
@@ -252,6 +262,12 @@ const rawAcquisitions = [
     gameName: 'RoomRewardHealDrop',
     kind: 'consumable',
     historyProjection: 'consumableAndUse',
+  },
+  {
+    gameName: 'RoomRewardConsolationPrize',
+    kind: 'consumable',
+    historyProjection: 'consumableAndUse',
+    goldConversionEligible: true,
   },
   { gameName: 'HealBigDrop', kind: 'consumable', historyProjection: 'consumableAndUse' },
   {

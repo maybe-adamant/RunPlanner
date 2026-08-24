@@ -130,6 +130,8 @@ export function projectCommandAddress(
     case 'ReplaceFigLeafSkip':
     case 'ReplaceGorgonDeathDefianceCondition':
       return command.phase;
+    case 'ReplaceNemesisRandomEventOutcome':
+      return command.event;
     case 'ReplaceTraitOffer':
     case 'ResetEncounterTraitOffer':
     case 'ReplaceGorgonAthenaOffer':

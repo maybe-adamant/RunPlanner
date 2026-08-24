@@ -236,8 +236,8 @@ function selectedNarcissusPickupSite(project: ProjectDocument, occurrenceId: Occ
     ?.biomes.find((biome) => biome.biomeKey === 'G')
     ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === occurrenceId);
   if (occurrence === undefined) throw new Error('Narcissus occurrence is missing');
-  const producer = selectedPickupProducers(catalog, goldenGBiome, occurrence).find((candidate) =>
-    candidate.traitKey.startsWith('Narcissus'),
+  const producer = selectedPickupProducers(catalog, goldenGBiome, occurrence).find(
+    (candidate) => candidate.traitKey?.startsWith('Narcissus') === true,
   );
   if (producer === undefined) throw new Error('selected Narcissus pickup producer is missing');
   return producer.siteKey;

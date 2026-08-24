@@ -282,6 +282,58 @@ export interface EncounterDefinition {
     readonly kind: 'traitOffer';
     readonly giverKey: string;
   };
+  readonly requiresInteraction?: boolean;
+  readonly suppressesIncomingReward?: boolean;
+  readonly nemesisRandomEvent?: {
+    readonly freeItem: {
+      readonly resultRewardTypes: readonly [
+        'EmptyMaxHealthDrop',
+        'HealDrop',
+        'LastStandDrop',
+        'ArmorBoost',
+      ];
+      readonly conditionalResultRewardType: 'LastStandDrop';
+      readonly response: 'none';
+      readonly pickupRequired: false;
+    };
+    readonly goldTrade: {
+      readonly variants: readonly {
+        readonly rewardType: string;
+        readonly enteredBiome: { readonly min?: number; readonly max?: number };
+        readonly requirement: 'none' | 'pomLegal' | 'hammerEarlyOrLate';
+      }[];
+      readonly response: readonly ['accept', 'decline'];
+      readonly pickupRequiredOnAccept: true;
+    };
+    readonly damageTrade: {
+      readonly variants: readonly {
+        readonly rewardType: string;
+        readonly enteredBiome: { readonly min?: number; readonly max?: number };
+        readonly requirement: 'none' | 'pomLegal' | 'talentLegal';
+      }[];
+      readonly response: readonly ['accept', 'decline'];
+      readonly pickupRequiredOnAccept: true;
+    };
+    readonly traitTrade: {
+      readonly response: readonly ['accept', 'decline'];
+      readonly pickupRequiredOnAccept: true;
+      readonly fixedResultRewardType: 'RoomMoneyTripleDrop';
+      readonly traitSelection: 'eligibleGodTraitCommonPriority';
+    };
+    readonly damageContest: {
+      readonly successResultRewardTypes: readonly [
+        'MaxHealthDrop',
+        'MaxManaDrop',
+        'StackUpgrade',
+        'RoomMoneyDrop',
+        'TalentDrop',
+      ];
+      readonly failureResultRewardType: 'RoomRewardConsolationPrize';
+      readonly response: 'none';
+      readonly pickupRequired: false;
+    };
+    readonly hOptionalCapacityReservation: 1;
+  };
 }
 
 /** Unique possibility support for one selectable slot, with a static default. */

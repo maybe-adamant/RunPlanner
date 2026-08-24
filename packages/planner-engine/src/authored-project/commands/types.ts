@@ -13,6 +13,7 @@ import type {
   ExitDecisionAddress,
   ExitSelectionAddress,
   EncounterPhaseAddress,
+  NemesisRandomEventAddress,
   HubDecisionAddress,
   HubSlotAddress,
   IncomingRewardAddress,
@@ -358,6 +359,14 @@ export type EncounterOccurrenceCommand =
   | {
       readonly kind: 'ResetEncounter';
       readonly phase: EncounterPhaseAddress;
+    }
+  | {
+      /** Complete replacement of the phase-local random-event realization. */
+      readonly kind: 'ReplaceNemesisRandomEventOutcome';
+      readonly event: NemesisRandomEventAddress;
+      readonly value: import('../model').AuthoredNemesisRandomEventOutcome | null;
+      /** The sole concrete result identity, persisted only at its generated entry. */
+      readonly reward: ResolvedRewardOffer | null;
     }
   | {
       readonly kind: 'ReplaceFigLeafSkip';

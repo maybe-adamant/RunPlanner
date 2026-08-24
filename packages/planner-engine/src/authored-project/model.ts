@@ -5,7 +5,7 @@ import type {
   AuthoredTraitOffer,
 } from './traits';
 
-export const PROJECT_DOCUMENT_SCHEMA_VERSION = 52 as const;
+export const PROJECT_DOCUMENT_SCHEMA_VERSION = 53 as const;
 
 declare const occurrenceIdBrand: unique symbol;
 
@@ -136,6 +136,18 @@ export interface AuthoredGorgonPhaseResult {
   readonly athenaOffer?: AuthoredGorgonAthenaOffer | null;
 }
 
+/** Closed, phase-local realization of the single Nemesis random-event encounter. */
+export type AuthoredNemesisRandomEventOutcome =
+  | { readonly kind: 'freeItem' }
+  | { readonly kind: 'goldTrade'; readonly response: 'accept' | 'decline' }
+  | { readonly kind: 'damageTrade'; readonly response: 'accept' | 'decline' }
+  | {
+      readonly kind: 'traitTrade';
+      readonly traitKey: string;
+      readonly response: 'accept' | 'decline';
+    }
+  | { readonly kind: 'damageContest'; readonly result: 'success' | 'failure' };
+
 export type SideRoomGeneration = 'generated' | 'notGenerated';
 
 /**
@@ -156,6 +168,10 @@ export interface RoomEncounterState {
   /** Sparse authored offers keyed by stable phase and concrete encounter. */
   readonly traitOffersByPhase?: Readonly<
     Record<string, Readonly<Record<string, AuthoredTraitOffer | null>>>
+  >;
+  /** Sparse phase-owned event detail; null is unresolved. */
+  readonly nemesisRandomEventByPhase?: Readonly<
+    Record<string, AuthoredNemesisRandomEventOutcome | null>
   >;
 }
 

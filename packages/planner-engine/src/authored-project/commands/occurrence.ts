@@ -34,6 +34,7 @@ export function applyOccurrenceCommand(
       return applyShopOccurrenceCommand(document, catalog, located, command);
     case 'SelectEncounter':
     case 'ResetEncounter':
+    case 'ReplaceNemesisRandomEventOutcome':
     case 'ReplaceFigLeafSkip':
     case 'ReplaceGorgonDeathDefianceCondition':
       return applyEncounterOccurrenceCommand(document, catalog, located, command);

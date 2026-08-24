@@ -151,7 +151,13 @@ export const gEncounterDefinitions = [
 export const gEncounterSets = [
   {
     key: 'GEncountersDefault',
-    encounterDefinitionKeys: ['GeneratedG', 'ArtemisCombatG', 'ArachneCombatG', 'NemesisCombatG'],
+    encounterDefinitionKeys: [
+      'GeneratedG',
+      'ArtemisCombatG',
+      'ArachneCombatG',
+      'NemesisCombatG',
+      'NemesisRandomEvent',
+    ],
     defaultEncounterDefinitionKey: 'GeneratedG',
   },
 ] as const satisfies readonly RawEncounterSetDeclaration[];

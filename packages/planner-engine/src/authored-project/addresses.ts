@@ -163,6 +163,11 @@ export interface GorgonPhaseAddress extends BiomeOwnedAddress {
   /** Convenience narrowing for generic owner consumers. */
   readonly occurrenceId: OccurrenceId;
 }
+/** Exact phase-local child of the one selected Nemesis random-event identity. */
+export interface NemesisRandomEventAddress extends BiomeOwnedAddress {
+  readonly kind: 'nemesisRandomEvent';
+  readonly encounter: EncounterPhaseAddress;
+}
 export interface RewardWheelAddress extends BiomeOwnedAddress {
   readonly kind: 'rewardWheel';
   readonly occurrenceId: OccurrenceId;
@@ -326,6 +331,7 @@ export type SemanticAddress =
   | LocalVisitOrderAddress
   | EncounterPhaseAddress
   | GorgonPhaseAddress
+  | NemesisRandomEventAddress
   | RewardWheelAddress
   | RewardWheelOfferAddress
   | HubSlotAddress
@@ -660,6 +666,16 @@ export function createGorgonPhaseAddress(encounter: EncounterPhaseAddress): Gorg
   });
   return Object.freeze(address);
 }
+export function createNemesisRandomEventAddress(
+  encounter: EncounterPhaseAddress,
+): NemesisRandomEventAddress {
+  return Object.freeze({
+    kind: 'nemesisRandomEvent',
+    routeKey: encounter.routeKey,
+    biomeKey: encounter.biomeKey,
+    encounter,
+  });
+}
 export function createRewardWheelAddress(
   biome: BiomeAddress,
   occurrenceId: OccurrenceId,
@@ -967,6 +983,8 @@ export function semanticAddressKey(address: SemanticAddress): string {
     case 'encounterPhase':
       return JSON.stringify([...base, address.owner, address.phaseKey]);
     case 'gorgonPhase':
+      return JSON.stringify([...base, semanticAddressKey(address.encounter)]);
+    case 'nemesisRandomEvent':
       return JSON.stringify([...base, semanticAddressKey(address.encounter)]);
     case 'rewardWheel':
       return JSON.stringify([...base, address.occurrenceId, address.wheelKey]);

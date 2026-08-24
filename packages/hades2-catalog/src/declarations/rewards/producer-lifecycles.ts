@@ -1,5 +1,23 @@
 import type { RawRewardKernelInput } from './types';
 
+const nemesisEventRewardTypes = [
+  'EmptyMaxHealthDrop',
+  'HealDrop',
+  'LastStandDrop',
+  'ArmorBoost',
+  'MaxHealthDrop',
+  'MaxHealthDropBig',
+  'MaxManaDrop',
+  'MaxManaDropBig',
+  'StackUpgrade',
+  'StackUpgradeBig',
+  'WeaponUpgrade',
+  'RoomMoneyDrop',
+  'TalentDrop',
+  'RoomMoneyTripleDrop',
+  'RoomRewardConsolationPrize',
+] as const;
+
 export const producerLifecycles = [
   {
     key: 'RoomReward',
@@ -189,6 +207,23 @@ export const producerLifecycles = [
           },
         ],
       },
+    ],
+  },
+  {
+    key: 'NemesisEventPickup',
+    rewardTypes: nemesisEventRewardTypes,
+    defaultLifecyclePoint: 'roomRewardPickup',
+    overrides: [
+      ...nemesisEventRewardTypes.map((rewardType) => ({
+        rewardType,
+        acquisitionLifecycle: [
+          {
+            role: 'self',
+            lifecyclePoint: 'roomRewardPickup' as const,
+            blocksArtificerConversion: true as const,
+          },
+        ],
+      })),
     ],
   },
   {

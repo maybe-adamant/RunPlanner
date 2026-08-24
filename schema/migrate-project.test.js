@@ -65,45 +65,71 @@ test('fails closed when a required migration step is absent', () => {
   assert.throws(() => migrateProjectDocument(source), /no migration is registered for schema 48/);
 });
 
-test('51 -> 52 changes only schema and catalog metadata', () => {
+test('51 -> 53 changes only schema and catalog metadata', () => {
   const source = schema49Project();
   source.schemaVersion = 51;
   source.catalogVersion = '0.31.0-chaos-traits';
   const result = migrateProjectDocument(source);
-  assert.equal(result.document.schemaVersion, 52);
-  assert.equal(result.document.catalogVersion, '0.34.0-sea-star');
+  assert.equal(result.document.schemaVersion, 53);
+  assert.equal(result.document.catalogVersion, '0.35.0-nemesis-random-events');
   assert.deepEqual(result.changes['51->52'], {});
-  assert.deepEqual(result.steps, [
-    '51->52',
-    '0.32.0-run-impacting-traits->0.32.1-run-impacting-traits',
-    '0.32.1-run-impacting-traits->0.33.0-generated-trait-pickups',
-    '0.33.0-generated-trait-pickups->0.34.0-sea-star',
-  ]);
+  assert.deepEqual(result.changes['52->53'], {
+    catalogMigrations: [
+      '0.32.0-run-impacting-traits->0.32.1-run-impacting-traits',
+      '0.32.1-run-impacting-traits->0.33.0-generated-trait-pickups',
+      '0.33.0-generated-trait-pickups->0.34.0-sea-star',
+    ],
+    generatedPickupSitesMoved: 0,
+  });
+  assert.deepEqual(result.steps, ['51->52', '52->53']);
 });
 
-test('52 catalog migration changes only catalog metadata', () => {
+test('52 -> 53 preserves the earlier schema-52 catalog migration ledger', () => {
   const source = schema49Project();
   source.schemaVersion = 52;
   source.catalogVersion = '0.32.0-run-impacting-traits';
   const result = migrateProjectDocument(source);
-  assert.equal(result.document.schemaVersion, 52);
-  assert.equal(result.document.catalogVersion, '0.34.0-sea-star');
+  assert.equal(result.document.schemaVersion, 53);
+  assert.equal(result.document.catalogVersion, '0.35.0-nemesis-random-events');
   assert.deepEqual(result.document.routes, source.routes);
-  assert.deepEqual(result.steps, [
-    '0.32.0-run-impacting-traits->0.32.1-run-impacting-traits',
-    '0.32.1-run-impacting-traits->0.33.0-generated-trait-pickups',
-    '0.33.0-generated-trait-pickups->0.34.0-sea-star',
-  ]);
+  assert.deepEqual(result.changes['52->53'], {
+    catalogMigrations: [
+      '0.32.0-run-impacting-traits->0.32.1-run-impacting-traits',
+      '0.32.1-run-impacting-traits->0.33.0-generated-trait-pickups',
+      '0.33.0-generated-trait-pickups->0.34.0-sea-star',
+    ],
+    generatedPickupSitesMoved: 0,
+  });
+  assert.deepEqual(result.steps, ['52->53']);
 });
 
-test('52 catalog migration advances the prior run-impacting-traits catalog metadata', () => {
+test('52 -> 53 advances the prior run-impacting-traits catalog metadata', () => {
   const source = schema49Project();
   source.schemaVersion = 52;
   source.catalogVersion = '0.32.1-run-impacting-traits';
   const result = migrateProjectDocument(source);
-  assert.equal(result.document.catalogVersion, '0.34.0-sea-star');
-  assert.deepEqual(result.steps, [
-    '0.32.1-run-impacting-traits->0.33.0-generated-trait-pickups',
-    '0.33.0-generated-trait-pickups->0.34.0-sea-star',
-  ]);
+  assert.equal(result.document.catalogVersion, '0.35.0-nemesis-random-events');
+  assert.deepEqual(result.changes['52->53'], {
+    catalogMigrations: [
+      '0.32.1-run-impacting-traits->0.33.0-generated-trait-pickups',
+      '0.33.0-generated-trait-pickups->0.34.0-sea-star',
+    ],
+    generatedPickupSitesMoved: 0,
+  });
+  assert.deepEqual(result.steps, ['52->53']);
+});
+
+test('current schema 52 -> 53 changes only schema and catalog metadata', () => {
+  const source = schema49Project();
+  source.schemaVersion = 52;
+  source.catalogVersion = '0.34.0-sea-star';
+  const result = migrateProjectDocument(source);
+  assert.equal(result.document.schemaVersion, 53);
+  assert.equal(result.document.catalogVersion, '0.35.0-nemesis-random-events');
+  assert.deepEqual(result.document.routes, source.routes);
+  assert.deepEqual(result.changes['52->53'], {
+    catalogMigrations: [],
+    generatedPickupSitesMoved: 0,
+  });
+  assert.deepEqual(result.steps, ['52->53']);
 });

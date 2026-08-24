@@ -1,7 +1,7 @@
 {
-  "schemaVersion": 52,
+  "schemaVersion": 53,
   "projectId": "surface-3",
-  "catalogVersion": "0.34.0-sea-star",
+  "catalogVersion": "0.35.0-nemesis-random-events",
   "routes": [
     {
       "routeKey": "Underworld",

@@ -49,6 +49,7 @@ export function artificerAcquisitionSite(
 export function acquisitionSiteStorageKey(site: AcquisitionSiteAddress): string {
   return site.pointKey === 'roomExit' ||
     site.pointKey.startsWith('traitGenerated:') ||
+    site.pointKey.startsWith('nemesisGenerated:') ||
     site.pointKey.startsWith('seaStarDuplicate:')
     ? site.pointKey
     : semanticAddressKey(site);
@@ -63,6 +64,8 @@ export function acquisitionSiteFromStorageKey(
   // Trait-generated sites are closed and reattested by the trait adapter/codec;
   // this parser only reconstructs the existing acquisition-site address.
   if (storageKey.startsWith('traitGenerated:'))
+    return createAcquisitionSiteAddress(occurrence, storageKey);
+  if (storageKey.startsWith('nemesisGenerated:'))
     return createAcquisitionSiteAddress(occurrence, storageKey);
   if (storageKey.startsWith('seaStarDuplicate:'))
     return createAcquisitionSiteAddress(occurrence, storageKey);

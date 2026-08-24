@@ -13,6 +13,7 @@ export {
   seaStarDuplicateSourceIsActive,
 } from './sea-star';
 export { activeRoomActionReferences } from './room-actions';
+export { authoredAcquisitionSources, authoredAcquisitionSourceAt } from './acquisition-sources';
 export {
   assembleRoomLifecycleStructure,
   assembleRoomActionDomain,
@@ -65,6 +66,7 @@ export {
   createExitDecisionAddress,
   createExitSelectionAddress,
   createEncounterPhaseAddress,
+  createNemesisRandomEventAddress,
   createGorgonPhaseAddress,
   createIncomingRewardAddress,
   createHubSlotAddress,
@@ -116,6 +118,7 @@ export {
   type ExitDecisionSourceAddress,
   type ExitSelectionAddress,
   type EncounterPhaseAddress,
+  type NemesisRandomEventAddress,
   type GorgonPhaseAddress,
   type EncounterPhaseOwner,
   type IncomingRewardAddress,
