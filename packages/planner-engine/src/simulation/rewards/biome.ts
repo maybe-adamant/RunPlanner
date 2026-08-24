@@ -1417,6 +1417,15 @@ export function evaluateBiomeRewardsAssemblyInternal(
   const layout = requireRewardLayout(catalog, snapshot);
   const rewardLookup = hubRewardLookups(catalog, snapshot);
   const rooms = rewardRooms(snapshot);
+  const authoredSeaStarDuplicateSiteKeys = new Set(
+    [...rooms.values()].flatMap((room) =>
+      room.kind === 'authored'
+        ? Object.keys(room.acquisitionSites).filter(
+            (siteKey) => parseSeaStarDuplicateSiteKey(siteKey) !== undefined,
+          )
+        : [],
+    ),
+  );
   const views = roomViews(history);
   const targets = canonicalTargets(snapshot);
   const additionalContinuations = canonicalAdditionalContinuations(snapshot);
@@ -2104,6 +2113,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
             duplicateUsesFreshObject ? [SEA_STAR_DUPLICATE_ENTRY_KEY] : [],
           ),
           seaStarDuplicateEntryKeys: new Set([SEA_STAR_DUPLICATE_ENTRY_KEY]),
+          authoredSeaStarDuplicateSiteKeys,
           historySequence,
           findingChronology: rewardFindingChronologyForRoom(
             snapshot,
@@ -2233,6 +2243,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
                 )
               : Object.freeze([onlyEntry.entryKey]),
           producerLifecycleKey: producer.producerLifecycleKey,
+          authoredSeaStarDuplicateSiteKeys,
           requiredEntryKeys,
           historySequence,
           findingChronology,
@@ -2310,6 +2321,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
                     ? Object.freeze([frontier.address.entryKey])
                     : Object.freeze([]),
                   producerLifecycleKey: producer.producerLifecycleKey,
+                  authoredSeaStarDuplicateSiteKeys,
                   requiredEntryKeys,
                   historySequence,
                   findingChronology,
@@ -2353,6 +2365,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
               )
             : Object.freeze([onlyEntry.entryKey]),
         completeAfterOrder: completeShopAfterOrder,
+        authoredSeaStarDuplicateSiteKeys,
         declaration,
         historySequence,
         findingChronology: rewardFindingChronologyForRoom(
@@ -2526,6 +2539,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
               'localRoomLifecycle',
             ),
             acquisitionSiteOwner(snapshot, entry.room),
+            authoredSeaStarDuplicateSiteKeys,
           );
           candidateBranches = settlement.branches;
         }
@@ -3794,6 +3808,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
                       entryKey: localReward.slotKey,
                       source: Object.freeze({ ...localReward, offer, instanceProvenance: 'free' }),
                       historySequence: acquisitionEvent.sequence,
+                      authoredSeaStarDuplicateSiteKeys,
                     },
                     (branchHistory) =>
                       rewardFacts(
@@ -3916,6 +3931,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
                       entryKey: candidate.slotKey,
                       source: Object.freeze({ ...candidate, instanceProvenance: 'free' }),
                       historySequence: acquisitionEvent.sequence,
+                      authoredSeaStarDuplicateSiteKeys,
                     },
                     (branchHistory) =>
                       rewardFacts(
@@ -4404,6 +4420,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
                     instanceProvenance: 'free',
                   }),
                   historySequence: acquisitionEvent.sequence,
+                  authoredSeaStarDuplicateSiteKeys,
                 },
                 (branchHistory) =>
                   rewardFacts(
@@ -4677,6 +4694,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
                     entryKey: 'picked',
                     source,
                     historySequence: acquisitionEvent.sequence,
+                    authoredSeaStarDuplicateSiteKeys,
                   },
                   (branchHistory) =>
                     rewardFacts(
@@ -4764,6 +4782,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
             ),
             historySequence: event.sequence,
             deferArtificerReplacement: true,
+            authoredSeaStarDuplicateSiteKeys,
           },
           (branchHistory) =>
             rewardFacts(catalog, room, room, declaration, view, branchHistory, enteredBiomeCount),
@@ -4813,6 +4832,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
           producerRegion,
           producerChronology,
           acquisitionSiteOwner(snapshot, room),
+          authoredSeaStarDuplicateSiteKeys,
         );
         recordAcquisitionRoleFrontiers(settlement.roleFrontiers);
         recordTraitChildSettlements(settlement.traitChildSettlements, room.origin);
@@ -5122,6 +5142,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
                 Object.freeze({ ...matchingRewards[0], instanceProvenance: 'free' }),
               ),
               historySequence: event.sequence,
+              authoredSeaStarDuplicateSiteKeys,
             },
             (branchHistory) =>
               rewardFacts(
@@ -5383,6 +5404,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
               ),
               historySequence: event.sequence,
               deferArtificerReplacement: true,
+              authoredSeaStarDuplicateSiteKeys,
             },
             (branchHistory) =>
               rewardFacts(
@@ -5458,6 +5480,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
                   event.sequence,
                   'localRoomLifecycle',
                 ),
+                authoredSeaStarDuplicateSiteKeys,
               },
               findings,
             );
