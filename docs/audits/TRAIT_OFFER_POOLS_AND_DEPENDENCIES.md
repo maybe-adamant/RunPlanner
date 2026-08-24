@@ -399,7 +399,9 @@ presentation rather than converting the underlying value to Common.
 These scaling values are outside the mutation boundary used by Proper
 Upbringing, Bridal Glow, and Aromatic Phial. Arachne, Icarus, Medea, Narcissus,
 Circe, and Echo are outside the relevant `IsGodTrait`/shop-god classification;
-Hades participates in the broader shop-style predicate but every Hades trait
+Hades participates in the broader shop-style predicate. NPC Hades options
+carry runtime `Common` and may therefore enter the sell-trait shop; direct and
+Jeweled Pom Hades grants omit runtime `Rarity` and cannot. Every Hades trait
 declares `BlockInRunRarify`. The different source exclusion mechanisms have
 the same supported planner consequence: these traits expose no authored,
 persisted, counted, mutable, or displayed boon rarity. The planner therefore
@@ -926,8 +928,9 @@ their independent Rank I/Rank II domain, with Icarus's Latest Model as the
 modeled in-run Rank II transition. Other normal-run providers are
 player-rarityless and do not receive Pom levels. Some retain internal scaling
 tables or values in source. Hades participates in the source's broader
-`IsGodTrait(..., { ForShop = true })` query, but every Hades trait declares
-`BlockInRunRarify`; Icarus uses internal Common in normal runs and
+`IsGodTrait(..., { ForShop = true })` query. NPC Hades offer instances carry
+`Common`, while direct and Jeweled Pom Hades instances omit `Rarity`; every
+Hades trait declares `BlockInRunRarify`. Icarus uses internal Common in normal runs and
 Dream-indexed scaling outside the supported route baseline. Neither source
 mechanism becomes planner rarity.
 

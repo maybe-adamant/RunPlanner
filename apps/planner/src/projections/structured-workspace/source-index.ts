@@ -20,6 +20,7 @@ import {
   type HubDecision,
   type HubDecisionAddress,
   type OccurrenceId,
+  type OccurrenceAddress,
   type ProjectDocument,
   type RoomOccurrence,
   type SemanticAddress,
@@ -105,6 +106,10 @@ export interface WorkspaceBiomeSource {
   readonly levelResolutionAssessment: (
     owner: LevelResolutionAddress,
   ) => SelectedLevelResolutionAssessment | undefined;
+  /** Exact post-encounter Pool generation assessment for one automatic Postboss room. */
+  readonly purgingPoolAssessment: (
+    owner: OccurrenceAddress,
+  ) => import('@run-planner/engine/simulation').PurgingPoolCandidateCapability | undefined;
   readonly steadyGrowthOutcomes: readonly import('@run-planner/engine/simulation').BiomeRewardSimulation['steadyGrowthOutcomes'][number][];
   readonly occurrence: (occurrenceId: OccurrenceId) => RoomOccurrence | undefined;
   /** Closed engine-owned outgoing state for one exact retained occurrence. */
@@ -631,6 +636,7 @@ function createWorkspaceBiomeSource(
   blockedOccurrenceRoom: (
     occurrence: ReturnType<typeof createOccurrenceAddress>,
   ) => CanonicalAuthoredRoom | undefined,
+  purgingPoolAssessment: WorkspaceBiomeSource['purgingPoolAssessment'],
   resourceAuthoring: RouteResourceAuthoring,
 ): WorkspaceBiomeSource {
   const biome = createBiomeAddress(routeKey, plan.biomeKey);
@@ -765,6 +771,7 @@ function createWorkspaceBiomeSource(
     isActiveTraitOffer,
     levelResolutionAssessment: (owner: LevelResolutionAddress) =>
       levelResolutionAssessments.get(semanticAddressKey(owner)),
+    purgingPoolAssessment,
     steadyGrowthOutcomes,
     layout,
     blockedOccurrenceRoom: (occurrenceId: OccurrenceId) =>
@@ -827,6 +834,7 @@ export function createWorkspaceProjectSourceIndex(
   blockedOccurrenceRoom: (
     occurrence: ReturnType<typeof createOccurrenceAddress>,
   ) => CanonicalAuthoredRoom | undefined = () => undefined,
+  purgingPoolAssessment: WorkspaceBiomeSource['purgingPoolAssessment'] = () => undefined,
 ): WorkspaceProjectSourceIndex {
   return Object.freeze({
     routes: Object.freeze(
@@ -850,6 +858,7 @@ export function createWorkspaceProjectSourceIndex(
                 derivedAcquisitionEntries,
                 isActiveTraitOffer,
                 blockedOccurrenceRoom,
+                purgingPoolAssessment,
                 resources,
               ),
             ),

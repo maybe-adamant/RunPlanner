@@ -495,6 +495,7 @@ export function assembleWorkspaceBiomeSemantics(
         : { fieldsBatchFacts: request.fieldsBatchFacts }),
       facts: requireOccurrenceAssemblyFacts(biome, occurrenceFacts, request.occurrence),
       levelResolutionAssessment: source.levelResolutionAssessment,
+      purgingPoolAssessment: source.purgingPoolAssessment,
       steadyGrowthOutcomes: source.steadyGrowthOutcomes,
       isActiveTraitOffer: source.isActiveTraitOffer,
       judgmentArcanaCapability,

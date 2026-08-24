@@ -74,12 +74,17 @@ realized set represents the outcome after any unmodeled rerolls.
 
 ## Current planner disposition
 
-The planner does not yet model Pool presence or its realized list. Its
-existing generic trait-removal consequences are the relevant semantic result:
-removing the selected trait name removes every stack and must leave normal
-history effects intact, including the previously-picked record that prevents a
-removed trait from becoming eligible again where the game uses that predicate.
-The Pool's gold grant, exact pricing, and permanent-upgrade requirements are
-intentionally sim-neutral. Shared Store rerolls remain outside the modeled
-scope. A future slice may author the realized up-to-three-name list and any
-chosen sales without modeling the random generation or reroll process itself.
+Schema 57 models a forced physical Pool on the F/G/H Postboss occurrences. An
+uninteracted Pool leaves its inventory runtime-random and contributes no
+candidate requirement, action, or simulation effect. Interaction activates an
+exact final realized list of up to three distinct eligible names; this list is
+the outcome after any unmodeled rerolls rather than a reroll request.
+
+Each selected sale is an ordinary ranked cleanup action. Evaluation validates
+the displayed list against the shop-aware God-trait predicate at Pool entry and
+requires a sold entry to remain equipped at its exact action prefix. A sale
+uses the shared trait-removal fold, removes every current stack of the selected
+name, and retains previously-picked history so ordinary
+`BlockOfferIfPreviouslyPicked` behavior remains intact. The Pool's gold grant,
+exact pricing, permanent-upgrade requirements, and shared Store rerolls remain
+sim-neutral.

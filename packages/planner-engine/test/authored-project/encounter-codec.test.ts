@@ -204,7 +204,7 @@ describe('schema-54 occurrence-owned encounter persistence', () => {
     const decoded = decodeProjectDocument(encoded(project), catalog);
 
     expect(decoded).toEqual(project);
-    expect(decoded.schemaVersion).toBe(56);
+    expect(decoded.schemaVersion).toBe(57);
   });
 
   it.each(['infernalContractReward', 'travelDealRefill', 'echoDoubleShopReward'] as const)(
@@ -331,7 +331,7 @@ describe('schema-54 occurrence-owned encounter persistence', () => {
 
     const decoded = decodeProjectDocument(encoded(project), catalog);
     expect(decoded).toEqual(project);
-    expect(encoded(decoded)).toMatchObject({ schemaVersion: 56 });
+    expect(encoded(decoded)).toMatchObject({ schemaVersion: 57 });
   });
 
   it('round-trips one atomically replaced exact All Together map and legal null', () => {

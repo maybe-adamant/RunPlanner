@@ -59,6 +59,7 @@ export interface RawTraitGiverDeclaration {
   readonly key: string;
   readonly label: string;
   readonly providerKind: 'olympian' | 'hermes' | 'hammer' | 'npc' | 'spell' | 'chaos';
+  readonly shopAwareGodTrait?: boolean;
   readonly traitKeys: readonly string[];
   readonly priorityTraitKeys: readonly string[];
   readonly rarityPolicy:

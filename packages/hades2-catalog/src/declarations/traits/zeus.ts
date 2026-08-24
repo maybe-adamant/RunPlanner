@@ -324,6 +324,7 @@ export const zeusGiver = {
   key: 'Zeus',
   label: 'Zeus',
   providerKind: 'olympian',
+  shopAwareGodTrait: true,
   denialParticipates: true,
   priorityTraitKeys: [
     'ZeusWeaponBoon',

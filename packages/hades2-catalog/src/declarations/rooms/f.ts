@@ -1140,6 +1140,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     label: 'Postboss',
     hasKeepsakeRack: true,
     hasRequiredFountain: true,
+    purgingPool: { slotKeys: ['left', 'middle', 'right'] },
     roomSetKey: 'F',
     advancesExperimentalHammerUses: true,
     kind: 'PostBoss',

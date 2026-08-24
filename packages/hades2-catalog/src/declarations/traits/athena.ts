@@ -125,6 +125,7 @@ export const athenaGiver = {
   key: 'Athena',
   label: 'Athena',
   providerKind: 'npc',
+  shopAwareGodTrait: true,
   priorityTraitKeys: [],
   traitKeys: [
     'InvulnerabilityDashBoon',

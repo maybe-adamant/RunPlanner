@@ -1,7 +1,7 @@
 {
-  "schemaVersion": 56,
+  "schemaVersion": 57,
   "projectId": "surface-4",
-  "catalogVersion": "0.38.0-selected-resource-successes",
+  "catalogVersion": "0.39.0-purging-pool",
   "routes": [
     {
       "routeKey": "Underworld",

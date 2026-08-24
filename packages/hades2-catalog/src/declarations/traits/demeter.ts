@@ -469,6 +469,7 @@ export const demeterGiver = {
   key: 'Demeter',
   label: 'Demeter',
   providerKind: 'olympian',
+  shopAwareGodTrait: true,
   denialParticipates: true,
   priorityTraitKeys: [
     'DemeterWeaponBoon',

@@ -10,6 +10,7 @@ import {
   type KeepsakeEquipResultAddress,
   type SteadyGrowthOutcomeAddress,
   type AcquisitionRoleAddress,
+  type OccurrenceAddress,
 } from '../authored-project/addresses';
 import type { Catalog, TraitOrdinaryBoonSlot } from '../catalog-schema';
 import type {
@@ -307,6 +308,50 @@ export interface BiomeCandidateArtifacts {
   readonly acquisitionConversions: AcquisitionConversionCandidateArtifacts;
   readonly derivedAcquisitionEntries: DerivedAcquisitionEntryCandidateArtifacts;
   readonly steadyGrowth: SteadyGrowthCandidateArtifacts;
+  readonly purgingPools: PurgingPoolCandidateArtifacts;
+}
+
+/** Exact room-entry Pool generation assessment at one automatic host. */
+export interface PurgingPoolCandidateCapability {
+  /** One exact assessment per surviving simulation branch. */
+  readonly assessments: readonly import('./purging-pool').PurgingPoolAssessment[];
+  /** Ordered candidates legal in every surviving branch. */
+  readonly candidateTraitKeysBySlot: Readonly<
+    Record<import('./purging-pool').PurgingPoolSlotKey, readonly string[]>
+  >;
+}
+export interface PurgingPoolCandidateArtifacts {
+  readonly at: (occurrence: OccurrenceAddress) => PurgingPoolCandidateCapability | undefined;
+}
+export function createPurgingPoolCandidateArtifacts(
+  contexts: ReadonlyMap<string, readonly import('./purging-pool').PurgingPoolAssessment[]>,
+): PurgingPoolCandidateArtifacts {
+  const privateContexts = new Map(contexts);
+  return Object.freeze({
+    at: (occurrence: OccurrenceAddress) => {
+      const assessments = privateContexts.get(semanticAddressKey(occurrence));
+      if (assessments === undefined || assessments.length === 0) return undefined;
+      const first = assessments[0]!;
+      const candidateTraitKeysBySlot = Object.freeze(
+        Object.fromEntries(
+          (['left', 'middle', 'right'] as const).map((slotKey) => [
+            slotKey,
+            Object.freeze(
+              first.candidateTraitKeysBySlot[slotKey].filter((traitKey) =>
+                assessments.every((assessment) =>
+                  assessment.candidateTraitKeysBySlot[slotKey].includes(traitKey),
+                ),
+              ),
+            ),
+          ]),
+        ) as Record<import('./purging-pool').PurgingPoolSlotKey, readonly string[]>,
+      );
+      return Object.freeze({ assessments, candidateTraitKeysBySlot });
+    },
+  });
+}
+function createEmptyPurgingPoolCandidateArtifacts(): PurgingPoolCandidateArtifacts {
+  return Object.freeze({ at: () => undefined });
 }
 
 export interface DerivedAcquisitionEntryCandidateCapability {
@@ -619,6 +664,7 @@ export function createBiomeCandidateArtifacts(
   acquisitionConversions: AcquisitionConversionCandidateArtifacts = createEmptyAcquisitionConversionCandidateArtifacts(),
   derivedAcquisitionEntries: DerivedAcquisitionEntryCandidateArtifacts = createEmptyDerivedAcquisitionEntryCandidateArtifacts(),
   steadyGrowth: SteadyGrowthCandidateArtifacts = createEmptySteadyGrowthCandidateArtifacts(),
+  purgingPools: PurgingPoolCandidateArtifacts = createEmptyPurgingPoolCandidateArtifacts(),
 ): BiomeCandidateArtifacts {
   return Object.freeze({
     origin,
@@ -634,6 +680,7 @@ export function createBiomeCandidateArtifacts(
     acquisitionConversions,
     derivedAcquisitionEntries,
     steadyGrowth,
+    purgingPools,
   });
 }
 

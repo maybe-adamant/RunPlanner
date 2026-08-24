@@ -132,6 +132,17 @@ export function activeRoomActionReferences(
       }
     }
   }
+  if (occurrence.purgingPool?.interacted === true) {
+    for (const [slotKey, traitKey] of Object.entries(occurrence.purgingPool.traitKeyBySlot)) {
+      if (traitKey !== null)
+        references.push(
+          Object.freeze({
+            kind: 'sellPurgingPoolTrait',
+            slotKey: slotKey as 'left' | 'middle' | 'right',
+          }),
+        );
+    }
+  }
   for (const phase of envelopeSlots) {
     if (activeEncounterSlots !== undefined && !activeEncounterSlots.has(phase.key)) continue;
     const key = selectedEncounterDefinitionKey(

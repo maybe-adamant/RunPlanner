@@ -302,6 +302,14 @@ function baseContribution(
         [],
         createShopOfferAddress(biome, occurrence.occurrenceId, reference.offerKey),
       );
+    case 'sellPurgingPoolTrait':
+      return contribution(
+        biome,
+        occurrence,
+        reference,
+        'optional',
+        frozen({ kind: 'postOutgoing' }),
+      );
     case 'interactEncounter':
     case 'interactGorgon': {
       const attachment = phaseRewardAttachment(

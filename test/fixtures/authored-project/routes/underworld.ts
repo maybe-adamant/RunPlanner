@@ -8,6 +8,8 @@ import {
   createLevelResolutionAddress,
   createOccurrenceAddress,
   createOccurrenceId,
+  createRoomActionAddress,
+  roomActionKey,
   createRouteStartKeepsakeSelectionAddress,
   createShopOfferAddress,
   type BiomeAddress,
@@ -119,6 +121,36 @@ export function createCompleteFGProject(options: GoldenGProjectOptions = {}): Pr
     }
   }
   return authorLegalTraitOffers(project);
+}
+
+/** Short F/G witness: the F Postboss Pool sells one of its realized traits. */
+export function createUnderworldFPoolCheckpoint(): ProjectDocument {
+  let project = createCompleteFGProject();
+  const occurrenceId = createOccurrenceId('completion:F:postboss');
+  project = applyProjectCommand(project, catalog, {
+    kind: 'SetPurgingPoolInteraction',
+    occurrence: createOccurrenceAddress(goldenFBiome, occurrenceId),
+    interacted: true,
+  });
+  const pool = project.routes
+    .find((route) => route.routeKey === 'Underworld')
+    ?.biomes.find((biome) => biome.biomeKey === 'F')
+    ?.completionOccurrences.find(
+      (occurrence) => occurrence.occurrenceId === occurrenceId,
+    )?.purgingPool;
+  const traitKey = pool?.traitKeyBySlot.left;
+  if (traitKey === null || traitKey === undefined)
+    throw new Error('complete F Pool fixture requires a resolved left slot');
+  const reference = Object.freeze({
+    kind: 'sellPurgingPoolTrait' as const,
+    slotKey: 'left' as const,
+  });
+  return applyProjectCommand(project, catalog, {
+    kind: 'InsertRoomAction',
+    action: createRoomActionAddress(goldenFBiome, occurrenceId, roomActionKey(reference)),
+    reference,
+    index: 1,
+  });
 }
 
 export function createGoldenFGHProject(): ProjectDocument {

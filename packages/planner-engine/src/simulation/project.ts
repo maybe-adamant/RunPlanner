@@ -386,6 +386,16 @@ export function traitOfferCandidateForProjectEvaluationAssembly(
     ?.traitOffers.at(address);
 }
 
+/** Exact Pool generation capability retained when progressive assessment clamps its reward view. */
+export function purgingPoolCandidateForProjectEvaluationAssembly(
+  assembly: ProjectEvaluationAssembly,
+  occurrence: import('../authored-project/addresses').OccurrenceAddress,
+) {
+  return candidateArtifactsForProjectEvaluationAssembly(assembly)
+    .biomeAt(createBiomeAddress(occurrence.routeKey, occurrence.biomeKey))
+    ?.purgingPools.at(occurrence);
+}
+
 /**
  * Supported exact-assembly query for one encounter phase. Application
  * composition may ask whether a particular declared phase has an evaluated
@@ -1017,6 +1027,7 @@ function evaluateBiomeAssembly(
         rewards.acquisitionConversionArtifacts,
         rewards.derivedAcquisitionEntryArtifacts,
         rewards.steadyGrowthArtifacts,
+        rewards.purgingPoolArtifacts,
       ),
     });
   }
@@ -1045,6 +1056,7 @@ function evaluateBiomeAssembly(
         rewards.acquisitionConversionArtifacts,
         rewards.derivedAcquisitionEntryArtifacts,
         rewards.steadyGrowthArtifacts,
+        rewards.purgingPoolArtifacts,
       ),
       history: Object.freeze({
         routeKey: history.routeKey,

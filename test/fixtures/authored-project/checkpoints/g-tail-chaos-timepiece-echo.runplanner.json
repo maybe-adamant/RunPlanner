@@ -1,7 +1,7 @@
 {
-  "schemaVersion": 56,
+  "schemaVersion": 57,
   "projectId": "golden-fg",
-  "catalogVersion": "0.38.0-selected-resource-successes",
+  "catalogVersion": "0.39.0-purging-pool",
   "routes": [
     {
       "routeKey": "Underworld",
@@ -1408,6 +1408,14 @@
                   }
                 ]
               },
+              "purgingPool": {
+                "interacted": false,
+                "traitKeyBySlot": {
+                  "left": null,
+                  "middle": null,
+                  "right": null
+                }
+              },
               "additionalExits": [],
               "keepsakeRack": {
                 "disposition": {
@@ -2503,6 +2511,14 @@
                     "kind": "useFountain"
                   }
                 ]
+              },
+              "purgingPool": {
+                "interacted": false,
+                "traitKeyBySlot": {
+                  "left": null,
+                  "middle": null,
+                  "right": null
+                }
               },
               "additionalExits": [],
               "keepsakeRack": {
@@ -3643,6 +3659,14 @@
                     "kind": "useFountain"
                   }
                 ]
+              },
+              "purgingPool": {
+                "interacted": false,
+                "traitKeyBySlot": {
+                  "left": null,
+                  "middle": null,
+                  "right": null
+                }
               },
               "additionalExits": [],
               "keepsakeRack": {

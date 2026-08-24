@@ -254,6 +254,7 @@ export const hermesGiver = {
   key: 'Hermes',
   label: 'Hermes',
   providerKind: 'hermes',
+  shopAwareGodTrait: true,
   denialParticipates: true,
   priorityTraitKeys: [],
   traitKeys: [

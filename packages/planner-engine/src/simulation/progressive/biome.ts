@@ -1459,6 +1459,57 @@ function locateFinding(
         : {
             historySequence: historyChronology.sequence,
             historyBoundary: historyChronology.boundary,
+      }),
+    });
+  }
+  // Automatic Boss/Postboss occurrences are real lifecycle owners but are not
+  // ordinary topology decisions. Occurrence-local feature findings belong to
+  // the completed biome's final automatic-room region.
+  const automaticOccurrence = finding.origin.kind === 'occurrence' ? finding.origin : undefined;
+  if (
+    automaticOccurrence !== undefined &&
+    automaticOccurrence.routeKey === prefix.routeKey &&
+    automaticOccurrence.biomeKey === prefix.biomeKey &&
+    (prefix.automaticRooms ?? []).some(
+      (room) => room.occurrenceId === automaticOccurrence.occurrenceId,
+    )
+  ) {
+    return Object.freeze({
+      finding,
+      decisionIndex: prefix.decisions.length - 1,
+      regionKey: atomicRegion,
+      ...(aggregate === undefined ? {} : { aggregate }),
+      ...(historyChronology === undefined
+        ? {}
+        : {
+            historySequence: historyChronology.sequence,
+            historyBoundary: historyChronology.boundary,
+          }),
+    });
+  }
+  // Retained Pool sales are occurrence-owned Postboss actions. They remain
+  // repairable at the completed biome's final automatic-room region even when
+  // their slot was cleared and therefore no longer has an active contribution.
+  const automaticRoomAction =
+    finding.origin.kind === 'roomAction' ? finding.origin : undefined;
+  if (
+    automaticRoomAction !== undefined &&
+    automaticRoomAction.routeKey === prefix.routeKey &&
+    automaticRoomAction.biomeKey === prefix.biomeKey &&
+    (prefix.automaticRooms ?? []).some(
+      (room) => room.occurrenceId === automaticRoomAction.occurrenceId,
+    )
+  ) {
+    return Object.freeze({
+      finding,
+      decisionIndex: prefix.decisions.length - 1,
+      regionKey: atomicRegion,
+      ...(aggregate === undefined ? {} : { aggregate }),
+      ...(historyChronology === undefined
+        ? {}
+        : {
+            historySequence: historyChronology.sequence,
+            historyBoundary: historyChronology.boundary,
           }),
     });
   }
@@ -2045,6 +2096,7 @@ export function evaluateProgressiveBiomeAssembly(
       evaluated.candidateArtifacts.acquisitionConversions,
       evaluated.candidateArtifacts.derivedAcquisitionEntries,
       evaluated.candidateArtifacts.steadyGrowth,
+      evaluated.candidateArtifacts.purgingPools,
     ),
   });
 }
@@ -2186,6 +2238,7 @@ function clampSelectedProducts(
       retainedInteractions.acquisitionConversions,
       retainedInteractions.derivedAcquisitionEntries,
       retainedInteractions.steadyGrowth,
+      selectedProducts.candidateArtifacts.purgingPools,
     ),
   });
 }

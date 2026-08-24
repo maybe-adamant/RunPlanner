@@ -962,6 +962,7 @@ export const hRooms = [
     label: 'Postboss',
     hasKeepsakeRack: true,
     hasRequiredFountain: true,
+    purgingPool: { slotKeys: ['left', 'middle', 'right'] },
     roomSetKey: 'H',
     advancesExperimentalHammerUses: true,
     kind: 'PostBoss',

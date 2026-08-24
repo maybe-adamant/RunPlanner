@@ -2,6 +2,11 @@ import type { Catalog, BiomeLayout, RoomDeclaration } from '../../catalog-schema
 import { evaluateRequirement } from '../../requirements';
 import { fieldsOptionalRewardCountSupport } from '../fields-optional-count';
 import {
+  assessPurgingPool,
+  isPurgingPoolEligibleTrait,
+  type PurgingPoolAssessment,
+} from '../purging-pool';
+import {
   createEncounterPhaseAddress,
   createNemesisRandomEventAddress,
   createGorgonPhaseAddress,
@@ -13,6 +18,7 @@ import {
   createRoomRunStateCheckpointAddress,
   createSteadyGrowthOutcomeAddress,
   createAcquisitionRoleAddress,
+  createRoomActionAddress,
   semanticAddressKey,
   type BatchRewardStoreAddress,
   type AcquisitionSiteOwnerAddress,
@@ -107,6 +113,7 @@ import {
   createAcquisitionConversionCandidateArtifacts,
   createDerivedAcquisitionEntryCandidateArtifacts,
   createSteadyGrowthCandidateArtifacts,
+  createPurgingPoolCandidateArtifacts,
   attestDerivedAcquisitionEntryCandidateCapability,
 } from '../candidate-artifacts';
 import type {
@@ -1183,6 +1190,7 @@ interface BiomeRewardEvaluationAssembly {
   readonly acquisitionConversionArtifacts: import('../candidate-artifacts').AcquisitionConversionCandidateArtifacts;
   readonly derivedAcquisitionEntryArtifacts: import('../candidate-artifacts').DerivedAcquisitionEntryCandidateArtifacts;
   readonly steadyGrowthArtifacts: import('../candidate-artifacts').SteadyGrowthCandidateArtifacts;
+  readonly purgingPoolArtifacts: import('../candidate-artifacts').PurgingPoolCandidateArtifacts;
   readonly traitChildSettlementCheckpoints: TraitChildSettlementCheckpoints;
   readonly findingRegions: readonly FindingRegionEntry[];
 }
@@ -1756,6 +1764,13 @@ export function evaluateBiomeRewardsAssemblyInternal(
     }
   >();
   const findings = new Map<string, FindingRegionEntry>();
+  const purgingPoolAssessments = new Map<
+    string,
+    {
+      readonly origin: import('../../authored-project/addresses').OccurrenceAddress;
+      readonly assessments: readonly PurgingPoolAssessment[];
+    }
+  >();
   // H's event is a passive room feature, not a replacement for any cage or
   // optional leaf.  Keep an over-cap authored count materialized for repair,
   // but make the one reserved physical optional position an evaluated error.
@@ -1798,6 +1813,39 @@ export function evaluateBiomeRewardsAssemblyInternal(
   >();
   const steadyGrowthCandidateContexts = new Map<string, ReachedSteadyGrowthThreshold[]>();
   const steadyGrowthOutcomeAddresses = new Map<string, SteadyGrowthOutcomeAddress>();
+  function recordPurgingPoolAssessment(room: CanonicalAuthoredRoom, sequence: number): void {
+    if (
+      room.purgingPool?.interacted !== true ||
+      purgingPoolAssessments.has(semanticAddressKey(room.origin))
+    )
+      return;
+    const assessments = Object.freeze(
+      branches.map((branch) =>
+        assessPurgingPool(
+          catalog,
+          room.purgingPool!,
+          (branch.traitHistory ?? createTraitHistoryState()).equippedTraits,
+        ),
+      ),
+    );
+    purgingPoolAssessments.set(
+      semanticAddressKey(room.origin),
+      Object.freeze({ origin: room.origin, assessments }),
+    );
+    for (const assessment of assessments) {
+      for (const finding of assessment.findings) {
+        addRewardFinding(
+          findings,
+          rewardFinding(finding.code, room.origin, {
+            ...finding.evidence,
+            ...(finding.slotKey === undefined ? {} : { slotKey: finding.slotKey }),
+          }),
+          ownerRegion(room.origin),
+          rewardFindingChronologyForRoom(snapshot, room.origin, sequence, 'localRoomLifecycle'),
+        );
+      }
+    }
+  }
   function recordTraitChildSettlements(
     checkpoints: readonly ReachedTraitChildCheckpoint[] | undefined,
     occurrenceOwner: SemanticAddress,
@@ -2989,6 +3037,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
       case 'roomEntered': {
         branches = advanceRewardBranches(branches, event.sequence);
         const room = rooms.get(semanticAddressKey(event.origin));
+        if (room?.kind === 'authored') recordPurgingPoolAssessment(room, event.sequence);
         if (room?.kind === 'authored' && room.lifecycleProfileKey !== 'ShipCombatRoom') {
           const view = views.get(semanticAddressKey(event.origin))?.entry;
           if (view === undefined) {
@@ -3334,6 +3383,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
           branches = advanceRewardBranches(branches, event.sequence);
           break;
         }
+        if (room.kind === 'authored') recordPurgingPoolAssessment(room, event.sequence);
         if (room.gameName !== event.gameName) {
           throw new BiomeRewardSimulationContractError(
             `${semanticAddressKey(event.origin)} is ${room.gameName} in the snapshot but ${event.gameName} in history`,
@@ -5693,6 +5743,89 @@ export function evaluateBiomeRewardsAssemblyInternal(
         ) {
           throw new BiomeRewardSimulationContractError('shop purchases have no authored room');
         }
+        const purgingPoolSlotKey = event.point.startsWith('purgingPool:')
+          ? event.point.slice('purgingPool:'.length)
+          : undefined;
+        if (
+          purgingPoolSlotKey === 'left' ||
+          purgingPoolSlotKey === 'middle' ||
+          purgingPoolSlotKey === 'right'
+        ) {
+          const traitKey = room.purgingPool?.traitKeyBySlot[purgingPoolSlotKey];
+          const row = room.roomActionRoster.rows.find(
+            (candidate) =>
+              candidate.rank !== null &&
+              candidate.reference.kind === 'sellPurgingPoolTrait' &&
+              candidate.reference.slotKey === purgingPoolSlotKey,
+          );
+          if (row === undefined) {
+            throw new BiomeRewardSimulationContractError(
+              `${room.gameName} has no ranked Pool sale row for ${purgingPoolSlotKey}`,
+            );
+          }
+          const owner = createRoomActionAddress(
+            createBiomeAddress(room.origin.routeKey, room.origin.biomeKey),
+            room.occurrenceId,
+            row.key,
+          );
+          const poolGenerationComplete =
+            purgingPoolAssessments
+              .get(semanticAddressKey(room.origin))
+              ?.assessments.every((assessment) => assessment.complete) === true;
+          const available =
+            poolGenerationComplete &&
+            traitKey !== null &&
+            traitKey !== undefined &&
+            branches.every((branch) => {
+              const equipped = (branch.traitHistory ?? createTraitHistoryState()).equippedTraits[
+                traitKey
+              ];
+              return equipped !== undefined && isPurgingPoolEligibleTrait(catalog, equipped);
+            });
+          if (!available) {
+            addRewardFinding(
+              findings,
+              rewardFinding('purgingPoolSaleUnavailable', owner, {
+                slotKey: purgingPoolSlotKey,
+                ...(traitKey === null || traitKey === undefined ? {} : { traitKey }),
+              }),
+              // A stale Pool action has no active roster contribution, so its
+              // enclosing occurrence remains the progressive atomic region;
+              // the finding origin itself stays the exact retained action.
+              ownerRegion(room.origin),
+              rewardFindingChronologyForRoom(
+                snapshot,
+                room.origin,
+                event.sequence,
+                'localRoomLifecycle',
+              ),
+            );
+            break;
+          }
+          branches = Object.freeze(
+            branches.map((branch) => {
+              const before = branch.traitHistory ?? createTraitHistoryState();
+              const traitHistory = foldTraitHistoryEvents(catalog, [
+                ...before.events,
+                Object.freeze({
+                  kind: 'traitRemoval' as const,
+                  owner,
+                  acquisitionRole: 'purgingPoolSale',
+                  sequence: event.sequence,
+                  acquisitionPoint: event.point,
+                  traitKey,
+                  match: 'currentTraitKey' as const,
+                }),
+              ]);
+              return Object.freeze({
+                ...branch,
+                history: attachTraitHistory(branch.history, traitHistory),
+                traitHistory,
+              });
+            }),
+          );
+          break;
+        }
         const roomActionLocalParts = event.point.startsWith('localReward:')
           ? event.point.slice('localReward:'.length).split(':')
           : undefined;
@@ -5995,6 +6128,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
     rewardLookups: rewardLookup.public,
     runStateSnapshots: runStatePublication.snapshots,
     runStateAvailability: runStatePublication.availability,
+    purgingPoolAssessments: Object.freeze([...purgingPoolAssessments.values()]),
     selectedTraitOffers: traitProducts.selectedTraitOffers,
     selectedLevelResolutions: traitProducts.selectedLevelResolutions,
     runtimeOfferFallbacks: Object.freeze([
@@ -6062,6 +6196,14 @@ export function evaluateBiomeRewardsAssemblyInternal(
     steadyGrowthArtifacts: createSteadyGrowthCandidateArtifacts(
       catalog,
       steadyGrowthCandidateContexts,
+    ),
+    purgingPoolArtifacts: createPurgingPoolCandidateArtifacts(
+      new Map(
+        [...purgingPoolAssessments.values()].map(({ origin, assessments }) => [
+          semanticAddressKey(origin),
+          assessments,
+        ]),
+      ),
     ),
     traitChildSettlementCheckpoints,
     findingRegions: Object.freeze(immutableFindingRegions),

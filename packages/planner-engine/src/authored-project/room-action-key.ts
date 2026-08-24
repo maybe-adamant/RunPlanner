@@ -16,6 +16,8 @@ export function roomActionKey(reference: RoomActionReference): string {
       return JSON.stringify([reference.kind, reference.wheelKey]);
     case 'interactShopOffer':
       return JSON.stringify([reference.kind, reference.offerKey]);
+    case 'sellPurgingPoolTrait':
+      return JSON.stringify([reference.kind, reference.slotKey]);
     case 'interactAcquisitionEntry':
       return JSON.stringify([reference.kind, reference.siteKey, reference.entryKey]);
     case 'useFountain':

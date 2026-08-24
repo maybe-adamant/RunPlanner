@@ -53,23 +53,26 @@ I participating in a separate pending-delivery boundary.
 
 ## Room chronology
 
-An eligible Shrine is installed during room setup and remains locked while
-combat is active. It becomes usable through `DoUnlockRoomExits`, after the
-room has reached its outgoing-generation boundary. This matters for
-multi-encounter rooms such as O: the Shrine is a post-room-combat interaction,
-not a between-encounter purchase surface.
+`RunShopGeneration` materializes an eligible Shrine's `SurfaceShop` inventory
+into `CurrentRoom.Store.StoreOptions` during the transition into the room. The
+physical Shrine is then installed during room setup and remains locked while
+combat is active. It becomes usable through `DoUnlockRoomExits`, after the room
+has reached its outgoing-generation boundary. This matters for multi-encounter
+rooms such as O: the Shrine is a post-room-combat interaction, not a
+between-encounter purchase surface.
 
 ```text
-enter room and determine Shrine presence
+enter room with the Shrine inventory already generated
   -> finish the room's required combat lifecycle
-  -> generate and reveal outgoing exits
+  -> generate and reveal outgoing exits from that visible inventory state
   -> unlock the Shrine
   -> purchase, and optionally rush, Shrine offers
   -> enter the selected next room
 ```
 
 Shrine purchases cannot alter outgoing doors already generated in the host
-room.
+room. The inventory itself is not neutral, however: `RequiredNotInStore` reads
+the same `CurrentRoom.Store.StoreOptions` before those purchases occur.
 
 ## Inventory
 
@@ -104,6 +107,16 @@ The second group is:
 - `MaxManaDrop`;
 - `BlindBoxLoot`; and
 - `TalentDrop`.
+
+Three second-group names participate directly in ordinary outgoing reward
+requirements. `RequiredNotInStore` rejects Hermes while
+`ShopHermesUpgrade` is visible, Spell while `SpellDrop` is visible, and Talent
+while `TalentDrop` is visible. The live Hammer requirement checks
+`WeaponUpgradeDrop`, but that option exists only in the commented-out Shrine
+group and therefore cannot be produced by the installed `SurfaceShop` pool.
+These exclusions observe an unpurchased Shrine screen because the complete
+inventory predates outgoing generation. They are separate from reward-bag
+depletion and from the later pending-delivery state.
 
 The Hammer group present in a block comment is not live inventory. Individual
 entries retain their own source requirements. In particular, SpellDrop and
@@ -229,7 +242,10 @@ such as Hermes biome/history limits, Path of Stars legality, or a missing Death
 Defiance slot. Those requirements are updated by actual acquisitions and run
 state, not by the pending Shrine wrapper. Likewise, without-replacement names
 inside one visible Shrine inventory and the rush-refill exclusion list are
-local menu-generation rules rather than run-wide pending reservations.
+local menu-generation rules rather than run-wide pending reservations. This
+does not make the initial inventory outgoing-neutral: its raw names still
+participate in the host room's earlier `RequiredNotInStore` checks as described
+above.
 
 ## Forced completion boundary
 

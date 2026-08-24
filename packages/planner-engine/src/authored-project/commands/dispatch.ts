@@ -212,6 +212,8 @@ function applyUnchecked(
     case 'ReplaceRewardWheelOffer':
     case 'ReplaceRewardWheelPicked':
     case 'ReplaceShopOffer':
+    case 'SetPurgingPoolInteraction':
+    case 'ReplacePurgingPoolSlot':
       return applyOccurrenceCommand(
         document,
         catalog,

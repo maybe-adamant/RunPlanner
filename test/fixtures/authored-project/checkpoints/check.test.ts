@@ -14,6 +14,7 @@ import { routeResourceAuthoring, simulateProject } from '@run-planner/engine/sim
 import { checkpointManifest, checkpointSpellDropIntents } from './manifest';
 import { checkpointRegistry, loadCheckpoint } from './registry';
 import { nFixedOccurrenceIds, nOccurrenceIds } from '../routes/surface';
+import { createUnderworldFPoolCheckpoint } from '../routes/underworld';
 
 const checkpointDirectory = resolve(process.cwd(), 'test/fixtures/authored-project/checkpoints');
 
@@ -104,7 +105,7 @@ describe('authored-project checkpoint integrity', () => {
     const chaosRoom = occurrences?.find(
       (occurrence) => occurrence.occurrenceId === 'fixture-chaos-room',
     );
-    expect(checkpointManifest).toHaveLength(25);
+    expect(checkpointManifest).toHaveLength(26);
     expect(chaosRoom?.gameName).toMatch(/^Chaos_/);
     expect(chaosRoom?.state).toMatchObject({
       kind: 'fixed',
@@ -114,6 +115,33 @@ describe('authored-project checkpoint integrity', () => {
       },
     });
     expect(loadCheckpoint('g-tail-chaos-timepiece-echo')).toBeDefined();
+  });
+
+  it('keeps the F Pool checkpoint as a stacked sale with retained prior-pick exclusion', () => {
+    const saved = loadCheckpoint('underworld-f-pool');
+    expect(encodeProjectDocument(saved)).toBe(
+      encodeProjectDocument(createUnderworldFPoolCheckpoint()),
+    );
+
+    const evaluation = simulateProject(catalog, saved);
+    const f = evaluation.routes
+      .find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find((biome) => biome.biomeKey === 'F');
+    if (f?.authoring !== 'complete') throw new Error('Pool checkpoint did not complete F');
+    const poolSnapshot = (checkpoint: 'roomEntered' | 'beforeRoomExit') =>
+      f.rewards.runStateSnapshots.find(
+        (snapshot) =>
+          snapshot.owner.kind === 'roomRunStateCheckpoint' &&
+          snapshot.owner.occurrenceId === 'completion:F:postboss' &&
+          snapshot.owner.checkpoint.kind === checkpoint,
+      );
+    expect(poolSnapshot('roomEntered')?.traits.equippedTraits.ApolloWeaponBoon?.level).toBe(2);
+    expect(poolSnapshot('beforeRoomExit')?.traits.equippedTraits.ApolloWeaponBoon).toBeUndefined();
+    expect(
+      f.rewards.branches.every((branch) =>
+        branch.traitHistory?.previouslyPickedTraitKeys.includes('ApolloWeaponBoon'),
+      ),
+    ).toBe(true);
   });
 
   it('keeps the selected N resource-success checkpoint legal, including its side-room Spirit host', () => {

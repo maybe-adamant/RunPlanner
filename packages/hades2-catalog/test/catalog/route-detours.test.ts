@@ -137,7 +137,7 @@ describe('route detour catalog declarations', () => {
   it('keeps detour room-set identity separate from the supported route layouts', () => {
     const catalog = createCatalog(declarations);
 
-    expect(catalog.version).toBe('0.38.0-selected-resource-successes');
+    expect(catalog.version).toBe('0.39.0-purging-pool');
     expect(catalog.biomes.values.map((biome) => biome.key)).not.toContain('Anomaly');
     expect(catalog.biomes.values.map((biome) => biome.key)).not.toContain('C');
     expect(catalog.biomeLayouts.values.map((layout) => layout.biomeKey)).not.toContain('Anomaly');
@@ -328,6 +328,28 @@ describe('route detour catalog declarations', () => {
       new CatalogContractError(
         `exitTypes[${autoExitIndex}].behavior.rewardPreview`,
         'automatic host continuations must hide reward preview',
+      ),
+    );
+  });
+
+  it.each([
+    ['missing', ['left', 'middle']],
+    ['reordered', ['left', 'right', 'middle']],
+    ['duplicate', ['left', 'middle', 'middle']],
+    ['extra', ['left', 'middle', 'right', 'extra']],
+  ] as const)('rejects %s Purging Pool slot keys', (_case, slotKeys) => {
+    const raw = input();
+    const index = roomIndex(raw, 'F_PostBoss01');
+    (
+      raw.rooms[index] as unknown as {
+        purgingPool: { slotKeys: readonly string[] };
+      }
+    ).purgingPool.slotKeys = slotKeys;
+
+    expect(() => createCatalog(raw)).toThrow(
+      new CatalogContractError(
+        `rooms[${index}].purgingPool.slotKeys`,
+        'must be left, middle, right',
       ),
     );
   });

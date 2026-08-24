@@ -77,8 +77,9 @@ enter room and materialize available inventory
 
 `RunShopGeneration` runs for the next room during the transition into it. It
 can materialize a structural World Shop, `RoomShop`, or `SurfaceShop` inventory
-before the new map loads. Room setup separately installs eligible Well or
-Shrine obstacles into a physical `ChallengeSwitchBase` slot.
+into the same `CurrentRoom.Store.StoreOptions` field before the new map loads.
+Room setup separately installs eligible Well or Shrine obstacles into a
+physical `ChallengeSwitchBase` slot.
 
 For combat-bearing rooms, the Well and Shrine remain locked during the
 encounter. `DoUnlockRoomExits` creates exit rooms and reward previews before it
@@ -87,10 +88,21 @@ interaction after the current exits exist and before entering one.
 
 Consequently:
 
-1. a post-encounter purchase cannot retroactively change the doors or rewards
+1. `RequiredNotInStore` checks used by outgoing reward generation observe the
+   complete pre-purchase inventory;
+2. a post-encounter purchase cannot retroactively change the doors or rewards
    already generated in that room; and
-2. its immediate or retained result can affect later lifecycle work beginning
+3. its immediate or retained result can affect later lifecycle work beginning
    with the selected next room.
+
+The installed `RequiredNotInStore` call sites check exactly
+`WeaponUpgradeDrop`, `ShopHermesUpgrade`, `SpellDrop`, and `TalentDrop`.
+Structural World Shops can expose those names, and the live Surface Shop can
+expose the latter three. The live Room Shop pool exposes none of the four raw
+names; nested Twist results are purchase results rather than initial
+`StoreOptions`. Thus a random uninteracted Well inventory is neutral to the
+currently modeled outgoing exclusions, while a random World Shop or Shrine
+inventory is not.
 
 ## Structural World Shops
 
@@ -145,6 +157,11 @@ still required.
 `SurfaceShop` materializes three offers: one from its first group and two
 distinct offers from its second group. It becomes usable after the encounter
 and outgoing doors unlock.
+
+Its complete inventory nevertheless predates outgoing generation in
+`CurrentRoom.Store.StoreOptions`. Visible `ShopHermesUpgrade`, `SpellDrop`, and
+`TalentDrop` entries suppress their corresponding outgoing reward requirements
+even when the Shrine is never opened or no offer is purchased.
 
 A normal purchase does not immediately grant the item. It creates a
 `StorePendingDeliveryItem` trait carrying the selected item and a room-delay
