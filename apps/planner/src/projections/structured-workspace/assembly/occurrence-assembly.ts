@@ -13,6 +13,8 @@ import {
   createAcquisitionEntryAddress,
   createTraitOfferAddress,
   createGorgonPhaseAddress,
+  createNemesisRandomEventAddress,
+  nemesisGeneratedPickupSiteKey,
   materializeGorgonAthenaOffer,
   createCirceResolutionAddress,
   createTraitAcquisitionTargetAddress,
@@ -74,6 +76,7 @@ import {
   appendSteadyGrowthTimelineEffects,
   encounterPhaseAuthoringDomainForRoom,
   scopeRoomLifecycleTimeline,
+  fieldsOptionalRewardCountSupport,
   type EncounterPhaseAuthoringRoomOptions,
 } from '@run-planner/engine/simulation';
 
@@ -119,6 +122,7 @@ import {
   type WorkspaceNaturalSelectionControl,
   type WorkspaceRunStateLauncher,
   type WorkspaceSteadyGrowthControl,
+  workspaceInteractionKey,
 } from '../contract';
 import type { WorkspaceOccurrenceInteractionRequirement } from '../interactions/interaction-requirements';
 import {
@@ -918,6 +922,16 @@ function activeEncounterPhasesForOwner(
         `${semanticAddressKey(address)} has no selected encounter definition ${domain.selectedEncounterKey}`,
       );
     }
+    const nemesisEvent =
+      selectedDefinition.key === 'NemesisRandomEvent'
+        ? Object.freeze({
+            owner: createNemesisRandomEventAddress(address),
+            reward:
+              input.occurrence?.acquisitionSites?.[nemesisGeneratedPickupSiteKey(domain.slotKey)]
+                ?.pickupEntries?.result?.offer ?? null,
+            value: encounters.nemesisRandomEventByPhase?.[domain.slotKey] ?? null,
+          })
+        : undefined;
     const producer = selectedDefinition.traitOfferProducer;
     const authoredTraitOffer =
       input.facts.detailsActive && producer !== undefined
@@ -1148,7 +1162,7 @@ function activeEncounterPhasesForOwner(
       Object.freeze({
         address,
         candidateChoices,
-        customizable: domain.declaredEncounterKeys.length > 1,
+        customizable: domain.declaredEncounterKeys.length > 1 && !fieldsPassive,
         label:
           room.encounterEnvelopeKey === 'PEncounter'
             ? domain.slotKey === 'Intro'
@@ -1158,6 +1172,11 @@ function activeEncounterPhasesForOwner(
                 : domain.slotKey
             : domain.slotKey,
         marker: input.markerDestinations.marker(address),
+        timelineAnchor: fieldsPassive
+          ? selectedDefinition.key === 'NemesisRandomEvent'
+            ? 'action'
+            : 'roomEntered'
+          : 'encounterStart',
         ...(figLeafSupport !== undefined || authoredFigLeafSkip
           ? {
               figLeaf: Object.freeze({
@@ -1183,6 +1202,15 @@ function activeEncounterPhasesForOwner(
           key: selectedDefinition.key,
           label: selectedDefinition.label,
         }),
+        ...(fieldsPassive && domain.declaredEncounterKeys.includes('NemesisRandomEvent')
+          ? {
+              nemesisFeature: Object.freeze({
+                encounterKey: 'NemesisRandomEvent',
+                selected: selectedDefinition.key === 'NemesisRandomEvent',
+              }),
+            }
+          : {}),
+        ...(nemesisEvent === undefined ? {} : { nemesisEvent }),
       }),
     );
   }
@@ -2270,12 +2298,20 @@ function roomLocalForOccurrence(
         owner: createOccurrenceAddress(input.biome, occurrence.occurrenceId),
         optionalRewardCount: occurrence.state.optionalRewardCount,
         optionalRewardCapacity: optionalDescriptor.optionalRewardCapacity,
-        optionalRewardCountValues: Object.freeze(
-          Array.from(
-            { length: optionalDescriptor.optionalRewardCapacity + 1 },
-            (_, index) => index,
-          ),
-        ),
+        optionalRewardCountValues: (() => {
+          const support = fieldsOptionalRewardCountSupport(
+            input.catalog,
+            occurrence,
+            createOccurrenceAddress(input.biome, occurrence.occurrenceId),
+          );
+          const maximum = support?.effectiveMaximum ?? optionalDescriptor.optionalRewardCapacity;
+          return Object.freeze([
+            ...Array.from({ length: maximum + 1 }, (_, index) => index),
+            ...(occurrence.state.optionalRewardCount > maximum
+              ? [occurrence.state.optionalRewardCount]
+              : []),
+          ]);
+        })(),
         optionalRewards: Object.freeze(optionalRewards),
         groupKey: group.key,
       });
@@ -2468,7 +2504,11 @@ function encounterPhaseInteractionRequirement(
 ): WorkspaceOccurrenceInteractionRequirement | undefined {
   const interactivePhases = phases.filter(
     (phase) =>
-      phase.customizable || phase.figLeaf !== undefined || phase.gorgonCondition !== undefined,
+      phase.customizable ||
+      phase.nemesisFeature !== undefined ||
+      phase.nemesisEvent !== undefined ||
+      phase.figLeaf !== undefined ||
+      phase.gorgonCondition !== undefined,
   );
   if (interactivePhases.length === 0) return undefined;
   return Object.freeze({
@@ -2480,6 +2520,9 @@ function encounterPhaseInteractionRequirement(
           candidateChoices: phase.candidateChoices,
           owner: phase.address,
           selectedEncounterKey: phase.selectedEncounter.key,
+          selectionEnabled: phase.customizable,
+          ...(phase.nemesisFeature === undefined ? {} : { nemesisFeature: phase.nemesisFeature }),
+          ...(phase.nemesisEvent === undefined ? {} : { nemesisEvent: phase.nemesisEvent }),
           ...(phase.figLeaf === undefined
             ? {}
             : {
@@ -2522,6 +2565,7 @@ function presentedEncounterPhases(
 function roomFeatures(
   input: WorkspaceOccurrenceAssemblyInput,
   room: RoomDeclaration,
+  encounterPhases: readonly WorkspaceEncounterPhase[],
   zagreusSpawn: WorkspaceRoomSummary['zagreusSpawn'],
   naturalChaosSpawn: WorkspaceRoomSummary['naturalChaosSpawn'],
 ): readonly WorkspaceRoomFeature[] {
@@ -2530,7 +2574,19 @@ function roomFeatures(
     createAdditionalExitAddress(input.biome, input.occurrence.occurrenceId, key);
   const zagreus = room.additionalExits.find((candidate) => candidate.kind === 'zagreusContract');
   const chaos = room.additionalExits.find((candidate) => candidate.kind === 'naturalChaos');
+  const passive = encounterPhases.find((phase) => phase.nemesisFeature !== undefined);
   return Object.freeze([
+    ...(room.mode.kind === 'authored' &&
+    room.mode.templateKey === 'FieldsCombat' &&
+    passive?.nemesisFeature !== undefined
+      ? [
+          Object.freeze({
+            kind: 'nemesisEvent' as const,
+            action: (passive.nemesisFeature.selected ? 'remove' : 'add') as 'add' | 'remove',
+            interactionKey: workspaceInteractionKey(passive.address),
+          }),
+        ]
+      : []),
     ...(zagreusSpawn?.materialized === true
       ? [
           Object.freeze({
@@ -2893,24 +2949,28 @@ export function assembleWorkspaceOccurrence(
   const rewardControls = controlsForOccurrence(input, room);
   const roomControls =
     input.roomPicker === undefined ? Object.freeze([]) : Object.freeze([input.roomPicker]);
-  const encounterPhases = input.facts.detailsActive
-    ? activeEncounterPhasesForOwner(
-        input,
-        room,
-        { kind: 'occurrence', occurrenceId: occurrence.occurrenceId },
-        occurrence.encounters,
-        {
-          ...(occurrence.state.kind === 'shipCombat'
-            ? { shipEncounterCount: occurrence.state.encounterCount }
-            : {}),
-          ...(occurrence.state.kind === 'fieldsCombat'
-            ? {
-                fieldsCageRewardCount: input.fieldsBatchFacts?.doorCageRewardCount ?? 0,
-              }
-            : {}),
-        },
-      )
-    : Object.freeze([]);
+  const hasRetainedNemesisEvent = Object.values(occurrence.encounters.encounterKeyByPhase).some(
+    (encounterKey) => encounterKey === 'NemesisRandomEvent',
+  );
+  const encounterPhases =
+    input.facts.detailsActive || hasRetainedNemesisEvent
+      ? activeEncounterPhasesForOwner(
+          input,
+          room,
+          { kind: 'occurrence', occurrenceId: occurrence.occurrenceId },
+          occurrence.encounters,
+          {
+            ...(occurrence.state.kind === 'shipCombat'
+              ? { shipEncounterCount: occurrence.state.encounterCount }
+              : {}),
+            ...(occurrence.state.kind === 'fieldsCombat'
+              ? {
+                  fieldsCageRewardCount: input.fieldsBatchFacts?.doorCageRewardCount ?? 0,
+                }
+              : {}),
+          },
+        )
+      : Object.freeze([]);
   const roomLocal = roomLocalForOccurrence(input, room, rewardControls);
   const zagreusDeclaration = room.additionalExits.find(
     (candidate) => candidate.kind === 'zagreusContract',
@@ -3059,7 +3119,7 @@ export function assembleWorkspaceOccurrence(
     ...(zagreusSpawn === undefined ? [] : [zagreusSpawn.marker]),
     ...(naturalChaosSpawn === undefined ? [] : [naturalChaosSpawn.marker]),
   ]);
-  const features = roomFeatures(input, room, zagreusSpawn, naturalChaosSpawn);
+  const features = roomFeatures(input, room, encounterPhases, zagreusSpawn, naturalChaosSpawn);
   const workbench = roomWorkbenchPresentation(encounterPhases, features, roomLocal, roomActions);
   const beforeExitRunState = runStateLauncher(
     input,

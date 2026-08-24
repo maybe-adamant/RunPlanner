@@ -242,6 +242,41 @@ export const checkpointManifest = Object.freeze([
     sha256: '3e501aad9018d9750568cd2d4fe23f32b4f30cd22aa5e875e9eea31840f7cf29',
     provenance: 'command-authored G Chaos, Time Piece Fields, and Echo replay checkpoint',
   },
+  {
+    id: 'nemesis-f-trait-trade',
+    file: 'nemesis-f-trait-trade.runplanner.json',
+    route: 'Underworld',
+    configuredBiomePrefix: ['F', 'G', 'H', 'I'],
+    scenario:
+      'F accepted Nemesis trait trade with required Triple Gold and suppressed incoming reward',
+    schemaVersion: 53,
+    catalogVersion: '0.35.0-nemesis-random-events',
+    sha256: '8184d34d60e80b04073b1dab9ed0f3a7d3751cc64e62219c9bec8c999f9730f2',
+    provenance: 'semantic-command recipe using the reached shared Nemesis trait candidate',
+  },
+  {
+    id: 'nemesis-h-fields',
+    file: 'nemesis-h-fields.runplanner.json',
+    route: 'Underworld',
+    configuredBiomePrefix: ['F', 'G', 'H'],
+    scenario:
+      'H physical-four Fields room with Passive Nemesis and three effective optional rewards',
+    schemaVersion: 53,
+    catalogVersion: '0.35.0-nemesis-random-events',
+    sha256: 'c5fdf9caf2b29361a9cabff6eb64baacdda32be621dd3d9e6e47a5d070c18e45',
+    provenance: 'semantic-command recipe with free result interleaved among Fields cage actions',
+  },
+  {
+    id: 'nemesis-f-pom-sea-star',
+    file: 'nemesis-f-pom-sea-star.runplanner.json',
+    route: 'Underworld',
+    configuredBiomePrefix: ['F', 'G', 'H', 'I'],
+    scenario: 'F accepted Nemesis Pom or Hammer trade with Sea Star generated acquisition child',
+    schemaVersion: 53,
+    catalogVersion: '0.35.0-nemesis-random-events',
+    sha256: '1f67ac2c59697e882cf69e736c0b52b4b0ad134426b061a0749db5ea785ccfc2',
+    provenance: 'semantic-command recipe using a reached Pom/Hammer candidate and Sea Star child',
+  },
 ] as const satisfies readonly AuthoredProjectCheckpointManifestEntry[]);
 
 /** Explicit schema-50 SpellDrop migration intent; no fixture is mass-filled. */
@@ -266,6 +301,12 @@ export const checkpointSpellDropIntents = Object.freeze([
   ['underworld-fghi', 'golden-h-combat03', 'SpellLaserTrait'],
   ['g-tail-chaos-timepiece-echo', 'golden-f-b10-e2', 'SpellMeteorTrait'],
   ['g-tail-chaos-timepiece-echo', 'golden-h-combat03', 'SpellTransformTrait'],
+  ['nemesis-f-trait-trade', 'golden-f-b10-e2', 'SpellLeapTrait'],
+  ['nemesis-f-trait-trade', 'golden-h-combat03', 'SpellLaserTrait'],
+  ['nemesis-h-fields', 'golden-f-b10-e2', 'SpellMeteorTrait'],
+  ['nemesis-h-fields', 'golden-h-combat03', 'SpellTransformTrait'],
+  ['nemesis-f-pom-sea-star', 'golden-f-b10-e2', 'SpellLeapTrait'],
+  ['nemesis-f-pom-sea-star', 'golden-h-combat03', 'SpellLaserTrait'],
 ] as const);
 
 export type AuthoredProjectCheckpointId = (typeof checkpointManifest)[number]['id'];

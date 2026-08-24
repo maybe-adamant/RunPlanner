@@ -164,6 +164,7 @@ export {
   parseEchoLastRewardPickupEntryKey,
   echoLastRewardPickupEntryKeys,
   traitGeneratedPickupSiteKey,
+  nemesisGeneratedPickupSiteKey,
   selectedPickupProducers,
   activeSelectedPickupProducers,
   selectedPickupProducerForEntry,
