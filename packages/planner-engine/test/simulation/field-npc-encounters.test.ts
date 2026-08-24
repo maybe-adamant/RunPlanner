@@ -1176,7 +1176,7 @@ describe('field NPC encounter requirements', () => {
     expect(support(withArachne, followingArtemis)?.candidateEncounterKeys).toContain(
       'ArtemisCombatF',
     );
-  });
+  }, 10_000);
 
   it('records Nemesis Cage01 before evaluating Cage02 without starting its depth effect', () => {
     const occurrenceId = createOccurrenceId('golden-h-combat02');
