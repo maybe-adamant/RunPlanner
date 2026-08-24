@@ -959,6 +959,9 @@ export interface WorkspaceInteractionCatalog {
     string,
     WorkspaceShopPurchaseParticipationInteraction
   >;
+  readonly purgingPoolInteractions: ReadonlyMap<string, WorkspacePurgingPoolInteraction>;
+  /** One declaration-keyed Pool slot, with engine-derived contextual candidates. */
+  readonly purgingPoolSlots: ReadonlyMap<string, WorkspacePurgingPoolSlotInteraction>;
   readonly resourcePlacements: ReadonlyMap<string, WorkspaceResourcePlacementInteraction>;
   readonly localVisitOrders: ReadonlyMap<string, WorkspaceLocalVisitOrderInteraction>;
   readonly localVisitGenerations: ReadonlyMap<string, WorkspaceLocalVisitGenerationInteraction>;
@@ -995,6 +998,29 @@ export interface WorkspaceShopPurchaseParticipationInteraction {
     purchased: boolean,
   ) => WorkspaceCommandIntent<
     Extract<ProjectCommand, { readonly kind: 'ReplaceShopPurchaseParticipation' }>
+  >;
+}
+
+/** Complete occurrence command binding for one physical Pool offer slot. */
+export interface WorkspacePurgingPoolSlotInteraction {
+  readonly key: string;
+  readonly owner: OccurrenceAddress;
+  readonly slotKey: 'left' | 'middle' | 'right';
+  readonly traitKey: string | null;
+  readonly intentFor: (
+    traitKey: string | null,
+  ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplacePurgingPoolSlot' }>>;
+}
+
+/** Controls whether a fixed physical Pool has an authored exact inventory. */
+export interface WorkspacePurgingPoolInteraction {
+  readonly key: string;
+  readonly owner: OccurrenceAddress;
+  readonly interacted: boolean;
+  readonly intentFor: (
+    interacted: boolean,
+  ) => WorkspaceCommandIntent<
+    Extract<ProjectCommand, { readonly kind: 'SetPurgingPoolInteraction' }>
   >;
 }
 
@@ -1589,6 +1615,22 @@ export type WorkspaceRoomFeature =
       readonly kind: 'naturalChaos';
       readonly action: 'remove';
       readonly owner: AdditionalExitAddress;
+    }
+  | {
+      /** Fixed Postboss inventory; candidates are produced by the engine assessment. */
+      readonly kind: 'purgingPool';
+      readonly interactionKey: string;
+      readonly interacted: boolean;
+      readonly slots: readonly {
+        readonly candidateTraitKeys: readonly string[];
+        readonly candidateTraits: readonly { readonly key: string; readonly label: string }[];
+        readonly interactionKey: string;
+        readonly key: 'left' | 'middle' | 'right';
+        readonly label: string;
+        readonly sale?: { readonly sold: boolean };
+        readonly traitLabel?: string;
+        readonly traitKey: string | null;
+      }[];
     };
 
 export interface WorkspaceShipStructurePhase {

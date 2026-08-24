@@ -919,6 +919,16 @@ const expectedOfferRequirements: Readonly<Record<string, string>> = {
 };
 
 describe('trait offer catalog closure', () => {
+  it('declares the exact shop-aware God-trait giver set', () => {
+    const actual = catalog.traitGivers.values
+      .filter((giver) => giver.shopAwareGodTrait)
+      .map((giver) => giver.key)
+      .sort();
+    expect(actual).toEqual([
+      'Aphrodite', 'Apollo', 'Ares', 'Artemis', 'Athena', 'Demeter', 'Dionysus',
+      'Hades', 'Hephaestus', 'Hera', 'Hermes', 'Hestia', 'Poseidon', 'Zeus',
+    ]);
+  });
   it('owns the exact runtime offer requirements and ordered fallback domains', () => {
     const expected = {
       NarcissusH: {

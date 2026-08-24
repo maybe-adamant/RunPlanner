@@ -155,11 +155,21 @@ export function assembleRoomActionRoster(options: {
   );
   const issueKeys = new Set(
     issues
-      .filter((issue) => issue.kind !== 'unrankedRequired')
+      .filter(
+        (issue) =>
+          issue.kind !== 'unrankedRequired' &&
+          !(issue.kind === 'stale' && issue.reference.kind === 'sellPurgingPoolTrait'),
+      )
       .map((issue) => roomActionKey(issue.reference)),
   );
   const rows: RoomActionRow[] = options.order.map((reference, index) => {
     const entry = active.get(roomActionKey(reference));
+    // A cleared Pool slot retains its sale in chronological authoring. It has
+    // no active contribution, but must still reach post-outgoing simulation so
+    // that the exact stale-sale finding is emitted instead of silently
+    // dropping the action.
+    const retainedPurgingPoolSale =
+      entry === undefined && reference.kind === 'sellPurgingPoolTrait';
     return frozen({
       reference,
       key: roomActionKey(reference),
@@ -171,11 +181,17 @@ export function assembleRoomActionRoster(options: {
           roomActionKey(reference),
         ),
       participation: entry?.participation ?? 'optional',
-      window: entry?.window ?? frozen({ kind: 'standard', phase: 'afterCombat' }),
+      window:
+        entry?.window ??
+        (retainedPurgingPoolSale
+          ? frozen({ kind: 'postOutgoing' })
+          : frozen({ kind: 'standard', phase: 'afterCombat' })),
       dependencies: entry?.dependencies ?? frozen([]),
       rank: index + 1,
       stale: entry === undefined,
-      executable: entry !== undefined && !issueKeys.has(roomActionKey(reference)),
+      executable:
+        (entry !== undefined || retainedPurgingPoolSale) &&
+        !issueKeys.has(roomActionKey(reference)),
     });
   });
   for (const action of actions) {

@@ -114,6 +114,21 @@ export type WorkspaceOccurrenceInteractionRequirement =
       readonly purchased: boolean;
     }
   | {
+      readonly kind: 'purgingPoolInteraction';
+      readonly owner: OccurrenceAddress;
+      readonly interactionKey: string;
+      readonly interacted: boolean;
+    }
+  | {
+      readonly kind: 'purgingPoolSlots';
+      readonly owner: OccurrenceAddress;
+      readonly slots: readonly {
+        readonly interactionKey: string;
+        readonly slotKey: 'left' | 'middle' | 'right';
+        readonly traitKey: string | null;
+      }[];
+    }
+  | {
       /** Route-owned selected successes are controlled at their exact host room. */
       readonly kind: 'resourcePlacements';
       readonly owner: OccurrenceAddress;

@@ -614,6 +614,8 @@ export interface RoomDeclaration {
   readonly hasKeepsakeRack: boolean;
   /** Exact physical fountain requirement for this room. */
   readonly hasRequiredFountain: boolean;
+  /** Declaration-owned stable physical Pool slots at this exact host. */
+  readonly purgingPool?: { readonly slotKeys: readonly ['left', 'middle', 'right'] };
   readonly boonRarityOverride?: import('./traits').BoonRarityOverride;
   readonly prebossBatchPolicy?: PrebossBatchPolicy;
   readonly forcedRewardStoreKey?: string;

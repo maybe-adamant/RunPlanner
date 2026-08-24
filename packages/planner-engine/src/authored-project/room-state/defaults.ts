@@ -327,6 +327,14 @@ export function createDefaultCompletionOccurrences(
         ...(room.hasKeepsakeRack
           ? { keepsakeRack: Object.freeze({ disposition: { kind: 'retain' as const } }) }
           : {}),
+        ...(room.purgingPool !== undefined
+          ? {
+              purgingPool: Object.freeze({
+                interacted: false,
+                traitKeyBySlot: Object.freeze({ left: null, middle: null, right: null }),
+              }),
+            }
+          : {}),
       });
     }),
   );

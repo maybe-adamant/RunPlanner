@@ -101,6 +101,8 @@ import type {
   WorkspaceRoomInteraction,
   WorkspaceRoomPickerControl,
   WorkspaceResourcePlacementInteraction,
+  WorkspacePurgingPoolSlotInteraction,
+  WorkspacePurgingPoolInteraction,
   WorkspaceStartInteraction,
   WorkspaceTakeoverBatchInteraction,
   WorkspaceTopologyRemovalInteraction,
@@ -332,6 +334,8 @@ interface WorkspaceOccurrenceLocalInteractionCatalog {
     string,
     WorkspaceShopPurchaseParticipationInteraction
   >;
+  readonly purgingPoolInteractions: ReadonlyMap<string, WorkspacePurgingPoolInteraction>;
+  readonly purgingPoolSlots: ReadonlyMap<string, WorkspacePurgingPoolSlotInteraction>;
   readonly localVisitOrders: ReadonlyMap<string, WorkspaceLocalVisitOrderInteraction>;
   readonly localVisitGenerations: ReadonlyMap<string, WorkspaceLocalVisitGenerationInteraction>;
   readonly zagreusSpawns: ReadonlyMap<string, WorkspaceZagreusSpawnInteraction>;
@@ -411,6 +415,8 @@ function bindOccurrenceLocalInteractions(
     string,
     WorkspaceShopPurchaseParticipationInteraction
   >();
+  const purgingPoolInteractions = new Map<string, WorkspacePurgingPoolInteraction>();
+  const purgingPoolSlots = new Map<string, WorkspacePurgingPoolSlotInteraction>();
   const localVisitOrders = new Map<string, WorkspaceLocalVisitOrderInteraction>();
   const localVisitGenerations = new Map<string, WorkspaceLocalVisitGenerationInteraction>();
   const zagreusSpawns = new Map<string, WorkspaceZagreusSpawnInteraction>();
@@ -728,6 +734,58 @@ function bindOccurrenceLocalInteractions(
         );
         break;
       }
+      case 'purgingPoolSlots': {
+        for (const slot of requirement.slots) {
+          if (purgingPoolSlots.has(slot.interactionKey)) {
+            throw new StructuredWorkspaceProjectionContractError(
+              `${slot.interactionKey} has multiple bound Purging Pool slot interactions`,
+            );
+          }
+          purgingPoolSlots.set(
+            slot.interactionKey,
+            Object.freeze({
+              intentFor: (traitKey: string | null) =>
+                Object.freeze({
+                  command: Object.freeze({
+                    kind: 'ReplacePurgingPoolSlot' as const,
+                    occurrence: requirement.owner,
+                    slotKey: slot.slotKey,
+                    traitKey,
+                  }),
+                }),
+              key: slot.interactionKey,
+              owner: requirement.owner,
+              slotKey: slot.slotKey,
+              traitKey: slot.traitKey,
+            }),
+          );
+        }
+        break;
+      }
+      case 'purgingPoolInteraction': {
+        if (purgingPoolInteractions.has(requirement.interactionKey)) {
+          throw new StructuredWorkspaceProjectionContractError(
+            `${requirement.interactionKey} has multiple bound Purging Pool interactions`,
+          );
+        }
+        purgingPoolInteractions.set(
+          requirement.interactionKey,
+          Object.freeze({
+            intentFor: (interacted: boolean) =>
+              Object.freeze({
+                command: Object.freeze({
+                  kind: 'SetPurgingPoolInteraction' as const,
+                  occurrence: requirement.owner,
+                  interacted,
+                }),
+              }),
+            key: requirement.interactionKey,
+            owner: requirement.owner,
+            interacted: requirement.interacted,
+          }),
+        );
+        break;
+      }
       case 'localVisits': {
         const generationValues = Object.freeze(
           requirement.generationChoices.map((choice) => choice.value),
@@ -861,6 +919,8 @@ function bindOccurrenceLocalInteractions(
     rewardWheelStores,
     shipCombatPhaseCounts,
     shopPurchaseParticipations,
+    purgingPoolInteractions,
+    purgingPoolSlots,
     localVisitOrders,
     localVisitGenerations,
     zagreusSpawns,
@@ -1577,6 +1637,8 @@ export function bindWorkspaceInteractions(
     rewardWheelStores,
     shipCombatPhaseCounts,
     shopPurchaseParticipations,
+    purgingPoolInteractions,
+    purgingPoolSlots,
     localVisitOrders,
     localVisitGenerations,
     zagreusSpawns,
@@ -2960,6 +3022,8 @@ export function bindWorkspaceInteractions(
     rooms,
     shipCombatPhaseCounts,
     shopPurchaseParticipations,
+    purgingPoolInteractions,
+    purgingPoolSlots,
     localVisitOrders,
     localVisitGenerations,
     zagreusContracts,

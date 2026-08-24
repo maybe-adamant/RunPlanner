@@ -1,7 +1,7 @@
 {
-  "schemaVersion": 56,
+  "schemaVersion": 57,
   "projectId": "golden-fg",
-  "catalogVersion": "0.38.0-selected-resource-successes",
+  "catalogVersion": "0.39.0-purging-pool",
   "routes": [
     {
       "routeKey": "Underworld",
@@ -1408,6 +1408,14 @@
                   }
                 ]
               },
+              "purgingPool": {
+                "interacted": false,
+                "traitKeyBySlot": {
+                  "left": "ApolloWeaponBoon",
+                  "middle": "HeraCastBoon",
+                  "right": "ZeusSpecialBoon"
+                }
+              },
               "additionalExits": [],
               "keepsakeRack": {
                 "disposition": {
@@ -2496,6 +2504,14 @@
                     "kind": "useFountain"
                   }
                 ]
+              },
+              "purgingPool": {
+                "interacted": false,
+                "traitKeyBySlot": {
+                  "left": "ApolloWeaponBoon",
+                  "middle": "CastProjectileBoon",
+                  "right": "HeraCastBoon"
+                }
               },
               "additionalExits": [],
               "keepsakeRack": {
@@ -3636,6 +3652,14 @@
                     "kind": "useFountain"
                   }
                 ]
+              },
+              "purgingPool": {
+                "interacted": false,
+                "traitKeyBySlot": {
+                  "left": "ApolloRetaliateBoon",
+                  "middle": "ApolloWeaponBoon",
+                  "right": "BurnExplodeBoon"
+                }
               },
               "additionalExits": [],
               "keepsakeRack": {

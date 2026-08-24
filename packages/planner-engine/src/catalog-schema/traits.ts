@@ -353,6 +353,8 @@ export interface TraitGiverDeclaration {
   readonly key: string;
   readonly label: string;
   readonly providerKind: TraitProviderKind;
+  /** Exact `IsGodTrait(_, { ForShop = true })` giver membership; not provider-kind inference. */
+  readonly shopAwareGodTrait: boolean;
   readonly traitKeys: readonly string[];
   /** Source-declared priority/core traits used by first Olympian offers. */
   readonly priorityTraitKeys: readonly string[];

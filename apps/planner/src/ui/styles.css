@@ -2591,6 +2591,17 @@ select {
   border-top: 1px solid #353640;
 }
 
+.room-purging-pool {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.room-purging-pool > label {
+  display: grid;
+  gap: 4px;
+}
+
 .ship-phase .encounter-editor,
 .ship-phase .reward-wheel,
 .ship-combat-editor .room-actions-workbench {

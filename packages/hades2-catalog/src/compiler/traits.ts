@@ -1396,6 +1396,7 @@ function normalizeGivers(
       'key',
       'label',
       'providerKind',
+      'shopAwareGodTrait',
       'traitKeys',
       'priorityTraitKeys',
       'rarityPolicy',
@@ -1405,6 +1406,8 @@ function normalizeGivers(
     if (unsupportedKey !== undefined) fail(`${path}.${unsupportedKey}`, 'is not supported');
     if (giver.denialParticipates !== undefined)
       requireBoolean(giver.denialParticipates, `${path}.denialParticipates`);
+    if (giver.shopAwareGodTrait !== undefined)
+      requireBoolean(giver.shopAwareGodTrait, `${path}.shopAwareGodTrait`);
     const priorityTraitKeys = freezeUniqueStrings(
       requireArray(giver.priorityTraitKeys, `${path}.priorityTraitKeys`) as readonly string[],
       `${path}.priorityTraitKeys`,
@@ -1538,6 +1541,7 @@ function normalizeGivers(
       key: requireNonEmpty(giver.key, `${path}.key`),
       label: requireNonEmpty(giver.label, `${path}.label`),
       providerKind,
+      shopAwareGodTrait: giver.shopAwareGodTrait === true,
       callingCardMenu: CALLING_CARD_GIVERS.has(requireNonEmpty(giver.key, `${path}.key`)),
       traitKeys,
       priorityTraitKeys,

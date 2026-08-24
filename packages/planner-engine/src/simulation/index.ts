@@ -1,4 +1,12 @@
 export {
+  assessPurgingPool,
+  isPurgingPoolEligibleTrait,
+  type PurgingPoolAssessment,
+  type PurgingPoolAssessmentFinding,
+  type PurgingPoolSlotKey,
+} from './purging-pool';
+export type { PurgingPoolCandidateCapability } from './candidate-artifacts';
+export {
   assessResourcePlacement,
   routeResourceAuthoring,
   type ResourceEnteredRoom,
@@ -340,6 +348,7 @@ export {
   keepsakeEquipResultCandidateForProjectEvaluationAssembly,
   levelResolutionCandidateForProjectEvaluationAssembly,
   traitOfferCandidateForProjectEvaluationAssembly,
+  purgingPoolCandidateForProjectEvaluationAssembly,
   encounterPhaseCandidateSupportForProjectEvaluationAssembly,
   encounterPhaseFigLeafSupportForProjectEvaluationAssembly,
   encounterPhaseGorgonSupportForProjectEvaluationAssembly,

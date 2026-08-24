@@ -540,7 +540,14 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
   }
   const origin = context.input.origin;
   const rankedRows = roster.rows
-    .filter((row) => row.rank !== null && !row.stale)
+    // A retained Pool sale must reach its declared lifecycle point even when
+    // its slot was later cleared. Reward simulation owns the precise stale
+    // finding and deliberately leaves the authored action intact.
+    .filter(
+      (row) =>
+        row.rank !== null &&
+        (!row.stale || row.reference.kind === 'sellPurgingPoolTrait'),
+    )
     .sort((left, right) => left.rank! - right.rank!);
   let cursor = 0;
 
@@ -589,6 +596,11 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
         return appendEvent(state, operationContext, {
           kind: 'acquisitionPointReached',
           point: `shopOffer:${row.reference.offerKey}`,
+        });
+      case 'sellPurgingPoolTrait':
+        return appendEvent(state, operationContext, {
+          kind: 'acquisitionPointReached',
+          point: `purgingPool:${row.reference.slotKey}`,
         });
       case 'interactEncounter':
         return appendEvent(state, operationContext, {

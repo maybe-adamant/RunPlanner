@@ -441,6 +441,26 @@ const findingCopy = {
     description:
       'Move or remove this selected success so its room, spacing, and capacity remain legal.',
   },
+  purgingPoolTraitMissing: {
+    title: 'Pool trait missing',
+    description: 'Choose every currently eligible trait offered by this Pool.',
+  },
+  purgingPoolTraitUnavailable: {
+    title: 'Pool trait unavailable',
+    description: 'Choose a trait currently eligible for this Pool.',
+  },
+  purgingPoolTraitDuplicate: {
+    title: 'Pool trait is repeated',
+    description: 'Each Pool slot must name a different trait.',
+  },
+  purgingPoolWrongCardinality: {
+    title: 'Pool has the wrong number of traits',
+    description: 'Use exactly the number of traits currently eligible for this Pool.',
+  },
+  purgingPoolSaleUnavailable: {
+    title: 'Pool sale unavailable',
+    description: 'Remove this stale sale or restore its valid Pool trait.',
+  },
   nemesisOutcomeMissing: {
     title: 'Choose the Nemesis event result',
     description: 'Record what Nemesis asks or offers at this interaction.',

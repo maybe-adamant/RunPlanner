@@ -1024,7 +1024,7 @@ describe('room-action commands', () => {
     ).toEqual([{ kind: 'useFountain' }, rack]);
     expect(() =>
       applyProjectCommand(replaced, catalog, { kind: 'RemoveRoomAction', action }),
-    ).toThrow('must include required interactKeepsakeRack action');
+    ).toThrow('active required room action cannot be removed');
 
     const history = applyProjectHistoryCommand(createProjectHistory(replaced), catalog, {
       kind: 'MoveRoomAction',

@@ -11,6 +11,7 @@ import {
   encounterPhaseGorgonSupportForProjectEvaluationAssembly,
   derivedAcquisitionEntriesForProjectEvaluationAssembly,
   blockedOccurrenceRoomForProjectEvaluationAssembly,
+  purgingPoolCandidateForProjectEvaluationAssembly,
   traitOfferCandidateForProjectEvaluationAssembly,
   type ProjectEvaluation,
   type ProjectEvaluationAssembly,
@@ -237,6 +238,16 @@ export function createStructuredWorkspaceProjection(
           }
         },
         (occurrence) => blockedOccurrenceRoomForProjectEvaluationAssembly(assembly, occurrence),
+        (occurrence) => {
+          try {
+            return purgingPoolCandidateForProjectEvaluationAssembly(assembly, occurrence);
+          } catch (error) {
+            if (error instanceof Error && error.name === 'ProjectSimulationContractError') {
+              return undefined;
+            }
+            throw error;
+          }
+        },
       );
       const routes = sources.routes.map((routeSource) => {
         const authoredRoute = project.routes.find(

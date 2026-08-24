@@ -334,6 +334,18 @@ export type ShopOccurrenceCommand = {
   readonly offer: ShopOfferAddress;
   readonly value: ResolvedRewardOffer;
 };
+export type PurgingPoolCommand =
+  | {
+      readonly kind: 'SetPurgingPoolInteraction';
+      readonly occurrence: OccurrenceAddress;
+      readonly interacted: boolean;
+    }
+  | {
+      readonly kind: 'ReplacePurgingPoolSlot';
+      readonly occurrence: OccurrenceAddress;
+      readonly slotKey: 'left' | 'middle' | 'right';
+      readonly traitKey: string | null;
+    };
 
 export type AcquisitionSiteCommand =
   | {
@@ -444,6 +456,7 @@ export type OccurrenceLeafCommand =
   | FieldsOccurrenceCommand
   | ShipOccurrenceCommand
   | ShopOccurrenceCommand
+  | PurgingPoolCommand
   | EncounterOccurrenceCommand;
 
 export type ProjectCommand =

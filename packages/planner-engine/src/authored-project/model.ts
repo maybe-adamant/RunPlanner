@@ -5,7 +5,7 @@ import type {
   AuthoredTraitOffer,
 } from './traits';
 
-export const PROJECT_DOCUMENT_SCHEMA_VERSION = 56 as const;
+export const PROJECT_DOCUMENT_SCHEMA_VERSION = 57 as const;
 export type ResourceFamily = import('../catalog-schema').ResourceFamily;
 /** Route ownership supplies the route key; the selected host is exact and durable. */
 export interface ResourcePlacement {
@@ -74,6 +74,13 @@ export interface ShopState {
   readonly offers: Readonly<Record<string, ShopOfferState>>;
 }
 
+/** The final realized Pool list; null is unresolved authoring, never a reroll request. */
+export interface PurgingPoolState {
+  /** Whether the player opens this physical Pool and authors its realized inventory. */
+  readonly interacted: boolean;
+  readonly traitKeyBySlot: Readonly<Record<'left' | 'middle' | 'right', string | null>>;
+}
+
 /** Occurrence-owned payloads for one exact acquisition point. */
 export interface AuthoredAcquisitionSiteState {
   /** Site-materialized optional pickups only. Shop offers remain producer-owned. */
@@ -107,6 +114,7 @@ export type RoomActionReference =
   | { readonly kind: 'chooseRewardWheel'; readonly wheelKey: string }
   | { readonly kind: 'interactWheelReward'; readonly wheelKey: string }
   | { readonly kind: 'interactShopOffer'; readonly offerKey: string }
+  | { readonly kind: 'sellPurgingPoolTrait'; readonly slotKey: 'left' | 'middle' | 'right' }
   | { readonly kind: 'interactEncounter'; readonly phaseKey: string }
   | { readonly kind: 'interactGorgon'; readonly phaseKey: string }
   | {
@@ -246,6 +254,8 @@ export interface RoomOccurrence {
     readonly disposition: PostbossKeepsakeDisposition;
     readonly equipResults?: AuthoredKeepsakeEquipResults;
   };
+  /** Present only at declaration-owned F/G/H automatic Postboss Pool hosts. */
+  readonly purgingPool?: PurgingPoolState;
 }
 
 export interface AnomalyReplacementProvenance {

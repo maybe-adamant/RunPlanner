@@ -70,6 +70,7 @@ import {
   goldenFStartId,
   goldenGBiome,
   goldenHBiome,
+  loadUnderworldFGProject,
   loadNemesisFieldsCheckpoint,
 } from '@run-planner/test-fixtures/underworld';
 import {
@@ -117,6 +118,12 @@ function occurrenceById(
       (node): node is WorkspaceOccurrenceWorkbenchNode =>
         node.kind === 'occurrenceWorkbench' && node.room.occurrenceId === occurrenceId,
     );
+}
+
+function completionOccurrenceById(
+  occurrenceId: string,
+): (biome: WorkspaceBiome) => WorkspaceOccurrenceWorkbenchNode | undefined {
+  return (biome) => biome.completionOutline.find((node) => node.room.occurrenceId === occurrenceId);
 }
 
 function decisionContainingOccurrence(occurrenceId: OccurrenceId) {
@@ -1169,6 +1176,150 @@ describe('OccurrenceWorkbench', () => {
     openRoomTab('Room Timeline');
     const shopActions = screen.getByRole('region', { name: 'Room Timeline' });
     expect(shopActions).toBeTruthy();
+  });
+
+  it('edits, reorders, repairs, and focuses fixed Pool sales through the shared timeline', async () => {
+    const postbossId = createOccurrenceId('completion:F:postboss');
+    const view = renderOccurrenceWorkbench(
+      authorLegalTraitOffers(loadUnderworldFGProject()),
+      'Underworld',
+      'F',
+      completionOccurrenceById(postbossId),
+    );
+    expect(screen.queryByRole('combobox', { name: 'Pool of Purging Left slot' })).toBeNull();
+    await view.user.click(screen.getByRole('checkbox', { name: 'Interact with Pool of Purging' }));
+    const left = screen.getByRole('combobox', { name: 'Pool of Purging Left slot' });
+    const firstTrait = Array.from((left as HTMLSelectElement).options).find(
+      (option) => option.value !== '',
+    );
+    if (firstTrait === undefined) throw new Error('F Pool has no eligible trait candidate');
+    const leftTraitLabel = firstTrait.text;
+    await view.user.selectOptions(left, firstTrait.value);
+    for (const label of ['Middle slot', 'Right slot'] as const) {
+      const slot = screen.getByRole('combobox', { name: `Pool of Purging ${label}` });
+      const trait = Array.from((slot as HTMLSelectElement).options).find(
+        (option) => option.value !== '',
+      );
+      if (trait === undefined) throw new Error(`F Pool ${label} has no eligible trait candidate`);
+      await view.user.selectOptions(slot, trait.value);
+    }
+    await waitFor(() =>
+      expect(
+        view.application.store
+          .getState()
+          .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
+          ?.biomes.find((biome) => biome.biomeKey === 'F')
+          ?.completionOccurrences.find((room) => room.occurrenceId === postbossId)?.purgingPool
+          ?.traitKeyBySlot.left,
+      ).toBe(firstTrait.value),
+    );
+
+    await view.user.click(screen.getByRole('checkbox', { name: 'Sell Left slot' }));
+    await waitFor(() =>
+      expect(
+        view.application.store
+          .getState()
+          .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
+          ?.biomes.find((biome) => biome.biomeKey === 'F')
+          ?.completionOccurrences.find((room) => room.occurrenceId === postbossId)?.roomActions
+          .order,
+      ).toContainEqual({ kind: 'sellPurgingPoolTrait', slotKey: 'left' }),
+    );
+
+    await view.user.click(screen.getByRole('checkbox', { name: 'Sell Middle slot' }));
+    await waitFor(() =>
+      expect(
+        view.application.store
+          .getState()
+          .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
+          ?.biomes.find((biome) => biome.biomeKey === 'F')
+          ?.completionOccurrences.find((room) => room.occurrenceId === postbossId)?.roomActions
+          .order,
+      ).toEqual([
+        { kind: 'sellPurgingPoolTrait', slotKey: 'middle' },
+        { kind: 'sellPurgingPoolTrait', slotKey: 'left' },
+        { kind: 'useFountain' },
+      ]),
+    );
+
+    openRoomTab('Room Timeline');
+    await view.user.click(
+      screen.getByRole('button', { name: `Move Sell ${leftTraitLabel} earlier` }),
+    );
+    const poolActionOrder = () =>
+      view.application.store
+        .getState()
+        .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
+        ?.biomes.find((biome) => biome.biomeKey === 'F')
+        ?.completionOccurrences.find((room) => room.occurrenceId === postbossId)?.roomActions.order;
+    await waitFor(() =>
+      expect(poolActionOrder()).toEqual([
+        { kind: 'sellPurgingPoolTrait', slotKey: 'left' },
+        { kind: 'sellPurgingPoolTrait', slotKey: 'middle' },
+        { kind: 'useFountain' },
+      ]),
+    );
+
+    view.application.store.dispatch(authoredProjectUndoRequested());
+    await waitFor(() =>
+      expect(poolActionOrder()).toEqual([
+        { kind: 'sellPurgingPoolTrait', slotKey: 'middle' },
+        { kind: 'sellPurgingPoolTrait', slotKey: 'left' },
+        { kind: 'useFountain' },
+      ]),
+    );
+    view.application.store.dispatch(authoredProjectRedoRequested());
+    await waitFor(() =>
+      expect(poolActionOrder()).toEqual([
+        { kind: 'sellPurgingPoolTrait', slotKey: 'left' },
+        { kind: 'sellPurgingPoolTrait', slotKey: 'middle' },
+        { kind: 'useFountain' },
+      ]),
+    );
+
+    openRoomTab('Room Overview');
+    await view.user.selectOptions(
+      screen.getByRole('combobox', { name: 'Pool of Purging Left slot' }),
+      '',
+    );
+    await waitFor(() =>
+      expect(poolActionOrder()).toContainEqual({ kind: 'sellPurgingPoolTrait', slotKey: 'left' }),
+    );
+
+    const leftSale = createRoomActionAddress(
+      goldenFBiome,
+      postbossId,
+      roomActionKey({ kind: 'sellPurgingPoolTrait', slotKey: 'left' }),
+    );
+    act(() => view.application.store.dispatch(semanticOwnerNavigated(leftSale)));
+    openRoomTab('Room Timeline');
+    const repairs = await screen.findByRole('region', { name: 'Timeline repairs' });
+    const stale = within(repairs).getByText('Sell left Pool trait').closest('li');
+    if (stale === null) throw new Error('Retained Pool sale is missing');
+    expect(document.getElementById(semanticOwnerControlElementId(leftSale))).toBe(stale);
+    expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(leftSale);
+    await view.user.click(
+      within(stale).getByRole('button', { name: 'Remove Sell left Pool trait from timeline' }),
+    );
+    await waitFor(() =>
+      expect(poolActionOrder()).not.toContainEqual({
+        kind: 'sellPurgingPoolTrait',
+        slotKey: 'left',
+      }),
+    );
+    openRoomTab('Room Overview');
+    await view.user.click(screen.getByRole('checkbox', { name: 'Interact with Pool of Purging' }));
+    await waitFor(() =>
+      expect(screen.queryByRole('combobox', { name: 'Pool of Purging Middle slot' })).toBeNull(),
+    );
+    expect(
+      view.application.store
+        .getState()
+        .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
+        ?.biomes.find((biome) => biome.biomeKey === 'F')
+        ?.completionOccurrences.find((room) => room.occurrenceId === postbossId)?.purgingPool
+        ?.traitKeyBySlot.middle,
+    ).not.toBeNull();
   });
 
   it('keeps Nectar trait editing on its pickup line and hides it after Artificer conversion', async () => {

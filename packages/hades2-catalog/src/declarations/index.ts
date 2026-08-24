@@ -36,7 +36,7 @@ const rooms: readonly RawRoomDeclaration[] = [
 ];
 
 export const declarations = {
-  version: '0.38.0-selected-resource-successes',
+  version: '0.39.0-purging-pool',
   biomes,
   routes,
   arcanaCards,

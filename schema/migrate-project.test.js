@@ -146,8 +146,8 @@ test('51 -> current preserves prior route content and adds resource placements',
   source.schemaVersion = 51;
   source.catalogVersion = '0.31.0-chaos-traits';
   const result = migrateProjectDocument(source);
-  assert.equal(result.document.schemaVersion, 56);
-  assert.equal(result.document.catalogVersion, '0.38.0-selected-resource-successes');
+  assert.equal(result.document.schemaVersion, 57);
+  assert.equal(result.document.catalogVersion, '0.39.0-purging-pool');
   assert.deepEqual(result.changes['51->52'], {});
   assert.deepEqual(result.changes['52->53'], {
     catalogMigrations: [
@@ -163,7 +163,8 @@ test('51 -> current preserves prior route content and adds resource placements',
   });
   assert.deepEqual(result.changes['54->55'], { completionOccurrencesAdded: 0 });
   assert.deepEqual(result.changes['55->56'], { routePlacementsAdded: 1 });
-  assert.deepEqual(result.steps, ['51->52', '52->53', '53->54', '54->55', '55->56']);
+  assert.deepEqual(result.changes['56->57'], { poolsAdded: 0 });
+  assert.deepEqual(result.steps, ['51->52', '52->53', '53->54', '54->55', '55->56', '56->57']);
 });
 
 test('55 -> 56 adds empty route-owned selected resource placements', () => {
@@ -171,8 +172,8 @@ test('55 -> 56 adds empty route-owned selected resource placements', () => {
   source.schemaVersion = 55;
   source.catalogVersion = '0.37.0-automatic-completion-occurrences';
   const result = migrateProjectDocument(source);
-  assert.equal(result.document.schemaVersion, 56);
-  assert.equal(result.document.catalogVersion, '0.38.0-selected-resource-successes');
+  assert.equal(result.document.schemaVersion, 57);
+  assert.equal(result.document.catalogVersion, '0.39.0-purging-pool');
   assert.deepEqual(result.document.routes[0].resourcePlacements, {
     Pickaxe: null,
     Exorcism: null,
@@ -180,6 +181,7 @@ test('55 -> 56 adds empty route-owned selected resource placements', () => {
     Fishing: null,
   });
   assert.deepEqual(result.changes['55->56'], { routePlacementsAdded: 1 });
+  assert.deepEqual(result.changes['56->57'], { poolsAdded: 0 });
 });
 
 test('52 -> current preserves the earlier schema-52 catalog migration ledger and adds resource placements', () => {
@@ -187,8 +189,8 @@ test('52 -> current preserves the earlier schema-52 catalog migration ledger and
   source.schemaVersion = 52;
   source.catalogVersion = '0.32.0-run-impacting-traits';
   const result = migrateProjectDocument(source);
-  assert.equal(result.document.schemaVersion, 56);
-  assert.equal(result.document.catalogVersion, '0.38.0-selected-resource-successes');
+  assert.equal(result.document.schemaVersion, 57);
+  assert.equal(result.document.catalogVersion, '0.39.0-purging-pool');
   assert.deepEqual(result.document.routes, [
     {
       ...source.routes[0],
@@ -209,7 +211,8 @@ test('52 -> current preserves the earlier schema-52 catalog migration ledger and
   });
   assert.deepEqual(result.changes['54->55'], { completionOccurrencesAdded: 0 });
   assert.deepEqual(result.changes['55->56'], { routePlacementsAdded: 1 });
-  assert.deepEqual(result.steps, ['52->53', '53->54', '54->55', '55->56']);
+  assert.deepEqual(result.changes['56->57'], { poolsAdded: 0 });
+  assert.deepEqual(result.steps, ['52->53', '53->54', '54->55', '55->56', '56->57']);
 });
 
 test('52 -> current advances the prior run-impacting-traits catalog metadata', () => {
@@ -217,7 +220,7 @@ test('52 -> current advances the prior run-impacting-traits catalog metadata', (
   source.schemaVersion = 52;
   source.catalogVersion = '0.32.1-run-impacting-traits';
   const result = migrateProjectDocument(source);
-  assert.equal(result.document.catalogVersion, '0.38.0-selected-resource-successes');
+  assert.equal(result.document.catalogVersion, '0.39.0-purging-pool');
   assert.deepEqual(result.changes['52->53'], {
     catalogMigrations: [
       '0.32.1-run-impacting-traits->0.33.0-generated-trait-pickups',
@@ -231,7 +234,8 @@ test('52 -> current advances the prior run-impacting-traits catalog metadata', (
   });
   assert.deepEqual(result.changes['54->55'], { completionOccurrencesAdded: 0 });
   assert.deepEqual(result.changes['55->56'], { routePlacementsAdded: 1 });
-  assert.deepEqual(result.steps, ['52->53', '53->54', '54->55', '55->56']);
+  assert.deepEqual(result.changes['56->57'], { poolsAdded: 0 });
+  assert.deepEqual(result.steps, ['52->53', '53->54', '54->55', '55->56', '56->57']);
 });
 
 test('current schema 52 -> current advances catalog metadata and adds resource placements', () => {
@@ -239,8 +243,8 @@ test('current schema 52 -> current advances catalog metadata and adds resource p
   source.schemaVersion = 52;
   source.catalogVersion = '0.34.0-sea-star';
   const result = migrateProjectDocument(source);
-  assert.equal(result.document.schemaVersion, 56);
-  assert.equal(result.document.catalogVersion, '0.38.0-selected-resource-successes');
+  assert.equal(result.document.schemaVersion, 57);
+  assert.equal(result.document.catalogVersion, '0.39.0-purging-pool');
   assert.deepEqual(result.document.routes, [
     {
       ...source.routes[0],
@@ -257,5 +261,6 @@ test('current schema 52 -> current advances catalog metadata and adds resource p
   });
   assert.deepEqual(result.changes['54->55'], { completionOccurrencesAdded: 0 });
   assert.deepEqual(result.changes['55->56'], { routePlacementsAdded: 1 });
-  assert.deepEqual(result.steps, ['52->53', '53->54', '54->55', '55->56']);
+  assert.deepEqual(result.changes['56->57'], { poolsAdded: 0 });
+  assert.deepEqual(result.steps, ['52->53', '53->54', '54->55', '55->56', '56->57']);
 });

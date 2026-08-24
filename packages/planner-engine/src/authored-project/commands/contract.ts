@@ -101,6 +101,8 @@ export function projectCommandAddress(
     case 'ReplaceOccurrenceRoom':
     case 'ReplaceShipEncounterCount':
     case 'ReplaceFieldsOptionalRewardCount':
+    case 'SetPurgingPoolInteraction':
+    case 'ReplacePurgingPoolSlot':
       return command.occurrence;
     case 'InsertRoomAction':
     case 'RemoveRoomAction':

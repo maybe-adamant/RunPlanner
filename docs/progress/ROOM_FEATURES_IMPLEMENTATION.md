@@ -95,14 +95,14 @@ outgoing targets are declaration-fixed rather than user-selectable.
 
 ## Source Facts and Planner Simplifications
 
-| Feature          | Source fact retained                                                                                                                                                                                           | Planner simplification                                                                                                                                                                             |
-| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Runtime fallback | Narcissus, Echo, Medea, Athena, Hades, and Last Stand item sources use several different volatile live predicates; Gorgon alone uses missing Last Stand to decide encounter timing.                            | Author and simulate the preferred result, retain only Gorgon's phase trigger, and derive one exact declaration-backed fallback for execution without modeling Death Defiance state.                |
-| Completion tail  | Boss and Postboss are declaration-fixed physical rooms reached in a fixed order rather than player-selected doors.                                                                                             | Persist them as automatic occurrences outside selectable topology. The layout owns their mandatory exits; each occurrence owns ordinary room-local state and remains active at the route boundary. |
-| Resources        | Each successful upgraded tool interaction rolls for its matching element until that family succeeds once; physical points obey declaration, spacing, biome, and room-capacity rules.                           | Author at most one selected successful interaction per family and protect only the source point's required spawn envelope. Assume exit-time auto-harvest and acquire the element at room exit.     |
-| Purging Pool     | F/G/H Postboss Pools show up to three distinct currently eligible shop-aware God trait names; selling removes every stack of the name.                                                                         | Author the final realized list after any unmodeled rerolls. Ignore sale gold and permit any subset of displayed entries to be sold.                                                                |
-| Hermes Shrine    | N/O/P forced Postboss and eligible N/O/P/Q ordinary Shrines have three offers. Purchases carry delay 2–8; rush spawns a same-room required pickup; otherwise qualifying encounters mature a required delivery. | Assume affordability. Persist realized inventory, delay, rush, and delivered payload; omit prices and presentation-only differences between the two final-delivery source paths.                   |
-| Stygian Well     | F/G/H forced Postboss and eligible F/G/H/I ordinary Wells have three offers, repeat across later Wells subject to exact exceptions, and apply purchases immediately.                                           | Represent the complete 25-item pool, but simulate only state that changes later planner outcomes. Health, damage, Magick, gold, and meta-resource amounts remain neutral.                          |
+| Feature          | Source fact retained                                                                                                                                                                                      | Planner simplification                                                                                                                                                                             |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Runtime fallback | Narcissus, Echo, Medea, Athena, Hades, and Last Stand item sources use several different volatile live predicates; Gorgon alone uses missing Last Stand to decide encounter timing.                       | Author and simulate the preferred result, retain only Gorgon's phase trigger, and derive one exact declaration-backed fallback for execution without modeling Death Defiance state.                |
+| Completion tail  | Boss and Postboss are declaration-fixed physical rooms reached in a fixed order rather than player-selected doors.                                                                                        | Persist them as automatic occurrences outside selectable topology. The layout owns their mandatory exits; each occurrence owns ordinary room-local state and remains active at the route boundary. |
+| Resources        | Each successful upgraded tool interaction rolls for its matching element until that family succeeds once; physical points obey declaration, spacing, biome, and room-capacity rules.                      | Author at most one selected successful interaction per family and protect only the source point's required spawn envelope. Assume exit-time auto-harvest and acquire the element at room exit.     |
+| Purging Pool     | F/G/H Postboss Pools show up to three distinct currently eligible shop-aware God trait names; selling removes every stack of the name.                                                                    | Leave an uninteracted Pool's inventory runtime-random. When interacted, author the final realized list after any unmodeled rerolls. Ignore sale gold and permit any subset to be sold.             |
+| Hermes Shrine    | N/O/P forced Postboss and eligible N/O/P/Q ordinary Shrines have three offers whose raw names participate in host-room outgoing exclusions. Purchases carry delay 2–8 and later deliver or rush a pickup. | Always persist the complete realized inventory, even without a purchase. Assume affordability; purchase-owned delay, rush, and delivery detail remains sparse.                                     |
+| Stygian Well     | F/G/H forced Postboss and eligible F/G/H/I ordinary Wells have three offers, repeat across later Wells subject to exact exceptions, and apply purchases immediately.                                      | Leave an uninteracted Well's inventory runtime-random. When interacted, use the complete 25-item pool but simulate only state that changes later planner outcomes; neutral amounts remain omitted. |
 
 The audits remain the authority for source behavior. This table records only
 the selected planner representation.
@@ -238,6 +238,13 @@ offer generation rather than its current item identity.
 Editing an offer payload does not change participation or rank. Removing a
 feature or invalidating its source retains structurally representable stale
 payload/action state with an exact repair path.
+
+Inventory participation is feature-specific. World Shops and Shrines always
+author every visible top-level slot because their pre-purchase inventories
+feed outgoing `RequiredNotInStore` checks. Pools and Wells may remain
+runtime-random while uninteracted; an interaction flag activates their exact
+inventory and ordinary action authoring. Do not generalize either rule across
+all Store-like features.
 
 Every offer generation retains its preferred item identity even when the item
 has a volatile live requirement. The evaluated result carries the exact
@@ -648,17 +655,22 @@ Intended commit: `feat(purging-pool): model postboss trait sales`
 
 - Declare a forced Pool only on F/G/H automatic Postboss occurrences and an
   inventory capacity of three.
-- Add schema-57 Pool state as three stable nullable slots containing distinct
-  trait keys. Null is unresolved authoring, not a request to reroll.
+- Add schema-57 Pool state with one interaction-participation flag and three
+  stable nullable slots containing distinct trait keys. When interaction is
+  off, the game owns the random inventory and slot detail is dormant. When it
+  is on, null is unresolved authoring, not a request to reroll.
 - Add one typed sale action reference per slot. Overview membership is the sole
   sold/not-sold fact; occurrence action order is the sole sale order.
 - Commands validate slot shape and known traits but preserve context-invalid
-  lists and stale sale actions for repair.
+  lists. Turning interaction off atomically removes Pool sale actions while
+  preserving slot detail dormantly for later restoration and Undo.
 
 ### Engine and simulation
 
-- At Pool generation, derive the exact current shop-aware God trait domain,
-  including Hermes, eligible field providers, unslotted traits, and Duos.
+- An uninteracted Pool has no authored inventory, candidate finding, sale
+  action, or simulation effect. At an interacted Pool's generation, derive the
+  exact current shop-aware God trait domain, including Hermes, eligible field
+  providers, unslotted traits, and Duos.
 - Require a complete realized list to contain exactly
   `min(3, eligible distinct trait names)` entries. Complete policy remains in
   Pool candidate tests, not React.
@@ -670,9 +682,9 @@ Intended commit: `feat(purging-pool): model postboss trait sales`
 
 ### Application and React
 
-- Render the fixed Pool in Postboss Room Features with three Shop-like slots,
-  contextual trait selection, and one Sell membership control per resolved
-  slot.
+- Render the fixed Pool in Postboss Room Features with one Interact control.
+  Only an interacted Pool exposes its three Shop-like slots, contextual trait
+  selection, and one Sell membership control per resolved slot.
 - Enrich sale timeline rows with slot/trait labels. Reordering uses ordinary
   Room Action proposals.
 - Do not add a Purging Pool route panel.
@@ -680,17 +692,42 @@ Intended commit: `feat(purging-pool): model postboss trait sales`
 ### Primary verification
 
 - Catalog tests own exact F/G/H host presence.
-- Pool candidate tests own eligibility, distinctness, cardinality,
-  retained-invalid values, and no reroll inference.
+- Pool candidate tests own the random uninteracted no-op, eligibility,
+  distinctness, cardinality, retained-invalid values, and no reroll inference.
 - Simulation tests own zero/partial/all sales, all-stack removal, Duo/field/
   Hermes contact, and preserved previously-picked blocking.
-- Application/UI tests own slot editing, Sell membership, rank movement, stale
-  repair, exact focus, and undo/redo.
+- Application/UI tests own interaction participation, dormant slot retention,
+  slot editing, Sell membership, rank movement, stale repair, exact focus, and
+  undo/redo.
 - A focused configured-tail test proves the forced Postboss Pool inventory,
   sale action, and trait removal remain fully active without a configured
   successor and are unchanged when the next biome is added.
 - Add one short F/G checkpoint route that acquires several eligible traits,
   sells a stacked trait, and proves it remains previously picked.
+
+### Delivery result — complete after independent review
+
+- Schema 57 gives each forced F/G/H Postboss Pool an explicit interaction
+  disposition and three dormant stable slots. An uninteracted Pool stays a
+  runtime-random no-op; an interacted Pool exposes exact inventory, sale
+  membership, and ordinary room-action chronology.
+- The catalog owns the shop-aware God-trait source fact. Candidate assessment
+  uses equipped rarity-bearing instances from those sources, preserves
+  branch-safe exact-prefix legality, and supports Hermes, Duos, and eligible
+  field providers without acquisition-source inference.
+- Sales remove every current stack of the selected trait through the existing
+  trait-removal fold, so previously-picked offer blocking survives removal.
+  Clearing a selected slot retains its sale as an exact stale repair target;
+  turning interaction off removes all Pool sale actions atomically while
+  retaining dormant slot detail.
+- Independent review found and closed two malformed-input gaps: raw Pool slot
+  declarations must be exactly `left`, `middle`, `right`, and occurrence
+  commands reject unknown slot keys before mutation. Focused compiler and
+  command regressions cover both boundaries.
+- Focused Pool simulation, migration, checkpoint, projection, UI, compiler,
+  and command suites passed, along with catalog and engine typechecks,
+  changed-file formatting, and `git diff --check`. The complete repository gate
+  remains reserved for final phase closure.
 
 ## Gate E — Shrine of Hermes
 
@@ -705,6 +742,12 @@ Intended commit: `feat(hermes-shrine): model purchases and timed delivery`
   generations, at most one Travel Deal refill generation, exact item identity,
   delay 2–8, and rushed disposition. Purchase membership plus a non-rushed
   disposition derives pending state; do not persist it independently.
+- Every present Shrine requires all three top-level item identities even when
+  it is never opened or no offer is purchased. `RunShopGeneration` exposes the
+  complete `SurfaceShop` inventory to the host room's outgoing
+  `RequiredNotInStore` checks, so Shrine authoring has no random-inventory
+  interaction bypass. Purchase participation may gate only delay, rush,
+  delivery, and acquisition-owned child detail.
 - Add the audit's pool-local first-group fallback edges:
   `LastStandDrop -> ArmorBoost` and `ArmorBoost -> ArmorBigBoost`. Reuse Gate
   A's normalized pool-option and resolved-fallback products; do not add a
@@ -721,6 +764,10 @@ Intended commit: `feat(hermes-shrine): model purchases and timed delivery`
 - Candidate authority owns Shrine placement spacing, slot-specific inventory,
   without-replacement generation, item requirements, and retained-invalid
   offers.
+- Outgoing generation observes the complete initial Shrine inventory before
+  any purchase. Visible `ShopHermesUpgrade`, `SpellDrop`, and `TalentDrop`
+  suppress the corresponding outgoing reward requirements without consuming a
+  reward-bag entry.
 - Last Stand remains a valid preferred authored identity. Evaluation publishes
   the exact Armor fallback from its first-group membership, while simulation
   assumes the preferred Last Stand delivery succeeds. Live generation and
@@ -754,8 +801,9 @@ Intended commit: `feat(hermes-shrine): model purchases and timed delivery`
 
 ### Application and React
 
-- Render Shrine presence and its three-slot inventory in Room Features. Each
-  offer exposes item editing, delay 2–8, Rushed, and purchase participation.
+- Render Shrine presence and its always-authored three-slot inventory in Room
+  Features. Purchased offers expose delay 2–8, Rushed, and acquisition detail;
+  purchase participation remains per slot.
 - Attach rushed pickup-resolution controls to the one ranked Shrine purchase
   row. Project only later due deliveries as separately ranked required pickup
   rows in their host occurrences.
@@ -768,7 +816,9 @@ Intended commit: `feat(hermes-shrine): model purchases and timed delivery`
 - Dedicated Shrine tests own delayed countdown, multi-encounter decrement,
   skipped/noncombat exclusions, Boss maturation, rush, simultaneous
   maturities, required pickup interactions, final Preboss completion, pending
-  SpellDrop, Travel Deal refill, and the two first-group fallback edges.
+  SpellDrop, Travel Deal refill, and the two first-group fallback edges. A
+  separate inventory-timing matrix proves that unpurchased visible Hermes,
+  Spell, and Talent suppress the host's corresponding outgoing rewards.
 - Existing reward, Pom, Time Piece, Artificer, Sea Star, rarity, and World Shop
   suites retain representative contacts, including one resolved-fallback
   witness and no return of authored Death Defiance state.
@@ -804,6 +854,12 @@ Intended commit: `feat(stygian-well): model inventory and consequential items`
   `LastStandShopItem -> EmptyMaxHealthShopItem`. Reuse Gate A's generic
   resolved-fallback product; no Well-wide, slot-local, or nested Death Defiance
   condition is added.
+- Add one Well interaction-participation flag. When it is off, the game owns
+  the random inventory and all offer detail is dormant. This is safe because
+  no live initial `RoomShop` name matches the four modeled
+  `RequiredNotInStore` exclusions; nested Twist results arise only from a
+  purchase. When interaction is on, the complete three-slot inventory and any
+  purchases are authored normally.
 - A typed Well purchase action owns participation and rank. Items may repeat
   across later Wells unless their exact current-state requirement says
   otherwise.
@@ -847,8 +903,9 @@ one-entry-per-trait equipped map.
 
 ### Application and React
 
-- Render Well presence, three slots, Travel refill generation, purchase
-  membership, and item-specific child controls in Room Features.
+- Render Well presence with one Interact control. An interacted Well exposes
+  its three slots, Travel refill generation, purchase membership, and
+  item-specific child controls in Room Features.
 - Render no Last Stand condition or fallback control. Initial, refill, and Twist
   editors select only the preferred item identity.
 - Render Twist's exact nested result selector only when Twist is active.
@@ -860,7 +917,8 @@ one-entry-per-trait equipped map.
 ### Primary verification
 
 - Catalog tests own the full 25-item pool, slot groups, Twist pool, host matrix,
-  spacing, and exact requirements.
+  spacing, exact requirements, and disjointness from the four live
+  `RequiredNotInStore` names.
 - Dedicated Well tests own repeats, same-Well distinctness, Travel refill,
   atomic purchase exclusions, Spark, Yarn, Hymn, Last Stand, Discount/Empty
   Slot expiry, the complete eight-item Extended consume/non-consume matrix,

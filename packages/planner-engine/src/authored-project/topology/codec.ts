@@ -168,6 +168,13 @@ function decodeRoomActionReference(value: unknown, path: string): RoomActionRefe
       offerKey: expectNonBlankString(reference.offerKey, `${path}.offerKey`),
     });
   }
+  if (kind === 'sellPurgingPoolTrait') {
+    expectExactKeys(reference, ['kind', 'slotKey'], path);
+    const slotKey = expectNonBlankString(reference.slotKey, `${path}.slotKey`);
+    if (slotKey !== 'left' && slotKey !== 'middle' && slotKey !== 'right')
+      failProjectDocument(`${path}.slotKey`, 'must be a declared Pool slot key');
+    return Object.freeze({ kind, slotKey });
+  }
   if (kind === 'interactAcquisitionEntry') {
     expectExactKeys(reference, ['kind', 'siteKey', 'entryKey'], path);
     return Object.freeze({

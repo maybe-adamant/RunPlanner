@@ -182,6 +182,9 @@ export interface WorkspaceOccurrenceAssemblyInput {
   readonly levelResolutionAssessment: (
     owner: LevelResolutionAddress,
   ) => SelectedLevelResolutionAssessment | undefined;
+  readonly purgingPoolAssessment?: (
+    owner: OccurrenceAddress,
+  ) => import('@run-planner/engine/simulation').PurgingPoolCandidateCapability | undefined;
   readonly steadyGrowthOutcomes?: readonly import('@run-planner/engine/simulation').BiomeRewardSimulation['steadyGrowthOutcomes'][number][];
   readonly isActiveTraitOffer: (owner: TraitOfferAddress) => boolean;
   readonly judgmentArcanaCapability?: (
@@ -1381,6 +1384,7 @@ function roomActionLabel(
   roomLocal: WorkspaceRoomLocal,
   encounterPhases: readonly WorkspaceEncounterPhase[],
   rewardControl: WorkspaceRewardControl | undefined,
+  purgingPoolTraitKeyBySlot?: Readonly<Record<'left' | 'middle' | 'right', string | null>>,
 ): string {
   const pickupLabel = (subject: string): string => {
     if (rewardControl?.offer === null || rewardControl?.offer === undefined)
@@ -1437,6 +1441,10 @@ function roomActionLabel(
           ? undefined
           : summarizeRewardOffer(catalog, rewardControl.offer);
       return `Buy ${rewardLabel ?? offer?.label ?? reference.offerKey}`;
+    }
+    case 'sellPurgingPoolTrait': {
+      const traitKey = purgingPoolTraitKeyBySlot?.[reference.slotKey];
+      return `Sell ${traitKey === null || traitKey === undefined ? `${reference.slotKey} Pool trait` : (catalog.traits.byKey[traitKey]?.label ?? traitKey)}`;
     }
     case 'interactEncounter':
       return `Interact with ${phase?.selectedEncounter.label ?? `${reference.phaseKey} encounter`}`;
@@ -1776,6 +1784,7 @@ function roomActionsForOccurrence(
           roomLocal,
           encounterPhases,
           resolvedRewardControl,
+          input.occurrence.purgingPool?.traitKeyBySlot,
         ),
         marker: input.markerDestinations.marker(address),
         proposalKeys: Object.freeze(proposalKeysByAction.get(row.key) ?? []),
@@ -2558,7 +2567,53 @@ function roomFeatures(
   const zagreus = room.additionalExits.find((candidate) => candidate.kind === 'zagreusContract');
   const chaos = room.additionalExits.find((candidate) => candidate.kind === 'naturalChaos');
   const passive = encounterPhases.find((phase) => phase.nemesisFeature !== undefined);
+  const poolOwner = createOccurrenceAddress(input.biome, input.occurrence.occurrenceId);
+  const poolAssessment = input.purgingPoolAssessment?.(poolOwner);
+  const pool = input.occurrence.purgingPool;
+  const poolSlotLabel = (slotKey: 'left' | 'middle' | 'right'): string =>
+    slotKey === 'left' ? 'Left slot' : slotKey === 'middle' ? 'Middle slot' : 'Right slot';
   return Object.freeze([
+    ...(pool === undefined
+      ? []
+      : [
+          Object.freeze({
+            kind: 'purgingPool' as const,
+            interactionKey: `purgingPool:${semanticAddressKey(poolOwner)}`,
+            interacted: pool.interacted,
+            slots: Object.freeze(
+              (['left', 'middle', 'right'] as const).map((slotKey) =>
+                (() => {
+                  const candidateTraitKeys =
+                    poolAssessment?.candidateTraitKeysBySlot[slotKey] ?? Object.freeze([]);
+                  const traitKey = pool.traitKeyBySlot[slotKey];
+                  const sold = input.occurrence.roomActions.order.some(
+                    (reference) =>
+                      reference.kind === 'sellPurgingPoolTrait' && reference.slotKey === slotKey,
+                  );
+                  return Object.freeze({
+                    candidateTraitKeys,
+                    candidateTraits: Object.freeze(
+                      candidateTraitKeys.map((key) =>
+                        Object.freeze({
+                          key,
+                          label: input.catalog.traits.byKey[key]?.label ?? key,
+                        }),
+                      ),
+                    ),
+                    interactionKey: `purgingPool:${semanticAddressKey(poolOwner)}:${slotKey}`,
+                    key: slotKey,
+                    label: poolSlotLabel(slotKey),
+                    ...(traitKey === null ? {} : { sale: Object.freeze({ sold }) }),
+                    traitKey,
+                    ...(traitKey === null
+                      ? {}
+                      : { traitLabel: input.catalog.traits.byKey[traitKey]?.label ?? traitKey }),
+                  });
+                })(),
+              ),
+            ),
+          }),
+        ]),
     ...(room.mode.kind === 'authored' &&
     room.mode.templateKey === 'FieldsCombat' &&
     passive?.nemesisFeature !== undefined
@@ -2856,6 +2911,33 @@ function occurrenceInteractionRequirements(
         }),
       );
     }
+  }
+  for (const feature of room.workbench.features) {
+    if (feature.kind !== 'purgingPool') continue;
+    requirements.push(
+      Object.freeze({
+        kind: 'purgingPoolInteraction' as const,
+        owner: room.address,
+        interactionKey: feature.interactionKey,
+        interacted: feature.interacted,
+      }),
+    );
+    if (!feature.interacted) continue;
+    requirements.push(
+      Object.freeze({
+        kind: 'purgingPoolSlots' as const,
+        owner: room.address,
+        slots: Object.freeze(
+          feature.slots.map((slot) =>
+            Object.freeze({
+              interactionKey: slot.interactionKey,
+              slotKey: slot.key,
+              traitKey: slot.traitKey,
+            }),
+          ),
+        ),
+      }),
+    );
   }
 
   switch (room.roomLocal.kind) {

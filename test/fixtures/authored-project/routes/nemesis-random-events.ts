@@ -18,13 +18,11 @@ import {
   type NemesisRandomEventBranchAssessment,
 } from '@run-planner/engine/simulation';
 
+import { goldenFBiome, goldenFOccurrenceId, goldenHBiome } from './underworld';
 import {
-  createGoldenFGHProject,
-  createGoldenFGHIProject,
-  goldenFBiome,
-  goldenFOccurrenceId,
-  goldenHBiome,
-} from './underworld';
+  loadUnderworldFGHCheckpoint,
+  loadUnderworldFGHICheckpoint,
+} from '../checkpoints/underworld';
 
 function sharedCandidate(
   branches: readonly NemesisRandomEventBranchAssessment[],
@@ -71,7 +69,7 @@ function reachedFreeItemRewardType(): string {
     'Encounter',
   );
   return sharedCandidate(
-    candidateBranches(selectedNemesis(createGoldenFGHIProject(), phase), phase),
+    candidateBranches(selectedNemesis(loadUnderworldFGHICheckpoint(), phase), phase),
     'freeItemRewardTypes',
   );
 }
@@ -104,7 +102,7 @@ export function createNemesisTraitTradeCheckpoint(): ProjectDocument {
     { kind: 'occurrence', occurrenceId },
     'Encounter',
   );
-  let project = selectedNemesis(createGoldenFGHIProject(), phase);
+  let project = selectedNemesis(loadUnderworldFGHICheckpoint(), phase);
   const traitKey = sharedCandidate(candidateBranches(project, phase), 'traitTradeTraitKeys');
   project = applyProjectCommand(project, catalog, {
     kind: 'ReplaceNemesisRandomEventOutcome',
@@ -124,7 +122,7 @@ export function createNemesisFieldsCheckpoint(): ProjectDocument {
     { kind: 'occurrence', occurrenceId },
     'Passive',
   );
-  let project = applyProjectCommand(createGoldenFGHProject(), catalog, {
+  let project = applyProjectCommand(loadUnderworldFGHCheckpoint(), catalog, {
     kind: 'ReplaceFieldsOptionalRewardCount',
     occurrence,
     optionalRewardCount: 3,
@@ -160,7 +158,7 @@ export function createNemesisPomCheckpoint(): ProjectDocument {
     { kind: 'occurrence', occurrenceId },
     'Encounter',
   );
-  let project = selectedNemesis(createGoldenFGHIProject(), phase);
+  let project = selectedNemesis(loadUnderworldFGHICheckpoint(), phase);
   const rewardTypes = candidateBranches(project, phase)[0]?.goldTradeRewardTypes ?? [];
   const rewardType = rewardTypes.find(
     (candidate) => candidate === 'StackUpgrade' || candidate === 'WeaponUpgrade',

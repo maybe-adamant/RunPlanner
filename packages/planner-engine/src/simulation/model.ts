@@ -55,7 +55,12 @@ export type RewardGenerationFindingCode =
   | 'steadyGrowthOutcomeUnavailable'
   | 'fieldsOptionalCapacityUnavailable'
   | 'nemesisOutcomeMissing'
-  | 'nemesisOutcomeUnavailable';
+  | 'nemesisOutcomeUnavailable'
+  | 'purgingPoolSaleUnavailable'
+  | 'purgingPoolTraitMissing'
+  | 'purgingPoolTraitUnavailable'
+  | 'purgingPoolTraitDuplicate'
+  | 'purgingPoolWrongCardinality';
 
 export type TraitFindingCode =
   | 'callingCardRarificationUnavailable'

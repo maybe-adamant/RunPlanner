@@ -237,8 +237,10 @@ function activeDomains(
       if (plan.topology === null) continue;
       const biome = createBiomeAddress(route.routeKey, plan.biomeKey);
       const active = structurallyActiveOccurrenceIds(plan.topology);
-      for (const occurrence of plan.topology.occurrences) {
-        if (!active.has(occurrence.occurrenceId)) continue;
+      for (const occurrence of [
+        ...plan.topology.occurrences.filter((candidate) => active.has(candidate.occurrenceId)),
+        ...plan.completionOccurrences,
+      ]) {
         result.set(
           JSON.stringify([route.routeKey, plan.biomeKey, occurrence.occurrenceId]),
           assembleRoomActionDomain({
@@ -352,19 +354,22 @@ export function reconcileNewRequiredRoomActions(
     );
     if (newlyRequired.size === 0) continue;
     const [routeKey, biomeKey, occurrenceId] = JSON.parse(ownerKey) as [string, string, string];
-    const occurrence = proposed.routes
+    const plan = proposed.routes
       .find((route) => route.routeKey === routeKey)
-      ?.biomes.find((plan) => plan.biomeKey === biomeKey)
-      ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === occurrenceId);
-    if (occurrence === undefined)
+      ?.biomes.find((plan) => plan.biomeKey === biomeKey);
+    const owner = [
+      ...(plan?.topology?.occurrences ?? []),
+      ...(plan?.completionOccurrences ?? []),
+    ].find((candidate) => candidate.occurrenceId === occurrenceId);
+    if (owner === undefined)
       throw new Error(`active Room Action owner ${ownerKey} disappeared`);
     const order = scheduleRequiredRoomActions({
       catalog,
       domain,
-      order: occurrence.roomActions.order,
+      order: owner.roomActions.order,
       requiredKeys: newlyRequired,
     });
-    if (order !== occurrence.roomActions.order) replacements.set(ownerKey, order);
+    if (order !== owner.roomActions.order) replacements.set(ownerKey, order);
   }
   if (replacements.size === 0) return proposed;
   return frozen({
@@ -375,8 +380,7 @@ export function reconcileNewRequiredRoomActions(
           ...route,
           biomes: frozen(
             route.biomes.map((plan): AuthoredBiomePlan => {
-              if (plan.topology === null) return plan;
-              const occurrences = plan.topology.occurrences.map((occurrence): RoomOccurrence => {
+              const replaceOrder = (occurrence: RoomOccurrence): RoomOccurrence => {
                 const key = JSON.stringify([
                   route.routeKey,
                   plan.biomeKey,
@@ -386,9 +390,14 @@ export function reconcileNewRequiredRoomActions(
                 return order === undefined
                   ? occurrence
                   : frozen({ ...occurrence, roomActions: frozen({ order }) });
-              });
+              };
+              const completionOccurrences = plan.completionOccurrences.map(replaceOrder);
+              if (plan.topology === null)
+                return frozen({ ...plan, completionOccurrences: frozen(completionOccurrences) });
+              const occurrences = plan.topology.occurrences.map(replaceOrder);
               return frozen({
                 ...plan,
+                completionOccurrences: frozen(completionOccurrences),
                 topology: frozen({ ...plan.topology, occurrences: frozen(occurrences) }),
               });
             }),
@@ -408,9 +417,10 @@ export function roomActionDomainForOccurrence(
   const plan = document.routes
     .find((route) => route.routeKey === biome.routeKey)
     ?.biomes.find((candidate) => candidate.biomeKey === biome.biomeKey);
-  const occurrence = plan?.topology?.occurrences.find(
-    (candidate) => candidate.occurrenceId === occurrenceId,
-  );
+  const occurrence = [
+    ...(plan?.topology?.occurrences ?? []),
+    ...(plan?.completionOccurrences ?? []),
+  ].find((candidate) => candidate.occurrenceId === occurrenceId);
   return occurrence === undefined
     ? undefined
     : frozen({

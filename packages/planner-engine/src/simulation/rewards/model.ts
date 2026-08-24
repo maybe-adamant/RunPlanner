@@ -168,6 +168,11 @@ export interface BiomeRewardSimulation extends RewardSimulationBase {
   readonly rewardLookups: Readonly<Record<string, readonly string[]>>;
   readonly runStateSnapshots: readonly RunStateSnapshot[];
   readonly runStateAvailability: readonly RunStateAvailability[];
+  /** Exact room-entry Pool generation assessments, before any sale action. */
+  readonly purgingPoolAssessments: readonly {
+    readonly origin: import('../../authored-project/addresses').OccurrenceAddress;
+    readonly assessments: readonly import('../purging-pool').PurgingPoolAssessment[];
+  }[];
   readonly selectedTraitOffers: readonly SelectedTraitOfferAssessment[];
   readonly selectedLevelResolutions: readonly SelectedLevelResolutionAssessment[];
   /** One resolved runtime substitute per reached selected result/action. */

@@ -21,6 +21,7 @@ import {
 } from './model';
 import {
   expectArray,
+  expectBoolean,
   expectExactKeys,
   expectNonBlankString,
   expectRecord,
@@ -167,6 +168,7 @@ function decodeBiomePlan(
           'additionalExits',
           ...(raw.acquisitionSites === undefined ? [] : ['acquisitionSites']),
           ...(room.hasKeepsakeRack ? ['keepsakeRack'] : []),
+          ...(room.purgingPool !== undefined ? ['purgingPool'] : []),
         ],
         `${path}.completionOccurrences[${index}]`,
       );
@@ -197,6 +199,55 @@ function decodeBiomePlan(
         raw.roomActions,
         `${path}.completionOccurrences[${index}].roomActions`,
       );
+      const purgingPool =
+        room.purgingPool === undefined
+          ? undefined
+          : (() => {
+              const value = expectRecord(
+                raw.purgingPool,
+                `${path}.completionOccurrences[${index}].purgingPool`,
+              );
+              expectExactKeys(
+                value,
+                ['interacted', 'traitKeyBySlot'],
+                `${path}.completionOccurrences[${index}].purgingPool`,
+              );
+              const interacted = expectBoolean(
+                value.interacted,
+                `${path}.completionOccurrences[${index}].purgingPool.interacted`,
+              );
+              const traitKeys = expectRecord(
+                value.traitKeyBySlot,
+                `${path}.completionOccurrences[${index}].purgingPool.traitKeyBySlot`,
+              );
+              expectExactKeys(
+                traitKeys,
+                [...room.purgingPool.slotKeys],
+                `${path}.completionOccurrences[${index}].purgingPool.traitKeyBySlot`,
+              );
+              const decoded = Object.fromEntries(
+                room.purgingPool.slotKeys.map((slot) => {
+                  const entry = traitKeys[slot];
+                  if (entry === null) return [slot, null];
+                  const traitKey = expectString(
+                    entry,
+                    `${path}.completionOccurrences[${index}].purgingPool.traitKeyBySlot.${slot}`,
+                  );
+                  if (catalog.traits.byKey[traitKey] === undefined)
+                    fail(
+                      `${path}.completionOccurrences[${index}].purgingPool.traitKeyBySlot.${slot}`,
+                      'unknown trait',
+                    );
+                  return [slot, traitKey];
+                }),
+              );
+              return Object.freeze({
+                interacted,
+                traitKeyBySlot: Object.freeze(decoded) as Readonly<
+                  Record<'left' | 'middle' | 'right', string | null>
+                >,
+              });
+            })();
       if (!Array.isArray(raw.additionalExits) || raw.additionalExits.length !== 0)
         fail(`${path}.completionOccurrences[${index}].additionalExits`, 'must be empty');
       const keepsakeRack = !room.hasKeepsakeRack
@@ -273,6 +324,7 @@ function decodeBiomePlan(
         state: Object.freeze({ kind: 'none' as const }),
         encounters,
         roomActions,
+        ...(purgingPool === undefined ? {} : { purgingPool }),
         additionalExits: Object.freeze([]),
       });
       const acquisitionSites =
@@ -320,8 +372,19 @@ function decodeBiomePlan(
       const authoredKeys = roomActions.order.map(roomActionKey);
       if (new Set(authoredKeys).size !== authoredKeys.length)
         fail(actionPath, 'must not repeat a room action');
-      for (const actionKey of authoredKeys)
-        if (!activeKeys.has(actionKey)) fail(actionPath, 'contains an inactive room action');
+      for (const reference of roomActions.order) {
+        const actionKey = roomActionKey(reference);
+        if (
+          reference.kind === 'sellPurgingPoolTrait' &&
+          decodedOccurrence.purgingPool?.interacted !== true
+        )
+          fail(actionPath, 'contains a Pool sale while the Pool is not interacted with');
+        const retainedClearedPoolSale =
+          reference.kind === 'sellPurgingPoolTrait' &&
+          decodedOccurrence.purgingPool?.traitKeyBySlot[reference.slotKey] === null;
+        if (!activeKeys.has(actionKey) && !retainedClearedPoolSale)
+          fail(actionPath, 'contains an inactive room action');
+      }
       for (const action of activeActions)
         if (
           action.participation === 'required' &&

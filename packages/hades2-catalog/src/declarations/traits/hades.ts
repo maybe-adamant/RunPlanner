@@ -76,6 +76,7 @@ export const hadesGiver = {
   key: 'Hades',
   label: 'Hades',
   providerKind: 'npc',
+  shopAwareGodTrait: true,
   priorityTraitKeys: [],
   traitKeys: [
     'HadesLifestealBoon',

@@ -7,15 +7,15 @@ scope, biome topology, occurrence-local state, semantic addresses, commands,
 persistence, and history. Simulation algorithms, candidates, Redux state, and
 React rendering are separate concerns.
 
-## Schema 56 Boundary
+## Schema 57 Boundary
 
-Schema 56 is the sole persisted authored-project contract. The codec rejects
+Schema 57 is the sole persisted authored-project contract. The codec rejects
 every other schema version rather than manufacturing current topology or leaf
 state for a stale document. The migration CLI performs the explicit 49-to-50,
-50-to-51, 51-to-52, 52-to-53, 53-to-54, 54-to-55, and 55-to-56 migrations outside the production
+50-to-51, 51-to-52, 52-to-53, 53-to-54, 54-to-55, 55-to-56, and 56-to-57 migrations outside the production
 decoder, and also updates the earlier catalog metadata from
 `0.32.0-run-impacting-traits` through
-`0.38.0-selected-resource-successes` without inventing authored outcomes. Catalog
+`0.39.0-purging-pool` without inventing authored outcomes. Catalog
 versions must match exactly after migration.
 
 Schemas 46 and 47 completed the occurrence-owned topology and chronology
@@ -53,6 +53,13 @@ Schema 56 adds a complete, route-owned four-family selected-resource record.
 Each value is null or an exact `(biomeKey, occurrenceId)` address. Structural
 topology deletion clears its exact target; room replacement retains the address
 for contextual repair. The resource result itself remains simulation output.
+
+Schema 57 adds the three fixed Pool of Purging slots on automatic F/G/H
+Postboss occurrences. The physical Pool is always present. Its occurrence-owned
+`interacted` flag distinguishes a runtime-random, unmodeled inventory from an
+opened exact screen: only the latter activates the persisted nullable slot
+details and Pool sale Room Actions. Disabling interaction removes those sale
+actions atomically but retains slot details dormantly for restoration and Undo.
 
 There is one biome plan and one topology language. Production state and
 semantic addresses have no layout-specific plan family, completion-transition

@@ -934,6 +934,23 @@ export function normalizeRooms(
       room.boonRarityOverride,
       `${path}.boonRarityOverride`,
     );
+    const purgingPool =
+      room.purgingPool === undefined
+        ? undefined
+        : (() => {
+            const slotKeys = room.purgingPool.slotKeys;
+            if (
+              slotKeys.length !== 3 ||
+              slotKeys[0] !== 'left' ||
+              slotKeys[1] !== 'middle' ||
+              slotKeys[2] !== 'right'
+            ) {
+              fail(`${path}.purgingPool.slotKeys`, 'must be left, middle, right');
+            }
+            return Object.freeze({
+              slotKeys: Object.freeze([...slotKeys]) as readonly ['left', 'middle', 'right'],
+            });
+          })();
 
     return Object.freeze({
       gameName: room.gameName,
@@ -956,6 +973,7 @@ export function normalizeRooms(
       blockGiftBoons: room.blockGiftBoons ?? false,
       hasKeepsakeRack: room.hasKeepsakeRack ?? false,
       hasRequiredFountain: room.hasRequiredFountain ?? false,
+      ...(purgingPool === undefined ? {} : { purgingPool }),
       blocksGorgon: room.blocksGorgon ?? false,
       ...(boonRarityOverride === undefined ? {} : { boonRarityOverride }),
       ...(prebossBatchPolicy === undefined ? {} : { prebossBatchPolicy }),

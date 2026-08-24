@@ -1851,9 +1851,11 @@ export function AnomalyIdentityControls({ room }: { readonly room: WorkspaceRoom
 function RoomFeaturesWorkbench({
   features,
   interactions,
+  roomActions,
 }: {
   readonly features: readonly WorkspaceRoomFeature[];
   readonly interactions: WorkspaceInteractionCatalog;
+  readonly roomActions?: WorkspaceRoomActions;
 }) {
   const executeIntent = useCommandIntent();
   if (features.length === 0) return null;
@@ -1899,6 +1901,108 @@ function RoomFeaturesWorkbench({
                 )}
               />
             );
+          case 'purgingPool':
+            return (() => {
+              const poolInteraction = requireWorkspaceInteraction(
+                interactions.purgingPoolInteractions,
+                feature.interactionKey,
+              );
+              return (
+                <fieldset className="room-purging-pool" key="purging-pool">
+                  <legend>Pool of Purging</legend>
+                  <label>
+                    <input
+                      aria-label="Interact with Pool of Purging"
+                      checked={feature.interacted}
+                      onChange={(event) =>
+                        executeIntent(poolInteraction.intentFor(event.target.checked))
+                      }
+                      type="checkbox"
+                    />
+                    Interact
+                  </label>
+                  {feature.interacted
+                    ? feature.slots.map((slot) => {
+                        const interaction = requireWorkspaceInteraction(
+                          interactions.purgingPoolSlots,
+                          slot.interactionKey,
+                        );
+                        return (
+                          <label key={slot.key}>
+                            {slot.label}
+                            <select
+                              aria-label={`Pool of Purging ${slot.label}`}
+                              onChange={(event) =>
+                                executeIntent(
+                                  interaction.intentFor(
+                                    event.target.value === '' ? null : event.target.value,
+                                  ),
+                                )
+                              }
+                              value={slot.traitKey ?? ''}
+                            >
+                              <option value="">Unresolved</option>
+                              {slot.traitKey !== null &&
+                              !slot.candidateTraitKeys.includes(slot.traitKey) ? (
+                                <option value={slot.traitKey}>
+                                  {slot.traitLabel ?? slot.traitKey}
+                                </option>
+                              ) : null}
+                              {slot.candidateTraits.map((trait) => (
+                                <option key={trait.key} value={trait.key}>
+                                  {trait.label}
+                                </option>
+                              ))}
+                            </select>
+                            {slot.sale === undefined
+                              ? null
+                              : (() => {
+                                  const reference = {
+                                    kind: 'sellPurgingPoolTrait' as const,
+                                    slotKey: slot.key,
+                                  };
+                                  const proposal = roomActions?.proposals.find(
+                                    (candidate) =>
+                                      candidate.reference.kind === reference.kind &&
+                                      candidate.reference.slotKey === reference.slotKey &&
+                                      candidate.kind === (slot.sale?.sold ? 'remove' : 'insert'),
+                                  );
+                                  const actionInteraction =
+                                    roomActions === undefined
+                                      ? undefined
+                                      : requireWorkspaceInteraction(
+                                          interactions.roomActions,
+                                          roomActions.interactionKey,
+                                        );
+                                  return (
+                                    <span>
+                                      <input
+                                        aria-label={`Sell ${slot.label}`}
+                                        checked={slot.sale.sold}
+                                        disabled={
+                                          proposal?.structurallyAuthorable !== true ||
+                                          actionInteraction === undefined
+                                        }
+                                        onChange={() =>
+                                          proposal === undefined || actionInteraction === undefined
+                                            ? undefined
+                                            : executeIntent(
+                                                actionInteraction.intentFor(proposal.key),
+                                              )
+                                        }
+                                        type="checkbox"
+                                      />
+                                      Sell
+                                    </span>
+                                  );
+                                })()}
+                          </label>
+                        );
+                      })
+                    : null}
+                </fieldset>
+              );
+            })();
         }
       })}
     </section>
@@ -1972,7 +2076,13 @@ function DirectRoomWorkbench({
                 <LocalVisitWorkbench interactions={interactions} localVisit={localVisit} />
               )}
               {renderRoomOverviewContent?.()}
-              <RoomFeaturesWorkbench features={workbench.features} interactions={interactions} />
+              <RoomFeaturesWorkbench
+                features={workbench.features}
+                interactions={interactions}
+                {...(workbench.roomActions === undefined
+                  ? {}
+                  : { roomActions: workbench.roomActions })}
+              />
             </>
           ) : (
             <RoomActionsWorkbench
@@ -2000,7 +2110,13 @@ function DirectRoomWorkbench({
                 <LocalVisitWorkbench interactions={interactions} localVisit={localVisit} />
               )}
               {renderRoomOverviewContent?.()}
-              <RoomFeaturesWorkbench features={workbench.features} interactions={interactions} />
+              <RoomFeaturesWorkbench
+                features={workbench.features}
+                interactions={interactions}
+                {...(workbench.roomActions === undefined
+                  ? {}
+                  : { roomActions: workbench.roomActions })}
+              />
             </>
           ) : (
             <RoomActionsWorkbench
@@ -2028,7 +2144,13 @@ function DirectRoomWorkbench({
                 <LocalVisitWorkbench interactions={interactions} localVisit={localVisit} />
               )}
               {renderRoomOverviewContent?.()}
-              <RoomFeaturesWorkbench features={workbench.features} interactions={interactions} />
+              <RoomFeaturesWorkbench
+                features={workbench.features}
+                interactions={interactions}
+                {...(workbench.roomActions === undefined
+                  ? {}
+                  : { roomActions: workbench.roomActions })}
+              />
             </>
           ) : (
             <RoomActionsWorkbench
@@ -2055,7 +2177,13 @@ function DirectRoomWorkbench({
                 interactions={interactions}
               />
               {renderRoomOverviewContent?.()}
-              <RoomFeaturesWorkbench features={workbench.features} interactions={interactions} />
+              <RoomFeaturesWorkbench
+                features={workbench.features}
+                interactions={interactions}
+                {...(workbench.roomActions === undefined
+                  ? {}
+                  : { roomActions: workbench.roomActions })}
+              />
             </>
           ) : (
             <RoomActionsWorkbench

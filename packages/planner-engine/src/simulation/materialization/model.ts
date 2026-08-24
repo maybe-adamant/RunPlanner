@@ -154,6 +154,10 @@ export interface CanonicalAuthoredRoom {
   readonly keepsakeRack?: NonNullable<
     import('../../authored-project/model').RoomOccurrence['keepsakeRack']
   >;
+  /** The exact realized Pool list remains occurrence-owned through simulation. */
+  readonly purgingPool?: NonNullable<
+    import('../../authored-project/model').RoomOccurrence['purgingPool']
+  >;
   readonly roomActionRoster: import('../room-actions').RoomActionRoster;
   readonly roomLifecycleTimeline: import('../room-actions').RoomLifecycleTimeline;
   readonly requiredObjects?: readonly RequiredRoomObjectDescriptor[];

@@ -76,6 +76,7 @@ export const dionysusGiver = {
   key: 'Dionysus',
   label: 'Dionysus',
   providerKind: 'npc',
+  shopAwareGodTrait: true,
   priorityTraitKeys: [],
   traitKeys: [
     'CastLobBoon',

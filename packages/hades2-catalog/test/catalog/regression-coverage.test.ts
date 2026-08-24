@@ -148,9 +148,9 @@ const roomFacts = [
 ] as const;
 
 const normalizedBiomeSnapshotHashes = [
-  ['F', 'a91c5c6558a91538'],
-  ['G', '601ffec3b5c4534b'],
-  ['H', '6925c224f0eff150'],
+  ['F', 'cde14c8b821e3b04'],
+  ['G', 'fe52930453227d97'],
+  ['H', '97883d9038f61444'],
   ['I', '02f22ab9096acb2c'],
   ['N', 'bd347a2a7d5123dc'],
   ['O', 'df3059b61144cb6b'],
@@ -254,6 +254,19 @@ describe('catalog regression coverage retained through unified decisions', () =>
       expect(rooms.filter((room) => room.mode.kind === 'authored')).toHaveLength(authored);
     },
   );
+
+  it('declares Purging Pools only on the three Underworld Postboss rooms', () => {
+    expect(
+      catalog.rooms.values
+        .filter((room) => room.purgingPool !== undefined)
+        .map((room) => room.gameName),
+    ).toEqual(['F_PostBoss01', 'G_PostBoss01', 'H_PostBoss01']);
+    for (const gameName of ['F_PostBoss01', 'G_PostBoss01', 'H_PostBoss01']) {
+      expect(catalog.rooms.byKey[gameName]?.purgingPool).toEqual({
+        slotKeys: ['left', 'middle', 'right'],
+      });
+    }
+  });
 
   it('declares Experimental Hammer use advancement independently of encounter depth', () => {
     for (const gameName of [

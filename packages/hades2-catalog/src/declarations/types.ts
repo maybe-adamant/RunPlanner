@@ -371,6 +371,7 @@ export interface RawRoomDeclaration {
   readonly blocksGorgon?: boolean;
   readonly hasKeepsakeRack?: boolean;
   readonly hasRequiredFountain?: boolean;
+  readonly purgingPool?: { readonly slotKeys: readonly ['left', 'middle', 'right'] };
   readonly boonRarityOverride?: import('@run-planner/engine/catalog-schema').BoonRarityOverride;
   readonly prebossBatchPolicy?: RawPrebossBatchPolicy;
   readonly forcedRewardStoreKey?: string;
