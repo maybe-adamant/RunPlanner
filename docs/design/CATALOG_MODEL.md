@@ -462,10 +462,13 @@ a parallel encounter-identity authority.
 The catalog is a fully progressed, non-bounty static projection. It excludes
 source identities whose only distinction is unmodeled save/profile progression,
 first-time narrative state, reweighting, or pre-run Shrine/difficulty choice.
-It retains supported concrete ordinary and field-NPC combat definitions. NPC
-random events, Shop/Bridge appearances, interactions, Gold-wager outcomes,
-enemy waves, and other unmodeled room details are not silently represented by
-an `unsupported` identity or a runtime resolver branch.
+It retains supported concrete ordinary and field-NPC combat definitions, plus
+the one normalized `NemesisRandomEvent` identity in its declared F/G/H slots.
+That identity owns its closed event policy rather than expanding into five fake
+encounter identities. Other NPC random events and their interactions,
+Shop/Bridge appearances, Gold-wager outcomes, enemy waves, and other unmodeled
+room details are not silently represented by an `unsupported` identity or a
+runtime resolver branch.
 
 O's outgoing reward-store override is intentionally selected by
 `sourceRoomTemplateKey: 'ShipCombat'`, not by an encounter envelope or

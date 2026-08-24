@@ -717,14 +717,18 @@ consequential concrete set includes Ashes, Psyche, Bones, Max Magick, Max
 Health, and Death Defiance; each remains optional and independently ordered.
 
 The same acquisition-entry seam hosts all current generated pickups. A normal
-Quick Buck, Buried Treasure, or equipping Narcissus acquisition activates its
+Quick Buck, Buried Treasure, equipping Narcissus acquisition, or selected
+Nemesis random-event result activates its
 declaration-owned entries at its declared pickup window; source selection alone
 does not. Sea Star adds one later source-scoped entry after an eligible normal
-free pickup. The source action and generated action remain in the occurrence's
-one ordered Room Action roster, so a generated result can affect later rooms
-without regenerating the current outgoing batch. Direct Shop purchase actions
-remain atomic and do not emit any alternate pickup interaction; a free entry
-generated in that Shop room is a distinct pickup action.
+free pickup. A Nemesis interaction is required and every active event result
+entry depends on it; accepted trades are required while free-item and contest
+results retain ordinary optional participation. The source action and generated
+action remain in the occurrence's one ordered Room Action roster, so a
+generated result can affect later rooms without regenerating the current
+outgoing batch. Direct Shop purchase actions remain atomic and do not emit any
+alternate pickup interaction; a free entry generated in that Shop room is a
+distinct pickup action.
 
 ### Opening Reward Room
 

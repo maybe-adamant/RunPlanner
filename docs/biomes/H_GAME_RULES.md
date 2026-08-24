@@ -176,10 +176,14 @@ encounter definition's depth effect.
 `NemesisCombatH` is a member of `HEncountersDefault` only. It can therefore
 resolve on an active cage, never on either Passive set, an inactive cage, the
 bridge, Shop, or another non-cage room. Its exact-key requirements participate
-in the same preparation history as every other concrete definition. Gold wager,
-unsupported random-event and NPC interactions, and unmodeled Shop interaction
-variants remain outside the planner's modeled surface; the fixed Echo Bridge
-offer is supported.
+in the same preparation history as every other concrete definition.
+`NemesisRandomEvent` is instead a declared Passive choice presented as an
+add/remove Room Feature: it requires its ordinary encounter interaction,
+reserves one physical optional-reward position, leaves cage rewards untouched,
+and retains an over-cap optional count for repair. Gold wager, Bridge Nemesis,
+other unsupported NPC interactions, and unmodeled Shop interaction variants
+remain outside the planner's modeled surface; the fixed Echo Bridge offer is
+supported.
 
 ## Product boundary
 

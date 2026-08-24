@@ -73,7 +73,7 @@ completion-owned Room Action order owns chronology; Gold materializes from the f
 non-Spell purchase before that source's acquisition effects and may be picked
 up later among the other room entries.
 
-The current strict authored contract is schema 52. Its earlier schema-41
+The current strict authored contract is schema 53. Its earlier schema-41
 Narcissus, Mourning Fields, and Artificer surface remains intact: Narcissus
 exposes every pickup consequential to Time Piece or
 Artificer, including producer-owned Psyche without adding it to a counted
@@ -82,6 +82,15 @@ retained optional inventory, and one action chronology that interleaves atomic
 cage completion with cage, optional, and Artificer-replacement interactions.
 Optional offers consume the persistent `FieldsOptionalRewards` bag when they
 spawn and remain history-neutral when left behind.
+
+Nemesis now has both clean combat and the ordinary random event. F and G
+author one realized event family and outcome at the selected encounter; the
+already-drawn incoming reward remains a door and bag fact but is not acquired.
+H presents the noncombat event as a Room Feature over its Passive encounter:
+it reserves one optional-reward position, requires the ordinary encounter
+interaction, leaves cages intact, and retains any over-cap authored optional
+count for repair. Event results use ordinary generated acquisition rows and
+the shared room-action chronology; I intentionally remains combat-only.
 
 The Artificer uses one mutually exclusive acquisition disposition beside
 ordinary pickup and Time Piece. A successful free-source conversion spends one

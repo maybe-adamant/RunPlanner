@@ -1158,8 +1158,9 @@ its exact occurrence or local owner and point key.
 producer-owned source and may own acquisition-time trait or level detail.
 
 Canonical simulation settles all current acquisition families through that
-one product. Ordinary room, Devotion, O wheel, H cage, and entered N main/side
-rewards have engine-derived required classification and lifecycle windows. The
+one product. Ordinary room, Devotion, O wheel, H cage, entered N main/side,
+and active Nemesis random-event results have engine-derived required
+classification and lifecycle windows. The
 activating semantic command default-inserts their exact required references in
 the occurrence's sole persisted `roomActions.order`; Shop offers and optional
 declaration-produced pickups join that same order through their explicit
@@ -1169,6 +1170,17 @@ chronology; the simulator never searches another ordering to rescue an invalid
 authored sequence. A deliberately missing required reference remains an
 incomplete, repairable authored state rather than being synthesized during
 simulation.
+
+Nemesis assesses its authored family, response, and trait target at the exact
+pre-interaction frontier in the ranked encounter action. Accepted trait trade
+uses the ordinary exact trait-removal history before activating its required
+Triple Gold entry; other active event results remain ordinary concrete
+acquisition entries. F/G event selection preserves the incoming reward's
+authored identity and counted-bag draw while disabling only its acquisition.
+H instead reserves one optional-reward position through its selected Passive
+event and leaves cage rewards active. The simulator records no exit theft:
+the selected continuation is protected, natural Chaos is an affordable ordinary
+alternative, and Zagreus Contract is excluded from ordinary door theft.
 
 For an entered shop, evaluate ordered groups against the pre-generation fact
 snapshot, validate every authored offer against an eligible option entry, and
