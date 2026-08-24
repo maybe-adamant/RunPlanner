@@ -275,7 +275,8 @@ The Planner does not add a Gold balance, current health, death branch,
 No-Hit-Shield ledger, or external dialogue/profile state. It therefore:
 
 - authors accept or decline without validating affordability;
-- records damage without simulating survival;
+- treats accepted damage trade as paid and survived without recording its
+  amount or simulating survival;
 - permits the audited realized Last Stand and damage-trade family baseline
   without inventing global health/shield state; and
 - treats the 2,000-damage presentation tier as absent.
