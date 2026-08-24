@@ -260,13 +260,16 @@ Their current-run room, counter, cap, force, and reward rules remain exact.
 
 Every G room binds its concrete encounter slots explicitly. Pool-backed
 ordinary combat phases select one exact definition from `GEncountersDefault`,
-which supports `GeneratedG`, `ArtemisCombatG`, `ArachneCombatG`, and
-`NemesisCombatG`. Fixed starts, specials, minibosses, Shops, and completion
+which supports `GeneratedG`, `ArtemisCombatG`, `ArachneCombatG`,
+`NemesisCombatG`, and `NemesisRandomEvent`. Fixed starts, specials, minibosses,
+Shops, and completion
 rooms resolve their direct definitions and are not NPC candidate surfaces.
 
 The NPC definitions use ordinary exact-key eligibility and history requirements;
-the planner does not add a G-specific NPC resolver or family ledger. Raw set
-weights, external predicates, Arachne and Nemesis interactions, random/Shop
+the planner does not add a G-specific NPC resolver or family ledger. The
+Nemesis event authors one realized family/outcome and suppresses the
+already-drawn incoming reward's acquisition while preserving its bag draw. Raw
+set weights, external predicates, Arachne interactions, other random/Shop
 events, and enemy-wave detail remain audit or future-feature concerns rather
 than production authored state. When `ArtemisCombatG` is selected and entered,
 its exact phase owns Artemis's three-choice trait offer and folds the selected

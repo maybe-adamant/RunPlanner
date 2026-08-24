@@ -874,10 +874,13 @@ repair state. No producer owns a parallel purchase or pickup order.
 
 Declaration-produced and interaction-produced pickups use this same settlement
 site and action order. Narcissus, Quick Buck, Buried Treasure, Artificer, Echo
-last-reward, and Sea Star differ only in their source owner, lifecycle binding,
-and requiredness; each generated entry is still one ordinary concrete
-acquisition. Quick Buck and Buried Treasure entries are optional. Artificer
-replacements and fresh full-Pom Sea Star duplicates are required. A retained
+last-reward, Sea Star, and Nemesis random-event results differ only in their
+source owner, lifecycle binding, and requiredness; each generated entry is
+still one ordinary concrete acquisition. Nemesis's free-item and contest
+results are optional, while an accepted trade result is required after its
+required encounter interaction. Quick Buck and Buried Treasure entries are
+optional. Artificer replacements and fresh full-Pom Sea Star duplicates are
+required. A retained
 Sea Star consumable/resource duplicate keeps the exact source participation,
 producer-lifecycle conversion capabilities, and concrete identity for its
 second use; only its Sea Star capability is cleared. A fresh full Pom instead

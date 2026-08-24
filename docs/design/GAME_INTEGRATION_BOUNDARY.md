@@ -60,9 +60,11 @@ which facts are actually necessary.
 - reject unknown versions, operations, identifiers, and unsafe bounds;
 - translate semantic facts through fixed runtime adapters;
 - realize the plan's selected concrete encounter definition, including supported
-  field-NPC combat, through fixed runtime adapters;
-- suppress unmodeled NPC random, Shop, Bridge, interaction,
-  and wager systems while those systems are absent from the execution plan;
+  field-NPC combat and `NemesisRandomEvent` with its mandatory interaction and
+  authored result settlement, through fixed runtime adapters;
+- suppress other unmodeled NPC random events and their interactions,
+  Shop/Bridge appearances, and wager systems while those systems are absent
+  from the execution plan;
 - realize supported authored Anomaly replacement, Zagreus contract, and natural
   Chaos detours
   only through later fixed runtime adapters;
@@ -123,13 +125,14 @@ would otherwise change modeled history:
 
 - natural Chaos generation beyond the planner's declared source/map/spacing
   contract;
-- NPC random events, Shop/Bridge appearances, interactions, and wager outcomes.
+- other NPC random events and their interactions, Shop/Bridge appearances, and
+  wager outcomes.
 
 The future game module must disable these systems unless a later schema
 explicitly represents them. It must still realize the exact supported
-field-NPC combat definition selected by the plan. Observing an excluded system
-during a v1 trace is a conformance mismatch, not permission for the runtime to
-reinterpret the plan.
+field-NPC combat definition or `NemesisRandomEvent` interaction/result selected
+by the plan. Observing an excluded system during a v1 trace is a conformance
+mismatch, not permission for the runtime to reinterpret the plan.
 
 Challenges, wells, gathering points, and rerolls use a no-action contract
 instead. They may exist in the world, but the traced player never activates a
@@ -200,7 +203,8 @@ for execution.
 - game hook selection;
 - exact runtime mechanism that realizes G's open-picked-exit baseline;
 - exact runtime adapters that realize selected combat definitions, supported
-  Anomaly/Zagreus/natural-Chaos detours, and suppression of unmodeled NPC
+  `NemesisRandomEvent` interaction/result settlement,
+  Anomaly/Zagreus/natural-Chaos detours, and suppression of other unmodeled NPC
   event systems;
 - runtime command handlers;
 - strict versus diagnostic mismatch policy;

@@ -91,19 +91,22 @@ Every opening forces RunProgress and excludes `Devotion`, `RoomMoneyDrop`,
 Every F room binds its concrete encounter slots explicitly. Pool-backed ordinary
 combat phases retain their exact selected definition; fixed and empty slots do
 not acquire a redundant selection. `FEncountersDefault` additionally supports
-`ArtemisCombatF`, `ArachneCombatF`, and `NemesisCombatF` beside `GeneratedF`.
+`ArtemisCombatF`, `ArachneCombatF`, `NemesisCombatF`, and
+`NemesisRandomEvent` beside `GeneratedF`.
 The fixed opening and `F_Combat01` use their own ordinary bindings and do not
 expose those field-NPC candidates.
 
-The three NPC combat definitions use the same exact-key requirements and
-history machinery as ordinary definitions. Their raw source multiplicity,
-external progression predicates, and deferred random/event behavior remain in
+The NPC combat definitions and the noncombat Nemesis event use the same
+exact-key requirements and history machinery as ordinary definitions. The
+event has one authored realized family/outcome and suppresses acquisition of
+the already-drawn incoming reward without refunding its bag draw. Raw source
+multiplicity and external progression predicates remain in
 [`ENCOUNTER_SELECTION_AND_COMPOSITION_FINDINGS.md`](../audits/ENCOUNTER_SELECTION_AND_COMPOSITION_FINDINGS.md).
 When `ArtemisCombatF` is the selected active definition, its exact phase owns
 Artemis's three-choice trait offer and folds the selected trait at encounter
-completion. The normalized F surface deliberately excludes Arachne and Nemesis
-interactions and reward outcomes, other NPC random events, Shop appearances,
-and enemy-wave authoring.
+completion. The normalized F surface deliberately excludes Arachne
+interactions, other NPC random events, Shop appearances, and enemy-wave
+authoring.
 
 ## Physical Exits
 

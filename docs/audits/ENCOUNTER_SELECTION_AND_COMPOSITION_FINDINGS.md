@@ -744,13 +744,15 @@ scalar wager outcome remains deferred.
   already-drawn incoming reward while preserving its exact identity and
   reward-bag consumption.
 - Although the game selects H Nemesis instead of the generated passive
-  encounter identity, the Planner persists it as an additive required room
-  feature because the separate optional-reward generator still runs. Nemesis
-  sets the optional-reward upper bound to `capacity - 1`; it does not remove an
-  already generated reward when the chance-rolled count is lower. It leaves
-  cage rewards untouched and can be ordered freely among room interactions
-  before exit. Retained authored states exceeding the resulting upper bound
-  remain repairable rather than being silently truncated.
+  encounter identity, the Planner persists the selection in the H Passive slot;
+  the application presents it as an additive required Room Feature because the
+  separate optional-reward generator still runs. There is no second feature
+  boolean or event state. Nemesis sets the optional-reward upper bound to
+  `capacity - 1`; it does not remove an already generated reward when the
+  chance-rolled count is lower. It leaves cage rewards untouched and can be
+  ordered freely among room interactions before exit. Retained authored states
+  exceeding the resulting upper bound remain repairable rather than being
+  silently truncated.
 - One route-wide Nemesis occurrence rule covers clean combat and ordinary
   random events. The shared six-room field-NPC spacing rule also applies.
 - The Planner authors the realized family and request or result rather than
@@ -773,12 +775,12 @@ scalar wager outcome remains deferred.
   than a door, so every Shop exit is protected. Bridge progression, Shop theft,
   and combat-wager economy are not added to the authored Nemesis state.
 
-At the audited Planner boundary, the four clean combat identities are present,
-but the route exclusion still names only those four identities. The ordinary
-random event, its H room feature, its source/result state, and its generated
-pickups are not modeled. The normalized reward catalog also lacks the exact
-`EmptyMaxHealthDrop`, `HealDrop`, and `RoomRewardConsolationPrize` identities;
-similarly named existing rewards are not substitutes for those source objects.
+The audited Planner boundary now includes the ordinary F/G/H
+`NemesisRandomEvent`, its H Passive room feature, sparse source/result state,
+and ordinary generated-pickup settlement. The normalized reward catalog also
+retains the exact `EmptyMaxHealthDrop`, `HealDrop`, and
+`RoomRewardConsolationPrize` identities; similarly named existing rewards are
+not substitutes for those source objects.
 
 ## Enemy-Composition Pipeline
 

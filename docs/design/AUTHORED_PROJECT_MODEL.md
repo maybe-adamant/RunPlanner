@@ -7,15 +7,15 @@ scope, biome topology, occurrence-local state, semantic addresses, commands,
 persistence, and history. Simulation algorithms, candidates, Redux state, and
 React rendering are separate concerns.
 
-## Schema 52 Boundary
+## Schema 53 Boundary
 
-Schema 52 is the sole persisted authored-project contract. The codec rejects
+Schema 53 is the sole persisted authored-project contract. The codec rejects
 every other schema version rather than manufacturing current topology or leaf
 state for a stale document. The migration CLI performs the explicit 49-to-50,
-50-to-51, and 51-to-52 migrations outside the production decoder, and also
-updates the schema-52 catalog metadata from
+50-to-51, 51-to-52, and 52-to-53 migrations outside the production decoder,
+and also updates the schema-53 catalog metadata from
 `0.32.0-run-impacting-traits` through
-`0.34.0-sea-star` without inventing authored outcomes. Catalog versions must
+`0.35.0-nemesis-random-events` without inventing authored outcomes. Catalog versions must
 match exactly after migration.
 
 Schemas 46 and 47 completed the occurrence-owned topology and chronology
@@ -38,8 +38,11 @@ chronology field.
 
 Schema 50 adds the boon-rarity ledger contacts, schema 51 adds the closed Chaos
 trait outcome, and schema 52 adds the Natural Selection result and sparse Steady
-Growth target contacts described below. Their derived history, progress, Ransom
-removals, and automatic rarity mutations remain outside the persisted document.
+Growth target contacts described below. Schema 53 adds sparse phase-local
+Nemesis random-event outcomes and their exact generated acquisition ownership;
+switching away from the event retains its detail dormant for restoration. Their
+derived history, progress, Ransom removals, automatic rarity mutations, and
+Nemesis settlement remain outside the persisted document.
 
 There is one biome plan and one topology language. Production state and
 semantic addresses have no layout-specific plan family, completion-transition

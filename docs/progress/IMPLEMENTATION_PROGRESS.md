@@ -12,14 +12,33 @@ by the owning design authorities and active delivery plans.
 
 ## Active Frontier
 
-The current persisted contract is strict schema 52 with catalog
-`0.32.1-run-impacting-traits`. The occurrence/action
+The current persisted contract is strict schema 53 with catalog
+`0.35.0-nemesis-random-events`. The occurrence/action
 delivery landed occurrence-backed door staging at `e1e3af0`, one unified room
 chronology at `f38247d`, the corrected door contract at `daa876f`, the opening
 reward frontier at `fdfd2dc`, the engine-walk N Hub board at `aa09c10`, and
 direct outgoing-frontier rendering at `b4be69f`. Every supported authored main
 or N side room is one occurrence; topology, door-visible identity, room-local
 payload, participation, and chronology have distinct owners.
+
+The ordinary Nemesis random-event phase is complete through Gates A-C. Gate A
+`5464d0a` added the closed catalog policy, strict schema-53 authored protocol,
+metadata-only migration, and shared generated-pickup ownership. Its focused
+authored/codec/Nemesis contacts passed 95/95, catalog 207/207, schema migrations
+7/7, fixture integrity 13/13, root typecheck, lint, Prettier, and diff-check.
+Gate B `1f91f82c` added lifecycle/simulation settlement, F/G incoming-reward
+suppression, H capacity/order behavior, interaction-frontier candidates, and
+selected-exit preservation. Its focused owning set passed 5 files/73 tests,
+the full engine lane 91 files/1,307 tests, planner finding presentation 16
+tests, root typecheck, lint, Prettier, and diff-check. Gate C `a28e8e25` added
+the contextual event editor, H Room Feature presentation, chronology bindings,
+NPC index contact, and named checkpoints; its focused projection/binding/UI/
+route-index/engine set passed 5 files/144 tests, fixture gate 3 files/17 tests,
+contract 8 files/49 tests, product 7 files/30 tests, root typecheck, lint,
+Prettier, production build, and diff-check. The final Gate-D closure
+`npm run check` passed: fixture integrity 3 files/17 tests, regular tests 136
+files/1,743 tests, heavy tests 27 files/421 tests, root typecheck, lint,
+Prettier, and production build.
 
 The run-impacting trait phase is now landed. `525c1b5` (`feat(traits): model
 selection ransom and steady growth effects`) delivers the catalog, schema-52

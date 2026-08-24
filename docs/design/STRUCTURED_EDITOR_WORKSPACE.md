@@ -295,11 +295,15 @@ exactly once in the Ship repair surface, preserving its finding, semantic
 focus, and explicit removal proposal.
 
 Room features is a closed application product containing the currently
-supported Chaos-gate and Zagreus-contract Add/Remove controls. The resulting
-exit card owns only decision selection, room navigation, and its remaining
-door-specific identity controls; Anomaly identity/revert remains on its door.
-Incoming room identity and door-visible reward are read-only context in an
-entered occurrence; their editor remains the predecessor's outgoing door.
+supported Chaos-gate, Zagreus-contract, and Fields Nemesis-event Add/Remove
+controls. The resulting exit card owns only decision selection, room
+navigation, and its remaining door-specific identity controls; Anomaly
+identity/revert remains on its door. A selected F/G Nemesis event projects its
+contextual family/outcome editor beneath the encounter phase; H projects the
+same editor at the required Passive event row and uses the engine-derived
+optional-count maximum. Incoming room identity and door-visible reward are
+read-only context in an entered occurrence; their editor remains the
+predecessor's outgoing door.
 
 ### Fields and Artificer Products
 
