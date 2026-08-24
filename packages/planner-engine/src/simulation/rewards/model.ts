@@ -19,6 +19,7 @@ import type { ArcanaFearState } from '../arcana-fear';
 import type { KeepsakeState } from '../keepsakes';
 import type { EncounterPhaseAddress } from '../../authored-project/addresses';
 import type { TraitRarity } from '../../catalog-schema';
+import type { NemesisRandomEventAddress } from '../../authored-project/addresses';
 
 export interface FigLeafPhaseCandidateSupport {
   readonly origin: EncounterPhaseAddress;
@@ -34,6 +35,29 @@ export interface GorgonPhaseCandidateSupport {
   readonly supported: boolean;
   /** Encounter-start snapshot; absent when no pending appearance reached this phase. */
   readonly rarity?: TraitRarity;
+}
+
+/** Exact pre-interaction domain for the one selected Nemesis random event. */
+export interface NemesisRandomEventCandidateSupport {
+  readonly origin: NemesisRandomEventAddress;
+  readonly familyKeys: readonly (
+    'freeItem' | 'goldTrade' | 'damageTrade' | 'traitTrade' | 'damageContest'
+  )[];
+  /**
+   * One exact assessment per reachable reward-history branch. Domains must not
+   * be flattened: a result and a trait target are correlated within a branch.
+   */
+  readonly branches: readonly NemesisRandomEventBranchAssessment[];
+}
+
+export interface NemesisRandomEventBranchAssessment {
+  readonly freeItemRewardTypes: readonly string[];
+  readonly goldTradeRewardTypes: readonly string[];
+  readonly damageTradeRewardTypes: readonly string[];
+  readonly damageContestSuccessRewardTypes: readonly string[];
+  readonly damageContestFailureRewardType: string;
+  /** Common eligible traits take precedence; otherwise this is the eligible God-trait domain. */
+  readonly traitTradeTraitKeys: readonly string[];
 }
 
 interface RewardEventBase {
@@ -135,6 +159,7 @@ export interface BiomeRewardSimulation extends RewardSimulationBase {
   readonly selectedLevelResolutions: readonly SelectedLevelResolutionAssessment[];
   readonly figLeafPhaseCandidates: readonly FigLeafPhaseCandidateSupport[];
   readonly gorgonPhaseCandidates: readonly GorgonPhaseCandidateSupport[];
+  readonly nemesisRandomEventCandidates: readonly NemesisRandomEventCandidateSupport[];
   /** Exact reached automatic Steady Growth checkpoints for workspace timelines. */
   readonly steadyGrowthOutcomes: readonly {
     readonly address: SteadyGrowthOutcomeAddress;

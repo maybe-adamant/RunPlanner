@@ -1,4 +1,8 @@
 export {
+  fieldsOptionalRewardCountSupport,
+  type FieldsOptionalRewardCountSupport,
+} from './fields-optional-count';
+export {
   deriveBoonRarityLedger,
   boonRarityRollUnavailable,
   BOON_RARITY_CHECKS,
@@ -252,6 +256,8 @@ export {
   type BiomeRewardSimulation,
   type FigLeafPhaseCandidateSupport,
   type GorgonPhaseCandidateSupport,
+  type NemesisRandomEventBranchAssessment,
+  type NemesisRandomEventCandidateSupport,
   type CountedRewardOwnerAddress,
   type RewardBranch,
   type RewardEvent,
@@ -335,6 +341,7 @@ export {
   encounterPhaseCandidateSupportForProjectEvaluationAssembly,
   encounterPhaseFigLeafSupportForProjectEvaluationAssembly,
   encounterPhaseGorgonSupportForProjectEvaluationAssembly,
+  nemesisRandomEventCandidateSupportForProjectEvaluationAssembly,
   encounterPhaseSequenceStatusForProjectEvaluationAssembly,
   evaluateBiome,
   materializedBiomePrefixCoveragePoint,

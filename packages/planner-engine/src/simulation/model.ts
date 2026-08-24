@@ -51,7 +51,10 @@ export type RewardGenerationFindingCode =
   | 'keepsakeEquipResultMissing'
   | 'keepsakeEquipResultUnavailable'
   | 'steadyGrowthOutcomeMissing'
-  | 'steadyGrowthOutcomeUnavailable';
+  | 'steadyGrowthOutcomeUnavailable'
+  | 'fieldsOptionalCapacityUnavailable'
+  | 'nemesisOutcomeMissing'
+  | 'nemesisOutcomeUnavailable';
 
 export type TraitFindingCode =
   | 'callingCardRarificationUnavailable'

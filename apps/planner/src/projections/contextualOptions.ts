@@ -262,6 +262,12 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
       return { kind: 'trait', message: 'Choose the Steady Growth rarity target.' };
     case 'steadyGrowthOutcomeUnavailable':
       return { kind: 'trait', message: 'Choose a trait eligible for a rarity increase.' };
+    case 'fieldsOptionalCapacityUnavailable':
+      return { kind: 'fields', message: 'Reduce optional rewards to leave room for Nemesis.' };
+    case 'nemesisOutcomeMissing':
+      return { kind: 'encounter', message: 'Choose the result of this Nemesis event.' };
+    case 'nemesisOutcomeUnavailable':
+      return { kind: 'encounter', message: 'Choose a Nemesis result legal at this interaction.' };
     case 'echoLastRunBoonMissing':
       return { kind: 'trait', message: 'Author one to three previous-run boon outcomes.' };
     case 'echoLastRunBoonOptionUnavailable':

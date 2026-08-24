@@ -73,6 +73,7 @@ function emptyEncounterCandidateArtifacts(): EncounterCandidateArtifacts {
     at: () => undefined,
     statusAt: () => undefined,
     gorgonAt: () => undefined,
+    nemesisAt: () => undefined,
     roomAt: () => undefined,
     figLeafAt: () => undefined,
   });

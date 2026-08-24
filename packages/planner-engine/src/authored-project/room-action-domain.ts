@@ -731,6 +731,8 @@ export function assembleRoomActionDomain(options: {
   readonly lifecycleProfileKey?: string;
   readonly activeEncounterSlotKeys?: readonly string[];
   readonly activeRewardWheelKeys?: readonly string[];
+  /** Evaluated producer disposition from canonical materialization. */
+  readonly incomingRewardActive?: boolean;
   readonly shopInventoryActive?: boolean;
 }): RoomActionDomain {
   const declaration = options.catalog.rooms.byKey[options.occurrence.gameName];
@@ -757,9 +759,33 @@ export function assembleRoomActionDomain(options: {
       ...(options.activeRewardWheelKeys === undefined
         ? {}
         : { activeRewardWheelKeys: options.activeRewardWheelKeys }),
-      ...(options.occurrence.state.kind === 'anomaly'
-        ? { incomingRewardActive: options.occurrence.state.success }
-        : {}),
+      ...(options.incomingRewardActive === undefined
+        ? (() => {
+            const selectedEncounterSuppressesIncoming = encounterEnvelopeSlots(
+              options.catalog,
+              declaration,
+              declaration.gameName,
+            ).some((slot) => {
+              const selected = selectedEncounterDefinitionKey(
+                options.catalog,
+                declaration,
+                options.occurrence.encounters,
+                slot.key,
+                declaration.gameName,
+              );
+              return (
+                selected !== undefined &&
+                options.catalog.encounterDefinitions.byKey[selected]?.suppressesIncomingReward ===
+                  true
+              );
+            });
+            return {
+              incomingRewardActive:
+                !selectedEncounterSuppressesIncoming &&
+                (options.occurrence.state.kind !== 'anomaly' || options.occurrence.state.success),
+            };
+          })()
+        : { incomingRewardActive: options.incomingRewardActive }),
       ...(options.shopInventoryActive === undefined
         ? {}
         : { shopInventoryActive: options.shopInventoryActive }),

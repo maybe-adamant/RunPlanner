@@ -18,6 +18,8 @@ export type {
   TargetRewardHistoryCheckpoint,
   FigLeafPhaseCandidateSupport,
   GorgonPhaseCandidateSupport,
+  NemesisRandomEventBranchAssessment,
+  NemesisRandomEventCandidateSupport,
 } from './model';
 export type {
   DecisionCounterState,

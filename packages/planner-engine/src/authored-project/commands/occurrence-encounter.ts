@@ -281,10 +281,30 @@ function replaceTopLevel(
             }),
           });
         })();
+  const suppressesIncomingReward = Object.values(withNemesis.encounterKeyByPhase).some(
+    (encounterKey) =>
+      catalog.encounterDefinitions.byKey[encounterKey]?.suppressesIncomingReward === true,
+  );
+  // F/G's draw remains authored, but the selected event disables its producer
+  // lifecycle entirely. Remove the now-stale interaction from persisted room
+  // chronology; selecting another encounter lets normal action reconciliation
+  // restore any declaration-required incoming action.
+  const roomActions = suppressesIncomingReward
+    ? Object.freeze({
+        order: Object.freeze(
+          withEventSite.roomActions.order.filter(
+            (reference) => reference.kind !== 'interactIncomingReward',
+          ),
+        ),
+      })
+    : withEventSite.roomActions;
   return updateOccurrenceTopology(
     document,
     located,
-    replaceOccurrence(topology, Object.freeze({ ...withEventSite, encounters: withNemesis })),
+    replaceOccurrence(
+      topology,
+      Object.freeze({ ...withEventSite, encounters: withNemesis, roomActions }),
+    ),
   );
 }
 
