@@ -6,7 +6,6 @@ import {
   createOccurrenceAddress,
   createOccurrenceId,
   createProjectDocument,
-  createTargetAddress,
   semanticAddressKey,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
@@ -167,7 +166,7 @@ describe('workspace inspector defaults', () => {
       expect(value.defaultInspectorDestination?.kind).toBe('node');
       if (value.defaultInspectorDestination?.kind !== 'node') continue;
       expect(nodeByKey(value, value.defaultInspectorDestination.nodeKey).kind).toMatch(
-        /ordinaryBatch|mixedBatch|takeoverBatch/,
+        /ordinaryBatch|mixedBatch|takeoverBatch|occurrenceWorkbench/,
       );
     }
     for (const biomeKey of ['O', 'P', 'Q'] as const) {
@@ -175,7 +174,7 @@ describe('workspace inspector defaults', () => {
       expect(value.defaultInspectorDestination?.kind).toBe('node');
       if (value.defaultInspectorDestination?.kind !== 'node') continue;
       expect(nodeByKey(value, value.defaultInspectorDestination.nodeKey).kind).toMatch(
-        /ordinaryBatch|mixedBatch|takeoverBatch/,
+        /ordinaryBatch|mixedBatch|takeoverBatch|occurrenceWorkbench/,
       );
     }
 
@@ -222,7 +221,7 @@ describe('workspace inspector defaults', () => {
     expect(blocked.defaultInspectorDestination?.kind).toBe('node');
     if (blocked.defaultInspectorDestination?.kind !== 'node') return;
     expect(nodeByKey(blocked, blocked.defaultInspectorDestination.nodeKey).kind).toBe(
-      'takeoverBatch',
+      'occurrenceWorkbench',
     );
   });
 
@@ -287,17 +286,12 @@ describe('workspace inspector defaults', () => {
     );
 
     const complete = biome(loadSurfaceNOPQProject(), 'N');
-    const preboss = complete.nodes.find(
-      (node) =>
-        node.kind === 'occurrenceWorkbench' && node.room.occurrenceId === nOccurrenceIds.preboss,
+    const postboss = complete.nodes.find(
+      (node) => node.kind === 'occurrenceWorkbench' && node.room.kind === 'PostBoss',
     );
-    if (preboss === undefined) throw new Error('complete N fixed Preboss is missing');
-    expectNode(complete.defaultInspectorDestination, preboss.key);
-    expect(complete.defaultInspectorDestination?.selectedRailKey).toBe(
-      semanticAddressKey(
-        createTargetAddress(nBiome, { kind: 'hubDecision', decisionKey: 'hub' }, 'preboss'),
-      ),
-    );
+    if (postboss === undefined) throw new Error('complete N automatic Postboss is missing');
+    expectNode(complete.defaultInspectorDestination, postboss.key);
+    expect(complete.defaultInspectorDestination?.selectedRailKey).toBeUndefined();
   });
 
   it('keeps defensive matching-exit, entry, first-node, and empty defaults explicit', () => {
@@ -350,8 +344,8 @@ describe('workspace inspector defaults', () => {
       entry.key,
     );
 
-    const completion = complete.nodes.find((node) => node.kind === 'completion');
-    if (completion === undefined) throw new Error('complete F completion node is missing');
+    const completion = complete.completionOutline[0];
+    if (completion === undefined) throw new Error('complete F automatic occurrence is missing');
     expectNode(
       defaultInspectorDestination({ frontier: null, nodes: [completion], rail: [] }),
       completion.key,

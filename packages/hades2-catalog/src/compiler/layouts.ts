@@ -390,12 +390,12 @@ function normalizeCompletion(
     const expectedKind = entry.role === 'boss' ? 'Boss' : 'PostBoss';
     if (
       room.kind !== expectedKind ||
-      room.mode.kind !== 'derived' ||
-      room.mode.classification !== 'completion'
+      room.mode.kind !== 'automatic' ||
+      room.mode.role !== entry.role
     ) {
       fail(
         `${path}.rooms[${index}].roomGameName`,
-        `${room.gameName} must be a derived ${expectedKind} completion room`,
+        `${room.gameName} must be the automatic ${entry.role} ${expectedKind} room`,
       );
     }
     return Object.freeze({

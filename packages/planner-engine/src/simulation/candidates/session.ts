@@ -79,10 +79,10 @@ import {
 } from './takeover-hub';
 import type { CandidateContextUnavailable } from './availability';
 import {
-  evaluateBossCompletionArcanaCandidate,
-  type BossCompletionArcanaCandidateQuery,
-  type EvaluatedBossCompletionArcanaCandidate,
-} from './boss-completion-arcana';
+  evaluateJudgmentArcanaCandidate,
+  type JudgmentArcanaCandidateQuery,
+  type EvaluatedJudgmentArcanaCandidate,
+} from './judgment-arcana';
 import {
   evaluateTraitAcquisitionTargetDomain,
   evaluateCirceResolutionDomain,
@@ -162,7 +162,7 @@ export type ProjectCandidateQuery =
   | TakeoverPrebossBatchCandidateQuery
   | HubTerminalTakeoverCandidateQuery
   | TraitOfferCandidateQuery
-  | BossCompletionArcanaCandidateQuery
+  | JudgmentArcanaCandidateQuery
   | KeepsakeSelectionCandidateQuery
   | KeepsakeEquipResultCandidateQuery
   | AcquisitionConversionCandidateQuery
@@ -203,7 +203,7 @@ export type ProjectCandidateEvaluation =
   | EvaluatedTakeoverPrebossBatchCandidate
   | EvaluatedHubTerminalTakeoverCandidate
   | EvaluatedTraitOfferCandidate
-  | EvaluatedBossCompletionArcanaCandidate
+  | EvaluatedJudgmentArcanaCandidate
   | EvaluatedKeepsakeSelectionCandidate
   | EvaluatedKeepsakeEquipResultCandidate
   | EvaluatedAcquisitionConversionCandidate
@@ -337,14 +337,14 @@ function evaluateCandidateQuery(
         candidateArtifacts.keepsakeSelections,
         query,
       );
-    case 'bossCompletionArcana':
-      return evaluateBossCompletionArcanaCandidate(
+    case 'judgmentArcana':
+      return evaluateJudgmentArcanaCandidate(
         catalog,
         project,
         evaluation,
         candidateArtifacts.biomeAt(
-          createBiomeAddress(query.completion.routeKey, query.completion.biomeKey),
-        )?.bossCompletionArcana,
+          createBiomeAddress(query.judgment.routeKey, query.judgment.biomeKey),
+        )?.judgmentArcana,
         query,
       );
     case 'startRoom':

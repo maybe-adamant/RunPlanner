@@ -10,8 +10,8 @@ import {
 import {
   applyProjectCommand,
   createEncounterPhaseAddress,
-  createCompletionRoomAddress,
   createPostbossKeepsakeSelectionAddress,
+  createOccurrenceAddress,
   createOccurrenceId,
   createRouteStartKeepsakeSelectionAddress,
   semanticAddressKey,
@@ -417,7 +417,7 @@ describe('Fig Leaf state contract', () => {
     const replacement = applyProjectCommand(skipped, catalog, {
       kind: 'ReplacePostbossKeepsake',
       selection: createPostbossKeepsakeSelectionAddress(
-        createCompletionRoomAddress(nBiome, 'postboss'),
+        createOccurrenceAddress(nBiome, createOccurrenceId('completion:N:postboss')),
       ),
       value: { kind: 'replace', keepsakeKey: 'GoldifyKeepsake' },
     });

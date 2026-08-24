@@ -318,8 +318,6 @@ function assertRenderedNodeControls(
       }
       return;
     }
-    case 'completion':
-      return;
     default:
       return unreachable(node);
   }

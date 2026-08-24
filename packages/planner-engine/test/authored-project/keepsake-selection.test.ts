@@ -4,8 +4,9 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createBiomeAddress,
-  createCompletionRoomAddress,
   createKeepsakeEquipResultAddress,
+  createOccurrenceAddress,
+  createOccurrenceId,
   createPostbossKeepsakeSelectionAddress,
   createProjectDocument,
   createRouteAddress,
@@ -15,6 +16,11 @@ import {
   type KeepsakeSelectionAddress,
 } from '@run-planner/engine/authored-project';
 
+const fPostboss = createOccurrenceAddress(
+  createBiomeAddress('Underworld', 'F'),
+  createOccurrenceId('completion:F:postboss'),
+);
+
 describe('keepsake authored selections', () => {
   it('creates mandatory starting and retained Postboss defaults and round-trips replacements', () => {
     let project = createProjectDocument(catalog, {
@@ -23,12 +29,14 @@ describe('keepsake authored selections', () => {
     });
     const route = project.routes.find((candidate) => candidate.routeKey === 'Underworld');
     expect(route?.loadout.startingKeepsakeKey).toBe('ManaOverTimeRefundKeepsake');
-    expect(route?.biomes[0]?.postbossKeepsakeDisposition).toEqual({ kind: 'retain' });
+    expect(
+      route?.biomes[0]?.completionOccurrences.find(
+        (occurrence) => occurrence.occurrenceId === fPostboss.occurrenceId,
+      )?.keepsakeRack?.disposition,
+    ).toEqual({ kind: 'retain' });
 
     const selection: Extract<KeepsakeSelectionAddress, { readonly owner: object }> =
-      createPostbossKeepsakeSelectionAddress(
-        createCompletionRoomAddress(createBiomeAddress('Underworld', 'F'), 'postboss'),
-      );
+      createPostbossKeepsakeSelectionAddress(fPostboss);
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceStartingKeepsake',
       selection: createRouteStartKeepsakeSelectionAddress('Underworld'),
@@ -65,9 +73,7 @@ describe('keepsake authored selections', () => {
       configuredBiomeCounts: { Underworld: 2 },
     });
     const start = createRouteStartKeepsakeSelectionAddress('Underworld');
-    const postboss = createPostbossKeepsakeSelectionAddress(
-      createCompletionRoomAddress(createBiomeAddress('Underworld', 'F'), 'postboss'),
-    );
+    const postboss = createPostbossKeepsakeSelectionAddress(fPostboss);
 
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceStartingKeepsake',
@@ -124,8 +130,11 @@ describe('keepsake authored selections', () => {
       value: { kind: 'replace', keepsakeKey: 'HadesAndPersephoneKeepsake' },
     });
     expect(
-      project.routes.find((route) => route.routeKey === 'Underworld')?.biomes[0]
-        ?.keepsakeEquipResults?.jeweledPom,
+      project.routes
+        .find((route) => route.routeKey === 'Underworld')
+        ?.biomes[0]?.completionOccurrences.find(
+          (occurrence) => occurrence.occurrenceId === fPostboss.occurrenceId,
+        )?.keepsakeRack?.equipResults?.jeweledPom,
     ).toBeUndefined();
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceJeweledPomEquipResult',
@@ -143,8 +152,11 @@ describe('keepsake authored selections', () => {
       value: { kind: 'replace', keepsakeKey: 'HadesAndPersephoneKeepsake' },
     });
     expect(
-      project.routes.find((route) => route.routeKey === 'Underworld')?.biomes[0]
-        ?.keepsakeEquipResults?.jeweledPom,
+      project.routes
+        .find((route) => route.routeKey === 'Underworld')
+        ?.biomes[0]?.completionOccurrences.find(
+          (occurrence) => occurrence.occurrenceId === fPostboss.occurrenceId,
+        )?.keepsakeRack?.equipResults?.jeweledPom,
     ).toEqual({ traitKey: 'HadesLifestealBoon' });
     expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog)).toEqual(
       project,

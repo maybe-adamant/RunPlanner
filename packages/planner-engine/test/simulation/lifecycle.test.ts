@@ -1,6 +1,5 @@
 import {
   createBiomeAddress,
-  createCompletionRoomAddress,
   createOccurrenceAddress,
   createOccurrenceId,
   createRoomActionAddress,
@@ -234,7 +233,10 @@ function actionRoster(
 
 describe('single-room lifecycle execution', () => {
   it('emits the derived Boss-defeated seam before completion and end effects', () => {
-    const bossOrigin = createCompletionRoomAddress(createBiomeAddress('Underworld', 'F'), 'boss');
+    const bossOrigin = createOccurrenceAddress(
+      createBiomeAddress('Underworld', 'F'),
+      createOccurrenceId('completion:F:boss'),
+    );
     const events = executeRoomLifecycle(
       catalog,
       inputWithoutProducer({

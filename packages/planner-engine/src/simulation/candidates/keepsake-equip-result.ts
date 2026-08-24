@@ -44,9 +44,12 @@ function authoredValue(
       ?.echoKeepsakeReplayResults?.experimentalHammer;
   if (address.selection.owner === 'routeStart')
     return route?.loadout.keepsakeEquipResults?.[address.resultKind];
-  return route?.biomes.find((biome) => biome.biomeKey === address.biomeKey)?.keepsakeEquipResults?.[
-    address.resultKind
-  ];
+  const postbossOwner = address.selection.owner;
+  return route?.biomes
+    .find((biome) => biome.biomeKey === address.biomeKey)
+    ?.completionOccurrences.find(
+      (occurrence) => occurrence.occurrenceId === postbossOwner.occurrenceId,
+    )?.keepsakeRack?.equipResults?.[address.resultKind];
 }
 
 /**

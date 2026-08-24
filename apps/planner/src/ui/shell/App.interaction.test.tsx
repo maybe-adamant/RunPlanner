@@ -1243,8 +1243,25 @@ describe('planner history interaction', () => {
         kind: 'occurrence',
         occurrenceId: goldenGOccurrenceId(7, 1),
       }),
-      value: { kind: 'normal', exitKey: 'exit3' },
+      value: { kind: 'normal', exitKey: 'exit2' },
     });
+    project = applyProjectCommand(project, application.catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(
+        goldenGBiome,
+        createOccurrenceId('golden-g-preboss-free-2'),
+      ),
+      value: { rewardType: 'HermesUpgrade' },
+    });
+    project = applyProjectCommand(project, application.catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(
+        goldenGBiome,
+        createOccurrenceId('golden-g-preboss-free-3'),
+      ),
+      value: { rewardType: 'StackUpgrade' },
+    });
+    project = authorLegalTraitOffers(project);
     application.store.dispatch(authoredProjectReplaced(project));
     const view = renderPlannerForInteraction({ application });
     await view.user.click(screen.getByRole('button', { name: 'Underworld' }));
@@ -1252,8 +1269,13 @@ describe('planner history interaction', () => {
     const interactions = application.selectStructuredWorkspace(
       application.store.getState(),
     ).interactions;
-    const hermes = [...interactions.traitOffers.values()].find(
-      (candidate) => candidate.giver.providerKind === 'hermes',
+    const hermes = interactions.traitOffers.get(
+      semanticAddressKey(
+        createTraitOfferAddress(
+          createIncomingRewardAddress(goldenGBiome, createOccurrenceId('golden-g-preboss-free-2')),
+          'self',
+        ),
+      ),
     );
     if (hermes === undefined) throw new Error('reached Hermes trait launcher is missing');
     application.store.dispatch(

@@ -158,7 +158,7 @@ function validateMode(room: RawRoomDeclaration, path: string): RoomMode {
   const receivedModeKind: unknown = (room.mode as { readonly kind?: unknown } | undefined)?.kind;
   if (room.mode?.kind === 'derived') {
     const classification = room.mode.classification;
-    if (classification !== 'completion' && classification !== 'hub') {
+    if (classification !== 'hub') {
       fail(
         `${path}.mode.classification`,
         `unknown derived classification ${String(classification)}`,
@@ -168,6 +168,17 @@ function validateMode(room: RawRoomDeclaration, path: string): RoomMode {
       fail(`${path}.prebossBatchPolicy`, 'is only valid for authored Preboss rooms');
     }
     return Object.freeze({ kind: 'derived', classification });
+  }
+  if (room.mode?.kind === 'automatic') {
+    const role = room.mode.role;
+    const expectedKind = role === 'boss' ? 'Boss' : role === 'postboss' ? 'PostBoss' : undefined;
+    if (expectedKind === undefined)
+      fail(`${path}.mode.role`, `unknown automatic role ${String(role)}`);
+    if (room.kind !== expectedKind)
+      fail(`${path}.kind`, `${role} automatic room requires ${expectedKind}`);
+    if (room.incomingReward.kind !== 'none')
+      fail(`${path}.incomingReward.kind`, 'automatic rooms have no incoming reward');
+    return Object.freeze({ kind: 'automatic', role });
   }
   if (room.mode?.kind !== 'authored') {
     fail(`${path}.mode.kind`, `unknown room mode ${String(receivedModeKind)}`);
@@ -850,6 +861,8 @@ export function normalizeRooms(
       additionalExits,
       incomingReward,
       blockGiftBoons: room.blockGiftBoons ?? false,
+      hasKeepsakeRack: room.hasKeepsakeRack ?? false,
+      hasRequiredFountain: room.hasRequiredFountain ?? false,
       blocksGorgon: room.blocksGorgon ?? false,
       ...(boonRarityOverride === undefined ? {} : { boonRarityOverride }),
       ...(prebossBatchPolicy === undefined ? {} : { prebossBatchPolicy }),

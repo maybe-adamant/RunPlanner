@@ -10,7 +10,7 @@ import {
   type EncounterAuthoringRoom,
   type PreparedEncounterPhases,
 } from '../encounters/preparation';
-import type { CanonicalCompletionRoom } from '../materialization';
+import type { CanonicalAuthoredRoom } from '../materialization';
 import { foldHistoryEvents } from './fold';
 import { foldBiomeHistoryPrefixEvents } from './fold';
 import { projectRoomPreparationCheckpoint } from './facts';
@@ -148,7 +148,7 @@ interface BiomeHistoryEnvelopeOptions<
   readonly seed?: HistoryStateView;
   readonly validateEncounterResolution?: boolean;
   readonly figLeafState?: FigLeafLifecycleState;
-  readonly completionRooms: readonly CanonicalCompletionRoom[];
+  readonly automaticRooms: readonly CanonicalAuthoredRoom[];
   readonly transitionEffects: readonly BiomeTransitionCounterReset[];
   readonly composeEntry: (writer: HistorySegmentWriter) => Entry;
   readonly composeBody: (writer: HistorySegmentWriter, entry: Entry) => Predecessor;
@@ -442,12 +442,12 @@ export function composeBiomeHistoryPrefixWithEncounterValidation({
   });
 }
 
-export function appendCompletionTail(
+export function appendAutomaticTail(
   writer: HistorySegmentWriter,
   catalog: Catalog,
   biome: BiomeAddress,
   predecessor: CanonicalLifecycleRoom,
-  completionRooms: readonly CanonicalCompletionRoom[],
+  automaticRooms: readonly CanonicalAuthoredRoom[],
   fail: (detail: string) => never,
 ): void {
   if (
@@ -457,7 +457,7 @@ export function appendCompletionTail(
   ) {
     fail('completion composer did not return the entered Preboss for this biome');
   }
-  for (const completion of completionRooms) {
+  for (const completion of automaticRooms) {
     appendStandaloneRoomCreated(writer, completion, 'layoutCompletion');
     appendRoomLifecycle(writer, catalog, completion, fail);
   }
@@ -475,7 +475,7 @@ function composeBiomeHistoryEnvelopeResult<
   seed,
   validateEncounterResolution = false,
   figLeafState,
-  completionRooms,
+  automaticRooms,
   transitionEffects,
   composeEntry,
   composeBody,
@@ -512,7 +512,7 @@ function composeBiomeHistoryEnvelopeResult<
     const entry = composeEntry(writer);
     const predecessor = composeBody(writer, entry);
     const completionPredecessor = composeCompletionPredecessor(writer, predecessor);
-    appendCompletionTail(writer, catalog, biome, completionPredecessor, completionRooms, fail);
+    appendAutomaticTail(writer, catalog, biome, completionPredecessor, automaticRooms, fail);
     appendEnvelope(builder, { kind: 'biomeCompleted', origin: biome });
     for (const effect of transitionEffects) {
       appendEnvelope(builder, {

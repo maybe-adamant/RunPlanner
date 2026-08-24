@@ -20,7 +20,7 @@ import type { RoomHistoryOrigin, RoomLifecycleEvent } from '../lifecycle';
 import {
   appendRoomLifecycle as appendCanonicalRoomLifecycle,
   appendStandaloneRoomCreated,
-  appendCompletionTail,
+  appendAutomaticTail,
   composeBiomeHistoryEnvelope,
   composeBiomeHistoryEnvelopeWithEncounterValidation,
   composeBiomeHistoryPrefix as composePrefixHistoryEnvelope,
@@ -566,7 +566,7 @@ function composeBiomeHistoryResult(
     initialCounters: initialCounters(catalog, snapshot, seed),
     ...(seed === undefined ? {} : { seed }),
     ...(figLeafState === undefined ? {} : { figLeafState }),
-    completionRooms: snapshot.completionRooms,
+    automaticRooms: snapshot.automaticRooms,
     transitionEffects:
       catalog.biomeLayouts.byKey[snapshot.biomeKey]?.completion.transitionEffects ?? [],
     composeEntry(writer: HistorySegmentWriter): CanonicalAuthoredRoom {
@@ -591,7 +591,7 @@ function composeBiomeHistoryResult(
             selectedTarget(handoff).continuation === 'startsCompletion'
           ) {
             if (current.kind !== 'authored')
-              fail('Hub Handoff selected a non-authored completion room');
+              fail('Hub Handoff selected a non-authored automatic room');
             completionPredecessor = current;
             break;
           }
@@ -689,17 +689,17 @@ function composeBiomeHistoryPrefixResult(
         current = appendCompletedDecision(writer, catalog, decision, current);
       }
       const frontier = snapshot.frontier;
-      if (frontier === undefined && snapshot.completionRooms !== undefined) {
+      if (frontier === undefined && snapshot.automaticRooms !== undefined) {
         if (current.kind !== 'authored') {
           fail('completion tail does not follow an authored Preboss room');
         }
         appendCanonicalRoomLifecycle(writer, catalog, current, fail);
-        appendCompletionTail(
+        appendAutomaticTail(
           writer,
           catalog,
           createBiomeAddress(snapshot.routeKey, snapshot.biomeKey),
           current,
-          snapshot.completionRooms,
+          snapshot.automaticRooms,
           fail,
         );
         return;

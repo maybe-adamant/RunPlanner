@@ -61,6 +61,7 @@ describe('F takeover completeness', () => {
         findings: startCompleteness.findings,
         occurrenceId: startPlan.topology!.startOccurrenceId,
         plan: startPlan,
+        configuredBiomeKeys: ['F'],
       }),
     ).toMatchObject({
       kind: 'frontier',
@@ -79,6 +80,7 @@ describe('F takeover completeness', () => {
         findings: authoredCompleteness.findings,
         occurrenceId: authoredPlan.topology!.startOccurrenceId,
         plan: authoredPlan,
+        configuredBiomeKeys: ['F'],
       }),
     ).toMatchObject({ kind: 'authoredDecision', owner: fDecision() });
     expect(
@@ -89,6 +91,7 @@ describe('F takeover completeness', () => {
         findings: authoredCompleteness.findings,
         occurrenceId: fCombatId,
         plan: authoredPlan,
+        configuredBiomeKeys: ['F'],
       }),
     ).toMatchObject({ kind: 'frontier', owner: fDecision(fCombatId) });
   });

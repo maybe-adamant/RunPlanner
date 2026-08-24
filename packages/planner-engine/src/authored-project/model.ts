@@ -5,7 +5,7 @@ import type {
   AuthoredTraitOffer,
 } from './traits';
 
-export const PROJECT_DOCUMENT_SCHEMA_VERSION = 54 as const;
+export const PROJECT_DOCUMENT_SCHEMA_VERSION = 55 as const;
 
 declare const occurrenceIdBrand: unique symbol;
 
@@ -160,6 +160,8 @@ export interface RoomEncounterState {
   readonly figLeafSkipByPhase: Readonly<Record<string, boolean>>;
   /** Sparse automatic Steady Growth targets keyed to a reached end-effects phase. */
   readonly steadyGrowthTargetByPhase?: Readonly<Record<string, string>>;
+  /** Sparse Boss-defeated Judgment selections keyed by their exact Boss phase. */
+  readonly judgmentArcanaKeysByPhase?: Readonly<Record<string, readonly string[]>>;
   /** Complete declaration-owned Gorgon condition/result for each phase. */
   /** Schema-29 documents always encode this map; optional keeps hand-built legacy fixtures decodable. */
   readonly gorgonResultByPhase?: Readonly<Record<string, AuthoredGorgonPhaseResult>>;
@@ -232,6 +234,11 @@ export interface RoomOccurrence {
   readonly roomActions: RoomActionState;
   /** Source-owned closed sibling continuations emitted by this occurrence. */
   readonly additionalExits: readonly AuthoredAdditionalExit[];
+  /** Present only where this exact room declaration exposes the keepsake rack. */
+  readonly keepsakeRack?: {
+    readonly disposition: PostbossKeepsakeDisposition;
+    readonly equipResults?: AuthoredKeepsakeEquipResults;
+  };
 }
 
 export interface AnomalyReplacementProvenance {
@@ -327,16 +334,8 @@ export interface AuthoredBiomePlan {
   readonly biomeKey: string;
   readonly state: AuthoredBiomeState;
   readonly topology: BiomeTopology | null;
-  /** Dormant unless Judgment is active at this biome's Boss completion. */
-  readonly bossCompletionArcanaKeys?: readonly string[];
-  /** One automatic Boss end-effects rarity target, dormant until its threshold. */
-  readonly bossCompletionSteadyGrowthTarget?: string;
-  /** Present on physical ordinary-rack biomes, including a dormant final configured biome. */
-  readonly postbossKeepsakeDisposition?: PostbossKeepsakeDisposition;
-  /** One derived Postboss chronology, dormant while this biome is the route tail. */
-  readonly postbossRoomActions?: RoomActionState;
-  /** Dormant unless this Postboss selection replaces with a supported keepsake. */
-  readonly keepsakeEquipResults?: AuthoredKeepsakeEquipResults;
+  /** Declaration-fixed Boss/Postboss rooms; never editable topology targets. */
+  readonly completionOccurrences: readonly RoomOccurrence[];
   /** Dormant until Gift Gift Gift reaches a Hammer replay at this biome start. */
   readonly echoKeepsakeReplayResults?: Pick<AuthoredKeepsakeEquipResults, 'experimentalHammer'>;
 }

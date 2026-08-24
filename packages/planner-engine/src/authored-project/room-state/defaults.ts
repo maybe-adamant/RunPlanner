@@ -25,6 +25,8 @@ import {
   type RoomStateContext,
 } from './declaration';
 import { createUnresolvedAcquisitionRewardState, producerLevelEffectSource } from '../traits';
+import { completionOccurrenceId } from '../completion-occurrences';
+import { createDefaultRoomEncounterState } from './encounters';
 
 function requireCountedStore(
   binding: CountedRewardBinding,
@@ -166,6 +168,8 @@ export function createDefaultRoomState(
       ? createUnresolvedAcquisitionRewardState(catalog, offer, source)
       : null;
 
+  if (room.mode.kind === 'automatic') return Object.freeze({ kind: 'none' });
+
   switch (authoredTemplateKey(room, path)) {
     case 'FixedIntro':
     case 'RewardlessCombat':
@@ -285,4 +289,45 @@ export function createDefaultRoomState(
       });
     }
   }
+}
+
+/** Constructs the closed automatic tail declared by one biome layout. */
+export function createDefaultCompletionOccurrences(
+  catalog: Catalog,
+  biomeKey: string,
+  loadout: import('../traits').TraitOfferLoadoutContext,
+): readonly import('../model').RoomOccurrence[] {
+  const layout = catalog.biomeLayouts.byKey[biomeKey];
+  if (layout === undefined) failProjectDocument(`biomes.${biomeKey}`, 'has no layout');
+  return Object.freeze(
+    layout.completion.rooms.map((descriptor) => {
+      const room = catalog.rooms.byKey[descriptor.roomGameName];
+      if (
+        room === undefined ||
+        room.mode.kind !== 'automatic' ||
+        room.mode.role !== descriptor.role
+      )
+        failProjectDocument(
+          `biomes.${biomeKey}.completion`,
+          `${descriptor.roomGameName} is not its automatic ${descriptor.role}`,
+        );
+      return Object.freeze({
+        occurrenceId: completionOccurrenceId(biomeKey, descriptor.role),
+        gameName: room.gameName,
+        state: createDefaultRoomState(catalog, room, {
+          role: 'ordinary',
+          entryActive: true,
+          loadout,
+        }),
+        encounters: createDefaultRoomEncounterState(catalog, room),
+        roomActions: Object.freeze({
+          order: Object.freeze(room.hasRequiredFountain ? [{ kind: 'useFountain' as const }] : []),
+        }),
+        additionalExits: Object.freeze([]),
+        ...(room.hasKeepsakeRack
+          ? { keepsakeRack: Object.freeze({ disposition: { kind: 'retain' as const } }) }
+          : {}),
+      });
+    }),
+  );
 }

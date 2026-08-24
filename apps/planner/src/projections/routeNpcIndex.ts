@@ -74,7 +74,6 @@ function phaseForEncounterRecord(
         { kind: 'occurrence', occurrenceId: origin.occurrenceId },
         slotKey,
       );
-    case 'completionRoom':
     case 'hubRoom':
       throw new RouteNpcIndexProjectionContractError(
         `${origin.kind} ${semanticAddressKey(origin)} cannot own encounter phase ${slotKey}`,

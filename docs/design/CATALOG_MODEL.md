@@ -21,7 +21,7 @@ profile:
 - `start` is either `authoredChoice` or declaration-fixed `fixedAuthored`;
 - `progression` is either ordinary `generated` normal-door batches or the N
   `hub` decision; and
-- `completion` remains one declaration-owned derived tail.
+- `completion` remains one declaration-owned automatic tail.
 
 There is no top-level completion-decision policy. A normal-door batch may
 contain a Preboss Room Declaration. Selecting that occurrence begins the
@@ -261,7 +261,7 @@ Biome layout declarations own one immutable common envelope:
 - persistent Hub structure where applicable: semantic Hub key, fixed physical
   slots, open-set constraints, visit rules, restores, and its dedicated fixed
   completed-Hub exit;
-- ordered derived completion rooms with stable Boss/Postboss roles; and
+- ordered automatic rooms with stable Boss/Postboss roles; and
 - biome-global authored field descriptors.
 
 They do not copy room-local facts such as intrinsic exits, eligibility, caps,
@@ -337,11 +337,13 @@ normalized counted-reward binding. The occurrence persists a complete value
 for every stable slot. Batch context may activate only a prefix; it never
 deletes or relocates the dormant values.
 
-Completion rooms such as bosses and postboss rooms are concrete derived Room
+Automatic rooms such as Boss and Postboss are concrete Room
 Declarations rather than simulator constants. They retain their real game
 names, encounters, modeled reward surface, counters, exits, and store-history
-policy, but have no authored leaf template or editor control. A biome layout
-references the rooms it actually uses through an ordered completion sequence
+policy. Their layout-fixed automatic occurrence has no room picker or editable
+topology, while its ordinary local encounter, action, acquisition, and declared
+room-feature controls remain available. A biome layout
+references the rooms it actually uses through an ordered automatic sequence
 after selection of a Preboss occurrence. The sequence need not contain a
 postboss room; Q's canonical repeat-run projection ends after its boss. The
 route declaration, not a completion room, remains the authority for biome
@@ -636,8 +638,8 @@ Catalog construction must verify:
 - every lifecycle profile uses registered operation kinds and every declared
   lifecycle effect has a registered pure implementation;
 - every room template receives the fields it requires;
-- every room declares exactly one authored or derived mode, and derived rooms
-  are referenced only from compatible layout roles;
+- every room declares exactly one authored, automatic, or derived mode; derived
+  rooms are referenced only from compatible layout roles;
 - every active leaf has a complete deterministic default;
 - every Room Declaration names one Encounter Envelope and each envelope slot
   has exactly one fixed-definition or set binding;
@@ -666,7 +668,7 @@ Catalog construction must verify:
   acquisition kind;
 - declaration order is explicit wherever simulation consumes order;
 - layout bounds can contain every supported authored structure;
-- every fixed-completion reference resolves to a derived room in the same
+- every fixed-completion reference resolves to an automatic room in the same
   biome and completion roles are ordered and unique;
 - labels and game identifiers are both present;
 - every game room name uniquely identifies one Room Declaration.

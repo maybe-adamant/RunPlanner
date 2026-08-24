@@ -117,6 +117,7 @@ export function prefixAuthoredRooms(
     ...(prefix.frontier?.kind === 'exitDecision'
       ? prefix.frontier.additional.map((continuation) => continuation.room)
       : []),
+    ...(prefix.automaticRooms ?? []),
   ];
   const seen = new Set<string>();
   return Object.freeze(

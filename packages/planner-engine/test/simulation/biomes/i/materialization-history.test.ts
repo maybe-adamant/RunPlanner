@@ -457,7 +457,7 @@ describe('canonical I Clockwork materialization and history', () => {
       undefined,
       'I_WorldShop',
     ]);
-    expect(snapshot.completionRooms.map((room) => room.gameName)).toEqual([
+    expect(snapshot.automaticRooms.map((room) => room.gameName)).toEqual([
       'I_Boss01',
       'I_PostBoss01',
     ]);

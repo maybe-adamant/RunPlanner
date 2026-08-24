@@ -4,7 +4,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { basename, dirname, extname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-const CURRENT_SCHEMA_VERSION = 54;
+const CURRENT_SCHEMA_VERSION = 55;
 const SCHEMA_49_CATALOG_VERSION = '0.27.0-arcana-fear-loadout';
 const SCHEMA_50_CATALOG_VERSION = '0.30.0-boon-rarity-ledger';
 const SCHEMA_51_CATALOG_VERSION = '0.31.0-chaos-traits';
@@ -14,6 +14,27 @@ const SCHEMA_52_GENERATED_TRAIT_PICKUPS_CATALOG_VERSION = '0.33.0-generated-trai
 const SCHEMA_52_CATALOG_VERSION = '0.34.0-sea-star';
 const SCHEMA_53_CATALOG_VERSION = '0.35.0-nemesis-random-events';
 const SCHEMA_54_CATALOG_VERSION = '0.36.0-runtime-offer-fallback';
+const SCHEMA_55_CATALOG_VERSION = '0.37.0-automatic-completion-occurrences';
+const COMPLETION_ROOMS_BY_BIOME = {
+  F: { boss: 'F_Boss01', postboss: 'F_PostBoss01' },
+  G: { boss: 'G_Boss01', postboss: 'G_PostBoss01' },
+  H: { boss: 'H_Boss01', postboss: 'H_PostBoss01' },
+  I: { boss: 'I_Boss01', postboss: 'I_PostBoss01' },
+  N: { boss: 'N_Boss01', postboss: 'N_PostBoss01' },
+  O: { boss: 'O_Boss01', postboss: 'O_PostBoss01' },
+  P: { boss: 'P_Boss01', postboss: 'P_PostBoss01' },
+  Q: { boss: 'Q_Boss01' },
+};
+
+const POSTBOSS_ROOM_FEATURES_BY_GAME_NAME = {
+  F_PostBoss01: { hasRequiredFountain: true, hasKeepsakeRack: true },
+  G_PostBoss01: { hasRequiredFountain: true, hasKeepsakeRack: true },
+  H_PostBoss01: { hasRequiredFountain: true, hasKeepsakeRack: true },
+  I_PostBoss01: { hasRequiredFountain: false, hasKeepsakeRack: false },
+  N_PostBoss01: { hasRequiredFountain: true, hasKeepsakeRack: true },
+  O_PostBoss01: { hasRequiredFountain: true, hasKeepsakeRack: true },
+  P_PostBoss01: { hasRequiredFountain: true, hasKeepsakeRack: true },
+};
 
 const NARCISSUS_PICKUP_KEYS = {
   NarcissusA: ['pom'],
@@ -253,12 +274,84 @@ function migrate53To54(document) {
   return { gorgonTriggersRenamed, genericConditionsRemoved };
 }
 
+function migrate54To55(document) {
+  if (document.catalogVersion !== SCHEMA_54_CATALOG_VERSION) {
+    throw new Error(
+      `schema 54 migration expects catalog ${SCHEMA_54_CATALOG_VERSION}, received ${String(document.catalogVersion)}`,
+    );
+  }
+  let completionOccurrencesAdded = 0;
+  for (const route of document.routes ?? []) {
+    for (const biome of route.biomes ?? []) {
+      const completion = [];
+      const rooms = COMPLETION_ROOMS_BY_BIOME[biome.biomeKey];
+      // Earlier generic migration vectors deliberately contain non-biome
+      // records. They have no completion sidecars to relocate.
+      if (rooms === undefined) continue;
+      for (const role of ['boss', 'postboss']) {
+        const gameName = rooms[role];
+        if (gameName === undefined) continue;
+        const occurrence = {
+          occurrenceId: `completion:${biome.biomeKey}:${role}`,
+          gameName,
+          state: { kind: 'none' },
+          encounters: {
+            encounterKeyByPhase: {},
+            figLeafSkipByPhase: { Encounter: false },
+            gorgonResultByPhase: {},
+          },
+          roomActions: { order: [] },
+          additionalExits: [],
+        };
+        if (role === 'boss') {
+          if (biome.bossCompletionArcanaKeys !== undefined)
+            occurrence.encounters.judgmentArcanaKeysByPhase = {
+              Encounter: biome.bossCompletionArcanaKeys,
+            };
+          if (biome.bossCompletionSteadyGrowthTarget !== undefined)
+            occurrence.encounters.steadyGrowthTargetByPhase = {
+              Encounter: biome.bossCompletionSteadyGrowthTarget,
+            };
+        }
+        if (role === 'postboss') {
+          const features = POSTBOSS_ROOM_FEATURES_BY_GAME_NAME[gameName];
+          if (features?.hasKeepsakeRack === true) {
+            occurrence.keepsakeRack = {
+              disposition: biome.postbossKeepsakeDisposition ?? { kind: 'retain' },
+              ...(biome.keepsakeEquipResults === undefined
+                ? {}
+                : { equipResults: biome.keepsakeEquipResults }),
+            };
+          }
+          occurrence.roomActions =
+            biome.postbossRoomActions ??
+            (features?.hasRequiredFountain === true
+              ? { order: [{ kind: 'useFountain' }] }
+              : occurrence.roomActions);
+        }
+        completion.push(occurrence);
+      }
+      biome.completionOccurrences = completion;
+      delete biome.bossCompletionArcanaKeys;
+      delete biome.bossCompletionSteadyGrowthTarget;
+      delete biome.postbossKeepsakeDisposition;
+      delete biome.postbossRoomActions;
+      delete biome.keepsakeEquipResults;
+      completionOccurrencesAdded += completion.length;
+    }
+  }
+  document.schemaVersion = 55;
+  document.catalogVersion = SCHEMA_55_CATALOG_VERSION;
+  return { completionOccurrencesAdded };
+}
+
 const migrations = new Map([
   [49, migrate49To50],
   [50, migrate50To51],
   [51, migrate51To52],
   [52, migrate52To53],
   [53, migrate53To54],
+  [54, migrate54To55],
 ]);
 
 export function migrateProjectDocument(value, targetVersion = CURRENT_SCHEMA_VERSION) {

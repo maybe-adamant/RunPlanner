@@ -6,7 +6,6 @@ import {
   createAcquisitionSiteAddress,
   createBatchRewardStoreAddress,
   createBiomeAddress,
-  createCompletionRoomAddress,
   createEncounterPhaseAddress,
   createExitDecisionAddress,
   createExitSelectionAddress,
@@ -188,6 +187,13 @@ function withMalformedAuthoredBiome(
   });
   if (!replaced) throw new Error('authored biome is missing');
   return { ...project, routes };
+}
+
+function postbossOccurrence(routeKey: string, biomeKey: string) {
+  return createOccurrenceAddress(
+    createBiomeAddress(routeKey, biomeKey),
+    createOccurrenceId(`completion:${biomeKey}:postboss`),
+  );
 }
 
 function projection(
@@ -593,9 +599,7 @@ describe('structured workspace overlay contract', () => {
   });
 
   it('publishes equip-result controls and destinations only for engine-supported owners', () => {
-    const fPostboss = createPostbossKeepsakeSelectionAddress(
-      createCompletionRoomAddress(createBiomeAddress('Underworld', 'F'), 'postboss'),
-    );
+    const fPostboss = createPostbossKeepsakeSelectionAddress(postbossOccurrence('Underworld', 'F'));
     const fHammerResult = createKeepsakeEquipResultAddress(fPostboss, 'experimentalHammer');
     let invalidHammer = applyProjectCommand(createGoldenFGHIProject(), catalog, {
       kind: 'ReplacePostbossKeepsake',
@@ -604,9 +608,19 @@ describe('structured workspace overlay contract', () => {
     });
     invalidHammer = withMalformedAuthoredBiome(invalidHammer, 'Underworld', 'F', (plan) => ({
       ...plan,
-      keepsakeEquipResults: {
-        experimentalHammer: { kind: 'selected', traitKey: 'ApolloWeaponBoon' },
-      },
+      completionOccurrences: plan.completionOccurrences.map((occurrence) =>
+        occurrence.occurrenceId === createOccurrenceId('completion:F:postboss')
+          ? {
+              ...occurrence,
+              keepsakeRack: {
+                ...occurrence.keepsakeRack!,
+                equipResults: {
+                  experimentalHammer: { kind: 'selected', traitKey: 'ApolloWeaponBoon' },
+                },
+              },
+            }
+          : occurrence,
+      ),
     }));
     const invalidAssembly = simulateProjectAssembly(catalog, invalidHammer);
     expect(invalidAssembly.evaluation.findings).toContainEqual(
@@ -623,12 +637,15 @@ describe('structured workspace overlay contract', () => {
     const fCompletion = invalidProjected.routes
       .find((route) => route.routeKey === 'Underworld')
       ?.biomes.find((biome) => biome.biomeKey === 'F')
-      ?.nodes.find((node) => node.kind === 'completion' && node.role === 'postboss');
-    if (fCompletion?.kind !== 'completion' || fCompletion.keepsakeSelection === undefined)
+      ?.nodes.find((node) => node.kind === 'occurrenceWorkbench' && node.room.kind === 'PostBoss');
+    if (
+      fCompletion?.kind !== 'occurrenceWorkbench' ||
+      fCompletion.room.keepsakeSelection === undefined
+    )
       throw new Error('reached F Postboss completion is missing');
 
     expect(invalidProjected.interactions.keepsakeEquipResults.has(invalidKey)).toBe(true);
-    expect(fCompletion.keepsakeSelection.equipResult?.address).toEqual(fHammerResult);
+    expect(fCompletion.room.keepsakeSelection.equipResult?.address).toEqual(fHammerResult);
     expect(invalidProjected.focusByOwner.get(invalidKey)).toMatchObject({
       focusAddress: fPostboss,
       focusKey: semanticAddressKey(fPostboss),
@@ -637,12 +654,8 @@ describe('structured workspace overlay contract', () => {
       ownerAddress: fHammerResult,
     });
 
-    const gPostboss = createPostbossKeepsakeSelectionAddress(
-      createCompletionRoomAddress(createBiomeAddress('Underworld', 'G'), 'postboss'),
-    );
-    const hPostboss = createPostbossKeepsakeSelectionAddress(
-      createCompletionRoomAddress(createBiomeAddress('Underworld', 'H'), 'postboss'),
-    );
+    const gPostboss = createPostbossKeepsakeSelectionAddress(postbossOccurrence('Underworld', 'G'));
+    const hPostboss = createPostbossKeepsakeSelectionAddress(postbossOccurrence('Underworld', 'H'));
     const hHammerResult = createKeepsakeEquipResultAddress(hPostboss, 'experimentalHammer');
     let unavailableHammer = applyProjectCommand(createGoldenFGHIProject(), catalog, {
       kind: 'ReplacePostbossKeepsake',
@@ -676,12 +689,12 @@ describe('structured workspace overlay contract', () => {
     const hCompletion = unavailableProjected.routes
       .find((route) => route.routeKey === 'Underworld')
       ?.biomes.find((biome) => biome.biomeKey === 'H')
-      ?.nodes.find((node) => node.kind === 'completion' && node.role === 'postboss');
-    if (hCompletion?.kind !== 'completion')
+      ?.nodes.find((node) => node.kind === 'occurrenceWorkbench' && node.room.kind === 'PostBoss');
+    if (hCompletion?.kind !== 'occurrenceWorkbench')
       throw new Error('reached H Postboss completion is missing');
 
     expect(unavailableProjected.interactions.keepsakeEquipResults.has(unavailableKey)).toBe(false);
-    expect(hCompletion.keepsakeSelection?.equipResult).toBeUndefined();
+    expect(hCompletion.room.keepsakeSelection?.equipResult).toBeUndefined();
     expect(unavailableProjected.focusByOwner.has(unavailableKey)).toBe(false);
 
     const routeStart = createRouteStartKeepsakeSelectionAddress('Underworld');
@@ -1625,7 +1638,9 @@ describe('structured workspace overlay contract', () => {
     missingTargetDestination.delete(semanticAddressKey(targetAddress));
     expect(() => assertF(f.nodes, missingTargetDestination)).toThrow(/target .* destination/);
 
-    const unrelatedFNode = f.nodes.find((node) => node.kind === 'completion');
+    const unrelatedFNode = f.nodes.find(
+      (node) => node.kind === 'occurrenceWorkbench' && node.room.kind === 'PostBoss',
+    );
     const targetDestination = fProjected.focusByOwner.get(semanticAddressKey(targetAddress));
     if (unrelatedFNode === undefined || targetDestination === undefined) {
       throw new Error('complete F unrelated target destination fixture is missing');

@@ -1,21 +1,24 @@
+import { describe, expect, it } from 'vitest';
+
 import { catalog } from '@run-planner/hades2-catalog';
 import {
+  applyProjectCommand,
+  createBiomeAddress,
+  createJudgmentArcanaAddress,
+  createOccurrenceAddress,
+  createOccurrenceId,
+  createProjectDocument,
+  createRouteAddress,
+} from '@run-planner/engine/authored-project';
+import {
   activateTemporaryArcana,
+  blockedOccurrenceRoomForProjectEvaluationAssembly,
   createArcanaFearState,
   createPreparedProjectCandidateSession,
   promoteArcana,
   simulateProject,
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
-import {
-  applyProjectCommand,
-  createBiomeAddress,
-  createBossCompletionArcanaAddress,
-  createCompletionRoomAddress,
-  createRouteAddress,
-} from '@run-planner/engine/authored-project';
-import { describe, expect, it } from 'vitest';
-
 import { loadSurfaceNOProject, loadSurfaceNOPQProject } from '@run-planner/test-fixtures/surface';
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
@@ -27,6 +30,9 @@ import {
   foldTraitHistoryEvents,
 } from '../../src/simulation/traits';
 
+const biome = createBiomeAddress('Underworld', 'F');
+const boss = createOccurrenceAddress(biome, createOccurrenceId('completion:F:boss'));
+const judgment = createJudgmentArcanaAddress(boss, 'Encounter');
 const surface = createRouteAddress('Surface');
 const n = createBiomeAddress('Surface', 'N');
 const o = createBiomeAddress('Surface', 'O');
@@ -34,7 +40,13 @@ const p = createBiomeAddress('Surface', 'P');
 const q = createBiomeAddress('Surface', 'Q');
 
 function judgmentOwner(biomeAddress = n) {
-  return createBossCompletionArcanaAddress(createCompletionRoomAddress(biomeAddress, 'boss'));
+  return createJudgmentArcanaAddress(
+    createOccurrenceAddress(
+      biomeAddress,
+      createOccurrenceId(`completion:${biomeAddress.biomeKey}:boss`),
+    ),
+    'Encounter',
+  );
 }
 
 function withJudgment(project = loadSurfaceNOProject()) {
@@ -55,19 +67,22 @@ function inactive(excluding: readonly string[], count: number): readonly string[
 
 function withBossOutcome(
   project: ReturnType<typeof withJudgment>,
-  biome = n,
+  biomeAddress = n,
   keys?: readonly string[],
 ) {
   const selected =
     keys ?? inactive(['CastCount', 'SorceryRegenUpgrade', 'BonusRarity', 'CardDraw'], 5);
   return applyProjectCommand(project, catalog, {
-    kind: 'ReplaceBossCompletionArcana',
-    completion: judgmentOwner(biome),
+    kind: 'ReplaceJudgmentArcana',
+    judgment: judgmentOwner(biomeAddress),
     arcanaKeys: selected,
   });
 }
 
-function biome(evaluation: ReturnType<typeof simulateProject>, key: 'N' | 'O' | 'P' | 'Q') {
+function evaluatedBiome(
+  evaluation: ReturnType<typeof simulateProject>,
+  key: 'N' | 'O' | 'P' | 'Q',
+) {
   const value = evaluation.routes
     .find((route) => route.routeKey === 'Surface')
     ?.biomes.find((candidate) => candidate.biomeKey === key);
@@ -75,21 +90,33 @@ function biome(evaluation: ReturnType<typeof simulateProject>, key: 'N' | 'O' | 
   return value;
 }
 
-/** A complete N snapshot is a clean lifecycle host for terminal Boss effects. */
 function evaluateNBossLifecycle(
   arcanaFear: ReturnType<typeof createArcanaFearState>,
   selected: readonly string[],
   traitHistory = createTraitHistoryState(),
 ) {
   const project = loadSurfaceNOProject();
-  const evaluated = biome(simulateProject(catalog, project), 'N');
+  const evaluated = evaluatedBiome(simulateProject(catalog, project), 'N');
   if (evaluated.validity !== 'valid')
     throw new Error('N lifecycle fixture must start complete-valid');
+  const bossOccurrenceId = judgmentOwner().occurrenceId;
   return evaluateBiomeRewardsAssemblyInternal(
     catalog,
     Object.freeze({
       ...evaluated.snapshot,
-      bossCompletionArcanaKeys: Object.freeze([...selected]),
+      automaticRooms: Object.freeze(
+        evaluated.snapshot.automaticRooms.map((room) =>
+          room.origin.occurrenceId === bossOccurrenceId
+            ? Object.freeze({
+                ...room,
+                encounters: Object.freeze({
+                  ...room.encounters,
+                  judgmentArcanaKeysByPhase: Object.freeze({ Encounter: selected }),
+                }),
+              })
+            : room,
+        ),
+      ),
     }),
     evaluated.history,
     1,
@@ -109,14 +136,46 @@ function evaluateNBossLifecycle(
   );
 }
 
-describe('Judgment Boss-completion lifecycle', () => {
-  it('applies Judgment at the Boss-defeated history event before generic encounter completion', () => {
-    const project = loadSurfaceNOProject();
-    const evaluated = biome(simulateProject(catalog, project), 'N');
+describe('Judgment automatic Boss ownership', () => {
+  it('stores its canonical selection on the addressed Boss-defeated phase', () => {
+    const project = applyProjectCommand(
+      createProjectDocument(catalog, {
+        projectId: 'judgment-phase-owner',
+        configuredBiomeCounts: { Underworld: 1 },
+      }),
+      catalog,
+      { kind: 'ReplaceJudgmentArcana', judgment, arcanaKeys: ['CardDraw', 'CastCount'] },
+    );
+    const authoredBoss = project.routes[0]?.biomes[0]?.completionOccurrences.find(
+      (occurrence) => occurrence.occurrenceId === boss.occurrenceId,
+    );
+    expect(authoredBoss?.encounters.judgmentArcanaKeysByPhase).toEqual({
+      Encounter: ['CastCount', 'CardDraw'],
+    });
+  });
+
+  it('rejects a fabricated phase instead of treating the phase address as cosmetic', () => {
+    const project = createProjectDocument(catalog, {
+      projectId: 'judgment-phase-rejection',
+      configuredBiomeCounts: { Underworld: 1 },
+    });
+    expect(() =>
+      applyProjectCommand(project, catalog, {
+        kind: 'ReplaceJudgmentArcana',
+        judgment: createJudgmentArcanaAddress(boss, 'fabricated'),
+        arcanaKeys: ['CardDraw'],
+      }),
+    ).toThrow('not an active Boss-defeated phase');
+  });
+});
+
+describe('Judgment automatic Boss lifecycle', () => {
+  it('applies Judgment at Boss defeated before generic encounter completion', () => {
+    const evaluated = evaluatedBiome(simulateProject(catalog, loadSurfaceNOProject()), 'N');
     const bossEvents = evaluated.history.events.filter(
       (event) =>
-        event.origin.kind === 'completionRoom' &&
-        event.origin.role === 'boss' &&
+        event.origin.kind === 'occurrence' &&
+        event.origin.occurrenceId === judgmentOwner().occurrenceId &&
         (event.kind === 'bossDefeated' || event.kind === 'encounterCompleted'),
     );
     const defeated = bossEvents.find(
@@ -130,12 +189,11 @@ describe('Judgment Boss-completion lifecycle', () => {
         event.kind === 'encounterCompleted',
     );
     if (defeated === undefined || completed === undefined)
-      throw new Error('N Boss lifecycle is missing its fixed completion seams');
+      throw new Error('N Boss lifecycle is missing its automatic occurrence seams');
 
-    const loadout = createDefaultRouteLoadout(catalog);
     const seededJudgment = activateTemporaryArcana(
       catalog,
-      createArcanaFearState(catalog, loadout),
+      createArcanaFearState(catalog, createDefaultRouteLoadout(catalog)),
       ['CardDraw'],
       { owner: n, sequence: 1 },
     );
@@ -155,25 +213,26 @@ describe('Judgment Boss-completion lifecycle', () => {
   });
 
   it('keeps final-use Barren active through Boss-defeated Judgment, then matures it at end effects', () => {
-    const project = loadSurfaceNOProject();
-    const evaluated = biome(simulateProject(catalog, project), 'N');
-    const boss = evaluated.history.events.filter(
+    const evaluated = evaluatedBiome(simulateProject(catalog, loadSurfaceNOProject()), 'N');
+    const bossEvents = evaluated.history.events.filter(
       (event) =>
-        event.origin.kind === 'completionRoom' &&
-        event.origin.role === 'boss' &&
-        (event.kind === 'bossDefeated' ||
-          event.kind === 'encounterCompleted' ||
-          event.kind === 'encounterEndEffectsApplied'),
+        event.origin.kind === 'occurrence' &&
+        event.origin.occurrenceId === judgmentOwner().occurrenceId &&
+        (event.kind === 'encounterCompleted' || event.kind === 'encounterEndEffectsApplied'),
     );
-    const completed = boss.find(
-      (event): event is Extract<(typeof boss)[number], { readonly kind: 'encounterCompleted' }> =>
-        event.kind === 'encounterCompleted',
-    );
-    const endEffects = boss.find(
+    const completed = bossEvents.find(
       (
         event,
-      ): event is Extract<(typeof boss)[number], { readonly kind: 'encounterEndEffectsApplied' }> =>
-        event.kind === 'encounterEndEffectsApplied',
+      ): event is Extract<(typeof bossEvents)[number], { readonly kind: 'encounterCompleted' }> =>
+        event.kind === 'encounterCompleted',
+    );
+    const endEffects = bossEvents.find(
+      (
+        event,
+      ): event is Extract<
+        (typeof bossEvents)[number],
+        { readonly kind: 'encounterEndEffectsApplied' }
+      > => event.kind === 'encounterEndEffectsApplied',
     );
     if (completed === undefined || endEffects === undefined)
       throw new Error('N Boss completion/end-effects seams are missing');
@@ -244,9 +303,6 @@ describe('Judgment Boss-completion lifecycle', () => {
     const result = evaluateNBossLifecycle(seeded.state, inactive(['CardDraw'], 5), barren);
     const branch = result.simulation.branches[0];
     expect(
-      branch?.arcanaFear.events.some((event) => event.kind === 'temporaryArcanaActivated'),
-    ).toBe(true);
-    expect(
       branch?.arcanaFear.events.filter((event) => event.kind === 'temporaryArcanaActivated'),
     ).toHaveLength(1);
     expect(branch?.traitHistory?.activeChaosCurses).toHaveLength(0);
@@ -255,40 +311,72 @@ describe('Judgment Boss-completion lifecycle', () => {
     );
   });
 
-  it('retains the missing exact-set repair capability at the terminal Boss and suppresses Postboss/later-biome state', () => {
+  it('retains terminal Boss repair, room lookup, and Run State while suppressing Postboss and later biome state', () => {
     const project = withJudgment();
     const assembly = simulateProjectAssembly(catalog, project);
-    const evaluated = biome(assembly.evaluation, 'N');
+    const evaluated = evaluatedBiome(assembly.evaluation, 'N');
+    const owner = judgmentOwner();
     expect(evaluated.validity).toBe('invalid');
-    expect(evaluated.coverage).toMatchObject({
-      kind: 'prefix',
-      blockedAt: judgmentOwner(),
+    expect(evaluated.coverage).toMatchObject({ kind: 'prefix', blockedAt: owner });
+    if (!('materializedPrefix' in evaluated))
+      throw new Error('terminal Judgment must retain a materialized prefix');
+    expect(evaluated.materializedPrefix).toMatchObject({
+      kind: 'biomePrefix',
+      automaticRooms: [
+        expect.objectContaining({ gameName: 'N_Boss01' }),
+        expect.objectContaining({ gameName: 'N_PostBoss01' }),
+      ],
     });
+    if (evaluated.materializedPrefix.entryRoom === undefined)
+      throw new Error('N terminal prefix must retain its fixed entry room');
+    const directPrefixRewards = evaluateBiomeRewardsAssemblyInternal(
+      catalog,
+      Object.freeze({
+        ...evaluated.materializedPrefix,
+        entryRoom: evaluated.materializedPrefix.entryRoom,
+      }),
+      evaluated.history,
+      1,
+      project.routes.find((route) => route.routeKey === 'Surface')!.loadout,
+    );
+    expect(directPrefixRewards.simulation.findings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: 'judgmentOutcomeMissing', origin: owner }),
+      ]),
+    );
     expect(evaluated.findings).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({
-          code: 'judgmentOutcomeMissing',
-          origin: judgmentOwner(),
-        }),
+        expect.objectContaining({ code: 'judgmentOutcomeMissing', origin: owner }),
       ]),
     );
     expect(
-      evaluated.rewards.runStateSnapshots.filter(
-        (snapshot) => snapshot.owner.kind !== 'roomRunStateCheckpoint',
+      blockedOccurrenceRoomForProjectEvaluationAssembly(
+        assembly,
+        createOccurrenceAddress(n, owner.occurrenceId),
       ),
-    ).toHaveLength(3);
+    ).toMatchObject({
+      gameName: 'N_Boss01',
+      origin: createOccurrenceAddress(n, owner.occurrenceId),
+    });
+    expect(
+      evaluated.rewards.runStateAvailability.some(
+        (entry) =>
+          entry.owner.kind === 'roomRunStateCheckpoint' &&
+          entry.owner.occurrenceId === owner.occurrenceId,
+      ),
+    ).toBe(true);
     expect(
       assembly.evaluation.routes.find((route) => route.routeKey === 'Surface')?.processing
         .blockedSuffix,
     ).toEqual(['O']);
 
     const candidate = createPreparedProjectCandidateSession(catalog, assembly).evaluate({
-      kind: 'bossCompletionArcana',
-      completion: judgmentOwner(),
+      kind: 'judgmentArcana',
+      judgment: owner,
       arcanaKeys: inactive(['CastCount', 'SorceryRegenUpgrade', 'BonusRarity', 'CardDraw'], 5),
     });
     expect(candidate).toMatchObject({
-      kind: 'bossCompletionArcana',
+      kind: 'judgmentArcana',
       result: { requiredCount: 5, selectedPossible: true },
     });
   });
@@ -302,10 +390,11 @@ describe('Judgment Boss-completion lifecycle', () => {
     let project = withBossOutcome(withJudgment(), n, first);
     project = withBossOutcome(project, o, second);
     const evaluation = simulateProject(catalog, project);
-    const nBiome = biome(evaluation, 'N');
-    const oBiome = biome(evaluation, 'O');
+    const nBiome = evaluatedBiome(evaluation, 'N');
+    const oBiome = evaluatedBiome(evaluation, 'O');
     expect(nBiome.validity).toBe('valid');
     expect(oBiome.validity).toBe('valid');
+    if (oBiome.validity !== 'valid') throw new Error('O must be valid');
     const active = oBiome.rewards.branches[0]!.arcanaFear.arcana.active;
     expect(active.filter((card) => card.origin === 'temporary').map((card) => card.key)).toEqual([
       ...first,
@@ -317,7 +406,7 @@ describe('Judgment Boss-completion lifecycle', () => {
     ]);
   });
 
-  it('uses the catalog route length rather than configured suffixes to suppress only the final Boss', () => {
+  it('uses catalog route length rather than configured suffixes to suppress only the final Boss', () => {
     const base = ['CastCount', 'SorceryRegenUpgrade', 'BonusRarity', 'CardDraw'];
     const first = inactive(base, 5);
     const second = inactive([...base, ...first], 5);
@@ -327,56 +416,45 @@ describe('Judgment Boss-completion lifecycle', () => {
     project = withBossOutcome(project, p, third);
 
     const evaluation = simulateProject(catalog, project);
-    expect(biome(evaluation, 'P').validity).toBe('valid');
-    expect(biome(evaluation, 'Q').validity).toBe('valid');
+    expect(evaluatedBiome(evaluation, 'P').validity).toBe('valid');
+    expect(evaluatedBiome(evaluation, 'Q').validity).toBe('valid');
     expect(
-      biome(evaluation, 'Q').findings.some(
-        (finding) => finding.origin.kind === 'bossCompletionArcana',
+      evaluatedBiome(evaluation, 'Q').findings.some(
+        (finding) => finding.origin.kind === 'judgmentArcana',
       ),
     ).toBe(false);
 
     const candidate = createPreparedProjectCandidateSession(
       catalog,
       simulateProjectAssembly(catalog, project),
-    ).evaluate({
-      kind: 'bossCompletionArcana',
-      completion: judgmentOwner(q),
-      arcanaKeys: [],
-    });
+    ).evaluate({ kind: 'judgmentArcana', judgment: judgmentOwner(q), arcanaKeys: [] });
     expect(candidate).toMatchObject({ kind: 'unavailable' });
   });
 
-  it('reads Red-activated and Lapis-promoted Gate-B inputs through the clean Boss lifecycle seam', () => {
+  it('reads Red-activated and Lapis-promoted inputs through the automatic Boss lifecycle seam', () => {
     const loadout = createDefaultRouteLoadout(catalog);
     const seeded = createArcanaFearState(catalog, { ...loadout, manualArcanaKeys: ['CastCount'] });
-    const promoted = promoteArcana(catalog, seeded, ['CardDraw'], {
-      owner: n,
-      sequence: 1,
-    });
+    const promoted = promoteArcana(catalog, seeded, ['CardDraw'], { owner: n, sequence: 1 });
     expect(promoted).toMatchObject({ legal: true });
     const redActivated = activateTemporaryArcana(
       catalog,
       createArcanaFearState(catalog, loadout),
       ['CardDraw'],
-      {
-        owner: n,
-        sequence: 1,
-      },
+      { owner: n, sequence: 1 },
     );
     expect(redActivated).toMatchObject({ legal: true });
 
-    const project = withJudgment();
-    const assembly = simulateProjectAssembly(catalog, project);
+    const assembly = simulateProjectAssembly(catalog, withJudgment());
     const candidate = createPreparedProjectCandidateSession(catalog, assembly).evaluate({
-      kind: 'bossCompletionArcana',
-      completion: judgmentOwner(),
+      kind: 'judgmentArcana',
+      judgment: judgmentOwner(),
       arcanaKeys: ['CastCount'],
     });
     expect(candidate).toMatchObject({
-      kind: 'bossCompletionArcana',
+      kind: 'judgmentArcana',
       result: { requiredCount: 5, selectedPossible: false },
     });
-    if (!promoted.legal || !redActivated.legal) throw new Error('Gate-B test inputs must be legal');
+    if (!promoted.legal || !redActivated.legal) throw new Error('test inputs must be legal');
     const redKeys = inactive(['CardDraw'], 5);
     const red = evaluateNBossLifecycle(redActivated.state, redKeys);
     expect(red.simulation.validity).toBe('valid');

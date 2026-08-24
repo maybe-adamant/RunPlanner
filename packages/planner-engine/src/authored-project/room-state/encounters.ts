@@ -560,6 +560,7 @@ export function decodeRoomEncounterState(
       ...(state.traitOffersByPhase === undefined ? [] : ['traitOffersByPhase']),
       ...(state.nemesisRandomEventByPhase === undefined ? [] : ['nemesisRandomEventByPhase']),
       ...(state.steadyGrowthTargetByPhase === undefined ? [] : ['steadyGrowthTargetByPhase']),
+      ...(state.judgmentArcanaKeysByPhase === undefined ? [] : ['judgmentArcanaKeysByPhase']),
     ],
     path,
   );
@@ -614,6 +615,38 @@ export function decodeRoomEncounterState(
       if (catalog.traits.byKey[traitKey] === undefined)
         failProjectDocument(`${path}.steadyGrowthTargetByPhase.${phaseKey}`, 'unknown trait');
       steadyGrowthTargetByPhase[phaseKey] = traitKey;
+    }
+  }
+  const judgmentArcanaKeysByPhase: Record<string, readonly string[]> = {};
+  if (state.judgmentArcanaKeysByPhase !== undefined) {
+    if (room.mode.kind !== 'automatic' || room.mode.role !== 'boss')
+      failProjectDocument(
+        `${path}.judgmentArcanaKeysByPhase`,
+        'is owned only by an automatic Boss',
+      );
+    const values = expectRecord(
+      state.judgmentArcanaKeysByPhase,
+      `${path}.judgmentArcanaKeysByPhase`,
+    );
+    for (const [phaseKey, rawKeys] of Object.entries(values)) {
+      if (!bindings.has(phaseKey))
+        failProjectDocument(`${path}.judgmentArcanaKeysByPhase.${phaseKey}`, 'unknown Boss phase');
+      const seen = new Set<string>();
+      for (const key of expectArray(rawKeys, `${path}.judgmentArcanaKeysByPhase.${phaseKey}`)) {
+        const arcanaKey = expectNonBlankString(
+          key,
+          `${path}.judgmentArcanaKeysByPhase.${phaseKey}`,
+        );
+        if (catalog.arcanaCards.byKey[arcanaKey] === undefined || seen.has(arcanaKey))
+          failProjectDocument(
+            `${path}.judgmentArcanaKeysByPhase.${phaseKey}`,
+            'must contain distinct declared Arcana cards',
+          );
+        seen.add(arcanaKey);
+      }
+      judgmentArcanaKeysByPhase[phaseKey] = Object.freeze(
+        catalog.arcanaCards.values.filter((card) => seen.has(card.key)).map((card) => card.key),
+      );
     }
   }
   const rawGorgon = expectRecord(state.gorgonResultByPhase, `${path}.gorgonResultByPhase`);
@@ -790,6 +823,9 @@ export function decodeRoomEncounterState(
     ...(Object.keys(steadyGrowthTargetByPhase).length === 0
       ? {}
       : { steadyGrowthTargetByPhase: Object.freeze(steadyGrowthTargetByPhase) }),
+    ...(Object.keys(judgmentArcanaKeysByPhase).length === 0
+      ? {}
+      : { judgmentArcanaKeysByPhase: Object.freeze(judgmentArcanaKeysByPhase) }),
     gorgonResultByPhase: Object.freeze(gorgonResultByPhase),
     ...(Object.keys(traitOffersByPhase).length === 0
       ? {}

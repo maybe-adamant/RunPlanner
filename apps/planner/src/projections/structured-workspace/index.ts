@@ -22,7 +22,6 @@ export type {
   WorkspaceCandidateInteraction,
   WorkspaceCompletedHubHandoffInteraction,
   WorkspaceCommandIntent,
-  WorkspaceCompletionNode,
   WorkspaceDefaultInspectorDestination,
   WorkspaceEncounterInteraction,
   WorkspaceNemesisEventInteraction,

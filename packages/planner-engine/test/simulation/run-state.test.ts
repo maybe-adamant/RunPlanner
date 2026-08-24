@@ -3,10 +3,9 @@ import { simulateProject, type RunStateSnapshot } from '@run-planner/engine/simu
 import {
   applyProjectCommand,
   createBiomeAddress,
-  createBossCompletionArcanaAddress,
-  createCompletionRoomAddress,
   createExitDecisionAddress,
   createIncomingRewardAddress,
+  createJudgmentArcanaAddress,
   createOccurrenceAddress,
   createOccurrenceId,
   createRoomRunStateCheckpointAddress,
@@ -656,9 +655,13 @@ describe('decision run-state snapshots', () => {
       .slice(0, 5)
       .map((card) => card.key);
     project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceBossCompletionArcana',
-      completion: createBossCompletionArcanaAddress(
-        createCompletionRoomAddress(createBiomeAddress('Underworld', 'F'), 'boss'),
+      kind: 'ReplaceJudgmentArcana',
+      judgment: createJudgmentArcanaAddress(
+        createOccurrenceAddress(
+          createBiomeAddress('Underworld', 'F'),
+          createOccurrenceId('completion:F:boss'),
+        ),
+        'Encounter',
       ),
       arcanaKeys: fJudgment,
     });
@@ -667,9 +670,13 @@ describe('decision run-state snapshots', () => {
       .slice(0, 5)
       .map((card) => card.key);
     project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceBossCompletionArcana',
-      completion: createBossCompletionArcanaAddress(
-        createCompletionRoomAddress(createBiomeAddress('Underworld', 'G'), 'boss'),
+      kind: 'ReplaceJudgmentArcana',
+      judgment: createJudgmentArcanaAddress(
+        createOccurrenceAddress(
+          createBiomeAddress('Underworld', 'G'),
+          createOccurrenceId('completion:G:boss'),
+        ),
+        'Encounter',
       ),
       arcanaKeys: gJudgment,
     });

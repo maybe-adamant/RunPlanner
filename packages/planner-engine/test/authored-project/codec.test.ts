@@ -46,6 +46,20 @@ function firstOccurrence(document: Record<string, unknown>): Record<string, unkn
   return occurrence;
 }
 
+function completionOccurrence(
+  document: Record<string, unknown>,
+  role: 'boss' | 'postboss',
+): Record<string, unknown> {
+  const routes = document.routes as Array<Record<string, unknown>>;
+  const underworld = routes.find((route) => route.routeKey === 'Underworld');
+  const biome = (underworld?.biomes as Array<Record<string, unknown>> | undefined)?.[0];
+  const occurrence = (
+    biome?.completionOccurrences as Array<Record<string, unknown>> | undefined
+  )?.find((candidate) => candidate.occurrenceId === `completion:F:${role}`);
+  if (occurrence === undefined) throw new Error(`missing encoded F ${role} completion occurrence`);
+  return occurrence;
+}
+
 const roomActionReferences: readonly RoomActionReference[] = [
   { kind: 'completeFieldsCage', phaseKey: 'wave1' },
   { kind: 'interactIncomingReward', producerPoint: 'beforeCombat', acquisitionRole: 'source' },
@@ -226,17 +240,19 @@ describe('project document codec', () => {
     expect(() => decodeProjectDocument(duplicate, catalog)).toThrow('duplicates room action');
   });
 
-  it('round-trips a canonical dormant Boss-completion Arcana set', () => {
+  it('round-trips a canonical dormant Boss Judgment Arcana set on its phase', () => {
     const encoded = encodedFStart();
-    const route = (encoded.routes as Array<Record<string, unknown>>)[0]!;
-    const biome = (route.biomes as Array<Record<string, unknown>>)[0]!;
-    biome.bossCompletionArcanaKeys = ['CardDraw', 'CastCount'];
+    const boss = completionOccurrence(encoded, 'boss');
+    boss.encounters = {
+      ...(boss.encounters as Record<string, unknown>),
+      judgmentArcanaKeysByPhase: { Encounter: ['CardDraw', 'CastCount'] },
+    };
 
     const decoded = decodeProjectDocument(encoded, catalog);
-    expect(decoded.routes[0]?.biomes[0]?.bossCompletionArcanaKeys).toEqual([
-      'CastCount',
-      'CardDraw',
-    ]);
+    expect(
+      decoded.routes[0]?.biomes[0]?.completionOccurrences[0]?.encounters.judgmentArcanaKeysByPhase
+        ?.Encounter,
+    ).toEqual(['CastCount', 'CardDraw']);
     expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(decoded)), catalog)).toEqual(
       decoded,
     );
@@ -245,12 +261,46 @@ describe('project document codec', () => {
   it.each([
     ['unknown', ['MissingArcana']],
     ['duplicate', ['CardDraw', 'CardDraw']],
-  ] as const)('rejects an %s Boss-completion Arcana set', (_name, arcanaKeys) => {
+  ] as const)('rejects an %s Boss Judgment Arcana set', (_name, arcanaKeys) => {
     const encoded = encodedFStart();
-    const route = (encoded.routes as Array<Record<string, unknown>>)[0]!;
-    const biome = (route.biomes as Array<Record<string, unknown>>)[0]!;
-    biome.bossCompletionArcanaKeys = arcanaKeys;
+    const boss = completionOccurrence(encoded, 'boss');
+    boss.encounters = {
+      ...(boss.encounters as Record<string, unknown>),
+      judgmentArcanaKeysByPhase: { Encounter: arcanaKeys },
+    };
     expect(() => decodeProjectDocument(encoded, catalog)).toThrow();
+  });
+
+  it('strictly validates automatic occurrence identity, action domain, acquisition sites, and topology collision', () => {
+    const wrongId = encodedFStart();
+    completionOccurrence(wrongId, 'boss').occurrenceId = 'ordinary-id';
+    expect(() => decodeProjectDocument(wrongId, catalog)).toThrow('fixed completion occurrence id');
+
+    const invalidAction = encodedFStart();
+    completionOccurrence(invalidAction, 'postboss').roomActions = {
+      order: [{ kind: 'interactShopOffer', offerKey: 'Boon' }],
+    };
+    expect(() => decodeProjectDocument(invalidAction, catalog)).toThrow('inactive room action');
+
+    const missingFountain = encodedFStart();
+    completionOccurrence(missingFountain, 'postboss').roomActions = { order: [] };
+    expect(() => decodeProjectDocument(missingFountain, catalog)).toThrow('required useFountain');
+
+    const collision = encodedFStart();
+    (fTopology(collision).occurrences as Array<Record<string, unknown>>)[0]!.occurrenceId =
+      'completion:F:boss';
+    fTopology(collision).startOccurrenceId = 'completion:F:boss';
+    expect(() => decodeProjectDocument(collision, catalog)).toThrow(
+      'collides with editable topology',
+    );
+
+    const acquisition = encodedFStart();
+    completionOccurrence(acquisition, 'boss').acquisitionSites = {
+      roomExit: { pickupEntries: {} },
+    };
+    expect(() => decodeProjectDocument(acquisition, catalog)).toThrow(
+      'has no selected pickup producer',
+    );
   });
 
   it('round-trips the complete Arcana and Fear loadout', () => {

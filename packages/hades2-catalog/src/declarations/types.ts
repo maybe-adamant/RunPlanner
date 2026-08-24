@@ -369,6 +369,8 @@ export interface RawRoomDeclaration {
   readonly blockGiftBoons?: boolean;
   /** The game room flag that suppresses Gorgon Amulet in this room. */
   readonly blocksGorgon?: boolean;
+  readonly hasKeepsakeRack?: boolean;
+  readonly hasRequiredFountain?: boolean;
   readonly boonRarityOverride?: import('@run-planner/engine/catalog-schema').BoonRarityOverride;
   readonly prebossBatchPolicy?: RawPrebossBatchPolicy;
   readonly forcedRewardStoreKey?: string;

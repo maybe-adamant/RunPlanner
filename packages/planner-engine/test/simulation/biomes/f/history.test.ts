@@ -72,7 +72,7 @@ describe('F takeover history', () => {
     ]);
     expect(
       result.ledgers.roomAppearances.filter((entry) => entry.origin.kind === 'occurrence'),
-    ).toHaveLength(3);
+    ).toHaveLength(5);
     expect(
       result.ledgers.roomCreations.filter((event) => event.gameName === 'F_PreBoss01'),
     ).toHaveLength(2);
@@ -84,8 +84,8 @@ describe('F takeover history', () => {
     const postbossCommit = result.events.findIndex(
       (event) =>
         event.kind === 'roomCommitted' &&
-        event.origin.kind === 'completionRoom' &&
-        event.origin.role === 'postboss',
+        event.origin.kind === 'occurrence' &&
+        event.origin.occurrenceId === 'completion:F:postboss',
     );
     const reset = result.events.findIndex((event) => event.kind === 'biomeCounterReset');
 

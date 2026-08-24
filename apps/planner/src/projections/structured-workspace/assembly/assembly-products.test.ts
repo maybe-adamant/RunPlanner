@@ -94,20 +94,7 @@ function redirectedRewardFocusDestination(): WorkspaceInspectorDestination {
 }
 
 function completionNode(key: string): WorkspaceNode {
-  const biome = createBiomeAddress('Underworld', 'F');
-  return Object.freeze({
-    gameName: 'F_Boss01',
-    key,
-    kind: 'completion' as const,
-    label: 'Synthetic completion',
-    marker: Object.freeze({
-      address: biome,
-      assessment: 'unassessed' as const,
-      findingCount: 0,
-      focusKey: semanticAddressKey(biome),
-    }),
-    role: 'boss',
-  }) as WorkspaceNode;
+  return Object.freeze({ key }) as unknown as WorkspaceNode;
 }
 
 function shipInteractionRequirement(): WorkspaceOccurrenceInteractionRequirement {

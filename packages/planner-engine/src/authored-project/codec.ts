@@ -1,8 +1,17 @@
 import type { Catalog, RouteDeclaration } from '../catalog-schema';
 import { decodeBiomeState } from './biomeState';
 import { assessStartingArcanaGrasp } from './loadout';
-import { postbossCapabilities } from './postboss-capabilities';
-import { decodeBiomeTopology, decodeRoomActionState } from './topology/codec';
+import {
+  decodeAcquisitionSites,
+  decodeBiomeTopology,
+  decodeRoomActionState,
+} from './topology/codec';
+import { selectedPickupProducers } from './traits';
+import { createBiomeAddress } from './addresses';
+import { decodeRoomEncounterState } from './room-state/encounters';
+import { completionOccurrenceId } from './completion-occurrences';
+import { roomActionKey } from './room-actions';
+import { assembleRoomActionDomain, type RoomActionContribution } from './room-action-domain';
 import {
   PROJECT_DOCUMENT_SCHEMA_VERSION,
   type AuthoredBiomePlan,
@@ -128,128 +137,219 @@ function decodeBiomePlan(
   // it, so decoding must accept that exact persisted representation too.
   expectExactKeys(
     plan,
-    [
-      'biomeKey',
-      'state',
-      'topology',
-      'bossCompletionArcanaKeys',
-      'bossCompletionSteadyGrowthTarget',
-      'postbossKeepsakeDisposition',
-      'postbossRoomActions',
-      'keepsakeEquipResults',
-      'echoKeepsakeReplayResults',
-    ],
+    ['biomeKey', 'state', 'topology', 'completionOccurrences', 'echoKeepsakeReplayResults'],
     path,
   );
-  const rawBossKeys =
-    plan.bossCompletionArcanaKeys === undefined
-      ? []
-      : expectArray(plan.bossCompletionArcanaKeys, `${path}.bossCompletionArcanaKeys`);
-  if (rawBossKeys.length > catalog.arcanaCards.values.length) {
-    fail(`${path}.bossCompletionArcanaKeys`, 'exceeds Arcana card count');
-  }
-  const bossCompletionArcanaKeys = rawBossKeys.map((entry, index) =>
-    expectString(entry, `${path}.bossCompletionArcanaKeys[${index}]`),
-  );
-  const bossSet = new Set<string>();
-  for (const [index, key] of bossCompletionArcanaKeys.entries()) {
-    if (catalog.arcanaCards.byKey[key] === undefined)
-      fail(`${path}.bossCompletionArcanaKeys[${index}]`, `unknown Arcana ${key}`);
-    if (bossSet.has(key)) fail(`${path}.bossCompletionArcanaKeys[${index}]`, `duplicates ${key}`);
-    bossSet.add(key);
-  }
-  const bossCompletionSteadyGrowthTarget =
-    plan.bossCompletionSteadyGrowthTarget === undefined
-      ? undefined
-      : expectNonBlankString(
-          plan.bossCompletionSteadyGrowthTarget,
-          `${path}.bossCompletionSteadyGrowthTarget`,
+  const rawCompletion = expectArray(plan.completionOccurrences, `${path}.completionOccurrences`);
+  if (rawCompletion.length !== layout.completion.rooms.length)
+    fail(`${path}.completionOccurrences`, 'must contain every declared automatic completion room');
+  const completionOccurrences = Object.freeze(
+    layout.completion.rooms.map((descriptor, index) => {
+      const raw = expectRecord(rawCompletion[index], `${path}.completionOccurrences[${index}]`);
+      const room = catalog.rooms.byKey[descriptor.roomGameName];
+      if (
+        room === undefined ||
+        room.mode.kind !== 'automatic' ||
+        room.mode.role !== descriptor.role
+      )
+        fail(
+          `${path}.completionOccurrences[${index}]`,
+          'does not match automatic completion declaration',
         );
-  if (
-    bossCompletionSteadyGrowthTarget !== undefined &&
-    catalog.traits.byKey[bossCompletionSteadyGrowthTarget] === undefined
-  )
-    fail(`${path}.bossCompletionSteadyGrowthTarget`, 'unknown trait');
+      expectExactKeys(
+        raw,
+        [
+          'occurrenceId',
+          'gameName',
+          'state',
+          'encounters',
+          'roomActions',
+          'additionalExits',
+          ...(raw.acquisitionSites === undefined ? [] : ['acquisitionSites']),
+          ...(room.hasKeepsakeRack ? ['keepsakeRack'] : []),
+        ],
+        `${path}.completionOccurrences[${index}]`,
+      );
+      if (
+        expectString(raw.occurrenceId, `${path}.completionOccurrences[${index}].occurrenceId`) !==
+        completionOccurrenceId(biomeKey, descriptor.role)
+      )
+        fail(
+          `${path}.completionOccurrences[${index}].occurrenceId`,
+          'must use its fixed completion occurrence id',
+        );
+      if (
+        expectString(raw.gameName, `${path}.completionOccurrences[${index}].gameName`) !==
+        room.gameName
+      )
+        fail(`${path}.completionOccurrences[${index}].gameName`, `must equal ${room.gameName}`);
+      const state = expectRecord(raw.state, `${path}.completionOccurrences[${index}].state`);
+      expectExactKeys(state, ['kind'], `${path}.completionOccurrences[${index}].state`);
+      if (state.kind !== 'none')
+        fail(`${path}.completionOccurrences[${index}].state.kind`, 'must be none');
+      const encounters = decodeRoomEncounterState(
+        raw.encounters,
+        catalog,
+        room,
+        `${path}.completionOccurrences[${index}].encounters`,
+      );
+      const roomActions = decodeRoomActionState(
+        raw.roomActions,
+        `${path}.completionOccurrences[${index}].roomActions`,
+      );
+      if (!Array.isArray(raw.additionalExits) || raw.additionalExits.length !== 0)
+        fail(`${path}.completionOccurrences[${index}].additionalExits`, 'must be empty');
+      const keepsakeRack = !room.hasKeepsakeRack
+        ? undefined
+        : (() => {
+            const value = expectRecord(
+              raw.keepsakeRack,
+              `${path}.completionOccurrences[${index}].keepsakeRack`,
+            );
+            expectExactKeys(
+              value,
+              ['disposition', ...(value.equipResults === undefined ? [] : ['equipResults'])],
+              `${path}.completionOccurrences[${index}].keepsakeRack`,
+            );
+            const disposition = expectRecord(
+              value.disposition,
+              `${path}.completionOccurrences[${index}].keepsakeRack.disposition`,
+            );
+            const kind = expectString(
+              disposition.kind,
+              `${path}.completionOccurrences[${index}].keepsakeRack.disposition.kind`,
+            );
+            if (kind === 'retain')
+              expectExactKeys(
+                disposition,
+                ['kind'],
+                `${path}.completionOccurrences[${index}].keepsakeRack.disposition`,
+              );
+            else if (kind === 'replace') {
+              expectExactKeys(
+                disposition,
+                ['kind', 'keepsakeKey'],
+                `${path}.completionOccurrences[${index}].keepsakeRack.disposition`,
+              );
+              if (
+                catalog.keepsakes.byKey[
+                  expectString(
+                    disposition.keepsakeKey,
+                    `${path}.completionOccurrences[${index}].keepsakeRack.disposition.keepsakeKey`,
+                  )
+                ] === undefined
+              )
+                fail(
+                  `${path}.completionOccurrences[${index}].keepsakeRack.disposition.keepsakeKey`,
+                  'unknown keepsake',
+                );
+            } else
+              fail(
+                `${path}.completionOccurrences[${index}].keepsakeRack.disposition.kind`,
+                'must be retain or replace',
+              );
+            return Object.freeze({
+              disposition:
+                kind === 'retain'
+                  ? Object.freeze({ kind: 'retain' as const })
+                  : Object.freeze({
+                      kind: 'replace' as const,
+                      keepsakeKey: disposition.keepsakeKey as string,
+                    }),
+              ...(value.equipResults === undefined
+                ? {}
+                : {
+                    equipResults: decodeKeepsakeEquipResults(
+                      value.equipResults,
+                      `${path}.completionOccurrences[${index}].keepsakeRack.equipResults`,
+                      catalog,
+                    ),
+                  }),
+            });
+          })();
+      const occurrenceBase = Object.freeze({
+        occurrenceId: completionOccurrenceId(biomeKey, descriptor.role),
+        gameName: room.gameName,
+        state: Object.freeze({ kind: 'none' as const }),
+        encounters,
+        roomActions,
+        additionalExits: Object.freeze([]),
+      });
+      const acquisitionSites =
+        raw.acquisitionSites === undefined
+          ? undefined
+          : decodeAcquisitionSites(
+              raw.acquisitionSites,
+              Object.freeze({
+                occurrenceId: occurrenceBase.occurrenceId,
+                gameName: room.gameName,
+                anomalyReplacement: undefined,
+                hasAnomalyReplacement: false,
+                state: raw.state,
+                encounters: raw.encounters,
+                roomActions: raw.roomActions,
+                additionalExits: raw.additionalExits,
+                acquisitionSites: raw.acquisitionSites,
+                hasAcquisitionSites: true,
+                path: `${path}.completionOccurrences[${index}]`,
+              }),
+              catalog,
+              selectedPickupProducers(
+                catalog,
+                createBiomeAddress(routeKey, biomeKey),
+                occurrenceBase,
+              ),
+              new Set(),
+              undefined,
+            );
+      const decodedOccurrence = Object.freeze({
+        ...occurrenceBase,
+        ...(acquisitionSites === undefined ? {} : { acquisitionSites }),
+        ...(keepsakeRack === undefined ? {} : { keepsakeRack }),
+      });
+      const actionPath = `${path}.completionOccurrences[${index}].roomActions.order`;
+      const actionDomain = assembleRoomActionDomain({
+        catalog,
+        biome: createBiomeAddress(routeKey, biomeKey),
+        occurrence: decodedOccurrence,
+      });
+      const activeActions = actionDomain.contributions.filter(
+        (contribution): contribution is RoomActionContribution => contribution.kind === 'action',
+      );
+      const activeKeys = new Set(activeActions.map((action) => roomActionKey(action.reference)));
+      const authoredKeys = roomActions.order.map(roomActionKey);
+      if (new Set(authoredKeys).size !== authoredKeys.length)
+        fail(actionPath, 'must not repeat a room action');
+      for (const actionKey of authoredKeys)
+        if (!activeKeys.has(actionKey)) fail(actionPath, 'contains an inactive room action');
+      for (const action of activeActions)
+        if (
+          action.participation === 'required' &&
+          !authoredKeys.includes(roomActionKey(action.reference))
+        )
+          fail(actionPath, `must include required ${action.reference.kind} action`);
+      return decodedOccurrence;
+    }),
+  );
   const topology =
     plan.topology === null
       ? null
       : decodeBiomeTopology(plan.topology, catalog, layout, routeKey, `${path}.topology`);
-  const postboss = postbossCapabilities(catalog, biomeKey);
-  const canOwnPostbossKeepsake = postboss.hasKeepsakeRack;
-  const rawDisposition = plan.postbossKeepsakeDisposition;
-  if (canOwnPostbossKeepsake !== (rawDisposition !== undefined))
-    fail(
-      `${path}.postbossKeepsakeDisposition`,
-      canOwnPostbossKeepsake ? 'is required' : 'is not supported',
-    );
-  let postbossKeepsakeDisposition: AuthoredBiomePlan['postbossKeepsakeDisposition'];
-  if (rawDisposition !== undefined) {
-    const disposition = expectRecord(rawDisposition, `${path}.postbossKeepsakeDisposition`);
-    const kind = expectString(disposition.kind, `${path}.postbossKeepsakeDisposition.kind`);
-    if (kind === 'retain') {
-      expectExactKeys(disposition, ['kind'], `${path}.postbossKeepsakeDisposition`);
-      postbossKeepsakeDisposition = Object.freeze({ kind: 'retain' });
-    } else if (kind === 'replace') {
-      expectExactKeys(disposition, ['kind', 'keepsakeKey'], `${path}.postbossKeepsakeDisposition`);
-      const keepsakeKey = expectString(
-        disposition.keepsakeKey,
-        `${path}.postbossKeepsakeDisposition.keepsakeKey`,
-      );
-      if (catalog.keepsakes.byKey[keepsakeKey] === undefined)
-        fail(`${path}.postbossKeepsakeDisposition.keepsakeKey`, `unknown keepsake ${keepsakeKey}`);
-      postbossKeepsakeDisposition = Object.freeze({ kind: 'replace', keepsakeKey });
-    } else fail(`${path}.postbossKeepsakeDisposition.kind`, 'must be retain or replace');
-  }
-  const canOwnPostbossActions = postboss.hasRoomActions;
-  if (canOwnPostbossActions !== (plan.postbossRoomActions !== undefined))
-    fail(`${path}.postbossRoomActions`, canOwnPostbossActions ? 'is required' : 'is not supported');
-  const postbossRoomActions =
-    plan.postbossRoomActions === undefined
-      ? undefined
-      : decodeRoomActionState(plan.postbossRoomActions, `${path}.postbossRoomActions`);
-  if (postbossRoomActions !== undefined) {
-    const allowed = new Set<import('./model').RoomActionReference['kind']>([
-      ...(postboss.hasPostbossRoom ? ['useFountain' as const] : []),
-      ...(canOwnPostbossKeepsake ? ['interactKeepsakeRack' as const] : []),
-    ]);
-    for (const reference of postbossRoomActions.order) {
-      if (!allowed.has(reference.kind))
-        fail(`${path}.postbossRoomActions.order`, `${reference.kind} is not supported by Postboss`);
+  if (topology !== null) {
+    const topologyIds = new Set(topology.occurrences.map((occurrence) => occurrence.occurrenceId));
+    for (const occurrence of completionOccurrences) {
+      if (topologyIds.has(occurrence.occurrenceId))
+        fail(
+          `${path}.completionOccurrences`,
+          `${occurrence.occurrenceId} collides with editable topology`,
+        );
     }
-    const rackOrdered = postbossRoomActions.order.some(
-      (reference) => reference.kind === 'interactKeepsakeRack',
-    );
-    if ((postbossKeepsakeDisposition?.kind === 'replace') !== rackOrdered)
-      fail(
-        `${path}.postbossRoomActions.order`,
-        'keepsake rack membership must match the Postboss disposition',
-      );
   }
   return Object.freeze({
     biomeKey,
     state: decodeBiomeState(plan.state, layout, `${path}.state`),
     topology,
-    ...(plan.bossCompletionArcanaKeys === undefined
-      ? {}
-      : {
-          bossCompletionArcanaKeys: Object.freeze(
-            catalog.arcanaCards.values
-              .filter((card) => bossSet.has(card.key))
-              .map((card) => card.key),
-          ),
-        }),
-    ...(bossCompletionSteadyGrowthTarget === undefined ? {} : { bossCompletionSteadyGrowthTarget }),
-    ...(postbossKeepsakeDisposition === undefined ? {} : { postbossKeepsakeDisposition }),
-    ...(postbossRoomActions === undefined ? {} : { postbossRoomActions }),
-    ...(plan.keepsakeEquipResults === undefined
-      ? {}
-      : {
-          keepsakeEquipResults: decodeKeepsakeEquipResults(
-            plan.keepsakeEquipResults,
-            `${path}.keepsakeEquipResults`,
-            catalog,
-          ),
-        }),
+    completionOccurrences,
     ...(plan.echoKeepsakeReplayResults === undefined
       ? {}
       : {

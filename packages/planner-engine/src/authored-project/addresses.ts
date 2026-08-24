@@ -27,16 +27,13 @@ export interface IncomingRewardAddress extends BiomeOwnedAddress {
   readonly kind: 'incomingReward';
   readonly occurrenceId: OccurrenceId;
 }
-export interface CompletionRoomAddress extends BiomeOwnedAddress {
-  readonly kind: 'completionRoom';
-  readonly role: 'boss' | 'postboss';
+/** The exact post-encounter Arcana draw owned by an automatic Boss occurrence. */
+export interface JudgmentArcanaAddress extends BiomeOwnedAddress {
+  readonly kind: 'judgmentArcana';
+  readonly occurrenceId: OccurrenceId;
+  readonly phaseKey: string;
 }
-/** The exact post-encounter Arcana draw owned by a derived Boss completion room. */
-export interface BossCompletionArcanaAddress extends BiomeOwnedAddress {
-  readonly kind: 'bossCompletionArcana';
-  readonly completion: CompletionRoomAddress & { readonly role: 'boss' };
-}
-/** A rack selection has exactly one start owner or one derived Postboss owner. */
+/** A rack selection has exactly one start owner or one automatic Postboss owner. */
 export type KeepsakeSelectionAddress =
   | {
       readonly kind: 'keepsakeSelection';
@@ -48,7 +45,7 @@ export type KeepsakeSelectionAddress =
       readonly kind: 'keepsakeSelection';
       readonly routeKey: string;
       readonly biomeKey: string;
-      readonly owner: CompletionRoomAddress & { readonly role: 'postboss' };
+      readonly owner: OccurrenceAddress;
     };
 
 /** Exact succeeding-biome start where Gift Gift Gift may replay its captured keepsake. */
@@ -114,13 +111,7 @@ export interface RoomActionAddress extends BiomeOwnedAddress {
   readonly occurrenceId: OccurrenceId;
   readonly actionKey: string;
 }
-/** One exact persisted row in a derived Postboss completion chronology. */
-export interface CompletionRoomActionAddress extends BiomeOwnedAddress {
-  readonly kind: 'completionRoomAction';
-  readonly completion: CompletionRoomAddress & { readonly role: 'postboss' };
-  readonly actionKey: string;
-}
-export type RoomActionSemanticAddress = RoomActionAddress | CompletionRoomActionAddress;
+export type RoomActionSemanticAddress = RoomActionAddress;
 export type RoomRunStateCheckpoint =
   | { readonly kind: 'roomEntered' }
   | { readonly kind: 'beforeEncounterStart'; readonly phaseKey: string }
@@ -206,7 +197,6 @@ export interface ShopOfferAddress extends BiomeOwnedAddress {
 /** One exact reached acquisition checkpoint. The source remains the offer owner. */
 export type AcquisitionSiteOwnerAddress =
   | OccurrenceAddress
-  | CompletionRoomAddress
   | LocalRewardAddress
   | RewardWheelAddress
   | HubVisitAddress
@@ -268,15 +258,15 @@ export interface NaturalSelectionResultAddress extends BiomeOwnedAddress {
   readonly trait: TraitOfferAddress;
   readonly optionKey: 'option1' | 'option2' | 'option3';
 }
-/** One automatic end-effects rarity outcome, owned by an ordinary phase or Boss completion. */
+/** One automatic end-effects rarity outcome, owned by an ordinary or automatic Boss phase. */
 export interface SteadyGrowthOutcomeAddress extends BiomeOwnedAddress {
   readonly kind: 'steadyGrowthOutcome';
   /**
-   * The ordinary occurrence or derived Boss that emitted the end-effects
+   * The ordinary occurrence or automatic Boss that emitted the end-effects
    * checkpoint. `phaseKey` below is the sole phase identity; keeping an
    * EncounterPhaseAddress here would permit contradictory double phase keys.
    */
-  readonly owner: OccurrenceAddress | (CompletionRoomAddress & { readonly role: 'boss' });
+  readonly owner: OccurrenceAddress;
   readonly phaseKey: string;
 }
 /** Echo Boon Boon Boon's complete mixed-provider child beneath the selected outer row. */
@@ -311,8 +301,7 @@ export type SemanticAddress =
   | BiomeFieldAddress
   | OccurrenceAddress
   | IncomingRewardAddress
-  | CompletionRoomAddress
-  | BossCompletionArcanaAddress
+  | JudgmentArcanaAddress
   | KeepsakeSelectionAddress
   | EchoKeepsakeReplayAddress
   | KeepsakeEquipResultAddress
@@ -324,7 +313,6 @@ export type SemanticAddress =
   | HubDecisionAddress
   | LocalRewardAddress
   | RoomActionAddress
-  | CompletionRoomActionAddress
   | RoomRunStateCheckpointAddress
   | LocalVisitDecisionAddress
   | LocalVisitSlotAddress
@@ -418,26 +406,16 @@ export function createOccurrenceAddress(
 ): OccurrenceAddress {
   return Object.freeze({ kind: 'occurrence', ...owner(biome), occurrenceId });
 }
-export function createCompletionRoomAddress(
-  biome: BiomeAddress,
-  role: CompletionRoomAddress['role'],
-): CompletionRoomAddress {
-  return Object.freeze({ kind: 'completionRoom', ...owner(biome), role });
-}
-export function createBossCompletionArcanaAddress(
-  completion: CompletionRoomAddress,
-): BossCompletionArcanaAddress {
-  if (completion.role !== 'boss')
-    throw new SemanticAddressContractError(
-      'completion.role',
-      'Boss-completion Arcana must be owned by the Boss completion room',
-    );
-  const bossCompletion = Object.freeze({ ...completion, role: 'boss' as const });
+export function createJudgmentArcanaAddress(
+  occurrence: OccurrenceAddress,
+  phaseKey: string,
+): JudgmentArcanaAddress {
   return Object.freeze({
-    kind: 'bossCompletionArcana',
-    routeKey: completion.routeKey,
-    biomeKey: completion.biomeKey,
-    completion: bossCompletion,
+    kind: 'judgmentArcana',
+    routeKey: occurrence.routeKey,
+    biomeKey: occurrence.biomeKey,
+    occurrenceId: occurrence.occurrenceId,
+    phaseKey: nonBlank(phaseKey, 'phaseKey'),
   });
 }
 export function createRouteStartKeepsakeSelectionAddress(
@@ -451,18 +429,13 @@ export function createRouteStartKeepsakeSelectionAddress(
   });
 }
 export function createPostbossKeepsakeSelectionAddress(
-  completion: CompletionRoomAddress,
-): Extract<KeepsakeSelectionAddress, { readonly owner: CompletionRoomAddress }> {
-  if (completion.role !== 'postboss')
-    throw new SemanticAddressContractError(
-      'completion.role',
-      'Keepsake rack must be owned by Postboss',
-    );
+  occurrence: OccurrenceAddress,
+): Extract<KeepsakeSelectionAddress, { readonly owner: OccurrenceAddress }> {
   return Object.freeze({
     kind: 'keepsakeSelection',
-    routeKey: completion.routeKey,
-    biomeKey: completion.biomeKey,
-    owner: Object.freeze({ ...completion, role: 'postboss' as const }),
+    routeKey: occurrence.routeKey,
+    biomeKey: occurrence.biomeKey,
+    owner: occurrence,
   });
 }
 export function createKeepsakeEquipResultAddress<
@@ -564,18 +537,6 @@ export function createRoomActionAddress(
     kind: 'roomAction',
     ...owner(biome),
     occurrenceId,
-    actionKey: nonBlank(actionKey, 'actionKey'),
-  });
-}
-export function createCompletionRoomActionAddress(
-  completion: CompletionRoomAddress & { readonly role: 'postboss' },
-  actionKey: string,
-): CompletionRoomActionAddress {
-  return Object.freeze({
-    kind: 'completionRoomAction',
-    routeKey: completion.routeKey,
-    biomeKey: completion.biomeKey,
-    completion: Object.freeze({ ...completion, role: 'postboss' as const }),
     actionKey: nonBlank(actionKey, 'actionKey'),
   });
 }
@@ -928,10 +889,8 @@ export function semanticAddressKey(address: SemanticAddress): string {
     case 'occurrence':
     case 'incomingReward':
       return JSON.stringify([...base, address.occurrenceId]);
-    case 'completionRoom':
-      return JSON.stringify([...base, address.role]);
-    case 'bossCompletionArcana':
-      return JSON.stringify([...base, semanticAddressKey(address.completion)]);
+    case 'judgmentArcana':
+      return JSON.stringify([...base, address.occurrenceId, address.phaseKey]);
     case 'keepsakeSelection':
       return JSON.stringify([
         address.kind,
@@ -959,8 +918,6 @@ export function semanticAddressKey(address: SemanticAddress): string {
       return JSON.stringify([...base, address.occurrenceId, address.groupKey, address.slotKey]);
     case 'roomAction':
       return JSON.stringify([...base, address.occurrenceId, address.actionKey]);
-    case 'completionRoomAction':
-      return JSON.stringify([...base, semanticAddressKey(address.completion), address.actionKey]);
     case 'roomRunStateCheckpoint':
       return JSON.stringify([
         ...base,

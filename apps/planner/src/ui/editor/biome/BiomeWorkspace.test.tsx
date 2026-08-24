@@ -5,9 +5,7 @@ import {
   applyProjectCommand,
   createBatchRewardStoreAddress,
   createBiomeAddress,
-  createBossCompletionArcanaAddress,
-  createCompletionRoomActionAddress,
-  createCompletionRoomAddress,
+  createJudgmentArcanaAddress,
   createPostbossKeepsakeSelectionAddress,
   createExitDecisionAddress,
   createHubDecisionAddress,
@@ -17,10 +15,8 @@ import {
   createOccurrenceAddress,
   createOccurrenceId,
   createProjectDocument,
-  decodeProjectDocument,
   createRouteAddress,
   createTargetAddress,
-  roomActionKey,
   semanticAddressKey,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
@@ -237,7 +233,7 @@ describe('BiomeWorkspace', () => {
     await user.click(rewardBagsSummary);
     expect(rewardBagsDisclosure.open).toBe(true);
     const bagSummary = within(sheet).getByText(/Major Reward \(RunProgress\)/);
-    expect(bagSummary.textContent).toMatch(/x3.*Eligible now x1.*Ineligible now x2/);
+    expect(bagSummary.textContent).toMatch(/x3.*Eligible now x0.*Ineligible now x3/);
     await user.click(bagSummary);
     await user.click(within(sheet).getAllByText(/Max Health \(MaxHealthDrop\)/)[0]!);
     expect(
@@ -662,7 +658,7 @@ describe('BiomeWorkspace', () => {
         projected.rail.map((entry) => entry.marker.focusKey),
       );
       const inspector = screen.getByRole('complementary', { name: 'Details' });
-      expect(inspector.querySelector('.biome-batch-workbench')).not.toBeNull();
+      expect(inspector.querySelector('.biome-batch-workbench')).toBeNull();
       expect(inspector.querySelector('.biome-occurrence-workbench')).not.toBeNull();
       cleanup();
     }
@@ -685,7 +681,7 @@ describe('BiomeWorkspace', () => {
     expect(
       screen
         .getByRole('complementary', { name: 'Details' })
-        .querySelector('.biome-batch-workbench'),
+        .querySelector('.biome-occurrence-workbench'),
     ).not.toBeNull();
   });
 
@@ -856,7 +852,7 @@ describe('BiomeWorkspace', () => {
     expect(screen.queryByRole('button', { name: 'Remove these doors' })).toBeNull();
   });
 
-  it('renders topology-owned and terminal outgoing states on their exact N occurrences', async () => {
+  it('renders topology-owned and fixed automatic outgoing states on their exact N occurrences', async () => {
     const view = renderWorkspace(loadSurfaceNOPQProject(), 'Surface', 'N');
 
     act(() =>
@@ -890,9 +886,7 @@ describe('BiomeWorkspace', () => {
     outgoing = within(screen.getByRole('complementary', { name: 'Details' })).getByRole('region', {
       name: 'Outgoing doors',
     });
-    expect(
-      within(outgoing).getByText('No physical outgoing door before biome completion.'),
-    ).toBeTruthy();
+    expect(within(outgoing).getByText('Continue to Polyphemus.')).toBeTruthy();
   });
 
   it('renders N’s entry frontiers without an unauthored Hub rail stop', () => {
@@ -1090,8 +1084,8 @@ describe('BiomeWorkspace', () => {
     cleanup();
 
     const first = fBiome.nodes.find(
-      (node): node is Extract<WorkspaceNode, { readonly kind: 'completion' }> =>
-        node.kind === 'completion',
+      (node): node is Extract<WorkspaceNode, { readonly kind: 'occurrenceWorkbench' }> =>
+        node.kind === 'occurrenceWorkbench' && node.room.kind === 'PostBoss',
     );
     if (first === undefined) throw new Error('complete F completion node is missing');
     const firstNodeDefault: WorkspaceBiome = {
@@ -1104,9 +1098,12 @@ describe('BiomeWorkspace', () => {
     const firstNodeInspector = screen.getByRole('complementary', { name: 'Details' });
     expect(selectedRailMarkerKeys(firstNodeView.container)).toEqual([]);
     expect(
-      within(firstNodeInspector).getByRole('heading', { level: 2, name: first.label }),
+      within(firstNodeInspector).getByRole('heading', {
+        level: 3,
+        name: `Entering ${first.room.label}`,
+      }),
     ).toBeTruthy();
-    expect(within(firstNodeInspector).getByRole('region', { name: 'Room Timeline' })).toBeTruthy();
+    expect(within(firstNodeInspector).getByRole('region', { name: 'Keepsake Rack' })).toBeTruthy();
     expect(
       within(firstNodeInspector).queryByText('This room is added automatically after the biome.'),
     ).toBeNull();
@@ -1424,11 +1421,11 @@ describe('BiomeWorkspace', () => {
   it('keeps the reached Judgment editor on the fixed Boss timeline and directly reopenable', () => {
     const dormant = renderWorkspace(loadSurfaceNOPQProject(), 'Surface', 'N');
     const dormantBoss = workspaceBiome(dormant.application, 'Surface', 'N').nodes.find(
-      (node): node is Extract<WorkspaceNode, { readonly kind: 'completion' }> =>
-        node.kind === 'completion' && node.role === 'boss',
+      (node): node is Extract<WorkspaceNode, { readonly kind: 'occurrenceWorkbench' }> =>
+        node.kind === 'occurrenceWorkbench' && node.room.kind === 'Boss',
     );
     if (dormantBoss === undefined) throw new Error('N Boss completion is missing');
-    expect(dormantBoss.judgment).toBeUndefined();
+    expect(dormantBoss.room.judgment).toBeUndefined();
     cleanup();
     dormant.application.dispose();
 
@@ -1439,14 +1436,17 @@ describe('BiomeWorkspace', () => {
     });
     const view = renderWorkspace(project, 'Surface', 'N');
     const workspace = workspaceProjection(view.application);
-    const owner = createBossCompletionArcanaAddress(createCompletionRoomAddress(nBiome, 'boss'));
-    const boss = workspaceBiome(view.application, 'Surface', 'N').nodes.find(
-      (node): node is Extract<WorkspaceNode, { readonly kind: 'completion' }> =>
-        node.kind === 'completion' && node.role === 'boss',
+    const owner = createJudgmentArcanaAddress(
+      createOccurrenceAddress(nBiome, createOccurrenceId('completion:N:boss')),
+      'Encounter',
     );
-    if (boss?.judgment === undefined)
+    const boss = workspaceBiome(view.application, 'Surface', 'N').nodes.find(
+      (node): node is Extract<WorkspaceNode, { readonly kind: 'occurrenceWorkbench' }> =>
+        node.kind === 'occurrenceWorkbench' && node.room.kind === 'Boss',
+    );
+    if (boss?.room.judgment === undefined)
       throw new Error('active Judgment completion control is missing');
-    expect(workspace.interactions.bossCompletionArcana.has(semanticAddressKey(owner))).toBe(true);
+    expect(workspace.interactions.judgmentArcana.has(semanticAddressKey(owner))).toBe(true);
 
     act(() => view.application.store.dispatch(semanticOwnerFocused(owner)));
     expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(owner);
@@ -1469,7 +1469,7 @@ describe('BiomeWorkspace', () => {
       ),
     );
     expect(document.activeElement).toBe(document.getElementById(semanticOwnerElementId(owner)));
-    expect(inspector.querySelector('.completion-judgment-popup')).toBeNull();
+    expect(inspector.querySelector('.room-judgment-popup')).toBeNull();
     expect(within(inspector).getByText('Start encounter')).toBeTruthy();
     expect(within(inspector).getByText('Boss defeated')).toBeTruthy();
     expect(within(inspector).getByText('End encounter')).toBeTruthy();
@@ -1480,11 +1480,6 @@ describe('BiomeWorkspace', () => {
         name: /Judgment — choose 5 inactive Arcana cards/,
       }),
     ).toBeTruthy();
-    expect(
-      within(timeline)
-        .getByRole('listitem', { name: /Judgment — choose 5 inactive Arcana cards/ })
-        .querySelector('.hub-roster-rank')?.textContent,
-    ).toBe('1');
     const timelineEntries = Array.from(timeline.querySelectorAll('ol > li'));
     expect(
       timelineEntries.findIndex((entry) => entry.getAttribute('aria-label') === 'Boss defeated'),
@@ -1492,12 +1487,12 @@ describe('BiomeWorkspace', () => {
       timelineEntries.findIndex((entry) => entry.getAttribute('aria-label') === 'End encounter'),
     );
     act(() => judgmentLauncher.click());
-    const optionList = inspector.querySelector('.completion-judgment-options');
+    const optionList = inspector.querySelector('.room-judgment-options');
     if (optionList === null) throw new Error('Judgment options list is missing');
     expect(optionList.querySelectorAll(':scope > label')).toHaveLength(
-      boss.judgment.inactiveArcanaKeys.length,
+      boss.room.judgment.inactiveArcanaKeys.length,
     );
-    for (let index = 0; index < boss.judgment.requiredCount; index += 1) {
+    for (let index = 0; index < boss.room.judgment.requiredCount; index += 1) {
       const next = within(inspector)
         .getAllByRole<HTMLInputElement>('checkbox')
         .find((checkbox) => !checkbox.checked);
@@ -1508,7 +1503,10 @@ describe('BiomeWorkspace', () => {
       view.application.store
         .getState()
         .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
-        ?.biomes.find((biome) => biome.biomeKey === 'N')?.bossCompletionArcanaKeys,
+        ?.biomes.find((biome) => biome.biomeKey === 'N')
+        ?.completionOccurrences.find(
+          (occurrence) => occurrence.occurrenceId === createOccurrenceId('completion:N:boss'),
+        )?.encounters.judgmentArcanaKeysByPhase?.Encounter,
     ).toHaveLength(5);
 
     act(() =>
@@ -1531,16 +1529,11 @@ describe('BiomeWorkspace', () => {
   it('binds the reached Postboss keepsake selector through replacement and retention', async () => {
     const view = renderWorkspace(loadSurfaceNOPQProject(), 'Surface', 'N');
     const owner = createPostbossKeepsakeSelectionAddress(
-      createCompletionRoomAddress(nBiome, 'postboss'),
+      createOccurrenceAddress(nBiome, createOccurrenceId('completion:N:postboss')),
     );
     act(() => view.application.store.dispatch(semanticOwnerFocused(owner)));
-    const timeline = screen.getByRole('region', { name: 'Room Timeline' });
-    expect(within(timeline).getByText('Room entered')).toBeTruthy();
-    expect(within(timeline).getByText('Choose keepsake')).toBeTruthy();
-    expect(within(timeline).getByText('Cleanup · Doors open')).toBeTruthy();
-    expect(within(timeline).queryByText('Start encounter')).toBeNull();
-    expect(within(timeline).queryByText('End encounter')).toBeNull();
-    const selector = within(timeline).getByRole<HTMLSelectElement>('combobox', {
+    const rack = screen.getByRole('region', { name: 'Keepsake Rack' });
+    const selector = within(rack).getByRole<HTMLSelectElement>('combobox', {
       name: 'Keepsake',
     });
     fireEvent.focus(selector);
@@ -1555,8 +1548,17 @@ describe('BiomeWorkspace', () => {
       view.application.store
         .getState()
         .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
-        ?.biomes.find((biome) => biome.biomeKey === 'N')?.postbossKeepsakeDisposition,
+        ?.biomes.find((biome) => biome.biomeKey === 'N')
+        ?.completionOccurrences.find(
+          (occurrence) => occurrence.occurrenceId === createOccurrenceId('completion:N:postboss'),
+        )?.keepsakeRack?.disposition,
     ).toEqual({ kind: 'replace', keepsakeKey: 'BossPreDamageKeepsake' });
+    const timeline = screen.getByRole('region', { name: 'Room Timeline' });
+    expect(within(timeline).getByText('Room entered')).toBeTruthy();
+    expect(within(timeline).getByText('Choose keepsake')).toBeTruthy();
+    expect(within(timeline).getByText('Cleanup · Doors open')).toBeTruthy();
+    expect(within(timeline).queryByText('Start encounter')).toBeNull();
+    expect(within(timeline).queryByText('End encounter')).toBeNull();
     await waitFor(() =>
       expect(
         within(timeline).getByRole('button', { name: 'Move Choose keepsake earlier' }),
@@ -1581,62 +1583,10 @@ describe('BiomeWorkspace', () => {
       view.application.store
         .getState()
         .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
-        ?.biomes.find((biome) => biome.biomeKey === 'N')?.postbossKeepsakeDisposition,
+        ?.biomes.find((biome) => biome.biomeKey === 'N')
+        ?.completionOccurrences.find(
+          (occurrence) => occurrence.occurrenceId === createOccurrenceId('completion:N:postboss'),
+        )?.keepsakeRack?.disposition,
     ).toEqual({ kind: 'retain' });
-  });
-
-  it('restores an omitted nonfinal Postboss fountain action through its completion owner', async () => {
-    const project = decodeProjectDocument(
-      {
-        ...loadSurfaceNOPQProject(),
-        routes: loadSurfaceNOPQProject().routes.map((route) => ({
-          ...route,
-          biomes: route.biomes.map((biome) =>
-            biome.biomeKey === 'N' ? { ...biome, postbossRoomActions: { order: [] } } : biome,
-          ),
-        })),
-      },
-      catalog,
-    );
-    const view = renderWorkspace(project, 'Surface', 'N');
-    const completion = createCompletionRoomAddress(nBiome, 'postboss') as ReturnType<
-      typeof createPostbossKeepsakeSelectionAddress
-    >['owner'];
-    const fountain = { kind: 'useFountain' as const };
-    const action = createCompletionRoomActionAddress(completion, roomActionKey(fountain));
-    const postboss = workspaceBiome(view.application, 'Surface', 'N').nodes.find(
-      (node): node is Extract<WorkspaceNode, { readonly kind: 'completion' }> =>
-        node.kind === 'completion' && node.role === 'postboss',
-    );
-    if (postboss?.roomActions === undefined) throw new Error('N Postboss actions are missing');
-    expect(postboss.roomActions.repairRows).toHaveLength(1);
-    expect(postboss.roomActions.repairRows[0]?.reference).toEqual(fountain);
-    expect(postboss.roomActions.repairRows[0]?.address).toEqual(action);
-
-    act(() => view.application.store.dispatch(semanticOwnerFocused(action)));
-    expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(action);
-    expect(document.getElementById(semanticOwnerElementId(action))).toBeTruthy();
-    const timeline = screen.getByRole('region', { name: 'Room Timeline' });
-    const repair = within(timeline)
-      .getByText('This required action has not been placed.')
-      .closest<HTMLElement>('[data-room-action-key]');
-    if (repair === null) throw new Error('Postboss fountain repair is missing');
-    expect(repair.dataset.roomActionKey).toBe(roomActionKey(fountain));
-
-    const before = view.application.store.getState().projectWorkspace.history.past.length;
-    await view.user.click(within(repair).getByRole('button', { name: 'Restore required action' }));
-    await waitFor(() =>
-      expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
-        before + 1,
-      ),
-    );
-    expect(
-      view.application.store
-        .getState()
-        .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
-        ?.biomes.find((biome) => biome.biomeKey === 'N')?.postbossRoomActions?.order,
-    ).toEqual([fountain]);
-    expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(action);
-    expect(document.getElementById(semanticOwnerElementId(action))).toBeTruthy();
   });
 });

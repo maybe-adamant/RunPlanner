@@ -1,16 +1,12 @@
 import {
   createBiomeFieldAddress,
-  createBossCompletionArcanaAddress,
-  createCompletionRoomAddress,
   createExitDecisionAddress,
   createInitialExitDecision,
   createHubDecisionAddress,
   createKeepsakeEquipResultAddress,
   createEchoKeepsakeReplayAddress,
   createOccurrenceAddress,
-  createPostbossKeepsakeSelectionAddress,
   normalDecisionProgressionForLayout,
-  roomActionKey,
   semanticAddressKey,
   type AuthoredBiomePlan,
   type BiomeAddress,
@@ -27,10 +23,6 @@ import type {
   Catalog,
 } from '@run-planner/engine/catalog-schema';
 import type { ProjectBiomeEvaluation } from '@run-planner/engine/simulation';
-import {
-  appendSteadyGrowthCompletionTimelineEffects,
-  assembleCompletionRoomLifecycleTimeline,
-} from '@run-planner/engine/simulation';
 
 import {
   appendUniqueRewardControls,
@@ -43,7 +35,6 @@ import {
   type WorkspaceAuthoringFrontier,
   type WorkspaceAssessment,
   type WorkspaceBiomeField,
-  type WorkspaceCompletionNode,
   type WorkspaceInspectorDestination,
   type WorkspaceMarker,
   type WorkspaceNode,
@@ -53,7 +44,6 @@ import {
   type WorkspaceRewardControl,
   type WorkspaceRunStateLauncher,
   type WorkspaceRoomPickerControl,
-  type WorkspaceRoomActions,
   type WorkspaceStatus,
 } from '../contract';
 import {
@@ -82,7 +72,6 @@ import {
 } from '../navigation/marker-builder';
 import {
   assembleWorkspaceOccurrence,
-  assembleBaseWorkspaceRoomActions,
   type WorkspaceOccurrenceAssembly,
   type WorkspaceOccurrenceAssembler,
   type WorkspaceOccurrenceAssemblyRequest,
@@ -106,8 +95,7 @@ export interface WorkspaceBiomeSemanticAssembly {
   readonly biome: BiomeAddress;
   readonly biomeKey: string;
   readonly batchInteractionRequirements: ReadonlyMap<string, WorkspaceBatchInteractionRequirement>;
-  readonly completion: readonly WorkspaceCompletionNode[];
-  readonly completionOutline: readonly WorkspaceCompletionNode[];
+  readonly completionOutline: readonly WorkspaceOccurrenceWorkbenchNode[];
   readonly entry?: WorkspaceOccurrenceWorkbenchNode;
   readonly echoKeepsakeReplay?: {
     readonly address: KeepsakeEquipResultAddress & { readonly resultKind: 'experimentalHammer' };
@@ -143,6 +131,11 @@ export interface WorkspaceBiomeSemanticAssembly {
     WorkspaceTopologyRemovalInteractionRequirement
   >;
 }
+
+export type WorkspaceJudgmentArcanaCapability = {
+  readonly inactiveArcanaKeys: readonly string[];
+  readonly requiredCount: number;
+};
 
 interface CachedOccurrenceAssembly {
   readonly assembly: WorkspaceOccurrenceAssembly;
@@ -430,12 +423,10 @@ function enrichFrontierPredecessor(
 export function assembleWorkspaceBiomeSemantics(
   catalog: Catalog,
   source: WorkspaceBiomeSource,
-  bossCompletionArcanaCapability?: {
-    readonly inactiveArcanaKeys: readonly string[];
-    readonly requiredCount: number;
-  },
-  postbossKeepsakeReached = false,
   keepsakeEquipResultSupported: (address: KeepsakeEquipResultAddress) => boolean = () => false,
+  judgmentArcanaCapability: (
+    address: import('@run-planner/engine/authored-project').JudgmentArcanaAddress,
+  ) => WorkspaceJudgmentArcanaCapability | undefined = () => undefined,
 ): WorkspaceBiomeSemanticAssembly {
   const { biome, evaluation, layout, plan } = source;
   const anomalyReplacementRoomGameNames =
@@ -506,6 +497,8 @@ export function assembleWorkspaceBiomeSemantics(
       levelResolutionAssessment: source.levelResolutionAssessment,
       steadyGrowthOutcomes: source.steadyGrowthOutcomes,
       isActiveTraitOffer: source.isActiveTraitOffer,
+      judgmentArcanaCapability,
+      keepsakeEquipResultSupported,
       derivedAcquisitionEntries: source.derivedAcquisitionEntries,
       markerDestinations,
       ordinaryRewardForfeited: (owner) => source.ordinaryRewardForfeited(owner.address),
@@ -636,8 +629,7 @@ export function assembleWorkspaceBiomeSemantics(
   if (frontier?.kind === 'exitDecision' && frontier.owner.source.kind === 'hubDecision') {
     markerDestinations.setHubTab([frontier.marker], 'exit');
   }
-  const structuralNodes = Object.freeze([...nodes]);
-  const frontierSeed = enrichFrontierPredecessor(frontier, structuralNodes);
+  const frontierSeed = enrichFrontierPredecessor(frontier, Object.freeze([...nodes]));
   let resolvedFrontier: WorkspaceAuthoringFrontier | null;
   if (frontierSeed?.kind === 'exitDecision') {
     const progression = normalDecisionProgressionForLayout(layout);
@@ -683,256 +675,119 @@ export function assembleWorkspaceBiomeSemantics(
     resolvedFrontier = frontierSeed;
   }
   const occurrenceOutgoing = new Map<OccurrenceId, WorkspaceOccurrenceStageOutgoing>();
-  if (plan.topology !== null) {
-    for (const occurrence of plan.topology.occurrences) {
-      const status = source.outgoingStatus(occurrence.occurrenceId);
-      switch (status.kind) {
-        case 'authoredDecision':
-          // Presentation binds the exact decision node after node titles are finalized.
-          occurrenceOutgoing.set(
-            occurrence.occurrenceId,
-            Object.freeze({
-              kind: 'authoredDecision' as const,
-              decisionNodeKey: semanticAddressKey(status.owner),
-            }),
+  for (const occurrence of [...(plan.topology?.occurrences ?? []), ...plan.completionOccurrences]) {
+    const status = source.outgoingStatus(occurrence.occurrenceId);
+    switch (status.kind) {
+      case 'authoredDecision':
+        // Presentation binds the exact decision node after node titles are finalized.
+        occurrenceOutgoing.set(
+          occurrence.occurrenceId,
+          Object.freeze({
+            kind: 'authoredDecision' as const,
+            decisionNodeKey: semanticAddressKey(status.owner),
+          }),
+        );
+        break;
+      case 'frontier': {
+        if (
+          resolvedFrontier?.kind !== 'exitDecision' ||
+          semanticAddressKey(resolvedFrontier.owner) !== semanticAddressKey(status.owner)
+        ) {
+          throw new StructuredWorkspaceProjectionContractError(
+            `${semanticAddressKey(status.owner)} engine frontier has no matching workspace frontier`,
           );
-          break;
-        case 'frontier': {
-          if (
-            resolvedFrontier?.kind !== 'exitDecision' ||
-            semanticAddressKey(resolvedFrontier.owner) !== semanticAddressKey(status.owner)
-          ) {
-            throw new StructuredWorkspaceProjectionContractError(
-              `${semanticAddressKey(status.owner)} engine frontier has no matching workspace frontier`,
-            );
-          }
-          occurrenceOutgoing.set(
-            occurrence.occurrenceId,
-            Object.freeze({ kind: 'frontier' as const, frontier: resolvedFrontier }),
-          );
-          break;
         }
-        case 'blockedOrUnentered':
-          occurrenceOutgoing.set(
-            occurrence.occurrenceId,
-            Object.freeze({
-              kind: 'blockedOrUnentered' as const,
-              marker: markerDestinations.marker(status.owner),
-              message:
-                status.reason === 'unentered'
-                  ? 'Enter this room before authoring its outgoing doors.'
-                  : 'This room is not the current outgoing authoring frontier.',
-            }),
-          );
-          break;
-        case 'topologyOwned':
-          occurrenceOutgoing.set(
-            occurrence.occurrenceId,
-            Object.freeze({
-              kind: 'topologyOwned' as const,
-              label:
-                status.topology === 'hub'
-                  ? 'Continuation is owned by the Hub.'
-                  : 'Continuation is owned by this room’s local visits.',
-              marker: markerDestinations.marker(status.owner),
-            }),
-          );
-          break;
-        case 'terminal':
-          occurrenceOutgoing.set(
-            occurrence.occurrenceId,
-            Object.freeze({
-              kind: 'terminal' as const,
-              label: 'No physical outgoing door before biome completion.',
-              marker: markerDestinations.marker(status.owner),
-            }),
-          );
-          break;
+        occurrenceOutgoing.set(
+          occurrence.occurrenceId,
+          Object.freeze({ kind: 'frontier' as const, frontier: resolvedFrontier }),
+        );
+        break;
+      }
+      case 'blockedOrUnentered':
+        occurrenceOutgoing.set(
+          occurrence.occurrenceId,
+          Object.freeze({
+            kind: 'blockedOrUnentered' as const,
+            marker: markerDestinations.marker(status.owner),
+            message:
+              status.reason === 'unentered'
+                ? 'Enter this room before authoring its outgoing doors.'
+                : 'This room is not the current outgoing authoring frontier.',
+          }),
+        );
+        break;
+      case 'topologyOwned':
+        occurrenceOutgoing.set(
+          occurrence.occurrenceId,
+          Object.freeze({
+            kind: 'topologyOwned' as const,
+            label:
+              status.topology === 'hub'
+                ? 'Continuation is owned by the Hub.'
+                : 'Continuation is owned by this room’s local visits.',
+            marker: markerDestinations.marker(status.owner),
+          }),
+        );
+        break;
+      case 'terminal':
+        occurrenceOutgoing.set(
+          occurrence.occurrenceId,
+          Object.freeze({
+            kind: 'terminal' as const,
+            label: 'No physical outgoing door before biome completion.',
+            marker: markerDestinations.marker(status.owner),
+          }),
+        );
+        break;
+      case 'fixedAutomatic': {
+        const targetStatus = status.target;
+        const label = (() => {
+          switch (targetStatus.kind) {
+            case 'automaticOccurrence': {
+              const target = plan.completionOccurrences.find(
+                (candidate) => candidate.occurrenceId === targetStatus.occurrenceId,
+              );
+              return target === undefined
+                ? 'Continue to automatic room.'
+                : `Continue to ${requireWorkspaceRoom(catalog, target.gameName).label}.`;
+            }
+            case 'nextBiomeIntro':
+              return `Continue to ${targetStatus.biomeKey}.`;
+            case 'routeBoundary':
+              return 'Continue to route boundary.';
+          }
+        })();
+        occurrenceOutgoing.set(
+          occurrence.occurrenceId,
+          Object.freeze({
+            kind: 'fixedAutomatic' as const,
+            label,
+            marker: markerDestinations.marker(status.owner),
+          }),
+        );
+        break;
       }
     }
   }
-  const completion = Object.freeze(
-    layout.completion.rooms.map((descriptor) => {
-      const address = createCompletionRoomAddress(biome, descriptor.role);
-      const judgment =
-        descriptor.role !== 'boss' || bossCompletionArcanaCapability === undefined
-          ? undefined
-          : Object.freeze({
-              address: createBossCompletionArcanaAddress(address),
-              inactiveArcanaKeys: bossCompletionArcanaCapability.inactiveArcanaKeys,
-              marker: markerDestinations.marker(createBossCompletionArcanaAddress(address)),
-              requiredCount: bossCompletionArcanaCapability.requiredCount,
-              value: plan.bossCompletionArcanaKeys ?? Object.freeze([]),
-            });
-      const postbossKeepsakeDisposition =
-        descriptor.role !== 'postboss' ||
-        plan.postbossKeepsakeDisposition === undefined ||
-        !postbossKeepsakeReached
-          ? undefined
-          : plan.postbossKeepsakeDisposition;
-      const keepsakeSelectionAddress =
-        postbossKeepsakeDisposition === undefined
-          ? undefined
-          : createPostbossKeepsakeSelectionAddress(address);
-      const keepsakeSelectionMarker =
-        keepsakeSelectionAddress === undefined
-          ? undefined
-          : markerDestinations.marker(keepsakeSelectionAddress);
-      const completionSteadyGrowth =
-        descriptor.role !== 'boss'
-          ? undefined
-          : (evaluation !== undefined && 'rewards' in evaluation
-              ? evaluation.rewards.steadyGrowthOutcomes
-              : Object.freeze([])
-            ).find(
-              (outcome) =>
-                outcome.address.owner.kind === 'completionRoom' &&
-                outcome.address.owner.role === 'boss',
-            );
-      const steadyGrowth =
-        completionSteadyGrowth === undefined
-          ? undefined
-          : Object.freeze({
-              address: completionSteadyGrowth.address,
-              marker: markerDestinations.marker(completionSteadyGrowth.address),
-              phaseKey: completionSteadyGrowth.phaseKey,
-              ...(plan.bossCompletionSteadyGrowthTarget === undefined
-                ? {}
-                : { targetTraitKey: plan.bossCompletionSteadyGrowthTarget }),
-            });
-      const completionTimeline = appendSteadyGrowthCompletionTimelineEffects(
-        assembleCompletionRoomLifecycleTimeline({
-          catalog,
-          owner: address,
-          roomGameName: descriptor.roomGameName,
-          ...(judgment === undefined ? {} : { judgment: judgment.address }),
-        }),
-        steadyGrowth === undefined ? [] : [steadyGrowth.address],
+  const completionOutline = Object.freeze(
+    plan.completionOccurrences.map((occurrence) => {
+      const projected = assembleOccurrence(Object.freeze({ occurrence }));
+      appendUniqueOccurrenceInteractionRequirements(
+        occurrenceInteractionRequirements,
+        projected.occurrenceInteractionRequirements,
       );
-      const timeline = completionTimeline.entries.map((entry) => {
-        const projected =
-          entry.kind === 'boundary'
-            ? Object.freeze({ kind: 'boundary' as const, boundary: entry.boundary })
-            : entry.kind === 'bossDefeated'
-              ? Object.freeze({ kind: 'bossDefeated' as const, key: entry.key })
-              : entry.kind === 'fixedEffect'
-                ? Object.freeze({ kind: 'fixedEffect' as const, effect: entry.effect })
-                : Object.freeze({
-                    kind: 'steadyGrowth' as const,
-                    address: entry.address,
-                    phaseKey: entry.phaseKey,
-                  });
-        return projected;
+      appendUniqueRoomControls(roomControls, projected.roomControls);
+      appendUniqueRewardControls(rewardControls, projected.rewardControls);
+      const node = Object.freeze({
+        ...projected.node,
+        railVisibility: 'inspectorOnly' as const,
       });
-      const completionRooms =
-        evaluation?.authoring === 'complete' && evaluation.validity === 'valid'
-          ? evaluation.snapshot.completionRooms
-          : evaluation !== undefined && 'materializedPrefix' in evaluation
-            ? (evaluation.assessmentPrefix ?? evaluation.materializedPrefix)?.completionRooms
-            : undefined;
-      const evaluatedPostboss =
-        descriptor.role === 'postboss'
-          ? completionRooms?.find((room) => room.role === 'postboss')
-          : undefined;
-      const postbossRoster = evaluatedPostboss?.roomActionRoster;
-      const postbossTimeline = evaluatedPostboss?.roomLifecycleTimeline;
-      // Rack membership is atomically owned by the keepsake selector; the
-      // shared timeline still owns its rank but must not offer a competing
-      // generic removal command.
-      const roomActions: WorkspaceRoomActions | undefined =
-        postbossRoster === undefined || postbossTimeline === undefined
-          ? undefined
-          : assembleBaseWorkspaceRoomActions({
-              roster: postbossRoster,
-              lifecycleTimeline: postbossTimeline,
-              owner: address,
-              markerFor: markerDestinations.marker,
-              labelFor: (reference) =>
-                reference.kind === 'useFountain'
-                  ? 'Use fountain'
-                  : reference.kind === 'interactKeepsakeRack'
-                    ? 'Choose keepsake'
-                    : roomActionKey(reference),
-              proposalFilter: (proposal) =>
-                !(proposal.kind === 'remove' && proposal.reference.kind === 'interactKeepsakeRack'),
-              boundaryFilter: (boundary) =>
-                boundary.kind === 'roomEntered' || boundary.kind === 'cleanup',
-            });
-      if (roomActions !== undefined) {
-        occurrenceInteractionRequirements.set(
-          semanticAddressKey(address),
-          Object.freeze({
-            kind: 'roomActions' as const,
-            owner: address,
-            proposals: roomActions.proposals,
-          }),
-        );
-      }
-      const replacementEffect =
-        keepsakeSelectionAddress !== undefined && postbossKeepsakeDisposition?.kind === 'replace'
-          ? catalog.keepsakes.byKey[postbossKeepsakeDisposition.keepsakeKey]?.effect
-          : undefined;
-      const keepsakeEquipResultAddress =
-        keepsakeSelectionAddress !== undefined &&
-        (replacementEffect?.kind === 'jeweledPom' ||
-          replacementEffect?.kind === 'experimentalHammer')
-          ? createKeepsakeEquipResultAddress(keepsakeSelectionAddress, replacementEffect.kind)
-          : undefined;
-      const keepsakeEquipResultMarker =
-        keepsakeEquipResultAddress !== undefined &&
-        keepsakeEquipResultSupported(keepsakeEquipResultAddress)
-          ? markerDestinations.marker(keepsakeEquipResultAddress)
-          : undefined;
-      const node: WorkspaceCompletionNode = Object.freeze({
-        kind: 'completion' as const,
-        key: `completion:${semanticAddressKey(address)}`,
-        marker: markerDestinations.marker(address),
-        role: descriptor.role,
-        gameName: descriptor.roomGameName,
-        label: requireWorkspaceRoom(catalog, descriptor.roomGameName).label,
-        ...(roomActions === undefined ? {} : { roomActions }),
-        timeline: Object.freeze(timeline),
-        ...(judgment === undefined ? {} : { judgment }),
-        ...(steadyGrowth === undefined ? {} : { steadyGrowth }),
-        ...(keepsakeSelectionAddress === undefined ||
-        keepsakeSelectionMarker === undefined ||
-        postbossKeepsakeDisposition === undefined
-          ? {}
-          : {
-              keepsakeSelection: Object.freeze({
-                address: keepsakeSelectionAddress,
-                ...(keepsakeEquipResultAddress === undefined ||
-                keepsakeEquipResultMarker === undefined
-                  ? {}
-                  : {
-                      equipResult: Object.freeze({
-                        address: keepsakeEquipResultAddress,
-                        marker: keepsakeEquipResultMarker,
-                      }),
-                    }),
-                marker: keepsakeSelectionMarker,
-                value: postbossKeepsakeDisposition,
-              }),
-            }),
-      });
-      markerDestinations.redirect(
-        Object.freeze([
-          node.marker,
-          ...(judgment === undefined ? [] : [judgment.marker]),
-          ...(steadyGrowth === undefined ? [] : [steadyGrowth.marker]),
-          ...(node.keepsakeSelection === undefined ? [] : [node.keepsakeSelection.marker]),
-          ...(node.roomActions === undefined ? [] : node.roomActions.rows.map((row) => row.marker)),
-        ]),
-        node.key,
-      );
-      if (keepsakeEquipResultMarker !== undefined && keepsakeSelectionMarker !== undefined) {
-        markerDestinations.redirectTo(keepsakeEquipResultMarker, keepsakeSelectionMarker, node.key);
-      }
+      appendUniqueWorkspaceNodes(nodes, [node]);
       return node;
     }),
   );
-  appendUniqueWorkspaceNodes(nodes, completion);
   const completedNodes = Object.freeze([...nodes]);
+  const structuralNodes = completedNodes;
   const echoKeepsakeReplayAddress = createKeepsakeEquipResultAddress(
     createEchoKeepsakeReplayAddress(biome),
     'experimentalHammer',
@@ -977,8 +832,7 @@ export function assembleWorkspaceBiomeSemantics(
     biome,
     biomeKey: plan.biomeKey,
     batchInteractionRequirements,
-    completion,
-    completionOutline: completion,
+    completionOutline,
     ...(entry === undefined ? {} : { entry }),
     ...(echoKeepsakeReplay === undefined ? {} : { echoKeepsakeReplay }),
     fields,

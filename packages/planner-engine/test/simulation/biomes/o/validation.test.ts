@@ -642,7 +642,7 @@ describe('selected O validation', () => {
         },
       ],
     });
-    expect(biome.snapshot.completionRooms[0]).toMatchObject({
+    expect(biome.snapshot.automaticRooms[0]).toMatchObject({
       gameName: 'O_Boss01',
       enteredRewardStoreKey: 'MetaProgress',
     });

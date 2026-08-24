@@ -359,7 +359,7 @@ function decodeAnomalyReplacementProvenance(
   });
 }
 
-function decodeAcquisitionSites(
+export function decodeAcquisitionSites(
   value: unknown,
   occurrence: RawOccurrence,
   catalog: Catalog,

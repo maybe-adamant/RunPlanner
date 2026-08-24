@@ -1,7 +1,5 @@
 import type {
   SteadyGrowthOutcomeAddress,
-  BossCompletionArcanaAddress,
-  CompletionRoomAddress,
   OccurrenceAddress,
 } from '../../authored-project/addresses';
 import type { RoomActionReference } from '../../authored-project/model';
@@ -57,7 +55,7 @@ type RoomLifecycleBoundaryEntry = Extract<
 >;
 
 export interface RoomLifecycleTimeline {
-  readonly owner: OccurrenceAddress | CompletionRoomAddress;
+  readonly owner: OccurrenceAddress;
   readonly structure: RoomLifecycleStructure;
   readonly entries: readonly RoomLifecycleTimelineEntry[];
   readonly boundaries: readonly RoomLifecycleBoundary[];
@@ -66,110 +64,8 @@ export interface RoomLifecycleTimeline {
 }
 
 export interface RoomLifecycleTimelineInput {
-  readonly owner: OccurrenceAddress | CompletionRoomAddress;
+  readonly owner: OccurrenceAddress;
   readonly roomActionRoster: RoomActionRoster;
-}
-
-/** Boss completion remains a derived fixed lifecycle timeline. */
-export type CompletionRoomLifecycleTimelineEntry =
-  | {
-      readonly kind: 'boundary';
-      readonly boundary: Extract<
-        RoomLifecycleBoundary,
-        { readonly kind: 'roomEntered' | 'encounterStart' | 'encounterEnd' | 'cleanup' }
-      >;
-    }
-  | {
-      readonly kind: 'bossDefeated';
-      readonly key: 'bossDefeated';
-    }
-  | {
-      readonly kind: 'fixedEffect';
-      readonly effect: 'judgment';
-      readonly owner: BossCompletionArcanaAddress;
-    }
-  | {
-      readonly kind: 'automaticEffect';
-      readonly effect: 'steadyGrowth';
-      readonly address: SteadyGrowthOutcomeAddress;
-      readonly boundary: Extract<RoomLifecycleBoundary, { readonly kind: 'encounterEnd' }>;
-      readonly phaseKey: string;
-    };
-
-export interface CompletionRoomLifecycleTimeline {
-  readonly owner: CompletionRoomAddress;
-  readonly entries: readonly CompletionRoomLifecycleTimelineEntry[];
-}
-
-/**
- * Completion rooms are derived canonical lifecycle rooms rather than authored
- * occurrences. Boss keeps its fixed effect; Postboss action chronology is
- * published through the shared Room Action timeline instead.
- */
-export function assembleCompletionRoomLifecycleTimeline(input: {
-  readonly catalog: Catalog;
-  readonly owner: CompletionRoomAddress;
-  readonly roomGameName: string;
-  readonly judgment?: BossCompletionArcanaAddress;
-}): CompletionRoomLifecycleTimeline {
-  const room = input.catalog.rooms.byKey[input.roomGameName];
-  const phaseKey = room?.encounterSlotBindings[0]?.slotKey;
-  if (
-    room === undefined ||
-    room.mode.kind !== 'derived' ||
-    room.mode.classification !== 'completion' ||
-    phaseKey === undefined ||
-    room.encounterSlotBindings.length !== 1 ||
-    (room.kind !== 'Boss' && room.kind !== 'PostBoss')
-  ) {
-    throw new Error(`${input.roomGameName} is not a derived single-encounter completion room`);
-  }
-  const entries: CompletionRoomLifecycleTimelineEntry[] = [
-    Object.freeze({
-      kind: 'boundary' as const,
-      boundary: Object.freeze({ kind: 'roomEntered' as const, key: 'roomEntered' as const }),
-    }),
-  ];
-  if (room.kind === 'Boss') {
-    entries.push(
-      Object.freeze({
-        kind: 'boundary' as const,
-        boundary: Object.freeze({
-          kind: 'encounterStart' as const,
-          key: `encounterStart:${phaseKey}`,
-          phaseKey,
-        }),
-      }),
-      Object.freeze({
-        kind: 'bossDefeated' as const,
-        key: 'bossDefeated' as const,
-      }),
-      ...(input.judgment === undefined
-        ? []
-        : [
-            Object.freeze({
-              kind: 'fixedEffect' as const,
-              effect: 'judgment' as const,
-              owner: input.judgment,
-            }),
-          ]),
-      Object.freeze({
-        kind: 'boundary' as const,
-        boundary: Object.freeze({
-          kind: 'encounterEnd' as const,
-          key: `encounterEnd:${phaseKey}`,
-          phaseKey,
-        }),
-      }),
-    );
-  }
-  entries.push(
-    Object.freeze({
-      kind: 'boundary' as const,
-      boundary: Object.freeze({ kind: 'cleanup' as const, key: 'cleanup' as const }),
-    }),
-  );
-  return Object.freeze({ owner: input.owner, entries: Object.freeze(entries) });
 }
 
 /**
@@ -199,35 +95,6 @@ export function appendSteadyGrowthTimelineEffects(
           boundary: entry.boundary,
           phaseKey: outcome.phaseKey,
           rank: entry.rank,
-        }),
-      );
-    }
-  }
-  return Object.freeze({ ...timeline, entries: Object.freeze(entries) });
-}
-
-/** Add reached Steady Growth to a derived Boss completion timeline. */
-export function appendSteadyGrowthCompletionTimelineEffects(
-  timeline: CompletionRoomLifecycleTimeline,
-  outcomes: readonly SteadyGrowthOutcomeAddress[],
-): CompletionRoomLifecycleTimeline {
-  const owned = outcomes.filter(
-    (outcome) => semanticAddressKey(outcome.owner) === semanticAddressKey(timeline.owner),
-  );
-  if (owned.length === 0) return timeline;
-  const entries: CompletionRoomLifecycleTimelineEntry[] = [];
-  for (const entry of timeline.entries) {
-    entries.push(entry);
-    if (entry.kind !== 'boundary' || entry.boundary.kind !== 'encounterEnd') continue;
-    for (const outcome of owned) {
-      if (outcome.phaseKey !== entry.boundary.phaseKey) continue;
-      entries.push(
-        Object.freeze({
-          kind: 'automaticEffect' as const,
-          effect: 'steadyGrowth' as const,
-          address: outcome,
-          boundary: entry.boundary,
-          phaseKey: outcome.phaseKey,
         }),
       );
     }
@@ -374,6 +241,8 @@ export function assembleRoomLifecycleTimeline(
               : 'before',
         );
       }
+      case 'bossDefeated':
+        return boundaryEntry(point, lastRank(rankedRows, () => true) ?? 0, 'after');
       case 'encounterEnd': {
         const phase = phaseByKey.get(point.phaseKey);
         if (phase === undefined) throw new Error(`unknown lifecycle phase ${point.phaseKey}`);
@@ -499,6 +368,7 @@ export function scopeRoomLifecycleTimeline(
   const boundaryActive = (boundary: RoomLifecycleBoundary): boolean => {
     switch (boundary.kind) {
       case 'encounterStart':
+      case 'bossDefeated':
       case 'encounterEnd':
         return active.has(boundary.phaseKey);
       case 'nextPhase':

@@ -1,7 +1,7 @@
 {
-  "schemaVersion": 54,
+  "schemaVersion": 55,
   "projectId": "golden-fg",
-  "catalogVersion": "0.36.0-runtime-offer-fallback",
+  "catalogVersion": "0.37.0-automatic-completion-occurrences",
   "routes": [
     {
       "routeKey": "Underworld",
@@ -1363,16 +1363,53 @@
               }
             ]
           },
-          "postbossKeepsakeDisposition": {
-            "kind": "retain"
-          },
-          "postbossRoomActions": {
-            "order": [
-              {
-                "kind": "useFountain"
+          "completionOccurrences": [
+            {
+              "occurrenceId": "completion:F:boss",
+              "gameName": "F_Boss01",
+              "state": {
+                "kind": "none"
+              },
+              "encounters": {
+                "encounterKeyByPhase": {},
+                "figLeafSkipByPhase": {
+                  "Encounter": false
+                },
+                "gorgonResultByPhase": {}
+              },
+              "roomActions": {
+                "order": []
+              },
+              "additionalExits": []
+            },
+            {
+              "occurrenceId": "completion:F:postboss",
+              "gameName": "F_PostBoss01",
+              "state": {
+                "kind": "none"
+              },
+              "encounters": {
+                "encounterKeyByPhase": {},
+                "figLeafSkipByPhase": {
+                  "Encounter": false
+                },
+                "gorgonResultByPhase": {}
+              },
+              "roomActions": {
+                "order": [
+                  {
+                    "kind": "useFountain"
+                  }
+                ]
+              },
+              "additionalExits": [],
+              "keepsakeRack": {
+                "disposition": {
+                  "kind": "retain"
+                }
               }
-            ]
-          }
+            }
+          ]
         },
         {
           "biomeKey": "G",
@@ -2415,16 +2452,53 @@
               }
             ]
           },
-          "postbossKeepsakeDisposition": {
-            "kind": "retain"
-          },
-          "postbossRoomActions": {
-            "order": [
-              {
-                "kind": "useFountain"
+          "completionOccurrences": [
+            {
+              "occurrenceId": "completion:G:boss",
+              "gameName": "G_Boss01",
+              "state": {
+                "kind": "none"
+              },
+              "encounters": {
+                "encounterKeyByPhase": {},
+                "figLeafSkipByPhase": {
+                  "Encounter": false
+                },
+                "gorgonResultByPhase": {}
+              },
+              "roomActions": {
+                "order": []
+              },
+              "additionalExits": []
+            },
+            {
+              "occurrenceId": "completion:G:postboss",
+              "gameName": "G_PostBoss01",
+              "state": {
+                "kind": "none"
+              },
+              "encounters": {
+                "encounterKeyByPhase": {},
+                "figLeafSkipByPhase": {
+                  "Encounter": false
+                },
+                "gorgonResultByPhase": {}
+              },
+              "roomActions": {
+                "order": [
+                  {
+                    "kind": "useFountain"
+                  }
+                ]
+              },
+              "additionalExits": [],
+              "keepsakeRack": {
+                "disposition": {
+                  "kind": "retain"
+                }
               }
-            ]
-          }
+            }
+          ]
         },
         {
           "biomeKey": "H",
@@ -3518,16 +3592,53 @@
               }
             ]
           },
-          "postbossKeepsakeDisposition": {
-            "kind": "retain"
-          },
-          "postbossRoomActions": {
-            "order": [
-              {
-                "kind": "useFountain"
+          "completionOccurrences": [
+            {
+              "occurrenceId": "completion:H:boss",
+              "gameName": "H_Boss01",
+              "state": {
+                "kind": "none"
+              },
+              "encounters": {
+                "encounterKeyByPhase": {},
+                "figLeafSkipByPhase": {
+                  "Encounter": false
+                },
+                "gorgonResultByPhase": {}
+              },
+              "roomActions": {
+                "order": []
+              },
+              "additionalExits": []
+            },
+            {
+              "occurrenceId": "completion:H:postboss",
+              "gameName": "H_PostBoss01",
+              "state": {
+                "kind": "none"
+              },
+              "encounters": {
+                "encounterKeyByPhase": {},
+                "figLeafSkipByPhase": {
+                  "Encounter": false
+                },
+                "gorgonResultByPhase": {}
+              },
+              "roomActions": {
+                "order": [
+                  {
+                    "kind": "useFountain"
+                  }
+                ]
+              },
+              "additionalExits": [],
+              "keepsakeRack": {
+                "disposition": {
+                  "kind": "retain"
+                }
               }
-            ]
-          }
+            }
+          ]
         }
       ]
     },

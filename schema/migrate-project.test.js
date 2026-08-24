@@ -104,15 +104,50 @@ test('53 -> 54 preserves Gorgon trigger values and removes generic DD fields', (
     gorgonTriggersRenamed: 2,
     genericConditionsRemoved: 2,
   });
+  assert.deepEqual(result.changes['54->55'], { completionOccurrencesAdded: 0 });
 });
 
-test('51 -> 54 changes only schema and catalog metadata', () => {
+test('54 -> 55 relocates completion sidecars into exact automatic occurrences', () => {
+  const source = {
+    schemaVersion: 54,
+    catalogVersion: '0.36.0-runtime-offer-fallback',
+    routes: [
+      {
+        biomes: [
+          {
+            biomeKey: 'F',
+            bossCompletionArcanaKeys: ['TheSorceress'],
+            bossCompletionSteadyGrowthTarget: 'Attack',
+            postbossKeepsakeDisposition: { kind: 'replace', keepsakeKey: 'JeweledPom' },
+            postbossRoomActions: { order: [{ kind: 'useFountain' }] },
+            keepsakeEquipResults: { jeweledPom: { traitKey: 'LastGasp' } },
+          },
+        ],
+      },
+    ],
+  };
+  const result = migrateProjectDocument(source);
+  const [boss, postboss] = result.document.routes[0].biomes[0].completionOccurrences;
+  assert.equal(boss.gameName, 'F_Boss01');
+  assert.deepEqual(boss.encounters.judgmentArcanaKeysByPhase, { Encounter: ['TheSorceress'] });
+  assert.deepEqual(boss.encounters.steadyGrowthTargetByPhase, { Encounter: 'Attack' });
+  assert.equal(postboss.gameName, 'F_PostBoss01');
+  assert.deepEqual(postboss.keepsakeRack.disposition, {
+    kind: 'replace',
+    keepsakeKey: 'JeweledPom',
+  });
+  assert.deepEqual(postboss.roomActions, { order: [{ kind: 'useFountain' }] });
+  assert.equal('postbossRoomActions' in result.document.routes[0].biomes[0], false);
+  assert.deepEqual(result.changes['54->55'], { completionOccurrencesAdded: 2 });
+});
+
+test('51 -> current changes only schema and catalog metadata', () => {
   const source = schema49Project();
   source.schemaVersion = 51;
   source.catalogVersion = '0.31.0-chaos-traits';
   const result = migrateProjectDocument(source);
-  assert.equal(result.document.schemaVersion, 54);
-  assert.equal(result.document.catalogVersion, '0.36.0-runtime-offer-fallback');
+  assert.equal(result.document.schemaVersion, 55);
+  assert.equal(result.document.catalogVersion, '0.37.0-automatic-completion-occurrences');
   assert.deepEqual(result.changes['51->52'], {});
   assert.deepEqual(result.changes['52->53'], {
     catalogMigrations: [
@@ -126,16 +161,17 @@ test('51 -> 54 changes only schema and catalog metadata', () => {
     gorgonTriggersRenamed: 0,
     genericConditionsRemoved: 0,
   });
-  assert.deepEqual(result.steps, ['51->52', '52->53', '53->54']);
+  assert.deepEqual(result.changes['54->55'], { completionOccurrencesAdded: 0 });
+  assert.deepEqual(result.steps, ['51->52', '52->53', '53->54', '54->55']);
 });
 
-test('52 -> 54 preserves the earlier schema-52 catalog migration ledger', () => {
+test('52 -> current preserves the earlier schema-52 catalog migration ledger', () => {
   const source = schema49Project();
   source.schemaVersion = 52;
   source.catalogVersion = '0.32.0-run-impacting-traits';
   const result = migrateProjectDocument(source);
-  assert.equal(result.document.schemaVersion, 54);
-  assert.equal(result.document.catalogVersion, '0.36.0-runtime-offer-fallback');
+  assert.equal(result.document.schemaVersion, 55);
+  assert.equal(result.document.catalogVersion, '0.37.0-automatic-completion-occurrences');
   assert.deepEqual(result.document.routes, source.routes);
   assert.deepEqual(result.changes['52->53'], {
     catalogMigrations: [
@@ -149,15 +185,16 @@ test('52 -> 54 preserves the earlier schema-52 catalog migration ledger', () => 
     gorgonTriggersRenamed: 0,
     genericConditionsRemoved: 0,
   });
-  assert.deepEqual(result.steps, ['52->53', '53->54']);
+  assert.deepEqual(result.changes['54->55'], { completionOccurrencesAdded: 0 });
+  assert.deepEqual(result.steps, ['52->53', '53->54', '54->55']);
 });
 
-test('52 -> 54 advances the prior run-impacting-traits catalog metadata', () => {
+test('52 -> current advances the prior run-impacting-traits catalog metadata', () => {
   const source = schema49Project();
   source.schemaVersion = 52;
   source.catalogVersion = '0.32.1-run-impacting-traits';
   const result = migrateProjectDocument(source);
-  assert.equal(result.document.catalogVersion, '0.36.0-runtime-offer-fallback');
+  assert.equal(result.document.catalogVersion, '0.37.0-automatic-completion-occurrences');
   assert.deepEqual(result.changes['52->53'], {
     catalogMigrations: [
       '0.32.1-run-impacting-traits->0.33.0-generated-trait-pickups',
@@ -169,16 +206,17 @@ test('52 -> 54 advances the prior run-impacting-traits catalog metadata', () => 
     gorgonTriggersRenamed: 0,
     genericConditionsRemoved: 0,
   });
-  assert.deepEqual(result.steps, ['52->53', '53->54']);
+  assert.deepEqual(result.changes['54->55'], { completionOccurrencesAdded: 0 });
+  assert.deepEqual(result.steps, ['52->53', '53->54', '54->55']);
 });
 
-test('current schema 52 -> 54 changes only schema and catalog metadata', () => {
+test('current schema 52 -> current changes only schema and catalog metadata', () => {
   const source = schema49Project();
   source.schemaVersion = 52;
   source.catalogVersion = '0.34.0-sea-star';
   const result = migrateProjectDocument(source);
-  assert.equal(result.document.schemaVersion, 54);
-  assert.equal(result.document.catalogVersion, '0.36.0-runtime-offer-fallback');
+  assert.equal(result.document.schemaVersion, 55);
+  assert.equal(result.document.catalogVersion, '0.37.0-automatic-completion-occurrences');
   assert.deepEqual(result.document.routes, source.routes);
   assert.deepEqual(result.changes['52->53'], {
     catalogMigrations: [],
@@ -188,5 +226,6 @@ test('current schema 52 -> 54 changes only schema and catalog metadata', () => {
     gorgonTriggersRenamed: 0,
     genericConditionsRemoved: 0,
   });
-  assert.deepEqual(result.steps, ['52->53', '53->54']);
+  assert.deepEqual(result.changes['54->55'], { completionOccurrencesAdded: 0 });
+  assert.deepEqual(result.steps, ['52->53', '53->54', '54->55']);
 });

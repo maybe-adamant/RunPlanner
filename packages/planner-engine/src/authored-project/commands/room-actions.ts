@@ -8,7 +8,11 @@ import {
 } from '../room-action-defaults';
 import { createBiomeAddress } from '../addresses';
 import { failCommand, requireOccurrence, requireTopology, type LocatedBiome } from './contract';
-import { replaceOccurrence, updateOccurrenceTopology } from './occurrence-mutation';
+import {
+  replaceOccurrence,
+  updateOccurrence,
+  updateOccurrenceTopology,
+} from './occurrence-mutation';
 import type { RoomActionCommand } from './types';
 
 function requireIndex(
@@ -22,98 +26,21 @@ function requireIndex(
   }
 }
 
-function applyCompletionRoomActionCommand(
-  document: ProjectDocument,
-  located: LocatedBiome,
-  command: Exclude<RoomActionCommand, { readonly kind: 'ReplaceShopPurchaseParticipation' }>,
-): ProjectDocument {
-  if (command.action.kind !== 'completionRoomAction') throw new Error('expected completion action');
-  const action = command.action;
-  if (
-    action.completion.routeKey !== action.routeKey ||
-    action.completion.biomeKey !== action.biomeKey ||
-    action.completion.role !== 'postboss'
-  )
-    failCommand(command, 'completion action has an inconsistent owner');
-  const state = located.plan.postbossRoomActions;
-  if (state === undefined) failCommand(command, 'biome has no Postboss action chronology');
-  const order = state.order;
-  const existingIndex = order.findIndex(
-    (reference) => roomActionKey(reference) === action.actionKey,
-  );
-  let nextOrder: RoomActionReference[];
-  switch (command.kind) {
-    case 'InsertRoomAction':
-      if (command.reference.kind === 'interactKeepsakeRack')
-        failCommand(command, 'Postboss rack membership belongs to ReplacePostbossKeepsake');
-      if (command.reference.kind !== 'useFountain')
-        failCommand(command, 'unsupported Postboss action');
-      if (roomActionKey(command.reference) !== action.actionKey)
-        failCommand(command, 'reference does not match the addressed room action');
-      if (existingIndex >= 0) failCommand(command, 'room action is already ordered');
-      requireIndex(command, command.index, order.length, 'index');
-      nextOrder = [...order];
-      nextOrder.splice(command.index, 0, command.reference);
-      break;
-    case 'RemoveRoomAction':
-      if (existingIndex < 0) failCommand(command, 'room action is not ordered');
-      if (order[existingIndex]?.kind === 'useFountain')
-        failCommand(command, 'active required room action cannot be removed');
-      if (order[existingIndex]?.kind === 'interactKeepsakeRack')
-        failCommand(command, 'Postboss rack membership belongs to ReplacePostbossKeepsake');
-      nextOrder = order.filter((_, index) => index !== existingIndex);
-      break;
-    case 'MoveRoomAction':
-      if (existingIndex < 0) failCommand(command, 'room action is not ordered');
-      requireIndex(command, command.toIndex, order.length - 1, 'toIndex');
-      if (existingIndex === command.toIndex) return document;
-      nextOrder = [...order];
-      {
-        const [reference] = nextOrder.splice(existingIndex, 1);
-        if (reference === undefined) failCommand(command, 'room action disappeared while moving');
-        nextOrder.splice(command.toIndex, 0, reference);
-      }
-      break;
-  }
-  return {
-    ...document,
-    routes: document.routes.map((route, routeIndex) =>
-      routeIndex !== located.routeIndex
-        ? route
-        : {
-            ...route,
-            biomes: route.biomes.map((plan) =>
-              plan.biomeKey !== located.plan.biomeKey
-                ? plan
-                : {
-                    ...plan,
-                    postbossRoomActions: Object.freeze({ order: Object.freeze(nextOrder) }),
-                  },
-            ),
-          },
-    ),
-  };
-}
-
 export function applyRoomActionCommand(
   document: ProjectDocument,
   catalog: Catalog,
   located: LocatedBiome,
   command: RoomActionCommand,
 ): ProjectDocument {
-  if (
-    command.kind !== 'ReplaceShopPurchaseParticipation' &&
-    command.action.kind === 'completionRoomAction'
-  ) {
-    return applyCompletionRoomActionCommand(document, located, command);
-  }
   const topology = requireTopology(located.plan, command);
   const occurrenceId =
     command.kind === 'ReplaceShopPurchaseParticipation'
       ? command.offer.occurrenceId
       : (command.action as import('../addresses').RoomActionAddress).occurrenceId;
   const occurrence = requireOccurrence(located.plan, occurrenceId, command);
-  const occurrenceIsActive = structurallyActiveOccurrenceIds(topology).has(occurrenceId);
+  const occurrenceIsActive =
+    structurallyActiveOccurrenceIds(topology).has(occurrenceId) ||
+    located.plan.completionOccurrences.some((candidate) => candidate.occurrenceId === occurrenceId);
   const commandAddress =
     command.kind === 'ReplaceShopPurchaseParticipation' ? command.offer : command.action;
   const domain = roomActionDomainForOccurrence(
@@ -132,18 +59,15 @@ export function applyRoomActionCommand(
     const existingIndex = order.findIndex((candidate) => roomActionKey(candidate) === key);
     if (!command.purchased) {
       if (existingIndex < 0) return document;
-      return updateOccurrenceTopology(
+      return updateOccurrence(
         document,
         located,
-        replaceOccurrence(
-          topology,
-          Object.freeze({
-            ...occurrence,
-            roomActions: Object.freeze({
-              order: Object.freeze(order.filter((_, index) => index !== existingIndex)),
-            }),
+        Object.freeze({
+          ...occurrence,
+          roomActions: Object.freeze({
+            order: Object.freeze(order.filter((_, index) => index !== existingIndex)),
           }),
-        ),
+        }),
       );
     }
     if (existingIndex >= 0) return document;
@@ -153,16 +77,13 @@ export function applyRoomActionCommand(
     if (occurrence.state.shop.offers[command.offer.offerKey] === undefined) {
       failCommand(command, `unknown shop offer ${command.offer.offerKey}`);
     }
-    return updateOccurrenceTopology(
+    return updateOccurrence(
       document,
       located,
-      replaceOccurrence(
-        topology,
-        Object.freeze({
-          ...occurrence,
-          roomActions: Object.freeze({ order: Object.freeze([...order, reference]) }),
-        }),
-      ),
+      Object.freeze({
+        ...occurrence,
+        roomActions: Object.freeze({ order: Object.freeze([...order, reference]) }),
+      }),
     );
   }
   const existingIndex = order.findIndex(
@@ -237,15 +158,12 @@ export function applyRoomActionCommand(
       break;
   }
 
-  return updateOccurrenceTopology(
+  return updateOccurrence(
     document,
     located,
-    replaceOccurrence(
-      topology,
-      Object.freeze({
-        ...occurrence,
-        roomActions: Object.freeze({ order: Object.freeze(nextOrder) }),
-      }),
-    ),
+    Object.freeze({
+      ...occurrence,
+      roomActions: Object.freeze({ order: Object.freeze(nextOrder) }),
+    }),
   );
 }

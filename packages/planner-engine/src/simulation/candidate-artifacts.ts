@@ -5,7 +5,7 @@ import {
   type TraitOfferAddress,
   type NaturalSelectionResultAddress,
   type TargetAddress,
-  type BossCompletionArcanaAddress,
+  type JudgmentArcanaAddress,
   type KeepsakeSelectionAddress,
   type KeepsakeEquipResultAddress,
   type SteadyGrowthOutcomeAddress,
@@ -215,15 +215,13 @@ export interface LevelResolutionCandidateArtifacts {
   readonly at: (address: LevelResolutionAddress) => LevelResolutionCandidateCapability | undefined;
 }
 
-/** Atomic exact-set support captured immediately before one Boss completion effect. */
-export interface BossCompletionArcanaCandidateCapability {
+/** Atomic exact-set support captured immediately before one automatic Boss effect. */
+export interface JudgmentArcanaCandidateCapability {
   readonly inactiveArcanaKeys: readonly string[];
   readonly requiredCount: number;
 }
-export interface BossCompletionArcanaCandidateArtifacts {
-  readonly at: (
-    address: BossCompletionArcanaAddress,
-  ) => BossCompletionArcanaCandidateCapability | undefined;
+export interface JudgmentArcanaCandidateArtifacts {
+  readonly at: (address: JudgmentArcanaAddress) => JudgmentArcanaCandidateCapability | undefined;
 }
 
 /** Exact threshold frontiers retained at one automatic Steady Growth row. */
@@ -286,12 +284,12 @@ export function createKeepsakeSelectionCandidateArtifacts(
     entries: () => Object.freeze([...privateContexts.entries()]),
   });
 }
-export function createBossCompletionArcanaCandidateArtifacts(
-  contexts: ReadonlyMap<string, BossCompletionArcanaCandidateCapability>,
-): BossCompletionArcanaCandidateArtifacts {
+export function createJudgmentArcanaCandidateArtifacts(
+  contexts: ReadonlyMap<string, JudgmentArcanaCandidateCapability>,
+): JudgmentArcanaCandidateArtifacts {
   const privateContexts = new Map(contexts);
   return Object.freeze({
-    at: (address: BossCompletionArcanaAddress) => privateContexts.get(semanticAddressKey(address)),
+    at: (address: JudgmentArcanaAddress) => privateContexts.get(semanticAddressKey(address)),
   });
 }
 
@@ -303,7 +301,7 @@ export interface BiomeCandidateArtifacts {
   readonly encounters: EncounterCandidateArtifacts;
   readonly traitOffers: TraitOfferCandidateArtifacts;
   readonly levelResolutions: LevelResolutionCandidateArtifacts;
-  readonly bossCompletionArcana: BossCompletionArcanaCandidateArtifacts;
+  readonly judgmentArcana: JudgmentArcanaCandidateArtifacts;
   readonly keepsakeSelections: KeepsakeSelectionCandidateArtifacts;
   readonly keepsakeEquipResults: KeepsakeEquipResultCandidateArtifacts;
   readonly acquisitionConversions: AcquisitionConversionCandidateArtifacts;
@@ -609,7 +607,7 @@ export function createBiomeCandidateArtifacts(
   encounters: EncounterCandidateArtifacts = emptyEncounterCandidateArtifacts(),
   traitOffers: TraitOfferCandidateArtifacts = createEmptyTraitOfferCandidateArtifacts(),
   levelResolutions: LevelResolutionCandidateArtifacts = createEmptyLevelResolutionCandidateArtifacts(),
-  bossCompletionArcana: BossCompletionArcanaCandidateArtifacts = createBossCompletionArcanaCandidateArtifacts(
+  judgmentArcana: JudgmentArcanaCandidateArtifacts = createJudgmentArcanaCandidateArtifacts(
     new Map(),
   ),
   keepsakeSelections: KeepsakeSelectionCandidateArtifacts = createKeepsakeSelectionCandidateArtifacts(
@@ -630,7 +628,7 @@ export function createBiomeCandidateArtifacts(
     encounters,
     traitOffers,
     levelResolutions,
-    bossCompletionArcana,
+    judgmentArcana,
     keepsakeSelections,
     keepsakeEquipResults,
     acquisitionConversions,
@@ -1072,7 +1070,7 @@ export function createProjectCandidateArtifacts(
     }
     privateBiomes.set(key, biome);
     // A Postboss artifact is produced by the one reward walk that reaches its
-    // physical completion room. Duplicate publication would be a chronology bug.
+    // physical automatic room. Duplicate publication would be a chronology bug.
     for (const [selectionKey, capability] of biome.keepsakeSelections.entries()) {
       if (keepsakeSelections.has(selectionKey))
         throw new CandidateArtifactContractError(

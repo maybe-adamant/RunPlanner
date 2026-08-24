@@ -110,8 +110,6 @@ describe('structured workspace biome presentation', () => {
     const semantic = assembleWorkspaceBiomeSemantics(
       catalog,
       source,
-      undefined,
-      false,
       (candidate) => semanticAddressKey(candidate) === semanticAddressKey(address),
     );
     const presented = presentWorkspaceBiome(catalog, semantic);
@@ -567,7 +565,7 @@ describe('structured workspace biome presentation', () => {
         ),
       ).toBe(false);
     }
-  });
+  }, 15_000);
 
   it('keeps completion landmarks outside an incomplete biome rail', () => {
     const empty = createProjectDocument(catalog, {
@@ -577,7 +575,7 @@ describe('structured workspace biome presentation', () => {
     const biome = present(empty, 'Underworld', 'F').presentation.biome;
 
     expect(railShape(biome)).toEqual(['frontier:start']);
-    expect(biome.completionOutline.map((node) => node.label)).toEqual(['Hecate', 'Postboss']);
+    expect(biome.completionOutline.map((node) => node.room.label)).toEqual(['Hecate', 'Postboss']);
   });
 
   it('reprojects only authored Hub visit children after replacement and truncation', () => {

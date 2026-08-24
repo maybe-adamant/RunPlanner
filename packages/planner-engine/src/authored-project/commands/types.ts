@@ -5,8 +5,7 @@ import type {
   AdditionalExitAddress,
   BatchRewardStoreAddress,
   BiomeAddress,
-  BossCompletionArcanaAddress,
-  CompletionRoomAddress,
+  JudgmentArcanaAddress,
   KeepsakeSelectionAddress,
   KeepsakeEquipResultAddress,
   BiomeFieldAddress,
@@ -79,9 +78,9 @@ export type ProjectStateCommand =
       readonly value: AuthoredFieldValue;
     };
 
-export type BossCompletionCommand = {
-  readonly kind: 'ReplaceBossCompletionArcana';
-  readonly completion: BossCompletionArcanaAddress;
+export type JudgmentArcanaCommand = {
+  readonly kind: 'ReplaceJudgmentArcana';
+  readonly judgment: JudgmentArcanaAddress;
   readonly arcanaKeys: readonly string[];
 };
 export type SteadyGrowthCommand = {
@@ -91,7 +90,7 @@ export type SteadyGrowthCommand = {
 };
 export type KeepsakeCommand = {
   readonly kind: 'ReplacePostbossKeepsake';
-  readonly selection: Extract<KeepsakeSelectionAddress, { readonly owner: CompletionRoomAddress }>;
+  readonly selection: Extract<KeepsakeSelectionAddress, { readonly owner: OccurrenceAddress }>;
   readonly value: import('../model').PostbossKeepsakeDisposition;
 };
 export type KeepsakeEquipResultCommand = {
@@ -442,7 +441,7 @@ export type OccurrenceLeafCommand =
 
 export type ProjectCommand =
   | ProjectStateCommand
-  | BossCompletionCommand
+  | JudgmentArcanaCommand
   | SteadyGrowthCommand
   | KeepsakeCommand
   | KeepsakeEquipResultCommand

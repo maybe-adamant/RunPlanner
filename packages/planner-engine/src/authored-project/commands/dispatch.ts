@@ -18,7 +18,7 @@ import { applyLevelResolutionCommand } from './level-resolution';
 import { applyAcquisitionSiteCommand, materializeDerivedShopEntry } from './acquisition-site';
 import { applyAcquisitionDispositionCommand } from './acquisition-conversion';
 import { applySeaStarResultCommand } from './sea-star';
-import { applyBossCompletionCommand } from './boss-completion';
+import { applyJudgmentArcanaCommand } from './judgment-arcana';
 import { applySteadyGrowthCommand } from './steady-growth';
 import { applyKeepsakeCommand } from './keepsake';
 import type { ProjectCommand } from './types';
@@ -238,8 +238,8 @@ function applyUnchecked(
         locateBiome(document, catalog, command),
         command,
       );
-    case 'ReplaceBossCompletionArcana':
-      return applyBossCompletionCommand(
+    case 'ReplaceJudgmentArcana':
+      return applyJudgmentArcanaCommand(
         document,
         catalog,
         locateBiome(document, catalog, command),

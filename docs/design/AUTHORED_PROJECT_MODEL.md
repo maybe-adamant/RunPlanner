@@ -7,29 +7,25 @@ scope, biome topology, occurrence-local state, semantic addresses, commands,
 persistence, and history. Simulation algorithms, candidates, Redux state, and
 React rendering are separate concerns.
 
-## Schema 54 Boundary
+## Schema 55 Boundary
 
-Schema 54 is the sole persisted authored-project contract. The codec rejects
+Schema 55 is the sole persisted authored-project contract. The codec rejects
 every other schema version rather than manufacturing current topology or leaf
 state for a stale document. The migration CLI performs the explicit 49-to-50,
-50-to-51, 51-to-52, 52-to-53, and 53-to-54 migrations outside the production
+50-to-51, 51-to-52, 52-to-53, 53-to-54, and 54-to-55 migrations outside the production
 decoder, and also updates the earlier catalog metadata from
 `0.32.0-run-impacting-traits` through
-`0.36.0-runtime-offer-fallback` without inventing authored outcomes. Catalog
+`0.37.0-automatic-completion-occurrences` without inventing authored outcomes. Catalog
 versions must match exactly after migration.
 
 Schemas 46 and 47 completed the occurrence-owned topology and chronology
 cutover: every supported authored main or N side room is a `RoomOccurrence`,
 and every authored interaction in those ordinary occurrence rooms is referenced
-from one occurrence-owned `roomActions.order`. Derived completion rooms are
-the deliberate exception: Postboss actions are owned by the biome's
-`postbossRoomActions` state and exact completion action address. Schema 48
+from one occurrence-owned `roomActions.order`. Schema 48
 removed the redundant authored
 project name; the profile filename is application session state. Schema 49 adds
-the structural Postboss `postbossRoomActions` order and the closed
-`useFountain`/`interactKeepsakeRack` references while keeping the same
-occurrence/completion action machinery. Ordinary room lifecycle timelines,
-Run State checkpoints, Shop Purchased markers, and the derived Boss
+the closed `useFountain`/`interactKeepsakeRack` references. Ordinary room lifecycle timelines,
+Run State checkpoints, Shop Purchased markers, and the automatic Boss
 `bossDefeated`/Judgment seam remain products over this authored state. Mandatory
 Room Action defaults likewise use the existing `roomActions.order`: semantic
 commands add newly active required references at their engine-owned canonical
@@ -46,7 +42,12 @@ Shops, and Keepsake results while preserving Gorgon Amulet's narrowly owned
 `athenaTriggerConditionMet` phase fact. Runtime offer fallbacks are derived
 simulation output, never persisted intent. Derived history, progress, Ransom
 removals, automatic rarity mutations, Nemesis settlement, and runtime fallback
-resolution remain outside the persisted document.
+resolution remain outside the persisted document. Schema 55 moves the fixed
+Boss/Postboss tail into ordered `completionOccurrences`: declaration-fixed,
+automatic `RoomOccurrence`s with ordinary encounter, acquisition-site, Room
+Action, and optional Postboss rack leaves. The strict codec validates fixed
+IDs, room names, automatic mode, none state, no additional exits, and collision
+with editable topology.
 
 There is one biome plan and one topology language. Production state and
 semantic addresses have no layout-specific plan family, completion-transition
@@ -65,6 +66,7 @@ interface AuthoredBiomePlan {
   biomeKey: string;
   state: AuthoredBiomeState;
   topology: BiomeTopology | null;
+  completionOccurrences: readonly RoomOccurrence[];
 }
 
 interface BiomeTopology {
@@ -120,15 +122,15 @@ and outgoing/return stage; the parent does not own a nested action list.
 
 `Preboss` is a Room Declaration role inside a normal-door batch, not a
 separate decision variant. Offering it does not complete a biome; selecting it
-does. Boss and optional Postboss rooms are catalog-derived completion tail
-rooms, not authored decisions or occurrences.
+does. Boss and optional Postboss rooms are catalog-declared automatic
+occurrences, not editable decisions; they remain outside editable topology but
+share ordinary room-local ownership.
 
-Topology owns occurrence relationships and decisions. Room state owns rewards,
-Shop inventory, one occurrence-owned Room Action order, exact concrete
-encounter selections, wheels, cages, and side-room state. The biome plan also
-owns the structural Postboss `postbossRoomActions` order for a derived
-completion owner. Sparse acquisition sites own optional generated payloads, not
-a second chronology. UI state owns no domain topology.
+Topology owns editable occurrence relationships and decisions. Room state owns
+rewards, Shop inventory, one occurrence-owned Room Action order, exact concrete
+encounter selections, wheels, cages, side-room state, and automatic tail
+occurrence leaves. Sparse acquisition sites own optional generated payloads,
+not a second chronology. UI state owns no domain topology.
 
 ## Route Scope
 
@@ -170,29 +172,25 @@ order, but does not evaluate current run eligibility. Dormant resolution detail
 remains persisted when a user switches away from its owning option, so a later
 switch can restore it.
 
-Judgment stores one canonical distinct Arcana-card set on the exact derived
-Boss-completion address for each authored biome. It is dormant unless Judgment
-is active at that completion. This is a completion-local authored outcome, not
-a synthetic room, reward, or topology edge.
+Judgment stores one canonical distinct Arcana-card set on the exact automatic
+Boss occurrence's `bossDefeated` phase for each authored biome. It is dormant
+unless Judgment is active at that phase. This is a room-local authored outcome,
+not a synthetic reward or topology edge.
 
 ### Keepsake Authorship
 
-The route loadout's starting keepsake and each nonfinal F/G/H/N/O/P Postboss
-completion own one exact chronological selection and one structural
-`postbossRoomActions` order. A Postboss value is either `retain` or `replace`
-with a catalog keepsake key. The value remains persisted while the configured
-route has no successor, but it becomes reached only when another modeled biome
-follows. I and Q own no final-route rack choice because no modeled consumer
-follows them.
+The route loadout's starting keepsake and each F/G/H/N/O/P automatic Postboss
+occurrence own one exact chronological selection and that occurrence's
+`roomActions` order. A Postboss value is either `retain` or `replace` with a
+catalog keepsake key. The occurrence and its local controls are active at the
+configured route tail as well as before a successor; I and Q own no rack
+because their declarations have none.
 
-Every structural Postboss state defaults to a `useFountain` action. The
-chronology is active only when that biome has a configured successor, so its
-state is dormant on the configured route tail and reactivates if a later biome
-is configured. Replacing a keepsake atomically adds the optional
+Every structural Postboss state defaults to a `useFountain` action. Replacing a
+keepsake atomically adds the required
 `interactKeepsakeRack` action; retaining removes that action while preserving
 any dormant keepsake-specific equip detail. The action order is the sole
-chronology owner, and the structural completion address owns its findings and
-history rather than a synthetic `RoomOccurrence`.
+chronology owner, and the automatic occurrence owns its findings and history.
 
 Selection legality is contextual rather than codec policy. Unknown keys are
 malformed, while a structurally valid replacement that has already been
@@ -388,8 +386,9 @@ Shop leaf; later targets are counted-free leaves only when the policy declares
 them. A width-one policy has no later offer. Individual takeover targets are
 not room-replaceable or capacity-repairable.
 
-Selecting a Preboss derives completion. There is no persisted completion flag,
-entry mode, or `closesBiomeWhenPicked` duplicate. The selected Preboss's
+Selecting a Preboss enters its layout-fixed automatic completion occurrences.
+There is no persisted completion flag, entry mode, or `closesBiomeWhenPicked`
+duplicate. The selected Preboss's
 ordinary peers remain real unpicked occurrences.
 
 ## N Hub Progression
@@ -402,7 +401,7 @@ N_Opening01
   -> exact empty terminal envelope
   -> source-bearing Hub decision hub
   -> completed-Hub exit preboss -> width-one N_PreBoss01 batch
-  -> derived Boss and Postboss completion
+  -> automatic Boss and Postboss occurrences
 ```
 
 The catalog bounds N's normal entry to one `prehub` physical exit and one
@@ -418,7 +417,7 @@ replaceable. Open unvisited slots remain real offered leaves.
 
 The completed-Hub batch is permitted only after the declared open-set and
 six-visit predicate holds. Its source is `{ kind: 'hubDecision', decisionKey: 'hub' }`, not
-a rendered visit index or synthetic N completion owner.
+a rendered visit index or synthetic completion source.
 
 Each entered main occurrence may own a `LocalVisitDecision` whose generated
 targets are distinct side-room occurrences. Generation and visit order remain
@@ -598,9 +597,9 @@ round-robin allocation, not eight independent Pom choices. Echo Boon Boon
 Boon's nested previous-run approximation may carry the same result. Ransom
 outcomes persist no removal set or level total.
 
-Steady Growth persists only reached random targets: ordinary occurrences use a
-sparse `steadyGrowthTargetByPhase` map, while a derived Boss completion uses
-`bossCompletionSteadyGrowthTarget`. A missing target is unresolved only at a
+Steady Growth persists only reached random targets: ordinary occurrences,
+including automatic Boss occurrences, use a sparse `steadyGrowthTargetByPhase`
+map. A missing target is unresolved only at a
 reached nonempty threshold; an empty target domain is a derived no-op. The
 semantic `ReplaceSteadyGrowthTarget` command owns one exact phase/contact and
 preserves retained invalid known keys for repair. Progress and threshold
@@ -657,21 +656,21 @@ eligible equipped target before the offer can fold.
 Addresses are immutable discriminated values. `semanticAddressKey` is a
 canonical projection for maps and markers, not another identity source.
 
-| Owner                             | Address                                                                     |
-| --------------------------------- | --------------------------------------------------------------------------- |
-| start and occurrence-local leaves | `OccurrenceAddress`                                                         |
-| room-sourced decision             | `ExitDecisionAddress` with occurrence source                                |
-| N handoff decision                | `ExitDecisionAddress` with Hub source                                       |
-| normal target                     | `TargetAddress` with source and exit key                                    |
-| additional continuation           | `AdditionalExitAddress` with occurrence ID and declared additional-exit key |
-| decision selection                | `ExitSelectionAddress` with source                                          |
-| batch reward store                | `BatchRewardStoreAddress` with source                                       |
-| Hub board                         | `HubDecisionAddress`                                                        |
-| Hub slot and visit                | `HubSlotAddress` and `HubVisitAddress`                                      |
-| local reward and wheel            | occurrence plus declaration-owned child key                                 |
-| N local visit topology            | parent occurrence, local group, and declaration-owned slot key              |
-| pool-backed encounter phase       | `EncounterPhaseAddress` with occurrence owner and stable phase key          |
-| derived completion                | `CompletionRoomAddress`                                                     |
+| Owner                              | Address                                                                     |
+| ---------------------------------- | --------------------------------------------------------------------------- |
+| start and occurrence-local leaves  | `OccurrenceAddress`                                                         |
+| room-sourced decision              | `ExitDecisionAddress` with occurrence source                                |
+| N handoff decision                 | `ExitDecisionAddress` with Hub source                                       |
+| normal target                      | `TargetAddress` with source and exit key                                    |
+| additional continuation            | `AdditionalExitAddress` with occurrence ID and declared additional-exit key |
+| decision selection                 | `ExitSelectionAddress` with source                                          |
+| batch reward store                 | `BatchRewardStoreAddress` with source                                       |
+| Hub board                          | `HubDecisionAddress`                                                        |
+| Hub slot and visit                 | `HubSlotAddress` and `HubVisitAddress`                                      |
+| local reward and wheel             | occurrence plus declaration-owned child key                                 |
+| N local visit topology             | parent occurrence, local group, and declaration-owned slot key              |
+| pool-backed encounter phase        | `EncounterPhaseAddress` with occurrence owner and stable phase key          |
+| automatic Boss/Postboss occurrence | `OccurrenceAddress`                                                         |
 
 `ContinuationAddress`, `PickedAddress`, fixed-entry addresses, parent-only
 batch-store identity, and rendered target indexes are absent from the current

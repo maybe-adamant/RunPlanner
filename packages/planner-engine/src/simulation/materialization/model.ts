@@ -2,7 +2,6 @@ import type { RequiredRoomObjectDescriptor, RoomCounterEffects } from '../../cat
 import type {
   AdditionalExitAddress,
   BatchRewardStoreAddress,
-  CompletionRoomAddress,
   ExitDecisionAddress,
   ExitDecisionSourceAddress,
   ExitSelectionAddress,
@@ -147,8 +146,14 @@ export interface CanonicalAuthoredRoom {
   readonly lifecycleProfileKey: string;
   readonly counterEffects: RoomCounterEffects;
   readonly entered: boolean;
+  /** Declaration-fixed automatic rooms inherit selected Preboss reward-store provenance. */
+  readonly enteredRewardStoreKey?: string;
   /** Persisted occurrence chronology and its sole derived roster product. */
   readonly roomActions: RoomActionState;
+  /** Exact optional Postboss rack state remains owned by its automatic occurrence. */
+  readonly keepsakeRack?: NonNullable<
+    import('../../authored-project/model').RoomOccurrence['keepsakeRack']
+  >;
   readonly roomActionRoster: import('../room-actions').RoomActionRoster;
   readonly roomLifecycleTimeline: import('../room-actions').RoomLifecycleTimeline;
   readonly requiredObjects?: readonly RequiredRoomObjectDescriptor[];
@@ -201,22 +206,6 @@ export interface CanonicalAuthoredRoom {
   >;
 }
 
-export interface CanonicalCompletionRoom {
-  readonly kind: 'completion';
-  readonly origin: CompletionRoomAddress;
-  readonly role: CompletionRoomAddress['role'];
-  readonly gameName: string;
-  readonly encounterEnvelopeKey: string;
-  readonly encounterPhases: readonly ResolvedEncounterPhase[];
-  readonly lifecycleProfileKey: string;
-  readonly counterEffects: RoomCounterEffects;
-  readonly enteredRewardStoreKey?: string;
-  readonly entered: true;
-  /** Active derived Postboss chronology; absent for Boss and dormant route tails. */
-  readonly roomActionRoster?: import('../room-actions').RoomActionRoster;
-  readonly roomLifecycleTimeline?: import('../room-actions').RoomLifecycleTimeline;
-}
-
 export interface CanonicalHubRoom {
   readonly kind: 'hub';
   readonly origin: HubRoomAddress;
@@ -241,7 +230,7 @@ export interface CanonicalLocalVisitRoom extends CanonicalAuthoredRoom {
   };
 }
 
-export type CanonicalRoom = CanonicalAuthoredRoom | CanonicalCompletionRoom;
+export type CanonicalRoom = CanonicalAuthoredRoom;
 
 export interface CanonicalRoomReference {
   readonly origin: OccurrenceAddress;
@@ -387,13 +376,8 @@ export interface CanonicalBiome {
   readonly biomeKey: string;
   readonly entryRoom: CanonicalAuthoredRoom;
   readonly decisions: readonly CanonicalDecision[];
-  readonly completionRooms: readonly CanonicalCompletionRoom[];
+  readonly automaticRooms: readonly CanonicalAuthoredRoom[];
   readonly biomeState: CanonicalBiomeState;
-  readonly bossCompletionArcanaKeys: readonly string[];
-  /** Dormant until Steady Growth reaches the Boss end-effects threshold. */
-  readonly bossCompletionSteadyGrowthTarget?: string;
-  readonly postbossKeepsakeDisposition?: import('../../authored-project/model').PostbossKeepsakeDisposition;
-  readonly keepsakeEquipResults?: import('../../authored-project/model').AuthoredKeepsakeEquipResults;
   readonly echoKeepsakeReplayResults?: Pick<
     import('../../authored-project/model').AuthoredKeepsakeEquipResults,
     'experimentalHammer'
@@ -471,7 +455,7 @@ export interface MaterializedBiomePrefix {
    * declared tail on the prefix lets progressive evaluation assess the final
    * entered room without manufacturing a canonical complete snapshot.
    */
-  readonly completionRooms?: readonly CanonicalCompletionRoom[];
+  readonly automaticRooms?: readonly CanonicalAuthoredRoom[];
   readonly frontier?: MaterializedExitDecisionFrontier | MaterializedHubDecisionFrontier;
   readonly biomeState: CanonicalBiomeState;
   readonly echoKeepsakeReplayResults?: Pick<

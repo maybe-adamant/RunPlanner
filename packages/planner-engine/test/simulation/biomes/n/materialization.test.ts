@@ -330,7 +330,7 @@ describe('canonical N Hub materialization', () => {
     ]);
   });
 
-  it('materializes the completed-Hub handoff and declaration-derived completion rooms', () => {
+  it('materializes the completed-Hub handoff and declaration-fixed automatic occurrences', () => {
     const { biome } = completeN();
     const handoff = biome.snapshot.decisions.at(-1);
 
@@ -355,7 +355,7 @@ describe('canonical N Hub materialization', () => {
         },
       ],
     });
-    expect(biome.snapshot.completionRooms.map((room) => room.gameName)).toEqual([
+    expect(biome.snapshot.automaticRooms.map((room) => room.gameName)).toEqual([
       'N_Boss01',
       'N_PostBoss01',
     ]);

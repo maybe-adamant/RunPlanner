@@ -3,7 +3,7 @@ import {
   createAcquisitionRoleAddress,
   createOccurrenceAddress,
   createBiomeAddress,
-  type BossCompletionArcanaAddress,
+  type JudgmentArcanaAddress,
   semanticAddressKey,
   type BiomeAddress,
   type OccurrenceAddress,
@@ -33,7 +33,7 @@ import {
   createKeepsakeSelectionCandidateArtifacts,
   type AcquisitionConversionCandidateArtifacts,
   type BiomeCandidateArtifacts,
-  type BossCompletionArcanaCandidateArtifacts,
+  type JudgmentArcanaCandidateArtifacts,
   type TraitOfferCandidateArtifacts,
   type DerivedAcquisitionEntryCandidateArtifacts,
   type KeepsakeEquipResultCandidateArtifacts,
@@ -122,7 +122,6 @@ export interface ProgressiveSeed {
 export interface ProgressiveBiomeContext {
   readonly enteredBiomeCount: number;
   /** A Postboss rack is reached only when this configured route continues. */
-  readonly hasConfiguredSuccessor?: boolean;
   readonly loadout: RouteLoadout;
   readonly seed?: ProgressiveSeed;
 }
@@ -165,7 +164,7 @@ function generation(
   roomLifecycles: RoomLifecycleCandidateArtifacts,
   traitOffers: import('../candidate-artifacts').TraitOfferCandidateArtifacts,
   levelResolutions: import('../candidate-artifacts').LevelResolutionCandidateArtifacts,
-  bossCompletionArcana: BossCompletionArcanaCandidateArtifacts,
+  judgmentArcana: JudgmentArcanaCandidateArtifacts,
   keepsakeSelections: KeepsakeSelectionCandidateArtifacts,
   keepsakeEquipResults: KeepsakeEquipResultCandidateArtifacts,
   acquisitionConversions: AcquisitionConversionCandidateArtifacts,
@@ -219,7 +218,7 @@ function generation(
       encounters.artifacts,
       traitOffers,
       levelResolutions,
-      bossCompletionArcana,
+      judgmentArcana,
       keepsakeSelections,
       keepsakeEquipResults,
       acquisitionConversions,
@@ -490,7 +489,7 @@ function products(
     rewards.lifecycleArtifacts,
     rewards.traitOfferArtifacts,
     rewards.levelResolutionArtifacts,
-    rewards.bossCompletionArcanaArtifacts,
+    rewards.judgmentArcanaArtifacts,
     rewards.keepsakeSelectionArtifacts,
     rewards.keepsakeEquipResultArtifacts,
     rewards.acquisitionConversionArtifacts,
@@ -548,8 +547,8 @@ function retainBlockedRegionProducts(
           : undefined;
   const blockedLevelAt: LevelResolutionAddress | undefined =
     blockedAt.kind === 'levelResolution' ? blockedAt : undefined;
-  const blockedBossCompletionAt: BossCompletionArcanaAddress | undefined =
-    blockedAt.kind === 'bossCompletionArcana' ? blockedAt : undefined;
+  const blockedJudgmentAt: JudgmentArcanaAddress | undefined =
+    blockedAt.kind === 'judgmentArcana' ? blockedAt : undefined;
   const blockedSteadyGrowthAt: SteadyGrowthOutcomeAddress | undefined =
     blockedAt.kind === 'steadyGrowthOutcome' ? blockedAt : undefined;
   const blockedNemesisAt: NemesisRandomEventAddress | undefined =
@@ -692,19 +691,19 @@ function retainBlockedRegionProducts(
       );
     },
   });
-  const blockedBossCapability =
-    blockedBossCompletionAt === undefined
+  const blockedJudgmentCapability =
+    blockedJudgmentAt === undefined
       ? undefined
-      : (selectedArtifacts.bossCompletionArcana.at(blockedBossCompletionAt) ??
-        blockedArtifacts.bossCompletionArcana.at(blockedBossCompletionAt));
-  const bossCompletionArcana =
-    blockedBossCompletionAt === undefined || blockedBossCapability === undefined
-      ? retainedArtifacts.bossCompletionArcana
+      : (selectedArtifacts.judgmentArcana.at(blockedJudgmentAt) ??
+        blockedArtifacts.judgmentArcana.at(blockedJudgmentAt));
+  const judgmentArcana =
+    blockedJudgmentAt === undefined || blockedJudgmentCapability === undefined
+      ? retainedArtifacts.judgmentArcana
       : Object.freeze({
-          at: (address: BossCompletionArcanaAddress) =>
-            semanticAddressKey(address) === semanticAddressKey(blockedBossCompletionAt)
-              ? blockedBossCapability
-              : retainedArtifacts.bossCompletionArcana.at(address),
+          at: (address: JudgmentArcanaAddress) =>
+            semanticAddressKey(address) === semanticAddressKey(blockedJudgmentAt)
+              ? blockedJudgmentCapability
+              : retainedArtifacts.judgmentArcana.at(address),
         });
   const blockedSteadyGrowthCapability =
     blockedSteadyGrowthAt === undefined
@@ -948,7 +947,7 @@ function retainBlockedRegionProducts(
     encounters,
     traitOffers,
     levelResolutions,
-    bossCompletionArcana,
+    judgmentArcana,
     keepsakeSelections,
     keepsakeEquipResults,
     acquisitionConversions,
@@ -1413,11 +1412,11 @@ function locateFinding(
       : chronology?.kind === 'hubBoard' || chronology?.kind === 'hubVisit'
         ? chronology.history
         : undefined;
-  // Boss completion is a terminal lifecycle child, not an authored Preboss
+  // The automatic Boss is a terminal lifecycle child, not an authored Preboss
   // occurrence. It follows every decision in the materialized biome and has
   // no room occurrence to use for ordinary ownership lookup.
   if (
-    finding.origin.kind === 'bossCompletionArcana' &&
+    finding.origin.kind === 'judgmentArcana' &&
     finding.origin.routeKey === prefix.routeKey &&
     finding.origin.biomeKey === prefix.biomeKey
   ) {
@@ -1736,7 +1735,7 @@ function clampPrefix(
   // authored prefix is already the exact pre-completion state; trimming its
   // Preboss decision would falsely erase that state rather than merely
   // suppressing the Postboss and later-biome consequences.
-  if (located.finding.origin.kind === 'bossCompletionArcana') return prefix;
+  if (located.finding.origin.kind === 'judgmentArcana') return prefix;
   if (located.decisionIndex < 0) {
     return Object.freeze({
       kind: 'biomePrefix',
@@ -1907,13 +1906,7 @@ export function evaluateProgressiveBiomeAssemblyBeforeClamp(
   plan: AuthoredBiomePlan,
   context: ProgressiveBiomeContext,
 ): ProgressiveBiomeEvaluationAssembly | null {
-  const initial = materializeBiomePrefix(
-    catalog,
-    biome,
-    plan,
-    context.loadout,
-    context.hasConfiguredSuccessor === true ? plan.postbossRoomActions : undefined,
-  );
+  const initial = materializeBiomePrefix(catalog, biome, plan, context.loadout);
   if (initial?.entryRoom === undefined) return null;
   const materializedPrefix = Object.freeze({
     ...initial,
@@ -1974,13 +1967,7 @@ export function evaluateProgressiveBiomeAssembly(
   plan: AuthoredBiomePlan,
   context: ProgressiveBiomeContext,
 ): ProgressiveBiomeEvaluationAssembly | null {
-  const initial = materializeBiomePrefix(
-    catalog,
-    biome,
-    plan,
-    context.loadout,
-    context.hasConfiguredSuccessor === true ? plan.postbossRoomActions : undefined,
-  );
+  const initial = materializeBiomePrefix(catalog, biome, plan, context.loadout);
   if (initial?.entryRoom === undefined) return null;
   const authoredPrefix = Object.freeze({
     ...initial,
@@ -2045,7 +2032,7 @@ export function evaluateProgressiveBiomeAssembly(
       evaluated.candidateArtifacts.encounters,
       evaluated.candidateArtifacts.traitOffers,
       evaluated.candidateArtifacts.levelResolutions,
-      evaluated.candidateArtifacts.bossCompletionArcana,
+      evaluated.candidateArtifacts.judgmentArcana,
       evaluated.candidateArtifacts.keepsakeSelections,
       evaluated.candidateArtifacts.keepsakeEquipResults,
       evaluated.candidateArtifacts.acquisitionConversions,
@@ -2066,13 +2053,7 @@ export function evaluateProgressiveBiomeAssemblyFromSelectedProducts(
   context: ProgressiveBiomeContext,
   selectedProducts: ProgressiveBiomeSelectedProducts,
 ): ProgressiveBiomeEvaluationAssembly | null {
-  const initial = materializeBiomePrefix(
-    catalog,
-    biome,
-    plan,
-    context.loadout,
-    context.hasConfiguredSuccessor === true ? plan.postbossRoomActions : undefined,
-  );
+  const initial = materializeBiomePrefix(catalog, biome, plan, context.loadout);
   if (initial?.entryRoom === undefined) return null;
   const authoredPrefix = Object.freeze({
     ...initial,
@@ -2192,7 +2173,7 @@ function clampSelectedProducts(
       retainedInteractions.encounters,
       retainedInteractions.traitOffers,
       retainedInteractions.levelResolutions,
-      retainedInteractions.bossCompletionArcana,
+      retainedInteractions.judgmentArcana,
       retainedInteractions.keepsakeSelections,
       retainedInteractions.keepsakeEquipResults,
       retainedInteractions.acquisitionConversions,

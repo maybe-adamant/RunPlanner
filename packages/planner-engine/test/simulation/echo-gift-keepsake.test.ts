@@ -5,7 +5,6 @@ import {
   applyProjectCommand,
   applyProjectHistoryCommand,
   createBiomeAddress,
-  createCompletionRoomAddress,
   createEncounterPhaseAddress,
   createEchoKeepsakeReplayAddress,
   createExitSelectionAddress,
@@ -715,7 +714,7 @@ describe('Echo Gift Gift Gift', () => {
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplacePostbossKeepsake',
       selection: createPostbossKeepsakeSelectionAddress(
-        createCompletionRoomAddress(goldenHBiome, 'postboss'),
+        createOccurrenceAddress(goldenHBiome, createOccurrenceId('completion:H:postboss')),
       ),
       value: { kind: 'replace', keepsakeKey: 'ManaOverTimeRefundKeepsake' },
     });

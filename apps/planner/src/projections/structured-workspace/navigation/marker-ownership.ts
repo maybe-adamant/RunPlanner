@@ -135,6 +135,15 @@ export function workspaceOccurrenceOwnedMarkers(
     ...workspaceLocalDetailMarkers(room.roomLocal),
     ...(room.roomActions?.rows.map((row) => row.marker) ?? []),
     ...(room.roomActions?.steadyGrowth?.map((effect) => effect.marker) ?? []),
+    ...(room.judgment === undefined ? [] : [room.judgment.marker]),
+    ...(room.keepsakeSelection === undefined
+      ? []
+      : [
+          room.keepsakeSelection.marker,
+          ...(room.keepsakeSelection.equipResult === undefined
+            ? []
+            : [room.keepsakeSelection.equipResult.marker]),
+        ]),
     ...(room.zagreusSpawn === undefined ? [] : [room.zagreusSpawn.marker]),
     ...(room.naturalChaosSpawn === undefined ? [] : [room.naturalChaosSpawn.marker]),
     ...(room.roomLocal.kind === 'fixed' ? [room.roomLocal.marker] : []),

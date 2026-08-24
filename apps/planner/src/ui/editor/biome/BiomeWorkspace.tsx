@@ -6,7 +6,6 @@ import {
   workspaceInteractionKey,
   type StructuredWorkspaceProjection,
   type WorkspaceBiome,
-  type WorkspaceCompletionNode,
   type WorkspaceDefaultInspectorDestination,
   type WorkspaceInspectorDestination,
   type WorkspaceInteractionCatalog,
@@ -14,6 +13,7 @@ import {
   type WorkspaceKeepsakeEquipResultInteraction,
   type WorkspaceMarker,
   type WorkspaceNode,
+  type WorkspaceRoomSummary,
   type WorkspaceRailEntry,
   type WorkspaceRailReward,
   type WorkspaceRailSelectedTarget,
@@ -29,11 +29,7 @@ import { FindingCount, SemanticOwnerMarker } from '@planner/ui/feedback/Evaluati
 import { AuthoringFrontier, BatchWorkbench, TopologyRemovalAction } from './DecisionWorkbench';
 import { BiomeFieldControls } from './BiomeFieldControls';
 import { HubDecisionWorkbench } from './HubDecisionWorkbench';
-import {
-  OccurrenceWorkbench,
-  RoomActionsWorkbench,
-  SteadyGrowthEffectRow,
-} from './OccurrenceWorkbench';
+import { OccurrenceWorkbench } from './OccurrenceWorkbench';
 import { RoomSelector } from './RoomSelector';
 import { RunStateSheet } from './RunStateSheet';
 import { RewardControlEditor } from '../rewards/RewardControlEditor';
@@ -122,8 +118,6 @@ function nodeLabel(node: WorkspaceNode): string {
       return 'Doors';
     case 'takeoverBatch':
       return 'Preboss doors';
-    case 'completion':
-      return node.label;
     case 'hubDecision':
       return 'Hub';
   }
@@ -357,12 +351,12 @@ function PostbossKeepsakeControl({
   value,
 }: {
   readonly interaction: WorkspaceKeepsakeSelectionInteraction;
-  readonly value: Extract<WorkspaceCompletionNode['keepsakeSelection'], object>['value'];
+  readonly value: NonNullable<WorkspaceRoomSummary['keepsakeSelection']>['value'];
 }) {
   const dispatch = useAppDispatch();
   const candidates = useWorkspaceInteraction(interaction);
   return (
-    <div className="completion-keepsake-control">
+    <div className="room-keepsake-control">
       <select
         aria-label="Keepsake"
         aria-busy={candidates.pending || undefined}
@@ -402,182 +396,73 @@ function PostbossKeepsakeControl({
   );
 }
 
-function CompletionWorkbench({
+function KeepsakeRackTimelineContent({
   interactions,
-  node,
+  selection,
 }: {
   readonly interactions: WorkspaceInteractionCatalog;
-  readonly node: WorkspaceCompletionNode;
+  readonly selection: NonNullable<WorkspaceRoomSummary['keepsakeSelection']>;
+}) {
+  const interaction = interactions.keepsakeSelections.get(
+    workspaceInteractionKey(selection.address),
+  );
+  const equipResult =
+    selection.equipResult === undefined
+      ? undefined
+      : interactions.keepsakeEquipResults.get(
+          workspaceInteractionKey(selection.equipResult.address),
+        );
+  if (interaction === undefined) return null;
+  return (
+    <div className="room-keepsake-action">
+      <PostbossKeepsakeControl interaction={interaction} value={selection.value} />
+      {equipResult === undefined ? null : equipResult.owner.resultKind === 'jeweledPom' ? (
+        <JeweledPomResultControl
+          interaction={
+            equipResult as Extract<
+              WorkspaceKeepsakeEquipResultInteraction,
+              { readonly owner: { readonly resultKind: 'jeweledPom' } }
+            >
+          }
+        />
+      ) : (
+        <ExperimentalHammerResultControl
+          interaction={
+            equipResult as Extract<
+              WorkspaceKeepsakeEquipResultInteraction,
+              { readonly owner: { readonly resultKind: 'experimentalHammer' } }
+            >
+          }
+        />
+      )}
+    </div>
+  );
+}
+
+function JudgmentArcanaControl({
+  interactions,
+  judgment,
+}: {
+  readonly interactions: WorkspaceInteractionCatalog;
+  readonly judgment: NonNullable<WorkspaceRoomSummary['judgment']>;
 }) {
   const dispatch = useAppDispatch();
   const [judgmentOpen, setJudgmentOpen] = useState(false);
-  const control =
-    node.judgment === undefined
-      ? undefined
-      : interactions.bossCompletionArcana.get(workspaceInteractionKey(node.judgment.address));
-  const keepsake =
-    node.keepsakeSelection === undefined
-      ? undefined
-      : interactions.keepsakeSelections.get(
-          workspaceInteractionKey(node.keepsakeSelection.address),
-        );
-  const equipResult =
-    node.keepsakeSelection?.equipResult === undefined
-      ? undefined
-      : interactions.keepsakeEquipResults.get(
-          workspaceInteractionKey(node.keepsakeSelection.equipResult.address),
-        );
-  const fixedEffectRanks = new Map(
-    (node.timeline ?? [])
-      .filter((entry) => entry.kind === 'fixedEffect')
-      .map((entry, index) => [entry.effect, index + 1] as const),
-  );
-  const renderEquipResult = () =>
-    equipResult === undefined ? null : equipResult.owner.resultKind === 'jeweledPom' ? (
-      <JeweledPomResultControl
-        interaction={
-          equipResult as Extract<
-            WorkspaceKeepsakeEquipResultInteraction,
-            { readonly owner: { readonly resultKind: 'jeweledPom' } }
-          >
-        }
-      />
-    ) : (
-      <ExperimentalHammerResultControl
-        interaction={
-          equipResult as Extract<
-            WorkspaceKeepsakeEquipResultInteraction,
-            { readonly owner: { readonly resultKind: 'experimentalHammer' } }
-          >
-        }
-      />
-    );
+  const control = interactions.judgmentArcana.get(workspaceInteractionKey(judgment.address));
+  if (control === undefined) return null;
   return (
-    <article className="biome-completion-workbench">
-      <p className="card-kicker">{node.role === 'postboss' ? 'Postboss' : 'Boss'}</p>
-      <h3>{node.label}</h3>
-      <SemanticOwnerMarker address={node.marker.address} />
-      {node.role === 'postboss' && node.roomActions !== undefined ? (
-        <>
-          <RoomActionsWorkbench
-            actions={node.roomActions}
-            interactions={interactions}
-            renderRowContent={(row) =>
-              row.reference.kind !== 'interactKeepsakeRack' ||
-              keepsake === undefined ||
-              node.keepsakeSelection === undefined ? null : (
-                <div className="completion-keepsake-action">
-                  <PostbossKeepsakeControl
-                    interaction={keepsake}
-                    value={node.keepsakeSelection.value}
-                  />
-                  {renderEquipResult()}
-                </div>
-              )
-            }
-          >
-            {keepsake === undefined ||
-            node.keepsakeSelection === undefined ||
-            node.keepsakeSelection.value.kind !== 'retain' ? null : (
-              <section aria-label="Choose keepsake" className="completion-keepsake-action">
-                <strong>Choose keepsake</strong>
-                <PostbossKeepsakeControl
-                  interaction={keepsake}
-                  value={node.keepsakeSelection.value}
-                />
-                {renderEquipResult()}
-              </section>
-            )}
-          </RoomActionsWorkbench>
-        </>
-      ) : node.timeline === undefined ? null : (
-        <section aria-label="Room Timeline" className="room-actions-workbench">
-          <header className="local-reward-heading">
-            <h4>Room Timeline</h4>
-          </header>
-          <ol aria-label="Room timeline" className="room-action-list">
-            {node.timeline.map((entry) => {
-              if (entry.kind === 'boundary') {
-                const label =
-                  entry.boundary.kind === 'roomEntered'
-                    ? 'Room entered'
-                    : entry.boundary.kind === 'encounterStart'
-                      ? 'Start encounter'
-                      : entry.boundary.kind === 'encounterEnd'
-                        ? 'End encounter'
-                        : 'Cleanup · Doors open';
-                return (
-                  <li
-                    aria-label={label}
-                    className="room-action-lifecycle-boundary"
-                    data-lifecycle-boundary={entry.boundary.key}
-                    key={entry.boundary.key}
-                  >
-                    <span aria-hidden="true" className="hub-roster-rank">
-                      ·
-                    </span>
-                    <strong>{label}</strong>
-                  </li>
-                );
-              }
-              if (entry.kind === 'bossDefeated') {
-                return (
-                  <li
-                    aria-label="Boss defeated"
-                    className="room-action-lifecycle-boundary"
-                    data-lifecycle-boundary={entry.key}
-                    key={entry.key}
-                  >
-                    <span aria-hidden="true" className="hub-roster-rank">
-                      ·
-                    </span>
-                    <strong>Boss defeated</strong>
-                  </li>
-                );
-              }
-              if (entry.kind === 'steadyGrowth') {
-                const steadyGrowth = node.steadyGrowth;
-                return steadyGrowth === undefined ? null : (
-                  <SteadyGrowthEffectRow
-                    control={steadyGrowth}
-                    interactions={interactions}
-                    key={workspaceInteractionKey(steadyGrowth.address)}
-                  />
-                );
-              }
-              const rank = fixedEffectRanks.get(entry.effect);
-              if (entry.effect === 'judgment') {
-                return control === undefined || node.judgment === undefined ? null : (
-                  <li
-                    aria-label={`Judgment — choose ${node.judgment.requiredCount} inactive Arcana cards`}
-                    className="hub-open-room-card room-action-row completion-timeline-effect-row"
-                    key={entry.effect}
-                  >
-                    <div className="owner-markers room-action-identity">
-                      <span aria-hidden="true" className="hub-roster-rank">
-                        {rank}
-                      </span>
-                      <button
-                        className="completion-timeline-effect"
-                        onClick={() => setJudgmentOpen(true)}
-                        type="button"
-                      >
-                        Judgment — choose {node.judgment.requiredCount} inactive Arcana cards
-                        <SemanticOwnerMarker address={control.owner} />
-                      </button>
-                    </div>
-                  </li>
-                );
-              }
-              return null;
-            })}
-          </ol>
-        </section>
-      )}
-      {judgmentOpen && control !== undefined && node.judgment !== undefined ? (
-        <div aria-label="Judgment editor" className="completion-judgment-popup" role="dialog">
-          <div className="completion-judgment-popup-header">
-            <h4>Judgment — choose {node.judgment.requiredCount} inactive Arcana cards</h4>
+    <li
+      aria-label={`Judgment — choose ${judgment.requiredCount} inactive Arcana cards`}
+      className="room-action-row room-timeline-effect-row"
+    >
+      <button className="room-timeline-effect" onClick={() => setJudgmentOpen(true)} type="button">
+        Judgment — choose {judgment.requiredCount} inactive Arcana cards
+        <SemanticOwnerMarker address={control.owner} />
+      </button>
+      {judgmentOpen ? (
+        <div aria-label="Judgment editor" className="room-judgment-popup" role="dialog">
+          <div className="room-judgment-popup-header">
+            <h4>Judgment — choose {judgment.requiredCount} inactive Arcana cards</h4>
             <button
               aria-label="Close Judgment editor"
               onClick={() => setJudgmentOpen(false)}
@@ -586,11 +471,11 @@ function CompletionWorkbench({
               Close
             </button>
           </div>
-          <div className="completion-judgment-options">
+          <div className="room-judgment-options">
             {control.choices
               .filter(
                 (choice) =>
-                  node.judgment!.inactiveArcanaKeys.includes(choice.value) ||
+                  judgment.inactiveArcanaKeys.includes(choice.value) ||
                   control.value.includes(choice.value),
               )
               .map((choice) => {
@@ -614,7 +499,44 @@ function CompletionWorkbench({
           </div>
         </div>
       ) : null}
-    </article>
+    </li>
+  );
+}
+
+function roomActionTimelineContent(
+  room: WorkspaceRoomSummary,
+  interactions: WorkspaceInteractionCatalog,
+  row: NonNullable<WorkspaceRoomSummary['roomActions']>['rows'][number],
+): ReactNode {
+  return row.reference.kind !== 'interactKeepsakeRack' ||
+    room.keepsakeSelection === undefined ? null : (
+    <KeepsakeRackTimelineContent interactions={interactions} selection={room.keepsakeSelection} />
+  );
+}
+
+function roomOverviewContent(
+  room: WorkspaceRoomSummary,
+  interactions: WorkspaceInteractionCatalog,
+): ReactNode {
+  const selection = room.keepsakeSelection;
+  const hasTimelineAction = room.roomActions?.rows.some(
+    (row) => row.reference.kind === 'interactKeepsakeRack',
+  );
+  return selection === undefined || hasTimelineAction ? null : (
+    <section aria-label="Keepsake Rack" className="room-keepsake-rack">
+      <h4>Keepsake Rack</h4>
+      <KeepsakeRackTimelineContent interactions={interactions} selection={selection} />
+    </section>
+  );
+}
+
+function lifecycleBoundaryContent(
+  room: WorkspaceRoomSummary,
+  interactions: WorkspaceInteractionCatalog,
+  boundary: import('@planner/projections/structured-workspace').WorkspaceRoomLifecycleBoundary,
+): ReactNode {
+  return boundary.kind !== 'bossDefeated' || room.judgment === undefined ? null : (
+    <JudgmentArcanaControl interactions={interactions} judgment={room.judgment} />
   );
 }
 
@@ -793,6 +715,13 @@ function InspectorNode({
             interactions={interactions}
             {...(node.localVisit === undefined ? {} : { localVisit: node.localVisit })}
             room={node.room}
+            renderRoomActionRowContent={(row) =>
+              roomActionTimelineContent(node.room, interactions, row)
+            }
+            renderLifecycleBoundaryContent={(boundary) =>
+              lifecycleBoundaryContent(node.room, interactions, boundary)
+            }
+            renderRoomOverviewContent={() => roomOverviewContent(node.room, interactions)}
             {...(node.runState === undefined ? {} : { runState: node.runState })}
             {...(roomTab === undefined ? {} : { initialTab: roomTab })}
             doors={
@@ -832,6 +761,15 @@ function InspectorNode({
                   ? {}
                   : { localVisit: sourceOccurrence.localVisit })}
                 room={sourceOccurrence.room}
+                renderRoomActionRowContent={(row) =>
+                  roomActionTimelineContent(sourceOccurrence.room, interactions, row)
+                }
+                renderLifecycleBoundaryContent={(boundary) =>
+                  lifecycleBoundaryContent(sourceOccurrence.room, interactions, boundary)
+                }
+                renderRoomOverviewContent={() =>
+                  roomOverviewContent(sourceOccurrence.room, interactions)
+                }
                 {...(sourceOccurrence.runState === undefined
                   ? {}
                   : { runState: sourceOccurrence.runState })}
@@ -857,8 +795,6 @@ function InspectorNode({
           ) : null}
         </>
       );
-    case 'completion':
-      return <CompletionWorkbench interactions={interactions} node={node} />;
     case 'hubDecision':
       return (
         <HubDecisionWorkbench
@@ -957,6 +893,7 @@ function OccurrenceOutgoing({
     case 'blockedOrUnentered':
     case 'topologyOwned':
     case 'terminal':
+    case 'fixedAutomatic':
       return (
         <section aria-label="Outgoing doors" className="outgoing-occurrence-state">
           <div className="owner-markers">
@@ -985,7 +922,11 @@ function CompletionOutline({
       <p className="card-kicker">Completion</p>
       <ol>
         {completion.map((node) => {
-          const roleLabel = node.role === 'postboss' ? 'Postboss' : 'Boss';
+          const roleLabel = node.room.kind === 'PostBoss' ? 'Postboss' : 'Boss';
+          const focusOwner =
+            node.room.judgment?.marker.address ??
+            node.room.keepsakeSelection?.marker.address ??
+            node.marker.address;
           return (
             <li key={node.key}>
               <button
@@ -994,11 +935,11 @@ function CompletionOutline({
                 className="biome-completion-node"
                 data-assessment={node.marker.assessment}
                 data-findings={node.marker.findingCount > 0}
-                onClick={() => dispatch(semanticOwnerFocused(node.marker.address))}
+                onClick={() => dispatch(semanticOwnerFocused(focusOwner))}
                 type="button"
               >
                 <span>{roleLabel}</span>
-                {node.label === roleLabel ? null : <strong>{node.label}</strong>}
+                {node.room.label === roleLabel ? null : <strong>{node.room.label}</strong>}
               </button>
             </li>
           );
@@ -1133,7 +1074,7 @@ export function BiomeWorkspace({
         </div>
         <CompletionOutline
           completion={biome.completionOutline}
-          {...(subject?.kind === 'node' && subject.node.kind === 'completion'
+          {...(subject?.kind === 'node' && subject.node.kind === 'occurrenceWorkbench'
             ? { selectedNodeKey: subject.node.key }
             : {})}
         />

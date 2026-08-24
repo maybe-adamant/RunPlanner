@@ -71,7 +71,7 @@ describe('O canonical materialization and lifecycle', () => {
         },
       ],
     });
-    expect(snapshot.completionRooms.map((room) => room.gameName)).toEqual([
+    expect(snapshot.automaticRooms.map((room) => room.gameName)).toEqual([
       'O_Boss01',
       'O_PostBoss01',
     ]);

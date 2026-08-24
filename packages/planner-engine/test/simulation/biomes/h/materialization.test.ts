@@ -1462,15 +1462,15 @@ describe('H Fields materialization', () => {
         lifecycleProfileKey: 'PrebossFreeRewardRoom',
       },
     });
-    expect(snapshot.completionRooms.map((room) => room.gameName)).toEqual([
+    expect(snapshot.automaticRooms.map((room) => room.gameName)).toEqual([
       'H_Boss01',
       'H_PostBoss01',
     ]);
-    expect(snapshot.completionRooms.map((room) => room.lifecycleProfileKey)).toEqual([
+    expect(snapshot.automaticRooms.map((room) => room.lifecycleProfileKey)).toEqual([
       'BossRoom',
       'PostBossRoom',
     ]);
-    expect(snapshot.completionRooms[0]).toMatchObject({ enteredRewardStoreKey: 'RunProgress' });
+    expect(snapshot.automaticRooms[0]).toMatchObject({ enteredRewardStoreKey: 'RunProgress' });
     expect(ordinaryBatches(snapshot)).toHaveLength(4);
     expect(snapshot).not.toHaveProperty('history');
     expect(snapshot).not.toHaveProperty('findings');

@@ -738,8 +738,6 @@ export function findingDestinationLabel(catalog: Catalog, origin: SemanticAddres
       return `${biomeLabel} · ${localRewardDestinationLabel(origin.groupKey, origin.slotKey)}`;
     case 'roomAction':
       return `${biomeLabel} · Room action`;
-    case 'completionRoomAction':
-      return `${biomeLabel} · Postboss action`;
     case 'roomRunStateCheckpoint':
       return `${biomeLabel} · Run State`;
     case 'localVisitDecision':
@@ -798,9 +796,7 @@ export function findingDestinationLabel(catalog: Catalog, origin: SemanticAddres
       return `${biomeLabel} · Gift Gift Gift replay`;
     case 'levelResolution':
       return `${biomeLabel} · Pom`;
-    case 'completionRoom':
-      return `${biomeLabel} · ${origin.role === 'boss' ? 'Boss' : 'Postboss'}`;
-    case 'bossCompletionArcana':
+    case 'judgmentArcana':
       return `${biomeLabel} · Boss Judgment`;
     case 'keepsakeSelection':
       return `${biomeLabel} · Postboss keepsake`;
