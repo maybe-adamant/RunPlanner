@@ -5,7 +5,7 @@ import type {
   AuthoredTraitOffer,
 } from './traits';
 
-export const PROJECT_DOCUMENT_SCHEMA_VERSION = 53 as const;
+export const PROJECT_DOCUMENT_SCHEMA_VERSION = 54 as const;
 
 declare const occurrenceIdBrand: unique symbol;
 
@@ -52,7 +52,6 @@ export interface AuthoredKeepsakeEquipResults {
   readonly jeweledPom?: {
     readonly traitKey: string;
     readonly rarity?: import('../catalog-schema').TraitRarity;
-    readonly deathDefianceConditionMet?: boolean;
   };
   readonly experimentalHammer?: AuthoredExperimentalHammerEquipResult;
 }
@@ -65,8 +64,6 @@ export type PostbossKeepsakeDisposition =
 
 export interface ShopState {
   readonly profileKey: string;
-  /** Present only when the normalized Shop profile owns this condition. */
-  readonly deathDefianceConditionMet?: boolean;
   readonly offers: Readonly<Record<string, ShopOfferState>>;
 }
 
@@ -131,7 +128,8 @@ export interface ShipCombatState {
 }
 
 export interface AuthoredGorgonPhaseResult {
-  readonly deathDefianceConditionMet: boolean;
+  /** Gorgon-only phase trigger; never a general offer eligibility condition. */
+  readonly athenaTriggerConditionMet: boolean;
   /** Conditional ordinary Athena offer; omitted while dormant. */
   readonly athenaOffer?: AuthoredGorgonAthenaOffer | null;
 }

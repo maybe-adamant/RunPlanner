@@ -98,7 +98,6 @@ import type {
   WorkspaceTraitOfferInteraction,
   WorkspaceNaturalSelectionInteraction,
   WorkspaceSteadyGrowthInteraction,
-  WorkspaceShopDeathDefianceConditionInteraction,
   WorkspaceShopPurchaseParticipationInteraction,
   WorkspaceRoomInteraction,
   WorkspaceRoomPickerControl,
@@ -329,10 +328,6 @@ interface WorkspaceOccurrenceLocalInteractionCatalog {
   readonly rewardWheelStores: ReadonlyMap<string, WorkspaceCandidateInteraction<string>>;
   readonly shipCombatPhaseCounts: ReadonlyMap<string, WorkspaceCandidateInteraction<2 | 3>>;
   readonly roomActions: ReadonlyMap<string, WorkspaceRoomActionInteraction>;
-  readonly shopDeathDefianceConditions: ReadonlyMap<
-    string,
-    WorkspaceShopDeathDefianceConditionInteraction
-  >;
   readonly shopPurchaseParticipations: ReadonlyMap<
     string,
     WorkspaceShopPurchaseParticipationInteraction
@@ -411,10 +406,6 @@ function bindOccurrenceLocalInteractions(
   const rewardWheelStores = new Map<string, WorkspaceCandidateInteraction<string>>();
   const shipCombatPhaseCounts = new Map<string, WorkspaceCandidateInteraction<2 | 3>>();
   const roomActions = new Map<string, WorkspaceRoomActionInteraction>();
-  const shopDeathDefianceConditions = new Map<
-    string,
-    WorkspaceShopDeathDefianceConditionInteraction
-  >();
   const shopPurchaseParticipations = new Map<
     string,
     WorkspaceShopPurchaseParticipationInteraction
@@ -827,31 +818,6 @@ function bindOccurrenceLocalInteractions(
         }
         break;
       }
-      case 'shopDeathDefianceCondition': {
-        const key = semanticAddressKey(requirement.owner);
-        if (shopDeathDefianceConditions.has(key)) {
-          throw new StructuredWorkspaceProjectionContractError(
-            `${key} has multiple Shop Death Defiance condition interactions`,
-          );
-        }
-        shopDeathDefianceConditions.set(
-          key,
-          Object.freeze({
-            key,
-            owner: requirement.owner,
-            value: requirement.value,
-            intentFor: (value: boolean) =>
-              Object.freeze({
-                command: Object.freeze({
-                  kind: 'ReplaceShopDeathDefianceCondition' as const,
-                  shop: requirement.owner,
-                  value,
-                }),
-              }),
-          }),
-        );
-        break;
-      }
     }
   }
   return Object.freeze({
@@ -865,7 +831,6 @@ function bindOccurrenceLocalInteractions(
     rewardWheelPicks,
     rewardWheelStores,
     shipCombatPhaseCounts,
-    shopDeathDefianceConditions,
     shopPurchaseParticipations,
     localVisitOrders,
     localVisitGenerations,
@@ -1581,7 +1546,6 @@ export function bindWorkspaceInteractions(
     rewardWheelPicks,
     rewardWheelStores,
     shipCombatPhaseCounts,
-    shopDeathDefianceConditions,
     shopPurchaseParticipations,
     localVisitOrders,
     localVisitGenerations,
@@ -2915,16 +2879,6 @@ export function bindWorkspaceInteractions(
               value:
                 control.value as import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults['jeweledPom'],
             }),
-        supportsDeathDefianceCondition: (
-          catalog.traitGivers.byKey[effect.giverKey]?.traitKeys ?? []
-        ).some(
-          (traitKey) =>
-            catalog.traits.byKey[traitKey]?.offerRequirements.some(
-              (requirement) =>
-                requirement.kind === 'offerContext' &&
-                requirement.context === 'deathDefianceConditionMet',
-            ) === true,
-        ),
         load: (
           value = control.value as import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults['jeweledPom'],
         ) => candidates.keepsakeEquipResult(control.address, value),
@@ -2973,7 +2927,6 @@ export function bindWorkspaceInteractions(
     rewardWheelStores,
     rooms,
     shipCombatPhaseCounts,
-    shopDeathDefianceConditions,
     shopPurchaseParticipations,
     localVisitOrders,
     localVisitGenerations,

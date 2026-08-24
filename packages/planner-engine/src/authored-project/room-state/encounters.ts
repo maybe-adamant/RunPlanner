@@ -17,7 +17,7 @@ import {
 } from '../traits';
 import { decodeEchoLastRunBoon } from './echo-last-run';
 import { decodeAllTogetherResult } from './all-together';
-import { TRAIT_OPTION_KEYS, traitGiverUsesOfferContext } from '../traits';
+import { TRAIT_OPTION_KEYS } from '../traits';
 import type { RoomEncounterState } from '../model';
 import type { AuthoredNemesisRandomEventOutcome } from '../model';
 import {
@@ -169,7 +169,7 @@ export function createDefaultRoomEncounterState(
         (key) => catalog.encounterDefinitions.byKey[key]?.hostsGorgon === true,
       )
     )
-      gorgonResultByPhase[binding.slotKey] = Object.freeze({ deathDefianceConditionMet: false });
+      gorgonResultByPhase[binding.slotKey] = Object.freeze({ athenaTriggerConditionMet: false });
   }
   for (const binding of bindings.values()) {
     const hostsGorgon =
@@ -183,7 +183,7 @@ export function createDefaultRoomEncounterState(
             (key) => catalog.encounterDefinitions.byKey[key]?.hostsGorgon === true,
           );
     if (hostsGorgon)
-      gorgonResultByPhase[binding.slotKey] ??= Object.freeze({ deathDefianceConditionMet: false });
+      gorgonResultByPhase[binding.slotKey] ??= Object.freeze({ athenaTriggerConditionMet: false });
   }
   const traitOffersByPhase: Record<string, Record<string, AuthoredTraitOffer | null>> = {};
   for (const binding of bindings.values()) {
@@ -208,13 +208,9 @@ export function decodeEncounterTraitOffer(
   catalog: Catalog,
   giverKey: string,
   path: string,
-  omitDeathDefianceContext = false,
   allowContextInvalid = false,
 ): AuthoredTraitOffer {
   const record = expectRecord(value, path);
-  const conditionApplicable =
-    !omitDeathDefianceContext &&
-    traitGiverUsesOfferContext(catalog, giverKey, 'deathDefianceConditionMet');
   if (expectString(record.giverKey, `${path}.giverKey`) !== giverKey) {
     failProjectDocument(`${path}.giverKey`, `expected ${giverKey}`);
   }
@@ -230,14 +226,7 @@ export function decodeEncounterTraitOffer(
   if (kind !== 'traits') failProjectDocument(`${path}.kind`, 'must be traits or fallbackGold');
   expectExactKeys(
     record,
-    [
-      'kind',
-      'giverKey',
-      'options',
-      'selectedOptionKey',
-      'rarificationActions',
-      ...(conditionApplicable ? ['deathDefianceConditionMet'] : []),
-    ],
+    ['kind', 'giverKey', 'options', 'selectedOptionKey', 'rarificationActions'],
     path,
   );
   const rawOptions = expectArray(record.options, `${path}.options`);
@@ -515,14 +504,6 @@ export function decodeEncounterTraitOffer(
     options: Object.freeze(options) as AuthoredTraitOfferTraits['options'],
     selectedOptionKey: selectedOptionKey as AuthoredTraitOfferTraits['selectedOptionKey'],
     rarificationActions: Object.freeze(rarificationActions),
-    ...(conditionApplicable
-      ? {
-          deathDefianceConditionMet: expectBoolean(
-            record.deathDefianceConditionMet,
-            `${path}.deathDefianceConditionMet`,
-          ),
-        }
-      : {}),
   });
 }
 
@@ -661,14 +642,14 @@ export function decodeRoomEncounterState(
     const hasOffer = result.athenaOffer !== undefined;
     expectExactKeys(
       result,
-      hasOffer ? ['deathDefianceConditionMet', 'athenaOffer'] : ['deathDefianceConditionMet'],
+      hasOffer ? ['athenaTriggerConditionMet', 'athenaOffer'] : ['athenaTriggerConditionMet'],
       `${path}.gorgonResultByPhase.${phaseKey}`,
     );
-    const deathDefianceConditionMet = expectBoolean(
-      result.deathDefianceConditionMet,
-      `${path}.gorgonResultByPhase.${phaseKey}.deathDefianceConditionMet`,
+    const athenaTriggerConditionMet = expectBoolean(
+      result.athenaTriggerConditionMet,
+      `${path}.gorgonResultByPhase.${phaseKey}.athenaTriggerConditionMet`,
     );
-    if (deathDefianceConditionMet && !hasOffer)
+    if (athenaTriggerConditionMet && !hasOffer)
       failProjectDocument(
         `${path}.gorgonResultByPhase.${phaseKey}.athenaOffer`,
         'is required while the Gorgon condition is active',
@@ -686,7 +667,7 @@ export function decodeRoomEncounterState(
             );
     }
     gorgonResultByPhase[phaseKey] = Object.freeze({
-      deathDefianceConditionMet,
+      athenaTriggerConditionMet,
       ...(athenaOffer === undefined ? {} : { athenaOffer }),
     });
   }
@@ -936,9 +917,9 @@ export function reconcileRoomEncounterState(
     const priorGorgon = previous.gorgonResultByPhase?.[binding.slotKey];
     gorgonResultByPhase[binding.slotKey] =
       priorGorgon === undefined
-        ? Object.freeze({ deathDefianceConditionMet: false })
+        ? Object.freeze({ athenaTriggerConditionMet: false })
         : Object.freeze({
-            deathDefianceConditionMet: priorGorgon.deathDefianceConditionMet,
+            athenaTriggerConditionMet: priorGorgon.athenaTriggerConditionMet,
             ...(priorGorgon.athenaOffer === undefined
               ? {}
               : { athenaOffer: priorGorgon.athenaOffer }),

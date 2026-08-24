@@ -1,6 +1,5 @@
 import {
   chaosHammerLegal,
-  deathDefianceConditionMet,
   hammerEarly,
   hammerLate,
   inRunFirstHalf,
@@ -251,6 +250,7 @@ export const shops = [
           phaseOption(inRunFirstHalf, {
             key: 'ArmorBoost',
             rewardType: 'ArmorBoost',
+            runtimeOfferFallbackRewardTypes: ['RoomRewardHealDrop'],
           }),
           phaseOption(inRunSecondHalf, {
             key: 'HealBigDrop',
@@ -259,12 +259,13 @@ export const shops = [
           phaseOption(inRunSecondHalf, {
             key: 'ArmorBigBoost',
             rewardType: 'ArmorBigBoost',
+            runtimeOfferFallbackRewardTypes: ['HealBigDrop'],
           }),
           option({
             key: 'LastStandDrop',
             rewardType: 'LastStandDrop',
-            requirement: deathDefianceConditionMet,
-            purchaseRequirement: deathDefianceConditionMet,
+            runtimeOfferRequirement: 'missingLastStand',
+            runtimeOfferFallbackRewardTypes: ['ArmorBoost', 'ArmorBigBoost'],
           }),
         ],
       },
@@ -435,6 +436,7 @@ export const shops = [
           phaseOption(inRunFirstHalf, {
             key: 'ArmorBoost',
             rewardType: 'ArmorBoost',
+            runtimeOfferFallbackRewardTypes: ['RoomRewardHealDrop'],
           }),
           phaseOption(inRunSecondHalf, {
             key: 'HealBigDrop',
@@ -443,12 +445,13 @@ export const shops = [
           phaseOption(inRunSecondHalf, {
             key: 'ArmorBigBoost',
             rewardType: 'ArmorBigBoost',
+            runtimeOfferFallbackRewardTypes: ['HealBigDrop'],
           }),
           option({
             key: 'LastStandDrop',
             rewardType: 'LastStandDrop',
-            requirement: deathDefianceConditionMet,
-            purchaseRequirement: deathDefianceConditionMet,
+            runtimeOfferRequirement: 'missingLastStand',
+            runtimeOfferFallbackRewardTypes: ['ArmorBoost', 'ArmorBigBoost'],
           }),
         ],
       },

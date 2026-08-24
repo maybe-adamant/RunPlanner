@@ -29,6 +29,7 @@ import {
   assessNaturalSelectionTargets,
   assessRansom,
   recordReachedTraitOffer,
+  resolveRuntimeOfferFallbackTraitKey,
   promoteArcana,
   isAspectSpellDropDormant,
   traitCandidates,
@@ -1254,7 +1255,6 @@ describe('targeted selected-trait child chronology', () => {
         'encounterCompleted',
         findings,
         undefined,
-        undefined,
         'source',
       );
       const expectedChild = createTraitAcquisitionTargetAddress(traitOwner, 'option1');
@@ -2166,6 +2166,22 @@ describe('trait legality and derived facts', () => {
 });
 
 describe('reached trait offer chronology', () => {
+  it('resolves Athena’s declaration-owned fallback after excluding companion screen rows', () => {
+    const offer = Object.freeze({
+      kind: 'traits' as const,
+      giverKey: 'Athena',
+      options: Object.freeze([
+        { traitKey: 'DeathDefianceRefillBoon', rarity: 'Common' as const },
+        { traitKey: 'InvulnerabilityDashBoon', rarity: 'Common' as const },
+        { traitKey: 'RetaliateInvulnerabilityBoon', rarity: 'Common' as const },
+      ]) as Extract<AuthoredTraitOffer, { kind: 'traits' }>['options'],
+      selectedOptionKey: 'option1' as const,
+      rarificationActions: Object.freeze([]),
+    });
+    expect(resolveRuntimeOfferFallbackTraitKey(catalog, offer, createTraitHistoryState())).toBe(
+      'FocusLastStandBoon',
+    );
+  });
   const offer = (giverKey: string, traitKeys: readonly [string, string, string]) =>
     Object.freeze({
       kind: 'traits',
@@ -2480,21 +2496,12 @@ describe('reached trait offer chronology', () => {
     });
   });
 
-  it('gates Athena Death Defiance candidates while retaining an invalid authored option', () => {
+  it('keeps Athena preferred candidates authorable without a Death Defiance input', () => {
     const history = createTraitHistoryState();
-    const falseCandidate = traitCandidates(catalog, 'Athena', history, {
-      deathDefianceConditionMet: false,
-    }).find((candidate) => candidate.traitKey === 'DeathDefianceRefillBoon');
-    const trueCandidate = traitCandidates(catalog, 'Athena', history, {
-      deathDefianceConditionMet: true,
-    }).find((candidate) => candidate.traitKey === 'DeathDefianceRefillBoon');
-    expect(falseCandidate?.available).toBe(false);
-    expect(falseCandidate?.assessment.findings).toContainEqual({
-      code: 'offerContext',
-      traitKey: 'DeathDefianceRefillBoon',
-      detail: 'deathDefianceConditionMet',
-    });
-    expect(trueCandidate?.available).toBe(true);
+    const candidate = traitCandidates(catalog, 'Athena', history).find(
+      (entry) => entry.traitKey === 'DeathDefianceRefillBoon',
+    );
+    expect(candidate?.available).toBe(true);
 
     const retained = Object.freeze({
       kind: 'traits',
@@ -2505,22 +2512,10 @@ describe('reached trait offer chronology', () => {
         { traitKey: 'RetaliateInvulnerabilityBoon', rarity: 'Common' as const },
       ]) as Extract<AuthoredTraitOffer, { kind: 'traits' }>['options'],
       selectedOptionKey: 'option1' as const,
-      deathDefianceConditionMet: false,
     });
-    expect(
-      assessTraitOffer(catalog, retained, history, {
-        deathDefianceConditionMet: retained.deathDefianceConditionMet,
-      }),
-    ).toMatchObject([
+    expect(assessTraitOffer(catalog, retained, history)).toMatchObject([
       {
-        legal: false,
-        findings: [
-          {
-            code: 'offerContext',
-            traitKey: 'DeathDefianceRefillBoon',
-            detail: 'deathDefianceConditionMet',
-          },
-        ],
+        legal: true,
       },
       { legal: true },
       { legal: true },

@@ -57,7 +57,6 @@ export function createEchoGoldHPrebossProject(): ProjectDocument {
       ],
       selectedOptionKey: 'option1',
       rarificationActions: [],
-      deathDefianceConditionMet: false,
     },
   });
   project = applyProjectCommand(project, catalog, {

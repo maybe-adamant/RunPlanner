@@ -598,13 +598,7 @@ function traitOfferCandidateContext(
   value: AuthoredTraitOffer,
 ): TraitOfferContext {
   const adjusted = chaosAdjustedTraitOfferContext(catalog, history, value, context);
-  if (value.kind !== 'traits') return adjusted;
-  return value.deathDefianceConditionMet === undefined
-    ? adjusted
-    : Object.freeze({
-        ...adjusted,
-        deathDefianceConditionMet: value.deathDefianceConditionMet,
-      });
+  return adjusted;
 }
 
 export function createBiomeCandidateArtifacts(
@@ -807,12 +801,7 @@ export function createTraitOfferCandidateArtifacts(
                 context.before,
                 context.context,
               );
-              return draft === undefined || context.context.deathDefianceConditionMet === undefined
-                ? draft
-                : Object.freeze({
-                    ...draft,
-                    deathDefianceConditionMet: context.context.deathDefianceConditionMet,
-                  });
+              return draft;
             })
             .find((draft): draft is NonNullable<typeof draft> => draft !== undefined),
         nextTraitOptionDraft: (value: AuthoredTraitOffer) => {
@@ -910,13 +899,7 @@ export function createTraitOfferCandidateArtifacts(
               if (option === undefined) return [];
               const disposition = catalog.traits.byKey[option.traitKey]?.selectedDisposition;
               if (disposition?.kind !== 'echo' || disposition.effect !== 'lastRunBoon') return [];
-              return [
-                echoLastRunBoonOutcomes(
-                  catalog,
-                  context.before,
-                  traitOfferCandidateContext(catalog, context.before, context.context, value),
-                ),
-              ];
+              return [echoLastRunBoonOutcomes(catalog, context.before)];
             }),
           ),
         allTogetherSet: (

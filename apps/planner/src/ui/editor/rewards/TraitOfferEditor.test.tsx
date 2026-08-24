@@ -1215,7 +1215,6 @@ describe('trait offer editor', () => {
       ]) as AuthoredTraitOfferTraits['options'],
       selectedOptionKey: 'option1',
       rarificationActions: Object.freeze([]),
-      deathDefianceConditionMet: false,
     });
     const control = Object.freeze({
       address: createEchoPomTargetAddress(base.owner, 'option1'),
@@ -1314,7 +1313,6 @@ describe('trait offer editor', () => {
       ]) as AuthoredTraitOfferTraits['options'],
       selectedOptionKey: 'option1',
       rarificationActions: Object.freeze([]),
-      deathDefianceConditionMet: false,
     });
     const childAddress = createEchoLastRunBoonAddress(base.owner, 'option1');
     const control = Object.freeze({
@@ -1626,7 +1624,6 @@ describe('trait offer editor', () => {
       ]) as AuthoredTraitOfferTraits['options'],
       selectedOptionKey: 'option1',
       rarificationActions: Object.freeze([]),
-      deathDefianceConditionMet: false,
     });
     const childAddress = createEchoLastRewardAddress(base.owner, 'option1');
     const control = Object.freeze({
@@ -1725,7 +1722,7 @@ describe('trait offer editor', () => {
     application.dispose();
   });
 
-  it('renders a capability-provided Death Defiance control in the atomic offer draft', async () => {
+  it('does not render a generic Death Defiance control in an offer draft', async () => {
     const application = createApplication();
     application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
     const workspace = application.selectStructuredWorkspace(application.store.getState());
@@ -1733,37 +1730,26 @@ describe('trait offer editor', () => {
       (candidate) => candidate.giver.providerKind !== 'hammer',
     );
     if (base === undefined) throw new Error('trait offer interaction is missing');
-    const interaction = Object.freeze({
-      ...base,
-      deathDefianceCondition: Object.freeze({ value: false }),
-    });
+    const interaction = base;
     const interactions = Object.freeze({
       ...workspace.interactions,
       traitOffers: new Map([[interaction.key, interaction]]),
     }) as WorkspaceInteractionCatalog;
-    const onCommit = vi.fn();
-    const user = userEvent.setup();
     render(
       <Provider store={application.store}>
         <TraitOfferEditor
           address={interaction.owner}
           interactions={interactions}
-          onCommit={onCommit}
+          onCommit={vi.fn()}
         />
       </Provider>,
     );
 
-    const checkbox = screen.getByLabelText('Death Defiance condition met');
-    expect((checkbox as HTMLInputElement).checked).toBe(false);
-    await user.click(checkbox);
-    await user.click(screen.getByRole('button', { name: 'Save trait offer' }));
-    expect(onCommit).toHaveBeenCalledWith(
-      expect.objectContaining({ deathDefianceConditionMet: true }),
-    );
+    expect(screen.queryByLabelText('Death Defiance condition met')).toBeNull();
     application.dispose();
   });
 
-  it('reevaluates a Medea draft immediately when its Death Defiance condition changes', async () => {
+  it('keeps a preferred Medea draft saveable without an obsolete condition control', async () => {
     const application = createApplication();
     const project = loadSurfaceNStoryBoardProject();
     application.store.dispatch(authoredProjectReplaced(project));
@@ -1783,24 +1769,18 @@ describe('trait offer editor', () => {
           initial.value.options[1]!,
           initial.value.options[2]!,
         ] as AuthoredTraitOfferTraits['options'],
-        deathDefianceConditionMet: false,
       },
     });
     application.store.dispatch(authoredProjectReplaced(invalidProject));
     const workspace = application.selectStructuredWorkspace(application.store.getState());
     const interaction = workspace.interactions.traitOffers.get(initial.key);
     if (interaction === undefined) throw new Error('edited Medea trait interaction is missing');
-    const user = userEvent.setup();
     render(
       <Provider store={application.store}>
         <TraitOfferEditor address={interaction.owner} interactions={workspace.interactions} />
       </Provider>,
     );
 
-    expect(await screen.findByText(/deathDefianceConditionMet/)).toBeTruthy();
-    await user.click(screen.getByLabelText('Death Defiance condition met'));
-
-    await waitFor(() => expect(screen.queryByText(/deathDefianceConditionMet/)).toBeNull());
     expect(
       (screen.getByRole('button', { name: 'Save trait offer' }) as HTMLButtonElement).disabled,
     ).toBe(false);

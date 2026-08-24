@@ -1412,7 +1412,7 @@ describe('route loadout interaction', () => {
     expect(selector).toHaveProperty('value', 'ManaOverTimeRefundKeepsake');
   });
 
-  it('authors the Jeweled Pom result and its local Death Defiance condition at route start', async () => {
+  it('authors the Jeweled Pom result at route start', async () => {
     const { application, user } = renderPlannerForInteraction();
     await user.selectOptions(screen.getByLabelText('Configure route up to'), '1');
     await user.selectOptions(
@@ -1447,8 +1447,6 @@ describe('route loadout interaction', () => {
     expect(application.store.getState().editorSession.selectedFinding?.origin).toEqual(
       missingFinding.origin,
     );
-    const condition = screen.getByRole('checkbox', { name: 'Death Defiance condition met' });
-    await user.click(condition);
     result.focus();
     await waitFor(() =>
       expect(within(result).getByRole('option', { name: 'Last Gasp' })).toHaveProperty(
@@ -1463,17 +1461,12 @@ describe('route loadout interaction', () => {
         .keepsakeEquipResults?.jeweledPom,
     ).toEqual({
       traitKey: 'HadesDeathDefianceDamageBoon',
-      deathDefianceConditionMet: true,
     });
     expect(
       application.store.getState().projectWorkspace.assembly.evaluation.routes[0]?.biomes,
     ).toHaveLength(1);
 
-    await user.click(condition);
-    expect(condition).toHaveProperty('checked', false);
-    await user.click(screen.getByRole('button', { name: 'Undo' }));
-    await waitFor(() => expect(condition).toHaveProperty('checked', true));
-    expect(result).toHaveProperty('value', 'HadesDeathDefianceDamageBoon');
+    expect(screen.queryByRole('checkbox', { name: 'Death Defiance condition met' })).toBeNull();
   });
 
   it('repairs the route-start Experimental Hammer result through its projected control', async () => {

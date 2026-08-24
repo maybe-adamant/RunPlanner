@@ -178,7 +178,7 @@ export interface GorgonEligibilityInput {
   readonly roomBlocked: boolean;
   readonly encounterBlocked: boolean;
   readonly figLeafSkipped: boolean;
-  readonly deathDefianceConditionMet: boolean;
+  readonly athenaTriggerConditionMet: boolean;
 }
 export function assessGorgonEligibility(input: GorgonEligibilityInput): boolean {
   return (
@@ -187,7 +187,7 @@ export function assessGorgonEligibility(input: GorgonEligibilityInput): boolean 
     !input.roomBlocked &&
     !input.encounterBlocked &&
     !input.figLeafSkipped &&
-    input.deathDefianceConditionMet
+    input.athenaTriggerConditionMet
   );
 }
 
@@ -349,12 +349,7 @@ export function assessJeweledPomEquipResult(
     catalog,
     result.traitKey,
     before,
-    {
-      resolvedProviderKey: effect.giverKey,
-      ...(result.deathDefianceConditionMet === undefined
-        ? {}
-        : { deathDefianceConditionMet: result.deathDefianceConditionMet }),
-    },
+    { resolvedProviderKey: effect.giverKey },
     result.rarity,
   );
   return Object.freeze({

@@ -375,7 +375,6 @@ describe('All Together direct trait settlement', () => {
       'encounterCompleted',
       findings,
       undefined,
-      undefined,
       'selection',
       undefined,
       undefined,

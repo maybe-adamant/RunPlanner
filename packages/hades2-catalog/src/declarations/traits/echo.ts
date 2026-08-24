@@ -21,8 +21,12 @@ export const echoTraits = [
     ...raritylessEchoTrait,
     key: 'EchoDeathDefianceRefill',
     label: 'Survive Survive Survive',
-    offerRequirements: [
-      { kind: 'offerContext', context: 'deathDefianceConditionMet', required: true },
+    offerRequirements: [],
+    runtimeOfferRequirement: 'missingLastStand',
+    runtimeOfferFallbackTraitKeys: [
+      'DiminishingDodgeBoon',
+      'DiminishingHealthAndManaBoon',
+      'EchoDoubleLevelBoon',
     ],
     selectedDisposition: { kind: 'echo', effect: 'survive' },
   },

@@ -193,7 +193,6 @@ describe('underworld product loop', () => {
           { traitKey: 'EchoDoubleLevelBoon', echoPomTarget: null },
         ],
         selectedOptionKey: 'option1',
-        deathDefianceConditionMet: false,
         rarificationActions: [],
       },
     });
@@ -328,7 +327,6 @@ describe('underworld product loop', () => {
           { traitKey: 'EchoDoubleLevelBoon', echoPomTarget: null },
         ],
         selectedOptionKey: 'option1',
-        deathDefianceConditionMet: false,
         rarificationActions: [],
       },
     });

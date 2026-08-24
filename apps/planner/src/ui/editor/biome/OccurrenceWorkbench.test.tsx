@@ -1446,7 +1446,7 @@ describe('OccurrenceWorkbench', () => {
         .projectWorkspace.history.present.routes.flatMap((route) => route.biomes)
         .find((biome) => biome.biomeKey === 'P')
         ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === occurrenceId)
-        ?.encounters.gorgonResultByPhase?.Combat?.deathDefianceConditionMet,
+        ?.encounters.gorgonResultByPhase?.Combat?.athenaTriggerConditionMet,
     ).toBe(true);
   });
 
@@ -1573,7 +1573,6 @@ describe('OccurrenceWorkbench', () => {
           { traitKey: 'NarcissusC' },
         ],
         selectedOptionKey: 'option1',
-        deathDefianceConditionMet: false,
       },
     });
     project = insertRoomAction(
@@ -1718,7 +1717,6 @@ describe('OccurrenceWorkbench', () => {
           { traitKey: 'NarcissusE' },
         ],
         selectedOptionKey: 'option1',
-        deathDefianceConditionMet: false,
       },
     });
     project = insertRoomAction(
@@ -1814,7 +1812,6 @@ describe('OccurrenceWorkbench', () => {
           { traitKey: 'NarcissusE' },
         ],
         selectedOptionKey: 'option1',
-        deathDefianceConditionMet: false,
       },
     });
     const narcissusSite = selectedNarcissusPickupSite(project, occurrence.occurrenceId);
@@ -2858,7 +2855,7 @@ describe('OccurrenceWorkbench', () => {
     expect(within(timeline).queryByRole('region', { name: 'Timeline repairs' })).toBeNull();
   });
 
-  it('renders and binds the applicable Shop Death Defiance repair control', async () => {
+  it('removes the Shop Death Defiance repair control while retaining purchase authoring', async () => {
     const project = createGoldenFGHIProject();
     const shop = project.routes
       .flatMap((route) => route.biomes)
@@ -2871,7 +2868,8 @@ describe('OccurrenceWorkbench', () => {
       'I',
       occurrenceById(shop.occurrenceId),
     );
-    const control = screen.getByLabelText('Death Defiance condition met') as HTMLInputElement;
+    expect(screen.queryByLabelText('Death Defiance condition met')).toBeNull();
+    const control = screen.getByRole('checkbox', { name: 'Purchased Offer 3' }) as HTMLInputElement;
     expect(control.checked).toBe(false);
     const before = view.application.store.getState().projectWorkspace.history.past.length;
     await view.user.click(control);

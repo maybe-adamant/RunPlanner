@@ -1,7 +1,7 @@
 {
-  "schemaVersion": 53,
+  "schemaVersion": 54,
   "projectId": "golden-fg",
-  "catalogVersion": "0.35.0-nemesis-random-events",
+  "catalogVersion": "0.36.0-runtime-offer-fallback",
   "routes": [
     {
       "routeKey": "Underworld",
@@ -123,7 +123,7 @@
                   },
                   "gorgonResultByPhase": {
                     "Encounter": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     }
                   }
                 },
@@ -189,7 +189,7 @@
                   },
                   "gorgonResultByPhase": {
                     "Encounter": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     }
                   }
                 },
@@ -230,7 +230,7 @@
                   },
                   "gorgonResultByPhase": {
                     "Encounter": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     }
                   }
                 },
@@ -271,7 +271,7 @@
                   },
                   "gorgonResultByPhase": {
                     "Encounter": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     }
                   }
                 },
@@ -312,7 +312,7 @@
                   },
                   "gorgonResultByPhase": {
                     "Encounter": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     }
                   }
                 },
@@ -363,7 +363,7 @@
                   },
                   "gorgonResultByPhase": {
                     "Encounter": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     }
                   }
                 },
@@ -404,7 +404,7 @@
                   },
                   "gorgonResultByPhase": {
                     "Encounter": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     }
                   }
                 },
@@ -445,7 +445,7 @@
                   },
                   "gorgonResultByPhase": {
                     "Encounter": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     }
                   }
                 },
@@ -486,7 +486,7 @@
                   },
                   "gorgonResultByPhase": {
                     "Encounter": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     }
                   }
                 },
@@ -628,7 +628,7 @@
                   },
                   "gorgonResultByPhase": {
                     "Encounter": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     }
                   }
                 },
@@ -687,7 +687,7 @@
                   },
                   "gorgonResultByPhase": {
                     "Encounter": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     }
                   }
                 },
@@ -730,7 +730,7 @@
                   },
                   "gorgonResultByPhase": {
                     "Encounter": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     }
                   }
                 },
@@ -771,7 +771,7 @@
                   },
                   "gorgonResultByPhase": {
                     "Encounter": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     }
                   }
                 },
@@ -818,7 +818,7 @@
                   },
                   "gorgonResultByPhase": {
                     "Encounter": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     }
                   }
                 },
@@ -859,7 +859,7 @@
                   },
                   "gorgonResultByPhase": {
                     "Encounter": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     }
                   }
                 },
@@ -918,7 +918,7 @@
                   },
                   "gorgonResultByPhase": {
                     "Encounter": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     }
                   }
                 },
@@ -1447,7 +1447,7 @@
                   },
                   "gorgonResultByPhase": {
                     "Encounter": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     }
                   }
                 },
@@ -1488,7 +1488,7 @@
                   },
                   "gorgonResultByPhase": {
                     "Encounter": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     }
                   }
                 },
@@ -1529,7 +1529,7 @@
                   },
                   "gorgonResultByPhase": {
                     "Encounter": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     }
                   }
                 },
@@ -1580,8 +1580,7 @@
                           }
                         ],
                         "selectedOptionKey": "option1",
-                        "rarificationActions": [],
-                        "deathDefianceConditionMet": false
+                        "rarificationActions": []
                       }
                     }
                   }
@@ -1645,7 +1644,7 @@
                   },
                   "gorgonResultByPhase": {
                     "Encounter": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     }
                   }
                 },
@@ -1686,7 +1685,7 @@
                   },
                   "gorgonResultByPhase": {
                     "Encounter": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     }
                   }
                 },
@@ -1727,7 +1726,7 @@
                   },
                   "gorgonResultByPhase": {
                     "Encounter": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     }
                   }
                 },
@@ -1846,7 +1845,7 @@
                   },
                   "gorgonResultByPhase": {
                     "Encounter": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     }
                   }
                 },
@@ -2019,7 +2018,7 @@
                   },
                   "gorgonResultByPhase": {
                     "Encounter": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     }
                   }
                 },
@@ -2060,7 +2059,7 @@
                   },
                   "gorgonResultByPhase": {
                     "Encounter": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     }
                   }
                 },
@@ -2544,16 +2543,16 @@
                   },
                   "gorgonResultByPhase": {
                     "Passive": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     },
                     "Cage01": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     },
                     "Cage02": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     },
                     "Cage03": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     }
                   }
                 },
@@ -2707,16 +2706,16 @@
                   },
                   "gorgonResultByPhase": {
                     "Passive": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     },
                     "Cage01": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     },
                     "Cage02": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     },
                     "Cage03": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     }
                   }
                 },
@@ -2831,16 +2830,16 @@
                   },
                   "gorgonResultByPhase": {
                     "Passive": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     },
                     "Cage01": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     },
                     "Cage02": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     },
                     "Cage03": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     }
                   }
                 },
@@ -3107,16 +3106,16 @@
                   },
                   "gorgonResultByPhase": {
                     "Passive": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     },
                     "Cage01": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     },
                     "Cage02": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     },
                     "Cage03": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     }
                   }
                 },
@@ -3216,16 +3215,16 @@
                   },
                   "gorgonResultByPhase": {
                     "Passive": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     },
                     "Cage01": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     },
                     "Cage02": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     },
                     "Cage03": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     }
                   }
                 },

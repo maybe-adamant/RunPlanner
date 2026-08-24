@@ -1041,7 +1041,6 @@ export interface TraitOfferContext {
   readonly aspectKey?: string;
   readonly devotionNoDuo?: boolean;
   readonly blockGiftBoons?: boolean;
-  readonly deathDefianceConditionMet?: boolean;
   /** Canonical reward-history fact consumed only by Echo Reward availability. */
   readonly echoLastRewardAvailable?: boolean;
   readonly echoLastRewardRecreation?: NonNullable<RewardHistoryState['lastRewardRecreation']>;
@@ -1157,8 +1156,6 @@ function assessEchoLastRunBoonOption(
   catalog: Catalog,
   traitKey: string,
   history: TraitHistoryState,
-  context: Pick<TraitOfferContext, 'deathDefianceConditionMet'>,
-  requiresDeathDefianceCondition: boolean,
 ): TraitAssessment {
   const trait = catalog.traits.byKey[traitKey];
   if (trait === undefined)
@@ -1180,8 +1177,6 @@ function assessEchoLastRunBoonOption(
     findings.push({ code: 'previouslyPicked', traitKey });
   if (trait.equipmentSlot !== undefined && history.equippedSlots[trait.equipmentSlot] !== undefined)
     findings.push({ code: 'occupiedBoonSlot', traitKey, detail: trait.equipmentSlot });
-  if (requiresDeathDefianceCondition && context.deathDefianceConditionMet !== true)
-    findings.push({ code: 'offerContext', traitKey, detail: 'deathDefianceConditionMet' });
   if (
     trait.targetedAcquisition !== undefined &&
     targetedAcquisitionTargetKeys(catalog, traitKey, history).length === 0
@@ -1194,7 +1189,6 @@ function assessEchoLastRunBoonOption(
 export function echoLastRunBoonOutcomes(
   catalog: Catalog,
   history: TraitHistoryState,
-  context: Pick<TraitOfferContext, 'deathDefianceConditionMet'> = {},
 ): readonly EchoLastRunBoonOutcome[] {
   return Object.freeze(
     catalog.echoLastRunBoon.variants.values.flatMap((variant) => {
@@ -1213,13 +1207,7 @@ export function echoLastRunBoonOutcomes(
           }),
           effectiveRarity,
           targetTraitKeys: targetedAcquisitionTargetKeys(catalog, variant.traitKey, history),
-          assessment: assessEchoLastRunBoonOption(
-            catalog,
-            variant.traitKey,
-            history,
-            context,
-            variant.requiresDeathDefianceCondition === true,
-          ),
+          assessment: assessEchoLastRunBoonOption(catalog, variant.traitKey, history),
         });
       });
     }),
@@ -1301,7 +1289,6 @@ function compositionDomainCacheKey(giverKey: string, context: TraitOfferContext)
     context.aspectKey,
     context.devotionNoDuo,
     context.blockGiftBoons,
-    context.deathDefianceConditionMet,
     context.echoLastRewardAvailable,
     context.echoLastRewardRecreation,
     context.freshRarityOverride,
@@ -1421,6 +1408,37 @@ export interface ReachedTraitOfferEvaluation {
   readonly targetedAcquisition: TraitTargetedAcquisitionAssessment;
   readonly reached: true;
   readonly chronologicalIndex: number;
+  /** Derived only: execution receives one candidate, never the declaration list. */
+  readonly runtimeOfferFallbackTraitKey?: string;
+}
+
+/** Resolve the bounded runtime safety result without changing authored intent.
+ * Companion screen rows are excluded; ordinary simulated-prefix legality is
+ * reused so this is neither persisted nor a second eligibility model. */
+export function resolveRuntimeOfferFallbackTraitKey(
+  catalog: Catalog,
+  offer: AuthoredTraitOffer,
+  history: TraitHistoryState,
+  context: TraitOfferContext = {},
+  excludedTraitKeys: readonly string[] = [],
+): string | undefined {
+  if (offer.kind !== 'traits') return undefined;
+  const selected = offer.options[optionIndex(offer.selectedOptionKey)];
+  const candidates =
+    selected === undefined
+      ? undefined
+      : catalog.traits.byKey[selected.traitKey]?.runtimeOfferFallbackTraitKeys;
+  if (candidates === undefined) return undefined;
+  const companions = new Set([
+    ...offer.options
+      .filter((_, index) => index !== optionIndex(offer.selectedOptionKey))
+      .map((option) => option.traitKey),
+    ...excludedTraitKeys,
+  ]);
+  return candidates.find(
+    (traitKey) =>
+      !companions.has(traitKey) && assessTraitOption(catalog, traitKey, history, context).legal,
+  );
 }
 
 /** The branch-local evidence published for one reached selected offer. */
@@ -1474,6 +1492,7 @@ function evaluateReachedTraitOfferWithAssessments(
   /** Calling Card changes a rolled row after base-offer legality is established. */
   rarificationBaseOffer?: AuthoredTraitOffer,
   assessments?: readonly TraitAssessment[],
+  runtimeOfferFallbackExcludedTraitKeys?: readonly string[],
 ): ReachedTraitOfferEvaluation {
   const effectiveContext = chaosAdjustedTraitOfferContext(catalog, before, offer, context);
   // Exact one-result sources (for example, a keepsake equip) are direct
@@ -1559,6 +1578,13 @@ function evaluateReachedTraitOfferWithAssessments(
       })
     : assessTraitReplacementComposition(catalog, legalityOffer, before, effectiveContext);
   const targetedAcquisition = assessSelectedTargetedAcquisition(catalog, legalityOffer, before);
+  const runtimeOfferFallbackTraitKey = resolveRuntimeOfferFallbackTraitKey(
+    catalog,
+    offer,
+    before,
+    effectiveContext,
+    runtimeOfferFallbackExcludedTraitKeys,
+  );
   return Object.freeze({
     address,
     acquisitionRole,
@@ -1573,6 +1599,7 @@ function evaluateReachedTraitOfferWithAssessments(
     targetedAcquisition,
     reached: true,
     chronologicalIndex,
+    ...(runtimeOfferFallbackTraitKey === undefined ? {} : { runtimeOfferFallbackTraitKey }),
   });
 }
 
@@ -1589,6 +1616,7 @@ export function evaluateReachedTraitOffer(
   keepsakes?: KeepsakeState,
   /** Calling Card changes a rolled row after base-offer legality is established. */
   rarificationBaseOffer?: AuthoredTraitOffer,
+  runtimeOfferFallbackExcludedTraitKeys?: readonly string[],
 ): ReachedTraitOfferEvaluation {
   return evaluateReachedTraitOfferWithAssessments(
     catalog,
@@ -1602,6 +1630,8 @@ export function evaluateReachedTraitOffer(
     directAcquisition,
     keepsakes,
     rarificationBaseOffer,
+    undefined,
+    runtimeOfferFallbackExcludedTraitKeys,
   );
 }
 
@@ -1616,6 +1646,7 @@ export function evaluateReachedEchoLastRunBoonOffer(
   chronologicalIndex: number,
   arcanaFear?: ArcanaFearState,
   keepsakes?: KeepsakeState,
+  runtimeOfferFallbackExcludedTraitKeys: readonly string[] = [],
 ): ReachedTraitOfferEvaluation {
   const option = offer.options[0];
   if (
@@ -1640,6 +1671,7 @@ export function evaluateReachedEchoLastRunBoonOffer(
     keepsakes,
     undefined,
     Object.freeze([outcome.assessment]),
+    runtimeOfferFallbackExcludedTraitKeys,
   );
 }
 
@@ -2283,7 +2315,7 @@ function checkRequirement(
             ? context.blockGiftBoons
             : requirement.context === 'circeRemovableFearVow'
               ? context.circeRemovableFearVow
-              : context.deathDefianceConditionMet) === requirement.required
+              : false) === requirement.required
       )
         return undefined;
       return { code: 'offerContext', detail: requirement.context };
@@ -2585,7 +2617,7 @@ export function assessTraitOption(
   if (
     trait.selectedDisposition.kind === 'echo' &&
     trait.selectedDisposition.effect === 'lastRunBoon' &&
-    !echoLastRunBoonOutcomes(catalog, history, context).some((outcome) => outcome.assessment.legal)
+    !echoLastRunBoonOutcomes(catalog, history).some((outcome) => outcome.assessment.legal)
   )
     findings.push({ code: 'offerContext', traitKey, detail: 'echoLastRunBoonEmpty' });
   if (

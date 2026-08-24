@@ -60,7 +60,6 @@ describe('requirement evaluator registry', () => {
       'clockworkGoalsRemaining',
       'clockworkNonGoalCapacity',
       'flagEquals',
-      'authoredCondition',
     ]);
     expect(hasRequirementEvaluator('counterRange')).toBe(true);
     expect(hasRequirementEvaluator('externalSavePredicate')).toBe(false);
@@ -169,28 +168,6 @@ describe('requirement evaluator registry', () => {
     expect(
       evaluateRequirement({ kind: 'flagEquals', flag: 'pendingSpellDrop', value: false }, context),
     ).toBe(false);
-  });
-
-  it('evaluates authored Death Defiance conditions independently from run facts', () => {
-    const requirement = {
-      kind: 'authoredCondition',
-      condition: 'deathDefianceConditionMet',
-      value: true,
-    } as const;
-
-    expect(
-      evaluateRequirement(requirement, {
-        ...baseContext,
-        authoredConditions: { deathDefianceConditionMet: true },
-      }),
-    ).toBe(true);
-    expect(
-      evaluateRequirement(requirement, {
-        ...baseContext,
-        authoredConditions: { deathDefianceConditionMet: false },
-      }),
-    ).toBe(false);
-    expect(evaluateRequirement(requirement, baseContext)).toBe(false);
   });
 
   it('counts a requested envelope slot at most once per recent room', () => {

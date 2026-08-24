@@ -51,12 +51,12 @@ export const medeaTraits = [
     key: 'DeathDefianceRetaliateCurse',
     label: 'Malice in Kind',
     ...raritylessNpcTrait,
-    offerRequirements: [
-      {
-        kind: 'offerContext',
-        context: 'deathDefianceConditionMet',
-        required: true,
-      },
+    offerRequirements: [],
+    runtimeOfferRequirement: 'heldLastStand',
+    runtimeOfferFallbackTraitKeys: [
+      'HealingOnDeathCurse',
+      'MoneyOnDeathCurse',
+      'ManaOverTimeCurse',
     ],
   },
   {

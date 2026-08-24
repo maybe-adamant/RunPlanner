@@ -195,7 +195,7 @@ describe('Gorgon Amulet lifecycle', () => {
 
   it.each([
     ['depth', { biomeDepthCache: 1 }],
-    ['false DD', { deathDefianceConditionMet: false }],
+    ['missing Athena trigger', { athenaTriggerConditionMet: false }],
     ['room blocker', { roomBlocked: true }],
     ['encounter blocker', { encounterBlocked: true }],
     ['Fig Leaf', { figLeafSkipped: true }],
@@ -208,7 +208,7 @@ describe('Gorgon Amulet lifecycle', () => {
         roomBlocked: false,
         encounterBlocked: false,
         figLeafSkipped: false,
-        deathDefianceConditionMet: true,
+        athenaTriggerConditionMet: true,
         ...override,
       }),
     ).toBe(false);
@@ -223,7 +223,7 @@ describe('Gorgon Amulet lifecycle', () => {
         roomBlocked: false,
         encounterBlocked: false,
         figLeafSkipped: false,
-        deathDefianceConditionMet: true,
+        athenaTriggerConditionMet: true,
       }),
     ).toBe(true);
   });
@@ -369,7 +369,6 @@ describe('Gorgon Amulet lifecycle', () => {
       if (offer === undefined) return;
       expect(offer.options).toHaveLength(3);
       expect(offer.options.every((option) => option.rarity === rarity)).toBe(true);
-      expect(offer.deathDefianceConditionMet).toBeUndefined();
       const branch = initializeTestRewardBranches()[0]!;
       const phase = createEncounterPhaseAddress(
         createBiomeAddress('Underworld', 'G'),
@@ -385,11 +384,12 @@ describe('Gorgon Amulet lifecycle', () => {
         'encounterCompleted',
         undefined,
         undefined,
-        true,
         'gorgonAthena',
         rarity,
       );
-      expect(evaluated.traitEvaluations?.at(-1)?.context.deathDefianceConditionMet).toBe(true);
+      expect(evaluated.traitEvaluations?.at(-1)?.context).not.toHaveProperty(
+        'athenaTriggerConditionMet',
+      );
       expect(evaluated.traitHistory?.equippedTraits.InvulnerabilityDashBoon?.rarity).toBe(rarity);
     },
   );
@@ -543,7 +543,7 @@ describe('Gorgon Amulet lifecycle', () => {
         (occurrence) => occurrence.occurrenceId === pOccurrenceId('P_Combat03', 1, 1),
       );
     const enabledResult = enabledOccurrence?.encounters.gorgonResultByPhase?.Combat;
-    expect(enabledResult?.deathDefianceConditionMet).toBe(true);
+    expect(enabledResult?.athenaTriggerConditionMet).toBe(true);
     expect(enabledResult?.athenaOffer).toBeNull();
     const authored = authorGorgon(enabled, phase);
 
@@ -560,7 +560,7 @@ describe('Gorgon Amulet lifecycle', () => {
       );
     const disabledResult = disabledOccurrence?.encounters.gorgonResultByPhase?.Combat;
     expect(disabledResult?.athenaOffer).toEqual(athenaOffer());
-    expect(disabledResult?.deathDefianceConditionMet).toBe(false);
+    expect(disabledResult?.athenaTriggerConditionMet).toBe(false);
   });
 
   it('undoes and redoes the Gorgon condition without losing the retained child', () => {
@@ -591,7 +591,7 @@ describe('Gorgon Amulet lifecycle', () => {
       ?.topology?.occurrences.find(
         (occurrence) => occurrence.occurrenceId === pOccurrenceId('P_Combat03', 1, 1),
       )?.encounters.gorgonResultByPhase?.Combat;
-    expect(result?.deathDefianceConditionMet).toBe(true);
+    expect(result?.athenaTriggerConditionMet).toBe(true);
     expect(result?.athenaOffer).toBeNull();
   });
 
@@ -692,7 +692,7 @@ describe('Gorgon Amulet lifecycle', () => {
                                           gorgonResultByPhase: Object.freeze({
                                             ...(occurrence.encounters.gorgonResultByPhase ?? {}),
                                             Encounter: Object.freeze({
-                                              deathDefianceConditionMet: true,
+                                              athenaTriggerConditionMet: true,
                                               athenaOffer: Object.freeze({
                                                 ...occurrence.encounters.gorgonResultByPhase
                                                   ?.Encounter?.athenaOffer,
@@ -760,7 +760,7 @@ describe('Gorgon Amulet lifecycle', () => {
                                           gorgonResultByPhase: Object.freeze({
                                             ...(occurrence.encounters.gorgonResultByPhase ?? {}),
                                             Encounter: Object.freeze({
-                                              deathDefianceConditionMet: true,
+                                              athenaTriggerConditionMet: true,
                                             }),
                                           }),
                                         }),

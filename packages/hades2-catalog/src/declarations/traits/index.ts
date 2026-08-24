@@ -248,11 +248,6 @@ export const traitCatalogInput: RawTraitCatalogInput = {
     { key: 'devotionNoDuo', kind: 'rewardRarityBlock', blockedRarity: 'Duo' },
     { key: 'blockGiftBoons', kind: 'roomFlag', roomFlag: 'BlockGiftBoons' },
     {
-      key: 'deathDefianceConditionMet',
-      kind: 'authoredCondition',
-      authoredCondition: 'deathDefianceConditionMet',
-    },
-    {
       key: 'circeRemovableFearVow',
       kind: 'authoredCondition',
       authoredCondition: 'circeRemovableFearVow',

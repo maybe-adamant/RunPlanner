@@ -50,6 +50,7 @@ import {
   evaluateTraitOfferFocusedOptionCandidate,
 } from '../../src/simulation/candidates/trait-offer';
 import { processEncounterTraitOffer } from '../../src/simulation/rewards/processing';
+import { selectedTraitOfferProducts } from '../../src/simulation/rewards/biome';
 import {
   assessTraitOption,
   attachTraitHistory,
@@ -77,7 +78,6 @@ const echoOwner = createTraitOfferAddress(
 function echoOffer(
   selectedOptionKey: AuthoredTraitOfferTraits['selectedOptionKey'],
   options: AuthoredTraitOfferTraits['options'],
-  deathDefianceConditionMet = false,
 ): AuthoredTraitOfferTraits {
   return Object.freeze({
     kind: 'traits',
@@ -85,7 +85,6 @@ function echoOffer(
     options,
     selectedOptionKey,
     rarificationActions: Object.freeze([]),
-    deathDefianceConditionMet,
   });
 }
 
@@ -122,22 +121,15 @@ function echoBoonChild(
   return Object.freeze({ options, selectedOptionKey });
 }
 
-function echoBoonOffer(
-  child?: AuthoredEchoLastRunBoonOffer,
-  deathDefianceConditionMet = false,
-): AuthoredTraitOfferTraits {
-  return echoOffer(
-    'option1',
-    [
-      Object.freeze({
-        traitKey: 'EchoLastRunBoon',
-        ...(child === undefined ? {} : { echoLastRunBoon: child }),
-      }),
-      Object.freeze({ traitKey: 'DiminishingDodgeBoon' }),
-      Object.freeze({ traitKey: 'EchoDoubleLevelBoon', echoPomTarget: null }),
-    ],
-    deathDefianceConditionMet,
-  );
+function echoBoonOffer(child?: AuthoredEchoLastRunBoonOffer): AuthoredTraitOfferTraits {
+  return echoOffer('option1', [
+    Object.freeze({
+      traitKey: 'EchoLastRunBoon',
+      ...(child === undefined ? {} : { echoLastRunBoon: child }),
+    }),
+    Object.freeze({ traitKey: 'DiminishingDodgeBoon' }),
+    Object.freeze({ traitKey: 'EchoDoubleLevelBoon', echoPomTarget: null }),
+  ]);
 }
 
 function echoRewardOffer(): AuthoredTraitOfferTraits {
@@ -372,58 +364,47 @@ function echoOfferInDocument(document: JsonRecord): JsonRecord {
 
 describe('Echo Gate A direct choices', () => {
   it.each([
-    [false, ['DiminishingDodgeBoon', 'DiminishingHealthAndManaBoon', 'EchoDoubleLevelBoon']],
-    [true, ['EchoDeathDefianceRefill', 'DiminishingDodgeBoon', 'EchoDoubleLevelBoon']],
-  ] as const)(
-    'keeps ordinary exact-three offers legal with DD condition %s',
-    (deathDefianceConditionMet, optionTraitKeys) => {
-      const project = completeGoldenFGHProject();
-      const evaluation = simulateProjectAssembly(catalog, project).evaluation;
-      const value = echoOffer(
-        'option1',
+    ['DiminishingDodgeBoon', 'DiminishingHealthAndManaBoon', 'EchoDoubleLevelBoon'],
+    ['EchoDeathDefianceRefill', 'DiminishingDodgeBoon', 'EchoDoubleLevelBoon'],
+  ] as const)('keeps ordinary exact-three offers legal', (...optionTraitKeys) => {
+    const project = completeGoldenFGHProject();
+    const evaluation = simulateProjectAssembly(catalog, project).evaluation;
+    const value = echoOffer('option1', [
+      echoTraitOption(optionTraitKeys[0]),
+      echoTraitOption(optionTraitKeys[1]),
+      echoTraitOption(optionTraitKeys[2]),
+    ]);
+    const candidateArtifacts = createTraitOfferCandidateArtifacts(
+      catalog,
+      new Map([
         [
-          echoTraitOption(optionTraitKeys[0]),
-          echoTraitOption(optionTraitKeys[1]),
-          echoTraitOption(optionTraitKeys[2]),
-        ],
-        deathDefianceConditionMet,
-      );
-      const candidateArtifacts = createTraitOfferCandidateArtifacts(
-        catalog,
-        new Map([
+          semanticAddressKey(echoOwner),
           [
-            semanticAddressKey(echoOwner),
-            [
-              Object.freeze({
-                before: createTraitHistoryState(),
-                context: Object.freeze({
-                  resolvedProviderKey: 'Echo',
-                  deathDefianceConditionMet,
-                }),
-              }),
-            ],
+            Object.freeze({
+              before: createTraitHistoryState(),
+              context: Object.freeze({ resolvedProviderKey: 'Echo' }),
+            }),
           ],
-        ]),
-      );
-      expect(
-        (['option1', 'option2', 'option3'] as const).map((optionKey) =>
-          evaluateTraitOfferFocusedOptionCandidate(
-            catalog,
-            project,
-            evaluation,
-            candidateArtifacts,
-            { kind: 'traitOfferFocusedOption', trait: echoOwner, value, optionKey },
-          ),
-        ),
-      ).toEqual([
-        expect.objectContaining({ result: expect.objectContaining({ supported: true }) }),
-        expect.objectContaining({ result: expect.objectContaining({ supported: true }) }),
-        expect.objectContaining({ result: expect.objectContaining({ supported: true }) }),
-      ]);
-    },
-  );
+        ],
+      ]),
+    );
+    expect(
+      (['option1', 'option2', 'option3'] as const).map((optionKey) =>
+        evaluateTraitOfferFocusedOptionCandidate(catalog, project, evaluation, candidateArtifacts, {
+          kind: 'traitOfferFocusedOption',
+          trait: echoOwner,
+          value,
+          optionKey,
+        }),
+      ),
+    ).toEqual([
+      expect.objectContaining({ result: expect.objectContaining({ supported: true }) }),
+      expect.objectContaining({ result: expect.objectContaining({ supported: true }) }),
+      expect.objectContaining({ result: expect.objectContaining({ supported: true }) }),
+    ]);
+  });
 
-  it('marks Survive unavailable, without affecting the three unconditional identities', () => {
+  it('keeps Survive authorable without a Death Defiance condition', () => {
     const project = completeGoldenFGHProject();
     const evaluation = simulateProjectAssembly(catalog, project).evaluation;
     const value = echoOffer('option1', [
@@ -439,10 +420,7 @@ describe('Echo Gate A direct choices', () => {
           [
             Object.freeze({
               before: createTraitHistoryState(),
-              context: Object.freeze({
-                resolvedProviderKey: 'Echo',
-                deathDefianceConditionMet: false,
-              }),
+              context: Object.freeze({ resolvedProviderKey: 'Echo' }),
             }),
           ],
         ],
@@ -457,7 +435,7 @@ describe('Echo Gate A direct choices', () => {
     );
     expect(survive).toMatchObject({
       kind: 'traitOfferFocusedOption',
-      result: { supported: false },
+      result: { supported: true },
     });
   });
 
@@ -583,12 +561,12 @@ describe('Echo Gate A direct choices', () => {
   });
 
   it.each([
-    ['DiminishingDodgeBoon', false],
-    ['DiminishingHealthAndManaBoon', false],
-    ['EchoDeathDefianceRefill', true],
-    ['EchoDoubleLevelBoon', false],
-    ['EchoDoubleShop', false],
-  ] as const)('retains %s as a rarityless outer acquisition', (traitKey, dd) => {
+    'DiminishingDodgeBoon',
+    'DiminishingHealthAndManaBoon',
+    'EchoDeathDefianceRefill',
+    'EchoDoubleLevelBoon',
+    'EchoDoubleShop',
+  ] as const)('retains %s as a rarityless outer acquisition', (traitKey) => {
     const siblingKeys = [
       'DiminishingDodgeBoon',
       'DiminishingHealthAndManaBoon',
@@ -603,15 +581,11 @@ describe('Echo Gate A direct choices', () => {
       catalog,
       baseBranch(),
       echoOwner.owner,
-      echoOffer(
-        'option1',
-        [
-          echoTraitOption(traitKey),
-          echoTraitOption(siblingKeys[0]),
-          echoTraitOption(siblingKeys[1]),
-        ],
-        dd,
-      ),
+      echoOffer('option1', [
+        echoTraitOption(traitKey),
+        echoTraitOption(siblingKeys[0]),
+        echoTraitOption(siblingKeys[1]),
+      ]),
       10,
       'encounterCompleted',
       findings,
@@ -629,7 +603,7 @@ describe('Echo Gate A direct choices', () => {
     expect(findings.size).toBe(0);
   });
 
-  it('rejects Survive when its source-local DD condition is false', () => {
+  it('acquires Survive without a source-local Death Defiance condition', () => {
     const findings = new Map();
     const result = processEncounterTraitOffer(
       catalog,
@@ -644,8 +618,8 @@ describe('Echo Gate A direct choices', () => {
       'encounterCompleted',
       findings,
     );
-    expect(result.traitHistory?.equippedTraits.EchoDeathDefianceRefill).toBeUndefined();
-    expect([...findings.values()].map((entry) => entry.finding.code)).toContain('offerContext');
+    expect(result.traitHistory?.equippedTraits.EchoDeathDefianceRefill).toBeDefined();
+    expect([...findings.values()].map((entry) => entry.finding.code)).not.toContain('offerContext');
   });
 
   it('offers only greatest-level Pom ties and doubles the selected current level', () => {
@@ -737,10 +711,9 @@ describe('Echo Gate A direct choices', () => {
       ],
       selectedOptionKey: 'option1',
       rarificationActions: [],
-      deathDefianceConditionMet: false,
     });
     const decoded = decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog);
-    expect(decoded.schemaVersion).toBe(53);
+    expect(decoded.schemaVersion).toBe(54);
     const invalidRarityDocument = JSON.parse(encodeProjectDocument(project)) as JsonRecord;
     const invalidRarityOffer = echoOfferInDocument(invalidRarityDocument);
     ((invalidRarityOffer.options as JsonRecord[])[0] ?? {}).rarity = 'Common';
@@ -900,7 +873,7 @@ describe('Echo Gate B Boon Boon Boon', () => {
     expect(floored).toMatchObject({ effectiveRarity: 'Rare', assessment: { legal: true } });
   });
 
-  it('threads the outer Death Defiance condition through Athena candidates and outer availability', () => {
+  it('keeps nested Athena candidates authorable without an outer Death Defiance condition', () => {
     const history = createTraitHistoryState();
     const child = echoBoonChild(
       Object.freeze([
@@ -921,14 +894,14 @@ describe('Echo Gate B Boon Boon Boon', () => {
         ],
       ]),
     ).at(echoOwner);
-    const falseAthena = capability
-      ?.echoLastRunBoon(echoBoonOffer(child, false), 'option1')[0]
+    const firstAthena = capability
+      ?.echoLastRunBoon(echoBoonOffer(child), 'option1')[0]
       ?.find((outcome) => outcome.option.traitKey === 'DeathDefianceRefillBoon');
-    const trueAthena = capability
-      ?.echoLastRunBoon(echoBoonOffer(child, true), 'option1')[0]
+    const secondAthena = capability
+      ?.echoLastRunBoon(echoBoonOffer(child), 'option1')[0]
       ?.find((outcome) => outcome.option.traitKey === 'DeathDefianceRefillBoon');
-    expect(falseAthena).toMatchObject({ assessment: { legal: false } });
-    expect(trueAthena).toMatchObject({ assessment: { legal: true } });
+    expect(firstAthena).toMatchObject({ assessment: { legal: true } });
+    expect(secondAthena).toMatchObject({ assessment: { legal: true } });
 
     const onlyAthena = Object.freeze({
       ...history,
@@ -943,13 +916,6 @@ describe('Echo Gate B Boon Boon Boon', () => {
     expect(
       assessTraitOption(catalog, 'EchoLastRunBoon', onlyAthena, {
         resolvedProviderKey: 'Echo',
-        deathDefianceConditionMet: false,
-      }).legal,
-    ).toBe(false);
-    expect(
-      assessTraitOption(catalog, 'EchoLastRunBoon', onlyAthena, {
-        resolvedProviderKey: 'Echo',
-        deathDefianceConditionMet: true,
       }).legal,
     ).toBe(true);
 
@@ -957,17 +923,20 @@ describe('Echo Gate B Boon Boon Boon', () => {
       catalog,
       baseBranch(),
       echoOwner.owner,
-      echoBoonOffer(child, false),
+      echoBoonOffer(child),
       10,
       'encounterCompleted',
     );
     expect(rejected.traitHistory?.equippedTraits.EchoLastRunBoon).toBeDefined();
-    expect(rejected.traitHistory?.equippedTraits.DeathDefianceRefillBoon).toBeUndefined();
+    expect(rejected.traitHistory?.equippedTraits.DeathDefianceRefillBoon).toMatchObject({
+      giverKey: 'Athena',
+      rarity: 'Common',
+    });
     const accepted = processEncounterTraitOffer(
       catalog,
       baseBranch(),
       echoOwner.owner,
-      echoBoonOffer(child, true),
+      echoBoonOffer(child),
       10,
       'encounterCompleted',
     );
@@ -975,6 +944,70 @@ describe('Echo Gate B Boon Boon Boon', () => {
       giverKey: 'Athena',
       rarity: 'Common',
     });
+  });
+
+  it('keeps a nested selected fallback at its exact Echo child address and excludes every sibling row', () => {
+    const child = echoBoonChild(
+      Object.freeze([
+        { giverKey: 'Athena', traitKey: 'DeathDefianceRefillBoon', rarity: 'Common' },
+        { giverKey: 'Athena', traitKey: 'InvulnerabilityDashBoon', rarity: 'Common' },
+        { giverKey: 'Athena', traitKey: 'RetaliateInvulnerabilityBoon', rarity: 'Common' },
+      ] as const),
+    );
+    const result = processEncounterTraitOffer(
+      catalog,
+      baseBranch(),
+      echoOwner.owner,
+      echoBoonOffer(child),
+      10,
+      'encounterCompleted',
+    );
+    const nested = result.traitEvaluations?.find(
+      (evaluation) => evaluation.address.kind === 'echoLastRunBoon',
+    );
+    expect(nested).toMatchObject({
+      address: { kind: 'echoLastRunBoon', optionKey: 'option1' },
+      runtimeOfferFallbackTraitKey: 'FocusLastStandBoon',
+    });
+    expect(selectedTraitOfferProducts([result]).runtimeOfferFallbacks).toEqual([
+      expect.objectContaining({
+        address: expect.objectContaining({ kind: 'echoLastRunBoon', optionKey: 'option1' }),
+        preferredKey: 'DeathDefianceRefillBoon',
+        fallbackKey: 'FocusLastStandBoon',
+      }),
+    ]);
+    expect(result.traitHistory?.equippedTraits.DeathDefianceRefillBoon).toBeDefined();
+    expect(result.traitHistory?.equippedTraits.FocusLastStandBoon).toBeUndefined();
+  });
+
+  it('suppresses a nested runtime fallback when reached branches disagree', () => {
+    const child = echoBoonChild(
+      Object.freeze([
+        { giverKey: 'Athena', traitKey: 'DeathDefianceRefillBoon', rarity: 'Common' },
+        { giverKey: 'Athena', traitKey: 'InvulnerabilityDashBoon', rarity: 'Common' },
+        { giverKey: 'Athena', traitKey: 'RetaliateInvulnerabilityBoon', rarity: 'Common' },
+      ] as const),
+    );
+    const resolved = processEncounterTraitOffer(
+      catalog,
+      baseBranch(),
+      echoOwner.owner,
+      echoBoonOffer(child),
+      10,
+      'encounterCompleted',
+    );
+    const unresolved = Object.freeze({
+      ...resolved,
+      traitEvaluations: Object.freeze(
+        (resolved.traitEvaluations ?? []).map((evaluation) => {
+          if (evaluation.address.kind !== 'echoLastRunBoon') return evaluation;
+          const withoutFallback = { ...evaluation };
+          delete withoutFallback.runtimeOfferFallbackTraitKey;
+          return Object.freeze(withoutFallback);
+        }),
+      ),
+    });
+    expect(selectedTraitOfferProducts([resolved, unresolved]).runtimeOfferFallbacks).toEqual([]);
   });
 
   it('publishes row-distinct transient domains without choosing an append default', () => {

@@ -118,8 +118,6 @@ export function projectCommandAddress(
       return command.offer;
     case 'ReplaceShopOffer':
       return command.offer;
-    case 'ReplaceShopDeathDefianceCondition':
-      return command.shop;
     case 'SelectDerivedShopEntry':
     case 'EditDerivedShopEntry':
       return command.site;

@@ -25,7 +25,6 @@ import {
   type RoomStateContext,
 } from './declaration';
 import { createUnresolvedAcquisitionRewardState, producerLevelEffectSource } from '../traits';
-import { shopProfileUsesDeathDefianceCondition } from '../shop';
 
 function requireCountedStore(
   binding: CountedRewardBinding,
@@ -63,9 +62,6 @@ function defaultShopState(catalog: Catalog, binding: ShopRewardBinding, path: st
   }
   return Object.freeze({
     profileKey: profile.key,
-    ...(shopProfileUsesDeathDefianceCondition(catalog, profile.key)
-      ? { deathDefianceConditionMet: false }
-      : {}),
     offers: Object.freeze(offers),
   });
 }

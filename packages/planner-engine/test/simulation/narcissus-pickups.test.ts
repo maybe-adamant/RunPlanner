@@ -76,11 +76,7 @@ function replacePickupActions(
   ]);
 }
 
-function selectNarcissus(
-  project: ProjectDocument,
-  traitKeys: readonly [string, string, string],
-  deathDefianceConditionMet = false,
-) {
+function selectNarcissus(project: ProjectDocument, traitKeys: readonly [string, string, string]) {
   const occurrence = narcissusOccurrence(project);
   return applyProjectCommand(project, catalog, {
     kind: 'ReplaceTraitOffer',
@@ -101,7 +97,6 @@ function selectNarcissus(
         { traitKey: string },
       ],
       selectedOptionKey: 'option1',
-      deathDefianceConditionMet,
     },
   });
 }
@@ -202,20 +197,20 @@ describe('Narcissus pickup producer', () => {
   });
 
   it.each([
-    ['NarcissusB', 'ashes', 'MetaCardPointsCommonDrop', false],
-    ['NarcissusD', 'psyche', 'MemPointsCommonDrop', false],
-    ['NarcissusD', 'maxMana', 'MaxManaDrop', false],
-    ['NarcissusE', 'bones', 'MetaCurrencyDrop', false],
-    ['NarcissusE', 'maxHealth', 'MaxHealthDrop', false],
-    ['NarcissusH', 'lastStand', 'LastStandDrop', true],
+    ['NarcissusB', 'ashes', 'MetaCardPointsCommonDrop'],
+    ['NarcissusD', 'psyche', 'MemPointsCommonDrop'],
+    ['NarcissusD', 'maxMana', 'MaxManaDrop'],
+    ['NarcissusE', 'bones', 'MetaCurrencyDrop'],
+    ['NarcissusE', 'maxHealth', 'MaxHealthDrop'],
+    ['NarcissusH', 'lastStand', 'LastStandDrop'],
   ] as const)(
     'settles %s %s normally or through Time Piece as one exact free pickup',
-    (traitKey, entryKey, acquisitionGameName, deathDefianceConditionMet) => {
-      let normalProject = selectNarcissus(
-        createGoldenFGHIProject(),
-        [traitKey, 'NarcissusC', 'NarcissusF'],
-        deathDefianceConditionMet,
-      );
+    (traitKey, entryKey, acquisitionGameName) => {
+      let normalProject = selectNarcissus(createGoldenFGHIProject(), [
+        traitKey,
+        'NarcissusC',
+        'NarcissusF',
+      ]);
       const entry = pickupEntry(normalProject, entryKey);
       const before = evaluatedG(normalProject).rewards.branches[0];
       normalProject = replacePickupActions(normalProject, entry.site, [entryKey]);
@@ -365,11 +360,11 @@ describe('Narcissus pickup producer', () => {
   });
 
   it('retains absent, normal, and Time Piece converted optional pickup states in the canonical route', () => {
-    let project = selectNarcissus(
-      createGoldenFGHIProject(),
-      ['NarcissusH', 'NarcissusB', 'NarcissusC'],
-      true,
-    );
+    let project = selectNarcissus(createGoldenFGHIProject(), [
+      'NarcissusH',
+      'NarcissusB',
+      'NarcissusC',
+    ]);
     const entry = pickupEntry(project, 'lastStand');
     const site = pickupSite(project);
     const absent = evaluatedG(project);
@@ -529,28 +524,18 @@ describe('Narcissus pickup producer', () => {
     ).toBe(true);
   });
 
-  it.each([
-    ['A', false],
-    ['B', false],
-    ['C', false],
-    ['D', false],
-    ['E', false],
-    ['F', false],
-    ['G', false],
-    ['H', true],
-  ] as const)(
+  it.each([['A'], ['B'], ['C'], ['D'], ['E'], ['F'], ['G'], ['H']] as const)(
     'records Narcissus%s as an equipped trait, including empty F',
-    (suffix, deathDefianceConditionMet) => {
+    (suffix) => {
       const traitKey = `Narcissus${suffix}`;
       const options = ['NarcissusA', 'NarcissusB', 'NarcissusC', 'NarcissusD'].filter(
         (candidate) => candidate !== traitKey,
       );
       while (options.length < 3) options.push('NarcissusD');
-      const project = selectNarcissus(
-        createGoldenFGHIProject(),
-        [traitKey, ...options.slice(0, 2)] as [string, string, string],
-        deathDefianceConditionMet,
-      );
+      const project = selectNarcissus(createGoldenFGHIProject(), [
+        traitKey,
+        ...options.slice(0, 2),
+      ] as [string, string, string]);
       const histories = evaluatedG(project).rewards.branches.map((branch) => branch.traitHistory);
       expect(histories).not.toHaveLength(0);
       expect(histories.every((history) => history?.equippedTraits[traitKey] !== undefined)).toBe(
@@ -597,7 +582,7 @@ describe('Narcissus pickup producer', () => {
     });
   });
 
-  it('admits the Last Stand pickup only when the local Death Defiance condition is true', () => {
+  it('keeps the preferred Last Stand pickup authorable without a Death Defiance condition', () => {
     const disabled = selectNarcissus(createGoldenFGHIProject(), [
       'NarcissusH',
       'NarcissusB',
@@ -606,16 +591,9 @@ describe('Narcissus pickup producer', () => {
     const disabledG = simulateProject(catalog, disabled)
       .routes.find((route) => route.routeKey === 'Underworld')
       ?.biomes.find((biome) => biome.biomeKey === 'G');
-    expect(
-      disabledG?.authoring === 'complete' && disabledG.rewards.findings.length,
-    ).toBeGreaterThan(0);
-    const enabled = selectNarcissus(
-      createGoldenFGHIProject(),
-      ['NarcissusH', 'NarcissusB', 'NarcissusC'],
-      true,
-    );
-    const site = pickupSite(enabled);
-    expect(narcissusOccurrence(enabled).acquisitionSites?.[site.pointKey]).toMatchObject({
+    expect(disabledG?.authoring).toBe('complete');
+    const site = pickupSite(disabled);
+    expect(narcissusOccurrence(disabled).acquisitionSites?.[site.pointKey]).toMatchObject({
       pickupEntries: { lastStand: { offer: { rewardType: 'LastStandDrop' } } },
     });
   });
@@ -691,7 +669,6 @@ describe('Narcissus pickup producer', () => {
           { traitKey: 'NarcissusE' },
         ],
         selectedOptionKey: 'option1',
-        deathDefianceConditionMet: false,
       },
     });
     expect(
@@ -1118,11 +1095,11 @@ describe('Narcissus pickup producer', () => {
       ]!.traitKey;
     expect(blindBoxHistory?.equippedTraits[selectedBlindBoxTrait]).toBeDefined();
 
-    let lastStand = selectNarcissus(
-      createCompleteFGProject(),
-      ['NarcissusH', 'NarcissusB', 'NarcissusC'],
-      true,
-    );
+    let lastStand = selectNarcissus(createCompleteFGProject(), [
+      'NarcissusH',
+      'NarcissusB',
+      'NarcissusC',
+    ]);
     lastStand = replacePickupActions(lastStand, pickupSite(lastStand), ['lastStand']);
     expect(evaluatedG(lastStand).rewards.branches[0]?.events).toContainEqual(
       expect.objectContaining({

@@ -295,15 +295,18 @@ describe('reward-kernel declaration parity', () => {
     expect(rewardKernelCatalog.shops.byKey.Q_WorldShop?.slotCount).toBe(6);
     expect(rewardKernelCatalog.shops.byKey.Q_WorldShop?.groups.values[0]?.offerCount).toBe(2);
     for (const profileKey of ['I_WorldShop', 'Q_WorldShop'] as const) {
-      const option = rewardKernelCatalog.shops.byKey[profileKey]?.groups.values
-        .flatMap((group) => group.options.values)
-        .find((entry) => entry.key === 'LastStandDrop');
-      expect(option?.requirement).toEqual({
-        kind: 'authoredCondition',
-        condition: 'deathDefianceConditionMet',
-        value: true,
-      });
-      expect(option?.purchaseRequirement).toEqual(option?.requirement);
+      const survival = rewardKernelCatalog.shops.byKey[profileKey]?.groups.byKey.Survival;
+      const option = survival?.options.byKey.LastStandDrop;
+      expect(option?.requirement).toBeUndefined();
+      expect(option?.purchaseRequirement).toBeUndefined();
+      expect(option?.runtimeOfferRequirement).toBe('missingLastStand');
+      expect(option?.runtimeOfferFallbackRewardTypes).toEqual(['ArmorBoost', 'ArmorBigBoost']);
+      expect(survival?.options.byKey.ArmorBoost?.runtimeOfferFallbackRewardTypes).toEqual([
+        'RoomRewardHealDrop',
+      ]);
+      expect(survival?.options.byKey.ArmorBigBoost?.runtimeOfferFallbackRewardTypes).toEqual([
+        'HealBigDrop',
+      ]);
     }
     expect(rewardKernelCatalog.shops.byKey.WorldShop?.groups.byKey.Boon?.rewardTypes).toEqual([
       'RandomLoot',

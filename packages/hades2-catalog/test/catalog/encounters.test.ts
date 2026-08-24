@@ -828,6 +828,11 @@ describe('encounter envelope catalog', () => {
       freeItem: {
         resultRewardTypes: ['EmptyMaxHealthDrop', 'HealDrop', 'LastStandDrop', 'ArmorBoost'],
         conditionalResultRewardType: 'LastStandDrop',
+        runtimeOfferRequirement: 'missingLastStand',
+        runtimeOfferFallbacks: [
+          { preferredRewardType: 'LastStandDrop', fallbackRewardType: 'ArmorBoost' },
+          { preferredRewardType: 'ArmorBoost', fallbackRewardType: 'EmptyMaxHealthDrop' },
+        ],
         response: 'none',
         pickupRequired: false,
       },

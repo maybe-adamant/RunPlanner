@@ -121,7 +121,6 @@ describe('Circe selected trait acquisition', () => {
       'encounterCompleted',
       findings,
       undefined,
-      undefined,
       'selection',
       undefined,
       loadout,

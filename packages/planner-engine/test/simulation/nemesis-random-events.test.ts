@@ -195,6 +195,32 @@ describe('Nemesis random events', () => {
     15_000,
   );
 
+  it('publishes Nemesis free-item fallbacks at the event address without a Shop action', () => {
+    let project = selectEvent();
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceNemesisRandomEventOutcome',
+      event: createNemesisRandomEventAddress(phase),
+      value: { kind: 'freeItem' },
+      reward: { rewardType: 'LastStandDrop' },
+    });
+    project = insertOptionalResult(project);
+    const evaluation = simulateProjectAssembly(catalog, project).evaluation;
+    const biome = evaluation.routes
+      .find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find((candidate) => candidate.biomeKey === 'F');
+    if (biome?.authoring !== 'complete') throw new Error('Nemesis F evaluation is incomplete');
+    expect(biome.rewards.runtimeOfferFallbacks).toContainEqual(
+      expect.objectContaining({
+        address: createNemesisRandomEventAddress(phase),
+        preferredKey: 'LastStandDrop',
+        fallbackKey: 'ArmorBoost',
+      }),
+    );
+    expect(
+      biome.rewards.runtimeOfferFallbacks.some((fallback) => fallback.address.kind === 'shopOffer'),
+    ).toBe(false);
+  });
+
   it('reuses Time Piece and Sea Star capability while forbidding Artificer on the event result', () => {
     let project = selectEvent();
     project = applyProjectCommand(project, catalog, {

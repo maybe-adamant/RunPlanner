@@ -96,9 +96,9 @@ export const narcissusTraits = [
     ...raritylessNpcTrait,
     key: 'NarcissusH',
     label: 'Life Savings',
-    offerRequirements: [
-      { kind: 'offerContext', context: 'deathDefianceConditionMet', required: true },
-    ],
+    offerRequirements: [],
+    runtimeOfferRequirement: 'missingLastStand',
+    runtimeOfferFallbackTraitKeys: ['NarcissusB', 'NarcissusC', 'NarcissusD'],
     selectedDisposition: {
       kind: 'producePickups',
       producerLifecycleKey: 'NarcissusPickup',

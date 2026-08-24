@@ -394,7 +394,6 @@ describe('structured workspace occurrence assembly', () => {
           { traitKey: 'DiminishingHealthAndManaBoon' },
         ],
         selectedOptionKey: 'option1',
-        deathDefianceConditionMet: false,
         rarificationActions: [],
       },
     });
@@ -1458,7 +1457,6 @@ describe('structured workspace occurrence assembly', () => {
           { traitKey: 'NarcissusE' },
         ],
         selectedOptionKey: 'option1',
-        deathDefianceConditionMet: false,
       },
     });
     const actions = assemble(project, 'Underworld', 'G', occurrence.occurrenceId).assembly.node.room
@@ -1513,7 +1511,6 @@ describe('structured workspace occurrence assembly', () => {
           { traitKey: 'NarcissusC' },
         ],
         selectedOptionKey: 'option1',
-        deathDefianceConditionMet: false,
       },
     });
     const current = project.routes
@@ -1608,7 +1605,7 @@ describe('structured workspace occurrence assembly', () => {
     expect(story.roomLocal.control).toBeUndefined();
   });
 
-  it('projects the applicable Shop condition as one repairable occurrence capability', () => {
+  it('does not project the retired Shop Death Defiance condition capability', () => {
     const project = createGoldenFGHIProject();
     const shopOccurrence = project.routes
       .flatMap((route) => route.biomes)
@@ -1621,15 +1618,11 @@ describe('structured workspace occurrence assembly', () => {
       goldenIBiome.biomeKey,
       shopOccurrence.occurrenceId,
     ).assembly;
-    expect(assembled.node.room.roomLocal).toMatchObject({
-      kind: 'shop',
-      deathDefianceCondition: { value: false },
-    });
-    expect(assembled.occurrenceInteractionRequirements).toContainEqual({
-      kind: 'shopDeathDefianceCondition',
-      owner: expect.objectContaining({ occurrenceId: shopOccurrence.occurrenceId }),
-      value: false,
-    });
+    expect(assembled.node.room.roomLocal).toMatchObject({ kind: 'shop' });
+    expect(assembled.node.room.roomLocal).not.toHaveProperty('deathDefianceCondition');
+    expect(assembled.occurrenceInteractionRequirements).not.toContainEqual(
+      expect.objectContaining({ kind: 'shopDeathDefianceCondition' }),
+    );
   });
 
   it('does not need evaluation entry to preserve authored room-local controls', () => {

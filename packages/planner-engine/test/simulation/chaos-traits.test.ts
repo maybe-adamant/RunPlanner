@@ -579,7 +579,6 @@ describe('Chaos paired-trait history', () => {
       'echoLastReward',
       undefined,
       undefined,
-      undefined,
       'self',
     );
     expect(settled.traitHistory?.activeChaosCurses).toMatchObject([

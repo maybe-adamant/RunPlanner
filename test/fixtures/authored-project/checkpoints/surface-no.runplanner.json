@@ -1,7 +1,7 @@
 {
-  "schemaVersion": 53,
+  "schemaVersion": 54,
   "projectId": "surface-2",
-  "catalogVersion": "0.35.0-nemesis-random-events",
+  "catalogVersion": "0.36.0-runtime-offer-fallback",
   "routes": [
     {
       "routeKey": "Underworld",
@@ -115,7 +115,7 @@
                   },
                   "gorgonResultByPhase": {
                     "Encounter": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     }
                   }
                 },
@@ -179,7 +179,7 @@
                   },
                   "gorgonResultByPhase": {
                     "Encounter": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     }
                   }
                 },
@@ -245,7 +245,7 @@
                   },
                   "gorgonResultByPhase": {
                     "Encounter": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     }
                   }
                 },
@@ -286,7 +286,7 @@
                   },
                   "gorgonResultByPhase": {
                     "Encounter": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     }
                   }
                 },
@@ -333,7 +333,7 @@
                   },
                   "gorgonResultByPhase": {
                     "Encounter": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     }
                   }
                 },
@@ -364,7 +364,7 @@
                   },
                   "gorgonResultByPhase": {
                     "Encounter": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     }
                   }
                 },
@@ -387,7 +387,7 @@
                   },
                   "gorgonResultByPhase": {
                     "Encounter": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     }
                   }
                 },
@@ -440,7 +440,7 @@
                   },
                   "gorgonResultByPhase": {
                     "Encounter": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     }
                   }
                 },
@@ -469,7 +469,7 @@
                   },
                   "gorgonResultByPhase": {
                     "Encounter": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     }
                   }
                 },
@@ -494,7 +494,7 @@
                   },
                   "gorgonResultByPhase": {
                     "Encounter": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     }
                   }
                 },
@@ -517,7 +517,7 @@
                   },
                   "gorgonResultByPhase": {
                     "Encounter": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     }
                   }
                 },
@@ -573,7 +573,7 @@
                   },
                   "gorgonResultByPhase": {
                     "Encounter": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     }
                   }
                 },
@@ -614,7 +614,7 @@
                   },
                   "gorgonResultByPhase": {
                     "Encounter": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     }
                   }
                 },
@@ -655,7 +655,7 @@
                   },
                   "gorgonResultByPhase": {
                     "Encounter": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     }
                   }
                 },
@@ -696,7 +696,7 @@
                   },
                   "gorgonResultByPhase": {
                     "Encounter": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     }
                   }
                 },
@@ -739,7 +739,7 @@
                   },
                   "gorgonResultByPhase": {
                     "Encounter": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     }
                   }
                 },
@@ -770,7 +770,7 @@
                   },
                   "gorgonResultByPhase": {
                     "Encounter": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     }
                   }
                 },
@@ -805,7 +805,7 @@
                   },
                   "gorgonResultByPhase": {
                     "Encounter": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     }
                   }
                 },
@@ -846,7 +846,7 @@
                   },
                   "gorgonResultByPhase": {
                     "Encounter": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     }
                   }
                 },
@@ -887,7 +887,7 @@
                   },
                   "gorgonResultByPhase": {
                     "Encounter": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     }
                   }
                 },
@@ -928,7 +928,7 @@
                   },
                   "gorgonResultByPhase": {
                     "Encounter": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     }
                   }
                 },
@@ -1054,7 +1054,7 @@
                   },
                   "gorgonResultByPhase": {
                     "Encounter": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     }
                   }
                 },
@@ -1085,7 +1085,7 @@
                   },
                   "gorgonResultByPhase": {
                     "Encounter": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     }
                   }
                 },
@@ -1110,7 +1110,7 @@
                   },
                   "gorgonResultByPhase": {
                     "Encounter": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     }
                   }
                 },
@@ -1135,7 +1135,7 @@
                   },
                   "gorgonResultByPhase": {
                     "Encounter": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     }
                   }
                 },
@@ -1529,10 +1529,10 @@
                   },
                   "gorgonResultByPhase": {
                     "Combat1": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     },
                     "Combat2": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     }
                   }
                 },
@@ -1600,10 +1600,10 @@
                   },
                   "gorgonResultByPhase": {
                     "Combat1": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     },
                     "Combat2": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     }
                   }
                 },
@@ -1671,10 +1671,10 @@
                   },
                   "gorgonResultByPhase": {
                     "Combat1": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     },
                     "Combat2": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     }
                   }
                 },
@@ -1893,10 +1893,10 @@
                   },
                   "gorgonResultByPhase": {
                     "Combat1": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     },
                     "Combat2": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     }
                   }
                 },

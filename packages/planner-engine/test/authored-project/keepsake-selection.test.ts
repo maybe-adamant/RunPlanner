@@ -99,7 +99,6 @@ describe('keepsake authored selections', () => {
       result: createKeepsakeEquipResultAddress(start, 'jeweledPom'),
       value: {
         traitKey: 'HadesDeathDefianceDamageBoon',
-        deathDefianceConditionMet: true,
       },
     });
     project = applyProjectCommand(project, catalog, {
@@ -117,7 +116,6 @@ describe('keepsake authored selections', () => {
         ?.jeweledPom,
     ).toEqual({
       traitKey: 'HadesDeathDefianceDamageBoon',
-      deathDefianceConditionMet: true,
     });
 
     project = applyProjectCommand(project, catalog, {

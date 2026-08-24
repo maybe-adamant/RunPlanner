@@ -19,7 +19,13 @@ import type {
   SourceResolutionPoint,
 } from '@run-planner/engine/reward-kernel';
 
-import { createCollection, requireNonEmpty, requirePositiveInteger } from '../common';
+import {
+  createCollection,
+  freezeUniqueStrings,
+  requireArray,
+  requireNonEmpty,
+  requirePositiveInteger,
+} from '../common';
 import { fail } from '../errors';
 import { normalizeRequirement, rejectEncounterHistoryRequirements } from '../requirements';
 import type {
@@ -573,7 +579,6 @@ function validateRequirementRewardReferences(
     case 'currentBatchRoomCount':
     case 'currentBatchTargetCount':
     case 'flagEquals':
-    case 'authoredCondition':
     case 'minExits':
     case 'minRoomsSinceEvent':
     case 'recentEnvelopeSlotCount':
@@ -699,6 +704,27 @@ function normalizeShopOption(
             `${path}.purchaseRequirement`,
           ),
         }),
+    ...(raw.runtimeOfferFallbackRewardTypes === undefined
+      ? {}
+      : (() => {
+          const values = freezeUniqueStrings(
+            requireArray(
+              raw.runtimeOfferFallbackRewardTypes,
+              `${path}.runtimeOfferFallbackRewardTypes`,
+            ) as readonly string[],
+            `${path}.runtimeOfferFallbackRewardTypes`,
+          );
+          if (values.length === 0)
+            fail(`${path}.runtimeOfferFallbackRewardTypes`, 'must not be empty');
+          if (values.some((rewardType) => rewardTypes.byKey[rewardType] === undefined))
+            fail(`${path}.runtimeOfferFallbackRewardTypes`, 'contains an unknown reward type');
+          return { runtimeOfferFallbackRewardTypes: values };
+        })()),
+    ...(raw.runtimeOfferRequirement === undefined
+      ? {}
+      : raw.runtimeOfferRequirement === 'missingLastStand'
+        ? { runtimeOfferRequirement: 'missingLastStand' as const }
+        : fail(`${path}.runtimeOfferRequirement`, 'has an unknown runtime offer requirement')),
     acquisitionLifecycle,
     purchaseInteraction,
     ...(boonRarityOverride === undefined
@@ -802,6 +828,15 @@ function normalizeShops(
           const groupRewardTypes = Object.freeze([
             ...new Set(options.values.map((option) => option.rewardType)),
           ]);
+          for (const option of options.values) {
+            const fallbacks = option.runtimeOfferFallbackRewardTypes;
+            if (fallbacks === undefined) continue;
+            if (fallbacks.some((rewardType) => !groupRewardTypes.includes(rewardType)))
+              fail(
+                `${groupPath}.options.${option.key}.runtimeOfferFallbackRewardTypes`,
+                'must remain in the exact Shop group',
+              );
+          }
           return Object.freeze({
             key: requireNonEmpty(group.key, `${groupPath}.key`),
             offerCount,

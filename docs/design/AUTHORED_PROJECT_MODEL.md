@@ -7,16 +7,16 @@ scope, biome topology, occurrence-local state, semantic addresses, commands,
 persistence, and history. Simulation algorithms, candidates, Redux state, and
 React rendering are separate concerns.
 
-## Schema 53 Boundary
+## Schema 54 Boundary
 
-Schema 53 is the sole persisted authored-project contract. The codec rejects
+Schema 54 is the sole persisted authored-project contract. The codec rejects
 every other schema version rather than manufacturing current topology or leaf
 state for a stale document. The migration CLI performs the explicit 49-to-50,
-50-to-51, 51-to-52, and 52-to-53 migrations outside the production decoder,
-and also updates the schema-53 catalog metadata from
+50-to-51, 51-to-52, 52-to-53, and 53-to-54 migrations outside the production
+decoder, and also updates the earlier catalog metadata from
 `0.32.0-run-impacting-traits` through
-`0.35.0-nemesis-random-events` without inventing authored outcomes. Catalog versions must
-match exactly after migration.
+`0.36.0-runtime-offer-fallback` without inventing authored outcomes. Catalog
+versions must match exactly after migration.
 
 Schemas 46 and 47 completed the occurrence-owned topology and chronology
 cutover: every supported authored main or N side room is a `RoomOccurrence`,
@@ -40,9 +40,13 @@ Schema 50 adds the boon-rarity ledger contacts, schema 51 adds the closed Chaos
 trait outcome, and schema 52 adds the Natural Selection result and sparse Steady
 Growth target contacts described below. Schema 53 adds sparse phase-local
 Nemesis random-event outcomes and their exact generated acquisition ownership;
-switching away from the event retains its detail dormant for restoration. Their
-derived history, progress, Ransom removals, automatic rarity mutations, and
-Nemesis settlement remain outside the persisted document.
+switching away from the event retains its detail dormant for restoration.
+Schema 54 removes general Death Defiance offer-condition state from traits,
+Shops, and Keepsake results while preserving Gorgon Amulet's narrowly owned
+`athenaTriggerConditionMet` phase fact. Runtime offer fallbacks are derived
+simulation output, never persisted intent. Derived history, progress, Ransom
+removals, automatic rarity mutations, Nemesis settlement, and runtime fallback
+resolution remain outside the persisted document.
 
 There is one biome plan and one topology language. Production state and
 semantic addresses have no layout-specific plan family, completion-transition

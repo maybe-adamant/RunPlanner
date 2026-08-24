@@ -933,29 +933,24 @@ describe('ordered shop transitions', () => {
       lastStandSlot: 3,
     },
   ] as const)(
-    'gates $profileKey LastStand generation and ordered purchase on one authored fact',
+    'keeps $profileKey LastStand generation and purchase independent of authored DD state',
     ({ profileKey, authored, lastStandSlot }) => {
       const profile = rewardKernelCatalog.shops.byKey[profileKey];
       if (profile === undefined) throw new Error(`missing ${profileKey}`);
-      const falseFacts = facts([], {
+      const factsAtShop = facts([], {
         counters: { ...requirementContext().counters, enteredBiomes: 4 },
-        authoredConditions: { deathDefianceConditionMet: false },
-      });
-      const trueFacts = facts([], {
-        counters: { ...requirementContext().counters, enteredBiomes: 4 },
-        authoredConditions: { deathDefianceConditionMet: true },
       });
 
       expect(
-        evaluateShopGenerationSupport(rewardKernelCatalog, profile, authored, falseFacts),
-      ).toMatchObject({ unsupportedSlotIndexes: [lastStandSlot], witnesses: [] });
+        evaluateShopGenerationSupport(rewardKernelCatalog, profile, authored, factsAtShop),
+      ).toMatchObject({ unsupportedSlotIndexes: [] });
       const witness = findShopGenerationWitnesses(
         rewardKernelCatalog,
         profile,
         authored,
-        trueFacts,
+        factsAtShop,
       )[0];
-      if (witness === undefined) throw new Error(`${profileKey} true-condition witness is missing`);
+      if (witness === undefined) throw new Error(`${profileKey} Last Stand witness is missing`);
       expect(
         simulateShopPurchases(
           rewardKernelCatalog,
@@ -964,9 +959,9 @@ describe('ordered shop transitions', () => {
           witness,
           [lastStandSlot],
           createRewardHistoryState(),
-          falseFacts,
+          factsAtShop,
         ),
-      ).toEqual([]);
+      ).toHaveLength(1);
       expect(
         simulateShopPurchases(
           rewardKernelCatalog,
@@ -975,7 +970,7 @@ describe('ordered shop transitions', () => {
           witness,
           [lastStandSlot],
           createRewardHistoryState(),
-          trueFacts,
+          factsAtShop,
         ),
       ).toHaveLength(1);
     },

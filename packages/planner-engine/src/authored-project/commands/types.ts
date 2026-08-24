@@ -323,17 +323,11 @@ export type LocalVisitCommand =
       readonly occurrenceIds: readonly OccurrenceId[];
     };
 
-export type ShopOccurrenceCommand =
-  | {
-      readonly kind: 'ReplaceShopOffer';
-      readonly offer: ShopOfferAddress;
-      readonly value: ResolvedRewardOffer;
-    }
-  | {
-      readonly kind: 'ReplaceShopDeathDefianceCondition';
-      readonly shop: OccurrenceAddress;
-      readonly value: boolean;
-    };
+export type ShopOccurrenceCommand = {
+  readonly kind: 'ReplaceShopOffer';
+  readonly offer: ShopOfferAddress;
+  readonly value: ResolvedRewardOffer;
+};
 
 export type AcquisitionSiteCommand =
   | {

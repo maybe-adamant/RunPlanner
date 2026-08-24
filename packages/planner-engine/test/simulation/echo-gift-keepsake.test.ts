@@ -258,7 +258,6 @@ describe('Echo Gift Gift Gift', () => {
         ]),
         selectedOptionKey: 'option1',
         rarificationActions: Object.freeze([]),
-        deathDefianceConditionMet: false,
       },
       10,
       'encounterCompleted',
@@ -582,7 +581,6 @@ describe('Echo Gift Gift Gift', () => {
         ]),
         selectedOptionKey: 'option1',
         rarificationActions: Object.freeze([]),
-        deathDefianceConditionMet: false,
       },
     });
     const h = evaluatedProject(project).routes[0]?.biomes.find((biome) => biome.biomeKey === 'H');
@@ -662,7 +660,6 @@ describe('Echo Gift Gift Gift', () => {
               {
                 ...loadout,
                 resolvedProviderKey: giver.key,
-                deathDefianceConditionMet: false,
               },
               'Common',
             ).legal
@@ -713,7 +710,6 @@ describe('Echo Gift Gift Gift', () => {
         ],
         selectedOptionKey: 'option1',
         rarificationActions: [],
-        deathDefianceConditionMet: false,
       },
     });
     project = applyProjectCommand(project, catalog, {

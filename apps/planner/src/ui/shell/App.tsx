@@ -110,26 +110,17 @@ function jeweledPomLoadable(
 
 function RouteStartJeweledPomResultControl({
   interaction,
-  missingDeathDefianceDraft,
-  setMissingDeathDefianceDraft,
 }: {
   readonly interaction: JeweledPomInteraction;
-  readonly missingDeathDefianceDraft: boolean;
-  readonly setMissingDeathDefianceDraft: (value: boolean) => void;
 }) {
   const dispatch = useAppDispatch();
   const selected = interaction.value;
-  const deathDefianceConditionMet =
-    selected === undefined
-      ? missingDeathDefianceDraft
-      : selected.deathDefianceConditionMet === true;
-  const revision = `${selected?.traitKey ?? ''}:${deathDefianceConditionMet ? 'dd' : 'no-dd'}`;
+  const revision = selected?.traitKey ?? '';
   const [candidateInput, setCandidateInput] = useState(() => ({
     interaction,
     revision,
     loadable: jeweledPomLoadable(interaction, {
       traitKey: selected?.traitKey ?? '',
-      ...(deathDefianceConditionMet ? { deathDefianceConditionMet: true } : {}),
     }),
   }));
   if (candidateInput.interaction !== interaction || candidateInput.revision !== revision) {
@@ -138,7 +129,6 @@ function RouteStartJeweledPomResultControl({
       revision,
       loadable: jeweledPomLoadable(interaction, {
         traitKey: selected?.traitKey ?? '',
-        ...(deathDefianceConditionMet ? { deathDefianceConditionMet: true } : {}),
       }),
     });
   }
@@ -164,7 +154,6 @@ function RouteStartJeweledPomResultControl({
                 interaction.intentFor({
                   ...(selected ?? {}),
                   traitKey,
-                  ...(deathDefianceConditionMet ? { deathDefianceConditionMet: true } : {}),
                 }).command,
               ),
             );
@@ -185,30 +174,6 @@ function RouteStartJeweledPomResultControl({
           );
         })}
       </select>
-      {interaction.supportsDeathDefianceCondition ? (
-        <label>
-          <input
-            checked={deathDefianceConditionMet}
-            type="checkbox"
-            onChange={(event) => {
-              if (selected === undefined) {
-                setMissingDeathDefianceDraft(event.target.checked);
-                return;
-              }
-              dispatch(
-                authoredProjectCommandDispatched(
-                  interaction.intentFor({
-                    traitKey: selected.traitKey,
-                    ...(selected.rarity === undefined ? {} : { rarity: selected.rarity }),
-                    deathDefianceConditionMet: event.target.checked,
-                  }).command,
-                ),
-              );
-            }}
-          />
-          Death Defiance condition met
-        </label>
-      ) : null}
     </fieldset>
   );
 }
@@ -275,7 +240,6 @@ function RouteOverview({
         { readonly owner: { readonly resultKind: 'jeweledPom' } }
       >
     | undefined;
-  const [missingPomDeathDefianceDraft, setMissingPomDeathDefianceDraft] = useState(false);
   const experimentalHammerAddress = createKeepsakeEquipResultAddress(
     startingKeepsake,
     'experimentalHammer',
@@ -372,13 +336,7 @@ function RouteOverview({
               })}
             </select>
           </label>
-          {pom === undefined ? null : (
-            <RouteStartJeweledPomResultControl
-              interaction={pom}
-              missingDeathDefianceDraft={missingPomDeathDefianceDraft}
-              setMissingDeathDefianceDraft={setMissingPomDeathDefianceDraft}
-            />
-          )}
+          {pom === undefined ? null : <RouteStartJeweledPomResultControl interaction={pom} />}
           {experimentalHammer === undefined ? null : (
             <fieldset className="field-control">
               <legend>Experimental Hammer result</legend>

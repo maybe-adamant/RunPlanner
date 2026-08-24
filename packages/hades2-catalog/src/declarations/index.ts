@@ -36,7 +36,7 @@ const rooms: readonly RawRoomDeclaration[] = [
 ];
 
 export const declarations = {
-  version: '0.35.0-nemesis-random-events',
+  version: '0.36.0-runtime-offer-fallback',
   biomes,
   routes,
   arcanaCards,

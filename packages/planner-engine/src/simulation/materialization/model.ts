@@ -66,7 +66,6 @@ export interface CanonicalShopOffer {
 export interface CanonicalShopEntryState {
   readonly kind: 'shop';
   readonly profileKey: string;
-  readonly deathDefianceConditionMet?: boolean;
   readonly offers: readonly CanonicalShopOffer[];
   readonly unresolvedOffers: readonly {
     readonly offerKey: string;

@@ -181,7 +181,6 @@ function applyUnchecked(
     case 'ReplaceRewardWheelOffer':
     case 'ReplaceRewardWheelPicked':
     case 'ReplaceShopOffer':
-    case 'ReplaceShopDeathDefianceCondition':
       return applyOccurrenceCommand(
         document,
         catalog,

@@ -185,7 +185,6 @@ export {
   traitOfferOption,
 } from './traits';
 export {
-  shopProfileUsesDeathDefianceCondition,
   createInfernalContractEntries,
   ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
   INFERNAL_CONTRACT_ENTRY_KEY,
