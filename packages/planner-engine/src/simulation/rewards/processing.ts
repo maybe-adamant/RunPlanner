@@ -37,6 +37,7 @@ import {
   artificerReplacementEntryKey,
   parseArtificerReplacementEntryKey,
 } from '../../authored-project/artificer';
+import { seaStarDuplicateSiteKey } from '../../authored-project/sea-star';
 import {
   ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
   echoShopDuplicateOffer,
@@ -320,6 +321,8 @@ export interface OwnedAcquisitionSettlementRequest {
   readonly source: AcquisitionSource;
   readonly historySequence: number;
   readonly roleBindings?: readonly AcquisitionSettlementRole[];
+  /** Exact authored Sea Star result sites whose source frontier must be retained. */
+  readonly authoredSeaStarDuplicateSiteKeys?: ReadonlySet<string>;
   /** Ordered sites publish a distinct dependent action instead of settling immediately. */
   readonly deferArtificerReplacement?: boolean;
 }
@@ -554,9 +557,13 @@ function equivalentBranchStateKey(branch: RewardBranchState): string {
     traitHistory: branch.traitHistory,
     arcanaFear: branch.arcanaFear,
     keepsakes: branch.keepsakes,
-    seaStarDuplicateEligibilityBySource: orderedRecord(
-      branch.seaStarDuplicateEligibilityBySource ?? {},
-    ),
+    ...(branch.seaStarDuplicateEligibilityBySource === undefined
+      ? {}
+      : {
+          seaStarDuplicateEligibilityBySource: orderedRecord(
+            branch.seaStarDuplicateEligibilityBySource,
+          ),
+        }),
     processedThroughHistorySequence: branch.processedThroughHistorySequence,
   });
 }
@@ -2742,6 +2749,8 @@ interface ShopProcessingContext {
   readonly order?: readonly string[];
   /** The current action is the final Shop-owned chronology row in this room. */
   readonly completeAfterOrder?: boolean;
+  /** Exact authored Sea Star result sites whose source frontier must be retained. */
+  readonly authoredSeaStarDuplicateSiteKeys?: ReadonlySet<string>;
 }
 
 export function processShopInventory(
@@ -3003,6 +3012,11 @@ export function settleShopAcquisitionSite(
                     traitContext: Object.freeze({}),
                   }),
                   historySequence,
+                  ...(context.authoredSeaStarDuplicateSiteKeys === undefined
+                    ? {}
+                    : {
+                        authoredSeaStarDuplicateSiteKeys: context.authoredSeaStarDuplicateSiteKeys,
+                      }),
                 },
                 context.facts,
                 candidateFindings,
@@ -3190,6 +3204,8 @@ export function settleShopAcquisitionSite(
           undefined,
           branchesBeforeEntry,
           true,
+          false,
+          context.authoredSeaStarDuplicateSiteKeys,
         );
       }
     }
@@ -3265,6 +3281,8 @@ export function settleShopAcquisitionSite(
         traitChildSettlements,
         agreementBranches,
         true,
+        false,
+        context.authoredSeaStarDuplicateSiteKeys,
       );
     }
     if (current.length !== 1) return false;
@@ -3329,6 +3347,11 @@ export function settleShopAcquisitionSite(
               }),
             ),
             historySequence,
+            ...(context.authoredSeaStarDuplicateSiteKeys === undefined
+              ? {}
+              : {
+                  authoredSeaStarDuplicateSiteKeys: context.authoredSeaStarDuplicateSiteKeys,
+                }),
           },
           context.facts,
           findings,
@@ -3521,6 +3544,11 @@ export function settleShopAcquisitionSite(
             historySequence,
             roleBindings: materialization.roleBindings,
             deferArtificerReplacement: true,
+            ...(context.authoredSeaStarDuplicateSiteKeys === undefined
+              ? {}
+              : {
+                  authoredSeaStarDuplicateSiteKeys: context.authoredSeaStarDuplicateSiteKeys,
+                }),
           },
           context.facts,
           findings,
@@ -3780,6 +3808,7 @@ export function settleProducerAcquisitionSite(
   atomicRegion?: string,
   findingChronology?: FindingChronology,
   siteOwner?: AcquisitionSiteOwnerAddress,
+  authoredSeaStarDuplicateSiteKeys?: ReadonlySet<string>,
 ): AcquisitionSettlementProduct {
   const incoming = room.incomingReward;
   if (
@@ -3885,6 +3914,8 @@ export function settleProducerAcquisitionSite(
               traitChildSettlements,
               undefined,
               true,
+              false,
+              authoredSeaStarDuplicateSiteKeys,
             );
       return Object.freeze({
         site,
@@ -3918,6 +3949,8 @@ export function settleProducerAcquisitionSite(
     traitChildSettlements,
     undefined,
     true,
+    false,
+    authoredSeaStarDuplicateSiteKeys,
   );
   return Object.freeze({
     site,
@@ -3991,6 +4024,8 @@ export function settleOwnedAcquisitionSite(
         traitChildSettlements,
         undefined,
         true,
+        false,
+        request.authoredSeaStarDuplicateSiteKeys,
       ),
     branches,
   );
@@ -4020,6 +4055,11 @@ export function settleOwnedAcquisitionSite(
             : { traitContext: request.source.traitContext }),
           ...(atomicRegion === undefined ? {} : { atomicRegion }),
           ...(findingChronology === undefined ? {} : { findingChronology }),
+          ...(request.authoredSeaStarDuplicateSiteKeys === undefined
+            ? {}
+            : {
+                authoredSeaStarDuplicateSiteKeys: request.authoredSeaStarDuplicateSiteKeys,
+              }),
         },
         findings,
       );
@@ -4058,6 +4098,7 @@ export function settleArtificerReplacementAcquisition(
     readonly traitContext?: CanonicalResolvedIncomingReward['traitContext'];
     readonly atomicRegion?: string;
     readonly findingChronology?: FindingChronology;
+    readonly authoredSeaStarDuplicateSiteKeys?: ReadonlySet<string>;
   },
   findings: Map<string, FindingRegionEntry>,
 ): AcquisitionSettlementProduct {
@@ -4146,6 +4187,7 @@ export function settleArtificerReplacementAcquisition(
       undefined,
       false,
       true,
+      request.authoredSeaStarDuplicateSiteKeys,
     );
   }
   return Object.freeze({
@@ -4191,6 +4233,8 @@ export function settlePickupAcquisitionSite(
     ) => AcquisitionSiteAddress;
     /** Closed entry identities that represent Sea Star's already-retained object. */
     readonly seaStarDuplicateEntryKeys?: ReadonlySet<string>;
+    /** Exact authored Sea Star result sites whose source frontier must be retained. */
+    readonly authoredSeaStarDuplicateSiteKeys?: ReadonlySet<string>;
     /** Candidate-only outer reward probes do not publish the child's own frontier. */
     readonly publishUnpickedChildFrontiers?: boolean;
   },
@@ -4329,6 +4373,8 @@ export function settlePickupAcquisitionSite(
           traitChildSettlements,
           undefined,
           true,
+          false,
+          request.authoredSeaStarDuplicateSiteKeys,
         );
       }
     }
@@ -4375,6 +4421,11 @@ export function settlePickupAcquisitionSite(
           ...(request.findingChronology === undefined
             ? {}
             : { findingChronology: request.findingChronology }),
+          ...(request.authoredSeaStarDuplicateSiteKeys === undefined
+            ? {}
+            : {
+                authoredSeaStarDuplicateSiteKeys: request.authoredSeaStarDuplicateSiteKeys,
+              }),
         },
         findings,
       );
@@ -4440,6 +4491,8 @@ export function settlePickupAcquisitionSite(
         traitChildSettlements,
         undefined,
         true,
+        false,
+        request.authoredSeaStarDuplicateSiteKeys,
       );
     }
   }
@@ -4468,6 +4521,7 @@ function applyProducerRoleHistory(
   directTraitAgreementBranches?: readonly RewardBranchState[],
   deferArtificerReplacement = false,
   offerAlreadyGenerated = false,
+  authoredSeaStarDuplicateSiteKeys?: ReadonlySet<string>,
 ): readonly RewardBranchState[] {
   const artificerReplacementRewardTypes = Object.freeze(
     [
@@ -4501,18 +4555,23 @@ function applyProducerRoleHistory(
   const next: RewardBranchState[] = [];
   let unresolvedArtificerReplacement = false;
   let unresolvedTraitOffer = false;
+  const seaStarSourceKey = semanticAddressKey(
+    createAcquisitionRoleAddress(incoming.origin, resolution.role),
+  );
+  const retainSeaStarEligibility =
+    authoredSeaStarDuplicateSiteKeys?.has(
+      seaStarDuplicateSiteKey(createAcquisitionRoleAddress(incoming.origin, resolution.role)),
+    ) === true;
   for (const branch of branches) {
-    const seaStarAssessment = assessSeaStarDuplication(catalog, branch, incoming, resolution);
-    const seaStarSourceKey = semanticAddressKey(
-      createAcquisitionRoleAddress(incoming.origin, resolution.role),
-    );
-    const attestedBranch = Object.freeze({
-      ...branch,
-      seaStarDuplicateEligibilityBySource: freezeRecord({
-        ...(branch.seaStarDuplicateEligibilityBySource ?? {}),
-        [seaStarSourceKey]: seaStarAssessment,
-      }),
-    });
+    const attestedBranch = retainSeaStarEligibility
+      ? Object.freeze({
+          ...branch,
+          seaStarDuplicateEligibilityBySource: freezeRecord({
+            ...(branch.seaStarDuplicateEligibilityBySource ?? {}),
+            [seaStarSourceKey]: assessSeaStarDuplication(catalog, branch, incoming, resolution),
+          }),
+        })
+      : branch;
     const branchFacts = facts(branch.history);
     if (
       !offerAlreadyGenerated &&
@@ -4745,6 +4804,7 @@ function applyProducerRoleHistory(
               undefined,
               false,
               true,
+              authoredSeaStarDuplicateSiteKeys,
             );
           }
           next.push(...replacementBranches);
