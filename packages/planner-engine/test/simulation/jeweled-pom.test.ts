@@ -14,6 +14,7 @@ import {
   applyJeweledPomEquipResult,
   processEncounterTraitOffer,
 } from '../../src/simulation/rewards/processing';
+import { selectedTraitOfferProducts } from '../../src/simulation/rewards/biome';
 import {
   applyKeepsakeDisposition,
   createKeepsakeState,
@@ -34,6 +35,35 @@ function authoredOffer(giverKey: string): AuthoredTraitOffer {
 }
 
 describe('Jeweled Pom', () => {
+  it('publishes Hades Last Gasp’s direct runtime fallback without changing the simulated acquisition', () => {
+    const seeded = initializeTestRewardBranches()[0]!;
+    const branch = Object.freeze({
+      ...seeded,
+      keepsakes: createKeepsakeState(catalog, 'HadesAndPersephoneKeepsake', seeded.arcanaFear),
+    });
+    const result = createKeepsakeEquipResultAddress(
+      createRouteStartKeepsakeSelectionAddress('Underworld'),
+      'jeweledPom',
+    );
+    const equipped = applyJeweledPomEquipResult(
+      catalog,
+      branch,
+      'HadesAndPersephoneKeepsake',
+      { jeweledPom: { traitKey: 'HadesDeathDefianceDamageBoon' } },
+      result,
+      1,
+    );
+    expect(equipped.traitHistory?.equippedTraits.HadesDeathDefianceDamageBoon).toBeDefined();
+    expect(equipped.traitHistory?.equippedTraits.HadesLifestealBoon).toBeUndefined();
+    expect(selectedTraitOfferProducts([equipped]).runtimeOfferFallbacks).toEqual([
+      expect.objectContaining({
+        address: result,
+        preferredKey: 'HadesDeathDefianceDamageBoon',
+        fallbackKey: 'HadesLifestealBoon',
+      }),
+    ]);
+  });
+
   it('acquires its exact one-result trait and applies +3 only to later eligible traits', () => {
     const seeded = initializeTestRewardBranches()[0]!;
     const branch = Object.freeze({

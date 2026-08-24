@@ -381,7 +381,6 @@ function traitOfferRevision(interaction: WorkspaceTraitOfferInteraction): string
       )
       .join(','),
     interaction.value.selectedOptionKey,
-    interaction.value.deathDefianceConditionMet === true ? 'dd' : 'no-dd',
   ].join('|');
 }
 
@@ -1375,8 +1374,6 @@ function LoadedTraitOfferEditor({
       ? values[0]
       : undefined;
   };
-  const deathDefianceCondition =
-    value.kind === 'traits' ? interaction.deathDefianceCondition : undefined;
   const spellOffer = interaction.giver.providerKind === 'spell';
   const traitsStartingDraft = useMemo(
     () => (value.kind === 'fallbackGold' ? interaction.traitsStartingDraft?.() : undefined),
@@ -1469,23 +1466,6 @@ function LoadedTraitOfferEditor({
   }
   return (
     <div className="trait-offer-editor">
-      {value.kind === 'traits' && deathDefianceCondition !== undefined ? (
-        <label className="trait-offer-condition">
-          <input
-            checked={value.deathDefianceConditionMet === true}
-            onChange={(event) =>
-              updateValue(
-                Object.freeze({
-                  ...value,
-                  deathDefianceConditionMet: event.target.checked,
-                }),
-              )
-            }
-            type="checkbox"
-          />
-          Death Defiance condition met
-        </label>
-      ) : null}
       {value.kind === 'fallbackGold' ? (
         <section className="trait-offer-fallback">
           <p>Fallback Gold</p>

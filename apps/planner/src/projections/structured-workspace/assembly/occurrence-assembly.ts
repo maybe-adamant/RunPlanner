@@ -26,7 +26,6 @@ import {
   createLevelResolutionAddress,
   createAcquisitionRoleAddress,
   traitOfferOption,
-  traitGiverUsesOfferContext,
   semanticAddressKey,
   type BiomeAddress,
   type CompletionRoomAddress,
@@ -96,7 +95,6 @@ import {
   type WorkspaceOccurrenceWorkbenchNode,
   type WorkspaceRewardControl,
   type WorkspaceExplicitRewardControl,
-  type WorkspaceShopConditionControl,
   type WorkspaceShopPurchaseDescriptor,
   type WorkspaceTraitOfferControl,
   type WorkspaceAcquisitionConversionControl,
@@ -387,14 +385,6 @@ function traitOfferControls(
         ...(circeResolution === undefined ? {} : { circeResolution }),
         ...(allTogetherSets === undefined ? {} : { allTogetherSets }),
         ...(naturalSelection === undefined ? {} : { naturalSelection }),
-        ...(offer.kind === 'traits' &&
-        traitGiverUsesOfferContext(input.catalog, giver.key, 'deathDefianceConditionMet')
-          ? {
-              deathDefianceCondition: {
-                value: offer.deathDefianceConditionMet ?? false,
-              },
-            }
-          : {}),
       }),
     );
   }
@@ -881,10 +871,10 @@ function activeEncounterPhasesForOwner(
     const authoredGorgonResult = encounters.gorgonResultByPhase?.[domain.slotKey];
     const gorgonResult =
       authoredGorgonResult === undefined && gorgonSupported
-        ? { deathDefianceConditionMet: false as const }
+        ? { athenaTriggerConditionMet: false as const }
         : authoredGorgonResult;
     const retainedGorgon =
-      gorgonResult?.deathDefianceConditionMet === true || gorgonResult?.athenaOffer !== undefined;
+      gorgonResult?.athenaTriggerConditionMet === true || gorgonResult?.athenaOffer !== undefined;
     const fixedPhase = domain.declaredEncounterKeys.length === 1;
     const fieldsPassive =
       room.mode.kind === 'authored' &&
@@ -939,7 +929,7 @@ function activeEncounterPhasesForOwner(
         : undefined;
     const gorgonPhaseAddress = createGorgonPhaseAddress(address);
     const gorgonAthenaOffer =
-      input.facts.detailsActive && gorgonResult?.deathDefianceConditionMet === true
+      input.facts.detailsActive && gorgonResult?.athenaTriggerConditionMet === true
         ? gorgonResult.athenaOffer == null
           ? undefined
           : materializeGorgonAthenaOffer(
@@ -960,7 +950,7 @@ function activeEncounterPhasesForOwner(
     const gorgonPhaseMarker = input.markerDestinations.marker(gorgonPhaseAddress);
     const gorgonAthena =
       input.facts.detailsActive &&
-      gorgonResult?.deathDefianceConditionMet === true &&
+      gorgonResult?.athenaTriggerConditionMet === true &&
       gorgonResult.athenaOffer !== undefined &&
       gorgonGiver !== undefined
         ? Object.freeze({
@@ -1147,14 +1137,6 @@ function activeEncounterPhasesForOwner(
               ...(echoPomTarget === undefined ? {} : { echoPomTarget }),
               ...(echoLastRunBoon === undefined ? {} : { echoLastRunBoon }),
               ...(echoLastReward === undefined ? {} : { echoLastReward }),
-              ...(authoredTraitOffer.kind === 'traits' &&
-              traitGiverUsesOfferContext(input.catalog, giver.key, 'deathDefianceConditionMet')
-                ? {
-                    deathDefianceCondition: {
-                      value: authoredTraitOffer.deathDefianceConditionMet ?? false,
-                    },
-                  }
-                : {}),
             });
           })()
         : undefined;
@@ -1192,7 +1174,7 @@ function activeEncounterPhasesForOwner(
           : {
               gorgonCondition: Object.freeze({
                 interactionKey: semanticAddressKey(address),
-                selected: gorgonResult.deathDefianceConditionMet,
+                selected: gorgonResult.athenaTriggerConditionMet,
                 supported: gorgonSupported,
               }),
             }),
@@ -2484,13 +2466,6 @@ function roomLocalForOccurrence(
       return Object.freeze({
         kind: 'shop' as const,
         materialized: true,
-        ...(shop.deathDefianceConditionMet === undefined
-          ? {}
-          : {
-              deathDefianceCondition: Object.freeze({
-                value: shop.deathDefianceConditionMet,
-              }) as WorkspaceShopConditionControl,
-            }),
         offers: Object.freeze(offers),
         supplementalOffers,
       });
@@ -2920,15 +2895,6 @@ function occurrenceInteractionRequirements(
       const shop = room.roomLocal;
       if (!shop.materialized) {
         return Object.freeze(requirements);
-      }
-      if (shop.deathDefianceCondition !== undefined) {
-        requirements.push(
-          Object.freeze({
-            kind: 'shopDeathDefianceCondition' as const,
-            owner: room.address,
-            value: shop.deathDefianceCondition.value,
-          }),
-        );
       }
       return Object.freeze(requirements);
     }

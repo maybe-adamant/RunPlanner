@@ -704,7 +704,6 @@ export interface WorkspaceJeweledPomEquipResultInteraction {
   readonly key: string;
   readonly owner: KeepsakeEquipResultAddress & { readonly resultKind: 'jeweledPom' };
   readonly value?: import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults['jeweledPom'];
-  readonly supportsDeathDefianceCondition: boolean;
   readonly load: (
     value?: import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults['jeweledPom'],
   ) => readonly CandidateOptionProjection<string>[];
@@ -960,10 +959,6 @@ export interface WorkspaceInteractionCatalog {
   readonly rooms: ReadonlyMap<string, WorkspaceRoomInteraction>;
   /** O-specific authored structure: whether the optional third Ship phase is active. */
   readonly shipCombatPhaseCounts: ReadonlyMap<string, WorkspaceCandidateInteraction<2 | 3>>;
-  readonly shopDeathDefianceConditions: ReadonlyMap<
-    string,
-    WorkspaceShopDeathDefianceConditionInteraction
-  >;
   readonly shopPurchaseParticipations: ReadonlyMap<
     string,
     WorkspaceShopPurchaseParticipationInteraction
@@ -993,17 +988,6 @@ export interface WorkspaceAcquisitionConversionInteraction {
   readonly key: string;
   readonly owner: AcquisitionRoleAddress;
   readonly value: import('@run-planner/engine/authored-project').AcquisitionDisposition;
-}
-
-export interface WorkspaceShopDeathDefianceConditionInteraction {
-  readonly key: string;
-  readonly owner: OccurrenceAddress;
-  readonly value: boolean;
-  readonly intentFor: (
-    value: boolean,
-  ) => WorkspaceCommandIntent<
-    Extract<ProjectCommand, { readonly kind: 'ReplaceShopDeathDefianceCondition' }>
-  >;
 }
 
 export interface WorkspaceShopPurchaseParticipationInteraction {

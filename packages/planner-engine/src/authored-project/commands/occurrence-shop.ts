@@ -9,7 +9,6 @@ import { createUnresolvedAcquisitionRewardState } from '../traits';
 import {
   ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
   INFERNAL_CONTRACT_ENTRY_KEY,
-  shopProfileUsesDeathDefianceCondition,
   TRAVEL_DEAL_REFILL_ENTRY_KEY,
 } from '../shop';
 
@@ -20,37 +19,9 @@ export function applyShopOccurrenceCommand(
   command: ShopOccurrenceCommand,
 ): ProjectDocument {
   const current = requireTopology(located.plan, command);
-  const occurrence = requireOccurrence(
-    located.plan,
-    command.kind === 'ReplaceShopOffer' ? command.offer.occurrenceId : command.shop.occurrenceId,
-    command,
-  );
+  const occurrence = requireOccurrence(located.plan, command.offer.occurrenceId, command);
   if (occurrence.state.kind !== 'shop' || occurrence.state.shop === undefined) {
     failCommand(command, `${occurrence.gameName} has no materialized shop inventory`);
-  }
-  if (command.kind === 'ReplaceShopDeathDefianceCondition') {
-    if (!shopProfileUsesDeathDefianceCondition(catalog, occurrence.state.shop.profileKey)) {
-      failCommand(command, 'Shop does not own Death Defiance condition');
-    }
-    if (typeof command.value !== 'boolean') failCommand(command, 'condition must be boolean');
-    if (occurrence.state.shop.deathDefianceConditionMet === command.value) return document;
-    return updateOccurrenceTopology(
-      document,
-      located,
-      replaceOccurrence(
-        current,
-        Object.freeze({
-          ...occurrence,
-          state: Object.freeze({
-            ...occurrence.state,
-            shop: Object.freeze({
-              ...occurrence.state.shop,
-              deathDefianceConditionMet: command.value,
-            }),
-          }),
-        }),
-      ),
-    );
   }
   if (
     command.offer.offerKey === INFERNAL_CONTRACT_ENTRY_KEY ||

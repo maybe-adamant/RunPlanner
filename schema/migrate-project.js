@@ -4,7 +4,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { basename, dirname, extname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-const CURRENT_SCHEMA_VERSION = 53;
+const CURRENT_SCHEMA_VERSION = 54;
 const SCHEMA_49_CATALOG_VERSION = '0.27.0-arcana-fear-loadout';
 const SCHEMA_50_CATALOG_VERSION = '0.30.0-boon-rarity-ledger';
 const SCHEMA_51_CATALOG_VERSION = '0.31.0-chaos-traits';
@@ -13,6 +13,7 @@ const SCHEMA_52_RUN_IMPACTING_TRAITS_CATALOG_VERSION = '0.32.1-run-impacting-tra
 const SCHEMA_52_GENERATED_TRAIT_PICKUPS_CATALOG_VERSION = '0.33.0-generated-trait-pickups';
 const SCHEMA_52_CATALOG_VERSION = '0.34.0-sea-star';
 const SCHEMA_53_CATALOG_VERSION = '0.35.0-nemesis-random-events';
+const SCHEMA_54_CATALOG_VERSION = '0.36.0-runtime-offer-fallback';
 
 const NARCISSUS_PICKUP_KEYS = {
   NarcissusA: ['pom'],
@@ -221,11 +222,43 @@ function migrate52To53(document) {
   };
 }
 
+function migrate53To54(document) {
+  if (document.catalogVersion !== SCHEMA_53_CATALOG_VERSION) {
+    throw new Error(
+      `schema 53 migration expects catalog ${SCHEMA_53_CATALOG_VERSION}, received ${String(document.catalogVersion)}`,
+    );
+  }
+  let gorgonTriggersRenamed = 0;
+  for (const route of document.routes ?? []) {
+    for (const biome of route.biomes ?? []) {
+      for (const occurrence of biome.topology?.occurrences ?? []) {
+        for (const result of Object.values(occurrence.encounters?.gorgonResultByPhase ?? {})) {
+          if (result === null || typeof result !== 'object' || Array.isArray(result)) continue;
+          if (!Object.hasOwn(result, 'deathDefianceConditionMet')) continue;
+          result.athenaTriggerConditionMet = result.deathDefianceConditionMet;
+          delete result.deathDefianceConditionMet;
+          gorgonTriggersRenamed += 1;
+        }
+      }
+    }
+  }
+  let genericConditionsRemoved = 0;
+  visitRecords(document, (record) => {
+    if (!Object.hasOwn(record, 'deathDefianceConditionMet')) return;
+    delete record.deathDefianceConditionMet;
+    genericConditionsRemoved += 1;
+  });
+  document.schemaVersion = 54;
+  document.catalogVersion = SCHEMA_54_CATALOG_VERSION;
+  return { gorgonTriggersRenamed, genericConditionsRemoved };
+}
+
 const migrations = new Map([
   [49, migrate49To50],
   [50, migrate50To51],
   [51, migrate51To52],
   [52, migrate52To53],
+  [53, migrate53To54],
 ]);
 
 export function migrateProjectDocument(value, targetVersion = CURRENT_SCHEMA_VERSION) {

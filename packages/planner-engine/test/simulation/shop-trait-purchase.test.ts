@@ -410,6 +410,7 @@ function echoGoldShop(
     readonly duplicateTraitKeys?: readonly [string, string, string];
     readonly withPomTarget?: boolean;
     readonly roomGameName?: 'F_Shop01' | 'I_PreBoss02';
+    readonly enteredBiomes?: number;
   } = {},
 ) {
   const room = catalog.rooms.byKey[options.roomGameName ?? 'F_Shop01'];
@@ -623,7 +624,10 @@ function echoGoldShop(
             ...baseFacts(),
             requirements: {
               ...baseFacts().requirements,
-              counters: { ...baseFacts().requirements.counters, enteredBiomes: 3 },
+              counters: {
+                ...baseFacts().requirements.counters,
+                enteredBiomes: options.enteredBiomes ?? 3,
+              },
             },
           }
         : baseFacts(),
@@ -901,6 +905,42 @@ describe('Echo Gate D Gold Gold Gold', () => {
       { Rare: 0.9, Epic: 0.25, Legendary: 0.1 },
     ]);
   });
+
+  it.each([
+    [
+      'first half',
+      1,
+      'ArmorBoost',
+      Object.freeze({
+        PremiumProgress: Object.freeze({
+          rewardType: 'RandomLoot' as const,
+          payload: Object.freeze({ kind: 'BoonSource' as const, source: 'ZeusUpgrade' }),
+        }),
+      }),
+    ],
+    ['second half', 3, 'ArmorBigBoost', Object.freeze({})],
+  ] as const)(
+    'publishes I World Shop %s Last Stand fallback while preserving the preferred purchase',
+    (_phase, enteredBiomes, fallbackKey, extraOverrides) => {
+      const result = echoGoldShop(['Survival'], {
+        roomGameName: 'I_PreBoss02',
+        enteredBiomes,
+        offerOverrides: {
+          Survival: Object.freeze({ rewardType: 'LastStandDrop' as const }),
+          ...extraOverrides,
+        },
+      });
+      expect(result.settlement.runtimeOfferFallbacks).toEqual([
+        expect.objectContaining({
+          address: expect.objectContaining({ kind: 'shopOffer', offerKey: 'Survival' }),
+          preferredRewardType: 'LastStandDrop',
+          fallbackRewardType: fallbackKey,
+        }),
+      ]);
+      expect(result.settlement.branches[0]?.history.consumableRecord.LastStandDrop).toBe(1);
+      expect(result.settlement.branches[0]?.history.consumableRecord[fallbackKey]).toBeUndefined();
+    },
+  );
 
   it('lets Artificer convert the free Echo Gold duplicate and materialize its exact replacement', () => {
     const result = echoGoldShop(['MajorNonBoon', ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY], {

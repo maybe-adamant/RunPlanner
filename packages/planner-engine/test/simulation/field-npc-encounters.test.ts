@@ -788,16 +788,11 @@ describe('field NPC encounter requirements', () => {
     expect(biome.rewards.branches[0]?.traitHistory?.equippedTraits.VitalityCostume).toBeUndefined();
   });
 
-  it('gates Medea Death Defiance curse candidates and acquires the selected Story curse chronologically', () => {
+  it('keeps Medea’s preferred curse authorable and acquires the selected Story curse chronologically', () => {
     const project = loadSurfaceNStoryBoardProject();
     const history = createTraitHistoryState();
     expect(
-      traitCandidates(catalog, 'Medea', history, { deathDefianceConditionMet: false }).find(
-        (candidate) => candidate.traitKey === 'DeathDefianceRetaliateCurse',
-      ),
-    ).toMatchObject({ available: false });
-    expect(
-      traitCandidates(catalog, 'Medea', history, { deathDefianceConditionMet: true }).find(
+      traitCandidates(catalog, 'Medea', history).find(
         (candidate) => candidate.traitKey === 'DeathDefianceRetaliateCurse',
       ),
     ).toMatchObject({ available: true });
@@ -806,7 +801,7 @@ describe('field NPC encounter requirements', () => {
     const storyPhase = phase(nBiome, storyId);
     const storyOffer = authoredOccurrence(project, 'N', storyId).encounters.traitOffersByPhase
       ?.Encounter?.Story_Medea_01;
-    expect(storyOffer).toMatchObject({ giverKey: 'Medea', deathDefianceConditionMet: false });
+    expect(storyOffer).toMatchObject({ giverKey: 'Medea' });
     const editedOffer = {
       ...storyOffer!,
       options: [
@@ -815,7 +810,6 @@ describe('field NPC encounter requirements', () => {
         { traitKey: 'ManaOverTimeCurse' },
       ] as const,
       selectedOptionKey: 'option1' as const,
-      deathDefianceConditionMet: true,
     };
     expect(
       createPreparedProjectCandidateSession(
@@ -846,15 +840,10 @@ describe('field NPC encounter requirements', () => {
     ).toMatchObject({ acquisitionRole: 'selection', chronologicalIndex: expect.any(Number) });
   });
 
-  it('gates Last Gasp locally and acquires a rarityless Hades Story trait', () => {
+  it('keeps Last Gasp authorable and acquires a rarityless Hades Story trait', () => {
     const history = createTraitHistoryState();
     expect(
-      traitCandidates(catalog, 'Hades', history, { deathDefianceConditionMet: false }).find(
-        (candidate) => candidate.traitKey === 'HadesDeathDefianceDamageBoon',
-      ),
-    ).toMatchObject({ available: false });
-    expect(
-      traitCandidates(catalog, 'Hades', history, { deathDefianceConditionMet: true }).find(
+      traitCandidates(catalog, 'Hades', history).find(
         (candidate) => candidate.traitKey === 'HadesDeathDefianceDamageBoon',
       ),
     ).toMatchObject({ available: true });
@@ -878,7 +867,6 @@ describe('field NPC encounter requirements', () => {
       .traitOffersByPhase?.Encounter?.Story_Hades_01;
     expect(storyOffer).toMatchObject({
       giverKey: 'Hades',
-      deathDefianceConditionMet: false,
       options: [
         { traitKey: 'HadesLifestealBoon' },
         { traitKey: 'HadesPreDamageBoon' },
@@ -893,7 +881,6 @@ describe('field NPC encounter requirements', () => {
         { traitKey: 'HadesDashSweepBoon' },
       ] as const,
       selectedOptionKey: 'option1' as const,
-      deathDefianceConditionMet: true,
     };
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceTraitOffer',

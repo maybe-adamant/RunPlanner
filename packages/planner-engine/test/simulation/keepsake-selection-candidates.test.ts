@@ -382,7 +382,7 @@ describe('keepsake selection candidates', () => {
     );
   });
 
-  it('reports missing and invalid Jeweled Pom children at their exact start and Postboss owners', () => {
+  it('reports missing Jeweled Pom children and accepts preferred Hades results at their exact owners', () => {
     const start = createRouteStartKeepsakeSelectionAddress('Underworld');
     let startProject = applyProjectCommand(createCompleteFGProject(), catalog, {
       kind: 'ReplaceStartingKeepsake',
@@ -452,10 +452,9 @@ describe('keepsake selection candidates', () => {
       result: startResult,
       value: {
         traitKey: 'HadesDeathDefianceDamageBoon',
-        deathDefianceConditionMet: false,
       },
     });
-    expect(simulateProjectAssembly(catalog, startProject).evaluation.findings).toContainEqual(
+    expect(simulateProjectAssembly(catalog, startProject).evaluation.findings).not.toContainEqual(
       expect.objectContaining({ code: 'keepsakeEquipResultUnavailable', origin: startResult }),
     );
 
@@ -473,10 +472,11 @@ describe('keepsake selection candidates', () => {
       result: postbossResult,
       value: {
         traitKey: 'HadesDeathDefianceDamageBoon',
-        deathDefianceConditionMet: false,
       },
     });
-    expect(simulateProjectAssembly(catalog, postbossProject).evaluation.findings).toContainEqual(
+    expect(
+      simulateProjectAssembly(catalog, postbossProject).evaluation.findings,
+    ).not.toContainEqual(
       expect.objectContaining({ code: 'keepsakeEquipResultUnavailable', origin: postbossResult }),
     );
   });

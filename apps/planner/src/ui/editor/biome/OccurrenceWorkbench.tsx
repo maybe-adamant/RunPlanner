@@ -573,17 +573,12 @@ function RewardWheelWorkbench({
 
 function ShopWorkbench({
   interactions,
-  occurrence,
   room,
 }: {
   readonly interactions: WorkspaceInteractionCatalog;
-  readonly occurrence: OccurrenceAddress;
   readonly room: Extract<WorkspaceRoomSummary['roomLocal'], { readonly kind: 'shop' }>;
 }) {
   const executeIntent = useCommandIntent();
-  const conditionInteraction = interactions.shopDeathDefianceConditions.get(
-    workspaceInteractionKey(occurrence),
-  );
   if (!room.materialized) {
     return (
       <section aria-label="Shop inventory and conditions" className="shop-editor">
@@ -599,18 +594,6 @@ function ShopWorkbench({
       <div className="local-reward-heading">
         <h4>Shop inventory and conditions</h4>
       </div>
-      {conditionInteraction === undefined ? null : (
-        <label className="shop-condition-control">
-          <input
-            checked={conditionInteraction.value}
-            onChange={(event) =>
-              executeIntent(conditionInteraction.intentFor(event.target.checked))
-            }
-            type="checkbox"
-          />
-          Death Defiance condition met
-        </label>
-      )}
       <div className="shop-table-scroll">
         <table className="shop-offer-table">
           <thead>
@@ -2009,11 +1992,7 @@ function DirectRoomWorkbench({
         <>
           {view === 'overview' ? (
             <>
-              <ShopWorkbench
-                interactions={interactions}
-                occurrence={room.address}
-                room={workbench.shop}
-              />
+              <ShopWorkbench interactions={interactions} room={workbench.shop} />
               {localVisit === undefined ? null : (
                 <LocalVisitWorkbench interactions={interactions} localVisit={localVisit} />
               )}

@@ -29,7 +29,6 @@ import type {
 import {
   createUnresolvedAcquisitionRewardState,
   createUnresolvedShopAcquisitionRewardState,
-  traitGiverUsesOfferContext,
 } from '../../authored-project/traits';
 import {
   acquisitionSiteStorageKey,
@@ -69,6 +68,7 @@ import {
   type ResolvedRewardOffer,
   type ShopGenerationSupport,
   type ShopGenerationWitness,
+  type ShopOptionEntry,
   type ProducerLifecyclePointKey,
 } from '../../reward-kernel';
 import type { CountedRewardBinding } from '../../reward-kernel/bindings';
@@ -170,6 +170,8 @@ interface PendingShopTravelRefill {
 
 type PendingShopPaidOffer = Omit<CanonicalShopOffer, 'offerOrigin'> & {
   readonly offerOrigin: TraitOfferOwnerAddress;
+  /** Ephemeral evaluated result; it never enters canonical materialization. */
+  readonly runtimeOfferFallbackRewardType?: string;
 };
 
 interface PendingShopGoldMaterialization {
@@ -236,6 +238,12 @@ export interface AcquisitionSettlementProduct {
   readonly derivedEntryFrontiers?: readonly DerivedAcquisitionEntryFrontier[];
   /** Exact post-outer checkpoints for reached trait children that block chronology. */
   readonly traitChildSettlements?: readonly ReachedTraitChildCheckpoint[];
+  /** Exact runtime fallback resolved at a selected paid item action. */
+  readonly runtimeOfferFallbacks?: readonly {
+    readonly address: SemanticAddress;
+    readonly preferredRewardType: string;
+    readonly fallbackRewardType: string;
+  }[];
 }
 
 export interface ReachedTraitChildCheckpoint {
@@ -670,6 +678,7 @@ interface ApplyTraitOfferOptions {
 interface EchoLastRunBoonSettlement {
   readonly address: EchoLastRunBoonAddress;
   readonly outcome: EchoLastRunBoonOutcome;
+  readonly runtimeOfferFallbackExcludedTraitKeys: readonly string[];
 }
 
 function isEligibleChaosGodScreen(
@@ -797,9 +806,6 @@ function applyTraitOfferForAcquisitionInternal(
             ...(reward.traitContext ?? {}),
             devotionNoDuo:
               reward.traitContext?.devotionNoDuo ?? reward.offer?.rewardType === 'Devotion',
-            ...(authored.kind !== 'traits' || authored.deathDefianceConditionMet === undefined
-              ? {}
-              : { deathDefianceConditionMet: authored.deathDefianceConditionMet }),
             resolvedProviderKey: authored.giverKey,
           }),
         );
@@ -931,10 +937,6 @@ function applyTraitOfferForAcquisitionInternal(
     Object.freeze({
       ...(reward.traitContext ?? {}),
       devotionNoDuo: reward.traitContext?.devotionNoDuo ?? reward.offer?.rewardType === 'Devotion',
-      ...(effectiveAuthored.kind !== 'traits' ||
-      effectiveAuthored.deathDefianceConditionMet === undefined
-        ? {}
-        : { deathDefianceConditionMet: effectiveAuthored.deathDefianceConditionMet }),
       resolvedProviderKey: effectiveAuthored.giverKey,
     }),
   );
@@ -967,6 +969,7 @@ function applyTraitOfferForAcquisitionInternal(
             branch.traitEvaluations?.length ?? 0,
             branch.arcanaFear,
             branch.keepsakes,
+            echoLastRunBoon.runtimeOfferFallbackExcludedTraitKeys,
           );
   const selectedForIdentity =
     effectiveAuthored.kind === 'traits'
@@ -1360,6 +1363,7 @@ function applyEchoLastRunBoonForAcquisition(
   context: TraitOfferContext,
   lifecyclePoint: string,
   sequence: number,
+  runtimeOfferFallbackExcludedTraitKeys: readonly string[],
 ): ReturnType<typeof applyTraitOfferForAcquisitionInternal> {
   return applyTraitOfferForAcquisitionInternal(
     catalog,
@@ -1375,7 +1379,7 @@ function applyEchoLastRunBoonForAcquisition(
     undefined,
     undefined,
     Object.freeze({ directAcquisition: true, skipCallingCard: true }),
-    Object.freeze({ address, outcome }),
+    Object.freeze({ address, outcome, runtimeOfferFallbackExcludedTraitKeys }),
   );
 }
 
@@ -1408,14 +1412,8 @@ function encounterPreOfferTraitContext(
   providerKey: string,
   loadout:
     Pick<TraitOfferContext, 'weaponKey' | 'aspectKey' | 'boonRarityRoomOverride'> | undefined,
-  deathDefianceConditionMet: boolean | undefined,
   freshRarityOverride: import('../../catalog-schema').TraitRarity | undefined,
 ): TraitOfferContext {
-  const effectiveDeathDefianceCondition =
-    deathDefianceConditionMet ??
-    (traitGiverUsesOfferContext(catalog, providerKey, 'deathDefianceConditionMet')
-      ? false
-      : undefined);
   const recreation = branch.history.lastRewardRecreation;
   return Object.freeze({
     ...(loadout ?? {}),
@@ -1425,9 +1423,6 @@ function encounterPreOfferTraitContext(
       .outerAvailable,
     echoLastRewardAvailable: recreation !== undefined,
     ...(recreation === undefined ? {} : { echoLastRewardRecreation: recreation }),
-    ...(effectiveDeathDefianceCondition === undefined
-      ? {}
-      : { deathDefianceConditionMet: effectiveDeathDefianceCondition }),
     ...(freshRarityOverride === undefined ? {} : { freshRarityOverride }),
     currentKeepsakeKey: branch.keepsakes.currentKey,
   });
@@ -1461,7 +1456,6 @@ export function settleEncounterTraitOffer(
   lifecyclePoint: string,
   findings?: Map<string, FindingRegionEntry>,
   findingChronology?: FindingChronology,
-  deathDefianceConditionMet?: boolean,
   acquisitionRole = 'selection',
   freshRarityOverride?: import('../../catalog-schema').TraitRarity,
   loadout?: Pick<TraitOfferContext, 'weaponKey' | 'aspectKey' | 'boonRarityRoomOverride'>,
@@ -1476,9 +1470,6 @@ export function settleEncounterTraitOffer(
     branch,
     providerKey,
     loadout,
-    offer?.kind === 'traits'
-      ? (offer.deathDefianceConditionMet ?? deathDefianceConditionMet)
-      : deathDefianceConditionMet,
     freshRarityOverride,
   );
   if (offer === null) {
@@ -1638,7 +1629,7 @@ export function settleEncounterTraitOffer(
       const selectedChildIndex = optionIndex(child.selectedOptionKey);
       const selectedChild = child.options[selectedChildIndex];
       if (selectedChild === undefined) return reject('echoLastRunBoonMissing');
-      const outcomes = echoLastRunBoonOutcomes(catalog, preChoiceTraitHistory, source.traitContext);
+      const outcomes = echoLastRunBoonOutcomes(catalog, preChoiceTraitHistory);
       let outcome: (typeof outcomes)[number] | undefined;
       for (const [index, childOption] of child.options.entries()) {
         const rowOutcome = outcomes.find(
@@ -1703,12 +1694,12 @@ export function settleEncounterTraitOffer(
         Object.freeze({
           freshRarityOverride: outcome.effectiveRarity,
           ordinarySlotReplacement: 'forbidden',
-          ...(traitContext.deathDefianceConditionMet === undefined
-            ? {}
-            : { deathDefianceConditionMet: traitContext.deathDefianceConditionMet }),
         }),
         lifecyclePoint,
         sequence,
+        child.options
+          .filter((_, index) => index !== selectedChildIndex)
+          .map((option) => option.traitKey),
       );
       const nested = nestedSettlement.branch;
       blockedChild ??= nestedSettlement.blockedChild;
@@ -1849,7 +1840,6 @@ export function processEncounterTraitOffer(
   lifecyclePoint: string,
   findings?: Map<string, FindingRegionEntry>,
   findingChronology?: FindingChronology,
-  deathDefianceConditionMet?: boolean,
   acquisitionRole = 'selection',
   freshRarityOverride?: import('../../catalog-schema').TraitRarity,
   loadout?: Pick<TraitOfferContext, 'weaponKey' | 'aspectKey' | 'boonRarityRoomOverride'>,
@@ -1863,7 +1853,6 @@ export function processEncounterTraitOffer(
     lifecyclePoint,
     findings,
     findingChronology,
-    deathDefianceConditionMet,
     acquisitionRole,
     freshRarityOverride,
     loadout,
@@ -2081,9 +2070,6 @@ export function applyJeweledPomEquipResult(
       import('../../authored-project/traits').AuthoredTraitOption
     >,
     selectedOptionKey: 'option1',
-    ...(result.deathDefianceConditionMet === undefined
-      ? {}
-      : { deathDefianceConditionMet: result.deathDefianceConditionMet }),
   });
   const evaluation = evaluateReachedTraitOffer(
     catalog,
@@ -2092,9 +2078,6 @@ export function applyJeweledPomEquipResult(
     offer,
     before,
     {
-      ...(result.deathDefianceConditionMet === undefined
-        ? {}
-        : { deathDefianceConditionMet: result.deathDefianceConditionMet }),
       resolvedProviderKey: effect.giverKey,
     },
     branch.traitEvaluations?.length ?? 0,
@@ -2887,6 +2870,11 @@ export function settleShopAcquisitionSite(
   const derivedEntryFrontiers: DerivedAcquisitionEntryFrontier[] = [];
   let entryPurchaseFailureRecorded = false;
   const traitChildSettlements: ReachedTraitChildCheckpoint[] = [];
+  const runtimeOfferFallbacks: {
+    address: SemanticAddress;
+    preferredRewardType: string;
+    fallbackRewardType: string;
+  }[] = [];
   const rolesByOfferKey = new Map<
     string,
     readonly { readonly role: string; readonly lifecyclePoint: ProducerLifecyclePointKey }[]
@@ -3096,6 +3084,41 @@ export function settleShopAcquisitionSite(
       generationFacts,
       evaluateOffer,
     });
+  };
+  /**
+   * Runtime-only item predicates never enter authored state.  Resolve the one
+   * declared replacement at the exact generated slot, retaining the active
+   * phase and source-pool witness for this action only.
+   */
+  const resolveShopRuntimeFallback = (
+    slotIndex: number,
+    option: ShopOptionEntry | undefined,
+    generationFacts: ReturnType<typeof context.facts>,
+    excludedPurchaseInteractionNames: ReadonlySet<string>,
+  ): string | undefined => {
+    if (option?.runtimeOfferFallbackRewardTypes === undefined) return undefined;
+    const slot = profile.slots.values[slotIndex];
+    const group = slot === undefined ? undefined : profile.groups.byKey[slot.groupKey];
+    if (group === undefined) return undefined;
+    for (const rewardType of option.runtimeOfferFallbackRewardTypes) {
+      const fallbackOption = group.options.values.find(
+        (candidate) => candidate.rewardType === rewardType,
+      );
+      if (fallbackOption === undefined) continue;
+      const active = locallyValidRewardOffers(catalog.rewards, rewardType).some((offer) =>
+        findShopIndexedGenerationWitnesses(
+          catalog.rewards,
+          profile,
+          slotIndex,
+          offer,
+          generationFacts,
+          requirements,
+          excludedPurchaseInteractionNames.size === 0 ? {} : { excludedPurchaseInteractionNames },
+        ).some((witness) => witness.optionKeys[slotIndex] === fallbackOption.key),
+      );
+      if (active) return rewardType;
+    }
+    return undefined;
   };
   const goldDisposition = Object.values(catalog.traits.byKey).find(
     (trait) =>
@@ -3432,6 +3455,18 @@ export function settleShopAcquisitionSite(
           const optionKey = witness.optionKeys[refill.slotIndex];
           const option = optionKey === undefined ? undefined : group.options.byKey[optionKey];
           if (option === undefined) continue;
+          // A Travel Deal child is a fresh result at the same physical slot.
+          // Its runtime contingency belongs to that generated child, not to
+          // the option originally purchased to create the refill.
+          const refillOption = group.options.values.find(
+            (candidate) => candidate.rewardType === child.offer.rewardType,
+          );
+          const runtimeOfferFallbackRewardType = resolveShopRuntimeFallback(
+            refill.slotIndex,
+            refillOption,
+            refill.generationFacts,
+            refill.excludedNames,
+          );
           const refillExecution: ShopExecution = {
             ...execution,
             witness,
@@ -3452,7 +3487,18 @@ export function settleShopAcquisitionSite(
                 ? {}
                 : { boonRarityItemOverride: option.boonRarityOverride }),
             }),
+            ...(runtimeOfferFallbackRewardType === undefined
+              ? {}
+              : {
+                  runtimeOfferFallbackRewardType,
+                }),
           });
+          if (runtimeOfferFallbackRewardType !== undefined)
+            runtimeOfferFallbacks.push({
+              address: refillOffer.offerOrigin,
+              preferredRewardType: refillOffer.offer.rewardType,
+              fallbackRewardType: runtimeOfferFallbackRewardType,
+            });
           const bindings = option.acquisitionLifecycle.map((binding) =>
             Object.freeze({ role: binding.role, lifecyclePoint: binding.lifecyclePoint }),
           );
@@ -3612,9 +3658,25 @@ export function settleShopAcquisitionSite(
                 boonRarityItemOverride: shopOption.boonRarityOverride,
               }),
             });
+      const runtimeOfferFallbackRewardType = resolveShopRuntimeFallback(
+        slotIndex,
+        shopOption,
+        context.facts(execution.candidate.history, new Set()),
+        new Set(),
+      );
+      const evaluatedPaidOffer =
+        runtimeOfferFallbackRewardType === undefined
+          ? paidOffer
+          : Object.freeze({ ...paidOffer, runtimeOfferFallbackRewardType });
+      if (runtimeOfferFallbackRewardType !== undefined)
+        runtimeOfferFallbacks.push({
+          address: offer.offerOrigin,
+          preferredRewardType: offer.offer.rewardType,
+          fallbackRewardType: runtimeOfferFallbackRewardType,
+        });
       const prePurchaseTraits = execution.candidate.traitHistory;
-      materializeGold(execution, paidOffer, bindings);
-      if (!settlePaid(execution, paidOffer, bindings, agreementBranches)) continue;
+      materializeGold(execution, evaluatedPaidOffer, bindings);
+      if (!settlePaid(execution, evaluatedPaidOffer, bindings, agreementBranches)) continue;
       execution.remainingSlotIndexes = purchase.remainingSlotIndexes;
       if (!execution.firstNormalPurchaseSeen) {
         execution.firstNormalPurchaseSeen = true;
@@ -3771,6 +3833,7 @@ export function settleShopAcquisitionSite(
     roleFrontiers: Object.freeze(roleFrontiers),
     derivedEntryFrontiers: Object.freeze(derivedEntryFrontiers),
     traitChildSettlements: Object.freeze(traitChildSettlements),
+    runtimeOfferFallbacks: Object.freeze(runtimeOfferFallbacks),
   });
 }
 

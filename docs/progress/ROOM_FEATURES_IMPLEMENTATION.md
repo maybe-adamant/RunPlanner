@@ -2,21 +2,15 @@
 
 ## Status
 
-Reviewed draft grounded on clean base
-`eb278f98d445b288f1378086bbb83a3b3af78964`. The source-audit baseline is
-committed; the durable runtime-offer fallback audit and its plan amendment are
-included in this draft change.
-A fresh read-only adversarial review found six material specification defects;
-the draft now closes delivery-host retention, one-row rush chronology, derived
-pending state, the earlier slot-local Last Stand proposal, and Extended's exact
-whitelist and consumption. A later model review replaced those Last Stand
-conditions with the durable runtime-fallback policy and removed the legacy
-configured-tail dormancy rule: a real Postboss occurrence remains reached and
-interactive at the route tail. A fresh final read-only lock review found no
-actionable plan defect for the prior gate sequence. The new leading fallback
-gate materially changes that sequence and therefore requires one fresh final
-read-only review before lock. The plan awaits that review, user lock, and commit
-before the first executor starts.
+Execution is active from locked plan commit `74f70a7f`. Gate A is complete at
+schema 54 after independent review and one bounded remediation pass deleted the
+dormant generic Death Defiance authored-condition path. Gate B is next.
+
+The locked plan remains grounded on the clean source-audit baseline
+`eb278f98d445b288f1378086bbb83a3b3af78964`. Its pre-execution reviews closed
+delivery-host retention, one-row rush chronology, derived pending state, the
+earlier slot-local Last Stand proposal, Extended's exact whitelist and
+consumption, and configured-tail Postboss activity.
 
 This is temporary delivery authority. It must not be linked from `README.md`
 or stable design documents. At phase closure, absorb the completed ownership
@@ -318,8 +312,8 @@ purchase/sale out of the timeline.
 
 ### 11. Strict schema boundaries
 
-The current project schema is 53. Each gate that adds or relocates persisted
-state advances the strict schema exactly once:
+The locked base project schema is 53. Each gate that adds or relocates
+persisted state advances the strict schema exactly once:
 
 - Gate A: schema 54 — remove general Death Defiance authored conditions and
   retain only Gorgon's phase trigger;

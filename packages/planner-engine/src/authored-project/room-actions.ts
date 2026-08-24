@@ -138,7 +138,7 @@ export function activeRoomActionReferences(
     if (definition?.traitOfferProducer !== undefined || definition?.requiresInteraction === true)
       references.push(Object.freeze({ kind: 'interactEncounter', phaseKey: phase.key }));
     if (
-      occurrence.encounters.gorgonResultByPhase?.[phase.key]?.deathDefianceConditionMet === true
+      occurrence.encounters.gorgonResultByPhase?.[phase.key]?.athenaTriggerConditionMet === true
     ) {
       references.push(Object.freeze({ kind: 'interactGorgon', phaseKey: phase.key }));
     }

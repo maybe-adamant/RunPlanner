@@ -179,7 +179,6 @@ function echoReplayProject(child?: {
       Object.freeze({ traitKey: 'DiminishingHealthAndManaBoon' }),
     ]) as AuthoredTraitOfferTraits['options'],
     selectedOptionKey: 'option1' as const,
-    deathDefianceConditionMet: false,
   });
   document = applyProjectCommand(document, catalog, {
     kind: 'ReplaceTraitOffer',

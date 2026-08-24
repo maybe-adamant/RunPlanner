@@ -12,14 +12,21 @@ by the owning design authorities and active delivery plans.
 
 ## Active Frontier
 
-The current persisted contract is strict schema 53 with catalog
-`0.35.0-nemesis-random-events`. The occurrence/action
+The current persisted contract is strict schema 54 with catalog
+`0.36.0-runtime-offer-fallback`. The occurrence/action
 delivery landed occurrence-backed door staging at `e1e3af0`, one unified room
 chronology at `f38247d`, the corrected door contract at `daa876f`, the opening
 reward frontier at `fdfd2dc`, the engine-walk N Hub board at `aa09c10`, and
 direct outgoing-frontier rendering at `b4be69f`. Every supported authored main
 or N side room is one occurrence; topology, door-visible identity, room-local
 payload, participation, and chronology have distinct owners.
+
+The room-feature phase is active from locked plan `74f70a7f`. Its first gate
+removes general authored Death Defiance offer conditions, retains only Gorgon
+Amulet's phase trigger, and publishes one address-keyed runtime fallback for
+each reached volatile trait or currently supported I/Q Shop and Nemesis item
+result. Preferred authored outcomes still simulate deterministically; fallback
+data remains derived and editor-invisible.
 
 The ordinary Nemesis random-event phase is complete through Gates A-C. Gate A
 `5464d0a` added the closed catalog policy, strict schema-53 authored protocol,

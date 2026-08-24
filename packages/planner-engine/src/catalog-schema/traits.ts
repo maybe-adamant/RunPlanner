@@ -236,8 +236,7 @@ export interface TraitPickupDeclaration {
   readonly excludeStorySource?: true;
 }
 
-export type TraitOfferContextKey =
-  'devotionNoDuo' | 'blockGiftBoons' | 'deathDefianceConditionMet' | 'circeRemovableFearVow';
+export type TraitOfferContextKey = 'devotionNoDuo' | 'blockGiftBoons' | 'circeRemovableFearVow';
 
 export type TraitRequirementExpression =
   | {
@@ -314,6 +313,14 @@ export interface TraitDeclaration {
   readonly label: string;
   readonly rarityDomain: TraitRarityDomain;
   readonly offerRequirements: readonly TraitRequirementExpression[];
+  /** Ordered same-giver runtime alternatives for a preferred volatile result. */
+  readonly runtimeOfferFallbackTraitKeys?: readonly [string, string, string];
+  /** Source-only volatile predicate, intentionally outside Planner eligibility. */
+  readonly runtimeOfferRequirement?:
+    | 'missingLastStand'
+    | 'heldLastStand'
+    | 'deathDefianceDamageBoonEligible'
+    | 'missingLastStandAndAthenaFirstMeeting';
   readonly equipmentSlot?: TraitEquipmentSlot;
   readonly elementContributions: Readonly<Partial<Record<TraitElement, number>>>;
   readonly usesBoonRarity: boolean;
@@ -360,8 +367,6 @@ export interface EchoLastRunBoonVariantDeclaration {
   readonly key: string;
   readonly giverKey: string;
   readonly traitKey: string;
-  /** Source `GameStateRequirements`, distinct from ordinary boon prerequisites. */
-  readonly requiresDeathDefianceCondition?: boolean;
   /** Present only when source `GetLootSourceName` records this provider. */
   readonly lootHistorySource?: string;
 }
@@ -375,7 +380,7 @@ export interface TraitOfferContextDeclaration {
   readonly kind: 'rewardRarityBlock' | 'roomFlag' | 'authoredCondition';
   readonly blockedRarity?: TraitRarity;
   readonly roomFlag?: 'BlockGiftBoons';
-  readonly authoredCondition?: 'deathDefianceConditionMet' | 'circeRemovableFearVow';
+  readonly authoredCondition?: 'circeRemovableFearVow';
 }
 
 export interface TraitCatalog {

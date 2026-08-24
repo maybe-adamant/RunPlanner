@@ -218,7 +218,6 @@ describe('project workspace application state', () => {
           { traitKey: 'EchoDoubleLevelBoon', echoPomTarget: null },
         ],
         selectedOptionKey: 'option1',
-        deathDefianceConditionMet: false,
       },
     });
     store.dispatch(authoredProjectReplaced(project));
@@ -355,7 +354,6 @@ describe('project workspace application state', () => {
           { traitKey: 'DiminishingHealthAndManaBoon' },
         ],
         selectedOptionKey: 'option2',
-        deathDefianceConditionMet: false,
       },
     });
     store.dispatch(authoredProjectReplaced(project));
@@ -439,7 +437,6 @@ describe('project workspace application state', () => {
           { traitKey: 'DiminishingHealthAndManaBoon' },
         ],
         selectedOptionKey: 'option2',
-        deathDefianceConditionMet: false,
       },
     });
     store.dispatch(authoredProjectReplaced(project));

@@ -90,8 +90,6 @@ function requirementExplanation(requirement: RequirementExpression): string {
       return `Requires ${requirement.reserve} Clockwork non-goal capacity remaining.`;
     case 'flagEquals':
       return `Requires ${requirement.flag} to be ${requirement.value}.`;
-    case 'authoredCondition':
-      return `Requires ${requirement.condition} to be ${requirement.value}.`;
   }
 }
 

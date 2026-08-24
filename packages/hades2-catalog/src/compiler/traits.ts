@@ -71,12 +71,7 @@ const CALLING_CARD_GIVERS = new Set([
 const ORDINARY_SLOTS = ['Melee', 'Secondary', 'Ranged', 'Rush', 'Mana'] as const;
 const BOON_RARITY_PROVIDER_KINDS = ['olympian', 'hermes'] as const;
 const BOON_RARITY_CHECKS = ['Rare', 'Epic', 'Duo', 'Legendary'] as const;
-const CONTEXTS = [
-  'devotionNoDuo',
-  'blockGiftBoons',
-  'deathDefianceConditionMet',
-  'circeRemovableFearVow',
-] as const;
+const CONTEXTS = ['devotionNoDuo', 'blockGiftBoons', 'circeRemovableFearVow'] as const;
 const CHAOS_CLOCKS = ['encounters', 'locations', 'godBoonScreens'] as const;
 const CHAOS_TAGS = ['Creation', 'Favor', 'Ordinary', 'Rejected', 'Barren'] as const;
 const CHAOS_RARITIES = ['Common', 'Rare', 'Epic', 'Heroic'] as const;
@@ -1072,6 +1067,41 @@ function normalizeTraits(
         ),
       ),
     );
+    const runtimeOfferFallbackTraitKeys =
+      trait.runtimeOfferFallbackTraitKeys === undefined
+        ? undefined
+        : (() => {
+            const keys = freezeUniqueStrings(
+              requireArray(
+                trait.runtimeOfferFallbackTraitKeys,
+                `${path}.runtimeOfferFallbackTraitKeys`,
+              ) as readonly string[],
+              `${path}.runtimeOfferFallbackTraitKeys`,
+            );
+            if (keys.length !== 3)
+              fail(
+                `${path}.runtimeOfferFallbackTraitKeys`,
+                'must contain exactly three distinct keys',
+              );
+            if (keys.includes(trait.key))
+              fail(`${path}.runtimeOfferFallbackTraitKeys`, 'must not include the preferred trait');
+            if (keys.some((key) => !declaredKeys.has(key)))
+              fail(`${path}.runtimeOfferFallbackTraitKeys`, 'references an unknown trait');
+            return Object.freeze(keys) as readonly [string, string, string];
+          })();
+    const runtimeOfferRequirement =
+      trait.runtimeOfferRequirement === undefined
+        ? undefined
+        : closedValue(
+            trait.runtimeOfferRequirement,
+            [
+              'missingLastStand',
+              'heldLastStand',
+              'deathDefianceDamageBoonEligible',
+              'missingLastStandAndAthenaFirstMeeting',
+            ] as const,
+            `${path}.runtimeOfferRequirement`,
+          );
     let rarityFloorEffect: ProperUpbringingEffect | undefined;
     if (trait.rarityFloorEffect !== undefined) {
       const effectPath = `${path}.rarityFloorEffect`;
@@ -1269,6 +1299,8 @@ function normalizeTraits(
       label: requireNonEmpty(trait.label, `${path}.label`),
       rarityDomain,
       offerRequirements,
+      ...(runtimeOfferFallbackTraitKeys === undefined ? {} : { runtimeOfferFallbackTraitKeys }),
+      ...(runtimeOfferRequirement === undefined ? {} : { runtimeOfferRequirement }),
       ...(trait.equipmentSlot === undefined
         ? {}
         : {
@@ -1648,12 +1680,6 @@ function normalizeContexts(
     )
       fail(path, 'must reference BlockGiftBoons');
     if (
-      key === 'deathDefianceConditionMet' &&
-      (context.kind !== 'authoredCondition' ||
-        context.authoredCondition !== 'deathDefianceConditionMet')
-    )
-      fail(path, 'must be an authored condition context');
-    if (
       key === 'circeRemovableFearVow' &&
       (context.kind !== 'authoredCondition' ||
         context.authoredCondition !== 'circeRemovableFearVow')
@@ -1759,14 +1785,6 @@ function normalizeEchoLastRunBoon(
           key: `${giver.key}:${traitKey}`,
           giverKey: giver.key,
           traitKey,
-          ...(trait.offerRequirements.some(
-            (requirement) =>
-              requirement.kind === 'offerContext' &&
-              requirement.context === 'deathDefianceConditionMet' &&
-              requirement.required,
-          )
-            ? { requiresDeathDefianceCondition: true }
-            : {}),
           ...(lootHistorySource === undefined ? {} : { lootHistorySource }),
         }),
       ];
@@ -1798,6 +1816,26 @@ export function createTraitCatalog(input: RawTraitCatalogInput): TraitCatalog {
     }
   }
   const givers = normalizeGivers(input.givers, traits);
+  for (const trait of traits.values) {
+    const fallbacks = trait.runtimeOfferFallbackTraitKeys;
+    if (fallbacks === undefined) continue;
+    const giver = givers.values.find((candidate) => candidate.traitKeys.includes(trait.key));
+    if (giver === undefined)
+      fail(`traits.${trait.key}.runtimeOfferFallbackTraitKeys`, 'preferred trait has no giver');
+    for (const fallbackKey of fallbacks) {
+      const fallback = traits.byKey[fallbackKey];
+      if (fallback === undefined || !giver.traitKeys.includes(fallbackKey))
+        fail(
+          `traits.${trait.key}.runtimeOfferFallbackTraitKeys`,
+          'must remain within the same giver',
+        );
+      if (fallback.offerRequirements.length !== 0)
+        fail(
+          `traits.${trait.key}.runtimeOfferFallbackTraitKeys`,
+          'fallback traits must be requirement-free',
+        );
+    }
+  }
   const boonRarityBases = normalizeBoonRarityBases(input.boonRarityBases);
   for (const aspect of aspects.values) {
     const starting = aspect.startingTrait;

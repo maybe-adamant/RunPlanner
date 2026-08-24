@@ -50,12 +50,12 @@ export const hadesTraits = [
     ...raritylessHadesTrait,
     key: 'HadesDeathDefianceDamageBoon',
     label: 'Last Gasp',
-    offerRequirements: [
-      {
-        kind: 'offerContext',
-        context: 'deathDefianceConditionMet',
-        required: true,
-      },
+    offerRequirements: [],
+    runtimeOfferRequirement: 'deathDefianceDamageBoonEligible',
+    runtimeOfferFallbackTraitKeys: [
+      'HadesLifestealBoon',
+      'HadesPreDamageBoon',
+      'HadesChronosDebuffBoon',
     ],
   },
   {

@@ -156,14 +156,6 @@ export function createRewardFacts({
     // requirement flag explicit at the supported baseline rather than infer it
     // from unrelated Shop state; its contextual value arrives with that slice.
     flags: Object.freeze({ allSpellInvested: false, pendingSpellDrop: false }),
-    authoredConditions:
-      currentRoom?.kind === 'authored' &&
-      currentRoom.entryState?.kind === 'shop' &&
-      currentRoom.entryState.deathDefianceConditionMet !== undefined
-        ? Object.freeze({
-            deathDefianceConditionMet: currentRoom.entryState.deathDefianceConditionMet,
-          })
-        : Object.freeze({}),
   });
   return factsWithHistory(Object.freeze({ requirements }), history, currentRoomShopOptionNames);
 }

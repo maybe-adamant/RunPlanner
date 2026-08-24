@@ -155,6 +155,13 @@ interface RewardSimulationBase {
   readonly findings: readonly SemanticFinding[];
 }
 
+/** One evaluated source-local runtime substitute for a selected result/action. */
+export interface ResolvedRuntimeOfferFallback {
+  readonly address: SemanticAddress;
+  readonly preferredKey: string;
+  readonly fallbackKey: string;
+}
+
 export interface BiomeRewardSimulation extends RewardSimulationBase {
   readonly storeSupport: readonly RewardStoreSupportEntry[];
   readonly targetHistory: readonly TargetRewardHistoryCheckpoint[];
@@ -163,6 +170,8 @@ export interface BiomeRewardSimulation extends RewardSimulationBase {
   readonly runStateAvailability: readonly RunStateAvailability[];
   readonly selectedTraitOffers: readonly SelectedTraitOfferAssessment[];
   readonly selectedLevelResolutions: readonly SelectedLevelResolutionAssessment[];
+  /** One resolved runtime substitute per reached selected result/action. */
+  readonly runtimeOfferFallbacks: readonly ResolvedRuntimeOfferFallback[];
   readonly figLeafPhaseCandidates: readonly FigLeafPhaseCandidateSupport[];
   readonly gorgonPhaseCandidates: readonly GorgonPhaseCandidateSupport[];
   readonly nemesisRandomEventCandidates: readonly NemesisRandomEventCandidateSupport[];

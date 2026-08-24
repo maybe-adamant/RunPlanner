@@ -109,12 +109,7 @@ export function applyKeepsakeCommand(
         failCommand(command, `${descriptor.giverKey} has inconsistent rarity declarations`);
       if (command.value.rarity !== undefined)
         failCommand(command, `rarityless option ${command.value.traitKey} has no rarity`);
-      completeValue = Object.freeze({
-        traitKey: command.value.traitKey,
-        ...(command.value.deathDefianceConditionMet === undefined
-          ? {}
-          : { deathDefianceConditionMet: command.value.deathDefianceConditionMet }),
-      });
+      completeValue = Object.freeze({ traitKey: command.value.traitKey });
     } else {
       if (rarityPolicy?.kind !== 'fixed')
         failCommand(command, `${descriptor.giverKey} must declare one fixed result rarity`);

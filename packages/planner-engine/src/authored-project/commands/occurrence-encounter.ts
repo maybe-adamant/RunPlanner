@@ -137,7 +137,7 @@ function updatedSelections(
       : Object.freeze({ ...priorOffers, [phase.phaseKey]: Object.freeze(phaseOffers) });
   const gorgonResultByPhase = { ...(current.gorgonResultByPhase ?? {}) };
   if (gorgonSlotOwnedByDeclaration(catalog, binding, room.gameName)) {
-    gorgonResultByPhase[phase.phaseKey] ??= { deathDefianceConditionMet: false };
+    gorgonResultByPhase[phase.phaseKey] ??= { athenaTriggerConditionMet: false };
   }
   const priorNemesis = current.nemesisRandomEventByPhase ?? {};
   const nemesisRandomEventByPhase =
@@ -210,7 +210,7 @@ function updatedGorgonResult(
   const nextOffer =
     command.value === true && prior.athenaOffer === undefined ? null : prior.athenaOffer;
   const next = Object.freeze({
-    deathDefianceConditionMet: command.value,
+    athenaTriggerConditionMet: command.value,
     ...(nextOffer === undefined ? {} : { athenaOffer: nextOffer }),
   });
   return Object.freeze({

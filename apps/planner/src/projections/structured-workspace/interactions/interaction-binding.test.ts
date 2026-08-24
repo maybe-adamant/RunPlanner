@@ -377,7 +377,6 @@ function reachedEchoProject(): ProjectDocument {
         { traitKey: 'EchoDoubleLevelBoon', echoPomTarget: null },
       ],
       selectedOptionKey: 'option1',
-      deathDefianceConditionMet: false,
     },
   });
   return project;
@@ -438,7 +437,6 @@ describe('structured workspace interaction binding', () => {
       options: [draft.options[2]!, draft.options[0]!, draft.options[1]!],
       selectedOptionKey: 'option2' as const,
       rarificationActions: ['option1' as const],
-      deathDefianceConditionMet: true,
     } satisfies AuthoredTraitOfferTraits;
     expect(interaction.intentFor(changed).command).toEqual({
       kind: 'ReplaceGorgonAthenaOffer',
@@ -1800,7 +1798,6 @@ describe('structured workspace interaction binding', () => {
           { traitKey: 'NarcissusC' },
         ],
         selectedOptionKey: 'option1',
-        deathDefianceConditionMet: false,
       },
     });
     const current = project.routes

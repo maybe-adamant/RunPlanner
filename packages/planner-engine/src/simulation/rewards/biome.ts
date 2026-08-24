@@ -43,6 +43,7 @@ import {
   createUnresolvedAcquisitionRewardState,
   createUnresolvedPickupRewardState,
   materializeGorgonAthenaOffer,
+  optionIndex,
 } from '../../authored-project/traits';
 import {
   encounterEnvelopeSlots,
@@ -95,6 +96,7 @@ import type {
   BiomeRewardSimulation,
   RewardStoreCandidateSupport,
   RewardStoreSupportEntry,
+  ResolvedRuntimeOfferFallback,
   TargetRewardHistoryCheckpoint,
 } from './model';
 import {
@@ -1214,6 +1216,7 @@ export function selectedTraitOfferProducts(
 ): {
   readonly selectedTraitOffers: readonly SelectedTraitOfferAssessment[];
   readonly selectedLevelResolutions: readonly SelectedLevelResolutionAssessment[];
+  readonly runtimeOfferFallbacks: readonly ResolvedRuntimeOfferFallback[];
   readonly candidateContexts: ReadonlyMap<string, readonly TraitOfferCandidateContext[]>;
   readonly levelCandidateContexts: ReadonlyMap<
     string,
@@ -1236,10 +1239,33 @@ export function selectedTraitOfferProducts(
       chronologicalIndex: number;
     }
   >();
+  const directRuntimeFallbacks = new Map<
+    string,
+    {
+      readonly address: SemanticAddress;
+      readonly preferredKey: string;
+      readonly fallbackKeys: (string | undefined)[];
+    }
+  >();
   for (const branch of branches) {
     for (const trace of branch.traitEvaluations ?? []) {
       const owner = traitOwnerAddress(trace.address);
-      if (owner === undefined) continue;
+      if (owner === undefined) {
+        if (trace.offer.kind === 'traits') {
+          const key = semanticAddressKey(trace.address);
+          const current = directRuntimeFallbacks.get(key);
+          if (current === undefined)
+            directRuntimeFallbacks.set(key, {
+              address: trace.address,
+              preferredKey:
+                trace.offer.options[optionIndex(trace.offer.selectedOptionKey)]!.traitKey,
+              fallbackKeys: [trace.runtimeOfferFallbackTraitKey],
+            });
+          else if (!current.fallbackKeys.includes(trace.runtimeOfferFallbackTraitKey))
+            current.fallbackKeys.push(trace.runtimeOfferFallbackTraitKey);
+        }
+        continue;
+      }
       const address = createTraitOfferAddress(owner, trace.acquisitionRole);
       const key = semanticAddressKey(address);
       const current = grouped.get(key);
@@ -1395,6 +1421,31 @@ export function selectedTraitOfferProducts(
   return Object.freeze({
     selectedTraitOffers,
     selectedLevelResolutions,
+    runtimeOfferFallbacks: Object.freeze([
+      ...[...grouped.values()].flatMap((entry) => {
+        const keys = new Set(entry.branches.map((trace) => trace.runtimeOfferFallbackTraitKey));
+        const fallbackKey = keys.size === 1 ? [...keys][0] : undefined;
+        if (fallbackKey === undefined || entry.offer.kind !== 'traits') return [];
+        return [
+          Object.freeze({
+            address: entry.address,
+            preferredKey: entry.offer.options[optionIndex(entry.offer.selectedOptionKey)]!.traitKey,
+            fallbackKey,
+          }),
+        ];
+      }),
+      ...[...directRuntimeFallbacks.values()].flatMap((entry) =>
+        entry.fallbackKeys.length === 1 && entry.fallbackKeys[0] !== undefined
+          ? [
+              Object.freeze({
+                address: entry.address,
+                preferredKey: entry.preferredKey,
+                fallbackKey: entry.fallbackKeys[0]!,
+              }),
+            ]
+          : [],
+      ),
+    ]),
     candidateContexts,
     levelCandidateContexts,
   });
@@ -1464,6 +1515,14 @@ export function evaluateBiomeRewardsAssemblyInternal(
     string,
     import('./model').NemesisRandomEventCandidateSupport
   >();
+  const runtimeOfferFallbacks = new Map<
+    string,
+    {
+      readonly address: SemanticAddress;
+      readonly preferredKey: string;
+      readonly fallbackKey: string;
+    }
+  >();
   const blockedGorgonPhases = new Set<string>();
   let gorgonEvaluationBlocked = false;
   const eligibleGorgonPhases = new Set<string>();
@@ -1493,6 +1552,27 @@ export function evaluateBiomeRewardsAssemblyInternal(
                 : fail('Artificer replacement frontier received a foreign owner'),
           }),
         );
+    }
+  }
+  function recordRuntimeOfferFallbacks(
+    fallbacks:
+      | readonly {
+          readonly address: SemanticAddress;
+          readonly preferredRewardType: string;
+          readonly fallbackRewardType: string;
+        }[]
+      | undefined,
+  ): void {
+    for (const fallback of fallbacks ?? []) {
+      const key = semanticAddressKey(fallback.address);
+      runtimeOfferFallbacks.set(
+        key,
+        Object.freeze({
+          address: fallback.address,
+          preferredKey: fallback.preferredRewardType,
+          fallbackKey: fallback.fallbackRewardType,
+        }),
+      );
     }
   }
   function recordDerivedAcquisitionEntryFrontiers(
@@ -2500,6 +2580,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
       );
     }
     recordAcquisitionRoleFrontiers(settled.roleFrontiers);
+    recordRuntimeOfferFallbacks(settled.runtimeOfferFallbacks);
     recordDerivedAcquisitionEntryFrontiers(settled.derivedEntryFrontiers);
     recordTraitChildSettlements(settled.traitChildSettlements, room.origin);
     return settled.branches;
@@ -2889,8 +2970,8 @@ export function evaluateBiomeRewardsAssemblyInternal(
                 selectedEncounterKey === undefined ||
                 catalog.encounterDefinitions.byKey[selectedEncounterKey]?.hostsGorgon !== true,
               figLeafSkipped: event.execution === 'skippedByFigLeaf',
-              deathDefianceConditionMet:
-                room.encounters.gorgonResultByPhase?.[event.phaseKey]?.deathDefianceConditionMet ===
+              athenaTriggerConditionMet:
+                room.encounters.gorgonResultByPhase?.[event.phaseKey]?.athenaTriggerConditionMet ===
                 true,
             })
           ) {
@@ -4919,7 +5000,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
           if (
             phase?.blocksGorgon !== true &&
             declaration.blocksGorgon !== true &&
-            result?.deathDefianceConditionMet === true &&
+            result?.athenaTriggerConditionMet === true &&
             result.athenaOffer === null &&
             !blockedGorgonPhases.has(gorgonKey)
           ) {
@@ -4941,7 +5022,6 @@ export function evaluateBiomeRewardsAssemblyInternal(
                   event.sequence,
                   'localRoomLifecycle',
                 ),
-                result.deathDefianceConditionMet,
                 'gorgonAthena',
                 gorgonSnapshot?.rarity,
                 Object.freeze({
@@ -4963,7 +5043,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
           } else if (
             phase?.blocksGorgon !== true &&
             declaration.blocksGorgon !== true &&
-            result?.deathDefianceConditionMet === true &&
+            result?.athenaTriggerConditionMet === true &&
             result.athenaOffer != null &&
             gorgonOffer !== undefined &&
             assessGorgonChildSettlement(catalog, result.athenaOffer) &&
@@ -4987,7 +5067,6 @@ export function evaluateBiomeRewardsAssemblyInternal(
                   event.sequence,
                   'localRoomLifecycle',
                 ),
-                result.deathDefianceConditionMet,
                 'gorgonAthena',
                 gorgonSnapshot?.rarity,
               ),
@@ -5018,7 +5097,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
               gorgonEvaluationBlocked = true;
             }
           } else if (
-            result?.deathDefianceConditionMet === true &&
+            result?.athenaTriggerConditionMet === true &&
             result.athenaOffer === undefined
           ) {
             blockedGorgonPhases.add(gorgonKey);
@@ -5031,7 +5110,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
               ownerRegion(gorgonAddress.owner),
               historyFindingChronology(event.sequence),
             );
-          } else if (result?.deathDefianceConditionMet === true && result.athenaOffer != null) {
+          } else if (result?.athenaTriggerConditionMet === true && result.athenaOffer != null) {
             blockedGorgonPhases.add(gorgonKey);
             gorgonEvaluationBlocked = true;
             addRewardFinding(
@@ -5422,6 +5501,29 @@ export function evaluateBiomeRewardsAssemblyInternal(
                 }),
               );
             }
+            if (outcome.kind === 'freeItem') {
+              const result =
+                room.acquisitionSites?.[`nemesisGenerated:${encodeURIComponent(event.phaseKey)}`]
+                  ?.entries.result;
+              const edge = policy?.freeItem.runtimeOfferFallbacks.find(
+                (candidate) => candidate.preferredRewardType === result?.offer.rewardType,
+              );
+              if (
+                edge !== undefined &&
+                assessments?.every((assessment) =>
+                  assessment.freeItemRewardTypes.includes(edge.fallbackRewardType),
+                )
+              ) {
+                runtimeOfferFallbacks.set(
+                  semanticAddressKey(eventOwner),
+                  Object.freeze({
+                    address: eventOwner,
+                    preferredKey: edge.preferredRewardType,
+                    fallbackKey: edge.fallbackRewardType,
+                  }),
+                );
+              }
+            }
           }
         }
         const authoredEncounterOffer =
@@ -5455,7 +5557,6 @@ export function evaluateBiomeRewardsAssemblyInternal(
                 event.sequence,
                 'localRoomLifecycle',
               ),
-              undefined,
               'selection',
               undefined,
               Object.freeze({
@@ -5499,7 +5600,6 @@ export function evaluateBiomeRewardsAssemblyInternal(
                 event.sequence,
                 'localRoomLifecycle',
               ),
-              undefined,
               'selection',
               undefined,
               Object.freeze({
@@ -5874,6 +5974,10 @@ export function evaluateBiomeRewardsAssemblyInternal(
     runStateAvailability: runStatePublication.availability,
     selectedTraitOffers: traitProducts.selectedTraitOffers,
     selectedLevelResolutions: traitProducts.selectedLevelResolutions,
+    runtimeOfferFallbacks: Object.freeze([
+      ...traitProducts.runtimeOfferFallbacks,
+      ...runtimeOfferFallbacks.values(),
+    ]),
     figLeafPhaseCandidates: Object.freeze([...figLeafPhaseCandidates.values()]),
     gorgonPhaseCandidates: Object.freeze([...gorgonPhaseCandidates.values()]),
     nemesisRandomEventCandidates: Object.freeze([...nemesisRandomEventCandidates.values()]),

@@ -140,6 +140,11 @@ export interface ShopOptionEntry {
   readonly rewardType: string;
   readonly requirement?: RequirementExpression;
   readonly purchaseRequirement?: RequirementExpression;
+  /** Ordered source-pool-local substitutes. Evaluation exports only the first
+   * active member for this generation; execution never traverses the list. */
+  readonly runtimeOfferFallbackRewardTypes?: readonly string[];
+  /** Source-only volatile predicate, not Planner eligibility. */
+  readonly runtimeOfferRequirement?: 'missingLastStand';
   readonly acquisitionLifecycle: readonly AcquisitionLifecycleBinding[];
   /** Exact world interaction identity passed to the physical restock exclusion. */
   readonly purchaseInteraction:

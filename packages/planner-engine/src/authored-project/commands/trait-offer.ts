@@ -1,7 +1,6 @@
 import type { Catalog } from '../../catalog-schema';
 import {
   traitGiverForAcquisitionRole,
-  traitGiverUsesOfferContext,
   reconcileSelectedPickupProducerState,
   selectedPickupProducerForEntry,
   traitOfferSupportsExhaustion,
@@ -45,11 +44,9 @@ function replaceTraitOfferValue(
   catalog: Catalog,
   existing: AuthoredTraitOffer | null,
   command: TraitOfferCommand,
-  omitDeathDefianceContext = false,
 ): AuthoredTraitOffer | null {
   if (command.kind === 'ResetEncounterTraitOffer') return null;
-  if (command.kind === 'ReplaceTraitOffer')
-    return validateOffer(catalog, command.value, command, omitDeathDefianceContext);
+  if (command.kind === 'ReplaceTraitOffer') return validateOffer(catalog, command.value, command);
   if (existing === null) failCommand(command, 'trait offer must be authored as one complete offer');
   if (command.kind === 'ReplaceTraitSelection')
     return Object.freeze({ ...existing, selectedOptionKey: command.selectedOptionKey });
@@ -141,7 +138,6 @@ function validateOffer(
   catalog: Catalog,
   value: AuthoredTraitOffer,
   command: TraitOfferCommand,
-  omitDeathDefianceContext = false,
 ): AuthoredTraitOffer {
   const giver = catalog.traitGivers.byKey[value.giverKey];
   if (giver === undefined) failCommand(command, `unknown trait giver ${value.giverKey}`);
@@ -252,13 +248,6 @@ function validateOffer(
       }
     }
   }
-  const conditionApplicable =
-    !omitDeathDefianceContext &&
-    traitGiverUsesOfferContext(catalog, value.giverKey, 'deathDefianceConditionMet');
-  if (conditionApplicable && typeof value.deathDefianceConditionMet !== 'boolean')
-    failCommand(command, 'Death Defiance condition is required for this trait giver');
-  if (!conditionApplicable && value.deathDefianceConditionMet !== undefined)
-    failCommand(command, 'Death Defiance condition is not supported by this trait giver');
   if (
     value.rarificationActions !== undefined &&
     (!Array.isArray(value.rarificationActions) ||
@@ -309,7 +298,6 @@ function validateOffer(
     ...(value.rejectedOptionKey === undefined
       ? {}
       : { rejectedOptionKey: value.rejectedOptionKey }),
-    ...(conditionApplicable ? { deathDefianceConditionMet: value.deathDefianceConditionMet } : {}),
   });
 }
 
@@ -730,7 +718,7 @@ export function applyTraitOfferCommand(
         gorgonResultByPhase: Object.freeze({
           ...(currentEncounters.gorgonResultByPhase ?? {}),
           [phaseKey]: Object.freeze({
-            ...(phaseGorgon ?? { deathDefianceConditionMet: false }),
+            ...(phaseGorgon ?? { athenaTriggerConditionMet: false }),
             athenaOffer: value,
           }),
         }),
@@ -752,7 +740,7 @@ export function applyTraitOfferCommand(
           traitOfferOption(existing, command.selectedOptionKey) === undefined)
       )
         failCommand(command, 'selected option is not materialized by this trait offer');
-      const value = replaceTraitOfferValue(catalog, existing, command, false);
+      const value = replaceTraitOfferValue(catalog, existing, command);
       if (value !== null && value.giverKey !== expectedProducer.giverKey)
         failCommand(command, `trait offer giver must be ${expectedProducer.giverKey}`);
       if (sameOccurrenceValue(value, existing)) return document;

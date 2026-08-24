@@ -54,7 +54,7 @@ function decodeKeepsakeEquipResults(
     });
   }
   const pom = expectRecord(results.jeweledPom, `${path}.jeweledPom`);
-  expectExactKeys(pom, ['traitKey', 'rarity', 'deathDefianceConditionMet'], `${path}.jeweledPom`);
+  expectExactKeys(pom, ['traitKey', 'rarity'], `${path}.jeweledPom`);
   const traitKey = expectString(pom.traitKey, `${path}.jeweledPom.traitKey`);
   const descriptor = catalog.keepsakes.values.find(
     (keepsake) => keepsake.effect?.kind === 'jeweledPom',
@@ -86,18 +86,10 @@ function decodeKeepsakeEquipResults(
       fail(`${path}.jeweledPom.rarity`, `is not declared for ${traitKey}`);
     rarity = authoredRarity as import('../catalog-schema').TraitRarity;
   }
-  if (
-    pom.deathDefianceConditionMet !== undefined &&
-    typeof pom.deathDefianceConditionMet !== 'boolean'
-  )
-    fail(`${path}.jeweledPom.deathDefianceConditionMet`, 'must be boolean');
   return Object.freeze({
     jeweledPom: Object.freeze({
       traitKey,
       ...(rarity === undefined ? {} : { rarity }),
-      ...(pom.deathDefianceConditionMet === undefined
-        ? {}
-        : { deathDefianceConditionMet: pom.deathDefianceConditionMet }),
     }),
     ...(hammer === undefined
       ? {}

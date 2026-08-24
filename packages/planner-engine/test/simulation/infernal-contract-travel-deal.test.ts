@@ -153,14 +153,14 @@ function authoredDerivedReward(
   return authoredShopReward(offer, profileKey);
 }
 
-function baseFacts(): RewardKernelFacts {
+function baseFacts(enteredBiomes = 4): RewardKernelFacts {
   return {
     requirements: {
       counters: {
         biomeDepthCache: 4,
         biomeEncounterDepth: 2,
         encounterDepth: 7,
-        enteredBiomes: 4,
+        enteredBiomes,
         upgradableTraitCount: 1,
       },
       records: { biomeUseRecord: {}, lootTypeHistory: {}, roomsEntered: {}, useRecord: {} },
@@ -258,6 +258,7 @@ function settle(options: {
   readonly echoDuplicateChild?: AuthoredRewardState;
   readonly shopOfferOverrides?: Readonly<Record<string, AuthoredRewardState>>;
   readonly roomGameName?: 'F_PreBoss01' | 'I_PreBoss02' | 'Q_PreBoss01';
+  readonly enteredBiomes?: number;
 }) {
   const roomGameName = options.roomGameName ?? 'F_PreBoss01';
   const declaration = catalog.rooms.byKey[roomGameName];
@@ -375,7 +376,7 @@ function settle(options: {
   const facts = (
     history: RewardBranchState['history'],
     currentRoomShopOptionNames: ReadonlySet<string> = new Set(),
-  ) => factsWithHistory(baseFacts(), history, currentRoomShopOptionNames);
+  ) => factsWithHistory(baseFacts(options.enteredBiomes), history, currentRoomShopOptionNames);
   const sourceBranches =
     options.divergentTravel === true
       ? Object.freeze([
@@ -1043,5 +1044,78 @@ describe('Infernal Contract and Travel Deal chronology', () => {
     });
     expect([...settled.findings.values()]).toEqual([]);
     expect(settled.settlement.branches).toHaveLength(1);
+  });
+
+  it.each([['Q Shop', 'Q_PreBoss01', 4, 'Survival', 'ArmorBigBoost']] as const)(
+    'publishes the exact runtime Last Stand fallback for %s without changing the preferred purchase',
+    (_label, roomGameName, enteredBiomes, offerKey, fallbackRewardType) => {
+      const profileKey = roomGameName === 'Q_PreBoss01' ? 'Q_WorldShop' : 'I_WorldShop';
+      const result = settle({
+        order: [offerKey],
+        roomGameName,
+        enteredBiomes,
+        shopOfferOverrides: {
+          [offerKey]: authoredShopReward(
+            Object.freeze({ rewardType: 'LastStandDrop' as const }),
+            profileKey,
+          ),
+        },
+      });
+      expect(result.settlement.runtimeOfferFallbacks).toEqual([
+        expect.objectContaining({
+          address: expect.objectContaining({ kind: 'shopOffer', offerKey }),
+          preferredRewardType: 'LastStandDrop',
+          fallbackRewardType,
+        }),
+      ]);
+      expect(result.settlement.branches[0]?.history.consumableRecord.LastStandDrop).toBe(1);
+      expect(
+        result.settlement.branches[0]?.history.consumableRecord[fallbackRewardType],
+      ).toBeUndefined();
+    },
+  );
+
+  it('publishes Travel Deal fallback at the later derived action, not the purchased Shop action', () => {
+    const preferred = authoredShopReward(
+      Object.freeze({ rewardType: 'LastStandDrop' as const }),
+      'Q_WorldShop',
+    );
+    const initial = settle({
+      order: ['Survival'],
+      roomGameName: 'Q_PreBoss01',
+      travel: true,
+      shopOfferOverrides: { Survival: preferred },
+    });
+    const refill = initial.settlement.derivedEntryFrontiers?.find(
+      (entry) => entry.kind === 'travelDealRefill',
+    );
+    if (refill === undefined) throw new Error('missing Travel Deal refill');
+    const refillPreferred = authoredDerivedReward(
+      refill,
+      Object.freeze({ rewardType: 'ArmorBigBoost' as const }),
+      'Q_WorldShop',
+    );
+    const settled = settle({
+      order: ['Survival', 'travelDealRefill'],
+      roomGameName: 'Q_PreBoss01',
+      travel: true,
+      travelChild: refillPreferred,
+      shopOfferOverrides: { Survival: preferred },
+    });
+    expect(settled.settlement.runtimeOfferFallbacks).toEqual([
+      expect.objectContaining({
+        address: expect.objectContaining({ kind: 'shopOffer', offerKey: 'Survival' }),
+        preferredRewardType: 'LastStandDrop',
+        fallbackRewardType: 'ArmorBigBoost',
+      }),
+      expect.objectContaining({
+        address: expect.objectContaining({
+          kind: 'acquisitionEntry',
+          entryKey: 'travelDealRefill',
+        }),
+        preferredRewardType: 'ArmorBigBoost',
+        fallbackRewardType: 'HealBigDrop',
+      }),
+    ]);
   });
 });

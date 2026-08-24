@@ -688,18 +688,12 @@ function JeweledPomResultControl({
 }) {
   const dispatch = useAppDispatch();
   const selected = interaction.value;
-  const [missingDeathDefianceDraft, setMissingDeathDefianceDraft] = useState(false);
-  const deathDefianceConditionMet =
-    selected === undefined
-      ? missingDeathDefianceDraft
-      : selected.deathDefianceConditionMet === true;
-  const revision = `${selected?.traitKey ?? ''}:${deathDefianceConditionMet ? 'dd' : 'no-dd'}`;
+  const revision = selected?.traitKey ?? '';
   const [candidateInput, setCandidateInput] = useState(() => ({
     interaction,
     revision,
     loadable: jeweledPomLoadable(interaction.load, {
       traitKey: selected?.traitKey ?? '',
-      ...(deathDefianceConditionMet ? { deathDefianceConditionMet: true } : {}),
     }),
   }));
   if (candidateInput.interaction !== interaction || candidateInput.revision !== revision) {
@@ -708,7 +702,6 @@ function JeweledPomResultControl({
       revision,
       loadable: jeweledPomLoadable(interaction.load, {
         traitKey: selected?.traitKey ?? '',
-        ...(deathDefianceConditionMet ? { deathDefianceConditionMet: true } : {}),
       }),
     });
   }
@@ -734,7 +727,6 @@ function JeweledPomResultControl({
                 interaction.intentFor({
                   ...(interaction.value ?? {}),
                   traitKey,
-                  ...(deathDefianceConditionMet ? { deathDefianceConditionMet: true } : {}),
                 }).command,
               ),
             );
@@ -755,30 +747,6 @@ function JeweledPomResultControl({
           );
         })}
       </select>
-      {interaction.supportsDeathDefianceCondition ? (
-        <label>
-          <input
-            checked={deathDefianceConditionMet}
-            type="checkbox"
-            onChange={(event) => {
-              if (selected === undefined) {
-                setMissingDeathDefianceDraft(event.target.checked);
-                return;
-              }
-              dispatch(
-                authoredProjectCommandDispatched(
-                  interaction.intentFor({
-                    traitKey: selected.traitKey,
-                    ...(selected.rarity === undefined ? {} : { rarity: selected.rarity }),
-                    deathDefianceConditionMet: event.target.checked,
-                  }).command,
-                ),
-              );
-            }}
-          />
-          Death Defiance condition met
-        </label>
-      ) : null}
     </fieldset>
   );
 }

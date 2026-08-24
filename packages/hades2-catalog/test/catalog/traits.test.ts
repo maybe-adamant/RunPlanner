@@ -738,17 +738,8 @@ const expectedOfferRequirements: Readonly<Record<string, string>> = {
   CirceSorceryDamageBoon:
     '[{"kind":"anyEquippedTrait","traitKeys":["SpellLaserTrait","SpellLeapTrait","SpellSummonTrait","SpellMeteorTrait","SpellTransformTrait","SpellMoonBeamTrait","SpellPolymorphTrait"]}]',
   NarcissusA: '[{"kind":"upgradableTrait"}]',
-  NarcissusH: '[{"kind":"offerContext","context":"deathDefianceConditionMet","required":true}]',
-  EchoDeathDefianceRefill:
-    '[{"kind":"offerContext","context":"deathDefianceConditionMet","required":true}]',
-  DeathDefianceRefillBoon:
-    '[{"kind":"offerContext","context":"deathDefianceConditionMet","required":true}]',
-  DeathDefianceRetaliateCurse:
-    '[{"kind":"offerContext","context":"deathDefianceConditionMet","required":true}]',
   HadesCastProjectileBoon:
     '[{"kind":"notEquippedTrait","traitKeys":["CastProjectileBoon","CastAnywhereBoon","CastLobBoon","SelfCastBoon"]}]',
-  HadesDeathDefianceDamageBoon:
-    '[{"kind":"offerContext","context":"deathDefianceConditionMet","required":true}]',
   CastLobBoon:
     '[{"kind":"notEquippedTrait","traitKeys":["CastProjectileBoon","CastAnywhereBoon","HadesCastProjectileBoon","SelfCastBoon"]}]',
   DoorHealToFullBoon: '[{"kind":"anyEquippedTrait","traitKeys":["HighHealthOffenseBoon"]}]',
@@ -928,6 +919,41 @@ const expectedOfferRequirements: Readonly<Record<string, string>> = {
 };
 
 describe('trait offer catalog closure', () => {
+  it('owns the exact runtime offer requirements and ordered fallback domains', () => {
+    const expected = {
+      NarcissusH: {
+        requirement: 'missingLastStand',
+        fallbacks: ['NarcissusB', 'NarcissusC', 'NarcissusD'],
+      },
+      EchoDeathDefianceRefill: {
+        requirement: 'missingLastStand',
+        fallbacks: ['DiminishingDodgeBoon', 'DiminishingHealthAndManaBoon', 'EchoDoubleLevelBoon'],
+      },
+      DeathDefianceRetaliateCurse: {
+        requirement: 'heldLastStand',
+        fallbacks: ['HealingOnDeathCurse', 'MoneyOnDeathCurse', 'ManaOverTimeCurse'],
+      },
+      DeathDefianceRefillBoon: {
+        requirement: 'missingLastStandAndAthenaFirstMeeting',
+        fallbacks: [
+          'InvulnerabilityDashBoon',
+          'RetaliateInvulnerabilityBoon',
+          'FocusLastStandBoon',
+        ],
+      },
+      HadesDeathDefianceDamageBoon: {
+        requirement: 'deathDefianceDamageBoonEligible',
+        fallbacks: ['HadesLifestealBoon', 'HadesPreDamageBoon', 'HadesChronosDebuffBoon'],
+      },
+    } as const;
+
+    for (const [traitKey, policy] of Object.entries(expected)) {
+      const trait = traits.traits.byKey[traitKey];
+      expect(trait?.runtimeOfferRequirement, traitKey).toBe(policy.requirement);
+      expect(trait?.runtimeOfferFallbackTraitKeys, traitKey).toEqual(policy.fallbacks);
+    }
+  });
+
   it('declares the exact three traits blocked after any prior pickup', () => {
     expect(
       catalog.traits.values
@@ -1583,11 +1609,6 @@ describe('trait offer catalog closure', () => {
     ).toEqual(['Hera:BoonDecayBoon']);
     expect(
       variants
-        .filter((variant) => variant.requiresDeathDefianceCondition === true)
-        .map((variant) => variant.key),
-    ).toEqual(['Athena:DeathDefianceRefillBoon']);
-    expect(
-      variants
         .filter(
           (variant) =>
             traits.traits.byKey[variant.traitKey]?.selectedDisposition.kind ===
@@ -1666,11 +1687,6 @@ describe('trait offer catalog closure', () => {
     expect(traits?.baseElements).toEqual(['Earth', 'Air', 'Fire', 'Water']);
     expect(traits?.offerContexts.byKey.devotionNoDuo?.blockedRarity).toBe('Duo');
     expect(traits?.offerContexts.byKey.blockGiftBoons?.roomFlag).toBe('BlockGiftBoons');
-    expect(traits?.offerContexts.byKey.deathDefianceConditionMet).toEqual({
-      key: 'deathDefianceConditionMet',
-      kind: 'authoredCondition',
-      authoredCondition: 'deathDefianceConditionMet',
-    });
     expect(traits?.givers.byKey.Aphrodite?.rarityPolicy).toEqual({
       kind: 'selectable',
       rarities: ['Common', 'Rare', 'Epic'],

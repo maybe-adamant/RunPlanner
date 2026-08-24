@@ -26,7 +26,6 @@ export interface EvaluatedKeepsakeEquipResultCandidate {
         | {
             readonly traitKey: string;
             readonly rarity?: import('../../catalog-schema').TraitRarity;
-            readonly deathDefianceConditionMet?: boolean;
           };
       readonly selectedPossible: boolean;
       readonly findings: readonly string[];

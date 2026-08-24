@@ -43,12 +43,12 @@ export const athenaTraits = [
     label: 'Renewed Faith',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [
-      {
-        kind: 'offerContext',
-        context: 'deathDefianceConditionMet',
-        required: true,
-      },
+    offerRequirements: [],
+    runtimeOfferRequirement: 'missingLastStandAndAthenaFirstMeeting',
+    runtimeOfferFallbackTraitKeys: [
+      'InvulnerabilityDashBoon',
+      'RetaliateInvulnerabilityBoon',
+      'FocusLastStandBoon',
     ],
     elementContributions: { Fire: 1 },
     usesBoonRarity: true,

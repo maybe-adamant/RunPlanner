@@ -1,7 +1,7 @@
 {
-  "schemaVersion": 53,
+  "schemaVersion": 54,
   "projectId": "surface-1",
-  "catalogVersion": "0.35.0-nemesis-random-events",
+  "catalogVersion": "0.36.0-runtime-offer-fallback",
   "routes": [
     {
       "routeKey": "Underworld",
@@ -96,7 +96,7 @@
                   },
                   "gorgonResultByPhase": {
                     "Encounter": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     }
                   }
                 },
@@ -135,7 +135,7 @@
                   },
                   "gorgonResultByPhase": {
                     "Encounter": {
-                      "deathDefianceConditionMet": false
+                      "athenaTriggerConditionMet": false
                     }
                   }
                 },

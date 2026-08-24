@@ -110,8 +110,6 @@ export interface AuthoredTraitOfferTraits {
   readonly selectedOptionKey: TraitOptionKey;
   /** Ordered explicit Calling Card row actions; base option rarity remains rolled/authored. */
   readonly rarificationActions?: readonly TraitOptionKey[];
-  /** Present only when this giver's normalized offer requirements consume it. */
-  readonly deathDefianceConditionMet?: boolean;
   /** Rejected keeps this exact generated row visible but unavailable. */
   readonly rejectedOptionKey?: TraitOptionKey;
 }
