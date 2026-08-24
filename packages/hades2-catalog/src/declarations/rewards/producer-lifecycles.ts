@@ -16,6 +16,7 @@ export const producerLifecycles = [
       'RoomMoneyTripleDrop',
       'RoomMoneyTinyDrop',
       'StackUpgrade',
+      'StackUpgradeBig',
       'StackUpgradeTriple',
       'WeaponUpgrade',
       'HermesUpgrade',

@@ -20,6 +20,8 @@ export interface RawConcreteAcquisitionDeclaration {
   readonly historyProjection: HistoryProjectionKey;
   readonly goldConversionEligible?: boolean;
   readonly artificerConversionEligible?: boolean;
+  /** Source CanDuplicate; every supported concrete acquisition declares it explicitly. */
+  readonly canDuplicate: boolean;
   readonly lastRewardRecreation?: {
     readonly rewardType: string;
     readonly producerLifecycleKey: 'EchoLastReward';

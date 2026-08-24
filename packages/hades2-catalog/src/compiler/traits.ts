@@ -460,6 +460,7 @@ const SELECTED_DISPOSITIONS = [
   'naturalSelection',
   'ransom',
   'steadyGrowth',
+  'seaStar',
 ] as const;
 type RawTraitRequirement = {
   readonly kind: string;
@@ -592,6 +593,10 @@ function normalizeSelectedDisposition(
         'must declare exact Common 6, Rare 5, Epic 4, Heroic 3 intervals',
       );
     return Object.freeze({ kind, intervalsByRarity: Object.freeze(expected) });
+  }
+  if (kind === 'seaStar') {
+    if (Object.keys(value).length !== 1) fail(path, 'seaStar requires only kind');
+    return Object.freeze({ kind });
   }
   if (kind === 'worldShopRestock') {
     if (Object.keys(value).length !== 3 || value.refillCount !== 1)

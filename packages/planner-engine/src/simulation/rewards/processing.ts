@@ -204,6 +204,14 @@ export interface RewardBranchState {
   readonly levelResolutionEvaluations?: readonly ReachedLevelResolutionEvaluation[];
   readonly arcanaFear: ArcanaFearState;
   readonly keepsakes: KeepsakeState;
+  /**
+   * Sea Star eligibility is decided at a source role's pre-acquisition
+   * frontier, then carried until its separately authored duplicate action.
+   * This deliberately survives later room actions which can change traits.
+   */
+  readonly seaStarDuplicateEligibilityBySource?: Readonly<
+    Record<string, { readonly supported: boolean; readonly evidence: FindingEvidence }>
+  >;
 }
 
 /**
@@ -338,6 +346,49 @@ export interface AcquisitionSource {
     Record<string, AcquisitionSiteAddress>
   >;
   readonly traitContext?: CanonicalResolvedIncomingReward['traitContext'];
+  /** A Sea Star second interaction is never eligible to produce a third. */
+  readonly blocksSeaStarDuplication?: true;
+}
+
+/** Exact Sea Star question at the captured pre-acquisition role frontier. */
+export function assessSeaStarDuplication(
+  catalog: Catalog,
+  branch: RewardBranchState,
+  source: AcquisitionSource,
+  resolution: AcquisitionSettlementRole,
+): { readonly supported: boolean; readonly evidence: FindingEvidence } {
+  const resolved = resolveAcquisitionRole(
+    catalog.rewards,
+    source.offer,
+    resolution.role,
+    resolution.lifecyclePoint,
+  );
+  const acquisition = catalog.rewards.acquisitions.byKey[resolved.acquisition.gameName];
+  const seaStarActive =
+    (branch.traitHistory ?? createTraitHistoryState()).equippedTraits.DoubleRewardBoon !==
+    undefined;
+  const evidence = Object.freeze({
+    ...offerEvidence(source.offer),
+    role: resolution.role,
+    lifecyclePoint: resolution.lifecyclePoint,
+    canDuplicate: acquisition?.canDuplicate === true,
+    seaStarActive,
+    instanceProvenance: source.instanceProvenance,
+    normalDisposition:
+      source.dispositionByAcquisitionRole?.[resolution.role]?.kind !== 'timePiece' &&
+      source.dispositionByAcquisitionRole?.[resolution.role]?.kind !== 'artificer',
+    blocksSeaStarDuplication: source.blocksSeaStarDuplication === true,
+  });
+  return Object.freeze({
+    supported:
+      seaStarActive &&
+      acquisition?.canDuplicate === true &&
+      source.instanceProvenance === 'free' &&
+      source.blocksSeaStarDuplication !== true &&
+      source.dispositionByAcquisitionRole?.[resolution.role]?.kind !== 'timePiece' &&
+      source.dispositionByAcquisitionRole?.[resolution.role]?.kind !== 'artificer',
+    evidence,
+  });
 }
 
 export function withStoredArtificerReplacements(
@@ -503,6 +554,9 @@ function equivalentBranchStateKey(branch: RewardBranchState): string {
     traitHistory: branch.traitHistory,
     arcanaFear: branch.arcanaFear,
     keepsakes: branch.keepsakes,
+    seaStarDuplicateEligibilityBySource: orderedRecord(
+      branch.seaStarDuplicateEligibilityBySource ?? {},
+    ),
     processedThroughHistorySequence: branch.processedThroughHistorySequence,
   });
 }
@@ -4052,6 +4106,15 @@ export function settleArtificerReplacementAcquisition(
     throw new Error(`${replacement.offer.rewardType} has no RoomReward lifecycle`);
   const roleFrontiers: AcquisitionRoleFrontier[] = [];
   const traitChildSettlements: ReachedTraitChildCheckpoint[] = [];
+  const sourceAcquisition = resolveAcquisitionRole(
+    catalog.rewards,
+    request.sourceReward.offer,
+    request.acquisitionRole,
+    'roomRewardPickup',
+  );
+  const sourceCanDuplicate =
+    catalog.rewards.acquisitions.byKey[sourceAcquisition.acquisition.gameName]?.canDuplicate ===
+    true;
   let current: readonly RewardBranchState[] = reached;
   for (const binding of lifecycle.acquisitionLifecycle) {
     current = applyProducerRoleHistory(
@@ -4070,6 +4133,7 @@ export function settleArtificerReplacementAcquisition(
             }),
         dispositionByAcquisitionRole: replacement.dispositionByAcquisitionRole,
         traitContext: request.traitContext ?? Object.freeze({}),
+        ...(!sourceCanDuplicate ? { blocksSeaStarDuplication: true as const } : {}),
       }),
       Object.freeze({ ...binding, historySequence: request.historySequence }),
       request.facts,
@@ -4125,6 +4189,8 @@ export function settlePickupAcquisitionSite(
       source: AcquisitionEntryAddress,
       role: string,
     ) => AcquisitionSiteAddress;
+    /** Closed entry identities that represent Sea Star's already-retained object. */
+    readonly seaStarDuplicateEntryKeys?: ReadonlySet<string>;
     /** Candidate-only outer reward probes do not publish the child's own frontier. */
     readonly publishUnpickedChildFrontiers?: boolean;
   },
@@ -4228,6 +4294,9 @@ export function settlePickupAcquisitionSite(
               : { levelResolutionsByAcquisitionRole: reward.levelResolutionsByAcquisitionRole }),
             traitContext: request.traitContext ?? Object.freeze({}),
             dispositionByAcquisitionRole: reward.dispositionByAcquisitionRole,
+            ...(request.seaStarDuplicateEntryKeys?.has(key) === true
+              ? { blocksSeaStarDuplication: true as const }
+              : {}),
             artificerReplacementByAcquisitionRole: Object.freeze(
               Object.fromEntries(
                 Object.entries(reward.dispositionByAcquisitionRole).flatMap(
@@ -4338,6 +4407,9 @@ export function settlePickupAcquisitionSite(
             : { levelResolutionsByAcquisitionRole: reward.levelResolutionsByAcquisitionRole }),
           traitContext: request.traitContext ?? Object.freeze({}),
           dispositionByAcquisitionRole: reward.dispositionByAcquisitionRole,
+          ...(request.seaStarDuplicateEntryKeys?.has(key) === true
+            ? { blocksSeaStarDuplication: true as const }
+            : {}),
           artificerReplacementByAcquisitionRole: Object.freeze(
             Object.fromEntries(
               Object.entries(reward.dispositionByAcquisitionRole).flatMap(([role, disposition]) =>
@@ -4430,6 +4502,17 @@ function applyProducerRoleHistory(
   let unresolvedArtificerReplacement = false;
   let unresolvedTraitOffer = false;
   for (const branch of branches) {
+    const seaStarAssessment = assessSeaStarDuplication(catalog, branch, incoming, resolution);
+    const seaStarSourceKey = semanticAddressKey(
+      createAcquisitionRoleAddress(incoming.origin, resolution.role),
+    );
+    const attestedBranch = Object.freeze({
+      ...branch,
+      seaStarDuplicateEligibilityBySource: freezeRecord({
+        ...(branch.seaStarDuplicateEligibilityBySource ?? {}),
+        [seaStarSourceKey]: seaStarAssessment,
+      }),
+    });
     const branchFacts = facts(branch.history);
     if (
       !offerAlreadyGenerated &&
@@ -4462,7 +4545,7 @@ function applyProducerRoleHistory(
     if (disposition.kind === 'timePiece' && conversion.supported) {
       next.push(
         appendRewardEvent(
-          Object.freeze({ ...branch, keepsakes: consumeTimePieceCharge(branch.keepsakes) }),
+          Object.freeze({ ...attestedBranch, keepsakes: consumeTimePieceCharge(branch.keepsakes) }),
           resolution.historySequence,
           {
             kind: 'conversionToGold',
@@ -4626,6 +4709,9 @@ function applyProducerRoleHistory(
             continue;
           }
           let replacementBranches: readonly RewardBranchState[] = Object.freeze([generated]);
+          const sourceCanDuplicate =
+            catalog.rewards.acquisitions.byKey[acquisition.acquisition.gameName]?.canDuplicate ===
+            true;
           for (const binding of replacementLifecycle.acquisitionLifecycle) {
             replacementBranches = applyProducerRoleHistory(
               catalog,
@@ -4644,6 +4730,9 @@ function applyProducerRoleHistory(
                     }),
                 dispositionByAcquisitionRole: artificerReplacement.dispositionByAcquisitionRole,
                 traitContext: incoming.traitContext,
+                ...(incoming.blocksSeaStarDuplication === true || !sourceCanDuplicate
+                  ? { blocksSeaStarDuplication: true as const }
+                  : {}),
               }),
               Object.freeze({ ...binding, historySequence: resolution.historySequence }),
               facts,
@@ -4685,7 +4774,7 @@ function applyProducerRoleHistory(
       catalog.rewards.acquisitions.byKey[acquisition.acquisition.gameName]?.grantedTraitKey;
     const contributions =
       catalog.rewards.acquisitions.byKey[acquisition.acquisition.gameName]?.elementContributions;
-    let acquisitionBranch: RewardBranchState = Object.freeze({ ...branch, history });
+    let acquisitionBranch: RewardBranchState = Object.freeze({ ...attestedBranch, history });
     if (fixedTraitKey !== undefined) {
       const traitHistory = recordFixedAcquisitionTraitGrant(
         catalog,

@@ -19,6 +19,8 @@ export interface EvaluatedAcquisitionConversionCandidate {
     readonly timePieceConvertible: boolean;
     readonly artificerSupported: boolean;
     readonly artificerConvertible: boolean;
+    /** True only when every reached branch can author the Sea Star result. */
+    readonly seaStarSupported: boolean;
     readonly artificerReplacementAddress?: import('../../authored-project/addresses').AcquisitionEntryAddress;
     readonly artificerReplacementRewardTypes?: readonly string[];
     readonly artificerReplacementOptions?: readonly import('../../authored-project/model').AuthoredRewardState[];
@@ -68,6 +70,9 @@ export function evaluateAcquisitionConversionCandidate(
             entry.evidence.blocksArtificerConversion !== true &&
             entry.evidence.instanceProvenance === 'free',
         ),
+      seaStarSupported:
+        capability.seaStarAssessments.length > 0 &&
+        capability.seaStarAssessments.every((entry) => entry.supported),
       ...(capability.artificerReplacementAddress === undefined
         ? {}
         : { artificerReplacementAddress: capability.artificerReplacementAddress }),
@@ -79,7 +84,11 @@ export function evaluateAcquisitionConversionCandidate(
         : { artificerReplacementOptions: capability.artificerReplacementOptions }),
       branchCount: capability.timePieceAssessments.length,
       unsupportedEvidence: Object.freeze(
-        [...capability.timePieceAssessments, ...capability.artificerAssessments]
+        [
+          ...capability.timePieceAssessments,
+          ...capability.artificerAssessments,
+          ...capability.seaStarAssessments,
+        ]
           .filter((entry) => !entry.supported)
           .map((entry) => entry.evidence),
       ),

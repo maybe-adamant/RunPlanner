@@ -17,6 +17,7 @@ import { applyTraitOfferCommand } from './trait-offer';
 import { applyLevelResolutionCommand } from './level-resolution';
 import { applyAcquisitionSiteCommand, materializeDerivedShopEntry } from './acquisition-site';
 import { applyAcquisitionDispositionCommand } from './acquisition-conversion';
+import { applySeaStarResultCommand } from './sea-star';
 import { applyBossCompletionCommand } from './boss-completion';
 import { applySteadyGrowthCommand } from './steady-growth';
 import { applyKeepsakeCommand } from './keepsake';
@@ -226,6 +227,13 @@ function applyUnchecked(
       );
     case 'ReplaceAcquisitionDisposition':
       return applyAcquisitionDispositionCommand(
+        document,
+        catalog,
+        locateBiome(document, catalog, command),
+        command,
+      );
+    case 'ReplaceSeaStarResult':
+      return applySeaStarResultCommand(
         document,
         catalog,
         locateBiome(document, catalog, command),

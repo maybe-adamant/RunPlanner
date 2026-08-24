@@ -46,6 +46,7 @@ export type RewardGenerationFindingCode =
   | 'keepsakeUnavailable'
   | 'timePieceConversionUnavailable'
   | 'artificerConversionUnavailable'
+  | 'seaStarDuplicationUnavailable'
   | 'artificerReplacementUnavailable'
   | 'keepsakeEquipResultMissing'
   | 'keepsakeEquipResultUnavailable'

@@ -404,6 +404,10 @@ const findingCopy = {
     description:
       'This source is not a free eligible metaprogression pickup with an active remaining Artificer use.',
   },
+  seaStarDuplicationUnavailable: {
+    title: 'Sea Star duplication unavailable',
+    description: 'This acquisition is not eligible for Sea Star on every reached source branch.',
+  },
   artificerReplacementUnavailable: {
     title: 'Artificer replacement unavailable',
     description: 'Choose a reward currently reachable from the RunProgress bag.',

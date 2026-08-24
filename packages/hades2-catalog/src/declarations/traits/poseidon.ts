@@ -141,6 +141,7 @@ export const poseidonTraits = [
   {
     key: 'DoubleRewardBoon',
     label: 'Sea Star',
+    selectedDisposition: { kind: 'seaStar' },
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
     offerRequirements: [],

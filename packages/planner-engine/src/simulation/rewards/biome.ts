@@ -9,6 +9,7 @@ import {
   createTargetAddress,
   createRoomRunStateCheckpointAddress,
   createSteadyGrowthOutcomeAddress,
+  createAcquisitionRoleAddress,
   semanticAddressKey,
   type BatchRewardStoreAddress,
   type AcquisitionSiteOwnerAddress,
@@ -30,6 +31,11 @@ import {
   artificerReplacementEntryKey,
   parseArtificerReplacementEntryKey,
 } from '../../authored-project/artificer';
+import {
+  SEA_STAR_DUPLICATE_ENTRY_KEY,
+  parseSeaStarDuplicateSiteKey,
+  seaStarDuplicateUsesFreshObject,
+} from '../../authored-project/sea-star';
 import {
   createUnresolvedAcquisitionRewardState,
   createUnresolvedPickupRewardState,
@@ -146,22 +152,39 @@ function canonicalRewardState(reward: {
 function canonicalArtificerSource(
   room: CanonicalAuthoredRoom,
   sourceKey: string,
-): { readonly owner: TraitOfferOwnerAddress; readonly reward: AuthoredRewardState } | undefined {
+):
+  | {
+      readonly owner: TraitOfferOwnerAddress;
+      readonly reward: AuthoredRewardState;
+      readonly producerLifecycleKey?: string;
+    }
+  | undefined {
   const candidates: {
     readonly owner: TraitOfferOwnerAddress;
     readonly reward: AuthoredRewardState;
+    readonly producerLifecycleKey?: string;
   }[] = [];
   if (room.incomingReward !== undefined) {
     candidates.push({
       owner: room.incomingReward.origin,
       reward: canonicalRewardState(room.incomingReward),
+      producerLifecycleKey: room.incomingReward.producerLifecycleKey,
     });
   }
-  for (const reward of [...(room.localRewards ?? []), ...(room.fieldsOptionalRewards ?? [])])
-    candidates.push({ owner: reward.origin, reward: canonicalRewardState(reward) });
+  for (const reward of [...(room.localRewards ?? []), ...(room.fieldsOptionalRewards ?? [])]) {
+    candidates.push({
+      owner: reward.origin,
+      reward: canonicalRewardState(reward),
+      producerLifecycleKey: reward.producerLifecycleKey,
+    });
+  }
   for (const wheel of room.rewardWheels ?? []) {
     for (const reward of wheel.offers) {
-      candidates.push({ owner: reward.origin, reward: canonicalRewardState(reward) });
+      candidates.push({
+        owner: reward.origin,
+        reward: canonicalRewardState(reward),
+        producerLifecycleKey: wheel.producerLifecycleKey,
+      });
     }
   }
   if (room.entryState?.kind === 'shop') {
@@ -175,6 +198,12 @@ function canonicalArtificerSource(
       candidates.push({
         owner: createAcquisitionEntryAddress(site.address, entryKey),
         reward,
+        ...(() => {
+          const producerLifecycleKey = room.pickupProducers?.find(
+            (producer) => producer.siteKey === site.address.pointKey,
+          )?.producerLifecycleKey;
+          return producerLifecycleKey === undefined ? {} : { producerLifecycleKey };
+        })(),
       });
     }
   }
@@ -189,6 +218,7 @@ import {
 } from './producer-frontiers';
 import {
   addRewardFinding,
+  assessSeaStarDuplication,
   advanceRewardBranches,
   beginRewardRoom,
   countedBinding,
@@ -1984,14 +2014,117 @@ export function evaluateBiomeRewardsAssemblyInternal(
     if (Object.keys(room.acquisitionSites).length === 0 && room.entryState?.kind !== 'shop') {
       return sourceBranches;
     }
-    if (room.entryState?.kind !== 'shop') {
-      const selectedSiteKey = onlyEntry?.siteKey ?? Object.keys(room.acquisitionSites)[0];
-      const selectedSite =
-        selectedSiteKey === undefined ? undefined : room.acquisitionSites[selectedSiteKey];
-      if (selectedSite === undefined) return sourceBranches;
-      const producer = room.pickupProducers?.find(
-        (candidate) => candidate.siteKey === selectedSiteKey,
+    const selectedSiteKey = onlyEntry?.siteKey ?? Object.keys(room.acquisitionSites)[0];
+    const selectedSite =
+      selectedSiteKey === undefined ? undefined : room.acquisitionSites[selectedSiteKey];
+    const producer = room.pickupProducers?.find(
+      (candidate) => candidate.siteKey === selectedSiteKey,
+    );
+    const seaStarDuplicate =
+      selectedSiteKey === undefined ? undefined : parseSeaStarDuplicateSiteKey(selectedSiteKey);
+    if (selectedSite !== undefined && seaStarDuplicate !== undefined) {
+      const duplicateEntry = selectedSite.entries[SEA_STAR_DUPLICATE_ENTRY_KEY];
+      if (duplicateEntry === undefined || duplicateEntry === null) return sourceBranches;
+      const source = canonicalArtificerSource(room, seaStarDuplicate.sourceKey);
+      if (source === undefined)
+        throw new BiomeRewardSimulationContractError(
+          `${room.gameName} lost Sea Star source for ${selectedSiteKey}`,
+        );
+      const sourceAddress = createAcquisitionRoleAddress(
+        source.owner,
+        seaStarDuplicate.acquisitionRole,
       );
+      const sourceAddressKey = semanticAddressKey(sourceAddress);
+      // A direct Shop offer is paid and therefore remains a repair-only
+      // authored result. A free acquisition entry generated in a Shop uses
+      // its own lifecycle and settles like any other free source.
+      if (source.owner.kind === 'shopOffer') return sourceBranches;
+      const duplicateUsesFreshObject = seaStarDuplicateUsesFreshObject(
+        catalog,
+        source.reward,
+        seaStarDuplicate.acquisitionRole,
+      );
+      const producerLifecycleKey = duplicateUsesFreshObject
+        ? 'RoomReward'
+        : source.producerLifecycleKey;
+      if (producerLifecycleKey === undefined)
+        throw new BiomeRewardSimulationContractError(
+          `${room.gameName} lost Sea Star producer lifecycle for ${selectedSiteKey}`,
+        );
+      // The duplicate can be placed after other room actions. Its eligibility
+      // is nevertheless the source's own pre-acquisition attestation, not
+      // whatever traits happen to be equipped at this later action.
+      const supportedBranches = sourceBranches.filter(
+        (branch) => branch.seaStarDuplicateEligibilityBySource?.[sourceAddressKey]?.supported,
+      );
+      if (supportedBranches.length !== sourceBranches.length) {
+        const unsupported = sourceBranches.find(
+          (branch) => !branch.seaStarDuplicateEligibilityBySource?.[sourceAddressKey]?.supported,
+        );
+        if (unsupported !== undefined) {
+          addRewardFinding(
+            targetFindings,
+            rewardFinding(
+              'seaStarDuplicationUnavailable',
+              sourceAddress,
+              unsupported.seaStarDuplicateEligibilityBySource?.[sourceAddressKey]?.evidence ??
+                Object.freeze({ reason: 'sourceFrontierNotReached' }),
+            ),
+            ownerRegion(sourceAddress),
+            rewardFindingChronologyForRoom(
+              snapshot,
+              room.origin,
+              historySequence,
+              'localRoomLifecycle',
+            ),
+          );
+        }
+      }
+      if (supportedBranches.length === 0) return sourceBranches;
+      const pickupFacts = (branchHistory: RewardHistoryState) =>
+        rewardFacts(
+          catalog,
+          room,
+          room,
+          declaration,
+          roomView.outgoingGeneration ?? roomView.preOutgoing ?? roomView.entry,
+          branchHistory,
+          enteredBiomeCount,
+        );
+      const settled = settlePickupAcquisitionSite(
+        catalog,
+        supportedBranches,
+        {
+          siteOwner: room.origin,
+          site: selectedSite.address,
+          entries: Object.freeze({ [SEA_STAR_DUPLICATE_ENTRY_KEY]: duplicateEntry }),
+          order: activationOnly ? Object.freeze([]) : Object.freeze([SEA_STAR_DUPLICATE_ENTRY_KEY]),
+          producerLifecycleKey,
+          requiredEntryKeys: new Set(
+            duplicateUsesFreshObject ? [SEA_STAR_DUPLICATE_ENTRY_KEY] : [],
+          ),
+          seaStarDuplicateEntryKeys: new Set([SEA_STAR_DUPLICATE_ENTRY_KEY]),
+          historySequence,
+          findingChronology: rewardFindingChronologyForRoom(
+            snapshot,
+            room.origin,
+            historySequence,
+            'localRoomLifecycle',
+          ),
+          facts: pickupFacts,
+          traitContext: routeLoadout,
+        },
+        targetFindings,
+      );
+      recordAcquisitionRoleFrontiers(settled.roleFrontiers);
+      recordTraitChildSettlements(settled.traitChildSettlements, room.origin);
+      return Object.freeze([
+        ...sourceBranches.filter((branch) => !supportedBranches.includes(branch)),
+        ...settled.branches,
+      ]);
+    }
+    if (room.entryState?.kind !== 'shop') {
+      if (selectedSite === undefined || selectedSiteKey === undefined) return sourceBranches;
       if (producer === undefined) return sourceBranches;
       const sourceWasNormallyAcquired = producer.sourceNormal;
       // A selected producer is structural authoring detail. Its pickup site
@@ -2246,6 +2379,78 @@ export function evaluateBiomeRewardsAssemblyInternal(
       },
       targetFindings,
     );
+    // Shop-spawned objects cannot duplicate. Their structurally retained
+    // result stays available for repair, but has no active child action; use
+    // the captured source frontiers to publish the source-role finding.
+    for (const siteKey of Object.keys(room.acquisitionSites)) {
+      const seaStarDuplicate = parseSeaStarDuplicateSiteKey(siteKey);
+      if (seaStarDuplicate === undefined) continue;
+      const source = canonicalArtificerSource(room, seaStarDuplicate.sourceKey);
+      if (source === undefined) continue;
+      const sourceAddress = createAcquisitionRoleAddress(
+        source.owner,
+        seaStarDuplicate.acquisitionRole,
+      );
+      if (
+        source.reward.dispositionByAcquisitionRole[seaStarDuplicate.acquisitionRole]?.kind !==
+        'normal'
+      )
+        continue;
+      const unsupportedFromFrontier = (settled.roleFrontiers ?? [])
+        .filter(
+          (frontier) => semanticAddressKey(frontier.address) === semanticAddressKey(sourceAddress),
+        )
+        .flatMap((frontier) =>
+          frontier.branchesBeforeRole.map((branch) =>
+            assessSeaStarDuplication(catalog, branch, frontier.source, {
+              role: seaStarDuplicate.acquisitionRole,
+              lifecyclePoint: frontier.lifecyclePoint,
+            }),
+          ),
+        )
+        .find((assessment) => !assessment.supported);
+      const sourceOfferKey = source.owner.kind === 'shopOffer' ? source.owner.offerKey : undefined;
+      const sourceWasPurchased =
+        !activationOnly &&
+        sourceOfferKey !== undefined &&
+        (onlyEntry === undefined
+          ? room.roomActions.order.some(
+              (action) => action.kind === 'interactShopOffer' && action.offerKey === sourceOfferKey,
+            )
+          : onlyEntry.entryKey === sourceOfferKey);
+      const unsupported =
+        unsupportedFromFrontier ??
+        (sourceWasPurchased
+          ? sourceBranches
+              .map((branch) =>
+                assessSeaStarDuplication(
+                  catalog,
+                  branch,
+                  Object.freeze({
+                    origin: source.owner,
+                    offer: source.reward.offer,
+                    producerLifecycleKey: 'Shop',
+                    instanceProvenance: 'paid' as const,
+                    dispositionByAcquisitionRole: source.reward.dispositionByAcquisitionRole,
+                  }),
+                  { role: seaStarDuplicate.acquisitionRole, lifecyclePoint: 'purchase' },
+                ),
+              )
+              .find((assessment) => !assessment.supported)
+          : undefined);
+      if (unsupported === undefined) continue;
+      addRewardFinding(
+        targetFindings,
+        rewardFinding('seaStarDuplicationUnavailable', sourceAddress, unsupported.evidence),
+        ownerRegion(sourceAddress),
+        rewardFindingChronologyForRoom(
+          snapshot,
+          room.origin,
+          historySequence,
+          'localRoomLifecycle',
+        ),
+      );
+    }
     recordAcquisitionRoleFrontiers(settled.roleFrontiers);
     recordDerivedAcquisitionEntryFrontiers(settled.derivedEntryFrontiers);
     recordTraitChildSettlements(settled.traitChildSettlements, room.origin);

@@ -1,6 +1,7 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  activeRoomActionReferences,
   createAllTogetherSetAddress,
   createBiomeAddress,
   createBatchRewardStoreAddress,
@@ -45,7 +46,11 @@ import {
 } from '@run-planner/engine/simulation';
 import { describe, expect, it, vi } from 'vitest';
 
-import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
+import {
+  authorLegalTraitOffers,
+  prepareLegalPomTraitOffers,
+  replaceTestShopOfferActions,
+} from '@run-planner/test-fixtures/shared';
 import {
   createGoldenFGHIProject,
   createCompleteFGProject,
@@ -2356,9 +2361,8 @@ describe('structured workspace interaction binding', () => {
       value: { kind: 'timePiece' },
     });
 
-    const candidate = services.candidateSessions
-      .bind(simulateProjectAssembly(catalog, project))
-      .acquisitionConversion(acquisition);
+    const assembly = simulateProjectAssembly(catalog, project);
+    const candidate = services.candidateSessions.bind(assembly).acquisitionConversion(acquisition);
     if (candidate.kind !== 'acquisitionConversion') {
       throw new Error(`expected acquisition conversion candidate, received ${candidate.kind}`);
     }
@@ -2416,6 +2420,108 @@ describe('structured workspace interaction binding', () => {
       },
     });
   });
+
+  it('publishes an eligible Sea Star row without Time Piece or Artificer support', () => {
+    const project = createCompleteFGProject();
+    const baseCandidateSession = createCandidateSessionFactory(catalog).bind(
+      simulateProjectAssembly(catalog, project),
+    );
+    const candidateSession = Object.freeze({
+      ...baseCandidateSession,
+      acquisitionConversion: () =>
+        Object.freeze({
+          kind: 'acquisitionConversion' as const,
+          result: Object.freeze({
+            timePieceSupported: false,
+            timePieceConvertible: false,
+            artificerSupported: false,
+            artificerConvertible: false,
+            seaStarSupported: true,
+            branchCount: 1,
+            unsupportedEvidence: Object.freeze([]),
+          }),
+        }),
+    }) as CandidateProjectionSession;
+    const interactions = bind(project, 'Underworld', 'F', undefined, candidateSession).interactions;
+    const seaStarOnly = [...interactions.acquisitionConversions.values()].find(
+      (interaction) =>
+        interaction.visible &&
+        interaction.seaStarSupported &&
+        !interaction.timePieceSupported &&
+        !interaction.artificerSupported,
+    );
+    expect(seaStarOnly).toBeDefined();
+    if (seaStarOnly === undefined) throw new Error('Sea Star-only interaction is missing');
+    expect(seaStarOnly.seaStarIntentFor(true)).toMatchObject({
+      command: {
+        kind: 'ReplaceSeaStarResult',
+        acquisition: seaStarOnly.owner,
+        procced: true,
+      },
+    });
+  });
+
+  it('retains a paid shop Pom Sea Star result as an exact repair control', () => {
+    const shopId = pOccurrenceIds.prebossShop;
+    const offer = createShopOfferAddress(pBiome, shopId, 'Minor');
+    const acquisition = createAcquisitionRoleAddress(offer, 'self');
+    let project = applyProjectCommand(createRepresentativeNOPQShopTraitProject(), catalog, {
+      kind: 'ReplaceShopOffer',
+      offer,
+      value: { rewardType: 'StackUpgrade' },
+    });
+    project = replaceTestShopOfferActions(
+      project,
+      catalog,
+      createOccurrenceAddress(pBiome, shopId),
+      ['Minor'],
+    );
+    project = prepareLegalPomTraitOffers(project).project;
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceSeaStarResult',
+      acquisition,
+      procced: true,
+    });
+    const shop = project.routes
+      .find((route) => route.routeKey === 'Surface')
+      ?.biomes.find((biome) => biome.biomeKey === 'P')
+      ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === shopId);
+    if (shop === undefined) throw new Error('paid shop source occurrence is missing');
+    expect(activeRoomActionReferences(catalog, pBiome, shop)).not.toContainEqual(
+      expect.objectContaining({
+        kind: 'interactAcquisitionEntry',
+        entryKey: 'seaStarDuplicate',
+      }),
+    );
+    const assembly = simulateProjectAssembly(catalog, project);
+    const candidate = services.candidateSessions.bind(assembly).acquisitionConversion(acquisition);
+    if (candidate.kind !== 'acquisitionConversion')
+      throw new Error(`expected shop Pom conversion candidate, received ${candidate.kind}`);
+    expect(candidate.result).toMatchObject({ seaStarSupported: false });
+    expect(candidate.result.unsupportedEvidence).toEqual(
+      expect.arrayContaining([expect.objectContaining({ instanceProvenance: 'paid' })]),
+    );
+    const p = assembly.evaluation.routes
+      .find((route) => route.routeKey === 'Surface')
+      ?.biomes.find((biome) => biome.biomeKey === 'P');
+    if (p === undefined || !('rewards' in p)) throw new Error('missing evaluated paid shop');
+    expect(p.rewards.findings).toContainEqual(
+      expect.objectContaining({ code: 'seaStarDuplicationUnavailable', origin: acquisition }),
+    );
+    const interaction = bind(project, 'Surface', 'P').interactions.acquisitionConversions.get(
+      semanticAddressKey(acquisition),
+    );
+    expect(interaction).toMatchObject({
+      owner: acquisition,
+      seaStarProcced: true,
+      seaStarSupported: false,
+      visible: true,
+    });
+    expect(interaction?.seaStarIntentFor(false)).toEqual({
+      command: { kind: 'ReplaceSeaStarResult', acquisition, procced: false },
+      focus: { owner: acquisition, timing: 'after' },
+    });
+  }, 10_000);
 
   it.each(['GiftDrop', 'MetaCurrencyDrop', 'MetaCardPointsCommonDrop'] as const)(
     'keeps the reached %s conversion interaction visible at a later incomplete frontier',

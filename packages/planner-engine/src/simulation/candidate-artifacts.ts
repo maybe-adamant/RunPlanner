@@ -62,6 +62,7 @@ import { evaluateCallingCardOffer } from './keepsakes';
 import type { ArcanaFearState } from './arcana-fear';
 import {
   assessArtificerConversion,
+  assessSeaStarDuplication,
   assessTimePieceConversion,
   type AcquisitionSource,
   type RewardBranchState,
@@ -408,6 +409,10 @@ export interface AcquisitionConversionCandidateCapability {
     readonly supported: boolean;
     readonly evidence: import('./model').FindingEvidence;
   }[];
+  readonly seaStarAssessments: readonly {
+    readonly supported: boolean;
+    readonly evidence: import('./model').FindingEvidence;
+  }[];
   readonly artificerReplacementAddress?: import('../authored-project/addresses').AcquisitionEntryAddress;
   readonly artificerReplacementRewardTypes?: readonly string[];
   readonly artificerReplacementOptions?: readonly import('../authored-project/model').AuthoredRewardState[];
@@ -471,6 +476,16 @@ export function createAcquisitionConversionCandidateArtifacts(
               ...(entry.blocksArtificerConversion === true
                 ? { blocksArtificerConversion: true as const }
                 : {}),
+            }),
+          ),
+        ),
+      ),
+      seaStarAssessments: Object.freeze(
+        entries.flatMap((entry) =>
+          entry.branchesBeforeRole.map((branch) =>
+            assessSeaStarDuplication(catalog, branch, entry.source, {
+              role: entry.address.acquisitionRole,
+              lifecyclePoint: entry.lifecyclePoint,
             }),
           ),
         ),

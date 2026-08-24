@@ -1,8 +1,19 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
+  applyProjectCommand,
+  assembleRoomActionDomain,
+  createAcquisitionEntryAddress,
+  createAcquisitionRoleAddress,
+  createAcquisitionSiteAddress,
   createOccurrenceId,
   createOccurrenceAddress,
+  createRoomActionAddress,
+  createIncomingRewardAddress,
+  createTraitOfferAddress,
   encodeProjectDocument,
+  SEA_STAR_DUPLICATE_ENTRY_KEY,
+  roomActionKey,
+  seaStarDuplicateSiteKey,
   selectedPickupProducers,
 } from '@run-planner/engine/authored-project';
 import {
@@ -27,6 +38,7 @@ import {
   createSurfaceNSteadyGrowthFrontier,
 } from '../routes/run-impacting-traits';
 import { nBiome } from '../routes/surface';
+import { nOccurrenceIds } from '../routes/surface';
 
 describe('run-impacting trait checkpoint recipes', () => {
   it('attests each saved checkpoint to its semantic-command recipe', () => {
@@ -72,6 +84,100 @@ describe('run-impacting trait checkpoint recipes', () => {
     };
     expect(producerPlacement(createSurfaceNQuickBuckCheckpoint())).toBe('afterSource');
     expect(producerPlacement(createSurfaceNBuriedTreasureCheckpoint())).toBe('afterSource');
+  });
+
+  it("keeps Sea Star's retained Buried Treasure resource in the source action window", () => {
+    const opening = createIncomingRewardAddress(nBiome, nOccurrenceIds.opening);
+    let project = applyProjectCommand(createSurfaceNBuriedTreasureCheckpoint(), catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: opening,
+      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'PoseidonUpgrade' } },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(opening, 'source'),
+      value: {
+        kind: 'traits',
+        giverKey: 'Poseidon',
+        options: [
+          { traitKey: 'DoubleRewardBoon', rarity: 'Common' },
+          { traitKey: 'PoseidonWeaponBoon', rarity: 'Common' },
+          { traitKey: 'PoseidonSpecialBoon', rarity: 'Common' },
+        ],
+        selectedOptionKey: 'option1',
+      },
+    });
+    const occurrence = () =>
+      project.routes
+        .find((route) => route.routeKey === 'Surface')!
+        .biomes.find((biome) => biome.biomeKey === 'N')!
+        .topology!.occurrences.find(
+          (candidate) => candidate.occurrenceId === nOccurrenceIds.preHub,
+        )!;
+    const [siteKey] =
+      Object.entries(occurrence().acquisitionSites ?? {}).find(([, site]) =>
+        Object.hasOwn(site.pickupEntries ?? {}, 'smallGold'),
+      ) ?? [];
+    if (siteKey === undefined) throw new Error('Buried Treasure small Gold entry is missing');
+    const source = createAcquisitionRoleAddress(
+      createAcquisitionEntryAddress(
+        createAcquisitionSiteAddress(
+          createOccurrenceAddress(nBiome, nOccurrenceIds.preHub),
+          siteKey,
+        ),
+        'smallGold',
+      ),
+      'self',
+    );
+    const sourceReference = Object.freeze({
+      kind: 'interactAcquisitionEntry' as const,
+      siteKey,
+      entryKey: 'smallGold',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'InsertRoomAction',
+      action: createRoomActionAddress(
+        nBiome,
+        nOccurrenceIds.preHub,
+        roomActionKey(sourceReference),
+      ),
+      reference: sourceReference,
+      index: occurrence().roomActions.order.length,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceSeaStarResult',
+      acquisition: source,
+      procced: true,
+    });
+    const duplicateSite = seaStarDuplicateSiteKey(source);
+    expect(occurrence().acquisitionSites?.[duplicateSite]?.pickupEntries).toHaveProperty(
+      SEA_STAR_DUPLICATE_ENTRY_KEY,
+    );
+    const domain = assembleRoomActionDomain({ catalog, biome: nBiome, occurrence: occurrence() });
+    const sourceAction = domain.contributions.find(
+      (entry) =>
+        entry.kind === 'action' &&
+        entry.reference.kind === 'interactAcquisitionEntry' &&
+        entry.reference.siteKey === siteKey &&
+        entry.reference.entryKey === 'smallGold',
+    );
+    const childAction = domain.contributions.find(
+      (entry) =>
+        entry.kind === 'action' &&
+        entry.reference.kind === 'interactAcquisitionEntry' &&
+        entry.reference.siteKey === duplicateSite,
+    );
+    expect(childAction).toMatchObject({
+      kind: 'action',
+      participation: sourceAction?.kind === 'action' ? sourceAction.participation : undefined,
+      window: sourceAction?.kind === 'action' ? sourceAction.window : undefined,
+      dependencies: [
+        {
+          kind: 'afterAction',
+          action: sourceAction?.kind === 'action' ? sourceAction.reference : undefined,
+        },
+      ],
+    });
   });
 
   it('reaches a selected Natural Selection child as the exact repair frontier', () => {

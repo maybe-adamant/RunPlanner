@@ -138,6 +138,7 @@ export function projectCommandAddress(
     case 'ReplaceLevelResolution':
       return command.levelResolution;
     case 'ReplaceAcquisitionDisposition':
+    case 'ReplaceSeaStarResult':
       return command.acquisition;
   }
 }

@@ -23,6 +23,12 @@ import {
   type SemanticAddress,
 } from './addresses';
 import { acquisitionSiteFromStorageKey, parseArtificerReplacementEntryKey } from './artificer';
+import { authoredAcquisitionSources } from './acquisition-sources';
+import {
+  SEA_STAR_DUPLICATE_ENTRY_KEY,
+  parseSeaStarDuplicateSiteKey,
+  seaStarDuplicateUsesFreshObject,
+} from './sea-star';
 import type { RoomActionReference, RoomOccurrence } from './model';
 import { encounterEnvelopeSlots, selectedEncounterDefinitionKey } from './room-state/encounters';
 import { activeRoomActionReferences, roomActionKey } from './room-actions';
@@ -230,61 +236,6 @@ function phaseRewardAttachment(
   return encounterEnvelopeSlots(catalog, declaration, occurrence.gameName).find(
     (phase) => phase.key === phaseKey,
   )?.rewardAttachment;
-}
-
-function acquisitionSourceRewards(
-  biome: BiomeAddress,
-  occurrence: RoomOccurrence,
-): ReadonlyMap<string, import('./model').AuthoredRewardState> {
-  const result = new Map<string, import('./model').AuthoredRewardState>();
-  const add = (
-    owner: SemanticAddress,
-    reward: import('./model').AuthoredRewardState | null | undefined,
-  ) => {
-    if (reward !== null && reward !== undefined) result.set(semanticAddressKey(owner), reward);
-  };
-  switch (occurrence.state.kind) {
-    case 'counted':
-    case 'fixed':
-    case 'anomaly':
-    case 'ephyraCombat':
-    case 'freeReward':
-      add(createIncomingRewardAddress(biome, occurrence.occurrenceId), occurrence.state.reward);
-      break;
-    case 'fieldsCombat':
-      for (const [slotKey, reward] of Object.entries(occurrence.state.cages))
-        add(createLocalRewardAddress(biome, occurrence.occurrenceId, 'cages', slotKey), reward);
-      for (const [slotKey, reward] of Object.entries(occurrence.state.optionalRewards))
-        add(
-          createLocalRewardAddress(biome, occurrence.occurrenceId, 'optionalRewards', slotKey),
-          reward,
-        );
-      break;
-    case 'shipCombat':
-      for (const [wheelKey, wheel] of Object.entries(occurrence.state.wheels))
-        for (const [offerKey, reward] of Object.entries(wheel.offers))
-          add(
-            createRewardWheelOfferAddress(biome, occurrence.occurrenceId, wheelKey, offerKey),
-            reward,
-          );
-      break;
-    case 'shop':
-      for (const [offerKey, offer] of Object.entries(occurrence.state.shop?.offers ?? {}))
-        add(createShopOfferAddress(biome, occurrence.occurrenceId, offerKey), offer.reward);
-      break;
-    case 'none':
-      break;
-  }
-  for (const [siteKey, site] of Object.entries(occurrence.acquisitionSites ?? {})) {
-    const siteAddress = acquisitionSiteFromStorageKey(
-      createOccurrenceAddress(biome, occurrence.occurrenceId),
-      siteKey,
-    );
-    if (siteAddress === undefined) continue;
-    for (const [entryKey, reward] of Object.entries(site.pickupEntries ?? {}))
-      add(createAcquisitionEntryAddress(siteAddress, entryKey), reward);
-  }
-  return result;
 }
 
 function baseContribution(
@@ -824,7 +775,12 @@ export function assembleRoomActionDomain(options: {
       reference,
     ),
   );
-  const sourceRewards = acquisitionSourceRewards(options.biome, options.occurrence);
+  const sourceRewards = new Map(
+    authoredAcquisitionSources(options.biome, options.occurrence).map((source) => [
+      semanticAddressKey(source.acquisition.owner),
+      source.reward,
+    ]),
+  );
   const orderedActionKeys = new Set(options.occurrence.roomActions.order.map(roomActionKey));
   // Generated pickup actions inherit the exact lifecycle window of their
   // source acquisition. Iterate through the finite action list so a nested
@@ -846,8 +802,12 @@ export function assembleRoomActionDomain(options: {
     actions = actions.flatMap((action) => {
       if (action.reference.kind !== 'interactAcquisitionEntry') return [action];
       const parsed = parseArtificerReplacementEntryKey(action.reference.entryKey);
+      const seaStar =
+        action.reference.entryKey === SEA_STAR_DUPLICATE_ENTRY_KEY
+          ? parseSeaStarDuplicateSiteKey(action.reference.siteKey)
+          : undefined;
       const producer =
-        parsed === undefined
+        parsed === undefined && seaStar === undefined
           ? selectedPickupProducerForEntry(
               options.catalog,
               options.biome,
@@ -856,20 +816,32 @@ export function assembleRoomActionDomain(options: {
               action.reference.entryKey,
             )
           : undefined;
-      if (parsed === undefined && producer === undefined) return [action];
+      if (parsed === undefined && seaStar === undefined && producer === undefined) return [action];
       const source =
-        parsed === undefined
+        parsed === undefined && seaStar === undefined
           ? producer === undefined
             ? undefined
             : sourceActionsByReference.get(roomActionKey(producer.sourceAction))
-          : sourceActions.get(artificerSourceActionKey(parsed.sourceKey, parsed.acquisitionRole));
+          : sourceActions.get(
+              artificerSourceActionKey(
+                (parsed ?? seaStar)!.sourceKey,
+                (parsed ?? seaStar)!.acquisitionRole,
+              ),
+            );
       if (source === undefined || !orderedActionKeys.has(roomActionKey(source.reference)))
         return [];
-      if (parsed === undefined && producer?.placement !== 'afterSource') return [action];
+      if (parsed === undefined && seaStar === undefined && producer?.placement !== 'afterSource')
+        return [action];
       if (
         parsed !== undefined &&
         sourceRewards.get(parsed.sourceKey)?.dispositionByAcquisitionRole[parsed.acquisitionRole]
           ?.kind !== 'artificer'
+      )
+        return [];
+      if (
+        seaStar !== undefined &&
+        sourceRewards.get(seaStar.sourceKey)?.dispositionByAcquisitionRole[seaStar.acquisitionRole]
+          ?.kind !== 'normal'
       )
         return [];
       const dependencies = action.dependencies.some(
@@ -885,7 +857,19 @@ export function assembleRoomActionDomain(options: {
       return [
         frozen({
           ...action,
-          ...(parsed === undefined ? {} : { participation: 'required' as const }),
+          ...(parsed !== undefined
+            ? { participation: 'required' as const }
+            : seaStar !== undefined
+              ? {
+                  participation: seaStarDuplicateUsesFreshObject(
+                    options.catalog,
+                    sourceRewards.get(seaStar.sourceKey)!,
+                    seaStar.acquisitionRole,
+                  )
+                    ? ('required' as const)
+                    : source.participation,
+                }
+              : {}),
           window: source.window,
           dependencies,
         }),

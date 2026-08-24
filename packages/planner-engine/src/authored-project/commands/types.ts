@@ -405,6 +405,13 @@ export type AcquisitionDispositionCommand = {
   readonly value: import('../model').AcquisitionDisposition;
 };
 
+/** The realized Sea Star result at one normal concrete acquisition role. */
+export type SeaStarResultCommand = {
+  readonly kind: 'ReplaceSeaStarResult';
+  readonly acquisition: AcquisitionRoleAddress;
+  readonly procced: boolean;
+};
+
 /** One payload edit whose acquisition-entry default may not be persisted yet. */
 export type DerivedShopEntryPayloadCommand =
   | Extract<AcquisitionSiteCommand, { readonly kind: 'ReplaceAcquisitionEntryOffer' }>
@@ -446,6 +453,7 @@ export type ProjectCommand =
   | TraitOfferCommand
   | LevelResolutionCommand
   | AcquisitionDispositionCommand
+  | SeaStarResultCommand
   | DerivedShopEntryEditCommand;
 
 export type BiomeOwnedProjectCommand = Exclude<

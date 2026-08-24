@@ -240,6 +240,8 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
       return { kind: 'reward', message: 'Time Piece cannot convert this acquisition here.' };
     case 'artificerConversionUnavailable':
       return { kind: 'reward', message: 'Artificer cannot convert this acquisition here.' };
+    case 'seaStarDuplicationUnavailable':
+      return { kind: 'reward', message: 'Sea Star cannot duplicate this acquisition here.' };
     case 'artificerReplacementUnavailable':
       return { kind: 'reward', message: 'This Artificer replacement is unavailable here.' };
     case 'targetRoomSupportEmpty':

@@ -160,6 +160,10 @@ function normalizePayloadDomains(
 function normalizeAcquisitions(
   raw: RawRewardKernelInput['acquisitions'],
 ): CatalogCollection<ConcreteAcquisitionDeclaration> {
+  for (const [index, acquisition] of raw.entries()) {
+    if (typeof acquisition.canDuplicate !== 'boolean')
+      fail(`acquisitions[${index}].canDuplicate`, 'must be boolean');
+  }
   const goldConversionEligible = new Set([
     'AphroditeUpgrade',
     'ApolloUpgrade',
@@ -298,6 +302,7 @@ function normalizeAcquisitions(
         ),
         goldConversionEligible: goldConversionEligible.has(acquisition.gameName),
         artificerConversionEligible: artificerConversionEligible.has(acquisition.gameName),
+        canDuplicate: acquisition.canDuplicate,
         ...(acquisition.lastRewardRecreation === undefined
           ? {}
           : {

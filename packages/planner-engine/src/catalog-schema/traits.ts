@@ -226,6 +226,7 @@ export type TraitSelectedDisposition =
       readonly producerLifecycleKey: string;
       readonly pickups: readonly TraitPickupDeclaration[];
     }
+  | { readonly kind: 'seaStar' }
   | { readonly kind: 'noOp' };
 
 export interface TraitPickupDeclaration {

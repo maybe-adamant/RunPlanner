@@ -10,7 +10,8 @@ const SCHEMA_50_CATALOG_VERSION = '0.30.0-boon-rarity-ledger';
 const SCHEMA_51_CATALOG_VERSION = '0.31.0-chaos-traits';
 const SCHEMA_52_INITIAL_CATALOG_VERSION = '0.32.0-run-impacting-traits';
 const SCHEMA_52_RUN_IMPACTING_TRAITS_CATALOG_VERSION = '0.32.1-run-impacting-traits';
-const SCHEMA_52_CATALOG_VERSION = '0.33.0-generated-trait-pickups';
+const SCHEMA_52_GENERATED_TRAIT_PICKUPS_CATALOG_VERSION = '0.33.0-generated-trait-pickups';
+const SCHEMA_52_CATALOG_VERSION = '0.34.0-sea-star';
 
 const NARCISSUS_PICKUP_KEYS = {
   NarcissusA: ['pom'],
@@ -189,14 +190,20 @@ function migrateSchema52Catalog(document) {
     migrations.push(`${SCHEMA_52_INITIAL_CATALOG_VERSION}->${document.catalogVersion}`);
   }
   if (document.catalogVersion === SCHEMA_52_RUN_IMPACTING_TRAITS_CATALOG_VERSION) {
-    document.catalogVersion = SCHEMA_52_CATALOG_VERSION;
+    document.catalogVersion = SCHEMA_52_GENERATED_TRAIT_PICKUPS_CATALOG_VERSION;
     migrations.push(
       `${SCHEMA_52_RUN_IMPACTING_TRAITS_CATALOG_VERSION}->${document.catalogVersion}`,
     );
   }
+  if (document.catalogVersion === SCHEMA_52_GENERATED_TRAIT_PICKUPS_CATALOG_VERSION) {
+    document.catalogVersion = SCHEMA_52_CATALOG_VERSION;
+    migrations.push(
+      `${SCHEMA_52_GENERATED_TRAIT_PICKUPS_CATALOG_VERSION}->${document.catalogVersion}`,
+    );
+  }
   if (document.catalogVersion !== SCHEMA_52_CATALOG_VERSION) {
     throw new Error(
-      `schema 52 migration expects catalog ${SCHEMA_52_INITIAL_CATALOG_VERSION}, ${SCHEMA_52_RUN_IMPACTING_TRAITS_CATALOG_VERSION}, or ${SCHEMA_52_CATALOG_VERSION}; received ${String(document.catalogVersion)}`,
+      `schema 52 migration expects catalog ${SCHEMA_52_INITIAL_CATALOG_VERSION}, ${SCHEMA_52_RUN_IMPACTING_TRAITS_CATALOG_VERSION}, ${SCHEMA_52_GENERATED_TRAIT_PICKUPS_CATALOG_VERSION}, or ${SCHEMA_52_CATALOG_VERSION}; received ${String(document.catalogVersion)}`,
     );
   }
   const generatedPickupSitesMoved = migrateLegacyNarcissusPickupSites(document);

@@ -2,77 +2,12 @@ import type { RoomActionReference, RoomActionState } from './model';
 import type { Catalog } from '../catalog-schema';
 import type { RoomOccurrence } from './model';
 import { encounterEnvelopeSlots, selectedEncounterDefinitionKey } from './room-state/encounters';
-import {
-  createAcquisitionEntryAddress,
-  createIncomingRewardAddress,
-  createLocalRewardAddress,
-  createRewardWheelOfferAddress,
-  createShopOfferAddress,
-  semanticAddressKey,
-} from './addresses';
-import { acquisitionSiteFromStorageKey, parseArtificerReplacementEntryKey } from './artificer';
+import { semanticAddressKey } from './addresses';
+import { parseArtificerReplacementEntryKey } from './artificer';
+import { authoredAcquisitionSources } from './acquisition-sources';
 import { echoLastRewardPickupEntryKeys, activeSelectedPickupProducers } from './traits';
+import { seaStarDuplicateSourceIsActive } from './sea-star';
 export { roomActionKey } from './room-action-key';
-
-function artificerSourceDispositions(
-  biome: import('./addresses').BiomeAddress,
-  occurrence: RoomOccurrence,
-): ReadonlyMap<string, import('./model').AuthoredRewardState> {
-  const sources = new Map<string, import('./model').AuthoredRewardState>();
-  const add = (
-    address: import('./addresses').TraitOfferOwnerAddress,
-    reward: import('./model').AuthoredRewardState | null | undefined,
-  ): void => {
-    if (reward !== undefined && reward !== null) sources.set(semanticAddressKey(address), reward);
-  };
-  switch (occurrence.state.kind) {
-    case 'counted':
-    case 'fixed':
-    case 'anomaly':
-    case 'ephyraCombat':
-    case 'freeReward':
-      add(createIncomingRewardAddress(biome, occurrence.occurrenceId), occurrence.state.reward);
-      break;
-    case 'fieldsCombat':
-      for (const [slotKey, reward] of Object.entries(occurrence.state.cages))
-        add(createLocalRewardAddress(biome, occurrence.occurrenceId, 'cages', slotKey), reward);
-      for (const [slotKey, reward] of Object.entries(occurrence.state.optionalRewards))
-        add(
-          createLocalRewardAddress(biome, occurrence.occurrenceId, 'optionalRewards', slotKey),
-          reward,
-        );
-      break;
-    case 'shipCombat':
-      for (const [wheelKey, wheel] of Object.entries(occurrence.state.wheels))
-        for (const [offerKey, reward] of Object.entries(wheel.offers))
-          add(
-            createRewardWheelOfferAddress(biome, occurrence.occurrenceId, wheelKey, offerKey),
-            reward,
-          );
-      break;
-    case 'shop':
-      for (const [offerKey, offer] of Object.entries(occurrence.state.shop?.offers ?? {}))
-        add(createShopOfferAddress(biome, occurrence.occurrenceId, offerKey), offer.reward);
-      break;
-    default:
-      break;
-  }
-  for (const [siteKey, site] of Object.entries(occurrence.acquisitionSites ?? {})) {
-    const address = acquisitionSiteFromStorageKey(
-      Object.freeze({
-        kind: 'occurrence',
-        routeKey: biome.routeKey,
-        biomeKey: biome.biomeKey,
-        occurrenceId: occurrence.occurrenceId,
-      }),
-      siteKey,
-    );
-    if (address === undefined) continue;
-    for (const [entryKey, reward] of Object.entries(site.pickupEntries ?? {}))
-      add(createAcquisitionEntryAddress(address, entryKey), reward);
-  }
-  return sources;
-}
 
 export function createEmptyRoomActionState(): RoomActionState {
   return Object.freeze({ order: Object.freeze([]) });
@@ -208,7 +143,12 @@ export function activeRoomActionReferences(
       references.push(Object.freeze({ kind: 'interactGorgon', phaseKey: phase.key }));
     }
   }
-  const sourceDispositions = artificerSourceDispositions(biome, occurrence);
+  const sourceDispositions = new Map(
+    authoredAcquisitionSources(biome, occurrence).map((source) => [
+      semanticAddressKey(source.acquisition.owner),
+      source.reward,
+    ]),
+  );
   const structuralEchoEntries = new Set(
     echoLastRewardPickupEntryKeys(catalog, occurrence.encounters),
   );
@@ -227,6 +167,11 @@ export function activeRoomActionReferences(
       if (
         siteKey.startsWith('traitGenerated:') &&
         !activePickupEntries.has(JSON.stringify([siteKey, entryKey]))
+      )
+        continue;
+      if (
+        siteKey.startsWith('seaStarDuplicate:') &&
+        !seaStarDuplicateSourceIsActive(catalog, biome, occurrence, siteKey)
       )
         continue;
       const artificer = parseArtificerReplacementEntryKey(entryKey);

@@ -152,6 +152,20 @@ export function RewardControlEditor({
                     </option>
                   </select>
                 </label>
+                {!interaction.seaStarSupported && !interaction.seaStarProcced ? null : (
+                  <label className="pickup-outcome-control">
+                    <input
+                      aria-label={`Sea Star procced for ${conversion.acquisitionRoleLabel}`}
+                      checked={interaction.seaStarProcced}
+                      disabled={!interaction.seaStarSupported && !interaction.seaStarProcced}
+                      onChange={(event) =>
+                        executeIntent(interaction.seaStarIntentFor(event.target.checked))
+                      }
+                      type="checkbox"
+                    />
+                    <span>Sea Star procced</span>
+                  </label>
+                )}
               </div>
             );
           })}
