@@ -755,10 +755,12 @@ scalar wager outcome remains deferred.
   random events. The shared six-room field-NPC spacing rule also applies.
 - The Planner authors the realized family and request or result rather than
   simulating profile history, text-line selection, or RNG. Free item and
-  contest persist the selected item; Gold and damage trades also persist their
-  bounded rolled amount and accept/decline response; trait trade persists the
-  selected eligible trait and response. Scalar Gold affordability, health,
-  death, and the 2,000-damage presentation tier remain outside simulation.
+  contest persist the selected item; Gold and damage trades persist only their
+  accept/decline response; trait trade persists the selected eligible trait and
+  response. Accept means the source cost was paid and the player survived. The
+  exact rolled Gold price, damage amount, scalar affordability, health, death,
+  contest threshold, and the 2,000-damage presentation tier remain outside
+  simulation.
 - Event-generated rewards use the ordinary acquisition and pickup semantics
   for their concrete declarations. Requiredness comes from the event family,
   trait trade reuses ordinary trait removal, and pickup alternatives remain
