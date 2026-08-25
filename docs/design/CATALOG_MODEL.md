@@ -911,7 +911,7 @@ flag; room names and acquisition timing never enter trait declarations.
 
 The complete membership, prerequisite, element, rarity, stacking, rarify,
 aspect, and exclusion matrices are tested at the catalog boundary against
-[`TRAIT_OFFER_POOLS_AND_DEPENDENCIES.md`](../audits/TRAIT_OFFER_POOLS_AND_DEPENDENCIES.md).
+[`TRAIT_OFFER_POOLS_AND_DEPENDENCIES.md`](../audits/traits/TRAIT_OFFER_POOLS_AND_DEPENDENCIES.md).
 The catalog is immutable after normalization and owns no authored choices,
 simulation counters, candidate policy, or React presentation.
 

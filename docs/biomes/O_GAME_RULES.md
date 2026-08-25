@@ -121,7 +121,7 @@ not to a different O-specific encounter-end meaning. No room feature or
 physical exit is usable between phases; O has one room-level Cleanup after its
 final active phase. The source evidence and relationship to wheel selection
 and room-local ordering are owned by
-[`ROOM_ACTION_ORDER_GAME_DATA_AUDIT.md`](../audits/ROOM_ACTION_ORDER_GAME_DATA_AUDIT.md).
+[`ROOM_ACTION_ORDER_GAME_DATA_AUDIT.md`](../audits/rooms-and-routes/ROOM_ACTION_ORDER_GAME_DATA_AUDIT.md).
 
 The editor renders Room Overview, Intro Timeline, Combat 1 Timeline, optional
 Combat 2 Timeline, and Room Doors. Overview owns encounter count and room

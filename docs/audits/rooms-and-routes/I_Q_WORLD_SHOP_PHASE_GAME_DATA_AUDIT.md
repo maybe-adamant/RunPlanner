@@ -18,9 +18,9 @@ The audit answers:
 It does not implement Dream Dive, change Shop authoring, model probability
 weights, or define the boon rarity ledger. The shared Shop settlement boundary
 remains owned by
-[Acquisition Delivery and Room Settlement](ACQUISITION_DELIVERY_AND_ROOM_SETTLEMENT.md), and
+[Acquisition Delivery and Room Settlement](../rewards-and-acquisition/ACQUISITION_DELIVERY_AND_ROOM_SETTLEMENT.md), and
 the rarity arithmetic remains owned by the
-[boon rarity ledger audit](BOON_RARITY_LEDGER_GAME_DATA_AUDIT.md).
+[boon rarity ledger audit](../traits/BOON_RARITY_LEDGER_GAME_DATA_AUDIT.md).
 
 The evidence was checked on 2026-08-22 against the installed Hades II scripts:
 

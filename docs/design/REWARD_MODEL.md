@@ -12,7 +12,7 @@ reward declaration kinds mean and how they compose. `ROOM_LIFECYCLE_MODEL.md`
 owns when a room invokes offer and acquisition transitions.
 `SIMULATION_AND_VALIDATION.md` owns transition evaluation, counted-bag mutation,
 and legality.
-`../audits/REWARD_GAME_DATA_AUDIT.md` records the underlying game evidence and the exact,
+`../audits/rewards-and-acquisition/REWARD_GAME_DATA_AUDIT.md` records the underlying game evidence and the exact,
 simplified, deferred, or excluded disposition of each audited mechanic.
 
 ## Cross-Biome Freeze Status
@@ -388,7 +388,7 @@ When no entry in the entire bag is eligible, the game appends a complete base
 set without discarding ineligible leftovers. It can do this twice. If no entry
 is eligible after the second refill, the offer falls back to
 `RoomRewardHealDrop`. This is one global picker rule, not repeated store data.
-The complete store-and-consumer proof in `../audits/REWARD_GAME_DATA_AUDIT.md` establishes
+The complete store-and-consumer proof in `../audits/rewards-and-acquisition/REWARD_GAME_DATA_AUDIT.md` establishes
 that every supported planner call has an eligible entry after the first refill.
 The simulator therefore appends at most one complete set and treats a
 still-empty supported call as an invariant failure. It does not reproduce the

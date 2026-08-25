@@ -29,7 +29,7 @@ It does not define an authored schema, command vocabulary, React component,
 delivery gate, or migration sequence. Those belong to the stable authored-
 project, lifecycle, and editor authorities. Feature-specific inventory and
 effect facts for Stygian Wells, Shrines of Hermes, and natural resources live in
-[Room Features](ROOM_FEATURES_GAME_DATA_AUDIT.md); their supported contacts
+[Room Features](../room-features/ROOM_FEATURES_GAME_DATA_AUDIT.md); their supported contacts
 enter this chronology at the source-backed checkpoints described below rather
 than creating private orders. Unsupported NPC rewards remain out of scope.
 
@@ -67,13 +67,13 @@ The source evidence comes from:
   Cleanup contacts.
 
 The exact Fields reward/store and Artificer matrices remain owned by
-`FIELDS_OPTIONAL_REWARDS_AND_ARTIFICER_GAME_DATA_AUDIT.md`. Producer-versus-
+`../rewards-and-acquisition/FIELDS_OPTIONAL_REWARDS_AND_ARTIFICER_GAME_DATA_AUDIT.md`. Producer-versus-
 pickup identity and multi-checkpoint acquisition facts remain owned by
-`ACQUISITION_DELIVERY_AND_ROOM_SETTLEMENT.md`. This audit owns the additional
+`../rewards-and-acquisition/ACQUISITION_DELIVERY_AND_ROOM_SETTLEMENT.md`. This audit owns the additional
 cross-producer conclusion that those interactions need one room chronology,
 including the boss and Postboss/fountain checkpoints. Feature-specific Well,
 Shrine, and resource matrices remain owned by
-`ROOM_FEATURES_GAME_DATA_AUDIT.md`.
+`../room-features/ROOM_FEATURES_GAME_DATA_AUDIT.md`.
 
 ## Terms
 
@@ -421,9 +421,9 @@ Dream reward selection; `InteractLogic.lua` for pickup use;
 `TraitLogic.lua:2871-2893` for the separate timed-resource path;
 `RoomDataAnomaly.lua`, `RoomDataC.lua`, and the F/G/H/I/N/O/P/Q boss
 declarations. The exact Judgment target domain
-remains owned by [Arcana and Fear](ARCANA_AND_FEAR_GAME_DATA_AUDIT.md), and
-Shrine delivery remains owned by [Room Features](ROOM_FEATURES_GAME_DATA_AUDIT.md)
-and [Acquisition Delivery and Room Settlement](ACQUISITION_DELIVERY_AND_ROOM_SETTLEMENT.md).
+remains owned by [Arcana and Fear](../loadout-and-progression/ARCANA_AND_FEAR_GAME_DATA_AUDIT.md), and
+Shrine delivery remains owned by [Room Features](../room-features/ROOM_FEATURES_GAME_DATA_AUDIT.md)
+and [Acquisition Delivery and Room Settlement](../rewards-and-acquisition/ACQUISITION_DELIVERY_AND_ROOM_SETTLEMENT.md).
 
 The supported boss interval is:
 
@@ -483,7 +483,7 @@ The evidence was checked on 2026-08-21 against
 `EventLogic.lua:HealthFountainNExitCheck,
 HealthFountainNRestoreState`; and F/G/H/I/N/O/P/Q room declarations.
 Feature-specific Well/Shrine inventory and eligibility facts are retained in
-[Room Features](ROOM_FEATURES_GAME_DATA_AUDIT.md).
+[Room Features](../room-features/ROOM_FEATURES_GAME_DATA_AUDIT.md).
 
 `HealthFountain` declares `BlockExitUntilUsed = true`. Room setup registers it
 in `MapState.RoomRequiredObjects`; `UseHealthFountain` disables it, removes it

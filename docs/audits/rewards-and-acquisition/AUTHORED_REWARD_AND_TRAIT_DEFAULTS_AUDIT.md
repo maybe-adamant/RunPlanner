@@ -37,7 +37,7 @@ later becomes invalid remains selected and repairable.
   `GetReplacementTraits` consume or regenerate that concrete list. The
   supported offer may contain one to three traits or the whole-offer fallback,
   as recorded in
-  [`TRAIT_OFFER_COMPOSITION_AND_FEAR_PRESSURE_AUDIT.md`](TRAIT_OFFER_COMPOSITION_AND_FEAR_PRESSURE_AUDIT.md).
+  [`../traits/TRAIT_OFFER_COMPOSITION_AND_FEAR_PRESSURE_AUDIT.md`](../traits/TRAIT_OFFER_COMPOSITION_AND_FEAR_PRESSURE_AUDIT.md).
 
 The planner models supported outcomes rather than replaying RNG. It therefore
 needs the user to author the concrete result, but RNG existence does not make

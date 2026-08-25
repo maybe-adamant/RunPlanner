@@ -101,7 +101,7 @@ exact-key requirements and history machinery as ordinary definitions. The
 event has one authored realized family/outcome and suppresses acquisition of
 the already-drawn incoming reward without refunding its bag draw. Raw source
 multiplicity and external progression predicates remain in
-[`ENCOUNTER_SELECTION_AND_COMPOSITION_FINDINGS.md`](../audits/ENCOUNTER_SELECTION_AND_COMPOSITION_FINDINGS.md).
+[`ENCOUNTER_SELECTION_AND_COMPOSITION_FINDINGS.md`](../audits/rooms-and-routes/ENCOUNTER_SELECTION_AND_COMPOSITION_FINDINGS.md).
 When `ArtemisCombatF` is the selected active definition, its exact phase owns
 Artemis's three-choice trait offer and folds the selected trait at encounter
 completion. The normalized F surface deliberately excludes Arachne

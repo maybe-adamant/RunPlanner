@@ -7,9 +7,9 @@ language decisions established while the eight route editors were brought to a
 shared workspace. It is evidence and product disposition, not a second editor
 architecture document.
 
-The stable ownership authorities are [`EDITOR_MODEL.md`](../design/EDITOR_MODEL.md),
-[`CONTEXTUAL_EDITOR_UX.md`](../design/CONTEXTUAL_EDITOR_UX.md), and
-[`STRUCTURED_EDITOR_WORKSPACE.md`](../design/STRUCTURED_EDITOR_WORKSPACE.md):
+The stable ownership authorities are [`EDITOR_MODEL.md`](../../design/EDITOR_MODEL.md),
+[`CONTEXTUAL_EDITOR_UX.md`](../../design/CONTEXTUAL_EDITOR_UX.md), and
+[`STRUCTURED_EDITOR_WORKSPACE.md`](../../design/STRUCTURED_EDITOR_WORKSPACE.md):
 they own the domain/projection/React boundary, contextual candidate policy, and
 structured presentation contract. Biome rules and normalized declarations own
 game facts. This audit records the cross-biome conclusions that those

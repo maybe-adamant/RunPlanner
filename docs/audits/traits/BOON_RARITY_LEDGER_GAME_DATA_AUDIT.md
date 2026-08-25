@@ -225,7 +225,7 @@ authority.
 
 Yarn of Ariadne is the Stygian Well item `TemporaryBoonRarityTrait`; the broader
 Well pool is recorded in the
-[Room Features audit](ROOM_FEATURES_GAME_DATA_AUDIT.md). The Well sells Yarn for
+[Room Features audit](../room-features/ROOM_FEATURES_GAME_DATA_AUDIT.md). The Well sells Yarn for
 70 gold. Its declaration is a `GodLootOnly` additive rarity contribution with
 one remaining use:
 
@@ -272,7 +272,7 @@ The I and Q World Shop rooms do not declare their own room rarity override.
 Their boon rarity differences come from the exact generated store item.
 Their complete first-/second-half inventory matrices are recorded separately
 in the
-[I/Q World Shop phase audit](I_Q_WORLD_SHOP_PHASE_GAME_DATA_AUDIT.md); this
+[I/Q World Shop phase audit](../rooms-and-routes/I_Q_WORLD_SHOP_PHASE_GAME_DATA_AUDIT.md); this
 section owns only the rarity-bearing contacts.
 
 `RandomLoot` uses the ordinary provider base. `BoostedRandomLoot` supplies the

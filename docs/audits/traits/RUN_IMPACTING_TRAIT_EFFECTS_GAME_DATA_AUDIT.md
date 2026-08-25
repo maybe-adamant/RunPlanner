@@ -430,7 +430,7 @@ The bounded Planner disposition models Quick Buck through the shared optional
 generated-pickup chronology. Its eligible money pickup participates in the
 same Sea Star and Echo-last-reward acquisition path rather than adding an
 isolated Quick Buck action. The Dream Dive boss teleport edge remains recorded by
-[Room Action Order](ROOM_ACTION_ORDER_GAME_DATA_AUDIT.md).
+[Room Action Order](../rooms-and-routes/ROOM_ACTION_ORDER_GAME_DATA_AUDIT.md).
 
 ## Current Planner boundary
 

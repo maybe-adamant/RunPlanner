@@ -36,7 +36,7 @@ foundation from `SIMULATION_AND_VALIDATION.md`; authoring-prefix support is not
 a seventh UI feature or a second candidate simulator.
 
 The cross-biome frontier audit is now recorded in
-`../audits/EDITOR_UX_AUDIT.md`. Contextual selection lands before
+`../audits/editor/EDITOR_UX_AUDIT.md`. Contextual selection lands before
 the final frontier and presentation closure because frontier guidance consumes
 the same progressive coverage and candidate evidence. Ordinary-decision,
 takeover Preboss, I mixed-batch, completed-Hub, and declaration-fixed
@@ -672,7 +672,7 @@ This work closes when:
 
 ## Durable ownership cross-reference
 
-[`EDITOR_UX_AUDIT.md`](../audits/EDITOR_UX_AUDIT.md) records the cross-biome
+[`EDITOR_UX_AUDIT.md`](../audits/editor/EDITOR_UX_AUDIT.md) records the cross-biome
 editor inventory, evidence/status distinctions, and player-facing vocabulary.
 This document owns shared contextual-selection behavior. [`EDITOR_MODEL.md`](EDITOR_MODEL.md)
 owns the broader feedback, navigation, persistence, and interaction boundaries;

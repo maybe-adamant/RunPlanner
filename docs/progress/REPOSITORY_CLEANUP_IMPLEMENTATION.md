@@ -24,8 +24,8 @@ or compiled product.
 
 At closure:
 
-- `README.md` is a lean product entry point for the current schema-59 product,
-  not an audit index or delivery-history dump;
+- `README.md` is a stable, version-agnostic product entry point, not an audit
+  index, status ledger, or delivery-history dump;
 - `docs/audits/README.md` owns the audit taxonomy and routes readers through
   purpose-based audit folders;
 - completed temporary delivery plans are gone after their durable outcomes are
@@ -135,9 +135,10 @@ source evidence or planner dispositions from the audits themselves.
 The root `README.md` links to that index once instead of maintaining an
 audit-by-audit list. It also stops carrying delivery chronology, large feature
 matrices, or detailed game-rule summaries that already have durable homes.
-Its retained responsibilities are product identity and scope, current
-schema/catalog status, quickstart, a compact architecture/documentation map,
-and development commands.
+Its retained responsibilities are product identity and scope, the app-first
+boundary, quickstart, a compact architecture/documentation map, source
+evidence, and development commands. Current schema/catalog status and feature
+frontier belong in the durable progress record.
 
 Audit folders express reader-facing subject ownership, not package boundaries.
 Moving a document changes no semantic authority. Cross-cutting documents live
@@ -176,8 +177,8 @@ is to preserve old internal imports.
 - conservative consolidation of editor-language and small biome findings;
 - organization of every surviving audit into a purpose-based subdirectory,
   with one audit index and repaired inbound links;
-- reduction of the project README to product orientation, current status,
-  quickstart, architecture/documentation entry points, and development
+- reduction of the project README to stable product orientation, quickstart,
+  architecture/documentation entry points, source evidence, and development
   commands;
 - application-only decomposition of occurrence presentation;
 - application-only decomposition of occurrence semantic assembly;
@@ -440,11 +441,11 @@ Deliverables:
    scopes and cross-cutting routing guidance.
 3. Rewrite all repository Markdown links and source comments that reference
    moved audit paths.
-4. Reduce the root README to its retained entry-point responsibilities and
-   replace the exhaustive audit list with one link to the audit index.
-5. Correct the README's schema-59 status and remove stale future-feature and
-   delivery-history prose while preserving quickstart and useful development
-   commands.
+4. Reduce the root README to a stable product entry point and replace the
+   exhaustive audit list with one link to the audit index.
+5. Remove status-ledger, future-feature, feature-inventory, and
+   delivery-history prose from the root README while preserving quickstart,
+   source evidence, and useful development commands.
 
 Acceptance:
 
@@ -458,8 +459,7 @@ Acceptance:
 - no generic, miscellaneous, archive, or package-shaped audit folder exists.
 
 Audit against: every surviving audit, all Markdown/source inbound references,
-the README documentation map, current schema/catalog constants, and current
-package scripts.
+the README documentation map, and current package scripts.
 
 Verification: an exact audit file inventory, old-path reference closure,
 Markdown link/path checks, Markdown formatting, and `git diff --check`. No test
