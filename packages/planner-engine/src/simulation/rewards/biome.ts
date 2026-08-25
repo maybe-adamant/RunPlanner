@@ -130,8 +130,6 @@ import type {
   TargetRewardHistoryCheckpoint,
 } from './model';
 import {
-  createLevelResolutionCandidateArtifacts,
-  createTraitOfferCandidateArtifacts,
   createAcquisitionConversionCandidateArtifacts,
   createDerivedAcquisitionEntryCandidateArtifacts,
   createSteadyGrowthCandidateArtifacts,
@@ -140,6 +138,10 @@ import {
   createStygianWellCandidateArtifacts,
   attestDerivedAcquisitionEntryCandidateCapability,
 } from '../candidate-artifacts';
+import {
+  createLevelResolutionCandidateArtifacts,
+  createTraitOfferCandidateArtifacts,
+} from '../candidates/trait-offer-capability';
 import type {
   ReachedTraitOfferEvaluation,
   ReachedLevelResolutionEvaluation,
@@ -1299,8 +1301,8 @@ interface BiomeRewardEvaluationAssembly {
   readonly simulation: BiomeRewardSimulation;
   readonly producerArtifacts: RewardProducerCandidateArtifacts;
   readonly lifecycleArtifacts: RoomLifecycleCandidateArtifacts;
-  readonly traitOfferArtifacts: import('../candidate-artifacts').TraitOfferCandidateArtifacts;
-  readonly levelResolutionArtifacts: import('../candidate-artifacts').LevelResolutionCandidateArtifacts;
+  readonly traitOfferArtifacts: import('../candidates/trait-offer-capability').TraitOfferCandidateArtifacts;
+  readonly levelResolutionArtifacts: import('../candidates/trait-offer-capability').LevelResolutionCandidateArtifacts;
   readonly judgmentArcanaArtifacts: import('../candidate-artifacts').JudgmentArcanaCandidateArtifacts;
   readonly keepsakeSelectionArtifacts: import('../candidate-artifacts').KeepsakeSelectionCandidateArtifacts;
   readonly keepsakeEquipResultArtifacts: import('../candidate-artifacts').KeepsakeEquipResultCandidateArtifacts;

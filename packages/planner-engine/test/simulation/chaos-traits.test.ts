@@ -37,7 +37,7 @@ import type {
   AuthoredTraitOfferTraits,
 } from '../../src/authored-project/traits';
 import { normalizeAuthoredChaosTraitOffer } from '../../src/authored-project/traits';
-import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidate-artifacts';
+import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidates/trait-offer-capability';
 import { evaluateBiomeRewardsAssemblyInternal } from '../../src/simulation/rewards/biome';
 import { loadSurfaceNOPProject } from '@run-planner/test-fixtures/surface';
 
