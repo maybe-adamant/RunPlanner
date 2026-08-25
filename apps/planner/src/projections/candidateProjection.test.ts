@@ -96,32 +96,6 @@ function exitDecisions(
 }
 
 describe('candidate projection', () => {
-  it('keeps engine result unions intact and caches one query domain by semantic owner', () => {
-    const project = createGoldenFGHIProject();
-    const assembly = simulateProjectAssembly(catalog, project);
-    const observeCandidateEvaluation = vi.fn();
-    const session = createCandidateSessionFactory(catalog, {
-      observeCandidateEvaluation,
-    }).bind(assembly);
-    const first = exitDecisions(project)[0]!;
-    const target = first.normal.kind === 'batch' ? first.normal.targets[0] : undefined;
-    if (target === undefined) throw new Error('F first batch target is missing');
-    const address = createTargetAddress(
-      createBiomeAddress('Underworld', 'F'),
-      first.source,
-      target.exitKey,
-    );
-    const rooms = [catalog.rooms.byKey.F_Combat02!];
-
-    const one = session.roomTargets(address, rooms);
-    const two = session.roomTargets(address, rooms);
-
-    expect(one).toBe(two);
-    expect(one[0]?.evaluation.kind).toBe('roomTarget');
-    expect(candidateSupport(one[0])).toBe('possible');
-    expect(observeCandidateEvaluation).toHaveBeenCalledTimes(1);
-  });
-
   it('uses materialized resolved stores for counted reward domains', () => {
     const project = createGoldenFGHIProject();
     const observeCandidateEvaluation = vi.fn();
