@@ -1,4 +1,5 @@
-import { catalog } from '@run-planner/hades2-catalog';
+import {
+  catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createAcquisitionRoleAddress,
@@ -19,20 +20,22 @@ import {
   createTraitOfferAddress,
   encodeProjectDocument,
   semanticAddressKey,
-} from '@run-planner/engine/authored-project';
-import { factsWithHistory, type RewardKernelFacts } from '@run-planner/engine/reward-kernel';
+  } from '@run-planner/engine/authored-project';
+import { factsWithHistory,
+  type RewardKernelFacts } from '@run-planner/engine/reward-kernel';
 import {
   createPreparedProjectCandidateSession,
   simulateProjectAssembly,
   simulateProject,
-} from '@run-planner/engine/simulation';
+  } from '@run-planner/engine/simulation';
 import { createNormalDispositionByAcquisitionRole } from '../../../../src/authored-project/reward-state';
 import {
   createTestArcanaFearState,
   initializeTestRewardBranches,
-} from '../../../support/arcana-fear';
+  } from '../../../support/arcana-fear';
 import { materializeHubDecision } from '../../../../src/simulation/materialization';
-import { settleOwnedAcquisitionSite } from '../../../../src/simulation/rewards/processing';
+import { settleOwnedAcquisitionSite,
+} from '../../../../src/simulation/rewards/processing';
 import { describe, expect, it } from 'vitest';
 
 import {

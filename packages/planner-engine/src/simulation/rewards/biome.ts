@@ -255,21 +255,15 @@ import {
   type RewardProducerFrontier,
 } from './producer-frontiers';
 import {
-  addRewardFinding,
-  assessSeaStarDuplication,
   advanceRewardBranches,
   beginRewardRoom,
   countedBinding,
   initializeRewardBranches,
-  mergeEquivalentRewardBranches,
-  settleEncounterTraitOffer,
   settleProducerAcquisitionSite,
   settleOwnedAcquisitionSite,
   settleArtificerReplacementAcquisition,
-  withStoredArtificerReplacements,
   processOfferGenerationCohort,
   processFocusedOfferAfterAuthoredPeers,
-  processEncounterTraitOffer,
   processRewardOffer,
   processShopInventory,
   completePendingShopAcquisitionSite,
@@ -278,13 +272,23 @@ import {
   publicRewardBranch,
   applyJeweledPomEquipResult,
   applyExperimentalHammerEquipResult,
-  rewardFinding,
   type AcquisitionRoleFrontier,
-  type ReachedTraitChildCheckpoint,
   type OfferProcessingContext,
   type OfferProcessingPeer,
-  type RewardBranchState,
 } from './processing';
+import { addRewardFinding } from './findings';
+import {
+  assessSeaStarDuplication,
+  mergeEquivalentRewardBranches,
+  withStoredArtificerReplacements,
+  type RewardBranchState,
+} from './branch-primitives';
+import {
+  settleEncounterTraitOffer,
+  processEncounterTraitOffer,
+  type ReachedTraitChildCheckpoint,
+} from './trait-settlement';
+import { rewardFinding } from './findings';
 import {
   assessJeweledPomEquipResult,
   assessExperimentalHammerEquipResult,

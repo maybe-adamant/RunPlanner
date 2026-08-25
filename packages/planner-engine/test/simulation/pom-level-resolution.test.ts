@@ -1,5 +1,8 @@
-import { catalog } from '@run-planner/hades2-catalog';
-import { describe, expect, it } from 'vitest';
+import {
+  catalog } from '@run-planner/hades2-catalog';
+import { describe,
+  expect,
+  it } from 'vitest';
 import {
   createBiomeAddress,
   createAcquisitionEntryAddress,
@@ -16,7 +19,7 @@ import {
   createTargetAddress,
   createTraitOfferAddress,
   semanticAddressKey,
-} from '@run-planner/engine/authored-project';
+  } from '@run-planner/engine/authored-project';
 import {
   foldTraitHistoryEvents,
   attachTraitHistory,
@@ -24,16 +27,17 @@ import {
   levelResolutionCandidateForProjectEvaluationAssembly,
   simulateProjectAssembly,
   type TraitOfferEvent,
-} from '@run-planner/engine/simulation';
+  } from '@run-planner/engine/simulation';
 import {
   factsWithHistory,
   levelResolutionEffectFor,
   type RewardKernelFacts,
-} from '@run-planner/engine/reward-kernel';
+  } from '@run-planner/engine/reward-kernel';
 import { createLevelResolutionCandidateArtifacts } from '../../src/simulation/candidate-artifacts';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
 import { selectedTraitOfferProducts } from '../../src/simulation/rewards/biome';
-import { settleOwnedAcquisitionSite } from '../../src/simulation/rewards/processing';
+import { settleOwnedAcquisitionSite,
+} from '../../src/simulation/rewards/processing';
 import { applyProjectCommand } from '@run-planner/engine/authored-project';
 import { replaceTestShopOfferActions } from '@run-planner/test-fixtures/shared';
 import {

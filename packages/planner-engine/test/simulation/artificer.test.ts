@@ -25,15 +25,17 @@ import {
   promoteArcana,
 } from '../../src/simulation/arcana-fear';
 import {
-  assessArtificerConversion,
-  assessSeaStarDuplication,
-  assessTimePieceConversion,
   initializeRewardBranches,
   settleArtificerReplacementAcquisition,
   settleOwnedAcquisitionSite,
   settlePickupAcquisitionSite,
-  type RewardBranchState,
 } from '../../src/simulation/rewards/processing';
+import {
+  assessArtificerConversion,
+  assessSeaStarDuplication,
+  assessTimePieceConversion,
+  type RewardBranchState,
+} from '../../src/simulation/rewards/branch-primitives';
 import { createTraitHistoryState } from '../../src/simulation/traits';
 
 const biome = createBiomeAddress('Underworld', 'H');

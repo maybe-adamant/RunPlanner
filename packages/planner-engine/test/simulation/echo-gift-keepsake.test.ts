@@ -49,10 +49,8 @@ import {
   type KeepsakeState,
 } from '../../src/simulation/keepsakes';
 import { evaluateBiomeRewardsAssemblyInternal } from '../../src/simulation/rewards/biome';
-import {
-  processEncounterTraitOffer,
-  type RewardBranchState,
-} from '../../src/simulation/rewards/processing';
+import { processEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement';
+import { type RewardBranchState } from '../../src/simulation/rewards/branch-primitives';
 import {
   assessTraitOption,
   attachTraitHistory,

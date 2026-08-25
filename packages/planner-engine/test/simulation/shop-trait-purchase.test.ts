@@ -1,4 +1,5 @@
-import { catalog } from '@run-planner/hades2-catalog';
+import {
+  catalog } from '@run-planner/hades2-catalog';
 import {
   acquisitionSiteStorageKey,
   applyProjectHistoryCommand,
@@ -19,30 +20,33 @@ import {
   encodeProjectDocument,
   redoProjectHistory,
   undoProjectHistory,
-} from '@run-planner/engine/authored-project';
+  } from '@run-planner/engine/authored-project';
 import {
   createRewardHistoryState,
   factsWithHistory,
   recordLootTypeHistorySource,
   type ResolvedRewardOffer,
   type RewardKernelFacts,
-} from '@run-planner/engine/reward-kernel';
-import { describe, expect, it } from 'vitest';
+  } from '@run-planner/engine/reward-kernel';
+import { describe,
+  expect,
+  it } from 'vitest';
 import { createDefaultRoomState } from '../../src/authored-project/room-state/defaults';
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
-import { createTestArcanaFearState, initializeTestRewardBranches } from '../support/arcana-fear';
+import { createTestArcanaFearState,
+  initializeTestRewardBranches } from '../support/arcana-fear';
 import { createDefaultRoomEncounterState } from '../../src/authored-project/room-state/encounters';
 import { createNormalDispositionByAcquisitionRole } from '../../src/authored-project/reward-state';
 import { createUnresolvedAcquisitionRewardState } from '../../src/authored-project/traits';
 import {
   ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
   echoShopDuplicateOffer,
-} from '../../src/authored-project/shop';
+  } from '../../src/authored-project/shop';
 import { materializeAuthoredRoom } from '../../src/simulation/materialization/rooms';
 import {
   createDerivedAcquisitionEntryCandidateArtifacts,
   createLevelResolutionCandidateArtifacts,
-} from '../../src/simulation/candidate-artifacts';
+  } from '../../src/simulation/candidate-artifacts';
 import {
   processShopInventory,
   settleShopAcquisitionSite,

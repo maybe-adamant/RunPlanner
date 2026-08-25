@@ -142,7 +142,7 @@ export interface RewardBranch {
   readonly keepsakes: KeepsakeState;
   /** Engine-derived delayed Shrine state carried between biome evaluations. */
   readonly pendingHermesShrineDeliveries?: Readonly<
-    Record<string, import('./processing').PendingHermesShrineDelivery>
+    Record<string, import('./branch-primitives').PendingHermesShrineDelivery>
   >;
   readonly stygianWell?: import('../stygian-well').StygianWellRunState;
 }

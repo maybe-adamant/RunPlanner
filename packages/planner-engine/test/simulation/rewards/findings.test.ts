@@ -6,7 +6,7 @@ import {
   createOccurrenceId,
 } from '@run-planner/engine/authored-project';
 
-import { addRewardFinding, rewardFinding } from '../../../src/simulation/rewards/processing';
+import { addRewardFinding, rewardFinding } from '../../../src/simulation/rewards/findings';
 import type { FindingRegionEntry } from '../../../src/simulation/finding-regions';
 
 describe('reward finding identity', () => {

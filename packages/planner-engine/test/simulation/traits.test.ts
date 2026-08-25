@@ -63,9 +63,9 @@ import {
 import { evaluateNaturalSelectionResultCandidate } from '../../src/simulation/candidates/trait-offer';
 import {
   initializeRewardBranches,
-  settleEncounterTraitOffer,
   settleOwnedAcquisitionSite,
 } from '../../src/simulation/rewards/processing';
+import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement';
 import {
   evaluateTraitOfferCandidate,
   type TraitOfferCandidateQuery,
