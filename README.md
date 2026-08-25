@@ -73,7 +73,7 @@ completion-owned Room Action order owns chronology; Gold materializes from the f
 non-Spell purchase before that source's acquisition effects and may be picked
 up later among the other room entries.
 
-The current strict authored contract is schema 58. Its earlier schema-41
+The current strict authored contract is schema 59. Its earlier schema-41
 Narcissus, Mourning Fields, and Artificer surface remains intact: Narcissus
 exposes every pickup consequential to Time Piece or
 Artificer, including producer-owned Psyche without adding it to a counted
@@ -246,9 +246,7 @@ copied elsewhere.
   [implementation plan](docs/progress/IMPLEMENTATION_PLAN.md) for forward
   acceptance gates and
   [implementation progress](docs/progress/IMPLEMENTATION_PROGRESS.md) for the
-  active frontier and chronological delivery record. The durable
-  [product-polish backlog](docs/progress/PRODUCT_POLISH.md) retains concrete
-  correctness and presentation observations between focused delivery slices.
+  active frontier and durable delivery milestones.
   Phase 7 Slice 4,
   Commit 5a prompt removal, the re-anchor program, and the four Commit 5b
   presentation slices are complete. Campaign B made candidate artifacts
@@ -257,13 +255,14 @@ copied elsewhere.
   eight-choice delivery, All Together, Infernal Contract, Travel Deal, and the
   corrected Gold Shop chronology are complete. Narcissus pickup correction,
   Fields room chronology and optional rewards, and Artificer conversions are
-  complete through authored schema 41. Fountain and reached nonfinal Postboss
-  interactions now use that shared chronology, with Cleanup · Doors open as
-  the future Well/Shrine contact frontier. Shop inventory, supplemental reward payloads, purchase/pickup participation,
-  and room-local chronology remain distinct supported products. The ranked Hub
-  follow-up and manual Shop UX acceptance close Phase 7. Phase 8 is complete
-  with the successful `v0.1.0` tagged Windows portable release. Wells and exact
-  Surface Shop delivery timing remain focused follow-up work.
+  complete through authored schema 41. Fountain and automatic reached
+  nonfinal Postboss interactions use that shared chronology. Selected
+  resources, Pools of Purging, Hermes Shrines, and Stygian Wells are complete
+  through schema 59; Shop inventory, supplemental reward payloads,
+  purchase/pickup participation, timed delivery, and room-local chronology
+  remain distinct supported products. The ranked Hub follow-up and manual Shop
+  UX acceptance close Phase 7. Phase 8 is complete with the successful
+  `v0.1.0` tagged Windows portable release.
 
 ## Source Evidence
 

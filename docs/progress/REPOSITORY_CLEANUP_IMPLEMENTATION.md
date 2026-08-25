@@ -2,11 +2,13 @@
 
 ## Status
 
-Drafted on 2026-08-25 from clean base `be69efd3` after the room-features
-closure. This document is the temporary execution contract for one bounded
+Locked for execution at `c6f7e6ff` on 2026-08-25 from clean room-features base
+`be69efd3`. This document is the temporary execution contract for one bounded
 cleanup phase. It is not a stable authority, must not be linked from
 `README.md`, and must be deleted in the final closure gate after durable facts
-have been absorbed.
+have received their final disposition. Gate A was clarified during execution:
+a retired plan needs added absorption prose only when it contains a unique
+durable fact not already owned elsewhere.
 
 The plan is intentionally behavior-preserving. It cleans the documentation
 surface and decomposes three application-layer gravity wells whose current
@@ -207,7 +209,7 @@ is to preserve old internal imports.
 | `IMPLEMENTATION_PLAN.md`     | Rewrite as the current product roadmap. Replace completed Phase 0-8 mechanics with a concise completed-phase index pointing to stable authorities and the durable progress record. Preserve and refresh Phase 9 Simulation Conformance/Game Protocol and Phase 10 Hardening as the forward plan. |
 | `IMPLEMENTATION_PROGRESS.md` | Rewrite as a current snapshot plus concise durable phase closures. Preserve schema/catalog milestones, major architectural transitions, truthful complete-gate results, and current blockers/frontier. Remove executor/reviewer narration and commit-by-commit duplication.                      |
 | `MIGRATION_PROVENANCE.md`    | Retain. Update only if rewritten progress links require a current description.                                                                                                                                                                                                                   |
-| Five completed feature plans | Absorb any outcome not already present in stable audits/design/progress, repair inbound links, then delete.                                                                                                                                                                                      |
+| Five completed feature plans | Review for unique durable outcomes, add only facts not already present in stable audits/design/progress, repair inbound links, then delete. A plan with no unique durable fact requires no absorption prose.                                                                                     |
 | `PRODUCT_POLISH.md`          | Remove its stale room-feature frontier and delete the empty queue. Any real future item belongs in the current roadmap, not a second queue.                                                                                                                                                      |
 
 The rewrite must not imply live game validation where only automated planner
@@ -373,7 +375,8 @@ Deliverables:
 1. Rewrite the durable implementation roadmap around the current frontier.
 2. Rewrite the durable progress record around current status and concise phase
    closures.
-3. Absorb and delete completed temporary plans and the empty polish queue.
+3. Review and delete completed temporary plans and the empty polish queue,
+   carrying forward only unique durable facts not already owned elsewhere.
 4. Remove or redirect any root README link whose target is retired in this
    gate; the full lean-README rewrite remains Gate D after audit destinations
    are stable.
