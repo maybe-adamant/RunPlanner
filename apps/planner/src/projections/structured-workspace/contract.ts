@@ -1389,9 +1389,19 @@ export type WorkspaceRoomLifecycleTimelineEntry =
   | {
       readonly kind: 'boundary';
       readonly boundary: WorkspaceRoomLifecycleBoundary;
+      /** Projection-owned text; React does not reconstruct boundary wording. */
+      readonly label: string;
+      /** Projection-owned lifecycle checkpoint identity for suppression and placement. */
+      readonly checkpointKey: string;
+      /** Projection-owned insertion position immediately adjacent to this boundary. */
+      readonly dropIndex: number;
       readonly rank: number;
       readonly placement: 'before' | 'after';
       readonly runState?: WorkspaceRunStateLauncher;
+      /** Exact projected child placed at this lifecycle seam. */
+      readonly supplement?:
+        | { readonly kind: 'encounter'; readonly phase: WorkspaceEncounterPhase }
+        | { readonly kind: 'rewardWheel'; readonly wheel: WorkspaceRewardWheelDescriptor };
       /** Fields-only assignment of one hidden cage-completion anchor to this rigid cycle. */
       readonly fieldsCageSlot?: WorkspaceFieldsCageSlotControl;
     }
@@ -1403,6 +1413,8 @@ export type WorkspaceRoomLifecycleTimelineEntry =
       readonly presentation: 'row' | 'fieldsCageAnchor';
       /** Engine-owned phase grouping for multi-encounter room workbenches. */
       readonly phaseKey?: string;
+      /** Exact projected encounter child placed on this action row. */
+      readonly supplement?: { readonly kind: 'encounter'; readonly phase: WorkspaceEncounterPhase };
     }
   | {
       readonly kind: 'automaticEffect';
@@ -1455,6 +1467,8 @@ export interface WorkspaceFieldsCageSlotControl {
 export interface WorkspaceRoomLifecycleTimeline {
   readonly entries: readonly WorkspaceRoomLifecycleTimelineEntry[];
   readonly boundaries: readonly WorkspaceRoomLifecycleBoundary[];
+  /** Checkpoints represented by lifecycle boundary rows rather than duplicate list items. */
+  readonly suppressedCheckpointKeys: readonly string[];
 }
 
 export interface WorkspaceRoomActionInteraction {
