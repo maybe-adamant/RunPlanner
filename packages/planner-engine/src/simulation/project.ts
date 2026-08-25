@@ -70,10 +70,10 @@ import type { FindingRegionEntry } from './finding-regions';
 import {
   evaluateProgressiveBiomeAssembly,
   evaluateProgressiveBiomeAssemblyFromSelectedProducts,
-  occurrenceOwnerAddress,
-  type BiomeGenerationValidation,
   type ProgressiveBiomeContext,
 } from './progressive/biome';
+import { occurrenceOwnerAddress } from './progressive/finding-location';
+import type { BiomeGenerationValidation } from './progressive/products';
 import { effectiveRouteResourcePlacements, routeResourceAuthoring } from './resources';
 import { prefixAuthoredRooms } from './candidates/evaluated-biome';
 import { evaluateBiomeRewardsAssemblyInternal } from './rewards/biome';
@@ -129,8 +129,6 @@ export interface PrefixIncompleteBiomeProjectEvaluation extends IncompleteBiomeP
 
 export type IncompleteBiomeProjectEvaluation =
   UnevaluatedIncompleteBiomeProjectEvaluation | PrefixIncompleteBiomeProjectEvaluation;
-
-export type { BiomeGenerationValidation } from './progressive/biome';
 
 interface CompleteBiomeProjectEvaluationBase extends BiomeEvaluationBase {
   readonly authoring: 'complete';

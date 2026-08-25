@@ -384,7 +384,6 @@ export {
   type BiomeEvaluationCheckpoint,
   type BiomeEvaluationCoverage,
   type BiomeEvaluationPoint,
-  type BiomeGenerationValidation,
   type CompleteBiomeEvaluationCoverage,
   type CompleteBiomeProjectEvaluation,
   type CompleteValidBiomeProjectEvaluation,
@@ -400,6 +399,7 @@ export {
   type RouteEvaluationSummary,
   type RouteProcessingRegions,
 } from './project';
+export type { BiomeGenerationValidation } from './progressive/products';
 export {
   assessTraitOffer,
   assessTraitOfferComposition,
