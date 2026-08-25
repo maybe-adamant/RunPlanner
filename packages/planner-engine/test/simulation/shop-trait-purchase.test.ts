@@ -40,9 +40,9 @@ import {
 } from '../../src/authored-project/shop';
 import { materializeAuthoredRoom } from '../../src/simulation/materialization/rooms';
 import {
-  createDerivedAcquisitionEntryCandidateArtifacts,
   createLevelResolutionCandidateArtifacts,
-} from '../../src/simulation/candidate-artifacts';
+} from '../../src/simulation/candidates/trait-offer-capability';
+import { createDerivedAcquisitionEntryCandidateArtifacts } from '../../src/simulation/candidate-artifacts';
 import {
   processShopInventory,
   settleShopAcquisitionSite,

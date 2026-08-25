@@ -57,9 +57,9 @@ import { initializeTestRewardBranches } from '../support/arcana-fear';
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
 import { createArcanaFearState } from '../../src/simulation/arcana-fear';
 import {
-  createSteadyGrowthCandidateArtifacts,
   createTraitOfferCandidateArtifacts,
-} from '../../src/simulation/candidate-artifacts';
+} from '../../src/simulation/candidates/trait-offer-capability';
+import { createSteadyGrowthCandidateArtifacts } from '../../src/simulation/candidate-artifacts';
 import { evaluateNaturalSelectionResultCandidate } from '../../src/simulation/candidates/trait-offer';
 import {
   initializeRewardBranches,

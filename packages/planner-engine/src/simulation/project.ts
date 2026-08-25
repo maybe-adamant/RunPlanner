@@ -93,8 +93,10 @@ import {
 } from './rewards/authoring-domain';
 import type { RewardProducerCandidateArtifacts } from './rewards/producer-frontiers';
 import type { RoomLifecycleCandidateArtifacts } from './rewards/lifecycle-artifacts';
-import type { TraitOfferCandidateArtifacts } from './candidate-artifacts';
-import type { LevelResolutionCandidateArtifacts } from './candidate-artifacts';
+import type {
+  LevelResolutionCandidateArtifacts,
+  TraitOfferCandidateArtifacts,
+} from './candidates/trait-offer-capability';
 
 export interface BiomeEvaluationBase {
   readonly biomeKey: string;
