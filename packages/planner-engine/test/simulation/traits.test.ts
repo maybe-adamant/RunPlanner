@@ -134,7 +134,7 @@ function reachedTraitOffers(
 }
 
 // Source-expected Hammer memberships and aspect restrictions from
-// docs/audits/TRAIT_OFFER_POOLS_AND_DEPENDENCIES.md.  This is intentionally
+// docs/audits/traits/TRAIT_OFFER_POOLS_AND_DEPENDENCIES.md.  This is intentionally
 // independent of the normalized catalog so the 92 x 24 candidate closure
 // cannot pass by comparing the evaluator with its own compatibility data.
 const expectedHammerTraitsByWeapon = {

@@ -58,11 +58,11 @@ scripts. Primary sources are:
   items.
 
 Feature-specific host, inventory, spacing, effect, and planner dispositions
-remain recorded in [Room Features](ROOM_FEATURES_GAME_DATA_AUDIT.md). The
+remain recorded in [Room Features](../room-features/ROOM_FEATURES_GAME_DATA_AUDIT.md). The
 exact Narcissus choice matrix and supported outcome dispositions remain
-recorded in `TRAIT_OFFER_POOLS_AND_DEPENDENCIES.md`.
+recorded in `../traits/TRAIT_OFFER_POOLS_AND_DEPENDENCIES.md`.
 
-The [Room Action Order audit](ROOM_ACTION_ORDER_GAME_DATA_AUDIT.md) owns the broader conclusion
+The [Room Action Order audit](../rooms-and-routes/ROOM_ACTION_ORDER_GAME_DATA_AUDIT.md) owns the broader conclusion
 that checkpoint acquisitions must interleave with combat barriers, room
 rewards, and combat-NPC interactions through one room chronology. The
 producer-versus-pickup and multi-checkpoint facts in this document remain

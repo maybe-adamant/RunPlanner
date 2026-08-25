@@ -11,9 +11,9 @@ dispositions.
 
 This audit owns feature-specific game facts. The shared post-encounter
 interaction boundary is owned by [Acquisition Delivery and Room
-Settlement](ACQUISITION_DELIVERY_AND_ROOM_SETTLEMENT.md), and the one entered-
+Settlement](../rewards-and-acquisition/ACQUISITION_DELIVERY_AND_ROOM_SETTLEMENT.md), and the one entered-
 room chronology and fixed lifecycle checkpoints are owned by [Room Action
-Order](ROOM_ACTION_ORDER_GAME_DATA_AUDIT.md). Those authorities are linked
+Order](../rooms-and-routes/ROOM_ACTION_ORDER_GAME_DATA_AUDIT.md). Those authorities are linked
 here rather than reproduced as a second lifecycle matrix. This document does
 not prescribe schema, commands, UI, module boundaries, or delivery sequencing.
 
@@ -24,15 +24,15 @@ validation.
 
 ## Source and disposition map
 
-| Superseded source                            | Unique claims retained here or in the surviving authority                                                                                                                                                                                                                                               |
-| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Natural Resources source audit               | Resource tool/element mapping, successful interaction boundary, run-local cap, point spacing/capacity/room declaration matrix, and selected-success planner abstraction retained in **Natural Resources**.                                                                                              |
-| Purging Pool source audit                    | Physical F/G/H Postboss hosts, challenge-switch realization, shop-aware candidate predicate, stack removal, reroll boundary, and schema-59 sale disposition retained in **Pools of Purging**.                                                                                                           |
-| Shrine delivery source audit                 | Shrine host/chance/anchor matrix, three-offer inventory, pending delivery/rush/forced completion, Spell reservation, Travel Deal refill, and schema-59 disposition retained in **Shrines of Hermes**. Shared acquisition ordering remains in the acquisition and room-action authorities.               |
-| Stygian Well source audit                    | Well host/spacing/anchor matrix, complete 25-identity effect table, repeat and temporary-use exceptions, consequential items, and schema-59 disposition retained in **Stygian Wells**. Spark's exact SecretPoint host/count matrix remains with the [route-detour authority](ROUTE_DETOUR_FINDINGS.md). |
-| Shop and Well lifecycle source audit         | Shared Shop/Well/Shrine post-outgoing boundary and RequiredNotInStore conclusion already survive in `ACQUISITION_DELIVERY_AND_ROOM_SETTLEMENT.md`; feature-specific pool facts are retained in this audit.                                                                                              |
-| Boss completion source audit                 | Boss-death/Judgment and effect-neutral reward facts are retained in the Boss section of `ROOM_ACTION_ORDER_GAME_DATA_AUDIT.md`; Shrine delivery remains here only for its feature-specific source facts.                                                                                                |
-| Fountain and Postboss lifecycle source audit | Fountain, persistent N Hub, Postboss, rack, and Cleanup chronology are retained in the Fountains and Postboss section of `ROOM_ACTION_ORDER_GAME_DATA_AUDIT.md`; Well/Shrine availability remains here.                                                                                                 |
+| Superseded source                            | Unique claims retained here or in the surviving authority                                                                                                                                                                                                                                                                   |
+| -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Natural Resources source audit               | Resource tool/element mapping, successful interaction boundary, run-local cap, point spacing/capacity/room declaration matrix, and selected-success planner abstraction retained in **Natural Resources**.                                                                                                                  |
+| Purging Pool source audit                    | Physical F/G/H Postboss hosts, challenge-switch realization, shop-aware candidate predicate, stack removal, reroll boundary, and schema-59 sale disposition retained in **Pools of Purging**.                                                                                                                               |
+| Shrine delivery source audit                 | Shrine host/chance/anchor matrix, three-offer inventory, pending delivery/rush/forced completion, Spell reservation, Travel Deal refill, and schema-59 disposition retained in **Shrines of Hermes**. Shared acquisition ordering remains in the acquisition and room-action authorities.                                   |
+| Stygian Well source audit                    | Well host/spacing/anchor matrix, complete 25-identity effect table, repeat and temporary-use exceptions, consequential items, and schema-59 disposition retained in **Stygian Wells**. Spark's exact SecretPoint host/count matrix remains with the [route-detour authority](../rooms-and-routes/ROUTE_DETOUR_FINDINGS.md). |
+| Shop and Well lifecycle source audit         | Shared Shop/Well/Shrine post-outgoing boundary and RequiredNotInStore conclusion already survive in `../rewards-and-acquisition/ACQUISITION_DELIVERY_AND_ROOM_SETTLEMENT.md`; feature-specific pool facts are retained in this audit.                                                                                       |
+| Boss completion source audit                 | Boss-death/Judgment and effect-neutral reward facts are retained in the Boss section of `../rooms-and-routes/ROOM_ACTION_ORDER_GAME_DATA_AUDIT.md`; Shrine delivery remains here only for its feature-specific source facts.                                                                                                |
+| Fountain and Postboss lifecycle source audit | Fountain, persistent N Hub, Postboss, rack, and Cleanup chronology are retained in the Fountains and Postboss section of `../rooms-and-routes/ROOM_ACTION_ORDER_GAME_DATA_AUDIT.md`; Well/Shrine availability remains here.                                                                                                 |
 
 The map is claim-level rather than filename-based: a superseded audit is
 removed only after the listed claims have a surviving home and its inbound
@@ -450,13 +450,13 @@ The three direct run-consequential identities are:
   Chaos pickup, is unavailable in Dream runs, and is consumed only when a
   force-capable physical `SecretPoint` creates the next Chaos gate. The
   forced branch precedes natural chance, preserves the ordinary route
-  history, and is fully detailed by the [route-detour authority](ROUTE_DETOUR_FINDINGS.md);
+  history, and is fully detailed by the [route-detour authority](../rooms-and-routes/ROUTE_DETOUR_FINDINGS.md);
   this audit does not duplicate its room-by-room SecretPoint matrix.
 - **Yarn of Ariadne** (`TemporaryBoonRarityTrait`) contributes the declared
   rarity bonuses to the next eligible God-loot offer that does not ignore
   temporary rarity. One use is consumed when that choice screen closes, not
   merely when an offer is generated. The complete rarity ledger remains in
-  `BOON_RARITY_LEDGER_GAME_DATA_AUDIT.md`.
+  `../traits/BOON_RARITY_LEDGER_GAME_DATA_AUDIT.md`.
 - **Sacrificial Hymn** (`LimitedSwapTraitDrop`) creates one
   `LimitedSwapBonusTrait` use with `ExchangeLevelBonus = 2`. The next eligible
   boon offer attempts one random replacement; if the replacement set is
@@ -492,7 +492,7 @@ The following remain explicit and outside this audit's modeled contract:
 - Store reroll chronology and currency;
 - temporary Well effects whose expiration is entirely sim-neutral;
 - changes to the installed Spark SecretPoint host matrix, whose current
-  declaration-backed counts live in the [route-detour authority](ROUTE_DETOUR_FINDINGS.md);
+  declaration-backed counts live in the [route-detour authority](../rooms-and-routes/ROUTE_DETOUR_FINDINGS.md);
 - future changes to source pools or permanent upgrades; and
 - unsupported feature families or interaction details not declared by the
   current schema-59 catalog.

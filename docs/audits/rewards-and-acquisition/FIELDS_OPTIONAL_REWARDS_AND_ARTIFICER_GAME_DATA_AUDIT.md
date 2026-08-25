@@ -20,7 +20,7 @@ planner contracts live in the authored, reward, lifecycle,
 simulation/validation, workspace, and H biome authorities; this audit retains
 the source evidence and final disposition rather than delivery mechanics.
 
-`ROOM_ACTION_ORDER_GAME_DATA_AUDIT.md` records the later cross-room conclusion:
+`../rooms-and-routes/ROOM_ACTION_ORDER_GAME_DATA_AUDIT.md` records the later cross-room conclusion:
 the mixed Fields chronology is the correct local evidence but not the final
 general owner. It must be absorbed with acquisition and combat-NPC interactions
 into one entered-room chronology rather than remain a Fields-private order.
@@ -59,7 +59,7 @@ Primary evidence:
 
 The exact supported counted-store declarations and refill proof remain owned
 by `REWARD_GAME_DATA_AUDIT.md`. The broad Arcana board and Circe eligibility
-facts remain owned by `ARCANA_AND_FEAR_GAME_DATA_AUDIT.md`.
+facts remain owned by `../loadout-and-progression/ARCANA_AND_FEAR_GAME_DATA_AUDIT.md`.
 
 ## Mourning Fields reward surfaces
 

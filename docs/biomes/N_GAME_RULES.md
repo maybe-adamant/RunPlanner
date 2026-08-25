@@ -244,7 +244,7 @@ phase owns Artemis's three-choice trait offer. Source chronology acquires that
 trait only through the separate post-combat Artemis interaction, which shares
 the main occurrence's local action window with its room reward. The current
 planner still folds it at encounter completion; the correction is owned by
-[`ROOM_ACTION_ORDER_GAME_DATA_AUDIT.md`](../audits/ROOM_ACTION_ORDER_GAME_DATA_AUDIT.md).
+[`ROOM_ACTION_ORDER_GAME_DATA_AUDIT.md`](../audits/rooms-and-routes/ROOM_ACTION_ORDER_GAME_DATA_AUDIT.md).
 Heracles and the Ephyra side-room definitions do not declare a trait provider;
 this does not create a Hub-wide trait surface.
 

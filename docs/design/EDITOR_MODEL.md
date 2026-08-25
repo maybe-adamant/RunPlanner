@@ -517,7 +517,7 @@ batch continues to expose its exact reconciliation action when it needs
 repair.
 
 The shared decision presentation and variant-owned action sets are recorded in
-`../audits/EDITOR_UX_AUDIT.md`. React may share the container, but
+`../audits/editor/EDITOR_UX_AUDIT.md`. React may share the container, but
 it does not reinterpret takeover, mixed, declaration-fixed width-one, or
 completed-Hub Preboss semantics.
 

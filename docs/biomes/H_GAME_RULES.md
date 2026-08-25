@@ -25,7 +25,7 @@ rechecked on 2026-08-15; source details remain in the focused audit.
   optional reward values, and one mixed action chronology for atomic cage
   encounters plus cage, optional, NPC/Gorgon, and Artificer-replacement
   interactions. One entered-room chronology owns them all;
-  [`ROOM_ACTION_ORDER_GAME_DATA_AUDIT.md`](../audits/ROOM_ACTION_ORDER_GAME_DATA_AUDIT.md)
+  [`ROOM_ACTION_ORDER_GAME_DATA_AUDIT.md`](../audits/rooms-and-routes/ROOM_ACTION_ORDER_GAME_DATA_AUDIT.md)
   owns the source evidence.
 - `H_PreBoss01` is an atomic takeover Preboss. For a two-door predecessor it
   creates a Shop occurrence on the first exit and a counted free-reward
