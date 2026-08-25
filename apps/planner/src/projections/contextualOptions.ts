@@ -241,6 +241,16 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
     case 'hermesShrineTravelDealRefillMissing':
     case 'hermesShrineTravelDealRefillUnavailable':
       return { kind: 'store', message: 'Repair this Hermes Shrine inventory choice.' };
+    case 'stygianWellMissing':
+    case 'stygianWellWrongGroup':
+    case 'stygianWellDuplicate':
+    case 'stygianWellPlacementUnavailable':
+    case 'stygianWellTravelDealRefillUnavailable':
+    case 'stygianWellTwistInvalid':
+      return { kind: 'store', message: 'Repair this Stygian Well inventory choice.' };
+    case 'sparkChaosMissing':
+    case 'sparkChaosUnavailable':
+      return { kind: 'generic', message: 'Repair this Spark-forced Chaos exit.' };
     case 'chaosOrdinaryRequiresCommon':
       return {
         kind: 'trait',

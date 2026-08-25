@@ -36,7 +36,8 @@ export function applyOccurrenceCommand(
         const order = occurrence.roomActions.order.filter(
           (reference) => reference.kind !== 'purchaseHermesShrineOffer',
         );
-        const { hermesShrine: _removed, ...withoutShrine } = occurrence;
+        const withoutShrine = { ...occurrence };
+        delete withoutShrine.hermesShrine;
         return updateOccurrence(
           document,
           located,
@@ -151,8 +152,8 @@ export function applyOccurrenceCommand(
                 ],
         ),
       });
-      const { purchaseBySlot: _priorPurchaseBySlot, ...shrineWithoutPurchase } =
-        occurrence.hermesShrine;
+      const shrineWithoutPurchase = { ...occurrence.hermesShrine };
+      delete shrineWithoutPurchase.purchaseBySlot;
       return updateOccurrence(
         document,
         located,
@@ -173,8 +174,10 @@ export function applyOccurrenceCommand(
               : {
                   travelDealRefill: Object.freeze({
                     ...(() => {
-                      const { purchase: _priorPurchase, ...withoutPurchase } =
-                        occurrence.hermesShrine.travelDealRefill ?? { offer: null };
+                      const withoutPurchase = {
+                        ...(occurrence.hermesShrine.travelDealRefill ?? { offer: null }),
+                      };
+                      delete withoutPurchase.purchase;
                       return withoutPurchase;
                     })(),
                     ...(command.purchase === null
@@ -262,6 +265,240 @@ export function applyOccurrenceCommand(
             traitKeyBySlot: Object.freeze({
               ...occurrence.purgingPool.traitKeyBySlot,
               [command.slotKey]: command.traitKey,
+            }),
+          }),
+        }),
+      );
+    }
+    case 'AddStygianWell': {
+      const occurrence = requireOccurrence(located.plan, command.occurrence.occurrenceId, command);
+      const room = catalog.rooms.byKey[occurrence.gameName];
+      const roomShop = room?.roomShop;
+      if (
+        roomShop === undefined ||
+        roomShop.forced ||
+        roomShop.spawnChance <= 0 ||
+        (room?.challengeSwitchAnchorCount ?? 0) <= 0
+      )
+        failCommand(command, 'occurrence is not an eligible ordinary Stygian Well host');
+      if (occurrence.stygianWell !== undefined) return document;
+      return updateOccurrence(
+        document,
+        located,
+        Object.freeze({
+          ...occurrence,
+          stygianWell: Object.freeze({
+            interacted: false,
+            offerKeyBySlot: Object.freeze({ healing: null, secondLeft: null, secondRight: null }),
+          }),
+        }),
+      );
+    }
+    case 'RemoveStygianWell': {
+      const occurrence = requireOccurrence(located.plan, command.occurrence.occurrenceId, command);
+      const room = catalog.rooms.byKey[occurrence.gameName];
+      if (room?.roomShop?.forced === true)
+        failCommand(command, 'forced Postboss Stygian Well cannot be removed');
+      if (occurrence.stygianWell === undefined) return document;
+      const withoutWell = { ...occurrence };
+      delete withoutWell.stygianWell;
+      return updateOccurrence(
+        document,
+        located,
+        Object.freeze({
+          ...withoutWell,
+          roomActions: Object.freeze({
+            ...occurrence.roomActions,
+            order: Object.freeze(
+              occurrence.roomActions.order.filter((r) => r.kind !== 'purchaseStygianWellOffer'),
+            ),
+          }),
+        }),
+      );
+    }
+    case 'SetStygianWellInteraction': {
+      const occurrence = requireOccurrence(located.plan, command.occurrence.occurrenceId, command);
+      const room = catalog.rooms.byKey[occurrence.gameName];
+      if (room?.roomShop === undefined) failCommand(command, 'occurrence has no Stygian Well host');
+      if (occurrence.stygianWell === undefined)
+        failCommand(command, 'occurrence has no present Stygian Well');
+      if (!command.interacted) {
+        const { stygianWell: prior, ...withoutWell } = occurrence;
+        if (prior === undefined) return document;
+        return updateOccurrence(
+          document,
+          located,
+          Object.freeze({
+            ...withoutWell,
+            // Retain dormant authored detail; only participation and chronology turn off.
+            stygianWell: Object.freeze({
+              ...prior,
+              interacted: false,
+              purchasedGenerationKeys: Object.freeze([]),
+            }),
+            roomActions: Object.freeze({
+              ...occurrence.roomActions,
+              order: Object.freeze(
+                occurrence.roomActions.order.filter((r) => r.kind !== 'purchaseStygianWellOffer'),
+              ),
+            }),
+          }),
+        );
+      }
+      return updateOccurrence(
+        document,
+        located,
+        Object.freeze({
+          ...occurrence,
+          stygianWell: Object.freeze({ ...occurrence.stygianWell, interacted: true }),
+        }),
+      );
+    }
+    case 'ReplaceStygianWellOffer': {
+      const occurrence = requireOccurrence(located.plan, command.occurrence.occurrenceId, command);
+      const well = occurrence.stygianWell;
+      if (well === undefined || !well.interacted)
+        failCommand(command, 'Stygian Well is not being interacted with');
+      if (!['healing', 'secondLeft', 'secondRight'].includes(command.slotKey))
+        failCommand(command, 'unknown Stygian Well slot');
+      const known = new Set(
+        catalog.rewards.shops.byKey.RoomShop?.groups.values.flatMap((g) =>
+          [...g.options.values].map((o) => o.key),
+        ) ?? [],
+      );
+      if (command.itemKey !== null && !known.has(command.itemKey))
+        failCommand(command, 'unknown RoomShop item');
+      return updateOccurrence(
+        document,
+        located,
+        Object.freeze({
+          ...occurrence,
+          stygianWell: Object.freeze({
+            ...well,
+            offerKeyBySlot: Object.freeze({
+              ...well.offerKeyBySlot,
+              [command.slotKey]: command.itemKey,
+            }),
+          }),
+        }),
+      );
+    }
+    case 'ReplaceStygianWellTravelDealRefill': {
+      const occurrence = requireOccurrence(located.plan, command.occurrence.occurrenceId, command);
+      const well = occurrence.stygianWell;
+      if (well === undefined || !well.interacted)
+        failCommand(command, 'Stygian Well is not being interacted with');
+      const known = new Set(
+        catalog.rewards.shops.byKey.RoomShop?.groups.values.flatMap((g) =>
+          [...g.options.values].map((o) => o.key),
+        ) ?? [],
+      );
+      if (command.itemKey !== null && !known.has(command.itemKey))
+        failCommand(command, 'unknown RoomShop item');
+      return updateOccurrence(
+        document,
+        located,
+        Object.freeze({
+          ...occurrence,
+          stygianWell: Object.freeze({ ...well, travelDealRefillKey: command.itemKey }),
+        }),
+      );
+    }
+    case 'SetStygianWellPurchase': {
+      const occurrence = requireOccurrence(located.plan, command.occurrence.occurrenceId, command);
+      const well = occurrence.stygianWell;
+      if (well === undefined || !well.interacted)
+        failCommand(command, 'Stygian Well is not being interacted with');
+      const generation = command.generationKey;
+      const slot = generation.startsWith('initial:')
+        ? (generation.slice(8) as import('../model').StygianWellSlotKey)
+        : undefined;
+      const item =
+        generation === 'travelDealRefill'
+          ? well.travelDealRefillKey
+          : slot === undefined
+            ? undefined
+            : well.offerKeyBySlot[slot];
+      if (item === null || item === undefined)
+        failCommand(command, 'Stygian Well offer is unresolved');
+      const purchased = new Set(well.purchasedGenerationKeys ?? []);
+      if (command.purchased) purchased.add(generation);
+      else purchased.delete(generation);
+      const order = command.purchased
+        ? occurrence.roomActions.order.some(
+            (r) => r.kind === 'purchaseStygianWellOffer' && r.generationKey === generation,
+          )
+          ? occurrence.roomActions.order
+          : [
+              ...occurrence.roomActions.order,
+              Object.freeze({
+                kind: 'purchaseStygianWellOffer' as const,
+                generationKey: generation,
+              }),
+            ]
+        : occurrence.roomActions.order.filter(
+            (r) => !(r.kind === 'purchaseStygianWellOffer' && r.generationKey === generation),
+          );
+      return updateOccurrence(
+        document,
+        located,
+        Object.freeze({
+          ...occurrence,
+          roomActions: Object.freeze({ ...occurrence.roomActions, order: Object.freeze(order) }),
+          stygianWell: Object.freeze({
+            ...well,
+            purchasedGenerationKeys: Object.freeze([...purchased]),
+          }),
+        }),
+      );
+    }
+    case 'ReplaceStygianWellTwistResult': {
+      const occurrence = requireOccurrence(located.plan, command.occurrence.occurrenceId, command);
+      const well = occurrence.stygianWell;
+      if (well === undefined || !well.interacted)
+        failCommand(command, 'Stygian Well is not being interacted with');
+      if (
+        ![
+          'initial:healing',
+          'initial:secondLeft',
+          'initial:secondRight',
+          'travelDealRefill',
+        ].includes(command.generationKey)
+      )
+        failCommand(command, 'unknown Stygian Well generation');
+      const slotKey = command.generationKey.startsWith('initial:')
+        ? (command.generationKey.slice('initial:'.length) as import('../model').StygianWellSlotKey)
+        : undefined;
+      const parentItemKey =
+        command.generationKey === 'travelDealRefill'
+          ? well.travelDealRefillKey
+          : slotKey === undefined
+            ? undefined
+            : well.offerKeyBySlot[slotKey];
+      if (
+        parentItemKey !== 'RandomStoreItem' ||
+        !(well.purchasedGenerationKeys ?? []).includes(command.generationKey)
+      )
+        failCommand(command, 'Twist result requires a purchased RandomStoreItem generation');
+      const twistResultItemKeys = new Set(
+        catalog.rewards.shops.byKey.RoomShop?.groups.values
+          .flatMap((group) => group.options.values)
+          .find((option) => option.key === 'RandomStoreItem')?.stygianWell?.nestedResultItemKeys ??
+          [],
+      );
+      if (command.itemKey !== null && !twistResultItemKeys.has(command.itemKey))
+        failCommand(command, 'item is not in the closed Twist result pool');
+      const childKey = command.generationKey === 'travelDealRefill' ? 'travelDealRefill' : slotKey!;
+      return updateOccurrence(
+        document,
+        located,
+        Object.freeze({
+          ...occurrence,
+          stygianWell: Object.freeze({
+            ...well,
+            twistResultKeyBySlot: Object.freeze({
+              ...well.twistResultKeyBySlot,
+              [childKey]: command.itemKey,
             }),
           }),
         }),

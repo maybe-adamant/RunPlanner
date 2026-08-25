@@ -126,7 +126,7 @@ describe('schema-51 Chaos TrialUpgrade authored child', () => {
     });
     const decoded = decodeProjectDocument(JSON.parse(encodeProjectDocument(changed)), catalog);
     expect(decoded).toEqual(changed);
-    expect(JSON.parse(encodeProjectDocument(changed))).toMatchObject({ schemaVersion: 58 });
+    expect(JSON.parse(encodeProjectDocument(changed))).toMatchObject({ schemaVersion: 59 });
 
     const history = applyProjectHistoryCommand(createProjectHistory(unresolved), catalog, {
       kind: 'ReplaceTraitOffer',

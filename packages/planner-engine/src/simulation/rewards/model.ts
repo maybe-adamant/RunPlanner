@@ -144,6 +144,7 @@ export interface RewardBranch {
   readonly pendingHermesShrineDeliveries?: Readonly<
     Record<string, import('./processing').PendingHermesShrineDelivery>
   >;
+  readonly stygianWell?: import('../stygian-well').StygianWellRunState;
 }
 
 export interface TargetRewardHistoryCheckpoint {
@@ -183,6 +184,11 @@ export interface BiomeRewardSimulation extends RewardSimulationBase {
   readonly hermesShrineAssessments: readonly {
     readonly origin: import('../../authored-project/addresses').OccurrenceAddress;
     readonly assessments: readonly import('../hermes-shrine').HermesShrineCandidateContext[];
+  }[];
+  /** Exact room-entry Well placement and inventory assessments. */
+  readonly stygianWellAssessments: readonly {
+    readonly origin: import('../../authored-project/addresses').OccurrenceAddress;
+    readonly assessments: readonly import('../stygian-well').StygianWellCandidateContext[];
   }[];
   /** Derived source-to-host delivery state; no pending object is persisted. */
   readonly hermesShrineDeliveries: readonly import('../hermes-shrine').DerivedHermesShrineDelivery[];

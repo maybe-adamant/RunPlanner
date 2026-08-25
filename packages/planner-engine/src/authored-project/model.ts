@@ -5,7 +5,7 @@ import type {
   AuthoredTraitOffer,
 } from './traits';
 
-export const PROJECT_DOCUMENT_SCHEMA_VERSION = 58 as const;
+export const PROJECT_DOCUMENT_SCHEMA_VERSION = 59 as const;
 export type ResourceFamily = import('../catalog-schema').ResourceFamily;
 /** Route ownership supplies the route key; the selected host is exact and durable. */
 export interface ResourcePlacement {
@@ -83,10 +83,7 @@ export interface PurgingPoolState {
 
 export type HermesShrineSlotKey = 'first' | 'secondLeft' | 'secondRight';
 export type HermesShrineGenerationKey =
-  | 'initial:first'
-  | 'initial:secondLeft'
-  | 'initial:secondRight'
-  | 'travelDealRefill';
+  'initial:first' | 'initial:secondLeft' | 'initial:secondRight' | 'travelDealRefill';
 
 export function hermesShrineInitialGenerationKey(
   slotKey: HermesShrineSlotKey,
@@ -123,6 +120,20 @@ export interface HermesShrineState {
   readonly travelDealRefill?: HermesShrineTravelDealRefill;
 }
 
+/** A RoomShop is runtime-random until the player elects to model this visit. */
+export type StygianWellSlotKey = 'healing' | 'secondLeft' | 'secondRight';
+export type StygianWellGenerationKey =
+  'initial:healing' | 'initial:secondLeft' | 'initial:secondRight' | 'travelDealRefill';
+export interface StygianWellState {
+  readonly interacted: boolean;
+  readonly offerKeyBySlot: Readonly<Record<StygianWellSlotKey, string | null>>;
+  readonly twistResultKeyBySlot?: Readonly<
+    Partial<Record<StygianWellSlotKey | 'travelDealRefill', string | null>>
+  >;
+  readonly purchasedGenerationKeys?: readonly StygianWellGenerationKey[];
+  readonly travelDealRefillKey?: string | null;
+}
+
 /** Occurrence-owned payloads for one exact acquisition point. */
 export interface AuthoredAcquisitionSiteState {
   /** Site-materialized optional pickups only. Shop offers remain producer-owned. */
@@ -156,7 +167,11 @@ export type RoomActionReference =
   | { readonly kind: 'chooseRewardWheel'; readonly wheelKey: string }
   | { readonly kind: 'interactWheelReward'; readonly wheelKey: string }
   | { readonly kind: 'interactShopOffer'; readonly offerKey: string }
-  | { readonly kind: 'purchaseHermesShrineOffer'; readonly generationKey: HermesShrineGenerationKey }
+  | {
+      readonly kind: 'purchaseHermesShrineOffer';
+      readonly generationKey: HermesShrineGenerationKey;
+    }
+  | { readonly kind: 'purchaseStygianWellOffer'; readonly generationKey: StygianWellGenerationKey }
   | { readonly kind: 'sellPurgingPoolTrait'; readonly slotKey: 'left' | 'middle' | 'right' }
   | { readonly kind: 'interactEncounter'; readonly phaseKey: string }
   | { readonly kind: 'interactGorgon'; readonly phaseKey: string }
@@ -301,6 +316,7 @@ export interface RoomOccurrence {
   readonly purgingPool?: PurgingPoolState;
   /** Present at declaration-owned Shrine hosts; never guarded by a global interaction flag. */
   readonly hermesShrine?: HermesShrineState;
+  readonly stygianWell?: StygianWellState;
 }
 
 export interface AnomalyReplacementProvenance {
@@ -345,7 +361,14 @@ export interface NaturalChaosAdditionalExit {
   readonly occurrenceId: OccurrenceId;
 }
 
-export type AuthoredAdditionalExit = ZagreusContractAdditionalExit | NaturalChaosAdditionalExit;
+export interface SparkChaosAdditionalExit {
+  readonly kind: 'sparkChaos';
+  readonly key: 'sparkChaos';
+  readonly occurrenceId: OccurrenceId;
+}
+
+export type AuthoredAdditionalExit =
+  ZagreusContractAdditionalExit | NaturalChaosAdditionalExit | SparkChaosAdditionalExit;
 
 export interface ExitDecision {
   readonly kind: 'exit';

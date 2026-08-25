@@ -263,11 +263,25 @@ export type RouteDetourCommand =
       readonly occurrenceId: OccurrenceId;
     }
   | {
+      readonly kind: 'AddSparkChaos';
+      readonly additional: AdditionalExitAddress;
+      readonly occurrenceId: OccurrenceId;
+    }
+  | {
       readonly kind: 'RemoveNaturalChaos';
       readonly additional: AdditionalExitAddress;
     }
   | {
+      readonly kind: 'RemoveSparkChaos';
+      readonly additional: AdditionalExitAddress;
+    }
+  | {
       readonly kind: 'ReplaceNaturalChaosMap';
+      readonly occurrence: OccurrenceAddress;
+      readonly gameName: string;
+    }
+  | {
+      readonly kind: 'ReplaceSparkChaosMap';
       readonly occurrence: OccurrenceAddress;
       readonly gameName: string;
     };
@@ -369,6 +383,38 @@ export type HermesShrineCommand =
       readonly kind: 'ReplaceHermesShrineTravelDealRefill';
       readonly occurrence: OccurrenceAddress;
       readonly value: ResolvedRewardOffer;
+    };
+
+export type StygianWellCommand =
+  | { readonly kind: 'AddStygianWell'; readonly occurrence: OccurrenceAddress }
+  | { readonly kind: 'RemoveStygianWell'; readonly occurrence: OccurrenceAddress }
+  | {
+      readonly kind: 'SetStygianWellInteraction';
+      readonly occurrence: OccurrenceAddress;
+      readonly interacted: boolean;
+    }
+  | {
+      readonly kind: 'ReplaceStygianWellOffer';
+      readonly occurrence: OccurrenceAddress;
+      readonly slotKey: import('../model').StygianWellSlotKey;
+      readonly itemKey: string | null;
+    }
+  | {
+      readonly kind: 'SetStygianWellPurchase';
+      readonly occurrence: OccurrenceAddress;
+      readonly generationKey: import('../model').StygianWellGenerationKey;
+      readonly purchased: boolean;
+    }
+  | {
+      readonly kind: 'ReplaceStygianWellTwistResult';
+      readonly occurrence: OccurrenceAddress;
+      readonly generationKey: import('../model').StygianWellGenerationKey;
+      readonly itemKey: string | null;
+    }
+  | {
+      readonly kind: 'ReplaceStygianWellTravelDealRefill';
+      readonly occurrence: OccurrenceAddress;
+      readonly itemKey: string | null;
     };
 
 export type AcquisitionSiteCommand =
@@ -481,6 +527,7 @@ export type OccurrenceLeafCommand =
   | ShipOccurrenceCommand
   | ShopOccurrenceCommand
   | PurgingPoolCommand
+  | StygianWellCommand
   | HermesShrineCommand
   | EncounterOccurrenceCommand;
 

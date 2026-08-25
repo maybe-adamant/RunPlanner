@@ -275,6 +275,7 @@ function appendRestore(
     biomeDepthCacheDelta: room.counterEffects.biomeDepthCache,
     roomHistoryOrdinalDelta: room.counterEffects.roomHistoryOrdinal,
     surfaceShopPresent: room.kind === 'authored' && room.hermesShrine !== undefined,
+    roomShopPresent: room.kind === 'authored' && room.stygianWell !== undefined,
   });
 }
 

@@ -85,6 +85,9 @@ export function createRoomLifecycleInput(
     ...(room.kind === 'authored' && room.hermesShrine !== undefined
       ? { surfaceShopPresent: true }
       : {}),
+    ...(room.kind === 'authored' && room.stygianWell !== undefined
+      ? { roomShopPresent: true }
+      : {}),
     ...(requiredObjects === undefined ? {} : { requiredObjects }),
     ...(offerPointRewardStores === undefined ? {} : { offerPointRewardStores }),
     ...(roomActionRoster === undefined ? {} : { roomActionRoster }),

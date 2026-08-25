@@ -350,9 +350,16 @@ export interface RawNaturalChaosAdditionalExitDeclaration {
   readonly exitType: string;
   readonly requirement?: RequirementExpression;
 }
+export interface RawSparkChaosAdditionalExitDeclaration {
+  readonly kind: 'sparkChaos';
+  readonly key: 'sparkChaos';
+  readonly exitType: string;
+}
 
 export type RawAdditionalExitDeclaration =
-  RawZagreusContractAdditionalExitDeclaration | RawNaturalChaosAdditionalExitDeclaration;
+  | RawZagreusContractAdditionalExitDeclaration
+  | RawNaturalChaosAdditionalExitDeclaration
+  | RawSparkChaosAdditionalExitDeclaration;
 
 export interface RawRoomDeclaration {
   readonly gameName: string;
@@ -374,9 +381,16 @@ export interface RawRoomDeclaration {
   readonly purgingPool?: { readonly slotKeys: readonly ['left', 'middle', 'right'] };
   /** Exact installed `ChallengeSwitchBase` anchors available to competing secret spawns. */
   readonly challengeSwitchAnchorCount?: number;
+  /** Exact installed `SecretPoint` anchors for forced Chaos gates. */
+  readonly secretPointAnchorCount?: number;
   /** Exact declaration-owned Surface Shop chance and forced status. */
   readonly surfaceShop?: {
     readonly profileKey: 'SurfaceShop';
+    readonly spawnChance: number;
+    readonly forced?: true;
+  };
+  readonly roomShop?: {
+    readonly profileKey: 'RoomShop';
     readonly spawnChance: number;
     readonly forced?: true;
   };
@@ -462,6 +476,10 @@ export interface RawBiomeLayoutDeclaration {
     readonly roomGameNames: readonly [string, ...string[]];
     readonly defaultRoomGameName: string;
     readonly offerSpacingWindow: number;
+  };
+  readonly sparkChaos?: {
+    readonly roomGameNames: readonly [string, ...string[]];
+    readonly defaultRoomGameName: string;
   };
   readonly completion: CompletionDescriptor;
   readonly fields?: readonly AuthoredFieldDescriptor[];

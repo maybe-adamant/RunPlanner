@@ -154,7 +154,126 @@ const lateResourceOptions = [
   }),
 ];
 
+const extendedWellItemKeys = [
+  'TemporaryDoorHealTrait',
+  'TemporaryImprovedSecondaryTrait',
+  'TemporaryImprovedCastTrait',
+  'TemporaryMoveSpeedTrait',
+  'TemporaryImprovedExTrait',
+  'TemporaryImprovedDefenseTrait',
+  'TemporaryDiscountTrait',
+  'TemporaryEmptySlotDamageTrait',
+] as const;
+const twistWellItemKeys = [
+  'TemporaryImprovedSecondaryTrait',
+  'TemporaryImprovedCastTrait',
+  'TemporaryMoveSpeedTrait',
+  'TemporaryBoonRarityTrait',
+  'TemporaryImprovedExTrait',
+  'TemporaryImprovedDefenseTrait',
+  'TemporaryDiscountTrait',
+  'TemporaryHealExpirationTrait',
+  'TemporaryDoorHealTrait',
+  'LastStandShopItem',
+  'EmptyMaxHealthShopItem',
+  'HealDropRange',
+  'MetaCurrencyRange',
+  'MetaCardPointsCommonRange',
+  'MemPointsCommonRange',
+  'SeedMysteryRange',
+] as const;
+function wellOption(
+  key: string,
+  rewardType: string,
+  effect: NonNullable<RawShopOptionEntryDeclaration['stygianWell']>['effect'] = 'neutral',
+  extra: Omit<RawShopOptionEntryDeclaration, 'key' | 'rewardType' | 'stygianWell'> & {
+    readonly stygianWell?: Omit<
+      NonNullable<RawShopOptionEntryDeclaration['stygianWell']>,
+      'effect'
+    >;
+  } = {},
+) {
+  return option({
+    key,
+    rewardType,
+    ...extra,
+    stygianWell: { effect, ...extra.stygianWell },
+  });
+}
+
 export const shops = [
+  // RoomShop is the game's Stygian Well profile, kept separate because its
+  // options are immediate paid effects, not World-Shop reward acquisition. The option key is the game
+  // identity consumed by the Well simulation; neutral effects deliberately
+  // share a neutral reward representation for the current planner scope.
+  {
+    key: 'RoomShop',
+    groups: [
+      {
+        key: 'Healing',
+        offerCount: 1,
+        options: [
+          wellOption('ArmorBoostStore', 'ArmorBoost', 'neutral', {
+            runtimeOfferFallbackRewardTypes: ['MaxHealthDrop'],
+          }),
+          wellOption('DamageSelfDrop', 'RoomMoneyDrop'),
+          wellOption('HealDropRange', 'RoomRewardHealDrop'),
+          wellOption('EmptyMaxHealthShopItem', 'MaxHealthDrop'),
+          wellOption('FirstHitHealTrait', 'RoomRewardHealDrop'),
+          wellOption('TemporaryDoorHealTrait', 'RoomRewardHealDrop'),
+          wellOption('TemporaryHealExpirationTrait', 'RoomRewardHealDrop'),
+          wellOption('LastStandShopItem', 'LastStandDrop', 'lastStand', {
+            runtimeOfferRequirement: 'missingLastStand',
+            runtimeOfferFallbackRewardTypes: ['ArmorBoost'],
+          }),
+        ],
+      },
+      {
+        key: 'Other',
+        offerCount: 2,
+        options: [
+          wellOption('TemporaryImprovedSecondaryTrait', 'RoomMoneyDrop'),
+          wellOption('TemporaryImprovedCastTrait', 'RoomMoneyDrop'),
+          wellOption('TemporaryMoveSpeedTrait', 'RoomMoneyDrop'),
+          wellOption('TemporaryBoonRarityTrait', 'RandomLoot', 'yarn'),
+          wellOption('TemporaryImprovedExTrait', 'RoomMoneyDrop'),
+          wellOption('TemporaryImprovedDefenseTrait', 'RoomMoneyDrop'),
+          wellOption('TemporaryDiscountTrait', 'RoomMoneyDrop', 'discount', {
+            stygianWell: { offerRequirements: ['inactive'] },
+          }),
+          wellOption('TemporaryForcedSecretDoorTrait', 'RoomMoneyDrop', 'spark'),
+          wellOption('TemporaryEmptySlotDamageTrait', 'RoomMoneyDrop', 'emptySlot', {
+            stygianWell: { offerRequirements: ['inactive', 'emptyAttackOrSpecial'] },
+          }),
+          wellOption('ExtendedShopTrait', 'RoomMoneyDrop', 'extended', {
+            stygianWell: { extendedDirectPurchaseItemKeys: extendedWellItemKeys },
+          }),
+          wellOption('MetaCurrencyRange', 'MetaCurrencyDrop'),
+          wellOption('MetaCardPointsCommonRange', 'MetaCardPointsCommonDrop'),
+          wellOption('MemPointsCommonRange', 'RoomMoneyDrop'),
+          wellOption('SeedMysteryRange', 'RoomMoneyDrop'),
+          wellOption('RandomStoreItem', 'RoomMoneyDrop', 'twist', {
+            stygianWell: {
+              nestedResultItemKeys: twistWellItemKeys,
+              nestedRuntimeOfferFallbacks: [
+                {
+                  preferredItemKey: 'LastStandShopItem',
+                  fallbackItemKey: 'EmptyMaxHealthShopItem',
+                },
+              ],
+            },
+          }),
+          wellOption('LimitedManaRegenDrop', 'MaxManaDrop'),
+          wellOption('LimitedSwapTraitDrop', 'RoomMoneyDrop', 'hymn'),
+        ],
+      },
+    ],
+    slots: [
+      { key: 'healing', label: 'Offer 1', groupKey: 'Healing' },
+      { key: 'secondLeft', label: 'Offer 2', groupKey: 'Other' },
+      { key: 'secondRight', label: 'Offer 3', groupKey: 'Other' },
+    ],
+  },
   // SurfaceShop is intentionally a separate declaration-owned profile.  Its
   // inventory is consumed by the Shrine lifecycle rather than by World Shop
   // purchase settlement, but it uses the same normalized slot/pool contract.

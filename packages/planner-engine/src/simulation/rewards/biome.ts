@@ -53,6 +53,17 @@ import {
 import { parseHermesShrineDeliveryEntryKey } from '../../authored-project/hermes-shrine-delivery';
 import { hermesShrineDeliveryEntryKey } from '../../authored-project/hermes-shrine-delivery';
 import {
+  applyStygianWellPurchase,
+  advanceStygianWellBossUses,
+  advanceStygianWellEncounterUses,
+} from '../stygian-well';
+import {
+  assessStygianWell,
+  assessStygianWellPlacement,
+  priorThreeRoomShopPresence,
+  type StygianWellCandidateContext,
+} from '../stygian-well';
+import {
   SEA_STAR_DUPLICATE_ENTRY_KEY,
   parseSeaStarDuplicateSiteKey,
   seaStarDuplicateUsesFreshObject,
@@ -69,6 +80,7 @@ import {
 } from '../../authored-project/room-state/encounters';
 import {
   findShopPartialGenerationWitnesses,
+  applyConcreteAcquisition,
   locallyValidRewardOffers,
   type ResolvedRewardOffer,
   type RewardHistoryState,
@@ -125,6 +137,7 @@ import {
   createSteadyGrowthCandidateArtifacts,
   createPurgingPoolCandidateArtifacts,
   createHermesShrineCandidateArtifacts,
+  createStygianWellCandidateArtifacts,
   attestDerivedAcquisitionEntryCandidateCapability,
 } from '../candidate-artifacts';
 import type {
@@ -668,6 +681,32 @@ function hermesShrineRuntimeFallbackRewardType(
   return option?.runtimeOfferFallbackRewardTypes?.find(
     (candidate) => supported?.includes(candidate) === true,
   );
+}
+
+function stygianWellRuntimeFallbackItemKey(
+  catalog: Catalog,
+  itemKey: string,
+  nested: boolean,
+): string | undefined {
+  const profile = catalog.rewards.shops.byKey.RoomShop;
+  const option = profile?.groups.values
+    .flatMap((group) => group.options.values)
+    .find((candidate) => candidate.key === itemKey);
+  if (nested) {
+    const twist = profile?.groups.values
+      .flatMap((group) => group.options.values)
+      .find((candidate) => candidate.key === 'RandomStoreItem');
+    return twist?.stygianWell?.nestedRuntimeOfferFallbacks?.find(
+      (edge) => edge.preferredItemKey === itemKey,
+    )?.fallbackItemKey;
+  }
+  const group = profile?.groups.values.find(
+    (candidate) => candidate.options.byKey[itemKey] !== undefined,
+  );
+  const fallbackRewardType = option?.runtimeOfferFallbackRewardTypes?.[0];
+  return fallbackRewardType === undefined
+    ? undefined
+    : group?.options.values.find((candidate) => candidate.rewardType === fallbackRewardType)?.key;
 }
 
 function requireRewardLayout(catalog: Catalog, snapshot: BiomeRewardSnapshot): BiomeLayout {
@@ -1270,6 +1309,7 @@ interface BiomeRewardEvaluationAssembly {
   readonly steadyGrowthArtifacts: import('../candidate-artifacts').SteadyGrowthCandidateArtifacts;
   readonly purgingPoolArtifacts: import('../candidate-artifacts').PurgingPoolCandidateArtifacts;
   readonly hermesShrineArtifacts: import('../candidate-artifacts').HermesShrineCandidateArtifacts;
+  readonly stygianWellArtifacts: import('../candidate-artifacts').StygianWellCandidateArtifacts;
   readonly traitChildSettlementCheckpoints: TraitChildSettlementCheckpoints;
   readonly findingRegions: readonly FindingRegionEntry[];
 }
@@ -1574,6 +1614,11 @@ export function evaluateBiomeRewardsAssemblyInternal(
   const views = roomViews(history);
   const targets = canonicalTargets(snapshot);
   const additionalContinuations = canonicalAdditionalContinuations(snapshot);
+  const forcedSparkChaosSourceOccurrenceIds = new Set(
+    [...additionalContinuations.values()].flatMap((continuation) =>
+      continuation.key === 'sparkChaos' ? [continuation.origin.occurrenceId] : [],
+    ),
+  );
   const hubTargetByOrigin = hubTargets(snapshot);
   const batchesByParent = new Map(
     batches(snapshot).map((batch) => [semanticAddressKey(batch.parent.origin), batch]),
@@ -1857,6 +1902,13 @@ export function evaluateBiomeRewardsAssemblyInternal(
       readonly assessments: readonly HermesShrineCandidateContext[];
     }
   >();
+  const stygianWellAssessments = new Map<
+    string,
+    {
+      readonly origin: import('../../authored-project/addresses').OccurrenceAddress;
+      readonly assessments: readonly StygianWellCandidateContext[];
+    }
+  >();
   const hermesShrineTravelDealRefills = new Map<
     string,
     readonly import('../hermes-shrine').HermesShrineTravelDealRefillAssessment[]
@@ -2020,6 +2072,73 @@ export function evaluateBiomeRewardsAssemblyInternal(
         addRewardFinding(
           findings,
           rewardFinding(code, room.origin, 'slotKey' in issue ? { slotKey: issue.slotKey } : {}),
+          ownerRegion(room.origin),
+          rewardFindingChronologyForRoom(snapshot, room.origin, sequence, 'localRoomLifecycle'),
+        );
+      }
+    }
+  }
+  function recordStygianWellAssessment(room: CanonicalAuthoredRoom, sequence: number): void {
+    if (stygianWellAssessments.has(semanticAddressKey(room.origin))) return;
+    const declaration = catalog.rooms.byKey[room.gameName];
+    if (declaration?.roomShop === undefined && room.stygianWell === undefined) return;
+    const entry = views.get(semanticAddressKey(room.origin))?.entry;
+    if (entry === undefined)
+      throw new BiomeRewardSimulationContractError(`${room.gameName} has no Well entry frontier`);
+    const priorEnteredWellFlags = priorThreeRoomShopPresence(entry.ledgers.roomAppearances);
+    const firstPurchaseGenerationKey = room.roomActions.order.find(
+      (action) => action.kind === 'purchaseStygianWellOffer',
+    )?.generationKey;
+    const assessments: readonly StygianWellCandidateContext[] = Object.freeze(
+      branches.map((branch) =>
+        room.stygianWell === undefined
+          ? Object.freeze({
+              placement: assessStygianWellPlacement(declaration, priorEnteredWellFlags),
+            })
+          : Object.freeze({
+              placement: assessStygianWellPlacement(declaration, priorEnteredWellFlags),
+              inventory: assessStygianWell(
+                catalog,
+                declaration,
+                room.stygianWell,
+                branch.stygianWell,
+                branch.traitHistory,
+                priorEnteredWellFlags,
+                firstPurchaseGenerationKey,
+                branch.traitHistory?.equippedTraits.RestockBoon !== undefined,
+              ),
+            }),
+      ),
+    );
+    stygianWellAssessments.set(
+      semanticAddressKey(room.origin),
+      Object.freeze({ origin: room.origin, assessments }),
+    );
+    for (const assessment of assessments) {
+      if (assessment.inventory !== undefined && !assessment.placement.eligible) {
+        addRewardFinding(
+          findings,
+          rewardFinding('stygianWellPlacementUnavailable', room.origin, {
+            priorWellCount: assessment.placement.priorWellCount,
+          }),
+          ownerRegion(room.origin),
+          rewardFindingChronologyForRoom(snapshot, room.origin, sequence, 'localRoomLifecycle'),
+        );
+      }
+      for (const issue of assessment.inventory?.issues ?? []) {
+        const code =
+          issue === 'missing'
+            ? 'stygianWellMissing'
+            : issue === 'wrongGroup'
+              ? 'stygianWellWrongGroup'
+              : issue === 'duplicate'
+                ? 'stygianWellDuplicate'
+                : issue.startsWith('refill')
+                  ? 'stygianWellTravelDealRefillUnavailable'
+                  : 'stygianWellTwistInvalid';
+        addRewardFinding(
+          findings,
+          rewardFinding(code, room.origin, { reason: issue }),
           ownerRegion(room.origin),
           rewardFindingChronologyForRoom(snapshot, room.origin, sequence, 'localRoomLifecycle'),
         );
@@ -3223,8 +3342,54 @@ export function evaluateBiomeRewardsAssemblyInternal(
       case 'roomEntered': {
         branches = advanceRewardBranches(branches, event.sequence);
         const room = rooms.get(semanticAddressKey(event.origin));
+        if (room?.kind === 'authored') {
+          const declaration = catalog.rooms.byKey[room.gameName];
+          const capable = (declaration?.secretPointAnchorCount ?? 0) > 0;
+          const authoredForced = forcedSparkChaosSourceOccurrenceIds.has(room.occurrenceId);
+          const activeSpark = branches.some((branch) => branch.stygianWell.sparkUses > 0);
+          if (capable && activeSpark && !authoredForced)
+            addRewardFinding(
+              findings,
+              rewardFinding('sparkChaosMissing', room.origin, { gameName: room.gameName }),
+              ownerRegion(room.origin),
+              rewardFindingChronologyForRoom(
+                snapshot,
+                room.origin,
+                event.sequence,
+                'localRoomLifecycle',
+              ),
+            );
+          if (authoredForced && !activeSpark)
+            addRewardFinding(
+              findings,
+              rewardFinding('sparkChaosUnavailable', room.origin, { gameName: room.gameName }),
+              ownerRegion(room.origin),
+              rewardFindingChronologyForRoom(
+                snapshot,
+                room.origin,
+                event.sequence,
+                'localRoomLifecycle',
+              ),
+            );
+          if (authoredForced)
+            branches = Object.freeze(
+              branches.map((branch) =>
+                Object.freeze({
+                  ...branch,
+                  stygianWell:
+                    branch.stygianWell.sparkUses === 0
+                      ? branch.stygianWell
+                      : Object.freeze({
+                          ...branch.stygianWell,
+                          sparkUses: branch.stygianWell.sparkUses - 1,
+                        }),
+                }),
+              ),
+            );
+        }
         if (room?.kind === 'authored') recordPurgingPoolAssessment(room, event.sequence);
         if (room?.kind === 'authored') recordHermesShrineAssessment(room, event.sequence);
+        if (room?.kind === 'authored') recordStygianWellAssessment(room, event.sequence);
         if (room?.kind === 'authored' && room.lifecycleProfileKey !== 'ShipCombatRoom') {
           const view = views.get(semanticAddressKey(event.origin))?.entry;
           if (view === undefined) {
@@ -5248,6 +5413,16 @@ export function evaluateBiomeRewardsAssemblyInternal(
       case 'encounterCompleted': {
         const room = rooms.get(semanticAddressKey(event.origin));
         const declaration = room === undefined ? undefined : catalog.rooms.byKey[room.gameName];
+        if (event.kind === 'bossDefeated') {
+          branches = Object.freeze(
+            branches.map((branch) =>
+              Object.freeze({
+                ...branch,
+                stygianWell: advanceStygianWellBossUses(branch.stygianWell),
+              }),
+            ),
+          );
+        }
         if (
           event.kind === 'encounterInteractionReached' &&
           event.interaction === 'gorgon' &&
@@ -5914,6 +6089,14 @@ export function evaluateBiomeRewardsAssemblyInternal(
           branches = advanceExperimentalHammerForEndEffects(branches, event.origin, event.sequence);
         }
         branches = advanceChaosClockAt(catalog, branches, event.sequence, 'encounters');
+        branches = Object.freeze(
+          branches.map((branch) =>
+            Object.freeze({
+              ...branch,
+              stygianWell: advanceStygianWellEncounterUses(branch.stygianWell),
+            }),
+          ),
+        );
         // Shrine countdowns are branch run-state, not a room-local history
         // scan: an N purchase must remain live when O begins.  A due item is
         // retained until its host's ordinary generated-pickup entry settles.
@@ -6655,6 +6838,118 @@ export function evaluateBiomeRewardsAssemblyInternal(
         );
         break;
       }
+      case 'wellPurchase': {
+        const room = rooms.get(semanticAddressKey(event.origin));
+        const well = room?.kind === 'authored' ? room.stygianWell : undefined;
+        const slot = event.generationKey.startsWith('initial:')
+          ? (event.generationKey.slice(
+              'initial:'.length,
+            ) as import('../../authored-project/model').StygianWellSlotKey)
+          : undefined;
+        const itemKey =
+          event.generationKey === 'travelDealRefill'
+            ? well?.travelDealRefillKey
+            : slot === undefined
+              ? undefined
+              : well?.offerKeyBySlot[slot];
+        if (
+          room?.kind !== 'authored' ||
+          well === undefined ||
+          !well.interacted ||
+          itemKey === undefined ||
+          itemKey === null
+        ) {
+          addRewardFinding(
+            findings,
+            rewardFinding('rewardSourceUnavailable', event.origin, {
+              generationKey: event.generationKey,
+            }),
+            ownerRegion(event.origin),
+            rewardFindingChronologyForRoom(
+              snapshot,
+              event.origin,
+              event.sequence,
+              'localRoomLifecycle',
+            ),
+          );
+          break;
+        }
+        const twistChildKey =
+          event.generationKey === 'travelDealRefill' ? 'travelDealRefill' : slot;
+        const twistResultKey =
+          itemKey === 'RandomStoreItem' && twistChildKey !== undefined
+            ? well.twistResultKeyBySlot?.[twistChildKey]
+            : undefined;
+        const row =
+          room?.kind === 'authored'
+            ? room.roomActionRoster.rows.find(
+                (candidate) =>
+                  candidate.reference.kind === 'purchaseStygianWellOffer' &&
+                  candidate.reference.generationKey === event.generationKey,
+              )
+            : undefined;
+        if (row !== undefined) {
+          const address = createRoomActionAddress(
+            createBiomeAddress(event.origin.routeKey, event.origin.biomeKey),
+            room.occurrenceId,
+            row.key,
+          );
+          const fallbackItemKey = stygianWellRuntimeFallbackItemKey(catalog, itemKey, false);
+          if (fallbackItemKey !== undefined)
+            runtimeOfferFallbacks.set(
+              semanticAddressKey(address),
+              Object.freeze({ address, preferredKey: itemKey, fallbackKey: fallbackItemKey }),
+            );
+          if (twistResultKey !== undefined && twistResultKey !== null) {
+            const nestedFallback = stygianWellRuntimeFallbackItemKey(catalog, twistResultKey, true);
+            if (nestedFallback !== undefined)
+              runtimeOfferFallbacks.set(
+                `${semanticAddressKey(address)}:twist`,
+                Object.freeze({
+                  address,
+                  preferredKey: twistResultKey,
+                  fallbackKey: nestedFallback,
+                }),
+              );
+          }
+        }
+        branches = Object.freeze(
+          branches.map((branch) => {
+            const direct = applyStygianWellPurchase(catalog, branch.stygianWell, itemKey);
+            const directOption = catalog.rewards.shops.byKey.RoomShop?.groups.values
+              .flatMap((group) => group.options.values)
+              .find((option) => option.key === itemKey);
+            const nestedOption =
+              twistResultKey === undefined || twistResultKey === null
+                ? undefined
+                : catalog.rewards.shops.byKey.RoomShop?.groups.values
+                    .flatMap((group) => group.options.values)
+                    .find((option) => option.key === twistResultKey);
+            let history = branch.history;
+            if (directOption?.stygianWell?.effect === 'lastStand') {
+              history = applyConcreteAcquisition(catalog.rewards, history, {
+                kind: 'consumable',
+                gameName: 'LastStandDrop',
+              });
+            }
+            if (nestedOption?.stygianWell?.effect === 'lastStand') {
+              history = applyConcreteAcquisition(catalog.rewards, history, {
+                kind: 'consumable',
+                gameName: 'LastStandDrop',
+              });
+            }
+            return Object.freeze({
+              ...branch,
+              history,
+              stygianWell:
+                twistResultKey === undefined || twistResultKey === null
+                  ? direct
+                  : applyStygianWellPurchase(catalog, direct, twistResultKey, false),
+            });
+          }),
+        );
+        break;
+      }
       case 'roomExited': {
         const room = rooms.get(semanticAddressKey(event.origin));
         if (room?.kind === 'authored' && room.entryState?.kind === 'shop') {
@@ -6801,6 +7096,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
     runStateAvailability: runStatePublication.availability,
     purgingPoolAssessments: Object.freeze([...purgingPoolAssessments.values()]),
     hermesShrineAssessments: Object.freeze([...hermesShrineAssessments.values()]),
+    stygianWellAssessments: Object.freeze([...stygianWellAssessments.values()]),
     hermesShrineDeliveries: Object.freeze([
       ...new Map(
         branches
@@ -6916,6 +7212,14 @@ export function evaluateBiomeRewardsAssemblyInternal(
             ),
           ] as const;
         }),
+      ),
+    ),
+    stygianWellArtifacts: createStygianWellCandidateArtifacts(
+      new Map(
+        [...stygianWellAssessments.values()].map(({ origin, assessments }) => [
+          semanticAddressKey(origin),
+          assessments,
+        ]),
       ),
     ),
     traitChildSettlementCheckpoints,

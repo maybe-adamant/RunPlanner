@@ -1,7 +1,7 @@
 {
-  "schemaVersion": 58,
+  "schemaVersion": 59,
   "projectId": "golden-fg",
-  "catalogVersion": "0.40.0-hermes-shrine",
+  "catalogVersion": "0.41.0-stygian-well",
   "routes": [
     {
       "routeKey": "Underworld",
@@ -1420,6 +1420,14 @@
                   "right": "ZeusSpecialBoon"
                 }
               },
+              "stygianWell": {
+                "interacted": false,
+                "offerKeyBySlot": {
+                  "healing": null,
+                  "secondLeft": null,
+                  "secondRight": null
+                }
+              },
               "additionalExits": [],
               "keepsakeRack": {
                 "disposition": {
@@ -2515,6 +2523,14 @@
                   "left": "ApolloWeaponBoon",
                   "middle": "CastProjectileBoon",
                   "right": "HeraCastBoon"
+                }
+              },
+              "stygianWell": {
+                "interacted": false,
+                "offerKeyBySlot": {
+                  "healing": null,
+                  "secondLeft": null,
+                  "secondRight": null
                 }
               },
               "additionalExits": [],

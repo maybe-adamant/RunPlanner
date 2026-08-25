@@ -2249,6 +2249,7 @@ function clampSelectedProducts(
       retainedInteractions.steadyGrowth,
       selectedProducts.candidateArtifacts.purgingPools,
       selectedProducts.candidateArtifacts.hermesShrines,
+      selectedProducts.candidateArtifacts.stygianWells,
     ),
   });
 }

@@ -489,6 +489,38 @@ const findingCopy = {
     title: 'Travel Deal refill unavailable',
     description: 'Repair this retained Shrine refill or its qualifying purchase prefix.',
   },
+  stygianWellMissing: {
+    title: 'Well offer missing',
+    description: 'Choose every visible Stygian Well offer.',
+  },
+  stygianWellWrongGroup: {
+    title: 'Well offer has the wrong group',
+    description: 'Choose an item from this Well slot’s declared group.',
+  },
+  stygianWellDuplicate: {
+    title: 'Well offer is repeated',
+    description: 'Choose three distinct initial Well items.',
+  },
+  stygianWellPlacementUnavailable: {
+    title: 'Well placement unavailable',
+    description: 'Remove this ordinary Well or restore its spacing and physical host.',
+  },
+  stygianWellTravelDealRefillUnavailable: {
+    title: 'Well Travel Deal refill unavailable',
+    description: 'Repair this retained refill or its qualifying first purchase.',
+  },
+  stygianWellTwistInvalid: {
+    title: 'Twist result unavailable',
+    description: 'Repair this retained Twist result or its purchased parent item.',
+  },
+  sparkChaosMissing: {
+    title: 'Spark Chaos exit missing',
+    description: 'Author the forced Chaos exit at the first capable physical host.',
+  },
+  sparkChaosUnavailable: {
+    title: 'Spark Chaos exit unavailable',
+    description: 'Remove this forced Chaos exit or restore a pending Spark use.',
+  },
   nemesisOutcomeMissing: {
     title: 'Choose the Nemesis event result',
     description: 'Record what Nemesis asks or offers at this interaction.',

@@ -24,6 +24,7 @@ import {
   freezeUniqueStrings,
   requireArray,
   requireNonEmpty,
+  requireObject,
   requirePositiveInteger,
 } from '../common';
 import { fail } from '../errors';
@@ -60,6 +61,18 @@ const LEVEL_RESOLUTION_EFFECT_KINDS = [
   'randomTarget',
   'randomTargetIfAvailable',
 ] as const;
+const STYGIAN_WELL_EFFECTS = [
+  'neutral',
+  'spark',
+  'yarn',
+  'hymn',
+  'discount',
+  'emptySlot',
+  'extended',
+  'twist',
+  'lastStand',
+] as const;
+const STYGIAN_WELL_OFFER_REQUIREMENTS = ['inactive', 'emptyAttackOrSpecial'] as const;
 
 function requireClosedValue<const Values extends readonly string[]>(
   value: unknown,
@@ -683,6 +696,82 @@ function normalizeShopOption(
       `${path}.purchaseInteraction`,
       'resolvedOfferSource requires offer-time source resolution',
     );
+  const stygianWell =
+    raw.stygianWell === undefined
+      ? undefined
+      : Object.freeze({
+          effect: requireClosedValue(
+            raw.stygianWell.effect,
+            STYGIAN_WELL_EFFECTS,
+            `${path}.stygianWell.effect`,
+          ),
+          ...(raw.stygianWell.offerRequirements === undefined
+            ? {}
+            : {
+                offerRequirements: (() => {
+                  const values = requireArray(
+                    raw.stygianWell.offerRequirements,
+                    `${path}.stygianWell.offerRequirements`,
+                  ).map((requirement, index) =>
+                    requireClosedValue(
+                      requirement,
+                      STYGIAN_WELL_OFFER_REQUIREMENTS,
+                      `${path}.stygianWell.offerRequirements[${index}]`,
+                    ),
+                  );
+                  if (new Set(values).size !== values.length)
+                    fail(`${path}.stygianWell.offerRequirements`, 'must not contain duplicates');
+                  return Object.freeze(values);
+                })(),
+              }),
+          ...(raw.stygianWell.nestedResultItemKeys === undefined
+            ? {}
+            : {
+                nestedResultItemKeys: freezeUniqueStrings(
+                  requireArray(
+                    raw.stygianWell.nestedResultItemKeys,
+                    `${path}.stygianWell.nestedResultItemKeys`,
+                  ) as readonly string[],
+                  `${path}.stygianWell.nestedResultItemKeys`,
+                ),
+              }),
+          ...(raw.stygianWell.nestedRuntimeOfferFallbacks === undefined
+            ? {}
+            : {
+                nestedRuntimeOfferFallbacks: Object.freeze(
+                  requireArray(
+                    raw.stygianWell.nestedRuntimeOfferFallbacks,
+                    `${path}.stygianWell.nestedRuntimeOfferFallbacks`,
+                  ).map((rawEdge, index) => {
+                    const edge = requireObject(
+                      rawEdge,
+                      `${path}.stygianWell.nestedRuntimeOfferFallbacks[${index}]`,
+                    );
+                    return Object.freeze({
+                      preferredItemKey: requireNonEmpty(
+                        edge.preferredItemKey as string,
+                        `${path}.stygianWell.nestedRuntimeOfferFallbacks[${index}].preferredItemKey`,
+                      ),
+                      fallbackItemKey: requireNonEmpty(
+                        edge.fallbackItemKey as string,
+                        `${path}.stygianWell.nestedRuntimeOfferFallbacks[${index}].fallbackItemKey`,
+                      ),
+                    });
+                  }),
+                ),
+              }),
+          ...(raw.stygianWell.extendedDirectPurchaseItemKeys === undefined
+            ? {}
+            : {
+                extendedDirectPurchaseItemKeys: freezeUniqueStrings(
+                  requireArray(
+                    raw.stygianWell.extendedDirectPurchaseItemKeys,
+                    `${path}.stygianWell.extendedDirectPurchaseItemKeys`,
+                  ) as readonly string[],
+                  `${path}.stygianWell.extendedDirectPurchaseItemKeys`,
+                ),
+              }),
+        });
   return Object.freeze({
     key: requireNonEmpty(raw.key, `${path}.key`),
     rewardType: rewardType.gameName,
@@ -730,6 +819,7 @@ function normalizeShopOption(
     ...(boonRarityOverride === undefined
       ? {}
       : { boonRarityOverride: Object.freeze({ ...boonRarityOverride }) }),
+    ...(stygianWell === undefined ? {} : { stygianWell }),
   });
 }
 
@@ -879,6 +969,62 @@ function normalizeShops(
         `${path}.slots`,
         (slot) => slot.key,
       );
+      const options = groups.values.flatMap((group) => group.options.values);
+      if (key !== 'RoomShop') {
+        if (options.some((option) => option.stygianWell !== undefined))
+          fail(path, 'Stygian Well metadata is permitted only on RoomShop options');
+      } else {
+        if (options.some((option) => option.stygianWell === undefined))
+          fail(path, 'every RoomShop option must declare its Stygian Well identity and effect');
+        const optionKeys = options.map((option) => option.key);
+        if (new Set(optionKeys).size !== optionKeys.length)
+          fail(path, 'RoomShop option identities must be unique across groups');
+        const known = new Set(optionKeys);
+        const twist = options.find((option) => option.key === 'RandomStoreItem');
+        const extended = options.find((option) => option.key === 'ExtendedShopTrait');
+        for (const option of options) {
+          const metadata = option.stygianWell!;
+          if (
+            option.key !== 'RandomStoreItem' &&
+            (metadata.nestedResultItemKeys !== undefined ||
+              metadata.nestedRuntimeOfferFallbacks !== undefined)
+          )
+            fail(path, 'nested Well metadata is owned only by RandomStoreItem');
+          if (
+            option.key !== 'ExtendedShopTrait' &&
+            metadata.extendedDirectPurchaseItemKeys !== undefined
+          )
+            fail(path, 'extended Well metadata is owned only by ExtendedShopTrait');
+        }
+        if (twist?.stygianWell?.effect !== 'twist')
+          fail(path, 'RandomStoreItem must own the Twist effect');
+        if (extended?.stygianWell?.effect !== 'extended')
+          fail(path, 'ExtendedShopTrait must own the Extended effect');
+        const nestedResultItemKeys = twist.stygianWell.nestedResultItemKeys ?? [];
+        const nestedFallbacks = twist.stygianWell.nestedRuntimeOfferFallbacks ?? [];
+        const extendedDirectPurchaseItemKeys =
+          extended.stygianWell.extendedDirectPurchaseItemKeys ?? [];
+        if (nestedResultItemKeys.length === 0)
+          fail(path, 'RandomStoreItem must declare a nonempty Twist result pool');
+        if (nestedFallbacks.length === 0)
+          fail(path, 'RandomStoreItem must declare its nonempty nested fallback policy');
+        if (extendedDirectPurchaseItemKeys.length === 0)
+          fail(path, 'ExtendedShopTrait must declare a nonempty direct-purchase whitelist');
+        const twistPool = new Set(nestedResultItemKeys);
+        for (const itemKey of twistPool)
+          if (!known.has(itemKey)) fail(path, `Twist references unknown RoomShop item ${itemKey}`);
+        if (
+          new Set(nestedFallbacks.map((edge) => edge.preferredItemKey)).size !==
+          nestedFallbacks.length
+        )
+          fail(path, 'Twist fallback preferred item keys must be unique');
+        for (const edge of nestedFallbacks)
+          if (!twistPool.has(edge.preferredItemKey) || !twistPool.has(edge.fallbackItemKey))
+            fail(path, 'Twist fallback endpoints must both belong to the Twist result pool');
+        for (const itemKey of extendedDirectPurchaseItemKeys)
+          if (!known.has(itemKey))
+            fail(path, `Extended references unknown RoomShop item ${itemKey}`);
+      }
       return Object.freeze({
         key,
         groups,

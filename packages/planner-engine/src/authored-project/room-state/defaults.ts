@@ -342,6 +342,18 @@ export function createDefaultCompletionOccurrences(
               }),
             }
           : {}),
+        ...(room.roomShop?.forced === true
+          ? {
+              stygianWell: Object.freeze({
+                interacted: false,
+                offerKeyBySlot: Object.freeze({
+                  healing: null,
+                  secondLeft: null,
+                  secondRight: null,
+                }),
+              }),
+            }
+          : {}),
       });
     }),
   );

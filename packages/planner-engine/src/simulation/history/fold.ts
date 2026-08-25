@@ -449,6 +449,7 @@ function foldHistoryEventStream(
           origin: event.origin,
           gameName: roomName(namesByOrigin, event),
           surfaceShopPresent: event.surfaceShopPresent === true,
+          roomShopPresent: event.roomShopPresent === true,
         });
         ledgers.roomAppearances.push(entry);
         requireRoomViews(viewsByOrigin, event).entry = stateView(event.sequence, ledgers);
@@ -701,6 +702,7 @@ function foldHistoryEventStream(
             origin: event.origin,
             gameName,
             surfaceShopPresent: event.surfaceShopPresent === true,
+            roomShopPresent: event.roomShopPresent === true,
           }),
         );
         ledgers.roomRestores.push(

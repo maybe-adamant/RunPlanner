@@ -635,7 +635,12 @@ export function hubTerminalTakeoverForSource(
   const additionalSource = topology.occurrences
     ?.flatMap((occurrence) => occurrence.additionalExits)
     .find((exit) => exit.occurrenceId === source.occurrenceId);
-  if (additionalSource !== undefined && additionalSource.kind !== 'naturalChaos') return undefined;
+  if (
+    additionalSource !== undefined &&
+    additionalSource.kind !== 'naturalChaos' &&
+    additionalSource.kind !== 'sparkChaos'
+  )
+    return undefined;
   const terminalOrdinal = ordinaryProgressionBatchLimit(layout);
   if (
     terminalOrdinal === undefined ||

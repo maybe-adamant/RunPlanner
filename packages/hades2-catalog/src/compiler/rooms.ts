@@ -519,7 +519,11 @@ function normalizeAdditionalExits(
   return Object.freeze(
     rawExits.map((raw, index): AdditionalExitDeclaration => {
       const exitPath = `${path}[${index}]`;
-      if (raw.kind !== 'zagreusContract' && raw.kind !== 'naturalChaos') {
+      if (
+        raw.kind !== 'zagreusContract' &&
+        raw.kind !== 'naturalChaos' &&
+        raw.kind !== 'sparkChaos'
+      ) {
         fail(
           `${exitPath}.kind`,
           `unknown additional exit ${String((raw as { kind?: unknown }).kind)}`,
@@ -531,7 +535,27 @@ function normalizeAdditionalExits(
       if (exitType === undefined) {
         fail(`${exitPath}.exitType`, `unknown physical exit type ${exitTypeKey}`);
       }
-      if (raw.kind === 'naturalChaos') {
+      if (raw.kind === 'naturalChaos' || raw.kind === 'sparkChaos') {
+        const expectedKey = raw.kind;
+        if (key !== expectedKey)
+          fail(`${exitPath}.key`, `${raw.kind} exit key must be ${expectedKey}`);
+        if (exitType.key !== 'ChaosExitDoor')
+          fail(`${exitPath}.exitType`, `${raw.kind} exits must use ChaosExitDoor`);
+        if (
+          exitType.behavior.kind !== 'playerSelected' ||
+          exitType.behavior.rewardPreview !== 'hidden'
+        )
+          fail(`${exitPath}.exitType`, `${raw.kind} exits must be player-selected and hidden`);
+        if (raw.kind === 'sparkChaos')
+          return Object.freeze({
+            kind: 'sparkChaos' as const,
+            key: 'sparkChaos' as const,
+            physicalExit: Object.freeze({
+              type: exitType.key,
+              compatibilityPolicyKey: exitType.compatibilityPolicyKey,
+              behavior: exitType.behavior,
+            }),
+          });
         if (key !== 'naturalChaos') {
           fail(`${exitPath}.key`, 'natural Chaos exit key must be naturalChaos');
         }
@@ -957,18 +981,46 @@ export function normalizeRooms(
       (!Number.isInteger(challengeSwitchAnchorCount) || challengeSwitchAnchorCount < 0)
     )
       fail(`${path}.challengeSwitchAnchorCount`, 'must be a non-negative integer');
+    const secretPointAnchorCount = room.secretPointAnchorCount;
+    if (
+      secretPointAnchorCount !== undefined &&
+      (!Number.isInteger(secretPointAnchorCount) || secretPointAnchorCount < 0)
+    )
+      fail(`${path}.secretPointAnchorCount`, 'must be a non-negative integer');
     const surfaceShop =
       room.surfaceShop === undefined
         ? undefined
         : (() => {
             if (room.surfaceShop.profileKey !== 'SurfaceShop')
               fail(`${path}.surfaceShop.profileKey`, 'must be SurfaceShop');
-            if (!Number.isFinite(room.surfaceShop.spawnChance) || room.surfaceShop.spawnChance < 0 || room.surfaceShop.spawnChance > 1)
+            if (
+              !Number.isFinite(room.surfaceShop.spawnChance) ||
+              room.surfaceShop.spawnChance < 0 ||
+              room.surfaceShop.spawnChance > 1
+            )
               fail(`${path}.surfaceShop.spawnChance`, 'must be a probability from 0 through 1');
             return Object.freeze({
               profileKey: 'SurfaceShop' as const,
               spawnChance: room.surfaceShop.spawnChance,
               forced: room.surfaceShop.forced === true,
+            });
+          })();
+    const roomShop =
+      room.roomShop === undefined
+        ? undefined
+        : (() => {
+            if (room.roomShop.profileKey !== 'RoomShop')
+              fail(`${path}.roomShop.profileKey`, 'must be RoomShop');
+            if (
+              !Number.isFinite(room.roomShop.spawnChance) ||
+              room.roomShop.spawnChance < 0 ||
+              room.roomShop.spawnChance > 1
+            )
+              fail(`${path}.roomShop.spawnChance`, 'must be a probability from 0 through 1');
+            return Object.freeze({
+              profileKey: 'RoomShop' as const,
+              spawnChance: room.roomShop.spawnChance,
+              forced: room.roomShop.forced === true,
             });
           })();
 
@@ -996,6 +1048,8 @@ export function normalizeRooms(
       ...(challengeSwitchAnchorCount === undefined ? {} : { challengeSwitchAnchorCount }),
       ...(purgingPool === undefined ? {} : { purgingPool }),
       ...(surfaceShop === undefined ? {} : { surfaceShop }),
+      ...(roomShop === undefined ? {} : { roomShop }),
+      ...(secretPointAnchorCount === undefined ? {} : { secretPointAnchorCount }),
       blocksGorgon: room.blocksGorgon ?? false,
       ...(boonRarityOverride === undefined ? {} : { boonRarityOverride }),
       ...(prebossBatchPolicy === undefined ? {} : { prebossBatchPolicy }),

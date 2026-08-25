@@ -195,8 +195,11 @@ function applyUnchecked(
     case 'AddZagreusContract':
     case 'RemoveZagreusContract':
     case 'AddNaturalChaos':
+    case 'AddSparkChaos':
     case 'RemoveNaturalChaos':
+    case 'RemoveSparkChaos':
     case 'ReplaceNaturalChaosMap':
+    case 'ReplaceSparkChaosMap':
       return applyRouteDetourCommand(
         document,
         catalog,
@@ -214,6 +217,13 @@ function applyUnchecked(
     case 'ReplaceShopOffer':
     case 'SetPurgingPoolInteraction':
     case 'ReplacePurgingPoolSlot':
+    case 'AddStygianWell':
+    case 'RemoveStygianWell':
+    case 'SetStygianWellInteraction':
+    case 'ReplaceStygianWellOffer':
+    case 'SetStygianWellPurchase':
+    case 'ReplaceStygianWellTwistResult':
+    case 'ReplaceStygianWellTravelDealRefill':
     case 'SetHermesShrinePresence':
     case 'ReplaceHermesShrineOffer':
     case 'SetHermesShrinePurchase':

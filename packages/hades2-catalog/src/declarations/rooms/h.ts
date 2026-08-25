@@ -1,6 +1,21 @@
 import type { RawRoomDeclaration } from '../types';
 import { hResourcePointSupport } from '../resources';
 
+const sparkChaosExit = {
+  kind: 'sparkChaos' as const,
+  key: 'sparkChaos' as const,
+  exitType: 'ChaosExitDoor',
+};
+const sparkChaosHost = (secretPointAnchorCount: number) => ({
+  secretPointAnchorCount,
+  additionalExits: [sparkChaosExit],
+});
+
+const wellHost = (challengeSwitchAnchorCount: number) => ({
+  challengeSwitchAnchorCount,
+  roomShop: { profileKey: 'RoomShop' as const, spawnChance: 0.35 },
+});
+
 const fieldsOptionalRewardCapacities = {
   H_Combat01: 4,
   H_Combat02: 3,
@@ -36,6 +51,7 @@ function fieldsOptionalRewards(gameName: keyof typeof fieldsOptionalRewardCapaci
 export const hRooms = [
   {
     gameName: 'H_Intro',
+    ...sparkChaosHost(2),
     resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Entrance',
     roomSetKey: 'H',
@@ -54,6 +70,8 @@ export const hRooms = [
   },
   {
     gameName: 'H_Combat01',
+    ...sparkChaosHost(3),
+    ...wellHost(1),
     resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 01',
     roomSetKey: 'H',
@@ -95,6 +113,8 @@ export const hRooms = [
   },
   {
     gameName: 'H_Combat02',
+    ...sparkChaosHost(3),
+    ...wellHost(1),
     resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 02',
     roomSetKey: 'H',
@@ -144,6 +164,8 @@ export const hRooms = [
   },
   {
     gameName: 'H_Combat03',
+    ...sparkChaosHost(3),
+    ...wellHost(1),
     resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 03',
     roomSetKey: 'H',
@@ -188,6 +210,8 @@ export const hRooms = [
   },
   {
     gameName: 'H_Combat04',
+    ...sparkChaosHost(4),
+    ...wellHost(1),
     resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 04',
     roomSetKey: 'H',
@@ -232,6 +256,8 @@ export const hRooms = [
   },
   {
     gameName: 'H_Combat05',
+    ...sparkChaosHost(4),
+    ...wellHost(1),
     resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 05',
     roomSetKey: 'H',
@@ -276,6 +302,8 @@ export const hRooms = [
   },
   {
     gameName: 'H_Combat06',
+    ...sparkChaosHost(3),
+    ...wellHost(1),
     resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 06',
     roomSetKey: 'H',
@@ -320,6 +348,8 @@ export const hRooms = [
   },
   {
     gameName: 'H_Combat07',
+    ...sparkChaosHost(3),
+    ...wellHost(1),
     resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 07',
     roomSetKey: 'H',
@@ -364,6 +394,8 @@ export const hRooms = [
   },
   {
     gameName: 'H_Combat08',
+    ...sparkChaosHost(3),
+    ...wellHost(1),
     resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 08',
     roomSetKey: 'H',
@@ -408,6 +440,8 @@ export const hRooms = [
   },
   {
     gameName: 'H_Combat09',
+    ...sparkChaosHost(2),
+    ...wellHost(1),
     resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 09',
     roomSetKey: 'H',
@@ -457,6 +491,8 @@ export const hRooms = [
   },
   {
     gameName: 'H_Combat10',
+    ...sparkChaosHost(4),
+    ...wellHost(1),
     resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 10',
     roomSetKey: 'H',
@@ -501,6 +537,8 @@ export const hRooms = [
   },
   {
     gameName: 'H_Combat11',
+    ...sparkChaosHost(4),
+    ...wellHost(1),
     resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 11',
     roomSetKey: 'H',
@@ -545,6 +583,8 @@ export const hRooms = [
   },
   {
     gameName: 'H_Combat12',
+    ...sparkChaosHost(3),
+    ...wellHost(1),
     resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 12',
     roomSetKey: 'H',
@@ -589,6 +629,8 @@ export const hRooms = [
   },
   {
     gameName: 'H_Combat13',
+    ...sparkChaosHost(2),
+    ...wellHost(1),
     resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 13',
     roomSetKey: 'H',
@@ -638,6 +680,8 @@ export const hRooms = [
   },
   {
     gameName: 'H_Combat14',
+    ...sparkChaosHost(3),
+    ...wellHost(1),
     resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 14',
     roomSetKey: 'H',
@@ -687,6 +731,8 @@ export const hRooms = [
   },
   {
     gameName: 'H_Combat15',
+    ...sparkChaosHost(2),
+    ...wellHost(1),
     resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 15',
     roomSetKey: 'H',
@@ -736,6 +782,7 @@ export const hRooms = [
   },
   {
     gameName: 'H_MiniBoss01',
+    ...sparkChaosHost(1),
     resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     boonRarityOverride: { Rare: 0.9, Epic: 0.1, Legendary: 0.05 },
     label: 'Phantom',
@@ -774,6 +821,7 @@ export const hRooms = [
   },
   {
     gameName: 'H_MiniBoss02',
+    ...sparkChaosHost(2),
     resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     boonRarityOverride: { Rare: 0.9, Epic: 0.1, Legendary: 0.05 },
     label: 'Queen Lamia',
@@ -809,6 +857,7 @@ export const hRooms = [
   },
   {
     gameName: 'H_Bridge01',
+    ...sparkChaosHost(3),
     resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Echo',
     roomSetKey: 'H',
@@ -963,6 +1012,8 @@ export const hRooms = [
     hasKeepsakeRack: true,
     hasRequiredFountain: true,
     purgingPool: { slotKeys: ['left', 'middle', 'right'] },
+    challengeSwitchAnchorCount: 2,
+    roomShop: { profileKey: 'RoomShop', spawnChance: 1, forced: true },
     roomSetKey: 'H',
     advancesExperimentalHammerUses: true,
     kind: 'PostBoss',

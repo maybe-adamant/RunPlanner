@@ -191,6 +191,9 @@ export interface WorkspaceOccurrenceAssemblyInput {
   readonly hermesShrineAssessment?: (
     owner: OccurrenceAddress,
   ) => import('@run-planner/engine/simulation').HermesShrineCandidateCapability | undefined;
+  readonly stygianWellAssessment?: (
+    owner: OccurrenceAddress,
+  ) => import('@run-planner/engine/simulation').StygianWellCandidateCapability | undefined;
   readonly isActiveTraitOffer: (owner: TraitOfferAddress) => boolean;
   readonly judgmentArcanaCapability?: (
     address: import('@run-planner/engine/authored-project').JudgmentArcanaAddress,
@@ -1449,6 +1452,8 @@ function roomActionLabel(
     }
     case 'purchaseHermesShrineOffer':
       return `Buy Shrine offer ${reference.generationKey}`;
+    case 'purchaseStygianWellOffer':
+      return `Buy Well offer ${reference.generationKey}`;
     case 'sellPurgingPoolTrait': {
       const traitKey = purgingPoolTraitKeyBySlot?.[reference.slotKey];
       return `Sell ${traitKey === null || traitKey === undefined ? `${reference.slotKey} Pool trait` : (catalog.traits.byKey[traitKey]?.label ?? traitKey)}`;
@@ -2587,11 +2592,134 @@ function roomFeatures(
   const poolOwner = createOccurrenceAddress(input.biome, input.occurrence.occurrenceId);
   const poolAssessment = input.purgingPoolAssessment?.(poolOwner);
   const shrineAssessment = input.hermesShrineAssessment?.(poolOwner);
+  const wellAssessment = input.stygianWellAssessment?.(poolOwner);
   const shrine = input.occurrence.hermesShrine;
+  const well = input.occurrence.stygianWell;
   const pool = input.occurrence.purgingPool;
   const poolSlotLabel = (slotKey: 'left' | 'middle' | 'right'): string =>
     slotKey === 'left' ? 'Left slot' : slotKey === 'middle' ? 'Middle slot' : 'Right slot';
   return Object.freeze([
+    ...(room.roomShop === undefined && well === undefined && wellAssessment === undefined
+      ? []
+      : [
+          (() => {
+            const itemLabel = (itemKey: string): string =>
+              input.catalog.rewards.shops.byKey.RoomShop?.groups.values
+                .flatMap((group) => group.options.values)
+                .find((option) => option.key === itemKey)?.key ?? itemKey;
+            const purchased = new Set(well?.purchasedGenerationKeys ?? []);
+            const initialSlots =
+              well === undefined
+                ? []
+                : (['healing', 'secondLeft', 'secondRight'] as const).map((slotKey) => {
+                    const generationKey = `initial:${slotKey}` as const;
+                    const selected = well.offerKeyBySlot[slotKey];
+                    const twistKey = well.twistResultKeyBySlot?.[slotKey] ?? null;
+                    const twistCandidates =
+                      wellAssessment?.twistCandidateItemKeysByGeneration[generationKey] ??
+                      Object.freeze([]);
+                    return Object.freeze({
+                      key: slotKey,
+                      generationKey,
+                      label:
+                        slotKey === 'healing'
+                          ? 'Healing'
+                          : slotKey === 'secondLeft'
+                            ? 'Second Left'
+                            : 'Second Right',
+                      itemKey: selected,
+                      ...(selected === null ? {} : { itemLabel: itemLabel(selected) }),
+                      candidateItemKeys:
+                        wellAssessment?.candidateItemKeysBySlot[slotKey] ?? Object.freeze([]),
+                      candidateItems: Object.freeze(
+                        (wellAssessment?.candidateItemKeysBySlot[slotKey] ?? []).map((key) =>
+                          Object.freeze({ key, label: itemLabel(key) }),
+                        ),
+                      ),
+                      offerInteractionKey: `stygianWellOffer:${semanticAddressKey(poolOwner)}:${generationKey}`,
+                      purchaseInteractionKey: `stygianWellPurchase:${semanticAddressKey(poolOwner)}:${generationKey}`,
+                      purchased: purchased.has(generationKey),
+                      ...(!purchased.has(generationKey) || selected !== 'RandomStoreItem'
+                        ? {}
+                        : {
+                            twist: Object.freeze({
+                              itemKey: twistKey,
+                              ...(twistKey === null ? {} : { itemLabel: itemLabel(twistKey) }),
+                              candidateItemKeys: twistCandidates,
+                              candidateItems: Object.freeze(
+                                twistCandidates.map((key) =>
+                                  Object.freeze({ key, label: itemLabel(key) }),
+                                ),
+                              ),
+                              interactionKey: `stygianWellTwist:${semanticAddressKey(poolOwner)}:${generationKey}`,
+                            }),
+                          }),
+                    });
+                  });
+            const refill =
+              well === undefined ||
+              (well.travelDealRefillKey === undefined &&
+                wellAssessment?.travelDealRefill === undefined)
+                ? []
+                : (() => {
+                    const generationKey = 'travelDealRefill' as const;
+                    const selected = well.travelDealRefillKey ?? null;
+                    const twistKey = well.twistResultKeyBySlot?.travelDealRefill ?? null;
+                    const candidates =
+                      wellAssessment?.travelDealRefill?.candidateItemKeys ?? Object.freeze([]);
+                    const twistCandidates =
+                      wellAssessment?.twistCandidateItemKeysByGeneration[generationKey] ??
+                      Object.freeze([]);
+                    return [
+                      Object.freeze({
+                        key: 'travelDealRefill' as const,
+                        generationKey,
+                        label: 'Travel Deal refill',
+                        itemKey: selected,
+                        ...(selected === null ? {} : { itemLabel: itemLabel(selected) }),
+                        candidateItemKeys: candidates,
+                        candidateItems: Object.freeze(
+                          candidates.map((key) => Object.freeze({ key, label: itemLabel(key) })),
+                        ),
+                        offerInteractionKey: `stygianWellOffer:${semanticAddressKey(poolOwner)}:${generationKey}`,
+                        purchaseInteractionKey: `stygianWellPurchase:${semanticAddressKey(poolOwner)}:${generationKey}`,
+                        purchased: purchased.has(generationKey),
+                        ...(!purchased.has(generationKey) || selected !== 'RandomStoreItem'
+                          ? {}
+                          : {
+                              twist: Object.freeze({
+                                itemKey: twistKey,
+                                ...(twistKey === null ? {} : { itemLabel: itemLabel(twistKey) }),
+                                candidateItemKeys: twistCandidates,
+                                candidateItems: Object.freeze(
+                                  twistCandidates.map((key) =>
+                                    Object.freeze({ key, label: itemLabel(key) }),
+                                  ),
+                                ),
+                                interactionKey: `stygianWellTwist:${semanticAddressKey(poolOwner)}:${generationKey}`,
+                              }),
+                            }),
+                      }),
+                    ];
+                  })();
+            return Object.freeze({
+              kind: 'stygianWell' as const,
+              present: well !== undefined,
+              required: wellAssessment?.required ?? room.roomShop?.forced === true,
+              placementEligible: wellAssessment?.placementEligible ?? false,
+              ...(room.roomShop?.forced === true
+                ? {}
+                : {
+                    presenceInteractionKey: `stygianWellPresence:${semanticAddressKey(poolOwner)}`,
+                  }),
+              ...(well === undefined
+                ? {}
+                : { interactionKey: `stygianWellInteract:${semanticAddressKey(poolOwner)}` }),
+              interacted: well?.interacted === true,
+              slots: Object.freeze([...initialSlots, ...refill]),
+            });
+          })(),
+        ]),
     ...(shrine === undefined && shrineAssessment === undefined
       ? []
       : [
@@ -3023,6 +3151,45 @@ function occurrenceInteractionRequirements(
     }
   }
   for (const feature of room.workbench.features) {
+    if (feature.kind === 'stygianWell') {
+      requirements.push(
+        Object.freeze({
+          kind: 'stygianWell' as const,
+          owner: room.address,
+          present: feature.present,
+          ...(feature.presenceInteractionKey === undefined
+            ? {}
+            : { presenceInteractionKey: feature.presenceInteractionKey }),
+          interacted: feature.interacted,
+          ...(feature.interactionKey === undefined
+            ? {}
+            : { interactionKey: feature.interactionKey }),
+          slots: Object.freeze(
+            feature.slots.map((slot) =>
+              Object.freeze({
+                generationKey: slot.generationKey,
+                slotKey: slot.key,
+                itemKey: slot.itemKey,
+                candidateItemKeys: slot.candidateItemKeys,
+                offerInteractionKey: slot.offerInteractionKey,
+                purchased: slot.purchased,
+                purchaseInteractionKey: slot.purchaseInteractionKey,
+                ...(slot.twist === undefined
+                  ? {}
+                  : {
+                      twist: Object.freeze({
+                        itemKey: slot.twist.itemKey,
+                        candidateItemKeys: slot.twist.candidateItemKeys,
+                        interactionKey: slot.twist.interactionKey,
+                      }),
+                    }),
+              }),
+            ),
+          ),
+        }),
+      );
+      continue;
+    }
     if (feature.kind === 'hermesShrine') {
       requirements.push(
         Object.freeze({

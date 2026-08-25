@@ -166,7 +166,24 @@ export function activeRoomActionReferences(
       occurrence.hermesShrine.travelDealRefill?.offer !== undefined &&
       purchased.has('travelDealRefill')
     )
-      references.push(Object.freeze({ kind: 'purchaseHermesShrineOffer', generationKey: 'travelDealRefill' }));
+      references.push(
+        Object.freeze({ kind: 'purchaseHermesShrineOffer', generationKey: 'travelDealRefill' }),
+      );
+  }
+  if (occurrence.stygianWell?.interacted === true) {
+    const purchased = new Set(occurrence.stygianWell.purchasedGenerationKeys ?? []);
+    for (const slotKey of ['healing', 'secondLeft', 'secondRight'] as const) {
+      const generationKey = `initial:${slotKey}` as import('./model').StygianWellGenerationKey;
+      // Purchase participation and rank survive an invalidating source edit.
+      // The active action then reaches the missing source finding and remains
+      // directly repairable by restoring this generation's offer.
+      if (purchased.has(generationKey))
+        references.push(Object.freeze({ kind: 'purchaseStygianWellOffer', generationKey }));
+    }
+    if (purchased.has('travelDealRefill'))
+      references.push(
+        Object.freeze({ kind: 'purchaseStygianWellOffer', generationKey: 'travelDealRefill' }),
+      );
   }
   for (const phase of envelopeSlots) {
     if (activeEncounterSlots !== undefined && !activeEncounterSlots.has(phase.key)) continue;

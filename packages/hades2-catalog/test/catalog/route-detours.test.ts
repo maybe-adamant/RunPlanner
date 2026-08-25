@@ -105,6 +105,71 @@ const naturalChaosSources = [
   'P_Shop01',
 ] as const;
 
+const sparkChaosSources = [
+  ...[
+    ['F_Opening01', 1],
+    ['F_Opening02', 1],
+    ['F_Opening03', 1],
+    ...Array.from(
+      { length: 22 },
+      (_, index) =>
+        [
+          `F_Combat${String(index + 1).padStart(2, '0')}`,
+          [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 2, 2, 1, 2, 2][index],
+        ] as const,
+    ),
+    ['F_MiniBoss01', 1],
+    ['F_MiniBoss02', 1],
+    ['F_MiniBoss03', 1],
+    ['F_Story01', 3],
+    ['F_Reprieve01', 1],
+    ['F_Shop01', 1],
+  ],
+  ...[
+    ['G_Intro', 1],
+    ...Array.from(
+      { length: 20 },
+      (_, index) =>
+        [
+          `G_Combat${String(index + 1).padStart(2, '0')}`,
+          [2, 4, 2, 2, 1, 2, 1, 1, 2, 1, 1, 1, 1, 2, 3, 1, 2, 2, 1, 1][index],
+        ] as const,
+    ),
+    ['G_MiniBoss01', 2],
+    ['G_MiniBoss02', 1],
+    ['G_MiniBoss03', 2],
+    ['G_Story01', 1],
+    ['G_Reprieve01', 1],
+    ['G_Shop01', 1],
+  ],
+  ...[
+    ['H_Intro', 2],
+    ...Array.from(
+      { length: 15 },
+      (_, index) =>
+        [
+          `H_Combat${String(index + 1).padStart(2, '0')}`,
+          [3, 3, 3, 4, 4, 3, 3, 3, 2, 4, 4, 3, 2, 3, 2][index],
+        ] as const,
+    ),
+    ['H_MiniBoss01', 1],
+    ['H_MiniBoss02', 2],
+    ['H_Bridge01', 3],
+  ],
+  ...[
+    ...Array.from(
+      { length: 23 },
+      (_, index) =>
+        [
+          `I_Combat${String(index + 1).padStart(2, '0')}`,
+          [1, 3, 1, 1, 1, 4, 3, 2, 1, 1, 2, 1, 2, 1, 2, 2, 4, 2, 4, 3, 3, 2, 3][index],
+        ] as const,
+    ),
+    ['I_MiniBoss01', 1],
+    ['I_MiniBoss02', 1],
+  ],
+] as const;
+
 function input(): RawCatalogInput {
   return JSON.parse(JSON.stringify(declarations)) as RawCatalogInput;
 }
@@ -137,7 +202,7 @@ describe('route detour catalog declarations', () => {
   it('keeps detour room-set identity separate from the supported route layouts', () => {
     const catalog = createCatalog(declarations);
 
-    expect(catalog.version).toBe('0.40.0-hermes-shrine');
+    expect(catalog.version).toBe('0.41.0-stygian-well');
     expect(catalog.biomes.values.map((biome) => biome.key)).not.toContain('Anomaly');
     expect(catalog.biomes.values.map((biome) => biome.key)).not.toContain('C');
     expect(catalog.biomeLayouts.values.map((layout) => layout.biomeKey)).not.toContain('Anomaly');
@@ -422,6 +487,48 @@ describe('route detour catalog declarations', () => {
     });
   });
 
+  it('normalizes the exact Spark Chaos physical-host matrix separately from natural Chaos', () => {
+    const catalog = createCatalog(declarations);
+    const actual = catalog.rooms.values
+      .filter((room) => room.additionalExits.some((exit) => exit.kind === 'sparkChaos'))
+      .map((room) => [room.gameName, room.secretPointAnchorCount] as const);
+    expect(actual).toEqual(sparkChaosSources);
+    for (const [gameName] of sparkChaosSources) {
+      expect(catalog.rooms.byKey[gameName]?.additionalExits).toContainEqual({
+        kind: 'sparkChaos',
+        key: 'sparkChaos',
+        physicalExit: {
+          type: 'ChaosExitDoor',
+          compatibilityPolicyKey: 'Unconstrained',
+          behavior: { kind: 'playerSelected', rewardPreview: 'hidden' },
+        },
+      });
+    }
+    for (const biomeKey of ['F', 'G', 'H', 'I'] as const) {
+      expect(catalog.biomeLayouts.byKey[biomeKey]?.sparkChaos).toEqual({
+        roomGameNames: ['Chaos_01', 'Chaos_02', 'Chaos_03', 'Chaos_04', 'Chaos_05', 'Chaos_06'],
+        defaultRoomGameName: 'Chaos_01',
+      });
+    }
+    expect(catalog.rooms.byKey.I_Combat24?.secretPointAnchorCount).toBeUndefined();
+    expect(catalog.rooms.byKey.H_PreBoss01?.secretPointAnchorCount).toBeUndefined();
+    expect(catalog.rooms.byKey.I_Intro?.additionalExits).not.toContainEqual(
+      expect.objectContaining({ kind: 'sparkChaos' }),
+    );
+  });
+
+  it('rejects invalid physical SecretPoint counts at the compiler boundary', () => {
+    const raw = input();
+    const index = roomIndex(raw, 'H_Combat01');
+    (raw.rooms[index] as { secretPointAnchorCount?: number }).secretPointAnchorCount = -1;
+    expect(() => createCatalog(raw)).toThrow(
+      new CatalogContractError(
+        `rooms[${index}].secretPointAnchorCount`,
+        'must be a non-negative integer',
+      ),
+    );
+  });
+
   it('rejects malformed Anomaly declaration structure and references', () => {
     const duplicateSourceEncounter = input();
     (
@@ -492,7 +599,7 @@ describe('route detour catalog declarations', () => {
       'B_Combat01';
     expect(() => createCatalog(retargeted)).toThrow(
       new CatalogContractError(
-        `rooms[${fShopIndex}].additionalExits[1].targetRoomGameName`,
+        `rooms[${fShopIndex}].additionalExits[2].targetRoomGameName`,
         'Zagreus contract target must be an authored C ContractBoss with automatic host return',
       ),
     );

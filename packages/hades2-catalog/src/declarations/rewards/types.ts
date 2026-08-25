@@ -73,6 +73,26 @@ export interface RawShopOptionEntryDeclaration {
     | { readonly kind: 'fixed'; readonly gameName: string }
     | { readonly kind: 'resolvedOfferSource' };
   readonly boonRarityOverride?: import('@run-planner/engine/catalog-schema').BoonRarityOverride;
+  /** RoomShop-only exact identity/effect metadata. */
+  readonly stygianWell?: {
+    readonly effect:
+      | 'neutral'
+      | 'spark'
+      | 'yarn'
+      | 'hymn'
+      | 'discount'
+      | 'emptySlot'
+      | 'extended'
+      | 'twist'
+      | 'lastStand';
+    readonly offerRequirements?: readonly ('inactive' | 'emptyAttackOrSpecial')[];
+    readonly nestedResultItemKeys?: readonly string[];
+    readonly nestedRuntimeOfferFallbacks?: readonly {
+      readonly preferredItemKey: string;
+      readonly fallbackItemKey: string;
+    }[];
+    readonly extendedDirectPurchaseItemKeys?: readonly string[];
+  };
 }
 
 export interface RawShopGroupDeclaration {

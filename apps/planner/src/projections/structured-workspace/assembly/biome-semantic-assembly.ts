@@ -497,6 +497,7 @@ export function assembleWorkspaceBiomeSemantics(
       levelResolutionAssessment: source.levelResolutionAssessment,
       purgingPoolAssessment: source.purgingPoolAssessment,
       hermesShrineAssessment: source.hermesShrineAssessment,
+      stygianWellAssessment: source.stygianWellAssessment,
       steadyGrowthOutcomes: source.steadyGrowthOutcomes,
       isActiveTraitOffer: source.isActiveTraitOffer,
       judgmentArcanaCapability,

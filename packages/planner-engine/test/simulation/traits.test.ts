@@ -35,6 +35,7 @@ import {
   traitCandidates,
   boonRarityFactsForOffer,
   traitOfferCompositionDomains,
+  traitOfferStartingDraft,
   targetedAcquisitionTargetKeys,
   type ProjectEvaluation,
   type SelectedTraitOfferAssessment,
@@ -1847,6 +1848,220 @@ describe('rarity-aware high-tier composition', () => {
         fallbackGold: false,
       }).legal,
     ).toBe(true);
+  });
+});
+
+describe('Sacrificial Hymn replacement composition', () => {
+  it('raises the existing exhaustion replacement minimum without replacing its composition model', () => {
+    expect(
+      assessTraitOfferDomainComposition({
+        ordinaryKeys: ['ordinary1', 'ordinary2', 'ordinary3'],
+        highTierKeys: [],
+        replacementKeys: ['replacement1'],
+        authored: [
+          { traitKey: 'ordinary1', kind: 'ordinary' },
+          { traitKey: 'ordinary2', kind: 'ordinary' },
+          { traitKey: 'ordinary3', kind: 'ordinary' },
+        ],
+        fallbackGold: false,
+        minimumReplacementCount: 1,
+      }).findings,
+    ).toContainEqual(expect.objectContaining({ code: 'missingForcedReplacement' }));
+    expect(
+      assessTraitOfferDomainComposition({
+        ordinaryKeys: ['ordinary1', 'ordinary2', 'ordinary3'],
+        highTierKeys: [],
+        replacementKeys: ['replacement1'],
+        authored: [
+          { traitKey: 'replacement1', kind: 'replacement' },
+          { traitKey: 'ordinary1', kind: 'ordinary' },
+          { traitKey: 'ordinary2', kind: 'ordinary' },
+        ],
+        fallbackGold: false,
+        minimumReplacementCount: 1,
+      }).legal,
+    ).toBe(true);
+  });
+
+  it('starts the next eligible offer with one replacement while a Hymn use is active', () => {
+    const history = historyFrom([
+      { giverKey: 'Apollo', traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
+    ]);
+    const draft = traitOfferStartingDraft(catalog, 'Hera', history, { limitedSwapUses: 1 });
+    expect(draft).toBeDefined();
+    expect(
+      draft?.options.some(
+        (option) =>
+          assessTraitOption(
+            catalog,
+            option.traitKey,
+            history,
+            { resolvedProviderKey: 'Hera' },
+            option.rarity,
+          ).replacementTransition !== undefined,
+      ),
+    ).toBe(true);
+  });
+
+  it('applies Yarn and Hymn once to the same eligible encounter screen', () => {
+    const history = historyFrom([
+      { giverKey: 'Apollo', traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
+    ]);
+    const draft = traitOfferStartingDraft(catalog, 'Hera', history, {
+      limitedSwapUses: 1,
+    });
+    if (draft?.kind !== 'traits') throw new Error('expected a Hera Hymn draft');
+    const replacementIndex = draft.options.findIndex(
+      (option) =>
+        assessTraitOption(
+          catalog,
+          option.traitKey,
+          history,
+          { resolvedProviderKey: 'Hera' },
+          option.rarity,
+        ).replacementTransition !== undefined,
+    );
+    if (replacementIndex < 0) throw new Error('expected a forced replacement option');
+    const selectedOptionKey = `option${replacementIndex + 1}` as 'option1' | 'option2' | 'option3';
+    const initial = initializeTestRewardBranches()[0]!;
+    const findings = new Map();
+    const eligibleDraft: AuthoredTraitOffer = Object.freeze({
+      ...draft,
+      options: Object.freeze(
+        draft.options.map((option) => Object.freeze({ ...option, rarity: 'Rare' as const })),
+      ) as Extract<AuthoredTraitOffer, { kind: 'traits' }>['options'],
+      selectedOptionKey,
+    });
+    const settlement = settleEncounterTraitOffer(
+      catalog,
+      Object.freeze({
+        ...initial,
+        traitHistory: history,
+        stygianWell: Object.freeze({
+          ...initial.stygianWell,
+          yarnUses: 2,
+          hymnUses: 2,
+        }),
+      }),
+      createIncomingRewardAddress(goldenFBiome, goldenFStartId),
+      eligibleDraft,
+      history.events.length + 1,
+      'encounterCompleted',
+      findings,
+    );
+    expect(settlement.branch.stygianWell).toMatchObject({ yarnUses: 1, hymnUses: 1 });
+    const equipped =
+      settlement.branch.traitHistory?.equippedTraits[draft.options[replacementIndex]!.traitKey];
+    if (equipped === undefined)
+      throw new Error(
+        JSON.stringify({
+          draft: eligibleDraft,
+          findings: [...findings.values()],
+          events: settlement.branch.traitHistory?.events,
+        }),
+      );
+    expect(equipped).toMatchObject({ level: 3, rarity: 'Rare' });
+  });
+
+  it('applies and consumes Yarn and Hymn on an ordinary incoming Boon screen', () => {
+    const history = historyFrom([
+      { giverKey: 'Apollo', traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
+    ]);
+    const initial = initializeTestRewardBranches()[0]!;
+    const source = {
+      origin: createIncomingRewardAddress(goldenFBiome, createOccurrenceId('well-incoming-boon')),
+      offer: {
+        rewardType: 'Boon' as const,
+        payload: { kind: 'BoonSource' as const, source: 'HeraUpgrade' },
+      },
+      producerLifecycleKey: 'RoomReward' as const,
+      instanceProvenance: 'free' as const,
+      traitOffersByAcquisitionRole: Object.freeze({
+        source: Object.freeze({
+          kind: 'traits' as const,
+          giverKey: 'Hera',
+          options: Object.freeze([
+            { traitKey: 'HeraWeaponBoon', rarity: 'Rare' as const },
+            { traitKey: 'HeraSpecialBoon', rarity: 'Rare' as const },
+            { traitKey: 'HeraCastBoon', rarity: 'Rare' as const },
+          ] as const),
+          selectedOptionKey: 'option1' as const,
+        }),
+      }),
+    };
+    const settled = settleTestRoomReward(
+      goldenFBiome,
+      createOccurrenceId('well-incoming-boon'),
+      [
+        Object.freeze({
+          ...initial,
+          traitHistory: history,
+          stygianWell: Object.freeze({ ...initial.stygianWell, yarnUses: 1, hymnUses: 1 }),
+        }),
+      ],
+      source,
+      history.events.length + 1,
+      (rewardHistory) => factsWithHistory(baseFacts(), rewardHistory, new Set()),
+      new Map(),
+    )[0]!;
+    expect(settled.stygianWell).toMatchObject({ yarnUses: 0, hymnUses: 0 });
+    expect(settled.traitEvaluations?.at(-1)?.context).toMatchObject({
+      temporaryBoonRarityUses: 1,
+      limitedSwapUses: 1,
+    });
+    expect(settled.traitHistory?.equippedTraits.HeraWeaponBoon).toMatchObject({
+      level: 3,
+      rarity: 'Rare',
+    });
+  });
+
+  it('retains Yarn and Hymn on a missing incoming Boon screen and publishes their candidate context', () => {
+    const history = historyFrom([
+      { giverKey: 'Apollo', traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
+    ]);
+    const initial = initializeTestRewardBranches()[0]!;
+    const origin = createIncomingRewardAddress(
+      goldenFBiome,
+      createOccurrenceId('well-missing-incoming-boon'),
+    );
+    const product = settleOwnedAcquisitionSite(
+      catalog,
+      [
+        Object.freeze({
+          ...initial,
+          traitHistory: history,
+          stygianWell: Object.freeze({ ...initial.stygianWell, yarnUses: 1, hymnUses: 1 }),
+        }),
+      ],
+      {
+        siteOwner: createOccurrenceAddress(
+          goldenFBiome,
+          createOccurrenceId('well-missing-incoming-boon'),
+        ),
+        pointKey: 'roomRewardPickup',
+        entryKey: 'self',
+        source: {
+          origin,
+          offer: {
+            rewardType: 'Boon',
+            payload: { kind: 'BoonSource', source: 'HeraUpgrade' },
+          },
+          producerLifecycleKey: 'RoomReward',
+          instanceProvenance: 'free',
+          traitOffersByAcquisitionRole: Object.freeze({ source: null }),
+        },
+        historySequence: history.events.length + 1,
+      },
+      (rewardHistory) => factsWithHistory(baseFacts(), rewardHistory, new Set()),
+      new Map(),
+    );
+    const blocked = product.traitChildSettlements?.[0];
+    expect(blocked?.branch.stygianWell).toMatchObject({ yarnUses: 1, hymnUses: 1 });
+    expect(blocked?.candidateContext?.context).toMatchObject({
+      temporaryBoonRarityUses: 1,
+      limitedSwapUses: 1,
+      resolvedProviderKey: 'Hera',
+    });
   });
 });
 

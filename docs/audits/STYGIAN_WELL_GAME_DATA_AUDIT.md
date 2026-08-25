@@ -40,6 +40,43 @@ forced Postboss Well. See `RoomDataF.lua:2561-2640`,
 `RoomDataG.lua:1053-1123`, `RoomDataH.lua:1900-1986`, and
 `RoomLogic.lua:4891-4905`.
 
+### Ordinary inherited room facts
+
+The source does not declare a standalone list of ordinary Well room names.
+`BaseF_Combat`, `BaseG_Combat`, `BaseH`, and `BaseI` supply the inherited
+chance (`0.25`, `0.30`, `0.35`, and `0.08` respectively); a concrete room is
+eligible only when its inherited map still has an available
+`ChallengeSwitchBase`. The explicit zero overrides found in the installed
+F/G/H/I scripts are `F_PreBoss01`, `G_PreBoss01`, `I_PostBoss01`,
+`I_ChronosFlashback01`, and `I_DeathAreaRestored`; the F/G/H Postboss rooms
+then separately replace that ordinary result with their forced, upgrade-gated
+Well. Source locations are `RoomDataF.lua:283,1945,2561`,
+`RoomDataG.lua:310,488,1055`, `RoomDataH.lua:18,1902`, and
+`RoomDataI.lua:346,3487,3902,4086`. The previously noted line 4486 is not an
+I zero override.
+
+The installed map binaries close the physical-anchor half of that inherited
+rule. The extraction inspected
+`/home/ayyatma/wsl-projects/modding/1GameData/Maps/bin/<Room>.thing_bin` and
+counted the literal `ChallengeSwitchBase` and `SecretPoint` identities exposed
+by `strings`. This is map evidence, not a runtime probability inference. The
+resolved ordinary Well matrix is:
+
+| Biome | Ordinary hosts                                            | `ChallengeSwitchBase` counts in host order                                    | Chance |
+| ----- | --------------------------------------------------------- | ----------------------------------------------------------------------------- | ------ |
+| F     | `F_Combat01`–`F_Combat22`                                 | `1,1,2,1,2,2,1,1,1,2,2,2,2,2,2,2,1,2,1,1,1,1`                                 | `0.25` |
+| G     | `G_Combat01`–`03`, `G_Combat07`–`20`                      | `1,2,2,1,1,2,2,2,2,1,1,1,1,2,1,1,1`                                           | `0.30` |
+| H     | `H_Combat01`–`H_Combat15`                                 | each has `1`                                                                  | `0.35` |
+| I     | `I_Combat01`–`I_Combat24`, `I_MiniBoss01`, `I_MiniBoss02` | combats: `3,2,2,2,2,2,2,2,2,1,2,1,1,2,2,1,1,2,1,1,2,3,1,1`; minibosses: `2,2` | `0.08` |
+
+`F_PostBoss01`, `G_PostBoss01`, and `H_PostBoss01` each have two
+`ChallengeSwitchBase` anchors and own the forced result. Representative
+exclusions close both source shapes: `G_Combat04`–`06` have no available
+anchor, while `I_PostBoss01`, `I_Story01`, and `I_Reprieve01` do not inherit a
+supported ordinary Well. The planner disposition is to resolve these facts in
+the unique room declarations; simulation does not reconstruct biome-level
+inheritance or maintain a second room-name matrix.
+
 The obstacle is present during room setup but locked through combat.
 `DoUnlockRoomExits` first completes outgoing generation, then makes the Well
 usable (`RoomLogic.lua:4056-4061`). A purchase therefore cannot alter doors
@@ -76,7 +113,7 @@ identity is eligible on a particular visit.
 | `FirstHitHealTrait`                               | The next hit heals 100% of its damage; stacking adds uses.                                      | Defer: health/combat.                                                               |
 | `TemporaryDoorHealTrait`                          | Heals 10% of maximum health after each of the next three room transitions.                      | Defer: health.                                                                      |
 | `TemporaryHealExpirationTrait`                    | After four encounters, heals 50% of maximum health on expiry.                                   | Defer: health.                                                                      |
-| `LastStandShopItem`                               | Adds a distinct Last Stand that restores 40% health and Magick.                                 | Consequential: existing Last Stand capacity; defer health/Magick values.            |
+| `LastStandShopItem`                               | Adds a distinct Last Stand that restores 40% health and Magick.                                 | Concrete paid consumable with runtime fallback; no planner Death Defiance ledger.   |
 | `TemporaryImprovedSecondaryTrait`                 | Multiplies secondary damage by 1.40 for five encounters.                                        | Defer: combat.                                                                      |
 | `TemporaryImprovedCastTrait`                      | Multiplies Cast damage by 1.35 for five encounters.                                             | Defer: combat.                                                                      |
 | `TemporaryMoveSpeedTrait`                         | Multiplies movement speed by 1.20 for eight encounters.                                         | Defer: combat/movement.                                                             |
@@ -205,6 +242,25 @@ host restarts the natural ten-room Chaos lookback; there is no distinct reset
 operation. `ROUTE_DETOUR_FINDINGS.md` records the exact forced-branch source
 walk and remains the detailed authority for its route consequences.
 
+The same installed-binary extraction closes the force-capable physical hosts.
+Counts below are `SecretPoint` counts in room-name order:
+
+- F: `F_Opening01`–`03` each `1`; `F_Combat01`–`22`
+  `1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,3,2,2,1,2,2`;
+  `F_MiniBoss01`–`03` each `1`; `F_Story01=3`, `F_Reprieve01=1`,
+  `F_Shop01=1`.
+- G: `G_Intro=1`; `G_Combat01`–`20`
+  `2,4,2,2,1,2,1,1,2,1,1,1,1,2,3,1,2,2,1,1`;
+  `G_MiniBoss01`–`03` `2,1,2`; Story, Reprieve, and Shop each `1`.
+- H: `H_Intro=2`; `H_Combat01`–`15`
+  `3,3,3,4,4,3,3,3,2,4,4,3,2,3,2`; `H_MiniBoss01=1`,
+  `H_MiniBoss02=2`, `H_Bridge01=3`.
+- I: `I_Combat01`–`23`
+  `1,3,1,1,1,4,3,2,1,1,2,1,2,1,2,2,4,2,4,3,3,2,3`;
+  `I_MiniBoss01` and `I_MiniBoss02` each `1`. `I_Combat24`, Story, and
+  Reprieve have no force-capable point; I Intro and Preboss are explicit
+  lifecycle exclusions.
+
 ### Yarn of Ariadne
 
 Yarn is `TemporaryBoonRarityTrait`, with `GodLootOnly`, one remaining use, and
@@ -250,25 +306,28 @@ its player choice remains optional.
 
 ## Current planner disposition
 
-The planner does not yet model Well presence, inventory, purchases, or any
-temporary Well state. Spark, Yarn, and Sacrificial Hymn remain the three direct
-rule-changing Well identities. Exact future Well-offer eligibility additionally
-requires encounter- or boss-use lifetime state for Discount and Empty Slot and
-the source's missing-Last-Stand requirement at each applicable slot or
-nested-result frontier. That runtime requirement does not become authored
-state; the shared fallback disposition owns it.
-Extended applies to the exact eight-identity whitelist above; only
-Discount and Empty Slot need their extended boss-use lifetime simulated, while
-the other six still consume a use. That consumption remains consequential run
-state because it prevents a later Discount or Empty Slot purchase from using
-the same Extended charge. Twist can award Yarn, Discount, or Last Stand through
-its nested pool. Their combat, health-restoration, Magick, price, and gold
-values remain deferred.
+The planner owns ordinary Well presence separately from interaction. Forced
+F/G/H Postboss Wells are always present. An uninteracted Well retains dormant
+authored inventory detail but contributes no exact purchases or effects; an
+interacted Well requires all three visible identities. Travel Deal owns one
+same-group refill from the first ranked purchase. Every purchase is a paid,
+atomic room action and never enters the free-pickup alternative-interaction
+lifecycle.
 
-Same-Well generation retains distinct visible identities and Travel Deal
-refill exclusions. Across separate Wells, repeat eligibility follows the held
-state above rather than a global purchased-name ban. Repeated Spark, Yarn,
-Hymn, and consequential Twist outcomes retain their exact use semantics.
-Existing World Shop, Travel Deal, Gold Gold Gold, Infernal Contract, natural
-Chaos, rarity ledger, Last Stand, and trait-replacement models are not implicit
-Well support.
+The modeled run state is deliberately narrow: Spark uses and their next
+force-capable authored Chaos exit, Yarn rarity uses, Sacrificial Hymn
+replacement uses, active Discount and Empty Slot lifetimes, and Extended
+charges. The exact eight-item whitelist consumes Extended even when the
+purchased effect itself is sim-neutral; only Discount and Empty Slot retain
+their boss-use lifetime. Twist uses its closed nested pool and can
+consequentially produce Yarn, Discount, or Last Stand. Last Stand remains a
+concrete paid consumable whose volatile availability is isolated by the
+declaration-owned runtime fallback; the planner owns no Death Defiance
+capacity ledger.
+
+Same-Well identities remain distinct and the refill excludes all current
+visible names. Separate Wells may repeat identities subject only to the exact
+active requirements above. Health, damage, Magick, gold, price, and
+meta-resource amounts remain sim-neutral. World Shop and Hermes Shrine remain
+fully authored without an Interact convenience; only Pool and Well use that
+runtime-random authoring boundary.

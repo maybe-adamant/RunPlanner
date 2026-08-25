@@ -113,6 +113,9 @@ export interface WorkspaceBiomeSource {
   readonly hermesShrineAssessment: (
     owner: OccurrenceAddress,
   ) => import('@run-planner/engine/simulation').HermesShrineCandidateCapability | undefined;
+  readonly stygianWellAssessment: (
+    owner: OccurrenceAddress,
+  ) => import('@run-planner/engine/simulation').StygianWellCandidateCapability | undefined;
   readonly steadyGrowthOutcomes: readonly import('@run-planner/engine/simulation').BiomeRewardSimulation['steadyGrowthOutcomes'][number][];
   readonly occurrence: (occurrenceId: OccurrenceId) => RoomOccurrence | undefined;
   /** Closed engine-owned outgoing state for one exact retained occurrence. */
@@ -642,6 +645,7 @@ function createWorkspaceBiomeSource(
   ) => CanonicalAuthoredRoom | undefined,
   purgingPoolAssessment: WorkspaceBiomeSource['purgingPoolAssessment'],
   hermesShrineAssessment: WorkspaceBiomeSource['hermesShrineAssessment'],
+  stygianWellAssessment: WorkspaceBiomeSource['stygianWellAssessment'],
   resourceAuthoring: RouteResourceAuthoring,
 ): WorkspaceBiomeSource {
   const biome = createBiomeAddress(routeKey, plan.biomeKey);
@@ -778,6 +782,7 @@ function createWorkspaceBiomeSource(
       levelResolutionAssessments.get(semanticAddressKey(owner)),
     purgingPoolAssessment,
     hermesShrineAssessment,
+    stygianWellAssessment,
     steadyGrowthOutcomes,
     layout,
     blockedOccurrenceRoom: (occurrenceId: OccurrenceId) =>
@@ -842,6 +847,7 @@ export function createWorkspaceProjectSourceIndex(
   ) => CanonicalAuthoredRoom | undefined = () => undefined,
   purgingPoolAssessment: WorkspaceBiomeSource['purgingPoolAssessment'] = () => undefined,
   hermesShrineAssessment: WorkspaceBiomeSource['hermesShrineAssessment'] = () => undefined,
+  stygianWellAssessment: WorkspaceBiomeSource['stygianWellAssessment'] = () => undefined,
 ): WorkspaceProjectSourceIndex {
   return Object.freeze({
     routes: Object.freeze(
@@ -867,6 +873,7 @@ export function createWorkspaceProjectSourceIndex(
                 blockedOccurrenceRoom,
                 purgingPoolAssessment,
                 hermesShrineAssessment,
+                stygianWellAssessment,
                 resources,
               ),
             ),

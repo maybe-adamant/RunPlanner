@@ -106,6 +106,11 @@ import type {
   WorkspaceHermesShrineOfferInteraction,
   WorkspaceHermesShrinePurchaseInteraction,
   WorkspaceHermesShrinePresenceInteraction,
+  WorkspaceStygianWellPresenceInteraction,
+  WorkspaceStygianWellInteraction,
+  WorkspaceStygianWellOfferInteraction,
+  WorkspaceStygianWellPurchaseInteraction,
+  WorkspaceStygianWellTwistResultInteraction,
   WorkspaceStartInteraction,
   WorkspaceTakeoverBatchInteraction,
   WorkspaceTopologyRemovalInteraction,
@@ -342,6 +347,11 @@ interface WorkspaceOccurrenceLocalInteractionCatalog {
   readonly hermesShrineOffers: ReadonlyMap<string, WorkspaceHermesShrineOfferInteraction>;
   readonly hermesShrinePurchases: ReadonlyMap<string, WorkspaceHermesShrinePurchaseInteraction>;
   readonly hermesShrinePresences: ReadonlyMap<string, WorkspaceHermesShrinePresenceInteraction>;
+  readonly stygianWellPresences: ReadonlyMap<string, WorkspaceStygianWellPresenceInteraction>;
+  readonly stygianWellInteractions: ReadonlyMap<string, WorkspaceStygianWellInteraction>;
+  readonly stygianWellOffers: ReadonlyMap<string, WorkspaceStygianWellOfferInteraction>;
+  readonly stygianWellPurchases: ReadonlyMap<string, WorkspaceStygianWellPurchaseInteraction>;
+  readonly stygianWellTwistResults: ReadonlyMap<string, WorkspaceStygianWellTwistResultInteraction>;
   readonly localVisitOrders: ReadonlyMap<string, WorkspaceLocalVisitOrderInteraction>;
   readonly localVisitGenerations: ReadonlyMap<string, WorkspaceLocalVisitGenerationInteraction>;
   readonly zagreusSpawns: ReadonlyMap<string, WorkspaceZagreusSpawnInteraction>;
@@ -426,6 +436,11 @@ function bindOccurrenceLocalInteractions(
   const hermesShrineOffers = new Map<string, WorkspaceHermesShrineOfferInteraction>();
   const hermesShrinePurchases = new Map<string, WorkspaceHermesShrinePurchaseInteraction>();
   const hermesShrinePresences = new Map<string, WorkspaceHermesShrinePresenceInteraction>();
+  const stygianWellPresences = new Map<string, WorkspaceStygianWellPresenceInteraction>();
+  const stygianWellInteractions = new Map<string, WorkspaceStygianWellInteraction>();
+  const stygianWellOffers = new Map<string, WorkspaceStygianWellOfferInteraction>();
+  const stygianWellPurchases = new Map<string, WorkspaceStygianWellPurchaseInteraction>();
+  const stygianWellTwistResults = new Map<string, WorkspaceStygianWellTwistResultInteraction>();
   const localVisitOrders = new Map<string, WorkspaceLocalVisitOrderInteraction>();
   const localVisitGenerations = new Map<string, WorkspaceLocalVisitGenerationInteraction>();
   const zagreusSpawns = new Map<string, WorkspaceZagreusSpawnInteraction>();
@@ -884,6 +899,116 @@ function bindOccurrenceLocalInteractions(
         }
         break;
       }
+      case 'stygianWell': {
+        if (requirement.presenceInteractionKey !== undefined) {
+          stygianWellPresences.set(
+            requirement.presenceInteractionKey,
+            Object.freeze({
+              key: requirement.presenceInteractionKey,
+              owner: requirement.owner,
+              present: requirement.present,
+              intentFor: (present: boolean) =>
+                Object.freeze({
+                  command: present
+                    ? Object.freeze({
+                        kind: 'AddStygianWell' as const,
+                        occurrence: requirement.owner,
+                      })
+                    : Object.freeze({
+                        kind: 'RemoveStygianWell' as const,
+                        occurrence: requirement.owner,
+                      }),
+                }),
+            }),
+          );
+        }
+        if (requirement.interactionKey !== undefined) {
+          stygianWellInteractions.set(
+            requirement.interactionKey,
+            Object.freeze({
+              key: requirement.interactionKey,
+              owner: requirement.owner,
+              interacted: requirement.interacted,
+              intentFor: (interacted: boolean) =>
+                Object.freeze({
+                  command: Object.freeze({
+                    kind: 'SetStygianWellInteraction' as const,
+                    occurrence: requirement.owner,
+                    interacted,
+                  }),
+                }),
+            }),
+          );
+        }
+        for (const slot of requirement.slots) {
+          stygianWellOffers.set(
+            slot.offerInteractionKey,
+            Object.freeze({
+              key: slot.offerInteractionKey,
+              owner: requirement.owner,
+              generationKey: slot.generationKey,
+              itemKey: slot.itemKey,
+              candidateItemKeys: slot.candidateItemKeys,
+              intentFor: (itemKey: string | null) =>
+                Object.freeze({
+                  command:
+                    slot.slotKey === 'travelDealRefill'
+                      ? Object.freeze({
+                          kind: 'ReplaceStygianWellTravelDealRefill' as const,
+                          occurrence: requirement.owner,
+                          itemKey,
+                        })
+                      : Object.freeze({
+                          kind: 'ReplaceStygianWellOffer' as const,
+                          occurrence: requirement.owner,
+                          slotKey: slot.slotKey,
+                          itemKey,
+                        }),
+                }),
+            }),
+          );
+          stygianWellPurchases.set(
+            slot.purchaseInteractionKey,
+            Object.freeze({
+              key: slot.purchaseInteractionKey,
+              owner: requirement.owner,
+              generationKey: slot.generationKey,
+              purchased: slot.purchased,
+              intentFor: (purchased: boolean) =>
+                Object.freeze({
+                  command: Object.freeze({
+                    kind: 'SetStygianWellPurchase' as const,
+                    occurrence: requirement.owner,
+                    generationKey: slot.generationKey,
+                    purchased,
+                  }),
+                }),
+            }),
+          );
+          if (slot.twist !== undefined) {
+            stygianWellTwistResults.set(
+              slot.twist.interactionKey,
+              Object.freeze({
+                key: slot.twist.interactionKey,
+                owner: requirement.owner,
+                generationKey: slot.generationKey,
+                itemKey: slot.twist.itemKey,
+                candidateItemKeys: slot.twist.candidateItemKeys,
+                intentFor: (itemKey: string | null) =>
+                  Object.freeze({
+                    command: Object.freeze({
+                      kind: 'ReplaceStygianWellTwistResult' as const,
+                      occurrence: requirement.owner,
+                      generationKey: slot.generationKey,
+                      itemKey,
+                    }),
+                  }),
+              }),
+            );
+          }
+        }
+        break;
+      }
       case 'localVisits': {
         const generationValues = Object.freeze(
           requirement.generationChoices.map((choice) => choice.value),
@@ -1022,6 +1147,11 @@ function bindOccurrenceLocalInteractions(
     hermesShrineOffers,
     hermesShrinePurchases,
     hermesShrinePresences,
+    stygianWellPresences,
+    stygianWellInteractions,
+    stygianWellOffers,
+    stygianWellPurchases,
+    stygianWellTwistResults,
     localVisitOrders,
     localVisitGenerations,
     zagreusSpawns,
@@ -1743,6 +1873,11 @@ export function bindWorkspaceInteractions(
     hermesShrineOffers,
     hermesShrinePurchases,
     hermesShrinePresences,
+    stygianWellPresences,
+    stygianWellInteractions,
+    stygianWellOffers,
+    stygianWellPurchases,
+    stygianWellTwistResults,
     localVisitOrders,
     localVisitGenerations,
     zagreusSpawns,
@@ -3131,6 +3266,11 @@ export function bindWorkspaceInteractions(
     hermesShrineOffers,
     hermesShrinePurchases,
     hermesShrinePresences,
+    stygianWellPresences,
+    stygianWellInteractions,
+    stygianWellOffers,
+    stygianWellPurchases,
+    stygianWellTwistResults,
     localVisitOrders,
     localVisitGenerations,
     zagreusContracts,
