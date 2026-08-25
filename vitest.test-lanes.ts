@@ -20,6 +20,7 @@ export const heavyTestFiles = Object.freeze([
   'apps/planner/src/projections/structured-workspace/source-index.test.ts',
   'apps/planner/src/state/projectWorkspaceSlice.test.ts',
   'apps/planner/src/ui/editor/biome/BiomeWorkspace.test.tsx',
+  'apps/planner/src/ui/editor/biome/BiomeInspectorControls.test.tsx',
   'apps/planner/src/ui/editor/biome/DecisionWorkbench.test.tsx',
   'apps/planner/src/ui/editor/biome/HubCompletionHandoff.test.tsx',
   'apps/planner/src/ui/editor/biome/HubDecisionWorkbench.interaction.test.tsx',
