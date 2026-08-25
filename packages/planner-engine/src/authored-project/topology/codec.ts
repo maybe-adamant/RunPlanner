@@ -41,7 +41,7 @@ import {
   nemesisGeneratedPickupSiteKey,
   selectedPickupProducers,
   type SelectedPickupProducer,
-} from '../traits';
+} from '../pickup-producers';
 import { createBiomeAddress, semanticAddressKey } from '../addresses';
 import {
   ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,

@@ -23,7 +23,7 @@ import {
   goldenFStartId,
 } from '@run-planner/test-fixtures/underworld';
 
-import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidate-artifacts';
+import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidates/trait-offer-capability';
 import type { TraitOfferCandidateContext } from '../../src/simulation/traits';
 import {
   evaluateTraitAcquisitionTargetDomain,

@@ -38,12 +38,12 @@ import {
   type AcquisitionConversionCandidateArtifacts,
   type BiomeCandidateArtifacts,
   type JudgmentArcanaCandidateArtifacts,
-  type TraitOfferCandidateArtifacts,
   type DerivedAcquisitionEntryCandidateArtifacts,
   type KeepsakeEquipResultCandidateArtifacts,
   type KeepsakeSelectionCandidateArtifacts,
   type SteadyGrowthCandidateArtifacts,
 } from '../candidate-artifacts';
+import type { TraitOfferCandidateArtifacts } from '../candidates/trait-offer-capability';
 import {
   composeBiomeHistoryPrefixWithEncounterValidation,
   type BiomeHistoryPrefix,
@@ -76,7 +76,7 @@ import {
   type FindingAggregate,
   type HistoryFindingChronology,
 } from '../finding-regions';
-import type { SelectedTraitOfferAssessment } from '../traits';
+import type { SelectedTraitOfferAssessment } from '../trait-offers';
 import {
   evaluateBiomeRewardsAssemblyInternal,
   type TraitChildSettlementCheckpoints,
@@ -175,8 +175,8 @@ function generation(
   rewards: BiomeRewardSimulation,
   rewardProducers: RewardProducerCandidateArtifacts,
   roomLifecycles: RoomLifecycleCandidateArtifacts,
-  traitOffers: import('../candidate-artifacts').TraitOfferCandidateArtifacts,
-  levelResolutions: import('../candidate-artifacts').LevelResolutionCandidateArtifacts,
+  traitOffers: import('../candidates/trait-offer-capability').TraitOfferCandidateArtifacts,
+  levelResolutions: import('../candidates/trait-offer-capability').LevelResolutionCandidateArtifacts,
   judgmentArcana: JudgmentArcanaCandidateArtifacts,
   keepsakeSelections: KeepsakeSelectionCandidateArtifacts,
   keepsakeEquipResults: KeepsakeEquipResultCandidateArtifacts,

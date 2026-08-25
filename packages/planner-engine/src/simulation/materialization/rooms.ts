@@ -26,12 +26,12 @@ import type {
   CanonicalRewardWheel,
   CanonicalShopEntryState,
 } from './model';
-import type { TraitOfferContext } from '../traits';
+import type { TraitOfferContext } from '../trait-offers';
 import type { ResolvedRewardOffer } from '../../reward-kernel/model';
 import {
   echoLastRewardPickupEntryKeys,
   activeSelectedPickupProducers,
-} from '../../authored-project/traits';
+} from '../../authored-project/pickup-producers';
 import { assembleRoomActionDomain } from '../../authored-project/room-action-domain';
 import { scheduleRequiredRoomActions } from '../../authored-project/room-action-defaults';
 import { roomActionKey } from '../../authored-project/room-actions';

@@ -8,7 +8,7 @@ import {
   decodeStygianWellState,
   assertStygianWellPurchaseActionClosure,
 } from './topology/codec';
-import { selectedPickupProducers } from './traits';
+import { selectedPickupProducers } from './pickup-producers';
 import { createBiomeAddress } from './addresses';
 import { decodeRoomEncounterState } from './room-state/encounters';
 import { decodeNullableRewardState } from './room-state/codec';

@@ -23,7 +23,7 @@ import { describe, expect, it } from 'vitest';
 import { loadSurfaceNOProject, oBiome, oOccurrenceIds } from '@run-planner/test-fixtures/surface';
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
-import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidate-artifacts';
+import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidates/trait-offer-capability';
 import { evaluateCirceResolutionDomain } from '../../src/simulation/candidates/trait-offer';
 import { createArcanaFearState } from '../../src/simulation/arcana-fear';
 import { selectedTraitOfferProducts } from '../../src/simulation/rewards/biome';

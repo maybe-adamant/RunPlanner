@@ -1,8 +1,6 @@
 import type { Catalog } from '../../catalog-schema';
 import {
   traitGiverForAcquisitionRole,
-  reconcileSelectedPickupProducerState,
-  selectedPickupProducerForEntry,
   traitOfferSupportsExhaustion,
   traitOfferOption,
   optionIndex,
@@ -13,6 +11,10 @@ import {
   type AuthoredTraitOffer,
   type AuthoredTraitOfferTraits,
 } from '../traits';
+import {
+  reconcileSelectedPickupProducerState,
+  selectedPickupProducerForEntry,
+} from '../pickup-producers';
 import {
   createBiomeAddress,
   type AcquisitionEntryAddress,
