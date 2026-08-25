@@ -14,7 +14,7 @@ import { describe, expect, it } from 'vitest';
 
 import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidate-artifacts';
 import { evaluateAllTogetherSetDomain } from '../../src/simulation/candidates/trait-offer';
-import { settleOwnedAcquisitionSite } from '../../src/simulation/rewards/processing';
+import { settleOwnedAcquisitionSite } from '../../src/simulation/rewards/acquisition-settlement';
 import {
   processEncounterTraitOffer,
   settleEncounterTraitOffer,

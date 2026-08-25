@@ -61,10 +61,8 @@ import {
   createTraitOfferCandidateArtifacts,
 } from '../../src/simulation/candidate-artifacts';
 import { evaluateNaturalSelectionResultCandidate } from '../../src/simulation/candidates/trait-offer';
-import {
-  initializeRewardBranches,
-  settleOwnedAcquisitionSite,
-} from '../../src/simulation/rewards/processing';
+import { initializeRewardBranches } from '../../src/simulation/rewards/processing';
+import { settleOwnedAcquisitionSite } from '../../src/simulation/rewards/acquisition-settlement';
 import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement';
 import {
   evaluateTraitOfferCandidate,

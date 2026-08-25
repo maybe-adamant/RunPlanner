@@ -61,13 +61,13 @@ import {
 import type { KeepsakeState } from './keepsakes';
 import { evaluateCallingCardOffer } from './keepsakes';
 import type { ArcanaFearState } from './arcana-fear';
-import type { AcquisitionSource } from './rewards/processing';
+import type { AcquisitionSource } from './rewards/acquisition-settlement';
 import {
   assessArtificerConversion,
   assessSeaStarDuplication,
   assessTimePieceConversion,
-  type RewardBranchState,
-} from './rewards/branch-primitives';
+} from './rewards/acquisition-settlement';
+import type { RewardBranchState } from './rewards/branch-primitives';
 
 function emptyEncounterCandidateArtifacts(): EncounterCandidateArtifacts {
   return Object.freeze({
@@ -527,7 +527,7 @@ function createEmptyStygianWellCandidateArtifacts(): StygianWellCandidateArtifac
 }
 
 export interface DerivedAcquisitionEntryCandidateCapability {
-  readonly kind: import('./rewards/processing').DerivedAcquisitionEntryFrontier['kind'];
+  readonly kind: import('./rewards/acquisition-settlement').DerivedAcquisitionEntryFrontier['kind'];
   readonly sourceOfferKey?: string;
   readonly slotIndex?: number;
   readonly rewardTypes?: readonly string[];
@@ -547,7 +547,7 @@ export interface DerivedAcquisitionEntryCandidateArtifacts {
   }[];
 }
 export function attestDerivedAcquisitionEntryCandidateCapability(
-  frontiers: readonly import('./rewards/processing').DerivedAcquisitionEntryFrontier[],
+  frontiers: readonly import('./rewards/acquisition-settlement').DerivedAcquisitionEntryFrontier[],
 ): DerivedAcquisitionEntryCandidateCapability | undefined {
   const first = frontiers[0];
   if (first === undefined) return undefined;
@@ -584,7 +584,7 @@ export function attestDerivedAcquisitionEntryCandidateCapability(
 export function createDerivedAcquisitionEntryCandidateArtifacts(
   contexts: ReadonlyMap<
     string,
-    readonly import('./rewards/processing').DerivedAcquisitionEntryFrontier[]
+    readonly import('./rewards/acquisition-settlement').DerivedAcquisitionEntryFrontier[]
   >,
 ): DerivedAcquisitionEntryCandidateArtifacts {
   const privateContexts = new Map(

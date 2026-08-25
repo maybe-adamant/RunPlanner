@@ -22,8 +22,8 @@ import { createTestArcanaFearState } from '../support/arcana-fear';
 import { createArcanaFearState } from '../../src/simulation/arcana-fear';
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
-import { settleOwnedAcquisitionSite } from '../../src/simulation/rewards/processing';
-import { assessTimePieceConversion } from '../../src/simulation/rewards/branch-primitives';
+import { settleOwnedAcquisitionSite } from '../../src/simulation/rewards/acquisition-settlement';
+import { assessTimePieceConversion } from '../../src/simulation/rewards/acquisition-settlement';
 import { type RewardBranchState } from '../../src/simulation/rewards/branch-primitives';
 
 const biome = createBiomeAddress('Underworld', 'F');

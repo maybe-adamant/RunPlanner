@@ -26,7 +26,7 @@ import { createKeepsakeState } from '../../src/simulation/keepsakes';
 import { boonRarityRollUnavailable } from '../../src/simulation/boon-rarity';
 import { createTestArcanaFearState } from '../support/arcana-fear';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
-import { assessArtificerConversion } from '../../src/simulation/rewards/branch-primitives';
+import { assessArtificerConversion } from '../../src/simulation/rewards/acquisition-settlement';
 import { processEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement';
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
 import { createArcanaFearState } from '../../src/simulation/arcana-fear';

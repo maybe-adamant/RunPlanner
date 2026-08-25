@@ -259,30 +259,31 @@ import {
   beginRewardRoom,
   countedBinding,
   initializeRewardBranches,
-  settleProducerAcquisitionSite,
-  settleOwnedAcquisitionSite,
-  settleArtificerReplacementAcquisition,
   processOfferGenerationCohort,
   processFocusedOfferAfterAuthoredPeers,
   processRewardOffer,
-  processShopInventory,
-  completePendingShopAcquisitionSite,
-  settleShopAcquisitionSite,
-  settlePickupAcquisitionSite,
   publicRewardBranch,
   applyJeweledPomEquipResult,
   applyExperimentalHammerEquipResult,
-  type AcquisitionRoleFrontier,
   type OfferProcessingContext,
   type OfferProcessingPeer,
 } from './processing';
-import { addRewardFinding } from './findings';
+import type { AcquisitionRoleFrontier } from './acquisition-settlement';
 import {
   assessSeaStarDuplication,
-  mergeEquivalentRewardBranches,
   withStoredArtificerReplacements,
-  type RewardBranchState,
-} from './branch-primitives';
+  settleArtificerReplacementAcquisition,
+  settleOwnedAcquisitionSite,
+  settlePickupAcquisitionSite,
+  settleProducerAcquisitionSite,
+} from './acquisition-settlement';
+import {
+  completePendingShopAcquisitionSite,
+  processShopInventory,
+  settleShopAcquisitionSite,
+} from './shop-settlement';
+import { addRewardFinding } from './findings';
+import { mergeEquivalentRewardBranches, type RewardBranchState } from './branch-primitives';
 import {
   settleEncounterTraitOffer,
   processEncounterTraitOffer,
@@ -1647,7 +1648,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
   const acquisitionConversionContexts = new Map<string, readonly AcquisitionRoleFrontier[]>();
   const derivedAcquisitionEntryContexts = new Map<
     string,
-    readonly import('./processing').DerivedAcquisitionEntryFrontier[]
+    readonly import('./acquisition-settlement').DerivedAcquisitionEntryFrontier[]
   >();
   const figLeafPhaseCandidates = new Map<string, import('./model').FigLeafPhaseCandidateSupport>();
   const gorgonPhaseCandidates = new Map<string, import('./model').GorgonPhaseCandidateSupport>();
@@ -1716,11 +1717,12 @@ export function evaluateBiomeRewardsAssemblyInternal(
     }
   }
   function recordDerivedAcquisitionEntryFrontiers(
-    frontiers: readonly import('./processing').DerivedAcquisitionEntryFrontier[] | undefined,
+    frontiers:
+      readonly import('./acquisition-settlement').DerivedAcquisitionEntryFrontier[] | undefined,
   ): void {
     const incomingByOwner = new Map<
       string,
-      import('./processing').DerivedAcquisitionEntryFrontier[]
+      import('./acquisition-settlement').DerivedAcquisitionEntryFrontier[]
     >();
     for (const frontier of frontiers ?? []) {
       const key = semanticAddressKey(frontier.address);
