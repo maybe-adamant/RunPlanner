@@ -11,7 +11,7 @@ import {
 import { selectedPickupProducers } from './pickup-producers';
 import { createBiomeAddress } from './addresses';
 import { decodeRoomEncounterState } from './room-state/encounters';
-import { decodeNullableRewardState } from './room-state/codec';
+import { decodeNullableRewardState } from './room-state/reward-acquisition-codec';
 import { completionOccurrenceId } from './completion-occurrences';
 import { roomActionKey } from './room-actions';
 import { assembleRoomActionDomain, type RoomActionContribution } from './room-action-domain';

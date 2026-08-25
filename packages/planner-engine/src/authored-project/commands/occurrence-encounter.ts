@@ -1,7 +1,7 @@
 import type { Catalog, EncounterSlotBinding, RoomDeclaration } from '../../catalog-schema';
 import type { EncounterPhaseAddress } from '../addresses';
 import type { ProjectDocument, RoomEncounterState } from '../model';
-import { encounterBindingsBySlot, encounterSetForBinding } from '../room-state/encounters';
+import { encounterBindingsBySlot, encounterSetForBinding } from '../room-state/encounter-envelope';
 import {
   failCommand,
   requireOccurrence,

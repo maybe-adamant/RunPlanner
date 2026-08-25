@@ -9,7 +9,7 @@ import {
   encounterBindingsBySlot,
   encounterEnvelopeSlots,
   encounterSetForBinding,
-} from '../../authored-project/room-state/encounters';
+} from '../../authored-project/room-state/encounter-envelope';
 
 /**
  * The authored encounter surface for one active room phase. Set-backed phases

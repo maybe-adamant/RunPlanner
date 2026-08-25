@@ -3,7 +3,7 @@ import type { ProjectDocument } from '../model';
 import { failCommand, requireOccurrence, requireRoom, type LocatedBiome } from './contract';
 import { updateOccurrence } from './occurrence-mutation';
 import type { SteadyGrowthCommand } from './types';
-import { encounterBindingsBySlot } from '../room-state/encounters';
+import { encounterBindingsBySlot } from '../room-state/encounter-envelope';
 
 /** Stores only the exact random target. Reachability and target legality stay in simulation. */
 export function applySteadyGrowthCommand(
