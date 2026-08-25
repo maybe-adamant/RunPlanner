@@ -2,8 +2,9 @@
 
 ## Status and scope
 
-Source audit completed on 2026-08-18 against the installed Hades II scripts.
-This document records the game facts and planner disposition needed to replace
+Source audit completed on 2026-08-21 against the installed Hades II scripts,
+with the room-action chronology originally checked on 2026-08-18. This document
+records the game facts and planner disposition needed to replace
 separate encounter-result, Fields-action, and acquisition-order surfaces with
 one coherent chronology for an entered room.
 
@@ -17,16 +18,20 @@ The audit covers:
   phase-local reward/NPC settlement;
 - Ephyra's persistent Hub, main-room visits, side-room entry, and restore
   boundaries as a control against conflating topology with room chronology;
-- the required-object barrier and outgoing-door generation; and
+- boss defeat, Judgment, effect-neutral boss rewards, and continuation;
+- required fountains, persistent N Hub fountain state, nonfinal Postboss
+  racks, and optional Cleanup contacts;
+- the required-object barrier and outgoing-door generation;
 - the relationship between action participation, action order, payload
   authorship, and fixed lifecycle checkpoints.
 
 It does not define an authored schema, command vocabulary, React component,
-delivery gate, or migration sequence. Those belong in a later locked
-implementation plan. It also does not broaden support to Stygian Wells,
-Shrines of Hermes, natural resources, or unmodeled NPC rewards. Those features
-must later enter the same chronology at their source-backed checkpoints rather
-than create another private order.
+delivery gate, or migration sequence. Those belong to the stable authored-
+project, lifecycle, and editor authorities. Feature-specific inventory and
+effect facts for Stygian Wells, Shrines of Hermes, and natural resources live in
+[Room Features](ROOM_FEATURES_GAME_DATA_AUDIT.md); their supported contacts
+enter this chronology at the source-backed checkpoints described below rather
+than creating private orders. Unsupported NPC rewards remain out of scope.
 
 ## Primary sources
 
@@ -51,14 +56,24 @@ The source evidence comes from:
 - `RewardLogic.lua` and `InteractLogic.lua`, especially room-reward creation,
   `UseLoot`, `UseConsumableItem`, and `UseNPCPostTextLines`;
 - `GiftLogic.lua`, especially the Artificer conversion path and
-  `CanReceiveGift`; and
-- `ObstacleDataH.lua`, especially `FieldsRewardCage`.
+  `CanReceiveGift`;
+- `ObstacleDataH.lua`, especially `FieldsRewardCage`;
+- `CombatLogic.lua`, `EncounterSets.lua`, `DreamRunLogic.lua`, and
+  `TraitData_Hermes.lua`, for boss completion, Judgment, effect-neutral boss
+  rewards, and Quick Buck's optional post-acquisition drop;
+- `EncounterData_Unique.lua`, `ObstacleData*.lua`, `InteractLogic.lua`,
+  `KeepsakeLogic.lua`, `EventLogic.lua`, and the F/G/H/I/N/O/P/Q room
+  declarations, for fountains, Postboss racks, persistent Hub state, and
+  Cleanup contacts.
 
 The exact Fields reward/store and Artificer matrices remain owned by
 `FIELDS_OPTIONAL_REWARDS_AND_ARTIFICER_GAME_DATA_AUDIT.md`. Producer-versus-
 pickup identity and multi-checkpoint acquisition facts remain owned by
 `ACQUISITION_DELIVERY_AND_ROOM_SETTLEMENT.md`. This audit owns the additional
-cross-producer conclusion that those interactions need one room chronology.
+cross-producer conclusion that those interactions need one room chronology,
+including the boss and Postboss/fountain checkpoints. Feature-specific Well,
+Shrine, and resource matrices remain owned by
+`ROOM_FEATURES_GAME_DATA_AUDIT.md`.
 
 ## Terms
 
@@ -394,6 +409,173 @@ The three representative biome shapes are therefore:
 | O     | one entered ShipCombat room         | Intro, wheel choice, matching combat, required-object wait, then next phase | objects produced by the same completed phase                                 | no action crosses into an earlier/later ShipCombat window                              |
 | N     | one entered main or side occurrence | that occurrence's own lifecycle                                             | its local reward/NPC/acquisition actions                                     | Hub visits, side entry, and restoration remain topology between chronologies           |
 
+### Boss completion, Judgment, and effect-neutral rewards
+
+The evidence was checked on 2026-08-21 against `CombatLogic.lua:3949-3975`
+boss-death postboss effects and `MetaUpgradeLogic.lua:499-575`;
+`EncounterSets.lua:446-452` and
+`RoomLogic.lua:1919-1939, 3080-3129, 3778-3790` for encounter completion,
+required-object barriers, and Dream continuation; `RewardLogic.lua:66-73` for
+Dream reward selection; `InteractLogic.lua` for pickup use;
+`DreamRunLogic.lua:63-83`; `TraitData_Hermes.lua:181-201` for Quick Buck;
+`TraitLogic.lua:2871-2893` for the separate timed-resource path;
+`RoomDataAnomaly.lua`, `RoomDataC.lua`, and the F/G/H/I/N/O/P/Q boss
+declarations. The exact Judgment target domain
+remains owned by [Arcana and Fear](ARCANA_AND_FEAR_GAME_DATA_AUDIT.md), and
+Shrine delivery remains owned by [Room Features](ROOM_FEATURES_GAME_DATA_AUDIT.md)
+and [Acquisition Delivery and Room Settlement](ACQUISITION_DELIVERY_AND_ROOM_SETTLEMENT.md).
+
+The supported boss interval is:
+
+1. the qualifying Boss dies;
+2. while Judgment is active and `CurrentRun.EnteredBiomes <
+GameData.FullRunBiomeCount`, boss-death handling calls
+   `AddRandomMetaUpgrades`; the Arcana state changes synchronously and only
+   presentation is delayed;
+3. the encounter event list returns from its enemy-death wait, performs
+   post-combat work, and calls `SpawnRoomReward`; and
+4. `StartEncounter` marks the encounter complete and runs
+   `EndEncounterEffects`, after which the required-object barrier must clear
+   before continuation.
+
+Judgment is therefore a boss-death effect guarded by the entered-biome ordinal
+against the full-run terminal ordinal. It is not an I/Q special case and does
+not use the length of a temporarily shortened authored prefix.
+
+Every supported biome boss spawns a forced resource reward through the
+ordinary encounter path. In a Dream Run, `CanSpawnDreamReward` replaces that
+resource with `DreamPointsDrop`; collecting it records room use and, after the
+required-object barrier clears, `UnlockRoomExits` calls
+`CheckDreamBiomeCompletion` to enter the next Dream biome or end the run. Both
+ordinary boss resources and Dream Points are real required pickups, but they
+are effect-neutral to the current planner: they do not enter run state,
+reward bags, god pools, trait, keepsake, Arcana, or route eligibility.
+
+One source edge is worth retaining because it explains the boundary without
+adding a special rule. Hermes's `MoneyMultiplierBoon` (Quick Buck), when
+acquired in a room without `BlockGiftBoons`, schedules `GiveRandomConsumables`
+and creates a nonrequired `RoomMoneyDrop`. `RoomDataAnomaly` and `RoomDataC`
+set `BlockGiftBoons = true`, while Dream Dive boss rooms do not inherit that
+broad flag. A Boss-room delivery can therefore create an optional money drop
+that is lost if `DreamPointsDrop` transfers the player before collection.
+Bosses also set `SkipTimedDropResourceInDream`, but that only affects the
+separate periodic `RoomsPerUpgrade.DropResources` path; it does not make
+Quick Buck's drop required. Money and this optional pickup remain outside the
+supported simulation.
+
+Schema 59 represents declaration-fixed Boss and optional Postboss rooms as
+automatic `RoomOccurrence`s outside editable topology. They retain the normal
+occurrence lifecycle, fixed exits, room features, and one room-action
+chronology, including configured-tail Postboss features. The derived
+`bossDefeated` Judgment seam precedes generic encounter-end effects, so a due
+Shrine delivery can use the ordinary Boss occurrence as a later host. Boss
+reward quantities, Dream continuation commands, and special Quick Buck rules
+remain unmodeled because no supported consumer observes them.
+
+### Fountains, persistent Hub state, and Postboss Cleanup
+
+The evidence was checked on 2026-08-21 against
+`EncounterData_Unique.lua` (`HealthRestore`), `ObstacleData.lua`,
+`ObstacleDataN.lua`, and biome obstacle files for `HealthFountain`,
+`HealthFountainN`, `GiftRack`, `WellShop`, and `SurfaceShop`;
+`InteractLogic.lua:UseHealthFountain`; `KeepsakeLogic.lua:UseKeepsakeRack`;
+`RoomLogic.lua:CreateLoot, CheckRoomExitsReady, DoUnlockRoomExits`;
+`EventLogic.lua:HealthFountainNExitCheck,
+HealthFountainNRestoreState`; and F/G/H/I/N/O/P/Q room declarations.
+Feature-specific Well/Shrine inventory and eligibility facts are retained in
+[Room Features](ROOM_FEATURES_GAME_DATA_AUDIT.md).
+
+`HealthFountain` declares `BlockExitUntilUsed = true`. Room setup registers it
+in `MapState.RoomRequiredObjects`; `UseHealthFountain` disables it, removes it
+from that barrier, applies fountain-owned trait effects, heals Melinoe, and
+asks `CheckRoomExitsReady` to unlock exits. An active Aromatic Phial
+(`FountainRarityKeepsake`) can consume a remaining use and raise an eligible
+trait's rarity at this exact interaction. Fountain-refresh and
+fountain-damage traits also run here. Fountain use is thus a required room
+interaction, not a decorative completion marker.
+
+Ordinary Reprieve declarations expose this common required-object shape. F/G/I
+inherit a Well chance, but their installed Reprieve maps have no
+`ChallengeSwitchBase`, so no Well is physically realized there. O/P Reprieves
+have Shrine anchors and their declaration-owned Shrine chance is `1.0`:
+
+| Route | Room           | Encounter       | Required incoming reward | Cleanup contact              |
+| ----- | -------------- | --------------- | ------------------------ | ---------------------------- |
+| F     | `F_Reprieve01` | `HealthRestore` | yes                      | no realized Well (no anchor) |
+| G     | `G_Reprieve01` | `HealthRestore` | yes                      | no realized Well (no anchor) |
+| I     | `I_Reprieve01` | `HealthRestore` | yes                      | no realized Well (no anchor) |
+| O     | `O_Reprieve01` | `HealthRestore` | yes                      | Shrine anchor, chance 1.0    |
+| P     | `P_Reprieve01` | `HealthRestore` | yes                      | Shrine anchor, chance 1.0    |
+
+The fountain and incoming reward are parallel required objects; neither is
+source-ordered before the other. Both must resolve before Cleanup and outgoing
+doors. `H_Bridge01` has a start hook for `HealthFountainH`, but the planner's
+modeled Echo Bridge realization does not expose a fountain and is not part of
+this required-fountain set.
+
+`HealthFountainN` normally sets `BlockExitUntilUsed = false` because the
+Ephyra Hub persists across visits. Once the sixth Soul Pylon is present,
+`HealthFountainNExitCheck` makes an unused fountain required at the completed
+Hub-exit frontier, and `HealthFountainNRestoreState` preserves its used state
+on restoration. It may be used on an earlier visit, becomes mandatory only at
+the completed-Hub boundary, and must not replay after a side-room return. N
+Hub is therefore not an ordinary one-visit fountain chronology.
+
+The nonfinal Postboss interaction set is:
+
+| Route | Room           | Required fountain                            | Optional rack | Door-open-only contact |
+| ----- | -------------- | -------------------------------------------- | ------------- | ---------------------- |
+| F     | `F_PostBoss01` | `HealthFountainF`                            | `GiftRack`    | forced Well            |
+| G     | `G_PostBoss01` | `HealthFountainG`                            | `GiftRack`    | forced Well            |
+| H     | `H_PostBoss01` | `HealthFountain`                             | `GiftRack`    | forced Well            |
+| N     | `N_PostBoss01` | `HealthFountainN` (explicitly blocking here) | `GiftRack`    | forced Shrine          |
+| O     | `O_PostBoss01` | `HealthFountainO`                            | `GiftRack`    | forced Shrine          |
+| P     | `P_PostBoss01` | `HealthFountainP`                            | `GiftRack`    | forced Shrine          |
+
+“Forced” describes a room declaration's feature spawn policy once the
+corresponding upgrade is available; it does not make the feature inventory a
+second source. In the source, the true terminal condition is
+`GameData.FullRunBiomeCount`: the full-run terminal biome has no succeeding-
+biome keepsake frontier and does not inherit the ordinary fountain/rack set
+merely because its declaration kind is `PostBoss`. In the current four-biome
+routes, final completion tails contain neither the ordinary fountain nor the
+ordinary Postboss rack. Schema 59 intentionally simplifies this source
+terminal behavior for configured-tail Postboss occurrences: their declared
+features remain active, and extending the route changes only the
+declaration-fixed exit target rather than removing the feature actions.
+`F_PostBoss01` uses `Story_Chronos_01`; this does not classify its optional
+Chronos presentation as a required interaction.
+
+The rack is optional and independent of exit readiness. It can retain the
+current keepsake or replace it once. There is no source barrier ordering rack
+and fountain: replacing before the fountain changes what Aromatic Phial sees,
+while replacing after the fountain cannot affect that already-resolved use.
+After the required fountain resolves, the Cleanup boundary opens exits and
+optional Well/Shrine contacts can be ordered before the selected exit. A
+truthful nonfinal Postboss sequence is therefore:
+
+```text
+enter with Boss keepsake
+  -> optional keepsake replacement on either side of fountain use
+  -> use the required fountain
+  -> Cleanup · Doors open
+  -> optional Well or Shrine contact
+  -> enter the selected next biome
+```
+
+The exact chronology and required-object barrier are one room-action owner;
+feature-specific purchase and delivery behavior remains in the room-features
+and acquisition authorities.
+
+Schema 59 carries this source order through one occurrence/completion-owned
+`roomActions.order`: ordinary Reprieves carry required reward and
+`useFountain`, while reached Postboss occurrences carry required `useFountain`
+and an optional `interactKeepsakeRack` when replacement is selected. The rack
+may rank before or after the fountain. Configured-tail Postboss features stay
+active, route extension changes only the declaration-fixed exit target, and H
+Echo Bridge plus persistent N Hub remain outside the ordinary one-visit
+fountain set.
+
 ### Participation, payload, and order are independent
 
 The game separately answers:
@@ -413,106 +595,6 @@ depends on the ordered prefix.
 This is the same invariant already established for Shops, Narcissus, and
 Fields acquisitions. It applies to the broader room action roster, not only to
 items currently rendered under Acquisitions.
-
-## Historical planner discrepancy before the unified chronology
-
-At audit time, the planner had the required semantic pieces but divided them
-across three authorities that could not express the source chronology together.
-
-### Encounter traits settle too early
-
-The reward simulation processes selected combat-NPC offers and the authored
-Gorgon Athena result when it handles `encounterCompleted`. A complete offer is
-applied immediately; an unresolved offer blocks there. There is no separately
-ordered NPC interaction.
-
-The editor mirrors that model by rendering encounter and Gorgon trait editors
-inside the Encounter section. `gorgonResultByPhase` also collapses the
-Death-Defiance-gated forced encounter contact and its later Athena interaction
-into one phase result. It cannot place the resulting interaction before or
-after the room reward interaction.
-
-### Fields owns a private partial order
-
-`FieldsCombatState.actionOrder` contains cage completions, cage reward
-interactions, optional reward interactions, and Artificer replacement pickups.
-It does not contain encounter-owned NPC/Gorgon interactions. Its UI rows are
-labels and order controls, while the reward and trait payload editors remain in
-separate cards.
-
-This is close to the required chronology but not general enough to be its
-authority.
-
-### Acquisitions owned a second partial order
-
-`RoomOccurrence.acquisitionSites.roomExit.order` ranks participating Shop,
-story-pickup, Echo, Narcissus, and generated acquisition entries at that site.
-Its ranked UI is more mature than the Fields selector, but it cannot interleave
-those entries with combat barriers, ordinary room rewards, or combat-NPC
-interactions.
-
-The site and entry addresses remain useful semantic ownership. The competing
-authored order does not.
-
-### Artificer output is nested under the wrong owner
-
-The pre-schema-47 `AcquisitionDisposition` persisted
-`artificer { replacement: AuthoredRewardState | null }`. Application controls
-then edit the generated reward, its trait offer, and its Pom detail by replacing
-that whole source disposition. Although simulation derives a separate
-source-addressed acquisition entry, the authored payload remains nested under
-the destroyed source.
-
-This conflates three facts:
-
-- the intent to transform the source;
-- the reward identity materialized by that transformation; and
-- the later interaction that acquires or resolves the materialized object.
-
-Room chronology makes the ownership mismatch visible. The source interaction
-must carry only its normal/Time Piece/Artificer intent. An Artificer action then
-consumes its use and bag entry and activates one exact dependent produced-object
-owner. That owner carries the transformed reward identity. Its later pickup
-action carries the acquisition-time trait or Pom resolution.
-
-The output identity is not a third freely movable action: it is the result of
-the Artificer source row and becomes concrete at that checkpoint. The resulting
-world-object interaction is the distinct dependent chronology participant.
-
-### O has fixed checkpoints but no unified phase-local action order
-
-The pre-schema-47 O lifecycle correctly distinguished Intro, Combat 1/`wheel1`, and
-optional Combat 2/`wheel2`, including offer generation before each combat and
-reward acquisition after completion. Encounter-owned Icarus traits still fold
-at encounter completion, however, rather than joining the same post-combat
-action window as the wheel reward. The planner can express the checkpoints but
-cannot author the legal reward-before-Icarus or Icarus-before-reward histories.
-
-This is the same semantic gap as an ordinary combat-NPC room, repeated once per
-active O phase. A solution that only replaces Fields `actionOrder` or only
-folds Acquisitions into ordinary rooms will still fail O.
-
-### N's existing traversal boundaries are not ordering debt
-
-N's Hub visit list, side-room entry order, and parent restoration already model
-movement between distinct occurrences. They must not be deleted or absorbed
-into room-action chronology. Only the local lifecycle within each entered main
-or side occurrence adopts the general action model.
-
-### Attached H occurrence demonstrates the gap
-
-The reported schema-45 project contains entered `H_Combat05` occurrence
-`5adf8a64-4232-4db6-bf67-37a8699e5d6f` with:
-
-- a Death-Defiance-satisfied Gorgon forced encounter authored on `Passive`;
-- two active cage rewards;
-- three realized optional rewards; and
-- an action order containing only Cage 1 completion/pickup followed by Cage 2
-  completion/pickup.
-
-There is no acquisition site. The Athena interaction and all three optional
-interactions are absent from the order even though their payloads exist. This
-is the exact product symptom of the split model.
 
 ## Planner disposition
 
@@ -611,7 +693,7 @@ extends the occurrence's existing order at the latest source-compatible
 lifecycle position; it does not infer required status in React or create a
 parallel mandatory order. This command guarantee does not rewrite source
 evidence or make missing-required documents malformed: an older or deliberately
-incomplete schema-50 document retains its omission and one explicit canonical
+incomplete authored document retains its omission and one explicit canonical
 repair, while an unrelated edit leaves that repair state unchanged. The same
 retained-invalid rule applies to the automatic Postboss occurrence owner.
 
@@ -628,7 +710,8 @@ Acquisition-time authoring belongs to the action that executes it:
 Encounter identity and room reward identity remain on their structural source
 owners. Associating acquisition-time authoring with the executing action does
 not move topology or offer generation into the chronology. Exact editor layout
-and interaction design belong to the later implementation plan.
+and interaction design belong to the structured workspace and editor ownership
+authorities.
 
 ## Required modeling examples
 
@@ -755,7 +838,7 @@ behind a third coordinator or translate between several simultaneous orders.
   chronology.
 - Optional post-outgoing interaction is source-real and must not be silently
   treated as pre-outgoing when its modeled effect can influence later state.
-- Story, Shop, delayed-delivery, Well, and future resource actions retain their
+- Story, Shop, delayed-delivery, Well, and resource actions retain their
   source-backed checkpoint distinctions. “One room chronology” does not mean
   “one universal end-of-room settlement point.”
 - Effect-neutral NPC rewards and other unsupported world objects need not be

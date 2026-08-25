@@ -10,17 +10,19 @@ discussion has settled a planner baseline against these facts, the disposition
 is recorded separately from the source behavior.
 
 The current product supports Oceanus Anomaly replacement, the Zagreus contract,
-and natural Chaos from their declared sources. Natural Chaos is implemented
-only for `N`, `F`, `G`, and `P`; Spark of Ixion and every forced path remain
-suppressed.
+natural Chaos from its declared sources, and Spark of Ixion's separate forced
+Chaos additional exit. Natural Chaos is implemented only for `N`, `F`, `G`,
+and `P`; Spark forced Chaos is implemented for its exact F/G/H/I declaration
+hosts and does not widen natural-Chaos eligibility.
 
-Spark of Ixion forced Chaos is recorded because it uses the same game entry
-function and explains otherwise surprising Chaos gates. It is explicitly not
-an implementation candidate. The planner is not being expanded to author Well
-items or forced Chaos in `H` or any other zero-chance source.
+Spark of Ixion forced Chaos uses the same game entry function but bypasses the
+natural chance, spacing, and room-specific requirements. Its source-backed
+physical host matrix is recorded below and its current planner disposition is
+separate from the natural Chaos path.
 
-The evidence was checked against the installed game scripts and map assets on
-2026-08-04. Primary sources are:
+The route evidence was checked against the installed game scripts and map
+assets on 2026-08-04. The Spark physical-host matrix was refreshed against the
+same installed maps on 2026-08-24. Primary sources are:
 
 - `RunLogic.lua`, especially `CreateRoom`, `ChooseNextRoomData`,
   `UpdateRunHistoryCache`, `GetRunDepth`, and `GetBiomeDepth`;
@@ -59,14 +61,17 @@ The current authored topology has:
 - `ExitDecision` for linked exits and a normal lane, including a zero-target
   generated envelope before its first ordinary target or takeover resolves;
 - `HubDecision` for Ephyra;
-- one selection among the normal targets of a realized `ExitDecision`;
+- one selection among the normal targets and declared additional exits of a
+  realized `ExitDecision`;
 - derived biome completion after a selected Preboss.
 
-`ExitDecision.normal` owns only normal exits. There is no additional Chaos or
-contract exit, normal-target replacement, detached room-set node, automatic
-hidden resume, or generic route edge. A Room Declaration also has one route
-`biomeKey`, and current topology decoding requires an occurrence's declaration
-to match its owning authored biome.
+`ExitDecision.normal` owns normal exits, while declaration-owned additional
+exits represent natural Chaos, Spark forced Chaos, and the Zagreus contract.
+Anomaly remains a normal-target replacement; there is no detached room-set
+node, automatic hidden resume outside the declared detour paths, or generic
+route edge. A Room Declaration also has one route `biomeKey`, and current
+topology decoding requires an occurrence's declaration to match its owning
+authored biome.
 
 Those are current-code facts, not the desired detour contract. This audit does
 not resolve them by adding fake `Chaos`, `B`, or `C` route biomes.
@@ -247,6 +252,24 @@ A physical `SecretPoint` is still mandatory because `HandleSecretSpawns`
 checks map capability before calling eligibility. Once an eligible gate is
 created, the trait use is consumed and the gate's health cost is set to zero.
 
+The installed map and declaration data expose this exact force-capable host
+matrix. Counts are `SecretPoint` anchors in room-name order, taken from the
+concrete `.thing_bin` maps; they are physical capability evidence rather than
+probability or a generic room-feature count:
+
+| Biome | Force-capable hosts and anchor counts                                                                                                                                                                  |
+| ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| F     | `F_Opening01`-`F_Opening03`: each 1; `F_Combat01`-`F_Combat22`: `1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,3,2,2,1,2,2`; `F_MiniBoss01`-`F_MiniBoss03`: each 1; `F_Story01`: 3; `F_Reprieve01`: 1; `F_Shop01`: 1 |
+| G     | `G_Intro`: 1; `G_Combat01`-`G_Combat20`: `2,4,2,2,1,2,1,1,2,1,1,1,1,2,3,1,2,2,1,1`; `G_MiniBoss01`-`G_MiniBoss03`: `2,1,2`; `G_Story01`, `G_Reprieve01`, `G_Shop01`: each 1                            |
+| H     | `H_Intro`: 2; `H_Combat01`-`H_Combat15`: `3,3,3,4,4,3,3,3,2,4,4,3,2,3,2`; `H_MiniBoss01`: 1; `H_MiniBoss02`: 2; `H_Bridge01`: 3                                                                        |
+| I     | `I_Combat01`-`I_Combat23`: `1,3,1,1,1,4,3,2,1,1,2,1,2,1,2,2,4,2,4,3,3,2,3`; `I_MiniBoss01` and `I_MiniBoss02`: each 1                                                                                  |
+
+`I_Combat24`, I Story, and I Reprieve have no force-capable point;
+I Intro and I Preboss are explicit lifecycle exclusions. The current catalog
+stores these counts on the room declarations and normalizes them into the
+Spark layout; command validation requires a positive anchor count for an
+authored Spark exit.
+
 This means Spark of Ixion can:
 
 - bypass the natural ten-room offer spacing;
@@ -255,10 +278,12 @@ This means Spark of Ixion can:
 - wait until the next map that has a `SecretPoint` and satisfies the narrower
   force exclusions.
 
-That explains forced gates in `H` and other naturally disabled contexts. This
-entire forced mode is outside the intended planner feature, including its Well
-purchase, trait lifetime, zero-health-cost distinction, and extra source
-biomes. It must not leak into natural Chaos eligibility as a guessed override.
+That explains forced gates in `H` and other naturally disabled contexts. The
+planner authors this as a separate Spark additional exit, consumes one modeled
+Spark use at the first reached capable host, and keeps the zero-health-cost
+and natural-eligibility distinctions explicit. Well purchase and trait-use
+state remain feature-owned; the current route authority owns host capability,
+additional-exit identity, and Chaos continuation.
 
 ## Oceanus Anomaly
 
@@ -568,19 +593,20 @@ command surface.
 
 ## Deliberate planner disposition
 
-| System                                     | Audit disposition                                                                                      |
-| ------------------------------------------ | ------------------------------------------------------------------------------------------------------ |
-| Natural Chaos in `N`, `F`, `G`, and `P`    | implemented as a natural-only declared additional exit with fixed Chaos room and fresh ordinary return |
-| Spark of Ixion forced Chaos, including `H` | record only; discard from planned product scope                                                        |
-| Oceanus Anomaly                            | implemented as normal-target replacement with one automatic hidden continuation                        |
-| Zagreus contract                           | implemented as Midshop additional exit with one automatic hidden continuation                          |
+| System                                  | Audit disposition                                                                                                |
+| --------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Natural Chaos in `N`, `F`, `G`, and `P` | implemented as a natural-only declared additional exit with fixed Chaos room and fresh ordinary return           |
+| Spark of Ixion forced Chaos in F/G/H/I  | implemented as a separate declaration-owned additional exit; consume one Spark at the first reached capable host |
+| Oceanus Anomaly                         | implemented as normal-target replacement with one automatic hidden continuation                                  |
+| Zagreus contract                        | implemented as Midshop additional exit with one automatic hidden continuation                                    |
 
 ### Implemented planner disposition
 
-The app models possible Anomaly replacement and the declared Midshop Zagreus
-contract while assuming their ordinary progression predicates are met; it does
-not replay chance. The game-only `GemPointsBigDrop`, `PauseBiomeState`, and
-dual Zagreus output remain outside the modeled reward and trait lifecycle.
+The app models possible Anomaly replacement, the declared Midshop Zagreus
+contract, and Spark forced Chaos while assuming their ordinary progression and
+profile predicates are met; it does not replay chance. The game-only
+`GemPointsBigDrop`, `PauseBiomeState`, and dual Zagreus output remain outside
+the modeled reward and trait lifecycle.
 Stable catalog, authored-project, lifecycle, simulation, editor, G-biome, and
 integration-boundary contracts own the implementation details; this audit
 retains only their source evidence and disposition.
@@ -599,17 +625,17 @@ The provisional natural Chaos plan may treat these product choices as closed:
   prior-ten-room spacing window, and the ordinary visible fresh continuation;
 - omit `BaseChaos.PauseBiomeState` from production modeling because the planner
   has no biome-state trait lifecycle input or consumer;
-- exclude Ixion, chance replay, save/profile inputs, and Chaos trait payloads.
+- keep Spark forced Chaos separate from natural Chaos; chance replay,
+  save/profile inputs, and Chaos trait payloads remain outside scope.
 
 The direct reward is a deliberate one-entry-store normalization, not evidence
 that the game bypasses `Secrets`.
 
 ## Required fixture ownership
 
-Focused lifecycle fixtures cover Anomaly replacement and a Zagreus Midshop;
-representative browser workflows cover Anomaly failure and selected Zagreus
-return. The later natural-Chaos implementation must separately add one ordinary
-natural source and the `N_Opening01` route case. The source establishes the expected
+Focused lifecycle fixtures cover Anomaly replacement, a Zagreus Midshop, and
+Spark's first capable-host consumption; representative browser workflows cover
+Anomaly failure and selected Zagreus return. The source establishes the expected
 history/depth and return behavior; fixtures should protect each selected
 planner interpretation rather than stand in for missing production semantics.
 
