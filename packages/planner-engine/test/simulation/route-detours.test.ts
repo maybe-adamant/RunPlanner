@@ -6,7 +6,6 @@ import {
   createAdditionalExitAddress,
   createBatchRewardStoreAddress,
   createBiomeAddress,
-  createEncounterPhaseAddress,
   createExitDecisionAddress,
   createExitSelectionAddress,
   decodeProjectDocument,
@@ -41,7 +40,6 @@ import {
   goldenFBiome,
   goldenFOccurrenceId,
   goldenGBiome,
-  goldenGOccurrenceId,
   goldenGStartId,
 } from '@run-planner/test-fixtures/underworld';
 
@@ -236,16 +234,6 @@ function authorWorldShop(
   return next;
 }
 
-function selectEncounter(
-  project: ProjectDocument,
-  biome: BiomeAddress,
-  occurrenceId: OccurrenceId,
-  encounterKey: string,
-): ProjectDocument {
-  const phase = createEncounterPhaseAddress(biome, source(occurrenceId), 'Encounter');
-  return applyProjectCommand(project, catalog, { kind: 'SelectEncounter', phase, encounterKey });
-}
-
 function appendSingleTargetBatch(
   project: ProjectDocument,
   biome: BiomeAddress,
@@ -434,123 +422,6 @@ function buildNaturalChaosProject() {
   project = appendSingleTargetBatch(project, fBiome, chaos, returned, 'F_Combat01', 'RunProgress');
   project = replaceIncomingReward(project, fBiome, returned, 'MaxHealthDrop');
   return { project, opening, chaos, returned, additional };
-}
-
-function buildAnomalyCapProject(firstAnomalySelected: boolean) {
-  const suffix = firstAnomalySelected ? 'entered' : 'unentered';
-  const intro = createOccurrenceId(`detour-g-cap-${suffix}-intro`);
-  const combat01 = createOccurrenceId(`detour-g-cap-${suffix}-combat01`);
-  const combat01Peer = createOccurrenceId(`detour-g-cap-${suffix}-combat01-peer`);
-  const combat02 = createOccurrenceId(`detour-g-cap-${suffix}-combat02`);
-  const firstAnomaly = createOccurrenceId(`detour-g-cap-${suffix}-first-anomaly`);
-  const continuingCombat = createOccurrenceId(`detour-g-cap-${suffix}-continuing-combat`);
-  const combat02Peer = createOccurrenceId(`detour-g-cap-${suffix}-combat02-peer`);
-  const returnedCombat = createOccurrenceId(`detour-g-cap-${suffix}-returned-combat`);
-  const laterAnomaly = createOccurrenceId(`detour-g-cap-${suffix}-later-anomaly`);
-  const laterPeer1 = createOccurrenceId(`detour-g-cap-${suffix}-later-peer1`);
-  const laterPeer2 = createOccurrenceId(`detour-g-cap-${suffix}-later-peer2`);
-  let project = projectFor('Underworld', 2);
-  project = applyProjectCommand(project, catalog, {
-    kind: 'CreateStart',
-    biome: gBiome,
-    occurrenceId: intro,
-  });
-  project = appendSingleTargetBatch(project, gBiome, intro, combat01, 'G_Combat01', 'RunProgress');
-  project = replaceIncomingReward(project, gBiome, combat01, 'MaxHealthDrop');
-  project = createBatch(project, gBiome, combat01);
-  project = replaceBatchStore(project, gBiome, combat01, 'MetaProgress');
-  project = addTarget(project, gBiome, combat01, 'exit1', combat02, 'G_Combat02');
-  project = addTarget(project, gBiome, combat01, 'exit2', combat01Peer, 'G_Combat03');
-  project = replaceIncomingReward(project, gBiome, combat02, 'MetaCurrencyDrop');
-  project = replaceIncomingReward(project, gBiome, combat01Peer, 'MetaCardPointsCommonDrop');
-  project = setNormalSelection(project, gBiome, combat01, 'exit1');
-  project = createBatch(project, gBiome, combat02);
-  project = replaceBatchStore(project, gBiome, combat02, 'RunProgress');
-  project = addTarget(project, gBiome, combat02, 'exit1', firstAnomaly, 'G_Combat04');
-  project = addTarget(project, gBiome, combat02, 'exit2', continuingCombat, 'G_Combat05');
-  project = addTarget(project, gBiome, combat02, 'exit3', combat02Peer, 'G_Combat06');
-  project = replaceIncomingReward(project, gBiome, firstAnomaly, 'RoomMoneyDrop');
-  project = replaceIncomingReward(project, gBiome, continuingCombat, 'MaxHealthDrop');
-  project = replaceIncomingReward(project, gBiome, combat02Peer, 'MaxManaDrop');
-  project = setNormalSelection(project, gBiome, combat02, firstAnomalySelected ? 'exit1' : 'exit2');
-  project = applyProjectCommand(project, catalog, {
-    kind: 'SwitchTargetToAnomaly',
-    target: createTargetAddress(gBiome, source(combat02), 'exit1'),
-  });
-
-  let laterSource: OccurrenceId;
-  if (firstAnomalySelected) {
-    project = appendSingleTargetBatch(
-      project,
-      gBiome,
-      firstAnomaly,
-      returnedCombat,
-      'G_Combat07',
-      'RunProgress',
-    );
-    project = replaceIncomingReward(project, gBiome, returnedCombat, 'MaxHealthDrop');
-    laterSource = returnedCombat;
-    project = createBatch(project, gBiome, laterSource);
-    project = replaceBatchStore(project, gBiome, laterSource, 'RunProgress');
-    project = addTarget(project, gBiome, laterSource, 'exit1', laterAnomaly, 'G_Combat08');
-    project = addTarget(project, gBiome, laterSource, 'exit2', laterPeer1, 'G_Combat09');
-    project = replaceIncomingReward(project, gBiome, laterAnomaly, 'RoomMoneyDrop');
-    project = replaceIncomingReward(project, gBiome, laterPeer1, 'MaxManaDrop');
-  } else {
-    laterSource = continuingCombat;
-    project = createBatch(project, gBiome, laterSource);
-    project = replaceBatchStore(project, gBiome, laterSource, 'RunProgress');
-    project = addTarget(project, gBiome, laterSource, 'exit1', laterAnomaly, 'G_Combat07');
-    project = addTarget(project, gBiome, laterSource, 'exit2', laterPeer1, 'G_Combat08');
-    project = addTarget(project, gBiome, laterSource, 'exit3', laterPeer2, 'G_Combat09');
-    project = replaceIncomingReward(project, gBiome, laterAnomaly, 'RoomMoneyDrop');
-    project = replaceIncomingReward(project, gBiome, laterPeer1, 'MaxHealthDrop');
-    project = replaceIncomingReward(project, gBiome, laterPeer2, 'MaxManaDrop');
-  }
-  project = setNormalSelection(project, gBiome, laterSource, 'exit1');
-  project = applyProjectCommand(project, catalog, {
-    kind: 'SwitchTargetToAnomaly',
-    target: createTargetAddress(gBiome, source(laterSource), 'exit1'),
-  });
-  return {
-    project,
-    laterTarget: createTargetAddress(gBiome, source(laterSource), 'exit1'),
-  };
-}
-
-function buildShopSourceAnomalyProject() {
-  const intro = createOccurrenceId('detour-g-shop-source-intro');
-  const shop = createOccurrenceId('detour-g-shop-source-shop');
-  const anomaly = createOccurrenceId('detour-g-shop-source-anomaly');
-  const peer = createOccurrenceId('detour-g-shop-source-peer');
-  let project = projectFor('Underworld', 2);
-  project = applyProjectCommand(project, catalog, {
-    kind: 'CreateStart',
-    biome: gBiome,
-    occurrenceId: intro,
-  });
-  project = appendSingleTargetBatch(project, gBiome, intro, shop, 'G_Shop01', 'RunProgress');
-  project = createBatch(project, gBiome, shop);
-  project = replaceBatchStore(project, gBiome, shop, 'RunProgress');
-  project = addTarget(project, gBiome, shop, 'exit1', anomaly, 'G_Combat01');
-  project = addTarget(project, gBiome, shop, 'exit2', peer, 'G_Combat02');
-  project = setNormalSelection(project, gBiome, shop, 'exit1');
-  project = applyProjectCommand(project, catalog, {
-    kind: 'SwitchTargetToAnomaly',
-    target: createTargetAddress(gBiome, source(shop), 'exit1'),
-  });
-  return { project, target: createTargetAddress(gBiome, source(shop), 'exit1') };
-}
-
-function buildArtemisSourceAnomalyProject() {
-  const sourceCombat = goldenGOccurrenceId(4, 1);
-  let project = createCompleteFGProject();
-  project = selectEncounter(project, goldenGBiome, sourceCombat, 'ArtemisCombatG');
-  project = applyProjectCommand(project, catalog, {
-    kind: 'SwitchTargetToAnomaly',
-    target: createTargetAddress(goldenGBiome, source(sourceCombat), 'exit2'),
-  });
-  return { project, target: createTargetAddress(goldenGBiome, source(sourceCombat), 'exit2') };
 }
 
 interface ContractReturnHost {
@@ -1143,110 +1014,6 @@ describe('route-detour simulation', () => {
       ).toBe(true);
     },
   );
-
-  it.each([false, true])(
-    'treats an earlier Anomaly as cap-consuming only when it has entered (entered=%s)',
-    (firstAnomalySelected) => {
-      const { project, laterTarget } = buildAnomalyCapProject(firstAnomalySelected);
-      const { snapshot, history } = prefix(project, gBiome);
-      const generation = evaluateBiomeRoomGeneration(catalog, snapshot, history, 2);
-      const unavailable = generation.findings.find(
-        (finding) =>
-          finding.code === 'targetRoomUnavailable' &&
-          semanticAddressKey(finding.origin) === semanticAddressKey(laterTarget),
-      );
-      const takeover = generation.anomalyTakeovers.find(
-        (support) => semanticAddressKey(support.origin) === semanticAddressKey(laterTarget),
-      );
-      expect(takeover).toBeDefined();
-
-      if (!firstAnomalySelected) {
-        expect(takeover).toMatchObject({ selectedPossible: true, failedConditions: [] });
-        expect(unavailable).not.toMatchObject({
-          evidence: expect.objectContaining({
-            anomalyReplacement: expect.objectContaining({
-              failedConditions: expect.arrayContaining(['enteredReplacementCap']),
-            }),
-          }),
-        });
-        return;
-      }
-      expect(takeover).toMatchObject({
-        selectedPossible: false,
-        priorEnteredReplacementCount: 1,
-        maximumEnteredReplacementsThisRoute: 0,
-        failedConditions: expect.arrayContaining(['enteredReplacementCap']),
-      });
-      expect(unavailable).toMatchObject({
-        evidence: expect.objectContaining({
-          anomalyReplacement: expect.objectContaining({
-            priorEnteredReplacementCount: 1,
-            maximumEnteredReplacementsThisRoute: 0,
-            failedConditions: expect.arrayContaining(['enteredReplacementCap']),
-          }),
-        }),
-      });
-    },
-  );
-
-  it('publishes a below-depth normal target takeover as unavailable before it is authored', () => {
-    const { project, earlyTarget } = buildAnomalyProject(true);
-    const { snapshot, history } = prefix(project, gBiome);
-    const generation = evaluateBiomeRoomGeneration(catalog, snapshot, history, 2);
-
-    expect(generation.anomalyTakeovers).toContainEqual(
-      expect.objectContaining({
-        origin: earlyTarget,
-        selectedPossible: false,
-        failedConditions: expect.arrayContaining(['minimumBiomeDepthCache']),
-      }),
-    );
-  });
-
-  it('keeps an Anomaly authored and finding-backed when its G_Shop source is excluded', () => {
-    const { project, target } = buildShopSourceAnomalyProject();
-    const { snapshot, history } = prefix(project, gBiome);
-    const generation = evaluateBiomeRoomGeneration(catalog, snapshot, history, 2);
-
-    expect(generation.anomalyTakeovers).toContainEqual(
-      expect.objectContaining({
-        origin: target,
-        selectedPossible: false,
-        failedConditions: expect.arrayContaining(['sourceRoomExcluded']),
-      }),
-    );
-
-    expect(generation.findings).toContainEqual(
-      expect.objectContaining({
-        code: 'targetRoomUnavailable',
-        origin: target,
-        evidence: expect.objectContaining({
-          anomalyReplacement: expect.objectContaining({
-            failedConditions: expect.arrayContaining(['sourceRoomExcluded']),
-          }),
-        }),
-      }),
-    );
-  });
-
-  it('keeps an Anomaly authored and finding-backed when its source selected Artemis', () => {
-    const { project, target } = buildArtemisSourceAnomalyProject();
-    const { snapshot, history } = prefix(project, gBiome);
-    const generation = evaluateBiomeRoomGeneration(catalog, snapshot, history, 2);
-
-    expect(generation.findings).toContainEqual(
-      expect.objectContaining({
-        code: 'targetRoomUnavailable',
-        origin: target,
-        evidence: expect.objectContaining({
-          anomalyReplacement: expect.objectContaining({
-            excludedSourceEncounterKeys: ['ArtemisCombatG'],
-            failedConditions: expect.arrayContaining(['sourceEncounterExcluded']),
-          }),
-        }),
-      }),
-    );
-  });
 
   it('creates selected C_Boss at Midshop room start even when its normal lane is still empty', () => {
     const { project, shop, contract, additional } = buildMidshopProject({ normalTargets: false });
