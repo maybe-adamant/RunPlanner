@@ -432,7 +432,7 @@ function materializeAdditionalContinuations(
     additionalExits.map((additional) => {
       const occurrence = requireOccurrence(occurrences, additional.occurrenceId);
       const room =
-        additional.kind === 'naturalChaos'
+        additional.kind === 'naturalChaos' || additional.kind === 'sparkChaos'
           ? requireCatalogRoom(catalog, occurrence)
           : requireRoom(catalog, layout, topology, occurrence);
       if (additional.kind === 'zagreusContract') {
@@ -580,7 +580,7 @@ function materializeBatch(
         source,
         normal.rewardStore,
         takeover,
-        selectedAdditional?.key === 'naturalChaos',
+        selectedAdditional?.key === 'naturalChaos' || selectedAdditional?.key === 'sparkChaos',
       ),
       ...(sharedBatchStoreKey === undefined
         ? {}
@@ -807,7 +807,8 @@ function isCompleteBatch(
         ? occurrences.get(selected.exit.occurrenceId)
         : undefined;
   const selectedNaturalChaos =
-    selected?.kind === 'additional' && selected.exit.kind === 'naturalChaos';
+    selected?.kind === 'additional' &&
+    (selected.exit.kind === 'naturalChaos' || selected.exit.kind === 'sparkChaos');
   return (
     (selectedNaturalChaos || (allPhysicalTargets && hasStore)) &&
     selected !== undefined &&

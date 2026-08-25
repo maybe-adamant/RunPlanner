@@ -4,7 +4,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { basename, dirname, extname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-const CURRENT_SCHEMA_VERSION = 58;
+const CURRENT_SCHEMA_VERSION = 59;
 const SCHEMA_49_CATALOG_VERSION = '0.27.0-arcana-fear-loadout';
 const SCHEMA_50_CATALOG_VERSION = '0.30.0-boon-rarity-ledger';
 const SCHEMA_51_CATALOG_VERSION = '0.31.0-chaos-traits';
@@ -18,6 +18,7 @@ const SCHEMA_55_CATALOG_VERSION = '0.37.0-automatic-completion-occurrences';
 const SCHEMA_56_CATALOG_VERSION = '0.38.0-selected-resource-successes';
 const SCHEMA_57_CATALOG_VERSION = '0.39.0-purging-pool';
 const SCHEMA_58_CATALOG_VERSION = '0.40.0-hermes-shrine';
+const SCHEMA_59_CATALOG_VERSION = '0.41.0-stygian-well';
 const COMPLETION_ROOMS_BY_BIOME = {
   F: { boss: 'F_Boss01', postboss: 'F_PostBoss01' },
   G: { boss: 'G_Boss01', postboss: 'G_PostBoss01' },
@@ -419,6 +420,44 @@ function migrate57To58(document) {
   return { shrinesAdded };
 }
 
+function migrate58To59(document) {
+  if (document.catalogVersion !== SCHEMA_58_CATALOG_VERSION) {
+    throw new Error(
+      `schema 58 migration expects catalog ${SCHEMA_58_CATALOG_VERSION}, received ${String(document.catalogVersion)}`,
+    );
+  }
+  let wellsAdded = 0;
+  for (const route of document.routes ?? []) {
+    if (route.routeKey !== 'Underworld') continue;
+    for (const biome of route.biomes ?? []) {
+      if (!['F', 'G', 'H'].includes(biome.biomeKey)) continue;
+      for (const [index, occurrence] of (biome.completionOccurrences ?? []).entries()) {
+        if (
+          occurrence.occurrenceId !== `completion:${biome.biomeKey}:postboss` ||
+          occurrence.gameName !== `${biome.biomeKey}_PostBoss01` ||
+          occurrence.stygianWell !== undefined
+        )
+          continue;
+        const { additionalExits, acquisitionSites, keepsakeRack, ...beforeAdditional } = occurrence;
+        biome.completionOccurrences[index] = {
+          ...beforeAdditional,
+          stygianWell: {
+            interacted: false,
+            offerKeyBySlot: { healing: null, secondLeft: null, secondRight: null },
+          },
+          additionalExits,
+          ...(acquisitionSites === undefined ? {} : { acquisitionSites }),
+          ...(keepsakeRack === undefined ? {} : { keepsakeRack }),
+        };
+        wellsAdded += 1;
+      }
+    }
+  }
+  document.schemaVersion = 59;
+  document.catalogVersion = SCHEMA_59_CATALOG_VERSION;
+  return { wellsAdded };
+}
+
 const migrations = new Map([
   [49, migrate49To50],
   [50, migrate50To51],
@@ -429,6 +468,7 @@ const migrations = new Map([
   [55, migrate55To56],
   [56, migrate56To57],
   [57, migrate57To58],
+  [58, migrate58To59],
 ]);
 
 export function migrateProjectDocument(value, targetVersion = CURRENT_SCHEMA_VERSION) {

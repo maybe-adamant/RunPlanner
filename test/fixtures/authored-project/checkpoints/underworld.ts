@@ -4,6 +4,7 @@ import { checkpointArtifact, type CheckpointArtifact } from './loader';
 
 import underworldFMidshopPomRaw from './underworld-f-midshop-pom-frontier.runplanner.json';
 import underworldFPoolRaw from './underworld-f-pool.runplanner.json';
+import underworldFStygianWellRaw from './underworld-f-stygian-well.runplanner.json';
 import underworldFGRaw from './underworld-fg.runplanner.json';
 import underworldFGHRaw from './underworld-fgh.runplanner.json';
 import underworldFGHIRaw from './underworld-fghi.runplanner.json';
@@ -24,6 +25,7 @@ type UnderworldCheckpointId =
 export const underworldCheckpointArtifacts = Object.freeze({
   'underworld-fg': checkpointArtifact(underworldFGRaw),
   'underworld-f-pool': checkpointArtifact(underworldFPoolRaw),
+  'underworld-f-stygian-well': checkpointArtifact(underworldFStygianWellRaw),
   'underworld-fgh': checkpointArtifact(underworldFGHRaw),
   'underworld-fghi': checkpointArtifact(underworldFGHIRaw),
   'underworld-f-midshop-pom-frontier': checkpointArtifact(underworldFMidshopPomRaw),
@@ -40,6 +42,10 @@ export function loadUnderworldFGCheckpoint(): ProjectDocument {
 
 export function loadUnderworldFPoolCheckpoint(): ProjectDocument {
   return underworldCheckpointArtifacts['underworld-f-pool'].load();
+}
+
+export function loadUnderworldFStygianWellCheckpoint(): ProjectDocument {
+  return underworldCheckpointArtifacts['underworld-f-stygian-well'].load();
 }
 
 export function loadUnderworldFGHCheckpoint(): ProjectDocument {

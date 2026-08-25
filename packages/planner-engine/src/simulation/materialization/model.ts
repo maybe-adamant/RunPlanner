@@ -162,6 +162,9 @@ export interface CanonicalAuthoredRoom {
   readonly hermesShrine?: NonNullable<
     import('../../authored-project/model').RoomOccurrence['hermesShrine']
   >;
+  readonly stygianWell?: NonNullable<
+    import('../../authored-project/model').RoomOccurrence['stygianWell']
+  >;
   readonly roomActionRoster: import('../room-actions').RoomActionRoster;
   readonly roomLifecycleTimeline: import('../room-actions').RoomLifecycleTimeline;
   readonly requiredObjects?: readonly RequiredRoomObjectDescriptor[];
@@ -282,7 +285,7 @@ export interface CanonicalTarget {
  */
 export interface CanonicalAdditionalContinuation {
   readonly origin: AdditionalExitAddress;
-  readonly key: 'zagreusContract' | 'naturalChaos';
+  readonly key: 'zagreusContract' | 'naturalChaos' | 'sparkChaos';
   readonly picked: boolean;
   readonly room: CanonicalAuthoredRoom;
 }

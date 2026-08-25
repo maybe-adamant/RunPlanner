@@ -5,6 +5,8 @@ import {
   decodeAcquisitionSites,
   decodeBiomeTopology,
   decodeRoomActionState,
+  decodeStygianWellState,
+  assertStygianWellPurchaseActionClosure,
 } from './topology/codec';
 import { selectedPickupProducers } from './traits';
 import { createBiomeAddress } from './addresses';
@@ -295,6 +297,7 @@ function decodeBiomePlan(
           ...(room.hasKeepsakeRack ? ['keepsakeRack'] : []),
           ...(room.purgingPool !== undefined ? ['purgingPool'] : []),
           ...(room.surfaceShop?.forced === true ? ['hermesShrine'] : []),
+          ...(room.roomShop?.forced === true ? ['stygianWell'] : []),
         ],
         `${path}.completionOccurrences[${index}]`,
       );
@@ -382,8 +385,21 @@ function decodeBiomePlan(
               `${path}.completionOccurrences[${index}].hermesShrine`,
               catalog,
             );
+      const stygianWell =
+        room.roomShop?.forced !== true
+          ? undefined
+          : decodeStygianWellState(
+              raw.stygianWell,
+              `${path}.completionOccurrences[${index}].stygianWell`,
+              catalog,
+            );
       assertHermesShrinePurchaseActionClosure(
         hermesShrine,
+        roomActions,
+        `${path}.completionOccurrences[${index}].roomActions.order`,
+      );
+      assertStygianWellPurchaseActionClosure(
+        stygianWell,
         roomActions,
         `${path}.completionOccurrences[${index}].roomActions.order`,
       );
@@ -465,6 +481,7 @@ function decodeBiomePlan(
         roomActions,
         ...(purgingPool === undefined ? {} : { purgingPool }),
         ...(hermesShrine === undefined ? {} : { hermesShrine }),
+        ...(stygianWell === undefined ? {} : { stygianWell }),
         additionalExits: Object.freeze([]),
       });
       const acquisitionSites =

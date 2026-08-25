@@ -12,6 +12,7 @@ import {
   roomActionKey,
   createRouteStartKeepsakeSelectionAddress,
   createShopOfferAddress,
+  createTraitOfferAddress,
   type BiomeAddress,
   type OccurrenceId,
   type ProjectDocument,
@@ -65,6 +66,110 @@ function source(occurrenceId: OccurrenceId) {
 
 export function loadUnderworldFGProject(): ProjectDocument {
   return loadUnderworldFGCheckpoint();
+}
+
+/** Short F-only witness: Travel Deal refills a consequential forced Postboss Well. */
+export function createUnderworldFWellCheckpoint(configuredTail = true): ProjectDocument {
+  let project = createCompleteFGProject();
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(8, 2)),
+    value: { rewardType: 'WeaponUpgrade' },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait: createTraitOfferAddress(
+      createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(8, 2)),
+      'self',
+    ),
+    value: {
+      kind: 'traits',
+      giverKey: 'WeaponUpgrade',
+      options: Object.freeze([
+        { traitKey: 'StaffDoubleAttackTrait' },
+        { traitKey: 'StaffLongAttackTrait' },
+        { traitKey: 'StaffDashAttackTrait' },
+      ]),
+      selectedOptionKey: 'option1',
+    },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(8, 1)),
+    value: { rewardType: 'HermesUpgrade' },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait: createTraitOfferAddress(
+      createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(8, 1)),
+      'self',
+    ),
+    value: {
+      kind: 'traits',
+      giverKey: 'Hermes',
+      options: Object.freeze([
+        { traitKey: 'RestockBoon', rarity: 'Epic' },
+        { traitKey: 'HermesWeaponBoon', rarity: 'Rare' as const },
+        { traitKey: 'SprintShieldBoon', rarity: 'Common' as const },
+      ]),
+      selectedOptionKey: 'option1',
+    },
+  });
+  const occurrence = createOccurrenceAddress(
+    goldenFBiome,
+    createOccurrenceId('completion:F:postboss'),
+  );
+  project = applyProjectCommand(project, catalog, {
+    kind: 'SetStygianWellInteraction',
+    occurrence,
+    interacted: true,
+  });
+  for (const [slotKey, itemKey] of [
+    ['healing', 'ArmorBoostStore'],
+    ['secondLeft', 'TemporaryBoonRarityTrait'],
+    ['secondRight', 'LimitedSwapTraitDrop'],
+  ] as const) {
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceStygianWellOffer',
+      occurrence,
+      slotKey,
+      itemKey,
+    });
+  }
+  for (const generationKey of ['initial:secondLeft', 'initial:secondRight'] as const) {
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetStygianWellPurchase',
+      occurrence,
+      generationKey,
+      purchased: true,
+    });
+  }
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceStygianWellTravelDealRefill',
+    occurrence,
+    itemKey: 'ExtendedShopTrait',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'SetStygianWellPurchase',
+    occurrence,
+    generationKey: 'travelDealRefill',
+    purchased: true,
+  });
+  return !configuredTail
+    ? project
+    : Object.freeze({
+        ...project,
+        routes: Object.freeze(
+          project.routes.map((route) =>
+            route.routeKey === 'Underworld'
+              ? Object.freeze({
+                  ...route,
+                  biomes: Object.freeze(route.biomes.filter((biome) => biome.biomeKey === 'F')),
+                })
+              : route,
+          ),
+        ),
+      });
 }
 
 export function createCompleteFGProject(options: GoldenGProjectOptions = {}): ProjectDocument {

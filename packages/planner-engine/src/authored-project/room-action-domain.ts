@@ -196,6 +196,14 @@ function baseContribution(
         'required',
         frozen({ kind: 'standard', phase: 'afterCombat' }),
       );
+    case 'purchaseStygianWellOffer':
+      return contribution(
+        biome,
+        occurrence,
+        reference,
+        'optional',
+        frozen({ kind: 'standard', phase: 'afterCombat' }),
+      );
     case 'completeFieldsCage':
       return contribution(biome, occurrence, reference, 'required', frozen({ kind: 'fields' }));
     case 'interactIncomingReward':

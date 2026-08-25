@@ -152,6 +152,25 @@ export interface ShopOptionEntry {
     | { readonly kind: 'resolvedOfferSource' };
   /** Exact generated Shop item override, retained only by the generation witness. */
   readonly boonRarityOverride?: import('../catalog-schema/traits').BoonRarityOverride;
+  readonly stygianWell?: {
+    readonly effect:
+      | 'neutral'
+      | 'spark'
+      | 'yarn'
+      | 'hymn'
+      | 'discount'
+      | 'emptySlot'
+      | 'extended'
+      | 'twist'
+      | 'lastStand';
+    readonly offerRequirements?: readonly ('inactive' | 'emptyAttackOrSpecial')[];
+    readonly nestedResultItemKeys?: readonly string[];
+    readonly nestedRuntimeOfferFallbacks?: readonly {
+      readonly preferredItemKey: string;
+      readonly fallbackItemKey: string;
+    }[];
+    readonly extendedDirectPurchaseItemKeys?: readonly string[];
+  };
 }
 
 export interface ShopGroupDeclaration {

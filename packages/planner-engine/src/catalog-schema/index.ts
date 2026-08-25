@@ -535,9 +535,16 @@ export interface NaturalChaosAdditionalExitDeclaration {
   /** A source-local prerequisite; host spacing remains evaluator-owned. */
   readonly requirement?: RequirementExpression;
 }
+export interface SparkChaosAdditionalExitDeclaration {
+  readonly kind: 'sparkChaos';
+  readonly key: 'sparkChaos';
+  readonly physicalExit: Omit<RoomExit, 'index'>;
+}
 
 export type AdditionalExitDeclaration =
-  ZagreusContractAdditionalExitDeclaration | NaturalChaosAdditionalExitDeclaration;
+  | ZagreusContractAdditionalExitDeclaration
+  | NaturalChaosAdditionalExitDeclaration
+  | SparkChaosAdditionalExitDeclaration;
 
 export interface RoomCounterEffects {
   readonly biomeDepthCache: number;
@@ -618,9 +625,17 @@ export interface RoomDeclaration {
   readonly purgingPool?: { readonly slotKeys: readonly ['left', 'middle', 'right'] };
   /** Exact installed `ChallengeSwitchBase` anchors available to competing secret spawns. */
   readonly challengeSwitchAnchorCount?: number;
+  /** Exact installed `SecretPoint` anchors for forced Chaos gates. */
+  readonly secretPointAnchorCount?: number;
   /** Exact Surface Shop chance and forced status; inventory is always authored when present. */
   readonly surfaceShop?: {
     readonly profileKey: 'SurfaceShop';
+    readonly spawnChance: number;
+    readonly forced: boolean;
+  };
+  /** Exact RoomShop placement facts. Unlike SurfaceShop, inventory is optional authoring. */
+  readonly roomShop?: {
+    readonly profileKey: 'RoomShop';
     readonly spawnChance: number;
     readonly forced: boolean;
   };
@@ -908,6 +923,10 @@ export interface BiomeLayout {
     readonly roomGameNames: readonly [string, ...string[]];
     readonly defaultRoomGameName: string;
     readonly offerSpacingWindow: number;
+  };
+  readonly sparkChaos?: {
+    readonly roomGameNames: readonly [string, ...string[]];
+    readonly defaultRoomGameName: string;
   };
   readonly completion: CompletionDescriptor;
   readonly fields: readonly AuthoredFieldDescriptor[];

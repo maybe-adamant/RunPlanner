@@ -378,6 +378,47 @@ describe('authored-project route detour commands', () => {
     ).not.toContain(chaos);
   });
 
+  it('authors Spark Chaos with distinct semantic commands and rejects a parallel natural gate', () => {
+    const opening = createOccurrenceId('spark-chaos-opening');
+    const chaos = createOccurrenceId('spark-chaos-target');
+    const additional = createAdditionalExitAddress(fBiome, opening, 'sparkChaos');
+    let project = applyProjectCommand(fProject(), catalog, {
+      kind: 'CreateStart',
+      biome: fBiome,
+      occurrenceId: opening,
+      gameName: 'F_Opening01',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'AddSparkChaos',
+      additional,
+      occurrenceId: chaos,
+    });
+    expect(
+      biomeTopology(project, 'Underworld', 'F').occurrences.find(
+        (occurrence) => occurrence.occurrenceId === opening,
+      )?.additionalExits,
+    ).toEqual([{ kind: 'sparkChaos', key: 'sparkChaos', occurrenceId: chaos }]);
+    expect(() =>
+      applyProjectCommand(project, catalog, {
+        kind: 'AddNaturalChaos',
+        additional: createAdditionalExitAddress(fBiome, opening, 'naturalChaos'),
+        occurrenceId: createOccurrenceId('parallel-natural-chaos'),
+      }),
+    ).toThrow(/already authored/);
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceSparkChaosMap',
+      occurrence: createOccurrenceAddress(fBiome, chaos),
+      gameName: 'Chaos_06',
+    });
+    expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog)).toEqual(
+      project,
+    );
+    project = applyProjectCommand(project, catalog, { kind: 'RemoveSparkChaos', additional });
+    expect(
+      biomeTopology(project, 'Underworld', 'F').occurrences.map((room) => room.occurrenceId),
+    ).not.toContain(chaos);
+  });
+
   it('rejects a natural Chaos map outside N’s declared target domain', () => {
     const opening = createOccurrenceId('natural-chaos-n-opening');
     const chaos = createOccurrenceId('natural-chaos-n-target');

@@ -145,6 +145,29 @@ export type WorkspaceOccurrenceInteractionRequirement =
       }[];
     }
   | {
+      readonly kind: 'stygianWell';
+      readonly owner: OccurrenceAddress;
+      readonly present: boolean;
+      readonly presenceInteractionKey?: string;
+      readonly interacted: boolean;
+      readonly interactionKey?: string;
+      readonly slots: readonly {
+        readonly generationKey: import('@run-planner/engine/authored-project').StygianWellGenerationKey;
+        readonly slotKey:
+          import('@run-planner/engine/authored-project').StygianWellSlotKey | 'travelDealRefill';
+        readonly itemKey: string | null;
+        readonly candidateItemKeys: readonly string[];
+        readonly offerInteractionKey: string;
+        readonly purchased: boolean;
+        readonly purchaseInteractionKey: string;
+        readonly twist?: {
+          readonly itemKey: string | null;
+          readonly candidateItemKeys: readonly string[];
+          readonly interactionKey: string;
+        };
+      }[];
+    }
+  | {
       /** Route-owned selected successes are controlled at their exact host room. */
       readonly kind: 'resourcePlacements';
       readonly owner: OccurrenceAddress;

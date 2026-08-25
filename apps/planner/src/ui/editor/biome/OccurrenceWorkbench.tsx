@@ -1901,6 +1901,64 @@ function RoomFeaturesWorkbench({
                 )}
               />
             );
+          case 'stygianWell':
+            return (
+              <fieldset className="room-purging-pool" key="stygian-well">
+                <legend>Stygian Well</legend>
+                {feature.presenceInteractionKey === undefined
+                  ? null
+                  : (() => {
+                      const presence = requireWorkspaceInteraction(
+                        interactions.stygianWellPresences,
+                        feature.presenceInteractionKey,
+                      );
+                      return (
+                        <label>
+                          <input
+                            aria-label="Stygian Well present"
+                            checked={feature.present}
+                            disabled={!feature.present && !feature.placementEligible}
+                            onChange={(event) =>
+                              executeIntent(presence.intentFor(event.target.checked))
+                            }
+                            type="checkbox"
+                          />
+                          Well present
+                        </label>
+                      );
+                    })()}
+                {feature.interactionKey === undefined
+                  ? null
+                  : (() => {
+                      const interaction = requireWorkspaceInteraction(
+                        interactions.stygianWellInteractions,
+                        feature.interactionKey,
+                      );
+                      return (
+                        <label>
+                          <input
+                            aria-label="Interact with Stygian Well"
+                            checked={feature.interacted}
+                            onChange={(event) =>
+                              executeIntent(interaction.intentFor(event.target.checked))
+                            }
+                            type="checkbox"
+                          />
+                          Interact
+                        </label>
+                      );
+                    })()}
+                {feature.interacted
+                  ? feature.slots.map((slot) => (
+                      <StygianWellSlotEditor
+                        key={slot.generationKey}
+                        slot={slot}
+                        interactions={interactions}
+                      />
+                    ))
+                  : null}
+              </fieldset>
+            );
           case 'purgingPool':
             return (() => {
               const poolInteraction = requireWorkspaceInteraction(
@@ -2076,6 +2134,96 @@ function RoomFeaturesWorkbench({
         }
       })}
     </section>
+  );
+}
+
+function StygianWellSlotEditor({
+  slot,
+  interactions,
+}: {
+  readonly slot: Extract<
+    import('@planner/projections/structured-workspace').WorkspaceRoomFeature,
+    { readonly kind: 'stygianWell' }
+  >['slots'][number];
+  readonly interactions: import('@planner/projections/structured-workspace').WorkspaceInteractionCatalog;
+}) {
+  const executeIntent = useCommandIntent();
+  const offer = requireWorkspaceInteraction(
+    interactions.stygianWellOffers,
+    slot.offerInteractionKey,
+  );
+  const purchase = requireWorkspaceInteraction(
+    interactions.stygianWellPurchases,
+    slot.purchaseInteractionKey,
+  );
+  return (
+    <div className="room-purging-pool-slot">
+      <label>
+        {slot.label}
+        <select
+          aria-label={`Stygian Well ${slot.label}`}
+          onChange={(event) =>
+            executeIntent(offer.intentFor(event.target.value === '' ? null : event.target.value))
+          }
+          value={slot.itemKey ?? ''}
+        >
+          <option value="">Unresolved</option>
+          {slot.itemKey !== null && !slot.candidateItemKeys.includes(slot.itemKey) ? (
+            <option value={slot.itemKey}>{slot.itemLabel ?? slot.itemKey}</option>
+          ) : null}
+          {slot.candidateItems.map((item) => (
+            <option key={item.key} value={item.key}>
+              {item.label}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label>
+        <input
+          aria-label={`Purchase Stygian Well ${slot.label}`}
+          checked={slot.purchased}
+          disabled={slot.itemKey === null}
+          onChange={(event) => executeIntent(purchase.intentFor(event.target.checked))}
+          type="checkbox"
+        />
+        Purchase
+      </label>
+      {slot.twist === undefined
+        ? null
+        : (() => {
+            const twist = requireWorkspaceInteraction(
+              interactions.stygianWellTwistResults,
+              slot.twist!.interactionKey,
+            );
+            return (
+              <label>
+                Twist result
+                <select
+                  aria-label={`Stygian Well ${slot.label} Twist result`}
+                  onChange={(event) =>
+                    executeIntent(
+                      twist.intentFor(event.target.value === '' ? null : event.target.value),
+                    )
+                  }
+                  value={slot.twist!.itemKey ?? ''}
+                >
+                  <option value="">Unresolved</option>
+                  {slot.twist!.itemKey !== null &&
+                  !slot.twist!.candidateItemKeys.includes(slot.twist!.itemKey) ? (
+                    <option value={slot.twist!.itemKey}>
+                      {slot.twist!.itemLabel ?? slot.twist!.itemKey}
+                    </option>
+                  ) : null}
+                  {slot.twist!.candidateItems.map((item) => (
+                    <option key={item.key} value={item.key}>
+                      {item.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            );
+          })()}
+    </div>
   );
 }
 

@@ -25,6 +25,31 @@ function replaceRewardType(
   });
 }
 
+function replaceShopOption(
+  profileKey: string,
+  optionKey: string,
+  replace: (option: Record<string, unknown>) => unknown,
+): RawRewardKernelInput {
+  return rawInput({
+    ...rewardKernelDeclarations,
+    shops: rewardKernelDeclarations.shops.map((shop) =>
+      shop.key !== profileKey
+        ? shop
+        : {
+            ...shop,
+            groups: shop.groups.map((group) => ({
+              ...group,
+              options: group.options.map((option) =>
+                option.key === optionKey
+                  ? replace(option as unknown as Record<string, unknown>)
+                  : option,
+              ),
+            })),
+          },
+    ),
+  });
+}
+
 describe('reward-kernel declaration parity', () => {
   it('normalizes declaration-owned Sea Star capability without reward-kind inference', () => {
     expect(
@@ -341,6 +366,7 @@ describe('reward-kernel declaration parity', () => {
         ]),
       ),
     ).toEqual({
+      RoomShop: ['Healing', 'Other', 'Other'],
       SurfaceShop: ['First', 'Second', 'Second'],
       WorldShop: ['Boon', 'MajorNonBoon', 'Minor'],
       I_WorldShop: ['BoostedBoon', 'MixedProgress', 'Survival', 'PremiumProgress', 'MetaProgress'],
@@ -372,6 +398,45 @@ describe('reward-kernel declaration parity', () => {
         ]),
       ),
     ).toEqual({
+      RoomShop: [
+        {
+          key: 'Healing',
+          offerCount: 1,
+          options: [
+            'ArmorBoostStore',
+            'DamageSelfDrop',
+            'HealDropRange',
+            'EmptyMaxHealthShopItem',
+            'FirstHitHealTrait',
+            'TemporaryDoorHealTrait',
+            'TemporaryHealExpirationTrait',
+            'LastStandShopItem',
+          ],
+        },
+        {
+          key: 'Other',
+          offerCount: 2,
+          options: [
+            'TemporaryImprovedSecondaryTrait',
+            'TemporaryImprovedCastTrait',
+            'TemporaryMoveSpeedTrait',
+            'TemporaryBoonRarityTrait',
+            'TemporaryImprovedExTrait',
+            'TemporaryImprovedDefenseTrait',
+            'TemporaryDiscountTrait',
+            'TemporaryForcedSecretDoorTrait',
+            'TemporaryEmptySlotDamageTrait',
+            'ExtendedShopTrait',
+            'MetaCurrencyRange',
+            'MetaCardPointsCommonRange',
+            'MemPointsCommonRange',
+            'SeedMysteryRange',
+            'RandomStoreItem',
+            'LimitedManaRegenDrop',
+            'LimitedSwapTraitDrop',
+          ],
+        },
+      ],
       SurfaceShop: [
         {
           key: 'First',
@@ -1420,6 +1485,97 @@ describe('reward-kernel declaration parity', () => {
     for (const input of malformed) {
       expect(() => createRewardKernelCatalog(input)).toThrow(CatalogContractError);
     }
+  });
+
+  it('rejects malformed Stygian Well metadata and cross-option references', () => {
+    const malformed: readonly RawRewardKernelInput[] = [
+      replaceShopOption('WorldShop', 'RandomLoot', (option) => ({
+        ...option,
+        stygianWell: { effect: 'neutral' },
+      })),
+      replaceShopOption('RoomShop', 'ArmorBoostStore', (option) => {
+        const withoutMetadata = { ...option };
+        delete withoutMetadata.stygianWell;
+        return withoutMetadata;
+      }),
+      replaceShopOption('RoomShop', 'ArmorBoostStore', (option) => ({
+        ...option,
+        stygianWell: { effect: 'unknownEffect' },
+      })),
+      replaceShopOption('RoomShop', 'TemporaryDiscountTrait', (option) => ({
+        ...option,
+        stygianWell: { effect: 'discount', offerRequirements: ['unknownRequirement'] },
+      })),
+      replaceShopOption('RoomShop', 'RandomStoreItem', (option) => ({
+        ...option,
+        stygianWell: { effect: 'twist' },
+      })),
+      replaceShopOption('RoomShop', 'RandomStoreItem', (option) => ({
+        ...option,
+        stygianWell: { effect: 'twist', nestedResultItemKeys: ['HealDropRange'] },
+      })),
+      replaceShopOption('RoomShop', 'ExtendedShopTrait', (option) => ({
+        ...option,
+        stygianWell: { effect: 'extended' },
+      })),
+      replaceShopOption('RoomShop', 'RandomStoreItem', (option) => ({
+        ...option,
+        stygianWell: {
+          effect: 'twist',
+          nestedResultItemKeys: ['UnknownWellItem'],
+          nestedRuntimeOfferFallbacks: [
+            { preferredItemKey: 'UnknownWellItem', fallbackItemKey: 'UnknownWellItem' },
+          ],
+        },
+      })),
+      replaceShopOption('RoomShop', 'ExtendedShopTrait', (option) => ({
+        ...option,
+        stygianWell: {
+          effect: 'extended',
+          extendedDirectPurchaseItemKeys: ['UnknownWellItem'],
+        },
+      })),
+      replaceShopOption('RoomShop', 'RandomStoreItem', (option) => ({
+        ...option,
+        stygianWell: {
+          effect: 'twist',
+          nestedResultItemKeys: ['HealDropRange'],
+          nestedRuntimeOfferFallbacks: [
+            { preferredItemKey: 'HealDropRange', fallbackItemKey: 'ArmorBoostStore' },
+          ],
+        },
+      })),
+      replaceShopOption('RoomShop', 'RandomStoreItem', (option) => ({
+        ...option,
+        stygianWell: {
+          effect: 'twist',
+          nestedResultItemKeys: ['LastStandShopItem', 'EmptyMaxHealthShopItem'],
+          nestedRuntimeOfferFallbacks: [
+            {
+              preferredItemKey: 'LastStandShopItem',
+              fallbackItemKey: 'EmptyMaxHealthShopItem',
+            },
+            {
+              preferredItemKey: 'LastStandShopItem',
+              fallbackItemKey: 'EmptyMaxHealthShopItem',
+            },
+          ],
+        },
+      })),
+      replaceShopOption('RoomShop', 'ArmorBoostStore', (option) => ({
+        ...option,
+        stygianWell: { effect: 'neutral', nestedResultItemKeys: ['HealDropRange'] },
+      })),
+      replaceShopOption('RoomShop', 'ArmorBoostStore', (option) => ({
+        ...option,
+        stygianWell: {
+          effect: 'neutral',
+          extendedDirectPurchaseItemKeys: ['HealDropRange'],
+        },
+      })),
+    ];
+    for (const input of malformed)
+      expect(() => createRewardKernelCatalog(input)).toThrow(CatalogContractError);
   });
 
   it('rejects incomplete source contracts at catalog construction', () => {

@@ -36,7 +36,7 @@ const rooms: readonly RawRoomDeclaration[] = [
 ];
 
 export const declarations = {
-  version: '0.40.0-hermes-shrine',
+  version: '0.41.0-stygian-well',
   biomes,
   routes,
   arcanaCards,

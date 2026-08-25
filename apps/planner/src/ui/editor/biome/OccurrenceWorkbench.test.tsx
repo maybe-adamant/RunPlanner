@@ -2983,6 +2983,8 @@ describe('OccurrenceWorkbench', () => {
       occurrenceById(pOccurrenceIds.prebossShop),
     );
     expect(screen.getByRole('columnheader', { name: 'Offer' })).toBeTruthy();
+    expect(screen.getAllByRole('button', { name: 'Reward' })).toHaveLength(3);
+    expect(screen.queryByRole('checkbox', { name: /Interact.*Shop/i })).toBeNull();
     expect(screen.queryByText('Participation')).toBeNull();
     expect(screen.getByRole('heading', { name: 'Entering Preboss' })).toBeTruthy();
     cleanup();

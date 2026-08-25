@@ -75,11 +75,14 @@ export function projectCommandAddress(
     case 'ReplaceAnomalySuccess':
     case 'RevertAnomaly':
     case 'ReplaceNaturalChaosMap':
+    case 'ReplaceSparkChaosMap':
       return command.occurrence;
     case 'AddZagreusContract':
     case 'RemoveZagreusContract':
     case 'AddNaturalChaos':
+    case 'AddSparkChaos':
     case 'RemoveNaturalChaos':
+    case 'RemoveSparkChaos':
       return command.additional;
     case 'RemoveHubDecision':
       return command.hub;
@@ -103,6 +106,13 @@ export function projectCommandAddress(
     case 'ReplaceFieldsOptionalRewardCount':
     case 'SetPurgingPoolInteraction':
     case 'ReplacePurgingPoolSlot':
+    case 'AddStygianWell':
+    case 'RemoveStygianWell':
+    case 'SetStygianWellInteraction':
+    case 'ReplaceStygianWellOffer':
+    case 'SetStygianWellPurchase':
+    case 'ReplaceStygianWellTwistResult':
+    case 'ReplaceStygianWellTravelDealRefill':
     case 'SetHermesShrinePresence':
     case 'ReplaceHermesShrineOffer':
     case 'SetHermesShrinePurchase':

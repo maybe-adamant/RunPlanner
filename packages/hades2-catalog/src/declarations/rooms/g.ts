@@ -1,22 +1,33 @@
 import type { RawRoomDeclaration } from '../types';
 import { normalResourcePointSupport } from '../resources';
 
+const wellHost = (challengeSwitchAnchorCount: number) => ({
+  challengeSwitchAnchorCount,
+  roomShop: { profileKey: 'RoomShop' as const, spawnChance: 0.3 },
+});
+
 const naturalChaosExit = {
   kind: 'naturalChaos' as const,
   key: 'naturalChaos' as const,
+  exitType: 'ChaosExitDoor',
+};
+const sparkChaosExit = {
+  kind: 'sparkChaos' as const,
+  key: 'sparkChaos' as const,
   exitType: 'ChaosExitDoor',
 };
 
 export const gRooms = [
   {
     gameName: 'G_Intro',
+    secretPointAnchorCount: 1,
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Entrance',
     roomSetKey: 'G',
     advancesExperimentalHammerUses: true,
     kind: 'Intro',
     mode: { kind: 'authored', templateKey: 'FixedIntro' },
-    additionalExits: [naturalChaosExit],
+    additionalExits: [naturalChaosExit, sparkChaosExit],
     structuralTags: [],
     exits: [{ index: 1, type: 'OceanusExitDoor' }],
     incomingReward: { kind: 'none' },
@@ -29,13 +40,15 @@ export const gRooms = [
   },
   {
     gameName: 'G_Combat01',
+    secretPointAnchorCount: 2,
+    ...wellHost(1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 01',
     roomSetKey: 'G',
     advancesExperimentalHammerUses: true,
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
-    additionalExits: [naturalChaosExit],
+    additionalExits: [naturalChaosExit, sparkChaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'OceanusExitDoor' },
@@ -63,13 +76,15 @@ export const gRooms = [
   },
   {
     gameName: 'G_Combat02',
+    secretPointAnchorCount: 4,
+    ...wellHost(2),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 02',
     roomSetKey: 'G',
     advancesExperimentalHammerUses: true,
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
-    additionalExits: [naturalChaosExit],
+    additionalExits: [naturalChaosExit, sparkChaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'OceanusExitDoor' },
@@ -93,13 +108,15 @@ export const gRooms = [
   },
   {
     gameName: 'G_Combat03',
+    secretPointAnchorCount: 2,
+    ...wellHost(2),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 03',
     roomSetKey: 'G',
     advancesExperimentalHammerUses: true,
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
-    additionalExits: [naturalChaosExit],
+    additionalExits: [naturalChaosExit, sparkChaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'OceanusExitDoor' },
@@ -128,13 +145,14 @@ export const gRooms = [
   },
   {
     gameName: 'G_Combat04',
+    secretPointAnchorCount: 2,
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 04',
     roomSetKey: 'G',
     advancesExperimentalHammerUses: true,
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
-    additionalExits: [naturalChaosExit],
+    additionalExits: [naturalChaosExit, sparkChaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'OceanusExitDoor' },
@@ -162,13 +180,14 @@ export const gRooms = [
   },
   {
     gameName: 'G_Combat05',
+    secretPointAnchorCount: 1,
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 05',
     roomSetKey: 'G',
     advancesExperimentalHammerUses: true,
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
-    additionalExits: [naturalChaosExit],
+    additionalExits: [naturalChaosExit, sparkChaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'OceanusExitDoor' },
@@ -197,13 +216,14 @@ export const gRooms = [
   },
   {
     gameName: 'G_Combat06',
+    secretPointAnchorCount: 2,
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 06',
     roomSetKey: 'G',
     advancesExperimentalHammerUses: true,
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
-    additionalExits: [naturalChaosExit],
+    additionalExits: [naturalChaosExit, sparkChaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'OceanusExitDoor' },
@@ -231,13 +251,15 @@ export const gRooms = [
   },
   {
     gameName: 'G_Combat07',
+    secretPointAnchorCount: 1,
+    ...wellHost(1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 07',
     roomSetKey: 'G',
     advancesExperimentalHammerUses: true,
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
-    additionalExits: [naturalChaosExit],
+    additionalExits: [naturalChaosExit, sparkChaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'OceanusExitDoor' },
@@ -265,13 +287,15 @@ export const gRooms = [
   },
   {
     gameName: 'G_Combat08',
+    secretPointAnchorCount: 1,
+    ...wellHost(1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 08',
     roomSetKey: 'G',
     advancesExperimentalHammerUses: true,
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
-    additionalExits: [naturalChaosExit],
+    additionalExits: [naturalChaosExit, sparkChaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'OceanusExitDoor' },
@@ -299,13 +323,15 @@ export const gRooms = [
   },
   {
     gameName: 'G_Combat09',
+    secretPointAnchorCount: 2,
+    ...wellHost(2),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 09',
     roomSetKey: 'G',
     advancesExperimentalHammerUses: true,
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
-    additionalExits: [naturalChaosExit],
+    additionalExits: [naturalChaosExit, sparkChaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'OceanusExitDoor' },
@@ -334,13 +360,15 @@ export const gRooms = [
   },
   {
     gameName: 'G_Combat10',
+    secretPointAnchorCount: 1,
+    ...wellHost(2),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 10',
     roomSetKey: 'G',
     advancesExperimentalHammerUses: true,
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
-    additionalExits: [naturalChaosExit],
+    additionalExits: [naturalChaosExit, sparkChaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'OceanusExitDoor' },
@@ -368,13 +396,15 @@ export const gRooms = [
   },
   {
     gameName: 'G_Combat11',
+    secretPointAnchorCount: 1,
+    ...wellHost(2),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 11',
     roomSetKey: 'G',
     advancesExperimentalHammerUses: true,
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
-    additionalExits: [naturalChaosExit],
+    additionalExits: [naturalChaosExit, sparkChaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'OceanusExitDoor' },
@@ -402,13 +432,15 @@ export const gRooms = [
   },
   {
     gameName: 'G_Combat12',
+    secretPointAnchorCount: 1,
+    ...wellHost(2),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 12',
     roomSetKey: 'G',
     advancesExperimentalHammerUses: true,
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
-    additionalExits: [naturalChaosExit],
+    additionalExits: [naturalChaosExit, sparkChaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'OceanusExitDoor' },
@@ -436,13 +468,15 @@ export const gRooms = [
   },
   {
     gameName: 'G_Combat13',
+    secretPointAnchorCount: 1,
+    ...wellHost(1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 13',
     roomSetKey: 'G',
     advancesExperimentalHammerUses: true,
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
-    additionalExits: [naturalChaosExit],
+    additionalExits: [naturalChaosExit, sparkChaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'OceanusExitDoor' },
@@ -470,13 +504,15 @@ export const gRooms = [
   },
   {
     gameName: 'G_Combat14',
+    secretPointAnchorCount: 2,
+    ...wellHost(1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 14',
     roomSetKey: 'G',
     advancesExperimentalHammerUses: true,
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
-    additionalExits: [naturalChaosExit],
+    additionalExits: [naturalChaosExit, sparkChaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'OceanusExitDoor' },
@@ -505,13 +541,15 @@ export const gRooms = [
   },
   {
     gameName: 'G_Combat15',
+    secretPointAnchorCount: 3,
+    ...wellHost(1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 15',
     roomSetKey: 'G',
     advancesExperimentalHammerUses: true,
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
-    additionalExits: [naturalChaosExit],
+    additionalExits: [naturalChaosExit, sparkChaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'OceanusExitDoor' },
@@ -540,13 +578,15 @@ export const gRooms = [
   },
   {
     gameName: 'G_Combat16',
+    secretPointAnchorCount: 1,
+    ...wellHost(1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 16',
     roomSetKey: 'G',
     advancesExperimentalHammerUses: true,
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
-    additionalExits: [naturalChaosExit],
+    additionalExits: [naturalChaosExit, sparkChaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'OceanusExitDoor' },
@@ -574,13 +614,15 @@ export const gRooms = [
   },
   {
     gameName: 'G_Combat17',
+    secretPointAnchorCount: 2,
+    ...wellHost(2),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 17',
     roomSetKey: 'G',
     advancesExperimentalHammerUses: true,
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
-    additionalExits: [naturalChaosExit],
+    additionalExits: [naturalChaosExit, sparkChaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'OceanusExitDoor' },
@@ -609,13 +651,15 @@ export const gRooms = [
   },
   {
     gameName: 'G_Combat18',
+    secretPointAnchorCount: 2,
+    ...wellHost(1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 18',
     roomSetKey: 'G',
     advancesExperimentalHammerUses: true,
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
-    additionalExits: [naturalChaosExit],
+    additionalExits: [naturalChaosExit, sparkChaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'OceanusExitDoor' },
@@ -646,13 +690,15 @@ export const gRooms = [
   },
   {
     gameName: 'G_Combat19',
+    secretPointAnchorCount: 1,
+    ...wellHost(1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 19',
     roomSetKey: 'G',
     advancesExperimentalHammerUses: true,
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
-    additionalExits: [naturalChaosExit],
+    additionalExits: [naturalChaosExit, sparkChaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'OceanusExitDoor' },
@@ -680,13 +726,15 @@ export const gRooms = [
   },
   {
     gameName: 'G_Combat20',
+    secretPointAnchorCount: 1,
+    ...wellHost(1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 20',
     roomSetKey: 'G',
     advancesExperimentalHammerUses: true,
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
-    additionalExits: [naturalChaosExit],
+    additionalExits: [naturalChaosExit, sparkChaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'OceanusExitDoor' },
@@ -715,6 +763,7 @@ export const gRooms = [
   },
   {
     gameName: 'G_MiniBoss01',
+    secretPointAnchorCount: 2,
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     boonRarityOverride: { Rare: 0.9, Epic: 0.1, Legendary: 0.05 },
     label: 'Deep Serpent',
@@ -722,7 +771,7 @@ export const gRooms = [
     advancesExperimentalHammerUses: true,
     kind: 'Miniboss',
     mode: { kind: 'authored', templateKey: 'Miniboss' },
-    additionalExits: [naturalChaosExit],
+    additionalExits: [naturalChaosExit, sparkChaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'OceanusExitDoor' },
@@ -759,6 +808,7 @@ export const gRooms = [
   },
   {
     gameName: 'G_MiniBoss02',
+    secretPointAnchorCount: 1,
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     boonRarityOverride: { Rare: 0.9, Epic: 0.1, Legendary: 0.05 },
     label: 'King Vermin',
@@ -766,7 +816,7 @@ export const gRooms = [
     advancesExperimentalHammerUses: true,
     kind: 'Miniboss',
     mode: { kind: 'authored', templateKey: 'Miniboss' },
-    additionalExits: [naturalChaosExit],
+    additionalExits: [naturalChaosExit, sparkChaosExit],
     structuralTags: [],
     exits: [{ index: 1, type: 'OceanusExitDoor' }],
     incomingReward: {
@@ -800,6 +850,7 @@ export const gRooms = [
   },
   {
     gameName: 'G_MiniBoss03',
+    secretPointAnchorCount: 2,
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     boonRarityOverride: { Rare: 0.9, Epic: 0.1, Legendary: 0.05 },
     label: 'Hellifish',
@@ -807,7 +858,7 @@ export const gRooms = [
     advancesExperimentalHammerUses: true,
     kind: 'Miniboss',
     mode: { kind: 'authored', templateKey: 'Miniboss' },
-    additionalExits: [naturalChaosExit],
+    additionalExits: [naturalChaosExit, sparkChaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'OceanusExitDoor' },
@@ -844,6 +895,7 @@ export const gRooms = [
   },
   {
     gameName: 'G_Story01',
+    secretPointAnchorCount: 1,
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing'], {
       ignoresBiomeLimit: true,
     }),
@@ -853,7 +905,7 @@ export const gRooms = [
     kind: 'Story',
     mode: { kind: 'authored', templateKey: 'Story' },
     lifecycleProfileKey: 'StoryPickupRoom',
-    additionalExits: [naturalChaosExit],
+    additionalExits: [naturalChaosExit, sparkChaosExit],
     structuralTags: [],
     exits: [{ index: 1, type: 'OceanusExitDoor' }],
     incomingReward: { kind: 'fixed', rewardType: 'Story', producerLifecycleKey: 'RoomReward' },
@@ -872,6 +924,7 @@ export const gRooms = [
   },
   {
     gameName: 'G_Reprieve01',
+    secretPointAnchorCount: 1,
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing'], {
       ignoresBiomeLimit: true,
     }),
@@ -880,7 +933,7 @@ export const gRooms = [
     advancesExperimentalHammerUses: true,
     kind: 'Reprieve',
     mode: { kind: 'authored', templateKey: 'Fountain' },
-    additionalExits: [naturalChaosExit],
+    additionalExits: [naturalChaosExit, sparkChaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'OceanusExitDoor' },
@@ -908,6 +961,7 @@ export const gRooms = [
   },
   {
     gameName: 'G_Shop01',
+    secretPointAnchorCount: 1,
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Midshop',
     roomSetKey: 'G',
@@ -921,6 +975,7 @@ export const gRooms = [
     ],
     additionalExits: [
       naturalChaosExit,
+      sparkChaosExit,
       {
         kind: 'zagreusContract',
         key: 'zagreusContract',
@@ -1032,6 +1087,8 @@ export const gRooms = [
     hasKeepsakeRack: true,
     hasRequiredFountain: true,
     purgingPool: { slotKeys: ['left', 'middle', 'right'] },
+    challengeSwitchAnchorCount: 2,
+    roomShop: { profileKey: 'RoomShop', spawnChance: 1, forced: true },
     roomSetKey: 'G',
     advancesExperimentalHammerUses: true,
     kind: 'PostBoss',

@@ -1142,6 +1142,40 @@ export function normalizeBiomeLayouts(
               offerSpacingWindow,
             });
           })();
+    const sparkChaos =
+      layout.sparkChaos === undefined
+        ? undefined
+        : (() => {
+            const roomGameNames = freezeUniqueStrings(
+              layout.sparkChaos.roomGameNames,
+              `${path}.sparkChaos.roomGameNames`,
+            );
+            if (roomGameNames.length === 0)
+              fail(`${path}.sparkChaos.roomGameNames`, 'must not be empty');
+            for (const [index, roomGameName] of roomGameNames.entries()) {
+              const room = rooms.byKey[roomGameName];
+              if (
+                room === undefined ||
+                room.roomSetKey !== 'Chaos' ||
+                room.mode.kind !== 'authored' ||
+                room.mode.templateKey !== 'Chaos'
+              )
+                fail(
+                  `${path}.sparkChaos.roomGameNames[${index}]`,
+                  'must name an authored Chaos room',
+                );
+            }
+            const defaultRoomGameName = requireNonEmpty(
+              layout.sparkChaos.defaultRoomGameName,
+              `${path}.sparkChaos.defaultRoomGameName`,
+            );
+            if (!roomGameNames.includes(defaultRoomGameName))
+              fail(`${path}.sparkChaos.defaultRoomGameName`, 'must belong to roomGameNames');
+            return Object.freeze({
+              roomGameNames: roomGameNames as [string, ...string[]],
+              defaultRoomGameName,
+            });
+          })();
     return Object.freeze({
       biomeKey: layout.biomeKey,
       initialCounters: Object.freeze({
@@ -1157,6 +1191,7 @@ export function normalizeBiomeLayouts(
       start,
       progression,
       ...(naturalChaos === undefined ? {} : { naturalChaos }),
+      ...(sparkChaos === undefined ? {} : { sparkChaos }),
       completion: normalizeCompletion(
         layout.completion,
         layout.biomeKey,

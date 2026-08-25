@@ -7,6 +7,19 @@ export {
 } from './purging-pool';
 export type { PurgingPoolCandidateCapability } from './candidate-artifacts';
 export {
+  assessStygianWell,
+  assessStygianWellPlacement,
+  priorThreeRoomShopPresence,
+  applyStygianWellPurchase,
+  advanceStygianWellEncounterUses,
+  advanceStygianWellBossUses,
+  extendedWellItemKeys,
+  twistResultItemKeys,
+  type StygianWellAssessment,
+  type StygianWellCandidateContext,
+  type StygianWellRunState,
+} from './stygian-well';
+export {
   assessResourcePlacement,
   routeResourceAuthoring,
   type ResourceEnteredRoom,
@@ -339,7 +352,10 @@ export {
   type SemanticFinding,
   type SimulationPhase,
 } from './model';
-export type { HermesShrineCandidateCapability } from './candidate-artifacts';
+export type {
+  HermesShrineCandidateCapability,
+  StygianWellCandidateCapability,
+} from './candidate-artifacts';
 export {
   assertProjectEvaluationAssembly,
   assertProjectEvaluationSource,
@@ -351,6 +367,7 @@ export {
   traitOfferCandidateForProjectEvaluationAssembly,
   purgingPoolCandidateForProjectEvaluationAssembly,
   hermesShrineCandidateForProjectEvaluationAssembly,
+  stygianWellCandidateForProjectEvaluationAssembly,
   encounterPhaseCandidateSupportForProjectEvaluationAssembly,
   encounterPhaseFigLeafSupportForProjectEvaluationAssembly,
   encounterPhaseGorgonSupportForProjectEvaluationAssembly,

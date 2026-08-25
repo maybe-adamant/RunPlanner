@@ -86,6 +86,8 @@ interface RawOccurrence {
   readonly hasAcquisitionSites: boolean;
   readonly hermesShrine?: unknown;
   readonly hasHermesShrine?: boolean;
+  readonly stygianWell?: unknown;
+  readonly hasStygianWell?: boolean;
   readonly path: string;
 }
 
@@ -199,6 +201,106 @@ function decodeOrdinaryHermesShrineState(
   }) as HermesShrineState;
 }
 
+export function decodeStygianWellState(
+  value: unknown,
+  path: string,
+  catalog: Catalog,
+): import('../model').StygianWellState {
+  const raw = expectRecord(value, path);
+  const hasTwist = Object.hasOwn(raw, 'twistResultKeyBySlot');
+  const hasPurchased = Object.hasOwn(raw, 'purchasedGenerationKeys');
+  const hasRefill = Object.hasOwn(raw, 'travelDealRefillKey');
+  expectExactKeys(
+    raw,
+    [
+      'interacted',
+      'offerKeyBySlot',
+      ...(hasTwist ? ['twistResultKeyBySlot'] : []),
+      ...(hasPurchased ? ['purchasedGenerationKeys'] : []),
+      ...(hasRefill ? ['travelDealRefillKey'] : []),
+    ],
+    path,
+  );
+  if (typeof raw.interacted !== 'boolean')
+    failProjectDocument(`${path}.interacted`, 'must be boolean');
+  const offers = expectRecord(raw.offerKeyBySlot, `${path}.offerKeyBySlot`);
+  expectExactKeys(offers, ['healing', 'secondLeft', 'secondRight'], `${path}.offerKeyBySlot`);
+  const textOrNull = (v: unknown, p: string) => (v === null ? null : expectNonBlankString(v, p));
+  const knownItemKeys = new Set(
+    catalog.rewards.shops.byKey.RoomShop?.groups.values.flatMap((group) =>
+      group.options.values.map((option) => option.key),
+    ) ?? [],
+  );
+  const knownItemOrNull = (v: unknown, p: string) => {
+    const itemKey = textOrNull(v, p);
+    if (itemKey !== null && !knownItemKeys.has(itemKey))
+      failProjectDocument(p, `unknown RoomShop item ${itemKey}`);
+    return itemKey;
+  };
+  const twistResultKeyBySlot = hasTwist
+    ? (() => {
+        const twist = expectRecord(raw.twistResultKeyBySlot, `${path}.twistResultKeyBySlot`);
+        for (const key of Object.keys(twist))
+          if (!['healing', 'secondLeft', 'secondRight', 'travelDealRefill'].includes(key))
+            failProjectDocument(
+              `${path}.twistResultKeyBySlot`,
+              `contains unknown generation ${key}`,
+            );
+        return Object.freeze(
+          Object.fromEntries(
+            Object.entries(twist).map(([key, entry]) => [
+              key,
+              knownItemOrNull(entry, `${path}.twistResultKeyBySlot.${key}`),
+            ]),
+          ),
+        );
+      })()
+    : undefined;
+  const purchasedGenerationKeys = hasPurchased
+    ? expectArray(raw.purchasedGenerationKeys, `${path}.purchasedGenerationKeys`).map((v, i) => {
+        const key = expectNonBlankString(v, `${path}.purchasedGenerationKeys[${i}]`);
+        if (
+          ![
+            'initial:healing',
+            'initial:secondLeft',
+            'initial:secondRight',
+            'travelDealRefill',
+          ].includes(key)
+        )
+          failProjectDocument(
+            `${path}.purchasedGenerationKeys[${i}]`,
+            'contains unknown Well generation',
+          );
+        return key as import('../model').StygianWellGenerationKey;
+      })
+    : undefined;
+  if (
+    purchasedGenerationKeys !== undefined &&
+    new Set(purchasedGenerationKeys).size !== purchasedGenerationKeys.length
+  )
+    failProjectDocument(`${path}.purchasedGenerationKeys`, 'must not contain duplicates');
+  return Object.freeze({
+    interacted: raw.interacted,
+    offerKeyBySlot: Object.freeze({
+      healing: knownItemOrNull(offers.healing, `${path}.offerKeyBySlot.healing`),
+      secondLeft: knownItemOrNull(offers.secondLeft, `${path}.offerKeyBySlot.secondLeft`),
+      secondRight: knownItemOrNull(offers.secondRight, `${path}.offerKeyBySlot.secondRight`),
+    }),
+    ...(hasRefill
+      ? {
+          travelDealRefillKey: knownItemOrNull(
+            raw.travelDealRefillKey,
+            `${path}.travelDealRefillKey`,
+          ),
+        }
+      : {}),
+    ...(twistResultKeyBySlot === undefined ? {} : { twistResultKeyBySlot }),
+    ...(purchasedGenerationKeys === undefined
+      ? {}
+      : { purchasedGenerationKeys: Object.freeze(purchasedGenerationKeys) }),
+  });
+}
+
 function assertHermesShrinePurchaseActionClosure(
   shrine: HermesShrineState | undefined,
   roomActions: RoomActionState,
@@ -219,6 +321,31 @@ function assertHermesShrinePurchaseActionClosure(
     failProjectDocument(
       path,
       'Shrine purchase details must have exactly one matching purchase action',
+    );
+}
+
+export function assertStygianWellPurchaseActionClosure(
+  well: import('../model').StygianWellState | undefined,
+  roomActions: RoomActionState,
+  path: string,
+): void {
+  const purchases = new Set(well?.purchasedGenerationKeys ?? []);
+  const actions = roomActions.order
+    .filter((reference) => reference.kind === 'purchaseStygianWellOffer')
+    .map((reference) => reference.generationKey);
+  if (
+    actions.length !== new Set(actions).size ||
+    actions.length !== purchases.size ||
+    actions.some((key) => !purchases.has(key))
+  )
+    failProjectDocument(
+      path,
+      'Well purchase generations must exactly match purchaseStygianWellOffer actions',
+    );
+  if (well?.interacted !== true && purchases.size > 0)
+    failProjectDocument(
+      path,
+      'an uninteracted Well must not retain purchase intent or purchase actions',
     );
 }
 
@@ -318,6 +445,21 @@ function decodeRoomActionReference(value: unknown, path: string): RoomActionRefe
     return Object.freeze({
       kind,
       generationKey: generationKey as import('../model').HermesShrineGenerationKey,
+    });
+  }
+  if (kind === 'purchaseStygianWellOffer') {
+    expectExactKeys(reference, ['kind', 'generationKey'], path);
+    const generationKey = expectNonBlankString(reference.generationKey, `${path}.generationKey`);
+    if (
+      generationKey !== 'initial:healing' &&
+      generationKey !== 'initial:secondLeft' &&
+      generationKey !== 'initial:secondRight' &&
+      generationKey !== 'travelDealRefill'
+    )
+      failProjectDocument(`${path}.generationKey`, 'must be a declared Well generation key');
+    return Object.freeze({
+      kind,
+      generationKey: generationKey as import('../model').StygianWellGenerationKey,
     });
   }
   if (kind === 'sellPurgingPoolTrait') {
@@ -468,14 +610,15 @@ function decodeAdditionalExits(
     const additionalPath = `${path}[${index}]`;
     const additional = expectRecord(rawValue, additionalPath);
     const kind = expectString(additional.kind, `${additionalPath}.kind`);
-    if (kind !== 'zagreusContract' && kind !== 'naturalChaos') {
+    if (kind !== 'zagreusContract' && kind !== 'naturalChaos' && kind !== 'sparkChaos') {
       failProjectDocument(`${additionalPath}.kind`, `unknown additional exit ${kind}`);
     }
     expectExactKeys(additional, ['kind', 'key', 'occurrenceId'], additionalPath);
     const key = expectNonBlankString(additional.key, `${additionalPath}.key`);
     if (
       (kind === 'zagreusContract' && key !== 'zagreusContract') ||
-      (kind === 'naturalChaos' && key !== 'naturalChaos')
+      (kind === 'naturalChaos' && key !== 'naturalChaos') ||
+      (kind === 'sparkChaos' && key !== 'sparkChaos')
     ) {
       failProjectDocument(`${additionalPath}.key`, `unknown additional exit ${key}`);
     }
@@ -1533,6 +1676,7 @@ export function decodeBiomeTopology(
     const hasAnomalyReplacement = Object.hasOwn(occurrence, 'anomalyReplacement');
     const hasAcquisitionSites = Object.hasOwn(occurrence, 'acquisitionSites');
     const hasHermesShrine = Object.hasOwn(occurrence, 'hermesShrine');
+    const hasStygianWell = Object.hasOwn(occurrence, 'stygianWell');
     expectExactKeys(
       occurrence,
       [
@@ -1545,6 +1689,7 @@ export function decodeBiomeTopology(
         ...(hasAnomalyReplacement ? ['anomalyReplacement'] : []),
         ...(hasAcquisitionSites ? ['acquisitionSites'] : []),
         ...(hasHermesShrine ? ['hermesShrine'] : []),
+        ...(hasStygianWell ? ['stygianWell'] : []),
       ],
       occurrencePath,
     );
@@ -1566,6 +1711,8 @@ export function decodeBiomeTopology(
         hasAcquisitionSites,
         hermesShrine: occurrence.hermesShrine,
         hasHermesShrine,
+        stygianWell: occurrence.stygianWell,
+        hasStygianWell,
         path: occurrencePath,
       }),
     );
@@ -1904,6 +2051,18 @@ export function decodeBiomeTopology(
           `${rawOccurrence.path}.hermesShrine`,
         )
       : undefined;
+    const stygianWell = rawOccurrence.hasStygianWell
+      ? decodeStygianWellState(
+          rawOccurrence.stygianWell,
+          `${rawOccurrence.path}.stygianWell`,
+          catalog,
+        )
+      : undefined;
+    assertStygianWellPurchaseActionClosure(
+      stygianWell,
+      decodeRoomActionState(rawOccurrence.roomActions, `${rawOccurrence.path}.roomActions`),
+      `${rawOccurrence.path}.roomActions.order`,
+    );
     if (
       hermesShrine !== undefined &&
       (room.surfaceShop === undefined ||
@@ -1915,6 +2074,17 @@ export function decodeBiomeTopology(
         `${rawOccurrence.path}.hermesShrine`,
         'requires an eligible ordinary Surface Shop host',
       );
+    if (
+      stygianWell !== undefined &&
+      (room.roomShop === undefined ||
+        room.roomShop.forced ||
+        room.roomShop.spawnChance <= 0 ||
+        (room.challengeSwitchAnchorCount ?? 0) <= 0)
+    )
+      failProjectDocument(
+        `${rawOccurrence.path}.stygianWell`,
+        'requires an eligible ordinary RoomShop Well host',
+      );
     const occurrenceWithoutAcquisitionSites: RoomOccurrence = Object.freeze({
       occurrenceId: rawOccurrence.occurrenceId,
       gameName: room.gameName,
@@ -1924,6 +2094,7 @@ export function decodeBiomeTopology(
       state,
       encounters,
       ...(hermesShrine === undefined ? {} : { hermesShrine }),
+      ...(stygianWell === undefined ? {} : { stygianWell }),
       roomActions: Object.freeze({ order: Object.freeze([]) }),
       additionalExits: Object.freeze([]),
     });
@@ -2242,6 +2413,7 @@ export function decodeBiomeTopology(
       encounters,
       roomActions: decodedRoomActions,
       ...(hermesShrine === undefined ? {} : { hermesShrine }),
+      ...(stygianWell === undefined ? {} : { stygianWell }),
       ...(acquisitionSites === undefined ? {} : { acquisitionSites }),
       additionalExits: decodeAdditionalExits(
         rawOccurrence.additionalExits,

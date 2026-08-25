@@ -143,6 +143,7 @@ export interface RoomRestoredHistoryEvent extends HistoryEventBase {
   readonly biomeDepthCacheDelta: number;
   readonly roomHistoryOrdinalDelta: number;
   readonly surfaceShopPresent?: boolean;
+  readonly roomShopPresent?: boolean;
 }
 
 export type HistoryEvent =
@@ -164,6 +165,7 @@ export interface RoomAppearanceHistoryEntry {
   readonly origin: RoomHistoryOrigin;
   readonly gameName: string;
   readonly surfaceShopPresent?: boolean;
+  readonly roomShopPresent?: boolean;
 }
 
 export interface EncounterHistoryEntry {

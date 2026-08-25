@@ -78,13 +78,16 @@ function isNaturalChaosAdditionalTarget(
   room: RoomDeclaration,
 ): boolean {
   if (
-    layout.naturalChaos === undefined ||
+    (layout.naturalChaos === undefined && layout.sparkChaos === undefined) ||
     room.roomSetKey !== 'Chaos' ||
     room.mode.kind !== 'authored' ||
     room.mode.templateKey !== 'Chaos' ||
     occurrence.state.kind !== 'fixed' ||
     occurrence.anomalyReplacement !== undefined ||
-    !layout.naturalChaos.roomGameNames.includes(room.gameName)
+    !(
+      layout.naturalChaos?.roomGameNames.includes(room.gameName) === true ||
+      layout.sparkChaos?.roomGameNames.includes(room.gameName) === true
+    )
   ) {
     return false;
   }
@@ -95,7 +98,8 @@ function isNaturalChaosAdditionalTarget(
       sourceRoom.roomSetKey === layout.biomeKey &&
       source.additionalExits.some(
         (additional) =>
-          additional.kind === 'naturalChaos' && additional.occurrenceId === occurrence.occurrenceId,
+          (additional.kind === 'naturalChaos' || additional.kind === 'sparkChaos') &&
+          additional.occurrenceId === occurrence.occurrenceId,
       )
     );
   });

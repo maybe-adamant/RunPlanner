@@ -1,7 +1,7 @@
 {
-  "schemaVersion": 58,
+  "schemaVersion": 59,
   "projectId": "natural-chaos-unresolved-trial-upgrade",
-  "catalogVersion": "0.40.0-hermes-shrine",
+  "catalogVersion": "0.41.0-stygian-well",
   "routes": [
     {
       "routeKey": "Underworld",
@@ -237,6 +237,14 @@
                   "left": null,
                   "middle": null,
                   "right": null
+                }
+              },
+              "stygianWell": {
+                "interacted": false,
+                "offerKeyBySlot": {
+                  "healing": null,
+                  "secondLeft": null,
+                  "secondRight": null
                 }
               },
               "additionalExits": [],

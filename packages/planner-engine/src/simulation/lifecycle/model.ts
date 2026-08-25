@@ -34,6 +34,7 @@ export type RoomLifecycleEvent =
   | (RoomLifecycleEventBase & {
       readonly kind: 'roomEntered';
       readonly surfaceShopPresent?: boolean;
+      readonly roomShopPresent?: boolean;
     })
   | (RoomLifecycleEventBase & {
       readonly kind: 'fountainUsed';
@@ -122,6 +123,10 @@ export type RoomLifecycleEvent =
       readonly siteKey?: string;
       readonly entryKey?: string;
     })
+  | (RoomLifecycleEventBase & {
+      readonly kind: 'wellPurchase';
+      readonly generationKey: import('../../authored-project/model').StygianWellGenerationKey;
+    })
   | (RoomLifecycleEventBase & { readonly kind: 'roomCommitted' })
   | (RoomLifecycleEventBase & {
       readonly kind: 'roomCountersAdvanced';
@@ -153,6 +158,7 @@ export interface RoomLifecycleExecutionInput {
   readonly counterEffects: RoomCounterEffects;
   /** Exact feature presence recorded with the physical room-entry ledger. */
   readonly surfaceShopPresent?: boolean;
+  readonly roomShopPresent?: boolean;
   readonly requiredObjects?: readonly RequiredRoomObjectDescriptor[];
   readonly enteredRewardStoreKey?: string;
   readonly offerPointRewardStores?: Readonly<Record<string, string>>;

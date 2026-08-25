@@ -1,7 +1,7 @@
 {
-  "schemaVersion": 58,
+  "schemaVersion": 59,
   "projectId": "surface-1",
-  "catalogVersion": "0.40.0-hermes-shrine",
+  "catalogVersion": "0.41.0-stygian-well",
   "routes": [
     {
       "routeKey": "Underworld",

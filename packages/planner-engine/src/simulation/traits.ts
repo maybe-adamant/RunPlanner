@@ -205,6 +205,8 @@ export interface TraitReplacementTransition {
   readonly oldRarity: TraitRarity;
   readonly newTraitKey: string;
   readonly requiredRarity: TraitRarity;
+  /** Sacrificial Hymn adds levels only to its one forced replacement row. */
+  readonly levelBonus?: number;
 }
 
 interface TraitTargetedAcquisitionTransitionBase {
@@ -799,7 +801,7 @@ export function foldTraitHistoryEvents(
         if (replacement !== undefined && replacementLevel !== undefined) {
           equipped[event.replacementTransition.newTraitKey] = Object.freeze({
             ...replacement,
-            level: replacementLevel,
+            level: replacementLevel + (event.replacementTransition.levelBonus ?? 0),
           });
         }
       }
@@ -1059,6 +1061,10 @@ export interface TraitOfferContext {
   readonly boonRarityFacts?: BoonRarityFacts;
   readonly boonRarityRoomOverride?: import('../catalog-schema').BoonRarityOverride;
   readonly boonRarityItemOverride?: import('../catalog-schema').BoonRarityOverride;
+  /** One-use Yarn contributions carried by the real Well purchase branch. */
+  readonly temporaryBoonRarityUses?: number;
+  /** One-use forced replacement state carried by Sacrificial Hymn. */
+  readonly limitedSwapUses?: number;
 }
 
 /** Applies the active Ordinary curse at the one source-screen frontier.
@@ -1132,7 +1138,16 @@ export function boonRarityFactsForOffer(
     ...(context.boonRarityItemOverride === undefined
       ? {}
       : { itemOverride: context.boonRarityItemOverride }),
-    contributions: Object.freeze([...arcana, ...traits, ...favor]),
+    contributions: Object.freeze([
+      ...arcana,
+      ...traits,
+      ...favor,
+      ...Array.from({ length: context.temporaryBoonRarityUses ?? 0 }, () =>
+        Object.freeze({
+          additive: Object.freeze({ Rare: 1, Epic: 0.25, Duo: 0.1, Legendary: 0.1 }),
+        }),
+      ),
+    ]),
   });
 }
 
@@ -1310,6 +1325,7 @@ export interface TraitOfferDomainCompositionInput {
     readonly kind: TraitOfferDomainOptionKind;
   }[];
   readonly fallbackGold: boolean;
+  readonly minimumReplacementCount?: number;
 }
 
 export interface TraitOfferDomainCompositionResult {
@@ -1350,9 +1366,13 @@ export function assessTraitOfferDomainComposition(
       ? [...ordinary].filter((key) => !optionKeys.has(key))
       : [];
   const authoredHighTier = input.authored.filter((option) => option.kind === 'highTier').length;
-  const requiredReplacement = Math.min(
+  const exhaustionRequiredReplacement = Math.min(
     replacements.size,
     Math.max(0, 3 - ordinaryCandidateCount - authoredHighTier),
+  );
+  const requiredReplacement = Math.max(
+    exhaustionRequiredReplacement,
+    input.minimumReplacementCount ?? 0,
   );
   const findings = Object.freeze([
     ...(ordinaryCandidateCount >= 3 && input.authored.length !== 3
@@ -1750,6 +1770,7 @@ export function assessTraitReplacementComposition(
       ),
       authored: Object.freeze([]),
       fallbackGold: true,
+      minimumReplacementCount: 0,
     });
     return Object.freeze({
       applies,
@@ -1805,6 +1826,7 @@ export function assessTraitReplacementComposition(
     replacementKeys: Object.freeze([...replacementKeys]),
     authored: Object.freeze(authored),
     fallbackGold: false,
+    minimumReplacementCount: (context.limitedSwapUses ?? 0) > 0 && replacementKeys.size > 0 ? 1 : 0,
   });
   return Object.freeze({
     applies: true,
@@ -2722,10 +2744,31 @@ export function assessTraitOffer(
 ): readonly TraitAssessment[] {
   if (offer.kind !== 'traits') return Object.freeze([]);
   const offerContext = { ...context, resolvedProviderKey: offer.giverKey };
+  let hymnApplied = false;
   return Object.freeze(
-    offer.options.map((option) =>
-      assessTraitOption(catalog, option.traitKey, history, offerContext, option.rarity),
-    ),
+    offer.options.map((option) => {
+      const assessment = assessTraitOption(
+        catalog,
+        option.traitKey,
+        history,
+        offerContext,
+        option.rarity,
+      );
+      if (
+        hymnApplied ||
+        (context.limitedSwapUses ?? 0) === 0 ||
+        assessment.replacementTransition === undefined
+      )
+        return assessment;
+      hymnApplied = true;
+      return Object.freeze({
+        ...assessment,
+        replacementTransition: Object.freeze({
+          ...assessment.replacementTransition,
+          levelBonus: 2,
+        }),
+      });
+    }),
   );
 }
 
@@ -3030,7 +3073,14 @@ export function traitOfferStartingDraft(
   const variants = automaticDraftCandidates(allCandidates);
   const selfContained = selfContainedDraftCandidates(catalog, variants, history);
   const chosen = traitOfferSupportsExhaustion(giver)
-    ? selectSelfContainedFirst(exhaustionStartingCandidates(catalog, domains), selfContained)
+    ? selectSelfContainedFirst(
+        exhaustionStartingCandidates(
+          catalog,
+          domains,
+          (context.limitedSwapUses ?? 0) > 0 && domains.replacements.length > 0 ? 1 : 0,
+        ),
+        selfContained,
+      )
     : fixedStartingCandidates(variants, selfContained);
   if (chosen.length === 0 || (!traitOfferSupportsExhaustion(giver) && chosen.length !== 3))
     return undefined;
@@ -3092,7 +3142,11 @@ export function nextTraitOfferDraft(
         : variants.filter((candidate) => !offered.has(candidate.traitKey)).length >=
             3 - current.options.length;
     }
-    const composition = assessDraftDomainComposition(current, domains);
+    const composition = assessDraftDomainComposition(
+      current,
+      domains,
+      (context.limitedSwapUses ?? 0) > 0 && domains.replacements.length > 0 ? 1 : 0,
+    );
     if (composition.legal) return assessTraitOfferComposition(catalog, current, history).legal;
     if (current.options.length >= 3) return false;
     const offered = new Set(current.options.map((option) => option.traitKey));
@@ -3170,10 +3224,16 @@ function traitDraft(
 function exhaustionStartingCandidates(
   catalog: Catalog,
   domains: TraitOfferCompositionDomains,
+  minimumReplacementCount = 0,
 ): readonly TraitCandidateAssessment[] {
   const ordinary = automaticDraftCandidates(domains.ordinary);
   const highTier = automaticDraftCandidates(domains.highTier);
   const replacements = automaticDraftCandidates(domains.replacements);
+  if (minimumReplacementCount > 0 && replacements.length > 0) {
+    const replacement = replacements[0]!;
+    const remainder = [...ordinary, ...highTier, ...replacements.slice(1)].slice(0, 2);
+    return [replacement, ...remainder];
+  }
   if (ordinary.length >= 3) {
     const priority = ordinary.slice(0, 3);
     if (priority.some((candidate) => isAttackOrSpecial(catalog, candidate.traitKey)))
@@ -3231,6 +3291,7 @@ function isAttackOrSpecial(catalog: Catalog, traitKey: string): boolean {
 function assessDraftDomainComposition(
   draft: AuthoredTraitOfferTraits,
   domains: TraitOfferCompositionDomains,
+  minimumReplacementCount = 0,
 ): TraitOfferDomainCompositionResult {
   const ordinary = new Set(domains.ordinary.map((candidate) => candidate.traitKey));
   const highTier = new Set(domains.highTier.map((candidate) => candidate.traitKey));
@@ -3252,6 +3313,7 @@ function assessDraftDomainComposition(
       ),
     ),
     fallbackGold: false,
+    minimumReplacementCount,
   });
 }
 

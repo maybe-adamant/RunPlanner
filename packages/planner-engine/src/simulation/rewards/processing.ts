@@ -115,6 +115,7 @@ import {
   isAspectSpellDropDormant,
   directTraitSetOutcomes,
   boonRarityFactsForOffer,
+  traitOfferCompositionDomains,
   hasActiveChaosSemanticTag,
   type ReachedTraitOfferEvaluation,
   type ReachedLevelResolutionEvaluation,
@@ -215,6 +216,8 @@ export interface RewardBranchState {
   readonly pendingShops: Readonly<Record<string, PendingShopState>>;
   /** Delayed Shrine purchases survive biome boundaries until delivery or pickup. */
   readonly pendingHermesShrineDeliveries: Readonly<Record<string, PendingHermesShrineDelivery>>;
+  /** Consequential RoomShop state only; neutral paid items deliberately add no ledger. */
+  readonly stygianWell: import('../stygian-well').StygianWellRunState;
   readonly processedThroughHistorySequence: number;
   readonly traitHistory?: TraitHistoryState;
   readonly traitEvaluations?: readonly ReachedTraitOfferEvaluation[];
@@ -579,6 +582,7 @@ function equivalentBranchStateKey(branch: RewardBranchState): string {
     },
     pendingShops: orderedRecord(branch.pendingShops),
     pendingHermesShrineDeliveries: orderedRecord(branch.pendingHermesShrineDeliveries),
+    stygianWell: branch.stygianWell,
     traitHistory: branch.traitHistory,
     arcanaFear: branch.arcanaFear,
     keepsakes: branch.keepsakes,
@@ -1358,10 +1362,18 @@ function applyTraitOfferForAcquisition(
   findingChronology?: FindingChronology,
   options: ApplyTraitOfferOptions = {},
 ): ReturnType<typeof applyTraitOfferForAcquisitionInternal> {
-  return applyTraitOfferForAcquisitionInternal(
+  const traitContext = Object.freeze({
+    ...(reward.traitContext ?? {}),
+    ...(branch.stygianWell.yarnUses === 0
+      ? {}
+      : { temporaryBoonRarityUses: branch.stygianWell.yarnUses }),
+    ...(branch.stygianWell.hymnUses === 0 ? {} : { limitedSwapUses: branch.stygianWell.hymnUses }),
+  });
+  const source = Object.freeze({ ...reward, traitContext });
+  const settlement = applyTraitOfferForAcquisitionInternal(
     catalog,
     branch,
-    reward,
+    source,
     role,
     lifecyclePoint,
     sequence,
@@ -1369,6 +1381,48 @@ function applyTraitOfferForAcquisition(
     findingChronology,
     options,
   );
+  const authored = reward.traitOffersByAcquisitionRole?.[role];
+  // A missing authored screen is an incomplete reached frontier, not a closed
+  // choice. Retain both one-use effects so the repaired screen receives them.
+  if (authored === undefined || authored === null) return settlement;
+  const closedContext = withBoonRarityFacts(
+    catalog,
+    branch,
+    Object.freeze({ ...traitContext, resolvedProviderKey: authored.giverKey }),
+  );
+  const consumesYarn =
+    traitContext.temporaryBoonRarityUses !== undefined &&
+    boonRarityFactsForOffer(
+      catalog,
+      branch.traitHistory ?? createTraitHistoryState(),
+      closedContext,
+      branch.arcanaFear,
+    ) !== undefined;
+  const consumesHymn =
+    (traitContext.limitedSwapUses ?? 0) > 0 &&
+    authored.kind === 'traits' &&
+    traitOfferCompositionDomains(
+      catalog,
+      authored.giverKey,
+      branch.traitHistory ?? createTraitHistoryState(),
+      closedContext,
+    ).replacements.length > 0;
+  if (!consumesYarn && !consumesHymn) return settlement;
+  return Object.freeze({
+    ...settlement,
+    branch: Object.freeze({
+      ...settlement.branch,
+      stygianWell: Object.freeze({
+        ...settlement.branch.stygianWell,
+        ...(consumesYarn
+          ? { yarnUses: Math.max(0, settlement.branch.stygianWell.yarnUses - 1) }
+          : {}),
+        ...(consumesHymn
+          ? { hymnUses: Math.max(0, settlement.branch.stygianWell.hymnUses - 1) }
+          : {}),
+      }),
+    }),
+  });
 }
 
 function applyEchoLastRunBoonForAcquisition(
@@ -1423,7 +1477,7 @@ export interface EncounterTraitOfferSettlement {
   readonly blockedChild?: ReachedTraitChildCheckpoint;
 }
 
-function encounterPreOfferTraitContext(
+function encounterTraitContext(
   catalog: Catalog,
   branch: RewardBranchState,
   providerKey: string,
@@ -1482,7 +1536,7 @@ export function settleEncounterTraitOffer(
   const providerKey = offer?.giverKey ?? unresolvedProviderKey;
   if (providerKey === undefined)
     throw new Error('encounter trait offer settlement requires its known provider');
-  const traitContext = encounterPreOfferTraitContext(
+  const traitContext = encounterTraitContext(
     catalog,
     branch,
     providerKey,
@@ -1997,6 +2051,14 @@ export function initializeRewardBranches(
       events: Object.freeze([]),
       pendingShops: Object.freeze({}),
       pendingHermesShrineDeliveries: Object.freeze({}),
+      stygianWell: Object.freeze({
+        sparkUses: 0,
+        yarnUses: 0,
+        hymnUses: 0,
+        discountUses: Object.freeze([]),
+        emptySlotUses: Object.freeze([]),
+        extendedUses: 0,
+      }),
       processedThroughHistorySequence: 0,
       traitHistory: createTraitHistoryState(),
       traitEvaluations: Object.freeze([]),
@@ -2050,6 +2112,16 @@ export function initializeRewardBranches(
         events: Object.freeze([]),
         pendingShops: Object.freeze({}),
         pendingHermesShrineDeliveries: branch.pendingHermesShrineDeliveries ?? Object.freeze({}),
+        stygianWell:
+          branch.stygianWell ??
+          Object.freeze({
+            sparkUses: 0,
+            yarnUses: 0,
+            hymnUses: 0,
+            discountUses: Object.freeze([]),
+            emptySlotUses: Object.freeze([]),
+            extendedUses: 0,
+          }),
         processedThroughHistorySequence: 0,
         traitHistory: branch.traitHistory ?? createTraitHistoryState(),
         traitEvaluations: Object.freeze([]),
@@ -5057,5 +5129,13 @@ export function publicRewardBranch(branch: RewardBranchState): RewardBranch {
     ...(Object.keys(branch.pendingHermesShrineDeliveries).length === 0
       ? {}
       : { pendingHermesShrineDeliveries: branch.pendingHermesShrineDeliveries }),
+    ...(branch.stygianWell.sparkUses === 0 &&
+    branch.stygianWell.yarnUses === 0 &&
+    branch.stygianWell.hymnUses === 0 &&
+    branch.stygianWell.extendedUses === 0 &&
+    branch.stygianWell.discountUses.length === 0 &&
+    branch.stygianWell.emptySlotUses.length === 0
+      ? {}
+      : { stygianWell: branch.stygianWell }),
   });
 }

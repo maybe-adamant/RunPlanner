@@ -18,6 +18,11 @@ retroactively changing the exited room. Its focused catalog, engine,
 planner/UI, migration, fixture, typecheck, formatting, and diff lanes are
 recorded with the Gate C delivery result below.
 
+Gates D and E are complete at schemas 57 and 58. Gate F's schema-59 executor
+pass now models the Stygian Well vertical slice and its independent-review
+remediation is complete; the complete repository gate remains reserved for
+Gate G closure.
+
 The locked plan remains grounded on the clean source-audit baseline
 `eb278f98d445b288f1378086bbb83a3b3af78964`. Its pre-execution reviews closed
 delivery-host retention, one-row rush chronology, derived pending state, the
@@ -972,6 +977,44 @@ one-entry-per-trait equipped map.
   added.
 - Add one short Underworld checkpoint route combining a Well refill with at
   least two consequential item contacts.
+
+### Delivery result — independent-review remediation complete
+
+- Schema 59 separates ordinary Well placement from interaction and gives every
+  present Well three stable initial generations, sparse purchase membership,
+  optional Travel Deal refill, and Twist children. Forced F/G/H Postboss Wells
+  are mandatory; optional F/G/H/I hosts use declaration-owned chances,
+  `ChallengeSwitchBase` capacity, and three-intervening-room spacing.
+- The normalized `RoomShop` profile owns all 25 identities, exact slot groups,
+  Discount/Empty requirements, the eight-item Extended whitelist, Twist's
+  closed nested pool, and the distinct top-level/nested fallback edges. The
+  engine derives those closed sets from the catalog rather than restating them.
+- Paid Well actions apply immediately without entering pickup alternatives.
+  Travel Deal refills the first ranked purchase from its same group. Spark uses
+  create the distinct authored `sparkChaos` exit at the first force-capable
+  physical host; Yarn and Hymn extend the existing rarity and replacement
+  lifecycles; Discount/Empty and Extended use existing encounter/Boss clocks;
+  Last Stand records the ordinary paid consumable and publishes one runtime
+  fallback without a Death Defiance ledger.
+- React exposes Well placement plus the Well-only Interact convenience. Exact
+  inventory appears only while interacting, purchase membership owns timeline
+  actions, and Twist appears only for a purchased Twist generation while stale
+  child state remains persisted for repair. The read-only Wells index navigates
+  every present ordinary or forced instance. World Shop and Hermes Shrine keep
+  their always-authored three-slot inventory and receive no Interact control.
+- The named `underworld-f-stygian-well` checkpoint combines a real Travel Deal
+  predecessor with Yarn, Hymn, and Extended purchases in the forced F Postboss
+  Well. A configured-tail witness proves that its refill and immediate effects
+  match the same F prefix when G remains configured.
+- Focused catalog matrices, strict codecs/commands, Spark topology, Well
+  consequences, Yarn/Hymn settlement, application projection/UI/index,
+  schema migration, and checkpoint-corpus tests are the owning verification.
+  Review remediation preserves purchased initial/refill generations and their
+  actions across invalidating source edits, carries Well candidates through
+  the progressive repair frontier, applies Yarn/Hymn through the shared boon
+  acquisition authority, and closes the compiler's Well metadata relations.
+  The executor's exact final lane results are recorded at handoff; the complete
+  repository gate remains pending.
 
 ## Gate G — Closure and Absorption
 

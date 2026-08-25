@@ -858,24 +858,35 @@ function evaluateAdditionalContinuationEntries(
     const parentHistory = history.rooms.find(
       (room) => semanticAddressKey(room.origin) === semanticAddressKey(parentOrigin),
     );
-    if (continuation.key === 'naturalChaos') {
+    if (continuation.key === 'naturalChaos' || continuation.key === 'sparkChaos') {
       if (source === undefined || parentHistory?.entry === undefined) continue;
-      const declaration = sourceDeclaration?.additionalExits.find(
-        (
-          candidate,
-        ): candidate is Extract<
-          (typeof sourceDeclaration.additionalExits)[number],
-          { readonly kind: 'naturalChaos' }
-        > => candidate.kind === 'naturalChaos' && candidate.key === continuation.key,
-      );
-      const host = layout.naturalChaos;
+      const forced = continuation.key === 'sparkChaos';
+      const declaration = forced
+        ? sourceDeclaration?.additionalExits.find(
+            (
+              candidate,
+            ): candidate is Extract<
+              (typeof sourceDeclaration.additionalExits)[number],
+              { readonly kind: 'sparkChaos' }
+            > => candidate.kind === 'sparkChaos' && candidate.key === 'sparkChaos',
+          )
+        : sourceDeclaration?.additionalExits.find(
+            (
+              candidate,
+            ): candidate is Extract<
+              (typeof sourceDeclaration.additionalExits)[number],
+              { readonly kind: 'naturalChaos' }
+            > => candidate.kind === 'naturalChaos' && candidate.key === 'naturalChaos',
+          );
+      const host = forced ? layout.sparkChaos : layout.naturalChaos;
       const failedConditions: string[] = [];
       if (declaration === undefined) failedConditions.push('sourceCapability');
       if (host === undefined || !host.roomGameNames.includes(continuation.room.gameName)) {
         failedConditions.push('targetDomain');
       }
       if (
-        declaration?.requirement !== undefined &&
+        declaration?.kind === 'naturalChaos' &&
+        declaration.requirement !== undefined &&
         sourceDeclaration !== undefined &&
         !evaluateRequirement(
           declaration.requirement,
@@ -890,8 +901,8 @@ function evaluateAdditionalContinuationEntries(
       ) {
         failedConditions.push('sourceRequirement');
       }
-      const window = host?.offerSpacingWindow;
-      if (window !== undefined) {
+      const window = forced ? undefined : layout.naturalChaos?.offerSpacingWindow;
+      if (!forced && window !== undefined) {
         const recentOrigins = new Set(
           parentHistory.entry.ledgers.roomAppearances
             .slice(0, -1)
@@ -901,7 +912,8 @@ function evaluateAdditionalContinuationEntries(
         const recentOffer = parentHistory.entry.ledgers.roomCreations.find(
           (creation) =>
             creation.source === 'additionalExit' &&
-            creation.additionalOrigin.additionalExitKey === 'naturalChaos' &&
+            (creation.additionalOrigin.additionalExitKey === 'naturalChaos' ||
+              creation.additionalOrigin.additionalExitKey === 'sparkChaos') &&
             recentOrigins.has(semanticAddressKey(creation.parentOrigin)),
         );
         if (recentOffer !== undefined) failedConditions.push('offerSpacing');
@@ -911,10 +923,10 @@ function evaluateAdditionalContinuationEntries(
           findings,
           findingRegions,
           finding('targetRoomUnavailable', continuation.origin, {
-            kind: 'naturalChaos',
+            kind: continuation.key,
             sourceGameName: source.gameName,
             chaosRoomGameName: continuation.room.gameName,
-            offerSpacingWindow: host?.offerSpacingWindow ?? null,
+            offerSpacingWindow: window ?? null,
             failedConditions: Object.freeze(failedConditions),
           }),
         );

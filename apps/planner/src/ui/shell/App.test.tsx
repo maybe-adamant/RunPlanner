@@ -131,6 +131,20 @@ describe('App', () => {
     expect(markup).toContain('No Shrine hosts in this route.');
   });
 
+  it('renders the read-only Stygian Well route index', () => {
+    const application = createApplication();
+    application.store.dispatch(
+      routePanelSelected({ routeKey: 'Underworld', panel: { kind: 'wells' } }),
+    );
+
+    const markup = appMarkup(application);
+    expect(application.store.getState().editorSession.activePanelByRoute.Underworld).toEqual({
+      kind: 'wells',
+    });
+    expect(markup).toContain('Stygian Wells');
+    expect(markup).toContain('No Well hosts in this route.');
+  });
+
   it('presents the configured route extent and included biomes', () => {
     const application = createApplication();
     application.store.dispatch(

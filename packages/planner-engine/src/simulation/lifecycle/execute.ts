@@ -132,6 +132,7 @@ const lifecycleEffectRegistry = Object.freeze({
     appendEvent(state, context, {
       kind: 'roomEntered',
       surfaceShopPresent: context.input.surfaceShopPresent === true,
+      roomShopPresent: context.input.roomShopPresent === true,
     }),
   recordRequiredObjectSpawns: (context, state) => {
     const requiredObjects = context.input.requiredObjects;
@@ -593,6 +594,11 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
             : {
                 enteredRewardStoreKey: context.input.offerPointRewardStores[row.reference.wheelKey],
               }),
+        });
+      case 'purchaseStygianWellOffer':
+        return appendEvent(state, operationContext, {
+          kind: 'wellPurchase',
+          generationKey: row.reference.generationKey,
         });
       case 'interactShopOffer':
         return appendEvent(state, operationContext, {

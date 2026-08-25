@@ -407,6 +407,16 @@ export function hermesShrineCandidateForProjectEvaluationAssembly(
     ?.hermesShrines.at(occurrence);
 }
 
+/** Exact Well entry-frontier capability retained by project evaluation. */
+export function stygianWellCandidateForProjectEvaluationAssembly(
+  assembly: ProjectEvaluationAssembly,
+  occurrence: import('../authored-project/addresses').OccurrenceAddress,
+) {
+  return candidateArtifactsForProjectEvaluationAssembly(assembly)
+    .biomeAt(createBiomeAddress(occurrence.routeKey, occurrence.biomeKey))
+    ?.stygianWells.at(occurrence);
+}
+
 /**
  * Supported exact-assembly query for one encounter phase. Application
  * composition may ask whether a particular declared phase has an evaluated
@@ -901,7 +911,7 @@ function evaluateBiomeAssembly(
   const startingKeepsake = catalog.keepsakes.byKey[context.loadout.startingKeepsakeKey];
   const startingFigLeaf = startingKeepsake?.effect;
   let figLeafState: FigLeafLifecycleState | undefined;
-  let pendingSpellDrop = false;
+  let pendingSpellDrop: boolean;
   try {
     figLeafState =
       context.seed === undefined
@@ -1046,6 +1056,7 @@ function evaluateBiomeAssembly(
         rewards.steadyGrowthArtifacts,
         rewards.purgingPoolArtifacts,
         rewards.hermesShrineArtifacts,
+        rewards.stygianWellArtifacts,
       ),
     });
   }
@@ -1076,6 +1087,7 @@ function evaluateBiomeAssembly(
         rewards.steadyGrowthArtifacts,
         rewards.purgingPoolArtifacts,
         rewards.hermesShrineArtifacts,
+        rewards.stygianWellArtifacts,
       ),
       history: Object.freeze({
         routeKey: history.routeKey,

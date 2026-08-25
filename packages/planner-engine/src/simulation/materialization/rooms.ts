@@ -860,6 +860,9 @@ export function materializeAuthoredRoom(
     ...(context.occurrence.hermesShrine === undefined
       ? {}
       : { hermesShrine: context.occurrence.hermesShrine }),
+    ...(context.occurrence.stygianWell === undefined
+      ? {}
+      : { stygianWell: context.occurrence.stygianWell }),
     acquisitionSites: Object.freeze(
       Object.fromEntries(
         Object.entries(context.occurrence.acquisitionSites ?? {}).flatMap(([siteKey, site]) => {

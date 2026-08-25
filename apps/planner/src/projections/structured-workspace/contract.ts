@@ -965,6 +965,11 @@ export interface WorkspaceInteractionCatalog {
   readonly hermesShrineOffers: ReadonlyMap<string, WorkspaceHermesShrineOfferInteraction>;
   readonly hermesShrinePurchases: ReadonlyMap<string, WorkspaceHermesShrinePurchaseInteraction>;
   readonly hermesShrinePresences: ReadonlyMap<string, WorkspaceHermesShrinePresenceInteraction>;
+  readonly stygianWellPresences: ReadonlyMap<string, WorkspaceStygianWellPresenceInteraction>;
+  readonly stygianWellInteractions: ReadonlyMap<string, WorkspaceStygianWellInteraction>;
+  readonly stygianWellOffers: ReadonlyMap<string, WorkspaceStygianWellOfferInteraction>;
+  readonly stygianWellPurchases: ReadonlyMap<string, WorkspaceStygianWellPurchaseInteraction>;
+  readonly stygianWellTwistResults: ReadonlyMap<string, WorkspaceStygianWellTwistResultInteraction>;
   readonly resourcePlacements: ReadonlyMap<string, WorkspaceResourcePlacementInteraction>;
   readonly localVisitOrders: ReadonlyMap<string, WorkspaceLocalVisitOrderInteraction>;
   readonly localVisitGenerations: ReadonlyMap<string, WorkspaceLocalVisitGenerationInteraction>;
@@ -1062,6 +1067,66 @@ export interface WorkspaceHermesShrinePresenceInteraction {
     present: boolean,
   ) => WorkspaceCommandIntent<
     Extract<ProjectCommand, { readonly kind: 'SetHermesShrinePresence' }>
+  >;
+}
+
+export interface WorkspaceStygianWellPresenceInteraction {
+  readonly key: string;
+  readonly owner: OccurrenceAddress;
+  readonly present: boolean;
+  readonly intentFor: (
+    present: boolean,
+  ) => WorkspaceCommandIntent<
+    | Extract<ProjectCommand, { readonly kind: 'AddStygianWell' }>
+    | Extract<ProjectCommand, { readonly kind: 'RemoveStygianWell' }>
+  >;
+}
+
+export interface WorkspaceStygianWellInteraction {
+  readonly key: string;
+  readonly owner: OccurrenceAddress;
+  readonly interacted: boolean;
+  readonly intentFor: (
+    interacted: boolean,
+  ) => WorkspaceCommandIntent<
+    Extract<ProjectCommand, { readonly kind: 'SetStygianWellInteraction' }>
+  >;
+}
+
+export interface WorkspaceStygianWellOfferInteraction {
+  readonly key: string;
+  readonly owner: OccurrenceAddress;
+  readonly generationKey: import('@run-planner/engine/authored-project').StygianWellGenerationKey;
+  readonly itemKey: string | null;
+  readonly candidateItemKeys: readonly string[];
+  readonly intentFor: (
+    itemKey: string | null,
+  ) => WorkspaceCommandIntent<
+    | Extract<ProjectCommand, { readonly kind: 'ReplaceStygianWellOffer' }>
+    | Extract<ProjectCommand, { readonly kind: 'ReplaceStygianWellTravelDealRefill' }>
+  >;
+}
+
+export interface WorkspaceStygianWellPurchaseInteraction {
+  readonly key: string;
+  readonly owner: OccurrenceAddress;
+  readonly generationKey: import('@run-planner/engine/authored-project').StygianWellGenerationKey;
+  readonly purchased: boolean;
+  readonly intentFor: (
+    purchased: boolean,
+  ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'SetStygianWellPurchase' }>>;
+}
+
+export interface WorkspaceStygianWellTwistResultInteraction {
+  readonly key: string;
+  readonly owner: OccurrenceAddress;
+  readonly generationKey: import('@run-planner/engine/authored-project').StygianWellGenerationKey;
+  readonly itemKey: string | null;
+  readonly candidateItemKeys: readonly string[];
+  readonly intentFor: (
+    itemKey: string | null,
+  ) => WorkspaceCommandIntent<
+    Extract<ProjectCommand, { readonly kind: 'ReplaceStygianWellTwistResult' }>
   >;
 }
 
@@ -1708,6 +1773,35 @@ export type WorkspaceRoomFeature =
         readonly purchase:
           import('@run-planner/engine/authored-project').HermesShrinePurchase | null;
       };
+    }
+  | {
+      readonly kind: 'stygianWell';
+      readonly present: boolean;
+      readonly required: boolean;
+      readonly placementEligible: boolean;
+      readonly presenceInteractionKey?: string;
+      readonly interactionKey?: string;
+      readonly interacted: boolean;
+      readonly slots: readonly {
+        readonly key:
+          import('@run-planner/engine/authored-project').StygianWellSlotKey | 'travelDealRefill';
+        readonly generationKey: import('@run-planner/engine/authored-project').StygianWellGenerationKey;
+        readonly label: string;
+        readonly itemKey: string | null;
+        readonly itemLabel?: string;
+        readonly candidateItemKeys: readonly string[];
+        readonly candidateItems: readonly { readonly key: string; readonly label: string }[];
+        readonly offerInteractionKey: string;
+        readonly purchaseInteractionKey: string;
+        readonly purchased: boolean;
+        readonly twist?: {
+          readonly itemKey: string | null;
+          readonly itemLabel?: string;
+          readonly candidateItemKeys: readonly string[];
+          readonly candidateItems: readonly { readonly key: string; readonly label: string }[];
+          readonly interactionKey: string;
+        };
+      }[];
     };
 
 export interface WorkspaceShipStructurePhase {

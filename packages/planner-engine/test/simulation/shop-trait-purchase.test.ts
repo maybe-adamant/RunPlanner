@@ -677,6 +677,34 @@ function echoGoldShop(
 }
 
 describe('Echo Gate D Gold Gold Gold', () => {
+  it('applies and consumes Well Yarn and Hymn on a paid World Shop Boon screen', () => {
+    const reward = shopBoonReward('HeraUpgrade', 'HeraWeaponBoon');
+    const initial = initializeTestRewardBranches()[0]!;
+    const traits = pomTargetHistory();
+    const result = echoGoldShop(['Boon'], {
+      initialBranches: [
+        Object.freeze({
+          ...initial,
+          history: attachTraitHistory(initial.history, traits),
+          traitHistory: traits,
+          stygianWell: Object.freeze({ ...initial.stygianWell, yarnUses: 1, hymnUses: 1 }),
+        }),
+      ],
+      offerOverrides: { Boon: reward.offer },
+      rewardOverrides: { Boon: reward },
+    });
+    const branch = result.settlement.branches[0];
+    expect(branch?.stygianWell).toMatchObject({ yarnUses: 0, hymnUses: 0 });
+    expect(branch?.traitEvaluations?.at(-1)?.context).toMatchObject({
+      temporaryBoonRarityUses: 1,
+      limitedSwapUses: 1,
+    });
+    expect(branch?.traitHistory?.equippedTraits.HeraWeaponBoon).toMatchObject({
+      level: 3,
+      rarity: 'Rare',
+    });
+  });
+
   it('settles paid All Together atomically across the complete divergent Shop cohort', () => {
     const reward = allTogetherReward();
     const result = echoGoldShop(['Boon'], {
