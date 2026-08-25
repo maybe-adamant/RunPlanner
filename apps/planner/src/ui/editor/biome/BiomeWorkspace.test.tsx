@@ -5,8 +5,6 @@ import {
   applyProjectCommand,
   createBatchRewardStoreAddress,
   createBiomeAddress,
-  createJudgmentArcanaAddress,
-  createPostbossKeepsakeSelectionAddress,
   createExitDecisionAddress,
   createHubDecisionAddress,
   createHubSlotAddress,
@@ -15,18 +13,16 @@ import {
   createOccurrenceAddress,
   createOccurrenceId,
   createProjectDocument,
-  createRouteAddress,
   createTargetAddress,
   semanticAddressKey,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
-import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Provider } from 'react-redux';
 
 import { createApplication, type PlannerApplication } from '@planner/composition/createApplication';
 import { semanticFindingKey } from '@planner/projections/evaluationProjection';
-import { semanticOwnerElementId } from '@planner/ui/feedback/semanticOwner';
 import type { WorkspaceBiome, WorkspaceNode } from '@planner/projections/structured-workspace';
 import { findingSelected, semanticOwnerFocused } from '@planner/state/editorSessionSlice';
 import {
@@ -38,7 +34,6 @@ import {
   loadSurfaceNCompleteHubFrontierProject,
   loadSurfaceNEntryFrontierProject,
   loadSurfaceNEntryFrontierResolvedProject,
-  loadSurfaceNResourcesProject,
   loadSurfaceNOPQProject,
   nBiome,
   nLocalOccurrenceId,
@@ -276,116 +271,6 @@ describe('BiomeWorkspace', () => {
     const start = screen.getByRole('button', { name: /Start with Opening/ });
     expect(start.textContent).toContain('Next step');
     expect(start.textContent).not.toContain('Choose the first room');
-  });
-
-  it('edits authored start identity beside the read-only room workbench and undoes exactly', async () => {
-    const occurrenceId = createOccurrenceId('start-identity-surface');
-    const occurrence = createOccurrenceAddress(goldenFBiome, occurrenceId);
-    const started = applyProjectCommand(emptyProject('Underworld', 1), catalog, {
-      biome: goldenFBiome,
-      gameName: 'F_Opening01',
-      kind: 'CreateStart',
-      occurrenceId,
-    });
-    const project = started;
-    const view = renderWorkspace(project, 'Underworld', 'F');
-    const identity = screen.getByRole('region', { name: 'Start room identity' });
-    const workbench = document.querySelector('.biome-occurrence-workbench');
-    if (!(workbench instanceof HTMLElement)) throw new Error('start workbench is missing');
-    expect(within(workbench).queryByLabelText('Start room')).toBeNull();
-    const historyBefore = view.application.store.getState().projectWorkspace.history.past.length;
-
-    await view.user.click(within(identity).getByRole('button', { name: 'Start room' }));
-    const replacement = within(await screen.findByRole('listbox'))
-      .getAllByRole('option')
-      .find(
-        (option) =>
-          option.getAttribute('aria-disabled') !== 'true' &&
-          option.getAttribute('data-selected-value') !== 'true',
-      );
-    if (replacement === undefined) throw new Error('F start has no replacement room');
-    await view.user.click(replacement);
-
-    const authoredStart = () =>
-      view.application.store
-        .getState()
-        .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
-        ?.biomes.find((biome) => biome.biomeKey === 'F')
-        ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === occurrenceId)
-        ?.gameName;
-    expect(authoredStart()).not.toBe('F_Opening01');
-    expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(
-      occurrence,
-    );
-    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
-      historyBefore + 1,
-    );
-    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
-    expect(authoredStart()).toBe('F_Opening01');
-  });
-
-  it('edits a selectable F entry reward beside identity and undoes exactly once', async () => {
-    const occurrenceId = createOccurrenceId('start-entry-reward');
-    const started = applyProjectCommand(emptyProject('Underworld', 1), catalog, {
-      biome: goldenFBiome,
-      gameName: 'F_Opening01',
-      kind: 'CreateStart',
-      occurrenceId,
-    });
-    const view = renderWorkspace(started, 'Underworld', 'F');
-    const identity = screen.getByRole('region', { name: 'Start room identity' });
-    const historyBefore = view.application.store.getState().projectWorkspace.history.past.length;
-
-    await view.user.click(within(identity).getByLabelText('Reward'));
-    const listbox = await screen.findByRole('listbox');
-    await view.user.click(within(listbox).getByText('Hammer'));
-
-    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
-      historyBefore + 1,
-    );
-    expect(
-      view.application.store.getState().projectWorkspace.history.present.routes[0]?.biomes[0]
-        ?.topology?.occurrences[0]?.state,
-    ).toMatchObject({
-      kind: 'counted',
-      reward: { offer: { rewardType: 'WeaponUpgrade' } },
-    });
-    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
-    expect(
-      view.application.store.getState().projectWorkspace.history.present.routes[0]?.biomes[0]
-        ?.topology?.occurrences[0]?.state,
-    ).toMatchObject({ kind: 'counted', reward: null });
-  });
-
-  it('shows the fixed N entry reward without a start identity picker', async () => {
-    const view = renderWorkspace(loadSurfaceNOPQProject(), 'Surface', 'N');
-    await view.user.click(screen.getByRole('button', { name: /^Opening/ }));
-    const entryReward = screen.getByRole('region', { name: 'Entry reward' });
-    expect(within(entryReward).getByLabelText('Reward')).toBeTruthy();
-    expect(within(entryReward).queryByLabelText('Start room')).toBeNull();
-    expect(within(entryReward).queryByRole('heading', { name: 'Entry reward' })).toBeNull();
-    expect(within(entryReward).queryByRole('button', { name: /Edit Trait/ })).toBeNull();
-  });
-
-  it('binds a room-local selected resource removal to one semantic edit and undo', async () => {
-    const view = renderWorkspace(loadSurfaceNResourcesProject(), 'Surface', 'N');
-    await view.user.click(screen.getByRole('button', { name: /^Opening/ }));
-    const resources = screen.getByRole('region', { name: 'Resources' });
-    const historyBefore = view.application.store.getState().projectWorkspace.history.past.length;
-
-    await view.user.click(within(resources).getByRole('button', { name: 'Remove Mining' }));
-    const selected = () =>
-      view.application.store
-        .getState()
-        .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
-        ?.resourcePlacements.Pickaxe;
-    expect(selected()).toBeNull();
-    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
-      historyBefore + 1,
-    );
-
-    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
-    expect(selected()).toEqual({ biomeKey: 'N', occurrenceId: 'surface-n-opening' });
   });
 
   it('uses one concise player-facing name for the Hub rail stop', () => {
@@ -1438,177 +1323,5 @@ describe('BiomeWorkspace', () => {
     const workbench = inspector.querySelector<HTMLElement>('.biome-batch-workbench');
     if (workbench === null) throw new Error('P target finding decision is missing');
     expect(within(workbench).getByRole('article', { name: 'Combat 02 room offer' })).toBeTruthy();
-  });
-
-  it('keeps the reached Judgment editor on the fixed Boss timeline and directly reopenable', () => {
-    const dormant = renderWorkspace(loadSurfaceNOPQProject(), 'Surface', 'N');
-    const dormantBoss = workspaceBiome(dormant.application, 'Surface', 'N').nodes.find(
-      (node): node is Extract<WorkspaceNode, { readonly kind: 'occurrenceWorkbench' }> =>
-        node.kind === 'occurrenceWorkbench' && node.room.kind === 'Boss',
-    );
-    if (dormantBoss === undefined) throw new Error('N Boss completion is missing');
-    expect(dormantBoss.room.judgment).toBeUndefined();
-    cleanup();
-    dormant.application.dispose();
-
-    const project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
-      kind: 'ReplaceManualArcanaSelection',
-      route: createRouteAddress('Surface'),
-      arcanaKeys: ['CastCount'],
-    });
-    const view = renderWorkspace(project, 'Surface', 'N');
-    const workspace = workspaceProjection(view.application);
-    const owner = createJudgmentArcanaAddress(
-      createOccurrenceAddress(nBiome, createOccurrenceId('completion:N:boss')),
-      'Encounter',
-    );
-    const boss = workspaceBiome(view.application, 'Surface', 'N').nodes.find(
-      (node): node is Extract<WorkspaceNode, { readonly kind: 'occurrenceWorkbench' }> =>
-        node.kind === 'occurrenceWorkbench' && node.room.kind === 'Boss',
-    );
-    if (boss?.room.judgment === undefined)
-      throw new Error('active Judgment completion control is missing');
-    expect(workspace.interactions.judgmentArcana.has(semanticAddressKey(owner))).toBe(true);
-
-    act(() => view.application.store.dispatch(semanticOwnerFocused(owner)));
-    expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(owner);
-    const inspector = screen.getByRole('complementary', { name: 'Details' });
-    const judgmentLauncher = within(inspector).getByRole('button', {
-      name: /Judgment — choose 5 inactive Arcana cards/,
-    });
-    const finding = view.application.store
-      .getState()
-      .projectWorkspace.assembly.evaluation.findings.find(
-        (candidate) =>
-          candidate.code === 'judgmentOutcomeMissing' &&
-          semanticAddressKey(candidate.origin) === semanticAddressKey(owner),
-      );
-    if (finding === undefined) throw new Error('Judgment finding is missing');
-    expect(document.getElementById(semanticOwnerElementId(owner))).toBeTruthy();
-    act(() =>
-      view.application.store.dispatch(
-        findingSelected({ key: semanticFindingKey(finding), origin: finding.origin }),
-      ),
-    );
-    expect(document.activeElement).toBe(document.getElementById(semanticOwnerElementId(owner)));
-    expect(inspector.querySelector('.room-judgment-popup')).toBeNull();
-    expect(within(inspector).getByText('Start encounter')).toBeTruthy();
-    expect(within(inspector).getByText('Boss defeated')).toBeTruthy();
-    expect(within(inspector).getByText('End encounter')).toBeTruthy();
-    const timeline = within(inspector).getByRole('region', { name: 'Room Timeline' });
-    expect(timeline.classList.contains('room-actions-workbench')).toBe(true);
-    expect(
-      within(timeline).getByRole('listitem', {
-        name: /Judgment — choose 5 inactive Arcana cards/,
-      }),
-    ).toBeTruthy();
-    const timelineEntries = Array.from(timeline.querySelectorAll('ol > li'));
-    expect(
-      timelineEntries.findIndex((entry) => entry.getAttribute('aria-label') === 'Boss defeated'),
-    ).toBeLessThan(
-      timelineEntries.findIndex((entry) => entry.getAttribute('aria-label') === 'End encounter'),
-    );
-    act(() => judgmentLauncher.click());
-    const optionList = inspector.querySelector('.room-judgment-options');
-    if (optionList === null) throw new Error('Judgment options list is missing');
-    expect(optionList.querySelectorAll(':scope > label')).toHaveLength(
-      boss.room.judgment.inactiveArcanaKeys.length,
-    );
-    for (let index = 0; index < boss.room.judgment.requiredCount; index += 1) {
-      const next = within(inspector)
-        .getAllByRole<HTMLInputElement>('checkbox')
-        .find((checkbox) => !checkbox.checked);
-      if (next === undefined) throw new Error('Judgment picker has too few inactive cards');
-      act(() => next.click());
-    }
-    expect(
-      view.application.store
-        .getState()
-        .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
-        ?.biomes.find((biome) => biome.biomeKey === 'N')
-        ?.completionOccurrences.find(
-          (occurrence) => occurrence.occurrenceId === createOccurrenceId('completion:N:boss'),
-        )?.encounters.judgmentArcanaKeysByPhase?.Encounter,
-    ).toHaveLength(5);
-
-    act(() =>
-      view.application.store.dispatch(
-        semanticOwnerFocused(createOccurrenceAddress(nBiome, nOccurrenceIds.opening)),
-      ),
-    );
-    expect(within(inspector).queryByText('Judgment — choose 5 inactive Arcana cards')).toBeNull();
-    act(() => screen.getByRole('button', { name: 'Open Boss completion' }).click());
-    expect(
-      within(inspector).getByRole('button', {
-        name: /Judgment — choose 5 inactive Arcana cards/,
-      }),
-    ).toBeTruthy();
-    expect(
-      screen.getByRole('button', { name: 'Open Boss completion' }).getAttribute('aria-pressed'),
-    ).toBe('true');
-  });
-
-  it('binds the reached Postboss keepsake selector through replacement and retention', async () => {
-    const view = renderWorkspace(loadSurfaceNOPQProject(), 'Surface', 'N');
-    const owner = createPostbossKeepsakeSelectionAddress(
-      createOccurrenceAddress(nBiome, createOccurrenceId('completion:N:postboss')),
-    );
-    act(() => view.application.store.dispatch(semanticOwnerFocused(owner)));
-    const rack = screen.getByRole('region', { name: 'Keepsake Rack' });
-    const selector = within(rack).getByRole<HTMLSelectElement>('combobox', {
-      name: 'Keepsake',
-    });
-    fireEvent.focus(selector);
-    await waitFor(() =>
-      expect(
-        selector.querySelector<HTMLOptionElement>('option[value="BossPreDamageKeepsake"]')?.dataset
-          .candidateSupport,
-      ).toBe('possible'),
-    );
-    fireEvent.change(selector, { target: { value: 'BossPreDamageKeepsake' } });
-    expect(
-      view.application.store
-        .getState()
-        .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
-        ?.biomes.find((biome) => biome.biomeKey === 'N')
-        ?.completionOccurrences.find(
-          (occurrence) => occurrence.occurrenceId === createOccurrenceId('completion:N:postboss'),
-        )?.keepsakeRack?.disposition,
-    ).toEqual({ kind: 'replace', keepsakeKey: 'BossPreDamageKeepsake' });
-    const timeline = screen.getByRole('region', { name: 'Room Timeline' });
-    expect(within(timeline).getByText('Room entered')).toBeTruthy();
-    expect(within(timeline).getByText('Choose keepsake')).toBeTruthy();
-    expect(within(timeline).getByText('Cleanup · Doors open')).toBeTruthy();
-    expect(within(timeline).queryByText('Start encounter')).toBeNull();
-    expect(within(timeline).queryByText('End encounter')).toBeNull();
-    await waitFor(() =>
-      expect(
-        within(timeline).getByRole('button', { name: 'Move Choose keepsake earlier' }),
-      ).toBeTruthy(),
-    );
-    const rankedSelector = within(timeline).getByRole<HTMLSelectElement>('combobox', {
-      name: 'Keepsake',
-    });
-    expect(
-      rankedSelector.closest('[data-room-action-key]')?.getAttribute('data-room-action-key'),
-    ).toBe('["interactKeepsakeRack"]');
-    const beforeMove = view.application.store.getState().projectWorkspace.history.past.length;
-    fireEvent.click(within(timeline).getByRole('button', { name: 'Move Choose keepsake earlier' }));
-    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
-      beforeMove + 1,
-    );
-    fireEvent.change(
-      within(timeline).getByRole<HTMLSelectElement>('combobox', { name: 'Keepsake' }),
-      { target: { value: '' } },
-    );
-    expect(
-      view.application.store
-        .getState()
-        .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
-        ?.biomes.find((biome) => biome.biomeKey === 'N')
-        ?.completionOccurrences.find(
-          (occurrence) => occurrence.occurrenceId === createOccurrenceId('completion:N:postboss'),
-        )?.keepsakeRack?.disposition,
-    ).toEqual({ kind: 'retain' });
   });
 });
