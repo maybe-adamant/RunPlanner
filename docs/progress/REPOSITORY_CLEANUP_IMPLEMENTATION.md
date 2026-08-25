@@ -3,12 +3,13 @@
 ## Status
 
 Locked for execution at `c6f7e6ff` on 2026-08-25 from clean room-features base
-`be69efd3`. This document is the temporary execution contract for one bounded
-cleanup phase. It is not a stable authority, must not be linked from
-`README.md`, and must be deleted in the final closure gate after durable facts
-have received their final disposition. Gate A was clarified during execution:
-a retired plan needs added absorption prose only when it contains a unique
-durable fact not already owned elsewhere.
+`be69efd3`, then amended before closure at `0149c2e5` to repair validation
+feedback and reassess remaining repository gravity. This document is the
+temporary execution contract for one bounded cleanup phase. It is not a stable
+authority, must not be linked from `README.md`, and must be deleted in the final
+closure gate after durable facts have received their final disposition. Gate A
+was clarified during execution: a retired plan needs added absorption prose
+only when it contains a unique durable fact not already owned elsewhere.
 
 The plan is intentionally behavior-preserving. It cleans the documentation
 surface and decomposes three application-layer gravity wells whose current
@@ -549,7 +550,41 @@ files, and `git diff --check`.
 
 Intended commit: `refactor(planner): split workspace interaction binding`
 
-### Gate H — Reassessment and closure
+### Gate H — Validation feedback and gravity reassessment
+
+Deliverables:
+
+1. Repair the exact empty-project application-state witness so it includes the
+   schema-59 resource-placement defaults already produced by the authored
+   initializer.
+2. Add lightweight shared Vitest progress output that reports the active test
+   module and file-completion count while preserving the normal failure details
+   and summary.
+3. Recount large production files across the planner application, planner
+   engine, and Hades II catalog. Separate explicit declaration/type/copy data
+   from mixed logic before naming a refactor candidate.
+4. Record only evidence-backed future maintenance slices in the durable roadmap.
+   Do not implement another application, engine, codec, or catalog split inside
+   this gate.
+
+Acceptance:
+
+- the stale bootstrap assertion remains exact rather than weakening to partial
+  matching;
+- a focused multi-file Vitest run visibly reports module start and completion;
+- declaration-heavy catalog files and explicit workspace contracts are not
+  classified as gravity solely by line count;
+- every retained future candidate names a concrete responsibility seam; and
+- the work introduces no timeout increase, test retry, or hidden validation
+  exception.
+
+Narrow validation: the repaired application-state suite, one representative
+second test module for progress output, typechecking, ESLint and Prettier on
+changed files, and `git diff --check`.
+
+Intended commit: `test(project): improve cleanup validation feedback`
+
+### Gate I — Reassessment and closure
 
 Deliverables:
 
@@ -605,7 +640,7 @@ acceptance row pass.
 
 This cleanup phase is complete only when:
 
-- Gates A-G are committed as coherent vertical slices;
+- Gates A-H are committed as coherent vertical slices;
 - every accepted review finding has one documented disposition;
 - README and durable progress are current;
 - deleted audit and progress filenames have no inbound references;
@@ -614,4 +649,4 @@ This cleanup phase is complete only when:
 - the final bird's-eye diff review finds no semantic change, hidden state,
   parallel path, generic dependency bag, or unexplained production growth;
 - the one final `npm run check` passes and its exact result is recorded; and
-- this temporary plan is deleted in Gate H.
+- this temporary plan is deleted in Gate I.

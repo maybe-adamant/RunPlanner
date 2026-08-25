@@ -1,6 +1,8 @@
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitest/config';
 
+import { TestProgressReporter } from './vitest.progress-reporter';
+
 export const sharedVitestConfig = defineConfig({
   resolve: {
     alias: [
@@ -61,6 +63,7 @@ export const sharedVitestConfig = defineConfig({
     // WSL can leave forked Vitest workers in teardown after their tests finish.
     // Threads retain the same isolation here and let the aggregate command exit reliably.
     pool: 'threads',
+    reporters: ['default', new TestProgressReporter()],
     setupFiles: ['./apps/planner/test/setup.ts'],
   },
 });

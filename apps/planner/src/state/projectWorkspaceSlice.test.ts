@@ -100,11 +100,23 @@ describe('project workspace application state', () => {
       {
         routeKey: 'Underworld',
         loadout: createDefaultRouteLoadout(catalog),
+        resourcePlacements: {
+          Exorcism: null,
+          Fishing: null,
+          Pickaxe: null,
+          Shovel: null,
+        },
         biomes: [],
       },
       {
         routeKey: 'Surface',
         loadout: createDefaultRouteLoadout(catalog),
+        resourcePlacements: {
+          Exorcism: null,
+          Fishing: null,
+          Pickaxe: null,
+          Shovel: null,
+        },
         biomes: [],
       },
     ]);

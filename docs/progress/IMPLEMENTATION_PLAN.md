@@ -87,6 +87,32 @@ implied by the current browser or Tauri implementation.
 - A refactor must move one complete responsibility with explicit inputs and
   returned products; line count alone is not an acceptance criterion.
 
+## Maintenance Cleanup Frontiers
+
+A 2026-08-25 repository-gravity review separated explicit declaration, type,
+and presentation-copy data from mixed logic. Large room and trait declaration
+files remain readable source-backed facts; the structured-workspace contract
+remains the explicit application vocabulary. Neither is a refactor target
+solely because of length.
+
+Future cleanup should use independent locked slices rather than one broad
+large-file phase:
+
+- planner presentation: specialized trait-offer editors, Hub membership and
+  ranking interaction, biome workspace composition, and the application shell;
+- planner projection: reward-child interaction binding, candidate-session
+  domain adapters, and occurrence-room assembly;
+- planner engine: reward acquisition/Shop processing, trait history versus
+  offer/level/candidate policy, and topology codec decoding versus relational
+  closure; and
+- catalog compiler: trait-family compilation and reward-kernel family
+  normalization.
+
+The chronological biome reward coordinator, topology command dispatcher, and
+declaration-language room/layout compilers stay intact until a focused audit
+proves a complete extractable product. Each future slice must map hidden state,
+consumers, primary test ownership, and expected deletions before implementation.
+
 ## Out of Scope for the Roadmap
 
 The roadmap does not authorize a second simulator, runtime effect registry,
