@@ -1,7 +1,4 @@
 import {
-  countedRewardTypeDomain,
-  createPreparedProjectCandidateSession,
-  encounterPhaseCandidateSupportForProjectEvaluationAssembly,
   type CandidateEvaluationEvent,
   type EvaluatedTraitAcquisitionTargetCandidate,
   type EvaluatedTraitOfferFocusedOptionCandidate,
@@ -15,16 +12,10 @@ import {
   type RansomAssessmentCandidateEvaluation,
   type EvaluatedSteadyGrowthOutcomeCandidate,
   type ProjectCandidateEvaluation,
-  type ProjectCandidateQuery,
-  type ProjectCandidateSession,
-  type ProjectCandidateSessionEvaluation,
-  type ProjectCandidateSessionQuery,
   type ProjectEvaluation,
   type ProjectEvaluationAssembly,
-  levelResolutionCandidateForProjectEvaluationAssembly,
 } from '@run-planner/engine/simulation';
 import {
-  semanticAddressKey,
   type AcquisitionEntryAddress,
   type AuthoredTraitOption,
   type BatchRewardStoreAddress,
@@ -63,13 +54,13 @@ import type {
 import { type Catalog, type RoomDeclaration } from '@run-planner/engine/catalog-schema';
 import type { CountedRewardBinding, ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 
+import type { PreparedRewardDomain, ProjectedRewardDomain } from './rewardDomainProjection';
+import { createCandidateProjectionCore } from './candidateProjectionSession';
 import {
-  prepareRewardDomain,
-  projectRewardDomain,
-  rewardDomainOffers,
-  type PreparedRewardDomain,
-  type ProjectedRewardDomain,
-} from './rewardDomainProjection';
+  createRewardRoomCandidateAdapters,
+  type RewardDomainCache,
+} from './candidateRewardRoomAdapters';
+import { createTraitCandidateAdapters } from './candidateTraitAdapters';
 
 export type RewardCandidateOwner =
   | { readonly kind: 'incomingReward'; readonly address: IncomingRewardAddress }
@@ -164,7 +155,6 @@ export interface CandidateProjectionSession {
     source: ExitDecisionAddress,
     gameNames: readonly string[],
   ) => readonly CandidateOptionProjection<string>[];
-  /** One declaration-owned terminal Hub result for an exact authored envelope. */
   readonly hubTerminalTakeover: (
     source: ExitDecisionAddress,
   ) => CandidateOptionProjection<ExitDecisionAddress>;
@@ -263,7 +253,6 @@ export interface CandidateProjectionSession {
     value: AuthoredTraitOffer,
     targets: readonly string[] | undefined,
   ) => NaturalSelectionResultCandidateEvaluation;
-  /** Exact engine-derived Ransom acquisition assessment. */
   readonly ransomAssessment: (
     owner: TraitOfferAddress,
     value: AuthoredTraitOffer,
@@ -275,10 +264,6 @@ export interface CandidateProjectionSession {
   ) =>
     | EvaluatedSteadyGrowthOutcomeCandidate
     | import('@run-planner/engine/simulation').CandidateContextUnavailable;
-  /**
-   * Exact declaration-owned Pom capability. The engine retains the correlated
-   * branch histories; application presentation only adapts its returned data.
-   */
   readonly levelResolution: (
     owner: LevelResolutionAddress,
     value: AuthoredLevelResolution,
@@ -331,832 +316,28 @@ export interface CandidateSessionFactoryOptions {
   readonly yieldToHost?: () => Promise<void>;
 }
 
-function offerKey(value: ResolvedRewardOffer): string {
-  return JSON.stringify(value);
-}
-
-function domainKey(values: readonly string[]): string {
-  return JSON.stringify(values);
-}
-
-function traitOptionKey(option: AuthoredTraitOption): string {
-  return `${option.traitKey}:${option.rarity ?? ''}:${option.targetTraitKey ?? ''}`;
-}
-
-function offerWithFocusedOption(
-  value: AuthoredTraitOffer,
-  optionKey: TraitOptionKey,
-  option: AuthoredTraitOption,
-): AuthoredTraitOffer {
-  if (value.kind !== 'traits') return value;
-  const index = optionKey === 'option1' ? 0 : optionKey === 'option2' ? 1 : 2;
-  const options = [...value.options] as AuthoredTraitOption[];
-  options[index] = Object.freeze({ ...option });
-  return Object.freeze({
-    ...value,
-    options: Object.freeze(options) as AuthoredTraitOfferTraits['options'],
-  });
-}
-
-function candidateOptionEvaluation(
-  evaluation: ProjectCandidateSessionEvaluation,
-): CandidateProjectionEvaluation {
-  if (
-    evaluation.kind === 'traitAcquisitionTargetDomain' ||
-    evaluation.kind === 'circeResolutionDomain' ||
-    evaluation.kind === 'echoPomTargetDomain' ||
-    evaluation.kind === 'naturalSelectionResult' ||
-    evaluation.kind === 'ransomAssessment' ||
-    evaluation.kind === 'steadyGrowthOutcome' ||
-    evaluation.kind === 'echoLastRunBoonDomain' ||
-    evaluation.kind === 'allTogetherSetDomain'
-  ) {
-    throw new Error('a target-domain aggregate cannot be projected as one candidate option');
-  }
-  return evaluation;
-}
-
-function rewardQueries(
-  owner: RewardCandidateOwner,
-  offers: readonly ResolvedRewardOffer[],
-): readonly ProjectCandidateQuery[] {
-  switch (owner.kind) {
-    case 'incomingReward':
-      return offers.map((value) => ({ kind: 'incomingReward', reward: owner.address, value }));
-    case 'localReward':
-      return offers.map((value) => ({ kind: 'localReward', reward: owner.address, value }));
-    case 'rewardWheelOffer':
-      return offers.map((value) => ({ kind: 'rewardWheelOffer', offer: owner.address, value }));
-    case 'shopOffer':
-      return offers.map((value) => ({ kind: 'shopOffer', offer: owner.address, value }));
-    case 'acquisitionEntry':
-      return offers.map((value) => ({
-        kind: 'acquisitionEntryOffer',
-        entry: owner.address,
-        value,
-      }));
-  }
-}
-
-function requireProjectCache(
-  cache: WeakMap<ProjectEvaluationAssembly, ProjectCandidateProjectionCache>,
-  assembly: ProjectEvaluationAssembly,
-  catalog: Catalog,
-  options: CandidateSessionFactoryOptions,
-): ProjectCandidateProjectionCache {
-  let projectCache = cache.get(assembly);
-  if (projectCache === undefined) {
-    projectCache = {
-      evaluator: createPreparedProjectCandidateSession(
-        catalog,
-        assembly,
-        options.observeCandidateEvaluation === undefined
-          ? {}
-          : { observe: options.observeCandidateEvaluation },
-      ),
-      options: new Map(),
-    };
-    cache.set(assembly, projectCache);
-  }
-  return projectCache;
-}
-
-function projectOptions<T>(
-  cache: WeakMap<ProjectEvaluationAssembly, ProjectCandidateProjectionCache>,
-  assembly: ProjectEvaluationAssembly,
-  key: string,
-  values: readonly T[],
-  queries: readonly ProjectCandidateSessionQuery[],
-  catalog: Catalog,
-  options: CandidateSessionFactoryOptions,
-): readonly CandidateOptionProjection<T>[] {
-  const projectCache = requireProjectCache(cache, assembly, catalog, options);
-  const existing = projectCache.options.get(key);
-  if (existing !== undefined) {
-    return existing as readonly CandidateOptionProjection<T>[];
-  }
-  const evaluations = projectCache.evaluator.evaluate(queries);
-  const projected = Object.freeze(
-    values.map((value, index) => {
-      const evaluation = evaluations[index];
-      if (evaluation === undefined) {
-        throw new Error(`candidate projection ${key} omitted value ${index}`);
-      }
-      return Object.freeze({ value, evaluation: candidateOptionEvaluation(evaluation) });
-    }),
-  ) as readonly CandidateOptionProjection<T>[];
-  projectCache.options.set(key, projected);
-  return projected;
-}
-
-interface ProjectCandidateProjectionCache {
-  readonly evaluator: ProjectCandidateSession;
-  readonly options: Map<
-    string,
-    readonly CandidateOptionProjection<unknown, CandidateProjectionEvaluation>[]
-  >;
-}
-
-async function projectOptionsCooperatively<T>(
-  cache: WeakMap<ProjectEvaluationAssembly, ProjectCandidateProjectionCache>,
-  assembly: ProjectEvaluationAssembly,
-  key: string,
-  values: readonly T[],
-  queries: readonly ProjectCandidateSessionQuery[],
-  catalog: Catalog,
-  options: CandidateSessionFactoryOptions,
-  yieldToHost: () => Promise<void>,
-): Promise<readonly CandidateOptionProjection<T>[]> {
-  const cached = cache.get(assembly)?.options.get(key);
-  if (cached !== undefined) {
-    return cached as readonly CandidateOptionProjection<T>[];
-  }
-  await yieldToHost();
-  const projectCache = requireProjectCache(cache, assembly, catalog, options);
-  const existing = projectCache.options.get(key);
-  if (existing !== undefined) {
-    return existing as readonly CandidateOptionProjection<T>[];
-  }
-  const projected: CandidateOptionProjection<T, CandidateProjectionEvaluation>[] = [];
-  for (const [index, query] of queries.entries()) {
-    const evaluation = projectCache.evaluator.evaluate([query])[0];
-    if (evaluation === undefined) {
-      throw new Error(`candidate projection ${key} omitted value ${index}`);
-    }
-    projected.push(
-      Object.freeze({
-        value: values[index]!,
-        evaluation: candidateOptionEvaluation(evaluation),
-      }),
-    );
-    if (index + 1 < queries.length) {
-      await yieldToHost();
-    }
-  }
-  const result = Object.freeze(projected) as readonly CandidateOptionProjection<T>[];
-  projectCache.options.set(key, result);
-  return result;
-}
-
 export function createCandidateSessionFactory(
   catalog: Catalog,
   options: CandidateSessionFactoryOptions = {},
 ): CandidateSessionFactory {
-  const yieldToHost =
-    options.yieldToHost ??
-    (() =>
-      new Promise((resolve) => {
-        setTimeout(resolve, 0);
-      }));
-  const cache = new WeakMap<ProjectEvaluationAssembly, ProjectCandidateProjectionCache>();
-  const rewardTypeDomainCache = new WeakMap<
-    ProjectEvaluationAssembly,
-    Map<string, readonly string[]>
-  >();
-  const preparedRewardDomainCache = new Map<string, PreparedRewardDomain>();
-  const pendingRewardDomains = new WeakMap<
-    ProjectEvaluationAssembly,
-    Map<string, Promise<ProjectedRewardDomain>>
-  >();
+  const coreFactory = createCandidateProjectionCore(catalog, options);
+  const rewardDomainCache: RewardDomainCache = {
+    rewardTypeDomainCache: new WeakMap(),
+    preparedRewardDomainCache: new Map(),
+    pendingRewardDomains: new WeakMap(),
+  };
   const boundSessionCache = new WeakMap<ProjectEvaluationAssembly, CandidateProjectionSession>();
-  const prepareCachedRewardDomain = (
-    rewardTypes: readonly string[],
-    selected?: ResolvedRewardOffer,
-  ): PreparedRewardDomain => {
-    const key = domainKey([
-      ...rewardTypes,
-      selected === undefined ? '__unresolved__' : offerKey(selected),
-    ]);
-    const existing = preparedRewardDomainCache.get(key);
-    if (existing !== undefined) {
-      return existing;
-    }
-    const prepared = prepareRewardDomain(catalog, rewardTypes, selected);
-    preparedRewardDomainCache.set(key, prepared);
-    return prepared;
-  };
-  const countedRewardTypesFor = (
-    assembly: ProjectEvaluationAssembly,
-    owner: CountedRewardCandidateOwner,
-    binding: CountedRewardBinding,
-    selectedRewardType?: string,
-  ): readonly string[] => {
-    let projectCache = rewardTypeDomainCache.get(assembly);
-    if (projectCache === undefined) {
-      projectCache = new Map();
-      rewardTypeDomainCache.set(assembly, projectCache);
-    }
-    const selectable = countedRewardTypeDomain(catalog, assembly, owner.address, binding);
-    const key = `reward-types:${semanticAddressKey(owner.address)}:${domainKey(selectable)}:${selectedRewardType ?? '__unresolved__'}`;
-    const existing = projectCache.get(key);
-    if (existing !== undefined) {
-      return existing;
-    }
-    const domain =
-      selectedRewardType === undefined || selectable.includes(selectedRewardType)
-        ? selectable
-        : Object.freeze([...selectable, selectedRewardType]);
-    projectCache.set(key, domain);
-    return domain;
-  };
-  const rewardDomainFor = (
-    assembly: ProjectEvaluationAssembly,
-    owner: RewardCandidateOwner,
-    rewardTypes: readonly string[],
-    selected?: ResolvedRewardOffer,
-  ): Promise<ProjectedRewardDomain> => {
-    const prepared = prepareCachedRewardDomain(rewardTypes, selected);
-    const offers = rewardDomainOffers(prepared);
-    const candidateKey = `reward-domain:${semanticAddressKey(owner.address)}:${domainKey(offers.map(offerKey))}`;
-    const pendingKey = `${candidateKey}:selected:${selected === undefined ? '__unresolved__' : offerKey(selected)}`;
-    let projectPending = pendingRewardDomains.get(assembly);
-    if (projectPending === undefined) {
-      projectPending = new Map();
-      pendingRewardDomains.set(assembly, projectPending);
-    }
-    const existing = projectPending.get(pendingKey);
-    if (existing !== undefined) {
-      return existing;
-    }
-    const pending = projectOptionsCooperatively(
-      cache,
-      assembly,
-      candidateKey,
-      offers,
-      rewardQueries(owner, offers),
-      catalog,
-      options,
-      yieldToHost,
-    )
-      .then((candidates) => projectRewardDomain(prepared, candidates))
-      .finally(() => {
-        projectPending?.delete(pendingKey);
-      });
-    projectPending.set(pendingKey, pending);
-    return pending;
-  };
-  const startRoomsFor = (
-    assembly: ProjectEvaluationAssembly,
-    owner: BiomeAddress | OccurrenceAddress,
-    rooms: readonly RoomDeclaration[],
-  ) =>
-    projectOptions(
-      cache,
-      assembly,
-      `start:${semanticAddressKey(owner)}:${domainKey(rooms.map((room) => room.gameName))}`,
-      rooms,
-      rooms.map((room) => ({ kind: 'startRoom', owner, gameName: room.gameName })),
-      catalog,
-      options,
-    );
-  const roomTargetsFor = (
-    assembly: ProjectEvaluationAssembly,
-    target: TargetAddress,
-    rooms: readonly RoomDeclaration[],
-  ) =>
-    projectOptions(
-      cache,
-      assembly,
-      `target:${semanticAddressKey(target)}:${domainKey(rooms.map((room) => room.gameName))}`,
-      rooms,
-      rooms.map((room) => ({ kind: 'roomTarget', target, gameName: room.gameName })),
-      catalog,
-      options,
-    );
-  const encounterPhasesFor = (
-    assembly: ProjectEvaluationAssembly,
-    phase: EncounterPhaseAddress,
-    encounterKeys: readonly string[],
-  ): readonly CandidateOptionProjection<string, EncounterCandidateProjectionEvaluation>[] => {
-    const key = `encounter:${semanticAddressKey(phase)}:${domainKey(encounterKeys)}`;
-    const projectCache = requireProjectCache(cache, assembly, catalog, options);
-    const existing = projectCache.options.get(key);
-    if (existing !== undefined) {
-      return existing as readonly CandidateOptionProjection<
-        string,
-        EncounterCandidateProjectionEvaluation
-      >[];
-    }
-    const support = encounterPhaseCandidateSupportForProjectEvaluationAssembly(assembly, phase);
-    const candidateKeys = support?.candidateEncounterKeys ?? [];
-    const projected = Object.freeze(
-      encounterKeys.map((encounterKey) => {
-        const result =
-          support === undefined
-            ? Object.freeze({
-                evidence: Object.freeze({ kind: 'coverageUnavailable' as const }),
-                support: 'unavailable' as const,
-              })
-            : !support.activationSatisfied
-              ? Object.freeze({
-                  evidence: Object.freeze({ kind: 'inactiveSlot' as const }),
-                  support: 'impossible' as const,
-                })
-              : candidateKeys.includes(encounterKey)
-                ? Object.freeze({
-                    evidence: Object.freeze({ kind: 'supported' as const }),
-                    support: (candidateKeys.length === 1
-                      ? 'forced'
-                      : 'possible') as CandidateSupport,
-                  })
-                : Object.freeze({
-                    evidence: Object.freeze({ kind: 'requirementsExcluded' as const }),
-                    support: 'impossible' as const,
-                  });
-        return Object.freeze({
-          value: encounterKey,
-          evaluation: Object.freeze({
-            kind: 'encounter' as const,
-            result,
-          }),
-        });
-      }),
-    );
-    projectCache.options.set(key, projected);
-    return projected;
-  };
   const bind = (assembly: ProjectEvaluationAssembly): CandidateProjectionSession => {
     const existing = boundSessionCache.get(assembly);
-    if (existing !== undefined) {
-      return existing;
-    }
-    requireProjectCache(cache, assembly, catalog, options);
-    const { evaluation, project } = assembly;
+    if (existing !== undefined) return existing;
+    const core = coreFactory.bind(assembly);
+    const rewardAdapters = createRewardRoomCandidateAdapters(core, rewardDomainCache);
+    const traitAdapters = createTraitCandidateAdapters(core);
     const session = Object.freeze({
-      project,
-      evaluation,
-      prepareRewardDomain: prepareCachedRewardDomain,
-      countedRewardTypes: (
-        owner: CountedRewardCandidateOwner,
-        binding: CountedRewardBinding,
-        selectedRewardType?: string,
-      ) => countedRewardTypesFor(assembly, owner, binding, selectedRewardType),
-      rewardDomain: (
-        owner: RewardCandidateOwner,
-        rewardTypes: readonly string[],
-        selected?: ResolvedRewardOffer,
-      ) => rewardDomainFor(assembly, owner, rewardTypes, selected),
-      startRooms: (owner: BiomeAddress | OccurrenceAddress, rooms: readonly RoomDeclaration[]) =>
-        startRoomsFor(assembly, owner, rooms),
-      roomTargets: (target: TargetAddress, rooms: readonly RoomDeclaration[]) =>
-        roomTargetsFor(assembly, target, rooms),
-      encounterPhases: (phase: EncounterPhaseAddress, encounterKeys: readonly string[]) =>
-        encounterPhasesFor(assembly, phase, encounterKeys),
-      batchRewardStores: (rewardStore: BatchRewardStoreAddress, storeKeys: readonly string[]) =>
-        projectOptions(
-          cache,
-          assembly,
-          `store:${semanticAddressKey(rewardStore)}:${domainKey(storeKeys)}`,
-          storeKeys,
-          storeKeys.map((storeKey) => ({ kind: 'batchRewardStore', rewardStore, storeKey })),
-          catalog,
-          options,
-        ),
-      fieldsCageOutcomes: (decision: ExitDecisionAddress, outcomes: readonly ('min' | 'max')[]) =>
-        projectOptions(
-          cache,
-          assembly,
-          `fields:${semanticAddressKey(decision)}:${domainKey(outcomes)}`,
-          outcomes,
-          outcomes.map((cageOutcome) => ({
-            kind: 'fieldsCageOutcome',
-            decision,
-            cageOutcome,
-          })),
-          catalog,
-          options,
-        ),
-      shipCombatPhaseCounts: (occurrence: OccurrenceAddress, values: readonly (2 | 3)[]) =>
-        projectOptions(
-          cache,
-          assembly,
-          `ship-encounters:${semanticAddressKey(occurrence)}:${domainKey(values.map(String))}`,
-          values,
-          values.map((encounterCount) => ({
-            kind: 'shipEncounterCount',
-            occurrence,
-            encounterCount,
-          })),
-          catalog,
-          options,
-        ),
-      rewardWheelOfferCounts: (wheel: RewardWheelAddress, values: readonly number[]) =>
-        projectOptions(
-          cache,
-          assembly,
-          `wheel-count:${semanticAddressKey(wheel)}:${domainKey(values.map(String))}`,
-          values,
-          values.map((offerCount) => ({ kind: 'rewardWheelOfferCount', wheel, offerCount })),
-          catalog,
-          options,
-        ),
-      rewardWheelStores: (wheel: RewardWheelAddress, storeKeys: readonly string[]) =>
-        projectOptions(
-          cache,
-          assembly,
-          `wheel-store:${semanticAddressKey(wheel)}:${domainKey(storeKeys)}`,
-          storeKeys,
-          storeKeys.map((storeKey) => ({ kind: 'rewardWheelStore', wheel, storeKey })),
-          catalog,
-          options,
-        ),
-      rewardWheelPicks: (wheel: RewardWheelAddress, values: readonly number[]) =>
-        projectOptions(
-          cache,
-          assembly,
-          `wheel-pick:${semanticAddressKey(wheel)}:${domainKey(values.map(String))}`,
-          values,
-          values.map((pickedOfferIndex) => ({
-            kind: 'rewardWheelPicked',
-            wheel,
-            pickedOfferIndex,
-          })),
-          catalog,
-          options,
-        ),
-      hubSlots: (
-        slot: HubSlotAddress,
-        occurrenceId: OccurrenceId,
-        localOccurrenceIdsBySlot: Readonly<Record<string, OccurrenceId>>,
-        values: readonly boolean[],
-      ) =>
-        projectOptions(
-          cache,
-          assembly,
-          `hub-slot:${semanticAddressKey(slot)}:${occurrenceId}:${domainKey(
-            Object.entries(localOccurrenceIdsBySlot)
-              .sort(([left], [right]) => left.localeCompare(right))
-              .map(([slotKey, localOccurrenceId]) => `${slotKey}:${localOccurrenceId}`),
-          )}:${domainKey(values.map(String))}`,
-          values,
-          values.map((open) => ({
-            kind: 'hubSlot',
-            slot,
-            open,
-            occurrenceId,
-            localOccurrenceIdsBySlot,
-          })),
-          catalog,
-          options,
-        ),
-      hubVisitOrders: (hub: HubDecisionAddress, values: readonly (readonly string[])[]) =>
-        projectOptions(
-          cache,
-          assembly,
-          `hub-visit-order:${semanticAddressKey(hub)}:${domainKey(
-            values.map((value) => JSON.stringify(value)),
-          )}`,
-          values,
-          values.map((hubSlotKeys) => ({ kind: 'hubVisitOrder', hub, hubSlotKeys })),
-          catalog,
-          options,
-        ),
-      localVisitGenerations: (
-        sideRoom: LocalVisitSlotAddress,
-        values: readonly SideRoomGeneration[],
-      ) =>
-        projectOptions(
-          cache,
-          assembly,
-          `side-generation:${semanticAddressKey(sideRoom)}:${domainKey(values)}`,
-          values,
-          values.map((generation) => ({ kind: 'sideRoomGeneration', sideRoom, generation })),
-          catalog,
-          options,
-        ),
-      localVisitOrders: (
-        group: LocalVisitOrderAddress,
-        values: readonly (readonly OccurrenceId[])[],
-      ) =>
-        projectOptions(
-          cache,
-          assembly,
-          `side-entry-order:${semanticAddressKey(group)}:${domainKey(values.map((value) => JSON.stringify(value)))}`,
-          values,
-          values.map((occurrenceIds) => ({
-            kind: 'sideRoomEntryOrder',
-            group,
-            occurrenceIds,
-          })),
-          catalog,
-          options,
-        ),
-      traitOffer: (owner: TraitOfferAddress, value: AuthoredTraitOffer) =>
-        projectOptions(
-          cache,
-          assembly,
-          `trait-offer:${semanticAddressKey(owner)}:${JSON.stringify(value)}`,
-          [value],
-          [{ kind: 'traitOffer', trait: owner, value }],
-          catalog,
-          options,
-        ),
-      traitOfferStartingDraft: (owner: TraitOfferAddress, giverKey: string) => {
-        const draft = requireProjectCache(
-          cache,
-          assembly,
-          catalog,
-          options,
-        ).evaluator.traitOfferStartingDraft(owner, giverKey);
-        return draft?.kind === 'traits' ? draft : undefined;
-      },
-      nextOptionalHighTierTraitOfferDraft: (
-        owner: TraitOfferAddress,
-        value: AuthoredTraitOfferTraits,
-      ) =>
-        requireProjectCache(
-          cache,
-          assembly,
-          catalog,
-          options,
-        ).evaluator.nextOptionalHighTierTraitOfferDraft(owner, value),
-      previousOptionalHighTierTraitOfferDraft: (
-        owner: TraitOfferAddress,
-        value: AuthoredTraitOfferTraits,
-      ) =>
-        requireProjectCache(
-          cache,
-          assembly,
-          catalog,
-          options,
-        ).evaluator.previousOptionalHighTierTraitOfferDraft(owner, value),
-      traitOfferFocusedOptions: (
-        owner: TraitOfferAddress,
-        value: AuthoredTraitOffer,
-        optionKey: TraitOptionKey,
-        variants: readonly AuthoredTraitOption[],
-      ) =>
-        projectOptions(
-          cache,
-          assembly,
-          `trait-offer-focused:${semanticAddressKey(owner)}:${JSON.stringify(value)}:${optionKey}:${domainKey(
-            variants.map(traitOptionKey),
-          )}`,
-          variants,
-          variants.map((option) => ({
-            kind: 'traitOfferFocusedOption' as const,
-            optionKey,
-            trait: owner,
-            value: offerWithFocusedOption(value, optionKey, option),
-          })),
-          catalog,
-          options,
-        ),
-      traitAcquisitionTargets: (
-        owner: TraitOfferAddress,
-        value: AuthoredTraitOffer,
-        optionKey: TraitOptionKey,
-        retainedTargetTraitKey?: string,
-      ) => {
-        const key = `trait-acquisition-targets:${semanticAddressKey(owner)}:${JSON.stringify(value)}:${optionKey}:${retainedTargetTraitKey ?? ''}`;
-        const projectCache = requireProjectCache(cache, assembly, catalog, options);
-        const existing = projectCache.options.get(key);
-        if (existing !== undefined) {
-          return existing as readonly CandidateOptionProjection<
-            string,
-            CandidateProjectionEvaluation
-          >[];
-        }
-        const evaluation = projectCache.evaluator.evaluate({
-          kind: 'traitAcquisitionTargetDomain',
-          trait: owner,
-          value,
-          optionKey,
-          ...(retainedTargetTraitKey === undefined ? {} : { retainedTargetTraitKey }),
-        });
-        const projected = Object.freeze(
-          evaluation.kind === 'unavailable'
-            ? retainedTargetTraitKey === undefined
-              ? []
-              : [Object.freeze({ value: retainedTargetTraitKey, evaluation })]
-            : evaluation.result.candidates.map((candidate) =>
-                Object.freeze({ value: candidate.result.traitKey, evaluation: candidate }),
-              ),
-        );
-        projectCache.options.set(key, projected);
-        return projected;
-      },
-      circeResolution: (
-        owner: TraitOfferAddress,
-        value: AuthoredTraitOffer,
-        optionKey: TraitOptionKey,
-      ) =>
-        requireProjectCache(cache, assembly, catalog, options).evaluator.evaluate({
-          kind: 'circeResolutionDomain',
-          trait: owner,
-          value,
-          optionKey,
-        }),
-      echoPomTarget: (
-        owner: TraitOfferAddress,
-        value: AuthoredTraitOffer,
-        optionKey: TraitOptionKey,
-      ) =>
-        requireProjectCache(cache, assembly, catalog, options).evaluator.evaluate({
-          kind: 'echoPomTargetDomain',
-          trait: owner,
-          value,
-          optionKey,
-        }),
-      echoLastRunBoon: (
-        owner: TraitOfferAddress,
-        value: AuthoredTraitOffer,
-        optionKey: TraitOptionKey,
-      ) =>
-        requireProjectCache(cache, assembly, catalog, options).evaluator.evaluate({
-          kind: 'echoLastRunBoonDomain',
-          trait: owner,
-          value,
-          optionKey,
-        }),
-      allTogetherSet: (
-        owner: TraitOfferAddress,
-        value: AuthoredTraitOffer,
-        optionKey: TraitOptionKey,
-        setKey: import('@run-planner/engine/catalog-schema').DirectTraitSetKey,
-      ) =>
-        requireProjectCache(cache, assembly, catalog, options).evaluator.evaluate({
-          kind: 'allTogetherSetDomain',
-          trait: owner,
-          value,
-          optionKey,
-          setKey,
-        }),
-      naturalSelectionResult: (
-        result: NaturalSelectionResultAddress,
-        value: AuthoredTraitOffer,
-        targets: readonly string[] | undefined,
-      ) =>
-        requireProjectCache(cache, assembly, catalog, options).evaluator.evaluate({
-          kind: 'naturalSelectionResult',
-          result,
-          value,
-          targets,
-        }) as NaturalSelectionResultCandidateEvaluation,
-      ransomAssessment: (trait: TraitOfferAddress, value: AuthoredTraitOffer) =>
-        requireProjectCache(cache, assembly, catalog, options).evaluator.evaluate({
-          kind: 'ransomAssessment',
-          trait,
-          value,
-        }) as RansomAssessmentCandidateEvaluation,
-      steadyGrowthOutcome: (
-        outcome: SteadyGrowthOutcomeAddress,
-        targetTraitKey: string | null | undefined,
-      ) =>
-        requireProjectCache(cache, assembly, catalog, options).evaluator.evaluate({
-          kind: 'steadyGrowthOutcome',
-          outcome,
-          targetTraitKey,
-        }) as
-          | EvaluatedSteadyGrowthOutcomeCandidate
-          | import('@run-planner/engine/simulation').CandidateContextUnavailable,
-      levelResolution: (owner: LevelResolutionAddress, value: AuthoredLevelResolution) => {
-        const capability = levelResolutionCandidateForProjectEvaluationAssembly(assembly, owner);
-        if (capability === undefined) return undefined;
-        const evaluations = capability.evaluate(value);
-        const groups = new Map<
-          string,
-          {
-            surface: LevelResolutionCandidateSurface;
-            branchIndices: number[];
-            evaluations: (typeof evaluations)[number][];
-          }
-        >();
-        for (const [branchIndex, surface] of capability.branches.entries()) {
-          const key = JSON.stringify([
-            surface.effectKind,
-            surface.emptyTargetAllowed ?? false,
-            surface.levelCount,
-            surface.requiredOfferCount,
-            surface.eligibleTargetTraitKeys,
-          ]);
-          const entry = groups.get(key) ?? { surface, branchIndices: [], evaluations: [] };
-          entry.branchIndices.push(branchIndex);
-          const evaluation = evaluations.find((candidate) => candidate.branchIndex === branchIndex);
-          if (evaluation !== undefined) entry.evaluations.push(evaluation);
-          groups.set(key, entry);
-        }
-        return Object.freeze({
-          groups: Object.freeze(
-            [...groups.entries()].map(([key, group]) =>
-              Object.freeze({
-                key,
-                surface: group.surface,
-                branchIndices: Object.freeze(group.branchIndices),
-                evaluations: Object.freeze(group.evaluations),
-              }),
-            ),
-          ),
-        });
-      },
-      judgmentArcana: (owner: JudgmentArcanaAddress, arcanaKeys: readonly string[]) =>
-        requireProjectCache(cache, assembly, catalog, options).evaluator.evaluate({
-          kind: 'judgmentArcana',
-          judgment: owner,
-          arcanaKeys,
-        }),
-      keepsakeSelections: (owner: KeepsakeSelectionAddress) => {
-        const evaluation = requireProjectCache(
-          cache,
-          assembly,
-          catalog,
-          options,
-        ).evaluator.evaluate({
-          kind: 'keepsakeSelection',
-          selection: owner,
-        });
-        if (evaluation.kind === 'unavailable') return Object.freeze([]);
-        if (evaluation.kind !== 'keepsakeSelection') {
-          throw new Error(
-            `Keepsake candidate ${semanticAddressKey(owner)} returned ${evaluation.kind}`,
-          );
-        }
-        return Object.freeze(
-          evaluation.result.options.map((option) =>
-            Object.freeze({
-              value: option.key,
-              // The engine publishes support per option. This shallow projection
-              // preserves the exact evidence while adapting the shared picker shape.
-              evaluation: Object.freeze({
-                ...evaluation,
-                result: Object.freeze({
-                  ...evaluation.result,
-                  selectedPossible: option.selectedPossible,
-                }),
-              }),
-            }),
-          ),
-        );
-      },
-      acquisitionConversion: (owner: AcquisitionRoleAddress) =>
-        requireProjectCache(cache, assembly, catalog, options).evaluator.evaluate({
-          kind: 'acquisitionConversion',
-          acquisition: owner,
-        }) as CandidateProjectionEvaluation,
-      keepsakeEquipResult: (
-        owner: KeepsakeEquipResultAddress,
-        value?: import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults[keyof import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults],
-      ) => {
-        const evaluation = requireProjectCache(
-          cache,
-          assembly,
-          catalog,
-          options,
-        ).evaluator.evaluate({
-          kind: 'keepsakeEquipResult',
-          result: owner,
-          ...(value === undefined ? {} : { value }),
-        });
-        if (evaluation.kind === 'unavailable') return Object.freeze([]);
-        if (evaluation.kind !== 'keepsakeEquipResult')
-          throw new Error(
-            `Keepsake equip result ${semanticAddressKey(owner)} returned ${evaluation.kind}`,
-          );
-        return Object.freeze(
-          evaluation.result.options.map((option) =>
-            Object.freeze({
-              value:
-                'kind' in option.value
-                  ? option.value.kind === 'selected'
-                    ? option.value.traitKey
-                    : '__exhausted'
-                  : option.value.traitKey,
-              evaluation: Object.freeze({
-                ...evaluation,
-                result: Object.freeze({
-                  ...evaluation.result,
-                  selectedPossible: option.selectedPossible,
-                }),
-              }),
-            }),
-          ),
-        );
-      },
-      takeoverPrebossBatches: (source: ExitDecisionAddress, gameNames: readonly string[]) =>
-        projectOptions(
-          cache,
-          assembly,
-          `takeover:${semanticAddressKey(source)}:${domainKey(gameNames)}`,
-          gameNames,
-          gameNames.map((gameName) => ({ kind: 'takeoverPrebossBatch', source, gameName })),
-          catalog,
-          options,
-        ),
-      hubTerminalTakeover: (source: ExitDecisionAddress) => {
-        const [candidate] = projectOptions(
-          cache,
-          assembly,
-          `hub-takeover:${semanticAddressKey(source)}`,
-          Object.freeze([source]),
-          Object.freeze([{ kind: 'hubTerminalTakeover' as const, source }]),
-          catalog,
-          options,
-        );
-        if (candidate === undefined) {
-          throw new Error(`Hub terminal candidate ${semanticAddressKey(source)} is missing`);
-        }
-        return candidate;
-      },
+      project: assembly.project,
+      evaluation: assembly.evaluation,
+      ...rewardAdapters,
+      ...traitAdapters,
     });
     boundSessionCache.set(assembly, session);
     return session;
@@ -1181,16 +362,13 @@ function candidateSelectedPossible(evaluation: CandidateProjectionEvaluation): b
     case 'acquisitionEntryOffer':
       return evaluation.result.supported;
     case 'takeoverPrebossBatch':
-      return evaluation.result.support !== 'impossible';
     case 'hubTerminalTakeover':
       return evaluation.result.support !== 'impossible';
     case 'traitOffer':
-      return evaluation.result.supported;
     case 'traitOfferFocusedOption':
     case 'traitAcquisitionTarget':
       return evaluation.result.supported;
     case 'judgmentArcana':
-      return evaluation.result.selectedPossible;
     case 'keepsakeSelection':
       return evaluation.result.selectedPossible;
     case 'acquisitionConversion':
@@ -1254,7 +432,6 @@ function candidateForced(
     case 'acquisitionEntryOffer':
       return false;
     case 'takeoverPrebossBatch':
-      return evaluation.result.support === 'required';
     case 'hubTerminalTakeover':
       return evaluation.result.support === 'required';
     case 'traitOffer':
