@@ -37,6 +37,8 @@ export const heavyTestFiles = Object.freeze([
   'apps/planner/src/ui/editor/rewards/TraitOfferSelectedSpecialOutcomes.test.tsx',
   'apps/planner/src/ui/editor/rewards/TraitOfferShell.test.tsx',
   'apps/planner/src/ui/shell/App.test.tsx',
+  'apps/planner/src/ui/shell/RouteOverview.test.tsx',
+  'apps/planner/src/ui/shell/RouteWorkspace.test.tsx',
   'apps/planner/test/architecture/candidateRenderPurity.interaction.test.tsx',
   'apps/planner/test/product-loops/GoldenUnderworldProductLoop.interaction.test.tsx',
   'apps/planner/test/product-loops/RunStateProductLoop.interaction.test.tsx',

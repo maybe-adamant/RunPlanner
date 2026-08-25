@@ -16,7 +16,6 @@ import {
   findingSelected,
   routePanelSelected,
   routeSelected,
-  semanticOwnerFocused,
   settingsSelected,
 } from '@planner/state/editorSessionSlice';
 import { semanticFindingKey } from '@planner/projections/evaluationProjection';
@@ -24,7 +23,6 @@ import {
   authoredProjectCommandDispatched,
   authoredProjectReplaced,
 } from '@planner/state/projectWorkspaceSlice';
-import { loadSurfaceNOPQProject } from '@run-planner/test-fixtures/surface';
 import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 import { App } from './App';
 import { semanticOwnerElementId } from '../feedback/semanticOwner';
@@ -71,127 +69,8 @@ describe('App', () => {
     expect(markup).toContain('Underworld');
     expect(markup).toContain('Surface');
     expect(markup).toContain('Settings');
-    expect(markup).toContain('Erebus');
-    expect(markup).toContain('Route settings');
-    expect(markup).toContain('Configure route up to');
-    expect(markup).toContain('No biomes');
-    expect(markup).toContain('No biomes configured.');
-    expect(markup).toContain('Findings');
-    expect(markup).toContain('Configure a biome in this route to begin simulation.');
-    expect(markup).toContain('data-editor-layout="overview"');
     expect(markup).not.toContain('Hades II Run Director');
     expect(markup).not.toContain('Project editor');
-  });
-
-  it('renders the route NPC index as a distinct panel, including an empty route', () => {
-    const application = createApplication();
-    application.store.dispatch(
-      routePanelSelected({ routeKey: 'Underworld', panel: { kind: 'npcIndex' } }),
-    );
-
-    const markup = appMarkup(application);
-    expect(application.store.getState().editorSession.activePanelByRoute.Underworld).toEqual({
-      kind: 'npcIndex',
-    });
-    expect(markup).toContain('NPC encounters');
-    expect(markup).toContain('No resolved NPC encounters in this route.');
-    expect(markup).toContain('data-editor-layout="npcIndex"');
-    expect(markup).not.toContain('Route settings');
-  });
-
-  it('renders the four-row read-only resource index for the selected route', () => {
-    const application = createApplication();
-    application.store.dispatch(
-      routePanelSelected({ routeKey: 'Surface', panel: { kind: 'resources' } }),
-    );
-
-    const markup = appMarkup(application);
-    expect(application.store.getState().editorSession.activePanelByRoute.Surface).toEqual({
-      kind: 'resources',
-    });
-    expect(markup).toContain('Route outcomes');
-    expect(markup).toContain('No selected success');
-    expect(markup).toContain('Mining');
-    expect(markup).toContain('Spirit');
-    expect(markup).toContain('Seed');
-    expect(markup).toContain('Fishing');
-  });
-
-  it('renders the read-only Hermes Shrine route index', () => {
-    const application = createApplication();
-    application.store.dispatch(
-      routePanelSelected({ routeKey: 'Surface', panel: { kind: 'shrines' } }),
-    );
-
-    const markup = appMarkup(application);
-    expect(application.store.getState().editorSession.activePanelByRoute.Surface).toEqual({
-      kind: 'shrines',
-    });
-    expect(markup).toContain('Hermes Shrines');
-    expect(markup).toContain('No Shrine hosts in this route.');
-  });
-
-  it('renders the read-only Stygian Well route index', () => {
-    const application = createApplication();
-    application.store.dispatch(
-      routePanelSelected({ routeKey: 'Underworld', panel: { kind: 'wells' } }),
-    );
-
-    const markup = appMarkup(application);
-    expect(application.store.getState().editorSession.activePanelByRoute.Underworld).toEqual({
-      kind: 'wells',
-    });
-    expect(markup).toContain('Stygian Wells');
-    expect(markup).toContain('No Well hosts in this route.');
-  });
-
-  it('presents the configured route extent and included biomes', () => {
-    const application = createApplication();
-    application.store.dispatch(
-      authoredProjectCommandDispatched({
-        kind: 'ConfigureRoutePrefix',
-        configuredBiomeCount: 1,
-        route: createRouteAddress('Underworld'),
-      }),
-    );
-
-    expect(appMarkup(application)).toContain('Through Erebus');
-    expect(appMarkup(application)).toContain('Configuring Erebus.');
-
-    application.store.dispatch(
-      authoredProjectCommandDispatched({
-        kind: 'ConfigureRoutePrefix',
-        configuredBiomeCount: 2,
-        route: createRouteAddress('Underworld'),
-      }),
-    );
-
-    expect(appMarkup(application)).toContain('Through Oceanus');
-    expect(appMarkup(application)).toContain('Configuring Erebus and Oceanus.');
-
-    application.store.dispatch(
-      authoredProjectCommandDispatched({
-        kind: 'ConfigureRoutePrefix',
-        configuredBiomeCount: 3,
-        route: createRouteAddress('Underworld'),
-      }),
-    );
-
-    const markup = appMarkup(application);
-    expect(markup).toContain('Through Fields');
-    expect(markup).toContain('Configuring Erebus, Oceanus, and Fields.');
-    expect(markup).not.toContain('contiguous route prefix');
-
-    application.store.dispatch(
-      authoredProjectCommandDispatched({
-        kind: 'ConfigureRoutePrefix',
-        configuredBiomeCount: 4,
-        route: createRouteAddress('Underworld'),
-      }),
-    );
-
-    expect(appMarkup(application)).toContain('Through Tartarus');
-    expect(appMarkup(application)).toContain('Configuring Erebus, Oceanus, Fields, and Tartarus.');
   });
 
   it('shows Findings only for the selected route, not Settings', () => {
@@ -223,46 +102,6 @@ describe('App', () => {
     application.store.dispatch(routeSelected('Surface'));
     expect(findingsMarkup(appMarkup(application))).toContain('Ephyra');
     expect(findingsMarkup(appMarkup(application))).not.toContain('Erebus');
-  });
-
-  it('renders a configured biome through the shared workspace rather than a biome-kind editor', () => {
-    const application = createApplication();
-    configureF(application);
-    application.store.dispatch(
-      authoredProjectCommandDispatched({
-        biome: createBiomeAddress('Underworld', 'F'),
-        gameName: 'F_Opening01',
-        kind: 'CreateStart',
-        occurrenceId: createOccurrenceId('app-shared-workspace-start'),
-      }),
-    );
-
-    const markup = appMarkup(application);
-    expect(markup).toContain('Route structure');
-    expect(markup).toContain('<strong>Opening</strong>');
-    expect(markup).toContain('aria-label="Entering Opening 01"');
-    expect(markup).not.toContain('<p class="eyebrow">Details</p>');
-    expect(markup).toContain('Continue route');
-    expect(markup).toContain('data-editor-layout="biome"');
-  });
-
-  it('renders N’s Hub through the same workspace shell and preserves its board owners', () => {
-    const application = createApplication();
-    application.store.dispatch(authoredProjectReplaced(loadSurfaceNOPQProject()));
-    application.store.dispatch(
-      routePanelSelected({ routeKey: 'Surface', panel: { kind: 'biome', biomeKey: 'N' } }),
-    );
-    application.store.dispatch(
-      semanticOwnerFocused(createHubDecisionAddress(createBiomeAddress('Surface', 'N'), 'hub')),
-    );
-
-    const markup = appMarkup(application);
-    expect(markup).toContain('Hub Overview');
-    expect(markup).toContain('Open rooms');
-    expect(markup).toContain('data-open="true"');
-    expect(markup).toContain(
-      semanticOwnerElementId(createHubDecisionAddress(createBiomeAddress('Surface', 'N'), 'hub')),
-    );
   });
 
   it('navigates an incomplete finding to its exact shared-workspace frontier without authoring history', () => {
