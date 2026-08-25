@@ -1,6 +1,6 @@
 import { semanticAddressKey, type SemanticAddress } from '../authored-project/addresses';
 import type { SemanticFinding } from './model';
-import type { ReachedLevelResolutionEvaluation } from './traits';
+import type { ReachedLevelResolutionEvaluation } from './trait-level-effects';
 
 /** Internal evaluator product; never exported through the public simulation API. */
 export interface FindingRegionEntry {

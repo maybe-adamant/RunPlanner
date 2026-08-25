@@ -39,7 +39,7 @@ import {
 } from './keepsakes';
 import { createArcanaFearState } from './arcana-fear';
 import { attestPendingHermesSpellDrop } from './hermes-shrine';
-import { createTraitHistoryState } from './traits';
+import { createTraitHistoryState } from './trait-history';
 import {
   createKeepsakeEquipResultAddress,
   createRouteStartKeepsakeSelectionAddress,

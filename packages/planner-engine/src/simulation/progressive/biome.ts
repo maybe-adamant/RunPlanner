@@ -76,7 +76,7 @@ import {
   type FindingAggregate,
   type HistoryFindingChronology,
 } from '../finding-regions';
-import type { SelectedTraitOfferAssessment } from '../traits';
+import type { SelectedTraitOfferAssessment } from '../trait-offers';
 import {
   evaluateBiomeRewardsAssemblyInternal,
   type TraitChildSettlementCheckpoints,
