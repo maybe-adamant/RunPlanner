@@ -128,7 +128,11 @@ const lifecycleEffectRegistry = Object.freeze({
           offerPoint: attachment.key,
         });
   },
-  recordAppearance: (context, state) => appendEvent(state, context, { kind: 'roomEntered' }),
+  recordAppearance: (context, state) =>
+    appendEvent(state, context, {
+      kind: 'roomEntered',
+      surfaceShopPresent: context.input.surfaceShopPresent === true,
+    }),
   recordRequiredObjectSpawns: (context, state) => {
     const requiredObjects = context.input.requiredObjects;
     if (requiredObjects === undefined || requiredObjects.length === 0) {
@@ -544,9 +548,7 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
     // its slot was later cleared. Reward simulation owns the precise stale
     // finding and deliberately leaves the authored action intact.
     .filter(
-      (row) =>
-        row.rank !== null &&
-        (!row.stale || row.reference.kind === 'sellPurgingPoolTrait'),
+      (row) => row.rank !== null && (!row.stale || row.reference.kind === 'sellPurgingPoolTrait'),
     )
     .sort((left, right) => left.rank! - right.rank!);
   let cursor = 0;
@@ -596,6 +598,11 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
         return appendEvent(state, operationContext, {
           kind: 'acquisitionPointReached',
           point: `shopOffer:${row.reference.offerKey}`,
+        });
+      case 'purchaseHermesShrineOffer':
+        return appendEvent(state, operationContext, {
+          kind: 'acquisitionPointReached',
+          point: `hermesShrinePurchase:${row.reference.generationKey}`,
         });
       case 'sellPurgingPoolTrait':
         return appendEvent(state, operationContext, {

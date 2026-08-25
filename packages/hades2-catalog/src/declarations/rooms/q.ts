@@ -1,6 +1,11 @@
 import type { RawRoomDeclaration } from '../types';
 import { normalResourcePointSupport } from '../resources';
 
+const surfaceShopHost = (spawnChance: number, forced = false, challengeSwitchAnchorCount = 1) => ({
+  challengeSwitchAnchorCount,
+  surfaceShop: { profileKey: 'SurfaceShop' as const, spawnChance, ...(forced ? { forced: true as const } : {}) },
+});
+
 export const qRooms = [
   {
     gameName: 'Q_Intro',
@@ -27,6 +32,7 @@ export const qRooms = [
   },
   {
     gameName: 'Q_Combat01',
+    ...surfaceShopHost(.10, false, 1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 01',
     roomSetKey: 'Q',
@@ -51,6 +57,7 @@ export const qRooms = [
   },
   {
     gameName: 'Q_Combat02',
+    ...surfaceShopHost(.10, false, 1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 02',
     roomSetKey: 'Q',
@@ -75,6 +82,7 @@ export const qRooms = [
   },
   {
     gameName: 'Q_Combat03',
+    ...surfaceShopHost(.10, false, 1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 03',
     roomSetKey: 'Q',
@@ -103,6 +111,7 @@ export const qRooms = [
   },
   {
     gameName: 'Q_Combat04',
+    ...surfaceShopHost(.10, false, 1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 04',
     roomSetKey: 'Q',
@@ -127,6 +136,7 @@ export const qRooms = [
   },
   {
     gameName: 'Q_Combat05',
+    ...surfaceShopHost(.10, false, 1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 05',
     roomSetKey: 'Q',
@@ -155,6 +165,7 @@ export const qRooms = [
   },
   {
     gameName: 'Q_Combat06',
+    ...surfaceShopHost(.10, false, 1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 06',
     roomSetKey: 'Q',
@@ -179,6 +190,7 @@ export const qRooms = [
   },
   {
     gameName: 'Q_Combat07',
+    ...surfaceShopHost(.10, false, 1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 07',
     roomSetKey: 'Q',
@@ -203,6 +215,7 @@ export const qRooms = [
   },
   {
     gameName: 'Q_Combat08',
+    ...surfaceShopHost(.10, false, 1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 08',
     roomSetKey: 'Q',
@@ -227,6 +240,7 @@ export const qRooms = [
   },
   {
     gameName: 'Q_Combat09',
+    ...surfaceShopHost(.10, false, 1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 09',
     roomSetKey: 'Q',
@@ -251,6 +265,7 @@ export const qRooms = [
   },
   {
     gameName: 'Q_Combat10',
+    ...surfaceShopHost(.10, false, 1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 10',
     roomSetKey: 'Q',
@@ -275,6 +290,7 @@ export const qRooms = [
   },
   {
     gameName: 'Q_Combat11',
+    ...surfaceShopHost(.10, false, 1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 11',
     roomSetKey: 'Q',
@@ -299,6 +315,7 @@ export const qRooms = [
   },
   {
     gameName: 'Q_Combat12',
+    ...surfaceShopHost(.10, false, 1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 12',
     roomSetKey: 'Q',
@@ -327,6 +344,7 @@ export const qRooms = [
   },
   {
     gameName: 'Q_Combat13',
+    ...surfaceShopHost(.10, false, 1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 13',
     roomSetKey: 'Q',
@@ -355,6 +373,7 @@ export const qRooms = [
   },
   {
     gameName: 'Q_Combat14',
+    ...surfaceShopHost(.10, false, 0),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 14',
     roomSetKey: 'Q',
@@ -383,6 +402,7 @@ export const qRooms = [
   },
   {
     gameName: 'Q_Combat15',
+    ...surfaceShopHost(.10, false, 0),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 15',
     roomSetKey: 'Q',
@@ -411,6 +431,7 @@ export const qRooms = [
   },
   {
     gameName: 'Q_Combat16',
+    ...surfaceShopHost(.10, false, 1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 16',
     roomSetKey: 'Q',

@@ -339,6 +339,7 @@ export {
   type SemanticFinding,
   type SimulationPhase,
 } from './model';
+export type { HermesShrineCandidateCapability } from './candidate-artifacts';
 export {
   assertProjectEvaluationAssembly,
   assertProjectEvaluationSource,
@@ -349,6 +350,7 @@ export {
   levelResolutionCandidateForProjectEvaluationAssembly,
   traitOfferCandidateForProjectEvaluationAssembly,
   purgingPoolCandidateForProjectEvaluationAssembly,
+  hermesShrineCandidateForProjectEvaluationAssembly,
   encounterPhaseCandidateSupportForProjectEvaluationAssembly,
   encounterPhaseFigLeafSupportForProjectEvaluationAssembly,
   encounterPhaseGorgonSupportForProjectEvaluationAssembly,

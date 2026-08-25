@@ -20,6 +20,7 @@ import {
   type SemanticAddress,
 } from './addresses';
 import { acquisitionSiteFromStorageKey, parseArtificerReplacementEntryKey } from './artificer';
+import { parseHermesShrineDeliveryEntryKey } from './hermes-shrine-delivery';
 import { authoredAcquisitionSources } from './acquisition-sources';
 import {
   SEA_STAR_DUPLICATE_ENTRY_KEY,
@@ -302,6 +303,14 @@ function baseContribution(
         [],
         createShopOfferAddress(biome, occurrence.occurrenceId, reference.offerKey),
       );
+    case 'purchaseHermesShrineOffer':
+      return contribution(
+        biome,
+        occurrence,
+        reference,
+        'optional',
+        frozen({ kind: 'postOutgoing' }),
+      );
     case 'sellPurgingPoolTrait':
       return contribution(
         biome,
@@ -367,6 +376,10 @@ function baseContribution(
       );
     }
     case 'interactAcquisitionEntry': {
+      const hermesDelivery =
+        reference.siteKey === 'hermesShrineDelivery'
+          ? parseHermesShrineDeliveryEntryKey(reference.entryKey)
+          : undefined;
       const producer = selectedPickupProducerForEntry(
         catalog,
         biome,
@@ -375,8 +388,9 @@ function baseContribution(
         reference.entryKey,
       );
       const required =
-        producer?.pickups.some((pickup) => pickup.key === reference.entryKey && pickup.required) ??
-        false;
+        hermesDelivery !== undefined ||
+        (producer?.pickups.some((pickup) => pickup.key === reference.entryKey && pickup.required) ??
+          false);
       const site = acquisitionSiteFromStorageKey(
         createOccurrenceAddress(biome, occurrence.occurrenceId),
         reference.siteKey,
@@ -386,11 +400,14 @@ function baseContribution(
         occurrence,
         reference,
         required ? 'required' : 'optional',
-        producer?.placement === 'roomExit' ||
-          (producer?.source.kind === 'traitOffer' && producer.source.owner.kind === 'shopOffer') ||
-          reference.siteKey === 'roomExit'
-          ? frozen({ kind: 'postOutgoing' })
-          : frozen({ kind: 'standard', phase: 'afterCombat' }),
+        hermesDelivery !== undefined
+          ? frozen({ kind: 'standard', phase: 'afterCombat' })
+          : producer?.placement === 'roomExit' ||
+              (producer?.source.kind === 'traitOffer' &&
+                producer.source.owner.kind === 'shopOffer') ||
+              reference.siteKey === 'roomExit'
+            ? frozen({ kind: 'postOutgoing' })
+            : frozen({ kind: 'standard', phase: 'afterCombat' }),
         producer === undefined
           ? []
           : [frozen({ kind: 'afterAction', action: producer.sourceAction })],
@@ -773,6 +790,23 @@ export function assembleRoomActionDomain(options: {
       sourceActions.set(
         artificerSourceActionKey(semanticAddressKey(sourceOwner), acquisitionRole),
         action,
+      );
+    }
+    // Some sources deliberately settle through a different row.  A rushed
+    // Shrine pickup is owned by its virtual acquisition entry but executes in
+    // the one purchase action, so its generated Artificer/Sea Star children
+    // must inherit that contribution rather than search for a nonexistent
+    // acquisition-entry row.
+    for (const source of authoredAcquisitionSources(options.biome, options.occurrence)) {
+      if (source.action === undefined) continue;
+      const contribution = sourceActionsByReference.get(roomActionKey(source.action));
+      if (contribution === undefined) continue;
+      sourceActions.set(
+        artificerSourceActionKey(
+          semanticAddressKey(source.acquisition.owner),
+          source.acquisition.acquisitionRole,
+        ),
+        contribution,
       );
     }
     actions = actions.flatMap((action) => {

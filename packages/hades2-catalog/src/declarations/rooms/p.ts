@@ -1,6 +1,11 @@
 import type { RawRoomDeclaration } from '../types';
 import { normalResourcePointSupport } from '../resources';
 
+const surfaceShopHost = (spawnChance: number, forced = false, challengeSwitchAnchorCount = 1) => ({
+  challengeSwitchAnchorCount,
+  surfaceShop: { profileKey: 'SurfaceShop' as const, spawnChance, ...(forced ? { forced: true as const } : {}) },
+});
+
 const naturalChaosExit = {
   kind: 'naturalChaos' as const,
   key: 'naturalChaos' as const,
@@ -38,6 +43,7 @@ export const pRooms = [
   },
   {
     gameName: 'P_Combat01',
+    ...surfaceShopHost(.13, false, 1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 01',
     roomSetKey: 'P',
@@ -77,6 +83,7 @@ export const pRooms = [
   },
   {
     gameName: 'P_Combat02',
+    ...surfaceShopHost(.13, false, 1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 02',
     roomSetKey: 'P',
@@ -111,6 +118,7 @@ export const pRooms = [
   },
   {
     gameName: 'P_Combat03',
+    ...surfaceShopHost(.13, false, 1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 03',
     roomSetKey: 'P',
@@ -150,6 +158,7 @@ export const pRooms = [
   },
   {
     gameName: 'P_Combat04',
+    ...surfaceShopHost(.13, false, 0),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 04',
     roomSetKey: 'P',
@@ -184,6 +193,7 @@ export const pRooms = [
   },
   {
     gameName: 'P_Combat05',
+    ...surfaceShopHost(.13, false, 1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 05',
     roomSetKey: 'P',
@@ -218,6 +228,7 @@ export const pRooms = [
   },
   {
     gameName: 'P_Combat06',
+    ...surfaceShopHost(.13, false, 1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 06',
     roomSetKey: 'P',
@@ -252,6 +263,7 @@ export const pRooms = [
   },
   {
     gameName: 'P_Combat07',
+    ...surfaceShopHost(.13, false, 1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 07',
     roomSetKey: 'P',
@@ -286,6 +298,7 @@ export const pRooms = [
   },
   {
     gameName: 'P_Combat08',
+    ...surfaceShopHost(.13, false, 1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 08',
     roomSetKey: 'P',
@@ -320,6 +333,7 @@ export const pRooms = [
   },
   {
     gameName: 'P_Combat09',
+    ...surfaceShopHost(.13, false, 1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Shovel']),
     label: 'Combat 09',
     roomSetKey: 'P',
@@ -354,6 +368,7 @@ export const pRooms = [
   },
   {
     gameName: 'P_Combat10',
+    ...surfaceShopHost(.13, false, 1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 10',
     roomSetKey: 'P',
@@ -388,6 +403,7 @@ export const pRooms = [
   },
   {
     gameName: 'P_Combat11',
+    ...surfaceShopHost(.13, false, 1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 11',
     roomSetKey: 'P',
@@ -422,6 +438,7 @@ export const pRooms = [
   },
   {
     gameName: 'P_Combat12',
+    ...surfaceShopHost(.13, false, 1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 12',
     roomSetKey: 'P',
@@ -456,6 +473,7 @@ export const pRooms = [
   },
   {
     gameName: 'P_Combat13',
+    ...surfaceShopHost(.13, false, 1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 13',
     roomSetKey: 'P',
@@ -490,6 +508,7 @@ export const pRooms = [
   },
   {
     gameName: 'P_Combat14',
+    ...surfaceShopHost(.13, false, 1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 14',
     roomSetKey: 'P',
@@ -524,6 +543,7 @@ export const pRooms = [
   },
   {
     gameName: 'P_Combat15',
+    ...surfaceShopHost(.13, false, 1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 15',
     roomSetKey: 'P',
@@ -558,6 +578,7 @@ export const pRooms = [
   },
   {
     gameName: 'P_Combat16',
+    ...surfaceShopHost(.13, false, 1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 16',
     roomSetKey: 'P',
@@ -592,6 +613,7 @@ export const pRooms = [
   },
   {
     gameName: 'P_Combat17',
+    ...surfaceShopHost(.13, false, 1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 17',
     roomSetKey: 'P',
@@ -631,6 +653,7 @@ export const pRooms = [
   },
   {
     gameName: 'P_Combat18',
+    ...surfaceShopHost(.13, false, 1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 18',
     roomSetKey: 'P',
@@ -670,6 +693,7 @@ export const pRooms = [
   },
   {
     gameName: 'P_Combat19',
+    ...surfaceShopHost(.13, false, 1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 19',
     roomSetKey: 'P',
@@ -737,6 +761,7 @@ export const pRooms = [
   },
   {
     gameName: 'P_Reprieve01',
+    ...surfaceShopHost(1, false, 1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Fountain',
     roomSetKey: 'P',
@@ -978,6 +1003,7 @@ export const pRooms = [
     label: 'Postboss',
     hasKeepsakeRack: true,
     hasRequiredFountain: true,
+    ...surfaceShopHost(1, true),
     roomSetKey: 'P',
     advancesExperimentalHammerUses: true,
     kind: 'PostBoss',

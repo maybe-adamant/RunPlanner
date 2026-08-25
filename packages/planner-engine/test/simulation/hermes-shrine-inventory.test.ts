@@ -1,0 +1,939 @@
+import { describe, expect, it } from 'vitest';
+
+import { catalog } from '@run-planner/hades2-catalog';
+import {
+  applyProjectCommand,
+  createAcquisitionEntryAddress,
+  createAcquisitionSiteAddress,
+  createAcquisitionRoleAddress,
+  createBiomeAddress,
+  createOccurrenceAddress,
+  createOccurrenceId,
+  createRouteStartKeepsakeSelectionAddress,
+  hermesShrineDeliveryEntryKey,
+  parseHermesShrineDeliveryEntryKey,
+  semanticAddressKey,
+} from '@run-planner/engine/authored-project';
+import {
+  hermesShrineCandidateForProjectEvaluationAssembly,
+  simulateProject,
+  simulateProjectAssembly,
+} from '@run-planner/engine/simulation';
+import {
+  loadSurfaceNOProject,
+  loadSurfaceNOPProject,
+  oBiome,
+  oOccurrenceIds,
+  pBiome,
+} from '@run-planner/test-fixtures/surface';
+import {
+  assessHermesShrineInventory,
+  assessHermesShrinePlacement,
+  assessHermesShrineTravelDealRefill,
+  deriveHermesShrineDeliveries,
+  hasPendingHermesSpellDrop,
+  priorTwoSurfaceShopPresence,
+} from '../../src/simulation/hermes-shrine';
+import { createHermesShrineCandidateArtifacts } from '../../src/simulation/candidate-artifacts';
+import { prefixAuthoredRooms } from '../../src/simulation/candidates/evaluated-biome';
+import { composeBiomeHistoryPrefix } from '../../src/simulation/history';
+import { prepareRoomEncounterPhases } from '../../src/simulation/encounters/preparation';
+import { materializeBiomePrefix } from '../../src/simulation/materialization';
+import { evaluateBiomeRewards } from '../../src/simulation/rewards/biome';
+import { attachTraitHistory, foldTraitHistoryEvents } from '../../src/simulation/traits';
+import { initializeTestRewardBranches } from '../support/arcana-fear';
+
+function branchesWithTravelDeal() {
+  const traits = foldTraitHistoryEvents(catalog, [
+    {
+      kind: 'traitOffer' as const,
+      owner: { kind: 'project' as const },
+      acquisitionRole: 'fixtureSeed',
+      sequence: 1,
+      giverKey: 'Hermes',
+      options: Object.freeze([{ traitKey: 'RestockBoon', rarity: 'Epic' as const }]),
+      selectedOptionKey: 'option1' as const,
+      acquisitionPoint: 'fixture:N-before-O',
+    },
+  ]);
+  return initializeTestRewardBranches().map((branch) =>
+    Object.freeze({
+      ...branch,
+      history: attachTraitHistory(branch.history, traits),
+      traitHistory: traits,
+    }),
+  );
+}
+
+const complete = (
+  overrides: Partial<Record<'first' | 'secondLeft' | 'secondRight', string | null>> = {},
+) =>
+  ({
+    offerBySlot: {
+      first:
+        overrides.first === undefined
+          ? { offer: { rewardType: 'HealBigDrop' } }
+          : overrides.first === null
+            ? null
+            : { offer: { rewardType: overrides.first } },
+      secondLeft:
+        overrides.secondLeft === undefined
+          ? { offer: { rewardType: 'SpellDrop' } }
+          : overrides.secondLeft === null
+            ? null
+            : { offer: { rewardType: overrides.secondLeft } },
+      secondRight:
+        overrides.secondRight === undefined
+          ? { offer: { rewardType: 'TalentDrop' } }
+          : overrides.secondRight === null
+            ? null
+            : { offer: { rewardType: overrides.secondRight } },
+    },
+  }) as never;
+
+function outgoingSeedBranches(rewardType: 'HermesUpgrade' | 'SpellDrop' | 'TalentDrop') {
+  return initializeTestRewardBranches().map((branch) =>
+    Object.freeze({
+      ...branch,
+      history: Object.freeze({
+        ...branch.history,
+        useRecord: Object.freeze({
+          ...branch.history.useRecord,
+          ...(rewardType === 'TalentDrop' ? { SpellDrop: 1 } : {}),
+        }),
+      }),
+    }),
+  );
+}
+
+function evaluateShrineOutgoingPrefix(
+  project: ReturnType<typeof loadSurfaceNOProject>,
+  rewardType: 'HermesUpgrade' | 'SpellDrop' | 'TalentDrop',
+) {
+  const route = project.routes.find((candidate) => candidate.routeKey === 'Surface');
+  const plan = route?.biomes.find((candidate) => candidate.biomeKey === 'O');
+  if (route === undefined || plan?.topology === null || plan === undefined)
+    throw new Error('fixture lost Surface O topology');
+  const cutoff = plan.topology.decisions.findIndex(
+    (decision) =>
+      decision.kind === 'exit' &&
+      decision.source.kind === 'occurrence' &&
+      decision.source.occurrenceId === oOccurrenceIds.combat07,
+  );
+  if (cutoff < 0) throw new Error('fixture lost O_Combat07 outgoing decision');
+  const prefixPlan = Object.freeze({
+    ...plan,
+    topology: Object.freeze({
+      ...plan.topology,
+      decisions: Object.freeze(plan.topology.decisions.slice(0, cutoff + 1)),
+    }),
+  });
+  const snapshot = materializeBiomePrefix(catalog, oBiome, prefixPlan, route.loadout);
+  const history = snapshot === null ? undefined : composeBiomeHistoryPrefix(catalog, snapshot);
+  if (snapshot?.entryRoom === undefined || history === null || history === undefined)
+    throw new Error('fixture lost O_Combat07 outgoing prefix');
+  const rewards = evaluateBiomeRewards(
+    catalog,
+    snapshot as typeof snapshot & { readonly entryRoom: NonNullable<typeof snapshot.entryRoom> },
+    history,
+    2,
+    route.loadout,
+    outgoingSeedBranches(rewardType),
+  );
+  const runState = rewards.runStateSnapshots.find(
+    (candidate) =>
+      candidate.owner.kind === 'exitDecision' &&
+      candidate.owner.source.kind === 'occurrence' &&
+      candidate.owner.source.occurrenceId === oOccurrenceIds.combat07,
+  );
+  if (runState === undefined) throw new Error('fixture lost O_Combat07 outgoing Run State');
+  return Object.freeze({ snapshot, rewards, runState });
+}
+
+function bagCounts(runState: ReturnType<typeof evaluateShrineOutgoingPrefix>['runState']) {
+  return runState.bags.map((bag) => ({
+    storeKey: bag.storeKey,
+    remaining: bag.remaining,
+    entries: bag.entries.map((entry) => ({
+      rewardType: entry.rewardType,
+      remaining: entry.remaining,
+      conditions: entry.conditions,
+    })),
+  }));
+}
+
+function outgoingEligibility(
+  runState: ReturnType<typeof evaluateShrineOutgoingPrefix>['runState'],
+  rewardType: 'HermesUpgrade' | 'SpellDrop' | 'TalentDrop',
+) {
+  return runState.bags
+    .flatMap((bag) => bag.entries)
+    .find((entry) => entry.rewardType === rewardType)?.eligibility;
+}
+
+describe('Hermes Shrine entry inventory gate', () => {
+  it('admits one first-group and two distinct second-group identities', () => {
+    expect(assessHermesShrineInventory(catalog, complete())).toEqual([]);
+  });
+
+  it('retains missing, wrong-group, and duplicate second-group state as invalid rather than visible', () => {
+    expect(assessHermesShrineInventory(catalog, complete({ first: null }))).toEqual([
+      { kind: 'missing', slotKey: 'first' },
+    ]);
+    expect(assessHermesShrineInventory(catalog, complete({ first: 'SpellDrop' }))).toEqual([
+      { kind: 'wrongGroup', slotKey: 'first' },
+    ]);
+    expect(assessHermesShrineInventory(catalog, complete({ secondRight: 'SpellDrop' }))).toEqual([
+      { kind: 'duplicateSecondGroup' },
+    ]);
+  });
+
+  it('publishes an absent ordinary host as an addable presence candidate', () => {
+    const owner = createOccurrenceAddress(
+      createBiomeAddress('Surface', 'O'),
+      createOccurrenceId('ordinary-shrine-host'),
+    );
+    const placement = assessHermesShrinePlacement(catalog.rooms.byKey.O_Combat02, [false, false]);
+    const candidate = createHermesShrineCandidateArtifacts(
+      new Map([[semanticAddressKey(owner), Object.freeze([Object.freeze({ placement })])]]),
+    ).at(owner);
+    expect(candidate).toMatchObject({ placementEligible: true, required: false, present: false });
+  });
+
+  it('keeps a restored occurrence as its own physical spacing position', () => {
+    const origin = createOccurrenceAddress(
+      createBiomeAddress('Surface', 'O'),
+      createOccurrenceId('revisited-host'),
+    );
+    expect(
+      priorTwoSurfaceShopPresence([
+        { origin, surfaceShopPresent: true },
+        { origin, surfaceShopPresent: false },
+        { origin, surfaceShopPresent: true },
+        { origin, surfaceShopPresent: false },
+      ]),
+    ).toEqual([false, true]);
+    // The address is deliberately reused by the two visits; position, not
+    // occurrence identity or game name, owns the Shrine window.
+    expect(origin.occurrenceId).toBe('revisited-host');
+  });
+
+  it('uses the prior-two physical window and lets forced Postboss hosts bypass it', () => {
+    const ordinary = catalog.rooms.byKey.O_Combat02;
+    expect(assessHermesShrinePlacement(ordinary, [true]).eligible).toBe(false);
+    expect(assessHermesShrinePlacement(ordinary, [true, false]).eligible).toBe(false);
+    expect(assessHermesShrinePlacement(ordinary, [false, false]).eligible).toBe(true);
+    expect(
+      assessHermesShrinePlacement(catalog.rooms.byKey.O_PostBoss01, [true, true]),
+    ).toMatchObject({
+      forced: true,
+      eligible: true,
+    });
+  });
+
+  it('publishes an O ordinary host through the supported project candidate API', () => {
+    const host = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
+    const absent = simulateProjectAssembly(catalog, loadSurfaceNOProject());
+    expect(hermesShrineCandidateForProjectEvaluationAssembly(absent, host)).toMatchObject({
+      placementEligible: true,
+      required: false,
+      present: false,
+    });
+    let project = applyProjectCommand(loadSurfaceNOProject(), catalog, {
+      kind: 'SetHermesShrinePresence',
+      occurrence: host,
+      present: true,
+    });
+    for (const [slotKey, rewardType] of [
+      ['first', 'HealBigDrop'],
+      ['secondLeft', 'ShopHermesUpgrade'],
+      ['secondRight', 'TalentDrop'],
+    ] as const) {
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceHermesShrineOffer',
+        occurrence: host,
+        slotKey,
+        value: { rewardType },
+      });
+    }
+    expect(
+      hermesShrineCandidateForProjectEvaluationAssembly(
+        simulateProjectAssembly(catalog, project),
+        host,
+      ),
+    ).toMatchObject({
+      placementEligible: true,
+      present: true,
+      candidateRewardTypesBySlot: {
+        first: expect.arrayContaining(['HealBigDrop']),
+      },
+    });
+  });
+
+  it('uses an unpurchased visible Shrine inventory for room eligibility without consuming a bag', () => {
+    const host = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
+    const oResult = (project: ReturnType<typeof loadSurfaceNOProject>) => {
+      const biome = simulateProject(catalog, project)
+        .routes.find((route) => route.routeKey === 'Surface')
+        ?.biomes.find((candidate) => candidate.biomeKey === 'O');
+      if (biome?.authoring !== 'complete' || biome.validity !== 'valid') {
+        throw new Error('fixture lost valid O evaluation');
+      }
+      return biome;
+    };
+    const baseline = oResult(loadSurfaceNOProject());
+    let project = applyProjectCommand(loadSurfaceNOProject(), catalog, {
+      kind: 'SetHermesShrinePresence',
+      occurrence: host,
+      present: true,
+    });
+    for (const [slotKey, rewardType] of [
+      ['first', 'HealBigDrop'],
+      ['secondLeft', 'MaxHealthDrop'],
+      ['secondRight', 'MaxManaDrop'],
+    ] as const) {
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceHermesShrineOffer',
+        occurrence: host,
+        slotKey,
+        value: { rewardType },
+      });
+    }
+    const withVisibleInventory = oResult(project);
+    expect(withVisibleInventory.rewards.branches.map((branch) => branch.bags)).toEqual(
+      baseline.rewards.branches.map((branch) => branch.bags),
+    );
+    const hostKey = semanticAddressKey(host);
+    expect(
+      withVisibleInventory.rewards.branches
+        .flatMap((branch) => branch.events)
+        .some(
+          (event) =>
+            event.kind === 'concreteAcquisition' &&
+            event.settlement !== undefined &&
+            semanticAddressKey(event.settlement.site.owner) === hostKey,
+        ),
+    ).toBe(false);
+  });
+
+  it.each([
+    ['ShopHermesUpgrade', 'HermesUpgrade'],
+    ['SpellDrop', 'SpellDrop'],
+    ['TalentDrop', 'TalentDrop'],
+  ] as const)(
+    'suppresses outgoing %s only while that complete unpurchased Shrine inventory is visible',
+    (visibleRewardType, outgoingRewardType) => {
+      const host = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
+      const baseline = evaluateShrineOutgoingPrefix(loadSurfaceNOProject(), outgoingRewardType);
+      expect(outgoingEligibility(baseline.runState, outgoingRewardType)).toBe('eligible');
+      let project = applyProjectCommand(loadSurfaceNOProject(), catalog, {
+        kind: 'SetHermesShrinePresence',
+        occurrence: host,
+        present: true,
+      });
+      for (const [slotKey, rewardType] of [
+        ['first', 'HealBigDrop'],
+        ['secondLeft', visibleRewardType],
+        ['secondRight', 'MaxManaDrop'],
+      ] as const) {
+        project = applyProjectCommand(project, catalog, {
+          kind: 'ReplaceHermesShrineOffer',
+          occurrence: host,
+          slotKey,
+          value: { rewardType },
+        });
+      }
+      const visible = evaluateShrineOutgoingPrefix(project, outgoingRewardType);
+      expect(outgoingEligibility(visible.runState, outgoingRewardType)).toBe('ineligible');
+      expect(bagCounts(visible.runState)).toEqual(bagCounts(baseline.runState));
+      expect(
+        visible.rewards.branches
+          .flatMap((branch) => branch.events)
+          .some(
+            (event) =>
+              event.kind === 'concreteAcquisition' &&
+              event.settlement !== undefined &&
+              semanticAddressKey(event.settlement.site.owner) === semanticAddressKey(host),
+          ),
+      ).toBe(false);
+    },
+  );
+
+  it.each([
+    ['missing', [['secondLeft', 'SpellDrop']] as const, 'SpellDrop'],
+    [
+      'wrong group',
+      [
+        ['first', 'ShopHermesUpgrade'],
+        ['secondLeft', 'SpellDrop'],
+        ['secondRight', 'MaxManaDrop'],
+      ] as const,
+      'HermesUpgrade',
+    ],
+    [
+      'duplicate',
+      [
+        ['first', 'HealBigDrop'],
+        ['secondLeft', 'SpellDrop'],
+        ['secondRight', 'SpellDrop'],
+      ] as const,
+      'SpellDrop',
+    ],
+  ] as const)(
+    'keeps %s retained-invalid Shrine inventory out of outgoing store names',
+    (_label, offers, outgoingRewardType) => {
+      const host = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
+      let project = applyProjectCommand(loadSurfaceNOProject(), catalog, {
+        kind: 'SetHermesShrinePresence',
+        occurrence: host,
+        present: true,
+      });
+      for (const [slotKey, rewardType] of offers) {
+        project = applyProjectCommand(project, catalog, {
+          kind: 'ReplaceHermesShrineOffer',
+          occurrence: host,
+          slotKey,
+          value: { rewardType },
+        });
+      }
+      const retained = evaluateShrineOutgoingPrefix(project, outgoingRewardType);
+      expect(outgoingEligibility(retained.runState, outgoingRewardType)).toBe('eligible');
+    },
+  );
+});
+
+describe('Hermes Shrine delayed-delivery derivation', () => {
+  const source = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
+  const firstHost = createOccurrenceAddress(oBiome, oOccurrenceIds.combat01);
+  const secondHost = createOccurrenceAddress(oBiome, createOccurrenceId('completion:O:boss'));
+
+  it('counts only later qualifying end-effects and leaves independent items pending', () => {
+    const deliveries = deriveHermesShrineDeliveries(
+      [
+        {
+          sourceKey: 'first',
+          sourceSequence: 10,
+          sourceOrigin: source,
+          rewardType: 'SpellDrop',
+          delay: 2,
+          rushed: false,
+        },
+        {
+          sourceKey: 'secondLeft',
+          sourceSequence: 10,
+          sourceOrigin: source,
+          rewardType: 'TalentDrop',
+          delay: 3,
+          rushed: false,
+        },
+      ],
+      [
+        // A purchase-room event and omitted skipped/noncombat events cannot
+        // consume the newly-created countdown because their sequence is not later.
+        { sequence: 10, kind: 'encounterEndEffectsApplied', origin: source },
+        { sequence: 20, kind: 'encounterEndEffectsApplied', origin: firstHost },
+        { sequence: 30, kind: 'encounterEndEffectsApplied', origin: secondHost },
+      ],
+    );
+    expect(deliveries).toMatchObject([
+      { sourceKey: 'first', deliveryKind: 'countdown', hostOrigin: secondHost, remainingUses: 0 },
+      { sourceKey: 'secondLeft', deliveryKind: 'pending', remainingUses: 1 },
+    ]);
+    // Maturity selects a host; it does not prove that the required pickup
+    // settled. The reservation remains live through the due host state.
+    expect(hasPendingHermesSpellDrop(deliveries)).toBe(true);
+  });
+
+  it('rushes in the source room and final Preboss completion flushes every remaining item', () => {
+    const deliveries = deriveHermesShrineDeliveries(
+      [
+        {
+          sourceKey: 'rush',
+          sourceSequence: 10,
+          sourceOrigin: source,
+          rewardType: 'HealBigDrop',
+          delay: 8,
+          rushed: true,
+        },
+        {
+          sourceKey: 'spell',
+          sourceSequence: 10,
+          sourceOrigin: source,
+          rewardType: 'SpellDrop',
+          delay: 8,
+          rushed: false,
+        },
+      ],
+      [{ sequence: 20, kind: 'finalPrebossCompletion', origin: secondHost }],
+    );
+    expect(deliveries).toMatchObject([
+      { deliveryKind: 'rush', hostOrigin: source, hostSequence: 10 },
+      { deliveryKind: 'finalPrebossCompletion', hostOrigin: secondHost, hostSequence: 20 },
+    ]);
+    expect(hasPendingHermesSpellDrop(deliveries)).toBe(true);
+  });
+
+  it('leaves a tail Postboss purchase pending when the modeled route has no later encounter', () => {
+    const tail = createOccurrenceAddress(pBiome, createOccurrenceId('completion:P:postboss'));
+    expect(
+      deriveHermesShrineDeliveries(
+        [
+          {
+            sourceKey: hermesShrineDeliveryEntryKey(tail, 'initial:secondLeft'),
+            sourceSequence: 10,
+            sourceOrigin: tail,
+            rewardType: 'SpellDrop',
+            delay: 8,
+            rushed: false,
+          },
+        ],
+        [],
+      ),
+    ).toEqual([
+      expect.objectContaining({
+        sourceOrigin: tail,
+        deliveryKind: 'pending',
+        remainingUses: 8,
+      }),
+    ]);
+  });
+});
+
+describe('Hermes Shrine Travel Deal generation', () => {
+  it('derives one same-group fourth generation and excludes all visible initial identities', () => {
+    const shrine = complete({
+      first: 'HealBigDrop',
+      secondLeft: 'SpellDrop',
+      secondRight: 'TalentDrop',
+    });
+    const first = assessHermesShrineTravelDealRefill(catalog, shrine, 'initial:first', []);
+    const second = assessHermesShrineTravelDealRefill(catalog, shrine, 'initial:secondLeft', []);
+    expect(first).toMatchObject({ sourceGenerationKey: 'initial:first' });
+    expect(first?.candidateRewardTypes).toContain('ArmorBoost');
+    expect(first?.candidateRewardTypes).not.toContain('HealBigDrop');
+    expect(first?.candidateRewardTypes).not.toContain('SpellDrop');
+    expect(second).toMatchObject({ sourceGenerationKey: 'initial:secondLeft' });
+    expect(second?.candidateRewardTypes).toContain('MaxHealthDrop');
+    expect(second?.candidateRewardTypes).not.toContain('SpellDrop');
+    expect(second?.candidateRewardTypes).not.toContain('TalentDrop');
+  });
+
+  it('cannot derive a refill from the refill generation itself', () => {
+    expect(
+      assessHermesShrineTravelDealRefill(catalog, complete(), 'travelDealRefill', []),
+    ).toBeUndefined();
+  });
+
+  it('uses a pre-equipped N-to-O Travel Deal only at the first rushed initial action', () => {
+    const host = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
+    let project = applyProjectCommand(loadSurfaceNOProject(), catalog, {
+      kind: 'SetHermesShrinePresence',
+      occurrence: host,
+      present: true,
+    });
+    for (const [slotKey, rewardType] of [
+      ['first', 'HealBigDrop'],
+      ['secondLeft', 'MaxHealthDrop'],
+      ['secondRight', 'MaxManaDrop'],
+    ] as const) {
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceHermesShrineOffer',
+        occurrence: host,
+        slotKey,
+        value: { rewardType },
+      });
+    }
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceHermesShrineTravelDealRefill',
+      occurrence: host,
+      value: { rewardType: 'ArmorBoost' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetHermesShrinePurchase',
+      occurrence: host,
+      generationKey: 'initial:first',
+      purchase: { delay: 2, rushed: true },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetHermesShrinePurchase',
+      occurrence: host,
+      generationKey: 'travelDealRefill',
+      purchase: { delay: 2, rushed: false },
+    });
+    const initialRoute = project.routes.find((candidate) => candidate.routeKey === 'Surface');
+    const initialPlan = initialRoute?.biomes.find((candidate) => candidate.biomeKey === 'O');
+    if (initialRoute === undefined || initialPlan === undefined)
+      throw new Error('fixture lost initial Surface O');
+    const initialSnapshot = materializeBiomePrefix(
+      catalog,
+      oBiome,
+      initialPlan,
+      initialRoute.loadout,
+    );
+    const initialHistory =
+      initialSnapshot === null ? undefined : composeBiomeHistoryPrefix(catalog, initialSnapshot);
+    if (
+      initialSnapshot?.entryRoom === undefined ||
+      initialHistory === null ||
+      initialHistory === undefined
+    )
+      throw new Error('fixture lost initial O history');
+    const refillPurchase = initialHistory.events.find(
+      (event) =>
+        event.kind === 'acquisitionPointReached' &&
+        event.point === 'hermesShrinePurchase:travelDealRefill',
+    );
+    if (refillPurchase === undefined) throw new Error('fixture lost Travel Deal refill purchase');
+    const scheduled = deriveHermesShrineDeliveries(
+      [
+        {
+          sourceKey: hermesShrineDeliveryEntryKey(host, 'travelDealRefill'),
+          sourceSequence: refillPurchase.sequence,
+          sourceOrigin: host,
+          rewardType: 'ArmorBoost',
+          delay: 2,
+          rushed: false,
+        },
+      ],
+      initialHistory.events.flatMap((event) =>
+        event.kind === 'encounterEndEffectsApplied' && event.origin.kind === 'occurrence'
+          ? [{ sequence: event.sequence, kind: event.kind, origin: event.origin }]
+          : [],
+      ),
+    )[0];
+    if (scheduled?.hostOrigin === undefined)
+      throw new Error('fixture never matures the Travel Deal refill');
+    const refillHost = scheduled.hostOrigin;
+    expect(refillHost).toEqual(createOccurrenceAddress(oBiome, oOccurrenceIds.combat01));
+    const refillEntry = createAcquisitionEntryAddress(
+      createAcquisitionSiteAddress(refillHost, 'hermesShrineDelivery'),
+      hermesShrineDeliveryEntryKey(host, 'travelDealRefill'),
+    );
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceAcquisitionEntryOffer',
+      entry: refillEntry,
+      value: { rewardType: 'ArmorBoost' },
+    });
+    const route = project.routes.find((candidate) => candidate.routeKey === 'Surface');
+    const plan = route?.biomes.find((candidate) => candidate.biomeKey === 'O');
+    if (route === undefined || plan === undefined) throw new Error('fixture lost Surface O');
+    const snapshot = materializeBiomePrefix(catalog, oBiome, plan, route.loadout);
+    const history = snapshot == null ? undefined : composeBiomeHistoryPrefix(catalog, snapshot);
+    if (snapshot == null || snapshot.entryRoom === undefined || history == null)
+      throw new Error('fixture lost O history');
+    const materializedRefillHost = prefixAuthoredRooms(snapshot).find(
+      (room) => semanticAddressKey(room.origin) === semanticAddressKey(refillHost),
+    );
+    expect(
+      materializedRefillHost?.roomActionRoster.rows.map((row) => row.reference),
+    ).toContainEqual({
+      kind: 'interactAcquisitionEntry',
+      siteKey: 'hermesShrineDelivery',
+      entryKey: refillEntry.entryKey,
+    });
+    const completeSnapshot = snapshot as typeof snapshot & {
+      readonly entryRoom: NonNullable<typeof snapshot.entryRoom>;
+    };
+    const result = evaluateBiomeRewards(
+      catalog,
+      completeSnapshot,
+      history,
+      2,
+      route.loadout,
+      branchesWithTravelDeal(),
+    );
+    expect(result.findings.map((finding) => finding.code)).not.toContain(
+      'hermesShrineTravelDealRefillUnavailable',
+    );
+    expect(result.hermesShrineDeliveries.map((delivery) => delivery.sourceKey)).not.toContain(
+      hermesShrineDeliveryEntryKey(host, 'travelDealRefill'),
+    );
+    expect(result.runtimeOfferFallbacks).toContainEqual({
+      address: createAcquisitionEntryAddress(
+        createAcquisitionSiteAddress(host, 'hermesShrineDelivery'),
+        hermesShrineDeliveryEntryKey(host, 'travelDealRefill'),
+      ),
+      preferredKey: 'ArmorBoost',
+      fallbackKey: 'ArmorBigBoost',
+    });
+    expect(refillEntry.entryKey).toBe(hermesShrineDeliveryEntryKey(host, 'travelDealRefill'));
+    expect(refillEntry.entryKey).not.toBe(hermesShrineDeliveryEntryKey(host, 'initial:first'));
+
+    const secondRush = applyProjectCommand(project, catalog, {
+      kind: 'SetHermesShrinePurchase',
+      occurrence: host,
+      generationKey: 'initial:secondLeft',
+      purchase: { delay: 2, rushed: true },
+    });
+    // The first rush has already established the fourth generation above.
+    // Clear its optional later purchase so this assertion isolates the second
+    // initial rush rather than a separate delayed refill delivery.
+    const bothRushed = applyProjectCommand(secondRush, catalog, {
+      kind: 'SetHermesShrinePurchase',
+      occurrence: host,
+      generationKey: 'travelDealRefill',
+      purchase: null,
+    });
+    const secondPlan = bothRushed.routes
+      .find((candidate) => candidate.routeKey === 'Surface')
+      ?.biomes.find((candidate) => candidate.biomeKey === 'O');
+    if (secondPlan === undefined) throw new Error('fixture lost O after second rush');
+    const secondSnapshot = materializeBiomePrefix(catalog, oBiome, secondPlan, route.loadout);
+    const secondHistory =
+      secondSnapshot === null ? undefined : composeBiomeHistoryPrefix(catalog, secondSnapshot);
+    if (
+      secondSnapshot?.entryRoom === undefined ||
+      secondHistory === null ||
+      secondHistory === undefined
+    )
+      throw new Error('fixture lost second-rush O history');
+    const bothRushedResult = evaluateBiomeRewards(
+      catalog,
+      secondSnapshot as typeof secondSnapshot & {
+        readonly entryRoom: NonNullable<typeof secondSnapshot.entryRoom>;
+      },
+      secondHistory,
+      2,
+      route.loadout,
+      branchesWithTravelDeal(),
+    );
+    expect(bothRushedResult.findings.map((finding) => finding.code)).not.toContain(
+      'hermesShrineTravelDealRefillUnavailable',
+    );
+    const bothRushedHost = prefixAuthoredRooms(secondSnapshot).find(
+      (room) => semanticAddressKey(room.origin) === semanticAddressKey(host),
+    );
+    expect(bothRushedHost?.roomActionRoster.rows.map((row) => row.reference)).toEqual(
+      expect.arrayContaining([
+        { kind: 'purchaseHermesShrineOffer', generationKey: 'initial:first' },
+        { kind: 'purchaseHermesShrineOffer', generationKey: 'initial:secondLeft' },
+      ]),
+    );
+    expect(
+      bothRushedResult.hermesShrineDeliveries.map((delivery) => delivery.sourceKey),
+    ).not.toContain(hermesShrineDeliveryEntryKey(host, 'initial:first'));
+    expect(
+      bothRushedResult.hermesShrineDeliveries.map((delivery) => delivery.sourceKey),
+    ).not.toContain(hermesShrineDeliveryEntryKey(host, 'initial:secondLeft'));
+  });
+});
+
+describe('Hermes Shrine Spell reservation lifecycle input', () => {
+  it('makes a delayed Spell reservation available to later encounter preparation', () => {
+    const project = loadSurfaceNOProject();
+    const route = project.routes.find((candidate) => candidate.routeKey === 'Surface');
+    const plan = route?.biomes.find((candidate) => candidate.biomeKey === 'O');
+    if (route === undefined || plan === undefined) throw new Error('fixture lost Surface O');
+    const snapshot = materializeBiomePrefix(catalog, oBiome, plan, route.loadout);
+    if (snapshot?.entryRoom === undefined) throw new Error('fixture lost O entry');
+    const host = prefixAuthoredRooms(snapshot).find(
+      (room) => room.occurrenceId === oOccurrenceIds.combat04 && room.entered,
+    );
+    if (host === undefined) throw new Error('fixture lost O_Combat04');
+    const envelope = catalog.encounterEnvelopes.byKey[host.encounterEnvelopeKey];
+    if (envelope === undefined) throw new Error('catalog lost O_Combat04 envelope');
+    const withSpellGuard = {
+      ...catalog,
+      encounterEnvelopes: {
+        ...catalog.encounterEnvelopes,
+        byKey: {
+          ...catalog.encounterEnvelopes.byKey,
+          [envelope.key]: {
+            ...envelope,
+            slots: envelope.slots.map((slot) =>
+              slot.key === 'Combat1'
+                ? {
+                    ...slot,
+                    activationRequirement: {
+                      kind: 'flagEquals' as const,
+                      flag: 'pendingSpellDrop',
+                      value: false,
+                    },
+                  }
+                : slot,
+            ),
+          },
+        },
+      },
+    } as typeof catalog;
+
+    const history = composeBiomeHistoryPrefix(catalog, snapshot);
+    const checkpoint = history?.rooms.find(
+      (room) => semanticAddressKey(room.origin) === semanticAddressKey(host.origin),
+    )?.preparation;
+    if (checkpoint === undefined) throw new Error('fixture never prepared O_Combat04');
+    expect(prepareRoomEncounterPhases(withSpellGuard, host, checkpoint).valid).toBe(true);
+    expect(
+      prepareRoomEncounterPhases(withSpellGuard, host, checkpoint, {
+        pendingSpellDrop: true,
+      }).valid,
+    ).toBe(false);
+  });
+});
+
+describe('Hermes Shrine pickup settlement', () => {
+  it('settles a rushed forced P Postboss Shrine pickup at the configured route tail', () => {
+    const host = createOccurrenceAddress(pBiome, createOccurrenceId('completion:P:postboss'));
+    let project = loadSurfaceNOPProject();
+    for (const [slotKey, rewardType] of [
+      ['first', 'HealBigDrop'],
+      ['secondLeft', 'MaxHealthDrop'],
+      ['secondRight', 'MaxManaDrop'],
+    ] as const) {
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceHermesShrineOffer',
+        occurrence: host,
+        slotKey,
+        value: { rewardType },
+      });
+    }
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetHermesShrinePurchase',
+      occurrence: host,
+      generationKey: 'initial:first',
+      purchase: { delay: 2, rushed: true },
+    });
+    const evaluation = simulateProject(catalog, project);
+    const p = evaluation.routes
+      .find((route) => route.routeKey === 'Surface')
+      ?.biomes.find((biome) => biome.biomeKey === 'P');
+    if (p?.authoring !== 'complete' || p.validity !== 'valid') {
+      throw new Error(
+        `fixture lost valid tail P biome: ${p?.findings.map((finding) => finding.code).join(',')}`,
+      );
+    }
+    expect(p.rewards.hermesShrineDeliveries.map((delivery) => delivery.sourceKey)).not.toContain(
+      hermesShrineDeliveryEntryKey(host, 'initial:first'),
+    );
+  });
+
+  it('settles a rushed Shrine item through the ordinary free pickup lifecycle', () => {
+    const host = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
+    let project = applyProjectCommand(loadSurfaceNOProject(), catalog, {
+      kind: 'SetHermesShrinePresence',
+      occurrence: host,
+      present: true,
+    });
+    for (const [slotKey, rewardType] of [
+      ['first', 'LastStandDrop'],
+      ['secondLeft', 'ShopHermesUpgrade'],
+      ['secondRight', 'TalentDrop'],
+    ] as const) {
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceHermesShrineOffer',
+        occurrence: host,
+        slotKey,
+        value: { rewardType },
+      });
+    }
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetHermesShrinePurchase',
+      occurrence: host,
+      generationKey: 'initial:first',
+      purchase: { delay: 2, rushed: true },
+    });
+    const site = createAcquisitionSiteAddress(host, 'hermesShrineDelivery');
+    const entry = createAcquisitionEntryAddress(
+      site,
+      hermesShrineDeliveryEntryKey(host, 'initial:first'),
+    );
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: createRouteStartKeepsakeSelectionAddress('Surface'),
+      keepsakeKey: 'GoldifyKeepsake',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceAcquisitionDisposition',
+      acquisition: createAcquisitionRoleAddress(entry, 'self'),
+      value: { kind: 'timePiece' },
+    });
+
+    const evaluation = simulateProject(catalog, project);
+    const o = evaluation.routes
+      .find((route) => route.routeKey === 'Surface')
+      ?.biomes.find((biome) => biome.biomeKey === 'O');
+    if (o?.authoring !== 'complete' || o.validity !== 'valid') {
+      throw new Error(
+        `fixture lost valid O biome: ${o?.findings.map((finding) => finding.code).join(',')}`,
+      );
+    }
+    expect(
+      o?.rewards.branches.some((branch) =>
+        branch.events.some(
+          (event) =>
+            event.kind === 'conversionToGold' &&
+            semanticAddressKey(event.origin) === semanticAddressKey(entry) &&
+            semanticAddressKey(event.settlement?.entry ?? entry) === semanticAddressKey(entry),
+        ),
+      ),
+    ).toBe(true);
+    expect(o?.rewards.runtimeOfferFallbacks).toContainEqual(
+      expect.objectContaining({ preferredKey: 'LastStandDrop', fallbackKey: 'ArmorBoost' }),
+    );
+
+    // A later host owns its own retained child.  It must not be mistaken for
+    // the virtual same-room rush source merely because both use the closed
+    // Shrine delivery site key.
+    const delayedHost = createOccurrenceAddress(oBiome, oOccurrenceIds.combat01);
+    let delayed = applyProjectCommand(project, catalog, {
+      kind: 'SetHermesShrinePurchase',
+      occurrence: host,
+      generationKey: 'initial:first',
+      purchase: { delay: 2, rushed: false },
+    });
+    const delayedEntry = createAcquisitionEntryAddress(
+      createAcquisitionSiteAddress(delayedHost, 'hermesShrineDelivery'),
+      hermesShrineDeliveryEntryKey(host, 'initial:first'),
+    );
+    delayed = applyProjectCommand(delayed, catalog, {
+      kind: 'ReplaceAcquisitionEntryOffer',
+      entry: delayedEntry,
+      value: { rewardType: 'LastStandDrop' },
+    });
+    delayed = applyProjectCommand(delayed, catalog, {
+      kind: 'ReplaceAcquisitionDisposition',
+      acquisition: createAcquisitionRoleAddress(delayedEntry, 'self'),
+      value: { kind: 'timePiece' },
+    });
+    const retained = delayed.routes
+      .find((route) => route.routeKey === 'Surface')
+      ?.biomes.find((biome) => biome.biomeKey === 'O')
+      ?.topology?.occurrences.find(
+        (occurrence) => occurrence.occurrenceId === delayedHost.occurrenceId,
+      )?.acquisitionSites?.hermesShrineDelivery?.pickupEntries?.[delayedEntry.entryKey];
+    expect(retained?.dispositionByAcquisitionRole.self).toEqual({ kind: 'timePiece' });
+  });
+});
+
+describe('Hermes Shrine delivery entry identity', () => {
+  it('round-trips the complete source address and keeps cross-biome sources distinct', () => {
+    const n = createOccurrenceAddress(
+      createBiomeAddress('Surface', 'N'),
+      createOccurrenceId('same-occurrence-id'),
+    );
+    const o = createOccurrenceAddress(
+      createBiomeAddress('Surface', 'O'),
+      createOccurrenceId('same-occurrence-id'),
+    );
+    const nKey = hermesShrineDeliveryEntryKey(n, 'initial:secondLeft');
+    const oKey = hermesShrineDeliveryEntryKey(o, 'initial:secondLeft');
+    expect(nKey).not.toBe(oKey);
+    expect(parseHermesShrineDeliveryEntryKey(nKey)).toEqual({
+      routeKey: 'Surface',
+      biomeKey: 'N',
+      sourceOccurrenceId: 'same-occurrence-id',
+      generationKey: 'initial:secondLeft',
+    });
+  });
+
+  it.each([
+    '',
+    'hermesShrineDelivery:',
+    'hermesShrineDelivery:%',
+    'hermesShrineDelivery:%5B%22Surface%22%2C%22N%22%2C%22id%22%5D',
+    'hermesShrineDelivery:%5B%22Surface%22%2C%22N%22%2C%22id%22%2C%22bad%22%5D',
+    'hermesShrineDelivery:%5B%22%22%2C%22N%22%2C%22id%22%2C%22first%22%5D',
+  ])('rejects malformed delivery key %s', (key) => {
+    expect(parseHermesShrineDeliveryEntryKey(key)).toBeUndefined();
+  });
+});

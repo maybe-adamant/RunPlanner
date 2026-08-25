@@ -6,6 +6,12 @@ export {
   parseArtificerReplacementEntryKey,
 } from './artificer';
 export {
+  HERMES_SHRINE_DELIVERY_SITE_KEY,
+  hermesShrineDeliveryEntryKey,
+  parseHermesShrineDeliveryEntryKey,
+} from './hermes-shrine-delivery';
+export type { HermesShrineGenerationKey, HermesShrinePurchase, HermesShrineSlotKey } from './model';
+export {
   SEA_STAR_DUPLICATE_ENTRY_KEY,
   seaStarDuplicateAcquisitionSite,
   seaStarDuplicateSiteKey,

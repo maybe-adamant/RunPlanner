@@ -81,6 +81,47 @@ export const producerLifecycles = [
       },
     ],
   },
+  // A Shrine purchase is paid, but its rush/matured object is a free room
+  // pickup.  Keep that delivery lifecycle distinct from the menu profile:
+  // the profile owns visible inventory while this declaration owns ordinary
+  // pickup roles for every exact SurfaceShop item.
+  {
+    key: 'HermesShrineDelivery',
+    rewardTypes: [
+      'HealBigDrop',
+      'RoomRewardHealDrop',
+      'ArmorBigBoost',
+      'ArmorBoost',
+      'LastStandDrop',
+      'GiftDrop',
+      'SpellDrop',
+      'ShopHermesUpgrade',
+      'MaxHealthDrop',
+      'MaxManaDrop',
+      'BlindBoxLoot',
+      'TalentDrop',
+    ],
+    defaultLifecyclePoint: 'roomRewardPickup',
+    overrides: [
+      {
+        rewardType: 'GiftDrop',
+        acquisitionLifecycle: [
+          {
+            role: 'self',
+            lifecyclePoint: 'roomRewardPickup',
+            levelResolutionEffect: { kind: 'randomTargetIfAvailable', levelCount: 1 },
+          },
+        ],
+      },
+      {
+        rewardType: 'BlindBoxLoot',
+        acquisitionLifecycle: [
+          { role: 'box', lifecyclePoint: 'roomRewardPickup' },
+          { role: 'hiddenSource', lifecyclePoint: 'afterUnwrap' },
+        ],
+      },
+    ],
+  },
   {
     key: 'EchoLastReward',
     rewardTypes: [

@@ -38,6 +38,7 @@ import {
   attestGorgonBranchState,
 } from './keepsakes';
 import { createArcanaFearState } from './arcana-fear';
+import { attestPendingHermesSpellDrop } from './hermes-shrine';
 import { createTraitHistoryState } from './traits';
 import {
   createKeepsakeEquipResultAddress,
@@ -394,6 +395,16 @@ export function purgingPoolCandidateForProjectEvaluationAssembly(
   return candidateArtifactsForProjectEvaluationAssembly(assembly)
     .biomeAt(createBiomeAddress(occurrence.routeKey, occurrence.biomeKey))
     ?.purgingPools.at(occurrence);
+}
+
+/** Exact Shrine entry-frontier capability retained by project evaluation. */
+export function hermesShrineCandidateForProjectEvaluationAssembly(
+  assembly: ProjectEvaluationAssembly,
+  occurrence: import('../authored-project/addresses').OccurrenceAddress,
+) {
+  return candidateArtifactsForProjectEvaluationAssembly(assembly)
+    .biomeAt(createBiomeAddress(occurrence.routeKey, occurrence.biomeKey))
+    ?.hermesShrines.at(occurrence);
 }
 
 /**
@@ -890,6 +901,7 @@ function evaluateBiomeAssembly(
   const startingKeepsake = catalog.keepsakes.byKey[context.loadout.startingKeepsakeKey];
   const startingFigLeaf = startingKeepsake?.effect;
   let figLeafState: FigLeafLifecycleState | undefined;
+  let pendingSpellDrop = false;
   try {
     figLeafState =
       context.seed === undefined
@@ -905,6 +917,10 @@ function evaluateBiomeAssembly(
               ? undefined
               : { remainingUses: state.remainingUses, activatedThisBiome: false };
           })();
+    pendingSpellDrop =
+      context.seed === undefined
+        ? false
+        : attestPendingHermesSpellDrop(context.seed.rewardBranches);
   } catch (error) {
     throw new ProjectSimulationContractError(
       error instanceof Error ? error.message : 'Fig Leaf branch frontier is divergent',
@@ -915,6 +931,7 @@ function evaluateBiomeAssembly(
     snapshot,
     seed,
     figLeafState,
+    pendingSpellDrop,
   );
   if (composed.kind !== 'complete') {
     const progressive = evaluateProgressiveBiomeAssembly(catalog, origin, plan, context);
@@ -1028,6 +1045,7 @@ function evaluateBiomeAssembly(
         rewards.derivedAcquisitionEntryArtifacts,
         rewards.steadyGrowthArtifacts,
         rewards.purgingPoolArtifacts,
+        rewards.hermesShrineArtifacts,
       ),
     });
   }
@@ -1057,6 +1075,7 @@ function evaluateBiomeAssembly(
         rewards.derivedAcquisitionEntryArtifacts,
         rewards.steadyGrowthArtifacts,
         rewards.purgingPoolArtifacts,
+        rewards.hermesShrineArtifacts,
       ),
       history: Object.freeze({
         routeKey: history.routeKey,

@@ -1,6 +1,11 @@
 import type { RawRoomDeclaration } from '../types';
 import { nResourcePointSupport } from '../resources';
 
+const surfaceShopHost = (spawnChance: number, forced = false, challengeSwitchAnchorCount = 1) => ({
+  challengeSwitchAnchorCount,
+  surfaceShop: { profileKey: 'SurfaceShop' as const, spawnChance, ...(forced ? { forced: true as const } : {}) },
+});
+
 const naturalChaosExit = {
   kind: 'naturalChaos' as const,
   key: 'naturalChaos' as const,
@@ -1137,6 +1142,7 @@ export const nRooms = [
   },
   {
     gameName: 'N_Sub01',
+    ...surfaceShopHost(.08, false, 1),
     resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     blocksGorgon: true,
     skipRoomsPerUpgrade: true,
@@ -1165,6 +1171,7 @@ export const nRooms = [
   },
   {
     gameName: 'N_Sub02',
+    ...surfaceShopHost(.08, false, 1),
     resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     blocksGorgon: true,
     skipRoomsPerUpgrade: true,
@@ -1193,6 +1200,7 @@ export const nRooms = [
   },
   {
     gameName: 'N_Sub03',
+    ...surfaceShopHost(.08, false, 1),
     resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     blocksGorgon: true,
     skipRoomsPerUpgrade: true,
@@ -1221,6 +1229,7 @@ export const nRooms = [
   },
   {
     gameName: 'N_Sub04',
+    ...surfaceShopHost(.08, false, 1),
     resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     blocksGorgon: true,
     skipRoomsPerUpgrade: true,
@@ -1249,6 +1258,7 @@ export const nRooms = [
   },
   {
     gameName: 'N_Sub05',
+    ...surfaceShopHost(.08, false, 0),
     resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     blocksGorgon: true,
     skipRoomsPerUpgrade: true,
@@ -1277,6 +1287,7 @@ export const nRooms = [
   },
   {
     gameName: 'N_Sub06',
+    ...surfaceShopHost(.08, false, 1),
     resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     blocksGorgon: true,
     skipRoomsPerUpgrade: true,
@@ -1305,6 +1316,7 @@ export const nRooms = [
   },
   {
     gameName: 'N_Sub07',
+    ...surfaceShopHost(.08, false, 1),
     resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     blocksGorgon: true,
     skipRoomsPerUpgrade: true,
@@ -1333,6 +1345,7 @@ export const nRooms = [
   },
   {
     gameName: 'N_Sub08',
+    ...surfaceShopHost(.08, false, 1),
     resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     blocksGorgon: true,
     skipRoomsPerUpgrade: true,
@@ -1361,6 +1374,7 @@ export const nRooms = [
   },
   {
     gameName: 'N_Sub09',
+    ...surfaceShopHost(.08, false, 1),
     resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     blocksGorgon: true,
     skipRoomsPerUpgrade: true,
@@ -1393,6 +1407,7 @@ export const nRooms = [
   },
   {
     gameName: 'N_Sub10',
+    ...surfaceShopHost(.08, false, 1),
     resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     blocksGorgon: true,
     skipRoomsPerUpgrade: true,
@@ -1425,6 +1440,7 @@ export const nRooms = [
   },
   {
     gameName: 'N_Sub11',
+    ...surfaceShopHost(.08, false, 1),
     resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     blocksGorgon: true,
     skipRoomsPerUpgrade: true,
@@ -1457,6 +1473,7 @@ export const nRooms = [
   },
   {
     gameName: 'N_Sub12',
+    ...surfaceShopHost(.08, false, 1),
     resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     blocksGorgon: true,
     skipRoomsPerUpgrade: true,
@@ -1485,6 +1502,7 @@ export const nRooms = [
   },
   {
     gameName: 'N_Sub13',
+    ...surfaceShopHost(.08, false, 1),
     resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     blocksGorgon: true,
     skipRoomsPerUpgrade: true,
@@ -1513,6 +1531,7 @@ export const nRooms = [
   },
   {
     gameName: 'N_Sub14',
+    ...surfaceShopHost(.08, false, 1),
     resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     blocksGorgon: true,
     skipRoomsPerUpgrade: true,
@@ -1545,6 +1564,7 @@ export const nRooms = [
   },
   {
     gameName: 'N_Sub15',
+    ...surfaceShopHost(.08, false, 1),
     resourcePointSupport: nResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     blocksGorgon: true,
     skipRoomsPerUpgrade: true,
@@ -1644,6 +1664,7 @@ export const nRooms = [
     label: 'Postboss',
     hasKeepsakeRack: true,
     hasRequiredFountain: true,
+    ...surfaceShopHost(1, true),
     roomSetKey: 'N',
     advancesExperimentalHammerUses: true,
     kind: 'PostBoss',

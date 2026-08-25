@@ -196,11 +196,25 @@ interface PendingShopState {
   readonly goldMaterialization?: PendingShopGoldMaterialization;
 }
 
+/** Cross-biome run state derived from one Shrine purchase action. */
+export interface PendingHermesShrineDelivery {
+  readonly sourceKey: string;
+  readonly sourceOrigin: import('../../authored-project/addresses').OccurrenceAddress;
+  readonly generationKey: import('../../authored-project/model').HermesShrineGenerationKey;
+  readonly reward: AuthoredRewardState;
+  readonly remainingUses: number;
+  /** Set at the exact qualifying lifecycle point; pickup settlement owns its host detail. */
+  readonly dueAt?: import('../../authored-project/addresses').OccurrenceAddress;
+  readonly dueSequence?: number;
+}
+
 export interface RewardBranchState {
   readonly bags: Readonly<Record<string, RewardBagState>>;
   readonly history: RewardHistoryState;
   readonly events: readonly RewardEvent[];
   readonly pendingShops: Readonly<Record<string, PendingShopState>>;
+  /** Delayed Shrine purchases survive biome boundaries until delivery or pickup. */
+  readonly pendingHermesShrineDeliveries: Readonly<Record<string, PendingHermesShrineDelivery>>;
   readonly processedThroughHistorySequence: number;
   readonly traitHistory?: TraitHistoryState;
   readonly traitEvaluations?: readonly ReachedTraitOfferEvaluation[];
@@ -259,6 +273,7 @@ export interface DerivedAcquisitionEntryFrontier {
     | 'echoDoubleShopReward'
     | 'echoLastReward'
     | 'infernalContractReward'
+    | 'hermesShrineDelivery'
     | 'travelDealPlaceholder'
     | 'travelDealRefill';
   readonly branchCohortSize: number;
@@ -527,6 +542,7 @@ function hasArtificerUse(
 export type RewardFactsFactory = (
   history: RewardHistoryState,
   currentRoomShopOptionNames?: ReadonlySet<string>,
+  branch?: RewardBranchState,
 ) => RewardKernelFacts;
 
 type RewardEventData<Event extends RewardEvent = RewardEvent> = Event extends RewardEvent
@@ -562,6 +578,7 @@ function equivalentBranchStateKey(branch: RewardBranchState): string {
       lastDevotionDepth: history.lastDevotionDepth,
     },
     pendingShops: orderedRecord(branch.pendingShops),
+    pendingHermesShrineDeliveries: orderedRecord(branch.pendingHermesShrineDeliveries),
     traitHistory: branch.traitHistory,
     arcanaFear: branch.arcanaFear,
     keepsakes: branch.keepsakes,
@@ -1979,6 +1996,7 @@ export function initializeRewardBranches(
       history: createRewardHistoryState(),
       events: Object.freeze([]),
       pendingShops: Object.freeze({}),
+      pendingHermesShrineDeliveries: Object.freeze({}),
       processedThroughHistorySequence: 0,
       traitHistory: createTraitHistoryState(),
       traitEvaluations: Object.freeze([]),
@@ -2031,6 +2049,7 @@ export function initializeRewardBranches(
         history: beginBiomeRewardHistory(branch.history),
         events: Object.freeze([]),
         pendingShops: Object.freeze({}),
+        pendingHermesShrineDeliveries: branch.pendingHermesShrineDeliveries ?? Object.freeze({}),
         processedThroughHistorySequence: 0,
         traitHistory: branch.traitHistory ?? createTraitHistoryState(),
         traitEvaluations: Object.freeze([]),
@@ -2376,7 +2395,7 @@ function sourceOrdering(
         !isOfferSupportedAtResolutionPoint(
           context.catalog.rewards,
           context.reward.offer,
-          context.facts(branch.history),
+          context.facts(branch.history, undefined, branch),
           'offer',
           { priorOffers: prior.map((entry) => entry.reward.offer) },
         )
@@ -2429,7 +2448,7 @@ export function processRewardOffer(
     siblingConflicts.set(semanticAddressKey(peer.origin), peer);
   };
   for (const originalBranch of branches) {
-    const facts = context.facts(originalBranch.history);
+    const facts = context.facts(originalBranch.history, undefined, originalBranch);
     const peers = { priorOffers: context.peers.map((peer) => peer.offer) };
     if (!isOfferSupportedAtResolutionPoint(catalog.rewards, reward.offer, facts, 'offer', peers)) {
       sawSourceFailure = true;
@@ -2555,7 +2574,7 @@ function recordCanonicalOffer(
   branch: RewardBranchState,
   context: OfferProcessingContext,
 ): RewardBranchState {
-  const facts = context.facts(branch.history);
+  const facts = context.facts(branch.history, undefined, branch);
   const history = applyOfferProjection(
     context.catalog.rewards,
     branch.history,
@@ -2761,14 +2780,14 @@ export function processShopInventory(
       catalog.rewards,
       profile,
       authored,
-      context.facts(branch.history, new Set()),
+      context.facts(branch.history, new Set(), branch),
       requirements,
     );
     supportResults.push(support);
     for (const witness of support.witnesses) {
       let candidate = branch;
       for (const offer of entry.offers) {
-        const offerFacts = context.facts(candidate.history, new Set());
+        const offerFacts = context.facts(candidate.history, new Set(), candidate);
         const history = applyOfferProjection(
           catalog.rewards,
           candidate.history,
@@ -3032,7 +3051,11 @@ export function settleShopAcquisitionSite(
     const slot = profile.slots.values[slotIndex];
     const group = slot === undefined ? undefined : profile.groups.byKey[slot.groupKey];
     if (slot === undefined || group === undefined) return undefined;
-    const generationFacts = context.facts(execution.candidate.history, new Set());
+    const generationFacts = context.facts(
+      execution.candidate.history,
+      new Set(),
+      execution.candidate,
+    );
     const candidateOffers = group.options.values.flatMap((option) =>
       locallyValidRewardOffers(catalog.rewards, option.rewardType),
     );
@@ -3622,7 +3645,7 @@ export function settleShopAcquisitionSite(
         slotIndex,
         execution.remainingSlotIndexes,
         execution.candidate.history,
-        context.facts(execution.candidate.history, new Set()),
+        context.facts(execution.candidate.history, new Set(), execution.candidate),
         requirements,
       );
       if (purchase === undefined) {
@@ -3661,7 +3684,7 @@ export function settleShopAcquisitionSite(
       const runtimeOfferFallbackRewardType = resolveShopRuntimeFallback(
         slotIndex,
         shopOption,
-        context.facts(execution.candidate.history, new Set()),
+        context.facts(execution.candidate.history, new Set(), execution.candidate),
         new Set(),
       );
       const evaluatedPaidOffer =
@@ -3922,7 +3945,7 @@ export function settleProducerAcquisitionSite(
       const supported = isOfferSupportedAtResolutionPoint(
         catalog.rewards,
         incoming.offer,
-        facts(branch.history),
+        facts(branch.history, undefined, branch),
         { acquisitionRole: event.role },
       );
       if (!supported) {
@@ -4635,7 +4658,7 @@ function applyProducerRoleHistory(
           }),
         })
       : branch;
-    const branchFacts = facts(branch.history);
+    const branchFacts = facts(branch.history, undefined, branch);
     if (
       !offerAlreadyGenerated &&
       !isOfferSupportedAtResolutionPoint(catalog.rewards, incoming.offer, branchFacts, {
@@ -4730,7 +4753,7 @@ function applyProducerRoleHistory(
             runProgress,
             prepared.bag,
             artificerReplacement.offer,
-            facts(prepared.branch.history),
+            facts(prepared.branch.history, undefined, prepared.branch),
             { ineligibleRewardTypes: new Set(['Devotion', 'SpellDrop']) },
           );
         } catch (error) {
@@ -4802,7 +4825,7 @@ function applyProducerRoleHistory(
             catalog.rewards,
             prepared.branch.history,
             artificerReplacement.offer,
-            facts(prepared.branch.history),
+            facts(prepared.branch.history, undefined, prepared.branch),
           );
           const withBagAndUse = Object.freeze({
             ...prepared.branch,
@@ -5002,7 +5025,7 @@ function applyProducerRoleHistory(
                         catalog.rewards.stores.byKey.RunProgress!,
                         prepared.bag,
                         offer,
-                        facts(prepared.branch.history),
+                        facts(prepared.branch.history, undefined, prepared.branch),
                         { ineligibleRewardTypes: new Set(['Devotion', 'SpellDrop']) },
                       ).length > 0
                     );
@@ -5031,5 +5054,8 @@ export function publicRewardBranch(branch: RewardBranchState): RewardBranch {
     ...(branch.traitHistory === undefined ? {} : { traitHistory: branch.traitHistory }),
     arcanaFear: branch.arcanaFear,
     keepsakes: branch.keepsakes,
+    ...(Object.keys(branch.pendingHermesShrineDeliveries).length === 0
+      ? {}
+      : { pendingHermesShrineDeliveries: branch.pendingHermesShrineDeliveries }),
   });
 }

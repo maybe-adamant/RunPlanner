@@ -82,6 +82,9 @@ export function createRoomLifecycleInput(
     encounterEnvelopeKey: room.encounterEnvelopeKey,
     encounterPhases,
     counterEffects: room.counterEffects,
+    ...(room.kind === 'authored' && room.hermesShrine !== undefined
+      ? { surfaceShopPresent: true }
+      : {}),
     ...(requiredObjects === undefined ? {} : { requiredObjects }),
     ...(offerPointRewardStores === undefined ? {} : { offerPointRewardStores }),
     ...(roomActionRoster === undefined ? {} : { roomActionRoster }),

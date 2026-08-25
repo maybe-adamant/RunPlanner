@@ -140,12 +140,18 @@ export interface RewardBranch {
   readonly traitHistory?: TraitHistoryState;
   readonly arcanaFear: ArcanaFearState;
   readonly keepsakes: KeepsakeState;
+  /** Engine-derived delayed Shrine state carried between biome evaluations. */
+  readonly pendingHermesShrineDeliveries?: Readonly<
+    Record<string, import('./processing').PendingHermesShrineDelivery>
+  >;
 }
 
 export interface TargetRewardHistoryCheckpoint {
   readonly origin: TargetAddress;
   readonly historySequence: number;
   readonly histories: readonly RewardHistoryState[];
+  /** Agreement-owned branch fact for later room generation requirements. */
+  readonly pendingSpellDrops: readonly boolean[];
 }
 
 interface RewardSimulationBase {
@@ -173,6 +179,13 @@ export interface BiomeRewardSimulation extends RewardSimulationBase {
     readonly origin: import('../../authored-project/addresses').OccurrenceAddress;
     readonly assessments: readonly import('../purging-pool').PurgingPoolAssessment[];
   }[];
+  /** Exact room-entry Shrine placement and inventory assessments. */
+  readonly hermesShrineAssessments: readonly {
+    readonly origin: import('../../authored-project/addresses').OccurrenceAddress;
+    readonly assessments: readonly import('../hermes-shrine').HermesShrineCandidateContext[];
+  }[];
+  /** Derived source-to-host delivery state; no pending object is persisted. */
+  readonly hermesShrineDeliveries: readonly import('../hermes-shrine').DerivedHermesShrineDelivery[];
   readonly selectedTraitOffers: readonly SelectedTraitOfferAssessment[];
   readonly selectedLevelResolutions: readonly SelectedLevelResolutionAssessment[];
   /** One resolved runtime substitute per reached selected result/action. */

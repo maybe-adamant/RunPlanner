@@ -5,16 +5,352 @@ import {
   applyProjectCommand,
   createProjectDocument,
   createBiomeFieldAddress,
+  createBiomeAddress,
   createOccurrenceId,
+  createOccurrenceAddress,
   createRouteAddress,
+  decodeProjectDocument,
   deriveRouteLoadout,
+  encodeProjectDocument,
   ProjectCommandContractError,
   ProjectDocumentContractError,
 } from '@run-planner/engine/authored-project';
 
 import { fBiome, fProject, iBiome, iProject } from '../support/configured-projects';
+import { loadSurfaceNOProject, oBiome, oOccurrenceIds } from '@run-planner/test-fixtures/surface';
 
 describe('authored-project project-state commands', () => {
+  it('adds and removes an ordinary Shrine shell atomically without admitting forced hosts', () => {
+    const route = createRouteAddress('Surface');
+    const biome = createBiomeAddress('Surface', 'N');
+    const occurrence = createOccurrenceAddress(biome, createOccurrenceId('completion:N:postboss'));
+    const seeded = createProjectDocument(catalog, {
+      projectId: 'ordinary-shrine-presence',
+      configuredBiomeCounts: { Surface: 1 },
+    });
+    const ordinaryCatalog = {
+      ...catalog,
+      rooms: {
+        ...catalog.rooms,
+        byKey: {
+          ...catalog.rooms.byKey,
+          N_PostBoss01: {
+            ...catalog.rooms.byKey.N_PostBoss01!,
+            surfaceShop: { profileKey: 'SurfaceShop' as const, spawnChance: 0.08, forced: false },
+          },
+        },
+      },
+    };
+    const present = applyProjectCommand(seeded, ordinaryCatalog, {
+      kind: 'SetHermesShrinePresence',
+      occurrence,
+      present: true,
+    });
+    const withShrine = present.routes
+      .find((candidate) => candidate.routeKey === route.routeKey)
+      ?.biomes[0]?.completionOccurrences.find(
+        (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
+      );
+    expect(withShrine?.hermesShrine?.offerBySlot).toEqual({
+      first: null,
+      secondLeft: null,
+      secondRight: null,
+    });
+    const offered = applyProjectCommand(present, ordinaryCatalog, {
+      kind: 'ReplaceHermesShrineOffer',
+      occurrence,
+      slotKey: 'first',
+      value: { rewardType: 'HealBigDrop' },
+    });
+    const purchased = applyProjectCommand(offered, ordinaryCatalog, {
+      kind: 'SetHermesShrinePurchase',
+      occurrence,
+      generationKey: 'initial:first',
+      purchase: { delay: 2, rushed: false },
+    });
+    const removed = applyProjectCommand(purchased, ordinaryCatalog, {
+      kind: 'SetHermesShrinePresence',
+      occurrence,
+      present: false,
+    });
+    const withoutShrine = removed.routes
+      .find((candidate) => candidate.routeKey === route.routeKey)
+      ?.biomes[0]?.completionOccurrences.find(
+        (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
+      );
+    expect(withoutShrine?.hermesShrine).toBeUndefined();
+    expect(withoutShrine?.roomActions.order).not.toContainEqual({
+      kind: 'purchaseHermesShrineOffer',
+      generationKey: 'initial:first',
+    });
+    expect(() =>
+      applyProjectCommand(seeded, catalog, {
+        kind: 'SetHermesShrinePresence',
+        occurrence,
+        present: false,
+      }),
+    ).toThrow(ProjectCommandContractError);
+  });
+
+  it('keeps Shrine purchase membership and detail in one semantic command while rejecting malformed input', () => {
+    const route = createRouteAddress('Surface');
+    const biome = createBiomeAddress('Surface', 'N');
+    const occurrence = createOccurrenceAddress(biome, createOccurrenceId('completion:N:postboss'));
+    const seeded = createProjectDocument(catalog, {
+      projectId: 'shrine-command',
+      configuredBiomeCounts: { Surface: 1 },
+    });
+    const offered = applyProjectCommand(seeded, catalog, {
+      kind: 'ReplaceHermesShrineOffer',
+      occurrence,
+      slotKey: 'first',
+      value: { rewardType: 'HealBigDrop' },
+    });
+    const purchased = applyProjectCommand(offered, catalog, {
+      kind: 'SetHermesShrinePurchase',
+      occurrence,
+      generationKey: 'initial:first',
+      purchase: { delay: 2, rushed: false },
+    });
+    const postboss = purchased.routes
+      .find((candidate) => candidate.routeKey === 'Surface')
+      ?.biomes[0]?.completionOccurrences.find(
+        (candidate) => candidate.occurrenceId === 'completion:N:postboss',
+      );
+    expect(postboss?.hermesShrine?.purchaseBySlot?.first).toEqual({ delay: 2, rushed: false });
+    expect(postboss?.roomActions.order).toContainEqual({
+      kind: 'purchaseHermesShrineOffer',
+      generationKey: 'initial:first',
+    });
+    expect(() =>
+      applyProjectCommand(offered, catalog, {
+        kind: 'SetHermesShrinePurchase',
+        occurrence,
+        generationKey: 'bad' as never,
+        purchase: { delay: 9 as never, rushed: 'no' as never },
+      }),
+    ).toThrow(ProjectCommandContractError);
+    const refilled = applyProjectCommand(offered, catalog, {
+      kind: 'ReplaceHermesShrineTravelDealRefill',
+      occurrence,
+      // Refill group is prefix-derived. A second-group retained value is
+      // structurally editable and candidate evaluation owns its repair.
+      value: { rewardType: 'SpellDrop' },
+    });
+    const refillPurchased = applyProjectCommand(refilled, catalog, {
+      kind: 'SetHermesShrinePurchase',
+      occurrence,
+      generationKey: 'travelDealRefill',
+      purchase: { delay: 2, rushed: false },
+    });
+    const refillCleared = applyProjectCommand(refillPurchased, catalog, {
+      kind: 'SetHermesShrinePurchase',
+      occurrence,
+      generationKey: 'travelDealRefill',
+      purchase: null,
+    });
+    const clearedPostboss = refillCleared.routes
+      .find((candidate) => candidate.routeKey === 'Surface')
+      ?.biomes[0]?.completionOccurrences.find(
+        (candidate) => candidate.occurrenceId === 'completion:N:postboss',
+      );
+    expect(clearedPostboss?.hermesShrine?.travelDealRefill).toMatchObject({
+      offer: { offer: { rewardType: 'SpellDrop' } },
+    });
+    expect(clearedPostboss?.hermesShrine?.travelDealRefill?.purchase).toBeUndefined();
+    expect(clearedPostboss?.roomActions.order).not.toContainEqual({
+      kind: 'purchaseHermesShrineOffer',
+      generationKey: 'travelDealRefill',
+    });
+    expect(() =>
+      applyProjectCommand(refilled, catalog, {
+        kind: 'SetHermesShrinePurchase',
+        occurrence,
+        generationKey: 'travelDealRefill',
+        purchase: { delay: 2, rushed: true },
+      }),
+    ).toThrow(ProjectCommandContractError);
+    const second = applyProjectCommand(seeded, catalog, {
+      kind: 'ReplaceHermesShrineOffer',
+      occurrence,
+      slotKey: 'secondLeft',
+      value: { rewardType: 'MaxHealthDrop' },
+    });
+    expect(
+      applyProjectCommand(second, catalog, {
+        kind: 'ReplaceHermesShrineOffer',
+        occurrence,
+        slotKey: 'secondRight',
+        value: { rewardType: 'MaxHealthDrop' },
+      }),
+    ).toBeDefined();
+  });
+
+  it('rejects malformed Shrine purchase action closure in completion and ordinary persisted rooms', () => {
+    const completionBiome = createBiomeAddress('Surface', 'N');
+    const completionOccurrence = createOccurrenceAddress(
+      completionBiome,
+      createOccurrenceId('completion:N:postboss'),
+    );
+    const completion = applyProjectCommand(
+      applyProjectCommand(
+        createProjectDocument(catalog, {
+          projectId: 'shrine-completion-codec-closure',
+          configuredBiomeCounts: { Surface: 1 },
+        }),
+        catalog,
+        {
+          kind: 'ReplaceHermesShrineOffer',
+          occurrence: completionOccurrence,
+          slotKey: 'first',
+          value: { rewardType: 'HealBigDrop' },
+        },
+      ),
+      catalog,
+      {
+        kind: 'SetHermesShrinePurchase',
+        occurrence: completionOccurrence,
+        generationKey: 'initial:first',
+        purchase: { delay: 2, rushed: false },
+      },
+    );
+    const ordinaryOccurrence = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
+    const ordinary = applyProjectCommand(
+      applyProjectCommand(
+        applyProjectCommand(loadSurfaceNOProject(), catalog, {
+          kind: 'SetHermesShrinePresence',
+          occurrence: ordinaryOccurrence,
+          present: true,
+        }),
+        catalog,
+        {
+          kind: 'ReplaceHermesShrineOffer',
+          occurrence: ordinaryOccurrence,
+          slotKey: 'first',
+          value: { rewardType: 'HealBigDrop' },
+        },
+      ),
+      catalog,
+      {
+        kind: 'SetHermesShrinePurchase',
+        occurrence: ordinaryOccurrence,
+        generationKey: 'initial:first',
+        purchase: { delay: 2, rushed: false },
+      },
+    );
+    const mutate = (
+      document: Record<string, unknown>,
+      occurrenceId: string,
+      mutateOccurrence: (occurrence: Record<string, unknown>) => void,
+    ) => {
+      const routes = document.routes as Record<string, unknown>[];
+      for (const route of routes) {
+        for (const biome of route.biomes as Record<string, unknown>[]) {
+          const completions = biome.completionOccurrences as Record<string, unknown>[];
+          const topology = biome.topology as Record<string, unknown> | null;
+          const occurrences = [
+            ...(completions ?? []),
+            ...((topology?.occurrences as Record<string, unknown>[] | undefined) ?? []),
+          ];
+          const occurrence = occurrences.find(
+            (candidate) => candidate.occurrenceId === occurrenceId,
+          );
+          if (occurrence !== undefined) {
+            mutateOccurrence(occurrence);
+            return;
+          }
+        }
+      }
+      throw new Error(`missing encoded ${occurrenceId}`);
+    };
+    for (const [name, project, occurrenceId] of [
+      ['completion', completion, completionOccurrence.occurrenceId],
+      ['ordinary', ordinary, ordinaryOccurrence.occurrenceId],
+    ] as const) {
+      const detailWithoutAction = JSON.parse(encodeProjectDocument(project)) as Record<
+        string,
+        unknown
+      >;
+      mutate(detailWithoutAction, occurrenceId, (occurrence) => {
+        (occurrence.roomActions as { order: unknown[] }).order = [];
+      });
+      expect(() => decodeProjectDocument(detailWithoutAction, catalog), name).toThrow(
+        'Shrine purchase details must have exactly one matching purchase action',
+      );
+
+      const actionWithoutDetail = JSON.parse(encodeProjectDocument(project)) as Record<
+        string,
+        unknown
+      >;
+      mutate(actionWithoutDetail, occurrenceId, (occurrence) => {
+        delete (occurrence.hermesShrine as Record<string, unknown>).purchaseBySlot;
+      });
+      expect(() => decodeProjectDocument(actionWithoutDetail, catalog), name).toThrow(
+        'Shrine purchase details must have exactly one matching purchase action',
+      );
+    }
+    for (const [name, project, occurrenceId] of [
+      ['completion', completion, completionOccurrence.occurrenceId],
+      ['ordinary', ordinary, ordinaryOccurrence.occurrenceId],
+    ] as const) {
+      const nullRefillPurchase = JSON.parse(encodeProjectDocument(project)) as Record<
+        string,
+        unknown
+      >;
+      mutate(nullRefillPurchase, occurrenceId, (occurrence) => {
+        const shrine = occurrence.hermesShrine as Record<string, unknown>;
+        shrine.travelDealRefill = {
+          offer: null,
+          purchase: { delay: 2, rushed: false },
+        };
+        (occurrence.roomActions as { order: unknown[] }).order.push({
+          kind: 'purchaseHermesShrineOffer',
+          generationKey: 'travelDealRefill',
+        });
+      });
+      expect(() => decodeProjectDocument(nullRefillPurchase, catalog), name).toThrow(
+        'requires a resolved source offer',
+      );
+    }
+  });
+
+  it('uses the Shrine delivery lifecycle for GiftDrop Pom state while retaining SurfaceShop membership', () => {
+    const occurrence = createOccurrenceAddress(
+      createBiomeAddress('Surface', 'N'),
+      createOccurrenceId('completion:N:postboss'),
+    );
+    const seeded = createProjectDocument(catalog, {
+      projectId: 'shrine-gift-delivery-state',
+      configuredBiomeCounts: { Surface: 1 },
+    });
+    const authored = applyProjectCommand(seeded, catalog, {
+      kind: 'ReplaceHermesShrineOffer',
+      occurrence,
+      slotKey: 'first',
+      value: { rewardType: 'GiftDrop' },
+    });
+    const state = authored.routes
+      .find((route) => route.routeKey === 'Surface')
+      ?.biomes[0]?.completionOccurrences.find(
+        (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
+      )?.hermesShrine?.offerBySlot.first;
+    expect(state?.levelResolutionsByAcquisitionRole?.self).toEqual({
+      kind: 'random',
+      targetTraitKey: null,
+    });
+    const roundTripped = decodeProjectDocument(
+      JSON.parse(encodeProjectDocument(authored)),
+      catalog,
+    );
+    expect(
+      roundTripped.routes
+        .find((route) => route.routeKey === 'Surface')
+        ?.biomes[0]?.completionOccurrences.find(
+          (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
+        )?.hermesShrine?.offerBySlot.first?.levelResolutionsByAcquisitionRole?.self,
+    ).toEqual({ kind: 'random', targetTraitKey: null });
+  });
+
   it('seeds Postboss room actions from its exact automatic room declaration', () => {
     const withoutRack = {
       ...catalog,

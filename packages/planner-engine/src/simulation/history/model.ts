@@ -142,6 +142,7 @@ export interface RoomRestoredHistoryEvent extends HistoryEventBase {
   readonly restoreKind: 'hub' | 'parent';
   readonly biomeDepthCacheDelta: number;
   readonly roomHistoryOrdinalDelta: number;
+  readonly surfaceShopPresent?: boolean;
 }
 
 export type HistoryEvent =
@@ -162,6 +163,7 @@ export interface RoomAppearanceHistoryEntry {
   readonly sequence: number;
   readonly origin: RoomHistoryOrigin;
   readonly gameName: string;
+  readonly surfaceShopPresent?: boolean;
 }
 
 export interface EncounterHistoryEntry {

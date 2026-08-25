@@ -7,15 +7,15 @@ scope, biome topology, occurrence-local state, semantic addresses, commands,
 persistence, and history. Simulation algorithms, candidates, Redux state, and
 React rendering are separate concerns.
 
-## Schema 57 Boundary
+## Schema 58 Boundary
 
-Schema 57 is the sole persisted authored-project contract. The codec rejects
+Schema 58 is the sole persisted authored-project contract. The codec rejects
 every other schema version rather than manufacturing current topology or leaf
 state for a stale document. The migration CLI performs the explicit 49-to-50,
 50-to-51, 51-to-52, 52-to-53, 53-to-54, 54-to-55, 55-to-56, and 56-to-57 migrations outside the production
-decoder, and also updates the earlier catalog metadata from
+decoder, followed by the 57-to-58 migration, and also updates the earlier catalog metadata from
 `0.32.0-run-impacting-traits` through
-`0.39.0-purging-pool` without inventing authored outcomes. Catalog
+`0.40.0-hermes-shrine` without inventing authored outcomes. Catalog
 versions must match exactly after migration.
 
 Schemas 46 and 47 completed the occurrence-owned topology and chronology
@@ -60,6 +60,14 @@ Postboss occurrences. The physical Pool is always present. Its occurrence-owned
 opened exact screen: only the latter activates the persisted nullable slot
 details and Pool sale Room Actions. Disabling interaction removes those sale
 actions atomically but retains slot details dormantly for restoration and Undo.
+
+Schema 58 adds occurrence-owned Shrine of Hermes state at declaration-owned
+ordinary and forced Postboss hosts. Every present Shrine persists all three
+visible initial offer identities; it has no global interaction flag or random
+inventory bypass. Sparse per-generation purchase state records delay and rush,
+and an optional fourth Travel Deal refill retains its own offer and delayed
+purchase. Pending delivery, maturity host, Spell reservation, and runtime offer
+fallbacks remain derived simulation output rather than persisted state.
 
 There is one biome plan and one topology language. Production state and
 semantic addresses have no layout-specific plan family, completion-transition

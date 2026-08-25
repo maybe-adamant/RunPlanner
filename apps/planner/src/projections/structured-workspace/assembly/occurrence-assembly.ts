@@ -51,6 +51,7 @@ import {
   activeSelectedPickupProducers,
   echoLastRewardPickupEntryKey,
   parseEchoLastRewardPickupEntryKey,
+  hermesShrineDeliveryEntryKey,
   echoLastRewardPickupEntryKeys,
   ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
   INFERNAL_CONTRACT_ENTRY_KEY,
@@ -149,6 +150,7 @@ type WorkspaceDerivedAcquisitionEntry = {
     | 'echoDoubleShopPlaceholder'
     | 'echoDoubleShopReward'
     | 'echoLastReward'
+    | 'hermesShrineDelivery'
     | 'infernalContractReward'
     | 'travelDealPlaceholder'
     | 'travelDealRefill';
@@ -186,6 +188,9 @@ export interface WorkspaceOccurrenceAssemblyInput {
     owner: OccurrenceAddress,
   ) => import('@run-planner/engine/simulation').PurgingPoolCandidateCapability | undefined;
   readonly steadyGrowthOutcomes?: readonly import('@run-planner/engine/simulation').BiomeRewardSimulation['steadyGrowthOutcomes'][number][];
+  readonly hermesShrineAssessment?: (
+    owner: OccurrenceAddress,
+  ) => import('@run-planner/engine/simulation').HermesShrineCandidateCapability | undefined;
   readonly isActiveTraitOffer: (owner: TraitOfferAddress) => boolean;
   readonly judgmentArcanaCapability?: (
     address: import('@run-planner/engine/authored-project').JudgmentArcanaAddress,
@@ -1442,6 +1447,8 @@ function roomActionLabel(
           : summarizeRewardOffer(catalog, rewardControl.offer);
       return `Buy ${rewardLabel ?? offer?.label ?? reference.offerKey}`;
     }
+    case 'purchaseHermesShrineOffer':
+      return `Buy Shrine offer ${reference.generationKey}`;
     case 'sellPurgingPoolTrait': {
       const traitKey = purgingPoolTraitKeyBySlot?.[reference.slotKey];
       return `Sell ${traitKey === null || traitKey === undefined ? `${reference.slotKey} Pool trait` : (catalog.traits.byKey[traitKey]?.label ?? traitKey)}`;
@@ -1716,7 +1723,17 @@ function roomActionsForOccurrence(
       const wheelControl = wheel?.offers.find(
         (_offer, index) => index + 1 === wheel.pickedOfferIndex,
       )?.control;
-      const rewardControl = directControl ?? incomingControl ?? wheelControl;
+      const shrinePurchaseControl =
+        row.reference.kind !== 'purchaseHermesShrineOffer'
+          ? undefined
+          : controlAt(
+              createAcquisitionEntryAddress(
+                createAcquisitionSiteAddress(owner, 'hermesShrineDelivery'),
+                hermesShrineDeliveryEntryKey(owner, row.reference.generationKey),
+              ),
+            );
+      const rewardControl =
+        directControl ?? incomingControl ?? wheelControl ?? shrinePurchaseControl;
       const phase = encounterPhases.find((candidate) =>
         row.reference.kind === 'interactGorgon'
           ? candidate.gorgonAthena !== undefined &&
@@ -2569,10 +2586,103 @@ function roomFeatures(
   const passive = encounterPhases.find((phase) => phase.nemesisFeature !== undefined);
   const poolOwner = createOccurrenceAddress(input.biome, input.occurrence.occurrenceId);
   const poolAssessment = input.purgingPoolAssessment?.(poolOwner);
+  const shrineAssessment = input.hermesShrineAssessment?.(poolOwner);
+  const shrine = input.occurrence.hermesShrine;
   const pool = input.occurrence.purgingPool;
   const poolSlotLabel = (slotKey: 'left' | 'middle' | 'right'): string =>
     slotKey === 'left' ? 'Left slot' : slotKey === 'middle' ? 'Middle slot' : 'Right slot';
   return Object.freeze([
+    ...(shrine === undefined && shrineAssessment === undefined
+      ? []
+      : [
+          Object.freeze({
+            kind: 'hermesShrine' as const,
+            present: shrine !== undefined,
+            required: shrineAssessment?.required ?? room.surfaceShop?.forced === true,
+            placementEligible: shrineAssessment?.placementEligible ?? false,
+            ...(shrineAssessment?.required === true || room.surfaceShop?.forced === true
+              ? {}
+              : {
+                  presenceInteractionKey: `hermesShrinePresence:${semanticAddressKey(poolOwner)}`,
+                }),
+            slots: Object.freeze(
+              shrine === undefined
+                ? []
+                : (
+                    [
+                      ['first', 'First'],
+                      ['secondLeft', 'Second Left'],
+                      ['secondRight', 'Second Right'],
+                    ] as const
+                  ).map(([slotKey, label]) => {
+                    const generationKey = `initial:${slotKey}` as const;
+                    return Object.freeze({
+                      key: slotKey,
+                      label,
+                      rewardType: shrine.offerBySlot[slotKey]?.offer.rewardType ?? null,
+                      ...(shrine.offerBySlot[slotKey] === null
+                        ? {}
+                        : {
+                            rewardLabel:
+                              input.catalog.rewards.rewardTypes.byKey[
+                                shrine.offerBySlot[slotKey]!.offer.rewardType
+                              ]?.label ?? shrine.offerBySlot[slotKey]!.offer.rewardType,
+                          }),
+                      candidateRewardTypes:
+                        shrineAssessment?.candidateRewardTypesBySlot[slotKey] ?? Object.freeze([]),
+                      candidateRewards: Object.freeze(
+                        (shrineAssessment?.candidateRewardTypesBySlot[slotKey] ?? []).map(
+                          (rewardType) =>
+                            Object.freeze({
+                              rewardType,
+                              label:
+                                input.catalog.rewards.rewardTypes.byKey[rewardType]?.label ??
+                                rewardType,
+                            }),
+                        ),
+                      ),
+                      offerInteractionKey: `hermesShrineOffer:${semanticAddressKey(poolOwner)}:${slotKey}`,
+                      purchaseInteractionKey: `hermesShrinePurchase:${semanticAddressKey(poolOwner)}:${generationKey}`,
+                      purchase: shrine.purchaseBySlot?.[slotKey] ?? null,
+                    });
+                  }),
+            ),
+            ...(shrine === undefined ||
+            (shrine.travelDealRefill === undefined &&
+              shrineAssessment?.travelDealRefill === undefined)
+              ? {}
+              : {
+                  travelDealRefill: Object.freeze({
+                    rewardType: shrine.travelDealRefill?.offer?.offer.rewardType ?? null,
+                    ...(shrine.travelDealRefill?.offer === null ||
+                    shrine.travelDealRefill?.offer === undefined
+                      ? {}
+                      : {
+                          rewardLabel:
+                            input.catalog.rewards.rewardTypes.byKey[
+                              shrine.travelDealRefill.offer.offer.rewardType
+                            ]?.label ?? shrine.travelDealRefill.offer.offer.rewardType,
+                        }),
+                    candidateRewardTypes:
+                      shrineAssessment?.travelDealRefill?.candidateRewardTypes ?? Object.freeze([]),
+                    candidateRewards: Object.freeze(
+                      (shrineAssessment?.travelDealRefill?.candidateRewardTypes ?? []).map(
+                        (rewardType) =>
+                          Object.freeze({
+                            rewardType,
+                            label:
+                              input.catalog.rewards.rewardTypes.byKey[rewardType]?.label ??
+                              rewardType,
+                          }),
+                      ),
+                    ),
+                    offerInteractionKey: `hermesShrineOffer:${semanticAddressKey(poolOwner)}:travelDealRefill`,
+                    purchaseInteractionKey: `hermesShrinePurchase:${semanticAddressKey(poolOwner)}:travelDealRefill`,
+                    purchase: shrine.travelDealRefill?.purchase ?? null,
+                  }),
+                }),
+          }),
+        ]),
     ...(pool === undefined
       ? []
       : [
@@ -2913,6 +3023,43 @@ function occurrenceInteractionRequirements(
     }
   }
   for (const feature of room.workbench.features) {
+    if (feature.kind === 'hermesShrine') {
+      requirements.push(
+        Object.freeze({
+          kind: 'hermesShrine' as const,
+          owner: room.address,
+          present: feature.present,
+          ...(feature.presenceInteractionKey === undefined
+            ? {}
+            : { presenceInteractionKey: feature.presenceInteractionKey }),
+          slots: Object.freeze([
+            ...feature.slots.map((slot) =>
+              Object.freeze({
+                slotKey: slot.key,
+                rewardType: slot.rewardType,
+                candidateRewardTypes: slot.candidateRewardTypes,
+                purchase: slot.purchase,
+                offerInteractionKey: slot.offerInteractionKey,
+                purchaseInteractionKey: slot.purchaseInteractionKey,
+              }),
+            ),
+            ...(feature.travelDealRefill === undefined
+              ? []
+              : [
+                  Object.freeze({
+                    slotKey: 'travelDealRefill' as const,
+                    rewardType: feature.travelDealRefill.rewardType,
+                    candidateRewardTypes: feature.travelDealRefill.candidateRewardTypes,
+                    purchase: feature.travelDealRefill.purchase,
+                    offerInteractionKey: feature.travelDealRefill.offerInteractionKey,
+                    purchaseInteractionKey: feature.travelDealRefill.purchaseInteractionKey,
+                  }),
+                ]),
+          ]),
+        }),
+      );
+      continue;
+    }
     if (feature.kind !== 'purgingPool') continue;
     requirements.push(
       Object.freeze({
@@ -3164,10 +3311,40 @@ export function assembleWorkspaceOccurrence(
           'rewardControl' in offer ? [offer.rewardControl] : [],
         ),
   );
+  const rushedShrineRewardControls = Object.freeze(
+    occurrence.hermesShrine === undefined
+      ? []
+      : Object.entries(occurrence.hermesShrine.purchaseBySlot ?? {}).flatMap(
+          ([slotKey, purchase]) => {
+            if (purchase?.rushed !== true) return [];
+            const typedSlotKey =
+              slotKey as import('@run-planner/engine/authored-project').HermesShrineSlotKey;
+            const reward = occurrence.hermesShrine?.offerBySlot[typedSlotKey];
+            if (reward === null || reward === undefined) return [];
+            const generationKey =
+              `initial:${typedSlotKey}` as import('@run-planner/engine/authored-project').HermesShrineGenerationKey;
+            const entry = createAcquisitionEntryAddress(
+              createAcquisitionSiteAddress(address, 'hermesShrineDelivery'),
+              hermesShrineDeliveryEntryKey(address, generationKey),
+            );
+            return [
+              rewardControl(
+                input,
+                { kind: 'acquisitionEntry' as const, address: entry },
+                undefined,
+                reward.offer,
+                reward,
+                Object.freeze([reward.offer.rewardType]),
+              ) as WorkspaceExplicitRewardControl,
+            ];
+          },
+        ),
+  );
   const allRewardControls = Object.freeze([
     ...rewardControls,
     ...pickupRewardControls,
     ...supplementalRewardControls,
+    ...rushedShrineRewardControls,
   ]);
   const roomActions = roomActionsForOccurrence(
     input,

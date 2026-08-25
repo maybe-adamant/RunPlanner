@@ -825,11 +825,49 @@ Intended commit: `feat(hermes-shrine): model purchases and timed delivery`
 - Application/UI tests own inventory, delay/rush, purchase participation,
   delivery pickup navigation/order, route index, stale repair, and undo/redo.
 - A focused configured-tail test proves a forced Postboss Shrine purchase,
-  rush, pickup settlement, and Travel Deal refill remain fully active without
-  a configured successor. A non-rushed purchase may remain pending beyond the
-  modeled route boundary without being silently delivered or deleted.
+  rush, and pickup settlement remain fully active without a configured
+  successor. A non-rushed purchase may remain pending beyond the modeled route
+  boundary without being silently delivered or deleted. Travel Deal refill is
+  covered separately through a real predecessor-backed route; do not fabricate
+  a tail seed solely to combine those two independent conditions.
 - Add one short Surface checkpoint route with one rushed purchase and one
   delayed purchase that matures alongside another pickup.
+
+### Delivery result — complete after independent review
+
+- Schema 58 gives every present Shrine three mandatory initial identities and
+  only sparse purchase state. There is no Shrine-wide interaction bypass:
+  complete visible inventory participates in the host's outgoing Hermes,
+  Spell, and Talent exclusions even when no offer is purchased.
+- Exact declaration-owned N/O/P/Q hosts, forced N/O/P Postboss instances,
+  entry-time spacing, slot pools, requirements, and one-step first-group
+  fallbacks feed one candidate authority. Retained missing, wrong-group,
+  duplicate, requirement-invalid, and placement-invalid state remains visible
+  and repairable without suppressing outgoing rewards.
+- Shrine purchase actions now drive rush or independent delayed delivery.
+  Rushed items settle through the ordinary free-pickup machinery in their
+  source room; delayed items mature on later encounter-end effects, cross
+  biome boundaries, may use automatic Boss occurrences as hosts, reserve a
+  pending Spell, and flush at the final Preboss boundary.
+- Pre-existing Travel Deal may create exactly one same-group fourth generation
+  from the first rushed initial purchase. Later rushed purchases remain legal,
+  and the refill uses the declaration-owned fallback trace without adding
+  Shrine-specific Death Defiance or nested contingency state.
+- The editor always authors all three visible Shrine offers, exposes purchase,
+  delay, and rush only per generation, attaches rushed pickup controls to the
+  purchase row, and indexes present ordinary and forced Shrines with exact
+  navigation. No generic Store model or Shrine `Interact` control was added.
+- Independent review closed second-rush legality, forced-Shrine fixture
+  closure, strict purchase/action codec bijection, catalog/schema metadata,
+  and the explicit 57-to-58 migration. The production decoder remains strict;
+  the migration CLI seeds unresolved Shrine shells only on exact forced
+  Surface Postboss tuples and preserves retained payloads.
+  The `surface-no-hermes-shrine-delivery` checkpoint keeps one rushed purchase
+  beside a delayed item maturing at a later room's ordinary pickup. Focused
+  Shrine, command, occurrence-assembly, UI, shell, and checkpoint suites
+  passed, together with catalog, engine, planner, and fixture typechecks,
+  formatting, and `git diff --check`. The complete repository gate remains
+  reserved for final phase closure.
 
 ## Gate F — Stygian Well
 

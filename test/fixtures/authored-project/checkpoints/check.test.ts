@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 import {
   applyProjectCommand,
   createRouteAddress,
+  createOccurrenceAddress,
   decodeProjectDocument,
   encodeProjectDocument,
 } from '@run-planner/engine/authored-project';
@@ -14,6 +15,11 @@ import { routeResourceAuthoring, simulateProject } from '@run-planner/engine/sim
 import { checkpointManifest, checkpointSpellDropIntents } from './manifest';
 import { checkpointRegistry, loadCheckpoint } from './registry';
 import { nFixedOccurrenceIds, nOccurrenceIds } from '../routes/surface';
+import {
+  createSurfaceNOHermesShrineDeliveryCheckpoint,
+  oBiome,
+  oOccurrenceIds,
+} from '../routes/surface';
 import { createUnderworldFPoolCheckpoint } from '../routes/underworld';
 
 const checkpointDirectory = resolve(process.cwd(), 'test/fixtures/authored-project/checkpoints');
@@ -105,7 +111,7 @@ describe('authored-project checkpoint integrity', () => {
     const chaosRoom = occurrences?.find(
       (occurrence) => occurrence.occurrenceId === 'fixture-chaos-room',
     );
-    expect(checkpointManifest).toHaveLength(26);
+    expect(checkpointManifest).toHaveLength(27);
     expect(chaosRoom?.gameName).toMatch(/^Chaos_/);
     expect(chaosRoom?.state).toMatchObject({
       kind: 'fixed',
@@ -142,6 +148,36 @@ describe('authored-project checkpoint integrity', () => {
         branch.traitHistory?.previouslyPickedTraitKeys.includes('ApolloWeaponBoon'),
       ),
     ).toBe(true);
+  });
+
+  it('keeps the Surface Shrine checkpoint as one rush and one later delivery beside the host reward', () => {
+    const saved = loadCheckpoint('surface-no-hermes-shrine-delivery');
+    expect(encodeProjectDocument(saved)).toBe(
+      encodeProjectDocument(createSurfaceNOHermesShrineDeliveryCheckpoint()),
+    );
+    const evaluation = simulateProject(catalog, saved);
+    const o = evaluation.routes
+      .find((route) => route.routeKey === 'Surface')
+      ?.biomes.find((biome) => biome.biomeKey === 'O');
+    if (o?.authoring !== 'complete' || o.validity !== 'valid')
+      throw new Error('Shrine checkpoint did not complete as a valid Surface O route');
+    expect(o.rewards.hermesShrineDeliveries).toContainEqual(
+      expect.objectContaining({
+        sourceOrigin: createOccurrenceAddress(oBiome, oOccurrenceIds.combat07),
+        rewardType: 'MaxHealthDrop',
+        hostOrigin: createOccurrenceAddress(oBiome, oOccurrenceIds.combat01),
+      }),
+    );
+    const host = saved.routes
+      .find((route) => route.routeKey === 'Surface')
+      ?.biomes.find((biome) => biome.biomeKey === 'O')
+      ?.topology?.occurrences.find(
+        (occurrence) => occurrence.occurrenceId === oOccurrenceIds.combat01,
+      );
+    expect(host?.roomActions.order).toContainEqual({
+      kind: 'interactWheelReward',
+      wheelKey: 'wheel1',
+    });
   });
 
   it('keeps the selected N resource-success checkpoint legal, including its side-room Spirit host', () => {

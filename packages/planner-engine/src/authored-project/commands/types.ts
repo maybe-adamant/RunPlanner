@@ -347,6 +347,30 @@ export type PurgingPoolCommand =
       readonly traitKey: string | null;
     };
 
+export type HermesShrineCommand =
+  | {
+      readonly kind: 'SetHermesShrinePresence';
+      readonly occurrence: OccurrenceAddress;
+      readonly present: boolean;
+    }
+  | {
+      readonly kind: 'ReplaceHermesShrineOffer';
+      readonly occurrence: OccurrenceAddress;
+      readonly slotKey: import('../model').HermesShrineSlotKey;
+      readonly value: ResolvedRewardOffer;
+    }
+  | {
+      readonly kind: 'SetHermesShrinePurchase';
+      readonly occurrence: OccurrenceAddress;
+      readonly generationKey: import('../model').HermesShrineGenerationKey;
+      readonly purchase: import('../model').HermesShrinePurchase | null;
+    }
+  | {
+      readonly kind: 'ReplaceHermesShrineTravelDealRefill';
+      readonly occurrence: OccurrenceAddress;
+      readonly value: ResolvedRewardOffer;
+    };
+
 export type AcquisitionSiteCommand =
   | {
       /** Replaces payload detail for one declaration-fixed site pickup. */
@@ -457,6 +481,7 @@ export type OccurrenceLeafCommand =
   | ShipOccurrenceCommand
   | ShopOccurrenceCommand
   | PurgingPoolCommand
+  | HermesShrineCommand
   | EncounterOccurrenceCommand;
 
 export type ProjectCommand =

@@ -1,7 +1,7 @@
 {
-  "schemaVersion": 57,
+  "schemaVersion": 58,
   "projectId": "natural-chaos-unresolved-trial-upgrade",
-  "catalogVersion": "0.39.0-purging-pool",
+  "catalogVersion": "0.40.0-hermes-shrine",
   "routes": [
     {
       "routeKey": "Underworld",

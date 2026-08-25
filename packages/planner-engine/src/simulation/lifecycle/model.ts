@@ -31,7 +31,10 @@ export type RoomLifecycleEvent =
       readonly offerPoint: string;
       readonly enteredRewardStoreKey?: string;
     })
-  | (RoomLifecycleEventBase & { readonly kind: 'roomEntered' })
+  | (RoomLifecycleEventBase & {
+      readonly kind: 'roomEntered';
+      readonly surfaceShopPresent?: boolean;
+    })
   | (RoomLifecycleEventBase & {
       readonly kind: 'fountainUsed';
       readonly owner: import('../../authored-project/addresses').RoomActionSemanticAddress;
@@ -148,6 +151,8 @@ export interface RoomLifecycleExecutionInput {
   readonly encounterPhases?: readonly ResolvedEncounterPhase[];
   readonly producer?: RoomLifecycleProducerInput;
   readonly counterEffects: RoomCounterEffects;
+  /** Exact feature presence recorded with the physical room-entry ledger. */
+  readonly surfaceShopPresent?: boolean;
   readonly requiredObjects?: readonly RequiredRoomObjectDescriptor[];
   readonly enteredRewardStoreKey?: string;
   readonly offerPointRewardStores?: Readonly<Record<string, string>>;

@@ -155,6 +155,60 @@ const lateResourceOptions = [
 ];
 
 export const shops = [
+  // SurfaceShop is intentionally a separate declaration-owned profile.  Its
+  // inventory is consumed by the Shrine lifecycle rather than by World Shop
+  // purchase settlement, but it uses the same normalized slot/pool contract.
+  {
+    key: 'SurfaceShop',
+    groups: [
+      {
+        key: 'First',
+        offerCount: 1,
+        options: [
+          option({ key: 'HealBigDrop', rewardType: 'HealBigDrop' }),
+          option({ key: 'RoomRewardHealDrop', rewardType: 'RoomRewardHealDrop' }),
+          option({ key: 'ArmorBigBoost', rewardType: 'ArmorBigBoost' }),
+          option({
+            key: 'ArmorBoost',
+            rewardType: 'ArmorBoost',
+            runtimeOfferFallbackRewardTypes: ['ArmorBigBoost'],
+          }),
+          option({
+            key: 'LastStandDrop',
+            rewardType: 'LastStandDrop',
+            runtimeOfferRequirement: 'missingLastStand',
+            // One generated action takes one fallback edge.  The next
+            // SurfaceShop generation can independently fall from Armor to
+            // Big Armor when Travel Deal cannot repeat the acquired Armor.
+            runtimeOfferFallbackRewardTypes: ['ArmorBoost'],
+          }),
+          option({ key: 'GiftDrop', rewardType: 'GiftDrop' }),
+        ],
+      },
+      {
+        key: 'Second',
+        offerCount: 2,
+        options: [
+          option({ key: 'SpellDrop', rewardType: 'SpellDrop', requirement: spellLegal }),
+          option({
+            key: 'ShopHermesUpgrade',
+            rewardType: 'ShopHermesUpgrade',
+            purchaseInteraction: { kind: 'fixed', gameName: 'HermesUpgrade' },
+            requirement: shopHermesLegal,
+          }),
+          option({ key: 'MaxHealthDrop', rewardType: 'MaxHealthDrop' }),
+          option({ key: 'MaxManaDrop', rewardType: 'MaxManaDrop' }),
+          option({ key: 'BlindBoxLoot', rewardType: 'BlindBoxLoot' }),
+          option({ key: 'TalentDrop', rewardType: 'TalentDrop', requirement: talentLegal }),
+        ],
+      },
+    ],
+    slots: [
+      { key: 'first', label: 'Offer 1', groupKey: 'First' },
+      { key: 'secondLeft', label: 'Offer 2', groupKey: 'Second' },
+      { key: 'secondRight', label: 'Offer 3', groupKey: 'Second' },
+    ],
+  },
   {
     key: 'WorldShop',
     groups: worldGroups,

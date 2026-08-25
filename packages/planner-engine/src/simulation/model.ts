@@ -60,7 +60,14 @@ export type RewardGenerationFindingCode =
   | 'purgingPoolTraitMissing'
   | 'purgingPoolTraitUnavailable'
   | 'purgingPoolTraitDuplicate'
-  | 'purgingPoolWrongCardinality';
+  | 'purgingPoolWrongCardinality'
+  | 'hermesShrinePlacementUnavailable'
+  | 'hermesShrineInventoryMissing'
+  | 'hermesShrineInventoryWrongGroup'
+  | 'hermesShrineInventoryDuplicate'
+  | 'hermesShrineInventoryRequirement'
+  | 'hermesShrineTravelDealRefillMissing'
+  | 'hermesShrineTravelDealRefillUnavailable';
 
 export type TraitFindingCode =
   | 'callingCardRarificationUnavailable'

@@ -64,6 +64,7 @@ import { ProjectHistoryControls } from '../project/ProjectHistoryControls';
 import { RouteNpcIndex } from './RouteNpcIndex';
 import { RouteTraitsPanel } from './RouteTraitsPanel';
 import { RouteResourcesPanel } from './RouteResourcesPanel';
+import { RouteShrinesPanel } from './RouteShrinesPanel';
 import { TraitOfferDialog } from '../editor/rewards/TraitOfferEditor';
 import { PomResolutionDialog } from '../editor/rewards/PomResolutionEditor';
 import { projectRouteTraitOffers } from '@planner/projections/traitProjection';
@@ -721,6 +722,22 @@ function RouteWorkspace({
           >
             Resources
           </button>
+          <button
+            aria-current={activePanel.kind === 'shrines' ? 'page' : undefined}
+            className="panel-navigation-item"
+            data-active={activePanel.kind === 'shrines'}
+            onClick={() =>
+              dispatch(
+                routePanelSelected({
+                  routeKey: workspaceRoute.routeKey,
+                  panel: { kind: 'shrines' },
+                }),
+              )
+            }
+            type="button"
+          >
+            Shrines
+          </button>
           {workspaceRoute.rail.map((biomeProjection) => {
             const biomeFeedback = feedback.biomes.get(biomeProjection.biomeKey);
             if (biomeFeedback === undefined) {
@@ -808,6 +825,8 @@ function RouteWorkspace({
             <RouteTraitsPanel interactions={interactions} rows={traitRows} />
           ) : activePanel.kind === 'resources' ? (
             <RouteResourcesPanel route={workspaceRoute} />
+          ) : activePanel.kind === 'shrines' ? (
+            <RouteShrinesPanel route={workspaceRoute} />
           ) : activeBiomeProjection === undefined ? (
             <RouteOverview
               catalog={catalog}

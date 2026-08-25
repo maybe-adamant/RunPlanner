@@ -158,6 +158,10 @@ export interface CanonicalAuthoredRoom {
   readonly purgingPool?: NonNullable<
     import('../../authored-project/model').RoomOccurrence['purgingPool']
   >;
+  /** Entry-time Shrine inventory participates in outgoing exclusions, never Shop settlement. */
+  readonly hermesShrine?: NonNullable<
+    import('../../authored-project/model').RoomOccurrence['hermesShrine']
+  >;
   readonly roomActionRoster: import('../room-actions').RoomActionRoster;
   readonly roomLifecycleTimeline: import('../room-actions').RoomLifecycleTimeline;
   readonly requiredObjects?: readonly RequiredRoomObjectDescriptor[];

@@ -372,6 +372,14 @@ export interface RawRoomDeclaration {
   readonly hasKeepsakeRack?: boolean;
   readonly hasRequiredFountain?: boolean;
   readonly purgingPool?: { readonly slotKeys: readonly ['left', 'middle', 'right'] };
+  /** Exact installed `ChallengeSwitchBase` anchors available to competing secret spawns. */
+  readonly challengeSwitchAnchorCount?: number;
+  /** Exact declaration-owned Surface Shop chance and forced status. */
+  readonly surfaceShop?: {
+    readonly profileKey: 'SurfaceShop';
+    readonly spawnChance: number;
+    readonly forced?: true;
+  };
   readonly boonRarityOverride?: import('@run-planner/engine/catalog-schema').BoonRarityOverride;
   readonly prebossBatchPolicy?: RawPrebossBatchPolicy;
   readonly forcedRewardStoreKey?: string;

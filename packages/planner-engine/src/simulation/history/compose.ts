@@ -274,6 +274,7 @@ function appendRestore(
     restoreKind,
     biomeDepthCacheDelta: room.counterEffects.biomeDepthCache,
     roomHistoryOrdinalDelta: room.counterEffects.roomHistoryOrdinal,
+    surfaceShopPresent: room.kind === 'authored' && room.hermesShrine !== undefined,
   });
 }
 
@@ -557,6 +558,7 @@ function composeBiomeHistoryResult(
   seed?: HistoryStateView,
   validateEncounterResolution = false,
   figLeafState?: FigLeafLifecycleState,
+  pendingSpellDrop = false,
 ): EncounterValidatedBiomeHistory {
   let completionPredecessor: CanonicalAuthoredRoom | undefined;
   const options = {
@@ -566,6 +568,7 @@ function composeBiomeHistoryResult(
     initialCounters: initialCounters(catalog, snapshot, seed),
     ...(seed === undefined ? {} : { seed }),
     ...(figLeafState === undefined ? {} : { figLeafState }),
+    pendingSpellDrop,
     automaticRooms: snapshot.automaticRooms,
     transitionEffects:
       catalog.biomeLayouts.byKey[snapshot.biomeKey]?.completion.transitionEffects ?? [],
@@ -651,8 +654,9 @@ export function composeBiomeHistoryWithEncounterValidation(
   snapshot: CanonicalBiome,
   seed?: HistoryStateView,
   figLeafState?: FigLeafLifecycleState,
+  pendingSpellDrop = false,
 ): EncounterValidatedBiomeHistory {
-  return composeBiomeHistoryResult(catalog, snapshot, seed, true, figLeafState);
+  return composeBiomeHistoryResult(catalog, snapshot, seed, true, figLeafState, pendingSpellDrop);
 }
 
 function composeBiomeHistoryPrefixResult(
@@ -661,6 +665,7 @@ function composeBiomeHistoryPrefixResult(
   seed?: HistoryStateView,
   validateEncounterResolution = false,
   figLeafState?: FigLeafLifecycleState,
+  pendingSpellDrop = false,
 ): EncounterValidatedPrefixHistory | null {
   const entry = snapshot.entryRoom;
   if (entry === undefined) return null;
@@ -670,6 +675,7 @@ function composeBiomeHistoryPrefixResult(
     initialCounters: initialCounters(catalog, snapshot, seed),
     ...(seed === undefined ? {} : { seed }),
     ...(figLeafState === undefined ? {} : { figLeafState }),
+    pendingSpellDrop,
     compose(writer: HistorySegmentWriter): void {
       appendStandaloneRoomCreated(writer, entry, 'biomeEntry');
       let current: CanonicalLifecycleRoom = entry;
@@ -807,6 +813,14 @@ export function composeBiomeHistoryPrefixWithEncounterValidation(
   snapshot: MaterializedBiomePrefix,
   seed?: HistoryStateView,
   figLeafState?: FigLeafLifecycleState,
+  pendingSpellDrop = false,
 ): EncounterValidatedPrefixHistory | null {
-  return composeBiomeHistoryPrefixResult(catalog, snapshot, seed, true, figLeafState);
+  return composeBiomeHistoryPrefixResult(
+    catalog,
+    snapshot,
+    seed,
+    true,
+    figLeafState,
+    pendingSpellDrop,
+  );
 }

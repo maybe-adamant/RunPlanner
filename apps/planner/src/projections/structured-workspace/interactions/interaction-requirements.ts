@@ -129,6 +129,22 @@ export type WorkspaceOccurrenceInteractionRequirement =
       }[];
     }
   | {
+      readonly kind: 'hermesShrine';
+      readonly owner: OccurrenceAddress;
+      readonly present: boolean;
+      readonly presenceInteractionKey?: string;
+      readonly slots: readonly {
+        readonly slotKey:
+          import('@run-planner/engine/authored-project').HermesShrineSlotKey | 'travelDealRefill';
+        readonly rewardType: string | null;
+        readonly candidateRewardTypes: readonly string[];
+        readonly purchase:
+          import('@run-planner/engine/authored-project').HermesShrinePurchase | null;
+        readonly offerInteractionKey: string;
+        readonly purchaseInteractionKey: string;
+      }[];
+    }
+  | {
       /** Route-owned selected successes are controlled at their exact host room. */
       readonly kind: 'resourcePlacements';
       readonly owner: OccurrenceAddress;

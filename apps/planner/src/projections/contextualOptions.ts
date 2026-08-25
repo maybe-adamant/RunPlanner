@@ -232,6 +232,15 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
         kind: 'trait',
         message: 'This Pool sale is no longer available at its timeline point.',
       };
+    case 'hermesShrinePlacementUnavailable':
+      return { kind: 'generic', message: 'This ordinary Shrine is outside its placement window.' };
+    case 'hermesShrineInventoryMissing':
+    case 'hermesShrineInventoryWrongGroup':
+    case 'hermesShrineInventoryDuplicate':
+    case 'hermesShrineInventoryRequirement':
+    case 'hermesShrineTravelDealRefillMissing':
+    case 'hermesShrineTravelDealRefillUnavailable':
+      return { kind: 'store', message: 'Repair this Hermes Shrine inventory choice.' };
     case 'chaosOrdinaryRequiresCommon':
       return {
         kind: 'trait',
