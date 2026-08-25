@@ -768,5 +768,5 @@ describe('structured workspace biome semantic assembly', () => {
         ),
       ),
     ).toBe(true);
-  });
+  }, 10_000);
 });

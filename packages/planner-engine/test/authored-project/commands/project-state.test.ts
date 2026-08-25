@@ -21,63 +21,48 @@ import { loadSurfaceNOProject, oBiome, oOccurrenceIds } from '@run-planner/test-
 
 describe('authored-project project-state commands', () => {
   it('adds and removes an ordinary Shrine shell atomically without admitting forced hosts', () => {
-    const route = createRouteAddress('Surface');
-    const biome = createBiomeAddress('Surface', 'N');
-    const occurrence = createOccurrenceAddress(biome, createOccurrenceId('completion:N:postboss'));
-    const seeded = createProjectDocument(catalog, {
-      projectId: 'ordinary-shrine-presence',
-      configuredBiomeCounts: { Surface: 1 },
-    });
-    const ordinaryCatalog = {
-      ...catalog,
-      rooms: {
-        ...catalog.rooms,
-        byKey: {
-          ...catalog.rooms.byKey,
-          N_PostBoss01: {
-            ...catalog.rooms.byKey.N_PostBoss01!,
-            surfaceShop: { profileKey: 'SurfaceShop' as const, spawnChance: 0.08, forced: false },
-          },
-        },
-      },
-    };
-    const present = applyProjectCommand(seeded, ordinaryCatalog, {
+    const occurrence = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
+    const forcedOccurrence = createOccurrenceAddress(
+      oBiome,
+      createOccurrenceId('completion:O:postboss'),
+    );
+    const seeded = loadSurfaceNOProject();
+    const occurrenceState = (project: ReturnType<typeof loadSurfaceNOProject>) =>
+      project.routes
+        .find((route) => route.routeKey === 'Surface')
+        ?.biomes.find((biome) => biome.biomeKey === 'O')
+        ?.topology?.occurrences.find(
+          (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
+        );
+    const present = applyProjectCommand(seeded, catalog, {
       kind: 'SetHermesShrinePresence',
       occurrence,
       present: true,
     });
-    const withShrine = present.routes
-      .find((candidate) => candidate.routeKey === route.routeKey)
-      ?.biomes[0]?.completionOccurrences.find(
-        (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
-      );
+    const withShrine = occurrenceState(present);
     expect(withShrine?.hermesShrine?.offerBySlot).toEqual({
       first: null,
       secondLeft: null,
       secondRight: null,
     });
-    const offered = applyProjectCommand(present, ordinaryCatalog, {
+    const offered = applyProjectCommand(present, catalog, {
       kind: 'ReplaceHermesShrineOffer',
       occurrence,
       slotKey: 'first',
       value: { rewardType: 'HealBigDrop' },
     });
-    const purchased = applyProjectCommand(offered, ordinaryCatalog, {
+    const purchased = applyProjectCommand(offered, catalog, {
       kind: 'SetHermesShrinePurchase',
       occurrence,
       generationKey: 'initial:first',
       purchase: { delay: 2, rushed: false },
     });
-    const removed = applyProjectCommand(purchased, ordinaryCatalog, {
+    const removed = applyProjectCommand(purchased, catalog, {
       kind: 'SetHermesShrinePresence',
       occurrence,
       present: false,
     });
-    const withoutShrine = removed.routes
-      .find((candidate) => candidate.routeKey === route.routeKey)
-      ?.biomes[0]?.completionOccurrences.find(
-        (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
-      );
+    const withoutShrine = occurrenceState(removed);
     expect(withoutShrine?.hermesShrine).toBeUndefined();
     expect(withoutShrine?.roomActions.order).not.toContainEqual({
       kind: 'purchaseHermesShrineOffer',
@@ -86,14 +71,13 @@ describe('authored-project project-state commands', () => {
     expect(() =>
       applyProjectCommand(seeded, catalog, {
         kind: 'SetHermesShrinePresence',
-        occurrence,
+        occurrence: forcedOccurrence,
         present: false,
       }),
     ).toThrow(ProjectCommandContractError);
   });
 
   it('keeps Shrine purchase membership and detail in one semantic command while rejecting malformed input', () => {
-    const route = createRouteAddress('Surface');
     const biome = createBiomeAddress('Surface', 'N');
     const occurrence = createOccurrenceAddress(biome, createOccurrenceId('completion:N:postboss'));
     const seeded = createProjectDocument(catalog, {

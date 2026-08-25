@@ -427,6 +427,13 @@ metadata for an already-resolved reward token; it never revisits authored source
 or interaction binding. Presentation owns the selective rail, Hub visit
 grouping, default inspector, and final inspector/rail destinations; interaction
 binding owns executable command adapters and does not consume presentation.
+Occurrence assembly composes complete reward/local-room, room-workbench,
+room-action, and room-feature products before final node and summary assembly.
+Interaction binding binds one candidate session and joins complete
+occurrence-local, batch, Hub, topology, and reward-child interaction maps. The
+React occurrence workbench remains the shell over encounter, action, feature,
+direct-room, and Ship presentation owners; those children render supported
+products and never reconstruct semantic policy.
 For the policy-bearing families it binds, it returns complete command intents;
 the shared React adapter dispatches only that intent and, when declared, its
 focus timing. React does not allocate occurrence identities or reconstruct

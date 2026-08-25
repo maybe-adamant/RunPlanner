@@ -119,8 +119,3 @@ The roadmap does not authorize a second simulator, runtime effect registry,
 generic context/service container, compatibility decoder, React-owned domain
 policy, probabilistic simulation, or mechanical splitting of readable
 declaration data. Those require their own authority and acceptance decision.
-
-The current repository cleanup is tracked separately in the temporary
-[`REPOSITORY_CLEANUP_IMPLEMENTATION.md`](REPOSITORY_CLEANUP_IMPLEMENTATION.md)
-plan. That plan is not a long-lived product authority and is removed when its
-cleanup phase closes.

@@ -8,11 +8,7 @@ import {
 } from '../room-action-defaults';
 import { createBiomeAddress } from '../addresses';
 import { failCommand, requireOccurrence, requireTopology, type LocatedBiome } from './contract';
-import {
-  replaceOccurrence,
-  updateOccurrence,
-  updateOccurrenceTopology,
-} from './occurrence-mutation';
+import { updateOccurrence } from './occurrence-mutation';
 import type { RoomActionCommand } from './types';
 
 function requireIndex(

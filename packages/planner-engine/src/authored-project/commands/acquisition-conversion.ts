@@ -136,7 +136,9 @@ export function applyAcquisitionDispositionCommand(
         shrineDelivery.sourceOccurrenceId === occurrence.occurrenceId
       ) {
         const shrine = occurrence.hermesShrine;
-        const slotKey = shrineDelivery.generationKey.slice('initial:'.length) as import('../model').HermesShrineSlotKey;
+        const slotKey = shrineDelivery.generationKey.slice(
+          'initial:'.length,
+        ) as import('../model').HermesShrineSlotKey;
         const purchase = shrine?.purchaseBySlot?.[slotKey];
         const reward = shrine?.offerBySlot[slotKey];
         if (

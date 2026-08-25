@@ -43,11 +43,17 @@ export const heavyTestFiles = Object.freeze([
   'packages/planner-engine/test/simulation/unified-biome.test.ts',
 ]);
 
-if (new Set(heavyTestFiles).size !== heavyTestFiles.length) {
+export const performanceTestFiles = Object.freeze([
+  'apps/planner/test/product-loops/UnifiedBiomePerformance.test.ts',
+]);
+
+const explicitTestFiles = Object.freeze([...heavyTestFiles, ...performanceTestFiles]);
+
+if (new Set(explicitTestFiles).size !== explicitTestFiles.length) {
   throw new Error('Explicit Vitest lanes contain a duplicate file');
 }
 
-for (const testFile of heavyTestFiles) {
+for (const testFile of explicitTestFiles) {
   if (!existsSync(fileURLToPath(new URL(testFile, import.meta.url)))) {
     throw new Error(`Explicit Vitest lane references a missing file: ${testFile}`);
   }

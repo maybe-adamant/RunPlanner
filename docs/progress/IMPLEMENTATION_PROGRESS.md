@@ -155,6 +155,26 @@ representative full-lane witnesses:
 Pools and Wells alone allow runtime-random inventory at Interact. World Shops
 and Shrines author every visible inventory identity.
 
+### Repository cleanup closure
+
+The 2026-08-25 repository cleanup made the root README a stable product and
+quickstart entry point, moved audit navigation into a subject-organized audit
+index, consolidated overlapping evidence without erasing source contacts, and
+retired completed delivery scaffolding. The progress directory now contains
+only this delivery record, the forward roadmap, and migration provenance.
+
+Occurrence presentation, occurrence semantic assembly, and workspace
+interaction binding now each use one deliberate composer over named complete
+products. The old inline paths and monolithic test matrices were removed in the
+same slices; public workspace contracts, authored schema, simulator behavior,
+focus policy, and editor workflows did not change. Shared Vitest lanes now
+report active and completed test modules so long runs expose live progress.
+
+The closure gravity review preserved large declaration, contract, and
+chronological coordinator files where their size reflects one readable
+authority. Evidence-backed planner, engine, codec, and catalog compiler
+frontiers are recorded in the roadmap and require independent locked slices.
+
 ## Validation Record
 
 Validation claims below are the executed checks retained because they establish
@@ -186,6 +206,17 @@ intermediate suite was green.
   catalog, engine, and fixture typechecks; fixture integrity; regular and
   heavy tests; ESLint; repository-wide Prettier; and production build all
   passed. The build retained only the existing chunk advisory.
+- The repository-cleanup closure passed one final `npm run check` on the final
+  2026-08-25 worktree: workspace, catalog, engine, and fixture
+  typechecks; fixture integrity at 3 files/20 tests; regular tests at 150
+  files/1,855 tests; heavy tests at 33 files/426 tests; the isolated performance
+  lane at 1 file/2 tests; ESLint; repository-wide Prettier; and production
+  build. The gate exposed and removed one stale Shrine fixture, ten dead
+  references, two contention-sensitive integration timeouts, and eight tracked
+  formatting drifts before closure. The performance witness now uses a
+  three-sample median and an 800 ms sub-second rebuild budget for the expanded
+  canonical checkpoints. The build retained only the existing greater-than-
+  500-kB application chunk advisory.
 
 Focused validation remains the normal implementation practice. A complete
 `npm run check` is reserved for the declared phase closure or a shared
@@ -198,6 +229,6 @@ former Chaos, trait-effect, trait-level/Pom, unresolved-authoring, I-biome, and
 Product Polish trackers are no longer progress authorities. Unique durable
 facts, where any existed, are represented above or in stable
 catalog/design/audit documents; deletion does not require adding redundant
-absorption prose. The temporary repository-cleanup plan is the only active
-delivery plan for the current documentation/refactor phase and is deleted when
-that phase closes.
+absorption prose. The repository-cleanup execution plan was deleted at closure
+after its durable ownership, maintenance outcomes, and validation results were
+recorded.

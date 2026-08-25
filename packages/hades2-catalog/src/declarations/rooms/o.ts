@@ -3,7 +3,11 @@ import { normalResourcePointSupport } from '../resources';
 
 const surfaceShopHost = (spawnChance: number, forced = false, challengeSwitchAnchorCount = 1) => ({
   challengeSwitchAnchorCount,
-  surfaceShop: { profileKey: 'SurfaceShop' as const, spawnChance, ...(forced ? { forced: true as const } : {}) },
+  surfaceShop: {
+    profileKey: 'SurfaceShop' as const,
+    spawnChance,
+    ...(forced ? { forced: true as const } : {}),
+  },
 });
 
 export const oRooms = [
@@ -27,7 +31,7 @@ export const oRooms = [
   },
   {
     gameName: 'O_Combat01',
-    ...surfaceShopHost(.125, false, 0),
+    ...surfaceShopHost(0.125, false, 0),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 01',
     roomSetKey: 'O',
@@ -56,7 +60,7 @@ export const oRooms = [
   },
   {
     gameName: 'O_Combat02',
-    ...surfaceShopHost(.125, false, 1),
+    ...surfaceShopHost(0.125, false, 1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 02',
     roomSetKey: 'O',
@@ -85,7 +89,7 @@ export const oRooms = [
   },
   {
     gameName: 'O_Combat03',
-    ...surfaceShopHost(.125, false, 1),
+    ...surfaceShopHost(0.125, false, 1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 03',
     roomSetKey: 'O',
@@ -114,7 +118,7 @@ export const oRooms = [
   },
   {
     gameName: 'O_Combat04',
-    ...surfaceShopHost(.125, false, 1),
+    ...surfaceShopHost(0.125, false, 1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 04',
     roomSetKey: 'O',
@@ -137,7 +141,7 @@ export const oRooms = [
   },
   {
     gameName: 'O_Combat05',
-    ...surfaceShopHost(.125, false, 1),
+    ...surfaceShopHost(0.125, false, 1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 05',
     roomSetKey: 'O',
@@ -166,7 +170,7 @@ export const oRooms = [
   },
   {
     gameName: 'O_Combat06',
-    ...surfaceShopHost(.125, false, 1),
+    ...surfaceShopHost(0.125, false, 1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 06',
     roomSetKey: 'O',
@@ -195,7 +199,7 @@ export const oRooms = [
   },
   {
     gameName: 'O_Combat07',
-    ...surfaceShopHost(.125, false, 1),
+    ...surfaceShopHost(0.125, false, 1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 07',
     roomSetKey: 'O',
@@ -218,7 +222,7 @@ export const oRooms = [
   },
   {
     gameName: 'O_Combat08',
-    ...surfaceShopHost(.125, false, 1),
+    ...surfaceShopHost(0.125, false, 1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 08',
     roomSetKey: 'O',
@@ -247,7 +251,7 @@ export const oRooms = [
   },
   {
     gameName: 'O_Combat09',
-    ...surfaceShopHost(.125, false, 1),
+    ...surfaceShopHost(0.125, false, 1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 09',
     roomSetKey: 'O',
@@ -276,7 +280,7 @@ export const oRooms = [
   },
   {
     gameName: 'O_Combat10',
-    ...surfaceShopHost(.125, false, 1),
+    ...surfaceShopHost(0.125, false, 1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 10',
     roomSetKey: 'O',
@@ -305,7 +309,7 @@ export const oRooms = [
   },
   {
     gameName: 'O_Combat11',
-    ...surfaceShopHost(.125, false, 1),
+    ...surfaceShopHost(0.125, false, 1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 11',
     roomSetKey: 'O',
@@ -328,7 +332,7 @@ export const oRooms = [
   },
   {
     gameName: 'O_Combat12',
-    ...surfaceShopHost(.125, false, 1),
+    ...surfaceShopHost(0.125, false, 1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 12',
     roomSetKey: 'O',
@@ -357,7 +361,7 @@ export const oRooms = [
   },
   {
     gameName: 'O_Combat13',
-    ...surfaceShopHost(.125, false, 1),
+    ...surfaceShopHost(0.125, false, 1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 13',
     roomSetKey: 'O',
@@ -392,7 +396,7 @@ export const oRooms = [
   },
   {
     gameName: 'O_Combat14',
-    ...surfaceShopHost(.125, false, 1),
+    ...surfaceShopHost(0.125, false, 1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 14',
     roomSetKey: 'O',
@@ -421,7 +425,7 @@ export const oRooms = [
   },
   {
     gameName: 'O_Combat15',
-    ...surfaceShopHost(.125, false, 1),
+    ...surfaceShopHost(0.125, false, 1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 15',
     roomSetKey: 'O',
@@ -444,7 +448,7 @@ export const oRooms = [
   },
   {
     gameName: 'O_MiniBoss01',
-    ...surfaceShopHost(.125, false, 0),
+    ...surfaceShopHost(0.125, false, 0),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     boonRarityOverride: { Rare: 0.9, Epic: 0.1, Legendary: 0.05 },
     label: 'Charybdis',
@@ -484,7 +488,7 @@ export const oRooms = [
   },
   {
     gameName: 'O_MiniBoss02',
-    ...surfaceShopHost(.125, false, 1),
+    ...surfaceShopHost(0.125, false, 1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     boonRarityOverride: { Rare: 0.9, Epic: 0.1, Legendary: 0.05 },
     label: 'The Yargonaut',
@@ -659,7 +663,7 @@ export const oRooms = [
   },
   {
     gameName: 'O_Devotion01',
-    ...surfaceShopHost(.125, false, 1),
+    ...surfaceShopHost(0.125, false, 1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Trial',
     roomSetKey: 'O',

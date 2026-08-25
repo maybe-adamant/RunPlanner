@@ -1,6 +1,6 @@
 import type { Catalog } from '../../catalog-schema';
 import type { AuthoredKeepsakeEquipResults, ProjectDocument } from '../model';
-import { failCommand, locateBiome, requireOccurrence, withBiome } from './contract';
+import { failCommand, locateBiome, requireOccurrence } from './contract';
 import { updateOccurrence } from './occurrence-mutation';
 import type {
   ExperimentalHammerEquipResultCommand,
