@@ -17,7 +17,7 @@ import {
   type RewardTypeDeclaration,
 } from '../../reward-kernel';
 import type { HistoryCounters, HistoryStateView } from '../history';
-import type { TraitHistoryState } from '../traits';
+import type { TraitHistoryState } from '../trait-history';
 import type { RewardBranchState } from './processing';
 
 export type RunStateOwner =

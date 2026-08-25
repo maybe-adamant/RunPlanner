@@ -26,7 +26,7 @@ import type {
   CanonicalRewardWheel,
   CanonicalShopEntryState,
 } from './model';
-import type { TraitOfferContext } from '../traits';
+import type { TraitOfferContext } from '../trait-offers';
 import type { ResolvedRewardOffer } from '../../reward-kernel/model';
 import {
   echoLastRewardPickupEntryKeys,

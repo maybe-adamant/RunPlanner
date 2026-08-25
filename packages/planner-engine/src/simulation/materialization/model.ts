@@ -25,7 +25,7 @@ import type {
   RoomEncounterState,
 } from '../../authored-project/model';
 import type { AuthoredLevelResolution, AuthoredTraitOffer } from '../../authored-project/traits';
-import type { TraitOfferContext } from '../traits';
+import type { TraitOfferContext } from '../trait-offers';
 import type { ResolvedRewardOffer } from '../../reward-kernel/model';
 import type { ResolvedEncounterPhase } from '../encounters';
 
