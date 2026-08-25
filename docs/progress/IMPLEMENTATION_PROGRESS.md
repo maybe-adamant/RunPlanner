@@ -175,6 +175,31 @@ chronological coordinator files where their size reflects one readable
 authority. Evidence-backed planner, engine, codec, and catalog compiler
 frontiers are recorded in the roadmap and require independent locked slices.
 
+### Maintainability decomposition closure
+
+The 2026-08-25 Plan 1 decomposition moved the catalog compiler, planner
+projection/presentation, engine trait/reward, persistence decoder, generation,
+and progressive-product families into complete semantic owners with their
+primary tests. Supported entry modules now compose those products instead of
+retaining parallel implementations or forwarding private APIs.
+
+Representative mixed-responsibility entry files became substantially smaller:
+catalog trait compilation moved from 1,880 to 60 lines and reward normalization
+from 1,211 to 112; planner candidate projection moved from 1,281 to 458 and the
+trait-offer editor from 1,760 to 291; engine trait simulation moved from 3,373
+to 9, reward processing from 5,141 to 808, topology codec assembly from 2,497
+to 23, biome generation from 2,310 to 252, and progressive biome assembly from
+2,255 to 492. These measurements describe entry ownership, not line-count
+quotas; the extracted modules retain the complete policies and explicit
+products.
+
+The split test monoliths were retired in favor of owner-specific matrices plus
+one representative assembly or product witness at each affected boundary.
+Authored schema, catalog version, semantic commands, findings, candidate
+results, and editor behavior did not change. The remaining chronological and
+declaration-language gravity is recorded in the roadmap for a fresh audit; no
+Plan 2 scaffold was introduced.
+
 ## Validation Record
 
 Validation claims below are the executed checks retained because they establish
@@ -217,6 +242,19 @@ intermediate suite was green.
   three-sample median and an 800 ms sub-second rebuild budget for the expanded
   canonical checkpoints. The build retained only the existing greater-than-
   500-kB application chunk advisory.
+- Plan 1's integrated engine boundary passed 120 files/1,397 tests after the
+  final decoder and progressive-product merges. The one authorized closure
+  `npm run check` passed workspace/catalog/engine/fixture typechecking,
+  checkpoint integrity at 3 files/20 tests, regular tests at 185 files/1,863
+  tests, and all 46 heavy-test files. The isolated Surface performance witness
+  passed; Underworld measured an 811.7 ms median against the 800 ms budget. An
+  unchanged-base comparison had already measured 825.4 ms, so the refactor did
+  not loosen the budget or rerun Vitest to manufacture a green result. The
+  short-circuited gate then exposed 223 stale split imports during standalone
+  lint; one bounded deletion/import remediation cleared full ESLint, workspace
+  typechecking, repository-wide Prettier, and production build without another
+  test run. The build retained only the existing greater-than-500-kB application
+  chunk advisory.
 
 Focused validation remains the normal implementation practice. A complete
 `npm run check` is reserved for the declared phase closure or a shared

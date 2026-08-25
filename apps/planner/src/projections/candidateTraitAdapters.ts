@@ -5,7 +5,6 @@ import {
 import type { DirectTraitSetKey } from '@run-planner/engine/catalog-schema';
 import {
   semanticAddressKey,
-  type AuthoredLevelResolution,
   type AuthoredTraitOffer,
   type AuthoredKeepsakeEquipResults,
   type TraitOptionKey,

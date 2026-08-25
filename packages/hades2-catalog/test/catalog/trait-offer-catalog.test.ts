@@ -3,17 +3,6 @@ import { describe, expect, it } from 'vitest';
 import { catalog, createCatalog } from '../../src';
 import { declarations } from '../../src/declarations';
 
-const traits = {
-  weapons: catalog.weapons,
-  aspects: catalog.aspects,
-  traits: catalog.traits,
-  givers: catalog.traitGivers,
-  echoLastRunBoon: catalog.echoLastRunBoon,
-  offerContexts: catalog.traitOfferContexts,
-  rarityOrder: catalog.traitRarityOrder,
-  baseElements: catalog.traitBaseElements,
-};
-
 describe('trait offer-catalog compiler owner', () => {
   it('normalizes one closed audited Olympian and Hermes boon-rarity base table', () => {
     expect(catalog.boonRarityBases.olympian).toEqual({

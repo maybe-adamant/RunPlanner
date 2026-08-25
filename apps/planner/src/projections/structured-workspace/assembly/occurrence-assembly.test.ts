@@ -1,16 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
   assemble,
-  applyProjectCommand,
-  catalog,
   createGoldenFGHIProject,
   createIncomingRewardAddress,
-  createOccurrenceAddress,
   loadSurfaceNOPQProject,
   nBiome,
   nOccurrenceId,
-  oBiome,
-  oOccurrenceIds,
   semanticAddressKey,
   goldenFOccurrenceId,
   goldenFStartId,

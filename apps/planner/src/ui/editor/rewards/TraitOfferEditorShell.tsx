@@ -1,48 +1,19 @@
 import {
-  semanticAddressKey,
   optionIndex,
   type AuthoredTraitOffer,
   type AuthoredTraitOfferTraits,
-  type AuthoredTraitOption,
-  type AuthoredEchoLastRunBoonOffer,
-  type AuthoredAllTogetherResult,
-  type TraitOfferAddress,
 } from '@run-planner/engine/authored-project';
-import type { DirectTraitSetKey, TraitRarity } from '@run-planner/engine/catalog-schema';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { TraitRarity } from '@run-planner/engine/catalog-schema';
+import { useEffect, useMemo, useState } from 'react';
 
 import { candidateSupport } from '@planner/projections/candidateProjection';
-import type { ContextualPickerModel } from '@planner/projections/contextualPicker';
-import type { TraitOptionDomainProjection } from '@planner/projections/traitDomainProjection';
-import type { AuthoredCirceResolution } from '@run-planner/engine/authored-project';
 import { projectTraitOfferFeedback } from '@planner/projections/traitProjection';
-import {
-  requireWorkspaceInteraction,
-  workspaceInteractionKey,
-  type WorkspaceInteractionCatalog,
-  type WorkspaceCirceResolutionDomain,
-  type WorkspaceEchoPomTargetDomain,
-  type WorkspaceEchoLastRunBoonDomain,
-  type WorkspaceEchoLastRunBoonTraitIdentity,
-  type WorkspaceAllTogetherSetInteraction,
-  type WorkspaceAllTogetherSetDomain,
-  type WorkspaceNaturalSelectionDomain,
-  type WorkspaceNaturalSelectionInteraction,
-  type WorkspaceTraitOfferInteraction,
-  type WorkspaceTraitOfferControl,
-} from '@planner/projections/structured-workspace';
-import { traitOfferDialogClosed, traitOfferDialogOpened } from '@planner/state/editorSessionSlice';
-import { useAppDispatch, useAppSelector } from '@planner/state/store';
-import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
-import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
+import { type WorkspaceTraitOfferInteraction } from '@planner/projections/structured-workspace';
 import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorkspaceInteraction';
-import { SemanticOwnerMarker } from '@planner/ui/feedback/EvaluationFeedback';
-import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
-import { CompoundOutcomeEditor } from './CompoundOutcomeEditor';
-import { TraitOfferCirceResolution } from './TraitOfferCirceResolution';
 import { LoadedEchoLastRunBoonChoice } from './TraitOfferEchoLastRunBoon';
-import { replaceTraitOfferOption, TraitOfferOrdinaryOption } from './TraitOfferOrdinaryOption';
+import { TraitOfferOrdinaryOption } from './TraitOfferOrdinaryOption';
 import { TraitOfferSelectedOutcome } from './TraitOfferSelectedOutcome';
+import { replaceTraitOfferOption } from './traitOfferOptions';
 const OPTION_KEYS = ['option1', 'option2', 'option3'] as const;
 
 function traitOfferLoadable(
@@ -53,36 +24,6 @@ function traitOfferLoadable(
   return Object.freeze({ load: () => loadInteraction(value) });
 }
 
-function traitOfferRevision(interaction: WorkspaceTraitOfferInteraction): string {
-  if (interaction.value === null) return `${interaction.giver.key}|unresolved`;
-  if (interaction.value.kind === 'fallbackGold') {
-    return `${interaction.giver.key}|fallbackGold`;
-  }
-  if (interaction.value.kind === 'chaos') {
-    return `${interaction.giver.key}|chaos|${interaction.value.curseKey}|${interaction.value.blessingKey}|${interaction.value.rarity}`;
-  }
-  return [
-    interaction.giver.key,
-    interaction.choices.map((choice) => choice.value).join(','),
-    interaction.value.options
-      .map(
-        (option) =>
-          `${option.traitKey}:${option.rarity ?? ''}:${option.targetTraitKey ?? ''}:${
-            'echoPomTarget' in option ? (option.echoPomTarget ?? 'none') : ''
-          }:${'echoLastRunBoon' in option ? JSON.stringify(option.echoLastRunBoon) : ''}:${
-            'allTogetherResult' in option ? JSON.stringify(option.allTogetherResult) : ''
-          }:${'naturalSelectionTargets' in option ? JSON.stringify(option.naturalSelectionTargets) : ''}`,
-      )
-      .join(','),
-    interaction.value.selectedOptionKey,
-  ].join('|');
-}
-
-interface EchoLastRunBoonDraftRow {
-  readonly identity?: WorkspaceEchoLastRunBoonTraitIdentity;
-  readonly rarity?: TraitRarity;
-  readonly targetTraitKey?: string;
-}
 export function TraitOfferEditorShell({
   initialValue,
   initialView,

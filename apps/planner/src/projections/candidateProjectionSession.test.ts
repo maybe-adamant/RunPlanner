@@ -1,9 +1,5 @@
 import { catalog } from '@run-planner/hades2-catalog';
-import {
-  createBiomeAddress,
-  createOccurrenceId,
-  createTargetAddress,
-} from '@run-planner/engine/authored-project';
+import { createBiomeAddress, createTargetAddress } from '@run-planner/engine/authored-project';
 import { simulateProjectAssembly } from '@run-planner/engine/simulation';
 import { describe, expect, it, vi } from 'vitest';
 

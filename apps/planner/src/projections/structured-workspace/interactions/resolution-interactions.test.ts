@@ -1,69 +1,31 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import * as support from '@planner-test/support/structured-workspace/interaction-binding.test-support';
 import type {
-  AuthoredTraitOffer,
   AuthoredTraitOfferTraits,
-  TraitOfferAddress,
-  TraitOptionKey,
   CandidateProjectionSession,
-  CandidateEvaluationEvent,
   WorkspaceSteadyGrowthControl,
 } from '@planner-test/support/structured-workspace/interaction-binding.test-support';
 
 const {
   bind,
   reachedEchoProject,
-  services,
   catalog,
   applyProjectCommand,
-  activeRoomActionReferences,
-  createAllTogetherSetAddress,
-  createCirceResolutionAddress,
-  createEchoLastRunBoonAddress,
-  createEchoLastRewardAddress,
   createEchoPomTargetAddress,
   createEncounterPhaseAddress,
-  createIncomingRewardAddress,
-  createNaturalSelectionResultAddress,
   createOccurrenceAddress,
   createOccurrenceId,
-  createRouteAddress,
-  createRewardWheelOfferAddress,
-  createShopOfferAddress,
-  createAcquisitionEntryAddress,
-  createAcquisitionRoleAddress,
-  createAcquisitionSiteAddress,
-  createRouteStartKeepsakeSelectionAddress,
   createSteadyGrowthOutcomeAddress,
   createTraitOfferAddress,
   semanticAddressKey,
   simulateProjectAssembly,
-  prepareLegalPomTraitOffers,
-  replaceTestShopOfferActions,
-  createGoldenFGHIProject,
-  createCompleteFGProject,
-  createFConversionFrontierProject,
   goldenFBiome,
   goldenFOccurrenceId,
-  goldenFStartId,
-  goldenGBiome,
   goldenHBiome,
-  loadSurfaceNOPQProject,
-  loadSurfaceNOPProject,
-  createRepresentativeNOPQShopTraitProject,
-  loadSurfaceNOProject,
-  nBiome,
-  nLocalOccurrenceId,
-  nOccurrenceId,
-  oBiome,
-  oOccurrenceIds,
-  pBiome,
-  pOccurrenceId,
-  pOccurrenceIds,
   createCandidateSessionFactory,
+  createGoldenFGHIProject,
 } = support;
-
 
 describe('resolution-interactions', () => {
   it('binds the real H Bridge Pom draft and its invalid authored target to the exact child', () => {
@@ -186,6 +148,4 @@ describe('resolution-interactions', () => {
       targetTraitKey: 'ApolloWeaponBoon',
     });
   });
-
-
 });

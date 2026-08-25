@@ -3,17 +3,10 @@ import {
   assemble,
   applyProjectCommand,
   catalog,
-  createGoldenFGHIProject,
-  createIncomingRewardAddress,
   createOccurrenceAddress,
   loadSurfaceNOPQProject,
-  nBiome,
-  nOccurrenceId,
   oBiome,
   oOccurrenceIds,
-  semanticAddressKey,
-  goldenFOccurrenceId,
-  goldenFStartId,
 } from '@planner-test/support/structured-workspace/occurrence-assembly.test-support';
 
 describe('occurrence room workbench', () => {

@@ -8,7 +8,6 @@ import type {
   TraitElement,
   TraitRarity,
   TraitRequirementExpression,
-  TraitSelectedDisposition,
   WeaponDeclaration,
 } from '@run-planner/engine/catalog-schema';
 

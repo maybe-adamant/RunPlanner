@@ -7,18 +7,9 @@ import {
 import type { RoomDeclaration } from '@run-planner/engine/catalog-schema';
 import {
   semanticAddressKey,
-  type BatchRewardStoreAddress,
   type BiomeAddress,
   type EncounterPhaseAddress,
-  type ExitDecisionAddress,
-  type HubDecisionAddress,
-  type HubSlotAddress,
-  type LocalVisitOrderAddress,
-  type LocalVisitSlotAddress,
   type OccurrenceAddress,
-  type OccurrenceId,
-  type RewardWheelAddress,
-  type SideRoomGeneration,
   type TargetAddress,
 } from '@run-planner/engine/authored-project';
 import type { CountedRewardBinding, ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';

@@ -1,5 +1,4 @@
 import {
-  optionIndex,
   semanticAddressKey,
   type AuthoredTraitOffer,
   type TraitOfferAddress,

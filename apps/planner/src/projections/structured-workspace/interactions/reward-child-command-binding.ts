@@ -1,8 +1,21 @@
-import { semanticAddressKey, type DerivedShopEntryEditCommand, type ProjectCommand, type TraitOfferAddress, type LevelResolutionAddress } from '@run-planner/engine/authored-project';
-import type { AuthoredLevelResolution, AuthoredTraitOffer } from '@run-planner/engine/authored-project';
+import {
+  semanticAddressKey,
+  type DerivedShopEntryEditCommand,
+  type ProjectCommand,
+  type TraitOfferAddress,
+  type LevelResolutionAddress,
+} from '@run-planner/engine/authored-project';
+import type {
+  AuthoredLevelResolution,
+  AuthoredTraitOffer,
+} from '@run-planner/engine/authored-project';
 
 import { StructuredWorkspaceProjectionContractError } from '../contract';
-import type { WorkspaceCommandIntent, WorkspaceRewardControl, WorkspaceRewardInteraction } from '../contract';
+import type {
+  WorkspaceCommandIntent,
+  WorkspaceRewardControl,
+  WorkspaceRewardInteraction,
+} from '../contract';
 
 type RewardPayloadCommand = Extract<
   ProjectCommand,
