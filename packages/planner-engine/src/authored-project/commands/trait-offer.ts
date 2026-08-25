@@ -22,7 +22,7 @@ import {
 } from '../addresses';
 import type { ProjectDocument, RoomOccurrence, AuthoredRewardState } from '../model';
 import type { AuthoredLevelResolution } from '../traits';
-import { selectedEncounterDefinitionKey } from '../room-state/encounters';
+import { selectedEncounterDefinitionKey } from '../room-state/encounter-envelope';
 import { requireShipCombatWheels } from '../room-state/declaration';
 import { incomingLevelEffectSource } from '../room-state/level-effects';
 import { parseArtificerReplacementEntryKey } from '../artificer';

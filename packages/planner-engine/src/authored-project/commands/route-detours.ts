@@ -14,7 +14,7 @@ import type {
   RoomOccurrence,
 } from '../model';
 import { createDefaultRoomState } from '../room-state/defaults';
-import { createDefaultRoomEncounterState } from '../room-state/encounters';
+import { createDefaultRoomEncounterState } from '../room-state/encounter-envelope';
 import { requireCountedBinding } from '../room-state/declaration';
 import {
   exitDecisionForSource,

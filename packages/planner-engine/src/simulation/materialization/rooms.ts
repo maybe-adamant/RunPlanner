@@ -15,7 +15,7 @@ import type {
   ShopState,
 } from '../../authored-project/model';
 import type { Catalog, RoomDeclaration, RoomTemplateKey } from '../../catalog-schema';
-import { encounterEnvelopeSlots } from '../../authored-project/room-state/encounters';
+import { encounterEnvelopeSlots } from '../../authored-project/room-state/encounter-envelope';
 import { alwaysActiveEncounterSlotKeys, resolveEncounterPhases } from '../encounters';
 import type { ResolvedEncounterPhase } from '../encounters';
 import type {

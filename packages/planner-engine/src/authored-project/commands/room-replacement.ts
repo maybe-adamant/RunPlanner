@@ -9,10 +9,8 @@ import type {
 } from '../model';
 import type { RoomOccurrenceRole, RoomStateContext } from '../room-state/declaration';
 import { createDefaultRoomState } from '../room-state/defaults';
-import {
-  createDefaultRoomEncounterState,
-  reconcileRoomEncounterState,
-} from '../room-state/encounters';
+import { reconcileRoomEncounterState } from '../room-state/encounter-reconciliation';
+import { createDefaultRoomEncounterState } from '../room-state/encounter-envelope';
 import { createInfernalContractEntries } from '../shop';
 import { reconcileReplacementRoomState } from '../room-state/replacement';
 import {

@@ -15,7 +15,7 @@ import {
 } from '@run-planner/engine/reward-kernel';
 import { describe, expect, it } from 'vitest';
 import { createDefaultRoomState } from '../../src/authored-project/room-state/defaults';
-import { createDefaultRoomEncounterState } from '../../src/authored-project/room-state/encounters';
+import { createDefaultRoomEncounterState } from '../../src/authored-project/room-state/encounter-envelope';
 import { createUnresolvedAcquisitionRewardState } from '../../src/authored-project/traits';
 import {
   ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
