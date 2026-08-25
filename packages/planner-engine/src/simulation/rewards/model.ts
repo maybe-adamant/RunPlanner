@@ -142,7 +142,7 @@ export interface RewardBranch {
   readonly keepsakes: KeepsakeState;
   /** Engine-derived delayed Shrine state carried between biome evaluations. */
   readonly pendingHermesShrineDeliveries?: Readonly<
-    Record<string, import('./processing').PendingHermesShrineDelivery>
+    Record<string, import('./branch-primitives').PendingHermesShrineDelivery>
   >;
   readonly stygianWell?: import('../stygian-well').StygianWellRunState;
 }
@@ -209,7 +209,7 @@ export interface BiomeRewardSimulation extends RewardSimulationBase {
   }[];
   readonly derivedAcquisitionEntries: readonly {
     readonly address: import('../../authored-project/addresses').AcquisitionEntryAddress;
-    readonly kind: import('./processing').DerivedAcquisitionEntryFrontier['kind'];
+    readonly kind: import('./acquisition-settlement').DerivedAcquisitionEntryFrontier['kind'];
     readonly sourceOfferKey?: string;
     readonly slotIndex?: number;
     readonly rewardTypes?: readonly string[];

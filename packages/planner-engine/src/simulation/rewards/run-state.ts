@@ -18,7 +18,7 @@ import {
 } from '../../reward-kernel';
 import type { HistoryCounters, HistoryStateView } from '../history';
 import type { TraitHistoryState } from '../trait-history';
-import type { RewardBranchState } from './processing';
+import type { RewardBranchState } from './branch-primitives';
 
 export type RunStateOwner =
   ExitDecisionAddress | HubDecisionAddress | RoomRunStateCheckpointAddress;

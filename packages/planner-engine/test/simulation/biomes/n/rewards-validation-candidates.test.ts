@@ -32,7 +32,7 @@ import {
   initializeTestRewardBranches,
 } from '../../../support/arcana-fear';
 import { materializeHubDecision } from '../../../../src/simulation/materialization';
-import { settleOwnedAcquisitionSite } from '../../../../src/simulation/rewards/processing';
+import { settleOwnedAcquisitionSite } from '../../../../src/simulation/rewards/acquisition-settlement';
 import { describe, expect, it } from 'vitest';
 
 import {

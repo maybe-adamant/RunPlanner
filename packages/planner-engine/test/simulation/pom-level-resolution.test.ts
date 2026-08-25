@@ -33,7 +33,7 @@ import {
 import { createLevelResolutionCandidateArtifacts } from '../../src/simulation/candidates/trait-offer-capability';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
 import { selectedTraitOfferProducts } from '../../src/simulation/rewards/biome';
-import { settleOwnedAcquisitionSite } from '../../src/simulation/rewards/processing';
+import { settleOwnedAcquisitionSite } from '../../src/simulation/rewards/acquisition-settlement';
 import { applyProjectCommand } from '@run-planner/engine/authored-project';
 import { replaceTestShopOfferActions } from '@run-planner/test-fixtures/shared';
 import {

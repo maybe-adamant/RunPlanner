@@ -3,12 +3,9 @@ import {
   applyProjectCommand,
   createBiomeAddress,
   createIncomingRewardAddress,
-  createNaturalSelectionResultAddress,
-  createTraitAcquisitionTargetAddress,
   createOccurrenceAddress,
   createOccurrenceId,
   createTraitOfferAddress,
-  createSteadyGrowthOutcomeAddress,
   semanticAddressKey,
   type AuthoredTraitOffer,
   type SemanticAddress,
@@ -17,31 +14,20 @@ import { factsWithHistory, type RewardKernelFacts } from '@run-planner/engine/re
 import {
   assessTraitOption,
   assessTraitOffer,
-  assessSelectedTargetedAcquisition,
   assessTraitOfferComposition,
   assessTraitOfferDomainComposition,
   createTraitHistoryState,
   evaluateReachedTraitOffer,
   foldTraitHistoryEvents,
-  hasEffectiveInRunUpgrade,
-  isPomEligibleTrait,
-  isPomUpgradeTarget,
-  assessNaturalSelectionTargets,
-  assessRansom,
   recordReachedTraitOffer,
   resolveRuntimeOfferFallbackTraitKey,
-  promoteArcana,
-  isAspectSpellDropDormant,
   traitCandidates,
   boonRarityFactsForOffer,
   traitOfferCompositionDomains,
   traitOfferStartingDraft,
-  targetedAcquisitionTargetKeys,
   type ProjectEvaluation,
   type SelectedTraitOfferAssessment,
-  type TraitHistoryState,
   type TraitOfferEvent,
-  type TraitLevelMutationEvent,
 } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
@@ -54,18 +40,9 @@ import {
 import { loadSurfaceNOPQProject } from '@run-planner/test-fixtures/surface';
 
 import { initializeTestRewardBranches } from '../support/arcana-fear';
-import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
-import { createArcanaFearState } from '../../src/simulation/arcana-fear';
-import {
-  createTraitOfferCandidateArtifacts,
-} from '../../src/simulation/candidates/trait-offer-capability';
-import { createSteadyGrowthCandidateArtifacts } from '../../src/simulation/candidate-artifacts';
-import { evaluateNaturalSelectionResultCandidate } from '../../src/simulation/candidates/trait-offer';
-import {
-  initializeRewardBranches,
-  settleEncounterTraitOffer,
-  settleOwnedAcquisitionSite,
-} from '../../src/simulation/rewards/processing';
+import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidates/trait-offer-capability';
+import { settleOwnedAcquisitionSite } from '../../src/simulation/rewards/acquisition-settlement';
+import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement';
 import {
   evaluateTraitOfferCandidate,
   type TraitOfferCandidateQuery,
@@ -77,7 +54,6 @@ import {
 } from '../../src/simulation';
 
 const owner = { kind: 'project' } as SemanticAddress;
-const naturalSelectionSlots = ['Melee', 'Secondary', 'Ranged', 'Rush', 'Mana'] as const;
 
 function settleTestRoomReward(
   biome: ReturnType<typeof createBiomeAddress>,
@@ -101,24 +77,6 @@ function settleTestRoomReward(
     facts,
     findings,
   ).branches;
-}
-
-function levelMutation(
-  sequence: number,
-  targetTraitKey: string,
-  oldLevel: number,
-  newLevel: number,
-): TraitLevelMutationEvent {
-  return {
-    kind: 'levelMutation',
-    owner,
-    acquisitionRole: 'test',
-    sequence,
-    acquisitionPoint: 'test',
-    targetTraitKey,
-    oldLevel,
-    newLevel,
-  };
 }
 
 function reachedTraitOffers(
@@ -388,10 +346,6 @@ function historyFrom(
       };
     }),
   );
-}
-
-function findingCode(traitKey: string, history: ReturnType<typeof createTraitHistoryState>) {
-  return assessTraitOption(catalog, traitKey, history).findings[0]?.code;
 }
 
 describe('rarity-aware high-tier composition', () => {

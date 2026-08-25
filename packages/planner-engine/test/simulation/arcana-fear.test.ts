@@ -15,9 +15,9 @@ import { initializeTestRewardBranches } from '../support/arcana-fear';
 import { circeResolutionDomain, judgmentRequiredCount } from '../../src/simulation/arcana-fear';
 import {
   initializeRewardBranches,
-  mergeEquivalentRewardBranches,
   publicRewardBranch,
 } from '../../src/simulation/rewards/processing';
+import { mergeEquivalentRewardBranches } from '../../src/simulation/rewards/branch-primitives';
 import { forfeitStatus } from '../../src/simulation/rewards/run-state';
 
 describe('progressive Arcana and Fear state', () => {
