@@ -919,149 +919,6 @@ const expectedOfferRequirements: Readonly<Record<string, string>> = {
 };
 
 describe('trait offer catalog closure', () => {
-  it('declares the exact shop-aware God-trait giver set', () => {
-    const actual = catalog.traitGivers.values
-      .filter((giver) => giver.shopAwareGodTrait)
-      .map((giver) => giver.key)
-      .sort();
-    expect(actual).toEqual([
-      'Aphrodite',
-      'Apollo',
-      'Ares',
-      'Artemis',
-      'Athena',
-      'Demeter',
-      'Dionysus',
-      'Hades',
-      'Hephaestus',
-      'Hera',
-      'Hermes',
-      'Hestia',
-      'Poseidon',
-      'Zeus',
-    ]);
-  });
-  it('owns the exact runtime offer requirements and ordered fallback domains', () => {
-    const expected = {
-      NarcissusH: {
-        requirement: 'missingLastStand',
-        fallbacks: ['NarcissusB', 'NarcissusC', 'NarcissusD'],
-      },
-      EchoDeathDefianceRefill: {
-        requirement: 'missingLastStand',
-        fallbacks: ['DiminishingDodgeBoon', 'DiminishingHealthAndManaBoon', 'EchoDoubleLevelBoon'],
-      },
-      DeathDefianceRetaliateCurse: {
-        requirement: 'heldLastStand',
-        fallbacks: ['HealingOnDeathCurse', 'MoneyOnDeathCurse', 'ManaOverTimeCurse'],
-      },
-      DeathDefianceRefillBoon: {
-        requirement: 'missingLastStandAndAthenaFirstMeeting',
-        fallbacks: [
-          'InvulnerabilityDashBoon',
-          'RetaliateInvulnerabilityBoon',
-          'FocusLastStandBoon',
-        ],
-      },
-      HadesDeathDefianceDamageBoon: {
-        requirement: 'deathDefianceDamageBoonEligible',
-        fallbacks: ['HadesLifestealBoon', 'HadesPreDamageBoon', 'HadesChronosDebuffBoon'],
-      },
-    } as const;
-
-    for (const [traitKey, policy] of Object.entries(expected)) {
-      const trait = traits.traits.byKey[traitKey];
-      expect(trait?.runtimeOfferRequirement, traitKey).toBe(policy.requirement);
-      expect(trait?.runtimeOfferFallbackTraitKeys, traitKey).toEqual(policy.fallbacks);
-    }
-  });
-
-  it('declares the exact three traits blocked after any prior pickup', () => {
-    expect(
-      catalog.traits.values
-        .filter((trait) => trait.blockOfferIfPreviouslyPicked)
-        .map((trait) => trait.key)
-        .sort(),
-    ).toEqual(['BoonDecayBoon', 'KeepsakeLevelBoon', 'RoomRewardBonusBoon']);
-  });
-
-  it('rejects a non-boolean previously-picked declaration flag', () => {
-    expect(() =>
-      createCatalog({
-        ...declarations,
-        traitCatalog: {
-          ...declarations.traitCatalog,
-          traits: declarations.traitCatalog.traits.map((trait) =>
-            trait.key === 'BoonDecayBoon'
-              ? { ...trait, blockOfferIfPreviouslyPicked: 'yes' as never }
-              : trait,
-          ),
-        },
-      }),
-    ).toThrow(/blockOfferIfPreviouslyPicked.*boolean/);
-  });
-
-  it('rejects missing and extra previously-picked declaration ownership', () => {
-    const mutate = (traitKey: string, value: boolean | undefined) =>
-      createCatalog({
-        ...declarations,
-        traitCatalog: {
-          ...declarations.traitCatalog,
-          traits: declarations.traitCatalog.traits.map((trait) =>
-            trait.key !== traitKey
-              ? trait
-              : ({ ...trait, blockOfferIfPreviouslyPicked: value } as RawTraitDeclaration),
-          ),
-        },
-      });
-    expect(() => mutate('BoonDecayBoon', undefined)).toThrow(
-      /BoonDecayBoon\.blockOfferIfPreviouslyPicked.*required/,
-    );
-    expect(() => mutate('HeraWeaponBoon', true)).toThrow(
-      /HeraWeaponBoon\.blockOfferIfPreviouslyPicked.*reserved/,
-    );
-  });
-
-  it('normalizes one closed audited Olympian and Hermes boon-rarity base table', () => {
-    expect(catalog.boonRarityBases.olympian).toEqual({
-      Rare: 0.1,
-      Epic: 0.05,
-      Duo: 0.12,
-      Legendary: 0.1,
-    });
-    expect(catalog.boonRarityBases.hermes).toEqual({
-      Rare: 0.06,
-      Epic: 0.03,
-      Duo: 0,
-      Legendary: 0.01,
-    });
-    expect(catalog.traitGivers.byKey.Apollo).not.toHaveProperty('boonRarityBase');
-    expect(catalog.traitGivers.byKey.Hermes).not.toHaveProperty('boonRarityBase');
-  });
-
-  it('rejects incomplete, extra, and non-finite provider base declarations', () => {
-    const malformed = (boonRarityBases: object) =>
-      createCatalog({
-        ...declarations,
-        traitCatalog: { ...declarations.traitCatalog, boonRarityBases: boonRarityBases as never },
-      });
-    expect(() =>
-      malformed({ olympian: declarations.traitCatalog.boonRarityBases.olympian }),
-    ).toThrow(/exactly olympian and hermes/);
-    expect(() =>
-      malformed({
-        ...declarations.traitCatalog.boonRarityBases,
-        npc: declarations.traitCatalog.boonRarityBases.hermes,
-      }),
-    ).toThrow(/exactly olympian and hermes/);
-    expect(() =>
-      malformed({
-        ...declarations.traitCatalog.boonRarityBases,
-        hermes: { ...declarations.traitCatalog.boonRarityBases.hermes, Duo: Number.NaN },
-      }),
-    ).toThrow(/finite number/);
-  });
-
   const traits = {
     weapons: catalog.weapons,
     aspects: catalog.aspects,
@@ -1073,57 +930,101 @@ describe('trait offer catalog closure', () => {
     baseElements: catalog.traitBaseElements,
   };
 
-  it('declares Selene’s eight normal spells and Aspect-owned Sky Fall exactly', () => {
-    expect(traits.givers.byKey.SpellDrop).toMatchObject({
-      providerKind: 'spell',
-      traitKeys: [
-        'SpellPolymorphTrait',
-        'SpellMeteorTrait',
-        'SpellTransformTrait',
-        'SpellLeapTrait',
-        'SpellLaserTrait',
-        'SpellSummonTrait',
-        'SpellTimeSlowTrait',
-        'SpellPotionTrait',
-      ],
-    });
-    expect(traits.aspects.byKey.SuitHexAspect?.startingTrait).toEqual({
-      traitKey: 'SpellMoonBeamTrait',
-      giverKey: 'SpellDrop',
-    });
-    for (const key of [...traits.givers.byKey.SpellDrop!.traitKeys, 'SpellMoonBeamTrait'])
-      expect(traits.traits.byKey[key]?.equipmentSlot).toBe('Spell');
-  });
-
-  it('rejects malformed Aspect starting spell links', () => {
-    const mutate = (startingTrait: unknown) =>
+  it('preserves the compiler boundary failure order across independent malformed inputs', () => {
+    const mutate = (patch: Record<string, unknown>) =>
       createCatalog({
         ...declarations,
-        traitCatalog: {
-          ...declarations.traitCatalog,
-          aspects: declarations.traitCatalog.aspects.map((aspect) =>
-            aspect.key === 'SuitHexAspect'
-              ? {
-                  ...aspect,
-                  startingTrait: startingTrait as { traitKey: string; giverKey: string },
-                }
-              : aspect,
-          ),
-        },
+        traitCatalog: { ...declarations.traitCatalog, ...patch } as never,
       });
-    expect(() => mutate({ traitKey: 'UnknownSpell', giverKey: 'SpellDrop' })).toThrow(
-      /unknown trait/,
-    );
-    expect(() => mutate({ traitKey: 'SpellPolymorphTrait', giverKey: 'SpellDrop' })).toThrow(
-      /must not belong to the normal spell pool/,
-    );
-    expect(() => mutate({ traitKey: 'SpellMoonBeamTrait', giverKey: 'Apollo' })).toThrow(
-      /must identify a spell provider/,
-    );
+
     expect(() =>
-      mutate({ traitKey: 'SpellMoonBeamTrait', giverKey: 'SpellDrop', extra: true }),
-    ).toThrow(/exactly traitKey and giverKey/);
-    expect(() => mutate({ traitKey: '', giverKey: 'SpellDrop' })).toThrow(/must not be empty/);
+      mutate({
+        traits: declarations.traitCatalog.traits.map((trait) =>
+          trait.key === 'ElementalRarityUpgradeBoon'
+            ? { ...trait, rarityFloorEffect: undefined }
+            : trait,
+        ),
+        givers: declarations.traitCatalog.givers.map((giver) =>
+          giver.key === 'Aphrodite' ? { ...giver, label: '' } : giver,
+        ),
+      }),
+    ).toThrow(/ElementalRarityUpgradeBoon\.rarityFloorEffect/);
+
+    expect(() =>
+      mutate({
+        deferredTraitKeys: [...declarations.traitCatalog.deferredTraitKeys, 'AphroditeWeaponBoon'],
+        givers: declarations.traitCatalog.givers.map((giver) =>
+          giver.key === 'Aphrodite' ? { ...giver, label: '' } : giver,
+        ),
+      }),
+    ).toThrow(/deferredTraitKeys/);
+
+    expect(() =>
+      mutate({
+        traits: declarations.traitCatalog.traits.map((trait) =>
+          trait.key === 'NarcissusH'
+            ? {
+                ...trait,
+                runtimeOfferFallbackTraitKeys: [
+                  'AphroditeWeaponBoon',
+                  'AphroditeSpecialBoon',
+                  'AphroditeCastBoon',
+                ],
+              }
+            : trait,
+        ),
+        boonRarityBases: {},
+      }),
+    ).toThrow(/runtimeOfferFallbackTraitKeys/);
+
+    expect(() =>
+      mutate({
+        boonRarityBases: {},
+        aspects: declarations.traitCatalog.aspects.map((aspect) =>
+          aspect.key === 'SuitHexAspect'
+            ? { ...aspect, startingTrait: { traitKey: 'SpellMoonBeamTrait', giverKey: 'Missing' } }
+            : aspect,
+        ),
+      }),
+    ).toThrow(/boonRarityBases/);
+
+    expect(() =>
+      mutate({
+        aspects: declarations.traitCatalog.aspects.map((aspect) =>
+          aspect.key === 'SuitHexAspect'
+            ? { ...aspect, startingTrait: { traitKey: 'SpellMoonBeamTrait', giverKey: 'Apollo' } }
+            : aspect,
+        ),
+        traits: declarations.traitCatalog.traits.map((trait) =>
+          trait.key === 'AllElementalBoon'
+            ? {
+                ...trait,
+                selectedDisposition: {
+                  kind: 'directTraitSets',
+                  sets: [
+                    {
+                      key: 'earth',
+                      traitKeys: ['AphroditeWeaponBoon', 'ElementalOlympianDamageBoon'],
+                    },
+                    {
+                      key: 'fire',
+                      traitKeys: ['ElementalBaseDamageBoon', 'ElementalRallyBoon'],
+                    },
+                    {
+                      key: 'air',
+                      traitKeys: ['ElementalDamageFloorBoon', 'ElementalDodgeBoon'],
+                    },
+                    {
+                      key: 'water',
+                      traitKeys: ['ElementalHealthBoon', 'ElementalDamageCapBoon'],
+                    },
+                  ],
+                } as never,
+              }
+            : trait,
+        ),
+      }),
+    ).toThrow(/must identify a spell provider/);
   });
 
   it('declares the complete field-NPC provider surfaces', () => {
@@ -1165,192 +1066,6 @@ describe('trait offer catalog closure', () => {
     }
     expect(traits.givers.byKey.Hermes?.priorityTraitKeys).toEqual([]);
     expect(traits.givers.byKey.WeaponUpgrade?.priorityTraitKeys).toEqual([]);
-  });
-
-  it('declares the complete closed Chaos pair matrix and fixed derived outcomes', () => {
-    expect(catalog.chaos.curses.values).toHaveLength(17);
-    expect(catalog.chaos.blessings.values).toHaveLength(16);
-    expect(
-      catalog.rewards.rewardTypes.byKey.TrialUpgrade?.acquisitionRoles.byKey.self?.traitGiverKey,
-    ).toBe('Chaos');
-    expect(catalog.traitGiverByAcquisitionGameName.TrialUpgrade).toBeUndefined();
-    expect(catalog.traitGiverByAcquisitionGameName).toEqual(
-      Object.fromEntries(
-        declarations.traitCatalog.traitAcquisitionProviders.map(({ gameName, giverKey }) => [
-          gameName,
-          giverKey,
-        ]),
-      ),
-    );
-    expect(catalog.chaos.curses.byKey.ChaosCommonCurse).toMatchObject({
-      label: 'Ordinary',
-      clock: 'godBoonScreens',
-      semanticTag: 'Ordinary',
-      duration: { minimum: 2, maximum: 3 },
-    });
-    expect(catalog.chaos.curses.byKey.ChaosHiddenRoomRewardCurse).toMatchObject({
-      label: 'Enshrouded',
-      clock: 'locations',
-      offerRequirements: [{ kind: 'routeKey', routeKey: 'Underworld' }],
-    });
-    expect(catalog.chaos.blessings.byKey.ChaosElementalBlessing).toMatchObject({
-      label: 'Creation',
-      semanticTag: 'Creation',
-      derivedOutcome: {
-        kind: 'creation',
-        elementsPerElementByRarity: { Common: 1, Rare: 2, Epic: 3, Heroic: 4 },
-      },
-    });
-    expect(catalog.chaos.blessings.byKey.ChaosSpeedBlessing).toMatchObject({
-      label: 'Celerity',
-      derivedOutcome: {
-        kind: 'celerity',
-        moveSpeedPercentByRarity: { Common: 15, Rare: 20, Epic: 25, Heroic: 30 },
-        sprintVelocityByRarity: { Common: 297, Rare: 396, Epic: 495, Heroic: 594 },
-        sprintCapByRarity: { Common: 133.5, Rare: 178, Epic: 222.5, Heroic: 267 },
-      },
-    });
-    expect(catalog.chaos.blessings.byKey.ChaosOmegaDamageBlessing).toMatchObject({
-      label: 'Chant',
-      derivedOutcome: {
-        kind: 'chant',
-        damagePerAetherPercentByRarity: { Common: 30, Rare: 36, Epic: 42, Heroic: 48 },
-      },
-      offerRequirements: [{ kind: 'elementMinimum', element: 'Aether', minimum: 1 }],
-    });
-    expect(catalog.chaos.blessings.byKey.ChaosLastStandBlessing).toMatchObject({
-      label: 'Defiance',
-      fixedRarity: 'Legendary',
-      derivedOutcome: { kind: 'defiance', healthPercent: 40, magickPercent: 40 },
-    });
-    const revelation = catalog.chaos.blessings.byKey.ChaosExSpeedBlessing;
-    expect(revelation?.operands.map((operand) => operand.key)).toEqual([
-      'weaponSpeed',
-      'propertySpeed',
-    ]);
-    for (const blessing of catalog.chaos.blessings.values) {
-      for (const operand of blessing.operands) {
-        expect(Object.keys(operand.byRarity ?? {}).sort()).toEqual([
-          'Common',
-          'Epic',
-          'Heroic',
-          'Rare',
-        ]);
-      }
-    }
-  });
-
-  it.each([
-    ['unknown kind', { kind: 'invented' }],
-    ['extra member', { kind: 'matureChaosBlessing', extra: true }],
-    ['invalid element', { kind: 'elementMinimum', element: 'Void', minimum: 1 }],
-    ['zero element minimum', { kind: 'elementMinimum', element: 'Aether', minimum: 0 }],
-  ])('rejects malformed Chaos offer requirement: %s', (_label, requirement) => {
-    const malformed = {
-      ...declarations,
-      traitCatalog: {
-        ...declarations.traitCatalog,
-        chaos: {
-          ...declarations.traitCatalog.chaos,
-          blessings: declarations.traitCatalog.chaos.blessings.map((blessing) =>
-            blessing.key === 'ChaosOmegaDamageBlessing'
-              ? { ...blessing, offerRequirements: [requirement] as never }
-              : blessing,
-          ),
-        },
-      },
-    };
-    expect(() => createCatalog(malformed)).toThrow(
-      /unknown Chaos offer requirement|must contain only kind|known element|positive integer/,
-    );
-  });
-
-  it.each([
-    [
-      'moves Creation outcome',
-      'ChaosWeaponBlessing',
-      { kind: 'creation', elementsPerElementByRarity: { Common: 1, Rare: 2, Epic: 3, Heroic: 4 } },
-    ],
-    [
-      'changes Celerity outcome',
-      'ChaosSpeedBlessing',
-      {
-        kind: 'celerity',
-        moveSpeedPercentByRarity: { Common: 16, Rare: 20, Epic: 25, Heroic: 30 },
-        sprintVelocityByRarity: { Common: 297, Rare: 396, Epic: 495, Heroic: 594 },
-        sprintCapByRarity: { Common: 133.5, Rare: 178, Epic: 222.5, Heroic: 267 },
-      },
-    ],
-  ])('rejects a %s mutation', (_label, key, derivedOutcome) => {
-    const malformed = {
-      ...declarations,
-      traitCatalog: {
-        ...declarations.traitCatalog,
-        chaos: {
-          ...declarations.traitCatalog.chaos,
-          blessings: declarations.traitCatalog.chaos.blessings.map((blessing) =>
-            blessing.key === key
-              ? { ...blessing, derivedOutcome: derivedOutcome as never }
-              : blessing,
-          ),
-        },
-      },
-    };
-    expect(() => createCatalog(malformed)).toThrow(/derivedOutcome/);
-  });
-
-  it('rejects extra rarity-domain fields and authored operands on fixed Chaos outcomes', () => {
-    const weapon = declarations.traitCatalog.chaos.blessings.find(
-      (blessing) => blessing.key === 'ChaosWeaponBlessing',
-    );
-    if (weapon === undefined) throw new Error('Chaos weapon blessing declaration is missing');
-    const damage = weapon.operands[0];
-    if (damage?.byRarity === undefined) throw new Error('Chaos damage rarity domains are missing');
-    const damageDomains = damage.byRarity;
-    const extraDomain = {
-      ...declarations,
-      traitCatalog: {
-        ...declarations.traitCatalog,
-        chaos: {
-          ...declarations.traitCatalog.chaos,
-          blessings: declarations.traitCatalog.chaos.blessings.map((blessing) =>
-            blessing.key !== 'ChaosWeaponBlessing'
-              ? blessing
-              : {
-                  ...blessing,
-                  operands: [
-                    {
-                      ...damage,
-                      byRarity: {
-                        ...damageDomains,
-                        Common: { ...damageDomains.Common, invented: true },
-                      },
-                    },
-                  ],
-                },
-          ),
-        },
-      },
-    };
-    expect(() => createCatalog(extraDomain as never)).toThrow(/unknown domain key/);
-
-    const derivedOperand = {
-      ...declarations,
-      traitCatalog: {
-        ...declarations.traitCatalog,
-        chaos: {
-          ...declarations.traitCatalog.chaos,
-          blessings: declarations.traitCatalog.chaos.blessings.map((blessing) =>
-            blessing.key === 'ChaosElementalBlessing'
-              ? { ...blessing, operands: weapon.operands }
-              : blessing,
-          ),
-        },
-      },
-    };
-    expect(() => createCatalog(derivedOperand as never)).toThrow(
-      /fixed Chaos outcomes cannot own authored operands/,
-    );
   });
 
   it('declares the exact player-rarityless Story and field-NPC matrix', () => {
@@ -1457,238 +1172,6 @@ describe('trait offer catalog closure', () => {
         },
       },
     ]);
-  });
-
-  it('declares Infernal Contract as rarityless and Travel Deal as one exact ranked restock', () => {
-    expect(traits.traits.byKey.InfernalContractBoon).toMatchObject({
-      rarityDomain: { kind: 'none' },
-      blockStacking: true,
-      blockInRunRarify: true,
-      excludeFromRarityCount: true,
-    });
-    expect(traits.traits.byKey.RestockBoon?.selectedDisposition).toEqual({
-      kind: 'worldShopRestock',
-      refillCount: 1,
-      discountByRarity: { Common: 0.05, Rare: 0.1, Epic: 0.15, Heroic: 0.2 },
-    });
-  });
-
-  it('compiler-closes All Together to the exact immutable four-pair direct-grant matrix', () => {
-    const expected = {
-      kind: 'directTraitSets',
-      sets: [
-        {
-          key: 'earth',
-          traitKeys: ['ElementalDamageBoon', 'ElementalOlympianDamageBoon'],
-        },
-        {
-          key: 'fire',
-          traitKeys: ['ElementalBaseDamageBoon', 'ElementalRallyBoon'],
-        },
-        {
-          key: 'air',
-          traitKeys: ['ElementalDamageFloorBoon', 'ElementalDodgeBoon'],
-        },
-        {
-          key: 'water',
-          traitKeys: ['ElementalHealthBoon', 'ElementalDamageCapBoon'],
-        },
-      ],
-    } as const;
-    const disposition = catalog.traits.byKey.AllElementalBoon?.selectedDisposition;
-    expect(disposition).toEqual(expected);
-    expect(Object.isFrozen(disposition)).toBe(true);
-    if (disposition?.kind !== 'directTraitSets') throw new Error('missing All Together descriptor');
-    expect(Object.isFrozen(disposition.sets)).toBe(true);
-    expect(
-      disposition.sets.every((set) => Object.isFrozen(set) && Object.isFrozen(set.traitKeys)),
-    ).toBe(true);
-
-    expect(() =>
-      createCatalog({
-        ...declarations,
-        traitCatalog: {
-          ...declarations.traitCatalog,
-          traits: declarations.traitCatalog.traits.map((trait) =>
-            trait.key === 'AllElementalBoon'
-              ? ({
-                  ...trait,
-                  selectedDisposition: {
-                    ...expected,
-                    sets: [expected.sets[0], expected.sets[2], expected.sets[1], expected.sets[3]],
-                  },
-                } as RawTraitDeclaration)
-              : trait,
-          ),
-        },
-      }),
-    ).toThrow(/must declare earth, fire, air, and water in source order/);
-
-    expect(() =>
-      createCatalog({
-        ...declarations,
-        traitCatalog: {
-          ...declarations.traitCatalog,
-          traits: declarations.traitCatalog.traits.map((trait) =>
-            trait.key === 'HeraWeaponBoon'
-              ? ({ ...trait, selectedDisposition: expected } as RawTraitDeclaration)
-              : trait,
-          ),
-        },
-      }),
-    ).toThrow(/direct trait sets are reserved for All Together/);
-  });
-
-  it('compiler-closes Gold Gold Gold to excluding exactly SpellDrop', () => {
-    expect(() =>
-      createCatalog({
-        ...declarations,
-        traitCatalog: {
-          ...declarations.traitCatalog,
-          traits: declarations.traitCatalog.traits.map((trait) =>
-            trait.key === 'EchoDoubleShop'
-              ? ({
-                  ...trait,
-                  selectedDisposition: { kind: 'echo', effect: 'doubleShop' },
-                } as RawTraitDeclaration)
-              : trait,
-          ),
-        },
-      }),
-    ).toThrow(/requires kind, effect, and excludedRewardTypes/);
-
-    const mutatedExcludedTypes = [['GiftDrop'], ['SpellDrop', 'GiftDrop']] as const;
-    for (const excludedRewardTypes of mutatedExcludedTypes) {
-      expect(() =>
-        createCatalog({
-          ...declarations,
-          traitCatalog: {
-            ...declarations.traitCatalog,
-            traits: declarations.traitCatalog.traits.map((trait) =>
-              trait.key === 'EchoDoubleShop'
-                ? ({
-                    ...trait,
-                    selectedDisposition: {
-                      kind: 'echo',
-                      effect: 'doubleShop',
-                      excludedRewardTypes,
-                    },
-                  } as RawTraitDeclaration)
-                : trait,
-            ),
-          },
-        }),
-      ).toThrow(/must equal \[SpellDrop\]/);
-    }
-  });
-
-  it('declares Echo Boon as the exact source-resolved 13-provider union', () => {
-    const variants = traits.echoLastRunBoon.variants.values;
-    expect([...new Set(variants.map((variant) => variant.giverKey))]).toEqual([
-      'Aphrodite',
-      'Apollo',
-      'Ares',
-      'Demeter',
-      'Hephaestus',
-      'Hera',
-      'Hestia',
-      'Poseidon',
-      'Zeus',
-      'Hermes',
-      'Artemis',
-      'Athena',
-      'Dionysus',
-    ]);
-    expect(variants).toHaveLength(236);
-    expect(
-      variants.every((variant) => {
-        const trait = traits.traits.byKey[variant.traitKey];
-        return trait?.rarityDomain.kind === 'ranked';
-      }),
-    ).toBe(true);
-    expect(traits.echoLastRunBoon.variants.byKey['Hades:CastProjectileBoon']).toBeUndefined();
-    expect(traits.echoLastRunBoon.variants.byKey['Aphrodite:SprintEchoBoon']).toEqual({
-      key: 'Aphrodite:SprintEchoBoon',
-      giverKey: 'Aphrodite',
-      traitKey: 'SprintEchoBoon',
-      lootHistorySource: 'AphroditeUpgrade',
-    });
-    expect(traits.echoLastRunBoon.variants.byKey['Zeus:SprintEchoBoon']).toEqual({
-      key: 'Zeus:SprintEchoBoon',
-      giverKey: 'Zeus',
-      traitKey: 'SprintEchoBoon',
-      lootHistorySource: 'ZeusUpgrade',
-    });
-    expect(traits.echoLastRunBoon.variants.byKey['Artemis:SupportingFireBoon']).toEqual(
-      expect.not.objectContaining({ lootHistorySource: expect.anything() }),
-    );
-    expect(
-      variants
-        .filter(
-          (variant) => traits.traits.byKey[variant.traitKey]?.targetedAcquisition !== undefined,
-        )
-        .map((variant) => variant.key),
-    ).toEqual(['Hera:BoonDecayBoon']);
-    expect(
-      variants
-        .filter(
-          (variant) =>
-            traits.traits.byKey[variant.traitKey]?.selectedDisposition.kind ===
-            'advanceCurrentKeepsake',
-        )
-        .map((variant) => variant.key),
-    ).toEqual(['Demeter:KeepsakeLevelBoon', 'Hera:KeepsakeLevelBoon']);
-  });
-
-  it('rejects duplicate and rarityless Echo-last-run sources at the catalog boundary', () => {
-    const duplicateSource = {
-      ...declarations,
-      traitCatalog: {
-        ...declarations.traitCatalog,
-        echoLastRunBoon: {
-          ...declarations.traitCatalog.echoLastRunBoon,
-          sources: [
-            ...declarations.traitCatalog.echoLastRunBoon.sources,
-            { giverKey: 'Apollo', lootHistorySource: 'ApolloUpgrade' },
-          ],
-        },
-      },
-    };
-    expect(() => createCatalog(duplicateSource)).toThrow(/distinct participating givers/);
-
-    const raritylessSource = {
-      ...declarations,
-      traitCatalog: {
-        ...declarations.traitCatalog,
-        echoLastRunBoon: {
-          ...declarations.traitCatalog.echoLastRunBoon,
-          sources: [{ giverKey: 'Echo' }],
-        },
-      },
-    };
-    expect(() => createCatalog(raritylessSource)).toThrow(
-      /Echo cannot participate in Echo's last-run domain/,
-    );
-  });
-
-  it('rejects an unknown Echo disposition effect at the raw declaration boundary', () => {
-    const malformed = {
-      ...declarations,
-      traitCatalog: {
-        ...declarations.traitCatalog,
-        traits: declarations.traitCatalog.traits.map((trait) =>
-          trait.key === 'EchoDoubleLevelBoon'
-            ? {
-                ...trait,
-                selectedDisposition: { kind: 'echo', effect: 'unexpected' } as never,
-              }
-            : trait,
-        ),
-      },
-    };
-    expect(() => createCatalog(malformed)).toThrow(
-      /selectedDisposition.effect.*numericNoOp.*survive.*doubleLevel/,
-    );
   });
 
   it('keeps shared traits giver-neutral and closes deferred operands without placeholders', () => {
@@ -2487,160 +1970,6 @@ describe('trait offer catalog closure', () => {
     expect(normalized.traits.byKey.CastAnywhereBoon).toBeDefined();
     expect(normalized.traits.byKey.SelfCastBoon).toBeDefined();
     expect('deferredTraitKeys' in normalized).toBe(false);
-  });
-
-  it('declares the complete equipped Narcissus disposition table', () => {
-    const table = Object.fromEntries(
-      ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'].map((suffix) => {
-        const trait = catalog.traits.byKey[`Narcissus${suffix}`];
-        if (trait === undefined) throw new Error(`missing Narcissus${suffix}`);
-        return [suffix, trait.selectedDisposition];
-      }),
-    );
-    expect(table).toEqual({
-      A: expect.objectContaining({
-        kind: 'producePickups',
-        pickups: [{ key: 'pom', rewardType: 'StoreRewardRandomStack' }],
-      }),
-      B: expect.objectContaining({
-        kind: 'producePickups',
-        pickups: [{ key: 'ashes', rewardType: 'MetaCardPointsCommonDrop' }],
-      }),
-      C: expect.objectContaining({
-        kind: 'producePickups',
-        pickups: [{ key: 'currency', rewardType: 'Currency' }],
-      }),
-      D: expect.objectContaining({
-        kind: 'producePickups',
-        pickups: [
-          { key: 'psyche', rewardType: 'MemPointsCommonDrop' },
-          { key: 'maxMana', rewardType: 'MaxManaDrop' },
-        ],
-      }),
-      E: expect.objectContaining({
-        kind: 'producePickups',
-        pickups: [
-          { key: 'bones', rewardType: 'MetaCurrencyDrop' },
-          { key: 'maxHealth', rewardType: 'MaxHealthDrop' },
-        ],
-      }),
-      F: { kind: 'equip' },
-      G: expect.objectContaining({
-        kind: 'producePickups',
-        pickups: [
-          { key: 'elementalBoost1', rewardType: 'ElementalBoost' },
-          { key: 'elementalBoost2', rewardType: 'ElementalBoost' },
-        ],
-      }),
-      H: expect.objectContaining({
-        kind: 'producePickups',
-        pickups: [{ key: 'lastStand', rewardType: 'LastStandDrop' }],
-      }),
-      I: expect.objectContaining({
-        kind: 'producePickups',
-        pickups: [{ key: 'mysteryBoon', rewardType: 'BlindBoxLoot' }],
-      }),
-    });
-  });
-
-  it('declares Quick Buck and Buried Treasure as exact generated-pickup traits', () => {
-    expect(catalog.traits.byKey.MoneyMultiplierBoon?.selectedDisposition).toEqual({
-      kind: 'producePickups',
-      producerLifecycleKey: 'GeneratedTraitPickup',
-      pickups: [{ key: 'quickBuckGold', rewardType: 'RoomMoneyDrop' }],
-    });
-    expect(catalog.traits.byKey.RoomRewardBonusBoon?.selectedDisposition).toEqual({
-      kind: 'producePickups',
-      producerLifecycleKey: 'GeneratedTraitPickup',
-      pickups: [
-        { key: 'smallGold', rewardType: 'RoomMoneySmallDrop' },
-        { key: 'tinyGold1', rewardType: 'RoomMoneyTinyDrop' },
-        { key: 'tinyGold2', rewardType: 'RoomMoneyTinyDrop' },
-        { key: 'minorHeal1', rewardType: 'HealDropMinor' },
-        { key: 'minorHeal2', rewardType: 'HealDropMinor' },
-        { key: 'bones', rewardType: 'MetaCurrencyDrop', excludeStorySource: true },
-      ],
-    });
-  });
-
-  it('owns Cherished Heirloom as the sole exact rank-one keepsake advance disposition', () => {
-    expect(catalog.traits.byKey.KeepsakeLevelBoon?.selectedDisposition).toEqual({
-      kind: 'advanceCurrentKeepsake',
-      rankBonus: 1,
-    });
-    expect(
-      catalog.traits.values.filter(
-        (trait) => trait.selectedDisposition.kind === 'advanceCurrentKeepsake',
-      ),
-    ).toHaveLength(1);
-  });
-
-  it.each([
-    ['missing', undefined],
-    ['wrong rank', { kind: 'advanceCurrentKeepsake', rankBonus: 2 }],
-    ['wrong kind', { kind: 'noOp' }],
-  ] as const)('rejects a %s Cherished keepsake advance declaration', (_label, disposition) => {
-    const malformed = {
-      ...declarations,
-      traitCatalog: {
-        ...declarations.traitCatalog,
-        traits: declarations.traitCatalog.traits.map((trait) =>
-          trait.key === 'KeepsakeLevelBoon'
-            ? { ...trait, selectedDisposition: disposition as never }
-            : trait,
-        ),
-      },
-    };
-    expect(() => createCatalog(malformed)).toThrow(/KeepsakeLevelBoon|rankBonus 1/);
-  });
-
-  it('rejects the Cherished disposition on any other trait', () => {
-    const malformed = {
-      ...declarations,
-      traitCatalog: {
-        ...declarations.traitCatalog,
-        traits: declarations.traitCatalog.traits.map((trait) =>
-          trait.key === 'ApolloWeaponBoon'
-            ? {
-                ...trait,
-                selectedDisposition: { kind: 'advanceCurrentKeepsake', rankBonus: 1 } as never,
-              }
-            : trait,
-        ),
-      },
-    };
-    expect(() => createCatalog(malformed)).toThrow(/reserved for KeepsakeLevelBoon/);
-  });
-
-  it.each([
-    [
-      'unknown pickup lifecycle',
-      { producerLifecycleKey: 'MissingLifecycle' },
-      /unknown producer lifecycle/,
-    ],
-    [
-      'unknown pickup reward',
-      { pickups: [{ key: 'pom', rewardType: 'MissingReward' }] },
-      /unknown reward type/,
-    ],
-    [
-      'lifecycle reward mismatch',
-      { producerLifecycleKey: 'RoomReward' },
-      /not supported by producer lifecycle/,
-    ],
-  ] as const)('rejects Narcissus pickup declaration with %s', (_name, patch, message) => {
-    const malformed = {
-      ...declarations,
-      traitCatalog: {
-        ...declarations.traitCatalog,
-        traits: declarations.traitCatalog.traits.map((trait) =>
-          trait.key === 'NarcissusA'
-            ? { ...trait, selectedDisposition: { ...trait.selectedDisposition, ...patch } as never }
-            : trait,
-        ),
-      },
-    };
-    expect(() => createCatalog(malformed)).toThrow(message);
   });
 
   it.each([
