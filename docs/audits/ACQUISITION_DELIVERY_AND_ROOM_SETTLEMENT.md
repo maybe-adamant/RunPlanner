@@ -6,10 +6,10 @@
 acquisitions, correct Shop-backed settlement, model Narcissus pickups, and
 settle Echo's replayed and duplicated acquisitions.** Schema 41 now delivers
 that boundary, including consequential Narcissus pickup closure, Fields room
-chronology, and separately acquired Artificer replacements. Shrine delivery,
-Well behavior, other composite-room delivery
-additions, and other dropped-item families remain explicitly scoped follow-up
-work rather than gaps in the current contract.
+chronology, separately acquired Artificer replacements, and the schema-58/59
+Shrine-delivery and Well-purchase contacts. Other composite-room delivery
+additions and dropped-item families remain explicitly scoped follow-up work
+rather than gaps in the current contract.
 
 This is a source-backed audit of the boundary between an action that produces
 an item and the later acquisition that changes run history. It was prompted by
@@ -274,12 +274,12 @@ picked-up/not-picked-up authoring fact for a delivery. Some encounter sets also
 invoke `CompleteSurfaceShopItems`, which expires every pending Shop delivery
 immediately and spawns the corresponding items.
 
-A future authored Shrine offer therefore needs at least a purchased fact and a
-delivery disposition. The natural player-facing choices are `Rush now` or an
-initial delay from `2` through `8`. The engine derives the concrete delivery
-site by advancing qualifying encounter uses and applying forced completion; the
-authored dropdown must not persist a future room address as a second authority.
-Once delivery becomes due, acquisition participates automatically.
+An authored Shrine offer has purchase participation and a delivery disposition:
+`Rush now` or an initial delay from `2` through `8`. The engine derives the
+concrete delivery site by advancing qualifying encounter uses and applying
+forced completion; authored state does not persist a future room address as a
+second authority. Once delivery becomes due, acquisition participates
+automatically.
 Purchase and rush affordability remain collapsed under the planner's existing
 sufficient-resource baseline; the delivery choice does not introduce gold
 modeling.
@@ -860,7 +860,7 @@ settlement seam now owns Shop `roomExit` acquisition, Narcissus pickups, Echo's
 mandatory last-reward recreation, and Gold Gold Gold's declaration-derived
 supplemental Shop entry. Travel and Gold publish one shared complete proposal
 product over their source dependencies, while payload edits use the same
-derived-entry materialization command without changing order. Later Shrine
-delivery must extend that seam while preserving
-multiple lifecycle checkpoints; it must not move every acquisition to one
-universal end-of-room phase.
+derived-entry materialization command without changing order. Schema 58 Shrine
+delivery extends that seam through source/host ownership and multiple lifecycle
+checkpoints; it does not move every acquisition to one universal end-of-room
+phase.

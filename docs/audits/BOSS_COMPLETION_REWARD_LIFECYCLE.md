@@ -111,12 +111,19 @@ count.
 
 ## Planner disposition
 
-The narrow Gate A.1 correction is the derived Boss-defeated Judgment seam. The
-planner otherwise retains its effect-neutral boss-reward omission and continues
-to omit boss-resource quantities and optional post-boss money pickups. It does
-not add a persisted Boss action order, a boss-reward payload, a Dream-specific
-continuation command, or a special Quick Buck rule merely to reproduce an
-effect that no supported consumer observes.
+Schema 55 represents declaration-fixed Boss and optional Postboss rooms as
+automatic `RoomOccurrence`s outside editable topology. They retain ordinary
+occurrence lifecycle, acquisition-site, feature, fixed-exit, and one-action
+chronology ownership—including fully active configured-tail Postboss features—
+without recreating a completion-room state or address path. The derived
+Boss-defeated Judgment seam remains before generic encounter-end effects, so a
+due Shrine delivery can use the ordinary Boss occurrence as its later host.
+
+The planner otherwise retains its effect-neutral boss-reward omission and
+continues to omit boss-resource quantities and optional post-boss money
+pickups. It does not add a persisted Boss action order, boss-reward payload,
+Dream-specific continuation command, or special Quick Buck rule merely to
+reproduce an effect that no supported consumer observes.
 
 This disposition must be revisited if Dream Dive becomes an authored run mode,
 money becomes simulated state, Quick Buck's dropped pickup enters scope, or

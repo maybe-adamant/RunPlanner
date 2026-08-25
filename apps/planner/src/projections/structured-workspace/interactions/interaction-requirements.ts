@@ -104,11 +104,6 @@ export type WorkspaceOccurrenceInteractionRequirement =
       readonly proposals: readonly WorkspaceRoomActionProposal[];
     }
   | {
-      readonly kind: 'shopDeathDefianceCondition';
-      readonly owner: OccurrenceAddress;
-      readonly value: boolean;
-    }
-  | {
       readonly kind: 'shopPurchaseParticipation';
       readonly owner: ShopOfferAddress;
       readonly purchased: boolean;

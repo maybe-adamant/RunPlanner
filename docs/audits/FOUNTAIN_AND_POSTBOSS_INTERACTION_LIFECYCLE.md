@@ -201,26 +201,27 @@ and optional room contacts may still change the history carried through the
 selected exit. Well and Shrine purchases do not belong in the pre-fountain
 room-entry interval.
 
-## Planner disposition after schema 49 implementation
+## Planner disposition after schema 59 implementation
 
 The planner now represents the source-backed order through the existing Room
 Action machinery. Ordinary Reprieve occurrences carry the required incoming
 reward and required `useFountain` references in their one
 `roomActions.order`; either order remains legal and Cleanup begins after both.
-Reached nonfinal Postboss completions carry the same completion-owned order:
+Reached Postboss automatic occurrences carry the same occurrence-owned order:
 `useFountain` is required, while an active keepsake replacement atomically
 adds optional `interactKeepsakeRack`. The rack may be ranked before or after
 the fountain, so the exact prefix seen by Aromatic Phial and later contacts is
 preserved. Retain removes the rack participant; a configured final-biome
-Postboss keeps its persisted state dormant and emits no action or blocker.
+Postboss remains fully active at the configured route tail; route extension
+changes only its declaration-fixed exit target.
 
-The shared completion owner and roster also preserve the source distinction
-between the automatic noncombat entry sequence and ranked player actions. The
-player-facing Postboss timeline omits those internal encounter boundaries but
-shows the required fountain, optional rack, and Cleanup · Doors open seam. The
-modeled H Echo Bridge and persistent N Hub remain outside this one-visit
-fountain set. Wells and Shrines remain future Cleanup contacts, not dormant
-planner actions.
+The automatic occurrence and roster preserve the source distinction between
+the noncombat entry sequence and ranked player actions. The player-facing
+Postboss timeline omits those internal encounter boundaries but shows the
+required fountain, optional rack, and Cleanup · Doors open seam. The modeled H
+Echo Bridge and persistent N Hub remain outside this one-visit fountain set.
+Eligible Pool, Well, and Shrine contacts are active later Cleanup actions with
+their exact room-feature ownership.
 
 ## Bounded uncertainties and exclusions
 
@@ -230,8 +231,8 @@ This audit intentionally does not settle:
   authored event when it has no modeled effect; the planner currently treats
   Retain as absence of a rack action;
 - the persistent N Hub fountain's eventual editor surface;
-- complete Well, Shrine, sell-trait-shop, natural-resource, or inspection
-  interaction support;
+- inspection interactions and any feature family not declared by the current
+  room-feature catalog;
 - profile progression for unlocking fountains, racks, Wells, or Shrines; or
 - healing amount, health state, and other combat-resource simulation.
 

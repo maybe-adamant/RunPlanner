@@ -1225,10 +1225,13 @@ predicate used to enumerate its target domain. Hammer rank is independent of
 rarity. No generic trait-effect interpreter, provider switch, or second NPC
 acquisition ledger is introduced.
 
-`pendingSpellDrop` remains an explicit, currently unmodeled Shrine-delivery
-fact. It is false in the supported baseline and must not be inferred from Shop
-state or from the equipped Spell slot. Talent delivery and Surface Shop delivery
-flags likewise remain on their explicit deferred boundaries.
+`pendingSpellDrop` is a derived Shrine-delivery reservation keyed to a
+non-rushed purchased Shrine offer. It blocks later Spell Drop generation until
+ordinary acquisition/use history makes the reservation redundant; it is not
+persisted and must not be inferred from the equipped Spell slot. Shrine
+inventory, delayed delivery, and required pickup settlement use the ordinary
+offer and acquisition authorities. Other unmodeled Talent/Surface-Shop details
+remain outside this contract.
 
 The editor only renders normalized domains and simulation results. It does not
 recompute reward legality.

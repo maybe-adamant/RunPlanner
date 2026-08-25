@@ -309,12 +309,13 @@ delivery:
   vacated Surface Shop slot from the same surface profile, with current names
   excluded before fallback.
 
-Preboss `AutocompleteSurfaceShopDelivery` can later deliver pending purchases.
-The current planner deliberately collapses Gold costs and delayed delivery into
-the selected Shop acquisition. Treating the supported Travel Deal consequence
-as one refill after the first modeled normal Shop purchase is therefore a
-planner timing simplification, not a claim that the two source code paths are
-literally identical.
+Preboss `AutocompleteSurfaceShopDelivery` can deliver pending purchases. Schema
+58 models this source behavior through Shrine-owned delayed delivery and the
+shared final-Preboss completion rule; it does not collapse that delivery into a
+World Shop acquisition. The planner still collapses Gold costs and discounts.
+Travel Deal remains one refill after its first modeled qualifying purchase, a
+timing simplification rather than a claim that the source paths are literally
+identical.
 
 ### Well boundary
 
@@ -385,16 +386,17 @@ Purchased markers edit that membership without adding a second persisted set.
 
 The first accepted purchase identifies the Travel/Gold source slot, but it is
 not a complete payload context. Generated reward legality belongs to the exact
-history prefix at that source action. A future delivery-aware presentation must
-therefore account for earlier same-room acquisitions—including Q's forced
-final-Preboss Hermes delivery—rather than deriving candidates from Shop-entry
-history or a source selector. This disposition does not claim Shrine delivery
-support; that feature remains deferred.
+history prefix at that source action. The current delivery-aware presentation
+accounts for earlier same-room acquisitions—including Q's forced final-Preboss
+Hermes delivery—rather than deriving candidates from Shop-entry history or a
+source selector. Shrine delivery is supported through its distinct source and
+host ownership; this World-Shop audit does not broaden that feature's scope.
 
 The planner continues to simplify resources and timing only where stated:
-costs and discounts are not simulated, Surface Shop delayed delivery remains
-deferred, and World Shop opportunity counts are presented as initial plus
-supplemental entries rather than physical object placement.
+costs and discounts are not simulated, and World Shop opportunity counts are
+presented as initial plus supplemental entries rather than physical object
+placement. Shrine delayed delivery is separately supported under its own audit
+and does not make World Shop timing a generic Store policy.
 
 ## Remaining bounded questions
 
@@ -402,7 +404,7 @@ No game-rule probe is required for All Together's pair selection, the contract
 pedestal pool, or the normal physical World Shop refill; all are explicit in
 source.
 
-Before a future scope includes Wells or exact Surface Shop delivery timing, it
-must separately settle their inventory counts, expedited-delivery choices, and
-room-local chronology. Those questions do not block a World-Shop-focused
-model that explicitly retains the simplification above.
+Future Well scope or a change to exact Surface Shop delivery timing must
+separately settle any newly relevant inventory counts, expedited-delivery
+choices, and room-local chronology. Those questions do not alter the current
+World-Shop model or the supported Shrine delivery boundary.

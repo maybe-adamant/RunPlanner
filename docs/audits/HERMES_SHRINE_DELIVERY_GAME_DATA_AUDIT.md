@@ -322,20 +322,23 @@ enters scope.
 
 ## Current planner disposition
 
-The planner does not yet model Shrine presence, its three-offer inventory,
-pending-delivery countdowns, rush, forced final-Preboss completion, or the
-pending-SpellDrop door block. Existing World Shop and Travel Deal support must
-not be interpreted as implicit Shrine support.
+Schema 58 models Shrine presence at its exact ordinary and forced Postboss
+hosts. Every present Shrine always persists its three visible initial offers:
+there is no Interact boundary or random-inventory bypass, because those names
+participate in host-room outgoing exclusions before purchase. Purchase state is
+sparse per stable generation; delay, rush, pending delivery, delivery host,
+Spell reservation, and runtime fallback are evaluated products rather than
+generic authored conditions.
 
-The forced Q contact nevertheless fixes a future planner requirement. If a
-delivered Hermes pickup and a World Shop purchase coexist in `Q_PreBoss01`,
-their positions in the one room chronology determine the Travel Deal or Gold
-Gold Gold payload context. Delivery before the purchase may add a fourth god
-and lock the pool before a refill is generated; delivery after the purchase
-cannot retroactively constrain that refill. A future payload editor must use
-the triggering action's exact history prefix rather than Shop-entry history or
-only the selected source slot.
+A rushed purchase settles one required pickup at its source action rank. A
+non-rushed purchase counts down only at qualifying encounter-end effects and
+materializes one required pickup at its reached host; an automatic Boss may be
+that host. Source and host detail stay separate, so a route/delay edit retains
+old host detail as repairable state rather than reparenting it. Final Preboss
+completion flushes remaining pending deliveries. If a delivered Hermes pickup
+and World Shop purchase coexist in `Q_PreBoss01`, their shared room-action
+order determines the exact Travel Deal or Gold Gold Gold prefix.
 
-This audit intentionally leaves authored shape and UX open. A later plan must
-decide how much numeric delay choice is useful while preserving the source
-distinction between purchase, delivery materialization, and concrete pickup.
+The planner assumes affordability and keeps other live numeric/economy details
+out of scope. It does not add a Shrine-specific Death Defiance condition,
+fallback control, second chronology, or a global Store abstraction.

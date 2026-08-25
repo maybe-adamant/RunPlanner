@@ -222,13 +222,19 @@ action. A future Q forced Hermes delivery before a World Shop purchase may
 therefore change god-pool closure seen by Travel; the same delivery after the
 purchase cannot change it retroactively.
 
-Wells and Shrines remain unimplemented. The chronology and exact-prefix rule
-are extension constraints, not implicit support for their inventory, purchase,
-rush, delay, delivery, or pickup behavior.
+Wells and Shrines are now implemented through their own feature state while
+sharing this room chronology. Well purchases are immediate paid effects; Shrine
+purchases either rush into a same-rank required pickup or derive a later
+encounter-end delivery host. World Shop and Shrine inventory is fully authored
+before outgoing generation, whereas Pool and Well inventory may remain dormant
+until their feature-local Interact boundary. Each family still uses the one
+occurrence `roomActions.order`; no Shop-private order or generic Store model
+was introduced.
 
 ## Unresolved source questions
 
-Future evidence refreshes for Wells or Shrines should close these gaps:
+Future evidence refreshes for Wells or Shrines should revisit these bounded
+out-of-scope details:
 
 - exact eligible host declarations and concrete `ChallengeSwitchBase`
   capability for each supported biome;
