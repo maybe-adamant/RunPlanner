@@ -33,7 +33,7 @@ import {
 import { semanticOwnerNavigated } from '@planner/state/editorSessionSlice';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 
-import { SteadyGrowthEffectRow } from '@planner/ui/editor/biome/OccurrenceRoomActions';
+import { SteadyGrowthEffectRow } from '@planner/ui/editor/biome/SteadyGrowthEffectRow';
 import {
   createCompleteFGProject,
   createFConversionFrontierProject,
