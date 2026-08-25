@@ -61,13 +61,13 @@ import {
 import type { KeepsakeState } from './keepsakes';
 import { evaluateCallingCardOffer } from './keepsakes';
 import type { ArcanaFearState } from './arcana-fear';
+import type { AcquisitionSource } from './rewards/processing';
 import {
   assessArtificerConversion,
   assessSeaStarDuplication,
   assessTimePieceConversion,
-  type AcquisitionSource,
   type RewardBranchState,
-} from './rewards/processing';
+} from './rewards/branch-primitives';
 
 function emptyEncounterCandidateArtifacts(): EncounterCandidateArtifacts {
   return Object.freeze({

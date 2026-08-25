@@ -49,7 +49,7 @@ import {
   evaluateEchoPomTargetDomain,
   evaluateTraitOfferFocusedOptionCandidate,
 } from '../../src/simulation/candidates/trait-offer';
-import { processEncounterTraitOffer } from '../../src/simulation/rewards/processing';
+import { processEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement';
 import { selectedTraitOfferProducts } from '../../src/simulation/rewards/biome';
 import {
   assessTraitOption,

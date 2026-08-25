@@ -25,8 +25,8 @@ import { materializeAuthoredRoom } from '../../src/simulation/materialization/ro
 import {
   processShopInventory,
   settleShopAcquisitionSite,
-  type RewardBranchState,
 } from '../../src/simulation/rewards/processing';
+import { type RewardBranchState } from '../../src/simulation/rewards/branch-primitives';
 import { attachTraitHistory, foldTraitHistoryEvents } from '../../src/simulation/traits';
 import { createKeepsakeState } from '../../src/simulation/keepsakes';
 import { createDerivedAcquisitionEntryCandidateArtifacts } from '../../src/simulation/candidate-artifacts';

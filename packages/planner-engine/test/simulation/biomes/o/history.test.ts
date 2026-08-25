@@ -1,12 +1,16 @@
-import { catalog } from '@run-planner/hades2-catalog';
+import {
+  catalog } from '@run-planner/hades2-catalog';
 import {
   createAcquisitionEntryAddress,
   createAcquisitionSiteAddress,
   semanticAddressKey,
-} from '@run-planner/engine/authored-project';
+  } from '@run-planner/engine/authored-project';
 import { simulateProject } from '@run-planner/engine/simulation';
-import { describe, expect, it } from 'vitest';
-import { settleOwnedAcquisitionSite } from '../../../../src/simulation/rewards/processing';
+import { describe,
+  expect,
+  it } from 'vitest';
+import { settleOwnedAcquisitionSite,
+} from '../../../../src/simulation/rewards/processing';
 
 import { loadSurfaceNOProject } from '@run-planner/test-fixtures/surface';
 

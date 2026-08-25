@@ -27,10 +27,8 @@ import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candida
 import { evaluateCirceResolutionDomain } from '../../src/simulation/candidates/trait-offer';
 import { createArcanaFearState } from '../../src/simulation/arcana-fear';
 import { selectedTraitOfferProducts } from '../../src/simulation/rewards/biome';
-import {
-  processEncounterTraitOffer,
-  settleEncounterTraitOffer,
-} from '../../src/simulation/rewards/processing';
+import { processEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement';
+import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement';
 import { createTraitHistoryState, evaluateReachedTraitOffer } from '../../src/simulation/traits';
 
 const surface = createRouteAddress('Surface');
