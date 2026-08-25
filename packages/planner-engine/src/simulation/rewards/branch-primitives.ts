@@ -1,37 +1,23 @@
-import type { Catalog } from '../../catalog-schema';
 import { semanticAddressKey, type TraitOfferOwnerAddress } from '../../authored-project/addresses';
 import type { AuthoredRewardState } from '../../authored-project/model';
 import {
-  acquisitionSiteStorageKey,
-  artificerAcquisitionSite,
-  artificerReplacementEntryKey,
-} from '../../authored-project/artificer';
-import {
-  resolveAcquisitionRole,
-  type ProducerLifecyclePointKey,
   type ResolvedRewardOffer,
   type RewardBagState,
   type RewardHistoryState,
   type RewardKernelFacts,
   type ShopGenerationWitness,
+  type ProducerLifecyclePointKey,
 } from '../../reward-kernel';
 import type { CanonicalShopOffer } from '../materialization';
 import type { FindingEvidence } from '../model';
 import type { RewardEvent } from './model';
 import {
-  createTraitHistoryState,
-  hasActiveChaosSemanticTag,
   type ReachedLevelResolutionEvaluation,
   type ReachedTraitOfferEvaluation,
   type TraitHistoryState,
 } from '../traits';
-import { artificerStatus, type ArcanaFearState } from '../arcana-fear';
+import type { ArcanaFearState } from '../arcana-fear';
 import type { KeepsakeState } from '../keepsakes';
-import type {
-  AcquisitionSettlementRole,
-  AcquisitionSource,
-  CanonicalRewardRoom,
-} from './processing';
 
 export interface PendingShopTravelRefill {
   readonly sourceOfferKey: string;
@@ -112,157 +98,6 @@ export interface RewardBranchState {
 export type RewardEventData<Event extends RewardEvent = RewardEvent> = Event extends RewardEvent
   ? Omit<Event, 'historySequence' | 'rewardSequence'>
   : never;
-
-/** Exact Sea Star question at the captured pre-acquisition role frontier. */
-export function assessSeaStarDuplication(
-  catalog: Catalog,
-  branch: RewardBranchState,
-  source: AcquisitionSource,
-  resolution: AcquisitionSettlementRole,
-): { readonly supported: boolean; readonly evidence: FindingEvidence } {
-  const resolved = resolveAcquisitionRole(
-    catalog.rewards,
-    source.offer,
-    resolution.role,
-    resolution.lifecyclePoint,
-  );
-  const acquisition = catalog.rewards.acquisitions.byKey[resolved.acquisition.gameName];
-  const seaStarActive =
-    (branch.traitHistory ?? createTraitHistoryState()).equippedTraits.DoubleRewardBoon !==
-    undefined;
-  const evidence = Object.freeze({
-    ...offerEvidence(source.offer),
-    role: resolution.role,
-    lifecyclePoint: resolution.lifecyclePoint,
-    canDuplicate: acquisition?.canDuplicate === true,
-    seaStarActive,
-    instanceProvenance: source.instanceProvenance,
-    normalDisposition:
-      source.dispositionByAcquisitionRole?.[resolution.role]?.kind !== 'timePiece' &&
-      source.dispositionByAcquisitionRole?.[resolution.role]?.kind !== 'artificer',
-    blocksSeaStarDuplication: source.blocksSeaStarDuplication === true,
-  });
-  return Object.freeze({
-    supported:
-      seaStarActive &&
-      acquisition?.canDuplicate === true &&
-      source.instanceProvenance === 'free' &&
-      source.blocksSeaStarDuplication !== true &&
-      source.dispositionByAcquisitionRole?.[resolution.role]?.kind !== 'timePiece' &&
-      source.dispositionByAcquisitionRole?.[resolution.role]?.kind !== 'artificer',
-    evidence,
-  });
-}
-
-export function withStoredArtificerReplacements(
-  room: CanonicalRewardRoom,
-  source: AcquisitionSource,
-): AcquisitionSource {
-  const dispositions = source.dispositionByAcquisitionRole ?? {};
-  const site = artificerAcquisitionSite(room.origin, source.origin);
-  const entries = room.acquisitionSites[acquisitionSiteStorageKey(site)]?.entries ?? {};
-  const replacements = Object.freeze(
-    Object.fromEntries(
-      Object.entries(dispositions).flatMap(([role, disposition]) =>
-        disposition.kind !== 'artificer'
-          ? []
-          : [[role, entries[artificerReplacementEntryKey(source.origin, role)] ?? null]],
-      ),
-    ),
-  );
-  return Object.freeze({
-    ...source,
-    artificerReplacementByAcquisitionRole: replacements,
-    artificerReplacementSiteByAcquisitionRole: Object.freeze(
-      Object.fromEntries(Object.keys(replacements).map((role) => [role, site])),
-    ),
-  });
-}
-
-/**
- * Shared Time Piece legality.  Settlement, progressive candidates, and the
- * persisted-value finding all ask this exact question at the frozen role
- * frontier; no consumer replays reward settlement to rediscover it.
- */
-export function assessTimePieceConversion(
-  catalog: Catalog,
-  branch: RewardBranchState,
-  source: AcquisitionSource,
-  role: string,
-  lifecyclePoint: ProducerLifecyclePointKey,
-): { readonly supported: boolean; readonly evidence: FindingEvidence } {
-  const acquisition = resolveAcquisitionRole(catalog.rewards, source.offer, role, lifecyclePoint);
-  const blocksGoldConversion =
-    catalog.rewards.rewardTypes.byKey[source.offer.rewardType]?.acquisitionRoles.byKey[role]
-      ?.blocksGoldConversion === true;
-  const goldConversionEligible =
-    catalog.rewards.acquisitions.byKey[acquisition.acquisition.gameName]?.goldConversionEligible ===
-    true;
-  const remainingCharges = branch.keepsakes.timePiece?.remainingCharges ?? 0;
-  const evidence = Object.freeze({
-    ...offerEvidence(source.offer),
-    role,
-    lifecyclePoint,
-    goldConversionEligible,
-    blocksGoldConversion,
-    instanceProvenance: source.instanceProvenance,
-    fatedStatus: branch.keepsakes.fatedStatus,
-    remainingCharges,
-  });
-  return Object.freeze({
-    supported:
-      goldConversionEligible &&
-      !blocksGoldConversion &&
-      source.instanceProvenance === 'free' &&
-      branch.keepsakes.fatedStatus === 'Fated' &&
-      remainingCharges > 0,
-    evidence,
-  });
-}
-
-export function assessArtificerConversion(
-  catalog: Catalog,
-  branch: RewardBranchState,
-  source: AcquisitionSource,
-  resolution: AcquisitionSettlementRole,
-): { readonly supported: boolean; readonly evidence: FindingEvidence } {
-  const acquisition = resolveAcquisitionRole(
-    catalog.rewards,
-    source.offer,
-    resolution.role,
-    resolution.lifecyclePoint,
-  );
-  const artificerConversionEligible =
-    catalog.rewards.acquisitions.byKey[acquisition.acquisition.gameName]
-      ?.artificerConversionEligible === true;
-  const status = hasActiveChaosSemanticTag(
-    branch.traitHistory ?? createTraitHistoryState(),
-    'Barren',
-  )
-    ? undefined
-    : artificerStatus(catalog, branch.arcanaFear);
-  const evidence = Object.freeze({
-    ...offerEvidence(source.offer),
-    role: resolution.role,
-    lifecyclePoint: resolution.lifecyclePoint,
-    artificerConversionEligible,
-    blocksArtificerConversion: resolution.blocksArtificerConversion === true,
-    instanceProvenance: source.instanceProvenance,
-    ...(status === undefined ? {} : { artificerRarity: status.rarity }),
-    artificerCapacity: status?.capacity ?? 0,
-    artificerSpent: status?.spent ?? 0,
-    artificerRemaining: status?.remaining ?? 0,
-  });
-  return Object.freeze({
-    supported:
-      artificerConversionEligible &&
-      resolution.blocksArtificerConversion !== true &&
-      source.instanceProvenance === 'free' &&
-      status !== undefined &&
-      status.remaining > 0,
-    evidence,
-  });
-}
 
 export function freezeRecord<T>(value: Readonly<Record<string, T>>): Readonly<Record<string, T>> {
   return Object.freeze({ ...value });
