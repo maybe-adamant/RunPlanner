@@ -27,7 +27,7 @@ import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
 import { SemanticOwnerMarker } from '@planner/ui/feedback/EvaluationFeedback';
 import { CandidateSelect } from './CandidateSelect';
-import { AnomalyIdentityControls, NaturalChaosMapWorkbench } from './OccurrenceWorkbench';
+import { AnomalyIdentityControls, NaturalChaosMapWorkbench } from './OccurrenceRoomFeatures';
 import { RoomSelector } from './RoomSelector';
 import { RunStateLauncher } from './RunStateSheet';
 import { DoorRewardEditor } from './DoorRewardEditor';
