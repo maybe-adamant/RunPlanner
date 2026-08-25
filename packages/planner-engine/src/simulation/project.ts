@@ -39,7 +39,7 @@ import {
 } from './keepsakes';
 import { createArcanaFearState } from './arcana-fear';
 import { attestPendingHermesSpellDrop } from './hermes-shrine';
-import { createTraitHistoryState } from './traits';
+import { createTraitHistoryState } from './trait-history';
 import {
   createKeepsakeEquipResultAddress,
   createRouteStartKeepsakeSelectionAddress,
@@ -93,8 +93,10 @@ import {
 } from './rewards/authoring-domain';
 import type { RewardProducerCandidateArtifacts } from './rewards/producer-frontiers';
 import type { RoomLifecycleCandidateArtifacts } from './rewards/lifecycle-artifacts';
-import type { TraitOfferCandidateArtifacts } from './candidate-artifacts';
-import type { LevelResolutionCandidateArtifacts } from './candidate-artifacts';
+import type {
+  LevelResolutionCandidateArtifacts,
+  TraitOfferCandidateArtifacts,
+} from './candidates/trait-offer-capability';
 
 export interface BiomeEvaluationBase {
   readonly biomeKey: string;

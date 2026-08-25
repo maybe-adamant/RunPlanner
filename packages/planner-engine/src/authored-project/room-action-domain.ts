@@ -30,7 +30,7 @@ import {
 import type { RoomActionReference, RoomOccurrence } from './model';
 import { encounterEnvelopeSlots, selectedEncounterDefinitionKey } from './room-state/encounters';
 import { activeRoomActionReferences, roomActionKey } from './room-actions';
-import { selectedPickupProducerForEntry } from './traits';
+import { selectedPickupProducerForEntry } from './pickup-producers';
 
 export type RoomActionParticipation = 'required' | 'optional';
 

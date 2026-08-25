@@ -30,7 +30,7 @@ import {
 } from '../addresses';
 import { applyRoomActionCommand } from './room-actions';
 import { reconcileNewRequiredRoomActions } from '../room-action-defaults';
-import { reconcileSelectedPickupProducerState } from '../traits';
+import { reconcileSelectedPickupProducerState } from '../pickup-producers';
 
 /**
  * Generated pickup sites are derived from their exact source acquisition. Run

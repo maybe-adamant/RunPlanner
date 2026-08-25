@@ -12,7 +12,7 @@ import {
 import { factsWithHistory, type RewardKernelFacts } from '@run-planner/engine/reward-kernel';
 import { describe, expect, it } from 'vitest';
 
-import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidate-artifacts';
+import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidates/trait-offer-capability';
 import { evaluateAllTogetherSetDomain } from '../../src/simulation/candidates/trait-offer';
 import {
   processEncounterTraitOffer,

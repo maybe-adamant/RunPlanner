@@ -30,7 +30,7 @@ import {
   levelResolutionEffectFor,
   type RewardKernelFacts,
 } from '@run-planner/engine/reward-kernel';
-import { createLevelResolutionCandidateArtifacts } from '../../src/simulation/candidate-artifacts';
+import { createLevelResolutionCandidateArtifacts } from '../../src/simulation/candidates/trait-offer-capability';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
 import { selectedTraitOfferProducts } from '../../src/simulation/rewards/biome';
 import { settleOwnedAcquisitionSite } from '../../src/simulation/rewards/processing';

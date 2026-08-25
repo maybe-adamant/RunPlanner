@@ -1,9 +1,8 @@
 import type { Catalog, KeepsakeRank, TraitRarity } from '../catalog-schema';
 import type { AuthoredKeepsakeEquipResults } from '../authored-project/model';
 import type { ArcanaFearState } from './arcana-fear';
-import type { TraitHistoryState } from './traits';
-import { assessTraitOption } from './traits';
-import { nextRarity } from './traits';
+import { nextRarity, type TraitHistoryState } from './trait-history';
+import { assessTraitOption } from './trait-authoring-policies';
 import {
   optionIndex,
   type AuthoredGorgonAthenaOffer,
