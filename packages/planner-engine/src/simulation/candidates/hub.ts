@@ -28,8 +28,8 @@ import type { ProjectEvaluation } from '../project';
 import {
   evaluateProgressiveBiome,
   evaluateProgressiveBiomeBeforeClamp,
-  ownsOccurrence,
 } from '../progressive/biome';
+import { ownsOccurrence } from '../progressive/finding-location';
 import { effectiveRouteResourcePlacements } from '../resources';
 import {
   coverageUnavailable,
