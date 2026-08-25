@@ -24,7 +24,7 @@ import type {
 } from '../model';
 import { requireEphyraSideRooms, type RoomOccurrenceRole } from '../room-state/declaration';
 import { createDefaultRoomState } from '../room-state/defaults';
-import { createDefaultRoomEncounterState } from '../room-state/encounters';
+import { createDefaultRoomEncounterState } from '../room-state/encounter-envelope';
 import {
   admitsTerminalTakeoverEnvelope,
   hostContinuationExitForDetourRoom,

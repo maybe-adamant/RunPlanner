@@ -26,7 +26,7 @@ import {
 } from './declaration';
 import { createUnresolvedAcquisitionRewardState, producerLevelEffectSource } from '../traits';
 import { completionOccurrenceId } from '../completion-occurrences';
-import { createDefaultRoomEncounterState } from './encounters';
+import { createDefaultRoomEncounterState } from './encounter-envelope';
 
 function requireCountedStore(
   binding: CountedRewardBinding,

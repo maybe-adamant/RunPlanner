@@ -18,7 +18,7 @@ import {
 import { fieldsDefaultActiveCageCount } from './fields';
 import { roomActionKey } from './room-actions';
 import { additionalExitsForDecision, selectedExitContinuation } from './topology/query';
-import { encounterEnvelopeSlots } from './room-state/encounters';
+import { encounterEnvelopeSlots } from './room-state/encounter-envelope';
 
 function frozen<T>(value: T): T {
   return Object.freeze(value);

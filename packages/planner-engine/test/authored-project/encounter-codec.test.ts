@@ -4,7 +4,6 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createEncounterPhaseAddress,
-  createGorgonPhaseAddress,
   createNemesisRandomEventAddress,
   createOccurrenceAddress,
   createIncomingRewardAddress,
@@ -12,7 +11,6 @@ import {
   createRouteStartKeepsakeSelectionAddress,
   createTraitOfferAddress,
   decodeProjectDocument,
-  encodeProjectDocument,
   roomActionKey,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
@@ -28,40 +26,10 @@ import {
   loadSurfaceNOPProject,
   nOccurrenceIds,
   oOccurrenceIds,
-  pBiome,
   pOccurrenceId,
 } from '@run-planner/test-fixtures/surface';
 
-type JsonRecord = Record<string, unknown>;
-
-function encoded(project: ProjectDocument): JsonRecord {
-  return JSON.parse(encodeProjectDocument(project)) as JsonRecord;
-}
-
-function biome(document: JsonRecord, routeKey: string, biomeKey: string): JsonRecord {
-  const routes = document.routes as JsonRecord[];
-  const route = routes.find((candidate) => candidate.routeKey === routeKey);
-  const plan = (route?.biomes as JsonRecord[] | undefined)?.find(
-    (candidate) => candidate.biomeKey === biomeKey,
-  );
-  if (plan === undefined) throw new Error(`missing ${routeKey}/${biomeKey}`);
-  return plan;
-}
-
-function occurrence(document: JsonRecord, biomeKey: string, occurrenceId: string): JsonRecord {
-  const topology = biome(
-    document,
-    biomeKey === 'F' || biomeKey === 'G' || biomeKey === 'H' || biomeKey === 'I'
-      ? 'Underworld'
-      : 'Surface',
-    biomeKey,
-  ).topology as JsonRecord;
-  const value = (topology.occurrences as JsonRecord[]).find(
-    (candidate) => candidate.occurrenceId === occurrenceId,
-  );
-  if (value === undefined) throw new Error(`missing ${biomeKey} occurrence ${occurrenceId}`);
-  return value;
-}
+import { biome, encoded, occurrence, type JsonRecord } from './support/project-codec-json';
 
 function selections(owner: JsonRecord): JsonRecord {
   return ((owner.encounters as JsonRecord).encounterKeyByPhase ?? {}) as JsonRecord;
@@ -69,10 +37,6 @@ function selections(owner: JsonRecord): JsonRecord {
 
 function figLeafSkips(owner: JsonRecord): JsonRecord {
   return ((owner.encounters as JsonRecord).figLeafSkipByPhase ?? {}) as JsonRecord;
-}
-
-function gorgonResults(owner: JsonRecord): JsonRecord {
-  return ((owner.encounters as JsonRecord).gorgonResultByPhase ?? {}) as JsonRecord;
 }
 
 function arachneStoryProject(): ProjectDocument {
@@ -543,122 +507,6 @@ describe('schema-54 occurrence-owned encounter persistence', () => {
     if (occurrence === undefined) throw new Error('missing P occurrence');
     expect(occurrence.encounters.figLeafSkipByPhase).toEqual({ Intro: false, Combat: false });
     expect(Object.isFrozen(occurrence.encounters.figLeafSkipByPhase)).toBe(true);
-  });
-
-  it('round-trips a strict Gorgon phase map and rejects malformed or misplaced children', () => {
-    const project = loadSurfaceNOPProject();
-    const document = encoded(project);
-    const state = occurrence(document, 'P', pOccurrenceId('P_Combat03', 1, 1));
-    expect(gorgonResults(state)).toEqual({ Combat: { athenaTriggerConditionMet: false } });
-    const decoded = decodeProjectDocument(document, catalog);
-    expect(decoded).toEqual(project);
-
-    const missing = encoded(project);
-    delete (occurrence(missing, 'P', pOccurrenceId('P_Combat03', 1, 1)).encounters as JsonRecord)
-      .gorgonResultByPhase;
-    expect(() => decodeProjectDocument(missing, catalog)).toThrow(
-      'gorgonResultByPhase: must be an object',
-    );
-
-    const extra = encoded(project);
-    gorgonResults(occurrence(extra, 'P', pOccurrenceId('P_Combat03', 1, 1))).Unexpected = {
-      athenaTriggerConditionMet: false,
-    };
-    expect(() => decodeProjectDocument(extra, catalog)).toThrow(
-      'gorgonResultByPhase.Unexpected: is not a project document field',
-    );
-
-    const nonBoolean = encoded(project);
-    gorgonResults(occurrence(nonBoolean, 'P', pOccurrenceId('P_Combat03', 1, 1))).Combat = {
-      athenaTriggerConditionMet: 'true',
-    };
-    expect(() => decodeProjectDocument(nonBoolean, catalog)).toThrow(
-      'athenaTriggerConditionMet: must be a boolean',
-    );
-
-    const trueWithoutChild = encoded(project);
-    gorgonResults(occurrence(trueWithoutChild, 'P', pOccurrenceId('P_Combat03', 1, 1))).Combat = {
-      athenaTriggerConditionMet: true,
-    };
-    expect(() => decodeProjectDocument(trueWithoutChild, catalog)).toThrow(
-      'athenaOffer: is required while the Gorgon condition is active',
-    );
-
-    const phase = createEncounterPhaseAddress(
-      pBiome,
-      { kind: 'occurrence', occurrenceId: pOccurrenceId('P_Combat03', 1, 1) },
-      'Combat',
-    );
-    const enabled = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceGorgonDeathDefianceCondition',
-      phase,
-      value: true,
-    });
-    expect(
-      (
-        gorgonResults(occurrence(encoded(enabled), 'P', pOccurrenceId('P_Combat03', 1, 1)))
-          .Combat as JsonRecord
-      ).athenaOffer,
-    ).toBeNull();
-    const withOffer = applyProjectCommand(enabled, catalog, {
-      kind: 'ReplaceGorgonAthenaOffer',
-      trait: createTraitOfferAddress(createGorgonPhaseAddress(phase), 'gorgonAthena'),
-      value: {
-        traitKeys: [
-          'InvulnerabilityDashBoon',
-          'RetaliateInvulnerabilityBoon',
-          'FocusLastStandBoon',
-        ],
-        selectedOptionKey: 'option1',
-      },
-    });
-    const encodedOffer = gorgonResults(
-      occurrence(encoded(withOffer), 'P', pOccurrenceId('P_Combat03', 1, 1)),
-    ).Combat as JsonRecord;
-    expect(encodedOffer.athenaOffer).toEqual({
-      traitKeys: ['InvulnerabilityDashBoon', 'RetaliateInvulnerabilityBoon', 'FocusLastStandBoon'],
-      selectedOptionKey: 'option1',
-    });
-
-    const malformedOffer = encoded(withOffer);
-    const offerResult = gorgonResults(
-      occurrence(malformedOffer, 'P', pOccurrenceId('P_Combat03', 1, 1)),
-    ).Combat as JsonRecord;
-    const offer = offerResult.athenaOffer as JsonRecord;
-    offer.traitKeys = (offer.traitKeys as unknown[]).slice(0, 1);
-    expect(() => decodeProjectDocument(malformedOffer, catalog)).toThrow(
-      'must contain exactly three distinct Athena trait identities',
-    );
-
-    const duplicateTraits = encoded(withOffer);
-    const duplicateResult = gorgonResults(
-      occurrence(duplicateTraits, 'P', pOccurrenceId('P_Combat03', 1, 1)),
-    ).Combat as JsonRecord;
-    (duplicateResult.athenaOffer as JsonRecord).traitKeys = [
-      'InvulnerabilityDashBoon',
-      'InvulnerabilityDashBoon',
-      'FocusLastStandBoon',
-    ];
-    expect(() => decodeProjectDocument(duplicateTraits, catalog)).toThrow(
-      'must contain exactly three distinct Athena trait identities',
-    );
-
-    for (const extraField of [
-      'giverKey',
-      'kind',
-      'options',
-      'rarificationActions',
-      'deathDefianceConditionMet',
-    ]) {
-      const legacyField = encoded(withOffer);
-      const result = gorgonResults(occurrence(legacyField, 'P', pOccurrenceId('P_Combat03', 1, 1)))
-        .Combat as JsonRecord;
-      (result.athenaOffer as JsonRecord)[extraField] =
-        extraField === 'rarificationActions' || extraField === 'options' ? [] : 'legacy';
-      expect(() => decodeProjectDocument(legacyField, catalog)).toThrow(
-        `athenaOffer.${extraField}: is not a project document field`,
-      );
-    }
   });
 
   it.each(['option0', 'option4', 'row1'])('rejects malformed Calling Card row key %s', (key) => {

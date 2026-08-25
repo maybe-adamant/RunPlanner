@@ -8,7 +8,7 @@ import {
   encounterBindingsBySlot,
   encounterEnvelopeSlots,
   encounterSetForBinding,
-} from '../../authored-project/room-state/encounters';
+} from '../../authored-project/room-state/encounter-envelope';
 import { evaluateRequirement, type RequirementEvaluationContext } from '../../requirements';
 import {
   projectBiomeEncounterKeyCounts,

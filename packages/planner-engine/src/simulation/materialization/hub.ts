@@ -1,5 +1,5 @@
 import type { Catalog, HubDecisionDescriptor, RoomDeclaration } from '../../catalog-schema';
-import { createDefaultRoomEncounterState } from '../../authored-project/room-state/encounters';
+import { createDefaultRoomEncounterState } from '../../authored-project/room-state/encounter-envelope';
 import { alwaysActiveEncounterSlotKeys, resolveEncounterPhases } from '../encounters';
 import {
   createHubDecisionAddress,

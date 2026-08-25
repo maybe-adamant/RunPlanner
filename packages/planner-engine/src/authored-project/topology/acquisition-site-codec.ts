@@ -9,7 +9,7 @@ import {
   type SelectedPickupProducer,
 } from '../pickup-producers';
 import { INFERNAL_CONTRACT_ENTRY_KEY } from '../shop';
-import { decodeNullableRewardState } from '../room-state/codec';
+import { decodeNullableRewardState } from '../room-state/reward-acquisition-codec';
 import { expectExactKeys, expectRecord, failProjectDocument } from '../validation';
 
 export interface AcquisitionSiteOccurrenceContext {

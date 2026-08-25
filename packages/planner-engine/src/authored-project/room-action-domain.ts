@@ -28,7 +28,10 @@ import {
   seaStarDuplicateUsesFreshObject,
 } from './sea-star';
 import type { RoomActionReference, RoomOccurrence } from './model';
-import { encounterEnvelopeSlots, selectedEncounterDefinitionKey } from './room-state/encounters';
+import {
+  encounterEnvelopeSlots,
+  selectedEncounterDefinitionKey,
+} from './room-state/encounter-envelope';
 import { activeRoomActionReferences, roomActionKey } from './room-actions';
 import { selectedPickupProducerForEntry } from './pickup-producers';
 
