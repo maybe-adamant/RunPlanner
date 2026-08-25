@@ -27,9 +27,9 @@ import {
   applyExperimentalHammerEquipResult,
   applyJeweledPomEquipResult,
   initializeRewardBranches,
-  processEncounterTraitOffer,
   publicRewardBranch,
 } from '../../src/simulation/rewards/processing';
+import { processEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement';
 import { evaluateBiomeRewardsAssemblyInternal } from '../../src/simulation/rewards/biome';
 import { attachTraitHistory, foldTraitHistoryEvents } from '../../src/simulation/traits';
 import type { RewardBranch } from '../../src/simulation/rewards/model';

@@ -44,10 +44,8 @@ import {
   assessGorgonEligibility,
   attestGorgonBranchState,
 } from '../../src/simulation/keepsakes';
-import {
-  initializeRewardBranches,
-  processEncounterTraitOffer,
-} from '../../src/simulation/rewards/processing';
+import { initializeRewardBranches } from '../../src/simulation/rewards/processing';
+import { processEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement';
 
 import { attachTraitHistory, foldTraitHistoryEvents } from '../../src/simulation/traits';
 import { initializeTestRewardBranches } from '../support/arcana-fear';

@@ -6,7 +6,7 @@ import {
 } from '@run-planner/engine/authored-project';
 import { simulateProject } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
-import { settleOwnedAcquisitionSite } from '../../../../src/simulation/rewards/processing';
+import { settleOwnedAcquisitionSite } from '../../../../src/simulation/rewards/acquisition-settlement';
 
 import { loadSurfaceNOProject } from '@run-planner/test-fixtures/surface';
 

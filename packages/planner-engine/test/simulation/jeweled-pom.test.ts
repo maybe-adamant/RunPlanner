@@ -10,10 +10,8 @@ import {
   type AuthoredTraitOffer,
 } from '@run-planner/engine/authored-project';
 
-import {
-  applyJeweledPomEquipResult,
-  processEncounterTraitOffer,
-} from '../../src/simulation/rewards/processing';
+import { applyJeweledPomEquipResult } from '../../src/simulation/rewards/processing';
+import { processEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement';
 import { selectedTraitOfferProducts } from '../../src/simulation/rewards/biome';
 import {
   applyKeepsakeDisposition,

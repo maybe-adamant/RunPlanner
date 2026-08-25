@@ -10,7 +10,6 @@ import {
   type OccurrenceAddress,
 } from '../authored-project/addresses';
 import type { Catalog } from '../catalog-schema';
-import type { AuthoredTraitOffer } from '../authored-project/traits';
 import type { ArcanaFearState } from './arcana-fear';
 import type { RoomTargetCandidateContext } from './generation/model';
 import {
@@ -24,7 +23,6 @@ import {
 import type { EncounterCandidateArtifacts } from './encounters';
 import {
   type TraitHistoryState,
-  type TraitOfferContext,
   type ReachedSteadyGrowthThreshold,
   type SteadyGrowthTargetAssessment,
   assessSteadyGrowthTarget,
@@ -36,13 +34,13 @@ import {
   type TraitOfferCandidateArtifacts,
 } from './candidates/trait-offer-capability';
 import type { KeepsakeState } from './keepsakes';
+import type { AcquisitionSource } from './rewards/acquisition-settlement';
 import {
   assessArtificerConversion,
   assessSeaStarDuplication,
   assessTimePieceConversion,
-  type AcquisitionSource,
-  type RewardBranchState,
-} from './rewards/processing';
+} from './rewards/acquisition-settlement';
+import type { RewardBranchState } from './rewards/branch-primitives';
 
 function emptyEncounterCandidateArtifacts(): EncounterCandidateArtifacts {
   return Object.freeze({
@@ -376,7 +374,7 @@ function createEmptyStygianWellCandidateArtifacts(): StygianWellCandidateArtifac
 }
 
 export interface DerivedAcquisitionEntryCandidateCapability {
-  readonly kind: import('./rewards/processing').DerivedAcquisitionEntryFrontier['kind'];
+  readonly kind: import('./rewards/acquisition-settlement').DerivedAcquisitionEntryFrontier['kind'];
   readonly sourceOfferKey?: string;
   readonly slotIndex?: number;
   readonly rewardTypes?: readonly string[];
@@ -396,7 +394,7 @@ export interface DerivedAcquisitionEntryCandidateArtifacts {
   }[];
 }
 export function attestDerivedAcquisitionEntryCandidateCapability(
-  frontiers: readonly import('./rewards/processing').DerivedAcquisitionEntryFrontier[],
+  frontiers: readonly import('./rewards/acquisition-settlement').DerivedAcquisitionEntryFrontier[],
 ): DerivedAcquisitionEntryCandidateCapability | undefined {
   const first = frontiers[0];
   if (first === undefined) return undefined;
@@ -433,7 +431,7 @@ export function attestDerivedAcquisitionEntryCandidateCapability(
 export function createDerivedAcquisitionEntryCandidateArtifacts(
   contexts: ReadonlyMap<
     string,
-    readonly import('./rewards/processing').DerivedAcquisitionEntryFrontier[]
+    readonly import('./rewards/acquisition-settlement').DerivedAcquisitionEntryFrontier[]
   >,
 ): DerivedAcquisitionEntryCandidateArtifacts {
   const privateContexts = new Map(

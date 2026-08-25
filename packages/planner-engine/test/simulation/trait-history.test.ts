@@ -1,83 +1,35 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
-  applyProjectCommand,
   createBiomeAddress,
   createIncomingRewardAddress,
-  createNaturalSelectionResultAddress,
-  createTraitAcquisitionTargetAddress,
   createOccurrenceAddress,
   createOccurrenceId,
-  createTraitOfferAddress,
-  createSteadyGrowthOutcomeAddress,
-  semanticAddressKey,
   type AuthoredTraitOffer,
   type SemanticAddress,
 } from '@run-planner/engine/authored-project';
 import { factsWithHistory, type RewardKernelFacts } from '@run-planner/engine/reward-kernel';
 import {
   assessTraitOption,
-  assessTraitOffer,
-  assessSelectedTargetedAcquisition,
-  assessTraitOfferComposition,
-  assessTraitOfferDomainComposition,
   createTraitHistoryState,
   evaluateReachedTraitOffer,
   foldTraitHistoryEvents,
-  hasEffectiveInRunUpgrade,
-  isPomEligibleTrait,
   isPomUpgradeTarget,
-  assessNaturalSelectionTargets,
-  assessRansom,
   recordReachedTraitOffer,
-  resolveRuntimeOfferFallbackTraitKey,
   promoteArcana,
   isAspectSpellDropDormant,
   traitCandidates,
   boonRarityFactsForOffer,
-  traitOfferCompositionDomains,
-  traitOfferStartingDraft,
-  targetedAcquisitionTargetKeys,
-  type ProjectEvaluation,
-  type SelectedTraitOfferAssessment,
   type TraitHistoryState,
   type TraitOfferEvent,
   type TraitLevelMutationEvent,
 } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
-
-import {
-  createGoldenFGHIProject,
-  goldenFBiome,
-  goldenFStartId,
-  goldenFOccurrenceId,
-} from '@run-planner/test-fixtures/underworld';
-import { loadSurfaceNOPQProject } from '@run-planner/test-fixtures/surface';
-
-import { initializeTestRewardBranches } from '../support/arcana-fear';
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
 import { createArcanaFearState } from '../../src/simulation/arcana-fear';
-import {
-  createTraitOfferCandidateArtifacts,
-} from '../../src/simulation/candidates/trait-offer-capability';
-import { createSteadyGrowthCandidateArtifacts } from '../../src/simulation/candidate-artifacts';
-import { evaluateNaturalSelectionResultCandidate } from '../../src/simulation/candidates/trait-offer';
-import {
-  initializeRewardBranches,
-  settleEncounterTraitOffer,
-  settleOwnedAcquisitionSite,
-} from '../../src/simulation/rewards/processing';
-import {
-  evaluateTraitOfferCandidate,
-  type TraitOfferCandidateQuery,
-} from '../../src/simulation/candidates/trait-offer';
-import {
-  createPreparedProjectCandidateSession,
-  simulateProject,
-  simulateProjectAssembly,
-} from '../../src/simulation';
+import { initializeRewardBranches } from '../../src/simulation/rewards/processing';
+import { settleOwnedAcquisitionSite } from '../../src/simulation/rewards/acquisition-settlement';
 
 const owner = { kind: 'project' } as SemanticAddress;
-const naturalSelectionSlots = ['Melee', 'Secondary', 'Ranged', 'Rush', 'Mana'] as const;
 
 function settleTestRoomReward(
   biome: ReturnType<typeof createBiomeAddress>,
@@ -121,200 +73,6 @@ function levelMutation(
   };
 }
 
-function reachedTraitOffers(
-  evaluation: ProjectEvaluation,
-): readonly SelectedTraitOfferAssessment[] {
-  return Object.freeze(
-    evaluation.routes.flatMap((route) =>
-      route.biomes.flatMap((biome) =>
-        'rewards' in biome ? biome.rewards.selectedTraitOffers : [],
-      ),
-    ),
-  );
-}
-
-// Source-expected Hammer memberships and aspect restrictions from
-// docs/audits/traits/TRAIT_OFFER_POOLS_AND_DEPENDENCIES.md.  This is intentionally
-// independent of the normalized catalog so the 92 x 24 candidate closure
-// cannot pass by comparing the evaluator with its own compatibility data.
-const expectedHammerTraitsByWeapon = {
-  WeaponStaffSwing: [
-    'StaffDoubleAttackTrait',
-    'StaffLongAttackTrait',
-    'StaffDashAttackTrait',
-    'StaffTripleShotTrait',
-    'StaffJumpSpecialTrait',
-    'StaffExAoETrait',
-    'StaffAttackRecoveryTrait',
-    'StaffFastSpecialTrait',
-    'StaffExHealTrait',
-    'StaffSecondStageTrait',
-    'StaffPowershotTrait',
-    'StaffOneWayAttackTrait',
-    'StaffRaiseDeadBigTrait',
-    'StaffRaiseDeadDoubleTrait',
-    'StaffLoneShadeRespawnTrait',
-    'StaffLoneShadeRallyTrait',
-  ],
-  WeaponDagger: [
-    'DaggerBlinkAoETrait',
-    'DaggerSpecialJumpTrait',
-    'DaggerSpecialLineTrait',
-    'DaggerRapidAttackTrait',
-    'DaggerSpecialConsecutiveTrait',
-    'DaggerBackstabTrait',
-    'DaggerSpecialReturnTrait',
-    'DaggerSpecialFanTrait',
-    'DaggerAttackFinisherTrait',
-    'DaggerFinalHitTrait',
-    'DaggerChargeStageSkipTrait',
-    'DaggerDashAttackTripleTrait',
-    'DaggerTripleBuffTrait',
-    'DaggerTripleRepeatWomboTrait',
-    'DaggerTripleHomingSpecialTrait',
-  ],
-  WeaponAxe: [
-    'AxeSpinSpeedTrait',
-    'AxeChargedSpecialTrait',
-    'AxeAttackRecoveryTrait',
-    'AxeMassiveThirdStrikeTrait',
-    'AxeThirdStrikeTrait',
-    'AxeRangedWhirlwindTrait',
-    'AxeFreeSpinTrait',
-    'AxeArmorTrait',
-    'AxeBlockEmpowerTrait',
-    'AxeSecondStageTrait',
-    'AxeDashAttackTrait',
-    'AxeSturdyTrait',
-    'AxeRallyFrenzyTrait',
-    'AxeRallyFirstStrikeTrait',
-  ],
-  WeaponTorch: [
-    'TorchExSpecialCountTrait',
-    'TorchSpecialSpeedTrait',
-    'TorchAttackSpeedTrait',
-    'TorchSpecialLineTrait',
-    'TorchSpecialImpactTrait',
-    'TorchMoveSpeedTrait',
-    'TorchSplitAttackTrait',
-    'TorchEnhancedAttackTrait',
-    'TorchDiscountExAttackTrait',
-    'TorchLongevityTrait',
-    'TorchOrbitPointTrait',
-    'TorchSpinAttackTrait',
-    'TorchAutofireSprintTrait',
-  ],
-  WeaponLob: [
-    'LobAmmoTrait',
-    'LobAmmoMagnetismTrait',
-    'LobRushArmorTrait',
-    'LobSpreadShotTrait',
-    'LobSpecialSpeedTrait',
-    'LobSturdySpecialTrait',
-    'LobOneSideTrait',
-    'LobInOutSpecialExTrait',
-    'LobStraightShotTrait',
-    'LobPulseAmmoTrait',
-    'LobPulseAmmoCollectTrait',
-    'LobGrowthTrait',
-    'LobGunOverheatTrait',
-    'LobGunBounceTrait',
-    'LobGunSpecialBounceTrait',
-    'LobGunAttackRangeTrait',
-    'LobGunAttackDoublerTrait',
-  ],
-  WeaponSuit: [
-    'SuitArmorTrait',
-    'SuitAttackSpeedTrait',
-    'SuitAttackSizeTrait',
-    'SuitAttackRangeTrait',
-    'SuitFullChargeTrait',
-    'SuitDashAttackTrait',
-    'SuitSpecialJumpTrait',
-    'SuitSpecialStartUpTrait',
-    'SuitSpecialAutoTrait',
-    'SuitSpecialBlockTrait',
-    'SuitSpecialDiscountTrait',
-    'SuitSpecialConsecutiveHitTrait',
-    'SuitComboForwardRocketTrait',
-    'SuitComboBlockBuffTrait',
-    'SuitComboDoubleSpecialTrait',
-    'SuitComboDashAttackTrait',
-    'SuitPowershotTrait',
-  ],
-} as const satisfies Readonly<Record<string, readonly string[]>>;
-
-const expectedHammerRestrictedAspects: Readonly<Record<string, readonly string[]>> = {
-  StaffDoubleAttackTrait: ['BaseStaffAspect', 'StaffClearCastAspect', 'StaffSelfHitAspect'],
-  StaffLongAttackTrait: ['BaseStaffAspect', 'StaffClearCastAspect', 'StaffSelfHitAspect'],
-  StaffDashAttackTrait: ['BaseStaffAspect', 'StaffClearCastAspect', 'StaffSelfHitAspect'],
-  StaffExAoETrait: ['BaseStaffAspect', 'StaffClearCastAspect', 'StaffSelfHitAspect'],
-  StaffOneWayAttackTrait: ['BaseStaffAspect', 'StaffClearCastAspect', 'StaffSelfHitAspect'],
-  StaffRaiseDeadBigTrait: ['StaffRaiseDeadAspect'],
-  StaffRaiseDeadDoubleTrait: ['StaffRaiseDeadAspect'],
-  StaffLoneShadeRespawnTrait: ['StaffRaiseDeadAspect'],
-  StaffLoneShadeRallyTrait: ['StaffRaiseDeadAspect'],
-  DaggerDashAttackTripleTrait: [
-    'DaggerBackstabAspect',
-    'DaggerHomingThrowAspect',
-    'DaggerBlockAspect',
-  ],
-  DaggerTripleBuffTrait: ['DaggerTripleAspect'],
-  DaggerTripleRepeatWomboTrait: ['DaggerTripleAspect'],
-  DaggerTripleHomingSpecialTrait: ['DaggerTripleAspect'],
-  AxeMassiveThirdStrikeTrait: ['AxeRecoveryAspect', 'AxeArmCastAspect', 'AxePerfectCriticalAspect'],
-  AxeThirdStrikeTrait: ['AxeRecoveryAspect', 'AxeArmCastAspect', 'AxePerfectCriticalAspect'],
-  AxeRallyFrenzyTrait: ['AxeRallyAspect'],
-  AxeRallyFirstStrikeTrait: ['AxeRallyAspect'],
-  TorchExSpecialCountTrait: [
-    'TorchSpecialDurationAspect',
-    'TorchDetonateAspect',
-    'TorchAutofireAspect',
-  ],
-  TorchAttackSpeedTrait: [
-    'TorchSpecialDurationAspect',
-    'TorchSprintRecallAspect',
-    'TorchDetonateAspect',
-  ],
-  TorchDiscountExAttackTrait: [
-    'TorchSpecialDurationAspect',
-    'TorchSprintRecallAspect',
-    'TorchDetonateAspect',
-  ],
-  TorchLongevityTrait: [
-    'TorchSpecialDurationAspect',
-    'TorchSprintRecallAspect',
-    'TorchDetonateAspect',
-  ],
-  TorchSplitAttackTrait: ['TorchSpecialDurationAspect', 'TorchAutofireAspect'],
-  TorchAutofireSprintTrait: ['TorchAutofireAspect'],
-  LobAmmoTrait: ['LobAmmoBoostAspect', 'LobCloseAttackAspect', 'LobImpulseAspect'],
-  LobAmmoMagnetismTrait: ['LobAmmoBoostAspect', 'LobCloseAttackAspect', 'LobImpulseAspect'],
-  LobSpreadShotTrait: ['LobAmmoBoostAspect', 'LobCloseAttackAspect', 'LobImpulseAspect'],
-  LobOneSideTrait: ['LobAmmoBoostAspect', 'LobCloseAttackAspect', 'LobImpulseAspect'],
-  LobStraightShotTrait: ['LobAmmoBoostAspect', 'LobCloseAttackAspect', 'LobImpulseAspect'],
-  LobPulseAmmoTrait: ['LobAmmoBoostAspect', 'LobCloseAttackAspect', 'LobImpulseAspect'],
-  LobPulseAmmoCollectTrait: ['LobAmmoBoostAspect', 'LobCloseAttackAspect', 'LobImpulseAspect'],
-  LobGrowthTrait: ['LobAmmoBoostAspect', 'LobCloseAttackAspect', 'LobImpulseAspect'],
-  LobGunOverheatTrait: ['LobGunAspect'],
-  LobGunBounceTrait: ['LobGunAspect'],
-  LobGunSpecialBounceTrait: ['LobGunAspect'],
-  LobGunAttackRangeTrait: ['LobGunAspect'],
-  LobGunAttackDoublerTrait: ['LobGunAspect'],
-  SuitDashAttackTrait: ['BaseSuitAspect', 'SuitMarkCritAspect', 'SuitHexAspect'],
-  SuitSpecialJumpTrait: ['BaseSuitAspect', 'SuitMarkCritAspect', 'SuitHexAspect'],
-  SuitSpecialStartUpTrait: ['BaseSuitAspect', 'SuitMarkCritAspect', 'SuitHexAspect'],
-  SuitSpecialAutoTrait: ['BaseSuitAspect', 'SuitMarkCritAspect', 'SuitHexAspect'],
-  SuitSpecialBlockTrait: ['BaseSuitAspect', 'SuitMarkCritAspect', 'SuitHexAspect'],
-  SuitSpecialDiscountTrait: ['BaseSuitAspect', 'SuitMarkCritAspect', 'SuitHexAspect'],
-  SuitSpecialConsecutiveHitTrait: ['BaseSuitAspect', 'SuitMarkCritAspect', 'SuitHexAspect'],
-  SuitComboForwardRocketTrait: ['SuitComboAspect'],
-  SuitComboBlockBuffTrait: ['SuitComboAspect'],
-  SuitComboDoubleSpecialTrait: ['SuitComboAspect'],
-  SuitComboDashAttackTrait: ['SuitComboAspect'],
-  SuitPowershotTrait: ['SuitComboAspect'],
-};
-
 function baseFacts(): RewardKernelFacts {
   return {
     requirements: {
@@ -344,14 +102,6 @@ function baseFacts(): RewardKernelFacts {
       flags: { allSpellInvested: false, pendingSpellDrop: false },
     },
   };
-}
-
-function historyWith(
-  giverKey: string,
-  traitKey: string,
-  rarity?: TraitOfferEvent['options'][number]['rarity'],
-) {
-  return historyFrom([{ giverKey, traitKey, rarity }]);
 }
 
 function historyFrom(
@@ -388,10 +138,6 @@ function historyFrom(
       };
     }),
   );
-}
-
-function findingCode(traitKey: string, history: ReturnType<typeof createTraitHistoryState>) {
-  return assessTraitOption(catalog, traitKey, history).findings[0]?.code;
 }
 
 describe('Selene Spell equipment chronology', () => {
