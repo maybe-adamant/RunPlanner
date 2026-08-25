@@ -545,19 +545,29 @@ not share raw `unknown` objects beyond the decoder that owns their exact shape.
 
 **Owner and product.** Decompose `simulation/generation/biome.ts` into:
 
-- normal candidate pools, counts, requirements, and force support;
+- normal candidate pools, counts, requirements, force support, and ordinary
+  selected-target traversal;
 - Fields cage-outcome support;
-- target frontier/context preparation;
-- takeover shape and candidate evaluation; and
+- one joint first-target/takeover support owner for the combined ordinary and
+  takeover force pool, first-target frontier context, takeover shape, and
+  takeover candidate evaluation; and
 - final biome-generation assembly.
 
 Each evaluator receives immutable generation history/frontier inputs and
 returns its complete support product. Assembly preserves declaration order,
 finding chronology, and the existing public generation result.
 
+The joint first-target/takeover boundary is intentional. The game-rule product
+computes one force pool from ordinary and takeover candidates before both the
+frontier query and takeover evaluation consume it; splitting those consumers
+into independent owners would create a false product cycle or duplicate force
+policy.
+
 **Tests.** Partition F/G generation and route-detour cases by normal, Fields,
 and takeover owner while retaining one assembly witness per affected biome.
-Run the focused suites and the changed-test lane.
+The joint-owner tests retain the mixed ordinary/takeover force-pool and
+all-exit aggregate-cap matrices without duplicating them in assembly tests. Run
+the focused suites and the changed-test lane.
 
 **Deletion.** Remove extracted implementations from `generation/biome.ts`; do
 not add a generation service, hidden cache, or second room-support evaluator.
