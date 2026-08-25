@@ -8,7 +8,8 @@ import type {
 import { roomActionKey } from '../room-actions';
 import { decodeRoomActionState } from './room-action-codec';
 import { assertStygianWellPurchaseActionClosure, decodeStygianWellState } from './well-codec';
-import { decodeNullableRewardState, decodeRoomState } from '../room-state/codec';
+import { decodeNullableRewardState } from '../room-state/reward-acquisition-codec';
+import { decodeRoomState } from '../room-state/codec';
 import { decodeRoomEncounterState } from '../room-state/encounters';
 import { createBiomeAddress, semanticAddressKey } from '../addresses';
 import { authoredAcquisitionSources } from '../acquisition-sources';

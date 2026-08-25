@@ -6,7 +6,7 @@ import type {
   RoomDeclaration,
 } from '../../catalog-schema';
 import type { CountedRewardBinding, ShopRewardBinding } from '../../reward-kernel/bindings';
-import { encounterEnvelopeSlots } from './encounters';
+import { encounterEnvelopeSlots } from './encounter-envelope';
 import { failProjectDocument } from '../validation';
 import type { TraitOfferLoadoutContext } from '../traits';
 

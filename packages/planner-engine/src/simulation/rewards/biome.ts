@@ -77,7 +77,7 @@ import {
 import {
   encounterEnvelopeSlots,
   selectedEncounterDefinitionKey,
-} from '../../authored-project/room-state/encounters';
+} from '../../authored-project/room-state/encounter-envelope';
 import {
   findShopPartialGenerationWitnesses,
   applyConcreteAcquisition,

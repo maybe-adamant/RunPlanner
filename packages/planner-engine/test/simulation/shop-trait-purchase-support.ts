@@ -31,7 +31,7 @@ import { describe, expect, it } from 'vitest';
 import { createDefaultRoomState } from '../../src/authored-project/room-state/defaults';
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
 import { createTestArcanaFearState, initializeTestRewardBranches } from '../support/arcana-fear';
-import { createDefaultRoomEncounterState } from '../../src/authored-project/room-state/encounters';
+import { createDefaultRoomEncounterState } from '../../src/authored-project/room-state/encounter-envelope';
 import { createNormalDispositionByAcquisitionRole } from '../../src/authored-project/reward-state';
 import { createUnresolvedAcquisitionRewardState } from '../../src/authored-project/traits';
 import {

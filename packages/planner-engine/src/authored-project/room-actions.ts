@@ -1,7 +1,10 @@
 import type { RoomActionReference, RoomActionState } from './model';
 import type { Catalog } from '../catalog-schema';
 import type { RoomOccurrence } from './model';
-import { encounterEnvelopeSlots, selectedEncounterDefinitionKey } from './room-state/encounters';
+import {
+  encounterEnvelopeSlots,
+  selectedEncounterDefinitionKey,
+} from './room-state/encounter-envelope';
 import { semanticAddressKey } from './addresses';
 import { parseArtificerReplacementEntryKey } from './artificer';
 import { parseHermesShrineDeliveryEntryKey } from './hermes-shrine-delivery';
