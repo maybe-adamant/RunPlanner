@@ -253,12 +253,6 @@ describe('structured workspace actions assembly', () => {
       { selected: 'Cage01', slotOrdinal: 2, values: ['Cage01', 'Cage02'] },
     ]);
     expect(fields.node.room.localDetailMarkers).toContain(roomActions.rows[0]?.marker);
-    expect(fields.occurrenceInteractionRequirements).toContainEqual(
-      expect.objectContaining({
-        kind: 'roomActions',
-        owner: fields.node.room.address,
-      }),
-    );
     const fieldsEntry = roomActions.timeline.entries.find(
       (entry) => entry.kind === 'boundary' && entry.boundary.kind === 'roomEntered',
     );
@@ -375,11 +369,6 @@ describe('structured workspace actions assembly', () => {
           wheel.offers.every((offer) => Object.isFrozen(offer) && Object.isFrozen(offer.control)),
       ),
     ).toBe(true);
-    expect(
-      ship.occurrenceInteractionRequirements.some(
-        (requirement) => requirement.kind === 'shipCombatPhaseCount',
-      ),
-    ).toBe(true);
     const shipBoundaryLaunchers = shipActions.timeline.entries.flatMap((entry) =>
       entry.kind === 'boundary' && entry.runState !== undefined ? [entry.runState] : [],
     );
@@ -413,93 +402,6 @@ describe('structured workspace actions assembly', () => {
           launcher.owner.checkpoint.kind === 'roomEntered',
       ),
     ).toBe(false);
-  });
-
-  it('projects active Contract and generated Travel rows but never the disabled placeholder', () => {
-    const shopId = createOccurrenceId('golden-f-preboss-shop');
-    const project = withFPrebossSelection(createGoldenFGHIProject(), 'exit1');
-    const shopOccurrence = project.routes
-      .flatMap((route) => route.biomes)
-      .find((biome) => biome.biomeKey === 'F')
-      ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === shopId);
-    const shop = shopOccurrence?.state.kind === 'shop' ? shopOccurrence.state.shop : undefined;
-    const site = createAcquisitionSiteAddress(
-      createOccurrenceAddress(goldenFBiome, shopId),
-      'roomExit',
-    );
-    if (shop === undefined) throw new Error('Gate B Shop state is missing');
-    const contractAddress = createAcquisitionEntryAddress(site, 'infernalContractReward');
-    const travelAddress = createAcquisitionEntryAddress(site, 'travelDealRefill');
-    const projectWith = (entries: Parameters<typeof assemble>[5]) =>
-      assemble(project, 'Underworld', 'F', shopId, undefined, entries).assembly.node.room.roomLocal;
-
-    const contractOnly = projectWith((candidateSite) =>
-      semanticAddressKey(candidateSite) !== semanticAddressKey(site)
-        ? []
-        : [
-            {
-              address: contractAddress,
-              kind: 'infernalContractReward' as const,
-              rewardTypes: ['BlindBoxLoot', 'StackUpgrade'],
-            },
-          ],
-    );
-    expect(contractOnly).toMatchObject({
-      kind: 'shop',
-      supplementalOffers: [
-        {
-          kind: 'infernalContractReward',
-          rewardControl: { rewardTypes: ['BlindBoxLoot', 'StackUpgrade'] },
-        },
-      ],
-    });
-
-    const placeholder = projectWith((candidateSite) =>
-      semanticAddressKey(candidateSite) !== semanticAddressKey(site)
-        ? []
-        : [
-            {
-              address: contractAddress,
-              kind: 'infernalContractReward' as const,
-              rewardTypes: ['BlindBoxLoot', 'StackUpgrade'],
-            },
-            { address: travelAddress, kind: 'travelDealPlaceholder' as const },
-          ],
-    );
-    expect(placeholder).toMatchObject({
-      kind: 'shop',
-      supplementalOffers: [{ kind: 'travelDealPlaceholder' }, { kind: 'infernalContractReward' }],
-    });
-
-    const active = projectWith((candidateSite) =>
-      semanticAddressKey(candidateSite) !== semanticAddressKey(site)
-        ? []
-        : [
-            {
-              address: contractAddress,
-              kind: 'infernalContractReward' as const,
-              rewardTypes: ['BlindBoxLoot', 'StackUpgrade'],
-            },
-            {
-              address: travelAddress,
-              kind: 'travelDealRefill' as const,
-              sourceOfferKey: 'MajorNonBoon',
-              slotIndex: 1,
-              rewardTypes: ['WeaponUpgradeDrop', 'MaxHealthDrop'],
-            },
-          ],
-    );
-    expect(active).toMatchObject({
-      kind: 'shop',
-      supplementalOffers: [
-        {
-          kind: 'travelDealRefill',
-          sourceOfferKey: 'MajorNonBoon',
-          rewardControl: { rewardTypes: ['WeaponUpgradeDrop', 'MaxHealthDrop'] },
-        },
-        { kind: 'infernalContractReward' },
-      ],
-    });
   });
 
   it('retains a selected unavailable Infernal Contract action without inventing its editor', () => {

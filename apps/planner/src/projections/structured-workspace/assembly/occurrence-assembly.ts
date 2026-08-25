@@ -52,17 +52,15 @@ import {
   type WorkspaceOccurrenceProjectionFacts,
 } from './occurrence-reward-assembly';
 export type { WorkspaceOccurrenceProjectionFacts } from './occurrence-reward-assembly';
-import { assembleOccurrenceRewardLocal } from './occurrence-room-assembly';
+import { assembleOccurrenceRewardLocal } from './occurrence-room-facts';
 import {
   assembleOccurrenceActions,
   roomTabForPhase,
   rewardChildMarkers,
 } from './occurrence-actions-assembly';
 import { assembleOccurrenceFeatures } from './occurrence-features-assembly';
-import {
-  occurrenceInteractionRequirements,
-  roomWorkbenchPresentation,
-} from './occurrence-room-assembly';
+import { occurrenceInteractionRequirements } from './occurrence-interaction-requirements';
+import { roomWorkbenchPresentation } from './occurrence-room-workbench';
 
 /** Exact authored/evaluated inputs for one room-local workspace product. */
 export interface WorkspaceOccurrenceAssemblyInput {
