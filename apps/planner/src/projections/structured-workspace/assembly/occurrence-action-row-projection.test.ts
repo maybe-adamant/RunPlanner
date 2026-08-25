@@ -65,8 +65,15 @@ describe('structured workspace actions assembly', () => {
       (entry) => entry.kind === 'boundary' && entry.boundary.kind === 'encounterEnd',
     );
     const steadyIndex = phase.timeline.findIndex((entry) => entry.kind === 'automaticEffect');
+    const encounterEnd = phase.timeline.find(
+      (entry) => entry.kind === 'boundary' && entry.boundary.kind === 'encounterEnd',
+    );
     expect(endIndex).toBeGreaterThanOrEqual(0);
     expect(steadyIndex).toBe(endIndex + 1);
+    expect(encounterEnd).toMatchObject({
+      checkpointKey: 'combat:Combat1',
+      label: 'End encounter',
+    });
     expect(assembled.assembly.node.room.roomActions?.steadyGrowth).toEqual([
       expect.objectContaining({ address: outcome, targetTraitKey: 'ApolloWeaponBoon' }),
     ]);
