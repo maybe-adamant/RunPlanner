@@ -8,7 +8,6 @@ import type {
   RoomLifecycleStructurePhase,
   RoomLifecycleStructurePoint,
 } from '../../authored-project/room-action-domain';
-import type { Catalog } from '../../catalog-schema';
 import { scopeRoomLifecycleStructure } from '../../authored-project/room-action-domain';
 import { roomActionKey } from '../../authored-project/room-actions';
 import { semanticAddressKey } from '../../authored-project/addresses';

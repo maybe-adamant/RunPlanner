@@ -47,7 +47,7 @@ Use the smallest authority that answers the question:
   application/editor boundaries.
 - [Source audit map](docs/audits/README.md) routes source evidence by subject.
 - [Progress](docs/progress/IMPLEMENTATION_PROGRESS.md) records durable delivery
-  context and current status.
+  history.
 
 ## Quickstart
 

@@ -9,9 +9,10 @@ export default mergeConfig(
   defineConfig({
     test: {
       include: [...heavyTestFiles],
-      // Heavy fixture consumers are stable at four workers after checkpoint
-      // loading; higher fan-out is not part of this lane's contract.
-      maxWorkers: Math.min(4, availableParallelism()),
+      // These integration-heavy fixture consumers clip their own bounded test
+      // timeouts under four-way CPU contention. Two workers keep the lane
+      // parallel without turning host scheduling into a test verdict.
+      maxWorkers: Math.min(2, availableParallelism()),
     },
   }),
 );

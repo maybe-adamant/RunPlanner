@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { catalog } from '@run-planner/hades2-catalog';
 import {
   appendSteadyGrowthTimelineEffects,
   assembleRoomLifecycleTimeline as assembleTimeline,

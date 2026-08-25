@@ -1195,7 +1195,7 @@ describe('field NPC encounter requirements', () => {
     expect(support(withArachne, followingArtemis)?.candidateEncounterKeys).toContain(
       'ArtemisCombatF',
     );
-  }, 10_000);
+  }, 15_000);
 
   it('publishes the random-event interaction domain at its exact owner without flattening branches', () => {
     const nemesisF = phase(goldenFBiome, goldenFOccurrenceId(5, 1));

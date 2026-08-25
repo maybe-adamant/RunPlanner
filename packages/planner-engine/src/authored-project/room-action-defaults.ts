@@ -361,8 +361,7 @@ export function reconcileNewRequiredRoomActions(
       ...(plan?.topology?.occurrences ?? []),
       ...(plan?.completionOccurrences ?? []),
     ].find((candidate) => candidate.occurrenceId === occurrenceId);
-    if (owner === undefined)
-      throw new Error(`active Room Action owner ${ownerKey} disappeared`);
+    if (owner === undefined) throw new Error(`active Room Action owner ${ownerKey} disappeared`);
     const order = scheduleRequiredRoomActions({
       catalog,
       domain,

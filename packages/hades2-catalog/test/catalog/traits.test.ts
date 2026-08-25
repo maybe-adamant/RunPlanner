@@ -925,8 +925,20 @@ describe('trait offer catalog closure', () => {
       .map((giver) => giver.key)
       .sort();
     expect(actual).toEqual([
-      'Aphrodite', 'Apollo', 'Ares', 'Artemis', 'Athena', 'Demeter', 'Dionysus',
-      'Hades', 'Hephaestus', 'Hera', 'Hermes', 'Hestia', 'Poseidon', 'Zeus',
+      'Aphrodite',
+      'Apollo',
+      'Ares',
+      'Artemis',
+      'Athena',
+      'Demeter',
+      'Dionysus',
+      'Hades',
+      'Hephaestus',
+      'Hera',
+      'Hermes',
+      'Hestia',
+      'Poseidon',
+      'Zeus',
     ]);
   });
   it('owns the exact runtime offer requirements and ordered fallback domains', () => {

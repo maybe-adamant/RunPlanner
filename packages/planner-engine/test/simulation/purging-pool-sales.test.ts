@@ -12,7 +12,6 @@ import {
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import {
-  attachTraitHistory,
   purgingPoolCandidateForProjectEvaluationAssembly,
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
