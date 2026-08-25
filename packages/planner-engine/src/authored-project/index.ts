@@ -167,14 +167,6 @@ export {
   TRAIT_OPTION_KEYS,
   optionIndex,
   normalizeAllTogetherResult,
-  echoLastRewardPickupEntryKey,
-  parseEchoLastRewardPickupEntryKey,
-  echoLastRewardPickupEntryKeys,
-  traitGeneratedPickupSiteKey,
-  nemesisGeneratedPickupSiteKey,
-  selectedPickupProducers,
-  activeSelectedPickupProducers,
-  selectedPickupProducerForEntry,
   traitGiverForAcquisitionRole,
   traitGiverUsesOfferContext,
   materializeGorgonAthenaOffer,
@@ -191,6 +183,16 @@ export {
   type TraitOptionKey,
   traitOfferOption,
 } from './traits';
+export {
+  echoLastRewardPickupEntryKey,
+  parseEchoLastRewardPickupEntryKey,
+  echoLastRewardPickupEntryKeys,
+  traitGeneratedPickupSiteKey,
+  nemesisGeneratedPickupSiteKey,
+  selectedPickupProducers,
+  activeSelectedPickupProducers,
+  selectedPickupProducerForEntry,
+} from './pickup-producers';
 export {
   createInfernalContractEntries,
   ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,

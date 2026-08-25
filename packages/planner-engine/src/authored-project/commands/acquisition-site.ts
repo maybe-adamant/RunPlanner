@@ -7,8 +7,8 @@ import type { AcquisitionSiteCommand, DerivedShopEntryEditCommand } from './type
 import {
   createUnresolvedAcquisitionRewardState,
   createUnresolvedPickupRewardState,
-  selectedPickupProducers,
 } from '../traits';
+import { selectedPickupProducers } from '../pickup-producers';
 import {
   authoredAcquisitionEntry,
   authoredAcquisitionEntryAtSite,

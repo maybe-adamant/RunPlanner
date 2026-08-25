@@ -6,7 +6,7 @@ import { semanticAddressKey } from './addresses';
 import { parseArtificerReplacementEntryKey } from './artificer';
 import { parseHermesShrineDeliveryEntryKey } from './hermes-shrine-delivery';
 import { authoredAcquisitionSources } from './acquisition-sources';
-import { echoLastRewardPickupEntryKeys, activeSelectedPickupProducers } from './traits';
+import { echoLastRewardPickupEntryKeys, activeSelectedPickupProducers } from './pickup-producers';
 import { seaStarDuplicateSourceIsActive } from './sea-star';
 export { roomActionKey } from './room-action-key';
 
