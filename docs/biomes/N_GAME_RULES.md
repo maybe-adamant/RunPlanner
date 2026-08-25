@@ -135,6 +135,30 @@ its own encounter, reward payload, `roomActions.order`, and Room Timeline. The p
 the declared spawn count, while leaving a target requires its spawned pylon to
 be completed.
 
+### Runtime-derived side-room availability ranks
+
+The following rank order was observed in the Hades II `h2-dev` profile on
+2026-07-18 by forcing every local side door to participate in generation and
+recording the order in which physical door obstacles ran their availability
+checks:
+
+| Parent       | Ranked side rooms               |
+| ------------ | ------------------------------- |
+| `N_Combat02` | `N_Sub03`, `N_Sub01`            |
+| `N_Combat04` | `N_Sub06`, `N_Sub02`            |
+| `N_Combat05` | `N_Sub02`, `N_Sub07`, `N_Sub03` |
+| `N_Combat06` | `N_Sub05`, `N_Sub10`            |
+| `N_Combat09` | `N_Sub08`, `N_Sub11`, `N_Sub14` |
+| `N_Combat10` | `N_Sub09`, `N_Sub05`            |
+| `N_Combat12` | `N_Sub09`, `N_Sub10`, `N_Sub07` |
+| `N_Combat22` | `N_Sub14`, `N_Sub02`            |
+| `N_Combat23` | `N_Sub13`, `N_Sub15`, `N_Sub12` |
+
+This table is runtime evidence rather than a second side-room design
+authority. The declarations and the surrounding rules above own slot identity,
+generation state, pressure, sibling rewards, and entry order; the observed
+order is the evidence for the availability-rank input used by those rules.
+
 ### Persistent board generation
 
 The Ephyra board is generated once when the Hub opens. The supported outcome
