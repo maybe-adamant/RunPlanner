@@ -16,9 +16,9 @@ The audit answers:
 5. which additional Dream Run condition remains separate from biome order.
 
 It does not implement Dream Dive, change Shop authoring, model probability
-weights, or define the boon rarity ledger. The general Shop lifecycle remains
-owned by the
-[Shop and Well interaction audit](SHOP_AND_WELL_INTERACTION_LIFECYCLE.md), and
+weights, or define the boon rarity ledger. The shared Shop settlement boundary
+remains owned by
+[Acquisition Delivery and Room Settlement](ACQUISITION_DELIVERY_AND_ROOM_SETTLEMENT.md), and
 the rarity arithmetic remains owned by the
 [boon rarity ledger audit](BOON_RARITY_LEDGER_GAME_DATA_AUDIT.md).
 

@@ -225,7 +225,7 @@ authority.
 
 Yarn of Ariadne is the Stygian Well item `TemporaryBoonRarityTrait`; the broader
 Well pool is recorded in the
-[Stygian Well audit](STYGIAN_WELL_GAME_DATA_AUDIT.md). The Well sells Yarn for
+[Room Features audit](ROOM_FEATURES_GAME_DATA_AUDIT.md). The Well sells Yarn for
 70 gold. Its declaration is a `GodLootOnly` additive rarity contribution with
 one remaining use:
 
