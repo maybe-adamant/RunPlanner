@@ -4,7 +4,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { basename, dirname, extname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-const CURRENT_SCHEMA_VERSION = 57;
+const CURRENT_SCHEMA_VERSION = 58;
 const SCHEMA_49_CATALOG_VERSION = '0.27.0-arcana-fear-loadout';
 const SCHEMA_50_CATALOG_VERSION = '0.30.0-boon-rarity-ledger';
 const SCHEMA_51_CATALOG_VERSION = '0.31.0-chaos-traits';
@@ -17,6 +17,7 @@ const SCHEMA_54_CATALOG_VERSION = '0.36.0-runtime-offer-fallback';
 const SCHEMA_55_CATALOG_VERSION = '0.37.0-automatic-completion-occurrences';
 const SCHEMA_56_CATALOG_VERSION = '0.38.0-selected-resource-successes';
 const SCHEMA_57_CATALOG_VERSION = '0.39.0-purging-pool';
+const SCHEMA_58_CATALOG_VERSION = '0.40.0-hermes-shrine';
 const COMPLETION_ROOMS_BY_BIOME = {
   F: { boss: 'F_Boss01', postboss: 'F_PostBoss01' },
   G: { boss: 'G_Boss01', postboss: 'G_PostBoss01' },
@@ -388,6 +389,36 @@ function migrate56To57(document) {
   return { poolsAdded };
 }
 
+function migrate57To58(document) {
+  if (document.catalogVersion !== SCHEMA_57_CATALOG_VERSION) {
+    throw new Error(
+      `schema 57 migration expects catalog ${SCHEMA_57_CATALOG_VERSION}, received ${String(document.catalogVersion)}`,
+    );
+  }
+  let shrinesAdded = 0;
+  for (const route of document.routes ?? []) {
+    if (route.routeKey !== 'Surface') continue;
+    for (const biome of route.biomes ?? []) {
+      if (!['N', 'O', 'P'].includes(biome.biomeKey)) continue;
+      for (const occurrence of biome.completionOccurrences ?? []) {
+        if (
+          occurrence.occurrenceId !== `completion:${biome.biomeKey}:postboss` ||
+          occurrence.gameName !== `${biome.biomeKey}_PostBoss01` ||
+          occurrence.hermesShrine !== undefined
+        )
+          continue;
+        occurrence.hermesShrine = {
+          offerBySlot: { first: null, secondLeft: null, secondRight: null },
+        };
+        shrinesAdded += 1;
+      }
+    }
+  }
+  document.schemaVersion = 58;
+  document.catalogVersion = SCHEMA_58_CATALOG_VERSION;
+  return { shrinesAdded };
+}
+
 const migrations = new Map([
   [49, migrate49To50],
   [50, migrate50To51],
@@ -397,6 +428,7 @@ const migrations = new Map([
   [54, migrate54To55],
   [55, migrate55To56],
   [56, migrate56To57],
+  [57, migrate57To58],
 ]);
 
 export function migrateProjectDocument(value, targetVersion = CURRENT_SCHEMA_VERSION) {

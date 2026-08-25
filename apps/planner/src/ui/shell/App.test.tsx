@@ -117,6 +117,20 @@ describe('App', () => {
     expect(markup).toContain('Fishing');
   });
 
+  it('renders the read-only Hermes Shrine route index', () => {
+    const application = createApplication();
+    application.store.dispatch(
+      routePanelSelected({ routeKey: 'Surface', panel: { kind: 'shrines' } }),
+    );
+
+    const markup = appMarkup(application);
+    expect(application.store.getState().editorSession.activePanelByRoute.Surface).toEqual({
+      kind: 'shrines',
+    });
+    expect(markup).toContain('Hermes Shrines');
+    expect(markup).toContain('No Shrine hosts in this route.');
+  });
+
   it('presents the configured route extent and included biomes', () => {
     const application = createApplication();
     application.store.dispatch(

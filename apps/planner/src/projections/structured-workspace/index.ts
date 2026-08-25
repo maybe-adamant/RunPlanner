@@ -61,6 +61,8 @@ export type {
   WorkspaceHubVisitOrderProposal,
   WorkspaceInspectorDestination,
   WorkspaceInteractionCatalog,
+  WorkspaceHermesShrineOfferInteraction,
+  WorkspaceHermesShrinePurchaseInteraction,
   WorkspaceKeepsakeSelectionInteraction,
   WorkspaceKeepsakeEquipResultInteraction,
   WorkspaceMarker,

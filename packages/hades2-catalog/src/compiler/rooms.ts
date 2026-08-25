@@ -951,6 +951,26 @@ export function normalizeRooms(
               slotKeys: Object.freeze([...slotKeys]) as readonly ['left', 'middle', 'right'],
             });
           })();
+    const challengeSwitchAnchorCount = room.challengeSwitchAnchorCount;
+    if (
+      challengeSwitchAnchorCount !== undefined &&
+      (!Number.isInteger(challengeSwitchAnchorCount) || challengeSwitchAnchorCount < 0)
+    )
+      fail(`${path}.challengeSwitchAnchorCount`, 'must be a non-negative integer');
+    const surfaceShop =
+      room.surfaceShop === undefined
+        ? undefined
+        : (() => {
+            if (room.surfaceShop.profileKey !== 'SurfaceShop')
+              fail(`${path}.surfaceShop.profileKey`, 'must be SurfaceShop');
+            if (!Number.isFinite(room.surfaceShop.spawnChance) || room.surfaceShop.spawnChance < 0 || room.surfaceShop.spawnChance > 1)
+              fail(`${path}.surfaceShop.spawnChance`, 'must be a probability from 0 through 1');
+            return Object.freeze({
+              profileKey: 'SurfaceShop' as const,
+              spawnChance: room.surfaceShop.spawnChance,
+              forced: room.surfaceShop.forced === true,
+            });
+          })();
 
     return Object.freeze({
       gameName: room.gameName,
@@ -973,7 +993,9 @@ export function normalizeRooms(
       blockGiftBoons: room.blockGiftBoons ?? false,
       hasKeepsakeRack: room.hasKeepsakeRack ?? false,
       hasRequiredFountain: room.hasRequiredFountain ?? false,
+      ...(challengeSwitchAnchorCount === undefined ? {} : { challengeSwitchAnchorCount }),
       ...(purgingPool === undefined ? {} : { purgingPool }),
+      ...(surfaceShop === undefined ? {} : { surfaceShop }),
       blocksGorgon: room.blocksGorgon ?? false,
       ...(boonRarityOverride === undefined ? {} : { boonRarityOverride }),
       ...(prebossBatchPolicy === undefined ? {} : { prebossBatchPolicy }),

@@ -962,6 +962,9 @@ export interface WorkspaceInteractionCatalog {
   readonly purgingPoolInteractions: ReadonlyMap<string, WorkspacePurgingPoolInteraction>;
   /** One declaration-keyed Pool slot, with engine-derived contextual candidates. */
   readonly purgingPoolSlots: ReadonlyMap<string, WorkspacePurgingPoolSlotInteraction>;
+  readonly hermesShrineOffers: ReadonlyMap<string, WorkspaceHermesShrineOfferInteraction>;
+  readonly hermesShrinePurchases: ReadonlyMap<string, WorkspaceHermesShrinePurchaseInteraction>;
+  readonly hermesShrinePresences: ReadonlyMap<string, WorkspaceHermesShrinePresenceInteraction>;
   readonly resourcePlacements: ReadonlyMap<string, WorkspaceResourcePlacementInteraction>;
   readonly localVisitOrders: ReadonlyMap<string, WorkspaceLocalVisitOrderInteraction>;
   readonly localVisitGenerations: ReadonlyMap<string, WorkspaceLocalVisitGenerationInteraction>;
@@ -1021,6 +1024,44 @@ export interface WorkspacePurgingPoolInteraction {
     interacted: boolean,
   ) => WorkspaceCommandIntent<
     Extract<ProjectCommand, { readonly kind: 'SetPurgingPoolInteraction' }>
+  >;
+}
+
+export interface WorkspaceHermesShrinePurchaseInteraction {
+  readonly key: string;
+  readonly owner: OccurrenceAddress;
+  readonly generationKey: import('@run-planner/engine/authored-project').HermesShrineGenerationKey;
+  readonly purchase: import('@run-planner/engine/authored-project').HermesShrinePurchase | null;
+  readonly intentFor: (
+    purchase: import('@run-planner/engine/authored-project').HermesShrinePurchase | null,
+  ) => WorkspaceCommandIntent<
+    Extract<ProjectCommand, { readonly kind: 'SetHermesShrinePurchase' }>
+  >;
+}
+
+export interface WorkspaceHermesShrineOfferInteraction {
+  readonly key: string;
+  readonly owner: OccurrenceAddress;
+  readonly slotKey:
+    import('@run-planner/engine/authored-project').HermesShrineSlotKey | 'travelDealRefill';
+  readonly rewardType: string | null;
+  readonly candidateRewardTypes: readonly string[];
+  readonly intentFor: (
+    rewardType: string,
+  ) => WorkspaceCommandIntent<
+    | Extract<ProjectCommand, { readonly kind: 'ReplaceHermesShrineOffer' }>
+    | Extract<ProjectCommand, { readonly kind: 'ReplaceHermesShrineTravelDealRefill' }>
+  >;
+}
+
+export interface WorkspaceHermesShrinePresenceInteraction {
+  readonly key: string;
+  readonly owner: OccurrenceAddress;
+  readonly present: boolean;
+  readonly intentFor: (
+    present: boolean,
+  ) => WorkspaceCommandIntent<
+    Extract<ProjectCommand, { readonly kind: 'SetHermesShrinePresence' }>
   >;
 }
 
@@ -1631,6 +1672,42 @@ export type WorkspaceRoomFeature =
         readonly traitLabel?: string;
         readonly traitKey: string | null;
       }[];
+    }
+  | {
+      /** Shrine inventory is always visible and authored once present. */
+      readonly kind: 'hermesShrine';
+      readonly present: boolean;
+      readonly required: boolean;
+      readonly placementEligible: boolean;
+      readonly presenceInteractionKey?: string;
+      readonly slots: readonly {
+        readonly key: import('@run-planner/engine/authored-project').HermesShrineSlotKey;
+        readonly label: string;
+        readonly rewardType: string | null;
+        readonly rewardLabel?: string;
+        readonly candidateRewardTypes: readonly string[];
+        readonly candidateRewards: readonly {
+          readonly rewardType: string;
+          readonly label: string;
+        }[];
+        readonly offerInteractionKey: string;
+        readonly purchaseInteractionKey: string;
+        readonly purchase:
+          import('@run-planner/engine/authored-project').HermesShrinePurchase | null;
+      }[];
+      readonly travelDealRefill?: {
+        readonly rewardType: string | null;
+        readonly rewardLabel?: string;
+        readonly candidateRewardTypes: readonly string[];
+        readonly candidateRewards: readonly {
+          readonly rewardType: string;
+          readonly label: string;
+        }[];
+        readonly offerInteractionKey: string;
+        readonly purchaseInteractionKey: string;
+        readonly purchase:
+          import('@run-planner/engine/authored-project').HermesShrinePurchase | null;
+      };
     };
 
 export interface WorkspaceShipStructurePhase {

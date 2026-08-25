@@ -36,7 +36,7 @@ const rooms: readonly RawRoomDeclaration[] = [
 ];
 
 export const declarations = {
-  version: '0.39.0-purging-pool',
+  version: '0.40.0-hermes-shrine',
   biomes,
   routes,
   arcanaCards,

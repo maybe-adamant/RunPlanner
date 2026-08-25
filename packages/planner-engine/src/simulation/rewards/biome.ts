@@ -7,12 +7,20 @@ import {
   type PurgingPoolAssessment,
 } from '../purging-pool';
 import {
+  assessHermesShrine,
+  assessHermesShrinePlacement,
+  assessHermesShrineTravelDealRefill,
+  priorTwoSurfaceShopPresence,
+  type HermesShrineCandidateContext,
+} from '../hermes-shrine';
+import {
   createEncounterPhaseAddress,
   createNemesisRandomEventAddress,
   createGorgonPhaseAddress,
   createBiomeAddress,
   createTraitOfferAddress,
   createAcquisitionEntryAddress,
+  createAcquisitionSiteAddress,
   createEchoKeepsakeReplayAddress,
   createTargetAddress,
   createRoomRunStateCheckpointAddress,
@@ -42,6 +50,8 @@ import {
   artificerReplacementEntryKey,
   parseArtificerReplacementEntryKey,
 } from '../../authored-project/artificer';
+import { parseHermesShrineDeliveryEntryKey } from '../../authored-project/hermes-shrine-delivery';
+import { hermesShrineDeliveryEntryKey } from '../../authored-project/hermes-shrine-delivery';
 import {
   SEA_STAR_DUPLICATE_ENTRY_KEY,
   parseSeaStarDuplicateSiteKey,
@@ -114,6 +124,7 @@ import {
   createDerivedAcquisitionEntryCandidateArtifacts,
   createSteadyGrowthCandidateArtifacts,
   createPurgingPoolCandidateArtifacts,
+  createHermesShrineCandidateArtifacts,
   attestDerivedAcquisitionEntryCandidateCapability,
 } from '../candidate-artifacts';
 import type {
@@ -582,6 +593,7 @@ function rewardFacts(
   peerParentOrigin = source.origin,
   peerCreationSource: RoomCreationSource = 'generatedTarget',
   rewardLookups: Readonly<Record<string, ReadonlySet<string>>> = Object.freeze({}),
+  branch?: RewardBranchState,
 ): RewardKernelFacts {
   return createRewardFacts({
     catalog,
@@ -598,9 +610,66 @@ function rewardFacts(
     ),
     currentRoomShopOptionNames,
     rewardLookups,
+    pendingSpellDrop: Object.values(branch?.pendingHermesShrineDeliveries ?? {}).some(
+      (delivery) => delivery.reward.offer.rewardType === 'SpellDrop',
+    ),
     fail,
   });
 }
+
+/**
+ * Surface Shrines are a visible store at room entry.  Their three realized
+ * names participate in the same outgoing `RequiredNotInStore` contact as a
+ * World Shop inventory, regardless of whether the player later purchases an
+ * item.  Keep this projection local to reward facts: it is neither a Shop
+ * action nor a reward-bag consumer.
+ */
+function visibleStoreOptionNames(
+  source: CanonicalRewardSource,
+  shrineAssessments?: readonly HermesShrineCandidateContext[],
+): ReadonlySet<string> {
+  const names = new Set<string>();
+  if (source.kind !== 'authored') return names;
+  for (const offer of source.entryState?.kind === 'shop' ? source.entryState.offers : [])
+    names.add(offer.offer.rewardType);
+  const shrine = source.hermesShrine;
+  const shrineInventoryVisible =
+    shrineAssessments !== undefined &&
+    shrineAssessments.length > 0 &&
+    shrineAssessments.every((assessment) => assessment.inventory?.complete === true);
+  if (shrine !== undefined && shrineInventoryVisible) {
+    for (const offer of Object.values(shrine.offerBySlot)) names.add(offer!.offer.rewardType);
+  }
+  return names;
+}
+
+/** One declaration-owned SurfaceShop fallback edge at the reached action. */
+function hermesShrineRuntimeFallbackRewardType(
+  catalog: Catalog,
+  generationKey: import('../../authored-project/model').HermesShrineGenerationKey,
+  rewardType: string,
+  refill: import('../hermes-shrine').HermesShrineTravelDealRefillAssessment | undefined,
+): string | undefined {
+  const sourceGenerationKey =
+    generationKey === 'travelDealRefill' ? refill?.sourceGenerationKey : generationKey;
+  const slotKey = sourceGenerationKey?.startsWith('initial:')
+    ? sourceGenerationKey.slice('initial:'.length)
+    : undefined;
+  if (slotKey !== 'first' && slotKey !== 'secondLeft' && slotKey !== 'secondRight')
+    return undefined;
+  const profile = catalog.rewards.shops.byKey.SurfaceShop;
+  const group = profile?.groups.byKey[profile.slots.byKey[slotKey]?.groupKey ?? ''];
+  const option = group?.options.values.find((candidate) => candidate.rewardType === rewardType);
+  // A refill is generated only from its published same-slot domain. Initial
+  // visible entries use their declaration group; both cases still take one
+  // option-declared edge, never a semantic Shrine/Death-Defiance rule.
+  const supported =
+    generationKey === 'travelDealRefill' ? refill?.candidateRewardTypes : group?.rewardTypes;
+  return option?.runtimeOfferFallbackRewardTypes?.find(
+    (candidate) => supported?.includes(candidate) === true,
+  );
+}
+
 function requireRewardLayout(catalog: Catalog, snapshot: BiomeRewardSnapshot): BiomeLayout {
   const layout = catalog.biomeLayouts.byKey[snapshot.biomeKey];
   const supportedPolicy =
@@ -1115,7 +1184,11 @@ function prepareShipLifecycleCandidateContext(
             binding,
             historySequence: lifecycleView.generation.sequence + 1,
             peers: Object.freeze([]),
-            facts: (branchHistory: RewardHistoryState) =>
+            facts: (
+              branchHistory: RewardHistoryState,
+              _shopNames: ReadonlySet<string> | undefined,
+              branch: RewardBranchState | undefined,
+            ) =>
               rewardFacts(
                 catalog,
                 candidateRoom,
@@ -1124,6 +1197,11 @@ function prepareShipLifecycleCandidateContext(
                 lifecycleView.generation,
                 branchHistory,
                 enteredBiomeCount,
+                undefined,
+                undefined,
+                undefined,
+                undefined,
+                branch,
               ),
           })),
           candidateFindings,
@@ -1191,6 +1269,7 @@ interface BiomeRewardEvaluationAssembly {
   readonly derivedAcquisitionEntryArtifacts: import('../candidate-artifacts').DerivedAcquisitionEntryCandidateArtifacts;
   readonly steadyGrowthArtifacts: import('../candidate-artifacts').SteadyGrowthCandidateArtifacts;
   readonly purgingPoolArtifacts: import('../candidate-artifacts').PurgingPoolCandidateArtifacts;
+  readonly hermesShrineArtifacts: import('../candidate-artifacts').HermesShrineCandidateArtifacts;
   readonly traitChildSettlementCheckpoints: TraitChildSettlementCheckpoints;
   readonly findingRegions: readonly FindingRegionEntry[];
 }
@@ -1771,6 +1850,22 @@ export function evaluateBiomeRewardsAssemblyInternal(
       readonly assessments: readonly PurgingPoolAssessment[];
     }
   >();
+  const hermesShrineAssessments = new Map<
+    string,
+    {
+      readonly origin: import('../../authored-project/addresses').OccurrenceAddress;
+      readonly assessments: readonly HermesShrineCandidateContext[];
+    }
+  >();
+  const hermesShrineTravelDealRefills = new Map<
+    string,
+    readonly import('../hermes-shrine').HermesShrineTravelDealRefillAssessment[]
+  >();
+  const hermesShrineTravelDealRefillValid = new Map<string, boolean>();
+  // The handler's FirstSpeedUpPurchase guard belongs to the Shrine room, not
+  // to a branch.  We still require Travel Deal to agree across every branch
+  // at that first action prefix before publishing a refill generation.
+  const firstRushedInitialGenerationByShrine = new Set<string>();
   // H's event is a passive room feature, not a replacement for any cage or
   // optional leaf.  Keep an over-cap authored count materialized for repair,
   // but make the one reserved physical optional position an evaluated error.
@@ -1840,6 +1935,91 @@ export function evaluateBiomeRewardsAssemblyInternal(
             ...finding.evidence,
             ...(finding.slotKey === undefined ? {} : { slotKey: finding.slotKey }),
           }),
+          ownerRegion(room.origin),
+          rewardFindingChronologyForRoom(snapshot, room.origin, sequence, 'localRoomLifecycle'),
+        );
+      }
+    }
+  }
+  function recordHermesShrineAssessment(room: CanonicalAuthoredRoom, sequence: number): void {
+    if (hermesShrineAssessments.has(semanticAddressKey(room.origin))) return;
+    const declaration = catalog.rooms.byKey[room.gameName];
+    const entry = views.get(semanticAddressKey(room.origin))?.entry;
+    if (declaration === undefined || entry === undefined)
+      throw new BiomeRewardSimulationContractError(`${room.gameName} has no Shrine entry frontier`);
+    if (declaration.surfaceShop === undefined && room.hermesShrine === undefined) return;
+    // The entry ledger includes this occurrence. The preceding two physical
+    // positions are intentionally neither filtered nor de-duplicated.
+    const priorEnteredShrineFlags = priorTwoSurfaceShopPresence(entry.ledgers.roomAppearances);
+    const assessments = Object.freeze(
+      branches.map((branch) =>
+        room.hermesShrine === undefined
+          ? Object.freeze({
+              placement: assessHermesShrinePlacement(declaration, priorEnteredShrineFlags),
+              inventory: undefined,
+            })
+          : Object.freeze({
+              placement: assessHermesShrinePlacement(declaration, priorEnteredShrineFlags),
+              inventory: assessHermesShrine(
+                catalog,
+                declaration,
+                room.hermesShrine,
+                rewardFacts(
+                  catalog,
+                  room,
+                  room,
+                  declaration,
+                  entry,
+                  branch.history,
+                  enteredBiomeCount,
+                  undefined,
+                  undefined,
+                  undefined,
+                  undefined,
+                  branch,
+                ).requirements,
+                priorEnteredShrineFlags,
+              ),
+            }),
+      ),
+    );
+    hermesShrineAssessments.set(
+      semanticAddressKey(room.origin),
+      Object.freeze({ origin: room.origin, assessments }),
+    );
+    for (const assessment of assessments) {
+      if (assessment.inventory === undefined && assessment.placement.forced) {
+        for (const slotKey of ['first', 'secondLeft', 'secondRight'] as const) {
+          addRewardFinding(
+            findings,
+            rewardFinding('hermesShrineInventoryMissing', room.origin, { slotKey }),
+            ownerRegion(room.origin),
+            rewardFindingChronologyForRoom(snapshot, room.origin, sequence, 'localRoomLifecycle'),
+          );
+        }
+      }
+      if (assessment.inventory !== undefined && !assessment.placement.eligible) {
+        addRewardFinding(
+          findings,
+          rewardFinding('hermesShrinePlacementUnavailable', room.origin, {
+            priorShrineCount: assessment.placement.priorShrineCount,
+          }),
+          ownerRegion(room.origin),
+          rewardFindingChronologyForRoom(snapshot, room.origin, sequence, 'localRoomLifecycle'),
+        );
+      }
+      for (const issue of assessment.inventory?.inventoryIssues ?? []) {
+        const code =
+          issue.kind === 'missing'
+            ? 'hermesShrineInventoryMissing'
+            : issue.kind === 'wrongGroup'
+              ? 'hermesShrineInventoryWrongGroup'
+              : issue.kind === 'duplicateSecondGroup'
+                ? 'hermesShrineInventoryDuplicate'
+                : 'hermesShrineInventoryRequirement';
+        addRewardFinding(
+          findings,
+          rewardFinding(code, room.origin, 'slotKey' in issue ? { slotKey: issue.slotKey } : {}),
           ownerRegion(room.origin),
           rewardFindingChronologyForRoom(snapshot, room.origin, sequence, 'localRoomLifecycle'),
         );
@@ -2074,11 +2254,9 @@ export function evaluateBiomeRewardsAssemblyInternal(
         `${source.gameName} has no declaration for run-state snapshot`,
       );
     }
-    const currentShopNames = new Set(
-      (source.kind === 'authored' && source.entryState?.kind === 'shop'
-        ? source.entryState.offers
-        : []
-      ).map((offer) => offer.offer.rewardType),
+    const currentShopNames = visibleStoreOptionNames(
+      source,
+      hermesShrineAssessments.get(semanticAddressKey(source.origin))?.assessments,
     );
     // One token represents this exact rewardFacts closure: current/source room,
     // declaration, immutable view, entered-biome count, shop names, peer
@@ -2134,6 +2312,13 @@ export function evaluateBiomeRewardsAssemblyInternal(
         origin,
         historySequence,
         histories: Object.freeze(branches.map((branch) => branch.history)),
+        pendingSpellDrops: Object.freeze(
+          branches.map((branch) =>
+            Object.values(branch.pendingHermesShrineDeliveries).some(
+              (delivery) => delivery.reward.offer.rewardType === 'SpellDrop',
+            ),
+          ),
+        ),
       }),
     );
   }
@@ -2541,7 +2726,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
           historySequence,
           'localRoomLifecycle',
         ),
-        facts: (branchHistory, shopNames = new Set()) =>
+        facts: (branchHistory, shopNames = new Set(), branch) =>
           rewardFacts(
             catalog,
             settlementRoom,
@@ -2554,6 +2739,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
             undefined,
             undefined,
             rewardLookup.internal,
+            branch,
           ),
         fail,
       },
@@ -3038,6 +3224,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
         branches = advanceRewardBranches(branches, event.sequence);
         const room = rooms.get(semanticAddressKey(event.origin));
         if (room?.kind === 'authored') recordPurgingPoolAssessment(room, event.sequence);
+        if (room?.kind === 'authored') recordHermesShrineAssessment(room, event.sequence);
         if (room?.kind === 'authored' && room.lifecycleProfileKey !== 'ShipCombatRoom') {
           const view = views.get(semanticAddressKey(event.origin))?.entry;
           if (view === undefined) {
@@ -3476,10 +3663,9 @@ export function evaluateBiomeRewardsAssemblyInternal(
                   semanticAddressKey(candidate.targetOrigin) ===
                   semanticAddressKey(event.targetOrigin),
               )?.before ?? parentViews.preOutgoing!;
-            currentShopNames = new Set(
-              (parent.kind === 'authored' ? parent.entryState?.offers : undefined)?.map(
-                (offer) => offer.offer.rewardType,
-              ) ?? [],
+            currentShopNames = visibleStoreOptionNames(
+              parent,
+              hermesShrineAssessments.get(semanticAddressKey(parent.origin))?.assessments,
             );
           } else if (event.parentOrigin.kind !== 'hubRoom') {
             throw new BiomeRewardSimulationContractError('generated reward lost its source room');
@@ -3520,10 +3706,9 @@ export function evaluateBiomeRewardsAssemblyInternal(
           source = parent;
           currentRoom = parent;
           view = parentViews.entry;
-          currentShopNames = new Set(
-            (parent.entryState?.kind === 'shop' ? parent.entryState.offers : []).map(
-              (offer) => offer.offer.rewardType,
-            ),
+          currentShopNames = visibleStoreOptionNames(
+            parent,
+            hermesShrineAssessments.get(semanticAddressKey(parent.origin))?.assessments,
           );
         } else if (event.source === 'hubTarget') {
           const parentViews = views.get(semanticAddressKey(event.parentOrigin));
@@ -3775,7 +3960,11 @@ export function evaluateBiomeRewardsAssemblyInternal(
               ? {}
               : { findingChronology: offerFindingChronology }),
             peers,
-            facts: (branchHistory: RewardHistoryState) =>
+            facts: (
+              branchHistory: RewardHistoryState,
+              _shopNames: ReadonlySet<string> | undefined,
+              branch: RewardBranchState | undefined,
+            ) =>
               rewardFacts(
                 catalog,
                 source,
@@ -3787,6 +3976,8 @@ export function evaluateBiomeRewardsAssemblyInternal(
                 currentShopNames,
                 source.kind === 'hub' ? source.origin : peerParentOrigin,
                 source.kind === 'hub' ? 'hubTarget' : peerCreationSource,
+                undefined,
+                branch,
               ),
           };
           const incomingOwnerKey = semanticAddressKey(incoming.origin);
@@ -3899,7 +4090,11 @@ export function evaluateBiomeRewardsAssemblyInternal(
               ? {}
               : { findingChronology: offerFindingChronology }),
             peers,
-            facts: (branchHistory: RewardHistoryState) =>
+            facts: (
+              branchHistory: RewardHistoryState,
+              _shopNames: ReadonlySet<string> | undefined,
+              branch: RewardBranchState | undefined,
+            ) =>
               rewardFacts(
                 catalog,
                 source,
@@ -3909,6 +4104,10 @@ export function evaluateBiomeRewardsAssemblyInternal(
                 branchHistory,
                 enteredBiomeCount,
                 currentShopNames,
+                undefined,
+                undefined,
+                undefined,
+                branch,
               ),
           };
           const localOwnerKey = semanticAddressKey(localReward.origin);
@@ -4068,7 +4267,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
                     binding: localRewardBinding(declaration, candidate),
                     historySequence: event.sequence,
                     peers,
-                    facts: (branchHistory: RewardHistoryState) =>
+                    facts: (branchHistory: RewardHistoryState, _shopNames, branch) =>
                       rewardFacts(
                         catalog,
                         source,
@@ -4078,6 +4277,10 @@ export function evaluateBiomeRewardsAssemblyInternal(
                         branchHistory,
                         enteredBiomeCount,
                         currentShopNames,
+                        undefined,
+                        undefined,
+                        undefined,
+                        branch,
                       ),
                   },
                   candidateFindings,
@@ -4359,6 +4562,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
             facts: (
               branchHistory: RewardHistoryState,
               shopNames: ReadonlySet<string> = new Set(),
+              branch?: RewardBranchState,
             ) =>
               rewardFacts(
                 catalog,
@@ -4372,6 +4576,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
                 undefined,
                 undefined,
                 rewardLookup.internal,
+                branch,
               ),
             fail,
           };
@@ -4418,7 +4623,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
                         catalog.rewards,
                         profile,
                         fixedOffers,
-                        shopContext.facts(branch.history, new Set()),
+                        shopContext.facts(branch.history, new Set(), branch),
                         requirements,
                       ).length > 0,
                   );
@@ -4493,8 +4698,25 @@ export function evaluateBiomeRewardsAssemblyInternal(
             binding: localRewardBinding(declaration, reward),
             historySequence: event.sequence,
             peers: Object.freeze([]),
-            facts: (branchHistory: RewardHistoryState) =>
-              rewardFacts(catalog, room, room, declaration, view, branchHistory, enteredBiomeCount),
+            facts: (
+              branchHistory: RewardHistoryState,
+              _shopNames: ReadonlySet<string> | undefined,
+              branch: RewardBranchState | undefined,
+            ) =>
+              rewardFacts(
+                catalog,
+                room,
+                room,
+                declaration,
+                view,
+                branchHistory,
+                enteredBiomeCount,
+                undefined,
+                undefined,
+                undefined,
+                undefined,
+                branch,
+              ),
           });
           const evaluateOptionalCohort = (owner: SemanticAddress, offer: ResolvedRewardOffer) => {
             const ownerKey = semanticAddressKey(owner);
@@ -4729,8 +4951,25 @@ export function evaluateBiomeRewardsAssemblyInternal(
           binding,
           historySequence: event.sequence,
           peers: Object.freeze([]),
-          facts: (branchHistory: RewardHistoryState) =>
-            rewardFacts(catalog, room, room, declaration, view, branchHistory, enteredBiomeCount),
+          facts: (
+            branchHistory: RewardHistoryState,
+            _shopNames: ReadonlySet<string> | undefined,
+            branch: RewardBranchState | undefined,
+          ) =>
+            rewardFacts(
+              catalog,
+              room,
+              room,
+              declaration,
+              view,
+              branchHistory,
+              enteredBiomeCount,
+              undefined,
+              undefined,
+              undefined,
+              undefined,
+              branch,
+            ),
         });
         const contexts = wheel.offers.map(contextForWheel);
         const frontierBranches = branches;
@@ -5675,6 +5914,71 @@ export function evaluateBiomeRewardsAssemblyInternal(
           branches = advanceExperimentalHammerForEndEffects(branches, event.origin, event.sequence);
         }
         branches = advanceChaosClockAt(catalog, branches, event.sequence, 'encounters');
+        // Shrine countdowns are branch run-state, not a room-local history
+        // scan: an N purchase must remain live when O begins.  A due item is
+        // retained until its host's ordinary generated-pickup entry settles.
+        if (event.origin.kind === 'occurrence') {
+          const deliveryHost = event.origin;
+          branches = Object.freeze(
+            branches.map((branch) => {
+              const pending = branch.pendingHermesShrineDeliveries;
+              const next = Object.fromEntries(
+                Object.entries(pending).map(([key, delivery]) => {
+                  if (delivery.dueAt !== undefined) return [key, delivery] as const;
+                  const forceComplete =
+                    enteredBiomeCount === fullRunBiomeCount && declaration?.kind === 'Preboss';
+                  const remainingUses = forceComplete ? 0 : delivery.remainingUses - 1;
+                  return [
+                    key,
+                    Object.freeze({
+                      ...delivery,
+                      remainingUses: Math.max(0, remainingUses),
+                      ...(remainingUses <= 0
+                        ? { dueAt: deliveryHost, dueSequence: event.sequence }
+                        : {}),
+                    }),
+                  ] as const;
+                }),
+              );
+              return Object.freeze({
+                ...branch,
+                pendingHermesShrineDeliveries: Object.freeze(next),
+              });
+            }),
+          );
+          for (const branch of branches) {
+            for (const delivery of Object.values(branch.pendingHermesShrineDeliveries)) {
+              if (
+                delivery.dueAt === undefined ||
+                semanticAddressKey(delivery.dueAt) !== semanticAddressKey(deliveryHost)
+              )
+                continue;
+              const site = createAcquisitionSiteAddress(deliveryHost, 'hermesShrineDelivery');
+              const entryKey = hermesShrineDeliveryEntryKey(
+                delivery.sourceOrigin,
+                delivery.generationKey,
+              );
+              const hostRoom = rooms.get(semanticAddressKey(deliveryHost));
+              const retained =
+                hostRoom?.kind === 'authored'
+                  ? hostRoom.acquisitionSites?.hermesShrineDelivery?.entries[entryKey]
+                  : undefined;
+              recordDerivedAcquisitionEntryFrontiers([
+                Object.freeze({
+                  address: createAcquisitionEntryAddress(site, entryKey),
+                  kind: 'hermesShrineDelivery' as const,
+                  branchCohortSize: branches.length,
+                  fixedReward: delivery.reward,
+                  retainedSourceMismatch:
+                    retained !== undefined &&
+                    retained !== null &&
+                    JSON.stringify(retained.offer) !== JSON.stringify(delivery.reward.offer),
+                  branchesBeforeEntry: Object.freeze([branch]),
+                }),
+              ]);
+            }
+          }
+        }
         const steadyOwner: SteadyGrowthOutcomeAddress['owner'] | undefined =
           event.origin.kind === 'occurrence' ? event.origin : undefined;
         const steadyGrowthTarget =
@@ -5742,6 +6046,245 @@ export function evaluateBiomeRewardsAssemblyInternal(
           roomView === undefined
         ) {
           throw new BiomeRewardSimulationContractError('shop purchases have no authored room');
+        }
+        if (event.point.startsWith('hermesShrinePurchase:')) {
+          const generationKey = event.point.slice(
+            'hermesShrinePurchase:'.length,
+          ) as import('../../authored-project/model').HermesShrineGenerationKey;
+          const slotKey = generationKey.startsWith('initial:')
+            ? (generationKey.slice(
+                'initial:'.length,
+              ) as import('../../authored-project/model').HermesShrineSlotKey)
+            : undefined;
+          const purchase =
+            generationKey === 'travelDealRefill'
+              ? room.hermesShrine?.travelDealRefill?.purchase
+              : room.hermesShrine?.purchaseBySlot?.[slotKey!];
+          const offer =
+            generationKey === 'travelDealRefill'
+              ? room.hermesShrine?.travelDealRefill?.offer
+              : room.hermesShrine?.offerBySlot[slotKey!];
+          if (purchase === undefined || offer === undefined || offer === null) {
+            addRewardFinding(
+              findings,
+              rewardFinding('rewardSourceUnavailable', room.origin, { generationKey }),
+              ownerRegion(room.origin),
+              rewardFindingChronologyForRoom(
+                snapshot,
+                room.origin,
+                event.sequence,
+                'localRoomLifecycle',
+              ),
+            );
+            break;
+          }
+          const sourceKey = hermesShrineDeliveryEntryKey(room.origin, generationKey);
+          const shrineKey = semanticAddressKey(room.origin);
+          const fallbackRewardType = hermesShrineRuntimeFallbackRewardType(
+            catalog,
+            generationKey,
+            offer.offer.rewardType,
+            hermesShrineTravelDealRefills.get(shrineKey)?.[0],
+          );
+          if (
+            fallbackRewardType !== undefined &&
+            (generationKey !== 'travelDealRefill' ||
+              hermesShrineTravelDealRefillValid.get(shrineKey) === true)
+          ) {
+            const address = createAcquisitionEntryAddress(
+              createAcquisitionSiteAddress(room.origin, 'hermesShrineDelivery'),
+              sourceKey,
+            );
+            runtimeOfferFallbacks.set(
+              semanticAddressKey(address),
+              Object.freeze({
+                address,
+                preferredKey: offer.offer.rewardType,
+                fallbackKey: fallbackRewardType,
+              }),
+            );
+          }
+          if (
+            generationKey === 'travelDealRefill' &&
+            hermesShrineTravelDealRefillValid.get(shrineKey) !== true
+          ) {
+            addRewardFinding(
+              findings,
+              rewardFinding('hermesShrineTravelDealRefillUnavailable', room.origin, {
+                reason: 'noQualifyingFirstRushedPurchase',
+              }),
+              ownerRegion(room.origin),
+              rewardFindingChronologyForRoom(
+                snapshot,
+                room.origin,
+                event.sequence,
+                'localRoomLifecycle',
+              ),
+            );
+            break;
+          }
+          if (purchase.rushed && generationKey.startsWith('initial:')) {
+            const shrineKey = semanticAddressKey(room.origin);
+            if (!firstRushedInitialGenerationByShrine.has(shrineKey)) {
+              firstRushedInitialGenerationByShrine.add(shrineKey);
+              const preRushView =
+                roomView.acquisitionPoints?.find((point) => point.point === event.point)?.before ??
+                roomView.preOutgoing ??
+                roomView.entry;
+              const qualifies = branches.every(
+                (branch) => branch.traitHistory?.equippedTraits.RestockBoon !== undefined,
+              );
+              if (qualifies) {
+                const refillAssessments = Object.freeze(
+                  branches.flatMap((branch) => {
+                    const assessment = assessHermesShrineTravelDealRefill(
+                      catalog,
+                      room.hermesShrine!,
+                      generationKey,
+                      [
+                        rewardFacts(
+                          catalog,
+                          room,
+                          room,
+                          declaration,
+                          preRushView,
+                          branch.history,
+                          enteredBiomeCount,
+                          undefined,
+                          undefined,
+                          undefined,
+                          undefined,
+                          branch,
+                        ).requirements,
+                      ],
+                    );
+                    return assessment === undefined ? [] : [assessment];
+                  }),
+                );
+                hermesShrineTravelDealRefills.set(shrineKey, refillAssessments);
+                const refill = room.hermesShrine?.travelDealRefill?.offer;
+                const supported =
+                  refill !== undefined &&
+                  refill !== null &&
+                  refillAssessments.length === branches.length &&
+                  refillAssessments.every((assessment) =>
+                    assessment.candidateRewardTypes.includes(refill.offer.rewardType),
+                  );
+                hermesShrineTravelDealRefillValid.set(shrineKey, supported);
+                if (refill === undefined || refill === null) {
+                  addRewardFinding(
+                    findings,
+                    rewardFinding('hermesShrineTravelDealRefillMissing', room.origin, {
+                      generationKey,
+                    }),
+                    ownerRegion(room.origin),
+                    rewardFindingChronologyForRoom(
+                      snapshot,
+                      room.origin,
+                      event.sequence,
+                      'localRoomLifecycle',
+                    ),
+                  );
+                } else if (!supported) {
+                  addRewardFinding(
+                    findings,
+                    rewardFinding('hermesShrineTravelDealRefillUnavailable', room.origin, {
+                      generationKey,
+                      rewardType: refill.offer.rewardType,
+                    }),
+                    ownerRegion(room.origin),
+                    rewardFindingChronologyForRoom(
+                      snapshot,
+                      room.origin,
+                      event.sequence,
+                      'localRoomLifecycle',
+                    ),
+                  );
+                }
+              }
+            }
+          }
+          if (!purchase.rushed) {
+            branches = Object.freeze(
+              branches.map((branch) =>
+                Object.freeze({
+                  ...branch,
+                  pendingHermesShrineDeliveries: Object.freeze({
+                    ...branch.pendingHermesShrineDeliveries,
+                    [sourceKey]: Object.freeze({
+                      sourceKey,
+                      sourceOrigin: room.origin,
+                      generationKey,
+                      reward: offer,
+                      remainingUses: purchase.delay,
+                    }),
+                  }),
+                }),
+              ),
+            );
+          } else {
+            // Rush is deliberately one source action, but it is still an
+            // ordinary free pickup.  The Shrine offer owns its resolution
+            // detail; no second host-owned action is authored for this case.
+            const site = createAcquisitionSiteAddress(room.origin, 'hermesShrineDelivery');
+            const acquisitionView =
+              roomView.acquisitionPoints?.find((point) => point.point === event.point)?.before ??
+              roomView.preOutgoing ??
+              roomView.entry;
+            const settled = settlePickupAcquisitionSite(
+              catalog,
+              branches,
+              {
+                siteOwner: room.origin,
+                site,
+                entries: Object.freeze({ [sourceKey]: offer }),
+                order: Object.freeze([sourceKey]),
+                requiredEntryKeys: new Set([sourceKey]),
+                producerLifecycleKey: 'HermesShrineDelivery',
+                historySequence: event.sequence,
+                facts: (branchHistory, _shopNames, branch) =>
+                  rewardFacts(
+                    catalog,
+                    room,
+                    room,
+                    declaration,
+                    acquisitionView,
+                    branchHistory,
+                    enteredBiomeCount,
+                    undefined,
+                    undefined,
+                    undefined,
+                    undefined,
+                    branch,
+                  ),
+                findingChronology: rewardFindingChronologyForRoom(
+                  snapshot,
+                  room.origin,
+                  event.sequence,
+                  'localRoomLifecycle',
+                ),
+                authoredSeaStarDuplicateSiteKeys,
+                artificerReplacementFor(source, role) {
+                  const replacementSite = artificerAcquisitionSite(room.origin, source);
+                  return (
+                    room.acquisitionSites[acquisitionSiteStorageKey(replacementSite)]?.entries[
+                      artificerReplacementEntryKey(source, role)
+                    ] ?? null
+                  );
+                },
+                artificerReplacementSiteFor(source) {
+                  return artificerAcquisitionSite(room.origin, source);
+                },
+              },
+              findings,
+            );
+            recordAcquisitionRoleFrontiers(settled.roleFrontiers);
+            recordTraitChildSettlements(settled.traitChildSettlements, room.origin);
+            // The entry is not retained at the source: the one purchase row
+            // itself owns this immediate pickup's controls and chronology.
+            branches = settled.branches;
+          }
+          break;
         }
         const purgingPoolSlotKey = event.point.startsWith('purgingPool:')
           ? event.point.slice('purgingPool:'.length)
@@ -5886,6 +6429,129 @@ export function evaluateBiomeRewardsAssemblyInternal(
         }
         if (event.siteKey !== undefined && event.entryKey !== undefined) {
           const site = room.acquisitionSites[event.siteKey];
+          const shrineDelivery =
+            event.siteKey === 'hermesShrineDelivery'
+              ? parseHermesShrineDeliveryEntryKey(event.entryKey)
+              : undefined;
+          if (site !== undefined && shrineDelivery !== undefined) {
+            const sourceOrigin = {
+              kind: 'occurrence' as const,
+              routeKey: shrineDelivery.routeKey,
+              biomeKey: shrineDelivery.biomeKey,
+              occurrenceId: shrineDelivery.sourceOccurrenceId,
+            };
+            const sourceKey = hermesShrineDeliveryEntryKey(
+              sourceOrigin,
+              shrineDelivery.generationKey,
+            );
+            const due = branches.map((branch) => branch.pendingHermesShrineDeliveries[sourceKey]);
+            const firstDue = due[0];
+            const agreedDue =
+              firstDue !== undefined &&
+              due.length === branches.length &&
+              due.every(
+                (delivery) =>
+                  delivery !== undefined &&
+                  semanticAddressKey(delivery.dueAt ?? room.origin) ===
+                    semanticAddressKey(room.origin),
+              )
+                ? firstDue
+                : undefined;
+            const retained = site.entries[event.entryKey];
+            const entry = createAcquisitionEntryAddress(site.address, event.entryKey);
+            if (
+              agreedDue === undefined ||
+              retained === undefined ||
+              retained === null ||
+              JSON.stringify(retained.offer) !== JSON.stringify(agreedDue.reward.offer)
+            ) {
+              addRewardFinding(
+                findings,
+                rewardFinding('rewardSourceUnavailable', entry, {
+                  reason:
+                    agreedDue === undefined
+                      ? 'staleHermesShrineDelivery'
+                      : 'retainedSourceMismatch',
+                }),
+                ownerRegion(entry),
+                rewardFindingChronologyForRoom(
+                  snapshot,
+                  room.origin,
+                  event.sequence,
+                  'localRoomLifecycle',
+                ),
+              );
+              break;
+            }
+            const acquisitionView =
+              roomView.acquisitionPoints?.find((point) => point.point === event.point)?.before ??
+              roomView.preOutgoing ??
+              roomView.entry;
+            const settled = settlePickupAcquisitionSite(
+              catalog,
+              branches,
+              {
+                siteOwner: room.origin,
+                site: site.address,
+                entries: Object.freeze({ [event.entryKey]: retained }),
+                order: Object.freeze([event.entryKey]),
+                requiredEntryKeys: new Set([event.entryKey]),
+                producerLifecycleKey: 'HermesShrineDelivery',
+                historySequence: event.sequence,
+                facts: (branchHistory, _shopNames, branch) =>
+                  rewardFacts(
+                    catalog,
+                    room,
+                    room,
+                    declaration,
+                    acquisitionView,
+                    branchHistory,
+                    enteredBiomeCount,
+                    undefined,
+                    undefined,
+                    undefined,
+                    undefined,
+                    branch,
+                  ),
+                findingChronology: rewardFindingChronologyForRoom(
+                  snapshot,
+                  room.origin,
+                  event.sequence,
+                  'localRoomLifecycle',
+                ),
+                authoredSeaStarDuplicateSiteKeys,
+              },
+              findings,
+            );
+            recordAcquisitionRoleFrontiers(settled.roleFrontiers);
+            recordTraitChildSettlements(settled.traitChildSettlements, room.origin);
+            const settledEntryKey = semanticAddressKey(entry);
+            branches = Object.freeze(
+              settled.branches.map((branch) => {
+                // A role can split or merge reward branches, so cardinality
+                // cannot decide whether this particular pending item settled.
+                // Its own ordinary pickup event is the authoritative success
+                // witness.  Blocked/no-op successors retain the pending item.
+                const settledThisEntry = branch.events.some(
+                  (candidate) =>
+                    (candidate.kind === 'concreteAcquisition' ||
+                      candidate.kind === 'conversionToGold' ||
+                      candidate.kind === 'artificerConversion') &&
+                    candidate.settlement !== undefined &&
+                    semanticAddressKey(candidate.settlement.entry) === settledEntryKey,
+                );
+                if (!settledThisEntry) return branch;
+                const { [sourceKey]: delivered, ...remaining } =
+                  branch.pendingHermesShrineDeliveries;
+                void delivered;
+                return Object.freeze({
+                  ...branch,
+                  pendingHermesShrineDeliveries: Object.freeze(remaining),
+                });
+              }),
+            );
+            break;
+          }
           const parsed = parseArtificerReplacementEntryKey(event.entryKey);
           if (site !== undefined && parsed !== undefined) {
             const source = canonicalArtificerSource(room, parsed.sourceKey);
@@ -5918,7 +6584,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
                 acquisitionRole: parsed.acquisitionRole,
                 participation: row?.participation === 'required' ? 'mandatory' : 'optional',
                 historySequence: event.sequence,
-                facts: (branchHistory) =>
+                facts: (branchHistory, _shopNames, branch) =>
                   rewardFacts(
                     catalog,
                     room,
@@ -5927,6 +6593,11 @@ export function evaluateBiomeRewardsAssemblyInternal(
                     acquisitionView,
                     branchHistory,
                     enteredBiomeCount,
+                    undefined,
+                    undefined,
+                    undefined,
+                    undefined,
+                    branch,
                   ),
                 findingChronology: rewardFindingChronologyForRoom(
                   snapshot,
@@ -6129,6 +6800,31 @@ export function evaluateBiomeRewardsAssemblyInternal(
     runStateSnapshots: runStatePublication.snapshots,
     runStateAvailability: runStatePublication.availability,
     purgingPoolAssessments: Object.freeze([...purgingPoolAssessments.values()]),
+    hermesShrineAssessments: Object.freeze([...hermesShrineAssessments.values()]),
+    hermesShrineDeliveries: Object.freeze([
+      ...new Map(
+        branches
+          .flatMap((branch) => Object.values(branch.pendingHermesShrineDeliveries))
+          .map(
+            (delivery) =>
+              [
+                delivery.sourceKey,
+                Object.freeze({
+                  sourceKey: delivery.sourceKey,
+                  sourceOrigin: delivery.sourceOrigin,
+                  rewardType: delivery.reward.offer.rewardType,
+                  deliveryKind:
+                    delivery.dueAt === undefined ? ('pending' as const) : ('countdown' as const),
+                  ...(delivery.dueAt === undefined ? {} : { hostOrigin: delivery.dueAt }),
+                  ...(delivery.dueSequence === undefined
+                    ? {}
+                    : { hostSequence: delivery.dueSequence }),
+                  remainingUses: delivery.remainingUses,
+                }),
+              ] as const,
+          ),
+      ).values(),
+    ]),
     selectedTraitOffers: traitProducts.selectedTraitOffers,
     selectedLevelResolutions: traitProducts.selectedLevelResolutions,
     runtimeOfferFallbacks: Object.freeze([
@@ -6203,6 +6899,23 @@ export function evaluateBiomeRewardsAssemblyInternal(
           semanticAddressKey(origin),
           assessments,
         ]),
+      ),
+    ),
+    hermesShrineArtifacts: createHermesShrineCandidateArtifacts(
+      new Map(
+        [...hermesShrineAssessments.values()].map(({ origin, assessments }) => {
+          const travelDealRefills = hermesShrineTravelDealRefills.get(semanticAddressKey(origin));
+          return [
+            semanticAddressKey(origin),
+            Object.freeze(
+              assessments.map((assessment, index) =>
+                travelDealRefills?.[index] === undefined
+                  ? assessment
+                  : Object.freeze({ ...assessment, travelDealRefill: travelDealRefills[index] }),
+              ),
+            ),
+          ] as const;
+        }),
       ),
     ),
     traitChildSettlementCheckpoints,

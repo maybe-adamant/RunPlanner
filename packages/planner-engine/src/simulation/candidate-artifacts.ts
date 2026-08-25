@@ -309,6 +309,7 @@ export interface BiomeCandidateArtifacts {
   readonly derivedAcquisitionEntries: DerivedAcquisitionEntryCandidateArtifacts;
   readonly steadyGrowth: SteadyGrowthCandidateArtifacts;
   readonly purgingPools: PurgingPoolCandidateArtifacts;
+  readonly hermesShrines: HermesShrineCandidateArtifacts;
 }
 
 /** Exact room-entry Pool generation assessment at one automatic host. */
@@ -351,6 +352,79 @@ export function createPurgingPoolCandidateArtifacts(
   });
 }
 function createEmptyPurgingPoolCandidateArtifacts(): PurgingPoolCandidateArtifacts {
+  return Object.freeze({ at: () => undefined });
+}
+
+/** Exact entry-frontier Shrine support at one physical occurrence. */
+export interface HermesShrineCandidateCapability {
+  readonly assessments: readonly import('./hermes-shrine').HermesShrineCandidateContext[];
+  readonly placementEligible: boolean;
+  readonly required: boolean;
+  readonly present: boolean;
+  readonly candidateRewardTypesBySlot: Readonly<
+    Record<import('../authored-project/model').HermesShrineSlotKey, readonly string[]>
+  >;
+  /** Exact first-rush Travel Deal domain, absent until that prefix is reached. */
+  readonly travelDealRefill?: {
+    readonly sourceGenerationKey: import('../authored-project/model').HermesShrineGenerationKey;
+    readonly candidateRewardTypes: readonly string[];
+  };
+}
+export interface HermesShrineCandidateArtifacts {
+  readonly at: (occurrence: OccurrenceAddress) => HermesShrineCandidateCapability | undefined;
+}
+export function createHermesShrineCandidateArtifacts(
+  contexts: ReadonlyMap<string, readonly import('./hermes-shrine').HermesShrineCandidateContext[]>,
+): HermesShrineCandidateArtifacts {
+  const privateContexts = new Map(contexts);
+  return Object.freeze({
+    at: (occurrence: OccurrenceAddress) => {
+      const assessments = privateContexts.get(semanticAddressKey(occurrence));
+      if (assessments === undefined || assessments.length === 0) return undefined;
+      const first = assessments[0]!;
+      const travelDealRefill = first.travelDealRefill;
+      return Object.freeze({
+        assessments,
+        placementEligible: assessments.every((assessment) => assessment.placement.eligible),
+        required: assessments.every((assessment) => assessment.placement.forced),
+        present: assessments.every((assessment) => assessment.inventory !== undefined),
+        candidateRewardTypesBySlot: Object.freeze(
+          Object.fromEntries(
+            (['first', 'secondLeft', 'secondRight'] as const).map((slotKey) => [
+              slotKey,
+              Object.freeze(
+                (first.inventory?.candidateRewardTypesBySlot[slotKey] ?? []).filter((rewardType) =>
+                  assessments.every((assessment) =>
+                    assessment.inventory?.candidateRewardTypesBySlot[slotKey].includes(rewardType),
+                  ),
+                ),
+              ),
+            ]),
+          ) as Record<import('../authored-project/model').HermesShrineSlotKey, readonly string[]>,
+        ),
+        ...(travelDealRefill === undefined
+          ? {}
+          : {
+              travelDealRefill: Object.freeze({
+                sourceGenerationKey: travelDealRefill.sourceGenerationKey,
+                candidateRewardTypes: Object.freeze(
+                  travelDealRefill.candidateRewardTypes.filter((rewardType) =>
+                    assessments.every(
+                      (assessment) =>
+                        assessment.travelDealRefill?.sourceGenerationKey ===
+                          travelDealRefill.sourceGenerationKey &&
+                        assessment.travelDealRefill?.candidateRewardTypes.includes(rewardType) ===
+                          true,
+                    ),
+                  ),
+                ),
+              }),
+            }),
+      });
+    },
+  });
+}
+function createEmptyHermesShrineCandidateArtifacts(): HermesShrineCandidateArtifacts {
   return Object.freeze({ at: () => undefined });
 }
 
@@ -665,6 +739,7 @@ export function createBiomeCandidateArtifacts(
   derivedAcquisitionEntries: DerivedAcquisitionEntryCandidateArtifacts = createEmptyDerivedAcquisitionEntryCandidateArtifacts(),
   steadyGrowth: SteadyGrowthCandidateArtifacts = createEmptySteadyGrowthCandidateArtifacts(),
   purgingPools: PurgingPoolCandidateArtifacts = createEmptyPurgingPoolCandidateArtifacts(),
+  hermesShrines: HermesShrineCandidateArtifacts = createEmptyHermesShrineCandidateArtifacts(),
 ): BiomeCandidateArtifacts {
   return Object.freeze({
     origin,
@@ -681,6 +756,7 @@ export function createBiomeCandidateArtifacts(
     derivedAcquisitionEntries,
     steadyGrowth,
     purgingPools,
+    hermesShrines,
   });
 }
 

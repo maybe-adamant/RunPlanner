@@ -10,6 +10,7 @@ import surfaceNQuickBuckRaw from './surface-n-quick-buck.runplanner.json';
 import surfaceNBuriedTreasureRaw from './surface-n-buried-treasure.runplanner.json';
 import surfaceNResourcesRaw from './surface-n-resources.runplanner.json';
 import surfaceNORaw from './surface-no.runplanner.json';
+import surfaceNOHermesShrineDeliveryRaw from './surface-no-hermes-shrine-delivery.runplanner.json';
 import surfaceNOPRaw from './surface-nop.runplanner.json';
 import surfaceNOPQRaw from './surface-nopq.runplanner.json';
 import surfaceNCompleteHubRaw from './surface-n-complete-hub-frontier.runplanner.json';
@@ -30,6 +31,7 @@ export const surfaceCheckpointArtifacts = Object.freeze({
   'surface-n-buried-treasure': checkpointArtifact(surfaceNBuriedTreasureRaw),
   'surface-n-resources': checkpointArtifact(surfaceNResourcesRaw),
   'surface-no': checkpointArtifact(surfaceNORaw),
+  'surface-no-hermes-shrine-delivery': checkpointArtifact(surfaceNOHermesShrineDeliveryRaw),
   'surface-nop': checkpointArtifact(surfaceNOPRaw),
   'surface-nopq': checkpointArtifact(surfaceNOPQRaw),
   'surface-n-entry-frontier': checkpointArtifact(surfaceNEntryRaw),
@@ -70,6 +72,10 @@ export function loadSurfaceNResourcesCheckpoint(): ProjectDocument {
 
 export function loadSurfaceNOCheckpoint(): ProjectDocument {
   return surfaceCheckpointArtifacts['surface-no'].load();
+}
+
+export function loadSurfaceNOHermesShrineDeliveryCheckpoint(): ProjectDocument {
+  return surfaceCheckpointArtifacts['surface-no-hermes-shrine-delivery'].load();
 }
 
 export function loadSurfaceNOPCheckpoint(): ProjectDocument {

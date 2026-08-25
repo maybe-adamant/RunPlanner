@@ -461,6 +461,34 @@ const findingCopy = {
     title: 'Pool sale unavailable',
     description: 'Remove this stale sale or restore its valid Pool trait.',
   },
+  hermesShrinePlacementUnavailable: {
+    title: 'Shrine placement unavailable',
+    description: 'Remove this ordinary Shrine or restore a legal placement window.',
+  },
+  hermesShrineInventoryMissing: {
+    title: 'Shrine offer missing',
+    description: 'Choose every visible Hermes Shrine offer.',
+  },
+  hermesShrineInventoryWrongGroup: {
+    title: 'Shrine offer has the wrong group',
+    description: 'Choose an offer from this Shrine slot’s declared group.',
+  },
+  hermesShrineInventoryDuplicate: {
+    title: 'Shrine offer is repeated',
+    description: 'The two second-group Shrine offers must be distinct.',
+  },
+  hermesShrineInventoryRequirement: {
+    title: 'Shrine offer unavailable',
+    description: 'Choose an offer supported at this Shrine entry.',
+  },
+  hermesShrineTravelDealRefillMissing: {
+    title: 'Travel Deal refill missing',
+    description: 'Choose the required fourth Shrine offer.',
+  },
+  hermesShrineTravelDealRefillUnavailable: {
+    title: 'Travel Deal refill unavailable',
+    description: 'Repair this retained Shrine refill or its qualifying purchase prefix.',
+  },
   nemesisOutcomeMissing: {
     title: 'Choose the Nemesis event result',
     description: 'Record what Nemesis asks or offers at this interaction.',

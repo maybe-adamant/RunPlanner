@@ -89,6 +89,7 @@ import type {
 import type { RoomLifecycleCandidateArtifacts } from '../rewards/lifecycle-artifacts';
 import type { FigLeafLifecycleState } from '../history';
 import { attestFigLeafBranchState, attestGorgonBranchState } from '../keepsakes';
+import { attestPendingHermesSpellDrop } from '../hermes-shrine';
 
 export interface BiomeGenerationValidation {
   readonly validity: 'invalid' | 'valid';
@@ -147,6 +148,12 @@ function figLeafLifecycleState(
   return effect?.kind === 'figLeaf' && keepsake !== undefined
     ? { remainingUses: effect.biomeUsesByRank[keepsake.rank], activatedThisBiome: false }
     : undefined;
+}
+
+function pendingHermesSpellDropLifecycleState(context: ProgressiveBiomeContext): boolean {
+  return context.seed === undefined
+    ? false
+    : attestPendingHermesSpellDrop(context.seed.rewardBranches);
 }
 
 interface ProgressiveGenerationAssembly {
@@ -446,11 +453,13 @@ function products(
   context: ProgressiveBiomeContext,
 ): ProgressiveProducts {
   const lifecycleFigLeafState = figLeafLifecycleState(catalog, context);
+  const lifecyclePendingSpellDrop = pendingHermesSpellDropLifecycleState(context);
   const composed = composeBiomeHistoryPrefixWithEncounterValidation(
     catalog,
     prefix,
     context.seed?.history.afterTransition,
     lifecycleFigLeafState,
+    lifecyclePendingSpellDrop,
   );
   if (composed === null) {
     throw new Error(`${prefix.biomeKey} materialized prefix has no composable history`);
@@ -1459,7 +1468,7 @@ function locateFinding(
         : {
             historySequence: historyChronology.sequence,
             historyBoundary: historyChronology.boundary,
-      }),
+          }),
     });
   }
   // Automatic Boss/Postboss occurrences are real lifecycle owners but are not
@@ -1490,8 +1499,7 @@ function locateFinding(
   // Retained Pool sales are occurrence-owned Postboss actions. They remain
   // repairable at the completed biome's final automatic-room region even when
   // their slot was cleared and therefore no longer has an active contribution.
-  const automaticRoomAction =
-    finding.origin.kind === 'roomAction' ? finding.origin : undefined;
+  const automaticRoomAction = finding.origin.kind === 'roomAction' ? finding.origin : undefined;
   if (
     automaticRoomAction !== undefined &&
     automaticRoomAction.routeKey === prefix.routeKey &&
@@ -2097,6 +2105,7 @@ export function evaluateProgressiveBiomeAssembly(
       evaluated.candidateArtifacts.derivedAcquisitionEntries,
       evaluated.candidateArtifacts.steadyGrowth,
       evaluated.candidateArtifacts.purgingPools,
+      evaluated.candidateArtifacts.hermesShrines,
     ),
   });
 }
@@ -2239,6 +2248,7 @@ function clampSelectedProducts(
       retainedInteractions.derivedAcquisitionEntries,
       retainedInteractions.steadyGrowth,
       selectedProducts.candidateArtifacts.purgingPools,
+      selectedProducts.candidateArtifacts.hermesShrines,
     ),
   });
 }

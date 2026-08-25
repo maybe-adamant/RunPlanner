@@ -448,6 +448,7 @@ function foldHistoryEventStream(
           sequence: event.sequence,
           origin: event.origin,
           gameName: roomName(namesByOrigin, event),
+          surfaceShopPresent: event.surfaceShopPresent === true,
         });
         ledgers.roomAppearances.push(entry);
         requireRoomViews(viewsByOrigin, event).entry = stateView(event.sequence, ledgers);
@@ -695,7 +696,12 @@ function foldHistoryEventStream(
       case 'roomRestored': {
         const gameName = roomName(namesByOrigin, event);
         ledgers.roomAppearances.push(
-          Object.freeze({ sequence: event.sequence, origin: event.origin, gameName }),
+          Object.freeze({
+            sequence: event.sequence,
+            origin: event.origin,
+            gameName,
+            surfaceShopPresent: event.surfaceShopPresent === true,
+          }),
         );
         ledgers.roomRestores.push(
           Object.freeze({

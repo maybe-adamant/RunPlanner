@@ -2003,9 +2003,177 @@ function RoomFeaturesWorkbench({
                 </fieldset>
               );
             })();
+          case 'hermesShrine':
+            return (
+              <fieldset className="room-purging-pool" key="hermes-shrine">
+                <legend>Hermes Shrine</legend>
+                {feature.presenceInteractionKey === undefined
+                  ? null
+                  : (() => {
+                      const presence = requireWorkspaceInteraction(
+                        interactions.hermesShrinePresences,
+                        feature.presenceInteractionKey,
+                      );
+                      return (
+                        <label>
+                          <input
+                            aria-label="Hermes Shrine present"
+                            checked={feature.present}
+                            disabled={!feature.present && !feature.placementEligible}
+                            onChange={(event) =>
+                              executeIntent(presence.intentFor(event.target.checked))
+                            }
+                            type="checkbox"
+                          />
+                          Shrine present
+                        </label>
+                      );
+                    })()}
+                {feature.slots.map((slot) => {
+                  const offer = requireWorkspaceInteraction(
+                    interactions.hermesShrineOffers,
+                    slot.offerInteractionKey,
+                  );
+                  const purchase = requireWorkspaceInteraction(
+                    interactions.hermesShrinePurchases,
+                    slot.purchaseInteractionKey,
+                  );
+                  return (
+                    <HermesShrineSlotEditor
+                      key={slot.key}
+                      label={slot.label}
+                      {...(slot.rewardLabel === undefined ? {} : { rewardLabel: slot.rewardLabel })}
+                      candidateRewards={slot.candidateRewards}
+                      offer={offer}
+                      purchase={purchase}
+                    />
+                  );
+                })}
+                {feature.travelDealRefill === undefined
+                  ? null
+                  : (() => {
+                      const refill = feature.travelDealRefill;
+                      return (
+                        <HermesShrineSlotEditor
+                          label="Travel Deal refill"
+                          {...(refill.rewardLabel === undefined
+                            ? {}
+                            : { rewardLabel: refill.rewardLabel })}
+                          candidateRewards={refill.candidateRewards}
+                          offer={requireWorkspaceInteraction(
+                            interactions.hermesShrineOffers,
+                            refill.offerInteractionKey,
+                          )}
+                          purchase={requireWorkspaceInteraction(
+                            interactions.hermesShrinePurchases,
+                            refill.purchaseInteractionKey,
+                          )}
+                        />
+                      );
+                    })()}
+              </fieldset>
+            );
         }
       })}
     </section>
+  );
+}
+
+function HermesShrineSlotEditor({
+  label,
+  rewardLabel,
+  candidateRewards,
+  offer,
+  purchase,
+}: {
+  readonly label: string;
+  readonly rewardLabel?: string;
+  readonly candidateRewards: readonly { readonly rewardType: string; readonly label: string }[];
+  readonly offer: import('@planner/projections/structured-workspace').WorkspaceHermesShrineOfferInteraction;
+  readonly purchase: import('@planner/projections/structured-workspace').WorkspaceHermesShrinePurchaseInteraction;
+}) {
+  const executeIntent = useCommandIntent();
+  const selected = offer.rewardType ?? '';
+  const values =
+    selected !== '' && !offer.candidateRewardTypes.includes(selected)
+      ? [selected, ...offer.candidateRewardTypes]
+      : offer.candidateRewardTypes;
+  const current = purchase.purchase;
+  return (
+    <div className="hermes-shrine-slot">
+      <label>
+        {label}
+        <select
+          aria-label={`Hermes Shrine ${label}`}
+          onChange={(event) => {
+            if (event.target.value !== '') executeIntent(offer.intentFor(event.target.value));
+          }}
+          value={selected}
+        >
+          <option value="">Unresolved</option>
+          {values.map((rewardType) => (
+            <option key={rewardType} value={rewardType}>
+              {rewardType === selected && rewardLabel !== undefined
+                ? rewardLabel
+                : (candidateRewards.find((candidate) => candidate.rewardType === rewardType)
+                    ?.label ?? rewardType)}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label>
+        <input
+          aria-label={`Purchase Hermes Shrine ${label}`}
+          checked={current !== null}
+          disabled={selected === ''}
+          onChange={(event) =>
+            executeIntent(
+              purchase.intentFor(event.target.checked ? { delay: 2, rushed: false } : null),
+            )
+          }
+          type="checkbox"
+        />
+        Purchase
+      </label>
+      {current === null ? null : (
+        <>
+          <label>
+            Delivery delay
+            <select
+              aria-label={`Hermes Shrine ${label} delivery delay`}
+              onChange={(event) =>
+                executeIntent(
+                  purchase.intentFor({
+                    ...current,
+                    delay: Number(event.target.value) as 2 | 3 | 4 | 5 | 6 | 7 | 8,
+                  }),
+                )
+              }
+              value={current.delay}
+            >
+              {[2, 3, 4, 5, 6, 7, 8].map((delay) => (
+                <option key={delay} value={delay}>
+                  {delay}
+                </option>
+              ))}
+            </select>
+          </label>
+          {purchase.generationKey === 'travelDealRefill' ? null : (
+            <label>
+              <input
+                aria-label={`Rush Hermes Shrine ${label}`}
+                checked={current.rushed}
+                onChange={(event) =>
+                  executeIntent(purchase.intentFor({ ...current, rushed: event.target.checked }))
+                }
+                type="checkbox"
+              />
+              Rushed
+            </label>
+          )}
+        </>
+      )}
+    </div>
   );
 }
 

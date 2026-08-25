@@ -95,6 +95,7 @@ function requirementContext(
   room: EncounterAuthoringRoom,
   declaration: RoomDeclaration,
   view: HistoryStateView,
+  pendingSpellDrop: boolean,
 ): RequirementEvaluationContext {
   const goalsRemaining = view.ledgers.counters.clockworkGoalsRemaining;
   const nonGoalRewardsAcquired = view.ledgers.counters.clockworkNonGoalRewardsAcquired;
@@ -145,8 +146,16 @@ function requirementContext(
           maxNonGoalRewards: maxNonGoalRewards!,
         }
       : undefined,
-    flags: Object.freeze({ allSpellInvested: false, pendingSpellDrop: false }),
+    flags: Object.freeze({ allSpellInvested: false, pendingSpellDrop }),
   });
+}
+
+/**
+ * A direct encounter query has no route-branch input.  Lifecycle composition
+ * supplies this narrow attested fact when a delayed Shrine Spell is live.
+ */
+export interface EncounterPreparationRunState {
+  readonly pendingSpellDrop?: boolean;
 }
 
 function phaseAddress(room: EncounterAuthoringRoom, slotKey: string): EncounterPhaseAddress {
@@ -195,12 +204,13 @@ function slotActivationSatisfied(
   declaration: RoomDeclaration,
   slot: EncounterEnvelopeSlot,
   before: HistoryStateView,
+  pendingSpellDrop: boolean,
 ): boolean {
   return (
     slot.activationRequirement === undefined ||
     evaluateRequirement(
       slot.activationRequirement,
-      requirementContext(catalog, room, declaration, before),
+      requirementContext(catalog, room, declaration, before, pendingSpellDrop),
     )
   );
 }
@@ -216,12 +226,14 @@ export function prepareRoomEncounterPhases(
   catalog: Catalog,
   room: EncounterAuthoringRoom,
   preparationCheckpoint: HistoryStateView,
+  runState: EncounterPreparationRunState = Object.freeze({}),
 ): PreparedEncounterPhases {
   const declaration = catalog.rooms.byKey[room.gameName];
   if (declaration === undefined) {
     throw new Error(`encounter preparation lost declaration ${room.gameName}`);
   }
   const bindings = encounterBindingsBySlot(catalog, declaration, declaration.gameName);
+  const pendingSpellDrop = runState.pendingSpellDrop === true;
   const slots = new Map(
     encounterEnvelopeSlots(catalog, declaration, declaration.gameName).map((slot) => [
       slot.key,
@@ -264,6 +276,7 @@ export function prepareRoomEncounterPhases(
       declaration,
       slot,
       preparation,
+      pendingSpellDrop,
     );
     if (binding.kind === 'fixed') {
       if (phase.encounterKey !== binding.encounterDefinitionKey) {
@@ -289,7 +302,7 @@ export function prepareRoomEncounterPhases(
     }
 
     const set = encounterSetForBinding(catalog, binding, declaration.gameName);
-    const context = requirementContext(catalog, room, declaration, preparation);
+    const context = requirementContext(catalog, room, declaration, preparation, pendingSpellDrop);
     const candidateEncounterKeys = Object.freeze(
       set.encounterDefinitionKeys.filter((key) => {
         const definition = catalog.encounterDefinitions.byKey[key];

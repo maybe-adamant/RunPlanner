@@ -12,6 +12,7 @@ import {
   derivedAcquisitionEntriesForProjectEvaluationAssembly,
   blockedOccurrenceRoomForProjectEvaluationAssembly,
   purgingPoolCandidateForProjectEvaluationAssembly,
+  hermesShrineCandidateForProjectEvaluationAssembly,
   traitOfferCandidateForProjectEvaluationAssembly,
   type ProjectEvaluation,
   type ProjectEvaluationAssembly,
@@ -241,6 +242,16 @@ export function createStructuredWorkspaceProjection(
         (occurrence) => {
           try {
             return purgingPoolCandidateForProjectEvaluationAssembly(assembly, occurrence);
+          } catch (error) {
+            if (error instanceof Error && error.name === 'ProjectSimulationContractError') {
+              return undefined;
+            }
+            throw error;
+          }
+        },
+        (occurrence) => {
+          try {
+            return hermesShrineCandidateForProjectEvaluationAssembly(assembly, occurrence);
           } catch (error) {
             if (error instanceof Error && error.name === 'ProjectSimulationContractError') {
               return undefined;

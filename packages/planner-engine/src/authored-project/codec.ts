@@ -9,6 +9,7 @@ import {
 import { selectedPickupProducers } from './traits';
 import { createBiomeAddress } from './addresses';
 import { decodeRoomEncounterState } from './room-state/encounters';
+import { decodeNullableRewardState } from './room-state/codec';
 import { completionOccurrenceId } from './completion-occurrences';
 import { roomActionKey } from './room-actions';
 import { assembleRoomActionDomain, type RoomActionContribution } from './room-action-domain';
@@ -28,6 +29,130 @@ import {
   expectString,
   failProjectDocument as fail,
 } from './validation';
+
+function decodeHermesShrineState(
+  value: unknown,
+  path: string,
+  catalog: Catalog,
+): import('./model').HermesShrineState {
+  const raw = expectRecord(value, path);
+  expectExactKeys(
+    raw,
+    [
+      'offerBySlot',
+      ...(raw.purchaseBySlot === undefined ? [] : ['purchaseBySlot']),
+      ...(raw.travelDealRefill === undefined ? [] : ['travelDealRefill']),
+    ],
+    path,
+  );
+  const offers = expectRecord(raw.offerBySlot, `${path}.offerBySlot`);
+  const slots = ['first', 'secondLeft', 'secondRight'] as const;
+  expectExactKeys(offers, slots, `${path}.offerBySlot`);
+  const offerBySlot = Object.freeze(
+    Object.fromEntries(
+      slots.map((slot) => [
+        slot,
+        decodeNullableRewardState(offers[slot], catalog, `${path}.offerBySlot.${slot}`, {
+          kind: 'producerLifecycle',
+          key: 'HermesShrineDelivery',
+        }),
+      ]),
+    ) as Record<
+      import('./model').HermesShrineSlotKey,
+      import('./model').AuthoredRewardState | null
+    >,
+  );
+  const decodePurchase = (value: unknown, purchasePath: string) => {
+    const purchase = expectRecord(value, purchasePath);
+    expectExactKeys(purchase, ['delay', 'rushed'], purchasePath);
+    const delay = purchase.delay;
+    if (![2, 3, 4, 5, 6, 7, 8].includes(delay as number))
+      fail(`${purchasePath}.delay`, 'must be an integer from 2 through 8');
+    return Object.freeze({
+      delay: delay as 2 | 3 | 4 | 5 | 6 | 7 | 8,
+      rushed: expectBoolean(purchase.rushed, `${purchasePath}.rushed`),
+    });
+  };
+  const purchases =
+    raw.purchaseBySlot === undefined
+      ? undefined
+      : expectRecord(raw.purchaseBySlot, `${path}.purchaseBySlot`);
+  for (const key of Object.keys(purchases ?? {}))
+    if (!slots.includes(key as (typeof slots)[number]))
+      fail(`${path}.purchaseBySlot.${key}`, 'is not a declared Shrine slot');
+  const purchaseBySlot = Object.freeze(
+    Object.fromEntries(
+      Object.entries(purchases ?? {}).map(([slot, rawPurchase]) => {
+        return [slot, decodePurchase(rawPurchase, `${path}.purchaseBySlot.${slot}`)];
+      }),
+    ) as Partial<
+      Record<
+        import('./model').HermesShrineSlotKey,
+        { readonly delay: 2 | 3 | 4 | 5 | 6 | 7 | 8; readonly rushed: boolean }
+      >
+    >,
+  );
+  for (const slot of Object.keys(purchaseBySlot) as import('./model').HermesShrineSlotKey[]) {
+    if (offerBySlot[slot] === null)
+      fail(`${path}.purchaseBySlot.${slot}`, 'requires a resolved source offer');
+  }
+  const refill =
+    raw.travelDealRefill === undefined
+      ? undefined
+      : (() => {
+          const refillRaw = expectRecord(raw.travelDealRefill, `${path}.travelDealRefill`);
+          expectExactKeys(
+            refillRaw,
+            ['offer', ...(refillRaw.purchase === undefined ? [] : ['purchase'])],
+            `${path}.travelDealRefill`,
+          );
+          const purchase =
+            refillRaw.purchase === undefined
+              ? undefined
+              : decodePurchase(refillRaw.purchase, `${path}.travelDealRefill.purchase`);
+          if (purchase?.rushed === true)
+            fail(`${path}.travelDealRefill.purchase.rushed`, 'must be false');
+          const offer = decodeNullableRewardState(
+            refillRaw.offer,
+            catalog,
+            `${path}.travelDealRefill.offer`,
+            { kind: 'producerLifecycle', key: 'HermesShrineDelivery' },
+          );
+          if (purchase !== undefined && offer === null)
+            fail(`${path}.travelDealRefill.purchase`, 'requires a resolved source offer');
+          return Object.freeze({
+            offer,
+            ...(purchase === undefined ? {} : { purchase }),
+          });
+        })();
+  return Object.freeze({
+    offerBySlot,
+    ...(purchases === undefined || Object.keys(purchaseBySlot).length === 0
+      ? {}
+      : { purchaseBySlot }),
+    ...(refill === undefined ? {} : { travelDealRefill: refill }),
+  });
+}
+
+function assertHermesShrinePurchaseActionClosure(
+  shrine: import('./model').HermesShrineState | undefined,
+  roomActions: import('./model').RoomActionState,
+  path: string,
+): void {
+  const purchases = new Set<import('./model').HermesShrineGenerationKey>([
+    ...Object.keys(shrine?.purchaseBySlot ?? {}).map(
+      (slotKey) => `initial:${slotKey}` as import('./model').HermesShrineGenerationKey,
+    ),
+    ...(shrine?.travelDealRefill?.purchase === undefined ? [] : ['travelDealRefill' as const]),
+  ]);
+  const actions = new Set(
+    roomActions.order.flatMap((reference) =>
+      reference.kind === 'purchaseHermesShrineOffer' ? [reference.generationKey] : [],
+    ),
+  );
+  if (purchases.size !== actions.size || [...purchases].some((key) => !actions.has(key)))
+    fail(path, 'Shrine purchase details must have exactly one matching purchase action');
+}
 
 function decodeKeepsakeEquipResults(
   value: unknown,
@@ -169,6 +294,7 @@ function decodeBiomePlan(
           ...(raw.acquisitionSites === undefined ? [] : ['acquisitionSites']),
           ...(room.hasKeepsakeRack ? ['keepsakeRack'] : []),
           ...(room.purgingPool !== undefined ? ['purgingPool'] : []),
+          ...(room.surfaceShop?.forced === true ? ['hermesShrine'] : []),
         ],
         `${path}.completionOccurrences[${index}]`,
       );
@@ -248,6 +374,19 @@ function decodeBiomePlan(
                 >,
               });
             })();
+      const hermesShrine =
+        room.surfaceShop?.forced !== true
+          ? undefined
+          : decodeHermesShrineState(
+              raw.hermesShrine,
+              `${path}.completionOccurrences[${index}].hermesShrine`,
+              catalog,
+            );
+      assertHermesShrinePurchaseActionClosure(
+        hermesShrine,
+        roomActions,
+        `${path}.completionOccurrences[${index}].roomActions.order`,
+      );
       if (!Array.isArray(raw.additionalExits) || raw.additionalExits.length !== 0)
         fail(`${path}.completionOccurrences[${index}].additionalExits`, 'must be empty');
       const keepsakeRack = !room.hasKeepsakeRack
@@ -325,6 +464,7 @@ function decodeBiomePlan(
         encounters,
         roomActions,
         ...(purgingPool === undefined ? {} : { purgingPool }),
+        ...(hermesShrine === undefined ? {} : { hermesShrine }),
         additionalExits: Object.freeze([]),
       });
       const acquisitionSites =

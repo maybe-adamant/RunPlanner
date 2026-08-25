@@ -91,6 +91,8 @@ interface RewardFactsOptions {
   readonly currentBatchRoomGameNames: readonly string[];
   readonly currentRoomShopOptionNames?: ReadonlySet<string>;
   readonly rewardLookups?: Readonly<Record<string, ReadonlySet<string>>>;
+  /** Branch-local delayed Shrine Spell reservation. */
+  readonly pendingSpellDrop?: boolean;
   readonly fail: (detail: string) => never;
 }
 
@@ -104,6 +106,7 @@ export function createRewardFacts({
   currentBatchRoomGameNames,
   currentRoomShopOptionNames = new Set(),
   rewardLookups = Object.freeze({}),
+  pendingSpellDrop = false,
   fail,
 }: RewardFactsOptions): RewardKernelFacts {
   const staticFacts = staticRewardViewFacts(catalog, view);
@@ -152,10 +155,7 @@ export function createRewardFacts({
           maxNonGoalRewards: maxNonGoalRewards!,
         }
       : undefined,
-    // Hermes Shrine delayed delivery is not modeled yet. Keep the source-owned
-    // requirement flag explicit at the supported baseline rather than infer it
-    // from unrelated Shop state; its contextual value arrives with that slice.
-    flags: Object.freeze({ allSpellInvested: false, pendingSpellDrop: false }),
+    flags: Object.freeze({ allSpellInvested: false, pendingSpellDrop }),
   });
   return factsWithHistory(Object.freeze({ requirements }), history, currentRoomShopOptionNames);
 }

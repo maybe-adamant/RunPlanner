@@ -857,6 +857,9 @@ export function materializeAuthoredRoom(
     ...(context.occurrence.purgingPool === undefined
       ? {}
       : { purgingPool: context.occurrence.purgingPool }),
+    ...(context.occurrence.hermesShrine === undefined
+      ? {}
+      : { hermesShrine: context.occurrence.hermesShrine }),
     acquisitionSites: Object.freeze(
       Object.fromEntries(
         Object.entries(context.occurrence.acquisitionSites ?? {}).flatMap(([siteKey, site]) => {

@@ -20,9 +20,11 @@ import type {
   RoomActionReference,
   RoomActionState,
   AuthoredRewardState,
+  HermesShrineState,
 } from '../model';
 import { roomActionKey } from '../room-actions';
 import { parseArtificerReplacementEntryKey } from '../artificer';
+import { parseHermesShrineDeliveryEntryKey } from '../hermes-shrine-delivery';
 import { authoredAcquisitionSources } from '../acquisition-sources';
 import {
   createSeaStarDuplicateRewardState,
@@ -82,7 +84,142 @@ interface RawOccurrence {
   readonly additionalExits: unknown;
   readonly acquisitionSites: unknown;
   readonly hasAcquisitionSites: boolean;
+  readonly hermesShrine?: unknown;
+  readonly hasHermesShrine?: boolean;
   readonly path: string;
+}
+
+function decodeOrdinaryHermesShrineState(
+  value: unknown,
+  catalog: Catalog,
+  path: string,
+): HermesShrineState {
+  const raw = expectRecord(value, path);
+  const hasPurchases = Object.hasOwn(raw, 'purchaseBySlot');
+  const hasRefill = Object.hasOwn(raw, 'travelDealRefill');
+  expectExactKeys(
+    raw,
+    [
+      'offerBySlot',
+      ...(hasPurchases ? ['purchaseBySlot'] : []),
+      ...(hasRefill ? ['travelDealRefill'] : []),
+    ],
+    path,
+  );
+  const offers = expectRecord(raw.offerBySlot, `${path}.offerBySlot`);
+  const slots = ['first', 'secondLeft', 'secondRight'] as const;
+  expectExactKeys(offers, slots, `${path}.offerBySlot`);
+  const offerBySlot = Object.freeze(
+    Object.fromEntries(
+      slots.map((slot) => [
+        slot,
+        decodeNullableRewardState(offers[slot], catalog, `${path}.offerBySlot.${slot}`, {
+          kind: 'producerLifecycle',
+          key: 'HermesShrineDelivery',
+        }),
+      ]),
+    ) as Record<import('../model').HermesShrineSlotKey, AuthoredRewardState | null>,
+  );
+  const purchases = hasPurchases ? expectRecord(raw.purchaseBySlot, `${path}.purchaseBySlot`) : {};
+  const purchaseBySlot = Object.freeze(
+    Object.fromEntries(
+      Object.entries(purchases).map(([slot, value]) => {
+        if (!slots.includes(slot as (typeof slots)[number]))
+          failProjectDocument(`${path}.purchaseBySlot.${slot}`, 'is not a Shrine slot');
+        const purchase = expectRecord(value, `${path}.purchaseBySlot.${slot}`);
+        expectExactKeys(purchase, ['delay', 'rushed'], `${path}.purchaseBySlot.${slot}`);
+        if (
+          ![2, 3, 4, 5, 6, 7, 8].includes(purchase.delay as number) ||
+          typeof purchase.rushed !== 'boolean'
+        )
+          failProjectDocument(
+            `${path}.purchaseBySlot.${slot}`,
+            'must have delay 2 through 8 and boolean rushed',
+          );
+        if (offerBySlot[slot as (typeof slots)[number]] === null)
+          failProjectDocument(`${path}.purchaseBySlot.${slot}`, 'requires a resolved source offer');
+        return [
+          slot,
+          Object.freeze({
+            delay: purchase.delay as 2 | 3 | 4 | 5 | 6 | 7 | 8,
+            rushed: purchase.rushed,
+          }),
+        ];
+      }),
+    ) as import('../model').HermesShrineState['purchaseBySlot'],
+  );
+  const travelDealRefill = !hasRefill
+    ? undefined
+    : (() => {
+        const refill = expectRecord(raw.travelDealRefill, `${path}.travelDealRefill`);
+        expectExactKeys(
+          refill,
+          ['offer', ...(refill.purchase === undefined ? [] : ['purchase'])],
+          `${path}.travelDealRefill`,
+        );
+        const purchase =
+          refill.purchase === undefined
+            ? undefined
+            : (() => {
+                const value = expectRecord(refill.purchase, `${path}.travelDealRefill.purchase`);
+                expectExactKeys(value, ['delay', 'rushed'], `${path}.travelDealRefill.purchase`);
+                if (
+                  ![2, 3, 4, 5, 6, 7, 8].includes(value.delay as number) ||
+                  value.rushed !== false
+                )
+                  failProjectDocument(
+                    `${path}.travelDealRefill.purchase`,
+                    'must have delay 2 through 8 and rushed false',
+                  );
+                return Object.freeze({
+                  delay: value.delay as 2 | 3 | 4 | 5 | 6 | 7 | 8,
+                  rushed: false,
+                });
+              })();
+        const offer = decodeNullableRewardState(
+          refill.offer,
+          catalog,
+          `${path}.travelDealRefill.offer`,
+          { kind: 'producerLifecycle', key: 'HermesShrineDelivery' },
+        );
+        if (purchase !== undefined && offer === null)
+          failProjectDocument(
+            `${path}.travelDealRefill.purchase`,
+            'requires a resolved source offer',
+          );
+        return Object.freeze({
+          offer,
+          ...(purchase === undefined ? {} : { purchase }),
+        });
+      })();
+  return Object.freeze({
+    offerBySlot,
+    ...(hasPurchases ? { purchaseBySlot } : {}),
+    ...(travelDealRefill === undefined ? {} : { travelDealRefill }),
+  }) as HermesShrineState;
+}
+
+function assertHermesShrinePurchaseActionClosure(
+  shrine: HermesShrineState | undefined,
+  roomActions: RoomActionState,
+  path: string,
+): void {
+  const purchases = new Set<import('../model').HermesShrineGenerationKey>([
+    ...Object.keys(shrine?.purchaseBySlot ?? {}).map(
+      (slotKey) => `initial:${slotKey}` as import('../model').HermesShrineGenerationKey,
+    ),
+    ...(shrine?.travelDealRefill?.purchase === undefined ? [] : ['travelDealRefill' as const]),
+  ]);
+  const actions = new Set(
+    roomActions.order.flatMap((reference) =>
+      reference.kind === 'purchaseHermesShrineOffer' ? [reference.generationKey] : [],
+    ),
+  );
+  if (purchases.size !== actions.size || [...purchases].some((key) => !actions.has(key)))
+    failProjectDocument(
+      path,
+      'Shrine purchase details must have exactly one matching purchase action',
+    );
 }
 
 interface OccurrenceOwner {
@@ -166,6 +303,21 @@ function decodeRoomActionReference(value: unknown, path: string): RoomActionRefe
     return Object.freeze({
       kind,
       offerKey: expectNonBlankString(reference.offerKey, `${path}.offerKey`),
+    });
+  }
+  if (kind === 'purchaseHermesShrineOffer') {
+    expectExactKeys(reference, ['kind', 'generationKey'], path);
+    const generationKey = expectNonBlankString(reference.generationKey, `${path}.generationKey`);
+    if (
+      generationKey !== 'initial:first' &&
+      generationKey !== 'initial:secondLeft' &&
+      generationKey !== 'initial:secondRight' &&
+      generationKey !== 'travelDealRefill'
+    )
+      failProjectDocument(`${path}.generationKey`, 'must be a declared Shrine generation key');
+    return Object.freeze({
+      kind,
+      generationKey: generationKey as import('../model').HermesShrineGenerationKey,
     });
   }
   if (kind === 'sellPurgingPoolTrait') {
@@ -408,11 +560,17 @@ export function decodeAcquisitionSites(
         `${occurrence.path}.acquisitionSites.${pointKey}`,
         'has an invalid Nemesis generated-pickup site key',
       );
+    const hermesShrineDeliverySite = pointKey === 'hermesShrineDelivery';
+    const hermesDeliveryEntry = (entryKey: string) =>
+      hermesShrineDeliverySite && parseHermesShrineDeliveryEntryKey(entryKey) !== undefined;
+    const hermesArtificerEntry = (entryKey: string) =>
+      hermesShrineDeliverySite && parseArtificerReplacementEntryKey(entryKey) !== undefined;
     const artificerSite =
       pointKey !== 'roomExit' &&
       !generatedTraitSite &&
       !generatedNemesisSite &&
-      !seaStarDuplicateSite;
+      !seaStarDuplicateSite &&
+      !hermesShrineDeliverySite;
     const site = expectRecord(rawSite, `${occurrence.path}.acquisitionSites.${pointKey}`);
     const hasPickups = site.pickupEntries !== undefined;
     expectExactKeys(
@@ -441,7 +599,8 @@ export function decodeAcquisitionSites(
       !artificerSite &&
       !generatedTraitSite &&
       !generatedNemesisSite &&
-      !seaStarDuplicateSite
+      !seaStarDuplicateSite &&
+      !hermesShrineDeliverySite
     )
       failProjectDocument(
         `${occurrence.path}.acquisitionSites.${pointKey}.pickupEntries`,
@@ -461,25 +620,30 @@ export function decodeAcquisitionSites(
                 raw,
                 catalog,
                 `${occurrence.path}.acquisitionSites.${pointKey}.pickupEntries.${key}`,
-                artificerSite || seaStarDuplicateSite
+                artificerSite || seaStarDuplicateSite || hermesArtificerEntry(key)
                   ? { kind: 'producerLifecycle', key: 'RoomReward' }
-                  : shopProfileKey === undefined
-                    ? {
-                        kind: 'producerLifecycle',
-                        key: echoLastRewardEntryKeys.has(key)
-                          ? 'EchoLastReward'
-                          : (producerByEntry.get(`${pointKey}\u0000${key}`)?.producerLifecycleKey ??
-                            ''),
-                      }
-                    : key === INFERNAL_CONTRACT_ENTRY_KEY
+                  : hermesDeliveryEntry(key)
+                    ? { kind: 'producerLifecycle', key: 'HermesShrineDelivery' }
+                    : shopProfileKey === undefined
                       ? {
                           kind: 'producerLifecycle',
-                          key:
-                            catalog.rooms.byKey[occurrence.gameName]?.infernalContractReward
-                              ?.producerLifecycleKey ?? '',
+                          key: echoLastRewardEntryKeys.has(key)
+                            ? 'EchoLastReward'
+                            : (producerByEntry.get(`${pointKey}\u0000${key}`)
+                                ?.producerLifecycleKey ?? ''),
                         }
-                      : { kind: 'shopProfile', key: shopProfileKey },
-                artificerSite || seaStarDuplicateSite || echoLastRewardEntryKeys.has(key)
+                      : key === INFERNAL_CONTRACT_ENTRY_KEY
+                        ? {
+                            kind: 'producerLifecycle',
+                            key:
+                              catalog.rooms.byKey[occurrence.gameName]?.infernalContractReward
+                                ?.producerLifecycleKey ?? '',
+                          }
+                        : { kind: 'shopProfile', key: shopProfileKey },
+                artificerSite ||
+                  seaStarDuplicateSite ||
+                  hermesDeliveryEntry(key) ||
+                  echoLastRewardEntryKeys.has(key)
                   ? false
                   : true,
               ),
@@ -1368,6 +1532,7 @@ export function decodeBiomeTopology(
     const occurrence = expectRecord(rawValue, occurrencePath);
     const hasAnomalyReplacement = Object.hasOwn(occurrence, 'anomalyReplacement');
     const hasAcquisitionSites = Object.hasOwn(occurrence, 'acquisitionSites');
+    const hasHermesShrine = Object.hasOwn(occurrence, 'hermesShrine');
     expectExactKeys(
       occurrence,
       [
@@ -1379,6 +1544,7 @@ export function decodeBiomeTopology(
         'additionalExits',
         ...(hasAnomalyReplacement ? ['anomalyReplacement'] : []),
         ...(hasAcquisitionSites ? ['acquisitionSites'] : []),
+        ...(hasHermesShrine ? ['hermesShrine'] : []),
       ],
       occurrencePath,
     );
@@ -1398,6 +1564,8 @@ export function decodeBiomeTopology(
         additionalExits: occurrence.additionalExits,
         acquisitionSites: occurrence.acquisitionSites,
         hasAcquisitionSites,
+        hermesShrine: occurrence.hermesShrine,
+        hasHermesShrine,
         path: occurrencePath,
       }),
     );
@@ -1729,6 +1897,24 @@ export function decodeBiomeTopology(
       room,
       `${rawOccurrence.path}.encounters`,
     );
+    const hermesShrine = rawOccurrence.hasHermesShrine
+      ? decodeOrdinaryHermesShrineState(
+          rawOccurrence.hermesShrine,
+          catalog,
+          `${rawOccurrence.path}.hermesShrine`,
+        )
+      : undefined;
+    if (
+      hermesShrine !== undefined &&
+      (room.surfaceShop === undefined ||
+        room.surfaceShop.forced ||
+        room.surfaceShop.spawnChance <= 0 ||
+        (room.challengeSwitchAnchorCount ?? 0) <= 0)
+    )
+      failProjectDocument(
+        `${rawOccurrence.path}.hermesShrine`,
+        'requires an eligible ordinary Surface Shop host',
+      );
     const occurrenceWithoutAcquisitionSites: RoomOccurrence = Object.freeze({
       occurrenceId: rawOccurrence.occurrenceId,
       gameName: room.gameName,
@@ -1737,6 +1923,7 @@ export function decodeBiomeTopology(
         : { anomalyReplacement: owner.anomalyReplacement }),
       state,
       encounters,
+      ...(hermesShrine === undefined ? {} : { hermesShrine }),
       roomActions: Object.freeze({ order: Object.freeze([]) }),
       additionalExits: Object.freeze([]),
     });
@@ -1864,6 +2051,18 @@ export function decodeBiomeTopology(
         );
     }
     for (const [siteKey, site] of Object.entries(acquisitionSites ?? {})) {
+      if (
+        siteKey === 'hermesShrineDelivery' &&
+        Object.keys(site.pickupEntries ?? {}).some(
+          (entryKey) =>
+            parseHermesShrineDeliveryEntryKey(entryKey) === undefined &&
+            parseArtificerReplacementEntryKey(entryKey) === undefined,
+        )
+      )
+        failProjectDocument(
+          `${rawOccurrence.path}.acquisitionSites.${siteKey}.pickupEntries`,
+          'must contain only exact Shrine delivery or Artificer replacement entry keys',
+        );
       if (parseTraitGeneratedPickupSiteKey(siteKey) !== undefined && !producerSiteKeys.has(siteKey))
         failProjectDocument(
           `${rawOccurrence.path}.acquisitionSites.${siteKey}`,
@@ -1902,6 +2101,7 @@ export function decodeBiomeTopology(
         parseTraitGeneratedPickupSiteKey(siteKey) === undefined &&
         parseNemesisGeneratedPickupSiteKey(siteKey) === undefined &&
         parseSeaStarDuplicateSiteKey(siteKey) === undefined &&
+        siteKey !== 'hermesShrineDelivery' &&
         Object.keys(site.pickupEntries ?? {}).some(
           (entryKey) => parseArtificerReplacementEntryKey(entryKey) === undefined,
         ),
@@ -2027,6 +2227,11 @@ export function decodeBiomeTopology(
       rawOccurrence.roomActions,
       `${rawOccurrence.path}.roomActions`,
     );
+    assertHermesShrinePurchaseActionClosure(
+      hermesShrine,
+      decodedRoomActions,
+      `${rawOccurrence.path}.roomActions.order`,
+    );
     const decodedOccurrence = Object.freeze({
       occurrenceId: rawOccurrence.occurrenceId,
       gameName: room.gameName,
@@ -2036,6 +2241,7 @@ export function decodeBiomeTopology(
       state,
       encounters,
       roomActions: decodedRoomActions,
+      ...(hermesShrine === undefined ? {} : { hermesShrine }),
       ...(acquisitionSites === undefined ? {} : { acquisitionSites }),
       additionalExits: decodeAdditionalExits(
         rawOccurrence.additionalExits,

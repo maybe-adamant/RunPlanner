@@ -103,6 +103,9 @@ import type {
   WorkspaceResourcePlacementInteraction,
   WorkspacePurgingPoolSlotInteraction,
   WorkspacePurgingPoolInteraction,
+  WorkspaceHermesShrineOfferInteraction,
+  WorkspaceHermesShrinePurchaseInteraction,
+  WorkspaceHermesShrinePresenceInteraction,
   WorkspaceStartInteraction,
   WorkspaceTakeoverBatchInteraction,
   WorkspaceTopologyRemovalInteraction,
@@ -336,6 +339,9 @@ interface WorkspaceOccurrenceLocalInteractionCatalog {
   >;
   readonly purgingPoolInteractions: ReadonlyMap<string, WorkspacePurgingPoolInteraction>;
   readonly purgingPoolSlots: ReadonlyMap<string, WorkspacePurgingPoolSlotInteraction>;
+  readonly hermesShrineOffers: ReadonlyMap<string, WorkspaceHermesShrineOfferInteraction>;
+  readonly hermesShrinePurchases: ReadonlyMap<string, WorkspaceHermesShrinePurchaseInteraction>;
+  readonly hermesShrinePresences: ReadonlyMap<string, WorkspaceHermesShrinePresenceInteraction>;
   readonly localVisitOrders: ReadonlyMap<string, WorkspaceLocalVisitOrderInteraction>;
   readonly localVisitGenerations: ReadonlyMap<string, WorkspaceLocalVisitGenerationInteraction>;
   readonly zagreusSpawns: ReadonlyMap<string, WorkspaceZagreusSpawnInteraction>;
@@ -417,6 +423,9 @@ function bindOccurrenceLocalInteractions(
   >();
   const purgingPoolInteractions = new Map<string, WorkspacePurgingPoolInteraction>();
   const purgingPoolSlots = new Map<string, WorkspacePurgingPoolSlotInteraction>();
+  const hermesShrineOffers = new Map<string, WorkspaceHermesShrineOfferInteraction>();
+  const hermesShrinePurchases = new Map<string, WorkspaceHermesShrinePurchaseInteraction>();
+  const hermesShrinePresences = new Map<string, WorkspaceHermesShrinePresenceInteraction>();
   const localVisitOrders = new Map<string, WorkspaceLocalVisitOrderInteraction>();
   const localVisitGenerations = new Map<string, WorkspaceLocalVisitGenerationInteraction>();
   const zagreusSpawns = new Map<string, WorkspaceZagreusSpawnInteraction>();
@@ -786,6 +795,95 @@ function bindOccurrenceLocalInteractions(
         );
         break;
       }
+      case 'hermesShrine': {
+        if (requirement.presenceInteractionKey !== undefined) {
+          if (hermesShrinePresences.has(requirement.presenceInteractionKey)) {
+            throw new StructuredWorkspaceProjectionContractError(
+              `${requirement.presenceInteractionKey} has multiple bound Hermes Shrine presence interactions`,
+            );
+          }
+          hermesShrinePresences.set(
+            requirement.presenceInteractionKey,
+            Object.freeze({
+              key: requirement.presenceInteractionKey,
+              owner: requirement.owner,
+              present: requirement.present,
+              intentFor: (present: boolean) =>
+                Object.freeze({
+                  command: Object.freeze({
+                    kind: 'SetHermesShrinePresence' as const,
+                    occurrence: requirement.owner,
+                    present,
+                  }),
+                }),
+            }),
+          );
+        }
+        for (const slot of requirement.slots) {
+          if (hermesShrineOffers.has(slot.offerInteractionKey)) {
+            throw new StructuredWorkspaceProjectionContractError(
+              `${slot.offerInteractionKey} has multiple bound Hermes Shrine offer interactions`,
+            );
+          }
+          const generationKey =
+            slot.slotKey === 'travelDealRefill'
+              ? 'travelDealRefill'
+              : (`initial:${slot.slotKey}` as const);
+          hermesShrineOffers.set(
+            slot.offerInteractionKey,
+            Object.freeze({
+              key: slot.offerInteractionKey,
+              owner: requirement.owner,
+              slotKey: slot.slotKey,
+              rewardType: slot.rewardType,
+              candidateRewardTypes: slot.candidateRewardTypes,
+              intentFor: (rewardType: string) =>
+                Object.freeze({
+                  command:
+                    slot.slotKey === 'travelDealRefill'
+                      ? Object.freeze({
+                          kind: 'ReplaceHermesShrineTravelDealRefill' as const,
+                          occurrence: requirement.owner,
+                          value: Object.freeze({ rewardType }),
+                        })
+                      : Object.freeze({
+                          kind: 'ReplaceHermesShrineOffer' as const,
+                          occurrence: requirement.owner,
+                          slotKey: slot.slotKey,
+                          value: Object.freeze({ rewardType }),
+                        }),
+                }),
+            }),
+          );
+          if (hermesShrinePurchases.has(slot.purchaseInteractionKey)) {
+            throw new StructuredWorkspaceProjectionContractError(
+              `${slot.purchaseInteractionKey} has multiple bound Hermes Shrine purchase interactions`,
+            );
+          }
+          hermesShrinePurchases.set(
+            slot.purchaseInteractionKey,
+            Object.freeze({
+              key: slot.purchaseInteractionKey,
+              owner: requirement.owner,
+              generationKey,
+              purchase: slot.purchase,
+              intentFor: (
+                purchase:
+                  import('@run-planner/engine/authored-project').HermesShrinePurchase | null,
+              ) =>
+                Object.freeze({
+                  command: Object.freeze({
+                    kind: 'SetHermesShrinePurchase' as const,
+                    occurrence: requirement.owner,
+                    generationKey,
+                    purchase,
+                  }),
+                }),
+            }),
+          );
+        }
+        break;
+      }
       case 'localVisits': {
         const generationValues = Object.freeze(
           requirement.generationChoices.map((choice) => choice.value),
@@ -921,6 +1019,9 @@ function bindOccurrenceLocalInteractions(
     shopPurchaseParticipations,
     purgingPoolInteractions,
     purgingPoolSlots,
+    hermesShrineOffers,
+    hermesShrinePurchases,
+    hermesShrinePresences,
     localVisitOrders,
     localVisitGenerations,
     zagreusSpawns,
@@ -1639,6 +1740,9 @@ export function bindWorkspaceInteractions(
     shopPurchaseParticipations,
     purgingPoolInteractions,
     purgingPoolSlots,
+    hermesShrineOffers,
+    hermesShrinePurchases,
+    hermesShrinePresences,
     localVisitOrders,
     localVisitGenerations,
     zagreusSpawns,
@@ -3024,6 +3128,9 @@ export function bindWorkspaceInteractions(
     shopPurchaseParticipations,
     purgingPoolInteractions,
     purgingPoolSlots,
+    hermesShrineOffers,
+    hermesShrinePurchases,
+    hermesShrinePresences,
     localVisitOrders,
     localVisitGenerations,
     zagreusContracts,

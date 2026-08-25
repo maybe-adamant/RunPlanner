@@ -50,6 +50,7 @@ export function acquisitionSiteStorageKey(site: AcquisitionSiteAddress): string 
   return site.pointKey === 'roomExit' ||
     site.pointKey.startsWith('traitGenerated:') ||
     site.pointKey.startsWith('nemesisGenerated:') ||
+    site.pointKey === 'hermesShrineDelivery' ||
     site.pointKey.startsWith('seaStarDuplicate:')
     ? site.pointKey
     : semanticAddressKey(site);
@@ -66,6 +67,8 @@ export function acquisitionSiteFromStorageKey(
   if (storageKey.startsWith('traitGenerated:'))
     return createAcquisitionSiteAddress(occurrence, storageKey);
   if (storageKey.startsWith('nemesisGenerated:'))
+    return createAcquisitionSiteAddress(occurrence, storageKey);
+  if (storageKey === 'hermesShrineDelivery')
     return createAcquisitionSiteAddress(occurrence, storageKey);
   if (storageKey.startsWith('seaStarDuplicate:'))
     return createAcquisitionSiteAddress(occurrence, storageKey);

@@ -4,6 +4,7 @@ import type { RoomOccurrence } from './model';
 import { encounterEnvelopeSlots, selectedEncounterDefinitionKey } from './room-state/encounters';
 import { semanticAddressKey } from './addresses';
 import { parseArtificerReplacementEntryKey } from './artificer';
+import { parseHermesShrineDeliveryEntryKey } from './hermes-shrine-delivery';
 import { authoredAcquisitionSources } from './acquisition-sources';
 import { echoLastRewardPickupEntryKeys, activeSelectedPickupProducers } from './traits';
 import { seaStarDuplicateSourceIsActive } from './sea-star';
@@ -143,6 +144,30 @@ export function activeRoomActionReferences(
         );
     }
   }
+  if (occurrence.hermesShrine !== undefined) {
+    const purchased = new Set(
+      occurrence.roomActions.order.flatMap((reference) =>
+        reference.kind === 'purchaseHermesShrineOffer' ? [reference.generationKey] : [],
+      ),
+    );
+    for (const [slotKey, offer] of Object.entries(occurrence.hermesShrine.offerBySlot)) {
+      const shrineSlot = slotKey as import('./model').HermesShrineSlotKey;
+      const generationKey = `initial:${shrineSlot}` as import('./model').HermesShrineGenerationKey;
+      if (offer !== null && purchased.has(generationKey))
+        references.push(
+          Object.freeze({
+            kind: 'purchaseHermesShrineOffer',
+            generationKey,
+          }),
+        );
+    }
+    if (
+      occurrence.hermesShrine.travelDealRefill?.offer !== null &&
+      occurrence.hermesShrine.travelDealRefill?.offer !== undefined &&
+      purchased.has('travelDealRefill')
+    )
+      references.push(Object.freeze({ kind: 'purchaseHermesShrineOffer', generationKey: 'travelDealRefill' }));
+  }
   for (const phase of envelopeSlots) {
     if (activeEncounterSlots !== undefined && !activeEncounterSlots.has(phase.key)) continue;
     const key = selectedEncounterDefinitionKey(
@@ -193,6 +218,12 @@ export function activeRoomActionReferences(
       )
         continue;
       const artificer = parseArtificerReplacementEntryKey(entryKey);
+      if (
+        siteKey === 'hermesShrineDelivery' &&
+        parseHermesShrineDeliveryEntryKey(entryKey) === undefined &&
+        artificer === undefined
+      )
+        continue;
       if (
         artificer !== undefined &&
         sourceDispositions.get(artificer.sourceKey)?.dispositionByAcquisitionRole[

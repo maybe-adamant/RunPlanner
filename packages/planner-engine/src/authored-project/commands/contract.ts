@@ -103,6 +103,10 @@ export function projectCommandAddress(
     case 'ReplaceFieldsOptionalRewardCount':
     case 'SetPurgingPoolInteraction':
     case 'ReplacePurgingPoolSlot':
+    case 'SetHermesShrinePresence':
+    case 'ReplaceHermesShrineOffer':
+    case 'SetHermesShrinePurchase':
+    case 'ReplaceHermesShrineTravelDealRefill':
       return command.occurrence;
     case 'InsertRoomAction':
     case 'RemoveRoomAction':

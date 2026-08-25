@@ -289,7 +289,8 @@ describe('reward-kernel declaration parity', () => {
     }
   });
 
-  it('normalizes World, I, and Q shops as ordered groups with 3, 5, and 6 slots', () => {
+  it('normalizes World, Surface, I, and Q shop pools with their declared slot groups', () => {
+    expect(rewardKernelCatalog.shops.byKey.SurfaceShop?.slotCount).toBe(3);
     expect(rewardKernelCatalog.shops.byKey.WorldShop?.slotCount).toBe(3);
     expect(rewardKernelCatalog.shops.byKey.I_WorldShop?.slotCount).toBe(5);
     expect(rewardKernelCatalog.shops.byKey.Q_WorldShop?.slotCount).toBe(6);
@@ -340,6 +341,7 @@ describe('reward-kernel declaration parity', () => {
         ]),
       ),
     ).toEqual({
+      SurfaceShop: ['First', 'Second', 'Second'],
       WorldShop: ['Boon', 'MajorNonBoon', 'Minor'],
       I_WorldShop: ['BoostedBoon', 'MixedProgress', 'Survival', 'PremiumProgress', 'MetaProgress'],
       Q_WorldShop: [
@@ -351,6 +353,13 @@ describe('reward-kernel declaration parity', () => {
         'MetaProgress',
       ],
     });
+    const surfaceFirst = rewardKernelCatalog.shops.byKey.SurfaceShop?.groups.byKey.First;
+    expect(surfaceFirst?.options.byKey.LastStandDrop?.runtimeOfferFallbackRewardTypes).toEqual([
+      'ArmorBoost',
+    ]);
+    expect(surfaceFirst?.options.byKey.ArmorBoost?.runtimeOfferFallbackRewardTypes).toEqual([
+      'ArmorBigBoost',
+    ]);
     expect(
       Object.fromEntries(
         rewardKernelCatalog.shops.values.map((profile) => [
@@ -363,6 +372,32 @@ describe('reward-kernel declaration parity', () => {
         ]),
       ),
     ).toEqual({
+      SurfaceShop: [
+        {
+          key: 'First',
+          offerCount: 1,
+          options: [
+            'HealBigDrop',
+            'RoomRewardHealDrop',
+            'ArmorBigBoost',
+            'ArmorBoost',
+            'LastStandDrop',
+            'GiftDrop',
+          ],
+        },
+        {
+          key: 'Second',
+          offerCount: 2,
+          options: [
+            'SpellDrop',
+            'ShopHermesUpgrade',
+            'MaxHealthDrop',
+            'MaxManaDrop',
+            'BlindBoxLoot',
+            'TalentDrop',
+          ],
+        },
+      ],
       WorldShop: [
         {
           key: 'Boon',

@@ -19,6 +19,27 @@ import {
   replaceAuthoredAcquisitionEntryAtSite,
 } from '../shop';
 import { parseArtificerReplacementEntryKey } from '../artificer';
+import { parseHermesShrineDeliveryEntryKey } from '../hermes-shrine-delivery';
+
+function shrineDeliverySource(
+  document: ProjectDocument,
+  entryKey: string,
+): import('../model').AuthoredRewardState | undefined {
+  const parsed = parseHermesShrineDeliveryEntryKey(entryKey);
+  if (parsed === undefined) return undefined;
+  const source = document.routes
+    .find((route) => route.routeKey === parsed.routeKey)
+    ?.biomes.find((biome) => biome.biomeKey === parsed.biomeKey)
+    ?.topology?.occurrences.find(
+      (occurrence) => occurrence.occurrenceId === parsed.sourceOccurrenceId,
+    );
+  if (parsed.generationKey === 'travelDealRefill')
+    return source?.hermesShrine?.travelDealRefill?.offer ?? undefined;
+  const slotKey = parsed.generationKey.slice(
+    'initial:'.length,
+  ) as import('../model').HermesShrineSlotKey;
+  return source?.hermesShrine?.offerBySlot[slotKey] ?? undefined;
+}
 
 function derivedShopEntryValue(
   catalog: Catalog,
@@ -106,6 +127,52 @@ export function applyAcquisitionSiteCommand(
         candidate.pickups.some((pickup) => pickup.key === command.entry.entryKey),
     );
     if (site.pointKey !== 'roomExit') {
+      const shrineSource =
+        site.pointKey === 'hermesShrineDelivery'
+          ? shrineDeliverySource(document, command.entry.entryKey)
+          : undefined;
+      if (
+        site.pointKey === 'hermesShrineDelivery' &&
+        parseHermesShrineDeliveryEntryKey(command.entry.entryKey) !== undefined
+      ) {
+        if (shrineSource === undefined)
+          failCommand(command, 'does not name an exact Shrine offer source');
+        if (shrineSource.offer.rewardType !== command.value.rewardType)
+          failCommand(command, `must retain Shrine reward type ${shrineSource.offer.rewardType}`);
+        const existing = authoredAcquisitionEntryAtSite(occurrence, site, command.entry.entryKey);
+        if (
+          existing !== undefined &&
+          existing !== null &&
+          sameOccurrenceValue(existing.offer, command.value)
+        )
+          return document;
+        const nextOccurrence =
+          occurrence.acquisitionSites?.[site.pointKey] === undefined
+            ? Object.freeze({
+                ...occurrence,
+                acquisitionSites: Object.freeze({
+                  ...(occurrence.acquisitionSites ?? {}),
+                  [site.pointKey]: Object.freeze({ pickupEntries: Object.freeze({}) }),
+                }),
+              })
+            : occurrence;
+        return updateOccurrenceTopology(
+          document,
+          located,
+          replaceOccurrence(
+            topology,
+            replaceAuthoredAcquisitionEntryAtSite(
+              nextOccurrence,
+              site,
+              command.entry.entryKey,
+              createUnresolvedAcquisitionRewardState(catalog, command.value, {
+                kind: 'producerLifecycle',
+                key: 'HermesShrineDelivery',
+              }),
+            ),
+          ),
+        );
+      }
       const parsed = parseArtificerReplacementEntryKey(command.entry.entryKey);
       const entry = authoredAcquisitionEntryAtSite(occurrence, site, command.entry.entryKey);
       const runProgress = catalog.rewards.stores.byKey.RunProgress;

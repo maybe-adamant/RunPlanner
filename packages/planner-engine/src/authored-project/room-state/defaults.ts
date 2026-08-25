@@ -335,6 +335,13 @@ export function createDefaultCompletionOccurrences(
               }),
             }
           : {}),
+        ...(room.surfaceShop !== undefined
+          ? {
+              hermesShrine: Object.freeze({
+                offerBySlot: Object.freeze({ first: null, secondLeft: null, secondRight: null }),
+              }),
+            }
+          : {}),
       });
     }),
   );

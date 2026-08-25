@@ -5,7 +5,7 @@ import type {
   AuthoredTraitOffer,
 } from './traits';
 
-export const PROJECT_DOCUMENT_SCHEMA_VERSION = 57 as const;
+export const PROJECT_DOCUMENT_SCHEMA_VERSION = 58 as const;
 export type ResourceFamily = import('../catalog-schema').ResourceFamily;
 /** Route ownership supplies the route key; the selected host is exact and durable. */
 export interface ResourcePlacement {
@@ -81,6 +81,48 @@ export interface PurgingPoolState {
   readonly traitKeyBySlot: Readonly<Record<'left' | 'middle' | 'right', string | null>>;
 }
 
+export type HermesShrineSlotKey = 'first' | 'secondLeft' | 'secondRight';
+export type HermesShrineGenerationKey =
+  | 'initial:first'
+  | 'initial:secondLeft'
+  | 'initial:secondRight'
+  | 'travelDealRefill';
+
+export function hermesShrineInitialGenerationKey(
+  slotKey: HermesShrineSlotKey,
+): HermesShrineGenerationKey {
+  return `initial:${slotKey}`;
+}
+
+export function hermesShrineInitialSlotKey(
+  generationKey: HermesShrineGenerationKey,
+): HermesShrineSlotKey | undefined {
+  if (!generationKey.startsWith('initial:')) return undefined;
+  const slotKey = generationKey.slice('initial:'.length);
+  return slotKey === 'first' || slotKey === 'secondLeft' || slotKey === 'secondRight'
+    ? slotKey
+    : undefined;
+}
+
+export interface HermesShrinePurchase {
+  readonly delay: 2 | 3 | 4 | 5 | 6 | 7 | 8;
+  readonly rushed: boolean;
+}
+
+/** A Travel Deal child is a fourth generation, never a replacement initial slot. */
+export interface HermesShrineTravelDealRefill {
+  readonly offer: AuthoredRewardState | null;
+  readonly purchase?: HermesShrinePurchase;
+}
+
+/** Complete entry-time Shrine inventory; purchase-owned detail is deliberately sparse. */
+export interface HermesShrineState {
+  readonly offerBySlot: Readonly<Record<HermesShrineSlotKey, AuthoredRewardState | null>>;
+  readonly purchaseBySlot?: Readonly<Partial<Record<HermesShrineSlotKey, HermesShrinePurchase>>>;
+  /** Retained for repair even when its qualifying Travel Deal prefix changes. */
+  readonly travelDealRefill?: HermesShrineTravelDealRefill;
+}
+
 /** Occurrence-owned payloads for one exact acquisition point. */
 export interface AuthoredAcquisitionSiteState {
   /** Site-materialized optional pickups only. Shop offers remain producer-owned. */
@@ -114,6 +156,7 @@ export type RoomActionReference =
   | { readonly kind: 'chooseRewardWheel'; readonly wheelKey: string }
   | { readonly kind: 'interactWheelReward'; readonly wheelKey: string }
   | { readonly kind: 'interactShopOffer'; readonly offerKey: string }
+  | { readonly kind: 'purchaseHermesShrineOffer'; readonly generationKey: HermesShrineGenerationKey }
   | { readonly kind: 'sellPurgingPoolTrait'; readonly slotKey: 'left' | 'middle' | 'right' }
   | { readonly kind: 'interactEncounter'; readonly phaseKey: string }
   | { readonly kind: 'interactGorgon'; readonly phaseKey: string }
@@ -256,6 +299,8 @@ export interface RoomOccurrence {
   };
   /** Present only at declaration-owned F/G/H automatic Postboss Pool hosts. */
   readonly purgingPool?: PurgingPoolState;
+  /** Present at declaration-owned Shrine hosts; never guarded by a global interaction flag. */
+  readonly hermesShrine?: HermesShrineState;
 }
 
 export interface AnomalyReplacementProvenance {

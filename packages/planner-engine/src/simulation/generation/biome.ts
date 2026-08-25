@@ -43,6 +43,7 @@ import type {
   CanonicalTarget,
   MaterializedBiomePrefix,
 } from '../materialization';
+import { assessHermesShrine, priorTwoSurfaceShopPresence } from '../hermes-shrine';
 import type { TargetRewardHistoryCheckpoint } from '../rewards';
 import type {
   FieldsCageOutcome,
@@ -235,17 +236,22 @@ function priorPeerGameNames(
 }
 
 function projectRoomGenerationRequirementContext(
+  catalog: Catalog,
   source: CanonicalGenerationSource,
   sourceDeclaration: RoomDeclaration,
   view: HistoryStateView,
   enteredBiomeCount: number,
   rewardHistory?: RewardHistoryState,
+  pendingSpellDrop = false,
 ): RequirementEvaluationContext {
   const roomsEntered = countByGameName(view.ledgers.roomAppearances);
-  const shopOptions =
-    source.kind === 'authored' && source.entryState?.kind === 'shop'
-      ? new Set(source.entryState.offers.map((offer) => offer.offer.rewardType))
-      : new Set<string>();
+  // Shrine inventory is a pre-outgoing room fact, but it deliberately never
+  // enters structural Shop settlement or consumes a reward bag.
+  const shopOptions = new Set<string>();
+  if (source.kind === 'authored') {
+    for (const offer of source.entryState?.kind === 'shop' ? source.entryState.offers : [])
+      shopOptions.add(offer.offer.rewardType);
+  }
   const goalsRemaining = view.ledgers.counters.clockworkGoalsRemaining;
   const nonGoalRewardsAcquired = view.ledgers.counters.clockworkNonGoalRewardsAcquired;
   const maxNonGoalRewards = view.ledgers.counters.clockworkMaxNonGoalRewards;
@@ -254,7 +260,7 @@ function projectRoomGenerationRequirementContext(
   if (!hasClockwork && clockworkValues.some((value) => value !== undefined)) {
     throw new BiomeRoomGenerationContractError('history has partial Clockwork facts');
   }
-  return Object.freeze({
+  const context = Object.freeze({
     counters: Object.freeze({
       biomeDepthCache: view.ledgers.counters.biomeDepthCache,
       biomeEncounterDepth: view.ledgers.counters.biomeEncounterDepth,
@@ -289,8 +295,23 @@ function projectRoomGenerationRequirementContext(
           maxNonGoalRewards: maxNonGoalRewards!,
         }
       : undefined,
-    flags: Object.freeze({ allSpellInvested: false, pendingSpellDrop: false }),
+    flags: Object.freeze({ allSpellInvested: false, pendingSpellDrop }),
   });
+  const shrine = source.hermesShrine;
+  const shrineAssessment =
+    shrine === undefined
+      ? undefined
+      : assessHermesShrine(
+          catalog,
+          sourceDeclaration,
+          shrine,
+          context,
+          priorTwoSurfaceShopPresence(view.ledgers.roomAppearances),
+        );
+  if (shrineAssessment?.complete === true && shrine !== undefined) {
+    for (const offer of Object.values(shrine.offerBySlot)) shopOptions.add(offer!.offer.rewardType);
+  }
+  return context;
 }
 
 /**
@@ -721,29 +742,41 @@ function sameRecord(
   return [...keys].every((key) => left[key] === right[key]);
 }
 
+interface TargetRewardRequirementFacts {
+  readonly history: RewardHistoryState;
+  readonly pendingSpellDrop: boolean;
+}
+
 function targetRewardHistories(
   checkpoints: readonly TargetRewardHistoryCheckpoint[] | undefined,
-): ReadonlyMap<string, RewardHistoryState> {
-  const result = new Map<string, RewardHistoryState>();
+): ReadonlyMap<string, TargetRewardRequirementFacts> {
+  const result = new Map<string, TargetRewardRequirementFacts>();
   for (const checkpoint of checkpoints ?? []) {
     const first = checkpoint.histories[0];
     if (first === undefined) {
       continue;
     }
+    const firstPendingSpellDrop = checkpoint.pendingSpellDrops[0];
     if (
+      firstPendingSpellDrop === undefined ||
+      checkpoint.pendingSpellDrops.length !== checkpoint.histories.length ||
       checkpoint.histories.some(
         (history) =>
           !sameRecord(history.useRecord, first.useRecord) ||
           !sameRecord(history.biomeUseRecord, first.biomeUseRecord) ||
           !sameRecord(history.lootTypeHistory, first.lootTypeHistory) ||
           history.traitFacts.upgradableTraitCount !== first.traitFacts.upgradableTraitCount,
-      )
+      ) ||
+      checkpoint.pendingSpellDrops.some((pending) => pending !== firstPendingSpellDrop)
     ) {
       throw new BiomeRoomGenerationContractError(
         `target ${semanticAddressKey(checkpoint.origin)} has divergent reward-history eligibility facts`,
       );
     }
-    result.set(semanticAddressKey(checkpoint.origin), first);
+    result.set(
+      semanticAddressKey(checkpoint.origin),
+      Object.freeze({ history: first, pendingSpellDrop: firstPendingSpellDrop }),
+    );
   }
   return result;
 }
@@ -847,6 +880,7 @@ function evaluateAdditionalContinuationEntries(
         !evaluateRequirement(
           declaration.requirement,
           projectRoomGenerationRequirementContext(
+            catalog,
             source,
             sourceDeclaration,
             parentHistory.entry,
@@ -1220,18 +1254,20 @@ function prepareTargetGameNameContext(
   exit: CanonicalPhysicalExit,
   before: HistoryStateView,
   enteredBiomeCount: number,
-  rewardHistory: RewardHistoryState | undefined,
+  rewardFacts: TargetRewardRequirementFacts | undefined,
 ): RoomTargetCandidateContext {
   const sourceDeclaration = catalog.rooms.byKey[source.gameName];
   if (sourceDeclaration === undefined) {
     throw new BiomeRoomGenerationContractError(`unknown source room ${source.gameName}`);
   }
   const context = projectRoomGenerationRequirementContext(
+    catalog,
     source,
     sourceDeclaration,
     before,
     enteredBiomeCount,
-    rewardHistory,
+    rewardFacts?.history,
+    rewardFacts?.pendingSpellDrop,
   );
   const counts = roomGenerationCounts(before, source.origin);
   const candidates = pool.map((room) =>
@@ -1358,6 +1394,7 @@ function firstTargetGenerationSupport(
   before: HistoryStateView,
   enteredBiomeCount: number,
   rewardHistory?: RewardHistoryState,
+  pendingSpellDrop = false,
 ): FirstTargetGenerationSupport {
   const layout = catalog.biomeLayouts.byKey[biomeKey];
   if (layout === undefined || normalDecisionProgressionForLayout(layout) === undefined) {
@@ -1370,11 +1407,13 @@ function firstTargetGenerationSupport(
     throw new BiomeRoomGenerationContractError(`unknown source room ${source.gameName}`);
   }
   const context = projectRoomGenerationRequirementContext(
+    catalog,
     source,
     sourceDeclaration,
     before,
     enteredBiomeCount,
     rewardHistory,
+    pendingSpellDrop,
   );
   const counts = roomGenerationCounts(before, source.origin);
   const domain = firstTargetCandidateDomain(catalog, layout, ordinaryBatchIndex);
@@ -1428,7 +1467,7 @@ function firstTargetRoomCandidateContext(
   exit: CanonicalPhysicalExit,
   before: HistoryStateView,
   enteredBiomeCount: number,
-  rewardHistory?: RewardHistoryState,
+  rewardFacts?: TargetRewardRequirementFacts,
 ): RoomTargetCandidateContext {
   const support = firstTargetGenerationSupport(
     catalog,
@@ -1438,7 +1477,8 @@ function firstTargetRoomCandidateContext(
     exit,
     before,
     enteredBiomeCount,
-    rewardHistory,
+    rewardFacts?.history,
+    rewardFacts?.pendingSpellDrop,
   );
   return targetCandidateContext(
     source,
@@ -1475,7 +1515,7 @@ export function roomTargetCandidateContextAtFrontier(
   if (layout === undefined || normalDecisionProgressionForLayout(layout) === undefined) {
     throw new BiomeRoomGenerationContractError(`${biomeKey} has no normal target candidate domain`);
   }
-  const rewardHistory = targetRewardHistories(rewardHistoryCheckpoints).get(
+  const rewardFacts = targetRewardHistories(rewardHistoryCheckpoints).get(
     semanticAddressKey(targetOrigin),
   );
   if (includeTakeoverSupport) {
@@ -1488,7 +1528,7 @@ export function roomTargetCandidateContextAtFrontier(
       exit,
       before,
       enteredBiomeCount,
-      rewardHistory,
+      rewardFacts,
     );
   }
   return prepareTargetGameNameContext(
@@ -1499,7 +1539,7 @@ export function roomTargetCandidateContextAtFrontier(
     exit,
     before,
     enteredBiomeCount,
-    rewardHistory,
+    rewardFacts,
   );
 }
 
@@ -1673,7 +1713,7 @@ function evaluateTargetSlots(
   findings: SemanticFinding[],
   findingRegions: FindingRegionEntry[],
   enteredBiomeCount: number,
-  rewardHistories: ReadonlyMap<string, RewardHistoryState>,
+  rewardHistories: ReadonlyMap<string, TargetRewardRequirementFacts>,
 ): void {
   const sourceDeclaration = catalog.rooms.byKey[source.gameName];
   if (sourceDeclaration === undefined) {
@@ -1682,7 +1722,7 @@ function evaluateTargetSlots(
   const biome = createBiomeAddress(generationOrigin.routeKey, generationOrigin.biomeKey);
   const evaluateConcreteTarget = (target: CanonicalTarget): HistoryStateView => {
     const targetKey = semanticAddressKey(target.origin);
-    const rewardHistory = rewardHistories.get(targetKey);
+    const rewardFacts = rewardHistories.get(targetKey);
     const view = views.get(targetKey);
     if (view === undefined) {
       throw new BiomeRoomGenerationContractError(
@@ -1698,7 +1738,7 @@ function evaluateTargetSlots(
       target.exit,
       before,
       enteredBiomeCount,
-      rewardHistory,
+      rewardFacts,
     );
     candidateContexts.set(targetKey, candidateContext);
     const rememberedGameName =
@@ -1740,7 +1780,7 @@ function evaluateTargetSlots(
     const target = targets.find((candidate) => candidate.exit.exitKey === exit.exitKey);
     const targetOrigin =
       target?.origin ?? createTargetAddress(biome, generationOrigin.source, exit.exitKey);
-    const rewardHistory = rewardHistories.get(semanticAddressKey(targetOrigin));
+    const rewardFacts = rewardHistories.get(semanticAddressKey(targetOrigin));
     if (target === undefined) {
       candidateContexts.set(
         semanticAddressKey(targetOrigin),
@@ -1752,7 +1792,7 @@ function evaluateTargetSlots(
           exit,
           before,
           enteredBiomeCount,
-          rewardHistory,
+          rewardFacts,
         ),
       );
       return;
@@ -1941,6 +1981,7 @@ export function hubTerminalTakeoverCandidateSupportAtFrontier(
   const terminal = layout.progression.terminal;
   assertGenerationRequirement(terminal.eligibility);
   const context = projectRoomGenerationRequirementContext(
+    catalog,
     owner,
     sourceDeclaration,
     ownerHistory,

@@ -1,7 +1,7 @@
 {
-  "schemaVersion": 57,
+  "schemaVersion": 58,
   "projectId": "surface-1",
-  "catalogVersion": "0.39.0-purging-pool",
+  "catalogVersion": "0.40.0-hermes-shrine",
   "routes": [
     {
       "routeKey": "Underworld",
@@ -1351,6 +1351,43 @@
                     "kind": "useFountain"
                   }
                 ]
+              },
+              "hermesShrine": {
+                "offerBySlot": {
+                  "first": {
+                    "offer": {
+                      "rewardType": "HealBigDrop"
+                    },
+                    "traitOffersByAcquisitionRole": {},
+                    "dispositionByAcquisitionRole": {
+                      "self": {
+                        "kind": "normal"
+                      }
+                    }
+                  },
+                  "secondLeft": {
+                    "offer": {
+                      "rewardType": "MaxHealthDrop"
+                    },
+                    "traitOffersByAcquisitionRole": {},
+                    "dispositionByAcquisitionRole": {
+                      "self": {
+                        "kind": "normal"
+                      }
+                    }
+                  },
+                  "secondRight": {
+                    "offer": {
+                      "rewardType": "MaxManaDrop"
+                    },
+                    "traitOffersByAcquisitionRole": {},
+                    "dispositionByAcquisitionRole": {
+                      "self": {
+                        "kind": "normal"
+                      }
+                    }
+                  }
+                }
               },
               "additionalExits": [],
               "keepsakeRack": {

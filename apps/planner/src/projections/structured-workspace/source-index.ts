@@ -110,6 +110,9 @@ export interface WorkspaceBiomeSource {
   readonly purgingPoolAssessment: (
     owner: OccurrenceAddress,
   ) => import('@run-planner/engine/simulation').PurgingPoolCandidateCapability | undefined;
+  readonly hermesShrineAssessment: (
+    owner: OccurrenceAddress,
+  ) => import('@run-planner/engine/simulation').HermesShrineCandidateCapability | undefined;
   readonly steadyGrowthOutcomes: readonly import('@run-planner/engine/simulation').BiomeRewardSimulation['steadyGrowthOutcomes'][number][];
   readonly occurrence: (occurrenceId: OccurrenceId) => RoomOccurrence | undefined;
   /** Closed engine-owned outgoing state for one exact retained occurrence. */
@@ -124,6 +127,7 @@ export interface WorkspaceBiomeSource {
       | 'echoDoubleShopPlaceholder'
       | 'echoDoubleShopReward'
       | 'echoLastReward'
+      | 'hermesShrineDelivery'
       | 'infernalContractReward'
       | 'travelDealPlaceholder'
       | 'travelDealRefill';
@@ -637,6 +641,7 @@ function createWorkspaceBiomeSource(
     occurrence: ReturnType<typeof createOccurrenceAddress>,
   ) => CanonicalAuthoredRoom | undefined,
   purgingPoolAssessment: WorkspaceBiomeSource['purgingPoolAssessment'],
+  hermesShrineAssessment: WorkspaceBiomeSource['hermesShrineAssessment'],
   resourceAuthoring: RouteResourceAuthoring,
 ): WorkspaceBiomeSource {
   const biome = createBiomeAddress(routeKey, plan.biomeKey);
@@ -772,6 +777,7 @@ function createWorkspaceBiomeSource(
     levelResolutionAssessment: (owner: LevelResolutionAddress) =>
       levelResolutionAssessments.get(semanticAddressKey(owner)),
     purgingPoolAssessment,
+    hermesShrineAssessment,
     steadyGrowthOutcomes,
     layout,
     blockedOccurrenceRoom: (occurrenceId: OccurrenceId) =>
@@ -835,6 +841,7 @@ export function createWorkspaceProjectSourceIndex(
     occurrence: ReturnType<typeof createOccurrenceAddress>,
   ) => CanonicalAuthoredRoom | undefined = () => undefined,
   purgingPoolAssessment: WorkspaceBiomeSource['purgingPoolAssessment'] = () => undefined,
+  hermesShrineAssessment: WorkspaceBiomeSource['hermesShrineAssessment'] = () => undefined,
 ): WorkspaceProjectSourceIndex {
   return Object.freeze({
     routes: Object.freeze(
@@ -859,6 +866,7 @@ export function createWorkspaceProjectSourceIndex(
                 isActiveTraitOffer,
                 blockedOccurrenceRoom,
                 purgingPoolAssessment,
+                hermesShrineAssessment,
                 resources,
               ),
             ),

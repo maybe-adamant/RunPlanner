@@ -616,6 +616,14 @@ export interface RoomDeclaration {
   readonly hasRequiredFountain: boolean;
   /** Declaration-owned stable physical Pool slots at this exact host. */
   readonly purgingPool?: { readonly slotKeys: readonly ['left', 'middle', 'right'] };
+  /** Exact installed `ChallengeSwitchBase` anchors available to competing secret spawns. */
+  readonly challengeSwitchAnchorCount?: number;
+  /** Exact Surface Shop chance and forced status; inventory is always authored when present. */
+  readonly surfaceShop?: {
+    readonly profileKey: 'SurfaceShop';
+    readonly spawnChance: number;
+    readonly forced: boolean;
+  };
   readonly boonRarityOverride?: import('./traits').BoonRarityOverride;
   readonly prebossBatchPolicy?: PrebossBatchPolicy;
   readonly forcedRewardStoreKey?: string;

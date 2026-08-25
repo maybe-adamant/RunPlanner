@@ -214,6 +214,10 @@ function applyUnchecked(
     case 'ReplaceShopOffer':
     case 'SetPurgingPoolInteraction':
     case 'ReplacePurgingPoolSlot':
+    case 'SetHermesShrinePresence':
+    case 'ReplaceHermesShrineOffer':
+    case 'SetHermesShrinePurchase':
+    case 'ReplaceHermesShrineTravelDealRefill':
       return applyOccurrenceCommand(
         document,
         catalog,

@@ -105,6 +105,9 @@ test('53 -> 54 preserves Gorgon trigger values and removes generic DD fields', (
     genericConditionsRemoved: 2,
   });
   assert.deepEqual(result.changes['54->55'], { completionOccurrencesAdded: 0 });
+  assert.deepEqual(result.changes['55->56'], { routePlacementsAdded: 1 });
+  assert.deepEqual(result.changes['56->57'], { poolsAdded: 0 });
+  assert.deepEqual(result.changes['57->58'], { shrinesAdded: 0 });
 });
 
 test('54 -> 55 relocates completion sidecars into exact automatic occurrences', () => {
@@ -146,8 +149,8 @@ test('51 -> current preserves prior route content and adds resource placements',
   source.schemaVersion = 51;
   source.catalogVersion = '0.31.0-chaos-traits';
   const result = migrateProjectDocument(source);
-  assert.equal(result.document.schemaVersion, 57);
-  assert.equal(result.document.catalogVersion, '0.39.0-purging-pool');
+  assert.equal(result.document.schemaVersion, 58);
+  assert.equal(result.document.catalogVersion, '0.40.0-hermes-shrine');
   assert.deepEqual(result.changes['51->52'], {});
   assert.deepEqual(result.changes['52->53'], {
     catalogMigrations: [
@@ -164,7 +167,40 @@ test('51 -> current preserves prior route content and adds resource placements',
   assert.deepEqual(result.changes['54->55'], { completionOccurrencesAdded: 0 });
   assert.deepEqual(result.changes['55->56'], { routePlacementsAdded: 1 });
   assert.deepEqual(result.changes['56->57'], { poolsAdded: 0 });
-  assert.deepEqual(result.steps, ['51->52', '52->53', '53->54', '54->55', '55->56', '56->57']);
+  assert.deepEqual(result.changes['57->58'], { shrinesAdded: 0 });
+  assert.deepEqual(result.steps, [
+    '51->52',
+    '52->53',
+    '53->54',
+    '54->55',
+    '55->56',
+    '56->57',
+    '57->58',
+  ]);
+});
+
+test('50 -> current advances the full external migration chain through the Hermes Shrine boundary', () => {
+  const source = schema49Project();
+  source.schemaVersion = 50;
+  source.catalogVersion = '0.30.0-boon-rarity-ledger';
+  source.routes[0].nestedReward.traitOffersByAcquisitionRole.self = null;
+
+  const result = migrateProjectDocument(source);
+
+  assert.equal(result.document.schemaVersion, 58);
+  assert.equal(result.document.catalogVersion, '0.40.0-hermes-shrine');
+  assert.deepEqual(result.steps, [
+    '50->51',
+    '51->52',
+    '52->53',
+    '53->54',
+    '54->55',
+    '55->56',
+    '56->57',
+    '57->58',
+  ]);
+  assert.deepEqual(result.changes['50->51'], { unresolvedTrialUpgradesAdded: 0 });
+  assert.deepEqual(result.changes['57->58'], { shrinesAdded: 0 });
 });
 
 test('55 -> 56 adds empty route-owned selected resource placements', () => {
@@ -172,8 +208,8 @@ test('55 -> 56 adds empty route-owned selected resource placements', () => {
   source.schemaVersion = 55;
   source.catalogVersion = '0.37.0-automatic-completion-occurrences';
   const result = migrateProjectDocument(source);
-  assert.equal(result.document.schemaVersion, 57);
-  assert.equal(result.document.catalogVersion, '0.39.0-purging-pool');
+  assert.equal(result.document.schemaVersion, 58);
+  assert.equal(result.document.catalogVersion, '0.40.0-hermes-shrine');
   assert.deepEqual(result.document.routes[0].resourcePlacements, {
     Pickaxe: null,
     Exorcism: null,
@@ -182,6 +218,7 @@ test('55 -> 56 adds empty route-owned selected resource placements', () => {
   });
   assert.deepEqual(result.changes['55->56'], { routePlacementsAdded: 1 });
   assert.deepEqual(result.changes['56->57'], { poolsAdded: 0 });
+  assert.deepEqual(result.changes['57->58'], { shrinesAdded: 0 });
 });
 
 test('52 -> current preserves the earlier schema-52 catalog migration ledger and adds resource placements', () => {
@@ -189,8 +226,8 @@ test('52 -> current preserves the earlier schema-52 catalog migration ledger and
   source.schemaVersion = 52;
   source.catalogVersion = '0.32.0-run-impacting-traits';
   const result = migrateProjectDocument(source);
-  assert.equal(result.document.schemaVersion, 57);
-  assert.equal(result.document.catalogVersion, '0.39.0-purging-pool');
+  assert.equal(result.document.schemaVersion, 58);
+  assert.equal(result.document.catalogVersion, '0.40.0-hermes-shrine');
   assert.deepEqual(result.document.routes, [
     {
       ...source.routes[0],
@@ -212,7 +249,8 @@ test('52 -> current preserves the earlier schema-52 catalog migration ledger and
   assert.deepEqual(result.changes['54->55'], { completionOccurrencesAdded: 0 });
   assert.deepEqual(result.changes['55->56'], { routePlacementsAdded: 1 });
   assert.deepEqual(result.changes['56->57'], { poolsAdded: 0 });
-  assert.deepEqual(result.steps, ['52->53', '53->54', '54->55', '55->56', '56->57']);
+  assert.deepEqual(result.changes['57->58'], { shrinesAdded: 0 });
+  assert.deepEqual(result.steps, ['52->53', '53->54', '54->55', '55->56', '56->57', '57->58']);
 });
 
 test('52 -> current advances the prior run-impacting-traits catalog metadata', () => {
@@ -220,7 +258,7 @@ test('52 -> current advances the prior run-impacting-traits catalog metadata', (
   source.schemaVersion = 52;
   source.catalogVersion = '0.32.1-run-impacting-traits';
   const result = migrateProjectDocument(source);
-  assert.equal(result.document.catalogVersion, '0.39.0-purging-pool');
+  assert.equal(result.document.catalogVersion, '0.40.0-hermes-shrine');
   assert.deepEqual(result.changes['52->53'], {
     catalogMigrations: [
       '0.32.1-run-impacting-traits->0.33.0-generated-trait-pickups',
@@ -235,7 +273,8 @@ test('52 -> current advances the prior run-impacting-traits catalog metadata', (
   assert.deepEqual(result.changes['54->55'], { completionOccurrencesAdded: 0 });
   assert.deepEqual(result.changes['55->56'], { routePlacementsAdded: 1 });
   assert.deepEqual(result.changes['56->57'], { poolsAdded: 0 });
-  assert.deepEqual(result.steps, ['52->53', '53->54', '54->55', '55->56', '56->57']);
+  assert.deepEqual(result.changes['57->58'], { shrinesAdded: 0 });
+  assert.deepEqual(result.steps, ['52->53', '53->54', '54->55', '55->56', '56->57', '57->58']);
 });
 
 test('current schema 52 -> current advances catalog metadata and adds resource placements', () => {
@@ -243,8 +282,8 @@ test('current schema 52 -> current advances catalog metadata and adds resource p
   source.schemaVersion = 52;
   source.catalogVersion = '0.34.0-sea-star';
   const result = migrateProjectDocument(source);
-  assert.equal(result.document.schemaVersion, 57);
-  assert.equal(result.document.catalogVersion, '0.39.0-purging-pool');
+  assert.equal(result.document.schemaVersion, 58);
+  assert.equal(result.document.catalogVersion, '0.40.0-hermes-shrine');
   assert.deepEqual(result.document.routes, [
     {
       ...source.routes[0],
@@ -262,5 +301,105 @@ test('current schema 52 -> current advances catalog metadata and adds resource p
   assert.deepEqual(result.changes['54->55'], { completionOccurrencesAdded: 0 });
   assert.deepEqual(result.changes['55->56'], { routePlacementsAdded: 1 });
   assert.deepEqual(result.changes['56->57'], { poolsAdded: 0 });
-  assert.deepEqual(result.steps, ['52->53', '53->54', '54->55', '55->56', '56->57']);
+  assert.deepEqual(result.changes['57->58'], { shrinesAdded: 0 });
+  assert.deepEqual(result.steps, ['52->53', '53->54', '54->55', '55->56', '56->57', '57->58']);
+});
+
+test('57 -> 58 seeds Shrine shells only on exact forced Surface Postboss identities', () => {
+  const source = {
+    schemaVersion: 57,
+    catalogVersion: '0.39.0-purging-pool',
+    projectId: 'hermes-migration',
+    routes: [
+      {
+        routeKey: 'Surface',
+        preserved: { nested: true },
+        biomes: [
+          {
+            biomeKey: 'N',
+            completionOccurrences: [
+              { occurrenceId: 'completion:N:postboss', gameName: 'N_PostBoss01' },
+              { occurrenceId: 'completion:N:notpostboss', gameName: 'N_PostBoss01' },
+            ],
+            topology: {
+              occurrences: [{ occurrenceId: 'ordinary:fake', gameName: 'N_PostBoss01' }],
+            },
+          },
+          {
+            biomeKey: 'O',
+            completionOccurrences: [
+              {
+                occurrenceId: 'completion:O:postboss',
+                gameName: 'O_PostBoss01',
+                hermesShrine: { malformedRetainedState: true },
+              },
+            ],
+          },
+          {
+            biomeKey: 'P',
+            completionOccurrences: [
+              { occurrenceId: 'completion:P:postboss', gameName: 'P_PostBoss01' },
+              { occurrenceId: 'completion:P:postboss', gameName: 'N_PostBoss01' },
+            ],
+          },
+          {
+            biomeKey: 'Q',
+            completionOccurrences: [
+              { occurrenceId: 'completion:N:postboss', gameName: 'N_PostBoss01' },
+            ],
+          },
+        ],
+      },
+      {
+        routeKey: 'Underworld',
+        biomes: [
+          {
+            biomeKey: 'N',
+            completionOccurrences: [
+              { occurrenceId: 'completion:N:postboss', gameName: 'N_PostBoss01' },
+            ],
+          },
+        ],
+      },
+    ],
+  };
+
+  const result = migrateProjectDocument(source);
+  const biomes = result.document.routes[0].biomes;
+  assert.equal(result.document.schemaVersion, 58);
+  assert.equal(result.document.catalogVersion, '0.40.0-hermes-shrine');
+  assert.deepEqual(result.steps, ['57->58']);
+  assert.deepEqual(result.changes['57->58'], { shrinesAdded: 2 });
+  for (const [biomeIndex, occurrenceIndex] of [
+    [0, 0],
+    [2, 0],
+  ]) {
+    assert.deepEqual(biomes[biomeIndex].completionOccurrences[occurrenceIndex].hermesShrine, {
+      offerBySlot: { first: null, secondLeft: null, secondRight: null },
+    });
+  }
+  assert.equal('hermesShrine' in biomes[0].completionOccurrences[1], false);
+  assert.equal('hermesShrine' in biomes[0].topology.occurrences[0], false);
+  assert.equal('hermesShrine' in biomes[2].completionOccurrences[1], false);
+  assert.deepEqual(biomes[1].completionOccurrences[0].hermesShrine, {
+    malformedRetainedState: true,
+  });
+  assert.equal('hermesShrine' in biomes[3].completionOccurrences[0], false);
+  assert.equal(
+    'hermesShrine' in result.document.routes[1].biomes[0].completionOccurrences[0],
+    false,
+  );
+  assert.deepEqual(result.document.routes[0].preserved, { nested: true });
+});
+
+test('57 -> 58 rejects a document from the wrong prior catalog', () => {
+  assert.throws(
+    () =>
+      migrateProjectDocument({
+        schemaVersion: 57,
+        catalogVersion: '0.38.0-selected-resource-successes',
+        routes: [],
+      }),
+    /schema 57 migration expects catalog 0\.39\.0-purging-pool/,
+  );
 });

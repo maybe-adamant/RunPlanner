@@ -121,6 +121,40 @@ export function loadSurfaceNProject(): ProjectDocument {
   return loadSurfaceNCheckpoint();
 }
 
+export function createSurfaceNOHermesShrineDeliveryCheckpoint(): ProjectDocument {
+  let project = loadSurfaceNOProject();
+  const shrine = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
+  project = applyProjectCommand(project, catalog, {
+    kind: 'SetHermesShrinePresence',
+    occurrence: shrine,
+    present: true,
+  });
+  for (const [slotKey, rewardType] of [
+    ['first', 'HealBigDrop'],
+    ['secondLeft', 'MaxHealthDrop'],
+    ['secondRight', 'MaxManaDrop'],
+  ] as const) {
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceHermesShrineOffer',
+      occurrence: shrine,
+      slotKey,
+      value: { rewardType },
+    });
+  }
+  project = applyProjectCommand(project, catalog, {
+    kind: 'SetHermesShrinePurchase',
+    occurrence: shrine,
+    generationKey: 'initial:first',
+    purchase: { delay: 2, rushed: true },
+  });
+  return applyProjectCommand(project, catalog, {
+    kind: 'SetHermesShrinePurchase',
+    occurrence: shrine,
+    generationKey: 'initial:secondLeft',
+    purchase: { delay: 2, rushed: false },
+  });
+}
+
 export function loadSurfaceNNaturalSelectionFrontierProject(): ProjectDocument {
   return loadSurfaceNNaturalSelectionFrontierCheckpoint();
 }
@@ -162,15 +196,51 @@ export function loadSurfaceNTenOpenInvalidProject(): ProjectDocument {
 }
 
 export function loadSurfaceNOProject(): ProjectDocument {
-  return loadSurfaceNOCheckpoint();
+  return authorForcedShrines(loadSurfaceNOCheckpoint(), [nBiome, oBiome]);
+}
+
+/** Schema-58 completion detail for forced Postboss Shrines reached by this fixture. */
+function authorForcedShrines(
+  project: ProjectDocument,
+  biomes: readonly ReturnType<typeof createBiomeAddress>[],
+): ProjectDocument {
+  let next = project;
+  for (const biome of biomes) {
+    next = authorForcedShrine(next, biome);
+  }
+  return next;
+}
+
+function authorForcedShrine(
+  project: ProjectDocument,
+  biome: ReturnType<typeof createBiomeAddress>,
+): ProjectDocument {
+  const occurrence = createOccurrenceAddress(
+    biome,
+    createOccurrenceId(`completion:${biome.biomeKey}:postboss`),
+  );
+  let next = project;
+  for (const [slotKey, rewardType] of [
+    ['first', 'HealBigDrop'],
+    ['secondLeft', 'MaxHealthDrop'],
+    ['secondRight', 'MaxManaDrop'],
+  ] as const) {
+    next = applyProjectCommand(next, catalog, {
+      kind: 'ReplaceHermesShrineOffer',
+      occurrence,
+      slotKey,
+      value: { rewardType },
+    });
+  }
+  return next;
 }
 
 export function loadSurfaceNOPProject(): ProjectDocument {
-  return loadSurfaceNOPCheckpoint();
+  return authorForcedShrines(loadSurfaceNOPCheckpoint(), [nBiome, oBiome, pBiome]);
 }
 
 export function loadSurfaceNOPQProject(): ProjectDocument {
-  return loadSurfaceNOPQCheckpoint();
+  return authorForcedShrines(loadSurfaceNOPQCheckpoint(), [nBiome, oBiome, pBiome]);
 }
 
 export function authorSurfaceWorldShop(

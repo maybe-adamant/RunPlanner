@@ -51,6 +51,44 @@ relevant to delivery completion through `I_PreBoss01`, not as an ordinary
 Shrine host. The accurate broad spawn description is therefore N/O/P/Q, with
 I participating in a separate pending-delivery boundary.
 
+### Physical host capability
+
+Declaration chance alone is insufficient. `IsSurfaceShopEligible` also
+requires the loaded map to contain a `ChallengeSwitchBase` anchor. Installed
+map data gives this exact realizable matrix:
+
+| Route | Ordinary maps with at least one anchor                                    |
+| ----- | ------------------------------------------------------------------------- |
+| N     | `N_Sub01`–`N_Sub04`, `N_Sub06`–`N_Sub15`                                  |
+| O     | `O_Combat02`–`O_Combat15`, `O_Devotion01`, `O_MiniBoss02`, `O_Reprieve01` |
+| P     | `P_Combat01`–`P_Combat03`, `P_Combat05`–`P_Combat19`, `P_Reprieve01`      |
+| Q     | `Q_Combat01`–`Q_Combat13`, `Q_Combat16`                                   |
+
+The declaration-eligible zero-anchor exceptions are `N_Shop01`, `N_Sub05`,
+`O_Combat01`, `O_MiniBoss01`, `P_Combat04`, `Q_Combat14`, and `Q_Combat15`.
+Intro, Hub, Story, ordinary Shop, Boss, and Preboss maps have no usable anchor;
+Q Postboss also has none. N/O/P Postboss maps have an anchor and retain their
+forced Shrine path. Side and special rooms are not excluded as a class:
+eligible N subrooms, `O_Devotion01`, `O_MiniBoss02`, and both Reprieves are
+positive hosts.
+
+`HandleSecretSpawns` consumes `ChallengeSwitchBase` anchors sequentially for a
+Well, Sell Shop, Shrine, Challenge Switch, and Meta Reward Stand. Maps with two
+anchors can realize two competing contacts. Resources, fountains, Gift Racks,
+and Nemesis use separate map objects or spawn systems and do not consume this
+anchor pool. The source exposes no generic `NumRoomFeatures` or passive-feature
+capacity. This is therefore a concrete shared-anchor fact, not a general room
+feature count (`RoomLogic.lua:4891-4933`, `5038-5054`; Shrine obstacle data in
+`ObstacleDataN.lua:541-574`).
+
+The spacing requirement's `SumPrevRooms = 3` loop reads the current room plus
+the two latest `RoomHistory` entries without filtering by biome, encounter, or
+room class (`RequirementsLogic.lua:328-376`). Hub revisits, side rooms, Shops,
+Boss/Postboss rooms, and Chaos rooms all occupy history positions. Because an
+ordinary candidate has not installed its own `SurfaceShop` yet, the practical
+lookback is the prior two entered rooms; a forced room bypasses the eligibility
+requirement entirely.
+
 ## Room chronology
 
 `RunShopGeneration` materializes an eligible Shrine's `SurfaceShop` inventory
