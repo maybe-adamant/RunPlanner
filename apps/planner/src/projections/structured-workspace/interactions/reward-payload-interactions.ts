@@ -1,5 +1,4 @@
 import type { AuthoredRewardState } from '@run-planner/engine/authored-project';
-import type { Catalog } from '@run-planner/engine/catalog-schema';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import type { CandidateProjectionSession } from '@planner/projections/candidateProjection';
 import type { RewardPickerProjectionService } from '@planner/projections/rewardPicker';

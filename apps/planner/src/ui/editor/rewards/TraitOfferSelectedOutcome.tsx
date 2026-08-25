@@ -15,7 +15,7 @@ import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorkspaceInteraction';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import { TraitOfferCirceResolution } from './TraitOfferCirceResolution';
-import { replaceTraitOfferOption } from './TraitOfferOrdinaryOption';
+import { replaceTraitOfferOption } from './traitOfferOptions';
 import { TraitOfferSelectedSpecialOutcomes } from './TraitOfferSelectedSpecialOutcomes';
 
 const emptyTargetPicker: ContextualPickerModel<string> = Object.freeze({

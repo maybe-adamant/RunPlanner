@@ -24,9 +24,7 @@ import {
 } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
-import {
-  createTraitOfferCandidateArtifacts,
-} from '../../src/simulation/candidates/trait-offer-capability';
+import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidates/trait-offer-capability';
 import { createSteadyGrowthCandidateArtifacts } from '../../src/simulation/candidate-artifacts';
 import { evaluateSteadyGrowthOutcomeCandidate } from '../../src/simulation/candidates/steady-growth';
 import { evaluateNaturalSelectionResultCandidate } from '../../src/simulation/candidates/trait-offer';

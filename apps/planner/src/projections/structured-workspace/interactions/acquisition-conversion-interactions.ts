@@ -7,7 +7,10 @@ import type { CandidateProjectionSession } from '@planner/projections/candidateP
 
 import { derivedShopPayloadIntent } from './reward-child-command-binding';
 import { workspaceInteractionKey } from '../contract';
-import type { WorkspaceAcquisitionConversionInteraction, WorkspaceRewardControl } from '../contract';
+import type {
+  WorkspaceAcquisitionConversionInteraction,
+  WorkspaceRewardControl,
+} from '../contract';
 
 /** Binds generated-pickup conversion controls and preserves retained Sea Star repair state. */
 export function bindAcquisitionConversionInteractions(input: {
@@ -24,7 +27,8 @@ export function bindAcquisitionConversionInteractions(input: {
     for (const conversion of control.conversions ?? []) {
       const key = workspaceInteractionKey(conversion.address);
       const evaluated =
-        input.evaluatedConversions.get(key) ?? input.candidates.acquisitionConversion(conversion.address);
+        input.evaluatedConversions.get(key) ??
+        input.candidates.acquisitionConversion(conversion.address);
       const owner = conversion.address.owner;
       const occurrenceId =
         owner.kind === 'acquisitionEntry'
@@ -44,9 +48,8 @@ export function bindAcquisitionConversionInteractions(input: {
               ?.biomes.find((biome) => biome.biomeKey === conversion.address.biomeKey)
               ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === occurrenceId);
       const seaStarProcced =
-        occurrence?.acquisitionSites?.[seaStarDuplicateSiteKey(conversion.address)]?.pickupEntries?.[
-          SEA_STAR_DUPLICATE_ENTRY_KEY
-        ] !== undefined;
+        occurrence?.acquisitionSites?.[seaStarDuplicateSiteKey(conversion.address)]
+          ?.pickupEntries?.[SEA_STAR_DUPLICATE_ENTRY_KEY] !== undefined;
       const support =
         evaluated.kind === 'acquisitionConversion'
           ? {

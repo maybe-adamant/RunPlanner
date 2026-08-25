@@ -1,8 +1,6 @@
 import {
-  semanticAddressKey,
   type AuthoredAllTogetherResult,
   type AuthoredTraitOfferTraits,
-  type AuthoredTraitOption,
 } from '@run-planner/engine/authored-project';
 import type { DirectTraitSetKey } from '@run-planner/engine/catalog-schema';
 import { useEffect, useMemo, useState } from 'react';
@@ -19,6 +17,7 @@ import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorkspaceInteraction';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import { CompoundOutcomeEditor } from './CompoundOutcomeEditor';
+import { naturalSelectionOptionWithTargets, replaceTraitOfferOption } from './traitOfferOptions';
 
 const emptyPicker: ContextualPickerModel<string> = Object.freeze({ sections: Object.freeze([]) });
 
@@ -26,33 +25,6 @@ function pickerValueLabel<T>(model: ContextualPickerModel<T>, value: T): string 
   return model.sections
     .flatMap((section) => section.items)
     .find((item) => Object.is(item.value, value))?.label;
-}
-
-export function replaceTraitOfferOption(
-  value: AuthoredTraitOfferTraits,
-  index: number,
-  next: AuthoredTraitOfferTraits['options'][number],
-): AuthoredTraitOfferTraits {
-  const options = [...value.options] as AuthoredTraitOfferTraits['options'][number][];
-  options[index] = Object.freeze({ ...next });
-  return Object.freeze({
-    ...value,
-    options: Object.freeze(options) as AuthoredTraitOfferTraits['options'],
-  });
-}
-
-export function naturalSelectionOptionWithTargets(
-  source: AuthoredTraitOption,
-  targets: readonly string[],
-): AuthoredTraitOption {
-  const { naturalSelectionTargets, ...base } = source;
-  void naturalSelectionTargets;
-  return {
-    ...base,
-    ...(targets.length === 0
-      ? {}
-      : { naturalSelectionTargets: targets as AuthoredTraitOption['naturalSelectionTargets'] }),
-  } as AuthoredTraitOption;
 }
 
 function AllTogetherSetPicker({

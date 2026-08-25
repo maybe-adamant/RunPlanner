@@ -8,7 +8,6 @@ import type {
 import {
   freezeUniqueStrings,
   requireArray,
-  requireBoolean,
   requireNonEmpty,
   requireObject,
   requirePositiveInteger,

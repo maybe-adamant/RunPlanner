@@ -10,6 +10,7 @@ import type { TraitOptionDomainProjection } from '@planner/projections/traitDoma
 import type { WorkspaceTraitOfferInteraction } from '@planner/projections/structured-workspace';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorkspaceInteraction';
+import { replaceTraitOfferOption } from './traitOfferOptions';
 
 const emptyTraitPicker: ContextualPickerModel<string> = Object.freeze({
   sections: Object.freeze([]),
@@ -20,19 +21,6 @@ const emptyRarityPicker: ContextualPickerModel<TraitRarity> = Object.freeze({
 
 function rarityLabel(rarity: TraitRarity): string {
   return rarity;
-}
-
-export function replaceTraitOfferOption(
-  value: AuthoredTraitOfferTraits,
-  index: number,
-  next: AuthoredTraitOfferTraits['options'][number],
-): AuthoredTraitOfferTraits {
-  const options = [...value.options] as AuthoredTraitOfferTraits['options'][number][];
-  options[index] = Object.freeze({ ...next });
-  return Object.freeze({
-    ...value,
-    options: Object.freeze(options) as AuthoredTraitOfferTraits['options'],
-  });
 }
 
 export function TraitOfferOrdinaryOption({

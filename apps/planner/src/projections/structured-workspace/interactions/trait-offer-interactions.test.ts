@@ -8,7 +8,6 @@ import type {
   TraitOptionKey,
   CandidateProjectionSession,
   CandidateEvaluationEvent,
-  WorkspaceSteadyGrowthControl,
 } from '@planner-test/support/structured-workspace/interaction-binding.test-support';
 
 const {
@@ -17,53 +16,33 @@ const {
   services,
   catalog,
   applyProjectCommand,
-  activeRoomActionReferences,
   createAllTogetherSetAddress,
   createCirceResolutionAddress,
   createEchoLastRunBoonAddress,
   createEchoLastRewardAddress,
-  createEchoPomTargetAddress,
   createEncounterPhaseAddress,
   createIncomingRewardAddress,
   createNaturalSelectionResultAddress,
-  createOccurrenceAddress,
   createOccurrenceId,
   createRouteAddress,
-  createRewardWheelOfferAddress,
-  createShopOfferAddress,
-  createAcquisitionEntryAddress,
-  createAcquisitionRoleAddress,
-  createAcquisitionSiteAddress,
   createRouteStartKeepsakeSelectionAddress,
-  createSteadyGrowthOutcomeAddress,
   createTraitOfferAddress,
   semanticAddressKey,
   simulateProjectAssembly,
-  prepareLegalPomTraitOffers,
-  replaceTestShopOfferActions,
   createGoldenFGHIProject,
   createCompleteFGProject,
-  createFConversionFrontierProject,
   goldenFBiome,
   goldenFOccurrenceId,
   goldenFStartId,
-  goldenGBiome,
   goldenHBiome,
-  loadSurfaceNOPQProject,
   loadSurfaceNOPProject,
-  createRepresentativeNOPQShopTraitProject,
   loadSurfaceNOProject,
-  nBiome,
-  nLocalOccurrenceId,
-  nOccurrenceId,
   oBiome,
   oOccurrenceIds,
   pBiome,
   pOccurrenceId,
-  pOccurrenceIds,
   createCandidateSessionFactory,
 } = support;
-
 
 describe('trait-offer-interactions', () => {
   it('binds the Gorgon child editor to author decisions only', () => {
@@ -794,6 +773,4 @@ describe('trait-offer-interactions', () => {
     await hammer.optionDomain(hammer.value, 'option1').load();
     expect(events).toHaveLength(1);
   });
-
-
 });

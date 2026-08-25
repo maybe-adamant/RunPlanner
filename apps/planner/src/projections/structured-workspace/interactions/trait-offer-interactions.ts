@@ -27,7 +27,11 @@ import {
   withoutDirectTraitOutcomeValues,
 } from '@planner/projections/directTraitOutcomeProjection';
 
-import { ordinaryTraitOfferCommandFor, traitOfferCommandFor, derivedShopPayloadIntent } from './reward-child-command-binding';
+import {
+  ordinaryTraitOfferCommandFor,
+  traitOfferCommandFor,
+  derivedShopPayloadIntent,
+} from './reward-child-command-binding';
 import { StructuredWorkspaceProjectionContractError } from '../contract';
 import type {
   WorkspaceNaturalSelectionInteraction,
@@ -41,10 +45,19 @@ export function bindTraitOfferInteractions(input: {
   readonly catalog: Catalog;
   readonly candidates: CandidateProjectionSession;
   readonly traitControls: ReadonlyMap<string, WorkspaceTraitOfferControl>;
-  readonly derivedShopEntryEdits: ReadonlyMap<string, NonNullable<WorkspaceRewardControl['derivedShopEntryEdit']>>;
+  readonly derivedShopEntryEdits: ReadonlyMap<
+    string,
+    NonNullable<WorkspaceRewardControl['derivedShopEntryEdit']>
+  >;
   readonly traitDomain: import('../contract').StructuredWorkspaceContextualServices['traitDomain'];
 }): ReadonlyMap<string, WorkspaceTraitOfferInteraction> {
-  const { catalog, candidates, traitControls: effectiveTraitControls, derivedShopEntryEdits, traitDomain } = input;
+  const {
+    catalog,
+    candidates,
+    traitControls: effectiveTraitControls,
+    derivedShopEntryEdits,
+    traitDomain,
+  } = input;
   const traitOffers = new Map<string, WorkspaceTraitOfferInteraction>();
   for (const [key, control] of effectiveTraitControls) {
     const derivedShopEntryEdit = derivedShopEntryEdits.get(semanticAddressKey(control.rewardOwner));

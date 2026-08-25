@@ -1,7 +1,4 @@
-import {
-  describe,
-  expect,
-  it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
 import {
@@ -14,19 +11,19 @@ import {
   createOccurrenceAddress,
   createPostbossKeepsakeSelectionAddress,
   createRouteStartKeepsakeSelectionAddress,
-  } from '@run-planner/engine/authored-project';
+} from '@run-planner/engine/authored-project';
 import {
   assessTraitOption,
   keepsakeEquipResultCandidateForProjectEvaluationAssembly,
   simulateProject,
   simulateProjectAssembly,
-  } from '@run-planner/engine/simulation';
+} from '@run-planner/engine/simulation';
 
 import { replaceTestRoomActionOrder } from '@run-planner/test-fixtures/shared';
 import {
   createCompleteFGProject,
   createGoldenFGHProject,
-  } from '@run-planner/test-fixtures/underworld';
+} from '@run-planner/test-fixtures/underworld';
 import {
   loadSurfaceNProject,
   loadSurfaceNOProject,
@@ -35,7 +32,7 @@ import {
   nOccurrenceId,
   oBiome,
   oOccurrenceIds,
-  } from '@run-planner/test-fixtures/surface';
+} from '@run-planner/test-fixtures/surface';
 import { evaluateBiomeRewardsAssemblyInternal } from '../../src/simulation/rewards/biome';
 import { evaluateKeepsakeEquipResultCandidate } from '../../src/simulation/candidates/keepsake-equip-result';
 import {

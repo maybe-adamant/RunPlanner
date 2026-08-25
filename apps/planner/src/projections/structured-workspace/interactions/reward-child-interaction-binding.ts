@@ -25,7 +25,6 @@ import type {
   WorkspaceKeepsakeSelectionInteraction,
   WorkspaceKeepsakeEquipResultInteraction,
   WorkspaceTraitOfferInteraction,
-  WorkspaceNaturalSelectionInteraction,
   WorkspaceSteadyGrowthControl,
   WorkspaceSteadyGrowthInteraction,
   WorkspaceAcquisitionConversionInteraction,

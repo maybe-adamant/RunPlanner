@@ -14,9 +14,7 @@ import {
   createGoldenFGHIProject,
   createIncomingRewardAddress,
   createOccurrenceAddress,
-  createOccurrenceId,
   createRouteStartKeepsakeSelectionAddress,
-  createShopOfferAddress,
   createTraitOfferAddress,
   decodeProjectDocument,
   encodeProjectDocument,
@@ -35,9 +33,7 @@ import {
   oOccurrenceIds,
   pBiome,
   pOccurrenceId,
-  semanticAddressKey,
   simulateProjectAssembly,
-  withFPrebossSelection,
 } from '@planner-test/support/structured-workspace/occurrence-assembly.test-support';
 
 describe('structured workspace reward assembly', () => {

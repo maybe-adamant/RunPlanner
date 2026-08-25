@@ -87,31 +87,36 @@ implied by the current browser or Tauri implementation.
 - A refactor must move one complete responsibility with explicit inputs and
   returned products; line count alone is not an acceptance criterion.
 
-## Maintenance Cleanup Frontiers
+## Maintenance Frontier After Plan 1
 
-A 2026-08-25 repository-gravity review separated explicit declaration, type,
-and presentation-copy data from mixed logic. Large room and trait declaration
-files remain readable source-backed facts; the structured-workspace contract
-remains the explicit application vocabulary. Neither is a refactor target
-solely because of length.
+The 2026-08-25 repository-gravity review and Plan 1 decomposition completed the
+catalog compiler, planner presentation/projection, engine trait/reward,
+persistence decoder, generation, and progressive-product slices. Their former
+entry monoliths now compose named complete products, and their policy matrices
+live with those owners. Large room and trait declarations remain readable
+source-backed facts, while the structured-workspace contract remains the
+explicit application vocabulary; neither is a target solely because of length.
 
-Future cleanup should use independent locked slices rather than one broad
-large-file phase:
+The remaining source gravity needs a fresh responsibility and chronology audit
+before any Plan 2 is locked:
 
-- planner presentation: specialized trait-offer editors, Hub membership and
-  ranking interaction, biome workspace composition, and the application shell;
-- planner projection: reward-child interaction binding, candidate-session
-  domain adapters, and occurrence-room assembly;
-- planner engine: reward acquisition/Shop processing, trait history versus
-  offer/level/candidate policy, and topology codec decoding versus relational
-  closure; and
-- catalog compiler: trait-family compilation and reward-kernel family
-  normalization.
+- engine chronological coordinators: `simulation/rewards/biome.ts`,
+  `simulation/project.ts`, `simulation/materialization/biome.ts`,
+  `simulation/materialization/rooms.ts`, `simulation/lifecycle/execute.ts`, and
+  `simulation/history/fold.ts`, whose order, hidden state, and consumer handoffs
+  must be mapped together;
+- the atomic topology command dispatcher, which stays intact unless an audit
+  proves a complete transition product without distributing its invariants;
+- catalog room/layout declaration-language compilers, which require a
+  compiler-specific audit distinct from their large declaration inputs; and
+- coherent planner vocabulary/composition modules such as the structured
+  workspace contract, decision assembly, occurrence reward assembly, source
+  index, and occurrence interaction binding, which remain deliberately intact
+  unless a smaller supported product is demonstrated.
 
-The chronological biome reward coordinator, topology command dispatcher, and
-declaration-language room/layout compilers stay intact until a focused audit
-proves a complete extractable product. Each future slice must map hidden state,
-consumers, primary test ownership, and expected deletions before implementation.
+A later maintenance plan should select only audit-proven seams, map consumers
+and primary test ownership, and name expected deletions before implementation.
+Plan 1 does not pre-authorize those changes.
 
 ## Out of Scope for the Roadmap
 

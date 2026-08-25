@@ -1,7 +1,4 @@
-import {
-  describe,
-  expect,
-  it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
 import {
@@ -12,7 +9,7 @@ import {
   createOccurrenceId,
   createProjectDocument,
   createRouteAddress,
-  } from '@run-planner/engine/authored-project';
+} from '@run-planner/engine/authored-project';
 import {
   activateTemporaryArcana,
   blockedOccurrenceRoomForProjectEvaluationAssembly,
@@ -21,14 +18,12 @@ import {
   promoteArcana,
   simulateProject,
   simulateProjectAssembly,
-  } from '@run-planner/engine/simulation';
-import { loadSurfaceNOProject,
-  loadSurfaceNOPQProject } from '@run-planner/test-fixtures/surface';
+} from '@run-planner/engine/simulation';
+import { loadSurfaceNOProject, loadSurfaceNOPQProject } from '@run-planner/test-fixtures/surface';
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
 import { evaluateBiomeRewardsAssemblyInternal } from '../../src/simulation/rewards/biome';
-import { publicRewardBranch,
-} from '../../src/simulation/rewards/processing';
+import { publicRewardBranch } from '../../src/simulation/rewards/processing';
 import {
   attachTraitHistory,
   createTraitHistoryState,

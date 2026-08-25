@@ -8,7 +8,10 @@ import type { Catalog } from '@run-planner/engine/catalog-schema';
 import type { CandidateProjectionSession } from '@planner/projections/candidateProjection';
 import { projectDirectTraitOutcomePicker } from '@planner/projections/directTraitOutcomeProjection';
 
-import { derivedShopPayloadIntent, levelResolutionCommandFor } from './reward-child-command-binding';
+import {
+  derivedShopPayloadIntent,
+  levelResolutionCommandFor,
+} from './reward-child-command-binding';
 import type {
   WorkspaceJudgmentArcanaInteraction,
   WorkspaceKeepsakeEquipResultInteraction,
@@ -27,10 +30,31 @@ export function bindResolutionInteractions(input: {
   readonly candidates: CandidateProjectionSession;
   readonly levelResolutionControls: ReadonlyMap<string, WorkspaceLevelResolutionControl>;
   readonly steadyGrowthControls: ReadonlyMap<string, WorkspaceSteadyGrowthControl>;
-  readonly derivedShopEntryEdits: ReadonlyMap<string, NonNullable<WorkspaceRewardControl['derivedShopEntryEdit']>>;
-  readonly judgmentArcanaControls?: ReadonlyMap<string, { readonly address: JudgmentArcanaAddress; readonly value: readonly string[] }>;
-  readonly keepsakeSelectionControls?: ReadonlyMap<string, { readonly address: KeepsakeSelectionAddress; readonly value: { readonly kind: 'retain' } | { readonly kind: 'replace'; readonly keepsakeKey: string } | string }>;
-  readonly keepsakeEquipResultControls?: ReadonlyMap<string, { readonly address: KeepsakeEquipResultAddress; readonly value?: import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults[keyof import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults] }>;
+  readonly derivedShopEntryEdits: ReadonlyMap<
+    string,
+    NonNullable<WorkspaceRewardControl['derivedShopEntryEdit']>
+  >;
+  readonly judgmentArcanaControls?: ReadonlyMap<
+    string,
+    { readonly address: JudgmentArcanaAddress; readonly value: readonly string[] }
+  >;
+  readonly keepsakeSelectionControls?: ReadonlyMap<
+    string,
+    {
+      readonly address: KeepsakeSelectionAddress;
+      readonly value:
+        | { readonly kind: 'retain' }
+        | { readonly kind: 'replace'; readonly keepsakeKey: string }
+        | string;
+    }
+  >;
+  readonly keepsakeEquipResultControls?: ReadonlyMap<
+    string,
+    {
+      readonly address: KeepsakeEquipResultAddress;
+      readonly value?: import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults[keyof import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults];
+    }
+  >;
 }): Readonly<{
   readonly levelResolutions: ReadonlyMap<string, WorkspaceLevelResolutionInteraction>;
   readonly steadyGrowth: ReadonlyMap<string, WorkspaceSteadyGrowthInteraction>;
@@ -38,7 +62,16 @@ export function bindResolutionInteractions(input: {
   readonly keepsakeSelections: ReadonlyMap<string, WorkspaceKeepsakeSelectionInteraction>;
   readonly keepsakeEquipResults: ReadonlyMap<string, WorkspaceKeepsakeEquipResultInteraction>;
 }> {
-  const { catalog, candidates, levelResolutionControls: effectiveLevelResolutionControls, steadyGrowthControls: effectiveSteadyGrowthControls, derivedShopEntryEdits, judgmentArcanaControls, keepsakeSelectionControls, keepsakeEquipResultControls } = input;
+  const {
+    catalog,
+    candidates,
+    levelResolutionControls: effectiveLevelResolutionControls,
+    steadyGrowthControls: effectiveSteadyGrowthControls,
+    derivedShopEntryEdits,
+    judgmentArcanaControls,
+    keepsakeSelectionControls,
+    keepsakeEquipResultControls,
+  } = input;
   const levelResolutions = new Map<string, WorkspaceLevelResolutionInteraction>();
   for (const [key, control] of effectiveLevelResolutionControls) {
     levelResolutions.set(
@@ -286,5 +319,11 @@ export function bindResolutionInteractions(input: {
       }),
     );
   }
-  return Object.freeze({ levelResolutions, steadyGrowth, judgmentArcana, keepsakeSelections, keepsakeEquipResults });
+  return Object.freeze({
+    levelResolutions,
+    steadyGrowth,
+    judgmentArcana,
+    keepsakeSelections,
+    keepsakeEquipResults,
+  });
 }
