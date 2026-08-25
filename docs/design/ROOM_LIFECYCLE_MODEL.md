@@ -820,11 +820,27 @@ pickup actions and retain their own capabilities.
 Travel Deal and Gold Gold Gold continue to derive their trigger from that true
 action order. The selected source slot is not a complete payload-authoring
 context: the generated payload must be evaluated against the exact history
-prefix at the triggering action. In particular, a future forced Hermes
-delivery in `Q_PreBoss01` may lock the god pool if acquired before the World
-Shop purchase and cannot do so retroactively if acquired after it. Shrine
-delivery itself remains unimplemented; this trace is the representative rule a
-future delivery-aware Travel/Gold editor must preserve.
+prefix at the triggering action. A forced or ordinary Hermes delivery in
+`Q_PreBoss01` may lock the god pool if acquired before the World Shop purchase
+and cannot do so retroactively if acquired after it. The Shrine source action
+and its later required pickup remain distinct room owners, while both use this
+same ordered room fold.
+
+### Room Features at Cleanup
+
+Purging Pool sales, Shrine purchases, and Well purchases are optional ranked
+`RoomActionReference` variants in their host occurrence's one action order. A
+Pool and Well may use their feature-local **Interact** boundary: until then
+their live random inventory remains dormant and no action is active. World Shop
+and Shrine inventories are always fully authored; neither receives that
+convenience because their visible identities affect outgoing generation.
+
+Well purchases settle immediately as paid effects and never invoke free-pickup
+alternatives. A Shrine purchase instead either rushes into a required same-room
+pickup at that one action rank or derives a later required pickup at the
+reached encounter-end host. Automatic Boss occurrences are ordinary later
+delivery hosts. No feature owns a private purchase order or a completion-only
+settlement path.
 
 The selected next room is therefore also already created and rewarded before
 the purchase. Shop acquisitions first affect generation when that selected

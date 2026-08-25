@@ -12,8 +12,8 @@ by the owning design authorities and active delivery plans.
 
 ## Active Frontier
 
-The current persisted contract is strict schema 54 with catalog
-`0.36.0-runtime-offer-fallback`. The occurrence/action
+The current persisted contract is strict schema 59 with catalog
+`0.41.0-stygian-well`. The occurrence/action
 delivery landed occurrence-backed door staging at `e1e3af0`, one unified room
 chronology at `f38247d`, the corrected door contract at `daa876f`, the opening
 reward frontier at `fdfd2dc`, the engine-walk N Hub board at `aa09c10`, and
@@ -21,12 +21,13 @@ direct outgoing-frontier rendering at `b4be69f`. Every supported authored main
 or N side room is one occurrence; topology, door-visible identity, room-local
 payload, participation, and chronology have distinct owners.
 
-The room-feature phase is active from locked plan `74f70a7f`. Its first gate
-removes general authored Death Defiance offer conditions, retains only Gorgon
-Amulet's phase trigger, and publishes one address-keyed runtime fallback for
-each reached volatile trait or currently supported I/Q Shop and Nemesis item
-result. Preferred authored outcomes still simulate deterministically; fallback
-data remains derived and editor-invisible.
+The room-feature phase is complete through commits `2a3cfd7d`, `7f39af28`,
+`8d9f38b0`, `2ac6a9bc`, `106f2231`, and `833c9d99`. It removes general
+authored Death Defiance offer conditions and retains only Gorgon Amulet's
+phase-local trigger; exact catalog-declared runtime fallbacks remain derived
+and editor-invisible. Boss/Postboss are automatic occurrences; selected
+resources, F/G/H Pools, Hermes Shrines, and Stygian Wells now have their
+bounded authored, simulation, candidate, workspace, and route-index products.
 
 The ordinary Nemesis random-event phase is complete through Gates A-C. Gate A
 `5464d0a` added the closed catalog policy, strict schema-53 authored protocol,
@@ -3231,3 +3232,31 @@ typechecking; fixture integrity 2 files/13 tests; the regular suite 135
 files/1,720 tests; the heavy suite 27 files/418 tests; ESLint; repository-wide
 Prettier; and the production build at 405 transformed modules. The build
 retained only the existing greater-than-500-kB chunk advisory.
+
+## Room-features closure
+
+The fallback-first room-features phase is closed at schema 59 from locked plan
+`74f70a7f`. Gate A (`2a3cfd7d`) replaces general Death Defiance authored state
+with exact declaration-owned one-step runtime fallbacks, leaving only Gorgon's
+phase-local trigger. Gate B (`7f39af28`) turns Boss/Postboss into automatic
+occurrences with ordinary room-local lifecycle and active configured-tail
+features. Gates C–F (`8d9f38b0`, `2ac6a9bc`, `106f2231`, `833c9d99`) add the
+selected-success resource abstraction, Pools of Purging, Hermes Shrines, and
+Stygian Wells.
+
+The four manifest-backed representative fixtures remain distinct short
+full-lane witnesses: `surface-n-resources` proves selected resource timing and
+side-room placement; `underworld-f-pool` proves stacked-trait removal with
+retained prior-pick history; `surface-no-hermes-shrine-delivery` proves rushed
+and delayed Shrine delivery; and `underworld-f-stygian-well` proves a real
+Travel Deal refill with consequential Well effects. Pool and Well alone use
+runtime-random Interact convenience; World Shop and Shrine always fully author
+their visible inventory. The temporary plan is retired in this closure.
+
+The one closure `npm run check` completed successfully on 2026-08-25 after
+the durable authorities were stable: workspace, catalog, engine, and fixture
+typechecks; fixture integrity; regular and heavy Vitest lanes; ESLint;
+repository-wide Prettier; and the production build. The build retained only
+the existing greater-than-500-kB chunk advisory. The focused closure residue
+removal also passed the occurrence-assembly witness (1 file, 28 tests), root
+typecheck, targeted Prettier, and `git diff --check` before the full gate.

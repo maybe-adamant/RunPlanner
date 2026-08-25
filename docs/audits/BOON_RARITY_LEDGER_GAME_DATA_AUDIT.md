@@ -261,9 +261,10 @@ Yarn. The planner should therefore model Yarn as a chronological, one-off
 ledger contribution consumed by the next eligible boon offer—not as a
 permanent floor and not as a bonus attached to the selected trait.
 
-Stygian Wells are not implemented yet. This audit records Yarn now so future
-Well authoring can add the purchase to history and let the same rarity-ledger
-frontier consume it without inventing a separate rarity rule.
+Schema 59 implements Stygian Well purchase and Yarn's one-use rarity-ledger
+contribution. The Well action installs the derived use, and the existing
+offer-local rarity frontier consumes it without creating a separate rarity
+authority.
 
 ## I and Q World Shops
 
@@ -330,8 +331,7 @@ at an exact trait-offer frontier. Its inputs are:
 2. the exact current room override, otherwise the exact reward/shop-item
    override;
 3. active additive effects, including the resolved ranks of Excellence, The
-   Queen, and Divinity plus Proper Upbringing; a future Well slice may add
-   unconsumed Yarn of Ariadne at this same frontier; and
+   Queen, Divinity, Proper Upbringing, and an unconsumed Yarn of Ariadne; and
 4. active multiplicative effects.
 
 The engine intersects that numeric ledger with the exact trait's declared
@@ -377,12 +377,10 @@ The implementation should preserve these exact contacts:
   second-half World Shop Hermes; and
 - dynamic `EnteredBiomes` first-/second-half selection.
 
-The implementation deliberately leaves Yarn's declaration, purchase,
-remaining-use state, and consumption boundary deferred. When that Well slice
-exists, it can add Yarn's audited contribution to the same offer-local facts
-without introducing another rarity authority. Chaos Favor/Ordinary likewise
-remain future consumers; this slice adds no forced-Common or Heroic-fresh-roll
-behavior.
+Schema 59 implements Yarn's declaration, purchase, remaining-use state, and
+next-eligible-offer consumption through the same offer-local facts; it adds no
+second rarity authority. Chaos Favor/Ordinary likewise remain future consumers;
+this slice adds no forced-Common or Heroic-fresh-roll behavior.
 
 ## Explicit non-goals
 

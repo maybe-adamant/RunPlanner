@@ -7,15 +7,15 @@ scope, biome topology, occurrence-local state, semantic addresses, commands,
 persistence, and history. Simulation algorithms, candidates, Redux state, and
 React rendering are separate concerns.
 
-## Schema 58 Boundary
+## Schema 59 Boundary
 
-Schema 58 is the sole persisted authored-project contract. The codec rejects
+Schema 59 is the sole persisted authored-project contract. The codec rejects
 every other schema version rather than manufacturing current topology or leaf
 state for a stale document. The migration CLI performs the explicit 49-to-50,
 50-to-51, 51-to-52, 52-to-53, 53-to-54, 54-to-55, 55-to-56, and 56-to-57 migrations outside the production
-decoder, followed by the 57-to-58 migration, and also updates the earlier catalog metadata from
+decoder, followed by the 57-to-58 and 58-to-59 migrations, and also updates the earlier catalog metadata from
 `0.32.0-run-impacting-traits` through
-`0.40.0-hermes-shrine` without inventing authored outcomes. Catalog
+`0.41.0-stygian-well` without inventing authored outcomes. Catalog
 versions must match exactly after migration.
 
 Schemas 46 and 47 completed the occurrence-owned topology and chronology
@@ -68,6 +68,14 @@ inventory bypass. Sparse per-generation purchase state records delay and rush,
 and an optional fourth Travel Deal refill retains its own offer and delayed
 purchase. Pending delivery, maturity host, Spell reservation, and runtime offer
 fallbacks remain derived simulation output rather than persisted state.
+
+Schema 59 adds occurrence-owned Stygian Well state at declaration-owned
+ordinary and forced Postboss hosts. A Well's `interacted` flag is the narrow
+runtime-random boundary: inactive inventory and purchase detail remains
+dormant, while an interacted Well has three stable initial generations and at
+most one Travel Deal refill generation. Purchases, refill participation, and
+Twist detail are occurrence-local; pending temporary effects, one-step runtime
+fallbacks, and their expiry are derived simulation output.
 
 There is one biome plan and one topology language. Production state and
 semantic addresses have no layout-specific plan family, completion-transition

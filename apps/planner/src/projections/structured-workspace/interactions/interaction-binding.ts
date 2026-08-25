@@ -2973,13 +2973,6 @@ export function bindWorkspaceInteractions(
           candidates.nextOptionalHighTierTraitOfferDraft(control.address, value),
         previousOptionalHighTierDraft: (value: AuthoredTraitOfferTraits) =>
           candidates.previousOptionalHighTierTraitOfferDraft(control.address, value),
-        ...(control.deathDefianceCondition === undefined
-          ? {}
-          : {
-              deathDefianceCondition: {
-                value: control.deathDefianceCondition.value,
-              },
-            }),
       }),
     );
   }

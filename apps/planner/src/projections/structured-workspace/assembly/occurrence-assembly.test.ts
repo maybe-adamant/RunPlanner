@@ -1620,9 +1620,6 @@ describe('structured workspace occurrence assembly', () => {
     ).assembly;
     expect(assembled.node.room.roomLocal).toMatchObject({ kind: 'shop' });
     expect(assembled.node.room.roomLocal).not.toHaveProperty('deathDefianceCondition');
-    expect(assembled.occurrenceInteractionRequirements).not.toContainEqual(
-      expect.objectContaining({ kind: 'shopDeathDefianceCondition' }),
-    );
   });
 
   it('does not need evaluation entry to preserve authored room-local controls', () => {

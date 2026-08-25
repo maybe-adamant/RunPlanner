@@ -357,9 +357,6 @@ export interface WorkspaceTraitOfferControl {
   readonly echoLastReward?: WorkspaceEchoLastRewardControl;
   readonly allTogetherSets?: readonly WorkspaceAllTogetherSetControl[];
   readonly naturalSelection?: WorkspaceNaturalSelectionControl;
-  readonly deathDefianceCondition?: {
-    readonly value: boolean;
-  };
 }
 
 /** One exact Time Piece choice, independent of whether this role has a trait child. */
@@ -630,9 +627,6 @@ export interface WorkspaceTraitOfferInteraction {
   readonly previousOptionalHighTierDraft?: (
     value: AuthoredTraitOfferTraits,
   ) => AuthoredTraitOfferTraits | undefined;
-  readonly deathDefianceCondition?: {
-    readonly value: boolean;
-  };
 }
 
 export interface WorkspaceLevelResolutionInteraction {
@@ -1557,10 +1551,6 @@ export type WorkspaceShopSupplementalDescriptor =
       readonly eligibleSourceOfferKeys: readonly string[];
     };
 
-export interface WorkspaceShopConditionControl {
-  readonly value: boolean;
-}
-
 export interface WorkspaceLocalVisitOrderOption {
   readonly key: string;
   readonly label: string;
@@ -1693,7 +1683,6 @@ export type WorkspaceRoomLocal =
       readonly materialized: boolean;
       readonly offers: readonly WorkspaceShopOfferDescriptor[];
       readonly supplementalOffers: readonly WorkspaceShopSupplementalDescriptor[];
-      readonly deathDefianceCondition?: WorkspaceShopConditionControl;
     };
 
 export type WorkspaceRoomFeature =
