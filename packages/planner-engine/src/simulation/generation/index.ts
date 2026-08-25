@@ -1,14 +1,12 @@
+export { evaluateBiomeRoomGeneration } from './biome';
 export {
-  evaluateBiomeRoomGeneration,
   roomTargetCandidateContextAtFrontier,
-  normalTargetCandidateHistory,
   hubTerminalTakeoverCandidateSupportAtFrontier,
   evaluateTakeoverPrebossBatchCandidate,
   evaluateTakeoverPrebossBatchCandidateAtFrontier,
-  fieldsCageOutcomeCandidateSupport,
-  BiomeRoomGenerationContractError,
-  supportedFieldsCageOutcomes,
-} from './biome';
+} from './first-target-takeover';
+export { BiomeRoomGenerationContractError, normalTargetCandidateHistory } from './normal-targets';
+export { fieldsCageOutcomeCandidateSupport, supportedFieldsCageOutcomes } from './fields-cage';
 export {
   evaluateHubOpenSetConstraints,
   evaluateHubDecisionGeneration,
