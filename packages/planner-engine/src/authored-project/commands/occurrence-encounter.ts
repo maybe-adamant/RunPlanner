@@ -10,7 +10,8 @@ import {
   type LocatedBiome,
 } from './contract';
 import { replaceOccurrence, updateOccurrenceTopology } from './occurrence-mutation';
-import { createUnresolvedPickupRewardState, nemesisGeneratedPickupSiteKey } from '../traits';
+import { createUnresolvedPickupRewardState } from '../traits';
+import { nemesisGeneratedPickupSiteKey } from '../pickup-producers';
 import { sameOccurrenceValue } from './occurrence-leaf-value';
 import type { EncounterOccurrenceCommand } from './types';
 
