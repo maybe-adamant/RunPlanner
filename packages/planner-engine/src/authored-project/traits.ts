@@ -93,6 +93,25 @@ export interface AuthoredTraitOfferTraits {
   readonly rarificationActions?: readonly TraitOptionKey[];
   /** Rejected keeps this exact generated row visible but unavailable. */
   readonly rejectedOptionKey?: TraitOptionKey;
+  /** Concave Stone's post-primary frozen residual choice. */
+  readonly concaveStoneResult?: AuthoredConcaveStoneResult;
+}
+
+export type AuthoredConcaveStoneResult =
+  | { readonly kind: 'noProc' }
+  | { readonly kind: 'proc'; readonly optionKey: TraitOptionKey };
+
+export function normalizeAuthoredConcaveStoneResult(
+  value: AuthoredConcaveStoneResult,
+  primaryOptionKey: TraitOptionKey,
+  options: readonly AuthoredTraitOption[],
+): AuthoredConcaveStoneResult {
+  if (value.kind === 'noProc') return Object.freeze({ kind: 'noProc' });
+  if (!['option1', 'option2', 'option3'].includes(value.optionKey))
+    throw new Error('Concave Stone result must reference an existing residual option');
+  if (value.optionKey === primaryOptionKey || options[optionIndex(value.optionKey)] === undefined)
+    throw new Error('Concave Stone result must reference an existing residual option');
+  return Object.freeze({ kind: 'proc', optionKey: value.optionKey });
 }
 
 export interface AuthoredTraitOfferFallbackGold {

@@ -43,6 +43,7 @@ export function derivedShopPayloadIntent<Command extends ProjectCommand>(
     edit.kind !== 'ReplaceTraitOffer' &&
     edit.kind !== 'ReplaceGorgonAthenaOffer' &&
     edit.kind !== 'ReplaceTraitSelection' &&
+    edit.kind !== 'ReplaceConcaveStoneResult' &&
     edit.kind !== 'ReplaceLevelResolution' &&
     edit.kind !== 'ReplaceAcquisitionDisposition'
   )

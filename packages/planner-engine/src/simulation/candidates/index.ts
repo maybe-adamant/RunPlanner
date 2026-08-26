@@ -128,6 +128,9 @@ export type {
   EvaluatedRansomAssessmentCandidate,
 } from './trait-offer';
 export type {
+  ConcaveStoneCandidateBranch,
+} from './trait-offer-capability';
+export type {
   SteadyGrowthOutcomeCandidateQuery,
   EvaluatedSteadyGrowthOutcomeCandidate,
 } from './steady-growth';

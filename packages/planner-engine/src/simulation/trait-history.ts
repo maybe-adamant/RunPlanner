@@ -30,6 +30,23 @@ export interface TraitOfferEvent {
   readonly targetedAcquisitionTransition?: TraitTargetedAcquisitionTransition;
 }
 
+/** A frozen Concave Stone pickup, distinct from the original generated offer. */
+export interface ConcaveStoneSecondaryEvent {
+  readonly kind: 'concaveStoneSecondary';
+  readonly owner: SemanticAddress;
+  readonly acquisitionRole: 'concaveStoneSecondary';
+  readonly sequence: number;
+  readonly giverKey: string;
+  readonly options: AuthoredTraitOfferTraits['options'];
+  readonly selectedOptionKey: TraitOptionKey;
+  readonly acquisitionPoint: string;
+  readonly acquisitionIdentity?: string;
+  readonly echoRepeatedKeepsakeKey?: string;
+  readonly bannedTraitKeys?: readonly string[];
+  readonly replacementTransition?: TraitReplacementTransition;
+  readonly targetedAcquisitionTransition?: TraitTargetedAcquisitionTransition;
+}
+
 /** A closed derived mutation of an already-equipped Pom-eligible trait. */
 export interface TraitLevelMutationEvent {
   readonly kind: 'levelMutation';
@@ -173,6 +190,7 @@ export interface EchoKeepsakeReplayEvent {
 
 export type TraitHistoryEvent =
   | TraitOfferEvent
+  | ConcaveStoneSecondaryEvent
   | TraitLevelMutationEvent
   | SteadyGrowthProgressEvent
   | TraitRarityMutationEvent
@@ -722,6 +740,7 @@ export function foldTraitHistoryEvents(
         });
         continue;
       }
+      if (event.kind !== 'traitOffer' && event.kind !== 'concaveStoneSecondary') continue;
       const option = event.options[optionIndex(event.selectedOptionKey)];
       for (const traitKey of event.bannedTraitKeys ?? []) bannedTraitKeys.add(traitKey);
       if (option !== undefined) previouslyPickedTraitKeys.add(option.traitKey);

@@ -267,7 +267,17 @@ function traitOfferControls(
               optionKey: offer.selectedOptionKey,
               slotCount: selectedDisposition.levelCount,
             }) satisfies WorkspaceNaturalSelectionControl;
-          })();
+            })();
+    const concaveStone =
+      offer.kind !== 'traits' || input.catalog.traitGivers.byKey[giverKey]?.shopAwareGodTrait !== true
+        ? undefined
+        : Object.freeze({
+            address,
+            marker: input.markerDestinations.marker(address),
+            ...(offer.concaveStoneResult === undefined
+              ? {}
+              : { value: offer.concaveStoneResult }),
+          });
     const marker = input.markerDestinations.marker(address);
     controls.push(
       Object.freeze({
@@ -282,6 +292,7 @@ function traitOfferControls(
         ...(circeResolution === undefined ? {} : { circeResolution }),
         ...(allTogetherSets === undefined ? {} : { allTogetherSets }),
         ...(naturalSelection === undefined ? {} : { naturalSelection }),
+        ...(concaveStone === undefined ? {} : { concaveStone }),
       }),
     );
   }

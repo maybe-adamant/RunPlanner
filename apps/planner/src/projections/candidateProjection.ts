@@ -10,6 +10,7 @@ import {
   type AllTogetherSetDomainEvaluation,
   type NaturalSelectionResultCandidateEvaluation,
   type RansomAssessmentCandidateEvaluation,
+  type ConcaveStoneCandidateBranch,
   type EvaluatedSteadyGrowthOutcomeCandidate,
   type EvaluatedFountainRarityOutcomeCandidate,
   type EvaluatedFigurineArcanaCandidate,
@@ -263,6 +264,10 @@ export interface CandidateProjectionSession {
     owner: TraitOfferAddress,
     value: AuthoredTraitOffer,
   ) => RansomAssessmentCandidateEvaluation;
+  readonly concaveStone: (
+    owner: TraitOfferAddress,
+    value: AuthoredTraitOffer,
+  ) => readonly ConcaveStoneCandidateBranch[];
   /** Exact engine-backed Steady Growth threshold capability. */
   readonly steadyGrowthOutcome: (
     owner: SteadyGrowthOutcomeAddress,

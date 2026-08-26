@@ -65,20 +65,25 @@ export const keepsakes: readonly RawKeepsakeDeclaration[] = entries.map(
                   availability: 'eligible',
                   effect: { kind: 'crystalFigurine', schedule: 'everyBiome' },
                 } as const)
-              : key === 'RarifyKeepsake'
+              : key === 'UnpickedBoonKeepsake'
                 ? ({
                     availability: 'eligible',
-                    effect: { kind: 'callingCard', schedule: 'everyBiome' },
+                    effect: { kind: 'concaveStone', schedule: 'oneShot' },
                   } as const)
-                : key === 'GoldifyKeepsake'
+                : key === 'RarifyKeepsake'
                   ? ({
                       availability: 'eligible',
-                      effect: { kind: 'timePiece', schedule: 'everyBiome' },
+                      effect: { kind: 'callingCard', schedule: 'everyBiome' },
                     } as const)
-                  : ({
-                      availability: 'eligible',
-                      effect: { kind: 'modeledNeutral', schedule: 'noModeledEffect' },
-                    } as const),
+                  : key === 'GoldifyKeepsake'
+                    ? ({
+                        availability: 'eligible',
+                        effect: { kind: 'timePiece', schedule: 'everyBiome' },
+                      } as const)
+                    : ({
+                        availability: 'eligible',
+                        effect: { kind: 'modeledNeutral', schedule: 'noModeledEffect' },
+                      } as const),
     ...(key === 'HadesAndPersephoneKeepsake'
       ? {
           effect: {
@@ -184,6 +189,19 @@ export const keepsakes: readonly RawKeepsakeDeclaration[] = entries.map(
                           },
                         },
                       }
-                    : {}),
+                    : key === 'UnpickedBoonKeepsake'
+                      ? {
+                          effect: {
+                            kind: 'concaveStone' as const,
+                            uses: 1 as const,
+                            procSupportByRank: {
+                              Common: 25 as const,
+                              Rare: 50 as const,
+                              Epic: 75 as const,
+                              Heroic: 100 as const,
+                            },
+                          },
+                        }
+                      : {}),
   }),
 );

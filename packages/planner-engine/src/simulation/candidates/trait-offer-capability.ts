@@ -37,7 +37,22 @@ import {
   recordReachedTraitOffer,
   type RansomAssessment,
 } from '../traits';
-import { evaluateCallingCardOffer } from '../keepsakes';
+import {
+  advanceCurrentKeepsake,
+  concaveStoneProcSupport,
+  concaveStoneResidualOptionKeys,
+  evaluateCallingCardOffer,
+} from '../keepsakes';
+import type { AuthoredConcaveStoneResult } from '../../authored-project/traits';
+
+export interface ConcaveStoneCandidateBranch {
+  readonly procSupport: number;
+  readonly residualOptionKeys: readonly TraitOptionKey[];
+  readonly required: boolean;
+  readonly supported: boolean;
+  readonly resultSupport: 'forced' | 'possible' | 'impossible';
+  readonly result?: AuthoredConcaveStoneResult;
+}
 
 function traitOfferCandidateContext(
   catalog: Catalog,
@@ -112,6 +127,8 @@ export interface TraitOfferCandidateCapability {
     slots: readonly TraitOrdinaryBoonSlot[],
     targets: readonly string[] | undefined,
   ) => readonly NaturalSelectionTargetAssessment[];
+  /** Exact post-primary Stone support for this frozen authored offer. */
+  readonly concaveStone: (value: AuthoredTraitOffer) => readonly ConcaveStoneCandidateBranch[];
   /** Data-only current-frontier transform for a selected Ransom. */
   readonly ransom: (value: AuthoredTraitOffer) => readonly RansomAssessment[];
   /** Closed Chaos restrictions at this exact pre-offer frontier. */
@@ -461,6 +478,85 @@ export function createTraitOfferCandidateArtifacts(
             branchContexts.map((context) =>
               assessNaturalSelectionTargets(catalog, context.before, levelCount, slots, targets),
             ),
+          ),
+        concaveStone: (value: AuthoredTraitOffer) =>
+          Object.freeze(
+            branchContexts.flatMap((context) => {
+              if (value.kind !== 'traits') return [];
+              if (catalog.traitGivers.byKey[value.giverKey]?.shopAwareGodTrait !== true) return [];
+              const base = assessTraitOfferBeforeRarification(
+                catalog,
+                value,
+                context.before,
+                traitOfferCandidateContext(catalog, context.before, context.context, value),
+              );
+              const replacementOptionKeys =
+                value.kind === 'traits'
+                  ? (['option1', 'option2', 'option3'] as const).filter(
+                      (key) =>
+                        base.assessments[optionIndex(key)]?.replacementTransition !== undefined,
+                    )
+                  : [];
+              const residualOptionKeys = concaveStoneResidualOptionKeys(
+                value,
+                replacementOptionKeys,
+              );
+              let keepsakes = context.keepsakes;
+              if (keepsakes === undefined) return [];
+              const callingCard = evaluateCallingCardOffer(catalog, keepsakes, value, base.legal);
+              keepsakes = callingCard.state;
+              const selected = value.options[optionIndex(value.selectedOptionKey)];
+              const disposition =
+                selected === undefined
+                  ? undefined
+                  : catalog.traits.byKey[selected.traitKey]?.selectedDisposition;
+              if (disposition?.kind === 'advanceCurrentKeepsake')
+                keepsakes = advanceCurrentKeepsake(catalog, keepsakes, disposition.rankBonus);
+              const procSupport = concaveStoneProcSupport(catalog, keepsakes);
+              const result = value.concaveStoneResult;
+              // An authored Stone result remains a repairable child even after
+              // its source disappears. Do not erase the invalid authored fact.
+              if (procSupport === undefined) {
+                if (result === undefined) return [];
+                return [
+                  Object.freeze({
+                    procSupport: 0,
+                    residualOptionKeys: Object.freeze([]),
+                    required: false,
+                    supported: false,
+                    resultSupport: 'impossible' as const,
+                    result,
+                  }),
+                ];
+              }
+              if (residualOptionKeys.length === 0 && result === undefined) return [];
+              const validResult =
+                result === undefined
+                  ? false
+                  : result.kind === 'noProc'
+                    ? procSupport < 100 || residualOptionKeys.length === 0
+                    : residualOptionKeys.includes(result.optionKey);
+              const required = procSupport >= 100 && residualOptionKeys.length > 0;
+              return [
+                Object.freeze({
+                  procSupport,
+                  residualOptionKeys,
+                  required,
+                  supported: result === undefined ? false : validResult,
+                  resultSupport:
+                    result?.kind === 'proc' || result?.kind === 'noProc'
+                      ? result.kind === 'noProc' && required
+                        ? ('impossible' as const)
+                        : validResult
+                          ? required
+                            ? ('forced' as const)
+                            : ('possible' as const)
+                          : ('impossible' as const)
+                      : ('impossible' as const),
+                  ...(result === undefined ? {} : { result }),
+                }),
+              ];
+            }),
           ),
         ransom: (value: AuthoredTraitOffer) =>
           Object.freeze(

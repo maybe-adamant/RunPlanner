@@ -177,6 +177,7 @@ export {
   type AuthoredGorgonAthenaOffer,
   type AuthoredTraitOffer,
   type AuthoredTraitOfferTraits,
+  type AuthoredConcaveStoneResult,
   type AuthoredLevelResolution,
   type AuthoredTraitOption,
   type AuthoredAllTogetherResult,

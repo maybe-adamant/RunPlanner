@@ -150,6 +150,7 @@ describe('Run State presentation', () => {
         figLeaf: { remainingUses: 2, activatedThisBiome: true },
         gorgon: { status: 'pending' as const, rarity: 'Epic' as const },
         phial: { status: 'pending' as const },
+        stone: { status: 'pending' as const, origin: 'echo' as const, rank: 'Common' as const },
       },
       forfeitStatus: 'consumed',
       bags: [
@@ -222,6 +223,9 @@ describe('Run State presentation', () => {
       gorgonStatus: 'pending',
       gorgonRarity: 'Epic',
       phialStatus: 'pending',
+      stoneStatus: 'pending',
+      stoneOrigin: 'echo',
+      stoneRank: 'Common',
     });
     expect(state.traits).toMatchObject({
       properUpbringingActive: true,

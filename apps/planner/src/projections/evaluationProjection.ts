@@ -420,6 +420,14 @@ const findingCopy = {
     title: 'Sea Star duplication unavailable',
     description: 'This acquisition is not eligible for Sea Star on every reached source branch.',
   },
+  concaveStoneResultMissing: {
+    title: 'Choose Concave Stone result',
+    description: 'Record whether Concave Stone procs and, if so, which residual boon it acquires.',
+  },
+  concaveStoneResultUnavailable: {
+    title: 'Concave Stone result is unavailable',
+    description: 'Choose a supported proc result for the frozen residual boon rows.',
+  },
   artificerReplacementUnavailable: {
     title: 'Artificer replacement unavailable',
     description: 'Choose a reward currently reachable from the RunProgress bag.',

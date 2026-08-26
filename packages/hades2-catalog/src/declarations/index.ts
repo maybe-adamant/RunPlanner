@@ -36,7 +36,7 @@ const rooms: readonly RawRoomDeclaration[] = [
 ];
 
 export const declarations = {
-  version: '0.43.0-crystal-figurine',
+  version: '0.44.0-concave-stone',
   biomes,
   routes,
   arcanaCards,

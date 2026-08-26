@@ -493,6 +493,11 @@ export type TraitOfferCommand =
       readonly kind: 'ReplaceTraitSelection';
       readonly trait: TraitOfferAddress;
       readonly selectedOptionKey: TraitOptionKey;
+    }
+  | {
+      readonly kind: 'ReplaceConcaveStoneResult';
+      readonly trait: TraitOfferAddress;
+      readonly value: import('../traits').AuthoredConcaveStoneResult | null;
     };
 
 export type LevelResolutionCommand = {

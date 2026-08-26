@@ -159,6 +159,7 @@ export interface KeepsakeDeclaration {
               readonly schedule: 'oneShotAfterUnequipped';
             }
           | { readonly kind: 'crystalFigurine'; readonly schedule: 'everyBiome' }
+          | { readonly kind: 'concaveStone'; readonly schedule: 'oneShot' }
           | { readonly kind: 'callingCard'; readonly schedule: 'everyBiome' }
           | { readonly kind: 'timePiece'; readonly schedule: 'everyBiome' }
           | { readonly kind: 'modeledNeutral'; readonly schedule: 'noModeledEffect' };
@@ -210,6 +211,11 @@ export interface KeepsakeDeclaration {
         readonly uses: 1;
         readonly requestedCards: 2;
         readonly rarityLevelByRank: KeepsakeRankProfile<1, 2, 3, 4>;
+      }
+    | {
+        readonly kind: 'concaveStone';
+        readonly uses: 1;
+        readonly procSupportByRank: KeepsakeRankProfile<25, 50, 75, 100>;
       };
 }
 

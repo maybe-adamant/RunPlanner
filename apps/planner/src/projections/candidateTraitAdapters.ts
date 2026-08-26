@@ -20,6 +20,7 @@ import type {
   EvaluatedSteadyGrowthOutcomeCandidate,
   NaturalSelectionResultCandidateEvaluation,
   CandidateContextUnavailable,
+  ConcaveStoneCandidateBranch,
 } from '@run-planner/engine/simulation';
 
 import type {
@@ -62,6 +63,7 @@ export type TraitCandidateAdapters = Pick<
   | 'allTogetherSet'
   | 'naturalSelectionResult'
   | 'ransomAssessment'
+  | 'concaveStone'
   | 'steadyGrowthOutcome'
   | 'fountainRarityOutcome'
   | 'levelResolution'
@@ -170,6 +172,12 @@ export function createTraitCandidateAdapters(
         trait,
         value,
       }) as import('@run-planner/engine/simulation').RansomAssessmentCandidateEvaluation,
+    concaveStone: (owner, value) => {
+      const evaluation = core.evaluate({ kind: 'traitOffer', trait: owner, value });
+      return evaluation.kind === 'traitOffer'
+        ? (evaluation.result.concaveStone ?? Object.freeze([]))
+        : Object.freeze([] as ConcaveStoneCandidateBranch[]);
+    },
     steadyGrowthOutcome: (outcome, targetTraitKey) =>
       aggregateEvaluation(core, {
         kind: 'steadyGrowthOutcome',

@@ -7,6 +7,7 @@ import {
   normalizeAuthoredEchoLastRunBoon,
   normalizeAllTogetherResult,
   normalizeAuthoredChaosTraitOffer,
+  normalizeAuthoredConcaveStoneResult,
   type AuthoredGorgonAthenaOffer,
   type AuthoredTraitOffer,
   type AuthoredTraitOfferTraits,
@@ -52,6 +53,29 @@ function replaceTraitOfferValue(
   if (existing === null) failCommand(command, 'trait offer must be authored as one complete offer');
   if (command.kind === 'ReplaceTraitSelection')
     return Object.freeze({ ...existing, selectedOptionKey: command.selectedOptionKey });
+  if (command.kind === 'ReplaceConcaveStoneResult') {
+    if (existing.kind !== 'traits') failCommand(command, 'Concave Stone requires a trait offer');
+    if (command.value === null) {
+      const { concaveStoneResult: _result, ...withoutResult } = existing;
+      void _result;
+      return Object.freeze(withoutResult);
+    }
+    try {
+      return Object.freeze({
+        ...existing,
+        concaveStoneResult: normalizeAuthoredConcaveStoneResult(
+          command.value,
+          existing.selectedOptionKey,
+          existing.options,
+        ),
+      });
+    } catch (error) {
+      return failCommand(
+        command,
+        error instanceof Error ? error.message : 'invalid Concave Stone result',
+      );
+    }
+  }
   if (command.kind === 'ReplaceGorgonAthenaOffer')
     failCommand(command, 'Gorgon Athena decisions require a Gorgon phase owner');
   return failCommand(command, 'unsupported trait-offer command');
@@ -256,6 +280,17 @@ function validateOffer(
       value.rarificationActions.some((key) => !['option1', 'option2', 'option3'].includes(key)))
   )
     failCommand(command, 'rarification actions must name trait offer option rows');
+  if (value.concaveStoneResult !== undefined) {
+    try {
+      normalizeAuthoredConcaveStoneResult(
+        value.concaveStoneResult,
+        value.selectedOptionKey,
+        value.options,
+      );
+    } catch (error) {
+      failCommand(command, error instanceof Error ? error.message : 'invalid Concave Stone result');
+    }
+  }
   return Object.freeze({
     kind: 'traits',
     giverKey: value.giverKey,
@@ -300,6 +335,15 @@ function validateOffer(
     ...(value.rejectedOptionKey === undefined
       ? {}
       : { rejectedOptionKey: value.rejectedOptionKey }),
+    ...(value.concaveStoneResult === undefined
+      ? {}
+      : {
+          concaveStoneResult: normalizeAuthoredConcaveStoneResult(
+            value.concaveStoneResult,
+            value.selectedOptionKey,
+            value.options,
+          ),
+        }),
   });
 }
 
@@ -706,6 +750,8 @@ export function applyTraitOfferCommand(
       if (existing === undefined) failCommand(command, `no trait offer at phase ${phaseKey}`);
       if (command.kind === 'ReplaceTraitOffer')
         failCommand(command, 'Gorgon Athena persists only its bound author decisions');
+      if (command.kind === 'ReplaceConcaveStoneResult')
+        failCommand(command, 'Gorgon Athena does not support Concave Stone results');
       const value =
         command.kind === 'ResetEncounterTraitOffer'
           ? null

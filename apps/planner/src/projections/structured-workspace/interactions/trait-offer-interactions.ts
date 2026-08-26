@@ -34,6 +34,7 @@ import {
 } from './reward-child-command-binding';
 import { StructuredWorkspaceProjectionContractError } from '../contract';
 import type {
+  WorkspaceConcaveStoneInteraction,
   WorkspaceNaturalSelectionInteraction,
   WorkspaceRewardControl,
   WorkspaceTraitOfferControl,
@@ -80,6 +81,48 @@ export function bindTraitOfferInteractions(input: {
       string,
       ReturnType<WorkspaceTraitOfferInteraction['optionDomain']>
     >();
+    const concaveStoneInteraction: WorkspaceConcaveStoneInteraction | undefined =
+      control.concaveStone === undefined
+        ? undefined
+        : Object.freeze({
+            control: control.concaveStone,
+            intentFor: (
+              _offer: AuthoredTraitOfferTraits,
+              result:
+                import('@run-planner/engine/authored-project').AuthoredConcaveStoneResult | null,
+            ) =>
+              derivedShopPayloadIntent(
+                derivedShopEntryEdit,
+                Object.freeze({
+                  kind: 'ReplaceConcaveStoneResult' as const,
+                  trait: control.address,
+                  value: result,
+                }),
+              ),
+            forOffer: (offer: AuthoredTraitOfferTraits) =>
+              Object.freeze({
+                load: () => {
+                  const branches = candidates.concaveStone(control.address, offer);
+                  const first = branches[0];
+                  if (first === undefined) return undefined;
+                  const sameDomain = branches.every(
+                    (branch) =>
+                      branch.procSupport === first.procSupport &&
+                      branch.required === first.required &&
+                      branch.resultSupport === first.resultSupport &&
+                      JSON.stringify(branch.residualOptionKeys) ===
+                        JSON.stringify(first.residualOptionKeys),
+                  );
+                  if (!sameDomain) return undefined;
+                  return Object.freeze({
+                    procSupport: first.procSupport,
+                    required: first.required,
+                    residualOptionKeys: first.residualOptionKeys,
+                    resultSupport: first.resultSupport,
+                  });
+                },
+              }),
+          });
     const optionDomain = (value: AuthoredTraitOffer, optionKey: TraitOptionKey) => {
       if (value.kind !== 'traits') {
         throw new StructuredWorkspaceProjectionContractError(
@@ -535,6 +578,7 @@ export function bindTraitOfferInteractions(input: {
                 traitLabel: (traitKey: string) => catalog.traits.byKey[traitKey]?.label ?? traitKey,
               } satisfies WorkspaceNaturalSelectionInteraction),
             }),
+        ...(concaveStoneInteraction === undefined ? {} : { concaveStone: concaveStoneInteraction }),
         load() {
           if (projected !== undefined) return projected;
           const focused = candidates.traitOfferFocusedOptions(

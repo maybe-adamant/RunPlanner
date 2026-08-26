@@ -7,6 +7,8 @@ import {
   optionIndex,
   type AuthoredGorgonAthenaOffer,
   type AuthoredTraitOffer,
+  type AuthoredTraitOfferTraits,
+  type TraitOptionKey,
 } from '../authored-project/traits';
 
 export type FatedStatus = 'Unknown' | 'Fated' | 'Unfated';
@@ -50,6 +52,12 @@ export interface KeepsakeState {
     readonly status: 'pending' | 'consumed';
     readonly rarity: InRunTraitRarity;
   };
+  /** Concave Stone source; Echo replay remains unslotted after consumption. */
+  readonly stone?: {
+    readonly origin: 'ordinary' | 'echo';
+    readonly status: 'pending' | 'consumed';
+    readonly rank: KeepsakeRank;
+  };
 }
 
 export interface FigLeafStateValue {
@@ -90,6 +98,8 @@ export function keepsakeRankForEquip(
     case 'fountainRarity':
       return 'Epic';
     case 'crystalFigurine':
+      return 'Heroic';
+    case 'concaveStone':
       return 'Heroic';
     default: {
       const exhaustive: never = effect;
@@ -151,6 +161,13 @@ export function advanceCurrentKeepsake(
               levels: effect.subsequentEligibleTraitLevelsByRank[advancedRank],
             }),
           });
+    case 'concaveStone':
+      return state.stone?.status === 'pending'
+        ? Object.freeze({
+            ...state,
+            stone: Object.freeze({ ...state.stone, rank: advancedRank }),
+          })
+        : state;
     case 'callingCard':
       return state.callingCard === undefined
         ? state
@@ -609,6 +626,15 @@ export function createKeepsakeState(
           }),
         }
       : {}),
+    ...(effect?.kind === 'concaveStone' && keepsake !== undefined
+      ? {
+          stone: Object.freeze({
+            origin: 'ordinary' as const,
+            status: 'pending' as const,
+            rank: keepsake.rank,
+          }),
+        }
+      : {}),
   });
 }
 export function applyKeepsakeDisposition(
@@ -660,9 +686,17 @@ export function applyKeepsakeDisposition(
     history.map((entry) => entry.key),
     activeArcanaKeys,
   );
-  const { phial: _phial, figurine: _figurine, ...stateWithoutSources } = state;
+  const { phial: _phial, figurine: _figurine, ...withoutPhialAndFigurine } = state;
   void _phial;
   void _figurine;
+  const stateWithoutSources =
+    state.currentKey === 'UnpickedBoonKeepsake'
+      ? (() => {
+          const { stone: _stone, ...withoutStone } = withoutPhialAndFigurine;
+          void _stone;
+          return withoutStone;
+        })()
+      : withoutPhialAndFigurine;
   return Object.freeze({
     ...stateWithoutSources,
     currentKey: disposition.keepsakeKey,
@@ -714,6 +748,15 @@ export function applyKeepsakeDisposition(
           }),
         }
       : {}),
+    ...(selected.effect?.kind === 'concaveStone'
+      ? {
+          stone: Object.freeze({
+            origin: 'ordinary' as const,
+            status: 'pending' as const,
+            rank,
+          }),
+        }
+      : {}),
     ...(fatedStatus === 'Unfated' && state.callingCard !== undefined
       ? { callingCard: Object.freeze({ remainingCharges: 0 }) }
       : {}),
@@ -741,6 +784,39 @@ export function consumeFigurine(state: KeepsakeState): KeepsakeState {
   return Object.freeze({ ...state, figurine: Object.freeze({ ...figurine, status: 'consumed' }) });
 }
 
+export function consumeConcaveStone(state: KeepsakeState): KeepsakeState {
+  const stone = state.stone;
+  if (stone?.status !== 'pending') return state;
+  return Object.freeze({ ...state, stone: Object.freeze({ ...stone, status: 'consumed' }) });
+}
+
+export function concaveStoneProcSupport(
+  catalog: Catalog,
+  state: KeepsakeState,
+): number | undefined {
+  const source = state.stone;
+  if (source === undefined || source.status !== 'pending') return undefined;
+  const effect = keepsakeEffectByKind(catalog, 'concaveStone');
+  return effect?.procSupportByRank[source.rank];
+}
+
+/** Original generated rows which Stone may select after the primary row. */
+export function concaveStoneResidualOptionKeys(
+  offer: AuthoredTraitOfferTraits,
+  replacementOptionKeys: readonly TraitOptionKey[] = [],
+): readonly TraitOptionKey[] {
+  const replacements = new Set(replacementOptionKeys);
+  return Object.freeze(
+    (['option1', 'option2', 'option3'] as const).filter(
+      (key) =>
+        optionIndex(key) < offer.options.length &&
+        key !== offer.selectedOptionKey &&
+        key !== offer.rejectedOptionKey &&
+        !replacements.has(key),
+    ),
+  );
+}
+
 /** Creates one Common unslotted source when no Figurine source is already present. */
 export function applyEchoFigurineReplay(
   catalog: Catalog,
@@ -758,6 +834,21 @@ export function applyEchoFigurineReplay(
       status: 'pending' as const,
       rarity: figurineRarityForRank(catalog, effect, 'Common'),
     }),
+  });
+}
+
+/** Creates one Common unslotted Stone source when no Stone source is present. */
+export function applyEchoConcaveStoneReplay(
+  catalog: Catalog,
+  state: KeepsakeState,
+  capturedKeepsakeKey: string,
+): KeepsakeState {
+  if (capturedKeepsakeKey !== 'UnpickedBoonKeepsake' || state.stone !== undefined) return state;
+  const effect = catalog.keepsakes.byKey[capturedKeepsakeKey]?.effect;
+  if (effect?.kind !== 'concaveStone') return state;
+  return Object.freeze({
+    ...state,
+    stone: Object.freeze({ origin: 'echo' as const, status: 'pending' as const, rank: 'Common' }),
   });
 }
 

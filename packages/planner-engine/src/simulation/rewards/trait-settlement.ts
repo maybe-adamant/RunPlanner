@@ -56,7 +56,13 @@ import {
   promoteArcana,
   suppressFearVow,
 } from '../arcana-fear';
-import { advanceCurrentKeepsake, refreshKeepsakeFatedStatus } from '../keepsakes';
+import {
+  advanceCurrentKeepsake,
+  concaveStoneProcSupport,
+  concaveStoneResidualOptionKeys,
+  consumeConcaveStone,
+  refreshKeepsakeFatedStatus,
+} from '../keepsakes';
 import type { RewardBranchState } from './branch-primitives';
 import { addRewardFinding } from './findings';
 
@@ -70,6 +76,8 @@ interface ApplyTraitOfferOptions {
   readonly directAcquisition?: boolean;
   readonly skipCallingCard?: boolean;
   readonly directTraitSetBranchHistories?: readonly TraitHistoryState[];
+  /** Stone's secondary row was already generated and must not be revalidated. */
+  readonly frozenAcquisition?: boolean;
 }
 
 interface EchoLastRunBoonSettlement {
@@ -351,6 +359,8 @@ function applyTraitOfferForAcquisitionInternal(
           options.directAcquisition === true,
           branch.keepsakes,
           callingCard === undefined ? undefined : authored,
+          undefined,
+          options.frozenAcquisition === true,
         )
       : effectiveAuthored.kind !== 'traits'
         ? (() => {
@@ -396,8 +406,14 @@ function applyTraitOfferForAcquisitionInternal(
       selectedForIdentityDisposition.effect === 'repeatKeepsake'
       ? reward.traitContext?.currentKeepsakeKey
       : undefined,
+    options.frozenAcquisition === true ? 'concaveStoneSecondary' : 'traitOffer',
   );
-  const traitEvaluations = Object.freeze([...(branch.traitEvaluations ?? []), evaluation]);
+  // A Stone residual is an acquisition from the already-evaluated source
+  // screen, not a second authored offer. Keep its callback machinery private
+  // to settlement and publish only the source offer's evaluation trace.
+  const traitEvaluations = options.frozenAcquisition
+    ? Object.freeze([...(branch.traitEvaluations ?? [])])
+    : Object.freeze([...(branch.traitEvaluations ?? []), evaluation]);
   if (
     findings !== undefined &&
     callingCard !== undefined &&
@@ -699,26 +715,121 @@ function applyTraitOfferForAcquisitionInternal(
         grants,
       );
   }
-  const settledBranch = consumeChaosGodScreen(
-    catalog,
-    Object.freeze({
-      ...effectiveBranch,
-      history: attachTraitHistory(branch.history, traitHistory),
-      traitHistory,
-      traitEvaluations,
-      keepsakes,
-    }),
-    sequence,
-    effectiveAuthored,
-  );
+  const settledBeforeChaos = Object.freeze({
+    ...effectiveBranch,
+    history: attachTraitHistory(branch.history, traitHistory),
+    traitHistory,
+    traitEvaluations,
+    keepsakes,
+  });
+  const settledBranch =
+    options.frozenAcquisition === true
+      ? settledBeforeChaos
+      : consumeChaosGodScreen(catalog, settledBeforeChaos, sequence, effectiveAuthored);
+  let stoneBranch = settledBranch;
+  if (
+    blockedChildAddress === undefined &&
+    authored?.kind === 'traits' &&
+    effectiveAuthored.kind === 'traits' &&
+    catalog.traitGivers.byKey[effectiveAuthored.giverKey]?.shopAwareGodTrait === true
+  ) {
+    const residualKeys = concaveStoneResidualOptionKeys(
+      effectiveAuthored,
+      (['option1', 'option2', 'option3'] as const).filter(
+        (key) => evaluation.assessments[optionIndex(key)]?.replacementTransition !== undefined,
+      ),
+    );
+    const stoneSupport = concaveStoneProcSupport(catalog, settledBranch.keepsakes);
+    const stoneResult = authored.concaveStoneResult;
+    const stoneOwner = traitOwnerAddress(reward.origin);
+    const stoneAddress =
+      stoneOwner === undefined ? undefined : createTraitOfferAddress(stoneOwner, role);
+    const rejectStone = (code: 'concaveStoneResultMissing' | 'concaveStoneResultUnavailable') => {
+      if (stoneAddress !== undefined) {
+        blockedChildAddress = stoneAddress;
+        blockedChildCandidateContext = Object.freeze({
+          before: evaluation.before,
+          context: evaluation.context,
+          ...(evaluation.arcanaFear === undefined ? {} : { arcanaFear: evaluation.arcanaFear }),
+          ...(evaluation.keepsakes === undefined ? {} : { keepsakes: evaluation.keepsakes }),
+        });
+        if (findings !== undefined)
+          addTraitChildFinding(
+            findings,
+            stoneAddress,
+            lifecyclePoint,
+            sequence,
+            code,
+            selected?.traitKey,
+            stoneResult === undefined ? 'unresolved' : String(stoneResult.kind),
+            findingChronology,
+          );
+      }
+    };
+    if (stoneSupport === undefined) {
+      if (stoneResult !== undefined) rejectStone('concaveStoneResultUnavailable');
+    } else {
+      if (residualKeys.length === 0) {
+        if (stoneResult?.kind === 'proc') rejectStone('concaveStoneResultUnavailable');
+      } else if (stoneResult === undefined) {
+        rejectStone('concaveStoneResultMissing');
+      } else if (stoneResult.kind === 'noProc') {
+        if (stoneSupport >= 100) rejectStone('concaveStoneResultUnavailable');
+      } else if (!residualKeys.includes(stoneResult.optionKey)) {
+        rejectStone('concaveStoneResultUnavailable');
+      } else {
+        const residual = effectiveAuthored.options[optionIndex(stoneResult.optionKey)];
+        if (residual === undefined) {
+          rejectStone('concaveStoneResultUnavailable');
+        } else {
+          const secondaryOffer: AuthoredTraitOfferTraits = Object.freeze({
+            kind: 'traits',
+            giverKey: effectiveAuthored.giverKey,
+            options: Object.freeze([
+              Object.freeze({ ...residual }),
+            ]) as AuthoredTraitOfferTraits['options'],
+            selectedOptionKey: 'option1',
+            rarificationActions: Object.freeze([]),
+          });
+          const secondarySettlement = applyTraitOfferForAcquisitionInternal(
+            catalog,
+            Object.freeze({
+              ...settledBranch,
+              keepsakes: consumeConcaveStone(settledBranch.keepsakes),
+            }),
+            {
+              origin: reward.origin,
+              traitOffersByAcquisitionRole: Object.freeze({
+                concaveStoneSecondary: secondaryOffer,
+              }),
+              traitContext: reward.traitContext,
+            },
+            'concaveStoneSecondary',
+            lifecyclePoint,
+            sequence,
+            findings,
+            findingChronology,
+            Object.freeze({
+              directAcquisition: true,
+              skipCallingCard: true,
+              frozenAcquisition: true,
+            }),
+          );
+          stoneBranch = secondarySettlement.branch;
+          blockedChildAddress ??= secondarySettlement.blockedChild?.address;
+          blockedChildCandidateContext ??= secondarySettlement.blockedChild?.candidateContext;
+        }
+      }
+    }
+  }
   return Object.freeze({
-    branch: settledBranch,
+    branch: stoneBranch,
     ...(blockedChildAddress === undefined
       ? {}
       : {
           blockedChild: Object.freeze({
             address: blockedChildAddress,
-            branch: settledBranch,
+            branch: stoneBranch,
             ...(blockedChildCandidateContext === undefined
               ? {}
               : { candidateContext: blockedChildCandidateContext }),

@@ -46,6 +46,7 @@ import {
   routePanelSelected,
   semanticOwnerFocused,
   semanticOwnerNavigated,
+  traitOfferDialogOpened,
 } from '@planner/state/editorSessionSlice';
 import { renderPlannerForInteraction } from '@planner-test/fixtures/renderPlanner';
 import {
@@ -295,6 +296,99 @@ function seaStarRewardFixture() {
     targetAcquisition: createAcquisitionRoleAddress(targetReward, 'self'),
     target,
   };
+}
+
+function concaveStoneTraitFixture() {
+  const base = seaStarRewardFixture();
+  let project = applyProjectCommand(base.project, catalog, {
+    kind: 'ReplaceStartingKeepsake',
+    selection: {
+      kind: 'keepsakeSelection',
+      routeKey: 'Underworld',
+      biomeKey: 'routeStart',
+      owner: 'routeStart',
+    },
+    keepsakeKey: 'UnpickedBoonKeepsake',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceConcaveStoneResult',
+    trait: createTraitOfferAddress(
+      createIncomingRewardAddress(goldenFBiome, createOccurrenceId('sea-star-app-start')),
+      'source',
+    ),
+    value: { kind: 'noProc' },
+  });
+  return project;
+}
+
+function staleConcaveStoneTraitFixture() {
+  const target = createTraitOfferAddress(
+    createIncomingRewardAddress(goldenFBiome, createOccurrenceId('sea-star-app-trait')),
+    'source',
+  );
+  let project = applyProjectCommand(seaStarRewardFixture().project, catalog, {
+    kind: 'ReplaceConcaveStoneResult',
+    trait: target,
+    value: { kind: 'proc', optionKey: 'option2' },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceStartingKeepsake',
+    selection: {
+      kind: 'keepsakeSelection',
+      routeKey: 'Underworld',
+      biomeKey: 'routeStart',
+      owner: 'routeStart',
+    },
+    keepsakeKey: 'ManaOverTimeRefundKeepsake',
+  });
+  return { project, target };
+}
+
+function heroicConcaveStoneTraitFixture() {
+  const startReward = createIncomingRewardAddress(
+    goldenFBiome,
+    createOccurrenceId('sea-star-app-start'),
+  );
+  const targetReward = createIncomingRewardAddress(
+    goldenFBiome,
+    createOccurrenceId('sea-star-app-trait'),
+  );
+  const target = createTraitOfferAddress(targetReward, 'source');
+  let project = applyProjectCommand(seaStarRewardFixture().project, catalog, {
+    kind: 'ReplaceStartingKeepsake',
+    selection: {
+      kind: 'keepsakeSelection',
+      routeKey: 'Underworld',
+      biomeKey: 'routeStart',
+      owner: 'routeStart',
+    },
+    keepsakeKey: 'UnpickedBoonKeepsake',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceConcaveStoneResult',
+    trait: createTraitOfferAddress(startReward, 'source'),
+    value: { kind: 'noProc' },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: targetReward,
+    value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'DemeterUpgrade' } },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait: target,
+    value: {
+      kind: 'traits',
+      giverKey: 'Demeter',
+      options: [
+        { traitKey: 'KeepsakeLevelBoon', rarity: 'Duo' },
+        { traitKey: 'DemeterWeaponBoon', rarity: 'Common' },
+        { traitKey: 'DemeterSpecialBoon', rarity: 'Common' },
+      ],
+      selectedOptionKey: 'option1',
+    },
+  });
+  return { project, target };
 }
 
 function allTogetherFindingFixture() {
@@ -671,6 +765,160 @@ describe('planner history interaction', () => {
         )?.acquisitionSites?.[siteKey],
     ).toBeUndefined();
     expect(semanticAddressKey(targetReward)).toBe(semanticAddressKey(targetAcquisition.owner));
+  });
+
+  it('authors, freezes, undoes, and redoes an optional Concave Stone result through its offer command', async () => {
+    const project = concaveStoneTraitFixture();
+    const application = createApplication();
+    application.store.dispatch(authoredProjectReplaced(project));
+    application.store.dispatch(
+      routePanelSelected({ routeKey: 'Underworld', panel: { kind: 'biome', biomeKey: 'F' } }),
+    );
+    const beforeOpen = [
+      ...application
+        .selectStructuredWorkspace(application.store.getState())
+        .interactions.traitOffers.values(),
+    ]
+      .flatMap((interaction) => {
+        const value = interaction.value;
+        if (value?.kind !== 'traits') return [];
+        return [
+          {
+            interaction,
+            value,
+            stone: interaction.optionDomain(value, value.selectedOptionKey).concaveStone,
+          },
+        ];
+      })
+      .find(({ stone, value }) => stone?.forOffer(value).load() !== undefined);
+    if (beforeOpen === undefined) throw new Error('Concave Stone domain is absent');
+    const target = beforeOpen.stone!.control.address;
+    application.store.dispatch(traitOfferDialogOpened(target));
+    const view = renderPlannerForInteraction({ application });
+
+    const checkbox = await screen.findByRole('checkbox', { name: 'Concave Stone procced' });
+    expect(checkbox).toHaveProperty('checked', false);
+    expect(checkbox).toHaveProperty('disabled', false);
+    const historyBefore = application.store.getState().projectWorkspace.history.past.length;
+
+    await view.user.click(checkbox);
+
+    await waitFor(() => expect(checkbox).toHaveProperty('checked', true));
+    const persisted = application
+      .selectStructuredWorkspace(application.store.getState())
+      .interactions.traitOffers.get(semanticAddressKey(target))?.value;
+    expect(persisted).toMatchObject({
+      kind: 'traits',
+      concaveStoneResult: { kind: 'proc', optionKey: 'option2' },
+    });
+    expect(
+      screen.getByRole('button', { name: 'Concave Stone residual trait' }).textContent,
+    ).toBeTruthy();
+    expect(application.store.getState().projectWorkspace.history.past).toHaveLength(
+      historyBefore + 1,
+    );
+
+    await view.user.click(screen.getByRole('button', { name: 'Undo' }));
+    await waitFor(() =>
+      expect(screen.getByRole('checkbox', { name: 'Concave Stone procced' })).toHaveProperty(
+        'checked',
+        false,
+      ),
+    );
+    expect(
+      application
+        .selectStructuredWorkspace(application.store.getState())
+        .interactions.traitOffers.get(semanticAddressKey(target))?.value,
+    ).toMatchObject({ concaveStoneResult: { kind: 'noProc' } });
+
+    await view.user.click(screen.getByRole('button', { name: 'Redo' }));
+    await waitFor(() =>
+      expect(screen.getByRole('checkbox', { name: 'Concave Stone procced' })).toHaveProperty(
+        'checked',
+        true,
+      ),
+    );
+    expect(
+      application
+        .selectStructuredWorkspace(application.store.getState())
+        .interactions.traitOffers.get(semanticAddressKey(target))?.value,
+    ).toMatchObject({ concaveStoneResult: { kind: 'proc', optionKey: 'option2' } });
+  });
+
+  it('keeps a stale later Concave Stone result visible and clears it through the real store', async () => {
+    const { project, target } = staleConcaveStoneTraitFixture();
+    const application = createApplication();
+    application.store.dispatch(authoredProjectReplaced(project));
+    application.store.dispatch(
+      routePanelSelected({ routeKey: 'Underworld', panel: { kind: 'biome', biomeKey: 'F' } }),
+    );
+    application.store.dispatch(traitOfferDialogOpened(target));
+    const view = renderPlannerForInteraction({ application });
+
+    expect(await screen.findByRole('checkbox', { name: 'Concave Stone procced' })).toHaveProperty(
+      'checked',
+      true,
+    );
+    expect(
+      await screen.findByRole('button', { name: 'Clear unavailable Concave Stone result' }),
+    ).toBeTruthy();
+    expect(
+      application.store.getState().projectWorkspace.assembly.evaluation.findings,
+    ).toContainEqual(
+      expect.objectContaining({ code: 'concaveStoneResultUnavailable', origin: target }),
+    );
+
+    await view.user.click(
+      screen.getByRole('button', { name: 'Clear unavailable Concave Stone result' }),
+    );
+    await waitFor(() =>
+      expect(
+        application
+          .selectStructuredWorkspace(application.store.getState())
+          .interactions.traitOffers.get(semanticAddressKey(target))?.value,
+      ).not.toMatchObject({ concaveStoneResult: expect.anything() }),
+    );
+    await view.user.click(screen.getByRole('button', { name: 'Undo' }));
+    await waitFor(() =>
+      expect(
+        application
+          .selectStructuredWorkspace(application.store.getState())
+          .interactions.traitOffers.get(semanticAddressKey(target))?.value,
+      ).toMatchObject({ concaveStoneResult: { kind: 'proc', optionKey: 'option2' } }),
+    );
+    await view.user.click(screen.getByRole('button', { name: 'Redo' }));
+    await waitFor(() =>
+      expect(
+        application
+          .selectStructuredWorkspace(application.store.getState())
+          .interactions.traitOffers.get(semanticAddressKey(target))?.value,
+      ).not.toMatchObject({ concaveStoneResult: expect.anything() }),
+    );
+  });
+
+  it('renders a same-screen Heroic Concave Stone proc as forced while retaining its frozen residual picker', async () => {
+    const { project, target } = heroicConcaveStoneTraitFixture();
+    const application = createApplication();
+    application.store.dispatch(authoredProjectReplaced(project));
+    application.store.dispatch(
+      routePanelSelected({ routeKey: 'Underworld', panel: { kind: 'biome', biomeKey: 'F' } }),
+    );
+    const interaction = application
+      .selectStructuredWorkspace(application.store.getState())
+      .interactions.traitOffers.get(semanticAddressKey(target));
+    if (interaction?.value?.kind !== 'traits') throw new Error('Heroic Stone offer is absent');
+    const domain = interaction
+      .optionDomain(interaction.value, interaction.value.selectedOptionKey)
+      .concaveStone?.forOffer(interaction.value)
+      .load();
+    expect(domain).toMatchObject({ required: true, procSupport: 100 });
+    application.store.dispatch(traitOfferDialogOpened(target));
+    renderPlannerForInteraction({ application });
+
+    const checkbox = await screen.findByRole('checkbox', { name: 'Concave Stone procced' });
+    expect(checkbox).toHaveProperty('checked', true);
+    expect(checkbox).toHaveProperty('disabled', true);
+    expect(screen.getByRole('button', { name: 'Concave Stone residual trait' })).toBeTruthy();
   });
 
   it('hands a route trait row through exact biome navigation and restores focus on Escape', async () => {

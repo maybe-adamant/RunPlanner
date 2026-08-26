@@ -24,6 +24,17 @@ packages/planner-engine/test/simulation/judgment-arcana.test.ts`, and
 `git diff --check`. The complete repository gate remains deferred to phase
 closure as required by this plan.
 
+Gate C implementation completed on 2026-08-26. Concave Stone now owns one
+frozen residual result on its original trait offer, records only the original
+published offer evaluation, and uses a distinct frozen secondary-acquisition
+event for its consumed-before-callback pickup. Independent review corrections
+preserve Calling Card's already-rarified frozen row and keep stale authored
+results visible and repairable after the source disappears. Focused catalog,
+strict codec, migration, engine, Echo, optional-result, stale retained-result,
+Heroic forced-result application/UI, typecheck, formatting, and diff-check
+lanes passed. The complete repository gate remains deferred to phase closure
+as required by this plan.
+
 The first phase contains Aromatic Phial, Crystal Figurine, Concave Stone, and
 Transcendent Embryo. A later phase establishes the exact-name reward-pressure
 infrastructure and immediately consumes it with all nine Olympian keepsakes.
@@ -294,26 +305,26 @@ surface, or UI model not covered by this table. Private functions and modules
 that implement one listed product are placement decisions, not permission to
 introduce another abstraction.
 
-| New semantic product | Immediate concrete consumer | Primary witness named by this plan |
-| --- | --- | --- |
-| Phial declaration and one-use source | Aromatic Phial at `fountainUsed` | Phial catalog matrix and fountain engine matrix |
-| occurrence-owned Phial target result/address/candidate | the exact next eligible fountain | codec/command/candidate tests plus Reprieve and Postboss UI witnesses |
-| Figurine declaration and pending source | Crystal Figurine at nonterminal `bossDefeated` | Figurine catalog and ordinary/Heirloom/Gift engine matrix |
-| Boss-phase Figurine Arcana result/address/candidate | the exact post-Judgment inactive-card frontier | codec/command/candidate tests and independent Boss UI witness |
-| Stone declaration and one-use source | Concave Stone after a qualifying primary trait acquisition | rank-support and ordinary/Heirloom/Gift engine matrix |
-| offer-owned Stone proc result/candidate | no-proc or one residual row from that frozen offer | strict offer codec, retained-invalid candidate, and frozen residual UI tests |
-| Embryo declaration and active driver | Transcendent Embryo equip and eight-room transformation | Embryo catalog and lifecycle matrix |
-| Embryo immediate equip-result variant | route start, Postboss rack, and Echo replay blessing | equip-result codec/candidate and three-owner UI tests |
-| phase-owned Embryo transformation result | the exact reached eighth qualifying encounter | threshold codec/candidate and transformation UI tests |
-| marked Embryo blessing identity and direct blessing fold | remove only the driver-owned blessing and acquire its replacement | Chaos-domain coexistence, same-key, and source-owned replacement tests |
-| Olympian declaration family | the nine named god keepsakes | complete nine-provider catalog matrix |
-| ordered exact-name reward-priority queue and insertion/refill transition | nine `Boon` priorities and Moon Beam's three exact targets | reward-kernel ordering, refill, eligibility, and consumption tests |
-| bounded active Olympian provider-source collection | at most one ordinary and one Gift-created source | ordinary/Gift coexistence and first/last provider-order tests |
-| provider-materialized transition at existing producer contacts | automatic force-use consumption for the nine Olympian keepsakes | the complete materialization matrix in Gate E |
-| provider-specific rarification settlement | one existing row action on a matching Olympian offer | precedence, cap, consumption, and Gift-removal trait-offer tests |
-| Moon Beam declaration/effect transition | ordinary, Cherished, and Gift Moon Beam | Moon Beam catalog and three-contact lifecycle tests |
-| 1/3/5 Path grants and ordered 0/1/2 spell bonuses | concrete Path acquisitions and ordinary `SpellDrop` selection | catalog matrix and exact acquisition/position tests |
-| two-field Hex progress product and shared settlement | Moon Beam banking plus aggregate Path investment | bank/transfer tests, Aspect/Q edge witnesses, and Run State product test |
+| New semantic product                                                     | Immediate concrete consumer                                       | Primary witness named by this plan                                           |
+| ------------------------------------------------------------------------ | ----------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| Phial declaration and one-use source                                     | Aromatic Phial at `fountainUsed`                                  | Phial catalog matrix and fountain engine matrix                              |
+| occurrence-owned Phial target result/address/candidate                   | the exact next eligible fountain                                  | codec/command/candidate tests plus Reprieve and Postboss UI witnesses        |
+| Figurine declaration and pending source                                  | Crystal Figurine at nonterminal `bossDefeated`                    | Figurine catalog and ordinary/Heirloom/Gift engine matrix                    |
+| Boss-phase Figurine Arcana result/address/candidate                      | the exact post-Judgment inactive-card frontier                    | codec/command/candidate tests and independent Boss UI witness                |
+| Stone declaration and one-use source                                     | Concave Stone after a qualifying primary trait acquisition        | rank-support and ordinary/Heirloom/Gift engine matrix                        |
+| offer-owned Stone proc result/candidate                                  | no-proc or one residual row from that frozen offer                | strict offer codec, retained-invalid candidate, and frozen residual UI tests |
+| Embryo declaration and active driver                                     | Transcendent Embryo equip and eight-room transformation           | Embryo catalog and lifecycle matrix                                          |
+| Embryo immediate equip-result variant                                    | route start, Postboss rack, and Echo replay blessing              | equip-result codec/candidate and three-owner UI tests                        |
+| phase-owned Embryo transformation result                                 | the exact reached eighth qualifying encounter                     | threshold codec/candidate and transformation UI tests                        |
+| marked Embryo blessing identity and direct blessing fold                 | remove only the driver-owned blessing and acquire its replacement | Chaos-domain coexistence, same-key, and source-owned replacement tests       |
+| Olympian declaration family                                              | the nine named god keepsakes                                      | complete nine-provider catalog matrix                                        |
+| ordered exact-name reward-priority queue and insertion/refill transition | nine `Boon` priorities and Moon Beam's three exact targets        | reward-kernel ordering, refill, eligibility, and consumption tests           |
+| bounded active Olympian provider-source collection                       | at most one ordinary and one Gift-created source                  | ordinary/Gift coexistence and first/last provider-order tests                |
+| provider-materialized transition at existing producer contacts           | automatic force-use consumption for the nine Olympian keepsakes   | the complete materialization matrix in Gate E                                |
+| provider-specific rarification settlement                                | one existing row action on a matching Olympian offer              | precedence, cap, consumption, and Gift-removal trait-offer tests             |
+| Moon Beam declaration/effect transition                                  | ordinary, Cherished, and Gift Moon Beam                           | Moon Beam catalog and three-contact lifecycle tests                          |
+| 1/3/5 Path grants and ordered 0/1/2 spell bonuses                        | concrete Path acquisitions and ordinary `SpellDrop` selection     | catalog matrix and exact acquisition/position tests                          |
+| two-field Hex progress product and shared settlement                     | Moon Beam banking plus aggregate Path investment                  | bank/transfer tests, Aspect/Q edge witnesses, and Run State product test     |
 
 The table deliberately excludes generic timer registries, generic keepsake
 interpreters, a second reward or loot pipeline, a second trait-offer model,
@@ -1193,11 +1204,11 @@ An ordinary Moon Beam equip performs two automatic mutations in source order:
 
 Choose that exact name from the reached equip frontier:
 
-| State at equip | Priority name |
-| --- | --- |
-| no acquired `SpellDrop` | `SpellDrop` |
+| State at equip                                           | Priority name   |
+| -------------------------------------------------------- | --------------- |
+| no acquired `SpellDrop`                                  | `SpellDrop`     |
 | acquired `SpellDrop` in `H_PostBoss01` or `P_PostBoss01` | `TalentBigDrop` |
-| acquired `SpellDrop` anywhere else | `TalentDrop` |
+| acquired `SpellDrop` anywhere else                       | `TalentDrop`    |
 
 The test is acquisition history, not an offered or pending `SpellDrop`. Moon
 Beam never queues `MinorTalentDrop`, and the priority queue remains exact-name
