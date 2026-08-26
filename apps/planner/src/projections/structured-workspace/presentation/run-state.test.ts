@@ -151,6 +151,13 @@ describe('Run State presentation', () => {
         gorgon: { status: 'pending' as const, rarity: 'Epic' as const },
         phial: { status: 'pending' as const },
         stone: { status: 'pending' as const, origin: 'echo' as const, rank: 'Common' as const },
+        transcendentEmbryo: {
+          origin: 'echo' as const,
+          rarity: 'Heroic' as const,
+          progress: 7,
+          markedBlessingKey: 'ChaosElementalBlessing',
+          markedBlessingAcquisitionIdentity: 'embryo-run-state',
+        },
       },
       forfeitStatus: 'consumed',
       bags: [
@@ -175,6 +182,14 @@ describe('Run State presentation', () => {
     } as const;
     const state = presentRunState(catalog, snapshot);
     expect(state.traits.banned).toEqual([{ key: 'ApolloSpecialBoon', label: 'Nova Flourish' }]);
+    expect(state.keepsakes.transcendentEmbryo).toEqual({
+      origin: 'echo',
+      rarity: 'Heroic',
+      progress: 7,
+      interval: 8,
+      markedBlessingLabel: 'Creation',
+      markedBlessingAcquisitionIdentity: 'embryo-run-state',
+    });
     expect(state.bags[0]).toMatchObject({ label: 'Major Reward', technicalKey: 'RunProgress' });
     expect(state.bags[0]?.eligible.entries[0]).toMatchObject({
       label: 'Boon',

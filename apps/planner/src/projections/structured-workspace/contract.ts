@@ -41,6 +41,7 @@ import {
   type AllTogetherSetAddress,
   type NaturalSelectionResultAddress,
   type SteadyGrowthOutcomeAddress,
+  type TranscendentEmbryoOutcomeAddress,
   type FountainRarityOutcomeAddress,
   type AuthoredEchoLastRunBoonOffer,
   type AuthoredEchoLastRunBoonOption,
@@ -70,6 +71,7 @@ import type { LevelResolutionCandidateProjection } from '../candidateProjection'
 
 import type {
   CandidateOptionProjection,
+  KeepsakeEquipResultOptionProjection,
   CandidateProjectionEvaluation,
   CandidateSessionFactory,
   CountedRewardCandidateOwner,
@@ -730,7 +732,9 @@ export interface WorkspaceKeepsakeSelectionInteraction {
 
 /** Closed immediate acquisitions beneath their exact rack selection. */
 export type WorkspaceKeepsakeEquipResultInteraction =
-  WorkspaceJeweledPomEquipResultInteraction | WorkspaceExperimentalHammerEquipResultInteraction;
+  | WorkspaceJeweledPomEquipResultInteraction
+  | WorkspaceExperimentalHammerEquipResultInteraction
+  | WorkspaceTranscendentEmbryoEquipResultInteraction;
 
 export interface WorkspaceJeweledPomEquipResultInteraction {
   readonly choices: readonly WorkspaceInteractionChoice<string>[];
@@ -763,6 +767,23 @@ export interface WorkspaceExperimentalHammerEquipResultInteraction {
     >,
   ) => WorkspaceCommandIntent<
     Extract<ProjectCommand, { readonly kind: 'ReplaceExperimentalHammerEquipResult' }>
+  >;
+}
+
+export interface WorkspaceTranscendentEmbryoEquipResultInteraction {
+  readonly choices: readonly WorkspaceInteractionChoice<string>[];
+  readonly key: string;
+  readonly owner: KeepsakeEquipResultAddress & { readonly resultKind: 'transcendentEmbryo' };
+  readonly value?: import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults['transcendentEmbryo'];
+  readonly load: (
+    value?: import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults['transcendentEmbryo'],
+  ) => readonly KeepsakeEquipResultOptionProjection[];
+  readonly intentFor: (
+    value: NonNullable<
+      import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults['transcendentEmbryo']
+    >,
+  ) => WorkspaceCommandIntent<
+    Extract<ProjectCommand, { readonly kind: 'ReplaceTranscendentEmbryoEquipResult' }>
   >;
 }
 
@@ -983,6 +1004,7 @@ export interface WorkspaceInteractionCatalog {
   readonly traitOffers: ReadonlyMap<string, WorkspaceTraitOfferInteraction>;
   readonly levelResolutions: ReadonlyMap<string, WorkspaceLevelResolutionInteraction>;
   readonly steadyGrowth: ReadonlyMap<string, WorkspaceSteadyGrowthInteraction>;
+  readonly transcendentEmbryo: ReadonlyMap<string, WorkspaceTranscendentEmbryoInteraction>;
   readonly fountainRarity: ReadonlyMap<string, WorkspaceFountainRarityInteraction>;
   readonly judgmentArcana: ReadonlyMap<string, WorkspaceJudgmentArcanaInteraction>;
   readonly figurineArcana: ReadonlyMap<string, WorkspaceFigurineArcanaInteraction>;
@@ -1422,6 +1444,7 @@ export interface WorkspaceRoomActions {
   /** Missing required or retained stale rows rendered once outside active lifecycle order. */
   readonly repairRows: readonly WorkspaceRoomActionRow[];
   readonly steadyGrowth?: readonly WorkspaceSteadyGrowthControl[];
+  readonly transcendentEmbryo?: readonly WorkspaceTranscendentEmbryoControl[];
 }
 
 export type WorkspaceRoomLifecycleBoundary =
@@ -1465,8 +1488,8 @@ export type WorkspaceRoomLifecycleTimelineEntry =
     }
   | {
       readonly kind: 'automaticEffect';
-      readonly effect: 'steadyGrowth';
-      readonly address: SteadyGrowthOutcomeAddress;
+      readonly effect: 'steadyGrowth' | 'transcendentEmbryo';
+      readonly address: SteadyGrowthOutcomeAddress | TranscendentEmbryoOutcomeAddress;
       readonly rank: number;
       readonly phaseKey: string;
     };
@@ -1496,6 +1519,33 @@ export interface WorkspaceSteadyGrowthInteraction {
     readonly load: () => WorkspaceSteadyGrowthDomain | undefined;
   };
   readonly traitLabel: (traitKey: string) => string;
+}
+
+export interface WorkspaceTranscendentEmbryoControl {
+  readonly address: TranscendentEmbryoOutcomeAddress;
+  readonly marker: WorkspaceMarker;
+  readonly phaseKey: string;
+  readonly blessingKey?: string | undefined;
+}
+
+export interface WorkspaceTranscendentEmbryoDomain {
+  readonly emptyNoOp: boolean;
+  readonly picker: ContextualPickerModel<string>;
+  readonly selectedPossible: boolean;
+}
+
+export interface WorkspaceTranscendentEmbryoInteraction {
+  readonly key: string;
+  readonly owner: TranscendentEmbryoOutcomeAddress;
+  readonly intentFor: (
+    blessingKey: string | null,
+  ) => WorkspaceCommandIntent<
+    Extract<ProjectCommand, { readonly kind: 'ReplaceTranscendentEmbryoTransformation' }>
+  >;
+  readonly forBlessing: (blessingKey?: string | null) => {
+    readonly load: () => WorkspaceTranscendentEmbryoDomain | undefined;
+  };
+  readonly blessingLabel: (blessingKey: string) => string;
 }
 
 export interface WorkspaceFountainRarityControl {
@@ -2282,6 +2332,14 @@ export interface WorkspaceRunStatePresentation {
       readonly remainingUses: number;
       readonly acquisitionIdentity: string;
     }[];
+    readonly transcendentEmbryo?: {
+      readonly origin: 'ordinary' | 'echo';
+      readonly rarity: import('@run-planner/engine/catalog-schema').InRunTraitRarity;
+      readonly progress: number;
+      readonly interval: number;
+      readonly markedBlessingLabel: string;
+      readonly markedBlessingAcquisitionIdentity: string;
+    };
     readonly echoGift?: {
       readonly capturedKeepsakeLabel: string;
       readonly status: 'pending' | 'oneShotApplied' | 'everyBiome' | 'effectNeutral';
@@ -2573,7 +2631,9 @@ export interface WorkspaceBiome {
   readonly defaultInspectorDestination: WorkspaceDefaultInspectorDestination | null;
   readonly entry?: WorkspaceOccurrenceWorkbenchNode;
   readonly echoKeepsakeReplay?: {
-    readonly address: KeepsakeEquipResultAddress & { readonly resultKind: 'experimentalHammer' };
+    readonly address: KeepsakeEquipResultAddress & {
+      readonly resultKind: 'experimentalHammer' | 'transcendentEmbryo';
+    };
     readonly marker: WorkspaceMarker;
   };
   readonly fields: readonly WorkspaceBiomeField[];

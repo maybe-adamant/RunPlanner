@@ -6,7 +6,9 @@ import type { ProjectEvaluation } from '../evaluation-products';
 import {
   assessExperimentalHammerEquipResult,
   assessJeweledPomEquipResult,
+  assessTranscendentEmbryoBlessing,
   keepsakeEffectByKind,
+  transcendentEmbryoBlessingValues,
 } from '../keepsakes';
 import { unavailableForBiome, type CandidateContextUnavailable } from './availability';
 
@@ -20,15 +22,21 @@ export interface EvaluatedKeepsakeEquipResultCandidate {
   readonly kind: 'keepsakeEquipResult';
   readonly result: {
     readonly options: readonly {
-      readonly resultKind: 'jeweledPom' | 'experimentalHammer';
+      readonly resultKind: 'jeweledPom' | 'experimentalHammer' | 'transcendentEmbryo';
       readonly value:
         | NonNullable<AuthoredKeepsakeEquipResults['experimentalHammer']>
+        | NonNullable<AuthoredKeepsakeEquipResults['transcendentEmbryo']>
         | {
             readonly traitKey: string;
             readonly rarity?: import('../../catalog-schema').TraitRarity;
           };
       readonly selectedPossible: boolean;
       readonly findings: readonly string[];
+      /** Declaration-derived presentation facts for Embryo's immediate grant. */
+      readonly transcendentEmbryoSummary?: {
+        readonly rarity: import('../../catalog-schema').InRunTraitRarity;
+        readonly operands: readonly { readonly label: string; readonly value: number }[];
+      };
     }[];
     readonly selectedPossible: boolean;
   };
@@ -39,9 +47,16 @@ function authoredValue(
   address: KeepsakeEquipResultAddress,
 ): AuthoredKeepsakeEquipResults[keyof AuthoredKeepsakeEquipResults] | undefined {
   const route = project.routes.find((candidate) => candidate.routeKey === address.routeKey);
-  if (address.selection.kind === 'echoKeepsakeReplay')
-    return route?.biomes.find((biome) => biome.biomeKey === address.biomeKey)
-      ?.echoKeepsakeReplayResults?.experimentalHammer;
+  if (address.selection.kind === 'echoKeepsakeReplay') {
+    const replay = route?.biomes.find(
+      (biome) => biome.biomeKey === address.biomeKey,
+    )?.echoKeepsakeReplayResults;
+    return address.resultKind === 'experimentalHammer'
+      ? replay?.experimentalHammer
+      : address.resultKind === 'transcendentEmbryo'
+        ? replay?.transcendentEmbryo
+        : undefined;
+  }
   if (address.selection.owner === 'routeStart')
     return route?.loadout.keepsakeEquipResults?.[address.resultKind];
   const postbossOwner = address.selection.owner;
@@ -76,6 +91,53 @@ export function evaluateKeepsakeEquipResultCandidate(
   const value = query.value ?? authoredValue(project, query.result);
   const effect = keepsakeEffectByKind(catalog, query.result.resultKind);
   if (effect === undefined) throw new Error(`missing ${query.result.resultKind} descriptor`);
+  if (effect.kind === 'transcendentEmbryo') {
+    const options = Object.freeze(
+      catalog.chaos.blessings.values
+        .filter((blessing) => blessing.fixedRarity === undefined)
+        .map((blessing) => {
+          const candidateValue = Object.freeze({ blessingKey: blessing.key });
+          const rarity = capability.frontiers[0]?.transcendentEmbryoRarity ?? 'Epic';
+          const values = transcendentEmbryoBlessingValues(catalog, blessing.key, rarity);
+          const assessments = capability.frontiers.map((frontier) =>
+            assessTranscendentEmbryoBlessing(
+              catalog,
+              candidateValue,
+              frontier.before,
+              frontier.transcendentEmbryoRarity ?? 'Epic',
+              frontier.loadout,
+            ),
+          );
+          return Object.freeze({
+            resultKind: 'transcendentEmbryo' as const,
+            value: candidateValue,
+            selectedPossible: assessments.every((assessment) => assessment.legal),
+            findings: Object.freeze([
+              ...new Set(assessments.flatMap((assessment) => assessment.findings)),
+            ]),
+            transcendentEmbryoSummary: Object.freeze({
+              rarity,
+              operands: Object.freeze(
+                blessing.operands.map((operand) =>
+                  Object.freeze({ label: operand.label, value: values[operand.key] ?? 0 }),
+                ),
+              ),
+            }),
+          });
+        }),
+    );
+    const selected =
+      value === undefined
+        ? undefined
+        : options.find((option) => JSON.stringify(option.value) === JSON.stringify(value));
+    return Object.freeze({
+      kind: 'keepsakeEquipResult',
+      result: Object.freeze({
+        options,
+        selectedPossible: selected?.selectedPossible ?? false,
+      }),
+    });
+  }
   const traitKeys =
     effect.kind === 'jeweledPom'
       ? (catalog.traitGivers.byKey[effect.giverKey]?.traitKeys ?? [])

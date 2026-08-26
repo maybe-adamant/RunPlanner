@@ -1,6 +1,7 @@
 export { assembleRoomActionRoster, scopeRoomActionRoster } from './assemble';
 export {
   appendSteadyGrowthTimelineEffects,
+  appendTranscendentEmbryoTimelineEffects,
   assembleRoomLifecycleTimeline,
   scopeRoomLifecycleTimeline,
 } from './timeline';

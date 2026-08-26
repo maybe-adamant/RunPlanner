@@ -5,7 +5,7 @@ import type {
   AuthoredTraitOffer,
 } from './traits';
 
-export const PROJECT_DOCUMENT_SCHEMA_VERSION = 62 as const;
+export const PROJECT_DOCUMENT_SCHEMA_VERSION = 63 as const;
 export type ResourceFamily = import('../catalog-schema').ResourceFamily;
 /** Route ownership supplies the route key; the selected host is exact and durable. */
 export interface ResourcePlacement {
@@ -61,6 +61,8 @@ export interface AuthoredKeepsakeEquipResults {
     readonly rarity?: import('../catalog-schema').TraitRarity;
   };
   readonly experimentalHammer?: AuthoredExperimentalHammerEquipResult;
+  /** Exact Chaos blessing granted by Transcendent Embryo at this frontier. */
+  readonly transcendentEmbryo?: { readonly blessingKey: string };
 }
 
 /** Sparse choice for the exact next fountain use owned by one occurrence. */
@@ -242,6 +244,8 @@ export interface RoomEncounterState {
   readonly judgmentArcanaKeysByPhase?: Readonly<Record<string, readonly string[]>>;
   /** Sparse Boss-defeated Crystal Figurine selections keyed by their exact Boss phase. */
   readonly figurineArcanaKeysByPhase?: Readonly<Record<string, readonly string[]>>;
+  /** Sparse reached eight-room Transcendent Embryo transformations. */
+  readonly transcendentEmbryoBlessingByPhase?: Readonly<Record<string, string>>;
   /** Complete declaration-owned Gorgon condition/result for each phase. */
   /** Schema-29 documents always encode this map; optional keeps hand-built legacy fixtures decodable. */
   readonly gorgonResultByPhase?: Readonly<Record<string, AuthoredGorgonPhaseResult>>;
@@ -431,7 +435,10 @@ export interface AuthoredBiomePlan {
   /** Declaration-fixed Boss/Postboss rooms; never editable topology targets. */
   readonly completionOccurrences: readonly RoomOccurrence[];
   /** Dormant until Gift Gift Gift reaches a Hammer replay at this biome start. */
-  readonly echoKeepsakeReplayResults?: Pick<AuthoredKeepsakeEquipResults, 'experimentalHammer'>;
+  readonly echoKeepsakeReplayResults?: Pick<
+    AuthoredKeepsakeEquipResults,
+    'experimentalHammer' | 'transcendentEmbryo'
+  >;
 }
 
 export interface AuthoredRoutePlan {

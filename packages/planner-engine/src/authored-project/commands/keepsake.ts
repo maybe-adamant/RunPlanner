@@ -1,12 +1,15 @@
 import type { Catalog } from '../../catalog-schema';
 import type { AuthoredKeepsakeEquipResults, ProjectDocument } from '../model';
-import { failCommand, locateBiome, requireOccurrence } from './contract';
+import { failCommand, locateBiome, requireOccurrence, requireRoom } from './contract';
 import { updateOccurrence } from './occurrence-mutation';
 import { roomActionKey } from '../room-action-key';
 import { createBiomeAddress } from '../addresses';
 import { assembleRoomActionDomain } from '../room-action-domain';
+import { encounterBindingsBySlot } from '../room-state/encounter-envelope';
 import type {
   ExperimentalHammerEquipResultCommand,
+  TranscendentEmbryoEquipResultCommand,
+  TranscendentEmbryoTransformationCommand,
   KeepsakeCommand,
   KeepsakeEquipResultCommand,
   FountainRarityCommand,
@@ -19,7 +22,9 @@ export function applyKeepsakeCommand(
     | KeepsakeCommand
     | KeepsakeEquipResultCommand
     | ExperimentalHammerEquipResultCommand
-    | FountainRarityCommand,
+    | FountainRarityCommand
+    | TranscendentEmbryoEquipResultCommand
+    | TranscendentEmbryoTransformationCommand,
 ): ProjectDocument {
   if (command.kind === 'ReplaceFountainRarityTarget') {
     if (
@@ -64,6 +69,115 @@ export function applyKeepsakeCommand(
             fountainRarityResult: Object.freeze({ targetTraitKey: command.targetTraitKey }),
           };
     return updateOccurrence(document, located, nextOccurrence);
+  }
+  if (command.kind === 'ReplaceTranscendentEmbryoTransformation') {
+    if (
+      command.blessingKey !== null &&
+      (catalog.chaos.blessings.byKey[command.blessingKey] === undefined ||
+        catalog.chaos.blessings.byKey[command.blessingKey]?.fixedRarity !== undefined)
+    )
+      failCommand(command, 'transformation must select an in-run Chaos blessing or null');
+    const located = locateBiome(document, catalog, command);
+    const occurrence = requireOccurrence(located.plan, command.outcome.owner.occurrenceId, command);
+    const room = requireRoom(catalog, occurrence.gameName, located.layout.biomeKey, command);
+    if (!encounterBindingsBySlot(catalog, room, room.gameName).has(command.outcome.phaseKey))
+      failCommand(command, `${room.gameName} has no encounter phase ${command.outcome.phaseKey}`);
+    const current = occurrence.encounters.transcendentEmbryoBlessingByPhase ?? {};
+    if (current[command.outcome.phaseKey] === command.blessingKey) return document;
+    const next = { ...current };
+    if (command.blessingKey === null) delete next[command.outcome.phaseKey];
+    else next[command.outcome.phaseKey] = command.blessingKey;
+    const encounters =
+      Object.keys(next).length === 0
+        ? (() => {
+            const { transcendentEmbryoBlessingByPhase, ...rest } = occurrence.encounters;
+            void transcendentEmbryoBlessingByPhase;
+            return rest;
+          })()
+        : {
+            ...occurrence.encounters,
+            transcendentEmbryoBlessingByPhase: Object.freeze(next),
+          };
+    return updateOccurrence(document, located, { ...occurrence, encounters });
+  }
+  if (command.kind === 'ReplaceTranscendentEmbryoEquipResult') {
+    if (
+      catalog.chaos.blessings.byKey[command.value.blessingKey] === undefined ||
+      catalog.chaos.blessings.byKey[command.value.blessingKey]?.fixedRarity !== undefined
+    )
+      failCommand(command, 'result must select an in-run Chaos blessing');
+    const { selection } = command.result;
+    const embryoKeepsakeKey = catalog.keepsakes.values.find(
+      (keepsake) => keepsake.effect?.kind === 'transcendentEmbryo',
+    )?.key;
+    if (embryoKeepsakeKey === undefined) failCommand(command, 'catalog has no Embryo keepsake');
+    const update = (results: AuthoredKeepsakeEquipResults | undefined) => ({
+      ...results,
+      transcendentEmbryo: Object.freeze({ blessingKey: command.value.blessingKey }),
+    });
+    if (selection.kind === 'echoKeepsakeReplay') {
+      const route = document.routes.find((candidate) => candidate.routeKey === selection.routeKey);
+      const biome = route?.biomes.find((candidate) => candidate.biomeKey === selection.biomeKey);
+      if (biome === undefined) failCommand(command, 'unknown Echo keepsake replay biome');
+      return {
+        ...document,
+        routes: document.routes.map((candidate) =>
+          candidate.routeKey !== selection.routeKey
+            ? candidate
+            : {
+                ...candidate,
+                biomes: candidate.biomes.map((plan) =>
+                  plan.biomeKey !== selection.biomeKey
+                    ? plan
+                    : {
+                        ...plan,
+                        echoKeepsakeReplayResults: update(plan.echoKeepsakeReplayResults),
+                      },
+                ),
+              },
+        ),
+      };
+    }
+    if (selection.owner === 'routeStart') {
+      const routeIndex = document.routes.findIndex(
+        (route) => route.routeKey === selection.routeKey,
+      );
+      const route = document.routes[routeIndex];
+      if (route === undefined || embryoKeepsakeKey !== route.loadout.startingKeepsakeKey)
+        failCommand(command, 'result does not match the current selection');
+      return {
+        ...document,
+        routes: document.routes.map((candidate, index) =>
+          index !== routeIndex
+            ? candidate
+            : {
+                ...candidate,
+                loadout: {
+                  ...candidate.loadout,
+                  keepsakeEquipResults: update(candidate.loadout.keepsakeEquipResults),
+                },
+              },
+        ),
+      };
+    }
+    const located = locateBiome(document, catalog, {
+      kind: 'ReplacePostbossKeepsake',
+      selection,
+      value: { kind: 'retain' },
+    });
+    const occurrence = requireOccurrence(located.plan, selection.owner.occurrenceId, command);
+    if (
+      occurrence.keepsakeRack?.disposition.kind !== 'replace' ||
+      embryoKeepsakeKey !== occurrence.keepsakeRack.disposition.keepsakeKey
+    )
+      failCommand(command, 'result does not match the current selection');
+    return updateOccurrence(document, located, {
+      ...occurrence,
+      keepsakeRack: {
+        ...occurrence.keepsakeRack,
+        equipResults: update(occurrence.keepsakeRack.equipResults),
+      },
+    });
   }
   if (command.kind === 'ReplaceExperimentalHammerEquipResult') {
     if (

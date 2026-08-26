@@ -98,7 +98,9 @@ export interface WorkspaceBiomeSemanticAssembly {
   readonly completionOutline: readonly WorkspaceOccurrenceWorkbenchNode[];
   readonly entry?: WorkspaceOccurrenceWorkbenchNode;
   readonly echoKeepsakeReplay?: {
-    readonly address: KeepsakeEquipResultAddress & { readonly resultKind: 'experimentalHammer' };
+    readonly address: KeepsakeEquipResultAddress & {
+      readonly resultKind: 'experimentalHammer' | 'transcendentEmbryo';
+    };
     readonly marker: WorkspaceMarker;
   };
   readonly fields: readonly WorkspaceBiomeField[];
@@ -506,6 +508,7 @@ export function assembleWorkspaceBiomeSemantics(
       hermesShrineAssessment: source.hermesShrineAssessment,
       stygianWellAssessment: source.stygianWellAssessment,
       steadyGrowthOutcomes: source.steadyGrowthOutcomes,
+      transcendentEmbryoOutcomes: source.transcendentEmbryoOutcomes,
       ...(fountainRarityAssessment === undefined ? {} : { fountainRarityAssessment }),
       isActiveTraitOffer: source.isActiveTraitOffer,
       judgmentArcanaCapability,
@@ -801,11 +804,16 @@ export function assembleWorkspaceBiomeSemantics(
   );
   const completedNodes = Object.freeze([...nodes]);
   const structuralNodes = completedNodes;
-  const echoKeepsakeReplayAddress = createKeepsakeEquipResultAddress(
-    createEchoKeepsakeReplayAddress(biome),
-    'experimentalHammer',
+  const echoKeepsakeReplaySelection = createEchoKeepsakeReplayAddress(biome);
+  const echoKeepsakeReplayAddresses = [
+    createKeepsakeEquipResultAddress(echoKeepsakeReplaySelection, 'transcendentEmbryo'),
+    createKeepsakeEquipResultAddress(echoKeepsakeReplaySelection, 'experimentalHammer'),
+  ] as const;
+  const echoKeepsakeReplayAddress = echoKeepsakeReplayAddresses.find((address) =>
+    keepsakeEquipResultSupported(address),
   );
-  const echoKeepsakeReplay = keepsakeEquipResultSupported(echoKeepsakeReplayAddress)
+  const echoKeepsakeReplay =
+    echoKeepsakeReplayAddress !== undefined && keepsakeEquipResultSupported(echoKeepsakeReplayAddress)
     ? Object.freeze({
         address: echoKeepsakeReplayAddress,
         marker: markerDestinations.marker(echoKeepsakeReplayAddress),

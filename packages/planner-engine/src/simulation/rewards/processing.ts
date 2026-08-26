@@ -45,6 +45,7 @@ import {
   equipJeweledPom,
   jeweledPomEffectForKey,
   beginBiomeKeepsakeState,
+  applyTranscendentEmbryoEquipResult,
 } from '../keepsakes';
 import {
   appendRewardEvent,
@@ -134,9 +135,27 @@ export function initializeRewardBranches(
       ),
       0,
     );
+    const embryoApplied =
+      startingKeepsakeKey === 'RandomBlessingKeepsake' &&
+      startingKeepsakeEquipResults?.transcendentEmbryo !== undefined
+        ? applyTranscendentEmbryoEquipResult(
+            catalog,
+            pomApplied,
+            startingKeepsakeKey,
+            startingKeepsakeEquipResults.transcendentEmbryo,
+            createKeepsakeEquipResultAddress(
+              createRouteStartKeepsakeSelectionAddress(routeKey ?? 'route'),
+              'transcendentEmbryo',
+            ),
+            0,
+            'ordinary',
+            catalog.keepsakes.byKey[startingKeepsakeKey]?.rank ?? 'Epic',
+            loadout,
+          )
+        : pomApplied;
     const initialized = applyExperimentalHammerEquipResult(
       catalog,
-      pomApplied,
+      embryoApplied,
       startingKeepsakeKey,
       startingKeepsakeEquipResults,
       createKeepsakeEquipResultAddress(

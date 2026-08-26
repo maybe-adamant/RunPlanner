@@ -14,6 +14,8 @@ import {
   assessJeweledPomEquipResult,
   invalidateJeweledPom,
   jeweledPomEffectForKey,
+  applyTranscendentEmbryoEquipResult,
+  assessTranscendentEmbryoBlessing,
   keepsakeRankForEquip,
   keepsakeSelectionUnavailableReason,
 } from '../../../keepsakes';
@@ -281,6 +283,74 @@ export function applyKeepsakeRackUsedTransition(
           }),
         );
     }
+    if (catalog.keepsakes.byKey[disposition.keepsakeKey]?.effect?.kind === 'transcendentEmbryo') {
+      const result = createKeepsakeEquipResultAddress(selection, 'transcendentEmbryo');
+      const effect = catalog.keepsakes.byKey[disposition.keepsakeKey]?.effect;
+      const rarity =
+        effect?.kind === 'transcendentEmbryo'
+          ? effect.blessingRarityByRank[
+              keepsakeRankForEquip(
+                catalog,
+                disposition.keepsakeKey,
+                successfulReplacementBranches[0]?.traitHistory ?? createTraitHistoryState(),
+              )
+            ]
+          : undefined;
+      if (
+        successfulReplacementBranches.length > 0 &&
+        rack.equipResults?.transcendentEmbryo === undefined
+      )
+        findings.push(
+          Object.freeze({
+            finding: rewardFinding('keepsakeEquipResultMissing', result, {
+              keepsakeKey: disposition.keepsakeKey,
+            }),
+            region: ownerRegion(selection),
+            chronology,
+          }),
+        );
+      else if (
+        rarity !== undefined &&
+        successfulReplacementBranches.some(
+          (branch) =>
+            !assessTranscendentEmbryoBlessing(
+              catalog,
+              rack.equipResults!.transcendentEmbryo!,
+              branch.traitHistory ?? createTraitHistoryState(),
+              rarity,
+              routeLoadout,
+            ).legal,
+        )
+      )
+        findings.push(
+          Object.freeze({
+            finding: rewardFinding('keepsakeEquipResultUnavailable', result, {
+              keepsakeKey: disposition.keepsakeKey,
+            }),
+            region: ownerRegion(selection),
+            chronology,
+          }),
+        );
+      if (successfulReplacementBranches.length > 0)
+        keepsakeEquipResultCandidates.push(
+          Object.freeze({
+            key: semanticAddressKey(result),
+            candidate: Object.freeze({
+              frontiers: Object.freeze(
+                successfulReplacementBranches.map((branch) =>
+                  Object.freeze({
+                    before: branch.traitHistory ?? createTraitHistoryState(),
+                    fatedStatus: branch.keepsakes.fatedStatus,
+                    arcanaFear: branch.arcanaFear,
+                    loadout: routeLoadout,
+                    ...(rarity === undefined ? {} : { transcendentEmbryoRarity: rarity }),
+                  }),
+                ),
+              ),
+            }),
+          }),
+        );
+    }
     rackTransitions = rackTransitions.map((transition) =>
       !transition.replacementSucceeded
         ? transition
@@ -295,6 +365,29 @@ export function applyKeepsakeRackUsedTransition(
               event.sequence,
               transition.equippedRank,
             ),
+          }),
+    );
+    rackTransitions = rackTransitions.map((transition) =>
+      !transition.replacementSucceeded
+        ? transition
+        : Object.freeze({
+            ...transition,
+            branch:
+              rack.equipResults?.transcendentEmbryo === undefined
+                ? transition.branch
+                : applyTranscendentEmbryoEquipResult(
+                    catalog,
+                    transition.branch,
+                    disposition.keepsakeKey,
+                    rack.equipResults.transcendentEmbryo,
+                    createKeepsakeEquipResultAddress(selection, 'transcendentEmbryo'),
+                    event.sequence,
+                    'ordinary',
+                    transition.equippedRank ??
+                      catalog.keepsakes.byKey[disposition.keepsakeKey]?.rank ??
+                      'Epic',
+                    routeLoadout,
+                  ),
           }),
     );
     rackTransitions = rackTransitions.map((transition) =>

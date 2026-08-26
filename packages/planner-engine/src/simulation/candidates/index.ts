@@ -127,13 +127,15 @@ export type {
   RansomAssessmentCandidateEvaluation,
   EvaluatedRansomAssessmentCandidate,
 } from './trait-offer';
-export type {
-  ConcaveStoneCandidateBranch,
-} from './trait-offer-capability';
+export type { ConcaveStoneCandidateBranch } from './trait-offer-capability';
 export type {
   SteadyGrowthOutcomeCandidateQuery,
   EvaluatedSteadyGrowthOutcomeCandidate,
 } from './steady-growth';
+export type {
+  TranscendentEmbryoOutcomeCandidateQuery,
+  EvaluatedTranscendentEmbryoOutcomeCandidate,
+} from './transcendent-embryo';
 export type {
   FountainRarityOutcomeCandidateQuery,
   EvaluatedFountainRarityOutcomeCandidate,

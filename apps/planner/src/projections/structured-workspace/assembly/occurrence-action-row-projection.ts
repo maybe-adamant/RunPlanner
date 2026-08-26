@@ -20,6 +20,7 @@ import {
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import {
   appendSteadyGrowthTimelineEffects,
+  appendTranscendentEmbryoTimelineEffects,
   scopeRoomLifecycleTimeline,
 } from '@run-planner/engine/simulation';
 import {
@@ -56,6 +57,7 @@ export interface WorkspaceOccurrenceActionsInput {
       }
     | undefined;
   readonly steadyGrowthOutcomes?: readonly import('@run-planner/engine/simulation').BiomeRewardSimulation['steadyGrowthOutcomes'][number][];
+  readonly transcendentEmbryoOutcomes?: readonly import('@run-planner/engine/simulation').BiomeRewardSimulation['transcendentEmbryoOutcomes'][number][];
   readonly fountainRarityAssessment?: (
     address: FountainRarityOutcomeAddress,
     targetTraitKey: string | null | undefined,
@@ -363,10 +365,16 @@ function roomActionsForOccurrence(
   const steadyGrowthOutcomes = (input.steadyGrowthOutcomes ?? []).filter(
     (outcome) => semanticAddressKey(outcome.address.owner) === semanticAddressKey(owner),
   );
+  const transcendentEmbryoOutcomes = (input.transcendentEmbryoOutcomes ?? []).filter(
+    (outcome) => semanticAddressKey(outcome.address.owner) === semanticAddressKey(owner),
+  );
   const activeLifecycleTimeline = scopeRoomLifecycleTimeline(
-    appendSteadyGrowthTimelineEffects(
-      lifecycleTimeline,
-      steadyGrowthOutcomes.map((outcome) => outcome.address),
+    appendTranscendentEmbryoTimelineEffects(
+      appendSteadyGrowthTimelineEffects(
+        lifecycleTimeline,
+        steadyGrowthOutcomes.map((outcome) => outcome.address),
+      ),
+      transcendentEmbryoOutcomes.map((outcome) => outcome.address),
     ),
     lifecycleTimeline.structure.activeEncounterSlotKeys.flatMap((phaseKey) => {
       const address = createEncounterPhaseAddress(
@@ -382,7 +390,7 @@ function roomActionsForOccurrence(
   );
   const steadyGrowth = Object.freeze(
     activeLifecycleTimeline.entries.flatMap((entry) => {
-      if (entry.kind !== 'automaticEffect') return [];
+      if (entry.kind !== 'automaticEffect' || entry.effect !== 'steadyGrowth') return [];
       const outcome = steadyGrowthOutcomeByAddress.get(semanticAddressKey(entry.address));
       if (outcome === undefined) {
         throw new StructuredWorkspaceProjectionContractError(
@@ -405,6 +413,36 @@ function roomActionsForOccurrence(
       ];
     }),
   );
+  const transcendentEmbryoOutcomeByAddress = new Map(
+    transcendentEmbryoOutcomes.map(
+      (outcome) => [semanticAddressKey(outcome.address), outcome] as const,
+    ),
+  );
+  const transcendentEmbryo = Object.freeze(
+    activeLifecycleTimeline.entries.flatMap((entry) => {
+      if (entry.kind !== 'automaticEffect' || entry.effect !== 'transcendentEmbryo') return [];
+      const outcome = transcendentEmbryoOutcomeByAddress.get(semanticAddressKey(entry.address));
+      if (outcome === undefined) {
+        throw new StructuredWorkspaceProjectionContractError(
+          `${semanticAddressKey(entry.address)} has no Transcendent Embryo outcome metadata`,
+        );
+      }
+      return [
+        Object.freeze({
+          address: outcome.address,
+          marker: input.markerDestinations.marker(outcome.address),
+          phaseKey: outcome.phaseKey,
+          ...(input.occurrence.encounters.transcendentEmbryoBlessingByPhase?.[outcome.phaseKey] ===
+          undefined
+            ? {}
+            : {
+                blessingKey:
+                  input.occurrence.encounters.transcendentEmbryoBlessingByPhase[outcome.phaseKey],
+              }),
+        }),
+      ];
+    }),
+  );
   const projectedTimeline = projectRoomLifecycleTimeline(
     input,
     activeLifecycleTimeline,
@@ -413,6 +451,7 @@ function roomActionsForOccurrence(
     projectedRows,
     proposals,
     steadyGrowth,
+    transcendentEmbryo,
   );
   return Object.freeze({
     timeline: projectedTimeline,

@@ -130,6 +130,64 @@ function RouteStartJeweledPomResultControl({
   );
 }
 
+function RouteStartTranscendentEmbryoResultControl({
+  interaction,
+}: {
+  readonly interaction: Extract<
+    import('@planner/projections/structured-workspace').WorkspaceKeepsakeEquipResultInteraction,
+    { readonly owner: { readonly resultKind: 'transcendentEmbryo' } }
+  >;
+}) {
+  const dispatch = useAppDispatch();
+  const candidates = useWorkspaceInteraction(interaction);
+  const candidateFor = (blessingKey: string) =>
+    candidates.result?.find((candidate) => candidate.value === blessingKey);
+  const summary = candidateFor(interaction.value?.blessingKey ?? '')?.transcendentEmbryoSummary;
+  return (
+    <fieldset className="field-control">
+      <legend>Transcendent Embryo result</legend>
+      <select
+        aria-label="Transcendent Embryo result"
+        id={`${interaction.owner.routeKey}-transcendent-embryo`}
+        onChange={(event) => {
+          const blessingKey = event.target.value;
+          if (blessingKey === '') return;
+          const option = candidateFor(blessingKey);
+          if (candidateMayBeAuthored(option))
+            dispatch(
+              authoredProjectCommandDispatched(interaction.intentFor({ blessingKey }).command),
+            );
+        }}
+        onFocus={candidates.activate}
+        onPointerDown={candidates.activate}
+        value={interaction.value?.blessingKey ?? ''}
+      >
+        <option value="">Choose Chaos blessing</option>
+        {interaction.choices.map((choice) => {
+          const option = candidateFor(choice.value);
+          return (
+            <option
+              key={choice.value}
+              value={choice.value}
+              disabled={option !== undefined && !candidateMayBeAuthored(option)}
+              {...candidateSelectState(option)}
+            >
+              {choice.label}
+            </option>
+          );
+        })}
+      </select>
+      {summary === undefined ? null : (
+        <p className="field-description">
+          {summary.rarity} ·{' '}
+          {summary.operands.map((operand) => `${operand.label}: ${operand.value}`).join(', ') ||
+            'No numeric operands'}
+        </p>
+      )}
+    </fieldset>
+  );
+}
+
 function presentBiomeList(labels: readonly string[]): string {
   if (labels.length === 0) return '';
   if (labels.length === 1) return labels[0]!;
@@ -202,6 +260,18 @@ export function RouteOverview({
     | Extract<
         import('@planner/projections/structured-workspace').WorkspaceKeepsakeEquipResultInteraction,
         { readonly owner: { readonly resultKind: 'experimentalHammer' } }
+      >
+    | undefined;
+  const transcendentEmbryoAddress = createKeepsakeEquipResultAddress(
+    startingKeepsake,
+    'transcendentEmbryo',
+  );
+  const transcendentEmbryo = interactions.keepsakeEquipResults.get(
+    workspaceInteractionKey(transcendentEmbryoAddress),
+  ) as
+    | Extract<
+        import('@planner/projections/structured-workspace').WorkspaceKeepsakeEquipResultInteraction,
+        { readonly owner: { readonly resultKind: 'transcendentEmbryo' } }
       >
     | undefined;
   const experimentalHammerCandidateController =
@@ -343,6 +413,9 @@ export function RouteOverview({
                 })}
               </select>
             </fieldset>
+          )}
+          {transcendentEmbryo === undefined ? null : (
+            <RouteStartTranscendentEmbryoResultControl interaction={transcendentEmbryo} />
           )}
         </div>
         <div className="route-weapon-controls">

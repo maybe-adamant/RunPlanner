@@ -163,9 +163,29 @@ function decodeKeepsakeEquipResults(
   catalog: Catalog,
 ): AuthoredKeepsakeEquipResults {
   const results = expectRecord(value, path);
-  expectExactKeys(results, ['jeweledPom', 'experimentalHammer'], path);
-  if (results.jeweledPom === undefined && results.experimentalHammer === undefined)
+  expectExactKeys(results, ['jeweledPom', 'experimentalHammer', 'transcendentEmbryo'], path);
+  if (
+    results.jeweledPom === undefined &&
+    results.experimentalHammer === undefined &&
+    results.transcendentEmbryo === undefined
+  )
     return Object.freeze({});
+  const embryo =
+    results.transcendentEmbryo === undefined
+      ? undefined
+      : expectRecord(results.transcendentEmbryo, `${path}.transcendentEmbryo`);
+  if (embryo !== undefined) {
+    expectExactKeys(embryo, ['blessingKey'], `${path}.transcendentEmbryo`);
+    const blessingKey = expectNonBlankString(
+      embryo.blessingKey,
+      `${path}.transcendentEmbryo.blessingKey`,
+    );
+    const blessing = catalog.chaos.blessings.byKey[blessingKey];
+    if (blessing === undefined)
+      fail(`${path}.transcendentEmbryo.blessingKey`, 'must be a declared Chaos blessing');
+    if (blessing.fixedRarity !== undefined)
+      fail(`${path}.transcendentEmbryo.blessingKey`, 'must be a declared in-run Chaos blessing');
+  }
   const hammer =
     results.experimentalHammer === undefined
       ? undefined
@@ -182,8 +202,16 @@ function decodeKeepsakeEquipResults(
     } else fail(`${path}.experimentalHammer.kind`, 'must be selected or exhausted');
   }
   if (results.jeweledPom === undefined) {
-    if (hammer === undefined) return Object.freeze({});
+    if (hammer === undefined)
+      return Object.freeze(
+        embryo === undefined
+          ? {}
+          : { transcendentEmbryo: Object.freeze({ blessingKey: embryo.blessingKey as string }) },
+      );
     return Object.freeze({
+      ...(embryo === undefined
+        ? {}
+        : { transcendentEmbryo: Object.freeze({ blessingKey: embryo.blessingKey as string }) }),
       experimentalHammer: Object.freeze({
         ...(hammer.kind === 'selected'
           ? { kind: 'selected' as const, traitKey: hammer.traitKey as string }
@@ -225,6 +253,9 @@ function decodeKeepsakeEquipResults(
     rarity = authoredRarity as import('../catalog-schema').TraitRarity;
   }
   return Object.freeze({
+    ...(embryo === undefined
+      ? {}
+      : { transcendentEmbryo: Object.freeze({ blessingKey: embryo.blessingKey as string }) }),
     jeweledPom: Object.freeze({
       traitKey,
       ...(rarity === undefined ? {} : { rarity }),

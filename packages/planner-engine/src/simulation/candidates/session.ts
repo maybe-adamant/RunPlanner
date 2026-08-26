@@ -147,6 +147,11 @@ import {
   type EvaluatedFountainRarityOutcomeCandidate,
   type FountainRarityOutcomeCandidateQuery,
 } from './fountain-rarity';
+import {
+  evaluateTranscendentEmbryoOutcomeCandidate,
+  type EvaluatedTranscendentEmbryoOutcomeCandidate,
+  type TranscendentEmbryoOutcomeCandidateQuery,
+} from './transcendent-embryo';
 
 export type ProjectCandidateQuery =
   | BatchRewardStoreCandidateQuery
@@ -175,7 +180,8 @@ export type ProjectCandidateQuery =
   | KeepsakeEquipResultCandidateQuery
   | AcquisitionConversionCandidateQuery
   | SteadyGrowthOutcomeCandidateQuery
-  | FountainRarityOutcomeCandidateQuery;
+  | FountainRarityOutcomeCandidateQuery
+  | TranscendentEmbryoOutcomeCandidateQuery;
 
 /** Candidate-session-only query vocabulary, including focused trait support. */
 export type ProjectCandidateSessionQuery =
@@ -218,7 +224,8 @@ export type ProjectCandidateEvaluation =
   | EvaluatedKeepsakeEquipResultCandidate
   | EvaluatedAcquisitionConversionCandidate
   | EvaluatedSteadyGrowthOutcomeCandidate
-  | EvaluatedFountainRarityOutcomeCandidate;
+  | EvaluatedFountainRarityOutcomeCandidate
+  | EvaluatedTranscendentEmbryoOutcomeCandidate;
 
 /** Result vocabulary corresponding to `ProjectCandidateSessionQuery`. */
 export type ProjectCandidateSessionEvaluation =
@@ -340,6 +347,16 @@ function evaluateCandidateQuery(
         candidateArtifacts.biomeAt(
           createBiomeAddress(query.outcome.routeKey, query.outcome.biomeKey),
         )?.fountainRarity,
+        query,
+      );
+    case 'transcendentEmbryoOutcome':
+      return evaluateTranscendentEmbryoOutcomeCandidate(
+        catalog,
+        project,
+        evaluation,
+        candidateArtifacts.biomeAt(
+          createBiomeAddress(query.outcome.routeKey, query.outcome.biomeKey),
+        )?.transcendentEmbryo,
         query,
       );
     case 'keepsakeEquipResult':

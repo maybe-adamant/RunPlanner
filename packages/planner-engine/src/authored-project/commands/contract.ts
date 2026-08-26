@@ -58,7 +58,10 @@ export function projectCommandAddress(
       return command.selection;
     case 'ReplaceJeweledPomEquipResult':
     case 'ReplaceExperimentalHammerEquipResult':
+    case 'ReplaceTranscendentEmbryoEquipResult':
       return command.result;
+    case 'ReplaceTranscendentEmbryoTransformation':
+      return command.outcome;
     case 'CreateStart':
     case 'ClearTopology':
       return command.biome;

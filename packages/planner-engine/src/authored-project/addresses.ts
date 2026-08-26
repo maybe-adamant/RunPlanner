@@ -65,7 +65,7 @@ export interface KeepsakeEquipResultAddress {
   readonly routeKey: string;
   readonly biomeKey: string;
   readonly selection: KeepsakeSelectionAddress | EchoKeepsakeReplayAddress;
-  readonly resultKind: 'jeweledPom' | 'experimentalHammer';
+  readonly resultKind: 'jeweledPom' | 'experimentalHammer' | 'transcendentEmbryo';
 }
 
 /** The authored Phial target beneath the exact occurrence-owned fountain use. */
@@ -281,6 +281,12 @@ export interface SteadyGrowthOutcomeAddress extends BiomeOwnedAddress {
   readonly owner: OccurrenceAddress;
   readonly phaseKey: string;
 }
+/** One automatic eight-room Embryo transformation at a reached encounter end. */
+export interface TranscendentEmbryoOutcomeAddress extends BiomeOwnedAddress {
+  readonly kind: 'transcendentEmbryoOutcome';
+  readonly owner: OccurrenceAddress;
+  readonly phaseKey: string;
+}
 /** Echo Boon Boon Boon's complete mixed-provider child beneath the selected outer row. */
 export interface EchoLastRunBoonAddress extends BiomeOwnedAddress {
   readonly kind: 'echoLastRunBoon';
@@ -348,6 +354,7 @@ export type SemanticAddress =
   | TraitAcquisitionTargetAddress
   | NaturalSelectionResultAddress
   | SteadyGrowthOutcomeAddress
+  | TranscendentEmbryoOutcomeAddress
   | CirceResolutionAddress
   | EchoPomTargetAddress
   | EchoLastRunBoonAddress
@@ -852,6 +859,18 @@ export function createSteadyGrowthOutcomeAddress(
     phaseKey: nonBlank(phaseKey, 'phaseKey'),
   });
 }
+export function createTranscendentEmbryoOutcomeAddress(
+  owner: TranscendentEmbryoOutcomeAddress['owner'],
+  phaseKey: string,
+): TranscendentEmbryoOutcomeAddress {
+  return Object.freeze({
+    kind: 'transcendentEmbryoOutcome',
+    routeKey: owner.routeKey,
+    biomeKey: owner.biomeKey,
+    owner,
+    phaseKey: nonBlank(phaseKey, 'phaseKey'),
+  });
+}
 export function createEchoLastRunBoonAddress(
   trait: TraitOfferAddress,
   optionKey: EchoLastRunBoonAddress['optionKey'],
@@ -1004,6 +1023,8 @@ export function semanticAddressKey(address: SemanticAddress): string {
     case 'echoLastReward':
       return JSON.stringify([...base, semanticAddressKey(address.trait), address.optionKey]);
     case 'steadyGrowthOutcome':
+      return JSON.stringify([...base, semanticAddressKey(address.owner), address.phaseKey]);
+    case 'transcendentEmbryoOutcome':
       return JSON.stringify([...base, semanticAddressKey(address.owner), address.phaseKey]);
     case 'allTogetherSet':
       return JSON.stringify([

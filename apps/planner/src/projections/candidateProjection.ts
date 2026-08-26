@@ -12,6 +12,7 @@ import {
   type RansomAssessmentCandidateEvaluation,
   type ConcaveStoneCandidateBranch,
   type EvaluatedSteadyGrowthOutcomeCandidate,
+  type EvaluatedTranscendentEmbryoOutcomeCandidate,
   type EvaluatedFountainRarityOutcomeCandidate,
   type EvaluatedFigurineArcanaCandidate,
   type ProjectCandidateEvaluation,
@@ -47,6 +48,7 @@ import {
   type LevelResolutionAddress,
   type NaturalSelectionResultAddress,
   type SteadyGrowthOutcomeAddress,
+  type TranscendentEmbryoOutcomeAddress,
   type FountainRarityOutcomeAddress,
   type TraitOptionKey,
   type TargetAddress,
@@ -119,6 +121,14 @@ export interface CandidateOptionProjection<
 > {
   readonly value: T;
   readonly evaluation: Evaluation;
+}
+
+/** Engine-derived immediate Embryo grant facts, retained beside its candidate option. */
+export interface KeepsakeEquipResultOptionProjection extends CandidateOptionProjection<string> {
+  readonly transcendentEmbryoSummary?: {
+    readonly rarity: import('@run-planner/engine/catalog-schema').InRunTraitRarity;
+    readonly operands: readonly { readonly label: string; readonly value: number }[];
+  };
 }
 
 export interface CandidateProjectionSession {
@@ -275,6 +285,12 @@ export interface CandidateProjectionSession {
   ) =>
     | EvaluatedSteadyGrowthOutcomeCandidate
     | import('@run-planner/engine/simulation').CandidateContextUnavailable;
+  readonly transcendentEmbryoOutcome: (
+    owner: TranscendentEmbryoOutcomeAddress,
+    blessingKey: string | null | undefined,
+  ) =>
+    | EvaluatedTranscendentEmbryoOutcomeCandidate
+    | import('@run-planner/engine/simulation').CandidateContextUnavailable;
   readonly fountainRarityOutcome: (
     owner: FountainRarityOutcomeAddress,
     targetTraitKey: string | null | undefined,
@@ -302,7 +318,7 @@ export interface CandidateProjectionSession {
   readonly keepsakeEquipResult: (
     owner: KeepsakeEquipResultAddress,
     value?: import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults[keyof import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults],
-  ) => readonly CandidateOptionProjection<string>[];
+  ) => readonly KeepsakeEquipResultOptionProjection[];
   readonly acquisitionConversion: (owner: AcquisitionRoleAddress) => CandidateProjectionEvaluation;
 }
 

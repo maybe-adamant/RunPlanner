@@ -6,6 +6,7 @@ import type {
   CandidateProjectionSession,
   WorkspaceFountainRarityControl,
   WorkspaceSteadyGrowthControl,
+  WorkspaceTranscendentEmbryoControl,
 } from '@planner-test/support/structured-workspace/interaction-binding.test-support';
 
 const {
@@ -20,6 +21,7 @@ const {
   createOccurrenceId,
   createRoomActionAddress,
   createSteadyGrowthOutcomeAddress,
+  createTranscendentEmbryoOutcomeAddress,
   createTraitOfferAddress,
   semanticAddressKey,
   roomActionKey,
@@ -150,6 +152,63 @@ describe('resolution-interactions', () => {
       kind: 'ReplaceSteadyGrowthTarget',
       outcome,
       targetTraitKey: 'ApolloWeaponBoon',
+    });
+  });
+
+  it('binds an automatic Embryo transformation to its exact blessing command', () => {
+    const project = createGoldenFGHIProject();
+    const owner = createOccurrenceAddress(goldenFBiome, goldenFOccurrenceId(1, 1));
+    const outcome = createTranscendentEmbryoOutcomeAddress(owner, 'Encounter');
+    const control: WorkspaceTranscendentEmbryoControl = Object.freeze({
+      address: outcome,
+      blessingKey: 'ChaosElementalBlessing',
+      marker: Object.freeze({
+        address: outcome,
+        assessment: 'assessed' as const,
+        findingCount: 0,
+        focusKey: 'test-transcendent-embryo',
+      }),
+      phaseKey: 'Encounter',
+    });
+    const baseCandidateSession = createCandidateSessionFactory(catalog).bind(
+      simulateProjectAssembly(catalog, project),
+    );
+    const candidateSession = Object.freeze({
+      ...baseCandidateSession,
+      transcendentEmbryoOutcome: () =>
+        Object.freeze({
+          kind: 'transcendentEmbryoOutcome' as const,
+          result: Object.freeze({
+            eligibleBlessingKeys: Object.freeze(['ChaosElementalBlessing']),
+            branchSupport: Object.freeze([true]),
+            emptyNoOp: false,
+            selectedPossible: true,
+          }),
+        }),
+    }) as CandidateProjectionSession;
+    const bound = bind(
+      project,
+      'Underworld',
+      'F',
+      undefined,
+      candidateSession,
+      undefined,
+      undefined,
+      new Map([[semanticAddressKey(outcome), control]]),
+    );
+    const interaction = bound.interactions.transcendentEmbryo.get(semanticAddressKey(outcome));
+    if (interaction === undefined) throw new Error('Embryo interaction is missing');
+    expect(
+      interaction
+        .forBlessing()
+        .load()
+        ?.picker.sections.flatMap((section) => section.items)
+        .map((item) => item.value),
+    ).toEqual(['ChaosElementalBlessing']);
+    expect(interaction.intentFor('ChaosElementalBlessing').command).toEqual({
+      kind: 'ReplaceTranscendentEmbryoTransformation',
+      outcome,
+      blessingKey: 'ChaosElementalBlessing',
     });
   });
 

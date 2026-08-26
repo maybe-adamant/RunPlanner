@@ -192,6 +192,22 @@ export function presentRunState(
           }),
         ),
       ),
+      ...(snapshot.keepsakes.transcendentEmbryo === undefined
+        ? {}
+        : {
+            transcendentEmbryo: Object.freeze({
+              origin: snapshot.keepsakes.transcendentEmbryo.origin,
+              rarity: snapshot.keepsakes.transcendentEmbryo.rarity,
+              progress: snapshot.keepsakes.transcendentEmbryo.progress,
+              interval: 8,
+              markedBlessingLabel:
+                catalog.chaos.blessings.byKey[
+                  snapshot.keepsakes.transcendentEmbryo.markedBlessingKey
+                ]?.label ?? snapshot.keepsakes.transcendentEmbryo.markedBlessingKey,
+              markedBlessingAcquisitionIdentity:
+                snapshot.keepsakes.transcendentEmbryo.markedBlessingAcquisitionIdentity,
+            }),
+          }),
       ...(() => {
         const gift = snapshot.traits.equippedTraits.EchoRepeatKeepsakeBoon;
         const captured = gift?.echoRepeatedKeepsakeKey;

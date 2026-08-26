@@ -70,20 +70,25 @@ export const keepsakes: readonly RawKeepsakeDeclaration[] = entries.map(
                     availability: 'eligible',
                     effect: { kind: 'concaveStone', schedule: 'oneShot' },
                   } as const)
-                : key === 'RarifyKeepsake'
+                : key === 'RandomBlessingKeepsake'
                   ? ({
                       availability: 'eligible',
-                      effect: { kind: 'callingCard', schedule: 'everyBiome' },
+                      effect: { kind: 'transcendentEmbryo', schedule: 'oneShot' },
                     } as const)
-                  : key === 'GoldifyKeepsake'
+                  : key === 'RarifyKeepsake'
                     ? ({
                         availability: 'eligible',
-                        effect: { kind: 'timePiece', schedule: 'everyBiome' },
+                        effect: { kind: 'callingCard', schedule: 'everyBiome' },
                       } as const)
-                    : ({
-                        availability: 'eligible',
-                        effect: { kind: 'modeledNeutral', schedule: 'noModeledEffect' },
-                      } as const),
+                    : key === 'GoldifyKeepsake'
+                      ? ({
+                          availability: 'eligible',
+                          effect: { kind: 'timePiece', schedule: 'everyBiome' },
+                        } as const)
+                      : ({
+                          availability: 'eligible',
+                          effect: { kind: 'modeledNeutral', schedule: 'noModeledEffect' },
+                        } as const),
     ...(key === 'HadesAndPersephoneKeepsake'
       ? {
           effect: {
@@ -202,6 +207,20 @@ export const keepsakes: readonly RawKeepsakeDeclaration[] = entries.map(
                             },
                           },
                         }
-                      : {}),
+                      : key === 'RandomBlessingKeepsake'
+                        ? {
+                            effect: {
+                              kind: 'transcendentEmbryo' as const,
+                              source: 'Chaos' as const,
+                              interval: 8 as const,
+                              blessingRarityByRank: {
+                                Common: 'Common' as const,
+                                Rare: 'Rare' as const,
+                                Epic: 'Epic' as const,
+                                Heroic: 'Heroic' as const,
+                              },
+                            },
+                          }
+                        : {}),
   }),
 );

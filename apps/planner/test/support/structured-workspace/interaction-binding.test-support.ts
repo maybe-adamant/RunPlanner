@@ -31,6 +31,7 @@ import {
   createAcquisitionSiteAddress,
   createRouteStartKeepsakeSelectionAddress,
   createSteadyGrowthOutcomeAddress,
+  createTranscendentEmbryoOutcomeAddress,
   createTraitOfferAddress,
   createTargetAddress,
   semanticAddressKey,
@@ -88,6 +89,7 @@ import type { CandidateProjectionSession } from '@planner/projections/candidateP
 import type {
   WorkspaceFountainRarityControl,
   WorkspaceSteadyGrowthControl,
+  WorkspaceTranscendentEmbryoControl,
   WorkspaceTraitOfferControl,
 } from '@planner/projections/structured-workspace';
 import { createContextualOptionResolver } from '@planner/projections/contextualOptions';
@@ -276,6 +278,7 @@ export function bind(
   candidateSession?: CandidateProjectionSession,
   steadyGrowthControls?: ReadonlyMap<string, WorkspaceSteadyGrowthControl>,
   fountainRarityControls?: ReadonlyMap<string, WorkspaceFountainRarityControl>,
+  transcendentEmbryoControls?: ReadonlyMap<string, WorkspaceTranscendentEmbryoControl>,
 ) {
   const authoredProject = project;
   const projectAssembly = simulateProjectAssembly(catalog, authoredProject);
@@ -353,6 +356,7 @@ export function bind(
       services: interactionServices,
       ...(steadyGrowthControls === undefined ? {} : { steadyGrowthControls }),
       ...(fountainRarityControls === undefined ? {} : { fountainRarityControls }),
+      ...(transcendentEmbryoControls === undefined ? {} : { transcendentEmbryoControls }),
       startInteractionRequirements: assembly.startInteractionRequirements,
       takeoverInteractionRequirements: assembly.takeoverInteractionRequirements,
       topologyRemovalInteractionRequirements: assembly.topologyRemovalInteractionRequirements,
@@ -424,6 +428,7 @@ export {
   createAcquisitionSiteAddress,
   createRouteStartKeepsakeSelectionAddress,
   createSteadyGrowthOutcomeAddress,
+  createTranscendentEmbryoOutcomeAddress,
   createTraitOfferAddress,
   createTargetAddress,
   semanticAddressKey,
@@ -473,6 +478,8 @@ export {
   createWorkspaceProjectSourceIndex,
   bindWorkspaceInteractions,
 };
+
+export type { WorkspaceTranscendentEmbryoControl };
 export type {
   AuthoredTraitOffer,
   AuthoredTraitOfferTraits,

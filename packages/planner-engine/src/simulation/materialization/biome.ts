@@ -630,7 +630,7 @@ export function materializeBiome(
   completionOccurrences = createDefaultCompletionOccurrences(catalog, biome.biomeKey, loadout),
   echoKeepsakeReplayResults?: Pick<
     import('../../authored-project/model').AuthoredKeepsakeEquipResults,
-    'experimentalHammer'
+    'experimentalHammer' | 'transcendentEmbryo'
   >,
 ): CanonicalBiome {
   loadout = requireLoadout(loadout);

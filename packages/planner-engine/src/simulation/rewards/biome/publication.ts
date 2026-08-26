@@ -9,6 +9,7 @@ import type {
   KeepsakeSelectionCandidateArtifacts,
   PurgingPoolCandidateArtifacts,
   SteadyGrowthCandidateArtifacts,
+  TranscendentEmbryoCandidateArtifacts,
   StygianWellCandidateArtifacts,
   FountainRarityCandidateArtifacts,
 } from '../../candidate-artifacts';
@@ -44,6 +45,7 @@ export interface BiomeRewardEvaluationAssembly {
   readonly acquisitionConversionArtifacts: AcquisitionConversionCandidateArtifacts;
   readonly derivedAcquisitionEntryArtifacts: DerivedAcquisitionEntryCandidateArtifacts;
   readonly steadyGrowthArtifacts: SteadyGrowthCandidateArtifacts;
+  readonly transcendentEmbryoArtifacts: TranscendentEmbryoCandidateArtifacts;
   readonly purgingPoolArtifacts: PurgingPoolCandidateArtifacts;
   readonly hermesShrineArtifacts: HermesShrineCandidateArtifacts;
   readonly stygianWellArtifacts: StygianWellCandidateArtifacts;

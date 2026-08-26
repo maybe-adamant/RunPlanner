@@ -3,9 +3,11 @@ import {
   createAcquisitionEntryAddress,
   createAcquisitionSiteAddress,
   createSteadyGrowthOutcomeAddress,
+  createTranscendentEmbryoOutcomeAddress,
   semanticAddressKey,
   type SemanticAddress,
   type SteadyGrowthOutcomeAddress,
+  type TranscendentEmbryoOutcomeAddress,
 } from '../../../../authored-project/addresses';
 import { hermesShrineDeliveryEntryKey } from '../../../../authored-project/hermes-shrine-delivery';
 import type { HistoryEvent } from '../../../history';
@@ -21,7 +23,15 @@ import {
   type ReachedSteadyGrowthThreshold,
 } from '../../../traits';
 import { advanceStygianWellEncounterUses } from '../../../stygian-well';
-import { advanceExperimentalHammers } from '../../../keepsakes';
+import {
+  advanceExperimentalHammers,
+  assessTranscendentEmbryoTransformation,
+  advanceTranscendentEmbryoProgress,
+  replaceTranscendentEmbryoBlessing,
+  transcendentEmbryoBlessingKeys,
+  transcendentEmbryoBlessingValues,
+  type ReachedTranscendentEmbryoThreshold,
+} from '../../../keepsakes';
 import type { DerivedAcquisitionEntryFrontier } from '../../acquisition-settlement';
 import type { RewardBranchState } from '../../branch-primitives';
 import { advanceRewardBranches } from '../../processing';
@@ -35,6 +45,10 @@ export interface EncounterEndEffectsTransition {
   readonly steadyGrowthThresholds: readonly {
     readonly address: SteadyGrowthOutcomeAddress;
     readonly threshold: ReachedSteadyGrowthThreshold;
+  }[];
+  readonly transcendentEmbryoThresholds: readonly {
+    readonly address: TranscendentEmbryoOutcomeAddress;
+    readonly threshold: ReachedTranscendentEmbryoThreshold;
   }[];
   readonly traitChildSettlements: readonly ReachedTraitChildCheckpoint[];
   readonly findings: readonly LifecycleFinding[];
@@ -181,6 +195,134 @@ function advanceSteadyGrowthAt(
   });
 }
 
+function advanceTranscendentEmbryoAt(
+  catalog: Catalog,
+  branches: readonly RewardBranchState[],
+  owner: TranscendentEmbryoOutcomeAddress['owner'],
+  phaseKey: string,
+  targetBlessingKey: string | null | undefined,
+  sequence: number,
+  routeKey: string,
+  aspectKey: string,
+): {
+  readonly branches: readonly RewardBranchState[];
+  readonly blocked: readonly {
+    readonly address: TranscendentEmbryoOutcomeAddress;
+    readonly branch: RewardBranchState;
+    readonly threshold: ReachedTranscendentEmbryoThreshold;
+    readonly targetBlessingKey: string | null | undefined;
+  }[];
+  readonly thresholds: readonly {
+    readonly address: TranscendentEmbryoOutcomeAddress;
+    readonly threshold: ReachedTranscendentEmbryoThreshold;
+  }[];
+} {
+  const next: RewardBranchState[] = [];
+  const blocked: {
+    readonly address: TranscendentEmbryoOutcomeAddress;
+    readonly branch: RewardBranchState;
+    readonly threshold: ReachedTranscendentEmbryoThreshold;
+    readonly targetBlessingKey: string | null | undefined;
+  }[] = [];
+  const thresholds: {
+    readonly address: TranscendentEmbryoOutcomeAddress;
+    readonly threshold: ReachedTranscendentEmbryoThreshold;
+  }[] = [];
+  const address = createTranscendentEmbryoOutcomeAddress(owner, phaseKey);
+  for (const branch of branches) {
+    const source = branch.keepsakes.transcendentEmbryo;
+    if (source === undefined) {
+      next.push(branch);
+      continue;
+    }
+    const progressed = advanceTranscendentEmbryoProgress(branch.keepsakes);
+    if (!progressed.reached) {
+      next.push(Object.freeze({ ...branch, keepsakes: progressed.state }));
+      continue;
+    }
+    const before = branch.traitHistory ?? createTraitHistoryState();
+    const threshold = Object.freeze({
+      source,
+      before,
+      eligibleBlessingKeys: transcendentEmbryoBlessingKeys(
+        catalog,
+        before,
+        source.rarity,
+        Object.freeze({
+          routeKey,
+          aspectKey,
+          removedBlessingAcquisitionIdentity: source.markedBlessingAcquisitionIdentity,
+        }),
+      ),
+    });
+    thresholds.push(Object.freeze({ address, threshold }));
+    const assessment = assessTranscendentEmbryoTransformation(
+      catalog,
+      threshold,
+      targetBlessingKey,
+    );
+    if (!assessment.legal) {
+      blocked.push(
+        Object.freeze({
+          address,
+          branch: Object.freeze({ ...branch, keepsakes: progressed.state }),
+          threshold,
+          targetBlessingKey,
+        }),
+      );
+      continue;
+    }
+    if (assessment.blessingKey === null) {
+      next.push(Object.freeze({ ...branch, keepsakes: progressed.state }));
+      continue;
+    }
+    const acquisitionIdentity = `${semanticAddressKey(address)}:${sequence}`;
+    const traitHistory = foldTraitHistoryEvents(catalog, [
+      ...before.events,
+      Object.freeze({
+        kind: 'directChaosBlessingRemoval' as const,
+        owner: address,
+        acquisitionRole: 'transcendentEmbryoTransformation' as const,
+        sequence,
+        acquisitionPoint: 'encounterEndEffectsApplied',
+        acquisitionIdentity: source.markedBlessingAcquisitionIdentity,
+      }),
+      Object.freeze({
+        kind: 'directChaosBlessing' as const,
+        owner: address,
+        acquisitionRole: 'transcendentEmbryoTransformation' as const,
+        sequence,
+        acquisitionPoint: 'encounterEndEffectsApplied',
+        acquisitionIdentity,
+        blessingKey: assessment.blessingKey,
+        rarity: source.rarity,
+        blessingValues: transcendentEmbryoBlessingValues(
+          catalog,
+          assessment.blessingKey,
+          source.rarity,
+        ),
+      }),
+    ]);
+    next.push(
+      Object.freeze({
+        ...branch,
+        keepsakes: replaceTranscendentEmbryoBlessing(
+          progressed.state,
+          assessment.blessingKey,
+          acquisitionIdentity,
+        ),
+        history: attachTraitHistory(branch.history, traitHistory),
+        traitHistory,
+      }),
+    );
+  }
+  return Object.freeze({
+    branches: Object.freeze(next),
+    blocked: Object.freeze(blocked),
+    thresholds: Object.freeze(thresholds),
+  });
+}
+
 /** Applies the exact post-encounter effects and returns all resulting frontiers. */
 export function applyEncounterEndEffectsTransition(
   catalog: Catalog,
@@ -273,7 +415,7 @@ export function applyEncounterEndEffectsTransition(
       ? room.encounters.steadyGrowthTargetByPhase?.[event.phaseKey]
       : undefined;
   const steadyAdvance =
-    steadyOwner === undefined
+    steadyOwner === undefined || declaration?.skipRoomsPerUpgrade === true
       ? undefined
       : advanceSteadyGrowthAt(
           catalog,
@@ -288,9 +430,24 @@ export function applyEncounterEndEffectsTransition(
       branches: advanceRewardBranches(next, event.sequence),
       derivedAcquisitionEntryFrontiers: Object.freeze(derivedAcquisitionEntryFrontiers),
       steadyGrowthThresholds: Object.freeze([]),
+      transcendentEmbryoThresholds: Object.freeze([]),
       traitChildSettlements: Object.freeze([]),
       findings: Object.freeze([]),
     });
+  const embryoTarget =
+    room?.kind === 'authored'
+      ? room.encounters.transcendentEmbryoBlessingByPhase?.[event.phaseKey]
+      : undefined;
+  const embryoAdvance = advanceTranscendentEmbryoAt(
+    catalog,
+    steadyAdvance.branches,
+    steadyOwner!,
+    event.phaseKey,
+    embryoTarget,
+    event.sequence,
+    event.origin.routeKey,
+    '',
+  );
   const findings: LifecycleFinding[] = [];
   const traitChildSettlements: ReachedTraitChildCheckpoint[] = [];
   for (const blocked of steadyAdvance.blocked) {
@@ -316,10 +473,34 @@ export function applyEncounterEndEffectsTransition(
       }),
     );
   }
+  for (const blocked of embryoAdvance.blocked) {
+    traitChildSettlements.push(Object.freeze({ address: blocked.address, branch: blocked.branch }));
+    findings.push(
+      Object.freeze({
+        finding: rewardFinding(
+          blocked.targetBlessingKey === undefined
+            ? 'transcendentEmbryoOutcomeMissing'
+            : 'transcendentEmbryoOutcomeUnavailable',
+          blocked.address,
+          Object.freeze({
+            sourceBlessingKey: blocked.threshold.source.markedBlessingKey,
+            transformationRarity: blocked.threshold.source.rarity,
+            eligibleBlessingKeys: blocked.threshold.eligibleBlessingKeys,
+            ...(blocked.targetBlessingKey === undefined
+              ? {}
+              : { targetBlessingKey: blocked.targetBlessingKey }),
+          }),
+        ),
+        region: ownerRegion(event.origin),
+        chronology: Object.freeze({ kind: 'history', sequence: event.sequence, boundary: 'at' }),
+      }),
+    );
+  }
   return Object.freeze({
-    branches: advanceRewardBranches(steadyAdvance.branches, event.sequence),
+    branches: advanceRewardBranches(embryoAdvance.branches, event.sequence),
     derivedAcquisitionEntryFrontiers: Object.freeze(derivedAcquisitionEntryFrontiers),
     steadyGrowthThresholds: steadyAdvance.thresholds,
+    transcendentEmbryoThresholds: embryoAdvance.thresholds,
     traitChildSettlements: Object.freeze(traitChildSettlements),
     findings: Object.freeze(findings),
   });

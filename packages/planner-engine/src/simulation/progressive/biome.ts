@@ -193,6 +193,7 @@ function generation(
       undefined,
       undefined,
       figurineArcana,
+      undefined,
     ),
     findingRegions: Object.freeze([
       ...ordinary.findingRegions,
@@ -447,6 +448,7 @@ export function evaluateProgressiveBiomeAssembly(
       undefined,
       evaluated.candidateArtifacts.fountainRarity,
       evaluated.candidateArtifacts.figurineArcana,
+      evaluated.candidateArtifacts.transcendentEmbryo,
     ),
   });
 }

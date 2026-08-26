@@ -1,7 +1,16 @@
 import type { Catalog, InRunTraitRarity, KeepsakeRank, TraitRarity } from '../catalog-schema';
+import { semanticAddressKey, type SemanticAddress } from '../authored-project/addresses';
 import type { AuthoredKeepsakeEquipResults } from '../authored-project/model';
 import type { ArcanaFearState } from './arcana-fear';
-import { hasEffectiveInRunUpgrade, nextRarity, type TraitHistoryState } from './trait-history';
+import {
+  attachTraitHistory,
+  createTraitHistoryState,
+  foldTraitHistoryEvents,
+  hasEffectiveInRunUpgrade,
+  nextRarity,
+  type TraitHistoryState,
+} from './trait-history';
+import type { RewardBranchState } from './rewards/branch-primitives';
 import { assessTraitOption } from './trait-authoring-policies';
 import {
   optionIndex,
@@ -58,6 +67,14 @@ export interface KeepsakeState {
     readonly status: 'pending' | 'consumed';
     readonly rank: KeepsakeRank;
   };
+  /** One direct Chaos blessing source and its exact eight-room checkpoint. */
+  readonly transcendentEmbryo?: {
+    readonly origin: 'ordinary' | 'echo';
+    readonly rarity: InRunTraitRarity;
+    readonly progress: number;
+    readonly markedBlessingKey: string;
+    readonly markedBlessingAcquisitionIdentity: string;
+  };
 }
 
 export interface FigLeafStateValue {
@@ -100,6 +117,8 @@ export function keepsakeRankForEquip(
     case 'crystalFigurine':
       return 'Heroic';
     case 'concaveStone':
+      return 'Heroic';
+    case 'transcendentEmbryo':
       return 'Heroic';
     default: {
       const exhaustive: never = effect;
@@ -168,6 +187,16 @@ export function advanceCurrentKeepsake(
             stone: Object.freeze({ ...state.stone, rank: advancedRank }),
           })
         : state;
+    case 'transcendentEmbryo':
+      return state.transcendentEmbryo === undefined
+        ? state
+        : Object.freeze({
+            ...state,
+            transcendentEmbryo: Object.freeze({
+              ...state.transcendentEmbryo,
+              rarity: effect.blessingRarityByRank[advancedRank],
+            }),
+          });
     case 'callingCard':
       return state.callingCard === undefined
         ? state
@@ -481,6 +510,224 @@ export function assessExperimentalHammerEquipResult(
   });
 }
 
+export interface TranscendentEmbryoBlessingContext {
+  readonly routeKey?: string;
+  readonly aspectKey?: string;
+  readonly removedBlessingAcquisitionIdentity?: string;
+}
+
+/** The direct Chaos blessing domain; it never creates a Chaos offer/menu. */
+export function transcendentEmbryoBlessingKeys(
+  catalog: Catalog,
+  history: TraitHistoryState,
+  rarity: InRunTraitRarity,
+  context: TranscendentEmbryoBlessingContext = {},
+  excludedBlessingKeys: readonly string[] = [],
+): readonly string[] {
+  const excluded = new Set(excludedBlessingKeys);
+  const matureCount = history.maturedChaosBlessings.filter(
+    (blessing) => blessing.acquisitionIdentity !== context.removedBlessingAcquisitionIdentity,
+  ).length;
+  return Object.freeze(
+    catalog.chaos.blessings.values
+      .filter((blessing) => {
+        if (blessing.fixedRarity !== undefined || excluded.has(blessing.key)) return false;
+        return (blessing.offerRequirements ?? []).every((requirement) => {
+          switch (requirement.kind) {
+            case 'matureChaosBlessing':
+              return matureCount > 0;
+            case 'elementMinimum':
+              return history.elementCounts[requirement.element] >= requirement.minimum;
+            case 'notAspect':
+              return context.aspectKey !== requirement.aspectKey;
+            case 'notKeepsake':
+              return true;
+            case 'routeKey':
+              return context.routeKey === requirement.routeKey;
+          }
+        });
+      })
+      .map((blessing) => blessing.key),
+  );
+}
+
+/** Declaration-derived values used by direct Embryo blessings. */
+export function transcendentEmbryoBlessingValues(
+  catalog: Catalog,
+  blessingKey: string,
+  rarity: InRunTraitRarity,
+): Readonly<Record<string, number>> {
+  const blessing = catalog.chaos.blessings.byKey[blessingKey];
+  if (blessing === undefined) return Object.freeze({});
+  return Object.freeze(
+    Object.fromEntries(
+      blessing.operands.map((operand) => [
+        operand.key,
+        (operand.byRarity?.[rarity] ?? operand).minimum,
+      ]),
+    ),
+  );
+}
+
+export function assessTranscendentEmbryoBlessing(
+  catalog: Catalog,
+  result: NonNullable<AuthoredKeepsakeEquipResults['transcendentEmbryo']>,
+  history: TraitHistoryState,
+  rarity: InRunTraitRarity,
+  context: TranscendentEmbryoBlessingContext = {},
+  excludedBlessingKeys: readonly string[] = [],
+): { readonly legal: boolean; readonly findings: readonly string[] } {
+  const legal = transcendentEmbryoBlessingKeys(
+    catalog,
+    history,
+    rarity,
+    context,
+    excludedBlessingKeys,
+  ).includes(result.blessingKey);
+  return Object.freeze({
+    legal,
+    findings: Object.freeze(legal ? [] : ['keepsakeEquipResultUnavailable']),
+  });
+}
+
+export function equipTranscendentEmbryo(
+  state: KeepsakeState,
+  origin: 'ordinary' | 'echo',
+  rarity: InRunTraitRarity,
+  blessingKey: string,
+  acquisitionIdentity: string,
+): KeepsakeState {
+  return Object.freeze({
+    ...state,
+    transcendentEmbryo: Object.freeze({
+      origin,
+      rarity,
+      progress: 0,
+      markedBlessingKey: blessingKey,
+      markedBlessingAcquisitionIdentity: acquisitionIdentity,
+    }),
+  });
+}
+
+export function advanceTranscendentEmbryoProgress(state: KeepsakeState): {
+  readonly state: KeepsakeState;
+  readonly reached: boolean;
+} {
+  const source = state.transcendentEmbryo;
+  if (source === undefined) return Object.freeze({ state, reached: false });
+  const progress = source.progress + 1;
+  if (progress < 8)
+    return Object.freeze({
+      state: Object.freeze({
+        ...state,
+        transcendentEmbryo: Object.freeze({ ...source, progress }),
+      }),
+      reached: false,
+    });
+  return Object.freeze({
+    state: Object.freeze({
+      ...state,
+      transcendentEmbryo: Object.freeze({ ...source, progress: 0 }),
+    }),
+    reached: true,
+  });
+}
+
+export interface ReachedTranscendentEmbryoThreshold {
+  readonly source: NonNullable<KeepsakeState['transcendentEmbryo']>;
+  readonly before: TraitHistoryState;
+  readonly eligibleBlessingKeys: readonly string[];
+}
+
+export interface TranscendentEmbryoBlessingAssessment {
+  readonly legal: boolean;
+  readonly blessingKey: string | null;
+  readonly eligibleBlessingKeys: readonly string[];
+}
+
+export function assessTranscendentEmbryoTransformation(
+  _catalog: Catalog,
+  threshold: ReachedTranscendentEmbryoThreshold,
+  blessingKey: string | null | undefined,
+  _context: TranscendentEmbryoBlessingContext = {},
+): TranscendentEmbryoBlessingAssessment {
+  const selected = blessingKey ?? null;
+  const legal =
+    threshold.eligibleBlessingKeys.length === 0
+      ? selected === null
+      : selected !== null && threshold.eligibleBlessingKeys.includes(selected);
+  return Object.freeze({
+    legal,
+    blessingKey: selected,
+    eligibleBlessingKeys: threshold.eligibleBlessingKeys,
+  });
+}
+
+export function replaceTranscendentEmbryoBlessing(
+  state: KeepsakeState,
+  blessingKey: string,
+  acquisitionIdentity: string,
+): KeepsakeState {
+  const source = state.transcendentEmbryo;
+  if (source === undefined) return state;
+  return Object.freeze({
+    ...state,
+    transcendentEmbryo: Object.freeze({
+      ...source,
+      progress: 0,
+      markedBlessingKey: blessingKey,
+      markedBlessingAcquisitionIdentity: acquisitionIdentity,
+    }),
+  });
+}
+
+export function applyTranscendentEmbryoEquipResult(
+  catalog: Catalog,
+  branch: RewardBranchState,
+  equippedKeepsakeKey: string,
+  result: NonNullable<AuthoredKeepsakeEquipResults['transcendentEmbryo']>,
+  owner: SemanticAddress,
+  sequence: number,
+  origin: 'ordinary' | 'echo',
+  equippedRank: KeepsakeRank,
+  context: TranscendentEmbryoBlessingContext = {},
+): RewardBranchState {
+  const keepsake = catalog.keepsakes.byKey[equippedKeepsakeKey];
+  const effect = keepsake?.effect;
+  if (effect?.kind !== 'transcendentEmbryo') return branch;
+  const rarity = effect.blessingRarityByRank[equippedRank];
+  const before = branch.traitHistory ?? createTraitHistoryState();
+  if (!assessTranscendentEmbryoBlessing(catalog, result, before, rarity, context).legal)
+    return branch;
+  const acquisitionIdentity = `${semanticAddressKey(owner)}:${sequence}`;
+  const history = foldTraitHistoryEvents(catalog, [
+    ...before.events,
+    Object.freeze({
+      kind: 'directChaosBlessing' as const,
+      owner,
+      acquisitionRole: 'transcendentEmbryoEquip' as const,
+      sequence,
+      acquisitionPoint: origin === 'echo' ? 'biomeStart' : 'keepsakeEquip',
+      acquisitionIdentity,
+      blessingKey: result.blessingKey,
+      rarity,
+      blessingValues: transcendentEmbryoBlessingValues(catalog, result.blessingKey, rarity),
+    }),
+  ]);
+  return Object.freeze({
+    ...branch,
+    history: attachTraitHistory(branch.history, history),
+    traitHistory: history,
+    keepsakes: equipTranscendentEmbryo(
+      branch.keepsakes,
+      origin,
+      rarity,
+      result.blessingKey,
+      acquisitionIdentity,
+    ),
+  });
+}
+
 export function invalidateJeweledPom(state: KeepsakeState): KeepsakeState {
   if (state.jeweledPom === undefined || !state.jeweledPom.active) return state;
   return Object.freeze({
@@ -689,7 +936,7 @@ export function applyKeepsakeDisposition(
   const { phial: _phial, figurine: _figurine, ...withoutPhialAndFigurine } = state;
   void _phial;
   void _figurine;
-  const stateWithoutSources =
+  const stateWithoutTrackedSources =
     state.currentKey === 'UnpickedBoonKeepsake'
       ? (() => {
           const { stone: _stone, ...withoutStone } = withoutPhialAndFigurine;
@@ -697,6 +944,15 @@ export function applyKeepsakeDisposition(
           return withoutStone;
         })()
       : withoutPhialAndFigurine;
+  const stateWithoutSources =
+    state.currentKey === 'RandomBlessingKeepsake'
+      ? (() => {
+          const { transcendentEmbryo: _transcendentEmbryo, ...withoutTranscendentEmbryo } =
+            stateWithoutTrackedSources;
+          void _transcendentEmbryo;
+          return withoutTranscendentEmbryo;
+        })()
+      : stateWithoutTrackedSources;
   return Object.freeze({
     ...stateWithoutSources,
     currentKey: disposition.keepsakeKey,

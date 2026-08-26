@@ -18,6 +18,7 @@ import type {
   EchoPomTargetDomainEvaluation,
   EvaluatedAcquisitionConversionCandidate,
   EvaluatedSteadyGrowthOutcomeCandidate,
+  EvaluatedTranscendentEmbryoOutcomeCandidate,
   NaturalSelectionResultCandidateEvaluation,
   CandidateContextUnavailable,
   ConcaveStoneCandidateBranch,
@@ -27,6 +28,7 @@ import type {
   CandidateOptionProjection,
   CandidateProjectionEvaluation,
   CandidateProjectionSession,
+  KeepsakeEquipResultOptionProjection,
 } from './candidateProjection';
 import { domainKey, type CandidateProjectionCore } from './candidateProjectionSession';
 
@@ -65,6 +67,7 @@ export type TraitCandidateAdapters = Pick<
   | 'ransomAssessment'
   | 'concaveStone'
   | 'steadyGrowthOutcome'
+  | 'transcendentEmbryoOutcome'
   | 'fountainRarityOutcome'
   | 'levelResolution'
   | 'judgmentArcana'
@@ -184,6 +187,12 @@ export function createTraitCandidateAdapters(
         outcome,
         targetTraitKey,
       }) as EvaluatedSteadyGrowthOutcomeCandidate | CandidateContextUnavailable,
+    transcendentEmbryoOutcome: (outcome, blessingKey) =>
+      aggregateEvaluation(core, {
+        kind: 'transcendentEmbryoOutcome',
+        outcome,
+        blessingKey,
+      }) as EvaluatedTranscendentEmbryoOutcomeCandidate | CandidateContextUnavailable,
     fountainRarityOutcome: (outcome, targetTraitKey) =>
       aggregateEvaluation(core, {
         kind: 'fountainRarityOutcome',
@@ -296,7 +305,9 @@ export function createTraitCandidateAdapters(
                 ? option.value.kind === 'selected'
                   ? option.value.traitKey
                   : '__exhausted'
-                : option.value.traitKey,
+                : 'blessingKey' in option.value
+                  ? option.value.blessingKey
+                  : option.value.traitKey,
             evaluation: Object.freeze({
               ...evaluation,
               result: Object.freeze({
@@ -304,9 +315,12 @@ export function createTraitCandidateAdapters(
                 selectedPossible: option.selectedPossible,
               }),
             }),
+            ...(option.transcendentEmbryoSummary === undefined
+              ? {}
+              : { transcendentEmbryoSummary: option.transcendentEmbryoSummary }),
           }),
         ),
-      );
+      ) as readonly KeepsakeEquipResultOptionProjection[];
     },
   };
 }

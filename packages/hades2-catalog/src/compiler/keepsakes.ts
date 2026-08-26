@@ -131,11 +131,13 @@ export function normalizeKeepsakes(
               ? ({ kind: 'crystalFigurine', schedule: 'everyBiome' } as const)
               : keepsake.key === 'UnpickedBoonKeepsake'
                 ? ({ kind: 'concaveStone', schedule: 'oneShot' } as const)
-                : keepsake.key === 'RarifyKeepsake'
-                  ? ({ kind: 'callingCard', schedule: 'everyBiome' } as const)
-                  : keepsake.key === 'GoldifyKeepsake'
-                    ? ({ kind: 'timePiece', schedule: 'everyBiome' } as const)
-                    : ({ kind: 'modeledNeutral', schedule: 'noModeledEffect' } as const);
+                : keepsake.key === 'RandomBlessingKeepsake'
+                  ? ({ kind: 'transcendentEmbryo', schedule: 'oneShot' } as const)
+                  : keepsake.key === 'RarifyKeepsake'
+                    ? ({ kind: 'callingCard', schedule: 'everyBiome' } as const)
+                    : keepsake.key === 'GoldifyKeepsake'
+                      ? ({ kind: 'timePiece', schedule: 'everyBiome' } as const)
+                      : ({ kind: 'modeledNeutral', schedule: 'noModeledEffect' } as const);
       requireExactObjectKeys(keepsake.echoGift.effect, `${path}.echoGift.effect`, [
         'kind',
         'schedule',
@@ -335,6 +337,38 @@ export function normalizeKeepsakes(
           `${path}.effect.procSupportByRank`,
           { Common: 25, Rare: 50, Epic: 75, Heroic: 100 } as const,
         ),
+      });
+    } else if (keepsake.key === 'RandomBlessingKeepsake') {
+      requireExactObjectKeys(keepsake.effect, `${path}.effect`, [
+        'kind',
+        'source',
+        'interval',
+        'blessingRarityByRank',
+      ]);
+      if (
+        keepsake.effect.kind !== 'transcendentEmbryo' ||
+        keepsake.effect.source !== 'Chaos' ||
+        keepsake.effect.interval !== 8
+      )
+        fail(`${path}.effect`, 'must declare Transcendent Embryo Chaos interval eight');
+      requireExactObjectKeys(
+        keepsake.effect.blessingRarityByRank,
+        `${path}.effect.blessingRarityByRank`,
+        keepsakeRanks,
+      );
+      for (const rank of keepsakeRanks)
+        if (keepsake.effect.blessingRarityByRank[rank] !== rank)
+          fail(`${path}.effect.blessingRarityByRank.${rank}`, `must equal ${rank}`);
+      effect = Object.freeze({
+        kind: 'transcendentEmbryo',
+        source: 'Chaos',
+        interval: 8,
+        blessingRarityByRank: Object.freeze({
+          Common: 'Common',
+          Rare: 'Rare',
+          Epic: 'Epic',
+          Heroic: 'Heroic',
+        }),
       });
     } else if (keepsake.effect !== undefined)
       fail(`${path}.effect`, 'is not supported by this keepsake');

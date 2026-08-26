@@ -148,6 +148,15 @@ export function RunStateSheet({ launcher }: { readonly launcher: WorkspaceRunSta
             </ul>
           </div>
         )}
+        {state.keepsakes.transcendentEmbryo === undefined ? null : (
+          <p>
+            Transcendent Embryo: {state.keepsakes.transcendentEmbryo.markedBlessingLabel} ·{' '}
+            {state.keepsakes.transcendentEmbryo.rarity} ·{' '}
+            {state.keepsakes.transcendentEmbryo.progress}/
+            {state.keepsakes.transcendentEmbryo.interval} encounter checkpoints ·{' '}
+            {state.keepsakes.transcendentEmbryo.origin}
+          </p>
+        )}
         {state.keepsakes.figLeafRemainingUses === undefined ? null : (
           <p>
             Fig Leaf: {state.keepsakes.figLeafRemainingUses} uses remaining

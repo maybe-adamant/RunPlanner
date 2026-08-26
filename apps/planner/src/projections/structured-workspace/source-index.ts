@@ -117,6 +117,7 @@ export interface WorkspaceBiomeSource {
     owner: OccurrenceAddress,
   ) => import('@run-planner/engine/simulation').StygianWellCandidateCapability | undefined;
   readonly steadyGrowthOutcomes: readonly import('@run-planner/engine/simulation').BiomeRewardSimulation['steadyGrowthOutcomes'][number][];
+  readonly transcendentEmbryoOutcomes: readonly import('@run-planner/engine/simulation').BiomeRewardSimulation['transcendentEmbryoOutcomes'][number][];
   readonly occurrence: (occurrenceId: OccurrenceId) => RoomOccurrence | undefined;
   /** Closed engine-owned outgoing state for one exact retained occurrence. */
   readonly outgoingStatus: (occurrenceId: OccurrenceId) => OccurrenceOutgoingStatus;
@@ -746,6 +747,10 @@ function createWorkspaceBiomeSource(
     evaluation !== undefined && 'rewards' in evaluation
       ? evaluation.rewards.steadyGrowthOutcomes
       : Object.freeze([]);
+  const transcendentEmbryoOutcomes =
+    evaluation !== undefined && 'rewards' in evaluation
+      ? evaluation.rewards.transcendentEmbryoOutcomes
+      : Object.freeze([]);
   const rewardBranches =
     evaluation !== undefined && 'rewards' in evaluation ? evaluation.rewards.branches : [];
   const forfeitedRewardOwnersByBranch = rewardBranches.map(
@@ -784,6 +789,7 @@ function createWorkspaceBiomeSource(
     hermesShrineAssessment,
     stygianWellAssessment,
     steadyGrowthOutcomes,
+    transcendentEmbryoOutcomes,
     layout,
     blockedOccurrenceRoom: (occurrenceId: OccurrenceId) =>
       overlay.automaticRooms.get(occurrenceId) ??

@@ -28,6 +28,8 @@ import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { CandidateSelect } from './CandidateSelect';
 export { SteadyGrowthEffectRow } from './SteadyGrowthEffectRow';
 import { SteadyGrowthEffectRow } from './SteadyGrowthEffectRow';
+export { TranscendentEmbryoEffectRow } from './TranscendentEmbryoEffectRow';
+import { TranscendentEmbryoEffectRow } from './TranscendentEmbryoEffectRow';
 import { LifecycleBoundaryRow } from './RoomLifecycleBoundaryRow';
 import { RoomActionAcquisitionRow } from './RoomActionAcquisitionRow';
 import { RoomActionInlineEditors } from './RoomActionInlineEditors';
@@ -462,7 +464,23 @@ export function RoomActionsWorkbench({
                 ): ReactNode[] => {
                   if (entry.kind === 'boundary') return [renderBoundary(entry)];
                   if (entry.kind === 'automaticEffect') {
-                    const control = actions?.steadyGrowth?.find(
+                    if (entry.effect === 'steadyGrowth') {
+                      const control = actions?.steadyGrowth?.find(
+                        (candidate) =>
+                          workspaceInteractionKey(candidate.address) ===
+                          workspaceInteractionKey(entry.address),
+                      );
+                      return control === undefined
+                        ? []
+                        : [
+                            <SteadyGrowthEffectRow
+                              control={control}
+                              interactions={interactions}
+                              key={workspaceInteractionKey(control.address)}
+                            />,
+                          ];
+                    }
+                    const control = actions?.transcendentEmbryo?.find(
                       (candidate) =>
                         workspaceInteractionKey(candidate.address) ===
                         workspaceInteractionKey(entry.address),
@@ -470,7 +488,7 @@ export function RoomActionsWorkbench({
                     return control === undefined
                       ? []
                       : [
-                          <SteadyGrowthEffectRow
+                          <TranscendentEmbryoEffectRow
                             control={control}
                             interactions={interactions}
                             key={workspaceInteractionKey(control.address)}
@@ -568,14 +586,29 @@ export function RoomActionsWorkbench({
       return [renderBoundary(entry)];
     }
     if (entry.kind === 'automaticEffect') {
-      const control = actions.steadyGrowth?.find(
+      if (entry.effect === 'steadyGrowth') {
+        const control = actions.steadyGrowth?.find(
+          (candidate) =>
+            workspaceInteractionKey(candidate.address) === workspaceInteractionKey(entry.address),
+        );
+        return control === undefined
+          ? []
+          : [
+              <SteadyGrowthEffectRow
+                control={control}
+                interactions={interactions}
+                key={workspaceInteractionKey(control.address)}
+              />,
+            ];
+      }
+      const control = actions.transcendentEmbryo?.find(
         (candidate) =>
           workspaceInteractionKey(candidate.address) === workspaceInteractionKey(entry.address),
       );
       return control === undefined
         ? []
         : [
-            <SteadyGrowthEffectRow
+            <TranscendentEmbryoEffectRow
               control={control}
               interactions={interactions}
               key={workspaceInteractionKey(control.address)}

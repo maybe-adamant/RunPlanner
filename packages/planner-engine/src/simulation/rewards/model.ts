@@ -5,6 +5,7 @@ import type {
   BatchRewardStoreAddress,
   SemanticAddress,
   SteadyGrowthOutcomeAddress,
+  TranscendentEmbryoOutcomeAddress,
   TargetAddress,
 } from '../../authored-project/addresses';
 import type { ConcreteAcquisitionEvent, ResolvedRewardOffer } from '../../reward-kernel/model';
@@ -205,6 +206,14 @@ export interface BiomeRewardSimulation extends RewardSimulationBase {
     readonly sourceTraitKey: string;
     readonly phaseKey: string;
     readonly requiredIntervals: readonly number[];
+    readonly progressBefore: readonly number[];
+  }[];
+  /** Exact reached automatic Transcendent Embryo checkpoints. */
+  readonly transcendentEmbryoOutcomes: readonly {
+    readonly address: TranscendentEmbryoOutcomeAddress;
+    readonly sourceBlessingKey: string;
+    readonly phaseKey: string;
+    readonly transformationRarities: readonly import('../../catalog-schema').InRunTraitRarity[];
     readonly progressBefore: readonly number[];
   }[];
   readonly derivedAcquisitionEntries: readonly {

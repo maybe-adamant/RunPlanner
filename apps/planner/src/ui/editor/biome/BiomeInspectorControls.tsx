@@ -31,6 +31,11 @@ type JeweledPomInteraction = Extract<
   { readonly owner: { readonly resultKind: 'jeweledPom' } }
 >;
 
+type TranscendentEmbryoInteraction = Extract<
+  WorkspaceKeepsakeEquipResultInteraction,
+  { readonly owner: { readonly resultKind: 'transcendentEmbryo' } }
+>;
+
 function jeweledPomLoadable(
   load: JeweledPomInteraction['load'],
   value: NonNullable<JeweledPomInteraction['value']>,
@@ -155,6 +160,59 @@ function JeweledPomResultControl({ interaction }: { readonly interaction: Jewele
   );
 }
 
+function TranscendentEmbryoResultControl({
+  interaction,
+}: {
+  readonly interaction: TranscendentEmbryoInteraction;
+}) {
+  const dispatch = useAppDispatch();
+  const candidates = useWorkspaceInteraction(interaction);
+  const candidateFor = (blessingKey: string) =>
+    candidates.result?.find((candidate) => candidate.value === blessingKey);
+  const summary = candidateFor(interaction.value?.blessingKey ?? '')?.transcendentEmbryoSummary;
+  return (
+    <fieldset className="field-control">
+      <legend>Transcendent Embryo result</legend>
+      <select
+        aria-label="Transcendent Embryo result"
+        value={interaction.value?.blessingKey ?? ''}
+        onFocus={candidates.activate}
+        onPointerDown={candidates.activate}
+        onChange={(event) => {
+          const blessingKey = event.target.value;
+          const option = candidateFor(blessingKey);
+          if (blessingKey !== '' && candidateMayBeAuthored(option))
+            dispatch(
+              authoredProjectCommandDispatched(interaction.intentFor({ blessingKey }).command),
+            );
+        }}
+      >
+        <option value="">Choose Chaos blessing</option>
+        {interaction.choices.map((choice) => {
+          const option = candidateFor(choice.value);
+          return (
+            <option
+              key={choice.value}
+              value={choice.value}
+              disabled={option !== undefined && !candidateMayBeAuthored(option)}
+              {...candidateSelectState(option)}
+            >
+              {choice.label}
+            </option>
+          );
+        })}
+      </select>
+      {summary === undefined ? null : (
+        <p className="field-description">
+          {summary.rarity} ·{' '}
+          {summary.operands.map((operand) => `${operand.label}: ${operand.value}`).join(', ') ||
+            'No numeric operands'}
+        </p>
+      )}
+    </fieldset>
+  );
+}
+
 function PostbossKeepsakeControl({
   interaction,
   value,
@@ -227,7 +285,7 @@ function KeepsakeRackTimelineContent({
       <PostbossKeepsakeControl interaction={interaction} value={selection.value} />
       {equipResult === undefined ? null : equipResult.owner.resultKind === 'jeweledPom' ? (
         <JeweledPomResultControl interaction={equipResult as JeweledPomInteraction} />
-      ) : (
+      ) : equipResult.owner.resultKind === 'experimentalHammer' ? (
         <ExperimentalHammerResultControl
           interaction={
             equipResult as Extract<
@@ -235,6 +293,10 @@ function KeepsakeRackTimelineContent({
               { readonly owner: { readonly resultKind: 'experimentalHammer' } }
             >
           }
+        />
+      ) : (
+        <TranscendentEmbryoResultControl
+          interaction={equipResult as TranscendentEmbryoInteraction}
         />
       )}
     </div>
@@ -494,13 +556,16 @@ export function EchoKeepsakeReplayControl({
   };
 }) {
   if (biome.echoKeepsakeReplay === undefined) return null;
-  return (
+  const interaction = requireWorkspaceInteraction(
+    interactions.keepsakeEquipResults,
+    workspaceInteractionKey(biome.echoKeepsakeReplay.address),
+  );
+  return interaction.owner.resultKind === 'transcendentEmbryo' ? (
+    <TranscendentEmbryoResultControl interaction={interaction as TranscendentEmbryoInteraction} />
+  ) : (
     <ExperimentalHammerResultControl
       interaction={
-        requireWorkspaceInteraction(
-          interactions.keepsakeEquipResults,
-          workspaceInteractionKey(biome.echoKeepsakeReplay.address),
-        ) as Extract<
+        interaction as Extract<
           WorkspaceKeepsakeEquipResultInteraction,
           { readonly owner: { readonly resultKind: 'experimentalHammer' } }
         >

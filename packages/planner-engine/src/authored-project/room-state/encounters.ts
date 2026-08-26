@@ -37,6 +37,9 @@ export function decodeRoomEncounterState(
       ...(state.steadyGrowthTargetByPhase === undefined ? [] : ['steadyGrowthTargetByPhase']),
       ...(state.judgmentArcanaKeysByPhase === undefined ? [] : ['judgmentArcanaKeysByPhase']),
       ...(state.figurineArcanaKeysByPhase === undefined ? [] : ['figurineArcanaKeysByPhase']),
+      ...(state.transcendentEmbryoBlessingByPhase === undefined
+        ? []
+        : ['transcendentEmbryoBlessingByPhase']),
     ],
     path,
   );
@@ -155,6 +158,33 @@ export function decodeRoomEncounterState(
       figurineArcanaKeysByPhase[phaseKey] = Object.freeze(
         catalog.arcanaCards.values.filter((card) => seen.has(card.key)).map((card) => card.key),
       );
+    }
+  }
+  const transcendentEmbryoBlessingByPhase: Record<string, string> = {};
+  if (state.transcendentEmbryoBlessingByPhase !== undefined) {
+    const values = expectRecord(
+      state.transcendentEmbryoBlessingByPhase,
+      `${path}.transcendentEmbryoBlessingByPhase`,
+    );
+    for (const [phaseKey, value] of Object.entries(values)) {
+      if (!bindings.has(phaseKey))
+        failProjectDocument(
+          `${path}.transcendentEmbryoBlessingByPhase.${phaseKey}`,
+          'unknown encounter phase',
+        );
+      const blessingKey = expectNonBlankString(
+        value,
+        `${path}.transcendentEmbryoBlessingByPhase.${phaseKey}`,
+      );
+      if (
+        catalog.chaos.blessings.byKey[blessingKey] === undefined ||
+        catalog.chaos.blessings.byKey[blessingKey]?.fixedRarity !== undefined
+      )
+        failProjectDocument(
+          `${path}.transcendentEmbryoBlessingByPhase.${phaseKey}`,
+          'must be a declared in-run Chaos blessing',
+        );
+      transcendentEmbryoBlessingByPhase[phaseKey] = blessingKey;
     }
   }
   const gorgonResultByPhase = decodeGorgonPhaseResults(
@@ -288,6 +318,11 @@ export function decodeRoomEncounterState(
     ...(Object.keys(figurineArcanaKeysByPhase).length === 0
       ? {}
       : { figurineArcanaKeysByPhase: Object.freeze(figurineArcanaKeysByPhase) }),
+    ...(Object.keys(transcendentEmbryoBlessingByPhase).length === 0
+      ? {}
+      : {
+          transcendentEmbryoBlessingByPhase: Object.freeze(transcendentEmbryoBlessingByPhase),
+        }),
     gorgonResultByPhase: Object.freeze(gorgonResultByPhase),
     ...(Object.keys(traitOffersByPhase).length === 0
       ? {}

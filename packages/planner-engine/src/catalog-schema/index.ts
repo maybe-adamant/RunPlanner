@@ -51,6 +51,7 @@ import type {
   TraitElement,
   TraitGiverDeclaration,
   TraitOfferContextDeclaration,
+  InRunTraitRarity,
   WeaponDeclaration,
 } from './traits';
 
@@ -160,6 +161,7 @@ export interface KeepsakeDeclaration {
             }
           | { readonly kind: 'crystalFigurine'; readonly schedule: 'everyBiome' }
           | { readonly kind: 'concaveStone'; readonly schedule: 'oneShot' }
+          | { readonly kind: 'transcendentEmbryo'; readonly schedule: 'oneShot' }
           | { readonly kind: 'callingCard'; readonly schedule: 'everyBiome' }
           | { readonly kind: 'timePiece'; readonly schedule: 'everyBiome' }
           | { readonly kind: 'modeledNeutral'; readonly schedule: 'noModeledEffect' };
@@ -216,6 +218,12 @@ export interface KeepsakeDeclaration {
         readonly kind: 'concaveStone';
         readonly uses: 1;
         readonly procSupportByRank: KeepsakeRankProfile<25, 50, 75, 100>;
+      }
+    | {
+        readonly kind: 'transcendentEmbryo';
+        readonly source: 'Chaos';
+        readonly interval: 8;
+        readonly blessingRarityByRank: Readonly<Record<KeepsakeRank, InRunTraitRarity>>;
       };
 }
 

@@ -296,6 +296,13 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
       return { kind: 'trait', message: 'Choose the Steady Growth rarity target.' };
     case 'steadyGrowthOutcomeUnavailable':
       return { kind: 'trait', message: 'Choose a trait eligible for a rarity increase.' };
+    case 'transcendentEmbryoOutcomeMissing':
+      return { kind: 'trait', message: 'Choose the Chaos blessing for Transcendent Embryo.' };
+    case 'transcendentEmbryoOutcomeUnavailable':
+      return {
+        kind: 'trait',
+        message: 'Choose a Chaos blessing eligible for Transcendent Embryo.',
+      };
     case 'fountainRarityResultMissing':
       return { kind: 'trait', message: 'Choose the Common boon promoted by Aromatic Phial.' };
     case 'fountainRarityResultUnavailable':
@@ -362,8 +369,14 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
         kind: 'generic',
         message:
           finding.code === 'keepsakeEquipResultMissing'
-            ? 'Choose the Hades trait granted by Jeweled Pom.'
-            : 'Choose a Hades trait eligible when Jeweled Pom is equipped.',
+            ? finding.origin.kind === 'keepsakeEquipResult' &&
+              finding.origin.resultKind === 'transcendentEmbryo'
+              ? 'Choose the Chaos blessing granted by Transcendent Embryo.'
+              : 'Choose the Hades trait granted by Jeweled Pom.'
+            : finding.origin.kind === 'keepsakeEquipResult' &&
+              finding.origin.resultKind === 'transcendentEmbryo'
+              ? 'Choose a Chaos blessing eligible when Transcendent Embryo is equipped.'
+              : 'Choose a Hades trait eligible when Jeweled Pom is equipped.',
       };
     case 'circeResolutionMissing':
     case 'circeResolutionWrongCardinality':

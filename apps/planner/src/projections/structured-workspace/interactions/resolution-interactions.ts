@@ -23,6 +23,8 @@ import type {
   WorkspaceRewardControl,
   WorkspaceSteadyGrowthControl,
   WorkspaceSteadyGrowthInteraction,
+  WorkspaceTranscendentEmbryoControl,
+  WorkspaceTranscendentEmbryoInteraction,
   WorkspaceFountainRarityControl,
   WorkspaceFountainRarityInteraction,
 } from '../contract';
@@ -34,6 +36,7 @@ export function bindResolutionInteractions(input: {
   readonly candidates: CandidateProjectionSession;
   readonly levelResolutionControls: ReadonlyMap<string, WorkspaceLevelResolutionControl>;
   readonly steadyGrowthControls: ReadonlyMap<string, WorkspaceSteadyGrowthControl>;
+  readonly transcendentEmbryoControls: ReadonlyMap<string, WorkspaceTranscendentEmbryoControl>;
   readonly fountainRarityControls: ReadonlyMap<string, WorkspaceFountainRarityControl>;
   readonly derivedShopEntryEdits: ReadonlyMap<
     string,
@@ -67,6 +70,7 @@ export function bindResolutionInteractions(input: {
 }): Readonly<{
   readonly levelResolutions: ReadonlyMap<string, WorkspaceLevelResolutionInteraction>;
   readonly steadyGrowth: ReadonlyMap<string, WorkspaceSteadyGrowthInteraction>;
+  readonly transcendentEmbryo: ReadonlyMap<string, WorkspaceTranscendentEmbryoInteraction>;
   readonly fountainRarity: ReadonlyMap<string, WorkspaceFountainRarityInteraction>;
   readonly judgmentArcana: ReadonlyMap<string, WorkspaceJudgmentArcanaInteraction>;
   readonly figurineArcana: ReadonlyMap<string, WorkspaceFigurineArcanaInteraction>;
@@ -78,6 +82,7 @@ export function bindResolutionInteractions(input: {
     candidates,
     levelResolutionControls: effectiveLevelResolutionControls,
     steadyGrowthControls: effectiveSteadyGrowthControls,
+    transcendentEmbryoControls,
     fountainRarityControls,
     derivedShopEntryEdits,
     judgmentArcanaControls,
@@ -156,6 +161,63 @@ export function bindResolutionInteractions(input: {
             },
           }),
         traitLabel: (traitKey: string) => catalog.traits.byKey[traitKey]?.label ?? traitKey,
+      }),
+    );
+  }
+  const transcendentEmbryo = new Map<string, WorkspaceTranscendentEmbryoInteraction>();
+  for (const [key, control] of transcendentEmbryoControls) {
+    transcendentEmbryo.set(
+      key,
+      Object.freeze({
+        key,
+        owner: control.address,
+        intentFor: (blessingKey: string | null) =>
+          Object.freeze({
+            command: Object.freeze({
+              kind: 'ReplaceTranscendentEmbryoTransformation' as const,
+              outcome: control.address,
+              blessingKey,
+            }),
+          }),
+        forBlessing: (blessingKey: string | null | undefined = control.blessingKey) =>
+          Object.freeze({
+            load: () => {
+              const evaluated = candidates.transcendentEmbryoOutcome(
+                control.address,
+                blessingKey,
+              );
+              if (evaluated.kind !== 'transcendentEmbryoOutcome') return undefined;
+              return Object.freeze({
+                emptyNoOp: evaluated.result.emptyNoOp,
+                picker: projectDirectTraitOutcomePicker(
+                  [
+                    ...new Set([
+                      ...evaluated.result.eligibleBlessingKeys,
+                      ...(blessingKey === null || blessingKey === undefined ? [] : [blessingKey]),
+                    ]),
+                  ].map((candidate) =>
+                    Object.freeze({
+                      value: candidate,
+                      support: evaluated.result.eligibleBlessingKeys.includes(candidate)
+                        ? ('possible' as const)
+                        : ('impossible' as const),
+                      branchSupport: evaluated.result.branchSupport,
+                      selected: candidate === (blessingKey ?? undefined),
+                      ...(evaluated.result.eligibleBlessingKeys.includes(candidate)
+                        ? {}
+                        : { reason: 'unavailable' as const }),
+                    }),
+                  ),
+                  (candidate) =>
+                    catalog.chaos.blessings.byKey[candidate]?.label ?? candidate,
+                  (candidate) => candidate,
+                ),
+                selectedPossible: evaluated.result.selectedPossible,
+              });
+            },
+          }),
+        blessingLabel: (blessingKey: string) =>
+          catalog.chaos.blessings.byKey[blessingKey]?.label ?? blessingKey,
       }),
     );
   }
@@ -376,6 +438,47 @@ export function bindResolutionInteractions(input: {
       );
       continue;
     }
+    if (effect.kind === 'transcendentEmbryo') {
+      keepsakeEquipResults.set(
+        key,
+        Object.freeze({
+          choices: Object.freeze(
+            catalog.chaos.blessings.values
+              .filter((blessing) => blessing.fixedRarity === undefined)
+              .map((blessing) => Object.freeze({ label: blessing.label, value: blessing.key })),
+          ),
+          key,
+          owner: control.address as KeepsakeEquipResultAddress & {
+            readonly resultKind: 'transcendentEmbryo';
+          },
+          ...(control.value === undefined
+            ? {}
+            : {
+                value:
+                  control.value as import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults['transcendentEmbryo'],
+              }),
+          load: (
+            value = control.value as import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults['transcendentEmbryo'],
+          ) =>
+            candidates.keepsakeEquipResult(control.address, value),
+          intentFor: (
+            value: NonNullable<
+              import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults['transcendentEmbryo']
+            >,
+          ) =>
+            Object.freeze({
+              command: Object.freeze({
+                kind: 'ReplaceTranscendentEmbryoEquipResult' as const,
+                result: control.address as KeepsakeEquipResultAddress & {
+                  readonly resultKind: 'transcendentEmbryo';
+                },
+                value,
+              }),
+            }),
+        }),
+      );
+      continue;
+    }
     if (effect.kind !== 'jeweledPom') continue;
     keepsakeEquipResults.set(
       key,
@@ -421,6 +524,7 @@ export function bindResolutionInteractions(input: {
   return Object.freeze({
     levelResolutions,
     steadyGrowth,
+    transcendentEmbryo,
     fountainRarity,
     judgmentArcana,
     figurineArcana,

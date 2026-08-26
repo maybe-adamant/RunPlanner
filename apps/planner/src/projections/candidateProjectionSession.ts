@@ -65,6 +65,7 @@ export function candidateOptionEvaluation(
     evaluation.kind === 'naturalSelectionResult' ||
     evaluation.kind === 'ransomAssessment' ||
     evaluation.kind === 'steadyGrowthOutcome' ||
+    evaluation.kind === 'transcendentEmbryoOutcome' ||
     evaluation.kind === 'echoLastRunBoonDomain' ||
     evaluation.kind === 'allTogetherSetDomain'
   ) {

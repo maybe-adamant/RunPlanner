@@ -12,6 +12,7 @@ import {
   semanticAddressKey,
   type SemanticAddress,
   type SteadyGrowthOutcomeAddress,
+  type TranscendentEmbryoOutcomeAddress,
   type TargetAddress,
 } from '../../../authored-project/addresses';
 import type { ResourcePlacements, RouteLoadout } from '../../../authored-project/model';
@@ -33,6 +34,7 @@ import {
   createAcquisitionConversionCandidateArtifacts,
   createDerivedAcquisitionEntryCandidateArtifacts,
   createSteadyGrowthCandidateArtifacts,
+  createTranscendentEmbryoCandidateArtifacts,
   createFountainRarityCandidateArtifacts,
   createPurgingPoolCandidateArtifacts,
   createHermesShrineCandidateArtifacts,
@@ -50,6 +52,7 @@ import {
   createTraitHistoryState,
   foldTraitHistoryEvents,
 } from '../../traits';
+import type { ReachedTranscendentEmbryoThreshold } from '../../keepsakes';
 import {
   createRunState,
   createRunStateDerivationCache,
@@ -121,6 +124,8 @@ import {
   applyEchoTimePieceReplay,
   applyEchoFigurineReplay,
   applyEchoConcaveStoneReplay,
+  applyTranscendentEmbryoEquipResult,
+  assessTranscendentEmbryoBlessing,
 } from '../../keepsakes';
 import { createArcanaFearState } from '../../arcana-fear';
 import { createKeepsakeEquipResultAddress } from '../../../authored-project/addresses';
@@ -460,6 +465,11 @@ export function evaluateBiomeRewardChronology(
   >();
   const steadyGrowthCandidateContexts = new Map<string, ReachedSteadyGrowthThreshold[]>();
   const steadyGrowthOutcomeAddresses = new Map<string, SteadyGrowthOutcomeAddress>();
+  const transcendentEmbryoCandidateContexts = new Map<
+    string,
+    ReachedTranscendentEmbryoThreshold[]
+  >();
+  const transcendentEmbryoOutcomeAddresses = new Map<string, TranscendentEmbryoOutcomeAddress>();
   const fountainRarityCandidateContexts = new Map<
     string,
     import('../../candidate-artifacts').FountainRarityCandidateCapability
@@ -510,6 +520,10 @@ export function evaluateBiomeRewardChronology(
   const echoHammerResult = createKeepsakeEquipResultAddress(
     echoKeepsakeReplay,
     'experimentalHammer',
+  );
+  const echoEmbryoResult = createKeepsakeEquipResultAddress(
+    echoKeepsakeReplay,
+    'transcendentEmbryo',
   );
   const biomeStartSequence = history.events[0]?.sequence ?? 0;
   const giftStates = branches.map((branch) => {
@@ -601,6 +615,81 @@ export function evaluateBiomeRewardChronology(
           : recordReplay(Object.freeze({ ...branch, keepsakes }));
       });
       branches = Object.freeze(replayedBranches);
+    } else if (
+      replayEffect.kind === 'transcendentEmbryo' &&
+      giftState.replayCount === 0 &&
+      branches.every((branch) => branch.keepsakes.transcendentEmbryo === undefined)
+    ) {
+      const effect = catalog.keepsakes.byKey[giftState.capturedKeepsakeKey]?.effect;
+      if (effect?.kind !== 'transcendentEmbryo')
+        throw new BiomeRewardSimulationContractError(
+          'Echo Transcendent Embryo replay has no rank data',
+        );
+      keepsakeEquipResultContexts.set(
+        semanticAddressKey(echoEmbryoResult),
+        Object.freeze({
+          frontiers: Object.freeze(
+            branches.map((branch) =>
+              Object.freeze({
+                before: branch.traitHistory ?? createTraitHistoryState(),
+                fatedStatus: branch.keepsakes.fatedStatus,
+                arcanaFear: branch.arcanaFear,
+                loadout: routeLoadout,
+                transcendentEmbryoRarity: effect.blessingRarityByRank.Common,
+              }),
+            ),
+          ),
+        }),
+      );
+      const authored = snapshot.echoKeepsakeReplayResults?.transcendentEmbryo;
+      if (authored === undefined) {
+        addRewardFinding(
+          findings,
+          rewardFinding('keepsakeEquipResultMissing', echoEmbryoResult, {
+            keepsakeKey: giftState.capturedKeepsakeKey,
+          }),
+          ownerRegion(echoKeepsakeReplay),
+          Object.freeze({ kind: 'history', sequence: biomeStartSequence, boundary: 'at' }),
+        );
+      } else if (
+        branches.some(
+          (branch) =>
+            !assessTranscendentEmbryoBlessing(
+              catalog,
+              authored,
+              branch.traitHistory ?? createTraitHistoryState(),
+              effect.blessingRarityByRank.Common,
+              routeLoadout,
+            ).legal,
+        )
+      ) {
+        addRewardFinding(
+          findings,
+          rewardFinding('keepsakeEquipResultUnavailable', echoEmbryoResult, {
+            keepsakeKey: giftState.capturedKeepsakeKey,
+          }),
+          ownerRegion(echoKeepsakeReplay),
+          Object.freeze({ kind: 'history', sequence: biomeStartSequence, boundary: 'at' }),
+        );
+      } else {
+        branches = Object.freeze(
+          branches.map((branch) =>
+            recordReplay(
+              applyTranscendentEmbryoEquipResult(
+                catalog,
+                branch,
+                giftState.capturedKeepsakeKey,
+                authored,
+                echoEmbryoResult,
+                biomeStartSequence,
+                'echo',
+                'Common',
+                routeLoadout,
+              ),
+            ),
+          ),
+        );
+      }
     } else if (
       replayEffect.kind === 'experimentalHammer' &&
       giftState.replayCount === 0 &&
@@ -1299,6 +1388,13 @@ export function evaluateBiomeRewardChronology(
           current.push(threshold);
           steadyGrowthCandidateContexts.set(key, current);
         }
+        for (const { address, threshold } of transition.transcendentEmbryoThresholds) {
+          const key = semanticAddressKey(address);
+          transcendentEmbryoOutcomeAddresses.set(key, address);
+          const current = transcendentEmbryoCandidateContexts.get(key) ?? [];
+          current.push(threshold);
+          transcendentEmbryoCandidateContexts.set(key, current);
+        }
         recordTraitChildSettlements(transition.traitChildSettlements, event.origin);
         for (const finding of transition.findings)
           addRewardFinding(findings, finding.finding, finding.region, finding.chronology);
@@ -1535,6 +1631,24 @@ export function evaluateBiomeRewardChronology(
         ];
       }),
     ),
+    transcendentEmbryoOutcomes: Object.freeze(
+      [...transcendentEmbryoCandidateContexts.entries()].flatMap(([key, thresholds]) => {
+        const address = transcendentEmbryoOutcomeAddresses.get(key);
+        const first = thresholds[0];
+        if (address === undefined || first === undefined) return [];
+        return [
+          Object.freeze({
+            address,
+            sourceBlessingKey: first.source.markedBlessingKey,
+            phaseKey: address.phaseKey,
+            transformationRarities: Object.freeze(
+              thresholds.map((threshold) => threshold.source.rarity),
+            ),
+            progressBefore: Object.freeze(thresholds.map((threshold) => threshold.source.progress)),
+          }),
+        ];
+      }),
+    ),
     derivedAcquisitionEntries: Object.freeze(
       [...derivedAcquisitionEntryContexts.values()].flatMap((frontiers) => {
         const first = frontiers[0];
@@ -1571,6 +1685,10 @@ export function evaluateBiomeRewardChronology(
     steadyGrowthArtifacts: createSteadyGrowthCandidateArtifacts(
       catalog,
       steadyGrowthCandidateContexts,
+    ),
+    transcendentEmbryoArtifacts: createTranscendentEmbryoCandidateArtifacts(
+      catalog,
+      transcendentEmbryoCandidateContexts,
     ),
     fountainRarityArtifacts: createFountainRarityCandidateArtifacts(
       fountainRarityCandidateContexts,

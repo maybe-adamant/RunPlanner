@@ -97,6 +97,7 @@ export {
   type EvaluatedStartRoomCandidate,
   type EvaluatedKeepsakeSelectionCandidate,
   type EvaluatedKeepsakeEquipResultCandidate,
+  type EvaluatedTranscendentEmbryoOutcomeCandidate,
   type EvaluatedAcquisitionConversionCandidate,
   type EvaluatedHubTerminalTakeoverCandidate,
   type EvaluatedTakeoverPrebossBatchCandidate,
@@ -128,6 +129,7 @@ export {
   type KeepsakeSelectionCandidateOption,
   type KeepsakeSelectionCandidateQuery,
   type KeepsakeEquipResultCandidateQuery,
+  type TranscendentEmbryoOutcomeCandidateQuery,
   type KeepsakeSelectionUnavailableReason,
   type StartRoomCandidateSupport,
   type HubTerminalTakeoverCandidateQuery,
@@ -203,6 +205,7 @@ export {
 } from './room-actions';
 export {
   appendSteadyGrowthTimelineEffects,
+  appendTranscendentEmbryoTimelineEffects,
   assembleRoomLifecycleTimeline,
   scopeRoomLifecycleTimeline,
   type RoomLifecycleBoundary,
