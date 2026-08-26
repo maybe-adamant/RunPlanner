@@ -1,4 +1,4 @@
-import type { Catalog, KeepsakeRank, TraitRarity } from '../catalog-schema';
+import type { Catalog, InRunTraitRarity, KeepsakeRank, TraitRarity } from '../catalog-schema';
 import type { AuthoredKeepsakeEquipResults } from '../authored-project/model';
 import type { ArcanaFearState } from './arcana-fear';
 import { hasEffectiveInRunUpgrade, nextRarity, type TraitHistoryState } from './trait-history';
@@ -44,6 +44,12 @@ export interface KeepsakeState {
     | { readonly status: 'consumed' | 'expired' };
   /** Aromatic Phial's one live source use; absent after ordinary replacement. */
   readonly phial?: { readonly status: 'pending' | 'consumed' };
+  /** Crystal Figurine source, retaining whether it came from the ordinary slot or Echo. */
+  readonly figurine?: {
+    readonly origin: 'ordinary' | 'echo';
+    readonly status: 'pending' | 'consumed';
+    readonly rarity: InRunTraitRarity;
+  };
 }
 
 export interface FigLeafStateValue {
@@ -83,6 +89,8 @@ export function keepsakeRankForEquip(
       return 'Heroic';
     case 'fountainRarity':
       return 'Epic';
+    case 'crystalFigurine':
+      return 'Heroic';
     default: {
       const exhaustive: never = effect;
       return exhaustive;
@@ -119,6 +127,16 @@ export function advanceCurrentKeepsake(
         : state;
     case 'fountainRarity':
       return state;
+    case 'crystalFigurine':
+      return state.figurine?.status === 'pending'
+        ? Object.freeze({
+            ...state,
+            figurine: Object.freeze({
+              ...state.figurine,
+              rarity: figurineRarityForRank(catalog, effect, advancedRank),
+            }),
+          })
+        : state;
     case 'figLeaf':
       return state;
     case 'experimentalHammer':
@@ -174,6 +192,19 @@ function gorgonRarityForRank(
 ): TraitRarity {
   const rarity = catalog.traitRarityOrder[effect.rarityLevelByRank[rank] - 1];
   if (rarity === undefined) throw new Error(`Gorgon rank ${rank} has no declared rarity`);
+  return rarity;
+}
+
+export function figurineRarityForRank(
+  catalog: Catalog,
+  effect: Extract<
+    NonNullable<import('../catalog-schema').KeepsakeDeclaration['effect']>,
+    { readonly kind: 'crystalFigurine' }
+  >,
+  rank: KeepsakeRank,
+): InRunTraitRarity {
+  const rarity = catalog.traitRarityOrder[effect.rarityLevelByRank[rank] - 1];
+  if (rarity === undefined) throw new Error(`Figurine rank ${rank} has no declared rarity`);
   return rarity;
 }
 export interface GorgonEligibilityInput {
@@ -569,6 +600,15 @@ export function createKeepsakeState(
     ...(effect?.kind === 'fountainRarity'
       ? { phial: Object.freeze({ status: 'pending' as const }) }
       : {}),
+    ...(effect?.kind === 'crystalFigurine' && keepsake !== undefined
+      ? {
+          figurine: Object.freeze({
+            origin: 'ordinary' as const,
+            status: 'pending' as const,
+            rarity: figurineRarityForRank(catalog, effect, keepsake.rank),
+          }),
+        }
+      : {}),
   });
 }
 export function applyKeepsakeDisposition(
@@ -620,10 +660,11 @@ export function applyKeepsakeDisposition(
     history.map((entry) => entry.key),
     activeArcanaKeys,
   );
-  const { phial: _phial, ...stateWithoutPhial } = state;
+  const { phial: _phial, figurine: _figurine, ...stateWithoutSources } = state;
   void _phial;
+  void _figurine;
   return Object.freeze({
-    ...stateWithoutPhial,
+    ...stateWithoutSources,
     currentKey: disposition.keepsakeKey,
     history,
     removedKeys: Object.freeze([...state.removedKeys, state.currentKey]),
@@ -664,6 +705,15 @@ export function applyKeepsakeDisposition(
     ...(selected.effect?.kind === 'fountainRarity'
       ? { phial: Object.freeze({ status: 'pending' as const }) }
       : {}),
+    ...(selected.effect?.kind === 'crystalFigurine'
+      ? {
+          figurine: Object.freeze({
+            origin: 'ordinary' as const,
+            status: 'pending' as const,
+            rarity: figurineRarityForRank(catalog, selected.effect, rank),
+          }),
+        }
+      : {}),
     ...(fatedStatus === 'Unfated' && state.callingCard !== undefined
       ? { callingCard: Object.freeze({ remainingCharges: 0 }) }
       : {}),
@@ -674,10 +724,41 @@ export function applyKeepsakeDisposition(
 }
 
 export type PhialLifecycleStatus = 'pending' | 'consumed';
+export type FigurineLifecycleStatus = 'pending' | 'consumed';
 
 export function consumePhial(state: KeepsakeState): KeepsakeState {
   if (state.phial?.status !== 'pending') return state;
   return Object.freeze({ ...state, phial: Object.freeze({ status: 'consumed' as const }) });
+}
+
+export function consumeFigurine(state: KeepsakeState): KeepsakeState {
+  const figurine = state.figurine;
+  if (figurine?.status !== 'pending') return state;
+  if (figurine.origin === 'echo') {
+    const { figurine: _figurine, ...withoutFigurine } = state;
+    return Object.freeze(withoutFigurine);
+  }
+  return Object.freeze({ ...state, figurine: Object.freeze({ ...figurine, status: 'consumed' }) });
+}
+
+/** Creates one Common unslotted source when no Figurine source is already present. */
+export function applyEchoFigurineReplay(
+  catalog: Catalog,
+  state: KeepsakeState,
+  capturedKeepsakeKey: string,
+): KeepsakeState {
+  if (capturedKeepsakeKey !== 'BossMetaUpgradeKeepsake' || state.figurine !== undefined)
+    return state;
+  const effect = catalog.keepsakes.byKey[capturedKeepsakeKey]?.effect;
+  if (effect?.kind !== 'crystalFigurine') return state;
+  return Object.freeze({
+    ...state,
+    figurine: Object.freeze({
+      origin: 'echo' as const,
+      status: 'pending' as const,
+      rarity: figurineRarityForRank(catalog, effect, 'Common'),
+    }),
+  });
 }
 
 export function expirePendingGorgon(state: KeepsakeState): KeepsakeState {

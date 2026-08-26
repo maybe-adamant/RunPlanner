@@ -46,6 +46,7 @@ export interface RawKeepsakeDeclaration {
               readonly kind: 'experimentalHammer';
               readonly schedule: 'oneShotAfterUnequipped';
             }
+          | { readonly kind: 'crystalFigurine'; readonly schedule: 'everyBiome' }
           | { readonly kind: 'callingCard'; readonly schedule: 'everyBiome' }
           | { readonly kind: 'timePiece'; readonly schedule: 'everyBiome' }
           | { readonly kind: 'modeledNeutral'; readonly schedule: 'noModeledEffect' };
@@ -86,6 +87,12 @@ export interface RawKeepsakeDeclaration {
         readonly uses: 1;
         readonly targetRarityLevelByRank: Readonly<{ Common: 2; Rare: 3; Epic: 4 }>;
         readonly sourceMaxRarityLevel: 1;
+      }
+    | {
+        readonly kind: 'crystalFigurine';
+        readonly uses: 1;
+        readonly requestedCards: 2;
+        readonly rarityLevelByRank: KeepsakeRankProfile<1, 2, 3, 4>;
       };
 }
 
@@ -115,10 +122,17 @@ export interface RawArcanaCardDeclaration {
     | { readonly kind: 'automatic'; readonly rule: ArcanaActivationRule };
   readonly permanentRank: 3;
   readonly fatedIncompatible?: boolean;
-  readonly postBossActivationCounts?: Readonly<{ readonly Epic: number; readonly Heroic: number }>;
+  readonly postBossActivationCounts?: Readonly<{
+    readonly Common: number;
+    readonly Rare: number;
+    readonly Epic: number;
+    readonly Heroic: number;
+  }>;
   readonly artificerCapacityByRarity?: Readonly<{
-    readonly Epic: 3;
-    readonly Heroic: 4;
+    readonly Common: number;
+    readonly Rare: number;
+    readonly Epic: number;
+    readonly Heroic: number;
   }>;
   readonly boonRarityContributions?: import('@run-planner/engine/catalog-schema').ArcanaCardDeclaration['boonRarityContributions'];
 }

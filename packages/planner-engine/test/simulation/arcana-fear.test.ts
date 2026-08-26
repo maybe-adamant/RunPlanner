@@ -1,6 +1,7 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   activateTemporaryArcana,
+  artificerStatus,
   createArcanaFearState,
   promoteArcana,
   suppressFearVow,
@@ -21,6 +22,80 @@ import { mergeEquivalentRewardBranches } from '../../src/simulation/rewards/bran
 import { forfeitStatus } from '../../src/simulation/rewards/run-state';
 
 describe('progressive Arcana and Fear state', () => {
+  it('uses source rarity for lower-rank temporary Arcana and orders distinct same-seam owners', () => {
+    const defaults = createDefaultRouteLoadout(catalog);
+    const seeded = createArcanaFearState(catalog, defaults);
+    const state = Object.freeze({
+      ...seeded,
+      arcana: Object.freeze({
+        ...seeded.arcana,
+        active: Object.freeze(
+          seeded.arcana.active.filter(
+            (card) => !['CardDraw', 'MetaToRunUpgrade', 'ChanneledCast'].includes(card.key),
+          ),
+        ),
+      }),
+    });
+    const judgmentOwner = createBiomeAddress('Underworld', 'F');
+    const figurineOwner = createBiomeAddress('Underworld', 'G');
+    const common = activateTemporaryArcana(
+      catalog,
+      state,
+      ['CardDraw', 'MetaToRunUpgrade'],
+      {
+        owner: judgmentOwner,
+        sequence: 7,
+      },
+      'Common',
+    );
+    expect(common.legal).toBe(true);
+    if (!common.legal) throw new Error('Common temporary activation should be legal');
+    expect(judgmentRequiredCount(catalog, common.state)).toBe(3);
+    expect(artificerStatus(catalog, common.state)).toMatchObject({
+      rarity: 'Common',
+      capacity: 1,
+    });
+    const rare = activateTemporaryArcana(
+      catalog,
+      common.state,
+      ['ChanneledCast'],
+      {
+        owner: figurineOwner,
+        sequence: 7,
+      },
+      'Rare',
+    );
+    expect(rare.legal).toBe(true);
+    if (!rare.legal) throw new Error('Distinct same-seam activation should be legal');
+    expect(rare.state.arcana.active.find((card) => card.key === 'ChanneledCast')).toMatchObject({
+      rarity: 'Rare',
+    });
+    expect(
+      activateTemporaryArcana(
+        catalog,
+        rare.state,
+        ['LowManaDamageBonus'],
+        {
+          owner: figurineOwner,
+          sequence: 7,
+        },
+        'Rare',
+      ),
+    ).toMatchObject({ legal: false, reason: 'staleChronology' });
+    expect(
+      activateTemporaryArcana(
+        catalog,
+        rare.state,
+        ['LowManaDamageBonus'],
+        {
+          owner: judgmentOwner,
+          sequence: 7,
+        },
+        'Common',
+      ),
+    ).toMatchObject({ legal: false, reason: 'staleChronology' });
+  });
+
   it('keeps Circe and Judgment temporary activation and promotion outside starting Grasp', () => {
     const defaults = createDefaultRouteLoadout(catalog);
     const state = createArcanaFearState(catalog, {

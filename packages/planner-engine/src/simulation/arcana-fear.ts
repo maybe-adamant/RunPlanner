@@ -1,4 +1,4 @@
-import type { Catalog, TraitRarity } from '../catalog-schema';
+import type { Catalog, InRunTraitRarity } from '../catalog-schema';
 import { deriveRouteLoadout } from '../authored-project/loadout';
 import type { RouteLoadout } from '../authored-project/model';
 import type { SemanticAddress } from '../authored-project/addresses';
@@ -7,7 +7,7 @@ export type ArcanaActivationOrigin = 'manual' | 'automatic' | 'temporary';
 export interface ActiveArcanaState {
   readonly key: string;
   readonly origin: ArcanaActivationOrigin;
-  readonly rarity: Extract<TraitRarity, 'Epic' | 'Heroic'>;
+  readonly rarity: InRunTraitRarity;
 }
 export interface ArcanaState {
   readonly active: readonly ActiveArcanaState[];
@@ -49,8 +49,8 @@ export interface ArcanaFearState {
 }
 
 export interface ArtificerStatus {
-  readonly rarity: Extract<TraitRarity, 'Epic' | 'Heroic'>;
-  readonly capacity: 3 | 4;
+  readonly rarity: InRunTraitRarity;
+  readonly capacity: 1 | 2 | 3 | 4;
   readonly spent: number;
   readonly remaining: number;
 }
@@ -60,15 +60,14 @@ export function artificerStatus(
   state: ArcanaFearState,
 ): ArtificerStatus | undefined {
   const active = state.arcana.active.find((card) => card.key === 'MetaToRunUpgrade');
+  if (active === undefined) return undefined;
   const capacity =
-    active === undefined
-      ? undefined
-      : catalog.arcanaCards.byKey[active.key]?.artificerCapacityByRarity?.[active.rarity];
-  if (active === undefined || capacity === undefined) return undefined;
+    catalog.arcanaCards.byKey[active.key]?.artificerCapacityByRarity?.[active.rarity];
+  if (capacity === undefined) return undefined;
   const spent = state.arcana.artificerUses.length;
   return Object.freeze({
     rarity: active.rarity,
-    capacity,
+    capacity: capacity as 1 | 2 | 3 | 4,
     spent,
     remaining: Math.max(0, capacity - spent),
   });
@@ -229,7 +228,16 @@ export type FearTransitionAssessment =
 
 function canAppendEvidence(state: ArcanaFearState, evidence: ArcanaFearEvidence): boolean {
   const previous = state.events.at(-1);
-  return previous === undefined || evidence.sequence > previous.sequence;
+  return (
+    previous === undefined ||
+    evidence.sequence > previous.sequence ||
+    (evidence.sequence === previous.sequence &&
+      !state.events.some(
+        (event) =>
+          event.sequence === evidence.sequence &&
+          JSON.stringify(event.owner) === JSON.stringify(evidence.owner),
+      ))
+  );
 }
 
 /** Seeds route-local state exactly once. Temporary activation never re-runs automatic rules. */
@@ -316,6 +324,7 @@ export function activateTemporaryArcana(
   state: ArcanaFearState,
   arcanaKeys: readonly string[],
   evidence: ArcanaFearEvidence,
+  rarity: InRunTraitRarity = 'Epic',
 ): ArcanaTransitionAssessment {
   if (!canAppendEvidence(state, evidence)) return rejected(state, 'staleChronology');
   if (arcanaKeys.length === 0) return rejected(state, 'emptyTargetSet');
@@ -327,9 +336,7 @@ export function activateTemporaryArcana(
   const canonicalKeys = canonicalArcanaSet(catalog, arcanaKeys);
   const active = [
     ...state.arcana.active,
-    ...canonicalKeys.map((key) =>
-      Object.freeze({ key, origin: 'temporary' as const, rarity: 'Epic' as const }),
-    ),
+    ...canonicalKeys.map((key) => Object.freeze({ key, origin: 'temporary' as const, rarity })),
   ].sort(
     (left, right) =>
       catalog.arcanaCards.values.findIndex((card) => card.key === left.key) -

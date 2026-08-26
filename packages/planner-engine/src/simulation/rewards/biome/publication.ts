@@ -4,6 +4,7 @@ import type {
   DerivedAcquisitionEntryCandidateArtifacts,
   HermesShrineCandidateArtifacts,
   JudgmentArcanaCandidateArtifacts,
+  FigurineArcanaCandidateArtifacts,
   KeepsakeEquipResultCandidateArtifacts,
   KeepsakeSelectionCandidateArtifacts,
   PurgingPoolCandidateArtifacts,
@@ -37,6 +38,7 @@ export interface BiomeRewardEvaluationAssembly {
   readonly traitOfferArtifacts: TraitOfferCandidateArtifacts;
   readonly levelResolutionArtifacts: LevelResolutionCandidateArtifacts;
   readonly judgmentArcanaArtifacts: JudgmentArcanaCandidateArtifacts;
+  readonly figurineArcanaArtifacts: FigurineArcanaCandidateArtifacts;
   readonly keepsakeSelectionArtifacts: KeepsakeSelectionCandidateArtifacts;
   readonly keepsakeEquipResultArtifacts: KeepsakeEquipResultCandidateArtifacts;
   readonly acquisitionConversionArtifacts: AcquisitionConversionCandidateArtifacts;

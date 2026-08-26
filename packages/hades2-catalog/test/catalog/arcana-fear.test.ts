@@ -64,6 +64,8 @@ describe('Arcana and Fear catalog', () => {
     ).toBe(25);
     expect(catalog.arcanaCards.values.every((card) => card.permanentRank === 3)).toBe(true);
     expect(catalog.arcanaCards.byKey.CardDraw?.postBossActivationCounts).toEqual({
+      Common: 3,
+      Rare: 4,
       Epic: 5,
       Heroic: 6,
     });
@@ -186,13 +188,13 @@ describe('Arcana and Fear catalog', () => {
           ) as unknown as typeof card;
         }),
       }),
-    ).toThrow(/Judgment must declare only Epic and Heroic counts/);
+    ).toThrow(/Judgment must declare Common, Rare, Epic, and Heroic counts/);
     expect(() =>
       createCatalog({
         ...declarations,
         arcanaCards: declarations.arcanaCards.map((card) =>
           card.key === 'CastCount'
-            ? { ...card, postBossActivationCounts: { Epic: 5, Heroic: 6 } }
+            ? { ...card, postBossActivationCounts: { Common: 3, Rare: 4, Epic: 5, Heroic: 6 } }
             : card,
         ),
       }),
@@ -202,7 +204,10 @@ describe('Arcana and Fear catalog', () => {
         ...declarations,
         arcanaCards: declarations.arcanaCards.map((card) =>
           card.key === 'CardDraw'
-            ? { ...card, postBossActivationCounts: { Epic: 0, Heroic: 6 } }
+            ? {
+                ...card,
+                postBossActivationCounts: { Common: 0, Rare: 4, Epic: 5, Heroic: 6 },
+              }
             : card,
         ),
       }),
@@ -285,7 +290,10 @@ describe('Arcana and Fear catalog', () => {
         ...declarations,
         arcanaCards: declarations.arcanaCards.map((card) =>
           card.key === 'CardDraw'
-            ? { ...card, postBossActivationCounts: { Epic: 6, Heroic: 5 } }
+            ? {
+                ...card,
+                postBossActivationCounts: { Common: 3, Rare: 4, Epic: 6, Heroic: 5 },
+              }
             : card,
         ),
       }),

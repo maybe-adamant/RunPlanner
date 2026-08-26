@@ -19,6 +19,7 @@ import { applyAcquisitionSiteCommand, materializeDerivedShopEntry } from './acqu
 import { applyAcquisitionDispositionCommand } from './acquisition-conversion';
 import { applySeaStarResultCommand } from './sea-star';
 import { applyJudgmentArcanaCommand } from './judgment-arcana';
+import { applyFigurineArcanaCommand } from './figurine-arcana';
 import { applySteadyGrowthCommand } from './steady-growth';
 import { applyKeepsakeCommand } from './keepsake';
 import { applyResourcePlacementCommand } from './resources';
@@ -288,6 +289,13 @@ function applyUnchecked(
       );
     case 'ReplaceJudgmentArcana':
       return applyJudgmentArcanaCommand(
+        document,
+        catalog,
+        locateBiome(document, catalog, command),
+        command,
+      );
+    case 'ReplaceFigurineArcana':
+      return applyFigurineArcanaCommand(
         document,
         catalog,
         locateBiome(document, catalog, command),

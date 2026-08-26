@@ -34,6 +34,7 @@ export type {
   TraitOrdinaryBoonSlot,
   TraitProviderKind,
   TraitRarity,
+  InRunTraitRarity,
   TraitRequirementExpression,
   ScalableGodTraitRarityFloorEffect,
   ProperUpbringingEffect,
@@ -88,12 +89,19 @@ export interface ArcanaCardDeclaration {
   readonly permanentRank: 3;
   /** Source-declared Fated incompatibility, consumed by Arcana candidate authority. */
   readonly fatedIncompatible: boolean;
-  /** Judgment alone declares its rank-scaled post-Boss activation counts. */
-  readonly postBossActivationCounts?: Readonly<{ readonly Epic: number; readonly Heroic: number }>;
+  /** Judgment's rank-scaled post-Boss activation counts. */
+  readonly postBossActivationCounts?: Readonly<{
+    readonly Common: number;
+    readonly Rare: number;
+    readonly Epic: number;
+    readonly Heroic: number;
+  }>;
   /** The Artificer's exact run-local capacity; absent from every other card. */
   readonly artificerCapacityByRarity?: Readonly<{
-    readonly Epic: 3;
-    readonly Heroic: 4;
+    readonly Common: number;
+    readonly Rare: number;
+    readonly Epic: number;
+    readonly Heroic: number;
   }>;
   readonly boonRarityContributions?: Readonly<
     Record<'Common' | 'Rare' | 'Epic' | 'Heroic', import('./traits').BoonRarityContribution>
@@ -150,6 +158,7 @@ export interface KeepsakeDeclaration {
               readonly kind: 'experimentalHammer';
               readonly schedule: 'oneShotAfterUnequipped';
             }
+          | { readonly kind: 'crystalFigurine'; readonly schedule: 'everyBiome' }
           | { readonly kind: 'callingCard'; readonly schedule: 'everyBiome' }
           | { readonly kind: 'timePiece'; readonly schedule: 'everyBiome' }
           | { readonly kind: 'modeledNeutral'; readonly schedule: 'noModeledEffect' };
@@ -195,6 +204,12 @@ export interface KeepsakeDeclaration {
           readonly Epic: 4;
         }>;
         readonly sourceMaxRarityLevel: 1;
+      }
+    | {
+        readonly kind: 'crystalFigurine';
+        readonly uses: 1;
+        readonly requestedCards: 2;
+        readonly rarityLevelByRank: KeepsakeRankProfile<1, 2, 3, 4>;
       };
 }
 

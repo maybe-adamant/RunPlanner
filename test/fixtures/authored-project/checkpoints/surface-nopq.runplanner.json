@@ -1,7 +1,7 @@
 {
-  "schemaVersion": 60,
+  "schemaVersion": 61,
   "projectId": "surface-4",
-  "catalogVersion": "0.42.0-fountain-rarity",
+  "catalogVersion": "0.43.0-crystal-figurine",
   "routes": [
     {
       "routeKey": "Underworld",

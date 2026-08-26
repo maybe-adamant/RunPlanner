@@ -242,6 +242,13 @@ export function presentRunState(
       ...(snapshot.keepsakes.phial === undefined
         ? {}
         : { phialStatus: snapshot.keepsakes.phial.status }),
+      ...(snapshot.keepsakes.figurine === undefined
+        ? {}
+        : {
+            figurineStatus: snapshot.keepsakes.figurine.status,
+            figurineOrigin: snapshot.keepsakes.figurine.origin,
+            figurineRarity: snapshot.keepsakes.figurine.rarity,
+          }),
     }),
     arcana: Object.freeze(
       snapshot.arcanaFear.arcana.active.map((card) =>

@@ -119,11 +119,13 @@ import {
   applyEchoFigLeafReplay,
   applyEchoCallingCardReplay,
   applyEchoTimePieceReplay,
+  applyEchoFigurineReplay,
 } from '../../keepsakes';
 import { createArcanaFearState } from '../../arcana-fear';
 import { createKeepsakeEquipResultAddress } from '../../../authored-project/addresses';
 import {
   createJudgmentArcanaCandidateArtifacts,
+  createFigurineArcanaCandidateArtifacts,
   createKeepsakeSelectionCandidateArtifacts,
   createKeepsakeEquipResultCandidateArtifacts,
 } from '../../candidate-artifacts';
@@ -191,6 +193,10 @@ export function evaluateBiomeRewardChronology(
   const judgmentArcanaContexts = new Map<
     string,
     import('../../candidate-artifacts').JudgmentArcanaCandidateCapability
+  >();
+  const figurineArcanaContexts = new Map<
+    string,
+    import('../../candidate-artifacts').FigurineArcanaCandidateCapability
   >();
   const keepsakeSelectionContexts = new Map<
     string,
@@ -566,6 +572,22 @@ export function evaluateBiomeRewardChronology(
           ),
         ),
       );
+    } else if (replayEffect.kind === 'crystalFigurine') {
+      // Echo can recreate the captured keepsake's Common Figurine source at
+      // the start of every biome once the previous source has been consumed.
+      // The keepsake state owns the no-duplicate and consumed-source rules;
+      // this boundary only records the replay event for branches it changes.
+      const replayedBranches = branches.map((branch) => {
+        const keepsakes = applyEchoFigurineReplay(
+          catalog,
+          branch.keepsakes,
+          giftState.capturedKeepsakeKey,
+        );
+        return keepsakes === branch.keepsakes
+          ? branch
+          : recordReplay(Object.freeze({ ...branch, keepsakes }));
+      });
+      branches = Object.freeze(replayedBranches);
     } else if (
       replayEffect.kind === 'experimentalHammer' &&
       giftState.replayCount === 0 &&
@@ -1217,6 +1239,15 @@ export function evaluateBiomeRewardChronology(
               requiredCount: transition.judgmentCandidate.requiredCount,
             }),
           );
+        if (transition.figurineCandidate !== undefined)
+          figurineArcanaContexts.set(
+            transition.figurineCandidate.key,
+            Object.freeze({
+              inactiveArcanaKeys: transition.figurineCandidate.inactiveArcanaKeys,
+              requiredCount: transition.figurineCandidate.requiredCount,
+              rarity: transition.figurineCandidate.rarity,
+            }),
+          );
         if (transition.nemesisCandidate !== undefined)
           nemesisRandomEventCandidates.set(
             transition.nemesisCandidate.key,
@@ -1511,6 +1542,7 @@ export function evaluateBiomeRewardChronology(
       levelCandidateContexts,
     ),
     judgmentArcanaArtifacts: createJudgmentArcanaCandidateArtifacts(judgmentArcanaContexts),
+    figurineArcanaArtifacts: createFigurineArcanaCandidateArtifacts(figurineArcanaContexts),
     keepsakeSelectionArtifacts:
       createKeepsakeSelectionCandidateArtifacts(keepsakeSelectionContexts),
     keepsakeEquipResultArtifacts: createKeepsakeEquipResultCandidateArtifacts(

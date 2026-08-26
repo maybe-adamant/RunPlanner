@@ -136,6 +136,9 @@ export type WorkspaceJudgmentArcanaCapability = {
   readonly inactiveArcanaKeys: readonly string[];
   readonly requiredCount: number;
 };
+export type WorkspaceFigurineArcanaCapability = WorkspaceJudgmentArcanaCapability & {
+  readonly rarity: import('@run-planner/engine/catalog-schema').TraitRarity;
+};
 
 interface CachedOccurrenceAssembly {
   readonly assembly: WorkspaceOccurrenceAssembly;
@@ -427,6 +430,9 @@ export function assembleWorkspaceBiomeSemantics(
   judgmentArcanaCapability: (
     address: import('@run-planner/engine/authored-project').JudgmentArcanaAddress,
   ) => WorkspaceJudgmentArcanaCapability | undefined = () => undefined,
+  figurineArcanaCapability: (
+    address: import('@run-planner/engine/authored-project').FigurineArcanaAddress,
+  ) => WorkspaceFigurineArcanaCapability | undefined = () => undefined,
   fountainRarityAssessment: import('./occurrence-action-row-projection').WorkspaceOccurrenceActionsInput['fountainRarityAssessment'] = undefined,
 ): WorkspaceBiomeSemanticAssembly {
   const { biome, evaluation, layout, plan } = source;
@@ -503,6 +509,7 @@ export function assembleWorkspaceBiomeSemantics(
       ...(fountainRarityAssessment === undefined ? {} : { fountainRarityAssessment }),
       isActiveTraitOffer: source.isActiveTraitOffer,
       judgmentArcanaCapability,
+      figurineArcanaCapability,
       keepsakeEquipResultSupported,
       derivedAcquisitionEntries: source.derivedAcquisitionEntries,
       markerDestinations,

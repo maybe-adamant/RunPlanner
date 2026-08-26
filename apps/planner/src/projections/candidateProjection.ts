@@ -12,6 +12,7 @@ import {
   type RansomAssessmentCandidateEvaluation,
   type EvaluatedSteadyGrowthOutcomeCandidate,
   type EvaluatedFountainRarityOutcomeCandidate,
+  type EvaluatedFigurineArcanaCandidate,
   type ProjectCandidateEvaluation,
   type ProjectEvaluation,
   type ProjectEvaluationAssembly,
@@ -22,6 +23,7 @@ import {
   type BatchRewardStoreAddress,
   type BiomeAddress,
   type JudgmentArcanaAddress,
+  type FigurineArcanaAddress,
   type KeepsakeSelectionAddress,
   type KeepsakeEquipResultAddress,
   type AcquisitionRoleAddress,
@@ -107,7 +109,8 @@ export type CandidateProjectionEvaluation =
   | EncounterCandidateProjectionEvaluation
   | EvaluatedKeepsakeEquipResultCandidate
   | EvaluatedAcquisitionConversionCandidate
-  | EvaluatedFountainRarityOutcomeCandidate;
+  | EvaluatedFountainRarityOutcomeCandidate
+  | EvaluatedFigurineArcanaCandidate;
 
 export interface CandidateOptionProjection<
   T,
@@ -282,6 +285,11 @@ export interface CandidateProjectionSession {
     owner: JudgmentArcanaAddress,
     arcanaKeys: readonly string[],
   ) => CandidateProjectionEvaluation;
+  /** One atomic exact Crystal Figurine selection, assessed after Judgment. */
+  readonly figurineArcana: (
+    owner: FigurineArcanaAddress,
+    arcanaKeys: readonly string[],
+  ) => CandidateProjectionEvaluation;
   /** Exact engine-captured keepsake frontier, projected one option at a time for controls. */
   readonly keepsakeSelections: (
     owner: KeepsakeSelectionAddress,
@@ -378,6 +386,7 @@ function candidateSelectedPossible(evaluation: CandidateProjectionEvaluation): b
     case 'traitAcquisitionTarget':
       return evaluation.result.supported;
     case 'judgmentArcana':
+    case 'figurineArcana':
     case 'keepsakeSelection':
       return evaluation.result.selectedPossible;
     case 'acquisitionConversion':
@@ -402,6 +411,7 @@ function candidateForced(
     case 'encounter':
       return evaluation.result.support === 'forced';
     case 'judgmentArcana':
+    case 'figurineArcana':
     case 'keepsakeSelection':
     case 'keepsakeEquipResult':
     case 'acquisitionConversion':
@@ -449,6 +459,8 @@ function candidateForced(
     case 'traitOffer':
     case 'traitOfferFocusedOption':
     case 'traitAcquisitionTarget':
+      return false;
+    default:
       return false;
   }
 }

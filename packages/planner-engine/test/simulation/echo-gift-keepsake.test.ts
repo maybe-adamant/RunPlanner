@@ -45,6 +45,7 @@ import { evaluateKeepsakeEquipResultCandidate } from '../../src/simulation/candi
 import {
   advanceExperimentalHammers,
   assessExperimentalHammerEquipResult,
+  consumeFigurine,
   createKeepsakeState,
   type KeepsakeState,
 } from '../../src/simulation/keepsakes';
@@ -325,6 +326,33 @@ describe('Echo Gift Gift Gift', () => {
     expect(result.traitHistory?.equippedTraits[giftTraitKey]).toMatchObject({
       echoRepeatedKeepsakeKey: 'ManaOverTimeRefundKeepsake',
       echoKeepsakeReplayCount: 0,
+    });
+  });
+
+  it('replays Crystal Figurine at Common, removes the Echo source at Boss, and replays later', () => {
+    const retained = retainedKeepsakeState('BossMetaUpgradeKeepsake', 'GoldifyKeepsake');
+    const { figurine: _removed, ...withoutOrdinaryFigurine } = retained;
+    const first = replayBiome([
+      branchWithGift('BossMetaUpgradeKeepsake', 'GoldifyKeepsake', {
+        keepsakes: withoutOrdinaryFigurine,
+      }),
+    ]).simulation.branches[0]!;
+    expect(first.keepsakes.figurine).toEqual({
+      origin: 'echo',
+      status: 'pending',
+      rarity: 'Common',
+    });
+
+    const consumed = Object.freeze({
+      ...first,
+      keepsakes: consumeFigurine(first.keepsakes),
+    });
+    expect(consumed.keepsakes.figurine).toBeUndefined();
+    const later = replayBiome([consumed]).simulation.branches[0]!;
+    expect(later.keepsakes.figurine).toEqual({
+      origin: 'echo',
+      status: 'pending',
+      rarity: 'Common',
     });
   });
 

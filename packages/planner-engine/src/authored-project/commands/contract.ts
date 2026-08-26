@@ -48,6 +48,8 @@ export function projectCommandAddress(
       return command.field;
     case 'ReplaceJudgmentArcana':
       return command.judgment;
+    case 'ReplaceFigurineArcana':
+      return command.figurine;
     case 'ReplaceSteadyGrowthTarget':
       return command.outcome;
     case 'ReplaceFountainRarityTarget':

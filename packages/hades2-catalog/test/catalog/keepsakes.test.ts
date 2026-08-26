@@ -40,6 +40,17 @@ const supportedEffects = [
     },
   },
   {
+    key: 'BossMetaUpgradeKeepsake',
+    profileKey: 'rarityLevelByRank',
+    legacyField: 'rarity',
+    effect: {
+      kind: 'crystalFigurine',
+      uses: 1,
+      requestedCards: 2,
+      rarityLevelByRank: { Common: 1, Rare: 2, Epic: 3, Heroic: 4 },
+    },
+  },
+  {
     key: 'TempHammerKeepsake',
     profileKey: 'qualifyingEncounterUsesByRank',
     legacyField: 'qualifyingEncounterUses',

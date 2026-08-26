@@ -81,6 +81,11 @@ import {
   type EvaluatedJudgmentArcanaCandidate,
 } from './judgment-arcana';
 import {
+  evaluateFigurineArcanaCandidate,
+  type FigurineArcanaCandidateQuery,
+  type EvaluatedFigurineArcanaCandidate,
+} from './figurine-arcana';
+import {
   evaluateTraitAcquisitionTargetDomain,
   evaluateCirceResolutionDomain,
   evaluateEchoPomTargetDomain,
@@ -165,6 +170,7 @@ export type ProjectCandidateQuery =
   | HubTerminalTakeoverCandidateQuery
   | TraitOfferCandidateQuery
   | JudgmentArcanaCandidateQuery
+  | FigurineArcanaCandidateQuery
   | KeepsakeSelectionCandidateQuery
   | KeepsakeEquipResultCandidateQuery
   | AcquisitionConversionCandidateQuery
@@ -207,6 +213,7 @@ export type ProjectCandidateEvaluation =
   | EvaluatedHubTerminalTakeoverCandidate
   | EvaluatedTraitOfferCandidate
   | EvaluatedJudgmentArcanaCandidate
+  | EvaluatedFigurineArcanaCandidate
   | EvaluatedKeepsakeSelectionCandidate
   | EvaluatedKeepsakeEquipResultCandidate
   | EvaluatedAcquisitionConversionCandidate
@@ -359,6 +366,16 @@ function evaluateCandidateQuery(
         candidateArtifacts.biomeAt(
           createBiomeAddress(query.judgment.routeKey, query.judgment.biomeKey),
         )?.judgmentArcana,
+        query,
+      );
+    case 'figurineArcana':
+      return evaluateFigurineArcanaCandidate(
+        catalog,
+        project,
+        evaluation,
+        candidateArtifacts.biomeAt(
+          createBiomeAddress(query.figurine.routeKey, query.figurine.biomeKey),
+        )?.figurineArcana,
         query,
       );
     case 'startRoom':

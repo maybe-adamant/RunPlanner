@@ -4,6 +4,7 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createBiomeAddress,
+  createFigurineArcanaAddress,
   createJudgmentArcanaAddress,
   createOccurrenceAddress,
   createOccurrenceId,
@@ -29,6 +30,11 @@ import {
   createTraitHistoryState,
   foldTraitHistoryEvents,
 } from '../../src/simulation/traits';
+import {
+  advanceCurrentKeepsake,
+  createKeepsakeState,
+  type KeepsakeState,
+} from '../../src/simulation/keepsakes';
 
 const biome = createBiomeAddress('Underworld', 'F');
 const boss = createOccurrenceAddress(biome, createOccurrenceId('completion:F:boss'));
@@ -65,6 +71,21 @@ function inactive(excluding: readonly string[], count: number): readonly string[
     .map((card) => card.key);
 }
 
+function stateWithExactInactiveArcana(inactiveKeys: readonly string[]) {
+  const initial = createArcanaFearState(catalog, createDefaultRouteLoadout(catalog));
+  const desired = new Set(inactiveKeys);
+  const initialActive = new Set(initial.arcana.active.map((card) => card.key));
+  const toActivate = catalog.arcanaCards.values
+    .filter((card) => !desired.has(card.key) && !initialActive.has(card.key))
+    .map((card) => card.key);
+  const activated = activateTemporaryArcana(catalog, initial, toActivate, {
+    owner: n,
+    sequence: 1,
+  });
+  if (!activated.legal) throw new Error('exact Arcana setup must be legal');
+  return activated.state;
+}
+
 function withBossOutcome(
   project: ReturnType<typeof withJudgment>,
   biomeAddress = n,
@@ -94,6 +115,12 @@ function evaluateNBossLifecycle(
   arcanaFear: ReturnType<typeof createArcanaFearState>,
   selected: readonly string[],
   traitHistory = createTraitHistoryState(),
+  figurineSelected: readonly string[] = [],
+  keepsakes: KeepsakeState = createKeepsakeState(
+    catalog,
+    catalog.defaultStartingKeepsakeKey,
+    arcanaFear,
+  ),
 ) {
   const project = loadSurfaceNOProject();
   const evaluated = evaluatedBiome(simulateProject(catalog, project), 'N');
@@ -112,6 +139,11 @@ function evaluateNBossLifecycle(
                 encounters: Object.freeze({
                   ...room.encounters,
                   judgmentArcanaKeysByPhase: Object.freeze({ Encounter: selected }),
+                  ...(figurineSelected.length === 0
+                    ? {}
+                    : {
+                        figurineArcanaKeysByPhase: Object.freeze({ Encounter: figurineSelected }),
+                      }),
                 }),
               })
             : room,
@@ -130,6 +162,7 @@ function evaluateNBossLifecycle(
             traitHistory,
           ),
           traitHistory,
+          keepsakes,
         }),
       ),
     ],
@@ -152,6 +185,25 @@ describe('Judgment automatic Boss ownership', () => {
     expect(authoredBoss?.encounters.judgmentArcanaKeysByPhase).toEqual({
       Encounter: ['CastCount', 'CardDraw'],
     });
+  });
+
+  it('stores Crystal Figurine independently on the same Boss-defeated phase', () => {
+    const figurine = createFigurineArcanaAddress(boss, 'Encounter');
+    const project = applyProjectCommand(
+      createProjectDocument(catalog, {
+        projectId: 'figurine-phase-owner',
+        configuredBiomeCounts: { Underworld: 1 },
+      }),
+      catalog,
+      { kind: 'ReplaceFigurineArcana', figurine, arcanaKeys: ['CardDraw', 'CastCount'] },
+    );
+    const authoredBoss = project.routes[0]?.biomes[0]?.completionOccurrences.find(
+      (occurrence) => occurrence.occurrenceId === boss.occurrenceId,
+    );
+    expect(authoredBoss?.encounters.figurineArcanaKeysByPhase).toEqual({
+      Encounter: ['CastCount', 'CardDraw'],
+    });
+    expect(authoredBoss?.encounters.judgmentArcanaKeysByPhase).toBeUndefined();
   });
 
   it('rejects a fabricated phase instead of treating the phase address as cosmetic', () => {
@@ -381,6 +433,44 @@ describe('Judgment automatic Boss lifecycle', () => {
     });
   });
 
+  it('suppresses Crystal Figurine at the full-run terminal Boss and retains its pending source', () => {
+    const figurine = createFigurineArcanaAddress(
+      createOccurrenceAddress(q, createOccurrenceId('completion:Q:boss')),
+      'Encounter',
+    );
+    const project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
+      kind: 'ReplaceFigurineArcana',
+      figurine,
+      arcanaKeys: ['ChanneledCast', 'HealthRegen'],
+    });
+    const evaluation = simulateProject(catalog, project);
+    const evaluated = evaluatedBiome(evaluation, 'Q');
+    if (evaluated.validity !== 'valid') throw new Error('terminal Q must remain valid');
+    const previous = evaluatedBiome(evaluation, 'P');
+    const arcanaFear = createArcanaFearState(catalog, createDefaultRouteLoadout(catalog));
+    const keepsakes = createKeepsakeState(catalog, 'BossMetaUpgradeKeepsake', arcanaFear);
+    const priorBranch = previous.rewards.branches[0];
+    if (priorBranch === undefined) throw new Error('terminal Q needs a prior reward branch');
+    const result = evaluateBiomeRewardsAssemblyInternal(
+      catalog,
+      evaluated.snapshot,
+      evaluated.history,
+      4,
+      project.routes.find((route) => route.routeKey === 'Surface')!.loadout,
+      [Object.freeze({ ...priorBranch, keepsakes })],
+    );
+
+    expect(result.figurineArcanaArtifacts.at(figurine)).toBeUndefined();
+    expect(result.simulation.findings).not.toContainEqual(
+      expect.objectContaining({ origin: figurine, code: 'figurineOutcomeMissing' }),
+    );
+    expect(result.simulation.branches[0]?.keepsakes.figurine).toEqual({
+      origin: 'ordinary',
+      status: 'pending',
+      rarity: 'Epic',
+    });
+  });
+
   it('applies Epic draws once per Boss, clamps only at the inactive frontier, and carries them into the next Boss', () => {
     const first = inactive(['CastCount', 'SorceryRegenUpgrade', 'BonusRarity', 'CardDraw'], 5);
     const second = inactive(
@@ -472,5 +562,151 @@ describe('Judgment automatic Boss lifecycle', () => {
         heroicKeys.includes(card.key),
       ),
     ).toHaveLength(6);
+  });
+
+  it('orders Judgment before Crystal Figurine and draws Figurine from the refreshed frontier', () => {
+    const seeded = activateTemporaryArcana(
+      catalog,
+      createArcanaFearState(catalog, createDefaultRouteLoadout(catalog)),
+      ['CardDraw'],
+      { owner: n, sequence: 1 },
+    );
+    if (!seeded.legal) throw new Error('Judgment setup must be legal');
+    const judgmentKeys = inactive(['CardDraw'], 5);
+    const figurineKeys = inactive(['CardDraw', ...judgmentKeys], 2);
+    const result = evaluateNBossLifecycle(
+      seeded.state,
+      judgmentKeys,
+      undefined,
+      figurineKeys,
+      createKeepsakeState(catalog, 'BossMetaUpgradeKeepsake', seeded.state),
+    );
+    const branch = result.simulation.branches[0];
+    if (branch === undefined) throw new Error('combined Boss transition should retain a branch');
+    const activations = branch.arcanaFear.events.filter(
+      (event) => event.kind === 'temporaryArcanaActivated',
+    );
+    expect(activations).toHaveLength(3);
+    expect(activations[1]?.arcanaKeys).toEqual(judgmentKeys);
+    expect(activations[2]?.arcanaKeys).toEqual(figurineKeys);
+    expect(activations[2]?.sequence).toBe(activations[1]?.sequence);
+    expect(activations[2]?.owner).toEqual(
+      createFigurineArcanaAddress(
+        createOccurrenceAddress(n, createOccurrenceId('completion:N:boss')),
+        'Encounter',
+      ),
+    );
+    expect(branch.keepsakes.figurine).toEqual({
+      origin: 'ordinary',
+      status: 'consumed',
+      rarity: 'Epic',
+    });
+  });
+
+  it('uses the post-Judgment remainder for fewer-than-two and empty Figurine domains', () => {
+    const baseline = createArcanaFearState(catalog, createDefaultRouteLoadout(catalog));
+    const baselineActive = new Set(baseline.arcana.active.map((card) => card.key));
+    const sixInactive = catalog.arcanaCards.values
+      .filter((card) => card.key !== 'CardDraw' && !baselineActive.has(card.key))
+      .slice(0, 6)
+      .map((card) => card.key);
+    const fewerState = stateWithExactInactiveArcana(sixInactive);
+    const fewer = evaluateNBossLifecycle(
+      fewerState,
+      sixInactive.slice(0, 5),
+      undefined,
+      [sixInactive[5]!],
+      createKeepsakeState(catalog, 'BossMetaUpgradeKeepsake', fewerState),
+    );
+    const fewerBranch = fewer.simulation.branches[0];
+    expect(fewerBranch).toBeDefined();
+    expect(fewerBranch?.arcanaFear.arcana.active.map((card) => card.key)).toContain(sixInactive[5]);
+    expect(fewerBranch?.keepsakes.figurine?.status).toBe('consumed');
+
+    const fiveInactive = sixInactive.slice(0, 5);
+    const emptyState = stateWithExactInactiveArcana(fiveInactive);
+    const empty = evaluateNBossLifecycle(
+      emptyState,
+      fiveInactive,
+      undefined,
+      [],
+      createKeepsakeState(catalog, 'BossMetaUpgradeKeepsake', emptyState),
+    );
+    const emptyBranch = empty.simulation.branches[0];
+    expect(emptyBranch).toBeDefined();
+    expect(emptyBranch?.keepsakes.figurine?.status).toBe('consumed');
+    expect(
+      emptyBranch?.arcanaFear.events.filter((event) => event.kind === 'temporaryArcanaActivated'),
+    ).toHaveLength(2);
+  });
+
+  it('filters Fated-incompatible Figurine cards from the candidate and rejects an authored exclusion', () => {
+    const seeded = createArcanaFearState(catalog, createDefaultRouteLoadout(catalog));
+    const safeKey = inactive(['CardDraw', 'DoorReroll'], 1)[0];
+    if (safeKey === undefined) throw new Error('Fated Figurine setup needs a safe target');
+    const initialKeepsakes = createKeepsakeState(catalog, 'BossMetaUpgradeKeepsake', seeded);
+    const fatedKeepsakes = Object.freeze({
+      ...initialKeepsakes,
+      history: Object.freeze([
+        { key: 'HadesAndPersephoneKeepsake', kind: 'start' as const },
+        { key: 'BossMetaUpgradeKeepsake', kind: 'replace' as const },
+      ]),
+      fatedStatus: 'Fated' as const,
+    });
+    const selected = ['DoorReroll', safeKey];
+    const result = evaluateNBossLifecycle(seeded, [], undefined, selected, fatedKeepsakes);
+
+    const figurine = createFigurineArcanaAddress(
+      createOccurrenceAddress(n, createOccurrenceId('completion:N:boss')),
+      'Encounter',
+    );
+    expect(result.figurineArcanaArtifacts.at(figurine)?.inactiveArcanaKeys).not.toContain(
+      'DoorReroll',
+    );
+    expect(result.simulation.branches).toHaveLength(0);
+    expect(result.simulation.findings).toContainEqual(
+      expect.objectContaining({
+        code: 'figurineOutcomeTargetUnavailable',
+        evidence: expect.objectContaining({ reason: 'fatedExcluded' }),
+      }),
+    );
+  });
+
+  it('activates ordinary Epic Figurine cards at Epic and Cherished-advanced cards at Heroic', () => {
+    const seeded = createArcanaFearState(catalog, createDefaultRouteLoadout(catalog));
+    const selected = inactive([], 2);
+    const ordinary = evaluateNBossLifecycle(
+      seeded,
+      [],
+      undefined,
+      selected,
+      createKeepsakeState(catalog, 'BossMetaUpgradeKeepsake', seeded),
+    );
+    expect(ordinary.simulation.branches[0]?.arcanaFear.arcana.active).toEqual(
+      expect.arrayContaining(
+        selected.map((key) =>
+          expect.objectContaining({ key, origin: 'temporary', rarity: 'Epic' }),
+        ),
+      ),
+    );
+
+    const advancedSource = advanceCurrentKeepsake(
+      catalog,
+      createKeepsakeState(catalog, 'BossMetaUpgradeKeepsake', seeded),
+      1,
+    );
+    expect(advancedSource.figurine).toEqual({
+      origin: 'ordinary',
+      status: 'pending',
+      rarity: 'Heroic',
+    });
+    const heroic = evaluateNBossLifecycle(seeded, [], undefined, selected, advancedSource);
+    expect(heroic.simulation.branches[0]?.arcanaFear.arcana.active).toEqual(
+      expect.arrayContaining(
+        selected.map((key) =>
+          expect.objectContaining({ key, origin: 'temporary', rarity: 'Heroic' }),
+        ),
+      ),
+    );
   });
 });

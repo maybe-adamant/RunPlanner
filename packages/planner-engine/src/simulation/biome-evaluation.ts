@@ -580,6 +580,7 @@ export function evaluateBiomeAssembly(
         rewards.hermesShrineArtifacts,
         rewards.stygianWellArtifacts,
         rewards.fountainRarityArtifacts,
+        rewards.figurineArcanaArtifacts,
       ),
     });
   }
@@ -612,6 +613,7 @@ export function evaluateBiomeAssembly(
         rewards.hermesShrineArtifacts,
         rewards.stygianWellArtifacts,
         rewards.fountainRarityArtifacts,
+        rewards.figurineArcanaArtifacts,
       ),
       history: Object.freeze({
         routeKey: history.routeKey,

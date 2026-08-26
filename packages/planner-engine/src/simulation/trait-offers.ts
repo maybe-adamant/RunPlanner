@@ -69,7 +69,11 @@ export function boonRarityFactsForOffer(
       // hand-maintained card-name list. The Arcana state itself is untouched,
       // so the independently-derived ledger restores it on maturation.
       if (barrenActive && table !== undefined) return [];
-      return table === undefined ? [] : [table[active.rarity]];
+      if (table === undefined) return [];
+      const rarity = active.rarity;
+      return rarity === 'Common' || rarity === 'Rare' || rarity === 'Epic' || rarity === 'Heroic'
+        ? [table[rarity]]
+        : [];
     }) ?? [];
   const traits =
     history.properUpbringingActive !== true

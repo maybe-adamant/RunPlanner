@@ -554,11 +554,12 @@ export function locateFinding(
       : chronology?.kind === 'hubBoard' || chronology?.kind === 'hubVisit'
         ? chronology.history
         : undefined;
-  // The automatic Boss is a terminal lifecycle child, not an authored Preboss
-  // occurrence. It follows every decision in the materialized biome and has
-  // no room occurrence to use for ordinary ownership lookup.
+  // Automatic Boss Arcana effects are terminal lifecycle children, not
+  // authored Preboss occurrences. They follow every decision in the
+  // materialized biome and have no room occurrence to use for ordinary
+  // ownership lookup.
   if (
-    finding.origin.kind === 'judgmentArcana' &&
+    (finding.origin.kind === 'judgmentArcana' || finding.origin.kind === 'figurineArcana') &&
     finding.origin.routeKey === prefix.routeKey &&
     finding.origin.biomeKey === prefix.biomeKey
   ) {

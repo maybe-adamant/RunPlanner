@@ -328,6 +328,13 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
         kind: 'generic',
         message: 'Repair the Judgment activation at this Boss completion.',
       };
+    case 'figurineOutcomeMissing':
+    case 'figurineOutcomeWrongCardinality':
+    case 'figurineOutcomeTargetUnavailable':
+      return {
+        kind: 'generic',
+        message: 'Repair the Crystal Figurine activation after Judgment at this Boss completion.',
+      };
     case 'keepsakeUnavailable':
       return {
         kind: 'generic',

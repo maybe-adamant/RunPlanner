@@ -172,6 +172,8 @@ export {
   type EvaluatedSteadyGrowthOutcomeCandidate,
   type FountainRarityOutcomeCandidateQuery,
   type EvaluatedFountainRarityOutcomeCandidate,
+  type FigurineArcanaCandidateQuery,
+  type EvaluatedFigurineArcanaCandidate,
   evaluateEchoLastRunBoonDraftSupport,
   echoLastRunBoonRarityCandidates,
   echoLastRunBoonTraitCandidatesForRow,
