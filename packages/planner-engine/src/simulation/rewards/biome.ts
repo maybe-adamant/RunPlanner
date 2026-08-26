@@ -1,16 +1,9 @@
-import type { Catalog, BiomeLayout, RoomDeclaration } from '../../catalog-schema';
+import type { Catalog, RoomDeclaration } from '../../catalog-schema';
 import { evaluateRequirement } from '../../requirements';
 import { fieldsOptionalRewardCountSupport } from '../fields-optional-count';
+import { isPurgingPoolEligibleTrait, type PurgingPoolAssessment } from '../purging-pool';
 import {
-  assessPurgingPool,
-  isPurgingPoolEligibleTrait,
-  type PurgingPoolAssessment,
-} from '../purging-pool';
-import {
-  assessHermesShrine,
-  assessHermesShrinePlacement,
   assessHermesShrineTravelDealRefill,
-  priorTwoSurfaceShopPresence,
   type HermesShrineCandidateContext,
 } from '../hermes-shrine';
 import {
@@ -24,11 +17,9 @@ import {
   createEchoKeepsakeReplayAddress,
   createTargetAddress,
   createRoomRunStateCheckpointAddress,
-  createSteadyGrowthOutcomeAddress,
   createAcquisitionRoleAddress,
   createRoomActionAddress,
   semanticAddressKey,
-  type AcquisitionSiteOwnerAddress,
   type ExitDecisionAddress,
   type SemanticAddress,
   type TraitOfferOwnerAddress,
@@ -50,17 +41,8 @@ import {
 } from '../../authored-project/artificer';
 import { parseHermesShrineDeliveryEntryKey } from '../../authored-project/hermes-shrine-delivery';
 import { hermesShrineDeliveryEntryKey } from '../../authored-project/hermes-shrine-delivery';
-import {
-  applyStygianWellPurchase,
-  advanceStygianWellBossUses,
-  advanceStygianWellEncounterUses,
-} from '../stygian-well';
-import {
-  assessStygianWell,
-  assessStygianWellPlacement,
-  priorThreeRoomShopPresence,
-  type StygianWellCandidateContext,
-} from '../stygian-well';
+import { applyStygianWellPurchase, advanceStygianWellBossUses } from '../stygian-well';
+import { type StygianWellCandidateContext } from '../stygian-well';
 import {
   SEA_STAR_DUPLICATE_ENTRY_KEY,
   parseSeaStarDuplicateSiteKey,
@@ -86,8 +68,6 @@ import {
 import type { CountedRewardBinding } from '../../reward-kernel/bindings';
 import type {
   EncounterHistoryEntry,
-  BiomeHistoryPrefix,
-  CanonicalBiomeHistory,
   HistoryEvent,
   HistoryStateView,
   ProgressiveRoomHistoryViews,
@@ -96,22 +76,15 @@ import type {
 import type {
   CanonicalAuthoredRoom,
   CanonicalFieldsOptionalReward,
-  CanonicalAdditionalContinuation,
-  CanonicalBatch,
-  CanonicalBiome,
   CanonicalHubRoom,
-  CanonicalHubTarget,
   CanonicalLocalReward,
   CanonicalResolvedIncomingReward,
   CanonicalRewardWheel,
   CanonicalTarget,
-  MaterializedBiomePrefix,
-  MaterializedHubVisitFrontier,
 } from '../materialization';
 import type { CanonicalDecision } from '../materialization/model';
 import { materializeShipCombatState } from '../materialization';
 import type { ResolvedEncounterPhase } from '../encounters';
-import { assessFigLeafSkip } from '../encounters';
 import {
   ownerRegion,
   type FindingChronology,
@@ -139,9 +112,6 @@ import {
 } from '../candidates/trait-offer-capability';
 import type { TraitOfferCandidateContext } from '../traits';
 import {
-  advanceChaosClock,
-  advanceSteadyGrowthProgress,
-  settleSteadyGrowthThreshold,
   type ReachedSteadyGrowthThreshold,
   attachTraitHistory,
   createTraitHistoryState,
@@ -164,6 +134,21 @@ import {
 import { BiomeRewardSimulationContractError } from './biome-contract';
 import { assessAuthoredBatchRewardStore } from './reward-store-support';
 import { selectedTraitOfferProducts } from './selected-trait-products';
+import {
+  prepareRewardEvaluationInputs,
+  preparedAcquisitionSiteOwner,
+  preparedHubVisitFrontier,
+  samePreparedRewardRoomOwner,
+  type RewardLifecycleReferences,
+} from './prepared-inputs';
+import { applyEncounterStartedTransition } from './lifecycle-transitions/encounter-started';
+import { applyEncounterEndEffectsTransition } from './lifecycle-transitions/encounter-end-effects';
+import { applyKeepsakeRackUsedTransition } from './lifecycle-transitions/keepsake-rack-used';
+import { applyRoomEnteredTransition } from './lifecycle-transitions/room-entered';
+import { applyRoomExitedTransition } from './lifecycle-transitions/room-exited';
+import { applyRoomPreparedTransition } from './lifecycle-transitions/room-prepared';
+import type { BiomeRewardHistory, BiomeRewardSnapshot } from './evaluation-contract';
+export type { BiomeRewardHistory, BiomeRewardSnapshot } from './evaluation-contract';
 
 function canonicalRewardState(reward: {
   readonly offer: AuthoredRewardState['offer'];
@@ -250,14 +235,12 @@ import {
 } from './producer-frontiers';
 import {
   advanceRewardBranches,
-  beginRewardRoom,
   countedBinding,
   initializeRewardBranches,
   processOfferGenerationCohort,
   processFocusedOfferAfterAuthoredPeers,
   processRewardOffer,
   publicRewardBranch,
-  applyJeweledPomEquipResult,
   applyExperimentalHammerEquipResult,
   type OfferProcessingContext,
   type OfferProcessingPeer,
@@ -271,11 +254,7 @@ import {
   settlePickupAcquisitionSite,
   settleProducerAcquisitionSite,
 } from './acquisition-settlement';
-import {
-  completePendingShopAcquisitionSite,
-  processShopInventory,
-  settleShopAcquisitionSite,
-} from './shop-settlement';
+import { processShopInventory, settleShopAcquisitionSite } from './shop-settlement';
 import { addRewardFinding } from './findings';
 import { mergeEquivalentRewardBranches, type RewardBranchState } from './branch-primitives';
 import {
@@ -285,17 +264,8 @@ import {
 } from './trait-settlement';
 import { rewardFinding } from './findings';
 import {
-  assessJeweledPomEquipResult,
   assessExperimentalHammerEquipResult,
-  advanceExperimentalHammers,
-  applyKeepsakeDisposition,
-  invalidateJeweledPom,
-  jeweledPomEffectForKey,
-  keepsakeSelectionUnavailableReason,
-  keepsakeRankForEquip,
   refreshKeepsakeFatedStatus,
-  consumeFigLeafUse,
-  attestFigLeafBranchState,
   attestGorgonBranchState,
   attestPendingGorgonRarity,
   consumeGorgonAppearance,
@@ -325,114 +295,6 @@ import {
 
 type CanonicalRewardRoom = CanonicalAuthoredRoom;
 type CanonicalRewardSource = CanonicalRewardRoom | CanonicalHubRoom;
-
-/** Applies one real lifecycle checkpoint to every active matching Chaos curse.
- * The trait fold owns atomic expiry/maturation; branch sequencing remains the
- * existing reward-history authority. */
-function advanceChaosClockAt(
-  catalog: Catalog,
-  branches: readonly RewardBranchState[],
-  sequence: number,
-  clock: import('../../catalog-schema').ChaosClockKind,
-): readonly RewardBranchState[] {
-  return Object.freeze(
-    branches.map((branch) => {
-      const before = branch.traitHistory ?? createTraitHistoryState();
-      const traitHistory = advanceChaosClock(catalog, before, sequence, clock);
-      return traitHistory === before
-        ? branch
-        : Object.freeze({
-            ...branch,
-            traitHistory,
-            history: attachTraitHistory(branch.history, traitHistory),
-          });
-    }),
-  );
-}
-
-/** Steady Growth consumes only the already-emitted qualifying end-effects event. */
-function advanceSteadyGrowthAt(
-  catalog: Catalog,
-  branches: readonly RewardBranchState[],
-  owner: SteadyGrowthOutcomeAddress['owner'],
-  phaseKey: string,
-  targetTraitKey: string | undefined,
-  sequence: number,
-): {
-  readonly branches: readonly RewardBranchState[];
-  readonly blocked: readonly {
-    readonly address: SteadyGrowthOutcomeAddress;
-    readonly branch: RewardBranchState;
-    readonly threshold: ReachedSteadyGrowthThreshold;
-    readonly targetTraitKey: string | undefined;
-  }[];
-  readonly thresholds: readonly {
-    readonly address: SteadyGrowthOutcomeAddress;
-    readonly threshold: ReachedSteadyGrowthThreshold;
-  }[];
-} {
-  const next: RewardBranchState[] = [];
-  const blocked: {
-    readonly address: SteadyGrowthOutcomeAddress;
-    readonly branch: RewardBranchState;
-    readonly threshold: ReachedSteadyGrowthThreshold;
-    readonly targetTraitKey: string | undefined;
-  }[] = [];
-  const thresholds: {
-    readonly address: SteadyGrowthOutcomeAddress;
-    readonly threshold: ReachedSteadyGrowthThreshold;
-  }[] = [];
-  for (const branch of branches) {
-    const before = branch.traitHistory ?? createTraitHistoryState();
-    const advanced = advanceSteadyGrowthProgress(catalog, before, owner, sequence);
-    let traitHistory = advanced.history;
-    let blockedAtThreshold = false;
-    for (const threshold of advanced.thresholds) {
-      const address = createSteadyGrowthOutcomeAddress(owner, phaseKey);
-      thresholds.push(Object.freeze({ address, threshold }));
-      const settled = settleSteadyGrowthThreshold(
-        catalog,
-        traitHistory,
-        owner,
-        sequence,
-        threshold,
-        targetTraitKey,
-      );
-      if (!settled.assessment.legal) {
-        blocked.push(
-          Object.freeze({
-            address,
-            branch: Object.freeze({
-              ...branch,
-              traitHistory,
-              history: attachTraitHistory(branch.history, traitHistory),
-            }),
-            threshold,
-            targetTraitKey,
-          }),
-        );
-        blockedAtThreshold = true;
-        break;
-      }
-      traitHistory = settled.history;
-    }
-    if (!blockedAtThreshold)
-      next.push(
-        traitHistory === before
-          ? branch
-          : Object.freeze({
-              ...branch,
-              traitHistory,
-              history: attachTraitHistory(branch.history, traitHistory),
-            }),
-      );
-  }
-  return Object.freeze({
-    branches: Object.freeze(next),
-    blocked: Object.freeze(blocked),
-    thresholds: Object.freeze(thresholds),
-  });
-}
 
 interface IncomingOfferCandidateContext {
   readonly context: OfferProcessingContext;
@@ -485,23 +347,6 @@ type RewardRoomOwner = {
   readonly slotKey?: string;
 };
 
-function sameRewardRoomOwner(left: RewardRoomOwner, right: RewardRoomOwner): boolean {
-  if (left.routeKey !== right.routeKey || left.biomeKey !== right.biomeKey) return false;
-  if (
-    left.groupKey !== undefined ||
-    left.slotKey !== undefined ||
-    right.groupKey !== undefined ||
-    right.slotKey !== undefined
-  ) {
-    return (
-      left.occurrenceId === right.occurrenceId &&
-      left.groupKey === right.groupKey &&
-      left.slotKey === right.slotKey
-    );
-  }
-  return left.occurrenceId !== undefined && left.occurrenceId === right.occurrenceId;
-}
-
 function historyFindingChronology(sequence: number): HistoryFindingChronology {
   return Object.freeze({ kind: 'history', sequence, boundary: 'at' });
 }
@@ -515,7 +360,7 @@ function hubFindingChronology(
   for (const decision of snapshot.decisions) {
     if (decision.kind !== 'hub') continue;
     for (const [visitIndex, visit] of decision.visits.entries()) {
-      if (sameRewardRoomOwner(visit.target.room.origin, owner)) {
+      if (samePreparedRewardRoomOwner(visit.target.room.origin, owner)) {
         return Object.freeze({
           kind: 'hubVisit',
           visitIndex,
@@ -523,7 +368,9 @@ function hubFindingChronology(
           history: historyFindingChronology(sequence),
         });
       }
-      const local = visit.localSlots.find((slot) => sameRewardRoomOwner(slot.origin, owner));
+      const local = visit.localSlots.find((slot) =>
+        samePreparedRewardRoomOwner(slot.origin, owner),
+      );
       if (local !== undefined) {
         return Object.freeze({
           kind: 'hubVisit',
@@ -537,9 +384,9 @@ function hubFindingChronology(
       }
     }
   }
-  const frontier = hubVisitFrontier(snapshot);
+  const frontier = preparedHubVisitFrontier(snapshot);
   if (frontier !== undefined) {
-    if (sameRewardRoomOwner(frontier.target.room.origin, owner)) {
+    if (samePreparedRewardRoomOwner(frontier.target.room.origin, owner)) {
       return Object.freeze({
         kind: 'hubVisit',
         visitIndex: frontier.origin.visitIndex - 1,
@@ -547,10 +394,12 @@ function hubFindingChronology(
         history: historyFindingChronology(sequence),
       });
     }
-    const local = frontier.localSlots.find((slot) => sameRewardRoomOwner(slot.origin, owner));
+    const local = frontier.localSlots.find((slot) =>
+      samePreparedRewardRoomOwner(slot.origin, owner),
+    );
     if (local !== undefined) {
       const localLifecycleIndex = frontier.enteredLocalRooms.findIndex((slot) =>
-        sameRewardRoomOwner(slot.origin, local.origin),
+        samePreparedRewardRoomOwner(slot.origin, local.origin),
       );
       return Object.freeze({
         kind: 'hubVisit',
@@ -576,11 +425,6 @@ function rewardFindingChronologyForRoom(
     hubFindingChronology(snapshot, owner, sequence, phase) ?? historyFindingChronology(sequence)
   );
 }
-
-/** The reward engine only needs materialized rooms and selected decisions. */
-export type BiomeRewardSnapshot =
-  CanonicalBiome | (MaterializedBiomePrefix & { readonly entryRoom: CanonicalAuthoredRoom });
-export type BiomeRewardHistory = CanonicalBiomeHistory | BiomeHistoryPrefix;
 
 export { BiomeRewardSimulationContractError } from './biome-contract';
 
@@ -701,191 +545,6 @@ function stygianWellRuntimeFallbackItemKey(
   return fallbackRewardType === undefined
     ? undefined
     : group?.options.values.find((candidate) => candidate.rewardType === fallbackRewardType)?.key;
-}
-
-function requireRewardLayout(catalog: Catalog, snapshot: BiomeRewardSnapshot): BiomeLayout {
-  const layout = catalog.biomeLayouts.byKey[snapshot.biomeKey];
-  const supportedPolicy =
-    layout !== undefined &&
-    (layout.progression.kind === 'hub' ||
-      layout.progression.rewardStorePolicy.kind === 'authoredBaseStore' ||
-      (layout.progression.progressionPolicy.kind === 'staged' &&
-        layout.progression.batchPolicy.kind === 'standard' &&
-        layout.progression.rewardStorePolicy.kind === 'none') ||
-      (layout.progression.batchPolicy.kind === 'clockwork' &&
-        layout.progression.rewardStorePolicy.kind === 'none') ||
-      (layout.progression.batchPolicy.kind === 'fields' &&
-        layout.progression.rewardStorePolicy.kind === 'none'));
-  if (layout === undefined || !supportedPolicy) {
-    throw new BiomeRewardSimulationContractError(
-      `catalog does not provide supported ${snapshot.biomeKey} reward stores`,
-    );
-  }
-  return layout;
-}
-
-function frontierBatch(snapshot: BiomeRewardSnapshot): readonly CanonicalBatch[] {
-  return snapshot.kind === 'biomePrefix' && snapshot.frontier?.kind === 'exitDecision'
-    ? snapshot.frontier.partialBatch === undefined
-      ? Object.freeze([])
-      : Object.freeze([snapshot.frontier.partialBatch])
-    : Object.freeze([]);
-}
-
-function frontierAdditional(
-  snapshot: BiomeRewardSnapshot,
-): readonly CanonicalAdditionalContinuation[] {
-  return snapshot.kind === 'biomePrefix' && snapshot.frontier?.kind === 'exitDecision'
-    ? snapshot.frontier.additional
-    : Object.freeze([]);
-}
-
-function rewardDecisions(snapshot: BiomeRewardSnapshot): readonly CanonicalDecision[] {
-  return Object.freeze([...snapshot.decisions, ...frontierBatch(snapshot)]);
-}
-
-function batches(snapshot: BiomeRewardSnapshot): readonly CanonicalBatch[] {
-  return rewardDecisions(snapshot).filter(
-    (decision): decision is CanonicalBatch => decision.kind === 'batch',
-  );
-}
-
-function hasHubVisitDetails(
-  frontier: MaterializedBiomePrefix['frontier'] | undefined,
-): frontier is MaterializedHubVisitFrontier {
-  return frontier?.kind === 'hubVisit' && 'phase' in frontier;
-}
-
-function hubVisitFrontier(snapshot: BiomeRewardSnapshot): MaterializedHubVisitFrontier | undefined {
-  const frontier = snapshot.kind === 'biomePrefix' ? snapshot.frontier : undefined;
-  return hasHubVisitDetails(frontier) ? frontier : undefined;
-}
-
-/**
- * A Hub board is persistent, but acquisitions belong to one entered visit (or
- * one entered side room), never to the restored Hub container.
- */
-function acquisitionSiteOwner(
-  snapshot: BiomeRewardSnapshot,
-  room: CanonicalRewardRoom,
-): AcquisitionSiteOwnerAddress {
-  if ('localVisit' in room) return room.origin;
-  for (const decision of snapshot.decisions) {
-    if (decision.kind !== 'hub') continue;
-    const visit = decision.visits.find((candidate) =>
-      sameRewardRoomOwner(candidate.target.room.origin, room.origin),
-    );
-    if (visit !== undefined) return visit.origin;
-  }
-  const frontier = hubVisitFrontier(snapshot);
-  if (frontier !== undefined && sameRewardRoomOwner(frontier.target.room.origin, room.origin)) {
-    return frontier.origin;
-  }
-  return room.origin;
-}
-
-function hubFrontierRooms(snapshot: BiomeRewardSnapshot): readonly CanonicalRewardSource[] {
-  const frontier = hubVisitFrontier(snapshot);
-  if (frontier === undefined) return Object.freeze([]);
-  return Object.freeze([frontier.target.room, ...frontier.localSlots]);
-}
-
-function rewardRooms(snapshot: BiomeRewardSnapshot): ReadonlyMap<string, CanonicalRewardSource> {
-  const rooms = [
-    snapshot.entryRoom,
-    ...rewardDecisions(snapshot).flatMap((decision) =>
-      decision.kind === 'batch'
-        ? [
-            ...decision.targets.map((target) => target.room),
-            ...decision.additional.map((continuation) => continuation.room),
-          ]
-        : [
-            decision.room,
-            ...decision.board.targets.map((target) => target.room),
-            ...decision.visits.flatMap((visit) => visit.localSlots),
-          ],
-    ),
-    ...frontierAdditional(snapshot).map((continuation) => continuation.room),
-    ...hubFrontierRooms(snapshot),
-    ...(snapshot.automaticRooms ?? []),
-  ];
-  return new Map(rooms.map((room) => [semanticAddressKey(room.origin), room]));
-}
-
-function canonicalAdditionalContinuations(
-  snapshot: BiomeRewardSnapshot,
-): ReadonlyMap<string, CanonicalAdditionalContinuation> {
-  return new Map(
-    [
-      ...rewardDecisions(snapshot).flatMap((decision) =>
-        decision.kind === 'batch' ? decision.additional : [],
-      ),
-      ...frontierAdditional(snapshot),
-    ].map((continuation) => [semanticAddressKey(continuation.origin), continuation]),
-  );
-}
-
-function hubTargets(snapshot: BiomeRewardSnapshot): ReadonlyMap<string, CanonicalHubTarget> {
-  return new Map(
-    rewardDecisions(snapshot)
-      .filter(
-        (decision): decision is Extract<CanonicalDecision, { readonly kind: 'hub' }> =>
-          decision.kind === 'hub',
-      )
-      .flatMap((decision) => decision.board.targets)
-      .map((target) => [semanticAddressKey(target.origin), target]),
-  );
-}
-
-function hubRewardLookups(
-  catalog: Catalog,
-  snapshot: BiomeRewardSnapshot,
-): {
-  readonly internal: Readonly<Record<string, ReadonlySet<string>>>;
-  readonly public: Readonly<Record<string, readonly string[]>>;
-} {
-  const descriptor = catalog.biomeLayouts.byKey[snapshot.biomeKey]?.progression;
-  const hub = snapshot.decisions.find(
-    (decision): decision is Extract<CanonicalDecision, { readonly kind: 'hub' }> =>
-      decision.kind === 'hub',
-  );
-  if (descriptor?.kind !== 'hub' || hub === undefined) {
-    return Object.freeze({ internal: Object.freeze({}), public: Object.freeze({}) });
-  }
-  if (hub.origin.hubKey !== descriptor.hubKey) {
-    throw new BiomeRewardSimulationContractError(
-      `${snapshot.biomeKey} reward lookup has the wrong Hub decision`,
-    );
-  }
-  const orderedTypes: string[] = [];
-  const uniqueTypes = new Set<string>();
-  for (const target of hub.board.targets) {
-    const incoming = target.room.incomingReward;
-    // An open Hub slot owns an authorable reward leaf before that leaf is
-    // materialized. Missing authorship is reported at the reward owner; it
-    // contributes no concrete lookup membership yet.
-    if (incoming === undefined) continue;
-    if (!uniqueTypes.has(incoming.offer.rewardType)) {
-      uniqueTypes.add(incoming.offer.rewardType);
-      orderedTypes.push(incoming.offer.rewardType);
-    }
-  }
-  return Object.freeze({
-    internal: Object.freeze({ [descriptor.rewardLookup.key]: uniqueTypes }),
-    public: Object.freeze({ [descriptor.rewardLookup.key]: Object.freeze(orderedTypes) }),
-  });
-}
-
-function roomViews(history: BiomeRewardHistory): ReadonlyMap<string, ProgressiveRoomHistoryViews> {
-  return new Map(history.rooms.map((room) => [semanticAddressKey(room.origin), room]));
-}
-
-function canonicalTargets(snapshot: BiomeRewardSnapshot): ReadonlyMap<string, CanonicalTarget> {
-  return new Map(
-    rewardDecisions(snapshot)
-      .flatMap((decision) => (decision.kind === 'batch' ? decision.targets : []))
-      .map((target) => [semanticAddressKey(target.origin), target]),
-  );
 }
 
 function expectedTargetStores(
@@ -1037,7 +696,7 @@ function projectDormantWheelView(
 }
 
 function wheelLifecycleViews(
-  history: BiomeRewardHistory,
+  lifecycle: RewardLifecycleReferences,
   room: CanonicalAuthoredRoom,
   roomView: ProgressiveRoomHistoryViews,
   wheel: CanonicalRewardWheel,
@@ -1046,12 +705,14 @@ function wheelLifecycleViews(
     (candidate) => candidate.offerPoint === wheel.wheelKey,
   );
   if (selected !== undefined) {
-    const acquisitionEvent = history.events.find(
-      (candidate) =>
-        candidate.kind === 'offerPointAcquired' &&
-        semanticAddressKey(candidate.origin) === semanticAddressKey(room.origin) &&
-        candidate.offerPoint === wheel.wheelKey,
-    );
+    const acquisitionEvent = lifecycle.wheelsByOwner
+      .get(semanticAddressKey(room.origin))
+      ?.find(
+        (candidate) =>
+          candidate.kind === 'offerPointAcquired' &&
+          semanticAddressKey(candidate.origin) === semanticAddressKey(room.origin) &&
+          candidate.offerPoint === wheel.wheelKey,
+      );
     if (selected.acquisitionBefore === undefined || acquisitionEvent === undefined) {
       return fail(`${room.gameName}.${wheel.wheelKey} has no acquisition lifecycle view`);
     }
@@ -1077,7 +738,7 @@ function prepareShipLifecycleCandidateContext(
   room: CanonicalAuthoredRoom,
   declaration: RoomDeclaration,
   roomView: ProgressiveRoomHistoryViews,
-  history: BiomeRewardHistory,
+  lifecycle: RewardLifecycleReferences,
   branchesBeforeFirstWheel: readonly RewardBranchState[],
   enteredBiomeCount: number,
   routeLoadout: RouteLoadout,
@@ -1112,7 +773,7 @@ function prepareShipLifecycleCandidateContext(
         if (candidateBranches.length === 0) {
           break;
         }
-        const lifecycleView = wheelLifecycleViews(history, candidateRoom, roomView, wheel);
+        const lifecycleView = wheelLifecycleViews(lifecycle, candidateRoom, roomView, wheel);
         const binding = rewardWheelBinding(catalog, declaration, wheel);
         candidateBranches = processOfferGenerationCohort(
           candidateBranches,
@@ -1244,9 +905,17 @@ export function evaluateBiomeRewardsAssemblyInternal(
       `${snapshot.routeKey} has no catalog route for Boss Judgment effects`,
     );
   }
-  const layout = requireRewardLayout(catalog, snapshot);
-  const rewardLookup = hubRewardLookups(catalog, snapshot);
-  const rooms = rewardRooms(snapshot);
+  const prepared = prepareRewardEvaluationInputs(catalog, snapshot, history);
+  const {
+    layout,
+    rewardLookup,
+    rooms,
+    views,
+    targets,
+    additionalContinuations,
+    hubTargetByOrigin,
+    lifecycle,
+  } = prepared;
   const authoredSeaStarDuplicateSiteKeys = new Set(
     [...rooms.values()].flatMap((room) =>
       room.kind === 'authored'
@@ -1256,18 +925,12 @@ export function evaluateBiomeRewardsAssemblyInternal(
         : [],
     ),
   );
-  const views = roomViews(history);
-  const targets = canonicalTargets(snapshot);
-  const additionalContinuations = canonicalAdditionalContinuations(snapshot);
   const forcedSparkChaosSourceOccurrenceIds = new Set(
     [...additionalContinuations.values()].flatMap((continuation) =>
       continuation.key === 'sparkChaos' ? [continuation.origin.occurrenceId] : [],
     ),
   );
-  const hubTargetByOrigin = hubTargets(snapshot);
-  const batchesByParent = new Map(
-    batches(snapshot).map((batch) => [semanticAddressKey(batch.parent.origin), batch]),
-  );
+  const batchesByParent = prepared.batchesByParent;
   const emptyOutgoingOrigins = new Set(
     history.events.flatMap((event) =>
       event.kind === 'emptyOutgoingGenerationCompleted' ? [semanticAddressKey(event.origin)] : [],
@@ -1423,43 +1086,6 @@ export function evaluateBiomeRewardsAssemblyInternal(
     }
   }
 
-  function advanceExperimentalHammerForEndEffects(
-    branchesAtEndEffects: readonly RewardBranchState[],
-    owner: SemanticAddress,
-    sequence: number,
-  ): readonly RewardBranchState[] {
-    return Object.freeze(
-      branchesAtEndEffects.map((branch) => {
-        const advanced = advanceExperimentalHammers(branch.keepsakes);
-        if (advanced.state === branch.keepsakes) return branch;
-        if (advanced.expired.length === 0)
-          return Object.freeze({ ...branch, keepsakes: advanced.state });
-        const prior = branch.traitHistory ?? createTraitHistoryState();
-        const traitHistory = foldTraitHistoryEvents(catalog, [
-          ...prior.events,
-          ...advanced.expired.map((expired) =>
-            Object.freeze({
-              kind: 'traitRemoval' as const,
-              owner,
-              acquisitionRole: 'experimentalHammerExpiry',
-              sequence,
-              acquisitionPoint: 'encounterEndEffectsApplied',
-              traitKey: expired.traitKey,
-              acquisitionIdentity: expired.acquisitionIdentity,
-              match: 'acquisitionIdentity' as const,
-            }),
-          ),
-        ]);
-        return Object.freeze({
-          ...branch,
-          history: attachTraitHistory(branch.history, traitHistory),
-          traitHistory,
-          keepsakes: advanced.state,
-        });
-      }),
-    );
-  }
-
   /**
    * Judgment is one authored exact set, so its pre-effect domain cannot be
    * picked from an arbitrary reward branch. Branches may still differ in
@@ -1499,7 +1125,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
   // Hub visit targets and their entered local rooms restore to an existing
   // parent rather than generating another ordinary decision. Their outgoing
   // checkpoints must still advance reward history without inventing a batch.
-  const activeHubVisit = hubVisitFrontier(snapshot);
+  const activeHubVisit = prepared.activeHubVisit;
   const hubRestoringSources = new Set([
     ...snapshot.decisions
       .filter(
@@ -1606,191 +1232,6 @@ export function evaluateBiomeRewardsAssemblyInternal(
   >();
   const steadyGrowthCandidateContexts = new Map<string, ReachedSteadyGrowthThreshold[]>();
   const steadyGrowthOutcomeAddresses = new Map<string, SteadyGrowthOutcomeAddress>();
-  function recordPurgingPoolAssessment(room: CanonicalAuthoredRoom, sequence: number): void {
-    if (
-      room.purgingPool?.interacted !== true ||
-      purgingPoolAssessments.has(semanticAddressKey(room.origin))
-    )
-      return;
-    const assessments = Object.freeze(
-      branches.map((branch) =>
-        assessPurgingPool(
-          catalog,
-          room.purgingPool!,
-          (branch.traitHistory ?? createTraitHistoryState()).equippedTraits,
-        ),
-      ),
-    );
-    purgingPoolAssessments.set(
-      semanticAddressKey(room.origin),
-      Object.freeze({ origin: room.origin, assessments }),
-    );
-    for (const assessment of assessments) {
-      for (const finding of assessment.findings) {
-        addRewardFinding(
-          findings,
-          rewardFinding(finding.code, room.origin, {
-            ...finding.evidence,
-            ...(finding.slotKey === undefined ? {} : { slotKey: finding.slotKey }),
-          }),
-          ownerRegion(room.origin),
-          rewardFindingChronologyForRoom(snapshot, room.origin, sequence, 'localRoomLifecycle'),
-        );
-      }
-    }
-  }
-  function recordHermesShrineAssessment(room: CanonicalAuthoredRoom, sequence: number): void {
-    if (hermesShrineAssessments.has(semanticAddressKey(room.origin))) return;
-    const declaration = catalog.rooms.byKey[room.gameName];
-    const entry = views.get(semanticAddressKey(room.origin))?.entry;
-    if (declaration === undefined || entry === undefined)
-      throw new BiomeRewardSimulationContractError(`${room.gameName} has no Shrine entry frontier`);
-    if (declaration.surfaceShop === undefined && room.hermesShrine === undefined) return;
-    // The entry ledger includes this occurrence. The preceding two physical
-    // positions are intentionally neither filtered nor de-duplicated.
-    const priorEnteredShrineFlags = priorTwoSurfaceShopPresence(entry.ledgers.roomAppearances);
-    const assessments = Object.freeze(
-      branches.map((branch) =>
-        room.hermesShrine === undefined
-          ? Object.freeze({
-              placement: assessHermesShrinePlacement(declaration, priorEnteredShrineFlags),
-              inventory: undefined,
-            })
-          : Object.freeze({
-              placement: assessHermesShrinePlacement(declaration, priorEnteredShrineFlags),
-              inventory: assessHermesShrine(
-                catalog,
-                declaration,
-                room.hermesShrine,
-                rewardFacts(
-                  catalog,
-                  room,
-                  room,
-                  declaration,
-                  entry,
-                  branch.history,
-                  enteredBiomeCount,
-                  undefined,
-                  undefined,
-                  undefined,
-                  undefined,
-                  branch,
-                ).requirements,
-                priorEnteredShrineFlags,
-              ),
-            }),
-      ),
-    );
-    hermesShrineAssessments.set(
-      semanticAddressKey(room.origin),
-      Object.freeze({ origin: room.origin, assessments }),
-    );
-    for (const assessment of assessments) {
-      if (assessment.inventory === undefined && assessment.placement.forced) {
-        for (const slotKey of ['first', 'secondLeft', 'secondRight'] as const) {
-          addRewardFinding(
-            findings,
-            rewardFinding('hermesShrineInventoryMissing', room.origin, { slotKey }),
-            ownerRegion(room.origin),
-            rewardFindingChronologyForRoom(snapshot, room.origin, sequence, 'localRoomLifecycle'),
-          );
-        }
-      }
-      if (assessment.inventory !== undefined && !assessment.placement.eligible) {
-        addRewardFinding(
-          findings,
-          rewardFinding('hermesShrinePlacementUnavailable', room.origin, {
-            priorShrineCount: assessment.placement.priorShrineCount,
-          }),
-          ownerRegion(room.origin),
-          rewardFindingChronologyForRoom(snapshot, room.origin, sequence, 'localRoomLifecycle'),
-        );
-      }
-      for (const issue of assessment.inventory?.inventoryIssues ?? []) {
-        const code =
-          issue.kind === 'missing'
-            ? 'hermesShrineInventoryMissing'
-            : issue.kind === 'wrongGroup'
-              ? 'hermesShrineInventoryWrongGroup'
-              : issue.kind === 'duplicateSecondGroup'
-                ? 'hermesShrineInventoryDuplicate'
-                : 'hermesShrineInventoryRequirement';
-        addRewardFinding(
-          findings,
-          rewardFinding(code, room.origin, 'slotKey' in issue ? { slotKey: issue.slotKey } : {}),
-          ownerRegion(room.origin),
-          rewardFindingChronologyForRoom(snapshot, room.origin, sequence, 'localRoomLifecycle'),
-        );
-      }
-    }
-  }
-  function recordStygianWellAssessment(room: CanonicalAuthoredRoom, sequence: number): void {
-    if (stygianWellAssessments.has(semanticAddressKey(room.origin))) return;
-    const declaration = catalog.rooms.byKey[room.gameName];
-    if (declaration?.roomShop === undefined && room.stygianWell === undefined) return;
-    const entry = views.get(semanticAddressKey(room.origin))?.entry;
-    if (entry === undefined)
-      throw new BiomeRewardSimulationContractError(`${room.gameName} has no Well entry frontier`);
-    const priorEnteredWellFlags = priorThreeRoomShopPresence(entry.ledgers.roomAppearances);
-    const firstPurchaseGenerationKey = room.roomActions.order.find(
-      (action) => action.kind === 'purchaseStygianWellOffer',
-    )?.generationKey;
-    const assessments: readonly StygianWellCandidateContext[] = Object.freeze(
-      branches.map((branch) =>
-        room.stygianWell === undefined
-          ? Object.freeze({
-              placement: assessStygianWellPlacement(declaration, priorEnteredWellFlags),
-            })
-          : Object.freeze({
-              placement: assessStygianWellPlacement(declaration, priorEnteredWellFlags),
-              inventory: assessStygianWell(
-                catalog,
-                declaration,
-                room.stygianWell,
-                branch.stygianWell,
-                branch.traitHistory,
-                priorEnteredWellFlags,
-                firstPurchaseGenerationKey,
-                branch.traitHistory?.equippedTraits.RestockBoon !== undefined,
-              ),
-            }),
-      ),
-    );
-    stygianWellAssessments.set(
-      semanticAddressKey(room.origin),
-      Object.freeze({ origin: room.origin, assessments }),
-    );
-    for (const assessment of assessments) {
-      if (assessment.inventory !== undefined && !assessment.placement.eligible) {
-        addRewardFinding(
-          findings,
-          rewardFinding('stygianWellPlacementUnavailable', room.origin, {
-            priorWellCount: assessment.placement.priorWellCount,
-          }),
-          ownerRegion(room.origin),
-          rewardFindingChronologyForRoom(snapshot, room.origin, sequence, 'localRoomLifecycle'),
-        );
-      }
-      for (const issue of assessment.inventory?.issues ?? []) {
-        const code =
-          issue === 'missing'
-            ? 'stygianWellMissing'
-            : issue === 'wrongGroup'
-              ? 'stygianWellWrongGroup'
-              : issue === 'duplicate'
-                ? 'stygianWellDuplicate'
-                : issue.startsWith('refill')
-                  ? 'stygianWellTravelDealRefillUnavailable'
-                  : 'stygianWellTwistInvalid';
-        addRewardFinding(
-          findings,
-          rewardFinding(code, room.origin, { reason: issue }),
-          ownerRegion(room.origin),
-          rewardFindingChronologyForRoom(snapshot, room.origin, sequence, 'localRoomLifecycle'),
-        );
-      }
-    }
-  }
   function recordTraitChildSettlements(
     checkpoints: readonly ReachedTraitChildCheckpoint[] | undefined,
     occurrenceOwner: SemanticAddress,
@@ -2657,7 +2098,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
               acquisitionEvent.sequence,
               'localRoomLifecycle',
             ),
-            acquisitionSiteOwner(snapshot, entry.room),
+            preparedAcquisitionSiteOwner(snapshot, entry.room),
             authoredSeaStarDuplicateSiteKeys,
           );
           candidateBranches = settlement.branches;
@@ -2812,87 +2253,18 @@ export function evaluateBiomeRewardsAssemblyInternal(
             view,
           );
         }
-        if (room !== undefined && room.kind === 'authored') {
-          const phase = room.encounterPhases.find(
-            (candidate) => candidate.slotKey === event.phaseKey,
-          );
-          const phaseOwner = {
-            kind: 'occurrence' as const,
-            occurrenceId: room.occurrenceId,
-          };
-          if (phase !== undefined) {
-            const origin = createEncounterPhaseAddress(
-              createBiomeAddress(event.origin.routeKey, event.origin.biomeKey),
-              phaseOwner,
-              event.phaseKey,
-            );
-            const isBiomeStart =
-              snapshot.entryRoom !== undefined &&
-              semanticAddressKey(snapshot.entryRoom.origin) === semanticAddressKey(event.origin);
-            const blockedByEnvelope = room.encounterPhases.some(
-              (candidate) => candidate.blocksFigLeaf,
-            );
-            const nonLeadingCascadePhase =
-              phase.skipEndEncounterEffects === true &&
-              room.encounterPhases[0]?.slotKey !== phase.slotKey;
-            // Fig Leaf is a single chronological resource even when rewards
-            // have multiple branches. Attest the complete frontier before
-            // deriving candidates/findings; never silently choose branch 0.
-            const figLeaf = attestFigLeafBranchState(branches);
-            const assessment = assessFigLeafSkip({
-              selected: phase.figLeafSkip,
-              canEncounterSkip: phase.canEncounterSkip,
-              biomeStart: isBiomeStart,
-              blockedByEnvelope,
-              nonLeadingCascadePhase,
-              remainingUses: figLeaf?.remainingUses ?? 0,
-              activatedThisBiome: figLeaf?.activatedThisBiome ?? false,
-              selectionAlreadyResolved: event.figLeafSkipOwner !== true,
-            });
-            if (phase.figLeafSkip === true && !assessment.legal) {
-              addRewardFinding(
-                findings,
-                Object.freeze({
-                  code: 'figLeafSkipUnavailable',
-                  severity: 'error',
-                  phase: 'encounterResolution',
-                  origin,
-                  evidence: Object.freeze(
-                    assessment.reason === undefined ? {} : { reason: assessment.reason },
-                  ),
-                }),
-                ownerRegion(origin),
-                historyFindingChronology(event.sequence),
-              );
-            }
-            if (
-              phase.canEncounterSkip &&
-              !isBiomeStart &&
-              !blockedByEnvelope &&
-              !nonLeadingCascadePhase &&
-              figLeaf !== undefined
-            ) {
-              figLeafPhaseCandidates.set(
-                semanticAddressKey(origin),
-                Object.freeze({
-                  origin,
-                  supported: figLeaf.remainingUses > 0 && !figLeaf.activatedThisBiome,
-                  selected: phase.figLeafSkip === true,
-                  remainingUses: figLeaf.remainingUses,
-                  activatedThisBiome: figLeaf.activatedThisBiome,
-                }),
-              );
-            }
-          }
-        }
-        if (event.figLeafSkipOwner) {
-          attestFigLeafBranchState(branches);
-          branches = Object.freeze(
-            branches.map((branch) =>
-              Object.freeze({ ...branch, keepsakes: consumeFigLeafUse(branch.keepsakes) }),
-            ),
-          );
-        }
+        const figLeafTransition = applyEncounterStartedTransition(
+          catalog,
+          snapshot,
+          event,
+          room?.kind === 'authored' ? room : undefined,
+          branches,
+        );
+        branches = figLeafTransition.branches;
+        for (const entry of figLeafTransition.figLeafCandidates)
+          figLeafPhaseCandidates.set(entry.key, entry.candidate);
+        for (const entry of figLeafTransition.findings)
+          addRewardFinding(findings, entry.finding, entry.region, entry.chronology);
         // Gorgon is an additive appearance on the existing phase. Eligibility
         // is evaluated at the predecessor/pre-room checkpoint after Fig Leaf
         // execution; the pending branch remains untouched until completion.
@@ -2982,351 +2354,88 @@ export function evaluateBiomeRewardsAssemblyInternal(
               eligibleGorgonPhases.add(`${semanticAddressKey(event.origin)}::${event.phaseKey}`);
           }
         }
-        branches = advanceRewardBranches(branches, event.sequence);
         break;
       }
       case 'roomEntered': {
-        branches = advanceRewardBranches(branches, event.sequence);
         const room = rooms.get(semanticAddressKey(event.origin));
-        if (room?.kind === 'authored') {
-          const declaration = catalog.rooms.byKey[room.gameName];
-          const capable = (declaration?.secretPointAnchorCount ?? 0) > 0;
-          const authoredForced = forcedSparkChaosSourceOccurrenceIds.has(room.occurrenceId);
-          const activeSpark = branches.some((branch) => branch.stygianWell.sparkUses > 0);
-          if (capable && activeSpark && !authoredForced)
-            addRewardFinding(
-              findings,
-              rewardFinding('sparkChaosMissing', room.origin, { gameName: room.gameName }),
-              ownerRegion(room.origin),
-              rewardFindingChronologyForRoom(
-                snapshot,
-                room.origin,
-                event.sequence,
-                'localRoomLifecycle',
-              ),
-            );
-          if (authoredForced && !activeSpark)
-            addRewardFinding(
-              findings,
-              rewardFinding('sparkChaosUnavailable', room.origin, { gameName: room.gameName }),
-              ownerRegion(room.origin),
-              rewardFindingChronologyForRoom(
-                snapshot,
-                room.origin,
-                event.sequence,
-                'localRoomLifecycle',
-              ),
-            );
-          if (authoredForced)
-            branches = Object.freeze(
-              branches.map((branch) =>
-                Object.freeze({
-                  ...branch,
-                  stygianWell:
-                    branch.stygianWell.sparkUses === 0
-                      ? branch.stygianWell
-                      : Object.freeze({
-                          ...branch.stygianWell,
-                          sparkUses: branch.stygianWell.sparkUses - 1,
-                        }),
-                }),
-              ),
-            );
-        }
-        if (room?.kind === 'authored') recordPurgingPoolAssessment(room, event.sequence);
-        if (room?.kind === 'authored') recordHermesShrineAssessment(room, event.sequence);
-        if (room?.kind === 'authored') recordStygianWellAssessment(room, event.sequence);
-        if (room?.kind === 'authored' && room.lifecycleProfileKey !== 'ShipCombatRoom') {
-          const view = views.get(semanticAddressKey(event.origin))?.entry;
+        const entered = applyRoomEnteredTransition(
+          catalog,
+          event,
+          room?.kind === 'authored' ? room : undefined,
+          views.get(semanticAddressKey(event.origin)),
+          forcedSparkChaosSourceOccurrenceIds,
+          branches,
+          rewardFindingChronologyForRoom(
+            snapshot,
+            event.origin as CanonicalAuthoredRoom['origin'],
+            event.sequence,
+            'localRoomLifecycle',
+          ),
+          enteredBiomeCount,
+          Object.freeze({
+            purgingPool:
+              room?.kind === 'authored' &&
+              purgingPoolAssessments.has(semanticAddressKey(room.origin)),
+            hermesShrine:
+              room?.kind === 'authored' &&
+              hermesShrineAssessments.has(semanticAddressKey(room.origin)),
+            stygianWell:
+              room?.kind === 'authored' &&
+              stygianWellAssessments.has(semanticAddressKey(room.origin)),
+          }),
+        );
+        branches = entered.branches;
+        for (const entry of entered.findings)
+          addRewardFinding(findings, entry.finding, entry.region, entry.chronology);
+        if (entered.purgingPoolAssessment !== undefined)
+          purgingPoolAssessments.set(
+            semanticAddressKey(entered.purgingPoolAssessment.origin),
+            entered.purgingPoolAssessment,
+          );
+        if (entered.hermesShrineAssessment !== undefined)
+          hermesShrineAssessments.set(
+            semanticAddressKey(entered.hermesShrineAssessment.origin),
+            entered.hermesShrineAssessment,
+          );
+        if (entered.stygianWellAssessment !== undefined)
+          stygianWellAssessments.set(
+            semanticAddressKey(entered.stygianWellAssessment.origin),
+            entered.stygianWellAssessment,
+          );
+        if (entered.runStateCheckpoint !== undefined) {
+          const { owner, room: checkpointRoom, view } = entered.runStateCheckpoint;
           if (view === undefined) {
             throw new BiomeRewardSimulationContractError(
-              `${room.gameName} has no room-entry Run State view`,
+              `${checkpointRoom.gameName} has no room-entry Run State view`,
             );
           }
-          captureRunState(
-            createRoomRunStateCheckpointAddress(room.origin, { kind: 'roomEntered' }),
-            room,
-            view,
-          );
+          captureRunState(owner, checkpointRoom, view);
         }
         break;
       }
       case 'roomPrepared':
-        branches = beginRewardRoom(branches, event.sequence);
+        branches = applyRoomPreparedTransition(event, branches);
         break;
       case 'keepsakeRackUsed': {
-        const rackRoom = rooms.get(semanticAddressKey(event.origin));
-        if (rackRoom?.kind === 'authored' && rackRoom.keepsakeRack !== undefined) {
-          const rack = rackRoom.keepsakeRack;
-          const disposition = rack.disposition;
-          if (event.origin.kind !== 'occurrence') break;
-          const selection = createPostbossKeepsakeSelectionAddress(event.origin);
-          const historyAtRack = views.get(semanticAddressKey(event.origin))?.entry;
+        const room = rooms.get(semanticAddressKey(event.origin));
+        const transition = applyKeepsakeRackUsedTransition(
+          catalog,
+          event,
+          room?.kind === 'authored' ? room : undefined,
+          views.get(semanticAddressKey(event.origin))?.entry,
+          routeLoadout,
+          branches,
+        );
+        branches = transition.branches;
+        if (transition.keepsakeSelectionCandidate !== undefined)
           keepsakeSelectionContexts.set(
-            semanticAddressKey(selection),
-            Object.freeze({
-              state: branches[0]!.keepsakes,
-              encounterBlockedKeepsakeKeys: Object.freeze([
-                ...new Set(
-                  historyAtRack?.ledgers.encounterRecords.flatMap(
-                    (encounter) =>
-                      catalog.encounterDefinitions.byKey[encounter.encounterKey]
-                        ?.blocksKeepsakeSelectionKeys ?? [],
-                  ) ?? [],
-                ),
-              ]),
-            }),
+            transition.keepsakeSelectionCandidate.key,
+            transition.keepsakeSelectionCandidate.candidate,
           );
-          const encounterBlockedKeepsakeKeys = keepsakeSelectionContexts.get(
-            semanticAddressKey(selection),
-          )!.encounterBlockedKeepsakeKeys;
-          const invalidReplacement =
-            disposition.kind === 'replace' &&
-            branches.some(
-              (branch) =>
-                keepsakeSelectionUnavailableReason(
-                  catalog,
-                  branch.keepsakes,
-                  disposition.keepsakeKey,
-                  encounterBlockedKeepsakeKeys,
-                ) !== undefined,
-            );
-          if (invalidReplacement) {
-            addRewardFinding(
-              findings,
-              rewardFinding('keepsakeUnavailable', selection, {
-                key: disposition.keepsakeKey,
-                reason: 'unavailableAtRack',
-              }),
-              ownerRegion(selection),
-              historyFindingChronology(event.sequence),
-            );
-          }
-          // The parent selection remains repairable when a replacement is
-          // unavailable. Its effect child, however, is reached only by the
-          // branches that actually crossed the rack boundary. Keep that
-          // explicit pre/post attestation instead of deriving reachability
-          // from the persisted disposition alone.
-          let rackTransitions = branches.map((branch) => {
-            const before = branch.keepsakes;
-            const unavailable =
-              disposition.kind === 'replace' &&
-              keepsakeSelectionUnavailableReason(
-                catalog,
-                before,
-                disposition.keepsakeKey,
-                encounterBlockedKeepsakeKeys,
-              ) !== undefined;
-            const equippedRank =
-              disposition.kind === 'replace' && !unavailable
-                ? keepsakeRankForEquip(
-                    catalog,
-                    disposition.keepsakeKey,
-                    branch.traitHistory ?? createTraitHistoryState(),
-                  )
-                : undefined;
-            const after = unavailable
-              ? before
-              : applyKeepsakeDisposition(
-                  catalog,
-                  before,
-                  disposition,
-                  branch.arcanaFear,
-                  equippedRank,
-                );
-            const replacementSucceeded =
-              disposition.kind === 'replace' &&
-              before.currentKey !== after.currentKey &&
-              after.currentKey === disposition.keepsakeKey;
-            return Object.freeze({
-              branch: Object.freeze({ ...branch, keepsakes: after }),
-              replacementSucceeded,
-              ...(equippedRank === undefined ? {} : { equippedRank }),
-            });
-          });
-          rackTransitions = rackTransitions.map((transition) => {
-            const branch = transition.branch;
-            if (
-              branch.keepsakes.fatedStatus !== 'Unfated' ||
-              branch.keepsakes.jeweledPom?.active !== true
-            )
-              return transition;
-            const prior = branch.traitHistory ?? createTraitHistoryState();
-            const traitHistory = foldTraitHistoryEvents(catalog, [
-              ...prior.events,
-              Object.freeze({
-                kind: 'traitRemoval' as const,
-                owner: selection,
-                acquisitionRole: 'jeweledPomCleanup',
-                sequence: event.sequence,
-                acquisitionPoint: 'keepsakeFatedInvalidation',
-                traitKey: branch.keepsakes.jeweledPom.grantedTraitKey,
-                acquisitionIdentity: branch.keepsakes.jeweledPom.acquisitionIdentity,
-                match: 'acquisitionIdentity' as const,
-              }),
-            ]);
-            return Object.freeze({
-              ...transition,
-              branch: Object.freeze({
-                ...branch,
-                history: attachTraitHistory(branch.history, traitHistory),
-                traitHistory,
-                keepsakes: invalidateJeweledPom(branch.keepsakes),
-              }),
-            });
-          });
-          branches = Object.freeze(rackTransitions.map((transition) => transition.branch));
-          if (disposition.kind === 'replace') {
-            const successfulReplacementTransitions = Object.freeze(
-              rackTransitions.filter((transition) => transition.replacementSucceeded),
-            );
-            const successfulReplacementBranches = Object.freeze(
-              successfulReplacementTransitions.map((transition) => transition.branch),
-            );
-            if (jeweledPomEffectForKey(catalog, disposition.keepsakeKey) !== undefined) {
-              const result = createKeepsakeEquipResultAddress(selection, 'jeweledPom');
-              if (
-                successfulReplacementBranches.length > 0 &&
-                rack.equipResults?.jeweledPom === undefined
-              ) {
-                addRewardFinding(
-                  findings,
-                  rewardFinding('keepsakeEquipResultMissing', result, {
-                    keepsakeKey: disposition.keepsakeKey,
-                  }),
-                  ownerRegion(selection.owner),
-                  historyFindingChronology(event.sequence),
-                );
-              } else if (
-                successfulReplacementBranches.some(
-                  (branch) =>
-                    !assessJeweledPomEquipResult(
-                      catalog,
-                      rack.equipResults!.jeweledPom!,
-                      branch.traitHistory ?? createTraitHistoryState(),
-                      branch.keepsakes.fatedStatus,
-                    ).legal,
-                )
-              ) {
-                addRewardFinding(
-                  findings,
-                  rewardFinding('keepsakeEquipResultUnavailable', result, {
-                    keepsakeKey: disposition.keepsakeKey,
-                  }),
-                  ownerRegion(selection.owner),
-                  historyFindingChronology(event.sequence),
-                );
-              }
-              if (successfulReplacementBranches.length > 0) {
-                keepsakeEquipResultContexts.set(
-                  semanticAddressKey(result),
-                  Object.freeze({
-                    frontiers: Object.freeze(
-                      successfulReplacementBranches.map((branch) =>
-                        Object.freeze({
-                          before: branch.traitHistory ?? createTraitHistoryState(),
-                          fatedStatus: branch.keepsakes.fatedStatus,
-                          ...(branch.arcanaFear === undefined
-                            ? {}
-                            : { arcanaFear: branch.arcanaFear }),
-                        }),
-                      ),
-                    ),
-                  }),
-                );
-              }
-            }
-            if (
-              catalog.keepsakes.byKey[disposition.keepsakeKey]?.effect?.kind ===
-              'experimentalHammer'
-            ) {
-              const result = createKeepsakeEquipResultAddress(selection, 'experimentalHammer');
-              if (
-                successfulReplacementBranches.length > 0 &&
-                rack.equipResults?.experimentalHammer === undefined
-              ) {
-                addRewardFinding(
-                  findings,
-                  rewardFinding('keepsakeEquipResultMissing', result, {
-                    keepsakeKey: disposition.keepsakeKey,
-                  }),
-                  ownerRegion(selection.owner),
-                  historyFindingChronology(event.sequence),
-                );
-              } else if (
-                successfulReplacementBranches.some(
-                  (branch) =>
-                    !assessExperimentalHammerEquipResult(
-                      catalog,
-                      rack.equipResults!.experimentalHammer!,
-                      branch.traitHistory ?? createTraitHistoryState(),
-                      routeLoadout,
-                    ).legal,
-                )
-              ) {
-                addRewardFinding(
-                  findings,
-                  rewardFinding('keepsakeEquipResultUnavailable', result, {
-                    keepsakeKey: disposition.keepsakeKey,
-                  }),
-                  ownerRegion(selection.owner),
-                  historyFindingChronology(event.sequence),
-                );
-              }
-              if (successfulReplacementBranches.length > 0) {
-                keepsakeEquipResultContexts.set(
-                  semanticAddressKey(result),
-                  Object.freeze({
-                    frontiers: Object.freeze(
-                      successfulReplacementBranches.map((branch) =>
-                        Object.freeze({
-                          before: branch.traitHistory ?? createTraitHistoryState(),
-                          fatedStatus: branch.keepsakes.fatedStatus,
-                          arcanaFear: branch.arcanaFear,
-                          loadout: routeLoadout,
-                        }),
-                      ),
-                    ),
-                  }),
-                );
-              }
-            }
-            rackTransitions = rackTransitions.map((transition) =>
-              !transition.replacementSucceeded
-                ? transition
-                : Object.freeze({
-                    ...transition,
-                    branch: applyJeweledPomEquipResult(
-                      catalog,
-                      transition.branch,
-                      disposition.keepsakeKey,
-                      rack.equipResults,
-                      createKeepsakeEquipResultAddress(selection, 'jeweledPom'),
-                      event.sequence,
-                      transition.equippedRank,
-                    ),
-                  }),
-            );
-            rackTransitions = rackTransitions.map((transition) =>
-              !transition.replacementSucceeded
-                ? transition
-                : Object.freeze({
-                    ...transition,
-                    branch: applyExperimentalHammerEquipResult(
-                      catalog,
-                      transition.branch,
-                      disposition.keepsakeKey,
-                      rack.equipResults,
-                      createKeepsakeEquipResultAddress(selection, 'experimentalHammer'),
-                      event.sequence,
-                      routeLoadout,
-                      transition.equippedRank,
-                    ),
-                  }),
-            );
-            branches = Object.freeze(rackTransitions.map((transition) => transition.branch));
-          }
-        }
+        for (const candidate of transition.keepsakeEquipResultCandidates)
+          keepsakeEquipResultContexts.set(candidate.key, candidate.candidate);
+        for (const finding of transition.findings)
+          addRewardFinding(findings, finding.finding, finding.region, finding.chronology);
         break;
       }
       case 'roomCreated': {
@@ -3381,7 +2490,6 @@ export function evaluateBiomeRewardsAssemblyInternal(
           branches = advanceRewardBranches(branches, event.sequence);
           break;
         }
-        if (room.kind === 'authored') recordPurgingPoolAssessment(room, event.sequence);
         if (room.gameName !== event.gameName) {
           throw new BiomeRewardSimulationContractError(
             `${semanticAddressKey(event.origin)} is ${room.gameName} in the snapshot but ${event.gameName} in history`,
@@ -3632,13 +2740,9 @@ export function evaluateBiomeRewardsAssemblyInternal(
           const acquisitionView =
             views.get(semanticAddressKey(room.origin))?.preOutgoing ??
             views.get(semanticAddressKey(room.origin))?.entry;
-          const producerPoints = history.events.filter(
-            (
-              candidate,
-            ): candidate is Extract<HistoryEvent, { readonly kind: 'producerPointReached' }> =>
-              candidate.kind === 'producerPointReached' &&
-              semanticAddressKey(candidate.origin) === semanticAddressKey(room.origin),
-          );
+          const producerPoints =
+            lifecycle.producerPointsByOwner.get(semanticAddressKey(room.origin)) ??
+            Object.freeze([]);
           const unresolvedFacts = (branchHistory: RewardHistoryState) =>
             rewardFacts(
               catalog,
@@ -3792,13 +2896,9 @@ export function evaluateBiomeRewardsAssemblyInternal(
               ),
           };
           const incomingOwnerKey = semanticAddressKey(incoming.origin);
-          const producerPoints = history.events.filter(
-            (
-              candidate,
-            ): candidate is Extract<HistoryEvent, { readonly kind: 'producerPointReached' }> =>
-              candidate.kind === 'producerPointReached' &&
-              semanticAddressKey(candidate.origin) === semanticAddressKey(room.origin),
-          );
+          const producerPoints =
+            lifecycle.producerPointsByOwner.get(semanticAddressKey(room.origin)) ??
+            Object.freeze([]);
           const candidateRoomView = views.get(semanticAddressKey(room.origin));
           // An Anomaly failure still owns a consumed door offer, but its
           // lifecycle deliberately omits the producer acquisition. Candidate
@@ -3922,15 +3022,14 @@ export function evaluateBiomeRewardsAssemblyInternal(
               ),
           };
           const localOwnerKey = semanticAddressKey(localReward.origin);
-          const acquisitionEvent = history.events.find(
-            (candidate) =>
-              semanticAddressKey(candidate.origin) === semanticAddressKey(room.origin) &&
-              (room.lifecycleProfileKey === 'FieldsCombatRoom'
-                ? candidate.kind === 'acquisitionPointReached' &&
-                  candidate.point === `cages:${localReward.slotKey}`
-                : candidate.kind === 'encounterCompleted' &&
-                  candidate.phaseKey === localReward.encounterPhaseKey),
-          );
+          const acquisitionEvent =
+            room.lifecycleProfileKey === 'FieldsCombatRoom'
+              ? lifecycle.acquisitionPointsByOwner
+                  .get(semanticAddressKey(room.origin))
+                  ?.find((candidate) => candidate.point === `cages:${localReward.slotKey}`)
+              : lifecycle.encounterCompletionsByOwner
+                  .get(semanticAddressKey(room.origin))
+                  ?.find((candidate) => candidate.phaseKey === localReward.encounterPhaseKey);
           const candidateRoomView = views.get(semanticAddressKey(room.origin));
           const acquisitionView =
             room.lifecycleProfileKey === 'FieldsCombatRoom'
@@ -4018,15 +3117,18 @@ export function evaluateBiomeRewardsAssemblyInternal(
         if (unresolvedLocalReward !== undefined && branches.length > 0) {
           const frontierBranches = branches;
           const ownerKey = semanticAddressKey(unresolvedLocalReward.origin);
-          const acquisitionEvent = history.events.find(
-            (candidate) =>
-              semanticAddressKey(candidate.origin) === semanticAddressKey(room.origin) &&
-              (room.lifecycleProfileKey === 'FieldsCombatRoom'
-                ? candidate.kind === 'acquisitionPointReached' &&
-                  candidate.point === `cages:${unresolvedLocalReward.slotKey}`
-                : candidate.kind === 'encounterCompleted' &&
-                  candidate.phaseKey === unresolvedLocalReward.encounterPhaseKey),
-          );
+          const acquisitionEvent =
+            room.lifecycleProfileKey === 'FieldsCombatRoom'
+              ? lifecycle.acquisitionPointsByOwner
+                  .get(semanticAddressKey(room.origin))
+                  ?.find(
+                    (candidate) => candidate.point === `cages:${unresolvedLocalReward.slotKey}`,
+                  )
+              : lifecycle.encounterCompletionsByOwner
+                  .get(semanticAddressKey(room.origin))
+                  ?.find(
+                    (candidate) => candidate.phaseKey === unresolvedLocalReward.encounterPhaseKey,
+                  );
           const candidateRoomView = views.get(semanticAddressKey(room.origin));
           const acquisitionView =
             room.lifecycleProfileKey === 'FieldsCombatRoom'
@@ -4590,12 +3692,9 @@ export function evaluateBiomeRewardsAssemblyInternal(
               completion?.findings ?? representativeFailedFindings ?? new Map();
             const generated = candidateBranches.length > 0;
             const pointKey = `optionalRewards:${selectedReward.slotKey}`;
-            const acquisitionEvent = history.events.find(
-              (candidate) =>
-                candidate.kind === 'acquisitionPointReached' &&
-                semanticAddressKey(candidate.origin) === semanticAddressKey(room.origin) &&
-                candidate.point === pointKey,
-            );
+            const acquisitionEvent = lifecycle.acquisitionPointsByOwner
+              .get(semanticAddressKey(room.origin))
+              ?.find((candidate) => candidate.point === pointKey);
             const acquisitionView = roomView.acquisitionPoints?.find(
               (point) => point.point === pointKey,
             )?.before;
@@ -4651,12 +3750,9 @@ export function evaluateBiomeRewardsAssemblyInternal(
           };
           for (const reward of [...optionalRewards, ...unresolvedOptionals]) {
             const pointKey = `optionalRewards:${reward.slotKey}`;
-            const acquisitionEvent = history.events.find(
-              (candidate) =>
-                candidate.kind === 'acquisitionPointReached' &&
-                semanticAddressKey(candidate.origin) === semanticAddressKey(room.origin) &&
-                candidate.point === pointKey,
-            );
+            const acquisitionEvent = lifecycle.acquisitionPointsByOwner
+              .get(semanticAddressKey(room.origin))
+              ?.find((candidate) => candidate.point === pointKey);
             indexRewardProducerFrontier(
               producerFrontiers,
               Object.freeze({
@@ -4717,7 +3813,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
               room,
               declaration,
               roomView,
-              history,
+              prepared.lifecycle,
               branches,
               enteredBiomeCount,
               Object.freeze({
@@ -4791,12 +3887,9 @@ export function evaluateBiomeRewardsAssemblyInternal(
         const acquisitionView = roomView.offerPoints?.find(
           (candidate) => candidate.offerPoint === event.offerPoint,
         )?.acquisitionBefore;
-        const acquisitionEvent = history.events.find(
-          (candidate) =>
-            candidate.kind === 'offerPointAcquired' &&
-            semanticAddressKey(candidate.origin) === semanticAddressKey(room.origin) &&
-            candidate.offerPoint === wheel.wheelKey,
-        );
+        const acquisitionEvent = lifecycle.wheelsByOwner
+          .get(semanticAddressKey(room.origin))
+          ?.find((candidate) => candidate.offerPoint === wheel.wheelKey);
         indexRewardProducerFrontier(
           producerFrontiers,
           Object.freeze({
@@ -5046,7 +4139,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
           fail,
           producerRegion,
           producerChronology,
-          acquisitionSiteOwner(snapshot, room),
+          preparedAcquisitionSiteOwner(snapshot, room),
           authoredSeaStarDuplicateSiteKeys,
         );
         recordAcquisitionRoleFrontiers(settlement.roleFrontiers);
@@ -5727,141 +4820,26 @@ export function evaluateBiomeRewardsAssemblyInternal(
       }
       case 'encounterEndEffectsApplied': {
         const room = rooms.get(semanticAddressKey(event.origin));
-        const declaration = room === undefined ? undefined : catalog.rooms.byKey[room.gameName];
-        if (
-          declaration?.advancesExperimentalHammerUses === true &&
-          !(room?.lifecycleProfileKey === 'FieldsCombatRoom' && event.phaseKey === 'Passive')
-        ) {
-          branches = advanceExperimentalHammerForEndEffects(branches, event.origin, event.sequence);
-        }
-        branches = advanceChaosClockAt(catalog, branches, event.sequence, 'encounters');
-        branches = Object.freeze(
-          branches.map((branch) =>
-            Object.freeze({
-              ...branch,
-              stygianWell: advanceStygianWellEncounterUses(branch.stygianWell),
-            }),
-          ),
+        const transition = applyEncounterEndEffectsTransition(
+          catalog,
+          event,
+          room?.kind === 'authored' ? room : undefined,
+          enteredBiomeCount,
+          fullRunBiomeCount,
+          branches,
         );
-        // Shrine countdowns are branch run-state, not a room-local history
-        // scan: an N purchase must remain live when O begins.  A due item is
-        // retained until its host's ordinary generated-pickup entry settles.
-        if (event.origin.kind === 'occurrence') {
-          const deliveryHost = event.origin;
-          branches = Object.freeze(
-            branches.map((branch) => {
-              const pending = branch.pendingHermesShrineDeliveries;
-              const next = Object.fromEntries(
-                Object.entries(pending).map(([key, delivery]) => {
-                  if (delivery.dueAt !== undefined) return [key, delivery] as const;
-                  const forceComplete =
-                    enteredBiomeCount === fullRunBiomeCount && declaration?.kind === 'Preboss';
-                  const remainingUses = forceComplete ? 0 : delivery.remainingUses - 1;
-                  return [
-                    key,
-                    Object.freeze({
-                      ...delivery,
-                      remainingUses: Math.max(0, remainingUses),
-                      ...(remainingUses <= 0
-                        ? { dueAt: deliveryHost, dueSequence: event.sequence }
-                        : {}),
-                    }),
-                  ] as const;
-                }),
-              );
-              return Object.freeze({
-                ...branch,
-                pendingHermesShrineDeliveries: Object.freeze(next),
-              });
-            }),
-          );
-          for (const branch of branches) {
-            for (const delivery of Object.values(branch.pendingHermesShrineDeliveries)) {
-              if (
-                delivery.dueAt === undefined ||
-                semanticAddressKey(delivery.dueAt) !== semanticAddressKey(deliveryHost)
-              )
-                continue;
-              const site = createAcquisitionSiteAddress(deliveryHost, 'hermesShrineDelivery');
-              const entryKey = hermesShrineDeliveryEntryKey(
-                delivery.sourceOrigin,
-                delivery.generationKey,
-              );
-              const hostRoom = rooms.get(semanticAddressKey(deliveryHost));
-              const retained =
-                hostRoom?.kind === 'authored'
-                  ? hostRoom.acquisitionSites?.hermesShrineDelivery?.entries[entryKey]
-                  : undefined;
-              recordDerivedAcquisitionEntryFrontiers([
-                Object.freeze({
-                  address: createAcquisitionEntryAddress(site, entryKey),
-                  kind: 'hermesShrineDelivery' as const,
-                  branchCohortSize: branches.length,
-                  fixedReward: delivery.reward,
-                  retainedSourceMismatch:
-                    retained !== undefined &&
-                    retained !== null &&
-                    JSON.stringify(retained.offer) !== JSON.stringify(delivery.reward.offer),
-                  branchesBeforeEntry: Object.freeze([branch]),
-                }),
-              ]);
-            }
-          }
-        }
-        const steadyOwner: SteadyGrowthOutcomeAddress['owner'] | undefined =
-          event.origin.kind === 'occurrence' ? event.origin : undefined;
-        const steadyGrowthTarget =
-          room?.kind === 'authored'
-            ? room.encounters.steadyGrowthTargetByPhase?.[event.phaseKey]
-            : undefined;
-        const steadyAdvance =
-          steadyOwner === undefined
-            ? undefined
-            : advanceSteadyGrowthAt(
-                catalog,
-                branches,
-                steadyOwner,
-                event.phaseKey,
-                steadyGrowthTarget,
-                event.sequence,
-              );
-        if (steadyAdvance === undefined) {
-          branches = advanceRewardBranches(branches, event.sequence);
-          break;
-        }
-        for (const { address, threshold } of steadyAdvance.thresholds) {
+        branches = transition.branches;
+        recordDerivedAcquisitionEntryFrontiers(transition.derivedAcquisitionEntryFrontiers);
+        for (const { address, threshold } of transition.steadyGrowthThresholds) {
           const key = semanticAddressKey(address);
           steadyGrowthOutcomeAddresses.set(key, address);
           const current = steadyGrowthCandidateContexts.get(key) ?? [];
           current.push(threshold);
           steadyGrowthCandidateContexts.set(key, current);
         }
-        for (const blocked of steadyAdvance.blocked) {
-          recordTraitChildSettlements(
-            [Object.freeze({ address: blocked.address, branch: blocked.branch })],
-            event.origin,
-          );
-          addRewardFinding(
-            findings,
-            rewardFinding(
-              blocked.targetTraitKey === undefined
-                ? 'steadyGrowthOutcomeMissing'
-                : 'steadyGrowthOutcomeUnavailable',
-              blocked.address,
-              Object.freeze({
-                sourceTraitKey: blocked.threshold.traitKey,
-                requiredInterval: blocked.threshold.requiredInterval,
-                eligibleTargetKeys: blocked.threshold.eligibleTargetKeys,
-                ...(blocked.targetTraitKey === undefined
-                  ? {}
-                  : { targetTraitKey: blocked.targetTraitKey }),
-              }),
-            ),
-            ownerRegion(event.origin),
-            Object.freeze({ kind: 'history', sequence: event.sequence, boundary: 'at' }),
-          );
-        }
-        branches = advanceRewardBranches(steadyAdvance.branches, event.sequence);
+        recordTraitChildSettlements(transition.traitChildSettlements, event.origin);
+        for (const finding of transition.findings)
+          addRewardFinding(findings, finding.finding, finding.region, finding.chronology);
         break;
       }
       case 'acquisitionPointReached': {
@@ -6598,73 +5576,21 @@ export function evaluateBiomeRewardsAssemblyInternal(
       }
       case 'roomExited': {
         const room = rooms.get(semanticAddressKey(event.origin));
-        if (room?.kind === 'authored' && room.entryState?.kind === 'shop') {
-          branches = completePendingShopAcquisitionSite(branches, room.origin, fail);
-        }
-        if (room?.kind === 'authored') {
-          const view = views.get(semanticAddressKey(event.origin))?.postCommit;
-          if (view === undefined) {
-            throw new BiomeRewardSimulationContractError(
-              `${room.gameName} has no pre-exit Run State view`,
-            );
-          }
+        const exited = applyRoomExitedTransition(
+          catalog,
+          event,
+          room?.kind === 'authored' ? room : undefined,
+          views.get(semanticAddressKey(event.origin)),
+          resourcePlacements,
+          branches,
+        );
+        branches = exited.branches;
+        if (exited.runStateCheckpoint !== undefined)
           captureRunState(
-            createRoomRunStateCheckpointAddress(room.origin, { kind: 'beforeRoomExit' }),
-            room,
-            view,
+            exited.runStateCheckpoint.owner,
+            exited.runStateCheckpoint.room,
+            exited.runStateCheckpoint.view,
           );
-          const placements = Object.entries(resourcePlacements).filter(([family, value]) => {
-            if (
-              value?.biomeKey !== room.origin.biomeKey ||
-              value.occurrenceId !== room.origin.occurrenceId
-            )
-              return false;
-            // Replacement retains its authored address for repair, but never
-            // fabricates a success in a room that no longer supports it.
-            return (
-              catalog.rooms.byKey[room.gameName]?.resourcePointSupport.families.includes(
-                family as import('../../catalog-schema').ResourceFamily,
-              ) ?? false
-            );
-          }) as readonly [
-            import('../../catalog-schema').ResourceFamily,
-            NonNullable<ResourcePlacements[import('../../catalog-schema').ResourceFamily]>,
-          ][];
-          if (placements.length > 0) {
-            branches = branches.map((branch) => {
-              const priorTraits = branch.traitHistory ?? createTraitHistoryState();
-              const events = placements.map(([family]) => {
-                const source =
-                  catalog.rooms.byKey[room.gameName]?.resourcePointSupport.rules[family];
-                if (source === undefined)
-                  throw new BiomeRewardSimulationContractError(
-                    `resource ${family} has no declaration rule in ${room.gameName}`,
-                  );
-                return Object.freeze({
-                  kind: 'elementContribution' as const,
-                  owner: room.origin,
-                  acquisitionRole: `resource:${source.grantedTraitKey}`,
-                  sequence: event.sequence,
-                  acquisitionPoint: 'roomExited',
-                  contributions: Object.freeze({ [source.element]: 1 }),
-                });
-              });
-              const traitHistory = foldTraitHistoryEvents(catalog, [
-                ...priorTraits.events,
-                ...events,
-              ]);
-              return Object.freeze({
-                ...branch,
-                traitHistory,
-                history: attachTraitHistory(branch.history, traitHistory),
-              });
-            });
-          }
-        }
-        // The pre-exit snapshot above intentionally observes Enshrouded
-        // before its departure use.  The next room sees a resulting maturity.
-        branches = advanceChaosClockAt(catalog, branches, event.sequence, 'locations');
-        branches = advanceRewardBranches(branches, event.sequence);
         break;
       }
       default:
