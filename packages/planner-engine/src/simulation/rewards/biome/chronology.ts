@@ -33,6 +33,7 @@ import {
   createAcquisitionConversionCandidateArtifacts,
   createDerivedAcquisitionEntryCandidateArtifacts,
   createSteadyGrowthCandidateArtifacts,
+  createFountainRarityCandidateArtifacts,
   createPurgingPoolCandidateArtifacts,
   createHermesShrineCandidateArtifacts,
   createStygianWellCandidateArtifacts,
@@ -66,6 +67,7 @@ import { prepareRewardEvaluationInputs } from './prepared-inputs';
 import { applyEncounterStartedTransition } from './lifecycle-transitions/encounter-started';
 import { applyEncounterEndEffectsTransition } from './lifecycle-transitions/encounter-end-effects';
 import { applyKeepsakeRackUsedTransition } from './lifecycle-transitions/keepsake-rack-used';
+import { applyFountainUsedTransition } from './lifecycle-transitions/fountain-used';
 import { applyRoomEnteredTransition } from './lifecycle-transitions/room-entered';
 import { applyRoomExitedTransition } from './lifecycle-transitions/room-exited';
 import { applyRoomPreparedTransition } from './lifecycle-transitions/room-prepared';
@@ -451,6 +453,10 @@ export function evaluateBiomeRewardChronology(
   >();
   const steadyGrowthCandidateContexts = new Map<string, ReachedSteadyGrowthThreshold[]>();
   const steadyGrowthOutcomeAddresses = new Map<string, SteadyGrowthOutcomeAddress>();
+  const fountainRarityCandidateContexts = new Map<
+    string,
+    import('../../candidate-artifacts').FountainRarityCandidateCapability
+  >();
   function recordTraitChildSettlements(
     checkpoints: readonly ReachedTraitChildCheckpoint[] | undefined,
     occurrenceOwner: SemanticAddress,
@@ -952,6 +958,21 @@ export function evaluateBiomeRewardChronology(
           );
         for (const candidate of transition.keepsakeEquipResultCandidates)
           keepsakeEquipResultContexts.set(candidate.key, candidate.candidate);
+        for (const finding of transition.findings)
+          addRewardFinding(findings, finding.finding, finding.region, finding.chronology);
+        break;
+      }
+      case 'fountainUsed': {
+        const room = rooms.get(semanticAddressKey(event.origin));
+        const transition = applyFountainUsedTransition(
+          catalog,
+          event,
+          room?.kind === 'authored' ? room : undefined,
+          branches,
+        );
+        branches = transition.branches;
+        if (transition.candidate !== undefined)
+          fountainRarityCandidateContexts.set(transition.candidate.key, transition.candidate.value);
         for (const finding of transition.findings)
           addRewardFinding(findings, finding.finding, finding.region, finding.chronology);
         break;
@@ -1505,6 +1526,9 @@ export function evaluateBiomeRewardChronology(
     steadyGrowthArtifacts: createSteadyGrowthCandidateArtifacts(
       catalog,
       steadyGrowthCandidateContexts,
+    ),
+    fountainRarityArtifacts: createFountainRarityCandidateArtifacts(
+      fountainRarityCandidateContexts,
     ),
     purgingPoolArtifacts: createPurgingPoolCandidateArtifacts(
       new Map(

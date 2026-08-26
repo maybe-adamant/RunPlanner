@@ -2,11 +2,16 @@
 
 ## Status
 
-**Locked on 2026-08-26.** Execution begins from documentation commit
-`a6842e8f` (`docs(keepsakes): plan remaining effect implementation`). The live
-production code reviewed by this plan remains base commit `5865cb05`
-(`refactor(engine): group biome reward evaluation`); the intervening commit is
-the audited source material and this execution contract only.
+**Locked on 2026-08-26.** Execution begins from lock commit `3e1b87b0`
+(`docs(keepsakes): lock remaining effects plan`). The live production code
+reviewed by this plan remains base commit `5865cb05` (`refactor(engine): group
+biome reward evaluation`); the intervening commits contain audited source
+material and this execution contract only.
+
+Gate A completed implementation and independent review on 2026-08-26. Its
+catalog, schema-migration, focused engine/application, typecheck, formatting,
+and diff-check lanes passed. The complete repository gate remains deferred to
+phase closure as required by this plan.
 
 The first phase contains Aromatic Phial, Crystal Figurine, Concave Stone, and
 Transcendent Embryo. A later phase establishes the exact-name reward-pressure

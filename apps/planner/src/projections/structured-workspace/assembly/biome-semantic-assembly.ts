@@ -427,6 +427,7 @@ export function assembleWorkspaceBiomeSemantics(
   judgmentArcanaCapability: (
     address: import('@run-planner/engine/authored-project').JudgmentArcanaAddress,
   ) => WorkspaceJudgmentArcanaCapability | undefined = () => undefined,
+  fountainRarityAssessment: import('./occurrence-action-row-projection').WorkspaceOccurrenceActionsInput['fountainRarityAssessment'] = undefined,
 ): WorkspaceBiomeSemanticAssembly {
   const { biome, evaluation, layout, plan } = source;
   const anomalyReplacementRoomGameNames =
@@ -499,6 +500,7 @@ export function assembleWorkspaceBiomeSemantics(
       hermesShrineAssessment: source.hermesShrineAssessment,
       stygianWellAssessment: source.stygianWellAssessment,
       steadyGrowthOutcomes: source.steadyGrowthOutcomes,
+      ...(fountainRarityAssessment === undefined ? {} : { fountainRarityAssessment }),
       isActiveTraitOffer: source.isActiveTraitOffer,
       judgmentArcanaCapability,
       keepsakeEquipResultSupported,

@@ -296,6 +296,10 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
       return { kind: 'trait', message: 'Choose the Steady Growth rarity target.' };
     case 'steadyGrowthOutcomeUnavailable':
       return { kind: 'trait', message: 'Choose a trait eligible for a rarity increase.' };
+    case 'fountainRarityResultMissing':
+      return { kind: 'trait', message: 'Choose the Common boon promoted by Aromatic Phial.' };
+    case 'fountainRarityResultUnavailable':
+      return { kind: 'trait', message: 'Choose a boon currently eligible for Aromatic Phial.' };
     case 'fieldsOptionalCapacityUnavailable':
       return { kind: 'fields', message: 'Reduce optional rewards to leave room for Nemesis.' };
     case 'nemesisOutcomeMissing':

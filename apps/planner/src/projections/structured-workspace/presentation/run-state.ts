@@ -239,6 +239,9 @@ export function presentRunState(
               ? { gorgonRarity: snapshot.keepsakes.gorgon.rarity }
               : {}),
           }),
+      ...(snapshot.keepsakes.phial === undefined
+        ? {}
+        : { phialStatus: snapshot.keepsakes.phial.status }),
     }),
     arcana: Object.freeze(
       snapshot.arcanaFear.arcana.active.map((card) =>

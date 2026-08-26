@@ -160,6 +160,9 @@ export function RunStateSheet({ launcher }: { readonly launcher: WorkspaceRunSta
             {state.keepsakes.gorgonRarity === undefined ? '' : ` (${state.keepsakes.gorgonRarity})`}
           </p>
         )}
+        {state.keepsakes.phialStatus === undefined ? null : (
+          <p>Aromatic Phial: {state.keepsakes.phialStatus}</p>
+        )}
       </details>
       <details className="run-state-summary-section">
         <summary>

@@ -5,7 +5,7 @@ import type {
   AuthoredTraitOffer,
 } from './traits';
 
-export const PROJECT_DOCUMENT_SCHEMA_VERSION = 59 as const;
+export const PROJECT_DOCUMENT_SCHEMA_VERSION = 60 as const;
 export type ResourceFamily = import('../catalog-schema').ResourceFamily;
 /** Route ownership supplies the route key; the selected host is exact and durable. */
 export interface ResourcePlacement {
@@ -61,6 +61,11 @@ export interface AuthoredKeepsakeEquipResults {
     readonly rarity?: import('../catalog-schema').TraitRarity;
   };
   readonly experimentalHammer?: AuthoredExperimentalHammerEquipResult;
+}
+
+/** Sparse choice for the exact next fountain use owned by one occurrence. */
+export interface AuthoredFountainRarityResult {
+  readonly targetTraitKey: string;
 }
 
 export type AuthoredExperimentalHammerEquipResult =
@@ -312,6 +317,8 @@ export interface RoomOccurrence {
     readonly disposition: PostbossKeepsakeDisposition;
     readonly equipResults?: AuthoredKeepsakeEquipResults;
   };
+  /** Present only when this exact occurrence owns a realized Phial target. */
+  readonly fountainRarityResult?: AuthoredFountainRarityResult;
   /** Present only at declaration-owned F/G/H automatic Postboss Pool hosts. */
   readonly purgingPool?: PurgingPoolState;
   /** Present at declaration-owned Shrine hosts; never guarded by a global interaction flag. */

@@ -36,7 +36,7 @@ const rooms: readonly RawRoomDeclaration[] = [
 ];
 
 export const declarations = {
-  version: '0.41.0-stygian-well',
+  version: '0.42.0-fountain-rarity',
   biomes,
   routes,
   arcanaCards,

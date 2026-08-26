@@ -170,6 +170,8 @@ export {
   type EvaluatedRansomAssessmentCandidate,
   type SteadyGrowthOutcomeCandidateQuery,
   type EvaluatedSteadyGrowthOutcomeCandidate,
+  type FountainRarityOutcomeCandidateQuery,
+  type EvaluatedFountainRarityOutcomeCandidate,
   evaluateEchoLastRunBoonDraftSupport,
   echoLastRunBoonRarityCandidates,
   echoLastRunBoonTraitCandidatesForRow,

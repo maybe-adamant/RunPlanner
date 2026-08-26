@@ -1,7 +1,7 @@
 import type { Catalog, KeepsakeRank, TraitRarity } from '../catalog-schema';
 import type { AuthoredKeepsakeEquipResults } from '../authored-project/model';
 import type { ArcanaFearState } from './arcana-fear';
-import { nextRarity, type TraitHistoryState } from './trait-history';
+import { hasEffectiveInRunUpgrade, nextRarity, type TraitHistoryState } from './trait-history';
 import { assessTraitOption } from './trait-authoring-policies';
 import {
   optionIndex,
@@ -42,6 +42,8 @@ export interface KeepsakeState {
   readonly gorgon?:
     | { readonly status: 'pending'; readonly rarity: TraitRarity }
     | { readonly status: 'consumed' | 'expired' };
+  /** Aromatic Phial's one live source use; absent after ordinary replacement. */
+  readonly phial?: { readonly status: 'pending' | 'consumed' };
 }
 
 export interface FigLeafStateValue {
@@ -79,6 +81,8 @@ export function keepsakeRankForEquip(
     case 'figLeaf':
     case 'gorgonAmulet':
       return 'Heroic';
+    case 'fountainRarity':
+      return 'Epic';
     default: {
       const exhaustive: never = effect;
       return exhaustive;
@@ -113,6 +117,8 @@ export function advanceCurrentKeepsake(
             }),
           })
         : state;
+    case 'fountainRarity':
+      return state;
     case 'figLeaf':
       return state;
     case 'experimentalHammer':
@@ -307,6 +313,48 @@ export function keepsakeEffectByKind<
         { readonly kind: K }
       >
     | undefined;
+}
+
+export interface PhialTraitTargetDomain {
+  readonly consumptionTargetKeys: readonly string[];
+  readonly mutationTargetKeys: readonly string[];
+}
+
+/** The two deliberately different Phial frontiers at one fountain use. */
+export function assessPhialTraitTargets(
+  catalog: Catalog,
+  history: TraitHistoryState,
+): PhialTraitTargetDomain {
+  const effect = keepsakeEffectByKind(catalog, 'fountainRarity');
+  if (effect === undefined)
+    return Object.freeze({ consumptionTargetKeys: [], mutationTargetKeys: [] });
+  const targetRarity = catalog.traitRarityOrder[effect.targetRarityLevelByRank.Epic - 1];
+  if (targetRarity === undefined)
+    return Object.freeze({ consumptionTargetKeys: [], mutationTargetKeys: [] });
+  const consumptionTargetKeys: string[] = [];
+  const mutationTargetKeys: string[] = [];
+  for (const equipped of Object.values(history.equippedTraits)) {
+    const declaration = catalog.traits.byKey[equipped.traitKey];
+    if (declaration === undefined) continue;
+    const shopGodTrait = catalog.traitGivers.values.some(
+      (giver) => giver.shopAwareGodTrait && giver.traitKeys.includes(equipped.traitKey),
+    );
+    const eligible =
+      shopGodTrait &&
+      declaration.usesBoonRarity === true &&
+      equipped.rarity === 'Common' &&
+      !declaration.blockInRunRarify &&
+      declaration.rarityDomain.kind === 'ranked' &&
+      declaration.rarityDomain.equippedRarities.includes(targetRarity);
+    if (!eligible) continue;
+    consumptionTargetKeys.push(equipped.traitKey);
+    if (hasEffectiveInRunUpgrade(catalog, equipped.traitKey, equipped))
+      mutationTargetKeys.push(equipped.traitKey);
+  }
+  return Object.freeze({
+    consumptionTargetKeys: Object.freeze(consumptionTargetKeys),
+    mutationTargetKeys: Object.freeze(mutationTargetKeys),
+  });
 }
 
 export function equipJeweledPom(
@@ -518,6 +566,9 @@ export function createKeepsakeState(
           }),
         }
       : {}),
+    ...(effect?.kind === 'fountainRarity'
+      ? { phial: Object.freeze({ status: 'pending' as const }) }
+      : {}),
   });
 }
 export function applyKeepsakeDisposition(
@@ -569,8 +620,10 @@ export function applyKeepsakeDisposition(
     history.map((entry) => entry.key),
     activeArcanaKeys,
   );
+  const { phial: _phial, ...stateWithoutPhial } = state;
+  void _phial;
   return Object.freeze({
-    ...state,
+    ...stateWithoutPhial,
     currentKey: disposition.keepsakeKey,
     history,
     removedKeys: Object.freeze([...state.removedKeys, state.currentKey]),
@@ -608,6 +661,9 @@ export function applyKeepsakeDisposition(
           }),
         }
       : {}),
+    ...(selected.effect?.kind === 'fountainRarity'
+      ? { phial: Object.freeze({ status: 'pending' as const }) }
+      : {}),
     ...(fatedStatus === 'Unfated' && state.callingCard !== undefined
       ? { callingCard: Object.freeze({ remainingCharges: 0 }) }
       : {}),
@@ -615,6 +671,13 @@ export function applyKeepsakeDisposition(
       ? { timePiece: Object.freeze({ remainingCharges: 0 }) }
       : {}),
   });
+}
+
+export type PhialLifecycleStatus = 'pending' | 'consumed';
+
+export function consumePhial(state: KeepsakeState): KeepsakeState {
+  if (state.phial?.status !== 'pending') return state;
+  return Object.freeze({ ...state, phial: Object.freeze({ status: 'consumed' as const }) });
 }
 
 export function expirePendingGorgon(state: KeepsakeState): KeepsakeState {

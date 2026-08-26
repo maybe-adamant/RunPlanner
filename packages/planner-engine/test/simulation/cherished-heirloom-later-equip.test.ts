@@ -196,6 +196,10 @@ describe('Cherished Heirloom later keepsake equips', () => {
     expect(timePiece.rank).toBe('Heroic');
     expect(timePiece.keepsakes.timePiece?.remainingCharges).toBe(5);
 
+    const phial = directLaterEquip('FountainRarityKeepsake');
+    expect(phial.rank).toBe('Epic');
+    expect(phial.keepsakes.phial).toEqual({ status: 'pending' });
+
     const pom = directLaterEquip('HadesAndPersephoneKeepsake');
     const pomApplied = applyJeweledPomEquipResult(
       catalog,

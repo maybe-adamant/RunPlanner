@@ -154,6 +154,7 @@ export interface CanonicalAuthoredRoom {
   readonly keepsakeRack?: NonNullable<
     import('../../authored-project/model').RoomOccurrence['keepsakeRack']
   >;
+  readonly fountainRarityResult?: import('../../authored-project/model').AuthoredFountainRarityResult;
   /** The exact realized Pool list remains occurrence-owned through simulation. */
   readonly purgingPool?: NonNullable<
     import('../../authored-project/model').RoomOccurrence['purgingPool']

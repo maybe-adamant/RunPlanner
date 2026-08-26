@@ -11,6 +11,7 @@ import {
 import { selectedPickupProducers } from './pickup-producers';
 import { createBiomeAddress } from './addresses';
 import { decodeRoomEncounterState } from './room-state/encounters';
+import { decodeFountainRarityResult } from './fountain-rarity-codec';
 import { decodeNullableRewardState } from './room-state/reward-acquisition-codec';
 import { completionOccurrenceId } from './completion-occurrences';
 import { roomActionKey } from './room-actions';
@@ -298,6 +299,7 @@ function decodeBiomePlan(
           ...(room.purgingPool !== undefined ? ['purgingPool'] : []),
           ...(room.surfaceShop?.forced === true ? ['hermesShrine'] : []),
           ...(room.roomShop?.forced === true ? ['stygianWell'] : []),
+          ...(room.hasRequiredFountain ? ['fountainRarityResult'] : []),
         ],
         `${path}.completionOccurrences[${index}]`,
       );
@@ -328,6 +330,14 @@ function decodeBiomePlan(
         raw.roomActions,
         `${path}.completionOccurrences[${index}].roomActions`,
       );
+      const fountainRarityResult =
+        raw.fountainRarityResult === undefined
+          ? undefined
+          : decodeFountainRarityResult(
+              raw.fountainRarityResult,
+              catalog,
+              `${path}.completionOccurrences[${index}].fountainRarityResult`,
+            );
       const purgingPool =
         room.purgingPool === undefined
           ? undefined
@@ -482,6 +492,7 @@ function decodeBiomePlan(
         ...(purgingPool === undefined ? {} : { purgingPool }),
         ...(hermesShrine === undefined ? {} : { hermesShrine }),
         ...(stygianWell === undefined ? {} : { stygianWell }),
+        ...(fountainRarityResult === undefined ? {} : { fountainRarityResult }),
         additionalExits: Object.freeze([]),
       });
       const acquisitionSites =
@@ -526,6 +537,14 @@ function decodeBiomePlan(
         (contribution): contribution is RoomActionContribution => contribution.kind === 'action',
       );
       const activeKeys = new Set(activeActions.map((action) => roomActionKey(action.reference)));
+      if (
+        fountainRarityResult !== undefined &&
+        !activeKeys.has(roomActionKey({ kind: 'useFountain' }))
+      )
+        fail(
+          `${path}.completionOccurrences[${index}].fountainRarityResult`,
+          'requires the declaration-owned fountain action',
+        );
       const authoredKeys = roomActions.order.map(roomActionKey);
       if (new Set(authoredKeys).size !== authoredKeys.length)
         fail(actionPath, 'must not repeat a room action');

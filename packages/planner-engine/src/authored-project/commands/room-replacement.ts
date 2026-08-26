@@ -365,6 +365,11 @@ export function applyRoomReplacementCommand(
   const replacement: RoomOccurrence = Object.freeze({
     occurrenceId: occurrence.occurrenceId,
     gameName: replacementRoom.gameName,
+    ...(occurrence.fountainRarityResult !== undefined &&
+    (replacementRoom.hasRequiredFountain ||
+      (replacementRoom.mode.kind === 'authored' && replacementRoom.mode.templateKey === 'Fountain'))
+      ? { fountainRarityResult: occurrence.fountainRarityResult }
+      : {}),
     state: replacementState,
     ...(replacementState.kind === 'shop' && replacementState.shop !== undefined
       ? {

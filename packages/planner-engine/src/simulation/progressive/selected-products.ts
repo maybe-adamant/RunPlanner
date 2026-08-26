@@ -473,6 +473,10 @@ export function retainBlockedRegionProducts(
     acquisitionConversions,
     derivedAcquisitionEntries,
     steadyGrowth,
+    undefined,
+    undefined,
+    undefined,
+    retainedArtifacts.fountainRarity,
   );
   return Object.freeze({
     rewards:

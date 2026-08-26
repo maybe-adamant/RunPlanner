@@ -60,19 +60,28 @@ export interface SteadyGrowthProgressEvent {
   readonly requiredInterval: number;
 }
 /** One automatic Steady Growth promotion at its owning end-effects checkpoint. */
-export interface TraitRarityMutationEvent {
+interface TraitRarityMutationEventBase {
   readonly kind: 'rarityMutation';
   readonly owner: SemanticAddress;
-  readonly acquisitionRole: 'steadyGrowth';
   readonly sequence: number;
-  readonly acquisitionPoint: 'encounterEndEffectsApplied';
-  readonly sourceTraitKey: string;
   readonly targetTraitKey: string;
   readonly oldRarity: TraitRarity;
   readonly newRarity: TraitRarity;
-  /** A reached Steady threshold reset its source before self-promotion. */
-  readonly resetSteadyGrowthProgress?: true;
 }
+
+export type TraitRarityMutationEvent =
+  | (TraitRarityMutationEventBase & {
+      readonly acquisitionRole: 'steadyGrowth';
+      readonly acquisitionPoint: 'encounterEndEffectsApplied';
+      readonly sourceTraitKey: string;
+      readonly resetSteadyGrowthProgress?: true;
+    })
+  | (TraitRarityMutationEventBase & {
+      readonly acquisitionRole: 'fountainRarity';
+      readonly acquisitionPoint: 'fountainUsed';
+      readonly sourceTraitKey?: never;
+      readonly resetSteadyGrowthProgress?: never;
+    });
 
 /** Concrete non-trait acquisition contribution, retained in the same ordered
  * trait facts ledger so later offer requirements see it. */
@@ -645,9 +654,15 @@ export function foldTraitHistoryEvents(
       }
       if (event.kind === 'rarityMutation') {
         const target = equipped[event.targetTraitKey];
+        const directFountainPromotion =
+          event.acquisitionRole === 'fountainRarity' &&
+          event.acquisitionPoint === 'fountainUsed' &&
+          event.oldRarity === 'Common' &&
+          event.newRarity === 'Heroic';
         if (
           target?.rarity === event.oldRarity &&
-          nextRarity(catalog, event.targetTraitKey, event.oldRarity) === event.newRarity
+          (directFountainPromotion ||
+            nextRarity(catalog, event.targetTraitKey, event.oldRarity) === event.newRarity)
         )
           equipped[event.targetTraitKey] = withRarityAndSteadyGrowthCredit(
             catalog,
@@ -922,6 +937,34 @@ export function settleSteadyGrowthThreshold(
   return Object.freeze({
     history: foldTraitHistoryEvents(catalog, [...history.events, event]),
     assessment,
+  });
+}
+
+/** Applies Phial's direct Common-to-Heroic mutation at its fountain action. */
+export function settleFountainRarityMutation(
+  catalog: Catalog,
+  history: TraitHistoryState,
+  owner: SemanticAddress,
+  sequence: number,
+  targetTraitKey: string,
+): { readonly history: TraitHistoryState; readonly legal: boolean } {
+  const target = history.equippedTraits[targetTraitKey];
+  const next = catalog.traitRarityOrder[3];
+  if (target === undefined || target.rarity !== 'Common' || next !== 'Heroic')
+    return Object.freeze({ history, legal: false });
+  const event: TraitRarityMutationEvent = Object.freeze({
+    kind: 'rarityMutation',
+    owner,
+    acquisitionRole: 'fountainRarity',
+    sequence,
+    acquisitionPoint: 'fountainUsed',
+    targetTraitKey,
+    oldRarity: target.rarity,
+    newRarity: next,
+  });
+  return Object.freeze({
+    history: foldTraitHistoryEvents(catalog, [...history.events, event]),
+    legal: true,
   });
 }
 

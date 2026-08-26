@@ -11,6 +11,7 @@ import {
   type NaturalSelectionResultCandidateEvaluation,
   type RansomAssessmentCandidateEvaluation,
   type EvaluatedSteadyGrowthOutcomeCandidate,
+  type EvaluatedFountainRarityOutcomeCandidate,
   type ProjectCandidateEvaluation,
   type ProjectEvaluation,
   type ProjectEvaluationAssembly,
@@ -43,6 +44,7 @@ import {
   type LevelResolutionAddress,
   type NaturalSelectionResultAddress,
   type SteadyGrowthOutcomeAddress,
+  type FountainRarityOutcomeAddress,
   type TraitOptionKey,
   type TargetAddress,
 } from '@run-planner/engine/authored-project';
@@ -104,7 +106,8 @@ export type CandidateProjectionEvaluation =
   | EvaluatedTraitAcquisitionTargetCandidate
   | EncounterCandidateProjectionEvaluation
   | EvaluatedKeepsakeEquipResultCandidate
-  | EvaluatedAcquisitionConversionCandidate;
+  | EvaluatedAcquisitionConversionCandidate
+  | EvaluatedFountainRarityOutcomeCandidate;
 
 export interface CandidateOptionProjection<
   T,
@@ -264,6 +267,12 @@ export interface CandidateProjectionSession {
   ) =>
     | EvaluatedSteadyGrowthOutcomeCandidate
     | import('@run-planner/engine/simulation').CandidateContextUnavailable;
+  readonly fountainRarityOutcome: (
+    owner: FountainRarityOutcomeAddress,
+    targetTraitKey: string | null | undefined,
+  ) =>
+    | EvaluatedFountainRarityOutcomeCandidate
+    | import('@run-planner/engine/simulation').CandidateContextUnavailable;
   readonly levelResolution: (
     owner: LevelResolutionAddress,
     value: AuthoredLevelResolution,
@@ -379,6 +388,8 @@ function candidateSelectedPossible(evaluation: CandidateProjectionEvaluation): b
       );
     case 'steadyGrowthOutcome':
       return evaluation.result.selectedPossible;
+    case 'fountainRarityOutcome':
+      return evaluation.result.selectedPossible;
     default:
       return evaluation.result.selectedPossible;
   }
@@ -395,6 +406,7 @@ function candidateForced(
     case 'keepsakeEquipResult':
     case 'acquisitionConversion':
     case 'steadyGrowthOutcome':
+    case 'fountainRarityOutcome':
       return false;
     case 'roomTarget':
       return (

@@ -435,6 +435,8 @@ export function evaluateProgressiveBiomeAssembly(
       evaluated.candidateArtifacts.steadyGrowth,
       evaluated.candidateArtifacts.purgingPools,
       evaluated.candidateArtifacts.hermesShrines,
+      undefined,
+      evaluated.candidateArtifacts.fountainRarity,
     ),
   });
 }

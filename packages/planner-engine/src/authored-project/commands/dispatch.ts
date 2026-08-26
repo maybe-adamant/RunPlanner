@@ -144,6 +144,7 @@ function applyUnchecked(
       return applyKeepsakeCommand(document, catalog, command);
     case 'ReplaceJeweledPomEquipResult':
     case 'ReplaceExperimentalHammerEquipResult':
+    case 'ReplaceFountainRarityTarget':
       return applyKeepsakeCommand(document, catalog, command);
     case 'CreateStart':
     case 'CreateBatch':

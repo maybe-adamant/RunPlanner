@@ -131,6 +131,10 @@ export type {
   SteadyGrowthOutcomeCandidateQuery,
   EvaluatedSteadyGrowthOutcomeCandidate,
 } from './steady-growth';
+export type {
+  FountainRarityOutcomeCandidateQuery,
+  EvaluatedFountainRarityOutcomeCandidate,
+} from './fountain-rarity';
 export {
   evaluateEchoLastRunBoonDraftSupport,
   echoLastRunBoonRarityCandidates,

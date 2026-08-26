@@ -21,6 +21,8 @@ import type {
   WorkspaceRewardControl,
   WorkspaceSteadyGrowthControl,
   WorkspaceSteadyGrowthInteraction,
+  WorkspaceFountainRarityControl,
+  WorkspaceFountainRarityInteraction,
 } from '../contract';
 import { semanticAddressKey } from '@run-planner/engine/authored-project';
 
@@ -30,6 +32,7 @@ export function bindResolutionInteractions(input: {
   readonly candidates: CandidateProjectionSession;
   readonly levelResolutionControls: ReadonlyMap<string, WorkspaceLevelResolutionControl>;
   readonly steadyGrowthControls: ReadonlyMap<string, WorkspaceSteadyGrowthControl>;
+  readonly fountainRarityControls: ReadonlyMap<string, WorkspaceFountainRarityControl>;
   readonly derivedShopEntryEdits: ReadonlyMap<
     string,
     NonNullable<WorkspaceRewardControl['derivedShopEntryEdit']>
@@ -58,6 +61,7 @@ export function bindResolutionInteractions(input: {
 }): Readonly<{
   readonly levelResolutions: ReadonlyMap<string, WorkspaceLevelResolutionInteraction>;
   readonly steadyGrowth: ReadonlyMap<string, WorkspaceSteadyGrowthInteraction>;
+  readonly fountainRarity: ReadonlyMap<string, WorkspaceFountainRarityInteraction>;
   readonly judgmentArcana: ReadonlyMap<string, WorkspaceJudgmentArcanaInteraction>;
   readonly keepsakeSelections: ReadonlyMap<string, WorkspaceKeepsakeSelectionInteraction>;
   readonly keepsakeEquipResults: ReadonlyMap<string, WorkspaceKeepsakeEquipResultInteraction>;
@@ -67,6 +71,7 @@ export function bindResolutionInteractions(input: {
     candidates,
     levelResolutionControls: effectiveLevelResolutionControls,
     steadyGrowthControls: effectiveSteadyGrowthControls,
+    fountainRarityControls,
     derivedShopEntryEdits,
     judgmentArcanaControls,
     keepsakeSelectionControls,
@@ -139,6 +144,66 @@ export function bindResolutionInteractions(input: {
                   (traitKey) => traitKey,
                 ),
                 selectedPossible: evaluated.result.selectedPossible,
+              });
+            },
+          }),
+        traitLabel: (traitKey: string) => catalog.traits.byKey[traitKey]?.label ?? traitKey,
+      }),
+    );
+  }
+  const fountainRarity = new Map<string, WorkspaceFountainRarityInteraction>();
+  for (const [key, control] of fountainRarityControls) {
+    fountainRarity.set(
+      key,
+      Object.freeze({
+        key,
+        owner: control.address,
+        intentFor: (targetTraitKey: string | null) =>
+          Object.freeze({
+            command: Object.freeze({
+              kind: 'ReplaceFountainRarityTarget' as const,
+              outcome: control.address,
+              targetTraitKey,
+            }),
+          }),
+        forTarget: (targetTraitKey: string | null | undefined = control.targetTraitKey) =>
+          Object.freeze({
+            load: () => {
+              const evaluated = candidates.fountainRarityOutcome(control.address, targetTraitKey);
+              if (evaluated.kind !== 'fountainRarityOutcome') return undefined;
+              return Object.freeze({
+                picker: projectDirectTraitOutcomePicker(
+                  [
+                    ...new Set([
+                      ...evaluated.result.mutationTargetKeys,
+                      ...(targetTraitKey === null || targetTraitKey === undefined
+                        ? []
+                        : [targetTraitKey]),
+                    ]),
+                  ].map((traitKey) =>
+                    (() => {
+                      const targetIndex = evaluated.result.mutationTargetKeys.indexOf(traitKey);
+                      const available = targetIndex >= 0;
+                      const branchSupported =
+                        available && evaluated.result.branchSupport[targetIndex] === true;
+                      return Object.freeze({
+                        value: traitKey,
+                        support: branchSupported ? ('possible' as const) : ('impossible' as const),
+                        branchSupport: evaluated.result.branchSupport,
+                        selected: traitKey === (targetTraitKey ?? undefined),
+                        ...(available
+                          ? branchSupported
+                            ? {}
+                            : { reason: 'branchDivergence' as const }
+                          : { reason: 'unavailable' as const }),
+                      });
+                    })(),
+                  ),
+                  (traitKey) => catalog.traits.byKey[traitKey]?.label ?? traitKey,
+                  (traitKey) => traitKey,
+                ),
+                selectedPossible: evaluated.result.selectedPossible,
+                targetRequired: evaluated.result.targetRequired,
               });
             },
           }),
@@ -322,6 +387,7 @@ export function bindResolutionInteractions(input: {
   return Object.freeze({
     levelResolutions,
     steadyGrowth,
+    fountainRarity,
     judgmentArcana,
     keepsakeSelections,
     keepsakeEquipResults,

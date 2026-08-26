@@ -40,6 +40,7 @@ import {
   type AllTogetherSetAddress,
   type NaturalSelectionResultAddress,
   type SteadyGrowthOutcomeAddress,
+  type FountainRarityOutcomeAddress,
   type AuthoredEchoLastRunBoonOffer,
   type AuthoredEchoLastRunBoonOption,
   type AuthoredCirceResolution,
@@ -940,6 +941,7 @@ export interface WorkspaceInteractionCatalog {
   readonly traitOffers: ReadonlyMap<string, WorkspaceTraitOfferInteraction>;
   readonly levelResolutions: ReadonlyMap<string, WorkspaceLevelResolutionInteraction>;
   readonly steadyGrowth: ReadonlyMap<string, WorkspaceSteadyGrowthInteraction>;
+  readonly fountainRarity: ReadonlyMap<string, WorkspaceFountainRarityInteraction>;
   readonly judgmentArcana: ReadonlyMap<string, WorkspaceJudgmentArcanaInteraction>;
   readonly keepsakeSelections: ReadonlyMap<string, WorkspaceKeepsakeSelectionInteraction>;
   readonly keepsakeEquipResults: ReadonlyMap<string, WorkspaceKeepsakeEquipResultInteraction>;
@@ -1354,6 +1356,8 @@ export interface WorkspaceRoomActionRow {
   readonly traitOffer?: WorkspaceTraitOfferControl;
   /** Exact wheel whose picked offer is chosen by this action. */
   readonly wheelPick?: RewardWheelAddress;
+  /** Exact Phial target control nested under this occurrence-owned fountain action. */
+  readonly fountainRarity?: WorkspaceFountainRarityControl;
   readonly executable: boolean;
 }
 
@@ -1447,6 +1451,32 @@ export interface WorkspaceSteadyGrowthInteraction {
   >;
   readonly forTarget: (targetTraitKey?: string | null) => {
     readonly load: () => WorkspaceSteadyGrowthDomain | undefined;
+  };
+  readonly traitLabel: (traitKey: string) => string;
+}
+
+export interface WorkspaceFountainRarityControl {
+  readonly address: FountainRarityOutcomeAddress;
+  readonly marker: WorkspaceMarker;
+  readonly targetTraitKey?: string;
+}
+
+export interface WorkspaceFountainRarityDomain {
+  readonly picker: ContextualPickerModel<string>;
+  readonly selectedPossible: boolean;
+  readonly targetRequired: boolean;
+}
+
+export interface WorkspaceFountainRarityInteraction {
+  readonly key: string;
+  readonly owner: FountainRarityOutcomeAddress;
+  readonly intentFor: (
+    targetTraitKey: string | null,
+  ) => WorkspaceCommandIntent<
+    Extract<ProjectCommand, { readonly kind: 'ReplaceFountainRarityTarget' }>
+  >;
+  readonly forTarget: (targetTraitKey?: string | null) => {
+    readonly load: () => WorkspaceFountainRarityDomain | undefined;
   };
   readonly traitLabel: (traitKey: string) => string;
 }
@@ -2211,6 +2241,7 @@ export interface WorkspaceRunStatePresentation {
     readonly figLeafActivatedThisBiome?: boolean;
     readonly gorgonStatus?: 'pending' | 'consumed' | 'expired';
     readonly gorgonRarity?: import('@run-planner/engine/catalog-schema').TraitRarity;
+    readonly phialStatus?: 'pending' | 'consumed';
   };
   readonly arcana: readonly {
     readonly key: string;

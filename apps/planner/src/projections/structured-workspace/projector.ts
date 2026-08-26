@@ -90,6 +90,7 @@ function projectBiome(
     address: import('@run-planner/engine/authored-project').JudgmentArcanaAddress,
   ) =>
     { readonly inactiveArcanaKeys: readonly string[]; readonly requiredCount: number } | undefined,
+  fountainRarityAssessment: import('./assembly/occurrence-action-row-projection').WorkspaceOccurrenceActionsInput['fountainRarityAssessment'] = undefined,
 ): {
   readonly batchInteractionRequirements: ReadonlyMap<string, WorkspaceBatchInteractionRequirement>;
   readonly biome: WorkspaceBiome;
@@ -117,6 +118,7 @@ function projectBiome(
     source,
     keepsakeEquipResultSupported,
     judgmentArcanaCapability,
+    fountainRarityAssessment,
   );
   const presentation = presentWorkspaceBiome(catalog, semantic);
   const runStateLaunchers = new Map(semantic.runStateLaunchers);
@@ -180,6 +182,10 @@ export function createStructuredWorkspaceProjection(
       const steadyGrowthControls = new Map<
         string,
         import('./contract').WorkspaceSteadyGrowthControl
+      >();
+      const fountainRarityControls = new Map<
+        string,
+        import('./contract').WorkspaceFountainRarityControl
       >();
       const judgmentArcanaControls = new Map<
         string,
@@ -318,6 +324,7 @@ export function createStructuredWorkspaceProjection(
               );
               return candidate.kind === 'judgmentArcana' ? candidate.result : undefined;
             },
+            (address, targetTraitKey) => candidates.fountainRarityOutcome(address, targetTraitKey),
           );
           appendUniqueFocusDestinations(focusByOwner, projected.focusDestinations.entries());
           for (const [key, launcher] of projected.runStateLaunchers) {
@@ -386,6 +393,14 @@ export function createStructuredWorkspaceProjection(
               }
               for (const control of node.room.roomActions?.steadyGrowth ?? []) {
                 steadyGrowthControls.set(semanticAddressKey(control.address), control);
+              }
+              for (const row of node.room.roomActions?.rows ?? []) {
+                if (row.fountainRarity !== undefined) {
+                  fountainRarityControls.set(
+                    semanticAddressKey(row.fountainRarity.address),
+                    row.fountainRarity,
+                  );
+                }
               }
             }
             if (node.kind === 'occurrenceWorkbench' && node.room.keepsakeSelection !== undefined) {
@@ -513,6 +528,7 @@ export function createStructuredWorkspaceProjection(
         traitControls,
         levelResolutionControls,
         steadyGrowthControls,
+        fountainRarityControls,
         judgmentArcanaControls,
         keepsakeSelectionControls,
         keepsakeEquipResultControls,

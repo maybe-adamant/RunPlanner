@@ -80,6 +80,12 @@ export interface RawKeepsakeDeclaration {
         readonly providerKey: 'Athena';
         readonly rarityLevelByRank: KeepsakeRankProfile<1, 2, 3, 4>;
         readonly naturalEncounterKey: string;
+      }
+    | {
+        readonly kind: 'fountainRarity';
+        readonly uses: 1;
+        readonly targetRarityLevelByRank: Readonly<{ Common: 2; Rare: 3; Epic: 4 }>;
+        readonly sourceMaxRarityLevel: 1;
       };
 }
 

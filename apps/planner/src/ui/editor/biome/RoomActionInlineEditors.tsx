@@ -5,6 +5,7 @@ import type {
 import { workspaceInteractionKey } from '@planner/projections/structured-workspace';
 import { PomResolutionLauncher } from '../rewards/PomResolutionEditor';
 import { TraitOfferLauncher } from '../rewards/TraitOfferEditor';
+import { FountainRarityEffectRow } from './FountainRarityEffectRow';
 
 /** Trait and level controls attached to one projected room-action row. */
 export function RoomActionInlineEditors({
@@ -35,6 +36,9 @@ export function RoomActionInlineEditors({
           key={workspaceInteractionKey(control.address)}
         />
       ))}
+      {row.fountainRarity === undefined ? null : (
+        <FountainRarityEffectRow control={row.fountainRarity} interactions={interactions} />
+      )}
     </>
   );
 }

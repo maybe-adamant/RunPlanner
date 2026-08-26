@@ -3,6 +3,7 @@ import {
   createAcquisitionEntryAddress,
   createAcquisitionSiteAddress,
   createEncounterPhaseAddress,
+  createFountainRarityOutcomeAddress,
   createOccurrenceAddress,
   createRoomActionAddress,
   createShopOfferAddress,
@@ -14,6 +15,7 @@ import {
   type RoomOccurrence,
   type RoomRunStateCheckpointAddress,
   type SemanticAddress,
+  type FountainRarityOutcomeAddress,
 } from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import {
@@ -28,6 +30,7 @@ import {
   type WorkspaceRoomLocal,
   type WorkspaceRoomTab,
   type WorkspaceRunStateLauncher,
+  type WorkspaceFountainRarityControl,
 } from '../contract';
 import type { WorkspaceMarkerDestinationEmitter } from '../navigation/marker-builder';
 import { occurrenceActionLabel } from './occurrence-action-label';
@@ -53,6 +56,14 @@ export interface WorkspaceOccurrenceActionsInput {
       }
     | undefined;
   readonly steadyGrowthOutcomes?: readonly import('@run-planner/engine/simulation').BiomeRewardSimulation['steadyGrowthOutcomes'][number][];
+  readonly fountainRarityAssessment?: (
+    address: FountainRarityOutcomeAddress,
+    targetTraitKey: string | null | undefined,
+  ) =>
+    | import('@run-planner/engine/simulation').EvaluatedFountainRarityOutcomeCandidate
+    | {
+        readonly kind: 'unavailable';
+      };
 }
 
 export interface WorkspaceOccurrenceActionAssemblyInput extends WorkspaceOccurrenceActionsInput {
@@ -204,6 +215,27 @@ function roomActionsForOccurrence(
           : row.reference.kind === 'interactIncomingReward'
             ? controlForRole(rewardControl, row.reference.acquisitionRole)
             : rewardControl;
+      const fountainRarity = (() => {
+        if (row.reference.kind !== 'useFountain' || input.fountainRarityAssessment === undefined) {
+          return undefined;
+        }
+        const outcome = createFountainRarityOutcomeAddress(address);
+        const targetTraitKey = input.occurrence.fountainRarityResult?.targetTraitKey;
+        const evaluated = input.fountainRarityAssessment(outcome, targetTraitKey);
+        if (evaluated.kind !== 'fountainRarityOutcome') return undefined;
+        if (
+          evaluated.result.status !== 'pending' ||
+          evaluated.result.targetRequired !== true ||
+          evaluated.result.mutationTargetKeys.length === 0
+        ) {
+          return undefined;
+        }
+        return Object.freeze<WorkspaceFountainRarityControl>({
+          address: outcome,
+          marker: input.markerDestinations.marker(outcome),
+          ...(targetTraitKey === undefined ? {} : { targetTraitKey }),
+        });
+      })();
       const artificerConversion = resolvedRewardControl?.conversions?.find(
         (conversion) => conversion.value.kind === 'artificer',
       );
@@ -307,6 +339,7 @@ function roomActionsForOccurrence(
         row.owner.kind !== 'rewardWheel'
           ? {}
           : { wheelPick: row.owner }),
+        ...(fountainRarity === undefined ? {} : { fountainRarity }),
         executable: row.executable,
       });
     }),

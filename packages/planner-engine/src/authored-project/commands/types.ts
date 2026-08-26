@@ -29,6 +29,7 @@ import type {
   AcquisitionRoleAddress,
   LevelResolutionAddress,
   SteadyGrowthOutcomeAddress,
+  FountainRarityOutcomeAddress,
   TargetAddress,
 } from '../addresses';
 import type {
@@ -93,6 +94,11 @@ export type JudgmentArcanaCommand = {
 export type SteadyGrowthCommand = {
   readonly kind: 'ReplaceSteadyGrowthTarget';
   readonly outcome: SteadyGrowthOutcomeAddress;
+  readonly targetTraitKey: string | null;
+};
+export type FountainRarityCommand = {
+  readonly kind: 'ReplaceFountainRarityTarget';
+  readonly outcome: FountainRarityOutcomeAddress;
   readonly targetTraitKey: string | null;
 };
 export type KeepsakeCommand = {
@@ -536,6 +542,7 @@ export type ProjectCommand =
   | ResourcePlacementCommand
   | JudgmentArcanaCommand
   | SteadyGrowthCommand
+  | FountainRarityCommand
   | KeepsakeCommand
   | KeepsakeEquipResultCommand
   | ExperimentalHammerEquipResultCommand
