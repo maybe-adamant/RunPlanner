@@ -15,6 +15,11 @@ changes are catalog compiler and planner-engine decompositions. The planner
 application remains an unchanged downstream consumer and supplies only
 representative contract and product witnesses.
 
+Gate C was narrowed after the live `db98aac4` call-path audit proved that Ship
+lifecycle candidate evaluation captures the ordered first-wheel branch frontier.
+It therefore remains with the chronological reward evaluator instead of crossing
+the extraction boundary described below.
+
 ## Objective
 
 Reduce the remaining change neighborhoods whose live code mixes complete
@@ -108,9 +113,11 @@ The reward evaluator's main event loop mutates one ordered branch and artifact
 assembly. Its local event families do not return independently complete
 products. Splitting them would require passing a broad mutable evaluator
 context or remerging partial branches, findings, checkpoints, and artifacts.
-That is explicitly excluded. The safe seams are products prepared before the
-loop or frozen after it: reward-store support, Ship lifecycle candidate
-preparation, and selected trait/level publication.
+That is explicitly excluded. The safe seams are reward-store support prepared
+from immutable history and layout facts, and selected trait/level publication
+frozen after ordered evaluation. Ship lifecycle candidate evaluation is not a
+safe seam: its deferred evaluator captures the exact first-wheel branch frontier
+and reuses reward generation, settlement, and finding accumulation.
 
 ### Planner application and React
 
@@ -333,7 +340,6 @@ single ordered reward evaluator. Extract only the complete products around it:
 
 - reward-store candidate support, including exact store history and layout
   policy projection;
-- Ship reward-wheel lifecycle views and candidate preparation; and
 - selected trait offers, selected level resolutions, runtime fallbacks, and
   their candidate contexts.
 
@@ -345,20 +351,20 @@ mutable candidate maps through an extraction.
 **Explicit retained authority.** Event-order dispatch, branch advancement,
 incoming and local acquisition settlement, producer frontiers, generated
 pickups, room-feature assessments, Run State capture, finding accumulation,
-pending Hub-board resolution, and final assembly remain together in
-`rewards/biome.ts`.
+pending Hub-board resolution, Ship lifecycle candidate evaluation, and final
+assembly remain together in `rewards/biome.ts`.
 
 **Consumers.** Reward-store candidate queries and downstream project candidate
-artifacts continue to expose the same supported results. Ship and selected
-trait products remain evaluator-private except where an existing supported
-simulation export already exists.
+artifacts continue to expose the same supported results. Selected trait products
+remain evaluator-private except where an existing supported simulation export
+already exists.
 
-**Tests.** Give store support, Ship lifecycle preparation, and selected
-trait/level publication their own primary suites by moving the exact cases from
-batch reward-store, Ship/O, progressive-selected-product, trait-offer, and
-level-resolution suites. Keep chronological settlement matrices with their
-existing reward and trait authorities and retain representative full-evaluator
-witnesses.
+**Tests.** Give store support and selected trait/level publication their own
+primary suites by moving the exact cases from batch reward-store,
+progressive-selected-product, trait-offer, and level-resolution suites. Keep
+Ship lifecycle candidate coverage and chronological settlement matrices with
+their existing reward and trait authorities, and retain representative
+full-evaluator witnesses.
 
 Run those focused suites. Do not run another Vitest process concurrently.
 
