@@ -28,11 +28,9 @@ import {
   createAcquisitionRoleAddress,
   createRoomActionAddress,
   semanticAddressKey,
-  type BatchRewardStoreAddress,
   type AcquisitionSiteOwnerAddress,
   type ExitDecisionAddress,
   type SemanticAddress,
-  type TraitOfferAddress,
   type TraitOfferOwnerAddress,
   type SteadyGrowthOutcomeAddress,
   type TargetAddress,
@@ -72,7 +70,6 @@ import {
   createUnresolvedAcquisitionRewardState,
   createUnresolvedPickupRewardState,
   materializeGorgonAthenaOffer,
-  optionIndex,
 } from '../../authored-project/traits';
 import {
   encounterEnvelopeSlots,
@@ -124,9 +121,7 @@ import {
 import type {
   RewardBranch,
   BiomeRewardSimulation,
-  RewardStoreCandidateSupport,
   RewardStoreSupportEntry,
-  ResolvedRuntimeOfferFallback,
   TargetRewardHistoryCheckpoint,
 } from './model';
 import {
@@ -142,13 +137,7 @@ import {
   createLevelResolutionCandidateArtifacts,
   createTraitOfferCandidateArtifacts,
 } from '../candidates/trait-offer-capability';
-import type {
-  ReachedTraitOfferEvaluation,
-  ReachedLevelResolutionEvaluation,
-  SelectedLevelResolutionAssessment,
-  SelectedTraitOfferAssessment,
-  TraitOfferCandidateContext,
-} from '../traits';
+import type { TraitOfferCandidateContext } from '../traits';
 import {
   advanceChaosClock,
   advanceSteadyGrowthProgress,
@@ -172,6 +161,9 @@ import {
   type RoomLifecycleCandidateResult,
   type ShipLifecycleCandidateContext,
 } from './lifecycle-artifacts';
+import { BiomeRewardSimulationContractError } from './biome-contract';
+import { assessAuthoredBatchRewardStore } from './reward-store-support';
+import { selectedTraitOfferProducts } from './selected-trait-products';
 
 function canonicalRewardState(reward: {
   readonly offer: AuthoredRewardState['offer'];
@@ -590,12 +582,7 @@ export type BiomeRewardSnapshot =
   CanonicalBiome | (MaterializedBiomePrefix & { readonly entryRoom: CanonicalAuthoredRoom });
 export type BiomeRewardHistory = CanonicalBiomeHistory | BiomeHistoryPrefix;
 
-export class BiomeRewardSimulationContractError extends Error {
-  constructor(detail: string) {
-    super(detail);
-    this.name = 'BiomeRewardSimulationContractError';
-  }
-}
+export { BiomeRewardSimulationContractError } from './biome-contract';
 
 function fail(detail: string): never {
   throw new BiomeRewardSimulationContractError(detail);
@@ -899,97 +886,6 @@ function canonicalTargets(snapshot: BiomeRewardSnapshot): ReadonlyMap<string, Ca
       .flatMap((decision) => (decision.kind === 'batch' ? decision.targets : []))
       .map((target) => [semanticAddressKey(target.origin), target]),
   );
-}
-
-function enteredStoreKey(
-  room: CanonicalRewardRoom,
-  declaration: RoomDeclaration,
-): string | undefined {
-  switch (declaration.enteredRewardStoreHistory.kind) {
-    case 'none':
-      return undefined;
-    case 'fixed':
-      return declaration.enteredRewardStoreHistory.storeKey;
-    case 'resolvedOffer':
-      return room.incomingReward?.resolvedStoreKey;
-  }
-}
-
-export function rewardStoreCandidateSupport(
-  layout: BiomeLayout,
-  origin: BatchRewardStoreAddress,
-  source: CanonicalAuthoredRoom,
-  sourceDeclaration: RoomDeclaration,
-  view: HistoryStateView,
-  historySequence: number,
-): RewardStoreCandidateSupport {
-  if (layout.progression.kind !== 'generated') {
-    throw new BiomeRewardSimulationContractError(
-      'Hub progression has no authored base-store policy',
-    );
-  }
-  const policy = layout.progression.rewardStorePolicy;
-  if (policy.kind !== 'authoredBaseStore') {
-    throw new BiomeRewardSimulationContractError(
-      'generated progression lost its authored base-store contract',
-    );
-  }
-  const priorStores = view.ledgers.enteredRewardStores
-    .filter((entry) => entry.origin.biomeKey === source.origin.biomeKey)
-    .map((entry) => entry.storeKey);
-  const currentStore = enteredStoreKey(source, sourceDeclaration);
-  const stores = currentStore === undefined ? priorStores : [...priorStores, currentStore];
-  const metaCount = stores.filter((storeKey) => storeKey === 'MetaProgress').length;
-  const ratio = stores.length === 0 ? null : metaCount / stores.length;
-  const metaSelectionValue =
-    ratio === null
-      ? policy.targetMetaRewardsRatio
-      : policy.targetMetaRewardsRatio +
-        policy.targetMetaRewardsAdjustSpeed * (policy.targetMetaRewardsRatio - ratio);
-  const supportStoreKeys = Object.freeze(
-    metaSelectionValue <= 0
-      ? policy.storeKeys.filter((storeKey) => storeKey !== 'MetaProgress')
-      : metaSelectionValue >= 1
-        ? policy.storeKeys.filter((storeKey) => storeKey === 'MetaProgress')
-        : [...policy.storeKeys],
-  );
-  return Object.freeze({
-    origin,
-    historySequence,
-    enteredStoreCount: stores.length,
-    enteredMetaStoreCount: metaCount,
-    currentMetaRatio: ratio,
-    metaSelectionValue,
-    supportStoreKeys,
-  });
-}
-
-function storeSupport(
-  layout: BiomeLayout,
-  batch: Pick<CanonicalBatch, 'rewardStore'>,
-  source: CanonicalAuthoredRoom,
-  sourceDeclaration: RoomDeclaration,
-  view: HistoryStateView,
-  historySequence: number,
-): RewardStoreSupportEntry {
-  if (batch.rewardStore.kind !== 'authoredBaseStore') {
-    throw new BiomeRewardSimulationContractError(
-      'generated batch lost its authored base-store contract',
-    );
-  }
-  const support = rewardStoreCandidateSupport(
-    layout,
-    batch.rewardStore.origin,
-    source,
-    sourceDeclaration,
-    view,
-    historySequence,
-  );
-  return Object.freeze({
-    ...support,
-    authoredStoreKey: batch.rewardStore.baseRewardStoreKey,
-    selectedPossible: support.supportStoreKeys.includes(batch.rewardStore.baseRewardStoreKey),
-  });
 }
 
 function expectedTargetStores(
@@ -1328,264 +1224,6 @@ export interface TraitChildSettlementCheckpoint {
 
 export interface TraitChildSettlementCheckpoints {
   readonly at: (address: SemanticAddress) => TraitChildSettlementCheckpoint | undefined;
-}
-
-function traitOwnerAddress(origin: SemanticAddress): TraitOfferOwnerAddress | undefined {
-  switch (origin.kind) {
-    case 'incomingReward':
-    case 'localReward':
-    case 'rewardWheelOffer':
-    case 'shopOffer':
-      return origin;
-    case 'encounterPhase':
-    case 'gorgonPhase':
-      return origin;
-    case 'acquisitionEntry':
-      return origin;
-    default:
-      return undefined;
-  }
-}
-
-export function selectedTraitOfferProducts(
-  branches: readonly RewardBranchState[],
-  retainedLevelEvaluations: readonly ReachedLevelResolutionEvaluation[] = Object.freeze([]),
-): {
-  readonly selectedTraitOffers: readonly SelectedTraitOfferAssessment[];
-  readonly selectedLevelResolutions: readonly SelectedLevelResolutionAssessment[];
-  readonly runtimeOfferFallbacks: readonly ResolvedRuntimeOfferFallback[];
-  readonly candidateContexts: ReadonlyMap<string, readonly TraitOfferCandidateContext[]>;
-  readonly levelCandidateContexts: ReadonlyMap<
-    string,
-    readonly {
-      readonly address: import('../../authored-project/addresses').LevelResolutionAddress;
-      readonly before: import('../traits').TraitHistoryState;
-      readonly levelCount: number;
-      readonly effectKind: 'choice' | 'random';
-      readonly emptyTargetAllowed?: boolean;
-    }[]
-  >;
-} {
-  const grouped = new Map<
-    string,
-    {
-      readonly address: TraitOfferAddress;
-      readonly acquisitionRole: string;
-      readonly offer: ReachedTraitOfferEvaluation['offer'];
-      readonly branches: ReachedTraitOfferEvaluation[];
-      chronologicalIndex: number;
-    }
-  >();
-  const directRuntimeFallbacks = new Map<
-    string,
-    {
-      readonly address: SemanticAddress;
-      readonly preferredKey: string;
-      readonly fallbackKeys: (string | undefined)[];
-    }
-  >();
-  for (const branch of branches) {
-    for (const trace of branch.traitEvaluations ?? []) {
-      const owner = traitOwnerAddress(trace.address);
-      if (owner === undefined) {
-        if (trace.offer.kind === 'traits') {
-          const key = semanticAddressKey(trace.address);
-          const current = directRuntimeFallbacks.get(key);
-          if (current === undefined)
-            directRuntimeFallbacks.set(key, {
-              address: trace.address,
-              preferredKey:
-                trace.offer.options[optionIndex(trace.offer.selectedOptionKey)]!.traitKey,
-              fallbackKeys: [trace.runtimeOfferFallbackTraitKey],
-            });
-          else if (!current.fallbackKeys.includes(trace.runtimeOfferFallbackTraitKey))
-            current.fallbackKeys.push(trace.runtimeOfferFallbackTraitKey);
-        }
-        continue;
-      }
-      const address = createTraitOfferAddress(owner, trace.acquisitionRole);
-      const key = semanticAddressKey(address);
-      const current = grouped.get(key);
-      if (current === undefined) {
-        grouped.set(key, {
-          address,
-          acquisitionRole: trace.acquisitionRole,
-          offer: trace.offer,
-          branches: [trace],
-          chronologicalIndex: trace.chronologicalIndex,
-        });
-      } else {
-        const duplicate = current.branches.some(
-          (candidate) =>
-            JSON.stringify([
-              candidate.before,
-              candidate.context,
-              candidate.offer,
-              candidate.arcanaFear,
-            ]) === JSON.stringify([trace.before, trace.context, trace.offer, trace.arcanaFear]),
-        );
-        if (!duplicate) current.branches.push(trace);
-        current.chronologicalIndex = Math.min(current.chronologicalIndex, trace.chronologicalIndex);
-      }
-    }
-  }
-  const selectedTraitOffers = Object.freeze(
-    [...grouped.values()]
-      .sort((left, right) => {
-        const chronology = left.chronologicalIndex - right.chronologicalIndex;
-        return chronology !== 0
-          ? chronology
-          : semanticAddressKey(left.address).localeCompare(semanticAddressKey(right.address));
-      })
-      .map((entry) =>
-        Object.freeze({
-          address: entry.address,
-          acquisitionRole: entry.acquisitionRole,
-          offer: entry.offer,
-          branches: Object.freeze(
-            entry.branches.map((trace) =>
-              Object.freeze({
-                assessments: trace.assessments,
-                composition: trace.composition,
-                replacementComposition: trace.replacementComposition,
-                targetedAcquisition: trace.targetedAcquisition,
-              }),
-            ),
-          ),
-          reached: true as const,
-          chronologicalIndex: entry.chronologicalIndex,
-        }),
-      ),
-  );
-  const candidateContexts = new Map<string, readonly TraitOfferCandidateContext[]>();
-  for (const entry of grouped.values()) {
-    const address = createTraitOfferAddress(entry.address.owner, entry.acquisitionRole);
-    candidateContexts.set(
-      semanticAddressKey(address),
-      Object.freeze(
-        entry.branches.map((trace) =>
-          Object.freeze({
-            before: trace.before,
-            context: trace.context,
-            ...(trace.arcanaFear === undefined ? {} : { arcanaFear: trace.arcanaFear }),
-            ...(trace.keepsakes === undefined ? {} : { keepsakes: trace.keepsakes }),
-          }),
-        ),
-      ),
-    );
-  }
-  const levels = new Map<
-    string,
-    {
-      address: import('../../authored-project/addresses').LevelResolutionAddress;
-      value: ReachedLevelResolutionEvaluation['value'];
-      branches: ReachedLevelResolutionEvaluation[];
-      chronologicalIndex: number;
-    }
-  >();
-  for (const trace of [
-    ...branches.flatMap((branch) => branch.levelResolutionEvaluations ?? []),
-    ...retainedLevelEvaluations,
-  ]) {
-    const key = semanticAddressKey(trace.address);
-    const current = levels.get(key);
-    if (current === undefined)
-      levels.set(key, {
-        address: trace.address,
-        value: trace.value,
-        branches: [trace],
-        chronologicalIndex: trace.chronologicalIndex,
-      });
-    else if (
-      !current.branches.some(
-        (candidate) =>
-          JSON.stringify([candidate.before, candidate.value]) ===
-          JSON.stringify([trace.before, trace.value]),
-      )
-    ) {
-      current.branches.push(trace);
-      current.chronologicalIndex = Math.min(current.chronologicalIndex, trace.chronologicalIndex);
-    }
-  }
-  const selectedLevelResolutions = Object.freeze(
-    [...levels.values()]
-      .sort((left, right) => left.chronologicalIndex - right.chronologicalIndex)
-      .map((entry) =>
-        Object.freeze({
-          address: entry.address,
-          value: entry.value,
-          branches: Object.freeze(
-            entry.branches.map((trace) =>
-              Object.freeze({
-                findings: trace.findings,
-                levelCount: trace.levelCount,
-                emptyTargetAllowed: trace.emptyTargetAllowed,
-                eligibleTargetCount: trace.before.upgradableTraitCount,
-              }),
-            ),
-          ),
-          reached: true as const,
-          chronologicalIndex: entry.chronologicalIndex,
-        }),
-      ),
-  );
-  const levelCandidateContexts = new Map<
-    string,
-    readonly {
-      readonly address: import('../../authored-project/addresses').LevelResolutionAddress;
-      readonly before: import('../traits').TraitHistoryState;
-      readonly levelCount: number;
-      readonly effectKind: 'choice' | 'random';
-      readonly emptyTargetAllowed?: boolean;
-    }[]
-  >();
-  for (const [key, entry] of levels) {
-    levelCandidateContexts.set(
-      key,
-      Object.freeze(
-        entry.branches.map((trace) =>
-          Object.freeze({
-            address: trace.address,
-            before: trace.before,
-            levelCount: trace.levelCount,
-            effectKind: trace.effectKind,
-            ...(trace.emptyTargetAllowed ? { emptyTargetAllowed: true } : {}),
-          }),
-        ),
-      ),
-    );
-  }
-  return Object.freeze({
-    selectedTraitOffers,
-    selectedLevelResolutions,
-    runtimeOfferFallbacks: Object.freeze([
-      ...[...grouped.values()].flatMap((entry) => {
-        const keys = new Set(entry.branches.map((trace) => trace.runtimeOfferFallbackTraitKey));
-        const fallbackKey = keys.size === 1 ? [...keys][0] : undefined;
-        if (fallbackKey === undefined || entry.offer.kind !== 'traits') return [];
-        return [
-          Object.freeze({
-            address: entry.address,
-            preferredKey: entry.offer.options[optionIndex(entry.offer.selectedOptionKey)]!.traitKey,
-            fallbackKey,
-          }),
-        ];
-      }),
-      ...[...directRuntimeFallbacks.values()].flatMap((entry) =>
-        entry.fallbackKeys.length === 1 && entry.fallbackKeys[0] !== undefined
-          ? [
-              Object.freeze({
-                address: entry.address,
-                preferredKey: entry.preferredKey,
-                fallbackKey: entry.fallbackKeys[0]!,
-              }),
-            ]
-          : [],
-      ),
-    ]),
-    candidateContexts,
-    levelCandidateContexts,
-  });
 }
 
 export function evaluateBiomeRewardsAssemblyInternal(
@@ -4650,7 +4288,7 @@ export function evaluateBiomeRewardsAssemblyInternal(
                 `${source.gameName} cannot own an authored base reward store`,
               );
             }
-            const support = storeSupport(
+            const support = assessAuthoredBatchRewardStore(
               layout,
               { rewardStore },
               source,

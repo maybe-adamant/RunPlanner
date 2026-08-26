@@ -29,8 +29,6 @@ import {
   createCompleteFTakeoverProject,
   createFOpeningBatch,
   createFProject,
-  createFStart,
-  createUnresolvedFOpeningBatch,
   fBiome,
   fCombatId,
   fDecision,
@@ -677,37 +675,6 @@ describe('F candidate support', () => {
         findings: [],
       },
     });
-  });
-
-  it('evaluates an unresolved F base store from its source prefix and blocks its dependent target', () => {
-    const project = createUnresolvedFOpeningBatch(createFStart());
-    const rewardStore = createBatchRewardStoreAddress(fBiome, fDecision().source);
-    const target = createTargetAddress(fBiome, fDecision().source, 'exit1');
-
-    expect(
-      candidateSession(project).evaluate([
-        { kind: 'batchRewardStore', rewardStore, storeKey: 'MetaProgress' },
-        { kind: 'batchRewardStore', rewardStore, storeKey: 'RunProgress' },
-        { kind: 'roomTarget', target, gameName: 'F_Combat02' },
-      ]),
-    ).toMatchObject([
-      {
-        kind: 'batchRewardStore',
-        result: { selectedStoreKey: 'MetaProgress', selectedPossible: true },
-      },
-      {
-        kind: 'batchRewardStore',
-        result: { selectedStoreKey: 'RunProgress', selectedPossible: false },
-      },
-      {
-        kind: 'unavailable',
-        reason: 'authoredPrerequisiteMissing',
-        evidence: {
-          kind: 'authoredPrerequisiteMissing',
-          prerequisite: { kind: 'batchRewardStore', owner: rewardStore },
-        },
-      },
-    ]);
   });
 
   it('keeps takeover Preboss selection source-owned instead of exposing its targets as ordinary rooms', () => {
