@@ -35,6 +35,15 @@ Heroic forced-result application/UI, typecheck, formatting, and diff-check
 lanes passed. The complete repository gate remains deferred to phase closure
 as required by this plan.
 
+Gate D implementation completed on 2026-08-26. Transcendent Embryo now has
+its closed Chaos blessing declaration, immediate route-start/Postboss/Echo
+results, exact eight-qualifying-encounter transformation result, direct marked
+blessing acquisition/removal history, Heirloom and unequip behavior, and the
+automatic lifecycle/UI and Run State products. Focused Embryo engine and
+workspace interaction witnesses, catalog, migration, typecheck, formatting,
+and diff-check lanes passed. The complete repository gate remains deferred to
+phase closure as required by this plan.
+
 The first phase contains Aromatic Phial, Crystal Figurine, Concave Stone, and
 Transcendent Embryo. A later phase establishes the exact-name reward-pressure
 infrastructure and immediately consumes it with all nine Olympian keepsakes.

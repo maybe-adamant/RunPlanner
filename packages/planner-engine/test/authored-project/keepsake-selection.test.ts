@@ -11,6 +11,7 @@ import {
   createProjectDocument,
   createRouteAddress,
   createRouteStartKeepsakeSelectionAddress,
+  createTranscendentEmbryoOutcomeAddress,
   decodeProjectDocument,
   encodeProjectDocument,
   type KeepsakeSelectionAddress,
@@ -19,6 +20,10 @@ import {
 const fPostboss = createOccurrenceAddress(
   createBiomeAddress('Underworld', 'F'),
   createOccurrenceId('completion:F:postboss'),
+);
+const fBoss = createOccurrenceAddress(
+  createBiomeAddress('Underworld', 'F'),
+  createOccurrenceId('completion:F:boss'),
 );
 
 describe('keepsake authored selections', () => {
@@ -65,6 +70,51 @@ describe('keepsake authored selections', () => {
     expect(() => decodeProjectDocument(encoded, catalog)).toThrow(
       'unknown keepsake MissingKeepsake',
     );
+  });
+
+  it('round-trips and clears exact Transcendent Embryo equip and transformation results', () => {
+    let project = createProjectDocument(catalog, {
+      projectId: 'transcendent-embryo-results',
+      configuredBiomeCounts: { Underworld: 1 },
+    });
+    const start = createRouteStartKeepsakeSelectionAddress('Underworld');
+    const equipResult = createKeepsakeEquipResultAddress(start, 'transcendentEmbryo');
+    const transformation = createTranscendentEmbryoOutcomeAddress(fBoss, 'Encounter');
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: start,
+      keepsakeKey: 'RandomBlessingKeepsake',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTranscendentEmbryoEquipResult',
+      result: equipResult,
+      value: { blessingKey: 'ChaosWeaponBlessing' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTranscendentEmbryoTransformation',
+      outcome: transformation,
+      blessingKey: 'ChaosElementalBlessing',
+    });
+    expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog)).toEqual(
+      project,
+    );
+    expect(() =>
+      applyProjectCommand(project, catalog, {
+        kind: 'ReplaceTranscendentEmbryoTransformation',
+        outcome: transformation,
+        blessingKey: 'ChaosLastStandBlessing',
+      }),
+    ).toThrow(/in-run Chaos blessing/);
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTranscendentEmbryoTransformation',
+      outcome: transformation,
+      blessingKey: null,
+    });
+    expect(
+      project.routes[0]?.biomes[0]?.completionOccurrences.find(
+        (occurrence) => occurrence.occurrenceId === fBoss.occurrenceId,
+      )?.encounters.transcendentEmbryoBlessingByPhase,
+    ).toBeUndefined();
   });
 
   it('leaves Jeweled Pom unresolved and restores dormant authored results', () => {

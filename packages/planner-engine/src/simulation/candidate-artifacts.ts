@@ -7,6 +7,7 @@ import {
   type KeepsakeSelectionAddress,
   type KeepsakeEquipResultAddress,
   type SteadyGrowthOutcomeAddress,
+  type TranscendentEmbryoOutcomeAddress,
   type FountainRarityOutcomeAddress,
   type AcquisitionRoleAddress,
   type OccurrenceAddress,
@@ -29,6 +30,11 @@ import {
   type SteadyGrowthTargetAssessment,
   assessSteadyGrowthTarget,
 } from './traits';
+import { assessTranscendentEmbryoTransformation } from './keepsakes';
+import type {
+  ReachedTranscendentEmbryoThreshold,
+  TranscendentEmbryoBlessingAssessment,
+} from './keepsakes';
 import {
   createEmptyLevelResolutionCandidateArtifacts,
   createEmptyTraitOfferCandidateArtifacts,
@@ -118,6 +124,42 @@ function createEmptySteadyGrowthCandidateArtifacts(): SteadyGrowthCandidateArtif
   return Object.freeze({ at: () => undefined });
 }
 
+export interface TranscendentEmbryoCandidateCapability {
+  readonly thresholds: readonly ReachedTranscendentEmbryoThreshold[];
+  readonly evaluate: (
+    blessingKey: string | null | undefined,
+  ) => readonly TranscendentEmbryoBlessingAssessment[];
+}
+export interface TranscendentEmbryoCandidateArtifacts {
+  readonly at: (
+    address: TranscendentEmbryoOutcomeAddress,
+  ) => TranscendentEmbryoCandidateCapability | undefined;
+}
+export function createTranscendentEmbryoCandidateArtifacts(
+  catalog: Catalog,
+  contexts: ReadonlyMap<string, readonly ReachedTranscendentEmbryoThreshold[]>,
+): TranscendentEmbryoCandidateArtifacts {
+  const privateContexts = new Map(contexts);
+  return Object.freeze({
+    at: (address: TranscendentEmbryoOutcomeAddress) => {
+      const thresholds = privateContexts.get(semanticAddressKey(address));
+      if (thresholds === undefined) return undefined;
+      return Object.freeze({
+        thresholds,
+        evaluate: (blessingKey: string | null | undefined) =>
+          Object.freeze(
+            thresholds.map((threshold) =>
+              assessTranscendentEmbryoTransformation(catalog, threshold, blessingKey),
+            ),
+          ),
+      });
+    },
+  });
+}
+function createEmptyTranscendentEmbryoCandidateArtifacts(): TranscendentEmbryoCandidateArtifacts {
+  return Object.freeze({ at: () => undefined });
+}
+
 /** Exact pre-fountain Phial frontiers retained by the reached action. */
 export interface FountainRarityCandidateFrontier {
   readonly status: import('./keepsakes').PhialLifecycleStatus | undefined;
@@ -203,6 +245,7 @@ export interface BiomeCandidateArtifacts {
   readonly acquisitionConversions: AcquisitionConversionCandidateArtifacts;
   readonly derivedAcquisitionEntries: DerivedAcquisitionEntryCandidateArtifacts;
   readonly steadyGrowth: SteadyGrowthCandidateArtifacts;
+  readonly transcendentEmbryo: TranscendentEmbryoCandidateArtifacts;
   readonly fountainRarity: FountainRarityCandidateArtifacts;
   readonly purgingPools: PurgingPoolCandidateArtifacts;
   readonly hermesShrines: HermesShrineCandidateArtifacts;
@@ -665,6 +708,7 @@ export interface KeepsakeEquipResultCandidateCapability {
     readonly before: TraitHistoryState;
     readonly arcanaFear?: ArcanaFearState;
     readonly fatedStatus: import('./keepsakes').FatedStatus;
+    readonly transcendentEmbryoRarity?: import('../catalog-schema').InRunTraitRarity;
     readonly loadout?: { readonly weaponKey: string; readonly aspectKey: string };
   }[];
 }
@@ -728,6 +772,7 @@ export function createBiomeCandidateArtifacts(
   figurineArcana: FigurineArcanaCandidateArtifacts = createFigurineArcanaCandidateArtifacts(
     new Map(),
   ),
+  transcendentEmbryo: TranscendentEmbryoCandidateArtifacts = createEmptyTranscendentEmbryoCandidateArtifacts(),
 ): BiomeCandidateArtifacts {
   return Object.freeze({
     origin,
@@ -744,6 +789,7 @@ export function createBiomeCandidateArtifacts(
     acquisitionConversions,
     derivedAcquisitionEntries,
     steadyGrowth,
+    transcendentEmbryo,
     fountainRarity,
     purgingPools,
     hermesShrines,

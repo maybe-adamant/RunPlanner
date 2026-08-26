@@ -15,6 +15,7 @@ import {
 import {
   assessExperimentalHammerEquipResult,
   assessJeweledPomEquipResult,
+  assessTranscendentEmbryoBlessing,
   createKeepsakeState,
 } from './keepsakes';
 import { createArcanaFearState } from './arcana-fear';
@@ -171,7 +172,9 @@ function evaluateRouteAssembly(
   const routeStartEffect = catalog.keepsakes.byKey[route.loadout.startingKeepsakeKey]?.effect;
   if (
     routeStartEffect !== undefined &&
-    (routeStartEffect.kind === 'jeweledPom' || routeStartEffect.kind === 'experimentalHammer')
+    (routeStartEffect.kind === 'jeweledPom' ||
+      routeStartEffect.kind === 'experimentalHammer' ||
+      routeStartEffect.kind === 'transcendentEmbryo')
   ) {
     const result = createKeepsakeEquipResultAddress(routeStart, routeStartEffect.kind);
     const startArcanaFear = createArcanaFearState(catalog, route.loadout);
@@ -200,12 +203,22 @@ function evaluateRouteAssembly(
             createTraitHistoryState(),
             startKeepsakes.fatedStatus,
           ).legal
-        : assessExperimentalHammerEquipResult(
-            catalog,
-            route.loadout.keepsakeEquipResults!.experimentalHammer!,
-            createTraitHistoryState(),
-            route.loadout,
-          ).legal)
+        : routeStartEffect.kind === 'experimentalHammer'
+          ? assessExperimentalHammerEquipResult(
+              catalog,
+              route.loadout.keepsakeEquipResults!.experimentalHammer!,
+              createTraitHistoryState(),
+              route.loadout,
+            ).legal
+          : assessTranscendentEmbryoBlessing(
+              catalog,
+              route.loadout.keepsakeEquipResults!.transcendentEmbryo!,
+              createTraitHistoryState(),
+              routeStartEffect.blessingRarityByRank[
+                catalog.keepsakes.byKey[route.loadout.startingKeepsakeKey]?.rank ?? 'Epic'
+              ],
+              route.loadout,
+            ).legal)
     ) {
       routeStartBlock = 'invalid';
       findings.push(
@@ -227,6 +240,14 @@ function evaluateRouteAssembly(
             arcanaFear: startArcanaFear,
             fatedStatus: startKeepsakes.fatedStatus,
             loadout: route.loadout,
+            ...(routeStartEffect.kind === 'transcendentEmbryo'
+              ? {
+                  transcendentEmbryoRarity:
+                    routeStartEffect.blessingRarityByRank[
+                      catalog.keepsakes.byKey[route.loadout.startingKeepsakeKey]?.rank ?? 'Epic'
+                    ],
+                }
+              : {}),
           }),
         ]),
       }),

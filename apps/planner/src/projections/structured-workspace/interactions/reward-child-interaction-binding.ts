@@ -29,6 +29,8 @@ import type {
   WorkspaceTraitOfferInteraction,
   WorkspaceSteadyGrowthControl,
   WorkspaceSteadyGrowthInteraction,
+  WorkspaceTranscendentEmbryoControl,
+  WorkspaceTranscendentEmbryoInteraction,
   WorkspaceFountainRarityControl,
   WorkspaceFountainRarityInteraction,
   WorkspaceAcquisitionConversionInteraction,
@@ -40,6 +42,7 @@ export interface WorkspaceRewardChildInteractionCatalog {
   readonly traitOffers: ReadonlyMap<string, WorkspaceTraitOfferInteraction>;
   readonly levelResolutions: ReadonlyMap<string, WorkspaceLevelResolutionInteraction>;
   readonly steadyGrowth: ReadonlyMap<string, WorkspaceSteadyGrowthInteraction>;
+  readonly transcendentEmbryo: ReadonlyMap<string, WorkspaceTranscendentEmbryoInteraction>;
   readonly fountainRarity: ReadonlyMap<string, WorkspaceFountainRarityInteraction>;
   readonly judgmentArcana: ReadonlyMap<string, WorkspaceJudgmentArcanaInteraction>;
   readonly figurineArcana: ReadonlyMap<string, WorkspaceFigurineArcanaInteraction>;
@@ -55,6 +58,10 @@ export function bindRewardChildInteractions(input: {
   readonly traitControls?: ReadonlyMap<string, WorkspaceTraitOfferControl>;
   readonly levelResolutionControls?: ReadonlyMap<string, WorkspaceLevelResolutionControl>;
   readonly steadyGrowthControls?: ReadonlyMap<string, WorkspaceSteadyGrowthControl>;
+  readonly transcendentEmbryoControls?: ReadonlyMap<
+    string,
+    WorkspaceTranscendentEmbryoControl
+  >;
   readonly fountainRarityControls?: ReadonlyMap<string, WorkspaceFountainRarityControl>;
   readonly judgmentArcanaControls?: ReadonlyMap<
     string,
@@ -92,6 +99,7 @@ export function bindRewardChildInteractions(input: {
     traitControls,
     levelResolutionControls,
     steadyGrowthControls,
+    transcendentEmbryoControls,
     fountainRarityControls,
     judgmentArcanaControls,
     figurineArcanaControls,
@@ -125,6 +133,7 @@ export function bindRewardChildInteractions(input: {
   const effectiveTraitControls = new Map(traitControls ?? []);
   const effectiveLevelResolutionControls = new Map(levelResolutionControls ?? []);
   const effectiveSteadyGrowthControls = new Map(steadyGrowthControls ?? []);
+  const effectiveTranscendentEmbryoControls = new Map(transcendentEmbryoControls ?? []);
   const effectiveFountainRarityControls = new Map(fountainRarityControls ?? []);
   for (const control of rewardControls.values()) {
     for (const trait of control.traitOffers ?? [])
@@ -171,6 +180,7 @@ export function bindRewardChildInteractions(input: {
   const {
     levelResolutions,
     steadyGrowth,
+    transcendentEmbryo,
     fountainRarity,
     judgmentArcana,
     figurineArcana,
@@ -181,6 +191,7 @@ export function bindRewardChildInteractions(input: {
     candidates,
     levelResolutionControls: effectiveLevelResolutionControls,
     steadyGrowthControls: effectiveSteadyGrowthControls,
+    transcendentEmbryoControls: effectiveTranscendentEmbryoControls,
     fountainRarityControls: effectiveFountainRarityControls,
     derivedShopEntryEdits,
     ...(judgmentArcanaControls === undefined ? {} : { judgmentArcanaControls }),
@@ -195,6 +206,7 @@ export function bindRewardChildInteractions(input: {
     traitOffers,
     levelResolutions,
     steadyGrowth,
+    transcendentEmbryo,
     fountainRarity,
     judgmentArcana,
     figurineArcana,

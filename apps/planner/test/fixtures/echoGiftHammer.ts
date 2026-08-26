@@ -11,6 +11,7 @@ import {
   createOccurrenceId,
   createPostbossKeepsakeSelectionAddress,
   createRouteStartKeepsakeSelectionAddress,
+  createTranscendentEmbryoOutcomeAddress,
   createTraitOfferAddress,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
@@ -26,13 +27,20 @@ export const echoGiftHammerReplayAddress = createKeepsakeEquipResultAddress(
   'experimentalHammer',
 );
 
+export const echoGiftEmbryoReplayAddress = createKeepsakeEquipResultAddress(
+  createEchoKeepsakeReplayAddress(createBiomeAddress('Underworld', 'I')),
+  'transcendentEmbryo',
+);
+
 /**
  * A narrow product fixture for the reached H -> I Gift Hammer repair path.
  * Echo extends the characterized H route into its forced-miniboss window, so
  * the replaced room also receives a fresh, frontier-legal Aphrodite Boon leaf
  * instead of retaining the Golden fixture's chronologically stale Apollo leaf.
  */
-export function createGoldenEchoGiftHammerPendingProject(): ProjectDocument {
+function createGoldenEchoGiftKeepsakePendingProject(
+  keepsakeKey: 'TempHammerKeepsake' | 'RandomBlessingKeepsake',
+): ProjectDocument {
   const forcedTargetId = createOccurrenceId('golden-h-combat05');
   const echo = createTraitOfferAddress(
     createEncounterPhaseAddress(
@@ -45,16 +53,58 @@ export function createGoldenEchoGiftHammerPendingProject(): ProjectDocument {
   let project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
     kind: 'ReplaceStartingKeepsake',
     selection: createRouteStartKeepsakeSelectionAddress('Underworld'),
-    keepsakeKey: 'TempHammerKeepsake',
+    keepsakeKey,
   });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'ReplaceExperimentalHammerEquipResult',
-    result: createKeepsakeEquipResultAddress(
-      createRouteStartKeepsakeSelectionAddress('Underworld'),
-      'experimentalHammer',
-    ),
-    value: { kind: 'selected', traitKey: 'StaffJumpSpecialTrait' },
-  });
+  project =
+    keepsakeKey === 'TempHammerKeepsake'
+      ? applyProjectCommand(project, catalog, {
+          kind: 'ReplaceExperimentalHammerEquipResult',
+          result: createKeepsakeEquipResultAddress(
+            createRouteStartKeepsakeSelectionAddress('Underworld'),
+            'experimentalHammer',
+          ),
+          value: { kind: 'selected', traitKey: 'StaffJumpSpecialTrait' },
+        })
+      : applyProjectCommand(project, catalog, {
+          kind: 'ReplaceTranscendentEmbryoEquipResult',
+          result: createKeepsakeEquipResultAddress(
+            createRouteStartKeepsakeSelectionAddress('Underworld'),
+            'transcendentEmbryo',
+          ),
+          value: { blessingKey: 'ChaosElementalBlessing' },
+        });
+  if (keepsakeKey === 'RandomBlessingKeepsake') {
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTranscendentEmbryoTransformation',
+      outcome: createTranscendentEmbryoOutcomeAddress(
+        createOccurrenceAddress(
+          createBiomeAddress('Underworld', 'F'),
+          createOccurrenceId('golden-f-b7-e1'),
+        ),
+        'Encounter',
+      ),
+      blessingKey: 'ChaosElementalBlessing',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTranscendentEmbryoTransformation',
+      outcome: createTranscendentEmbryoOutcomeAddress(
+        createOccurrenceAddress(
+          createBiomeAddress('Underworld', 'G'),
+          createOccurrenceId('golden-g-b4-e1'),
+        ),
+        'Encounter',
+      ),
+      blessingKey: 'ChaosElementalBlessing',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTranscendentEmbryoTransformation',
+      outcome: createTranscendentEmbryoOutcomeAddress(
+        createOccurrenceAddress(goldenHBiome, createOccurrenceId('golden-h-bridge01')),
+        'Encounter',
+      ),
+      blessingKey: 'ChaosElementalBlessing',
+    });
+  }
   project = applyProjectCommand(project, catalog, {
     kind: 'SetExitSelection',
     selection: createExitSelectionAddress(goldenHBiome, {
@@ -130,4 +180,13 @@ export function createGoldenEchoGiftHammerPendingProject(): ProjectDocument {
     ),
     value: { kind: 'replace', keepsakeKey: 'ManaOverTimeRefundKeepsake' },
   });
+}
+
+export function createGoldenEchoGiftHammerPendingProject(): ProjectDocument {
+  return createGoldenEchoGiftKeepsakePendingProject('TempHammerKeepsake');
+}
+
+/** The same reached Echo recipe, with Embryo's Common one-shot replay pending in I. */
+export function createGoldenEchoGiftEmbryoPendingProject(): ProjectDocument {
+  return createGoldenEchoGiftKeepsakePendingProject('RandomBlessingKeepsake');
 }

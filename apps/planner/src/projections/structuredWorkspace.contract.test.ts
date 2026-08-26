@@ -21,6 +21,7 @@ import {
   createProjectDocument,
   createRewardWheelOfferAddress,
   createTargetAddress,
+  createTranscendentEmbryoOutcomeAddress,
   createTraitOfferAddress,
   semanticAddressKey,
   type AuthoredBiomePlan,
@@ -73,7 +74,9 @@ import {
 import { assertExpectedWorkspaceTopologyClosure } from '@planner-test/support/structured-workspace/topology-closure';
 import { unsafeOmitWorkspaceProperty } from '@planner-test/support/structured-workspace/unsafe-product-mutation';
 import {
+  createGoldenEchoGiftEmbryoPendingProject,
   createGoldenEchoGiftHammerPendingProject,
+  echoGiftEmbryoReplayAddress,
   echoGiftHammerReplayAddress,
 } from '@planner-test/fixtures/echoGiftHammer';
 import { candidateSupport, createCandidateSessionFactory } from './candidateProjection';
@@ -758,6 +761,92 @@ describe('structured workspace overlay contract', () => {
       ownerAddress: echoGiftHammerReplayAddress,
       region: 'structure',
       nodeKey: i.entry?.key,
+    });
+  }, 20_000);
+
+  it('publishes immediate Embryo result interactions at route start, F Postboss, and I Echo', () => {
+    const fOnlyProject = (): ProjectDocument => {
+      const base = createGoldenFGHIProject();
+      return {
+        ...base,
+        routes: base.routes.map((route) =>
+          route.routeKey !== 'Underworld'
+            ? route
+            : { ...route, biomes: route.biomes.filter((biome) => biome.biomeKey === 'F') },
+        ),
+      };
+    };
+    const start = createRouteStartKeepsakeSelectionAddress('Underworld');
+    const startResult = createKeepsakeEquipResultAddress(start, 'transcendentEmbryo');
+    let routeStartProject = applyProjectCommand(fOnlyProject(), catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: start,
+      keepsakeKey: 'RandomBlessingKeepsake',
+    });
+    const routeStart = projectWorkspace(routeStartProject);
+    const startInteraction = routeStart.interactions.keepsakeEquipResults.get(
+      semanticAddressKey(startResult),
+    );
+    if (startInteraction?.owner.resultKind !== 'transcendentEmbryo')
+      throw new Error('route-start Embryo interaction is missing');
+    expect(startInteraction.owner).toEqual(startResult);
+    expect(startInteraction.value).toBeUndefined();
+    const epicStart = startInteraction
+      .load()
+      .find((candidate) => candidate.value === 'ChaosWeaponBlessing');
+    expect(candidateSupport(epicStart!)).toBe('possible');
+    expect(epicStart).toMatchObject({ transcendentEmbryoSummary: { rarity: 'Epic' } });
+    expect(routeStart.focusByOwner.get(semanticAddressKey(startResult))).toMatchObject({
+      ownerAddress: startResult,
+      region: 'routeRail',
+    });
+
+    const fPostboss = createPostbossKeepsakeSelectionAddress(
+      createOccurrenceAddress(
+        createBiomeAddress('Underworld', 'F'),
+        createOccurrenceId('completion:F:postboss'),
+      ),
+    );
+    const postbossResult = createKeepsakeEquipResultAddress(fPostboss, 'transcendentEmbryo');
+    const postbossProject = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+      kind: 'ReplacePostbossKeepsake',
+      selection: fPostboss,
+      value: { kind: 'replace', keepsakeKey: 'RandomBlessingKeepsake' },
+    });
+    const postboss = projectWorkspace(postbossProject);
+    const postbossInteraction = postboss.interactions.keepsakeEquipResults.get(
+      semanticAddressKey(postbossResult),
+    );
+    if (postbossInteraction?.owner.resultKind !== 'transcendentEmbryo')
+      throw new Error('F Postboss Embryo interaction is missing');
+    expect(postbossInteraction.owner).toEqual(postbossResult);
+    expect(postbossInteraction.value).toBeUndefined();
+    const epicPostboss = postbossInteraction
+      .load()
+      .find((candidate) => candidate.value === 'ChaosWeaponBlessing');
+    expect(candidateSupport(epicPostboss!)).toBe('possible');
+    expect(epicPostboss).toMatchObject({ transcendentEmbryoSummary: { rarity: 'Epic' } });
+
+    const echoAssembly = simulateProjectAssembly(
+      catalog,
+      createGoldenEchoGiftEmbryoPendingProject(),
+    );
+    const echo = projection().project(echoAssembly);
+    const echoInteraction = echo.interactions.keepsakeEquipResults.get(
+      semanticAddressKey(echoGiftEmbryoReplayAddress),
+    );
+    if (echoInteraction?.owner.resultKind !== 'transcendentEmbryo')
+      throw new Error('I Echo Embryo interaction is missing');
+    expect(echoInteraction.owner).toEqual(echoGiftEmbryoReplayAddress);
+    expect(echoInteraction.value).toBeUndefined();
+    const common = echoInteraction
+      .load()
+      .find((candidate) => candidate.value === 'ChaosWeaponBlessing');
+    expect(candidateSupport(common!)).toBe('possible');
+    expect(common).toMatchObject({ transcendentEmbryoSummary: { rarity: 'Common' } });
+    expect(echo.focusByOwner.get(semanticAddressKey(echoGiftEmbryoReplayAddress))).toMatchObject({
+      ownerAddress: echoGiftEmbryoReplayAddress,
+      region: 'structure',
     });
   }, 20_000);
 

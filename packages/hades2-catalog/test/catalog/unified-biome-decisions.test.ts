@@ -6,7 +6,7 @@ import { declarations } from '@run-planner/hades2-catalog/test-support';
 describe('unified biome decisions catalog', () => {
   it('assembles every supported biome through the common immutable catalog envelope', () => {
     const catalog = createCatalog(declarations);
-    expect(catalog.version).toBe('0.44.0-concave-stone');
+    expect(catalog.version).toBe('0.45.0-transcendent-embryo');
     expect(catalog.biomeLayouts.values.map((layout) => layout.biomeKey)).toEqual([
       'F',
       'G',

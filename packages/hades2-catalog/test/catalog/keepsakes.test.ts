@@ -98,6 +98,17 @@ const supportedEffects = [
       conversionChargesByRank: { Common: 2, Rare: 3, Epic: 4, Heroic: 5 },
     },
   },
+  {
+    key: 'RandomBlessingKeepsake',
+    profileKey: 'blessingRarityByRank',
+    legacyField: 'rarity',
+    effect: {
+      kind: 'transcendentEmbryo',
+      source: 'Chaos',
+      interval: 8,
+      blessingRarityByRank: { Common: 'Common', Rare: 'Rare', Epic: 'Epic', Heroic: 'Heroic' },
+    },
+  },
 ] as const;
 
 function replaceSupportedEffect(
@@ -302,7 +313,7 @@ describe('keepsake normalization', () => {
         },
       }));
       expect(() => normalizeKeepsakes(nonNumeric), `${row.key} non-numeric rank`).toThrow(
-        'must be numeric',
+        row.key === 'RandomBlessingKeepsake' ? 'must equal Rare' : 'must be numeric',
       );
     }
   });
@@ -433,6 +444,19 @@ describe('keepsake normalization', () => {
     ]) {
       expect(catalog.rewards.acquisitions.byKey[excluded]?.goldConversionEligible).not.toBe(true);
     }
+  });
+
+  it('normalizes Transcendent Embryo’s Chaos blessing profile and Common Gift replay', () => {
+    expect(catalog.keepsakes.byKey.RandomBlessingKeepsake?.effect).toEqual({
+      kind: 'transcendentEmbryo',
+      source: 'Chaos',
+      interval: 8,
+      blessingRarityByRank: { Common: 'Common', Rare: 'Rare', Epic: 'Epic', Heroic: 'Heroic' },
+    });
+    expect(catalog.keepsakes.byKey.RandomBlessingKeepsake?.echoGift).toEqual({
+      availability: 'eligible',
+      effect: { kind: 'transcendentEmbryo', schedule: 'oneShot' },
+    });
   });
 
   it('rejects missing, unexpected, and malformed Time Piece acquisition capability facts', () => {

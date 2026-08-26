@@ -36,7 +36,7 @@ const rooms: readonly RawRoomDeclaration[] = [
 ];
 
 export const declarations = {
-  version: '0.44.0-concave-stone',
+  version: '0.45.0-transcendent-embryo',
   biomes,
   routes,
   arcanaCards,

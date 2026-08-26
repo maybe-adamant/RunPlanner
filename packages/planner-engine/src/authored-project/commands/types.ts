@@ -30,6 +30,7 @@ import type {
   AcquisitionRoleAddress,
   LevelResolutionAddress,
   SteadyGrowthOutcomeAddress,
+  TranscendentEmbryoOutcomeAddress,
   FountainRarityOutcomeAddress,
   TargetAddress,
 } from '../addresses';
@@ -123,6 +124,18 @@ export type ExperimentalHammerEquipResultCommand = {
   readonly value: NonNullable<
     import('../model').AuthoredKeepsakeEquipResults['experimentalHammer']
   >;
+};
+export type TranscendentEmbryoEquipResultCommand = {
+  readonly kind: 'ReplaceTranscendentEmbryoEquipResult';
+  readonly result: KeepsakeEquipResultAddress & { readonly resultKind: 'transcendentEmbryo' };
+  readonly value: NonNullable<
+    import('../model').AuthoredKeepsakeEquipResults['transcendentEmbryo']
+  >;
+};
+export type TranscendentEmbryoTransformationCommand = {
+  readonly kind: 'ReplaceTranscendentEmbryoTransformation';
+  readonly outcome: TranscendentEmbryoOutcomeAddress;
+  readonly blessingKey: string | null;
 };
 
 export type TopologyCommand =
@@ -558,6 +571,8 @@ export type ProjectCommand =
   | KeepsakeCommand
   | KeepsakeEquipResultCommand
   | ExperimentalHammerEquipResultCommand
+  | TranscendentEmbryoEquipResultCommand
+  | TranscendentEmbryoTransformationCommand
   | TopologyCommand
   | RoomReplacementCommand
   | RoomActionCommand

@@ -12,6 +12,7 @@ import {
   type OccurrenceAddress,
   type SemanticAddress,
   type SteadyGrowthOutcomeAddress,
+  type TranscendentEmbryoOutcomeAddress,
   type TargetAddress,
   type TraitOfferAddress,
 } from '../../authored-project/addresses';
@@ -22,6 +23,7 @@ import {
   type BiomeCandidateArtifacts,
   type DerivedAcquisitionEntryCandidateArtifacts,
   type SteadyGrowthCandidateArtifacts,
+  type TranscendentEmbryoCandidateArtifacts,
 } from '../candidate-artifacts';
 import type { TraitOfferCandidateArtifacts } from '../candidates/trait-offer-capability';
 import type { TraitChildSettlementCheckpoints } from '../rewards/biome';
@@ -74,6 +76,8 @@ export function retainBlockedRegionProducts(
     blockedAt.kind === 'figurineArcana' ? blockedAt : undefined;
   const blockedSteadyGrowthAt: SteadyGrowthOutcomeAddress | undefined =
     blockedAt.kind === 'steadyGrowthOutcome' ? blockedAt : undefined;
+  const blockedTranscendentEmbryoAt: TranscendentEmbryoOutcomeAddress | undefined =
+    blockedAt.kind === 'transcendentEmbryoOutcome' ? blockedAt : undefined;
   const blockedNemesisAt: NemesisRandomEventAddress | undefined =
     blockedAt.kind === 'nemesisRandomEvent' ? blockedAt : undefined;
   const blockedKeepsakeAt: KeepsakeSelectionAddress | undefined =
@@ -255,6 +259,20 @@ export function retainBlockedRegionProducts(
             semanticAddressKey(address) === semanticAddressKey(blockedSteadyGrowthAt)
               ? blockedSteadyGrowthCapability
               : retainedArtifacts.steadyGrowth.at(address),
+        });
+  const blockedTranscendentEmbryoCapability =
+    blockedTranscendentEmbryoAt === undefined
+      ? undefined
+      : (selectedArtifacts.transcendentEmbryo.at(blockedTranscendentEmbryoAt) ??
+        blockedArtifacts.transcendentEmbryo.at(blockedTranscendentEmbryoAt));
+  const transcendentEmbryo: TranscendentEmbryoCandidateArtifacts =
+    blockedTranscendentEmbryoAt === undefined || blockedTranscendentEmbryoCapability === undefined
+      ? retainedArtifacts.transcendentEmbryo
+      : Object.freeze({
+          at: (address: TranscendentEmbryoOutcomeAddress) =>
+            semanticAddressKey(address) === semanticAddressKey(blockedTranscendentEmbryoAt)
+              ? blockedTranscendentEmbryoCapability
+              : retainedArtifacts.transcendentEmbryo.at(address),
         });
   const blockedKeepsakeCapability =
     blockedKeepsakeAt === undefined
@@ -495,6 +513,7 @@ export function retainBlockedRegionProducts(
     undefined,
     retainedArtifacts.fountainRarity,
     figurineArcana,
+    transcendentEmbryo,
   );
   return Object.freeze({
     rewards:

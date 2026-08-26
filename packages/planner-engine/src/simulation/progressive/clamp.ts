@@ -136,6 +136,7 @@ export function clampSelectedProducts(
       selectedProducts.candidateArtifacts.stygianWells,
       selectedProducts.candidateArtifacts.fountainRarity,
       selectedProducts.candidateArtifacts.figurineArcana,
+      selectedProducts.candidateArtifacts.transcendentEmbryo,
     ),
   });
 }

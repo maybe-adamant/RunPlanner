@@ -17,6 +17,7 @@ import {
   type WorkspaceRoomActionRow,
   type WorkspaceRunStateLauncher,
   type WorkspaceSteadyGrowthControl,
+  type WorkspaceTranscendentEmbryoControl,
 } from '../contract';
 import { runStateLauncher } from './occurrence-action-run-state';
 import type { WorkspaceOccurrenceActionsInput } from './occurrence-action-row-projection';
@@ -56,6 +57,7 @@ function projectRoomLifecycleTimeline(
   rows: readonly WorkspaceRoomActionRow[],
   proposals: readonly WorkspaceRoomActionProposal[],
   steadyGrowth: readonly WorkspaceSteadyGrowthControl[],
+  transcendentEmbryo: readonly WorkspaceTranscendentEmbryoControl[],
 ): WorkspaceRoomLifecycleTimeline {
   const occurrence = createOccurrenceAddress(input.biome, input.occurrence.occurrenceId);
   const launcherForBoundary = (
@@ -223,14 +225,29 @@ function projectRoomLifecycleTimeline(
       continue;
     }
     if (entry.kind === 'automaticEffect') {
-      const control = steadyGrowth.find(
-        (candidate) => semanticAddressKey(candidate.address) === semanticAddressKey(entry.address),
-      );
-      if (control !== undefined) {
+      if (entry.effect === 'steadyGrowth') {
+        const control = steadyGrowth.find(
+          (candidate) => semanticAddressKey(candidate.address) === semanticAddressKey(entry.address),
+        );
+        if (control === undefined) continue;
         entries.push(
           Object.freeze({
             kind: 'automaticEffect' as const,
             effect: 'steadyGrowth' as const,
+            address: control.address,
+            phaseKey: control.phaseKey,
+            rank: entry.rank,
+          }),
+        );
+      } else {
+        const control = transcendentEmbryo.find(
+          (candidate) => semanticAddressKey(candidate.address) === semanticAddressKey(entry.address),
+        );
+        if (control === undefined) continue;
+        entries.push(
+          Object.freeze({
+            kind: 'automaticEffect' as const,
+            effect: 'transcendentEmbryo' as const,
             address: control.address,
             phaseKey: control.phaseKey,
             rank: entry.rank,

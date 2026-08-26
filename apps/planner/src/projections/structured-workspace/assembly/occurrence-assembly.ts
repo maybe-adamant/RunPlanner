@@ -89,6 +89,7 @@ export interface WorkspaceOccurrenceAssemblyInput {
     owner: OccurrenceAddress,
   ) => import('@run-planner/engine/simulation').PurgingPoolCandidateCapability | undefined;
   readonly steadyGrowthOutcomes?: readonly import('@run-planner/engine/simulation').BiomeRewardSimulation['steadyGrowthOutcomes'][number][];
+  readonly transcendentEmbryoOutcomes?: readonly import('@run-planner/engine/simulation').BiomeRewardSimulation['transcendentEmbryoOutcomes'][number][];
   readonly fountainRarityAssessment?: import('./occurrence-action-row-projection').WorkspaceOccurrenceActionsInput['fountainRarityAssessment'];
   readonly hermesShrineAssessment?: (
     owner: OccurrenceAddress,
@@ -200,6 +201,9 @@ export function assembleWorkspaceOccurrence(
     ...(input.steadyGrowthOutcomes === undefined
       ? {}
       : { steadyGrowthOutcomes: input.steadyGrowthOutcomes }),
+    ...(input.transcendentEmbryoOutcomes === undefined
+      ? {}
+      : { transcendentEmbryoOutcomes: input.transcendentEmbryoOutcomes }),
     ...(input.fountainRarityAssessment === undefined
       ? {}
       : { fountainRarityAssessment: input.fountainRarityAssessment }),
@@ -266,7 +270,9 @@ export function assembleWorkspaceOccurrence(
               : input.catalog.keepsakes.byKey[occurrence.keepsakeRack.disposition.keepsakeKey]
                   ?.effect;
           const resultAddress =
-            effect?.kind === 'jeweledPom' || effect?.kind === 'experimentalHammer'
+            effect?.kind === 'jeweledPom' ||
+            effect?.kind === 'experimentalHammer' ||
+            effect?.kind === 'transcendentEmbryo'
               ? createKeepsakeEquipResultAddress(address, effect.kind)
               : undefined;
           return Object.freeze({
@@ -477,6 +483,12 @@ export function assembleWorkspaceOccurrence(
   }
   if (roomActions !== undefined) {
     for (const effect of roomActions.steadyGrowth ?? []) {
+      input.markerDestinations.setRoomTab(
+        [effect.marker],
+        roomLocal.kind === 'ship' ? roomTabForPhase(roomLocal, effect.phaseKey) : 'actions',
+      );
+    }
+    for (const effect of roomActions.transcendentEmbryo ?? []) {
       input.markerDestinations.setRoomTab(
         [effect.marker],
         roomLocal.kind === 'ship' ? roomTabForPhase(roomLocal, effect.phaseKey) : 'actions',

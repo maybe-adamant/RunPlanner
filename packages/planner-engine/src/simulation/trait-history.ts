@@ -167,6 +167,29 @@ export interface ChaosPairEvent {
   readonly offer: AuthoredChaosTraitOffer;
 }
 
+/** A direct, already-matured Chaos blessing (Transcendent Embryo). */
+export interface DirectChaosBlessingEvent {
+  readonly kind: 'directChaosBlessing';
+  readonly owner: SemanticAddress;
+  readonly acquisitionRole: 'transcendentEmbryoEquip' | 'transcendentEmbryoTransformation';
+  readonly sequence: number;
+  readonly acquisitionPoint: string;
+  readonly acquisitionIdentity: string;
+  readonly blessingKey: string;
+  readonly rarity: Extract<TraitRarity, 'Common' | 'Rare' | 'Epic' | 'Heroic'>;
+  readonly blessingValues: Readonly<Record<string, number>>;
+}
+
+/** Removes one exact direct Chaos blessing instance owned by Embryo. */
+export interface DirectChaosBlessingRemovalEvent {
+  readonly kind: 'directChaosBlessingRemoval';
+  readonly owner: SemanticAddress;
+  readonly acquisitionRole: 'transcendentEmbryoTransformation';
+  readonly sequence: number;
+  readonly acquisitionPoint: string;
+  readonly acquisitionIdentity: string;
+}
+
 export interface ChaosClockEvent {
   readonly kind: 'chaosClock';
   readonly sequence: number;
@@ -199,6 +222,8 @@ export type TraitHistoryEvent =
   | TraitRemovalEvent
   | EchoKeepsakeReplayEvent
   | ChaosPairEvent
+  | DirectChaosBlessingEvent
+  | DirectChaosBlessingRemovalEvent
   | ChaosClockEvent;
 
 export interface TraitReplacementTransition {
@@ -592,6 +617,38 @@ export function foldTraitHistoryEvents(
     const group: TraitHistoryEvent[] = [];
     while (ordered[index]?.sequence === sequence) group.push(ordered[index++]!);
     for (const event of group) {
+      if (event.kind === 'directChaosBlessing') {
+        const blessing = catalog.chaos.blessings.byKey[event.blessingKey];
+        if (blessing === undefined) continue;
+        maturedChaos.push(
+          Object.freeze({
+            acquisitionIdentity: event.acquisitionIdentity,
+            blessingKey: event.blessingKey,
+            rarity: event.rarity,
+            blessingValues: event.blessingValues,
+          }),
+        );
+        const outcome = blessing.derivedOutcome;
+        if (outcome?.kind === 'creation')
+          for (const element of ['Aether', 'Earth', 'Air', 'Fire', 'Water'] as const)
+            pickupElements[element] += outcome.elementsPerElementByRarity[event.rarity];
+        continue;
+      }
+      if (event.kind === 'directChaosBlessingRemoval') {
+        const index = maturedChaos.findIndex(
+          (blessing) => blessing.acquisitionIdentity === event.acquisitionIdentity,
+        );
+        if (index < 0) continue;
+        const [removed] = maturedChaos.splice(index, 1);
+        const outcome = catalog.chaos.blessings.byKey[removed!.blessingKey]?.derivedOutcome;
+        if (outcome?.kind === 'creation')
+          for (const element of ['Aether', 'Earth', 'Air', 'Fire', 'Water'] as const)
+            pickupElements[element] -=
+              outcome.elementsPerElementByRarity[
+                removed!.rarity === 'Legendary' ? 'Heroic' : removed!.rarity
+              ];
+        continue;
+      }
       if (event.kind === 'chaosPair') {
         const curse = catalog.chaos.curses.byKey[event.offer.curseKey];
         if (curse !== undefined)

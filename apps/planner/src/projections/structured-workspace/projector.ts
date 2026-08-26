@@ -193,6 +193,10 @@ export function createStructuredWorkspaceProjection(
         string,
         import('./contract').WorkspaceSteadyGrowthControl
       >();
+      const transcendentEmbryoControls = new Map<
+        string,
+        import('./contract').WorkspaceTranscendentEmbryoControl
+      >();
       const fountainRarityControls = new Map<
         string,
         import('./contract').WorkspaceFountainRarityControl
@@ -309,7 +313,8 @@ export function createStructuredWorkspaceProjection(
           catalog.keepsakes.byKey[authoredRoute.loadout.startingKeepsakeKey]?.effect;
         if (
           routeStartEffect?.kind === 'jeweledPom' ||
-          routeStartEffect?.kind === 'experimentalHammer'
+          routeStartEffect?.kind === 'experimentalHammer' ||
+          routeStartEffect?.kind === 'transcendentEmbryo'
         ) {
           const address = createKeepsakeEquipResultAddress(
             routeStartKeepsake,
@@ -361,7 +366,8 @@ export function createStructuredWorkspaceProjection(
               semanticAddressKey(result),
               Object.freeze({
                 address: result,
-                value: biomeSource.plan.echoKeepsakeReplayResults?.experimentalHammer,
+                value:
+                  biomeSource.plan.echoKeepsakeReplayResults?.[result.resultKind],
               }),
             );
           }
@@ -423,6 +429,9 @@ export function createStructuredWorkspaceProjection(
               }
               for (const control of node.room.roomActions?.steadyGrowth ?? []) {
                 steadyGrowthControls.set(semanticAddressKey(control.address), control);
+              }
+              for (const control of node.room.roomActions?.transcendentEmbryo ?? []) {
+                transcendentEmbryoControls.set(semanticAddressKey(control.address), control);
               }
               for (const row of node.room.roomActions?.rows ?? []) {
                 if (row.fountainRarity !== undefined) {
@@ -497,6 +506,7 @@ export function createStructuredWorkspaceProjection(
         const routeStartResults = [
           createKeepsakeEquipResultAddress(routeStartKeepsake, 'jeweledPom'),
           createKeepsakeEquipResultAddress(routeStartKeepsake, 'experimentalHammer'),
+          createKeepsakeEquipResultAddress(routeStartKeepsake, 'transcendentEmbryo'),
         ] as const;
         appendUniqueFocusDestinations(focusByOwner, [
           [routeMarker.focusKey, routeDestination(routeAddress)],
@@ -558,6 +568,7 @@ export function createStructuredWorkspaceProjection(
         traitControls,
         levelResolutionControls,
         steadyGrowthControls,
+        transcendentEmbryoControls,
         fountainRarityControls,
         judgmentArcanaControls,
         figurineArcanaControls,

@@ -1,5 +1,6 @@
 import type {
   SteadyGrowthOutcomeAddress,
+  TranscendentEmbryoOutcomeAddress,
   OccurrenceAddress,
 } from '../../authored-project/addresses';
 import type { RoomActionReference } from '../../authored-project/model';
@@ -41,8 +42,8 @@ export type RoomLifecycleTimelineEntry =
     }
   | {
       readonly kind: 'automaticEffect';
-      readonly effect: 'steadyGrowth';
-      readonly address: SteadyGrowthOutcomeAddress;
+      readonly effect: 'steadyGrowth' | 'transcendentEmbryo';
+      readonly address: SteadyGrowthOutcomeAddress | TranscendentEmbryoOutcomeAddress;
       readonly boundary: Extract<RoomLifecycleBoundary, { readonly kind: 'encounterEnd' }>;
       readonly rank: number;
       readonly phaseKey: string;
@@ -90,6 +91,40 @@ export function appendSteadyGrowthTimelineEffects(
         Object.freeze({
           kind: 'automaticEffect' as const,
           effect: 'steadyGrowth' as const,
+          address: outcome,
+          boundary: entry.boundary,
+          phaseKey: outcome.phaseKey,
+          rank: entry.rank,
+        }),
+      );
+    }
+  }
+  return Object.freeze({ ...timeline, entries: Object.freeze(entries) });
+}
+
+/**
+ * Add reached Transcendent Embryo checkpoints immediately after their owning
+ * encounter end. The checkpoint is automatic and remains outside the room
+ * action order, just like Steady Growth.
+ */
+export function appendTranscendentEmbryoTimelineEffects(
+  timeline: RoomLifecycleTimeline,
+  outcomes: readonly TranscendentEmbryoOutcomeAddress[],
+): RoomLifecycleTimeline {
+  const owned = outcomes.filter(
+    (outcome) => semanticAddressKey(outcome.owner) === semanticAddressKey(timeline.owner),
+  );
+  if (owned.length === 0) return timeline;
+  const entries: RoomLifecycleTimelineEntry[] = [];
+  for (const entry of timeline.entries) {
+    entries.push(entry);
+    if (entry.kind !== 'boundary' || entry.boundary.kind !== 'encounterEnd') continue;
+    for (const outcome of owned) {
+      if (outcome.phaseKey !== entry.boundary.phaseKey) continue;
+      entries.push(
+        Object.freeze({
+          kind: 'automaticEffect' as const,
+          effect: 'transcendentEmbryo' as const,
           address: outcome,
           boundary: entry.boundary,
           phaseKey: outcome.phaseKey,

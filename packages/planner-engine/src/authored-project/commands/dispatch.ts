@@ -146,6 +146,8 @@ function applyUnchecked(
       return applyKeepsakeCommand(document, catalog, command);
     case 'ReplaceJeweledPomEquipResult':
     case 'ReplaceExperimentalHammerEquipResult':
+    case 'ReplaceTranscendentEmbryoEquipResult':
+    case 'ReplaceTranscendentEmbryoTransformation':
     case 'ReplaceFountainRarityTarget':
       return applyKeepsakeCommand(document, catalog, command);
     case 'CreateStart':

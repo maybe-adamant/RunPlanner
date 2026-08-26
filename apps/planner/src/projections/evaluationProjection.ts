@@ -452,6 +452,14 @@ const findingCopy = {
     title: 'Steady Growth target unavailable',
     description: 'Choose a trait that can gain rarity at this checkpoint.',
   },
+  transcendentEmbryoOutcomeMissing: {
+    title: 'Transcendent Embryo blessing missing',
+    description: 'Choose the Chaos blessing granted at this transformation checkpoint.',
+  },
+  transcendentEmbryoOutcomeUnavailable: {
+    title: 'Transcendent Embryo blessing unavailable',
+    description: 'Choose a Chaos blessing eligible at this transformation checkpoint.',
+  },
   fountainRarityResultMissing: {
     title: 'Aromatic Phial target missing',
     description: 'Choose the Common boon promoted at this fountain.',
@@ -822,7 +830,11 @@ export function findingDestinationLabel(catalog: Catalog, origin: SemanticAddres
   if (origin.kind === 'keepsakeSelection' && origin.owner === 'routeStart')
     return 'Starting keepsake';
   if (origin.kind === 'keepsakeEquipResult')
-    return origin.resultKind === 'jeweledPom' ? 'Jeweled Pom result' : 'Experimental Hammer result';
+    return origin.resultKind === 'jeweledPom'
+      ? 'Jeweled Pom result'
+      : origin.resultKind === 'experimentalHammer'
+        ? 'Experimental Hammer result'
+        : 'Transcendent Embryo result';
   if (origin.kind === 'fountainRarityOutcome') return 'Aromatic Phial fountain target';
   const biome = catalog.biomes.byKey[origin.biomeKey];
   if (biome === undefined) {
@@ -894,6 +906,8 @@ export function findingDestinationLabel(catalog: Catalog, origin: SemanticAddres
       return `${biomeLabel} · Natural Selection result`;
     case 'steadyGrowthOutcome':
       return `${biomeLabel} · Steady Growth outcome`;
+    case 'transcendentEmbryoOutcome':
+      return `${biomeLabel} · Transcendent Embryo outcome`;
     case 'acquisitionRole':
       return `${biomeLabel} · Acquisition`;
     case 'circeResolution':

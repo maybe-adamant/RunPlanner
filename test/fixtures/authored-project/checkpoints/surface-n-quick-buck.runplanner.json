@@ -1,7 +1,7 @@
 {
-  "schemaVersion": 62,
+  "schemaVersion": 63,
   "projectId": "surface-1",
-  "catalogVersion": "0.44.0-concave-stone",
+  "catalogVersion": "0.45.0-transcendent-embryo",
   "routes": [
     {
       "routeKey": "Underworld",

@@ -62,6 +62,10 @@ export interface WorkspaceInteractionBindingInput {
     string,
     import('../contract').WorkspaceSteadyGrowthControl
   >;
+  readonly transcendentEmbryoControls?: ReadonlyMap<
+    string,
+    import('../contract').WorkspaceTranscendentEmbryoControl
+  >;
   readonly fountainRarityControls?: ReadonlyMap<
     string,
     import('../contract').WorkspaceFountainRarityControl
@@ -118,6 +122,7 @@ export function bindWorkspaceInteractions(
     traitControls,
     levelResolutionControls,
     steadyGrowthControls,
+    transcendentEmbryoControls,
     fountainRarityControls,
     judgmentArcanaControls,
     figurineArcanaControls,
@@ -168,6 +173,7 @@ export function bindWorkspaceInteractions(
     ...(traitControls === undefined ? {} : { traitControls }),
     ...(levelResolutionControls === undefined ? {} : { levelResolutionControls }),
     ...(steadyGrowthControls === undefined ? {} : { steadyGrowthControls }),
+    ...(transcendentEmbryoControls === undefined ? {} : { transcendentEmbryoControls }),
     ...(fountainRarityControls === undefined ? {} : { fountainRarityControls }),
     ...(judgmentArcanaControls === undefined ? {} : { judgmentArcanaControls }),
     ...(figurineArcanaControls === undefined ? {} : { figurineArcanaControls }),
