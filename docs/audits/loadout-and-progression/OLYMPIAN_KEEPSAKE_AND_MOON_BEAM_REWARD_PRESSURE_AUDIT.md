@@ -42,8 +42,8 @@ Primary evidence:
   successful-use decrement, and unslotted-source removal;
 - `TraitLogic.lua`: `AddTraitData`, `ReduceTraitUses`, and active-use checks;
 - `EncounterLogic.lua`: Devotion's initial two-loot materialization;
-- `StoreLogic.lua`: ordinary shop `BoughtFromShop` arguments and Mystery Boon
-  unwrap ordering;
+- `StoreLogic.lua`: ordinary Shop/Mystery Boon `BoughtFromShop` arguments and
+  Blind Box unwrap ordering;
 - `RunLogic.lua`: `CurrentRun.RewardPriorities` initialization,
   `GetInteractedGodsThisRun`, and loot-history membership;
 - `LootData.lua`: `RunProgress`, `HubRewards`, `TartarusRewards`, and
@@ -56,10 +56,10 @@ Primary evidence:
 An Olympian keepsake does not create one indivisible "force this god" state.
 The declaration and runtime split it into three independently consumed effects:
 
-| Effect | Source state | Created by | Consumed by |
-| --- | --- | --- | --- |
-| reward-type priority | one `Boon` name in `CurrentRun.RewardPriorities` | ordinary `FromLoot` equip or Gift replay | generation of a matching eligible counted reward |
-| provider force | `ForceBoonName` plus top-level `Uses = 1` on the keepsake trait | equipped ordinary or unslotted Gift-created trait | creation of matching non-purchase god loot |
+| Effect                | Source state                                                                           | Created by                                        | Consumed by                                                    |
+| --------------------- | -------------------------------------------------------------------------------------- | ------------------------------------------------- | -------------------------------------------------------------- |
+| reward-type priority  | one `Boon` name in `CurrentRun.RewardPriorities`                                       | ordinary `FromLoot` equip or Gift replay          | generation of a matching eligible counted reward               |
+| provider force        | `ForceBoonName` plus top-level `Uses = 1` on the keepsake trait                        | equipped ordinary or unslotted Gift-created trait | creation of matching non-purchase god loot                     |
 | provider rarification | nested `RarityUpgradeData` with provider `LootName`, one use, and a rank-processed cap | equipped ordinary or unslotted Gift-created trait | one successful explicit rarification on that provider's screen |
 
 The effects normally line up, but they do not share lifetime. In particular,
@@ -71,17 +71,17 @@ the provider force and rarification available.
 All nine declarations inherit `BaseBoonUpgradeKeepsake`. That base has Common,
 Rare, and Epic rows only. It has no Heroic row.
 
-| Keepsake key | Label | Provider loot name |
-| --- | --- | --- |
-| `ForceZeusBoonKeepsake` | Cloud Bangle | `ZeusUpgrade` |
-| `ForceHeraBoonKeepsake` | Iridescent Fan | `HeraUpgrade` |
-| `ForcePoseidonBoonKeepsake` | Vivid Sea | `PoseidonUpgrade` |
-| `ForceDemeterBoonKeepsake` | Barley Sheaf | `DemeterUpgrade` |
-| `ForceApolloBoonKeepsake` | Harmonic Photon | `ApolloUpgrade` |
-| `ForceAphroditeBoonKeepsake` | Beautiful Mirror | `AphroditeUpgrade` |
-| `ForceHephaestusBoonKeepsake` | Adamant Shard | `HephaestusUpgrade` |
-| `ForceHestiaBoonKeepsake` | Everlasting Ember | `HestiaUpgrade` |
-| `ForceAresBoonKeepsake` | Sword Hilt | `AresUpgrade` |
+| Keepsake key                  | Label             | Provider loot name  |
+| ----------------------------- | ----------------- | ------------------- |
+| `ForceZeusBoonKeepsake`       | Cloud Bangle      | `ZeusUpgrade`       |
+| `ForceHeraBoonKeepsake`       | Iridescent Fan    | `HeraUpgrade`       |
+| `ForcePoseidonBoonKeepsake`   | Vivid Sea         | `PoseidonUpgrade`   |
+| `ForceDemeterBoonKeepsake`    | Barley Sheaf      | `DemeterUpgrade`    |
+| `ForceApolloBoonKeepsake`     | Harmonic Photon   | `ApolloUpgrade`     |
+| `ForceAphroditeBoonKeepsake`  | Beautiful Mirror  | `AphroditeUpgrade`  |
+| `ForceHephaestusBoonKeepsake` | Adamant Shard     | `HephaestusUpgrade` |
+| `ForceHestiaBoonKeepsake`     | Everlasting Ember | `HestiaUpgrade`     |
+| `ForceAresBoonKeepsake`       | Sword Hilt        | `AresUpgrade`       |
 
 Every row declares the same structural behavior:
 
@@ -195,6 +195,13 @@ provider order; Devotion uses last-qualifying provider order. Gift-created
 unslotted traits retain their acquisition position, so coexistence remains
 deterministic.
 
+The planner's existing `DevotionPair` payload intentionally records the
+player's later `chosenSource`/`spurnedSource` execution order, not the game's
+generated Loot A/Loot B identity. The representation-equivalent disposition
+therefore requires the last qualifying forced provider to be present in the
+generated pair while accepting either later execution orientation. It does not
+add a second generated-pair order solely for this keepsake effect.
+
 ## Provider-force consumption is loot materialization
 
 `GiveLoot` first resolves the concrete loot provider. Unless the call already
@@ -203,20 +210,28 @@ has `BoughtFromShop = true`, it then scans all hero traits and calls
 provider. This occurs while the loot object is created, before trait-screen
 selection and independently of whether the player later selects a trait row.
 
-| Source | Provider steering | Matching force consumption |
-| --- | --- | --- |
-| ordinary Boon room reward | forced during target setup | when the entered room's loot object spawns after combat |
-| unchosen Boon exit | provider appears on the door | none, because that room's loot object never spawns |
-| Nemesis-suppressed room reward | the original door may show the provider | none, because the room reward does not spawn |
-| Fields cage Boon | forced while cage rewards are set up | when the locked loot object is materialized, before cage pickup |
-| Fields optional Boon | provider is not supplied by the generic reward-type-only bonus selection | an independently selected matching provider can still consume the force when spawned |
-| Devotion | eligible force may set initial `LootAName` | both initial god loot objects call `GiveLoot` before the player chooses; a matching provider consumes the force then |
-| fixed free or direct god loot | fixed source is not changed by the keepsake | a matching non-purchase `GiveLoot` consumes the force |
-| ordinary Shop Boon | Shop generation chooses its own provider | none because the spawn arguments already carry `BoughtFromShop = true` |
-| Mystery Boon unwrap | unwrap chooses a provider without consulting `ForceBoonName` | a matching random result consumes the force because `BoughtFromShop` is assigned only after `GiveLoot` returns |
+| Source                                                          | Provider steering                                                        | Matching force consumption                                                                                                                             |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| ordinary Boon room reward                                       | forced during target setup                                               | when the entered room's loot object spawns after combat                                                                                                |
+| unchosen Boon exit                                              | provider appears on the door                                             | none, because that room's loot object never spawns                                                                                                     |
+| Nemesis-suppressed room reward                                  | the original door may show the provider                                  | none, because the room reward does not spawn                                                                                                           |
+| Fields cage Boon                                                | forced while cage rewards are set up                                     | when the locked loot object is materialized, before cage pickup                                                                                        |
+| Fields optional Boon                                            | provider is not supplied by the generic reward-type-only bonus selection | an independently selected matching provider can still consume the force when spawned                                                                   |
+| Devotion                                                        | eligible force may set initial `LootAName`                               | both initial god loot objects call `GiveLoot` before the player chooses; a matching provider consumes the force then                                   |
+| fixed free or direct god loot                                   | fixed source is not changed by the keepsake                              | a matching non-purchase `GiveLoot` consumes the force                                                                                                  |
+| ordinary Shop Boon or Mystery Boon (`RandomLoot`)               | Shop generation chooses its own provider                                 | none because the spawn arguments already carry `BoughtFromShop = true`                                                                                 |
+| Blind Box unwrap, whether the box came from Narcissus or a Shop | unwrap chooses a provider without consulting `ForceBoonName`             | a matching random result consumes the force because `BoughtFromShop` is absent during `GiveLoot`; Shop unwrap assigns it only after `GiveLoot` returns |
 
-The Mystery Boon order is a source quirk rather than a general purchase rule.
-The purchased box does not consume the force; its later unwrapped loot can.
+The Blind Box order is a source quirk rather than a general purchase rule. The
+box acquisition does not consume the force; its later unwrapped loot can. This
+is distinct from a Shop Mystery Boon, whose direct `GiveLoot` call already has
+purchase provenance and therefore does not consume the force.
+
+The current normalized planner store `FieldsOptionalRewards` excludes `Boon`,
+so the source-audited Fields optional row is dormant in the executable model.
+No synthetic catalog path is added for it. If Fields optional Boons become a
+modeled reward later, that feature must add the matching spawn-time force
+contact and its own lifecycle witness.
 
 The planner disposition is **Exact within modeled producers**. Provider-force
 use belongs to the producer's loot-materialization lifecycle, not its optional
@@ -241,7 +256,9 @@ implicitly spend the others.
 
 The planner disposition is **Exact**: retain the existing authored row-level
 rarification action, resolve provider-specific sources before general sources,
-and apply the declaration/rank-owned maximum. No second offer or keepsake-only
+and apply the declaration/rank-owned maximum **source** rarity. A source cap of
+Common/Rare/Epic permits an action from that current rarity to the next one;
+only a source already above its cap is rejected. No second offer or keepsake-only
 authoring control is required.
 
 ## Ordinary swap, Cherished Heirloom, and Gift Gift Gift
@@ -284,7 +301,8 @@ Olympian replay therefore creates:
 
 - another generic `Boon` priority;
 - one Common active provider-force use; and
-- one Common-cap provider-specific rarification use.
+- one Common-source-cap provider-specific rarification use (which can upgrade
+  a Common row to Rare).
 
 The replayed trait is unslotted. It remains present after provider-force use is
 spent and blocks another replay of the same keepsake until its nested
@@ -299,8 +317,7 @@ selection rules above.
 
 `SpellTalentKeepsake` calls `KeepsakeAcquireSpellDrop` on ordinary `FromLoot`
 equip and Gift replay. The callback first grants processed Path of Stars points
-immediately. The declared rank values are Common 3, Rare 4, Epic 5, and Heroic
-7. These points are not attached to a later Path pickup.
+immediately. The declared rank values are Common 3, Rare 4, Epic 5, and Heroic 7. These points are not attached to a later Path pickup.
 
 Cherished Heirloom does not replay this acquisition callback. Its explicit
 rank-III to rank-IV special case adds two points, the difference between Epic
@@ -310,12 +327,12 @@ rank-III to rank-IV special case adds two points, the difference between Epic
 
 After granting points, `KeepsakeAcquireSpellDrop` selects exactly one priority:
 
-| State at ordinary equip or Gift replay | Exact queued reward name |
-| --- | --- |
-| `CurrentRun.UseRecord.SpellDrop` is zero or absent | `SpellDrop` |
-| a `SpellDrop` was acquired and `CurrentRun.CurrentRoom.Name` is `H_PostBoss01` | `TalentBigDrop` |
-| a `SpellDrop` was acquired and `CurrentRun.CurrentRoom.Name` is `P_PostBoss01` | `TalentBigDrop` |
-| a `SpellDrop` was acquired in any other room | `TalentDrop` |
+| State at ordinary equip or Gift replay                                         | Exact queued reward name |
+| ------------------------------------------------------------------------------ | ------------------------ |
+| `CurrentRun.UseRecord.SpellDrop` is zero or absent                             | `SpellDrop`              |
+| a `SpellDrop` was acquired and `CurrentRun.CurrentRoom.Name` is `H_PostBoss01` | `TalentBigDrop`          |
+| a `SpellDrop` was acquired and `CurrentRun.CurrentRoom.Name` is `P_PostBoss01` | `TalentBigDrop`          |
+| a `SpellDrop` was acquired in any other room                                   | `TalentDrop`             |
 
 The condition uses acquisition history. Merely offering Selene without
 acquiring `SpellDrop` does not select a Path priority on a later Moon Beam
@@ -346,20 +363,21 @@ occurs; it does not reuse the target selected by the original equip.
 
 ## Planner disposition summary
 
-| Behavior | Disposition |
-| --- | --- |
-| exact reward name, duplicate queue entries, and priority survival after unequip | Exact |
-| immediate store-set append when the refill store lacks the exact name | Exact |
-| matching priority consumed at counted offer generation, including unpicked offers | Exact |
-| three-or-more priority mutation while iterating the Lua array | Simplified to oldest eligible, one consumption per generated reward |
-| ordinary first-qualifying provider and Devotion last-qualifying provider | Exact |
-| provider-force use at non-purchase loot materialization | Exact within modeled producers |
-| Mystery Boon's post-`GiveLoot` shop marker | Exact when Mystery Boon unwrap is modeled |
-| provider-specific rarification precedence and one-use lifetime | Exact |
-| Moon Beam `SpellDrop`/`TalentDrop`/`TalentBigDrop` selection | Exact |
-| treating all Path drop sizes as one priority family | Rejected; source uses exact names |
+| Behavior                                                                          | Disposition                                                         |
+| --------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| exact reward name, duplicate queue entries, and priority survival after unequip   | Exact                                                               |
+| immediate store-set append when the refill store lacks the exact name             | Exact                                                               |
+| matching priority consumed at counted offer generation, including unpicked offers | Exact                                                               |
+| three-or-more priority mutation while iterating the Lua array                     | Simplified to oldest eligible, one consumption per generated reward |
+| ordinary first-qualifying provider and Devotion last-qualifying provider          | Exact                                                               |
+| provider-force use at non-purchase loot materialization                           | Exact within modeled producers                                      |
+| Blind Box's post-`GiveLoot` shop marker                                           | Exact for Shop and Narcissus Blind Box unwrap                       |
+| provider-specific rarification precedence and one-use lifetime                    | Exact                                                               |
+| Moon Beam `SpellDrop`/`TalentDrop`/`TalentBigDrop` selection                      | Exact                                                               |
+| treating all Path drop sizes as one priority family                               | Rejected; source uses exact names                                   |
 
-Current production coverage is pending. Until the effect slice lands, the
-existing neutral keepsake declarations must not be described as implementing
-this audit merely because ordinary keepsake selection identity is already
-modeled.
+Production now covers the nine Olympian keepsakes, their exact `Boon` priority,
+provider force, provider rarification, ordinary/Cherished/Gift lifetimes, and
+all currently reachable producer contacts in this audit. The Fields optional
+row remains dormant for the normalized-store reason above. Moon Beam and its
+Path-point/priority behavior remain pending until the dedicated Hex slice.

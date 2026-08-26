@@ -51,6 +51,8 @@ import {
   fGenerationOccurrenceId,
 } from '../../support/f-generation-project';
 import { createCompleteFTakeoverProject } from '../../support/f-takeover-project';
+import { createArcanaFearState } from '../../../../src/simulation/arcana-fear';
+import { initializeRewardBranches } from '../../../../src/simulation/rewards/processing';
 
 const biome = createBiomeAddress('Underworld', 'F');
 
@@ -263,15 +265,35 @@ function addTakeover(
   return next;
 }
 
-function evaluate(project: ProjectDocument, authorTraits = true) {
+function evaluate(
+  project: ProjectDocument,
+  authorTraits = true,
+  initialBranches?: Parameters<typeof evaluateBiomeRewards>[5],
+) {
   if (authorTraits) project = authorLegalTraitOffers(project);
   const snapshot = materializeBiome(catalog, biome, complete(project), traitContext(project));
   const history = composeBiomeHistory(catalog, snapshot);
   return {
     snapshot,
     history,
-    rewards: evaluateBiomeRewards(catalog, snapshot, history, 1, traitContext(project)),
+    rewards: evaluateBiomeRewards(
+      catalog,
+      snapshot,
+      history,
+      1,
+      traitContext(project),
+      initialBranches,
+    ),
   };
+}
+
+function olympianContactSeed(project: ProjectDocument, keepsakeKey: string) {
+  const arcanaFear = createArcanaFearState(catalog, traitContext(project));
+  const seed = initializeRewardBranches(undefined, arcanaFear, catalog, keepsakeKey)[0];
+  if (seed === undefined) throw new Error('Olympian contact seed is missing');
+  // These contact witnesses isolate loot materialization. Exact-priority generation is covered
+  // by the reward-pressure suite; the live F chronology still owns the spawn decision here.
+  return Object.freeze({ ...seed, rewardPriorities: Object.freeze([]) });
 }
 
 function withDenial(project: ProjectDocument): ProjectDocument {
@@ -862,6 +884,25 @@ function devotionProject(): ProjectDocument {
 }
 
 describe('F reward-history simulation', () => {
+  it('spends an Olympian provider at the entered ordinary post-combat Boon spawn', () => {
+    const start = createOccurrenceId('ratio-start');
+    const enteredProject = ratioBoundaryProject();
+    const entered = firstBranch(
+      evaluate(enteredProject, true, [
+        olympianContactSeed(enteredProject, 'ForceApolloBoonKeepsake'),
+      ]).rewards,
+    );
+    expect(
+      entered.keepsakes.olympianSources.find((source) => source.providerKey === 'Apollo')
+        ?.remainingForceUses,
+    ).toBe(0);
+    expect(entered.events).toContainEqual(
+      expect.objectContaining({
+        kind: 'rewardOffered',
+        origin: createIncomingRewardAddress(biome, start),
+      }),
+    );
+  });
   it('carries effective Denial through room, purchased Shop, and Devotion settlement', () => {
     const room = firstBranch(evaluate(withDenial(sameRoomAcquisitionProject())).rewards);
     const shop = firstBranch(evaluate(withDenial(shopTimingProject())).rewards);

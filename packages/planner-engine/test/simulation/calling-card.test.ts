@@ -20,7 +20,7 @@ import { createCompleteFGProject, goldenFStartId } from '@run-planner/test-fixtu
 import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidates/trait-offer-capability';
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
 import { createArcanaFearState } from '../../src/simulation/arcana-fear';
-import { createKeepsakeState } from '../../src/simulation/keepsakes';
+import { createKeepsakeState, evaluateCallingCardOffer } from '../../src/simulation/keepsakes';
 import { simulateProject } from '../../src/simulation';
 
 const biome = createBiomeAddress('Underworld', 'F');
@@ -311,5 +311,146 @@ describe('Calling Card offer settlement', () => {
     expect(
       callingCard.effectiveOffer.kind === 'traits' && callingCard.effectiveOffer.options[0]?.rarity,
     ).toBe('Epic');
+  });
+
+  it('lets a matching Epic-source-cap Olympian action reach Heroic before Calling Card', () => {
+    const olympian = createKeepsakeState(catalog, 'ForceApolloBoonKeepsake');
+    const state = {
+      ...olympian,
+      callingCard: { remainingCharges: 6 },
+    };
+    const result = evaluateCallingCardOffer(
+      catalog,
+      state,
+      {
+        kind: 'traits',
+        giverKey: 'Apollo',
+        options: [
+          { traitKey: 'ApolloWeaponBoon', rarity: 'Epic' },
+          { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
+          { traitKey: 'ApolloCastBoon', rarity: 'Common' },
+        ],
+        selectedOptionKey: 'option1',
+        rarificationActions: ['option1'],
+      },
+      true,
+    );
+    expect(result.invalidActions).toEqual([]);
+    expect(result.state.callingCard?.remainingCharges).toBe(6);
+    expect(result.offer.kind === 'traits' && result.offer.options[0]?.rarity).toBe('Heroic');
+  });
+
+  it.each([
+    ['Common', 1, 'Rare'],
+    ['Rare', 2, 'Epic'],
+    ['Epic', 3, 'Heroic'],
+  ] as const)(
+    'applies the Olympian %s source cap as one legal step',
+    (sourceRarity, maximumSourceRarityLevel, expectedRarity) => {
+      const base = createKeepsakeState(catalog, 'ForceApolloBoonKeepsake');
+      const state = {
+        ...base,
+        olympianSources: [
+          {
+            ...base.olympianSources[0]!,
+            maximumSourceRarityLevel,
+          },
+        ],
+      };
+      const result = evaluateCallingCardOffer(
+        catalog,
+        state,
+        {
+          kind: 'traits',
+          giverKey: 'Apollo',
+          options: [{ traitKey: 'ApolloWeaponBoon', rarity: sourceRarity }],
+          selectedOptionKey: 'option1',
+          rarificationActions: ['option1'],
+        },
+        true,
+      );
+
+      expect(result.invalidActions).toEqual([]);
+      expect(result.offer.kind === 'traits' && result.offer.options[0]?.rarity).toBe(
+        expectedRarity,
+      );
+      expect(result.state.olympianSources[0]?.remainingRarificationUses).toBe(0);
+    },
+  );
+
+  it('does not fall through to Calling Card when a matching Olympian source is above its cap', () => {
+    const base = createKeepsakeState(catalog, 'ForceApolloBoonKeepsake');
+    const state = {
+      ...base,
+      callingCard: { remainingCharges: 6 },
+      olympianSources: [
+        {
+          ...base.olympianSources[0]!,
+          maximumSourceRarityLevel: 1 as const,
+        },
+      ],
+    };
+    const result = evaluateCallingCardOffer(
+      catalog,
+      state,
+      {
+        kind: 'traits',
+        giverKey: 'Apollo',
+        options: [{ traitKey: 'ApolloWeaponBoon', rarity: 'Rare' }],
+        selectedOptionKey: 'option1',
+        rarificationActions: ['option1'],
+      },
+      true,
+    );
+
+    expect(result.invalidActions).toEqual([0]);
+    expect(result.state.callingCard?.remainingCharges).toBe(6);
+    expect(result.state.olympianSources[0]?.remainingRarificationUses).toBe(1);
+    expect(result.offer.kind === 'traits' && result.offer.options[0]?.rarity).toBe('Rare');
+  });
+
+  it('rejects an extra Olympian action after its one use is spent', () => {
+    const result = evaluateCallingCardOffer(
+      catalog,
+      createKeepsakeState(catalog, 'ForceApolloBoonKeepsake'),
+      {
+        kind: 'traits',
+        giverKey: 'Apollo',
+        options: [
+          { traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
+          { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
+        ],
+        selectedOptionKey: 'option1',
+        rarificationActions: ['option1', 'option2'],
+      },
+      true,
+    );
+
+    expect(result.invalidActions).toEqual([1]);
+    expect(
+      result.offer.kind === 'traits' ? result.offer.options.map((option) => option.rarity) : [],
+    ).toEqual(['Rare', 'Common']);
+  });
+
+  it('retains a forced-provider mismatch at the existing reward owner for repair', () => {
+    let project = applyProjectCommand(createCompleteFGProject(), catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: createRouteStartKeepsakeSelectionAddress('Underworld'),
+      keepsakeKey: 'ForceApolloBoonKeepsake',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward,
+      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
+    });
+
+    const result = rewards(project);
+    expect(result.findings).toContainEqual(
+      expect.objectContaining({
+        code: 'rewardSourceUnavailable',
+        origin: reward,
+        evidence: expect.objectContaining({ source: 'ZeusUpgrade' }),
+      }),
+    );
   });
 });

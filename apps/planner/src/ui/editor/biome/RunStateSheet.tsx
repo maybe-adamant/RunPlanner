@@ -126,6 +126,15 @@ export function RunStateSheet({ launcher }: { readonly launcher: WorkspaceRunSta
         {state.keepsakes.callingCardRemainingCharges === undefined ? null : (
           <p>Calling Card: {state.keepsakes.callingCardRemainingCharges} charges remaining</p>
         )}
+        {state.keepsakes.pendingRewardPriorities.length === 0 ? null : (
+          <p>Reward priorities: {state.keepsakes.pendingRewardPriorities.join(', ')}</p>
+        )}
+        {state.keepsakes.olympianSources.map((source) => (
+          <p key={`${source.origin}-${source.providerKey}`}>
+            {source.providerLabel} ({source.origin}): force {source.forceRemaining}, rarification{' '}
+            {source.rarificationRemaining}, source cap {source.maximumSourceRarityLevel}
+          </p>
+        ))}
         {state.keepsakes.timePieceRemainingCharges === undefined ? null : (
           <p>Time Piece: {state.keepsakes.timePieceRemainingCharges} charges remaining</p>
         )}

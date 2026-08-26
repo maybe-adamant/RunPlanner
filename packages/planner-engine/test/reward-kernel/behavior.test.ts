@@ -9,6 +9,8 @@ import {
   beginCurrentRoomRewardHistory,
   consumeCountedOffer,
   createRewardBagState,
+  insertExactPriorityIntoBag,
+  oldestSupportedRewardPriority,
   createRewardHistoryState,
   evaluateShopGenerationSupport,
   evaluateShopPurchaseAtSlot,
@@ -448,6 +450,49 @@ describe('counted reward bags', () => {
         { eligibleRewardTypes: new Set(['SpellDrop']) },
       ),
     ).toThrow('one-refill eligibility invariant');
+  });
+});
+
+describe('exact reward priorities', () => {
+  const runProgress = rewardKernelCatalog.stores.byKey.RunProgress!;
+
+  it('preserves leftovers and appends at source time only when the exact name is exhausted', () => {
+    const initial = createRewardBagState(runProgress);
+    const boonIndexes = runProgress.entries
+      .map((entry, index) => (entry.rewardType === 'Boon' ? index : -1))
+      .filter((index) => index >= 0);
+    const withBoonLeft = insertExactPriorityIntoBag(runProgress, initial, 'Boon');
+    expect(withBoonLeft).toBe(initial);
+
+    const exhaustedBoon = {
+      remainingEntryCounts: initial.remainingEntryCounts.map((count, index) =>
+        boonIndexes.includes(index) ? 0 : count + 2,
+      ),
+    };
+    const refilled = insertExactPriorityIntoBag(runProgress, exhaustedBoon, 'Boon');
+    expect(refilled.remainingEntryCounts).toEqual(
+      exhaustedBoon.remainingEntryCounts.map((count) => count + 1),
+    );
+  });
+
+  it('selects only the oldest supported exact priority, leaves ineligible names pending, and sees one normal refill', () => {
+    const initial = createRewardBagState(runProgress);
+    expect(
+      oldestSupportedRewardPriority(runProgress, initial, ['Missing', 'Boon', 'Boon'], facts()),
+    ).toBe('Boon');
+    expect(
+      oldestSupportedRewardPriority(runProgress, initial, ['Boon'], facts(), {
+        eligibleRewardTypes: new Set(['MaxHealthDrop']),
+      }),
+    ).toBeUndefined();
+    expect(
+      oldestSupportedRewardPriority(
+        runProgress,
+        { remainingEntryCounts: initial.remainingEntryCounts.map(() => 0) },
+        ['Boon'],
+        facts(),
+      ),
+    ).toBe('Boon');
   });
 });
 

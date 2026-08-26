@@ -29,7 +29,11 @@ import type {
   KeepsakeSelectionCandidateCapability,
 } from '../../../candidate-artifacts';
 import type { RewardBranchState } from '../../branch-primitives';
-import { applyExperimentalHammerEquipResult, applyJeweledPomEquipResult } from '../../processing';
+import {
+  applyExperimentalHammerEquipResult,
+  applyJeweledPomEquipResult,
+  applyOlympianRewardPressureEquip,
+} from '../../processing';
 import { rewardFinding } from '../../findings';
 import type { LifecycleFinding } from './types';
 
@@ -140,7 +144,13 @@ export function applyKeepsakeRackUsedTransition(
       before.currentKey !== after.currentKey &&
       after.currentKey === disposition.keepsakeKey;
     return Object.freeze({
-      branch: Object.freeze({ ...branch, keepsakes: after }),
+      branch: replacementSucceeded
+        ? applyOlympianRewardPressureEquip(
+            catalog,
+            Object.freeze({ ...branch, keepsakes: after }),
+            disposition.keepsakeKey,
+          )
+        : Object.freeze({ ...branch, keepsakes: after }),
       replacementSucceeded,
       ...(equippedRank === undefined ? {} : { equippedRank }),
     });

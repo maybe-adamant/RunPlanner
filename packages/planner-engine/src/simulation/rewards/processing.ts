@@ -14,6 +14,8 @@ import {
   beginCurrentRoomRewardHistory,
   consumeCountedOffer,
   createRewardBagState,
+  insertExactPriorityIntoBag,
+  oldestSupportedRewardPriority,
   createRewardHistoryState,
   isOfferSupportedAtResolutionPoint,
   isPayloadLocallyValid,
@@ -46,6 +48,8 @@ import {
   jeweledPomEffectForKey,
   beginBiomeKeepsakeState,
   applyTranscendentEmbryoEquipResult,
+  olympianProviderForOffer,
+  consumeOlympianProviderMaterialized,
 } from '../keepsakes';
 import {
   appendRewardEvent,
@@ -106,6 +110,7 @@ export function initializeRewardBranches(
       throw new Error('initial branch state is required');
     const branch = Object.freeze({
       bags: Object.freeze({}),
+      rewardPriorities: Object.freeze([]),
       history: createRewardHistoryState(),
       events: Object.freeze([]),
       pendingShops: Object.freeze({}),
@@ -124,9 +129,10 @@ export function initializeRewardBranches(
       arcanaFear: initialArcanaFear,
       keepsakes: createKeepsakeState(catalog, startingKeepsakeKey, initialArcanaFear),
     });
+    const pressured = applyOlympianRewardPressureEquip(catalog, branch, startingKeepsakeKey);
     const pomApplied = applyJeweledPomEquipResult(
       catalog,
-      branch,
+      pressured,
       startingKeepsakeKey,
       startingKeepsakeEquipResults,
       createKeepsakeEquipResultAddress(
@@ -185,6 +191,7 @@ export function initializeRewardBranches(
     initialBranches.map((branch) =>
       Object.freeze({
         bags: branch.bags,
+        rewardPriorities: branch.rewardPriorities,
         history: beginBiomeRewardHistory(branch.history),
         events: Object.freeze([]),
         pendingShops: Object.freeze({}),
@@ -207,6 +214,33 @@ export function initializeRewardBranches(
       }),
     ),
   );
+}
+
+/** The exact source-time FromLoot transition: queue first, then RunProgress presence refill. */
+export function applyOlympianRewardPressureEquip(
+  catalog: Catalog,
+  branch: RewardBranchState,
+  keepsakeKey: string,
+): RewardBranchState {
+  const effect = catalog.keepsakes.byKey[keepsakeKey]?.effect;
+  if (effect?.kind !== 'olympianRewardPressure') return branch;
+  const store = catalog.rewards.stores.byKey.RunProgress;
+  if (store === undefined)
+    return Object.freeze({
+      ...branch,
+      rewardPriorities: Object.freeze([...branch.rewardPriorities, effect.priorityRewardType]),
+    });
+  const existing = branch.bags.RunProgress;
+  const current = existing ?? createRewardBagState(store);
+  const bag = insertExactPriorityIntoBag(store, current, effect.priorityRewardType);
+  return Object.freeze({
+    ...branch,
+    bags:
+      existing === undefined && bag === current
+        ? branch.bags
+        : freezeRecord({ ...branch.bags, RunProgress: bag }),
+    rewardPriorities: Object.freeze([...branch.rewardPriorities, effect.priorityRewardType]),
+  });
 }
 
 /** Applies the closed immediate Jeweled Pom result through ordinary trait history. */
@@ -524,18 +558,38 @@ export function processRewardOffer(
     siblingConflicts.set(semanticAddressKey(peer.origin), peer);
   };
   for (const originalBranch of branches) {
+    // ForceBoonName participates only in counted room-reward setup. Fixed
+    // rewards, direct pickups, and inventory offers retain their own provider.
+    const requiredProvider =
+      context.binding === undefined
+        ? undefined
+        : requiredOlympianProviderForOffer(catalog, originalBranch, reward.offer, context.peers);
+    // Provider pressure constrains the retained authored offer at its existing
+    // reward owner.  It is deliberately not a runtime rewrite: an author can
+    // repair the same payload control and no hidden forced-provider field is
+    // introduced into authored state.
+    if (
+      requiredProvider !== undefined &&
+      !offerContainsProvider(catalog, reward.offer, requiredProvider)
+    ) {
+      sawSourceFailure = true;
+      continue;
+    }
+    const effectiveOffer = reward.offer;
     const facts = context.facts(originalBranch.history, undefined, originalBranch);
     const peers = { priorOffers: context.peers.map((peer) => peer.offer) };
-    if (!isOfferSupportedAtResolutionPoint(catalog.rewards, reward.offer, facts, 'offer', peers)) {
+    if (
+      !isOfferSupportedAtResolutionPoint(catalog.rewards, effectiveOffer, facts, 'offer', peers)
+    ) {
       sawSourceFailure = true;
       if (
         context.peers.length > 0 &&
-        isOfferSupportedAtResolutionPoint(catalog.rewards, reward.offer, facts, 'offer', {
+        isOfferSupportedAtResolutionPoint(catalog.rewards, effectiveOffer, facts, 'offer', {
           priorOffers: [],
         })
       ) {
         sawSiblingFailure = true;
-        sourceConflictingPeers(reward.offer, context.peers).forEach(recordSiblingConflict);
+        sourceConflictingPeers(effectiveOffer, context.peers).forEach(recordSiblingConflict);
       }
       continue;
     }
@@ -544,14 +598,14 @@ export function processRewardOffer(
       const history = applyOfferProjection(
         catalog.rewards,
         originalBranch.history,
-        reward.offer,
+        effectiveOffer,
         facts,
       );
       next.push(
         appendRewardEvent(Object.freeze({ ...originalBranch, history }), historySequence, {
           kind: 'rewardOffered',
           origin: reward.origin,
-          offer: reward.offer,
+          offer: effectiveOffer,
           ...(reward.resolvedStoreKey === undefined ? {} : { storeKey: reward.resolvedStoreKey }),
         }),
       );
@@ -569,28 +623,47 @@ export function processRewardOffer(
       sawBagInvariantFailure = true;
       continue;
     }
+    const bagOptions = {
+      ...(context.binding.eligibleRewardTypes.length === 0
+        ? {}
+        : { eligibleRewardTypes: new Set(context.binding.eligibleRewardTypes) }),
+      ...(context.binding.ineligibleRewardTypes.length === 0
+        ? {}
+        : { ineligibleRewardTypes: new Set(context.binding.ineligibleRewardTypes) }),
+      peers,
+    };
+    const requiredPriority = oldestSupportedRewardPriority(
+      store,
+      prepared.bag,
+      originalBranch.rewardPriorities,
+      facts,
+      bagOptions,
+    );
+    if (requiredPriority !== undefined && effectiveOffer.rewardType !== requiredPriority) {
+      sawBagInvariantFailure = true;
+      continue;
+    }
     if (
-      context.peers.some((peer) => peer.offer.rewardType === reward.offer.rewardType) &&
+      context.peers.some((peer) => peer.offer.rewardType === effectiveOffer.rewardType) &&
       store.entries.some(
-        (entry) => entry.rewardType === reward.offer.rewardType && !entry.allowDuplicates,
+        (entry) => entry.rewardType === effectiveOffer.rewardType && !entry.allowDuplicates,
       )
     ) {
       sawSiblingFailure = true;
       context.peers
-        .filter((peer) => peer.offer.rewardType === reward.offer.rewardType)
+        .filter((peer) => peer.offer.rewardType === effectiveOffer.rewardType)
         .forEach(recordSiblingConflict);
     }
     let transitions: readonly RewardBagState[];
     try {
-      transitions = consumeCountedOffer(catalog.rewards, store, prepared.bag, reward.offer, facts, {
-        ...(context.binding.eligibleRewardTypes.length === 0
-          ? {}
-          : { eligibleRewardTypes: new Set(context.binding.eligibleRewardTypes) }),
-        ...(context.binding.ineligibleRewardTypes.length === 0
-          ? {}
-          : { ineligibleRewardTypes: new Set(context.binding.ineligibleRewardTypes) }),
-        peers,
-      });
+      transitions = consumeCountedOffer(
+        catalog.rewards,
+        store,
+        prepared.bag,
+        effectiveOffer,
+        facts,
+        bagOptions,
+      );
     } catch (error) {
       if (error instanceof Error && error.message.includes('one-refill eligibility invariant')) {
         sawBagInvariantFailure = true;
@@ -602,7 +675,7 @@ export function processRewardOffer(
       const history = applyOfferProjection(
         catalog.rewards,
         prepared.branch.history,
-        reward.offer,
+        effectiveOffer,
         facts,
       );
       next.push(
@@ -610,10 +683,20 @@ export function processRewardOffer(
           Object.freeze({
             ...prepared.branch,
             bags: freezeRecord({ ...prepared.branch.bags, [storeKey]: bag }),
+            rewardPriorities:
+              requiredPriority === undefined
+                ? prepared.branch.rewardPriorities
+                : Object.freeze(
+                    prepared.branch.rewardPriorities.filter(
+                      (priority, index) =>
+                        priority !== requiredPriority ||
+                        index !== prepared.branch.rewardPriorities.indexOf(requiredPriority),
+                    ),
+                  ),
             history,
           }),
           historySequence,
-          { kind: 'rewardOffered', origin: reward.origin, offer: reward.offer, storeKey },
+          { kind: 'rewardOffered', origin: reward.origin, offer: effectiveOffer, storeKey },
         ),
       );
     }
@@ -644,6 +727,55 @@ export function processRewardOffer(
     );
   }
   return Object.freeze(next);
+}
+
+/**
+ * Computes the source-required provider payload without changing the retained
+ * authored offer.  The caller reports disagreement at that offer's owner.
+ */
+function requiredOlympianProviderForOffer(
+  catalog: Catalog,
+  branch: RewardBranchState,
+  offer: ResolvedRewardOffer,
+  peers: readonly OfferProcessingPeer[],
+): string | undefined {
+  const providerForLootSource = (source: string): string | undefined =>
+    catalog.traitGiverByAcquisitionGameName[source];
+  if (offer.rewardType === 'Boon' && offer.payload?.kind === 'BoonSource') {
+    const siblingProviders = peers.flatMap((peer): readonly string[] =>
+      peer.offer.rewardType === 'Boon' && peer.offer.payload?.kind === 'BoonSource'
+        ? (() => {
+            const provider = providerForLootSource(peer.offer.payload.source);
+            return provider === undefined ? [] : [provider];
+          })()
+        : [],
+    );
+    const provider = olympianProviderForOffer(branch.keepsakes, siblingProviders);
+    return provider;
+  }
+  if (offer.rewardType !== 'Devotion' || offer.payload?.kind !== 'DevotionPair') return undefined;
+  const interactedProviders = new Set(
+    Object.entries(catalog.traitGiverByAcquisitionGameName).flatMap(([source, giverKey]) =>
+      branch.history.lootTypeHistory[source] !== undefined ? [giverKey] : [],
+    ),
+  );
+  const provider = olympianProviderForOffer(branch.keepsakes, [], true, interactedProviders);
+  return provider;
+}
+
+function offerContainsProvider(
+  catalog: Catalog,
+  offer: ResolvedRewardOffer,
+  providerKey: string,
+): boolean {
+  if (offer.payload?.kind === 'BoonSource')
+    return catalog.traitGiverByAcquisitionGameName[offer.payload.source] === providerKey;
+  if (offer.payload?.kind === 'DevotionPair')
+    return (
+      catalog.traitGiverByAcquisitionGameName[offer.payload.chosenSource] === providerKey ||
+      catalog.traitGiverByAcquisitionGameName[offer.payload.spurnedSource] === providerKey
+    );
+  return false;
 }
 
 function recordCanonicalOffer(
@@ -739,6 +871,7 @@ export function processOfferGenerationCohort(
           // second time when canonical offers are recorded below.
           ...branch,
           bags: candidate.bags,
+          rewardPriorities: candidate.rewardPriorities,
         });
         for (const context of contexts) {
           canonical = recordCanonicalOffer(canonical, context);
@@ -806,6 +939,7 @@ export function processFocusedOfferAfterAuthoredPeers(
 export function publicRewardBranch(branch: RewardBranchState): RewardBranch {
   return Object.freeze({
     bags: branch.bags,
+    rewardPriorities: branch.rewardPriorities,
     history: branch.history,
     events: branch.events,
     processedThroughHistorySequence: branch.processedThroughHistorySequence,
@@ -824,4 +958,54 @@ export function publicRewardBranch(branch: RewardBranchState): RewardBranch {
       ? {}
       : { stygianWell: branch.stygianWell }),
   });
+}
+
+/**
+ * Returns the reached generated offer from the existing chronological ledger.
+ * Materialization consumers use this instead of reinterpreting a retained
+ * authored payload after a branch-local provider force has bound it.
+ */
+export function reachedOfferForOrigin(
+  branch: RewardBranchState,
+  origin: SemanticAddress,
+): ResolvedRewardOffer | undefined {
+  const key = semanticAddressKey(origin);
+  for (const event of [...branch.events].reverse()) {
+    if (event.kind === 'rewardOffered' && semanticAddressKey(event.origin) === key)
+      return event.offer;
+  }
+  return undefined;
+}
+
+/** Exact normalized provider lookup for a concrete god-loot game name. */
+export function traitProviderForLootSource(catalog: Catalog, source: string): string | undefined {
+  return catalog.traitGiverByAcquisitionGameName[source];
+}
+
+/** Spend matching force only when this exact reached offer materializes as free loot. */
+export function consumeOlympianProviderForReachedOffer(
+  catalog: Catalog,
+  branch: RewardBranchState,
+  origin: SemanticAddress,
+  provenance: 'free' | 'paid',
+): RewardBranchState {
+  const offer = reachedOfferForOrigin(branch, origin);
+  const sources =
+    offer?.payload?.kind === 'BoonSource'
+      ? [offer.payload.source]
+      : offer?.payload?.kind === 'DevotionPair'
+        ? [offer.payload.chosenSource, offer.payload.spurnedSource]
+        : [];
+  const providers = sources.flatMap((source) => {
+    const provider = traitProviderForLootSource(catalog, source);
+    return provider === undefined ? [] : [provider];
+  });
+  return providers.reduce(
+    (current, provider) =>
+      Object.freeze({
+        ...current,
+        keepsakes: consumeOlympianProviderMaterialized(current.keepsakes, provider, provenance),
+      }),
+    branch,
+  );
 }

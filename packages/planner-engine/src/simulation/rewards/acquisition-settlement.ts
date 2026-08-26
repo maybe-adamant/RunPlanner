@@ -56,7 +56,7 @@ import {
 } from '../traits';
 
 import { artificerStatus, consumeOrdinaryRoomForfeit, consumeArtificerUse } from '../arcana-fear';
-import { consumeTimePieceCharge } from '../keepsakes';
+import { consumeOlympianProviderMaterialized, consumeTimePieceCharge } from '../keepsakes';
 import {
   appendRewardEvent,
   freezeRecord,
@@ -1189,6 +1189,24 @@ export function applyProducerRoleHistory(
       resolution.role,
       resolution.lifecyclePoint,
     );
+    // A concrete god-loot acquisition is a materialization contact when the
+    // producer marks it free. Blind Box hidden loot is also free even when its
+    // containing Shop box was paid; the box itself is not god loot.
+    const materializedProvider =
+      incoming.instanceProvenance === 'free' || resolution.lifecyclePoint === 'afterUnwrap'
+        ? catalog.traitGiverByAcquisitionGameName[acquisition.acquisition.gameName]
+        : undefined;
+    const materializedBranch =
+      materializedProvider === undefined
+        ? attestedBranch
+        : Object.freeze({
+            ...attestedBranch,
+            keepsakes: consumeOlympianProviderMaterialized(
+              attestedBranch.keepsakes,
+              materializedProvider,
+              'free',
+            ),
+          });
     // Time Piece is assessed at the exact concrete role, after offer/bag
     // evidence exists but before any acquisition, trait, Pom, level, or
     // element effects can be folded. Shop purchases take their separate paid
@@ -1206,7 +1224,10 @@ export function applyProducerRoleHistory(
     if (disposition.kind === 'timePiece' && conversion.supported) {
       next.push(
         appendRewardEvent(
-          Object.freeze({ ...attestedBranch, keepsakes: consumeTimePieceCharge(branch.keepsakes) }),
+          Object.freeze({
+            ...materializedBranch,
+            keepsakes: consumeTimePieceCharge(materializedBranch.keepsakes),
+          }),
           resolution.historySequence,
           {
             kind: 'conversionToGold',
@@ -1436,7 +1457,7 @@ export function applyProducerRoleHistory(
       catalog.rewards.acquisitions.byKey[acquisition.acquisition.gameName]?.grantedTraitKey;
     const contributions =
       catalog.rewards.acquisitions.byKey[acquisition.acquisition.gameName]?.elementContributions;
-    let acquisitionBranch: RewardBranchState = Object.freeze({ ...attestedBranch, history });
+    let acquisitionBranch: RewardBranchState = Object.freeze({ ...materializedBranch, history });
     if (fixedTraitKey !== undefined) {
       const traitHistory = recordFixedAcquisitionTraitGrant(
         catalog,

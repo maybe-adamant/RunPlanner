@@ -138,6 +138,18 @@ describe('Run State presentation', () => {
         ],
         removedKeys: ['ManaOverTimeRefundKeepsake'],
         fatedStatus: 'Unknown',
+        olympianSources: [
+          {
+            keepsakeKey: 'ForceZeusBoonKeepsake',
+            providerKey: 'Zeus',
+            origin: 'echo',
+            acquisitionOrder: 4,
+            remainingForceUses: 1,
+            remainingRarificationUses: 0,
+            maximumSourceRarityLevel: 1,
+          },
+        ],
+        nextOlympianAcquisitionOrder: 5,
         callingCard: { remainingCharges: 0 },
         experimentalHammers: [
           {
@@ -159,6 +171,7 @@ describe('Run State presentation', () => {
           markedBlessingAcquisitionIdentity: 'embryo-run-state',
         },
       },
+      rewardPriorities: ['Boon', 'Boon'],
       forfeitStatus: 'consumed',
       bags: [
         {
@@ -182,6 +195,16 @@ describe('Run State presentation', () => {
     } as const;
     const state = presentRunState(catalog, snapshot);
     expect(state.traits.banned).toEqual([{ key: 'ApolloSpecialBoon', label: 'Nova Flourish' }]);
+    expect(state.keepsakes.pendingRewardPriorities).toEqual(['Boon', 'Boon']);
+    expect(state.keepsakes.olympianSources).toEqual([
+      expect.objectContaining({
+        providerKey: 'Zeus',
+        origin: 'echo',
+        forceRemaining: 1,
+        rarificationRemaining: 0,
+        maximumSourceRarityLevel: 1,
+      }),
+    ]);
     expect(state.keepsakes.transcendentEmbryo).toEqual({
       origin: 'echo',
       rarity: 'Heroic',

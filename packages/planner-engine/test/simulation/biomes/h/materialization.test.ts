@@ -17,6 +17,7 @@ import {
   createRouteAddress,
   createRouteStartKeepsakeSelectionAddress,
   createTargetAddress,
+  createTraitOfferAddress,
   encodeProjectDocument,
   roomActionKey,
   semanticAddressKey,
@@ -29,6 +30,9 @@ import {
 import type { Catalog, RoomDeclaration } from '@run-planner/engine/catalog-schema';
 import {
   createPreparedProjectCandidateSession,
+  composeBiomeHistory,
+  createArcanaFearState,
+  evaluateBiomeRewards,
   simulateProjectAssembly,
   simulateProject,
   evaluateBiomeCompleteness,
@@ -47,6 +51,7 @@ import {
   replaceTestRoomActionOrder,
 } from '@run-planner/test-fixtures/shared';
 import { createGoldenFGHProject, goldenHStartId } from '@run-planner/test-fixtures/underworld';
+import { initializeRewardBranches } from '../../../../src/simulation/rewards/processing';
 
 const biome = createBiomeAddress('Underworld', 'H');
 
@@ -320,6 +325,25 @@ function materialize(project: ProjectDocument) {
   return materializeBiome(catalog, biome, completeness, traitContext(project));
 }
 
+function olympianContactSeed(project: ProjectDocument, keepsakeKey: string) {
+  const arcanaFear = createArcanaFearState(catalog, traitContext(project));
+  const seed = initializeRewardBranches(undefined, arcanaFear, catalog, keepsakeKey)[0];
+  if (seed === undefined) throw new Error('Olympian contact seed is missing');
+  return Object.freeze({ ...seed, rewardPriorities: Object.freeze([]) });
+}
+
+function evaluateWithOlympianContactSeed(project: ProjectDocument, keepsakeKey: string) {
+  const snapshot = materialize(project);
+  return evaluateBiomeRewards(
+    catalog,
+    snapshot,
+    composeBiomeHistory(catalog, snapshot),
+    3,
+    traitContext(project),
+    [olympianContactSeed(project, keepsakeKey)],
+  );
+}
+
 function ordinaryBatches(snapshot: ReturnType<typeof materialize>) {
   return snapshot.decisions.filter(
     (
@@ -350,6 +374,39 @@ function replaceFieldsActions(
 }
 
 describe('H Fields materialization', () => {
+  it('spends an Olympian provider when a Fields cage creates its matching Boon', () => {
+    const occurrenceId = createOccurrenceId('golden-h-combat02');
+    const cage = createLocalRewardAddress(biome, occurrenceId, 'cages', 'cage1');
+    let project = applyProjectCommand(createGoldenFGHProject(), catalog, {
+      kind: 'ReplaceLocalReward',
+      reward: cage,
+      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(cage, 'source'),
+      value: {
+        kind: 'traits',
+        giverKey: 'Zeus',
+        options: [
+          { traitKey: 'ZeusWeaponBoon', rarity: 'Common' },
+          { traitKey: 'ZeusSpecialBoon', rarity: 'Common' },
+          { traitKey: 'ZeusCastBoon', rarity: 'Common' },
+        ],
+        selectedOptionKey: 'option1',
+      },
+    });
+
+    const branch = evaluateWithOlympianContactSeed(project, 'ForceZeusBoonKeepsake').branches[0];
+    expect(
+      branch?.keepsakes.olympianSources.find((source) => source.providerKey === 'Zeus')
+        ?.remainingForceUses,
+    ).toBe(0);
+    expect(branch?.events).toContainEqual(
+      expect.objectContaining({ kind: 'rewardOffered', origin: cage }),
+    );
+  });
+
   it('defaults a command-created Fields room with required pickups before doors-open Cleanup', () => {
     const occurrenceId = createOccurrenceId('h-materialized-combat02');
     const project = completeProject();

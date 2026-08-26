@@ -1,5 +1,17 @@
 import type { RawKeepsakeDeclaration } from './types';
 
+const olympianProviderByKeepsake = {
+  ForceZeusBoonKeepsake: 'Zeus',
+  ForceHeraBoonKeepsake: 'Hera',
+  ForcePoseidonBoonKeepsake: 'Poseidon',
+  ForceDemeterBoonKeepsake: 'Demeter',
+  ForceApolloBoonKeepsake: 'Apollo',
+  ForceAphroditeBoonKeepsake: 'Aphrodite',
+  ForceHephaestusBoonKeepsake: 'Hephaestus',
+  ForceHestiaBoonKeepsake: 'Hestia',
+  ForceAresBoonKeepsake: 'Ares',
+} as const;
+
 /** Ordinary rack inventory; player selection remains fixed at rank III. */
 const entries: readonly (readonly [string, string, RawKeepsakeDeclaration['fatedDisposition']])[] =
   [
@@ -85,10 +97,15 @@ export const keepsakes: readonly RawKeepsakeDeclaration[] = entries.map(
                           availability: 'eligible',
                           effect: { kind: 'timePiece', schedule: 'everyBiome' },
                         } as const)
-                      : ({
-                          availability: 'eligible',
-                          effect: { kind: 'modeledNeutral', schedule: 'noModeledEffect' },
-                        } as const),
+                      : key in olympianProviderByKeepsake
+                        ? ({
+                            availability: 'eligible',
+                            effect: { kind: 'olympianRewardPressure', schedule: 'everyBiome' },
+                          } as const)
+                        : ({
+                            availability: 'eligible',
+                            effect: { kind: 'modeledNeutral', schedule: 'noModeledEffect' },
+                          } as const),
     ...(key === 'HadesAndPersephoneKeepsake'
       ? {
           effect: {
@@ -221,6 +238,24 @@ export const keepsakes: readonly RawKeepsakeDeclaration[] = entries.map(
                               },
                             },
                           }
-                        : {}),
+                        : key in olympianProviderByKeepsake
+                          ? {
+                              effect: {
+                                kind: 'olympianRewardPressure' as const,
+                                priorityRewardType: 'Boon' as const,
+                                providerKey:
+                                  olympianProviderByKeepsake[
+                                    key as keyof typeof olympianProviderByKeepsake
+                                  ],
+                                providerForceUses: 1 as const,
+                                providerRarificationUses: 1 as const,
+                                maximumSourceRarityLevelByRank: {
+                                  Common: 1 as const,
+                                  Rare: 2 as const,
+                                  Epic: 3 as const,
+                                },
+                              },
+                            }
+                          : {}),
   }),
 );

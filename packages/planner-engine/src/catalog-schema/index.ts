@@ -164,6 +164,7 @@ export interface KeepsakeDeclaration {
           | { readonly kind: 'transcendentEmbryo'; readonly schedule: 'oneShot' }
           | { readonly kind: 'callingCard'; readonly schedule: 'everyBiome' }
           | { readonly kind: 'timePiece'; readonly schedule: 'everyBiome' }
+          | { readonly kind: 'olympianRewardPressure'; readonly schedule: 'everyBiome' }
           | { readonly kind: 'modeledNeutral'; readonly schedule: 'noModeledEffect' };
       };
   /** Closed, source-backed rank data consumed by the six supported effect transitions. */
@@ -224,6 +225,16 @@ export interface KeepsakeDeclaration {
         readonly source: 'Chaos';
         readonly interval: 8;
         readonly blessingRarityByRank: Readonly<Record<KeepsakeRank, InRunTraitRarity>>;
+      }
+    | {
+        /** The nine provider keepsakes share one exact reward-pressure contract. */
+        readonly kind: 'olympianRewardPressure';
+        readonly priorityRewardType: 'Boon';
+        readonly providerKey: string;
+        readonly providerForceUses: 1;
+        readonly providerRarificationUses: 1;
+        /** These declarations intentionally have no Heroic source row. */
+        readonly maximumSourceRarityLevelByRank: Readonly<{ Common: 1; Rare: 2; Epic: 3 }>;
       };
 }
 

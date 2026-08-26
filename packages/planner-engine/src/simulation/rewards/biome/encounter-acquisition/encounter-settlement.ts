@@ -41,7 +41,7 @@ import type { BiomeRewardSnapshot } from '../evaluation-contract';
 import { BiomeRewardSimulationContractError } from '../biome-contract';
 import type { GorgonPhaseCandidateSupport, NemesisRandomEventCandidateSupport } from '../../model';
 import type { RewardBranchState } from '../../branch-primitives';
-import { advanceRewardBranches } from '../../processing';
+import { advanceRewardBranches, consumeOlympianProviderForReachedOffer } from '../../processing';
 import {
   settleOwnedAcquisitionSite,
   withStoredArtificerReplacements,
@@ -537,9 +537,14 @@ export function applyEncounterSettlementTransition(inputs: {
       throw new BiomeRewardSimulationContractError(
         `${room.gameName}.${event.phaseKey} does not own exactly one local reward`,
       );
+    const materialized = Object.freeze(
+      branches.map((branch) =>
+        consumeOlympianProviderForReachedOffer(catalog, branch, rewards[0]!.origin, 'free'),
+      ),
+    );
     const settlement = settleOwnedAcquisitionSite(
       catalog,
-      branches,
+      materialized,
       {
         siteOwner: rewards[0].origin,
         pointKey: event.phaseKey,
