@@ -1,9 +1,5 @@
-export {
-  BiomeMaterializationContractError,
-  materializeBiome,
-  materializeBiomePrefix,
-  selectedBatchContinuation,
-} from './biome';
+export { materializeBiome, materializeBiomePrefix } from './biome';
+export { BiomeMaterializationContractError, selectedBatchContinuation } from './batch';
 export {
   fieldsBatchFacts,
   fieldsBatchOwnsCageOutcome,

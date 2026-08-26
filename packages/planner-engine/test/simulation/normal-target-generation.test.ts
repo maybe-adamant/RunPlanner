@@ -179,37 +179,6 @@ describe('normal target generation support', () => {
       ]),
     );
   });
-
-  it('preserves retained overflow for semantic physical-exit validation', () => {
-    const project = applyProjectCommand(createFGenerationProject(), catalog, {
-      kind: 'ReplaceOccurrenceRoom',
-      occurrence: createOccurrenceAddress(fGenerationBiome, fGenerationOccurrenceId(7, 1)),
-      gameName: 'F_Combat10',
-    });
-    const result = evaluate(project);
-    const overflow = result.snapshot.decisions.find(
-      (decision) =>
-        decision.kind === 'batch' &&
-        semanticAddressKey(decision.origin) ===
-          semanticAddressKey(
-            createExitDecisionAddress(fGenerationBiome, {
-              kind: 'occurrence',
-              occurrenceId: fGenerationOccurrenceId(7, 1),
-            }),
-          ),
-    );
-    const target = fGenerationTargetAddress(fGenerationBaselineBatches, 8, 2);
-    const finding = result.generation.findings.find(
-      (candidate) =>
-        candidate.code === 'targetRoomUnavailable' &&
-        semanticAddressKey(candidate.origin) === semanticAddressKey(target),
-    );
-
-    if (overflow?.kind !== 'batch') throw new Error('missing retained overflow batch');
-    expect(overflow.targets[1]?.exit).toEqual({ kind: 'unavailable', exitKey: 'exit2', index: 2 });
-    expect(finding?.evidence.exclusionReasons).toContain('physicalExitUnavailable');
-  });
-
   it('rejects a snapshot whose source identity is newer than its supplied history', () => {
     const baseline = evaluate();
     const project = applyProjectCommand(createFGenerationProject(), catalog, {

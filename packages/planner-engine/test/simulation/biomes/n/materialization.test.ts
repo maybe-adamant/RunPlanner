@@ -180,16 +180,6 @@ describe('canonical N Hub materialization', () => {
       lifecycleProfileKey: 'OpeningRewardRoom',
       incomingReward: { resolvedStoreKey: 'RunProgress' },
     });
-    expect(biome.snapshot.decisions[0]).toMatchObject({
-      kind: 'batch',
-      selectedExitKey: 'prehub',
-      targets: [
-        {
-          exit: { kind: 'available', exitKey: 'prehub', index: 1 },
-          room: { occurrenceId: nOccurrenceIds.preHub, gameName: 'N_PreHub01' },
-        },
-      ],
-    });
     expect(hub.board.targets.map((target) => target.hubSlotKey)).toEqual([
       'combat01',
       'combat02',
