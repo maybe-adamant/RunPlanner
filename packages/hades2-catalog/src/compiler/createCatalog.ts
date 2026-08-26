@@ -9,12 +9,8 @@ import {
   normalizeEncounterSets,
 } from './encounters';
 import { normalizeExitCompatibilityPolicies, normalizeExitTypes } from './exits';
-import {
-  normalizeBiomeLayouts,
-  validatePrebossBatchPolicies,
-  validateDerivedRoomOwnership,
-  validateRewardLookupOwnership,
-} from './layouts';
+import { normalizeBiomeLayouts } from './layouts';
+import { validateRoomLayoutClosure } from './room-layout-closure';
 import { normalizeRooms } from './rooms';
 import { normalizeRoomLifecycleProfiles } from './lifecycles';
 import { normalizeRoutes } from './routes';
@@ -174,9 +170,7 @@ export function createCatalog(input: RawCatalogInput): Catalog {
     rewards.stores,
     exitTypes,
   );
-  validatePrebossBatchPolicies(biomeLayouts, rooms, exitCompatibilityPolicies);
-  validateDerivedRoomOwnership(rooms, biomeLayouts);
-  validateRewardLookupOwnership(rooms, biomeLayouts);
+  validateRoomLayoutClosure(rooms, biomeLayouts, exitCompatibilityPolicies);
   for (const reward of rewards.rewardTypes.values) {
     for (const role of reward.acquisitionRoles.values) {
       if (
