@@ -57,7 +57,7 @@ class ImmutableMapView<Key, Value> implements ReadonlyMap<Key, Value> {
   }
 }
 
-class ImmutableSetView<Value> implements ReadonlySet<Value> {
+export class ImmutableSetView<Value> implements ReadonlySet<Value> {
   readonly #values: Set<Value>;
 
   constructor(values: Iterable<Value>) {
@@ -91,6 +91,7 @@ class ImmutableSetView<Value> implements ReadonlySet<Value> {
 }
 
 export interface RewardLifecycleReferences {
+  readonly emptyOutgoingOwnerKeys: ReadonlySet<string>;
   readonly producerPointsByOwner: ReadonlyMap<
     string,
     readonly Extract<HistoryEvent, { readonly kind: 'producerPointReached' }>[]
@@ -263,6 +264,7 @@ function rewardLookup(
 }
 
 function lifecycleReferences(events: readonly HistoryEvent[]): RewardLifecycleReferences {
+  const emptyOutgoingOwnerKeys = new Set<string>();
   const producer = new Map<
     string,
     Extract<HistoryEvent, { readonly kind: 'producerPointReached' }>[]
@@ -280,6 +282,8 @@ function lifecycleReferences(events: readonly HistoryEvent[]): RewardLifecycleRe
     Extract<HistoryEvent, { readonly kind: 'encounterCompleted' }>[]
   >();
   for (const event of events) {
+    if (event.kind === 'emptyOutgoingGenerationCompleted')
+      emptyOutgoingOwnerKeys.add(semanticAddressKey(event.origin));
     const key = semanticAddressKey(event.origin);
     if (event.kind === 'producerPointReached')
       producer.set(key, [...(producer.get(key) ?? []), event]);
@@ -290,6 +294,7 @@ function lifecycleReferences(events: readonly HistoryEvent[]): RewardLifecycleRe
       completed.set(key, [...(completed.get(key) ?? []), event]);
   }
   return Object.freeze({
+    emptyOutgoingOwnerKeys: new ImmutableSetView(emptyOutgoingOwnerKeys),
     producerPointsByOwner: new ImmutableMapView(
       [...producer.entries()].map(([key, points]) => [key, Object.freeze(points)] as const),
     ),

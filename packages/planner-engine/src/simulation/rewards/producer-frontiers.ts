@@ -8,12 +8,24 @@ import {
 } from '../../authored-project/addresses';
 import type { ResolvedRewardOffer } from '../../reward-kernel';
 import type { SemanticFinding } from '../model';
+import type { FindingRegionEntry } from '../finding-regions';
 
 export type RewardProducerGenerationPolicy = 'jointShopInventory' | 'jointUnordered' | 'sequential';
 
 export interface RewardProducerCandidateResult {
   readonly findings: readonly SemanticFinding[];
   readonly supported: boolean;
+}
+
+/** Freezes the only public result shape produced by an exact offer frontier. */
+export function createRewardProducerCandidateResult(
+  findings: ReadonlyMap<string, FindingRegionEntry>,
+  branches: readonly unknown[],
+): RewardProducerCandidateResult {
+  return Object.freeze({
+    findings: Object.freeze([...findings.values()].map((entry) => entry.finding)),
+    supported: branches.length > 0,
+  });
 }
 
 export type RewardProducerOwnerAddress =
