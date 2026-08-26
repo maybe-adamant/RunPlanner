@@ -13,6 +13,7 @@ import {
   createTargetAddress,
   decodeProjectDocument,
   encodeProjectDocument,
+  PROJECT_DOCUMENT_SCHEMA_VERSION,
   undoProjectHistory,
 } from '@run-planner/engine/authored-project';
 import { simulateProjectAssembly } from '@run-planner/engine/simulation';
@@ -126,7 +127,9 @@ describe('schema-51 Chaos TrialUpgrade authored child', () => {
     });
     const decoded = decodeProjectDocument(JSON.parse(encodeProjectDocument(changed)), catalog);
     expect(decoded).toEqual(changed);
-    expect(JSON.parse(encodeProjectDocument(changed))).toMatchObject({ schemaVersion: 62 });
+    expect(JSON.parse(encodeProjectDocument(changed))).toMatchObject({
+      schemaVersion: PROJECT_DOCUMENT_SCHEMA_VERSION,
+    });
 
     const history = applyProjectHistoryCommand(createProjectHistory(unresolved), catalog, {
       kind: 'ReplaceTraitOffer',

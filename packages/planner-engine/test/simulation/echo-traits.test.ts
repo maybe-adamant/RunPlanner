@@ -17,6 +17,7 @@ import {
   createTraitOfferAddress,
   decodeProjectDocument,
   encodeProjectDocument,
+  PROJECT_DOCUMENT_SCHEMA_VERSION,
   semanticAddressKey,
   roomActionKey,
   echoLastRewardPickupEntryKey,
@@ -713,7 +714,7 @@ describe('Echo Gate A direct choices', () => {
       rarificationActions: [],
     });
     const decoded = decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog);
-    expect(decoded.schemaVersion).toBe(62);
+    expect(decoded.schemaVersion).toBe(PROJECT_DOCUMENT_SCHEMA_VERSION);
     const invalidRarityDocument = JSON.parse(encodeProjectDocument(project)) as JsonRecord;
     const invalidRarityOffer = echoOfferInDocument(invalidRarityDocument);
     ((invalidRarityOffer.options as JsonRecord[])[0] ?? {}).rarity = 'Common';
