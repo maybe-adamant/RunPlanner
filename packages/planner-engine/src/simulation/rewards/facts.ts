@@ -11,7 +11,7 @@ import { projectRecentEncounterEnvelopeSlots } from '../history';
 import type { CanonicalLifecycleRoom } from '../history/lifecycleInput';
 import type { HermesShrineCandidateContext } from '../hermes-shrine';
 import type { RewardBranchState } from './branch-primitives';
-import { BiomeRewardSimulationContractError } from './biome-contract';
+import { BiomeRewardSimulationContractError } from './biome/biome-contract';
 
 /** Visible store names that participate in RequiredNotInStore at room entry. */
 export function visibleStoreOptionNames(
