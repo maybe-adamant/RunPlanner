@@ -86,13 +86,19 @@ export function TraitOfferSelectedOutcome({
     () => loadable.concaveStone?.forOffer(value),
     [loadable.concaveStone, value],
   );
-  const concaveStoneDomain = concaveStoneLoadable?.load();
+  const concaveStoneController = useWorkspaceInteractionController<
+    WorkspaceConcaveStoneDomain | undefined
+  >();
+  const concaveStoneDomain = concaveStoneController.observe(concaveStoneLoadable);
   useEffect(() => {
     if (loadable.hasTargetPicker) optionController.activate(loadable);
     if (circeLoadable !== undefined) circeController.activate(circeLoadable);
     if (echoPomLoadable !== undefined) echoPomController.activate(echoPomLoadable);
     if (echoLastRunLoadable !== undefined) echoLastRunController.activate(echoLastRunLoadable);
+    if (concaveStoneLoadable !== undefined) concaveStoneController.activate(concaveStoneLoadable);
   }, [
+    concaveStoneController,
+    concaveStoneLoadable,
     circeController,
     circeLoadable,
     echoLastRunController,
@@ -112,7 +118,7 @@ export function TraitOfferSelectedOutcome({
     interaction.echoLastReward !== undefined ||
     loadable.allTogetherSets !== undefined ||
     loadable.naturalSelection !== undefined ||
-    concaveStoneDomain !== undefined ||
+    concaveStoneDomain.result !== undefined ||
     interaction.ransomAssessment(value) !== undefined;
   if (!hasOutcome) return null;
   return (
@@ -229,9 +235,9 @@ export function TraitOfferSelectedOutcome({
         optionIndex={selectedIndex}
         onUpdate={onUpdate}
         concaveStone={
-          loadable.concaveStone === undefined || concaveStoneDomain === undefined
+          loadable.concaveStone === undefined || concaveStoneDomain.result === undefined
             ? undefined
-            : { interaction: loadable.concaveStone, domain: concaveStoneDomain }
+            : { interaction: loadable.concaveStone, domain: concaveStoneDomain.result }
         }
         {...(onConcaveStoneResult === undefined ? {} : { onConcaveStoneResult })}
       />
