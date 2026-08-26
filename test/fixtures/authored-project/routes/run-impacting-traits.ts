@@ -3,7 +3,6 @@ import {
   applyProjectCommand,
   createIncomingRewardAddress,
   createOccurrenceAddress,
-  createSteadyGrowthOutcomeAddress,
   createTraitOfferAddress,
   type AuthoredTraitOfferTraits,
   type ProjectDocument,
@@ -243,14 +242,6 @@ export function createSurfaceNSteadyGrowthFrontier(): ProjectDocument {
   );
   project = replaceExistingSourceOffer(project, nOccurrenceId('combat11'), aresRareCoreOffer);
   project = replaceUnvisitedBoonSource(project, nOccurrenceId('combat10'), 'DemeterUpgrade');
-  project = applyProjectCommand(project, catalog, {
-    kind: 'ReplaceSteadyGrowthTarget',
-    outcome: createSteadyGrowthOutcomeAddress(
-      createOccurrenceAddress(nBiome, nOccurrenceId('miniBoss01')),
-      'Encounter',
-    ),
-    targetTraitKey: 'ApolloWeaponBoon',
-  });
   return project;
 }
 

@@ -1002,9 +1002,6 @@
                   "figLeafSkipByPhase": {
                     "Encounter": false
                   },
-                  "steadyGrowthTargetByPhase": {
-                    "Encounter": "ApolloWeaponBoon"
-                  },
                   "gorgonResultByPhase": {}
                 },
                 "roomActions": {

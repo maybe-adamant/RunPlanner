@@ -220,7 +220,7 @@ describe('run-impacting trait checkpoint recipes', () => {
     ).toBe(true);
   });
 
-  it('settles one Epic Steady Growth threshold and reaches the next real N owner', () => {
+  it('reaches the first Epic Steady Growth threshold at its next real N owner', () => {
     const assembly = simulateProjectAssembly(catalog, createSurfaceNSteadyGrowthFrontier());
     const findings = assembly.evaluation.findings.filter(
       (candidate) => candidate.code === 'steadyGrowthOutcomeMissing',
@@ -237,7 +237,7 @@ describe('run-impacting trait checkpoint recipes', () => {
     const outcome = findings[0]?.origin;
     expect(outcome).toMatchObject({
       kind: 'steadyGrowthOutcome',
-      owner: { kind: 'occurrence', occurrenceId: 'surface-n-combat11-sideDoor1' },
+      owner: { kind: 'occurrence', occurrenceId: 'surface-n-combat11' },
       phaseKey: 'Encounter',
     });
     if (outcome?.kind !== 'steadyGrowthOutcome') throw new Error('Steady outcome is missing');
@@ -253,18 +253,9 @@ describe('run-impacting trait checkpoint recipes', () => {
         assembly,
         createOccurrenceAddress(
           { kind: 'biome', routeKey: 'Surface', biomeKey: 'N' },
-          createOccurrenceId('surface-n-combat11-sideDoor1'),
+          createOccurrenceId('surface-n-combat11'),
         ),
       )?.origin,
-    ).toMatchObject({ kind: 'occurrence', occurrenceId: 'surface-n-combat11-sideDoor1' });
-    expect(
-      histories[0]?.events.some(
-        (event) =>
-          event.kind === 'rarityMutation' &&
-          event.targetTraitKey === 'ApolloWeaponBoon' &&
-          event.oldRarity === 'Common' &&
-          event.newRarity === 'Rare',
-      ),
-    ).toBe(true);
+    ).toMatchObject({ kind: 'occurrence', occurrenceId: 'surface-n-combat11' });
   });
 });
