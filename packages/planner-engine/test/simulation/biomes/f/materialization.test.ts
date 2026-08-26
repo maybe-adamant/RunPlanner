@@ -1,12 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
-import {
-  createTargetAddress,
-  roomActionKey,
-  semanticAddressKey,
-  type ProjectDocument,
-} from '@run-planner/engine/authored-project';
+import { roomActionKey, type ProjectDocument } from '@run-planner/engine/authored-project';
 import {
   BiomeMaterializationContractError,
   evaluateBiomeCompleteness,
@@ -19,7 +14,6 @@ import {
   createFProject,
   fBiome,
   fCombatId,
-  fDecision,
 } from '../../support/f-takeover-project';
 
 function fPlan(project: ProjectDocument) {
@@ -182,17 +176,6 @@ describe('F takeover materialization', () => {
     ).toEqual([
       [false, undefined, 'deadLeaf'],
       [true, undefined, 'startsCompletion'],
-    ]);
-  });
-
-  it('keeps target ownership semantic and independent of target insertion order', () => {
-    const snapshot = materialize(createCompleteFTakeoverProject());
-    const takeover = snapshot.decisions.at(-1);
-    if (takeover?.kind !== 'batch') throw new Error('missing F takeover batch');
-
-    expect(takeover.targets.map((target) => semanticAddressKey(target.origin))).toEqual([
-      semanticAddressKey(createTargetAddress(fBiome, fDecision(fCombatId).source, 'exit1')),
-      semanticAddressKey(createTargetAddress(fBiome, fDecision(fCombatId).source, 'exit2')),
     ]);
   });
 

@@ -1,6 +1,7 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  createAdditionalExitAddress,
   createBatchRewardStoreAddress,
   createBiomeAddress,
   createEncounterPhaseAddress,
@@ -9,7 +10,9 @@ import {
   createIncomingRewardAddress,
   createOccurrenceId,
   createProjectDocument,
+  createShopOfferAddress,
   createTargetAddress,
+  createTraitOfferAddress,
   type OccurrenceId,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
@@ -224,4 +227,95 @@ export function buildArtemisSourceAnomalyProject() {
     target: createTargetAddress(goldenGBiome, source(sourceCombat), 'exit2'),
   });
   return { project, target: createTargetAddress(goldenGBiome, source(sourceCombat), 'exit2') };
+}
+
+/** Builds the authored selected-Contract frontier; materialization remains under test. */
+export function createSelectedContractContinuationProject() {
+  const opening = createOccurrenceId('batch-materialization-contract-opening');
+  const shop = createOccurrenceId('batch-materialization-contract-shop');
+  const contract = createOccurrenceId('batch-materialization-contract');
+  let project = createProjectDocument(catalog, {
+    projectId: 'batch-materialization-contract',
+    configuredBiomeCounts: { Underworld: 1 },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateStart',
+    biome: detourFBiome,
+    occurrenceId: opening,
+    gameName: 'F_Opening01',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: createIncomingRewardAddress(detourFBiome, opening),
+    value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait: createTraitOfferAddress(createIncomingRewardAddress(detourFBiome, opening), 'source'),
+    value: {
+      kind: 'traits',
+      giverKey: 'Apollo',
+      options: [
+        { traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
+        { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
+        { traitKey: 'ApolloCastBoon', rarity: 'Common' },
+      ],
+      selectedOptionKey: 'option1',
+    },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateBatch',
+    decision: createExitDecisionAddress(detourFBiome, source(opening)),
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceBatchRewardStore',
+    rewardStore: createBatchRewardStoreAddress(detourFBiome, source(opening)),
+    storeKey: 'MetaProgress',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateTarget',
+    target: createTargetAddress(detourFBiome, source(opening), 'exit1'),
+    occurrenceId: shop,
+    gameName: 'F_Shop01',
+  });
+  for (const [offerKey, value] of Object.entries({
+    Boon: {
+      rewardType: 'RandomLoot' as const,
+      payload: { kind: 'BoonSource' as const, source: 'ApolloUpgrade' },
+    },
+    MajorNonBoon: { rewardType: 'WeaponUpgradeDrop' as const },
+    Minor: { rewardType: 'MaxManaDrop' as const },
+  })) {
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceShopOffer',
+      offer: createShopOfferAddress(detourFBiome, shop, offerKey),
+      value,
+    });
+  }
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait: createTraitOfferAddress(createShopOfferAddress(detourFBiome, shop, 'Boon'), 'source'),
+    value: {
+      kind: 'traits',
+      giverKey: 'Apollo',
+      options: [
+        { traitKey: 'ApolloManaBoon', rarity: 'Common' },
+        { traitKey: 'ApolloRetaliateBoon', rarity: 'Common' },
+        { traitKey: 'PerfectDamageBonusBoon', rarity: 'Common' },
+      ],
+      selectedOptionKey: 'option1',
+    },
+  });
+  const additional = createAdditionalExitAddress(detourFBiome, shop, 'zagreusContract');
+  project = applyProjectCommand(project, catalog, {
+    kind: 'AddZagreusContract',
+    additional,
+    occurrenceId: contract,
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'SetExitSelection',
+    selection: createExitSelectionAddress(detourFBiome, source(shop)),
+    value: { kind: 'additional', additionalExitKey: 'zagreusContract' },
+  });
+  return { project, shop, contract, additional };
 }

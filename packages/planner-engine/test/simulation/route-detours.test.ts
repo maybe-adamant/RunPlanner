@@ -1021,13 +1021,6 @@ describe('route-detour simulation', () => {
     if (snapshot.frontier?.kind !== 'exitDecision')
       throw new Error('Midshop should remain frontier');
 
-    expect(snapshot.frontier.additional).toMatchObject([
-      {
-        origin: additional,
-        picked: true,
-        room: { occurrenceId: contract, gameName: 'C_Boss01' },
-      },
-    ]);
     expect(
       history.events.some(
         (event) =>

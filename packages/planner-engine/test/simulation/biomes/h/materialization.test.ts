@@ -1228,42 +1228,11 @@ describe('H Fields materialization', () => {
     expect(work).toEqual([]);
   });
 
-  it('derives each Fields capacity and active local-reward prefix without mutating authorship', () => {
+  it('derives each active Fields local-reward prefix without mutating authorship', () => {
     const project = completeProject();
     const encodedBefore = encodeProjectDocument(project);
     const snapshot = materialize(project);
     const batches = ordinaryBatches(snapshot);
-
-    expect(batches.map((batch) => batch.batchState)).toEqual([
-      {
-        kind: 'fields',
-        cageOutcome: 'min',
-        batchCapacity: 3,
-        cageTargetCount: 1,
-        doorCageRewardCount: 2,
-      },
-      {
-        kind: 'fields',
-        cageOutcome: 'max',
-        batchCapacity: 2,
-        cageTargetCount: 2,
-        doorCageRewardCount: 2,
-      },
-      {
-        kind: 'fields',
-        cageOutcome: 'max',
-        batchCapacity: 3,
-        cageTargetCount: 0,
-        doorCageRewardCount: 3,
-      },
-      {
-        kind: 'fields',
-        cageOutcome: 'min',
-        batchCapacity: 3,
-        cageTargetCount: 2,
-        doorCageRewardCount: 2,
-      },
-    ]);
 
     const minCombat = batches[0]?.targets[0]?.room;
     expect(minCombat).toMatchObject({

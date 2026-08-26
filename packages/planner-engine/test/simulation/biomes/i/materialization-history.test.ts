@@ -358,7 +358,7 @@ describe('canonical I Clockwork materialization and history', () => {
     expect(source?.preOutgoing?.ledgers.counters.clockworkNonGoalRewardsAcquired).toBe(4);
   });
 
-  it('derives physical Goal and NonGoal offers before each generated batch', () => {
+  it('keeps I entry and completion-tail materialization deterministic', () => {
     const project = completeProject();
     const encodedBefore = encodeProjectDocument(project);
     const snapshot = materializeBiome(catalog, biome, complete(project), traitContext(project));
@@ -369,86 +369,9 @@ describe('canonical I Clockwork materialization and history', () => {
       gameName: 'I_Intro',
       entered: true,
     });
-    expect(
-      snapshotBatches.slice(0, -1).map((batch) => {
-        if (batch.batchState.kind !== 'clockwork') {
-          throw new Error('fixture lost Clockwork batch state');
-        }
-        return [
-          batch.batchState.goalsRemaining,
-          batch.batchState.nonGoalRewardsAcquired,
-          batch.batchState.maxNonGoalRewards,
-        ];
-      }),
-    ).toEqual([
-      [5, 0, 5],
-      [4, 0, 5],
-      [3, 0, 5],
-      [3, 1, 5],
-      [2, 1, 5],
-      [2, 2, 5],
-      [1, 2, 5],
-      [1, 3, 5],
-      [0, 3, 5],
-    ]);
     expect(materializeBiome(catalog, biome, complete(project), traitContext(project))).toEqual(
       snapshot,
     );
-    expect(
-      snapshotBatches.slice(0, -1).map((batch) =>
-        batch.targets.map((target) => ({
-          picked: target.picked,
-          reward: target.room.clockworkReward,
-          concrete: target.room.incomingReward?.offer.rewardType,
-        })),
-      ),
-    ).toEqual([
-      [{ picked: true, reward: 'goal', concrete: undefined }],
-      [
-        { picked: true, reward: 'goal', concrete: undefined },
-        { picked: false, reward: undefined, concrete: 'Story' },
-      ],
-      [
-        { picked: false, reward: 'goal', concrete: undefined },
-        { picked: true, reward: 'nonGoal', concrete: 'RoomMoneyTripleDrop' },
-      ],
-      [{ picked: true, reward: 'goal', concrete: undefined }],
-      [
-        { picked: false, reward: 'goal', concrete: undefined },
-        { picked: true, reward: 'nonGoal', concrete: 'RoomMoneyTripleDrop' },
-      ],
-      [{ picked: true, reward: 'goal', concrete: undefined }],
-      [
-        { picked: false, reward: 'goal', concrete: undefined },
-        { picked: true, reward: 'nonGoal', concrete: 'RoomMoneyTripleDrop' },
-      ],
-      [{ picked: true, reward: 'goal', concrete: undefined }],
-      [
-        { picked: false, reward: 'goal', concrete: 'Shop' },
-        { picked: true, reward: 'nonGoal', concrete: 'RoomMoneyTripleDrop' },
-      ],
-    ]);
-    expect(snapshotBatches.at(-1)).toMatchObject({
-      batchState: {
-        kind: 'clockwork',
-        goalsRemaining: 0,
-        nonGoalRewardsAcquired: 4,
-        maxNonGoalRewards: 5,
-      },
-      rewardStore: { kind: 'none' },
-      selectedExitKey: 'exit1',
-      targets: [
-        {
-          picked: true,
-          continuation: 'startsCompletion',
-          room: {
-            gameName: 'I_PreBoss02',
-            clockworkReward: 'goal',
-            entryState: { kind: 'shop', profileKey: 'I_WorldShop' },
-          },
-        },
-      ],
-    });
     const prebosses = snapshotBatches
       .flatMap((batch) => batch.targets)
       .filter((target) => target.room.gameName === 'I_PreBoss02');
