@@ -19,6 +19,9 @@ import {
   createOccurrenceAddress,
   createOccurrenceId,
   createProjectDocument,
+  createFountainRarityOutcomeAddress,
+  createRoomActionAddress,
+  roomActionKey,
   createRouteAddress,
   createRewardWheelOfferAddress,
   createRewardWheelAddress,
@@ -83,6 +86,7 @@ import {
 import { createCandidateSessionFactory } from '@planner/projections/candidateProjection';
 import type { CandidateProjectionSession } from '@planner/projections/candidateProjection';
 import type {
+  WorkspaceFountainRarityControl,
   WorkspaceSteadyGrowthControl,
   WorkspaceTraitOfferControl,
 } from '@planner/projections/structured-workspace';
@@ -271,6 +275,7 @@ export function bind(
   allocateOccurrenceId = () => createOccurrenceId('interaction-binding-start'),
   candidateSession?: CandidateProjectionSession,
   steadyGrowthControls?: ReadonlyMap<string, WorkspaceSteadyGrowthControl>,
+  fountainRarityControls?: ReadonlyMap<string, WorkspaceFountainRarityControl>,
 ) {
   const authoredProject = project;
   const projectAssembly = simulateProjectAssembly(catalog, authoredProject);
@@ -347,6 +352,7 @@ export function bind(
       roomControls: assembly.roomControls,
       services: interactionServices,
       ...(steadyGrowthControls === undefined ? {} : { steadyGrowthControls }),
+      ...(fountainRarityControls === undefined ? {} : { fountainRarityControls }),
       startInteractionRequirements: assembly.startInteractionRequirements,
       takeoverInteractionRequirements: assembly.takeoverInteractionRequirements,
       topologyRemovalInteractionRequirements: assembly.topologyRemovalInteractionRequirements,
@@ -431,6 +437,9 @@ export {
   createGoldenFGHIProject,
   createCompleteFGProject,
   createFConversionFrontierProject,
+  createFountainRarityOutcomeAddress,
+  createRoomActionAddress,
+  roomActionKey,
   goldenFBiome,
   goldenFOccurrenceId,
   goldenFStartId,
@@ -472,5 +481,6 @@ export type {
   TraitOptionKey,
   CandidateProjectionSession,
   CandidateEvaluationEvent,
+  WorkspaceFountainRarityControl,
   WorkspaceSteadyGrowthControl,
 };

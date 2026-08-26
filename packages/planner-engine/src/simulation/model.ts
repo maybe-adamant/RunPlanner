@@ -53,6 +53,8 @@ export type RewardGenerationFindingCode =
   | 'keepsakeEquipResultUnavailable'
   | 'steadyGrowthOutcomeMissing'
   | 'steadyGrowthOutcomeUnavailable'
+  | 'fountainRarityResultMissing'
+  | 'fountainRarityResultUnavailable'
   | 'stygianWellMissing'
   | 'stygianWellWrongGroup'
   | 'stygianWellDuplicate'

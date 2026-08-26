@@ -137,6 +137,11 @@ import {
   type EvaluatedSteadyGrowthOutcomeCandidate,
   type SteadyGrowthOutcomeCandidateQuery,
 } from './steady-growth';
+import {
+  evaluateFountainRarityOutcomeCandidate,
+  type EvaluatedFountainRarityOutcomeCandidate,
+  type FountainRarityOutcomeCandidateQuery,
+} from './fountain-rarity';
 
 export type ProjectCandidateQuery =
   | BatchRewardStoreCandidateQuery
@@ -163,7 +168,8 @@ export type ProjectCandidateQuery =
   | KeepsakeSelectionCandidateQuery
   | KeepsakeEquipResultCandidateQuery
   | AcquisitionConversionCandidateQuery
-  | SteadyGrowthOutcomeCandidateQuery;
+  | SteadyGrowthOutcomeCandidateQuery
+  | FountainRarityOutcomeCandidateQuery;
 
 /** Candidate-session-only query vocabulary, including focused trait support. */
 export type ProjectCandidateSessionQuery =
@@ -204,7 +210,8 @@ export type ProjectCandidateEvaluation =
   | EvaluatedKeepsakeSelectionCandidate
   | EvaluatedKeepsakeEquipResultCandidate
   | EvaluatedAcquisitionConversionCandidate
-  | EvaluatedSteadyGrowthOutcomeCandidate;
+  | EvaluatedSteadyGrowthOutcomeCandidate
+  | EvaluatedFountainRarityOutcomeCandidate;
 
 /** Result vocabulary corresponding to `ProjectCandidateSessionQuery`. */
 export type ProjectCandidateSessionEvaluation =
@@ -316,6 +323,16 @@ function evaluateCandidateQuery(
         candidateArtifacts.biomeAt(
           createBiomeAddress(query.outcome.routeKey, query.outcome.biomeKey),
         )?.steadyGrowth,
+        query,
+      );
+    case 'fountainRarityOutcome':
+      return evaluateFountainRarityOutcomeCandidate(
+        catalog,
+        project,
+        evaluation,
+        candidateArtifacts.biomeAt(
+          createBiomeAddress(query.outcome.routeKey, query.outcome.biomeKey),
+        )?.fountainRarity,
         query,
       );
     case 'keepsakeEquipResult':

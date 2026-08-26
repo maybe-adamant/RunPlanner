@@ -9,6 +9,7 @@ import type {
   PurgingPoolCandidateArtifacts,
   SteadyGrowthCandidateArtifacts,
   StygianWellCandidateArtifacts,
+  FountainRarityCandidateArtifacts,
 } from '../../candidate-artifacts';
 import type {
   LevelResolutionCandidateArtifacts,
@@ -44,6 +45,7 @@ export interface BiomeRewardEvaluationAssembly {
   readonly purgingPoolArtifacts: PurgingPoolCandidateArtifacts;
   readonly hermesShrineArtifacts: HermesShrineCandidateArtifacts;
   readonly stygianWellArtifacts: StygianWellCandidateArtifacts;
+  readonly fountainRarityArtifacts: FountainRarityCandidateArtifacts;
   readonly traitChildSettlementCheckpoints: TraitChildSettlementCheckpoints;
   readonly findingRegions: readonly FindingRegionEntry[];
 }

@@ -152,6 +152,19 @@ export const keepsakes: readonly RawKeepsakeDeclaration[] = entries.map(
                       naturalEncounterKey: 'AthenaCombatP' as const,
                     },
                   }
-                : {}),
+                : key === 'FountainRarityKeepsake'
+                  ? {
+                      effect: {
+                        kind: 'fountainRarity' as const,
+                        uses: 1 as const,
+                        targetRarityLevelByRank: {
+                          Common: 2 as const,
+                          Rare: 3 as const,
+                          Epic: 4 as const,
+                        },
+                        sourceMaxRarityLevel: 1 as const,
+                      },
+                    }
+                  : {}),
   }),
 );

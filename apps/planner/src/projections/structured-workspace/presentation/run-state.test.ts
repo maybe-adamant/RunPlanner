@@ -149,6 +149,7 @@ describe('Run State presentation', () => {
         ],
         figLeaf: { remainingUses: 2, activatedThisBiome: true },
         gorgon: { status: 'pending' as const, rarity: 'Epic' as const },
+        phial: { status: 'pending' as const },
       },
       forfeitStatus: 'consumed',
       bags: [
@@ -220,6 +221,7 @@ describe('Run State presentation', () => {
       figLeafActivatedThisBiome: true,
       gorgonStatus: 'pending',
       gorgonRarity: 'Epic',
+      phialStatus: 'pending',
     });
     expect(state.traits).toMatchObject({
       properUpbringingActive: true,
@@ -295,5 +297,11 @@ describe('Run State presentation', () => {
       expect(projected.keepsakes.gorgonStatus).toBe(status);
       expect(projected.keepsakes.gorgonRarity).toBe(status === 'pending' ? 'Epic' : undefined);
     }
+    expect(
+      presentRunState(catalog, {
+        ...snapshot,
+        keepsakes: { ...snapshot.keepsakes, phial: { status: 'consumed' } },
+      }).keepsakes.phialStatus,
+    ).toBe('consumed');
   });
 });

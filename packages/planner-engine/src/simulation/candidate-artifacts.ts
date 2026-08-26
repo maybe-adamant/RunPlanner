@@ -6,6 +6,7 @@ import {
   type KeepsakeSelectionAddress,
   type KeepsakeEquipResultAddress,
   type SteadyGrowthOutcomeAddress,
+  type FountainRarityOutcomeAddress,
   type AcquisitionRoleAddress,
   type OccurrenceAddress,
 } from '../authored-project/addresses';
@@ -107,6 +108,34 @@ function createEmptySteadyGrowthCandidateArtifacts(): SteadyGrowthCandidateArtif
   return Object.freeze({ at: () => undefined });
 }
 
+/** Exact pre-fountain Phial frontiers retained by the reached action. */
+export interface FountainRarityCandidateFrontier {
+  readonly status: import('./keepsakes').PhialLifecycleStatus | undefined;
+  readonly consumptionTargetKeys: readonly string[];
+  readonly mutationTargetKeys: readonly string[];
+}
+export interface FountainRarityCandidateCapability {
+  readonly frontiers: readonly FountainRarityCandidateFrontier[];
+}
+export interface FountainRarityCandidateArtifacts {
+  readonly at: (
+    address: FountainRarityOutcomeAddress,
+  ) => FountainRarityCandidateCapability | undefined;
+  readonly entries: () => readonly (readonly [string, FountainRarityCandidateCapability])[];
+}
+export function createFountainRarityCandidateArtifacts(
+  contexts: ReadonlyMap<string, FountainRarityCandidateCapability>,
+): FountainRarityCandidateArtifacts {
+  const privateContexts = new Map(contexts);
+  return Object.freeze({
+    at: (address: FountainRarityOutcomeAddress) => privateContexts.get(semanticAddressKey(address)),
+    entries: () => Object.freeze([...privateContexts.entries()]),
+  });
+}
+function createEmptyFountainRarityCandidateArtifacts(): FountainRarityCandidateArtifacts {
+  return createFountainRarityCandidateArtifacts(new Map());
+}
+
 /**
  * Exact rack frontier captured by the selected chronological reward walk.
  * It deliberately contains the already-derived identity history rather than
@@ -155,6 +184,7 @@ export interface BiomeCandidateArtifacts {
   readonly acquisitionConversions: AcquisitionConversionCandidateArtifacts;
   readonly derivedAcquisitionEntries: DerivedAcquisitionEntryCandidateArtifacts;
   readonly steadyGrowth: SteadyGrowthCandidateArtifacts;
+  readonly fountainRarity: FountainRarityCandidateArtifacts;
   readonly purgingPools: PurgingPoolCandidateArtifacts;
   readonly hermesShrines: HermesShrineCandidateArtifacts;
   readonly stygianWells: StygianWellCandidateArtifacts;
@@ -675,6 +705,7 @@ export function createBiomeCandidateArtifacts(
   purgingPools: PurgingPoolCandidateArtifacts = createEmptyPurgingPoolCandidateArtifacts(),
   hermesShrines: HermesShrineCandidateArtifacts = createEmptyHermesShrineCandidateArtifacts(),
   stygianWells: StygianWellCandidateArtifacts = createEmptyStygianWellCandidateArtifacts(),
+  fountainRarity: FountainRarityCandidateArtifacts = createEmptyFountainRarityCandidateArtifacts(),
 ): BiomeCandidateArtifacts {
   return Object.freeze({
     origin,
@@ -690,6 +721,7 @@ export function createBiomeCandidateArtifacts(
     acquisitionConversions,
     derivedAcquisitionEntries,
     steadyGrowth,
+    fountainRarity,
     purgingPools,
     hermesShrines,
     stygianWells,

@@ -134,6 +134,9 @@ export function workspaceOccurrenceOwnedMarkers(
     ]),
     ...workspaceLocalDetailMarkers(room.roomLocal),
     ...(room.roomActions?.rows.map((row) => row.marker) ?? []),
+    ...(room.roomActions?.rows.flatMap((row) =>
+      row.fountainRarity === undefined ? [] : [row.fountainRarity.marker],
+    ) ?? []),
     ...(room.roomActions?.steadyGrowth?.map((effect) => effect.marker) ?? []),
     ...(room.judgment === undefined ? [] : [room.judgment.marker]),
     ...(room.keepsakeSelection === undefined

@@ -1,7 +1,7 @@
 {
-  "schemaVersion": 59,
+  "schemaVersion": 60,
   "projectId": "golden-fg",
-  "catalogVersion": "0.41.0-stygian-well",
+  "catalogVersion": "0.42.0-fountain-rarity",
   "routes": [
     {
       "routeKey": "Underworld",

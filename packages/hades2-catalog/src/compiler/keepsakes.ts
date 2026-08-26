@@ -258,6 +258,40 @@ export function normalizeKeepsakes(
         ),
         naturalEncounterKey: 'AthenaCombatP',
       });
+    } else if (keepsake.key === 'FountainRarityKeepsake') {
+      requireExactObjectKeys(keepsake.effect, `${path}.effect`, [
+        'kind',
+        'uses',
+        'targetRarityLevelByRank',
+        'sourceMaxRarityLevel',
+      ]);
+      if (
+        keepsake.effect.kind !== 'fountainRarity' ||
+        keepsake.effect.uses !== 1 ||
+        keepsake.effect.sourceMaxRarityLevel !== 1
+      )
+        fail(`${path}.effect`, 'must declare Aromatic Phial one use and source MaxRarity one');
+      requireExactObjectKeys(
+        keepsake.effect.targetRarityLevelByRank,
+        `${path}.effect.targetRarityLevelByRank`,
+        ['Common', 'Rare', 'Epic'],
+      );
+      for (const [rank, expected] of [
+        ['Common', 2],
+        ['Rare', 3],
+        ['Epic', 4],
+      ] as const) {
+        if (typeof keepsake.effect.targetRarityLevelByRank[rank] !== 'number')
+          fail(`${path}.effect.targetRarityLevelByRank.${rank}`, 'must be numeric');
+        if (keepsake.effect.targetRarityLevelByRank[rank] !== expected)
+          fail(`${path}.effect.targetRarityLevelByRank.${rank}`, `must equal ${expected}`);
+      }
+      effect = Object.freeze({
+        kind: 'fountainRarity',
+        uses: 1,
+        targetRarityLevelByRank: Object.freeze({ Common: 2, Rare: 3, Epic: 4 }),
+        sourceMaxRarityLevel: 1,
+      });
     } else if (keepsake.effect !== undefined)
       fail(`${path}.effect`, 'is not supported by this keepsake');
     return Object.freeze({

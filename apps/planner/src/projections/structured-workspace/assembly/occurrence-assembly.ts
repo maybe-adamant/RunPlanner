@@ -88,6 +88,7 @@ export interface WorkspaceOccurrenceAssemblyInput {
     owner: OccurrenceAddress,
   ) => import('@run-planner/engine/simulation').PurgingPoolCandidateCapability | undefined;
   readonly steadyGrowthOutcomes?: readonly import('@run-planner/engine/simulation').BiomeRewardSimulation['steadyGrowthOutcomes'][number][];
+  readonly fountainRarityAssessment?: import('./occurrence-action-row-projection').WorkspaceOccurrenceActionsInput['fountainRarityAssessment'];
   readonly hermesShrineAssessment?: (
     owner: OccurrenceAddress,
   ) => import('@run-planner/engine/simulation').HermesShrineCandidateCapability | undefined;
@@ -189,6 +190,9 @@ export function assembleWorkspaceOccurrence(
     ...(input.steadyGrowthOutcomes === undefined
       ? {}
       : { steadyGrowthOutcomes: input.steadyGrowthOutcomes }),
+    ...(input.fountainRarityAssessment === undefined
+      ? {}
+      : { fountainRarityAssessment: input.fountainRarityAssessment }),
     controls: allRewardControls,
     encounterPhases,
     roomLabel: room.label,

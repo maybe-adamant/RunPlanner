@@ -63,6 +63,7 @@ export type TraitCandidateAdapters = Pick<
   | 'naturalSelectionResult'
   | 'ransomAssessment'
   | 'steadyGrowthOutcome'
+  | 'fountainRarityOutcome'
   | 'levelResolution'
   | 'judgmentArcana'
   | 'keepsakeSelections'
@@ -174,6 +175,14 @@ export function createTraitCandidateAdapters(
         outcome,
         targetTraitKey,
       }) as EvaluatedSteadyGrowthOutcomeCandidate | CandidateContextUnavailable,
+    fountainRarityOutcome: (outcome, targetTraitKey) =>
+      aggregateEvaluation(core, {
+        kind: 'fountainRarityOutcome',
+        outcome,
+        targetTraitKey,
+      }) as
+        | import('@run-planner/engine/simulation').EvaluatedFountainRarityOutcomeCandidate
+        | CandidateContextUnavailable,
     levelResolution: (owner, value) => {
       const capability = levelResolutionCandidateForProjectEvaluationAssembly(core.assembly, owner);
       if (capability === undefined) return undefined;

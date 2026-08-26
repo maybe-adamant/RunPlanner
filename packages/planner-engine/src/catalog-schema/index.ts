@@ -185,6 +185,16 @@ export interface KeepsakeDeclaration {
         readonly providerKey: 'Athena';
         readonly rarityLevelByRank: KeepsakeRankProfile<1, 2, 3, 4>;
         readonly naturalEncounterKey: string;
+      }
+    | {
+        readonly kind: 'fountainRarity';
+        readonly uses: 1;
+        readonly targetRarityLevelByRank: Readonly<{
+          readonly Common: 2;
+          readonly Rare: 3;
+          readonly Epic: 4;
+        }>;
+        readonly sourceMaxRarityLevel: 1;
       };
 }
 

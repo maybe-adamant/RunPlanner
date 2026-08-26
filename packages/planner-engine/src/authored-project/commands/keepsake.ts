@@ -2,17 +2,69 @@ import type { Catalog } from '../../catalog-schema';
 import type { AuthoredKeepsakeEquipResults, ProjectDocument } from '../model';
 import { failCommand, locateBiome, requireOccurrence } from './contract';
 import { updateOccurrence } from './occurrence-mutation';
+import { roomActionKey } from '../room-action-key';
+import { createBiomeAddress } from '../addresses';
+import { assembleRoomActionDomain } from '../room-action-domain';
 import type {
   ExperimentalHammerEquipResultCommand,
   KeepsakeCommand,
   KeepsakeEquipResultCommand,
+  FountainRarityCommand,
 } from './types';
 
 export function applyKeepsakeCommand(
   document: ProjectDocument,
   catalog: Catalog,
-  command: KeepsakeCommand | KeepsakeEquipResultCommand | ExperimentalHammerEquipResultCommand,
+  command:
+    | KeepsakeCommand
+    | KeepsakeEquipResultCommand
+    | ExperimentalHammerEquipResultCommand
+    | FountainRarityCommand,
 ): ProjectDocument {
+  if (command.kind === 'ReplaceFountainRarityTarget') {
+    if (
+      command.targetTraitKey !== null &&
+      catalog.traits.byKey[command.targetTraitKey] === undefined
+    )
+      failCommand(command, `unknown trait ${command.targetTraitKey}`);
+    const located = locateBiome(document, catalog, command);
+    const occurrence = requireOccurrence(
+      located.plan,
+      command.outcome.action.occurrenceId,
+      command,
+    );
+    const expectedActionKey = roomActionKey({ kind: 'useFountain' });
+    const declarationActions = assembleRoomActionDomain({
+      catalog,
+      biome: createBiomeAddress(command.outcome.routeKey, command.outcome.biomeKey),
+      occurrence,
+    }).activeReferences;
+    if (
+      command.outcome.action.kind !== 'roomAction' ||
+      command.outcome.action.routeKey !== command.outcome.routeKey ||
+      command.outcome.action.biomeKey !== command.outcome.biomeKey ||
+      command.outcome.action.actionKey !== expectedActionKey ||
+      !declarationActions.some((reference) => reference.kind === 'useFountain') ||
+      !occurrence.roomActions.order.some(
+        (reference) =>
+          reference.kind === 'useFountain' &&
+          roomActionKey(reference) === command.outcome.action.actionKey,
+      )
+    )
+      failCommand(command, 'outcome does not own the exact fountain action');
+    const nextOccurrence =
+      command.targetTraitKey === null
+        ? (() => {
+            const { fountainRarityResult, ...rest } = occurrence;
+            void fountainRarityResult;
+            return rest;
+          })()
+        : {
+            ...occurrence,
+            fountainRarityResult: Object.freeze({ targetTraitKey: command.targetTraitKey }),
+          };
+    return updateOccurrence(document, located, nextOccurrence);
+  }
   if (command.kind === 'ReplaceExperimentalHammerEquipResult') {
     if (
       command.value.kind === 'selected' &&

@@ -62,6 +62,12 @@ export interface KeepsakeEquipResultAddress {
   readonly resultKind: 'jeweledPom' | 'experimentalHammer';
 }
 
+/** The authored Phial target beneath the exact occurrence-owned fountain use. */
+export interface FountainRarityOutcomeAddress extends BiomeOwnedAddress {
+  readonly kind: 'fountainRarityOutcome';
+  readonly action: RoomActionAddress;
+}
+
 export type ExitDecisionSourceAddress =
   | { readonly kind: 'occurrence'; readonly occurrenceId: OccurrenceId }
   | { readonly kind: 'hubDecision'; readonly decisionKey: string };
@@ -305,6 +311,7 @@ export type SemanticAddress =
   | KeepsakeSelectionAddress
   | EchoKeepsakeReplayAddress
   | KeepsakeEquipResultAddress
+  | FountainRarityOutcomeAddress
   | ExitDecisionAddress
   | ExitSelectionAddress
   | BatchRewardStoreAddress
@@ -450,6 +457,16 @@ export function createKeepsakeEquipResultAddress<
     biomeKey: selection.biomeKey,
     selection,
     resultKind,
+  });
+}
+export function createFountainRarityOutcomeAddress(
+  action: RoomActionAddress,
+): FountainRarityOutcomeAddress {
+  return Object.freeze({
+    kind: 'fountainRarityOutcome',
+    routeKey: action.routeKey,
+    biomeKey: action.biomeKey,
+    action,
   });
 }
 export function createEchoKeepsakeReplayAddress(biome: BiomeAddress): EchoKeepsakeReplayAddress {
@@ -886,6 +903,8 @@ export function semanticAddressKey(address: SemanticAddress): string {
       return JSON.stringify([...base, address.fieldKey]);
     case 'keepsakeEquipResult':
       return JSON.stringify([...base, semanticAddressKey(address.selection), address.resultKind]);
+    case 'fountainRarityOutcome':
+      return JSON.stringify([...base, semanticAddressKey(address.action)]);
     case 'occurrence':
     case 'incomingReward':
       return JSON.stringify([...base, address.occurrenceId]);

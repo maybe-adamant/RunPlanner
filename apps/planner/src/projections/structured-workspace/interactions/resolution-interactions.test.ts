@@ -4,6 +4,7 @@ import * as support from '@planner-test/support/structured-workspace/interaction
 import type {
   AuthoredTraitOfferTraits,
   CandidateProjectionSession,
+  WorkspaceFountainRarityControl,
   WorkspaceSteadyGrowthControl,
 } from '@planner-test/support/structured-workspace/interaction-binding.test-support';
 
@@ -14,11 +15,14 @@ const {
   applyProjectCommand,
   createEchoPomTargetAddress,
   createEncounterPhaseAddress,
+  createFountainRarityOutcomeAddress,
   createOccurrenceAddress,
   createOccurrenceId,
+  createRoomActionAddress,
   createSteadyGrowthOutcomeAddress,
   createTraitOfferAddress,
   semanticAddressKey,
+  roomActionKey,
   simulateProjectAssembly,
   goldenFBiome,
   goldenFOccurrenceId,
@@ -146,6 +150,65 @@ describe('resolution-interactions', () => {
       kind: 'ReplaceSteadyGrowthTarget',
       outcome,
       targetTraitKey: 'ApolloWeaponBoon',
+    });
+  });
+
+  it('disables a Phial target supported by only one current branch', () => {
+    const project = createGoldenFGHIProject();
+    const occurrence = createOccurrenceAddress(goldenFBiome, goldenFOccurrenceId(1, 1));
+    const outcome = createFountainRarityOutcomeAddress(
+      createRoomActionAddress(
+        goldenFBiome,
+        occurrence.occurrenceId,
+        roomActionKey({ kind: 'useFountain' }),
+      ),
+    );
+    const control: WorkspaceFountainRarityControl = Object.freeze({
+      address: outcome,
+      marker: Object.freeze({
+        address: outcome,
+        assessment: 'assessed' as const,
+        findingCount: 0,
+        focusKey: 'test-fountain-rarity',
+      }),
+    });
+    const baseCandidateSession = createCandidateSessionFactory(catalog).bind(
+      simulateProjectAssembly(catalog, project),
+    );
+    const candidateSession = Object.freeze({
+      ...baseCandidateSession,
+      fountainRarityOutcome: () =>
+        Object.freeze({
+          kind: 'fountainRarityOutcome' as const,
+          result: Object.freeze({
+            status: 'pending' as const,
+            consumptionTargetKeys: Object.freeze(['ApolloWeaponBoon', 'ZeusWeaponBoon']),
+            mutationTargetKeys: Object.freeze(['ApolloWeaponBoon', 'ZeusWeaponBoon']),
+            branchSupport: Object.freeze([true, false]),
+            selectedPossible: false,
+            targetRequired: true,
+          }),
+        }),
+    }) as CandidateProjectionSession;
+    const bound = bind(
+      project,
+      'Underworld',
+      'F',
+      undefined,
+      candidateSession,
+      undefined,
+      new Map([[semanticAddressKey(outcome), control]]),
+    );
+    const interaction = bound.interactions.fountainRarity.get(semanticAddressKey(outcome));
+    if (interaction === undefined) throw new Error('Phial interaction is missing');
+    const picker = interaction.forTarget().load()?.picker;
+    const unionOnly = picker?.sections
+      .flatMap((section) => section.items)
+      .find((item) => item.value === 'ZeusWeaponBoon');
+    expect(unionOnly).toMatchObject({
+      state: 'impossible',
+      disabled: true,
+      explanation: 'This outcome is not supported by every current route branch.',
     });
   });
 });

@@ -1,7 +1,7 @@
 {
-  "schemaVersion": 59,
+  "schemaVersion": 60,
   "projectId": "surface-4",
-  "catalogVersion": "0.41.0-stygian-well",
+  "catalogVersion": "0.42.0-fountain-rarity",
   "routes": [
     {
       "routeKey": "Underworld",

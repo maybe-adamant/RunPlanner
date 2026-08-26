@@ -854,6 +854,9 @@ export function materializeAuthoredRoom(
     ...(context.occurrence.keepsakeRack === undefined
       ? {}
       : { keepsakeRack: context.occurrence.keepsakeRack }),
+    ...(context.occurrence.fountainRarityResult === undefined
+      ? {}
+      : { fountainRarityResult: context.occurrence.fountainRarityResult }),
     ...(context.occurrence.purgingPool === undefined
       ? {}
       : { purgingPool: context.occurrence.purgingPool }),

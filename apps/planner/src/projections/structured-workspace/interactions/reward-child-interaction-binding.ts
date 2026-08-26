@@ -27,6 +27,8 @@ import type {
   WorkspaceTraitOfferInteraction,
   WorkspaceSteadyGrowthControl,
   WorkspaceSteadyGrowthInteraction,
+  WorkspaceFountainRarityControl,
+  WorkspaceFountainRarityInteraction,
   WorkspaceAcquisitionConversionInteraction,
 } from '../contract';
 
@@ -36,6 +38,7 @@ export interface WorkspaceRewardChildInteractionCatalog {
   readonly traitOffers: ReadonlyMap<string, WorkspaceTraitOfferInteraction>;
   readonly levelResolutions: ReadonlyMap<string, WorkspaceLevelResolutionInteraction>;
   readonly steadyGrowth: ReadonlyMap<string, WorkspaceSteadyGrowthInteraction>;
+  readonly fountainRarity: ReadonlyMap<string, WorkspaceFountainRarityInteraction>;
   readonly judgmentArcana: ReadonlyMap<string, WorkspaceJudgmentArcanaInteraction>;
   readonly keepsakeSelections: ReadonlyMap<string, WorkspaceKeepsakeSelectionInteraction>;
   readonly keepsakeEquipResults: ReadonlyMap<string, WorkspaceKeepsakeEquipResultInteraction>;
@@ -49,6 +52,7 @@ export function bindRewardChildInteractions(input: {
   readonly traitControls?: ReadonlyMap<string, WorkspaceTraitOfferControl>;
   readonly levelResolutionControls?: ReadonlyMap<string, WorkspaceLevelResolutionControl>;
   readonly steadyGrowthControls?: ReadonlyMap<string, WorkspaceSteadyGrowthControl>;
+  readonly fountainRarityControls?: ReadonlyMap<string, WorkspaceFountainRarityControl>;
   readonly judgmentArcanaControls?: ReadonlyMap<
     string,
     { readonly address: JudgmentArcanaAddress; readonly value: readonly string[] }
@@ -81,6 +85,7 @@ export function bindRewardChildInteractions(input: {
     traitControls,
     levelResolutionControls,
     steadyGrowthControls,
+    fountainRarityControls,
     judgmentArcanaControls,
     keepsakeSelectionControls,
     keepsakeEquipResultControls,
@@ -112,6 +117,7 @@ export function bindRewardChildInteractions(input: {
   const effectiveTraitControls = new Map(traitControls ?? []);
   const effectiveLevelResolutionControls = new Map(levelResolutionControls ?? []);
   const effectiveSteadyGrowthControls = new Map(steadyGrowthControls ?? []);
+  const effectiveFountainRarityControls = new Map(fountainRarityControls ?? []);
   for (const control of rewardControls.values()) {
     for (const trait of control.traitOffers ?? [])
       effectiveTraitControls.set(workspaceInteractionKey(trait.address), trait);
@@ -157,6 +163,7 @@ export function bindRewardChildInteractions(input: {
   const {
     levelResolutions,
     steadyGrowth,
+    fountainRarity,
     judgmentArcana,
     keepsakeSelections,
     keepsakeEquipResults,
@@ -165,6 +172,7 @@ export function bindRewardChildInteractions(input: {
     candidates,
     levelResolutionControls: effectiveLevelResolutionControls,
     steadyGrowthControls: effectiveSteadyGrowthControls,
+    fountainRarityControls: effectiveFountainRarityControls,
     derivedShopEntryEdits,
     ...(judgmentArcanaControls === undefined ? {} : { judgmentArcanaControls }),
     ...(keepsakeSelectionControls === undefined ? {} : { keepsakeSelectionControls }),
@@ -177,6 +185,7 @@ export function bindRewardChildInteractions(input: {
     traitOffers,
     levelResolutions,
     steadyGrowth,
+    fountainRarity,
     judgmentArcana,
     keepsakeSelections,
     keepsakeEquipResults,

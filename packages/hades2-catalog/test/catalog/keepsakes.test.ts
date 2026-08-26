@@ -29,6 +29,17 @@ const supportedEffects = [
     },
   },
   {
+    key: 'FountainRarityKeepsake',
+    profileKey: 'targetRarityLevelByRank',
+    legacyField: 'rarity',
+    effect: {
+      kind: 'fountainRarity',
+      uses: 1,
+      targetRarityLevelByRank: { Common: 2, Rare: 3, Epic: 4 },
+      sourceMaxRarityLevel: 1,
+    },
+  },
+  {
     key: 'TempHammerKeepsake',
     profileKey: 'qualifyingEncounterUsesByRank',
     legacyField: 'qualifyingEncounterUses',
@@ -213,7 +224,11 @@ describe('keepsake normalization', () => {
 
   it('rejects every wrong supported rank cell', () => {
     for (const row of supportedEffects) {
-      for (const rank of ['Common', 'Rare', 'Epic', 'Heroic'] as const) {
+      const ranks =
+        row.key === 'FountainRarityKeepsake'
+          ? (['Common', 'Rare', 'Epic'] as const)
+          : (['Common', 'Rare', 'Epic', 'Heroic'] as const);
+      for (const rank of ranks) {
         const malformed = replaceSupportedEffect(row.key, (effect) => ({
           ...effect,
           [row.profileKey]: {
@@ -267,7 +282,7 @@ describe('keepsake normalization', () => {
     }
   });
 
-  it('enforces the exact six supported descriptors and their effect-specific shape', () => {
+  it('enforces the exact seven supported descriptors and their effect-specific shape', () => {
     for (const row of supportedEffects) {
       expect(() => normalizeKeepsakes(replaceSupportedEffect(row.key, () => undefined))).toThrow(
         'must be an object',

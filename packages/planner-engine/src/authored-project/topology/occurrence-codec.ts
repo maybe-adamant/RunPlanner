@@ -5,7 +5,7 @@ import type {
   RoomActionState,
   RoomOccurrence,
 } from '../model';
-import { roomActionKey } from '../room-actions';
+import { activeRoomActionReferences, roomActionKey } from '../room-actions';
 import { decodeRoomActionState } from './room-action-codec';
 import { assertStygianWellPurchaseActionClosure, decodeStygianWellState } from './well-codec';
 import { decodeNullableRewardState } from '../room-state/reward-acquisition-codec';
@@ -37,6 +37,7 @@ import {
 import { expectExactKeys, expectRecord, failProjectDocument } from '../validation';
 import type { DecodedTopologyStructure } from './structure-codec';
 import { decodeAcquisitionSites } from './acquisition-site-codec';
+import { decodeFountainRarityResult } from '../fountain-rarity-codec';
 
 function decodeOrdinaryHermesShrineState(
   value: unknown,
@@ -232,6 +233,13 @@ export function decodeRoomOccurrence(input: {
         catalog,
       )
     : undefined;
+  const fountainRarityResult = rawOccurrence.hasFountainRarityResult
+    ? decodeFountainRarityResult(
+        rawOccurrence.fountainRarityResult,
+        catalog,
+        `${rawOccurrence.path}.fountainRarityResult`,
+      )
+    : undefined;
   assertStygianWellPurchaseActionClosure(
     stygianWell,
     decodeRoomActionState(rawOccurrence.roomActions, `${rawOccurrence.path}.roomActions`),
@@ -269,6 +277,7 @@ export function decodeRoomOccurrence(input: {
     encounters,
     ...(hermesShrine === undefined ? {} : { hermesShrine }),
     ...(stygianWell === undefined ? {} : { stygianWell }),
+    ...(fountainRarityResult === undefined ? {} : { fountainRarityResult }),
     roomActions: Object.freeze({ order: Object.freeze([]) }),
     additionalExits: Object.freeze([]),
   });
@@ -579,9 +588,20 @@ export function decodeRoomOccurrence(input: {
     roomActions: decodedRoomActions,
     ...(hermesShrine === undefined ? {} : { hermesShrine }),
     ...(stygianWell === undefined ? {} : { stygianWell }),
+    ...(fountainRarityResult === undefined ? {} : { fountainRarityResult }),
     ...(acquisitionSites === undefined ? {} : { acquisitionSites }),
     additionalExits,
   });
+  if (
+    fountainRarityResult !== undefined &&
+    !activeRoomActionReferences(catalog, biomeAddress, decodedOccurrence).some(
+      (reference) => reference.kind === 'useFountain',
+    )
+  )
+    failProjectDocument(
+      `${rawOccurrence.path}.fountainRarityResult`,
+      'requires the declaration-owned fountain action',
+    );
   for (const [siteKey, site] of Object.entries(acquisitionSites ?? {})) {
     const seaStar = parseSeaStarDuplicateSiteKey(siteKey);
     if (seaStar === undefined) continue;

@@ -61,6 +61,10 @@ export interface WorkspaceInteractionBindingInput {
     string,
     import('../contract').WorkspaceSteadyGrowthControl
   >;
+  readonly fountainRarityControls?: ReadonlyMap<
+    string,
+    import('../contract').WorkspaceFountainRarityControl
+  >;
   readonly judgmentArcanaControls?: ReadonlyMap<
     string,
     { readonly address: JudgmentArcanaAddress; readonly value: readonly string[] }
@@ -109,6 +113,7 @@ export function bindWorkspaceInteractions(
     traitControls,
     levelResolutionControls,
     steadyGrowthControls,
+    fountainRarityControls,
     judgmentArcanaControls,
     keepsakeSelectionControls,
     keepsakeEquipResultControls,
@@ -157,6 +162,7 @@ export function bindWorkspaceInteractions(
     ...(traitControls === undefined ? {} : { traitControls }),
     ...(levelResolutionControls === undefined ? {} : { levelResolutionControls }),
     ...(steadyGrowthControls === undefined ? {} : { steadyGrowthControls }),
+    ...(fountainRarityControls === undefined ? {} : { fountainRarityControls }),
     ...(judgmentArcanaControls === undefined ? {} : { judgmentArcanaControls }),
     ...(keepsakeSelectionControls === undefined ? {} : { keepsakeSelectionControls }),
     ...(keepsakeEquipResultControls === undefined ? {} : { keepsakeEquipResultControls }),

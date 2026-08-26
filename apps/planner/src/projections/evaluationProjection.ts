@@ -432,6 +432,14 @@ const findingCopy = {
     title: 'Steady Growth target unavailable',
     description: 'Choose a trait that can gain rarity at this checkpoint.',
   },
+  fountainRarityResultMissing: {
+    title: 'Aromatic Phial target missing',
+    description: 'Choose the Common boon promoted at this fountain.',
+  },
+  fountainRarityResultUnavailable: {
+    title: 'Aromatic Phial target unavailable',
+    description: 'Choose a boon eligible for the Phial at this fountain.',
+  },
   fieldsOptionalCapacityUnavailable: {
     title: 'Nemesis needs one reward position',
     description: 'Reduce optional rewards by one while the Nemesis room feature is active.',
@@ -795,6 +803,7 @@ export function findingDestinationLabel(catalog: Catalog, origin: SemanticAddres
     return 'Starting keepsake';
   if (origin.kind === 'keepsakeEquipResult')
     return origin.resultKind === 'jeweledPom' ? 'Jeweled Pom result' : 'Experimental Hammer result';
+  if (origin.kind === 'fountainRarityOutcome') return 'Aromatic Phial fountain target';
   const biome = catalog.biomes.byKey[origin.biomeKey];
   if (biome === undefined) {
     throw new Error(`Finding references unknown biome ${origin.biomeKey}`);
