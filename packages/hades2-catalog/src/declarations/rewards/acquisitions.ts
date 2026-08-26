@@ -242,6 +242,7 @@ const rawAcquisitions = [
     gameName: 'TalentDrop',
     kind: 'consumable',
     historyProjection: 'consumableAndUse',
+    pathPointGrant: 3,
     goldConversionEligible: true,
     ...lastReward('TalentDrop'),
   },
@@ -249,6 +250,7 @@ const rawAcquisitions = [
     gameName: 'TalentBigDrop',
     kind: 'consumable',
     historyProjection: 'consumableAndUse',
+    pathPointGrant: 5,
     goldConversionEligible: true,
     ...lastReward('TalentBigDrop'),
   },
@@ -256,6 +258,7 @@ const rawAcquisitions = [
     gameName: 'MinorTalentDrop',
     kind: 'consumable',
     historyProjection: 'consumableAndUse',
+    pathPointGrant: 1,
     goldConversionEligible: true,
   },
   {

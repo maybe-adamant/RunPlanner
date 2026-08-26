@@ -172,6 +172,7 @@ describe('Run State presentation', () => {
         },
       },
       rewardPriorities: ['Boon', 'Boon'],
+      hexProgress: { bankedPathPoints: 2, investedPathPoints: 5 },
       forfeitStatus: 'consumed',
       bags: [
         {
@@ -196,6 +197,11 @@ describe('Run State presentation', () => {
     const state = presentRunState(catalog, snapshot);
     expect(state.traits.banned).toEqual([{ key: 'ApolloSpecialBoon', label: 'Nova Flourish' }]);
     expect(state.keepsakes.pendingRewardPriorities).toEqual(['Boon', 'Boon']);
+    expect(state.hexProgress).toEqual({
+      baseSpellLabel: 'Sky Fall',
+      bankedPathPoints: 2,
+      investedPathPoints: 5,
+    });
     expect(state.keepsakes.olympianSources).toEqual([
       expect.objectContaining({
         providerKey: 'Zeus',

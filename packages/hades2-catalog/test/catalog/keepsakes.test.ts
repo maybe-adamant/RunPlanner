@@ -238,7 +238,9 @@ describe('keepsake normalization', () => {
       normalized.values
         .filter(
           (keepsake) =>
-            keepsake.effect !== undefined && keepsake.effect.kind !== 'olympianRewardPressure',
+            keepsake.effect !== undefined &&
+            keepsake.effect.kind !== 'olympianRewardPressure' &&
+            keepsake.effect.kind !== 'moonBeam',
         )
         .map((keepsake) => keepsake.key),
     ).toEqual(supportedEffects.map((row) => row.key));
@@ -281,6 +283,16 @@ describe('keepsake normalization', () => {
         effect: { kind: 'olympianRewardPressure', schedule: 'everyBiome' },
       });
     }
+
+    expect(normalized.byKey.SpellTalentKeepsake?.effect).toEqual({
+      kind: 'moonBeam',
+      pathPointsByRank: { Common: 3, Rare: 4, Epic: 5, Heroic: 7 },
+      priorityRewardTypes: ['SpellDrop', 'TalentDrop', 'TalentBigDrop'],
+    });
+    expect(normalized.byKey.SpellTalentKeepsake?.echoGift).toEqual({
+      availability: 'eligible',
+      effect: { kind: 'moonBeam', schedule: 'oneShotAfterUnequipped' },
+    });
 
     for (const row of supportedEffects) {
       const declaration = normalized.byKey[row.key];

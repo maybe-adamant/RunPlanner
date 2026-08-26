@@ -59,6 +59,7 @@ import {
   type RewardBranchState,
 } from './branch-primitives';
 import { historyChronology, type RewardFactsFactory } from './acquisition-settlement';
+import { bankPathPoints } from '../hex-progress';
 
 import { addRewardFinding, rewardFinding } from './findings';
 
@@ -111,6 +112,7 @@ export function initializeRewardBranches(
     const branch = Object.freeze({
       bags: Object.freeze({}),
       rewardPriorities: Object.freeze([]),
+      hexProgress: Object.freeze({ bankedPathPoints: 0, investedPathPoints: 0 }),
       history: createRewardHistoryState(),
       events: Object.freeze([]),
       pendingShops: Object.freeze({}),
@@ -129,7 +131,12 @@ export function initializeRewardBranches(
       arcanaFear: initialArcanaFear,
       keepsakes: createKeepsakeState(catalog, startingKeepsakeKey, initialArcanaFear),
     });
-    const pressured = applyOlympianRewardPressureEquip(catalog, branch, startingKeepsakeKey);
+    const pressured = applyMoonBeamEquip(
+      catalog,
+      applyOlympianRewardPressureEquip(catalog, branch, startingKeepsakeKey),
+      startingKeepsakeKey,
+      catalog.keepsakes.byKey[startingKeepsakeKey]?.rank,
+    );
     const pomApplied = applyJeweledPomEquipResult(
       catalog,
       pressured,
@@ -192,6 +199,7 @@ export function initializeRewardBranches(
       Object.freeze({
         bags: branch.bags,
         rewardPriorities: branch.rewardPriorities,
+        hexProgress: branch.hexProgress,
         history: beginBiomeRewardHistory(branch.history),
         events: Object.freeze([]),
         pendingShops: Object.freeze({}),
@@ -224,23 +232,55 @@ export function applyOlympianRewardPressureEquip(
 ): RewardBranchState {
   const effect = catalog.keepsakes.byKey[keepsakeKey]?.effect;
   if (effect?.kind !== 'olympianRewardPressure') return branch;
+  return applyExactRewardPriority(catalog, branch, effect.priorityRewardType);
+}
+
+/** Shared source-time exact priority insertion and immediate RunProgress refill. */
+export function applyExactRewardPriority(
+  catalog: Catalog,
+  branch: RewardBranchState,
+  priority: string,
+): RewardBranchState {
   const store = catalog.rewards.stores.byKey.RunProgress;
   if (store === undefined)
     return Object.freeze({
       ...branch,
-      rewardPriorities: Object.freeze([...branch.rewardPriorities, effect.priorityRewardType]),
+      rewardPriorities: Object.freeze([...branch.rewardPriorities, priority]),
     });
   const existing = branch.bags.RunProgress;
   const current = existing ?? createRewardBagState(store);
-  const bag = insertExactPriorityIntoBag(store, current, effect.priorityRewardType);
+  const bag = insertExactPriorityIntoBag(store, current, priority);
   return Object.freeze({
     ...branch,
     bags:
       existing === undefined && bag === current
         ? branch.bags
         : freezeRecord({ ...branch.bags, RunProgress: bag }),
-    rewardPriorities: Object.freeze([...branch.rewardPriorities, effect.priorityRewardType]),
+    rewardPriorities: Object.freeze([...branch.rewardPriorities, priority]),
   });
+}
+
+/** Moon Beam's source-time callback: bank points and queue one exact future reward. */
+export function applyMoonBeamEquip(
+  catalog: Catalog,
+  branch: RewardBranchState,
+  keepsakeKey: string,
+  rank: KeepsakeRank | undefined,
+  preferBigTalent = false,
+): RewardBranchState {
+  const effect = catalog.keepsakes.byKey[keepsakeKey]?.effect;
+  if (effect?.kind !== 'moonBeam' || rank === undefined) return branch;
+  const priority =
+    (branch.history.useRecord.SpellDrop ?? 0) === 0
+      ? effect.priorityRewardTypes[0]
+      : preferBigTalent
+        ? effect.priorityRewardTypes[2]
+        : effect.priorityRewardTypes[1];
+  return applyExactRewardPriority(
+    catalog,
+    bankPathPoints(branch, effect.pathPointsByRank[rank]),
+    priority,
+  );
 }
 
 /** Applies the closed immediate Jeweled Pom result through ordinary trait history. */
@@ -940,6 +980,7 @@ export function publicRewardBranch(branch: RewardBranchState): RewardBranch {
   return Object.freeze({
     bags: branch.bags,
     rewardPriorities: branch.rewardPriorities,
+    hexProgress: branch.hexProgress,
     history: branch.history,
     events: branch.events,
     processedThroughHistorySequence: branch.processedThroughHistorySequence,

@@ -29,6 +29,10 @@ import { type RewardBranchState } from '../../src/simulation/rewards/branch-prim
 const biome = createBiomeAddress('Underworld', 'F');
 const reward = createIncomingRewardAddress(biome, createOccurrenceId('time-piece'));
 const siteOwner = createOccurrenceAddress(biome, createOccurrenceId('time-piece'));
+const boonOffer = {
+  rewardType: 'Boon' as const,
+  payload: { kind: 'BoonSource' as const, source: 'ApolloUpgrade' },
+};
 
 function facts(): RewardKernelFacts {
   return {
@@ -60,6 +64,7 @@ function settle(
   value: 'normal' | 'gold',
   branches = initializeTestRewardBranches(),
   instanceProvenance: 'free' | 'paid' = 'free',
+  offer: typeof boonOffer | { readonly rewardType: 'SpellDrop' } = boonOffer,
 ) {
   return settleOwnedAcquisitionSite(
     catalog,
@@ -71,11 +76,12 @@ function settle(
       historySequence: 1,
       source: {
         origin: reward,
-        offer: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
+        offer,
         producerLifecycleKey: 'RoomReward',
         instanceProvenance,
         dispositionByAcquisitionRole: {
-          source: value === 'gold' ? { kind: 'timePiece' } : { kind: 'normal' },
+          [offer.rewardType === 'SpellDrop' ? 'self' : 'source']:
+            value === 'gold' ? { kind: 'timePiece' } : { kind: 'normal' },
         },
       },
     },
@@ -106,6 +112,21 @@ describe('Time Piece conversions', () => {
     expect(result.roleFrontiers?.[0]?.address).toEqual(
       createAcquisitionRoleAddress(reward, 'source'),
     );
+  });
+
+  it('does not award SpellDrop Path points when Time Piece converts the source before acquisition', () => {
+    const seeded = initializeTestRewardBranches().map((branch) =>
+      Object.freeze({
+        ...branch,
+        keepsakes: createKeepsakeState(catalog, 'GoldifyKeepsake', branch.arcanaFear),
+      }),
+    );
+    const result = settle('gold', seeded, 'free', { rewardType: 'SpellDrop' });
+    expect(result.branches[0]?.events).toContainEqual(
+      expect.objectContaining({ kind: 'conversionToGold' }),
+    );
+    expect(result.branches[0]?.hexProgress).toEqual({ bankedPathPoints: 0, investedPathPoints: 0 });
+    expect(result.branches[0]?.history.useRecord.SpellDrop).toBeUndefined();
   });
 
   it('keeps an invalid persisted conversion repairable without consuming a charge or suppressing the acquisition', () => {

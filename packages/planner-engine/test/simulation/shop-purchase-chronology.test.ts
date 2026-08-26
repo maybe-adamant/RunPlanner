@@ -167,11 +167,13 @@ describe('Echo Gate D Gold Gold Gold', () => {
   it('skips SpellDrop, materializes at the first later purchase, and settles the ordered pickup', () => {
     const result = echoGoldShop(['Minor', 'Boon', 'MajorNonBoon'], {
       replaceMinorWithSpell: true,
+      spellSelectOption2: true,
       includeDuplicate: true,
       duplicateSelectOption2: true,
     });
     const branch = result.settlement.branches[0];
     expect(branch?.history.consumableRecord).toMatchObject({ SpellDrop: 1 });
+    expect(branch?.hexProgress.bankedPathPoints).toBe(1);
     expect(branch?.traitHistory?.equippedTraits.EchoDoubleShop).toBeUndefined();
     expect(branch?.traitHistory?.events.filter((event) => event.kind === 'traitRemoval')).toEqual([
       expect.objectContaining({

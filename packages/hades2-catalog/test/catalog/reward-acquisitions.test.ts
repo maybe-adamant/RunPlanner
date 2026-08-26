@@ -9,6 +9,26 @@ import {
 import { describe, expect, it } from 'vitest';
 
 describe('reward compiler acquisition, reward-type, and store normalizers', () => {
+  it('normalizes and guards the exact 1/3/5 concrete Path grants', () => {
+    expect({
+      MinorTalentDrop: rewardKernelCatalog.acquisitions.byKey.MinorTalentDrop?.pathPointGrant,
+      TalentDrop: rewardKernelCatalog.acquisitions.byKey.TalentDrop?.pathPointGrant,
+      TalentBigDrop: rewardKernelCatalog.acquisitions.byKey.TalentBigDrop?.pathPointGrant,
+    }).toEqual({ MinorTalentDrop: 1, TalentDrop: 3, TalentBigDrop: 5 });
+    expect(() =>
+      createRewardKernelCatalog(
+        rawInput({
+          ...rewardKernelDeclarations,
+          acquisitions: rewardKernelDeclarations.acquisitions.map((acquisition) =>
+            acquisition.gameName === 'TalentDrop'
+              ? ({ ...acquisition, pathPointGrant: 5 } as never)
+              : acquisition,
+          ),
+        }),
+      ),
+    ).toThrow(/pathPointGrant.*must equal 3/);
+  });
+
   it('normalizes declaration-owned Sea Star capability without reward-kind inference', () => {
     expect(
       rewardKernelCatalog.acquisitions.values

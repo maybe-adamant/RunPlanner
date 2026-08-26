@@ -132,6 +132,7 @@ describe('trait declarations and giver compiler owners', () => {
         'SpellTimeSlowTrait',
         'SpellPotionTrait',
       ],
+      selectedOptionPathPointBonuses: [0, 1, 2],
     });
     expect(traits.aspects.byKey.SuitHexAspect?.startingTrait).toEqual({
       traitKey: 'SpellMoonBeamTrait',
@@ -139,6 +140,23 @@ describe('trait declarations and giver compiler owners', () => {
     });
     for (const key of [...traits.givers.byKey.SpellDrop!.traitKeys, 'SpellMoonBeamTrait'])
       expect(traits.traits.byKey[key]?.equipmentSlot).toBe('Spell');
+  });
+
+  it('rejects a non-SpellDrop or malformed ordered spell-point profile', () => {
+    const mutate = (giverKey: string, selectedOptionPathPointBonuses: unknown) =>
+      createCatalog({
+        ...declarations,
+        traitCatalog: {
+          ...declarations.traitCatalog,
+          givers: declarations.traitCatalog.givers.map((giver) =>
+            giver.key === giverKey
+              ? ({ ...giver, selectedOptionPathPointBonuses } as never)
+              : giver,
+          ),
+        },
+      });
+    expect(() => mutate('SpellDrop', [0, 2, 1])).toThrow(/ordered \[0, 1, 2\]/);
+    expect(() => mutate('Apollo', [0, 1, 2])).toThrow(/SpellDrop ordered/);
   });
 
   it('rejects malformed Aspect starting spell links', () => {

@@ -67,6 +67,7 @@ export interface RawTraitGiverDeclaration {
     | { readonly kind: 'fixed'; readonly rarity: TraitRarity }
     | { readonly kind: 'none' };
   readonly denialParticipates?: boolean;
+  readonly selectedOptionPathPointBonuses?: readonly [0, 1, 2];
 }
 
 export interface RawTraitOfferContextDeclaration {

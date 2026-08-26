@@ -253,6 +253,20 @@ describe('Cherished Heirloom later keepsake equips', () => {
     });
   });
 
+  it('settles a later Heroic Moon Beam rack equip with its full grant and ordinary priority', () => {
+    const rack = postbossOwner();
+    const project = applyProjectCommand(createGoldenFGHProject(), catalog, {
+      kind: 'ReplacePostbossKeepsake',
+      selection: rack,
+      value: { kind: 'replace', keepsakeKey: 'SpellTalentKeepsake' },
+    });
+    const throughF = replayBiome(project, 'F', [cherishedBranch()]);
+    const afterRack = throughF.branches[0]!;
+    expect(afterRack.keepsakes.currentKey).toBe('SpellTalentKeepsake');
+    expect(afterRack.hexProgress).toEqual({ bankedPathPoints: 7, investedPathPoints: 0 });
+    expect(afterRack.rewardPriorities).toEqual(['SpellDrop']);
+  });
+
   it('resolves real Postboss Gorgon, Pom, and Hammer paths through the rank forwarding seam', () => {
     const rack = postbossOwner();
 

@@ -150,7 +150,9 @@ export function normalizeKeepsakes(
                       ? ({ kind: 'timePiece', schedule: 'everyBiome' } as const)
                       : keepsake.key in olympianProviderByKeepsake
                         ? ({ kind: 'olympianRewardPressure', schedule: 'everyBiome' } as const)
-                        : ({ kind: 'modeledNeutral', schedule: 'noModeledEffect' } as const);
+                        : keepsake.key === 'SpellTalentKeepsake'
+                          ? ({ kind: 'moonBeam', schedule: 'oneShotAfterUnequipped' } as const)
+                          : ({ kind: 'modeledNeutral', schedule: 'noModeledEffect' } as const);
       requireExactObjectKeys(keepsake.echoGift.effect, `${path}.echoGift.effect`, [
         'kind',
         'schedule',
@@ -421,6 +423,42 @@ export function normalizeKeepsakes(
         providerForceUses: 1,
         providerRarificationUses: 1,
         maximumSourceRarityLevelByRank: Object.freeze({ Common: 1, Rare: 2, Epic: 3 }),
+      });
+    } else if (keepsake.key === 'SpellTalentKeepsake') {
+      requireExactObjectKeys(keepsake.effect, `${path}.effect`, [
+        'kind',
+        'pathPointsByRank',
+        'priorityRewardTypes',
+      ]);
+      if (keepsake.effect.kind !== 'moonBeam')
+        fail(`${path}.effect.kind`, 'must declare Moon Beam point and priority effect');
+      requireExactObjectKeys(
+        keepsake.effect.pathPointsByRank,
+        `${path}.effect.pathPointsByRank`,
+        keepsakeRanks,
+      );
+      for (const [rank, expected] of [
+        ['Common', 3],
+        ['Rare', 4],
+        ['Epic', 5],
+        ['Heroic', 7],
+      ] as const)
+        if (keepsake.effect.pathPointsByRank[rank] !== expected)
+          fail(`${path}.effect.pathPointsByRank.${rank}`, `must equal ${expected}`);
+      if (
+        keepsake.effect.priorityRewardTypes.length !== 3 ||
+        keepsake.effect.priorityRewardTypes[0] !== 'SpellDrop' ||
+        keepsake.effect.priorityRewardTypes[1] !== 'TalentDrop' ||
+        keepsake.effect.priorityRewardTypes[2] !== 'TalentBigDrop'
+      )
+        fail(
+          `${path}.effect.priorityRewardTypes`,
+          'must equal [SpellDrop, TalentDrop, TalentBigDrop]',
+        );
+      effect = Object.freeze({
+        kind: 'moonBeam' as const,
+        pathPointsByRank: Object.freeze({ Common: 3, Rare: 4, Epic: 5, Heroic: 7 }),
+        priorityRewardTypes: Object.freeze(['SpellDrop', 'TalentDrop', 'TalentBigDrop'] as const),
       });
     } else if (keepsake.effect !== undefined)
       fail(`${path}.effect`, 'is not supported by this keepsake');

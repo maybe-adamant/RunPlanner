@@ -39,4 +39,5 @@ export const seleneGiver = {
   ],
   priorityTraitKeys: [],
   rarityPolicy: { kind: 'none' },
+  selectedOptionPathPointBonuses: [0, 1, 2],
 } as const satisfies RawTraitGiverDeclaration;

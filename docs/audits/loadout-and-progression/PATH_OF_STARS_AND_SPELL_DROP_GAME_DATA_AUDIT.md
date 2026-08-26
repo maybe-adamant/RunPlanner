@@ -70,11 +70,11 @@ bank.
 The three concrete Path consumables inherit the same `OpenTalentScreen`
 callback and differ in declared `AddTalentPoints`:
 
-| Reward name | Display role | Declared points |
-| --- | --- | ---: |
-| `MinorTalentDrop` | Minor Path of Stars | 1 |
-| `TalentDrop` | ordinary Path of Stars | 3 |
-| `TalentBigDrop` | Big Path of Stars | 5 |
+| Reward name       | Display role           | Declared points |
+| ----------------- | ---------------------- | --------------: |
+| `MinorTalentDrop` | Minor Path of Stars    |               1 |
+| `TalentDrop`      | ordinary Path of Stars |               3 |
+| `TalentBigDrop`   | Big Path of Stars      |               5 |
 
 These are exact values, not rarity levels and not variants of one runtime
 amount.
@@ -88,11 +88,11 @@ additional selection consumes one banked point.
 
 Consequently:
 
-| Pickup | Immediate raw bank addition | Total new selections supplied by the pickup |
-| --- | ---: | ---: |
-| `MinorTalentDrop` | 0 | 1 |
-| `TalentDrop` | 2 | 3 |
-| `TalentBigDrop` | 4 | 5 |
+| Pickup            | Immediate raw bank addition | Total new selections supplied by the pickup |
+| ----------------- | --------------------------: | ------------------------------------------: |
+| `MinorTalentDrop` |                           0 |                                           1 |
+| `TalentDrop`      |                           2 |                                           3 |
+| `TalentBigDrop`   |                           4 |                                           5 |
 
 The subtraction is UI/lifecycle accounting, not evidence that the consumables
 grant zero, two, and four points. Their player-visible and semantic grants are
@@ -122,10 +122,10 @@ Offer order is semantically significant. `SpellTalentData.InitialBonuses` is
 indexed by option position:
 
 | Offer position | Bonus points |
-| --- | ---: |
-| first | 0 |
-| second | 1 |
-| third | 2 |
+| -------------- | -----------: |
+| first          |            0 |
+| second         |            1 |
+| third          |            2 |
 
 The bonus belongs to the position, not the spell identity. A spell appearing
 first in one offer and third in another has zero in the first case and two in
@@ -211,13 +211,13 @@ distinct legal five-point acquisition.
 
 Moon Beam writes to the same `CurrentRun.NumTalentPoints` bank:
 
-| Contact | Point mutation |
-| --- | ---: |
-| Common ordinary/Gift equip | +3 |
-| Rare ordinary equip | +4 |
-| Epic ordinary equip | +5 |
-| Heroic ordinary equip | +7 |
-| Cherished Epic-to-Heroic reconstruction | +2 |
+| Contact                                 | Point mutation |
+| --------------------------------------- | -------------: |
+| Common ordinary/Gift equip              |             +3 |
+| Rare ordinary equip                     |             +4 |
+| Epic ordinary equip                     |             +5 |
+| Heroic ordinary equip                   |             +7 |
+| Cherished Epic-to-Heroic reconstruction |             +2 |
 
 Ordinary equip and Gift replay run the acquisition callback and also add the
 separate exact reward priority documented by the reward-pressure audit.
@@ -257,16 +257,22 @@ gameplay effects sim-neutral.
 
 ## Current planner coverage
 
-The current catalog already declares:
+The catalog declares the concrete one/three/five Path grants, the ordered
+`SpellDrop` bonuses `[0, 1, 2]`, and Moon Beam's Common/Rare/Epic/Heroic
+three/four/five/seven grants and exact priority targets. The compiler keeps
+those closed declaration contracts local to their owning reward, trait-giver,
+and keepsake declarations.
 
-- all three Path reward identities;
-- the eight normal rarityless Spell traits in the `SpellDrop` giver;
-- Aspect of Selene's fixed `SpellMoonBeamTrait`; and
-- ordered authored Spell offers through the ordinary trait-offer shape.
+The simulation carries only `bankedPathPoints` and `investedPathPoints` on the
+chronological branch. Concrete Minor/ordinary/Big Talent acquisition settles
+the shared bank, an ordinary successful SpellDrop install banks its selected
+row's zero/one/two bonus, and Aspect of Selene preserves SpellDrop acquisition
+history while routing that child directly through the three-point settlement
+without a trait offer. Moon Beam ordinary and Gift contacts bank their declared
+points and insert the existing exact-name priority; the H-to-I and P-to-Q Gift
+frontiers choose `TalentBigDrop`. Cherished only banks its Epic-to-Heroic
+two-point delta.
 
-The engine currently makes the Aspect-owned later `SpellDrop` child dormant
-because Path investment is unsupported. It does not yet own a Path point
-account, the position-owned zero/one/two spell bonus, the routed three-point
-Aspect settlement, or Moon Beam point mutations. The planner does not need a
-standalone Aspect starting-allocation product. The remaining behaviors stay
-deferred until a locked implementation gate consumes this audit.
+Run State projects those two counts and the equipped spell identity. The scope
+remains deliberately below Hex-node, capacity, and effect modeling: no authored
+Hex tree, node identity, or claimed remaining capacity exists in the planner.

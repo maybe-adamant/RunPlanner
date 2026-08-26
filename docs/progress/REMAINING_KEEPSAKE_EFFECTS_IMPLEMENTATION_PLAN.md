@@ -58,6 +58,12 @@ Run State, product-loop, typecheck, performance, formatting, and diff-check
 lanes passed. The complete repository gate remains deferred to phase closure
 as required by this plan.
 
+Gate F implementation and bounded remediation completed on 2026-08-26. The
+focused catalog declaration/compiler, concrete Path acquisition, ordinary
+SpellDrop and Aspect settlement, H-to-I/P-to-Q Gift replay, Run State cache and
+presentation, typecheck, formatting, and diff-check lanes passed. The complete
+repository gate remains deferred to phase closure as required by this plan.
+
 The first phase contains Aromatic Phial, Crystal Figurine, Concave Stone, and
 Transcendent Embryo. A later phase establishes the exact-name reward-pressure
 infrastructure and immediately consumes it with all nine Olympian keepsakes.

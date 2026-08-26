@@ -75,6 +75,8 @@ export interface ConcreteAcquisitionDeclaration extends ConcreteAcquisitionAddre
   >;
   /** One source-fixed rarityless equipped trait installed by this acquisition. */
   readonly grantedTraitKey?: string;
+  /** Full semantic Path selections awarded by this concrete acquisition. */
+  readonly pathPointGrant?: 1 | 3 | 5;
 }
 
 export type AcquisitionRoleResolution =

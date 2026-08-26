@@ -61,6 +61,7 @@ export function normalizeGivers(
       'priorityTraitKeys',
       'rarityPolicy',
       'denialParticipates',
+      'selectedOptionPathPointBonuses',
     ]);
     const unsupportedKey = Object.keys(giver).find((key) => !allowedKeys.has(key));
     if (unsupportedKey !== undefined) fail(`${path}.${unsupportedKey}`, 'is not supported');
@@ -68,6 +69,16 @@ export function normalizeGivers(
       requireBoolean(giver.denialParticipates, `${path}.denialParticipates`);
     if (giver.shopAwareGodTrait !== undefined)
       requireBoolean(giver.shopAwareGodTrait, `${path}.shopAwareGodTrait`);
+    if (giver.selectedOptionPathPointBonuses !== undefined) {
+      if (
+        giver.key !== 'SpellDrop' ||
+        giver.selectedOptionPathPointBonuses.length !== 3 ||
+        giver.selectedOptionPathPointBonuses[0] !== 0 ||
+        giver.selectedOptionPathPointBonuses[1] !== 1 ||
+        giver.selectedOptionPathPointBonuses[2] !== 2
+      )
+        fail(`${path}.selectedOptionPathPointBonuses`, 'must be SpellDrop ordered [0, 1, 2]');
+    }
     const priorityTraitKeys = freezeUniqueStrings(
       requireArray(giver.priorityTraitKeys, `${path}.priorityTraitKeys`) as readonly string[],
       `${path}.priorityTraitKeys`,
@@ -207,6 +218,11 @@ export function normalizeGivers(
       priorityTraitKeys,
       rarityPolicy: frozenRarityPolicy,
       ...(giver.denialParticipates === true ? { denialParticipates: true } : {}),
+      ...(giver.selectedOptionPathPointBonuses === undefined
+        ? {}
+        : {
+            selectedOptionPathPointBonuses: Object.freeze([0, 1, 2] as const),
+          }),
     });
   });
   const denialKeys = values.filter((giver) => giver.denialParticipates).map((giver) => giver.key);

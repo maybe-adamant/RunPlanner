@@ -136,6 +136,8 @@ export function keepsakeRankForEquip(
     case 'olympianRewardPressure':
       // The source declaration deliberately has no Heroic row.
       return 'Epic';
+    case 'moonBeam':
+      return 'Heroic';
     default: {
       const exhaustive: never = effect;
       return exhaustive;
@@ -248,6 +250,8 @@ export function advanceCurrentKeepsake(
           ),
         ),
       });
+    case 'moonBeam':
+      return state;
     default: {
       const exhaustive: never = effect;
       return exhaustive;

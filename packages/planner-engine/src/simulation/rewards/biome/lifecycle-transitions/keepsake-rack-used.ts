@@ -33,6 +33,7 @@ import {
   applyExperimentalHammerEquipResult,
   applyJeweledPomEquipResult,
   applyOlympianRewardPressureEquip,
+  applyMoonBeamEquip,
 } from '../../processing';
 import { rewardFinding } from '../../findings';
 import type { LifecycleFinding } from './types';
@@ -145,10 +146,16 @@ export function applyKeepsakeRackUsedTransition(
       after.currentKey === disposition.keepsakeKey;
     return Object.freeze({
       branch: replacementSucceeded
-        ? applyOlympianRewardPressureEquip(
+        ? applyMoonBeamEquip(
             catalog,
-            Object.freeze({ ...branch, keepsakes: after }),
+            applyOlympianRewardPressureEquip(
+              catalog,
+              Object.freeze({ ...branch, keepsakes: after }),
+              disposition.keepsakeKey,
+            ),
             disposition.keepsakeKey,
+            equippedRank,
+            room.gameName === 'H_PostBoss01' || room.gameName === 'P_PostBoss01',
           )
         : Object.freeze({ ...branch, keepsakes: after }),
       replacementSucceeded,

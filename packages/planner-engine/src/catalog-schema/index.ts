@@ -165,9 +165,10 @@ export interface KeepsakeDeclaration {
           | { readonly kind: 'callingCard'; readonly schedule: 'everyBiome' }
           | { readonly kind: 'timePiece'; readonly schedule: 'everyBiome' }
           | { readonly kind: 'olympianRewardPressure'; readonly schedule: 'everyBiome' }
+          | { readonly kind: 'moonBeam'; readonly schedule: 'oneShotAfterUnequipped' }
           | { readonly kind: 'modeledNeutral'; readonly schedule: 'noModeledEffect' };
       };
-  /** Closed, source-backed rank data consumed by the six supported effect transitions. */
+  /** Closed, source-backed rank data consumed by supported effect transitions. */
   readonly effect?:
     | {
         readonly kind: 'jeweledPom';
@@ -235,6 +236,11 @@ export interface KeepsakeDeclaration {
         readonly providerRarificationUses: 1;
         /** These declarations intentionally have no Heroic source row. */
         readonly maximumSourceRarityLevelByRank: Readonly<{ Common: 1; Rare: 2; Epic: 3 }>;
+      }
+    | {
+        readonly kind: 'moonBeam';
+        readonly pathPointsByRank: KeepsakeRankProfile<3, 4, 5, 7>;
+        readonly priorityRewardTypes: readonly ['SpellDrop', 'TalentDrop', 'TalentBigDrop'];
       };
 }
 
