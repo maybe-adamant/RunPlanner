@@ -2,8 +2,9 @@
 
 ## Status
 
-Source audit completed against the installed Hades II scripts on 2026-08-14.
-This document isolates the game behavior of Echo's
+Source audit completed against the installed Hades II scripts on 2026-08-14
+and extended across the 13 previously effect-neutral declarations on
+2026-08-26. This document isolates the game behavior of Echo's
 `EchoRepeatKeepsakeBoon` (Gift Gift Gift) for the keepsakes whose effects are
 implemented or deliberately deferred by the planner.
 
@@ -20,22 +21,16 @@ rediscover the game path.
 
 ## Scope and Rank Boundary
 
-The detailed matrix covers:
+The detailed matrix covers all 33 selectable keepsakes: the six modeled
+effects, the four trait/fountain/Arcana effects, the ten reward-steering
+effects, and the 13 effects that are strictly sim-neutral under the planner's
+current health/Magick/gold/armor/damage/time boundary.
 
-- the six modeled keepsakes: Gorgon Amulet, Fig Leaf, Experimental Hammer,
-  Jeweled Pom, Calling Card, and Time Piece;
-- the four lower-priority deferred effects: Transcendent Embryo, Aromatic
-  Phial, Concave Stone, and Crystal Figurine; and
-- the ten deferred reward-steering keepsakes: Moon Beam and the nine
-  Olympian keepsakes.
-
-The 13 intentionally effect-neutral keepsakes remain outside the detailed
-effect matrix. They still participate in ordinary equip/retain/replace history,
-removed-key and no-return legality, Fated/Unfated state, and Run State identity.
-The implemented Echo slice retains an eligible captured identity for them, but
-their biome-start Gift transition remains an explicit no-op until their own
-effect slice. Discordant Bell is still mentioned because the game explicitly
-excludes it from Gift Gift Gift.
+Those 13 rows now record the real source replay even though the implemented
+planner transition remains an explicit no-op. They still participate in
+ordinary equip/retain/replace history, removed-key and no-return legality,
+Fated/Unfated state, and Run State identity. Discordant Bell remains in the
+matrix because the game explicitly excludes it from Gift Gift Gift.
 
 The planner always treats an ordinary player-selected keepsake as rank III.
 Gift Gift Gift's forced rank-I replay is a distinct, source-created effect; it
@@ -150,6 +145,19 @@ present.
 
 | Keepsake            | Gift Gift Gift source result                                                                                                                                                                                                                                            | Source repetition                                                                                                                                                              | Planner disposition                                                                                                                                                                                                                              |
 | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Silver Wheel        | Re-equips rank I. If the source-marked maximum-Magick trait from the ordinary equip remains, `EquipKeepsake` rewrites it to +50; otherwise it creates +50.                                                                                                              | First successful replay only; the Common unslotted Silver Wheel remains and blocks another equip.                                                                              | Strictly sim-neutral. Preserve as an audited no-op unless maximum Magick enters the planner.                                                                                                                                                     |
+| Knuckle Bones       | Re-equips rank I with one 5% pre-boss damage use and the rank-independent 10% boss-damage reduction.                                                                                                                                                                    | First successful replay only. Spending the hit expires but does not remove the unslotted source.                                                                               | Strictly sim-neutral.                                                                                                                                                                                                                            |
+| Luckier Tooth       | Re-equips rank I and adds one 51-health keepsake Last Stand.                                                                                                                                                                                                            | First successful replay only. Spending the restoration leaves the unslotted source present.                                                                                    | Strictly sim-neutral.                                                                                                                                                                                                                            |
+| Ghost Onion         | Re-equips rank I with a 50-health room-exit reserve.                                                                                                                                                                                                                    | First successful replay only. Exhaustion leaves the unslotted source present.                                                                                                  | Strictly sim-neutral.                                                                                                                                                                                                                            |
+| Evil Eye            | Re-equips rank I with the 20% prior-cause-of-death damage modifier.                                                                                                                                                                                                     | First successful replay only; the unslotted source has no finite use and remains.                                                                                              | Strictly sim-neutral.                                                                                                                                                                                                                            |
+| Gold Purse          | Re-equips rank I, then the explicit `BonusMoneyKeepsake` biome-start special case grants 100 gold.                                                                                                                                                                      | First successful replay only; the unslotted source remains after the grant.                                                                                                    | Strictly sim-neutral under the planner's no-gold boundary.                                                                                                                                                                                       |
+| Engraved Pin        | Re-equips rank I with the recurring encounter-local ten-second survival window and 30-health successful-clear restoration.                                                                                                                                              | First successful replay only; the unslotted source remains and can continue to act in later encounters.                                                                        | Strictly sim-neutral.                                                                                                                                                                                                                            |
+| Discordant Bell     | Explicitly excluded.                                                                                                                                                                                                                                                    | Never eligible.                                                                                                                                                                | No Gift Gift Gift target or replay product.                                                                                                                                                                                                      |
+| Metallic Droplet    | Re-equips rank I, starts a 200-second timer, and applies the fixed 20% speed effect while time remains.                                                                                                                                                                 | First successful replay only. Timer expiry marks the source exhausted but does not remove the unslotted trait.                                                                 | Strictly sim-neutral.                                                                                                                                                                                                                            |
+| White Antler        | Re-equips rank I with the 30-health cap, 20% critical chance, and one boss-expiration use.                                                                                                                                                                              | First successful replay only. Boss expiration leaves the unslotted source present.                                                                                             | Strictly sim-neutral.                                                                                                                                                                                                                            |
+| Silken Sash         | Re-equips rank I, runs ordinary costume setup for 30 armor, and adds 2 armor after qualifying rooms while some source armor remains.                                                                                                                                    | First successful replay only. The declaration is `Invincible`, so armor break leaves its unslotted source present at zero armor.                                               | Strictly sim-neutral.                                                                                                                                                                                                                            |
+| Lion Fang           | Re-equips rank I at +30% damage with the ordinary five-point encounter decay.                                                                                                                                                                                           | First successful replay only. Complete decay expires but does not remove the unslotted source.                                                                                 | Strictly sim-neutral.                                                                                                                                                                                                                            |
+| Blackened Fleece    | Re-equips rank I with +20% Omega damage after the same 250 total-damage-taken threshold.                                                                                                                                                                                | First successful replay only; the unslotted source remains.                                                                                                                    | Strictly sim-neutral.                                                                                                                                                                                                                            |
 | Gorgon Amulet       | Explicitly excluded by `EchoRepeatKeepsakeBoon.GameStateRequirements`.                                                                                                                                                                                                  | Never eligible.                                                                                                                                                                | No Gift Gift Gift target or replay product.                                                                                                                                                                                                      |
 | Fig Leaf            | Re-equips rank I and runs `DionysusSkipTrait`, creating another `PersistentDionysusSkipKeepsake` with one biome use.                                                                                                                                                    | First successful replay only; the unslotted `SkipEncounterKeepsake` copy remains and blocks another equip.                                                                     | At the first successful replay, preserve a positive retained use count or restore zero to exactly one, then mark the replay applied even when the numeric count did not change.                                                                  |
 | Experimental Hammer | Re-equips rank I and attempts to grant one compatible random Hammer with 10 encounter uses. The source excludes already-equipped Hammer keys, permits a second distinct Hammer while the original remains active, and returns no Hammer when the exact domain is empty. | One-shot equip attempt; the unslotted keepsake source remains even when no Hammer can be granted, so an exhausted attempt does not retry later.                                | Reuse the general Experimental Hammer result: author one Common/10-use compatible Hammer when the domain is nonempty, or an explicit consumed no-result when it is empty. Retain successful grants as distinct independently expiring instances. |
@@ -230,6 +238,10 @@ biome-start frontier and starts that instance at the rank-I value of 10 uses.
 
 ## Reward-Steering Replay Details
 
+The complete reward-priority, provider-force, materialization, and exact Moon
+Beam target rules are owned by the focused
+[Olympian keepsake and Moon Beam reward-pressure audit](OLYMPIAN_KEEPSAKE_AND_MOON_BEAM_REWARD_PRESSURE_AUDIT.md).
+
 Moon Beam's Common acquisition callback immediately increments
 `CurrentRun.NumTalentPoints` by three and then adds either Selene priority or,
 if Selene has already appeared, Path of Stars priority. Both behaviors are
@@ -263,9 +275,10 @@ cannot be derived later:
 
 For the currently supported set, Gorgon Amulet and Jeweled Pom are source-
 excluded, Fig Leaf and Experimental Hammer are one-shot rank-I effects, and
-Calling Card and Time Piece add their rank-I values every biome. Other eligible
-captured identities remain visible chronological facts but produce no modeled
-effect until their dedicated keepsake slice.
+Calling Card and Time Piece add their rank-I values every biome. The 13
+sim-neutral identities now have exact source replays in the matrix but still
+produce no modeled mutation; other eligible captured identities remain visible
+chronological facts until their dedicated effect slice.
 
 It must not derive replay policy from React labels, treat the newly equipped
 keepsake as Echo's target, or interpret every keepsake through a generic
@@ -277,8 +290,9 @@ Schema 35 implements the audited boundary. Gift is unavailable for the four
 exact exclusions. A valid selection snapshots the current key on the equipped
 rarityless Echo trait, and later rack changes do not retarget it. Fig Leaf and
 Experimental Hammer use their one-shot schedules; Calling Card and Time Piece
-apply their rank-I value on every succeeding biome; other eligible identities
-remain captured, visible, and effect-neutral.
+apply their rank-I value on every succeeding biome. The other eligible
+identities remain captured, visible, and effect-neutral in the current planner,
+but their exact source replay is now recorded above.
 
 The reached Experimental Hammer replay owns the shared selected-compatible or
 explicit exhausted authored result at the succeeding biome-start address.
@@ -292,8 +306,11 @@ generic effect registry, or React keepsake-key policy was introduced.
 
 Gift Gift Gift is a captured-identity biome-start effect, not a keepsake-swap
 listener. The source stores the acquisition-time keepsake once and continues
-to use that key after later switches. The current planner now has the exact
-acquisition and biome-start contacts needed to own that chronology.
+to use that key after later switches. The outcome for every one of the 33
+possible current keepsakes is now audited: four exclusions, two permanent
+refill cases, and the declaration-specific Common re-equip results for every
+other eligible identity. The current planner has the exact acquisition and
+biome-start contacts needed to own that chronology.
 
 The implementation surface is accurately described by two axes: an exact
 biome-start transition and a replay schedule. Fig Leaf, Experimental Hammer,

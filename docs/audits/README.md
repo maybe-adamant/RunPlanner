@@ -59,6 +59,8 @@ reader-facing taxonomy, not a package or runtime boundary.
 - [Cherished Heirloom](loadout-and-progression/CHERISHED_HEIRLOOM_KEEPSAKE_AUDIT.md) — Cherished Heirloom progression and supported keepsake effects.
 - [Echo Gift Gift Gift](loadout-and-progression/ECHO_GIFT_GIFT_GIFT_KEEPSAKE_AUDIT.md) — Echo's Gift Gift Gift keepsake capture and replay facts.
 - [Keepsakes](loadout-and-progression/KEEPSAKE_GAME_DATA_AUDIT.md) — Keepsake declarations, acquisition, and effect lifecycle evidence.
+- [Path of Stars and Spell Drop](loadout-and-progression/PATH_OF_STARS_AND_SPELL_DROP_GAME_DATA_AUDIT.md) — Path point values, ordered initial spell bonuses, Aspect of Selene routing, and Moon Beam point contacts.
+- [Olympian keepsakes and Moon Beam](loadout-and-progression/OLYMPIAN_KEEPSAKE_AND_MOON_BEAM_REWARD_PRESSURE_AUDIT.md) — Reward-priority lifetime, provider pressure, rarification, and exact Selene/Path targeting.
 
 ### Room features
 
