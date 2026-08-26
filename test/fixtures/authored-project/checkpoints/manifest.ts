@@ -19,7 +19,7 @@ export const checkpointManifest = Object.freeze([
     scenario: 'Canonical Underworld F/G route prefix',
     schemaVersion: 63,
     catalogVersion: '0.45.0-transcendent-embryo',
-    sha256: 'dbd522a029d17c976dd828a5df91d7a46b016a40b2b8c0f0a6821ad954723746',
+    sha256: '4d33b2bb4a793c327ce33d2bdf992dbde0b2625dc0a663538fc23172cfccf1ba',
     provenance: 'saved canonical Underworld F/G checkpoint',
   },
   {
@@ -30,7 +30,7 @@ export const checkpointManifest = Object.freeze([
     scenario: 'F Postboss Pool sells a stacked trait while earlier picks remain recorded',
     schemaVersion: 63,
     catalogVersion: '0.45.0-transcendent-embryo',
-    sha256: '9927fd995c08708bbd9063d59c99374227cf42414c5993962c3b695c17faeeba',
+    sha256: '51ea9f9bb4ed1805db727c04a2c499662c2a7b2b4b461e73eceb46a921ac6b7b',
     provenance: 'semantic-command recipe from canonical Underworld F/G checkpoint',
   },
   {
@@ -41,7 +41,7 @@ export const checkpointManifest = Object.freeze([
     scenario: 'F forced Postboss Well with Travel Deal refill, Yarn, Hymn, and Extended purchases',
     schemaVersion: 63,
     catalogVersion: '0.45.0-transcendent-embryo',
-    sha256: 'f2c2d1d7fbbeaec9a5ccc1ad532863b5c67031fcf35f0dae5a540a561a3a2609',
+    sha256: '7c18d8042e01f8c199fa39ad0654ff16152ba33b469b1c221ee750ace31ca25f',
     provenance: 'semantic-command recipe from canonical Underworld F/G checkpoint',
   },
   {
@@ -52,7 +52,7 @@ export const checkpointManifest = Object.freeze([
     scenario: 'Canonical Underworld F/G/H route prefix',
     schemaVersion: 63,
     catalogVersion: '0.45.0-transcendent-embryo',
-    sha256: '0b0a3efb1949d36977c15ae4008d50bae8f9f8f3f671e67396c5489e3ef40314',
+    sha256: 'c72659e00f8625d223c93d74b6bc64135db9044521227d562901f25d76d7f832',
     provenance: 'saved canonical Underworld F/G/H checkpoint',
   },
   {
@@ -63,7 +63,7 @@ export const checkpointManifest = Object.freeze([
     scenario: 'Canonical Underworld F/G/H/I route prefix',
     schemaVersion: 63,
     catalogVersion: '0.45.0-transcendent-embryo',
-    sha256: '794cbdb5935b16c1a2507a0751e4c38d9e13d5e46f015626e31b87de52163e49',
+    sha256: '83082af4c827642b3768ef9b5e60aeabd13d41eff57fb760b8334c4f08b2a305',
     provenance: 'saved canonical Underworld F/G/H/I checkpoint',
   },
   {
@@ -74,7 +74,7 @@ export const checkpointManifest = Object.freeze([
     scenario: 'F Midshop Pom resolution frontier',
     schemaVersion: 63,
     catalogVersion: '0.45.0-transcendent-embryo',
-    sha256: 'fca2ca6861152d6248bd30ded8cdcc3c1a48b3f15a8d7a2a99b20dc72072879b',
+    sha256: '686c77cf79fadfd250048ba4351a9db7a7db6a30c575b9f89f9460dc7891fca9',
     provenance: 'saved canonical editor/generated checkpoint',
   },
   {
@@ -85,7 +85,7 @@ export const checkpointManifest = Object.freeze([
     scenario: 'Canonical Surface N Hub route prefix',
     schemaVersion: 63,
     catalogVersion: '0.45.0-transcendent-embryo',
-    sha256: '18a92285a917f56b9b62ac527fbe1fd71c950941e82095be422d1281fb8a4484',
+    sha256: 'ae08b44919b4e9c2934d59f391db4cf857ff79af1effc159618e8d19a338da92',
     provenance: 'saved canonical editor/generated checkpoint',
   },
   {
@@ -96,7 +96,7 @@ export const checkpointManifest = Object.freeze([
     scenario: 'N selected Natural Selection with unresolved eight-target result',
     schemaVersion: 63,
     catalogVersion: '0.45.0-transcendent-embryo',
-    sha256: '64c794553f83e49cde42bb0b66096ac57c5cdabbd3495fc659c4814b7623f647',
+    sha256: 'b9518148aadbf0229019a20a05e795ee54d7595f054da78f8e0fd242548d0758',
     provenance: 'semantic-command recipe from the canonical Surface N checkpoint',
   },
   {
@@ -107,7 +107,7 @@ export const checkpointManifest = Object.freeze([
     scenario: "N Queen's Ransom acquisition with two Zeus removals",
     schemaVersion: 63,
     catalogVersion: '0.45.0-transcendent-embryo',
-    sha256: 'f80fe1abb6f06fe62d88aa91e336a4a0dd2e10e66456a09de5bc25bab59e0de9',
+    sha256: 'c8be0fc610df7e4dfe00b2988281fdf7924973834fa1c17c984a533b3f61280e',
     provenance: 'semantic-command recipe from the canonical Surface N checkpoint',
   },
   {
@@ -115,10 +115,10 @@ export const checkpointManifest = Object.freeze([
     file: 'surface-n-steady-growth-frontier.runplanner.json',
     route: 'Surface',
     configuredBiomePrefix: ['N'],
-    scenario: 'N Epic Steady Growth after one resolved and at its second unresolved threshold',
+    scenario: 'N Epic Steady Growth at its first unresolved main-room threshold',
     schemaVersion: 63,
     catalogVersion: '0.45.0-transcendent-embryo',
-    sha256: '69353a1f78502ce3d4ecafb689782a1d4dc6399458082c1b71503a4572bebf04',
+    sha256: '979d26230f118eb685cc06d2917e750f1e4ffd97e68309b308d85c3f6734c45a',
     provenance: 'semantic-command recipe from the canonical Surface N checkpoint',
   },
   {
@@ -129,7 +129,7 @@ export const checkpointManifest = Object.freeze([
     scenario: 'N Quick Buck acquisition with one optional same-room Gold pickup',
     schemaVersion: 63,
     catalogVersion: '0.45.0-transcendent-embryo',
-    sha256: '789a46ce39ac90384dc328a1271bbed67320533001f4da3c376380a59427290c',
+    sha256: '361af0c8e1bb22160ff77a272e2e3797e5c6d268cb0e47c5bfe8086fcfee0cf4',
     provenance: 'semantic-command recipe from the canonical Surface N checkpoint',
   },
   {
@@ -140,7 +140,7 @@ export const checkpointManifest = Object.freeze([
     scenario: 'N Buried Treasure acquisition with six optional same-room pickups',
     schemaVersion: 63,
     catalogVersion: '0.45.0-transcendent-embryo',
-    sha256: '92de9b99983199745295ba6e4150365aed3444c130f7d390e7357a36426d7958',
+    sha256: '0c06e4c300fe1cad81d9eb7ed2d716bde6ea74e356d6f8663d9366d265d2b631',
     provenance: 'semantic-command recipe from the canonical Surface N checkpoint',
   },
   {
@@ -151,7 +151,7 @@ export const checkpointManifest = Object.freeze([
     scenario: 'N selected Mining, Spirit, and Seed successes including a side-room Spirit host',
     schemaVersion: 63,
     catalogVersion: '0.45.0-transcendent-embryo',
-    sha256: 'e3919322206083b8cac5e5855a52415c910358d8ee969cd29ac2b4c9c4e64980',
+    sha256: '378cee17c5faad9fabe0664bd71959701e7c334b3be76922b663149c60fd0478',
     provenance: 'semantic-command recipe from the canonical Surface N checkpoint',
   },
   {
@@ -162,7 +162,7 @@ export const checkpointManifest = Object.freeze([
     scenario: 'Canonical Surface N/O route prefix',
     schemaVersion: 63,
     catalogVersion: '0.45.0-transcendent-embryo',
-    sha256: 'f78e9593415c9a9250321a7274ae71535c1ec650e5894ce86eb87bbbf4fd8e2e',
+    sha256: '7395875067bfd44b60b65566fa7dcc0205a209168b22307ee5eeae23a0a3beff',
     provenance: 'saved canonical editor/generated checkpoint',
   },
   {
@@ -174,7 +174,7 @@ export const checkpointManifest = Object.freeze([
       'O ordinary Hermes Shrine rushes one offer and matures a delayed offer with the host reward',
     schemaVersion: 63,
     catalogVersion: '0.45.0-transcendent-embryo',
-    sha256: '0599d6173173b59e754cd6e4f2f5b5be2b0495d2c51098a2c41de7cc0daa0e13',
+    sha256: '73cd89c30f5fcf4183e09951c3d64f91d99b50f15650fdd826eb7383b990e72d',
     provenance: 'semantic-command recipe from the canonical Surface N/O checkpoint',
   },
   {
@@ -185,7 +185,7 @@ export const checkpointManifest = Object.freeze([
     scenario: 'Canonical Surface N/O/P route prefix',
     schemaVersion: 63,
     catalogVersion: '0.45.0-transcendent-embryo',
-    sha256: '04eb4349766d4457174e4f52f9bbe3ad5c72110d838203567d0be09eae96798d',
+    sha256: 'bcf141856864489ed2da627d3d6de580249629e1dff6850a1dbdff6b6ba9e2bf',
     provenance: 'saved canonical editor/generated checkpoint',
   },
   {
@@ -196,7 +196,7 @@ export const checkpointManifest = Object.freeze([
     scenario: 'Canonical Surface N/O/P/Q route prefix',
     schemaVersion: 63,
     catalogVersion: '0.45.0-transcendent-embryo',
-    sha256: '7441039dea6ada6f9b95df0f1a265c30520bdc997939a170b00ce63d4b6fa80c',
+    sha256: 'e6ecc81024ae7398173f6f4d6133c5df15a4e7c4508e79c7539b5a045a6db61c',
     provenance: 'saved canonical editor/generated checkpoint',
   },
   {
@@ -207,7 +207,7 @@ export const checkpointManifest = Object.freeze([
     scenario: 'N entry frontier with unresolved terminal envelope',
     schemaVersion: 63,
     catalogVersion: '0.45.0-transcendent-embryo',
-    sha256: 'b9043335671ee6ab682c6999785d79e3182f1847b1a4d16311056ffda4f0fa0a',
+    sha256: '91a3ac9c9afd43db6d3a2a328fd55c9a883d656021f4b07fa4df0745227a50b5',
     provenance: 'saved N entry frontier checkpoint',
   },
   {
@@ -218,7 +218,7 @@ export const checkpointManifest = Object.freeze([
     scenario: 'N entry frontier with trait-resolved terminal envelope',
     schemaVersion: 63,
     catalogVersion: '0.45.0-transcendent-embryo',
-    sha256: '37e07ad44f73fae74193ddd5a8fe2c6416f01424984a9f3210c33dd4f9e2d750',
+    sha256: '1d2d5a660030a3d01847d5d5ee5a5355b06487eedb65f4e0a619e38259b4542d',
     provenance: 'saved N entry frontier checkpoint with resolved traits',
   },
   {
@@ -229,7 +229,7 @@ export const checkpointManifest = Object.freeze([
     scenario: 'N complete Hub frontier before Preboss handoff',
     schemaVersion: 63,
     catalogVersion: '0.45.0-transcendent-embryo',
-    sha256: '25cc0ff2f3b3d3f0ed4fefca63c053879c809f9c0cea3d0b2493b456089aaeac',
+    sha256: '0523922a68d5709266156d6d8cebbb27794df814084e99836d5b61d9fd65820f',
     provenance: 'saved normalized N complete Hub frontier checkpoint',
   },
   {
@@ -240,7 +240,7 @@ export const checkpointManifest = Object.freeze([
     scenario: 'N partial Hub visit-order frontier',
     schemaVersion: 63,
     catalogVersion: '0.45.0-transcendent-embryo',
-    sha256: '62484f8b82a241d11bba9f4dcbbce767880f1e1528df1ea737fc8ab04fb6ec9a',
+    sha256: 'd2d892355b03b947e8094e3fa6021e47723e888d529af07eea67938e0bfc0e56',
     provenance: 'saved normalized N partial Hub frontier checkpoint',
   },
   {
@@ -251,7 +251,7 @@ export const checkpointManifest = Object.freeze([
     scenario: 'N Hub Story board with Story visit selected',
     schemaVersion: 63,
     catalogVersion: '0.45.0-transcendent-embryo',
-    sha256: 'ef0c0d2951e2109d1ceb5c7f09a2b026eb1a2af2b3d5268217a92905b8081e66',
+    sha256: 'cd8e08b6acfcb3724915d01d3d81d85a724fcb6ef275a0d5fb406b9a3b81ca5b',
     provenance: 'saved normalized N Story board checkpoint',
   },
   {
@@ -262,7 +262,7 @@ export const checkpointManifest = Object.freeze([
     scenario: 'N Hub invalid ten-open board with reward mutation',
     schemaVersion: 63,
     catalogVersion: '0.45.0-transcendent-embryo',
-    sha256: 'c6d82c6cf2278d4a0e3070df39679245278e3298b3ca3a4f1b66c1045be8b028',
+    sha256: 'f00313f887edd1aed470398ee55148a4e4913a905158e9e6eb7a3f47835625f3',
     provenance: 'saved N ten-open invalid checkpoint',
   },
   {
@@ -273,7 +273,7 @@ export const checkpointManifest = Object.freeze([
     scenario: 'Selected natural Chaos room with unresolved TrialUpgrade child and ordinary return',
     schemaVersion: 63,
     catalogVersion: '0.45.0-transcendent-embryo',
-    sha256: 'd738eec276716eba7c52d1ef728380f571987bc3f48ef122ea2de9171a81d1c2',
+    sha256: 'f38b709eb5f5a205cf461f8fd3bf18a3e7a74b212ce1f29d32210eb595af715a',
     provenance: 'command-authored natural Chaos required-pickup frontier',
   },
   {
@@ -284,7 +284,7 @@ export const checkpointManifest = Object.freeze([
     scenario: 'G-tail natural Chaos survives Time Piece Fields into Echo Reward Reward Reward',
     schemaVersion: 63,
     catalogVersion: '0.45.0-transcendent-embryo',
-    sha256: 'd40a2f4261a24591ab40f9d5765610168da8bcb1faed5003d9f0c9e63e885ae0',
+    sha256: 'a25b82944a7a7454d0e63c917f4911cb651cbb05b2b1cc205701e70d1236ad3e',
     provenance: 'command-authored G Chaos, Time Piece Fields, and Echo replay checkpoint',
   },
   {
@@ -296,7 +296,7 @@ export const checkpointManifest = Object.freeze([
       'F accepted Nemesis trait trade with required Triple Gold and suppressed incoming reward',
     schemaVersion: 63,
     catalogVersion: '0.45.0-transcendent-embryo',
-    sha256: '7c5b4096e0364951335e48b05adc513ad1b0b059a9f6dc948fb51a24e8018c41',
+    sha256: '918cbe28c215fa9273e98520fc9b3783366dbc216fe012204a8db190a85d4056',
     provenance: 'semantic-command recipe using the reached shared Nemesis trait candidate',
   },
   {
@@ -308,7 +308,7 @@ export const checkpointManifest = Object.freeze([
       'H physical-four Fields room with Passive Nemesis and three effective optional rewards',
     schemaVersion: 63,
     catalogVersion: '0.45.0-transcendent-embryo',
-    sha256: '1703d1a5ee67408ad9efe527822893e8894ac0faa697c5c720768c49b645ead8',
+    sha256: 'dc6e3fb5aa0f0ef0cbc3b9ac1e0f68ce6892d413d8eff05f721f9bd99d252468',
     provenance: 'semantic-command recipe with free result interleaved among Fields cage actions',
   },
   {
@@ -319,7 +319,7 @@ export const checkpointManifest = Object.freeze([
     scenario: 'F accepted Nemesis Pom or Hammer trade with Sea Star generated acquisition child',
     schemaVersion: 63,
     catalogVersion: '0.45.0-transcendent-embryo',
-    sha256: '709dfa467092aacbb54266020ae332356282e7dc9ea7624c3450de402d5dcced',
+    sha256: 'd83deb049411d010ab9f305143b4129cfd2196f24ac5ce0ae2e99daca73384ae',
     provenance: 'semantic-command recipe using a reached Pom/Hammer candidate and Sea Star child',
   },
 ] as const satisfies readonly AuthoredProjectCheckpointManifestEntry[]);
