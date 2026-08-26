@@ -101,6 +101,7 @@ export function applyRoomCreatedTransition(
     enteredBiomeCount,
     authoredSeaStarDuplicateSiteKeys,
   });
+  if (incoming.branches.length === 0) return Object.freeze({ ...incoming, ...prelude });
   const local = generateLocalRewards(catalog, snapshot, event, contextResult.context, {
     branches: incoming.branches,
     peers: incoming.peers,

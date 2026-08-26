@@ -87,6 +87,14 @@ rewards, purchases, encounters, and selected exits are authored choices.
 `ROOM_LIFECYCLE_MODEL.md` defines the single-room fragments that this pipeline
 composes.
 
+Complete generated-batch materialization is a distinct immutable product from
+progressive biome traversal. Batch construction owns target, continuation, and
+batch-state resolution; traversal decides how far supported authored structure
+can be materialized and assessed. Project evaluation then composes one biome
+product at a time into route order and one exact project assembly. These
+boundaries do not create alternate simulation entries, candidate-only
+evaluation, or a second history interpretation.
+
 ## Catalog Boundary
 
 The normalized catalog contains immutable possible facts:

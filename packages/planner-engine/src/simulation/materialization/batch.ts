@@ -14,7 +14,6 @@ import {
   type ExitDecisionSourceAddress,
 } from '../../authored-project/addresses';
 import type {
-  AuthoredBiomeState,
   BatchRewardStoreState,
   BiomeTopology,
   ExitDecision,

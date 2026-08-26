@@ -196,9 +196,21 @@ products.
 The split test monoliths were retired in favor of owner-specific matrices plus
 one representative assembly or product witness at each affected boundary.
 Authored schema, catalog version, semantic commands, findings, candidate
-results, and editor behavior did not change. The remaining chronological and
-declaration-language gravity is recorded in the roadmap for a fresh audit; no
-Plan 2 scaffold was introduced.
+results, and editor behavior did not change.
+
+The 2026-08-26 Plan 2 closure completed the audit-proven room/layout compiler,
+batch materialization, project-evaluation, and reward-chronology seams.
+Catalog compilation now closes local declarations only after their immutable
+collections exist; engine evaluation keeps complete batch construction,
+per-biome composition, exact private artifacts, route orchestration, and final
+reward publication as explicit products. Reward event families return complete
+transitions to one exhaustive chronology, which remains the only authority for
+event order, branch advancement, emission application, and final publication.
+The planner application remains an unchanged downstream consumer. Superseded
+inline paths and duplicate primary cases were removed with their replacement
+owners; public catalog and engine contacts, authored schema 59, catalog
+version, simulation results, candidates, findings, persistence, and editor
+behavior remain unchanged.
 
 ## Validation Record
 
@@ -255,6 +267,15 @@ intermediate suite was green.
   typechecking, repository-wide Prettier, and production build without another
   test run. The build retained only the existing greater-than-500-kB application
   chunk advisory.
+- Plan 2's one authorized closure `npm run check` passed on 2026-08-26:
+  workspace, catalog, engine, and fixture typechecking; checkpoint integrity at
+  3 files/20 tests; regular tests at 194 files/1,870 tests; heavy tests at 46
+  files/430 tests; the isolated performance lane at 1 file/2 tests; ESLint;
+  repository-wide Prettier; and production build. The gate exposed and removed
+  four stale declarations left by the completed decompositions and one
+  formatting drift in the reward chronology before the successful rerun. The
+  build retained only the existing greater-than-500-kB application chunk
+  advisory.
 
 Focused validation remains the normal implementation practice. A complete
 `npm run check` is reserved for the declared phase closure or a shared

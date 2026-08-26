@@ -12,12 +12,8 @@ import {
   goldenGBiome,
   goldenGStartId,
 } from '@run-planner/test-fixtures/underworld';
-import {
-  simulateProjectAssembly,
-} from '../../src/simulation/project';
-import {
-  stygianWellCandidateForProjectEvaluationAssembly,
-} from '../../src/simulation/project-evaluation-assembly';
+import { simulateProjectAssembly } from '../../src/simulation/project';
+import { stygianWellCandidateForProjectEvaluationAssembly } from '../../src/simulation/project-evaluation-assembly';
 import {
   applyStygianWellPurchase,
   advanceStygianWellBossUses,

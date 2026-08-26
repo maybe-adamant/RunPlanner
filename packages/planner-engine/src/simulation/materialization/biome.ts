@@ -121,12 +121,6 @@ function requireRoom(
   return room;
 }
 
-function requireCatalogRoom(catalog: Catalog, occurrence: RoomOccurrence): RoomDeclaration {
-  const room = catalog.rooms.byKey[occurrence.gameName];
-  if (room === undefined) fail(`trusted topology lost room ${occurrence.gameName}`);
-  return room;
-}
-
 function roomReference(room: CanonicalAuthoredRoom): CanonicalRoomReference {
   return Object.freeze({
     origin: room.origin,

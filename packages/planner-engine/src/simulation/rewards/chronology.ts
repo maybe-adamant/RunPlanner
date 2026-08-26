@@ -795,8 +795,13 @@ export function evaluateBiomeRewardChronology(
     result: AuthoredSiteSettlementResult,
     occurrenceOwner: SemanticAddress,
   ): void {
-    for (const entry of result.emissions.findings)
-      addRewardFinding(findings, entry.finding, entry.atomicRegion, entry.chronology);
+    for (const entry of result.emissions.findings) {
+      const evaluations = entry.levelResolutionEvaluations ?? [];
+      if (evaluations.length === 0)
+        addRewardFinding(findings, entry.finding, entry.atomicRegion, entry.chronology);
+      for (const evaluation of evaluations)
+        addRewardFinding(findings, entry.finding, entry.atomicRegion, entry.chronology, evaluation);
+    }
     recordAcquisitionRoleFrontiers(result.emissions.acquisitionRoleFrontiers);
     recordRuntimeOfferFallbacks(result.emissions.runtimeOfferFallbacks);
     recordDerivedAcquisitionEntryFrontiers(result.emissions.derivedEntryFrontiers);
