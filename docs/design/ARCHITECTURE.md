@@ -213,6 +213,15 @@ retain visible exhaustive dispatch. A chronological coordinator or atomic
 transition aggregate may remain long when keeping the invariant in one place
 is more coherent than distributing it across handlers.
 
+Catalog compilation follows the same boundary: local declaration normalization
+returns immutable collections, while rules that require a complete collection
+or several declaration families run in an explicit later closure stage. Engine
+evaluation likewise composes a complete per-biome product into route and
+project results; private exact-assembly artifacts remain attached to that one
+evaluation rather than being recovered by a later consumer. These stages may
+compose focused products, but neither compilation nor evaluation gains an
+ambient registry or a parallel semantic path.
+
 ### Reorganization Contract
 
 Before a broad structural refactor, record the current authority-to-consumer

@@ -154,6 +154,14 @@ raw declaration format permits it, installs explicit semantic defaults, and
 produces immutable indexed records. Consumers never need to interpret raw
 inheritance or optional shorthand.
 
+Local normalization and relational closure are distinct compilation stages.
+Room and layout declarations first become their own immutable collections;
+template contracts and rules spanning a completed room collection or both
+room and layout collections then validate those frozen products. Catalog
+construction owns the explicit stage order and returns only the fully closed
+catalog. A local normalizer does not discover cross-collection policy through
+registration, and relational closure does not reconstruct raw declarations.
+
 Compact helpers may remove syntax repetition only when the complete room
 surface remains readable at its declaration point. Avoid metaprogramming that
 requires executing several layers of builders to discover a room's exits,

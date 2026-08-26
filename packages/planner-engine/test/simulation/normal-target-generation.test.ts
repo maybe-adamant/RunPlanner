@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
-  createExitDecisionAddress,
   createOccurrenceAddress,
   semanticAddressKey,
 } from '@run-planner/engine/authored-project';
