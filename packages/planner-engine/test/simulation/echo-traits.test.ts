@@ -50,7 +50,7 @@ import {
   evaluateTraitOfferFocusedOptionCandidate,
 } from '../../src/simulation/candidates/trait-offer';
 import { processEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement';
-import { selectedTraitOfferProducts } from '../../src/simulation/rewards/biome';
+import { selectedTraitOfferProducts } from '../../src/simulation/rewards/selected-trait-products';
 import {
   assessTraitOption,
   attachTraitHistory,

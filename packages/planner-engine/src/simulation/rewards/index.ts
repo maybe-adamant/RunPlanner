@@ -1,9 +1,9 @@
 export {
   evaluateBiomeRewards,
   evaluateBiomeRewardsAssembly,
-  rewardStoreCandidateSupport,
   BiomeRewardSimulationContractError,
 } from './biome';
+export { rewardStoreCandidateSupport } from './reward-store-support';
 export {
   RewardAuthoringDomainContractError,
   type CountedRewardOwnerAddress,

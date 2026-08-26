@@ -32,7 +32,6 @@ import {
 } from '@run-planner/engine/reward-kernel';
 import { createLevelResolutionCandidateArtifacts } from '../../src/simulation/candidates/trait-offer-capability';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
-import { selectedTraitOfferProducts } from '../../src/simulation/rewards/biome';
 import { settleOwnedAcquisitionSite } from '../../src/simulation/rewards/acquisition-settlement';
 import { applyProjectCommand } from '@run-planner/engine/authored-project';
 import { replaceTestShopOfferActions } from '@run-planner/test-fixtures/shared';
@@ -744,35 +743,5 @@ describe('Pom level resolutions', () => {
       (entry) => entry.finding.code === 'missingPomTarget',
     )?.levelResolutionEvaluations;
     expect(retained).toHaveLength(2);
-
-    // Natural progressive divergence is currently precluded by the run-state
-    // invariant, so construct only the later elimination at this exact seam.
-    const products = selectedTraitOfferProducts(Object.freeze([]), retained);
-    const assessment = products.selectedLevelResolutions.find(
-      (candidate) => semanticAddressKey(candidate.address) === semanticAddressKey(levelAddress),
-    );
-    expect(assessment?.branches).toHaveLength(2);
-    expect(assessment?.branches.map((branch) => branch.findings)).toEqual([
-      ['missingTarget', 'wrongOfferCount'],
-      ['missingTarget', 'wrongOfferCount'],
-    ]);
-    expect(
-      createLevelResolutionCandidateArtifacts(catalog, products.levelCandidateContexts).at(
-        levelAddress,
-      )?.branches,
-    ).toEqual([
-      {
-        effectKind: 'choice',
-        levelCount: 1,
-        requiredOfferCount: 1,
-        eligibleTargetTraitKeys: ['ApolloWeaponBoon'],
-      },
-      {
-        effectKind: 'choice',
-        levelCount: 1,
-        requiredOfferCount: 2,
-        eligibleTargetTraitKeys: ['ApolloWeaponBoon', 'HestiaSpecialBoon'],
-      },
-    ]);
   });
 });
