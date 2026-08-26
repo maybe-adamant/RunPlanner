@@ -9,6 +9,29 @@ import {
 import type { HistoryStateView, RoomCreationSource } from '../history';
 import { projectRecentEncounterEnvelopeSlots } from '../history';
 import type { CanonicalLifecycleRoom } from '../history/lifecycleInput';
+import type { HermesShrineCandidateContext } from '../hermes-shrine';
+import type { RewardBranchState } from './branch-primitives';
+import { BiomeRewardSimulationContractError } from './biome-contract';
+
+/** Visible store names that participate in RequiredNotInStore at room entry. */
+export function visibleStoreOptionNames(
+  source: CanonicalLifecycleRoom,
+  shrineAssessments?: readonly HermesShrineCandidateContext[],
+): ReadonlySet<string> {
+  const names = new Set<string>();
+  if (source.kind !== 'authored') return names;
+  for (const offer of source.entryState?.kind === 'shop' ? source.entryState.offers : [])
+    names.add(offer.offer.rewardType);
+  const shrineInventoryVisible =
+    shrineAssessments !== undefined &&
+    shrineAssessments.length > 0 &&
+    shrineAssessments.every((assessment) => assessment.inventory?.complete === true);
+  if (source.hermesShrine !== undefined && shrineInventoryVisible) {
+    for (const offer of Object.values(source.hermesShrine.offerBySlot))
+      names.add(offer!.offer.rewardType);
+  }
+  return names;
+}
 
 function countByGameName(
   entries: readonly { readonly gameName: string }[],
@@ -158,4 +181,43 @@ export function createRewardFacts({
     flags: Object.freeze({ allSpellInvested: false, pendingSpellDrop }),
   });
   return factsWithHistory(Object.freeze({ requirements }), history, currentRoomShopOptionNames);
+}
+
+/** Exact reward-evaluation facts for one reached source and history view. */
+export function createBiomeRewardFacts(
+  catalog: Catalog,
+  source: CanonicalLifecycleRoom,
+  currentRoom: CanonicalLifecycleRoom | undefined,
+  sourceDeclaration: RoomDeclaration,
+  view: HistoryStateView,
+  history: RewardHistoryState,
+  enteredBiomeCount: number,
+  currentRoomShopOptionNames: ReadonlySet<string> = new Set(),
+  peerParentOrigin = source.origin,
+  peerCreationSource: RoomCreationSource = 'generatedTarget',
+  rewardLookups: Readonly<Record<string, ReadonlySet<string>>> = Object.freeze({}),
+  branch?: RewardBranchState,
+): RewardKernelFacts {
+  return createRewardFacts({
+    catalog,
+    currentRoom,
+    sourceDeclaration,
+    view,
+    history,
+    enteredBiomeCount,
+    currentBatchRoomGameNames: createdPeerGameNames(
+      catalog,
+      view,
+      peerParentOrigin,
+      peerCreationSource,
+    ),
+    currentRoomShopOptionNames,
+    rewardLookups,
+    pendingSpellDrop: Object.values(branch?.pendingHermesShrineDeliveries ?? {}).some(
+      (delivery) => delivery.reward.offer.rewardType === 'SpellDrop',
+    ),
+    fail: (detail) => {
+      throw new BiomeRewardSimulationContractError(detail);
+    },
+  });
 }
