@@ -2,11 +2,12 @@
 
 ## Status
 
-Locked for execution at clean base `714874b5` on 2026-08-25. This is the
-temporary execution contract for the second bounded maintainability phase. It
-must not be linked from `README.md` or stable design, biome, or audit
-authorities. After its closure gate, durable outcomes belong in the smallest
-owning design or progress document and this file is deleted.
+Locked for execution at clean base `714874b5` on 2026-08-25 and amended before
+closure from the clean `1ac93fe1` frontier. This is the temporary execution
+contract for the second bounded maintainability phase. It must not be linked
+from `README.md` or stable design, biome, or audit authorities. After its
+closure gate, durable outcomes belong in the smallest owning design or
+progress document and this file is deleted.
 
 This plan follows the post-Plan-1 responsibility and chronology audit required
 by the durable maintenance frontier. The audit covered all three ownership
@@ -15,10 +16,13 @@ changes are catalog compiler and planner-engine decompositions. The planner
 application remains an unchanged downstream consumer and supplies only
 representative contract and product witnesses.
 
-Gate C was narrowed after the live `db98aac4` call-path audit proved that Ship
-lifecycle candidate evaluation captures the ordered first-wheel branch frontier.
-It therefore remains with the chronological reward evaluator instead of crossing
-the extraction boundary described below.
+Gates A1 through D are complete at `1ac93fe1`. The pre-closure reinventory then
+rejected the earlier assumption that singular chronology requires one singular
+reward-evaluation function. Gate C correctly kept Ship lifecycle preparation in
+chronology, but the remaining `rewards/biome.ts` still combines the chronology
+spine with several independently nameable event-family computations. Pass E
+decomposes those computations without distributing event order or mutable
+branch authority; durable absorption moves to Pass F.
 
 ## Objective
 
@@ -32,11 +36,12 @@ At closure:
 - room and layout declaration-language compilation have named local and
   relational closure owners;
 - complete batch materialization is separate from progressive biome traversal;
-- nonchronological reward projections no longer live inside the ordered reward
-  evaluator;
+- reward evaluation has one visible chronological spine whose private event
+  families receive explicit current facts and return complete transition
+  products;
 - project evaluation vocabulary, exact assembly, biome evaluation, and route
   orchestration have explicit owners;
-- the ordered reward evaluator, history fold, lifecycle executor, topology
+- the ordered reward chronology, history fold, lifecycle executor, topology
   dispatcher, and per-template room materializer retain their atomic
   invariants;
 - public catalog, engine, planner, authored-schema, candidate, finding, and
@@ -79,7 +84,9 @@ owns the resulting delivery gates and mechanics only.
 
 ## Post-Plan-1 Audit
 
-Counts are from `714874b5`. They are diagnostics, not quotas.
+Initial counts are from `714874b5`; the reward-evaluator row is refreshed from
+the post-Gate-C `3f91c095` tree because that live remainder caused the
+pre-closure amendment. Counts are diagnostics, not quotas.
 
 ### Hades II catalog
 
@@ -99,25 +106,34 @@ route-detour, and regression suites.
 
 ### Planner engine
 
-| Owner                                   | Production lines | Audit result                                                                                                    | Disposition                                                     |
-| --------------------------------------- | ---------------: | --------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
-| `simulation/materialization/biome.ts`   |            1,218 | Complete target/batch construction and progressive traversal are distinct products                              | Split batch materialization from biome traversal                |
-| `simulation/project.ts`                 |            1,506 | Evaluation vocabulary, exact assembly identity, biome evaluation, and route orchestration are distinct products | Split in one complete vertical gate                             |
-| `simulation/rewards/biome.ts`           |            7,276 | One ordered evaluator surrounds several complete pure projections                                               | Extract only nonchronological products; preserve the event loop |
-| `simulation/materialization/rooms.ts`   |              970 | Closed per-template room materialization and exhaustive dispatch                                                | Keep intact                                                     |
-| `simulation/lifecycle/execute.ts`       |              903 | Input attestation, action scheduling, and effect dispatch jointly execute one ordered room lifecycle            | Keep intact                                                     |
-| `simulation/history/fold.ts`            |              907 | One chronological fold owns ledgers, paired-event closure, and frozen views                                     | Keep intact                                                     |
-| `authored-project/commands/topology.ts` |            1,541 | Atomic topology transitions and their shared invariants                                                         | Keep intact                                                     |
+| Owner                                   | Production lines | Audit result                                                                                                          | Disposition                                                                        |
+| --------------------------------------- | ---------------: | --------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| `simulation/materialization/biome.ts`   |            1,218 | Complete target/batch construction and progressive traversal are distinct products                                    | Split batch materialization from biome traversal                                   |
+| `simulation/project.ts`                 |            1,506 | Evaluation vocabulary, exact assembly identity, biome evaluation, and route orchestration are distinct products       | Split in one complete vertical gate                                                |
+| `simulation/rewards/biome.ts`           |            6,914 | One 5,647-line evaluation function owns the event loop, event-family computation, mutable collectors, and publication | Preserve one visible loop; extract complete private event products and publication |
+| `simulation/materialization/rooms.ts`   |              970 | Closed per-template room materialization and exhaustive dispatch                                                      | Keep intact                                                                        |
+| `simulation/lifecycle/execute.ts`       |              903 | Input attestation, action scheduling, and effect dispatch jointly execute one ordered room lifecycle                  | Keep intact                                                                        |
+| `simulation/history/fold.ts`            |              907 | One chronological fold owns ledgers, paired-event closure, and frozen views                                           | Keep intact                                                                        |
+| `authored-project/commands/topology.ts` |            1,541 | Atomic topology transitions and their shared invariants                                                               | Keep intact                                                                        |
 
-The reward evaluator's main event loop mutates one ordered branch and artifact
-assembly. Its local event families do not return independently complete
-products. Splitting them would require passing a broad mutable evaluator
-context or remerging partial branches, findings, checkpoints, and artifacts.
-That is explicitly excluded. The safe seams are reward-store support prepared
-from immutable history and layout facts, and selected trait/level publication
-frozen after ordered evaluation. Ship lifecycle candidate evaluation is not a
-safe seam: its deferred evaluator captures the exact first-wheel branch frontier
-and reuses reward generation, settlement, and finding accumulation.
+Gate C removed reward-store support and selected trait/level publication, but
+the resulting file is still not merely a chronology. Its single evaluator
+contains thirteen history-event cases; `roomCreated`,
+`offerPointMaterialized`, the combined encounter-settlement case, and
+`acquisitionPointReached` each contain roughly six hundred to eight hundred
+lines of policy integration. The function also closes over branch state,
+pending Hub state, producer and lifecycle frontiers, finding regions, room-
+feature assessments, Run State checkpoints, and candidate-context maps.
+
+The corrected boundary preserves one owner of `history.events` order while
+making each event family a pure private consumer of the exact current facts it
+needs. An event family returns its whole transition and emitted artifacts; it
+does not mutate chronology-owned maps, register callbacks, inspect later
+events, or publish a partial simulation. The chronology coordinator applies
+those products in order and final publication freezes the one complete
+assembly. Ship lifecycle preparation moves only with the offer chronology that
+supplies its exact first-wheel branch frontier; it does not become a detached
+candidate service.
 
 ### Planner application and React
 
@@ -167,15 +183,32 @@ compatibility, or become an ambient registry.
 
 ### Chronological state remains singular
 
-The ordered reward evaluator, history fold, lifecycle executor, and topology
-command dispatcher remain the sole owners of their state transitions. Plan 2
-does not create per-event reward evaluators, partial history folds, lifecycle
-effect services, topology handlers with shared mutable state, or a generic
-simulation context.
+The reward chronology coordinator remains the only owner that iterates
+`history.events`, selects the next event family, advances the current branch
+cohort, carries pending Hub state, and decides when emitted products enter the
+assembly. No handler may inspect the full event sequence, invoke another event
+out of order, or publish a simulation independently.
 
-Pure preparation, lookup, and publication products may move below a
-chronological coordinator only when they do not receive or return that
-coordinator's mutable ordered state.
+Chronology-owned input preparation may traverse `history.events` once to build
+an immutable reference index for later lifecycle points keyed by their exact
+room, producer, wheel, or acquisition owner. That index exposes only the
+referenced events and views required by a reached transition; it is not a
+second fold and cannot answer semantic questions about event order. Event
+families receive those narrow references instead of the full history sequence.
+
+Private event owners may receive the exact current branch/frontier facts needed
+for one event and return the complete next state and emitted findings,
+frontiers, assessments, or candidate contexts for that event. The coordinator
+applies those products explicitly. Handlers do not mutate coordinator-owned
+maps, communicate through registration, or share a catch-all evaluator
+context. Parameter objects are accepted only when they are genuine immutable
+input or event-result products, not dependency bags introduced to shorten a
+call.
+
+The history fold, lifecycle executor, and topology command dispatcher remain
+the sole owners of their own ordered transitions. Plan 2 does not create a
+second history interpretation, a lifecycle effect service, topology handlers
+with shared mutable state, or a generic simulation context.
 
 ### Test ownership follows production ownership
 
@@ -421,9 +454,188 @@ symbol.
 
 **Commit.** `refactor(engine): decompose project evaluation composition`
 
-### Pass E — Closure
+### Pass E — Engine reward chronology
 
-#### Gate E — Durable absorption and repository validation
+#### Gate E1 — Prepared evaluation inputs and lifecycle transitions
+
+**Owner and product.** Establish the private reward-evaluation neighborhood by
+extracting one immutable prepared-input product from catalog, materialized
+snapshot, history, route loadout, and resource placements. It owns the current
+layout, reward and room lookups, history views, target and continuation indexes,
+Hub indexes, batch-parent indexes, and one chronology-owned lifecycle-reference
+index for producer points and acquisition/wheel events keyed by exact semantic
+owner. The reference index is constructed once from `history.events`; no later
+event family receives or searches the full sequence.
+
+Move the non-acquisition lifecycle transitions that consume those facts:
+
+- the non-Gorgon portion of `encounterStarted`;
+- `roomEntered`;
+- `roomPrepared` and `keepsakeRackUsed`;
+- `encounterEndEffectsApplied`; and
+- `roomExited`.
+
+Each transition receives its exact event, current branches and peers, and the
+prepared facts it needs. It returns the next branches plus its complete emitted
+frontiers, checkpoints, findings, or candidate contexts. It does not mutate
+chronology-owned maps. The history loop remains in `rewards/biome.ts` during
+this gate and applies each returned product at the original sequence point.
+The combined `bossDefeated` / `encounterInteractionReached` /
+`encounterCompleted` settlement remains for Gate E4. Gorgon start eligibility,
+candidate publication, pending/expired state, and later interaction settlement
+also remain together for Gate E4 rather than crossing this lifecycle boundary.
+
+**Tests.** Keep lifecycle policy with its current Chaos, Fig Leaf, Experimental
+Hammer, keepsake, and Run State authorities. Move only direct transition-
+product assertions that acquire a new primary owner; retain representative
+full-biome chronology witnesses. Run the focused lifecycle, Chaos, Fig Leaf,
+Experimental Hammer, keepsake-selection, and Run State suites serially.
+
+**Deletion.** Remove the prepared lookup implementation and moved lifecycle
+case bodies from `rewards/biome.ts`. The gate is rejected if it adds a generic
+event result, handler registry, evaluator service bag, or mutable shared draft.
+
+**Commit.** `refactor(engine): separate reward lifecycle transitions`
+
+#### Gate E2 — Room and outgoing generation transitions
+
+**Owner and product.** Extract the complete generation transitions for:
+
+- `roomCreated`, including incoming and local producer preparation, room-
+  feature inventory/assessment preparation, reward wheels, Shops, Shrines,
+  Wells, Pools, and generated acquisition sites;
+- `targetGenerationCompleted`;
+- `outgoingGenerationCheckpoint`; and
+- pending Hub-board generation and flush.
+
+The room-creation owner may extract the authored-acquisition-site settlement
+adapter that it first consumes, but that adapter must return one complete site
+settlement product: next branches and peers together with its exact producer,
+conversion, derived-entry, trait-child, fallback, finding, and checkpoint
+emissions. It must not receive the chronology's maps or callbacks. Later offer
+and acquisition transitions reuse that product rather than wrapping or
+reimplementing it.
+
+The chronology coordinator remains the sole owner of when a generated result
+is applied, when a Hub board is pending or flushed, and when target history is
+published. Extracted generation code cannot walk history or generate a later
+event eagerly. Room creation receives producer/acquisition lifecycle references
+from the prepared exact-owner index established in E1.
+
+**Tests.** Use the existing F/H/N/O generation and rewards suites as primary
+policy owners, with focused Shop inventory, Hermes Shrine, Stygian Well,
+Purging Pool, Fields optional, and Hub witnesses. Move direct product cases
+only where the new generation owner is the authority. Run those suites
+serially; do not run the complete engine lane yet.
+
+**Deletion.** Remove the moved generation cases, room-feature recorders,
+pending-Hub implementation, and superseded site-settlement adapter from
+`rewards/biome.ts`. There is one generated-result path and one site-settlement
+path after the gate.
+
+**Commit.** `refactor(engine): separate reward generation transitions`
+
+#### Gate E3 — Offer chronology transitions
+
+**Owner and product.** Extract `offerPointMaterialized`,
+`offerPointAcquired`, and `producerRoleAdvanced` as the offer-chronology owner.
+It owns the exact offer-time branch cohort, trait and level settlement
+integration, incoming/local offer completion, producer-role advancement, and
+the candidate/frontier products emitted at those event points.
+
+Ship lifecycle candidate preparation moves with this owner because its
+deferred evaluation captures the exact first-wheel branches. The offer owner
+receives that cohort explicitly and returns its complete Ship candidate
+product; it does not become a detached service and cannot evaluate before the
+chronology reaches the wheel. Wheel preparation receives the exact selected or
+dormant generation/acquisition reference from the E1 lifecycle index rather
+than `BiomeRewardHistory` or `history.events`. Existing trait, shop, and
+acquisition-settlement authorities remain lower-level pure dependencies rather
+than being copied.
+
+**Tests.** Keep complete trait, Pom, Circe, Echo, Shop-purchase, Ship-wheel, and
+progressive candidate matrices with their current authorities. Give direct
+offer-transition publication its own focused primary cases only where broad
+tests currently assert the extracted product itself. Run those focused suites
+serially.
+
+**Deletion.** Remove the three offer case bodies, Ship preparation body, and
+superseded incoming-offer adapter from `rewards/biome.ts`. The gate is rejected
+if offer processing gains a second event loop, branch cache, or publication
+entry.
+
+**Commit.** `refactor(engine): separate reward offer transitions`
+
+#### Gate E4 — Encounter and acquisition transitions
+
+**Owner and product.** Extract the remaining settlement-heavy transitions:
+
+- the combined `bossDefeated`, `encounterInteractionReached`, and
+  `encounterCompleted` case;
+- Gorgon start eligibility and candidate publication from `encounterStarted`,
+  together with its later interaction settlement;
+- `acquisitionPointReached`; and
+- `wellPurchase`.
+
+This owner coordinates the already-supported lower-level acquisition, trait,
+Shop, generated-pickup, Nemesis, Narcissus, Echo, Sea Star, Time Piece,
+Artificer, room-feature, and keepsake effects at their reached event. Each
+transition returns its complete next branch cohort and exact emissions. It
+does not absorb the lower-level feature policies, mutate chronology collectors,
+or infer whether another event will occur.
+
+**Tests.** Use the existing encounter-trait, NPC pickup, Nemesis event,
+Artificer, Time Piece, Sea Star, Echo, Pool, Shrine, Well, and Shop settlement
+suites as the primary matrices. Retain representative complete-route witnesses
+and avoid a second generic acquisition matrix. Run the affected suites
+serially.
+
+**Deletion.** Remove the moved encounter/acquisition case bodies and any
+superseded local adapters from `rewards/biome.ts`. There is no compatibility
+dispatcher and no duplicated feature settlement path.
+
+**Commit.** `refactor(engine): separate reward acquisition transitions`
+
+#### Gate E5 — Chronology spine and final publication
+
+**Owner and product.** Move the one exhaustive `history.events` loop into the
+private reward-evaluation chronology owner. It alone:
+
+- selects the event-family transition in source order;
+- carries current branches, peers, and pending Hub state;
+- applies returned findings, frontiers, assessments, checkpoints, and
+  candidate contexts to its private collectors; and
+- invokes one final publication owner that freezes the complete
+  `BiomeRewardEvaluationAssembly`.
+
+The switch remains explicit and exhaustive; it is not replaced with a handler
+registry. Event-family modules cannot import the chronology owner or call one
+another through it. Final publication may receive one named immutable
+publication-input product because it represents the complete accumulated
+result, but it cannot own transition policy or recover missing facts through a
+side channel.
+
+`rewards/biome.ts` becomes the thin supported adapter for
+`evaluateBiomeRewards`, `evaluateBiomeRewardsAssembly`, the internal project-
+evaluation contact, and existing supported error/result vocabulary. It does
+not re-export private event modules or forward their symbols.
+
+**Tests.** Keep one exact event-order and one complete reward-assembly witness
+with the chronology owner. Existing feature suites remain their policy owners.
+Run the focused chronology/publication tests, engine typecheck, and then
+`npm run test:engine` once to close the amended engine pass. Vitest remains
+serialized.
+
+**Deletion.** Remove the remaining loop, mutable collectors, transition
+application, and final-publication implementation from `rewards/biome.ts`.
+The gate is rejected if the facade retains a shadow path, if any event family
+walks `history.events`, or if the new folder adds a second simulation entry.
+
+**Commit.** `refactor(engine): isolate reward chronology assembly`
+
+### Pass F — Closure
+
+#### Gate F — Durable absorption and repository validation
 
 **Review.** Reinventory the three packages from the final implementation tree
 and compare them with the `714874b5` baseline. Confirm:
@@ -433,7 +645,7 @@ and compare them with the `714874b5` baseline. Confirm:
 - superseded inline code and duplicate tests are deleted;
 - the catalog construction and engine simulation surfaces are unchanged;
 - no planner production policy moved or was reproduced;
-- the reward evaluator, history fold, lifecycle executor, topology dispatcher,
+- the reward chronology, history fold, lifecycle executor, topology dispatcher,
   and room-template materializer still own their ordered or exhaustive
   invariants; and
 - production growth is explained by ownership boundaries rather than wrappers,
@@ -454,11 +666,11 @@ this temporary plan in the same closure change.
 
 ## Execution Topology and Review
 
-The catalog chain is ordered `A1 -> A2`. The engine chain is ordered
-`B -> C -> D` so project composition consumes the final materialization and
-reward-owner surfaces. The two chains have no intended contract dependency and
-may execute in parallel worktrees when that reduces elapsed time. Gate D starts
-only after both engine predecessor gates are integrated.
+The completed catalog chain was ordered `A1 -> A2`; the completed initial
+engine chain was ordered `B -> C -> D`. The amended reward chain is strictly
+ordered `E1 -> E2 -> E3 -> E4 -> E5` because each later transition family
+consumes the final private products of its predecessors. Gate F starts only
+after E5 is integrated and the amended engine pass is green.
 
 Tests are never parallelized across gates. A single lane owner runs Vitest at a
 time so resource starvation cannot create false timeouts.
@@ -491,7 +703,9 @@ Plan 2 does not authorize:
 - splitting readable declaration data;
 - a generic compiler framework, validation toolkit, simulator context,
   dependency container, service registry, or helper directory;
-- per-event reward evaluators or a second history interpretation;
+- a reward-handler registry, event owner that walks `history.events`, generic
+  evaluator context, shared mutable event draft, or second history
+  interpretation;
 - decomposition of `materialization/rooms.ts`, `lifecycle/execute.ts`,
   `history/fold.ts`, or the topology command dispatcher;
 - planner application or React production refactoring;
