@@ -8,7 +8,7 @@ import {
 import type { ProjectDocument } from '../../authored-project/model';
 import { exitDecisionForSource } from '../../authored-project/topology/query';
 import { rewardStoreCandidateSupport, type RewardStoreCandidateSupport } from '../rewards';
-import type { ProjectEvaluation } from '../project';
+import type { ProjectEvaluation } from '../evaluation-products';
 import {
   unavailableForBiome,
   unreachableTarget,

@@ -2,7 +2,7 @@ import type { KeepsakeEquipResultAddress } from '../../authored-project/addresse
 import type { AuthoredKeepsakeEquipResults, ProjectDocument } from '../../authored-project/model';
 import type { Catalog } from '../../catalog-schema';
 import type { KeepsakeEquipResultCandidateArtifacts } from '../candidate-artifacts';
-import type { ProjectEvaluation } from '../project';
+import type { ProjectEvaluation } from '../evaluation-products';
 import {
   assessExperimentalHammerEquipResult,
   assessJeweledPomEquipResult,

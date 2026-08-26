@@ -10,7 +10,7 @@ import {
 } from '../../authored-project/traits';
 import type { ProjectDocument } from '../../authored-project/model';
 import type { TraitOfferCandidateArtifacts } from './trait-offer-capability';
-import type { ProjectEvaluation } from '../project';
+import type { ProjectEvaluation } from '../evaluation-products';
 import type {
   TraitAssessment,
   TraitAssessmentFinding,

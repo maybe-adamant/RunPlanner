@@ -13,7 +13,7 @@ import type {
 import type { SemanticFinding } from '../model';
 import { materializeShipCombatState } from '../materialization';
 import type { EncounterCandidateArtifacts } from '../encounters';
-import type { ProjectEvaluation } from '../project';
+import type { ProjectEvaluation } from '../evaluation-products';
 import type { RoomLifecycleCandidateArtifacts } from '../rewards/lifecycle-artifacts';
 import {
   coverageUnavailable,

@@ -47,7 +47,7 @@ import {
   evaluateProgressiveBiomeAssembly,
   evaluateProgressiveBiomeAssemblyBeforeClamp,
 } from '../../../src/simulation/progressive/biome';
-import { candidateArtifactsForProjectEvaluationAssembly } from '../../../src/simulation/project';
+import { candidateArtifactsForProjectEvaluationAssembly } from '../../../src/simulation/project-evaluation-assembly';
 import { EMPTY_RESOURCE_PLACEMENTS } from '../../../src/authored-project/defaults';
 
 const defaultRouteLoadout = createDefaultRouteLoadout(catalog);

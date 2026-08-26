@@ -2,7 +2,7 @@ import type { Catalog } from '../../catalog-schema';
 import type { JudgmentArcanaAddress } from '../../authored-project/addresses';
 import type { ProjectDocument } from '../../authored-project/model';
 import type { JudgmentArcanaCandidateArtifacts } from '../candidate-artifacts';
-import type { ProjectEvaluation } from '../project';
+import type { ProjectEvaluation } from '../evaluation-products';
 import type { SemanticFinding } from '../model';
 import { unavailableForBiome, type CandidateContextUnavailable } from './availability';
 

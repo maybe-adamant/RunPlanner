@@ -3,11 +3,8 @@ import { createBiomeAddress, type TraitOfferAddress } from '../../authored-proje
 import type { AuthoredTraitOfferTraits } from '../../authored-project/traits';
 import type { ProjectDocument } from '../../authored-project/model';
 import type { ProjectCandidateArtifacts } from '../candidate-artifacts';
-import {
-  candidateArtifactsForProjectEvaluationAssembly,
-  type ProjectEvaluation,
-  type ProjectEvaluationAssembly,
-} from '../project';
+import { candidateArtifactsForProjectEvaluationAssembly } from '../project-evaluation-assembly';
+import type { ProjectEvaluation, ProjectEvaluationAssembly } from '../evaluation-products';
 import {
   evaluateBatchRewardStoreCandidate,
   type BatchRewardStoreCandidateQuery,

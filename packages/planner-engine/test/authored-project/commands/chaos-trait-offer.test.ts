@@ -16,7 +16,7 @@ import {
   undoProjectHistory,
 } from '@run-planner/engine/authored-project';
 import { simulateProjectAssembly } from '@run-planner/engine/simulation';
-import { candidateArtifactsForProjectEvaluationAssembly } from '../../../src/simulation/project';
+import { candidateArtifactsForProjectEvaluationAssembly } from '../../../src/simulation/project-evaluation-assembly';
 
 import naturalChaosRaw from '../../../../../test/fixtures/authored-project/checkpoints/natural-chaos-unresolved-trial.runplanner.json';
 import type { AuthoredChaosTraitOffer } from '../../../src/authored-project/traits';

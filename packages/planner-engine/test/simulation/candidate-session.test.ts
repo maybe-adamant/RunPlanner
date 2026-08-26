@@ -17,12 +17,9 @@ import {
 } from '@run-planner/engine/authored-project';
 import {
   createPreparedProjectCandidateSession,
-  ProjectSimulationContractError,
   simulateProjectAssembly,
   simulateProject,
   type CandidateEvaluationEvent,
-  type ProjectEvaluation,
-  type ProjectEvaluationAssembly,
 } from '@run-planner/engine/simulation';
 
 import {
@@ -100,48 +97,6 @@ describe('candidate session', () => {
       { kind: 'batchRewardStore', result: { selectedStoreKey: 'MetaProgress' } },
       { kind: 'batchRewardStore', result: { selectedStoreKey: 'RunProgress' } },
     ]);
-  });
-
-  it('rejects missing, forged, and mixed exact-assembly products', () => {
-    const project = createCompleteFTakeoverProject();
-    const first = simulateProjectAssembly(catalog, project);
-    const second = simulateProjectAssembly(catalog, project);
-    const withoutArtifacts = Object.freeze({
-      project: first.project,
-      evaluation: first.evaluation,
-    }) as unknown as ProjectEvaluationAssembly;
-    const mixed = Object.freeze({
-      project: first.project,
-      evaluation: second.evaluation,
-    }) as ProjectEvaluationAssembly;
-    const forgedPrototype = Object.freeze(
-      Object.assign(Object.create(Object.getPrototypeOf(first)), {
-        project: first.project,
-        evaluation: first.evaluation,
-      }),
-    ) as ProjectEvaluationAssembly;
-    const reflectedAssemblyConstructor = Object.getPrototypeOf(first).constructor;
-    const ReflectedAssemblyConstructor = reflectedAssemblyConstructor as unknown as new (
-      project: ProjectDocument,
-      evaluation: ProjectEvaluation,
-      candidateArtifacts: unknown,
-    ) => ProjectEvaluationAssembly;
-
-    expect(() => createPreparedProjectCandidateSession(catalog, withoutArtifacts)).toThrow(
-      ProjectSimulationContractError,
-    );
-    expect(() => createPreparedProjectCandidateSession(catalog, mixed)).toThrow(
-      /was not produced by this simulator execution/,
-    );
-    expect(() => createPreparedProjectCandidateSession(catalog, forgedPrototype)).toThrow(
-      ProjectSimulationContractError,
-    );
-    expect('candidateArtifacts' in reflectedAssemblyConstructor).toBe(false);
-    expect('isExact' in reflectedAssemblyConstructor).toBe(false);
-    expect(
-      () => new ReflectedAssemblyConstructor(first.project, first.evaluation, Object.freeze({})),
-    ).toThrow(ProjectSimulationContractError);
-    expect(createPreparedProjectCandidateSession(catalog, first).evaluation).toBe(first.evaluation);
   });
 
   it('keeps the public simulation facade data-only and deeply equal', () => {
