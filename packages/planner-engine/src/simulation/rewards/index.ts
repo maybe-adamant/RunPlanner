@@ -3,7 +3,7 @@ export {
   evaluateBiomeRewardsAssembly,
   BiomeRewardSimulationContractError,
 } from './biome';
-export { rewardStoreCandidateSupport } from './reward-store-support';
+export { rewardStoreCandidateSupport } from './biome/reward-store-support';
 export {
   RewardAuthoringDomainContractError,
   type CountedRewardOwnerAddress,

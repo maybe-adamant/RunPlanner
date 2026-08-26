@@ -11,7 +11,7 @@ import {
 
 import { createKeepsakeState } from '../../src/simulation/keepsakes';
 import { applyJeweledPomEquipResult } from '../../src/simulation/rewards/processing';
-import { selectedTraitOfferProducts } from '../../src/simulation/rewards/selected-trait-products';
+import { selectedTraitOfferProducts } from '../../src/simulation/rewards/biome/selected-trait-products';
 import {
   createTraitHistoryState,
   type ReachedLevelResolutionEvaluation,

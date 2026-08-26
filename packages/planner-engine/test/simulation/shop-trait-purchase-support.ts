@@ -45,7 +45,7 @@ import {
   processShopInventory,
   settleShopAcquisitionSite,
 } from '../../src/simulation/rewards/shop-settlement';
-import { selectedTraitOfferProducts } from '../../src/simulation/rewards/selected-trait-products';
+import { selectedTraitOfferProducts } from '../../src/simulation/rewards/biome/selected-trait-products';
 import {
   attachTraitHistory,
   foldTraitHistoryEvents,

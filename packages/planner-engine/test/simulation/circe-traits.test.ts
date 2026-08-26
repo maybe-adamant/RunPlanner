@@ -26,7 +26,7 @@ import { initializeTestRewardBranches } from '../support/arcana-fear';
 import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidates/trait-offer-capability';
 import { evaluateCirceResolutionDomain } from '../../src/simulation/candidates/trait-offer';
 import { createArcanaFearState } from '../../src/simulation/arcana-fear';
-import { selectedTraitOfferProducts } from '../../src/simulation/rewards/selected-trait-products';
+import { selectedTraitOfferProducts } from '../../src/simulation/rewards/biome/selected-trait-products';
 import { processEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement';
 import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement';
 import { createTraitHistoryState, evaluateReachedTraitOffer } from '../../src/simulation/traits';
