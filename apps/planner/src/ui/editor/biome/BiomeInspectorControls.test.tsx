@@ -6,6 +6,7 @@ import {
   applyProjectCommand,
   createBatchRewardStoreAddress,
   createBiomeAddress,
+  createFigurineArcanaAddress,
   createJudgmentArcanaAddress,
   createPostbossKeepsakeSelectionAddress,
   createExitDecisionAddress,
@@ -17,6 +18,7 @@ import {
   createOccurrenceId,
   createProjectDocument,
   createRouteAddress,
+  createRouteStartKeepsakeSelectionAddress,
   createTargetAddress,
   semanticAddressKey,
   type ProjectDocument,
@@ -389,6 +391,78 @@ describe('Biome inspector controls', () => {
     expect(
       screen.getByRole('button', { name: 'Open Boss completion' }).getAttribute('aria-pressed'),
     ).toBe('true');
+  });
+
+  it('keeps Judgment and Crystal Figurine independently authorable and undoable', () => {
+    let project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
+      kind: 'ReplaceManualArcanaSelection',
+      route: createRouteAddress('Surface'),
+      arcanaKeys: ['CastCount'],
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: createRouteStartKeepsakeSelectionAddress('Surface'),
+      keepsakeKey: 'BossMetaUpgradeKeepsake',
+    });
+    const view = renderWorkspace(project, 'Surface', 'N');
+    const workspace = workspaceProjection(view.application);
+    const bossOccurrence = createOccurrenceAddress(nBiome, createOccurrenceId('completion:N:boss'));
+    const judgmentOwner = createJudgmentArcanaAddress(bossOccurrence, 'Encounter');
+    const figurineOwner = createFigurineArcanaAddress(bossOccurrence, 'Encounter');
+    expect(workspace.interactions.judgmentArcana.has(semanticAddressKey(judgmentOwner))).toBe(true);
+
+    act(() => view.application.store.dispatch(semanticOwnerFocused(judgmentOwner)));
+    const inspector = screen.getByRole('complementary', { name: 'Details' });
+    act(() =>
+      within(inspector)
+        .getByRole('button', { name: /Judgment — choose 5 inactive Arcana cards/ })
+        .click(),
+    );
+    const judgmentPopup = within(inspector).getByRole('dialog', { name: 'Judgment editor' });
+    for (let index = 0; index < 5; index += 1) {
+      const next = within(judgmentPopup)
+        .getAllByRole<HTMLInputElement>('checkbox')
+        .find((checkbox) => !checkbox.checked);
+      if (next === undefined) throw new Error('Judgment picker has too few inactive cards');
+      act(() => next.click());
+    }
+    act(() => within(judgmentPopup).getByRole('button', { name: 'Close Judgment editor' }).click());
+    const updatedWorkspace = workspaceProjection(view.application);
+    expect(
+      updatedWorkspace.interactions.figurineArcana.has(semanticAddressKey(figurineOwner)),
+    ).toBe(true);
+
+    act(() =>
+      within(inspector)
+        .getByRole('button', { name: /Crystal Figurine — choose 2 inactive Arcana cards/ })
+        .click(),
+    );
+    const figurinePopup = within(inspector).getByRole('dialog', {
+      name: 'Crystal Figurine editor',
+    });
+    for (let index = 0; index < 2; index += 1) {
+      const next = within(figurinePopup)
+        .getAllByRole<HTMLInputElement>('checkbox')
+        .find((checkbox) => !checkbox.checked);
+      if (next === undefined) throw new Error('Figurine picker has too few inactive cards');
+      act(() => next.click());
+    }
+
+    const authored = () =>
+      view.application.store
+        .getState()
+        .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
+        ?.biomes.find((biome) => biome.biomeKey === 'N')
+        ?.completionOccurrences.find(
+          (occurrence) => occurrence.occurrenceId === createOccurrenceId('completion:N:boss'),
+        )?.encounters;
+    expect(authored()?.judgmentArcanaKeysByPhase?.Encounter).toHaveLength(5);
+    expect(authored()?.figurineArcanaKeysByPhase?.Encounter).toHaveLength(2);
+
+    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
+    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
+    expect(authored()?.judgmentArcanaKeysByPhase?.Encounter).toHaveLength(5);
+    expect(authored()?.figurineArcanaKeysByPhase?.Encounter ?? []).toHaveLength(0);
   });
 
   it('binds the reached Postboss keepsake selector through replacement and retention', async () => {

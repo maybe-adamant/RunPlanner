@@ -1,5 +1,6 @@
 import type {
   JudgmentArcanaAddress,
+  FigurineArcanaAddress,
   KeepsakeSelectionAddress,
   KeepsakeEquipResultAddress,
 } from '@run-planner/engine/authored-project';
@@ -69,6 +70,10 @@ export interface WorkspaceInteractionBindingInput {
     string,
     { readonly address: JudgmentArcanaAddress; readonly value: readonly string[] }
   >;
+  readonly figurineArcanaControls?: ReadonlyMap<
+    string,
+    { readonly address: FigurineArcanaAddress; readonly value: readonly string[] }
+  >;
   readonly keepsakeSelectionControls?: ReadonlyMap<
     string,
     {
@@ -115,6 +120,7 @@ export function bindWorkspaceInteractions(
     steadyGrowthControls,
     fountainRarityControls,
     judgmentArcanaControls,
+    figurineArcanaControls,
     keepsakeSelectionControls,
     keepsakeEquipResultControls,
     roomControls,
@@ -164,6 +170,7 @@ export function bindWorkspaceInteractions(
     ...(steadyGrowthControls === undefined ? {} : { steadyGrowthControls }),
     ...(fountainRarityControls === undefined ? {} : { fountainRarityControls }),
     ...(judgmentArcanaControls === undefined ? {} : { judgmentArcanaControls }),
+    ...(figurineArcanaControls === undefined ? {} : { figurineArcanaControls }),
     ...(keepsakeSelectionControls === undefined ? {} : { keepsakeSelectionControls }),
     ...(keepsakeEquipResultControls === undefined ? {} : { keepsakeEquipResultControls }),
   });

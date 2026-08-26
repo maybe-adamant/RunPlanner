@@ -4,9 +4,12 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createEncounterPhaseAddress,
+  createFigurineArcanaAddress,
   createNemesisRandomEventAddress,
   createOccurrenceAddress,
+  createOccurrenceId,
   createIncomingRewardAddress,
+  createProjectDocument,
   createRoomActionAddress,
   createRouteStartKeepsakeSelectionAddress,
   createTraitOfferAddress,
@@ -168,7 +171,7 @@ describe('schema-54 occurrence-owned encounter persistence', () => {
     const decoded = decodeProjectDocument(encoded(project), catalog);
 
     expect(decoded).toEqual(project);
-    expect(decoded.schemaVersion).toBe(60);
+    expect(decoded.schemaVersion).toBe(61);
   });
 
   it('rejects schema-57 Purging Pool documents at the strict Stygian Well boundary', () => {
@@ -176,7 +179,7 @@ describe('schema-54 occurrence-owned encounter persistence', () => {
     document.schemaVersion = 57;
     document.catalogVersion = '0.39.0-purging-pool';
 
-    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 60, received 57');
+    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 61, received 57');
   });
 
   it('rejects a valid-shaped Shrine shell on a non-host completion room', () => {
@@ -322,7 +325,7 @@ describe('schema-54 occurrence-owned encounter persistence', () => {
 
     const decoded = decodeProjectDocument(encoded(project), catalog);
     expect(decoded).toEqual(project);
-    expect(encoded(decoded)).toMatchObject({ schemaVersion: 60 });
+    expect(encoded(decoded)).toMatchObject({ schemaVersion: 61 });
   });
 
   it('round-trips one atomically replaced exact All Together map and legal null', () => {
@@ -421,25 +424,25 @@ describe('schema-54 occurrence-owned encounter persistence', () => {
   it('rejects schema 47 at the strict schema-54 boundary', () => {
     const document = encoded(allTogetherProject());
     document.schemaVersion = 47;
-    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 60, received 47');
+    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 61, received 47');
   });
 
   it('rejects schema 35 rather than inventing an All Together child migration', () => {
     const document = encoded(allTogetherProject());
     document.schemaVersion = 35;
-    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 60, received 35');
+    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 61, received 35');
   });
 
   it('rejects schema 37 rather than migrating source-keyed Gold chronology', () => {
     const document = encoded(createCompleteFGProject());
     document.schemaVersion = 37;
-    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 60, received 37');
+    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 61, received 37');
   });
 
   it('rejects schema 39 rather than inventing Fields optional rewards', () => {
     const document = encoded(createGoldenFGHProject());
     document.schemaVersion = 40;
-    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 60, received 40');
+    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 61, received 40');
   });
 
   it('requires an exact persisted acquisition disposition map for every reward role', () => {
@@ -507,6 +510,36 @@ describe('schema-54 occurrence-owned encounter persistence', () => {
     if (occurrence === undefined) throw new Error('missing P occurrence');
     expect(occurrence.encounters.figLeafSkipByPhase).toEqual({ Intro: false, Combat: false });
     expect(Object.isFrozen(occurrence.encounters.figLeafSkipByPhase)).toBe(true);
+  });
+
+  it('round-trips a distinct automatic-Boss Figurine map and rejects duplicates', () => {
+    const boss = createOccurrenceAddress(goldenFBiome, createOccurrenceId('completion:F:boss'));
+    const figurine = createFigurineArcanaAddress(boss, 'Encounter');
+    const project = applyProjectCommand(createCompleteFGProject(), catalog, {
+      kind: 'ReplaceFigurineArcana',
+      figurine,
+      arcanaKeys: ['CardDraw', 'CastCount'],
+    });
+    const document = encoded(project);
+    const completion = (
+      biome(document, 'Underworld', 'F').completionOccurrences as JsonRecord[]
+    ).find((candidate) => candidate.occurrenceId === boss.occurrenceId);
+    if (completion === undefined) throw new Error('missing automatic Boss completion');
+    expect((completion.encounters as JsonRecord).figurineArcanaKeysByPhase).toEqual({
+      Encounter: ['CastCount', 'CardDraw'],
+    });
+    expect(decodeProjectDocument(document, catalog)).toEqual(project);
+
+    const duplicate = encoded(project);
+    const duplicateCompletion = (
+      biome(duplicate, 'Underworld', 'F').completionOccurrences as JsonRecord[]
+    ).find((candidate) => candidate.occurrenceId === boss.occurrenceId);
+    if (duplicateCompletion === undefined) throw new Error('missing automatic Boss completion');
+    const encounters = duplicateCompletion.encounters as JsonRecord;
+    (encounters.figurineArcanaKeysByPhase as JsonRecord).Encounter = ['CardDraw', 'CardDraw'];
+    expect(() => decodeProjectDocument(duplicate, catalog)).toThrow(
+      'must contain distinct declared Arcana cards',
+    );
   });
 
   it.each(['option0', 'option4', 'row1'])('rejects malformed Calling Card row key %s', (key) => {
@@ -581,28 +614,28 @@ describe('schema-54 occurrence-owned encounter persistence', () => {
     const document = encoded(loadSurfaceNOPProject());
     document.schemaVersion = 18;
 
-    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 60, received 18');
+    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 61, received 18');
   });
 
   it('rejects schema 21 rather than inventing a trait-offer migration', () => {
     const document = encoded(loadSurfaceNOPProject());
     document.schemaVersion = 21;
 
-    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 60, received 21');
+    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 61, received 21');
   });
 
   it('rejects schema 29 rather than migrating the generic Gorgon child', () => {
     const document = encoded(loadSurfaceNOPProject());
     document.schemaVersion = 29;
 
-    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 60, received 29');
+    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 61, received 29');
   });
 
   it('rejects schema 30 rather than inventing an Echo Pom target migration', () => {
     const document = encoded(loadSurfaceNOPProject());
     document.schemaVersion = 30;
 
-    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 60, received 30');
+    expect(() => decodeProjectDocument(document, catalog)).toThrow('expected 61, received 30');
   });
 
   it.each([

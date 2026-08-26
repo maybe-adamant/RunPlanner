@@ -127,11 +127,13 @@ export function normalizeKeepsakes(
           ? ({ kind: 'figLeaf', schedule: 'oneShot' } as const)
           : keepsake.key === 'TempHammerKeepsake'
             ? ({ kind: 'experimentalHammer', schedule: 'oneShotAfterUnequipped' } as const)
-            : keepsake.key === 'RarifyKeepsake'
-              ? ({ kind: 'callingCard', schedule: 'everyBiome' } as const)
-              : keepsake.key === 'GoldifyKeepsake'
-                ? ({ kind: 'timePiece', schedule: 'everyBiome' } as const)
-                : ({ kind: 'modeledNeutral', schedule: 'noModeledEffect' } as const);
+            : keepsake.key === 'BossMetaUpgradeKeepsake'
+              ? ({ kind: 'crystalFigurine', schedule: 'everyBiome' } as const)
+              : keepsake.key === 'RarifyKeepsake'
+                ? ({ kind: 'callingCard', schedule: 'everyBiome' } as const)
+                : keepsake.key === 'GoldifyKeepsake'
+                  ? ({ kind: 'timePiece', schedule: 'everyBiome' } as const)
+                  : ({ kind: 'modeledNeutral', schedule: 'noModeledEffect' } as const);
       requireExactObjectKeys(keepsake.echoGift.effect, `${path}.echoGift.effect`, [
         'kind',
         'schedule',
@@ -291,6 +293,29 @@ export function normalizeKeepsakes(
         uses: 1,
         targetRarityLevelByRank: Object.freeze({ Common: 2, Rare: 3, Epic: 4 }),
         sourceMaxRarityLevel: 1,
+      });
+    } else if (keepsake.key === 'BossMetaUpgradeKeepsake') {
+      requireExactObjectKeys(keepsake.effect, `${path}.effect`, [
+        'kind',
+        'uses',
+        'requestedCards',
+        'rarityLevelByRank',
+      ]);
+      if (
+        keepsake.effect.kind !== 'crystalFigurine' ||
+        keepsake.effect.uses !== 1 ||
+        keepsake.effect.requestedCards !== 2
+      )
+        fail(`${path}.effect`, 'must declare Crystal Figurine one use and two requested cards');
+      effect = Object.freeze({
+        kind: 'crystalFigurine',
+        uses: 1,
+        requestedCards: 2,
+        rarityLevelByRank: normalizeRankProfile(
+          keepsake.effect.rarityLevelByRank,
+          `${path}.effect.rarityLevelByRank`,
+          { Common: 1, Rare: 2, Epic: 3, Heroic: 4 } as const,
+        ),
       });
     } else if (keepsake.effect !== undefined)
       fail(`${path}.effect`, 'is not supported by this keepsake');

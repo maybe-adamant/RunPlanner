@@ -105,11 +105,15 @@ export function clampPrefix(
   prefix: MaterializedBiomePrefix,
   located: LocatedFinding,
 ): MaterializedBiomePrefix {
-  // A Judgment finding occurs only after the terminal Boss encounter. The
-  // authored prefix is already the exact pre-completion state; trimming its
-  // Preboss decision would falsely erase that state rather than merely
-  // suppressing the Postboss and later-biome consequences.
-  if (located.finding.origin.kind === 'judgmentArcana') return prefix;
+  // Automatic Boss Arcana findings occur only after the terminal Boss
+  // encounter. The authored prefix is already the exact pre-completion state;
+  // trimming its Preboss decision would falsely erase that state rather than
+  // merely suppressing the Postboss and later-biome consequences.
+  if (
+    located.finding.origin.kind === 'judgmentArcana' ||
+    located.finding.origin.kind === 'figurineArcana'
+  )
+    return prefix;
   if (located.decisionIndex < 0) {
     return Object.freeze({
       kind: 'biomePrefix',

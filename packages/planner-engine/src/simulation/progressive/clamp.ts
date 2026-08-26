@@ -135,6 +135,7 @@ export function clampSelectedProducts(
       selectedProducts.candidateArtifacts.hermesShrines,
       selectedProducts.candidateArtifacts.stygianWells,
       selectedProducts.candidateArtifacts.fountainRarity,
+      selectedProducts.candidateArtifacts.figurineArcana,
     ),
   });
 }

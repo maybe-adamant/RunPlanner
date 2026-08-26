@@ -336,6 +336,7 @@ function CompletionOutline({
           const roleLabel = node.room.kind === 'PostBoss' ? 'Postboss' : 'Boss';
           const focusOwner =
             node.room.judgment?.marker.address ??
+            node.room.figurine?.marker.address ??
             node.room.keepsakeSelection?.marker.address ??
             node.marker.address;
           return (

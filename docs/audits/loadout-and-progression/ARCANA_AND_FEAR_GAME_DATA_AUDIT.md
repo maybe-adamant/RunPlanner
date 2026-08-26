@@ -165,6 +165,7 @@ three and its permanent Arcana rank scales that effect as follows:
 | 1             | Common       | 3                                        |
 | 2             | Rare         | 4                                        |
 | 3             | Epic         | 5                                        |
+| 4             | Heroic       | 6                                        |
 
 `TriggerPostBossEvents` calls the same `AddRandomMetaUpgrades` operation after
 a boss when the derived `PostBossCards` value is positive and
@@ -173,6 +174,21 @@ that full-run count from the catalog route structure rather than the currently
 configured authored prefix. Each trigger draws
 from the then-inactive set, so previously activated temporary cards cannot be
 drawn again.
+
+The source chronology is explicit at the shared boss seam: `TriggerPostBossEvents`
+invokes Judgment's `AddRandomMetaUpgrades(PostBossCards)` before the
+`BossMetaUpgradeKeepsake` Figurine invocation of `AddRandomMetaUpgrades(2,
+RarityLevel)`. `MetaUpgradeLogic.lua` mutates each selected card's resolved
+`Equipped` state synchronously; presentation is downstream of that mutation.
+The planner therefore treats Figurine's domain as a fresh inactive-card query
+after Judgment, rather than as a second draw from the pre-Judgment frontier.
+
+The same rank multipliers are source-backed for other run-local Arcana uses:
+`TraitData_MetaUpgrade.lua` declares the `MetaUpgradeTrait` multipliers as
+1/2/3/4, and `MetaToRunMetaUpgrade` supplies a base conversion-use value of 1,
+giving The Artificer capacities Common/Rare/Epic/Heroic of 1/2/3/4. These
+values apply to a temporary Arcana card at its source rarity; they do not
+change the ordinary Judgment default path.
 
 ## Run-Local Arcana Rarity Upgrade
 
@@ -310,8 +326,8 @@ Arcana grants. Fated mode, permanent card advancement, and every other ordinary
 Vow gameplay effect remain deliberately out of scope.
 
 Schema 41 adds the Artificer's supported reward-facing effect without changing
-the pre-run loadout model. The catalog owns Epic capacity three and Heroic
-capacity four. Canonical run-local Arcana state records exact successful source
+the pre-run loadout model. The catalog owns Common/Rare/Epic/Heroic capacity
+one/two/three/four. Canonical run-local Arcana state records exact successful source
 interactions rather than a mutable remaining counter; remaining uses are
 derived from current rarity and spent evidence. Lazuli promotion therefore
 preserves every spent use and adds exactly one remaining use. Concrete source

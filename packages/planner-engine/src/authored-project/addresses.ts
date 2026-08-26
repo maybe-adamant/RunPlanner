@@ -33,6 +33,12 @@ export interface JudgmentArcanaAddress extends BiomeOwnedAddress {
   readonly occurrenceId: OccurrenceId;
   readonly phaseKey: string;
 }
+/** The exact post-Judgment Arcana draw owned by an automatic Boss occurrence. */
+export interface FigurineArcanaAddress extends BiomeOwnedAddress {
+  readonly kind: 'figurineArcana';
+  readonly occurrenceId: OccurrenceId;
+  readonly phaseKey: string;
+}
 /** A rack selection has exactly one start owner or one automatic Postboss owner. */
 export type KeepsakeSelectionAddress =
   | {
@@ -308,6 +314,7 @@ export type SemanticAddress =
   | OccurrenceAddress
   | IncomingRewardAddress
   | JudgmentArcanaAddress
+  | FigurineArcanaAddress
   | KeepsakeSelectionAddress
   | EchoKeepsakeReplayAddress
   | KeepsakeEquipResultAddress
@@ -419,6 +426,18 @@ export function createJudgmentArcanaAddress(
 ): JudgmentArcanaAddress {
   return Object.freeze({
     kind: 'judgmentArcana',
+    routeKey: occurrence.routeKey,
+    biomeKey: occurrence.biomeKey,
+    occurrenceId: occurrence.occurrenceId,
+    phaseKey: nonBlank(phaseKey, 'phaseKey'),
+  });
+}
+export function createFigurineArcanaAddress(
+  occurrence: OccurrenceAddress,
+  phaseKey: string,
+): FigurineArcanaAddress {
+  return Object.freeze({
+    kind: 'figurineArcana',
     routeKey: occurrence.routeKey,
     biomeKey: occurrence.biomeKey,
     occurrenceId: occurrence.occurrenceId,
@@ -909,6 +928,8 @@ export function semanticAddressKey(address: SemanticAddress): string {
     case 'incomingReward':
       return JSON.stringify([...base, address.occurrenceId]);
     case 'judgmentArcana':
+      return JSON.stringify([...base, address.occurrenceId, address.phaseKey]);
+    case 'figurineArcana':
       return JSON.stringify([...base, address.occurrenceId, address.phaseKey]);
     case 'keepsakeSelection':
       return JSON.stringify([

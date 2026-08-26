@@ -5,6 +5,7 @@ import {
   createEncounterPhaseAddress,
   createGorgonPhaseAddress,
   createJudgmentArcanaAddress,
+  createFigurineArcanaAddress,
   createNemesisRandomEventAddress,
   createTraitOfferAddress,
   semanticAddressKey,
@@ -25,6 +26,7 @@ import {
   assessGorgonChildSettlement,
   consumeGorgonAppearance,
   refreshKeepsakeFatedStatus,
+  consumeFigurine,
 } from '../../../keepsakes';
 import {
   attachTraitHistory,
@@ -70,6 +72,12 @@ export interface EncounterSettlementTransition {
     readonly inactiveArcanaKeys: readonly string[];
     readonly requiredCount: number;
   };
+  readonly figurineCandidate?: {
+    readonly key: string;
+    readonly inactiveArcanaKeys: readonly string[];
+    readonly requiredCount: number;
+    readonly rarity: import('../../../../catalog-schema').InRunTraitRarity;
+  };
   readonly nemesisCandidate?: {
     readonly key: string;
     readonly value: NemesisRandomEventCandidateSupport;
@@ -97,13 +105,13 @@ function chronology(
   );
 }
 
-function judgmentFrontier(branches: readonly RewardBranchState[]) {
+function arcanaFrontier(branches: readonly RewardBranchState[]) {
   const first = branches[0]?.arcanaFear.arcana.active;
   if (first === undefined) return undefined;
   const identity = JSON.stringify(first);
   if (!branches.every((branch) => JSON.stringify(branch.arcanaFear.arcana.active) === identity))
     throw new BiomeRewardSimulationContractError(
-      'Judgment candidate frontier has divergent Arcana state across surviving branches',
+      'Automatic Boss Arcana frontier has divergent state across surviving branches',
     );
   return first;
 }
@@ -291,11 +299,12 @@ export function applyEncounterSettlementTransition(inputs: {
     inputs.enteredBiomeCount < inputs.fullRunBiomeCount
   ) {
     const owner = createJudgmentArcanaAddress(room.origin, event.phaseKey);
+    const figurineOwner = createFigurineArcanaAddress(room.origin, event.phaseKey);
     const judgmentBranches = branches.filter(
       (branch) =>
         !hasActiveChaosSemanticTag(branch.traitHistory ?? createTraitHistoryState(), 'Barren'),
     );
-    const frontier = judgmentFrontier(judgmentBranches);
+    const frontier = arcanaFrontier(judgmentBranches);
     const first = judgmentBranches[0]?.arcanaFear;
     const requiredCount =
       frontier === undefined || first === undefined
@@ -372,12 +381,126 @@ export function applyEncounterSettlementTransition(inputs: {
         ];
       }),
     );
+    const figurineBranches = branches;
+    const figurineSource = figurineBranches[0]?.keepsakes.figurine;
+    const figurineEffect = catalog.keepsakes.values.find(
+      (keepsake) => keepsake.effect?.kind === 'crystalFigurine',
+    )?.effect;
+    const figurineEligible =
+      figurineSource?.status === 'pending' && figurineEffect?.kind === 'crystalFigurine';
+    if (figurineEligible) {
+      if (
+        figurineBranches.some(
+          (branch) => JSON.stringify(branch.keepsakes.figurine) !== JSON.stringify(figurineSource),
+        )
+      )
+        throw new BiomeRewardSimulationContractError(
+          'Crystal Figurine source frontier has divergent state across surviving branches',
+        );
+      arcanaFrontier(figurineBranches);
+    }
+    const figurineFrontier = figurineEligible ? figurineBranches[0]?.arcanaFear : undefined;
+    const figurineInactive =
+      figurineEligible && figurineFrontier !== undefined
+        ? Object.freeze(
+            inactiveArcanaKeys(catalog, figurineFrontier).filter(
+              (key) =>
+                figurineBranches[0]?.keepsakes.fatedStatus !== 'Fated' ||
+                catalog.arcanaCards.byKey[key]?.fatedIncompatible !== true,
+            ),
+          )
+        : Object.freeze([]);
+    const figurineRequiredCount = figurineEligible
+      ? Math.min(figurineEffect.requestedCards, figurineInactive.length)
+      : 0;
+    const figurineCandidate =
+      figurineEligible && figurineFrontier !== undefined
+        ? Object.freeze({
+            key: semanticAddressKey(figurineOwner),
+            inactiveArcanaKeys: figurineInactive,
+            requiredCount: figurineRequiredCount,
+            rarity: figurineSource.rarity,
+          })
+        : undefined;
+    branches = Object.freeze(
+      figurineBranches.flatMap((branch) => {
+        const source = branch.keepsakes.figurine;
+        if (source?.status !== 'pending' || figurineEffect?.kind !== 'crystalFigurine')
+          return [advanceRewardBranches([branch], event.sequence)[0]!];
+        const selected = room.encounters.figurineArcanaKeysByPhase?.[event.phaseKey] ?? [];
+        if (selected.length !== figurineRequiredCount) {
+          const finding = rewardFinding(
+            selected.length === 0 ? 'figurineOutcomeMissing' : 'figurineOutcomeWrongCardinality',
+            figurineOwner,
+            Object.freeze({ required: figurineRequiredCount, selected: selected.length }),
+          );
+          findings.set(
+            findingIdentityKey(finding),
+            Object.freeze({
+              finding,
+              atomicRegion: ownerRegion(figurineOwner),
+              chronology: historyFindingChronology(event.sequence),
+            }),
+          );
+          return [];
+        }
+        if (selected.length === 0) {
+          return [
+            Object.freeze({
+              ...branch,
+              keepsakes: consumeFigurine(branch.keepsakes),
+              processedThroughHistorySequence: event.sequence,
+            }),
+          ];
+        }
+        const assessed = activateTemporaryArcana(
+          catalog,
+          branch.arcanaFear,
+          selected,
+          { owner: figurineOwner, sequence: event.sequence },
+          source.rarity,
+        );
+        if (
+          !assessed.legal ||
+          (branch.keepsakes.fatedStatus === 'Fated' &&
+            selected.some((key) => catalog.arcanaCards.byKey[key]?.fatedIncompatible === true))
+        ) {
+          const finding = rewardFinding(
+            'figurineOutcomeTargetUnavailable',
+            figurineOwner,
+            Object.freeze({ reason: assessed.legal ? 'fatedExcluded' : assessed.reason }),
+          );
+          findings.set(
+            findingIdentityKey(finding),
+            Object.freeze({
+              finding,
+              atomicRegion: ownerRegion(figurineOwner),
+              chronology: historyFindingChronology(event.sequence),
+            }),
+          );
+          return [];
+        }
+        return [
+          Object.freeze({
+            ...branch,
+            arcanaFear: assessed.state,
+            keepsakes: refreshKeepsakeFatedStatus(
+              catalog,
+              consumeFigurine(branch.keepsakes),
+              assessed.state,
+            ),
+            processedThroughHistorySequence: event.sequence,
+          }),
+        ];
+      }),
+    );
     return Object.freeze({
       branches,
       findings: Object.freeze([...findings.values()]),
       roleFrontiers: Object.freeze(roleFrontiers),
       traitChildSettlements: Object.freeze(traitChildSettlements),
       ...(judgmentCandidate === undefined ? {} : { judgmentCandidate }),
+      ...(figurineCandidate === undefined ? {} : { figurineCandidate }),
       gorgonEvaluationBlocked,
       ...(blockGorgonPhaseKey === undefined ? {} : { blockGorgonPhaseKey }),
     });

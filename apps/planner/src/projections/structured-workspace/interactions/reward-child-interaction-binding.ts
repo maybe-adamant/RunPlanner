@@ -1,6 +1,7 @@
 import {
   semanticAddressKey,
   type JudgmentArcanaAddress,
+  type FigurineArcanaAddress,
   type KeepsakeSelectionAddress,
   type KeepsakeEquipResultAddress,
   type AuthoredRewardState,
@@ -22,6 +23,7 @@ import type {
   WorkspaceLevelResolutionControl,
   WorkspaceLevelResolutionInteraction,
   WorkspaceJudgmentArcanaInteraction,
+  WorkspaceFigurineArcanaInteraction,
   WorkspaceKeepsakeSelectionInteraction,
   WorkspaceKeepsakeEquipResultInteraction,
   WorkspaceTraitOfferInteraction,
@@ -40,6 +42,7 @@ export interface WorkspaceRewardChildInteractionCatalog {
   readonly steadyGrowth: ReadonlyMap<string, WorkspaceSteadyGrowthInteraction>;
   readonly fountainRarity: ReadonlyMap<string, WorkspaceFountainRarityInteraction>;
   readonly judgmentArcana: ReadonlyMap<string, WorkspaceJudgmentArcanaInteraction>;
+  readonly figurineArcana: ReadonlyMap<string, WorkspaceFigurineArcanaInteraction>;
   readonly keepsakeSelections: ReadonlyMap<string, WorkspaceKeepsakeSelectionInteraction>;
   readonly keepsakeEquipResults: ReadonlyMap<string, WorkspaceKeepsakeEquipResultInteraction>;
 }
@@ -56,6 +59,10 @@ export function bindRewardChildInteractions(input: {
   readonly judgmentArcanaControls?: ReadonlyMap<
     string,
     { readonly address: JudgmentArcanaAddress; readonly value: readonly string[] }
+  >;
+  readonly figurineArcanaControls?: ReadonlyMap<
+    string,
+    { readonly address: FigurineArcanaAddress; readonly value: readonly string[] }
   >;
   readonly keepsakeSelectionControls?: ReadonlyMap<
     string,
@@ -87,6 +94,7 @@ export function bindRewardChildInteractions(input: {
     steadyGrowthControls,
     fountainRarityControls,
     judgmentArcanaControls,
+    figurineArcanaControls,
     keepsakeSelectionControls,
     keepsakeEquipResultControls,
     rewardPicker,
@@ -165,6 +173,7 @@ export function bindRewardChildInteractions(input: {
     steadyGrowth,
     fountainRarity,
     judgmentArcana,
+    figurineArcana,
     keepsakeSelections,
     keepsakeEquipResults,
   } = bindResolutionInteractions({
@@ -175,6 +184,7 @@ export function bindRewardChildInteractions(input: {
     fountainRarityControls: effectiveFountainRarityControls,
     derivedShopEntryEdits,
     ...(judgmentArcanaControls === undefined ? {} : { judgmentArcanaControls }),
+    ...(figurineArcanaControls === undefined ? {} : { figurineArcanaControls }),
     ...(keepsakeSelectionControls === undefined ? {} : { keepsakeSelectionControls }),
     ...(keepsakeEquipResultControls === undefined ? {} : { keepsakeEquipResultControls }),
   });
@@ -187,6 +197,7 @@ export function bindRewardChildInteractions(input: {
     steadyGrowth,
     fountainRarity,
     judgmentArcana,
+    figurineArcana,
     keepsakeSelections,
     keepsakeEquipResults,
   });

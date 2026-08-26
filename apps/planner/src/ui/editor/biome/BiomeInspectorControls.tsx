@@ -306,6 +306,78 @@ function JudgmentArcanaControl({
   );
 }
 
+function FigurineArcanaControl({
+  interactions,
+  figurine,
+}: {
+  readonly interactions: WorkspaceInteractionCatalog;
+  readonly figurine: NonNullable<WorkspaceRoomSummary['figurine']>;
+}) {
+  const dispatch = useAppDispatch();
+  const [open, setOpen] = useState(false);
+  const control = interactions.figurineArcana.get(workspaceInteractionKey(figurine.address));
+  if (control === undefined) return null;
+  return (
+    <li
+      aria-label={`Crystal Figurine — choose ${figurine.requiredCount} inactive Arcana cards`}
+      className="room-action-row room-timeline-effect-row"
+    >
+      <button className="room-timeline-effect" onClick={() => setOpen(true)} type="button">
+        Crystal Figurine — choose {figurine.requiredCount} inactive Arcana cards ({figurine.rarity})
+        <SemanticOwnerMarker address={control.owner} />
+      </button>
+      {open ? (
+        <div aria-label="Crystal Figurine editor" className="room-figurine-popup" role="dialog">
+          <div className="room-judgment-popup-header">
+            <h4>
+              Crystal Figurine — choose {figurine.requiredCount} inactive Arcana cards (
+              {figurine.rarity})
+            </h4>
+            <button
+              aria-label="Close Crystal Figurine editor"
+              onClick={() => setOpen(false)}
+              type="button"
+            >
+              Close
+            </button>
+          </div>
+          <div className="room-judgment-options">
+            {control.choices
+              .filter(
+                (choice) =>
+                  figurine.inactiveArcanaKeys.includes(choice.value) ||
+                  control.value.includes(choice.value),
+              )
+              .map((choice) => {
+                const checked = control.value.includes(choice.value);
+                return (
+                  <label key={choice.value}>
+                    <input
+                      checked={checked}
+                      onChange={() =>
+                        dispatch(
+                          authoredProjectCommandDispatched(
+                            control.intentFor(
+                              checked
+                                ? control.value.filter((key) => key !== choice.value)
+                                : [...control.value, choice.value],
+                            ).command,
+                          ),
+                        )
+                      }
+                      type="checkbox"
+                    />
+                    {choice.label}
+                  </label>
+                );
+              })}
+          </div>
+        </div>
+      ) : null}
+    </li>
+  );
+}
+
 function resourceFamilyLabel(
   family: import('@run-planner/engine/catalog-schema').ResourceFamily,
 ): string {
@@ -373,8 +445,16 @@ export function inspectorLifecycleBoundaryContent(
   interactions: WorkspaceInteractionCatalog,
   boundary: WorkspaceRoomLifecycleBoundary,
 ): ReactNode {
-  return boundary.kind !== 'bossDefeated' || room.judgment === undefined ? null : (
-    <JudgmentArcanaControl interactions={interactions} judgment={room.judgment} />
+  if (boundary.kind !== 'bossDefeated') return null;
+  return (
+    <>
+      {room.judgment === undefined ? null : (
+        <JudgmentArcanaControl interactions={interactions} judgment={room.judgment} />
+      )}
+      {room.figurine === undefined ? null : (
+        <FigurineArcanaControl interactions={interactions} figurine={room.figurine} />
+      )}
+    </>
   );
 }
 export function InspectorRoomOverviewContent({

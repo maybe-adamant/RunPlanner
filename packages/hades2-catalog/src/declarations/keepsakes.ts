@@ -60,20 +60,25 @@ export const keepsakes: readonly RawKeepsakeDeclaration[] = entries.map(
                 availability: 'eligible',
                 effect: { kind: 'experimentalHammer', schedule: 'oneShotAfterUnequipped' },
               } as const)
-            : key === 'RarifyKeepsake'
+            : key === 'BossMetaUpgradeKeepsake'
               ? ({
                   availability: 'eligible',
-                  effect: { kind: 'callingCard', schedule: 'everyBiome' },
+                  effect: { kind: 'crystalFigurine', schedule: 'everyBiome' },
                 } as const)
-              : key === 'GoldifyKeepsake'
+              : key === 'RarifyKeepsake'
                 ? ({
                     availability: 'eligible',
-                    effect: { kind: 'timePiece', schedule: 'everyBiome' },
+                    effect: { kind: 'callingCard', schedule: 'everyBiome' },
                   } as const)
-                : ({
-                    availability: 'eligible',
-                    effect: { kind: 'modeledNeutral', schedule: 'noModeledEffect' },
-                  } as const),
+                : key === 'GoldifyKeepsake'
+                  ? ({
+                      availability: 'eligible',
+                      effect: { kind: 'timePiece', schedule: 'everyBiome' },
+                    } as const)
+                  : ({
+                      availability: 'eligible',
+                      effect: { kind: 'modeledNeutral', schedule: 'noModeledEffect' },
+                    } as const),
     ...(key === 'HadesAndPersephoneKeepsake'
       ? {
           effect: {
@@ -165,6 +170,20 @@ export const keepsakes: readonly RawKeepsakeDeclaration[] = entries.map(
                         sourceMaxRarityLevel: 1 as const,
                       },
                     }
-                  : {}),
+                  : key === 'BossMetaUpgradeKeepsake'
+                    ? {
+                        effect: {
+                          kind: 'crystalFigurine' as const,
+                          uses: 1 as const,
+                          requestedCards: 2 as const,
+                          rarityLevelByRank: {
+                            Common: 1 as const,
+                            Rare: 2 as const,
+                            Epic: 3 as const,
+                            Heroic: 4 as const,
+                          },
+                        },
+                      }
+                    : {}),
   }),
 );

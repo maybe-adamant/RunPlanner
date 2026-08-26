@@ -247,6 +247,18 @@ describe('Cherished Heirloom active keepsake advance', () => {
     ).toEqual([hadesEvent]);
   });
 
+  it.each([
+    ['pending', { origin: 'ordinary', status: 'pending', rarity: 'Epic' }, 'Heroic'],
+    ['consumed', { origin: 'ordinary', status: 'consumed', rarity: 'Epic' }, 'Epic'],
+  ] as const)(
+    'advances Crystal Figurine only while its source is unused (%s)',
+    (_label, before, expectedRarity) => {
+      const initial = createKeepsakeState(catalog, 'BossMetaUpgradeKeepsake', arcanaFear);
+      const acquired = acquireCherished(branchWithKeepsakes({ ...initial, figurine: before }));
+      expect(acquired.keepsakes.figurine).toEqual({ ...before, rarity: expectedRarity });
+    },
+  );
+
   it.each([0, 3, 6])('adds the declared Calling Card rank delta to %i charges', (remaining) => {
     const initial = createKeepsakeState(catalog, 'RarifyKeepsake', arcanaFear);
     const acquired = acquireCherished(

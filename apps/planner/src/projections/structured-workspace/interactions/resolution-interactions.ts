@@ -1,6 +1,7 @@
 import type {
   AuthoredLevelResolution,
   JudgmentArcanaAddress,
+  FigurineArcanaAddress,
   KeepsakeEquipResultAddress,
   KeepsakeSelectionAddress,
 } from '@run-planner/engine/authored-project';
@@ -14,6 +15,7 @@ import {
 } from './reward-child-command-binding';
 import type {
   WorkspaceJudgmentArcanaInteraction,
+  WorkspaceFigurineArcanaInteraction,
   WorkspaceKeepsakeEquipResultInteraction,
   WorkspaceKeepsakeSelectionInteraction,
   WorkspaceLevelResolutionControl,
@@ -41,6 +43,10 @@ export function bindResolutionInteractions(input: {
     string,
     { readonly address: JudgmentArcanaAddress; readonly value: readonly string[] }
   >;
+  readonly figurineArcanaControls?: ReadonlyMap<
+    string,
+    { readonly address: FigurineArcanaAddress; readonly value: readonly string[] }
+  >;
   readonly keepsakeSelectionControls?: ReadonlyMap<
     string,
     {
@@ -63,6 +69,7 @@ export function bindResolutionInteractions(input: {
   readonly steadyGrowth: ReadonlyMap<string, WorkspaceSteadyGrowthInteraction>;
   readonly fountainRarity: ReadonlyMap<string, WorkspaceFountainRarityInteraction>;
   readonly judgmentArcana: ReadonlyMap<string, WorkspaceJudgmentArcanaInteraction>;
+  readonly figurineArcana: ReadonlyMap<string, WorkspaceFigurineArcanaInteraction>;
   readonly keepsakeSelections: ReadonlyMap<string, WorkspaceKeepsakeSelectionInteraction>;
   readonly keepsakeEquipResults: ReadonlyMap<string, WorkspaceKeepsakeEquipResultInteraction>;
 }> {
@@ -74,6 +81,7 @@ export function bindResolutionInteractions(input: {
     fountainRarityControls,
     derivedShopEntryEdits,
     judgmentArcanaControls,
+    figurineArcanaControls,
     keepsakeSelectionControls,
     keepsakeEquipResultControls,
   } = input;
@@ -237,6 +245,32 @@ export function bindResolutionInteractions(input: {
       }),
     );
   }
+  const figurineArcana = new Map<string, WorkspaceFigurineArcanaInteraction>();
+  for (const [key, control] of figurineArcanaControls ?? []) {
+    figurineArcana.set(
+      key,
+      Object.freeze({
+        choices: Object.freeze(
+          catalog.arcanaCards.values.map((card) =>
+            Object.freeze({ label: card.label, value: card.key }),
+          ),
+        ),
+        intentFor: (arcanaKeys: readonly string[]) =>
+          Object.freeze({
+            command: Object.freeze({
+              kind: 'ReplaceFigurineArcana' as const,
+              figurine: control.address,
+              arcanaKeys: Object.freeze([...arcanaKeys]),
+            }),
+          }),
+        key,
+        load: (arcanaKeys = control.value) =>
+          candidates.figurineArcana(control.address, arcanaKeys),
+        owner: control.address,
+        value: control.value,
+      }),
+    );
+  }
   const keepsakeSelections = new Map<string, WorkspaceKeepsakeSelectionInteraction>();
   for (const [key, control] of keepsakeSelectionControls ?? []) {
     const postboss = control.address.owner !== 'routeStart';
@@ -389,6 +423,7 @@ export function bindResolutionInteractions(input: {
     steadyGrowth,
     fountainRarity,
     judgmentArcana,
+    figurineArcana,
     keepsakeSelections,
     keepsakeEquipResults,
   });

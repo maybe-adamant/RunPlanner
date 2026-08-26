@@ -135,6 +135,10 @@ export type {
   FountainRarityOutcomeCandidateQuery,
   EvaluatedFountainRarityOutcomeCandidate,
 } from './fountain-rarity';
+export type {
+  FigurineArcanaCandidateQuery,
+  EvaluatedFigurineArcanaCandidate,
+} from './figurine-arcana';
 export {
   evaluateEchoLastRunBoonDraftSupport,
   echoLastRunBoonRarityCandidates,

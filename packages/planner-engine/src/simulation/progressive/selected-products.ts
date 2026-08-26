@@ -2,6 +2,7 @@ import {
   semanticAddressKey,
   type AcquisitionEntryAddress,
   type AcquisitionRoleAddress,
+  type FigurineArcanaAddress,
   type JudgmentArcanaAddress,
   type KeepsakeEquipResultAddress,
   type KeepsakeSelectionAddress,
@@ -69,6 +70,8 @@ export function retainBlockedRegionProducts(
     blockedAt.kind === 'levelResolution' ? blockedAt : undefined;
   const blockedJudgmentAt: JudgmentArcanaAddress | undefined =
     blockedAt.kind === 'judgmentArcana' ? blockedAt : undefined;
+  const blockedFigurineAt: FigurineArcanaAddress | undefined =
+    blockedAt.kind === 'figurineArcana' ? blockedAt : undefined;
   const blockedSteadyGrowthAt: SteadyGrowthOutcomeAddress | undefined =
     blockedAt.kind === 'steadyGrowthOutcome' ? blockedAt : undefined;
   const blockedNemesisAt: NemesisRandomEventAddress | undefined =
@@ -224,6 +227,20 @@ export function retainBlockedRegionProducts(
             semanticAddressKey(address) === semanticAddressKey(blockedJudgmentAt)
               ? blockedJudgmentCapability
               : retainedArtifacts.judgmentArcana.at(address),
+        });
+  const blockedFigurineCapability =
+    blockedFigurineAt === undefined
+      ? undefined
+      : (selectedArtifacts.figurineArcana.at(blockedFigurineAt) ??
+        blockedArtifacts.figurineArcana.at(blockedFigurineAt));
+  const figurineArcana =
+    blockedFigurineAt === undefined || blockedFigurineCapability === undefined
+      ? retainedArtifacts.figurineArcana
+      : Object.freeze({
+          at: (address: FigurineArcanaAddress) =>
+            semanticAddressKey(address) === semanticAddressKey(blockedFigurineAt)
+              ? blockedFigurineCapability
+              : retainedArtifacts.figurineArcana.at(address),
         });
   const blockedSteadyGrowthCapability =
     blockedSteadyGrowthAt === undefined
@@ -477,6 +494,7 @@ export function retainBlockedRegionProducts(
     undefined,
     undefined,
     retainedArtifacts.fountainRarity,
+    figurineArcana,
   );
   return Object.freeze({
     rewards:

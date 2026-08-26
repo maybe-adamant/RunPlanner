@@ -64,12 +64,20 @@ export function normalizeArcanaCards(
     if (card.key === 'CardDraw') {
       if (
         postBossActivationCounts === undefined ||
-        Object.keys(postBossActivationCounts).length !== 2
+        Object.keys(postBossActivationCounts).length !== 4
       )
         fail(
           `${path}.postBossActivationCounts`,
-          'Judgment must declare only Epic and Heroic counts',
+          'Judgment must declare Common, Rare, Epic, and Heroic counts',
         );
+      requirePositiveInteger(
+        postBossActivationCounts.Common,
+        `${path}.postBossActivationCounts.Common`,
+      );
+      requirePositiveInteger(
+        postBossActivationCounts.Rare,
+        `${path}.postBossActivationCounts.Rare`,
+      );
       requirePositiveInteger(
         postBossActivationCounts.Epic,
         `${path}.postBossActivationCounts.Epic`,
@@ -78,6 +86,10 @@ export function normalizeArcanaCards(
         postBossActivationCounts.Heroic,
         `${path}.postBossActivationCounts.Heroic`,
       );
+      if (postBossActivationCounts.Rare < postBossActivationCounts.Common)
+        fail(`${path}.postBossActivationCounts`, 'Rare count must not be lower than Common');
+      if (postBossActivationCounts.Epic < postBossActivationCounts.Rare)
+        fail(`${path}.postBossActivationCounts`, 'Epic count must not be lower than Rare');
       if (postBossActivationCounts.Heroic < postBossActivationCounts.Epic)
         fail(`${path}.postBossActivationCounts`, 'Heroic count must not be lower than Epic');
     } else if (postBossActivationCounts !== undefined) {
@@ -88,11 +100,16 @@ export function normalizeArcanaCards(
     }
     if (card.key === 'MetaToRunUpgrade') {
       if (
+        artificerCapacityByRarity?.Common !== 1 ||
+        artificerCapacityByRarity.Rare !== 2 ||
         artificerCapacityByRarity?.Epic !== 3 ||
         artificerCapacityByRarity.Heroic !== 4 ||
-        Object.keys(artificerCapacityByRarity).length !== 2
+        Object.keys(artificerCapacityByRarity).length !== 4
       )
-        fail(`${path}.artificerCapacityByRarity`, 'Artificer must declare Epic 3 and Heroic 4');
+        fail(
+          `${path}.artificerCapacityByRarity`,
+          'Artificer must declare Common 1, Rare 2, Epic 3, and Heroic 4',
+        );
     } else if (artificerCapacityByRarity !== undefined) {
       fail(`${path}.artificerCapacityByRarity`, 'only Artificer may declare conversion capacity');
     }

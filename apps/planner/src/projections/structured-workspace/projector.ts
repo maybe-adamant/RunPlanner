@@ -90,6 +90,15 @@ function projectBiome(
     address: import('@run-planner/engine/authored-project').JudgmentArcanaAddress,
   ) =>
     { readonly inactiveArcanaKeys: readonly string[]; readonly requiredCount: number } | undefined,
+  figurineArcanaCapability: (
+    address: import('@run-planner/engine/authored-project').FigurineArcanaAddress,
+  ) =>
+    | {
+        readonly inactiveArcanaKeys: readonly string[];
+        readonly requiredCount: number;
+        readonly rarity: import('@run-planner/engine/catalog-schema').TraitRarity;
+      }
+    | undefined,
   fountainRarityAssessment: import('./assembly/occurrence-action-row-projection').WorkspaceOccurrenceActionsInput['fountainRarityAssessment'] = undefined,
 ): {
   readonly batchInteractionRequirements: ReadonlyMap<string, WorkspaceBatchInteractionRequirement>;
@@ -118,6 +127,7 @@ function projectBiome(
     source,
     keepsakeEquipResultSupported,
     judgmentArcanaCapability,
+    figurineArcanaCapability,
     fountainRarityAssessment,
   );
   const presentation = presentWorkspaceBiome(catalog, semantic);
@@ -190,6 +200,10 @@ export function createStructuredWorkspaceProjection(
       const judgmentArcanaControls = new Map<
         string,
         NonNullable<import('./contract').WorkspaceRoomSummary['judgment']>
+      >();
+      const figurineArcanaControls = new Map<
+        string,
+        NonNullable<import('./contract').WorkspaceRoomSummary['figurine']>
       >();
       const keepsakeSelectionControls = new Map<
         string,
@@ -324,6 +338,16 @@ export function createStructuredWorkspaceProjection(
               );
               return candidate.kind === 'judgmentArcana' ? candidate.result : undefined;
             },
+            (address) => {
+              const occurrence = biomeSource.occurrence(address.occurrenceId);
+              if (occurrence === undefined) return undefined;
+              const candidate = candidates.figurineArcana(
+                address,
+                occurrence.encounters.figurineArcanaKeysByPhase?.[address.phaseKey] ??
+                  Object.freeze([]),
+              );
+              return candidate.kind === 'figurineArcana' ? candidate.result : undefined;
+            },
             (address, targetTraitKey) => candidates.fountainRarityOutcome(address, targetTraitKey),
           );
           appendUniqueFocusDestinations(focusByOwner, projected.focusDestinations.entries());
@@ -389,6 +413,12 @@ export function createStructuredWorkspaceProjection(
                 judgmentArcanaControls.set(
                   semanticAddressKey(node.room.judgment.address),
                   node.room.judgment,
+                );
+              }
+              if (node.room.figurine !== undefined) {
+                figurineArcanaControls.set(
+                  semanticAddressKey(node.room.figurine.address),
+                  node.room.figurine,
                 );
               }
               for (const control of node.room.roomActions?.steadyGrowth ?? []) {
@@ -530,6 +560,7 @@ export function createStructuredWorkspaceProjection(
         steadyGrowthControls,
         fountainRarityControls,
         judgmentArcanaControls,
+        figurineArcanaControls,
         keepsakeSelectionControls,
         keepsakeEquipResultControls,
         roomControls,

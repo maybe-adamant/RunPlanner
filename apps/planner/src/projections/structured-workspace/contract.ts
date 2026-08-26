@@ -46,6 +46,7 @@ import {
   type AuthoredCirceResolution,
   type LevelResolutionAddress,
   type JudgmentArcanaAddress,
+  type FigurineArcanaAddress,
   type KeepsakeSelectionAddress,
   type KeepsakeEquipResultAddress,
   type TraitOptionKey,
@@ -663,6 +664,18 @@ export interface WorkspaceJudgmentArcanaInteraction {
   readonly value: readonly string[];
 }
 
+/** Atomic exact-set authoring for Crystal Figurine after Judgment at one Boss seam. */
+export interface WorkspaceFigurineArcanaInteraction {
+  readonly choices: readonly WorkspaceInteractionChoice<string>[];
+  readonly intentFor: (
+    arcanaKeys: readonly string[],
+  ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceFigurineArcana' }>>;
+  readonly key: string;
+  readonly load: (arcanaKeys?: readonly string[]) => CandidateProjectionEvaluation;
+  readonly owner: FigurineArcanaAddress;
+  readonly value: readonly string[];
+}
+
 /** One exact route-start or Postboss rack selection, with engine-backed option support. */
 export interface WorkspaceKeepsakeSelectionInteraction {
   readonly choices: readonly WorkspaceInteractionChoice<string>[];
@@ -943,6 +956,7 @@ export interface WorkspaceInteractionCatalog {
   readonly steadyGrowth: ReadonlyMap<string, WorkspaceSteadyGrowthInteraction>;
   readonly fountainRarity: ReadonlyMap<string, WorkspaceFountainRarityInteraction>;
   readonly judgmentArcana: ReadonlyMap<string, WorkspaceJudgmentArcanaInteraction>;
+  readonly figurineArcana: ReadonlyMap<string, WorkspaceFigurineArcanaInteraction>;
   readonly keepsakeSelections: ReadonlyMap<string, WorkspaceKeepsakeSelectionInteraction>;
   readonly keepsakeEquipResults: ReadonlyMap<string, WorkspaceKeepsakeEquipResultInteraction>;
   readonly rewardWheelOfferCounts: ReadonlyMap<string, WorkspaceCandidateInteraction<number>>;
@@ -1939,6 +1953,15 @@ export interface WorkspaceRoomSummary {
     readonly requiredCount: number;
     readonly value: readonly string[];
   };
+  /** A second, independent Boss-only draw immediately after Judgment. */
+  readonly figurine?: {
+    readonly address: FigurineArcanaAddress;
+    readonly inactiveArcanaKeys: readonly string[];
+    readonly marker: WorkspaceMarker;
+    readonly requiredCount: number;
+    readonly rarity: TraitRarity;
+    readonly value: readonly string[];
+  };
   /** A Postboss-only ordinary room-local rack selection. */
   readonly keepsakeSelection?: {
     readonly address: KeepsakeSelectionAddress;
@@ -2242,6 +2265,9 @@ export interface WorkspaceRunStatePresentation {
     readonly gorgonStatus?: 'pending' | 'consumed' | 'expired';
     readonly gorgonRarity?: import('@run-planner/engine/catalog-schema').TraitRarity;
     readonly phialStatus?: 'pending' | 'consumed';
+    readonly figurineStatus?: 'pending' | 'consumed';
+    readonly figurineOrigin?: 'ordinary' | 'echo';
+    readonly figurineRarity?: import('@run-planner/engine/catalog-schema').InRunTraitRarity;
   };
   readonly arcana: readonly {
     readonly key: string;
@@ -2250,9 +2276,9 @@ export interface WorkspaceRunStatePresentation {
     readonly rarity: TraitRarity;
   }[];
   readonly artificer?: {
-    readonly rarity: Extract<TraitRarity, 'Epic' | 'Heroic'>;
+    readonly rarity: import('@run-planner/engine/catalog-schema').InRunTraitRarity;
     readonly spent: number;
-    readonly capacity: 3 | 4;
+    readonly capacity: 1 | 2 | 3 | 4;
     readonly remaining: number;
   };
   readonly bags: readonly WorkspaceRunStateBagPresentation[];

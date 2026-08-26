@@ -283,6 +283,18 @@ const findingCopy = {
     title: 'Judgment target is unavailable',
     description: 'Choose distinct Arcana cards that were inactive before this Boss completed.',
   },
+  figurineOutcomeMissing: {
+    title: 'Choose Crystal Figurine cards',
+    description: 'Record the exact inactive Arcana cards activated by Crystal Figurine.',
+  },
+  figurineOutcomeWrongCardinality: {
+    title: 'Crystal Figurine card count is incorrect',
+    description: 'Choose the complete number of inactive Arcana cards for Crystal Figurine.',
+  },
+  figurineOutcomeTargetUnavailable: {
+    title: 'Crystal Figurine target is unavailable',
+    description: 'Choose distinct Arcana cards that remained inactive after Judgment.',
+  },
   keepsakeUnavailable: {
     title: 'Keepsake is unavailable',
     description: 'Choose a keepsake that remains available at this rack frontier.',
@@ -892,6 +904,8 @@ export function findingDestinationLabel(catalog: Catalog, origin: SemanticAddres
       return `${biomeLabel} · Pom`;
     case 'judgmentArcana':
       return `${biomeLabel} · Boss Judgment`;
+    case 'figurineArcana':
+      return `${biomeLabel} · Boss Crystal Figurine`;
     case 'keepsakeSelection':
       return `${biomeLabel} · Postboss keepsake`;
   }

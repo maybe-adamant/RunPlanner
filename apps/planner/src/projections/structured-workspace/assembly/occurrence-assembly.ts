@@ -1,5 +1,6 @@
 import {
   createJudgmentArcanaAddress,
+  createFigurineArcanaAddress,
   createIncomingRewardAddress,
   createOccurrenceAddress,
   createAcquisitionEntryAddress,
@@ -100,6 +101,15 @@ export interface WorkspaceOccurrenceAssemblyInput {
     address: import('@run-planner/engine/authored-project').JudgmentArcanaAddress,
   ) =>
     { readonly inactiveArcanaKeys: readonly string[]; readonly requiredCount: number } | undefined;
+  readonly figurineArcanaCapability?: (
+    address: import('@run-planner/engine/authored-project').FigurineArcanaAddress,
+  ) =>
+    | {
+        readonly inactiveArcanaKeys: readonly string[];
+        readonly requiredCount: number;
+        readonly rarity: import('@run-planner/engine/catalog-schema').TraitRarity;
+      }
+    | undefined;
   readonly keepsakeEquipResultSupported?: (address: KeepsakeEquipResultAddress) => boolean;
   readonly derivedAcquisitionEntries?: (
     site: AcquisitionSiteAddress,
@@ -220,6 +230,29 @@ export function assembleWorkspaceOccurrence(
       value: occurrence.encounters.judgmentArcanaKeysByPhase?.[phaseKey] ?? Object.freeze([]),
     });
   })();
+  const figurine = (() => {
+    if (room.kind !== 'Boss' || !input.facts.detailsActive) return undefined;
+    const bossDefeated = input.evaluatedRoom?.roomLifecycleTimeline.boundaries.find(
+      (boundary) => boundary.kind === 'bossDefeated',
+    );
+    if (bossDefeated === undefined) return undefined;
+    const address = createFigurineArcanaAddress(
+      createOccurrenceAddress(input.biome, occurrence.occurrenceId),
+      bossDefeated.phaseKey,
+    );
+    const capability = input.figurineArcanaCapability?.(address);
+    if (capability === undefined) return undefined;
+    return Object.freeze({
+      address,
+      inactiveArcanaKeys: capability.inactiveArcanaKeys,
+      marker: input.markerDestinations.marker(address),
+      requiredCount: capability.requiredCount,
+      rarity: capability.rarity,
+      value:
+        occurrence.encounters.figurineArcanaKeysByPhase?.[bossDefeated.phaseKey] ??
+        Object.freeze([]),
+    });
+  })();
   const keepsakeSelection =
     !input.facts.detailsActive || occurrence.keepsakeRack === undefined
       ? undefined
@@ -282,6 +315,7 @@ export function assembleWorkspaceOccurrence(
     ...workspaceLocalDetailMarkers(roomLocal),
     ...(roomActions?.rows.map((row) => row.marker) ?? []),
     ...(judgment === undefined ? [] : [judgment.marker]),
+    ...(figurine === undefined ? [] : [figurine.marker]),
     ...(keepsakeSelection === undefined
       ? []
       : [
@@ -306,6 +340,7 @@ export function assembleWorkspaceOccurrence(
     detailsActive: input.facts.detailsActive,
     ...(entryReward === undefined ? {} : { entryReward }),
     ...(judgment === undefined ? {} : { judgment }),
+    ...(figurine === undefined ? {} : { figurine }),
     ...(keepsakeSelection === undefined ? {} : { keepsakeSelection }),
     encounterPhases,
     entered,
@@ -415,6 +450,9 @@ export function assembleWorkspaceOccurrence(
   }
   if (judgment !== undefined) {
     input.markerDestinations.setRoomTab([judgment.marker], 'actions');
+  }
+  if (figurine !== undefined) {
+    input.markerDestinations.setRoomTab([figurine.marker], 'actions');
   }
   if (keepsakeSelection !== undefined) {
     const keepsakeActionInTimeline = roomActions?.rows.some(

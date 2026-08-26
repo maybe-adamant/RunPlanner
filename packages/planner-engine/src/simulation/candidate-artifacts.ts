@@ -3,6 +3,7 @@ import {
   type BiomeAddress,
   type TargetAddress,
   type JudgmentArcanaAddress,
+  type FigurineArcanaAddress,
   type KeepsakeSelectionAddress,
   type KeepsakeEquipResultAddress,
   type SteadyGrowthOutcomeAddress,
@@ -71,6 +72,15 @@ export interface JudgmentArcanaCandidateCapability {
 }
 export interface JudgmentArcanaCandidateArtifacts {
   readonly at: (address: JudgmentArcanaAddress) => JudgmentArcanaCandidateCapability | undefined;
+}
+/** Atomic exact-set support captured immediately after Judgment at one Boss effect. */
+export interface FigurineArcanaCandidateCapability {
+  readonly inactiveArcanaKeys: readonly string[];
+  readonly requiredCount: number;
+  readonly rarity: import('../catalog-schema').TraitRarity;
+}
+export interface FigurineArcanaCandidateArtifacts {
+  readonly at: (address: FigurineArcanaAddress) => FigurineArcanaCandidateCapability | undefined;
 }
 
 /** Exact threshold frontiers retained at one automatic Steady Growth row. */
@@ -169,6 +179,14 @@ export function createJudgmentArcanaCandidateArtifacts(
     at: (address: JudgmentArcanaAddress) => privateContexts.get(semanticAddressKey(address)),
   });
 }
+export function createFigurineArcanaCandidateArtifacts(
+  contexts: ReadonlyMap<string, FigurineArcanaCandidateCapability>,
+): FigurineArcanaCandidateArtifacts {
+  const privateContexts = new Map(contexts);
+  return Object.freeze({
+    at: (address: FigurineArcanaAddress) => privateContexts.get(semanticAddressKey(address)),
+  });
+}
 
 export interface BiomeCandidateArtifacts {
   readonly origin: BiomeAddress;
@@ -179,6 +197,7 @@ export interface BiomeCandidateArtifacts {
   readonly traitOffers: TraitOfferCandidateArtifacts;
   readonly levelResolutions: LevelResolutionCandidateArtifacts;
   readonly judgmentArcana: JudgmentArcanaCandidateArtifacts;
+  readonly figurineArcana: FigurineArcanaCandidateArtifacts;
   readonly keepsakeSelections: KeepsakeSelectionCandidateArtifacts;
   readonly keepsakeEquipResults: KeepsakeEquipResultCandidateArtifacts;
   readonly acquisitionConversions: AcquisitionConversionCandidateArtifacts;
@@ -706,6 +725,9 @@ export function createBiomeCandidateArtifacts(
   hermesShrines: HermesShrineCandidateArtifacts = createEmptyHermesShrineCandidateArtifacts(),
   stygianWells: StygianWellCandidateArtifacts = createEmptyStygianWellCandidateArtifacts(),
   fountainRarity: FountainRarityCandidateArtifacts = createEmptyFountainRarityCandidateArtifacts(),
+  figurineArcana: FigurineArcanaCandidateArtifacts = createFigurineArcanaCandidateArtifacts(
+    new Map(),
+  ),
 ): BiomeCandidateArtifacts {
   return Object.freeze({
     origin,
@@ -716,6 +738,7 @@ export function createBiomeCandidateArtifacts(
     traitOffers,
     levelResolutions,
     judgmentArcana,
+    figurineArcana,
     keepsakeSelections,
     keepsakeEquipResults,
     acquisitionConversions,

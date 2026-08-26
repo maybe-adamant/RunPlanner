@@ -6,6 +6,7 @@ import type {
   BatchRewardStoreAddress,
   BiomeAddress,
   JudgmentArcanaAddress,
+  FigurineArcanaAddress,
   KeepsakeSelectionAddress,
   KeepsakeEquipResultAddress,
   BiomeFieldAddress,
@@ -89,6 +90,11 @@ export type ResourcePlacementCommand = {
 export type JudgmentArcanaCommand = {
   readonly kind: 'ReplaceJudgmentArcana';
   readonly judgment: JudgmentArcanaAddress;
+  readonly arcanaKeys: readonly string[];
+};
+export type FigurineArcanaCommand = {
+  readonly kind: 'ReplaceFigurineArcana';
+  readonly figurine: FigurineArcanaAddress;
   readonly arcanaKeys: readonly string[];
 };
 export type SteadyGrowthCommand = {
@@ -541,6 +547,7 @@ export type ProjectCommand =
   | ProjectStateCommand
   | ResourcePlacementCommand
   | JudgmentArcanaCommand
+  | FigurineArcanaCommand
   | SteadyGrowthCommand
   | FountainRarityCommand
   | KeepsakeCommand

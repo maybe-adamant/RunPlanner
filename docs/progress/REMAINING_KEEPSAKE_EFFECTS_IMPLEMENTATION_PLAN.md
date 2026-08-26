@@ -13,6 +13,17 @@ catalog, schema-migration, focused engine/application, typecheck, formatting,
 and diff-check lanes passed. The complete repository gate remains deferred to
 phase closure as required by this plan.
 
+Gate B implementation and bounded review remediation completed on 2026-08-26.
+The focused Judgment/Crystal Figurine lifecycle witnesses cover terminal-Boss
+suppression with pending-source retention, Fated filtering and authored
+exclusion rejection, and Epic ordinary versus Heroic Cherished-advanced
+activation. Verification passed with `npx vitest run
+packages/planner-engine/test/simulation/judgment-arcana.test.ts` (1 file, 14
+tests), `npx prettier --write
+packages/planner-engine/test/simulation/judgment-arcana.test.ts`, and
+`git diff --check`. The complete repository gate remains deferred to phase
+closure as required by this plan.
+
 The first phase contains Aromatic Phial, Crystal Figurine, Concave Stone, and
 Transcendent Embryo. A later phase establishes the exact-name reward-pressure
 infrastructure and immediately consumes it with all nine Olympian keepsakes.

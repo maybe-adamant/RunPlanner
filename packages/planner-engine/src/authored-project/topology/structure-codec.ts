@@ -57,6 +57,8 @@ export interface RawOccurrence {
   readonly hasStygianWell?: boolean;
   readonly fountainRarityResult?: unknown;
   readonly hasFountainRarityResult?: boolean;
+  readonly figurineArcanaKeysByPhase?: unknown;
+  readonly hasFigurineArcanaKeysByPhase?: boolean;
   readonly path: string;
 }
 
@@ -1130,6 +1132,7 @@ export function decodeTopologyStructure(
     const hasHermesShrine = Object.hasOwn(occurrence, 'hermesShrine');
     const hasStygianWell = Object.hasOwn(occurrence, 'stygianWell');
     const hasFountainRarityResult = Object.hasOwn(occurrence, 'fountainRarityResult');
+    const hasFigurineArcanaKeysByPhase = Object.hasOwn(occurrence, 'figurineArcanaKeysByPhase');
     expectExactKeys(
       occurrence,
       [
@@ -1144,6 +1147,7 @@ export function decodeTopologyStructure(
         ...(hasHermesShrine ? ['hermesShrine'] : []),
         ...(hasStygianWell ? ['stygianWell'] : []),
         ...(hasFountainRarityResult ? ['fountainRarityResult'] : []),
+        ...(hasFigurineArcanaKeysByPhase ? ['figurineArcanaKeysByPhase'] : []),
       ],
       occurrencePath,
     );
@@ -1169,6 +1173,8 @@ export function decodeTopologyStructure(
         hasStygianWell,
         fountainRarityResult: occurrence.fountainRarityResult,
         hasFountainRarityResult,
+        figurineArcanaKeysByPhase: occurrence.figurineArcanaKeysByPhase,
+        hasFigurineArcanaKeysByPhase,
         path: occurrencePath,
       }),
     );

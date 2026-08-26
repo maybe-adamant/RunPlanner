@@ -84,7 +84,7 @@ export const arcanaCards = [
     { kind: 'manual' },
     undefined,
     false,
-    { Epic: 3, Heroic: 4 },
+    { Common: 1, Rare: 2, Epic: 3, Heroic: 4 },
   ),
   card(
     'RarityBoost',
@@ -171,7 +171,7 @@ export const arcanaCards = [
     5,
     0,
     automatic({ kind: 'manualCardCount', minimum: 1, maximum: 3 }),
-    { Epic: 5, Heroic: 6 },
+    { Common: 3, Rare: 4, Epic: 5, Heroic: 6 },
   ),
 ] as const;
 

@@ -66,6 +66,7 @@ export type TraitCandidateAdapters = Pick<
   | 'fountainRarityOutcome'
   | 'levelResolution'
   | 'judgmentArcana'
+  | 'figurineArcana'
   | 'keepsakeSelections'
   | 'keepsakeEquipResult'
   | 'acquisitionConversion'
@@ -226,6 +227,12 @@ export function createTraitCandidateAdapters(
       aggregateEvaluation(core, {
         kind: 'judgmentArcana',
         judgment: owner,
+        arcanaKeys,
+      }) as CandidateProjectionEvaluation,
+    figurineArcana: (owner, arcanaKeys) =>
+      aggregateEvaluation(core, {
+        kind: 'figurineArcana',
+        figurine: owner,
         arcanaKeys,
       }) as CandidateProjectionEvaluation,
     keepsakeSelections: (owner) => {
