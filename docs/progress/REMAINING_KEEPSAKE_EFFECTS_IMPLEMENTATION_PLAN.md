@@ -2,29 +2,18 @@
 
 ## Status
 
-**Draft.** This document is not yet a locked execution contract. Its first
-phase contains Aromatic Phial, Crystal Figurine, Concave Stone, and
+**Locked on 2026-08-26.** Execution begins from documentation commit
+`a6842e8f` (`docs(keepsakes): plan remaining effect implementation`). The live
+production code reviewed by this plan remains base commit `5865cb05`
+(`refactor(engine): group biome reward evaluation`); the intervening commit is
+the audited source material and this execution contract only.
+
+The first phase contains Aromatic Phial, Crystal Figurine, Concave Stone, and
 Transcendent Embryo. A later phase establishes the exact-name reward-pressure
 infrastructure and immediately consumes it with all nine Olympian keepsakes.
-A final phase adds the minimal Hex/Path point layer and consumes both that
+The final phase adds the minimal Hex/Path point layer and consumes both that
 layer and the reward-pressure queue with Moon Beam. Individual Hex talent-tree
 nodes remain outside the executable scope.
-
-The code review was performed against base commit `5865cb05` (`refactor(engine):
-group biome reward evaluation`). The worktree already contains uncommitted
-source-audit extensions in:
-
-- `docs/audits/loadout-and-progression/KEEPSAKE_GAME_DATA_AUDIT.md`;
-- `docs/audits/loadout-and-progression/CHERISHED_HEIRLOOM_KEEPSAKE_AUDIT.md`;
-  and
-- `docs/audits/loadout-and-progression/ECHO_GIFT_GIFT_GIFT_KEEPSAKE_AUDIT.md`.
-
-The worktree also contains the focused
-`OLYMPIAN_KEEPSAKE_AND_MOON_BEAM_REWARD_PRESSURE_AUDIT.md` and
-`PATH_OF_STARS_AND_SPELL_DROP_GAME_DATA_AUDIT.md`, which are the source
-authorities for the later reward-pressure and Hex/Path phases. These edits are
-source material for this plan and must be preserved. This plan does not
-authorize rewriting or discarding them.
 
 ## Objective
 
