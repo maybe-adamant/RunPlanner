@@ -2,8 +2,9 @@
 
 ## Status
 
-Source audit completed against the installed Hades II scripts on 2026-08-14.
-This document isolates the game behavior of Demeter and Hera's
+Source audit completed against the installed Hades II scripts on 2026-08-14
+and extended across the 13 previously effect-neutral declarations on
+2026-08-26. This document isolates the game behavior of Demeter and Hera's
 `KeepsakeLevelBoon` (Cherished Heirloom) for the keepsakes whose effects are
 implemented or deliberately deferred by the planner.
 
@@ -13,17 +14,15 @@ same-offer Concave Stone chronology.
 
 ## Scope and Planner Rank Simplification
 
-The detailed matrix covers:
+The detailed matrix covers all 33 selectable keepsakes: the six modeled
+effects, the four trait/fountain/Arcana effects, Moon Beam and the nine Olympian
+reward-steering effects, and the 13 effects that are strictly sim-neutral under
+the planner's current health/Magick/gold/armor/damage/time boundary.
 
-- the six modeled keepsakes;
-- the four lower-priority deferred effects; and
-- Moon Beam plus the nine deferred Olympian reward-steering keepsakes.
-
-The 13 intentionally effect-neutral keepsakes remain valid ordinary keepsake
-declarations, but their inherent gameplay effects are not individually resolved
-here. Their source rank facts remain audit evidence; production rank profiles
-are deferred until each keepsake receives its own effect slice. Effect-neutral
-is not system-neutral: they still participate in ordinary equip/retain/replace
+Effect-neutral is a planner disposition, not a missing source result. The 13
+rows below now record their exact rank values and reconstruction outcomes even
+though production rank profiles remain deferred until an effect slice needs
+them. They also continue to participate in ordinary equip/retain/replace
 history, removed-key and no-return legality, Fated/Unfated state, and Run State
 identity.
 
@@ -127,6 +126,14 @@ separately snapshots it only for `RarifyKeepsake` and restores it as the old
 count plus two. The nine Olympian keepsakes receive no equivalent nested-field
 preservation.
 
+Luckier Tooth also has an exact `UnequipKeepsake` fallback outside that field
+list. When its keepsake-owned Last Stand is already absent, the source removes
+one other non-priority Last Stand if available before reducing Tooth's added
+capacity. The re-equip then creates the rank-IV Tooth Last Stand and increases
+capacity again. The observable result is a recreated or substituted Tooth
+restoration, not an extra Death Defiance appended beyond the existing
+capacity.
+
 ## Rank Profiles and Current-Equip Outcomes
 
 The rank values below are source declaration facts retained as durable audit
@@ -137,6 +144,19 @@ is always evaluated from the planner's rank-III player-equip baseline.
 
 | Keepsake            | Rank-sensitive declaration value (I / II / III / IV)                         | Current rank-III outcome when Cherished Heirloom is acquired                                                                                                                   |
 | ------------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Silver Wheel        | maximum Magick 50 / 75 / 100 / 150                                           | Rewrite the existing source-marked maximum-Magick trait to +150 rather than granting a second trait.                                                                           |
+| Knuckle Bones       | pre-boss damage 5% / 10% / 15% / 25%; boss reduction is always 10%           | Preserve `Uses`. An unspent pre-damage hit becomes 25%; a spent hit stays spent. The 10% reduction does not change.                                                            |
+| Luckier Tooth       | Death Defiance health 51 / 76 / 101 / 151                                    | Remove the old keepsake Last Stand when present and create a rank-IV 151-health one. This recreates the keepsake-owned restoration after it was spent.                         |
+| Ghost Onion         | room-exit healing reserve 50 / 75 / 100 / 150                                | Preserve the exact remaining `DoorHealReserve`; do not refill it or raise it to 150.                                                                                           |
+| Evil Eye            | damage against the prior cause of death 20% / 25% / 30% / 40%                | Rebuild the current combat modifier at 40%; there is no finite-use state to preserve.                                                                                          |
+| Gold Purse          | immediate gold 100 / 125 / 150 / 200                                         | Rebuild at rank IV but grant no gold because reconstruction does not run the rack/run-start integration callback.                                                              |
+| Engraved Pin        | successful-clear restoration 30 / 45 / 60 / 90; timer is always 10 seconds   | Rebuild the restoration at 90 health without changing the encounter-local survival window.                                                                                     |
+| Discordant Bell     | encounter growth 0.5% / 0.75% / 1% / 1.5%                                    | Preserve accumulated `EscalatingKeepsakeValue`; only future qualifying encounters use the new 1.5% growth.                                                                     |
+| Metallic Droplet    | duration 200 / 250 / 300 / 400 seconds; speed effect is always 20%           | Preserve `CurrentTime`; do not refill or add time. The larger 400-second value applies only to a later rank-IV equip.                                                          |
+| White Antler        | critical chance 20% / 25% / 30% / 50%; maximum-health cap is always 30       | Preserve `Uses` and `CapMaxHealth`. An active copy becomes 50%; an expired copy remains expired and retains its neutralized property state.                                    |
+| Silken Sash         | room armor 2 / 3 / 4 / 6; initial armor is always 30                         | Preserve current armor, grant no fresh 30, and make later room gains 6 while armor remains.                                                                                    |
+| Lion Fang           | starting damage 30% / 40% / 50% / 70%; decay is always five points           | The declaration-specific special case resets `CurrentKeepsakeDamageBonus` to the rank-IV 70%, including after partial or complete decay.                                       |
+| Blackened Fleece    | Omega damage 20% / 30% / 40% / 60%; threshold is always 250 damage taken     | Rebuild the modifier at 60% while leaving the run-owned accumulated-damage state unchanged.                                                                                    |
 | Gorgon Amulet       | Athena rarity level 1 / 2 / 3 / 4                                            | Preserve `RemainingUses`. If still pending, the future Athena appearance uses Heroic; if consumed, it remains consumed.                                                        |
 | Fig Leaf            | 1 / 2 / 3 / 4 supported biomes                                               | No new persistent Fig Leaf trait and no added use. The rank-IV base declaration is rebuilt, but `DionysusSkipTrait` is not rerun and the separate retained state is untouched. |
 | Experimental Hammer | 10 / 15 / 20 / 30 encounter uses                                             | No new Hammer and no extension of the existing Hammer. Its acquire callback is not rerun.                                                                                      |
@@ -221,6 +241,10 @@ blessing is therefore Heroic. Cherished Heirloom changes the future
 transformation rarity, not the already-equipped blessing.
 
 ## Moon Beam and Olympian Keepsakes
+
+The generic priority queue, provider-force lifetime, loot-materialization
+consumption, and Moon Beam target variants are owned by the focused
+[Olympian keepsake and Moon Beam reward-pressure audit](OLYMPIAN_KEEPSAKE_AND_MOON_BEAM_REWARD_PRESSURE_AUDIT.md).
 
 Moon Beam has an explicit `AdvanceKeepsake` special case. The source adds one
 Path of Stars point after a lower-rank advance, but adds two when
@@ -309,11 +333,11 @@ canonical trait history, preserves removed ledgers, and snapshots Gorgon rarity
 at encounter start. It does not use a callback registry or authored player
 ranks.
 
-The remaining audited rows are source evidence, not implemented behavior.
-Transcendent Embryo, Aromatic Phial, Concave Stone, Crystal Figurine, Moon Beam,
-and the Olympian reward-steering keepsakes retain the dispositions above for
-their own future effect slices. Cherished currently gives those effect-neutral
-identities no individual gameplay mutation.
+The remaining 27 audited rows are source evidence, not implemented behavior.
+The 13 sim-neutral effects, Transcendent Embryo, Aromatic Phial, Concave Stone,
+Crystal Figurine, Moon Beam, and the Olympian reward-steering keepsakes retain
+the dispositions above for their own future effect slices. Cherished currently
+gives those identities no individual planner gameplay mutation.
 
 ## Audit Conclusions
 
@@ -324,11 +348,14 @@ That produces the source-backed supported outcomes: pending Gorgon becomes
 Heroic, Fig Leaf and Experimental Hammer do nothing, Jeweled Pom becomes +4
 prospectively, Calling Card gains two uses, and Time Piece gains one.
 
-The deferred effects are equally explicit: Embryo changes its next
-transformation, Phial has no rank IV, unused Concave and Crystal effects become
-rank IV, Moon Beam adds two points, and each Olympian keepsake refills its one
-nested rarify use without replaying reward priority. Concave Stone granting
-Cherished Heirloom as its second boon preserves the already-consumed use. When
-Cherished Heirloom is selected first, its no-yield acquisition path upgrades
-Concave before the same offer checks it, making that second boon mandatory
-whenever an eligible unpicked option exists.
+The deferred effects are equally explicit. The 13 sim-neutral rows preserve,
+replace, refill, or reset their exact source-owned fields as recorded in the
+matrix; notably Tooth recreates its Last Stand, Onion and Droplet do not refill,
+Sash preserves armor, and Lion Fang resets to its new maximum. Embryo changes
+its next transformation, Phial has no rank IV, unused Concave and Crystal
+effects become rank IV, Moon Beam adds two points, and each Olympian keepsake
+refills its one nested rarify use without replaying reward priority. Concave
+Stone granting Cherished Heirloom as its second boon preserves the already-
+consumed use. When Cherished Heirloom is selected first, its no-yield
+acquisition path upgrades Concave before the same offer checks it, making that
+second boon mandatory whenever an eligible unpicked option exists.

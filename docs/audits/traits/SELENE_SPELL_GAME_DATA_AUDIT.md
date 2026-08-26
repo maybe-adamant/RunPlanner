@@ -8,9 +8,13 @@ choice domain and the run-state consequences needed before the planner turns
 `SpellDrop` from an effect-neutral consumable into a concrete trait-bearing
 reward.
 
-Path of Stars talent-tree authoring is outside this audit. The source contacts
-between a chosen Hex and later trait eligibility are included because concrete
-spell identity is already observable by the planner's trait-offer model.
+Path of Stars talent-tree authoring is outside this audit. The point bank,
+one/three/five reward values, ordered initial-offer bonuses, and Aspect routing
+are owned by the focused
+[Path of Stars and Spell Drop audit](../loadout-and-progression/PATH_OF_STARS_AND_SPELL_DROP_GAME_DATA_AUDIT.md).
+The source contacts between a chosen Hex and later trait eligibility are
+included here because concrete spell identity is already observable by the
+planner's trait-offer model.
 
 The evidence was checked on 2026-08-22 against the installed Hades II scripts:
 

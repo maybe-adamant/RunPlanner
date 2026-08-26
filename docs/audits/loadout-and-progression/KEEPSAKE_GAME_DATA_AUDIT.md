@@ -7,7 +7,9 @@ Source-fact audit completed against the installed Hades II scripts on
 boundary, and amended on 2026-08-14 with Experimental Hammer's exhausted equip
 result. A focused 2026-08-23 reread against installed Steam build `24556151`
 corrected the NonCombat/`SkipEndEncounterEffects` boundary and confirmed P Fig
-Leaf propagation. This document records the ordinary keepsake inventory, rank
+Leaf propagation. A 2026-08-26 extension audited ordinary equip, Cherished
+Heirloom reconstruction/later equip, and Gift Gift Gift replay for the remaining
+27 declarations. This document records the ordinary keepsake inventory, rank
 model, equip/swap lifecycle, and the effect surfaces that may contact systems
 already modeled by the planner.
 
@@ -28,10 +30,15 @@ Primary evidence:
 - `StoreLogic.lua`
 - `ResourceLogic.lua`
 - `RoomLogic.lua`
+- `EventLogic.lua`
+- `RunLogic.lua`
 - `EncounterLogic.lua`
 - `EncounterData.lua` and the biome/challenge/NPC encounter declarations
 - `TraitLogic.lua`
+- `TraitData_Duo.lua`
+- `TraitData_Echo.lua`
 - `CombatLogic.lua`
+- `CostumeLogic.lua`
 - `PowersLogic.lua`
 - `UpgradeChoiceLogic.lua`
 - `LootData.lua` and `LootData_Selene.lua`
@@ -763,28 +770,98 @@ combat phase plus its Athena trait offer. It is not a room takeover, a reward
 replacement, or a P-only encounter selection. Progressive candidate evaluation
 must arbitrate both sources against the same Athena appearance history.
 
-### Later effect group
+### Remaining 27 effect groups
 
-The nine Olympian source keepsakes remain lower-priority effect candidates:
+The other 27 declarations now have complete source dispositions across their
+three creation or mutation paths:
 
-- Cloud Bangle, Iridescent Fan, Vivid Sea, Barley Sheaf, Harmonic Photon,
-  Beautiful Mirror, Adamant Shard, Everlasting Ember, and Sword Hilt.
+- ordinary player equip uses the fixed rank-III (`Epic`) profile;
+- Cherished Heirloom immediately reconstructs only the currently equipped
+  keepsake and makes a later player equip rank IV only when that declaration
+  has a Heroic row; and
+- Gift Gift Gift replays the captured declaration at rank I (`Common`) at a
+  later biome start, subject to its four exact source exclusions and the
+  replayed trait's continued presence.
 
-Their identities belong in the initial keepsake history even when their reward
-priority and rarity-upgrade effects remain inactive. Their later implementation
-can reuse the planner's reward-source and trait-rarity authorities without
-making those policies part of the base keepsake timeline.
+"Sim-neutral" below is a planner disposition, not a claim that the game effect
+does nothing. It means the effect changes only health, Magick, gold, armor,
+damage, real time, or prior-death combat state that the planner deliberately
+does not simulate. Those keepsakes still participate in selection history,
+no-return legality, Fated policy, and Run State identity.
 
-### Identity/history only
+#### Strictly sim-neutral effects
 
-The remaining 18 selectable keepsakes are not current effect-modeling targets.
-They remain valid selectable identities and are recorded in the same equip/swap
-history, but their gameplay effects are deliberately inert until a later scope
-decision promotes an individual declaration.
+| Game key                     | Label            | Ordinary rank-III equip effect                                                                                          | Cherished Heirloom contact                                                                                                                                      | Gift Gift Gift result                                                                                                                                      |
+| ---------------------------- | ---------------- | ----------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ManaOverTimeRefundKeepsake` | Silver Wheel     | creates or owns a source-marked +100 maximum-Magick trait                                                               | current reconstruction rewrites that source trait to +150 rather than adding another; a later equip creates +150                                                | one Common replay creates +50, or rewrites the retained source-marked bonus to +50 when it already exists; the unslotted source then blocks another replay |
+| `BossPreDamageKeepsake`      | Knuckle Bones    | one 15% pre-boss damage use and a rank-independent 10% boss-damage reduction                                            | preserves the use count; an unspent hit becomes 25%, a spent hit remains spent, and the reduction stays 10%; a later equip starts with the 25% hit              | one Common copy supplies a 5% pre-boss hit and the same 10% reduction; spending the hit expires but does not remove the unslotted source                   |
+| `ReincarnationKeepsake`      | Luckier Tooth    | adds one keepsake-owned Death Defiance restoring 101 health                                                             | reconstruction removes the old keepsake Last Stand when present and creates a rank-IV 151-health one; this recreates the keepsake-owned restoration after use   | one Common replay adds one 51-health keepsake Last Stand; its retained unslotted source prevents another replay after the restoration is spent             |
+| `DoorHealReserveKeepsake`    | Ghost Onion      | supplies a 100-health room-exit reserve that fills otherwise missing health                                             | preserves the exact remaining reserve, so current reconstruction neither refills nor raises it; a later rank-IV equip starts with 150                           | one Common replay creates a 50-health reserve; exhaustion leaves the unslotted source present and prevents another replay                                  |
+| `DeathVengeanceKeepsake`     | Evil Eye         | adds 30% damage against the recorded prior cause of death                                                               | current or later rank-IV effect is 40%; there is no separate use ledger                                                                                         | one Common replay adds the 20% modifier and its unslotted source remains                                                                                   |
+| `BonusMoneyKeepsake`         | Gold Purse       | grants 150 gold at the actual run-start or rack equip integration point                                                 | reconstruction itself grants no gold because it does not replay the integration callback; a later rank-IV rack equip grants 200                                 | the biome-start replay has an explicit special case that grants 100 gold once after creating the Common unslotted source                                   |
+| `BlockDeathKeepsake`         | Engraved Pin     | once per encounter, a zero-health event starts a ten-second survival window and successful clearance restores 60 health | reconstruction changes the restoration to 90 health without changing the ten-second window; a later rank-IV equip has the same result                           | one Common replay installs the recurring encounter-local window with a 30-health restoration; the unslotted source remains                                 |
+| `EscalatingKeepsake`         | Discordant Bell  | permanently adds 1% damage dealt and received after each qualifying encounter                                           | preserves the accumulated multiplier and changes only future growth to 1.5% per encounter; a later rank-IV equip starts from zero accumulated growth            | explicitly excluded by Gift Gift Gift                                                                                                                      |
+| `TimedBuffKeepsake`          | Metallic Droplet | applies its fixed 20% speed effect for 300 seconds of unpaused biome time                                               | preserves remaining time rather than refilling it; rank IV changes only a later equip's starting duration to 400 seconds                                        | one Common replay starts a 200-second timer; expiry leaves the unslotted source present and prevents another replay                                        |
+| `LowHealthCritKeepsake`      | White Antler     | caps maximum health at 30 and supplies 30% critical chance until the next boss expires its one use                      | an active current copy becomes 50%; an expired copy stays expired and keeps its neutralized cap/property state; a later rank-IV equip starts active at 50%      | one Common replay supplies the same 30-health cap and 20% critical chance until its boss use expires; the unslotted source remains                         |
+| `ArmorGainKeepsake`          | Silken Sash      | grants 30 armor and adds 4 armor after each qualifying room while some of its armor remains                             | preserves current armor and grants no fresh 30; future room gains become 6, while a later rank-IV equip grants 30 and then 6 per room                           | one Common replay grants 30 armor and 2 per qualifying room while armor remains; its invincible unslotted costume source stays after the armor breaks      |
+| `DecayingBoostKeepsake`      | Lion Fang        | starts at +50% damage and loses five percentage points after each qualifying encounter                                  | the declaration-specific advance rule resets the current bonus to the rank-IV +70%, even if it had partially or fully decayed; a later equip also starts at 70% | one Common replay starts at +30% and decays by the same five points; the exhausted unslotted source remains and prevents another replay                    |
+| `DamagedDamageBoostKeepsake` | Blackened Fleece | after 250 total damage taken in the run, adds 40% Omega damage                                                          | changes the active rank value to 60% while preserving the external accumulated-damage threshold state; a later rank-IV equip uses the same threshold            | one Common replay adds 20% after the same 250-damage threshold; the unslotted source remains                                                               |
+
+These 13 effects are complete audit facts but require no planner mutation under
+the current simulation boundary. In particular, Gift Gift Gift may rerun a
+real source effect without making that replay observable to the planner.
+
+Luckier Tooth has one reconstruction edge worth retaining even though Death
+Defiance is sim-neutral. If its keepsake-owned Last Stand was already spent,
+`UnequipKeepsake` removes one other non-priority Last Stand when one exists
+before decrementing the capacity that Tooth had added. The subsequent equip
+then creates the rank-IV Tooth Last Stand and restores that capacity. Cherished
+therefore recreates or substitutes the Tooth restoration; it does not blindly
+append a new Death Defiance beyond the existing capacity.
+
+#### Next-reward effects
+
+| Game key                      | Label             | Ordinary rank-III equip effect                                                                             | Cherished Heirloom contact                                                                                                               | Gift Gift Gift result                                                                                                                  |
+| ----------------------------- | ----------------- | ---------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `SpellTalentKeepsake`         | Moon Beam         | immediately adds five Path of Stars points and prioritizes Selene before the first Hex, then Path of Stars | current reconstruction adds two points and does not replay priority; a later rank-IV equip adds seven points and ordinary priority       | one Common replay adds three points and reruns the Selene-or-Path priority; its unslotted source then blocks another replay            |
+| `ForceZeusBoonKeepsake`       | Cloud Bangle      | adds Zeus priority and one Zeus-only rank-III-profile rarify use                                           | has no Heroic row; current reconstruction refills its non-preserved nested use to one without replaying priority; later equip stays Epic | Common replay adds Zeus priority and one Common-profile use; spending that unslotted use removes the source and permits a later replay |
+| `ForceHeraBoonKeepsake`       | Iridescent Fan    | same provider-specific priority and one-use effect for Hera                                                | same no-Heroic refill-to-one result                                                                                                      | same Common replay for Hera                                                                                                            |
+| `ForcePoseidonBoonKeepsake`   | Vivid Sea         | same provider-specific priority and one-use effect for Poseidon                                            | same no-Heroic refill-to-one result                                                                                                      | same Common replay for Poseidon                                                                                                        |
+| `ForceDemeterBoonKeepsake`    | Barley Sheaf      | same provider-specific priority and one-use effect for Demeter                                             | same no-Heroic refill-to-one result                                                                                                      | same Common replay for Demeter                                                                                                         |
+| `ForceApolloBoonKeepsake`     | Harmonic Photon   | same provider-specific priority and one-use effect for Apollo                                              | same no-Heroic refill-to-one result                                                                                                      | same Common replay for Apollo                                                                                                          |
+| `ForceAphroditeBoonKeepsake`  | Beautiful Mirror  | same provider-specific priority and one-use effect for Aphrodite                                           | same no-Heroic refill-to-one result                                                                                                      | same Common replay for Aphrodite                                                                                                       |
+| `ForceHephaestusBoonKeepsake` | Adamant Shard     | same provider-specific priority and one-use effect for Hephaestus                                          | same no-Heroic refill-to-one result                                                                                                      | same Common replay for Hephaestus                                                                                                      |
+| `ForceHestiaBoonKeepsake`     | Everlasting Ember | same provider-specific priority and one-use effect for Hestia                                              | same no-Heroic refill-to-one result                                                                                                      | same Common replay for Hestia                                                                                                          |
+| `ForceAresBoonKeepsake`       | Sword Hilt        | same provider-specific priority and one-use effect for Ares                                                | same no-Heroic refill-to-one result                                                                                                      | same Common replay for Ares                                                                                                            |
+
+These ten declarations affect the next matching reward source or offer rather
+than creating an independent long-running route subsystem. Their exact priority
+consumption and row-local rarity rules remain reward-store and trait-offer
+facts, not keepsake-history policy. The complete source matrix and planner
+disposition are owned by the focused
+[Olympian keepsake and Moon Beam reward-pressure audit](OLYMPIAN_KEEPSAKE_AND_MOON_BEAM_REWARD_PRESSURE_AUDIT.md).
+
+Moon Beam's point grant shares its runtime bank with the three Path reward
+sizes, the ordered initial spell-offer bonus, and Aspect of Selene. Those facts
+and their planner boundary are owned by the focused
+[Path of Stars and Spell Drop audit](PATH_OF_STARS_AND_SPELL_DROP_GAME_DATA_AUDIT.md).
+
+#### Trait, fountain, and Arcana effects
+
+| Game key                  | Label               | Ordinary rank-III equip effect                                                                              | Cherished Heirloom contact                                                                                                                    | Gift Gift Gift result                                                                                                                     |
+| ------------------------- | ------------------- | ----------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `RandomBlessingKeepsake`  | Transcendent Embryo | grants an Epic random Chaos blessing and schedules its replacement every eight qualifying rooms             | leaves the current blessing and room counter unchanged but makes the next transformation Heroic; a later rank-IV equip grants Heroic          | one Common replay grants a Common Chaos blessing and starts the ordinary eight-room Common transformation lifecycle                       |
+| `FountainRarityKeepsake`  | Aromatic Phial      | adds 20% fountain healing and one use that upgrades one eligible Common boon to Heroic at the next fountain | has no Heroic row; preserves the pending/consumed use, so current reconstruction has no effect and a later equip remains Epic                 | explicitly excluded by Gift Gift Gift                                                                                                     |
+| `UnpickedBoonKeepsake`    | Concave Stone       | gives one 75% chance to acquire a random eligible unpicked non-replacement option after choosing a god boon | an unused current copy becomes 100%, while a consumed copy stays consumed; a later rank-IV equip starts at 100%                               | one Common replay supplies one 25% use; the consumed unslotted source remains, so this is one successful replay                           |
+| `BossMetaUpgradeKeepsake` | Crystal Figurine    | after the next boss, activates two random inactive Arcana at rank III                                       | preserves the pending/consumed use; an unused current activation becomes rank IV, a consumed one stays consumed, and a later equip is rank IV | Common replay creates one pending rank-I activation; boss consumption removes the unslotted source, permitting another later-biome replay |
+
+The companion [Cherished Heirloom](CHERISHED_HEIRLOOM_KEEPSAKE_AUDIT.md) and
+[Gift Gift Gift](ECHO_GIFT_GIFT_GIFT_KEEPSAKE_AUDIT.md) audits own the detailed
+reconstruction and replay chronology behind these matrix outcomes.
 
 This disposition is additive: effect support can be expanded declaration by
-declaration without changing the legal identity history or requiring generic
-placeholder effects.
+declaration without changing the legal identity history or requiring a generic
+placeholder-effect interpreter.
 
 ## Fated Compatibility
 
@@ -928,7 +1005,7 @@ authorship, simulation, and presentation slice for the settled effect subset.
 
 ## Current Planner Disposition
 
-The keepsake model is current through authored schema 51. All 33 identities
+The keepsake model is current through authored schema 59. All 33 identities
 participate in mandatory route-start selection, reached nonfinal Postboss
 retain-or-replace frontiers, ordered history, no-return legality, and their
 declared Fated role. The reached Postboss replacement is an optional ranked
@@ -943,8 +1020,9 @@ current supported effect according to its exact reconstruction rule, and a
 later supported equip uses rank IV while the Duo remains active. Gorgon uses the
 schema-30 phase child and a chronologically snapped Epic or Heroic rarity. The
 remaining 27 identities create no individual simulated gameplay effect, but
-still participate fully in identity history, no-return, Fated policy, and Run
-State.
+their ordinary equip, Cherished contact, and Gift replay behavior is now fully
+source-audited. They still participate fully in identity history, no-return,
+Fated policy, and Run State.
 
 Gift Gift Gift now captures all 29 source-eligible identities at Echo
 acquisition. Fig Leaf and Experimental Hammer apply their rank-I replay once,
