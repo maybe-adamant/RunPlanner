@@ -501,20 +501,32 @@ event result, handler registry, evaluator service bag, or mutable shared draft.
 
 **Owner and product.** Extract the complete generation transitions for:
 
-- `roomCreated`, including incoming and local producer preparation, room-
-  feature inventory/assessment preparation, reward wheels, Shops, Shrines,
-  Wells, Pools, and generated acquisition sites;
+- `roomCreated`, including incoming and local reward generation, unresolved-
+  reward generation, the exact branch cohorts and producer-frontier
+  capabilities emitted from that creation point, room-feature inventory and
+  assessment preparation, reward-wheel preparation, Shops, Shrines, Wells,
+  Pools, generated acquisition sites, postboss Keepsake-selection candidate
+  publication, and Hub-target Run State handoff checkpoints;
 - `targetGenerationCompleted`;
 - `outgoingGenerationCheckpoint`; and
 - pending Hub-board generation and flush.
 
-The room-creation owner may extract the authored-acquisition-site settlement
-adapter that it first consumes, but that adapter must return one complete site
-settlement product: next branches and peers together with its exact producer,
-conversion, derived-entry, trait-child, fallback, finding, and checkpoint
-emissions. It must not receive the chronology's maps or callbacks. Later offer
-and acquisition transitions reuse that product rather than wrapping or
-reimplementing it.
+`roomCreated` is the chronological generation point for incoming and local
+rewards. Its calls to offer processing and its focused candidate evaluators
+therefore remain with this transition; they are not split out merely because
+they evaluate an offer. A returned producer-frontier evaluator is an explicit
+immutable capability in the generation product and may close over that exact
+creation cohort. This does not authorize injected callbacks that mutate the
+coordinator's branches, peers, findings, maps, pending Hub state, or checkpoint
+builders.
+
+The outgoing-generation owner may extract the authored-acquisition-site
+settlement adapter that `outgoingGenerationCheckpoint` first consumes. That
+lower-level adapter must return one complete site-settlement product: next
+branches and peers together with its exact producer, conversion, derived-entry,
+trait-child, fallback, finding, and checkpoint emissions. It must not receive
+the chronology's maps or callbacks. Later acquisition transitions reuse that
+product rather than wrapping or reimplementing it.
 
 The chronology coordinator remains the sole owner of when a generated result
 is applied, when a Hub board is pending or flushed, and when target history is
@@ -524,9 +536,10 @@ from the prepared exact-owner index established in E1.
 
 **Tests.** Use the existing F/H/N/O generation and rewards suites as primary
 policy owners, with focused Shop inventory, Hermes Shrine, Stygian Well,
-Purging Pool, Fields optional, and Hub witnesses. Move direct product cases
-only where the new generation owner is the authority. Run those suites
-serially; do not run the complete engine lane yet.
+Purging Pool, Fields optional, postboss Keepsake selection, Hub generation, and
+Hub Run State witnesses. Move direct product cases only where the new
+generation owner is the authority. Run those suites serially; do not run the
+complete engine lane yet.
 
 **Deletion.** Remove the moved generation cases, room-feature recorders,
 pending-Hub implementation, and superseded site-settlement adapter from
@@ -535,13 +548,15 @@ path after the gate.
 
 **Commit.** `refactor(engine): separate reward generation transitions`
 
-#### Gate E3 — Offer chronology transitions
+#### Gate E3 — Reached offer-lifecycle transitions
 
 **Owner and product.** Extract `offerPointMaterialized`,
-`offerPointAcquired`, and `producerRoleAdvanced` as the offer-chronology owner.
-It owns the exact offer-time branch cohort, trait and level settlement
-integration, incoming/local offer completion, producer-role advancement, and
-the candidate/frontier products emitted at those event points.
+`offerPointAcquired`, and `producerRoleAdvanced` as the reached offer-lifecycle
+owner. It owns the exact branch cohort at those later lifecycle events, trait
+and level settlement integration, producer-role advancement, and the
+candidate/frontier products emitted at those event points. Incoming and local
+reward generation remains wholly owned by Gate E2's `roomCreated` transition;
+this gate neither wraps nor reprocesses it.
 
 Ship lifecycle candidate preparation moves with this owner because its
 deferred evaluation captures the exact first-wheel branches. The offer owner
