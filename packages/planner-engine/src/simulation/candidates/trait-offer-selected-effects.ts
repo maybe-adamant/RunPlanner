@@ -2,7 +2,7 @@ import type { Catalog } from '../../catalog-schema';
 import { optionIndex } from '../../authored-project/traits';
 import type { ProjectDocument } from '../../authored-project/model';
 import type { TraitOfferCandidateArtifacts } from './trait-offer-capability';
-import type { ProjectEvaluation } from '../project';
+import type { ProjectEvaluation } from '../evaluation-products';
 import type {
   AllTogetherSetDomainEvaluation,
   AllTogetherSetDomainQuery,

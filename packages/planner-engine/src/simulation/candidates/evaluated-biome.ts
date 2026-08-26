@@ -5,7 +5,7 @@ import type {
   CompleteBiomeProjectEvaluation,
   PrefixIncompleteBiomeProjectEvaluation,
   ProjectEvaluation,
-} from '../project';
+} from '../evaluation-products';
 import type { CanonicalAuthoredRoom, MaterializedBiomePrefix } from '../materialization';
 import { CandidateEvaluationContractError } from './contract';
 

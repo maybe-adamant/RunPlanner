@@ -3,7 +3,7 @@ import { semanticAddressKey, type ExitDecisionAddress } from '../../authored-pro
 import type { ProjectDocument } from '../../authored-project/model';
 import { fieldsCageOutcomeCandidateSupport } from '../generation';
 import type { SemanticFinding } from '../model';
-import type { ProjectEvaluation } from '../project';
+import type { ProjectEvaluation } from '../evaluation-products';
 import { unavailableForBiome, type CandidateContextUnavailable } from './availability';
 import {
   candidateAssessmentPrefix,

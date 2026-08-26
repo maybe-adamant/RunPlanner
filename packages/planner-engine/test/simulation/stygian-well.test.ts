@@ -14,8 +14,10 @@ import {
 } from '@run-planner/test-fixtures/underworld';
 import {
   simulateProjectAssembly,
-  stygianWellCandidateForProjectEvaluationAssembly,
 } from '../../src/simulation/project';
+import {
+  stygianWellCandidateForProjectEvaluationAssembly,
+} from '../../src/simulation/project-evaluation-assembly';
 import {
   applyStygianWellPurchase,
   advanceStygianWellBossUses,

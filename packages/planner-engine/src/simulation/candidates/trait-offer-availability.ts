@@ -1,5 +1,5 @@
 import type { TraitOfferAddress } from '../../authored-project/addresses';
-import type { ProjectEvaluation } from '../project';
+import type { ProjectEvaluation } from '../evaluation-products';
 import { unavailableForBiome, type CandidateContextUnavailable } from './availability';
 
 /**

@@ -3,7 +3,7 @@ import type {
   BiomeEvaluationCheckpoint,
   BiomeEvaluationCoverage,
   ProjectEvaluation,
-} from '../project';
+} from '../evaluation-products';
 
 export type CandidateContextUnavailableReason =
   | 'authoredPrerequisiteMissing'

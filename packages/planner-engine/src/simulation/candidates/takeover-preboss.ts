@@ -7,7 +7,7 @@ import {
   evaluateTakeoverPrebossBatchCandidateAtFrontier,
   type TakeoverPrebossBatchCandidateSupport,
 } from '../generation';
-import type { ProjectEvaluation } from '../project';
+import type { ProjectEvaluation } from '../evaluation-products';
 import type { CanonicalDecision } from '../materialization';
 import { unavailableForBiome, type CandidateContextUnavailable } from './availability';
 import { CandidateEvaluationContractError } from './contract';
