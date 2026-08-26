@@ -161,6 +161,57 @@ describe('decision run-state snapshots', () => {
     expect(cachedA?.bags).not.toEqual(cachedB?.bags);
   });
 
+  it('keeps derived Hex progress distinct when a shared cache sees the same history frontier', () => {
+    const base = initializeTestRewardBranches()[0]!;
+    const sharedCache = createRunStateDerivationCache();
+    const owner = createRoomRunStateCheckpointAddress(
+      createOccurrenceAddress(
+        createBiomeAddress('Underworld', 'F'),
+        createOccurrenceId('run-state-hex-cache'),
+      ),
+      { kind: 'roomEntered' },
+    );
+    const historyView = {
+      sequence: 1,
+      ledgers: {
+        roomCreations: [],
+        roomAppearances: [],
+        encounterRecords: [],
+        encounterStarts: [],
+        encounterCompletions: [],
+        enteredRewardStores: [],
+        requiredObjectSpawns: [],
+        requiredObjectCompletions: [],
+        roomRestores: [],
+        counters: {
+          biomeDepthCache: 1,
+          biomeEncounterDepth: 0,
+          routeEncounterDepth: 0,
+          roomHistoryOrdinal: 1,
+        },
+      },
+    };
+    const token = Object.freeze({ owner, historyView });
+    const snapshot = (bankedPathPoints: number) =>
+      createRunState({
+        catalog,
+        owner,
+        historyView,
+        branches: [
+          Object.freeze({
+            ...base,
+            hexProgress: Object.freeze({ bankedPathPoints, investedPathPoints: 0 }),
+          }),
+        ],
+        enteredBiomeCount: 1,
+        rewardFacts: () => requirementFacts(0),
+        derivationCache: sharedCache,
+        factsContextToken: token,
+      });
+    expect(snapshot(2)?.hexProgress).toEqual({ bankedPathPoints: 2, investedPathPoints: 0 });
+    expect(snapshot(5)?.hexProgress).toEqual({ bankedPathPoints: 5, investedPathPoints: 0 });
+  });
+
   it('publishes distinct ordinary room-entry and pre-exit checkpoints', () => {
     const evaluation = simulateProject(catalog, createCompleteFGProject());
     const biome = evaluation.routes

@@ -485,6 +485,12 @@ describe('exact reward priorities', () => {
         eligibleRewardTypes: new Set(['MaxHealthDrop']),
       }),
     ).toBeUndefined();
+    // Exact-name priorities never treat the three Path consumables as a family.
+    expect(
+      oldestSupportedRewardPriority(runProgress, initial, ['SpellDrop'], facts(), {
+        eligibleRewardTypes: new Set(['MinorTalentDrop']),
+      }),
+    ).toBeUndefined();
     expect(
       oldestSupportedRewardPriority(
         runProgress,

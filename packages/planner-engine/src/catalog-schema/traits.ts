@@ -362,6 +362,8 @@ export interface TraitGiverDeclaration {
   /** Closed source-menu participation normalized for Calling Card. */
   readonly callingCardMenu: boolean;
   readonly denialParticipates?: boolean;
+  /** Ordered initial-spell button bonuses, owned by the SpellDrop giver. */
+  readonly selectedOptionPathPointBonuses?: readonly [0, 1, 2];
 }
 
 /** One giver-preserving source variant in Echo's audited previous-run approximation. */

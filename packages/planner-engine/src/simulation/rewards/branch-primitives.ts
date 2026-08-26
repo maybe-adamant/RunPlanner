@@ -74,6 +74,8 @@ export interface RewardBranchState {
   readonly bags: Readonly<Record<string, RewardBagState>>;
   /** Ordered global exact reward-type priorities, consumed only by counted selection. */
   readonly rewardPriorities: readonly string[];
+  /** Semantic Path selections: banked until a writable screen, then aggregate invested. */
+  readonly hexProgress: { readonly bankedPathPoints: number; readonly investedPathPoints: number };
   readonly history: RewardHistoryState;
   readonly events: readonly RewardEvent[];
   readonly pendingShops: Readonly<Record<string, PendingShopState>>;
@@ -118,6 +120,7 @@ function equivalentBranchStateKey(branch: RewardBranchState): string {
   return JSON.stringify({
     bags: orderedRecord(branch.bags),
     rewardPriorities: branch.rewardPriorities,
+    hexProgress: branch.hexProgress,
     history: {
       offerHistory: history.offerHistory,
       useRecord: orderedRecord(history.useRecord),

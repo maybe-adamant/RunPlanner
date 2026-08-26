@@ -102,10 +102,15 @@ export const keepsakes: readonly RawKeepsakeDeclaration[] = entries.map(
                             availability: 'eligible',
                             effect: { kind: 'olympianRewardPressure', schedule: 'everyBiome' },
                           } as const)
-                        : ({
-                            availability: 'eligible',
-                            effect: { kind: 'modeledNeutral', schedule: 'noModeledEffect' },
-                          } as const),
+                        : key === 'SpellTalentKeepsake'
+                          ? ({
+                              availability: 'eligible',
+                              effect: { kind: 'moonBeam', schedule: 'oneShotAfterUnequipped' },
+                            } as const)
+                          : ({
+                              availability: 'eligible',
+                              effect: { kind: 'modeledNeutral', schedule: 'noModeledEffect' },
+                            } as const),
     ...(key === 'HadesAndPersephoneKeepsake'
       ? {
           effect: {
@@ -256,6 +261,23 @@ export const keepsakes: readonly RawKeepsakeDeclaration[] = entries.map(
                                 },
                               },
                             }
-                          : {}),
+                          : key === 'SpellTalentKeepsake'
+                            ? {
+                                effect: {
+                                  kind: 'moonBeam' as const,
+                                  pathPointsByRank: {
+                                    Common: 3 as const,
+                                    Rare: 4 as const,
+                                    Epic: 5 as const,
+                                    Heroic: 7 as const,
+                                  },
+                                  priorityRewardTypes: [
+                                    'SpellDrop' as const,
+                                    'TalentDrop' as const,
+                                    'TalentBigDrop' as const,
+                                  ],
+                                },
+                              }
+                            : {}),
   }),
 );

@@ -161,7 +161,18 @@ export function presentRunState(
     Object.values(snapshot.traits.equippedSlots).map(({ traitKey }) => traitKey),
   );
   const artificer = artificerStatus(catalog, snapshot.arcanaFear);
+  const equippedSpell = snapshot.traits.equippedSlots.Spell;
   return Object.freeze({
+    hexProgress: Object.freeze({
+      ...(equippedSpell === undefined
+        ? {}
+        : {
+            baseSpellLabel:
+              catalog.traits.byKey[equippedSpell.traitKey]?.label ?? equippedSpell.traitKey,
+          }),
+      bankedPathPoints: snapshot.hexProgress.bankedPathPoints,
+      investedPathPoints: snapshot.hexProgress.investedPathPoints,
+    }),
     keepsakes: Object.freeze({
       currentLabel:
         catalog.keepsakes.byKey[snapshot.keepsakes.currentKey]?.label ??

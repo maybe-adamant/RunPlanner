@@ -31,6 +31,7 @@ export interface RawConcreteAcquisitionDeclaration {
     Partial<Record<'Earth' | 'Air' | 'Fire' | 'Water', number>>
   >;
   readonly grantedTraitKey?: string;
+  readonly pathPointGrant?: 1 | 3 | 5;
 }
 
 export interface RawAcquisitionRoleDeclaration {

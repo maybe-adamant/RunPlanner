@@ -283,6 +283,38 @@ describe('The Artificer', () => {
     expect(product.roleFrontiers?.[0]?.source.blocksSeaStarDuplication).toBe(true);
   });
 
+  it('settles a picked Sea Star-recreated Path reward through the shared concrete acquisition', () => {
+    const occurrenceId = createOccurrenceId('sea-star-talent-duplicate');
+    const siteOwner = createOccurrenceAddress(biome, occurrenceId);
+    const site = createAcquisitionSiteAddress(siteOwner, 'seaStarDuplicate:talent:self');
+    const retained = createUnresolvedAcquisitionRewardState(
+      catalog,
+      { rewardType: 'TalentDrop' },
+      { kind: 'producerLifecycle', key: 'RoomReward' },
+    );
+    const product = settlePickupAcquisitionSite(
+      catalog,
+      initialBranches(),
+      {
+        siteOwner,
+        site,
+        entries: Object.freeze({ seaStarDuplicate: retained }),
+        order: Object.freeze(['seaStarDuplicate']),
+        producerLifecycleKey: 'RoomReward',
+        requiredEntryKeys: new Set(),
+        seaStarDuplicateEntryKeys: new Set(['seaStarDuplicate']),
+        historySequence: 1,
+        facts: (history) => factsWithHistory(facts(), history, new Set()),
+      },
+      new Map(),
+    );
+    expect(product.entries[0]?.participation).toBe('optional');
+    expect(product.branches[0]?.hexProgress).toEqual({
+      bankedPathPoints: 0,
+      investedPathPoints: 3,
+    });
+  });
+
   it('keeps a Sea Star-retained Buried Treasure Bones pickup on its parent lifecycle', () => {
     const occurrenceId = createOccurrenceId('sea-star-buried-bones');
     const siteOwner = createOccurrenceAddress(biome, occurrenceId);

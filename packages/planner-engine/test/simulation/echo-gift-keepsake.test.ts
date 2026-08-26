@@ -179,6 +179,21 @@ function replayBiome(
   );
 }
 
+function replayBiomeAt(
+  biomeKey: 'I' | 'Q',
+  branches: NonNullable<Parameters<typeof evaluateBiomeRewardsAssemblyInternal>[5]>,
+) {
+  const evaluated = evaluatedG();
+  return evaluateBiomeRewardsAssemblyInternal(
+    catalog,
+    { ...evaluated.snapshot, biomeKey },
+    { ...evaluated.history, biomeKey, events: Object.freeze([]), rooms: Object.freeze([]) },
+    2,
+    route().value.loadout,
+    branches,
+  );
+}
+
 function hammerEvent(
   traitKey: string,
   sequence: number,
@@ -317,6 +332,48 @@ describe('Echo Gift Gift Gift', () => {
     const second = replayBiome([first]).simulation.branches[0]!;
     expect(second.keepsakes[ledger]?.remainingCharges).toBe(initial + 4);
     expect(second.traitHistory?.equippedTraits[giftTraitKey]?.echoKeepsakeReplayCount).toBe(2);
+  });
+
+  it.each([
+    ['I', 'H_PostBoss01'],
+    ['Q', 'P_PostBoss01'],
+  ] as const)(
+    'replays Moon Beam after %s with the preceding %s Big Path priority',
+    (biomeKey, _postboss) => {
+      const branch = branchWithGift('SpellTalentKeepsake', 'GoldifyKeepsake');
+      const afterSpell = Object.freeze({
+        ...branch,
+        history: Object.freeze({
+          ...branch.history,
+          useRecord: Object.freeze({ ...branch.history.useRecord, SpellDrop: 1 }),
+        }),
+      });
+      const replayed = replayBiomeAt(biomeKey, [afterSpell]).simulation.branches[0]!;
+      expect(replayed.hexProgress.bankedPathPoints).toBe(3);
+      expect(replayed.rewardPriorities).toEqual(['TalentBigDrop']);
+      expect(replayed.traitHistory?.equippedTraits[giftTraitKey]?.echoKeepsakeReplayCount).toBe(1);
+    },
+  );
+
+  it('defers Moon Beam Gift while ordinary Moon Beam remains equipped, then replays once at Common', () => {
+    const ordinary = branchWithGift('SpellTalentKeepsake');
+    const deferred = replayBiome([ordinary]).simulation.branches[0]!;
+    expect(deferred.hexProgress).toEqual({ bankedPathPoints: 0, investedPathPoints: 0 });
+    expect(deferred.rewardPriorities).toEqual([]);
+    expect(deferred.traitHistory?.equippedTraits[giftTraitKey]?.echoKeepsakeReplayCount).toBe(0);
+
+    const unequipped = branchWithGift('SpellTalentKeepsake', 'GoldifyKeepsake', {
+      keepsakes: retainedKeepsakeState('SpellTalentKeepsake', 'GoldifyKeepsake'),
+    });
+    const replayed = replayBiome([unequipped]).simulation.branches[0]!;
+    expect(replayed.hexProgress).toEqual({ bankedPathPoints: 3, investedPathPoints: 0 });
+    expect(replayed.rewardPriorities).toEqual(['SpellDrop']);
+    expect(replayed.traitHistory?.equippedTraits[giftTraitKey]?.echoKeepsakeReplayCount).toBe(1);
+
+    const later = replayBiome([replayed]).simulation.branches[0]!;
+    expect(later.hexProgress).toEqual(replayed.hexProgress);
+    expect(later.rewardPriorities).toEqual(replayed.rewardPriorities);
+    expect(later.traitHistory?.equippedTraits[giftTraitKey]?.echoKeepsakeReplayCount).toBe(1);
   });
 
   it('retains an eligible effect-neutral capture without inventing a replay mutation', () => {

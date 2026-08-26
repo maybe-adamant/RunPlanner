@@ -64,6 +64,7 @@ import {
   refreshKeepsakeFatedStatus,
 } from '../keepsakes';
 import type { RewardBranchState } from './branch-primitives';
+import { bankPathPoints } from '../hex-progress';
 import { addRewardFinding } from './findings';
 
 export interface ReachedTraitChildCheckpoint {
@@ -137,9 +138,9 @@ function applyTraitOfferForAcquisitionInternal(
   readonly branch: RewardBranchState;
   readonly blockedChild?: ReachedTraitChildCheckpoint;
 } {
-  // Aspect of Selene routes a later Spell Drop into unsupported Path of Stars.
-  // The concrete acquisition still settles in the reward ledger; its base-spell
-  // child is deliberately dormant and must neither block nor change history.
+  // Aspect of Selene routes a later Spell Drop directly to Path settlement.
+  // The concrete acquisition retains its history identity; its base-spell child
+  // stays absent and must neither block nor change trait history.
   if (
     reward.offer?.rewardType === 'SpellDrop' &&
     isAspectSpellDropDormant(catalog, reward.traitContext?.aspectKey) &&
@@ -722,10 +723,16 @@ function applyTraitOfferForAcquisitionInternal(
     traitEvaluations,
     keepsakes,
   });
+  const moonBeamAdvanced =
+    selectedDisposition?.kind === 'advanceCurrentKeepsake' &&
+    catalog.keepsakes.byKey[effectiveBranch.keepsakes.currentKey]?.effect?.kind === 'moonBeam';
+  const settledAfterKeepsakeAdvance = moonBeamAdvanced
+    ? bankPathPoints(settledBeforeChaos, 2)
+    : settledBeforeChaos;
   const settledBranch =
     options.frozenAcquisition === true
-      ? settledBeforeChaos
-      : consumeChaosGodScreen(catalog, settledBeforeChaos, sequence, effectiveAuthored);
+      ? settledAfterKeepsakeAdvance
+      : consumeChaosGodScreen(catalog, settledAfterKeepsakeAdvance, sequence, effectiveAuthored);
   let stoneBranch = settledBranch;
   if (
     blockedChildAddress === undefined &&

@@ -450,6 +450,7 @@ export function echoGoldShop(
   order: readonly string[],
   options: {
     readonly replaceMinorWithSpell?: boolean;
+    readonly spellSelectOption2?: boolean;
     readonly includeDuplicate?: boolean;
     readonly duplicateConversion?: 'normal' | 'gold' | 'artificer';
     readonly duplicateSelectOption2?: boolean;
@@ -480,10 +481,30 @@ export function echoGoldShop(
   if (baseState.kind !== 'shop' || baseState.shop === undefined)
     throw new Error('missing active Shop');
   const spellOffer = Object.freeze({ rewardType: 'SpellDrop' as const });
-  const spellReward =
+  const unresolvedSpellReward =
     options.replaceMinorWithSpell === true
       ? completeShopFixtureReward(spellOffer, loadout, baseState.shop.profileKey)
       : undefined;
+  const unresolvedSpellTraitOffer =
+    unresolvedSpellReward !== undefined &&
+    'self' in unresolvedSpellReward.traitOffersByAcquisitionRole
+      ? unresolvedSpellReward.traitOffersByAcquisitionRole.self
+      : undefined;
+  const spellReward =
+    unresolvedSpellReward === undefined ||
+    options.spellSelectOption2 !== true ||
+    unresolvedSpellTraitOffer?.kind !== 'traits'
+      ? unresolvedSpellReward
+      : Object.freeze({
+          ...unresolvedSpellReward,
+          traitOffersByAcquisitionRole: Object.freeze({
+            ...unresolvedSpellReward.traitOffersByAcquisitionRole,
+            self: Object.freeze({
+              ...unresolvedSpellTraitOffer,
+              selectedOptionKey: 'option2' as const,
+            }),
+          }),
+        });
   const offerOverrides: Readonly<Record<string, ResolvedRewardOffer>> = {
     ...(options.replaceMinorWithSpell ? { Minor: spellOffer } : {}),
     ...(options.offerOverrides ?? {}),

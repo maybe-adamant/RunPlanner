@@ -111,6 +111,7 @@ import {
   publicRewardBranch,
   applyExperimentalHammerEquipResult,
   applyOlympianRewardPressureEquip,
+  applyMoonBeamEquip,
   type OfferProcessingPeer,
 } from '../processing';
 import type { AcquisitionRoleFrontier } from '../acquisition-settlement';
@@ -635,6 +636,27 @@ export function evaluateBiomeRewardChronology(
             );
       });
       branches = Object.freeze(replayedBranches);
+    } else if (
+      replayEffect.kind === 'moonBeam' &&
+      giftState.replayCount === 0 &&
+      branches[0]?.keepsakes.currentKey !== giftState.capturedKeepsakeKey
+    ) {
+      // Replay happens at the next biome boundary. I/Q immediately follow the
+      // H/P Postboss frontiers that own Moon Beam's Big Path override.
+      const precedingPostbossWasBigPath = snapshot.biomeKey === 'I' || snapshot.biomeKey === 'Q';
+      branches = Object.freeze(
+        branches.map((branch) =>
+          recordReplay(
+            applyMoonBeamEquip(
+              catalog,
+              branch,
+              giftState.capturedKeepsakeKey,
+              'Common',
+              precedingPostbossWasBigPath,
+            ),
+          ),
+        ),
+      );
     } else if (
       replayEffect.kind === 'transcendentEmbryo' &&
       giftState.replayCount === 0 &&

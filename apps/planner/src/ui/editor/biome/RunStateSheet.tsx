@@ -189,6 +189,16 @@ export function RunStateSheet({ launcher }: { readonly launcher: WorkspaceRunSta
         )}
       </details>
       <details className="run-state-summary-section">
+        <summary>Hex progress</summary>
+        {state.hexProgress.baseSpellLabel === undefined ? null : (
+          <p>Spell: {state.hexProgress.baseSpellLabel}</p>
+        )}
+        <p>Banked Path points: {state.hexProgress.bankedPathPoints}</p>
+        <p>
+          Aggregate invested Path points: {state.hexProgress.investedPathPoints} (sim-neutral nodes)
+        </p>
+      </details>
+      <details className="run-state-summary-section">
         <summary>
           Arcana <span>{state.arcana.length} active</span>
         </summary>

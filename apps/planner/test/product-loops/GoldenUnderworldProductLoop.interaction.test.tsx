@@ -53,6 +53,39 @@ afterEach(() => {
 });
 
 describe('underworld product loop', () => {
+  it('shows Moon Beam banked Path progress in Run State without inventing a Hex-node editor', async () => {
+    const application = createApplication();
+    let project = applyProjectCommand(createGoldenFGHIProject(), application.catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: createRouteStartKeepsakeSelectionAddress('Underworld'),
+      keepsakeKey: 'SpellTalentKeepsake',
+    });
+    project = applyProjectCommand(project, application.catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(goldenFBiome, goldenFStartId),
+      value: { rewardType: 'SpellDrop' },
+    });
+    application.store.dispatch(authoredProjectReplaced(authorLegalTraitOffers(project)));
+    const view = renderPlannerForInteraction({ application });
+
+    await view.user.click(screen.getByRole('button', { name: 'Underworld' }));
+    await view.user.click(screen.getByRole('button', { name: 'Erebus' }));
+    await view.user.click(screen.getByRole('button', { name: /^OpeningEvaluated/ }));
+    await view.user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
+    const workbench = screen
+      .getByRole('region', { name: 'Room Timeline' })
+      .closest<HTMLElement>('.biome-occurrence-workbench');
+    if (workbench === null) throw new Error('Opening room workbench is missing');
+    await view.user.click(within(workbench).getByRole('button', { name: 'Run State' }));
+    const sheet = screen.getByRole('region', {
+      name: 'State before the first action in Opening 01',
+    });
+    expect(within(sheet).getByText('Banked Path points: 5')).toBeTruthy();
+    expect(within(sheet).getByText(/Aggregate invested Path points: 0/)).toBeTruthy();
+    expect(within(sheet).queryByRole('button', { name: /Hex node|Path node/i })).toBeNull();
+    application.dispose();
+  });
+
   it('projects the reached forced Zeus Boon and its still-active ordinary source in Run State', async () => {
     const application = createApplication();
     const openingReward = createIncomingRewardAddress(goldenFBiome, goldenFStartId);

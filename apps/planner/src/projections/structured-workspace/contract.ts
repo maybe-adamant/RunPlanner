@@ -2317,6 +2317,11 @@ export type WorkspaceRunStateLauncher =
     };
 
 export interface WorkspaceRunStatePresentation {
+  readonly hexProgress: {
+    readonly baseSpellLabel?: string;
+    readonly bankedPathPoints: number;
+    readonly investedPathPoints: number;
+  };
   readonly keepsakes: {
     readonly currentLabel: string;
     readonly chronology: readonly {

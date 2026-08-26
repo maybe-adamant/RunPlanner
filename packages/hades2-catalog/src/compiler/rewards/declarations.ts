@@ -133,6 +133,19 @@ export function normalizePayloadDomains(
 export function normalizeAcquisitions(
   raw: RawRewardKernelInput['acquisitions'],
 ): CatalogCollection<ConcreteAcquisitionDeclaration> {
+  const pathPointGrants = new Map([
+    ['MinorTalentDrop', 1],
+    ['TalentDrop', 3],
+    ['TalentBigDrop', 5],
+  ]);
+  for (const [index, acquisition] of raw.entries()) {
+    const expected = pathPointGrants.get(acquisition.gameName);
+    if (expected === undefined) {
+      if (acquisition.pathPointGrant !== undefined)
+        fail(`acquisitions[${index}].pathPointGrant`, 'is reserved to concrete Path rewards');
+    } else if (acquisition.pathPointGrant !== expected)
+      fail(`acquisitions[${index}].pathPointGrant`, `must equal ${expected}`);
+  }
   for (const [index, acquisition] of raw.entries()) {
     if (typeof acquisition.canDuplicate !== 'boolean')
       fail(`acquisitions[${index}].canDuplicate`, 'must be boolean');
@@ -278,6 +291,9 @@ export function normalizeAcquisitions(
         goldConversionEligible: goldConversionEligible.has(acquisition.gameName),
         artificerConversionEligible: artificerConversionEligible.has(acquisition.gameName),
         canDuplicate: acquisition.canDuplicate,
+        ...(acquisition.pathPointGrant === undefined
+          ? {}
+          : { pathPointGrant: acquisition.pathPointGrant }),
         ...(acquisition.lastRewardRecreation === undefined
           ? {}
           : {

@@ -12,7 +12,7 @@ import {
   type TraitOfferOwnerAddress,
 } from '../../authored-project/addresses';
 import type { AuthoredRewardState } from '../../authored-project/model';
-import { createUnresolvedAcquisitionRewardState } from '../../authored-project/traits';
+import { createUnresolvedAcquisitionRewardState, optionIndex } from '../../authored-project/traits';
 import {
   acquisitionSiteStorageKey,
   artificerAcquisitionSite,
@@ -52,11 +52,13 @@ import {
   hasActiveChaosSemanticTag,
   foldTraitHistoryEvents,
   recordFixedAcquisitionTraitGrant,
+  isAspectSpellDropDormant,
   type TraitHistoryState,
 } from '../traits';
 
 import { artificerStatus, consumeOrdinaryRoomForfeit, consumeArtificerUse } from '../arcana-fear';
 import { consumeOlympianProviderMaterialized, consumeTimePieceCharge } from '../keepsakes';
+import { bankPathPoints, settlePathScreen } from '../hex-progress';
 import {
   appendRewardEvent,
   freezeRecord,
@@ -1458,6 +1460,14 @@ export function applyProducerRoleHistory(
     const contributions =
       catalog.rewards.acquisitions.byKey[acquisition.acquisition.gameName]?.elementContributions;
     let acquisitionBranch: RewardBranchState = Object.freeze({ ...materializedBranch, history });
+    const pathPointGrant: 1 | 3 | 5 | undefined =
+      catalog.rewards.acquisitions.byKey[acquisition.acquisition.gameName]?.pathPointGrant ??
+      (acquisition.acquisition.gameName === 'SpellDrop' &&
+      isAspectSpellDropDormant(catalog, incoming.traitContext?.aspectKey)
+        ? (3 as const)
+        : undefined);
+    if (pathPointGrant !== undefined)
+      acquisitionBranch = settlePathScreen(acquisitionBranch, pathPointGrant);
     if (fixedTraitKey !== undefined) {
       const traitHistory = recordFixedAcquisitionTraitGrant(
         catalog,
@@ -1489,6 +1499,7 @@ export function applyProducerRoleHistory(
       history = attachTraitHistory(history, traitHistory);
       acquisitionBranch = Object.freeze({ ...acquisitionBranch, history, traitHistory });
     }
+    const traitEventCountBeforeSettlement = acquisitionBranch.traitHistory?.events.length ?? 0;
     const traitSettlement = applyTraitOfferForAcquisition(
       catalog,
       acquisitionBranch,
@@ -1504,7 +1515,29 @@ export function applyProducerRoleHistory(
         ),
       },
     );
-    const withEvent = appendRewardEvent(traitSettlement.branch, resolution.historySequence, {
+    const installedSpellEvent =
+      acquisition.acquisition.gameName === 'SpellDrop' && pathPointGrant === undefined
+        ? traitSettlement.branch.traitHistory?.events
+            .slice(traitEventCountBeforeSettlement)
+            .findLast(
+              (event) =>
+                event.kind === 'traitOffer' &&
+                event.sequence === resolution.historySequence &&
+                event.acquisitionRole === resolution.role &&
+                event.giverKey === 'SpellDrop',
+            )
+        : undefined;
+    const spellBonus =
+      installedSpellEvent?.kind === 'traitOffer'
+        ? catalog.traitGivers.byKey.SpellDrop?.selectedOptionPathPointBonuses?.[
+            optionIndex(installedSpellEvent.selectedOptionKey)
+          ]
+        : undefined;
+    const settledTraitBranch =
+      spellBonus === undefined
+        ? traitSettlement.branch
+        : bankPathPoints(traitSettlement.branch, spellBonus);
+    const withEvent = appendRewardEvent(settledTraitBranch, resolution.historySequence, {
       kind: 'concreteAcquisition',
       origin: incoming.origin,
       acquisition,
