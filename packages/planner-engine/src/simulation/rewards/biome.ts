@@ -1,4 +1,4 @@
-import type { Catalog, RoomDeclaration } from '../../catalog-schema';
+import type { Catalog } from '../../catalog-schema';
 import { evaluateRequirement } from '../../requirements';
 import { fieldsOptionalRewardCountSupport } from '../fields-optional-count';
 import { isPurgingPoolEligibleTrait, type PurgingPoolAssessment } from '../purging-pool';
@@ -23,11 +23,7 @@ import {
   type SteadyGrowthOutcomeAddress,
   type TargetAddress,
 } from '../../authored-project/addresses';
-import type {
-  ResourcePlacements,
-  RouteLoadout,
-  ShipCombatState,
-} from '../../authored-project/model';
+import type { ResourcePlacements, RouteLoadout } from '../../authored-project/model';
 import { EMPTY_RESOURCE_PLACEMENTS } from '../../authored-project/defaults';
 import {
   acquisitionSiteStorageKey,
@@ -40,38 +36,13 @@ import { hermesShrineDeliveryEntryKey } from '../../authored-project/hermes-shri
 import { applyStygianWellPurchase, advanceStygianWellBossUses } from '../stygian-well';
 import { type StygianWellCandidateContext } from '../stygian-well';
 import { parseSeaStarDuplicateSiteKey } from '../../authored-project/sea-star';
-import {
-  createUnresolvedAcquisitionRewardState,
-  materializeGorgonAthenaOffer,
-} from '../../authored-project/traits';
-import {
-  encounterEnvelopeSlots,
-  selectedEncounterDefinitionKey,
-} from '../../authored-project/room-state/encounter-envelope';
-import {
-  findShopPartialGenerationWitnesses,
-  applyConcreteAcquisition,
-  locallyValidRewardOffers,
-  type ResolvedRewardOffer,
-  type RewardHistoryState,
-} from '../../reward-kernel';
-import type { CountedRewardBinding } from '../../reward-kernel/bindings';
-import type {
-  EncounterHistoryEntry,
-  HistoryStateView,
-  ProgressiveRoomHistoryViews,
-} from '../history';
-import type {
-  CanonicalAuthoredRoom,
-  CanonicalFieldsOptionalReward,
-  CanonicalHubRoom,
-  CanonicalResolvedIncomingReward,
-  CanonicalRewardWheel,
-} from '../materialization';
+import { materializeGorgonAthenaOffer } from '../../authored-project/traits';
+import { selectedEncounterDefinitionKey } from '../../authored-project/room-state/encounter-envelope';
+import { applyConcreteAcquisition, type ResolvedRewardOffer } from '../../reward-kernel';
+import type { HistoryStateView } from '../history';
+import type { CanonicalAuthoredRoom, CanonicalHubRoom } from '../materialization';
 import type { CanonicalDecision } from '../materialization/model';
-import { materializeShipCombatState } from '../materialization';
-import type { ResolvedEncounterPhase } from '../encounters';
-import { ownerRegion, type FindingRegionEntry } from '../finding-regions';
+import { findingIdentityKey, ownerRegion, type FindingRegionEntry } from '../finding-regions';
 import type {
   RewardBranch,
   BiomeRewardSimulation,
@@ -109,18 +80,12 @@ import { createBiomeRewardFacts, visibleStoreOptionNames } from './facts';
 import {
   createRoomLifecycleCandidateArtifacts,
   type RoomLifecycleCandidateArtifacts,
-  type RoomLifecycleCandidateResult,
   type ShipLifecycleCandidateContext,
 } from './lifecycle-artifacts';
 import { BiomeRewardSimulationContractError } from './biome-contract';
-import { localRewardBinding } from './room-reward-bindings';
 import { canonicalArtificerSource } from './reward-sources';
 import { selectedTraitOfferProducts } from './selected-trait-products';
-import {
-  prepareRewardEvaluationInputs,
-  preparedAcquisitionSiteOwner,
-  type RewardLifecycleReferences,
-} from './prepared-inputs';
+import { prepareRewardEvaluationInputs } from './prepared-inputs';
 import { applyEncounterStartedTransition } from './lifecycle-transitions/encounter-started';
 import { applyEncounterEndEffectsTransition } from './lifecycle-transitions/encounter-end-effects';
 import { applyKeepsakeRackUsedTransition } from './lifecycle-transitions/keepsake-rack-used';
@@ -138,6 +103,8 @@ import {
   type AuthoredSiteSettlementResult,
 } from './generation/authored-site-settlement';
 import { applyOutgoingGenerationTransition } from './generation/outgoing-generation';
+import { applyOfferPointMaterializedTransition } from './offer-lifecycle/offer-point-materialized';
+import { applyReachedOfferSettlement } from './offer-lifecycle/reached-settlement';
 import { historyFindingChronology, rewardFindingChronologyForRoom } from './finding-chronology';
 import type { PendingHubBoardGeneration as GenerationPendingHubBoardGeneration } from './generation/emissions';
 import type { BiomeRewardHistory, BiomeRewardSnapshot } from './evaluation-contract';
@@ -145,7 +112,6 @@ export type { BiomeRewardHistory, BiomeRewardSnapshot } from './evaluation-contr
 
 import {
   createRewardProducerCandidateArtifacts,
-  createRewardProducerCandidateResult,
   indexRewardProducerFrontier,
   type RewardProducerCandidateArtifacts,
   type RewardProducerFrontier,
@@ -153,8 +119,6 @@ import {
 import {
   advanceRewardBranches,
   initializeRewardBranches,
-  processOfferGenerationCohort,
-  processRewardOffer,
   publicRewardBranch,
   applyExperimentalHammerEquipResult,
   type OfferProcessingPeer,
@@ -165,9 +129,7 @@ import {
   settleArtificerReplacementAcquisition,
   settleOwnedAcquisitionSite,
   settlePickupAcquisitionSite,
-  settleProducerAcquisitionSite,
 } from './acquisition-settlement';
-import { processShopInventory } from './shop-settlement';
 import { addRewardFinding } from './findings';
 import { mergeEquivalentRewardBranches, type RewardBranchState } from './branch-primitives';
 import {
@@ -274,248 +236,6 @@ function stygianWellRuntimeFallbackItemKey(
   return fallbackRewardType === undefined
     ? undefined
     : group?.options.values.find((candidate) => candidate.rewardType === fallbackRewardType)?.key;
-}
-
-function rewardWheelBinding(
-  catalog: Catalog,
-  declaration: RoomDeclaration,
-  wheel: CanonicalRewardWheel,
-): CountedRewardBinding {
-  const descriptor = encounterEnvelopeSlots(catalog, declaration, declaration.gameName).find(
-    (slot) => slot.key === wheel.encounterPhaseKey,
-  )?.rewardAttachment;
-  if (
-    descriptor?.kind !== 'rewardWheel' ||
-    descriptor.key !== wheel.wheelKey ||
-    descriptor.reward.producerLifecycleKey !== wheel.producerLifecycleKey ||
-    !descriptor.reward.storeKeys.includes(wheel.storeKey)
-  ) {
-    throw new BiomeRewardSimulationContractError(
-      `${declaration.gameName} does not own reward wheel ${wheel.wheelKey}`,
-    );
-  }
-  return descriptor.reward;
-}
-
-function lifecycleCandidateResult(
-  findings: Map<string, FindingRegionEntry>,
-  branches: readonly RewardBranchState[],
-): RoomLifecycleCandidateResult {
-  return createRewardProducerCandidateResult(findings, branches);
-}
-
-interface WheelLifecycleView {
-  readonly generation: HistoryStateView;
-  readonly acquisition: HistoryStateView;
-  readonly acquisitionSequence: number;
-}
-
-function projectedEncounterEntry(
-  room: CanonicalAuthoredRoom,
-  phase: ResolvedEncounterPhase,
-  sequence: number,
-): EncounterHistoryEntry {
-  return Object.freeze({
-    sequence,
-    origin: room.origin,
-    gameName: room.gameName,
-    encounterEnvelopeKey: phase.envelopeKey,
-    slotKey: phase.slotKey,
-    encounterKey: phase.encounterKey,
-    phaseKind: phase.kind,
-  });
-}
-
-function projectDormantWheelView(
-  room: CanonicalAuthoredRoom,
-  phase: ResolvedEncounterPhase,
-  generation: HistoryStateView,
-): WheelLifecycleView {
-  const start = projectedEncounterEntry(room, phase, generation.sequence + 2);
-  const completion = projectedEncounterEntry(room, phase, generation.sequence + 4);
-  const encounterDelta = phase.countsEncounterDepth ? 1 : 0;
-  const acquisition = Object.freeze({
-    sequence: completion.sequence,
-    ledgers: Object.freeze({
-      ...generation.ledgers,
-      encounterStarts: Object.freeze([...generation.ledgers.encounterStarts, start]),
-      encounterCompletions: Object.freeze([...generation.ledgers.encounterCompletions, completion]),
-      counters: Object.freeze({
-        ...generation.ledgers.counters,
-        biomeEncounterDepth: generation.ledgers.counters.biomeEncounterDepth + encounterDelta,
-        routeEncounterDepth: generation.ledgers.counters.routeEncounterDepth + encounterDelta,
-      }),
-    }),
-  });
-  return Object.freeze({
-    generation,
-    acquisition,
-    acquisitionSequence: acquisition.sequence + 1,
-  });
-}
-
-function wheelLifecycleViews(
-  lifecycle: RewardLifecycleReferences,
-  room: CanonicalAuthoredRoom,
-  roomView: ProgressiveRoomHistoryViews,
-  wheel: CanonicalRewardWheel,
-): WheelLifecycleView {
-  const selected = roomView.offerPoints?.find(
-    (candidate) => candidate.offerPoint === wheel.wheelKey,
-  );
-  if (selected !== undefined) {
-    const acquisitionEvent = lifecycle.wheelsByOwner
-      .get(semanticAddressKey(room.origin))
-      ?.find(
-        (candidate) =>
-          candidate.kind === 'offerPointAcquired' &&
-          semanticAddressKey(candidate.origin) === semanticAddressKey(room.origin) &&
-          candidate.offerPoint === wheel.wheelKey,
-      );
-    if (selected.acquisitionBefore === undefined || acquisitionEvent === undefined) {
-      return fail(`${room.gameName}.${wheel.wheelKey} has no acquisition lifecycle view`);
-    }
-    return Object.freeze({
-      generation: selected.before,
-      acquisition: selected.acquisitionBefore,
-      acquisitionSequence: acquisitionEvent.sequence,
-    });
-  }
-  const phase = room.encounterPhases.find(
-    (candidate) => candidate.slotKey === wheel.encounterPhaseKey,
-  );
-  const generation =
-    roomView.preOutgoing ?? roomView.offerPoints?.at(-1)?.acquisitionAfter ?? roomView.entry;
-  if (phase === undefined || generation === undefined) {
-    return fail(`${room.gameName}.${wheel.wheelKey} has no dormant lifecycle view`);
-  }
-  return projectDormantWheelView(room, phase, generation);
-}
-
-function prepareShipLifecycleCandidateContext(
-  catalog: Catalog,
-  room: CanonicalAuthoredRoom,
-  declaration: RoomDeclaration,
-  roomView: ProgressiveRoomHistoryViews,
-  lifecycle: RewardLifecycleReferences,
-  branchesBeforeFirstWheel: readonly RewardBranchState[],
-  enteredBiomeCount: number,
-  routeLoadout: RouteLoadout,
-): ShipLifecycleCandidateContext {
-  const activeWheelKeys = Object.freeze(room.rewardWheels?.map((wheel) => wheel.wheelKey) ?? []);
-  return Object.freeze({
-    origin: room.origin,
-    activeWheelKeys,
-    evaluateState: (state: ShipCombatState): RoomLifecycleCandidateResult => {
-      const ship = materializeShipCombatState(
-        catalog,
-        createBiomeAddress(room.origin.routeKey, room.origin.biomeKey),
-        declaration,
-        Object.freeze({
-          occurrenceId: room.occurrenceId,
-          gameName: room.gameName,
-          state,
-          encounters: room.encounters,
-          additionalExits: Object.freeze([]),
-          roomActions: Object.freeze({ order: Object.freeze([]) }),
-        }),
-        routeLoadout,
-      );
-      const candidateRoom = Object.freeze({
-        ...room,
-        encounterPhases: ship.encounterPhases,
-        rewardWheels: ship.rewardWheels,
-      });
-      const candidateFindings = new Map<string, FindingRegionEntry>();
-      let candidateBranches = branchesBeforeFirstWheel;
-      for (const wheel of ship.rewardWheels) {
-        if (candidateBranches.length === 0) {
-          break;
-        }
-        const lifecycleView = wheelLifecycleViews(lifecycle, candidateRoom, roomView, wheel);
-        const binding = rewardWheelBinding(catalog, declaration, wheel);
-        candidateBranches = processOfferGenerationCohort(
-          candidateBranches,
-          wheel.offers.map((offer: CanonicalRewardWheel['offers'][number]) => ({
-            catalog,
-            reward: {
-              ...offer,
-              producerLifecycleKey: wheel.producerLifecycleKey,
-              resolvedStoreKey: wheel.storeKey,
-            },
-            binding,
-            historySequence: lifecycleView.generation.sequence + 1,
-            peers: Object.freeze([]),
-            facts: (
-              branchHistory: RewardHistoryState,
-              _shopNames: ReadonlySet<string> | undefined,
-              branch: RewardBranchState | undefined,
-            ) =>
-              rewardFacts(
-                catalog,
-                candidateRoom,
-                candidateRoom,
-                declaration,
-                lifecycleView.generation,
-                branchHistory,
-                enteredBiomeCount,
-                undefined,
-                undefined,
-                undefined,
-                undefined,
-                branch,
-              ),
-          })),
-          candidateFindings,
-          { ordering: 'allOffers', atomicRegion: ownerRegion(wheel.origin) },
-        );
-        const picked = wheel.offers.find(
-          (offer: CanonicalRewardWheel['offers'][number]) => offer.picked,
-        );
-        if (picked === undefined) {
-          const unresolvedPicked = wheel.unresolvedOffers.find((offer) => offer.picked);
-          if (unresolvedPicked !== undefined) {
-            addRewardFinding(
-              candidateFindings,
-              rewardFinding('rewardMissing', unresolvedPicked.origin, {}),
-            );
-            return lifecycleCandidateResult(candidateFindings, candidateBranches);
-          }
-          return fail(`${room.gameName}.${wheel.wheelKey} has no picked offer`);
-        }
-        if (candidateBranches.length > 0) {
-          candidateBranches = settleOwnedAcquisitionSite(
-            catalog,
-            candidateBranches,
-            {
-              siteOwner: wheel.origin,
-              pointKey: wheel.wheelKey,
-              entryKey: 'picked',
-              source: Object.freeze({
-                ...picked,
-                producerLifecycleKey: wheel.producerLifecycleKey,
-                instanceProvenance: 'free',
-              }),
-              historySequence: lifecycleView.acquisitionSequence,
-            },
-            (branchHistory) =>
-              rewardFacts(
-                catalog,
-                candidateRoom,
-                candidateRoom,
-                declaration,
-                lifecycleView.acquisition,
-                branchHistory,
-                enteredBiomeCount,
-              ),
-            candidateFindings,
-            ownerRegion(wheel.origin),
-          ).branches;
-        }
-      }
-      return lifecycleCandidateResult(candidateFindings, candidateBranches);
-    },
-  });
 }
 
 interface BiomeRewardEvaluationAssembly {
@@ -1578,708 +1298,71 @@ export function evaluateBiomeRewardsAssemblyInternal(
         break;
       }
       case 'offerPointMaterialized': {
-        const room = rooms.get(semanticAddressKey(event.origin));
-        const declaration = room && catalog.rooms.byKey[room.gameName];
-        const roomView = views.get(semanticAddressKey(event.origin));
-        if (
-          room === undefined ||
-          room.kind !== 'authored' ||
-          declaration === undefined ||
-          roomView === undefined
-        ) {
-          throw new BiomeRewardSimulationContractError('shop offer point has no authored room');
-        }
-        if (event.offerPoint === 'shopInventory') {
-          const frontierBranches = branches;
-          const shopEntry = room.entryState?.kind === 'shop' ? room.entryState : undefined;
-          const owners = Object.freeze([
-            ...(shopEntry?.offers.map((offer) => offer.offerOrigin) ?? []),
-            ...(shopEntry?.unresolvedOffers.map((offer) => offer.offerOrigin) ?? []),
-          ]);
-          const ownerKeys = new Set(owners.map(semanticAddressKey));
-          const shopContext = {
-            catalog,
-            room,
-            declaration,
-            historySequence: event.sequence,
-            findingChronology: rewardFindingChronologyForRoom(
-              snapshot,
-              room.origin,
-              event.sequence,
-              'localRoomLifecycle',
-            ),
-            facts: (
-              branchHistory: RewardHistoryState,
-              shopNames: ReadonlySet<string> = new Set(),
-              branch?: RewardBranchState,
-            ) =>
-              rewardFacts(
-                catalog,
-                room,
-                room,
-                declaration,
-                roomView.preparation,
-                branchHistory,
-                enteredBiomeCount,
-                shopNames,
-                undefined,
-                undefined,
-                rewardLookup.internal,
-                branch,
-              ),
-            fail,
-          };
-          if (owners.length > 0) {
-            indexRewardProducerFrontier(
-              producerFrontiers,
-              Object.freeze({
-                generationPolicy: 'jointShopInventory',
-                generationHistorySequence: event.sequence,
-                reachableBranchCount: frontierBranches.length,
-                acquisitionHorizon: 'generationOnly',
-                owners,
-                evaluateOffer: (
-                  owner: SemanticAddress,
-                  offer: CanonicalResolvedIncomingReward['offer'],
-                ) => {
-                  if (shopEntry === undefined) {
-                    return fail(`${room.gameName} lost its shop candidate state`);
-                  }
-                  const ownerKey = semanticAddressKey(owner);
-                  if (!ownerKeys.has(ownerKey)) {
-                    return fail('shop reward frontier received a foreign owner');
-                  }
-                  const profile = catalog.rewards.shops.byKey[shopEntry.profileKey];
-                  if (profile === undefined)
-                    return fail(`unknown shop profile ${shopEntry.profileKey}`);
-                  const concreteByKey = new Map(
-                    shopEntry.offers.map((entry) => [entry.offerKey, entry.offer] as const),
-                  );
-                  const focused = [...shopEntry.offers, ...shopEntry.unresolvedOffers].find(
-                    (entry) => semanticAddressKey(entry.offerOrigin) === ownerKey,
-                  );
-                  if (focused === undefined) return fail('shop reward frontier lost its owner');
-                  const fixedOffers = profile.slots.values.map((slot) =>
-                    slot.key === focused.offerKey ? offer : (concreteByKey.get(slot.key) ?? null),
-                  );
-                  const requirements =
-                    declaration.incomingReward.kind === 'shop'
-                      ? declaration.incomingReward.additionalOptionRequirements
-                      : undefined;
-                  const supported = frontierBranches.some(
-                    (branch) =>
-                      findShopPartialGenerationWitnesses(
-                        catalog.rewards,
-                        profile,
-                        fixedOffers,
-                        shopContext.facts(branch.history, new Set(), branch),
-                        requirements,
-                      ).length > 0,
-                  );
-                  return Object.freeze({ findings: Object.freeze([]), supported });
-                },
-              }),
-            );
-          }
-          if ((shopEntry?.unresolvedOffers.length ?? 0) > 0) {
-            for (const unresolved of shopEntry!.unresolvedOffers) {
-              addRewardFinding(
-                findings,
-                rewardFinding('rewardMissing', unresolved.offerOrigin, {}),
-                ownerRegion(room.origin),
-                shopContext.findingChronology,
-              );
-            }
-            branches = Object.freeze([]);
-          } else {
-            branches = processShopInventory(branches, shopContext, findings);
-          }
-          break;
-        }
-        if (event.offerPoint === 'fieldsOptionalRewards') {
-          const optionalRewards = room.fieldsOptionalRewards ?? [];
-          const unresolvedOptionals = room.unresolvedFieldsOptionalRewards ?? [];
-          const view = roomView.offerPoints?.find(
-            (candidate) => candidate.offerPoint === event.offerPoint,
-          )?.before;
-          if (view === undefined || room.lifecycleProfileKey !== 'FieldsCombatRoom') {
-            throw new BiomeRewardSimulationContractError(
-              `${room.gameName} has no Fields optional materialization`,
-            );
-          }
-          const frontierBranches = branches;
-          const descriptor = declaration.fieldsOptionalRewards;
-          if (descriptor === undefined)
-            return fail(`${room.gameName} has no Fields optional descriptor`);
-          const concreteBySlot = new Map(optionalRewards.map((reward) => [reward.slotKey, reward]));
-          const unresolvedBySlot = new Map(
-            unresolvedOptionals.map((reward) => [reward.slotKey, reward]),
-          );
-          const orderedSlots = descriptor.slotKeys.filter(
-            (slotKey) => concreteBySlot.has(slotKey) || unresolvedBySlot.has(slotKey),
-          );
-          const candidateState = (
-            base: (typeof unresolvedOptionals)[number],
-            offer: ResolvedRewardOffer,
-          ): CanonicalFieldsOptionalReward => {
-            const state = createUnresolvedAcquisitionRewardState(catalog, offer, {
-              kind: 'producerLifecycle',
-              key: base.producerLifecycleKey,
-            });
-            return Object.freeze({
-              ...base,
-              offer,
-              traitOffersByAcquisitionRole: state.traitOffersByAcquisitionRole,
-              ...(state.levelResolutionsByAcquisitionRole === undefined
-                ? {}
-                : { levelResolutionsByAcquisitionRole: state.levelResolutionsByAcquisitionRole }),
-              dispositionByAcquisitionRole: state.dispositionByAcquisitionRole,
-              traitContext: Object.freeze({
-                ...routeLoadout,
-                blockGiftBoons: declaration.blockGiftBoons,
-                devotionNoDuo: offer.rewardType === 'Devotion',
-              }),
-            });
-          };
-          const contextFor = (reward: CanonicalFieldsOptionalReward) => ({
-            catalog,
-            reward,
-            binding: localRewardBinding(declaration, reward),
-            historySequence: event.sequence,
-            peers: Object.freeze([]),
-            facts: (
-              branchHistory: RewardHistoryState,
-              _shopNames: ReadonlySet<string> | undefined,
-              branch: RewardBranchState | undefined,
-            ) =>
-              rewardFacts(
-                catalog,
-                room,
-                room,
-                declaration,
-                view,
-                branchHistory,
-                enteredBiomeCount,
-                undefined,
-                undefined,
-                undefined,
-                undefined,
-                branch,
-              ),
-          });
-          const evaluateOptionalCohort = (owner: SemanticAddress, offer: ResolvedRewardOffer) => {
-            const ownerKey = semanticAddressKey(owner);
-            const selectedReward = [...optionalRewards, ...unresolvedOptionals].find(
-              (reward) => semanticAddressKey(reward.origin) === ownerKey,
-            );
-            if (selectedReward === undefined) {
-              return fail('Fields optional frontier received a foreign owner');
-            }
-            const store = catalog.rewards.stores.byKey.FieldsOptionalRewards;
-            if (store === undefined) return fail('Fields optional store is missing');
-            const domain = Object.freeze(
-              store.entries.flatMap((entry) =>
-                locallyValidRewardOffers(catalog.rewards, entry.rewardType),
-              ),
-            );
-            let representativeFailedFindings: Map<string, FindingRegionEntry> | undefined;
-            const visit = (
-              index: number,
-              current: readonly RewardBranchState[],
-              currentFindings: Map<string, FindingRegionEntry>,
-            ):
-              | {
-                  readonly branches: readonly RewardBranchState[];
-                  readonly findings: Map<string, FindingRegionEntry>;
-                }
-              | undefined => {
-              if (index === orderedSlots.length)
-                return Object.freeze({ branches: current, findings: currentFindings });
-              const slotKey = orderedSlots[index]!;
-              const concrete = concreteBySlot.get(slotKey);
-              const unresolved = unresolvedBySlot.get(slotKey);
-              const offers =
-                slotKey === selectedReward.slotKey
-                  ? Object.freeze([offer])
-                  : concrete === undefined
-                    ? domain
-                    : Object.freeze([concrete.offer]);
-              for (const candidateOffer of offers) {
-                const trialFindings = new Map(currentFindings);
-                const reward =
-                  concrete !== undefined && candidateOffer === concrete.offer
-                    ? concrete
-                    : unresolved === undefined
-                      ? Object.freeze({ ...concrete!, offer: candidateOffer })
-                      : candidateState(unresolved, candidateOffer);
-                const next = processRewardOffer(current, contextFor(reward), trialFindings);
-                if (next.length === 0) {
-                  representativeFailedFindings ??= trialFindings;
-                  continue;
-                }
-                const completed = visit(index + 1, next, trialFindings);
-                if (completed !== undefined) return completed;
-              }
-              return undefined;
-            };
-            const completion = visit(0, frontierBranches, new Map());
-            const candidateBranches = completion?.branches ?? Object.freeze([]);
-            const candidateFindings =
-              completion?.findings ?? representativeFailedFindings ?? new Map();
-            const generated = candidateBranches.length > 0;
-            const pointKey = `optionalRewards:${selectedReward.slotKey}`;
-            const acquisitionEvent = lifecycle.acquisitionPointsByOwner
-              .get(semanticAddressKey(room.origin))
-              ?.find((candidate) => candidate.point === pointKey);
-            const acquisitionView = roomView.acquisitionPoints?.find(
-              (point) => point.point === pointKey,
-            )?.before;
-            if (
-              candidateBranches.length > 0 &&
-              acquisitionEvent !== undefined &&
-              acquisitionView !== undefined
-            ) {
-              settleOwnedAcquisitionSite(
-                catalog,
-                candidateBranches,
-                {
-                  siteOwner: selectedReward.origin,
-                  pointKey,
-                  entryKey: selectedReward.slotKey,
-                  source: Object.freeze({
-                    ...(concreteBySlot.get(selectedReward.slotKey) ??
-                      candidateState(unresolvedBySlot.get(selectedReward.slotKey)!, offer)),
-                    offer,
-                    instanceProvenance: 'free',
-                  }),
-                  historySequence: acquisitionEvent.sequence,
-                  authoredSeaStarDuplicateSiteKeys,
-                },
-                (branchHistory) =>
-                  rewardFacts(
-                    catalog,
-                    room,
-                    room,
-                    declaration,
-                    acquisitionView,
-                    branchHistory,
-                    enteredBiomeCount,
-                  ),
-                candidateFindings,
-                ownerRegion(selectedReward.origin),
-                rewardFindingChronologyForRoom(
-                  snapshot,
-                  room.origin,
-                  acquisitionEvent.sequence,
-                  'localRoomLifecycle',
-                ),
-              );
-            }
-            return Object.freeze({
-              findings: Object.freeze(
-                [...candidateFindings.values()]
-                  .map((entry) => entry.finding)
-                  .filter((finding) => finding.code !== 'traitOfferMissing'),
-              ),
-              supported: generated,
-            });
-          };
-          for (const reward of [...optionalRewards, ...unresolvedOptionals]) {
-            const pointKey = `optionalRewards:${reward.slotKey}`;
-            const acquisitionEvent = lifecycle.acquisitionPointsByOwner
-              .get(semanticAddressKey(room.origin))
-              ?.find((candidate) => candidate.point === pointKey);
-            indexRewardProducerFrontier(
-              producerFrontiers,
-              Object.freeze({
-                generationPolicy: 'sequential',
-                generationHistorySequence: event.sequence,
-                reachableBranchCount: frontierBranches.length,
-                acquisitionHorizon:
-                  acquisitionEvent === undefined
-                    ? ('generationOnly' as const)
-                    : ('ownEnteredLifecycle' as const),
-                owners: Object.freeze([reward.origin]),
-                resolvedStoreKey: reward.resolvedStoreKey,
-                evaluateOffer: evaluateOptionalCohort,
-              }),
-            );
-          }
-          let reachedMissing = false;
-          for (const slotKey of orderedSlots) {
-            const concrete = concreteBySlot.get(slotKey);
-            if (concrete === undefined) {
-              reachedMissing = true;
-              continue;
-            }
-            if (!reachedMissing)
-              branches = processRewardOffer(branches, contextFor(concrete), findings);
-          }
-          if (unresolvedOptionals.length > 0) {
-            for (const unresolved of unresolvedOptionals) {
-              addRewardFinding(
-                findings,
-                rewardFinding('rewardMissing', unresolved.origin, {}),
-                ownerRegion(room.origin),
-                historyFindingChronology(event.sequence),
-              );
-            }
-            branches = Object.freeze([]);
-          }
-          break;
-        }
-        const wheel = room.rewardWheels?.find(
-          (candidate) => candidate.wheelKey === event.offerPoint,
-        );
-        const view = roomView.offerPoints?.find(
-          (candidate) => candidate.offerPoint === event.offerPoint,
-        )?.before;
-        if (wheel === undefined || view === undefined) {
-          throw new BiomeRewardSimulationContractError(
-            `${room.gameName} has no canonical ${event.offerPoint} materialization`,
-          );
-        }
-        const binding = rewardWheelBinding(catalog, declaration, wheel);
-        const roomKey = semanticAddressKey(room.origin);
-        if (room.rewardWheels?.[0] === wheel && !shipLifecycleContexts.has(roomKey)) {
-          shipLifecycleContexts.set(
-            roomKey,
-            prepareShipLifecycleCandidateContext(
-              catalog,
-              room,
-              declaration,
-              roomView,
-              prepared.lifecycle,
-              branches,
-              enteredBiomeCount,
-              Object.freeze({
-                ...routeLoadout,
-                ...(declaration.boonRarityOverride === undefined
-                  ? {}
-                  : { boonRarityRoomOverride: declaration.boonRarityOverride }),
-              }),
-            ),
-          );
-        }
-        const wheelStateFor = (
-          base: (typeof wheel.unresolvedOffers)[number],
-          offer: ResolvedRewardOffer,
-        ): CanonicalRewardWheel['offers'][number] => {
-          const state = createUnresolvedAcquisitionRewardState(catalog, offer, {
-            kind: 'producerLifecycle',
-            key: wheel.producerLifecycleKey,
-          });
-          return Object.freeze({
-            ...base,
-            offer,
-            traitOffersByAcquisitionRole: state.traitOffersByAcquisitionRole,
-            ...(state.levelResolutionsByAcquisitionRole === undefined
-              ? {}
-              : { levelResolutionsByAcquisitionRole: state.levelResolutionsByAcquisitionRole }),
-            dispositionByAcquisitionRole: state.dispositionByAcquisitionRole,
-            traitContext: Object.freeze({
-              ...routeLoadout,
-              blockGiftBoons: declaration.blockGiftBoons,
-              devotionNoDuo: offer.rewardType === 'Devotion',
-            }),
-          });
-        };
-        const contextForWheel = (offer: CanonicalRewardWheel['offers'][number]) => ({
+        const roomKey = semanticAddressKey(event.origin);
+        const transition = applyOfferPointMaterializedTransition({
           catalog,
-          reward: {
-            ...offer,
-            producerLifecycleKey: wheel.producerLifecycleKey,
-            resolvedStoreKey: wheel.storeKey,
-          },
-          binding,
-          historySequence: event.sequence,
-          peers: Object.freeze([]),
-          facts: (
-            branchHistory: RewardHistoryState,
-            _shopNames: ReadonlySet<string> | undefined,
-            branch: RewardBranchState | undefined,
-          ) =>
-            rewardFacts(
-              catalog,
-              room,
-              room,
-              declaration,
-              view,
-              branchHistory,
-              enteredBiomeCount,
-              undefined,
-              undefined,
-              undefined,
-              undefined,
-              branch,
-            ),
+          snapshot,
+          event,
+          rooms,
+          views,
+          lifecycle,
+          branches,
+          enteredBiomeCount,
+          routeLoadout,
+          rewardLookups: rewardLookup.internal,
+          authoredSeaStarDuplicateSiteKeys,
+          shipLifecycleCandidateAlreadyPublished: shipLifecycleContexts.has(roomKey),
         });
-        const contexts = wheel.offers.map(contextForWheel);
-        const frontierBranches = branches;
-        const owners = Object.freeze(
-          [...wheel.offers, ...wheel.unresolvedOffers].map((offer) => offer.origin),
-        );
-        const ownerKeys = new Set(owners.map(semanticAddressKey));
-        const acquisitionView = roomView.offerPoints?.find(
-          (candidate) => candidate.offerPoint === event.offerPoint,
-        )?.acquisitionBefore;
-        const acquisitionEvent = lifecycle.wheelsByOwner
-          .get(semanticAddressKey(room.origin))
-          ?.find((candidate) => candidate.offerPoint === wheel.wheelKey);
-        indexRewardProducerFrontier(
-          producerFrontiers,
-          Object.freeze({
-            generationPolicy: 'jointUnordered',
-            generationHistorySequence: event.sequence,
-            reachableBranchCount: frontierBranches.length,
-            acquisitionHorizon:
-              acquisitionEvent?.kind !== 'offerPointAcquired' || acquisitionView === undefined
-                ? 'generationOnly'
-                : 'ownEnteredLifecycle',
-            owners,
-            resolvedStoreKey: wheel.storeKey,
-            evaluateOffer: (
-              owner: SemanticAddress,
-              offer: CanonicalResolvedIncomingReward['offer'],
-            ) => {
-              const ownerKey = semanticAddressKey(owner);
-              if (!ownerKeys.has(ownerKey)) {
-                return fail('reward-wheel frontier received a foreign owner');
-              }
-              const candidateFindings = new Map<string, FindingRegionEntry>();
-              const focused = [...wheel.offers, ...wheel.unresolvedOffers].find(
-                (candidate) => semanticAddressKey(candidate.origin) === ownerKey,
-              );
-              if (focused === undefined) return fail('reward-wheel frontier lost its owner');
-              const concreteByKey = new Map(
-                wheel.offers.map((candidate) => [candidate.offerKey, candidate]),
-              );
-              const unresolvedByKey = new Map(
-                wheel.unresolvedOffers.map((candidate) => [candidate.offerKey, candidate]),
-              );
-              const offerKeys = Object.freeze(
-                [...wheel.offers, ...wheel.unresolvedOffers]
-                  .sort((left, right) => left.offerKey.localeCompare(right.offerKey))
-                  .map((candidate) => candidate.offerKey),
-              );
-              const store = catalog.rewards.stores.byKey[wheel.storeKey];
-              if (store === undefined) return fail(`unknown wheel store ${wheel.storeKey}`);
-              const domain = Object.freeze(
-                store.entries.flatMap((entry) =>
-                  locallyValidRewardOffers(catalog.rewards, entry.rewardType),
-                ),
-              );
-              const proposals: CanonicalRewardWheel['offers'][number][][] = [];
-              const build = (
-                index: number,
-                values: CanonicalRewardWheel['offers'][number][],
-              ): void => {
-                if (proposals.length > 0) return;
-                if (index === offerKeys.length) {
-                  proposals.push(values);
-                  return;
-                }
-                const key = offerKeys[index]!;
-                const concrete = concreteByKey.get(key);
-                const unresolved = unresolvedByKey.get(key);
-                const offers =
-                  key === focused.offerKey
-                    ? Object.freeze([offer])
-                    : concrete === undefined
-                      ? domain
-                      : Object.freeze([concrete.offer]);
-                for (const candidateOffer of offers) {
-                  const candidate =
-                    concrete !== undefined && candidateOffer === concrete.offer
-                      ? concrete
-                      : unresolved === undefined
-                        ? Object.freeze({ ...concrete!, offer: candidateOffer })
-                        : wheelStateFor(unresolved, candidateOffer);
-                  const trialFindings = new Map<string, FindingRegionEntry>();
-                  const trial = processOfferGenerationCohort(
-                    frontierBranches,
-                    [...values, candidate].map(contextForWheel),
-                    trialFindings,
-                    { ordering: 'allOffers', atomicRegion: ownerRegion(wheel.origin) },
-                  );
-                  if (trial.length === 0) continue;
-                  build(index + 1, [...values, candidate]);
-                  if (proposals.length > 0) return;
-                }
-              };
-              build(0, []);
-              const candidateBranches = processOfferGenerationCohort(
-                frontierBranches,
-                (proposals[0] ?? []).map(contextForWheel),
-                candidateFindings,
-                { ordering: 'allOffers', atomicRegion: ownerRegion(wheel.origin) },
-              );
-              const selectedOffer = (proposals[0] ?? []).find(
-                (candidate) => semanticAddressKey(candidate.origin) === ownerKey,
-              );
-              if (
-                candidateBranches.length > 0 &&
-                selectedOffer?.picked === true &&
-                acquisitionView !== undefined &&
-                acquisitionEvent?.kind === 'offerPointAcquired'
-              ) {
-                const source = Object.freeze({
-                  ...selectedOffer,
-                  offer,
-                  producerLifecycleKey: wheel.producerLifecycleKey,
-                  instanceProvenance: 'free',
-                });
-                settleOwnedAcquisitionSite(
-                  catalog,
-                  candidateBranches,
-                  {
-                    siteOwner: wheel.origin,
-                    pointKey: wheel.wheelKey,
-                    entryKey: 'picked',
-                    source,
-                    historySequence: acquisitionEvent.sequence,
-                    authoredSeaStarDuplicateSiteKeys,
-                  },
-                  (branchHistory) =>
-                    rewardFacts(
-                      catalog,
-                      room,
-                      room,
-                      declaration,
-                      acquisitionView,
-                      branchHistory,
-                      enteredBiomeCount,
-                    ),
-                  candidateFindings,
-                  ownerRegion(wheel.origin),
-                );
-              }
-              return Object.freeze({
-                findings: Object.freeze(
-                  [...candidateFindings.values()]
-                    .map((entry) => entry.finding)
-                    .filter((finding) => finding.code !== 'traitOfferMissing'),
-                ),
-                supported: proposals.length > 0,
-              });
-            },
-          }),
-        );
-        if (wheel.unresolvedOffers.length > 0) {
-          for (const unresolved of wheel.unresolvedOffers) {
-            addRewardFinding(
-              findings,
-              rewardFinding('rewardMissing', unresolved.origin, {}),
-              ownerRegion(wheel.origin),
-              historyFindingChronology(event.sequence),
-            );
-          }
-          branches = Object.freeze([]);
-        } else {
-          branches = processOfferGenerationCohort(branches, contexts, findings, {
-            ordering: 'allOffers',
-            atomicRegion: ownerRegion(wheel.origin),
-          });
-        }
+        for (const entry of transition.findings)
+          addRewardFinding(findings, entry.finding, entry.atomicRegion, entry.chronology);
+        for (const frontier of transition.producerFrontiers)
+          indexRewardProducerFrontier(producerFrontiers, frontier);
+        if (transition.shipLifecycleCandidate !== undefined)
+          shipLifecycleContexts.set(roomKey, transition.shipLifecycleCandidate);
+        branches = transition.branches;
         break;
       }
       case 'offerPointAcquired': {
-        const room = rooms.get(semanticAddressKey(event.origin));
-        const declaration = room && catalog.rooms.byKey[room.gameName];
-        const roomView = views.get(semanticAddressKey(event.origin));
-        if (
-          room === undefined ||
-          room.kind !== 'authored' ||
-          declaration === undefined ||
-          roomView === undefined
-        ) {
-          throw new BiomeRewardSimulationContractError(
-            'reward-wheel acquisition has no authored room',
-          );
-        }
-        const wheel = room.rewardWheels?.find(
-          (candidate) => candidate.wheelKey === event.offerPoint,
-        );
-        const picked = wheel?.offers.find((offer) => offer.picked);
-        const view = roomView.offerPoints?.find(
-          (candidate) => candidate.offerPoint === event.offerPoint,
-        )?.acquisitionBefore;
-        if (wheel === undefined || picked === undefined || view === undefined) {
-          throw new BiomeRewardSimulationContractError(
-            `${room.gameName} has no canonical ${event.offerPoint} acquisition`,
-          );
-        }
-        const settlement = settleOwnedAcquisitionSite(
+        const settlement = applyReachedOfferSettlement({
           catalog,
+          snapshot,
+          event,
+          rooms,
+          views,
           branches,
-          {
-            siteOwner: wheel.origin,
-            pointKey: wheel.wheelKey,
-            entryKey: 'picked',
-            source: withStoredArtificerReplacements(
-              room,
-              Object.freeze({
-                ...picked,
-                producerLifecycleKey: wheel.producerLifecycleKey,
-                instanceProvenance: 'free',
-              }),
-            ),
-            historySequence: event.sequence,
-            deferArtificerReplacement: true,
-            authoredSeaStarDuplicateSiteKeys,
-          },
-          (branchHistory) =>
-            rewardFacts(catalog, room, room, declaration, view, branchHistory, enteredBiomeCount),
-          findings,
-          ownerRegion(wheel.origin),
-        );
+          priorFindings: Object.freeze([...findings.values()]),
+          enteredBiomeCount,
+          authoredSeaStarDuplicateSiteKeys,
+        });
+        for (const entry of settlement.findings)
+          findings.set(findingIdentityKey(entry.finding), entry);
         recordAcquisitionRoleFrontiers(settlement.roleFrontiers);
-        recordTraitChildSettlements(settlement.traitChildSettlements, room.origin);
+        recordTraitChildSettlements(
+          settlement.traitChildSettlements,
+          settlement.traitChildOccurrenceOwner,
+        );
         branches = settlement.branches;
         break;
       }
       case 'producerRoleAdvanced': {
-        const room = rooms.get(semanticAddressKey(event.origin));
-        const declaration = room && catalog.rooms.byKey[room.gameName];
-        const roomView = views.get(semanticAddressKey(event.origin));
-        if (room === undefined || declaration === undefined || roomView === undefined) {
-          throw new BiomeRewardSimulationContractError('producer role has no authored room');
-        }
-        if (room.kind === 'hub') {
-          throw new BiomeRewardSimulationContractError('Hub room cannot advance a reward producer');
-        }
-        const producerFacts = (branchHistory: RewardHistoryState) =>
-          rewardFacts(
-            catalog,
-            room,
-            room,
-            declaration,
-            roomView.preOutgoing ?? roomView.entry,
-            branchHistory,
-            enteredBiomeCount,
-          );
-        const producerRegion = ownerRegion(room.incomingReward?.origin ?? room.origin);
-        const producerChronology = rewardFindingChronologyForRoom(
-          snapshot,
-          room.origin,
-          event.sequence,
-          'localRoomLifecycle',
-        );
-        const settlement = settleProducerAcquisitionSite(
+        const settlement = applyReachedOfferSettlement({
           catalog,
-          branches,
-          room,
+          snapshot,
           event,
-          producerFacts,
-          findings,
-          fail,
-          producerRegion,
-          producerChronology,
-          preparedAcquisitionSiteOwner(snapshot, room),
+          rooms,
+          views,
+          branches,
+          priorFindings: Object.freeze([...findings.values()]),
+          enteredBiomeCount,
           authoredSeaStarDuplicateSiteKeys,
-        );
+        });
+        for (const entry of settlement.findings)
+          findings.set(findingIdentityKey(entry.finding), entry);
         recordAcquisitionRoleFrontiers(settlement.roleFrontiers);
-        recordTraitChildSettlements(settlement.traitChildSettlements, room.origin);
+        recordTraitChildSettlements(
+          settlement.traitChildSettlements,
+          settlement.traitChildOccurrenceOwner,
+        );
         branches = settlement.branches;
         break;
       }
