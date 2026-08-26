@@ -40,6 +40,16 @@ const supportedEffects = [
     },
   },
   {
+    key: 'UnpickedBoonKeepsake',
+    profileKey: 'procSupportByRank',
+    legacyField: 'rarity',
+    effect: {
+      kind: 'concaveStone',
+      uses: 1,
+      procSupportByRank: { Common: 25, Rare: 50, Epic: 75, Heroic: 100 },
+    },
+  },
+  {
     key: 'BossMetaUpgradeKeepsake',
     profileKey: 'rarityLevelByRank',
     legacyField: 'rarity',
@@ -122,6 +132,10 @@ describe('keepsake normalization', () => {
       availability: 'eligible',
       effect: { kind: 'experimentalHammer', schedule: 'oneShotAfterUnequipped' },
     });
+    expect(normalized.byKey.UnpickedBoonKeepsake?.echoGift).toEqual({
+      availability: 'eligible',
+      effect: { kind: 'concaveStone', schedule: 'oneShot' },
+    });
     expect(normalized.byKey.RarifyKeepsake?.echoGift).toEqual({
       availability: 'eligible',
       effect: { kind: 'callingCard', schedule: 'everyBiome' },
@@ -203,7 +217,7 @@ describe('keepsake normalization', () => {
     );
   });
 
-  it('normalizes the exact immutable six-by-four supported rank matrix at fixed Epic selection', () => {
+  it('normalizes the exact immutable supported rank matrix at fixed Epic selection', () => {
     const source = JSON.parse(JSON.stringify(keepsakes)) as Parameters<
       typeof normalizeKeepsakes
     >[0];
@@ -293,7 +307,7 @@ describe('keepsake normalization', () => {
     }
   });
 
-  it('enforces the exact seven supported descriptors and their effect-specific shape', () => {
+  it('enforces the exact supported descriptors and their effect-specific shape', () => {
     for (const row of supportedEffects) {
       expect(() => normalizeKeepsakes(replaceSupportedEffect(row.key, () => undefined))).toThrow(
         'must be an object',

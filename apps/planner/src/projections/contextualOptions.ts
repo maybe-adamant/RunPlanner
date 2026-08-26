@@ -300,6 +300,10 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
       return { kind: 'trait', message: 'Choose the Common boon promoted by Aromatic Phial.' };
     case 'fountainRarityResultUnavailable':
       return { kind: 'trait', message: 'Choose a boon currently eligible for Aromatic Phial.' };
+    case 'concaveStoneResultMissing':
+      return { kind: 'trait', message: 'Choose whether Concave Stone procs on this boon screen.' };
+    case 'concaveStoneResultUnavailable':
+      return { kind: 'trait', message: 'Choose a supported frozen Concave Stone residual boon.' };
     case 'fieldsOptionalCapacityUnavailable':
       return { kind: 'fields', message: 'Reduce optional rewards to leave room for Nemesis.' };
     case 'nemesisOutcomeMissing':

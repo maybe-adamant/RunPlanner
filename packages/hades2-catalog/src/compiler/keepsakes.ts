@@ -129,11 +129,13 @@ export function normalizeKeepsakes(
             ? ({ kind: 'experimentalHammer', schedule: 'oneShotAfterUnequipped' } as const)
             : keepsake.key === 'BossMetaUpgradeKeepsake'
               ? ({ kind: 'crystalFigurine', schedule: 'everyBiome' } as const)
-              : keepsake.key === 'RarifyKeepsake'
-                ? ({ kind: 'callingCard', schedule: 'everyBiome' } as const)
-                : keepsake.key === 'GoldifyKeepsake'
-                  ? ({ kind: 'timePiece', schedule: 'everyBiome' } as const)
-                  : ({ kind: 'modeledNeutral', schedule: 'noModeledEffect' } as const);
+              : keepsake.key === 'UnpickedBoonKeepsake'
+                ? ({ kind: 'concaveStone', schedule: 'oneShot' } as const)
+                : keepsake.key === 'RarifyKeepsake'
+                  ? ({ kind: 'callingCard', schedule: 'everyBiome' } as const)
+                  : keepsake.key === 'GoldifyKeepsake'
+                    ? ({ kind: 'timePiece', schedule: 'everyBiome' } as const)
+                    : ({ kind: 'modeledNeutral', schedule: 'noModeledEffect' } as const);
       requireExactObjectKeys(keepsake.echoGift.effect, `${path}.echoGift.effect`, [
         'kind',
         'schedule',
@@ -315,6 +317,23 @@ export function normalizeKeepsakes(
           keepsake.effect.rarityLevelByRank,
           `${path}.effect.rarityLevelByRank`,
           { Common: 1, Rare: 2, Epic: 3, Heroic: 4 } as const,
+        ),
+      });
+    } else if (keepsake.key === 'UnpickedBoonKeepsake') {
+      requireExactObjectKeys(keepsake.effect, `${path}.effect`, [
+        'kind',
+        'uses',
+        'procSupportByRank',
+      ]);
+      if (keepsake.effect.kind !== 'concaveStone' || keepsake.effect.uses !== 1)
+        fail(`${path}.effect`, 'must declare Concave Stone one use and proc support profile');
+      effect = Object.freeze({
+        kind: 'concaveStone',
+        uses: 1,
+        procSupportByRank: normalizeRankProfile(
+          keepsake.effect.procSupportByRank,
+          `${path}.effect.procSupportByRank`,
+          { Common: 25, Rare: 50, Epic: 75, Heroic: 100 } as const,
         ),
       });
     } else if (keepsake.effect !== undefined)

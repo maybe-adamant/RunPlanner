@@ -153,6 +153,7 @@ export {
   type AllTogetherSetDomainQuery,
   type EvaluatedTraitAcquisitionTargetDomain,
   type EvaluatedTraitOfferCandidate,
+  type ConcaveStoneCandidateBranch,
   type EvaluatedTraitOfferFocusedOptionCandidate,
   type TraitOfferCandidateFinding,
   type TraitOfferCandidateFindingCode,

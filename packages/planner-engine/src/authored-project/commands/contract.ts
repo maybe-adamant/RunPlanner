@@ -156,6 +156,7 @@ export function projectCommandAddress(
     case 'ResetEncounterTraitOffer':
     case 'ReplaceGorgonAthenaOffer':
     case 'ReplaceTraitSelection':
+    case 'ReplaceConcaveStoneResult':
       return command.trait;
     case 'ReplaceLevelResolution':
       return command.levelResolution;

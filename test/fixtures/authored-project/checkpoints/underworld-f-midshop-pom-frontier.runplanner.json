@@ -1,7 +1,7 @@
 {
-  "schemaVersion": 61,
+  "schemaVersion": 62,
   "projectId": "midshop-pom-frontier",
-  "catalogVersion": "0.43.0-crystal-figurine",
+  "catalogVersion": "0.44.0-concave-stone",
   "routes": [
     {
       "routeKey": "Underworld",

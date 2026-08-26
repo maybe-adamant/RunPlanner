@@ -477,6 +477,7 @@ function evaluateReachedTraitOfferWithAssessments(
   rarificationBaseOffer?: AuthoredTraitOffer,
   assessments?: readonly TraitAssessment[],
   runtimeOfferFallbackExcludedTraitKeys?: readonly string[],
+  frozenAcquisition = false,
 ): ReachedTraitOfferEvaluation {
   const effectiveContext = chaosAdjustedTraitOfferContext(catalog, before, offer, context);
   // Exact one-result sources (for example, a keepsake equip) are direct
@@ -487,70 +488,72 @@ function evaluateReachedTraitOfferWithAssessments(
   const baseComposition = directAcquisition
     ? Object.freeze({ applies: false, legal: true, findings: Object.freeze([]) })
     : assessTraitOfferComposition(catalog, legalityOffer, before);
-  const composition = (() => {
-    if (offer.kind === 'chaos') {
-      const requirements = [
-        ...(catalog.chaos.curses.byKey[offer.curseKey]?.offerRequirements ?? []),
-        ...(catalog.chaos.blessings.byKey[offer.blessingKey]?.offerRequirements ?? []),
-      ];
-      const unavailable = requirements.some((requirement) => {
-        switch (requirement.kind) {
-          case 'matureChaosBlessing':
-            return before.maturedChaosBlessings.length === 0;
-          case 'elementMinimum':
-            return before.elementCounts[requirement.element] < requirement.minimum;
-          case 'notKeepsake':
-            return context.currentKeepsakeKey === requirement.keepsakeKey;
-          case 'notAspect':
-            return context.aspectKey === requirement.aspectKey;
-          case 'routeKey':
-            return !('routeKey' in address) || address.routeKey !== requirement.routeKey;
+  const composition = frozenAcquisition
+    ? Object.freeze({ applies: false, legal: true, findings: Object.freeze([]) })
+    : (() => {
+        if (offer.kind === 'chaos') {
+          const requirements = [
+            ...(catalog.chaos.curses.byKey[offer.curseKey]?.offerRequirements ?? []),
+            ...(catalog.chaos.blessings.byKey[offer.blessingKey]?.offerRequirements ?? []),
+          ];
+          const unavailable = requirements.some((requirement) => {
+            switch (requirement.kind) {
+              case 'matureChaosBlessing':
+                return before.maturedChaosBlessings.length === 0;
+              case 'elementMinimum':
+                return before.elementCounts[requirement.element] < requirement.minimum;
+              case 'notKeepsake':
+                return context.currentKeepsakeKey === requirement.keepsakeKey;
+              case 'notAspect':
+                return context.aspectKey === requirement.aspectKey;
+              case 'routeKey':
+                return !('routeKey' in address) || address.routeKey !== requirement.routeKey;
+            }
+          });
+          return unavailable
+            ? Object.freeze({
+                applies: true,
+                legal: false,
+                findings: Object.freeze([Object.freeze({ code: 'chaosPairUnavailable' as const })]),
+              })
+            : baseComposition;
         }
-      });
-      return unavailable
-        ? Object.freeze({
-            applies: true,
-            legal: false,
-            findings: Object.freeze([Object.freeze({ code: 'chaosPairUnavailable' as const })]),
-          })
-        : baseComposition;
-    }
-    if (offer.kind !== 'traits') return baseComposition;
-    const provider = catalog.traitGivers.byKey[offer.giverKey]?.providerKind;
-    if (provider !== 'olympian' && provider !== 'hermes') return baseComposition;
-    const chaosFindings: TraitOfferCompositionFinding[] = [];
-    if (
-      hasActiveChaosSemanticTag(before, 'Ordinary') &&
-      offer.options.some((option) => option.rarity !== 'Common')
-    )
-      chaosFindings.push(Object.freeze({ code: 'chaosOrdinaryRequiresCommon' }));
-    if (hasActiveChaosSemanticTag(before, 'Rejected')) {
-      const blocked = offer.rejectedOptionKey;
-      if (blocked === undefined)
-        chaosFindings.push(Object.freeze({ code: 'chaosRejectedBlockMissing' }));
-      else if (
-        blocked === offer.selectedOptionKey ||
-        offer.options[optionIndex(blocked)] === undefined
-      )
-        chaosFindings.push(
-          Object.freeze({ code: 'chaosRejectedBlockUnavailable', optionKey: blocked }),
-        );
-    } else if (offer.rejectedOptionKey !== undefined) {
-      chaosFindings.push(
-        Object.freeze({
-          code: 'chaosRejectedBlockUnavailable',
-          optionKey: offer.rejectedOptionKey,
-        }),
-      );
-    }
-    return chaosFindings.length === 0
-      ? baseComposition
-      : Object.freeze({
-          ...baseComposition,
-          legal: false,
-          findings: Object.freeze([...baseComposition.findings, ...chaosFindings]),
-        });
-  })();
+        if (offer.kind !== 'traits') return baseComposition;
+        const provider = catalog.traitGivers.byKey[offer.giverKey]?.providerKind;
+        if (provider !== 'olympian' && provider !== 'hermes') return baseComposition;
+        const chaosFindings: TraitOfferCompositionFinding[] = [];
+        if (
+          hasActiveChaosSemanticTag(before, 'Ordinary') &&
+          offer.options.some((option) => option.rarity !== 'Common')
+        )
+          chaosFindings.push(Object.freeze({ code: 'chaosOrdinaryRequiresCommon' }));
+        if (hasActiveChaosSemanticTag(before, 'Rejected')) {
+          const blocked = offer.rejectedOptionKey;
+          if (blocked === undefined)
+            chaosFindings.push(Object.freeze({ code: 'chaosRejectedBlockMissing' }));
+          else if (
+            blocked === offer.selectedOptionKey ||
+            offer.options[optionIndex(blocked)] === undefined
+          )
+            chaosFindings.push(
+              Object.freeze({ code: 'chaosRejectedBlockUnavailable', optionKey: blocked }),
+            );
+        } else if (offer.rejectedOptionKey !== undefined) {
+          chaosFindings.push(
+            Object.freeze({
+              code: 'chaosRejectedBlockUnavailable',
+              optionKey: offer.rejectedOptionKey,
+            }),
+          );
+        }
+        return chaosFindings.length === 0
+          ? baseComposition
+          : Object.freeze({
+              ...baseComposition,
+              legal: false,
+              findings: Object.freeze([...baseComposition.findings, ...chaosFindings]),
+            });
+      })();
   const replacementComposition = directAcquisition
     ? Object.freeze({
         applies: false,
@@ -561,14 +564,21 @@ function evaluateReachedTraitOfferWithAssessments(
         findings: Object.freeze([]),
       })
     : assessTraitReplacementComposition(catalog, legalityOffer, before, effectiveContext);
-  const targetedAcquisition = assessSelectedTargetedAcquisition(catalog, legalityOffer, before);
-  const runtimeOfferFallbackTraitKey = resolveRuntimeOfferFallbackTraitKey(
-    catalog,
-    offer,
-    before,
-    effectiveContext,
-    runtimeOfferFallbackExcludedTraitKeys,
-  );
+  const targetedAcquisition = frozenAcquisition
+    ? Object.freeze({ applies: false, legal: true, findings: Object.freeze([]) })
+    : assessSelectedTargetedAcquisition(catalog, legalityOffer, before);
+  const runtimeOfferFallbackTraitKey = frozenAcquisition
+    ? undefined
+    : resolveRuntimeOfferFallbackTraitKey(
+        catalog,
+        offer,
+        before,
+        effectiveContext,
+        runtimeOfferFallbackExcludedTraitKeys,
+      );
+  const resolvedAssessments = frozenAcquisition
+    ? Object.freeze([])
+    : (assessments ?? assessTraitOffer(catalog, legalityOffer, before, effectiveContext));
   return Object.freeze({
     address,
     acquisitionRole,
@@ -577,7 +587,7 @@ function evaluateReachedTraitOfferWithAssessments(
     context: effectiveContext,
     ...(arcanaFear === undefined ? {} : { arcanaFear }),
     ...(keepsakes === undefined ? {} : { keepsakes }),
-    assessments: assessments ?? assessTraitOffer(catalog, legalityOffer, before, effectiveContext),
+    assessments: resolvedAssessments,
     composition,
     replacementComposition,
     targetedAcquisition,
@@ -601,6 +611,7 @@ export function evaluateReachedTraitOffer(
   /** Calling Card changes a rolled row after base-offer legality is established. */
   rarificationBaseOffer?: AuthoredTraitOffer,
   runtimeOfferFallbackExcludedTraitKeys?: readonly string[],
+  frozenAcquisition = false,
 ): ReachedTraitOfferEvaluation {
   return evaluateReachedTraitOfferWithAssessments(
     catalog,
@@ -616,6 +627,7 @@ export function evaluateReachedTraitOffer(
     rarificationBaseOffer,
     undefined,
     runtimeOfferFallbackExcludedTraitKeys,
+    frozenAcquisition,
   );
 }
 
@@ -832,9 +844,10 @@ export function recordReachedTraitOffer(
   acquisitionPoint: string,
   acquisitionIdentity?: string,
   echoRepeatedKeepsakeKey?: string,
+  eventKind: 'traitOffer' | 'concaveStoneSecondary' = 'traitOffer',
 ): {
   readonly history: TraitHistoryState;
-  readonly event?: TraitOfferEvent;
+  readonly event?: TraitOfferEvent | import('./trait-history').ConcaveStoneSecondaryEvent;
   readonly ransomAssessment?: RansomAssessment;
 } {
   if (evaluation.offer.kind === 'chaos') {
@@ -883,9 +896,12 @@ export function recordReachedTraitOffer(
   }
   const selectedAssessment =
     evaluation.assessments[optionIndex(evaluation.offer.selectedOptionKey)];
-  const bannedTraitKeys = denialBannedTraitKeys(catalog, evaluation);
-  const event: TraitOfferEvent = Object.freeze({
-    kind: 'traitOffer',
+  // Stone's frozen pickup is not another screen, so it must not settle a
+  // second post-screen Denial partition.
+  const bannedTraitKeys =
+    eventKind === 'concaveStoneSecondary' ? undefined : denialBannedTraitKeys(catalog, evaluation);
+  const event = Object.freeze({
+    kind: eventKind,
     owner: evaluation.address,
     acquisitionRole: evaluation.acquisitionRole,
     sequence,
@@ -893,8 +909,12 @@ export function recordReachedTraitOffer(
     options: evaluation.offer.options,
     selectedOptionKey: evaluation.offer.selectedOptionKey,
     acquisitionPoint,
-    ...(acquisitionIdentity === undefined ? {} : { acquisitionIdentity }),
-    ...(echoRepeatedKeepsakeKey === undefined ? {} : { echoRepeatedKeepsakeKey }),
+    ...(eventKind === 'traitOffer' && acquisitionIdentity !== undefined
+      ? { acquisitionIdentity }
+      : {}),
+    ...(eventKind === 'traitOffer' && echoRepeatedKeepsakeKey !== undefined
+      ? { echoRepeatedKeepsakeKey }
+      : {}),
     ...(bannedTraitKeys === undefined ? {} : { bannedTraitKeys }),
     ...(selectedAssessment?.replacementTransition === undefined
       ? {}
@@ -902,7 +922,7 @@ export function recordReachedTraitOffer(
     ...(evaluation.targetedAcquisition.transition === undefined
       ? {}
       : { targetedAcquisitionTransition: evaluation.targetedAcquisition.transition }),
-  });
+  }) as TraitOfferEvent | import('./trait-history').ConcaveStoneSecondaryEvent;
   const transition = evaluation.targetedAcquisition.transition;
   const mutation: TraitLevelMutationEvent | undefined =
     transition?.kind === 'promoteGodTraitToHeroic'

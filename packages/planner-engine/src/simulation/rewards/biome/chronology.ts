@@ -120,6 +120,7 @@ import {
   applyEchoCallingCardReplay,
   applyEchoTimePieceReplay,
   applyEchoFigurineReplay,
+  applyEchoConcaveStoneReplay,
 } from '../../keepsakes';
 import { createArcanaFearState } from '../../arcana-fear';
 import { createKeepsakeEquipResultAddress } from '../../../authored-project/addresses';
@@ -579,6 +580,18 @@ export function evaluateBiomeRewardChronology(
       // this boundary only records the replay event for branches it changes.
       const replayedBranches = branches.map((branch) => {
         const keepsakes = applyEchoFigurineReplay(
+          catalog,
+          branch.keepsakes,
+          giftState.capturedKeepsakeKey,
+        );
+        return keepsakes === branch.keepsakes
+          ? branch
+          : recordReplay(Object.freeze({ ...branch, keepsakes }));
+      });
+      branches = Object.freeze(replayedBranches);
+    } else if (replayEffect.kind === 'concaveStone') {
+      const replayedBranches = branches.map((branch) => {
+        const keepsakes = applyEchoConcaveStoneReplay(
           catalog,
           branch.keepsakes,
           giftState.capturedKeepsakeKey,

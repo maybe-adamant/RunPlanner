@@ -163,6 +163,12 @@ export function RunStateSheet({ launcher }: { readonly launcher: WorkspaceRunSta
         {state.keepsakes.phialStatus === undefined ? null : (
           <p>Aromatic Phial: {state.keepsakes.phialStatus}</p>
         )}
+        {state.keepsakes.stoneStatus === undefined ? null : (
+          <p>
+            Concave Stone: {state.keepsakes.stoneStatus} · {state.keepsakes.stoneOrigin} ·{' '}
+            {state.keepsakes.stoneRank}
+          </p>
+        )}
       </details>
       <details className="run-state-summary-section">
         <summary>

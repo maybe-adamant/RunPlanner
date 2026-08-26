@@ -9,7 +9,10 @@ import {
   type TraitOptionKey,
 } from '../../authored-project/traits';
 import type { ProjectDocument } from '../../authored-project/model';
-import type { TraitOfferCandidateArtifacts } from './trait-offer-capability';
+import type {
+  ConcaveStoneCandidateBranch,
+  TraitOfferCandidateArtifacts,
+} from './trait-offer-capability';
 import type { ProjectEvaluation } from '../evaluation-products';
 import type {
   TraitAssessment,
@@ -400,6 +403,7 @@ export interface EvaluatedTraitOfferCandidate {
     readonly assessments: readonly TraitAssessment[];
     readonly branches: readonly TraitOfferCandidateBranch[];
     readonly callingCard?: readonly CallingCardOfferCandidateBranch[];
+    readonly concaveStone?: readonly ConcaveStoneCandidateBranch[];
     readonly findings: readonly TraitOfferCandidateFinding[];
   };
 }
@@ -563,6 +567,7 @@ function assessTraitOfferCandidate(
 function evaluatedTraitOfferCandidate(
   assessment: TraitOfferCandidateAssessment,
   callingCard: readonly CallingCardOfferCandidateBranch[],
+  concaveStone: readonly ConcaveStoneCandidateBranch[] = Object.freeze([]),
 ): EvaluatedTraitOfferCandidate {
   return Object.freeze({
     kind: 'traitOffer',
@@ -572,6 +577,7 @@ function evaluatedTraitOfferCandidate(
       assessments: assessment.assessments,
       findings: assessment.findings,
       callingCard: Object.freeze(callingCard),
+      concaveStone: Object.freeze(concaveStone),
     }),
   });
 }
@@ -698,13 +704,14 @@ export function evaluateTraitOfferCandidate(
       }),
     ),
   );
+  const concaveStone = Object.freeze(capability?.concaveStone(query.value) ?? []);
   const assessment = assessTraitOfferCandidate(
     capability === undefined ? Object.freeze([]) : capability.evaluateOffer(query.value),
     duplicateFindings,
     callingCard,
     query.value,
   );
-  return evaluatedTraitOfferCandidate(assessment, callingCard);
+  return evaluatedTraitOfferCandidate(assessment, callingCard, concaveStone);
 }
 
 export function evaluateTraitOfferFocusedOptionCandidate(

@@ -8,6 +8,7 @@ import {
   type AuthoredCirceResolution,
   type TraitOptionKey,
   TRAIT_OPTION_KEYS,
+  normalizeAuthoredConcaveStoneResult,
 } from '../traits';
 import {
   expectArray,
@@ -44,7 +45,15 @@ export function decodeEncounterTraitOffer(
   if (kind !== 'traits') failProjectDocument(`${path}.kind`, 'must be traits or fallbackGold');
   expectExactKeys(
     record,
-    ['kind', 'giverKey', 'options', 'selectedOptionKey', 'rarificationActions'],
+    [
+      'kind',
+      'giverKey',
+      'options',
+      'selectedOptionKey',
+      'rarificationActions',
+      ...('rejectedOptionKey' in record ? ['rejectedOptionKey'] : []),
+      ...('concaveStoneResult' in record ? ['concaveStoneResult'] : []),
+    ],
     path,
   );
   const rawOptions = expectArray(record.options, `${path}.options`);
@@ -316,12 +325,49 @@ export function decodeEncounterTraitOffer(
     options[TRAIT_OPTION_KEYS.indexOf(selectedOptionKey as never)] === undefined
   )
     failProjectDocument(`${path}.selectedOptionKey`, 'must select option1, option2, or option3');
+  const rejectedOptionKey =
+    record.rejectedOptionKey === undefined
+      ? undefined
+      : expectString(record.rejectedOptionKey, `${path}.rejectedOptionKey`);
+  if (
+    rejectedOptionKey !== undefined &&
+    !(TRAIT_OPTION_KEYS as readonly string[]).includes(rejectedOptionKey)
+  )
+    failProjectDocument(`${path}.rejectedOptionKey`, 'must name an option row');
+  let concaveStoneResult: import('../traits').AuthoredConcaveStoneResult | undefined;
+  if ('concaveStoneResult' in record) {
+    const rawResult = expectRecord(record.concaveStoneResult, `${path}.concaveStoneResult`);
+    const resultKind = expectString(rawResult.kind, `${path}.concaveStoneResult.kind`);
+    if (resultKind === 'noProc') {
+      expectExactKeys(rawResult, ['kind'], `${path}.concaveStoneResult`);
+      concaveStoneResult = Object.freeze({ kind: 'noProc' });
+    } else if (resultKind === 'proc') {
+      expectExactKeys(rawResult, ['kind', 'optionKey'], `${path}.concaveStoneResult`);
+      const optionKey = expectString(rawResult.optionKey, `${path}.concaveStoneResult.optionKey`);
+      try {
+        concaveStoneResult = normalizeAuthoredConcaveStoneResult(
+          { kind: 'proc', optionKey: optionKey as TraitOptionKey },
+          selectedOptionKey as TraitOptionKey,
+          options,
+        );
+      } catch (error) {
+        failProjectDocument(
+          `${path}.concaveStoneResult.optionKey`,
+          error instanceof Error ? error.message : 'invalid Concave Stone result',
+        );
+      }
+    } else {
+      failProjectDocument(`${path}.concaveStoneResult.kind`, 'must be noProc or proc');
+    }
+  }
   return Object.freeze({
     kind: 'traits',
     giverKey,
     options: Object.freeze(options) as AuthoredTraitOfferTraits['options'],
     selectedOptionKey: selectedOptionKey as AuthoredTraitOfferTraits['selectedOptionKey'],
     rarificationActions: Object.freeze(rarificationActions),
+    ...(rejectedOptionKey === undefined ? {} : { rejectedOptionKey: rejectedOptionKey as TraitOptionKey }),
+    ...(concaveStoneResult === undefined ? {} : { concaveStoneResult }),
   });
 }
 

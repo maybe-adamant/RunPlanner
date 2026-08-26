@@ -1,6 +1,9 @@
 import {
+  optionIndex,
   type AuthoredAllTogetherResult,
+  type AuthoredConcaveStoneResult,
   type AuthoredTraitOfferTraits,
+  type TraitOptionKey,
 } from '@run-planner/engine/authored-project';
 import type { DirectTraitSetKey } from '@run-planner/engine/catalog-schema';
 import { useEffect, useMemo, useState } from 'react';
@@ -9,6 +12,8 @@ import type { ContextualPickerModel } from '@planner/projections/contextualPicke
 import {
   type WorkspaceAllTogetherSetDomain,
   type WorkspaceAllTogetherSetInteraction,
+  type WorkspaceConcaveStoneDomain,
+  type WorkspaceConcaveStoneInteraction,
   type WorkspaceNaturalSelectionDomain,
   type WorkspaceNaturalSelectionInteraction,
   type WorkspaceTraitOfferInteraction,
@@ -25,6 +30,126 @@ function pickerValueLabel<T>(model: ContextualPickerModel<T>, value: T): string 
   return model.sections
     .flatMap((section) => section.items)
     .find((item) => Object.is(item.value, value))?.label;
+}
+
+function ConcaveStoneOutcomeEditor({
+  interaction,
+  domain,
+  offer,
+  traitLabel,
+  onSelect,
+}: {
+  readonly interaction: WorkspaceConcaveStoneInteraction;
+  readonly domain: WorkspaceConcaveStoneDomain;
+  readonly offer: AuthoredTraitOfferTraits;
+  readonly traitLabel: (traitKey: string) => string;
+  readonly onSelect: (result: AuthoredConcaveStoneResult | null) => void;
+}) {
+  const authoredResult = offer.concaveStoneResult;
+  const authoredOptionKey = authoredResult?.kind === 'proc' ? authoredResult.optionKey : undefined;
+  const authoredOption =
+    authoredOptionKey === undefined ? undefined : offer.options[optionIndex(authoredOptionKey)];
+  const authoredOptionIsResidual =
+    authoredOptionKey !== undefined && domain.residualOptionKeys.includes(authoredOptionKey);
+  const procced = authoredResult?.kind === 'proc';
+  const pickerItems = domain.residualOptionKeys.map((optionKey) => {
+    const option = offer.options[optionIndex(optionKey)];
+    return Object.freeze({
+      key: optionKey,
+      value: optionKey,
+      label: option === undefined ? optionKey : traitLabel(option.traitKey),
+      state: domain.required ? ('forced' as const) : ('possible' as const),
+      selected: authoredOptionIsResidual && authoredOptionKey === optionKey,
+      disabled: false,
+    });
+  });
+  const selectedInvalid =
+    procced && !authoredOptionIsResidual && authoredOptionKey !== undefined
+      ? Object.freeze({
+          key: authoredOptionKey,
+          value: authoredOptionKey,
+          label:
+            authoredOption === undefined ? authoredOptionKey : traitLabel(authoredOption.traitKey),
+          state: 'impossible' as const,
+          selected: true,
+          disabled: true,
+          status: 'Current · unavailable',
+        })
+      : undefined;
+  const picker: ContextualPickerModel<TraitOptionKey> = Object.freeze({
+    ...(selectedInvalid === undefined ? {} : { selected: selectedInvalid }),
+    sections: Object.freeze([
+      ...(selectedInvalid === undefined
+        ? []
+        : [
+            Object.freeze({
+              key: 'selected-invalid',
+              kind: 'selectedInvalid' as const,
+              label: 'Current selection',
+              collapsible: false,
+              items: Object.freeze([selectedInvalid]),
+            }),
+          ]),
+      Object.freeze({
+        key: 'residual',
+        kind: 'category' as const,
+        label: 'Original unpicked rows',
+        collapsible: false,
+        items: Object.freeze(pickerItems),
+      }),
+    ]),
+  });
+  const selectedLabel =
+    authoredOptionIsResidual && authoredOption !== undefined
+      ? traitLabel(authoredOption.traitKey)
+      : undefined;
+  const onToggle = (checked: boolean): void => {
+    if (checked) {
+      const optionKey = authoredOptionIsResidual ? authoredOptionKey : domain.residualOptionKeys[0];
+      if (optionKey !== undefined) onSelect({ kind: 'proc', optionKey });
+      return;
+    }
+    onSelect({ kind: 'noProc' });
+  };
+  return (
+    <fieldset className="trait-selected-outcome-detail" aria-label="Concave Stone outcome">
+      <legend>Concave Stone</legend>
+      <label>
+        <input
+          checked={procced || domain.required}
+          disabled={domain.required}
+          onChange={(event) => onToggle(event.target.checked)}
+          type="checkbox"
+        />{' '}
+        Concave Stone procced
+      </label>
+      <p className="trait-selected-outcome-detail">
+        {domain.required
+          ? 'Heroic Stone must acquire one original unpicked row.'
+          : `Stone proc support: ${domain.procSupport}%.`}
+      </p>
+      {authoredResult === undefined || domain.resultSupport !== 'impossible' ? null : (
+        <button
+          className="quiet-action action-compact"
+          onClick={() => onSelect(null)}
+          type="button"
+        >
+          Clear unavailable Concave Stone result
+        </button>
+      )}
+      {!procced && !domain.required ? null : (
+        <ContextualPicker
+          ariaLabel="Concave Stone residual trait"
+          id={`${semanticOwnerControlElementId(interaction.control.address)}-picker`}
+          label="Frozen residual row"
+          model={picker}
+          onSelect={(optionKey) => onSelect({ kind: 'proc', optionKey })}
+          placeholder="Choose an original unpicked row"
+          {...(selectedLabel === undefined ? {} : { triggerLabel: selectedLabel })}
+        />
+      )}
+    </fieldset>
+  );
 }
 
 function AllTogetherSetPicker({
@@ -304,16 +429,28 @@ export function TraitOfferSelectedSpecialOutcomes({
   optionIndex,
   option,
   allTogetherSets,
+  concaveStone,
   naturalSelection,
   onUpdate,
+  onConcaveStoneResult,
 }: {
   readonly interaction: WorkspaceTraitOfferInteraction;
   readonly offer: AuthoredTraitOfferTraits;
   readonly optionIndex: number;
   readonly option: AuthoredTraitOfferTraits['options'][number];
   readonly allTogetherSets: readonly WorkspaceAllTogetherSetInteraction[] | undefined;
+  readonly concaveStone:
+    | {
+        readonly interaction: WorkspaceConcaveStoneInteraction;
+        readonly domain: WorkspaceConcaveStoneDomain;
+      }
+    | undefined;
   readonly naturalSelection: WorkspaceNaturalSelectionInteraction | undefined;
   readonly onUpdate: (value: AuthoredTraitOfferTraits) => void;
+  readonly onConcaveStoneResult?: (
+    offer: AuthoredTraitOfferTraits,
+    result: AuthoredConcaveStoneResult | null,
+  ) => void;
 }) {
   const ransomAssessment = interaction.ransomAssessment(offer);
   return (
@@ -342,6 +479,22 @@ export function TraitOfferSelectedSpecialOutcomes({
               ),
             )
           }
+        />
+      )}
+      {concaveStone === undefined ? null : (
+        <ConcaveStoneOutcomeEditor
+          domain={concaveStone.domain}
+          interaction={concaveStone.interaction}
+          offer={offer}
+          traitLabel={interaction.traitLabel}
+          onSelect={(result) => {
+            if (result === null) {
+              const { concaveStoneResult: _result, ...withoutResult } = offer;
+              void _result;
+              onUpdate(Object.freeze(withoutResult));
+            } else onUpdate({ ...offer, concaveStoneResult: result });
+            onConcaveStoneResult?.(offer, result);
+          }}
         />
       )}
       {ransomAssessment === undefined ? null : (

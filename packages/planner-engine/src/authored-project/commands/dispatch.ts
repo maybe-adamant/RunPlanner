@@ -114,6 +114,7 @@ function derivedPayloadEntryAddress(
     case 'ReplaceTraitOffer':
     case 'ReplaceGorgonAthenaOffer':
     case 'ReplaceTraitSelection':
+    case 'ReplaceConcaveStoneResult':
       return command.trait.owner.kind === 'acquisitionEntry' ? command.trait.owner : undefined;
     case 'ReplaceLevelResolution':
       return command.levelResolution.owner.kind === 'acquisitionEntry'
@@ -260,6 +261,7 @@ function applyUnchecked(
     case 'ResetEncounterTraitOffer':
     case 'ReplaceGorgonAthenaOffer':
     case 'ReplaceTraitSelection':
+    case 'ReplaceConcaveStoneResult':
       return applyTraitOfferCommand(
         document,
         catalog,

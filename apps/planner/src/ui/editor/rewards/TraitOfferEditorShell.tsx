@@ -1,6 +1,7 @@
 import {
   optionIndex,
   type AuthoredTraitOffer,
+  type AuthoredConcaveStoneResult,
   type AuthoredTraitOfferTraits,
 } from '@run-planner/engine/authored-project';
 import type { TraitRarity } from '@run-planner/engine/catalog-schema';
@@ -30,6 +31,7 @@ export function TraitOfferEditorShell({
   interaction,
   onChildCommit,
   onCommit,
+  onStoneResult,
   onReset,
 }: {
   readonly initialValue: AuthoredTraitOffer;
@@ -37,6 +39,10 @@ export function TraitOfferEditorShell({
   readonly interaction: WorkspaceTraitOfferInteraction;
   readonly onChildCommit?: (value: AuthoredTraitOffer) => void;
   readonly onCommit?: (value: AuthoredTraitOffer) => void;
+  readonly onStoneResult?: (
+    offer: AuthoredTraitOfferTraits,
+    result: AuthoredConcaveStoneResult | null,
+  ) => void;
   readonly onReset?: () => void;
 }) {
   const [value, setValue] = useState<AuthoredTraitOffer>(initialValue);
@@ -144,6 +150,21 @@ export function TraitOfferEditorShell({
     setLoadable(nextLoadable);
     if (!spellOffer) controller.activate(nextLoadable);
   };
+  const updateStoneResult = (
+    offer: AuthoredTraitOfferTraits,
+    result: AuthoredConcaveStoneResult | null,
+  ): void => {
+    const nextValue =
+      result === null
+        ? (() => {
+            const { concaveStoneResult: _result, ...withoutResult } = offer;
+            void _result;
+            return Object.freeze(withoutResult);
+          })()
+        : Object.freeze({ ...offer, concaveStoneResult: result });
+    updateValue(nextValue);
+    onStoneResult?.(nextValue, result);
+  };
   if (view === 'echoLastRunBoon' && value.kind === 'traits') {
     const selectedIndex = optionIndex(value.selectedOptionKey);
     const selected = value.options[selectedIndex];
@@ -219,6 +240,7 @@ export function TraitOfferEditorShell({
             interaction={interaction}
             onOpenEchoLastRunBoon={() => setView('echoLastRunBoon')}
             onUpdate={updateValue}
+            onConcaveStoneResult={updateStoneResult}
             value={value}
           />
           {nextTraitOfferDraft === undefined &&

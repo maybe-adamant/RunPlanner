@@ -7,6 +7,7 @@ import type {
   WorkspaceCirceResolutionDomain,
   WorkspaceEchoLastRunBoonDomain,
   WorkspaceEchoPomTargetDomain,
+  WorkspaceConcaveStoneDomain,
   WorkspaceTraitOfferInteraction,
 } from '@planner/projections/structured-workspace';
 import { traitOfferDialogClosed } from '@planner/state/editorSessionSlice';
@@ -33,11 +34,16 @@ export function TraitOfferSelectedOutcome({
   value,
   onOpenEchoLastRunBoon,
   onUpdate,
+  onConcaveStoneResult,
 }: {
   readonly interaction: WorkspaceTraitOfferInteraction;
   readonly value: AuthoredTraitOfferTraits;
   readonly onOpenEchoLastRunBoon: () => void;
   readonly onUpdate: (value: AuthoredTraitOfferTraits) => void;
+  readonly onConcaveStoneResult?: (
+    offer: AuthoredTraitOfferTraits,
+    result: import('@run-planner/engine/authored-project').AuthoredConcaveStoneResult | null,
+  ) => void;
 }) {
   const dispatch = useAppDispatch();
   const selectedIndex = optionIndex(value.selectedOptionKey);
@@ -76,6 +82,11 @@ export function TraitOfferSelectedOutcome({
     WorkspaceEchoLastRunBoonDomain | undefined
   >();
   const echoLastRunDomain = echoLastRunController.observe(echoLastRunLoadable);
+  const concaveStoneLoadable = useMemo(
+    () => loadable.concaveStone?.forOffer(value),
+    [loadable.concaveStone, value],
+  );
+  const concaveStoneDomain = concaveStoneLoadable?.load();
   useEffect(() => {
     if (loadable.hasTargetPicker) optionController.activate(loadable);
     if (circeLoadable !== undefined) circeController.activate(circeLoadable);
@@ -101,6 +112,7 @@ export function TraitOfferSelectedOutcome({
     interaction.echoLastReward !== undefined ||
     loadable.allTogetherSets !== undefined ||
     loadable.naturalSelection !== undefined ||
+    concaveStoneDomain !== undefined ||
     interaction.ransomAssessment(value) !== undefined;
   if (!hasOutcome) return null;
   return (
@@ -216,6 +228,12 @@ export function TraitOfferSelectedOutcome({
         option={option}
         optionIndex={selectedIndex}
         onUpdate={onUpdate}
+        concaveStone={
+          loadable.concaveStone === undefined || concaveStoneDomain === undefined
+            ? undefined
+            : { interaction: loadable.concaveStone, domain: concaveStoneDomain }
+        }
+        {...(onConcaveStoneResult === undefined ? {} : { onConcaveStoneResult })}
       />
     </section>
   );

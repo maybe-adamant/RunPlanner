@@ -25,6 +25,7 @@ import {
   type AuthoredTraitOfferTraits,
   type AuthoredTraitOption,
   type TraitOptionKey,
+  normalizeAuthoredConcaveStoneResult,
 } from '../traits';
 import { levelResolutionEffectFor } from '../../reward-kernel/level-effects';
 import { decodeEchoLastRunBoon } from './echo-last-run';
@@ -207,6 +208,7 @@ function decodeTraitOffers(
         'selectedOptionKey',
         'rarificationActions',
         ...(record.rejectedOptionKey === undefined ? [] : ['rejectedOptionKey']),
+        ...('concaveStoneResult' in record ? ['concaveStoneResult'] : []),
       ],
       rolePath,
     );
@@ -487,6 +489,38 @@ function decodeTraitOffers(
       !(TRAIT_OPTION_KEYS as readonly string[]).includes(rejectedOptionKey)
     )
       failProjectDocument(`${rolePath}.rejectedOptionKey`, 'must name an option row');
+    let concaveStoneResult: import('../traits').AuthoredConcaveStoneResult | undefined;
+    if ('concaveStoneResult' in record) {
+      const result = expectRecord(record.concaveStoneResult, `${rolePath}.concaveStoneResult`);
+      const resultKind = expectString(result.kind, `${rolePath}.concaveStoneResult.kind`);
+      if (resultKind === 'noProc') {
+        expectExactKeys(result, ['kind'], `${rolePath}.concaveStoneResult`);
+        concaveStoneResult = Object.freeze({ kind: 'noProc' });
+      } else if (resultKind === 'proc') {
+        expectExactKeys(result, ['kind', 'optionKey'], `${rolePath}.concaveStoneResult`);
+        const optionKey = expectString(
+          result.optionKey,
+          `${rolePath}.concaveStoneResult.optionKey`,
+        );
+        try {
+          concaveStoneResult = normalizeAuthoredConcaveStoneResult(
+            { kind: 'proc', optionKey: optionKey as TraitOptionKey },
+            selected as TraitOptionKey,
+            options,
+          );
+        } catch (error) {
+          failProjectDocument(
+            `${rolePath}.concaveStoneResult.optionKey`,
+            error instanceof Error ? error.message : 'invalid Concave Stone result',
+          );
+        }
+      } else {
+        failProjectDocument(
+          `${rolePath}.concaveStoneResult.kind`,
+          'must be noProc or proc',
+        );
+      }
+    }
     result[roleKey] = Object.freeze({
       kind: 'traits',
       giverKey,
@@ -496,6 +530,7 @@ function decodeTraitOffers(
       ...(rejectedOptionKey === undefined
         ? {}
         : { rejectedOptionKey: rejectedOptionKey as TraitOptionKey }),
+      ...(concaveStoneResult === undefined ? {} : { concaveStoneResult }),
     });
   }
   return Object.freeze(result);

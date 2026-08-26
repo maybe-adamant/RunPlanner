@@ -1,6 +1,7 @@
 import {
   semanticAddressKey,
   type AuthoredTraitOffer,
+  type AuthoredConcaveStoneResult,
   type TraitOfferAddress,
 } from '@run-planner/engine/authored-project';
 import { useCallback, useEffect, useRef } from 'react';
@@ -46,6 +47,7 @@ function traitOfferRevision(interaction: WorkspaceTraitOfferInteraction): string
           }:${'naturalSelectionTargets' in option ? JSON.stringify(option.naturalSelectionTargets) : ''}`,
       )
       .join(','),
+    JSON.stringify(interaction.value.concaveStoneResult),
     interaction.value.selectedOptionKey,
   ].join('|');
 }
@@ -108,6 +110,7 @@ export function TraitOfferEditor({
   interactions,
   onChildCommit,
   onCommit,
+  onStoneResult,
   onReset,
 }: {
   readonly address: TraitOfferAddress;
@@ -115,6 +118,10 @@ export function TraitOfferEditor({
   readonly interactions: WorkspaceInteractionCatalog;
   readonly onChildCommit?: (value: AuthoredTraitOffer) => void;
   readonly onCommit?: (value: AuthoredTraitOffer) => void;
+  readonly onStoneResult?: (
+    offer: import('@run-planner/engine/authored-project').AuthoredTraitOfferTraits,
+    result: AuthoredConcaveStoneResult | null,
+  ) => void;
   readonly onReset?: () => void;
 }) {
   const interaction = requireWorkspaceInteraction(
@@ -137,6 +144,7 @@ export function TraitOfferEditor({
       key={traitOfferRevision(interaction)}
       {...(onChildCommit === undefined ? {} : { onChildCommit })}
       {...(onCommit === undefined ? {} : { onCommit })}
+      {...(onStoneResult === undefined ? {} : { onStoneResult })}
       {...(onReset === undefined ? {} : { onReset })}
     />
   );
@@ -274,6 +282,11 @@ export function TraitOfferDialog({
           onChildCommit={(value) => {
             executeIntent(interaction.intentFor(value));
             dispatch(traitOfferDialogOpened(target));
+          }}
+          onStoneResult={(offer, result) => {
+            const optionDomain = interaction.optionDomain(offer, offer.selectedOptionKey);
+            if (optionDomain.concaveStone === undefined) return;
+            executeIntent(optionDomain.concaveStone.intentFor(offer, result));
           }}
           {...(interaction.resetIntent === undefined
             ? {}

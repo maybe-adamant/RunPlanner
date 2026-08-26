@@ -113,6 +113,8 @@ export type TraitFindingCode =
   | 'wrongHammerLoadout'
   | 'naturalSelectionResultMissing'
   | 'naturalSelectionResultUnavailable'
+  | 'concaveStoneResultMissing'
+  | 'concaveStoneResultUnavailable'
   | 'nonPriorityTrait'
   | 'missingAttackOrSpecial'
   | 'circeResolutionMissing'

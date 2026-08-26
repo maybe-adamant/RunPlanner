@@ -4,6 +4,7 @@ import {
   type AcquisitionRoleAddress,
   type AuthoredTraitOffer,
   type AuthoredTraitOfferTraits,
+  type AuthoredConcaveStoneResult,
   type AuthoredLevelResolution,
   type AuthoredBatchState,
   type AdditionalExitAddress,
@@ -359,6 +360,13 @@ export interface WorkspaceTraitOfferControl {
   readonly echoLastReward?: WorkspaceEchoLastRewardControl;
   readonly allTogetherSets?: readonly WorkspaceAllTogetherSetControl[];
   readonly naturalSelection?: WorkspaceNaturalSelectionControl;
+  readonly concaveStone?: WorkspaceConcaveStoneControl;
+}
+
+export interface WorkspaceConcaveStoneControl {
+  readonly address: TraitOfferAddress;
+  readonly marker: WorkspaceMarker;
+  readonly value?: AuthoredConcaveStoneResult;
 }
 
 /** One exact Time Piece choice, independent of whether this role has a trait child. */
@@ -449,6 +457,7 @@ export interface WorkspaceTraitOptionDomainInteraction {
   readonly echoLastRunBoon?: WorkspaceEchoLastRunBoonInteraction;
   readonly allTogetherSets?: readonly WorkspaceAllTogetherSetInteraction[];
   readonly naturalSelection?: WorkspaceNaturalSelectionInteraction;
+  readonly concaveStone?: WorkspaceConcaveStoneInteraction;
 }
 
 export interface WorkspaceAllTogetherSetDomain {
@@ -476,6 +485,26 @@ export interface WorkspaceNaturalSelectionInteraction {
     readonly load: () => WorkspaceNaturalSelectionDomain | undefined;
   };
   readonly traitLabel: (traitKey: string) => string;
+}
+
+export interface WorkspaceConcaveStoneDomain {
+  readonly procSupport: number;
+  readonly required: boolean;
+  readonly residualOptionKeys: readonly TraitOptionKey[];
+  readonly resultSupport: 'forced' | 'possible' | 'impossible';
+}
+
+export interface WorkspaceConcaveStoneInteraction {
+  readonly control: WorkspaceConcaveStoneControl;
+  readonly intentFor: (
+    offer: AuthoredTraitOfferTraits,
+    result: AuthoredConcaveStoneResult | null,
+  ) => WorkspacePayloadEditIntent<
+    Extract<ProjectCommand, { readonly kind: 'ReplaceConcaveStoneResult' }>
+  >;
+  readonly forOffer: (offer: AuthoredTraitOfferTraits) => {
+    readonly load: () => WorkspaceConcaveStoneDomain | undefined;
+  };
 }
 
 export type WorkspaceRansomAssessment =
@@ -2268,6 +2297,9 @@ export interface WorkspaceRunStatePresentation {
     readonly figurineStatus?: 'pending' | 'consumed';
     readonly figurineOrigin?: 'ordinary' | 'echo';
     readonly figurineRarity?: import('@run-planner/engine/catalog-schema').InRunTraitRarity;
+    readonly stoneStatus?: 'pending' | 'consumed';
+    readonly stoneOrigin?: 'ordinary' | 'echo';
+    readonly stoneRank?: import('@run-planner/engine/catalog-schema').KeepsakeRank;
   };
   readonly arcana: readonly {
     readonly key: string;

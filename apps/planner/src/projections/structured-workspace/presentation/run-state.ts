@@ -249,6 +249,13 @@ export function presentRunState(
             figurineOrigin: snapshot.keepsakes.figurine.origin,
             figurineRarity: snapshot.keepsakes.figurine.rarity,
           }),
+      ...(snapshot.keepsakes.stone === undefined
+        ? {}
+        : {
+            stoneStatus: snapshot.keepsakes.stone.status,
+            stoneOrigin: snapshot.keepsakes.stone.origin,
+            stoneRank: snapshot.keepsakes.stone.rank,
+          }),
     }),
     arcana: Object.freeze(
       snapshot.arcanaFear.arcana.active.map((card) =>
