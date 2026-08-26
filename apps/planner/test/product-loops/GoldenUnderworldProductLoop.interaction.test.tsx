@@ -17,6 +17,7 @@ import {
   createOccurrenceAddress,
   createOccurrenceId,
   createProjectDocument,
+  createRouteStartKeepsakeSelectionAddress,
   createTargetAddress,
   createTraitOfferAddress,
   echoLastRewardPickupEntryKey,
@@ -40,6 +41,7 @@ import {
   goldenFBiome,
   goldenGBiome,
   goldenGOccurrenceId,
+  goldenFStartId,
 } from '@run-planner/test-fixtures/underworld';
 import { loadSurfaceNOPQProject } from '@run-planner/test-fixtures/surface';
 import { renderPlannerForInteraction } from '../fixtures/renderPlanner';
@@ -51,6 +53,44 @@ afterEach(() => {
 });
 
 describe('underworld product loop', () => {
+  it('projects the reached forced Zeus Boon and its still-active ordinary source in Run State', async () => {
+    const application = createApplication();
+    const openingReward = createIncomingRewardAddress(goldenFBiome, goldenFStartId);
+    let project = applyProjectCommand(createGoldenFGHIProject(), application.catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: createRouteStartKeepsakeSelectionAddress('Underworld'),
+      keepsakeKey: 'ForceZeusBoonKeepsake',
+    });
+    project = applyProjectCommand(project, application.catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: openingReward,
+      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
+    });
+    application.store.dispatch(authoredProjectReplaced(authorLegalTraitOffers(project)));
+    const view = renderPlannerForInteraction({ application });
+
+    await view.user.click(screen.getByRole('button', { name: 'Underworld' }));
+    await view.user.click(screen.getByRole('button', { name: 'Erebus' }));
+    await view.user.click(screen.getByRole('button', { name: /^OpeningEvaluated/ }));
+    expect(screen.getByRole('button', { name: /^OpeningEvaluated/ }).textContent).toContain(
+      'Boon · Zeus',
+    );
+    await view.user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
+    const workbench = screen
+      .getByRole('region', { name: 'Room Timeline' })
+      .closest<HTMLElement>('.biome-occurrence-workbench');
+    if (workbench === null) throw new Error('Opening room workbench is missing');
+    await view.user.click(within(workbench).getByRole('button', { name: 'Run State' }));
+    const sheet = screen.getByRole('region', {
+      name: 'State before the first action in Opening 01',
+    });
+    expect(
+      within(sheet).getByText('Zeus (ordinary): force 1, rarification 1, source cap 3'),
+    ).toBeTruthy();
+    expect(within(sheet).queryByRole('button', { name: /Olympian|force/i })).toBeNull();
+    application.dispose();
+  });
+
   it('creates a required pickup atomically and opens its move-only Room Timeline workflow without evaluation work', async () => {
     const application = createApplication();
     const biome = createBiomeAddress('Underworld', 'F');

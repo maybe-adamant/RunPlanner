@@ -110,6 +110,7 @@ import {
   initializeRewardBranches,
   publicRewardBranch,
   applyExperimentalHammerEquipResult,
+  applyOlympianRewardPressureEquip,
   type OfferProcessingPeer,
 } from '../processing';
 import type { AcquisitionRoleFrontier } from '../acquisition-settlement';
@@ -124,6 +125,7 @@ import {
   applyEchoTimePieceReplay,
   applyEchoFigurineReplay,
   applyEchoConcaveStoneReplay,
+  applyEchoOlympianRewardPressureReplay,
   applyTranscendentEmbryoEquipResult,
   assessTranscendentEmbryoBlessing,
 } from '../../keepsakes';
@@ -613,6 +615,24 @@ export function evaluateBiomeRewardChronology(
         return keepsakes === branch.keepsakes
           ? branch
           : recordReplay(Object.freeze({ ...branch, keepsakes }));
+      });
+      branches = Object.freeze(replayedBranches);
+    } else if (replayEffect.kind === 'olympianRewardPressure') {
+      const replayedBranches = branches.map((branch) => {
+        const keepsakes = applyEchoOlympianRewardPressureReplay(
+          catalog,
+          branch.keepsakes,
+          giftState.capturedKeepsakeKey,
+        );
+        return keepsakes === branch.keepsakes
+          ? branch
+          : recordReplay(
+              applyOlympianRewardPressureEquip(
+                catalog,
+                Object.freeze({ ...branch, keepsakes }),
+                giftState.capturedKeepsakeKey,
+              ),
+            );
       });
       branches = Object.freeze(replayedBranches);
     } else if (

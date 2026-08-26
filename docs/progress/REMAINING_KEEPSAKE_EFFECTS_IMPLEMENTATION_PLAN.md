@@ -44,6 +44,20 @@ workspace interaction witnesses, catalog, migration, typecheck, formatting,
 and diff-check lanes passed. The complete repository gate remains deferred to
 phase closure as required by this plan.
 
+Gate E implementation and independent review remediation completed on
+2026-08-26. The nine Olympian keepsakes now share one exact `Boon` priority
+queue, ordered provider-source ledger, producer-owned force consumption, and
+provider-specific rarification transition across ordinary, Cherished, and Gift
+contacts. Review corrections preserve consumed priorities through unordered
+generation cohorts and treat Devotion's authored chosen/spurned order as the
+player's later execution order rather than generated Loot A/Loot B identity.
+The unreachable Fields optional Boon hook was removed because the normalized
+store excludes `Boon`; the durable audit records that dormant source row.
+Focused catalog, reward-kernel, engine, F/H materialization, Shop/Narcissus,
+Run State, product-loop, typecheck, performance, formatting, and diff-check
+lanes passed. The complete repository gate remains deferred to phase closure
+as required by this plan.
+
 The first phase contains Aromatic Phial, Crystal Figurine, Concave Stone, and
 Transcendent Embryo. A later phase establishes the exact-name reward-pressure
 infrastructure and immediately consumes it with all nine Olympian keepsakes.
@@ -863,7 +877,8 @@ Add one `olympianRewardPressure` keepsake effect family declaring:
 - the exact priority reward name `Boon`;
 - one provider-force use;
 - one provider-specific rarification use;
-- the Common/Rare/Epic maximum-rarity levels 1/2/3 and no Heroic row; and
+- the Common/Rare/Epic maximum **source** rarity levels 1/2/3 and no Heroic row;
+  each permits a one-step action from that source rarity; and
 - the exact provider trait-giver key for each of the nine identities.
 
 The nine declarations use that family with Zeus, Hera, Poseidon, Demeter,
@@ -935,9 +950,13 @@ reward/trait-offer product. Generating the door does not spend the provider
 force, so an unchosen forced-provider exit leaves it active.
 
 For Devotion, start from the providers already present in loot history and use
-the last qualifying active source in acquisition order as Loot A. Loot B must
-remain a different provider. Preserve this source-backed ordering difference;
-do not normalize Devotion to ordinary first-source selection.
+the last qualifying active source in acquisition order as one member of the
+generated pair; the other member must remain a different provider. The
+persisted `chosenSource`/`spurnedSource` fields model the player's later
+execution order, not generated Loot A/Loot B identity, so either authored
+orientation containing the forced provider is accepted. Preserve this
+source-backed ordering difference; do not normalize Devotion to ordinary
+first-source selection.
 
 An authored provider or trait offer that disagrees with the reached forced
 provider is retained and receives one exact repairable finding at its existing
@@ -955,22 +974,25 @@ producers:
 - unchosen exits and Nemesis-suppressed room rewards do not spend because no
   corresponding loot object spawns;
 - Fields cages spend when their locked loot object is created;
-- Fields optional Boons are not provider-steered by generic bonus generation,
-  but an independently selected matching provider still spends at spawn;
+- the source-audited Fields optional Boon behavior remains dormant: the current
+  normalized `FieldsOptionalRewards` store excludes `Boon`, so Gate E adds no
+  runtime contact for an impossible authored outcome; a future store expansion
+  must add that contact and its focused witness with the feature;
 - Devotion spends when its two initial loot objects materialize, before the
   player chooses between them;
 - fixed or direct free god loot does not change provider but spends a matching
   source when materialized;
-- standard purchases do not spend provider force; and
-- Mystery Boon does not use provider steering, but a matching unwrap result
-  spends force at its existing post-purchase loot-materialization contact.
+- standard purchases, including a direct Shop Mystery Boon, do not spend
+  provider force; and
+- Blind Box does not use provider steering, but a matching unwrap result
+  spends force whether the box came from Narcissus or a Shop.
 
 This is an automatic chronological transition. It creates no checkbox and is
 not controlled by the reward's required-versus-optional pickup disposition.
 Implement one narrow provider-materialized transition and invoke it only from
 the existing source-owned chronology contacts reached by this matrix: selected
-room reward/fixed/cage/Devotion materialization, Fields optional offer-point
-materialization, and Mystery Boon's existing `afterUnwrap` role. No new generic
+room reward/fixed/cage/Devotion materialization and Blind Box's existing
+`afterUnwrap` role. No new generic
 loot event, authored state, or parallel pipeline is permitted. If one of those
 contacts does not carry enough provider/provenance information in live code,
 the gate stops for plan review instead of adding an unplanned transport model.
@@ -980,7 +1002,8 @@ the gate stops for plan review instead of adding an unplanned transport model.
 Reuse the existing row-level `rarificationActions` authoring and trait-offer
 UI. On a matching provider offer, resolve an available provider-specific source
 before Calling Card. A successful legal action upgrades the selected row one
-step, respects the source's declared maximum, and spends the source's one
+step, accepts a current row at or below the source's declared maximum source
+rarity, and spends the source's one
 nested rarification use. An unavailable or excess authored action remains
 repairable through the existing Calling-Card-style action finding rather than
 creating a second keepsake selector.
@@ -1044,10 +1067,11 @@ editable force toggle.
   and Shrines bypass it.
 - Provider-selection tests for ordinary first-source ordering, sibling
   provider exclusion, Devotion's prior-history requirement and last-source
-  ordering, retained mismatched authoring, and coexistence of ordinary/Gift
-  sources.
-- The complete materialization matrix above, with purchase provenance and
-  Mystery Boon as separate witnesses.
+  pair membership in either authored execution orientation, retained mismatched
+  authoring, and coexistence of ordinary/Gift sources.
+- The complete materialization matrix above, with direct Shop Mystery Boon,
+  Narcissus Blind Box, and Shop Blind Box as separate purchase-provenance
+  witnesses.
 - Trait-offer tests for provider-specific precedence over Calling Card, legal
   one-step caps at Common/Rare/Epic, successful-use consumption, invalid extra
   actions, and Gift-source removal only after its rarification use is spent.

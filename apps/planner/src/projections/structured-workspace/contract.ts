@@ -2346,6 +2346,16 @@ export interface WorkspaceRunStatePresentation {
       readonly replayCount: number;
     };
     readonly callingCardRemainingCharges?: number;
+    /** Future-outcome-only Olympian pressure; no producer internals or editable controls. */
+    readonly pendingRewardPriorities: readonly string[];
+    readonly olympianSources: readonly {
+      readonly providerKey: string;
+      readonly providerLabel: string;
+      readonly origin: 'ordinary' | 'echo';
+      readonly forceRemaining: 0 | 1;
+      readonly rarificationRemaining: 0 | 1;
+      readonly maximumSourceRarityLevel: 1 | 2 | 3;
+    }[];
     readonly timePieceRemainingCharges?: number;
     readonly figLeafRemainingUses?: number;
     readonly figLeafActivatedThisBiome?: boolean;

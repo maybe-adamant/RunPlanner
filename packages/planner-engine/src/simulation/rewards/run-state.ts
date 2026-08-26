@@ -112,6 +112,7 @@ export interface RunStateSnapshot {
   readonly arcanaFear: RewardBranchState['arcanaFear'];
   /** Branch-derived identity chronology; effects are introduced by later gates. */
   readonly keepsakes: RewardBranchState['keepsakes'];
+  readonly rewardPriorities: RewardBranchState['rewardPriorities'];
   readonly forfeitStatus: 'inactive' | 'available' | 'consumed';
   readonly bags: readonly DecisionRewardBagState[];
 }
@@ -167,6 +168,7 @@ interface RunStateDerivationCache {
       readonly traits: DecisionTraitState;
       readonly arcanaFear: RewardBranchState['arcanaFear'];
       readonly keepsakes: RewardBranchState['keepsakes'];
+      readonly rewardPriorities: RewardBranchState['rewardPriorities'];
       readonly forfeitStatus: 'inactive' | 'available' | 'consumed';
     }
   >;
@@ -608,6 +610,7 @@ export function createRunState(context: RunStateContext): RunStateSnapshot | und
             branch.traitHistory === undefined ? 0 : objectId(cache, branch.traitHistory),
             objectId(cache, branch.arcanaFear),
             objectId(cache, branch.keepsakes),
+            objectId(cache, branch.rewardPriorities),
           ].join(':');
     let derived =
       identityKey === undefined ? undefined : cache?.branchStateByIdentity.get(identityKey);
@@ -634,6 +637,7 @@ export function createRunState(context: RunStateContext): RunStateSnapshot | und
         traits,
         arcanaFear: branch.arcanaFear,
         keepsakes: branch.keepsakes,
+        rewardPriorities: branch.rewardPriorities,
         forfeitStatus: forfeit,
       });
       if (identityKey !== undefined) {
@@ -719,6 +723,7 @@ export function createRunState(context: RunStateContext): RunStateSnapshot | und
     counters: first.counters,
     arcanaFear: first.arcanaFear,
     keepsakes: first.keepsakes,
+    rewardPriorities: first.rewardPriorities,
     forfeitStatus: first.forfeitStatus,
     bags,
   });

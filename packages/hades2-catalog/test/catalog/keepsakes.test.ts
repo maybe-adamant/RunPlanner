@@ -236,9 +236,51 @@ describe('keepsake normalization', () => {
     expect(normalized.values.every((keepsake) => keepsake.rank === 'Epic')).toBe(true);
     expect(
       normalized.values
-        .filter((keepsake) => keepsake.effect !== undefined)
+        .filter(
+          (keepsake) =>
+            keepsake.effect !== undefined && keepsake.effect.kind !== 'olympianRewardPressure',
+        )
         .map((keepsake) => keepsake.key),
     ).toEqual(supportedEffects.map((row) => row.key));
+
+    const olympians = normalized.values.filter(
+      (keepsake) => keepsake.effect?.kind === 'olympianRewardPressure',
+    );
+    expect(olympians).toHaveLength(9);
+    expect(
+      Object.fromEntries(
+        olympians.map((keepsake) => [
+          keepsake.key,
+          keepsake.effect?.kind === 'olympianRewardPressure'
+            ? keepsake.effect.providerKey
+            : undefined,
+        ]),
+      ),
+    ).toEqual({
+      ForceZeusBoonKeepsake: 'Zeus',
+      ForceHeraBoonKeepsake: 'Hera',
+      ForcePoseidonBoonKeepsake: 'Poseidon',
+      ForceDemeterBoonKeepsake: 'Demeter',
+      ForceApolloBoonKeepsake: 'Apollo',
+      ForceAphroditeBoonKeepsake: 'Aphrodite',
+      ForceHephaestusBoonKeepsake: 'Hephaestus',
+      ForceHestiaBoonKeepsake: 'Hestia',
+      ForceAresBoonKeepsake: 'Ares',
+    });
+    for (const keepsake of olympians) {
+      expect(keepsake.effect).toEqual(
+        expect.objectContaining({
+          priorityRewardType: 'Boon',
+          providerForceUses: 1,
+          providerRarificationUses: 1,
+          maximumSourceRarityLevelByRank: { Common: 1, Rare: 2, Epic: 3 },
+        }),
+      );
+      expect(keepsake.echoGift).toEqual({
+        availability: 'eligible',
+        effect: { kind: 'olympianRewardPressure', schedule: 'everyBiome' },
+      });
+    }
 
     for (const row of supportedEffects) {
       const declaration = normalized.byKey[row.key];

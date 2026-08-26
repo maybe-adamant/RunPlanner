@@ -20,6 +20,7 @@ import {
   expect,
   it,
   initializeTestRewardBranches,
+  createKeepsakeState,
   ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
   createDerivedAcquisitionEntryCandidateArtifacts,
   selectedTraitOfferProducts,
@@ -412,6 +413,40 @@ describe('Echo Gate D Gold Gold Gold', () => {
       rewardTypes: ['BlindBoxLoot'],
     });
     expect(branch?.traitHistory?.equippedTraits.EchoDoubleShop).toBeUndefined();
+  });
+
+  it('keeps provider force through a paid Mystery Boon but spends it when a paid Blind Box unwraps', () => {
+    const pressuredBranches = () =>
+      initializeTestRewardBranches().map((branch) =>
+        Object.freeze({
+          ...branch,
+          keepsakes: createKeepsakeState(catalog, 'ForceApolloBoonKeepsake', branch.arcanaFear),
+        }),
+      );
+
+    const paidMysteryBoon = echoGoldShop(['Boon'], {
+      initialBranches: pressuredBranches(),
+      rewardOverrides: { Boon: shopBoonReward('ApolloUpgrade', 'ApolloWeaponBoon') },
+    }).settlement.branches[0];
+    expect(
+      paidMysteryBoon?.keepsakes.olympianSources.find((source) => source.providerKey === 'Apollo')
+        ?.remainingForceUses,
+    ).toBe(1);
+
+    const paidBlindBox = echoGoldShop(['Boon'], {
+      initialBranches: pressuredBranches(),
+      rewardOverrides: {
+        Boon: blindBoxReward(
+          'ApolloUpgrade',
+          ['ApolloManaBoon', 'ApolloSpecialBoon', 'ApolloCastBoon'],
+          'option1',
+        ),
+      },
+    }).settlement.branches[0];
+    expect(
+      paidBlindBox?.keepsakes.olympianSources.find((source) => source.providerKey === 'Apollo')
+        ?.remainingForceUses,
+    ).toBe(0);
   });
 
   it('duplicates Shop Nectar without inheriting Echo Reward Pom semantics', () => {

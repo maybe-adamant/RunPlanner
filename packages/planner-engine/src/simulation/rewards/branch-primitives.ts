@@ -72,6 +72,8 @@ export interface PendingHermesShrineDelivery {
 
 export interface RewardBranchState {
   readonly bags: Readonly<Record<string, RewardBagState>>;
+  /** Ordered global exact reward-type priorities, consumed only by counted selection. */
+  readonly rewardPriorities: readonly string[];
   readonly history: RewardHistoryState;
   readonly events: readonly RewardEvent[];
   readonly pendingShops: Readonly<Record<string, PendingShopState>>;
@@ -115,6 +117,7 @@ function equivalentBranchStateKey(branch: RewardBranchState): string {
   const history = branch.history;
   return JSON.stringify({
     bags: orderedRecord(branch.bags),
+    rewardPriorities: branch.rewardPriorities,
     history: {
       offerHistory: history.offerHistory,
       useRecord: orderedRecord(history.useRecord),

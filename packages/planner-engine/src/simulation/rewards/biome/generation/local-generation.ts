@@ -10,7 +10,11 @@ import type { RewardBranchState } from '../../branch-primitives';
 import { createBiomeRewardFacts } from '../../facts';
 import { rewardFinding } from '../../findings';
 import { addRewardFinding } from '../../findings';
-import { processRewardOffer, type OfferProcessingPeer } from '../../processing';
+import {
+  consumeOlympianProviderForReachedOffer,
+  processRewardOffer,
+  type OfferProcessingPeer,
+} from '../../processing';
 import { localRewardBinding } from '../room-reward-bindings';
 import {
   createRewardProducerCandidateResult,
@@ -177,7 +181,17 @@ export function generateLocalRewards(
         },
       }),
     );
-    branches = processRewardOffer(branches, offerContext, findings);
+    const generated = processRewardOffer(branches, offerContext, findings);
+    // Fields cages create their locked loot objects during room materialization.
+    // Their later acquisition point is a pickup, not an additional loot spawn.
+    branches =
+      context.room.lifecycleProfileKey === 'FieldsCombatRoom'
+        ? Object.freeze(
+            generated.map((branch) =>
+              consumeOlympianProviderForReachedOffer(catalog, branch, localReward.origin, 'free'),
+            ),
+          )
+        : generated;
     peers = Object.freeze([
       ...peers,
       Object.freeze({ origin: localReward.origin, offer: localReward.offer }),

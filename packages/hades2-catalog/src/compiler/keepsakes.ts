@@ -54,6 +54,17 @@ const authoritativeKeys = new Set([
 ]);
 
 const keepsakeRanks = ['Common', 'Rare', 'Epic', 'Heroic'] as const;
+const olympianProviderByKeepsake = Object.freeze({
+  ForceZeusBoonKeepsake: 'Zeus',
+  ForceHeraBoonKeepsake: 'Hera',
+  ForcePoseidonBoonKeepsake: 'Poseidon',
+  ForceDemeterBoonKeepsake: 'Demeter',
+  ForceApolloBoonKeepsake: 'Apollo',
+  ForceAphroditeBoonKeepsake: 'Aphrodite',
+  ForceHephaestusBoonKeepsake: 'Hephaestus',
+  ForceHestiaBoonKeepsake: 'Hestia',
+  ForceAresBoonKeepsake: 'Ares',
+} as const);
 type KeepsakeRank = (typeof keepsakeRanks)[number];
 type NumericRankProfile = Readonly<Record<KeepsakeRank, number>>;
 
@@ -137,7 +148,9 @@ export function normalizeKeepsakes(
                     ? ({ kind: 'callingCard', schedule: 'everyBiome' } as const)
                     : keepsake.key === 'GoldifyKeepsake'
                       ? ({ kind: 'timePiece', schedule: 'everyBiome' } as const)
-                      : ({ kind: 'modeledNeutral', schedule: 'noModeledEffect' } as const);
+                      : keepsake.key in olympianProviderByKeepsake
+                        ? ({ kind: 'olympianRewardPressure', schedule: 'everyBiome' } as const)
+                        : ({ kind: 'modeledNeutral', schedule: 'noModeledEffect' } as const);
       requireExactObjectKeys(keepsake.echoGift.effect, `${path}.echoGift.effect`, [
         'kind',
         'schedule',
@@ -369,6 +382,45 @@ export function normalizeKeepsakes(
           Epic: 'Epic',
           Heroic: 'Heroic',
         }),
+      });
+    } else if (keepsake.key in olympianProviderByKeepsake) {
+      requireExactObjectKeys(keepsake.effect, `${path}.effect`, [
+        'kind',
+        'priorityRewardType',
+        'providerKey',
+        'providerForceUses',
+        'providerRarificationUses',
+        'maximumSourceRarityLevelByRank',
+      ]);
+      const providerKey =
+        olympianProviderByKeepsake[keepsake.key as keyof typeof olympianProviderByKeepsake];
+      if (
+        keepsake.effect.kind !== 'olympianRewardPressure' ||
+        keepsake.effect.priorityRewardType !== 'Boon' ||
+        keepsake.effect.providerKey !== providerKey ||
+        keepsake.effect.providerForceUses !== 1 ||
+        keepsake.effect.providerRarificationUses !== 1
+      )
+        fail(`${path}.effect`, 'must declare exact Olympian Boon priority, provider, and one uses');
+      requireExactObjectKeys(
+        keepsake.effect.maximumSourceRarityLevelByRank,
+        `${path}.effect.maximumSourceRarityLevelByRank`,
+        ['Common', 'Rare', 'Epic'],
+      );
+      for (const [rank, expected] of [
+        ['Common', 1],
+        ['Rare', 2],
+        ['Epic', 3],
+      ] as const)
+        if (keepsake.effect.maximumSourceRarityLevelByRank[rank] !== expected)
+          fail(`${path}.effect.maximumSourceRarityLevelByRank.${rank}`, `must equal ${expected}`);
+      effect = Object.freeze({
+        kind: 'olympianRewardPressure',
+        priorityRewardType: 'Boon',
+        providerKey,
+        providerForceUses: 1,
+        providerRarificationUses: 1,
+        maximumSourceRarityLevelByRank: Object.freeze({ Common: 1, Rare: 2, Epic: 3 }),
       });
     } else if (keepsake.effect !== undefined)
       fail(`${path}.effect`, 'is not supported by this keepsake');

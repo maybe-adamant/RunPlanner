@@ -53,6 +53,7 @@ export interface RawKeepsakeDeclaration {
           | { readonly kind: 'transcendentEmbryo'; readonly schedule: 'oneShot' }
           | { readonly kind: 'callingCard'; readonly schedule: 'everyBiome' }
           | { readonly kind: 'timePiece'; readonly schedule: 'everyBiome' }
+          | { readonly kind: 'olympianRewardPressure'; readonly schedule: 'everyBiome' }
           | { readonly kind: 'modeledNeutral'; readonly schedule: 'noModeledEffect' };
       };
   readonly effect?:
@@ -108,6 +109,14 @@ export interface RawKeepsakeDeclaration {
         readonly source: 'Chaos';
         readonly interval: 8;
         readonly blessingRarityByRank: Readonly<Record<KeepsakeRank, InRunTraitRarity>>;
+      }
+    | {
+        readonly kind: 'olympianRewardPressure';
+        readonly priorityRewardType: 'Boon';
+        readonly providerKey: string;
+        readonly providerForceUses: 1;
+        readonly providerRarificationUses: 1;
+        readonly maximumSourceRarityLevelByRank: Readonly<{ Common: 1; Rare: 2; Epic: 3 }>;
       };
 }
 

@@ -135,6 +135,8 @@ export interface RewardStoreSupportEntry extends RewardStoreCandidateSupport {
 
 export interface RewardBranch {
   readonly bags: Readonly<Record<string, RewardBagState>>;
+  /** Ordered global priorities that intentionally survive biome boundaries. */
+  readonly rewardPriorities: readonly string[];
   readonly history: RewardHistoryState;
   readonly events: readonly RewardEvent[];
   readonly processedThroughHistorySequence: number;

@@ -1,4 +1,9 @@
-export { consumeCountedOffer, createRewardBagState } from './bag';
+export {
+  consumeCountedOffer,
+  createRewardBagState,
+  insertExactPriorityIntoBag,
+  oldestSupportedRewardPriority,
+} from './bag';
 export type {
   CountedRewardBinding,
   EnteredRewardStoreHistoryPolicy,

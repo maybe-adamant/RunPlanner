@@ -15,6 +15,24 @@ export function createRewardBagState(store: RewardStoreDeclaration): RewardBagSt
   });
 }
 
+/** Appends one complete base set only when no exact-name entry remains. */
+export function insertExactPriorityIntoBag(
+  store: RewardStoreDeclaration,
+  state: RewardBagState,
+  rewardType: string,
+): RewardBagState {
+  if (
+    store.entries.some(
+      (entry, index) =>
+        entry.rewardType === rewardType && (state.remainingEntryCounts[index] ?? 0) > 0,
+    )
+  )
+    return state;
+  return Object.freeze({
+    remainingEntryCounts: Object.freeze(state.remainingEntryCounts.map((count) => count + 1)),
+  });
+}
+
 function entryIsEligible(
   store: RewardStoreDeclaration,
   entryIndex: number,
@@ -56,6 +74,26 @@ function eligibleIndexes(
       ? [index]
       : [],
   );
+}
+
+/** The deterministic planner disposition: first queued name with eligible exact support. */
+export function oldestSupportedRewardPriority(
+  store: RewardStoreDeclaration,
+  state: RewardBagState,
+  priorities: readonly string[],
+  facts: RewardKernelFacts,
+  options: CountedOfferTransitionOptions = {},
+): string | undefined {
+  const eligible = eligibleIndexes(store, state, facts, options);
+  // Match the ordinary counted transition: only an exhausted/ineligible bag
+  // reaches its one full refill before an offer is selected.
+  const frontier = eligible.length === 0 ? refill(state) : state;
+  const supported = new Set(
+    eligibleIndexes(store, frontier, facts, options).map(
+      (index) => store.entries[index]!.rewardType,
+    ),
+  );
+  return priorities.find((priority) => supported.has(priority));
 }
 
 function refill(state: RewardBagState): RewardBagState {

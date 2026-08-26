@@ -176,6 +176,20 @@ export function presentRunState(
         ),
       ),
       fatedStatus: snapshot.keepsakes.fatedStatus,
+      pendingRewardPriorities: Object.freeze([...snapshot.rewardPriorities]),
+      olympianSources: Object.freeze(
+        snapshot.keepsakes.olympianSources.map((source) =>
+          Object.freeze({
+            providerKey: source.providerKey,
+            providerLabel:
+              catalog.traitGivers.byKey[source.providerKey]?.label ?? source.providerKey,
+            origin: source.origin,
+            forceRemaining: source.remainingForceUses,
+            rarificationRemaining: source.remainingRarificationUses,
+            maximumSourceRarityLevel: source.maximumSourceRarityLevel,
+          }),
+        ),
+      ),
       jeweledPomStatus:
         snapshot.keepsakes.jeweledPom === undefined
           ? 'inactive'
