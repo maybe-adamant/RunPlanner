@@ -1788,10 +1788,11 @@ offer members, and Heroic remains an existing transition rather than a fresh
 roll. Non-Olympian/Hermes providers retain their declaration-owned rarity
 policies.
 
-The current canonical trace still keeps `allSpellInvested = false` and
-`pendingSpellDrop = false` on their explicit Spell/Talent and Surface Shop
-delivery boundaries. Trait state does not infer either flag; concrete Hex,
-Talent, and delivery features must replace those facts if activated.
+The canonical trace derives `allSpellInvested` from the installed finite Hex
+tree's latched closure state and keeps `pendingSpellDrop` at its explicit
+Spell/Talent and Surface Shop delivery boundaries. Trait state does not infer
+either fact: Hex settlement owns closure, and the Hermes lifecycle owns pending
+delivery.
 
 N's local conformance probe captured the availability rank for every
 multi-side-door map, so forced-prefix validation can consume exact declaration

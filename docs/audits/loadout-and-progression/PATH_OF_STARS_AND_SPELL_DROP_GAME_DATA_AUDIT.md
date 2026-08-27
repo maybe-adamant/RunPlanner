@@ -266,16 +266,22 @@ three/four/five/seven grants and exact priority targets. The compiler keeps
 those closed declaration contracts local to their owning reward, trait-giver,
 and keepsake declarations.
 
-The simulation carries only `bankedPathPoints` and `investedPathPoints` on the
-chronological branch. Concrete Minor/ordinary/Big Talent acquisition settles
-the shared bank, an ordinary successful SpellDrop install banks its selected
-row's zero/one/two bonus, and Aspect of Selene preserves SpellDrop acquisition
-history while routing that child directly through the three-point settlement
-without a trait offer. Moon Beam ordinary and Gift contacts bank their declared
-points and insert the existing exact-name priority; the H-to-I and P-to-Q Gift
-frontiers choose `TalentBigDrop`. Cherished only banks its Epic-to-Heroic
-two-point delta.
+The simulation carries the installed frozen Hex tree, banked and invested Path
+points, persistent God Sent state, and the latched ordinary-Talent-Drop closure
+on the chronological branch. Concrete Minor/ordinary/Big Talent acquisition
+always adds its raw `grant - 1` to the shared bank before attempting the
+implicit first selection; investment and bank spending are capacity-limited, so
+a screen reached on a full tree retains that raw overflow. An ordinary
+successful SpellDrop installs its selected tree before banking the selected row's
+zero/one/two bonus; Aspect of Selene installs frozen Sky Fall and routes its
+later SpellDrop directly through the three-point settlement without a trait
+offer or positional bonus. Moon Beam ordinary and Gift contacts bank their
+declared points and insert the existing exact-name priority; the H-to-I and
+P-to-Q Gift frontiers choose `TalentBigDrop`. Cherished only banks its
+Epic-to-Heroic two-point delta.
 
-Run State projects those two counts and the equipped spell identity. The scope
-remains deliberately below Hex-node, capacity, and effect modeling: no authored
-Hex tree, node identity, or claimed remaining capacity exists in the planner.
+Run State projects the equipped spell, layout, base/effective capacity, God
+Sent state, open/closed state, and both point counts. The scope remains below
+graph-node reachability and effects: the authored tree freezes high-value
+identity sets but does not model graph positions, investment order, or
+individual talent acquisition.

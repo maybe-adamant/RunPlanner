@@ -127,12 +127,13 @@ planner rule is:
 - every other aspect starts with no spell and its first acquired Spell Drop
   owns the eight-spell, three-choice selection; and
 - Aspect of Selene starts with Sky Fall, and a later Spell Drop is still
-  acquired but owns Path of Stars progression rather than trait selection.
+  acquired but settles the three-point Path screen rather than trait selection.
 
-The current planner does not yet author Path of Stars. Until that separate
-slice exists, an Aspect-of-Selene Spell Drop may remain a concrete consumable
-and use record with an explicitly deferred talent outcome; it must not offer a
-second Hex or erase Sky Fall.
+Schema 65 stores Aspect of Selene's complete frozen Sky Fall tree in the route
+loadout's `aspectHexTree`. Its later concrete Spell Drop owns no nullable,
+dormant, or retained trait-offer child: it remains a consumable/use record and
+settles the three-point Path screen without offering a second Hex or erasing
+Sky Fall.
 
 ## Existing downstream contacts
 
@@ -163,9 +164,9 @@ separately. Exact Olympian-node acquisition remains graph-local and is not
 simulated. Task Force requires at least one concrete Spell Drop to have settled,
 then trusts the authored result and uses the durable runtime fallback contract
 for the deeper node condition. Aspect of Selene's starting Sky Fall alone does
-not qualify; the Aspect's later Spell Drop does. The current explicit
-`allSpellInvested = false` support baseline remains until the aggregate layout
-model is delivered.
+not qualify; the Aspect's later Spell Drop does. The aggregate layout model now
+derives the finite capacity and latched Talent Drop closure from the installed
+tree rather than retaining an always-false support baseline.
 
 ## Echo replay boundary
 

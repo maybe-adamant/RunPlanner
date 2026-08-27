@@ -11,8 +11,8 @@ the active frontier needed to orient the next delivery.
 
 ## Current Snapshot
 
-The current persisted contract is strict authored schema 64 with catalog
-`0.47.0-persephone-effective-levels`. The browser product supports all eight route biomes:
+The current persisted contract is strict authored schema 65 with catalog
+`0.48.0-hex-talent-layouts`. The browser product supports all eight route biomes:
 
 ```text
 Underworld: F -> G -> H -> I
@@ -83,9 +83,10 @@ milestones without repeating the delivery chronology.
 | Schemas 54-59      | Runtime fallback policy, automatic Boss/Postboss occurrences, Resources, Pools, Hermes Shrines, and Stygian Wells.                           |
 | Schemas 60-63      | Aromatic Phial fountain rarity, Crystal Figurine Boss activation, Concave Stone residual boons, and Transcendent Embryo transformations.     |
 | Schema 64          | Optional frozen Aspect of Persephone offer contributions, chronological Premium Service range expansion, and derived effective trait levels. |
+| Schema 65          | Frozen selected-Hex layouts and high-value identities, finite Path capacity, latched Talent Drop closure, and persistent God Sent extension. |
 
 Catalog versions advanced alongside these boundaries. The current catalog is
-`0.47.0-persephone-effective-levels`; exact declaration facts and source contacts
+`0.48.0-hex-talent-layouts`; exact declaration facts and source contacts
 remain in the catalog package and focused audits rather than this status
 ledger.
 
@@ -147,10 +148,24 @@ The remaining keepsake catalog is closed. Aromatic Phial, Crystal Figurine,
 Concave Stone, and Transcendent Embryo author their random results at existing
 fountain, Boss-defeated, trait-offer, and encounter-threshold owners. The nine
 Olympian keepsakes share one ordered exact-reward priority and provider-specific
-force/rarification ledger; Moon Beam reuses that priority and adds only banked
-and invested Path-point state. Ordinary equip, Cherished Heirloom, and Gift
-Gift Gift contacts are explicit for every implemented effect. Individual Hex
-tree topology and node choices remain outside the supported simulation scope.
+force/rarification ledger; Moon Beam reuses that priority and feeds the finite
+Hex Path account. Ordinary equip, Cherished Heirloom, and Gift Gift Gift
+contacts are explicit for every implemented effect. Individual Hex tree
+topology, node reachability, and effects remain outside the supported
+simulation scope.
+
+### Hex talent layout closure
+
+The 2026-08-27 Hex closure added four frozen layouts and exact Rare/Epic
+identity sets for every selected Hex, including Aspect of Selene's fixed Sky
+Fall tree. Schema 65 validates and migrates complete tree configurations. The
+simulator installs the tree before Path settlement, clamps investment to finite
+capacity, preserves banked overflow, latches future ordinary Talent Drops when
+a writable screen fills the tree, and retains committed Hermes delivery. God
+Sent adds its audited two capacity once and does not reopen a closed tree. Task
+Force requires an earlier concrete Spell Drop but retains its graph-local
+Olympian-node predicate as an execution-time fallback concern. Run State shows
+the selected layout, capacity, God Sent, points, and open/closed status.
 
 The 2026-08-27 Persephone effective-level closure added the declaration-owned
 `0..5`/`0..8` offer contribution bounds and the strict schema-64 optional
@@ -367,6 +382,18 @@ intermediate suite was green.
   that narrow defect was fixed. The parent subsequently ran standalone
   `npm run lint`, `npm run format:check`, and `npm run build`, each of which
   passed; `npm run check` itself was not rerun.
+- The Hex talent-layout closure ran its one authorized `npm run check` on
+  2026-08-27. Workspace, catalog, engine, and fixture typechecking passed, as
+  did checkpoint integrity at 3 files/20 tests. The regular lane then completed
+  205 files/2,048 tests with four failures: two stale pre-capacity fixtures, one
+  stale Task Force requirement-family matrix, and one direct Hex-domain loader
+  that violated the single React interaction-adapter boundary. The four owners
+  were corrected without adding production fallback behavior; focused
+  verification passed the affected files, including the final 19/19 Artificer
+  witness, and standalone engine/planner typechecking passed. After the exposed
+  lint defects were repaired, standalone ESLint, repository-wide Prettier, and
+  the production build passed; the build retained only the existing
+  greater-than-500-kB chunk advisory. The full test gate was not rerun.
 
 Focused validation remains the normal implementation practice. A complete
 `npm run check` is reserved for the declared phase closure or a shared

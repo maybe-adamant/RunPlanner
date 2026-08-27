@@ -8,7 +8,6 @@ import {
   normalizeAllTogetherResult,
   normalizeAuthoredChaosTraitOffer,
   normalizeAuthoredConcaveStoneResult,
-  type TraitOptionKey,
   type AuthoredGorgonAthenaOffer,
   type AuthoredTraitOffer,
   type AuthoredTraitOfferTraits,

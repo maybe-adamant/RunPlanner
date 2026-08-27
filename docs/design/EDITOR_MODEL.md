@@ -914,8 +914,9 @@ rarityless rows and no fallback, sparse, rarity, replacement, target, or
 god-pool controls. It still binds the existing complete `ReplaceTraitOffer`
 semantic edit and exact finding destination. Opening the dialog does not
 evaluate a candidate domain; focused editing invokes the already-bound engine
-capability lazily. A dormant Aspect-of-Selene Spell Drop child projects no
-control or missing-offer finding. The rows expose their position-owned Path of
+capability lazily. Aspect of Selene instead owns its frozen Sky Fall tree in
+the route loadout; its later Spell Drop has no trait-offer child, control, or
+missing-offer finding. The ordinary rows expose their position-owned Path of
 Stars bonus as Crescent, Half, and Full Moonglow for the first, second, and
 third slots respectively, and the launcher summarizes the selected spell and
 its fixed slot.

@@ -171,12 +171,10 @@ trait counter.
 `SpellDropRequirements` also reads `PendingSpellDrop`, but the canonical route
 never uses the separately deferred Surface Shop delivery system that sets it.
 The value is therefore exactly false in the supported trace. `TalentLegal`
-reads `AllSpellInvestedCache`, which cannot be derived without the deferred Hex
-and Talent tree. V1 uses the explicit baseline witness
-`allSpellInvested = false`: after acquiring Spell, Talent remains supported
-subject to its other exact store, room, and biome-use requirements. This is a
-named `Simplified` support expansion and must be replaced when concrete Hex
-investment becomes authored.
+reads `AllSpellInvestedCache`; the planner derives its equivalent from the
+installed finite Hex tree's latched closure state. After a writable Path screen
+fills the then-current tree, future ordinary Talent generation is unsupported;
+committed delivery retains its separately audited settlement path.
 
 ### MetaProgress
 

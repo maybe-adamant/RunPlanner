@@ -572,8 +572,9 @@ assessment traces or candidate contexts.
 A normal `SpellDrop` is one such fixed-three, rarityless trait-offer
 capability. The engine exposes its exact self-child capability and candidates;
 the application does not duplicate the eight-spell pool or inspect loadout
-identity. An Aspect-of-Selene Spell Drop instead has a contextually dormant
-child for the deferred Path of Stars outcome, so it publishes neither a
+identity. Aspect of Selene instead owns its complete Sky Fall tree in schema
+65's `loadout.aspectHexTree`; its later concrete Spell Drop settles the
+three-point Path screen without a trait-offer child, so it publishes neither a
 trait-offer candidate capability nor a missing-child finding.
 
 The returned findings cover prerequisite, negative predicate, context,

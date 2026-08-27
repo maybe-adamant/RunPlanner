@@ -8,6 +8,7 @@ import {
   createIncomingRewardAddress,
   createOccurrenceAddress,
   createOccurrenceId,
+  createDefaultAuthoredHexTree,
   semanticAddressKey,
 } from '@run-planner/engine/authored-project';
 import {
@@ -36,6 +37,7 @@ import {
 import { type RewardBranchState } from '../../src/simulation/rewards/branch-primitives';
 import { createAcquisitionConversionCandidateArtifacts } from '../../src/simulation/candidate-artifacts';
 import { createTraitHistoryState } from '../../src/simulation/traits';
+import { installHexTree } from '../../src/simulation/hex-progress';
 
 const biome = createBiomeAddress('Underworld', 'H');
 const loadout = createDefaultRouteLoadout(catalog);
@@ -400,9 +402,17 @@ describe('The Artificer', () => {
       { rewardType: 'TalentDrop' },
       { kind: 'producerLifecycle', key: 'RoomReward' },
     );
+    const [initial] = initialBranches();
     const product = settlePickupAcquisitionSite(
       catalog,
-      initialBranches(),
+      [
+        installHexTree(
+          catalog,
+          initial!,
+          'SpellPolymorphTrait',
+          createDefaultAuthoredHexTree(catalog, 'SpellPolymorphTrait'),
+        ),
+      ],
       {
         siteOwner,
         site,
@@ -417,7 +427,7 @@ describe('The Artificer', () => {
       new Map(),
     );
     expect(product.entries[0]?.participation).toBe('optional');
-    expect(product.branches[0]?.hexProgress).toEqual({
+    expect(product.branches[0]?.hexProgress).toMatchObject({
       bankedPathPoints: 0,
       investedPathPoints: 3,
     });

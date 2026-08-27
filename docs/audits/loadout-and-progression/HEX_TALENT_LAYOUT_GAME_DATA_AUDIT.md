@@ -356,21 +356,22 @@ is full, so an ordinary three-point delayed Talent Drop can leave two raw
 points banked. Those points still require another writable acquisition screen;
 read-only inspection cannot spend them.
 
-## Planner disposition
+## Current planner coverage
 
-The planner will freeze one layout and the exact Rare/Epic identity sets
-generated for that Hex while deliberately omitting graph coordinates and
+The planner freezes one layout and the exact Rare/Epic identity sets generated
+for the selected Hex while deliberately omitting graph coordinates and
 ordinary-node identities. The layout owns the required cardinalities and base
 capacity; the persistent Olympian-pair fact adds exactly two capacity.
 
 Generated Hex talents remain execution-facing frozen identities. The Planner
 does not simulate their individual acquisition, equip them into trait history,
 or derive its Olympian-node eligibility from them. Task Force requires an
-equipped base Hex in Planner history, keeps its deeper source requirement as a
-runtime-offer fact, and uses the ordinary one-step fallback contract when the
-preferred result is unavailable in game.
+earlier concrete Spell Drop to have settled, keeps its deeper source requirement
+as a runtime-offer fact, and uses the ordinary one-step fallback contract when
+the preferred result is unavailable in game. Aspect of Selene's starting Sky
+Fall alone does not satisfy that prefix.
 
-Talent Drop eligibility will use a latched closed state:
+Talent Drop eligibility uses a latched closed state:
 
 - closure begins false;
 - a writable Path screen that completes the then-current tree closes future
@@ -383,10 +384,10 @@ Talent Drop eligibility will use a latched closed state:
 This matches the installed source's coded cache boundary without
 embedding `AllSpellInvestedCache` as a planner-facing implementation concept.
 If live-game confirmation later establishes that late Olympian insertion does
-reopen ordinary Talent Drops, only this closure disposition should change; the
-layout declarations, candidate pools, capacity, and committed-delivery rules
-remain valid.
+reopen ordinary Talent Drops, only this closure disposition changes; the layout
+declarations, candidate pools, capacity, and committed-delivery rules remain
+valid.
 
-The audit does not prescribe a persisted schema, catalog module, editor
-component, or delivery sequence. Those ownership and gate decisions belong in
-the subsequent implementation plan.
+The audit does not prescribe a persisted schema, catalog module, or editor
+component. Those ownership details remain with their owning implementation
+authorities.

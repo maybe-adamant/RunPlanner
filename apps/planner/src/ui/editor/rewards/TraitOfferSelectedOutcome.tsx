@@ -92,16 +92,19 @@ export function TraitOfferSelectedOutcome({
     WorkspaceConcaveStoneDomain | undefined
   >();
   const concaveStoneDomain = concaveStoneController.observe(concaveStoneLoadable);
-  const hexTreeDomain = useMemo<WorkspaceHexTreeDomain | undefined>(
-    () => loadable.hexTree?.forOffer(value).load(),
+  const hexTreeLoadable = useMemo(
+    () => loadable.hexTree?.forOffer(value),
     [loadable.hexTree, value],
   );
+  const hexTreeController = useWorkspaceInteractionController<WorkspaceHexTreeDomain | undefined>();
+  const hexTreeDomain = hexTreeController.observe(hexTreeLoadable);
   useEffect(() => {
     if (loadable.hasTargetPicker) optionController.activate(loadable);
     if (circeLoadable !== undefined) circeController.activate(circeLoadable);
     if (echoPomLoadable !== undefined) echoPomController.activate(echoPomLoadable);
     if (echoLastRunLoadable !== undefined) echoLastRunController.activate(echoLastRunLoadable);
     if (concaveStoneLoadable !== undefined) concaveStoneController.activate(concaveStoneLoadable);
+    if (hexTreeLoadable !== undefined) hexTreeController.activate(hexTreeLoadable);
   }, [
     concaveStoneController,
     concaveStoneLoadable,
@@ -111,6 +114,8 @@ export function TraitOfferSelectedOutcome({
     echoLastRunLoadable,
     echoPomController,
     echoPomLoadable,
+    hexTreeController,
+    hexTreeLoadable,
     loadable,
     optionController,
   ]);
@@ -125,16 +130,16 @@ export function TraitOfferSelectedOutcome({
     loadable.allTogetherSets !== undefined ||
     loadable.naturalSelection !== undefined ||
     concaveStoneDomain.result !== undefined ||
-    hexTreeDomain !== undefined ||
+    hexTreeDomain.result !== undefined ||
     interaction.ransomAssessment(value) !== undefined;
   if (!hasOutcome) return null;
   return (
     <section aria-label="Selected trait outcome" className="trait-selected-outcome">
       <h3>Selected trait outcome</h3>
       <p className="trait-selected-outcome-name">{interaction.traitLabel(option.traitKey)}</p>
-      {loadable.hexTree === undefined || hexTreeDomain === undefined ? null : (
+      {loadable.hexTree === undefined || hexTreeDomain.result === undefined ? null : (
         <HexTreeEditor
-          domain={hexTreeDomain}
+          domain={hexTreeDomain.result}
           address={loadable.hexTree.control.address}
           transitionFor={(layoutKey) => loadable.hexTree!.transitionFor(value, layoutKey)}
           onChange={(hexTree) => onUpdate({ ...value, hexTree })}
