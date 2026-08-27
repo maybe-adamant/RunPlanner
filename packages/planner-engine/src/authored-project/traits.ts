@@ -98,8 +98,7 @@ export interface AuthoredTraitOfferTraits {
 }
 
 export type AuthoredConcaveStoneResult =
-  | { readonly kind: 'noProc' }
-  | { readonly kind: 'proc'; readonly optionKey: TraitOptionKey };
+  { readonly kind: 'noProc' } | { readonly kind: 'proc'; readonly optionKey: TraitOptionKey };
 
 export function normalizeAuthoredConcaveStoneResult(
   value: AuthoredConcaveStoneResult,

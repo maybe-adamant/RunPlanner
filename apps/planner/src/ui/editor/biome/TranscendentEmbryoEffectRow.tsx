@@ -37,7 +37,9 @@ export function TranscendentEmbryoEffectRow({
     () => interaction.forBlessing(control.blessingKey),
     [control.blessingKey, interaction],
   );
-  const controller = useWorkspaceInteractionController<WorkspaceTranscendentEmbryoDomain | undefined>();
+  const controller = useWorkspaceInteractionController<
+    WorkspaceTranscendentEmbryoDomain | undefined
+  >();
   const loaded = controller.observe(loadable);
   useEffect(() => {
     controller.activate(loadable);

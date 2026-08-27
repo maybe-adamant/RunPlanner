@@ -182,10 +182,7 @@ export function bindResolutionInteractions(input: {
         forBlessing: (blessingKey: string | null | undefined = control.blessingKey) =>
           Object.freeze({
             load: () => {
-              const evaluated = candidates.transcendentEmbryoOutcome(
-                control.address,
-                blessingKey,
-              );
+              const evaluated = candidates.transcendentEmbryoOutcome(control.address, blessingKey);
               if (evaluated.kind !== 'transcendentEmbryoOutcome') return undefined;
               return Object.freeze({
                 emptyNoOp: evaluated.result.emptyNoOp,
@@ -208,8 +205,7 @@ export function bindResolutionInteractions(input: {
                         : { reason: 'unavailable' as const }),
                     }),
                   ),
-                  (candidate) =>
-                    catalog.chaos.blessings.byKey[candidate]?.label ?? candidate,
+                  (candidate) => catalog.chaos.blessings.byKey[candidate]?.label ?? candidate,
                   (candidate) => candidate,
                 ),
                 selectedPossible: evaluated.result.selectedPossible,
@@ -459,8 +455,7 @@ export function bindResolutionInteractions(input: {
               }),
           load: (
             value = control.value as import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults['transcendentEmbryo'],
-          ) =>
-            candidates.keepsakeEquipResult(control.address, value),
+          ) => candidates.keepsakeEquipResult(control.address, value),
           intentFor: (
             value: NonNullable<
               import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults['transcendentEmbryo']

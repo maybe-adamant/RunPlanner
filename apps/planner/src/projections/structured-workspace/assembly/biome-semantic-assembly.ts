@@ -813,12 +813,13 @@ export function assembleWorkspaceBiomeSemantics(
     keepsakeEquipResultSupported(address),
   );
   const echoKeepsakeReplay =
-    echoKeepsakeReplayAddress !== undefined && keepsakeEquipResultSupported(echoKeepsakeReplayAddress)
-    ? Object.freeze({
-        address: echoKeepsakeReplayAddress,
-        marker: markerDestinations.marker(echoKeepsakeReplayAddress),
-      })
-    : undefined;
+    echoKeepsakeReplayAddress !== undefined &&
+    keepsakeEquipResultSupported(echoKeepsakeReplayAddress)
+      ? Object.freeze({
+          address: echoKeepsakeReplayAddress,
+          marker: markerDestinations.marker(echoKeepsakeReplayAddress),
+        })
+      : undefined;
   if (echoKeepsakeReplay !== undefined && entry !== undefined)
     markerDestinations.redirect([echoKeepsakeReplay.marker], entry.key);
   appendUniqueTopologyRemovalInteractionRequirements(

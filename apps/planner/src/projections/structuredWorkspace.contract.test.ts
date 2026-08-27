@@ -21,7 +21,6 @@ import {
   createProjectDocument,
   createRewardWheelOfferAddress,
   createTargetAddress,
-  createTranscendentEmbryoOutcomeAddress,
   createTraitOfferAddress,
   semanticAddressKey,
   type AuthoredBiomePlan,
@@ -778,7 +777,7 @@ describe('structured workspace overlay contract', () => {
     };
     const start = createRouteStartKeepsakeSelectionAddress('Underworld');
     const startResult = createKeepsakeEquipResultAddress(start, 'transcendentEmbryo');
-    let routeStartProject = applyProjectCommand(fOnlyProject(), catalog, {
+    const routeStartProject = applyProjectCommand(fOnlyProject(), catalog, {
       kind: 'ReplaceStartingKeepsake',
       selection: start,
       keepsakeKey: 'RandomBlessingKeepsake',

@@ -374,7 +374,7 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
               ? 'Choose the Chaos blessing granted by Transcendent Embryo.'
               : 'Choose the Hades trait granted by Jeweled Pom.'
             : finding.origin.kind === 'keepsakeEquipResult' &&
-              finding.origin.resultKind === 'transcendentEmbryo'
+                finding.origin.resultKind === 'transcendentEmbryo'
               ? 'Choose a Chaos blessing eligible when Transcendent Embryo is equipped.'
               : 'Choose a Hades trait eligible when Jeweled Pom is equipped.',
       };

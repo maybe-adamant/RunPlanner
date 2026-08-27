@@ -58,10 +58,7 @@ export function bindRewardChildInteractions(input: {
   readonly traitControls?: ReadonlyMap<string, WorkspaceTraitOfferControl>;
   readonly levelResolutionControls?: ReadonlyMap<string, WorkspaceLevelResolutionControl>;
   readonly steadyGrowthControls?: ReadonlyMap<string, WorkspaceSteadyGrowthControl>;
-  readonly transcendentEmbryoControls?: ReadonlyMap<
-    string,
-    WorkspaceTranscendentEmbryoControl
-  >;
+  readonly transcendentEmbryoControls?: ReadonlyMap<string, WorkspaceTranscendentEmbryoControl>;
   readonly fountainRarityControls?: ReadonlyMap<string, WorkspaceFountainRarityControl>;
   readonly judgmentArcanaControls?: ReadonlyMap<
     string,

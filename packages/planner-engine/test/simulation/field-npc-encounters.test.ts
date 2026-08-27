@@ -1423,13 +1423,22 @@ describe('field NPC encounter requirements', () => {
     const indoorIntro = phase(pBiome, pOccurrenceId('P_Combat02', 2, 1), 'Intro');
     const indoorCombat = phase(pBiome, indoorOccurrenceId, 'Combat');
     const initial = loadSurfaceNOPQProject();
+    const initialAssembly = simulateProjectAssembly(catalog, initial);
+    const indoorIntroSupport = encounterPhaseCandidateSupportForProjectEvaluationAssembly(
+      initialAssembly,
+      indoorIntro,
+    );
+    const indoorCombatSupport = encounterPhaseCandidateSupportForProjectEvaluationAssembly(
+      initialAssembly,
+      indoorCombat,
+    );
 
-    expect(support(initial, indoorIntro)?.candidateEncounterKeys).toContain('HeraclesCombatP');
-    expect(support(initial, indoorIntro)?.candidateEncounterKeys).not.toContain('IcarusCombatP');
-    expect(support(initial, indoorIntro)?.candidateEncounterKeys).not.toContain('AthenaCombatP');
-    expect(support(initial, indoorCombat)?.candidateEncounterKeys).not.toContain('HeraclesCombatP');
-    expect(support(initial, indoorCombat)?.candidateEncounterKeys).toContain('AthenaCombatP');
-    expect(support(initial, indoorCombat)?.candidateEncounterKeys).not.toContain('IcarusCombatP');
+    expect(indoorIntroSupport?.candidateEncounterKeys).toContain('HeraclesCombatP');
+    expect(indoorIntroSupport?.candidateEncounterKeys).not.toContain('IcarusCombatP');
+    expect(indoorIntroSupport?.candidateEncounterKeys).not.toContain('AthenaCombatP');
+    expect(indoorCombatSupport?.candidateEncounterKeys).not.toContain('HeraclesCombatP');
+    expect(indoorCombatSupport?.candidateEncounterKeys).toContain('AthenaCombatP');
+    expect(indoorCombatSupport?.candidateEncounterKeys).not.toContain('IcarusCombatP');
 
     const outdoorOccurrenceId = pOccurrenceId('P_Combat11', 4, 2);
     const outdoorCombat = phase(pBiome, outdoorOccurrenceId, 'Combat');
@@ -1454,7 +1463,11 @@ describe('field NPC encounter requirements', () => {
       value: { rewardType: 'TalentDrop' },
     });
 
-    expect(support(outdoor, outdoorCombat)?.candidateEncounterKeys).toContain('IcarusCombatP');
+    const outdoorSupport = encounterPhaseCandidateSupportForProjectEvaluationAssembly(
+      simulateProjectAssembly(catalog, outdoor),
+      outdoorCombat,
+    );
+    expect(outdoorSupport?.candidateEncounterKeys).toContain('IcarusCombatP');
   });
 
   it('retains a dormant P Icarus offer and acquires its selected trait when reached again', () => {
