@@ -273,20 +273,41 @@ replace one qualifying reward in every biome while the Vow remains effective.
 
 ### Qualifying acquisition path
 
-The interception is called only from `RewardLogic`'s room-reward spawn cases
-for:
+The interception is called only from `RewardLogic`'s `SpawnRoomReward` cases
+whose outer reward type is:
 
 - `rewardType == "Boon"`; and
 - `rewardType == "HermesUpgrade"`.
 
-The authored door reward remains a Boon or Hermes reward. At spawn time the
-Vow substitutes the consolation consumable, so no trait offer is opened and no
-trait is acquired from that reward.
+The authored door or generated replacement remains a Boon or Hermes reward.
+At spawn time the Vow substitutes the consolation consumable, so no trait
+offer is opened and no trait is acquired from that reward.
 
-The generic Shop `GiveLoot` path and Devotion's two `GiveLoot` calls do not call
-`CheckBoonSkipShrineUpgrade`. Forfeit therefore does not consume its biome
-trigger or replace those offers. Pom, Hammer, NPC, and Story traits likewise
-do not enter the qualifying switch cases.
+This spawn boundary is reached from two supported sources. Ordinary room
+completion calls `SpawnRoomReward` for its selected door reward. Artificer
+first destroys the eligible minor object, consumes one use, and chooses a
+`RunProgress` replacement while excluding Devotion and Spell Drop; it then
+calls `SpawnRoomReward` with that selected replacement as `RewardOverride`.
+An Artificer-selected Boon or Hermes reward therefore enters the same
+`CheckBoonSkipShrineUpgrade` branch, consumes the biome's Forfeit use, and
+spawns `RoomRewardConsolationPrize` instead.
+
+`CheckBoonSkipShrineUpgrade` registers the consolation object in
+`MapState.RoomRequiredObjects`. Artificer's caller restores requiredness when
+the destroyed source was required but never removes the new object's own
+required registration when the source was optional. An Artificer-generated
+consolation object is therefore still required. The caller separately copies
+the destroyed source's `CanDuplicate` value onto a duplicable replacement, so
+Sea Star support remains constrained by the converted source's duplication
+capability.
+
+The generic Shop `GiveLoot` path does not call
+`CheckBoonSkipShrineUpgrade`. Devotion is structurally separate even though it
+is a door reward and both outcomes are god trait screens: its pre-combat pair
+and post-combat spurned reward call `GiveLoot` directly under the outer
+`Devotion` lifecycle. Forfeit therefore does not consume its biome trigger or
+replace those offers. Pom, Hammer, NPC, and Story traits likewise do not enter
+the qualifying switch cases.
 
 ### Suppression by Circe
 
@@ -311,10 +332,14 @@ trait offer is restored retroactively.
    equipped trait.
 6. Denial records only actual displayed, unselected Olympian/Hermes traits and
    preserves prior bans if Circe later disables the Vow.
-7. Forfeit is one qualifying room-reward substitution per biome. It does not
-   apply to Shop or Devotion offers merely because they use the same giver.
+7. Forfeit is one qualifying `SpawnRoomReward` Boon/Hermes substitution per
+   biome. This includes an Artificer-selected `RunProgress` replacement but
+   does not include Shop or Devotion offers merely because they use the same
+   giver.
 8. Forfeit prevents the trait-offer lifecycle from starting; Denial acts only
    after a real trait option is selected.
+9. The Forfeit result is a required `RoomRewardConsolationPrize`; it retains
+   the converted source's duplication capability when produced by Artificer.
 
 ## Planner Disposition
 
@@ -326,12 +351,16 @@ trait offer is restored retroactively.
    assessment, progressive candidates, findings, deterministic add/return
    drafts, and Fallback Gold. Denial adds exact unselected bans to the normal
    trait-history fold and does not select a separate composition algorithm.
-3. The planner deliberately models Forfeit as an acquisition veto at the
-   ordinary authored room boundary. It retains the authored reward and bag
-   evidence, records biome-local usage, and skips the concrete Boon/Hermes and
-   trait transition. `RoomRewardConsolationPrize` remains a source fact only:
-   its inert numeric result is not normalized or recorded as a substitute
-   acquisition.
+3. Schema 22 originally simplified Forfeit to an acquisition veto at the
+   ordinary authored-room boundary. That implementation is now a recorded
+   discrepancy: it omits the concrete Red Onion, its Time Piece and Sea Star
+   interactions, and the Artificer replacement contact. The accepted
+   correction retains the original Boon/Hermes offer and bag evidence, records
+   biome-local usage, and materializes the fixed
+   `RoomRewardConsolationPrize` through ordinary acquisition settlement while
+   keeping the trait lifecycle dormant. The same transition applies to an
+   Artificer-generated Boon/Hermes replacement. It does not become a generic
+   trait-giver predicate or make the Red Onion an authorable door reward.
 4. `CalcNumLootChoices` supports a separate acquired effect that reduces a god
    screen from three choices to two. No currently modeled trait supplies that
    effect, so it remains outside production rather than being conflated with
