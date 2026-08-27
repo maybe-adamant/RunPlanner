@@ -344,6 +344,7 @@ export function normalizeTraits(
               'heldLastStand',
               'deathDefianceDamageBoonEligible',
               'missingLastStandAndAthenaFirstMeeting',
+              'equippedOlympianSpellTalent',
             ] as const,
             `${path}.runtimeOfferRequirement`,
           );

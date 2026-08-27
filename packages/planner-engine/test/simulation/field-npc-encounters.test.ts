@@ -1581,6 +1581,12 @@ describe('field NPC encounter requirements', () => {
     const athenaPhase = phase(pBiome, occurrenceId, 'Combat');
     let project = loadSurfaceNOPQProject();
 
+    expect(
+      traitCandidates(catalog, 'Athena', createTraitHistoryState()).find(
+        (candidate) => candidate.traitKey === 'OlympianSpellCountBoon',
+      ),
+    ).toMatchObject({ available: false });
+
     expect(support(project, athenaPhase)?.candidateEncounterKeys).toContain('AthenaCombatP');
     project = select(project, athenaPhase, 'AthenaCombatP');
     project = authorLegalTraitOffers(project);
@@ -1635,7 +1641,7 @@ describe('field NPC encounter requirements', () => {
       traitCandidates(catalog, 'Athena', traitHistory).find(
         (candidate) => candidate.traitKey === 'OlympianSpellCountBoon',
       ),
-    ).toMatchObject({ available: false });
+    ).toMatchObject({ available: true });
   });
 
   it('marks only a valid fixed terminating Intro as a dormant Combat suffix', () => {

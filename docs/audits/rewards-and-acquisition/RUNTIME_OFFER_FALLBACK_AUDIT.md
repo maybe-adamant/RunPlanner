@@ -79,15 +79,17 @@ that the Planner deliberately does not simulate:
 
 A shared Death Defiance boolean collapses opposite and unrelated combat
 predicates. A separate Task Force boolean would ask the author to reproduce the
-unmodeled Path of Stars graph and exact node-investment order. In both cases,
-selecting the conditional trait or item already expresses the intended result.
-Persisting another boolean adds no useful intent.
+unmodeled Path of Stars graph and exact node-investment order. The Planner can
+still enforce the necessary base-Hex prefix from its equipped Spell state;
+selecting Task Force expresses the deeper node-acquisition intent. Persisting
+another boolean adds no useful intent.
 
 The Planner therefore authors and simulates the preferred result without a
 general Death Defiance condition or an authored Olympian-node acquisition
-fact. The catalog retains each real source requirement as evidence and as
-runtime eligibility information. A declared fallback absorbs a failed live
-predicate at the execution boundary.
+fact. Task Force alone retains its ordinary base-Hex requirement because that
+state is already modeled. The catalog retains each real source requirement as
+evidence and as runtime eligibility information. A declared fallback absorbs
+a failed live predicate at the execution boundary.
 
 ## Gorgon Amulet is the phase-local exception
 
@@ -168,9 +170,11 @@ nested or direct source still uses its own giver's declaration.
 Task Force deliberately reuses Renewed Faith's three requirement-free Athena
 alternatives. Its real prerequisite remains source evidence, but the Planner
 does not infer an equipped Olympian talent from a generated Hex layout or from
-aggregate invested points. The authored Task Force selection expresses intent;
-the one exported fallback protects execution when the hidden graph path has
-not actually acquired its required Olympian node.
+aggregate invested points. It does require one of the nine base Hex traits to
+be equipped, including Aspect of Selene's Sky Fall. The authored Task Force
+selection expresses the remaining node-level intent; the one exported fallback
+protects execution when the hidden graph path has not actually acquired its
+required Olympian node.
 
 Jeweled Pom illustrates the intended simulation boundary. If its authored
 result is Last Gasp, simulation records Last Gasp as acquired, so a later Hades
