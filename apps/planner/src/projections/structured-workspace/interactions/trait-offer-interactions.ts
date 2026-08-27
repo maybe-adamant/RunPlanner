@@ -11,6 +11,7 @@ import {
 } from '@run-planner/engine/authored-project';
 import type {
   AuthoredCirceResolution,
+  AuthoredChaosTraitOffer,
   AuthoredEchoLastRunBoonOffer,
   AuthoredTraitOffer,
   AuthoredTraitOfferTraits,
@@ -42,8 +43,85 @@ import type {
   WorkspaceRewardControl,
   WorkspaceTraitOfferControl,
   WorkspaceTraitOfferInteraction,
+  WorkspaceChaosOfferDomain,
+  WorkspaceChaosOfferInteraction,
   WorkspaceHexTreeInteraction,
 } from '../contract';
+
+function chaosOperandDefault(
+  operand: import('@run-planner/engine/catalog-schema').ChaosNumericOperand,
+  rarity?: TraitRarity,
+): number {
+  return rarity === undefined
+    ? operand.authoringDefault
+    : (operand.byRarity?.[
+        rarity as Extract<TraitRarity, 'Common' | 'Rare' | 'Epic' | 'Heroic' | 'Legendary'>
+      ]?.authoringDefault ?? operand.authoringDefault);
+}
+
+function chaosValuesFor(
+  operands: readonly import('@run-planner/engine/catalog-schema').ChaosNumericOperand[],
+  rarity?: TraitRarity,
+): Readonly<Record<string, number>> {
+  return Object.freeze(
+    Object.fromEntries(
+      operands.map((operand) => [operand.key, chaosOperandDefault(operand, rarity)]),
+    ),
+  );
+}
+
+function chaosDomainFromCandidate(
+  candidate: import('@run-planner/engine/simulation').ChaosOfferDomain,
+  catalog: Catalog,
+  value: AuthoredChaosTraitOffer,
+): WorkspaceChaosOfferDomain {
+  const evaluatedPickerCandidates = (
+    keys: readonly string[],
+    availableKeys: readonly string[],
+    selectedKey: string,
+  ) =>
+    keys.map((key) => ({
+      value: key,
+      support: availableKeys.includes(key) ? ('possible' as const) : ('impossible' as const),
+      branchSupport: Object.freeze([availableKeys.includes(key)]),
+      selected: key === selectedKey,
+      ...(availableKeys.includes(key) ? {} : { reason: 'unavailable' as const }),
+    }));
+  return Object.freeze({
+    curseOptions: Object.freeze(
+      candidate.curseOptions.map((option, index) =>
+        Object.freeze({
+          optionKey: option.optionKey,
+          cursePicker: projectDirectTraitOutcomePicker(
+            evaluatedPickerCandidates(
+              option.curseKeys,
+              option.availableCurseKeys,
+              value.curseOptions[index]!.curseKey,
+            ),
+            (key) => catalog.chaos.curses.byKey[key]?.label ?? key,
+            (key) => key,
+          ),
+          requirements: option.requirements,
+        }),
+      ),
+    ) as WorkspaceChaosOfferDomain['curseOptions'],
+    ...(candidate.selectedCurseKey === undefined
+      ? {}
+      : { selectedCurseKey: candidate.selectedCurseKey }),
+    selectedCurseOperands: candidate.selectedCurseOperands,
+    blessingPicker: projectDirectTraitOutcomePicker(
+      evaluatedPickerCandidates(
+        candidate.blessingKeys,
+        candidate.availableBlessingKeys,
+        value.blessingKey,
+      ),
+      (key) => catalog.chaos.blessings.byKey[key]?.label ?? key,
+      (key) => key,
+    ),
+    rarities: candidate.rarities as readonly Exclude<TraitRarity, 'Duo'>[],
+    blessingOperands: candidate.blessingOperands,
+  });
+}
 
 /** Projects one complete authored Hex tree into the shared editor product. */
 export function projectHexTreeDomain(
@@ -131,6 +209,58 @@ export function bindTraitOfferInteractions(input: {
     );
     const startingDraft = () =>
       candidates.traitOfferStartingDraft(control.address, control.giver.key);
+    const chaosDomainFor = (value: AuthoredChaosTraitOffer) => {
+      const candidate = candidates.chaosOfferDomain(control.address, value)[0];
+      return candidate === undefined
+        ? undefined
+        : chaosDomainFromCandidate(candidate, catalog, value);
+    };
+    const chaosStartingDraft = (): AuthoredChaosTraitOffer | undefined => {
+      if (control.giver.providerKind !== 'chaos') return undefined;
+      const candidate = candidates.chaosOfferDomain(control.address)[0];
+      const firstBlessingKey = candidate?.blessingKeys[0];
+      const firstOptions:
+        readonly (AuthoredChaosTraitOffer['curseOptions'][number] | undefined)[] | undefined =
+        candidate?.curseOptions.map((option) => {
+          const curseKey = option.curseKeys[0];
+          const requirement = curseKey === undefined ? undefined : option.requirements[curseKey];
+          return curseKey === undefined || requirement === undefined
+            ? undefined
+            : Object.freeze({ curseKey, requirementCount: requirement.authoringDefault });
+        });
+      const selectedCurseKey = candidate?.selectedCurseKey;
+      const rarity = candidate?.rarities[0] as AuthoredChaosTraitOffer['rarity'] | undefined;
+      if (
+        candidate === undefined ||
+        firstBlessingKey === undefined ||
+        rarity === undefined ||
+        selectedCurseKey === undefined ||
+        firstOptions === undefined ||
+        firstOptions.some((option) => option === undefined)
+      )
+        return undefined;
+      return Object.freeze({
+        kind: 'chaos' as const,
+        giverKey: 'Chaos' as const,
+        curseOptions: Object.freeze(firstOptions) as AuthoredChaosTraitOffer['curseOptions'],
+        selectedOptionKey: 'option1' as const,
+        selectedCurseValues: chaosValuesFor(candidate.selectedCurseOperands),
+        blessingKey: firstBlessingKey,
+        rarity,
+        blessingValues: chaosValuesFor(candidate.blessingOperands[firstBlessingKey] ?? [], rarity),
+      });
+    };
+    const chaosInteraction: WorkspaceChaosOfferInteraction | undefined =
+      control.giver.providerKind !== 'chaos'
+        ? undefined
+        : Object.freeze({
+            blessingLabel: (blessingKey: string) =>
+              catalog.chaos.blessings.byKey[blessingKey]?.label ?? blessingKey,
+            curseLabel: (curseKey: string) =>
+              catalog.chaos.curses.byKey[curseKey]?.label ?? curseKey,
+            domainFor: chaosDomainFor,
+            startingDraft: chaosStartingDraft,
+          });
     const load = (value = control.offer ?? startingDraft()) =>
       value === undefined ? Object.freeze([]) : candidates.traitOffer(control.address, value);
     const optionDomains = new Map<
@@ -714,7 +844,8 @@ export function bindTraitOfferInteractions(input: {
       key,
       Object.freeze({
         acquisitionRoleLabel: control.acquisitionRoleLabel,
-        choices: traitChoices,
+        choices: control.giver.providerKind === 'chaos' ? Object.freeze([]) : traitChoices,
+        ...(chaosInteraction === undefined ? {} : { chaos: chaosInteraction }),
         giver: control.giver,
         intentFor: (value: AuthoredTraitOffer) =>
           derivedShopPayloadIntent(

@@ -27,7 +27,16 @@ function closedValue<const Values extends readonly string[]>(
 
 function normalizeChaosOperand(raw: unknown, path: string) {
   const value = requireObject(raw, path);
-  const allowed = new Set(['key', 'label', 'minimum', 'maximum', 'step', 'integer', 'byRarity']);
+  const allowed = new Set([
+    'key',
+    'label',
+    'minimum',
+    'maximum',
+    'step',
+    'authoringDefault',
+    'integer',
+    'byRarity',
+  ]);
   if (Object.keys(value).some((key) => !allowed.has(key))) fail(path, 'has an unknown operand key');
   const key = requireNonEmpty(value.key as string, `${path}.key`);
   const label = requireNonEmpty(value.label as string, `${path}.label`);
@@ -45,6 +54,18 @@ function normalizeChaosOperand(raw: unknown, path: string) {
     step <= 0
   )
     fail(path, 'requires finite minimum, maximum, and positive step');
+  const expectedDefault = Number(
+    (minimum + Math.floor((maximum - minimum) / 2 / step + 0.5 + 1e-9) * step).toFixed(12),
+  );
+  if (
+    typeof value.authoringDefault !== 'number' ||
+    !Number.isFinite(value.authoringDefault) ||
+    Math.abs(value.authoringDefault - expectedDefault) > 1e-8
+  )
+    fail(
+      `${path}.authoringDefault`,
+      `must be the legal midpoint snapped to step (${expectedDefault})`,
+    );
   const integer = value.integer;
   if (integer !== undefined && integer !== true)
     fail(`${path}.integer`, 'must be true when present');
@@ -56,6 +77,7 @@ function normalizeChaosOperand(raw: unknown, path: string) {
       minimum,
       maximum,
       step,
+      authoringDefault: value.authoringDefault,
       ...(integer === true ? { integer: true as const } : {}),
     });
   const rawDomains = requireObject(byRarity, `${path}.byRarity`);
@@ -68,7 +90,9 @@ function normalizeChaosOperand(raw: unknown, path: string) {
     CHAOS_RARITIES.map((rarity) => {
       const domain = requireObject(rawDomains[rarity], `${path}.byRarity.${rarity}`);
       if (
-        Object.keys(domain).some((key) => !['minimum', 'maximum', 'step', 'integer'].includes(key))
+        Object.keys(domain).some(
+          (key) => !['minimum', 'maximum', 'step', 'authoringDefault', 'integer'].includes(key),
+        )
       )
         fail(`${path}.byRarity.${rarity}`, 'has an unknown domain key');
       const domainMinimum = domain.minimum;
@@ -85,6 +109,21 @@ function normalizeChaosOperand(raw: unknown, path: string) {
         domainStep <= 0
       )
         fail(`${path}.byRarity.${rarity}`, 'requires finite minimum, maximum, and positive step');
+      const expectedDomainDefault = Number(
+        (
+          domainMinimum +
+          Math.floor((domainMaximum - domainMinimum) / 2 / domainStep + 0.5 + 1e-9) * domainStep
+        ).toFixed(12),
+      );
+      if (
+        typeof domain.authoringDefault !== 'number' ||
+        !Number.isFinite(domain.authoringDefault) ||
+        Math.abs(domain.authoringDefault - expectedDomainDefault) > 1e-8
+      )
+        fail(
+          `${path}.byRarity.${rarity}.authoringDefault`,
+          `must be the legal midpoint snapped to step (${expectedDomainDefault})`,
+        );
       if (domain.integer !== undefined && domain.integer !== true)
         fail(`${path}.byRarity.${rarity}.integer`, 'must be true when present');
       return [
@@ -93,6 +132,7 @@ function normalizeChaosOperand(raw: unknown, path: string) {
           minimum: domainMinimum,
           maximum: domainMaximum,
           step: domainStep,
+          authoringDefault: domain.authoringDefault,
           ...(domain.integer === true ? { integer: true as const } : {}),
         }),
       ];
@@ -104,6 +144,7 @@ function normalizeChaosOperand(raw: unknown, path: string) {
     minimum,
     maximum,
     step,
+    authoringDefault: value.authoringDefault,
     ...(integer === true ? { integer: true as const } : {}),
     byRarity: Object.freeze(domains),
   });

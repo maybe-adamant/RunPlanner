@@ -481,12 +481,7 @@ function traitState(catalog: Catalog, history: TraitHistoryState | undefined): D
             blessingLabel: blessing?.label ?? entry.blessingKey,
             rarity: entry.rarity,
             clock: entry.clock,
-            clockLabel:
-              entry.clock === 'godBoonScreens'
-                ? 'God boon screens'
-                : entry.clock === 'locations'
-                  ? 'Locations'
-                  : 'Encounters',
+            clockLabel: curse?.duration.label ?? entry.clock,
             initial: entry.duration,
             remaining: entry.remaining,
             curseValues: entry.curseValues,

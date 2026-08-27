@@ -3,6 +3,7 @@ import {
   type AcquisitionSiteAddress,
   type AcquisitionRoleAddress,
   type AuthoredTraitOffer,
+  type AuthoredChaosTraitOffer,
   type AuthoredTraitOfferTraits,
   type AuthoredHexTreeConfiguration,
   type AuthoredConcaveStoneResult,
@@ -60,6 +61,7 @@ import type {
   RoomDeclaration,
   TraitGiverDeclaration,
   TraitRarity,
+  ChaosNumericOperand,
   HexDeclaration,
   HexLayoutKey,
 } from '@run-planner/engine/catalog-schema';
@@ -675,6 +677,8 @@ export interface WorkspaceEchoLastRunBoonInteraction {
 export interface WorkspaceTraitOfferInteraction {
   readonly acquisitionRoleLabel: string;
   readonly choices: readonly WorkspaceInteractionChoice<string>[];
+  /** Dedicated Chaos envelope interaction; ordinary trait choices remain above. */
+  readonly chaos?: WorkspaceChaosOfferInteraction;
   /** Read-only summary of the generated pickup owned by the Room Timeline. */
   readonly echoLastReward?: WorkspaceEchoLastRewardControl;
   readonly giver: TraitGiverDeclaration;
@@ -722,6 +726,43 @@ export interface WorkspaceTraitOfferInteraction {
   readonly previousOptionalHighTierDraft?: (
     value: AuthoredTraitOfferTraits,
   ) => AuthoredTraitOfferTraits | undefined;
+}
+
+export interface WorkspaceChaosOfferOptionDomain {
+  readonly optionKey: TraitOptionKey;
+  readonly cursePicker: ContextualPickerModel<string>;
+  readonly requirements: Readonly<
+    Record<
+      string,
+      {
+        readonly minimum: number;
+        readonly maximum: number;
+        readonly step: number;
+        readonly authoringDefault: number;
+        readonly unit: string;
+      }
+    >
+  >;
+}
+
+export interface WorkspaceChaosOfferDomain {
+  readonly curseOptions: readonly [
+    WorkspaceChaosOfferOptionDomain,
+    WorkspaceChaosOfferOptionDomain,
+    WorkspaceChaosOfferOptionDomain,
+  ];
+  readonly selectedCurseKey?: string;
+  readonly selectedCurseOperands: readonly ChaosNumericOperand[];
+  readonly blessingPicker: ContextualPickerModel<string>;
+  readonly rarities: readonly Exclude<TraitRarity, 'Duo'>[];
+  readonly blessingOperands: Readonly<Record<string, readonly ChaosNumericOperand[]>>;
+}
+
+export interface WorkspaceChaosOfferInteraction {
+  readonly blessingLabel: (blessingKey: string) => string;
+  readonly curseLabel: (curseKey: string) => string;
+  readonly domainFor: (value: AuthoredChaosTraitOffer) => WorkspaceChaosOfferDomain | undefined;
+  readonly startingDraft: () => AuthoredChaosTraitOffer | undefined;
 }
 
 export interface WorkspaceLevelResolutionInteraction {

@@ -169,6 +169,8 @@ export interface ChaosPairEvent {
   readonly acquisitionPoint: string;
   readonly acquisitionIdentity: string;
   readonly offer: AuthoredChaosTraitOffer;
+  /** Exact distinct unselected curse identities banned by Vow of Denial. */
+  readonly bannedCurseKeys?: readonly string[];
 }
 
 /** A direct, already-matured Chaos blessing (Transcendent Embryo). */
@@ -655,19 +657,22 @@ export function foldTraitHistoryEvents(
         continue;
       }
       if (event.kind === 'chaosPair') {
-        const curse = catalog.chaos.curses.byKey[event.offer.curseKey];
+        for (const curseKey of event.bannedCurseKeys ?? []) bannedTraitKeys.add(curseKey);
+        const selectedOption = event.offer.curseOptions[optionIndex(event.offer.selectedOptionKey)];
+        const curseKey = selectedOption?.curseKey;
+        const curse = curseKey === undefined ? undefined : catalog.chaos.curses.byKey[curseKey];
         if (curse !== undefined)
           activeChaos = [
             ...activeChaos,
             Object.freeze({
               acquisitionIdentity: event.acquisitionIdentity,
               owner: event.owner,
-              curseKey: event.offer.curseKey,
-              duration: event.offer.duration,
-              remaining: event.offer.duration,
+              curseKey,
+              duration: selectedOption.requirementCount,
+              remaining: selectedOption.requirementCount,
               clock: curse.clock,
               ...(curse.semanticTag === undefined ? {} : { semanticTag: curse.semanticTag }),
-              curseValues: event.offer.curseValues,
+              curseValues: event.offer.selectedCurseValues,
               blessingKey: event.offer.blessingKey,
               rarity: event.offer.rarity,
               blessingValues: event.offer.blessingValues,

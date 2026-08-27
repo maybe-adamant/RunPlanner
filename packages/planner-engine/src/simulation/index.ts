@@ -157,6 +157,8 @@ export {
   type EvaluatedTraitAcquisitionTargetDomain,
   type EvaluatedTraitOfferCandidate,
   type ConcaveStoneCandidateBranch,
+  type ChaosOfferDomain,
+  type ChaosOfferCurseOptionDomain,
   type EvaluatedTraitOfferFocusedOptionCandidate,
   type TraitOfferCandidateFinding,
   type TraitOfferCandidateFindingCode,

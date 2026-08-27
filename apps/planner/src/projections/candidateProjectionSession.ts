@@ -24,6 +24,7 @@ export interface CandidateProjectionCore {
   readonly traitOfferStartingDraft: ProjectCandidateCoreTraitDrafts['traitOfferStartingDraft'];
   readonly nextOptionalHighTierTraitOfferDraft: ProjectCandidateCoreTraitDrafts['nextOptionalHighTierTraitOfferDraft'];
   readonly previousOptionalHighTierTraitOfferDraft: ProjectCandidateCoreTraitDrafts['previousOptionalHighTierTraitOfferDraft'];
+  readonly chaosOfferDomain: ProjectCandidateCoreTraitDrafts['chaosOfferDomain'];
   readonly projectOptions: <T>(
     key: string,
     values: readonly T[],
@@ -45,6 +46,7 @@ type ProjectCandidateCoreTraitDrafts = Pick<
   | 'traitOfferStartingDraft'
   | 'nextOptionalHighTierTraitOfferDraft'
   | 'previousOptionalHighTierTraitOfferDraft'
+  | 'chaosOfferDomain'
 >;
 
 export function domainKey(values: readonly unknown[]): string {
@@ -174,6 +176,7 @@ export function createCandidateProjectionCore(
         traitOfferStartingDraft: evaluator.traitOfferStartingDraft,
         nextOptionalHighTierTraitOfferDraft: evaluator.nextOptionalHighTierTraitOfferDraft,
         previousOptionalHighTierTraitOfferDraft: evaluator.previousOptionalHighTierTraitOfferDraft,
+        chaosOfferDomain: evaluator.chaosOfferDomain,
         projectOptions,
         projectOptionsCooperatively,
         memoizeOptions,

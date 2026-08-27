@@ -6,7 +6,6 @@ import {
   createIncomingRewardAddress,
   createOccurrenceAddress,
   createOccurrenceId,
-  createPostbossKeepsakeSelectionAddress,
   createRoomActionAddress,
   semanticAddressKey,
   createTraitOfferAddress,
@@ -384,11 +383,23 @@ describe('Transcendent Embryo declaration and direct Chaos fold', () => {
         ],
       ]),
     ).at(laterChaos);
-    const domain = capability?.chaosPairDomains({
-      curseKey: 'ChaosMetaUpgradeCurse',
+    const domain = capability?.chaosOfferDomain({
+      kind: 'chaos',
+      giverKey: 'Chaos',
+      curseOptions: [
+        { curseKey: 'ChaosMetaUpgradeCurse', requirementCount: 3 },
+        { curseKey: 'ChaosMetaUpgradeCurse', requirementCount: 3 },
+        { curseKey: 'ChaosMetaUpgradeCurse', requirementCount: 3 },
+      ],
+      selectedOptionKey: 'option1',
+      selectedCurseValues: {},
       blessingKey: 'ChaosWeaponBlessing',
+      rarity: 'Common',
+      blessingValues: { damageBonus: 0.2 },
     })[0];
-    expect(domain?.curseKeys).not.toContain('ChaosMetaUpgradeCurse');
+    expect(
+      domain?.curseOptions.every((option) => option.curseKeys.includes('ChaosMetaUpgradeCurse')),
+    ).toBe(true);
     expect(domain?.blessingKeys).not.toContain('ChaosLastStandBlessing');
   });
 

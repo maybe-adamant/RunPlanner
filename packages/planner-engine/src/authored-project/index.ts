@@ -178,6 +178,8 @@ export {
   materializeGorgonAthenaOffer,
   type AuthoredGorgonAthenaOffer,
   type AuthoredTraitOffer,
+  type AuthoredChaosTraitOffer,
+  type AuthoredChaosCurseOption,
   type AuthoredTraitOfferTraits,
   type AuthoredConcaveStoneResult,
   type AuthoredLevelResolution,

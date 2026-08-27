@@ -127,7 +127,11 @@ export type {
   RansomAssessmentCandidateEvaluation,
   EvaluatedRansomAssessmentCandidate,
 } from './trait-offer';
-export type { ConcaveStoneCandidateBranch } from './trait-offer-capability';
+export type {
+  ConcaveStoneCandidateBranch,
+  ChaosOfferDomain,
+  ChaosOfferCurseOptionDomain,
+} from './trait-offer-capability';
 export type {
   SteadyGrowthOutcomeCandidateQuery,
   EvaluatedSteadyGrowthOutcomeCandidate,

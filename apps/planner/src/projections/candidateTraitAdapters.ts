@@ -66,6 +66,7 @@ export type TraitCandidateAdapters = Pick<
   | 'traitOfferStartingDraft'
   | 'nextOptionalHighTierTraitOfferDraft'
   | 'previousOptionalHighTierTraitOfferDraft'
+  | 'chaosOfferDomain'
   | 'traitOfferFocusedOptions'
   | 'traitAcquisitionTargets'
   | 'circeResolution'
@@ -108,6 +109,7 @@ export function createTraitCandidateAdapters(
       core.nextOptionalHighTierTraitOfferDraft(owner, value),
     previousOptionalHighTierTraitOfferDraft: (owner, value) =>
       core.previousOptionalHighTierTraitOfferDraft(owner, value),
+    chaosOfferDomain: (owner, value) => core.chaosOfferDomain(owner, value),
     traitOfferFocusedOptions: (owner, value, optionKey, variants) =>
       core.projectOptions(
         `trait-offer-focused:${semanticAddressKey(owner)}:${JSON.stringify(value)}:${optionKey}:${domainKey(

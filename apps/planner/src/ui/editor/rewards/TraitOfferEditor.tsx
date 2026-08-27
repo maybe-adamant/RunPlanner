@@ -33,7 +33,7 @@ function traitOfferRevision(interaction: WorkspaceTraitOfferInteraction): string
     return `${interaction.giver.key}|fallbackGold`;
   }
   if (interaction.value.kind === 'chaos') {
-    return `${interaction.giver.key}|chaos|${interaction.value.curseKey}|${interaction.value.blessingKey}|${interaction.value.rarity}`;
+    return `${interaction.giver.key}|chaos|${JSON.stringify(interaction.value.curseOptions)}|${interaction.value.selectedOptionKey}|${interaction.value.blessingKey}|${interaction.value.rarity}`;
   }
   return [
     interaction.giver.key,
@@ -72,13 +72,19 @@ export function TraitOfferLauncher({
     control.offer?.kind === 'traits' ? control.offer.options[selectedOptionIndex] : undefined;
   const traitLabel =
     control.offer === null
-      ? 'Choose Trait'
-      : control.offer.kind === 'fallbackGold'
-        ? 'Fallback Gold'
-        : selected === undefined
-          ? 'Choose Trait'
-          : (interaction.choices.find((choice) => choice.value === selected.traitKey)?.label ??
-            selected.traitKey);
+      ? control.giver.providerKind === 'chaos'
+        ? 'Choose Chaos outcome'
+        : 'Choose Trait'
+      : control.offer.kind === 'chaos'
+        ? (interaction.chaos?.blessingLabel(control.offer.blessingKey) ?? control.offer.blessingKey)
+        : control.offer.kind === 'fallbackGold'
+          ? 'Fallback Gold'
+          : selected === undefined
+            ? control.giver.providerKind === 'chaos'
+              ? 'Choose Chaos outcome'
+              : 'Choose Trait'
+            : (interaction.choices.find((choice) => choice.value === selected.traitKey)?.label ??
+              selected.traitKey);
   const status = control.status;
   const spellOffer = interaction.giver.providerKind === 'spell';
   const label = spellOffer
@@ -90,7 +96,9 @@ export function TraitOfferLauncher({
         )}${control.hexTree?.value?.layoutKey === undefined ? '' : ` · ${control.hexTree.value.layoutKey}`}`
     : control.offer === null
       ? traitLabel
-      : `Edit Trait · ${traitLabel}`;
+      : control.giver.providerKind === 'chaos'
+        ? `Edit Chaos outcome - ${traitLabel}`
+        : `Edit Trait · ${traitLabel}`;
   const statusLabel =
     status === 'unspecified'
       ? `${spellOffer ? 'spell' : 'trait'} is not selected`
@@ -135,7 +143,8 @@ export function TraitOfferEditor({
     interactions.traitOffers,
     workspaceInteractionKey(address),
   );
-  const initialValue = interaction.value ?? interaction.traitsStartingDraft?.();
+  const initialValue =
+    interaction.value ?? interaction.chaos?.startingDraft() ?? interaction.traitsStartingDraft?.();
   if (initialValue === undefined) {
     return (
       <div className="trait-offer-editor" role="status">

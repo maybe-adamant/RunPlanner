@@ -54,9 +54,13 @@ function chaos(
   return normalizeAuthoredChaosTraitOffer(catalog, {
     kind: 'chaos',
     giverKey: 'Chaos',
-    curseKey,
-    duration: curse.duration.minimum,
-    curseValues: Object.freeze(
+    curseOptions: [
+      { curseKey, requirementCount: curse.duration.minimum },
+      { curseKey, requirementCount: curse.duration.minimum },
+      { curseKey, requirementCount: curse.duration.minimum },
+    ],
+    selectedOptionKey: 'option1',
+    selectedCurseValues: Object.freeze(
       Object.fromEntries(curse.operands.map((operand) => [operand.key, operand.minimum])),
     ),
     blessingKey,
@@ -119,13 +123,110 @@ function branchWithHistory(history: ReturnType<typeof createTraitHistoryState>) 
 }
 
 describe('Chaos paired-trait history', () => {
+  it('bans only distinct unselected curses under Denial and blocks those curses later', () => {
+    const offer = Object.freeze({
+      ...chaos('ChaosNoMoneyCurse'),
+      curseOptions: Object.freeze([
+        { curseKey: 'ChaosNoMoneyCurse', requirementCount: 3 },
+        { curseKey: 'ChaosNoMoneyCurse', requirementCount: 3 },
+        { curseKey: 'ChaosHealthCurse', requirementCount: 3 },
+      ]) as AuthoredChaosTraitOffer['curseOptions'],
+    });
+    const evaluation = evaluateReachedTraitOffer(
+      catalog,
+      rewardOwner,
+      'self',
+      offer,
+      createTraitHistoryState(),
+      {},
+      1,
+      createTestArcanaFearState({ BanUnpickedBoonsShrineUpgrade: 1 }),
+    );
+    const settled = recordReachedTraitOffer(catalog, evaluation, 1, 'reward');
+    expect(evaluation.composition.legal).toBe(true);
+    expect(settled.history.events.at(-1)).toMatchObject({
+      kind: 'chaosPair',
+      bannedCurseKeys: ['ChaosHealthCurse'],
+    });
+    expect(settled.history.bannedTraitKeys).toEqual(['ChaosHealthCurse']);
+    const later = Object.freeze({
+      ...offer,
+      curseOptions: Object.freeze([
+        { curseKey: 'ChaosHealthCurse', requirementCount: 3 },
+        { curseKey: 'ChaosNoMoneyCurse', requirementCount: 3 },
+        { curseKey: 'ChaosNoMoneyCurse', requirementCount: 3 },
+      ]) as AuthoredChaosTraitOffer['curseOptions'],
+    });
+    expect(
+      evaluateReachedTraitOffer(catalog, rewardOwner, 'self', later, settled.history, {}, 2)
+        .composition.legal,
+    ).toBe(false);
+  });
+
+  it('rejects an authored Chaos offer when an unselected curse is unavailable at the same frontier', () => {
+    const offer = Object.freeze({
+      ...chaos('ChaosNoMoneyCurse'),
+      curseOptions: Object.freeze([
+        { curseKey: 'ChaosNoMoneyCurse', requirementCount: 3 },
+        { curseKey: 'ChaosMetaUpgradeCurse', requirementCount: 3 },
+        { curseKey: 'ChaosNoMoneyCurse', requirementCount: 3 },
+      ]) as AuthoredChaosTraitOffer['curseOptions'],
+    });
+    const evaluation = evaluateReachedTraitOffer(
+      catalog,
+      rewardOwner,
+      'self',
+      offer,
+      createTraitHistoryState(),
+      {},
+      1,
+      createTestArcanaFearState({ BanUnpickedBoonsShrineUpgrade: 1 }),
+    );
+    expect(evaluation.composition.legal).toBe(false);
+    const settled = recordReachedTraitOffer(catalog, evaluation, 1, 'reward');
+    expect(settled.history).toBe(evaluation.before);
+  });
+
+  it('rejects an authored Chaos offer when a peer curse was already banned by Denial', () => {
+    const before = foldTraitHistoryEvents(catalog, [
+      Object.freeze({
+        kind: 'chaosPair' as const,
+        owner: rewardOwner,
+        acquisitionRole: 'self',
+        sequence: 1,
+        acquisitionPoint: 'reward',
+        acquisitionIdentity: 'chaos:prior',
+        offer: chaos('ChaosNoMoneyCurse'),
+        bannedCurseKeys: ['ChaosHealthCurse'],
+      }),
+    ]);
+    const offer = Object.freeze({
+      ...chaos('ChaosNoMoneyCurse'),
+      curseOptions: Object.freeze([
+        { curseKey: 'ChaosNoMoneyCurse', requirementCount: 3 },
+        { curseKey: 'ChaosHealthCurse', requirementCount: 3 },
+        { curseKey: 'ChaosNoMoneyCurse', requirementCount: 3 },
+      ]) as AuthoredChaosTraitOffer['curseOptions'],
+    });
+    const evaluation = evaluateReachedTraitOffer(
+      catalog,
+      rewardOwner,
+      'self',
+      offer,
+      before,
+      {},
+      2,
+    );
+    expect(evaluation.composition.legal).toBe(false);
+    expect(recordReachedTraitOffer(catalog, evaluation, 2, 'reward').history).toBe(before);
+  });
+
   it('closes blessing numeric values against the selected rarity, not the cross-rarity union', () => {
     expect(() =>
       normalizeAuthoredChaosTraitOffer(
         catalog,
         Object.freeze({
           ...chaos('ChaosNoMoneyCurse', 'ChaosWeaponBlessing', 'Common'),
-          duration: 3,
           blessingValues: Object.freeze({ damageBonus: 0.75 }),
         }),
       ),
@@ -135,7 +236,6 @@ describe('Chaos paired-trait history', () => {
         catalog,
         Object.freeze({
           ...chaos('ChaosNoMoneyCurse', 'ChaosWeaponBlessing', 'Rare'),
-          duration: 3,
           blessingValues: Object.freeze({ damageBonus: 0.75 }),
         }),
       ).blessingValues.damageBonus,
@@ -192,7 +292,14 @@ describe('Chaos paired-trait history', () => {
         sequence: 2,
         acquisitionPoint: 'reward',
         acquisitionIdentity: 'chaos:expiring',
-        offer: Object.freeze({ ...chaos('ChaosTimeCurse'), duration: 2 }),
+        offer: Object.freeze({
+          ...chaos('ChaosTimeCurse'),
+          curseOptions: Object.freeze([
+            { curseKey: 'ChaosTimeCurse', requirementCount: 2 },
+            { curseKey: 'ChaosTimeCurse', requirementCount: 2 },
+            { curseKey: 'ChaosTimeCurse', requirementCount: 2 },
+          ]) as AuthoredChaosTraitOffer['curseOptions'],
+        }),
       }),
     ]);
     const encounter = advanceChaosClock(catalog, history, 3, 'encounters');
@@ -442,8 +549,11 @@ describe('Chaos paired-trait history', () => {
     );
     expect(evaluation.composition.legal).toBe(true);
     expect(
-      recordReachedTraitOffer(catalog, evaluation, 1, 'reward').event?.bannedTraitKeys,
-    ).toEqual(['HermesWeaponBoon', 'HermesCastDiscountBoon']);
+      recordReachedTraitOffer(catalog, evaluation, 1, 'reward').history.events.at(-1),
+    ).toMatchObject({
+      kind: 'traitOffer',
+      bannedTraitKeys: ['HermesWeaponBoon', 'HermesCastDiscountBoon'],
+    });
   });
 
   it('suppresses Barren Arcana rarity contributions only until the exact encounter maturity', () => {

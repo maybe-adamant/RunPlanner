@@ -307,9 +307,17 @@ describe('Judgment automatic Boss lifecycle', () => {
         offer: Object.freeze({
           kind: 'chaos' as const,
           giverKey: 'Chaos' as const,
-          curseKey: 'ChaosNoMoneyCurse',
-          duration: 3,
-          curseValues: Object.freeze({}),
+          curseOptions: Object.freeze([
+            { curseKey: 'ChaosNoMoneyCurse', requirementCount: 3 },
+            { curseKey: 'ChaosNoMoneyCurse', requirementCount: 3 },
+            { curseKey: 'ChaosNoMoneyCurse', requirementCount: 3 },
+          ]) as readonly [
+            { curseKey: string; requirementCount: number },
+            { curseKey: string; requirementCount: number },
+            { curseKey: string; requirementCount: number },
+          ],
+          selectedOptionKey: 'option1' as const,
+          selectedCurseValues: Object.freeze({}),
           blessingKey: 'ChaosElementalBlessing',
           rarity: 'Common' as const,
           blessingValues: Object.freeze({}),
@@ -334,9 +342,17 @@ describe('Judgment automatic Boss lifecycle', () => {
         offer: Object.freeze({
           kind: 'chaos' as const,
           giverKey: 'Chaos' as const,
-          curseKey: 'ChaosMetaUpgradeCurse',
-          duration: 3,
-          curseValues: Object.freeze({}),
+          curseOptions: Object.freeze([
+            { curseKey: 'ChaosMetaUpgradeCurse', requirementCount: 3 },
+            { curseKey: 'ChaosMetaUpgradeCurse', requirementCount: 3 },
+            { curseKey: 'ChaosMetaUpgradeCurse', requirementCount: 3 },
+          ]) as readonly [
+            { curseKey: string; requirementCount: number },
+            { curseKey: string; requirementCount: number },
+            { curseKey: string; requirementCount: number },
+          ],
+          selectedOptionKey: 'option1' as const,
+          selectedCurseValues: Object.freeze({}),
           blessingKey: 'ChaosElementalBlessing',
           rarity: 'Heroic' as const,
           blessingValues: Object.freeze({}),

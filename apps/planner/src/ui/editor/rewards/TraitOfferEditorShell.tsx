@@ -15,6 +15,7 @@ import { LoadedEchoLastRunBoonChoice } from './TraitOfferEchoLastRunBoon';
 import { TraitOfferOrdinaryOption } from './TraitOfferOrdinaryOption';
 import { TraitOfferSelectedOutcome } from './TraitOfferSelectedOutcome';
 import { replaceTraitOfferOption } from './traitOfferOptions';
+import { ChaosTraitOfferEditor } from './ChaosTraitOfferEditor';
 const OPTION_KEYS = ['option1', 'option2', 'option3'] as const;
 
 function traitOfferLoadable(
@@ -202,6 +203,12 @@ export function TraitOfferEditorShell({
             Return to traits
           </button>
         </section>
+      ) : value.kind === 'chaos' && interaction.chaos !== undefined ? (
+        <ChaosTraitOfferEditor
+          interaction={interaction.chaos}
+          onUpdate={updateValue}
+          value={value}
+        />
       ) : value.kind !== 'traits' ? null : (
         <>
           <div className="trait-offer-options">
@@ -339,7 +346,7 @@ export function TraitOfferEditorShell({
         }}
         type="button"
       >
-        Save trait offer
+        {value.kind === 'chaos' ? 'Save Chaos outcome' : 'Save trait offer'}
       </button>
       {onReset === undefined ? null : (
         <button className="quiet-action" onClick={onReset} type="button">

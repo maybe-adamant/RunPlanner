@@ -4,6 +4,41 @@ import { catalog, createCatalog } from '../../src';
 import { declarations } from '../../src/declarations';
 
 describe('Chaos compiler owner', () => {
+  it('publishes a legal midpoint default and declaration-owned duration label for every Chaos numeric domain', () => {
+    const snap = (minimum: number, maximum: number, step: number) =>
+      Number(
+        (minimum + Math.floor((maximum - minimum) / 2 / step + 0.5 + 1e-9) * step).toFixed(12),
+      );
+    for (const curse of catalog.chaos.curses.values) {
+      expect(curse.duration.label).toBe(
+        curse.semanticTag === 'Ordinary'
+          ? 'Forced common boons'
+          : curse.semanticTag === 'Rejected'
+            ? 'Fewer offer boons'
+            : curse.clock === 'encounters'
+              ? 'encounters'
+              : curse.clock === 'locations'
+                ? 'locations / departures'
+                : 'god-offer resolutions',
+      );
+      expect(curse.duration.authoringDefault).toBe(
+        snap(curse.duration.minimum, curse.duration.maximum, curse.duration.step),
+      );
+      for (const operand of curse.operands) {
+        expect(operand.authoringDefault).toBe(snap(operand.minimum, operand.maximum, operand.step));
+      }
+    }
+    for (const blessing of catalog.chaos.blessings.values) {
+      for (const operand of blessing.operands) {
+        expect(operand.authoringDefault).toBe(snap(operand.minimum, operand.maximum, operand.step));
+        for (const domain of Object.values(operand.byRarity ?? {})) {
+          if (domain === undefined) continue;
+          expect(domain.authoringDefault).toBe(snap(domain.minimum, domain.maximum, domain.step));
+        }
+      }
+    }
+  });
+
   it('declares the complete closed Chaos pair matrix and fixed derived outcomes', () => {
     expect(catalog.chaos.curses.values).toHaveLength(17);
     expect(catalog.chaos.blessings.values).toHaveLength(16);
@@ -23,8 +58,11 @@ describe('Chaos compiler owner', () => {
       label: 'Ordinary',
       clock: 'godBoonScreens',
       semanticTag: 'Ordinary',
-      duration: { minimum: 2, maximum: 3 },
+      duration: { minimum: 2, maximum: 3, label: 'Forced common boons' },
     });
+    expect(catalog.chaos.curses.byKey.ChaosRestrictBoonCurse?.duration.label).toBe(
+      'Fewer offer boons',
+    );
     expect(catalog.chaos.curses.byKey.ChaosHiddenRoomRewardCurse).toMatchObject({
       label: 'Enshrouded',
       clock: 'locations',

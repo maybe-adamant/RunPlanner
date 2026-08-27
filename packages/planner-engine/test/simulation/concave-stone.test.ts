@@ -116,9 +116,13 @@ function rejectedChaosHistory() {
   const offer = normalizeAuthoredChaosTraitOffer(catalog, {
     kind: 'chaos',
     giverKey: 'Chaos',
-    curseKey: curse.key,
-    duration: curse.duration.minimum,
-    curseValues: Object.freeze(
+    curseOptions: [
+      { curseKey: curse.key, requirementCount: curse.duration.minimum },
+      { curseKey: curse.key, requirementCount: curse.duration.minimum },
+      { curseKey: curse.key, requirementCount: curse.duration.minimum },
+    ],
+    selectedOptionKey: 'option1',
+    selectedCurseValues: Object.freeze(
       Object.fromEntries(curse.operands.map((operand) => [operand.key, operand.minimum])),
     ),
     blessingKey: blessing.key,

@@ -70,7 +70,7 @@ function replaceTraitOfferValue(
       );
     }
   if (command.kind === 'ReplaceTraitSelection')
-    return Object.freeze({ ...existing, selectedOptionKey: command.selectedOptionKey });
+    return failCommand(command, 'Chaos offers require one complete ReplaceTraitOffer command');
   if (command.kind === 'ReplaceConcaveStoneResult') {
     if (existing.kind !== 'traits') failCommand(command, 'Concave Stone requires a trait offer');
     if (command.value === null) {

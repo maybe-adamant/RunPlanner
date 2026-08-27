@@ -185,15 +185,16 @@ test('63 -> 64 updates the Persephone catalog boundary without inventing optiona
   });
   assert.deepEqual(result.document, {
     ...source,
-    schemaVersion: 65,
+    schemaVersion: 66,
     catalogVersion: '0.48.0-hex-talent-layouts',
   });
-  assert.deepEqual(result.steps, ['63->64', '64->65']);
+  assert.deepEqual(result.steps, ['63->64', '64->65', '65->66']);
   assert.deepEqual(result.changes['63->64'], {});
   assert.deepEqual(result.changes['64->65'], {
     spellHexTreesDefaulted: 0,
     aspectHexTreesDefaulted: 0,
   });
+  assert.deepEqual(result.changes['65->66'], { chaosOffersMigrated: 0 });
   assert.equal(
     'persephoneLevelBonus' in
       result.document.routes[0].biomes[0].topology.occurrences[0].encounters.traitOffersByPhase
@@ -400,7 +401,7 @@ test('51 -> current preserves prior route content and adds resource placements',
   source.schemaVersion = 51;
   source.catalogVersion = '0.31.0-chaos-traits';
   const result = migrateProjectDocument(source);
-  assert.equal(result.document.schemaVersion, 65);
+  assert.equal(result.document.schemaVersion, 66);
   assert.equal(result.document.catalogVersion, '0.48.0-hex-talent-layouts');
   assert.deepEqual(result.changes['51->52'], {});
   assert.deepEqual(result.changes['52->53'], {
@@ -434,12 +435,14 @@ test('51 -> current preserves prior route content and adds resource placements',
     '62->63',
     '63->64',
     '64->65',
+    '65->66',
   ]);
   assert.deepEqual(result.changes['63->64'], {});
   assert.deepEqual(result.changes['64->65'], {
     spellHexTreesDefaulted: 0,
     aspectHexTreesDefaulted: 0,
   });
+  assert.deepEqual(result.changes['65->66'], { chaosOffersMigrated: 0 });
 });
 
 test('50 -> current advances the full external migration chain through the Hermes Shrine boundary', () => {
@@ -450,7 +453,7 @@ test('50 -> current advances the full external migration chain through the Herme
 
   const result = migrateProjectDocument(source);
 
-  assert.equal(result.document.schemaVersion, 65);
+  assert.equal(result.document.schemaVersion, 66);
   assert.equal(result.document.catalogVersion, '0.48.0-hex-talent-layouts');
   assert.deepEqual(result.steps, [
     '50->51',
@@ -468,7 +471,9 @@ test('50 -> current advances the full external migration chain through the Herme
     '62->63',
     '63->64',
     '64->65',
+    '65->66',
   ]);
+  assert.deepEqual(result.changes['65->66'], { chaosOffersMigrated: 0 });
   assert.deepEqual(result.changes['50->51'], { unresolvedTrialUpgradesAdded: 0 });
   assert.deepEqual(result.changes['57->58'], { shrinesAdded: 0 });
 });
@@ -478,7 +483,7 @@ test('55 -> 56 adds empty route-owned selected resource placements', () => {
   source.schemaVersion = 55;
   source.catalogVersion = '0.37.0-automatic-completion-occurrences';
   const result = migrateProjectDocument(source);
-  assert.equal(result.document.schemaVersion, 65);
+  assert.equal(result.document.schemaVersion, 66);
   assert.equal(result.document.catalogVersion, '0.48.0-hex-talent-layouts');
   assert.deepEqual(result.document.routes[0].resourcePlacements, {
     Pickaxe: null,
@@ -496,7 +501,7 @@ test('52 -> current preserves the earlier schema-52 catalog migration ledger and
   source.schemaVersion = 52;
   source.catalogVersion = '0.32.0-run-impacting-traits';
   const result = migrateProjectDocument(source);
-  assert.equal(result.document.schemaVersion, 65);
+  assert.equal(result.document.schemaVersion, 66);
   assert.equal(result.document.catalogVersion, '0.48.0-hex-talent-layouts');
   assert.deepEqual(result.document.routes, [
     {
@@ -534,7 +539,9 @@ test('52 -> current preserves the earlier schema-52 catalog migration ledger and
     '62->63',
     '63->64',
     '64->65',
+    '65->66',
   ]);
+  assert.deepEqual(result.changes['65->66'], { chaosOffersMigrated: 0 });
 });
 
 test('52 -> current advances the prior run-impacting-traits catalog metadata', () => {
@@ -572,7 +579,9 @@ test('52 -> current advances the prior run-impacting-traits catalog metadata', (
     '62->63',
     '63->64',
     '64->65',
+    '65->66',
   ]);
+  assert.deepEqual(result.changes['65->66'], { chaosOffersMigrated: 0 });
 });
 
 test('current schema 52 -> current advances catalog metadata and adds resource placements', () => {
@@ -580,7 +589,7 @@ test('current schema 52 -> current advances catalog metadata and adds resource p
   source.schemaVersion = 52;
   source.catalogVersion = '0.34.0-sea-star';
   const result = migrateProjectDocument(source);
-  assert.equal(result.document.schemaVersion, 65);
+  assert.equal(result.document.schemaVersion, 66);
   assert.equal(result.document.catalogVersion, '0.48.0-hex-talent-layouts');
   assert.deepEqual(result.document.routes, [
     {
@@ -614,7 +623,9 @@ test('current schema 52 -> current advances catalog metadata and adds resource p
     '62->63',
     '63->64',
     '64->65',
+    '65->66',
   ]);
+  assert.deepEqual(result.changes['65->66'], { chaosOffersMigrated: 0 });
 });
 
 test('57 -> 58 seeds Shrine shells only on exact forced Surface Postboss identities', () => {
@@ -678,7 +689,7 @@ test('57 -> 58 seeds Shrine shells only on exact forced Surface Postboss identit
 
   const result = migrateProjectDocument(source);
   const biomes = result.document.routes[0].biomes;
-  assert.equal(result.document.schemaVersion, 65);
+  assert.equal(result.document.schemaVersion, 66);
   assert.equal(result.document.catalogVersion, '0.48.0-hex-talent-layouts');
   assert.deepEqual(result.steps, [
     '57->58',
@@ -689,7 +700,9 @@ test('57 -> 58 seeds Shrine shells only on exact forced Surface Postboss identit
     '62->63',
     '63->64',
     '64->65',
+    '65->66',
   ]);
+  assert.deepEqual(result.changes['65->66'], { chaosOffersMigrated: 0 });
   assert.deepEqual(result.changes['57->58'], { shrinesAdded: 2 });
   for (const [biomeIndex, occurrenceIndex] of [
     [0, 0],
@@ -785,7 +798,7 @@ test('58 -> 59 seeds Well shells only on exact forced Underworld Postboss identi
 
   const result = migrateProjectDocument(source);
   const biomes = result.document.routes[0].biomes;
-  assert.equal(result.document.schemaVersion, 65);
+  assert.equal(result.document.schemaVersion, 66);
   assert.equal(result.document.catalogVersion, '0.48.0-hex-talent-layouts');
   assert.deepEqual(result.steps, [
     '58->59',
@@ -795,7 +808,9 @@ test('58 -> 59 seeds Well shells only on exact forced Underworld Postboss identi
     '62->63',
     '63->64',
     '64->65',
+    '65->66',
   ]);
+  assert.deepEqual(result.changes['65->66'], { chaosOffersMigrated: 0 });
   assert.deepEqual(result.changes['64->65'], {
     spellHexTreesDefaulted: 0,
     aspectHexTreesDefaulted: 0,

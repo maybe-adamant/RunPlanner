@@ -4,19 +4,31 @@ import type {
   ChaosCurseDeclaration,
 } from '@run-planner/engine/catalog-schema';
 
-const duration = (minimum: number, maximum: number, clock: ChaosCurseDeclaration['clock']) => ({
+const duration = (
+  minimum: number,
+  maximum: number,
+  clock: ChaosCurseDeclaration['clock'],
+  labelOverride?: string,
+) => ({
   key: 'duration',
   label:
-    clock === 'locations'
-      ? 'Locations'
+    labelOverride ??
+    (clock === 'locations'
+      ? 'locations / departures'
       : clock === 'godBoonScreens'
-        ? 'God boon screens'
-        : 'Encounters',
+        ? 'god-offer resolutions'
+        : 'encounters'),
   minimum,
   maximum,
   step: 1,
+  authoringDefault: minimum + Math.floor((maximum - minimum) / 2 + 0.5),
   integer: true as const,
 });
+function authoringDefault(minimum: number, maximum: number, step: number): number {
+  const midpoint = minimum + (maximum - minimum) / 2;
+  const snapped = minimum + Math.floor((midpoint - minimum) / step + 0.5 + 1e-9) * step;
+  return Number(snapped.toFixed(12));
+}
 const operand = (
   key: string,
   label: string,
@@ -24,7 +36,15 @@ const operand = (
   maximum: number,
   step: number,
   integer = false,
-) => ({ key, label, minimum, maximum, step, ...(integer ? { integer: true as const } : {}) });
+) => ({
+  key,
+  label,
+  minimum,
+  maximum,
+  step,
+  authoringDefault: authoringDefault(minimum, maximum, step),
+  ...(integer ? { integer: true as const } : {}),
+});
 type ChaosRarity = 'Common' | 'Rare' | 'Epic' | 'Heroic';
 type NumericDomain = readonly [minimum: number, maximum: number, step: number, integer?: true];
 /** Exact post-processing domains; no Common payload may borrow a Heroic value. */
@@ -45,6 +65,7 @@ const rarityOperand = (
               minimum: domain[0],
               maximum: domain[1],
               step: domain[2],
+              authoringDefault: authoringDefault(domain[0], domain[1], domain[2]),
               ...(domain[3] === true ? { integer: true as const } : {}),
             }),
           ],
@@ -63,11 +84,12 @@ const curse = (
   operands: readonly import('@run-planner/engine/catalog-schema').ChaosNumericOperand[] = [],
   semanticTag?: ChaosCurseDeclaration['semanticTag'],
   offerRequirements?: ChaosCurseDeclaration['offerRequirements'],
+  durationLabel?: string,
 ): ChaosCurseDeclaration => ({
   key,
   label,
   clock,
-  duration: duration(min, max, clock),
+  duration: duration(min, max, clock, durationLabel),
   operands,
   ...(semanticTag === undefined ? {} : { semanticTag }),
   ...(offerRequirements === undefined ? {} : { offerRequirements }),
@@ -131,8 +153,28 @@ export const chaosCurses = [
   curse('ChaosHiddenRoomRewardCurse', 'Enshrouded', 'locations', 4, 6, [], undefined, [
     { kind: 'routeKey', routeKey: 'Underworld' },
   ]),
-  curse('ChaosCommonCurse', 'Ordinary', 'godBoonScreens', 2, 3, [], 'Ordinary'),
-  curse('ChaosRestrictBoonCurse', 'Rejected', 'godBoonScreens', 2, 4, [], 'Rejected'),
+  curse(
+    'ChaosCommonCurse',
+    'Ordinary',
+    'godBoonScreens',
+    2,
+    3,
+    [],
+    'Ordinary',
+    undefined,
+    'Forced common boons',
+  ),
+  curse(
+    'ChaosRestrictBoonCurse',
+    'Rejected',
+    'godBoonScreens',
+    2,
+    4,
+    [],
+    'Rejected',
+    undefined,
+    'Fewer offer boons',
+  ),
 ] as const;
 const blessing = (
   key: string,

@@ -148,16 +148,16 @@ function decodeTraitOffers(
         [
           'kind',
           'giverKey',
-          'curseKey',
-          'duration',
-          'curseValues',
+          'curseOptions',
+          'selectedOptionKey',
+          'selectedCurseValues',
           'blessingKey',
           'rarity',
           'blessingValues',
         ],
         rolePath,
       );
-      const rawValues = (key: 'curseValues' | 'blessingValues') => {
+      const rawValues = (key: 'selectedCurseValues' | 'blessingValues') => {
         const values = expectRecord(record[key], `${rolePath}.${key}`);
         return Object.fromEntries(
           Object.entries(values).map(([name, raw]) => {
@@ -171,12 +171,32 @@ function decodeTraitOffers(
         result[roleKey] = normalizeAuthoredChaosTraitOffer(catalog, {
           kind: 'chaos',
           giverKey: 'Chaos',
-          curseKey: expectString(record.curseKey, `${rolePath}.curseKey`),
-          duration:
-            typeof record.duration === 'number'
-              ? record.duration
-              : failProjectDocument(`${rolePath}.duration`, 'must be a number'),
-          curseValues: rawValues('curseValues'),
+          curseOptions: (() => {
+            const options = expectArray(record.curseOptions, `${rolePath}.curseOptions`);
+            if (options.length !== 3)
+              failProjectDocument(`${rolePath}.curseOptions`, 'must contain exactly three options');
+            return options.map((option, index) => {
+              const optionPath = `${rolePath}.curseOptions[${index}]`;
+              const optionRecord = expectRecord(option, optionPath);
+              expectExactKeys(optionRecord, ['curseKey', 'requirementCount'], optionPath);
+              return Object.freeze({
+                curseKey: expectString(optionRecord.curseKey, `${optionPath}.curseKey`),
+                requirementCount:
+                  typeof optionRecord.requirementCount === 'number'
+                    ? optionRecord.requirementCount
+                    : failProjectDocument(`${optionPath}.requirementCount`, 'must be a number'),
+              });
+            }) as [
+              { curseKey: string; requirementCount: number },
+              { curseKey: string; requirementCount: number },
+              { curseKey: string; requirementCount: number },
+            ];
+          })(),
+          selectedOptionKey: expectString(
+            record.selectedOptionKey,
+            `${rolePath}.selectedOptionKey`,
+          ) as import('../traits').TraitOptionKey,
+          selectedCurseValues: rawValues('selectedCurseValues'),
           blessingKey: expectString(record.blessingKey, `${rolePath}.blessingKey`),
           rarity: expectString(record.rarity, `${rolePath}.rarity`) as Extract<
             import('../../catalog-schema').TraitRarity,
