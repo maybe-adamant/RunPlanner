@@ -235,26 +235,45 @@ describe('Pom resolution editor', () => {
     });
 
     render(<PomResolutionEditor interaction={editorInteraction} onCommit={onCommit} />);
-    await user.click(screen.getByRole('button', { name: 'Pom target 1' }));
-    await user.click(screen.getByText('Trait A'));
-    await user.click(screen.getByRole('button', { name: 'Pom target 2' }));
-    expect(screen.getByRole('option', { name: 'Trait A' }).getAttribute('aria-disabled')).toBe(
-      'true',
-    );
-    await user.click(screen.getByRole('option', { name: 'Trait B' }));
-    await user.click(screen.getAllByLabelText('Selected')[0]!);
-
     await waitFor(() =>
       expect((screen.getByRole('button', { name: 'Save Pom' }) as HTMLButtonElement).disabled).toBe(
         false,
       ),
     );
+    expect(onCommit).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Pom target 1' }).textContent).toContain('Trait A');
+    expect(screen.getByRole('button', { name: 'Pom target 2' }).textContent).toContain('Trait B');
+    await user.click(screen.getByRole('button', { name: 'Pom target 2' }));
+    expect(screen.getByRole('option', { name: 'Trait A' }).getAttribute('aria-disabled')).toBe(
+      'true',
+    );
+    await user.click(screen.getByRole('button', { name: 'Pom target 2' }));
     await user.click(screen.getByRole('button', { name: 'Save Pom' }));
     expect(onCommit).toHaveBeenCalledWith({
       kind: 'choice',
       offeredTraitKeys: ['A', 'B'],
       selectedTraitKey: 'A',
     });
+  });
+
+  it('preserves a retained partial visible Pom instead of replacing it with defaults', async () => {
+    const editorInteraction = interaction({
+      value: { kind: 'choice', offeredTraitKeys: ['C'], selectedTraitKey: null },
+      load: () =>
+        Object.freeze({
+          groups: Object.freeze([
+            group('branch-0', 'choice', ['A', 'B', 'C'], false, ['missingTarget'], 2),
+          ]),
+        }),
+    });
+
+    render(<PomResolutionEditor interaction={editorInteraction} onCommit={vi.fn()} />);
+    expect((await screen.findByRole('button', { name: 'Pom target 1' })).textContent).toContain(
+      'Trait C',
+    );
+    expect(screen.getByRole('button', { name: 'Pom target 2' }).textContent).toContain(
+      'Choose a trait',
+    );
   });
 
   it('switches correlated route-state surfaces without unioning their target domains', async () => {
@@ -274,8 +293,8 @@ describe('Pom resolution editor', () => {
     await screen.findByLabelText('Route state');
     await user.selectOptions(screen.getByLabelText('Route state'), 'branch-2');
     await user.click(screen.getByRole('button', { name: 'Pom target 1' }));
-    expect(screen.getByText('Trait B')).not.toBeNull();
-    expect(screen.queryByText('Trait A')).toBeNull();
+    expect(screen.getByRole('option', { name: 'Trait B' })).not.toBeNull();
+    expect(screen.queryByRole('option', { name: 'Trait A' })).toBeNull();
   });
 
   it('pins a stale random target until the author selects an eligible replacement', async () => {

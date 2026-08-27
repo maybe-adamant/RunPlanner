@@ -217,6 +217,7 @@ export function PomResolutionEditor({
     interaction.value.kind === 'random' ? interaction.value.targetTraitKey : null,
   );
   const [activeGroupKey, setActiveGroupKey] = useState<string | null>(null);
+  const [autoFilledGroupKey, setAutoFilledGroupKey] = useState<string | null>(null);
   const draft: AuthoredLevelResolution =
     interaction.value.kind === 'choice'
       ? Object.freeze({
@@ -249,6 +250,7 @@ export function PomResolutionEditor({
       setRandomTarget(interaction.value.targetTraitKey);
     }
     setActiveGroupKey(null);
+    setAutoFilledGroupKey(null);
     setLoadable(levelResolutionLoadable(interaction, interaction.value));
   }
   const evaluateDraft = (next: AuthoredLevelResolution): void => {
@@ -273,30 +275,63 @@ export function PomResolutionEditor({
   const count = interaction.value.kind === 'choice' ? (requiredCount ?? choiceSlots.length) : 1;
   const rows = Array.from({ length: count }, (_, index) => index);
   const domKey = pomDomKey(interaction.owner);
+  const authoredChoice = interaction.value.kind === 'choice' ? interaction.value : undefined;
+  const authoredRandom = interaction.value.kind === 'random' ? interaction.value : undefined;
+  const authoredChoiceIsPristine =
+    authoredChoice !== undefined &&
+    authoredChoice.offeredTraitKeys.length === 0 &&
+    authoredChoice.selectedTraitKey === null;
+  if (
+    authoredChoiceIsPristine &&
+    activeGroup !== undefined &&
+    autoFilledGroupKey !== activeGroup.key
+  ) {
+    const targets = Object.freeze(
+      activeGroup.surface.eligibleTargetTraitKeys.slice(
+        0,
+        activeGroup.surface.requiredOfferCount ?? 0,
+      ),
+    );
+    const selected = targets[0] ?? null;
+    const next = Object.freeze({
+      kind: 'choice' as const,
+      offeredTraitKeys: targets,
+      selectedTraitKey: selected,
+    });
+    setAutoFilledGroupKey(activeGroup.key);
+    setChoiceSlots(targets);
+    setSelectedChoice(selected);
+    setLoadable(levelResolutionLoadable(interaction, next));
+  }
   const selectGroup = (key: string): void => {
     const group = groups.find((candidate) => candidate.key === key);
     if (group === undefined) return;
     setActiveGroupKey(group.key);
-    if (interaction.value.kind === 'choice') {
-      const slots = Array.from({ length: group.surface.requiredOfferCount ?? 0 }, (_, index) =>
-        interaction.value.kind === 'choice'
-          ? (interaction.value.offeredTraitKeys[index] ?? null)
-          : null,
-      );
+    if (authoredChoice !== undefined) {
+      const slots = authoredChoiceIsPristine
+        ? group.surface.eligibleTargetTraitKeys.slice(0, group.surface.requiredOfferCount ?? 0)
+        : Array.from(
+            { length: group.surface.requiredOfferCount ?? 0 },
+            (_, index) => authoredChoice.offeredTraitKeys[index] ?? null,
+          );
+      const selected = authoredChoiceIsPristine
+        ? (slots[0] ?? null)
+        : authoredChoice.selectedTraitKey;
+      setAutoFilledGroupKey(authoredChoiceIsPristine ? group.key : null);
       setChoiceSlots(slots);
-      setSelectedChoice(interaction.value.selectedTraitKey);
+      setSelectedChoice(selected);
       evaluateDraft(
         Object.freeze({
           kind: 'choice',
           offeredTraitKeys: Object.freeze(
             slots.filter((target): target is string => target !== null),
           ),
-          selectedTraitKey: interaction.value.selectedTraitKey,
+          selectedTraitKey: selected,
         }),
       );
-    } else {
-      setRandomTarget(interaction.value.targetTraitKey);
-      evaluateDraft(interaction.value);
+    } else if (authoredRandom !== undefined) {
+      setRandomTarget(authoredRandom.targetTraitKey);
+      evaluateDraft(authoredRandom);
     }
   };
   const updateChoiceSlot = (index: number, target: string): void => {
