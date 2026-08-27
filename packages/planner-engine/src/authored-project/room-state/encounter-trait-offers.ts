@@ -366,7 +366,9 @@ export function decodeEncounterTraitOffer(
     options: Object.freeze(options) as AuthoredTraitOfferTraits['options'],
     selectedOptionKey: selectedOptionKey as AuthoredTraitOfferTraits['selectedOptionKey'],
     rarificationActions: Object.freeze(rarificationActions),
-    ...(rejectedOptionKey === undefined ? {} : { rejectedOptionKey: rejectedOptionKey as TraitOptionKey }),
+    ...(rejectedOptionKey === undefined
+      ? {}
+      : { rejectedOptionKey: rejectedOptionKey as TraitOptionKey }),
     ...(concaveStoneResult === undefined ? {} : { concaveStoneResult }),
   });
 }

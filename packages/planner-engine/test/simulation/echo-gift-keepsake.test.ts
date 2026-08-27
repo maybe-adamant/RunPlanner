@@ -334,12 +334,9 @@ describe('Echo Gift Gift Gift', () => {
     expect(second.traitHistory?.equippedTraits[giftTraitKey]?.echoKeepsakeReplayCount).toBe(2);
   });
 
-  it.each([
-    ['I', 'H_PostBoss01'],
-    ['Q', 'P_PostBoss01'],
-  ] as const)(
-    'replays Moon Beam after %s with the preceding %s Big Path priority',
-    (biomeKey, _postboss) => {
+  it.each(['I', 'Q'] as const)(
+    'replays Moon Beam after %s with the preceding Postboss Big Path priority',
+    (biomeKey) => {
       const branch = branchWithGift('SpellTalentKeepsake', 'GoldifyKeepsake');
       const afterSpell = Object.freeze({
         ...branch,
@@ -388,7 +385,8 @@ describe('Echo Gift Gift Gift', () => {
 
   it('replays Crystal Figurine at Common, removes the Echo source at Boss, and replays later', () => {
     const retained = retainedKeepsakeState('BossMetaUpgradeKeepsake', 'GoldifyKeepsake');
-    const { figurine: _removed, ...withoutOrdinaryFigurine } = retained;
+    const { figurine: removed, ...withoutOrdinaryFigurine } = retained;
+    if (removed === undefined) throw new Error('ordinary Figurine source is missing');
     const first = replayBiome([
       branchWithGift('BossMetaUpgradeKeepsake', 'GoldifyKeepsake', {
         keepsakes: withoutOrdinaryFigurine,

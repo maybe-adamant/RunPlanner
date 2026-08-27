@@ -1,7 +1,6 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
-  createBiomeAddress,
   createFountainRarityOutcomeAddress,
   createOccurrenceAddress,
   createOccurrenceId,
@@ -128,24 +127,6 @@ function cappedHephaestusHistory() {
 
 function fountainRoom(targetTraitKey: string): CanonicalAuthoredRoom {
   return { fountainRarityResult: { targetTraitKey } } as unknown as CanonicalAuthoredRoom;
-}
-
-function fountainEventFor(
-  occurrenceId: ReturnType<typeof createOccurrenceId>,
-  sequence = 1,
-): Extract<HistoryEvent, { readonly kind: 'fountainUsed' }> {
-  const origin = createOccurrenceAddress(goldenFBiome, occurrenceId);
-  return Object.freeze({
-    kind: 'fountainUsed',
-    sequence,
-    operationIndex: 0,
-    origin,
-    owner: createRoomActionAddress(
-      goldenFBiome,
-      occurrenceId,
-      roomActionKey({ kind: 'useFountain' }),
-    ),
-  });
 }
 
 describe('Aromatic Phial catalog and target domains', () => {

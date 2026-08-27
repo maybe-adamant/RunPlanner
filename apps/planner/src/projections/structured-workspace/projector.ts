@@ -366,8 +366,7 @@ export function createStructuredWorkspaceProjection(
               semanticAddressKey(result),
               Object.freeze({
                 address: result,
-                value:
-                  biomeSource.plan.echoKeepsakeReplayResults?.[result.resultKind],
+                value: biomeSource.plan.echoKeepsakeReplayResults?.[result.resultKind],
               }),
             );
           }

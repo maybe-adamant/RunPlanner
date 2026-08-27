@@ -210,11 +210,12 @@ describe('Concave Stone trait settlement', () => {
     ['Rare', 50],
     ['Epic', 75],
   ] as const)(
-    'accepts an explicit no-proc at %s support and preserves the use',
-    (rank: 'Common' | 'Rare' | 'Epic', _support: number) => {
+    'accepts an explicit no-proc at %s rank with %i%% support and preserves the use',
+    (rank: 'Common' | 'Rare' | 'Epic', support: number) => {
       const result = settle(offer({ kind: 'noProc' }), rank);
       expect(result.blockedChild).toBeUndefined();
       expect(result.branch.keepsakes.stone).toMatchObject({ status: 'pending', rank });
+      expect(concaveStoneProcSupport(catalog, result.branch.keepsakes)).toBe(support);
       expect(result.branch.traitHistory?.equippedTraits.ApolloWeaponBoon).toBeDefined();
       expect(
         result.branch.traitHistory?.events.filter((event) => event.kind === 'traitOffer'),

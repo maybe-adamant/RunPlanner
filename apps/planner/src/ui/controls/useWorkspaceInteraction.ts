@@ -31,7 +31,7 @@ export function useWorkspaceInteractionController<Result>(): {
     interaction: WorkspaceLoadableInteraction<Result> | undefined,
   ) => WorkspaceInteractionSnapshot<Result>;
 } {
-  const cacheRef = useRef(new WeakMap<object, Result>());
+  const cacheRef = useRef(new WeakMap<object, { readonly result: Result }>());
   const committedInteractionRef = useRef<WorkspaceLoadableInteraction<Result> | undefined>(
     undefined,
   );
@@ -78,19 +78,16 @@ export function useWorkspaceInteractionController<Result>(): {
     renderedInteractionRef.current = interaction;
     registerInteraction(interaction);
     const existing = stateRef.current;
-    if (
-      existing?.interaction === interaction &&
-      (existing.pending || existing.result !== undefined)
-    ) {
+    if (existing?.interaction === interaction && (existing.pending || 'result' in existing)) {
       setState(existing);
       return existing.result;
     }
     const cached = cacheRef.current.get(interaction);
     if (cached !== undefined) {
-      const next = Object.freeze({ interaction, pending: false, result: cached });
+      const next = Object.freeze({ interaction, pending: false, result: cached.result });
       stateRef.current = next;
       setState(next);
-      return cached;
+      return cached.result;
     }
     const requestId = ++requestIdRef.current;
     let loaded: Result | Promise<Result>;
@@ -107,7 +104,7 @@ export function useWorkspaceInteractionController<Result>(): {
       return undefined;
     }
     if (!isPromise(loaded)) {
-      cacheRef.current.set(interaction, loaded);
+      cacheRef.current.set(interaction, Object.freeze({ result: loaded }));
       const next = Object.freeze({ interaction, pending: false, result: loaded });
       stateRef.current = next;
       setState(next);
@@ -121,7 +118,7 @@ export function useWorkspaceInteractionController<Result>(): {
         if (requestIdRef.current !== requestId) {
           return;
         }
-        cacheRef.current.set(interaction, result);
+        cacheRef.current.set(interaction, Object.freeze({ result }));
         const next = Object.freeze({ interaction, pending: false, result });
         stateRef.current = next;
         setState(next);

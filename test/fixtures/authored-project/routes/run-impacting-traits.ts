@@ -2,7 +2,6 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createIncomingRewardAddress,
-  createOccurrenceAddress,
   createTraitOfferAddress,
   type AuthoredTraitOfferTraits,
   type ProjectDocument,

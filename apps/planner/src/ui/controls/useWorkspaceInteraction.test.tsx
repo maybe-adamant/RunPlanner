@@ -87,4 +87,38 @@ describe('useWorkspaceInteractionController', () => {
     expect(interactionA.load).toHaveBeenCalledTimes(1);
     expect(view.result.current.snapshot).toEqual({ pending: false, result: 'A' });
   });
+
+  it('treats a synchronous undefined result as completed and caches it across observation swaps', () => {
+    const interactionA: WorkspaceLoadableInteraction<string | undefined> = Object.freeze({
+      load: vi.fn(() => undefined),
+    });
+    const interactionB: WorkspaceLoadableInteraction<string | undefined> = Object.freeze({
+      load: vi.fn(() => 'B'),
+    });
+    type Props = {
+      readonly interaction: WorkspaceLoadableInteraction<string | undefined>;
+    };
+    const view = renderHook(
+      ({ interaction }: Props) => {
+        const controller = useWorkspaceInteractionController<string | undefined>();
+        return Object.freeze({ controller, snapshot: controller.observe(interaction) });
+      },
+      { initialProps: { interaction: interactionA } },
+    );
+
+    act(() => {
+      expect(view.result.current.controller.activate(interactionA)).toBeUndefined();
+      expect(view.result.current.controller.activate(interactionA)).toBeUndefined();
+    });
+    expect(interactionA.load).toHaveBeenCalledTimes(1);
+    expect(view.result.current.snapshot).toEqual({ pending: false, result: undefined });
+
+    view.rerender({ interaction: interactionB });
+    view.rerender({ interaction: interactionA });
+    act(() => {
+      expect(view.result.current.controller.activate(interactionA)).toBeUndefined();
+    });
+    expect(interactionA.load).toHaveBeenCalledTimes(1);
+    expect(view.result.current.snapshot).toEqual({ pending: false, result: undefined });
+  });
 });

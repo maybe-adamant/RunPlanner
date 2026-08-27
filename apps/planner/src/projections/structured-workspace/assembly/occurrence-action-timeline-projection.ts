@@ -227,7 +227,8 @@ function projectRoomLifecycleTimeline(
     if (entry.kind === 'automaticEffect') {
       if (entry.effect === 'steadyGrowth') {
         const control = steadyGrowth.find(
-          (candidate) => semanticAddressKey(candidate.address) === semanticAddressKey(entry.address),
+          (candidate) =>
+            semanticAddressKey(candidate.address) === semanticAddressKey(entry.address),
         );
         if (control === undefined) continue;
         entries.push(
@@ -241,7 +242,8 @@ function projectRoomLifecycleTimeline(
         );
       } else {
         const control = transcendentEmbryo.find(
-          (candidate) => semanticAddressKey(candidate.address) === semanticAddressKey(entry.address),
+          (candidate) =>
+            semanticAddressKey(candidate.address) === semanticAddressKey(entry.address),
         );
         if (control === undefined) continue;
         entries.push(

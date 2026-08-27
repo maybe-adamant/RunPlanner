@@ -84,6 +84,7 @@ export function oldestSupportedRewardPriority(
   facts: RewardKernelFacts,
   options: CountedOfferTransitionOptions = {},
 ): string | undefined {
+  if (priorities.length === 0) return undefined;
   const eligible = eligibleIndexes(store, state, facts, options);
   // Match the ordinary counted transition: only an exhausted/ineligible bag
   // reaches its one full refill before an offer is selected.

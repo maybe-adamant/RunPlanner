@@ -680,7 +680,6 @@ export function assessTranscendentEmbryoTransformation(
   _catalog: Catalog,
   threshold: ReachedTranscendentEmbryoThreshold,
   blessingKey: string | null | undefined,
-  _context: TranscendentEmbryoBlessingContext = {},
 ): TranscendentEmbryoBlessingAssessment {
   const selected = blessingKey ?? null;
   const legal =
@@ -1105,12 +1104,9 @@ export function consumePhial(state: KeepsakeState): KeepsakeState {
 }
 
 export function consumeFigurine(state: KeepsakeState): KeepsakeState {
-  const figurine = state.figurine;
+  const { figurine, ...withoutFigurine } = state;
   if (figurine?.status !== 'pending') return state;
-  if (figurine.origin === 'echo') {
-    const { figurine: _figurine, ...withoutFigurine } = state;
-    return Object.freeze(withoutFigurine);
-  }
+  if (figurine.origin === 'echo') return Object.freeze(withoutFigurine);
   return Object.freeze({ ...state, figurine: Object.freeze({ ...figurine, status: 'consumed' }) });
 }
 

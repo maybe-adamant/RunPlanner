@@ -515,10 +515,7 @@ function decodeTraitOffers(
           );
         }
       } else {
-        failProjectDocument(
-          `${rolePath}.concaveStoneResult.kind`,
-          'must be noProc or proc',
-        );
+        failProjectDocument(`${rolePath}.concaveStoneResult.kind`, 'must be noProc or proc');
       }
     }
     result[roleKey] = Object.freeze({

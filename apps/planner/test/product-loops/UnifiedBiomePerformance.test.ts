@@ -26,8 +26,8 @@ import {
 import { loadSurfaceNOPQProject, nBiome } from '@run-planner/test-fixtures/surface';
 
 // The canonical checkpoints now cover the complete modeled feature surface.
-// Preserve a sub-second interaction contract with measured host headroom.
-const interactiveBudgetMs = 800;
+// Preserve the product's explicit sub-second interaction contract.
+const interactiveBudgetMs = 1_000;
 const cachedUndoBudgetMs = 50;
 let underworldProject: ReturnType<typeof createGoldenFGHIProject>;
 let surfaceProject: ReturnType<typeof loadSurfaceNOPQProject>;

@@ -779,6 +779,8 @@ function requiredOlympianProviderForOffer(
   offer: ResolvedRewardOffer,
   peers: readonly OfferProcessingPeer[],
 ): string | undefined {
+  if (!branch.keepsakes.olympianSources.some((source) => source.remainingForceUses === 1))
+    return undefined;
   const providerForLootSource = (source: string): string | undefined =>
     catalog.traitGiverByAcquisitionGameName[source];
   if (offer.rewardType === 'Boon' && offer.payload?.kind === 'BoonSource') {
@@ -1030,6 +1032,11 @@ export function consumeOlympianProviderForReachedOffer(
   origin: SemanticAddress,
   provenance: 'free' | 'paid',
 ): RewardBranchState {
+  if (
+    provenance === 'paid' ||
+    !branch.keepsakes.olympianSources.some((source) => source.remainingForceUses === 1)
+  )
+    return branch;
   const offer = reachedOfferForOrigin(branch, origin);
   const sources =
     offer?.payload?.kind === 'BoonSource'
