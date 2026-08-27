@@ -10,7 +10,20 @@ import {
 import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
 import { useAppDispatch } from '@planner/state/store';
 import { SemanticOwnerMarker } from '@planner/ui/feedback/EvaluationFeedback';
+import type { ContextualPickerModel } from '@planner/projections/contextualPicker';
+import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
+import {
+  useOptionalWorkspaceInteraction,
+  useWorkspaceInteraction,
+} from '@planner/ui/controls/useWorkspaceInteraction';
+
+const emptyNullablePicker: ContextualPickerModel<string | null> = Object.freeze({
+  sections: Object.freeze([]),
+});
+const emptyStringPicker: ContextualPickerModel<string> = Object.freeze({
+  sections: Object.freeze([]),
+});
 export function NaturalChaosMapWorkbench({
   control,
   interactions,
@@ -389,32 +402,18 @@ export function RoomFeaturesWorkbench({
                           slot.interactionKey,
                         );
                         return (
-                          <label key={slot.key}>
+                          <div key={slot.key}>
                             {slot.label}
-                            <select
-                              aria-label={`Pool of Purging ${slot.label}`}
-                              onChange={(event) =>
-                                executeIntent(
-                                  interaction.intentFor(
-                                    event.target.value === '' ? null : event.target.value,
-                                  ),
-                                )
+                            <PurgingPoolTraitPicker
+                              interaction={interaction}
+                              label={slot.label}
+                              {...(slot.traitLabel === undefined
+                                ? {}
+                                : { selectedLabel: slot.traitLabel })}
+                              onSelect={(traitKey) =>
+                                executeIntent(interaction.intentFor(traitKey))
                               }
-                              value={slot.traitKey ?? ''}
-                            >
-                              <option value="">Unresolved</option>
-                              {slot.traitKey !== null &&
-                              !slot.candidateTraitKeys.includes(slot.traitKey) ? (
-                                <option value={slot.traitKey}>
-                                  {slot.traitLabel ?? slot.traitKey}
-                                </option>
-                              ) : null}
-                              {slot.candidateTraits.map((trait) => (
-                                <option key={trait.key} value={trait.key}>
-                                  {trait.label}
-                                </option>
-                              ))}
-                            </select>
+                            />
                             {slot.sale === undefined
                               ? null
                               : (() => {
@@ -457,7 +456,7 @@ export function RoomFeaturesWorkbench({
                                     </span>
                                   );
                                 })()}
-                          </label>
+                          </div>
                         );
                       })
                     : null}
@@ -504,7 +503,6 @@ export function RoomFeaturesWorkbench({
                       key={slot.key}
                       label={slot.label}
                       {...(slot.rewardLabel === undefined ? {} : { rewardLabel: slot.rewardLabel })}
-                      candidateRewards={slot.candidateRewards}
                       offer={offer}
                       purchase={purchase}
                     />
@@ -520,7 +518,6 @@ export function RoomFeaturesWorkbench({
                           {...(refill.rewardLabel === undefined
                             ? {}
                             : { rewardLabel: refill.rewardLabel })}
-                          candidateRewards={refill.candidateRewards}
                           offer={requireWorkspaceInteraction(
                             interactions.hermesShrineOffers,
                             refill.offerInteractionKey,
@@ -537,6 +534,34 @@ export function RoomFeaturesWorkbench({
         }
       })}
     </section>
+  );
+}
+
+function PurgingPoolTraitPicker({
+  interaction,
+  label,
+  onSelect,
+  selectedLabel,
+}: {
+  readonly interaction: import('@planner/projections/structured-workspace').WorkspacePurgingPoolSlotInteraction;
+  readonly label: string;
+  readonly onSelect: (traitKey: string | null) => void;
+  readonly selectedLabel?: string;
+}) {
+  const picker = useWorkspaceInteraction(interaction);
+  return (
+    <ContextualPicker
+      id={`${interaction.key}-picker`}
+      label={`Pool of Purging ${label}`}
+      loading={picker.pending}
+      model={picker.result ?? emptyNullablePicker}
+      onOpenChange={(open) => {
+        if (open) picker.activate();
+      }}
+      onSelect={onSelect}
+      placeholder="Unresolved"
+      {...(selectedLabel === undefined ? {} : { triggerLabel: selectedLabel })}
+    />
   );
 }
 
@@ -559,28 +584,29 @@ function StygianWellSlotEditor({
     interactions.stygianWellPurchases,
     slot.purchaseInteractionKey,
   );
+  const offerPicker = useWorkspaceInteraction(offer);
+  const twist =
+    slot.twist === undefined
+      ? undefined
+      : requireWorkspaceInteraction(
+          interactions.stygianWellTwistResults,
+          slot.twist.interactionKey,
+        );
+  const twistPicker = useOptionalWorkspaceInteraction<ContextualPickerModel<string | null>>(twist);
   return (
     <div className="room-purging-pool-slot">
-      <label>
-        {slot.label}
-        <select
-          aria-label={`Stygian Well ${slot.label}`}
-          onChange={(event) =>
-            executeIntent(offer.intentFor(event.target.value === '' ? null : event.target.value))
-          }
-          value={slot.itemKey ?? ''}
-        >
-          <option value="">Unresolved</option>
-          {slot.itemKey !== null && !slot.candidateItemKeys.includes(slot.itemKey) ? (
-            <option value={slot.itemKey}>{slot.itemLabel ?? slot.itemKey}</option>
-          ) : null}
-          {slot.candidateItems.map((item) => (
-            <option key={item.key} value={item.key}>
-              {item.label}
-            </option>
-          ))}
-        </select>
-      </label>
+      <ContextualPicker
+        id={`${offer.key}-picker`}
+        label={`Stygian Well ${slot.label}`}
+        loading={offerPicker.pending}
+        model={offerPicker.result ?? emptyNullablePicker}
+        onOpenChange={(open) => {
+          if (open) offerPicker.activate();
+        }}
+        onSelect={(itemKey) => executeIntent(offer.intentFor(itemKey))}
+        placeholder="Unresolved"
+        {...(slot.itemLabel === undefined ? {} : { triggerLabel: slot.itemLabel })}
+      />
       <label>
         <input
           aria-label={`Purchase Stygian Well ${slot.label}`}
@@ -591,41 +617,20 @@ function StygianWellSlotEditor({
         />
         Purchase
       </label>
-      {slot.twist === undefined
-        ? null
-        : (() => {
-            const twist = requireWorkspaceInteraction(
-              interactions.stygianWellTwistResults,
-              slot.twist!.interactionKey,
-            );
-            return (
-              <label>
-                Twist result
-                <select
-                  aria-label={`Stygian Well ${slot.label} Twist result`}
-                  onChange={(event) =>
-                    executeIntent(
-                      twist.intentFor(event.target.value === '' ? null : event.target.value),
-                    )
-                  }
-                  value={slot.twist!.itemKey ?? ''}
-                >
-                  <option value="">Unresolved</option>
-                  {slot.twist!.itemKey !== null &&
-                  !slot.twist!.candidateItemKeys.includes(slot.twist!.itemKey) ? (
-                    <option value={slot.twist!.itemKey}>
-                      {slot.twist!.itemLabel ?? slot.twist!.itemKey}
-                    </option>
-                  ) : null}
-                  {slot.twist!.candidateItems.map((item) => (
-                    <option key={item.key} value={item.key}>
-                      {item.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            );
-          })()}
+      {twist === undefined ? null : (
+        <ContextualPicker
+          id={`${twist.key}-picker`}
+          label={`Stygian Well ${slot.label} Twist result`}
+          loading={twistPicker.pending}
+          model={twistPicker.result ?? emptyNullablePicker}
+          onOpenChange={(open) => {
+            if (open) twistPicker.activate();
+          }}
+          onSelect={(itemKey) => executeIntent(twist.intentFor(itemKey))}
+          placeholder="Unresolved"
+          {...(slot.twist!.itemLabel === undefined ? {} : { triggerLabel: slot.twist!.itemLabel })}
+        />
+      )}
     </div>
   );
 }
@@ -633,50 +638,36 @@ function StygianWellSlotEditor({
 function HermesShrineSlotEditor({
   label,
   rewardLabel,
-  candidateRewards,
   offer,
   purchase,
 }: {
   readonly label: string;
   readonly rewardLabel?: string;
-  readonly candidateRewards: readonly { readonly rewardType: string; readonly label: string }[];
   readonly offer: import('@planner/projections/structured-workspace').WorkspaceHermesShrineOfferInteraction;
   readonly purchase: import('@planner/projections/structured-workspace').WorkspaceHermesShrinePurchaseInteraction;
 }) {
   const executeIntent = useCommandIntent();
-  const selected = offer.rewardType ?? '';
-  const values =
-    selected !== '' && !offer.candidateRewardTypes.includes(selected)
-      ? [selected, ...offer.candidateRewardTypes]
-      : offer.candidateRewardTypes;
+  const offerPicker = useWorkspaceInteraction(offer);
   const current = purchase.purchase;
   return (
     <div className="hermes-shrine-slot">
-      <label>
-        {label}
-        <select
-          aria-label={`Hermes Shrine ${label}`}
-          onChange={(event) => {
-            if (event.target.value !== '') executeIntent(offer.intentFor(event.target.value));
-          }}
-          value={selected}
-        >
-          <option value="">Unresolved</option>
-          {values.map((rewardType) => (
-            <option key={rewardType} value={rewardType}>
-              {rewardType === selected && rewardLabel !== undefined
-                ? rewardLabel
-                : (candidateRewards.find((candidate) => candidate.rewardType === rewardType)
-                    ?.label ?? rewardType)}
-            </option>
-          ))}
-        </select>
-      </label>
+      <ContextualPicker
+        id={`${offer.key}-picker`}
+        label={`Hermes Shrine ${label}`}
+        loading={offerPicker.pending}
+        model={offerPicker.result ?? emptyStringPicker}
+        onOpenChange={(open) => {
+          if (open) offerPicker.activate();
+        }}
+        onSelect={(rewardType) => executeIntent(offer.intentFor(rewardType))}
+        placeholder="Unresolved"
+        {...(rewardLabel === undefined ? {} : { triggerLabel: rewardLabel })}
+      />
       <label>
         <input
           aria-label={`Purchase Hermes Shrine ${label}`}
           checked={current !== null}
-          disabled={selected === ''}
+          disabled={offer.rewardType === null}
           onChange={(event) =>
             executeIntent(
               purchase.intentFor(event.target.checked ? { delay: 2, rushed: false } : null),

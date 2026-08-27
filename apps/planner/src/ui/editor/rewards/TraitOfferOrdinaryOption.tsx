@@ -23,38 +23,6 @@ function rarityLabel(rarity: TraitRarity): string {
   return rarity;
 }
 
-function persephoneBonusPicker(
-  maximum: number,
-  selected: number | undefined,
-): ContextualPickerModel<number> {
-  const selectedValue = selected ?? 0;
-  const items = Object.freeze(
-    Array.from({ length: maximum + 1 }, (_, value) =>
-      Object.freeze({
-        disabled: false,
-        key: String(value),
-        label: `+${value}`,
-        selected: selectedValue === value,
-        state: 'possible' as const,
-        value,
-      }),
-    ),
-  );
-  const selectedItem = items.find((item) => item.selected);
-  return Object.freeze({
-    ...(selectedItem === undefined ? {} : { selected: selectedItem }),
-    sections: Object.freeze([
-      Object.freeze({
-        collapsible: false,
-        items,
-        key: 'persephone-level-bonus',
-        kind: 'category' as const,
-        label: 'Persephone level bonus',
-      }),
-    ]),
-  });
-}
-
 export function TraitOfferOrdinaryOption({
   index,
   interaction,
@@ -89,13 +57,6 @@ export function TraitOfferOrdinaryOption({
   const domain = loaded.result;
   const traitPicker = domain?.traitPicker ?? emptyTraitPicker;
   const rarityPicker = domain?.rarityPickerFor(option.traitKey);
-  const persephonePicker = useMemo(
-    () =>
-      persephoneLevelBonusMaximum === undefined
-        ? undefined
-        : persephoneBonusPicker(persephoneLevelBonusMaximum, option.persephoneLevelBonus),
-    [option.persephoneLevelBonus, persephoneLevelBonusMaximum],
-  );
   const hasEditableRarity =
     interaction.rarityEditable &&
     interaction.giver.rarityPolicy.kind === 'selectable' &&
@@ -189,15 +150,22 @@ export function TraitOfferOrdinaryOption({
       )}
       {effectiveRarity === undefined ? null : <p>Effective rarity: {effectiveRarity}</p>}
       {effectiveLevel === undefined ? null : <p>Effective level: {effectiveLevel}</p>}
-      {persephonePicker === undefined ? null : (
-        <ContextualPicker
-          ariaLabel={`${optionKey} Persephone level bonus`}
-          id={`${idPrefix}-persephone-level-bonus`}
-          label="Persephone bonus"
-          model={persephonePicker}
-          onSelect={selectPersephoneBonus}
-          placeholder="Choose bonus"
-        />
+      {persephoneLevelBonusMaximum === undefined ? null : (
+        <label className="field-control field-control-inline">
+          <span>Persephone bonus</span>
+          <select
+            aria-label={`${optionKey} Persephone level bonus`}
+            id={`${idPrefix}-persephone-level-bonus`}
+            onChange={(event) => selectPersephoneBonus(Number(event.target.value))}
+            value={option.persephoneLevelBonus ?? 0}
+          >
+            {Array.from({ length: persephoneLevelBonusMaximum + 1 }, (_, bonus) => (
+              <option key={bonus} value={bonus}>
+                +{bonus}
+              </option>
+            ))}
+          </select>
+        </label>
       )}
       <label className="trait-option-selected">
         <input

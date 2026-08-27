@@ -25,6 +25,7 @@ import type {
   WorkspaceLocalVisitOrderControl,
   WorkspaceRoomActionProposal,
   WorkspaceInteractionChoice,
+  WorkspaceFeatureAssessment,
 } from '../contract';
 import { StructuredWorkspaceProjectionContractError } from '../contract';
 
@@ -115,15 +116,19 @@ export type WorkspaceOccurrenceInteractionRequirement =
       readonly interacted: boolean;
     }
   | {
+      readonly assessment: WorkspaceFeatureAssessment;
       readonly kind: 'purgingPoolSlots';
       readonly owner: OccurrenceAddress;
       readonly slots: readonly {
         readonly interactionKey: string;
         readonly slotKey: 'left' | 'middle' | 'right';
         readonly traitKey: string | null;
+        readonly traitLabel?: string;
+        readonly candidateTraits: readonly { readonly key: string; readonly label: string }[];
       }[];
     }
   | {
+      readonly assessment: WorkspaceFeatureAssessment;
       readonly kind: 'hermesShrine';
       readonly owner: OccurrenceAddress;
       readonly present: boolean;
@@ -132,7 +137,12 @@ export type WorkspaceOccurrenceInteractionRequirement =
         readonly slotKey:
           import('@run-planner/engine/authored-project').HermesShrineSlotKey | 'travelDealRefill';
         readonly rewardType: string | null;
+        readonly rewardLabel?: string;
         readonly candidateRewardTypes: readonly string[];
+        readonly candidateRewards: readonly {
+          readonly rewardType: string;
+          readonly label: string;
+        }[];
         readonly purchase:
           import('@run-planner/engine/authored-project').HermesShrinePurchase | null;
         readonly offerInteractionKey: string;
@@ -140,6 +150,7 @@ export type WorkspaceOccurrenceInteractionRequirement =
       }[];
     }
   | {
+      readonly assessment: WorkspaceFeatureAssessment;
       readonly kind: 'stygianWell';
       readonly owner: OccurrenceAddress;
       readonly present: boolean;
@@ -151,13 +162,17 @@ export type WorkspaceOccurrenceInteractionRequirement =
         readonly slotKey:
           import('@run-planner/engine/authored-project').StygianWellSlotKey | 'travelDealRefill';
         readonly itemKey: string | null;
+        readonly itemLabel?: string;
         readonly candidateItemKeys: readonly string[];
+        readonly candidateItems: readonly { readonly key: string; readonly label: string }[];
         readonly offerInteractionKey: string;
         readonly purchased: boolean;
         readonly purchaseInteractionKey: string;
         readonly twist?: {
           readonly itemKey: string | null;
+          readonly itemLabel?: string;
           readonly candidateItemKeys: readonly string[];
+          readonly candidateItems: readonly { readonly key: string; readonly label: string }[];
           readonly interactionKey: string;
         };
       }[];

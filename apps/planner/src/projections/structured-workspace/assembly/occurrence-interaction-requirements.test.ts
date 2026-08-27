@@ -80,6 +80,7 @@ describe('occurrence interaction requirements', () => {
           ...postboss.workbench.features,
           {
             kind: 'hermesShrine' as const,
+            assessment: 'unassessed' as const,
             present: true,
             required: false,
             placementEligible: true,

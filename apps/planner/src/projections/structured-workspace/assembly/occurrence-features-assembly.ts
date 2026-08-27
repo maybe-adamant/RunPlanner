@@ -13,6 +13,7 @@ import type {
 } from '@run-planner/engine/simulation';
 import {
   type WorkspaceEncounterPhase,
+  type WorkspaceFeatureAssessment,
   type WorkspaceRoomFeature,
   type WorkspaceRoomLocal,
   type WorkspaceRoomSummary,
@@ -44,6 +45,68 @@ export interface WorkspaceOccurrenceFeatureAssembly {
   readonly features: readonly WorkspaceRoomFeature[];
   readonly naturalChaosSpawn: WorkspaceRoomSummary['naturalChaosSpawn'];
   readonly zagreusSpawn: WorkspaceRoomSummary['zagreusSpawn'];
+}
+
+function distinct(values: readonly string[]): readonly string[] {
+  return Object.freeze([...new Set(values)]);
+}
+
+function declaredRoomShopItemKeys(catalog: Catalog, slotKey: string): readonly string[] {
+  const profile = catalog.rewards.shops.byKey.RoomShop;
+  if (profile === undefined) return Object.freeze([]);
+  const groupKey = profile?.slots.byKey[slotKey]?.groupKey;
+  return groupKey === undefined
+    ? Object.freeze([])
+    : Object.freeze(
+        (profile.groups.byKey[groupKey]?.options.values ?? []).map((option) => option.key),
+      );
+}
+
+function declaredRoomShopAllItemKeys(catalog: Catalog): readonly string[] {
+  const profile = catalog.rewards.shops.byKey.RoomShop;
+  return profile === undefined
+    ? Object.freeze([])
+    : distinct(
+        profile.groups.values.flatMap((group) =>
+          group.options.values.map((option) => option.key),
+        ),
+      );
+}
+
+function declaredRoomShopTwistItemKeys(catalog: Catalog): readonly string[] {
+  const profile = catalog.rewards.shops.byKey.RoomShop;
+  return profile === undefined
+    ? Object.freeze([])
+    : Object.freeze(
+        profile.groups.values
+          .flatMap((group) => group.options.values)
+          .find((option) => option.key === 'RandomStoreItem')?.stygianWell
+          ?.nestedResultItemKeys ?? [],
+      );
+}
+
+function declaredSurfaceShopRewardTypes(catalog: Catalog, slotKey: string): readonly string[] {
+  const profile = catalog.rewards.shops.byKey.SurfaceShop;
+  if (profile === undefined) return Object.freeze([]);
+  const groupKey = profile?.slots.byKey[slotKey]?.groupKey;
+  return groupKey === undefined
+    ? Object.freeze([])
+    : profile.groups.byKey[groupKey]?.rewardTypes ?? Object.freeze([]);
+}
+
+function declaredSurfaceShopAllRewardTypes(catalog: Catalog): readonly string[] {
+  const profile = catalog.rewards.shops.byKey.SurfaceShop;
+  return profile === undefined
+    ? Object.freeze([])
+    : distinct(profile.groups.values.flatMap((group) => group.rewardTypes));
+}
+
+function declaredPurgingPoolTraitKeys(catalog: Catalog): readonly string[] {
+  return distinct(
+    catalog.traitGivers.values
+      .filter((giver) => giver.shopAwareGodTrait)
+      .flatMap((giver) => giver.traitKeys),
+  );
 }
 
 export function assembleOccurrenceFeatures(
@@ -120,6 +183,10 @@ function roomFeatures(
   const shrine = input.occurrence.hermesShrine;
   const well = input.occurrence.stygianWell;
   const pool = input.occurrence.purgingPool;
+  const declaredPoolTraitKeys = declaredPurgingPoolTraitKeys(input.catalog);
+  const declaredWellAllItemKeys = declaredRoomShopAllItemKeys(input.catalog);
+  const declaredWellTwistItemKeys = declaredRoomShopTwistItemKeys(input.catalog);
+  const declaredShrineAllRewardTypes = declaredSurfaceShopAllRewardTypes(input.catalog);
   const poolSlotLabel = (slotKey: 'left' | 'middle' | 'right'): string =>
     slotKey === 'left' ? 'Left slot' : slotKey === 'middle' ? 'Middle slot' : 'Right slot';
   return Object.freeze([
@@ -141,7 +208,7 @@ function roomFeatures(
                     const twistKey = well.twistResultKeyBySlot?.[slotKey] ?? null;
                     const twistCandidates =
                       wellAssessment?.twistCandidateItemKeysByGeneration[generationKey] ??
-                      Object.freeze([]);
+                      declaredWellTwistItemKeys;
                     return Object.freeze({
                       key: slotKey,
                       generationKey,
@@ -154,11 +221,13 @@ function roomFeatures(
                       itemKey: selected,
                       ...(selected === null ? {} : { itemLabel: itemLabel(selected) }),
                       candidateItemKeys:
-                        wellAssessment?.candidateItemKeysBySlot[slotKey] ?? Object.freeze([]),
+                        wellAssessment?.candidateItemKeysBySlot[slotKey] ??
+                        declaredRoomShopItemKeys(input.catalog, slotKey),
                       candidateItems: Object.freeze(
-                        (wellAssessment?.candidateItemKeysBySlot[slotKey] ?? []).map((key) =>
-                          Object.freeze({ key, label: itemLabel(key) }),
-                        ),
+                        (
+                          wellAssessment?.candidateItemKeysBySlot[slotKey] ??
+                          declaredRoomShopItemKeys(input.catalog, slotKey)
+                        ).map((key) => Object.freeze({ key, label: itemLabel(key) })),
                       ),
                       offerInteractionKey: `stygianWellOffer:${semanticAddressKey(poolOwner)}:${generationKey}`,
                       purchaseInteractionKey: `stygianWellPurchase:${semanticAddressKey(poolOwner)}:${generationKey}`,
@@ -190,10 +259,13 @@ function roomFeatures(
                     const selected = well.travelDealRefillKey ?? null;
                     const twistKey = well.twistResultKeyBySlot?.travelDealRefill ?? null;
                     const candidates =
-                      wellAssessment?.travelDealRefill?.candidateItemKeys ?? Object.freeze([]);
+                      wellAssessment === undefined
+                        ? declaredWellAllItemKeys
+                        : (wellAssessment.travelDealRefill?.candidateItemKeys ??
+                          Object.freeze([]));
                     const twistCandidates =
                       wellAssessment?.twistCandidateItemKeysByGeneration[generationKey] ??
-                      Object.freeze([]);
+                      declaredWellTwistItemKeys;
                     return [
                       Object.freeze({
                         key: 'travelDealRefill' as const,
@@ -227,6 +299,9 @@ function roomFeatures(
                     ];
                   })();
             return Object.freeze({
+              assessment: (wellAssessment === undefined
+                ? 'unassessed'
+                : 'assessed') as WorkspaceFeatureAssessment,
               kind: 'stygianWell' as const,
               present: well !== undefined,
               required: wellAssessment?.required ?? room.roomShop?.forced === true,
@@ -248,6 +323,9 @@ function roomFeatures(
       ? []
       : [
           Object.freeze({
+            assessment: (shrineAssessment === undefined
+              ? 'unassessed'
+              : 'assessed') as WorkspaceFeatureAssessment,
             kind: 'hermesShrine' as const,
             present: shrine !== undefined,
             required: shrineAssessment?.required ?? room.surfaceShop?.forced === true,
@@ -281,16 +359,19 @@ function roomFeatures(
                               ]?.label ?? shrine.offerBySlot[slotKey]!.offer.rewardType,
                           }),
                       candidateRewardTypes:
-                        shrineAssessment?.candidateRewardTypesBySlot[slotKey] ?? Object.freeze([]),
+                        shrineAssessment?.candidateRewardTypesBySlot[slotKey] ??
+                        declaredSurfaceShopRewardTypes(input.catalog, slotKey),
                       candidateRewards: Object.freeze(
-                        (shrineAssessment?.candidateRewardTypesBySlot[slotKey] ?? []).map(
-                          (rewardType) =>
-                            Object.freeze({
+                        (
+                          shrineAssessment?.candidateRewardTypesBySlot[slotKey] ??
+                          declaredSurfaceShopRewardTypes(input.catalog, slotKey)
+                        ).map((rewardType) =>
+                          Object.freeze({
+                            rewardType,
+                            label:
+                              input.catalog.rewards.rewardTypes.byKey[rewardType]?.label ??
                               rewardType,
-                              label:
-                                input.catalog.rewards.rewardTypes.byKey[rewardType]?.label ??
-                                rewardType,
-                            }),
+                          }),
                         ),
                       ),
                       offerInteractionKey: `hermesShrineOffer:${semanticAddressKey(poolOwner)}:${slotKey}`,
@@ -316,16 +397,23 @@ function roomFeatures(
                             ]?.label ?? shrine.travelDealRefill.offer.offer.rewardType,
                         }),
                     candidateRewardTypes:
-                      shrineAssessment?.travelDealRefill?.candidateRewardTypes ?? Object.freeze([]),
+                      shrineAssessment === undefined
+                        ? declaredShrineAllRewardTypes
+                        : (shrineAssessment.travelDealRefill?.candidateRewardTypes ??
+                          Object.freeze([])),
                     candidateRewards: Object.freeze(
-                      (shrineAssessment?.travelDealRefill?.candidateRewardTypes ?? []).map(
-                        (rewardType) =>
-                          Object.freeze({
+                      (
+                        shrineAssessment === undefined
+                          ? declaredShrineAllRewardTypes
+                          : (shrineAssessment.travelDealRefill?.candidateRewardTypes ??
+                            Object.freeze([]))
+                      ).map((rewardType) =>
+                        Object.freeze({
+                          rewardType,
+                          label:
+                            input.catalog.rewards.rewardTypes.byKey[rewardType]?.label ??
                             rewardType,
-                            label:
-                              input.catalog.rewards.rewardTypes.byKey[rewardType]?.label ??
-                              rewardType,
-                          }),
+                        }),
                       ),
                     ),
                     offerInteractionKey: `hermesShrineOffer:${semanticAddressKey(poolOwner)}:travelDealRefill`,
@@ -339,6 +427,9 @@ function roomFeatures(
       ? []
       : [
           Object.freeze({
+            assessment: (poolAssessment === undefined
+              ? 'unassessed'
+              : 'assessed') as WorkspaceFeatureAssessment,
             kind: 'purgingPool' as const,
             interactionKey: `purgingPool:${semanticAddressKey(poolOwner)}`,
             interacted: pool.interacted,
@@ -346,7 +437,7 @@ function roomFeatures(
               (['left', 'middle', 'right'] as const).map((slotKey) =>
                 (() => {
                   const candidateTraitKeys =
-                    poolAssessment?.candidateTraitKeysBySlot[slotKey] ?? Object.freeze([]);
+                    poolAssessment?.candidateTraitKeysBySlot[slotKey] ?? declaredPoolTraitKeys;
                   const traitKey = pool.traitKeyBySlot[slotKey];
                   const sold = input.occurrence.roomActions.order.some(
                     (reference) =>

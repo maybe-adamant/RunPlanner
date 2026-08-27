@@ -78,7 +78,7 @@ describe('Hermes Shrine workbench', () => {
     expect(screen.queryByRole('checkbox', { name: /Interact.*Hermes Shrine/i })).toBeNull();
 
     await view.user.click(presence);
-    expect(screen.getAllByRole('combobox', { name: /^Hermes Shrine (First|Second)/ })).toHaveLength(
+    expect(screen.getAllByRole('button', { name: /^Hermes Shrine (First|Second)/ })).toHaveLength(
       3,
     );
     expect(
@@ -112,7 +112,7 @@ describe('Hermes Shrine workbench', () => {
       occurrence(oOccurrenceIds.combat07),
       application,
     );
-    expect(screen.getAllByRole('combobox', { name: /^Hermes Shrine (First|Second)/ })).toHaveLength(
+    expect(screen.getAllByRole('button', { name: /^Hermes Shrine (First|Second)/ })).toHaveLength(
       3,
     );
     expect(screen.queryByText(/^HealBigDrop$/)).toBeNull();
@@ -146,7 +146,7 @@ describe('Hermes Shrine workbench', () => {
     const postbossId = `completion:O:postboss`;
     renderOccurrenceWorkbench(loadSurfaceNOProject(), 'Surface', 'O', occurrence(postbossId));
     expect(screen.queryByRole('checkbox', { name: 'Hermes Shrine present' })).toBeNull();
-    expect(screen.getAllByRole('combobox', { name: /^Hermes Shrine (First|Second)/ })).toHaveLength(
+    expect(screen.getAllByRole('button', { name: /^Hermes Shrine (First|Second)/ })).toHaveLength(
       3,
     );
   });

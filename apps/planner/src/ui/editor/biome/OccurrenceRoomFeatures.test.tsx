@@ -7,6 +7,7 @@ import {
   createIncomingRewardAddress,
   createEncounterPhaseAddress,
   createNemesisRandomEventAddress,
+  createExitDecisionAddress,
   createOccurrenceAddress,
   roomActionKey,
   semanticAddressKey,
@@ -25,10 +26,13 @@ import { findingSelected } from '@planner/state/editorSessionSlice';
 import { simulateProject } from '@run-planner/engine/simulation';
 import {
   createGoldenFGHIProject,
+  createUnderworldFPoolCheckpoint,
   goldenFBiome,
   goldenFOccurrenceId,
+  goldenFStartId,
   goldenHBiome,
   loadNemesisFieldsCheckpoint,
+  loadUnderworldFGProject,
 } from '@run-planner/test-fixtures/underworld';
 import {
   authoredAnomalyProject,
@@ -249,6 +253,151 @@ describe('OccurrenceRoomFeatures', () => {
         (row) => row.dataset.roomActionKey === requiredActionKey,
       ),
     ).toBe(false);
+  });
+
+  it('edits a Nemesis trait trade target through the contextual picker', async () => {
+    const occurrenceId = goldenFOccurrenceId(5, 1);
+    const phase = createEncounterPhaseAddress(
+      goldenFBiome,
+      { kind: 'occurrence', occurrenceId },
+      'Encounter',
+    );
+    const project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+      kind: 'SelectEncounter',
+      phase,
+      encounterKey: 'NemesisRandomEvent',
+    });
+    const view = renderOccurrenceWorkbench(
+      project,
+      'Underworld',
+      'F',
+      occurrenceById(occurrenceId),
+    );
+    openRoomTab('Room Timeline');
+    const eventOwner = createNemesisRandomEventAddress(phase);
+    const finding = simulateProject(catalog, project).findings.find(
+      (candidate) => semanticAddressKey(candidate.origin) === semanticAddressKey(eventOwner),
+    );
+    if (finding === undefined) throw new Error('missing Nemesis outcome finding');
+    act(() =>
+      view.application.store.dispatch(
+        findingSelected({ key: semanticFindingKey(finding), origin: finding.origin }),
+      ),
+    );
+    const eventEditor = await screen.findByRole('region', { name: 'Nemesis event' });
+    await waitFor(() => expect(eventEditor.contains(document.activeElement)).toBe(true));
+
+    const family = screen.getByRole('combobox', { name: 'Nemesis family' });
+    await view.user.click(family);
+    await waitFor(() =>
+      expect(within(family).getByRole('option', { name: 'trait Trade' })).toBeTruthy(),
+    );
+    await view.user.selectOptions(family, 'traitTrade');
+    const trait = await screen.findByRole('button', { name: 'Nemesis trait' });
+    await view.user.click(trait);
+    const listbox = await screen.findByRole('listbox');
+    const firstChoice = within(listbox).getAllByRole('option')[0];
+    if (firstChoice === undefined) throw new Error('Nemesis trait choices are missing');
+    await view.user.click(firstChoice);
+    expect(trait.textContent).not.toContain('Choose a trait');
+
+    await view.user.click(screen.getByRole('button', { name: 'Save event' }));
+    await waitFor(() =>
+      expect(
+        view.application.store
+          .getState()
+          .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
+          ?.biomes.find((biome) => biome.biomeKey === 'F')
+          ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === occurrenceId)
+          ?.encounters.nemesisRandomEventByPhase?.Encounter?.kind,
+      ).toBe('traitTrade'),
+    );
+  });
+
+  it('keeps an unreached Well domain visible as unassessed', async () => {
+    const occurrenceId = createOccurrenceId('completion:F:postboss');
+    const owner = createOccurrenceAddress(goldenFBiome, occurrenceId);
+    let project = applyProjectCommand(loadUnderworldFGProject(), catalog, {
+      kind: 'RemoveExitDecision',
+      decision: createExitDecisionAddress(goldenFBiome, {
+        kind: 'occurrence',
+        occurrenceId: goldenFStartId,
+      }),
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetStygianWellInteraction',
+      occurrence: owner,
+      interacted: true,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceStygianWellOffer',
+      occurrence: owner,
+      slotKey: 'healing',
+      itemKey: 'ArmorBoostStore',
+    });
+
+    const application = createApplication();
+    const view = renderOccurrenceWorkbench(
+      project,
+      'Underworld',
+      'F',
+      occurrenceById(occurrenceId),
+      application,
+    );
+    const feature = application
+      .selectStructuredWorkspace(application.store.getState())
+      .routes.find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find((biome) => biome.biomeKey === 'F')
+      ?.nodes.find((node) => {
+        if (node.kind !== 'occurrenceWorkbench') return false;
+        return node.room.occurrenceId === occurrenceId;
+      });
+    const workbench = feature?.kind === 'occurrenceWorkbench' ? feature.room.workbench : undefined;
+    if (workbench?.kind !== 'standard') throw new Error('F Postboss workbench is missing');
+    const well = workbench.features.find((candidate) => candidate.kind === 'stygianWell');
+    expect(well).toMatchObject({ assessment: 'unassessed' });
+
+    const picker = screen.getByRole('button', { name: 'Stygian Well Healing' });
+    await view.user.click(picker);
+    const choice = await screen.findByRole('option', { name: 'ArmorBoostStore' });
+    expect(picker.getAttribute('data-candidate-state')).toBe('unassessed');
+    expect(choice.getAttribute('data-candidate-state')).toBe('unassessed');
+    expect(choice.getAttribute('aria-disabled')).not.toBe('true');
+  });
+
+  it('marks a reached stale Pool trait as selected-invalid', async () => {
+    const occurrenceId = createOccurrenceId('completion:F:postboss');
+    const owner = createOccurrenceAddress(goldenFBiome, occurrenceId);
+    const project = applyProjectCommand(createUnderworldFPoolCheckpoint(), catalog, {
+      kind: 'ReplacePurgingPoolSlot',
+      occurrence: owner,
+      slotKey: 'left',
+      traitKey: 'AthenaProjectileBoon',
+    });
+    const view = renderOccurrenceWorkbench(
+      project,
+      'Underworld',
+      'F',
+      occurrenceById(occurrenceId),
+    );
+    const feature = view.application
+      .selectStructuredWorkspace(view.application.store.getState())
+      .routes.find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find((biome) => biome.biomeKey === 'F')
+      ?.nodes.find((node) => {
+        if (node.kind !== 'occurrenceWorkbench') return false;
+        return node.room.occurrenceId === occurrenceId;
+      });
+    expect(feature?.kind).toBe('occurrenceWorkbench');
+    const picker = screen.getByRole('button', { name: 'Pool of Purging Left slot' });
+    await view.user.click(picker);
+    const choice = await screen.findByRole('option', { name: /Phalanx Shot/ });
+    await waitFor(() =>
+      expect(picker.getAttribute('data-candidate-state')).toBe('impossible'),
+    );
+    expect(screen.getByText('Current selection')).toBeTruthy();
+    expect(choice.getAttribute('data-candidate-state')).toBe('impossible');
+    expect(choice.getAttribute('aria-disabled')).toBe('true');
   });
 
   it('uses one H feature control and preserves an over-cap count through repair and Undo', async () => {
