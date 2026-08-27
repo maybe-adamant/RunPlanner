@@ -88,7 +88,7 @@ function decisionKit(source: WorkspaceBiomeSource) {
       levelResolutionAssessment: source.levelResolutionAssessment,
       isActiveTraitOffer: source.isActiveTraitOffer,
       markerDestinations: markers.emitter,
-      ordinaryRewardForfeited: (owner) => source.ordinaryRewardForfeited(owner.address),
+      acquisitionConversionCandidate: source.acquisitionConversionCandidate,
       occurrence: input.occurrence,
       runState: source.runState,
       ...(input.roomPicker === undefined ? {} : { roomPicker: input.roomPicker }),

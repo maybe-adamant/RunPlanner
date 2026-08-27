@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   assemble,
   applyProjectCommand,
+  authorTestArtificerReplacement,
   catalog,
   createAcquisitionEntryAddress,
   createAcquisitionSiteAddress,
@@ -20,6 +21,7 @@ import {
   encodeProjectDocument,
   encounterPhaseGorgonSupportForProjectEvaluationAssembly,
   goldenFBiome,
+  goldenFStartId,
   goldenFOccurrenceId,
   goldenGBiome,
   goldenIBiome,
@@ -330,6 +332,88 @@ describe('structured workspace reward assembly', () => {
       inlineTraitOffers: [],
     });
     expect(artificer?.artificerOutput).toBeDefined();
+  });
+
+  it('projects Forfeit as a realized Red Onion pickup without a trait launcher', () => {
+    let project = applyProjectCommand(createCompleteFGProject(), catalog, {
+      kind: 'ReplaceFearVowRank',
+      route: { kind: 'route', routeKey: 'Underworld' },
+      vowKey: 'BoonSkipShrineUpgrade',
+      rank: 1,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(goldenFBiome, goldenFStartId),
+      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
+    });
+    const assembledForfeit = assemble(project, 'Underworld', 'F', goldenFStartId);
+    const room = assembledForfeit.assembly.node.room;
+    const row = room.roomActions?.rows.find(
+      (candidate) => candidate.reference.kind === 'interactIncomingReward',
+    );
+    expect(row?.label).toContain('Red Onion');
+    expect(row?.rewardPayload).toMatchObject({
+      control: {
+        realizedAcquisition: { rewardType: 'RoomRewardConsolationPrize', label: 'Red Onion' },
+        traitOffers: [],
+        levelResolutions: [],
+      },
+    });
+  });
+
+  it('projects an Artificer-forfeited Boon as a nested Red Onion without a trait launcher', () => {
+    const occurrenceId = goldenFOccurrenceId(1, 1);
+    const fixture = createFConversionFrontierProject('GiftDrop');
+    let project = applyProjectCommand(fixture.project, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(goldenFBiome, goldenFStartId),
+      value: { rewardType: 'WeaponUpgrade' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(
+        createIncomingRewardAddress(goldenFBiome, goldenFStartId),
+        'self',
+      ),
+      value: {
+        kind: 'traits',
+        giverKey: 'WeaponUpgrade',
+        options: [
+          { traitKey: 'StaffDoubleAttackTrait' },
+          { traitKey: 'StaffLongAttackTrait' },
+          { traitKey: 'StaffDashAttackTrait' },
+        ],
+        selectedOptionKey: 'option1',
+      },
+    });
+    const candidate = assemble(
+      project,
+      'Underworld',
+      'F',
+      occurrenceId,
+    ).source.acquisitionConversionCandidate(fixture.acquisition);
+    const replacement = candidate?.artificerReplacementOptions?.find(
+      (option) => option.offer.rewardType === 'Boon',
+    );
+    if (replacement === undefined) throw new Error('Boon Artificer replacement is missing');
+    project = authorTestArtificerReplacement(project, catalog, fixture.acquisition, replacement);
+
+    const row = assemble(
+      project,
+      'Underworld',
+      'F',
+      occurrenceId,
+    ).assembly.node.room.roomActions?.rows.find(
+      (candidateRow) => candidateRow.reference.kind === 'interactIncomingReward',
+    );
+    expect(row?.artificerOutput?.control).toMatchObject({
+      realizedAcquisition: {
+        rewardType: 'RoomRewardConsolationPrize',
+        label: 'Red Onion',
+      },
+      traitOffers: [],
+      levelResolutions: [],
+    });
   });
 
   it('projects the active Narcissus reward editor before its independent pickup choice', () => {

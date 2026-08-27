@@ -84,12 +84,13 @@ export function RewardControlEditor({
             : { initialStep: offerStartStep ?? control.authoringStartStep })}
         />
       )}
-      {!showAcquisitionChildren ? null : control.acquisitionOutcome === 'forfeitedByVow' ? (
-        <p className="reward-acquisition-outcome" role="status">
-          Removed by Vow of Forfeit
-        </p>
-      ) : (
+      {!showAcquisitionChildren ? null : (
         <div className="trait-offer-launchers">
+          {control.realizedAcquisition === undefined ? null : (
+            <p className="reward-acquisition-outcome" role="status">
+              Vow of Forfeit: {control.realizedAcquisition.label}
+            </p>
+          )}
           {showTraitOffers
             ? (control.traitOffers ?? []).map((trait) => (
                 <TraitOfferLauncher
@@ -119,7 +120,12 @@ export function RewardControlEditor({
                 key={workspaceInteractionKey(conversion.address)}
               >
                 <label className="pickup-outcome-control">
-                  <span>Pickup outcome</span>
+                  <span>
+                    Pickup outcome
+                    {control.realizedAcquisition === undefined
+                      ? ''
+                      : ` · ${control.realizedAcquisition.label}`}
+                  </span>
                   <select
                     aria-label={`Pickup outcome for ${conversion.acquisitionRoleLabel}`}
                     onChange={(event) => {
@@ -133,7 +139,9 @@ export function RewardControlEditor({
                     }}
                     value={conversion.value.kind}
                   >
-                    <option value="normal">Pick up reward</option>
+                    <option value="normal">
+                      Pick up {control.realizedAcquisition?.label ?? 'reward'}
+                    </option>
                     <option
                       disabled={
                         !interaction.timePieceSupported && conversion.value.kind !== 'timePiece'

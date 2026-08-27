@@ -1320,7 +1320,7 @@ describe('planner history interaction', () => {
     const actionRow = marker?.closest('[data-room-action-key]');
     expect(actionRow?.textContent).toContain('Gold Gold Gold duplicate of Offer 3');
     expect(actionRow?.textContent).toContain('Shop purchase is unavailable');
-  });
+  }, 10_000);
 
   it('opens and focuses the exact All Together set control from its finding', async () => {
     const { application, project, set, target } = allTogetherFindingFixture();

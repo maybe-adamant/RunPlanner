@@ -329,7 +329,7 @@ describe('reward compiler acquisition, reward-type, and store normalizers', () =
       HealDrop: 'Heal',
       HealDropMinor: 'Minor Heal',
       HealBigDrop: 'Big Heal',
-      RoomRewardConsolationPrize: 'Consolation Prize',
+      RoomRewardConsolationPrize: 'Red Onion',
       ArmorBoost: 'Armor',
       ArmorBigBoost: 'Big Armor',
       AirBoost: 'Air Essence',

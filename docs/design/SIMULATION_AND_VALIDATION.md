@@ -1715,17 +1715,18 @@ the event carries the route-wide banned set into every later eligibility and
 candidate query. Circe suppression stops new Denial evidence but leaves prior
 bans intact. Fallback Gold and nonparticipating providers emit no bans.
 
-Effective Forfeit is evaluated earlier and at a narrower provenance boundary.
-The first supported incoming `Boon` or `HermesUpgrade` reward on an ordinary
-authored room in each biome records a `rewardForfeited` reward outcome, advances
-the processed frontier, and skips concrete acquisition and trait-child
-evaluation. This shares the reward-outcome stream used by Time Piece and
-Artificer without making Forfeit an authored or selectable disposition. The
-already-resolved offer and bag consumption remain. Shop, Devotion, room-local
-rewards, and pickups do not enter this veto; no substitute acquisition is
-recorded. Per-biome usage resets when carried reward branches initialize the
-next biome, while configured/effective Fear and Circe suppression remain
-route-wide.
+Effective Forfeit is evaluated at the shared RoomReward materialization
+boundary. The first supported incoming `Boon` or `HermesUpgrade` reward in
+each biome records a `rewardForfeited` event with the fixed
+`RoomRewardConsolationPrize` replacement, then settles that required Red Onion
+through the canonical concrete-acquisition path. The authored offer and bag
+consumption remain evidence, but no Boon/Hermes trait provider or child is
+settled. Artificer-generated RoomReward Boon/Hermes replacements use this same
+predicate after their Artificer and replacement-bag transitions; Artificer's
+source capability still controls Sea Star while Time Piece sees the realized
+Onion. Shop, Devotion, room-local rewards, and pickups do not enter this lane.
+Per-biome usage resets when carried reward branches initialize the next biome,
+while configured/effective Fear and Circe suppression remain route-wide.
 
 The same replay folds the normalized Proper Upbringing lifecycle. After each
 reached acquisition or replacement it derives the post-selection element

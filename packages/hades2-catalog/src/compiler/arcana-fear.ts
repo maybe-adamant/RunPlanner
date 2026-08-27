@@ -224,15 +224,16 @@ export function normalizeFearVows(
     )
       fail(`${path}.effect`, 'must be banUnselectedTraits with count 2');
     if (isForfeit && vow.effect === undefined)
-      fail(`${path}.effect`, 'Vow of Forfeit must declare preventOrdinaryRoomAcquisition');
+      fail(`${path}.effect`, 'Vow of Forfeit must declare substituteRoomReward');
     if (
       isForfeit &&
-      (vow.effect?.kind !== 'preventOrdinaryRoomAcquisition' ||
+      (vow.effect?.kind !== 'substituteRoomReward' ||
         vow.effect.maximumPerBiome !== 1 ||
         JSON.stringify(vow.effect.qualifyingRewardTypes) !==
-          JSON.stringify(['Boon', 'HermesUpgrade']))
+          JSON.stringify(['Boon', 'HermesUpgrade']) ||
+        vow.effect.replacementRewardType !== 'RoomRewardConsolationPrize')
     )
-      fail(`${path}.effect`, 'must prevent one ordinary Boon or Hermes acquisition per biome');
+      fail(`${path}.effect`, 'must substitute one Boon or Hermes reward with Red Onion per biome');
     if (isVoid && vow.effect === undefined)
       fail(`${path}.effect`, 'Vow of Void must declare limitStartingGrasp');
     if (
@@ -250,12 +251,13 @@ export function normalizeFearVows(
         : isForfeit
           ? {
               effect: Object.freeze({
-                kind: 'preventOrdinaryRoomAcquisition' as const,
+                kind: 'substituteRoomReward' as const,
                 maximumPerBiome: 1 as const,
                 qualifyingRewardTypes: Object.freeze(['Boon', 'HermesUpgrade']) as readonly [
                   'Boon',
                   'HermesUpgrade',
                 ],
+                replacementRewardType: 'RoomRewardConsolationPrize' as const,
               }),
             }
           : isVoid

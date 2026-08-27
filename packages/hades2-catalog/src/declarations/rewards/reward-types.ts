@@ -48,7 +48,7 @@ export const rewardTypes = [
   directReward('HealDrop', 'Heal', 'consumable'),
   directReward('HealDropMinor', 'Minor Heal', 'consumable'),
   directReward('HealBigDrop', 'Big Heal', 'consumable'),
-  directReward('RoomRewardConsolationPrize', 'Consolation Prize', 'consumable'),
+  directReward('RoomRewardConsolationPrize', 'Red Onion', 'consumable'),
   directReward('ArmorBoost', 'Armor', 'consumable'),
   directReward('ArmorBigBoost', 'Big Armor', 'consumable'),
   directReward('AirBoost', 'Air Essence', 'consumable'),

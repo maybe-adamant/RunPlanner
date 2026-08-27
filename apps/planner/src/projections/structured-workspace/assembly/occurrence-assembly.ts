@@ -30,8 +30,6 @@ import type {
   RunStateSnapshot,
   SelectedLevelResolutionAssessment,
 } from '@run-planner/engine/simulation';
-import type { RewardCandidateOwner } from '@planner/projections/candidateProjection';
-
 import { requireWorkspaceRoom as requireRoom } from './catalog-room';
 import {
   StructuredWorkspaceProjectionContractError,
@@ -85,6 +83,10 @@ export interface WorkspaceOccurrenceAssemblyInput {
   readonly levelResolutionAssessment: (
     owner: LevelResolutionAddress,
   ) => SelectedLevelResolutionAssessment | undefined;
+  readonly acquisitionConversionCandidate?: (
+    owner: import('@run-planner/engine/authored-project').AcquisitionRoleAddress,
+  ) =>
+    import('@run-planner/engine/simulation').AcquisitionConversionCandidateCapability | undefined;
   readonly purgingPoolAssessment?: (
     owner: OccurrenceAddress,
   ) => import('@run-planner/engine/simulation').PurgingPoolCandidateCapability | undefined;
@@ -116,7 +118,6 @@ export interface WorkspaceOccurrenceAssemblyInput {
     site: AcquisitionSiteAddress,
   ) => readonly WorkspaceDerivedAcquisitionEntry[];
   readonly markerDestinations: WorkspaceMarkerDestinationEmitter;
-  readonly ordinaryRewardForfeited: (owner: RewardCandidateOwner) => boolean;
   readonly occurrence: RoomOccurrence;
   readonly runState: (owner: RoomRunStateCheckpointAddress) =>
     | { readonly availability: 'available'; readonly snapshot: RunStateSnapshot }
@@ -179,12 +180,14 @@ export function assembleWorkspaceOccurrence(
       ...(input.fieldsBatchFacts === undefined ? {} : { fieldsBatchFacts: input.fieldsBatchFacts }),
       facts: input.facts,
       levelResolutionAssessment: input.levelResolutionAssessment,
+      ...(input.acquisitionConversionCandidate === undefined
+        ? {}
+        : { acquisitionConversionCandidate: input.acquisitionConversionCandidate }),
       isActiveTraitOffer: input.isActiveTraitOffer,
       ...(input.derivedAcquisitionEntries === undefined
         ? {}
         : { derivedAcquisitionEntries: input.derivedAcquisitionEntries }),
       markerDestinations: input.markerDestinations,
-      ordinaryRewardForfeited: input.ordinaryRewardForfeited,
       occurrence: input.occurrence,
     },
     room,

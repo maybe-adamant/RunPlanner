@@ -43,6 +43,7 @@ import {
 } from './candidates/trait-offer-capability';
 import type { KeepsakeState } from './keepsakes';
 import type { AcquisitionSource } from './rewards/acquisition-settlement';
+import type { ConcreteAcquisitionEvent } from '../reward-kernel';
 import {
   assessArtificerConversion,
   assessSeaStarDuplication,
@@ -568,6 +569,8 @@ export interface AcquisitionConversionCandidateCapability {
     readonly supported: boolean;
     readonly evidence: import('./model').FindingEvidence;
   }[];
+  /** One concrete realized acquisition when every reached branch materializes it. */
+  readonly realizedAcquisition?: ConcreteAcquisitionEvent;
   readonly artificerReplacementAddress?: import('../authored-project/addresses').AcquisitionEntryAddress;
   readonly artificerReplacementRewardTypes?: readonly string[];
   readonly artificerReplacementOptions?: readonly import('../authored-project/model').AuthoredRewardState[];
@@ -593,6 +596,7 @@ export function createAcquisitionConversionCandidateArtifacts(
     readonly {
       readonly address: AcquisitionRoleAddress;
       readonly branchesBeforeRole: readonly RewardBranchState[];
+      readonly realizedAcquisitionByBranch?: readonly (ConcreteAcquisitionEvent | undefined)[];
       readonly source: AcquisitionSource;
       readonly lifecyclePoint: import('../reward-kernel').ProducerLifecyclePointKey;
       readonly blocksArtificerConversion?: true;
@@ -611,13 +615,14 @@ export function createAcquisitionConversionCandidateArtifacts(
     return Object.freeze({
       timePieceAssessments: Object.freeze(
         entries.flatMap((entry) =>
-          entry.branchesBeforeRole.map((branch) =>
+          entry.branchesBeforeRole.map((branch, branchIndex) =>
             assessTimePieceConversion(
               catalog,
               branch,
               entry.source,
               entry.address.acquisitionRole,
               entry.lifecyclePoint,
+              entry.realizedAcquisitionByBranch?.[branchIndex],
             ),
           ),
         ),
@@ -637,14 +642,35 @@ export function createAcquisitionConversionCandidateArtifacts(
       ),
       seaStarAssessments: Object.freeze(
         entries.flatMap((entry) =>
-          entry.branchesBeforeRole.map((branch) =>
-            assessSeaStarDuplication(catalog, branch, entry.source, {
-              role: entry.address.acquisitionRole,
-              lifecyclePoint: entry.lifecyclePoint,
-            }),
+          entry.branchesBeforeRole.map((branch, branchIndex) =>
+            assessSeaStarDuplication(
+              catalog,
+              branch,
+              entry.source,
+              {
+                role: entry.address.acquisitionRole,
+                lifecyclePoint: entry.lifecyclePoint,
+              },
+              entry.realizedAcquisitionByBranch?.[branchIndex],
+            ),
           ),
         ),
       ),
+      ...(() => {
+        const realized = entries.flatMap((entry) =>
+          entry.branchesBeforeRole.map(
+            (_, branchIndex) => entry.realizedAcquisitionByBranch?.[branchIndex],
+          ),
+        );
+        const first = realized[0];
+        return first !== undefined &&
+          realized.every(
+            (candidate) =>
+              candidate !== undefined && JSON.stringify(candidate) === JSON.stringify(first),
+          )
+          ? { realizedAcquisition: first }
+          : {};
+      })(),
       ...(() => {
         const domains = entries.map((entry) => entry.artificerReplacementOptions);
         const first = domains[0];

@@ -341,12 +341,13 @@ status, duplication capability, recursion, lifecycle inheritance, or Pom
 freshness.
 
 The control presents those authored choices as reward outcomes rather than
-exposing internal role vocabulary. An automatic Forfeit veto is not added to
-the authored disposition union: the engine records it in the same reward-event
-stream as the other acquisition outcomes, the workspace marks the exact reward
-control, and React replaces dormant acquisition children with a read-only
-`Removed by Vow of Forfeit` status. Retained authored children remain in the
-document and reappear if an upstream edit makes the veto no longer apply.
+exposing internal role vocabulary. Forfeit is not added to the authored
+disposition union: the engine records its fixed Red Onion materialization in
+the same reward-event stream as the other acquisition outcomes, the workspace
+marks the exact reward control with the realized acquisition, and React keeps
+the legal pickup interactions visible beneath a compact substitution status.
+Retained authored children remain in the document and reappear if an upstream
+edit makes the substitution no longer apply.
 
 ### Keepsake Products
 

@@ -27,6 +27,7 @@ import {
   type LevelResolutionAddress,
   type AcquisitionSiteAddress,
   type AcquisitionEntryAddress,
+  type AcquisitionRoleAddress,
 } from '@run-planner/engine/authored-project';
 import type { BiomeLayout, Catalog } from '@run-planner/engine/catalog-schema';
 import type {
@@ -54,6 +55,7 @@ import type {
   SelectedLevelResolutionAssessment,
   OccurrenceOutgoingStatus,
   RouteResourceAuthoring,
+  AcquisitionConversionCandidateCapability,
 } from '@run-planner/engine/simulation';
 import {
   evaluateBiomeCompleteness,
@@ -106,6 +108,10 @@ export interface WorkspaceBiomeSource {
   readonly levelResolutionAssessment: (
     owner: LevelResolutionAddress,
   ) => SelectedLevelResolutionAssessment | undefined;
+  /** Exact engine materialization for one reached acquisition role. */
+  readonly acquisitionConversionCandidate: (
+    owner: AcquisitionRoleAddress,
+  ) => AcquisitionConversionCandidateCapability | undefined;
   /** Exact post-encounter Pool generation assessment for one automatic Postboss room. */
   readonly purgingPoolAssessment: (
     owner: OccurrenceAddress,
@@ -123,8 +129,6 @@ export interface WorkspaceBiomeSource {
   readonly outgoingStatus: (occurrenceId: OccurrenceId) => OccurrenceOutgoingStatus;
   /** Exact engine-retained room whose own action currently blocks assessment. */
   readonly blockedOccurrenceRoom: (occurrenceId: OccurrenceId) => CanonicalAuthoredRoom | undefined;
-  /** True only when every evaluated branch records the engine-owned Forfeit veto. */
-  readonly ordinaryRewardForfeited: (owner: SemanticAddress) => boolean;
   readonly derivedAcquisitionEntries: (site: AcquisitionSiteAddress) => readonly {
     readonly address: AcquisitionEntryAddress;
     readonly kind:
@@ -648,6 +652,7 @@ function createWorkspaceBiomeSource(
   hermesShrineAssessment: WorkspaceBiomeSource['hermesShrineAssessment'],
   stygianWellAssessment: WorkspaceBiomeSource['stygianWellAssessment'],
   resourceAuthoring: RouteResourceAuthoring,
+  acquisitionConversionCandidate: WorkspaceBiomeSource['acquisitionConversionCandidate'],
 ): WorkspaceBiomeSource {
   const biome = createBiomeAddress(routeKey, plan.biomeKey);
   const layout = catalog.biomeLayouts.byKey[plan.biomeKey];
@@ -751,16 +756,6 @@ function createWorkspaceBiomeSource(
     evaluation !== undefined && 'rewards' in evaluation
       ? evaluation.rewards.transcendentEmbryoOutcomes
       : Object.freeze([]);
-  const rewardBranches =
-    evaluation !== undefined && 'rewards' in evaluation ? evaluation.rewards.branches : [];
-  const forfeitedRewardOwnersByBranch = rewardBranches.map(
-    (branch) =>
-      new Set(
-        branch.events.flatMap((event) =>
-          event.kind === 'rewardForfeited' ? [semanticAddressKey(event.origin)] : [],
-        ),
-      ),
-  );
   return Object.freeze({
     biome,
     completeness,
@@ -785,6 +780,7 @@ function createWorkspaceBiomeSource(
     isActiveTraitOffer,
     levelResolutionAssessment: (owner: LevelResolutionAddress) =>
       levelResolutionAssessments.get(semanticAddressKey(owner)),
+    acquisitionConversionCandidate,
     purgingPoolAssessment,
     hermesShrineAssessment,
     stygianWellAssessment,
@@ -805,9 +801,6 @@ function createWorkspaceBiomeSource(
         occurrenceId,
         plan,
       }),
-    ordinaryRewardForfeited: (owner: SemanticAddress) =>
-      forfeitedRewardOwnersByBranch.length > 0 &&
-      forfeitedRewardOwnersByBranch.every((owners) => owners.has(semanticAddressKey(owner))),
     derivedAcquisitionEntries,
     plan,
     resourceAuthoring,
@@ -854,6 +847,8 @@ export function createWorkspaceProjectSourceIndex(
   purgingPoolAssessment: WorkspaceBiomeSource['purgingPoolAssessment'] = () => undefined,
   hermesShrineAssessment: WorkspaceBiomeSource['hermesShrineAssessment'] = () => undefined,
   stygianWellAssessment: WorkspaceBiomeSource['stygianWellAssessment'] = () => undefined,
+  acquisitionConversionCandidate: WorkspaceBiomeSource['acquisitionConversionCandidate'] = () =>
+    undefined,
 ): WorkspaceProjectSourceIndex {
   return Object.freeze({
     routes: Object.freeze(
@@ -881,6 +876,7 @@ export function createWorkspaceProjectSourceIndex(
                 hermesShrineAssessment,
                 stygianWellAssessment,
                 resources,
+                acquisitionConversionCandidate,
               ),
             ),
           ),

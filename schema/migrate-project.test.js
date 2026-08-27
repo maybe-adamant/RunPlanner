@@ -108,7 +108,7 @@ test('62 -> 63 updates the Transcendent Embryo catalog boundary without rewritin
   assert.deepEqual(result.document, {
     schemaVersion: 63,
     projectId: 'transcendent-embryo-migration',
-    catalogVersion: '0.45.0-transcendent-embryo',
+    catalogVersion: '0.46.0-vow-forfeit-red-onion',
     routes: [{ preserved: { nested: true } }],
   });
   assert.deepEqual(result.steps, ['62->63']);
@@ -200,7 +200,7 @@ test('51 -> current preserves prior route content and adds resource placements',
   source.catalogVersion = '0.31.0-chaos-traits';
   const result = migrateProjectDocument(source);
   assert.equal(result.document.schemaVersion, 63);
-  assert.equal(result.document.catalogVersion, '0.45.0-transcendent-embryo');
+  assert.equal(result.document.catalogVersion, '0.46.0-vow-forfeit-red-onion');
   assert.deepEqual(result.changes['51->52'], {});
   assert.deepEqual(result.changes['52->53'], {
     catalogMigrations: [
@@ -243,7 +243,7 @@ test('50 -> current advances the full external migration chain through the Herme
   const result = migrateProjectDocument(source);
 
   assert.equal(result.document.schemaVersion, 63);
-  assert.equal(result.document.catalogVersion, '0.45.0-transcendent-embryo');
+  assert.equal(result.document.catalogVersion, '0.46.0-vow-forfeit-red-onion');
   assert.deepEqual(result.steps, [
     '50->51',
     '51->52',
@@ -269,7 +269,7 @@ test('55 -> 56 adds empty route-owned selected resource placements', () => {
   source.catalogVersion = '0.37.0-automatic-completion-occurrences';
   const result = migrateProjectDocument(source);
   assert.equal(result.document.schemaVersion, 63);
-  assert.equal(result.document.catalogVersion, '0.45.0-transcendent-embryo');
+  assert.equal(result.document.catalogVersion, '0.46.0-vow-forfeit-red-onion');
   assert.deepEqual(result.document.routes[0].resourcePlacements, {
     Pickaxe: null,
     Exorcism: null,
@@ -287,7 +287,7 @@ test('52 -> current preserves the earlier schema-52 catalog migration ledger and
   source.catalogVersion = '0.32.0-run-impacting-traits';
   const result = migrateProjectDocument(source);
   assert.equal(result.document.schemaVersion, 63);
-  assert.equal(result.document.catalogVersion, '0.45.0-transcendent-embryo');
+  assert.equal(result.document.catalogVersion, '0.46.0-vow-forfeit-red-onion');
   assert.deepEqual(result.document.routes, [
     {
       ...source.routes[0],
@@ -330,7 +330,7 @@ test('52 -> current advances the prior run-impacting-traits catalog metadata', (
   source.schemaVersion = 52;
   source.catalogVersion = '0.32.1-run-impacting-traits';
   const result = migrateProjectDocument(source);
-  assert.equal(result.document.catalogVersion, '0.45.0-transcendent-embryo');
+  assert.equal(result.document.catalogVersion, '0.46.0-vow-forfeit-red-onion');
   assert.deepEqual(result.changes['52->53'], {
     catalogMigrations: [
       '0.32.1-run-impacting-traits->0.33.0-generated-trait-pickups',
@@ -367,7 +367,7 @@ test('current schema 52 -> current advances catalog metadata and adds resource p
   source.catalogVersion = '0.34.0-sea-star';
   const result = migrateProjectDocument(source);
   assert.equal(result.document.schemaVersion, 63);
-  assert.equal(result.document.catalogVersion, '0.45.0-transcendent-embryo');
+  assert.equal(result.document.catalogVersion, '0.46.0-vow-forfeit-red-onion');
   assert.deepEqual(result.document.routes, [
     {
       ...source.routes[0],
@@ -463,7 +463,7 @@ test('57 -> 58 seeds Shrine shells only on exact forced Surface Postboss identit
   const result = migrateProjectDocument(source);
   const biomes = result.document.routes[0].biomes;
   assert.equal(result.document.schemaVersion, 63);
-  assert.equal(result.document.catalogVersion, '0.45.0-transcendent-embryo');
+  assert.equal(result.document.catalogVersion, '0.46.0-vow-forfeit-red-onion');
   assert.deepEqual(result.steps, ['57->58', '58->59', '59->60', '60->61', '61->62', '62->63']);
   assert.deepEqual(result.changes['57->58'], { shrinesAdded: 2 });
   for (const [biomeIndex, occurrenceIndex] of [
@@ -561,7 +561,7 @@ test('58 -> 59 seeds Well shells only on exact forced Underworld Postboss identi
   const result = migrateProjectDocument(source);
   const biomes = result.document.routes[0].biomes;
   assert.equal(result.document.schemaVersion, 63);
-  assert.equal(result.document.catalogVersion, '0.45.0-transcendent-embryo');
+  assert.equal(result.document.catalogVersion, '0.46.0-vow-forfeit-red-onion');
   assert.deepEqual(result.steps, ['58->59', '59->60', '60->61', '61->62', '62->63']);
   assert.deepEqual(result.changes['58->59'], { wellsAdded: 2 });
   assert.deepEqual(result.changes['59->60'], {});

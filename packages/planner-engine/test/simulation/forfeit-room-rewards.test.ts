@@ -61,25 +61,30 @@ function rewardsFor(project: ReturnType<typeof createCompleteFGProject>) {
   return f.rewards;
 }
 
-describe('Vow of Forfeit ordinary room reward veto', () => {
+describe('Vow of Forfeit Red Onion substitution', () => {
   it.each(['Boon', 'HermesUpgrade'] as const)(
-    'vetoes the first ordinary %s acquisition before its trait child',
+    'substitutes the first ordinary %s acquisition with a required Red Onion',
     (rewardType) => {
       const rewards = simulated(rewardType);
       const branch = rewards.branches[0];
       if (branch === undefined) throw new Error('expected reward branch');
       expect(branch.arcanaFear.fear.forfeitConsumed).toBe(true);
       expect(branch.events).toContainEqual(
-        expect.objectContaining({ kind: 'rewardForfeited', rewardType }),
+        expect.objectContaining({
+          kind: 'rewardForfeited',
+          rewardType,
+          replacementRewardType: 'RoomRewardConsolationPrize',
+        }),
       );
       expect(
         branch.events.some(
           (event) =>
             event.kind === 'concreteAcquisition' &&
             semanticAddressKey(event.origin) ===
-              semanticAddressKey(createIncomingRewardAddress(biome, goldenFStartId)),
+              semanticAddressKey(createIncomingRewardAddress(biome, goldenFStartId)) &&
+            event.acquisition.acquisition.gameName === 'RoomRewardConsolationPrize',
         ),
-      ).toBe(false);
+      ).toBe(true);
       expect(
         rewards.selectedTraitOffers.some(
           (offer) =>
@@ -139,9 +144,10 @@ describe('Vow of Forfeit ordinary room reward veto', () => {
       branch.events.some(
         (event) =>
           event.kind === 'concreteAcquisition' &&
-          semanticAddressKey(event.origin) === semanticAddressKey(owner),
+          semanticAddressKey(event.origin) === semanticAddressKey(owner) &&
+          event.acquisition.acquisition.gameName === 'RoomRewardConsolationPrize',
       ),
-    ).toBe(false);
+    ).toBe(true);
     expect(
       rewards.selectedTraitOffers.some(
         (offer) => semanticAddressKey(offer.address.owner) === semanticAddressKey(owner),
@@ -158,7 +164,7 @@ describe('Vow of Forfeit ordinary room reward veto', () => {
     ).toBe(false);
   });
 
-  it('keeps the veto in the progressive candidate frontier without exposing its dormant trait child', () => {
+  it('keeps the unavailable acquisition in the progressive candidate frontier without exposing its dormant trait child', () => {
     const owner = createIncomingRewardAddress(biome, goldenFStartId);
     let project = createCompleteFGProject();
     project = applyProjectCommand(project, catalog, {

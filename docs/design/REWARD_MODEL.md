@@ -1169,15 +1169,18 @@ After a valid participating Olympian or Hermes trait selection, effective Vow
 of Denial records up to two exact unselected materialized keys on that same
 trait event. The folded banned set is route-wide eligibility history;
 suppressing Denial stops new bans but never removes existing ones. Effective
-Vow of Forfeit is narrower: at the ordinary authored room's incoming `Boon` or
-`HermesUpgrade` settlement boundary it vetoes the first such acquisition in
-each biome. The authored offer and bag result remain, but concrete acquisition
-and its trait child stay dormant. Shops, Devotion, side-room occurrences, and pickups
-do not trigger or consume Forfeit, and no consolation acquisition is modeled.
-The veto is an automatic `rewardForfeited` reward event beside Time Piece and
-Artificer outcomes, not an authored acquisition disposition or an
-Arcana/Fear-specific event. The Arcana/Fear ledger retains only the per-biome
-consumed flag needed by later settlement and Run State.
+Vow of Forfeit is narrower: at the RoomReward materialization boundary it
+substitutes the first supported incoming `Boon` or `HermesUpgrade` in each
+biome with a required `RoomRewardConsolationPrize` (Red Onion). The authored
+offer and bag result remain, while a `rewardForfeited` event records the fixed
+replacement and the canonical concrete acquisition settles the Onion. This
+also covers an Artificer-generated RoomReward Boon/Hermes replacement; it
+does not inspect its resolved giver. Shops, Devotion, direct room-local rewards,
+and pickups do not trigger or consume Forfeit. The Red Onion keeps its normal
+pickup, Time Piece, and Sea Star contacts, but cannot start a trait offer,
+Artificer conversion, or Echo last-reward recreation. The Arcana/Fear ledger
+retains only the per-biome consumed flag needed by later settlement and Run
+State.
 
 The equipped-trait ledger is the sole authority for trait-derived facts:
 ordinary boon-slot occupancy, element totals and highest base-element count,
