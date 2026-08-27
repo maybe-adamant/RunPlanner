@@ -116,6 +116,7 @@ interface RewardFactsOptions {
   readonly rewardLookups?: Readonly<Record<string, ReadonlySet<string>>>;
   /** Branch-local delayed Shrine Spell reservation. */
   readonly pendingSpellDrop?: boolean;
+  readonly allSpellInvested?: boolean;
   readonly fail: (detail: string) => never;
 }
 
@@ -130,6 +131,7 @@ export function createRewardFacts({
   currentRoomShopOptionNames = new Set(),
   rewardLookups = Object.freeze({}),
   pendingSpellDrop = false,
+  allSpellInvested = false,
   fail,
 }: RewardFactsOptions): RewardKernelFacts {
   const staticFacts = staticRewardViewFacts(catalog, view);
@@ -178,7 +180,10 @@ export function createRewardFacts({
           maxNonGoalRewards: maxNonGoalRewards!,
         }
       : undefined,
-    flags: Object.freeze({ allSpellInvested: false, pendingSpellDrop }),
+    flags: Object.freeze({
+      allSpellInvested,
+      pendingSpellDrop,
+    }),
   });
   return factsWithHistory(Object.freeze({ requirements }), history, currentRoomShopOptionNames);
 }
@@ -216,6 +221,7 @@ export function createBiomeRewardFacts(
     pendingSpellDrop: Object.values(branch?.pendingHermesShrineDeliveries ?? {}).some(
       (delivery) => delivery.reward.offer.rewardType === 'SpellDrop',
     ),
+    allSpellInvested: branch?.hexProgress.talentDropsClosed === true,
     fail: (detail) => {
       throw new BiomeRewardSimulationContractError(detail);
     },

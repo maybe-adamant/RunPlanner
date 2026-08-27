@@ -13,12 +13,14 @@ import {
   hermesShrineDeliveryEntryKey,
   parseHermesShrineDeliveryEntryKey,
   semanticAddressKey,
+  createDefaultAuthoredHexTree,
 } from '@run-planner/engine/authored-project';
 import {
   hermesShrineCandidateForProjectEvaluationAssembly,
   simulateProject,
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
+import type { RewardHistoryState, RewardKernelFacts } from '@run-planner/engine/reward-kernel';
 import {
   loadSurfaceNOProject,
   loadSurfaceNOPProject,
@@ -41,7 +43,10 @@ import { prepareRoomEncounterPhases } from '../../src/simulation/encounters/prep
 import { materializeBiomePrefix } from '../../src/simulation/materialization';
 import { evaluateBiomeRewards } from '../../src/simulation/rewards/biome';
 import { attachTraitHistory, foldTraitHistoryEvents } from '../../src/simulation/traits';
-import { initializeTestRewardBranches } from '../support/arcana-fear';
+import { installHexTree, settlePathScreen } from '../../src/simulation/hex-progress';
+import { settleOwnedAcquisitionSite } from '../../src/simulation/rewards/acquisition-settlement';
+import { initializeRewardBranches } from '../../src/simulation/rewards/processing';
+import { createTestArcanaFearState, initializeTestRewardBranches } from '../support/arcana-fear';
 
 function branchesWithTravelDeal() {
   const traits = foldTraitHistoryEvents(catalog, [
@@ -63,6 +68,37 @@ function branchesWithTravelDeal() {
       traitHistory: traits,
     }),
   );
+}
+
+function rewardFacts(history: RewardHistoryState): RewardKernelFacts {
+  return {
+    requirements: {
+      counters: {
+        biomeDepthCache: 4,
+        biomeEncounterDepth: 2,
+        encounterDepth: 7,
+        enteredBiomes: 1,
+        upgradableTraitCount: 0,
+      },
+      records: {
+        biomeUseRecord: history.biomeUseRecord,
+        lootTypeHistory: history.lootTypeHistory,
+        roomsEntered: {},
+        useRecord: history.useRecord,
+      },
+      currentRoomShopOptionNames: new Set(),
+      currentRoomRewardType: undefined,
+      currentRoomStructuralTags: [],
+      rewardLookups: {},
+      runDepthCache: 8,
+      lastEventRunDepthCaches: {},
+      recentEncounterEnvelopeSlots: [],
+      offeredExitCount: 3,
+      currentBatchRoomGameNames: [],
+      clockwork: undefined,
+      flags: { allSpellInvested: false, pendingSpellDrop: false },
+    },
+  };
 }
 
 const complete = (
@@ -772,6 +808,50 @@ describe('Hermes Shrine Spell reservation lifecycle input', () => {
 });
 
 describe('Hermes Shrine pickup settlement', () => {
+  it('settles a committed delayed Talent Drop after closure without reopening the Hex tree', () => {
+    const sourceHost = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
+    const deliveryHost = createOccurrenceAddress(oBiome, oOccurrenceIds.combat01);
+    const entryKey = hermesShrineDeliveryEntryKey(sourceHost, 'initial:secondRight');
+    const site = createAcquisitionSiteAddress(deliveryHost, 'hermesShrineDelivery');
+    let closed = installHexTree(
+      catalog,
+      initializeRewardBranches(
+        undefined,
+        createTestArcanaFearState(),
+        catalog,
+        'ForceZeusBoonKeepsake',
+      )[0]!,
+      'SpellPolymorphTrait',
+      createDefaultAuthoredHexTree(catalog, 'SpellPolymorphTrait', 'Lung'),
+    );
+    for (let index = 0; index < 6; index += 1) closed = settlePathScreen(catalog, closed, 3);
+    expect(closed.hexProgress).toMatchObject({ investedPathPoints: 18, talentDropsClosed: true });
+
+    const delivery = settleOwnedAcquisitionSite(
+      catalog,
+      [closed],
+      {
+        siteOwner: deliveryHost,
+        pointKey: 'hermesShrineDelivery',
+        entryKey,
+        historySequence: 9,
+        source: {
+          origin: createAcquisitionEntryAddress(site, entryKey),
+          offer: { rewardType: 'TalentDrop' },
+          producerLifecycleKey: 'HermesShrineDelivery',
+          instanceProvenance: 'free',
+        },
+      },
+      rewardFacts,
+      new Map(),
+    );
+    expect(delivery.branches[0]?.hexProgress).toMatchObject({
+      investedPathPoints: 18,
+      bankedPathPoints: 2,
+      talentDropsClosed: true,
+    });
+  });
+
   it('settles a rushed forced P Postboss Shrine pickup at the configured route tail', () => {
     const host = createOccurrenceAddress(pBiome, createOccurrenceId('completion:P:postboss'));
     let project = loadSurfaceNOPProject();

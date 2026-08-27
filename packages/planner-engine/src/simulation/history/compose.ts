@@ -560,6 +560,7 @@ function composeBiomeHistoryResult(
   validateEncounterResolution = false,
   figLeafState?: FigLeafLifecycleState,
   pendingSpellDrop = false,
+  allSpellInvested = false,
 ): EncounterValidatedBiomeHistory {
   let completionPredecessor: CanonicalAuthoredRoom | undefined;
   const options = {
@@ -570,6 +571,7 @@ function composeBiomeHistoryResult(
     ...(seed === undefined ? {} : { seed }),
     ...(figLeafState === undefined ? {} : { figLeafState }),
     pendingSpellDrop,
+    allSpellInvested,
     automaticRooms: snapshot.automaticRooms,
     transitionEffects:
       catalog.biomeLayouts.byKey[snapshot.biomeKey]?.completion.transitionEffects ?? [],
@@ -656,8 +658,17 @@ export function composeBiomeHistoryWithEncounterValidation(
   seed?: HistoryStateView,
   figLeafState?: FigLeafLifecycleState,
   pendingSpellDrop = false,
+  allSpellInvested = false,
 ): EncounterValidatedBiomeHistory {
-  return composeBiomeHistoryResult(catalog, snapshot, seed, true, figLeafState, pendingSpellDrop);
+  return composeBiomeHistoryResult(
+    catalog,
+    snapshot,
+    seed,
+    true,
+    figLeafState,
+    pendingSpellDrop,
+    allSpellInvested,
+  );
 }
 
 function composeBiomeHistoryPrefixResult(
@@ -667,6 +678,7 @@ function composeBiomeHistoryPrefixResult(
   validateEncounterResolution = false,
   figLeafState?: FigLeafLifecycleState,
   pendingSpellDrop = false,
+  allSpellInvested = false,
 ): EncounterValidatedPrefixHistory | null {
   const entry = snapshot.entryRoom;
   if (entry === undefined) return null;
@@ -677,6 +689,7 @@ function composeBiomeHistoryPrefixResult(
     ...(seed === undefined ? {} : { seed }),
     ...(figLeafState === undefined ? {} : { figLeafState }),
     pendingSpellDrop,
+    allSpellInvested,
     compose(writer: HistorySegmentWriter): void {
       appendStandaloneRoomCreated(writer, entry, 'biomeEntry');
       let current: CanonicalLifecycleRoom = entry;
@@ -815,6 +828,7 @@ export function composeBiomeHistoryPrefixWithEncounterValidation(
   seed?: HistoryStateView,
   figLeafState?: FigLeafLifecycleState,
   pendingSpellDrop = false,
+  allSpellInvested = false,
 ): EncounterValidatedPrefixHistory | null {
   return composeBiomeHistoryPrefixResult(
     catalog,
@@ -823,5 +837,6 @@ export function composeBiomeHistoryPrefixWithEncounterValidation(
     true,
     figLeafState,
     pendingSpellDrop,
+    allSpellInvested,
   );
 }

@@ -327,6 +327,8 @@ export function normalizeRequirement(
           ),
         ),
       });
+    case 'settledSpellDrop':
+      return Object.freeze({ kind: 'settledSpellDrop' as const });
     case 'anyEquippedTrait':
     case 'notEquippedTrait': {
       if (!Array.isArray(requirement.traitKeys)) {

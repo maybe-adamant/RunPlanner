@@ -17,6 +17,7 @@ import {
 } from './candidate-artifacts';
 import { attestFigLeafBranchState, attestGorgonBranchState } from './keepsakes';
 import { attestPendingHermesSpellDrop } from './hermes-shrine';
+import { attestTalentDropsClosed } from './hex-progress';
 import { isAcquisitionAuthorshipMissingFinding } from './model';
 import {
   composeBiomeHistoryWithEncounterValidation,
@@ -434,6 +435,7 @@ export function evaluateBiomeAssembly(
   const startingFigLeaf = startingKeepsake?.effect;
   let figLeafState: FigLeafLifecycleState | undefined;
   let pendingSpellDrop: boolean;
+  let allSpellInvested: boolean;
   try {
     figLeafState =
       context.seed === undefined
@@ -453,6 +455,8 @@ export function evaluateBiomeAssembly(
       context.seed === undefined
         ? false
         : attestPendingHermesSpellDrop(context.seed.rewardBranches);
+    allSpellInvested =
+      context.seed === undefined ? false : attestTalentDropsClosed(context.seed.rewardBranches);
   } catch (error) {
     throw new ProjectSimulationContractError(
       error instanceof Error ? error.message : 'Fig Leaf branch frontier is divergent',
@@ -464,6 +468,7 @@ export function evaluateBiomeAssembly(
     seed,
     figLeafState,
     pendingSpellDrop,
+    allSpellInvested,
   );
   if (composed.kind !== 'complete') {
     const progressive = evaluateProgressiveBiomeAssembly(catalog, origin, plan, context);

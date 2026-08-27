@@ -19,6 +19,8 @@ export interface TraitOfferContext {
   readonly stackBoostsSuppressed?: boolean;
   /** Exact chronological keepsake held at this acquisition frontier. */
   readonly currentKeepsakeKey?: string;
+  /** Canonical reward history fact: at least one Spell Drop has settled. */
+  readonly settledSpellDrop?: boolean;
   /** Derived, offer-local numeric rarity facts for fresh Olympian/Hermes rolls. */
   readonly boonRarityFacts?: BoonRarityFacts;
   readonly boonRarityRoomOverride?: import('../catalog-schema').BoonRarityOverride;

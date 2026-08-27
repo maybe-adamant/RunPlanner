@@ -1,7 +1,11 @@
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import type { RequirementExpression } from '@run-planner/engine/requirements';
 import type { DecisionRewardBagCount, RunStateSnapshot } from '@run-planner/engine/simulation';
-import { artificerStatus } from '@run-planner/engine/simulation';
+import {
+  artificerStatus,
+  hexBaseCapacity,
+  hexEffectiveCapacity,
+} from '@run-planner/engine/simulation';
 
 import type {
   WorkspaceRunStateBagCondition,
@@ -162,6 +166,8 @@ export function presentRunState(
   );
   const artificer = artificerStatus(catalog, snapshot.arcanaFear);
   const equippedSpell = snapshot.traits.equippedSlots.Spell;
+  const hexBase = hexBaseCapacity(catalog, snapshot.hexProgress);
+  const hexEffective = hexEffectiveCapacity(catalog, snapshot.hexProgress);
   return Object.freeze({
     hexProgress: Object.freeze({
       ...(equippedSpell === undefined
@@ -170,6 +176,23 @@ export function presentRunState(
             baseSpellLabel:
               catalog.traits.byKey[equippedSpell.traitKey]?.label ?? equippedSpell.traitKey,
           }),
+      ...(snapshot.hexProgress.spellTraitKey === undefined ||
+      snapshot.hexProgress.tree === undefined
+        ? {}
+        : {
+            layoutLabel:
+              catalog.hexes.byKey[snapshot.hexProgress.spellTraitKey]?.layouts.byKey[
+                snapshot.hexProgress.tree.layoutKey
+              ]?.label ?? snapshot.hexProgress.tree.layoutKey,
+          }),
+      ...(hexBase === undefined
+        ? {}
+        : {
+            baseCapacity: hexBase,
+            ...(hexEffective === undefined ? {} : { effectiveCapacity: hexEffective }),
+          }),
+      godSentAdded: snapshot.hexProgress.godSentAdded === true,
+      talentDropsClosed: snapshot.hexProgress.talentDropsClosed === true,
       bankedPathPoints: snapshot.hexProgress.bankedPathPoints,
       investedPathPoints: snapshot.hexProgress.investedPathPoints,
     }),

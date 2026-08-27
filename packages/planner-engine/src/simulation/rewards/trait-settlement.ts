@@ -64,7 +64,7 @@ import {
 } from '../keepsakes';
 import type { RewardBranchState } from './branch-primitives';
 import type { TraitOfferOptionLevelResolution } from '../trait-offer-levels';
-import { bankPathPoints } from '../hex-progress';
+import { bankPathPoints, installHexTree, maybeAddGodSent } from '../hex-progress';
 import { addRewardFinding } from './findings';
 
 export interface ReachedTraitChildCheckpoint {
@@ -154,6 +154,7 @@ function applyTraitOfferForAcquisitionInternal(
   const before = branch.traitHistory ?? createTraitHistoryState();
   const sourceTraitContext = Object.freeze({
     ...(reward.traitContext ?? {}),
+    settledSpellDrop: (branch.history.useRecord.SpellDrop ?? 0) > 0,
     ...(reward.producerLifecycleKey === 'EchoLastReward' || role === 'echoLastRunSelection'
       ? { stackBoostsSuppressed: true as const }
       : {}),
@@ -706,13 +707,27 @@ function applyTraitOfferForAcquisitionInternal(
         grants,
       );
   }
-  const settledBeforeChaos = Object.freeze({
+  let settledBeforeChaos: RewardBranchState = Object.freeze({
     ...effectiveBranch,
     history: attachTraitHistory(branch.history, traitHistory),
     traitHistory,
     traitEvaluations,
     keepsakes,
   });
+  if (
+    effectiveAuthored.kind === 'traits' &&
+    effectiveAuthored.giverKey === 'SpellDrop' &&
+    selectedForIdentity !== undefined &&
+    effectiveAuthored.hexTree !== undefined
+  ) {
+    settledBeforeChaos = installHexTree(
+      catalog,
+      settledBeforeChaos,
+      selectedForIdentity.traitKey,
+      effectiveAuthored.hexTree,
+    );
+  }
+  settledBeforeChaos = maybeAddGodSent(catalog, settledBeforeChaos);
   const moonBeamAdvanced =
     selectedDisposition?.kind === 'advanceCurrentKeepsake' &&
     catalog.keepsakes.byKey[effectiveBranch.keepsakes.currentKey]?.effect?.kind === 'moonBeam';

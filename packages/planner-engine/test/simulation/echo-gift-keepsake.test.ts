@@ -16,6 +16,7 @@ import {
   createProjectHistory,
   createRouteStartKeepsakeSelectionAddress,
   createTraitOfferAddress,
+  createDefaultAuthoredHexTree,
   decodeProjectDocument,
   encodeProjectDocument,
   redoProjectHistory,
@@ -61,6 +62,7 @@ import {
   type TraitHistoryState,
 } from '../../src/simulation/traits';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
+import { installHexTree } from '../../src/simulation/hex-progress';
 
 const giftTraitKey = 'EchoRepeatKeepsakeBoon';
 const giftIdentity = 'echo-gift-1';
@@ -230,6 +232,19 @@ function saturatedGiftHammerHistory(): TraitHistoryState {
 }
 
 describe('Echo Gift Gift Gift', () => {
+  it('adds the linked God Sent pair once when Gift replays its captured Olympian keepsake', () => {
+    const beforeReplay = installHexTree(
+      catalog,
+      branchWithGift('ForceZeusBoonKeepsake', 'ManaOverTimeRefundKeepsake', {
+        keepsakes: retainedKeepsakeState('ManaOverTimeRefundKeepsake'),
+      }),
+      'SpellPolymorphTrait',
+      createDefaultAuthoredHexTree(catalog, 'SpellPolymorphTrait'),
+    );
+    expect(beforeReplay.hexProgress.godSentAdded).toBe(false);
+    const afterReplay = replayBiome([beforeReplay]).simulation.branches[0]!;
+    expect(afterReplay.hexProgress.godSentAdded).toBe(true);
+  });
   it('owns the exact four source exclusions while every other keepsake remains capturable', () => {
     const excluded = new Set([
       'AthenaEncounterKeepsake',

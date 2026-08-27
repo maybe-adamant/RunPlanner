@@ -4,12 +4,14 @@ import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
   createBiomeAddress,
+  createIncomingRewardAddress,
   createKeepsakeEquipResultAddress,
   createOccurrenceAddress,
   createOccurrenceId,
   createPostbossKeepsakeSelectionAddress,
   createProjectDocument,
   createRoomActionAddress,
+  createTraitOfferAddress,
   roomActionKey,
   createRouteStartKeepsakeSelectionAddress,
   type KeepsakeSelectionAddress,
@@ -27,7 +29,14 @@ import {
   createCompleteFGProject,
   createGoldenFGHProject,
 } from '@run-planner/test-fixtures/underworld';
-import { loadSurfaceNOPQProject, pBiome, pOccurrenceId } from '@run-planner/test-fixtures/surface';
+import {
+  loadSurfaceNOProject,
+  loadSurfaceNOPQProject,
+  nBiome,
+  nOccurrenceId,
+  pBiome,
+  pOccurrenceId,
+} from '@run-planner/test-fixtures/surface';
 
 let representativeNOPQProject: ReturnType<typeof loadSurfaceNOPQProject>;
 
@@ -81,6 +90,54 @@ function keepsakesAfter(project: ReturnType<typeof createGoldenFGHProject>, biom
 }
 
 describe('keepsake selection candidates', () => {
+  it('adds and retains the linked God Sent pair when the real later rack equips its Olympian keepsake', () => {
+    const spellReward = createIncomingRewardAddress(nBiome, nOccurrenceId('combat09'));
+    let project = applyProjectCommand(loadSurfaceNOProject(), catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(spellReward, 'self'),
+      value: {
+        kind: 'traits',
+        giverKey: 'SpellDrop',
+        options: [
+          { traitKey: 'SpellPolymorphTrait' },
+          { traitKey: 'SpellMeteorTrait' },
+          { traitKey: 'SpellTransformTrait' },
+        ],
+        selectedOptionKey: 'option1',
+        rarificationActions: [],
+      },
+    });
+    const nPostboss = createPostbossKeepsakeSelectionAddress(
+      createOccurrenceAddress(nBiome, createOccurrenceId('completion:N:postboss')),
+    );
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplacePostbossKeepsake',
+      selection: nPostboss,
+      value: { kind: 'replace', keepsakeKey: 'ForceZeusBoonKeepsake' },
+    });
+    const route = simulateProjectAssembly(catalog, project).evaluation.routes.find(
+      (candidate) => candidate.routeKey === 'Surface',
+    );
+    const n = route?.biomes.find((biome) => biome.biomeKey === 'N');
+    const o = route?.biomes.find((biome) => biome.biomeKey === 'O');
+    if (n?.authoring !== 'complete' || o?.authoring !== 'complete') {
+      throw new Error('expected the N rack and following O biome to be reached');
+    }
+    expect(n.rewards.branches).toHaveLength(1);
+    expect(n.rewards.branches[0]?.hexProgress).toMatchObject({
+      spellTraitKey: 'SpellPolymorphTrait',
+      godSentAdded: true,
+    });
+    expect(o.rewards.branches[0]?.hexProgress).toMatchObject({
+      spellTraitKey: 'SpellPolymorphTrait',
+      godSentAdded: true,
+    });
+    expect(n.rewards.branches[0]?.keepsakes.history).toContainEqual({
+      key: 'ForceZeusBoonKeepsake',
+      kind: 'replace',
+    });
+  });
+
   it('publishes the complete rank-III inventory at route start without inheriting baseline Fated restrictions', () => {
     const project = createProjectDocument(catalog, {
       projectId: 'keepsake-start-domain',

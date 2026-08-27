@@ -1644,6 +1644,36 @@ describe('field NPC encounter requirements', () => {
     ).toMatchObject({ available: true });
   });
 
+  it('publishes Task Force only after a concrete earlier Spell Drop at the reached Athena frontier', () => {
+    const occurrenceId = pOccurrenceId('P_Combat10', 6, 1);
+    const athenaPhase = phase(pBiome, occurrenceId, 'Combat');
+    const athenaTrait = createTraitOfferAddress(athenaPhase, 'selection');
+    let afterSpell = authorLegalTraitOffers(
+      select(loadSurfaceNOPQProject(), athenaPhase, 'AthenaCombatP'),
+    );
+    expect(support(afterSpell, athenaPhase)?.candidateEncounterKeys).toContain('AthenaCombatP');
+    expect(
+      createPreparedProjectCandidateSession(
+        catalog,
+        simulateProjectAssembly(catalog, afterSpell),
+      ).evaluate({
+        kind: 'traitOffer',
+        trait: athenaTrait,
+        value: {
+          kind: 'traits',
+          giverKey: 'Athena',
+          options: [
+            { traitKey: 'OlympianSpellCountBoon', rarity: 'Common' },
+            { traitKey: 'InvulnerabilityDashBoon', rarity: 'Common' },
+            { traitKey: 'RetaliateInvulnerabilityBoon', rarity: 'Common' },
+          ],
+          selectedOptionKey: 'option1',
+          rarificationActions: [],
+        },
+      }),
+    ).toMatchObject({ kind: 'traitOffer', result: { supported: true, findings: [] } });
+  });
+
   it('marks only a valid fixed terminating Intro as a dormant Combat suffix', () => {
     const { preparation, room } = pCombatPreparationFixture();
     const fixedRoom = fixedTerminatingIntro(room);

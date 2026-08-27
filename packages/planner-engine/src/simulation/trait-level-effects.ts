@@ -177,6 +177,10 @@ export function checkRequirement(
       return requirement.requirements
         .map((child) => checkRequirement(catalog, child, trait, history, context))
         .find(Boolean);
+    case 'settledSpellDrop':
+      return context.settledSpellDrop === true
+        ? undefined
+        : { code: 'missingPrerequisite', detail: 'settledSpellDrop' };
     case 'anyEquippedTrait':
       return requirement.traitKeys.some((key) => history.equippedTraits[key] !== undefined)
         ? undefined

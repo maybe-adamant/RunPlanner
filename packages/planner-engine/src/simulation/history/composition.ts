@@ -48,6 +48,7 @@ interface EventBuilder {
   readonly seed?: HistoryStateView;
   readonly validateEncounterResolution: boolean;
   readonly pendingSpellDrop: boolean;
+  readonly allSpellInvested: boolean;
   readonly figLeafState?: {
     remainingUses: number;
     activatedThisBiome: boolean;
@@ -60,6 +61,7 @@ export interface HistorySegmentWriter {
   current(): HistoryStateView;
   readonly validatesEncounterResolution: boolean;
   readonly pendingSpellDrop: boolean;
+  readonly allSpellInvested: boolean;
   resolveFigLeafEncounterPhases(
     room: CanonicalLifecycleRoom,
     phases: readonly ResolvedEncounterPhase[],
@@ -151,6 +153,7 @@ interface BiomeHistoryEnvelopeOptions<
   readonly validateEncounterResolution?: boolean;
   readonly figLeafState?: FigLeafLifecycleState;
   readonly pendingSpellDrop?: boolean;
+  readonly allSpellInvested?: boolean;
   readonly automaticRooms: readonly CanonicalAuthoredRoom[];
   readonly transitionEffects: readonly BiomeTransitionCounterReset[];
   readonly composeEntry: (writer: HistorySegmentWriter) => Entry;
@@ -189,6 +192,7 @@ function segmentWriter(builder: EventBuilder): HistorySegmentWriter {
     },
     validatesEncounterResolution: builder.validateEncounterResolution,
     pendingSpellDrop: builder.pendingSpellDrop,
+    allSpellInvested: builder.allSpellInvested,
     resolveFigLeafEncounterPhases(
       _room: CanonicalLifecycleRoom,
       phases: readonly ResolvedEncounterPhase[],
@@ -280,7 +284,10 @@ export function appendRoomLifecycle(
           catalog,
           authoringRoom,
           projectRoomPreparationCheckpoint(beforeEncounterPreparation!),
-          { pendingSpellDrop: writer.pendingSpellDrop },
+          {
+            pendingSpellDrop: writer.pendingSpellDrop,
+            allSpellInvested: writer.allSpellInvested,
+          },
         )
       : undefined;
   const encounterPhases = encounterPreparation?.validPrefix ?? room.encounterPhases;
@@ -346,6 +353,7 @@ interface BiomeHistoryPrefixOptions {
   readonly validateEncounterResolution?: boolean;
   readonly figLeafState?: FigLeafLifecycleState;
   readonly pendingSpellDrop?: boolean;
+  readonly allSpellInvested?: boolean;
   readonly compose: (writer: HistorySegmentWriter) => void;
 }
 
@@ -357,6 +365,7 @@ function composeBiomeHistoryPrefixResult({
   validateEncounterResolution = false,
   figLeafState,
   pendingSpellDrop = false,
+  allSpellInvested = false,
   compose,
 }: BiomeHistoryPrefixOptions): EncounterValidatedPrefixHistory {
   const builder: EventBuilder = {
@@ -365,6 +374,7 @@ function composeBiomeHistoryPrefixResult({
     ...(seed === undefined ? {} : { seed }),
     validateEncounterResolution,
     pendingSpellDrop,
+    allSpellInvested,
     ...(figLeafState === undefined
       ? {}
       : {
@@ -484,6 +494,7 @@ function composeBiomeHistoryEnvelopeResult<
   validateEncounterResolution = false,
   figLeafState,
   pendingSpellDrop = false,
+  allSpellInvested = false,
   automaticRooms,
   transitionEffects,
   composeEntry,
@@ -502,6 +513,7 @@ function composeBiomeHistoryEnvelopeResult<
     ...(seed === undefined ? {} : { seed }),
     validateEncounterResolution,
     pendingSpellDrop,
+    allSpellInvested,
     ...(figLeafState === undefined
       ? {}
       : {

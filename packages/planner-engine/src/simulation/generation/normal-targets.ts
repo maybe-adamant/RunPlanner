@@ -220,6 +220,7 @@ function projectRoomGenerationRequirementContext(
   enteredBiomeCount: number,
   rewardHistory?: RewardHistoryState,
   pendingSpellDrop = false,
+  allSpellInvested = false,
 ): RequirementEvaluationContext {
   const roomsEntered = countByGameName(view.ledgers.roomAppearances);
   // Shrine inventory is a pre-outgoing room fact, but it deliberately never
@@ -272,7 +273,7 @@ function projectRoomGenerationRequirementContext(
           maxNonGoalRewards: maxNonGoalRewards!,
         }
       : undefined,
-    flags: Object.freeze({ allSpellInvested: false, pendingSpellDrop }),
+    flags: Object.freeze({ allSpellInvested, pendingSpellDrop }),
   });
   const shrine = source.hermesShrine;
   const shrineAssessment =
@@ -722,6 +723,7 @@ function sameRecord(
 interface TargetRewardRequirementFacts {
   readonly history: RewardHistoryState;
   readonly pendingSpellDrop: boolean;
+  readonly allSpellInvested: boolean;
 }
 
 function targetRewardHistories(
@@ -734,9 +736,12 @@ function targetRewardHistories(
       continue;
     }
     const firstPendingSpellDrop = checkpoint.pendingSpellDrops[0];
+    const firstAllSpellInvested = checkpoint.allSpellInvested[0];
     if (
       firstPendingSpellDrop === undefined ||
+      firstAllSpellInvested === undefined ||
       checkpoint.pendingSpellDrops.length !== checkpoint.histories.length ||
+      checkpoint.allSpellInvested.length !== checkpoint.histories.length ||
       checkpoint.histories.some(
         (history) =>
           !sameRecord(history.useRecord, first.useRecord) ||
@@ -744,7 +749,8 @@ function targetRewardHistories(
           !sameRecord(history.lootTypeHistory, first.lootTypeHistory) ||
           history.traitFacts.upgradableTraitCount !== first.traitFacts.upgradableTraitCount,
       ) ||
-      checkpoint.pendingSpellDrops.some((pending) => pending !== firstPendingSpellDrop)
+      checkpoint.pendingSpellDrops.some((pending) => pending !== firstPendingSpellDrop) ||
+      checkpoint.allSpellInvested.some((closed) => closed !== firstAllSpellInvested)
     ) {
       throw new BiomeRoomGenerationContractError(
         `target ${semanticAddressKey(checkpoint.origin)} has divergent reward-history eligibility facts`,
@@ -752,7 +758,11 @@ function targetRewardHistories(
     }
     result.set(
       semanticAddressKey(checkpoint.origin),
-      Object.freeze({ history: first, pendingSpellDrop: firstPendingSpellDrop }),
+      Object.freeze({
+        history: first,
+        pendingSpellDrop: firstPendingSpellDrop,
+        allSpellInvested: firstAllSpellInvested,
+      }),
     );
   }
   return result;

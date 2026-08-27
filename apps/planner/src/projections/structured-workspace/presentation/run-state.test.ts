@@ -1,6 +1,7 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   createBiomeAddress,
+  createDefaultAuthoredHexTree,
   createExitDecisionAddress,
 } from '@run-planner/engine/authored-project';
 import { describe, expect, it } from 'vitest';
@@ -172,7 +173,14 @@ describe('Run State presentation', () => {
         },
       },
       rewardPriorities: ['Boon', 'Boon'],
-      hexProgress: { bankedPathPoints: 2, investedPathPoints: 5 },
+      hexProgress: {
+        spellTraitKey: 'SpellMoonBeamTrait',
+        tree: createDefaultAuthoredHexTree(catalog, 'SpellMoonBeamTrait', 'Maze'),
+        godSentAdded: true,
+        talentDropsClosed: false,
+        bankedPathPoints: 2,
+        investedPathPoints: 5,
+      },
       forfeitStatus: 'consumed',
       bags: [
         {
@@ -199,6 +207,11 @@ describe('Run State presentation', () => {
     expect(state.keepsakes.pendingRewardPriorities).toEqual(['Boon', 'Boon']);
     expect(state.hexProgress).toEqual({
       baseSpellLabel: 'Sky Fall',
+      layoutLabel: 'Maze',
+      baseCapacity: 22,
+      effectiveCapacity: 24,
+      godSentAdded: true,
+      talentDropsClosed: false,
       bankedPathPoints: 2,
       investedPathPoints: 5,
     });

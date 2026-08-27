@@ -97,22 +97,7 @@ export const athenaTraits = [
     label: 'Task Force',
     freshOfferRarities: ['Common', 'Rare', 'Epic'],
     equippedRarities: ['Common', 'Rare', 'Epic', 'Heroic'],
-    offerRequirements: [
-      {
-        kind: 'anyEquippedTrait',
-        traitKeys: [
-          'SpellPolymorphTrait',
-          'SpellMeteorTrait',
-          'SpellTransformTrait',
-          'SpellLeapTrait',
-          'SpellLaserTrait',
-          'SpellSummonTrait',
-          'SpellTimeSlowTrait',
-          'SpellPotionTrait',
-          'SpellMoonBeamTrait',
-        ],
-      },
-    ],
+    offerRequirements: [{ kind: 'settledSpellDrop' }],
     runtimeOfferRequirement: 'equippedOlympianSpellTalent',
     runtimeOfferFallbackTraitKeys: [
       'InvulnerabilityDashBoon',

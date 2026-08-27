@@ -4,9 +4,8 @@ export interface AuthoredProjectCheckpointManifestEntry {
   readonly route: 'Underworld' | 'Surface';
   readonly configuredBiomePrefix: readonly string[];
   readonly scenario: string;
-  readonly schemaVersion: 64;
+  readonly schemaVersion: 65;
   readonly catalogVersion: string;
-  readonly sha256: string;
   readonly provenance: string;
 }
 
@@ -17,9 +16,8 @@ export const checkpointManifest = Object.freeze([
     route: 'Underworld',
     configuredBiomePrefix: ['F', 'G'],
     scenario: 'Canonical Underworld F/G route prefix',
-    schemaVersion: 64,
-    catalogVersion: '0.47.0-persephone-effective-levels',
-    sha256: 'c757cfc13007f6d96b1641ab999317d816239024e2e2d14e807f390724678fdd',
+    schemaVersion: 65,
+    catalogVersion: '0.48.0-hex-talent-layouts',
     provenance: 'saved canonical Underworld F/G checkpoint',
   },
   {
@@ -28,9 +26,8 @@ export const checkpointManifest = Object.freeze([
     route: 'Underworld',
     configuredBiomePrefix: ['F', 'G'],
     scenario: 'F Postboss Pool sells a stacked trait while earlier picks remain recorded',
-    schemaVersion: 64,
-    catalogVersion: '0.47.0-persephone-effective-levels',
-    sha256: '4defb166cbb60e4bc5edb243b4f4cb54dd39d1b2f2e58653f8ad3e0da095bab5',
+    schemaVersion: 65,
+    catalogVersion: '0.48.0-hex-talent-layouts',
     provenance: 'semantic-command recipe from canonical Underworld F/G checkpoint',
   },
   {
@@ -39,9 +36,8 @@ export const checkpointManifest = Object.freeze([
     route: 'Underworld',
     configuredBiomePrefix: ['F'],
     scenario: 'F forced Postboss Well with Travel Deal refill, Yarn, Hymn, and Extended purchases',
-    schemaVersion: 64,
-    catalogVersion: '0.47.0-persephone-effective-levels',
-    sha256: '81d44a7db8caff3f7b270eb18f6abd2621d324cf1eb135b666fece6aedf8eb8f',
+    schemaVersion: 65,
+    catalogVersion: '0.48.0-hex-talent-layouts',
     provenance: 'semantic-command recipe from canonical Underworld F/G checkpoint',
   },
   {
@@ -50,9 +46,8 @@ export const checkpointManifest = Object.freeze([
     route: 'Underworld',
     configuredBiomePrefix: ['F', 'G', 'H'],
     scenario: 'Canonical Underworld F/G/H route prefix',
-    schemaVersion: 64,
-    catalogVersion: '0.47.0-persephone-effective-levels',
-    sha256: 'bb6e2eea52bb4782b5820862873824ffc8fb1adb8c4990abde1975fbc9ab0dad',
+    schemaVersion: 65,
+    catalogVersion: '0.48.0-hex-talent-layouts',
     provenance: 'saved canonical Underworld F/G/H checkpoint',
   },
   {
@@ -61,9 +56,8 @@ export const checkpointManifest = Object.freeze([
     route: 'Underworld',
     configuredBiomePrefix: ['F', 'G', 'H', 'I'],
     scenario: 'Canonical Underworld F/G/H/I route prefix',
-    schemaVersion: 64,
-    catalogVersion: '0.47.0-persephone-effective-levels',
-    sha256: '24eca242aa758d70e7cb367ee626b74ca4a46ae162a3bdbfae3085d0f6f4bf36',
+    schemaVersion: 65,
+    catalogVersion: '0.48.0-hex-talent-layouts',
     provenance: 'saved canonical Underworld F/G/H/I checkpoint',
   },
   {
@@ -72,9 +66,8 @@ export const checkpointManifest = Object.freeze([
     route: 'Underworld',
     configuredBiomePrefix: ['F'],
     scenario: 'F Midshop Pom resolution frontier',
-    schemaVersion: 64,
-    catalogVersion: '0.47.0-persephone-effective-levels',
-    sha256: '109585c08d11fb75aa8ff96c053ee707a92d35b717e7f7bb474870bfba21b261',
+    schemaVersion: 65,
+    catalogVersion: '0.48.0-hex-talent-layouts',
     provenance: 'saved canonical editor/generated checkpoint',
   },
   {
@@ -83,9 +76,8 @@ export const checkpointManifest = Object.freeze([
     route: 'Surface',
     configuredBiomePrefix: ['N'],
     scenario: 'Canonical Surface N Hub route prefix',
-    schemaVersion: 64,
-    catalogVersion: '0.47.0-persephone-effective-levels',
-    sha256: 'e6b50b8c1e76398d23d0c83fd70160389aaf872180c94e1312c2fde4eabefc49',
+    schemaVersion: 65,
+    catalogVersion: '0.48.0-hex-talent-layouts',
     provenance: 'saved canonical editor/generated checkpoint',
   },
   {
@@ -94,9 +86,8 @@ export const checkpointManifest = Object.freeze([
     route: 'Surface',
     configuredBiomePrefix: ['N'],
     scenario: 'N selected Natural Selection with unresolved eight-target result',
-    schemaVersion: 64,
-    catalogVersion: '0.47.0-persephone-effective-levels',
-    sha256: '07d4bfb775766ff3b755b8051d4af5ef513c2386d567e5eb53f954469392ec60',
+    schemaVersion: 65,
+    catalogVersion: '0.48.0-hex-talent-layouts',
     provenance: 'semantic-command recipe from the canonical Surface N checkpoint',
   },
   {
@@ -105,9 +96,8 @@ export const checkpointManifest = Object.freeze([
     route: 'Surface',
     configuredBiomePrefix: ['N'],
     scenario: "N Queen's Ransom acquisition with two Zeus removals",
-    schemaVersion: 64,
-    catalogVersion: '0.47.0-persephone-effective-levels',
-    sha256: 'a8b798d903d4b50fb1074b046164769794e37374b25079c24cdc747e7f809062',
+    schemaVersion: 65,
+    catalogVersion: '0.48.0-hex-talent-layouts',
     provenance: 'semantic-command recipe from the canonical Surface N checkpoint',
   },
   {
@@ -116,9 +106,8 @@ export const checkpointManifest = Object.freeze([
     route: 'Surface',
     configuredBiomePrefix: ['N'],
     scenario: 'N Epic Steady Growth at its first unresolved main-room threshold',
-    schemaVersion: 64,
-    catalogVersion: '0.47.0-persephone-effective-levels',
-    sha256: '7cf6dc6a71d6926dfb261fae7d32d3d4722c191233cc2289b61496653c078d22',
+    schemaVersion: 65,
+    catalogVersion: '0.48.0-hex-talent-layouts',
     provenance: 'semantic-command recipe from the canonical Surface N checkpoint',
   },
   {
@@ -127,9 +116,8 @@ export const checkpointManifest = Object.freeze([
     route: 'Surface',
     configuredBiomePrefix: ['N'],
     scenario: 'N Quick Buck acquisition with one optional same-room Gold pickup',
-    schemaVersion: 64,
-    catalogVersion: '0.47.0-persephone-effective-levels',
-    sha256: '3cd2b036b0dc269edb829bb02e9a7378d28b2f729474eb3b5b29c40ef6a2ddf4',
+    schemaVersion: 65,
+    catalogVersion: '0.48.0-hex-talent-layouts',
     provenance: 'semantic-command recipe from the canonical Surface N checkpoint',
   },
   {
@@ -138,9 +126,8 @@ export const checkpointManifest = Object.freeze([
     route: 'Surface',
     configuredBiomePrefix: ['N'],
     scenario: 'N Buried Treasure acquisition with six optional same-room pickups',
-    schemaVersion: 64,
-    catalogVersion: '0.47.0-persephone-effective-levels',
-    sha256: '9707fa280065e5dc16ca54442eb090a4ab87844f75f83732bec11aaffb605f0c',
+    schemaVersion: 65,
+    catalogVersion: '0.48.0-hex-talent-layouts',
     provenance: 'semantic-command recipe from the canonical Surface N checkpoint',
   },
   {
@@ -149,9 +136,8 @@ export const checkpointManifest = Object.freeze([
     route: 'Surface',
     configuredBiomePrefix: ['N'],
     scenario: 'N selected Mining, Spirit, and Seed successes including a side-room Spirit host',
-    schemaVersion: 64,
-    catalogVersion: '0.47.0-persephone-effective-levels',
-    sha256: '270ed19f4a22d4c7d898b10d96f857b61dc4529a6a7aa311acd3f16ad5562d83',
+    schemaVersion: 65,
+    catalogVersion: '0.48.0-hex-talent-layouts',
     provenance: 'semantic-command recipe from the canonical Surface N checkpoint',
   },
   {
@@ -160,9 +146,8 @@ export const checkpointManifest = Object.freeze([
     route: 'Surface',
     configuredBiomePrefix: ['N', 'O'],
     scenario: 'Canonical Surface N/O route prefix',
-    schemaVersion: 64,
-    catalogVersion: '0.47.0-persephone-effective-levels',
-    sha256: '00d9edefaf6e9fd3bfb3addf21ce92271b6004fe069d68ed0371787cfb5aa37b',
+    schemaVersion: 65,
+    catalogVersion: '0.48.0-hex-talent-layouts',
     provenance: 'saved canonical editor/generated checkpoint',
   },
   {
@@ -172,9 +157,8 @@ export const checkpointManifest = Object.freeze([
     configuredBiomePrefix: ['N', 'O'],
     scenario:
       'O ordinary Hermes Shrine rushes one offer and matures a delayed offer with the host reward',
-    schemaVersion: 64,
-    catalogVersion: '0.47.0-persephone-effective-levels',
-    sha256: 'cb8c47d7fe922a96deec903522c540581425885b221b5ca758018271e1f66cc1',
+    schemaVersion: 65,
+    catalogVersion: '0.48.0-hex-talent-layouts',
     provenance: 'semantic-command recipe from the canonical Surface N/O checkpoint',
   },
   {
@@ -183,9 +167,8 @@ export const checkpointManifest = Object.freeze([
     route: 'Surface',
     configuredBiomePrefix: ['N', 'O', 'P'],
     scenario: 'Canonical Surface N/O/P route prefix',
-    schemaVersion: 64,
-    catalogVersion: '0.47.0-persephone-effective-levels',
-    sha256: 'c09d6ecf42765d39e6ae4fcba27d65fa2dcd5fa3264eb751534cddb772e3fb1f',
+    schemaVersion: 65,
+    catalogVersion: '0.48.0-hex-talent-layouts',
     provenance: 'saved canonical editor/generated checkpoint',
   },
   {
@@ -194,9 +177,8 @@ export const checkpointManifest = Object.freeze([
     route: 'Surface',
     configuredBiomePrefix: ['N', 'O', 'P', 'Q'],
     scenario: 'Canonical Surface N/O/P/Q route prefix',
-    schemaVersion: 64,
-    catalogVersion: '0.47.0-persephone-effective-levels',
-    sha256: 'daf9a4949efa853730a553968e473f44587ef4440ca31fb59b73f0c2a0da22c5',
+    schemaVersion: 65,
+    catalogVersion: '0.48.0-hex-talent-layouts',
     provenance: 'saved canonical editor/generated checkpoint',
   },
   {
@@ -205,9 +187,8 @@ export const checkpointManifest = Object.freeze([
     route: 'Surface',
     configuredBiomePrefix: ['N'],
     scenario: 'N entry frontier with unresolved terminal envelope',
-    schemaVersion: 64,
-    catalogVersion: '0.47.0-persephone-effective-levels',
-    sha256: '13b835fd8f05c324bfc8965cdddcb2f79bc7da6aa9d4e6673cf56103e7e129bb',
+    schemaVersion: 65,
+    catalogVersion: '0.48.0-hex-talent-layouts',
     provenance: 'saved N entry frontier checkpoint',
   },
   {
@@ -216,9 +197,8 @@ export const checkpointManifest = Object.freeze([
     route: 'Surface',
     configuredBiomePrefix: ['N'],
     scenario: 'N entry frontier with trait-resolved terminal envelope',
-    schemaVersion: 64,
-    catalogVersion: '0.47.0-persephone-effective-levels',
-    sha256: '2a0f46e31d8ce98b914509180148077558edc9dc0008a60cd402151ccbee71b1',
+    schemaVersion: 65,
+    catalogVersion: '0.48.0-hex-talent-layouts',
     provenance: 'saved N entry frontier checkpoint with resolved traits',
   },
   {
@@ -227,9 +207,8 @@ export const checkpointManifest = Object.freeze([
     route: 'Surface',
     configuredBiomePrefix: ['N'],
     scenario: 'N complete Hub frontier before Preboss handoff',
-    schemaVersion: 64,
-    catalogVersion: '0.47.0-persephone-effective-levels',
-    sha256: 'ca9f1a6b410114e637242e33aef9e22b4c8a410070fe80a635a432acb4b63905',
+    schemaVersion: 65,
+    catalogVersion: '0.48.0-hex-talent-layouts',
     provenance: 'saved normalized N complete Hub frontier checkpoint',
   },
   {
@@ -238,9 +217,8 @@ export const checkpointManifest = Object.freeze([
     route: 'Surface',
     configuredBiomePrefix: ['N'],
     scenario: 'N partial Hub visit-order frontier',
-    schemaVersion: 64,
-    catalogVersion: '0.47.0-persephone-effective-levels',
-    sha256: 'd745c136f22af624e38c00b1a0c82afe024a835acf006efdc733f481f08298dd',
+    schemaVersion: 65,
+    catalogVersion: '0.48.0-hex-talent-layouts',
     provenance: 'saved normalized N partial Hub frontier checkpoint',
   },
   {
@@ -249,9 +227,8 @@ export const checkpointManifest = Object.freeze([
     route: 'Surface',
     configuredBiomePrefix: ['N'],
     scenario: 'N Hub Story board with Story visit selected',
-    schemaVersion: 64,
-    catalogVersion: '0.47.0-persephone-effective-levels',
-    sha256: 'b8f930f27289d425feb5cfa83aeda7710fdffa07d06a2f70a12f1701bc8c9a6d',
+    schemaVersion: 65,
+    catalogVersion: '0.48.0-hex-talent-layouts',
     provenance: 'saved normalized N Story board checkpoint',
   },
   {
@@ -260,9 +237,8 @@ export const checkpointManifest = Object.freeze([
     route: 'Surface',
     configuredBiomePrefix: ['N'],
     scenario: 'N Hub invalid ten-open board with reward mutation',
-    schemaVersion: 64,
-    catalogVersion: '0.47.0-persephone-effective-levels',
-    sha256: 'd41b334c2176c19d8a09c24820099bec4a28e8ec6382d6fef6a147bff0b60bb1',
+    schemaVersion: 65,
+    catalogVersion: '0.48.0-hex-talent-layouts',
     provenance: 'saved N ten-open invalid checkpoint',
   },
   {
@@ -271,9 +247,8 @@ export const checkpointManifest = Object.freeze([
     route: 'Underworld',
     configuredBiomePrefix: ['F'],
     scenario: 'Selected natural Chaos room with unresolved TrialUpgrade child and ordinary return',
-    schemaVersion: 64,
-    catalogVersion: '0.47.0-persephone-effective-levels',
-    sha256: 'd6fae9c95297b414b04aa1729b5f2b32b2b1e788b429be2219de1c05f5944ac5',
+    schemaVersion: 65,
+    catalogVersion: '0.48.0-hex-talent-layouts',
     provenance: 'command-authored natural Chaos required-pickup frontier',
   },
   {
@@ -282,9 +257,8 @@ export const checkpointManifest = Object.freeze([
     route: 'Underworld',
     configuredBiomePrefix: ['F', 'G', 'H'],
     scenario: 'G-tail natural Chaos survives Time Piece Fields into Echo Reward Reward Reward',
-    schemaVersion: 64,
-    catalogVersion: '0.47.0-persephone-effective-levels',
-    sha256: 'bdb21f421cde048f03eb692709f6e697c000f45c218c34af6390de5e1942f3de',
+    schemaVersion: 65,
+    catalogVersion: '0.48.0-hex-talent-layouts',
     provenance: 'command-authored G Chaos, Time Piece Fields, and Echo replay checkpoint',
   },
   {
@@ -294,9 +268,8 @@ export const checkpointManifest = Object.freeze([
     configuredBiomePrefix: ['F', 'G', 'H', 'I'],
     scenario:
       'F accepted Nemesis trait trade with required Triple Gold and suppressed incoming reward',
-    schemaVersion: 64,
-    catalogVersion: '0.47.0-persephone-effective-levels',
-    sha256: '7739cc66957cdd5f58bc0dcd466dac2870ac2a1f94bc5b4479102267498f5a07',
+    schemaVersion: 65,
+    catalogVersion: '0.48.0-hex-talent-layouts',
     provenance: 'semantic-command recipe using the reached shared Nemesis trait candidate',
   },
   {
@@ -306,9 +279,8 @@ export const checkpointManifest = Object.freeze([
     configuredBiomePrefix: ['F', 'G', 'H'],
     scenario:
       'H physical-four Fields room with Passive Nemesis and three effective optional rewards',
-    schemaVersion: 64,
-    catalogVersion: '0.47.0-persephone-effective-levels',
-    sha256: '040dad05927bfdc2931e15a487530952fe7a7bbb133e3ca4c9e732fdf6c4eec7',
+    schemaVersion: 65,
+    catalogVersion: '0.48.0-hex-talent-layouts',
     provenance: 'semantic-command recipe with free result interleaved among Fields cage actions',
   },
   {
@@ -317,9 +289,8 @@ export const checkpointManifest = Object.freeze([
     route: 'Underworld',
     configuredBiomePrefix: ['F', 'G', 'H', 'I'],
     scenario: 'F accepted Nemesis Pom or Hammer trade with Sea Star generated acquisition child',
-    schemaVersion: 64,
-    catalogVersion: '0.47.0-persephone-effective-levels',
-    sha256: 'ce1a9f51ddda4750349518ce6d0cbaf1db213e17d1cc63da79cb1d6cdbbc4b5d',
+    schemaVersion: 65,
+    catalogVersion: '0.48.0-hex-talent-layouts',
     provenance: 'semantic-command recipe using a reached Pom/Hammer candidate and Sea Star child',
   },
 ] as const satisfies readonly AuthoredProjectCheckpointManifestEntry[]);

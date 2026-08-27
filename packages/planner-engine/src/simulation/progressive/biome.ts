@@ -43,6 +43,7 @@ import type { RewardProducerCandidateArtifacts } from '../rewards/producer-front
 import type { RoomLifecycleCandidateArtifacts } from '../rewards/lifecycle-artifacts';
 import { attestFigLeafBranchState, attestGorgonBranchState } from '../keepsakes';
 import { attestPendingHermesSpellDrop } from '../hermes-shrine';
+import { attestTalentDropsClosed } from '../hex-progress';
 import {
   compareLocatedFindings,
   encounterBlockChronology,
@@ -96,6 +97,10 @@ function pendingHermesSpellDropLifecycleState(context: ProgressiveBiomeContext):
   return context.seed === undefined
     ? false
     : attestPendingHermesSpellDrop(context.seed.rewardBranches);
+}
+
+function talentDropClosureLifecycleState(context: ProgressiveBiomeContext): boolean {
+  return context.seed === undefined ? false : attestTalentDropsClosed(context.seed.rewardBranches);
 }
 
 interface ProgressiveGenerationAssembly {
@@ -212,12 +217,14 @@ function products(
 ): ProgressiveProducts {
   const lifecycleFigLeafState = figLeafLifecycleState(catalog, context);
   const lifecyclePendingSpellDrop = pendingHermesSpellDropLifecycleState(context);
+  const lifecycleAllSpellInvested = talentDropClosureLifecycleState(context);
   const composed = composeBiomeHistoryPrefixWithEncounterValidation(
     catalog,
     prefix,
     context.seed?.history.afterTransition,
     lifecycleFigLeafState,
     lifecyclePendingSpellDrop,
+    lifecycleAllSpellInvested,
   );
   if (composed === null) {
     throw new Error(`${prefix.biomeKey} materialized prefix has no composable history`);
