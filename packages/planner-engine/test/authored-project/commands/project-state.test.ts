@@ -3,7 +3,9 @@ import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  applyProjectHistoryCommand,
   createProjectDocument,
+  createProjectHistory,
   createBiomeFieldAddress,
   createBiomeAddress,
   createOccurrenceId,
@@ -14,6 +16,8 @@ import {
   encodeProjectDocument,
   ProjectCommandContractError,
   ProjectDocumentContractError,
+  redoProjectHistory,
+  undoProjectHistory,
 } from '@run-planner/engine/authored-project';
 
 import { fBiome, fProject, iBiome, iProject } from '../support/configured-projects';
@@ -549,6 +553,53 @@ describe('authored-project project-state commands', () => {
         arcanaKeys: ['CastCount', 'ChanneledCast'],
       }),
     ).toBe(withWeapon);
+  });
+
+  it('installs, replaces, and undoes the complete Aspect of Selene Hex tree', () => {
+    const route = createRouteAddress('Underworld');
+    const selene = applyProjectCommand(fProject(), catalog, {
+      kind: 'ReplaceRouteLoadout',
+      route,
+      weaponKey: 'WeaponSuit',
+      aspectKey: 'SuitHexAspect',
+    });
+    const initialTree = selene.routes[0]!.loadout.aspectHexTree;
+    expect(initialTree).toEqual({
+      layoutKey: 'Lung',
+      rareTalentKeys: ['MoonBeamConsecutiveDamageTalent', 'MoonBeamDefenseTalent'],
+      epicTalentKeys: ['MoonBeamTargetTalent'],
+    });
+    const history = createProjectHistory(selene);
+    const changed = applyProjectHistoryCommand(history, catalog, {
+      kind: 'ReplaceAspectHexTree',
+      route,
+      value: {
+        layoutKey: 'Maze',
+        rareTalentKeys: [
+          'MoonBeamPrimaryTalent',
+          'MoonBeamConsecutiveDamageTalent',
+          'MoonBeamDefenseTalent',
+        ],
+        epicTalentKeys: ['MoonBeamTargetTalent', 'MoonBeamExBeamBonusTalent'],
+      },
+    });
+    expect(changed.present.routes[0]!.loadout.aspectHexTree?.layoutKey).toBe('Maze');
+    expect(undoProjectHistory(changed).present).toBe(history.present);
+    expect(redoProjectHistory(changed).present).toBe(changed.present);
+    const ordinary = applyProjectCommand(selene, catalog, {
+      kind: 'ReplaceRouteLoadout',
+      route,
+      weaponKey: 'WeaponSuit',
+      aspectKey: 'BaseSuitAspect',
+    });
+    expect(ordinary.routes[0]!.loadout).not.toHaveProperty('aspectHexTree');
+    expect(() =>
+      applyProjectCommand(ordinary, catalog, {
+        kind: 'ReplaceAspectHexTree',
+        route,
+        value: initialTree!,
+      }),
+    ).toThrow('supported only by Aspect of Selene');
   });
 
   it('derives automatic Arcana and cumulative Fear from the complete route loadout', () => {

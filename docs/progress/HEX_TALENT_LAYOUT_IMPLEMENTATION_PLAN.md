@@ -2,8 +2,7 @@
 
 ## Status
 
-- **State:** proposed for review; implementation must not begin until this plan
-  is committed as the delivery contract.
+- **State:** locked and in implementation.
 - **Grounded base:** `a0d7ccd9c80dbb2cabce815912d05db6dbc5d037`
 - **Intended schema/catalog boundary:** project schema `65`, catalog
   `0.48.0-hex-talent-layouts`.

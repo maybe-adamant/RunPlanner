@@ -237,7 +237,7 @@ describe('schema-51 Chaos TrialUpgrade authored child', () => {
     ).toEqual(['Legendary']);
   });
 
-  it('migrates schema-63 projects into the strict schema-64 decoder path', () => {
+  it('migrates schema-63 projects into the strict schema-65 decoder path', () => {
     const legacy = JSON.parse(JSON.stringify(naturalChaosRaw)) as {
       schemaVersion: number;
       catalogVersion: string;
@@ -245,8 +245,8 @@ describe('schema-51 Chaos TrialUpgrade authored child', () => {
     legacy.schemaVersion = 63;
     legacy.catalogVersion = '0.46.0-vow-forfeit-red-onion';
     const migrated = migrateProjectDocument(legacy).document;
-    expect(migrated.schemaVersion).toBe(64);
-    expect(migrated.catalogVersion).toBe('0.47.0-persephone-effective-levels');
+    expect(migrated.schemaVersion).toBe(65);
+    expect(migrated.catalogVersion).toBe('0.48.0-hex-talent-layouts');
     expect(() => decodeProjectDocument(migrated, catalog)).not.toThrow();
   });
 });

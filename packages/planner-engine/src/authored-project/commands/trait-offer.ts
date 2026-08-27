@@ -8,10 +8,12 @@ import {
   normalizeAllTogetherResult,
   normalizeAuthoredChaosTraitOffer,
   normalizeAuthoredConcaveStoneResult,
+  type TraitOptionKey,
   type AuthoredGorgonAthenaOffer,
   type AuthoredTraitOffer,
   type AuthoredTraitOfferTraits,
 } from '../traits';
+import { createDefaultAuthoredHexTree, normalizeAuthoredHexTree } from '../hex-tree';
 import {
   reconcileSelectedPickupProducerState,
   selectedPickupProducerForEntry,
@@ -51,6 +53,23 @@ function replaceTraitOfferValue(
   if (command.kind === 'ResetEncounterTraitOffer') return null;
   if (command.kind === 'ReplaceTraitOffer') return validateOffer(catalog, command.value, command);
   if (existing === null) failCommand(command, 'trait offer must be authored as one complete offer');
+  if (command.kind === 'ReplaceTraitSelection')
+    if (existing.kind === 'traits') {
+      const selected = existing.options[optionIndex(command.selectedOptionKey)];
+      const hexTree =
+        existing.giverKey === 'SpellDrop' && selected !== undefined
+          ? createDefaultAuthoredHexTree(catalog, selected.traitKey)
+          : undefined;
+      return validateOffer(
+        catalog,
+        Object.freeze({
+          ...existing,
+          selectedOptionKey: command.selectedOptionKey,
+          ...(hexTree === undefined ? {} : { hexTree }),
+        }),
+        command,
+      );
+    }
   if (command.kind === 'ReplaceTraitSelection')
     return Object.freeze({ ...existing, selectedOptionKey: command.selectedOptionKey });
   if (command.kind === 'ReplaceConcaveStoneResult') {
@@ -284,6 +303,29 @@ function validateOffer(
       }
     }
   }
+  const selectedOption = value.options[optionIndex(value.selectedOptionKey)];
+  const isSpell = giver.providerKind === 'spell';
+  const selectedHex =
+    selectedOption === undefined ? undefined : catalog.hexes.byKey[selectedOption.traitKey];
+  if (value.hexTree !== undefined && (!isSpell || selectedHex === undefined))
+    failCommand(command, 'Hex tree is allowed only on a selected declared Spell Drop Hex');
+  if (isSpell && selectedHex === undefined)
+    failCommand(
+      command,
+      `${selectedOption?.traitKey ?? value.selectedOptionKey} has no declared Hex tree`,
+    );
+  let canonicalHexTree: ReturnType<typeof normalizeAuthoredHexTree> | undefined;
+  if (isSpell && selectedOption !== undefined) {
+    try {
+      canonicalHexTree = normalizeAuthoredHexTree(
+        catalog,
+        selectedOption.traitKey,
+        value.hexTree ?? createDefaultAuthoredHexTree(catalog, selectedOption.traitKey),
+      );
+    } catch (error) {
+      failCommand(command, error instanceof Error ? error.message : 'invalid Hex tree');
+    }
+  }
   if (
     value.rarificationActions !== undefined &&
     (!Array.isArray(value.rarificationActions) ||
@@ -341,6 +383,7 @@ function validateOffer(
       }),
     ) as AuthoredTraitOfferTraits['options'],
     selectedOptionKey: value.selectedOptionKey,
+    ...(canonicalHexTree === undefined ? {} : { hexTree: canonicalHexTree }),
     rarificationActions: Object.freeze([...(value.rarificationActions ?? [])]),
     ...(value.rejectedOptionKey === undefined
       ? {}

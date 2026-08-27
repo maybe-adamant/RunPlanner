@@ -37,6 +37,7 @@ export function projectCommandAddress(
   switch (command.kind) {
     case 'ConfigureRoutePrefix':
     case 'ReplaceRouteLoadout':
+    case 'ReplaceAspectHexTree':
     case 'ReplaceManualArcanaSelection':
     case 'ReplaceFearVowRank':
       return command.route;

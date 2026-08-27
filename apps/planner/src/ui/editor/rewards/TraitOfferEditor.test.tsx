@@ -119,8 +119,13 @@ describe('trait offer editor entry and dialog', () => {
     const historyDepth = application.store.getState().projectWorkspace.history.past.length;
     const option2 = screen.getAllByRole('radio', { name: 'Selected' })[1];
     if (option2 === undefined) throw new Error('Spell option 2 selector is missing');
-    await userEvent.setup().click(option2);
-    await userEvent.setup().click(screen.getByRole('button', { name: 'Save trait offer' }));
+    const user = userEvent.setup();
+    await user.click(option2);
+    await user.click(screen.getByRole('button', { name: 'Hex talent layout' }));
+    await user.click(screen.getByRole('option', { name: 'Maze' }));
+    await user.click(screen.getByRole('button', { name: 'Rare Hex node 1' }));
+    await user.click(screen.getByRole('option', { name: 'Splendor' }));
+    await user.click(screen.getByRole('button', { name: 'Save trait offer' }));
     expect(application.store.getState().projectWorkspace.history.past).toHaveLength(
       historyDepth + 1,
     );
@@ -133,7 +138,13 @@ describe('trait offer editor entry and dialog', () => {
       changedOccurrence?.state.kind === 'counted' && changedOccurrence.state.reward !== null
         ? changedOccurrence.state.reward.traitOffersByAcquisitionRole?.self
         : undefined;
-    expect(changed).toMatchObject({ selectedOptionKey: 'option2' });
+    expect(changed).toMatchObject({
+      selectedOptionKey: 'option2',
+      hexTree: {
+        layoutKey: 'Maze',
+        rareTalentKeys: expect.arrayContaining(['TransformSpecialTalent']),
+      },
+    });
     cleanup();
     const changedWorkspace = application.selectStructuredWorkspace(application.store.getState());
     const changedInteraction = changedWorkspace.interactions.traitOffers.get(
@@ -155,7 +166,7 @@ describe('trait offer editor entry and dialog', () => {
     expect(changedLauncher.textContent).toContain(
       changedInteraction.traitLabel(changedSelected.traitKey),
     );
-    expect(changedLauncher.textContent).toContain('Half Moonglow · +1 Path of Stars');
+    expect(changedLauncher.textContent).toContain('Half Moonglow · +1 Path of Stars · Maze');
     application.store.dispatch(authoredProjectUndoRequested());
     const restoredOccurrence = application.store
       .getState()

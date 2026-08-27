@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import * as support from '@planner-test/support/structured-workspace/interaction-binding.test-support';
+import { createGoldenFGHProject } from '@run-planner/test-fixtures/underworld';
+import { optionIndex } from '@run-planner/engine/authored-project';
 import type {
   AuthoredTraitOffer,
   AuthoredTraitOfferTraits,
@@ -22,6 +24,7 @@ const {
   createEchoLastRewardAddress,
   createEncounterPhaseAddress,
   createIncomingRewardAddress,
+  createExitSelectionAddress,
   createNaturalSelectionResultAddress,
   createOccurrenceId,
   createRouteAddress,
@@ -45,6 +48,121 @@ const {
 } = support;
 
 describe('trait-offer-interactions', () => {
+  it('projects the selected Spell Hex tree with layout and identity exclusion', () => {
+    const occurrenceId = goldenFOccurrenceId(10, 2);
+    const reward = createIncomingRewardAddress(goldenFBiome, occurrenceId);
+    const project = applyProjectCommand(createGoldenFGHProject(), catalog, {
+      kind: 'SetExitSelection',
+      selection: createExitSelectionAddress(goldenFBiome, {
+        kind: 'occurrence',
+        occurrenceId: goldenFOccurrenceId(9, 1),
+      }),
+      value: { kind: 'normal', exitKey: 'exit2' },
+    });
+    let authored = project;
+    const trait = createTraitOfferAddress(reward, 'self');
+    authored = applyProjectCommand(authored, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait,
+      value: {
+        kind: 'traits',
+        giverKey: 'SpellDrop',
+        options: [
+          { traitKey: 'SpellPolymorphTrait' },
+          { traitKey: 'SpellMeteorTrait' },
+          { traitKey: 'SpellTransformTrait' },
+        ],
+        selectedOptionKey: 'option2',
+        rarificationActions: [],
+      },
+    });
+    const { interactions } = bind(authored, 'Underworld', 'F');
+    const interaction = [...interactions.traitOffers.values()].find(
+      (candidate) => candidate.giver.providerKind === 'spell' && candidate.value?.kind === 'traits',
+    );
+    if (interaction === undefined || interaction.value?.kind !== 'traits')
+      throw new Error('Spell Hex interaction is missing');
+    const optionDomain = interaction.optionDomain(
+      interaction.value,
+      interaction.value.selectedOptionKey,
+    );
+    const hex = optionDomain.hexTree;
+    if (hex === undefined) throw new Error('selected Spell Hex editor is missing');
+    const declaration =
+      catalog.hexes.byKey[
+        interaction.value.options[optionIndex(interaction.value.selectedOptionKey)]!.traitKey
+      ];
+    if (declaration === undefined) throw new Error('selected Spell Hex declaration is missing');
+    const domain = hex.forOffer(interaction.value).load();
+    if (domain === undefined) throw new Error('selected Spell Hex domain is missing');
+    expect(domain.layoutPicker.sections.flatMap((section) => section.items)).toHaveLength(4);
+    expect(domain.godSent.providerKey).toBeDefined();
+    const selectedRare = domain.value.rareTalentKeys[0]!;
+    expect(domain.rarePickerFor(domain.value.rareTalentKeys, selectedRare).selected?.value).toBe(
+      selectedRare,
+    );
+    expect(
+      domain
+        .rarePickerFor(domain.value.rareTalentKeys, domain.value.rareTalentKeys[1])
+        .sections.flatMap((section) => section.items)
+        .find((item) => item.value === selectedRare)?.disabled,
+    ).toBe(true);
+
+    const expectedLayouts = [
+      ['Lung', 2, 1],
+      ['Pyramid', 3, 1],
+      ['Maze', 3, 2],
+      ['Nacelle', 3, 2],
+    ] as const;
+    for (const [layoutKey, rareCount, epicCount] of expectedLayouts) {
+      const transitioned = hex.transitionFor(interaction.value, layoutKey);
+      expect(transitioned.rareTalentKeys).toHaveLength(rareCount);
+      expect(transitioned.epicTalentKeys).toHaveLength(epicCount);
+      const transitionedDomain = hex
+        .forOffer({ ...interaction.value, hexTree: transitioned })
+        .load();
+      if (transitionedDomain === undefined) throw new Error(`${layoutKey} Hex domain is missing`);
+      expect(transitionedDomain.layoutPicker.selected?.value).toBe(layoutKey);
+      expect(
+        transitionedDomain
+          .rarePickerFor(transitioned.rareTalentKeys, transitioned.rareTalentKeys[0])
+          .sections.flatMap((section) => section.items),
+      ).toHaveLength(declaration.rareCandidates.values.length);
+      expect(
+        transitionedDomain
+          .epicPickerFor(transitioned.epicTalentKeys, transitioned.epicTalentKeys[0])
+          .sections.flatMap((section) => section.items),
+      ).toHaveLength(declaration.epicCandidates.values.length);
+      if (transitioned.rareTalentKeys.length > 1) {
+        expect(
+          transitionedDomain
+            .rarePickerFor(transitioned.rareTalentKeys, transitioned.rareTalentKeys[1])
+            .sections.flatMap((section) => section.items)
+            .find((item) => item.value === transitioned.rareTalentKeys[0])?.disabled,
+        ).toBe(true);
+      }
+      if (transitioned.epicTalentKeys.length > 1) {
+        expect(
+          transitionedDomain
+            .epicPickerFor(transitioned.epicTalentKeys, transitioned.epicTalentKeys[1])
+            .sections.flatMap((section) => section.items)
+            .find((item) => item.value === transitioned.epicTalentKeys[0])?.disabled,
+        ).toBe(true);
+      }
+    }
+
+    const transitioned = hex.transitionFor(interaction.value, 'Maze');
+    const saved = applyProjectCommand(
+      authored,
+      catalog,
+      hex.intentFor(interaction.value, transitioned).command,
+    );
+    const reloaded = bind(saved, 'Underworld', 'F').interactions.traitOffers.get(interaction.key);
+    expect(reloaded?.value?.kind === 'traits' ? reloaded.value.hexTree?.layoutKey : undefined).toBe(
+      'Maze',
+    );
+  });
+
   it('binds the Gorgon child editor to author decisions only', () => {
     const phase = createEncounterPhaseAddress(
       pBiome,

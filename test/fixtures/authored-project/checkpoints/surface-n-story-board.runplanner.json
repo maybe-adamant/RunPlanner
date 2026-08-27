@@ -1,7 +1,7 @@
 {
-  "schemaVersion": 64,
+  "schemaVersion": 65,
   "projectId": "surface-1",
-  "catalogVersion": "0.47.0-persephone-effective-levels",
+  "catalogVersion": "0.48.0-hex-talent-layouts",
   "routes": [
     {
       "routeKey": "Underworld",
@@ -433,7 +433,17 @@
                           }
                         ],
                         "selectedOptionKey": "option1",
-                        "rarificationActions": []
+                        "rarificationActions": [],
+                        "hexTree": {
+                          "layoutKey": "Lung",
+                          "rareTalentKeys": [
+                            "TransformCastDamageTalent",
+                            "TransformLastStandRechargeTalent"
+                          ],
+                          "epicTalentKeys": [
+                            "TransformPrimaryTalent"
+                          ]
+                        }
                       }
                     },
                     "dispositionByAcquisitionRole": {

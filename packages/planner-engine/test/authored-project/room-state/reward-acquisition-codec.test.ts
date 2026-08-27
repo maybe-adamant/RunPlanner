@@ -7,6 +7,27 @@ import { decodeRoomState } from '../../../src/authored-project/room-state/codec'
 import { createTestDefaultRoomState as createDefaultRoomState } from '../support/default-room-state';
 import { mutable, room, roomStatePath as path } from '../support/room-state-codec';
 
+type MutableHexTree = {
+  layoutKey: string;
+  rareTalentKeys: string[];
+  epicTalentKeys: string[];
+};
+
+type MutableTraitOffer = {
+  kind: string;
+  giverKey: string;
+  options: unknown[];
+  selectedOptionKey: string;
+  rarificationActions: unknown[];
+  hexTree?: MutableHexTree;
+};
+
+type MutableRewardWithHexOffer = {
+  offer: Record<string, unknown>;
+  dispositionByAcquisitionRole: Record<string, unknown>;
+  traitOffersByAcquisitionRole: Record<string, MutableTraitOffer | undefined>;
+};
+
 describe('reward acquisition decoder', () => {
   function boonRewardWithPersephoneBonus(bonus: unknown, include = true) {
     const option: Record<string, unknown> = {
@@ -66,6 +87,191 @@ describe('reward acquisition decoder', () => {
       ).toThrow(/persephoneLevelBonus/);
     },
   );
+
+  it('owns one complete tree at the resolved SpellDrop offer and rejects option-local trees', () => {
+    const spellOffer = {
+      offer: { rewardType: 'SpellDrop' },
+      dispositionByAcquisitionRole: { self: { kind: 'normal' } },
+      traitOffersByAcquisitionRole: {
+        self: {
+          kind: 'traits',
+          giverKey: 'SpellDrop',
+          options: [
+            { traitKey: 'SpellPolymorphTrait' },
+            { traitKey: 'SpellMeteorTrait' },
+            { traitKey: 'SpellTransformTrait' },
+          ],
+          selectedOptionKey: 'option1',
+          rarificationActions: [],
+          hexTree: {
+            layoutKey: 'Lung',
+            rareTalentKeys: ['PolymorphBossDamageTalent', 'PolymorphDeathExplodeTalent'],
+            epicTalentKeys: ['PolymorphSandwichTalent'],
+          },
+        },
+      },
+    };
+    const decoded = decodeRewardState(spellOffer, catalog, '$.reward', {
+      kind: 'producerLifecycle',
+      key: 'roomRewardPickup',
+    });
+    expect(decoded.traitOffersByAcquisitionRole.self).toMatchObject({
+      kind: 'traits',
+      hexTree: spellOffer.traitOffersByAcquisitionRole.self.hexTree,
+    });
+
+    const missing = JSON.parse(JSON.stringify(spellOffer)) as any;
+    delete missing.traitOffersByAcquisitionRole.self.hexTree;
+    expect(() =>
+      decodeRewardState(missing, catalog, '$.reward', {
+        kind: 'producerLifecycle',
+        key: 'roomRewardPickup',
+      }),
+    ).toThrow(/hexTree.*required/);
+
+    const dormant = JSON.parse(JSON.stringify(spellOffer)) as any;
+    dormant.traitOffersByAcquisitionRole.self.options[0].hexTree =
+      spellOffer.traitOffersByAcquisitionRole.self.hexTree;
+    expect(() =>
+      decodeRewardState(dormant, catalog, '$.reward', {
+        kind: 'producerLifecycle',
+        key: 'roomRewardPickup',
+      }),
+    ).toThrow(/options\.option1\.hexTree: is not a project document field/);
+  });
+
+  const invalidHexOfferMutations: readonly [string, (offer: MutableRewardWithHexOffer) => void][] =
+    [
+      [
+        'a Rare identity from another Hex pool',
+        (offer) => {
+          offer.traitOffersByAcquisitionRole.self!.hexTree!.rareTalentKeys = [
+            'MeteorVulnerabilityDecalTalent',
+            'PolymorphDeathExplodeTalent',
+          ];
+        },
+      ],
+      [
+        'a duplicate node identity',
+        (offer) => {
+          offer.traitOffersByAcquisitionRole.self!.hexTree!.rareTalentKeys = [
+            'PolymorphBossDamageTalent',
+            'PolymorphBossDamageTalent',
+          ];
+        },
+      ],
+      [
+        'the wrong Rare cardinality',
+        (offer) => {
+          offer.traitOffersByAcquisitionRole.self!.hexTree!.rareTalentKeys = [
+            'PolymorphBossDamageTalent',
+          ];
+        },
+      ],
+      [
+        'a tree for a different selected Spell',
+        (offer) => {
+          offer.traitOffersByAcquisitionRole.self!.options = [
+            { traitKey: 'SpellMeteorTrait' },
+            { traitKey: 'SpellTransformTrait' },
+            { traitKey: 'SpellLeapTrait' },
+          ];
+        },
+      ],
+      [
+        'a Hex tree leaked onto a non-spell offer',
+        (offer) => {
+          const spellTree = offer.traitOffersByAcquisitionRole.self!.hexTree;
+          offer.offer = {
+            rewardType: 'Boon',
+            payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+          };
+          offer.dispositionByAcquisitionRole = { source: { kind: 'normal' } };
+          offer.traitOffersByAcquisitionRole = {
+            source: {
+              kind: 'traits',
+              giverKey: 'Apollo',
+              options: [
+                { traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
+                { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
+                { traitKey: 'ApolloCastBoon', rarity: 'Common' },
+              ],
+              selectedOptionKey: 'option1',
+              rarificationActions: [],
+              hexTree: spellTree,
+            },
+          };
+          delete offer.traitOffersByAcquisitionRole.self;
+        },
+      ],
+    ];
+
+  it.each(invalidHexOfferMutations)('rejects %s', (_label, mutate) => {
+    const offer = {
+      offer: { rewardType: 'SpellDrop' },
+      dispositionByAcquisitionRole: { self: { kind: 'normal' } },
+      traitOffersByAcquisitionRole: {
+        self: {
+          kind: 'traits',
+          giverKey: 'SpellDrop',
+          options: [
+            { traitKey: 'SpellPolymorphTrait' },
+            { traitKey: 'SpellMeteorTrait' },
+            { traitKey: 'SpellTransformTrait' },
+          ],
+          selectedOptionKey: 'option1',
+          rarificationActions: [],
+          hexTree: {
+            layoutKey: 'Lung',
+            rareTalentKeys: ['PolymorphBossDamageTalent', 'PolymorphDeathExplodeTalent'],
+            epicTalentKeys: ['PolymorphSandwichTalent'],
+          },
+        },
+      },
+    } satisfies MutableRewardWithHexOffer;
+    mutate(offer);
+    expect(() =>
+      decodeRewardState(offer, catalog, '$.reward', {
+        kind: 'producerLifecycle',
+        key: 'roomRewardPickup',
+      }),
+    ).toThrow(/hexTree|Hex/);
+  });
+
+  it('canonicalizes valid unordered Hex node selections to declaration order', () => {
+    const offer = {
+      offer: { rewardType: 'SpellDrop' },
+      dispositionByAcquisitionRole: { self: { kind: 'normal' } },
+      traitOffersByAcquisitionRole: {
+        self: {
+          kind: 'traits',
+          giverKey: 'SpellDrop',
+          options: [
+            { traitKey: 'SpellPolymorphTrait' },
+            { traitKey: 'SpellMeteorTrait' },
+            { traitKey: 'SpellTransformTrait' },
+          ],
+          selectedOptionKey: 'option1',
+          rarificationActions: [],
+          hexTree: {
+            layoutKey: 'Lung',
+            rareTalentKeys: ['PolymorphDeathExplodeTalent', 'PolymorphBossDamageTalent'],
+            epicTalentKeys: ['PolymorphSandwichTalent'],
+          },
+        },
+      },
+    };
+    const decoded = decodeRewardState(offer, catalog, '$.reward', {
+      kind: 'producerLifecycle',
+      key: 'roomRewardPickup',
+    });
+    expect(decoded.traitOffersByAcquisitionRole.self).toMatchObject({
+      hexTree: {
+        rareTalentKeys: ['PolymorphBossDamageTalent', 'PolymorphDeathExplodeTalent'],
+        epicTalentKeys: ['PolymorphSandwichTalent'],
+      },
+    });
+  });
 
   it('owns the exact Boon acquisition and payload shape', () => {
     const value = {

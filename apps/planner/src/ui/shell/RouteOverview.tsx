@@ -19,6 +19,7 @@ import {
   KeepsakeEquipResultPicker,
   KeepsakeSelectionPicker,
 } from '@planner/ui/editor/KeepsakePickers';
+import { HexTreeEditor } from '@planner/ui/editor/rewards/HexTreeEditor';
 import { FindingCount, SemanticOwnerMarker, StatusBadge } from '../feedback/EvaluationFeedback';
 
 const fearVowGridOrder = Object.freeze([
@@ -247,6 +248,20 @@ export function RouteOverview({
           </label>
         </div>
       </div>
+      {workspaceRoute.aspectHexTree === undefined ? null : (
+        <HexTreeEditor
+          address={workspaceRoute.aspectHexTree.address}
+          domain={workspaceRoute.aspectHexTree.domain}
+          onChange={(value) =>
+            dispatch(
+              authoredProjectCommandDispatched(
+                workspaceRoute.aspectHexTree!.intentFor(value).command,
+              ),
+            )
+          }
+          transitionFor={workspaceRoute.aspectHexTree.transitionFor}
+        />
+      )}
       <details
         aria-label={`Arcana, ${derivedLoadout.activeArcanaKeys.length} active`}
         className="route-loadout-section"

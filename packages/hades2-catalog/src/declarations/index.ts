@@ -36,7 +36,7 @@ const rooms: readonly RawRoomDeclaration[] = [
 ];
 
 export const declarations = {
-  version: '0.47.0-persephone-effective-levels',
+  version: '0.48.0-hex-talent-layouts',
   biomes,
   routes,
   arcanaCards,
@@ -80,3 +80,4 @@ export type {
   RawZagreusContractAdditionalExitDeclaration,
   RawTraitCatalogInput,
 } from './types';
+export type { RawHexDeclaration } from './traits';

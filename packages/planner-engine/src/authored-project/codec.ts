@@ -1,6 +1,7 @@
 import type { Catalog, RouteDeclaration } from '../catalog-schema';
 import { decodeBiomeState } from './biomeState';
 import { assessStartingArcanaGrasp } from './loadout';
+import { normalizeAuthoredHexTree } from './hex-tree';
 import { decodeBiomeTopology } from './topology/codec';
 import { decodeAcquisitionSites } from './topology/acquisition-site-codec';
 import { decodeRoomActionState } from './topology/room-action-codec';
@@ -32,6 +33,34 @@ import {
   expectString,
   failProjectDocument as fail,
 } from './validation';
+
+function decodeHexTree(
+  value: unknown,
+  catalog: Catalog,
+  spellTraitKey: string,
+  path: string,
+): import('./traits').AuthoredHexTreeConfiguration {
+  const raw = expectRecord(value, path);
+  expectExactKeys(raw, ['layoutKey', 'rareTalentKeys', 'epicTalentKeys'], path);
+  const rareTalentKeys = expectArray(raw.rareTalentKeys, `${path}.rareTalentKeys`).map(
+    (entry, index) => expectString(entry, `${path}.rareTalentKeys[${index}]`),
+  );
+  const epicTalentKeys = expectArray(raw.epicTalentKeys, `${path}.epicTalentKeys`).map(
+    (entry, index) => expectString(entry, `${path}.epicTalentKeys[${index}]`),
+  );
+  try {
+    return normalizeAuthoredHexTree(catalog, spellTraitKey, {
+      layoutKey: expectString(
+        raw.layoutKey,
+        `${path}.layoutKey`,
+      ) as import('../catalog-schema').HexLayoutKey,
+      rareTalentKeys,
+      epicTalentKeys,
+    });
+  } catch (error) {
+    fail(path, error instanceof Error ? error.message : 'invalid Hex tree');
+  }
+}
 
 function decodeHermesShrineState(
   value: unknown,
@@ -669,6 +698,7 @@ function decodeRoutePlan(
       'fearRanks',
       'startingKeepsakeKey',
       'keepsakeEquipResults',
+      ...(loadout.aspectHexTree === undefined ? [] : ['aspectHexTree']),
     ],
     `${path}.loadout`,
   );
@@ -730,6 +760,22 @@ function decodeRoutePlan(
       `cost ${grasp.cost} exceeds starting Grasp capacity ${grasp.capacity}`,
     );
   }
+
+  const isSeleneAspect =
+    catalog.aspects.byKey[aspectKey]?.startingTrait?.traitKey === 'SpellMoonBeamTrait';
+  const hasAspectHexTree = 'aspectHexTree' in loadout;
+  const aspectHexTree = isSeleneAspect
+    ? hasAspectHexTree
+      ? decodeHexTree(
+          loadout.aspectHexTree,
+          catalog,
+          'SpellMoonBeamTrait',
+          `${path}.loadout.aspectHexTree`,
+        )
+      : fail(`${path}.loadout.aspectHexTree`, 'is required for Aspect of Selene')
+    : hasAspectHexTree
+      ? fail(`${path}.loadout.aspectHexTree`, 'is supported only for Aspect of Selene')
+      : undefined;
 
   const rawBiomes = expectArray(plan.biomes, `${path}.biomes`);
   if (rawBiomes.length > route.biomeKeys.length) {
@@ -793,6 +839,7 @@ function decodeRoutePlan(
               catalog,
             ),
           }),
+      ...(aspectHexTree === undefined ? {} : { aspectHexTree }),
     }),
     biomes: Object.freeze(biomes),
   });

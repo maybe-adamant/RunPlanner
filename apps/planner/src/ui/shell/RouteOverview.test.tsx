@@ -59,4 +59,28 @@ describe('RouteOverview', () => {
 
     expect(routeOverviewMarkup(application)).not.toContain('contiguous route prefix');
   });
+
+  it('presents Aspect of Selene Hex controls only for the active aspect', () => {
+    const application = createApplication();
+    application.store.dispatch(
+      authoredProjectCommandDispatched({
+        kind: 'ReplaceRouteLoadout',
+        route: createRouteAddress('Underworld'),
+        weaponKey: 'WeaponSuit',
+        aspectKey: 'SuitHexAspect',
+      }),
+    );
+    expect(routeOverviewMarkup(application)).toContain('Hex talent layout');
+    expect(routeOverviewMarkup(application)).toContain('God Sent');
+
+    application.store.dispatch(
+      authoredProjectCommandDispatched({
+        kind: 'ReplaceRouteLoadout',
+        route: createRouteAddress('Underworld'),
+        weaponKey: 'WeaponSuit',
+        aspectKey: 'BaseSuitAspect',
+      }),
+    );
+    expect(routeOverviewMarkup(application)).not.toContain('Hex talent layout');
+  });
 });

@@ -2,10 +2,11 @@ import type { ResolvedRewardOffer } from '../reward-kernel/model';
 import type {
   AuthoredGorgonAthenaOffer,
   AuthoredLevelResolution,
+  AuthoredHexTreeConfiguration,
   AuthoredTraitOffer,
 } from './traits';
 
-export const PROJECT_DOCUMENT_SCHEMA_VERSION = 64 as const;
+export const PROJECT_DOCUMENT_SCHEMA_VERSION = 65 as const;
 export type ResourceFamily = import('../catalog-schema').ResourceFamily;
 /** Route ownership supplies the route key; the selected host is exact and durable. */
 export interface ResourcePlacement {
@@ -52,6 +53,8 @@ export interface RouteLoadout extends RouteWeaponAspectLoadout {
   readonly startingKeepsakeKey: string;
   /** Dormant unless the route-start selection equips a supported keepsake. */
   readonly keepsakeEquipResults?: AuthoredKeepsakeEquipResults;
+  /** Complete fixed Sky Fall Hex tree, present only for Aspect of Selene. */
+  readonly aspectHexTree?: AuthoredHexTreeConfiguration;
 }
 
 /** Exact immediate products owned by one keepsake-selection frontier. */

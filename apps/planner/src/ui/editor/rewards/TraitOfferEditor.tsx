@@ -48,6 +48,7 @@ function traitOfferRevision(interaction: WorkspaceTraitOfferInteraction): string
           }:${'naturalSelectionTargets' in option ? JSON.stringify(option.naturalSelectionTargets) : ''}:${'persephoneLevelBonus' in option ? (option.persephoneLevelBonus ?? '') : ''}`,
       )
       .join(','),
+    JSON.stringify(interaction.value.hexTree),
     JSON.stringify(interaction.value.concaveStoneResult),
     interaction.value.selectedOptionKey,
   ].join('|');
@@ -86,7 +87,7 @@ export function TraitOfferLauncher({
       : `Edit spell · ${traitLabel} · ${spellOfferSlotSummary(
           interaction.giver,
           selectedOptionIndex,
-        )}`
+        )}${control.hexTree?.value?.layoutKey === undefined ? '' : ` · ${control.hexTree.value.layoutKey}`}`
     : control.offer === null
       ? traitLabel
       : `Edit Trait · ${traitLabel}`;

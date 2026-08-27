@@ -236,6 +236,41 @@ export interface TraitPickupDeclaration {
   readonly excludeStorySource?: true;
 }
 
+export type HexLayoutKey = 'Lung' | 'Pyramid' | 'Maze' | 'Nacelle';
+
+export interface HexLayoutDeclaration {
+  readonly key: HexLayoutKey;
+  readonly label: string;
+  readonly baseCapacity: number;
+  readonly rareCount: number;
+  readonly epicCount: number;
+}
+
+export interface HexTalentCandidateDeclaration {
+  readonly key: string;
+  readonly label: string;
+}
+
+export interface HexGodSentDeclaration {
+  readonly providerKey: string;
+  readonly forceKeepsakeKey: string;
+  readonly olympianTalentKey: string;
+  readonly olympianTalentLabel: string;
+  readonly lineageTalentKey: string;
+  readonly lineageTalentLabel: string;
+  readonly capacityDelta: 2;
+}
+
+/** Frozen high-value outcome data for one generated Hex tree. */
+export interface HexDeclaration {
+  readonly spellTraitKey: string;
+  readonly label: string;
+  readonly layouts: CatalogCollection<HexLayoutDeclaration>;
+  readonly rareCandidates: CatalogCollection<HexTalentCandidateDeclaration>;
+  readonly epicCandidates: CatalogCollection<HexTalentCandidateDeclaration>;
+  readonly godSent: HexGodSentDeclaration;
+}
+
 export type TraitOfferContextKey = 'devotionNoDuo' | 'blockGiftBoons' | 'circeRemovableFearVow';
 
 export type TraitRequirementExpression =
@@ -407,4 +442,5 @@ export interface TraitCatalog {
   readonly boonRarityBases: Readonly<Record<'olympian' | 'hermes', BoonRarityValues>>;
   readonly chaos: ChaosTraitCatalog;
   readonly echoLastRunBoon: EchoLastRunBoonCatalog;
+  readonly hexes: CatalogCollection<HexDeclaration>;
 }

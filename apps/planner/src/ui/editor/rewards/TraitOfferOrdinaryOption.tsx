@@ -63,6 +63,17 @@ export function TraitOfferOrdinaryOption({
     interaction.giver.rarityPolicy.kind === 'selectable' &&
     interaction.rarityEditableFor(option.traitKey);
   const idPrefix = `${semanticAddressKey(interaction.owner)}-${optionKey}`;
+  const withSelectedHexDefault = (
+    nextValue: AuthoredTraitOfferTraits,
+  ): AuthoredTraitOfferTraits => {
+    if (!spellOffer || nextValue.selectedOptionKey !== optionKey) return nextValue;
+    const { hexTree: _hexTree, ...withoutTree } = nextValue;
+    void _hexTree;
+    const selectedDomain = interaction.optionDomain(withoutTree, optionKey).hexTree;
+    return selectedDomain === undefined
+      ? Object.freeze(withoutTree)
+      : Object.freeze({ ...withoutTree, hexTree: selectedDomain.defaultFor(withoutTree) });
+  };
   const selectTrait = (traitKey: string): void => {
     const preferred = domain?.preferredOptionFor(traitKey);
     if (preferred === undefined) return;
@@ -75,7 +86,8 @@ export function TraitOfferOrdinaryOption({
               ? {}
               : { persephoneLevelBonus: option.persephoneLevelBonus }),
           });
-    onUpdate(replaceTraitOfferOption(value, index, nextOption));
+    const nextValue = replaceTraitOfferOption(value, index, nextOption);
+    onUpdate(withSelectedHexDefault(nextValue));
   };
   const selectRarity = (rarity: TraitRarity): void => {
     onUpdate(replaceTraitOfferOption(value, index, { ...option, rarity }));
@@ -175,7 +187,11 @@ export function TraitOfferOrdinaryOption({
         <input
           checked={value.selectedOptionKey === optionKey}
           name={`${semanticAddressKey(interaction.owner)}-selected`}
-          onChange={() => onUpdate(Object.freeze({ ...value, selectedOptionKey: optionKey }))}
+          onChange={() =>
+            onUpdate(
+              withSelectedHexDefault(Object.freeze({ ...value, selectedOptionKey: optionKey })),
+            )
+          }
           type="radio"
         />
         Selected

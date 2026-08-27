@@ -6,6 +6,8 @@ import {
   createTraitAcquisitionTargetAddress,
   optionIndex,
   semanticAddressKey,
+  createDefaultAuthoredHexTree,
+  transitionAuthoredHexTreeLayout,
 } from '@run-planner/engine/authored-project';
 import type {
   AuthoredCirceResolution,
@@ -13,6 +15,7 @@ import type {
   AuthoredTraitOffer,
   AuthoredTraitOfferTraits,
   TraitOptionKey,
+  AuthoredHexTreeConfiguration,
 } from '@run-planner/engine/authored-project';
 import type { Catalog, TraitRarity } from '@run-planner/engine/catalog-schema';
 import {
@@ -39,7 +42,60 @@ import type {
   WorkspaceRewardControl,
   WorkspaceTraitOfferControl,
   WorkspaceTraitOfferInteraction,
+  WorkspaceHexTreeInteraction,
 } from '../contract';
+
+/** Projects one complete authored Hex tree into the shared editor product. */
+export function projectHexTreeDomain(
+  catalog: Catalog,
+  spellTraitKey: string,
+  tree: AuthoredHexTreeConfiguration,
+): import('../contract').WorkspaceHexTreeDomain | undefined {
+  const selectedHex = catalog.hexes.byKey[spellTraitKey];
+  if (selectedHex === undefined) return undefined;
+  const selectedCandidates = (
+    candidates: readonly { readonly key: string; readonly label: string }[],
+    selectedKeys: readonly string[],
+    selectedKey: string | undefined,
+  ) =>
+    projectDirectTraitOutcomePicker(
+      candidates.map((candidate) => ({
+        value: candidate.key,
+        support:
+          selectedKey === candidate.key || !selectedKeys.includes(candidate.key)
+            ? ('possible' as const)
+            : ('impossible' as const),
+        branchSupport: Object.freeze([true]),
+        selected: selectedKey === candidate.key,
+        ...(selectedKey === candidate.key || !selectedKeys.includes(candidate.key)
+          ? {}
+          : { reason: 'duplicateTrait' as const }),
+      })),
+      (key) =>
+        selectedHex.rareCandidates.byKey[key]?.label ??
+        selectedHex.epicCandidates.byKey[key]?.label ??
+        key,
+      (key) => key,
+    );
+  return Object.freeze({
+    value: tree,
+    layoutPicker: projectDirectTraitOutcomePicker(
+      selectedHex.layouts.values.map((layout) => ({
+        value: layout.key,
+        support: 'possible' as const,
+        branchSupport: Object.freeze([true]),
+        selected: layout.key === tree.layoutKey,
+      })),
+      (key) => selectedHex.layouts.byKey[key]?.label ?? key,
+      (key) => key,
+    ),
+    rarePickerFor: (selectedKeys: readonly string[], selectedKey?: string) =>
+      selectedCandidates(selectedHex.rareCandidates.values, selectedKeys, selectedKey),
+    epicPickerFor: (selectedKeys: readonly string[], selectedKey?: string) =>
+      selectedCandidates(selectedHex.epicCandidates.values, selectedKeys, selectedKey),
+    godSent: selectedHex.godSent,
+  });
+}
 
 /** Binds ordinary trait offers and their selected Echo, Natural Selection, Ransom, All Together, and Circe outcomes. */
 export function bindTraitOfferInteractions(input: {
@@ -123,6 +179,57 @@ export function bindTraitOfferInteractions(input: {
                 },
               }),
           });
+    const hexTreeInteraction = (value: AuthoredTraitOfferTraits, optionKey: TraitOptionKey) => {
+      if (value.selectedOptionKey !== optionKey || control.hexTree === undefined) return undefined;
+      const selected = value.options[optionIndex(optionKey)];
+      const hex = selected === undefined ? undefined : catalog.hexes.byKey[selected.traitKey];
+      if (hex === undefined) return undefined;
+      const interaction: WorkspaceHexTreeInteraction = {
+        control: control.hexTree,
+        defaultFor: (offer) => {
+          const selectedOption = offer.options[optionIndex(offer.selectedOptionKey)];
+          if (selectedOption === undefined)
+            throw new StructuredWorkspaceProjectionContractError(
+              `${semanticAddressKey(control.address)} is missing its selected Spell option`,
+            );
+          return createDefaultAuthoredHexTree(catalog, selectedOption.traitKey);
+        },
+        transitionFor: (offer, layoutKey) => {
+          const selectedOption = offer.options[optionIndex(offer.selectedOptionKey)];
+          if (selectedOption === undefined)
+            throw new StructuredWorkspaceProjectionContractError(
+              `${semanticAddressKey(control.address)} is missing its selected Spell option`,
+            );
+          return transitionAuthoredHexTreeLayout(
+            catalog,
+            selectedOption.traitKey,
+            offer.hexTree ?? createDefaultAuthoredHexTree(catalog, selectedOption.traitKey),
+            layoutKey,
+          );
+        },
+        intentFor: (offer, tree) =>
+          derivedShopPayloadIntent(
+            derivedShopEntryEdit,
+            ordinaryTraitOfferCommandFor(
+              control.address,
+              Object.freeze({ ...offer, hexTree: tree }),
+            ),
+          ),
+        forOffer: (offer) => ({
+          load: () => {
+            const option = offer.options[optionIndex(offer.selectedOptionKey)];
+            const selectedHex =
+              option === undefined ? undefined : catalog.hexes.byKey[option.traitKey];
+            const tree =
+              offer.hexTree ??
+              control.hexTree?.value ??
+              createDefaultAuthoredHexTree(catalog, option!.traitKey);
+            return projectHexTreeDomain(catalog, option!.traitKey, tree);
+          },
+        }),
+      } as WorkspaceHexTreeInteraction;
+      return interaction;
+    };
     const optionDomain = (value: AuthoredTraitOffer, optionKey: TraitOptionKey) => {
       if (value.kind !== 'traits') {
         throw new StructuredWorkspaceProjectionContractError(
@@ -218,6 +325,7 @@ export function bindTraitOfferInteractions(input: {
           ? control.naturalSelection
           : undefined;
       let projected: ReturnType<typeof traitDomain.project> | undefined;
+      const hexTree = hexTreeInteraction(value, optionKey);
       const bound = Object.freeze({
         hasTargetPicker,
         ...(traitAcquisitionTargetControl === undefined
@@ -579,6 +687,7 @@ export function bindTraitOfferInteractions(input: {
               } satisfies WorkspaceNaturalSelectionInteraction),
             }),
         ...(concaveStoneInteraction === undefined ? {} : { concaveStone: concaveStoneInteraction }),
+        ...(hexTree === undefined ? {} : { hexTree }),
         load() {
           if (projected !== undefined) return projected;
           const focused = candidates.traitOfferFocusedOptions(
