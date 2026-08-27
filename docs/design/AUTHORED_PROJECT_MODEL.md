@@ -618,10 +618,10 @@ edit may retain a context-invalid outcome for explicit repair.
 `SpellDrop` uses that same `traits` shape at its existing `self` acquisition
 role: exactly three distinct, rarityless options from Selene's ordered
 eight-spell provider pool and one selected option. It is not a separate spell
-offer model. Under Aspect of Selene, that persisted child is structurally
-present but contextually dormant for the deferred Path of Stars outcome;
-`null` is complete there, while a retained non-null child stays preserved for
-reactivation after the aspect changes.
+offer model. Under Aspect of Selene, schema 65 instead requires one complete
+`loadout.aspectHexTree` for fixed Sky Fall. Its later concrete Spell Drop has
+no trait-offer child—nullable, dormant, and retained children are all
+unsupported—and settles the three-point Path screen.
 
 When the selected trait is All Together, that exact option additionally owns
 one complete result keyed by its four declaration-owned sets. Each value is one

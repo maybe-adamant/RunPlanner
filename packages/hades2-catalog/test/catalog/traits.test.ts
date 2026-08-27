@@ -83,8 +83,9 @@ const expectedPositiveRequirementOwners = [
   'FireballRendBoon',
   'BloodManaBurstBoon',
   'SorceryCritBoon',
-  'OlympianSpellCountBoon',
 ] as const;
+
+const expectedSettledSpellDropRequirementOwners = ['OlympianSpellCountBoon'] as const;
 
 const expectedOrdinarySlots = Object.fromEntries(
   [
@@ -775,8 +776,7 @@ const expectedOfferRequirements: Readonly<Record<string, string>> = {
     '[{"kind":"anyEquippedTrait","traitKeys":["AphroditeWeaponBoon","ApolloWeaponBoon","DemeterWeaponBoon","HephaestusWeaponBoon","HeraWeaponBoon","HestiaWeaponBoon","PoseidonWeaponBoon","ZeusWeaponBoon","AresWeaponBoon"]}]',
   SorceryCritBoon:
     '[{"kind":"anyEquippedTrait","traitKeys":["SpellLaserTrait","SpellLeapTrait","SpellSummonTrait","SpellMeteorTrait","SpellTransformTrait","SpellMoonBeamTrait","SpellPolymorphTrait"]}]',
-  OlympianSpellCountBoon:
-    '[{"kind":"anyEquippedTrait","traitKeys":["SpellPolymorphTrait","SpellMeteorTrait","SpellTransformTrait","SpellLeapTrait","SpellLaserTrait","SpellSummonTrait","SpellTimeSlowTrait","SpellPotionTrait","SpellMoonBeamTrait"]}]',
+  OlympianSpellCountBoon: '[{"kind":"settledSpellDrop"}]',
   ElementalRallyBoon: '[{"kind":"elementCount","element":"Fire","minimum":2}]',
   DoubleExManaBoon:
     '[{"kind":"all","requirements":[{"kind":"anyEquippedTrait","traitKeys":["ApolloWeaponBoon","ApolloSpecialBoon"]},{"kind":"anyEquippedTrait","traitKeys":["ApolloCastBoon","ApolloSprintBoon","ApolloManaBoon"]},{"kind":"anyEquippedTrait","traitKeys":["DoubleStrikeChanceBoon","ApolloCastAreaBoon","ApolloBlindBoon","ApolloExCastBoon"]}]}]',
@@ -1389,6 +1389,17 @@ describe('trait offer catalog closure', () => {
       .map((trait) => trait.key);
     expect(positiveOwners).toHaveLength(expectedPositiveRequirementOwners.length);
     expect(new Set(positiveOwners)).toEqual(new Set(expectedPositiveRequirementOwners));
+
+    const containsSettledSpellDropRequirement = (requirement: Requirement): boolean => {
+      if (requirement.kind === 'settledSpellDrop') return true;
+      if (requirement.kind === 'all')
+        return requirement.requirements.some(containsSettledSpellDropRequirement);
+      return false;
+    };
+    const settledSpellDropOwners = traits.traits.values
+      .filter((trait) => trait.offerRequirements.some(containsSettledSpellDropRequirement))
+      .map((trait) => trait.key);
+    expect(settledSpellDropOwners).toEqual(expectedSettledSpellDropRequirementOwners);
 
     const actualOfferRequirements = Object.fromEntries(
       traits.traits.values

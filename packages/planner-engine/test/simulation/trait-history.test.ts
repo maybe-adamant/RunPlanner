@@ -4,6 +4,7 @@ import {
   createIncomingRewardAddress,
   createOccurrenceAddress,
   createOccurrenceId,
+  createDefaultAuthoredHexTree,
   type AuthoredTraitOffer,
   type SemanticAddress,
 } from '@run-planner/engine/authored-project';
@@ -16,7 +17,6 @@ import {
   isPomUpgradeTarget,
   recordReachedTraitOffer,
   promoteArcana,
-  isAspectSpellDropDormant,
   traitCandidates,
   boonRarityFactsForOffer,
   type TraitHistoryState,
@@ -198,6 +198,7 @@ describe('Selene Spell equipment chronology', () => {
       ...createDefaultRouteLoadout(catalog),
       weaponKey: 'WeaponSuit',
       aspectKey: 'SuitHexAspect',
+      aspectHexTree: createDefaultAuthoredHexTree(catalog, 'SpellMoonBeamTrait'),
     };
     const branches = initializeRewardBranches(
       undefined,
@@ -220,7 +221,7 @@ describe('Selene Spell equipment chronology', () => {
     expect(history?.equippedSlots.Spell?.traitKey).toBe('SpellMoonBeamTrait');
   });
 
-  it('keeps a retained SpellDrop child dormant under Selene and reactivates it after switching', () => {
+  it('settles Aspect of Selene SpellDrop through the later concrete Path acquisition without a trait offer', () => {
     const biome = createBiomeAddress('Underworld', 'F');
     const occurrenceId = createOccurrenceId('selene-dormant-spell');
     const reward = { rewardType: 'SpellDrop' as const };
@@ -229,23 +230,17 @@ describe('Selene Spell equipment chronology', () => {
       offer: reward,
       producerLifecycleKey: 'RoomReward' as const,
       instanceProvenance: 'free' as const,
-      traitOffersByAcquisitionRole: Object.freeze({
-        self: Object.freeze({
-          kind: 'traits' as const,
-          giverKey: 'SpellDrop',
-          options: Object.freeze([
-            { traitKey: 'SpellPolymorphTrait' },
-            { traitKey: 'SpellMeteorTrait' },
-            { traitKey: 'SpellTransformTrait' },
-          ] as const),
-          selectedOptionKey: 'option1' as const,
-          rarificationActions: Object.freeze([]),
-        }),
-      }),
     };
-    const makeBranches = (aspectKey: string) => {
-      const loadout = { ...createDefaultRouteLoadout(catalog), weaponKey: 'WeaponSuit', aspectKey };
-      return initializeRewardBranches(
+    const loadout = {
+      ...createDefaultRouteLoadout(catalog),
+      weaponKey: 'WeaponSuit',
+      aspectKey: 'SuitHexAspect',
+      aspectHexTree: createDefaultAuthoredHexTree(catalog, 'SpellMoonBeamTrait'),
+    };
+    const settled = settleTestRoomReward(
+      biome,
+      occurrenceId,
+      initializeRewardBranches(
         undefined,
         createArcanaFearState(catalog, loadout),
         catalog,
@@ -253,31 +248,17 @@ describe('Selene Spell equipment chronology', () => {
         undefined,
         'Underworld',
         loadout,
-      );
-    };
-    const settle = (aspectKey: string) =>
-      settleTestRoomReward(
-        biome,
-        occurrenceId,
-        makeBranches(aspectKey),
-        { ...source, traitContext: { weaponKey: 'WeaponSuit', aspectKey } },
-        1,
-        (_history) => factsWithHistory(baseFacts(), _history, new Set()),
-        new Map(),
-      )[0]!;
+      ),
+      { ...source, traitContext: { weaponKey: 'WeaponSuit', aspectKey: 'SuitHexAspect' } },
+      1,
+      (_history) => factsWithHistory(baseFacts(), _history, new Set()),
+      new Map(),
+    )[0]!;
 
-    const dormant = settle('SuitHexAspect');
-    expect(dormant.history.useRecord.SpellDrop).toBe(1);
-    expect(dormant.traitHistory?.equippedSlots.Spell?.traitKey).toBe('SpellMoonBeamTrait');
-    expect(dormant.traitHistory?.equippedTraits.SpellPolymorphTrait).toBeUndefined();
-    expect(dormant.traitEvaluations).toEqual([]);
-
-    const active = settle('BaseSuitAspect');
-    expect(active.traitHistory?.equippedSlots.Spell?.traitKey).toBe('SpellPolymorphTrait');
-    expect(active.traitHistory?.equippedTraits.SpellMoonBeamTrait).toBeUndefined();
-    expect(active.traitEvaluations).toHaveLength(1);
-    expect(isAspectSpellDropDormant(catalog, 'SuitHexAspect')).toBe(true);
-    expect(isAspectSpellDropDormant(catalog, 'BaseSuitAspect')).toBe(false);
+    expect(settled.history.useRecord.SpellDrop).toBe(1);
+    expect(settled.traitHistory?.equippedSlots.Spell?.traitKey).toBe('SpellMoonBeamTrait');
+    expect(settled.traitEvaluations).toEqual([]);
+    expect(settled.hexProgress).toMatchObject({ bankedPathPoints: 0, investedPathPoints: 3 });
   });
 });
 

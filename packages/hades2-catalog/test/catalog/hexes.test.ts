@@ -138,12 +138,12 @@ describe('compiled Hex declarations', () => {
   });
 
   it('rejects cross-pool node collisions and mismatched provider keepsakes', () => {
-    const duplicate = JSON.parse(JSON.stringify(declarations)) as any;
+    const duplicate = structuredClone(declarations);
     duplicate.traitCatalog.hexes[0].epicCandidates[0].key =
       duplicate.traitCatalog.hexes[0].rareCandidates[0].key;
     expect(() => createCatalog(duplicate)).toThrow(/Rare and Epic node keys must be unique/);
 
-    const wrongKeepsake = JSON.parse(JSON.stringify(declarations)) as any;
+    const wrongKeepsake = structuredClone(declarations);
     wrongKeepsake.traitCatalog.hexes[0].godSent.forceKeepsakeKey = 'ForceHestiaBoonKeepsake';
     expect(() => createCatalog(wrongKeepsake)).toThrow(/must be ForceZeusBoonKeepsake/);
   });

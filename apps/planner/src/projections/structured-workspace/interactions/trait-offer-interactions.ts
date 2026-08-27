@@ -218,8 +218,6 @@ export function bindTraitOfferInteractions(input: {
         forOffer: (offer) => ({
           load: () => {
             const option = offer.options[optionIndex(offer.selectedOptionKey)];
-            const selectedHex =
-              option === undefined ? undefined : catalog.hexes.byKey[option.traitKey];
             const tree =
               offer.hexTree ??
               control.hexTree?.value ??

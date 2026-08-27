@@ -86,12 +86,12 @@ node-acquisition intent. Persisting another boolean adds no useful intent.
 
 The Planner therefore authors and simulates the preferred result without a
 general Death Defiance condition or an authored Olympian-node acquisition
-fact. Task Force alone retains the settled-Spell-Drop prefix because that fact
-is already modeled in reward history. Aspect of Selene's starting Sky Fall does
-not satisfy it before the Aspect's first concrete Spell Drop. The catalog
-retains each real source requirement as evidence and as runtime eligibility
-information. A declared fallback absorbs a failed live predicate at the
-execution boundary.
+fact. Task Force alone retains the earlier-concrete-Spell-Drop prefix because
+that fact is already modeled in reward history. Aspect of Selene's starting Sky
+Fall does not satisfy it before the Aspect's first concrete Spell Drop. The
+catalog retains each real source requirement as evidence and as runtime
+eligibility information. A declared fallback absorbs a failed live predicate
+at the execution boundary.
 
 ## Gorgon Amulet is the phase-local exception
 
@@ -172,12 +172,13 @@ nested or direct source still uses its own giver's declaration.
 Task Force deliberately reuses Renewed Faith's three requirement-free Athena
 alternatives. Its real prerequisite remains source evidence, but the Planner
 does not infer an equipped Olympian talent from a generated Hex layout or from
-aggregate invested points. It does require one concrete Spell Drop to have
-settled. Aspect of Selene's starting Sky Fall alone is therefore insufficient;
-the Aspect's later Spell Drop satisfies the prefix. The authored Task Force
-selection expresses the remaining node-level intent; the one exported
-fallback protects execution when the hidden graph path has not actually
-acquired its required Olympian node.
+aggregate invested points. Candidate generation requires one earlier concrete
+Spell Drop to have settled; Aspect of Selene's starting Sky Fall alone is
+therefore insufficient, while the Aspect's later Spell Drop satisfies the
+prefix. The authored Task Force selection expresses the remaining node-level
+intent; the selected trait-offer product exports one legal same-giver fallback
+when the hidden graph path has not actually acquired its required Olympian
+node.
 
 Jeweled Pom illustrates the intended simulation boundary. If its authored
 result is Last Gasp, simulation records Last Gasp as acquired, so a later Hades

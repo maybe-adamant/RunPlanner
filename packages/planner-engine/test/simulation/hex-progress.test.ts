@@ -41,7 +41,7 @@ import {
 } from '../../src/simulation/rewards/processing';
 import { createGoldenFGHProject } from '@run-planner/test-fixtures/underworld';
 
-describe('minimal Hex progress', () => {
+describe('finite Hex progress', () => {
   it('keeps the normal selected-option-3 Lung checkpoint within its finite capacity', () => {
     const checkpoint = normalOption3LungClosureCheckpoint();
     expect(checkpoint.afterOption3Bank.hexProgress).toMatchObject({

@@ -16,7 +16,7 @@ type MutableHexTree = {
 type MutableTraitOffer = {
   kind: string;
   giverKey: string;
-  options: unknown[];
+  options: Record<string, unknown>[];
   selectedOptionKey: string;
   rarificationActions: unknown[];
   hexTree?: MutableHexTree;
@@ -120,8 +120,10 @@ describe('reward acquisition decoder', () => {
       hexTree: spellOffer.traitOffersByAcquisitionRole.self.hexTree,
     });
 
-    const missing = JSON.parse(JSON.stringify(spellOffer)) as any;
-    delete missing.traitOffersByAcquisitionRole.self.hexTree;
+    const missing = JSON.parse(JSON.stringify(spellOffer)) as MutableRewardWithHexOffer;
+    const missingSelf = missing.traitOffersByAcquisitionRole.self;
+    if (missingSelf === undefined) throw new Error('missing SpellDrop test offer');
+    delete missingSelf.hexTree;
     expect(() =>
       decodeRewardState(missing, catalog, '$.reward', {
         kind: 'producerLifecycle',
@@ -129,9 +131,12 @@ describe('reward acquisition decoder', () => {
       }),
     ).toThrow(/hexTree.*required/);
 
-    const dormant = JSON.parse(JSON.stringify(spellOffer)) as any;
-    dormant.traitOffersByAcquisitionRole.self.options[0].hexTree =
-      spellOffer.traitOffersByAcquisitionRole.self.hexTree;
+    const dormant = JSON.parse(JSON.stringify(spellOffer)) as MutableRewardWithHexOffer;
+    const dormantSelf = dormant.traitOffersByAcquisitionRole.self;
+    const dormantOption = dormantSelf?.options[0];
+    if (dormantSelf === undefined || dormantOption === undefined)
+      throw new Error('missing SpellDrop test option');
+    dormantOption.hexTree = spellOffer.traitOffersByAcquisitionRole.self.hexTree;
     expect(() =>
       decodeRewardState(dormant, catalog, '$.reward', {
         kind: 'producerLifecycle',

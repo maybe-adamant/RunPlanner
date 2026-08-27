@@ -1648,7 +1648,7 @@ describe('field NPC encounter requirements', () => {
     const occurrenceId = pOccurrenceId('P_Combat10', 6, 1);
     const athenaPhase = phase(pBiome, occurrenceId, 'Combat');
     const athenaTrait = createTraitOfferAddress(athenaPhase, 'selection');
-    let afterSpell = authorLegalTraitOffers(
+    const afterSpell = authorLegalTraitOffers(
       select(loadSurfaceNOPQProject(), athenaPhase, 'AthenaCombatP'),
     );
     expect(support(afterSpell, athenaPhase)?.candidateEncounterKeys).toContain('AthenaCombatP');
