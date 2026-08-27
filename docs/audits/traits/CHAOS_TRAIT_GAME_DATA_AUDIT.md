@@ -10,7 +10,8 @@ Natural-Chaos topology is already supported. This audit begins at the direct
 `TrialUpgrade` pickup inside the entered Chaos room. It does not redesign gate
 eligibility, room maps, or the ordinary outgoing continuation.
 
-The evidence was checked on 2026-08-22 against the installed Hades II scripts:
+The evidence was checked on 2026-08-22 and the Denial contact was rechecked on
+2026-08-27 against the installed Hades II scripts:
 
 - `LootData_Chaos.lua` for the complete permanent and temporary pools;
 - `TraitData_Chaos.lua` and `TraitText.en.sjson` for identities, requirements,
@@ -61,10 +62,10 @@ identity therefore may repeat across the three visible alternatives.
 
 The picker is not three independent choices made in sequence. The game offers
 three already-paired curse/blessing alternatives and the player selects one
-pair. A planner editor may present the selected pair through compact identity,
-rarity, duration, and declaration-owned value fields, but engine validation
-must assess the complete pair against one pre-pickup context and must not imply
-that the game first chooses a curse and then grants a free blessing choice.
+pair. All three curses are processed button identities, while each blessing is
+stored below its paired curse. Engine validation must assess all three curse
+identities against one pre-pickup context and must not imply that the game first
+chooses a curse and then grants a free blessing choice.
 
 Ordinary pairs can be Common, Rare, or Epic. `ChaosLastStandBlessing` has only
 Legendary rarity. `ChaosMetaUpgradeCurse` marks its paired option as Heroic
@@ -77,7 +78,31 @@ processed blessing under that curse's `OnExpire.TraitData`. The blessing is not
 yet an equipped trait and must not contribute elements, satisfy trait
 requirements, or qualify later Chaos legendaries during the curse interval.
 
-## Numeric outcomes are processed when the pair is selected
+### Denial bans unselected curses, not blessings
+
+`TrialUpgrade` inherits `BaseLoot.BanUnpickedBoonsEligible = true` and does not
+override it when setting `GodLoot = false`. Data inheritance therefore leaves
+the Denial hook active on the Chaos screen. For a transforming option,
+`CreateUpgradeChoiceButton` deep-copies the processed curse into
+`button.Data`; the paired blessing remains nested at
+`button.Data.OnExpire.TraitData`.
+
+When Vow of Denial is active, `HandleUpgradeChoiceSelection` iterates the other
+upgrade buttons and writes `otherUpgradeButton.Data.Name` to
+`CurrentRun.BannedTraits`. The two unselected **curse** identities are therefore
+banned from later Chaos generation. Their paired blessing identities are never
+written to the ban table. If an unselected option repeats the selected curse,
+the name-equality check skips it; two unselected options may also collapse to
+one distinct banned curse when their curse identities repeat.
+
+Every displayed curse is also written to the lifetime `GameState.TraitsSeen`
+table when its button is built. That presentation/progression fact is outside
+the run planner's modeled inputs. It does not make an unselected blessing seen,
+picked, equipped, or eligible as Chaos history. Apart from the exact Denial
+bans, the two unselected options create no run-state consequence owned by the
+planner.
+
+## Numeric outcomes are processed when the screen constructs each option
 
 The shared rarity applies to the blessing, not the curse. Chaos curses declare
 no `RarityLevels`, so their duration and effect rolls use their source ranges
@@ -100,7 +125,7 @@ Nested values are processed in stable key order for deterministic RNG use, but
 two declarations with the same range are still two independent rolls unless
 one explicitly uses `DeriveSource`/`DeriveValueFrom`. The processed curse and
 pending blessing therefore already contain the exact gameplay operands before
-the player leaves the Chaos screen.
+the player makes a selection.
 
 This produces a closed payload shape rather than a universal pair of numeric
 sliders:
@@ -309,13 +334,15 @@ TrialUpgrade selected
   -> curse removed and blessing equipped at expiration
 ```
 
-The authored state must preserve the selected curse, selected blessing, shared
-rarity, exact rolled duration, and the declaration-owned rolled operands named
-in the two inventories above. The maturity **position** is derived by folding
-subsequent qualifying encounter-end-effect checkpoints, room transitions, or
-god-boon pickups. The preceding encounter completion remains a distinct fact.
-Maturity is not a draggable Room Timeline action and should not be stored as an
-independently chosen room coordinate.
+The authored state must preserve all three displayed curse identities and their
+rolled requirements so Denial and the visible option envelope remain exact. It
+must additionally preserve which option was selected, that selected curse's
+independent rolled operands, the selected blessing and shared rarity, and the
+selected blessing's declaration-owned rolled operands. The maturity
+**position** is derived by folding subsequent qualifying encounter-end-effect
+checkpoints, room transitions, or god-boon pickups. The preceding encounter
+completion remains a distinct fact. Maturity is not a draggable Room Timeline
+action and should not be stored as an independently chosen room coordinate.
 
 For encounter clocks, the exact transition consumes
 `encounterEndEffectsApplied`, the explicit checkpoint after encounter
@@ -360,29 +387,45 @@ only their unsupported gameplay effects are simulation-neutral. The planner
 does not add damage, health, magick, money, resources, combat effects,
 door-preview state, or a partial Death Defiance ledger for them.
 
+Vow of Denial adds one cross-offer consequence: after a selected Chaos option,
+the exact unselected curse identities enter the same run-local banned-trait
+authority used by later eligibility. Unselected blessings, rarities, and
+numeric values remain irrelevant to that transition and need not become
+authored planner state.
+
 ## Planner disposition
 
-The Chaos paired-trait model is implemented at authored schema 51. One selected
-outcome owns its curse, blessing, shared rarity, duration, and the exact
-declaration-owned numeric operands. Acquisition equips the curse with a
-pending blessing; the shared history fold derives maturation from the exact
-encounter-end-effect, room-departure, or qualifying god-offer checkpoints. It
-does not reuse the ordinary one-trait offer shape as though both halves were
-immediately equipped.
+The schema-51 selected-pair model is no longer sufficient because it cannot
+derive Denial's exact run-local bans. The durable planner shape is three ordered
+curse options, each with its curse identity and rolled requirement, plus one
+selected-option identity. Only the selected option additionally owns the
+curse's zero-or-one independent intensity value, its paired blessing, shared
+rarity, and the blessing's declaration-owned zero, one, or two independent
+intensity values.
 
-The source evidence does not support a fixed `{ curseMagnitude,
-benefitMagnitude }` schema. The stable semantic shape is a closed curse key,
-one duration value, that curse's zero-or-one named effect value, a closed
-blessing key, shared rarity, and that blessing's declaration-owned zero, one,
-or two named roll values. Rarity- and history-derived deterministic values are
-recomputed from their authorities rather than redundantly authored.
+The two unselected blessings and their numeric values remain source-generated.
+They are not Denial bans, do not enter picked/equipped Chaos history, and have
+no other planner-owned run consequence. A later game-module consumer may let
+the game generate those peers while reserving the authored selected blessing;
+the planner does not fabricate identities for state it does not consume.
 
-All 17 curses and 16 blessings remain real authored trait history. The five
-consequences named above are active in their owning existing authorities:
+The source evidence does not support a universal fixed `{ curseMagnitude,
+benefitMagnitude }` schema. Requirement units depend on the curse: qualifying
+encounters, room departures/locations, or resolved god offers. Independent
+intensity fields remain declaration-closed. Rarity- and history-derived
+deterministic values are recomputed from their authorities rather than
+redundantly authored. A legal catalog-owned starting value may reduce editor
+labor, but it is an authoring convenience rather than a claimed source-game
+default.
+
+Any of the 17 curses and 16 blessings may become real selected/matured trait
+history. The five consequences named above are active in their owning existing authorities:
 Creation adds elements on maturation; Ordinary constrains fresh god-offer
 rarity; Rejected retains the blocked third option and Vow of Denial contact;
 Barren temporarily suppresses Arcana consequences including Artificer and
-Judgment; and Favor contributes to the offer-local rarity ledger.
+Judgment; and Favor contributes to the offer-local rarity ledger. Separately,
+Denial folds the two exact unselected Chaos curse identities into later curse
+eligibility without treating their blessings as offered or banned traits.
 
 All selected traits and matured benefits still remain available to later Chaos
 eligibility, trait history, and Run State even when their gameplay effect is
