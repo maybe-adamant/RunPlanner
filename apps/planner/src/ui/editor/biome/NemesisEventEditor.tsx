@@ -137,6 +137,7 @@ export function NemesisEventEditor({
       <p className="fixed-room-state">{nemesisOutcomeSummary(draft, selectedRewardType)}</p>
       <div className="hub-rank-actions">
         <button
+          className="primary-action"
           disabled={draft !== null && selectedRewardType === null}
           onClick={() =>
             executeIntent(

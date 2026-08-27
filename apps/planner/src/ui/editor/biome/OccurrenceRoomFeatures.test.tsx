@@ -172,6 +172,9 @@ describe('OccurrenceRoomFeatures', () => {
     await view.user.selectOptions(family, 'goldTrade');
     expect(screen.getByRole('combobox', { name: 'Nemesis response' })).toBeTruthy();
     expect(screen.getByRole('combobox', { name: 'Nemesis reward' })).toBeTruthy();
+    expect(
+      screen.getByRole('button', { name: 'Save event' }).classList.contains('primary-action'),
+    ).toBe(true);
 
     await view.user.click(screen.getByRole('button', { name: 'Cancel' }));
     expect((family as HTMLSelectElement).value).toBe('');
@@ -277,7 +280,9 @@ describe('OccurrenceRoomFeatures', () => {
         ?.biomes.find((biome) => biome.biomeKey === 'H')
         ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === occurrenceId);
 
-    expect(screen.getByRole('button', { name: 'Remove Nemesis event' })).toBeTruthy();
+    const removeNemesis = screen.getByRole('button', { name: 'Remove Nemesis event' });
+    expect(removeNemesis).toBeTruthy();
+    expect(removeNemesis.classList.contains('danger-action')).toBe(true);
     expect(screen.queryByRole('combobox', { name: /Passive encounter/i })).toBeNull();
     const count = screen.getByRole('combobox', { name: 'Optional pickups' });
     expect((count as HTMLSelectElement).value).toBe('4');
@@ -328,7 +333,9 @@ describe('OccurrenceRoomFeatures', () => {
         'NemesisRandomEvent',
       ),
     );
-    expect(screen.getByRole('button', { name: 'Add Nemesis event' })).toBeTruthy();
+    const addNemesis = screen.getByRole('button', { name: 'Add Nemesis event' });
+    expect(addNemesis).toBeTruthy();
+    expect(addNemesis.classList.contains('secondary-action')).toBe(true);
     act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
     await waitFor(() =>
       expect(authoredFields()?.encounters.encounterKeyByPhase.Passive).toBe('NemesisRandomEvent'),

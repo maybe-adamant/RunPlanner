@@ -1305,6 +1305,7 @@ describe('planner history interaction', () => {
       .getAllByRole('button')
       .find((button) => button.textContent?.includes('Shop purchase is unavailable'));
     if (findingButton === undefined) throw new Error('Gold finding is not presented');
+    expect(findingButton.classList.contains('findings-list-entry')).toBe(true);
     await view.user.click(findingButton);
 
     await waitFor(() =>

@@ -933,6 +933,11 @@ describe('OccurrenceRoomActions', () => {
     });
     expect((missingRequiredDelete as HTMLButtonElement).disabled).toBe(true);
     expect(missingRequiredDelete.classList.contains('quiet-action')).toBe(true);
+    expect(
+      within(repairRow)
+        .getByRole('button', { name: 'Restore required action' })
+        .classList.contains('secondary-action'),
+    ).toBe(true);
 
     const historyBefore = view.application.store.getState().projectWorkspace.history.past.length;
     await view.user.click(

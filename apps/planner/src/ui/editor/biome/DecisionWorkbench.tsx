@@ -441,7 +441,7 @@ function SelectedContinuationAction({ node }: { readonly node: BatchNode }) {
   const continuation = node.selectedContinuation;
   return (
     <button
-      className="success-action"
+      className="primary-action"
       disabled={continuation === undefined}
       onClick={() => {
         if (continuation !== undefined) {

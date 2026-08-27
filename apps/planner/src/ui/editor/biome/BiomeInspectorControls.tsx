@@ -327,7 +327,12 @@ function JudgmentArcanaControl({
         <div aria-label="Judgment editor" className="room-judgment-popup" role="dialog">
           <div className="room-judgment-popup-header">
             <h4>Judgment — choose {judgment.requiredCount} inactive Arcana cards</h4>
-            <button aria-label="Close Judgment editor" onClick={() => setOpen(false)} type="button">
+            <button
+              aria-label="Close Judgment editor"
+              className="quiet-action"
+              onClick={() => setOpen(false)}
+              type="button"
+            >
               Close
             </button>
           </div>
@@ -397,6 +402,7 @@ function FigurineArcanaControl({
             </h4>
             <button
               aria-label="Close Crystal Figurine editor"
+              className="quiet-action"
               onClick={() => setOpen(false)}
               type="button"
             >
@@ -470,6 +476,11 @@ function RoomResourceControls({
       {room.resources.map((resource) => (
         <Fragment key={resource.family}>
           <button
+            className={
+              resource.action === 'remove'
+                ? 'danger-action action-compact'
+                : 'secondary-action action-compact'
+            }
             disabled={!resource.legal && resource.action !== 'remove'}
             onClick={() =>
               dispatchIntent(
