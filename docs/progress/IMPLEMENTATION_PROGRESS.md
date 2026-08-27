@@ -11,8 +11,8 @@ the active frontier needed to orient the next delivery.
 
 ## Current Snapshot
 
-The current persisted contract is strict authored schema 59 with catalog
-`0.41.0-stygian-well`. The browser product supports all eight route biomes:
+The current persisted contract is strict authored schema 63 with catalog
+`0.45.0-transcendent-embryo`. The browser product supports all eight route biomes:
 
 ```text
 Underworld: F -> G -> H -> I
@@ -81,9 +81,10 @@ milestones without repeating the delivery chronology.
 | Schema 52          | Natural Selection, King's/Queen's Ransom, Steady Growth, shared Hephaestus cooldown limits, and retained offer history.                  |
 | Schema 53          | Nemesis combat/random-event authoring and generated-pickup settlement.                                                                   |
 | Schemas 54-59      | Runtime fallback policy, automatic Boss/Postboss occurrences, Resources, Pools, Hermes Shrines, and Stygian Wells.                       |
+| Schemas 60-63      | Aromatic Phial fountain rarity, Crystal Figurine Boss activation, Concave Stone residual boons, and Transcendent Embryo transformations. |
 
 Catalog versions advanced alongside these boundaries. The current catalog is
-`0.41.0-stygian-well`; exact declaration facts and source contacts remain in
+`0.45.0-transcendent-embryo`; exact declaration facts and source contacts remain in
 the catalog package and focused audits rather than this status ledger.
 
 ## Durable Architecture Transitions
@@ -128,6 +129,15 @@ acquisition-site, candidate, finding, and Run State authorities. All Together,
 Infernal Contract, Travel Deal, Gold, Shops, Narcissus, Fields, and Artificer
 share the canonical settlement and Room Action products. Direct purchases are
 atomic paid acquisitions; free generated pickups retain pickup capabilities.
+
+The remaining keepsake catalog is closed. Aromatic Phial, Crystal Figurine,
+Concave Stone, and Transcendent Embryo author their random results at existing
+fountain, Boss-defeated, trait-offer, and encounter-threshold owners. The nine
+Olympian keepsakes share one ordered exact-reward priority and provider-specific
+force/rarification ledger; Moon Beam reuses that priority and adds only banked
+and invested Path-point state. Ordinary equip, Cherished Heirloom, and Gift
+Gift Gift contacts are explicit for every implemented effect. Individual Hex
+tree topology and node choices remain outside the supported simulation scope.
 
 ### Trait and generated-pickup closures
 
@@ -276,6 +286,17 @@ intermediate suite was green.
   formatting drift in the reward chronology before the successful rerun. The
   build retained only the existing greater-than-500-kB application chunk
   advisory.
+- The remaining-keepsake closure passed checkpoint integrity at 3 files/20
+  tests, regular tests at 202 files/1,972 tests, heavy tests at 46 files/433
+  tests, the isolated performance lane at 1 file/2 tests, workspace/catalog/
+  engine/fixture typechecking, ESLint, repository-wide Prettier, and production
+  build. Closure exposed and fixed a generic interaction-loader loop for a
+  completed `undefined` result and reduced one P encounter witness from seven
+  full route assemblies to two. The former 800 ms performance threshold also
+  failed the unchanged pre-keepsake base at 853.5/824.2 ms; inactive Olympian
+  pressure paths were short-circuited and the gate now enforces the stated
+  sub-second contract at 1,000 ms. The build retained only the existing
+  greater-than-500-kB application chunk advisory.
 
 Focused validation remains the normal implementation practice. A complete
 `npm run check` is reserved for the declared phase closure or a shared
@@ -290,4 +311,6 @@ facts, where any existed, are represented above or in stable
 catalog/design/audit documents; deletion does not require adding redundant
 absorption prose. The repository-cleanup execution plan was deleted at closure
 after its durable ownership, maintenance outcomes, and validation results were
-recorded.
+recorded. The remaining-keepsake execution plan was likewise retired after its
+catalog closure, three-contact lifecycle, Hex boundary, and validation evidence
+were absorbed here and in the focused keepsake audits.
