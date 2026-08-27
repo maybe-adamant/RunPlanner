@@ -59,7 +59,7 @@ import {
   type RewardBranchState,
 } from './branch-primitives';
 import { historyChronology, type RewardFactsFactory } from './acquisition-settlement';
-import { bankPathPoints } from '../hex-progress';
+import { bankPathPoints, installHexTree, maybeAddGodSent } from '../hex-progress';
 
 import { addRewardFinding, rewardFinding } from './findings';
 
@@ -100,7 +100,11 @@ export function initializeRewardBranches(
   startingKeepsakeKey?: string,
   startingKeepsakeEquipResults?: AuthoredKeepsakeEquipResults,
   routeKey?: string,
-  loadout?: { readonly weaponKey: string; readonly aspectKey: string },
+  loadout?: {
+    readonly weaponKey: string;
+    readonly aspectKey: string;
+    readonly aspectHexTree?: import('../../authored-project/traits').AuthoredHexTreeConfiguration;
+  },
 ): readonly RewardBranchState[] {
   if (initialBranches === undefined) {
     if (
@@ -131,9 +135,13 @@ export function initializeRewardBranches(
       arcanaFear: initialArcanaFear,
       keepsakes: createKeepsakeState(catalog, startingKeepsakeKey, initialArcanaFear),
     });
+    const initialWithHex =
+      loadout?.aspectKey === 'SuitHexAspect' && loadout.aspectHexTree !== undefined
+        ? installHexTree(catalog, branch, 'SpellMoonBeamTrait', loadout.aspectHexTree)
+        : branch;
     const pressured = applyMoonBeamEquip(
       catalog,
-      applyOlympianRewardPressureEquip(catalog, branch, startingKeepsakeKey),
+      applyOlympianRewardPressureEquip(catalog, initialWithHex, startingKeepsakeKey),
       startingKeepsakeKey,
       catalog.keepsakes.byKey[startingKeepsakeKey]?.rank,
     );
@@ -184,12 +192,13 @@ export function initializeRewardBranches(
       createRouteStartKeepsakeSelectionAddress(routeKey ?? 'route'),
       loadout ?? { aspectKey: '' },
     );
+    const withGodSent = maybeAddGodSent(catalog, initialized);
     return Object.freeze([
-      traitHistory === initialized.traitHistory
-        ? initialized
+      traitHistory === withGodSent.traitHistory
+        ? withGodSent
         : Object.freeze({
-            ...initialized,
-            history: attachTraitHistory(initialized.history, traitHistory),
+            ...withGodSent,
+            history: attachTraitHistory(withGodSent.history, traitHistory),
             traitHistory,
           }),
     ]);
@@ -232,7 +241,10 @@ export function applyOlympianRewardPressureEquip(
 ): RewardBranchState {
   const effect = catalog.keepsakes.byKey[keepsakeKey]?.effect;
   if (effect?.kind !== 'olympianRewardPressure') return branch;
-  return applyExactRewardPriority(catalog, branch, effect.priorityRewardType);
+  return maybeAddGodSent(
+    catalog,
+    applyExactRewardPriority(catalog, branch, effect.priorityRewardType),
+  );
 }
 
 /** Shared source-time exact priority insertion and immediate RunProgress refill. */

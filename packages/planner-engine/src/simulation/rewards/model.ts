@@ -138,7 +138,7 @@ export interface RewardBranch {
   readonly bags: Readonly<Record<string, RewardBagState>>;
   /** Ordered global priorities that intentionally survive biome boundaries. */
   readonly rewardPriorities: readonly string[];
-  readonly hexProgress: { readonly bankedPathPoints: number; readonly investedPathPoints: number };
+  readonly hexProgress: import('../hex-progress').HexProgressState;
   readonly history: RewardHistoryState;
   readonly events: readonly RewardEvent[];
   readonly processedThroughHistorySequence: number;
@@ -158,6 +158,8 @@ export interface TargetRewardHistoryCheckpoint {
   readonly histories: readonly RewardHistoryState[];
   /** Agreement-owned branch fact for later room generation requirements. */
   readonly pendingSpellDrops: readonly boolean[];
+  /** Branch-owned closure truth must agree before a generated target can use it. */
+  readonly allSpellInvested: readonly boolean[];
 }
 
 interface RewardSimulationBase {

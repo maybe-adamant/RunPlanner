@@ -8,6 +8,7 @@ import {
   semanticAddressKey,
   type AuthoredAllTogetherResult,
   type AuthoredTraitOfferTraits,
+  createDefaultAuthoredHexTree,
 } from '@run-planner/engine/authored-project';
 import { factsWithHistory, type RewardKernelFacts } from '@run-planner/engine/reward-kernel';
 import { describe, expect, it } from 'vitest';
@@ -27,6 +28,8 @@ import {
   type TraitHistoryState,
 } from '../../src/simulation/traits';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
+import { installHexTree } from '../../src/simulation/hex-progress';
+import type { RewardBranchState } from '../../src/simulation/rewards/branch-primitives';
 
 const owner = createTraitOfferAddress(
   createEncounterPhaseAddress(
@@ -134,11 +137,15 @@ function offer(
   });
 }
 
-function settle(history: TraitHistoryState, result?: AuthoredAllTogetherResult) {
+function settle(
+  history: TraitHistoryState,
+  result?: AuthoredAllTogetherResult,
+  initial: RewardBranchState = branch(history),
+) {
   const findings = new Map();
   const settled = processEncounterTraitOffer(
     catalog,
-    branch(history),
+    initial,
     owner.owner,
     offer(result),
     20,
@@ -206,7 +213,14 @@ describe('All Together direct trait settlement', () => {
     const findings = new Map();
     const settled = settleOwnedAcquisitionSite(
       catalog,
-      [branch(history)],
+      [
+        installHexTree(
+          catalog,
+          branch(history),
+          'SpellPolymorphTrait',
+          createDefaultAuthoredHexTree(catalog, 'SpellPolymorphTrait'),
+        ),
+      ],
       {
         siteOwner: createOccurrenceAddress(biome, occurrenceId),
         pointKey: 'roomRewardPickup',
@@ -233,6 +247,35 @@ describe('All Together direct trait settlement', () => {
         .filter((event) => event.kind === 'directTraitGrant')
         .map((event) => event.traitKey),
     ).toEqual(Object.values(firstResult));
+    expect(settled.branches[0]?.hexProgress.godSentAdded).toBe(true);
+
+    const nonmatching = settleOwnedAcquisitionSite(
+      catalog,
+      [
+        installHexTree(
+          catalog,
+          branch(history),
+          'SpellTransformTrait',
+          createDefaultAuthoredHexTree(catalog, 'SpellTransformTrait'),
+        ),
+      ],
+      {
+        siteOwner: createOccurrenceAddress(biome, occurrenceId),
+        pointKey: 'roomRewardPickup',
+        entryKey: 'self',
+        source: {
+          origin: incoming,
+          offer: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'HeraUpgrade' } },
+          producerLifecycleKey: 'RoomReward',
+          instanceProvenance: 'free',
+          traitOffersByAcquisitionRole: { source: offer() },
+        },
+        historySequence: 20,
+      },
+      (rewardHistory) => factsWithHistory(rewardFacts(), rewardHistory, new Set()),
+      new Map(),
+    );
+    expect(nonmatching.branches[0]?.hexProgress.godSentAdded).toBe(false);
   });
 
   it('publishes the exact post-outer checkpoint when an ordinary reward child blocks', () => {
@@ -311,6 +354,17 @@ describe('All Together direct trait settlement', () => {
     ).settled.traitHistory!;
     expect(exhausted.equippedTraits.AllElementalBoon?.rarity).toBe('Legendary');
     expect(exhausted.events.filter((event) => event.kind === 'directTraitGrant')).toEqual([]);
+    const nightBloom = settle(
+      allEight,
+      Object.freeze({ earth: null, fire: null, air: null, water: null }),
+      installHexTree(
+        catalog,
+        branch(allEight),
+        'SpellSummonTrait',
+        createDefaultAuthoredHexTree(catalog, 'SpellSummonTrait'),
+      ),
+    ).settled;
+    expect(nightBloom.hexProgress.godSentAdded).toBe(true);
   });
 
   it.each([

@@ -1468,7 +1468,7 @@ export function applyProducerRoleHistory(
         ? (3 as const)
         : undefined);
     if (pathPointGrant !== undefined)
-      acquisitionBranch = settlePathScreen(acquisitionBranch, pathPointGrant);
+      acquisitionBranch = settlePathScreen(catalog, acquisitionBranch, pathPointGrant);
     if (fixedTraitKey !== undefined) {
       const traitHistory = recordFixedAcquisitionTraitGrant(
         catalog,

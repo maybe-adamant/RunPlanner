@@ -980,7 +980,7 @@ describe('trait legality and derived facts', () => {
 });
 
 describe('reached trait offer chronology', () => {
-  it('requires a base Hex before exporting one non-companion Task Force fallback', () => {
+  it('requires a settled Spell Drop, not Aspect-start Sky Fall, before exporting Task Force fallback', () => {
     const emptyHistory = createTraitHistoryState();
     expect(assessTraitOption(catalog, 'OlympianSpellCountBoon', emptyHistory).legal).toBe(false);
 
@@ -996,15 +996,17 @@ describe('reached trait offer chronology', () => {
         acquisitionPoint: 'test',
       }),
     ]);
-    expect(assessTraitOption(catalog, 'OlympianSpellCountBoon', ordinarySpellHistory).legal).toBe(
-      true,
-    );
+    expect(
+      assessTraitOption(catalog, 'OlympianSpellCountBoon', ordinarySpellHistory, {
+        settledSpellDrop: true,
+      }).legal,
+    ).toBe(true);
 
     const aspectSpellHistory = recordAspectStartingTrait(catalog, emptyHistory, owner, {
       aspectKey: 'SuitHexAspect',
     });
     expect(assessTraitOption(catalog, 'OlympianSpellCountBoon', aspectSpellHistory).legal).toBe(
-      true,
+      false,
     );
 
     const offer = Object.freeze({
@@ -1028,7 +1030,7 @@ describe('reached trait offer chronology', () => {
       'source',
       offer,
       ordinarySpellHistory,
-      {},
+      { settledSpellDrop: true },
       0,
     );
     expect(evaluation.runtimeOfferFallbackTraitKey).toBe('FocusLastStandBoon');

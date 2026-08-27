@@ -18,6 +18,7 @@ import {
 } from '../traits';
 import type { ArcanaFearState } from '../arcana-fear';
 import type { KeepsakeState } from '../keepsakes';
+import type { HexProgressState } from '../hex-progress';
 
 export interface PendingShopTravelRefill {
   readonly sourceOfferKey: string;
@@ -75,7 +76,7 @@ export interface RewardBranchState {
   /** Ordered global exact reward-type priorities, consumed only by counted selection. */
   readonly rewardPriorities: readonly string[];
   /** Semantic Path selections: banked until a writable screen, then aggregate invested. */
-  readonly hexProgress: { readonly bankedPathPoints: number; readonly investedPathPoints: number };
+  readonly hexProgress: HexProgressState;
   readonly history: RewardHistoryState;
   readonly events: readonly RewardEvent[];
   readonly pendingShops: Readonly<Record<string, PendingShopState>>;

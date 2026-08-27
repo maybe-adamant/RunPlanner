@@ -2401,6 +2401,11 @@ export type WorkspaceRunStateLauncher =
 export interface WorkspaceRunStatePresentation {
   readonly hexProgress: {
     readonly baseSpellLabel?: string;
+    readonly layoutLabel?: string;
+    readonly baseCapacity?: number;
+    readonly effectiveCapacity?: number;
+    readonly godSentAdded: boolean;
+    readonly talentDropsClosed: boolean;
     readonly bankedPathPoints: number;
     readonly investedPathPoints: number;
   };

@@ -1,3 +1,4 @@
+export { hexBaseCapacity, hexEffectiveCapacity, attestTalentDropsClosed } from './hex-progress';
 export {
   assessPurgingPool,
   isPurgingPoolEligibleTrait,

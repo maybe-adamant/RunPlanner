@@ -96,6 +96,7 @@ function requirementContext(
   declaration: RoomDeclaration,
   view: HistoryStateView,
   pendingSpellDrop: boolean,
+  allSpellInvested = false,
 ): RequirementEvaluationContext {
   const goalsRemaining = view.ledgers.counters.clockworkGoalsRemaining;
   const nonGoalRewardsAcquired = view.ledgers.counters.clockworkNonGoalRewardsAcquired;
@@ -146,7 +147,7 @@ function requirementContext(
           maxNonGoalRewards: maxNonGoalRewards!,
         }
       : undefined,
-    flags: Object.freeze({ allSpellInvested: false, pendingSpellDrop }),
+    flags: Object.freeze({ allSpellInvested, pendingSpellDrop }),
   });
 }
 
@@ -156,6 +157,7 @@ function requirementContext(
  */
 export interface EncounterPreparationRunState {
   readonly pendingSpellDrop?: boolean;
+  readonly allSpellInvested?: boolean;
 }
 
 function phaseAddress(room: EncounterAuthoringRoom, slotKey: string): EncounterPhaseAddress {
@@ -205,12 +207,13 @@ function slotActivationSatisfied(
   slot: EncounterEnvelopeSlot,
   before: HistoryStateView,
   pendingSpellDrop: boolean,
+  allSpellInvested = false,
 ): boolean {
   return (
     slot.activationRequirement === undefined ||
     evaluateRequirement(
       slot.activationRequirement,
-      requirementContext(catalog, room, declaration, before, pendingSpellDrop),
+      requirementContext(catalog, room, declaration, before, pendingSpellDrop, allSpellInvested),
     )
   );
 }
@@ -234,6 +237,7 @@ export function prepareRoomEncounterPhases(
   }
   const bindings = encounterBindingsBySlot(catalog, declaration, declaration.gameName);
   const pendingSpellDrop = runState.pendingSpellDrop === true;
+  const allSpellInvested = runState.allSpellInvested === true;
   const slots = new Map(
     encounterEnvelopeSlots(catalog, declaration, declaration.gameName).map((slot) => [
       slot.key,
@@ -277,6 +281,7 @@ export function prepareRoomEncounterPhases(
       slot,
       preparation,
       pendingSpellDrop,
+      allSpellInvested,
     );
     if (binding.kind === 'fixed') {
       if (phase.encounterKey !== binding.encounterDefinitionKey) {
@@ -302,7 +307,14 @@ export function prepareRoomEncounterPhases(
     }
 
     const set = encounterSetForBinding(catalog, binding, declaration.gameName);
-    const context = requirementContext(catalog, room, declaration, preparation, pendingSpellDrop);
+    const context = requirementContext(
+      catalog,
+      room,
+      declaration,
+      preparation,
+      pendingSpellDrop,
+      allSpellInvested,
+    );
     const candidateEncounterKeys = Object.freeze(
       set.encounterDefinitionKeys.filter((key) => {
         const definition = catalog.encounterDefinitions.byKey[key];

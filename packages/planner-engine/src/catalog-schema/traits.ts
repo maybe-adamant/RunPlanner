@@ -279,6 +279,10 @@ export type TraitRequirementExpression =
       readonly requirements: readonly TraitRequirementExpression[];
     }
   | {
+      /** A canonical reward-use prefix fact, not an authored predicate. */
+      readonly kind: 'settledSpellDrop';
+    }
+  | {
       readonly kind: 'anyEquippedTrait';
       readonly traitKeys: readonly string[];
     }

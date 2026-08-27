@@ -921,6 +921,9 @@ export function evaluateBiomeRewardChronology(
             ),
           ),
         ),
+        allSpellInvested: Object.freeze(
+          checkpointBranches.map((branch) => branch.hexProgress.talentDropsClosed === true),
+        ),
       }),
     );
   }

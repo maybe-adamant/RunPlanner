@@ -199,6 +199,14 @@ export function RunStateSheet({ launcher }: { readonly launcher: WorkspaceRunSta
         {state.hexProgress.baseSpellLabel === undefined ? null : (
           <p>Spell: {state.hexProgress.baseSpellLabel}</p>
         )}
+        {state.hexProgress.layoutLabel === undefined ? null : (
+          <p>
+            Layout: {state.hexProgress.layoutLabel} · capacity {state.hexProgress.baseCapacity}/
+            {state.hexProgress.effectiveCapacity}
+          </p>
+        )}
+        <p>God Sent: {state.hexProgress.godSentAdded ? 'present' : 'absent'}</p>
+        <p>Talent Drops: {state.hexProgress.talentDropsClosed ? 'closed' : 'open'}</p>
         <p>Banked Path points: {state.hexProgress.bankedPathPoints}</p>
         <p>
           Aggregate invested Path points: {state.hexProgress.investedPathPoints} (sim-neutral nodes)

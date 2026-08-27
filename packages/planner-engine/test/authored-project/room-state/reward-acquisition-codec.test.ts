@@ -198,7 +198,7 @@ describe('reward acquisition decoder', () => {
               ],
               selectedOptionKey: 'option1',
               rarificationActions: [],
-              hexTree: spellTree,
+              ...(spellTree === undefined ? {} : { hexTree: spellTree }),
             },
           };
           delete offer.traitOffersByAcquisitionRole.self;
