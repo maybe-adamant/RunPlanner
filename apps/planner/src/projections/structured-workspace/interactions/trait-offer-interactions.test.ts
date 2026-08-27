@@ -135,6 +135,37 @@ describe('trait-offer-interactions', () => {
     );
   });
 
+  it('saves and reloads a Persephone row through the complete whole-offer intent', () => {
+    const project = createGoldenFGHIProject();
+    const initial = bind(project, 'Underworld', 'F');
+    const interaction = [...initial.interactions.traitOffers.values()].find(
+      (candidate) =>
+        candidate.giver.providerKind === 'olympian' && candidate.value?.kind === 'traits',
+    );
+    if (interaction === undefined || interaction.value?.kind !== 'traits') {
+      throw new Error('Olympian trait interaction is missing');
+    }
+    const original = interaction.value;
+    const changed = Object.freeze({
+      ...original,
+      options: Object.freeze([
+        Object.freeze({ ...original.options[0], persephoneLevelBonus: 5 }),
+        original.options[1],
+        original.options[2],
+      ]) as AuthoredTraitOfferTraits['options'],
+      selectedOptionKey: 'option2' as const,
+    });
+    const saved = applyProjectCommand(project, catalog, interaction.intentFor(changed).command);
+    const reloaded = bind(saved, 'Underworld', 'F').interactions.traitOffers.get(interaction.key);
+    expect(reloaded?.value).toEqual(changed);
+    expect(reloaded?.value?.kind === 'traits' ? reloaded.value.options[1] : undefined).toEqual(
+      original.options[1],
+    );
+    expect(reloaded?.value?.kind === 'traits' ? reloaded.value.selectedOptionKey : undefined).toBe(
+      'option2',
+    );
+  });
+
   it('binds Circe draft switches and the blocking finding to the exact resolution child', () => {
     let project = loadSurfaceNOProject();
     project = applyProjectCommand(project, catalog, {

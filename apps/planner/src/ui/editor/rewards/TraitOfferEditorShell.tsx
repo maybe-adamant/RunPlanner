@@ -208,6 +208,8 @@ export function TraitOfferEditorShell({
               const optionKey = OPTION_KEYS[index]!;
               const optionFeedback = feedback.options[index];
               const rowEffectiveRarity = effectiveRarity(optionKey);
+              const rowEffectiveLevel = optionFeedback?.effectiveLevel;
+              const rowPersephoneLevelBonusMaximum = optionFeedback?.persephoneLevelBonusMaximum;
               return (
                 <div data-has-findings={(optionFeedback?.reasons.length ?? 0) > 0} key={optionKey}>
                   {rowEffectiveRarity === undefined ? (
@@ -216,6 +218,12 @@ export function TraitOfferEditorShell({
                       interaction={interaction}
                       onUpdate={updateValue}
                       optionKey={optionKey}
+                      {...(rowEffectiveLevel === undefined
+                        ? {}
+                        : { effectiveLevel: rowEffectiveLevel })}
+                      {...(rowPersephoneLevelBonusMaximum === undefined
+                        ? {}
+                        : { persephoneLevelBonusMaximum: rowPersephoneLevelBonusMaximum })}
                       rarifySupported={rarifySupported(optionKey)}
                       spellOffer={spellOffer}
                       value={value}
@@ -223,10 +231,16 @@ export function TraitOfferEditorShell({
                   ) : (
                     <TraitOfferOrdinaryOption
                       effectiveRarity={rowEffectiveRarity}
+                      {...(rowEffectiveLevel === undefined
+                        ? {}
+                        : { effectiveLevel: rowEffectiveLevel })}
                       index={index}
                       interaction={interaction}
                       onUpdate={updateValue}
                       optionKey={optionKey}
+                      {...(rowPersephoneLevelBonusMaximum === undefined
+                        ? {}
+                        : { persephoneLevelBonusMaximum: rowPersephoneLevelBonusMaximum })}
                       rarifySupported={rarifySupported(optionKey)}
                       spellOffer={spellOffer}
                       value={value}

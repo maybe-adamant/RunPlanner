@@ -24,6 +24,9 @@ export interface TraitOfferOptionFeedback {
   readonly legal: boolean;
   readonly reasons: readonly string[];
   readonly traitKey: string;
+  /** Engine-published row products; omitted when branches do not agree. */
+  readonly effectiveLevel?: number;
+  readonly persephoneLevelBonusMaximum?: number;
   readonly replacement?: TraitReplacementPresentation;
 }
 
@@ -173,10 +176,14 @@ export function projectTraitOfferFeedback(
           evaluation.result.branches.length,
           option.traitKey,
         );
+        const effectiveLevel = evaluation.result.effectiveLevels[index];
+        const persephoneLevelBonusMaximum = evaluation.result.persephoneLevelBonusMaximums[index];
         return Object.freeze({
           legal: reasons.length === 0,
           reasons: Object.freeze([...reasons]),
           traitKey: option.traitKey,
+          ...(effectiveLevel === undefined ? {} : { effectiveLevel }),
+          ...(persephoneLevelBonusMaximum === undefined ? {} : { persephoneLevelBonusMaximum }),
           ...(replacement === undefined
             ? {}
             : {

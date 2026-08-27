@@ -44,7 +44,7 @@ function traitOfferRevision(interaction: WorkspaceTraitOfferInteraction): string
             'echoPomTarget' in option ? (option.echoPomTarget ?? 'none') : ''
           }:${'echoLastRunBoon' in option ? JSON.stringify(option.echoLastRunBoon) : ''}:${
             'allTogetherResult' in option ? JSON.stringify(option.allTogetherResult) : ''
-          }:${'naturalSelectionTargets' in option ? JSON.stringify(option.naturalSelectionTargets) : ''}`,
+          }:${'naturalSelectionTargets' in option ? JSON.stringify(option.naturalSelectionTargets) : ''}:${'persephoneLevelBonus' in option ? (option.persephoneLevelBonus ?? '') : ''}`,
       )
       .join(','),
     JSON.stringify(interaction.value.concaveStoneResult),
