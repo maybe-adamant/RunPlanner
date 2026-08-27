@@ -78,7 +78,7 @@ import {
   echoGiftEmbryoReplayAddress,
   echoGiftHammerReplayAddress,
 } from '@planner-test/fixtures/echoGiftHammer';
-import { candidateSupport, createCandidateSessionFactory } from './candidateProjection';
+import { createCandidateSessionFactory } from './candidateProjection';
 import type { CandidateSessionFactory } from './candidateProjection';
 import { createContextualOptionResolver } from './contextualOptions';
 import { createContextualPickerProjection } from './contextualPicker';
@@ -636,6 +636,24 @@ describe('structured workspace overlay contract', () => {
     ).toBeDefined();
     const invalidProjected = projection().project(invalidAssembly);
     const invalidKey = semanticAddressKey(fHammerResult);
+    const invalidInteraction = invalidProjected.interactions.keepsakeEquipResults.get(invalidKey);
+    if (invalidInteraction?.owner.resultKind !== 'experimentalHammer')
+      throw new Error('invalid Experimental Hammer interaction is missing');
+    const invalidModel = invalidInteraction.load();
+    expect(invalidModel.picker.selected).toMatchObject({
+      value: 'ApolloWeaponBoon',
+      state: 'impossible',
+      selected: true,
+      explanation: 'This option is not available with the current route.',
+    });
+    expect(invalidModel.picker.sections).toContainEqual(
+      expect.objectContaining({
+        kind: 'selectedInvalid',
+        items: expect.arrayContaining([
+          expect.objectContaining({ value: 'ApolloWeaponBoon', state: 'impossible' }),
+        ]),
+      }),
+    );
     const fCompletion = invalidProjected.routes
       .find((route) => route.routeKey === 'Underworld')
       ?.biomes.find((biome) => biome.biomeKey === 'F')
@@ -751,10 +769,8 @@ describe('structured workspace overlay contract', () => {
     expect(
       interaction
         .load()
-        .some(
-          (candidate) =>
-            candidate.value !== '__exhausted' && candidateSupport(candidate) === 'possible',
-        ),
+        .picker.sections.flatMap((section) => section.items)
+        .some((candidate) => candidate.value !== '__exhausted' && candidate.state === 'possible'),
     ).toBe(true);
     expect(projected.focusByOwner.get(key)).toMatchObject({
       ownerAddress: echoGiftHammerReplayAddress,
@@ -792,9 +808,17 @@ describe('structured workspace overlay contract', () => {
     expect(startInteraction.value).toBeUndefined();
     const epicStart = startInteraction
       .load()
+      .picker.sections.flatMap((section) => section.items)
       .find((candidate) => candidate.value === 'ChaosWeaponBlessing');
-    expect(candidateSupport(epicStart!)).toBe('possible');
-    expect(epicStart).toMatchObject({ transcendentEmbryoSummary: { rarity: 'Epic' } });
+    expect(epicStart?.state).toBe('possible');
+    expect(
+      (
+        startInteraction as Extract<
+          typeof startInteraction,
+          { readonly owner: { readonly resultKind: 'transcendentEmbryo' } }
+        >
+      ).load({ blessingKey: 'ChaosWeaponBlessing' }).transcendentEmbryoSummary,
+    ).toMatchObject({ rarity: 'Epic' });
     expect(routeStart.focusByOwner.get(semanticAddressKey(startResult))).toMatchObject({
       ownerAddress: startResult,
       region: 'routeRail',
@@ -822,9 +846,17 @@ describe('structured workspace overlay contract', () => {
     expect(postbossInteraction.value).toBeUndefined();
     const epicPostboss = postbossInteraction
       .load()
+      .picker.sections.flatMap((section) => section.items)
       .find((candidate) => candidate.value === 'ChaosWeaponBlessing');
-    expect(candidateSupport(epicPostboss!)).toBe('possible');
-    expect(epicPostboss).toMatchObject({ transcendentEmbryoSummary: { rarity: 'Epic' } });
+    expect(epicPostboss?.state).toBe('possible');
+    expect(
+      (
+        postbossInteraction as Extract<
+          typeof postbossInteraction,
+          { readonly owner: { readonly resultKind: 'transcendentEmbryo' } }
+        >
+      ).load({ blessingKey: 'ChaosWeaponBlessing' }).transcendentEmbryoSummary,
+    ).toMatchObject({ rarity: 'Epic' });
 
     const echoAssembly = simulateProjectAssembly(
       catalog,
@@ -840,9 +872,17 @@ describe('structured workspace overlay contract', () => {
     expect(echoInteraction.value).toBeUndefined();
     const common = echoInteraction
       .load()
+      .picker.sections.flatMap((section) => section.items)
       .find((candidate) => candidate.value === 'ChaosWeaponBlessing');
-    expect(candidateSupport(common!)).toBe('possible');
-    expect(common).toMatchObject({ transcendentEmbryoSummary: { rarity: 'Common' } });
+    expect(common?.state).toBe('possible');
+    expect(
+      (
+        echoInteraction as Extract<
+          typeof echoInteraction,
+          { readonly owner: { readonly resultKind: 'transcendentEmbryo' } }
+        >
+      ).load({ blessingKey: 'ChaosWeaponBlessing' }).transcendentEmbryoSummary,
+    ).toMatchObject({ rarity: 'Common' });
     expect(echo.focusByOwner.get(semanticAddressKey(echoGiftEmbryoReplayAddress))).toMatchObject({
       ownerAddress: echoGiftEmbryoReplayAddress,
       region: 'structure',

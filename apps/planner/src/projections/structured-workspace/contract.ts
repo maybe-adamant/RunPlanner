@@ -71,7 +71,6 @@ import type { LevelResolutionCandidateProjection } from '../candidateProjection'
 
 import type {
   CandidateOptionProjection,
-  KeepsakeEquipResultOptionProjection,
   CandidateProjectionEvaluation,
   CandidateSessionFactory,
   CountedRewardCandidateOwner,
@@ -709,10 +708,12 @@ export interface WorkspaceFigurineArcanaInteraction {
 
 /** One exact route-start or Postboss rack selection, with engine-backed option support. */
 export interface WorkspaceKeepsakeSelectionInteraction {
-  readonly choices: readonly WorkspaceInteractionChoice<string>[];
   readonly key: string;
-  readonly load: () => readonly CandidateOptionProjection<string, CandidateProjectionEvaluation>[];
+  /** Candidate-backed identity model; evaluation starts when the picker opens. */
+  readonly load: () => ContextualPickerModel<string>;
   readonly owner: KeepsakeSelectionAddress;
+  /** Label retained by the trigger before its candidate model is activated. */
+  readonly selectedLabel: string;
   readonly value:
     | { readonly kind: 'retain' }
     | { readonly kind: 'replace'; readonly keepsakeKey: string }
@@ -736,14 +737,22 @@ export type WorkspaceKeepsakeEquipResultInteraction =
   | WorkspaceExperimentalHammerEquipResultInteraction
   | WorkspaceTranscendentEmbryoEquipResultInteraction;
 
+export interface WorkspaceKeepsakeEquipResultDomain {
+  readonly picker: ContextualPickerModel<string>;
+  readonly transcendentEmbryoSummary?: {
+    readonly rarity: import('@run-planner/engine/catalog-schema').InRunTraitRarity;
+    readonly operands: readonly { readonly label: string; readonly value: number }[];
+  };
+}
+
 export interface WorkspaceJeweledPomEquipResultInteraction {
-  readonly choices: readonly WorkspaceInteractionChoice<string>[];
   readonly key: string;
   readonly owner: KeepsakeEquipResultAddress & { readonly resultKind: 'jeweledPom' };
   readonly value?: import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults['jeweledPom'];
   readonly load: (
     value?: import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults['jeweledPom'],
-  ) => readonly CandidateOptionProjection<string>[];
+  ) => WorkspaceKeepsakeEquipResultDomain;
+  readonly selectedLabel: string;
   readonly intentFor: (
     value: NonNullable<
       import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults['jeweledPom']
@@ -754,13 +763,13 @@ export interface WorkspaceJeweledPomEquipResultInteraction {
 }
 
 export interface WorkspaceExperimentalHammerEquipResultInteraction {
-  readonly choices: readonly WorkspaceInteractionChoice<string>[];
   readonly key: string;
   readonly owner: KeepsakeEquipResultAddress & { readonly resultKind: 'experimentalHammer' };
   readonly value?: import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults['experimentalHammer'];
   readonly load: (
     value?: import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults['experimentalHammer'],
-  ) => readonly CandidateOptionProjection<string>[];
+  ) => WorkspaceKeepsakeEquipResultDomain;
+  readonly selectedLabel: string;
   readonly intentFor: (
     value: NonNullable<
       import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults['experimentalHammer']
@@ -771,13 +780,13 @@ export interface WorkspaceExperimentalHammerEquipResultInteraction {
 }
 
 export interface WorkspaceTranscendentEmbryoEquipResultInteraction {
-  readonly choices: readonly WorkspaceInteractionChoice<string>[];
   readonly key: string;
   readonly owner: KeepsakeEquipResultAddress & { readonly resultKind: 'transcendentEmbryo' };
   readonly value?: import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults['transcendentEmbryo'];
   readonly load: (
     value?: import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults['transcendentEmbryo'],
-  ) => readonly KeepsakeEquipResultOptionProjection[];
+  ) => WorkspaceKeepsakeEquipResultDomain;
+  readonly selectedLabel: string;
   readonly intentFor: (
     value: NonNullable<
       import('@run-planner/engine/authored-project').AuthoredKeepsakeEquipResults['transcendentEmbryo']

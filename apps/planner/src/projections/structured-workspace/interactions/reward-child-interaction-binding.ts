@@ -53,6 +53,7 @@ export interface WorkspaceRewardChildInteractionCatalog {
 export function bindRewardChildInteractions(input: {
   readonly catalog: Catalog;
   readonly candidates: CandidateProjectionSession;
+  readonly contextualPicker: import('@planner/projections/contextualPicker').ContextualPickerProjectionService;
   readonly project: import('@run-planner/engine/simulation').ProjectEvaluationAssembly['project'];
   readonly rewardControls: ReadonlyMap<string, WorkspaceRewardControl>;
   readonly traitControls?: ReadonlyMap<string, WorkspaceTraitOfferControl>;
@@ -91,6 +92,7 @@ export function bindRewardChildInteractions(input: {
   const {
     catalog,
     candidates,
+    contextualPicker,
     project,
     rewardControls,
     traitControls,
@@ -186,6 +188,7 @@ export function bindRewardChildInteractions(input: {
   } = bindResolutionInteractions({
     catalog,
     candidates,
+    contextualPicker,
     levelResolutionControls: effectiveLevelResolutionControls,
     steadyGrowthControls: effectiveSteadyGrowthControls,
     transcendentEmbryoControls: effectiveTranscendentEmbryoControls,

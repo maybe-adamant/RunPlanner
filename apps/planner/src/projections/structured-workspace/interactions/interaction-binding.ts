@@ -166,6 +166,7 @@ export function bindWorkspaceInteractions(
   const child: WorkspaceRewardChildInteractionCatalog = bindRewardChildInteractions({
     candidates,
     catalog,
+    contextualPicker: services.contextualPicker,
     project: assembly.project,
     rewardControls,
     rewardPicker: services.rewardPicker,

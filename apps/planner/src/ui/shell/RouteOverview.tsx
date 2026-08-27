@@ -6,8 +6,6 @@ import {
   deriveRouteLoadout,
 } from '@run-planner/engine/authored-project';
 import { type Catalog } from '@run-planner/engine/catalog-schema';
-import { useState } from 'react';
-
 import { type RouteFeedbackPresentation } from '@planner/projections/evaluationProjection';
 import type { RouteEditorNavigation } from '@planner/projections/editorNavigation';
 import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
@@ -18,19 +16,10 @@ import type {
 } from '@planner/projections/structured-workspace';
 import { workspaceInteractionKey } from '@planner/projections/structured-workspace';
 import {
-  useWorkspaceInteraction,
-  useWorkspaceInteractionController,
-} from '@planner/ui/controls/useWorkspaceInteraction';
-import {
-  candidateMayBeAuthored,
-  candidateSelectState,
-} from '@planner/ui/feedback/candidatePresentation';
+  KeepsakeEquipResultPicker,
+  KeepsakeSelectionPicker,
+} from '@planner/ui/editor/KeepsakePickers';
 import { FindingCount, SemanticOwnerMarker, StatusBadge } from '../feedback/EvaluationFeedback';
-
-type JeweledPomInteraction = Extract<
-  import('@planner/projections/structured-workspace').WorkspaceKeepsakeEquipResultInteraction,
-  { readonly owner: { readonly resultKind: 'jeweledPom' } }
->;
 
 const fearVowGridOrder = Object.freeze([
   'EnemyDamageShrineUpgrade',
@@ -51,142 +40,6 @@ const fearVowGridOrder = Object.freeze([
   'BanUnpickedBoonsShrineUpgrade',
   'BossDifficultyShrineUpgrade',
 ] as const);
-
-function jeweledPomLoadable(
-  interaction: JeweledPomInteraction,
-  value: NonNullable<JeweledPomInteraction['value']>,
-): { readonly load: () => ReturnType<JeweledPomInteraction['load']> } {
-  const load = interaction.load;
-  return Object.freeze({ load: () => load(value) });
-}
-
-function RouteStartJeweledPomResultControl({
-  interaction,
-}: {
-  readonly interaction: JeweledPomInteraction;
-}) {
-  const dispatch = useAppDispatch();
-  const selected = interaction.value;
-  const revision = selected?.traitKey ?? '';
-  const [candidateInput, setCandidateInput] = useState(() => ({
-    interaction,
-    revision,
-    loadable: jeweledPomLoadable(interaction, {
-      traitKey: selected?.traitKey ?? '',
-    }),
-  }));
-  if (candidateInput.interaction !== interaction || candidateInput.revision !== revision) {
-    setCandidateInput({
-      interaction,
-      revision,
-      loadable: jeweledPomLoadable(interaction, {
-        traitKey: selected?.traitKey ?? '',
-      }),
-    });
-  }
-  const candidates = useWorkspaceInteraction(candidateInput.loadable);
-  const candidateFor = (traitKey: string) =>
-    candidates.result?.find((candidate) => candidate.value === traitKey);
-  return (
-    <fieldset className="field-control">
-      <legend>Jeweled Pom result</legend>
-      <select
-        aria-label="Jeweled Pom result"
-        id={`${interaction.owner.routeKey}-jeweled-pom`}
-        value={selected?.traitKey ?? ''}
-        onFocus={candidates.activate}
-        onPointerDown={candidates.activate}
-        onChange={(event) => {
-          const traitKey = event.target.value;
-          if (traitKey === '') return;
-          const option = candidateFor(traitKey);
-          if (candidateMayBeAuthored(option))
-            dispatch(
-              authoredProjectCommandDispatched(
-                interaction.intentFor({
-                  ...(selected ?? {}),
-                  traitKey,
-                }).command,
-              ),
-            );
-        }}
-      >
-        <option value="">Choose Hades trait</option>
-        {interaction.choices.map((choice) => {
-          const option = candidateFor(choice.value);
-          return (
-            <option
-              key={choice.value}
-              value={choice.value}
-              disabled={option !== undefined && !candidateMayBeAuthored(option)}
-              {...candidateSelectState(option)}
-            >
-              {choice.label}
-            </option>
-          );
-        })}
-      </select>
-    </fieldset>
-  );
-}
-
-function RouteStartTranscendentEmbryoResultControl({
-  interaction,
-}: {
-  readonly interaction: Extract<
-    import('@planner/projections/structured-workspace').WorkspaceKeepsakeEquipResultInteraction,
-    { readonly owner: { readonly resultKind: 'transcendentEmbryo' } }
-  >;
-}) {
-  const dispatch = useAppDispatch();
-  const candidates = useWorkspaceInteraction(interaction);
-  const candidateFor = (blessingKey: string) =>
-    candidates.result?.find((candidate) => candidate.value === blessingKey);
-  const summary = candidateFor(interaction.value?.blessingKey ?? '')?.transcendentEmbryoSummary;
-  return (
-    <fieldset className="field-control">
-      <legend>Transcendent Embryo result</legend>
-      <select
-        aria-label="Transcendent Embryo result"
-        id={`${interaction.owner.routeKey}-transcendent-embryo`}
-        onChange={(event) => {
-          const blessingKey = event.target.value;
-          if (blessingKey === '') return;
-          const option = candidateFor(blessingKey);
-          if (candidateMayBeAuthored(option))
-            dispatch(
-              authoredProjectCommandDispatched(interaction.intentFor({ blessingKey }).command),
-            );
-        }}
-        onFocus={candidates.activate}
-        onPointerDown={candidates.activate}
-        value={interaction.value?.blessingKey ?? ''}
-      >
-        <option value="">Choose Chaos blessing</option>
-        {interaction.choices.map((choice) => {
-          const option = candidateFor(choice.value);
-          return (
-            <option
-              key={choice.value}
-              value={choice.value}
-              disabled={option !== undefined && !candidateMayBeAuthored(option)}
-              {...candidateSelectState(option)}
-            >
-              {choice.label}
-            </option>
-          );
-        })}
-      </select>
-      {summary === undefined ? null : (
-        <p className="field-description">
-          {summary.rarity} ·{' '}
-          {summary.operands.map((operand) => `${operand.label}: ${operand.value}`).join(', ') ||
-            'No numeric operands'}
-        </p>
-      )}
-    </fieldset>
-  );
-}
 
 function presentBiomeList(labels: readonly string[]): string {
   if (labels.length === 0) return '';
@@ -242,7 +95,6 @@ export function RouteOverview({
   const keepsake = interactions.keepsakeSelections.get(workspaceInteractionKey(startingKeepsake));
   if (keepsake === undefined)
     throw new Error(`Missing starting keepsake interaction for ${workspaceRoute.routeKey}`);
-  const keepsakeCandidates = useWorkspaceInteraction(keepsake);
   const pomAddress = createKeepsakeEquipResultAddress(startingKeepsake, 'jeweledPom');
   const pom = interactions.keepsakeEquipResults.get(workspaceInteractionKey(pomAddress)) as
     | Extract<
@@ -274,14 +126,6 @@ export function RouteOverview({
         { readonly owner: { readonly resultKind: 'transcendentEmbryo' } }
       >
     | undefined;
-  const experimentalHammerCandidateController =
-    useWorkspaceInteractionController<
-      readonly import('@planner/projections/candidateProjection').CandidateOptionProjection<string>[]
-    >();
-  const experimentalHammerCandidates =
-    experimentalHammerCandidateController.observe(experimentalHammer);
-  const experimentalHammerCandidateFor = (traitKey: string) =>
-    experimentalHammerCandidates.result?.find((candidate) => candidate.value === traitKey);
   return (
     <section className="route-overview">
       <header className="panel-heading">
@@ -324,98 +168,28 @@ export function RouteOverview({
       <p className="panel-description">{routeDescription}</p>
       <div className="route-loadout-controls">
         <div className="route-keepsake-controls">
-          <label className="field-control" htmlFor={`${workspaceRoute.routeKey}-starting-keepsake`}>
-            <span>Starting keepsake</span>
-            <select
-              aria-busy={keepsakeCandidates.pending || undefined}
-              id={`${workspaceRoute.routeKey}-starting-keepsake`}
-              onChange={(event) => {
-                const key = event.target.value;
-                const option = keepsakeCandidates.result?.find(
-                  (candidate) => candidate.value === key,
-                );
-                if (candidateMayBeAuthored(option))
-                  dispatch(authoredProjectCommandDispatched(keepsake.replaceIntent(key).command));
-              }}
-              onFocus={keepsakeCandidates.activate}
-              onPointerDown={keepsakeCandidates.activate}
-              value={authoredRoute.loadout.startingKeepsakeKey}
-            >
-              {keepsake.choices.map((choice) => {
-                const option = keepsakeCandidates.result?.find(
-                  (candidate) => candidate.value === choice.value,
-                );
-                return (
-                  <option
-                    key={choice.value}
-                    value={choice.value}
-                    disabled={option !== undefined && !candidateMayBeAuthored(option)}
-                    {...candidateSelectState(option)}
-                  >
-                    {choice.label}
-                  </option>
-                );
-              })}
-            </select>
-          </label>
-          {pom === undefined ? null : <RouteStartJeweledPomResultControl interaction={pom} />}
+          <KeepsakeSelectionPicker
+            id={`${workspaceRoute.routeKey}-starting-keepsake`}
+            interaction={keepsake}
+            label="Starting keepsake"
+          />
+          {pom === undefined ? null : (
+            <KeepsakeEquipResultPicker
+              id={`${workspaceRoute.routeKey}-jeweled-pom`}
+              interaction={pom}
+            />
+          )}
           {experimentalHammer === undefined ? null : (
-            <fieldset className="field-control">
-              <legend>Experimental Hammer result</legend>
-              <select
-                aria-busy={experimentalHammerCandidates.pending || undefined}
-                aria-label="Experimental Hammer result"
-                id={`${workspaceRoute.routeKey}-experimental-hammer`}
-                onChange={(event) => {
-                  const traitKey = event.target.value;
-                  if (traitKey === '') return;
-                  const option = experimentalHammerCandidateFor(traitKey);
-                  if (candidateMayBeAuthored(option))
-                    dispatch(
-                      authoredProjectCommandDispatched(
-                        experimentalHammer.intentFor(
-                          traitKey === '__exhausted'
-                            ? { kind: 'exhausted' }
-                            : { kind: 'selected', traitKey },
-                        ).command,
-                      ),
-                    );
-                }}
-                onFocus={() =>
-                  experimentalHammer !== undefined &&
-                  experimentalHammerCandidateController.activate(experimentalHammer)
-                }
-                onPointerDown={() =>
-                  experimentalHammer !== undefined &&
-                  experimentalHammerCandidateController.activate(experimentalHammer)
-                }
-                value={
-                  experimentalHammer.value?.kind === 'selected'
-                    ? experimentalHammer.value.traitKey
-                    : experimentalHammer.value?.kind === 'exhausted'
-                      ? '__exhausted'
-                      : ''
-                }
-              >
-                <option value="">Choose compatible Hammer</option>
-                {experimentalHammer.choices.map((choice) => {
-                  const option = experimentalHammerCandidateFor(choice.value);
-                  return (
-                    <option
-                      key={choice.value}
-                      value={choice.value}
-                      disabled={option !== undefined && !candidateMayBeAuthored(option)}
-                      {...candidateSelectState(option)}
-                    >
-                      {choice.label}
-                    </option>
-                  );
-                })}
-              </select>
-            </fieldset>
+            <KeepsakeEquipResultPicker
+              id={`${workspaceRoute.routeKey}-experimental-hammer`}
+              interaction={experimentalHammer}
+            />
           )}
           {transcendentEmbryo === undefined ? null : (
-            <RouteStartTranscendentEmbryoResultControl interaction={transcendentEmbryo} />
+            <KeepsakeEquipResultPicker
+              id={`${workspaceRoute.routeKey}-transcendent-embryo`}
+              interaction={transcendentEmbryo}
+            />
           )}
         </div>
         <div className="route-weapon-controls">

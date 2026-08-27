@@ -6,7 +6,6 @@ import {
   requireWorkspaceInteraction,
   workspaceInteractionKey,
   type WorkspaceInteractionCatalog,
-  type WorkspaceKeepsakeEquipResultInteraction,
   type WorkspaceKeepsakeSelectionInteraction,
   type WorkspaceNode,
   type WorkspaceRoomLifecycleBoundary,
@@ -17,247 +16,23 @@ import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspac
 import { useAppDispatch } from '@planner/state/store';
 import { SemanticOwnerMarker } from '@planner/ui/feedback/EvaluationFeedback';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
-import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
-import {
-  candidateMayBeAuthored,
-  candidateSelectState,
-} from '@planner/ui/feedback/candidatePresentation';
 import { RoomSelector } from './RoomSelector';
 import { RewardControlEditor } from '../rewards/RewardControlEditor';
 import { BiomeWorkspaceContractError } from './workspaceContract';
-
-type JeweledPomInteraction = Extract<
-  WorkspaceKeepsakeEquipResultInteraction,
-  { readonly owner: { readonly resultKind: 'jeweledPom' } }
->;
-
-type TranscendentEmbryoInteraction = Extract<
-  WorkspaceKeepsakeEquipResultInteraction,
-  { readonly owner: { readonly resultKind: 'transcendentEmbryo' } }
->;
-
-function jeweledPomLoadable(
-  load: JeweledPomInteraction['load'],
-  value: NonNullable<JeweledPomInteraction['value']>,
-) {
-  return Object.freeze({ load: () => load(value) });
-}
-
-function ExperimentalHammerResultControl({
-  interaction,
-}: {
-  readonly interaction: Extract<
-    WorkspaceKeepsakeEquipResultInteraction,
-    { readonly owner: { readonly resultKind: 'experimentalHammer' } }
-  >;
-}) {
-  const dispatch = useAppDispatch();
-  const candidates = useWorkspaceInteraction(interaction);
-  const candidateFor = (traitKey: string) =>
-    candidates.result?.find((candidate) => candidate.value === traitKey);
-  return (
-    <fieldset className="field-control">
-      <legend>Experimental Hammer result</legend>
-      <select
-        aria-label="Experimental Hammer result"
-        value={
-          interaction.value === undefined
-            ? ''
-            : interaction.value.kind === 'selected'
-              ? interaction.value.traitKey
-              : '__exhausted'
-        }
-        onFocus={candidates.activate}
-        onPointerDown={candidates.activate}
-        onChange={(event) => {
-          const selected = event.target.value;
-          const option = candidateFor(selected);
-          if (selected !== '' && candidateMayBeAuthored(option))
-            dispatch(
-              authoredProjectCommandDispatched(
-                interaction.intentFor(
-                  selected === '__exhausted'
-                    ? { kind: 'exhausted' }
-                    : { kind: 'selected', traitKey: selected },
-                ).command,
-              ),
-            );
-        }}
-      >
-        <option value="">Choose compatible Hammer</option>
-        {interaction.choices.map((choice) => {
-          const option = candidateFor(choice.value);
-          return (
-            <option
-              key={choice.value}
-              value={choice.value}
-              disabled={option !== undefined && !candidateMayBeAuthored(option)}
-              {...candidateSelectState(option)}
-            >
-              {choice.label}
-            </option>
-          );
-        })}
-      </select>
-    </fieldset>
-  );
-}
-
-function JeweledPomResultControl({ interaction }: { readonly interaction: JeweledPomInteraction }) {
-  const dispatch = useAppDispatch();
-  const selected = interaction.value;
-  const revision = selected?.traitKey ?? '';
-  const [candidateInput, setCandidateInput] = useState(() => ({
-    interaction,
-    revision,
-    loadable: jeweledPomLoadable(interaction.load, { traitKey: selected?.traitKey ?? '' }),
-  }));
-  if (candidateInput.interaction !== interaction || candidateInput.revision !== revision)
-    setCandidateInput({
-      interaction,
-      revision,
-      loadable: jeweledPomLoadable(interaction.load, { traitKey: selected?.traitKey ?? '' }),
-    });
-  const candidates = useWorkspaceInteraction(candidateInput.loadable);
-  const candidateFor = (traitKey: string) =>
-    candidates.result?.find((candidate) => candidate.value === traitKey);
-  return (
-    <fieldset className="field-control">
-      <legend>Jeweled Pom result</legend>
-      <select
-        aria-label="Jeweled Pom result"
-        id={`jeweled-pom-${interaction.key}`}
-        value={interaction.value?.traitKey ?? ''}
-        onFocus={candidates.activate}
-        onPointerDown={candidates.activate}
-        onChange={(event) => {
-          const traitKey = event.target.value;
-          const option = candidateFor(traitKey);
-          if (traitKey !== '' && candidateMayBeAuthored(option))
-            dispatch(
-              authoredProjectCommandDispatched(
-                interaction.intentFor({ ...(interaction.value ?? {}), traitKey }).command,
-              ),
-            );
-        }}
-      >
-        <option value="">Choose Hades trait</option>
-        {interaction.choices.map((choice) => {
-          const option = candidateFor(choice.value);
-          return (
-            <option
-              key={choice.value}
-              value={choice.value}
-              disabled={option !== undefined && !candidateMayBeAuthored(option)}
-              {...candidateSelectState(option)}
-            >
-              {choice.label}
-            </option>
-          );
-        })}
-      </select>
-    </fieldset>
-  );
-}
-
-function TranscendentEmbryoResultControl({
-  interaction,
-}: {
-  readonly interaction: TranscendentEmbryoInteraction;
-}) {
-  const dispatch = useAppDispatch();
-  const candidates = useWorkspaceInteraction(interaction);
-  const candidateFor = (blessingKey: string) =>
-    candidates.result?.find((candidate) => candidate.value === blessingKey);
-  const summary = candidateFor(interaction.value?.blessingKey ?? '')?.transcendentEmbryoSummary;
-  return (
-    <fieldset className="field-control">
-      <legend>Transcendent Embryo result</legend>
-      <select
-        aria-label="Transcendent Embryo result"
-        value={interaction.value?.blessingKey ?? ''}
-        onFocus={candidates.activate}
-        onPointerDown={candidates.activate}
-        onChange={(event) => {
-          const blessingKey = event.target.value;
-          const option = candidateFor(blessingKey);
-          if (blessingKey !== '' && candidateMayBeAuthored(option))
-            dispatch(
-              authoredProjectCommandDispatched(interaction.intentFor({ blessingKey }).command),
-            );
-        }}
-      >
-        <option value="">Choose Chaos blessing</option>
-        {interaction.choices.map((choice) => {
-          const option = candidateFor(choice.value);
-          return (
-            <option
-              key={choice.value}
-              value={choice.value}
-              disabled={option !== undefined && !candidateMayBeAuthored(option)}
-              {...candidateSelectState(option)}
-            >
-              {choice.label}
-            </option>
-          );
-        })}
-      </select>
-      {summary === undefined ? null : (
-        <p className="field-description">
-          {summary.rarity} ·{' '}
-          {summary.operands.map((operand) => `${operand.label}: ${operand.value}`).join(', ') ||
-            'No numeric operands'}
-        </p>
-      )}
-    </fieldset>
-  );
-}
+import { KeepsakeEquipResultPicker, KeepsakeSelectionPicker } from '../KeepsakePickers';
 
 function PostbossKeepsakeControl({
   interaction,
-  value,
 }: {
   readonly interaction: WorkspaceKeepsakeSelectionInteraction;
-  readonly value: NonNullable<WorkspaceRoomSummary['keepsakeSelection']>['value'];
 }) {
-  const dispatch = useAppDispatch();
-  const candidates = useWorkspaceInteraction(interaction);
   return (
     <div className="room-keepsake-control">
-      <select
-        aria-label="Keepsake"
-        aria-busy={candidates.pending || undefined}
+      <KeepsakeSelectionPicker
         id={`postboss-keepsake-${interaction.key}`}
-        onFocus={candidates.activate}
-        onPointerDown={candidates.activate}
-        onChange={(event) => {
-          const key = event.target.value;
-          if (key === '') {
-            if (interaction.retainIntent !== undefined)
-              dispatch(authoredProjectCommandDispatched(interaction.retainIntent().command));
-            return;
-          }
-          const option = candidates.result?.find((candidate) => candidate.value === key);
-          if (candidateMayBeAuthored(option))
-            dispatch(authoredProjectCommandDispatched(interaction.replaceIntent(key).command));
-        }}
-        value={value.kind === 'replace' ? value.keepsakeKey : ''}
-      >
-        <option value="">Retain current keepsake</option>
-        {interaction.choices.map((choice) => {
-          const option = candidates.result?.find((candidate) => candidate.value === choice.value);
-          return (
-            <option
-              key={choice.value}
-              value={choice.value}
-              disabled={option !== undefined && !candidateMayBeAuthored(option)}
-              {...candidateSelectState(option)}
-            >
-              {choice.label}
-            </option>
-          );
-        })}
-      </select>
+        interaction={interaction}
+        label="Keepsake"
+      />
       <SemanticOwnerMarker address={interaction.owner} />
     </div>
   );
@@ -282,21 +57,11 @@ function KeepsakeRackTimelineContent({
   if (interaction === undefined) return null;
   return (
     <div className="room-keepsake-action">
-      <PostbossKeepsakeControl interaction={interaction} value={selection.value} />
-      {equipResult === undefined ? null : equipResult.owner.resultKind === 'jeweledPom' ? (
-        <JeweledPomResultControl interaction={equipResult as JeweledPomInteraction} />
-      ) : equipResult.owner.resultKind === 'experimentalHammer' ? (
-        <ExperimentalHammerResultControl
-          interaction={
-            equipResult as Extract<
-              WorkspaceKeepsakeEquipResultInteraction,
-              { readonly owner: { readonly resultKind: 'experimentalHammer' } }
-            >
-          }
-        />
-      ) : (
-        <TranscendentEmbryoResultControl
-          interaction={equipResult as TranscendentEmbryoInteraction}
+      <PostbossKeepsakeControl interaction={interaction} />
+      {equipResult === undefined ? null : (
+        <KeepsakeEquipResultPicker
+          id={`${equipResult.owner.resultKind}-${equipResult.key}`}
+          interaction={equipResult}
         />
       )}
     </div>
@@ -571,16 +336,10 @@ export function EchoKeepsakeReplayControl({
     interactions.keepsakeEquipResults,
     workspaceInteractionKey(biome.echoKeepsakeReplay.address),
   );
-  return interaction.owner.resultKind === 'transcendentEmbryo' ? (
-    <TranscendentEmbryoResultControl interaction={interaction as TranscendentEmbryoInteraction} />
-  ) : (
-    <ExperimentalHammerResultControl
-      interaction={
-        interaction as Extract<
-          WorkspaceKeepsakeEquipResultInteraction,
-          { readonly owner: { readonly resultKind: 'experimentalHammer' } }
-        >
-      }
+  return (
+    <KeepsakeEquipResultPicker
+      id={`${interaction.owner.resultKind}-${interaction.key}`}
+      interaction={interaction}
     />
   );
 }
