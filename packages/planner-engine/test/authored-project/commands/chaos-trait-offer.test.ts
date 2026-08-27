@@ -32,7 +32,7 @@ const chaosReward = createIncomingRewardAddress(
 const chaosTrait = createTraitOfferAddress(chaosReward, 'self');
 
 function unresolvedProject() {
-  return decodeProjectDocument(naturalChaosRaw, catalog);
+  return decodeProjectDocument(migrateProjectDocument(naturalChaosRaw).document, catalog);
 }
 
 /** The named checkpoint intentionally retains only the Chaos child unresolved.
@@ -83,9 +83,13 @@ function pair(values: Partial<AuthoredChaosTraitOffer> = {}): AuthoredChaosTrait
   return {
     kind: 'chaos',
     giverKey: 'Chaos',
-    curseKey: 'ChaosNoMoneyCurse',
-    duration: 3,
-    curseValues: {},
+    curseOptions: [
+      { curseKey: 'ChaosNoMoneyCurse', requirementCount: 3 },
+      { curseKey: 'ChaosNoMoneyCurse', requirementCount: 3 },
+      { curseKey: 'ChaosNoMoneyCurse', requirementCount: 3 },
+    ],
+    selectedOptionKey: 'option1',
+    selectedCurseValues: {},
     blessingKey: 'ChaosWeaponBlessing',
     rarity: 'Common',
     blessingValues: { damageBonus: 0.2 },
@@ -93,7 +97,7 @@ function pair(values: Partial<AuthoredChaosTraitOffer> = {}): AuthoredChaosTrait
   };
 }
 
-describe('schema-51 Chaos TrialUpgrade authored child', () => {
+describe('schema-66 Chaos TrialUpgrade authored child', () => {
   it('round-trips its unresolved default and atomically replaces the whole selected pair', () => {
     const unresolved = unresolvedProject();
     const serializedUnresolved = JSON.parse(encodeProjectDocument(unresolved)) as {
@@ -152,7 +156,7 @@ describe('schema-51 Chaos TrialUpgrade authored child', () => {
       applyProjectCommand(unresolvedProject(), catalog, {
         kind: 'ReplaceTraitOffer',
         trait: chaosTrait,
-        value: pair({ curseValues: { invented: 1 } }),
+        value: pair({ selectedCurseValues: { invented: 1 } }),
       }),
     ).toThrow(/exactly the declaration operands/);
 
@@ -194,21 +198,23 @@ describe('schema-51 Chaos TrialUpgrade authored child', () => {
       .biomeAt(createBiomeAddress('Underworld', 'F'))
       ?.traitOffers.at(chaosTrait);
     expect(capability).toBeDefined();
-    const domain = capability?.chaosPairDomains({
-      curseKey: 'ChaosNoMoneyCurse',
-      blessingKey: 'ChaosWeaponBlessing',
-    })[0];
-    expect(domain).toMatchObject({
-      curseKeys: expect.arrayContaining(['ChaosNoMoneyCurse', 'ChaosHealthCurse']),
-      blessingKeys: expect.arrayContaining(['ChaosWeaponBlessing', 'ChaosHealthBlessing']),
-      rarities: ['Common', 'Rare', 'Epic'],
-      curseDurations: {
-        ChaosNoMoneyCurse: { minimum: 3, maximum: 5, step: 1 },
-      },
-    });
-    expect(domain?.curseOperands.ChaosHealthCurse).toEqual(
-      expect.arrayContaining([expect.objectContaining({ key: expect.any(String) })]),
+    const domain = capability?.chaosOfferDomain(pair())[0];
+    expect(domain?.blessingKeys).toEqual(
+      expect.arrayContaining(['ChaosWeaponBlessing', 'ChaosHealthBlessing']),
     );
+    expect(domain?.rarities).toEqual(['Common', 'Rare', 'Epic']);
+    const firstOption = domain?.curseOptions[0];
+    expect(firstOption?.optionKey).toBe('option1');
+    expect(firstOption?.curseKeys).toEqual(
+      expect.arrayContaining(['ChaosNoMoneyCurse', 'ChaosHealthCurse']),
+    );
+    expect(firstOption?.requirements.ChaosNoMoneyCurse).toMatchObject({
+      minimum: 3,
+      maximum: 5,
+      step: 1,
+      unit: 'encounters',
+    });
+    expect(domain?.selectedCurseOperands).toEqual([]);
     expect(domain?.blessingOperands.ChaosWeaponBlessing).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -217,27 +223,68 @@ describe('schema-51 Chaos TrialUpgrade authored child', () => {
         }),
       ]),
     );
+    const defaultDomain = capability?.chaosOfferDomain()[0];
+    expect(defaultDomain?.selectedCurseKey).toBe(defaultDomain?.curseOptions[0]?.curseKeys[0]);
+    expect(defaultDomain?.blessingKeys[0]).toBeDefined();
+    expect(defaultDomain?.rarities).toEqual(['Common', 'Rare', 'Epic']);
+    const retainedUnavailablePeer = capability?.chaosOfferDomain(
+      pair({
+        curseOptions: [
+          { curseKey: 'ChaosMetaUpgradeCurse', requirementCount: 3 },
+          { curseKey: 'ChaosNoMoneyCurse', requirementCount: 3 },
+          { curseKey: 'ChaosNoMoneyCurse', requirementCount: 3 },
+        ],
+      }),
+    )[0];
+    expect(retainedUnavailablePeer?.curseOptions[0]?.curseKeys).toContain('ChaosMetaUpgradeCurse');
+    expect(retainedUnavailablePeer?.curseOptions[0]?.availableCurseKeys).not.toContain(
+      'ChaosMetaUpgradeCurse',
+    );
+    expect(retainedUnavailablePeer?.curseOptions[1]?.curseKeys).not.toContain(
+      'ChaosMetaUpgradeCurse',
+    );
+    expect(retainedUnavailablePeer?.curseOptions[2]?.curseKeys).not.toContain(
+      'ChaosMetaUpgradeCurse',
+    );
     expect(
-      capability?.chaosPairDomains({
-        curseKey: 'ChaosCommonCurse',
-        blessingKey: 'ChaosWeaponBlessing',
-      })[0]?.rarities,
+      capability?.chaosOfferDomain(
+        pair({
+          curseOptions: [
+            { curseKey: 'ChaosCommonCurse', requirementCount: 2 },
+            { curseKey: 'ChaosNoMoneyCurse', requirementCount: 3 },
+            { curseKey: 'ChaosNoMoneyCurse', requirementCount: 3 },
+          ],
+        }),
+      )[0]?.rarities,
     ).toEqual(['Common', 'Rare', 'Epic']);
     expect(
-      capability?.chaosPairDomains({
-        curseKey: 'ChaosMetaUpgradeCurse',
-        blessingKey: 'ChaosWeaponBlessing',
-      })[0]?.rarities,
+      capability?.chaosOfferDomain(
+        pair({
+          curseOptions: [
+            { curseKey: 'ChaosMetaUpgradeCurse', requirementCount: 3 },
+            { curseKey: 'ChaosNoMoneyCurse', requirementCount: 3 },
+            { curseKey: 'ChaosNoMoneyCurse', requirementCount: 3 },
+          ],
+        }),
+      )[0]?.rarities,
     ).toEqual(['Heroic']);
     expect(
-      capability?.chaosPairDomains({
-        curseKey: 'ChaosMetaUpgradeCurse',
-        blessingKey: 'ChaosLastStandBlessing',
-      })[0]?.rarities,
+      capability?.chaosOfferDomain(
+        pair({
+          curseOptions: [
+            { curseKey: 'ChaosMetaUpgradeCurse', requirementCount: 3 },
+            { curseKey: 'ChaosNoMoneyCurse', requirementCount: 3 },
+            { curseKey: 'ChaosNoMoneyCurse', requirementCount: 3 },
+          ],
+          blessingKey: 'ChaosLastStandBlessing',
+          rarity: 'Legendary',
+          blessingValues: {},
+        }),
+      )[0]?.rarities,
     ).toEqual(['Legendary']);
   });
 
-  it('migrates schema-63 projects into the strict schema-65 decoder path', () => {
+  it('migrates schema-63 projects into the strict schema-66 decoder path', () => {
     const legacy = JSON.parse(JSON.stringify(naturalChaosRaw)) as {
       schemaVersion: number;
       catalogVersion: string;
@@ -245,8 +292,63 @@ describe('schema-51 Chaos TrialUpgrade authored child', () => {
     legacy.schemaVersion = 63;
     legacy.catalogVersion = '0.46.0-vow-forfeit-red-onion';
     const migrated = migrateProjectDocument(legacy).document;
-    expect(migrated.schemaVersion).toBe(65);
+    expect(migrated.schemaVersion).toBe(66);
     expect(migrated.catalogVersion).toBe('0.48.0-hex-talent-layouts');
     expect(() => decodeProjectDocument(migrated, catalog)).not.toThrow();
+  });
+
+  it('migrates a schema-65 selected Chaos pair into three repeated options without adding bans', () => {
+    type LegacyOccurrence = {
+      occurrenceId: string;
+      state: {
+        reward: {
+          traitOffersByAcquisitionRole: Record<string, unknown>;
+        };
+      };
+    };
+    type LegacyDocument = {
+      schemaVersion: number;
+      catalogVersion: string;
+      routes: { biomes: { topology: { occurrences: LegacyOccurrence[] } }[] }[];
+    };
+    const legacy = JSON.parse(JSON.stringify(naturalChaosRaw)) as unknown as LegacyDocument;
+    legacy.schemaVersion = 65;
+    legacy.catalogVersion = '0.48.0-hex-talent-layouts';
+    const occurrence = legacy.routes[0]?.biomes[0]?.topology.occurrences.find(
+      (entry) => entry.occurrenceId === 'fixture-chaos-room',
+    );
+    if (occurrence === undefined) throw new Error('legacy Chaos occurrence is missing');
+    occurrence.state.reward.traitOffersByAcquisitionRole.self = {
+      kind: 'chaos',
+      giverKey: 'Chaos',
+      curseKey: 'ChaosHealthCurse',
+      duration: 4,
+      curseValues: { healthPenalty: -24 },
+      blessingKey: 'ChaosWeaponBlessing',
+      rarity: 'Common',
+      blessingValues: { damageBonus: 0.2 },
+    };
+    const migrated = migrateProjectDocument(legacy).document as unknown as LegacyDocument;
+    const migratedOccurrence = migrated.routes[0]?.biomes[0]?.topology.occurrences.find(
+      (entry) => entry.occurrenceId === 'fixture-chaos-room',
+    );
+    if (migratedOccurrence === undefined) throw new Error('migrated Chaos occurrence is missing');
+    const migratedOffer = migratedOccurrence.state.reward.traitOffersByAcquisitionRole.self;
+    expect(migratedOffer).toMatchObject({
+      curseOptions: [
+        { curseKey: 'ChaosHealthCurse', requirementCount: 4 },
+        { curseKey: 'ChaosHealthCurse', requirementCount: 4 },
+        { curseKey: 'ChaosHealthCurse', requirementCount: 4 },
+      ],
+      selectedOptionKey: 'option1',
+      selectedCurseValues: { healthPenalty: -24 },
+      blessingKey: 'ChaosWeaponBlessing',
+      rarity: 'Common',
+      blessingValues: { damageBonus: 0.2 },
+    });
+    expect(migratedOffer).not.toHaveProperty('curseKey');
+    expect(migratedOffer).not.toHaveProperty('duration');
+    expect(migratedOffer).not.toHaveProperty('curseValues');
+    expect(decodeProjectDocument(migrated, catalog)).toBeTruthy();
   });
 });

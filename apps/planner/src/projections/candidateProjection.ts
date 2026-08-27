@@ -18,6 +18,7 @@ import {
   type ProjectCandidateEvaluation,
   type ProjectEvaluation,
   type ProjectEvaluationAssembly,
+  type ChaosOfferDomain,
 } from '@run-planner/engine/simulation';
 import {
   type AcquisitionEntryAddress,
@@ -225,6 +226,10 @@ export interface CandidateProjectionSession {
     owner: TraitOfferAddress,
     value: AuthoredTraitOfferTraits,
   ) => AuthoredTraitOfferTraits | undefined;
+  readonly chaosOfferDomain: (
+    owner: TraitOfferAddress,
+    value?: AuthoredTraitOffer,
+  ) => readonly ChaosOfferDomain[];
   /**
    * Evaluates one declaration-compatible concrete domain at one focused offer
    * position. Every query still carries the complete draft into engine offer

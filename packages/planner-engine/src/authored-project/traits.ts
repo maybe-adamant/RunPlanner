@@ -130,13 +130,23 @@ export interface AuthoredTraitOfferFallbackGold {
 
 export type TraitOptionKey = 'option1' | 'option2' | 'option3';
 
-/** The one selected transforming Chaos row.  Numeric records are declaration-closed. */
+/** One of the three source-generated Chaos curse alternatives. */
+export interface AuthoredChaosCurseOption {
+  readonly curseKey: string;
+  readonly requirementCount: number;
+}
+
+/** The complete three-option transforming Chaos offer. Numeric records are declaration-closed. */
 export interface AuthoredChaosTraitOffer {
   readonly kind: 'chaos';
   readonly giverKey: 'Chaos';
-  readonly curseKey: string;
-  readonly duration: number;
-  readonly curseValues: Readonly<Record<string, number>>;
+  readonly curseOptions: readonly [
+    AuthoredChaosCurseOption,
+    AuthoredChaosCurseOption,
+    AuthoredChaosCurseOption,
+  ];
+  readonly selectedOptionKey: TraitOptionKey;
+  readonly selectedCurseValues: Readonly<Record<string, number>>;
   readonly blessingKey: string;
   readonly rarity: Extract<TraitRarity, 'Common' | 'Rare' | 'Epic' | 'Heroic' | 'Legendary'>;
   readonly blessingValues: Readonly<Record<string, number>>;
@@ -326,6 +336,7 @@ function chaosOperandsAtRarity(
       minimum: domain.minimum,
       maximum: domain.maximum,
       step: domain.step,
+      authoringDefault: domain.authoringDefault,
       ...(domain.integer === true ? { integer: true as const } : {}),
     });
   });
@@ -336,29 +347,45 @@ export function normalizeAuthoredChaosTraitOffer(
   value: AuthoredChaosTraitOffer,
 ): AuthoredChaosTraitOffer {
   if (value.giverKey !== 'Chaos') throw new Error('Chaos pairs require the Chaos provider');
-  const curse = catalog.chaos.curses.byKey[value.curseKey];
+  if (
+    value.curseOptions.length !== 3 ||
+    !TRAIT_OPTION_KEYS.includes(value.selectedOptionKey) ||
+    value.curseOptions[optionIndex(value.selectedOptionKey)] === undefined
+  )
+    throw new Error('Chaos offers require exactly three curse options and one selected option');
+  const curseOptions = value.curseOptions.map((option, index) => {
+    const curse = catalog.chaos.curses.byKey[option.curseKey];
+    if (curse === undefined) throw new Error(`unknown Chaos curse ${option.curseKey}`);
+    const requirement = normalizeChaosValues(
+      [curse.duration],
+      { duration: option.requirementCount },
+      `curseOptions[${index}].requirementCount`,
+    ).duration!;
+    return Object.freeze({ curseKey: curse.key, requirementCount: requirement });
+  }) as unknown as AuthoredChaosTraitOffer['curseOptions'];
+  const selectedCurse =
+    catalog.chaos.curses.byKey[curseOptions[optionIndex(value.selectedOptionKey)]!.curseKey];
+  if (selectedCurse === undefined) throw new Error('unknown selected Chaos curse');
   const blessing = catalog.chaos.blessings.byKey[value.blessingKey];
-  if (curse === undefined || blessing === undefined)
-    throw new Error('unknown Chaos curse or blessing');
+  if (blessing === undefined) throw new Error('unknown Chaos blessing');
   const rarity = value.rarity;
   const legal =
     blessing.fixedRarity === 'Legendary'
       ? rarity === 'Legendary'
-      : curse.semanticTag === 'Barren'
+      : selectedCurse.semanticTag === 'Barren'
         ? rarity === 'Heroic'
         : rarity === 'Common' || rarity === 'Rare' || rarity === 'Epic';
   if (!legal) throw new Error('Chaos pair rarity is not legal for this selected pair');
-  const duration = normalizeChaosValues(
-    [curse.duration],
-    { duration: value.duration },
-    'duration',
-  ).duration!;
   return Object.freeze({
     kind: 'chaos',
     giverKey: 'Chaos',
-    curseKey: curse.key,
-    duration,
-    curseValues: normalizeChaosValues(curse.operands, value.curseValues, 'curseValues'),
+    curseOptions: Object.freeze(curseOptions),
+    selectedOptionKey: value.selectedOptionKey,
+    selectedCurseValues: normalizeChaosValues(
+      selectedCurse.operands,
+      value.selectedCurseValues,
+      'selectedCurseValues',
+    ),
     blessingKey: blessing.key,
     rarity,
     blessingValues: normalizeChaosValues(

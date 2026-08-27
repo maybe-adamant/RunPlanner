@@ -1,6 +1,6 @@
 import type { Catalog } from '../../catalog-schema';
 import { createBiomeAddress, type TraitOfferAddress } from '../../authored-project/addresses';
-import type { AuthoredTraitOfferTraits } from '../../authored-project/traits';
+import type { AuthoredTraitOffer, AuthoredTraitOfferTraits } from '../../authored-project/traits';
 import type { ProjectDocument } from '../../authored-project/model';
 import type { ProjectCandidateArtifacts } from '../candidate-artifacts';
 import { candidateArtifactsForProjectEvaluationAssembly } from '../project-evaluation-assembly';
@@ -305,6 +305,10 @@ export interface ProjectCandidateSession {
     owner: TraitOfferAddress,
     value: AuthoredTraitOfferTraits,
   ) => AuthoredTraitOfferTraits | undefined;
+  readonly chaosOfferDomain: (
+    owner: TraitOfferAddress,
+    value?: AuthoredTraitOffer,
+  ) => readonly import('./trait-offer-capability').ChaosOfferDomain[];
 }
 
 function assertNever(value: never): never {
@@ -683,5 +687,7 @@ export function createPreparedProjectCandidateSession(
       owner: TraitOfferAddress,
       value: AuthoredTraitOfferTraits,
     ) => traitCapability(owner)?.previousOptionalHighTierDraft(value),
+    chaosOfferDomain: (owner: TraitOfferAddress, value?: AuthoredTraitOffer) =>
+      traitCapability(owner)?.chaosOfferDomain(value) ?? Object.freeze([]),
   });
 }

@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import * as support from '@planner-test/support/structured-workspace/interaction-binding.test-support';
 import { createGoldenFGHProject } from '@run-planner/test-fixtures/underworld';
 import { optionIndex } from '@run-planner/engine/authored-project';
+import { underworldCheckpointArtifacts } from '@run-planner/test-fixtures/checkpoints/underworld';
 import type {
   AuthoredTraitOffer,
   AuthoredTraitOfferTraits,
@@ -18,6 +19,7 @@ const {
   services,
   catalog,
   applyProjectCommand,
+  createBiomeAddress,
   createAllTogetherSetAddress,
   createCirceResolutionAddress,
   createEchoLastRunBoonAddress,
@@ -45,9 +47,86 @@ const {
   pBiome,
   pOccurrenceId,
   createCandidateSessionFactory,
+  createBatchRewardStoreAddress,
+  createTargetAddress,
 } = support;
 
+function reachableNaturalChaosProject() {
+  let project = underworldCheckpointArtifacts['natural-chaos-unresolved-trial'].load();
+  const openingId = createOccurrenceId('fixture-chaos-opening');
+  const biome = createBiomeAddress('Underworld', 'F');
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: createIncomingRewardAddress(biome, openingId),
+    value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait: createTraitOfferAddress(createIncomingRewardAddress(biome, openingId), 'source'),
+    value: {
+      kind: 'traits',
+      giverKey: 'Apollo',
+      options: [
+        { traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
+        { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
+        { traitKey: 'ApolloCastBoon', rarity: 'Common' },
+      ],
+      selectedOptionKey: 'option1',
+    },
+  });
+  const source = { kind: 'occurrence' as const, occurrenceId: openingId };
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceBatchRewardStore',
+    rewardStore: createBatchRewardStoreAddress(biome, source),
+    storeKey: 'MetaProgress',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateTarget',
+    target: createTargetAddress(biome, source, 'exit1'),
+    occurrenceId: createOccurrenceId('interaction-chaos-target'),
+    gameName: 'F_Combat01',
+  });
+  return applyProjectCommand(project, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: createIncomingRewardAddress(biome, createOccurrenceId('interaction-chaos-target')),
+    value: { rewardType: 'MaxHealthDrop' },
+  });
+}
+
 describe('trait-offer-interactions', () => {
+  it('binds the Chaos editor to the real typed domain and one complete save intent', () => {
+    const project = reachableNaturalChaosProject();
+    const { interactions } = bind(project, 'Underworld', 'F');
+    const interaction = [...interactions.traitOffers.values()].find(
+      (candidate) => candidate.giver.providerKind === 'chaos',
+    );
+    if (interaction?.chaos === undefined) throw new Error('Chaos interaction is missing');
+    expect(interaction.choices).toEqual([]);
+    const draft = interaction.chaos.startingDraft();
+    if (draft === undefined) throw new Error('Chaos default draft is missing');
+    expect(draft.curseOptions).toHaveLength(3);
+    expect(interaction.chaos.domainFor(draft)).toMatchObject({
+      curseOptions: [
+        expect.objectContaining({ optionKey: 'option1' }),
+        expect.objectContaining({ optionKey: 'option2' }),
+        expect.objectContaining({ optionKey: 'option3' }),
+      ],
+      blessingPicker: expect.objectContaining({
+        selected: expect.objectContaining({ value: draft.blessingKey }),
+        sections: expect.arrayContaining([
+          expect.objectContaining({
+            items: expect.arrayContaining([expect.objectContaining({ value: draft.blessingKey })]),
+          }),
+        ]),
+      }),
+    });
+    expect(interaction.intentFor(draft).command).toEqual({
+      kind: 'ReplaceTraitOffer',
+      trait: interaction.owner,
+      value: draft,
+    });
+  });
+
   it('projects the selected Spell Hex tree with layout and identity exclusion', () => {
     const occurrenceId = goldenFOccurrenceId(10, 2);
     const reward = createIncomingRewardAddress(goldenFBiome, occurrenceId);

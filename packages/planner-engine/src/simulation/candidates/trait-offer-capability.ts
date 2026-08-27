@@ -138,24 +138,44 @@ export interface TraitOfferCandidateCapability {
     readonly rejectedBlockRequired: boolean;
     readonly rejectedBlockableOptionKeys: readonly TraitOptionKey[];
   }[];
-  /** Declaration-owned complete-pair domains for the specialized Chaos editor. */
-  readonly chaosPairDomains: (pair: {
-    readonly curseKey: string;
-    readonly blessingKey: string;
-  }) => readonly {
-    readonly curseKeys: readonly string[];
-    readonly blessingKeys: readonly string[];
-    readonly rarities: readonly import('../../catalog-schema').TraitRarity[];
-    readonly curseDurations: Readonly<
-      Record<string, { readonly minimum: number; readonly maximum: number; readonly step: number }>
-    >;
-    readonly curseOperands: Readonly<
-      Record<string, readonly import('../../catalog-schema').ChaosNumericOperand[]>
-    >;
-    readonly blessingOperands: Readonly<
-      Record<string, readonly import('../../catalog-schema').ChaosNumericOperand[]>
-    >;
-  }[];
+  /** Declaration-owned three-option Chaos envelope and selected-outcome domains. */
+  readonly chaosOfferDomain: (value?: AuthoredTraitOffer) => readonly ChaosOfferDomain[];
+}
+
+export interface ChaosOfferCurseOptionDomain {
+  readonly optionKey: TraitOptionKey;
+  readonly curseKeys: readonly string[];
+  /** Legal rows before retaining the authored identity for repair. */
+  readonly availableCurseKeys: readonly string[];
+  readonly requirements: Readonly<
+    Record<
+      string,
+      {
+        readonly minimum: number;
+        readonly maximum: number;
+        readonly step: number;
+        readonly authoringDefault: number;
+        readonly unit: string;
+      }
+    >
+  >;
+}
+
+export interface ChaosOfferDomain {
+  readonly curseOptions: readonly [
+    ChaosOfferCurseOptionDomain,
+    ChaosOfferCurseOptionDomain,
+    ChaosOfferCurseOptionDomain,
+  ];
+  readonly selectedCurseKey?: string;
+  readonly selectedCurseOperands: readonly import('../../catalog-schema').ChaosNumericOperand[];
+  readonly blessingKeys: readonly string[];
+  /** Legal rows before retaining the authored identity for repair. */
+  readonly availableBlessingKeys: readonly string[];
+  readonly rarities: readonly import('../../catalog-schema').TraitRarity[];
+  readonly blessingOperands: Readonly<
+    Record<string, readonly import('../../catalog-schema').ChaosNumericOperand[]>
+  >;
 }
 
 export interface TraitOfferCandidateArtifacts {
@@ -647,7 +667,7 @@ export function createTraitOfferCandidateArtifacts(
               });
             }),
           ),
-        chaosPairDomains: (pair: { readonly curseKey: string; readonly blessingKey: string }) =>
+        chaosOfferDomain: (value?: AuthoredTraitOffer) =>
           Object.freeze(
             branchContexts.map((context) => {
               const eligible = <
@@ -673,33 +693,94 @@ export function createTraitOfferCandidateArtifacts(
                       return address.routeKey !== requirement.routeKey;
                   }
                 });
-              const curses = catalog.chaos.curses.values.filter(eligible);
-              const blessings = catalog.chaos.blessings.values.filter(eligible);
+              const availableCurses = catalog.chaos.curses.values.filter(
+                (curse) => eligible(curse) && !context.before.bannedTraitKeys.includes(curse.key),
+              );
+              const availableBlessings = catalog.chaos.blessings.values.filter(eligible);
+              const optionKeys = ['option1', 'option2', 'option3'] as const;
+              // A retained authored identity is still a repairable picker row,
+              // but it belongs only to the exact option that authored it. This
+              // keeps an unavailable peer from becoming a new choice in every
+              // column.
+              const cursesForOption = (index: number) => {
+                const retainedKey =
+                  value?.kind === 'chaos' ? value.curseOptions[index]?.curseKey : undefined;
+                const retained =
+                  retainedKey === undefined ? undefined : catalog.chaos.curses.byKey[retainedKey];
+                return [
+                  ...availableCurses,
+                  ...(retained !== undefined &&
+                  !availableCurses.some((entry) => entry.key === retained.key)
+                    ? [retained]
+                    : []),
+                ];
+              };
+              const retainedBlessing =
+                value?.kind === 'chaos'
+                  ? catalog.chaos.blessings.byKey[value.blessingKey]
+                  : undefined;
+              const blessings = [
+                ...availableBlessings,
+                ...(retainedBlessing !== undefined &&
+                !availableBlessings.some((entry) => entry.key === retainedBlessing.key)
+                  ? [retainedBlessing]
+                  : []),
+              ];
+              const selectedOption =
+                value?.kind === 'chaos'
+                  ? value.curseOptions[optionIndex(value.selectedOptionKey)]
+                  : undefined;
+              const selectedCurseKey = selectedOption?.curseKey ?? cursesForOption(0)[0]?.key;
+              const selectedCurse =
+                selectedCurseKey === undefined
+                  ? undefined
+                  : catalog.chaos.curses.byKey[selectedCurseKey];
+              const blessing =
+                value?.kind === 'chaos'
+                  ? catalog.chaos.blessings.byKey[value.blessingKey]
+                  : blessings[0];
+              const rarities =
+                blessing?.fixedRarity === 'Legendary'
+                  ? (['Legendary'] as const)
+                  : selectedCurse?.semanticTag === 'Barren'
+                    ? (['Heroic'] as const)
+                    : (['Common', 'Rare', 'Epic'] as const);
               return Object.freeze({
-                curseKeys: Object.freeze(curses.map((curse) => curse.key)),
-                blessingKeys: Object.freeze(blessings.map((blessing) => blessing.key)),
-                rarities: Object.freeze(
-                  catalog.chaos.blessings.byKey[pair.blessingKey]?.fixedRarity === 'Legendary'
-                    ? (['Legendary'] as const)
-                    : catalog.chaos.curses.byKey[pair.curseKey]?.semanticTag === 'Barren'
-                      ? (['Heroic'] as const)
-                      : (['Common', 'Rare', 'Epic'] as const),
-                ),
-                curseDurations: Object.freeze(
-                  Object.fromEntries(
-                    curses.map((curse) => [
-                      curse.key,
-                      Object.freeze({
-                        minimum: curse.duration.minimum,
-                        maximum: curse.duration.maximum,
-                        step: curse.duration.step,
-                      }),
-                    ]),
+                curseOptions: Object.freeze(
+                  optionKeys.map((optionKey) =>
+                    (() => {
+                      const curses = cursesForOption(optionKeys.indexOf(optionKey));
+                      return Object.freeze({
+                        optionKey,
+                        curseKeys: Object.freeze(curses.map((curse) => curse.key)),
+                        availableCurseKeys: Object.freeze(
+                          availableCurses.map((curse) => curse.key),
+                        ),
+                        requirements: Object.freeze(
+                          Object.fromEntries(
+                            curses.map((curse) => [
+                              curse.key,
+                              Object.freeze({
+                                minimum: curse.duration.minimum,
+                                maximum: curse.duration.maximum,
+                                step: curse.duration.step,
+                                authoringDefault: curse.duration.authoringDefault,
+                                unit: curse.duration.label,
+                              }),
+                            ]),
+                          ),
+                        ),
+                      });
+                    })(),
                   ),
+                ) as ChaosOfferDomain['curseOptions'],
+                ...(selectedCurseKey === undefined ? {} : { selectedCurseKey }),
+                selectedCurseOperands: Object.freeze(selectedCurse?.operands ?? []),
+                blessingKeys: Object.freeze(blessings.map((blessing) => blessing.key)),
+                availableBlessingKeys: Object.freeze(
+                  availableBlessings.map((blessing) => blessing.key),
                 ),
-                curseOperands: Object.freeze(
-                  Object.fromEntries(curses.map((curse) => [curse.key, curse.operands])),
-                ),
+                rarities: Object.freeze([...rarities]),
                 blessingOperands: Object.freeze(
                   Object.fromEntries(
                     blessings.map((blessing) => [blessing.key, blessing.operands]),

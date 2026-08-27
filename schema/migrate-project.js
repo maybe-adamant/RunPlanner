@@ -4,7 +4,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { basename, dirname, extname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-const CURRENT_SCHEMA_VERSION = 65;
+const CURRENT_SCHEMA_VERSION = 66;
 const SCHEMA_49_CATALOG_VERSION = '0.27.0-arcana-fear-loadout';
 const SCHEMA_50_CATALOG_VERSION = '0.30.0-boon-rarity-ledger';
 const SCHEMA_51_CATALOG_VERSION = '0.31.0-chaos-traits';
@@ -626,6 +626,47 @@ function migrate64To65(document) {
   return { spellHexTreesDefaulted, aspectHexTreesDefaulted };
 }
 
+function migrate65To66(document) {
+  if (document.catalogVersion !== SCHEMA_65_CATALOG_VERSION) {
+    throw new Error(
+      `schema 65 migration expects catalog ${SCHEMA_65_CATALOG_VERSION}, received ${String(document.catalogVersion)}`,
+    );
+  }
+  let chaosOffersMigrated = 0;
+  visitRecords(document, (record) => {
+    const traitOffers = record.traitOffersByAcquisitionRole;
+    if (traitOffers === null || typeof traitOffers !== 'object' || Array.isArray(traitOffers))
+      return;
+    for (const traitOffer of Object.values(traitOffers)) {
+      if (
+        traitOffer === null ||
+        typeof traitOffer !== 'object' ||
+        Array.isArray(traitOffer) ||
+        traitOffer.kind !== 'chaos'
+      )
+        continue;
+      if (Array.isArray(traitOffer.curseOptions)) continue;
+      if (typeof traitOffer.curseKey !== 'string' || typeof traitOffer.duration !== 'number') {
+        throw new Error('schema 65 Chaos offer is missing its selected curse and duration');
+      }
+      traitOffer.curseOptions = [
+        { curseKey: traitOffer.curseKey, requirementCount: traitOffer.duration },
+        { curseKey: traitOffer.curseKey, requirementCount: traitOffer.duration },
+        { curseKey: traitOffer.curseKey, requirementCount: traitOffer.duration },
+      ];
+      traitOffer.selectedOptionKey = 'option1';
+      traitOffer.selectedCurseValues = traitOffer.curseValues;
+      delete traitOffer.curseKey;
+      delete traitOffer.duration;
+      delete traitOffer.curseValues;
+      chaosOffersMigrated += 1;
+    }
+  });
+  document.schemaVersion = 66;
+  document.catalogVersion = SCHEMA_65_CATALOG_VERSION;
+  return { chaosOffersMigrated };
+}
+
 const migrations = new Map([
   [49, migrate49To50],
   [50, migrate50To51],
@@ -643,6 +684,7 @@ const migrations = new Map([
   [62, migrate62To63],
   [63, migrate63To64],
   [64, migrate64To65],
+  [65, migrate65To66],
 ]);
 
 export function migrateProjectDocument(value, targetVersion = CURRENT_SCHEMA_VERSION) {

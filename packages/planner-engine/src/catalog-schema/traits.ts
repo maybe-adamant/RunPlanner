@@ -10,6 +10,8 @@ export interface ChaosNumericOperand {
   readonly minimum: number;
   readonly maximum: number;
   readonly step: number;
+  /** Catalog-owned legal starting value for authoring this operand. */
+  readonly authoringDefault: number;
   readonly integer?: true;
   /** Blessing values are processed against the selected shared rarity. */
   readonly byRarity?: Readonly<
@@ -26,6 +28,8 @@ export interface ChaosNumericOperandDomain {
   readonly minimum: number;
   readonly maximum: number;
   readonly step: number;
+  /** Catalog-owned legal starting value for authoring this rarity domain. */
+  readonly authoringDefault: number;
   readonly integer?: true;
 }
 

@@ -502,11 +502,9 @@ function evaluateReachedTraitOfferWithAssessments(
     ? Object.freeze({ applies: false, legal: true, findings: Object.freeze([]) })
     : (() => {
         if (offer.kind === 'chaos') {
-          const requirements = [
-            ...(catalog.chaos.curses.byKey[offer.curseKey]?.offerRequirements ?? []),
-            ...(catalog.chaos.blessings.byKey[offer.blessingKey]?.offerRequirements ?? []),
-          ];
-          const unavailable = requirements.some((requirement) => {
+          const requirementUnavailable = (
+            requirement: import('../catalog-schema').ChaosOfferRequirement,
+          ) => {
             switch (requirement.kind) {
               case 'matureChaosBlessing':
                 return before.maturedChaosBlessings.length === 0;
@@ -519,7 +517,24 @@ function evaluateReachedTraitOfferWithAssessments(
               case 'routeKey':
                 return !('routeKey' in address) || address.routeKey !== requirement.routeKey;
             }
+          };
+          // Every authored curse is part of the generated Chaos screen. A
+          // context-invalid peer therefore invalidates the whole frozen offer;
+          // otherwise Denial could ban an option that could never have been
+          // selected at this frontier.
+          const curseUnavailable = offer.curseOptions.some((option) => {
+            const curse = catalog.chaos.curses.byKey[option.curseKey];
+            return (
+              curse === undefined ||
+              before.bannedTraitKeys.includes(option.curseKey) ||
+              (curse.offerRequirements ?? []).some(requirementUnavailable)
+            );
           });
+          const blessing = catalog.chaos.blessings.byKey[offer.blessingKey];
+          const unavailable =
+            curseUnavailable ||
+            blessing === undefined ||
+            (blessing.offerRequirements ?? []).some(requirementUnavailable);
           return unavailable
             ? Object.freeze({
                 applies: true,
@@ -880,6 +895,26 @@ function denialBannedTraitKeys(
   );
 }
 
+function denialBannedChaosCurseKeys(
+  catalog: Catalog,
+  evaluation: ReachedTraitOfferEvaluation,
+): readonly string[] | undefined {
+  if (evaluation.offer.kind !== 'chaos') return undefined;
+  const denial = catalog.fearVows.byKey.BanUnpickedBoonsShrineUpgrade;
+  const effective = evaluation.arcanaFear?.fear.effectiveRanks[denial?.key ?? ''] ?? 0;
+  if (denial?.effect?.kind !== 'banUnselectedTraits' || effective <= 0) return undefined;
+  const selected =
+    evaluation.offer.curseOptions[optionIndex(evaluation.offer.selectedOptionKey)]?.curseKey;
+  if (selected === undefined) return undefined;
+  const distinct: string[] = [];
+  for (const [index, option] of evaluation.offer.curseOptions.entries()) {
+    if (index === optionIndex(evaluation.offer.selectedOptionKey) || option.curseKey === selected)
+      continue;
+    if (!distinct.includes(option.curseKey)) distinct.push(option.curseKey);
+  }
+  return Object.freeze(distinct.slice(0, denial.effect.count));
+}
+
 export function recordReachedTraitOffer(
   catalog: Catalog,
   evaluation: ReachedTraitOfferEvaluation,
@@ -896,6 +931,7 @@ export function recordReachedTraitOffer(
   if (evaluation.offer.kind === 'chaos') {
     if (!evaluation.composition.legal) return Object.freeze({ history: evaluation.before });
     const identity = acquisitionIdentity ?? `chaos:${sequence}`;
+    const bannedCurseKeys = denialBannedChaosCurseKeys(catalog, evaluation);
     const event: ChaosPairEvent = Object.freeze({
       kind: 'chaosPair',
       owner: evaluation.address,
@@ -904,6 +940,7 @@ export function recordReachedTraitOffer(
       acquisitionPoint,
       acquisitionIdentity: identity,
       offer: evaluation.offer,
+      ...(bannedCurseKeys === undefined ? {} : { bannedCurseKeys }),
     });
     return Object.freeze({
       history: foldTraitHistoryEvents(catalog, [...evaluation.before.events, event]),
