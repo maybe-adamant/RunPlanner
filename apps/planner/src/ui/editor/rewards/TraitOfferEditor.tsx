@@ -18,6 +18,7 @@ import { useAppDispatch, useAppSelector } from '@planner/state/store';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { SemanticOwnerMarker } from '@planner/ui/feedback/EvaluationFeedback';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
+import { spellOfferSlotSummary } from './spellOfferPresentation';
 import { TraitOfferEditorShell } from './TraitOfferEditorShell';
 
 const OPTION_KEYS = ['option1', 'option2', 'option3'] as const;
@@ -64,10 +65,10 @@ export function TraitOfferLauncher({
     interactions.traitOffers,
     workspaceInteractionKey(control.address),
   );
+  const selectedOptionIndex =
+    control.offer?.kind === 'traits' ? OPTION_KEYS.indexOf(control.offer.selectedOptionKey) : -1;
   const selected =
-    control.offer?.kind === 'traits'
-      ? control.offer.options[OPTION_KEYS.indexOf(control.offer.selectedOptionKey)]
-      : undefined;
+    control.offer?.kind === 'traits' ? control.offer.options[selectedOptionIndex] : undefined;
   const traitLabel =
     control.offer === null
       ? 'Choose Trait'
@@ -80,16 +81,21 @@ export function TraitOfferLauncher({
   const status = control.status;
   const spellOffer = interaction.giver.providerKind === 'spell';
   const label = spellOffer
-    ? 'Edit spell'
+    ? selected === undefined
+      ? 'Edit spell · Choose spell'
+      : `Edit spell · ${traitLabel} · ${spellOfferSlotSummary(
+          interaction.giver,
+          selectedOptionIndex,
+        )}`
     : control.offer === null
       ? traitLabel
       : `Edit Trait · ${traitLabel}`;
   const statusLabel =
     status === 'unspecified'
-      ? 'trait is not selected'
+      ? `${spellOffer ? 'spell' : 'trait'} is not selected`
       : status === 'invalid'
-        ? 'trait configuration needs attention'
-        : 'trait configuration has no findings';
+        ? `${spellOffer ? 'spell' : 'trait'} configuration needs attention`
+        : `${spellOffer ? 'spell' : 'trait'} configuration has no findings`;
   return (
     <button
       aria-label={`${label}; ${statusLabel}`}

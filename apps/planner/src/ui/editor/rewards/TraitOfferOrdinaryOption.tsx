@@ -10,6 +10,7 @@ import type { TraitOptionDomainProjection } from '@planner/projections/traitDoma
 import type { WorkspaceTraitOfferInteraction } from '@planner/projections/structured-workspace';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorkspaceInteraction';
+import { spellOfferSlotSummary } from './spellOfferPresentation';
 import { replaceTraitOfferOption } from './traitOfferOptions';
 
 const emptyTraitPicker: ContextualPickerModel<string> = Object.freeze({
@@ -93,7 +94,10 @@ export function TraitOfferOrdinaryOption({
     <fieldset className="trait-offer-option" key={optionKey}>
       <legend>
         {spellOffer
-          ? optionKey.replace('option', 'Spell ')
+          ? `${optionKey.replace('option', 'Spell ')} · ${spellOfferSlotSummary(
+              interaction.giver,
+              index,
+            )}`
           : optionKey.replace('option', 'Option ')}
       </legend>
       <ContextualPicker

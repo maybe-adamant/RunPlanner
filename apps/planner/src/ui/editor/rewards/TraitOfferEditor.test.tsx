@@ -23,8 +23,12 @@ import {
   authoredProjectUndoRequested,
   authoredProjectReplaced,
 } from '@planner/state/projectWorkspaceSlice';
-import type { WorkspaceInteractionCatalog } from '@planner/projections/structured-workspace';
-import { TraitOfferDialog, TraitOfferEditor } from './TraitOfferEditor';
+import type {
+  StructuredWorkspaceProjection,
+  WorkspaceInteractionCatalog,
+  WorkspaceTraitOfferControl,
+} from '@planner/projections/structured-workspace';
+import { TraitOfferDialog, TraitOfferEditor, TraitOfferLauncher } from './TraitOfferEditor';
 import {
   createGoldenFGHProject,
   createGoldenFGHIProject,
@@ -34,6 +38,30 @@ import {
 } from '@run-planner/test-fixtures/underworld';
 
 afterEach(cleanup);
+
+function findTraitOfferControl(
+  workspace: StructuredWorkspaceProjection,
+  address: import('@run-planner/engine/authored-project').TraitOfferAddress,
+): WorkspaceTraitOfferControl {
+  const key = semanticAddressKey(address);
+  for (const route of workspace.routes)
+    for (const biome of route.biomes)
+      for (const node of biome.nodes) {
+        const rooms =
+          node.kind === 'occurrenceWorkbench'
+            ? [node.room]
+            : node.kind === 'ordinaryBatch' ||
+                node.kind === 'mixedBatch' ||
+                node.kind === 'takeoverBatch'
+              ? node.targets.map((target) => target.room)
+              : [];
+        for (const room of rooms)
+          for (const reward of room.rewardControls)
+            for (const control of reward.traitOffers ?? [])
+              if (semanticAddressKey(control.address) === key) return control;
+      }
+  throw new Error('Trait offer control is not projected');
+}
 
 describe('trait offer editor entry and dialog', () => {
   it('edits the real reached SpellDrop once, without new project evaluation, and supports Undo', async () => {
@@ -55,6 +83,23 @@ describe('trait offer editor entry and dialog', () => {
     );
     const workspace = application.selectStructuredWorkspace(application.store.getState());
     expect(workspace.interactions.traitOffers.has(semanticAddressKey(address))).toBe(true);
+    const initialInteraction = workspace.interactions.traitOffers.get(semanticAddressKey(address));
+    if (initialInteraction === undefined) throw new Error('SpellDrop interaction is missing');
+    const initialControl = findTraitOfferControl(workspace, address);
+    if (initialControl.offer?.kind !== 'traits') throw new Error('SpellDrop offer is missing');
+    const initialSelected = initialControl.offer.options[0];
+    if (initialSelected === undefined) throw new Error('SpellDrop first option is missing');
+    render(
+      <Provider store={application.store}>
+        <TraitOfferLauncher control={initialControl} interactions={workspace.interactions} />
+      </Provider>,
+    );
+    const initialLauncher = screen.getByRole('button', { name: /Edit spell/ });
+    expect(initialLauncher.textContent).toContain(
+      initialInteraction.traitLabel(initialSelected.traitKey),
+    );
+    expect(initialLauncher.textContent).toContain('Crescent Moonglow · +0 Path of Stars');
+    cleanup();
     events.length = 0;
     render(
       <Provider store={application.store}>
@@ -62,9 +107,9 @@ describe('trait offer editor entry and dialog', () => {
       </Provider>,
     );
     expect(events).toEqual([]);
-    expect(screen.getByText('Spell 1')).toBeTruthy();
-    expect(screen.getByText('Spell 2')).toBeTruthy();
-    expect(screen.getByText('Spell 3')).toBeTruthy();
+    expect(screen.getByText('Spell 1 · Crescent Moonglow · +0 Path of Stars')).toBeTruthy();
+    expect(screen.getByText('Spell 2 · Half Moonglow · +1 Path of Stars')).toBeTruthy();
+    expect(screen.getByText('Spell 3 · Full Moonglow · +2 Path of Stars')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Rarify' })).toBeNull();
     expect(screen.queryByText(/^Rarity:/)).toBeNull();
     expect(screen.queryByRole('status', { name: 'Offer feedback' })).toBeNull();
@@ -89,6 +134,28 @@ describe('trait offer editor entry and dialog', () => {
         ? changedOccurrence.state.reward.traitOffersByAcquisitionRole?.self
         : undefined;
     expect(changed).toMatchObject({ selectedOptionKey: 'option2' });
+    cleanup();
+    const changedWorkspace = application.selectStructuredWorkspace(application.store.getState());
+    const changedInteraction = changedWorkspace.interactions.traitOffers.get(
+      semanticAddressKey(address),
+    );
+    if (changedInteraction === undefined)
+      throw new Error('changed SpellDrop interaction is missing');
+    const changedControl = findTraitOfferControl(changedWorkspace, address);
+    if (changedControl.offer?.kind !== 'traits')
+      throw new Error('changed SpellDrop offer is missing');
+    const changedSelected = changedControl.offer.options[1];
+    if (changedSelected === undefined) throw new Error('SpellDrop second option is missing');
+    render(
+      <Provider store={application.store}>
+        <TraitOfferLauncher control={changedControl} interactions={changedWorkspace.interactions} />
+      </Provider>,
+    );
+    const changedLauncher = screen.getByRole('button', { name: /Edit spell/ });
+    expect(changedLauncher.textContent).toContain(
+      changedInteraction.traitLabel(changedSelected.traitKey),
+    );
+    expect(changedLauncher.textContent).toContain('Half Moonglow · +1 Path of Stars');
     application.store.dispatch(authoredProjectUndoRequested());
     const restoredOccurrence = application.store
       .getState()
