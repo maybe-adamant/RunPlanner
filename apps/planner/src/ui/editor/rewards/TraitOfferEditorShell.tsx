@@ -192,6 +192,7 @@ export function TraitOfferEditorShell({
         <section className="trait-offer-fallback">
           <p>Fallback Gold</p>
           <button
+            className="quiet-action"
             disabled={traitsStartingDraft === undefined}
             onClick={() => {
               if (traitsStartingDraft !== undefined) updateValue(traitsStartingDraft);

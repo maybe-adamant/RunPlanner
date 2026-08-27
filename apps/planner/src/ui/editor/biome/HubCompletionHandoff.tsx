@@ -49,7 +49,7 @@ export function HubCompletionHandoff({
           <p className="fixed-room-state">Complete the required Hub visits to unlock this door.</p>
         )}
         <button
-          className="success-action"
+          className="primary-action"
           disabled={exit.kind === 'locked'}
           onClick={() => {
             if (exit.kind === 'ready') {

@@ -103,7 +103,13 @@ export function RunStateSheet({ launcher }: { readonly launcher: WorkspaceRunSta
     <aside aria-label={`State before ${launcher.title}`} className="run-state-sheet" role="region">
       <header>
         <h2>State before {launcher.title}</h2>
-        <button aria-label="Close Run State" onClick={close} ref={closeButton} type="button">
+        <button
+          aria-label="Close Run State"
+          className="quiet-action"
+          onClick={close}
+          ref={closeButton}
+          type="button"
+        >
           ×
         </button>
       </header>

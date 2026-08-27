@@ -153,7 +153,6 @@ select:focus-visible {
 .primary-action,
 .secondary-action,
 .danger-action,
-.success-action,
 .quiet-action {
   display: inline-flex;
   min-height: 36px;
@@ -178,18 +177,6 @@ select:focus-visible {
 .primary-action:hover:not(:disabled) {
   border-color: #f0c87b;
   background: #efc678;
-}
-
-.success-action {
-  border-color: #3c684e;
-  color: #9bd7af;
-  background: rgb(60 104 78 / 22%);
-}
-
-.success-action:hover:not(:disabled) {
-  border-color: #5d946e;
-  color: #c1f0cd;
-  background: rgb(60 104 78 / 34%);
 }
 
 .secondary-action {
@@ -441,7 +428,7 @@ button:disabled {
   scrollbar-gutter: stable;
 }
 
-.findings-list button {
+.findings-list-entry {
   display: grid;
   width: 100%;
   gap: 2px;
@@ -454,8 +441,8 @@ button:disabled {
   cursor: pointer;
 }
 
-.findings-list button:hover,
-.findings-list button[data-selected='true'] {
+.findings-list-entry:hover,
+.findings-list-entry[data-selected='true'] {
   border-color: rgb(226 185 113 / 55%);
   background: rgb(226 185 113 / 7%);
 }

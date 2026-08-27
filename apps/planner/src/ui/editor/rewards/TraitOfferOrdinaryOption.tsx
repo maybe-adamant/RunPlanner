@@ -169,6 +169,7 @@ export function TraitOfferOrdinaryOption({
       )}
       {spellOffer ? null : (
         <button
+          className="secondary-action action-compact"
           disabled={!rarifySupported}
           onClick={() =>
             onUpdate(

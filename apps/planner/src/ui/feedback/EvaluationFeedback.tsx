@@ -168,6 +168,7 @@ export function ProjectFindings({
               <li key={`${key}-${index}`}>
                 <button
                   aria-current={selectedKey === key ? 'true' : undefined}
+                  className="findings-list-entry"
                   data-selected={selectedKey === key}
                   onClick={() =>
                     dispatch(

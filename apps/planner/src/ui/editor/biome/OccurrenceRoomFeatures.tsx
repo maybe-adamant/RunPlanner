@@ -271,6 +271,11 @@ export function RoomFeaturesWorkbench({
             );
             return (
               <button
+                className={
+                  feature.action === 'remove'
+                    ? 'danger-action action-compact'
+                    : 'secondary-action action-compact'
+                }
                 key={feature.interactionKey}
                 onClick={() => executeIntent(interaction.intent)}
                 type="button"

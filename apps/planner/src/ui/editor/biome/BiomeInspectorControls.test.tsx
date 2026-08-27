@@ -270,7 +270,9 @@ describe('Biome inspector controls', () => {
     const resources = screen.getByRole('region', { name: 'Resources' });
     const historyBefore = view.application.store.getState().projectWorkspace.history.past.length;
 
-    await view.user.click(within(resources).getByRole('button', { name: 'Remove Mining' }));
+    const removeMining = within(resources).getByRole('button', { name: 'Remove Mining' });
+    expect(removeMining.classList.contains('danger-action')).toBe(true);
+    await view.user.click(removeMining);
     const selected = () =>
       view.application.store
         .getState()
@@ -426,7 +428,11 @@ describe('Biome inspector controls', () => {
       if (next === undefined) throw new Error('Judgment picker has too few inactive cards');
       act(() => next.click());
     }
-    act(() => within(judgmentPopup).getByRole('button', { name: 'Close Judgment editor' }).click());
+    const closeJudgment = within(judgmentPopup).getByRole('button', {
+      name: 'Close Judgment editor',
+    });
+    expect(closeJudgment.classList.contains('quiet-action')).toBe(true);
+    act(() => closeJudgment.click());
     const updatedWorkspace = workspaceProjection(view.application);
     expect(
       updatedWorkspace.interactions.figurineArcana.has(semanticAddressKey(figurineOwner)),

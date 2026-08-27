@@ -140,7 +140,9 @@ describe('trait offer editor entry and dialog', () => {
         false,
       ),
     );
-    await user.click(screen.getAllByRole('button', { name: 'Rarify' })[0]!);
+    const rarify = screen.getAllByRole('button', { name: 'Rarify' })[0]!;
+    expect(rarify.classList.contains('secondary-action')).toBe(true);
+    await user.click(rarify);
     const save = screen.getByRole('button', { name: 'Save trait offer' });
     expect(save).toHaveProperty('disabled', false);
     await user.click(save);

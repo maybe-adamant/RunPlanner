@@ -39,6 +39,7 @@ export function RoomActionOrderingControls({
     <>
       {row.rank === null && row.participation === 'required' ? (
         <button
+          className="secondary-action action-compact"
           disabled={insertions.length !== 1 || insertions[0]?.structurallyAuthorable !== true}
           onClick={() => insertions[0] === undefined || onApply(insertions[0].key)}
           type="button"
