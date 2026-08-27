@@ -11,6 +11,7 @@ import {
   createRouteStartKeepsakeSelectionAddress,
   createTraitOfferAddress,
   semanticAddressKey,
+  type AuthoredTraitOffer,
   type AuthoredTraitOfferTraits,
 } from '@run-planner/engine/authored-project';
 
@@ -22,6 +23,7 @@ import {
   authoredProjectUndoRequested,
   authoredProjectReplaced,
 } from '@planner/state/projectWorkspaceSlice';
+import type { WorkspaceInteractionCatalog } from '@planner/projections/structured-workspace';
 import { TraitOfferDialog, TraitOfferEditor } from './TraitOfferEditor';
 import {
   createGoldenFGHProject,
@@ -150,6 +152,86 @@ describe('trait offer editor entry and dialog', () => {
     await user.click(screen.getAllByRole('button', { name: 'Rarify' })[0]!);
     expect(screen.getByText('Effective rarity: Heroic')).toBeTruthy();
     expect(screen.getAllByRole('button', { name: 'Rarify' })[0]).toHaveProperty('disabled', true);
+    application.dispose();
+  });
+
+  it('refreshes an open editor when an external persisted Persephone result changes', async () => {
+    const application = createApplication();
+    application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
+    const workspace = application.selectStructuredWorkspace(application.store.getState());
+    const base = [...workspace.interactions.traitOffers.values()].find(
+      (candidate) => candidate.value?.kind === 'traits',
+    );
+    if (base === undefined || base.value?.kind !== 'traits') {
+      throw new Error('traits interaction is missing');
+    }
+    const initialValue = Object.freeze({
+      ...base.value,
+      options: Object.freeze([
+        Object.freeze({ ...base.value.options[0], persephoneLevelBonus: 1 }),
+        base.value.options[1],
+        base.value.options[2],
+      ]) as AuthoredTraitOfferTraits['options'],
+    });
+    const updatedValue = Object.freeze({
+      ...initialValue,
+      options: Object.freeze([
+        Object.freeze({ ...initialValue.options[0], persephoneLevelBonus: 5 }),
+        initialValue.options[1],
+        initialValue.options[2],
+      ]) as AuthoredTraitOfferTraits['options'],
+    });
+    const interactionFor = (value: AuthoredTraitOfferTraits) =>
+      Object.freeze({
+        ...base,
+        value,
+        load: (draft: AuthoredTraitOffer = value) =>
+          Object.freeze([
+            Object.freeze({
+              value: draft,
+              evaluation: Object.freeze({
+                kind: 'traitOffer' as const,
+                result: Object.freeze({
+                  assessments: Object.freeze([]),
+                  branches: Object.freeze([]),
+                  effectiveLevels: Object.freeze([6, 4, 2]),
+                  findings: Object.freeze([]),
+                  persephoneLevelBonusMaximums: Object.freeze([5, undefined, undefined]),
+                  supported: true,
+                }),
+              }),
+            }),
+          ]),
+      });
+    const interactionsFor = (value: AuthoredTraitOfferTraits): WorkspaceInteractionCatalog =>
+      Object.freeze({
+        ...workspace.interactions,
+        traitOffers: new Map([[base.key, interactionFor(value)]]),
+      }) as unknown as WorkspaceInteractionCatalog;
+    const user = userEvent.setup();
+    const initialInteractions = interactionsFor(initialValue);
+    const view = render(
+      <Provider store={application.store}>
+        <TraitOfferEditor address={base.owner} interactions={initialInteractions} />
+      </Provider>,
+    );
+
+    const bonus = screen.getByRole('button', { name: 'option1 Persephone level bonus' });
+    expect(bonus.textContent).toContain('+1');
+    await user.click(bonus);
+    await user.click(await screen.findByRole('option', { name: '+2' }));
+    expect(
+      screen.getByRole('button', { name: 'option1 Persephone level bonus' }).textContent,
+    ).toContain('+2');
+
+    view.rerender(
+      <Provider store={application.store}>
+        <TraitOfferEditor address={base.owner} interactions={interactionsFor(updatedValue)} />
+      </Provider>,
+    );
+    expect(
+      screen.getByRole('button', { name: 'option1 Persephone level bonus' }).textContent,
+    ).toContain('+5');
     application.dispose();
   });
 });

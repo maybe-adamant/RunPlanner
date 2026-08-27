@@ -296,6 +296,8 @@ describe('ordinary offer shell', () => {
               result: Object.freeze({
                 assessments: Object.freeze([]),
                 branches: Object.freeze([]),
+                persephoneLevelBonusMaximums: Object.freeze([]),
+                effectiveLevels: Object.freeze([]),
                 findings: Object.freeze(
                   value.kind === 'traits' && value.options[0]?.targetTraitKey === undefined
                     ? [
@@ -452,6 +454,8 @@ describe('ordinary offer shell', () => {
               result: Object.freeze({
                 assessments: Object.freeze([]),
                 branches: Object.freeze([]),
+                persephoneLevelBonusMaximums: Object.freeze([]),
+                effectiveLevels: Object.freeze([]),
                 findings: Object.freeze([]),
                 supported: true,
               }),
@@ -520,6 +524,8 @@ describe('ordinary offer shell', () => {
               result: Object.freeze({
                 assessments: Object.freeze([]),
                 branches: Object.freeze([]),
+                persephoneLevelBonusMaximums: Object.freeze([]),
+                effectiveLevels: Object.freeze([]),
                 findings: Object.freeze([]),
                 supported: draft.kind !== 'fallbackGold',
               }),
@@ -636,6 +642,8 @@ describe('ordinary offer shell', () => {
               result: Object.freeze({
                 assessments: Object.freeze([]),
                 branches: Object.freeze([]),
+                persephoneLevelBonusMaximums: Object.freeze([]),
+                effectiveLevels: Object.freeze([]),
                 findings: Object.freeze([]),
                 supported: true,
               }),
@@ -685,6 +693,203 @@ describe('ordinary offer shell', () => {
     await user.click(screen.getByRole('button', { name: 'Return to traits' }));
     expect(starting).toHaveBeenCalledTimes(1);
     expect(screen.getByLabelText('option1 trait')).toBeTruthy();
+    application.dispose();
+  });
+
+  it('authors a bounded Persephone contribution and preserves the complete offer', async () => {
+    const application = createApplication();
+    application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
+    const workspace = application.selectStructuredWorkspace(application.store.getState());
+    const base = [...workspace.interactions.traitOffers.values()].find(
+      (candidate) => candidate.value?.kind === 'traits',
+    );
+    if (base === undefined || base.value?.kind !== 'traits') {
+      throw new Error('traits interaction is missing');
+    }
+    const value = base.value;
+    const interaction = Object.freeze({
+      ...base,
+      load: (draft: AuthoredTraitOffer = value) =>
+        Object.freeze([
+          Object.freeze({
+            value: draft,
+            evaluation: Object.freeze({
+              kind: 'traitOffer' as const,
+              result: Object.freeze({
+                assessments: Object.freeze([]),
+                branches: Object.freeze([]),
+                effectiveLevels: Object.freeze([6, 4, 2]),
+                findings: Object.freeze([]),
+                persephoneLevelBonusMaximums: Object.freeze([5, undefined, undefined]),
+                supported: true,
+              }),
+            }),
+          }),
+        ]),
+    });
+    const interactions: WorkspaceInteractionCatalog = Object.freeze({
+      ...workspace.interactions,
+      traitOffers: new Map([[interaction.key, interaction]]),
+    }) as unknown as WorkspaceInteractionCatalog;
+    const onCommit = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <Provider store={application.store}>
+        <TraitOfferEditor
+          address={interaction.owner}
+          interactions={interactions}
+          onCommit={onCommit}
+        />
+      </Provider>,
+    );
+
+    expect(await screen.findByText('Effective level: 6')).toBeTruthy();
+    const bonus = screen.getByRole('button', { name: 'option1 Persephone level bonus' });
+    expect(bonus.textContent).toContain('+0');
+    await user.click(screen.getByRole('button', { name: 'Save trait offer' }));
+    const defaultCommit = onCommit.mock.calls[0]?.[0] as AuthoredTraitOfferTraits | undefined;
+    expect(defaultCommit?.options[0]).not.toHaveProperty('persephoneLevelBonus');
+    await user.click(bonus);
+    await user.click(await screen.findByRole('option', { name: '+5' }));
+    await user.click(screen.getByRole('button', { name: 'Save trait offer' }));
+
+    expect(onCommit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        options: [
+          expect.objectContaining({
+            persephoneLevelBonus: 5,
+          }),
+          value.options[1],
+          value.options[2],
+        ],
+      }),
+    );
+    await user.click(bonus);
+    await user.click(await screen.findByRole('option', { name: '+0' }));
+    await user.click(screen.getByRole('button', { name: 'Save trait offer' }));
+
+    const zeroCommit = onCommit.mock.calls.at(-1)?.[0] as AuthoredTraitOfferTraits | undefined;
+    expect(zeroCommit?.options[0]).not.toHaveProperty('persephoneLevelBonus');
+    expect(zeroCommit?.options[0]).toEqual(value.options[0]);
+    expect(zeroCommit?.options.slice(1)).toEqual(value.options.slice(1));
+    application.dispose();
+  });
+
+  it('preserves dormant Persephone detail when changing a trait away and back', async () => {
+    const application = createApplication();
+    application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
+    const workspace = application.selectStructuredWorkspace(application.store.getState());
+    const base = [...workspace.interactions.traitOffers.values()].find(
+      (candidate) => candidate.value?.kind === 'traits',
+    );
+    if (base === undefined || base.value?.kind !== 'traits') {
+      throw new Error('traits interaction is missing');
+    }
+    const value = Object.freeze({
+      ...base.value,
+      options: Object.freeze([
+        Object.freeze({ ...base.value.options[0], persephoneLevelBonus: 5 }),
+        base.value.options[1],
+        base.value.options[2],
+      ]) as AuthoredTraitOfferTraits['options'],
+    });
+    const alternative = base.choices.find((choice) => choice.value !== value.options[0]?.traitKey);
+    const original = base.choices.find((choice) => choice.value === value.options[0]?.traitKey);
+    if (alternative === undefined || original === undefined) {
+      throw new Error('trait choices are missing an alternate and original option');
+    }
+    const interaction = Object.freeze({
+      ...base,
+      value,
+      load: (draft: AuthoredTraitOffer = value) =>
+        Object.freeze([
+          Object.freeze({
+            value: draft,
+            evaluation: Object.freeze({
+              kind: 'traitOffer' as const,
+              result: Object.freeze({
+                assessments: Object.freeze([]),
+                branches: Object.freeze([]),
+                effectiveLevels: Object.freeze([6, 4, 2]),
+                findings: Object.freeze([]),
+                persephoneLevelBonusMaximums: Object.freeze([5, undefined, undefined]),
+                supported: true,
+              }),
+            }),
+          }),
+        ]),
+      optionDomain: (draft: AuthoredTraitOffer, optionKey: 'option1' | 'option2' | 'option3') => {
+        const optionIndex = optionKey === 'option1' ? 0 : optionKey === 'option2' ? 1 : 2;
+        const selected = draft.kind === 'traits' ? draft.options[optionIndex] : undefined;
+        const originalOption = Object.freeze({
+          traitKey: original.value,
+          ...(selected?.rarity === undefined ? {} : { rarity: selected.rarity }),
+        });
+        const alternativeOption = Object.freeze({
+          traitKey: alternative.value,
+          ...(selected?.rarity === undefined ? {} : { rarity: selected.rarity }),
+        });
+        const choices = optionKey === 'option1' ? [original, alternative] : [];
+        return Object.freeze({
+          hasTargetPicker: false,
+          load: () =>
+            Object.freeze({
+              candidates: Object.freeze([]),
+              preferredOptionFor: (traitKey: string) =>
+                traitKey === original.value
+                  ? originalOption
+                  : traitKey === alternative.value
+                    ? alternativeOption
+                    : undefined,
+              rarityPickerFor: () => undefined,
+              traitPicker: Object.freeze({
+                sections: Object.freeze([
+                  Object.freeze({
+                    collapsible: false,
+                    items: Object.freeze(
+                      choices.map((choice) =>
+                        Object.freeze({
+                          disabled: false,
+                          key: choice.value,
+                          label: choice.label,
+                          selected: choice.value === selected?.traitKey,
+                          state: 'possible' as const,
+                          value: choice.value,
+                        }),
+                      ),
+                    ),
+                    key: 'trait-choices',
+                    kind: 'category' as const,
+                    label: 'Available',
+                  }),
+                ]),
+              }),
+            }),
+        });
+      },
+    });
+    const interactions: WorkspaceInteractionCatalog = Object.freeze({
+      ...workspace.interactions,
+      traitOffers: new Map([[interaction.key, interaction]]),
+    }) as unknown as WorkspaceInteractionCatalog;
+    const user = userEvent.setup();
+    render(
+      <Provider store={application.store}>
+        <TraitOfferEditor address={interaction.owner} interactions={interactions} />
+      </Provider>,
+    );
+
+    const traitPicker = screen.getByLabelText('option1 trait');
+    await user.click(traitPicker);
+    await user.click(await screen.findByRole('option', { name: alternative.label }));
+    expect(
+      screen.getByRole('button', { name: 'option1 Persephone level bonus' }).textContent,
+    ).toContain('+5');
+    await user.click(traitPicker);
+    await user.click(await screen.findByRole('option', { name: original.label }));
+    expect(
+      screen.getByRole('button', { name: 'option1 Persephone level bonus' }).textContent,
+    ).toContain('+5');
     application.dispose();
   });
 });

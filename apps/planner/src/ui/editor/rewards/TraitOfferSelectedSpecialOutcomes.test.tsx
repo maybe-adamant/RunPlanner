@@ -117,6 +117,8 @@ describe('selected outcomes', () => {
               result: Object.freeze({
                 assessments: Object.freeze([]),
                 branches: Object.freeze([]),
+                persephoneLevelBonusMaximums: Object.freeze([]),
+                effectiveLevels: Object.freeze([]),
                 findings: Object.freeze([]),
                 supported: true,
               }),
@@ -249,6 +251,8 @@ describe('selected outcomes', () => {
               result: Object.freeze({
                 assessments: Object.freeze([]),
                 branches: Object.freeze([]),
+                persephoneLevelBonusMaximums: Object.freeze([]),
+                effectiveLevels: Object.freeze([]),
                 findings: Object.freeze([]),
                 supported: true,
               }),
@@ -358,6 +362,8 @@ describe('selected outcomes', () => {
               result: Object.freeze({
                 assessments: Object.freeze([]),
                 branches: Object.freeze([]),
+                persephoneLevelBonusMaximums: Object.freeze([]),
+                effectiveLevels: Object.freeze([]),
                 findings: Object.freeze([]),
                 supported: true,
               }),
@@ -520,6 +526,8 @@ describe('selected outcomes', () => {
               result: Object.freeze({
                 assessments: Object.freeze([]),
                 branches: Object.freeze([]),
+                persephoneLevelBonusMaximums: Object.freeze([]),
+                effectiveLevels: Object.freeze([]),
                 findings: Object.freeze([]),
                 supported: true,
               }),
@@ -599,6 +607,8 @@ describe('selected outcomes', () => {
               result: Object.freeze({
                 assessments: Object.freeze([]),
                 branches: Object.freeze([]),
+                persephoneLevelBonusMaximums: Object.freeze([]),
+                effectiveLevels: Object.freeze([]),
                 findings: Object.freeze([]),
                 supported: true,
               }),
@@ -677,6 +687,8 @@ describe('selected outcomes', () => {
               result: Object.freeze({
                 assessments: Object.freeze([]),
                 branches: Object.freeze([]),
+                persephoneLevelBonusMaximums: Object.freeze([]),
+                effectiveLevels: Object.freeze([]),
                 findings: Object.freeze([]),
                 supported: true,
               }),

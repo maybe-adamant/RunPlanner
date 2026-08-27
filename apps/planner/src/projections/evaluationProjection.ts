@@ -565,6 +565,10 @@ const findingCopy = {
     title: 'Nemesis event result unavailable',
     description: 'Choose a result supported by every reached branch at this interaction.',
   },
+  persephoneLevelBonusUnavailable: {
+    title: 'Persephone level bonus unavailable',
+    description: 'Choose a contribution within the active Persephone range for this trait.',
+  },
 } as const satisfies Readonly<Record<FindingCode, FindingPresentation>>;
 
 const projectStatusCopy = {

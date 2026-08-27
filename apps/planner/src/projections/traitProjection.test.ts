@@ -13,6 +13,40 @@ import { createGoldenFGHIProject } from '@run-planner/test-fixtures/underworld';
 const { structuredWorkspace } = createStructuredWorkspaceTestServices();
 
 describe('route trait projection', () => {
+  it('projects engine-agreed effective level and Persephone range without deriving either', () => {
+    const offer: AuthoredTraitOfferTraits = {
+      kind: 'traits',
+      giverKey: 'Apollo',
+      options: [
+        { traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
+        { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
+        { traitKey: 'ApolloCastBoon', rarity: 'Common' },
+      ],
+      selectedOptionKey: 'option1',
+    };
+    const feedback = projectTraitOfferFeedback(offer, {
+      value: offer,
+      evaluation: {
+        kind: 'traitOffer',
+        result: {
+          supported: true,
+          branches: [],
+          assessments: [],
+          findings: [],
+          persephoneLevelBonusMaximums: [5, undefined, undefined],
+          effectiveLevels: [6, undefined, undefined],
+        },
+      },
+    });
+
+    expect(feedback.options[0]).toMatchObject({
+      effectiveLevel: 6,
+      persephoneLevelBonusMaximum: 5,
+    });
+    expect(feedback.options[1]).not.toHaveProperty('effectiveLevel');
+    expect(feedback.options[1]).not.toHaveProperty('persephoneLevelBonusMaximum');
+  });
+
   it('aggregates divergent branch evidence and sorts rows by engine chronology', () => {
     const source = createGoldenFGHIProject();
     const assembly = simulateProjectAssembly(catalog, source);
@@ -131,6 +165,8 @@ describe('route trait projection', () => {
         result: {
           supported: false,
           branches: [],
+          persephoneLevelBonusMaximums: [],
+          effectiveLevels: [],
           assessments: invalidTrace.branches.flatMap((branch) => branch.assessments),
           findings: [duplicateFinding, duplicateFinding, secondFinding],
         },
@@ -255,6 +291,8 @@ describe('route trait projection', () => {
         result: {
           supported: false,
           branches: [],
+          persephoneLevelBonusMaximums: [],
+          effectiveLevels: [],
           assessments: [],
           findings: [
             {
@@ -295,6 +333,8 @@ describe('route trait projection', () => {
         result: {
           supported: false,
           branches: [],
+          persephoneLevelBonusMaximums: [],
+          effectiveLevels: [],
           assessments: [],
           findings: [
             {
@@ -328,6 +368,8 @@ describe('route trait projection', () => {
         result: {
           supported: false,
           branches: [],
+          persephoneLevelBonusMaximums: [],
+          effectiveLevels: [],
           assessments: [],
           findings: [{ code: 'traitOfferSelectionUnavailable' }],
         },
@@ -356,6 +398,8 @@ describe('route trait projection', () => {
           result: {
             supported: false,
             branches: [],
+            persephoneLevelBonusMaximums: [],
+            effectiveLevels: [],
             assessments: [],
             findings: [
               {
@@ -403,6 +447,8 @@ describe('route trait projection', () => {
           result: {
             supported: false,
             branches: [],
+            persephoneLevelBonusMaximums: [],
+            effectiveLevels: [],
             assessments: [],
             findings: [
               {
