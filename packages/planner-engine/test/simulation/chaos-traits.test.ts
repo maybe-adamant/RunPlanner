@@ -519,8 +519,10 @@ describe('Chaos paired-trait history', () => {
         ordinaryRequiresCommon: false,
         rejectedBlockRequired: true,
         rejectedBlockableOptionKeys: ['option1'],
+        rejectedBlockNeedsRepair: true,
       },
     ]);
+    expect(capability?.chaosOfferRules({ ...offer, giverKey: 'SpellDrop' })).toEqual([]);
   });
 
   it('keeps Rejected’s blocked identity visible to Denial as an unselected trait, not a replacement row', () => {

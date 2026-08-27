@@ -706,6 +706,10 @@ export interface WorkspaceTraitOfferInteraction {
     value: AuthoredTraitOffer,
     optionKey: TraitOptionKey,
   ) => WorkspaceTraitOptionDomainInteraction;
+  /** Conservative Rejected domain from the editor's complete candidate result. */
+  readonly rejectedBlockDomain?: (
+    rules: readonly WorkspaceRejectedBlockRule[],
+  ) => WorkspaceRejectedBlockDomain | undefined;
   readonly ransomAssessment: (value: AuthoredTraitOffer) => WorkspaceRansomAssessment | undefined;
   /** Application-owned labels for trait keys carried by engine evidence. */
   readonly traitLabel: (traitKey: string) => string;
@@ -726,6 +730,22 @@ export interface WorkspaceTraitOfferInteraction {
   readonly previousOptionalHighTierDraft?: (
     value: AuthoredTraitOfferTraits,
   ) => AuthoredTraitOfferTraits | undefined;
+}
+
+export interface WorkspaceRejectedBlockDomain {
+  readonly required: boolean;
+  /** True only when every surviving branch permits clearing the retained block. */
+  readonly canClear: boolean;
+  readonly needsRepair: boolean;
+  readonly optionKeys: readonly TraitOptionKey[];
+}
+
+/** Engine facts from one surviving ordinary-offer branch. */
+export interface WorkspaceRejectedBlockRule {
+  readonly ordinaryRequiresCommon: boolean;
+  readonly rejectedBlockRequired: boolean;
+  readonly rejectedBlockableOptionKeys: readonly TraitOptionKey[];
+  readonly rejectedBlockNeedsRepair: boolean;
 }
 
 export interface WorkspaceChaosOfferOptionDomain {

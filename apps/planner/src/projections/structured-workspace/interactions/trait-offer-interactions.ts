@@ -41,6 +41,7 @@ import type {
   WorkspaceConcaveStoneInteraction,
   WorkspaceNaturalSelectionInteraction,
   WorkspaceRewardControl,
+  WorkspaceRejectedBlockRule,
   WorkspaceTraitOfferControl,
   WorkspaceTraitOfferInteraction,
   WorkspaceChaosOfferDomain,
@@ -263,6 +264,22 @@ export function bindTraitOfferInteractions(input: {
           });
     const load = (value = control.offer ?? startingDraft()) =>
       value === undefined ? Object.freeze([]) : candidates.traitOffer(control.address, value);
+    const rejectedBlockDomain = (rules: readonly WorkspaceRejectedBlockRule[]) => {
+      if (rules.length === 0) return undefined;
+      return Object.freeze({
+        // Do not select an arbitrary history branch. A row is offered only
+        // when every reached branch agrees it can be blocked; clearing is
+        // likewise exposed only when it is legal across the full frontier.
+        required: rules.every((rule) => rule.rejectedBlockRequired),
+        canClear: rules.every((rule) => !rule.rejectedBlockRequired),
+        needsRepair: rules.some((rule) => rule.rejectedBlockNeedsRepair),
+        optionKeys: Object.freeze(
+          rules[0]!.rejectedBlockableOptionKeys.filter((key) =>
+            rules.every((rule) => rule.rejectedBlockableOptionKeys.includes(key)),
+          ),
+        ),
+      });
+    };
     const optionDomains = new Map<
       string,
       ReturnType<WorkspaceTraitOfferInteraction['optionDomain']>
@@ -877,6 +894,7 @@ export function bindTraitOfferInteractions(input: {
             }
           : {}),
         optionDomain,
+        rejectedBlockDomain,
         ransomAssessment: (value: AuthoredTraitOffer) => {
           if (value.kind !== 'traits') return undefined;
           const evaluated = candidates.ransomAssessment(control.address, value);
