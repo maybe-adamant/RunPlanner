@@ -8,6 +8,65 @@ import { createTestDefaultRoomState as createDefaultRoomState } from '../support
 import { mutable, room, roomStatePath as path } from '../support/room-state-codec';
 
 describe('reward acquisition decoder', () => {
+  function boonRewardWithPersephoneBonus(bonus: unknown, include = true) {
+    const option: Record<string, unknown> = {
+      traitKey: 'ApolloWeaponBoon',
+      rarity: 'Common',
+    };
+    if (include) option.persephoneLevelBonus = bonus;
+    return {
+      offer: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
+      dispositionByAcquisitionRole: { source: { kind: 'normal' } },
+      traitOffersByAcquisitionRole: {
+        source: {
+          kind: 'traits',
+          giverKey: 'Apollo',
+          options: [
+            option,
+            { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
+            { traitKey: 'ApolloCastBoon', rarity: 'Common' },
+          ],
+          selectedOptionKey: 'option1',
+          rarificationActions: [],
+        },
+      },
+    };
+  }
+
+  it('round-trips absent and explicit Persephone contributions in reward acquisition state', () => {
+    for (const [bonus, include] of [
+      [undefined, false],
+      [0, true],
+      [5, true],
+      [8, true],
+    ] as const) {
+      const decoded = decodeRewardState(
+        boonRewardWithPersephoneBonus(bonus, include),
+        catalog,
+        '$.reward',
+        { kind: 'producerLifecycle', key: 'roomRewardPickup' },
+      );
+      const option =
+        decoded.traitOffersByAcquisitionRole.source?.kind === 'traits'
+          ? decoded.traitOffersByAcquisitionRole.source.options[0]
+          : undefined;
+      if (!include) expect(option).not.toHaveProperty('persephoneLevelBonus');
+      else expect(option?.persephoneLevelBonus).toBe(bonus);
+    }
+  });
+
+  it.each([-1, 1.5, 9, '5', null, true] as const)(
+    'rejects malformed Persephone contribution %s in reward acquisition state',
+    (bonus) => {
+      expect(() =>
+        decodeRewardState(boonRewardWithPersephoneBonus(bonus), catalog, '$.reward', {
+          kind: 'producerLifecycle',
+          key: 'roomRewardPickup',
+        }),
+      ).toThrow(/persephoneLevelBonus/);
+    },
+  );
+
   it('owns the exact Boon acquisition and payload shape', () => {
     const value = {
       offer: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },

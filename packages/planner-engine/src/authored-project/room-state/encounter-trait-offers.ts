@@ -14,6 +14,7 @@ import {
   expectArray,
   expectExactKeys,
   expectNonBlankString,
+  expectNonNegativeInteger,
   expectRecord,
   expectString,
   failProjectDocument,
@@ -73,6 +74,7 @@ export function decodeEncounterTraitOffer(
     const hasEchoLastRunBoon = 'echoLastRunBoon' in option;
     const hasAllTogetherResult = 'allTogetherResult' in option;
     const hasNaturalSelectionTargets = 'naturalSelectionTargets' in option;
+    const hasPersephoneLevelBonus = 'persephoneLevelBonus' in option;
     expectExactKeys(
       option,
       [
@@ -84,6 +86,7 @@ export function decodeEncounterTraitOffer(
         ...(hasEchoLastRunBoon ? ['echoLastRunBoon'] : []),
         ...(hasAllTogetherResult ? ['allTogetherResult'] : []),
         ...(hasNaturalSelectionTargets ? ['naturalSelectionTargets'] : []),
+        ...(hasPersephoneLevelBonus ? ['persephoneLevelBonus'] : []),
       ],
       `${path}.options.${optionKey}`,
     );
@@ -287,6 +290,14 @@ export function decodeEncounterTraitOffer(
           return Object.freeze(keys) as AuthoredTraitOption['naturalSelectionTargets'];
         })()
       : undefined;
+    const persephoneLevelBonus = hasPersephoneLevelBonus
+      ? expectNonNegativeInteger(
+          option.persephoneLevelBonus,
+          `${path}.options.${optionKey}.persephoneLevelBonus`,
+        )
+      : undefined;
+    if (persephoneLevelBonus !== undefined && persephoneLevelBonus > 8)
+      failProjectDocument(`${path}.options.${optionKey}.persephoneLevelBonus`, 'must not exceed 8');
     const decodedOption: AuthoredTraitOption =
       rarity === undefined
         ? {
@@ -297,6 +308,7 @@ export function decodeEncounterTraitOffer(
             ...(echoLastRunBoon === undefined ? {} : { echoLastRunBoon }),
             ...(allTogetherResult === undefined ? {} : { allTogetherResult }),
             ...(naturalSelectionTargets === undefined ? {} : { naturalSelectionTargets }),
+            ...(persephoneLevelBonus === undefined ? {} : { persephoneLevelBonus }),
           }
         : {
             traitKey,
@@ -307,6 +319,7 @@ export function decodeEncounterTraitOffer(
             ...(echoLastRunBoon === undefined ? {} : { echoLastRunBoon }),
             ...(allTogetherResult === undefined ? {} : { allTogetherResult }),
             ...(naturalSelectionTargets === undefined ? {} : { naturalSelectionTargets }),
+            ...(persephoneLevelBonus === undefined ? {} : { persephoneLevelBonus }),
           };
     options.push(Object.freeze(decodedOption));
   }

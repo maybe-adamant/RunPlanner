@@ -23,6 +23,7 @@ import {
   assessNaturalSelectionTargets,
   assessRansom,
   recordReachedTraitOffer,
+  traitOfferStartingDraft,
   targetedAcquisitionTargetKeys,
   type TraitOfferEvent,
   type TraitLevelMutationEvent,
@@ -102,6 +103,16 @@ function findingCode(traitKey: string, history: ReturnType<typeof createTraitHis
 }
 
 describe('Boon Growth and Boon Decay target predicates', () => {
+  it('does not materialize zero Persephone contributions in an automatic three-option draft', () => {
+    const draft = traitOfferStartingDraft(catalog, 'Apollo', createTraitHistoryState(), {
+      aspectKey: 'LobImpulseAspect',
+    });
+    if (draft === undefined) throw new Error('missing Apollo starting draft');
+
+    expect(draft.options).toHaveLength(3);
+    expect(draft.options.every((option) => !('persephoneLevelBonus' in option))).toBe(true);
+  });
+
   it('keeps one-time pickup history after King’s Ransom removes Bridal Glow', () => {
     const before = historyFrom([
       { giverKey: 'Hera', traitKey: 'HeraWeaponBoon', rarity: 'Common' },

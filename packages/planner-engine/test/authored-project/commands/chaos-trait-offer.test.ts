@@ -237,7 +237,7 @@ describe('schema-51 Chaos TrialUpgrade authored child', () => {
     ).toEqual(['Legendary']);
   });
 
-  it('strictly decodes and canonically re-encodes the engine-consumed 50-to-51 migration output', () => {
+  it('does not make schema-63 migration output an implicit schema-64 decoder path', () => {
     const legacy = JSON.parse(JSON.stringify(naturalChaosRaw)) as {
       schemaVersion: number;
       catalogVersion: string;
@@ -260,9 +260,8 @@ describe('schema-51 Chaos TrialUpgrade authored child', () => {
     if (reward === undefined)
       throw new Error('legacy migration witness has no TrialUpgrade reward');
     reward.traitOffersByAcquisitionRole = {};
-    const migrated = migrateProjectDocument(legacy).document;
-    const decoded = decodeProjectDocument(migrated, catalog);
-    expect(decoded).toEqual(unresolvedProject());
-    expect(JSON.parse(encodeProjectDocument(decoded))).toEqual(migrated);
+    const migrated = migrateProjectDocument(legacy, 63).document;
+    expect(migrated.schemaVersion).toBe(63);
+    expect(() => decodeProjectDocument(migrated, catalog)).toThrow('expected 64, received 63');
   });
 });

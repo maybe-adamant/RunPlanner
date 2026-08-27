@@ -10,6 +10,7 @@ import {
   expectArray,
   expectExactKeys,
   expectNonBlankString,
+  expectNonNegativeInteger,
   expectRecord,
   expectString,
   failProjectDocument,
@@ -227,6 +228,7 @@ function decodeTraitOffers(
       const option = expectRecord(optionsRaw[index], `${rolePath}.options.${key}`);
       const hasAllTogetherResult = 'allTogetherResult' in option;
       const hasNaturalSelectionTargets = 'naturalSelectionTargets' in option;
+      const hasPersephoneLevelBonus = 'persephoneLevelBonus' in option;
       expectExactKeys(
         option,
         [
@@ -238,6 +240,7 @@ function decodeTraitOffers(
           ...('echoLastRunBoon' in option ? ['echoLastRunBoon'] : []),
           ...('allTogetherResult' in option ? ['allTogetherResult'] : []),
           ...(hasNaturalSelectionTargets ? ['naturalSelectionTargets'] : []),
+          ...(hasPersephoneLevelBonus ? ['persephoneLevelBonus'] : []),
         ],
         `${rolePath}.options.${key}`,
       );
@@ -449,6 +452,14 @@ function decodeTraitOffers(
             return Object.freeze(targets) as AuthoredTraitOption['naturalSelectionTargets'];
           })()
         : undefined;
+      const persephoneLevelBonus = hasPersephoneLevelBonus
+        ? expectNonNegativeInteger(
+            option.persephoneLevelBonus,
+            `${rolePath}.options.${key}.persephoneLevelBonus`,
+          )
+        : undefined;
+      if (persephoneLevelBonus !== undefined && persephoneLevelBonus > 8)
+        failProjectDocument(`${rolePath}.options.${key}.persephoneLevelBonus`, 'must not exceed 8');
       options.push(
         Object.freeze({
           traitKey,
@@ -459,6 +470,7 @@ function decodeTraitOffers(
           ...(echoLastRunBoon === undefined ? {} : { echoLastRunBoon }),
           ...(allTogetherResult === undefined ? {} : { allTogetherResult }),
           ...(naturalSelectionTargets === undefined ? {} : { naturalSelectionTargets }),
+          ...(persephoneLevelBonus === undefined ? {} : { persephoneLevelBonus }),
         }),
       );
     }

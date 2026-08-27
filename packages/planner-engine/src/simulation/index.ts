@@ -471,3 +471,8 @@ export {
   type LevelResolutionFindingCode,
   type TraitCandidateAssessment,
 } from './traits';
+export {
+  resolveTraitOfferOptionLevel,
+  type TraitOfferOptionLevelResolution,
+  type TraitOfferOptionLevelResolutionInput,
+} from './trait-offer-levels';

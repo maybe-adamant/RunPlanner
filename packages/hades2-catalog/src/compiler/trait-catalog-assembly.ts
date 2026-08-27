@@ -148,6 +148,30 @@ export function validateAspectStartingTraits(input: {
   }
 }
 
+export function validateAspectTraitOfferLevelBonuses(input: {
+  readonly aspects: CatalogCollection<AspectDeclaration>;
+  readonly traits: CatalogCollection<TraitDeclaration>;
+}): void {
+  for (const aspect of input.aspects.values) {
+    const effect = aspect.traitOfferLevelBonus;
+    if (effect === undefined) continue;
+    if (aspect.key !== 'LobImpulseAspect')
+      fail(`aspects.${aspect.key}.traitOfferLevelBonus`, 'is reserved for LobImpulseAspect');
+    if (effect.maximumBonus !== 5 || effect.upgradedMaximumBonus !== 8)
+      fail(
+        `aspects.${aspect.key}.traitOfferLevelBonus`,
+        'must use maximumBonus 5 and upgradedMaximumBonus 8',
+      );
+    if (effect.upgradeTraitKey !== 'WeaponUpgradeBoon')
+      fail(
+        `aspects.${aspect.key}.traitOfferLevelBonus.upgradeTraitKey`,
+        'must reference WeaponUpgradeBoon',
+      );
+    if (input.traits.byKey[effect.upgradeTraitKey] === undefined)
+      fail(`aspects.${aspect.key}.traitOfferLevelBonus.upgradeTraitKey`, 'unknown trait');
+  }
+}
+
 export function validateTraitCatalogClosure(input: {
   readonly traits: CatalogCollection<TraitDeclaration>;
   readonly givers: CatalogCollection<TraitGiverDeclaration>;

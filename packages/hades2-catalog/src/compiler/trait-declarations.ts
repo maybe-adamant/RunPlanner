@@ -18,6 +18,7 @@ import {
   requireBoolean,
   requireNonEmpty,
   requireObject,
+  requireNonNegativeInteger,
   requirePositiveInteger,
 } from './common';
 import { fail } from './errors';
@@ -99,11 +100,19 @@ export function normalizeAspects(
       aspect.startingTrait === undefined
         ? undefined
         : normalizeAspectStartingTrait(aspect.startingTrait, `${path}.startingTrait`);
+    const traitOfferLevelBonus =
+      aspect.traitOfferLevelBonus === undefined
+        ? undefined
+        : normalizeAspectTraitOfferLevelBonus(
+            aspect.traitOfferLevelBonus,
+            `${path}.traitOfferLevelBonus`,
+          );
     return Object.freeze({
       key: requireNonEmpty(aspect.key, `${path}.key`),
       label: requireNonEmpty(aspect.label, `${path}.label`),
       weaponKey,
       ...(startingTrait === undefined ? {} : { startingTrait }),
+      ...(traitOfferLevelBonus === undefined ? {} : { traitOfferLevelBonus }),
     });
   });
   const collection = createCollection(values, 'aspects', (aspect) => aspect.key);
@@ -122,6 +131,36 @@ export function normalizeAspects(
       fail(`aspects.${aspect.key}`, 'is not declared by a weapon');
   }
   return collection;
+}
+
+function normalizeAspectTraitOfferLevelBonus(
+  raw: unknown,
+  path: string,
+): NonNullable<AspectDeclaration['traitOfferLevelBonus']> {
+  const value = requireObject(raw, path);
+  const keys = Object.keys(value);
+  if (
+    keys.length !== 3 ||
+    !Object.hasOwn(value, 'maximumBonus') ||
+    !Object.hasOwn(value, 'upgradedMaximumBonus') ||
+    !Object.hasOwn(value, 'upgradeTraitKey')
+  )
+    fail(path, 'must contain exactly maximumBonus, upgradedMaximumBonus, and upgradeTraitKey');
+  const maximumBonus = requireNonNegativeInteger(
+    value.maximumBonus as number,
+    `${path}.maximumBonus`,
+  );
+  const upgradedMaximumBonus = requireNonNegativeInteger(
+    value.upgradedMaximumBonus as number,
+    `${path}.upgradedMaximumBonus`,
+  );
+  if (upgradedMaximumBonus <= maximumBonus)
+    fail(`${path}.upgradedMaximumBonus`, 'must exceed maximumBonus');
+  return Object.freeze({
+    maximumBonus,
+    upgradedMaximumBonus,
+    upgradeTraitKey: requireNonEmpty(value.upgradeTraitKey as string, `${path}.upgradeTraitKey`),
+  });
 }
 
 function normalizeAspectStartingTrait(

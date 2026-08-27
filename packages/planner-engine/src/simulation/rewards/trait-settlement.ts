@@ -33,7 +33,6 @@ import {
   evaluateReachedTraitOffer,
   foldTraitHistoryEvents,
   isAspectSpellDropDormant,
-  isPomUpgradeTarget,
   recordDirectTraitGrants,
   recordReachedLevelResolution,
   recordReachedTraitOffer,
@@ -64,6 +63,7 @@ import {
   refreshKeepsakeFatedStatus,
 } from '../keepsakes';
 import type { RewardBranchState } from './branch-primitives';
+import type { TraitOfferOptionLevelResolution } from '../trait-offer-levels';
 import { bankPathPoints } from '../hex-progress';
 import { addRewardFinding } from './findings';
 
@@ -79,6 +79,8 @@ interface ApplyTraitOfferOptions {
   readonly directTraitSetBranchHistories?: readonly TraitHistoryState[];
   /** Stone's secondary row was already generated and must not be revalidated. */
   readonly frozenAcquisition?: boolean;
+  /** The original screen's frozen row result for a Concave Stone residual. */
+  readonly frozenLevelResolution?: TraitOfferOptionLevelResolution;
 }
 
 interface EchoLastRunBoonSettlement {
@@ -150,10 +152,16 @@ function applyTraitOfferForAcquisitionInternal(
   const authored = reward.traitOffersByAcquisitionRole?.[role];
   const authoredLevelResolution = reward.levelResolutionsByAcquisitionRole?.[role];
   const before = branch.traitHistory ?? createTraitHistoryState();
+  const sourceTraitContext = Object.freeze({
+    ...(reward.traitContext ?? {}),
+    ...(reward.producerLifecycleKey === 'EchoLastReward' || role === 'echoLastRunSelection'
+      ? { stackBoostsSuppressed: true as const }
+      : {}),
+  });
   if (authored === null) {
     const owner = traitOwnerAddress(reward.origin);
     const giver =
-      reward.traitContext?.resolvedProviderKey ??
+      sourceTraitContext.resolvedProviderKey ??
       (reward.offer === undefined
         ? undefined
         : traitGiverForAcquisitionRole(catalog, reward.offer, role));
@@ -187,9 +195,9 @@ function applyTraitOfferForAcquisitionInternal(
                         catalog,
                         branch,
                         Object.freeze({
-                          ...(reward.traitContext ?? {}),
+                          ...sourceTraitContext,
                           devotionNoDuo:
-                            reward.traitContext?.devotionNoDuo ??
+                            sourceTraitContext.devotionNoDuo ??
                             reward.offer?.rewardType === 'Devotion',
                           resolvedProviderKey: giver,
                         }),
@@ -209,9 +217,9 @@ function applyTraitOfferForAcquisitionInternal(
           catalog,
           branch,
           Object.freeze({
-            ...(reward.traitContext ?? {}),
+            ...sourceTraitContext,
             devotionNoDuo:
-              reward.traitContext?.devotionNoDuo ?? reward.offer?.rewardType === 'Devotion',
+              sourceTraitContext.devotionNoDuo ?? reward.offer?.rewardType === 'Devotion',
             resolvedProviderKey: authored.giverKey,
           }),
         );
@@ -341,8 +349,8 @@ function applyTraitOfferForAcquisitionInternal(
     catalog,
     effectiveBranch,
     Object.freeze({
-      ...(reward.traitContext ?? {}),
-      devotionNoDuo: reward.traitContext?.devotionNoDuo ?? reward.offer?.rewardType === 'Devotion',
+      ...sourceTraitContext,
+      devotionNoDuo: sourceTraitContext.devotionNoDuo ?? reward.offer?.rewardType === 'Devotion',
       resolvedProviderKey: effectiveAuthored.giverKey,
     }),
   );
@@ -362,6 +370,9 @@ function applyTraitOfferForAcquisitionInternal(
           callingCard === undefined ? undefined : authored,
           undefined,
           options.frozenAcquisition === true,
+          options.frozenLevelResolution === undefined
+            ? undefined
+            : Object.freeze([options.frozenLevelResolution]),
         )
       : effectiveAuthored.kind !== 'traits'
         ? (() => {
@@ -405,7 +416,7 @@ function applyTraitOfferForAcquisitionInternal(
     acquisitionIdentity,
     selectedForIdentityDisposition?.kind === 'echo' &&
       selectedForIdentityDisposition.effect === 'repeatKeepsake'
-      ? reward.traitContext?.currentKeepsakeKey
+      ? sourceTraitContext.currentKeepsakeKey
       : undefined,
     options.frozenAcquisition === true ? 'concaveStoneSecondary' : 'traitOffer',
   );
@@ -528,31 +539,10 @@ function applyTraitOfferForAcquisitionInternal(
     });
   }
   const selected = applied.event.options[optionIndex(applied.event.selectedOptionKey)];
-  const pomLevels =
-    branch.keepsakes.jeweledPom?.active === true &&
-    selected !== undefined &&
-    isPomUpgradeTarget(catalog, applied.history.equippedTraits[selected.traitKey])
-      ? branch.keepsakes.jeweledPom.levels
-      : undefined;
-  let traitHistory =
-    pomLevels === undefined || selected === undefined
-      ? applied.history
-      : foldTraitHistoryEvents(catalog, [
-          ...applied.history.events,
-          Object.freeze({
-            kind: 'levelMutation' as const,
-            owner: evaluation.address,
-            acquisitionRole: role,
-            sequence,
-            acquisitionPoint: lifecyclePoint,
-            ...(branch.keepsakes.jeweledPom?.grantedTraitKey === undefined
-              ? {}
-              : { sourceTraitKey: branch.keepsakes.jeweledPom.grantedTraitKey }),
-            targetTraitKey: selected.traitKey,
-            oldLevel: applied.history.equippedTraits[selected.traitKey]?.level ?? 1,
-            newLevel: (applied.history.equippedTraits[selected.traitKey]?.level ?? 1) + pomLevels,
-          }),
-        ]);
+  // Jeweled Pom and Persephone are resolved from the exact pre-offer frontier
+  // and installed atomically with the selected row. There is no post-selection
+  // mutation, so sibling rows and Concave Stone residuals remain frozen.
+  let traitHistory = applied.history;
   const selectedDisposition =
     selected === undefined
       ? undefined
@@ -586,7 +576,7 @@ function applyTraitOfferForAcquisitionInternal(
             catalog,
             branch,
             Object.freeze({
-              ...(reward.traitContext ?? {}),
+              ...sourceTraitContext,
               resolvedProviderKey: evaluation.offer.giverKey,
             }),
           ),
@@ -809,7 +799,7 @@ function applyTraitOfferForAcquisitionInternal(
               traitOffersByAcquisitionRole: Object.freeze({
                 concaveStoneSecondary: secondaryOffer,
               }),
-              traitContext: reward.traitContext,
+              traitContext: sourceTraitContext,
             },
             'concaveStoneSecondary',
             lifecyclePoint,
@@ -820,6 +810,12 @@ function applyTraitOfferForAcquisitionInternal(
               directAcquisition: true,
               skipCallingCard: true,
               frozenAcquisition: true,
+              ...(evaluation.levelResolutions[optionIndex(stoneResult.optionKey)] === undefined
+                ? {}
+                : {
+                    frozenLevelResolution:
+                      evaluation.levelResolutions[optionIndex(stoneResult.optionKey)],
+                  }),
             }),
           );
           stoneBranch = secondarySettlement.branch;

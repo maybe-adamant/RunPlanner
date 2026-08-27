@@ -4,6 +4,49 @@ import { catalog, createCatalog } from '../../src';
 import { declarations } from '../../src/declarations';
 
 describe('trait offer-catalog compiler owner', () => {
+  it('declares Persephone offer-level bounds and the Premium Service upgrade link', () => {
+    expect(catalog.aspects.byKey.LobImpulseAspect?.traitOfferLevelBonus).toEqual({
+      maximumBonus: 5,
+      upgradedMaximumBonus: 8,
+      upgradeTraitKey: 'WeaponUpgradeBoon',
+    });
+  });
+
+  it.each([
+    [
+      'negative maximum',
+      { maximumBonus: -1, upgradedMaximumBonus: 8, upgradeTraitKey: 'WeaponUpgradeBoon' },
+    ],
+    [
+      'widened maximum',
+      { maximumBonus: 5, upgradedMaximumBonus: 9, upgradeTraitKey: 'WeaponUpgradeBoon' },
+    ],
+    [
+      'missing upgrade trait',
+      { maximumBonus: 5, upgradedMaximumBonus: 8, upgradeTraitKey: 'MissingTrait' },
+    ],
+    [
+      'extra field',
+      {
+        maximumBonus: 5,
+        upgradedMaximumBonus: 8,
+        upgradeTraitKey: 'WeaponUpgradeBoon',
+        extra: true,
+      },
+    ],
+  ])('rejects %s Persephone declaration mutations', (_label, effect) => {
+    const mutated = {
+      ...declarations,
+      traitCatalog: {
+        ...declarations.traitCatalog,
+        aspects: declarations.traitCatalog.aspects.map((aspect) =>
+          aspect.key === 'LobImpulseAspect' ? { ...aspect, traitOfferLevelBonus: effect } : aspect,
+        ),
+      },
+    };
+    expect(() => createCatalog(mutated as never)).toThrow();
+  });
+
   it('normalizes one closed audited Olympian and Hermes boon-rarity base table', () => {
     expect(catalog.boonRarityBases.olympian).toEqual({
       Rare: 0.1,

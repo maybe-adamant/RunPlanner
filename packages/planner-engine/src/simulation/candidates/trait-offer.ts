@@ -386,6 +386,8 @@ export interface TraitOfferCandidateBranch {
   readonly composition: TraitOfferCompositionAssessment;
   readonly replacementComposition?: TraitReplacementCompositionAssessment;
   readonly targetedAcquisition?: TraitTargetedAcquisitionAssessment;
+  readonly persephoneLevelBonusMaximums: readonly (number | undefined)[];
+  readonly effectiveLevels: readonly (number | undefined)[];
 }
 
 /** Exact Calling Card replay product for one surviving pre-offer branch. */
@@ -404,6 +406,9 @@ export interface EvaluatedTraitOfferCandidate {
     readonly branches: readonly TraitOfferCandidateBranch[];
     readonly callingCard?: readonly CallingCardOfferCandidateBranch[];
     readonly concaveStone?: readonly ConcaveStoneCandidateBranch[];
+    /** Published only when every surviving branch agrees for each option. */
+    readonly persephoneLevelBonusMaximums: readonly (number | undefined)[];
+    readonly effectiveLevels: readonly (number | undefined)[];
     readonly findings: readonly TraitOfferCandidateFinding[];
   };
 }
@@ -503,6 +508,8 @@ function assessTraitOfferCandidate(
     readonly composition: TraitOfferCompositionAssessment;
     readonly replacementComposition: TraitReplacementCompositionAssessment;
     readonly targetedAcquisition: TraitTargetedAcquisitionAssessment;
+    readonly persephoneLevelBonusMaximums: readonly (number | undefined)[];
+    readonly effectiveLevels: readonly (number | undefined)[];
   }[],
   duplicateFindings: readonly TraitOfferCandidateFinding[],
   callingCard: readonly CallingCardOfferCandidateBranch[] = Object.freeze([]),
@@ -520,6 +527,8 @@ function assessTraitOfferCandidate(
         ...(branch.targetedAcquisition.applies
           ? { targetedAcquisition: branch.targetedAcquisition }
           : {}),
+        persephoneLevelBonusMaximums: branch.persephoneLevelBonusMaximums,
+        effectiveLevels: branch.effectiveLevels,
       }),
     ),
   );
@@ -569,6 +578,19 @@ function evaluatedTraitOfferCandidate(
   callingCard: readonly CallingCardOfferCandidateBranch[],
   concaveStone: readonly ConcaveStoneCandidateBranch[] = Object.freeze([]),
 ): EvaluatedTraitOfferCandidate {
+  const agreeingBranchValues = (
+    key: 'persephoneLevelBonusMaximums' | 'effectiveLevels',
+  ): readonly (number | undefined)[] => {
+    const width = assessment.branches[0]?.[key].length ?? 0;
+    return Object.freeze(
+      Array.from({ length: width }, (_, index) => {
+        const values = assessment.branches.map((branch) => branch[key][index]);
+        return values.length > 0 && values.every((value) => value === values[0])
+          ? values[0]
+          : undefined;
+      }),
+    );
+  };
   return Object.freeze({
     kind: 'traitOffer',
     result: Object.freeze({
@@ -578,6 +600,8 @@ function evaluatedTraitOfferCandidate(
       findings: assessment.findings,
       callingCard: Object.freeze(callingCard),
       concaveStone: Object.freeze(concaveStone),
+      persephoneLevelBonusMaximums: agreeingBranchValues('persephoneLevelBonusMaximums'),
+      effectiveLevels: agreeingBranchValues('effectiveLevels'),
     }),
   });
 }

@@ -2,9 +2,10 @@
 
 ## Status
 
-**Drafted for lock on 2026-08-26.** The plan is grounded against clean base
-commit `5a16b05b` (`fix(rewards): materialize Vow of Forfeit Red Onion`). It
-must be committed as the execution contract before implementation begins.
+**Amended on 2026-08-27.** The plan is grounded against clean base commit
+`5a16b05b` (`fix(rewards): materialize Vow of Forfeit Red Onion`). Active
+Persephone detail is optional authored state: an absent value means `+0`.
+Only an explicit invalid value is a candidate finding.
 
 This is one focused cross-lane feature set. It adds one authored random
 contribution, one chronological upgrade condition, and one derived per-option
@@ -20,8 +21,8 @@ Jeweled Pom, Persephone, replacement inheritance, or Sacrificial Hymn mentally.
 
 Concretely:
 
-- an eligible fresh option with Aspect of Persephone owns an explicit `+0` to
-  `+5` authored result;
+- an eligible fresh option with Aspect of Persephone accepts an optional
+  authored result from `+0` to `+5`; an absent result resolves as `+0`;
 - after Premium Service has been selected, later eligible options allow `+0`
   to `+8`;
 - fresh effective level is `1 + active Jeweled Pom bonus + authored
@@ -93,11 +94,12 @@ development fixtures advance in the same gate. Migration-tool metadata may be
 updated where its current-output contract requires it, but this plan does not
 add a 63-to-64 migration.
 
-Zero must be represented explicitly on an active Persephone row. Missing is an
-incomplete authored random result, not an implicit zero. A value retained on a
-currently ineligible row is dormant repairable state and has no simulation
-effect. Existing whole-offer replacement commands are sufficient; no new
-semantic address or one-field command is needed.
+An active Persephone row may omit its contribution, which resolves as `+0` so
+authors do not have to fill three zero-valued rows. Explicit zero still
+round-trips, and nonzero values remain authored and frozen on their rows. A
+value retained on a currently ineligible row is dormant repairable state and
+has no simulation effect. Existing whole-offer replacement commands are
+sufficient; no new semantic address or one-field command is needed.
 
 ### Engine chronology and settlement
 
@@ -147,7 +149,7 @@ Extend each reached trait-offer branch with parallel
 `persephoneLevelBonusMaximums` and `effectiveLevels` entries, one per option.
 Candidate evaluation, not the application, determines:
 
-- whether the Persephone result is active, missing, out of range, or dormant;
+- whether the Persephone result is active, out of range, or dormant;
 - the exact maximum (`5` or `8`) at that pre-offer frontier;
 - replacement precedence; and
 - the final effective level.
@@ -158,9 +160,10 @@ must not be collapsed to an arbitrary first value. This parallels the existing
 effective-rarity presentation rule without forcing the two products into a
 new generic option-outcome abstraction.
 
-Missing or invalid active Persephone detail must block that exact focused row
-with a repairable candidate finding. Dormant detail must neither block nor
-affect the row.
+An absent active Persephone detail resolves as zero and does not block the
+row. An explicit invalid active detail must block that exact focused row with
+a repairable candidate finding. Dormant detail must neither block nor affect
+the row.
 
 ### Application and React
 
@@ -177,9 +180,10 @@ actions, selected identity, Concave Stone result, and dormant option detail.
 
 Place `Effective level: N` beside `Effective rarity: ...` in the ordinary trait
 option row. Do not calculate levels, inspect keepsake state, search history, or
-recognize Premium Service in React. When an active contribution is unresolved,
-show the bounded choice and the focused incomplete feedback rather than
-inventing `+0`.
+recognize Premium Service in React. An omitted active contribution is resolved
+as `+0`, so the bounded control and effective level can be shown without an
+incomplete finding. Explicit invalid values retain the focused candidate
+finding.
 
 ## Included scope
 
@@ -279,7 +283,8 @@ comments.
 
 ### Authored-project owner
 
-- schema 64 round-trips absent, zero, five, and eight contributions exactly;
+- schema 64 round-trips absent, explicit zero, five, and eight contributions
+  exactly;
 - malformed numbers, fractions, negatives, and values above eight are rejected;
 - replacing a complete offer preserves each option's contribution and other
   dormant children; and
@@ -320,8 +325,7 @@ tests. Facade and product suites retain representative contacts only.
 
 - an eligible standard Persephone row offers every integer `+0` through `+5`;
 - a later post-Premium row offers every integer `+0` through `+8`;
-- missing active detail is visibly incomplete and is never silently authored
-  as zero;
+- omitted active detail resolves and displays as zero without a finding;
 - changing the contribution updates `Effective level` without changing rarity
   or selection;
 - Jeweled Pom and Hymn examples display the engine-derived final values;

@@ -15,6 +15,8 @@ export interface TraitOfferContext {
   readonly manualArcanaGraspCost?: number;
   /** Direct sources such as Echo may forbid the ordinary replacement path. */
   readonly ordinarySlotReplacement?: 'forbidden';
+  /** Source loot flag equivalent to `IgnoreStackBoost`. */
+  readonly stackBoostsSuppressed?: boolean;
   /** Exact chronological keepsake held at this acquisition frontier. */
   readonly currentKeepsakeKey?: string;
   /** Derived, offer-local numeric rarity facts for fresh Olympian/Hermes rolls. */
@@ -274,6 +276,7 @@ export function compositionDomainCacheKey(giverKey: string, context: TraitOfferC
     context.circeRemovableFearVow,
     context.manualArcanaGraspCost,
     context.currentKeepsakeKey,
+    context.stackBoostsSuppressed,
     context.boonRarityFacts,
   ]);
 }
@@ -387,6 +390,8 @@ export interface ReachedTraitOfferEvaluation {
   /** Exact pre-offer keepsake frontier retained for Calling Card replay. */
   readonly keepsakes?: KeepsakeState;
   readonly assessments: readonly TraitAssessment[];
+  /** Frozen option-level outcomes used by candidate projection and settlement. */
+  readonly levelResolutions: readonly TraitOfferOptionLevelResolution[];
   readonly composition: TraitOfferCompositionAssessment;
   readonly replacementComposition: TraitReplacementCompositionAssessment;
   readonly targetedAcquisition: TraitTargetedAcquisitionAssessment;
@@ -431,6 +436,8 @@ export interface TraitOfferBranchAssessment {
   readonly composition: TraitOfferCompositionAssessment;
   readonly replacementComposition: TraitReplacementCompositionAssessment;
   readonly targetedAcquisition: TraitTargetedAcquisitionAssessment;
+  readonly persephoneLevelBonusMaximums: readonly (number | undefined)[];
+  readonly effectiveLevels: readonly (number | undefined)[];
 }
 
 /**
@@ -478,6 +485,7 @@ function evaluateReachedTraitOfferWithAssessments(
   assessments?: readonly TraitAssessment[],
   runtimeOfferFallbackExcludedTraitKeys?: readonly string[],
   frozenAcquisition = false,
+  frozenLevelResolutions?: readonly TraitOfferOptionLevelResolution[],
 ): ReachedTraitOfferEvaluation {
   const effectiveContext = chaosAdjustedTraitOfferContext(catalog, before, offer, context);
   // Exact one-result sources (for example, a keepsake equip) are direct
@@ -576,9 +584,39 @@ function evaluateReachedTraitOfferWithAssessments(
         effectiveContext,
         runtimeOfferFallbackExcludedTraitKeys,
       );
-  const resolvedAssessments = frozenAcquisition
+  const rawAssessments = frozenAcquisition
     ? Object.freeze([])
     : (assessments ?? assessTraitOffer(catalog, legalityOffer, before, effectiveContext));
+  const levelResolutions =
+    frozenLevelResolutions ??
+    (offer.kind !== 'traits'
+      ? Object.freeze([])
+      : Object.freeze(
+          offer.options.map((option, index) =>
+            resolveTraitOfferOptionLevel({
+              catalog,
+              before,
+              context: effectiveContext,
+              ...(keepsakes === undefined ? {} : { keepsakes }),
+              option,
+              ...(rawAssessments[index] === undefined ? {} : { assessment: rawAssessments[index] }),
+            }),
+          ),
+        ));
+  const resolvedAssessments = frozenAcquisition
+    ? Object.freeze([])
+    : Object.freeze(
+        rawAssessments.map((assessment, index) => {
+          const resolution = levelResolutions[index];
+          return resolution === undefined || resolution.findings.length === 0
+            ? assessment
+            : Object.freeze({
+                ...assessment,
+                legal: false,
+                findings: Object.freeze([...assessment.findings, ...resolution.findings]),
+              });
+        }),
+      );
   return Object.freeze({
     address,
     acquisitionRole,
@@ -588,6 +626,7 @@ function evaluateReachedTraitOfferWithAssessments(
     ...(arcanaFear === undefined ? {} : { arcanaFear }),
     ...(keepsakes === undefined ? {} : { keepsakes }),
     assessments: resolvedAssessments,
+    levelResolutions,
     composition,
     replacementComposition,
     targetedAcquisition,
@@ -612,6 +651,7 @@ export function evaluateReachedTraitOffer(
   rarificationBaseOffer?: AuthoredTraitOffer,
   runtimeOfferFallbackExcludedTraitKeys?: readonly string[],
   frozenAcquisition = false,
+  frozenLevelResolutions?: readonly TraitOfferOptionLevelResolution[],
 ): ReachedTraitOfferEvaluation {
   return evaluateReachedTraitOfferWithAssessments(
     catalog,
@@ -628,6 +668,7 @@ export function evaluateReachedTraitOffer(
     undefined,
     runtimeOfferFallbackExcludedTraitKeys,
     frozenAcquisition,
+    frozenLevelResolutions,
   );
 }
 
@@ -896,6 +937,8 @@ export function recordReachedTraitOffer(
   }
   const selectedAssessment =
     evaluation.assessments[optionIndex(evaluation.offer.selectedOptionKey)];
+  const selectedLevel =
+    evaluation.levelResolutions[optionIndex(evaluation.offer.selectedOptionKey)]?.effectiveLevel;
   // Stone's frozen pickup is not another screen, so it must not settle a
   // second post-screen Denial partition.
   const bannedTraitKeys =
@@ -922,6 +965,7 @@ export function recordReachedTraitOffer(
     ...(evaluation.targetedAcquisition.transition === undefined
       ? {}
       : { targetedAcquisitionTransition: evaluation.targetedAcquisition.transition }),
+    ...(selectedLevel === undefined ? {} : { selectedEffectiveLevel: selectedLevel }),
   }) as TraitOfferEvent | import('./trait-history').ConcaveStoneSecondaryEvent;
   const transition = evaluation.targetedAcquisition.transition;
   const mutation: TraitLevelMutationEvent | undefined =
@@ -1096,6 +1140,10 @@ export type { TraitFindingCode } from './model';
 import { optionIndex } from '../authored-project/traits';
 import { targetedAcquisitionTargetKeys } from './trait-level-effects';
 import { assessRansom, ordinaryEquippedSlots, foldTraitHistoryEvents } from './trait-history';
+import {
+  resolveTraitOfferOptionLevel,
+  type TraitOfferOptionLevelResolution,
+} from './trait-offer-levels';
 import {
   assessNaturalSelectionTargets,
   assessSelectedTargetedAcquisition,

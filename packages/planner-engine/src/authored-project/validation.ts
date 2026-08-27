@@ -67,3 +67,10 @@ export function expectPositiveInteger(value: unknown, path: string): number {
   }
   return value;
 }
+
+export function expectNonNegativeInteger(value: unknown, path: string): number {
+  if (typeof value !== 'number' || !Number.isInteger(value) || value < 0) {
+    failProjectDocument(path, 'must be a non-negative integer');
+  }
+  return value;
+}

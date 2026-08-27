@@ -657,7 +657,7 @@ export function traitOfferStartingDraft(
     : fixedStartingCandidates(variants, selfContained);
   if (chosen.length === 0 || (!traitOfferSupportsExhaustion(giver) && chosen.length !== 3))
     return undefined;
-  const draft = traitDraft(catalog, giverKey, chosen);
+  const draft = traitDraft(giverKey, chosen);
   // Candidate domains establish leaf legality. Keep the authoritative complete
   // offer checks at this boundary, once, rather than evaluating every variant.
   return assessTraitOfferComposition(catalog, draft, history).legal &&
@@ -701,10 +701,7 @@ export function nextTraitOfferDraft(
       ...current,
       options: Object.freeze([
         ...current.options,
-        Object.freeze({
-          traitKey: candidate.traitKey,
-          ...(candidate.rarity === undefined ? {} : { rarity: candidate.rarity }),
-        }),
+        candidateToOption(candidate),
       ]) as AuthoredTraitOfferTraits['options'],
     });
   const canComplete = (current: AuthoredTraitOfferTraits): boolean => {
@@ -778,7 +775,6 @@ export function previousOptionalHighTierTraitOfferDraft(
 }
 
 function traitDraft(
-  catalog: Catalog,
   giverKey: string,
   candidates: readonly TraitCandidateAssessment[],
 ): AuthoredTraitOfferTraits {
@@ -786,7 +782,7 @@ function traitDraft(
     kind: 'traits',
     giverKey,
     options: Object.freeze(
-      candidates.map((candidate) => candidateToOption(candidate)),
+      candidates.map(candidateToOption),
     ) as AuthoredTraitOfferTraits['options'],
     selectedOptionKey: 'option1',
     rarificationActions: Object.freeze([]),

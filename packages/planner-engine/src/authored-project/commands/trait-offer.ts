@@ -197,6 +197,16 @@ function validateOffer(
         command,
         `option${index + 1} ${option.traitKey} is not in giver ${value.giverKey}`,
       );
+    if (
+      option.persephoneLevelBonus !== undefined &&
+      (!Number.isInteger(option.persephoneLevelBonus) ||
+        option.persephoneLevelBonus < 0 ||
+        option.persephoneLevelBonus > 8)
+    )
+      failCommand(
+        command,
+        `${option.traitKey} Persephone level bonus must be an integer from 0 to 8`,
+      );
     if (trait.rarityDomain.kind === 'none') {
       if (option.rarity !== undefined)
         failCommand(command, `rarityless option ${option.traitKey} has no rarity`);
