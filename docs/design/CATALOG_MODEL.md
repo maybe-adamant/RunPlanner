@@ -828,6 +828,14 @@ targets, Natural Selection, Bridal Glow, and Steady Growth. Proper Upbringing's
 direct Common-to-Rare floor intentionally remains outside that in-run
 effectiveness predicate.
 
+Aspect declarations may also own the narrow `traitOfferLevelBonus` fact used by
+the reward-side Aspect of Persephone projection. The only current declaration
+is `LobImpulseAspect`, with an ordinary maximum contribution of `0..5`, an
+upgraded maximum of `0..8`, and `WeaponUpgradeBoon` as the acquisition that
+activates the upgraded range. This is a closed declaration product consumed by
+the trait-offer level resolver; it is not an aspect-rank ledger, callback, or
+general numeric effect registry.
+
 Field NPCs use the explicit `fieldNpc` provider kind. Character identity does
 not make Artemis or Athena ordinary Olympian providers: field-NPC offers do not
 participate in the first-Olympian composition rule, ordinary-slot replacement

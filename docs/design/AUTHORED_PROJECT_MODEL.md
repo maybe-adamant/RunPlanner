@@ -7,16 +7,20 @@ scope, biome topology, occurrence-local state, semantic addresses, commands,
 persistence, and history. Simulation algorithms, candidates, Redux state, and
 React rendering are separate concerns.
 
-## Schema 59 Boundary
+## Schema 64 Boundary
 
-Schema 59 is the sole persisted authored-project contract. The codec rejects
+Schema 64 is the sole persisted authored-project contract. The codec rejects
 every other schema version rather than manufacturing current topology or leaf
 state for a stale document. The migration CLI performs the explicit 49-to-50,
-50-to-51, 51-to-52, 52-to-53, 53-to-54, 54-to-55, 55-to-56, and 56-to-57 migrations outside the production
-decoder, followed by the 57-to-58 and 58-to-59 migrations, and also updates the earlier catalog metadata from
-`0.32.0-run-impacting-traits` through
-`0.41.0-stygian-well` without inventing authored outcomes. Catalog
-versions must match exactly after migration.
+50-to-51, 51-to-52, 52-to-53, 53-to-54, 54-to-55, 55-to-56, 56-to-57,
+57-to-58, 58-to-59, 59-to-60, 60-to-61, 61-to-62, 62-to-63, and 63-to-64
+migrations outside the production decoder. It advances the corresponding
+catalog metadata from `0.32.0-run-impacting-traits` through
+`0.47.0-persephone-effective-levels` without inventing authored outcomes.
+Catalog versions must match exactly after migration. The strict production
+decoder has no implicit schema-63 compatibility path; the explicit 63-to-64
+migration advances schema and catalog metadata only because an absent optional
+`persephoneLevelBonus` is the complete authored `+0` result.
 
 Schemas 46 and 47 completed the occurrence-owned topology and chronology
 cutover: every supported authored main or N side room is a `RoomOccurrence`,
@@ -76,6 +80,14 @@ dormant, while an interacted Well has three stable initial generations and at
 most one Travel Deal refill generation. Purchases, refill participation, and
 Twist detail are occurrence-local; pending temporary effects, one-step runtime
 fallbacks, and their expiry are derived simulation output.
+
+Schema 64 adds the optional `persephoneLevelBonus` to each authored trait
+option. Omission is the complete ordinary result (`+0`), so a generated
+three-option screen does not require three explicit zero values. Explicit zero
+and nonzero values round-trip and remain frozen with their option; an out-of-
+range value is retained for repair and receives an engine-owned candidate
+finding. The active maximum (`5` before Premium Service and `8` afterward) is
+contextual simulation output, not a persisted field.
 
 There is one biome plan and one topology language. Production state and
 semantic addresses have no layout-specific plan family, completion-transition
@@ -625,6 +637,13 @@ round-robin allocation, not eight independent Pom choices. Echo Boon Boon
 Boon's nested previous-run approximation may carry the same result. Ransom
 outcomes persist no removal set or level total.
 
+Each trait option may retain one optional `persephoneLevelBonus`. When the
+active Aspect of Persephone row omits it, the authored result resolves as
+`+0`; omission is not a missing-authorship finding. Only explicit malformed or
+out-of-range values receive the focused repair finding. The value is an
+option-owned frozen outcome and remains intact through sibling edits, Calling
+Card rerarity, and Concave Stone residual selection.
+
 Steady Growth persists only reached random targets: ordinary occurrences,
 including automatic Boss occurrences, use a sparse `steadyGrowthTargetByPhase`
 map. A missing target is unresolved only at a
@@ -746,7 +765,7 @@ stable indented JSON with a trailing newline:
 
 ```ts
 interface ProjectDocument {
-  schemaVersion: 52;
+  schemaVersion: 64;
   projectId: string;
   catalogVersion: string;
   routes: readonly AuthoredRoutePlan[];

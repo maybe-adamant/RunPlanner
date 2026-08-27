@@ -237,31 +237,16 @@ describe('schema-51 Chaos TrialUpgrade authored child', () => {
     ).toEqual(['Legendary']);
   });
 
-  it('does not make schema-63 migration output an implicit schema-64 decoder path', () => {
+  it('migrates schema-63 projects into the strict schema-64 decoder path', () => {
     const legacy = JSON.parse(JSON.stringify(naturalChaosRaw)) as {
       schemaVersion: number;
       catalogVersion: string;
-      routes: {
-        biomes: {
-          topology?: {
-            occurrences: {
-              occurrenceId: string;
-              state: { reward?: { traitOffersByAcquisitionRole: Record<string, unknown> } };
-            }[];
-          };
-        }[];
-      }[];
     };
-    legacy.schemaVersion = 50;
-    legacy.catalogVersion = '0.30.0-boon-rarity-ledger';
-    const reward = legacy.routes[0]!.biomes[0]!.topology!.occurrences.find(
-      (occurrence) => occurrence.occurrenceId === 'fixture-chaos-room',
-    )?.state.reward;
-    if (reward === undefined)
-      throw new Error('legacy migration witness has no TrialUpgrade reward');
-    reward.traitOffersByAcquisitionRole = {};
-    const migrated = migrateProjectDocument(legacy, 63).document;
-    expect(migrated.schemaVersion).toBe(63);
-    expect(() => decodeProjectDocument(migrated, catalog)).toThrow('expected 64, received 63');
+    legacy.schemaVersion = 63;
+    legacy.catalogVersion = '0.46.0-vow-forfeit-red-onion';
+    const migrated = migrateProjectDocument(legacy).document;
+    expect(migrated.schemaVersion).toBe(64);
+    expect(migrated.catalogVersion).toBe('0.47.0-persephone-effective-levels');
+    expect(() => decodeProjectDocument(migrated, catalog)).not.toThrow();
   });
 });

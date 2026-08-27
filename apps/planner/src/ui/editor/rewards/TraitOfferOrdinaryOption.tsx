@@ -120,7 +120,8 @@ export function TraitOfferOrdinaryOption({
   };
   const selectPersephoneBonus = (bonus: number): void => {
     if (bonus === 0) {
-      const { persephoneLevelBonus: _bonus, ...withoutBonus } = option;
+      const { persephoneLevelBonus, ...withoutBonus } = option;
+      void persephoneLevelBonus;
       onUpdate(replaceTraitOfferOption(value, index, withoutBonus));
       return;
     }
