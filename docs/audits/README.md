@@ -59,6 +59,7 @@ reader-facing taxonomy, not a package or runtime boundary.
 - [Arcana and Fear](loadout-and-progression/ARCANA_AND_FEAR_GAME_DATA_AUDIT.md) — Arcana board, Fear, and progression declarations.
 - [Cherished Heirloom](loadout-and-progression/CHERISHED_HEIRLOOM_KEEPSAKE_AUDIT.md) — Cherished Heirloom progression and supported keepsake effects.
 - [Echo Gift Gift Gift](loadout-and-progression/ECHO_GIFT_GIFT_GIFT_KEEPSAKE_AUDIT.md) — Echo's Gift Gift Gift keepsake capture and replay facts.
+- [Hex talent layouts](loadout-and-progression/HEX_TALENT_LAYOUT_GAME_DATA_AUDIT.md) — Generated layout capacities, Rare/Epic identity pools, Olympian extensions, and full-tree closure.
 - [Keepsakes](loadout-and-progression/KEEPSAKE_GAME_DATA_AUDIT.md) — Keepsake declarations, acquisition, and effect lifecycle evidence.
 - [Path of Stars and Spell Drop](loadout-and-progression/PATH_OF_STARS_AND_SPELL_DROP_GAME_DATA_AUDIT.md) — Path point values, ordered initial spell bonuses, Aspect of Selene routing, and Moon Beam point contacts.
 - [Olympian keepsakes and Moon Beam](loadout-and-progression/OLYMPIAN_KEEPSAKE_AND_MOON_BEAM_REWARD_PRESSURE_AUDIT.md) — Reward-priority lifetime, provider pressure, rarification, and exact Selene/Path targeting.

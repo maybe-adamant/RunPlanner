@@ -6,8 +6,8 @@ This is the durable source-and-disposition authority for offer results whose
 live eligibility can differ from the deterministic state authored and
 simulated by the Run Planner. It records:
 
-- why Death Defiance-adjacent offer requirements are runtime facts rather than
-  useful authored inputs;
+- why Death Defiance-adjacent and graph-local Task Force offer requirements are
+  runtime facts rather than useful authored inputs;
 - the one phase-local exception owned by Gorgon Amulet;
 - the declaration-owned trait and item fallback mappings; and
 - the boundary between deterministic Planner intent and safe game-module
@@ -30,6 +30,8 @@ The relevant installed game-data contacts are:
   entry in `CurrentRun.Hero.LastStands`;
 - `TraitData_Athena.lua:282-314` — Renewed Faith requires
   `MissingLastStand` and the pre-first-meeting state;
+- `TraitData_Athena.lua:480-524` — Task Force requires at least one of the nine
+  Olympian Hex talents to be currently equipped;
 - `TraitData_Hades.lua:468-478`, `CombatLogic.lua:2204-2213`, and
   `PowersLogic.lua:4895-4907` — Last Gasp uses the separate
   `CurrentRun.DeathDefianceDamageBoonEligible` state, which is set by acquiring
@@ -60,9 +62,10 @@ The focused trait, keepsake, Nemesis, World Shop, Well, and Shrine audits retain
 the complete surrounding source facts. This audit owns only their shared
 runtime-fallback disposition.
 
-## The predicates are not one authored condition
+## Volatile predicates are not authored inputs
 
-The source does not expose one coherent "Death Defiance condition":
+The source predicates include combat state and graph-local acquisition state
+that the Planner deliberately does not simulate:
 
 | Result                                                  | Live source predicate                                                      |
 | ------------------------------------------------------- | -------------------------------------------------------------------------- |
@@ -71,17 +74,20 @@ The source does not expose one coherent "Death Defiance condition":
 | Athena Renewed Faith                                    | a Last Stand is missing and Athena's first-meeting state permits the trait |
 | Medea Malice in Kind                                    | at least one Last Stand is held                                            |
 | Hades Last Gasp                                         | `DeathDefianceDamageBoonEligible` is true                                  |
+| Athena Task Force                                       | one of nine Olympian Hex talents is equipped                               |
 | Shop, Shrine, Well, Twist, and Nemesis Last Stand items | a Last Stand is missing at the applicable generation or purchase frontier  |
 
-A shared authored boolean collapses opposite and unrelated predicates and asks
-the author to predict volatile health/combat state that the Planner does not
-otherwise simulate. Selecting the conditional trait or item already expresses
-the intended result. Persisting another boolean adds no useful intent.
+A shared Death Defiance boolean collapses opposite and unrelated combat
+predicates. A separate Task Force boolean would ask the author to reproduce the
+unmodeled Path of Stars graph and exact node-investment order. In both cases,
+selecting the conditional trait or item already expresses the intended result.
+Persisting another boolean adds no useful intent.
 
 The Planner therefore authors and simulates the preferred result without a
-general Death Defiance condition. The catalog retains the real source
-requirement as evidence and as runtime eligibility information. A declared
-fallback absorbs a failed live predicate at the execution boundary.
+general Death Defiance condition or an authored Olympian-node acquisition
+fact. The catalog retains each real source requirement as evidence and as
+runtime eligibility information. A declared fallback absorbs a failed live
+predicate at the execution boundary.
 
 ## Gorgon Amulet is the phase-local exception
 
@@ -150,6 +156,7 @@ The durable mappings are:
 | `EchoDeathDefianceRefill` — Survive Survive Survive | `DiminishingDodgeBoon`, `DiminishingHealthAndManaBoon`, `EchoDoubleLevelBoon`   |
 | `DeathDefianceRetaliateCurse` — Malice in Kind      | `HealingOnDeathCurse`, `MoneyOnDeathCurse`, `ManaOverTimeCurse`                 |
 | `DeathDefianceRefillBoon` — Renewed Faith           | `InvulnerabilityDashBoon`, `RetaliateInvulnerabilityBoon`, `FocusLastStandBoon` |
+| `OlympianSpellCountBoon` — Task Force               | `InvulnerabilityDashBoon`, `RetaliateInvulnerabilityBoon`, `FocusLastStandBoon` |
 | `HadesDeathDefianceDamageBoon` — Last Gasp          | `HadesLifestealBoon`, `HadesPreDamageBoon`, `HadesChronosDebuffBoon`            |
 
 The alternatives deliberately skip requirement-bearing neighbors such as
@@ -157,6 +164,13 @@ Narcissus Verdure Sampler and Hades Howling Soul. Echo uses the same
 three-choice trait rule as Narcissus, Medea, Athena, and Hades; it does not own
 a special fallback mechanism. A condition-bearing trait selected through a
 nested or direct source still uses its own giver's declaration.
+
+Task Force deliberately reuses Renewed Faith's three requirement-free Athena
+alternatives. Its real prerequisite remains source evidence, but the Planner
+does not infer an equipped Olympian talent from a generated Hex layout or from
+aggregate invested points. The authored Task Force selection expresses intent;
+the one exported fallback protects execution when the hidden graph path has
+not actually acquired its required Olympian node.
 
 Jeweled Pom illustrates the intended simulation boundary. If its authored
 result is Last Gasp, simulation records Last Gasp as acquired, so a later Hades

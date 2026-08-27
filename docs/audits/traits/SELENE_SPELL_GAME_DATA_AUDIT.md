@@ -8,9 +8,11 @@ choice domain and the run-state consequences needed before the planner turns
 `SpellDrop` from an effect-neutral consumable into a concrete trait-bearing
 reward.
 
-Path of Stars talent-tree authoring is outside this audit. The point bank,
-one/three/five reward values, ordered initial-offer bonuses, and Aspect routing
-are owned by the focused
+Path of Stars talent-tree authoring is outside this audit. Generated layout
+capacity, Rare/Epic composition, and Olympian extensions are owned by the
+[Hex Talent Layout audit](../loadout-and-progression/HEX_TALENT_LAYOUT_GAME_DATA_AUDIT.md).
+The point bank, one/three/five reward values, ordered initial-offer bonuses, and
+Aspect routing are owned by the focused
 [Path of Stars and Spell Drop audit](../loadout-and-progression/PATH_OF_STARS_AND_SPELL_DROP_GAME_DATA_AUDIT.md).
 The source contacts between a chosen Hex and later trait eligibility are
 included here because concrete spell identity is already observable by the
@@ -155,10 +157,12 @@ trait eligibility exact.
 
 Path of Stars talents remain distinct equipped traits. In particular,
 `OlympianSpellCountBoon` depends on one of nine Olympian talent identities, not
-on a base Hex. Base-spell implementation must not synthesize those talents or
-claim that `AllSpellInvestedCache` is exact. The current explicit
-`allSpellInvested = false` support baseline remains until talent-tree
-authoring is audited and delivered.
+on a base Hex. Base-spell implementation must not synthesize those talents.
+Their generation and finite-capacity closure are now source-audited
+separately. Exact Olympian-node acquisition remains graph-local and is not
+simulated; Task Force trusts the authored result and uses the durable runtime
+fallback contract instead. The current explicit `allSpellInvested = false`
+support baseline remains until the aggregate layout model is delivered.
 
 ## Echo replay boundary
 
