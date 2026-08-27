@@ -28,6 +28,7 @@ import {
   type TraitOptionKey,
   normalizeAuthoredConcaveStoneResult,
 } from '../traits';
+import { normalizeAuthoredHexTree } from '../hex-tree';
 import { levelResolutionEffectFor } from '../../reward-kernel/level-effects';
 import { decodeEchoLastRunBoon } from './echo-last-run';
 import { decodeAllTogetherResult } from './all-together';
@@ -210,6 +211,7 @@ function decodeTraitOffers(
         'rarificationActions',
         ...(record.rejectedOptionKey === undefined ? [] : ['rejectedOptionKey']),
         ...('concaveStoneResult' in record ? ['concaveStoneResult'] : []),
+        ...('hexTree' in record ? ['hexTree'] : []),
       ],
       rolePath,
     );
@@ -492,6 +494,49 @@ function decodeTraitOffers(
         `${rolePath}.selectedOptionKey`,
         'must select option1, option2, or option3',
       );
+    const selectedOption = options[TRAIT_OPTION_KEYS.indexOf(selected as never)];
+    const hasHexTree = 'hexTree' in record;
+    let hexTree: import('../traits').AuthoredHexTreeConfiguration | undefined;
+    if (giver.providerKind === 'spell') {
+      if (
+        selectedOption === undefined ||
+        catalog.hexes.byKey[selectedOption.traitKey] === undefined
+      )
+        failProjectDocument(`${rolePath}.selectedOptionKey`, 'must select a declared Spell Hex');
+      if (!hasHexTree)
+        failProjectDocument(`${rolePath}.hexTree`, 'is required for a resolved Spell Drop offer');
+      const rawTree = expectRecord(record.hexTree, `${rolePath}.hexTree`);
+      expectExactKeys(
+        rawTree,
+        ['layoutKey', 'rareTalentKeys', 'epicTalentKeys'],
+        `${rolePath}.hexTree`,
+      );
+      const rareTalentKeys = expectArray(
+        rawTree.rareTalentKeys,
+        `${rolePath}.hexTree.rareTalentKeys`,
+      ).map((entry, index) => expectString(entry, `${rolePath}.hexTree.rareTalentKeys[${index}]`));
+      const epicTalentKeys = expectArray(
+        rawTree.epicTalentKeys,
+        `${rolePath}.hexTree.epicTalentKeys`,
+      ).map((entry, index) => expectString(entry, `${rolePath}.hexTree.epicTalentKeys[${index}]`));
+      try {
+        hexTree = normalizeAuthoredHexTree(catalog, selectedOption!.traitKey, {
+          layoutKey: expectString(
+            rawTree.layoutKey,
+            `${rolePath}.hexTree.layoutKey`,
+          ) as import('../../catalog-schema').HexLayoutKey,
+          rareTalentKeys,
+          epicTalentKeys,
+        });
+      } catch (error) {
+        failProjectDocument(
+          `${rolePath}.hexTree`,
+          error instanceof Error ? error.message : 'invalid Hex tree',
+        );
+      }
+    } else if (hasHexTree) {
+      failProjectDocument(`${rolePath}.hexTree`, 'is supported only for Spell Drop offers');
+    }
     const rejectedOptionKey =
       record.rejectedOptionKey === undefined
         ? undefined
@@ -540,6 +585,7 @@ function decodeTraitOffers(
         ? {}
         : { rejectedOptionKey: rejectedOptionKey as TraitOptionKey }),
       ...(concaveStoneResult === undefined ? {} : { concaveStoneResult }),
+      ...(hexTree === undefined ? {} : { hexTree }),
     });
   }
   return Object.freeze(result);

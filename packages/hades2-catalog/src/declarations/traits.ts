@@ -83,6 +83,21 @@ export interface RawTraitOfferContextDeclaration {
   readonly authoredCondition?: 'circeRemovableFearVow';
 }
 
+export interface RawHexDeclaration {
+  readonly spellTraitKey: string;
+  readonly label: string;
+  readonly layouts: readonly {
+    readonly key: import('@run-planner/engine/catalog-schema').HexLayoutKey;
+    readonly label: string;
+    readonly baseCapacity: number;
+    readonly rareCount: number;
+    readonly epicCount: number;
+  }[];
+  readonly rareCandidates: readonly import('@run-planner/engine/catalog-schema').HexTalentCandidateDeclaration[];
+  readonly epicCandidates: readonly import('@run-planner/engine/catalog-schema').HexTalentCandidateDeclaration[];
+  readonly godSent: import('@run-planner/engine/catalog-schema').HexGodSentDeclaration;
+}
+
 export interface RawTraitCatalogInput {
   readonly weapons: readonly RawWeaponDeclaration[];
   readonly aspects: readonly RawAspectDeclaration[];
@@ -109,6 +124,7 @@ export interface RawTraitCatalogInput {
     readonly curses: readonly import('@run-planner/engine/catalog-schema').ChaosCurseDeclaration[];
     readonly blessings: readonly import('@run-planner/engine/catalog-schema').ChaosBlessingDeclaration[];
   };
+  readonly hexes: readonly RawHexDeclaration[];
 }
 
 export type { TraitCatalog, TraitRequirementExpression, TraitRarity };

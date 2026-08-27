@@ -4,6 +4,7 @@ import {
   type AcquisitionRoleAddress,
   type AuthoredTraitOffer,
   type AuthoredTraitOfferTraits,
+  type AuthoredHexTreeConfiguration,
   type AuthoredConcaveStoneResult,
   type AuthoredLevelResolution,
   type AuthoredBatchState,
@@ -25,6 +26,7 @@ import {
   type RoomActionReference,
   type ShopOfferAddress,
   type OccurrenceAddress,
+  type RouteAddress,
   type OccurrenceId,
   type ProjectCommand,
   type RewardWheelAddress,
@@ -58,6 +60,8 @@ import type {
   RoomDeclaration,
   TraitGiverDeclaration,
   TraitRarity,
+  HexDeclaration,
+  HexLayoutKey,
 } from '@run-planner/engine/catalog-schema';
 import type { CountedRewardBinding, ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import type {
@@ -366,6 +370,16 @@ export interface WorkspaceTraitOfferControl {
   readonly allTogetherSets?: readonly WorkspaceAllTogetherSetControl[];
   readonly naturalSelection?: WorkspaceNaturalSelectionControl;
   readonly concaveStone?: WorkspaceConcaveStoneControl;
+  /** Present only for the selected ordinary Spell Drop Hex. */
+  readonly hexTree?: WorkspaceHexTreeControl;
+}
+
+export interface WorkspaceHexTreeControl {
+  readonly address: TraitOfferAddress;
+  readonly marker: WorkspaceMarker;
+  readonly optionKey: TraitOptionKey;
+  readonly spellTraitKey: string;
+  readonly value?: AuthoredHexTreeConfiguration;
 }
 
 export interface WorkspaceConcaveStoneControl {
@@ -463,6 +477,51 @@ export interface WorkspaceTraitOptionDomainInteraction {
   readonly allTogetherSets?: readonly WorkspaceAllTogetherSetInteraction[];
   readonly naturalSelection?: WorkspaceNaturalSelectionInteraction;
   readonly concaveStone?: WorkspaceConcaveStoneInteraction;
+  readonly hexTree?: WorkspaceHexTreeInteraction;
+}
+
+export interface WorkspaceHexTreeDomain {
+  readonly value: AuthoredHexTreeConfiguration;
+  readonly layoutPicker: ContextualPickerModel<HexLayoutKey>;
+  readonly rarePickerFor: (
+    selectedKeys: readonly string[],
+    selected?: string,
+  ) => ContextualPickerModel<string>;
+  readonly epicPickerFor: (
+    selectedKeys: readonly string[],
+    selected?: string,
+  ) => ContextualPickerModel<string>;
+  readonly godSent: HexDeclaration['godSent'];
+}
+
+export interface WorkspaceHexTreeInteraction {
+  readonly control: WorkspaceHexTreeControl;
+  /** Complete declaration-owned default for the offer's currently selected spell. */
+  readonly defaultFor: (offer: AuthoredTraitOfferTraits) => AuthoredHexTreeConfiguration;
+  readonly transitionFor: (
+    offer: AuthoredTraitOfferTraits,
+    layoutKey: HexLayoutKey,
+  ) => AuthoredHexTreeConfiguration;
+  readonly intentFor: (
+    offer: AuthoredTraitOfferTraits,
+    value: AuthoredHexTreeConfiguration,
+  ) => WorkspacePayloadEditIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceTraitOffer' }>>;
+  readonly forOffer: (offer: AuthoredTraitOfferTraits) => {
+    readonly load: () => WorkspaceHexTreeDomain | undefined;
+  };
+}
+
+/** Route-loadout-owned Hex controls for Aspect of Selene's fixed Sky Fall. */
+export interface WorkspaceAspectHexTreeControl {
+  readonly address: RouteAddress;
+  readonly declaration: HexDeclaration;
+  readonly marker: WorkspaceMarker;
+  readonly value: AuthoredHexTreeConfiguration;
+  readonly domain: WorkspaceHexTreeDomain;
+  readonly transitionFor: (layoutKey: HexLayoutKey) => AuthoredHexTreeConfiguration;
+  readonly intentFor: (
+    value: AuthoredHexTreeConfiguration,
+  ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceAspectHexTree' }>>;
 }
 
 export interface WorkspaceAllTogetherSetDomain {
@@ -2695,6 +2754,7 @@ export interface WorkspaceRouteRailBiome {
 }
 
 export interface WorkspaceRoute {
+  readonly aspectHexTree?: WorkspaceAspectHexTreeControl;
   readonly biomes: readonly WorkspaceBiome[];
   readonly label: string;
   readonly marker: WorkspaceMarker;

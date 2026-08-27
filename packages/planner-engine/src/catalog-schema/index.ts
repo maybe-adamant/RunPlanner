@@ -43,6 +43,11 @@ export type {
   DirectTraitSetDeclaration,
   DirectTraitSetKey,
   TraitPickupDeclaration,
+  HexDeclaration,
+  HexGodSentDeclaration,
+  HexLayoutDeclaration,
+  HexLayoutKey,
+  HexTalentCandidateDeclaration,
   WeaponDeclaration,
 } from './traits';
 import type {
@@ -1018,6 +1023,8 @@ export interface Catalog {
     Record<'olympian' | 'hermes', import('./traits').BoonRarityValues>
   >;
   readonly echoLastRunBoon: import('./traits').EchoLastRunBoonCatalog;
+  /** Complete normalized frozen Hex layout declarations. */
+  readonly hexes: CatalogCollection<import('./traits').HexDeclaration>;
   readonly traitOfferContexts: CatalogCollection<TraitOfferContextDeclaration>;
   readonly traitRarityOrder: readonly ['Common', 'Rare', 'Epic', 'Heroic'];
   readonly traitElements: readonly TraitElement[];

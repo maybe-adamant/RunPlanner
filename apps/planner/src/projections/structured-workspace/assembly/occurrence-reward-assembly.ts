@@ -281,6 +281,19 @@ function traitOfferControls(
             marker: input.markerDestinations.marker(address),
             ...(offer.concaveStoneResult === undefined ? {} : { value: offer.concaveStoneResult }),
           });
+    const hexTree =
+      offer.kind !== 'traits' ||
+      giver.providerKind !== 'spell' ||
+      selected === undefined ||
+      input.catalog.hexes.byKey[selected.traitKey] === undefined
+        ? undefined
+        : Object.freeze({
+            address,
+            marker: input.markerDestinations.marker(address),
+            optionKey: offer.selectedOptionKey,
+            spellTraitKey: selected.traitKey,
+            ...(offer.hexTree === undefined ? {} : { value: offer.hexTree }),
+          });
     const marker = input.markerDestinations.marker(address);
     controls.push(
       Object.freeze({
@@ -296,6 +309,7 @@ function traitOfferControls(
         ...(allTogetherSets === undefined ? {} : { allTogetherSets }),
         ...(naturalSelection === undefined ? {} : { naturalSelection }),
         ...(concaveStone === undefined ? {} : { concaveStone }),
+        ...(hexTree === undefined ? {} : { hexTree }),
       }),
     );
   }

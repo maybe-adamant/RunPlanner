@@ -185,11 +185,15 @@ test('63 -> 64 updates the Persephone catalog boundary without inventing optiona
   });
   assert.deepEqual(result.document, {
     ...source,
-    schemaVersion: 64,
-    catalogVersion: '0.47.0-persephone-effective-levels',
+    schemaVersion: 65,
+    catalogVersion: '0.48.0-hex-talent-layouts',
   });
-  assert.deepEqual(result.steps, ['63->64']);
+  assert.deepEqual(result.steps, ['63->64', '64->65']);
   assert.deepEqual(result.changes['63->64'], {});
+  assert.deepEqual(result.changes['64->65'], {
+    spellHexTreesDefaulted: 0,
+    aspectHexTreesDefaulted: 0,
+  });
   assert.equal(
     'persephoneLevelBonus' in
       result.document.routes[0].biomes[0].topology.occurrences[0].encounters.traitOffersByPhase
@@ -197,6 +201,120 @@ test('63 -> 64 updates the Persephone catalog boundary without inventing optiona
     false,
   );
 });
+
+test('64 -> 65 defaults every resolved SpellDrop role and only the route-owned Selene loadout', () => {
+  const source = {
+    schemaVersion: 64,
+    projectId: 'hex-tree-migration',
+    catalogVersion: '0.47.0-persephone-effective-levels',
+    routes: [
+      {
+        loadout: { aspectKey: 'SuitHexAspect' },
+        biomes: [
+          {
+            topology: {
+              occurrences: [
+                {
+                  aspectKey: 'SuitHexAspect',
+                  aspectHexTree: { preserved: true },
+                  encounters: {
+                    spellDrop: {
+                      offer: { rewardType: 'SpellDrop' },
+                      traitOffersByAcquisitionRole: {
+                        self: {
+                          kind: 'traits',
+                          giverKey: 'SpellDrop',
+                          options: [
+                            { traitKey: 'SpellPolymorphTrait' },
+                            { traitKey: 'SpellMeteorTrait' },
+                            { traitKey: 'SpellTransformTrait' },
+                          ],
+                          selectedOptionKey: 'option1',
+                        },
+                        gift: {
+                          kind: 'traits',
+                          giverKey: 'SpellDrop',
+                          options: [
+                            { traitKey: 'SpellMeteorTrait' },
+                            { traitKey: 'SpellTransformTrait' },
+                            { traitKey: 'SpellLeapTrait' },
+                          ],
+                          selectedOptionKey: 'option2',
+                        },
+                        echo: {
+                          kind: 'traits',
+                          giverKey: 'SpellDrop',
+                          options: [
+                            { traitKey: 'SpellLaserTrait' },
+                            { traitKey: 'SpellSummonTrait' },
+                            { traitKey: 'SpellPotionTrait' },
+                          ],
+                          selectedOptionKey: 'option3',
+                        },
+                        unresolved: null,
+                      },
+                    },
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    ],
+  };
+
+  const result = migrateProjectDocument(source);
+  const roles =
+    result.document.routes[0].biomes[0].topology.occurrences[0].encounters.spellDrop
+      .traitOffersByAcquisitionRole;
+  for (const role of ['self', 'gift', 'echo']) {
+    assert.deepEqual(roles[role].hexTree, {
+      layoutKey: 'Lung',
+      rareTalentKeys: expectRareDefaults(roles[role].selectedOptionKey, roles[role].options),
+      epicTalentKeys: expectEpicDefaults(roles[role].selectedOptionKey, roles[role].options),
+    });
+  }
+  assert.equal(roles.unresolved, null);
+  assert.deepEqual(result.document.routes[0].loadout.aspectHexTree, {
+    layoutKey: 'Lung',
+    rareTalentKeys: ['MoonBeamConsecutiveDamageTalent', 'MoonBeamDefenseTalent'],
+    epicTalentKeys: ['MoonBeamTargetTalent'],
+  });
+  assert.deepEqual(result.document.routes[0].biomes[0].topology.occurrences[0].aspectHexTree, {
+    preserved: true,
+  });
+  assert.deepEqual(result.changes['64->65'], {
+    spellHexTreesDefaulted: 3,
+    aspectHexTreesDefaulted: 1,
+  });
+});
+
+function expectRareDefaults(selectedOptionKey, options) {
+  const traitKey = options[{ option1: 0, option2: 1, option3: 2 }[selectedOptionKey]].traitKey;
+  return {
+    SpellPolymorphTrait: ['PolymorphBossDamageTalent', 'PolymorphDeathExplodeTalent'],
+    SpellMeteorTrait: ['MeteorVulnerabilityDecalTalent', 'MeteorSlowDecalTalent'],
+    SpellTransformTrait: ['TransformCastDamageTalent', 'TransformLastStandRechargeTalent'],
+    SpellLeapTrait: ['LeapLaunchAoETalent', 'LeapAoETalent'],
+    SpellLaserTrait: ['LaserAoETalent', 'LaserStartAoETalent'],
+    SpellSummonTrait: ['SummonSpeedTalent', 'SummonTeleportTalent'],
+    SpellPotionTrait: ['DamageBuffTalent', 'ShieldTalent'],
+  }[traitKey];
+}
+
+function expectEpicDefaults(selectedOptionKey, options) {
+  const traitKey = options[{ option1: 0, option2: 1, option3: 2 }[selectedOptionKey]].traitKey;
+  return {
+    SpellPolymorphTrait: ['PolymorphSandwichTalent'],
+    SpellMeteorTrait: ['MeteorInvulnerableChargeTalent'],
+    SpellTransformTrait: ['TransformPrimaryTalent'],
+    SpellLeapTrait: ['LeapShieldTalent'],
+    SpellLaserTrait: ['LaserTripleTalent'],
+    SpellSummonTrait: ['SummonDamageSplitTalent'],
+    SpellPotionTrait: ['ClearCastTalent'],
+  }[traitKey];
+}
 
 test('53 -> 54 preserves Gorgon trigger values and removes generic DD fields', () => {
   const source = {
@@ -282,8 +400,8 @@ test('51 -> current preserves prior route content and adds resource placements',
   source.schemaVersion = 51;
   source.catalogVersion = '0.31.0-chaos-traits';
   const result = migrateProjectDocument(source);
-  assert.equal(result.document.schemaVersion, 64);
-  assert.equal(result.document.catalogVersion, '0.47.0-persephone-effective-levels');
+  assert.equal(result.document.schemaVersion, 65);
+  assert.equal(result.document.catalogVersion, '0.48.0-hex-talent-layouts');
   assert.deepEqual(result.changes['51->52'], {});
   assert.deepEqual(result.changes['52->53'], {
     catalogMigrations: [
@@ -315,8 +433,13 @@ test('51 -> current preserves prior route content and adds resource placements',
     '61->62',
     '62->63',
     '63->64',
+    '64->65',
   ]);
   assert.deepEqual(result.changes['63->64'], {});
+  assert.deepEqual(result.changes['64->65'], {
+    spellHexTreesDefaulted: 0,
+    aspectHexTreesDefaulted: 0,
+  });
 });
 
 test('50 -> current advances the full external migration chain through the Hermes Shrine boundary', () => {
@@ -327,8 +450,8 @@ test('50 -> current advances the full external migration chain through the Herme
 
   const result = migrateProjectDocument(source);
 
-  assert.equal(result.document.schemaVersion, 64);
-  assert.equal(result.document.catalogVersion, '0.47.0-persephone-effective-levels');
+  assert.equal(result.document.schemaVersion, 65);
+  assert.equal(result.document.catalogVersion, '0.48.0-hex-talent-layouts');
   assert.deepEqual(result.steps, [
     '50->51',
     '51->52',
@@ -344,6 +467,7 @@ test('50 -> current advances the full external migration chain through the Herme
     '61->62',
     '62->63',
     '63->64',
+    '64->65',
   ]);
   assert.deepEqual(result.changes['50->51'], { unresolvedTrialUpgradesAdded: 0 });
   assert.deepEqual(result.changes['57->58'], { shrinesAdded: 0 });
@@ -354,8 +478,8 @@ test('55 -> 56 adds empty route-owned selected resource placements', () => {
   source.schemaVersion = 55;
   source.catalogVersion = '0.37.0-automatic-completion-occurrences';
   const result = migrateProjectDocument(source);
-  assert.equal(result.document.schemaVersion, 64);
-  assert.equal(result.document.catalogVersion, '0.47.0-persephone-effective-levels');
+  assert.equal(result.document.schemaVersion, 65);
+  assert.equal(result.document.catalogVersion, '0.48.0-hex-talent-layouts');
   assert.deepEqual(result.document.routes[0].resourcePlacements, {
     Pickaxe: null,
     Exorcism: null,
@@ -372,8 +496,8 @@ test('52 -> current preserves the earlier schema-52 catalog migration ledger and
   source.schemaVersion = 52;
   source.catalogVersion = '0.32.0-run-impacting-traits';
   const result = migrateProjectDocument(source);
-  assert.equal(result.document.schemaVersion, 64);
-  assert.equal(result.document.catalogVersion, '0.47.0-persephone-effective-levels');
+  assert.equal(result.document.schemaVersion, 65);
+  assert.equal(result.document.catalogVersion, '0.48.0-hex-talent-layouts');
   assert.deepEqual(result.document.routes, [
     {
       ...source.routes[0],
@@ -409,6 +533,7 @@ test('52 -> current preserves the earlier schema-52 catalog migration ledger and
     '61->62',
     '62->63',
     '63->64',
+    '64->65',
   ]);
 });
 
@@ -417,7 +542,7 @@ test('52 -> current advances the prior run-impacting-traits catalog metadata', (
   source.schemaVersion = 52;
   source.catalogVersion = '0.32.1-run-impacting-traits';
   const result = migrateProjectDocument(source);
-  assert.equal(result.document.catalogVersion, '0.47.0-persephone-effective-levels');
+  assert.equal(result.document.catalogVersion, '0.48.0-hex-talent-layouts');
   assert.deepEqual(result.changes['52->53'], {
     catalogMigrations: [
       '0.32.1-run-impacting-traits->0.33.0-generated-trait-pickups',
@@ -446,6 +571,7 @@ test('52 -> current advances the prior run-impacting-traits catalog metadata', (
     '61->62',
     '62->63',
     '63->64',
+    '64->65',
   ]);
 });
 
@@ -454,8 +580,8 @@ test('current schema 52 -> current advances catalog metadata and adds resource p
   source.schemaVersion = 52;
   source.catalogVersion = '0.34.0-sea-star';
   const result = migrateProjectDocument(source);
-  assert.equal(result.document.schemaVersion, 64);
-  assert.equal(result.document.catalogVersion, '0.47.0-persephone-effective-levels');
+  assert.equal(result.document.schemaVersion, 65);
+  assert.equal(result.document.catalogVersion, '0.48.0-hex-talent-layouts');
   assert.deepEqual(result.document.routes, [
     {
       ...source.routes[0],
@@ -487,6 +613,7 @@ test('current schema 52 -> current advances catalog metadata and adds resource p
     '61->62',
     '62->63',
     '63->64',
+    '64->65',
   ]);
 });
 
@@ -551,8 +678,8 @@ test('57 -> 58 seeds Shrine shells only on exact forced Surface Postboss identit
 
   const result = migrateProjectDocument(source);
   const biomes = result.document.routes[0].biomes;
-  assert.equal(result.document.schemaVersion, 64);
-  assert.equal(result.document.catalogVersion, '0.47.0-persephone-effective-levels');
+  assert.equal(result.document.schemaVersion, 65);
+  assert.equal(result.document.catalogVersion, '0.48.0-hex-talent-layouts');
   assert.deepEqual(result.steps, [
     '57->58',
     '58->59',
@@ -561,6 +688,7 @@ test('57 -> 58 seeds Shrine shells only on exact forced Surface Postboss identit
     '61->62',
     '62->63',
     '63->64',
+    '64->65',
   ]);
   assert.deepEqual(result.changes['57->58'], { shrinesAdded: 2 });
   for (const [biomeIndex, occurrenceIndex] of [
@@ -657,9 +785,21 @@ test('58 -> 59 seeds Well shells only on exact forced Underworld Postboss identi
 
   const result = migrateProjectDocument(source);
   const biomes = result.document.routes[0].biomes;
-  assert.equal(result.document.schemaVersion, 64);
-  assert.equal(result.document.catalogVersion, '0.47.0-persephone-effective-levels');
-  assert.deepEqual(result.steps, ['58->59', '59->60', '60->61', '61->62', '62->63', '63->64']);
+  assert.equal(result.document.schemaVersion, 65);
+  assert.equal(result.document.catalogVersion, '0.48.0-hex-talent-layouts');
+  assert.deepEqual(result.steps, [
+    '58->59',
+    '59->60',
+    '60->61',
+    '61->62',
+    '62->63',
+    '63->64',
+    '64->65',
+  ]);
+  assert.deepEqual(result.changes['64->65'], {
+    spellHexTreesDefaulted: 0,
+    aspectHexTreesDefaulted: 0,
+  });
   assert.deepEqual(result.changes['58->59'], { wellsAdded: 2 });
   assert.deepEqual(result.changes['59->60'], {});
   for (const [biomeIndex, occurrenceIndex] of [

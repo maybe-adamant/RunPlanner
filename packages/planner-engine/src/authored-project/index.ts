@@ -190,6 +190,12 @@ export {
   type TraitOptionKey,
   traitOfferOption,
 } from './traits';
+export type { AuthoredHexTreeConfiguration } from './traits';
+export {
+  createDefaultAuthoredHexTree,
+  normalizeAuthoredHexTree,
+  transitionAuthoredHexTreeLayout,
+} from './hex-tree';
 export {
   echoLastRewardPickupEntryKey,
   parseEchoLastRewardPickupEntryKey,

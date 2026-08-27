@@ -45,6 +45,7 @@ import {
   encounterPhaseGorgonSupportForProjectEvaluationAssembly,
   encounterPhaseFigLeafSupportForProjectEvaluationAssembly,
   encounterPhaseSequenceStatusForProjectEvaluationAssembly,
+  traitOfferCandidateForProjectEvaluationAssembly,
   simulateProjectAssembly,
   type CandidateEvaluationEvent,
 } from '@run-planner/engine/simulation';
@@ -290,6 +291,9 @@ export function bind(
     (phase) => encounterPhaseSequenceStatusForProjectEvaluationAssembly(projectAssembly, phase),
     (phase) => encounterPhaseFigLeafSupportForProjectEvaluationAssembly(projectAssembly, phase),
     (phase) => encounterPhaseGorgonSupportForProjectEvaluationAssembly(projectAssembly, phase),
+    undefined,
+    (address) =>
+      traitOfferCandidateForProjectEvaluationAssembly(projectAssembly, address) !== undefined,
   )
     .routes.find((route) => route.routeKey === routeKey)
     ?.biomes.find((biome) => biome.plan.biomeKey === biomeKey);

@@ -8,6 +8,7 @@ import type {
   WorkspaceEchoLastRunBoonDomain,
   WorkspaceEchoPomTargetDomain,
   WorkspaceConcaveStoneDomain,
+  WorkspaceHexTreeDomain,
   WorkspaceTraitOfferInteraction,
 } from '@planner/projections/structured-workspace';
 import { traitOfferDialogClosed } from '@planner/state/editorSessionSlice';
@@ -18,6 +19,7 @@ import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwne
 import { TraitOfferCirceResolution } from './TraitOfferCirceResolution';
 import { replaceTraitOfferOption } from './traitOfferOptions';
 import { TraitOfferSelectedSpecialOutcomes } from './TraitOfferSelectedSpecialOutcomes';
+import { HexTreeEditor } from './HexTreeEditor';
 
 const emptyTargetPicker: ContextualPickerModel<string> = Object.freeze({
   sections: Object.freeze([]),
@@ -90,6 +92,10 @@ export function TraitOfferSelectedOutcome({
     WorkspaceConcaveStoneDomain | undefined
   >();
   const concaveStoneDomain = concaveStoneController.observe(concaveStoneLoadable);
+  const hexTreeDomain = useMemo<WorkspaceHexTreeDomain | undefined>(
+    () => loadable.hexTree?.forOffer(value).load(),
+    [loadable.hexTree, value],
+  );
   useEffect(() => {
     if (loadable.hasTargetPicker) optionController.activate(loadable);
     if (circeLoadable !== undefined) circeController.activate(circeLoadable);
@@ -119,12 +125,21 @@ export function TraitOfferSelectedOutcome({
     loadable.allTogetherSets !== undefined ||
     loadable.naturalSelection !== undefined ||
     concaveStoneDomain.result !== undefined ||
+    hexTreeDomain !== undefined ||
     interaction.ransomAssessment(value) !== undefined;
   if (!hasOutcome) return null;
   return (
     <section aria-label="Selected trait outcome" className="trait-selected-outcome">
       <h3>Selected trait outcome</h3>
       <p className="trait-selected-outcome-name">{interaction.traitLabel(option.traitKey)}</p>
+      {loadable.hexTree === undefined || hexTreeDomain === undefined ? null : (
+        <HexTreeEditor
+          domain={hexTreeDomain}
+          address={loadable.hexTree.control.address}
+          transitionFor={(layoutKey) => loadable.hexTree!.transitionFor(value, layoutKey)}
+          onChange={(hexTree) => onUpdate({ ...value, hexTree })}
+        />
+      )}
       {loadable.traitAcquisitionTarget === undefined ? null : (
         <ContextualPicker
           ariaLabel={`${value.selectedOptionKey} acquisition target`}

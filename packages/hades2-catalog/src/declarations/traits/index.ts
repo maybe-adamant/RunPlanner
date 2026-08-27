@@ -23,6 +23,7 @@ import { circeGiver, circeTraits } from './circe';
 import { echoGiver, echoTraits } from './echo';
 import { infernalContractTraits } from './infernal-contract';
 import { seleneGiver, seleneTraits } from './selene';
+import { hexes } from './hexes';
 import { chaosBlessings, chaosCurses, chaosGiver, chaosTraits } from './chaos';
 
 const weapons = [
@@ -226,6 +227,7 @@ export const traitCatalogInput: RawTraitCatalogInput = {
   weapons,
   aspects,
   traits,
+  hexes,
   givers,
   traitAcquisitionProviders: traitAcquisitionProviders.map(([gameName, giverKey]) => ({
     gameName,

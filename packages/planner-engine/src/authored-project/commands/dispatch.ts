@@ -136,6 +136,7 @@ function applyUnchecked(
     case 'ReplaceResourcePlacement':
       return applyResourcePlacementCommand(document, catalog, command);
     case 'ReplaceRouteLoadout':
+    case 'ReplaceAspectHexTree':
     case 'ReplaceManualArcanaSelection':
     case 'ReplaceFearVowRank':
     case 'ReplaceStartingKeepsake':

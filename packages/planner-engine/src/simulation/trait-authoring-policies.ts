@@ -658,12 +658,21 @@ export function traitOfferStartingDraft(
   if (chosen.length === 0 || (!traitOfferSupportsExhaustion(giver) && chosen.length !== 3))
     return undefined;
   const draft = traitDraft(giverKey, chosen);
+  const completeDraft =
+    giver.providerKind === 'spell'
+      ? Object.freeze({
+          ...draft,
+          hexTree: createDefaultAuthoredHexTree(catalog, draft.options[0]!.traitKey),
+        })
+      : draft;
   // Candidate domains establish leaf legality. Keep the authoritative complete
   // offer checks at this boundary, once, rather than evaluating every variant.
-  return assessTraitOfferComposition(catalog, draft, history).legal &&
-    assessTraitReplacementComposition(catalog, draft, history, context).legal &&
-    assessTraitOffer(catalog, draft, history, context).every((assessment) => assessment.legal)
-    ? draft
+  return assessTraitOfferComposition(catalog, completeDraft, history).legal &&
+    assessTraitReplacementComposition(catalog, completeDraft, history, context).legal &&
+    assessTraitOffer(catalog, completeDraft, history, context).every(
+      (assessment) => assessment.legal,
+    )
+    ? completeDraft
     : undefined;
 }
 
@@ -939,6 +948,7 @@ import {
   TRAIT_OPTION_KEYS,
   traitOfferSupportsExhaustion,
 } from '../authored-project/traits';
+import { createDefaultAuthoredHexTree } from '../authored-project/hex-tree';
 import {
   isPomUpgradeTarget,
   nextRarity,

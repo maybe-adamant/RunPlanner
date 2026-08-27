@@ -22,6 +22,7 @@ import {
   validateTraitCatalogClosure,
 } from './trait-catalog-assembly';
 import type { RawTraitCatalogInput } from '../declarations/traits';
+import { normalizeHexes } from './hexes';
 
 const ELEMENTS = ['Aether', 'Earth', 'Air', 'Fire', 'Water'] as const;
 const BASE_ELEMENTS = ['Earth', 'Air', 'Fire', 'Water'] as const;
@@ -38,6 +39,7 @@ export function createTraitCatalog(input: RawTraitCatalogInput): TraitCatalog {
   const traits = normalizeTraits(input.traits, weapons, aspects, deferred, coreGodTraitKeys);
   validateProperUpbringingAndDeferred({ declaredDeferred, traits });
   const givers = normalizeGivers(input.givers, traits);
+  const hexes = normalizeHexes(input.hexes);
   validateRuntimeOfferFallbacks({ traits, givers });
   const boonRarityBases = normalizeBoonRarityBases(input.boonRarityBases);
   validateAspectStartingTraits({ aspects, traits, givers });
@@ -57,6 +59,7 @@ export function createTraitCatalog(input: RawTraitCatalogInput): TraitCatalog {
     givers,
     boonRarityBases,
     echoLastRunBoon,
+    hexes,
     chaos,
   });
 }

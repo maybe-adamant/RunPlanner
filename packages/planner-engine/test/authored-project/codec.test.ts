@@ -324,6 +324,19 @@ describe('project document codec', () => {
     );
   });
 
+  it('rejects an Aspect Hex tree on a non-Selene route loadout', () => {
+    const encoded = encodedFStart();
+    const route = (encoded.routes as Array<Record<string, unknown>>)[0]!;
+    (route.loadout as Record<string, unknown>).aspectHexTree = {
+      layoutKey: 'Lung',
+      rareTalentKeys: ['MoonBeamConsecutiveDamageTalent', 'MoonBeamDefenseTalent'],
+      epicTalentKeys: ['MoonBeamTargetTalent'],
+    };
+    expect(() => decodeProjectDocument(encoded, catalog)).toThrow(
+      'aspectHexTree: is supported only for Aspect of Selene',
+    );
+  });
+
   it.each([
     [
       'the base 30-Grasp capacity',

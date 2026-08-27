@@ -61,6 +61,7 @@ describe('summarizeCatalog', () => {
         hermes: { Rare: 0.06, Epic: 0.03, Duo: 0, Legendary: 0.01 },
       },
       echoLastRunBoon: { variants: emptyCollection() },
+      hexes: emptyCollection(),
       traitOfferContexts: emptyCollection(),
       traitRarityOrder: ['Common', 'Rare', 'Epic', 'Heroic'],
       traitElements: [],

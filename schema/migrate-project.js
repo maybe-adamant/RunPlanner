@@ -4,7 +4,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { basename, dirname, extname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-const CURRENT_SCHEMA_VERSION = 64;
+const CURRENT_SCHEMA_VERSION = 65;
 const SCHEMA_49_CATALOG_VERSION = '0.27.0-arcana-fear-loadout';
 const SCHEMA_50_CATALOG_VERSION = '0.30.0-boon-rarity-ledger';
 const SCHEMA_51_CATALOG_VERSION = '0.31.0-chaos-traits';
@@ -24,6 +24,46 @@ const SCHEMA_61_CATALOG_VERSION = '0.43.0-crystal-figurine';
 const SCHEMA_62_CATALOG_VERSION = '0.44.0-concave-stone';
 const SCHEMA_63_CATALOG_VERSION = '0.46.0-vow-forfeit-red-onion';
 const SCHEMA_64_CATALOG_VERSION = '0.47.0-persephone-effective-levels';
+const SCHEMA_65_CATALOG_VERSION = '0.48.0-hex-talent-layouts';
+
+const HEX_DEFAULTS = {
+  SpellPolymorphTrait: {
+    rareTalentKeys: ['PolymorphBossDamageTalent', 'PolymorphDeathExplodeTalent'],
+    epicTalentKeys: ['PolymorphSandwichTalent'],
+  },
+  SpellMeteorTrait: {
+    rareTalentKeys: ['MeteorVulnerabilityDecalTalent', 'MeteorSlowDecalTalent'],
+    epicTalentKeys: ['MeteorInvulnerableChargeTalent'],
+  },
+  SpellTransformTrait: {
+    rareTalentKeys: ['TransformCastDamageTalent', 'TransformLastStandRechargeTalent'],
+    epicTalentKeys: ['TransformPrimaryTalent'],
+  },
+  SpellLeapTrait: {
+    rareTalentKeys: ['LeapLaunchAoETalent', 'LeapAoETalent'],
+    epicTalentKeys: ['LeapShieldTalent'],
+  },
+  SpellLaserTrait: {
+    rareTalentKeys: ['LaserAoETalent', 'LaserStartAoETalent'],
+    epicTalentKeys: ['LaserTripleTalent'],
+  },
+  SpellSummonTrait: {
+    rareTalentKeys: ['SummonSpeedTalent', 'SummonTeleportTalent'],
+    epicTalentKeys: ['SummonDamageSplitTalent'],
+  },
+  SpellTimeSlowTrait: {
+    rareTalentKeys: ['TimeSlowDestroyProjectilesTalent', 'TimeSlowSpeedTalent'],
+    epicTalentKeys: ['TimeSlowCritTalent'],
+  },
+  SpellPotionTrait: {
+    rareTalentKeys: ['DamageBuffTalent', 'ShieldTalent'],
+    epicTalentKeys: ['ClearCastTalent'],
+  },
+  SpellMoonBeamTrait: {
+    rareTalentKeys: ['MoonBeamConsecutiveDamageTalent', 'MoonBeamDefenseTalent'],
+    epicTalentKeys: ['MoonBeamTargetTalent'],
+  },
+};
 const COMPLETION_ROOMS_BY_BIOME = {
   F: { boss: 'F_Boss01', postboss: 'F_PostBoss01' },
   G: { boss: 'G_Boss01', postboss: 'G_PostBoss01' },
@@ -520,6 +560,72 @@ function migrate63To64(document) {
   return {};
 }
 
+function migrate64To65(document) {
+  if (document.catalogVersion !== SCHEMA_64_CATALOG_VERSION) {
+    throw new Error(
+      `schema 64 migration expects catalog ${SCHEMA_64_CATALOG_VERSION}, received ${String(document.catalogVersion)}`,
+    );
+  }
+  let spellHexTreesDefaulted = 0;
+  let aspectHexTreesDefaulted = 0;
+  for (const route of document.routes ?? []) {
+    const loadout = route?.loadout;
+    if (
+      loadout !== null &&
+      typeof loadout === 'object' &&
+      !Array.isArray(loadout) &&
+      loadout.aspectKey === 'SuitHexAspect' &&
+      loadout.aspectHexTree === undefined
+    ) {
+      loadout.aspectHexTree = {
+        layoutKey: 'Lung',
+        rareTalentKeys: [...HEX_DEFAULTS.SpellMoonBeamTrait.rareTalentKeys],
+        epicTalentKeys: [...HEX_DEFAULTS.SpellMoonBeamTrait.epicTalentKeys],
+      };
+      aspectHexTreesDefaulted += 1;
+    }
+  }
+  visitRecords(document, (record) => {
+    const offer = record.offer;
+    if (
+      offer !== null &&
+      typeof offer === 'object' &&
+      !Array.isArray(offer) &&
+      offer.rewardType === 'SpellDrop' &&
+      record.traitOffersByAcquisitionRole !== null &&
+      typeof record.traitOffersByAcquisitionRole === 'object' &&
+      !Array.isArray(record.traitOffersByAcquisitionRole)
+    ) {
+      for (const traitOffer of Object.values(record.traitOffersByAcquisitionRole)) {
+        if (
+          traitOffer === null ||
+          typeof traitOffer !== 'object' ||
+          Array.isArray(traitOffer) ||
+          traitOffer.kind !== 'traits' ||
+          traitOffer.giverKey !== 'SpellDrop' ||
+          !Array.isArray(traitOffer.options)
+        )
+          continue;
+        const selectedIndex = { option1: 0, option2: 1, option3: 2 }[traitOffer.selectedOptionKey];
+        const selected =
+          selectedIndex === undefined ? undefined : traitOffer.options[selectedIndex];
+        const defaults = selected === undefined ? undefined : HEX_DEFAULTS[selected.traitKey];
+        if (defaults !== undefined && traitOffer.hexTree === undefined) {
+          traitOffer.hexTree = {
+            layoutKey: 'Lung',
+            rareTalentKeys: [...defaults.rareTalentKeys],
+            epicTalentKeys: [...defaults.epicTalentKeys],
+          };
+          spellHexTreesDefaulted += 1;
+        }
+      }
+    }
+  });
+  document.schemaVersion = 65;
+  document.catalogVersion = SCHEMA_65_CATALOG_VERSION;
+  return { spellHexTreesDefaulted, aspectHexTreesDefaulted };
+}
+
 const migrations = new Map([
   [49, migrate49To50],
   [50, migrate50To51],
@@ -536,6 +642,7 @@ const migrations = new Map([
   [61, migrate61To62],
   [62, migrate62To63],
   [63, migrate63To64],
+  [64, migrate64To65],
 ]);
 
 export function migrateProjectDocument(value, targetVersion = CURRENT_SCHEMA_VERSION) {

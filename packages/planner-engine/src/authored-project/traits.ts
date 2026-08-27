@@ -25,6 +25,12 @@ export interface AuthoredTraitOption {
   readonly persephoneLevelBonus?: number;
 }
 
+export interface AuthoredHexTreeConfiguration {
+  readonly layoutKey: import('../catalog-schema').HexLayoutKey;
+  readonly rareTalentKeys: readonly string[];
+  readonly epicTalentKeys: readonly string[];
+}
+
 export type AuthoredAllTogetherResult = Readonly<
   Record<import('../catalog-schema').DirectTraitSetKey, string | null>
 >;
@@ -91,6 +97,8 @@ export interface AuthoredTraitOfferTraits {
   readonly giverKey: string;
   readonly options: OneToThree<AuthoredTraitOption>;
   readonly selectedOptionKey: TraitOptionKey;
+  /** Complete selected Hex layout and Rare/Epic identity composition. */
+  readonly hexTree?: AuthoredHexTreeConfiguration;
   /** Ordered explicit Calling Card row actions; base option rarity remains rolled/authored. */
   readonly rarificationActions?: readonly TraitOptionKey[];
   /** Rejected keeps this exact generated row visible but unavailable. */

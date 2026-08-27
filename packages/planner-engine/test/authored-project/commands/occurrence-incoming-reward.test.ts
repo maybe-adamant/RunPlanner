@@ -20,6 +20,7 @@ import {
   decodeProjectDocument,
   encodeProjectDocument,
   undoProjectHistory,
+  type AuthoredTraitOfferTraits,
 } from '@run-planner/engine/authored-project';
 import {
   createGoldenFGHProject,
@@ -40,6 +41,25 @@ import { createCompleteNProject } from '../support/complete-n-project';
 import { nBiome } from '../support/configured-projects';
 
 describe('authored-project incoming reward commands', () => {
+  function completePolymorphSpellOffer(): AuthoredTraitOfferTraits {
+    return {
+      kind: 'traits',
+      giverKey: 'SpellDrop',
+      options: [
+        { traitKey: 'SpellPolymorphTrait' },
+        { traitKey: 'SpellMeteorTrait' },
+        { traitKey: 'SpellTransformTrait' },
+      ],
+      selectedOptionKey: 'option1',
+      hexTree: {
+        layoutKey: 'Lung',
+        rareTalentKeys: ['PolymorphBossDamageTalent', 'PolymorphDeathExplodeTalent'],
+        epicTalentKeys: ['PolymorphSandwichTalent'],
+      },
+      rarificationActions: [],
+    };
+  }
+
   it('strictly authors a three-choice rarityless SpellDrop self child', () => {
     const reward = createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(1, 1));
     let project = applyProjectCommand(createGoldenFGHProject(), catalog, {
@@ -62,6 +82,22 @@ describe('authored-project incoming reward commands', () => {
         rarificationActions: [],
       },
     });
+    const selectedSpell = project.routes[0]!.biomes.flatMap(
+      (biome) => biome.topology?.occurrences ?? [],
+    ).find((occurrence) => occurrence.occurrenceId === goldenFOccurrenceId(1, 1))?.state;
+    const authoredSpell =
+      selectedSpell?.kind === 'counted'
+        ? selectedSpell.reward?.traitOffersByAcquisitionRole?.self
+        : undefined;
+    expect(authoredSpell).toMatchObject({
+      kind: 'traits',
+      selectedOptionKey: 'option2',
+      hexTree: {
+        layoutKey: 'Lung',
+        rareTalentKeys: ['MeteorVulnerabilityDecalTalent', 'MeteorSlowDecalTalent'],
+        epicTalentKeys: ['MeteorInvulnerableChargeTalent'],
+      },
+    });
     const encoded = encodeProjectDocument(project);
     expect(decodeProjectDocument(JSON.parse(encoded), catalog)).toEqual(project);
 
@@ -79,6 +115,22 @@ describe('authored-project incoming reward commands', () => {
         ],
         selectedOptionKey: 'option1',
         rarificationActions: [],
+      },
+    });
+    const changedSpell = changed.present.routes[0]!.biomes.flatMap(
+      (biome) => biome.topology?.occurrences ?? [],
+    ).find((occurrence) => occurrence.occurrenceId === goldenFOccurrenceId(1, 1))?.state;
+    const changedOffer =
+      changedSpell?.kind === 'counted'
+        ? changedSpell.reward?.traitOffersByAcquisitionRole?.self
+        : undefined;
+    expect(changedOffer).toMatchObject({
+      kind: 'traits',
+      selectedOptionKey: 'option1',
+      hexTree: {
+        layoutKey: 'Lung',
+        rareTalentKeys: ['MeteorVulnerabilityDecalTalent', 'MeteorSlowDecalTalent'],
+        epicTalentKeys: ['MeteorInvulnerableChargeTalent'],
       },
     });
     expect(undoProjectHistory(changed).present).toBe(initial.present);
@@ -147,6 +199,115 @@ describe('authored-project incoming reward commands', () => {
       }),
     ).toThrow();
   });
+
+  const invalidHexOfferMutations: readonly [
+    string,
+    (offer: AuthoredTraitOfferTraits) => AuthoredTraitOfferTraits,
+  ][] = [
+    [
+      'a Rare identity from another Hex pool',
+      (offer) => ({
+        ...offer,
+        hexTree: {
+          ...offer.hexTree!,
+          rareTalentKeys: ['MeteorVulnerabilityDecalTalent', 'PolymorphDeathExplodeTalent'],
+        },
+      }),
+    ],
+    [
+      'a duplicate node identity',
+      (offer) => ({
+        ...offer,
+        hexTree: {
+          ...offer.hexTree!,
+          rareTalentKeys: ['PolymorphBossDamageTalent', 'PolymorphBossDamageTalent'],
+        },
+      }),
+    ],
+    [
+      'the wrong Rare cardinality',
+      (offer) => ({
+        ...offer,
+        hexTree: {
+          ...offer.hexTree!,
+          rareTalentKeys: ['PolymorphBossDamageTalent'],
+        },
+      }),
+    ],
+    [
+      'a tree for a different selected Spell',
+      (offer) => ({
+        ...offer,
+        options: [
+          { traitKey: 'SpellMeteorTrait' },
+          { traitKey: 'SpellTransformTrait' },
+          { traitKey: 'SpellLeapTrait' },
+        ],
+      }),
+    ],
+    [
+      'a Hex tree leaked onto a non-spell offer',
+      (offer) => ({
+        ...offer,
+        giverKey: 'Apollo',
+        options: [
+          { traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
+          { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
+          { traitKey: 'ApolloCastBoon', rarity: 'Common' },
+        ],
+      }),
+    ],
+  ];
+
+  it.each(invalidHexOfferMutations)('rejects malformed selected Hex tree: %s', (_label, mutate) => {
+    const reward = createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(1, 1));
+    const project = applyProjectCommand(createGoldenFGHProject(), catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward,
+      value: { rewardType: 'SpellDrop' },
+    });
+    expect(() =>
+      applyProjectCommand(project, catalog, {
+        kind: 'ReplaceTraitOffer',
+        trait: createTraitOfferAddress(reward, 'self'),
+        value: mutate(completePolymorphSpellOffer()),
+      }),
+    ).toThrow();
+  });
+
+  it('canonicalizes valid unordered selected Hex nodes to declaration order', () => {
+    const reward = createIncomingRewardAddress(goldenFBiome, goldenFOccurrenceId(1, 1));
+    const project = applyProjectCommand(
+      applyProjectCommand(createGoldenFGHProject(), catalog, {
+        kind: 'ReplaceIncomingReward',
+        reward,
+        value: { rewardType: 'SpellDrop' },
+      }),
+      catalog,
+      {
+        kind: 'ReplaceTraitOffer',
+        trait: createTraitOfferAddress(reward, 'self'),
+        value: {
+          ...completePolymorphSpellOffer(),
+          hexTree: {
+            ...completePolymorphSpellOffer().hexTree!,
+            rareTalentKeys: ['PolymorphDeathExplodeTalent', 'PolymorphBossDamageTalent'],
+          },
+        },
+      },
+    );
+    const occurrence = project.routes[0]!.biomes.flatMap(
+      (biome) => biome.topology?.occurrences ?? [],
+    ).find((candidate) => candidate.occurrenceId === goldenFOccurrenceId(1, 1));
+    const offer = occurrence?.state.kind === 'counted' ? occurrence.state.reward : undefined;
+    expect(offer?.traitOffersByAcquisitionRole.self).toMatchObject({
+      hexTree: {
+        rareTalentKeys: ['PolymorphBossDamageTalent', 'PolymorphDeathExplodeTalent'],
+        epicTalentKeys: ['PolymorphSandwichTalent'],
+      },
+    });
+  });
+
   const apolloOffer = {
     kind: 'traits' as const,
     giverKey: 'Apollo',

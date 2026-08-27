@@ -60,6 +60,11 @@ export type ProjectStateCommand =
       readonly aspectKey: string;
     }
   | {
+      readonly kind: 'ReplaceAspectHexTree';
+      readonly route: RouteAddress;
+      readonly value: import('../traits').AuthoredHexTreeConfiguration;
+    }
+  | {
       readonly kind: 'ReplaceManualArcanaSelection';
       readonly route: RouteAddress;
       readonly arcanaKeys: readonly string[];
