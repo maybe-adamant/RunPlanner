@@ -307,13 +307,13 @@ the closure latch remains true.
 
 ### 6. Task Force adjustment
 
-Change `OlympianSpellCountBoon` from its Planner-simulated nine-Olympian-node
-requirement to two deliberately different layers:
+Model `OlympianSpellCountBoon` with two deliberately different layers:
 
-- a normal `anyEquippedTrait` requirement over the nine base Hex identities,
-  including Aspect of Selene's `SpellMoonBeamTrait`; and
-- a source-only runtime requirement such as `equippedOlympianSpellTalent` for
-  the deeper God Sent node that the Planner does not simulate.
+- Planner legality requires at least one concrete `SpellDrop` acquisition to
+  have settled in the current run; and
+- a source-only runtime requirement such as `equippedOlympianSpellTalent`
+  retains the deeper God Sent node predicate that the Planner does not
+  simulate.
 
 Give it the audited fallback trio:
 
@@ -321,43 +321,45 @@ Give it the audited fallback trio:
 2. `RetaliateInvulnerabilityBoon`; and
 3. `FocusLastStandBoon`.
 
-The normal requirement keeps Task Force unavailable before any Hex is equipped
-and permits it after an ordinary Spell selection or from Aspect of Selene's
-built-in Sky Fall. The existing generic runtime fallback resolver still
-removes companion rows and unavailable simulated-history traits, then exports
-one fallback. There is no authored Task Force checkbox, no inference from
-generated God Sent presence, and no generated Path talent in `TraitHistory`.
+The settled-acquisition requirement keeps Task Force unavailable before the
+player has actually taken a Spell Drop. This matters for Aspect of Selene:
+built-in Sky Fall alone does not qualify, while the Aspect's later concrete
+Spell Drop does. The existing generic runtime fallback resolver still removes
+companion rows and unavailable simulated-history traits, then exports one
+fallback. There is no authored Task Force checkbox, no inference from generated
+God Sent presence, and no generated Path talent in `TraitHistory`.
 
 The runtime-requirement enum is declaration/execution evidence only. Planner
-legality stops at the modeled base-Hex prerequisite; it does not claim that the
-required God Sent node was actually acquired.
+legality stops at the modeled Spell Drop acquisition prefix; it does not claim
+that the required God Sent node was actually acquired.
 
 ## Ownership map
 
-| Concern                                                             | Authority                                                | Main change neighborhood                                                                                      |
-| ------------------------------------------------------------------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| Layouts, node pools, labels, linked gods/keepsakes                  | Hades II catalog                                         | `packages/hades2-catalog/src/declarations/traits/`, compiler, catalog-schema                                  |
-| Frozen tree value, strict decode, defaults, route/offer transitions | Planner engine authored model                            | `packages/planner-engine/src/authored-project/`                                                               |
-| Capacity, point settlement, closure, God Sent chronology            | Planner engine simulation                                | `packages/planner-engine/src/simulation/hex-progress.ts` and existing acquisition/keepsake lifecycle contacts |
-| Talent Drop requirement facts                                       | Planner engine requirements/generation                   | existing normal-target, preparation, and reward-fact builders                                                 |
-| Spell and Aspect controls                                           | Planner application projection and React                 | existing structured-workspace trait interaction, `TraitOfferEditorShell`, Route Loadout                       |
-| Task Force source condition/fallback                                | Catalog declaration and existing engine fallback product | Athena declaration/compiler and existing selected-trait products                                              |
-| Durable evidence and delivery record                                | Docs                                                     | the four named audits and `IMPLEMENTATION_PROGRESS.md`                                                        |
+| Concern                                                             | Authority                                            | Main change neighborhood                                                                                      |
+| ------------------------------------------------------------------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| Layouts, node pools, labels, linked gods/keepsakes                  | Hades II catalog                                     | `packages/hades2-catalog/src/declarations/traits/`, compiler, catalog-schema                                  |
+| Frozen tree value, strict decode, defaults, route/offer transitions | Planner engine authored model                        | `packages/planner-engine/src/authored-project/`                                                               |
+| Capacity, point settlement, closure, God Sent chronology            | Planner engine simulation                            | `packages/planner-engine/src/simulation/hex-progress.ts` and existing acquisition/keepsake lifecycle contacts |
+| Talent Drop requirement facts                                       | Planner engine requirements/generation               | existing normal-target, preparation, and reward-fact builders                                                 |
+| Spell and Aspect controls                                           | Planner application projection and React             | existing structured-workspace trait interaction, `TraitOfferEditorShell`, Route Loadout                       |
+| Task Force acquisition prefix and runtime fallback                  | Catalog declaration plus branch-aware engine history | Athena declaration/compiler, reward-use history, and existing selected-trait products                         |
+| Durable evidence and delivery record                                | Docs                                                 | the four named audits and `IMPLEMENTATION_PROGRESS.md`                                                        |
 
 ## Delivery gates and commit boundaries
 
 ### Gate A — Task Force runtime volatility correction
 
-**Outcome:** Task Force is selectable from the authored Athena menu only after
-a base Hex exists, without a fabricated Hex-node history, while execution
-receives one safe fallback.
+**Outcome:** Task Force owns its runtime-only node predicate and one safe
+fallback without fabricating Hex-node history. Gate C replaces the initial
+equipped-Hex approximation with the exact settled-Spell-Drop prefix at the
+branch-aware offer frontier.
 
 Work:
 
 - add the closed runtime requirement value to the raw and normalized catalog
   contracts;
-- replace Task Force's nine-node `offerRequirements` expression with the nine
-  base Hex identities already represented in equipped Spell state;
+- replace Task Force's nine-node `offerRequirements` expression with the
+  conservative equipped-Hex approximation available before Gate C;
 - declare the audited Athena fallback trio;
 - retain the existing one-step fallback resolver and export format; and
 - update the runtime fallback audit's current-coverage section only if the
@@ -367,9 +369,8 @@ Primary tests:
 
 - catalog: Task Force owns the exact base-Hex requirement, runtime requirement,
   and fallback trio, and malformed declarations are rejected;
-- engine: Task Force is illegal before a Hex, legal after an ordinary Spell or
-  Aspect-owned Sky Fall, and resolves the first legal non-companion Athena
-  fallback; and
+- engine: the interim declaration gate is illegal before a Hex and the generic
+  resolver exports the first legal non-companion Athena fallback; and
 - representative selected-trait product: the one fallback is emitted without
   recursive or authored fallback behavior.
 
@@ -429,6 +430,9 @@ delivery edges.
 Work:
 
 - install normal and Aspect tree configurations into `hexProgress`;
+- expose the canonical settled-`SpellDrop` reward-use fact to branch-aware
+  trait legality, replace Task Force's interim equipped-Hex approximation with
+  that fact, and keep Aspect-start Sky Fall alone ineligible;
 - replace unlimited `settlePathScreen` with the audited implicit-first/raw-bank
   calculation and capacity clamp;
 - derive capacity and latch closure after writable screens;
@@ -452,23 +456,26 @@ owner:
    Talent Drop generation fail `TalentLegal`;
 6. Aspect of Selene installs frozen Sky Fall and its first Spell Drop invests
    the existing semantic `3`, with no row bonus;
-7. God Sent exists at tree creation when a currently equipped trait belongs to
+7. Task Force is illegal for Aspect-start Sky Fall before that Spell Drop,
+   becomes Planner-legal after the concrete Spell Drop settles, and still
+   exports its runtime fallback;
+8. God Sent exists at tree creation when a currently equipped trait belongs to
    the linked provider;
-8. God Sent exists at tree creation for the linked starting keepsake;
-9. later acquisition of a trait from the linked provider adds exactly two
-   capacity once;
-10. a matching All Together direct child adds the pair, while its sibling from
+9. God Sent exists at tree creation for the linked starting keepsake;
+10. later acquisition of a trait from the linked provider adds exactly two
+    capacity once;
+11. a matching All Together direct child adds the pair, while its sibling from
     the same set does not;
-11. Night Bloom's All Together outer Hera trait adds the pair even when every
+12. Night Bloom's All Together outer Hera trait adds the pair even when every
     child set is exhausted;
-12. removing the last linked-provider trait before tree creation does not
+13. removing the last linked-provider trait before tree creation does not
     qualify, while removal after insertion does not remove the pair;
-13. later ordinary or Gift-replayed linked keepsake installation adds exactly
+14. later ordinary or Gift-replayed linked keepsake installation adds exactly
     two capacity once;
-14. removing or spending the keepsake source does not remove the pair;
-15. late God Sent after closure raises capacity but does not reopen ordinary
+15. removing or spending the keepsake source does not remove the pair;
+16. late God Sent after closure raises capacity but does not reopen ordinary
     generation; and
-16. a Hermes Talent Drop purchased before closure is delivered afterward,
+17. a Hermes Talent Drop purchased before closure is delivered afterward,
     clamps to capacity, preserves raw bank, and does not clear the closure
     latch.
 

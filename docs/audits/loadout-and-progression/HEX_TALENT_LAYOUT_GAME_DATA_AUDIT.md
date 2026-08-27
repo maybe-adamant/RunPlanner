@@ -309,12 +309,14 @@ equipped. Exact acquisition timing depends on the omitted graph and investment
 path, so neither generated pair presence nor aggregate invested points proves
 that predicate at the relevant Athena offer.
 
-The Planner can still enforce the necessary modeled prefix: one of the nine
-base Hex traits must currently occupy the Spell state, including Aspect of
-Selene's built-in Sky Fall. It does not claim that this proves acquisition of
-the required Olympian node. The authored Task Force selection expresses that
-deeper intent, while the declaration supplies requirement-free Athena
-fallbacks for execution. The exact mapping is owned by the
+The Planner can still enforce a necessary modeled prefix without pretending to
+know the graph path: at least one concrete `SpellDrop` acquisition must have
+settled in the current run. An ordinary Spell Drop both installs the base Hex
+and satisfies this prefix. Aspect of Selene's built-in Sky Fall does not
+qualify by itself; the Aspect's later concrete Spell Drop does. This still does
+not prove acquisition of the required Olympian node. The authored Task Force
+selection expresses that deeper intent, while the declaration supplies
+requirement-free Athena fallbacks for execution. The exact mapping is owned by the
 [Runtime Offer Fallback audit](../rewards-and-acquisition/RUNTIME_OFFER_FALLBACK_AUDIT.md).
 No generated Path talent needs to enter the simulated equipped-trait ledger
 merely to support Task Force.
