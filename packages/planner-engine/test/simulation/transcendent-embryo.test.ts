@@ -3,9 +3,13 @@ import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   createBiomeAddress,
+  createIncomingRewardAddress,
   createOccurrenceAddress,
   createOccurrenceId,
+  createPostbossKeepsakeSelectionAddress,
+  createRoomActionAddress,
   semanticAddressKey,
+  createTraitOfferAddress,
 } from '../../src/authored-project';
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
 import { createArcanaFearState } from '../../src/simulation/arcana-fear';
@@ -28,6 +32,8 @@ import {
 import type { RewardBranchState } from '../../src/simulation/rewards/branch-primitives';
 import { initializeRewardBranches } from '../../src/simulation/rewards/processing';
 import { applyEncounterEndEffectsTransition } from '../../src/simulation/rewards/biome/lifecycle-transitions/encounter-end-effects';
+import { applyKeepsakeRackUsedTransition } from '../../src/simulation/rewards/biome/lifecycle-transitions/keepsake-rack-used';
+import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidates/trait-offer-capability';
 import type { CanonicalAuthoredRoom } from '../../src/simulation/materialization';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
 
@@ -298,6 +304,151 @@ describe('Transcendent Embryo declaration and direct Chaos fold', () => {
     expect(equipped.traitHistory?.maturedChaosBlessings).toMatchObject([
       { blessingKey: 'ChaosElementalBlessing' },
     ]);
+  });
+
+  it('detaches the marked blessing before an ordinary rack replacement reaches later Chaos eligibility', () => {
+    const rackOccurrence = createOccurrenceAddress(
+      createBiomeAddress('Underworld', 'F'),
+      createOccurrenceId('embryo-rack-replacement'),
+    );
+    const equipped = applyTranscendentEmbryoEquipResult(
+      catalog,
+      branchWithHistory(
+        createTraitHistoryState(),
+        createKeepsakeState(catalog, 'RandomBlessingKeepsake'),
+      ),
+      'RandomBlessingKeepsake',
+      { blessingKey: 'ChaosElementalBlessing' },
+      rackOccurrence,
+      1,
+      'ordinary',
+      'Epic',
+      { routeKey: 'Underworld' },
+    );
+    const transition = applyKeepsakeRackUsedTransition(
+      catalog,
+      {
+        kind: 'keepsakeRackUsed',
+        origin: rackOccurrence,
+        owner: createRoomActionAddress(
+          createBiomeAddress(rackOccurrence.routeKey, rackOccurrence.biomeKey),
+          rackOccurrence.occurrenceId,
+          'interactKeepsakeRack',
+        ),
+        sequence: 2,
+        operationIndex: 0,
+      },
+      {
+        gameName: 'F_PostBoss01',
+        keepsakeRack: {
+          disposition: { kind: 'replace', keepsakeKey: 'GoldifyKeepsake' },
+        },
+      } as unknown as CanonicalAuthoredRoom,
+      undefined,
+      createDefaultRouteLoadout(catalog),
+      [equipped],
+    );
+    const replaced = transition.branches[0];
+    if (replaced === undefined) throw new Error('rack replacement did not produce a branch');
+    expect(replaced.keepsakes.currentKey).toBe('GoldifyKeepsake');
+    expect(replaced.traitHistory?.events).toContainEqual(
+      expect.objectContaining({
+        kind: 'directChaosBlessingRemoval',
+        acquisitionRole: 'transcendentEmbryoRackReplacement',
+        acquisitionPoint: 'keepsakeRackUsed',
+        acquisitionIdentity: expect.stringContaining('embryo-rack-replacement'),
+      }),
+    );
+    expect(replaced.traitHistory?.maturedChaosBlessings).toHaveLength(0);
+    expect(replaced.traitHistory?.elementCounts).toEqual({
+      Aether: 0,
+      Earth: 0,
+      Air: 0,
+      Fire: 0,
+      Water: 0,
+    });
+
+    const laterChaos = createTraitOfferAddress(
+      createIncomingRewardAddress(
+        createBiomeAddress('Underworld', 'F'),
+        createOccurrenceId('later-chaos'),
+      ),
+      'self',
+    );
+    const capability = createTraitOfferCandidateArtifacts(
+      catalog,
+      new Map([
+        [
+          semanticAddressKey(laterChaos),
+          [Object.freeze({ before: replaced.traitHistory!, context: Object.freeze({}) })],
+        ],
+      ]),
+    ).at(laterChaos);
+    const domain = capability?.chaosPairDomains({
+      curseKey: 'ChaosMetaUpgradeCurse',
+      blessingKey: 'ChaosWeaponBlessing',
+    })[0];
+    expect(domain?.curseKeys).not.toContain('ChaosMetaUpgradeCurse');
+    expect(domain?.blessingKeys).not.toContain('ChaosLastStandBlessing');
+  });
+
+  it('keeps a Gift Gift Gift Embryo blessing when the current rack keepsake is unrelated', () => {
+    const rackOccurrence = createOccurrenceAddress(
+      createBiomeAddress('Underworld', 'F'),
+      createOccurrenceId('echo-embryo-rack-replacement'),
+    );
+    const echoHistory = foldTraitHistoryEvents(catalog, [
+      directBlessing('ChaosElementalBlessing', 'embryo:echo', 1),
+    ]);
+    const echoBranch = branchWithHistory(
+      echoHistory,
+      Object.freeze({
+        ...createKeepsakeState(catalog, 'GoldifyKeepsake'),
+        transcendentEmbryo: Object.freeze({
+          origin: 'echo' as const,
+          rarity: 'Epic' as const,
+          progress: 0,
+          markedBlessingKey: 'ChaosElementalBlessing',
+          markedBlessingAcquisitionIdentity: 'embryo:echo',
+        }),
+      }),
+    );
+    const transition = applyKeepsakeRackUsedTransition(
+      catalog,
+      {
+        kind: 'keepsakeRackUsed',
+        origin: rackOccurrence,
+        owner: createRoomActionAddress(
+          createBiomeAddress(rackOccurrence.routeKey, rackOccurrence.biomeKey),
+          rackOccurrence.occurrenceId,
+          'interactKeepsakeRack',
+        ),
+        sequence: 2,
+        operationIndex: 0,
+      },
+      {
+        gameName: 'F_PostBoss01',
+        keepsakeRack: {
+          disposition: { kind: 'replace', keepsakeKey: 'RarifyKeepsake' },
+        },
+      } as unknown as CanonicalAuthoredRoom,
+      undefined,
+      createDefaultRouteLoadout(catalog),
+      [echoBranch],
+    );
+    const replaced = transition.branches[0];
+    if (replaced === undefined) throw new Error('rack replacement did not produce a branch');
+    expect(replaced.keepsakes.currentKey).toBe('RarifyKeepsake');
+    expect(replaced.keepsakes.transcendentEmbryo).toMatchObject({
+      origin: 'echo',
+      markedBlessingAcquisitionIdentity: 'embryo:echo',
+    });
+    expect(replaced.traitHistory?.maturedChaosBlessings).toMatchObject([
+      { acquisitionIdentity: 'embryo:echo', blessingKey: 'ChaosElementalBlessing' },
+    ]);
+    expect(replaced.traitHistory?.events).not.toContainEqual(
+      expect.objectContaining({ kind: 'directChaosBlessingRemoval' }),
+    );
   });
 
   it('removes only the marked direct blessing before acquiring the replacement', () => {

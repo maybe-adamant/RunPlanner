@@ -34,7 +34,6 @@ describe('reward compiler acquisition and producer lifecycle normalizers', () =>
       'RoomMoneyTripleDrop',
       'TalentDrop',
       'TalentBigDrop',
-      'TrialUpgrade',
       'GiftDrop',
       'MetaCurrencyDrop',
       'MetaCurrencyBigDrop',

@@ -230,6 +230,12 @@ describe('Echo last-reward acquisition history', () => {
     expect(history.lastRewardRecreation?.offer.rewardType).toBe('ZeusUpgrade');
 
     history = applyConcreteAcquisition(rewardKernelCatalog, history, {
+      kind: 'loot',
+      gameName: 'TrialUpgrade',
+    });
+    expect(history.lastRewardRecreation?.offer.rewardType).toBe('ZeusUpgrade');
+
+    history = applyConcreteAcquisition(rewardKernelCatalog, history, {
       kind: 'consumable',
       gameName: 'HealBigDrop',
     });

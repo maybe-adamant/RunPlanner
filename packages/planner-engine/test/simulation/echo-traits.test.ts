@@ -37,7 +37,6 @@ import {
 } from '@run-planner/engine/simulation';
 import { authorLegalTraitOffers, editTestRoomActionOrder } from '@run-planner/test-fixtures/shared';
 import { createGoldenFGHProject, goldenHBiome } from '@run-planner/test-fixtures/underworld';
-import { loadGTailChaosTimepieceEchoCheckpoint } from '@run-planner/test-fixtures/checkpoints/underworld';
 import { describe, expect, it } from 'vitest';
 
 import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidates/trait-offer-capability';
@@ -2514,53 +2513,5 @@ describe('Echo Gate C Reward Reward Reward', () => {
     expect(
       h.rewards.branches.every((branch) => branch.history.lootTypeHistory.WeaponUpgrade === 3),
     ).toBe(true);
-  });
-
-  it('replays the G-tail TrialUpgrade through Echo after Time Piece destroys the intervening Fields and miniboss rewards', () => {
-    let project = selectGoldenBridge(loadGTailChaosTimepieceEchoCheckpoint());
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceTraitOffer',
-      trait: echoOwner,
-      value: echoRewardOffer(),
-    });
-    const incomplete = simulateProjectAssembly(catalog, project);
-    const h = incomplete.evaluation.routes[0]!.biomes.find((biome) => biome.biomeKey === 'H');
-    if (h === undefined || !('findings' in h)) throw new Error('H must reach the Echo frontier');
-    expect(h.findings).toContainEqual(
-      expect.objectContaining({ code: 'rewardMissing', origin: echoReplayEntry() }),
-    );
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceAcquisitionEntryOffer',
-      entry: echoReplayEntry(),
-      value: { rewardType: 'TrialUpgrade' },
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceTraitOffer',
-      trait: createTraitOfferAddress(echoReplayEntry(), 'self'),
-      value: {
-        kind: 'chaos',
-        giverKey: 'Chaos',
-        curseKey: 'ChaosNoMoneyCurse',
-        duration: 3,
-        curseValues: {},
-        blessingKey: 'ChaosWeaponBlessing',
-        rarity: 'Common',
-        blessingValues: { damageBonus: 0.2 },
-      },
-    });
-    const evaluated = simulateProjectAssembly(catalog, project).evaluation.routes[0]!.biomes.find(
-      (biome) => biome.biomeKey === 'H',
-    );
-    if (evaluated === undefined || !('rewards' in evaluated))
-      throw new Error('H must evaluate the resolved Echo replay');
-    expect(evaluated.rewards.branches[0]?.traitHistory?.activeChaosCurses).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          owner: echoReplayEntry(),
-          curseKey: 'ChaosNoMoneyCurse',
-          blessingKey: 'ChaosWeaponBlessing',
-        }),
-      ]),
-    );
   });
 });

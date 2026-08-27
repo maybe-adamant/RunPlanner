@@ -247,7 +247,6 @@ export function normalizeAcquisitions(
     'StackUpgradeBig',
     'StackUpgradeTriple',
     'WeaponUpgrade',
-    'TrialUpgrade',
     'MaxHealthDrop',
     'MaxHealthDropBig',
     'MaxManaDrop',
