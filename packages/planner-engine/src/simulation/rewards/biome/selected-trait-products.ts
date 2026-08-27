@@ -137,6 +137,14 @@ export function selectedTraitOfferProducts(
                 composition: trace.composition,
                 replacementComposition: trace.replacementComposition,
                 targetedAcquisition: trace.targetedAcquisition,
+                persephoneLevelBonusMaximums: Object.freeze(
+                  trace.levelResolutions.map(
+                    (resolution) => resolution.persephoneLevelBonusMaximum,
+                  ),
+                ),
+                effectiveLevels: Object.freeze(
+                  trace.levelResolutions.map((resolution) => resolution.effectiveLevel),
+                ),
               }),
             ),
           ),

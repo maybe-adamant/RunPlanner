@@ -44,6 +44,7 @@ import {
   evaluateCallingCardOffer,
 } from '../keepsakes';
 import type { AuthoredConcaveStoneResult } from '../../authored-project/traits';
+import { resolveTraitOfferOptionLevel } from '../trait-offer-levels';
 
 export interface ConcaveStoneCandidateBranch {
   readonly procSupport: number;
@@ -272,14 +273,57 @@ export function createTraitOfferCandidateArtifacts(
                 context.before,
                 traitOfferCandidateContext(catalog, context.before, context.context, value),
               );
+              const resolvedContext = traitOfferCandidateContext(
+                catalog,
+                context.before,
+                context.context,
+                value,
+              );
+              const levelResolutions =
+                value.kind !== 'traits'
+                  ? Object.freeze([])
+                  : Object.freeze(
+                      value.options.map((option, index) =>
+                        resolveTraitOfferOptionLevel({
+                          catalog,
+                          before: context.before,
+                          context: resolvedContext,
+                          ...(context.keepsakes === undefined
+                            ? {}
+                            : { keepsakes: context.keepsakes }),
+                          option,
+                          ...(base.assessments[index] === undefined
+                            ? {}
+                            : { assessment: base.assessments[index] }),
+                        }),
+                      ),
+                    );
+              const assessments = Object.freeze(
+                base.assessments.map((assessment, index) => {
+                  const level = levelResolutions[index];
+                  return level === undefined || level.findings.length === 0
+                    ? assessment
+                    : Object.freeze({
+                        ...assessment,
+                        legal: false,
+                        findings: Object.freeze([...assessment.findings, ...level.findings]),
+                      });
+                }),
+              );
               // Calling Card acts only after the authored (rolled) offer is
               // accepted. Its derived effective rarity is deliberately not a
               // fresh-roll input: Heroic and promoted replacement rows must
               // retain the legality/composition assessment of that base offer.
               return Object.freeze({
-                assessments: base.assessments,
+                assessments,
                 composition: base.composition,
                 replacementComposition: base.replacementComposition,
+                persephoneLevelBonusMaximums: Object.freeze(
+                  levelResolutions.map((resolution) => resolution?.persephoneLevelBonusMaximum),
+                ),
+                effectiveLevels: Object.freeze(
+                  levelResolutions.map((resolution) => resolution?.effectiveLevel),
+                ),
                 targetedAcquisition: assessSelectedTargetedAcquisition(
                   catalog,
                   value,

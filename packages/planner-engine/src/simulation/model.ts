@@ -134,7 +134,8 @@ export type TraitFindingCode =
   | 'chaosOrdinaryRequiresCommon'
   | 'chaosRejectedBlockMissing'
   | 'chaosRejectedBlockUnavailable'
-  | 'chaosPairUnavailable';
+  | 'chaosPairUnavailable'
+  | 'persephoneLevelBonusUnavailable';
 
 export type FindingCode =
   | CompletenessFindingCode

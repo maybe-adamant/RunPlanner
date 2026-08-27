@@ -102,7 +102,16 @@ const aspects = [
   { key: 'TorchAutofireAspect', label: 'Aspect of Supay', weaponKey: 'WeaponTorch' },
   { key: 'LobAmmoBoostAspect', label: 'Aspect of Melinoë', weaponKey: 'WeaponLob' },
   { key: 'LobCloseAttackAspect', label: 'Aspect of Medea', weaponKey: 'WeaponLob' },
-  { key: 'LobImpulseAspect', label: 'Aspect of Persephone', weaponKey: 'WeaponLob' },
+  {
+    key: 'LobImpulseAspect',
+    label: 'Aspect of Persephone',
+    weaponKey: 'WeaponLob',
+    traitOfferLevelBonus: {
+      maximumBonus: 5,
+      upgradedMaximumBonus: 8,
+      upgradeTraitKey: 'WeaponUpgradeBoon',
+    },
+  },
   { key: 'LobGunAspect', label: 'Aspect of Hel', weaponKey: 'WeaponLob' },
   { key: 'BaseSuitAspect', label: 'Aspect of Melinoë', weaponKey: 'WeaponSuit' },
   { key: 'SuitMarkCritAspect', label: 'Aspect of Nyx', weaponKey: 'WeaponSuit' },

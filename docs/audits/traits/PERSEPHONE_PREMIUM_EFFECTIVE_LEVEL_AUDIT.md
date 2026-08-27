@@ -134,10 +134,12 @@ addition.
 
 ## Planner disposition
 
-The Planner will persist only Persephone's random additive contribution on the
+The Planner has an optional Persephone random additive contribution on the
 exact authored option row. The legal contribution is `0..5` before Premium
-Service and `0..8` after a prior Premium Service acquisition. Zero is an
-explicit random result, not the absence of authorship.
+Service and `0..8` after a prior Premium Service acquisition. Only nonzero
+outcomes need persistence: an omitted active value semantically resolves as
+the ordinary `+0` result, so authors do not have to author zero on every
+eligible row. Explicit zero remains a valid round-tripping representation.
 
 The field is active only for a fresh, stackable core-god option on a supported
 loot screen while Aspect of Persephone is equipped. It remains frozen with the

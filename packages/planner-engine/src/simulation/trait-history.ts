@@ -28,6 +28,8 @@ export interface TraitOfferEvent {
   readonly replacementTransition?: TraitReplacementTransition;
   /** Exact declaration-owned acquisition mutation derived from pre-offer state. */
   readonly targetedAcquisitionTransition?: TraitTargetedAcquisitionTransition;
+  /** Derived selected-row level from the frozen offer frontier. */
+  readonly selectedEffectiveLevel?: number;
 }
 
 /** A frozen Concave Stone pickup, distinct from the original generated offer. */
@@ -45,6 +47,8 @@ export interface ConcaveStoneSecondaryEvent {
   readonly bannedTraitKeys?: readonly string[];
   readonly replacementTransition?: TraitReplacementTransition;
   readonly targetedAcquisitionTransition?: TraitTargetedAcquisitionTransition;
+  /** Derived selected-row level from the frozen offer frontier. */
+  readonly selectedEffectiveLevel?: number;
 }
 
 /** A closed derived mutation of an already-equipped Pom-eligible trait. */
@@ -828,7 +832,9 @@ export function foldTraitHistoryEvents(
         giverKey: giver.key,
         providerKind: giver.providerKind,
         ...(option.rarity === undefined ? {} : { rarity: option.rarity }),
-        ...(isLevelBearingTrait(catalog, option.traitKey) ? { level: 1 } : {}),
+        ...(isLevelBearingTrait(catalog, option.traitKey)
+          ? { level: event.selectedEffectiveLevel ?? 1 }
+          : {}),
         ...(declaration.hammerCompatibility === undefined ? {} : { hammerRank: 'RankI' as const }),
         sourceRole: event.acquisitionRole,
         ...(event.acquisitionIdentity === undefined
@@ -862,7 +868,7 @@ export function foldTraitHistoryEvents(
           }
         }
       }
-      if (event.replacementTransition !== undefined) {
+      if (event.replacementTransition !== undefined && event.selectedEffectiveLevel === undefined) {
         const replacement = equipped[event.replacementTransition.newTraitKey];
         if (replacement !== undefined && replacementLevel !== undefined) {
           equipped[event.replacementTransition.newTraitKey] = Object.freeze({

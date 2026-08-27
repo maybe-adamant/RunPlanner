@@ -1261,6 +1261,8 @@ describe('reached trait offer chronology', () => {
         { legal: true, findings: [] },
       ],
       composition: { applies: false, legal: true, findings: [] },
+      persephoneLevelBonusMaximums: [undefined, undefined, undefined],
+      effectiveLevels: [1, 1, 1],
     });
     expect(result.result.branches[1]).toEqual({
       assessments: [
@@ -1273,6 +1275,8 @@ describe('reached trait offer chronology', () => {
         legal: false,
         findings: [{ code: 'missingAttackOrSpecial' }],
       },
+      persephoneLevelBonusMaximums: [undefined, undefined, undefined],
+      effectiveLevels: [1, 1, 1],
     });
     expect(result.result.findings).toContainEqual({ code: 'missingAttackOrSpecial' });
   });

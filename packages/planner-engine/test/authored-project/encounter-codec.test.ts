@@ -123,6 +123,13 @@ function allTogetherOffer(document: JsonRecord): JsonRecord {
   return (reward.traitOffersByAcquisitionRole as JsonRecord).source as JsonRecord;
 }
 
+function arachneStoryOffer(document: JsonRecord): JsonRecord {
+  const encounters = occurrence(document, 'F', goldenFOccurrenceId(7, 1)).encounters as JsonRecord;
+  const byPhase = encounters.traitOffersByPhase as JsonRecord;
+  const byEncounter = byPhase.Encounter as JsonRecord;
+  return byEncounter.Story_Arachne_01 as JsonRecord;
+}
+
 describe('schema-54 occurrence-owned encounter persistence', () => {
   it('rejects malformed and unowned reserved Nemesis generated acquisition sites', () => {
     const phase = createEncounterPhaseAddress(
@@ -640,6 +647,30 @@ describe('schema-54 occurrence-owned encounter persistence', () => {
     });
     expect(decoded).toEqual(project);
   });
+
+  it('round-trips absent and explicit Persephone offer contributions at the encounter boundary', () => {
+    for (const bonus of [undefined, 0, 5, 8] as const) {
+      const document = encoded(arachneStoryProject());
+      const option = (arachneStoryOffer(document).options as JsonRecord[])[0]!;
+      if (bonus === undefined) delete option.persephoneLevelBonus;
+      else option.persephoneLevelBonus = bonus;
+
+      const decoded = decodeProjectDocument(document, catalog);
+      const roundTrippedOption = (arachneStoryOffer(encoded(decoded)).options as JsonRecord[])[0]!;
+      if (bonus === undefined) expect('persephoneLevelBonus' in roundTrippedOption).toBe(false);
+      else expect(roundTrippedOption.persephoneLevelBonus).toBe(bonus);
+    }
+  });
+
+  it.each([-1, 1.5, 9, '5', null, true] as const)(
+    'rejects malformed Persephone offer contribution %s at the encounter boundary',
+    (bonus) => {
+      const document = encoded(arachneStoryProject());
+      const option = (arachneStoryOffer(document).options as JsonRecord[])[0]!;
+      option.persephoneLevelBonus = bonus;
+      expect(() => decodeProjectDocument(document, catalog)).toThrow(/persephoneLevelBonus/);
+    },
+  );
 
   it('requires fixed Story encounter offers to retain their exact triple traits shape', () => {
     const document = encoded(arachneStoryProject());

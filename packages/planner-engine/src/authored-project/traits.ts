@@ -21,6 +21,8 @@ export interface AuthoredTraitOption {
   readonly allTogetherResult?: AuthoredAllTogetherResult;
   /** Natural Selection's complete ordered successful-increment outcome. */
   readonly naturalSelectionTargets?: OneToEight<string>;
+  /** Persephone's frozen additive contribution for this generated row. */
+  readonly persephoneLevelBonus?: number;
 }
 
 export type AuthoredAllTogetherResult = Readonly<
