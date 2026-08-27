@@ -83,6 +83,14 @@ export function TraitOfferEditorShell({
       : undefined;
   };
   const spellOffer = interaction.giver.providerKind === 'spell';
+  const rejectedRules =
+    candidate?.evaluation.kind === 'traitOffer'
+      ? candidate.evaluation.result.chaosOfferRules
+      : undefined;
+  const rejectedBlock =
+    value.kind === 'traits' && rejectedRules !== undefined
+      ? interaction.rejectedBlockDomain?.(rejectedRules)
+      : undefined;
   const traitsStartingDraft = useMemo(
     () => (value.kind === 'fallbackGold' ? interaction.traitsStartingDraft?.() : undefined),
     [interaction, value],
@@ -212,6 +220,40 @@ export function TraitOfferEditorShell({
       ) : value.kind !== 'traits' ? null : (
         <>
           <div className="trait-offer-options">
+            {rejectedBlock === undefined ||
+            (!rejectedBlock.required && !rejectedBlock.needsRepair) ? null : (
+              <fieldset aria-label="Rejected blocked row" className="trait-offer-rejected-block">
+                <legend>Rejected blocked row</legend>
+                {rejectedBlock.canClear ? (
+                  <label>
+                    <input
+                      checked={value.rejectedOptionKey === undefined}
+                      name={`${interaction.key}-rejected-block`}
+                      onChange={() => {
+                        const { rejectedOptionKey: _rejectedOptionKey, ...withoutBlock } = value;
+                        void _rejectedOptionKey;
+                        updateValue(Object.freeze(withoutBlock));
+                      }}
+                      type="radio"
+                    />
+                    No blocked row
+                  </label>
+                ) : null}
+                {rejectedBlock.optionKeys.map((optionKey) => (
+                  <label key={optionKey}>
+                    <input
+                      checked={value.rejectedOptionKey === optionKey}
+                      name={`${interaction.key}-rejected-block`}
+                      onChange={() =>
+                        updateValue(Object.freeze({ ...value, rejectedOptionKey: optionKey }))
+                      }
+                      type="radio"
+                    />
+                    Block {optionKey.replace('option', 'Option ')}
+                  </label>
+                ))}
+              </fieldset>
+            )}
             {value.options.map((_, index) => {
               const optionKey = OPTION_KEYS[index]!;
               const optionFeedback = feedback.options[index];
@@ -226,6 +268,7 @@ export function TraitOfferEditorShell({
                       interaction={interaction}
                       onUpdate={updateValue}
                       optionKey={optionKey}
+                      rejected={value.rejectedOptionKey === optionKey}
                       {...(rowEffectiveLevel === undefined
                         ? {}
                         : { effectiveLevel: rowEffectiveLevel })}
@@ -246,6 +289,7 @@ export function TraitOfferEditorShell({
                       interaction={interaction}
                       onUpdate={updateValue}
                       optionKey={optionKey}
+                      rejected={value.rejectedOptionKey === optionKey}
                       {...(rowPersephoneLevelBonusMaximum === undefined
                         ? {}
                         : { persephoneLevelBonusMaximum: rowPersephoneLevelBonusMaximum })}

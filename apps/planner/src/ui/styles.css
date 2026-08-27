@@ -757,6 +757,23 @@ button:disabled {
   min-width: 0;
 }
 
+.trait-offer-rejected-block {
+  border: 1px solid var(--border, #ccd3df);
+  border-radius: 0.45rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+}
+
+.trait-offer-rejected-block label {
+  align-items: center;
+  display: inline-flex;
+  gap: 0.3rem;
+}
+
 .trait-offer-editor {
   display: grid;
   gap: 0.85rem;

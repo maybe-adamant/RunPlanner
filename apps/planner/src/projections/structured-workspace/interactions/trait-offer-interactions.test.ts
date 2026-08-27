@@ -127,6 +127,52 @@ describe('trait-offer-interactions', () => {
     });
   });
 
+  it('conservatively projects Rejected repair and mixed-branch rules through a bound ordinary interaction', () => {
+    const { interactions } = bind(createGoldenFGHIProject(), 'Underworld', 'F');
+    const interaction = [...interactions.traitOffers.values()].find(
+      (candidate) =>
+        candidate.giver.providerKind === 'olympian' && candidate.value?.kind === 'traits',
+    );
+    if (interaction?.rejectedBlockDomain === undefined)
+      throw new Error('ordinary Rejected interaction is missing');
+    const required = Object.freeze({
+      ordinaryRequiresCommon: false,
+      rejectedBlockRequired: true,
+      rejectedBlockableOptionKeys: Object.freeze(['option2', 'option3'] as const),
+      rejectedBlockNeedsRepair: true,
+    });
+    expect(interaction.rejectedBlockDomain([required])).toEqual({
+      required: true,
+      canClear: false,
+      needsRepair: true,
+      optionKeys: ['option2', 'option3'],
+    });
+    expect(
+      interaction.rejectedBlockDomain([
+        Object.freeze({ ...required, rejectedBlockNeedsRepair: false }),
+      ]),
+    ).toEqual({
+      required: true,
+      canClear: false,
+      needsRepair: false,
+      optionKeys: ['option2', 'option3'],
+    });
+    expect(
+      interaction.rejectedBlockDomain([
+        Object.freeze({
+          ...required,
+          rejectedBlockableOptionKeys: Object.freeze(['option3'] as const),
+        }),
+        Object.freeze({ ...required, rejectedBlockRequired: false }),
+      ]),
+    ).toEqual({
+      required: false,
+      canClear: false,
+      needsRepair: true,
+      optionKeys: ['option3'],
+    });
+  });
+
   it('projects the selected Spell Hex tree with layout and identity exclusion', () => {
     const occurrenceId = goldenFOccurrenceId(10, 2);
     const reward = createIncomingRewardAddress(goldenFBiome, occurrenceId);

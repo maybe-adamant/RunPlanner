@@ -406,6 +406,13 @@ export interface EvaluatedTraitOfferCandidate {
     readonly branches: readonly TraitOfferCandidateBranch[];
     readonly callingCard?: readonly CallingCardOfferCandidateBranch[];
     readonly concaveStone?: readonly ConcaveStoneCandidateBranch[];
+    /** Branch-correlated active Chaos restrictions at this complete offer. */
+    readonly chaosOfferRules?: readonly {
+      readonly ordinaryRequiresCommon: boolean;
+      readonly rejectedBlockRequired: boolean;
+      readonly rejectedBlockableOptionKeys: readonly TraitOptionKey[];
+      readonly rejectedBlockNeedsRepair: boolean;
+    }[];
     /** Published only when every surviving branch agrees for each option. */
     readonly persephoneLevelBonusMaximums: readonly (number | undefined)[];
     readonly effectiveLevels: readonly (number | undefined)[];
@@ -577,6 +584,12 @@ function evaluatedTraitOfferCandidate(
   assessment: TraitOfferCandidateAssessment,
   callingCard: readonly CallingCardOfferCandidateBranch[],
   concaveStone: readonly ConcaveStoneCandidateBranch[] = Object.freeze([]),
+  chaosOfferRules: readonly {
+    readonly ordinaryRequiresCommon: boolean;
+    readonly rejectedBlockRequired: boolean;
+    readonly rejectedBlockableOptionKeys: readonly TraitOptionKey[];
+    readonly rejectedBlockNeedsRepair: boolean;
+  }[] = Object.freeze([]),
 ): EvaluatedTraitOfferCandidate {
   const agreeingBranchValues = (
     key: 'persephoneLevelBonusMaximums' | 'effectiveLevels',
@@ -600,6 +613,7 @@ function evaluatedTraitOfferCandidate(
       findings: assessment.findings,
       callingCard: Object.freeze(callingCard),
       concaveStone: Object.freeze(concaveStone),
+      chaosOfferRules: Object.freeze(chaosOfferRules),
       persephoneLevelBonusMaximums: agreeingBranchValues('persephoneLevelBonusMaximums'),
       effectiveLevels: agreeingBranchValues('effectiveLevels'),
     }),
@@ -729,13 +743,14 @@ export function evaluateTraitOfferCandidate(
     ),
   );
   const concaveStone = Object.freeze(capability?.concaveStone(query.value) ?? []);
+  const chaosOfferRules = Object.freeze(capability?.chaosOfferRules(query.value) ?? []);
   const assessment = assessTraitOfferCandidate(
     capability === undefined ? Object.freeze([]) : capability.evaluateOffer(query.value),
     duplicateFindings,
     callingCard,
     query.value,
   );
-  return evaluatedTraitOfferCandidate(assessment, callingCard, concaveStone);
+  return evaluatedTraitOfferCandidate(assessment, callingCard, concaveStone, chaosOfferRules);
 }
 
 export function evaluateTraitOfferFocusedOptionCandidate(

@@ -137,6 +137,8 @@ export interface TraitOfferCandidateCapability {
     readonly ordinaryRequiresCommon: boolean;
     readonly rejectedBlockRequired: boolean;
     readonly rejectedBlockableOptionKeys: readonly TraitOptionKey[];
+    /** A retained block is missing, stale, or targets the selected row. */
+    readonly rejectedBlockNeedsRepair: boolean;
   }[];
   /** Declaration-owned three-option Chaos envelope and selected-outcome domains. */
   readonly chaosOfferDomain: (value?: AuthoredTraitOffer) => readonly ChaosOfferDomain[];
@@ -644,29 +646,42 @@ export function createTraitOfferCandidateArtifacts(
             }),
           ),
         chaosOfferRules: (value?: AuthoredTraitOffer) =>
-          Object.freeze(
-            branchContexts.map((context) => {
-              const ordinary = context.before.activeChaosCurses.some(
-                (curse) => curse.semanticTag === 'Ordinary',
-              );
-              const rejected = context.before.activeChaosCurses.some(
-                (curse) => curse.semanticTag === 'Rejected',
-              );
-              return Object.freeze({
-                ordinaryRequiresCommon: ordinary,
-                rejectedBlockRequired: rejected,
-                rejectedBlockableOptionKeys: Object.freeze(
-                  !rejected
-                    ? []
-                    : (['option1', 'option2', 'option3'] as const)
-                        .slice(0, value?.kind === 'traits' ? value.options.length : 3)
-                        .filter(
-                          (key) => value?.kind !== 'traits' || key !== value.selectedOptionKey,
-                        ),
-                ),
-              });
-            }),
-          ),
+          value?.kind !== 'traits' ||
+          (catalog.traitGivers.byKey[value.giverKey]?.providerKind !== 'olympian' &&
+            catalog.traitGivers.byKey[value.giverKey]?.providerKind !== 'hermes')
+            ? Object.freeze([])
+            : Object.freeze(
+                branchContexts.map((context) => {
+                  const ordinary = context.before.activeChaosCurses.some(
+                    (curse) => curse.semanticTag === 'Ordinary',
+                  );
+                  const rejected = context.before.activeChaosCurses.some(
+                    (curse) => curse.semanticTag === 'Rejected',
+                  );
+                  return Object.freeze({
+                    ordinaryRequiresCommon: ordinary,
+                    rejectedBlockRequired: rejected,
+                    rejectedBlockableOptionKeys: Object.freeze(
+                      !rejected
+                        ? []
+                        : (['option1', 'option2', 'option3'] as const)
+                            .slice(0, value?.kind === 'traits' ? value.options.length : 3)
+                            .filter(
+                              (key) => value?.kind !== 'traits' || key !== value.selectedOptionKey,
+                            ),
+                    ),
+                    rejectedBlockNeedsRepair:
+                      value?.kind === 'traits' &&
+                      (rejected
+                        ? value.rejectedOptionKey === undefined ||
+                          !(['option1', 'option2', 'option3'] as const)
+                            .slice(0, value.options.length)
+                            .filter((key) => key !== value.selectedOptionKey)
+                            .includes(value.rejectedOptionKey)
+                        : value.rejectedOptionKey !== undefined),
+                  });
+                }),
+              ),
         chaosOfferDomain: (value?: AuthoredTraitOffer) =>
           Object.freeze(
             branchContexts.map((context) => {

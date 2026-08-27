@@ -235,6 +235,103 @@ describe('trait offer editor entry and dialog', () => {
     application.dispose();
   });
 
+  it('repairs a required Rejected row, keeps that row unavailable, and saves one undoable offer edit', async () => {
+    const application = createApplication();
+    application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
+    const workspace = application.selectStructuredWorkspace(application.store.getState());
+    const base = [...workspace.interactions.traitOffers.values()].find(
+      (candidate) => candidate.value?.kind === 'traits' && candidate.value.options.length === 3,
+    );
+    if (base === undefined || base.value?.kind !== 'traits')
+      throw new Error('three-row trait interaction is missing');
+    const { rejectedOptionKey: _rejectedOptionKey, ...withoutRejected } = base.value;
+    void _rejectedOptionKey;
+    const value = Object.freeze({
+      ...withoutRejected,
+      selectedOptionKey: 'option1' as const,
+      rarificationActions: Object.freeze([]),
+    });
+    const interaction = Object.freeze({
+      ...base,
+      value,
+      rejectedBlockDomain: () =>
+        Object.freeze({
+          required: true,
+          canClear: false,
+          needsRepair: true,
+          optionKeys: Object.freeze(['option2', 'option3'] as const),
+        }),
+      load: (draft: AuthoredTraitOffer = value) => {
+        const supported = draft.kind === 'traits' && draft.rejectedOptionKey === 'option2';
+        return Object.freeze([
+          Object.freeze({
+            value: draft,
+            evaluation: Object.freeze({
+              kind: 'traitOffer' as const,
+              result: Object.freeze({
+                assessments: Object.freeze([]),
+                branches: Object.freeze([]),
+                callingCard: Object.freeze([
+                  Object.freeze({
+                    effectiveRarities: Object.freeze([]),
+                    invalidActionIndexes: Object.freeze([]),
+                    rarifiableOptionKeys: Object.freeze(['option1', 'option2', 'option3'] as const),
+                  }),
+                ]),
+                chaosOfferRules: Object.freeze([
+                  Object.freeze({
+                    ordinaryRequiresCommon: false,
+                    rejectedBlockRequired: true,
+                    rejectedBlockableOptionKeys: Object.freeze(['option2', 'option3'] as const),
+                    rejectedBlockNeedsRepair: !supported,
+                  }),
+                ]),
+                effectiveLevels: Object.freeze([]),
+                findings: Object.freeze([]),
+                persephoneLevelBonusMaximums: Object.freeze([]),
+                supported,
+              }),
+            }),
+          }),
+        ]);
+      },
+    });
+    const interactions = Object.freeze({
+      ...workspace.interactions,
+      traitOffers: new Map([[interaction.key, interaction]]),
+    });
+    const user = userEvent.setup();
+    render(
+      <Provider store={application.store}>
+        <TraitOfferDialog interactions={interactions} target={interaction.owner} />
+      </Provider>,
+    );
+
+    expect(screen.getByRole('group', { name: 'Rejected blocked row' })).toBeTruthy();
+    const save = screen.getByRole('button', { name: 'Save trait offer' });
+    expect(save).toHaveProperty('disabled', true);
+    await user.click(screen.getByRole('radio', { name: 'Block Option 2' }));
+    expect(screen.getAllByRole('button', { name: 'Rarify' })[1]).toHaveProperty('disabled', true);
+    expect(screen.getAllByRole('radio', { name: 'Blocked by Rejected' })[0]).toHaveProperty(
+      'disabled',
+      true,
+    );
+    expect(save).toHaveProperty('disabled', false);
+    await user.click(save);
+    const saved = findTraitOfferControl(
+      application.selectStructuredWorkspace(application.store.getState()),
+      interaction.owner,
+    );
+    expect(saved.offer).toMatchObject({ rejectedOptionKey: 'option2' });
+    application.store.dispatch(authoredProjectUndoRequested());
+    const restored = findTraitOfferControl(
+      application.selectStructuredWorkspace(application.store.getState()),
+      interaction.owner,
+    );
+    expect(restored.offer).not.toMatchObject({ rejectedOptionKey: 'option2' });
+    application.dispose();
+  });
+
   it('refreshes an open editor when an external persisted Persephone result changes', async () => {
     const application = createApplication();
     application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));

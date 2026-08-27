@@ -51,6 +51,7 @@ function traitOfferRevision(interaction: WorkspaceTraitOfferInteraction): string
     JSON.stringify(interaction.value.hexTree),
     JSON.stringify(interaction.value.concaveStoneResult),
     interaction.value.selectedOptionKey,
+    interaction.value.rejectedOptionKey ?? '',
   ].join('|');
 }
 

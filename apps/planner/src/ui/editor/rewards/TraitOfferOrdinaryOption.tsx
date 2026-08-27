@@ -28,6 +28,7 @@ export function TraitOfferOrdinaryOption({
   index,
   interaction,
   optionKey,
+  rejected,
   effectiveRarity,
   effectiveLevel,
   persephoneLevelBonusMaximum,
@@ -39,6 +40,8 @@ export function TraitOfferOrdinaryOption({
   readonly index: number;
   readonly interaction: WorkspaceTraitOfferInteraction;
   readonly optionKey: AuthoredTraitOfferTraits['selectedOptionKey'];
+  /** Rejected keeps this generated row visible but unavailable. */
+  readonly rejected: boolean;
   readonly effectiveRarity?: TraitRarity;
   readonly effectiveLevel?: number;
   readonly persephoneLevelBonusMaximum?: number;
@@ -147,7 +150,7 @@ export function TraitOfferOrdinaryOption({
       {spellOffer ? null : (
         <button
           className="secondary-action action-compact"
-          disabled={!rarifySupported}
+          disabled={rejected || !rarifySupported}
           onClick={() =>
             onUpdate(
               Object.freeze({
@@ -186,6 +189,7 @@ export function TraitOfferOrdinaryOption({
       <label className="trait-option-selected">
         <input
           checked={value.selectedOptionKey === optionKey}
+          disabled={rejected}
           name={`${semanticAddressKey(interaction.owner)}-selected`}
           onChange={() =>
             onUpdate(
@@ -194,7 +198,7 @@ export function TraitOfferOrdinaryOption({
           }
           type="radio"
         />
-        Selected
+        {rejected ? 'Blocked by Rejected' : 'Selected'}
       </label>
     </fieldset>
   );
