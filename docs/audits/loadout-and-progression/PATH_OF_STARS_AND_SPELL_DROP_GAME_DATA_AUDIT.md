@@ -13,13 +13,16 @@ This document is the primary evidence authority for:
 - Aspect of Selene's starting spell, source-level starting allocation, and the
   semantic equivalence of its routed `SpellDrop` to a three-point Path screen;
 - Moon Beam's point grants as contacts with the same point bank; and
-- the planner boundary that permits point accounting without implementing Hex
-  trees or authored Path-node selection.
+- the point-accounting boundary shared with the separately audited finite Hex
+  layout model.
 
 Moon Beam reward priority remains owned by
 [the Olympian keepsake and Moon Beam reward-pressure audit](OLYMPIAN_KEEPSAKE_AND_MOON_BEAM_REWARD_PRESSURE_AUDIT.md).
-This audit does not map individual Hex talent trees, talent prerequisites,
-duo/legendary nodes, rerolls, or damage and Magick effects.
+Finite layout capacities, generated Rare/Epic identities, Olympian extensions,
+and full-tree closure are owned by the
+[Hex Talent Layout audit](HEX_TALENT_LAYOUT_GAME_DATA_AUDIT.md). This audit does
+not map talent prerequisites, graph positions, investment order, rerolls, or
+damage and Magick effects.
 
 ## Sources
 
@@ -101,8 +104,9 @@ one, three, and five.
 Any points already banked before the pickup fund additional selections on the
 same screen. This is how Moon Beam and the initial spell-choice bonus take
 effect. If the Hex tree becomes fully invested before all banked points are
-spent, the unused bank can remain; exact tree-capacity exhaustion cannot be
-derived without modeling the tree.
+spent, the unused bank can remain. The separately audited finite layout model
+makes that capacity exhaustion derivable without implementing graph
+connectivity.
 
 Purchases and pickups use the same writable talent-screen callback once the
 concrete consumable is acquired. Provenance changes purchase interactions, not
@@ -233,8 +237,8 @@ positional bonus.
 
 ## Planner disposition
 
-The source facts support a narrow Path-accounting slice without a Hex-tree
-model:
+The source facts support a narrow Path-accounting slice that composes with the
+finite, graph-free Hex layout model:
 
 - retain the existing ordered three-row `SpellDrop` offer; option keys/row
   order are semantic because they own zero/one/two bonus points;
@@ -248,12 +252,11 @@ model:
 - apply Moon Beam ordinary, Cherished, and Gift grants to the same account; and
 - keep reward-priority selection in the separate exact-name priority product.
 
-The audit does **not** require authored Hex nodes. A future implementation must
-name its projected counts truthfully—at minimum distinguishing awarded or
-banked points from invested nodes—and must not claim exact remaining tree
-capacity without a tree model. The simplest Moon Beam-capable slice may account
-for point grants and Path acquisitions while leaving node identities and their
-gameplay effects sim-neutral.
+This audit does **not** require authored graph nodes. A future implementation
+must name its projected counts truthfully—at minimum distinguishing awarded or
+banked points from invested nodes. Exact remaining capacity may be derived from
+the layout and Olympian extension audited separately, while individual node
+reachability and talent effects remain outside this point-ledger authority.
 
 ## Current planner coverage
 
