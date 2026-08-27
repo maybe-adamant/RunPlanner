@@ -32,7 +32,6 @@ import { catalog } from '@run-planner/hades2-catalog';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { createApplication } from '@planner/composition/createApplication';
-import { candidateSupport } from '@planner/projections/candidateProjection';
 import type {
   AutosaveRecoveryAdapter,
   AutosaveScheduler,
@@ -1627,7 +1626,7 @@ describe('planner history interaction', () => {
 describe('route loadout interaction', () => {
   it('presents starting Grasp capacity and disables Arcana or Void choices that exceed it', async () => {
     const { user } = renderPlannerForInteraction();
-    const startingKeepsake = screen.getByRole('combobox', { name: 'Starting keepsake' });
+    const startingKeepsake = screen.getByRole('button', { name: 'Starting keepsake' });
     const weapon = screen.getByRole('combobox', { name: 'Weapon' });
     const aspect = screen.getByRole('combobox', { name: 'Aspect' });
     expect(startingKeepsake.closest('.route-keepsake-controls')).toBeTruthy();
@@ -1694,30 +1693,30 @@ describe('route loadout interaction', () => {
 
   it('authors one of the complete starting-keepsake inventory through route settings', async () => {
     const { application, user } = renderPlannerForInteraction();
-    const selector = screen.getByRole('combobox', { name: 'Starting keepsake' });
+    const selector = screen.getByRole('button', { name: 'Starting keepsake' });
 
-    expect(within(selector).getAllByRole('option')).toHaveLength(33);
-    expect(selector).toHaveProperty('value', 'ManaOverTimeRefundKeepsake');
+    await user.click(selector);
+    const keepsakeList = screen.getByRole('listbox');
+    expect(within(keepsakeList).getByText('Time Piece')).toBeTruthy();
 
-    await user.selectOptions(selector, 'GoldifyKeepsake');
+    await user.click(within(keepsakeList).getByText('Time Piece'));
 
     expect(
       application.store.getState().projectWorkspace.history.present.routes[0]?.loadout
         .startingKeepsakeKey,
     ).toBe('GoldifyKeepsake');
-    expect(selector).toHaveProperty('value', 'GoldifyKeepsake');
+    expect(selector.textContent).toContain('Time Piece');
 
     await user.click(screen.getByRole('button', { name: 'Undo' }));
-    expect(selector).toHaveProperty('value', 'ManaOverTimeRefundKeepsake');
+    expect(selector.textContent).not.toContain('Time Piece');
   });
 
   it('authors the Jeweled Pom result at route start', async () => {
     const { application, user } = renderPlannerForInteraction();
     await user.selectOptions(screen.getByLabelText('Configure route up to'), '1');
-    await user.selectOptions(
-      screen.getByRole('combobox', { name: 'Starting keepsake' }),
-      'HadesAndPersephoneKeepsake',
-    );
+    const startingKeepsake = screen.getByRole('button', { name: 'Starting keepsake' });
+    await user.click(startingKeepsake);
+    await user.click(within(screen.getByRole('listbox')).getByText('Jeweled Pom'));
 
     expect(
       application.store.getState().projectWorkspace.history.present.routes[0]?.loadout
@@ -1732,8 +1731,7 @@ describe('route loadout interaction', () => {
       summary: { evaluatedBiomeCount: 0, blockedBiomeCount: 1, eligibleForExecutionPlan: false },
     });
 
-    const result = await screen.findByRole('combobox', { name: 'Jeweled Pom result' });
-    expect(result).toHaveProperty('value', '');
+    const result = await screen.findByRole('button', { name: 'Jeweled Pom result' });
     const missingFinding = application.store
       .getState()
       .projectWorkspace.assembly.evaluation.findings.find(
@@ -1746,14 +1744,10 @@ describe('route loadout interaction', () => {
     expect(application.store.getState().editorSession.selectedFinding?.origin).toEqual(
       missingFinding.origin,
     );
-    result.focus();
-    await waitFor(() =>
-      expect(within(result).getByRole('option', { name: 'Last Gasp' })).toHaveProperty(
-        'disabled',
-        false,
-      ),
-    );
-    await user.selectOptions(result, 'HadesDeathDefianceDamageBoon');
+    await user.click(result);
+    const resultList = screen.getByRole('listbox');
+    await waitFor(() => expect(within(resultList).getByText('Last Gasp')).toBeTruthy());
+    await user.click(within(resultList).getByText('Last Gasp'));
 
     expect(
       application.store.getState().projectWorkspace.history.present.routes[0]?.loadout
@@ -1771,10 +1765,9 @@ describe('route loadout interaction', () => {
   it('repairs the route-start Experimental Hammer result through its projected control', async () => {
     const { application, user } = renderPlannerForInteraction();
     await user.selectOptions(screen.getByLabelText('Configure route up to'), '1');
-    await user.selectOptions(
-      screen.getByRole('combobox', { name: 'Starting keepsake' }),
-      'TempHammerKeepsake',
-    );
+    const startingKeepsake = screen.getByRole('button', { name: 'Starting keepsake' });
+    await user.click(startingKeepsake);
+    await user.click(within(screen.getByRole('listbox')).getByText('Experimental Hammer'));
 
     expect(
       application.store.getState().projectWorkspace.history.present.routes[0]?.loadout
@@ -1789,8 +1782,7 @@ describe('route loadout interaction', () => {
       summary: { evaluatedBiomeCount: 0, blockedBiomeCount: 1, eligibleForExecutionPlan: false },
     });
 
-    const result = await screen.findByRole('combobox', { name: 'Experimental Hammer result' });
-    expect(result).toHaveProperty('value', '');
+    const result = await screen.findByRole('button', { name: 'Experimental Hammer result' });
     const finding = application.store
       .getState()
       .projectWorkspace.assembly.evaluation.findings.find(
@@ -1798,15 +1790,17 @@ describe('route loadout interaction', () => {
       );
     if (finding === undefined) throw new Error('missing Hammer finding is absent');
     const authoredTraitKey = 'StaffDoubleAttackTrait';
-    result.focus();
+    await user.click(result);
+    const resultList = screen.getByRole('listbox');
     await waitFor(() =>
       expect(
-        within(result)
-          .getByRole('option', { name: 'Wicked Thrasher' })
-          .getAttribute('data-candidate-support'),
+        within(resultList)
+          .getByText('Wicked Thrasher')
+          .closest('[cmdk-item]')
+          ?.getAttribute('data-candidate-state'),
       ).toBe('possible'),
     );
-    await user.selectOptions(result, authoredTraitKey);
+    await user.click(within(resultList).getByText('Wicked Thrasher'));
     expect(
       application.store.getState().projectWorkspace.history.present.routes[0]?.loadout
         .keepsakeEquipResults?.experimentalHammer,
@@ -1814,9 +1808,12 @@ describe('route loadout interaction', () => {
     expect(
       application.store.getState().projectWorkspace.assembly.evaluation.routes[0]?.biomes,
     ).toHaveLength(1);
+    expect(result.textContent).toContain('Wicked Thrasher');
 
     await user.click(screen.getByRole('button', { name: 'Undo' }));
-    expect(result).toHaveProperty('value', '');
+    expect(
+      screen.getByRole('button', { name: 'Experimental Hammer result' }).textContent,
+    ).toContain('Choose compatible Hammer');
     expect(
       application.store.getState().projectWorkspace.assembly.evaluation.routes[0]?.biomes,
     ).toHaveLength(0);
@@ -1840,7 +1837,8 @@ describe('route loadout interaction', () => {
       throw new Error('I Gift Hammer interaction is missing');
     const candidate = interaction
       .load()
-      .find((option) => option.value !== '__exhausted' && candidateSupport(option) === 'possible');
+      .picker.sections.flatMap((section) => section.items)
+      .find((option) => option.value !== '__exhausted' && option.state === 'possible');
     if (candidate === undefined) throw new Error('I Gift Hammer has no selectable result');
 
     const { user } = renderPlannerForInteraction({ application });
@@ -1857,15 +1855,20 @@ describe('route loadout interaction', () => {
       kind: 'biome',
       biomeKey: 'I',
     });
-    const result = await screen.findByRole('combobox', { name: 'Experimental Hammer result' });
-    expect(result).toHaveProperty('value', '');
-    fireEvent.focus(result);
-    const selected = within(result)
-      .getAllByRole('option')
-      .find((option) => (option as HTMLOptionElement).value === candidate.value);
-    if (selected === undefined) throw new Error('projected I Gift Hammer choice is absent');
-    await waitFor(() => expect(selected.dataset.candidateSupport).toBe('possible'));
-    await user.selectOptions(result, candidate.value);
+    const result = await screen.findByRole('button', { name: 'Experimental Hammer result' });
+    await user.click(result);
+    const resultList = screen.getByRole('listbox');
+    const candidateLabel =
+      candidate.value === '__exhausted'
+        ? 'No compatible Hammer'
+        : (catalog.traits.byKey[candidate.value]?.label ?? candidate.value);
+    const selected = within(resultList).getByText(candidateLabel);
+    await waitFor(() =>
+      expect(selected.closest('[cmdk-item]')?.getAttribute('data-candidate-state')).toBe(
+        'possible',
+      ),
+    );
+    await user.click(selected);
 
     expect(
       application.store

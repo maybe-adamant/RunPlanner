@@ -478,15 +478,18 @@ describe('Biome inspector controls', () => {
     );
     act(() => view.application.store.dispatch(semanticOwnerFocused(owner)));
     const rack = screen.getByRole('region', { name: 'Keepsake Rack' });
-    const selector = within(rack).getByRole<HTMLSelectElement>('combobox', { name: 'Keepsake' });
-    fireEvent.focus(selector);
+    const selector = within(rack).getByRole('button', { name: 'Keepsake' });
+    fireEvent.click(selector);
+    const keepsakeList = screen.getByRole('listbox');
     await waitFor(() =>
       expect(
-        selector.querySelector<HTMLOptionElement>('option[value="BossPreDamageKeepsake"]')?.dataset
-          .candidateSupport,
+        within(keepsakeList)
+          .getByText('Knuckle Bones')
+          .closest('[cmdk-item]')
+          ?.getAttribute('data-candidate-state'),
       ).toBe('possible'),
     );
-    fireEvent.change(selector, { target: { value: 'BossPreDamageKeepsake' } });
+    fireEvent.click(within(keepsakeList).getByText('Knuckle Bones'));
     expect(
       view.application.store
         .getState()
@@ -502,10 +505,9 @@ describe('Biome inspector controls', () => {
         within(timeline).getByRole('button', { name: 'Move Choose keepsake earlier' }),
       ).toBeTruthy(),
     );
-    fireEvent.change(
-      within(timeline).getByRole<HTMLSelectElement>('combobox', { name: 'Keepsake' }),
-      { target: { value: '' } },
-    );
+    const timelineSelector = within(timeline).getByRole('button', { name: 'Keepsake' });
+    fireEvent.click(timelineSelector);
+    fireEvent.click(within(screen.getByRole('listbox')).getByText('Retain current keepsake'));
     expect(
       view.application.store
         .getState()

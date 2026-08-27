@@ -51,6 +51,15 @@ function offerWithFocusedOption(
   });
 }
 
+function keepsakeEquipResultKey(
+  value: AuthoredKeepsakeEquipResults[keyof AuthoredKeepsakeEquipResults] | undefined,
+): string | undefined {
+  if (value === undefined) return undefined;
+  if ('kind' in value) return value.kind === 'selected' ? value.traitKey : '__exhausted';
+  if ('blessingKey' in value) return value.blessingKey;
+  return value.traitKey;
+}
+
 export type TraitCandidateAdapters = Pick<
   CandidateProjectionSession,
   | 'traitOffer'
@@ -297,30 +306,41 @@ export function createTraitCandidateAdapters(
         throw new Error(
           `Keepsake equip result ${semanticAddressKey(owner)} returned ${evaluation.kind}`,
         );
-      return Object.freeze(
-        evaluation.result.options.map((option) =>
-          Object.freeze({
-            value:
-              'kind' in option.value
-                ? option.value.kind === 'selected'
-                  ? option.value.traitKey
-                  : '__exhausted'
-                : 'blessingKey' in option.value
-                  ? option.value.blessingKey
-                  : option.value.traitKey,
-            evaluation: Object.freeze({
-              ...evaluation,
-              result: Object.freeze({
-                ...evaluation.result,
-                selectedPossible: option.selectedPossible,
-              }),
+      const projected = evaluation.result.options.map((option) =>
+        Object.freeze({
+          value:
+            'kind' in option.value
+              ? option.value.kind === 'selected'
+                ? option.value.traitKey
+                : '__exhausted'
+              : 'blessingKey' in option.value
+                ? option.value.blessingKey
+                : option.value.traitKey,
+          evaluation: Object.freeze({
+            ...evaluation,
+            result: Object.freeze({
+              ...evaluation.result,
+              selectedPossible: option.selectedPossible,
             }),
-            ...(option.transcendentEmbryoSummary === undefined
-              ? {}
-              : { transcendentEmbryoSummary: option.transcendentEmbryoSummary }),
           }),
-        ),
+          ...(option.transcendentEmbryoSummary === undefined
+            ? {}
+            : { transcendentEmbryoSummary: option.transcendentEmbryoSummary }),
+        }),
       ) as readonly KeepsakeEquipResultOptionProjection[];
+      const selectedKey = keepsakeEquipResultKey(value);
+      if (selectedKey === undefined || projected.some((option) => option.value === selectedKey))
+        return Object.freeze(projected);
+      return Object.freeze([
+        ...projected,
+        Object.freeze({
+          value: selectedKey,
+          evaluation: Object.freeze({
+            ...evaluation,
+            result: Object.freeze({ ...evaluation.result, selectedPossible: false }),
+          }),
+        }),
+      ]);
     },
   };
 }
