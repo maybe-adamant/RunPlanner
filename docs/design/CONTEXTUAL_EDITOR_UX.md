@@ -502,6 +502,31 @@ ordered picker model containing required, semantic-category, unassessed, and
 unavailable sections. This preserves one presentation-policy authority while
 allowing room and reward controls to share one accessible component.
 
+### Control selection policy
+
+Use the contextual picker for a domain identity when search or semantic
+grouping is useful, run context can require or exclude values, individual
+explanations matter, a retained invalid value needs a repair path, or the
+interaction is staged or compound. The application owns its complete picker
+model; React owns accessible presentation and dispatch only. Rarity therefore
+remains contextual despite its small domain because concrete rarity variants
+carry candidate evidence and retained-invalid repair.
+
+Use a native select for a small, flat, closed scalar parameter of an already
+identified object when no search, grouping, explanation, or rich repair state
+is needed. Candidate backing alone does not require a popover: the compact
+`CandidateSelect` remains appropriate for reward pool or store, Fields roll,
+Ephyra generation, reward-wheel parameters, and Ship combat phase count.
+Counts, ranks, delivery delays, insertion order, weapon or aspect, and other
+closed enums follow the same scalar rule.
+
+Stable room-feature identity domains may use the contextual presentation even
+when no focused simulator query exists. The application must then expose the
+declaration-owned domain as unassessed, not fabricate support. Once the owning
+feature is assessed, a selected declaration identity excluded by that evidence
+remains pinned as invalid for repair. Opening a contextual selector stays a
+lazy query boundary wherever a real candidate query exists.
+
 ### Trait offer domains
 
 Each materialized trait-option card uses that same contextual-picker

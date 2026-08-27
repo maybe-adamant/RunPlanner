@@ -67,9 +67,7 @@ function declaredRoomShopAllItemKeys(catalog: Catalog): readonly string[] {
   return profile === undefined
     ? Object.freeze([])
     : distinct(
-        profile.groups.values.flatMap((group) =>
-          group.options.values.map((option) => option.key),
-        ),
+        profile.groups.values.flatMap((group) => group.options.values.map((option) => option.key)),
       );
 }
 
@@ -80,8 +78,8 @@ function declaredRoomShopTwistItemKeys(catalog: Catalog): readonly string[] {
     : Object.freeze(
         profile.groups.values
           .flatMap((group) => group.options.values)
-          .find((option) => option.key === 'RandomStoreItem')?.stygianWell
-          ?.nestedResultItemKeys ?? [],
+          .find((option) => option.key === 'RandomStoreItem')?.stygianWell?.nestedResultItemKeys ??
+          [],
       );
 }
 
@@ -91,7 +89,7 @@ function declaredSurfaceShopRewardTypes(catalog: Catalog, slotKey: string): read
   const groupKey = profile?.slots.byKey[slotKey]?.groupKey;
   return groupKey === undefined
     ? Object.freeze([])
-    : profile.groups.byKey[groupKey]?.rewardTypes ?? Object.freeze([]);
+    : (profile.groups.byKey[groupKey]?.rewardTypes ?? Object.freeze([]));
 }
 
 function declaredSurfaceShopAllRewardTypes(catalog: Catalog): readonly string[] {
@@ -261,8 +259,7 @@ function roomFeatures(
                     const candidates =
                       wellAssessment === undefined
                         ? declaredWellAllItemKeys
-                        : (wellAssessment.travelDealRefill?.candidateItemKeys ??
-                          Object.freeze([]));
+                        : (wellAssessment.travelDealRefill?.candidateItemKeys ?? Object.freeze([]));
                     const twistCandidates =
                       wellAssessment?.twistCandidateItemKeysByGeneration[generationKey] ??
                       declaredWellTwistItemKeys;
@@ -402,11 +399,10 @@ function roomFeatures(
                         : (shrineAssessment.travelDealRefill?.candidateRewardTypes ??
                           Object.freeze([])),
                     candidateRewards: Object.freeze(
-                      (
-                        shrineAssessment === undefined
-                          ? declaredShrineAllRewardTypes
-                          : (shrineAssessment.travelDealRefill?.candidateRewardTypes ??
-                            Object.freeze([]))
+                      (shrineAssessment === undefined
+                        ? declaredShrineAllRewardTypes
+                        : (shrineAssessment.travelDealRefill?.candidateRewardTypes ??
+                          Object.freeze([]))
                       ).map((rewardType) =>
                         Object.freeze({
                           rewardType,

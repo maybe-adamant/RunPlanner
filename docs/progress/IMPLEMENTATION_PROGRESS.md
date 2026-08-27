@@ -105,6 +105,10 @@ application composition -> React UI`.
 - The structured workspace and candidate session became the application
   boundary for lazy contextual products; React renders projections and
   dispatches complete semantic intents.
+- Editor controls use four explicit command tones while specialized navigation
+  and selection surfaces retain named treatments. Domain identities use the
+  contextual-picker product when search, evidence, or repair matters; small
+  closed scalar parameters remain native controls.
 - Named JSON checkpoints and a typed manifest replaced permanent command-built
   full-route fixture machinery. Command tests remain command-driven and
   fixture integrity owns canonical bytes, metadata, and cached-base identity.
@@ -243,12 +247,38 @@ owners; public catalog and engine contacts, authored schema 59, catalog
 version, simulation results, candidates, findings, persistence, and editor
 behavior remain unchanged.
 
+### Editor control system closure
+
+The editor now has one explicit four-tone command hierarchy: Primary for the
+local commit or forward action, Secondary for reversible support mutations,
+Quiet for dismissal, navigation, history, ordering, and local-draft cleanup,
+and Danger for destructive authored or project replacement. The former green
+success-action path was retired, every production button has an explicit
+command or specialized-surface classification, and an architecture test guards
+that closure without introducing a generic button wrapper.
+
+Identity controls that need search, candidate evidence, unassessed state, or
+selected-invalid repair now consume application-owned contextual-picker
+models. Compact closed parameters remain native selects, including the
+Persephone level bonus and existing candidate-backed scalar controls. Stable
+room-feature identities distinguish unreached unassessed declaration domains
+from reached invalid selections; no new engine query, authored schema, catalog,
+simulation, persistence, or semantic-command behavior was introduced.
+
 ## Validation Record
 
 Validation claims below are the executed checks retained because they establish
 important closure boundaries. They are not a promise that every historical
 intermediate suite was green.
 
+- The editor-control closure ran the complete repository sequence on
+  2026-08-27: workspace and fixture typechecks; fixture integrity at 3 files/20
+  tests; regular tests at 204 files/2,013 tests; heavy tests at 46 files/441
+  tests; the isolated performance lane at 1 file/2 tests; and ESLint all
+  passed. The sequence then exposed two formatting-only Gate C drifts before
+  build. After formatting those files, the repository-wide Prettier check and
+  production build passed without rerunning the already-green tests. The build
+  retained only the existing greater-than-500-kB chunk advisory.
 - The schema-48 lifecycle/Shop closure initially exposed fixture-runtime
   timeout limits; the named-checkpoint fixture correction `84db578` removed
   command-built full-route machinery and its final complete gate passed with

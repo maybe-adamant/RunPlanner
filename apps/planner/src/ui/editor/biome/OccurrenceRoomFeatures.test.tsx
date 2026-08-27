@@ -392,9 +392,7 @@ describe('OccurrenceRoomFeatures', () => {
     const picker = screen.getByRole('button', { name: 'Pool of Purging Left slot' });
     await view.user.click(picker);
     const choice = await screen.findByRole('option', { name: /Phalanx Shot/ });
-    await waitFor(() =>
-      expect(picker.getAttribute('data-candidate-state')).toBe('impossible'),
-    );
+    await waitFor(() => expect(picker.getAttribute('data-candidate-state')).toBe('impossible'));
     expect(screen.getByText('Current selection')).toBeTruthy();
     expect(choice.getAttribute('data-candidate-state')).toBe('impossible');
     expect(choice.getAttribute('aria-disabled')).toBe('true');

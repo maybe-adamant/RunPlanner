@@ -547,14 +547,23 @@ recovery. The UI does not persistently display projected deletion scope. The
 command layer, not React, defines the actual deletion scope.
 
 Semantic action styling is an explicit React/CSS convention rather than a
-generic button abstraction. Primary controls advance authoring, secondary
-controls make restorative repairs or project edits, and danger controls
-remove authored structure or replace/discard a project or recovery snapshot.
-Compact quiet controls serve Undo/Redo; contextual navigation and picker
-controls retain their own interaction treatments. Shared action rows only
-arrange co-located controls (danger actions before a right-aligned primary
-continuation on wide screens, in the same DOM order on narrow screens); they do
-not alter the command, history, recovery, or confirmation contract.
+generic button abstraction. A local scope has at most one Primary command: the
+commit or forward action such as Save, Start biome, or Open next room.
+Secondary commands make reversible supporting changes such as adding,
+restoring, or rarifying. Quiet commands cover dismissal, navigation, history,
+ordering, and low-emphasis local-draft cleanup. Danger commands remove authored
+structure or replace or discard a project or recovery snapshot. Green remains
+status language; it is not a second forward-action treatment.
+
+Every production button carries either one of those four command treatments or
+a named specialized-surface class. Contextual-picker triggers, tabs, rail and
+completion nodes, semantic focus links, findings, trait and timeline launchers,
+and icon-only ordering controls keep their specialized interaction treatments.
+An architecture test guards explicit classification; semantic correctness
+remains a review responsibility. Shared action rows only arrange co-located
+controls (danger actions before a right-aligned primary continuation on wide
+screens, in the same DOM order on narrow screens); they do not alter the
+command, history, recovery, or confirmation contract.
 
 ## Room and Reward Editors
 
