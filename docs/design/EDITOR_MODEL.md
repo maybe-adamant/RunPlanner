@@ -923,6 +923,17 @@ eligibility. Structurally supported but context-invalid rarities remain visible
 for repair, while Heroic is offered only when the engine exposes an
 Epic-to-Heroic replacement.
 
+An active Aspect-of-Persephone row may also present the engine's bounded
+Persephone contribution picker and the derived effective level beside the
+effective-rarity evidence. The picker offers the exact active integer range
+(`+0..+5`, or `+0..+8` after a prior Premium Service acquisition). An omitted
+authored value is displayed and settled as `+0`; selecting zero removes the
+optional persisted detail. The application writes the complete trait offer
+through the existing semantic replacement intent and does not calculate the
+level, inspect history, or let a same-screen Premium Service selection alter
+sibling or Concave Stone rows. Context-invalid explicit values retain the
+focused engine finding for repair.
+
 When a declaration-owned option targets another equipped trait, the same row
 renders a generic engine-backed target picker. Catalog labels present the exact
 target domain; a missing or stale selected target remains visible for repair

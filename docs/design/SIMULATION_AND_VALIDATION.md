@@ -473,6 +473,26 @@ Treasure, and Cherished Heirloom—remain in that set after a later Ransom
 removal, so candidate eligibility reports a distinct `previouslyPicked`
 finding instead of treating removal as a fresh offer.
 
+For a fresh stackable core-god option, the trait-offer evaluator consumes the
+equipped Aspect of Persephone declaration, the exact pre-offer trait history,
+the retained Jeweled Pom state, and the option's authored
+`persephoneLevelBonus`. An omitted contribution is `+0`; it is not a missing
+authorship finding. The active contribution domain is `0..5`, or `0..8` after a
+selected Premium Service acquisition. An explicit value outside that domain
+publishes `persephoneLevelBonusUnavailable` at the option owner and remains
+repairable.
+
+The level resolver is shared by candidate evaluation and selected settlement.
+It derives a fresh row as `1 + Jeweled Pom contribution + Persephone
+contribution`, or derives a replacement from the replaced level plus its
+replacement bonus. Replacement rows do not receive fresh contributions.
+Effective levels are branch products: the public row value is published only
+when all surviving branches agree. The resolver receives the frozen pre-offer
+history, so selecting Premium Service cannot change sibling rows or a Concave
+Stone residual on the same screen; it expands only later screens. Calling Card
+rerarity preserves the row's level, and Echo `IgnoreStackBoost` paths suppress
+both fresh contributions.
+
 If a covered selected value has no supporting pre-state, alternatives at that
 owner may still use its last valid pre-decision view for repair. Contextual
 claims after an unsupported upstream state remain unavailable; materialized
@@ -1372,6 +1392,15 @@ semantic invalid results.
 Candidate results report possible, forced, or impossible membership plus the
 same semantic findings used for the selected plan. They do not report a score
 or likelihood.
+
+Trait-offer candidate branches carry the active Persephone maximum and the
+derived effective level for each materialized option. The application receives
+the maximum only for a universally agreeing active row, and receives an
+effective level only when all surviving branches agree. A branch disagreement
+remains explicit rather than being collapsed to a first branch. The candidate
+product reuses the selected settlement resolver, including omission as `+0`,
+Premium Service's prior-selection chronology, replacement precedence, and
+frozen Calling Card or Concave Stone outcomes.
 
 For one candidate domain, simulation:
 

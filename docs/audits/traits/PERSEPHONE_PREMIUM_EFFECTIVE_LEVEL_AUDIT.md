@@ -2,6 +2,9 @@
 
 ## Status and scope
 
+Implemented in the schema-64, catalog `0.47.0-persephone-effective-levels`
+Planner contract.
+
 This is the durable source audit for the reward-side level effects of Aspect of
 Persephone (`LobImpulseAspect`) and Premium Service (`WeaponUpgradeBoon`), plus
 the existing Jeweled Pom and Sacrificial Hymn contacts needed to state one
@@ -154,3 +157,11 @@ simulation branches agree.
 
 No general aspect-rank ledger, random-effect registry, weighted probability
 simulator, or React-owned level formula is implied.
+
+The shipped implementation keeps the contribution optional in authored JSON:
+an omitted active value is the ordinary `+0` result and does not produce a
+finding. The engine emits `persephoneLevelBonusUnavailable` only for an
+explicit value outside the active range, and the application presents that
+finding at the exact option owner for repair. Effective levels remain derived
+products; Premium Service expands only later offer screens because each screen
+freezes its levels when generated.

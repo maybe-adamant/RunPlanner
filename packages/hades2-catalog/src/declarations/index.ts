@@ -36,7 +36,7 @@ const rooms: readonly RawRoomDeclaration[] = [
 ];
 
 export const declarations = {
-  version: '0.46.0-vow-forfeit-red-onion',
+  version: '0.47.0-persephone-effective-levels',
   biomes,
   routes,
   arcanaCards,

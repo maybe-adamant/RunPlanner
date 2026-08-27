@@ -11,8 +11,8 @@ the active frontier needed to orient the next delivery.
 
 ## Current Snapshot
 
-The current persisted contract is strict authored schema 63 with catalog
-`0.46.0-vow-forfeit-red-onion`. The browser product supports all eight route biomes:
+The current persisted contract is strict authored schema 64 with catalog
+`0.47.0-persephone-effective-levels`. The browser product supports all eight route biomes:
 
 ```text
 Underworld: F -> G -> H -> I
@@ -57,34 +57,35 @@ integration exclusions remain outside the current simulation contract.
 The following table preserves the major persisted-contract and catalog
 milestones without repeating the delivery chronology.
 
-| Contract milestone | Durable outcome                                                                                                                          |
-| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| Schema 1           | Initial strict `ProjectDocument`, F/G route spine, semantic addresses, authored occurrence identity, and JSON boundary.                  |
-| Schema 2           | Batch-owned reward stores and the first connected reward authority; the pre-release leaf-store model was rejected.                       |
-| Schema 3           | Global biome declarations, route placement, shared layout vocabulary, and dormant cross-biome declaration isolation.                     |
-| Schema 7           | I's authored Entrance, generated Story peer, and explicit bounded non-goal roll.                                                         |
-| Schema 8           | Batch authoring defaults and strict replacement of the prior latent-default contract.                                                    |
-| Schema 9           | Unified biome decisions, common exits/batches, and the application capability boundary.                                                  |
-| Schema 11          | Exact authored Shop purchase order replaced the purchased-set contract.                                                                  |
-| Schema 20          | Canonical acquisition settlement across ordinary rewards, O wheels, Fields, N rooms, and Shops.                                          |
-| Schema 30          | Keepsake identity/equip chronology and supported-rank effect transitions.                                                                |
-| Schema 35          | Echo's complete player-rarityless provider and replay child products.                                                                    |
-| Schemas 36-38      | All Together, Infernal Contract, Travel Deal, Gold, Shop-trait effects, and one acquisition chronology.                                  |
-| Schemas 39-41      | Narcissus pickups, Fields cage/optional chronology, Artificer conversion, and source-owned replacement acquisition.                      |
-| Schemas 42-43      | Unresolved-or-complete authored rewards and encounter-owned trait offers, with strict retained invalidity.                               |
-| Schemas 44-45      | Atomic direct selected-trait outcomes and generated-pickup ownership for Reward Reward Reward/Boon Boon Boon.                            |
-| Schema 47          | The occurrence-owned Room Action order absorbed the prior acquisition chronology.                                                        |
-| Schema 48          | Required Room Action defaults, explicit Shop/optional participation, fixture-integrity checkpoint corpus, and no private purchase order. |
-| Schema 49          | Fountain/Postboss completion lifecycle, required fountain use, optional keepsake rack, and derived `bossDefeated`.                       |
-| Schema 50          | Selene's rarityless spells, Spell Drop lifecycle, equipped-slot ledger, and Echo replay correction.                                      |
-| Schema 51          | Chaos Trial Upgrade paired traits, closed curse/blessing pools, and maturation effects.                                                  |
-| Schema 52          | Natural Selection, King's/Queen's Ransom, Steady Growth, shared Hephaestus cooldown limits, and retained offer history.                  |
-| Schema 53          | Nemesis combat/random-event authoring and generated-pickup settlement.                                                                   |
-| Schemas 54-59      | Runtime fallback policy, automatic Boss/Postboss occurrences, Resources, Pools, Hermes Shrines, and Stygian Wells.                       |
-| Schemas 60-63      | Aromatic Phial fountain rarity, Crystal Figurine Boss activation, Concave Stone residual boons, and Transcendent Embryo transformations. |
+| Contract milestone | Durable outcome                                                                                                                              |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| Schema 1           | Initial strict `ProjectDocument`, F/G route spine, semantic addresses, authored occurrence identity, and JSON boundary.                      |
+| Schema 2           | Batch-owned reward stores and the first connected reward authority; the pre-release leaf-store model was rejected.                           |
+| Schema 3           | Global biome declarations, route placement, shared layout vocabulary, and dormant cross-biome declaration isolation.                         |
+| Schema 7           | I's authored Entrance, generated Story peer, and explicit bounded non-goal roll.                                                             |
+| Schema 8           | Batch authoring defaults and strict replacement of the prior latent-default contract.                                                        |
+| Schema 9           | Unified biome decisions, common exits/batches, and the application capability boundary.                                                      |
+| Schema 11          | Exact authored Shop purchase order replaced the purchased-set contract.                                                                      |
+| Schema 20          | Canonical acquisition settlement across ordinary rewards, O wheels, Fields, N rooms, and Shops.                                              |
+| Schema 30          | Keepsake identity/equip chronology and supported-rank effect transitions.                                                                    |
+| Schema 35          | Echo's complete player-rarityless provider and replay child products.                                                                        |
+| Schemas 36-38      | All Together, Infernal Contract, Travel Deal, Gold, Shop-trait effects, and one acquisition chronology.                                      |
+| Schemas 39-41      | Narcissus pickups, Fields cage/optional chronology, Artificer conversion, and source-owned replacement acquisition.                          |
+| Schemas 42-43      | Unresolved-or-complete authored rewards and encounter-owned trait offers, with strict retained invalidity.                                   |
+| Schemas 44-45      | Atomic direct selected-trait outcomes and generated-pickup ownership for Reward Reward Reward/Boon Boon Boon.                                |
+| Schema 47          | The occurrence-owned Room Action order absorbed the prior acquisition chronology.                                                            |
+| Schema 48          | Required Room Action defaults, explicit Shop/optional participation, fixture-integrity checkpoint corpus, and no private purchase order.     |
+| Schema 49          | Fountain/Postboss completion lifecycle, required fountain use, optional keepsake rack, and derived `bossDefeated`.                           |
+| Schema 50          | Selene's rarityless spells, Spell Drop lifecycle, equipped-slot ledger, and Echo replay correction.                                          |
+| Schema 51          | Chaos Trial Upgrade paired traits, closed curse/blessing pools, and maturation effects.                                                      |
+| Schema 52          | Natural Selection, King's/Queen's Ransom, Steady Growth, shared Hephaestus cooldown limits, and retained offer history.                      |
+| Schema 53          | Nemesis combat/random-event authoring and generated-pickup settlement.                                                                       |
+| Schemas 54-59      | Runtime fallback policy, automatic Boss/Postboss occurrences, Resources, Pools, Hermes Shrines, and Stygian Wells.                           |
+| Schemas 60-63      | Aromatic Phial fountain rarity, Crystal Figurine Boss activation, Concave Stone residual boons, and Transcendent Embryo transformations.     |
+| Schema 64          | Optional frozen Aspect of Persephone offer contributions, chronological Premium Service range expansion, and derived effective trait levels. |
 
 Catalog versions advanced alongside these boundaries. The current catalog is
-`0.46.0-vow-forfeit-red-onion`; exact declaration facts and source contacts
+`0.47.0-persephone-effective-levels`; exact declaration facts and source contacts
 remain in the catalog package and focused audits rather than this status
 ledger.
 
@@ -146,6 +147,18 @@ force/rarification ledger; Moon Beam reuses that priority and adds only banked
 and invested Path-point state. Ordinary equip, Cherished Heirloom, and Gift
 Gift Gift contacts are explicit for every implemented effect. Individual Hex
 tree topology and node choices remain outside the supported simulation scope.
+
+The 2026-08-27 Persephone effective-level closure added the declaration-owned
+`0..5`/`0..8` offer contribution bounds and the strict schema-64 optional
+`persephoneLevelBonus` row result. Omission is the authored default `+0`, while
+nonzero outcomes remain frozen with their generated option. One engine
+resolver serves candidate projection and selected settlement: fresh rows add
+Jeweled Pom and Persephone contributions, replacements inherit their prior
+level and any Sacrificial Hymn bonus, and Calling Card/Concave Stone preserve
+the generated row. Premium Service is chronological and expands only later
+screens; same-screen siblings remain frozen. The application renders the
+engine-derived effective level and the bounded editor without reimplementing
+eligibility or arithmetic.
 
 ### Trait and generated-pickup closures
 
@@ -315,6 +328,15 @@ intermediate suite was green.
   timeout; the migration was advanced and that witness received a focused
   ten-second budget without changing its assertions. The build retained only
   the existing greater-than-500-kB application chunk advisory.
+- The Persephone effective-level closure reached the complete-check test
+  surfaces on 2026-08-27: workspace/catalog/engine/fixture typechecking,
+  checkpoint integrity at 3 files/20 tests, regular tests at 203 files/2,011
+  tests, heavy tests at 46 files/438 tests, and the isolated performance lane
+  at 1 file/2 tests all passed. The single `npm run check` then stopped at lint
+  on an unused destructured zero-selection variable in the Persephone editor;
+  that narrow defect was fixed. The parent subsequently ran standalone
+  `npm run lint`, `npm run format:check`, and `npm run build`, each of which
+  passed; `npm run check` itself was not rerun.
 
 Focused validation remains the normal implementation practice. A complete
 `npm run check` is reserved for the declared phase closure or a shared

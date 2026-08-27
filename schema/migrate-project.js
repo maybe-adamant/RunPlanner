@@ -4,7 +4,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { basename, dirname, extname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-const CURRENT_SCHEMA_VERSION = 63;
+const CURRENT_SCHEMA_VERSION = 64;
 const SCHEMA_49_CATALOG_VERSION = '0.27.0-arcana-fear-loadout';
 const SCHEMA_50_CATALOG_VERSION = '0.30.0-boon-rarity-ledger';
 const SCHEMA_51_CATALOG_VERSION = '0.31.0-chaos-traits';
@@ -23,6 +23,7 @@ const SCHEMA_60_CATALOG_VERSION = '0.42.0-fountain-rarity';
 const SCHEMA_61_CATALOG_VERSION = '0.43.0-crystal-figurine';
 const SCHEMA_62_CATALOG_VERSION = '0.44.0-concave-stone';
 const SCHEMA_63_CATALOG_VERSION = '0.46.0-vow-forfeit-red-onion';
+const SCHEMA_64_CATALOG_VERSION = '0.47.0-persephone-effective-levels';
 const COMPLETION_ROOMS_BY_BIOME = {
   F: { boss: 'F_Boss01', postboss: 'F_PostBoss01' },
   G: { boss: 'G_Boss01', postboss: 'G_PostBoss01' },
@@ -506,6 +507,19 @@ function migrate62To63(document) {
   return {};
 }
 
+function migrate63To64(document) {
+  if (document.catalogVersion !== SCHEMA_63_CATALOG_VERSION) {
+    throw new Error(
+      `schema 63 migration expects catalog ${SCHEMA_63_CATALOG_VERSION}, received ${String(document.catalogVersion)}`,
+    );
+  }
+  // persephoneLevelBonus is optional. An absent field is the authored +0
+  // outcome, so this migration advances only the schema and catalog metadata.
+  document.schemaVersion = 64;
+  document.catalogVersion = SCHEMA_64_CATALOG_VERSION;
+  return {};
+}
+
 const migrations = new Map([
   [49, migrate49To50],
   [50, migrate50To51],
@@ -521,6 +535,7 @@ const migrations = new Map([
   [60, migrate60To61],
   [61, migrate61To62],
   [62, migrate62To63],
+  [63, migrate63To64],
 ]);
 
 export function migrateProjectDocument(value, targetVersion = CURRENT_SCHEMA_VERSION) {
