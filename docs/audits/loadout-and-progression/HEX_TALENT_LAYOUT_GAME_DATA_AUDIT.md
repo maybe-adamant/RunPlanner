@@ -37,9 +37,13 @@ Primary evidence:
 - `TraitData_Talent.lua`: talent identities, duo links, and the shared
   `OlympianSpellCountTalent`;
 - `TraitData_Athena.lua`: the concrete Olympian-talent dependency;
+- `TraitData_Hera.lua` and `TraitLogic.lua`: All Together's direct grants,
+  current `MetGods` reconstruction, and provider attribution;
+- `UpgradeChoiceLogic.lua`, `EventLogic.lua`, and `KeepsakeLogic.lua`: the
+  concrete post-acquisition and keepsake reevaluation contacts;
 - `RequirementsData.lua`: `TalentLegal`;
-- `SurfaceShopLogic.lua` and `TraitLogic.lua`: committed delayed delivery and
-  direct item spawning; and
+- `SurfaceShopLogic.lua`: committed delayed delivery and direct item spawning;
+  and
 - English `TraitText.en.sjson`: player-facing talent names.
 
 ## One generated tree, not a four-choice screen
@@ -236,15 +240,68 @@ declarations.
 At initial tree generation, the pair is present only when the profile-level
 Selene duo unlock is satisfied and either:
 
-- the linked god has already been met during the current run; or
-- the linked god's force-boon keepsake is equipped.
+- the linked god is represented by a trait currently held by the hero; or
+- the linked god's force-boon keepsake trait is currently held by the hero.
 
-`CheckAndAddOlympianDuo` runs after later god-boon acquisition and after a
-keepsake-rack interaction. Once the requirement becomes true, it restores both
-previously omitted positions and their links. The added nodes persist after
-the keepsake is removed; capacity must therefore remember that the pair was
-added rather than continuously derive it from the currently equipped
-keepsake.
+The source field is named `CurrentRun.Hero.MetGods`, but it is not a historical
+"seen this run" set. `UpdateHeroTraitDictionary` reconstructs it from the
+currently held traits by calling `GetGodSourceName` for every trait. It can
+therefore gain a provider through a direct trait grant and lose a provider
+when the final trait associated with that provider is removed. It is also
+distinct from `LootTypeHistory` and from the ordinary god-pool record.
+
+The force-keepsake side is equally current-state-based: the requirement reads
+the linked `Force*BoonKeepsake` identity from `Hero.TraitDictionary`. A normal
+equipped keepsake and an active Gift Gift Gift recreation can satisfy that
+identity. Once the pair has actually been inserted, later provider-trait
+removal or keepsake removal does not remove it.
+
+### All Together is a provider-presence source
+
+All Together is selected from a normal Hera upgrade screen. Its outer
+`AllElementalBoon` is itself a currently held Hera trait, so it satisfies Night
+Bloom's linked-Hera condition even when every direct-grant set is exhausted.
+
+Before the normal upgrade screen's final `CheckAndAddOlympianDuo` call, All
+Together's `GrantBoons` callback directly adds each authored child with
+`FromLoot = true`. Each child is indexed by one Olympian loot declaration, so
+the next `UpdateHeroTraitDictionary` includes that provider in `MetGods` even
+though the grant did not increment `LootTypeHistory` or add that provider to
+the ordinary god pool.
+
+The exact child-to-Hex contacts are:
+
+| Selected Hex   | Linked provider | All Together identity that satisfies it |
+| -------------- | --------------- | --------------------------------------- |
+| Twilight Curse | Zeus            | `ElementalDamageFloorBoon`              |
+| Total Eclipse  | Hestia          | `ElementalBaseDamageBoon`               |
+| Dark Side      | Aphrodite       | `ElementalDodgeBoon`                    |
+| Wolf Howl      | Hephaestus      | `ElementalDamageBoon`                   |
+| Lunar Ray      | Apollo          | `ElementalRallyBoon`                    |
+| Night Bloom    | Hera            | outer `AllElementalBoon`                |
+| Phase Shift    | Demeter         | `ElementalDamageCapBoon`                |
+| Moon Water     | Poseidon        | `ElementalHealthBoon`                   |
+| Sky Fall       | Ares            | `ElementalOlympianDamageBoon`           |
+
+Selecting the other identity from the same All Together set does not satisfy
+that Hex's linked-provider condition. The Planner already freezes all four
+direct-grant results and records each granted identity with its exact giver, so
+God Sent can consume the post-settlement equipped-trait state without adding
+an All Together special flag.
+
+### Reevaluation contacts
+
+`CheckAndAddOlympianDuo` reevaluates the current predicate after a normal
+upgrade choice, after Echo's explicit previous-run boon choice, and after a
+keepsake-screen interaction. Tree creation performs the same eligibility check
+while generating the initial tree. The post-choice check observes the complete
+selected result, including direct grants and removals performed by the chosen
+trait, rather than merely the outer giver that opened the screen.
+
+Once a reevaluation finds the requirement true, it restores both previously
+omitted positions and their links. The added nodes persist after the qualifying
+trait or keepsake is removed; capacity must therefore remember that the pair
+was added rather than continuously derive it from current state.
 
 Athena's `OlympianSpellCountBoon` (`Task Force`) has one external eligibility
 contact: it requires at least one of the nine Olympian talent identities to be

@@ -118,6 +118,15 @@ god-loot pickup. The child grant therefore:
 This is materially different from selecting the same Infusion from an
 Olympian offer, where the containing loot source has its own history event.
 
+It does still affect the source field named `CurrentRun.Hero.MetGods` while the
+child remains equipped. That field is rebuilt from current traits through
+`GetGodSourceName`, and each Infusion is indexed by exactly one Olympian loot
+declaration. A matching All Together child can therefore satisfy the linked-god
+side of a Hex God Sent requirement at the post-choice check without changing
+`LootTypeHistory` or the ordinary god pool. The exact mapping and reevaluation
+chronology are owned by the
+[Hex Talent Layout audit](../loadout-and-progression/HEX_TALENT_LAYOUT_GAME_DATA_AUDIT.md).
+
 ### Grant chronology
 
 The game loops over the four sets, directly adds each selected child, and calls
