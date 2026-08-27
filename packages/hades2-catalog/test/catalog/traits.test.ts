@@ -776,7 +776,7 @@ const expectedOfferRequirements: Readonly<Record<string, string>> = {
   SorceryCritBoon:
     '[{"kind":"anyEquippedTrait","traitKeys":["SpellLaserTrait","SpellLeapTrait","SpellSummonTrait","SpellMeteorTrait","SpellTransformTrait","SpellMoonBeamTrait","SpellPolymorphTrait"]}]',
   OlympianSpellCountBoon:
-    '[{"kind":"anyEquippedTrait","traitKeys":["PolymorphZeusTalent","MeteorHestiaTalent","TransformAphroditeTalent","LeapHephaestusTalent","LaserApolloTalent","SummonHeraTalent","TimeSlowDemeterTalent","PotionPoseidonTalent","MoonBeamAresTalent"]}]',
+    '[{"kind":"anyEquippedTrait","traitKeys":["SpellPolymorphTrait","SpellMeteorTrait","SpellTransformTrait","SpellLeapTrait","SpellLaserTrait","SpellSummonTrait","SpellTimeSlowTrait","SpellPotionTrait","SpellMoonBeamTrait"]}]',
   ElementalRallyBoon: '[{"kind":"elementCount","element":"Fire","minimum":2}]',
   DoubleExManaBoon:
     '[{"kind":"all","requirements":[{"kind":"anyEquippedTrait","traitKeys":["ApolloWeaponBoon","ApolloSpecialBoon"]},{"kind":"anyEquippedTrait","traitKeys":["ApolloCastBoon","ApolloSprintBoon","ApolloManaBoon"]},{"kind":"anyEquippedTrait","traitKeys":["DoubleStrikeChanceBoon","ApolloCastAreaBoon","ApolloBlindBoon","ApolloExCastBoon"]}]}]',
@@ -1294,7 +1294,6 @@ describe('trait offer catalog closure', () => {
       context: 'blockGiftBoons',
       required: false,
     });
-
     expect(
       Object.fromEntries(
         traits.traits.values
@@ -1877,6 +1876,21 @@ describe('trait offer catalog closure', () => {
       },
     };
     expect(() => createCatalog(unknownRequirement)).toThrow(/unknown requirement kind/);
+
+    const unknownRuntimeRequirement = {
+      ...declarations,
+      traitCatalog: {
+        ...declarations.traitCatalog,
+        traits: declarations.traitCatalog.traits.map((trait) =>
+          trait.key === 'OlympianSpellCountBoon'
+            ? { ...trait, runtimeOfferRequirement: 'futurePredicate' as never }
+            : trait,
+        ),
+      },
+    };
+    expect(() => createCatalog(unknownRuntimeRequirement)).toThrow(
+      /runtimeOfferRequirement: must be one of/,
+    );
   });
 
   it('rejects malformed raw array and object contacts with declaration paths', () => {

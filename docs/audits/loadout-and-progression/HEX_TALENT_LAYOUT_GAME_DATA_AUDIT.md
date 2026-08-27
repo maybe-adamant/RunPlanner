@@ -309,13 +309,15 @@ equipped. Exact acquisition timing depends on the omitted graph and investment
 path, so neither generated pair presence nor aggregate invested points proves
 that predicate at the relevant Athena offer.
 
-The Planner therefore treats Task Force like other traits with volatile live
-requirements: the authored selection expresses intent, while the declaration
-supplies requirement-free Athena fallbacks for execution. The exact mapping is
-owned by the
+The Planner can still enforce the necessary modeled prefix: one of the nine
+base Hex traits must currently occupy the Spell state, including Aspect of
+Selene's built-in Sky Fall. It does not claim that this proves acquisition of
+the required Olympian node. The authored Task Force selection expresses that
+deeper intent, while the declaration supplies requirement-free Athena
+fallbacks for execution. The exact mapping is owned by the
 [Runtime Offer Fallback audit](../rewards-and-acquisition/RUNTIME_OFFER_FALLBACK_AUDIT.md).
-No Hex talent needs to enter the simulated equipped-trait ledger merely to
-support Task Force.
+No generated Path talent needs to enter the simulated equipped-trait ledger
+merely to support Task Force.
 
 ## Full-tree closure, inspection, and committed delivery
 
@@ -361,9 +363,10 @@ capacity; the persistent Olympian-pair fact adds exactly two capacity.
 
 Generated Hex talents remain execution-facing frozen identities. The Planner
 does not simulate their individual acquisition, equip them into trait history,
-or derive Task Force eligibility from them. Task Force keeps its source
-requirement as a runtime-offer fact and uses the ordinary one-step fallback
-contract when the preferred result is unavailable in game.
+or derive its Olympian-node eligibility from them. Task Force requires an
+equipped base Hex in Planner history, keeps its deeper source requirement as a
+runtime-offer fact, and uses the ordinary one-step fallback contract when the
+preferred result is unavailable in game.
 
 Talent Drop eligibility will use a latched closed state:
 

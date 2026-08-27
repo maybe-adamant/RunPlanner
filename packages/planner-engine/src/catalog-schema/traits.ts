@@ -326,7 +326,8 @@ export interface TraitDeclaration {
     | 'missingLastStand'
     | 'heldLastStand'
     | 'deathDefianceDamageBoonEligible'
-    | 'missingLastStandAndAthenaFirstMeeting';
+    | 'missingLastStandAndAthenaFirstMeeting'
+    | 'equippedOlympianSpellTalent';
   readonly equipmentSlot?: TraitEquipmentSlot;
   readonly elementContributions: Readonly<Partial<Record<TraitElement, number>>>;
   readonly usesBoonRarity: boolean;

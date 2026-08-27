@@ -16,9 +16,11 @@ import {
   assessTraitOffer,
   assessTraitOfferComposition,
   assessTraitOfferDomainComposition,
+  attachTraitHistory,
   createTraitHistoryState,
   evaluateReachedTraitOffer,
   foldTraitHistoryEvents,
+  recordAspectStartingTrait,
   recordReachedTraitOffer,
   resolveRuntimeOfferFallbackTraitKey,
   traitCandidates,
@@ -42,7 +44,11 @@ import { loadSurfaceNOPQProject } from '@run-planner/test-fixtures/surface';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
 import { createTraitOfferCandidateArtifacts } from '../../src/simulation/candidates/trait-offer-capability';
 import { settleOwnedAcquisitionSite } from '../../src/simulation/rewards/acquisition-settlement';
-import { settleEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement';
+import {
+  processEncounterTraitOffer,
+  settleEncounterTraitOffer,
+} from '../../src/simulation/rewards/trait-settlement';
+import { selectedTraitOfferProducts } from '../../src/simulation/rewards/biome/selected-trait-products';
 import {
   evaluateTraitOfferCandidate,
   type TraitOfferCandidateQuery,
@@ -974,6 +980,75 @@ describe('trait legality and derived facts', () => {
 });
 
 describe('reached trait offer chronology', () => {
+  it('requires a base Hex before exporting one non-companion Task Force fallback', () => {
+    const emptyHistory = createTraitHistoryState();
+    expect(assessTraitOption(catalog, 'OlympianSpellCountBoon', emptyHistory).legal).toBe(false);
+
+    const ordinarySpellHistory = foldTraitHistoryEvents(catalog, [
+      Object.freeze({
+        kind: 'traitOffer' as const,
+        owner,
+        acquisitionRole: 'spell',
+        sequence: 1,
+        giverKey: 'SpellDrop',
+        options: Object.freeze([{ traitKey: 'SpellPolymorphTrait' }]) as TraitOfferEvent['options'],
+        selectedOptionKey: 'option1' as const,
+        acquisitionPoint: 'test',
+      }),
+    ]);
+    expect(assessTraitOption(catalog, 'OlympianSpellCountBoon', ordinarySpellHistory).legal).toBe(
+      true,
+    );
+
+    const aspectSpellHistory = recordAspectStartingTrait(catalog, emptyHistory, owner, {
+      aspectKey: 'SuitHexAspect',
+    });
+    expect(assessTraitOption(catalog, 'OlympianSpellCountBoon', aspectSpellHistory).legal).toBe(
+      true,
+    );
+
+    const offer = Object.freeze({
+      kind: 'traits' as const,
+      giverKey: 'Athena',
+      options: Object.freeze([
+        { traitKey: 'OlympianSpellCountBoon', rarity: 'Common' as const },
+        { traitKey: 'InvulnerabilityDashBoon', rarity: 'Common' as const },
+        { traitKey: 'RetaliateInvulnerabilityBoon', rarity: 'Common' as const },
+      ]) as Extract<AuthoredTraitOffer, { kind: 'traits' }>['options'],
+      selectedOptionKey: 'option1' as const,
+      rarificationActions: Object.freeze([]),
+    });
+
+    expect(resolveRuntimeOfferFallbackTraitKey(catalog, offer, ordinarySpellHistory)).toBe(
+      'FocusLastStandBoon',
+    );
+    const evaluation = evaluateReachedTraitOffer(
+      catalog,
+      owner,
+      'source',
+      offer,
+      ordinarySpellHistory,
+      {},
+      0,
+    );
+    expect(evaluation.runtimeOfferFallbackTraitKey).toBe('FocusLastStandBoon');
+
+    const branch = initializeTestRewardBranches()[0];
+    if (branch === undefined) throw new Error('Task Force product fixture is missing its branch');
+    const branchWithSpell = Object.freeze({
+      ...branch,
+      history: attachTraitHistory(branch.history, ordinarySpellHistory),
+      traitHistory: ordinarySpellHistory,
+    });
+    const settled = processEncounterTraitOffer(catalog, branchWithSpell, owner, offer, 1, 'test');
+    expect(selectedTraitOfferProducts([settled]).runtimeOfferFallbacks).toEqual([
+      expect.objectContaining({
+        preferredKey: 'OlympianSpellCountBoon',
+        fallbackKey: 'FocusLastStandBoon',
+      }),
+    ]);
+  });
+
   it('resolves Athena’s declaration-owned fallback after excluding companion screen rows', () => {
     const offer = Object.freeze({
       kind: 'traits' as const,

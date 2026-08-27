@@ -64,6 +64,14 @@ describe('trait declarations and giver compiler owners', () => {
         requirement: 'deathDefianceDamageBoonEligible',
         fallbacks: ['HadesLifestealBoon', 'HadesPreDamageBoon', 'HadesChronosDebuffBoon'],
       },
+      OlympianSpellCountBoon: {
+        requirement: 'equippedOlympianSpellTalent',
+        fallbacks: [
+          'InvulnerabilityDashBoon',
+          'RetaliateInvulnerabilityBoon',
+          'FocusLastStandBoon',
+        ],
+      },
     } as const;
 
     for (const [traitKey, policy] of Object.entries(expected)) {

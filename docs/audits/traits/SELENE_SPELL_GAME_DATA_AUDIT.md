@@ -160,9 +160,11 @@ Path of Stars talents remain distinct equipped traits. In particular,
 on a base Hex. Base-spell implementation must not synthesize those talents.
 Their generation and finite-capacity closure are now source-audited
 separately. Exact Olympian-node acquisition remains graph-local and is not
-simulated; Task Force trusts the authored result and uses the durable runtime
-fallback contract instead. The current explicit `allSpellInvested = false`
-support baseline remains until the aggregate layout model is delivered.
+simulated. Task Force requires one currently equipped base Hex, including
+Aspect of Selene's Sky Fall, then trusts the authored result and uses the
+durable runtime fallback contract for the deeper node condition. The current
+explicit `allSpellInvested = false` support baseline remains until the
+aggregate layout model is delivered.
 
 ## Echo replay boundary
 

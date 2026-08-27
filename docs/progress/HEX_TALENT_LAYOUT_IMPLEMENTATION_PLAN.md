@@ -38,9 +38,9 @@ without inventing a three-row spell screen that the Aspect skips in game.
 Simulation then knows the finite tree capacity, derives and permanently adds
 the fixed two-node God Sent extension when its audited condition is reached,
 clamps writable Path investment to capacity, and closes ordinary Talent Drop
-generation at the correct lifecycle boundary. Task Force remains authorable
-without simulating individual Hex-talent acquisition and receives its audited
-runtime fallback.
+generation at the correct lifecycle boundary. Task Force requires a currently
+equipped base Hex, remains authorable without simulating individual Hex-talent
+acquisition, and receives its audited runtime fallback.
 
 ## Included scope
 
@@ -58,8 +58,8 @@ runtime fallback.
   Path point contacts;
 - replacement of the three hard-coded `allSpellInvested: false` facts with the
   branch's closed state; and
-- Task Force's runtime-only requirement plus the existing generic fallback
-  export path.
+- Task Force's modeled base-Hex prerequisite, runtime-only Olympian-node
+  requirement, and existing generic fallback export path.
 
 ## Excluded scope
 
@@ -308,22 +308,30 @@ the closure latch remains true.
 
 ### 6. Task Force adjustment
 
-Change `OlympianSpellCountBoon` from a Planner-simulated
-`anyEquippedTrait` requirement to a source-only runtime requirement such as
-`equippedOlympianSpellTalent` and give it the audited fallback trio:
+Change `OlympianSpellCountBoon` from its Planner-simulated nine-Olympian-node
+requirement to two deliberately different layers:
+
+- a normal `anyEquippedTrait` requirement over the nine base Hex identities,
+  including Aspect of Selene's `SpellMoonBeamTrait`; and
+- a source-only runtime requirement such as `equippedOlympianSpellTalent` for
+  the deeper God Sent node that the Planner does not simulate.
+
+Give it the audited fallback trio:
 
 1. `InvulnerabilityDashBoon`;
 2. `RetaliateInvulnerabilityBoon`; and
 3. `FocusLastStandBoon`.
 
-The existing generic runtime fallback resolver still removes companion rows
-and unavailable simulated-history traits, then exports one fallback. There is
-no authored Task Force checkbox, no inference from generated God Sent
-presence, and no Hex talent in `TraitHistory`.
+The normal requirement keeps Task Force unavailable before any Hex is equipped
+and permits it after an ordinary Spell selection or from Aspect of Selene's
+built-in Sky Fall. The existing generic runtime fallback resolver still
+removes companion rows and unavailable simulated-history traits, then exports
+one fallback. There is no authored Task Force checkbox, no inference from
+generated God Sent presence, and no generated Path talent in `TraitHistory`.
 
-The runtime-requirement enum is declaration/execution evidence only. It does
-not change Planner offer legality, matching the existing Death
-Defiance-adjacent policy.
+The runtime-requirement enum is declaration/execution evidence only. Planner
+legality stops at the modeled base-Hex prerequisite; it does not claim that the
+required God Sent node was actually acquired.
 
 ## Ownership map
 
@@ -341,14 +349,16 @@ Defiance-adjacent policy.
 
 ### Gate A — Task Force runtime volatility correction
 
-**Outcome:** Task Force is selectable from the authored Athena menu without a
-fabricated Hex-node history, while execution receives one safe fallback.
+**Outcome:** Task Force is selectable from the authored Athena menu only after
+a base Hex exists, without a fabricated Hex-node history, while execution
+receives one safe fallback.
 
 Work:
 
 - add the closed runtime requirement value to the raw and normalized catalog
   contracts;
-- remove Task Force's nine-node `offerRequirements` expression;
+- replace Task Force's nine-node `offerRequirements` expression with the nine
+  base Hex identities already represented in equipped Spell state;
 - declare the audited Athena fallback trio;
 - retain the existing one-step fallback resolver and export format; and
 - update the runtime fallback audit's current-coverage section only if the
@@ -356,11 +366,11 @@ Work:
 
 Primary tests:
 
-- catalog: Task Force has no simulated offer requirement, owns the exact
-  runtime requirement and exact fallback trio, and malformed declarations are
-  rejected;
-- engine: a selected Task Force row remains Planner-legal and resolves the
-  first legal non-companion Athena fallback; and
+- catalog: Task Force owns the exact base-Hex requirement, runtime requirement,
+  and fallback trio, and malformed declarations are rejected;
+- engine: Task Force is illegal before a Hex, legal after an ordinary Spell or
+  Aspect-owned Sky Fall, and resolves the first legal non-companion Athena
+  fallback; and
 - representative selected-trait product: the one fallback is emitted without
   recursive or authored fallback behavior.
 
@@ -530,15 +540,15 @@ The final review must specifically reject:
 
 Every new engine/catalog product has a stated consumer and witness:
 
-| Addition                      | Concrete consumers                                                            | Required witness                                     |
-| ----------------------------- | ----------------------------------------------------------------------------- | ---------------------------------------------------- |
-| Normalized Hex declaration    | authored validation/defaults, editor projection, capacity/God Sent simulation | catalog matrix plus one editor and one capacity test |
-| Authored selected-tree value  | Spell/Aspect UI, persisted executor input, tree installation                  | codec/command round-trip plus product edit witness   |
-| Whole-tree Aspect command     | Aspect of Selene loadout editor and Undo/Redo                                 | command validation plus route interaction test       |
-| Expanded `hexProgress`        | Path settlement, TalentLegal facts, Run State                                 | capacity/closure chronology plus presentation test   |
-| God Sent boolean              | effective capacity and Run State                                              | initial, late, persistent, and closed-tree tests     |
-| Closed-state checkpoint fact  | branch-aware reward generation                                                | open/closed and branch-disagreement tests            |
-| Task Force runtime enum value | game execution eligibility evidence                                           | catalog normalization and fallback emission test     |
+| Addition                                               | Concrete consumers                                                            | Required witness                                                          |
+| ------------------------------------------------------ | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| Normalized Hex declaration                             | authored validation/defaults, editor projection, capacity/God Sent simulation | catalog matrix plus one editor and one capacity test                      |
+| Authored selected-tree value                           | Spell/Aspect UI, persisted executor input, tree installation                  | codec/command round-trip plus product edit witness                        |
+| Whole-tree Aspect command                              | Aspect of Selene loadout editor and Undo/Redo                                 | command validation plus route interaction test                            |
+| Expanded `hexProgress`                                 | Path settlement, TalentLegal facts, Run State                                 | capacity/closure chronology plus presentation test                        |
+| God Sent boolean                                       | effective capacity and Run State                                              | initial, late, persistent, and closed-tree tests                          |
+| Closed-state checkpoint fact                           | branch-aware reward generation                                                | open/closed and branch-disagreement tests                                 |
+| Task Force base-Hex requirement and runtime enum value | Planner minimum eligibility and game execution evidence                       | catalog normalization, pre/post-Hex legality, and fallback emission tests |
 
 No addition is reserved for future full-Hex work. If an implementation needs a
 new abstraction that is not in this table, the gate stops and the plan must be
