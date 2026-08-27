@@ -91,6 +91,8 @@ import type { TakeoverBatchCommand } from '@planner/workspace/takeoverBatchInter
  * the `structured-workspace` entry point.
  */
 export type WorkspaceAssessment = 'assessed' | 'blocked' | 'unassessed';
+/** Whether an occurrence room-feature domain has reached engine assessment. */
+export type WorkspaceFeatureAssessment = 'assessed' | 'unassessed';
 export type WorkspaceProjectionSource = 'authored' | 'canonical' | 'progressive';
 export type WorkspaceStatus = 'blocked' | 'empty' | 'incomplete' | 'invalid' | 'valid';
 
@@ -278,6 +280,8 @@ export interface WorkspaceNemesisEventDomain {
   readonly goldTradeRewardTypes: readonly string[];
   readonly damageTradeRewardTypes: readonly string[];
   readonly traitTradeTraitKeys: readonly string[];
+  /** Application-owned identity model for the trait-trade target. */
+  readonly traitTradePicker: (selected?: string) => ContextualPickerModel<string>;
   readonly damageContestSuccessRewardTypes: readonly string[];
   readonly traitTradeRewardType: string;
   readonly damageContestFailureRewardType: string;
@@ -1085,6 +1089,7 @@ export interface WorkspacePurgingPoolSlotInteraction {
   readonly owner: OccurrenceAddress;
   readonly slotKey: 'left' | 'middle' | 'right';
   readonly traitKey: string | null;
+  readonly load: () => ContextualPickerModel<string | null>;
   readonly intentFor: (
     traitKey: string | null,
   ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplacePurgingPoolSlot' }>>;
@@ -1121,6 +1126,7 @@ export interface WorkspaceHermesShrineOfferInteraction {
     import('@run-planner/engine/authored-project').HermesShrineSlotKey | 'travelDealRefill';
   readonly rewardType: string | null;
   readonly candidateRewardTypes: readonly string[];
+  readonly load: () => ContextualPickerModel<string>;
   readonly intentFor: (
     rewardType: string,
   ) => WorkspaceCommandIntent<
@@ -1169,6 +1175,7 @@ export interface WorkspaceStygianWellOfferInteraction {
   readonly generationKey: import('@run-planner/engine/authored-project').StygianWellGenerationKey;
   readonly itemKey: string | null;
   readonly candidateItemKeys: readonly string[];
+  readonly load: () => ContextualPickerModel<string | null>;
   readonly intentFor: (
     itemKey: string | null,
   ) => WorkspaceCommandIntent<
@@ -1193,6 +1200,7 @@ export interface WorkspaceStygianWellTwistResultInteraction {
   readonly generationKey: import('@run-planner/engine/authored-project').StygianWellGenerationKey;
   readonly itemKey: string | null;
   readonly candidateItemKeys: readonly string[];
+  readonly load: () => ContextualPickerModel<string | null>;
   readonly intentFor: (
     itemKey: string | null,
   ) => WorkspaceCommandIntent<
@@ -1863,6 +1871,7 @@ export type WorkspaceRoomFeature =
   | {
       /** Fixed Postboss inventory; candidates are produced by the engine assessment. */
       readonly kind: 'purgingPool';
+      readonly assessment: WorkspaceFeatureAssessment;
       readonly interactionKey: string;
       readonly interacted: boolean;
       readonly slots: readonly {
@@ -1879,6 +1888,7 @@ export type WorkspaceRoomFeature =
   | {
       /** Shrine inventory is always visible and authored once present. */
       readonly kind: 'hermesShrine';
+      readonly assessment: WorkspaceFeatureAssessment;
       readonly present: boolean;
       readonly required: boolean;
       readonly placementEligible: boolean;
@@ -1914,6 +1924,7 @@ export type WorkspaceRoomFeature =
     }
   | {
       readonly kind: 'stygianWell';
+      readonly assessment: WorkspaceFeatureAssessment;
       readonly present: boolean;
       readonly required: boolean;
       readonly placementEligible: boolean;

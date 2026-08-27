@@ -137,6 +137,7 @@ export function bindWorkspaceInteractions(
   const candidates = services.candidateSessions.bind(assembly);
 
   const occurrence: WorkspaceOccurrenceLocalInteractionCatalog = bindOccurrenceLocalInteractions(
+    catalog,
     allocateOccurrenceId,
     assembly,
     candidates,

@@ -79,7 +79,7 @@ describe('Stygian Well workbench', () => {
 
     await view.user.click(presence);
     expect(screen.getByRole('checkbox', { name: 'Interact with Stygian Well' })).toBeTruthy();
-    expect(screen.queryAllByRole('combobox', { name: /^Stygian Well / })).toHaveLength(0);
+    expect(screen.queryAllByRole('button', { name: /^Stygian Well / })).toHaveLength(0);
   });
 
   it('keeps forced presence fixed and gates exact inventory behind Interact', async () => {
@@ -91,27 +91,50 @@ describe('Stygian Well workbench', () => {
     );
     expect(screen.queryByRole('checkbox', { name: 'Stygian Well present' })).toBeNull();
     expect(screen.getByRole('checkbox', { name: 'Interact with Stygian Well' })).toBeTruthy();
-    expect(screen.queryAllByRole('combobox', { name: /^Stygian Well / })).toHaveLength(0);
+    expect(screen.queryAllByRole('button', { name: /^Stygian Well / })).toHaveLength(0);
 
     await view.user.click(screen.getByRole('checkbox', { name: 'Interact with Stygian Well' }));
-    expect(screen.getAllByRole('combobox', { name: /^Stygian Well / })).toHaveLength(3);
+    expect(screen.getAllByRole('button', { name: /^Stygian Well / })).toHaveLength(3);
+  });
+
+  it('retains an authored refill as selected-invalid when reached assessment has no refill capability', async () => {
+    const owner = createOccurrenceAddress(goldenFBiome, postbossId);
+    let project = applyProjectCommand(loadUnderworldFGProject(), catalog, {
+      kind: 'SetStygianWellInteraction',
+      occurrence: owner,
+      interacted: true,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceStygianWellTravelDealRefill',
+      occurrence: owner,
+      itemKey: 'ArmorBoostStore',
+    });
+
+    const view = renderOccurrenceWorkbench(project, 'Underworld', 'F', occurrence);
+    const picker = screen.getByRole('button', { name: 'Stygian Well Travel Deal refill' });
+    await view.user.click(picker);
+    const choice = await screen.findByRole('option', { name: /ArmorBoostStore/ });
+    expect(picker.getAttribute('data-candidate-state')).toBe('impossible');
+    expect(screen.getByText('Current selection')).toBeTruthy();
+    expect(choice.getAttribute('data-candidate-state')).toBe('impossible');
+    expect(choice.getAttribute('aria-disabled')).toBe('true');
   });
 
   it('shows Twist only for a purchased Twist generation and clears purchase intent on exit', async () => {
     const view = renderOccurrenceWorkbench(authoredWell(), 'Underworld', 'F', occurrence);
     expect(
-      screen.queryByRole('combobox', { name: 'Stygian Well Second Left Twist result' }),
+      screen.queryByRole('button', { name: 'Stygian Well Second Left Twist result' }),
     ).toBeNull();
 
     await view.user.click(
       screen.getByRole('checkbox', { name: 'Purchase Stygian Well Second Left' }),
     );
     expect(
-      screen.getByRole('combobox', { name: 'Stygian Well Second Left Twist result' }),
+      screen.getByRole('button', { name: 'Stygian Well Second Left Twist result' }),
     ).toBeTruthy();
 
     await view.user.click(screen.getByRole('checkbox', { name: 'Interact with Stygian Well' }));
-    expect(screen.queryAllByRole('combobox', { name: /^Stygian Well / })).toHaveLength(0);
+    expect(screen.queryAllByRole('button', { name: /^Stygian Well / })).toHaveLength(0);
   });
 
   it('repairs a retained purchased generation without discarding its dormant Twist result', async () => {
@@ -139,18 +162,21 @@ describe('Stygian Well workbench', () => {
     const purchase = screen.getByRole('checkbox', {
       name: 'Purchase Stygian Well Second Left',
     });
-    const offer = screen.getByRole('combobox', { name: 'Stygian Well Second Left' });
+    const offer = screen.getByRole('button', { name: 'Stygian Well Second Left' });
     expect((purchase as HTMLInputElement).checked).toBe(true);
-    expect((offer as HTMLSelectElement).value).toBe('');
+    expect(offer.textContent).toContain('Unresolved');
     expect(
-      screen.queryByRole('combobox', { name: 'Stygian Well Second Left Twist result' }),
+      screen.queryByRole('button', { name: 'Stygian Well Second Left Twist result' }),
     ).toBeNull();
 
-    await view.user.selectOptions(offer, 'RandomStoreItem');
-    const twist = screen.getByRole('combobox', {
+    await view.user.click(offer);
+    await view.user.click(
+      screen.getByRole('option', { name: /RandomStoreItem|Random Store Item/ }),
+    );
+    const twist = screen.getByRole('button', {
       name: 'Stygian Well Second Left Twist result',
     });
-    expect((twist as HTMLSelectElement).value).toBe('HealDropRange');
+    expect(twist.textContent).toMatch(/HealDropRange|Heal Drop Range/);
   });
 
   it('indexes present Wells and navigates to the owning room', async () => {

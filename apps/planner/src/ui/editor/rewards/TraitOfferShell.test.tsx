@@ -744,13 +744,12 @@ describe('ordinary offer shell', () => {
     );
 
     expect(await screen.findByText('Effective level: 6')).toBeTruthy();
-    const bonus = screen.getByRole('button', { name: 'option1 Persephone level bonus' });
-    expect(bonus.textContent).toContain('+0');
+    const bonus = screen.getByRole('combobox', { name: 'option1 Persephone level bonus' });
+    expect((bonus as HTMLSelectElement).value).toBe('0');
     await user.click(screen.getByRole('button', { name: 'Save trait offer' }));
     const defaultCommit = onCommit.mock.calls[0]?.[0] as AuthoredTraitOfferTraits | undefined;
     expect(defaultCommit?.options[0]).not.toHaveProperty('persephoneLevelBonus');
-    await user.click(bonus);
-    await user.click(await screen.findByRole('option', { name: '+5' }));
+    await user.selectOptions(bonus, '5');
     await user.click(screen.getByRole('button', { name: 'Save trait offer' }));
 
     expect(onCommit).toHaveBeenCalledWith(
@@ -764,8 +763,7 @@ describe('ordinary offer shell', () => {
         ],
       }),
     );
-    await user.click(bonus);
-    await user.click(await screen.findByRole('option', { name: '+0' }));
+    await user.selectOptions(bonus, '0');
     await user.click(screen.getByRole('button', { name: 'Save trait offer' }));
 
     const zeroCommit = onCommit.mock.calls.at(-1)?.[0] as AuthoredTraitOfferTraits | undefined;
@@ -883,13 +881,21 @@ describe('ordinary offer shell', () => {
     await user.click(traitPicker);
     await user.click(await screen.findByRole('option', { name: alternative.label }));
     expect(
-      screen.getByRole('button', { name: 'option1 Persephone level bonus' }).textContent,
-    ).toContain('+5');
+      (
+        screen.getByRole('combobox', {
+          name: 'option1 Persephone level bonus',
+        }) as HTMLSelectElement
+      ).value,
+    ).toBe('5');
     await user.click(traitPicker);
     await user.click(await screen.findByRole('option', { name: original.label }));
     expect(
-      screen.getByRole('button', { name: 'option1 Persephone level bonus' }).textContent,
-    ).toContain('+5');
+      (
+        screen.getByRole('combobox', {
+          name: 'option1 Persephone level bonus',
+        }) as HTMLSelectElement
+      ).value,
+    ).toBe('5');
     application.dispose();
   });
 });

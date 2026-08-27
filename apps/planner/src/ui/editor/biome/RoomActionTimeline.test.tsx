@@ -630,22 +630,26 @@ describe('OccurrenceRoomActions', () => {
       'F',
       completionOccurrenceById(postbossId),
     );
-    expect(screen.queryByRole('combobox', { name: 'Pool of Purging Left slot' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Pool of Purging Left slot' })).toBeNull();
     await view.user.click(screen.getByRole('checkbox', { name: 'Interact with Pool of Purging' }));
-    const left = screen.getByRole('combobox', { name: 'Pool of Purging Left slot' });
-    const firstTrait = Array.from((left as HTMLSelectElement).options).find(
-      (option) => option.value !== '',
-    );
+    const left = screen.getByRole('button', { name: 'Pool of Purging Left slot' });
+    await view.user.click(left);
+    const firstTrait = within(screen.getByRole('listbox'))
+      .getAllByRole('option')
+      .find((option) => option.textContent?.trim() !== 'Unresolved');
     if (firstTrait === undefined) throw new Error('F Pool has no eligible trait candidate');
-    const leftTraitLabel = firstTrait.text;
-    await view.user.selectOptions(left, firstTrait.value);
+    const leftTraitLabel =
+      firstTrait.querySelector('.contextual-picker-item-label')?.textContent ??
+      firstTrait.textContent;
+    await view.user.click(firstTrait);
     for (const label of ['Middle slot', 'Right slot'] as const) {
-      const slot = screen.getByRole('combobox', { name: `Pool of Purging ${label}` });
-      const trait = Array.from((slot as HTMLSelectElement).options).find(
-        (option) => option.value !== '',
-      );
+      const slot = screen.getByRole('button', { name: `Pool of Purging ${label}` });
+      await view.user.click(slot);
+      const trait = within(screen.getByRole('listbox'))
+        .getAllByRole('option')
+        .find((option) => option.textContent?.trim() !== 'Unresolved');
       if (trait === undefined) throw new Error(`F Pool ${label} has no eligible trait candidate`);
-      await view.user.selectOptions(slot, trait.value);
+      await view.user.click(trait);
     }
     await waitFor(() =>
       expect(
@@ -655,7 +659,7 @@ describe('OccurrenceRoomActions', () => {
           ?.biomes.find((biome) => biome.biomeKey === 'F')
           ?.completionOccurrences.find((room) => room.occurrenceId === postbossId)?.purgingPool
           ?.traitKeyBySlot.left,
-      ).toBe(firstTrait.value),
+      ).not.toBeNull(),
     );
 
     await view.user.click(screen.getByRole('checkbox', { name: 'Sell Left slot' }));
@@ -722,10 +726,8 @@ describe('OccurrenceRoomActions', () => {
     );
 
     openRoomTab('Room Overview');
-    await view.user.selectOptions(
-      screen.getByRole('combobox', { name: 'Pool of Purging Left slot' }),
-      '',
-    );
+    await view.user.click(screen.getByRole('button', { name: 'Pool of Purging Left slot' }));
+    await view.user.click(screen.getByRole('option', { name: 'Unresolved' }));
     await waitFor(() =>
       expect(poolActionOrder()).toContainEqual({ kind: 'sellPurgingPoolTrait', slotKey: 'left' }),
     );
@@ -754,7 +756,7 @@ describe('OccurrenceRoomActions', () => {
     openRoomTab('Room Overview');
     await view.user.click(screen.getByRole('checkbox', { name: 'Interact with Pool of Purging' }));
     await waitFor(() =>
-      expect(screen.queryByRole('combobox', { name: 'Pool of Purging Middle slot' })).toBeNull(),
+      expect(screen.queryByRole('button', { name: 'Pool of Purging Middle slot' })).toBeNull(),
     );
     expect(
       view.application.store

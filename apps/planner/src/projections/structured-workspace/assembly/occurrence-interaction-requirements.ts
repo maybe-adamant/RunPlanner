@@ -119,6 +119,7 @@ export function occurrenceInteractionRequirements(
     if (feature.kind === 'stygianWell') {
       requirements.push(
         Object.freeze({
+          assessment: feature.assessment,
           kind: 'stygianWell' as const,
           owner: room.address,
           present: feature.present,
@@ -135,7 +136,9 @@ export function occurrenceInteractionRequirements(
                 generationKey: slot.generationKey,
                 slotKey: slot.key,
                 itemKey: slot.itemKey,
+                ...(slot.itemLabel === undefined ? {} : { itemLabel: slot.itemLabel }),
                 candidateItemKeys: slot.candidateItemKeys,
+                candidateItems: slot.candidateItems,
                 offerInteractionKey: slot.offerInteractionKey,
                 purchased: slot.purchased,
                 purchaseInteractionKey: slot.purchaseInteractionKey,
@@ -144,7 +147,11 @@ export function occurrenceInteractionRequirements(
                   : {
                       twist: Object.freeze({
                         itemKey: slot.twist.itemKey,
+                        ...(slot.twist.itemLabel === undefined
+                          ? {}
+                          : { itemLabel: slot.twist.itemLabel }),
                         candidateItemKeys: slot.twist.candidateItemKeys,
+                        candidateItems: slot.twist.candidateItems,
                         interactionKey: slot.twist.interactionKey,
                       }),
                     }),
@@ -158,6 +165,7 @@ export function occurrenceInteractionRequirements(
     if (feature.kind === 'hermesShrine') {
       requirements.push(
         Object.freeze({
+          assessment: feature.assessment,
           kind: 'hermesShrine' as const,
           owner: room.address,
           present: feature.present,
@@ -169,7 +177,9 @@ export function occurrenceInteractionRequirements(
               Object.freeze({
                 slotKey: slot.key,
                 rewardType: slot.rewardType,
+                ...(slot.rewardLabel === undefined ? {} : { rewardLabel: slot.rewardLabel }),
                 candidateRewardTypes: slot.candidateRewardTypes,
+                candidateRewards: slot.candidateRewards,
                 purchase: slot.purchase,
                 offerInteractionKey: slot.offerInteractionKey,
                 purchaseInteractionKey: slot.purchaseInteractionKey,
@@ -181,7 +191,11 @@ export function occurrenceInteractionRequirements(
                   Object.freeze({
                     slotKey: 'travelDealRefill' as const,
                     rewardType: feature.travelDealRefill.rewardType,
+                    ...(feature.travelDealRefill.rewardLabel === undefined
+                      ? {}
+                      : { rewardLabel: feature.travelDealRefill.rewardLabel }),
                     candidateRewardTypes: feature.travelDealRefill.candidateRewardTypes,
+                    candidateRewards: feature.travelDealRefill.candidateRewards,
                     purchase: feature.travelDealRefill.purchase,
                     offerInteractionKey: feature.travelDealRefill.offerInteractionKey,
                     purchaseInteractionKey: feature.travelDealRefill.purchaseInteractionKey,
@@ -204,6 +218,7 @@ export function occurrenceInteractionRequirements(
     if (!feature.interacted) continue;
     requirements.push(
       Object.freeze({
+        assessment: feature.assessment,
         kind: 'purgingPoolSlots' as const,
         owner: room.address,
         slots: Object.freeze(
@@ -212,6 +227,8 @@ export function occurrenceInteractionRequirements(
               interactionKey: slot.interactionKey,
               slotKey: slot.key,
               traitKey: slot.traitKey,
+              ...(slot.traitLabel === undefined ? {} : { traitLabel: slot.traitLabel }),
+              candidateTraits: slot.candidateTraits,
             }),
           ),
         ),

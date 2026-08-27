@@ -5,9 +5,15 @@ import type {
 } from '@planner/projections/structured-workspace';
 import { SemanticOwnerMarker } from '@planner/ui/feedback/EvaluationFeedback';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
+import type { ContextualPickerModel } from '@planner/projections/contextualPicker';
+import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
 import { useState } from 'react';
+
+const emptyTraitPicker: ContextualPickerModel<string> = Object.freeze({
+  sections: Object.freeze([]),
+});
 
 export function NemesisEventEditor({
   interaction,
@@ -22,6 +28,14 @@ export function NemesisEventEditor({
   const candidate = useWorkspaceInteraction(interaction);
   const domain = candidate.result;
   const kind = draft?.kind ?? '';
+  const traitTradeDraft = draft?.kind === 'traitTrade' ? draft : undefined;
+  const traitPicker =
+    traitTradeDraft === undefined
+      ? emptyTraitPicker
+      : (domain?.traitTradePicker(
+          traitTradeDraft.traitKey === '' ? undefined : traitTradeDraft.traitKey,
+        ) ?? emptyTraitPicker);
+  const traitTriggerLabel = traitPicker.selected?.label ?? (traitTradeDraft?.traitKey || undefined);
   const rewardTypes = withRetained(
     nemesisRewardTypes(domain, draft),
     rewardType ?? interaction.reward?.rewardType,
@@ -103,20 +117,19 @@ export function NemesisEventEditor({
         </label>
       ) : null}
       {draft?.kind === 'traitTrade' ? (
-        <label className="field-control">
-          <span>Trait</span>
-          <select
-            aria-label="Nemesis trait"
-            onChange={(event) => setDraft({ ...draft, traitKey: event.target.value })}
-            value={draft.traitKey}
-          >
-            {withRetained(domain?.traitTradeTraitKeys ?? [], draft.traitKey).map((value) => (
-              <option key={value} value={value}>
-                {value}
-              </option>
-            ))}
-          </select>
-        </label>
+        <ContextualPicker
+          ariaLabel="Nemesis trait"
+          id="nemesis-trait"
+          label="Trait"
+          loading={candidate.pending}
+          model={traitPicker}
+          onOpenChange={(open) => {
+            if (open) candidate.activate();
+          }}
+          onSelect={(traitKey) => setDraft({ ...draft, traitKey })}
+          placeholder="Choose a trait"
+          {...(traitTriggerLabel === undefined ? {} : { triggerLabel: traitTriggerLabel })}
+        />
       ) : null}
       {draft === null ? null : (
         <label className="field-control">

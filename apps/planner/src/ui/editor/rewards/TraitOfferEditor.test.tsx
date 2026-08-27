@@ -218,13 +218,10 @@ describe('trait offer editor entry and dialog', () => {
       </Provider>,
     );
 
-    const bonus = screen.getByRole('button', { name: 'option1 Persephone level bonus' });
-    expect(bonus.textContent).toContain('+1');
-    await user.click(bonus);
-    await user.click(await screen.findByRole('option', { name: '+2' }));
-    expect(
-      screen.getByRole('button', { name: 'option1 Persephone level bonus' }).textContent,
-    ).toContain('+2');
+    const bonus = screen.getByRole('combobox', { name: 'option1 Persephone level bonus' });
+    expect((bonus as HTMLSelectElement).value).toBe('1');
+    await user.selectOptions(bonus, '2');
+    expect((bonus as HTMLSelectElement).value).toBe('2');
 
     view.rerender(
       <Provider store={application.store}>
@@ -232,8 +229,12 @@ describe('trait offer editor entry and dialog', () => {
       </Provider>,
     );
     expect(
-      screen.getByRole('button', { name: 'option1 Persephone level bonus' }).textContent,
-    ).toContain('+5');
+      (
+        screen.getByRole('combobox', {
+          name: 'option1 Persephone level bonus',
+        }) as HTMLSelectElement
+      ).value,
+    ).toBe('5');
     application.dispose();
   });
 });

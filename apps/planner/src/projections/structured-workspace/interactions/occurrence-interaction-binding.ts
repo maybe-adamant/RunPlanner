@@ -6,6 +6,7 @@ import {
   type OccurrenceId,
   type SideRoomGeneration,
 } from '@run-planner/engine/authored-project';
+import type { Catalog } from '@run-planner/engine/catalog-schema';
 import type { ResolvedRewardOffer } from '@run-planner/engine/reward-kernel';
 import {
   nemesisRandomEventCandidateSupportForProjectEvaluationAssembly,
@@ -45,6 +46,10 @@ import type {
 } from '../contract';
 import type { WorkspaceOccurrenceInteractionRequirement } from './interaction-requirements';
 import { candidateInteraction } from './interaction-binding-primitives';
+import {
+  createMemoizedStableIdentityPickerLoad,
+  projectStableIdentityPicker,
+} from './room-feature-picker-model';
 
 export interface WorkspaceOccurrenceLocalInteractionCatalog {
   readonly encounterPhases: ReadonlyMap<string, WorkspaceEncounterInteraction>;
@@ -98,6 +103,7 @@ function intersectNemesisBranchValues(
 }
 
 function projectNemesisEventDomain(
+  catalog: import('@run-planner/engine/catalog-schema').Catalog,
   support: NemesisRandomEventCandidateSupport | undefined,
 ): WorkspaceNemesisEventDomain | undefined {
   if (support === undefined) return undefined;
@@ -123,6 +129,18 @@ function projectNemesisEventDomain(
       support,
       (branch) => branch.traitTradeTraitKeys,
     ),
+    traitTradePicker: (selected?: string) =>
+      projectStableIdentityPicker({
+        assessment: 'assessed',
+        choices: intersectNemesisBranchValues(support, (branch) => branch.traitTradeTraitKeys).map(
+          (traitKey) => ({
+            label: catalog.traits.byKey[traitKey]?.label ?? traitKey,
+            value: traitKey,
+          }),
+        ),
+        selected,
+        selectedLabel: selected === undefined ? undefined : catalog.traits.byKey[selected]?.label,
+      }),
     damageContestSuccessRewardTypes: intersectNemesisBranchValues(
       support,
       (branch) => branch.damageContestSuccessRewardTypes,
@@ -133,6 +151,7 @@ function projectNemesisEventDomain(
 }
 
 export function bindOccurrenceLocalInteractions(
+  catalog: Catalog,
   allocateOccurrenceId: OccurrenceIdFactory,
   assembly: ProjectEvaluationAssembly,
   candidates: CandidateProjectionSession,
@@ -357,6 +376,7 @@ export function bindOccurrenceLocalInteractions(
                 value: event.value,
                 load: () =>
                   projectNemesisEventDomain(
+                    catalog,
                     nemesisRandomEventCandidateSupportForProjectEvaluationAssembly(
                       assembly,
                       event.owner,
@@ -503,6 +523,18 @@ export function bindOccurrenceLocalInteractions(
                   }),
                 }),
               key: slot.interactionKey,
+              load: createMemoizedStableIdentityPickerLoad({
+                assessment: requirement.assessment,
+                choices: [
+                  { label: 'Unresolved', value: null },
+                  ...slot.candidateTraits.map((trait) => ({
+                    label: trait.label,
+                    value: trait.key,
+                  })),
+                ],
+                selected: slot.traitKey,
+                selectedLabel: slot.traitLabel,
+              }),
               owner: requirement.owner,
               slotKey: slot.slotKey,
               traitKey: slot.traitKey,
@@ -573,6 +605,15 @@ export function bindOccurrenceLocalInteractions(
             slot.offerInteractionKey,
             Object.freeze({
               key: slot.offerInteractionKey,
+              load: createMemoizedStableIdentityPickerLoad({
+                assessment: requirement.assessment,
+                choices: slot.candidateRewards.map((reward) => ({
+                  label: reward.label,
+                  value: reward.rewardType,
+                })),
+                selected: slot.rewardType ?? undefined,
+                selectedLabel: slot.rewardLabel,
+              }),
               owner: requirement.owner,
               slotKey: slot.slotKey,
               rewardType: slot.rewardType,
@@ -670,6 +711,18 @@ export function bindOccurrenceLocalInteractions(
             slot.offerInteractionKey,
             Object.freeze({
               key: slot.offerInteractionKey,
+              load: createMemoizedStableIdentityPickerLoad({
+                assessment: requirement.assessment,
+                choices: [
+                  { label: 'Unresolved', value: null },
+                  ...slot.candidateItems.map((item) => ({
+                    label: item.label,
+                    value: item.key,
+                  })),
+                ],
+                selected: slot.itemKey,
+                selectedLabel: slot.itemLabel,
+              }),
               owner: requirement.owner,
               generationKey: slot.generationKey,
               itemKey: slot.itemKey,
@@ -715,6 +768,18 @@ export function bindOccurrenceLocalInteractions(
               slot.twist.interactionKey,
               Object.freeze({
                 key: slot.twist.interactionKey,
+                load: createMemoizedStableIdentityPickerLoad({
+                  assessment: requirement.assessment,
+                  choices: [
+                    { label: 'Unresolved', value: null },
+                    ...slot.twist.candidateItems.map((item) => ({
+                      label: item.label,
+                      value: item.key,
+                    })),
+                  ],
+                  selected: slot.twist.itemKey,
+                  selectedLabel: slot.twist.itemLabel,
+                }),
                 owner: requirement.owner,
                 generationKey: slot.generationKey,
                 itemKey: slot.twist.itemKey,
