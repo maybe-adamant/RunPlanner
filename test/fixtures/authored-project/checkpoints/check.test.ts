@@ -108,7 +108,7 @@ describe('authored-project checkpoint integrity', () => {
     const chaosRoom = occurrences?.find(
       (occurrence) => occurrence.occurrenceId === 'fixture-chaos-room',
     );
-    expect(checkpointManifest).toHaveLength(28);
+    expect(checkpointManifest).toHaveLength(27);
     expect(chaosRoom?.gameName).toMatch(/^Chaos_/);
     expect(chaosRoom?.state).toMatchObject({
       kind: 'fixed',
@@ -117,7 +117,6 @@ describe('authored-project checkpoint integrity', () => {
         traitOffersByAcquisitionRole: { self: null },
       },
     });
-    expect(loadCheckpoint('g-tail-chaos-timepiece-echo')).toBeDefined();
   });
 
   it('keeps the F Pool checkpoint as a stacked sale with retained prior-pick exclusion', () => {

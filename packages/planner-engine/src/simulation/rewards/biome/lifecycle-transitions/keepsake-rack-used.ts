@@ -51,6 +51,38 @@ export interface KeepsakeRackUsedTransition {
   readonly findings: readonly LifecycleFinding[];
 }
 
+function detachTranscendentEmbryoBlessing(
+  catalog: Catalog,
+  branch: RewardBranchState,
+  owner: ReturnType<typeof createPostbossKeepsakeSelectionAddress>,
+  sequence: number,
+): RewardBranchState {
+  const source = branch.keepsakes.transcendentEmbryo;
+  if (
+    source === undefined ||
+    source.origin !== 'ordinary' ||
+    branch.keepsakes.currentKey !== 'RandomBlessingKeepsake'
+  )
+    return branch;
+  const before = branch.traitHistory ?? createTraitHistoryState();
+  const traitHistory = foldTraitHistoryEvents(catalog, [
+    ...before.events,
+    Object.freeze({
+      kind: 'directChaosBlessingRemoval' as const,
+      owner,
+      acquisitionRole: 'transcendentEmbryoRackReplacement' as const,
+      sequence,
+      acquisitionPoint: 'keepsakeRackUsed',
+      acquisitionIdentity: source.markedBlessingAcquisitionIdentity,
+    }),
+  ]);
+  return Object.freeze({
+    ...branch,
+    history: attachTraitHistory(branch.history, traitHistory),
+    traitHistory,
+  });
+}
+
 /** Applies a ranked postboss rack and emits its exact pre-selection/equip frontiers. */
 export function applyKeepsakeRackUsedTransition(
   catalog: Catalog,
@@ -144,20 +176,20 @@ export function applyKeepsakeRackUsedTransition(
       disposition.kind === 'replace' &&
       before.currentKey !== after.currentKey &&
       after.currentKey === disposition.keepsakeKey;
+    const detachedBranch = replacementSucceeded
+      ? detachTranscendentEmbryoBlessing(catalog, branch, selection, event.sequence)
+      : branch;
+    const transitionedBranch = Object.freeze({ ...detachedBranch, keepsakes: after });
     return Object.freeze({
       branch: replacementSucceeded
         ? applyMoonBeamEquip(
             catalog,
-            applyOlympianRewardPressureEquip(
-              catalog,
-              Object.freeze({ ...branch, keepsakes: after }),
-              disposition.keepsakeKey,
-            ),
+            applyOlympianRewardPressureEquip(catalog, transitionedBranch, disposition.keepsakeKey),
             disposition.keepsakeKey,
             equippedRank,
             room.gameName === 'H_PostBoss01' || room.gameName === 'P_PostBoss01',
           )
-        : Object.freeze({ ...branch, keepsakes: after }),
+        : transitionedBranch,
       replacementSucceeded,
       ...(equippedRank === undefined ? {} : { equippedRank }),
     });

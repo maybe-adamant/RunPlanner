@@ -322,7 +322,6 @@ const rawAcquisitions = [
     gameName: 'TrialUpgrade',
     kind: 'loot',
     historyProjection: 'lootAndUse',
-    ...lastReward('TrialUpgrade'),
   },
   { gameName: 'BlindBoxLoot', kind: 'consumable', historyProjection: 'consumableAndUse' },
   {

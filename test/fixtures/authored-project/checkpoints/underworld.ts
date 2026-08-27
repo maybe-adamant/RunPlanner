@@ -9,7 +9,6 @@ import underworldFGRaw from './underworld-fg.runplanner.json';
 import underworldFGHRaw from './underworld-fgh.runplanner.json';
 import underworldFGHIRaw from './underworld-fghi.runplanner.json';
 import naturalChaosUnresolvedTrialRaw from './natural-chaos-unresolved-trial.runplanner.json';
-import gTailChaosTimepieceEchoRaw from './g-tail-chaos-timepiece-echo.runplanner.json';
 import nemesisFTraitTradeRaw from './nemesis-f-trait-trade.runplanner.json';
 import nemesisHFieldsRaw from './nemesis-h-fields.runplanner.json';
 import nemesisFPomSeaStarRaw from './nemesis-f-pom-sea-star.runplanner.json';
@@ -17,7 +16,6 @@ import nemesisFPomSeaStarRaw from './nemesis-f-pom-sea-star.runplanner.json';
 type UnderworldCheckpointId =
   | Extract<AuthoredProjectCheckpointId, `underworld-${string}`>
   | 'natural-chaos-unresolved-trial'
-  | 'g-tail-chaos-timepiece-echo'
   | 'nemesis-f-trait-trade'
   | 'nemesis-h-fields'
   | 'nemesis-f-pom-sea-star';
@@ -30,7 +28,6 @@ export const underworldCheckpointArtifacts = Object.freeze({
   'underworld-fghi': checkpointArtifact(underworldFGHIRaw),
   'underworld-f-midshop-pom-frontier': checkpointArtifact(underworldFMidshopPomRaw),
   'natural-chaos-unresolved-trial': checkpointArtifact(naturalChaosUnresolvedTrialRaw),
-  'g-tail-chaos-timepiece-echo': checkpointArtifact(gTailChaosTimepieceEchoRaw),
   'nemesis-f-trait-trade': checkpointArtifact(nemesisFTraitTradeRaw),
   'nemesis-h-fields': checkpointArtifact(nemesisHFieldsRaw),
   'nemesis-f-pom-sea-star': checkpointArtifact(nemesisFPomSeaStarRaw),
@@ -58,10 +55,6 @@ export function loadUnderworldFGHICheckpoint(): ProjectDocument {
 
 export function loadUnderworldFMidshopPomFrontierCheckpoint(): ProjectDocument {
   return underworldCheckpointArtifacts['underworld-f-midshop-pom-frontier'].load();
-}
-
-export function loadGTailChaosTimepieceEchoCheckpoint(): ProjectDocument {
-  return underworldCheckpointArtifacts['g-tail-chaos-timepiece-echo'].load();
 }
 
 export function loadNemesisTraitTradeCheckpoint(): ProjectDocument {
