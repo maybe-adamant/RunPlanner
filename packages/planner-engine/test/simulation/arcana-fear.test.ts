@@ -6,7 +6,7 @@ import {
   promoteArcana,
   suppressFearVow,
   beginBiomeArcanaFearState,
-  consumeOrdinaryRoomForfeit,
+  consumeRoomRewardForfeit,
 } from '@run-planner/engine/simulation';
 import { createBiomeAddress } from '@run-planner/engine/authored-project';
 import { describe, expect, it } from 'vitest';
@@ -134,17 +134,21 @@ describe('progressive Arcana and Fear state', () => {
       fearRanks: { ...loadout.fearRanks, BoonSkipShrineUpgrade: 1 },
     });
     const owner = createBiomeAddress('Underworld', 'F');
-    const consumed = consumeOrdinaryRoomForfeit(catalog, state, 'Boon', { owner, sequence: 1 });
-    expect(consumed).toMatchObject({ consumed: true, state: { fear: { forfeitConsumed: true } } });
+    const consumed = consumeRoomRewardForfeit(catalog, state, 'Boon', { owner, sequence: 1 });
+    expect(consumed).toMatchObject({
+      consumed: true,
+      replacementRewardType: 'RoomRewardConsolationPrize',
+      state: { fear: { forfeitConsumed: true } },
+    });
     expect(
-      consumeOrdinaryRoomForfeit(catalog, consumed.state, 'HermesUpgrade', { owner, sequence: 2 }),
+      consumeRoomRewardForfeit(catalog, consumed.state, 'HermesUpgrade', { owner, sequence: 2 }),
     ).toMatchObject({ consumed: false });
     expect(
-      consumeOrdinaryRoomForfeit(catalog, consumed.state, 'HermesUpgrade', { owner, sequence: 1 }),
+      consumeRoomRewardForfeit(catalog, consumed.state, 'HermesUpgrade', { owner, sequence: 1 }),
     ).toMatchObject({ consumed: false });
     expect(beginBiomeArcanaFearState(consumed.state).fear.forfeitConsumed).toBe(false);
     expect(
-      consumeOrdinaryRoomForfeit(catalog, createArcanaFearState(catalog, loadout), 'Boon', {
+      consumeRoomRewardForfeit(catalog, createArcanaFearState(catalog, loadout), 'Boon', {
         owner,
         sequence: 1,
       }),
@@ -159,7 +163,7 @@ describe('progressive Arcana and Fear state', () => {
     });
     const owner = createBiomeAddress('Underworld', 'F');
     expect(forfeitStatus(state)).toBe('available');
-    const consumed = consumeOrdinaryRoomForfeit(catalog, state, 'Boon', {
+    const consumed = consumeRoomRewardForfeit(catalog, state, 'Boon', {
       owner,
       sequence: 1,
     });
@@ -182,7 +186,7 @@ describe('progressive Arcana and Fear state', () => {
     expect(nextBiome.arcanaFear.fear.forfeitConsumed).toBe(false);
     expect(forfeitStatus(nextBiome.arcanaFear)).toBe('available');
     expect(
-      consumeOrdinaryRoomForfeit(catalog, nextBiome.arcanaFear, 'HermesUpgrade', {
+      consumeRoomRewardForfeit(catalog, nextBiome.arcanaFear, 'HermesUpgrade', {
         owner: createBiomeAddress('Underworld', 'G'),
         sequence: 3,
       }),

@@ -700,8 +700,9 @@ The authored offer at that owner is a closed schema-22 outcome: either one to
 three materialized trait options with one selected option, or mutually
 exclusive Fallback Gold. The engine alone derives ordinary, optional
 high-tier, and replacement domains; folds Denial's exact unselected bans into
-trait history after a valid selection; and vetoes Forfeit's first qualifying
-ordinary room acquisition before concrete Boon/Hermes and trait settlement.
+trait history after a valid selection; and materializes Forfeit's first
+qualifying RoomReward as its fixed Red Onion before concrete Boon/Hermes and
+trait settlement.
 Catalog declarations provide only the closed effect facts and exact Denial
 participant set. Redux and React own no shadow offer-composition,
 banned-trait, or Forfeit-usage model.

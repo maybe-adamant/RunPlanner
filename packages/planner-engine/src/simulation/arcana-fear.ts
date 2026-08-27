@@ -275,16 +275,22 @@ export function beginBiomeArcanaFearState(state: ArcanaFearState): ArcanaFearSta
     : state;
 }
 
-/** Consumes the one source-backed Forfeit use; reward settlement owns its outcome event. */
-export function consumeOrdinaryRoomForfeit(
+/** Consumes the one source-backed Forfeit use; RoomReward settlement owns its concrete outcome. */
+export function consumeRoomRewardForfeit(
   catalog: Catalog,
   state: ArcanaFearState,
   rewardType: 'Boon' | 'HermesUpgrade',
   evidence: ArcanaFearEvidence,
-): { readonly consumed: boolean; readonly state: ArcanaFearState } {
+):
+  | {
+      readonly consumed: true;
+      readonly state: ArcanaFearState;
+      readonly replacementRewardType: 'RoomRewardConsolationPrize';
+    }
+  | { readonly consumed: false; readonly state: ArcanaFearState } {
   const forfeit = catalog.fearVows.byKey.BoonSkipShrineUpgrade;
   if (
-    forfeit?.effect?.kind !== 'preventOrdinaryRoomAcquisition' ||
+    forfeit?.effect?.kind !== 'substituteRoomReward' ||
     (state.fear.effectiveRanks[forfeit.key] ?? 0) <= 0 ||
     state.fear.forfeitConsumed ||
     !canAppendEvidence(state, evidence) ||
@@ -293,6 +299,7 @@ export function consumeOrdinaryRoomForfeit(
     return Object.freeze({ consumed: false, state });
   return Object.freeze({
     consumed: true,
+    replacementRewardType: forfeit.effect.replacementRewardType,
     state: Object.freeze({
       ...state,
       fear: Object.freeze({ ...state.fear, forfeitConsumed: true }),

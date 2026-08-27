@@ -117,9 +117,10 @@ export interface FearVowDeclaration {
   readonly effect?:
     | { readonly kind: 'banUnselectedTraits'; readonly count: 2 }
     | {
-        readonly kind: 'preventOrdinaryRoomAcquisition';
+        readonly kind: 'substituteRoomReward';
         readonly maximumPerBiome: 1;
         readonly qualifyingRewardTypes: readonly ['Boon', 'HermesUpgrade'];
+        readonly replacementRewardType: 'RoomRewardConsolationPrize';
       }
     | {
         readonly kind: 'limitStartingGrasp';

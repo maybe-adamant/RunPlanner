@@ -34,6 +34,7 @@ import {
   settlePickupAcquisitionSite,
 } from '../../src/simulation/rewards/acquisition-settlement';
 import { type RewardBranchState } from '../../src/simulation/rewards/branch-primitives';
+import { createAcquisitionConversionCandidateArtifacts } from '../../src/simulation/candidate-artifacts';
 import { createTraitHistoryState } from '../../src/simulation/traits';
 
 const biome = createBiomeAddress('Underworld', 'H');
@@ -70,25 +71,132 @@ function facts(enteredBiomes = 3): RewardKernelFacts {
 }
 
 function replacement(
-  rewardType: 'MaxHealthDrop' | 'MaxManaDrop' | 'RoomMoneyDrop' | 'WeaponUpgrade',
+  rewardType:
+    'MaxHealthDrop' | 'MaxManaDrop' | 'RoomMoneyDrop' | 'WeaponUpgrade' | 'Boon' | 'HermesUpgrade',
 ) {
-  return createUnresolvedAcquisitionRewardState(
-    catalog,
-    { rewardType },
-    {
-      kind: 'producerLifecycle',
-      key: 'RoomReward',
-    },
-  );
+  const offer =
+    rewardType === 'Boon'
+      ? { rewardType, payload: { kind: 'BoonSource' as const, source: 'ApolloUpgrade' } }
+      : { rewardType };
+  const unresolved = createUnresolvedAcquisitionRewardState(catalog, offer, {
+    kind: 'producerLifecycle',
+    key: 'RoomReward',
+  });
+  return rewardType === 'Boon'
+    ? Object.freeze({
+        ...unresolved,
+        traitOffersByAcquisitionRole: Object.freeze({
+          ...unresolved.traitOffersByAcquisitionRole,
+          source: Object.freeze({
+            kind: 'traits' as const,
+            giverKey: 'Apollo',
+            options: Object.freeze([
+              { traitKey: 'ApolloWeaponBoon', rarity: 'Common' as const },
+              { traitKey: 'ApolloSpecialBoon', rarity: 'Common' as const },
+              { traitKey: 'ApolloCastBoon', rarity: 'Common' as const },
+            ] as const),
+            selectedOptionKey: 'option1' as const,
+          }),
+        }),
+      })
+    : unresolved;
 }
 
-function initialBranches(): readonly RewardBranchState[] {
-  const arcanaFear = createArcanaFearState(catalog, artificerLoadout);
+function settleOrdinaryBoon(
+  branches: readonly RewardBranchState[],
+  index: number,
+  traitKey: 'ApolloWeaponBoon' | 'ApolloSpecialBoon',
+) {
+  const occurrenceId = createOccurrenceId(`ordinary-forfeit-${index}`);
+  const origin = createIncomingRewardAddress(biome, occurrenceId);
+  const siteOwner = createOccurrenceAddress(biome, occurrenceId);
+  const offer = {
+    rewardType: 'Boon' as const,
+    payload: { kind: 'BoonSource' as const, source: 'ApolloUpgrade' },
+  };
+  const reward = createUnresolvedAcquisitionRewardState(catalog, offer, {
+    kind: 'producerLifecycle',
+    key: 'RoomReward',
+  });
+  const findings = new Map();
+  const settled = settleOwnedAcquisitionSite(
+    catalog,
+    branches,
+    {
+      siteOwner,
+      pointKey: 'roomRewardPickup',
+      entryKey: 'source',
+      historySequence: index + 1,
+      source: {
+        origin,
+        offer,
+        producerLifecycleKey: 'RoomReward',
+        instanceProvenance: 'free',
+        roomRewardForfeitEligible: true,
+        traitOffersByAcquisitionRole: Object.freeze({
+          source: Object.freeze({
+            kind: 'traits' as const,
+            giverKey: 'Apollo',
+            options: Object.freeze([
+              { traitKey, rarity: 'Common' as const },
+              { traitKey: 'ApolloSpecialBoon', rarity: 'Common' as const },
+              { traitKey: 'ApolloCastBoon', rarity: 'Common' as const },
+            ] as const),
+            selectedOptionKey: 'option1' as const,
+          }),
+        }),
+        dispositionByAcquisitionRole: reward.dispositionByAcquisitionRole,
+        traitContext: artificerLoadout,
+      },
+    },
+    (history) => factsWithHistory(facts(), history, new Set()),
+    findings,
+  );
+  return Object.freeze({ settled, findings, origin });
+}
+
+function initialBranches(forfeit = false): readonly RewardBranchState[] {
+  const arcanaFear = createArcanaFearState(catalog, {
+    ...artificerLoadout,
+    fearRanks: Object.freeze({
+      ...artificerLoadout.fearRanks,
+      ...(forfeit ? { BoonSkipShrineUpgrade: 1 } : {}),
+    }),
+  });
   return initializeRewardBranches(
     undefined,
     arcanaFear,
     catalog,
     catalog.defaultStartingKeepsakeKey,
+  );
+}
+
+function withSeaStarAndTimePiece(
+  branches: readonly RewardBranchState[],
+): readonly RewardBranchState[] {
+  return Object.freeze(
+    branches.map((branch) =>
+      Object.freeze({
+        ...branch,
+        keepsakes: Object.freeze({
+          ...branch.keepsakes,
+          fatedStatus: 'Fated' as const,
+          timePiece: Object.freeze({ remainingCharges: 1 }),
+        }),
+        traitHistory: Object.freeze({
+          ...createTraitHistoryState(),
+          equippedTraits: Object.freeze({
+            DoubleRewardBoon: Object.freeze({
+              traitKey: 'DoubleRewardBoon',
+              giverKey: 'Poseidon',
+              providerKind: 'olympian' as const,
+              rarity: 'Common' as const,
+              sourceRole: 'selection' as const,
+            }),
+          }),
+        }),
+      }),
+    ),
   );
 }
 
@@ -474,6 +582,208 @@ describe('The Artificer', () => {
       ]),
     );
     expect(exhausted.product.branches[0]?.history.consumableRecord.GiftDrop).toBe(1);
+  });
+
+  it.each(['Boon', 'HermesUpgrade'] as const)(
+    'forfeits an Artificer-generated %s as a concrete Red Onion after spending both ledgers',
+    (replacementType) => {
+      const conversion = convert(initialBranches(true), 0, replacementType);
+      expect(conversion.findings.size).toBe(0);
+      const branch = conversion.product.branches[0];
+      if (branch === undefined) throw new Error('Artificer Forfeit branch is missing');
+
+      expect(artificerStatus(catalog, branch.arcanaFear)).toMatchObject({ spent: 1 });
+      expect(branch.arcanaFear.fear.forfeitConsumed).toBe(true);
+      expect(branch.history.consumableRecord.Boon).toBeUndefined();
+      expect(branch.history.consumableRecord.RoomRewardConsolationPrize).toBe(1);
+      expect(branch.events).toContainEqual(
+        expect.objectContaining({
+          kind: 'rewardOffered',
+          offer: expect.objectContaining({ rewardType: replacementType }),
+        }),
+      );
+      expect(branch.events).toContainEqual(
+        expect.objectContaining({
+          kind: 'rewardForfeited',
+          rewardType: replacementType,
+          replacementRewardType: 'RoomRewardConsolationPrize',
+        }),
+      );
+      expect(branch.events).toContainEqual(
+        expect.objectContaining({
+          kind: 'concreteAcquisition',
+          acquisition: expect.objectContaining({
+            acquisition: { kind: 'consumable', gameName: 'RoomRewardConsolationPrize' },
+          }),
+        }),
+      );
+      expect(branch.events.filter((event) => event.kind === 'artificerConversion')).toHaveLength(1);
+    },
+  );
+
+  it('projects Time Piece and Sea Star from an ordinary forfeited Red Onion frontier', () => {
+    const ordinary = settleOrdinaryBoon(
+      withSeaStarAndTimePiece(initialBranches(true)),
+      0,
+      'ApolloWeaponBoon',
+    );
+    const frontier = ordinary.settled.roleFrontiers?.find(
+      (candidate) => candidate.realizedAcquisitionByBranch !== undefined,
+    );
+    if (frontier === undefined) throw new Error('ordinary Red Onion frontier is missing');
+    const candidates = createAcquisitionConversionCandidateArtifacts(
+      catalog,
+      new Map([[semanticAddressKey(frontier.address), [frontier]]]),
+    );
+
+    expect(candidates.at(frontier.address)).toMatchObject({
+      realizedAcquisition: {
+        acquisition: { kind: 'consumable', gameName: 'RoomRewardConsolationPrize' },
+      },
+      timePieceAssessments: [{ supported: true }],
+      seaStarAssessments: [{ supported: true }],
+    });
+  });
+
+  it('projects Time Piece and Sea Star from an Artificer-forfeited Red Onion frontier', () => {
+    const conversion = convert(withSeaStarAndTimePiece(initialBranches(true)), 0, 'Boon');
+    const frontier = conversion.product.roleFrontiers?.find(
+      (candidate) => candidate.realizedAcquisitionByBranch !== undefined,
+    );
+    if (frontier === undefined) throw new Error('Artificer Red Onion frontier is missing');
+    const candidates = createAcquisitionConversionCandidateArtifacts(
+      catalog,
+      new Map([[semanticAddressKey(frontier.address), [frontier]]]),
+    );
+
+    expect(candidates.at(frontier.address)).toMatchObject({
+      realizedAcquisition: {
+        acquisition: { kind: 'consumable', gameName: 'RoomRewardConsolationPrize' },
+      },
+      timePieceAssessments: [{ supported: true }],
+      seaStarAssessments: [{ supported: true }],
+    });
+  });
+
+  it('does not substitute either Devotion acquisition role when the RoomReward lane is marked', () => {
+    const occurrenceId = createOccurrenceId('devotion-forfeit');
+    const siteOwner = createOccurrenceAddress(biome, occurrenceId);
+    const site = createAcquisitionSiteAddress(siteOwner, 'roomRewardPickup');
+    const entry = createAcquisitionEntryAddress(site, 'source');
+    const offer = {
+      rewardType: 'Devotion' as const,
+      payload: {
+        kind: 'DevotionPair' as const,
+        chosenSource: 'ApolloUpgrade',
+        spurnedSource: 'ZeusUpgrade',
+      },
+    };
+    const reward = createUnresolvedAcquisitionRewardState(catalog, offer, {
+      kind: 'producerLifecycle',
+      key: 'RoomReward',
+    });
+    const findings = new Map();
+    const seeded = initialBranches(true).map((branch) =>
+      Object.freeze({
+        ...branch,
+        history: Object.freeze({
+          ...branch.history,
+          lootTypeHistory: Object.freeze({ ApolloUpgrade: 1, ZeusUpgrade: 1 }),
+        }),
+      }),
+    );
+    const devotionFacts = (history: Parameters<typeof factsWithHistory>[1]) => {
+      const base = facts();
+      return factsWithHistory(
+        Object.freeze({
+          ...base,
+          requirements: Object.freeze({ ...base.requirements, offeredExitCount: 2 }),
+        }),
+        history,
+        new Set(),
+      );
+    };
+    const settled = settleOwnedAcquisitionSite(
+      catalog,
+      seeded,
+      {
+        siteOwner,
+        pointKey: 'roomRewardPickup',
+        entryKey: 'source',
+        historySequence: 1,
+        source: {
+          origin: entry,
+          offer,
+          producerLifecycleKey: 'RoomReward',
+          instanceProvenance: 'free',
+          roomRewardForfeitEligible: true,
+          traitOffersByAcquisitionRole: {
+            chosenSource: {
+              kind: 'traits',
+              giverKey: 'Apollo',
+              options: [
+                { traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
+                { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
+                { traitKey: 'ApolloCastBoon', rarity: 'Common' },
+              ],
+              selectedOptionKey: 'option1',
+            },
+            spurnedSource: {
+              kind: 'traits',
+              giverKey: 'Zeus',
+              options: [
+                { traitKey: 'ZeusWeaponBoon', rarity: 'Common' },
+                { traitKey: 'ZeusSpecialBoon', rarity: 'Common' },
+                { traitKey: 'ZeusCastBoon', rarity: 'Common' },
+              ],
+              selectedOptionKey: 'option1',
+            },
+          },
+          dispositionByAcquisitionRole: reward.dispositionByAcquisitionRole,
+          traitContext: artificerLoadout,
+        },
+      },
+      devotionFacts,
+      findings,
+    );
+    const branch = settled.branches[0];
+    if (branch === undefined) throw new Error('Devotion Forfeit branch is missing');
+    expect(branch.arcanaFear.fear.forfeitConsumed).toBe(false);
+    expect(branch.events.filter((event) => event.kind === 'rewardForfeited')).toEqual([]);
+    expect(
+      branch.events.filter(
+        (event) =>
+          event.kind === 'concreteAcquisition' &&
+          ['ApolloUpgrade', 'ZeusUpgrade'].includes(event.acquisition.acquisition.gameName),
+      ),
+    ).toHaveLength(2);
+  });
+
+  it('consumes one Forfeit use across either chronological order of ordinary and Artificer rewards', () => {
+    const ordinaryFirst = settleOrdinaryBoon(initialBranches(true), 0, 'ApolloWeaponBoon');
+    expect(ordinaryFirst.findings.size).toBe(0);
+    const artificerAfter = convert(ordinaryFirst.settled.branches, 1, 'Boon');
+    expect(artificerAfter.findings.size).toBe(0);
+    const ordinaryFirstBranch = artificerAfter.product.branches[0]!;
+    expect(
+      ordinaryFirstBranch.events.filter((event) => event.kind === 'rewardForfeited'),
+    ).toHaveLength(1);
+    expect(ordinaryFirstBranch.arcanaFear.fear.forfeitConsumed).toBe(true);
+
+    const artificerFirst = convert(initialBranches(true), 0, 'Boon');
+    expect(artificerFirst.findings.size).toBe(0);
+    const ordinaryAfter = settleOrdinaryBoon(
+      artificerFirst.product.branches,
+      1,
+      'ApolloSpecialBoon',
+    );
+    expect(ordinaryAfter.findings.size).toBe(0);
+    const artificerFirstBranch = ordinaryAfter.settled.branches[0]!;
+    expect(
+      artificerFirstBranch.events.filter((event) => event.kind === 'rewardForfeited'),
+    ).toHaveLength(1);
+    expect(artificerFirstBranch.arcanaFear.fear.forfeitConsumed).toBe(true);
+    expect(artificerFirstBranch.history.consumableRecord.RoomRewardConsolationPrize).toBe(1);
   });
 
   it('appends one full RunProgress set without discarding excluded leftovers', () => {

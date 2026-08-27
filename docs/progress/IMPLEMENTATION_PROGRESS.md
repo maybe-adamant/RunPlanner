@@ -12,7 +12,7 @@ the active frontier needed to orient the next delivery.
 ## Current Snapshot
 
 The current persisted contract is strict authored schema 63 with catalog
-`0.45.0-transcendent-embryo`. The browser product supports all eight route biomes:
+`0.46.0-vow-forfeit-red-onion`. The browser product supports all eight route biomes:
 
 ```text
 Underworld: F -> G -> H -> I
@@ -84,8 +84,9 @@ milestones without repeating the delivery chronology.
 | Schemas 60-63      | Aromatic Phial fountain rarity, Crystal Figurine Boss activation, Concave Stone residual boons, and Transcendent Embryo transformations. |
 
 Catalog versions advanced alongside these boundaries. The current catalog is
-`0.45.0-transcendent-embryo`; exact declaration facts and source contacts remain in
-the catalog package and focused audits rather than this status ledger.
+`0.46.0-vow-forfeit-red-onion`; exact declaration facts and source contacts
+remain in the catalog package and focused audits rather than this status
+ledger.
 
 ## Durable Architecture Transitions
 
@@ -129,6 +130,13 @@ acquisition-site, candidate, finding, and Run State authorities. All Together,
 Infernal Contract, Travel Deal, Gold, Shops, Narcissus, Fields, and Artificer
 share the canonical settlement and Room Action products. Direct purchases are
 atomic paid acquisitions; free generated pickups retain pickup capabilities.
+
+Vow of Forfeit now preserves the qualifying Boon/Hermes offer and reward-store
+history while materializing the required Red Onion through ordinary pickup
+settlement. The same RoomReward boundary covers Artificer-generated
+Boon/Hermes replacements; Devotion and direct `GiveLoot` paths remain outside
+it. Time Piece and Sea Star assess the realized Onion, and the workspace
+presents that outcome without exposing a dormant trait screen.
 
 The remaining keepsake catalog is closed. Aromatic Phial, Crystal Figurine,
 Concave Stone, and Transcendent Embryo author their random results at existing
@@ -297,6 +305,16 @@ intermediate suite was green.
   pressure paths were short-circuited and the gate now enforces the stated
   sub-second contract at 1,000 ms. The build retained only the existing
   greater-than-500-kB application chunk advisory.
+- The Vow of Forfeit Red Onion correction closed on 2026-08-26 with workspace,
+  catalog, engine, and fixture typechecking; checkpoint integrity at 3 files/20
+  tests; regular tests at 202 files/1,978 tests; heavy tests at 46 files/435
+  tests; the isolated performance lane at 1 file/2 tests; ESLint;
+  repository-wide Prettier; and production build. The closure gate exposed one
+  stale schema-63 catalog-version migration and one existing UI interaction
+  witness that measured 4.8 seconds in isolation against its five-second
+  timeout; the migration was advanced and that witness received a focused
+  ten-second budget without changing its assertions. The build retained only
+  the existing greater-than-500-kB application chunk advisory.
 
 Focused validation remains the normal implementation practice. A complete
 `npm run check` is reserved for the declared phase closure or a shared

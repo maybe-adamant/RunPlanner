@@ -22,7 +22,7 @@ const SCHEMA_59_CATALOG_VERSION = '0.41.0-stygian-well';
 const SCHEMA_60_CATALOG_VERSION = '0.42.0-fountain-rarity';
 const SCHEMA_61_CATALOG_VERSION = '0.43.0-crystal-figurine';
 const SCHEMA_62_CATALOG_VERSION = '0.44.0-concave-stone';
-const SCHEMA_63_CATALOG_VERSION = '0.45.0-transcendent-embryo';
+const SCHEMA_63_CATALOG_VERSION = '0.46.0-vow-forfeit-red-onion';
 const COMPLETION_ROOMS_BY_BIOME = {
   F: { boss: 'F_Boss01', postboss: 'F_PostBoss01' },
   G: { boss: 'G_Boss01', postboss: 'G_PostBoss01' },

@@ -26,6 +26,7 @@ import {
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import {
+  acquisitionConversionCandidateForProjectEvaluationAssembly,
   encounterPhaseGorgonSupportForProjectEvaluationAssembly,
   encounterPhaseSequenceStatusForProjectEvaluationAssembly,
   fieldsBatchFacts,
@@ -34,6 +35,7 @@ import {
   type GorgonPhaseCandidateSupport,
 } from '@run-planner/engine/simulation';
 import {
+  authorTestArtificerReplacement,
   createCompleteFGProject,
   createFConversionFrontierProject,
   createGoldenFGHProject,
@@ -85,6 +87,11 @@ function biomeSource(
     gorgonSupport,
     () => Object.freeze([]),
     (address) => traitOfferCandidateForProjectEvaluationAssembly(assembly, address) !== undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    (address) => acquisitionConversionCandidateForProjectEvaluationAssembly(assembly, address),
   )
     .routes.find((route) => route.routeKey === routeKey)
     ?.biomes.find((biome) => biome.plan.biomeKey === biomeKey);
@@ -167,7 +174,7 @@ export function assemble(
     ...(projectedEvaluatedRoom === undefined ? {} : { evaluatedRoom: projectedEvaluatedRoom }),
     ...(steadyGrowthOutcomes === undefined ? {} : { steadyGrowthOutcomes }),
     markerDestinations: markers.emitter,
-    ordinaryRewardForfeited: (owner) => source.ordinaryRewardForfeited(owner.address),
+    acquisitionConversionCandidate: source.acquisitionConversionCandidate,
     occurrence,
     runState: source.runState,
   });
@@ -217,6 +224,7 @@ export function withFPrebossSelection(
 
 export {
   applyProjectCommand,
+  authorTestArtificerReplacement,
   catalog,
   createAcquisitionEntryAddress,
   createAcquisitionSiteAddress,

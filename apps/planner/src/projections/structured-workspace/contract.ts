@@ -1319,8 +1319,11 @@ export type WorkspaceRoomPickerControl =
     };
 
 interface WorkspaceRewardControlBase {
-  /** Evaluated automatic outcome for this exact reward acquisition. */
-  readonly acquisitionOutcome?: 'forfeitedByVow';
+  /** Evaluated concrete acquisition replacing the authored RoomReward offer. */
+  readonly realizedAcquisition?: {
+    readonly rewardType: string;
+    readonly label: string;
+  };
   /** Direct payload authoring for a declaration-fixed type whose payload remains unresolved. */
   readonly authoringStartStep?: Exclude<RewardPickerStep, 'type' | 'spurned'>;
   /** Transient factual type seed for that unresolved payload; never persisted independently. */

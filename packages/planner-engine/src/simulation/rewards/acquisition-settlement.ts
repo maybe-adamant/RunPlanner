@@ -33,6 +33,7 @@ import {
   type RewardHistoryState,
   type RewardKernelFacts,
   type ResolvedRewardOffer,
+  type ConcreteAcquisitionEvent,
   type ProducerLifecyclePointKey,
 } from '../../reward-kernel';
 
@@ -56,7 +57,7 @@ import {
   type TraitHistoryState,
 } from '../traits';
 
-import { artificerStatus, consumeOrdinaryRoomForfeit, consumeArtificerUse } from '../arcana-fear';
+import { artificerStatus, consumeRoomRewardForfeit, consumeArtificerUse } from '../arcana-fear';
 import { consumeOlympianProviderMaterialized, consumeTimePieceCharge } from '../keepsakes';
 import { bankPathPoints, settlePathScreen } from '../hex-progress';
 import {
@@ -167,6 +168,12 @@ export interface DerivedAcquisitionEntryFrontier {
 export interface AcquisitionRoleFrontier {
   readonly address: import('../../authored-project/addresses').AcquisitionRoleAddress;
   readonly branchesBeforeRole: readonly RewardBranchState[];
+  /**
+   * Concrete materialization produced by this role when its outer RoomReward
+   * was forfeited. The array follows branchesBeforeRole and is absent for
+   * roles with no realized substitution.
+   */
+  readonly realizedAcquisitionByBranch?: readonly (ConcreteAcquisitionEvent | undefined)[];
   readonly source: AcquisitionSource;
   readonly lifecyclePoint: ProducerLifecyclePointKey;
   readonly historySequence: number;
@@ -228,6 +235,8 @@ export interface AcquisitionSource {
   readonly producerKind?: CanonicalResolvedIncomingReward['producerKind'];
   /** Instance fact supplied by the producer, never inferred from an owner label. */
   readonly instanceProvenance: 'free' | 'paid';
+  /** Set only by the two paths that enter the game's RoomReward spawn lane. */
+  readonly roomRewardForfeitEligible?: true;
   readonly traitOffersByAcquisitionRole?: CanonicalResolvedIncomingReward['traitOffersByAcquisitionRole'];
   readonly levelResolutionsByAcquisitionRole?: CanonicalResolvedIncomingReward['levelResolutionsByAcquisitionRole'];
   /** Optional creation-time Pom frontier for an already-materialized loot object. */
@@ -256,13 +265,16 @@ export function assessSeaStarDuplication(
   branch: RewardBranchState,
   source: AcquisitionSource,
   resolution: AcquisitionSettlementRole,
+  resolvedAcquisition?: ConcreteAcquisitionEvent,
 ): { readonly supported: boolean; readonly evidence: FindingEvidence } {
-  const resolved = resolveAcquisitionRole(
-    catalog.rewards,
-    source.offer,
-    resolution.role,
-    resolution.lifecyclePoint,
-  );
+  const resolved =
+    resolvedAcquisition ??
+    resolveAcquisitionRole(
+      catalog.rewards,
+      source.offer,
+      resolution.role,
+      resolution.lifecyclePoint,
+    );
   const acquisition = catalog.rewards.acquisitions.byKey[resolved.acquisition.gameName];
   const seaStarActive =
     (branch.traitHistory ?? createTraitHistoryState()).equippedTraits.DoubleRewardBoon !==
@@ -327,8 +339,11 @@ export function assessTimePieceConversion(
   source: AcquisitionSource,
   role: string,
   lifecyclePoint: ProducerLifecyclePointKey,
+  resolvedAcquisition?: ConcreteAcquisitionEvent,
 ): { readonly supported: boolean; readonly evidence: FindingEvidence } {
-  const acquisition = resolveAcquisitionRole(catalog.rewards, source.offer, role, lifecyclePoint);
+  const acquisition =
+    resolvedAcquisition ??
+    resolveAcquisitionRole(catalog.rewards, source.offer, role, lifecyclePoint);
   const blocksGoldConversion =
     catalog.rewards.rewardTypes.byKey[source.offer.rewardType]?.acquisitionRoles.byKey[role]
       ?.blocksGoldConversion === true;
@@ -422,7 +437,12 @@ export function settleProducerAcquisitionSite(
   ) {
     return fail(`${room.gameName} producer event does not match its offer`);
   }
-  const incomingSource = withStoredArtificerReplacements(room, incoming);
+  const incomingSource = Object.freeze({
+    ...withStoredArtificerReplacements(room, incoming),
+    ...(incoming.producerLifecycleKey === 'RoomReward'
+      ? { roomRewardForfeitEligible: true as const }
+      : {}),
+  });
   if (event.origin.kind === 'hubRoom') {
     return fail('Hub room cannot own an ordinary producer acquisition site');
   }
@@ -448,90 +468,6 @@ export function settleProducerAcquisitionSite(
     ]),
     participation: 'mandatory' as const,
   });
-  // Forfeit is deliberately decided by the enclosing ordinary Room Occurrence,
-  // before this shared role fold turns the room's authored Boon/Hermes reward
-  // into a concrete acquisition. Local children, Shops, pickups, and all
-  // other owners never enter this branch.
-  const qualifyingRewardType =
-    incoming.offer.rewardType === 'Boon' || incoming.offer.rewardType === 'HermesUpgrade'
-      ? incoming.offer.rewardType
-      : undefined;
-  if (room.kind === 'authored' && qualifyingRewardType !== undefined) {
-    const vetoed: RewardBranchState[] = [];
-    const remaining: RewardBranchState[] = [];
-    for (const branch of branches) {
-      const supported = isOfferSupportedAtResolutionPoint(
-        catalog.rewards,
-        incoming.offer,
-        facts(branch.history, undefined, branch),
-        { acquisitionRole: event.role },
-      );
-      if (!supported) {
-        remaining.push(branch);
-        continue;
-      }
-      const forfeit = consumeOrdinaryRoomForfeit(catalog, branch.arcanaFear, qualifyingRewardType, {
-        owner: incoming.origin,
-        sequence: event.sequence,
-      });
-      if (!forfeit.consumed) {
-        remaining.push(branch);
-        continue;
-      }
-      vetoed.push(
-        appendRewardEvent(
-          Object.freeze({
-            ...branch,
-            arcanaFear: forfeit.state,
-          }),
-          event.sequence,
-          Object.freeze({
-            kind: 'rewardForfeited' as const,
-            origin: incoming.origin,
-            rewardType: qualifyingRewardType,
-          }),
-        ),
-      );
-    }
-    if (vetoed.length > 0) {
-      const settled =
-        remaining.length === 0
-          ? Object.freeze([])
-          : applyProducerRoleHistory(
-              catalog,
-              Object.freeze(remaining),
-              incomingSource,
-              {
-                role: event.role,
-                lifecyclePoint: event.lifecyclePoint,
-                historySequence: event.sequence,
-                ...(lifecycleBinding?.blocksArtificerConversion === true
-                  ? { blocksArtificerConversion: true as const }
-                  : {}),
-              },
-              facts,
-              findings,
-              atomicRegion,
-              findingChronology,
-              Object.freeze({ site, entry: entry.address }),
-              roleFrontiers,
-              traitChildSettlements,
-              undefined,
-              true,
-              false,
-              authoredSeaStarDuplicateSiteKeys,
-            );
-      return Object.freeze({
-        site,
-        entries: Object.freeze([entry]),
-        branches: mergeEquivalentRewardBranches(Object.freeze([...vetoed, ...settled])),
-        ...(roleFrontiers.length === 0 ? {} : { roleFrontiers: Object.freeze(roleFrontiers) }),
-        ...(traitChildSettlements.length === 0
-          ? {}
-          : { traitChildSettlements: Object.freeze(traitChildSettlements) }),
-      });
-    }
-  }
   const settled = applyProducerRoleHistory(
     catalog,
     branches,
@@ -770,6 +706,7 @@ export function settleArtificerReplacementAcquisition(
         offer: replacement.offer,
         producerLifecycleKey: 'RoomReward',
         instanceProvenance: 'free',
+        roomRewardForfeitEligible: true as const,
         traitOffersByAcquisitionRole: replacement.traitOffersByAcquisitionRole,
         ...(replacement.levelResolutionsByAcquisitionRole === undefined
           ? {}
@@ -1157,6 +1094,7 @@ export function applyProducerRoleHistory(
       : artificerReplacementEntryKey(incoming.origin, resolution.role),
   );
   const next: RewardBranchState[] = [];
+  const realizedAcquisitionByBranch: (ConcreteAcquisitionEvent | undefined)[] = [];
   let unresolvedArtificerReplacement = false;
   let unresolvedTraitOffer = false;
   const seaStarSourceKey = semanticAddressKey(
@@ -1167,15 +1105,6 @@ export function applyProducerRoleHistory(
       seaStarDuplicateSiteKey(createAcquisitionRoleAddress(incoming.origin, resolution.role)),
     ) === true;
   for (const branch of branches) {
-    const attestedBranch = retainSeaStarEligibility
-      ? Object.freeze({
-          ...branch,
-          seaStarDuplicateEligibilityBySource: freezeRecord({
-            ...(branch.seaStarDuplicateEligibilityBySource ?? {}),
-            [seaStarSourceKey]: assessSeaStarDuplication(catalog, branch, incoming, resolution),
-          }),
-        })
-      : branch;
     const branchFacts = facts(branch.history, undefined, branch);
     if (
       !offerAlreadyGenerated &&
@@ -1183,6 +1112,7 @@ export function applyProducerRoleHistory(
         acquisitionRole: resolution.role,
       })
     ) {
+      realizedAcquisitionByBranch.push(undefined);
       continue;
     }
     const acquisition = resolveAcquisitionRole(
@@ -1191,12 +1121,61 @@ export function applyProducerRoleHistory(
       resolution.role,
       resolution.lifecyclePoint,
     );
+    const qualifyingRewardType =
+      incoming.offer.rewardType === 'Boon' || incoming.offer.rewardType === 'HermesUpgrade'
+        ? incoming.offer.rewardType
+        : undefined;
+    const forfeit =
+      incoming.roomRewardForfeitEligible === true && qualifyingRewardType !== undefined
+        ? consumeRoomRewardForfeit(catalog, branch.arcanaFear, qualifyingRewardType, {
+            owner: incoming.origin,
+            sequence: resolution.historySequence,
+          })
+        : Object.freeze({ consumed: false as const, state: branch.arcanaFear });
+    const realizedAcquisition = forfeit.consumed
+      ? Object.freeze({
+          ...acquisition,
+          acquisition: Object.freeze({
+            kind: 'consumable' as const,
+            gameName: forfeit.replacementRewardType,
+          }),
+        })
+      : acquisition;
+    realizedAcquisitionByBranch.push(forfeit.consumed ? realizedAcquisition : undefined);
+    const forfeitBranch =
+      forfeit.consumed && qualifyingRewardType !== undefined
+        ? appendRewardEvent(
+            Object.freeze({ ...branch, arcanaFear: forfeit.state }),
+            resolution.historySequence,
+            Object.freeze({
+              kind: 'rewardForfeited' as const,
+              origin: incoming.origin,
+              rewardType: qualifyingRewardType,
+              replacementRewardType: forfeit.replacementRewardType,
+            }),
+          )
+        : branch;
+    const attestedBranch = retainSeaStarEligibility
+      ? Object.freeze({
+          ...forfeitBranch,
+          seaStarDuplicateEligibilityBySource: freezeRecord({
+            ...(forfeitBranch.seaStarDuplicateEligibilityBySource ?? {}),
+            [seaStarSourceKey]: assessSeaStarDuplication(
+              catalog,
+              branch,
+              incoming,
+              resolution,
+              realizedAcquisition,
+            ),
+          }),
+        })
+      : forfeitBranch;
     // A concrete god-loot acquisition is a materialization contact when the
     // producer marks it free. Blind Box hidden loot is also free even when its
     // containing Shop box was paid; the box itself is not god loot.
     const materializedProvider =
       incoming.instanceProvenance === 'free' || resolution.lifecyclePoint === 'afterUnwrap'
-        ? catalog.traitGiverByAcquisitionGameName[acquisition.acquisition.gameName]
+        ? catalog.traitGiverByAcquisitionGameName[realizedAcquisition.acquisition.gameName]
         : undefined;
     const materializedBranch =
       materializedProvider === undefined
@@ -1222,6 +1201,7 @@ export function applyProducerRoleHistory(
       incoming,
       resolution.role,
       resolution.lifecyclePoint,
+      realizedAcquisition,
     );
     if (disposition.kind === 'timePiece' && conversion.supported) {
       next.push(
@@ -1234,7 +1214,7 @@ export function applyProducerRoleHistory(
           {
             kind: 'conversionToGold',
             origin: incoming.origin,
-            acquisition,
+            acquisition: realizedAcquisition,
             settlement,
           },
         ),
@@ -1254,6 +1234,26 @@ export function applyProducerRoleHistory(
         atomicRegion,
         findingChronology ?? historyChronology(resolution.historySequence),
       );
+    }
+    if (forfeit.consumed) {
+      const history = applyConcreteAcquisition(
+        catalog.rewards,
+        materializedBranch.history,
+        realizedAcquisition.acquisition,
+      );
+      next.push(
+        appendRewardEvent(
+          Object.freeze({ ...materializedBranch, history }),
+          resolution.historySequence,
+          {
+            kind: 'concreteAcquisition',
+            origin: incoming.origin,
+            acquisition: realizedAcquisition,
+            settlement,
+          },
+        ),
+      );
+      continue;
     }
     if (disposition.kind === 'artificer') {
       const artificerReplacement =
@@ -1405,6 +1405,7 @@ export function applyProducerRoleHistory(
                 offer: artificerReplacement.offer,
                 producerLifecycleKey: 'RoomReward',
                 instanceProvenance: 'free',
+                roomRewardForfeitEligible: true as const,
                 traitOffersByAcquisitionRole: artificerReplacement.traitOffersByAcquisitionRole,
                 ...(artificerReplacement.levelResolutionsByAcquisitionRole === undefined
                   ? {}
@@ -1566,6 +1567,9 @@ export function applyProducerRoleHistory(
     Object.freeze({
       address: createAcquisitionRoleAddress(incoming.origin, resolution.role),
       branchesBeforeRole: branches,
+      ...(realizedAcquisitionByBranch.some((acquisition) => acquisition !== undefined)
+        ? { realizedAcquisitionByBranch: Object.freeze(realizedAcquisitionByBranch) }
+        : {}),
       source: incoming,
       lifecyclePoint: resolution.lifecyclePoint,
       historySequence: resolution.historySequence,

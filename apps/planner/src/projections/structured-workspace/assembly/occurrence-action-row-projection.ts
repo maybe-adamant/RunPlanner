@@ -261,7 +261,6 @@ function roomActionsForOccurrence(
         row.reference.kind === 'interactAcquisitionEntry' &&
         parseArtificerReplacementEntryKey(row.reference.entryKey) !== undefined;
       const roleIsAcquired = (acquisitionRole: string): boolean => {
-        if (resolvedRewardControl?.acquisitionOutcome === 'forfeitedByVow') return false;
         const conversion = resolvedRewardControl?.conversions?.find(
           (candidate) => candidate.address.acquisitionRole === acquisitionRole,
         );

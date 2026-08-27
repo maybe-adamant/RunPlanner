@@ -21,14 +21,20 @@ export function occurrenceActionLabel(
   purgingPoolTraitKeyBySlot?: Readonly<Record<'left' | 'middle' | 'right', string | null>>,
 ): string {
   const pickupLabel = (subject: string): string => {
-    if (rewardControl?.offer === null || rewardControl?.offer === undefined)
-      return `Interact with ${subject} pickup`;
-    const summary = summarizeRewardOffer(catalog, rewardControl.offer);
     const label = `Interact with ${subject} pickup`;
-    if (summary === subject) return label;
-    return summary.startsWith(`${subject} · `)
-      ? `${label} · ${summary.slice(subject.length + 3)}`
-      : `${label} · ${summary}`;
+    const summary =
+      rewardControl?.offer === null || rewardControl?.offer === undefined
+        ? undefined
+        : summarizeRewardOffer(catalog, rewardControl.offer);
+    const described =
+      summary === undefined || summary === subject
+        ? label
+        : summary.startsWith(`${subject} · `)
+          ? `${label} · ${summary.slice(subject.length + 3)}`
+          : `${label} · ${summary}`;
+    return rewardControl?.realizedAcquisition === undefined
+      ? described
+      : `${described} -> ${rewardControl.realizedAcquisition.label} (Vow of Forfeit)`;
   };
   const phase =
     'phaseKey' in reference

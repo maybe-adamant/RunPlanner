@@ -97,9 +97,10 @@ describe('Arcana and Fear catalog', () => {
       count: 2,
     });
     expect(catalog.fearVows.byKey.BoonSkipShrineUpgrade?.effect).toEqual({
-      kind: 'preventOrdinaryRoomAcquisition',
+      kind: 'substituteRoomReward',
       maximumPerBiome: 1,
       qualifyingRewardTypes: ['Boon', 'HermesUpgrade'],
+      replacementRewardType: 'RoomRewardConsolationPrize',
     });
     expect(catalog.fearVows.byKey.LimitGraspShrineUpgrade?.effect).toEqual({
       kind: 'limitStartingGrasp',
@@ -231,28 +232,34 @@ describe('Arcana and Fear catalog', () => {
             : vow,
         ),
       }),
-    ).toThrow(/must prevent one ordinary Boon or Hermes acquisition per biome/);
+    ).toThrow(/must substitute one Boon or Hermes reward with Red Onion per biome/);
     for (const effect of [
       undefined,
       {
-        kind: 'preventOrdinaryRoomAcquisition',
+        kind: 'substituteRoomReward',
         maximumPerBiome: 2,
         qualifyingRewardTypes: ['Boon', 'HermesUpgrade'],
       },
       {
-        kind: 'preventOrdinaryRoomAcquisition',
+        kind: 'substituteRoomReward',
         maximumPerBiome: 1,
         qualifyingRewardTypes: ['Boon'],
       },
       {
-        kind: 'preventOrdinaryRoomAcquisition',
+        kind: 'substituteRoomReward',
         maximumPerBiome: 1,
         qualifyingRewardTypes: ['HermesUpgrade', 'Boon'],
       },
       {
-        kind: 'preventOrdinaryRoomAcquisition',
+        kind: 'substituteRoomReward',
         maximumPerBiome: 1,
         qualifyingRewardTypes: ['Boon', 'HermesUpgrade', 'Pom'],
+      },
+      {
+        kind: 'substituteRoomReward',
+        maximumPerBiome: 1,
+        qualifyingRewardTypes: ['Boon', 'HermesUpgrade'],
+        replacementRewardType: 'RoomMoneyDrop',
       },
     ]) {
       expect(() =>
@@ -265,7 +272,7 @@ describe('Arcana and Fear catalog', () => {
           ) as unknown as typeof declarations.fearVows,
         }),
       ).toThrow(
-        /Forfeit must declare|must prevent one ordinary Boon or Hermes acquisition per biome/,
+        /Forfeit must declare|must substitute one Boon or Hermes reward with Red Onion per biome/,
       );
     }
     expect(() =>
@@ -276,9 +283,10 @@ describe('Arcana and Fear catalog', () => {
             ? {
                 ...vow,
                 effect: {
-                  kind: 'preventOrdinaryRoomAcquisition',
+                  kind: 'substituteRoomReward',
                   maximumPerBiome: 1,
                   qualifyingRewardTypes: ['Boon', 'HermesUpgrade'],
+                  replacementRewardType: 'RoomRewardConsolationPrize',
                 },
               }
             : vow,
@@ -393,23 +401,25 @@ describe('Arcana and Fear catalog', () => {
           ? {
               ...vow,
               effect: {
-                kind: 'preventOrdinaryRoomAcquisition' as const,
+                kind: 'substituteRoomReward' as const,
                 maximumPerBiome: 1 as const,
                 qualifyingRewardTypes,
+                replacementRewardType: 'RoomRewardConsolationPrize' as const,
               },
             }
           : vow,
       ),
     };
     const normalized = createCatalog(source).fearVows.byKey.BoonSkipShrineUpgrade!.effect!;
-    if (normalized.kind !== 'preventOrdinaryRoomAcquisition') {
+    if (normalized.kind !== 'substituteRoomReward') {
       throw new Error('expected normalized Forfeit effect');
     }
     (qualifyingRewardTypes as unknown as string[])[0] = 'HermesUpgrade';
     expect(normalized).toEqual({
-      kind: 'preventOrdinaryRoomAcquisition',
+      kind: 'substituteRoomReward',
       maximumPerBiome: 1,
       qualifyingRewardTypes: ['Boon', 'HermesUpgrade'],
+      replacementRewardType: 'RoomRewardConsolationPrize',
     });
     expect(Object.isFrozen(normalized)).toBe(true);
     expect(Object.isFrozen(normalized.qualifyingRewardTypes)).toBe(true);

@@ -20,7 +20,7 @@ export function RoomActionAcquisitionRow({
   if (payload === undefined) return null;
   const visible =
     payload.showOffer ||
-    payload.control.acquisitionOutcome === 'forfeitedByVow' ||
+    payload.control.realizedAcquisition !== undefined ||
     (payload.showOwner && payload.control.marker.findingCount > 0) ||
     (payload.control.conversions ?? []).some(
       (conversion) =>

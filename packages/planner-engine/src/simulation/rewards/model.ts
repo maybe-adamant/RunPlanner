@@ -108,9 +108,10 @@ export type RewardEvent =
       };
     })
   | (RewardEventBase & {
-      /** Automatic room-reward veto; intentionally no concrete acquisition exists. */
+      /** Automatic RoomReward substitution evidence; concrete Onion follows this event. */
       readonly kind: 'rewardForfeited';
       readonly rewardType: 'Boon' | 'HermesUpgrade';
+      readonly replacementRewardType: 'RoomRewardConsolationPrize';
     })
   | (RewardEventBase & {
       readonly kind: 'shopInventorySupported';

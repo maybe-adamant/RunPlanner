@@ -44,7 +44,7 @@ export {
   suppressFearVow,
   beginBiomeArcanaFearState,
   artificerStatus,
-  consumeOrdinaryRoomForfeit,
+  consumeRoomRewardForfeit,
   type ActiveArcanaState,
   type ArcanaActivationOrigin,
   type ArcanaFearState,
@@ -361,6 +361,7 @@ export {
   type SimulationPhase,
 } from './model';
 export type {
+  AcquisitionConversionCandidateCapability,
   HermesShrineCandidateCapability,
   StygianWellCandidateCapability,
 } from './candidate-artifacts';
@@ -368,6 +369,7 @@ export {
   assertProjectEvaluationAssembly,
   assertProjectEvaluationSource,
   countedRewardTypeDomain,
+  acquisitionConversionCandidateForProjectEvaluationAssembly,
   derivedAcquisitionEntriesForProjectEvaluationAssembly,
   blockedOccurrenceRoomForProjectEvaluationAssembly,
   keepsakeEquipResultCandidateForProjectEvaluationAssembly,

@@ -3,6 +3,7 @@ import {
   createBiomeAddress,
   semanticAddressKey,
   type AcquisitionSiteAddress,
+  type AcquisitionRoleAddress,
   type EncounterPhaseAddress,
   type KeepsakeEquipResultAddress,
   type LevelResolutionAddress,
@@ -159,6 +160,20 @@ export function candidateArtifactsForProjectEvaluationAssembly(
     throw new ProjectSimulationContractError('candidate artifact access is not initialized');
   }
   return candidateArtifacts(requireExactProjectEvaluationAssembly(assembly));
+}
+
+/**
+ * Exact realized acquisition materialization for one reached source role.
+ * This is a projection of the canonical acquisition frontier; callers do not
+ * replay reward settlement or infer substitutions from reward events.
+ */
+export function acquisitionConversionCandidateForProjectEvaluationAssembly(
+  assembly: ProjectEvaluationAssembly,
+  address: AcquisitionRoleAddress,
+) {
+  return candidateArtifactsForProjectEvaluationAssembly(assembly)
+    .biomeAt(createBiomeAddress(address.routeKey, address.biomeKey))
+    ?.acquisitionConversions.at(address);
 }
 
 /** Narrow reachability query for one exact immediate-keepsake child. */

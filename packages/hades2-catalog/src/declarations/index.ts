@@ -36,7 +36,7 @@ const rooms: readonly RawRoomDeclaration[] = [
 ];
 
 export const declarations = {
-  version: '0.45.0-transcendent-embryo',
+  version: '0.46.0-vow-forfeit-red-onion',
   biomes,
   routes,
   arcanaCards,

@@ -14,6 +14,7 @@ import {
   purgingPoolCandidateForProjectEvaluationAssembly,
   hermesShrineCandidateForProjectEvaluationAssembly,
   stygianWellCandidateForProjectEvaluationAssembly,
+  acquisitionConversionCandidateForProjectEvaluationAssembly,
   traitOfferCandidateForProjectEvaluationAssembly,
   type ProjectEvaluation,
   type ProjectEvaluationAssembly,
@@ -287,6 +288,16 @@ export function createStructuredWorkspaceProjection(
         (occurrence) => {
           try {
             return stygianWellCandidateForProjectEvaluationAssembly(assembly, occurrence);
+          } catch (error) {
+            if (error instanceof Error && error.name === 'ProjectSimulationContractError') {
+              return undefined;
+            }
+            throw error;
+          }
+        },
+        (address) => {
+          try {
+            return acquisitionConversionCandidateForProjectEvaluationAssembly(assembly, address);
           } catch (error) {
             if (error instanceof Error && error.name === 'ProjectSimulationContractError') {
               return undefined;

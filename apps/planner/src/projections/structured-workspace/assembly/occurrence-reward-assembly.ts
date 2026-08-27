@@ -33,6 +33,7 @@ import {
   type RoomOccurrence,
   type SemanticAddress,
   type TraitOfferAddress,
+  type AcquisitionRoleAddress,
 } from '@run-planner/engine/authored-project';
 import { traitGiverForAcquisitionRole } from '@run-planner/engine/authored-project';
 import type {
@@ -46,6 +47,7 @@ import type {
   FigLeafPhaseCandidateSupport,
   FieldsBatchFacts,
   GorgonPhaseCandidateSupport,
+  AcquisitionConversionCandidateCapability,
   SelectedLevelResolutionAssessment,
 } from '@run-planner/engine/simulation';
 import {
@@ -115,12 +117,14 @@ export interface WorkspaceOccurrenceRewardAssemblyInput {
   readonly levelResolutionAssessment: (
     owner: LevelResolutionAddress,
   ) => SelectedLevelResolutionAssessment | undefined;
+  readonly acquisitionConversionCandidate?: (
+    owner: AcquisitionRoleAddress,
+  ) => AcquisitionConversionCandidateCapability | undefined;
   readonly isActiveTraitOffer: (owner: TraitOfferAddress) => boolean;
   readonly derivedAcquisitionEntries?: (
     site: AcquisitionSiteAddress,
   ) => readonly WorkspaceDerivedAcquisitionEntry[];
   readonly markerDestinations: WorkspaceMarkerDestinationEmitter;
-  readonly ordinaryRewardForfeited: (owner: RewardCandidateOwner) => boolean;
   readonly occurrence: RoomOccurrence;
 }
 
@@ -380,6 +384,34 @@ function conversionControls(
   );
 }
 
+function realizedAcquisitionForReward(
+  input: WorkspaceOccurrenceRewardAssemblyInput,
+  owner: RewardCandidateOwner,
+  offer: ResolvedRewardOffer | null,
+  authoredReward: AuthoredRewardState | null,
+): WorkspaceRewardControl['realizedAcquisition'] {
+  if (input.acquisitionConversionCandidate === undefined) return undefined;
+  const rewardType = authoredReward?.offer.rewardType ?? offer?.rewardType;
+  if (rewardType === undefined) return undefined;
+  const declaration = input.catalog.rewards.rewardTypes.byKey[rewardType];
+  if (declaration === undefined) return undefined;
+  const realized = declaration.acquisitionRoles.values
+    .map(
+      (role) =>
+        input.acquisitionConversionCandidate?.(
+          createAcquisitionRoleAddress(owner.address, role.key),
+        )?.realizedAcquisition,
+    )
+    .find((acquisition) => acquisition !== undefined);
+  if (realized === undefined) return undefined;
+  return Object.freeze({
+    rewardType: realized.acquisition.gameName,
+    label:
+      input.catalog.rewards.rewardTypes.byKey[realized.acquisition.gameName]?.label ??
+      realized.acquisition.gameName,
+  });
+}
+
 export function rewardControl(
   input: WorkspaceOccurrenceRewardAssemblyInput,
   owner: RewardCandidateOwner,
@@ -412,9 +444,7 @@ export function rewardControl(
     authoringStartStep === undefined || fixedRewardType === undefined
       ? undefined
       : Object.freeze({ rewardType: fixedRewardType });
-  const acquisitionOutcome = input.ordinaryRewardForfeited(owner)
-    ? ('forfeitedByVow' as const)
-    : undefined;
+  const realizedAcquisition = realizedAcquisitionForReward(input, owner, offer, authoredReward);
   const offerEditStartStep = retainedSourceMismatch
     ? ('type' as const)
     : offer?.payload?.kind === 'BoonSource'
@@ -425,7 +455,7 @@ export function rewardControl(
   return binding === undefined
     ? Object.freeze({
         kind: 'explicitReward' as const,
-        ...(acquisitionOutcome === undefined ? {} : { acquisitionOutcome }),
+        ...(realizedAcquisition === undefined ? {} : { realizedAcquisition }),
         ...(authoringStartStep === undefined ? {} : { authoringStartStep }),
         ...(authoringSeed === undefined ? {} : { authoringSeed }),
         marker: input.markerDestinations.marker(owner.address),
@@ -443,11 +473,11 @@ export function rewardControl(
         owner,
         retainedSourceMismatch,
         traitOffers:
-          authoredReward === null
+          authoredReward === null || realizedAcquisition !== undefined
             ? Object.freeze([])
             : traitOfferControls(input, owner, authoredReward),
         levelResolutions:
-          authoredReward === null
+          authoredReward === null || realizedAcquisition !== undefined
             ? Object.freeze([])
             : levelResolutionControls(input, owner, authoredReward),
         conversions:
@@ -459,7 +489,7 @@ export function rewardControl(
       })
     : Object.freeze({
         kind: 'countedReward' as const,
-        ...(acquisitionOutcome === undefined ? {} : { acquisitionOutcome }),
+        ...(realizedAcquisition === undefined ? {} : { realizedAcquisition }),
         binding,
         marker: input.markerDestinations.marker(owner.address),
         offer,
@@ -471,11 +501,11 @@ export function rewardControl(
         owner: owner as CountedRewardCandidateOwner,
         retainedSourceMismatch,
         traitOffers:
-          authoredReward === null
+          authoredReward === null || realizedAcquisition !== undefined
             ? Object.freeze([])
             : traitOfferControls(input, owner, authoredReward),
         levelResolutions:
-          authoredReward === null
+          authoredReward === null || realizedAcquisition !== undefined
             ? Object.freeze([])
             : levelResolutionControls(input, owner, authoredReward),
         conversions:

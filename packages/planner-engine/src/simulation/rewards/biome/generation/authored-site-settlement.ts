@@ -140,6 +140,21 @@ export function settleAuthoredAcquisitionSite(
         throw new BiomeRewardSimulationContractError(
           `${room.gameName} lost Sea Star producer lifecycle for ${selectedSiteKey}`,
         );
+      const forfeitApplied = sourceBranches.every((branch) =>
+        branch.events.some(
+          (event) =>
+            event.kind === 'rewardForfeited' &&
+            semanticAddressKey(event.origin) === semanticAddressKey(source.owner) &&
+            event.replacementRewardType === 'RoomRewardConsolationPrize',
+        ),
+      );
+      const effectiveDuplicateEntry = forfeitApplied
+        ? createUnresolvedPickupRewardState(
+            catalog,
+            { rewardType: 'RoomRewardConsolationPrize' },
+            producerLifecycleKey,
+          )
+        : duplicateEntry;
       // The duplicate can be placed after other room actions. Its eligibility
       // is nevertheless the source's own pre-acquisition attestation, not
       // whatever traits happen to be equipped at this later action.
@@ -186,11 +201,11 @@ export function settleAuthoredAcquisitionSite(
         {
           siteOwner: room.origin,
           site: selectedSite.address,
-          entries: Object.freeze({ [SEA_STAR_DUPLICATE_ENTRY_KEY]: duplicateEntry }),
+          entries: Object.freeze({ [SEA_STAR_DUPLICATE_ENTRY_KEY]: effectiveDuplicateEntry }),
           order: activationOnly ? Object.freeze([]) : Object.freeze([SEA_STAR_DUPLICATE_ENTRY_KEY]),
           producerLifecycleKey,
           requiredEntryKeys: new Set(
-            duplicateUsesFreshObject ? [SEA_STAR_DUPLICATE_ENTRY_KEY] : [],
+            forfeitApplied || duplicateUsesFreshObject ? [SEA_STAR_DUPLICATE_ENTRY_KEY] : [],
           ),
           seaStarDuplicateEntryKeys: new Set([SEA_STAR_DUPLICATE_ENTRY_KEY]),
           authoredSeaStarDuplicateSiteKeys,
