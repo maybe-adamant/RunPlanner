@@ -134,7 +134,7 @@ describe('authored-project checkpoint integrity', () => {
       f.rewards.runStateSnapshots.find(
         (snapshot) =>
           snapshot.owner.kind === 'roomRunStateCheckpoint' &&
-          snapshot.owner.occurrenceId === 'completion:F:postboss' &&
+          snapshot.owner.occurrenceId === 'golden-f-preboss-shop:postboss' &&
           snapshot.owner.checkpoint.kind === checkpoint,
       );
     expect(poolSnapshot('roomEntered')?.traits.equippedTraits.ApolloWeaponBoon?.level).toBe(2);
@@ -144,6 +144,52 @@ describe('authored-project checkpoint integrity', () => {
         branch.traitHistory?.previouslyPickedTraitKeys.includes('ApolloWeaponBoon'),
       ),
     ).toBe(true);
+  });
+
+  it('keeps ordinary Postboss features and terminal I/Q Boss-only topology in canonical checkpoints', () => {
+    const postbossFixture = loadCheckpoint('underworld-f-pool');
+    const f = postbossFixture.routes
+      .find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find((biome) => biome.biomeKey === 'F');
+    expect(f?.topology?.fixedRoomLinks).toEqual([
+      {
+        sourceOccurrenceId: 'golden-f-preboss-shop',
+        targetOccurrenceId: 'golden-f-preboss-shop:boss',
+      },
+      {
+        sourceOccurrenceId: 'golden-f-preboss-shop:boss',
+        targetOccurrenceId: 'golden-f-preboss-shop:postboss',
+      },
+    ]);
+    expect(
+      f?.topology?.occurrences.find(
+        (occurrence) => occurrence.occurrenceId === 'golden-f-preboss-shop:postboss',
+      ),
+    ).toMatchObject({ gameName: 'F_PostBoss01', purgingPool: expect.anything() });
+
+    for (const [id, routeKey, biomeKey, prebossId, bossName] of [
+      ['underworld-fghi', 'Underworld', 'I', 'golden-i-preboss', 'I_Boss01'],
+      ['surface-nopq', 'Surface', 'Q', 'surface-q-preboss', 'Q_Boss01'],
+    ] as const) {
+      const document = loadCheckpoint(id);
+      const biome = document.routes
+        .find((route) => route.routeKey === routeKey)
+        ?.biomes.find((candidate) => candidate.biomeKey === biomeKey);
+      const completion = biome?.topology?.occurrences.filter((occurrence) =>
+        occurrence.gameName.endsWith('_Boss01'),
+      );
+      expect(completion).toEqual([
+        expect.objectContaining({ occurrenceId: `${prebossId}:boss`, gameName: bossName }),
+      ]);
+      expect(biome?.topology?.fixedRoomLinks).toEqual([
+        { sourceOccurrenceId: prebossId, targetOccurrenceId: `${prebossId}:boss` },
+      ]);
+      expect(
+        biome?.topology?.occurrences.some((occurrence) =>
+          occurrence.gameName.endsWith('_PostBoss01'),
+        ),
+      ).toBe(false);
+    }
   });
 
   it('keeps the Surface Shrine checkpoint as one rush and one later delivery beside the host reward', () => {

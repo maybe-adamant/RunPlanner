@@ -325,7 +325,7 @@ export interface RoomOccurrence {
   };
   /** Present only when this exact occurrence owns a realized Phial target. */
   readonly fountainRarityResult?: AuthoredFountainRarityResult;
-  /** Present only at declaration-owned F/G/H automatic Postboss Pool hosts. */
+  /** Present only at declaration-owned F/G/H fixed Postboss Pool hosts. */
   readonly purgingPool?: PurgingPoolState;
   /** Present at declaration-owned Shrine hosts; never guarded by a global interaction flag. */
   readonly hermesShrine?: HermesShrineState;

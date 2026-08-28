@@ -546,7 +546,7 @@ describe('selected O validation', () => {
     );
   });
 
-  it('preserves a non-Ship terminal base store through the Preboss takeover and completion tail', () => {
+  it('preserves a non-Ship terminal base store through the Preboss takeover and fixed completion chain', () => {
     const terminalDecision = createExitDecisionAddress(oBiome, {
       kind: 'occurrence',
       occurrenceId: oOccurrenceIds.combat02,

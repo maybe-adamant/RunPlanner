@@ -792,7 +792,7 @@ describe('BiomeWorkspace', () => {
     expect(screen.queryByRole('button', { name: 'Remove these doors' })).toBeNull();
   });
 
-  it('renders topology-owned and fixed automatic outgoing states on their exact N occurrences', async () => {
+  it('renders topology-owned and fixed outgoing states on their exact N occurrences', async () => {
     const view = renderWorkspace(loadSurfaceNOPQProject(), 'Surface', 'N');
 
     act(() =>

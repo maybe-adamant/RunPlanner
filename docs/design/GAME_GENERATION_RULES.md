@@ -5,7 +5,7 @@
 This document owns the shared generation contract used by the concrete biome
 authorities. It defines candidate support, physical exits, creation and cap
 semantics, ordinary batches, Preboss batches, retained-peer Prebosses,
-completed-Hub handoff, reward-store ownership, and the automatic tail.
+completed-Hub handoff, reward-store ownership, and fixed completion links.
 Concrete starts, room sets, exit types, lifecycle effects, and biome-specific
 fields remain in the documents under `docs/biomes/` and the normalized
 catalog.
@@ -162,7 +162,7 @@ inventory. Moving selection away may return that Shop to dormant structural
 state when no entered inventory is valid for the new selection. This is a
 topology-selection effect, not a React-only visibility convention.
 
-## Hub handoff and automatic tail
+## Hub handoff and fixed completion links
 
 A Hub uses one `HubDecision` for its declaration-fixed slot membership and
 visit order. Once its completion predicate holds, it owns a completed-Hub
@@ -170,10 +170,12 @@ width-one normal exit whose persisted source is
 `{ kind: 'hubDecision', decisionKey }`. That exit creates the declaration-fixed
 Preboss occurrence through the same batch language as other biomes.
 
-Selecting any Preboss stops editable traversal and starts the layout-owned
-automatic Boss/Postboss occurrence sequence. Those rooms are catalog declarations
-and declaration-fixed authored occurrences, not an alternate editable topology owner. A biome may omit a
-postboss room when its completion descriptor says so.
+Selecting any Preboss stops editable traversal and realizes its fixed Boss and
+route-position Postboss occurrences, when a Postboss exists. Those rooms are
+ordinary catalog declarations and authored topology occurrences connected by
+`fixedRoomLinks`; they are not an alternate topology owner or a normal exit
+decision. A biome may omit a Postboss room when the route-position declaration
+is `null`.
 
 ### Completeness and validation
 

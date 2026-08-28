@@ -32,7 +32,7 @@ export function activeRoomActionReferences(
   const room = catalog.rooms.byKey[occurrence.gameName];
   if (room === undefined) return Object.freeze([]);
   const references: RoomActionReference[] = [];
-  // Reprieve rooms and automatic Postboss rooms both expose the same
+  // Reprieve rooms and fixed Postboss rooms both expose the same
   // occurrence-owned Fountain interaction.  The declaration fact, rather than
   // the old completion role, is the authoritative source.
   const hasFountain =

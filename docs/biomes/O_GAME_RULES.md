@@ -24,7 +24,8 @@ encounter data, `RunLogic.lua`, and `RoomLogic.lua` on 2026-07-18.
   from the last active ShipCombat wheel.
 - `O_PreBoss01` is a width-one atomic takeover Preboss. Its policy has no
   remaining free offer: its sole target is the selected World Shop occurrence.
-- Selecting it begins the `O_Boss01`, `O_PostBoss01` completion tail.
+- Selecting it creates the ordinary `O_Boss01` and route-position
+  `O_PostBoss01` occurrences through fixed links.
 
 The final ordinary source reaches the preboss frontier at the declared depth.
 No second physical exit exists there, so no peer or synthetic free reward is
@@ -113,7 +114,7 @@ Miniboss, Story, Reprieve, Devotion, and Shop declarations retain their own
 physical one-door shape, caps, force pressure, and producers. Wheel offer
 count is not a second room exit. The sixth ordinary one-door target reaches
 the declared Preboss frontier; the width-one O takeover creates the entered
-WorldShop and then the derived `O_Boss01`, `O_PostBoss01` tail. Weighted replay,
+WorldShop and then the fixed-link `O_Boss01`, `O_PostBoss01` rooms. Weighted replay,
 NPC random/interaction behavior, optional actions, and automatic boss drops
 remain outside the canonical projection.
 

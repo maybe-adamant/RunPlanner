@@ -24,8 +24,8 @@ P uses the common generated biome envelope:
 - `P_PreBoss01` is an atomic takeover Preboss. It replaces every normal exit
   of its source in declaration order: the first occurrence owns the World
   Shop and later occurrences own complete free RunProgress offers.
-- Selecting a P Preboss closes editable traversal and starts the fixed
-  `P_Boss01`, `P_PostBoss01` completion tail.
+- Selecting a P Preboss closes editable traversal and creates the ordinary
+  `P_Boss01`, `P_PostBoss01` occurrences through fixed links.
 
 `P_MiniBoss02` has one exit, so its takeover batch contains only the Shop
 occurrence. Two-door predecessors create the Shop plus one free-reward peer.
@@ -56,8 +56,8 @@ is included in production catalog data.
 Ordinary P batches own their declared RunProgress/MetaProgress store choice.
 Preboss free offers use the Preboss declaration's counted binding. Shop
 inventory is materialized only for the selected Shop occurrence; free offers
-are complete at creation time. The Preboss's physical exit and the layout's
-completion declarations then provide the derived boss and postboss sequence.
+are complete at creation time. The Preboss's physical exit and fixed links
+then provide the Boss and Postboss occurrences.
 
 ### Physical source and target semantics
 

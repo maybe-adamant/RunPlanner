@@ -31,8 +31,8 @@ rechecked on 2026-08-15; source details remain in the focused audit.
   creates a Shop occurrence on the first exit and a counted free-reward
   occurrence on the second. Its batch has no ordinary batch reward store, so
   the free offer resolves from `H_PreBoss01`'s authored RunProgress store.
-- Selecting a Preboss begins the fixed `H_Boss01`, `H_PostBoss01` completion
-  tail.
+- Selecting a Preboss creates the ordinary `H_Boss01` and route-position
+  `H_PostBoss01` occurrences through fixed links.
 
 The Preboss batch follows the predecessor's declaration-owned normal exits.
 It is not a separate room family, and it cannot be edited one target at a
@@ -143,8 +143,8 @@ place after the ordinary Fields body, and the Preboss pressure are catalog
 facts rather than UI ordering rules.
 
 The bridge contributes its own declaration-owned Story behavior before the
-atomic Preboss batch. `H_Boss01` and `H_PostBoss01` are layout-derived
-completion declarations, not persisted target occurrences. Their transition
+atomic Preboss batch. `H_Boss01` and `H_PostBoss01` are ordinary declarations
+created as persisted target occurrences through fixed links. Their transition
 resets are applied only after the selected Preboss has entered.
 
 ### Baseline boundaries

@@ -177,7 +177,7 @@ function evaluateNBossLifecycle(
   );
 }
 
-describe('Judgment automatic Boss ownership', () => {
+describe('Judgment fixed Boss ownership', () => {
   it('stores its canonical selection on the addressed Boss-defeated phase', () => {
     const project = applyProjectCommand(createGoldenFGHProject(), catalog, {
       kind: 'ReplaceJudgmentArcana',
@@ -220,7 +220,7 @@ describe('Judgment automatic Boss ownership', () => {
   });
 });
 
-describe('Judgment automatic Boss lifecycle', () => {
+describe('Judgment fixed Boss lifecycle', () => {
   it('applies Judgment at Boss defeated before generic encounter completion', () => {
     const evaluated = evaluatedBiome(simulateProject(catalog, loadSurfaceNOProject()), 'N');
     const bossEvents = evaluated.history.events.filter(
@@ -240,7 +240,7 @@ describe('Judgment automatic Boss lifecycle', () => {
         event.kind === 'encounterCompleted',
     );
     if (defeated === undefined || completed === undefined)
-      throw new Error('N Boss lifecycle is missing its automatic occurrence seams');
+      throw new Error('N Boss lifecycle is missing its fixed occurrence seams');
 
     const seededJudgment = activateTemporaryArcana(
       catalog,
@@ -536,7 +536,7 @@ describe('Judgment automatic Boss lifecycle', () => {
     expect(candidate).toMatchObject({ kind: 'unavailable' });
   });
 
-  it('reads Red-activated and Lapis-promoted inputs through the automatic Boss lifecycle seam', () => {
+  it('reads Red-activated and Lapis-promoted inputs through the fixed Boss lifecycle seam', () => {
     const loadout = createDefaultRouteLoadout(catalog);
     const seeded = createArcanaFearState(catalog, { ...loadout, manualArcanaKeys: ['CastCount'] });
     const promoted = promoteArcana(catalog, seeded, ['CardDraw'], { owner: n, sequence: 1 });

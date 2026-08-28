@@ -1,7 +1,7 @@
 {
-  "schemaVersion": 67,
+  "schemaVersion": 68,
   "projectId": "midshop-pom-frontier",
-  "catalogVersion": "0.48.0-hex-talent-layouts",
+  "catalogVersion": "0.49.0-completion-topology",
   "routes": [
     {
       "routeKey": "Underworld",
@@ -690,66 +690,9 @@
                   "exitKey": "exit1"
                 }
               }
-            ]
-          },
-          "completionOccurrences": [
-            {
-              "occurrenceId": "completion:F:boss",
-              "gameName": "F_Boss01",
-              "state": {
-                "kind": "none"
-              },
-              "encounters": {
-                "encounterKeyByPhase": {},
-                "figLeafSkipByPhase": {
-                  "Encounter": false
-                },
-                "gorgonResultByPhase": {}
-              },
-              "roomActions": {
-                "order": []
-              },
-              "additionalExits": []
-            },
-            {
-              "occurrenceId": "completion:F:postboss",
-              "gameName": "F_PostBoss01",
-              "state": {
-                "kind": "none"
-              },
-              "encounters": {
-                "encounterKeyByPhase": {},
-                "figLeafSkipByPhase": {
-                  "Encounter": false
-                },
-                "gorgonResultByPhase": {}
-              },
-              "roomActions": {
-                "order": [
-                  {
-                    "kind": "useFountain"
-                  }
-                ]
-              },
-              "purgingPool": {
-                "interacted": false,
-                "traitKeyBySlot": {
-                  "left": null,
-                  "middle": null,
-                  "right": null
-                }
-              },
-              "stygianWell": {
-                "interacted": false,
-                "offerKeyBySlot": {
-                  "healing": null,
-                  "secondLeft": null,
-                  "secondRight": null
-                }
-              },
-              "additionalExits": []
-            }
-          ]
+            ],
+            "fixedRoomLinks": []
+          }
         }
       ]
     },

@@ -1460,7 +1460,7 @@ describe('H Fields materialization', () => {
     expect(fieldsBatchFacts(catalog, hLayout(), mixedLookup, decision)).toBeUndefined();
   });
 
-  it('materializes the entry, selected Preboss batch, and H completion tail exactly once', () => {
+  it('materializes the entry, selected Preboss batch, and H fixed completion chain exactly once', () => {
     const snapshot = materialize(completeProject());
     const takeover = snapshot.decisions.at(-1);
     if (takeover?.kind !== 'batch') throw new Error('H fixture lost its takeover batch');

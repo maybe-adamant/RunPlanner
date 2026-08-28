@@ -1,7 +1,7 @@
 {
-  "schemaVersion": 67,
+  "schemaVersion": 68,
   "projectId": "surface-2",
-  "catalogVersion": "0.48.0-hex-talent-layouts",
+  "catalogVersion": "0.49.0-completion-topology",
   "routes": [
     {
       "routeKey": "Underworld",
@@ -1240,6 +1240,83 @@
                   }
                 },
                 "additionalExits": []
+              },
+              {
+                "occurrenceId": "surface-n-preboss:boss",
+                "gameName": "N_Boss01",
+                "state": {
+                  "kind": "none"
+                },
+                "encounters": {
+                  "encounterKeyByPhase": {},
+                  "figLeafSkipByPhase": {
+                    "Encounter": false
+                  },
+                  "gorgonResultByPhase": {}
+                },
+                "roomActions": {
+                  "order": []
+                },
+                "additionalExits": []
+              },
+              {
+                "occurrenceId": "surface-n-preboss:postboss",
+                "gameName": "N_PostBoss01",
+                "state": {
+                  "kind": "none"
+                },
+                "encounters": {
+                  "encounterKeyByPhase": {},
+                  "figLeafSkipByPhase": {
+                    "Encounter": false
+                  },
+                  "gorgonResultByPhase": {}
+                },
+                "roomActions": {
+                  "order": [
+                    {
+                      "kind": "useFountain"
+                    }
+                  ]
+                },
+                "hermesShrine": {
+                  "offerBySlot": {
+                    "first": {
+                      "offer": {
+                        "rewardType": "HealBigDrop"
+                      },
+                      "traitOffersByAcquisitionRole": {},
+                      "dispositionByAcquisitionRole": {
+                        "self": {
+                          "kind": "normal"
+                        }
+                      }
+                    },
+                    "secondLeft": {
+                      "offer": {
+                        "rewardType": "MaxHealthDrop"
+                      },
+                      "traitOffersByAcquisitionRole": {},
+                      "dispositionByAcquisitionRole": {
+                        "self": {
+                          "kind": "normal"
+                        }
+                      }
+                    },
+                    "secondRight": {
+                      "offer": {
+                        "rewardType": "MaxManaDrop"
+                      },
+                      "traitOffersByAcquisitionRole": {},
+                      "dispositionByAcquisitionRole": {
+                        "self": {
+                          "kind": "normal"
+                        }
+                      }
+                    }
+                  }
+                },
+                "additionalExits": []
               }
             ],
             "decisions": [
@@ -1466,87 +1543,18 @@
                   "kind": "derived"
                 }
               }
+            ],
+            "fixedRoomLinks": [
+              {
+                "sourceOccurrenceId": "surface-n-preboss",
+                "targetOccurrenceId": "surface-n-preboss:boss"
+              },
+              {
+                "sourceOccurrenceId": "surface-n-preboss:boss",
+                "targetOccurrenceId": "surface-n-preboss:postboss"
+              }
             ]
-          },
-          "completionOccurrences": [
-            {
-              "occurrenceId": "completion:N:boss",
-              "gameName": "N_Boss01",
-              "state": {
-                "kind": "none"
-              },
-              "encounters": {
-                "encounterKeyByPhase": {},
-                "figLeafSkipByPhase": {
-                  "Encounter": false
-                },
-                "gorgonResultByPhase": {}
-              },
-              "roomActions": {
-                "order": []
-              },
-              "additionalExits": []
-            },
-            {
-              "occurrenceId": "completion:N:postboss",
-              "gameName": "N_PostBoss01",
-              "state": {
-                "kind": "none"
-              },
-              "encounters": {
-                "encounterKeyByPhase": {},
-                "figLeafSkipByPhase": {
-                  "Encounter": false
-                },
-                "gorgonResultByPhase": {}
-              },
-              "roomActions": {
-                "order": [
-                  {
-                    "kind": "useFountain"
-                  }
-                ]
-              },
-              "hermesShrine": {
-                "offerBySlot": {
-                  "first": {
-                    "offer": {
-                      "rewardType": "HealBigDrop"
-                    },
-                    "traitOffersByAcquisitionRole": {},
-                    "dispositionByAcquisitionRole": {
-                      "self": {
-                        "kind": "normal"
-                      }
-                    }
-                  },
-                  "secondLeft": {
-                    "offer": {
-                      "rewardType": "MaxHealthDrop"
-                    },
-                    "traitOffersByAcquisitionRole": {},
-                    "dispositionByAcquisitionRole": {
-                      "self": {
-                        "kind": "normal"
-                      }
-                    }
-                  },
-                  "secondRight": {
-                    "offer": {
-                      "rewardType": "MaxManaDrop"
-                    },
-                    "traitOffersByAcquisitionRole": {},
-                    "dispositionByAcquisitionRole": {
-                      "self": {
-                        "kind": "normal"
-                      }
-                    }
-                  }
-                }
-              },
-              "additionalExits": []
-            }
-          ]
+          }
         },
         {
           "biomeKey": "O",
@@ -2079,6 +2087,83 @@
                   }
                 },
                 "additionalExits": []
+              },
+              {
+                "occurrenceId": "surface-o-preboss:boss",
+                "gameName": "O_Boss01",
+                "state": {
+                  "kind": "none"
+                },
+                "encounters": {
+                  "encounterKeyByPhase": {},
+                  "figLeafSkipByPhase": {
+                    "Encounter": false
+                  },
+                  "gorgonResultByPhase": {}
+                },
+                "roomActions": {
+                  "order": []
+                },
+                "additionalExits": []
+              },
+              {
+                "occurrenceId": "surface-o-preboss:postboss",
+                "gameName": "O_PostBoss01",
+                "state": {
+                  "kind": "none"
+                },
+                "encounters": {
+                  "encounterKeyByPhase": {},
+                  "figLeafSkipByPhase": {
+                    "Encounter": false
+                  },
+                  "gorgonResultByPhase": {}
+                },
+                "roomActions": {
+                  "order": [
+                    {
+                      "kind": "useFountain"
+                    }
+                  ]
+                },
+                "hermesShrine": {
+                  "offerBySlot": {
+                    "first": {
+                      "offer": {
+                        "rewardType": "HealBigDrop"
+                      },
+                      "traitOffersByAcquisitionRole": {},
+                      "dispositionByAcquisitionRole": {
+                        "self": {
+                          "kind": "normal"
+                        }
+                      }
+                    },
+                    "secondLeft": {
+                      "offer": {
+                        "rewardType": "MaxHealthDrop"
+                      },
+                      "traitOffersByAcquisitionRole": {},
+                      "dispositionByAcquisitionRole": {
+                        "self": {
+                          "kind": "normal"
+                        }
+                      }
+                    },
+                    "secondRight": {
+                      "offer": {
+                        "rewardType": "MaxManaDrop"
+                      },
+                      "traitOffersByAcquisitionRole": {},
+                      "dispositionByAcquisitionRole": {
+                        "self": {
+                          "kind": "normal"
+                        }
+                      }
+                    }
+                  }
+                },
+                "additionalExits": []
               }
             ],
             "decisions": [
@@ -2246,87 +2331,18 @@
                   "kind": "derived"
                 }
               }
+            ],
+            "fixedRoomLinks": [
+              {
+                "sourceOccurrenceId": "surface-o-preboss",
+                "targetOccurrenceId": "surface-o-preboss:boss"
+              },
+              {
+                "sourceOccurrenceId": "surface-o-preboss:boss",
+                "targetOccurrenceId": "surface-o-preboss:postboss"
+              }
             ]
-          },
-          "completionOccurrences": [
-            {
-              "occurrenceId": "completion:O:boss",
-              "gameName": "O_Boss01",
-              "state": {
-                "kind": "none"
-              },
-              "encounters": {
-                "encounterKeyByPhase": {},
-                "figLeafSkipByPhase": {
-                  "Encounter": false
-                },
-                "gorgonResultByPhase": {}
-              },
-              "roomActions": {
-                "order": []
-              },
-              "additionalExits": []
-            },
-            {
-              "occurrenceId": "completion:O:postboss",
-              "gameName": "O_PostBoss01",
-              "state": {
-                "kind": "none"
-              },
-              "encounters": {
-                "encounterKeyByPhase": {},
-                "figLeafSkipByPhase": {
-                  "Encounter": false
-                },
-                "gorgonResultByPhase": {}
-              },
-              "roomActions": {
-                "order": [
-                  {
-                    "kind": "useFountain"
-                  }
-                ]
-              },
-              "hermesShrine": {
-                "offerBySlot": {
-                  "first": {
-                    "offer": {
-                      "rewardType": "HealBigDrop"
-                    },
-                    "traitOffersByAcquisitionRole": {},
-                    "dispositionByAcquisitionRole": {
-                      "self": {
-                        "kind": "normal"
-                      }
-                    }
-                  },
-                  "secondLeft": {
-                    "offer": {
-                      "rewardType": "MaxHealthDrop"
-                    },
-                    "traitOffersByAcquisitionRole": {},
-                    "dispositionByAcquisitionRole": {
-                      "self": {
-                        "kind": "normal"
-                      }
-                    }
-                  },
-                  "secondRight": {
-                    "offer": {
-                      "rewardType": "MaxManaDrop"
-                    },
-                    "traitOffersByAcquisitionRole": {},
-                    "dispositionByAcquisitionRole": {
-                      "self": {
-                        "kind": "normal"
-                      }
-                    }
-                  }
-                }
-              },
-              "additionalExits": []
-            }
-          ]
+          }
         }
       ]
     }
