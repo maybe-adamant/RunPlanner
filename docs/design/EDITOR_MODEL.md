@@ -112,19 +112,31 @@ The one Hub decision node projects:
 `BiomeWorkspace`. Its occurrence-like tabs make the persistent board readable
 without changing its model: Hub Overview renders the complete fixed-slot set
 and exclusively owns both open/closed participation and each open room's main
-reward editor; Hub Timeline renders the exact authored visit prefix, compact
-next-visit target, visit cutoff, presentation-only tail, and read-only reward
-context; Hub Exit presents the declaration-owned fixed target as one custom
-`Preboss` card. It stays visibly locked until the existing completed-Hub
+reward identity editor; Hub Timeline renders the exact authored visit prefix,
+compact next-visit target, visit cutoff, presentation-only tail, and read-only
+reward context; and Hub Exit presents the declaration-owned fixed target as one
+custom `Preboss` card. It stays visibly locked until the existing completed-Hub
 handoff capability is available, then exposes one `Open next room` action—no
 candidate picker or arbitrary room replacement. It may not persist a second
 door-count value.
 
 The Timeline roster makes rank, identity, traversal state, and reordering
-readable. Membership and reward controls never appear there; closing a slot
-remains the single semantic operation that reconciles its authored occurrence
-and visit references. Its reward summary links the exact semantic owner back
-to the existing Overview editor without creating another ownership path.
+readable. Membership and main reward-identity controls never appear there;
+closing a slot remains the single semantic operation that reconciles its
+authored occurrence and visit references. Its read-only reward summary links
+the exact semantic owner back to the existing Overview editor without creating
+another ownership path.
+
+Hub destination ownership is explicit in the application projection. Hub
+membership and the incoming identity of a main-room reward open Hub Overview;
+the main visit and ordering owner opens Hub Timeline; and the entered main-room
+occurrence, including the trait, Pom, spell, and other acquisition-resolution
+children of its incoming reward, opens that occurrence's Timeline. Side-room
+generation, entry order, and side reward identity remain on the parent main
+occurrence's Overview. Once a side room is entered, its lifecycle and
+acquisition detail opens the side occurrence's Timeline. React consumes these
+destinations and never derives them from address shape, rendered ancestry, or
+the currently selected tab.
 
 Membership controls create or remove the one authored occurrence owned by a
 fixed slot; visited slots cannot be closed until their visit references are
@@ -152,6 +164,23 @@ derived. The editor must allow every permutation, and it must not suggest that
 reordering entries changes already-generated sibling offers. Reordering
 preserves the final modeled parent-exit state while changing the exact
 history/execution trace.
+
+The N route rail nests entered side occurrences beneath their owning main visit.
+Only side occurrences present in the authored local `visitOrder` appear there;
+generated but unentered rows remain available through the parent Overview only.
+Side entries retain their authored side-entry order, select the side occurrence
+when focused, and do not increment the Hub's six-main-visit count. Parent-owned
+side generation, order, and reward-identity markers continue to select the
+parent main visit.
+
+Hub Timeline roster cards use one shared structural column layout for drag
+handle, rank, identity, visit metadata, room details, and reorder controls.
+Long labels wrap inside the identity column rather than shifting later
+controls. The Hub Overview fixed-slot board uses three columns at its normal
+width, two at an intermediate container width, and one on narrow layouts;
+declaration order and fixed membership slots do not change with those breakpoints.
+These are presentation rules only and do not enter authored state or UI-session
+persistence.
 
 Projectors consume normalized domain state and never infer topology from
 rendered components.

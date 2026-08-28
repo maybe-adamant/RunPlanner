@@ -40,15 +40,15 @@ reward at all. This makes a derived or selected RunProgress value look as if it
 must control the next room's visible reward, even though O target behavior is
 mixed:
 
-| Selected O target | Actual outgoing-store consequence |
-| --- | --- |
-| ShipCombat | target has no incoming reward; the inherited store is discarded |
-| Miniboss | target forces RunProgress and Boon; inherited store is overridden |
-| Devotion | target forces RunProgress and Devotion; inherited store is overridden |
-| Reprieve | inherited store draws the ordinary reward and records that store |
-| Story | reward is fixed Story; inherited store records Run/Meta provenance |
-| Midshop | reward is fixed Shop; inherited store records Run/Meta provenance |
-| Preboss Shop | reward is fixed Shop; inherited store records Run/Meta provenance and continues into the completion boundary |
+| Selected O target | Actual outgoing-store consequence                                                                            |
+| ----------------- | ------------------------------------------------------------------------------------------------------------ |
+| ShipCombat        | target has no incoming reward; the inherited store is discarded                                              |
+| Miniboss          | target forces RunProgress and Boon; inherited store is overridden                                            |
+| Devotion          | target forces RunProgress and Devotion; inherited store is overridden                                        |
+| Reprieve          | inherited store draws the ordinary reward and records that store                                             |
+| Story             | reward is fixed Story; inherited store records Run/Meta provenance                                           |
+| Midshop           | reward is fixed Shop; inherited store records Run/Meta provenance                                            |
+| Preboss Shop      | reward is fixed Shop; inherited store records Run/Meta provenance and continues into the completion boundary |
 
 The provenance rows matter. `CalcRoomRewardStores` counts a fixed Story or Shop
 when it has both `ChosenRewardType` and `RewardStoreName`; the resulting ratio

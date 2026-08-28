@@ -228,6 +228,33 @@ clears the complete owned subtree. Run State history records only the starting
 equip and real replacements, with each entry carrying its actual effective
 biome so skipped racks do not collapse chronology labels.
 
+### Hub editor navigation and layout closure
+
+The 2026-08-28 Hub editor correction, delivered in commits `9af264cf` and
+`6631a378`, preserves the existing N ownership split while making its
+destinations and presentation explicit. Hub Overview owns fixed-slot
+membership and main incoming-reward identity; Hub Timeline owns the main visit
+and ordering roster; entered main-room lifecycle and incoming-reward
+acquisition details remain in that occurrence's Timeline. Parent main-room
+Overviews own side generation, entry order, and side reward identity, while
+entered side occurrences appear as nested rail children and own their own
+Timeline acquisition details. Generated but unentered side rooms remain off the
+rail, and side entries never alter the six-main-visit count.
+
+The Hub Overview board now uses three, two, and one columns at normal,
+intermediate, and narrow container widths. Hub Timeline cards reserve stable
+columns for drag handle, rank, identity, visit metadata, Room details, and
+reorder controls; long labels wrap within identity without shifting later
+controls. These are presentation-only changes with no authored, simulation, or
+UI-session persistence changes.
+
+Gate A and Gate B were committed separately as the navigation/destination and
+board/layout slices. This closure pass absorbed the durable editor rules,
+formatted the remaining locked O presentation plan, and completed the repository
+closure gate. Typechecking, fixture integrity (3 files and 20 tests), correctness
+(255 files and 2,531 tests), performance unit coverage (17 tests), relative
+performance comparison, lint, formatting, and the production build all passed.
+
 ### Repository cleanup closure
 
 The 2026-08-25 repository cleanup made the root README a stable product and
