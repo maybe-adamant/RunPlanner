@@ -59,9 +59,7 @@ describe('HubRoomCards', () => {
     expect(screen.getByText('10 open · 9–10 required')).toBeTruthy();
     const beforeReward = nHubOccurrence(view.application, 'combat04').state;
     await view.user.click(within(openedCard).getByLabelText('Reward'));
-    const rewardTypes = within(
-      await screen.findByRole('listbox', {}, { timeout: 5_000 }),
-    ).getAllByRole('option');
+    const rewardTypes = within(await screen.findByRole('listbox')).getAllByRole('option');
     const replacementType =
       rewardTypes.find(
         (option) =>
@@ -134,7 +132,7 @@ describe('HubRoomCards', () => {
         ),
       ).toBe(true),
     );
-  }, 10_000);
+  });
 
   it('offers direct Room details for every visited Hub room workbench', async () => {
     const project = hubRoomDetailProject();

@@ -57,7 +57,7 @@ const biome = createBiomeAddress('Underworld', 'H');
 
 beforeAll(() => {
   createGoldenFGHProject();
-}, 60_000);
+});
 
 function plan(project: ProjectDocument) {
   const result = project.routes

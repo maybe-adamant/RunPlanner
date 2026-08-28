@@ -203,7 +203,7 @@ describe('acquisition-conversion-interactions', () => {
       command: { kind: 'ReplaceSeaStarResult', acquisition, procced: false },
       focus: { owner: acquisition, timing: 'after' },
     });
-  }, 10_000);
+  });
 
   it.each(['GiftDrop', 'MetaCurrencyDrop', 'MetaCardPointsCommonDrop'] as const)(
     'keeps the reached %s conversion interaction visible at a later incomplete frontier',

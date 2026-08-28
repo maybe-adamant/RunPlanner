@@ -32,6 +32,15 @@ import {
   goldenHBiome,
 } from '@run-planner/test-fixtures/underworld';
 
+const nemesisRandomEventFamilies = [
+  'freeItem',
+  'goldTrade',
+  'damageTrade',
+  'traitTrade',
+  'damageContestSuccess',
+  'damageContestFailure',
+] as const;
+
 describe('Nemesis random events', () => {
   const phase = createEncounterPhaseAddress(
     goldenFBiome,
@@ -96,14 +105,7 @@ describe('Nemesis random events', () => {
     return value;
   }
 
-  it.each([
-    'freeItem',
-    'goldTrade',
-    'damageTrade',
-    'traitTrade',
-    'damageContestSuccess',
-    'damageContestFailure',
-  ] as const)(
+  it.each(nemesisRandomEventFamilies)(
     'settles the %s family through the ordinary generated-pickup path',
     (family) => {
       let project = selectEvent();
@@ -192,7 +194,6 @@ describe('Nemesis random events', () => {
         ).toBe(true);
       }
     },
-    15_000,
   );
 
   it('publishes Nemesis free-item fallbacks at the event address without a Shop action', () => {
@@ -373,7 +374,7 @@ describe('Nemesis random events', () => {
         ),
       ),
     ).toBe(false);
-  }, 10_000);
+  });
 
   it('blocks an unavailable trait trade at the event before its required child can settle', () => {
     let project = createGoldenFGHIProject();
@@ -409,7 +410,7 @@ describe('Nemesis random events', () => {
         ),
       ),
     ).toBe(false);
-  }, 10_000);
+  });
 
   it('retains a declined trade result without activating its pickup or trait removal', () => {
     let project = createGoldenFGHIProject();
@@ -438,7 +439,7 @@ describe('Nemesis random events', () => {
     expect(simulateProjectAssembly(catalog, project).evaluation.findings).not.toContainEqual(
       expect.objectContaining({ code: 'nemesisOutcomeUnavailable' }),
     );
-  }, 10_000);
+  });
 
   it('reserves one H generator position while keeping the event freely ordered among cages', () => {
     const occurrenceId = createOccurrenceId('golden-h-combat05');
@@ -531,5 +532,5 @@ describe('Nemesis random events', () => {
     expect(simulateProjectAssembly(catalog, project).evaluation.findings).not.toContainEqual(
       expect.objectContaining({ code: 'fieldsOptionalCapacityUnavailable' }),
     );
-  }, 15_000);
+  });
 });

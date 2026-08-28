@@ -208,7 +208,7 @@ describe('surface product loop', () => {
     renderPlannerForInteraction({ application: recovered });
     expect(selectProfileStatus(recovered.store.getState())).toBe('Recovered');
     expect(currentProject(recovered)).toEqual(authored);
-  }, 10_000);
+  });
 
   it('carries a purchased P Shop Hammer through route history and the application projection', async () => {
     const application = createApplication();

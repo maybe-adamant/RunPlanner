@@ -177,7 +177,7 @@ describe('Purging Pool sales', () => {
         ),
       ).toBe(true);
     }
-  }, 15_000);
+  });
 
   it('retains a stale sale and reports it without removing a different trait', () => {
     const initial = createGoldenFGHProject();
@@ -225,7 +225,7 @@ describe('Purging Pool sales', () => {
         (branch) => branch.traitHistory?.equippedTraits[middle!] !== undefined,
       ),
     ).toBe(true);
-  }, 15_000);
+  });
 
   it('removes the same F Pool trait at the configured tail and when G follows', () => {
     const withG = createCompleteFGProject();
@@ -252,5 +252,5 @@ describe('Purging Pool sales', () => {
         ),
       ).toBe(true);
     }
-  }, 15_000);
+  });
 });

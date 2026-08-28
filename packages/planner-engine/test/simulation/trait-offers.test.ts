@@ -975,7 +975,6 @@ describe('trait legality and derived facts', () => {
         [...events].map((event) => event.sequence).sort((left, right) => left - right),
       );
     },
-    10_000,
   );
 });
 

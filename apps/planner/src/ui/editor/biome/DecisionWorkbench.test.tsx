@@ -616,7 +616,7 @@ describe('DecisionWorkbench', () => {
           semanticAddressKey(candidate.owner) === semanticAddressKey(retainedOwner),
       ),
     ).toBe(true);
-  }, 10_000);
+  });
 
   it('publishes room selection separately from occurrence-workbench navigation', async () => {
     const project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
