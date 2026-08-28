@@ -5,6 +5,7 @@ import {
   createOccurrenceId,
   createOccurrenceAddress,
   createProjectAddress,
+  createRoomActionAddress,
   createRoomRunStateCheckpointAddress,
   createRouteAddress,
   createTraitOfferAddress,
@@ -101,6 +102,39 @@ describe('editor session navigation', () => {
     const explicit = reducer(fromFinding, traitOfferDialogOpened(trait));
     expect(explicit.focusedSemanticOwner).toEqual(trait);
     expect(explicit.traitDialogTarget).toEqual(trait);
+  });
+
+  it('keeps an exact finding selected while focusing its visible timeline action', () => {
+    const occurrence = createOccurrenceAddress(
+      createBiomeAddress('Underworld', 'F'),
+      createOccurrenceId('pickup-context'),
+    );
+    const trait = createTraitOfferAddress(
+      createEncounterPhaseAddress(
+        createBiomeAddress('Underworld', 'F'),
+        { kind: 'occurrence', occurrenceId: occurrence.occurrenceId },
+        'Encounter',
+      ),
+      'selection',
+    );
+    const action = createRoomActionAddress(
+      createBiomeAddress('Underworld', 'F'),
+      occurrence.occurrenceId,
+      'interact:incoming',
+    );
+    const selected = reducer(
+      undefined,
+      findingSelected({
+        focusAddress: action,
+        key: 'pickup-trait-finding',
+        origin: trait,
+        traitDialogTarget: null,
+      }),
+    );
+
+    expect(selected.selectedFinding?.origin).toEqual(trait);
+    expect(selected.focusedSemanticOwner).toEqual(action);
+    expect(selected.traitDialogTarget).toBeNull();
   });
 
   it('selects route panels without losing another route panel selection', () => {

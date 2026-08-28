@@ -81,16 +81,29 @@ export function SemanticOwnerMarker({ address }: { readonly address: SemanticAdd
   const projectFindings = useAppSelector(selectProjectFindingsByOwner);
   const findings = (localFindings ?? projectFindings).get(ownerKey) ?? [];
   const selectedFinding = useAppSelector((state) => state.editorSession.selectedFinding);
+  const focusedSemanticOwner = useAppSelector((state) => state.editorSession.focusedSemanticOwner);
   const navigationRevision = useAppSelector(
     (state) => state.editorSession.semanticNavigationRevision,
   );
   const selectedKey = selectedFinding === null ? null : selectedFinding.key;
   const selectedAtOwner =
     selectedFinding !== null &&
-    semanticAddressKey(selectedFinding.origin) === ownerKey &&
-    findings.some((finding) => semanticFindingKey(finding) === selectedFinding.key);
+    focusedSemanticOwner !== null &&
+    semanticAddressKey(focusedSemanticOwner) === ownerKey;
+  const selectedSourceFinding =
+    selectedFinding === null
+      ? undefined
+      : (projectFindings.get(semanticAddressKey(selectedFinding.origin)) ?? []).find(
+          (finding) => semanticFindingKey(finding) === selectedFinding.key,
+        );
+  const presentedFindings =
+    findings.length > 0
+      ? findings
+      : selectedAtOwner && selectedSourceFinding !== undefined
+        ? [selectedSourceFinding]
+        : [];
   const marker = useRef<HTMLSpanElement>(null);
-  const firstFinding = findings[0];
+  const firstFinding = presentedFindings[0];
   const firstFindingCopy = firstFinding === undefined ? undefined : presentFinding(firstFinding);
   const focusedDetail =
     firstFindingCopy === undefined
@@ -111,12 +124,12 @@ export function SemanticOwnerMarker({ address }: { readonly address: SemanticAdd
       <span
         aria-describedby={focusedDetail === undefined ? undefined : focusedDetailId}
         aria-label={
-          findings.length === 0
+          presentedFindings.length === 0
             ? undefined
-            : `${findings.length} ${findings.length === 1 ? 'finding' : 'findings'}`
+            : `${presentedFindings.length} ${presentedFindings.length === 1 ? 'finding' : 'findings'}`
         }
         className="semantic-owner-marker"
-        data-has-findings={findings.length > 0}
+        data-has-findings={presentedFindings.length > 0}
         data-selected={selectedAtOwner}
         data-semantic-owner={ownerKey}
         id={elementId}
@@ -124,7 +137,7 @@ export function SemanticOwnerMarker({ address }: { readonly address: SemanticAdd
         tabIndex={-1}
         title={focusedDetail}
       >
-        {findings.length === 0 ? null : findings.length}
+        {presentedFindings.length === 0 ? null : presentedFindings.length}
       </span>
       {focusedDetail === undefined ? null : (
         <span className="visually-hidden" id={focusedDetailId}>
@@ -173,11 +186,12 @@ export function ProjectFindings({
                   onClick={() =>
                     dispatch(
                       findingSelected({
+                        focusAddress: destination?.focusAddress ?? finding.origin,
                         key,
                         origin: finding.origin,
-                        ...(destination?.traitDialogTarget === undefined
-                          ? {}
-                          : { traitDialogTarget: destination.traitDialogTarget }),
+                        traitDialogTarget: destination?.traitDialogTarget ?? null,
+                        levelResolutionDialogTarget:
+                          destination?.levelResolutionDialogTarget ?? null,
                       }),
                     )
                   }
@@ -185,7 +199,7 @@ export function ProjectFindings({
                 >
                   <span className="finding-title">{copy.title}</span>
                   <span className="finding-destination">
-                    {findingDestinationLabel(catalog, finding.origin)}
+                    {findingDestinationLabel(catalog, destination?.focusAddress ?? finding.origin)}
                   </span>
                   <span className="finding-description">{copy.description}</span>
                 </button>

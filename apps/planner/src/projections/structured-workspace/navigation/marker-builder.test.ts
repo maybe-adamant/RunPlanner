@@ -72,6 +72,26 @@ describe('structured workspace marker destination builder', () => {
     });
   });
 
+  it('redirects a nested owner to visible context without opening its transient editor', () => {
+    const value = builder();
+    const reward = createIncomingRewardAddress(
+      biome,
+      createOccurrenceId('contextual-trait-reward'),
+    );
+    const trait = value.emitter.marker(createTraitOfferAddress(reward, 'self'));
+    const action = value.emitter.marker(reward, 'action-node');
+
+    value.emitter.redirectToContext(trait, action, 'action-node');
+
+    expect(value.destinations().get(trait.focusKey)).toMatchObject({
+      focusAddress: action.address,
+      focusKey: action.focusKey,
+      nodeKey: 'action-node',
+      ownerAddress: trait.address,
+    });
+    expect(value.destinations().get(trait.focusKey)).not.toHaveProperty('traitDialogTarget');
+  });
+
   it('routes an exact All Together child through its containing trait dialog', () => {
     const value = builder();
     const reward = createIncomingRewardAddress(

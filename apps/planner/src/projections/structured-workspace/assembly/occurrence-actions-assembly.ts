@@ -7,7 +7,7 @@ export type {
   WorkspaceOccurrenceActionAssemblyInput,
   WorkspaceOccurrenceActionsInput,
 } from './occurrence-action-row-projection';
-export { rewardChildMarkers } from './occurrence-action-markers';
+export { rewardChildMarkers, traitOfferMarkers } from './occurrence-action-markers';
 export { roomTabForPhase } from './occurrence-action-run-state';
 
 /** Compose complete row, timeline, and run-state products for one occurrence. */

@@ -196,14 +196,19 @@ and every physical offer's picked state, room selector, and reward controls.
 Before a decision has one selected continuation, its numbered rail stop opens
 that decision surface. Once exactly one target is selected, the same stop opens
 the selected target occurrence stage; the predecessor stage still owns and
-renders the outgoing door editor. Exact target, door-reward, and finding focus
-continues to open the semantic control that owns the value. Fixed entries and N
+renders the outgoing door editor. Exact target and door-reward focus continues
+to open the semantic control that owns the value. Findings retain their exact
+semantic origin, but an acquisition child edited from a Room Timeline action
+navigates first to that visible pickup action without opening its trait, spell,
+or Pom dialog. The action's existing editor launcher is the deliberate next
+step. Structural reward and encounter setup findings continue to open their
+owning control directly. Fixed entries and N
 visit-local details retain occurrence workbenches where they are player-facing
 stages or subordinate Hub navigation.
 
-Finding navigation selects the owning route and biome, focuses the semantic
-owner, and brings its inspector surface into view. The inspector never searches
-for a rendered room label or decision number.
+Finding navigation selects the owning route and biome, preserves the semantic
+finding owner, and brings its projected visible authoring point into view. The
+inspector never searches for a rendered room label or decision number.
 
 ### Encounter Phase Products
 
@@ -1039,8 +1044,9 @@ The structured workspace is complete when:
   semantics;
 - every ordinary decision exposes room, reward, and picked state together while
   preserving unpicked reward and finding state;
-- finding navigation focuses the exact semantic owner inside its owning
-  decision or N visit-local workbench;
+- finding navigation preserves the exact semantic owner while focusing its
+  visible authoring point inside the owning decision or N visit-local
+  workbench;
 - empty and partial biomes show only truthful declared or projected structure;
 - no expected length, probability, invented exit, or hypothetical future room is
   presented as a game fact;

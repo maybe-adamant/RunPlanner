@@ -387,7 +387,7 @@ describe('workspace inspector destinations', () => {
     expect(replayDestination).not.toHaveProperty('traitDialogTarget');
   });
 
-  it('routes generated Echo pickup trait findings to the nested trait editor', () => {
+  it('routes generated Echo trait findings to their pickup action', () => {
     const configured = echoReplayProject(
       Object.freeze({
         disposition: { kind: 'normal' as const },
@@ -420,11 +420,13 @@ describe('workspace inspector destinations', () => {
 
     const workspace = structuredWorkspace.project(assembled);
     for (const finding of findings) {
-      expect(destination(workspace, finding.origin)).toMatchObject({
+      const resolved = destination(workspace, finding.origin);
+      expect(resolved).toMatchObject({
         ownerAddress: finding.origin,
-        focusAddress: finding.origin,
-        traitDialogTarget: finding.origin,
+        focusAddress: { kind: 'roomAction' },
+        roomTab: 'actions',
       });
+      expect(resolved).not.toHaveProperty('traitDialogTarget');
     }
   });
 
@@ -700,12 +702,13 @@ describe('workspace inspector destinations', () => {
     );
     if (mainVisit === undefined) throw new Error('Hub main-reward visit is missing');
     expect(destination(complete, hubTrait.address)).toMatchObject({
+      focusAddress: { kind: 'roomAction' },
       roomTab: 'actions',
       inspectorSubject: { kind: 'node', nodeKey: mainVisit.node.key },
       ownerAddress: hubTrait.address,
       selectedRailKey: mainVisit.marker.focusKey,
-      traitDialogTarget: hubTrait.address,
     });
+    expect(destination(complete, hubTrait.address)).not.toHaveProperty('traitDialogTarget');
     if (mainVisit.node.room.roomLocal.kind !== 'incomingReward') {
       throw new Error('Hub main-reward incoming control is missing');
     }
