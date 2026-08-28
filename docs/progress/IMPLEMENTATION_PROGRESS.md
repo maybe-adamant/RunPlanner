@@ -291,6 +291,59 @@ room-feature identities distinguish unreached unassessed declaration domains
 from reached invalid selections; no new engine query, authored schema, catalog,
 simulation, persistence, or semantic-command behavior was introduced.
 
+### Test execution stability closure
+
+The testing-policy delivery completed Gates A and B in commits `b29db68b`
+(`test: unify correctness execution policy`) and `0c0fcb8f`
+(`test: compare performance against repository base`). The former retired the
+regular/heavy split, removed local timeout overrides and prohibited local
+retries, added shared watchdogs and progress diagnostics, and made the
+performance snapshot a separate raw witness. The latter added the same-host
+base/candidate comparison, detached base-worktree bootstrap and cleanup,
+strict percentage plus inclusive absolute regression thresholds, and explicit
+report-only versus absolute performance commands.
+
+Sequential correctness calibration was stable at each tested worker count:
+
+```text
+4 workers: 391.51 s wall time
+6 workers: 276.89 s wall time
+8 workers: 240.20 s wall time
+```
+
+The selected repository policy is eight workers. The calibration correctness
+lane passed 254 files and 2,510 tests without worker, memory, or teardown
+failures. Fixture integrity passed 3 files and 20 tests. Focused Gate A policy
+and reporter tests passed 2 files and 20 tests; Gate B's comparison unit suite
+passed 17 tests.
+
+The Gate B comparison against `b29db68b` passed on the same host. Its
+report-rounded values and deltas were:
+
+| Metric                                       | Base → candidate (ms) | Delta (ms) |  Change |
+| -------------------------------------------- | --------------------: | ---------: | ------: |
+| `underworld.fullRebuildMs`                   |   1,494.52 → 1,293.29 |    -201.22 | -13.46% |
+| `underworld.coldCandidateProjectionMs`       |           0.55 → 0.49 |      -0.06 | -11.75% |
+| `underworld.representativeEditPublicationMs` |       175.01 → 167.17 |      -7.85 |  -4.48% |
+| `underworld.cachedUndoPublicationMs`         |           0.19 → 0.07 |      -0.12 | -64.47% |
+| `surface.fullRebuildMs`                      |   1,387.67 → 1,251.91 |    -135.77 |  -9.78% |
+| `surface.coldCandidateProjectionMs`          |           0.70 → 0.51 |      -0.19 | -27.49% |
+| `surface.representativeEditPublicationMs`    |         70.18 → 66.28 |      -3.90 |  -5.56% |
+| `surface.cachedUndoPublicationMs`            |           0.04 → 0.04 |      +0.00 |  +0.62% |
+
+Relative verdict: PASS.
+
+The single final `npm run check` passed on 2026-08-27 after independent Gate C
+review remediation: workspace, catalog, engine, and fixture typechecks;
+fixture integrity at 3 files/20 tests; the unified correctness lane at 254
+files/2,524 tests in 225.84 seconds; the 17-test comparison unit suite; a
+same-host relative comparison with no regression verdicts; ESLint;
+repository-wide Prettier; and the production build. The closure comparison's
+largest increase was 31.65 ms on Underworld representative-edit publication,
+which exceeded the percentage threshold but remained below the required
+100 ms absolute increase. The build retained only the existing greater-than-
+500-kB application chunk advisory.
+
 ## Validation Record
 
 Validation claims below are the executed checks retained because they establish

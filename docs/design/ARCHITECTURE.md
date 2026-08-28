@@ -386,11 +386,47 @@ gate, then delete the transformer. Semantic changes require a per-checkpoint
 intent decision; production compatibility decoding and a permanent fixture
 migration framework remain out of scope.
 
-Regular and heavy Vitest lanes have explicit, non-overlapping file manifests
-in `vitest.test-lanes.ts`. The heavy lane is reserved for consumers whose
-fixture-backed cold cost justifies separate scheduling. Their worker caps are
-measured configuration, while the default timeout, hook timeout, thread-pool
-isolation, and lane semantics remain unchanged.
+Correctness and performance are separate Vitest products. The default
+configuration selects every package and application test except the single
+performance witness, so `npm run test:correctness` is one correctness lane
+instead of a regular/heavy manifest split. It uses the fixed eight-worker value
+selected by sequential repository calibration, a 120-second test and hook
+watchdog, a 30-second teardown watchdog, and `retry: 0`. These watchdogs are
+non-termination guards, not duration verdicts. Fixture integrity remains a
+separate one-worker command while inheriting the shared watchdogs. Correctness
+tests do not carry local timeout or retry overrides; Testing Library uses one
+shared ten-second asynchronous wait for functional UI failures.
+
+The shared progress reporter emits file start/completion, a 30-second
+heartbeat for active files, and a slowest-file summary. These timings are
+diagnostics only and never change a pass/fail result.
+
+The isolated performance witness records exactly eight named, millisecond
+metrics: Underworld and Surface full rebuild, cold candidate projection,
+representative edit publication, and cached Undo publication. Full rebuild
+uses one application and project, performs one unmeasured warmup, and then
+measures three calls; the reported value is their median. Each cold candidate,
+edit, and cached Undo sample uses a fresh application and prepared project
+state, and retains its evaluation-work assertions.
+
+`npm run test:performance:compare` runs candidate and base snapshots
+sequentially on the same host. An uncommitted worktree compares against
+`HEAD`; a clean worktree compares against `HEAD^`; `RUN_PLANNER_PERFORMANCE_BASE_REF`
+or `--base-ref` supplies an explicit base. A clean base that resolves to the
+candidate revision is rejected. The comparator creates a detached temporary
+base worktree, bootstraps it with `npm install --ignore-scripts --prefer-offline`,
+and performs targeted cleanup on ordinary success and failure paths. If
+single- or double-force removal cannot be verified absent, the command fails
+and preserves the registered directory while removing separable snapshot
+files, avoiding stale Git metadata.
+
+Non-Undo metrics regress only when they are strictly more than 20 percent and
+at least 100 ms slower; cached Undo uses strictly more than 50 percent and at
+least 10 ms, with the absolute comparisons inclusive. Missing, incompatible,
+negative, or non-finite snapshots are errors. The canonical 1,000 ms
+interaction and 50 ms cached-Undo targets remain report-only for generic hosts;
+`npm run test:performance:absolute` is the explicit absolute-enforcement
+command.
 
 ### shadcn/ui and Tailwind
 
