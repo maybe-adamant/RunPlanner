@@ -118,10 +118,13 @@ completion's shared Room Action order. The required fountain and optional rack
 interaction are ranked independently, so the exact source prefix determines
 whether the fountain observes the carried Boss keepsake or the newly equipped
 replacement. Boss completion and Postboss entry still see the old keepsake;
-immediate equip results occur only when the ranked rack action executes. Retain
-means that the optional rack participant is absent, while replacement adds it
-atomically. The action belongs to the exact completion owner rather than a
-synthetic room or a second keepsake chronology.
+immediate equip results occur only when the ranked rack action executes. The
+physical rack remains a room-declaration fact. No change is represented by the
+absence of authored rack state, action, lifecycle event, and history entry;
+selecting a replacement atomically creates one sparse leaf and ranked action.
+Changing that selection preserves its dormant immediate-result detail, while
+deleting it removes the complete owned subtree. The action belongs to the exact
+completion owner rather than a synthetic room or a second keepsake chronology.
 
 At a normal rack the player can:
 

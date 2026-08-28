@@ -478,9 +478,12 @@ old or new keepsake according to that order and later acquisitions observe the
 resulting state.
 
 The rack is a shared Room Action owned by the exact Postboss occurrence, not a
-fixed lifecycle seam. Retention records no rack action; replacing and returning
-to retain atomically adds or removes its required membership while dormant equip
-detail remains authored. Final-tail Postboss interactions remain active.
+fixed lifecycle seam. A declaration-owned physical rack publishes authoring
+capability even when no action exists. Only a selected replacement creates the
+occurrence-owned ranked action and `keepsakeRackUsed` event. Changing the
+selection preserves its ranked position and dormant equip detail; deleting it
+removes the action and complete leaf-owned subtree. Final-tail Postboss
+interactions remain active.
 
 ## Closed Operation Vocabulary
 
