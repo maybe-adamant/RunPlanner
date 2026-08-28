@@ -691,7 +691,7 @@ export function assembleWorkspaceBiomeSemantics(
     resolvedFrontier = frontierSeed;
   }
   const occurrenceOutgoing = new Map<OccurrenceId, WorkspaceOccurrenceStageOutgoing>();
-  for (const occurrence of [...(plan.topology?.occurrences ?? []), ...plan.completionOccurrences]) {
+  for (const occurrence of plan.topology?.occurrences ?? []) {
     const status = source.outgoingStatus(occurrence.occurrenceId);
     switch (status.kind) {
       case 'authoredDecision':
@@ -755,16 +755,16 @@ export function assembleWorkspaceBiomeSemantics(
           }),
         );
         break;
-      case 'fixedAutomatic': {
+      case 'fixedRoom': {
         const targetStatus = status.target;
         const label = (() => {
           switch (targetStatus.kind) {
-            case 'automaticOccurrence': {
-              const target = plan.completionOccurrences.find(
+            case 'fixedOccurrence': {
+              const target = plan.topology?.occurrences.find(
                 (candidate) => candidate.occurrenceId === targetStatus.occurrenceId,
               );
               return target === undefined
-                ? 'Continue to automatic room.'
+                ? 'Continue to fixed room.'
                 : `Continue to ${requireWorkspaceRoom(catalog, target.gameName).label}.`;
             }
             case 'nextBiomeIntro':
@@ -776,7 +776,7 @@ export function assembleWorkspaceBiomeSemantics(
         occurrenceOutgoing.set(
           occurrence.occurrenceId,
           Object.freeze({
-            kind: 'fixedAutomatic' as const,
+            kind: 'fixedRoom' as const,
             label,
             marker: markerDestinations.marker(status.owner),
           }),
@@ -785,8 +785,15 @@ export function assembleWorkspaceBiomeSemantics(
       }
     }
   }
+  const fixedCompletionOccurrenceIds = [
+    ...new Set((plan.topology?.fixedRoomLinks ?? []).map((link) => link.targetOccurrenceId)),
+  ];
   const completionOutline = Object.freeze(
-    plan.completionOccurrences.map((occurrence) => {
+    fixedCompletionOccurrenceIds.flatMap((occurrenceId) => {
+      const occurrence = plan.topology?.occurrences.find(
+        (candidate) => candidate.occurrenceId === occurrenceId,
+      );
+      if (occurrence === undefined) return [];
       const projected = assembleOccurrence(Object.freeze({ occurrence }));
       appendUniqueOccurrenceInteractionRequirements(
         occurrenceInteractionRequirements,
@@ -799,7 +806,7 @@ export function assembleWorkspaceBiomeSemantics(
         railVisibility: 'inspectorOnly' as const,
       });
       appendUniqueWorkspaceNodes(nodes, [node]);
-      return node;
+      return [node];
     }),
   );
   const completedNodes = Object.freeze([...nodes]);

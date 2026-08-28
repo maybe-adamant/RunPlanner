@@ -65,7 +65,7 @@ describe('P core loop', () => {
         { room: { gameName: 'P_PreBoss01' } },
       ],
     });
-    expect(p.snapshot.automaticRooms.map((room) => room.gameName)).toEqual([
+    expect(p.snapshot.fixedRoomLinks.map((link) => link.target.gameName)).toEqual([
       'P_Boss01',
       'P_PostBoss01',
     ]);

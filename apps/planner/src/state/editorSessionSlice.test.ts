@@ -36,6 +36,7 @@ describe('editor session navigation', () => {
       key: 'Alternate',
       label: 'Alternate Route',
       biomeKeys: ['F'],
+      postbossRoomGameNames: [null],
     };
     const alternateCatalog: Catalog = {
       ...catalog,

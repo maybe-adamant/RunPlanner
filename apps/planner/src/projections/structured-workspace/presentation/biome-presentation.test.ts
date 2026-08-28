@@ -580,7 +580,7 @@ describe('structured workspace biome presentation', () => {
     }
   });
 
-  it('keeps completion landmarks outside an incomplete biome rail', () => {
+  it('does not project completion landmarks before the Preboss is selected', () => {
     const empty = createProjectDocument(catalog, {
       configuredBiomeCounts: { Underworld: 1 },
       projectId: 'presentation-completion-outline',
@@ -588,7 +588,7 @@ describe('structured workspace biome presentation', () => {
     const biome = present(empty, 'Underworld', 'F').presentation.biome;
 
     expect(railShape(biome)).toEqual(['frontier:start']);
-    expect(biome.completionOutline.map((node) => node.room.label)).toEqual(['Hecate', 'Postboss']);
+    expect(biome.completionOutline).toEqual([]);
   });
 
   it('reprojects only authored Hub visit children after replacement and truncation', () => {

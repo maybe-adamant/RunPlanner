@@ -2269,7 +2269,7 @@ export interface WorkspacePhysicalTarget {
   readonly physicalState: 'available' | 'unavailable';
   readonly selected: boolean;
   readonly retained: boolean;
-  readonly nextPath: 'continuesSpine' | 'deadLeaf' | 'startsCompletion';
+  readonly nextPath: 'continuesSpine' | 'deadLeaf';
   readonly rewardConsequence?: WorkspaceTargetRewardConsequence;
   /** Occurrence workbench identity; door UI and decision rails consume `door`. */
   readonly room: WorkspaceRoomSummary;
@@ -2696,8 +2696,8 @@ export type WorkspaceOccurrenceStageOutgoing =
       readonly marker: WorkspaceMarker;
     }
   | {
-      /** Engine-declared automatic continuation, rendered as a fixed exit. */
-      readonly kind: 'fixedAutomatic';
+      /** Engine-declared fixed completion continuation, rendered as a fixed exit. */
+      readonly kind: 'fixedRoom';
       readonly label: string;
       readonly marker: WorkspaceMarker;
     };

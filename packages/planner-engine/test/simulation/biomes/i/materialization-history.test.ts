@@ -358,7 +358,7 @@ describe('canonical I Clockwork materialization and history', () => {
     expect(source?.preOutgoing?.ledgers.counters.clockworkNonGoalRewardsAcquired).toBe(4);
   });
 
-  it('keeps I entry and completion-tail materialization deterministic', () => {
+  it('keeps I entry and terminal Boss materialization deterministic', () => {
     const project = completeProject();
     const encodedBefore = encodeProjectDocument(project);
     const snapshot = materializeBiome(catalog, biome, complete(project), traitContext(project));
@@ -380,10 +380,7 @@ describe('canonical I Clockwork materialization and history', () => {
       undefined,
       'I_WorldShop',
     ]);
-    expect(snapshot.automaticRooms.map((room) => room.gameName)).toEqual([
-      'I_Boss01',
-      'I_PostBoss01',
-    ]);
+    expect(snapshot.fixedRoomLinks.map((link) => link.target.gameName)).toEqual(['I_Boss01']);
     expect(snapshot.biomeState).toEqual({ maxNonGoalRewards: 5 });
     expect(encodeProjectDocument(project)).toBe(encodedBefore);
   });
@@ -463,10 +460,10 @@ describe('canonical I Clockwork materialization and history', () => {
       'roomExited',
     ]);
     expect(history.biomeCompletion.ledgers.counters).toMatchObject({
-      biomeDepthCache: 13,
+      biomeDepthCache: 12,
       biomeEncounterDepth: 10,
       routeEncounterDepth: 29,
-      roomHistoryOrdinal: 43,
+      roomHistoryOrdinal: 42,
       clockworkGoalsRemaining: 0,
       clockworkNonGoalRewardsAcquired: 4,
       clockworkMaxNonGoalRewards: 5,
@@ -475,7 +472,7 @@ describe('canonical I Clockwork materialization and history', () => {
       biomeDepthCache: 0,
       biomeEncounterDepth: 0,
       routeEncounterDepth: 29,
-      roomHistoryOrdinal: 43,
+      roomHistoryOrdinal: 42,
       clockworkGoalsRemaining: 0,
       clockworkNonGoalRewardsAcquired: 4,
     });

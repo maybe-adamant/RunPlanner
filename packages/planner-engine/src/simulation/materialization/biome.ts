@@ -34,7 +34,6 @@ import {
   selectedExitKey,
 } from '../../authored-project/topology/query';
 import { legalTopologyOccurrenceRoom } from '../../authored-project/topology/room-ownership';
-import { createDefaultCompletionOccurrences } from '../../authored-project/room-state/defaults';
 import type { CompleteBiomeCompletenessResult } from '../completeness';
 import { batchTakesOverNormalDoors } from './decision-facts';
 import {
@@ -56,6 +55,7 @@ import type {
   CanonicalBiomeState,
   CanonicalDecision,
   CanonicalDecisionParent,
+  CanonicalFixedRoomLink,
   CanonicalRoomReference,
   MaterializedBiomePrefix,
   MaterializedExitDecisionFrontier,
@@ -129,6 +129,10 @@ function roomReference(room: CanonicalAuthoredRoom): CanonicalRoomReference {
   });
 }
 
+function isCompletionTerminal(room: RoomDeclaration): boolean {
+  return room.kind === 'Boss' || room.kind === 'PostBoss';
+}
+
 function canonicalBiomeState(biomeKey: string, state: AuthoredBiomeState): CanonicalBiomeState {
   const unresolved = Object.entries(state).find(([, value]) => value === null);
   if (unresolved !== undefined) fail(`${biomeKey} has no authored ${unresolved[0]}`);
@@ -185,7 +189,7 @@ function prefix(
   entryRoom: CanonicalAuthoredRoom | undefined,
   decisions: readonly CanonicalDecision[],
   frontier?: MaterializedExitDecisionFrontier | MaterializedHubDecisionFrontier,
-  automaticRooms?: CanonicalBiome['automaticRooms'],
+  fixedRoomLinks?: readonly CanonicalFixedRoomLink[],
 ): MaterializedBiomePrefix {
   return Object.freeze({
     kind: 'biomePrefix',
@@ -193,44 +197,70 @@ function prefix(
     biomeKey: biome.biomeKey,
     ...(entryRoom === undefined ? {} : { entryRoom }),
     decisions: Object.freeze([...decisions]),
-    ...(automaticRooms === undefined ? {} : { automaticRooms }),
+    ...(fixedRoomLinks === undefined ? {} : { fixedRoomLinks }),
     ...(frontier === undefined ? {} : { frontier }),
     biomeState,
   });
 }
 
-function automaticTailForSelectedPreboss(
+function fixedRoomSuccessor(
   catalog: Catalog,
   biome: BiomeAddress,
   layout: BiomeLayout,
-  completionOccurrences: readonly RoomOccurrence[],
+  topology: BiomeTopology,
+  occurrences: ReadonlyMap<OccurrenceId, RoomOccurrence>,
+  source: CanonicalAuthoredRoom,
   loadout: RouteWeaponAspectLoadout,
-  preboss: CanonicalAuthoredRoom,
-): CanonicalBiome['automaticRooms'] {
-  return Object.freeze(
-    completionOccurrences.map((occurrence) => {
-      const room = catalog.rooms.byKey[occurrence.gameName];
-      if (room?.mode.kind !== 'automatic') fail(`${occurrence.gameName} is not an automatic room`);
-      const materialized = materializeAuthoredRoom({
-        catalog,
-        biome,
-        room,
-        occurrence,
-        role: 'automatic',
-        entered: true,
-        loadout,
-      });
-      const inheritedStoreKey =
-        room.enteredRewardStoreHistory.kind === 'resolvedOffer'
-          ? preboss.incomingReward?.resolvedStoreKey
-          : room.enteredRewardStoreHistory.kind === 'fixed'
-            ? room.enteredRewardStoreHistory.storeKey
-            : undefined;
-      return inheritedStoreKey === undefined
-        ? materialized
-        : Object.freeze({ ...materialized, enteredRewardStoreKey: inheritedStoreKey });
-    }),
+): CanonicalFixedRoomLink | undefined {
+  const link = topology.fixedRoomLinks.find(
+    (candidate) => candidate.sourceOccurrenceId === source.occurrenceId,
   );
+  if (link === undefined) return undefined;
+  const occurrence = requireOccurrence(occurrences, link.targetOccurrenceId);
+  const room = requireRoom(catalog, layout, topology, occurrence);
+  const target = materializeAuthoredRoom({
+    catalog,
+    biome,
+    room,
+    occurrence,
+    role: 'ordinary',
+    entered: true,
+    ...(source.kind === 'authored' && source.incomingReward?.resolvedStoreKey !== undefined
+      ? { batchStoreKey: source.incomingReward.resolvedStoreKey }
+      : {}),
+    loadout,
+  });
+  return Object.freeze({ kind: 'fixedRoomLink', source, target });
+}
+
+function fixedRoomChain(
+  catalog: Catalog,
+  biome: BiomeAddress,
+  layout: BiomeLayout,
+  topology: BiomeTopology,
+  occurrences: ReadonlyMap<OccurrenceId, RoomOccurrence>,
+  source: CanonicalAuthoredRoom,
+  loadout: RouteWeaponAspectLoadout,
+): readonly CanonicalFixedRoomLink[] {
+  const links: CanonicalFixedRoomLink[] = [];
+  let current = source;
+  const visited = new Set<OccurrenceId>();
+  while (!visited.has(current.occurrenceId)) {
+    visited.add(current.occurrenceId);
+    const link = fixedRoomSuccessor(
+      catalog,
+      biome,
+      layout,
+      topology,
+      occurrences,
+      current,
+      loadout,
+    );
+    if (link === undefined) break;
+    links.push(link);
+    current = link.target;
+  }
+  return Object.freeze(links);
 }
 
 /**
@@ -413,6 +443,7 @@ export function materializeBiomePrefix(
   const startOccurrence = requireOccurrence(occurrences, topology.startOccurrenceId);
   const entryRoom = materializeStart(catalog, biome, layout, topology, startOccurrence, loadout);
   const decisions: CanonicalDecision[] = [];
+  const fixedRoomLinks: CanonicalFixedRoomLink[] = [];
   let current = entryRoom;
   let clockwork =
     layout.progression.kind === 'generated'
@@ -519,16 +550,41 @@ export function materializeBiomePrefix(
           entryRoom,
           decisions,
           undefined,
-          selected?.kind === 'normal' && selected.target.continuation === 'startsCompletion'
-            ? automaticTailForSelectedPreboss(
+          selected?.kind === 'normal'
+            ? fixedRoomChain(
                 catalog,
                 biome,
                 layout,
-                plan.completionOccurrences,
-                loadout,
+                topology,
+                occurrences,
                 selected.target.room,
+                loadout,
               )
             : undefined,
+        );
+      }
+      const fixed = fixedRoomSuccessor(
+        catalog,
+        biome,
+        layout,
+        topology,
+        occurrences,
+        current,
+        loadout,
+      );
+      if (fixed !== undefined) {
+        fixedRoomLinks.push(fixed);
+        current = fixed.target;
+        continue;
+      }
+      if (isCompletionTerminal(sourceRoom)) {
+        return prefix(
+          biome,
+          biomeState,
+          entryRoom,
+          decisions,
+          undefined,
+          fixedRoomLinks.length === 0 ? undefined : Object.freeze([...fixedRoomLinks]),
         );
       }
       return prefix(
@@ -598,23 +654,13 @@ export function materializeBiomePrefix(
     clockwork = materialized.nextClockwork;
     const selected = selectedBatchContinuation(materialized.batch);
     if (selected === undefined) {
-      return prefix(biome, biomeState, entryRoom, decisions);
-    }
-    if (selected.kind === 'normal' && selected.target.continuation === 'startsCompletion') {
       return prefix(
         biome,
         biomeState,
         entryRoom,
         decisions,
         undefined,
-        automaticTailForSelectedPreboss(
-          catalog,
-          biome,
-          layout,
-          plan.completionOccurrences,
-          loadout,
-          selected.target.room,
-        ),
+        fixedRoomLinks.length === 0 ? undefined : Object.freeze([...fixedRoomLinks]),
       );
     }
     current = selected.kind === 'normal' ? selected.target.room : selected.continuation.room;
@@ -627,7 +673,6 @@ export function materializeBiome(
   biome: BiomeAddress,
   completeness: CompleteBiomeCompletenessResult,
   loadout: RouteWeaponAspectLoadout,
-  completionOccurrences = createDefaultCompletionOccurrences(catalog, biome.biomeKey, loadout),
   echoKeepsakeReplayResults?: Pick<
     import('../../authored-project/model').AuthoredKeepsakeEquipResults,
     'experimentalHammer' | 'transcendentEmbryo'
@@ -642,6 +687,7 @@ export function materializeBiome(
   const startOccurrence = requireOccurrence(occurrences, topology.startOccurrenceId);
   const entryRoom = materializeStart(catalog, biome, layout, topology, startOccurrence, loadout);
   const decisions: CanonicalDecision[] = [];
+  const fixedRoomLinks: CanonicalFixedRoomLink[] = [];
   let currentRoom = entryRoom;
   let clockwork =
     layout.progression.kind === 'generated'
@@ -658,6 +704,26 @@ export function materializeBiome(
     });
     const decision = exitDecisionForSource(topology, source);
     if (decision === undefined) {
+      const sourceRoom = requireRoom(
+        catalog,
+        layout,
+        topology,
+        requireOccurrence(occurrences, currentRoom.occurrenceId),
+      );
+      const fixed = fixedRoomSuccessor(
+        catalog,
+        biome,
+        layout,
+        topology,
+        occurrences,
+        currentRoom,
+        loadout,
+      );
+      if (fixed !== undefined) {
+        fixedRoomLinks.push(fixed);
+        currentRoom = fixed.target;
+        continue;
+      }
       const authoredHub =
         layout.progression.kind === 'hub'
           ? hubDecisionForSource(topology, layout.progression, source)
@@ -689,8 +755,22 @@ export function materializeBiome(
         );
         decisions.push(materialized.batch);
         enteredPreboss = materialized.batch.targets.find((target) => target.picked)?.room;
+        if (enteredPreboss !== undefined) {
+          fixedRoomLinks.push(
+            ...fixedRoomChain(
+              catalog,
+              biome,
+              layout,
+              topology,
+              occurrences,
+              enteredPreboss,
+              loadout,
+            ),
+          );
+        }
         break;
       }
+      if (isCompletionTerminal(sourceRoom)) break;
       fail(`${currentRoom.gameName} has no selected-spine exit decision`);
     }
     const materialized = materializeBatch(
@@ -710,28 +790,18 @@ export function materializeBiome(
     clockwork = materialized.nextClockwork;
     const selected = selectedBatchContinuation(materialized.batch);
     if (selected === undefined) fail(`${currentRoom.gameName} lost selected target`);
-    if (selected.kind === 'normal' && selected.target.continuation === 'startsCompletion') {
-      enteredPreboss = selected.target.room;
-      break;
-    }
-    currentRoom = selected.kind === 'normal' ? selected.target.room : selected.continuation.room;
+    const nextRoom = selected.kind === 'normal' ? selected.target.room : selected.continuation.room;
+    if (catalog.rooms.byKey[nextRoom.gameName]?.kind === 'Preboss') enteredPreboss = nextRoom;
+    currentRoom = nextRoom;
   }
   if (enteredPreboss === undefined) fail(`${layout.biomeKey} has no selected Preboss`);
-  const automaticRooms = automaticTailForSelectedPreboss(
-    catalog,
-    biome,
-    layout,
-    completionOccurrences,
-    loadout,
-    enteredPreboss,
-  );
   return Object.freeze({
     kind: 'biome',
     routeKey: biome.routeKey,
     biomeKey: layout.biomeKey,
     entryRoom,
     decisions: Object.freeze(decisions),
-    automaticRooms,
+    fixedRoomLinks: Object.freeze(fixedRoomLinks),
     biomeState,
     ...(echoKeepsakeReplayResults === undefined ? {} : { echoKeepsakeReplayResults }),
   });

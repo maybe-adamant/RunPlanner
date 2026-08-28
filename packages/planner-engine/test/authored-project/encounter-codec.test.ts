@@ -197,7 +197,7 @@ describe('schema-54 occurrence-owned encounter persistence', () => {
       (route) => route.routeKey === 'Underworld',
     );
     const fBiome = (underworld?.biomes as JsonRecord[]).find((biome) => biome.biomeKey === 'F');
-    const postboss = (fBiome?.completionOccurrences as JsonRecord[]).find(
+    const postboss = ((fBiome?.topology as JsonRecord | null)?.occurrences as JsonRecord[]).find(
       (completion) => completion.gameName === 'F_PostBoss01',
     );
     if (postboss === undefined) throw new Error('missing F Postboss completion occurrence');
@@ -206,7 +206,7 @@ describe('schema-54 occurrence-owned encounter persistence', () => {
     };
 
     expect(() => decodeProjectDocument(document, catalog)).toThrow(
-      'hermesShrine: is not a project document field',
+      'hermesShrine: requires an eligible ordinary Surface Shop host',
     );
   });
 
@@ -592,7 +592,10 @@ describe('schema-54 occurrence-owned encounter persistence', () => {
   });
 
   it('round-trips a distinct automatic-Boss Figurine map and rejects duplicates', () => {
-    const boss = createOccurrenceAddress(goldenFBiome, createOccurrenceId('completion:F:boss'));
+    const boss = createOccurrenceAddress(
+      goldenFBiome,
+      createOccurrenceId('golden-f-preboss-shop:boss'),
+    );
     const figurine = createFigurineArcanaAddress(boss, 'Encounter');
     const project = applyProjectCommand(createCompleteFGProject(), catalog, {
       kind: 'ReplaceFigurineArcana',
@@ -601,7 +604,7 @@ describe('schema-54 occurrence-owned encounter persistence', () => {
     });
     const document = encoded(project);
     const completion = (
-      biome(document, 'Underworld', 'F').completionOccurrences as JsonRecord[]
+      (biome(document, 'Underworld', 'F').topology as JsonRecord).occurrences as JsonRecord[]
     ).find((candidate) => candidate.occurrenceId === boss.occurrenceId);
     if (completion === undefined) throw new Error('missing automatic Boss completion');
     expect((completion.encounters as JsonRecord).figurineArcanaKeysByPhase).toEqual({
@@ -611,7 +614,7 @@ describe('schema-54 occurrence-owned encounter persistence', () => {
 
     const duplicate = encoded(project);
     const duplicateCompletion = (
-      biome(duplicate, 'Underworld', 'F').completionOccurrences as JsonRecord[]
+      (biome(duplicate, 'Underworld', 'F').topology as JsonRecord).occurrences as JsonRecord[]
     ).find((candidate) => candidate.occurrenceId === boss.occurrenceId);
     if (duplicateCompletion === undefined) throw new Error('missing automatic Boss completion');
     const encounters = duplicateCompletion.encounters as JsonRecord;

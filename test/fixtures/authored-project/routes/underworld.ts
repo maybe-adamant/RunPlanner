@@ -117,7 +117,7 @@ export function createUnderworldFWellCheckpoint(configuredTail = true): ProjectD
   });
   const occurrence = createOccurrenceAddress(
     goldenFBiome,
-    createOccurrenceId('completion:F:postboss'),
+    createOccurrenceId('golden-f-preboss-shop:postboss'),
   );
   project = applyProjectCommand(project, catalog, {
     kind: 'SetStygianWellInteraction',
@@ -231,7 +231,7 @@ export function createCompleteFGProject(options: GoldenGProjectOptions = {}): Pr
 /** Short F/G witness: the F Postboss Pool sells one of its realized traits. */
 export function createUnderworldFPoolCheckpoint(): ProjectDocument {
   let project = createCompleteFGProject();
-  const occurrenceId = createOccurrenceId('completion:F:postboss');
+  const occurrenceId = createOccurrenceId('golden-f-preboss-shop:postboss');
   project = applyProjectCommand(project, catalog, {
     kind: 'SetPurgingPoolInteraction',
     occurrence: createOccurrenceAddress(goldenFBiome, occurrenceId),
@@ -240,7 +240,7 @@ export function createUnderworldFPoolCheckpoint(): ProjectDocument {
   const pool = project.routes
     .find((route) => route.routeKey === 'Underworld')
     ?.biomes.find((biome) => biome.biomeKey === 'F')
-    ?.completionOccurrences.find(
+    ?.topology?.occurrences.find(
       (occurrence) => occurrence.occurrenceId === occurrenceId,
     )?.purgingPool;
   const traitKey = pool?.traitKeyBySlot.left;

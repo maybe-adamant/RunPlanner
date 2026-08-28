@@ -53,19 +53,19 @@ const addressCases: readonly { readonly name: string; readonly address: Semantic
     }),
   },
   {
-    name: 'automatic Boss occurrence',
-    address: createOccurrenceAddress(fBiome, createOccurrenceId('completion:F:boss')),
+    name: 'fixed Boss occurrence',
+    address: createOccurrenceAddress(fBiome, createOccurrenceId('golden-f-preboss-shop:boss')),
   },
   {
     name: 'Boss Judgment Arcana child',
     address: createJudgmentArcanaAddress(
-      createOccurrenceAddress(fBiome, createOccurrenceId('completion:F:boss')),
+      createOccurrenceAddress(fBiome, createOccurrenceId('golden-f-preboss-shop:boss')),
       'Encounter',
     ),
   },
   {
-    name: 'automatic Postboss occurrence',
-    address: createOccurrenceAddress(fBiome, createOccurrenceId('completion:F:postboss')),
+    name: 'fixed Postboss occurrence',
+    address: createOccurrenceAddress(fBiome, createOccurrenceId('golden-f-preboss-shop:postboss')),
   },
   { name: 'occurrence exit decision', address: createExitDecisionAddress(fBiome, fSource) },
   { name: 'Hub exit decision', address: createExitDecisionAddress(nBiome, nHubSource) },
@@ -152,12 +152,12 @@ describe('semantic addresses', () => {
     );
   });
 
-  it('owns Judgment beneath the exact automatic Boss occurrence and phase', () => {
-    const boss = createOccurrenceAddress(fBiome, createOccurrenceId('completion:F:boss'));
+  it('owns Judgment beneath the exact fixed Boss occurrence and phase', () => {
+    const boss = createOccurrenceAddress(fBiome, createOccurrenceId('golden-f-preboss-shop:boss'));
     const judgment = createJudgmentArcanaAddress(boss, 'Encounter');
     expect(judgment.occurrenceId).toBe(boss.occurrenceId);
     expect(JSON.parse(semanticAddressKey(judgment)).slice(-2)).toEqual([
-      'completion:F:boss',
+      'golden-f-preboss-shop:boss',
       'Encounter',
     ]);
   });

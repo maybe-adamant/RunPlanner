@@ -299,7 +299,7 @@ function materializeTarget(
     origin: createTargetAddress(biome, source, target.exitKey),
     exit: physicalExit,
     picked,
-    continuation: targetContinuation(picked, room.kind),
+    continuation: targetContinuation(picked),
     room: materializeAuthoredRoom({
       catalog,
       biome,

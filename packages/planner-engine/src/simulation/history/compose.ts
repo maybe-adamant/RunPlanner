@@ -20,7 +20,7 @@ import type { RoomHistoryOrigin, RoomLifecycleEvent } from '../lifecycle';
 import {
   appendRoomLifecycle as appendCanonicalRoomLifecycle,
   appendStandaloneRoomCreated,
-  appendAutomaticTail,
+  appendFixedRoomLinks,
   composeBiomeHistoryEnvelope,
   composeBiomeHistoryEnvelopeWithEncounterValidation,
   composeBiomeHistoryPrefix as composePrefixHistoryEnvelope,
@@ -572,7 +572,7 @@ function composeBiomeHistoryResult(
     ...(figLeafState === undefined ? {} : { figLeafState }),
     pendingSpellDrop,
     allSpellInvested,
-    automaticRooms: snapshot.automaticRooms,
+    fixedRoomLinks: snapshot.fixedRoomLinks,
     transitionEffects:
       catalog.biomeLayouts.byKey[snapshot.biomeKey]?.completion.transitionEffects ?? [],
     composeEntry(writer: HistorySegmentWriter): CanonicalAuthoredRoom {
@@ -591,15 +591,14 @@ function composeBiomeHistoryResult(
               ? candidateHandoff
               : undefined;
           current = appendHubDecision(writer, catalog, current, decision, handoff);
-          if (handoff !== undefined) decisionIndex += 1;
-          if (
-            handoff !== undefined &&
-            selectedTarget(handoff).continuation === 'startsCompletion'
-          ) {
-            if (current.kind !== 'authored')
-              fail('Hub Handoff selected a non-authored automatic room');
-            completionPredecessor = current;
-            break;
+          if (handoff !== undefined) {
+            decisionIndex += 1;
+            if (
+              current.kind === 'authored' &&
+              catalog.rooms.byKey[current.gameName]?.kind === 'Preboss'
+            ) {
+              completionPredecessor = current;
+            }
           }
           continue;
         }
@@ -617,9 +616,11 @@ function composeBiomeHistoryResult(
           fail(`${semanticAddressKey(decision.origin)} has no selected continuation`);
         }
         current = selected.kind === 'normal' ? selected.target.room : selected.continuation.room;
-        if (selected.kind === 'normal' && selected.target.continuation === 'startsCompletion') {
+        if (
+          selected.kind === 'normal' &&
+          catalog.rooms.byKey[selected.target.room.gameName]?.kind === 'Preboss'
+        ) {
           completionPredecessor = selected.target.room;
-          break;
         }
       }
       if (completionPredecessor === undefined)
@@ -709,17 +710,17 @@ function composeBiomeHistoryPrefixResult(
         current = appendCompletedDecision(writer, catalog, decision, current);
       }
       const frontier = snapshot.frontier;
-      if (frontier === undefined && snapshot.automaticRooms !== undefined) {
+      if (frontier === undefined && snapshot.fixedRoomLinks !== undefined) {
         if (current.kind !== 'authored') {
-          fail('completion tail does not follow an authored Preboss room');
+          fail('fixed completion links do not follow an authored Preboss room');
         }
         appendCanonicalRoomLifecycle(writer, catalog, current, fail);
-        appendAutomaticTail(
+        appendFixedRoomLinks(
           writer,
           catalog,
           createBiomeAddress(snapshot.routeKey, snapshot.biomeKey),
           current,
-          snapshot.automaticRooms,
+          snapshot.fixedRoomLinks,
           fail,
         );
         return;

@@ -217,7 +217,15 @@ function authorForcedShrine(
 ): ProjectDocument {
   const occurrence = createOccurrenceAddress(
     biome,
-    createOccurrenceId(`completion:${biome.biomeKey}:postboss`),
+    createOccurrenceId(
+      `${
+        {
+          N: 'surface-n-preboss',
+          O: 'surface-o-preboss',
+          P: 'surface-p-preboss-shop',
+        }[biome.biomeKey] ?? `surface-${biome.biomeKey.toLowerCase()}-preboss`
+      }:postboss`,
+    ),
   );
   let next = project;
   for (const [slotKey, rewardType] of [

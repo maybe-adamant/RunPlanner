@@ -1009,7 +1009,10 @@ describe('room-action commands', () => {
   });
 
   it('keeps the Postboss rack membership atomic while its ranked action moves in one undo step', () => {
-    const completion = createOccurrenceAddress(biome, createOccurrenceId('completion:F:postboss'));
+    const completion = createOccurrenceAddress(
+      biome,
+      createOccurrenceId('golden-f-preboss-shop:postboss'),
+    );
     const rack = { kind: 'interactKeepsakeRack' as const };
     const action = createRoomActionAddress(biome, completion.occurrenceId, roomActionKey(rack));
     const retained = createGoldenFGHProject();
@@ -1019,7 +1022,7 @@ describe('room-action commands', () => {
       keepsakeKey: 'HadesAndPersephoneKeepsake',
     });
     expect(
-      replaced.routes[0]?.biomes[0]?.completionOccurrences.find(
+      replaced.routes[0]?.biomes[0]?.topology?.occurrences.find(
         (occurrence) => occurrence.occurrenceId === completion.occurrenceId,
       )?.roomActions.order,
     ).toEqual([{ kind: 'useFountain' }, rack]);
@@ -1034,7 +1037,7 @@ describe('room-action commands', () => {
     });
     expect(history.past).toHaveLength(1);
     expect(
-      history.present.routes[0]?.biomes[0]?.completionOccurrences.find(
+      history.present.routes[0]?.biomes[0]?.topology?.occurrences.find(
         (occurrence) => occurrence.occurrenceId === completion.occurrenceId,
       )?.roomActions.order,
     ).toEqual([rack, { kind: 'useFountain' }]);
@@ -1054,12 +1057,12 @@ describe('room-action commands', () => {
     });
     const retainedAgain = deletedHistory.present;
     expect(
-      retainedAgain.routes[0]?.biomes[0]?.completionOccurrences.find(
+      retainedAgain.routes[0]?.biomes[0]?.topology?.occurrences.find(
         (occurrence) => occurrence.occurrenceId === completion.occurrenceId,
       )?.keepsakeRack,
     ).toBeUndefined();
     expect(
-      retainedAgain.routes[0]?.biomes[0]?.completionOccurrences.find(
+      retainedAgain.routes[0]?.biomes[0]?.topology?.occurrences.find(
         (occurrence) => occurrence.occurrenceId === completion.occurrenceId,
       )?.roomActions.order,
     ).toEqual([{ kind: 'useFountain' }]);

@@ -619,7 +619,7 @@ export const qRooms = [
     roomSetKey: 'Q',
     advancesExperimentalHammerUses: true,
     kind: 'Boss',
-    mode: { kind: 'automatic', role: 'boss' },
+    mode: { kind: 'authored', templateKey: 'Boss' },
     structuralTags: [],
     exits: [{ index: 1, type: 'TyphonExitDoor' }],
     incomingReward: { kind: 'none' },

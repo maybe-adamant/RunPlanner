@@ -1,4 +1,4 @@
-import type { AuthoredBiomePlan, BiomeTopology, ProjectDocument, RoomOccurrence } from '../model';
+import type { BiomeTopology, ProjectDocument, RoomOccurrence } from '../model';
 
 import { withBiome, type LocatedBiome } from './contract';
 
@@ -30,26 +30,21 @@ export function updateOccurrenceTopology(
   return withBiome(document, located, { ...located.plan, topology });
 }
 
-/** Replaces either an editable-topology occurrence or a declaration-fixed automatic occurrence. */
+/** Replaces an authored occurrence while retaining topology ownership. */
 export function updateOccurrence(
   document: ProjectDocument,
   located: LocatedBiome,
   occurrence: RoomOccurrence,
 ): ProjectDocument {
   const topology = located.plan.topology;
-  const inTopology =
-    topology?.occurrences.some(
-      (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
-    ) === true;
-  const plan: AuthoredBiomePlan = inTopology
-    ? { ...located.plan, topology: replaceOccurrence(topology!, occurrence) }
-    : {
-        ...located.plan,
-        completionOccurrences: Object.freeze(
-          located.plan.completionOccurrences.map((candidate) =>
-            candidate.occurrenceId === occurrence.occurrenceId ? occurrence : candidate,
-          ),
-        ),
-      };
-  return withBiome(document, located, plan);
+  if (
+    topology === null ||
+    !topology.occurrences.some((candidate) => candidate.occurrenceId === occurrence.occurrenceId)
+  ) {
+    throw new Error(`unknown topology occurrence ${occurrence.occurrenceId}`);
+  }
+  return withBiome(document, located, {
+    ...located.plan,
+    topology: replaceOccurrence(topology, occurrence),
+  });
 }

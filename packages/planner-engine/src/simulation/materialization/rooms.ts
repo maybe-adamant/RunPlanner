@@ -45,6 +45,7 @@ function fail(detail: string): never {
 
 type AuthoredTemplateKey =
   | 'Anomaly'
+  | 'Boss'
   | 'Chaos'
   | 'ClockworkCombat'
   | 'ContractBoss'
@@ -60,11 +61,12 @@ type AuthoredTemplateKey =
   | 'RewardlessCombat'
   | 'Shop'
   | 'Preboss'
+  | 'PostBoss'
   | 'ShipCombat'
   | 'StandardCombat'
   | 'Story';
 
-export type AuthoredRoomRole = 'ordinary' | 'prebossFreeReward' | 'prebossShop' | 'automatic';
+export type AuthoredRoomRole = 'ordinary' | 'prebossFreeReward' | 'prebossShop';
 
 export interface AuthoredRoomMaterializationContext {
   readonly catalog: Catalog;
@@ -696,6 +698,11 @@ function materializePreboss(context: AuthoredRoomMaterializationContext): Materi
 
 const authoredTemplateMaterializers = Object.freeze({
   Anomaly: materializeAnomaly,
+  Boss: (context) =>
+    Object.freeze({
+      ...materializeRewardlessRoom(context),
+      lifecycleProfileKey: 'BossRoom',
+    }),
   Chaos: materializeFixedRoom,
   ClockworkCombat: materializeClockworkCombat,
   ContractBoss: materializeFixedRoom,
@@ -715,6 +722,11 @@ const authoredTemplateMaterializers = Object.freeze({
     }),
   Shop: materializeShopRoom,
   Preboss: materializePreboss,
+  PostBoss: (context) =>
+    Object.freeze({
+      ...materializeRewardlessRoom(context),
+      lifecycleProfileKey: 'PostBossRoom',
+    }),
   ShipCombat: materializeShipCombat,
   StandardCombat: materializeCountedRoom,
   Story: (context) =>
@@ -781,12 +793,10 @@ export function materializeAuthoredRoom(
 ): CanonicalAuthoredRoom {
   if (context.room.mode.kind === 'derived')
     fail(`${context.room.gameName} is not an occurrence room`);
-  const leaf: MaterializedRoomLeaf =
-    context.room.mode.kind === 'automatic'
-      ? Object.freeze({
-          lifecycleProfileKey: context.room.mode.role === 'boss' ? 'BossRoom' : 'PostBossRoom',
-        })
-      : authoredMaterializer(context.room.mode.templateKey, context.room.gameName)(context);
+  const leaf: MaterializedRoomLeaf = authoredMaterializer(
+    context.room.mode.templateKey,
+    context.room.gameName,
+  )(context);
   const selectedEncounterPhases =
     leaf.encounterPhases ??
     resolveEncounterPhases(
@@ -836,6 +846,12 @@ export function materializeAuthoredRoom(
     leaf.incomingReward === undefined || !suppressesIncomingReward
       ? leaf.incomingReward
       : Object.freeze({ ...leaf.incomingReward, acquisitionEnabled: false });
+  const enteredRewardStoreKey =
+    context.room.enteredRewardStoreHistory.kind === 'resolvedOffer'
+      ? resolvedStoreKey(context.room, context.batchStoreKey)
+      : context.room.enteredRewardStoreHistory.kind === 'fixed'
+        ? context.room.enteredRewardStoreHistory.storeKey
+        : undefined;
   const base = Object.freeze({
     kind: 'authored',
     origin: createOccurrenceAddress(context.biome, context.occurrence.occurrenceId),
@@ -850,6 +866,7 @@ export function materializeAuthoredRoom(
     lifecycleProfileKey: leaf.lifecycleProfileKey,
     counterEffects: context.room.counters,
     entered: context.entered,
+    ...(enteredRewardStoreKey === undefined ? {} : { enteredRewardStoreKey }),
     roomActions: context.occurrence.roomActions,
     ...(context.occurrence.keepsakeRack === undefined
       ? {}

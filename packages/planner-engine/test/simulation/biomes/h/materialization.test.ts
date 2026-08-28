@@ -1473,7 +1473,7 @@ describe('H Fields materialization', () => {
     expect(takeover.targets).toHaveLength(2);
     expect(takeover.targets[0]).toMatchObject({
       picked: true,
-      continuation: 'startsCompletion',
+      continuation: 'continuesSpine',
       room: {
         gameName: 'H_PreBoss01',
         lifecycleProfileKey: 'PrebossShopRoom',
@@ -1488,15 +1488,17 @@ describe('H Fields materialization', () => {
         lifecycleProfileKey: 'PrebossFreeRewardRoom',
       },
     });
-    expect(snapshot.automaticRooms.map((room) => room.gameName)).toEqual([
+    expect(snapshot.fixedRoomLinks.map((link) => link.target.gameName)).toEqual([
       'H_Boss01',
       'H_PostBoss01',
     ]);
-    expect(snapshot.automaticRooms.map((room) => room.lifecycleProfileKey)).toEqual([
+    expect(snapshot.fixedRoomLinks.map((link) => link.target.lifecycleProfileKey)).toEqual([
       'BossRoom',
       'PostBossRoom',
     ]);
-    expect(snapshot.automaticRooms[0]).toMatchObject({ enteredRewardStoreKey: 'RunProgress' });
+    expect(snapshot.fixedRoomLinks[0]?.target).toMatchObject({
+      enteredRewardStoreKey: 'RunProgress',
+    });
     expect(ordinaryBatches(snapshot)).toHaveLength(4);
     expect(snapshot).not.toHaveProperty('history');
     expect(snapshot).not.toHaveProperty('findings');

@@ -417,7 +417,7 @@ describe('Fig Leaf state contract', () => {
     const replacement = applyProjectCommand(skipped, catalog, {
       kind: 'ReplacePostbossKeepsake',
       selection: createPostbossKeepsakeSelectionAddress(
-        createOccurrenceAddress(nBiome, createOccurrenceId('completion:N:postboss')),
+        createOccurrenceAddress(nBiome, createOccurrenceId('surface-n-preboss:postboss')),
       ),
       keepsakeKey: 'GoldifyKeepsake',
     });

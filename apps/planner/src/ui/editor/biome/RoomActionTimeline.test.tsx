@@ -623,7 +623,7 @@ describe('OccurrenceRoomActions', () => {
   });
 
   it('edits, reorders, repairs, and focuses fixed Pool sales through the shared timeline', async () => {
-    const postbossId = createOccurrenceId('completion:F:postboss');
+    const postbossId = createOccurrenceId('golden-f-preboss-shop:postboss');
     const view = renderOccurrenceWorkbench(
       authorLegalTraitOffers(loadUnderworldFGProject()),
       'Underworld',
@@ -657,7 +657,7 @@ describe('OccurrenceRoomActions', () => {
           .getState()
           .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
           ?.biomes.find((biome) => biome.biomeKey === 'F')
-          ?.completionOccurrences.find((room) => room.occurrenceId === postbossId)?.purgingPool
+          ?.topology?.occurrences.find((room) => room.occurrenceId === postbossId)?.purgingPool
           ?.traitKeyBySlot.left,
       ).not.toBeNull(),
     );
@@ -669,7 +669,7 @@ describe('OccurrenceRoomActions', () => {
           .getState()
           .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
           ?.biomes.find((biome) => biome.biomeKey === 'F')
-          ?.completionOccurrences.find((room) => room.occurrenceId === postbossId)?.roomActions
+          ?.topology?.occurrences.find((room) => room.occurrenceId === postbossId)?.roomActions
           .order,
       ).toContainEqual({ kind: 'sellPurgingPoolTrait', slotKey: 'left' }),
     );
@@ -681,7 +681,7 @@ describe('OccurrenceRoomActions', () => {
           .getState()
           .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
           ?.biomes.find((biome) => biome.biomeKey === 'F')
-          ?.completionOccurrences.find((room) => room.occurrenceId === postbossId)?.roomActions
+          ?.topology?.occurrences.find((room) => room.occurrenceId === postbossId)?.roomActions
           .order,
       ).toEqual([
         { kind: 'sellPurgingPoolTrait', slotKey: 'middle' },
@@ -699,7 +699,7 @@ describe('OccurrenceRoomActions', () => {
         .getState()
         .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
         ?.biomes.find((biome) => biome.biomeKey === 'F')
-        ?.completionOccurrences.find((room) => room.occurrenceId === postbossId)?.roomActions.order;
+        ?.topology?.occurrences.find((room) => room.occurrenceId === postbossId)?.roomActions.order;
     await waitFor(() =>
       expect(poolActionOrder()).toEqual([
         { kind: 'sellPurgingPoolTrait', slotKey: 'left' },
@@ -763,7 +763,7 @@ describe('OccurrenceRoomActions', () => {
         .getState()
         .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
         ?.biomes.find((biome) => biome.biomeKey === 'F')
-        ?.completionOccurrences.find((room) => room.occurrenceId === postbossId)?.purgingPool
+        ?.topology?.occurrences.find((room) => room.occurrenceId === postbossId)?.purgingPool
         ?.traitKeyBySlot.middle,
     ).not.toBeNull();
   });

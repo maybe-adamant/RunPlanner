@@ -294,8 +294,8 @@ export function applyEncounterSettlementTransition(inputs: {
   if (
     event.kind === 'bossDefeated' &&
     room?.kind === 'authored' &&
-    declaration?.mode.kind === 'automatic' &&
-    declaration.mode.role === 'boss' &&
+    declaration?.mode.kind === 'authored' &&
+    declaration.mode.templateKey === 'Boss' &&
     inputs.enteredBiomeCount < inputs.fullRunBiomeCount
   ) {
     const owner = createJudgmentArcanaAddress(room.origin, event.phaseKey);

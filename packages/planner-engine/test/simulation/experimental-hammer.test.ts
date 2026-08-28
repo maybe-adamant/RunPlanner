@@ -53,7 +53,18 @@ function automaticOccurrence(
   biome: ReturnType<typeof createBiomeAddress>,
   role: 'boss' | 'postboss',
 ) {
-  return createOccurrenceAddress(biome, createOccurrenceId(`completion:${biome.biomeKey}:${role}`));
+  const prebossOccurrenceIds: Record<string, string> = {
+    F: 'golden-f-preboss-shop',
+    G: 'golden-g-preboss-shop',
+    H: 'golden-h-preboss-shop',
+    N: 'surface-n-preboss',
+    O: 'surface-o-preboss',
+    P: 'surface-p-preboss-shop',
+    Q: 'surface-q-preboss',
+  };
+  const preboss = prebossOccurrenceIds[biome.biomeKey];
+  if (preboss === undefined) throw new Error(`missing test Preboss for ${biome.biomeKey}`);
+  return createOccurrenceAddress(biome, createOccurrenceId(`${preboss}:${role}`));
 }
 
 function evaluatedBiome(project: ReturnType<typeof createCompleteFGProject>, key: 'F' | 'G' | 'H') {
@@ -369,14 +380,15 @@ describe('Experimental Hammer', () => {
     const endEffects = lifecycleEndEffects(project, 'F');
     const bossIndex = endEffects.findIndex(
       (event) =>
-        event.origin.kind === 'occurrence' && event.origin.occurrenceId === 'completion:F:boss',
+        event.origin.kind === 'occurrence' &&
+        event.origin.occurrenceId === 'golden-f-preboss-shop:boss',
     );
     if (bossIndex < 0) throw new Error('missing Boss end-effects checkpoint');
     expect(
       endEffects.some(
         (event) =>
           event.origin.kind === 'occurrence' &&
-          event.origin.occurrenceId === 'completion:F:postboss',
+          event.origin.occurrenceId === 'golden-f-preboss-shop:postboss',
       ),
     ).toBe(false);
     const branch = replayThroughRealLifecycle(project, 'F', bossIndex + 1).branches[0]!;
@@ -388,7 +400,10 @@ describe('Experimental Hammer', () => {
       expect.objectContaining({
         kind: 'traitRemoval',
         acquisitionRole: 'experimentalHammerExpiry',
-        owner: expect.objectContaining({ kind: 'occurrence', occurrenceId: 'completion:F:boss' }),
+        owner: expect.objectContaining({
+          kind: 'occurrence',
+          occurrenceId: 'golden-f-preboss-shop:boss',
+        }),
       }),
     );
   });
@@ -409,7 +424,7 @@ describe('Experimental Hammer', () => {
       (event) =>
         event.kind === 'encounterCompleted' &&
         event.origin.kind === 'occurrence' &&
-        event.origin.occurrenceId === 'completion:F:postboss',
+        event.origin.occurrenceId === 'golden-f-preboss-shop:postboss',
     );
     expect(equip).toBeDefined();
     expect(postbossCompletion).toBeDefined();
@@ -574,8 +589,8 @@ describe('Experimental Hammer', () => {
     const project = withPostbossHammer(createGoldenFGHProject());
     const evaluated = evaluatedBiome(project, 'F');
     const plan = route(project).biomes.find((biome) => biome.biomeKey === 'F');
-    const rack = plan?.completionOccurrences.find(
-      (occurrence) => occurrence.occurrenceId === 'completion:F:postboss',
+    const rack = plan?.topology?.occurrences.find(
+      (occurrence) => occurrence.occurrenceId === 'golden-f-preboss-shop:postboss',
     )?.keepsakeRack;
     if (rack === undefined || rack.equipResults === undefined)
       throw new Error('expected authored F Hammer result');
@@ -640,8 +655,8 @@ describe('Experimental Hammer', () => {
     };
     const evaluated = evaluatedBiome(project, 'F');
     const plan = route(project).biomes.find((biome) => biome.biomeKey === 'F');
-    const rack = plan?.completionOccurrences.find(
-      (occurrence) => occurrence.occurrenceId === 'completion:F:postboss',
+    const rack = plan?.topology?.occurrences.find(
+      (occurrence) => occurrence.occurrenceId === 'golden-f-preboss-shop:postboss',
     )?.keepsakeRack;
     if (rack === undefined || rack.equipResults === undefined)
       throw new Error('expected authored F Hammer result');
@@ -659,8 +674,8 @@ describe('Experimental Hammer', () => {
     expect(
       route(project)
         .biomes.find((biome) => biome.biomeKey === 'F')
-        ?.completionOccurrences.find(
-          (occurrence) => occurrence.occurrenceId === 'completion:F:postboss',
+        ?.topology?.occurrences.find(
+          (occurrence) => occurrence.occurrenceId === 'golden-f-preboss-shop:postboss',
         )?.keepsakeRack?.equipResults?.experimentalHammer,
     ).toEqual(authoredResult);
     expect(rewards.simulation.findings).toContainEqual(
@@ -850,22 +865,28 @@ describe('Experimental Hammer', () => {
                   ? biome
                   : {
                       ...biome,
-                      completionOccurrences: biome.completionOccurrences.map((occurrence) =>
-                        occurrence.occurrenceId !== 'completion:F:postboss'
-                          ? occurrence
+                      topology:
+                        biome.topology === null
+                          ? null
                           : {
-                              ...occurrence,
-                              keepsakeRack: {
-                                ...occurrence.keepsakeRack!,
-                                equipResults: {
-                                  experimentalHammer: {
-                                    kind: 'selected' as const,
-                                    traitKey: 'ApolloWeaponBoon',
-                                  },
-                                },
-                              },
+                              ...biome.topology,
+                              occurrences: biome.topology.occurrences.map((occurrence) =>
+                                occurrence.occurrenceId !== 'golden-f-preboss-shop:postboss'
+                                  ? occurrence
+                                  : {
+                                      ...occurrence,
+                                      keepsakeRack: {
+                                        ...occurrence.keepsakeRack!,
+                                        equipResults: {
+                                          experimentalHammer: {
+                                            kind: 'selected' as const,
+                                            traitKey: 'ApolloWeaponBoon',
+                                          },
+                                        },
+                                      },
+                                    },
+                              ),
                             },
-                      ),
                     },
               ),
             },
@@ -890,19 +911,25 @@ describe('Experimental Hammer', () => {
                   ? biome
                   : {
                       ...biome,
-                      completionOccurrences: biome.completionOccurrences.map((occurrence) =>
-                        occurrence.occurrenceId !== 'completion:F:postboss'
-                          ? occurrence
+                      topology:
+                        biome.topology === null
+                          ? null
                           : {
-                              ...occurrence,
-                              keepsakeRack: {
-                                ...occurrence.keepsakeRack!,
-                                equipResults: {
-                                  experimentalHammer: { kind: 'exhausted' as const },
-                                },
-                              },
+                              ...biome.topology,
+                              occurrences: biome.topology.occurrences.map((occurrence) =>
+                                occurrence.occurrenceId !== 'golden-f-preboss-shop:postboss'
+                                  ? occurrence
+                                  : {
+                                      ...occurrence,
+                                      keepsakeRack: {
+                                        ...occurrence.keepsakeRack!,
+                                        equipResults: {
+                                          experimentalHammer: { kind: 'exhausted' as const },
+                                        },
+                                      },
+                                    },
+                              ),
                             },
-                      ),
                     },
               ),
             },

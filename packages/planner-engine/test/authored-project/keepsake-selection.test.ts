@@ -16,26 +16,24 @@ import {
   encodeProjectDocument,
   type KeepsakeSelectionAddress,
 } from '@run-planner/engine/authored-project';
+import { createCompleteFGProject } from '@run-planner/test-fixtures/underworld';
 
 const fPostboss = createOccurrenceAddress(
   createBiomeAddress('Underworld', 'F'),
-  createOccurrenceId('completion:F:postboss'),
+  createOccurrenceId('golden-f-preboss-shop:postboss'),
 );
 const fBoss = createOccurrenceAddress(
   createBiomeAddress('Underworld', 'F'),
-  createOccurrenceId('completion:F:boss'),
+  createOccurrenceId('golden-f-preboss-shop:boss'),
 );
 
 describe('keepsake authored selections', () => {
   it('creates mandatory starting and sparse Postboss defaults and round-trips replacements', () => {
-    let project = createProjectDocument(catalog, {
-      projectId: 'keepsake-authored',
-      configuredBiomeCounts: { Underworld: 1 },
-    });
+    let project = createCompleteFGProject();
     const route = project.routes.find((candidate) => candidate.routeKey === 'Underworld');
     expect(route?.loadout.startingKeepsakeKey).toBe('ManaOverTimeRefundKeepsake');
     expect(
-      route?.biomes[0]?.completionOccurrences.find(
+      route?.biomes[0]?.topology?.occurrences.find(
         (occurrence) => occurrence.occurrenceId === fPostboss.occurrenceId,
       )?.keepsakeRack,
     ).toBeUndefined();
@@ -73,22 +71,20 @@ describe('keepsake authored selections', () => {
   });
 
   it('rejects a persisted rack leaf on a room without the declaration-owned rack', () => {
-    const project = createProjectDocument(catalog, {
-      projectId: 'keepsake-codec-rack-ownership',
-      configuredBiomeCounts: { Underworld: 1 },
-    });
+    const project = createCompleteFGProject();
     const encoded = JSON.parse(encodeProjectDocument(project)) as {
       routes: {
         routeKey: string;
         biomes: {
           biomeKey: string;
-          completionOccurrences: Record<string, unknown>[];
+          topology: { occurrences: Record<string, unknown>[] } | null;
         }[];
       }[];
     };
     const occurrence = encoded.routes
       .find((route) => route.routeKey === 'Underworld')
-      ?.biomes.find((biome) => biome.biomeKey === 'F')?.completionOccurrences[0];
+      ?.biomes.find((biome) => biome.biomeKey === 'F')
+      ?.topology?.occurrences.find((candidate) => candidate.gameName === 'F_Combat02');
     if (occurrence === undefined) throw new Error('expected an Underworld F occurrence');
     occurrence.keepsakeRack = { keepsakeKey: 'ForceZeusBoonKeepsake' };
     expect(() => decodeProjectDocument(encoded, catalog)).toThrow(
@@ -97,10 +93,7 @@ describe('keepsake authored selections', () => {
   });
 
   it('round-trips and clears exact Transcendent Embryo equip and transformation results', () => {
-    let project = createProjectDocument(catalog, {
-      projectId: 'transcendent-embryo-results',
-      configuredBiomeCounts: { Underworld: 1 },
-    });
+    let project = createCompleteFGProject();
     const start = createRouteStartKeepsakeSelectionAddress('Underworld');
     const equipResult = createKeepsakeEquipResultAddress(start, 'transcendentEmbryo');
     const transformation = createTranscendentEmbryoOutcomeAddress(fBoss, 'Encounter');
@@ -135,17 +128,14 @@ describe('keepsake authored selections', () => {
       blessingKey: null,
     });
     expect(
-      project.routes[0]?.biomes[0]?.completionOccurrences.find(
+      project.routes[0]?.biomes[0]?.topology?.occurrences.find(
         (occurrence) => occurrence.occurrenceId === fBoss.occurrenceId,
       )?.encounters.transcendentEmbryoBlessingByPhase,
     ).toBeUndefined();
   });
 
   it('leaves Jeweled Pom unresolved and restores dormant authored results', () => {
-    let project = createProjectDocument(catalog, {
-      projectId: 'jeweled-pom-defaults',
-      configuredBiomeCounts: { Underworld: 2 },
-    });
+    let project = createCompleteFGProject();
     const start = createRouteStartKeepsakeSelectionAddress('Underworld');
     const postboss = createPostbossKeepsakeSelectionAddress(fPostboss);
 
@@ -206,7 +196,7 @@ describe('keepsake authored selections', () => {
     expect(
       project.routes
         .find((route) => route.routeKey === 'Underworld')
-        ?.biomes[0]?.completionOccurrences.find(
+        ?.biomes[0]?.topology?.occurrences.find(
           (occurrence) => occurrence.occurrenceId === fPostboss.occurrenceId,
         )?.keepsakeRack?.equipResults?.jeweledPom,
     ).toBeUndefined();
@@ -228,7 +218,7 @@ describe('keepsake authored selections', () => {
     expect(
       project.routes
         .find((route) => route.routeKey === 'Underworld')
-        ?.biomes[0]?.completionOccurrences.find(
+        ?.biomes[0]?.topology?.occurrences.find(
           (occurrence) => occurrence.occurrenceId === fPostboss.occurrenceId,
         )?.keepsakeRack?.equipResults?.jeweledPom,
     ).toEqual({ traitKey: 'HadesLifestealBoon' });

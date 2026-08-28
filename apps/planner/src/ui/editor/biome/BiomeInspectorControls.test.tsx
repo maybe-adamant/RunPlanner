@@ -308,7 +308,7 @@ describe('Biome inspector controls', () => {
     const view = renderWorkspace(project, 'Surface', 'N');
     const workspace = workspaceProjection(view.application);
     const owner = createJudgmentArcanaAddress(
-      createOccurrenceAddress(nBiome, createOccurrenceId('completion:N:boss')),
+      createOccurrenceAddress(nBiome, createOccurrenceId('surface-n-preboss:boss')),
       'Encounter',
     );
     const boss = workspaceBiome(view.application, 'Surface', 'N').nodes.find(
@@ -375,8 +375,8 @@ describe('Biome inspector controls', () => {
         .getState()
         .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
         ?.biomes.find((biome) => biome.biomeKey === 'N')
-        ?.completionOccurrences.find(
-          (occurrence) => occurrence.occurrenceId === createOccurrenceId('completion:N:boss'),
+        ?.topology?.occurrences.find(
+          (occurrence) => occurrence.occurrenceId === createOccurrenceId('surface-n-preboss:boss'),
         )?.encounters.judgmentArcanaKeysByPhase?.Encounter,
     ).toHaveLength(5);
 
@@ -410,7 +410,10 @@ describe('Biome inspector controls', () => {
     });
     const view = renderWorkspace(project, 'Surface', 'N');
     const workspace = workspaceProjection(view.application);
-    const bossOccurrence = createOccurrenceAddress(nBiome, createOccurrenceId('completion:N:boss'));
+    const bossOccurrence = createOccurrenceAddress(
+      nBiome,
+      createOccurrenceId('surface-n-preboss:boss'),
+    );
     const judgmentOwner = createJudgmentArcanaAddress(bossOccurrence, 'Encounter');
     const figurineOwner = createFigurineArcanaAddress(bossOccurrence, 'Encounter');
     expect(workspace.interactions.judgmentArcana.has(semanticAddressKey(judgmentOwner))).toBe(true);
@@ -461,8 +464,8 @@ describe('Biome inspector controls', () => {
         .getState()
         .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
         ?.biomes.find((biome) => biome.biomeKey === 'N')
-        ?.completionOccurrences.find(
-          (occurrence) => occurrence.occurrenceId === createOccurrenceId('completion:N:boss'),
+        ?.topology?.occurrences.find(
+          (occurrence) => occurrence.occurrenceId === createOccurrenceId('surface-n-preboss:boss'),
         )?.encounters;
     expect(authored()?.judgmentArcanaKeysByPhase?.Encounter).toHaveLength(5);
     expect(authored()?.figurineArcanaKeysByPhase?.Encounter).toHaveLength(2);
@@ -476,7 +479,7 @@ describe('Biome inspector controls', () => {
   it('binds the reached Postboss keepsake selector through replacement and deletion', async () => {
     const view = renderWorkspace(loadSurfaceNOPQProject(), 'Surface', 'N');
     const owner = createPostbossKeepsakeSelectionAddress(
-      createOccurrenceAddress(nBiome, createOccurrenceId('completion:N:postboss')),
+      createOccurrenceAddress(nBiome, createOccurrenceId('surface-n-preboss:postboss')),
     );
     act(() => view.application.store.dispatch(semanticOwnerFocused(owner)));
     const timeline = screen.getByRole('region', { name: 'Room Timeline' });
@@ -499,8 +502,9 @@ describe('Biome inspector controls', () => {
         .getState()
         .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
         ?.biomes.find((biome) => biome.biomeKey === 'N')
-        ?.completionOccurrences.find(
-          (occurrence) => occurrence.occurrenceId === createOccurrenceId('completion:N:postboss'),
+        ?.topology?.occurrences.find(
+          (occurrence) =>
+            occurrence.occurrenceId === createOccurrenceId('surface-n-preboss:postboss'),
         )?.keepsakeRack,
     ).toEqual({ keepsakeKey: 'BossPreDamageKeepsake' });
     await waitFor(() =>
@@ -516,8 +520,9 @@ describe('Biome inspector controls', () => {
       .getState()
       .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
       ?.biomes.find((biome) => biome.biomeKey === 'N')
-      ?.completionOccurrences.find(
-        (occurrence) => occurrence.occurrenceId === createOccurrenceId('completion:N:postboss'),
+      ?.topology?.occurrences.find(
+        (occurrence) =>
+          occurrence.occurrenceId === createOccurrenceId('surface-n-preboss:postboss'),
       )?.roomActions.order;
     fireEvent.click(within(timeline).getByRole('button', { name: 'Keepsake' }));
     fireEvent.click(within(screen.getByRole('listbox')).getByText('Evil Eye'));
@@ -526,8 +531,9 @@ describe('Biome inspector controls', () => {
         .getState()
         .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
         ?.biomes.find((biome) => biome.biomeKey === 'N')
-        ?.completionOccurrences.find(
-          (occurrence) => occurrence.occurrenceId === createOccurrenceId('completion:N:postboss'),
+        ?.topology?.occurrences.find(
+          (occurrence) =>
+            occurrence.occurrenceId === createOccurrenceId('surface-n-preboss:postboss'),
         )?.roomActions.order,
     ).toEqual(orderBeforeChange);
     expect(
@@ -535,8 +541,9 @@ describe('Biome inspector controls', () => {
         .getState()
         .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
         ?.biomes.find((biome) => biome.biomeKey === 'N')
-        ?.completionOccurrences.find(
-          (occurrence) => occurrence.occurrenceId === createOccurrenceId('completion:N:postboss'),
+        ?.topology?.occurrences.find(
+          (occurrence) =>
+            occurrence.occurrenceId === createOccurrenceId('surface-n-preboss:postboss'),
         )?.keepsakeRack,
     ).toEqual({ keepsakeKey: 'DeathVengeanceKeepsake' });
     fireEvent.click(within(timeline).getByRole('button', { name: 'Delete keepsake change' }));
@@ -545,8 +552,9 @@ describe('Biome inspector controls', () => {
         .getState()
         .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
         ?.biomes.find((biome) => biome.biomeKey === 'N')
-        ?.completionOccurrences.find(
-          (occurrence) => occurrence.occurrenceId === createOccurrenceId('completion:N:postboss'),
+        ?.topology?.occurrences.find(
+          (occurrence) =>
+            occurrence.occurrenceId === createOccurrenceId('surface-n-preboss:postboss'),
         )?.keepsakeRack,
     ).toBeUndefined();
     expect(
@@ -565,7 +573,7 @@ describe('Biome inspector controls', () => {
       'Underworld',
       'F',
     );
-    const postbossId = createOccurrenceId('completion:F:postboss');
+    const postbossId = createOccurrenceId('golden-f-preboss-shop:postboss');
     const owner = createPostbossKeepsakeSelectionAddress(
       createOccurrenceAddress(goldenFBiome, postbossId),
     );
@@ -606,7 +614,7 @@ describe('Biome inspector controls', () => {
           .getState()
           .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
           ?.biomes.find((biome) => biome.biomeKey === 'F')
-          ?.completionOccurrences.find((occurrence) => occurrence.occurrenceId === postbossId)
+          ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === postbossId)
           ?.fountainRarityResult?.targetTraitKey,
       ).toBeTruthy(),
     );

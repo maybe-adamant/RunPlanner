@@ -28,9 +28,17 @@ describe('authored-project project-state commands', () => {
     const occurrence = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
     const forcedOccurrence = createOccurrenceAddress(
       oBiome,
-      createOccurrenceId('completion:O:postboss'),
+      createOccurrenceId('surface-o-preboss:postboss'),
     );
     const seeded = loadSurfaceNOProject();
+    expect(
+      seeded.routes
+        .find((route) => route.routeKey === 'Surface')
+        ?.biomes.find((biome) => biome.biomeKey === 'O')
+        ?.topology?.occurrences.some(
+          (candidate) => candidate.occurrenceId === forcedOccurrence.occurrenceId,
+        ),
+    ).toBe(true);
     const occurrenceState = (project: ReturnType<typeof loadSurfaceNOProject>) =>
       project.routes
         .find((route) => route.routeKey === 'Surface')
@@ -83,11 +91,11 @@ describe('authored-project project-state commands', () => {
 
   it('keeps Shrine purchase membership and detail in one semantic command while rejecting malformed input', () => {
     const biome = createBiomeAddress('Surface', 'N');
-    const occurrence = createOccurrenceAddress(biome, createOccurrenceId('completion:N:postboss'));
-    const seeded = createProjectDocument(catalog, {
-      projectId: 'shrine-command',
-      configuredBiomeCounts: { Surface: 1 },
-    });
+    const occurrence = createOccurrenceAddress(
+      biome,
+      createOccurrenceId('surface-n-preboss:postboss'),
+    );
+    const seeded = loadSurfaceNOProject();
     const offered = applyProjectCommand(seeded, catalog, {
       kind: 'ReplaceHermesShrineOffer',
       occurrence,
@@ -102,8 +110,8 @@ describe('authored-project project-state commands', () => {
     });
     const postboss = purchased.routes
       .find((candidate) => candidate.routeKey === 'Surface')
-      ?.biomes[0]?.completionOccurrences.find(
-        (candidate) => candidate.occurrenceId === 'completion:N:postboss',
+      ?.biomes[0]?.topology?.occurrences.find(
+        (candidate) => candidate.occurrenceId === 'surface-n-preboss:postboss',
       );
     expect(postboss?.hermesShrine?.purchaseBySlot?.first).toEqual({ delay: 2, rushed: false });
     expect(postboss?.roomActions.order).toContainEqual({
@@ -139,8 +147,8 @@ describe('authored-project project-state commands', () => {
     });
     const clearedPostboss = refillCleared.routes
       .find((candidate) => candidate.routeKey === 'Surface')
-      ?.biomes[0]?.completionOccurrences.find(
-        (candidate) => candidate.occurrenceId === 'completion:N:postboss',
+      ?.biomes[0]?.topology?.occurrences.find(
+        (candidate) => candidate.occurrenceId === 'surface-n-preboss:postboss',
       );
     expect(clearedPostboss?.hermesShrine?.travelDealRefill).toMatchObject({
       offer: { offer: { rewardType: 'SpellDrop' } },
@@ -178,22 +186,15 @@ describe('authored-project project-state commands', () => {
     const completionBiome = createBiomeAddress('Surface', 'N');
     const completionOccurrence = createOccurrenceAddress(
       completionBiome,
-      createOccurrenceId('completion:N:postboss'),
+      createOccurrenceId('surface-n-preboss:postboss'),
     );
     const completion = applyProjectCommand(
-      applyProjectCommand(
-        createProjectDocument(catalog, {
-          projectId: 'shrine-completion-codec-closure',
-          configuredBiomeCounts: { Surface: 1 },
-        }),
-        catalog,
-        {
-          kind: 'ReplaceHermesShrineOffer',
-          occurrence: completionOccurrence,
-          slotKey: 'first',
-          value: { rewardType: 'HealBigDrop' },
-        },
-      ),
+      applyProjectCommand(loadSurfaceNOProject(), catalog, {
+        kind: 'ReplaceHermesShrineOffer',
+        occurrence: completionOccurrence,
+        slotKey: 'first',
+        value: { rewardType: 'HealBigDrop' },
+      }),
       catalog,
       {
         kind: 'SetHermesShrinePurchase',
@@ -234,12 +235,9 @@ describe('authored-project project-state commands', () => {
       const routes = document.routes as Record<string, unknown>[];
       for (const route of routes) {
         for (const biome of route.biomes as Record<string, unknown>[]) {
-          const completions = biome.completionOccurrences as Record<string, unknown>[];
           const topology = biome.topology as Record<string, unknown> | null;
-          const occurrences = [
-            ...(completions ?? []),
-            ...((topology?.occurrences as Record<string, unknown>[] | undefined) ?? []),
-          ];
+          const occurrences =
+            (topology?.occurrences as Record<string, unknown>[] | undefined) ?? [];
           const occurrence = occurrences.find(
             (candidate) => candidate.occurrenceId === occurrenceId,
           );
@@ -305,12 +303,9 @@ describe('authored-project project-state commands', () => {
   it('uses the Shrine delivery lifecycle for GiftDrop Pom state while retaining SurfaceShop membership', () => {
     const occurrence = createOccurrenceAddress(
       createBiomeAddress('Surface', 'N'),
-      createOccurrenceId('completion:N:postboss'),
+      createOccurrenceId('surface-n-preboss:postboss'),
     );
-    const seeded = createProjectDocument(catalog, {
-      projectId: 'shrine-gift-delivery-state',
-      configuredBiomeCounts: { Surface: 1 },
-    });
+    const seeded = loadSurfaceNOProject();
     const authored = applyProjectCommand(seeded, catalog, {
       kind: 'ReplaceHermesShrineOffer',
       occurrence,
@@ -319,7 +314,7 @@ describe('authored-project project-state commands', () => {
     });
     const state = authored.routes
       .find((route) => route.routeKey === 'Surface')
-      ?.biomes[0]?.completionOccurrences.find(
+      ?.biomes[0]?.topology?.occurrences.find(
         (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
       )?.hermesShrine?.offerBySlot.first;
     expect(state?.levelResolutionsByAcquisitionRole?.self).toEqual({
@@ -333,13 +328,13 @@ describe('authored-project project-state commands', () => {
     expect(
       roundTripped.routes
         .find((route) => route.routeKey === 'Surface')
-        ?.biomes[0]?.completionOccurrences.find(
+        ?.biomes[0]?.topology?.occurrences.find(
           (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
         )?.hermesShrine?.offerBySlot.first?.levelResolutionsByAcquisitionRole?.self,
     ).toEqual({ kind: 'random', targetTraitKey: null });
   });
 
-  it('seeds Postboss room actions from its exact automatic room declaration', () => {
+  it('does not create completion rooms before a Preboss is selected', () => {
     const withoutRack = {
       ...catalog,
       rooms: {
@@ -354,45 +349,17 @@ describe('authored-project project-state commands', () => {
       projectId: 'fountain-without-rack',
       configuredBiomeCounts: { Underworld: 1 },
     });
-    const postboss = document.routes[0]?.biomes[0]?.completionOccurrences.find(
-      (occurrence) => occurrence.occurrenceId === 'completion:F:postboss',
-    );
-    expect(postboss?.roomActions).toEqual({ order: [{ kind: 'useFountain' }] });
-    expect(postboss?.keepsakeRack).toBeUndefined();
+    expect(document.routes[0]?.biomes[0]?.topology).toBeNull();
   });
 
-  it('seeds fountain chronology from the exact configured automatic Postboss room', () => {
-    const replacementGameName = catalog.biomeLayouts.byKey.G!.completion.rooms.find(
-      (room) => room.role === 'postboss',
-    )!.roomGameName;
-    const fLayout = catalog.biomeLayouts.byKey.F!;
-    const overridden = {
-      ...catalog,
-      biomeLayouts: {
-        ...catalog.biomeLayouts,
-        byKey: {
-          ...catalog.biomeLayouts.byKey,
-          F: {
-            ...fLayout,
-            completion: {
-              ...fLayout.completion,
-              rooms: fLayout.completion.rooms.map((room) =>
-                room.role === 'postboss' ? { ...room, roomGameName: replacementGameName } : room,
-              ),
-            },
-          },
-        },
-      },
-    };
-    const project = createProjectDocument(overridden, {
-      projectId: 'overridden-postboss',
-      configuredBiomeCounts: { Underworld: 1 },
-    });
-    expect(
-      project.routes[0]?.biomes[0]?.completionOccurrences.find(
-        (occurrence) => occurrence.occurrenceId === 'completion:F:postboss',
-      )?.roomActions,
-    ).toEqual({ order: [{ kind: 'useFountain' }] });
+  it('keeps Boss declaration on the biome and Postboss selection on the route', () => {
+    expect(catalog.biomeLayouts.byKey.F?.completion.bossRoomGameName).toBe('F_Boss01');
+    expect(catalog.routes.byKey.Underworld?.postbossRoomGameNames).toEqual([
+      'F_PostBoss01',
+      'G_PostBoss01',
+      'H_PostBoss01',
+      null,
+    ]);
   });
 
   it.each([
@@ -484,10 +451,7 @@ describe('authored-project project-state commands', () => {
     expect(grown.routes[0]?.biomes[0]).toEqual(retainedF);
     for (const biome of grown.routes[0]?.biomes.slice(1) ?? []) {
       expect(biome.topology).toBeNull();
-      expect(biome.completionOccurrences.map((occurrence) => occurrence.occurrenceId)).toEqual([
-        `completion:${biome.biomeKey}:boss`,
-        `completion:${biome.biomeKey}:postboss`,
-      ]);
+      expect(biome.topology).toBeNull();
     }
     expect(grown.routes[0]?.biomes[3]).toMatchObject({
       biomeKey: 'I',

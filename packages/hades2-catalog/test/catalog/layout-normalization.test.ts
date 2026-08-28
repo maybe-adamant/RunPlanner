@@ -21,7 +21,13 @@ describe('biome layout declaration normalization', () => {
         batchPolicy: { kind: 'standard' },
         bounds: { maxBatches: 10, maxTargets: 20 },
       },
-      completion: { rooms: [{ roomGameName: 'F_Boss01' }, { roomGameName: 'F_PostBoss01' }] },
+      completion: {
+        bossRoomGameName: 'F_Boss01',
+        transitionEffects: [
+          { kind: 'resetCounter', axis: 'biomeDepthCache' },
+          { kind: 'resetCounter', axis: 'biomeEncounterDepth' },
+        ],
+      },
     });
     expect(catalog.biomeLayouts.byKey.N).toMatchObject({
       progression: {

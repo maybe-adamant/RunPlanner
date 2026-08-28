@@ -119,7 +119,7 @@ function structurallyEligibleRunStateOwners(
     appendRoom(activeHubVisit.target.room);
     for (const local of activeHubVisit.enteredLocalRooms) appendRoom(local);
   }
-  for (const room of prefix.automaticRooms ?? []) appendRoom(room);
+  for (const link of prefix.fixedRoomLinks ?? []) appendRoom(link.target);
   for (const room of enteredRooms) {
     if (room.lifecycleProfileKey === 'ShipCombatRoom') {
       for (const phase of room.encounterPhases) {
@@ -427,7 +427,6 @@ export function evaluateBiomeAssembly(
     origin,
     completeness,
     context.loadout,
-    plan.completionOccurrences,
     plan.echoKeepsakeReplayResults,
   );
   const seed: HistoryStateView | undefined = context.seed?.history.afterTransition;

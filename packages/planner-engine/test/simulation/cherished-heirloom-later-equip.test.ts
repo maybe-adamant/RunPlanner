@@ -107,10 +107,17 @@ function cherishedBranch(startingKeepsakeKey = 'ManaOverTimeRefundKeepsake'): Re
 }
 
 function postbossOwner(biomeKey = 'F') {
+  const prebossByBiome: Readonly<Record<string, string>> = {
+    F: 'golden-f-preboss-shop',
+    G: 'golden-g-preboss-shop',
+    H: 'golden-h-preboss-shop',
+  };
+  const prebossOccurrenceId = prebossByBiome[biomeKey];
+  if (prebossOccurrenceId === undefined) throw new Error('missing Postboss fixture identity');
   return createPostbossKeepsakeSelectionAddress(
     createOccurrenceAddress(
       createBiomeAddress('Underworld', biomeKey),
-      createOccurrenceId(`completion:${biomeKey}:postboss`),
+      createOccurrenceId(`${prebossOccurrenceId}:postboss`),
     ),
   );
 }

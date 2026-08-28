@@ -600,21 +600,23 @@ export function locateFinding(
           }),
     });
   }
-  // Automatic Boss/Postboss occurrences are real lifecycle owners but are not
-  // ordinary topology decisions. Occurrence-local feature findings belong to
-  // the completed biome's final automatic-room region.
-  const automaticOccurrence =
+  // Fixed Boss/Postboss occurrences are real lifecycle owners but are not
+  // ordinary topology decisions. Occurrence-local findings belong to the
+  // completed biome's final fixed-room region.
+  const fixedOccurrence =
     finding.origin.kind === 'occurrence'
       ? finding.origin
       : finding.origin.kind === 'fountainRarityOutcome'
         ? occurrenceOwnerAddress(finding.origin)
         : undefined;
   if (
-    automaticOccurrence !== undefined &&
-    automaticOccurrence.routeKey === prefix.routeKey &&
-    automaticOccurrence.biomeKey === prefix.biomeKey &&
-    (prefix.automaticRooms ?? []).some(
-      (room) => room.occurrenceId === automaticOccurrence.occurrenceId,
+    fixedOccurrence !== undefined &&
+    fixedOccurrence.routeKey === prefix.routeKey &&
+    fixedOccurrence.biomeKey === prefix.biomeKey &&
+    (prefix.fixedRoomLinks ?? []).some(
+      (link) =>
+        link.source.occurrenceId === fixedOccurrence.occurrenceId ||
+        link.target.occurrenceId === fixedOccurrence.occurrenceId,
     )
   ) {
     return Object.freeze({
@@ -631,15 +633,17 @@ export function locateFinding(
     });
   }
   // Retained Pool sales are occurrence-owned Postboss actions. They remain
-  // repairable at the completed biome's final automatic-room region even when
+  // repairable at the completed biome's final fixed-room region even when
   // their slot was cleared and therefore no longer has an active contribution.
   const automaticRoomAction = finding.origin.kind === 'roomAction' ? finding.origin : undefined;
   if (
     automaticRoomAction !== undefined &&
     automaticRoomAction.routeKey === prefix.routeKey &&
     automaticRoomAction.biomeKey === prefix.biomeKey &&
-    (prefix.automaticRooms ?? []).some(
-      (room) => room.occurrenceId === automaticRoomAction.occurrenceId,
+    (prefix.fixedRoomLinks ?? []).some(
+      (link) =>
+        link.source.occurrenceId === automaticRoomAction.occurrenceId ||
+        link.target.occurrenceId === automaticRoomAction.occurrenceId,
     )
   ) {
     return Object.freeze({

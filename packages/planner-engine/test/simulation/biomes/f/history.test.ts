@@ -85,7 +85,7 @@ describe('F takeover history', () => {
       (event) =>
         event.kind === 'roomCommitted' &&
         event.origin.kind === 'occurrence' &&
-        event.origin.occurrenceId === 'completion:F:postboss',
+        event.origin.occurrenceId === 'f-takeover-preboss-shop:postboss',
     );
     const reset = result.events.findIndex((event) => event.kind === 'biomeCounterReset');
 

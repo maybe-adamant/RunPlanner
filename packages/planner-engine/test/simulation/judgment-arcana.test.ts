@@ -8,7 +8,6 @@ import {
   createJudgmentArcanaAddress,
   createOccurrenceAddress,
   createOccurrenceId,
-  createProjectDocument,
   createRouteAddress,
 } from '@run-planner/engine/authored-project';
 import {
@@ -20,6 +19,7 @@ import {
   simulateProject,
   simulateProjectAssembly,
 } from '@run-planner/engine/simulation';
+import { createGoldenFGHProject } from '@run-planner/test-fixtures/underworld';
 import { loadSurfaceNOProject, loadSurfaceNOPQProject } from '@run-planner/test-fixtures/surface';
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
 import { initializeTestRewardBranches } from '../support/arcana-fear';
@@ -37,7 +37,7 @@ import {
 } from '../../src/simulation/keepsakes';
 
 const biome = createBiomeAddress('Underworld', 'F');
-const boss = createOccurrenceAddress(biome, createOccurrenceId('completion:F:boss'));
+const boss = createOccurrenceAddress(biome, createOccurrenceId('golden-f-preboss-shop:boss'));
 const judgment = createJudgmentArcanaAddress(boss, 'Encounter');
 const surface = createRouteAddress('Surface');
 const n = createBiomeAddress('Surface', 'N');
@@ -46,11 +46,16 @@ const p = createBiomeAddress('Surface', 'P');
 const q = createBiomeAddress('Surface', 'Q');
 
 function judgmentOwner(biomeAddress = n) {
+  const prebossOccurrenceId = {
+    N: 'surface-n-preboss',
+    O: 'surface-o-preboss',
+    P: 'surface-p-preboss-shop',
+    Q: 'surface-q-preboss',
+  }[biomeAddress.biomeKey];
+  if (prebossOccurrenceId === undefined)
+    throw new Error('missing Surface Preboss fixture identity');
   return createJudgmentArcanaAddress(
-    createOccurrenceAddress(
-      biomeAddress,
-      createOccurrenceId(`completion:${biomeAddress.biomeKey}:boss`),
-    ),
+    createOccurrenceAddress(biomeAddress, createOccurrenceId(`${prebossOccurrenceId}:boss`)),
     'Encounter',
   );
 }
@@ -131,22 +136,25 @@ function evaluateNBossLifecycle(
     catalog,
     Object.freeze({
       ...evaluated.snapshot,
-      automaticRooms: Object.freeze(
-        evaluated.snapshot.automaticRooms.map((room) =>
-          room.origin.occurrenceId === bossOccurrenceId
+      fixedRoomLinks: Object.freeze(
+        evaluated.snapshot.fixedRoomLinks.map((link) =>
+          link.target.origin.occurrenceId === bossOccurrenceId
             ? Object.freeze({
-                ...room,
-                encounters: Object.freeze({
-                  ...room.encounters,
-                  judgmentArcanaKeysByPhase: Object.freeze({ Encounter: selected }),
-                  ...(figurineSelected.length === 0
-                    ? {}
-                    : {
-                        figurineArcanaKeysByPhase: Object.freeze({ Encounter: figurineSelected }),
-                      }),
+                ...link,
+                target: Object.freeze({
+                  ...link.target,
+                  encounters: Object.freeze({
+                    ...link.target.encounters,
+                    judgmentArcanaKeysByPhase: Object.freeze({ Encounter: selected }),
+                    ...(figurineSelected.length === 0
+                      ? {}
+                      : {
+                          figurineArcanaKeysByPhase: Object.freeze({ Encounter: figurineSelected }),
+                        }),
+                  }),
                 }),
               })
-            : room,
+            : link,
         ),
       ),
     }),
@@ -171,15 +179,12 @@ function evaluateNBossLifecycle(
 
 describe('Judgment automatic Boss ownership', () => {
   it('stores its canonical selection on the addressed Boss-defeated phase', () => {
-    const project = applyProjectCommand(
-      createProjectDocument(catalog, {
-        projectId: 'judgment-phase-owner',
-        configuredBiomeCounts: { Underworld: 1 },
-      }),
-      catalog,
-      { kind: 'ReplaceJudgmentArcana', judgment, arcanaKeys: ['CardDraw', 'CastCount'] },
-    );
-    const authoredBoss = project.routes[0]?.biomes[0]?.completionOccurrences.find(
+    const project = applyProjectCommand(createGoldenFGHProject(), catalog, {
+      kind: 'ReplaceJudgmentArcana',
+      judgment,
+      arcanaKeys: ['CardDraw', 'CastCount'],
+    });
+    const authoredBoss = project.routes[0]?.biomes[0]?.topology?.occurrences.find(
       (occurrence) => occurrence.occurrenceId === boss.occurrenceId,
     );
     expect(authoredBoss?.encounters.judgmentArcanaKeysByPhase).toEqual({
@@ -189,15 +194,12 @@ describe('Judgment automatic Boss ownership', () => {
 
   it('stores Crystal Figurine independently on the same Boss-defeated phase', () => {
     const figurine = createFigurineArcanaAddress(boss, 'Encounter');
-    const project = applyProjectCommand(
-      createProjectDocument(catalog, {
-        projectId: 'figurine-phase-owner',
-        configuredBiomeCounts: { Underworld: 1 },
-      }),
-      catalog,
-      { kind: 'ReplaceFigurineArcana', figurine, arcanaKeys: ['CardDraw', 'CastCount'] },
-    );
-    const authoredBoss = project.routes[0]?.biomes[0]?.completionOccurrences.find(
+    const project = applyProjectCommand(createGoldenFGHProject(), catalog, {
+      kind: 'ReplaceFigurineArcana',
+      figurine,
+      arcanaKeys: ['CardDraw', 'CastCount'],
+    });
+    const authoredBoss = project.routes[0]?.biomes[0]?.topology?.occurrences.find(
       (occurrence) => occurrence.occurrenceId === boss.occurrenceId,
     );
     expect(authoredBoss?.encounters.figurineArcanaKeysByPhase).toEqual({
@@ -207,10 +209,7 @@ describe('Judgment automatic Boss ownership', () => {
   });
 
   it('rejects a fabricated phase instead of treating the phase address as cosmetic', () => {
-    const project = createProjectDocument(catalog, {
-      projectId: 'judgment-phase-rejection',
-      configuredBiomeCounts: { Underworld: 1 },
-    });
+    const project = createGoldenFGHProject();
     expect(() =>
       applyProjectCommand(project, catalog, {
         kind: 'ReplaceJudgmentArcana',
@@ -390,9 +389,9 @@ describe('Judgment automatic Boss lifecycle', () => {
       throw new Error('terminal Judgment must retain a materialized prefix');
     expect(evaluated.materializedPrefix).toMatchObject({
       kind: 'biomePrefix',
-      automaticRooms: [
-        expect.objectContaining({ gameName: 'N_Boss01' }),
-        expect.objectContaining({ gameName: 'N_PostBoss01' }),
+      fixedRoomLinks: [
+        expect.objectContaining({ target: expect.objectContaining({ gameName: 'N_Boss01' }) }),
+        expect.objectContaining({ target: expect.objectContaining({ gameName: 'N_PostBoss01' }) }),
       ],
     });
     if (evaluated.materializedPrefix.entryRoom === undefined)
@@ -451,7 +450,7 @@ describe('Judgment automatic Boss lifecycle', () => {
 
   it('suppresses Crystal Figurine at the full-run terminal Boss and retains its pending source', () => {
     const figurine = createFigurineArcanaAddress(
-      createOccurrenceAddress(q, createOccurrenceId('completion:Q:boss')),
+      createOccurrenceAddress(q, createOccurrenceId('surface-q-preboss:boss')),
       'Encounter',
     );
     const project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
@@ -608,7 +607,7 @@ describe('Judgment automatic Boss lifecycle', () => {
     expect(activations[2]?.sequence).toBe(activations[1]?.sequence);
     expect(activations[2]?.owner).toEqual(
       createFigurineArcanaAddress(
-        createOccurrenceAddress(n, createOccurrenceId('completion:N:boss')),
+        createOccurrenceAddress(n, createOccurrenceId('surface-n-preboss:boss')),
         'Encounter',
       ),
     );
@@ -673,7 +672,7 @@ describe('Judgment automatic Boss lifecycle', () => {
     const result = evaluateNBossLifecycle(seeded, [], undefined, selected, fatedKeepsakes);
 
     const figurine = createFigurineArcanaAddress(
-      createOccurrenceAddress(n, createOccurrenceId('completion:N:boss')),
+      createOccurrenceAddress(n, createOccurrenceId('surface-n-preboss:boss')),
       'Encounter',
     );
     expect(result.figurineArcanaArtifacts.at(figurine)?.inactiveArcanaKeys).not.toContain(

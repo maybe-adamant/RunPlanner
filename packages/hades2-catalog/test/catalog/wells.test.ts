@@ -115,14 +115,7 @@ describe('Stygian Well room facts', () => {
           ] as const,
       );
     expect(actual).toEqual(expected);
-    for (const gameName of [
-      'G_Combat04',
-      'G_Combat05',
-      'G_Combat06',
-      'I_PostBoss01',
-      'I_Story01',
-      'I_Reprieve01',
-    ])
+    for (const gameName of ['G_Combat04', 'G_Combat05', 'G_Combat06', 'I_Story01', 'I_Reprieve01'])
       expect(catalog.rooms.byKey[gameName]?.roomShop, gameName).toBeUndefined();
   });
 });

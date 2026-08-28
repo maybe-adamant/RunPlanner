@@ -22,6 +22,7 @@ import {
   selectedFTakeoverProject,
   unresolvedFProject,
 } from '../support/topology-codec-fixtures';
+import { createCompleteFGProject } from '@run-planner/test-fixtures/underworld';
 
 describe('topology leaf codecs', () => {
   it('keeps optional Well absence and rejects non-host, unknown-item, and missing forced Well shapes', () => {
@@ -43,10 +44,7 @@ describe('topology leaf codecs', () => {
       occurrence: createOccurrenceAddress(fBiome, createOccurrenceId('well-codec-host')),
     });
     const encoded = encodedProject(document);
-    const fPlan = encoded.routes[0]!.biomes[0]! as unknown as {
-      topology: EncodedTopology;
-      completionOccurrences: Array<Record<string, unknown>>;
-    };
+    const fPlan = encoded.routes[0]!.biomes[0]! as unknown as { topology: EncodedTopology };
     const hostIndex = fPlan.topology.occurrences.findIndex(
       (room) => room.occurrenceId === 'well-codec-host',
     );
@@ -96,16 +94,16 @@ describe('topology leaf codecs', () => {
       detail: 'an uninteracted Well must not retain purchase intent or purchase actions',
     });
 
-    const missingForced = encodedProject(document);
+    const missingForced = encodedProject(createCompleteFGProject());
     const missingF = missingForced.routes[0]!.biomes[0]! as unknown as {
-      completionOccurrences: Array<Record<string, unknown>>;
+      topology: EncodedTopology;
     };
-    const postbossIndex = missingF.completionOccurrences.findIndex(
+    const postbossIndex = missingF.topology.occurrences.findIndex(
       (room) => room.gameName === 'F_PostBoss01',
     );
-    delete missingF.completionOccurrences[postbossIndex]!.stygianWell;
+    delete missingF.topology.occurrences[postbossIndex]!.stygianWell;
     expectDocumentError(missingForced, {
-      path: `$.routes[0].biomes[0].completionOccurrences[${postbossIndex}].stygianWell`,
+      path: `$.routes[0].biomes[0].topology.occurrences[${postbossIndex}].stygianWell`,
       detail: 'must be an object',
     });
   });

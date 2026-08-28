@@ -264,7 +264,7 @@ describe('structured workspace decision assembly', () => {
           target.exit.exitKey === selected.exit.exitKey
             ? {
                 ...target,
-                continuation: 'startsCompletion',
+                continuation: 'continuesSpine',
                 exit: {
                   kind: 'unavailable',
                   exitKey: target.exit.exitKey,
@@ -290,7 +290,7 @@ describe('structured workspace decision assembly', () => {
 
     expect(target).toMatchObject({
       physicalState: 'unavailable',
-      nextPath: 'startsCompletion',
+      nextPath: 'continuesSpine',
     });
   });
 

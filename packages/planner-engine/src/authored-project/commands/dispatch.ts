@@ -85,7 +85,7 @@ function reconcileResourcePlacementTopology(document: ProjectDocument): ProjectD
   const routes = document.routes.map((route) => {
     const existing = new Set(
       route.biomes.flatMap((biome) =>
-        [...(biome.topology?.occurrences ?? []), ...biome.completionOccurrences].map(
+        (biome.topology?.occurrences ?? []).map(
           (occurrence) => `${biome.biomeKey}:${occurrence.occurrenceId}`,
         ),
       ),

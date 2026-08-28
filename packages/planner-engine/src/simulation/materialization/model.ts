@@ -146,7 +146,7 @@ export interface CanonicalAuthoredRoom {
   readonly lifecycleProfileKey: string;
   readonly counterEffects: RoomCounterEffects;
   readonly entered: boolean;
-  /** Declaration-fixed automatic rooms inherit selected Preboss reward-store provenance. */
+  /** Declaration-fixed completion rooms inherit selected Preboss reward-store provenance. */
   readonly enteredRewardStoreKey?: string;
   /** Persisted occurrence chronology and its sole derived roster product. */
   readonly roomActions: RoomActionState;
@@ -267,7 +267,7 @@ export type CanonicalPhysicalExit =
     }
   | { readonly kind: 'unavailable'; readonly exitKey: string; readonly index: number };
 
-export type CanonicalTargetContinuation = 'continuesSpine' | 'deadLeaf' | 'startsCompletion';
+export type CanonicalTargetContinuation = 'continuesSpine' | 'deadLeaf';
 
 export interface CanonicalTarget {
   readonly origin: TargetAddress;
@@ -380,6 +380,12 @@ export interface CanonicalHubDecision {
 
 export type CanonicalDecision = CanonicalBatch | CanonicalHubDecision;
 
+export interface CanonicalFixedRoomLink {
+  readonly kind: 'fixedRoomLink';
+  readonly source: CanonicalAuthoredRoom;
+  readonly target: CanonicalAuthoredRoom;
+}
+
 export type CanonicalBiomeState = Readonly<Record<string, boolean | number | string>>;
 
 export interface CanonicalBiome {
@@ -388,7 +394,7 @@ export interface CanonicalBiome {
   readonly biomeKey: string;
   readonly entryRoom: CanonicalAuthoredRoom;
   readonly decisions: readonly CanonicalDecision[];
-  readonly automaticRooms: readonly CanonicalAuthoredRoom[];
+  readonly fixedRoomLinks: readonly CanonicalFixedRoomLink[];
   readonly biomeState: CanonicalBiomeState;
   readonly echoKeepsakeReplayResults?: Pick<
     import('../../authored-project/model').AuthoredKeepsakeEquipResults,
@@ -461,13 +467,8 @@ export interface MaterializedBiomePrefix {
   readonly biomeKey: string;
   readonly entryRoom?: CanonicalAuthoredRoom;
   readonly decisions: readonly CanonicalDecision[];
-  /**
-   * Completion-tail rooms become part of a structurally complete prefix when
-   * its selected Preboss target has no further authored decision. Keeping the
-   * declared tail on the prefix lets progressive evaluation assess the final
-   * entered room without manufacturing a canonical complete snapshot.
-   */
-  readonly automaticRooms?: readonly CanonicalAuthoredRoom[];
+  /** Realized declaration-fixed room links after a selected Preboss. */
+  readonly fixedRoomLinks?: readonly CanonicalFixedRoomLink[];
   readonly frontier?: MaterializedExitDecisionFrontier | MaterializedHubDecisionFrontier;
   readonly biomeState: CanonicalBiomeState;
   readonly echoKeepsakeReplayResults?: Pick<

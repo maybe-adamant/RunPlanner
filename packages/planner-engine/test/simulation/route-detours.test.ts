@@ -1294,7 +1294,7 @@ describe('route-detour simulation', () => {
     expect(prebossBatch.targets).toMatchObject([
       {
         room: { occurrenceId: preboss, gameName: 'O_PreBoss01' },
-        continuation: 'startsCompletion',
+        continuation: 'continuesSpine',
         picked: true,
       },
     ]);

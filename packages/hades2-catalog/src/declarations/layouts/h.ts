@@ -34,10 +34,7 @@ export const hBiomeLayout = {
     defaultRoomGameName: 'Chaos_01',
   },
   completion: {
-    rooms: [
-      { role: 'boss', roomGameName: 'H_Boss01' },
-      { role: 'postboss', roomGameName: 'H_PostBoss01' },
-    ],
+    bossRoomGameName: 'H_Boss01',
     transitionEffects: [
       { kind: 'resetCounter', axis: 'biomeDepthCache' },
       { kind: 'resetCounter', axis: 'biomeEncounterDepth' },

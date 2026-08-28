@@ -373,7 +373,7 @@ describe('topology relational closure codec', () => {
       additionalExits: [],
     });
     expectDocumentError(orphan.document, {
-      path: `${orphan.path}.occurrences[4]`,
+      path: `${orphan.path}.occurrences[6]`,
       detail: 'occurrence orphan has no structural owner',
     });
 

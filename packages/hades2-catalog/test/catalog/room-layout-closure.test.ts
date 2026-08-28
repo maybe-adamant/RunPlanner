@@ -133,10 +133,7 @@ describe('room-layout compiler closure', () => {
               ...layout,
               completion: {
                 ...layout.completion,
-                rooms: [
-                  ...layout.completion.rooms,
-                  { ...layout.completion.rooms[0]!, roomGameName: 'N_Hub' },
-                ],
+                bossRoomGameName: 'N_Hub',
               },
             }
           : layout,
@@ -154,7 +151,7 @@ describe('room-layout compiler closure', () => {
       ),
     ).toThrow(
       new CatalogContractError(
-        'biomeLayouts.N.completion.rooms[2]',
+        'biomeLayouts.N.completion.bossRoomGameName',
         'N_Hub is already owned by biomeLayouts.N.progression.terminal',
       ),
     );

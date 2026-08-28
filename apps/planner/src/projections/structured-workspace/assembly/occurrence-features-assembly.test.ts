@@ -7,7 +7,7 @@ import {
 
 describe('structured workspace features assembly', () => {
   it('projects declared Stygian Well features for an F Postboss room', () => {
-    const postbossId = createOccurrenceId('completion:F:postboss');
+    const postbossId = createOccurrenceId('golden-f-preboss-shop:postboss');
     const room = assemble(createGoldenFGHIProject(), 'Underworld', 'F', postbossId).assembly.node
       .room;
 

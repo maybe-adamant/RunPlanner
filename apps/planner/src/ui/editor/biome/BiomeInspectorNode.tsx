@@ -58,7 +58,7 @@ function OccurrenceOutgoing({
     case 'blockedOrUnentered':
     case 'topologyOwned':
     case 'terminal':
-    case 'fixedAutomatic':
+    case 'fixedRoom':
       return (
         <section aria-label="Outgoing doors" className="outgoing-occurrence-state">
           <div className="owner-markers">

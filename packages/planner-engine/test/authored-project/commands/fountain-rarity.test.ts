@@ -20,7 +20,7 @@ import { createCompleteFGProject, goldenFBiome } from '@run-planner/test-fixture
 
 const occurrence = createOccurrenceAddress(
   goldenFBiome,
-  createOccurrenceId('completion:F:postboss'),
+  createOccurrenceId('golden-f-preboss-shop:postboss'),
 );
 const fountainAction = createRoomActionAddress(
   goldenFBiome,
@@ -41,7 +41,7 @@ describe('Aromatic Phial authored fountain result', () => {
       targetTraitKey: 'ApolloWeaponBoon',
     });
     expect(
-      selected.routes[0]?.biomes[0]?.completionOccurrences.find(
+      selected.routes[0]?.biomes[0]?.topology?.occurrences.find(
         (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
       )?.fountainRarityResult,
     ).toEqual({ targetTraitKey: 'ApolloWeaponBoon' });
@@ -51,7 +51,7 @@ describe('Aromatic Phial authored fountain result', () => {
       targetTraitKey: null,
     });
     expect(
-      cleared.routes[0]?.biomes[0]?.completionOccurrences.find(
+      cleared.routes[0]?.biomes[0]?.topology?.occurrences.find(
         (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
       )?.fountainRarityResult,
     ).toBeUndefined();
@@ -67,9 +67,13 @@ describe('Aromatic Phial authored fountain result', () => {
       targetTraitKey: 'ApolloWeaponBoon',
     });
     const encoded = JSON.parse(encodeProjectDocument(selected)) as {
-      routes: Array<{ biomes: Array<{ completionOccurrences: Array<Record<string, unknown>> }> }>;
+      routes: Array<{
+        biomes: Array<{
+          topology: { occurrences: Array<Record<string, unknown>> } | null;
+        }>;
+      }>;
     };
-    const completion = encoded.routes[0]?.biomes[0]?.completionOccurrences.find(
+    const completion = encoded.routes[0]?.biomes[0]?.topology?.occurrences.find(
       (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
     );
     if (completion === undefined) throw new Error('missing encoded Postboss occurrence');
@@ -160,7 +164,7 @@ describe('Aromatic Phial authored fountain result', () => {
       targetTraitKey: 'ApolloWeaponBoon',
     });
     expect(
-      history.present.routes[0]?.biomes[0]?.completionOccurrences.find(
+      history.present.routes[0]?.biomes[0]?.topology?.occurrences.find(
         (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
       )?.fountainRarityResult,
     ).toEqual({ targetTraitKey: 'ApolloWeaponBoon' });

@@ -8,7 +8,6 @@ import {
 } from './model';
 import { ProjectDocumentContractError } from './validation';
 import { createDefaultRouteLoadout } from './loadout';
-import { createDefaultCompletionOccurrences } from './room-state/defaults';
 
 export interface CreateProjectDocumentOptions {
   readonly projectId: string;
@@ -70,7 +69,6 @@ export function createProjectDocument(
           biomeKey,
           state: createInitialBiomeState(layout),
           topology: null,
-          completionOccurrences: createDefaultCompletionOccurrences(catalog, biomeKey, loadout),
         };
       }),
     };

@@ -214,9 +214,9 @@ export function requireOccurrence(
   occurrenceId: OccurrenceId,
   command: ProjectCommand,
 ): RoomOccurrence {
-  const occurrence =
-    plan.topology?.occurrences.find((candidate) => candidate.occurrenceId === occurrenceId) ??
-    plan.completionOccurrences.find((candidate) => candidate.occurrenceId === occurrenceId);
+  const occurrence = plan.topology?.occurrences.find(
+    (candidate) => candidate.occurrenceId === occurrenceId,
+  );
   if (occurrence === undefined) failCommand(command, `unknown occurrence ${occurrenceId}`);
   return occurrence;
 }

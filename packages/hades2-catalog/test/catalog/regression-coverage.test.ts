@@ -44,7 +44,7 @@ const biomeContracts = [
       batch: 'clockwork',
       bounds: [13, 23],
     },
-    completion: ['I_Boss01', 'I_PostBoss01'],
+    completion: ['I_Boss01'],
   },
   {
     biomeKey: 'N',
@@ -82,14 +82,14 @@ const biomeContracts = [
 ] as const;
 
 const roomCounts = [
-  ['F', 34, 32],
-  ['G', 30, 28],
-  ['H', 22, 20],
-  ['I', 32, 30],
-  ['N', 47, 44],
-  ['O', 25, 23],
-  ['P', 28, 26],
-  ['Q', 23, 22],
+  ['F', 34, 34],
+  ['G', 30, 30],
+  ['H', 22, 22],
+  ['I', 31, 31],
+  ['N', 47, 46],
+  ['O', 25, 25],
+  ['P', 28, 28],
+  ['Q', 23, 23],
 ] as const;
 
 const prebossPolicies = [
@@ -148,14 +148,14 @@ const roomFacts = [
 ] as const;
 
 const normalizedBiomeSnapshotHashes = [
-  ['F', '6216f240a7bfd2c9'],
-  ['G', '8921e4b7cb0f361b'],
-  ['H', '944f930a55566aa6'],
-  ['I', '75e0f0a375fdc767'],
-  ['N', '6b7b1519a9dfc3d7'],
-  ['O', '310d69c6697e9a42'],
-  ['P', 'aac62d074a62e0a6'],
-  ['Q', '28f83323de2aca77'],
+  ['F', '8d089456f8ba69ff'],
+  ['G', 'c28f8b0cbeabb7b6'],
+  ['H', '23be1545139dd452'],
+  ['I', '8c260d658579ee7b'],
+  ['N', '71f86525e512fc15'],
+  ['O', '16199fe10d015fcd'],
+  ['P', '8ba08fa9c6a51fb2'],
+  ['Q', '7a347412589671af'],
 ] as const;
 
 function normalizedBiomeSnapshot(biomeKey: string) {
@@ -221,7 +221,7 @@ describe('catalog regression coverage retained through unified decisions', () =>
     (fixture) => {
       const layout = catalog.biomeLayouts.byKey[fixture.biomeKey];
       expect(layout?.start).toEqual(fixture.start);
-      expect(layout?.completion.rooms.map((room) => room.roomGameName)).toEqual(fixture.completion);
+      expect(layout?.completion.bossRoomGameName).toBe(fixture.completion[0]);
       expect(layout?.progression.kind).toBe(fixture.progression.kind);
       if (fixture.progression.kind === 'generated' && layout?.progression.kind === 'generated') {
         expect(layout.progression.progressionPolicy.kind).toBe(fixture.progression.policy);
@@ -235,12 +235,12 @@ describe('catalog regression coverage retained through unified decisions', () =>
   );
 
   it.each(biomeContracts)(
-    '$biomeKey completion declarations stay biome-local and automatic',
+    '$biomeKey completion declarations stay biome-local and authored',
     (fixture) => {
       for (const gameName of fixture.completion) {
         expect(catalog.rooms.byKey[gameName]).toMatchObject({
           roomSetKey: fixture.biomeKey,
-          mode: { kind: 'automatic' },
+          mode: { kind: 'authored' },
         });
       }
     },
@@ -348,7 +348,7 @@ describe('catalog regression coverage retained through unified decisions', () =>
       expect(room).toMatchObject({
         roomSetKey: biomeKey,
         kind,
-        mode: kind === 'Boss' ? { kind: 'automatic', role: 'boss' } : { kind: 'authored' },
+        mode: { kind: 'authored' },
       });
       expect(room?.exits).toHaveLength(exitCount);
       expect(room?.exits.map((exit) => exit.index)).toEqual(

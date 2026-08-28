@@ -143,7 +143,7 @@ describe('Hermes Shrine workbench', () => {
   });
 
   it('keeps forced Shrine inventory visible and non-removable', () => {
-    const postbossId = `completion:O:postboss`;
+    const postbossId = `surface-o-preboss:postboss`;
     renderOccurrenceWorkbench(loadSurfaceNOProject(), 'Surface', 'O', occurrence(postbossId));
     expect(screen.queryByRole('checkbox', { name: 'Hermes Shrine present' })).toBeNull();
     expect(screen.getAllByRole('button', { name: /^Hermes Shrine (First|Second)/ })).toHaveLength(

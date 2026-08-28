@@ -68,10 +68,7 @@ export const gBiomeLayout = {
     defaultRoomGameName: 'Chaos_01',
   },
   completion: {
-    rooms: [
-      { role: 'boss', roomGameName: 'G_Boss01' },
-      { role: 'postboss', roomGameName: 'G_PostBoss01' },
-    ],
+    bossRoomGameName: 'G_Boss01',
     transitionEffects: [
       { kind: 'resetCounter', axis: 'biomeDepthCache' },
       { kind: 'resetCounter', axis: 'biomeEncounterDepth' },
