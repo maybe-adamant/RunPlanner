@@ -606,7 +606,7 @@ describe('structured workspace overlay contract', () => {
     let invalidHammer = applyProjectCommand(createGoldenFGHIProject(), catalog, {
       kind: 'ReplacePostbossKeepsake',
       selection: fPostboss,
-      value: { kind: 'replace', keepsakeKey: 'TempHammerKeepsake' },
+      keepsakeKey: 'TempHammerKeepsake',
     });
     invalidHammer = withMalformedAuthoredBiome(invalidHammer, 'Underworld', 'F', (plan) => ({
       ...plan,
@@ -680,7 +680,7 @@ describe('structured workspace overlay contract', () => {
     let unavailableHammer = applyProjectCommand(createGoldenFGHIProject(), catalog, {
       kind: 'ReplacePostbossKeepsake',
       selection: fPostboss,
-      value: { kind: 'replace', keepsakeKey: 'TempHammerKeepsake' },
+      keepsakeKey: 'TempHammerKeepsake',
     });
     unavailableHammer = applyProjectCommand(unavailableHammer, catalog, {
       kind: 'ReplaceExperimentalHammerEquipResult',
@@ -690,12 +690,12 @@ describe('structured workspace overlay contract', () => {
     unavailableHammer = applyProjectCommand(unavailableHammer, catalog, {
       kind: 'ReplacePostbossKeepsake',
       selection: gPostboss,
-      value: { kind: 'replace', keepsakeKey: 'BossPreDamageKeepsake' },
+      keepsakeKey: 'BossPreDamageKeepsake',
     });
     unavailableHammer = applyProjectCommand(unavailableHammer, catalog, {
       kind: 'ReplacePostbossKeepsake',
       selection: hPostboss,
-      value: { kind: 'replace', keepsakeKey: 'TempHammerKeepsake' },
+      keepsakeKey: 'TempHammerKeepsake',
     });
     const unavailableAssembly = simulateProjectAssembly(catalog, unavailableHammer);
     expect(unavailableAssembly.evaluation.findings).toContainEqual(
@@ -834,7 +834,7 @@ describe('structured workspace overlay contract', () => {
     const postbossProject = applyProjectCommand(createGoldenFGHIProject(), catalog, {
       kind: 'ReplacePostbossKeepsake',
       selection: fPostboss,
-      value: { kind: 'replace', keepsakeKey: 'RandomBlessingKeepsake' },
+      keepsakeKey: 'RandomBlessingKeepsake',
     });
     const postboss = projectWorkspace(postbossProject);
     const postbossInteraction = postboss.interactions.keepsakeEquipResults.get(

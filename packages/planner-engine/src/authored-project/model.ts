@@ -6,7 +6,7 @@ import type {
   AuthoredTraitOffer,
 } from './traits';
 
-export const PROJECT_DOCUMENT_SCHEMA_VERSION = 66 as const;
+export const PROJECT_DOCUMENT_SCHEMA_VERSION = 67 as const;
 export type ResourceFamily = import('../catalog-schema').ResourceFamily;
 /** Route ownership supplies the route key; the selected host is exact and durable. */
 export interface ResourcePlacement {
@@ -75,9 +75,6 @@ export interface AuthoredFountainRarityResult {
 
 export type AuthoredExperimentalHammerEquipResult =
   { readonly kind: 'selected'; readonly traitKey: string } | { readonly kind: 'exhausted' };
-
-export type PostbossKeepsakeDisposition =
-  { readonly kind: 'retain' } | { readonly kind: 'replace'; readonly keepsakeKey: string };
 
 export interface ShopState {
   readonly profileKey: string;
@@ -323,7 +320,7 @@ export interface RoomOccurrence {
   readonly additionalExits: readonly AuthoredAdditionalExit[];
   /** Present only where this exact room declaration exposes the keepsake rack. */
   readonly keepsakeRack?: {
-    readonly disposition: PostbossKeepsakeDisposition;
+    readonly keepsakeKey: string;
     readonly equipResults?: AuthoredKeepsakeEquipResults;
   };
   /** Present only when this exact occurrence owns a realized Phial target. */

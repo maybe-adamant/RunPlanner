@@ -324,9 +324,6 @@ export function createDefaultCompletionOccurrences(
           order: Object.freeze(room.hasRequiredFountain ? [{ kind: 'useFountain' as const }] : []),
         }),
         additionalExits: Object.freeze([]),
-        ...(room.hasKeepsakeRack
-          ? { keepsakeRack: Object.freeze({ disposition: { kind: 'retain' as const } }) }
-          : {}),
         ...(room.purgingPool !== undefined
           ? {
               purgingPool: Object.freeze({

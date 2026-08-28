@@ -15,7 +15,7 @@ import { createGoldenFGHProject } from '@run-planner/test-fixtures/underworld';
 import { createArcanaFearState } from '../../src/simulation/arcana-fear';
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
 import {
-  applyKeepsakeDisposition,
+  applyKeepsakeReplacement,
   attestGorgonBranchState,
   beginBiomeKeepsakeState,
   createKeepsakeState,
@@ -121,10 +121,10 @@ function directLaterEquip(keepsakeKey: string) {
   return {
     branch,
     rank,
-    keepsakes: applyKeepsakeDisposition(
+    keepsakes: applyKeepsakeReplacement(
       catalog,
       branch.keepsakes,
-      { kind: 'replace', keepsakeKey },
+      keepsakeKey,
       branch.arcanaFear,
       rank,
     ),
@@ -152,7 +152,7 @@ function replayBiome(
     catalog,
     biome.snapshot,
     biome.history,
-    biomeKey === 'F' ? 0 : 1,
+    biomeKey === 'F' ? 1 : 2,
     route.loadout,
     initialBranches,
   ).simulation;
@@ -233,7 +233,7 @@ describe('Cherished Heirloom later keepsake equips', () => {
     const project = applyProjectCommand(createGoldenFGHProject(), catalog, {
       kind: 'ReplacePostbossKeepsake',
       selection: rack,
-      value: { kind: 'replace', keepsakeKey: 'SkipEncounterKeepsake' },
+      keepsakeKey: 'SkipEncounterKeepsake',
     });
     const throughF = replayBiome(project, 'F', [cherishedBranch()]);
     const afterRack = throughF.branches[0];
@@ -241,8 +241,8 @@ describe('Cherished Heirloom later keepsake equips', () => {
       currentKey: 'SkipEncounterKeepsake',
       figLeaf: { remainingUses: 4, activatedThisBiome: false },
       history: [
-        { key: 'ManaOverTimeRefundKeepsake', kind: 'start' },
-        { key: 'SkipEncounterKeepsake', kind: 'replace' },
+        { key: 'ManaOverTimeRefundKeepsake', kind: 'start', biomeNumber: 1 },
+        { key: 'SkipEncounterKeepsake', kind: 'replace', biomeNumber: 2 },
       ],
     });
 
@@ -258,7 +258,7 @@ describe('Cherished Heirloom later keepsake equips', () => {
     const project = applyProjectCommand(createGoldenFGHProject(), catalog, {
       kind: 'ReplacePostbossKeepsake',
       selection: rack,
-      value: { kind: 'replace', keepsakeKey: 'SpellTalentKeepsake' },
+      keepsakeKey: 'SpellTalentKeepsake',
     });
     const throughF = replayBiome(project, 'F', [cherishedBranch()]);
     const afterRack = throughF.branches[0]!;
@@ -273,7 +273,7 @@ describe('Cherished Heirloom later keepsake equips', () => {
     const gorgonProject = applyProjectCommand(createGoldenFGHProject(), catalog, {
       kind: 'ReplacePostbossKeepsake',
       selection: rack,
-      value: { kind: 'replace', keepsakeKey: 'AthenaEncounterKeepsake' },
+      keepsakeKey: 'AthenaEncounterKeepsake',
     });
     expect(
       replayBiome(gorgonProject, 'F', [cherishedBranch()]).branches[0]?.keepsakes,
@@ -285,7 +285,7 @@ describe('Cherished Heirloom later keepsake equips', () => {
     let pomProject = applyProjectCommand(createGoldenFGHProject(), catalog, {
       kind: 'ReplacePostbossKeepsake',
       selection: rack,
-      value: { kind: 'replace', keepsakeKey: 'HadesAndPersephoneKeepsake' },
+      keepsakeKey: 'HadesAndPersephoneKeepsake',
     });
     pomProject = applyProjectCommand(pomProject, catalog, {
       kind: 'ReplaceJeweledPomEquipResult',
@@ -300,7 +300,7 @@ describe('Cherished Heirloom later keepsake equips', () => {
     let hammerProject = applyProjectCommand(createGoldenFGHProject(), catalog, {
       kind: 'ReplacePostbossKeepsake',
       selection: rack,
-      value: { kind: 'replace', keepsakeKey: 'TempHammerKeepsake' },
+      keepsakeKey: 'TempHammerKeepsake',
     });
     hammerProject = applyProjectCommand(hammerProject, catalog, {
       kind: 'ReplaceExperimentalHammerEquipResult',
@@ -323,19 +323,23 @@ describe('Cherished Heirloom later keepsake equips', () => {
     });
   });
 
-  it('does not replay a retained supported keepsake or add a false neutral effect ledger', () => {
-    const retainedProject = createGoldenFGHProject();
-    const retainedState = createKeepsakeState(catalog, 'RarifyKeepsake', arcanaFear);
-    const retained: RewardBranch = {
+  it('does not replay an absent rack or add a false neutral effect ledger', () => {
+    const unchangedProject = createGoldenFGHProject();
+    const unchangedState = createKeepsakeState(catalog, 'RarifyKeepsake', arcanaFear);
+    const unchanged: RewardBranch = {
       ...cherishedBranch(),
       keepsakes: {
-        ...retainedState,
+        ...unchangedState,
         callingCard: { remainingCharges: 2 },
       },
     };
-    const afterRetain = replayBiome(retainedProject, 'F', [retained]).branches[0]?.keepsakes;
-    expect(afterRetain?.callingCard?.remainingCharges).toBe(2);
-    expect(afterRetain?.history.at(-1)).toEqual({ key: 'RarifyKeepsake', kind: 'start' });
+    const afterRack = replayBiome(unchangedProject, 'F', [unchanged]).branches[0]?.keepsakes;
+    expect(afterRack?.callingCard?.remainingCharges).toBe(2);
+    expect(afterRack?.history.at(-1)).toEqual({
+      key: 'RarifyKeepsake',
+      kind: 'start',
+      biomeNumber: 1,
+    });
 
     const neutral = directLaterEquip('BossPreDamageKeepsake');
     expect(neutral.rank).toBe('Epic');
@@ -350,17 +354,12 @@ describe('Cherished Heirloom later keepsake equips', () => {
 
   it('keeps invalid replacements inert and isolates a removed supported ledger', () => {
     const prior = createKeepsakeState(catalog, 'GoldifyKeepsake', arcanaFear);
-    const removed = applyKeepsakeDisposition(
-      catalog,
-      prior,
-      { kind: 'replace', keepsakeKey: 'BossPreDamageKeepsake' },
-      arcanaFear,
-    );
+    const removed = applyKeepsakeReplacement(catalog, prior, 'BossPreDamageKeepsake', arcanaFear);
     const rack = postbossOwner();
     const project = applyProjectCommand(createGoldenFGHProject(), catalog, {
       kind: 'ReplacePostbossKeepsake',
       selection: rack,
-      value: { kind: 'replace', keepsakeKey: 'GoldifyKeepsake' },
+      keepsakeKey: 'GoldifyKeepsake',
     });
     const seeded: RewardBranch = { ...cherishedBranch(), keepsakes: removed };
     const evaluated = replayBiome(project, 'F', [seeded]);
@@ -391,10 +390,10 @@ describe('Cherished Heirloom later keepsake equips', () => {
     expect(keepsakeSelectionUnavailableReason(catalog, opposing, 'GoldifyKeepsake')).toBe(
       'unfatedEnabling',
     );
-    const rejected = applyKeepsakeDisposition(
+    const rejected = applyKeepsakeReplacement(
       catalog,
       opposing,
-      { kind: 'replace', keepsakeKey: 'GoldifyKeepsake' },
+      'GoldifyKeepsake',
       arcanaFear,
       'Heroic',
     );

@@ -110,7 +110,7 @@ export function activeRoomActionReferences(
   }
   // A Reprieve's authored reward is its room-entry pickup; fountain use follows it by default.
   if (hasFountain) references.push(Object.freeze({ kind: 'useFountain' }));
-  if (occurrence.keepsakeRack?.disposition.kind === 'replace')
+  if (occurrence.keepsakeRack !== undefined)
     references.push(Object.freeze({ kind: 'interactKeepsakeRack' }));
   if (occurrence.state.kind === 'shipCombat') {
     const activeWheels =

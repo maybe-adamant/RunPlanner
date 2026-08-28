@@ -121,7 +121,6 @@ export function RunStateSheet({ launcher }: { readonly launcher: WorkspaceRunSta
           {state.keepsakes.chronology.map((entry) => (
             <li key={entry.biomeNumber}>
               <span>{ordinal(entry.biomeNumber)} Biome:</span> {entry.label}
-              {entry.retained ? ' (retained)' : ''}
             </li>
           ))}
         </ol>

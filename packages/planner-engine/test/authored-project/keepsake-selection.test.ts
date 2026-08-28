@@ -27,7 +27,7 @@ const fBoss = createOccurrenceAddress(
 );
 
 describe('keepsake authored selections', () => {
-  it('creates mandatory starting and retained Postboss defaults and round-trips replacements', () => {
+  it('creates mandatory starting and sparse Postboss defaults and round-trips replacements', () => {
     let project = createProjectDocument(catalog, {
       projectId: 'keepsake-authored',
       configuredBiomeCounts: { Underworld: 1 },
@@ -37,8 +37,8 @@ describe('keepsake authored selections', () => {
     expect(
       route?.biomes[0]?.completionOccurrences.find(
         (occurrence) => occurrence.occurrenceId === fPostboss.occurrenceId,
-      )?.keepsakeRack?.disposition,
-    ).toEqual({ kind: 'retain' });
+      )?.keepsakeRack,
+    ).toBeUndefined();
 
     const selection: Extract<KeepsakeSelectionAddress, { readonly owner: object }> =
       createPostbossKeepsakeSelectionAddress(fPostboss);
@@ -50,7 +50,7 @@ describe('keepsake authored selections', () => {
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplacePostbossKeepsake',
       selection,
-      value: { kind: 'replace', keepsakeKey: 'ForceZeusBoonKeepsake' },
+      keepsakeKey: 'ForceZeusBoonKeepsake',
     });
     expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog)).toEqual(
       project,
@@ -69,6 +69,30 @@ describe('keepsake authored selections', () => {
       'MissingKeepsake';
     expect(() => decodeProjectDocument(encoded, catalog)).toThrow(
       'unknown keepsake MissingKeepsake',
+    );
+  });
+
+  it('rejects a persisted rack leaf on a room without the declaration-owned rack', () => {
+    const project = createProjectDocument(catalog, {
+      projectId: 'keepsake-codec-rack-ownership',
+      configuredBiomeCounts: { Underworld: 1 },
+    });
+    const encoded = JSON.parse(encodeProjectDocument(project)) as {
+      routes: {
+        routeKey: string;
+        biomes: {
+          biomeKey: string;
+          completionOccurrences: Record<string, unknown>[];
+        }[];
+      }[];
+    };
+    const occurrence = encoded.routes
+      .find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find((biome) => biome.biomeKey === 'F')?.completionOccurrences[0];
+    if (occurrence === undefined) throw new Error('expected an Underworld F occurrence');
+    occurrence.keepsakeRack = { keepsakeKey: 'ForceZeusBoonKeepsake' };
+    expect(() => decodeProjectDocument(encoded, catalog)).toThrow(
+      'room declaration has no keepsake rack',
     );
   });
 
@@ -177,7 +201,7 @@ describe('keepsake authored selections', () => {
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplacePostbossKeepsake',
       selection: postboss,
-      value: { kind: 'replace', keepsakeKey: 'HadesAndPersephoneKeepsake' },
+      keepsakeKey: 'HadesAndPersephoneKeepsake',
     });
     expect(
       project.routes
@@ -194,12 +218,12 @@ describe('keepsake authored selections', () => {
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplacePostbossKeepsake',
       selection: postboss,
-      value: { kind: 'replace', keepsakeKey: 'BossPreDamageKeepsake' },
+      keepsakeKey: 'BossPreDamageKeepsake',
     });
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplacePostbossKeepsake',
       selection: postboss,
-      value: { kind: 'replace', keepsakeKey: 'HadesAndPersephoneKeepsake' },
+      keepsakeKey: 'HadesAndPersephoneKeepsake',
     });
     expect(
       project.routes

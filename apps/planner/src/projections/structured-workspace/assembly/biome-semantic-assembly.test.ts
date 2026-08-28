@@ -238,12 +238,10 @@ describe('structured workspace biome semantic assembly', () => {
     );
     const reachedPostboss = reached.completionOutline.find((node) => node.room.kind === 'PostBoss');
 
-    expect(configuredTailPostboss?.room.keepsakeSelection).toMatchObject({
-      value: { kind: 'retain' },
-    });
-    expect(reachedPostboss?.room.keepsakeSelection).toMatchObject({
-      value: { kind: 'retain' },
-    });
+    expect(configuredTailPostboss?.room.keepsakeSelection).toBeDefined();
+    expect(configuredTailPostboss?.room.keepsakeSelection?.selectedKeepsakeKey).toBeUndefined();
+    expect(reachedPostboss?.room.keepsakeSelection).toBeDefined();
+    expect(reachedPostboss?.room.keepsakeSelection?.selectedKeepsakeKey).toBeUndefined();
   });
 
   it('owns a reached Gift Hammer child at the succeeding biome entry address', () => {

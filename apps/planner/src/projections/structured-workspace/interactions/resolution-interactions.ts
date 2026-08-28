@@ -44,7 +44,6 @@ function projectKeepsakeSelectionPicker(
   catalog: Catalog,
   options: readonly CandidateOptionProjection<string>[],
   selectedKey: string | undefined,
-  postboss: boolean,
 ): ContextualPickerModel<string> {
   const projected = contextualPicker.project(
     options,
@@ -55,30 +54,7 @@ function projectKeepsakeSelectionPicker(
       }),
     (value) => value,
   );
-  if (!postboss) return projected;
-  const retain = Object.freeze({
-    key: 'retain-current-keepsake',
-    value: '',
-    label: 'Retain current keepsake',
-    state: 'possible' as const,
-    selected: selectedKey === undefined,
-    disabled: false,
-  });
-  const retainSection = Object.freeze({
-    key: 'current',
-    kind: 'category' as const,
-    label: 'Current',
-    collapsible: false,
-    items: Object.freeze([retain]),
-  });
-  return Object.freeze({
-    ...(selectedKey === undefined
-      ? { selected: retain }
-      : projected.selected === undefined
-        ? {}
-        : { selected: projected.selected }),
-    sections: Object.freeze([retainSection, ...projected.sections]),
-  });
+  return projected;
 }
 
 function equipResultLabel(
@@ -142,10 +118,7 @@ export function bindResolutionInteractions(input: {
     string,
     {
       readonly address: KeepsakeSelectionAddress;
-      readonly value:
-        | { readonly kind: 'retain' }
-        | { readonly kind: 'replace'; readonly keepsakeKey: string }
-        | string;
+      readonly selectedKeepsakeKey?: string;
     }
   >;
   readonly keepsakeEquipResultControls?: ReadonlyMap<
@@ -420,13 +393,8 @@ export function bindResolutionInteractions(input: {
   }
   const keepsakeSelections = new Map<string, WorkspaceKeepsakeSelectionInteraction>();
   for (const [key, control] of keepsakeSelectionControls ?? []) {
+    const selectedKey = control.selectedKeepsakeKey;
     const postboss = control.address.owner !== 'routeStart';
-    const selectedKey =
-      typeof control.value === 'string'
-        ? control.value
-        : control.value.kind === 'replace'
-          ? control.value.keepsakeKey
-          : undefined;
     keepsakeSelections.set(
       key,
       Object.freeze({
@@ -437,16 +405,12 @@ export function bindResolutionInteractions(input: {
             catalog,
             candidates.keepsakeSelections(control.address),
             selectedKey,
-            postboss,
           ),
         owner: control.address,
         selectedLabel:
-          postboss && selectedKey === undefined
-            ? 'Retain current keepsake'
-            : (catalog.keepsakes.byKey[selectedKey ?? '']?.label ??
-              selectedKey ??
-              'Choose keepsake'),
-        value: control.value,
+          catalog.keepsakes.byKey[selectedKey ?? '']?.label ??
+          (postboss ? 'Add keepsake change' : (selectedKey ?? 'Choose keepsake')),
+        ...(selectedKey === undefined ? {} : { selectedKeepsakeKey: selectedKey }),
         replaceIntent: (keepsakeKey: string) =>
           Object.freeze({
             command: postboss
@@ -458,7 +422,7 @@ export function bindResolutionInteractions(input: {
                       readonly owner: import('@run-planner/engine/authored-project').OccurrenceAddress;
                     }
                   >,
-                  value: Object.freeze({ kind: 'replace' as const, keepsakeKey }),
+                  keepsakeKey,
                 })
               : Object.freeze({
                   kind: 'ReplaceStartingKeepsake' as const,
@@ -469,19 +433,18 @@ export function bindResolutionInteractions(input: {
                   keepsakeKey,
                 }),
           }),
-        ...(postboss
+        ...(postboss && selectedKey !== undefined
           ? {
-              retainIntent: () =>
+              removeIntent: () =>
                 Object.freeze({
                   command: Object.freeze({
-                    kind: 'ReplacePostbossKeepsake' as const,
+                    kind: 'RemovePostbossKeepsake' as const,
                     selection: control.address as Extract<
                       KeepsakeSelectionAddress,
                       {
                         readonly owner: import('@run-planner/engine/authored-project').OccurrenceAddress;
                       }
                     >,
-                    value: Object.freeze({ kind: 'retain' as const }),
                   }),
                 }),
             }

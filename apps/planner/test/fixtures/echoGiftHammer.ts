@@ -178,7 +178,7 @@ function createGoldenEchoGiftKeepsakePendingProject(
     selection: createPostbossKeepsakeSelectionAddress(
       createOccurrenceAddress(goldenHBiome, createOccurrenceId('completion:H:postboss')),
     ),
-    value: { kind: 'replace', keepsakeKey: 'ManaOverTimeRefundKeepsake' },
+    keepsakeKey: 'ManaOverTimeRefundKeepsake',
   });
 }
 

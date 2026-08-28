@@ -144,6 +144,7 @@ function applyUnchecked(
     case 'ReplaceBiomeField':
       return applyProjectStateCommand(document, catalog, command);
     case 'ReplacePostbossKeepsake':
+    case 'RemovePostbossKeepsake':
       return applyKeepsakeCommand(document, catalog, command);
     case 'ReplaceJeweledPomEquipResult':
     case 'ReplaceExperimentalHammerEquipResult':

@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 66,
+  "schemaVersion": 67,
   "projectId": "surface-1",
   "catalogVersion": "0.48.0-hex-talent-layouts",
   "routes": [
@@ -277,12 +277,7 @@
                   }
                 }
               },
-              "additionalExits": [],
-              "keepsakeRack": {
-                "disposition": {
-                  "kind": "retain"
-                }
-              }
+              "additionalExits": []
             }
           ]
         }

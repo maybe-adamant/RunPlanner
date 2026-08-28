@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 66,
+  "schemaVersion": 67,
   "projectId": "golden-fg",
   "catalogVersion": "0.48.0-hex-talent-layouts",
   "routes": [
@@ -1438,12 +1438,7 @@
                   "secondRight": null
                 }
               },
-              "additionalExits": [],
-              "keepsakeRack": {
-                "disposition": {
-                  "kind": "retain"
-                }
-              }
+              "additionalExits": []
             }
           ]
         },
@@ -2543,12 +2538,7 @@
                   "secondRight": null
                 }
               },
-              "additionalExits": [],
-              "keepsakeRack": {
-                "disposition": {
-                  "kind": "retain"
-                }
-              }
+              "additionalExits": []
             }
           ]
         }

@@ -26,6 +26,7 @@ function PostbossKeepsakeControl({
 }: {
   readonly interaction: WorkspaceKeepsakeSelectionInteraction;
 }) {
+  const dispatch = useAppDispatch();
   return (
     <div className="room-keepsake-control">
       <KeepsakeSelectionPicker
@@ -33,6 +34,17 @@ function PostbossKeepsakeControl({
         interaction={interaction}
         label="Keepsake"
       />
+      {interaction.removeIntent === undefined ? null : (
+        <button
+          className="danger-action action-compact"
+          onClick={() =>
+            dispatch(authoredProjectCommandDispatched(interaction.removeIntent!().command))
+          }
+          type="button"
+        >
+          Delete keepsake change
+        </button>
+      )}
       <SemanticOwnerMarker address={interaction.owner} />
     </div>
   );

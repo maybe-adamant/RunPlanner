@@ -132,7 +132,11 @@ function retainedKeepsakeState(
         currentKey: currentKeepsakeKey,
         history: Object.freeze([
           ...captured.history,
-          Object.freeze({ key: currentKeepsakeKey, kind: 'replace' as const }),
+          Object.freeze({
+            key: currentKeepsakeKey,
+            kind: 'replace' as const,
+            biomeNumber: (captured.history.at(-1)?.biomeNumber ?? 0) + 1,
+          }),
         ]),
         removedKeys: Object.freeze([...captured.removedKeys, capturedKeepsakeKey]),
       });
@@ -303,7 +307,11 @@ describe('Echo Gift Gift Gift', () => {
         currentKey: 'RarifyKeepsake',
         history: Object.freeze([
           ...result.keepsakes.history,
-          { key: 'RarifyKeepsake', kind: 'replace' as const },
+          {
+            key: 'RarifyKeepsake',
+            kind: 'replace' as const,
+            biomeNumber: (result.keepsakes.history.at(-1)?.biomeNumber ?? 0) + 1,
+          },
         ]),
       },
     });
@@ -812,7 +820,7 @@ describe('Echo Gift Gift Gift', () => {
       selection: createPostbossKeepsakeSelectionAddress(
         createOccurrenceAddress(goldenHBiome, createOccurrenceId('completion:H:postboss')),
       ),
-      value: { kind: 'replace', keepsakeKey: 'ManaOverTimeRefundKeepsake' },
+      keepsakeKey: 'ManaOverTimeRefundKeepsake',
     });
     const iReplay = createKeepsakeEquipResultAddress(
       createEchoKeepsakeReplayAddress(createBiomeAddress('Underworld', 'I')),

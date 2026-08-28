@@ -82,10 +82,7 @@ export interface WorkspaceInteractionBindingInput {
     string,
     {
       readonly address: KeepsakeSelectionAddress;
-      readonly value:
-        | { readonly kind: 'retain' }
-        | { readonly kind: 'replace'; readonly keepsakeKey: string }
-        | string;
+      readonly selectedKeepsakeKey?: string;
     }
   >;
   readonly keepsakeEquipResultControls?: ReadonlyMap<

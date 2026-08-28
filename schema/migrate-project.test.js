@@ -65,6 +65,41 @@ test('fails closed when a required migration step is absent', () => {
   assert.throws(() => migrateProjectDocument(source), /no migration is registered for schema 48/);
 });
 
+test('66 -> 67 removes retained rack no-ops and compacts replacement racks', () => {
+  const source = {
+    schemaVersion: 66,
+    projectId: 'keepsake-rack-migration',
+    catalogVersion: '0.48.0-hex-talent-layouts',
+    routes: [
+      {
+        completionOccurrences: [
+          {
+            keepsakeRack: { disposition: { kind: 'retain' } },
+          },
+          {
+            keepsakeRack: {
+              disposition: { kind: 'replace', keepsakeKey: 'TempHammerKeepsake' },
+              equipResults: { experimentalHammer: { kind: 'exhausted' } },
+            },
+          },
+        ],
+      },
+    ],
+  };
+  const result = migrateProjectDocument(source);
+  assert.equal(result.document.schemaVersion, 67);
+  assert.equal('keepsakeRack' in result.document.routes[0].completionOccurrences[0], false);
+  assert.deepEqual(result.document.routes[0].completionOccurrences[1].keepsakeRack, {
+    keepsakeKey: 'TempHammerKeepsake',
+    equipResults: { experimentalHammer: { kind: 'exhausted' } },
+  });
+  assert.deepEqual(result.steps, ['66->67']);
+  assert.deepEqual(result.changes['66->67'], {
+    retainedRacksRemoved: 1,
+    replacementRacksCompacted: 1,
+  });
+});
+
 test('61 -> 62 updates the Concave Stone catalog boundary without rewriting authored state', () => {
   const source = {
     schemaVersion: 61,
@@ -185,16 +220,20 @@ test('63 -> 64 updates the Persephone catalog boundary without inventing optiona
   });
   assert.deepEqual(result.document, {
     ...source,
-    schemaVersion: 66,
+    schemaVersion: 67,
     catalogVersion: '0.48.0-hex-talent-layouts',
   });
-  assert.deepEqual(result.steps, ['63->64', '64->65', '65->66']);
+  assert.deepEqual(result.steps, ['63->64', '64->65', '65->66', '66->67']);
   assert.deepEqual(result.changes['63->64'], {});
   assert.deepEqual(result.changes['64->65'], {
     spellHexTreesDefaulted: 0,
     aspectHexTreesDefaulted: 0,
   });
   assert.deepEqual(result.changes['65->66'], { chaosOffersMigrated: 0 });
+  assert.deepEqual(result.changes['66->67'], {
+    retainedRacksRemoved: 0,
+    replacementRacksCompacted: 0,
+  });
   assert.equal(
     'persephoneLevelBonus' in
       result.document.routes[0].biomes[0].topology.occurrences[0].encounters.traitOffersByPhase
@@ -387,9 +426,9 @@ test('54 -> 55 relocates completion sidecars into exact automatic occurrences', 
   assert.deepEqual(boss.encounters.judgmentArcanaKeysByPhase, { Encounter: ['TheSorceress'] });
   assert.deepEqual(boss.encounters.steadyGrowthTargetByPhase, { Encounter: 'Attack' });
   assert.equal(postboss.gameName, 'F_PostBoss01');
-  assert.deepEqual(postboss.keepsakeRack.disposition, {
-    kind: 'replace',
+  assert.deepEqual(postboss.keepsakeRack, {
     keepsakeKey: 'JeweledPom',
+    equipResults: { jeweledPom: { traitKey: 'LastGasp' } },
   });
   assert.deepEqual(postboss.roomActions, { order: [{ kind: 'useFountain' }] });
   assert.equal('postbossRoomActions' in result.document.routes[0].biomes[0], false);
@@ -401,7 +440,7 @@ test('51 -> current preserves prior route content and adds resource placements',
   source.schemaVersion = 51;
   source.catalogVersion = '0.31.0-chaos-traits';
   const result = migrateProjectDocument(source);
-  assert.equal(result.document.schemaVersion, 66);
+  assert.equal(result.document.schemaVersion, 67);
   assert.equal(result.document.catalogVersion, '0.48.0-hex-talent-layouts');
   assert.deepEqual(result.changes['51->52'], {});
   assert.deepEqual(result.changes['52->53'], {
@@ -436,6 +475,7 @@ test('51 -> current preserves prior route content and adds resource placements',
     '63->64',
     '64->65',
     '65->66',
+    '66->67',
   ]);
   assert.deepEqual(result.changes['63->64'], {});
   assert.deepEqual(result.changes['64->65'], {
@@ -453,7 +493,7 @@ test('50 -> current advances the full external migration chain through the Herme
 
   const result = migrateProjectDocument(source);
 
-  assert.equal(result.document.schemaVersion, 66);
+  assert.equal(result.document.schemaVersion, 67);
   assert.equal(result.document.catalogVersion, '0.48.0-hex-talent-layouts');
   assert.deepEqual(result.steps, [
     '50->51',
@@ -472,6 +512,7 @@ test('50 -> current advances the full external migration chain through the Herme
     '63->64',
     '64->65',
     '65->66',
+    '66->67',
   ]);
   assert.deepEqual(result.changes['65->66'], { chaosOffersMigrated: 0 });
   assert.deepEqual(result.changes['50->51'], { unresolvedTrialUpgradesAdded: 0 });
@@ -483,7 +524,7 @@ test('55 -> 56 adds empty route-owned selected resource placements', () => {
   source.schemaVersion = 55;
   source.catalogVersion = '0.37.0-automatic-completion-occurrences';
   const result = migrateProjectDocument(source);
-  assert.equal(result.document.schemaVersion, 66);
+  assert.equal(result.document.schemaVersion, 67);
   assert.equal(result.document.catalogVersion, '0.48.0-hex-talent-layouts');
   assert.deepEqual(result.document.routes[0].resourcePlacements, {
     Pickaxe: null,
@@ -501,7 +542,7 @@ test('52 -> current preserves the earlier schema-52 catalog migration ledger and
   source.schemaVersion = 52;
   source.catalogVersion = '0.32.0-run-impacting-traits';
   const result = migrateProjectDocument(source);
-  assert.equal(result.document.schemaVersion, 66);
+  assert.equal(result.document.schemaVersion, 67);
   assert.equal(result.document.catalogVersion, '0.48.0-hex-talent-layouts');
   assert.deepEqual(result.document.routes, [
     {
@@ -540,6 +581,7 @@ test('52 -> current preserves the earlier schema-52 catalog migration ledger and
     '63->64',
     '64->65',
     '65->66',
+    '66->67',
   ]);
   assert.deepEqual(result.changes['65->66'], { chaosOffersMigrated: 0 });
 });
@@ -580,6 +622,7 @@ test('52 -> current advances the prior run-impacting-traits catalog metadata', (
     '63->64',
     '64->65',
     '65->66',
+    '66->67',
   ]);
   assert.deepEqual(result.changes['65->66'], { chaosOffersMigrated: 0 });
 });
@@ -589,7 +632,7 @@ test('current schema 52 -> current advances catalog metadata and adds resource p
   source.schemaVersion = 52;
   source.catalogVersion = '0.34.0-sea-star';
   const result = migrateProjectDocument(source);
-  assert.equal(result.document.schemaVersion, 66);
+  assert.equal(result.document.schemaVersion, 67);
   assert.equal(result.document.catalogVersion, '0.48.0-hex-talent-layouts');
   assert.deepEqual(result.document.routes, [
     {
@@ -624,6 +667,7 @@ test('current schema 52 -> current advances catalog metadata and adds resource p
     '63->64',
     '64->65',
     '65->66',
+    '66->67',
   ]);
   assert.deepEqual(result.changes['65->66'], { chaosOffersMigrated: 0 });
 });
@@ -689,7 +733,7 @@ test('57 -> 58 seeds Shrine shells only on exact forced Surface Postboss identit
 
   const result = migrateProjectDocument(source);
   const biomes = result.document.routes[0].biomes;
-  assert.equal(result.document.schemaVersion, 66);
+  assert.equal(result.document.schemaVersion, 67);
   assert.equal(result.document.catalogVersion, '0.48.0-hex-talent-layouts');
   assert.deepEqual(result.steps, [
     '57->58',
@@ -701,6 +745,7 @@ test('57 -> 58 seeds Shrine shells only on exact forced Surface Postboss identit
     '63->64',
     '64->65',
     '65->66',
+    '66->67',
   ]);
   assert.deepEqual(result.changes['65->66'], { chaosOffersMigrated: 0 });
   assert.deepEqual(result.changes['57->58'], { shrinesAdded: 2 });
@@ -798,7 +843,7 @@ test('58 -> 59 seeds Well shells only on exact forced Underworld Postboss identi
 
   const result = migrateProjectDocument(source);
   const biomes = result.document.routes[0].biomes;
-  assert.equal(result.document.schemaVersion, 66);
+  assert.equal(result.document.schemaVersion, 67);
   assert.equal(result.document.catalogVersion, '0.48.0-hex-talent-layouts');
   assert.deepEqual(result.steps, [
     '58->59',
@@ -809,6 +854,7 @@ test('58 -> 59 seeds Well shells only on exact forced Underworld Postboss identi
     '63->64',
     '64->65',
     '65->66',
+    '66->67',
   ]);
   assert.deepEqual(result.changes['65->66'], { chaosOffersMigrated: 0 });
   assert.deepEqual(result.changes['64->65'], {
