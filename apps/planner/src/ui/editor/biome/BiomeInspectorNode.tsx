@@ -17,6 +17,7 @@ import {
   inspectorLifecycleBoundaryContent,
   inspectorRoomActionContent,
   InspectorRoomOverviewContent,
+  inspectorOptionalRoomActionContent,
   StartRoomIdentityEditor,
 } from './BiomeInspectorControls';
 import { BiomeWorkspaceContractError } from './workspaceContract';
@@ -107,6 +108,9 @@ function OccurrenceInspector({
         }
         renderLifecycleBoundaryContent={(boundary) =>
           inspectorLifecycleBoundaryContent(node.room, interactions, boundary)
+        }
+        renderOptionalRoomActionContent={() =>
+          inspectorOptionalRoomActionContent(node.room, interactions)
         }
         renderRoomOverviewContent={() => (
           <InspectorRoomOverviewContent interactions={interactions} room={node.room} />

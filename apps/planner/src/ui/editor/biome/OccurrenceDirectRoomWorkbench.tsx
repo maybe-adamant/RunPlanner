@@ -70,6 +70,7 @@ export function DirectRoomWorkbench({
   shipPhaseKey,
   renderRoomActionRowContent,
   renderLifecycleBoundaryContent,
+  renderOptionalRoomActionContent,
   renderRoomOverviewContent,
 }: {
   readonly idPrefix: string;
@@ -80,6 +81,7 @@ export function DirectRoomWorkbench({
   readonly shipPhaseKey?: string;
   readonly renderRoomActionRowContent?: (row: WorkspaceRoomActions['rows'][number]) => ReactNode;
   readonly renderLifecycleBoundaryContent?: (boundary: WorkspaceRoomLifecycleBoundary) => ReactNode;
+  readonly renderOptionalRoomActionContent?: () => ReactNode;
   readonly renderRoomOverviewContent?: () => ReactNode;
 }) {
   const workbench = room.workbench;
@@ -115,6 +117,7 @@ export function DirectRoomWorkbench({
               encounterPhases={workbench.encounterPhases}
               idPrefix={idPrefix}
               interactions={interactions}
+              optionalChildren={renderOptionalRoomActionContent?.()}
               renderEncounterPhase={renderEncounterPhase}
               renderRewardWheel={renderRewardWheel}
               {...(renderRoomActionRowContent === undefined

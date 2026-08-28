@@ -96,6 +96,7 @@ export function RoomActionsWorkbench({
   encounterPhases,
   idPrefix,
   interactions,
+  optionalChildren,
   renderEncounterPhase,
   renderRewardWheel,
   renderRowContent,
@@ -107,6 +108,8 @@ export function RoomActionsWorkbench({
   readonly encounterPhases?: readonly WorkspaceEncounterPhase[];
   readonly idPrefix?: string;
   readonly interactions: WorkspaceInteractionCatalog;
+  /** Room-owned optional interactions that do not exist as authored actions yet. */
+  readonly optionalChildren?: ReactNode;
   /** Encounter/reward owner supplies these leaves without a reverse import. */
   readonly renderEncounterPhase?: (phase: WorkspaceEncounterPhase) => ReactNode;
   readonly renderRewardWheel?: (wheel: WorkspaceRewardWheelDescriptor) => ReactNode;
@@ -127,6 +130,7 @@ export function RoomActionsWorkbench({
   const activePointerDrag = useRef<RoomActionPointerDrag | undefined>(undefined);
   const [pointerDrag, setPointerDrag] = useState<RoomActionPointerDrag | undefined>(undefined);
   const [announcement, setAnnouncement] = useState('');
+  const hasOptionalChildren = optionalChildren !== undefined && optionalChildren !== null;
   if (actions === undefined && ship === undefined) {
     if (encounterPhases === undefined || idPrefix === undefined) return null;
     return (
@@ -644,13 +648,14 @@ export function RoomActionsWorkbench({
         {rankedRows.length === 0 ? checkpointRows(0) : null}
       </ol>
       {children}
-      {actions.optionalRows.length === 0 ? null : (
+      {actions.optionalRows.length === 0 && !hasOptionalChildren ? null : (
         <section aria-label="Optional actions" className="room-action-optional-pool">
           <div className="local-reward-heading">
             <h5>Optional actions</h5>
           </div>
           <ol aria-label="Optional actions" className="room-action-list">
             {actions.optionalRows.map((row) => renderRow(row))}
+            {optionalChildren}
           </ol>
         </section>
       )}

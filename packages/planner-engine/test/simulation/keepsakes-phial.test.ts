@@ -25,6 +25,7 @@ import {
   foldTraitHistoryEvents,
 } from '../../src/simulation/traits';
 import { simulateProjectAssembly } from '../../src/simulation';
+import { candidateArtifactsForProjectEvaluationAssembly } from '../../src/simulation/project-evaluation-assembly';
 import { applyFountainUsedTransition } from '../../src/simulation/rewards/biome/lifecycle-transitions/fountain-used';
 import type { CanonicalAuthoredRoom } from '../../src/simulation/materialization';
 import type { RewardBranchState } from '../../src/simulation/rewards/branch-primitives';
@@ -210,6 +211,18 @@ describe('Aromatic Phial fountain lifecycle', () => {
       },
       keepsakeKey: 'FountainRarityKeepsake',
     });
+    project = authorLegalTraitOffers(project);
+    const missing = simulateProjectAssembly(catalog, project)
+      .evaluation.routes.find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find((biome) => biome.biomeKey === 'F');
+    expect(missing?.findings).toContainEqual(
+      expect.objectContaining({
+        code: 'fountainRarityResultMissing',
+        origin: createFountainRarityOutcomeAddress(
+          createRoomActionAddress(goldenFBiome, reprieveId, roomActionKey({ kind: 'useFountain' })),
+        ),
+      }),
+    );
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceFountainRarityTarget',
       outcome: createFountainRarityOutcomeAddress(
@@ -230,7 +243,7 @@ describe('Aromatic Phial fountain lifecycle', () => {
         ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === reprieveId)
         ?.fountainRarityResult,
     ).toEqual({ targetTraitKey: 'ApolloWeaponBoon' });
-    const evaluation = simulateProjectAssembly(catalog, authorLegalTraitOffers(project)).evaluation;
+    const evaluation = simulateProjectAssembly(catalog, project).evaluation;
     const f = evaluation.routes
       .find((route) => route.routeKey === 'Underworld')
       ?.biomes.find((biomeEvaluation) => biomeEvaluation.biomeKey === 'F');
@@ -294,6 +307,68 @@ describe('Aromatic Phial fountain lifecycle', () => {
     expect(created).toBeDefined();
     expect(created!.sequence).toBeLessThan(postbossEvents[0]!.sequence);
     expect(f.rewards.branches[0]?.keepsakes.phial).toEqual({ status: 'consumed' });
+  });
+
+  it('publishes and resolves a Phial target after a Postboss rack is moved before its fountain', () => {
+    const postbossId = createOccurrenceId('completion:F:postboss');
+    const selection = {
+      kind: 'keepsakeSelection' as const,
+      routeKey: 'Underworld' as const,
+      biomeKey: 'F',
+      owner: createOccurrenceAddress(goldenFBiome, postbossId),
+    };
+    const fountain = createRoomActionAddress(
+      goldenFBiome,
+      postbossId,
+      roomActionKey({ kind: 'useFountain' }),
+    );
+    const outcome = createFountainRarityOutcomeAddress(fountain);
+    let project = authorLegalTraitOffers(createCompleteFGProject());
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplacePostbossKeepsake',
+      selection,
+      keepsakeKey: 'FountainRarityKeepsake',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'MoveRoomAction',
+      action: createRoomActionAddress(
+        goldenFBiome,
+        postbossId,
+        roomActionKey({ kind: 'interactKeepsakeRack' }),
+      ),
+      toIndex: 0,
+    });
+
+    const missing = simulateProjectAssembly(catalog, project);
+    const fMissing = missing.evaluation.routes
+      .find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find((biome) => biome.biomeKey === 'F');
+    expect(fMissing?.findings).toContainEqual(
+      expect.objectContaining({ code: 'fountainRarityResultMissing', origin: outcome }),
+    );
+    const capability = candidateArtifactsForProjectEvaluationAssembly(missing)
+      .biomeAt(goldenFBiome)
+      ?.fountainRarity.at(outcome);
+    const targetTraitKey = capability?.frontiers[0]?.mutationTargetKeys[0];
+    expect(targetTraitKey).toBeDefined();
+
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceFountainRarityTarget',
+      outcome,
+      targetTraitKey: targetTraitKey!,
+    });
+    const resolved = simulateProjectAssembly(catalog, project)
+      .evaluation.routes.find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find((biome) => biome.biomeKey === 'F');
+    if (resolved?.authoring !== 'complete' || resolved.validity !== 'valid') {
+      throw new Error(
+        `expected valid Phial Postboss result: ${JSON.stringify(resolved?.findings)}`,
+      );
+    }
+    expect(resolved.rewards.branches[0]?.keepsakes.phial).toEqual({ status: 'consumed' });
+    expect(resolved.findings).not.toContainEqual(
+      expect.objectContaining({ code: 'fountainRarityResultMissing' }),
+    );
   });
 
   it('mutates the selected Common god trait directly to Heroic and consumes the source', () => {

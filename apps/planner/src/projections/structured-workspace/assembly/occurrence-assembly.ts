@@ -466,9 +466,6 @@ export function assembleWorkspaceOccurrence(
     input.markerDestinations.setRoomTab([figurine.marker], 'actions');
   }
   if (keepsakeSelection !== undefined) {
-    const keepsakeActionInTimeline = roomActions?.rows.some(
-      (row) => row.reference.kind === 'interactKeepsakeRack',
-    );
     input.markerDestinations.setRoomTab(
       [
         keepsakeSelection.marker,
@@ -476,7 +473,7 @@ export function assembleWorkspaceOccurrence(
           ? []
           : [keepsakeSelection.equipResult.marker]),
       ],
-      keepsakeActionInTimeline ? 'actions' : 'overview',
+      'actions',
     );
     if (keepsakeSelection.equipResult !== undefined) {
       input.markerDestinations.redirectTo(
