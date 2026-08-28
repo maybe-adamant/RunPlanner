@@ -1232,6 +1232,12 @@ describe('OccurrenceEncounterWorkbench', () => {
 
     openRoomTab('Intro Timeline');
     const rewardWheel = screen.getByLabelText('Combat 1 reward');
+    const offerGrid = rewardWheel.querySelector<HTMLElement>('.reward-wheel-offers');
+    if (offerGrid === null) throw new Error('Reward wheel offer grid is missing');
+    expect(offerGrid.getAttribute('data-active-offer-count')).toBe('1');
+    expect(offerGrid.children).toHaveLength(1);
+    expect(offerGrid.firstElementChild?.getAttribute('data-picked')).toBe('true');
+    expect(within(rewardWheel).getByText('Picked')).toBeTruthy();
     expect(within(rewardWheel).queryByLabelText('Offer 2')).toBeNull();
 
     act(() =>
@@ -1244,6 +1250,9 @@ describe('OccurrenceEncounterWorkbench', () => {
       ),
     );
     await waitFor(() => expect(within(rewardWheel).getByLabelText('Offer 2')).toBeTruthy());
+    expect(offerGrid.getAttribute('data-active-offer-count')).toBe('2');
+    expect(offerGrid.children).toHaveLength(2);
+    expect(offerGrid.lastElementChild?.getAttribute('data-picked')).toBeNull();
 
     act(() =>
       view.application.store.dispatch(
@@ -1297,6 +1306,11 @@ describe('OccurrenceEncounterWorkbench', () => {
     expect(within(restoredOffer).getByRole('button', { name: 'Reward' }).textContent).toContain(
       'Bones',
     );
+    expect(
+      within(screen.getByRole('region', { name: 'Room Timeline' })).getAllByRole('combobox', {
+        name: 'Picked offer',
+      }),
+    ).toHaveLength(1);
   });
 
   it('renders materialized Shop descriptors directly', () => {
