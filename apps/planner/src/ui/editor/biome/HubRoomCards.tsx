@@ -76,6 +76,34 @@ export function OpenHubRoomCard({
   const visitPosition = ranking.authoredVisitOrder.indexOf(slot.hubSlotKey);
   const showSlotAssessment =
     visitMarker === undefined || visitMarker.assessment !== slot.marker.assessment;
+  const roomHeading = (
+    <div className="hub-slot-heading">
+      <div className="owner-markers">
+        <h3>{slot.label}</h3>
+        <SemanticOwnerMarker address={slot.marker.address} />
+        {visitMarker === undefined ? null : <SemanticOwnerMarker address={visitMarker.address} />}
+      </div>
+    </div>
+  );
+  const roomState = (
+    <div className="hub-slot-state">
+      <span className="room-kind">{slot.roomKind}</span>
+      {slot.room?.entered ? <span className="neutral-status">Entered</span> : null}
+      {visitMarker === undefined ? null : <MarkerAssessment marker={visitMarker} />}
+      {showSlotAssessment ? <MarkerAssessment marker={slot.marker} /> : null}
+    </div>
+  );
+  const roomDetails =
+    !canInspectLocalDetail || slot.room === undefined ? null : (
+      <button
+        aria-label={`Open details for ${slot.label}`}
+        className="semantic-focus-link"
+        onClick={() => dispatch(semanticOwnerFocused(slot.room!.marker.address))}
+        type="button"
+      >
+        Room details
+      </button>
+    );
 
   // A reward owner deliberately resolves to the Hub board. Keep the picker
   // closed, but bring the existing card into view so the returned destination
@@ -113,6 +141,7 @@ export function OpenHubRoomCard({
             aria-hidden="true"
             className="hub-roster-drag-handle"
             data-hub-roster-drag-handle
+            data-hub-roster-region="drag-handle"
             data-dragging={pointerDragging || undefined}
             onPointerDown={(event) => onPointerDragStarted(event, slot.hubSlotKey)}
           >
@@ -120,39 +149,36 @@ export function OpenHubRoomCard({
           </span>
         )}
         {!showOrder || onRankMove === undefined ? null : (
-          <span aria-hidden="true" className="hub-roster-rank">
+          <span aria-hidden="true" className="hub-roster-rank" data-hub-roster-region="rank">
             {visitPosition === -1 ? '—' : visitPosition + 1}
           </span>
         )}
-        <div className="hub-roster-identity">
-          <div className="hub-slot-heading">
-            <div className="owner-markers">
-              <h3>{slot.label}</h3>
-              <SemanticOwnerMarker address={slot.marker.address} />
-              {visitMarker === undefined ? null : (
-                <SemanticOwnerMarker address={visitMarker.address} />
+        {showOrder ? (
+          <>
+            <div className="hub-roster-identity" data-hub-roster-region="identity">
+              {roomHeading}
+            </div>
+            <div
+              className="hub-slot-meta hub-roster-visit-meta"
+              data-hub-roster-region="visit-meta"
+            >
+              {roomState}
+            </div>
+            <div className="hub-slot-meta hub-roster-details" data-hub-roster-region="room-details">
+              {roomDetails ?? (
+                <span aria-hidden="true" className="hub-roster-details-placeholder" />
               )}
             </div>
-          </div>
-          <div className="hub-slot-meta">
-            <div className="hub-slot-state">
-              <span className="room-kind">{slot.roomKind}</span>
-              {slot.room?.entered ? <span className="neutral-status">Entered</span> : null}
-              {visitMarker === undefined ? null : <MarkerAssessment marker={visitMarker} />}
-              {showSlotAssessment ? <MarkerAssessment marker={slot.marker} /> : null}
+          </>
+        ) : (
+          <div className="hub-roster-identity">
+            {roomHeading}
+            <div className="hub-slot-meta">
+              {roomState}
+              {roomDetails}
             </div>
-            {!canInspectLocalDetail || slot.room === undefined ? null : (
-              <button
-                aria-label={`Open details for ${slot.label}`}
-                className="semantic-focus-link"
-                onClick={() => dispatch(semanticOwnerFocused(slot.room!.marker.address))}
-                type="button"
-              >
-                Room details
-              </button>
-            )}
           </div>
-        </div>
+        )}
         {!showMembership || onMembershipTransition === undefined ? null : (
           <HubSlotMembershipControl
             interactions={interactions}

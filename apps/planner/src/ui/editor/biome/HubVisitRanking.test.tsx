@@ -112,6 +112,31 @@ describe('HubVisitRanking', () => {
     }
   });
 
+  it('publishes the same timeline roster regions for every room card', () => {
+    renderStaticHubDecisionWorkbench(representativeHubProject);
+    selectHubTab('Hub Timeline');
+
+    const expectedRegions = [
+      'drag-handle',
+      'rank',
+      'identity',
+      'visit-meta',
+      'room-details',
+      'reorder-controls',
+    ];
+    const cards = Array.from(document.querySelectorAll<HTMLElement>('.hub-open-room-card'));
+    expect(cards.length).toBeGreaterThan(1);
+
+    for (const card of cards) {
+      expect(
+        Array.from(card.querySelector('.hub-roster-primary')?.children ?? [])
+          .map((child) => child.getAttribute('data-hub-roster-region'))
+          .filter((region): region is string => region !== null),
+      ).toEqual(expectedRegions);
+      expect(card.querySelector('[data-hub-roster-region="room-details"]')).not.toBeNull();
+    }
+  });
+
   it('keeps unplanned visit owners in one compact next-visit target', () => {
     const project = twoVisitHubProject();
     renderStaticHubDecisionWorkbench(project);
