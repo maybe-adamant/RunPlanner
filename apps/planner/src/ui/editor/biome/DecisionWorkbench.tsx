@@ -215,6 +215,14 @@ function TargetRow({
             This saved door is no longer available here. Fix the earlier route first.
           </p>
         ) : null}
+        {target.rewardConsequence === undefined ? null : (
+          <p
+            className="target-reward-consequence"
+            data-consequence-kind={target.rewardConsequence.kind}
+          >
+            {target.rewardConsequence.statement}
+          </p>
+        )}
         <div className="door-reward-slot">
           <DoorRewardEditor
             door={door}
@@ -484,7 +492,7 @@ function BatchSettings({
           <CandidateSelect
             id={`${node.key}-reward-store`}
             interaction={store}
-            label="Reward Pool"
+            label={node.rewardStoreLabel ?? 'Reward Pool'}
             onReplace={(storeKey) => executeIntent(store.intentFor(storeKey))}
             placeholder="Select pool"
           />
