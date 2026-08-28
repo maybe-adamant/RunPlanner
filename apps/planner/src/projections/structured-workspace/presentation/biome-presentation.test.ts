@@ -26,6 +26,7 @@ import {
   loadSurfaceNPartialHubProject,
   loadSurfaceNOPQProject,
   nBiome,
+  nLocalOccurrenceId,
   nOccurrenceId,
   nOccurrenceIds,
   nVisitSlotKeys,
@@ -233,6 +234,18 @@ describe('structured workspace biome presentation', () => {
     expect(hub.visits.every((visit) => visit.node.inspectorPresentation === 'hubRoomLocal')).toBe(
       true,
     );
+    const combat05 = hub.visits.find(
+      (visit) => visit.node.room.occurrenceId === nOccurrenceId('combat05'),
+    );
+    if (combat05 === undefined) throw new Error('N Combat 05 Hub visit is missing');
+    expect(combat05.sideVisits.map((side) => side.node.room.occurrenceId)).toEqual([
+      nLocalOccurrenceId('combat05', 'sideDoor2'),
+      nLocalOccurrenceId('combat05', 'sideDoor1'),
+    ]);
+    expect(combat05.sideVisits.map((side) => side.label)).toEqual([
+      'Side 1 · Side Room 07',
+      'Side 2 · Side Room 02',
+    ]);
 
     const opening = biome.rail.find(
       (entry) =>

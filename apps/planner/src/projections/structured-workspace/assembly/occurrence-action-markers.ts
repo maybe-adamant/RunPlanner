@@ -15,6 +15,7 @@ export function rewardChildMarkers(control: WorkspaceRewardControl): readonly Wo
     if (trait.echoLastRunBoon !== undefined) markers.push(trait.echoLastRunBoon.marker);
     if (trait.echoLastReward !== undefined) markers.push(trait.echoLastReward.marker);
     for (const set of trait.allTogetherSets ?? []) markers.push(set.marker);
+    if (trait.naturalSelection !== undefined) markers.push(trait.naturalSelection.marker);
   }
   for (const resolution of control.levelResolutions ?? []) markers.push(resolution.marker);
   for (const conversion of control.conversions ?? []) markers.push(conversion.marker);

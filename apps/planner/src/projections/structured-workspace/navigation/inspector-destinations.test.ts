@@ -43,6 +43,7 @@ import {
   loadSurfaceNEntryFrontierProject,
   loadSurfaceNOPQProject,
   nBiome,
+  nLocalOccurrenceId,
   nOccurrenceId,
   nOccurrenceIds,
   nVisitSlotKeys,
@@ -690,12 +691,32 @@ describe('workspace inspector destinations', () => {
       .flatMap((control) => control.traitOffers ?? [])
       .find((trait) => trait.address.owner.kind === 'incomingReward');
     if (hubTrait === undefined) throw new Error('Hub main-reward trait marker is missing');
+    const hubTraitOwner = hubTrait.address.owner;
+    if (hubTraitOwner.kind !== 'incomingReward') {
+      throw new Error('Hub main-reward trait has an unexpected owner');
+    }
+    const mainVisit = hubRail.visits.find(
+      (candidate) => candidate.node.room.occurrenceId === hubTraitOwner.occurrenceId,
+    );
+    if (mainVisit === undefined) throw new Error('Hub main-reward visit is missing');
     expect(destination(complete, hubTrait.address)).toMatchObject({
-      hubTab: 'overview',
-      inspectorSubject: { kind: 'node', nodeKey: hub.key },
+      roomTab: 'actions',
+      inspectorSubject: { kind: 'node', nodeKey: mainVisit.node.key },
       ownerAddress: hubTrait.address,
-      selectedRailKey: hubRail.marker.focusKey,
+      selectedRailKey: mainVisit.marker.focusKey,
       traitDialogTarget: hubTrait.address,
+    });
+    if (mainVisit.node.room.roomLocal.kind !== 'incomingReward') {
+      throw new Error('Hub main-reward incoming control is missing');
+    }
+    const mainConversion = mainVisit.node.room.roomLocal.control.conversions?.[0];
+    if (mainConversion === undefined)
+      throw new Error('Hub main-reward conversion marker is missing');
+    expect(destination(complete, mainConversion.address)).toMatchObject({
+      roomTab: 'actions',
+      inspectorSubject: { kind: 'node', nodeKey: mainVisit.node.key },
+      ownerAddress: mainConversion.address,
+      selectedRailKey: mainVisit.marker.focusKey,
     });
 
     const sideRoom = createLocalVisitSlotAddress(
@@ -704,13 +725,56 @@ describe('workspace inspector destinations', () => {
       'sideRooms',
       'sideDoor1',
     );
-    const sideVisit = hubRail.visits.find(
+    const sideVisit = hubRail.visits
+      .flatMap((candidate) => candidate.sideVisits)
+      .find(
+        (candidate) =>
+          candidate.node.room.occurrenceId === nLocalOccurrenceId('combat05', 'sideDoor1'),
+      );
+    if (sideVisit === undefined) throw new Error('N Combat 05 side visit is missing');
+    const sideParentVisit = hubRail.visits.find(
       (candidate) => candidate.node.room.occurrenceId === nOccurrenceId('combat05'),
     );
-    if (sideVisit === undefined) throw new Error('N Combat 05 Hub visit is missing');
+    if (sideParentVisit === undefined) throw new Error('N Combat 05 Hub visit is missing');
     expect(destination(complete, sideRoom)).toMatchObject({
-      inspectorSubject: { kind: 'node', nodeKey: hub.key },
-      selectedRailKey: hubRail.marker.focusKey,
+      roomTab: 'overview',
+      inspectorSubject: { kind: 'node', nodeKey: sideParentVisit.node.key },
+      selectedRailKey: sideParentVisit.marker.focusKey,
+    });
+    expect(destination(complete, sideVisit.node.room.marker.address)).toMatchObject({
+      roomTab: 'actions',
+      inspectorSubject: { kind: 'node', nodeKey: sideVisit.node.key },
+      selectedRailKey: sideVisit.marker.focusKey,
+    });
+
+    const sideReward = createIncomingRewardAddress(
+      nBiome,
+      nLocalOccurrenceId('combat05', 'sideDoor1'),
+    );
+    const sideProject = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: sideReward,
+      value: { rewardType: 'StackUpgrade' },
+    });
+    const sideWorkspace = project(sideProject);
+    const sideBiome = biome(sideWorkspace, 'N');
+    const sideRail = sideBiome.rail.find(
+      (entry): entry is Extract<(typeof sideBiome.rail)[number], { readonly kind: 'hubGroup' }> =>
+        entry.kind === 'hubGroup',
+    );
+    const sideRailEntry = sideRail?.visits
+      .flatMap((candidate) => candidate.sideVisits)
+      .find((candidate) => candidate.node.room.occurrenceId === sideReward.occurrenceId);
+    if (sideRailEntry === undefined) throw new Error('N side-reward rail entry is missing');
+    if (sideRailEntry.node.room.roomLocal.kind !== 'incomingReward') {
+      throw new Error('N side-reward incoming control is missing');
+    }
+    const sideLevel = sideRailEntry.node.room.roomLocal.control.levelResolutions?.[0];
+    if (sideLevel === undefined) throw new Error('N side-reward level resolution is missing');
+    expect(destination(sideWorkspace, sideLevel.address)).toMatchObject({
+      roomTab: 'actions',
+      inspectorSubject: { kind: 'node', nodeKey: sideRailEntry.node.key },
+      selectedRailKey: sideRailEntry.marker.focusKey,
     });
 
     const handoffOwner = createExitDecisionAddress(nBiome, {
