@@ -265,7 +265,7 @@ describe('Aromatic Phial fountain lifecycle', () => {
     expect(f.rewards.branches[0]?.keepsakes.phial).toEqual({ status: 'consumed' });
   });
 
-  it('emits the automatic Postboss fountain lifecycle event after room creation', () => {
+  it('emits the fixed-linked Postboss fountain lifecycle event after room creation', () => {
     const postbossId = createOccurrenceId('golden-f-preboss-shop:postboss');
     let project = createCompleteFGProject();
     project = applyProjectCommand(project, catalog, {
@@ -290,7 +290,7 @@ describe('Aromatic Phial fountain lifecycle', () => {
       .find((route) => route.routeKey === 'Underworld')
       ?.biomes.find((biomeEvaluation) => biomeEvaluation.biomeKey === 'F');
     if (f === undefined || f.authoring !== 'complete' || f.validity !== 'valid')
-      throw new Error('expected valid automatic Postboss evaluation');
+      throw new Error('expected valid fixed-linked Postboss evaluation');
     const postbossEvents = f.history.events.filter(
       (event) =>
         event.kind === 'fountainUsed' &&

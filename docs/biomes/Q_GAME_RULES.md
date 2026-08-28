@@ -22,7 +22,8 @@ data, encounter data, `RunLogic.lua`, and `RoomLogic.lua` on 2026-07-18.
 - `Q_PreBoss01` is a width-one atomic takeover Preboss at the declared final
   frontier. It owns a single Q World Shop occurrence and has no remaining free
   offer.
-- Selecting the Preboss begins the `Q_Boss01` completion tail.
+- Selecting the Preboss creates the ordinary `Q_Boss01` occurrence through a
+  fixed link. Q has no modeled Postboss at route position four.
 
 The width-one rule is physical: Q does not create an unpicked peer and does
 not need a second offer owner. The Preboss occurrence is real authored state
@@ -69,7 +70,8 @@ collapsed into a generic combat-reward UI state.
 After the second miniboss stage, `Q_PreBoss01` takes over the final one
 physical normal exit. Its width-one batch has only the entry-time `Q_WorldShop`
 occurrence and no synthetic free reward. Selecting that occurrence closes the
-editable Q body and starts the derived `Q_Boss01` completion declaration.
+editable Q body and creates the ordinary `Q_Boss01` occurrence through its
+fixed link.
 
 `Q_WorldShop` filters its option entries from the entered-biome history at
 entry: `enteredBiomes <= 2` admits first-half entries and `enteredBiomes >= 3`

@@ -356,9 +356,9 @@ edit makes the substitution no longer apply.
 
 ### Keepsake Products
 
-Route Settings projects the mandatory starting selection, and each automatic
+Route Settings projects the mandatory starting selection, and each fixed
 Postboss occurrence with a declared rack projects its retain-or-replace
-selection, including at the configured route tail. Immediate Jeweled Pom and
+selection at every supported nonterminal route position. Immediate Jeweled Pom and
 Experimental Hammer results appear beneath that exact selection.
 Calling Card actions remain on trait-offer rows, Time Piece conversions remain
 on acquisition roles, and Fig Leaf plus Gorgon controls remain on exact
@@ -574,7 +574,7 @@ For F/G/H/I/O/P/Q, the center region presents a concise decision-point rail:
 - the active continuation frontier;
 - retained downstream structure after an invalid upstream edit;
 - a layout-owned Preboss stage where it is distinct from an ordinary decision;
-- layout-fixed automatic Boss/Postboss occurrences in their declared order.
+- realized fixed Boss/Postboss occurrences in their declared order.
 
 The rail is not a freeform graph. Its visual position is derived from semantic
 topology and never persisted.
@@ -967,12 +967,12 @@ destination, and a lazy engine-backed domain loader; it does not expose the
 Arcana/Fear ledger. Red, Lapis, and Black Night differ only in the engine
 domain product rendered by the shared trait surface. Switching a draft option
 updates this child in the existing dialog, while dormant detail remains owned
-by authored state. A reached derived Boss completion renders its engine-owned
+by authored state. A reached fixed-linked Boss occurrence renders its engine-owned
 fixed lifecycle timeline: `Room entered -> Start encounter -> Boss defeated ->
 End encounter -> [Steady Growth, when reached] -> Cleanup · Doors open`.
 Judgment, when active, is attached to
 the exact `Boss defeated` seam and launches its child control from the existing
-completion address. It is not a room occurrence, Room Action, or route-settings
+completion address. It is an ordinary topology occurrence, not a route-settings
 substitute. Postboss uses the same Room Timeline visual language without combat
 boundaries; its active nonfinal roster contains required `Use fountain` and
 optional `Choose keepsake` when replacing. The rack may move on either side of

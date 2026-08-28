@@ -33,19 +33,19 @@ sources are:
 The disposition vocabulary is defined by `../design/CATALOG_MODEL.md`; implementation
 coverage is defined by `../progress/MIGRATION_PROVENANCE.md`.
 
-| Feature                                      | Verified game behavior                                                                                                    | Disposition and planner projection                                                                     | Implementation status | Reconsider when                                            |
-| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ | --------------------- | ---------------------------------------------------------- |
-| Generated decisions                          | F uses sequential physical doors, forced pools, and repeatable unpicked room creations                                    | **Exact:** standard generated batches with distinct Room Occurrences                                   | implemented           | --                                                         |
-| Opening baseline                             | `F_Opening01..03` use counting `OpeningGeneratedF` and forced RunProgress in the progressed-save route                    | **Exact:** one counting opening encounter and its resolved reward offer                                | implemented           | --                                                         |
-| Progression encounter variants               | `OpeningEmpty`, `FCastTutorialFight`, and `FIntroFight` depend on persistent progression                                  | **Excluded:** absent from the progressed-save baseline                                                 | documented boundary   | Save-profile state becomes a project input                 |
-| Ordinary combat identity                     | Maps choose internal enemy waves while each supported combat has its relevant room and counter effects                    | **Simplified:** preserve concrete room identity and encounter-depth effect, not enemy-wave composition | implemented           | Combat composition becomes an authored or validated output |
-| Room eligibility and force                   | Concrete current-run counters, caps, predecessor-exit requirements, mutual exclusion, and force windows govern candidates | **Exact:** declaration-owned predicates evaluated from history                                         | implemented           | --                                                         |
-| Reward-store selection                       | F targets MetaProgress ratio `0.315` with adjustment speed `10`                                                           | **Simplified:** preserve only possible and forced RunProgress/MetaProgress support                     | implemented           | Probability analysis or exact RNG replay is introduced     |
-| Incoming rewards and shops                   | Openings, `F_Combat01`, minibosses, and preboss force RunProgress; other producers retain concrete filters and shops      | **Exact:** occurrence reward state plus declaration-owned overrides                                    | implemented           | --                                                         |
-| Natural Chaos                                | Declared F sources may expose one optional Chaos sibling beside normal doors                                              | **Exact:** map domain/default, preceding-ten offer spacing, fixed Chaos room, fresh ordinary return    | implemented           | --                                                         |
-| Takeover Preboss                             | `F_PreBoss01` takes over every physical predecessor exit; exit 1 is Shop and a later exit, when present, is a free reward | **Exact:** one declaration-owned takeover batch with one occurrence per physical exit                  | implemented           | --                                                         |
-| Fixed boss and postboss tail                 | `F_PreBoss01` leads through one mutually exclusive Hecate variant and then `F_PostBoss01`                                 | **Exact:** layout-derived `F_Boss01` then `F_PostBoss01` under the neutral difficulty baseline         | implemented           | User-selected difficulty becomes a project input           |
-| Story, Fountain, and other progression gates | Dialogue, world upgrades, and persistent progression alter availability                                                   | **Excluded:** progressed-save baseline retains current-run rules only                                  | documented boundary   | Save-profile state becomes a project input                 |
+| Feature                                      | Verified game behavior                                                                                                    | Disposition and planner projection                                                                                                                                    | Implementation status | Reconsider when                                            |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------- | ---------------------------------------------------------- |
+| Generated decisions                          | F uses sequential physical doors, forced pools, and repeatable unpicked room creations                                    | **Exact:** standard generated batches with distinct Room Occurrences                                                                                                  | implemented           | --                                                         |
+| Opening baseline                             | `F_Opening01..03` use counting `OpeningGeneratedF` and forced RunProgress in the progressed-save route                    | **Exact:** one counting opening encounter and its resolved reward offer                                                                                               | implemented           | --                                                         |
+| Progression encounter variants               | `OpeningEmpty`, `FCastTutorialFight`, and `FIntroFight` depend on persistent progression                                  | **Excluded:** absent from the progressed-save baseline                                                                                                                | documented boundary   | Save-profile state becomes a project input                 |
+| Ordinary combat identity                     | Maps choose internal enemy waves while each supported combat has its relevant room and counter effects                    | **Simplified:** preserve concrete room identity and encounter-depth effect, not enemy-wave composition                                                                | implemented           | Combat composition becomes an authored or validated output |
+| Room eligibility and force                   | Concrete current-run counters, caps, predecessor-exit requirements, mutual exclusion, and force windows govern candidates | **Exact:** declaration-owned predicates evaluated from history                                                                                                        | implemented           | --                                                         |
+| Reward-store selection                       | F targets MetaProgress ratio `0.315` with adjustment speed `10`                                                           | **Simplified:** preserve only possible and forced RunProgress/MetaProgress support                                                                                    | implemented           | Probability analysis or exact RNG replay is introduced     |
+| Incoming rewards and shops                   | Openings, `F_Combat01`, minibosses, and preboss force RunProgress; other producers retain concrete filters and shops      | **Exact:** occurrence reward state plus declaration-owned overrides                                                                                                   | implemented           | --                                                         |
+| Natural Chaos                                | Declared F sources may expose one optional Chaos sibling beside normal doors                                              | **Exact:** map domain/default, preceding-ten offer spacing, fixed Chaos room, fresh ordinary return                                                                   | implemented           | --                                                         |
+| Takeover Preboss                             | `F_PreBoss01` takes over every physical predecessor exit; exit 1 is Shop and a later exit, when present, is a free reward | **Exact:** one declaration-owned takeover batch with one occurrence per physical exit                                                                                 | implemented           | --                                                         |
+| Fixed boss and postboss rooms                | `F_PreBoss01` leads through one mutually exclusive Hecate variant and then `F_PostBoss01`                                 | **Exact:** selecting the Preboss creates ordinary `F_Boss01` then route-position `F_PostBoss01` occurrences through fixed links under the neutral difficulty baseline | implemented           | User-selected difficulty becomes a project input           |
+| Story, Fountain, and other progression gates | Dialogue, world upgrades, and persistent progression alter availability                                                   | **Excluded:** progressed-save baseline retains current-run rules only                                                                                                 | documented boundary   | Save-profile state becomes a project input                 |
 
 ## Layout
 
@@ -179,12 +179,12 @@ exit 2 -> F_PreBoss01 with free RunProgress reward, when present
 The free reward excludes `Devotion` and `RoomMoneyDrop`. Because no supported F
 predecessor has more than two exits, F's maximum free-reward capacity is one.
 Each target is a distinct occurrence of the same concrete room declaration.
-The selected Preboss occurrence closes editable traversal and enters the
-layout-derived boss/postboss completion tail.
+The selected Preboss occurrence closes editable traversal and creates the
+ordinary Boss and route-position Postboss occurrences through fixed links.
 
-## Fixed Boss and Postboss Tail
+## Fixed Boss and Postboss Rooms
 
-F completes through the layout-derived sequence `F_Boss01` then
+F completes through the fixed-link sequence `F_Boss01` then
 `F_PostBoss01`. `F_Boss02` is the mutually exclusive user-difficulty variant
 and remains excluded under the neutral baseline. Automatic Mixer and
 weapon-dependent boss drops are intentionally outside the modeled reward
@@ -194,15 +194,15 @@ binds shared `Empty`, with no modeled reward or store contribution, before the
 route enters `G_Intro`. The raw `Story_Chronos_01` binding is a progression-event
 carrier over `Empty` and remains outside the static planner baseline.
 
-Both rooms are derived Room Declarations referenced by the layout completion
-sequence. They are not generated candidates, authored topology, or editor
+Both rooms are ordinary Room Declarations referenced by the fixed topology
+links. They are not generated candidates, authored topology choices, or editor
 controls.
 
 ## Current Product Boundary
 
 F editable-room declarations, authored topology, semantic commands, and editor
 projection exist. Complete topology now materializes one canonical F snapshot,
-including the layout-derived `F_Boss01`/`F_PostBoss01` completion sequence.
+including the fixed-link `F_Boss01`/`F_PostBoss01` completion sequence.
 The picked spine now composes into canonical lifecycle history with sequential
 peer creation, timing-specific counter/store ledgers, completion-room history,
 and declared biome-local resets. F room-generation legality now validates

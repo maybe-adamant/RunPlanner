@@ -289,7 +289,7 @@ describe('workspace inspector defaults', () => {
     const postboss = complete.nodes.find(
       (node) => node.kind === 'occurrenceWorkbench' && node.room.kind === 'PostBoss',
     );
-    if (postboss === undefined) throw new Error('complete N automatic Postboss is missing');
+    if (postboss === undefined) throw new Error('complete N fixed-linked Postboss is missing');
     expectNode(complete.defaultInspectorDestination, postboss.key);
     expect(complete.defaultInspectorDestination?.selectedRailKey).toBeUndefined();
   });
@@ -345,7 +345,7 @@ describe('workspace inspector defaults', () => {
     );
 
     const completion = complete.completionOutline[0];
-    if (completion === undefined) throw new Error('complete F automatic occurrence is missing');
+    if (completion === undefined) throw new Error('complete F fixed-linked occurrence is missing');
     expectNode(
       defaultInspectorDestination({ frontier: null, nodes: [completion], rail: [] }),
       completion.key,

@@ -140,9 +140,9 @@ offer, and any exact pickup timing while omitting player-facing Start encounter
 and End encounter boundaries. This same rule applies to all `nonCombat` phase
 kinds. Only `combat`, `miniboss`, and `boss` phase kinds render a combat spine.
 
-#### Automatic Boss/Postboss occurrences and Judgment
+#### Boss/Postboss occurrences and Judgment
 
-The automatic Boss occurrence has the fixed `BossRoom` lifecycle. Its player-facing timeline is `Room
+The fixed Boss occurrence has the `BossRoom` lifecycle. Its player-facing timeline is `Room
 entered -> Start encounter -> Boss defeated -> End encounter -> Cleanup · Doors
 open`. `Boss defeated` is an exact derived seam before generic encounter-end
 effects. When Judgment is active, it is one engine-owned fixed effect at that
@@ -152,19 +152,19 @@ and semantic command. End encounter remains the later seam for post-encounter
 delivery. A reached Steady Growth threshold then settles after End encounter
 and before Cleanup.
 
-The automatic Postboss occurrence uses the same timeline presentation without a
+The fixed Postboss occurrence uses the same timeline presentation without a
 combat interval. Its active shape is `Room entered -> ranked actions
 -> Cleanup · Doors open`: `Use fountain` is required and a replacement's
 `Choose keepsake` rack action is required when a replacement is selected. The rack may be ordered before or
-after the fountain; Cleanup follows the last required action. The automatic
-occurrence lifecycle still runs its noncombat entry sequence after `roomEntered`
+after the fountain; Cleanup follows the last required action. The occurrence
+lifecycle still runs its noncombat entry sequence after `roomEntered`
 and before the first ranked player action, but those internal boundaries are
 not rendered as encounter rows. The action roster and exact occurrence owner
 carry the persisted order, immediate equip result, findings, and history.
 
 These interactions emit exact ranked-action events. `fountainUsed` carries a
 `RoomActionSemanticAddress`: an ordinary Reprieve event is owned by that
-occurrence, while a Postboss event is owned by its automatic occurrence action address.
+occurrence, while a Postboss event is owned by its occurrence action address.
 `keepsakeRackUsed` carries the same `RoomActionSemanticAddress` and is emitted only
 by the active Postboss rack action. The event owners are the same semantic
 owners consumed by the Room Action roster and history fold; neither event is
@@ -417,9 +417,9 @@ profile determines when it can run.
 
 `RoomLifecycleEvent`
 : One immutable room-addressed fact emitted after an effect is applied.
-Authored and automatic rooms use their occurrence address. Events are folded into ledgers and
-retained as ordering evidence. An operation may emit zero, one, or several
-events.
+Authored and fixed-linked rooms use their occurrence address. Events are
+folded into ledgers and retained as ordering evidence. An operation may emit
+zero, one, or several events.
 
 `RoomHistoryFragment`
 : The concrete room-addressed event sequence produced by executing one
@@ -442,8 +442,8 @@ predecessor's outgoing-generation state.
 : The state after every supported local acquisition and exit effect has run. It
 is threaded into the already-generated picked target's preparation.
 
-`Automatic Postboss action`
-: A ranked action owned by an automatic Postboss occurrence. `Use fountain` is
+`Postboss action`
+: A ranked action owned by a fixed Postboss occurrence. `Use fountain` is
 required; `Choose keepsake` is the required rack interaction created by a
 replacement. Its position determines which equipped keepsake and fountain
 effects later actions observe.
@@ -469,7 +469,7 @@ The editor must not persist lifecycle operations or history snapshots.
 
 ### Postboss Keepsake Ordering
 
-The route enters each automatic Postboss occurrence with the keepsake used for the Boss.
+The route enters each fixed Postboss occurrence with the keepsake used for the Boss.
 Boss Judgment therefore observes the old keepsake. The occurrence roster contains required
 `Use fountain`; a replacement also contributes optional `Choose keepsake`.
 The authored order may place the rack before or after the fountain. Immediate
@@ -482,8 +482,9 @@ fixed lifecycle seam. A declaration-owned physical rack publishes authoring
 capability even when no action exists. Only a selected replacement creates the
 occurrence-owned ranked action and `keepsakeRackUsed` event. Changing the
 selection preserves its ranked position and dormant equip detail; deleting it
-removes the action and complete leaf-owned subtree. Final-tail Postboss
-interactions remain active.
+removes the action and complete leaf-owned subtree. Postboss features exist
+only when the route-position table supplies a Postboss occurrence; terminal I/Q
+endings do not expose this Postboss interaction set in the supported topology.
 
 ## Closed Operation Vocabulary
 
@@ -841,7 +842,7 @@ convenience because their visible identities affect outgoing generation.
 Well purchases settle immediately as paid effects and never invoke free-pickup
 alternatives. A Shrine purchase instead either rushes into a required same-room
 pickup at that one action rank or derives a later required pickup at the
-reached encounter-end host. Automatic Boss occurrences are ordinary later
+reached encounter-end host. Fixed Boss occurrences are ordinary later
 delivery hosts. No feature owns a private purchase order or a completion-only
 settlement path.
 
@@ -946,8 +947,8 @@ acquisition fold or Artificer-private order.
 ### Preboss and Persistent Structures
 
 A selected Preboss completes its declaration-owned normal-door batch, enters
-through its normal room lifecycle, and then begins the layout-owned completion
-sequence. A persistent Hub may generate a stable board once and later emit
+through its normal room lifecycle, and then follows its fixed Boss/Postboss
+links. A persistent Hub may generate a stable board once and later emit
 restore fragments. Those are structural compositions of room-addressed
 fragments, not reasons to weaken the ordering contract or introduce UI-shaped
 rows into history.
@@ -1035,9 +1036,9 @@ confirms the already-zero state.
 
 ### Biome Transition Resets
 
-Biome-local resets occur after the declared completion sequence at the layout
-transition boundary. They are not `exitRoom` defaults and are not repeated by
-every room profile. The next biome starts from the reset state plus any
+Biome-local resets occur after the fixed-linked Boss/Postboss sequence at the
+layout transition boundary. They are not `exitRoom` defaults and are not
+repeated by every room profile. The next biome starts from the reset state plus any
 route-wide history retained by its declared transition policy.
 
 The initial closed transition vocabulary is one ordered `resetCounter` effect

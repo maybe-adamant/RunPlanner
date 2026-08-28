@@ -72,7 +72,7 @@ export interface RoomTargetCandidateArtifacts {
   readonly at: (target: TargetAddress) => RoomTargetCandidateContext | undefined;
 }
 
-/** Atomic exact-set support captured immediately before one automatic Boss effect. */
+/** Atomic exact-set support captured immediately before one fixed Boss effect. */
 export interface JudgmentArcanaCandidateCapability {
   readonly inactiveArcanaKeys: readonly string[];
   readonly requiredCount: number;
@@ -853,7 +853,7 @@ export function createProjectCandidateArtifacts(
     }
     privateBiomes.set(key, biome);
     // A Postboss artifact is produced by the one reward walk that reaches its
-    // physical automatic room. Duplicate publication would be a chronology bug.
+    // fixed-linked occurrence. Duplicate publication would be a chronology bug.
     for (const [selectionKey, capability] of biome.keepsakeSelections.entries()) {
       if (keepsakeSelections.has(selectionKey))
         throw new CandidateArtifactContractError(

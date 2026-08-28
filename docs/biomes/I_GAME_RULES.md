@@ -22,7 +22,9 @@ data, encounter data, `RunLogic.lua`, and `RoomLogic.lua` on 2026-07-18.
 - `I_PreBoss02` uses the `retainNormalPeers` policy. It can appear once in an
   ordinary batch beside normal room occurrences; it does not take over the
   physical exits or create a synthetic free-reward peer.
-- The selected I Preboss begins the `I_Boss01`, `I_PostBoss01` completion tail.
+- Selecting the I Preboss creates the ordinary `I_Boss01` occurrence through a
+  fixed link. I has no modeled Postboss at route position four; the physical
+  `I_PostBoss01` ending sequence is outside the supported planner topology.
 
 I has no over-bound terminal takeover envelope. Its Preboss remains an
 ordinary per-target retained peer, evaluated with ordinary candidates and
@@ -59,10 +61,11 @@ eligible support, and physical exit keys remain catalog facts; the authored
 project stores only occurrences, decisions, selected exits, and owned leaves.
 
 The planner models possible and forced support, capped candidate creation,
-complete offer defaults, concrete encounter selection, and the fixed completion
-tail. It deliberately omits weighted RNG, combat-wave composition, NPC events
-and interactions beyond selected combat, natural Chaos, anomalies, and optional
-player interactions from the canonical baseline.
+complete offer defaults, concrete encounter selection, and the I Boss-only
+completion through its fixed Boss link. It deliberately omits weighted RNG,
+combat-wave composition, NPC events and interactions beyond selected combat,
+natural Chaos, anomalies, and optional player interactions from the canonical
+baseline.
 
 ### Clockwork state and physical capacity
 
@@ -116,6 +119,7 @@ entry. It never rewrites the batch into a synthetic Shop/free pair.
 
 The thirteen-batch and twenty-three-target bounds cover five Goals, up to six
 non-goals, an optional entered Story, and the selected Preboss under the
-physical exit constraints. `I_Boss01` and `I_PostBoss01` remain derived
-completion declarations; automatic boss drops and persistent-save variants
-remain out of the canonical modeled reward surface.
+physical exit constraints. `I_Boss01` is an ordinary declaration created in
+topology through the fixed Preboss link. The physical `I_PostBoss01` ending
+sequence is outside the supported topology; automatic boss drops and
+persistent-save variants remain out of the canonical modeled reward surface.

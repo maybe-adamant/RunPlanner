@@ -1,19 +1,40 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 
 import { migrateProjectDocument } from './migrate-project.js';
 
-function checkpoint(name) {
-  return JSON.parse(
-    readFileSync(
-      new URL(
-        `../test/fixtures/authored-project/checkpoints/${name}.runplanner.json`,
-        import.meta.url,
-      ),
-      'utf8',
-    ),
-  );
+function schema67CompletionSource(routeKey, biomeKeys, resourcePlacements = {}) {
+  return {
+    schemaVersion: 67,
+    projectId: `schema-67-${routeKey.toLowerCase()}`,
+    catalogVersion: '0.48.0-hex-talent-layouts',
+    routes: [
+      {
+        routeKey,
+        resourcePlacements,
+        biomes: biomeKeys.map((biomeKey) => ({
+          biomeKey,
+          topology: {
+            startOccurrenceId: `${biomeKey.toLowerCase()}-preboss`,
+            occurrences: [
+              {
+                occurrenceId: `${biomeKey.toLowerCase()}-preboss`,
+                gameName: `${biomeKey}_PreBoss01`,
+              },
+            ],
+            decisions: [],
+          },
+          completionOccurrences: [
+            { occurrenceId: `completion:${biomeKey}:boss`, gameName: `${biomeKey}_Boss01` },
+            {
+              occurrenceId: `completion:${biomeKey}:postboss`,
+              gameName: `${biomeKey}_PostBoss01`,
+            },
+          ],
+        })),
+      },
+    ],
+  };
 }
 
 function schema49Project() {
@@ -878,8 +899,10 @@ test('58 -> 59 rejects a document from the wrong prior catalog', () => {
   );
 });
 
-test('67 -> 68 moves the real Surface resources tail and rewrites its placement', () => {
-  const source = checkpoint('surface-n-resources');
+test('67 -> 68 moves a Surface completion chain and rewrites its resource placement', () => {
+  const source = schema67CompletionSource('Surface', ['N'], {
+    Shovel: { biomeKey: 'N', occurrenceId: 'completion:N:postboss' },
+  });
   const result = migrateProjectDocument(source);
   const route = result.document.routes.find((candidate) => candidate.routeKey === 'Surface');
   const biome = route.biomes.find((candidate) => candidate.biomeKey === 'N');
@@ -893,11 +916,11 @@ test('67 -> 68 moves the real Surface resources tail and rewrites its placement'
   assert.deepEqual(
     completion.map((occurrence) => [occurrence.occurrenceId, occurrence.gameName]),
     [
-      ['surface-n-preboss:boss', 'N_Boss01'],
-      ['surface-n-preboss:postboss', 'N_PostBoss01'],
+      ['n-preboss:boss', 'N_Boss01'],
+      ['n-preboss:postboss', 'N_PostBoss01'],
     ],
   );
-  assert.equal(route.resourcePlacements.Shovel.occurrenceId, 'surface-n-preboss:postboss');
+  assert.equal(route.resourcePlacements.Shovel.occurrenceId, 'n-preboss:postboss');
   assert.deepEqual(result.changes['67->68'], {
     completionOccurrencesMoved: 2,
     completionOccurrencesRetired: 0,
@@ -910,12 +933,9 @@ test('67 -> 68 moves the real Surface resources tail and rewrites its placement'
 });
 
 test('67 -> 68 retires a terminal Postboss and clears its resource placement', () => {
-  const source = checkpoint('underworld-fghi');
-  const route = source.routes.find((candidate) => candidate.routeKey === 'Underworld');
-  route.resourcePlacements.Pickaxe = {
-    biomeKey: 'I',
-    occurrenceId: 'completion:I:postboss',
-  };
+  const source = schema67CompletionSource('Underworld', ['F', 'G', 'H', 'I'], {
+    Pickaxe: { biomeKey: 'I', occurrenceId: 'completion:I:postboss' },
+  });
 
   const result = migrateProjectDocument(source);
   const biome = routeFor(result.document, 'Underworld').biomes.find(

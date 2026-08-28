@@ -85,7 +85,7 @@ completed-Hub frontier:
 complete HubDecision
   -> completed-Hub exit `preboss`
   -> fixed width-one N_PreBoss01 takeover batch
-  -> N_Boss01 -> N_PostBoss01
+  -> N_Boss01 -> N_PostBoss01 through fixed links
 ```
 
 The handoff remains sourced by `{ kind: 'hubDecision', decisionKey: 'hub' }`.
@@ -113,7 +113,8 @@ or make `N_PreBoss01` an occurrence-sourced candidate.
   completed-Hub exit.
   Its persisted source is `{ kind: 'hubDecision', decisionKey: 'hub' }` and
   it creates the fixed width-one `N_PreBoss01` Shop occurrence.
-- Selecting that Preboss starts the `N_Boss01`, `N_PostBoss01` completion tail.
+- Selecting that Preboss creates the ordinary `N_Boss01` and route-position
+  `N_PostBoss01` occurrences through fixed links.
 
 This is a completed-Hub handoff, not the PreHub-owned terminal envelope or a
 Door 1 room choice. The Hub's completion predicate remains the sole authority

@@ -606,7 +606,7 @@ describe('schema-54 occurrence-owned encounter persistence', () => {
     const completion = (
       (biome(document, 'Underworld', 'F').topology as JsonRecord).occurrences as JsonRecord[]
     ).find((candidate) => candidate.occurrenceId === boss.occurrenceId);
-    if (completion === undefined) throw new Error('missing automatic Boss completion');
+    if (completion === undefined) throw new Error('missing fixed Boss completion');
     expect((completion.encounters as JsonRecord).figurineArcanaKeysByPhase).toEqual({
       Encounter: ['CastCount', 'CardDraw'],
     });
@@ -616,7 +616,7 @@ describe('schema-54 occurrence-owned encounter persistence', () => {
     const duplicateCompletion = (
       (biome(duplicate, 'Underworld', 'F').topology as JsonRecord).occurrences as JsonRecord[]
     ).find((candidate) => candidate.occurrenceId === boss.occurrenceId);
-    if (duplicateCompletion === undefined) throw new Error('missing automatic Boss completion');
+    if (duplicateCompletion === undefined) throw new Error('missing fixed Boss completion');
     const encounters = duplicateCompletion.encounters as JsonRecord;
     (encounters.figurineArcanaKeysByPhase as JsonRecord).Encounter = ['CardDraw', 'CardDraw'];
     expect(() => decodeProjectDocument(duplicate, catalog)).toThrow(

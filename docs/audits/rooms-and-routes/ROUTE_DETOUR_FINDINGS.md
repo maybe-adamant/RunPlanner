@@ -63,7 +63,7 @@ The current authored topology has:
 - `HubDecision` for Ephyra;
 - one selection among the normal targets and declared additional exits of a
   realized `ExitDecision`;
-- derived biome completion after a selected Preboss.
+- fixed-linked Boss/Postboss completion after a selected Preboss.
 
 `ExitDecision.normal` owns normal exits, while declaration-owned additional
 exits represent natural Chaos, Spark forced Chaos, and the Zagreus contract.

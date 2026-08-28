@@ -320,7 +320,7 @@ describe('canonical N Hub materialization', () => {
     ]);
   });
 
-  it('materializes the completed-Hub handoff and declaration-fixed automatic occurrences', () => {
+  it('materializes the completed-Hub handoff and declaration-fixed occurrences', () => {
     const { biome } = completeN();
     const handoff = biome.snapshot.decisions.at(-1);
 

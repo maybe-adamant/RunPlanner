@@ -112,7 +112,7 @@ export interface WorkspaceBiomeSource {
   readonly acquisitionConversionCandidate: (
     owner: AcquisitionRoleAddress,
   ) => AcquisitionConversionCandidateCapability | undefined;
-  /** Exact post-encounter Pool generation assessment for one automatic Postboss room. */
+  /** Exact post-encounter Pool generation assessment for one fixed Postboss room. */
   readonly purgingPoolAssessment: (
     owner: OccurrenceAddress,
   ) => import('@run-planner/engine/simulation').PurgingPoolCandidateCapability | undefined;

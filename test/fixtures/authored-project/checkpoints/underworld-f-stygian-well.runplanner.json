@@ -1,7 +1,7 @@
 {
-  "schemaVersion": 67,
+  "schemaVersion": 68,
   "projectId": "golden-fg",
-  "catalogVersion": "0.48.0-hex-talent-layouts",
+  "catalogVersion": "0.49.0-completion-topology",
   "routes": [
     {
       "routeKey": "Underworld",
@@ -1084,6 +1084,80 @@
                   ]
                 },
                 "additionalExits": []
+              },
+              {
+                "occurrenceId": "golden-f-preboss-shop:boss",
+                "gameName": "F_Boss01",
+                "state": {
+                  "kind": "none"
+                },
+                "encounters": {
+                  "encounterKeyByPhase": {},
+                  "figLeafSkipByPhase": {
+                    "Encounter": false
+                  },
+                  "gorgonResultByPhase": {}
+                },
+                "roomActions": {
+                  "order": []
+                },
+                "additionalExits": []
+              },
+              {
+                "occurrenceId": "golden-f-preboss-shop:postboss",
+                "gameName": "F_PostBoss01",
+                "state": {
+                  "kind": "none"
+                },
+                "encounters": {
+                  "encounterKeyByPhase": {},
+                  "figLeafSkipByPhase": {
+                    "Encounter": false
+                  },
+                  "gorgonResultByPhase": {}
+                },
+                "roomActions": {
+                  "order": [
+                    {
+                      "kind": "useFountain"
+                    },
+                    {
+                      "kind": "purchaseStygianWellOffer",
+                      "generationKey": "initial:secondLeft"
+                    },
+                    {
+                      "kind": "purchaseStygianWellOffer",
+                      "generationKey": "initial:secondRight"
+                    },
+                    {
+                      "kind": "purchaseStygianWellOffer",
+                      "generationKey": "travelDealRefill"
+                    }
+                  ]
+                },
+                "stygianWell": {
+                  "interacted": true,
+                  "offerKeyBySlot": {
+                    "healing": "ArmorBoostStore",
+                    "secondLeft": "TemporaryBoonRarityTrait",
+                    "secondRight": "LimitedSwapTraitDrop"
+                  },
+                  "travelDealRefillKey": "ExtendedShopTrait",
+                  "purchasedGenerationKeys": [
+                    "initial:secondLeft",
+                    "initial:secondRight",
+                    "travelDealRefill"
+                  ]
+                },
+                "purgingPool": {
+                  "interacted": false,
+                  "traitKeyBySlot": {
+                    "left": "ApolloWeaponBoon",
+                    "middle": "HeraCastBoon",
+                    "right": "ZeusSpecialBoon"
+                  }
+                },
+                "additionalExits": []
               }
             ],
             "decisions": [
@@ -1396,84 +1470,18 @@
                   "exitKey": "exit1"
                 }
               }
+            ],
+            "fixedRoomLinks": [
+              {
+                "sourceOccurrenceId": "golden-f-preboss-shop",
+                "targetOccurrenceId": "golden-f-preboss-shop:boss"
+              },
+              {
+                "sourceOccurrenceId": "golden-f-preboss-shop:boss",
+                "targetOccurrenceId": "golden-f-preboss-shop:postboss"
+              }
             ]
-          },
-          "completionOccurrences": [
-            {
-              "occurrenceId": "completion:F:boss",
-              "gameName": "F_Boss01",
-              "state": {
-                "kind": "none"
-              },
-              "encounters": {
-                "encounterKeyByPhase": {},
-                "figLeafSkipByPhase": {
-                  "Encounter": false
-                },
-                "gorgonResultByPhase": {}
-              },
-              "roomActions": {
-                "order": []
-              },
-              "additionalExits": []
-            },
-            {
-              "occurrenceId": "completion:F:postboss",
-              "gameName": "F_PostBoss01",
-              "state": {
-                "kind": "none"
-              },
-              "encounters": {
-                "encounterKeyByPhase": {},
-                "figLeafSkipByPhase": {
-                  "Encounter": false
-                },
-                "gorgonResultByPhase": {}
-              },
-              "roomActions": {
-                "order": [
-                  {
-                    "kind": "useFountain"
-                  },
-                  {
-                    "kind": "purchaseStygianWellOffer",
-                    "generationKey": "initial:secondLeft"
-                  },
-                  {
-                    "kind": "purchaseStygianWellOffer",
-                    "generationKey": "initial:secondRight"
-                  },
-                  {
-                    "kind": "purchaseStygianWellOffer",
-                    "generationKey": "travelDealRefill"
-                  }
-                ]
-              },
-              "purgingPool": {
-                "interacted": false,
-                "traitKeyBySlot": {
-                  "left": "ApolloWeaponBoon",
-                  "middle": "HeraCastBoon",
-                  "right": "ZeusSpecialBoon"
-                }
-              },
-              "stygianWell": {
-                "interacted": true,
-                "offerKeyBySlot": {
-                  "healing": "ArmorBoostStore",
-                  "secondLeft": "TemporaryBoonRarityTrait",
-                  "secondRight": "LimitedSwapTraitDrop"
-                },
-                "travelDealRefillKey": "ExtendedShopTrait",
-                "purchasedGenerationKeys": [
-                  "initial:secondLeft",
-                  "initial:secondRight",
-                  "travelDealRefill"
-                ]
-              },
-              "additionalExits": []
-            }
-          ]
+          }
         }
       ]
     },

@@ -1,7 +1,7 @@
 {
-  "schemaVersion": 67,
+  "schemaVersion": 68,
   "projectId": "golden-fg",
-  "catalogVersion": "0.48.0-hex-talent-layouts",
+  "catalogVersion": "0.49.0-completion-topology",
   "routes": [
     {
       "routeKey": "Underworld",
@@ -1065,6 +1065,62 @@
                   ]
                 },
                 "additionalExits": []
+              },
+              {
+                "occurrenceId": "golden-f-preboss-shop:boss",
+                "gameName": "F_Boss01",
+                "state": {
+                  "kind": "none"
+                },
+                "encounters": {
+                  "encounterKeyByPhase": {},
+                  "figLeafSkipByPhase": {
+                    "Encounter": false
+                  },
+                  "gorgonResultByPhase": {}
+                },
+                "roomActions": {
+                  "order": []
+                },
+                "additionalExits": []
+              },
+              {
+                "occurrenceId": "golden-f-preboss-shop:postboss",
+                "gameName": "F_PostBoss01",
+                "state": {
+                  "kind": "none"
+                },
+                "encounters": {
+                  "encounterKeyByPhase": {},
+                  "figLeafSkipByPhase": {
+                    "Encounter": false
+                  },
+                  "gorgonResultByPhase": {}
+                },
+                "roomActions": {
+                  "order": [
+                    {
+                      "kind": "useFountain"
+                    }
+                  ]
+                },
+                "stygianWell": {
+                  "interacted": false,
+                  "offerKeyBySlot": {
+                    "healing": null,
+                    "secondLeft": null,
+                    "secondRight": null
+                  }
+                },
+                "purgingPool": {
+                  "interacted": false,
+                  "traitKeyBySlot": {
+                    "left": "ApolloWeaponBoon",
+                    "middle": "HeraCastBoon",
+                    "right": "ZeusSpecialBoon"
+                  }
+                },
+                "additionalExits": []
               }
             ],
             "decisions": [
@@ -1377,66 +1433,18 @@
                   "exitKey": "exit1"
                 }
               }
+            ],
+            "fixedRoomLinks": [
+              {
+                "sourceOccurrenceId": "golden-f-preboss-shop",
+                "targetOccurrenceId": "golden-f-preboss-shop:boss"
+              },
+              {
+                "sourceOccurrenceId": "golden-f-preboss-shop:boss",
+                "targetOccurrenceId": "golden-f-preboss-shop:postboss"
+              }
             ]
-          },
-          "completionOccurrences": [
-            {
-              "occurrenceId": "completion:F:boss",
-              "gameName": "F_Boss01",
-              "state": {
-                "kind": "none"
-              },
-              "encounters": {
-                "encounterKeyByPhase": {},
-                "figLeafSkipByPhase": {
-                  "Encounter": false
-                },
-                "gorgonResultByPhase": {}
-              },
-              "roomActions": {
-                "order": []
-              },
-              "additionalExits": []
-            },
-            {
-              "occurrenceId": "completion:F:postboss",
-              "gameName": "F_PostBoss01",
-              "state": {
-                "kind": "none"
-              },
-              "encounters": {
-                "encounterKeyByPhase": {},
-                "figLeafSkipByPhase": {
-                  "Encounter": false
-                },
-                "gorgonResultByPhase": {}
-              },
-              "roomActions": {
-                "order": [
-                  {
-                    "kind": "useFountain"
-                  }
-                ]
-              },
-              "purgingPool": {
-                "interacted": false,
-                "traitKeyBySlot": {
-                  "left": "ApolloWeaponBoon",
-                  "middle": "HeraCastBoon",
-                  "right": "ZeusSpecialBoon"
-                }
-              },
-              "stygianWell": {
-                "interacted": false,
-                "offerKeyBySlot": {
-                  "healing": null,
-                  "secondLeft": null,
-                  "secondRight": null
-                }
-              },
-              "additionalExits": []
-            }
-          ]
+          }
         },
         {
           "biomeKey": "G",
@@ -2248,6 +2256,62 @@
                   ]
                 },
                 "additionalExits": []
+              },
+              {
+                "occurrenceId": "golden-g-preboss-shop:boss",
+                "gameName": "G_Boss01",
+                "state": {
+                  "kind": "none"
+                },
+                "encounters": {
+                  "encounterKeyByPhase": {},
+                  "figLeafSkipByPhase": {
+                    "Encounter": false
+                  },
+                  "gorgonResultByPhase": {}
+                },
+                "roomActions": {
+                  "order": []
+                },
+                "additionalExits": []
+              },
+              {
+                "occurrenceId": "golden-g-preboss-shop:postboss",
+                "gameName": "G_PostBoss01",
+                "state": {
+                  "kind": "none"
+                },
+                "encounters": {
+                  "encounterKeyByPhase": {},
+                  "figLeafSkipByPhase": {
+                    "Encounter": false
+                  },
+                  "gorgonResultByPhase": {}
+                },
+                "roomActions": {
+                  "order": [
+                    {
+                      "kind": "useFountain"
+                    }
+                  ]
+                },
+                "stygianWell": {
+                  "interacted": false,
+                  "offerKeyBySlot": {
+                    "healing": null,
+                    "secondLeft": null,
+                    "secondRight": null
+                  }
+                },
+                "purgingPool": {
+                  "interacted": false,
+                  "traitKeyBySlot": {
+                    "left": "ApolloWeaponBoon",
+                    "middle": "CastProjectileBoon",
+                    "right": "HeraCastBoon"
+                  }
+                },
+                "additionalExits": []
               }
             ],
             "decisions": [
@@ -2477,66 +2541,18 @@
                   "exitKey": "exit1"
                 }
               }
+            ],
+            "fixedRoomLinks": [
+              {
+                "sourceOccurrenceId": "golden-g-preboss-shop",
+                "targetOccurrenceId": "golden-g-preboss-shop:boss"
+              },
+              {
+                "sourceOccurrenceId": "golden-g-preboss-shop:boss",
+                "targetOccurrenceId": "golden-g-preboss-shop:postboss"
+              }
             ]
-          },
-          "completionOccurrences": [
-            {
-              "occurrenceId": "completion:G:boss",
-              "gameName": "G_Boss01",
-              "state": {
-                "kind": "none"
-              },
-              "encounters": {
-                "encounterKeyByPhase": {},
-                "figLeafSkipByPhase": {
-                  "Encounter": false
-                },
-                "gorgonResultByPhase": {}
-              },
-              "roomActions": {
-                "order": []
-              },
-              "additionalExits": []
-            },
-            {
-              "occurrenceId": "completion:G:postboss",
-              "gameName": "G_PostBoss01",
-              "state": {
-                "kind": "none"
-              },
-              "encounters": {
-                "encounterKeyByPhase": {},
-                "figLeafSkipByPhase": {
-                  "Encounter": false
-                },
-                "gorgonResultByPhase": {}
-              },
-              "roomActions": {
-                "order": [
-                  {
-                    "kind": "useFountain"
-                  }
-                ]
-              },
-              "purgingPool": {
-                "interacted": false,
-                "traitKeyBySlot": {
-                  "left": "ApolloWeaponBoon",
-                  "middle": "CastProjectileBoon",
-                  "right": "HeraCastBoon"
-                }
-              },
-              "stygianWell": {
-                "interacted": false,
-                "offerKeyBySlot": {
-                  "healing": null,
-                  "secondLeft": null,
-                  "secondRight": null
-                }
-              },
-              "additionalExits": []
-            }
-          ]
+          }
         }
       ]
     },

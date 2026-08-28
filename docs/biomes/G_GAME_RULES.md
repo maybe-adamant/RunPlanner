@@ -36,22 +36,22 @@ on 2026-07-18. Primary sources are:
 The disposition vocabulary is defined by `../design/CATALOG_MODEL.md`; implementation
 coverage is defined by `../progress/MIGRATION_PROVENANCE.md`.
 
-| Feature                                | Verified game behavior                                                                                                    | Disposition and planner projection                                                                     | Implementation status | Reconsider when                                               |
-| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ | --------------------- | ------------------------------------------------------------- |
-| Generated decisions                    | G uses sequential physical doors, forced pools, and repeatable unpicked room creations                                    | **Exact:** standard generated batches with distinct Room Occurrences                                   | implemented           | --                                                            |
-| Fixed intro                            | `G_Intro` is reward-free and has no planner-relevant encounter choice                                                     | **Exact:** empty fixed intro projection                                                                | implemented           | --                                                            |
-| Ordinary combat identity               | Maps choose internal enemy waves while each supported combat has its relevant room and counter effects                    | **Simplified:** preserve concrete room identity and encounter-depth effect, not enemy-wave composition | implemented           | Combat composition becomes an authored or validated output    |
-| Locked extra exits                     | After ordinary target creation, later exits may require a counting, reward-free unlock encounter before traversal         | **Deferred:** v1 requires the picked exit to realize open and takes it immediately                     | documented boundary   | v2 models optional per-exit actions and their counter effects |
-| Anomaly replacement                    | An eligible ordinary G target may be replaced by a one-room Anomaly detour that later returns to the host set             | **Exact:** closed replacement, retained offer, authored outcome, and hidden fresh host return          | implemented           | --                                                            |
-| Natural Chaos                          | Declared G sources may expose one optional Chaos sibling beside normal doors                                              | **Exact:** map domain/default, preceding-ten offer spacing, fixed Chaos room, fresh ordinary return    | implemented           | --                                                            |
-| Room eligibility and force             | Concrete current-run counters, caps, predecessor-exit requirements, mutual exclusion, and force windows govern candidates | **Exact:** declaration-owned predicates evaluated from history                                         | implemented           | --                                                            |
-| Reward-store selection                 | G targets MetaProgress ratio `0.35` with adjustment speed `10`                                                            | **Simplified:** preserve only possible and forced RunProgress/MetaProgress support                     | implemented           | Probability analysis or exact RNG replay is introduced        |
-| Incoming rewards and shops             | Combat, miniboss, Story, Fountain, Midshop, and Preboss producers retain concrete filters and overrides                   | **Exact:** occurrence incoming-reward state plus declaration-owned overrides                           | implemented           | --                                                            |
-| Miniboss variants                      | All three variants are production rooms; Crawler is non-counting                                                          | **Exact:** separate concrete room and direct encounter definitions                                     | implemented           | --                                                            |
-| Takeover Preboss                       | `G_PreBoss01` takes over every physical predecessor exit; exit 1 is Shop and later exits are free rewards when present    | **Exact:** one declaration-owned takeover batch with one occurrence per physical exit                  | implemented           | --                                                            |
-| Narcissus benefit choice               | Entering `G_Story01` presents three NPC benefits whose concrete effects can include run and meta resources or traits      | **Exact supported surface:** rarityless offer plus independently ordered consequential pickups         | implemented           | Another omitted companion pickup gains a modeled consequence  |
-| Fixed boss and postboss tail           | `G_PreBoss01` leads through one mutually exclusive Scylla variant and then `G_PostBoss01`                                 | **Exact:** layout-derived `G_Boss01` then `G_PostBoss01` under the neutral difficulty baseline         | implemented           | User-selected difficulty becomes a project input              |
-| Narcissus and special-room progression | Dialogue, bounty, lifetime, prior-run force, and world-upgrade gates alter availability                                   | **Excluded:** progressed-save baseline retains current-run rules only                                  | documented boundary   | Save-profile state becomes a project input                    |
+| Feature                                | Verified game behavior                                                                                                    | Disposition and planner projection                                                                                                                                    | Implementation status | Reconsider when                                               |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------- | ------------------------------------------------------------- |
+| Generated decisions                    | G uses sequential physical doors, forced pools, and repeatable unpicked room creations                                    | **Exact:** standard generated batches with distinct Room Occurrences                                                                                                  | implemented           | --                                                            |
+| Fixed intro                            | `G_Intro` is reward-free and has no planner-relevant encounter choice                                                     | **Exact:** empty fixed intro projection                                                                                                                               | implemented           | --                                                            |
+| Ordinary combat identity               | Maps choose internal enemy waves while each supported combat has its relevant room and counter effects                    | **Simplified:** preserve concrete room identity and encounter-depth effect, not enemy-wave composition                                                                | implemented           | Combat composition becomes an authored or validated output    |
+| Locked extra exits                     | After ordinary target creation, later exits may require a counting, reward-free unlock encounter before traversal         | **Deferred:** v1 requires the picked exit to realize open and takes it immediately                                                                                    | documented boundary   | v2 models optional per-exit actions and their counter effects |
+| Anomaly replacement                    | An eligible ordinary G target may be replaced by a one-room Anomaly detour that later returns to the host set             | **Exact:** closed replacement, retained offer, authored outcome, and hidden fresh host return                                                                         | implemented           | --                                                            |
+| Natural Chaos                          | Declared G sources may expose one optional Chaos sibling beside normal doors                                              | **Exact:** map domain/default, preceding-ten offer spacing, fixed Chaos room, fresh ordinary return                                                                   | implemented           | --                                                            |
+| Room eligibility and force             | Concrete current-run counters, caps, predecessor-exit requirements, mutual exclusion, and force windows govern candidates | **Exact:** declaration-owned predicates evaluated from history                                                                                                        | implemented           | --                                                            |
+| Reward-store selection                 | G targets MetaProgress ratio `0.35` with adjustment speed `10`                                                            | **Simplified:** preserve only possible and forced RunProgress/MetaProgress support                                                                                    | implemented           | Probability analysis or exact RNG replay is introduced        |
+| Incoming rewards and shops             | Combat, miniboss, Story, Fountain, Midshop, and Preboss producers retain concrete filters and overrides                   | **Exact:** occurrence incoming-reward state plus declaration-owned overrides                                                                                          | implemented           | --                                                            |
+| Miniboss variants                      | All three variants are production rooms; Crawler is non-counting                                                          | **Exact:** separate concrete room and direct encounter definitions                                                                                                    | implemented           | --                                                            |
+| Takeover Preboss                       | `G_PreBoss01` takes over every physical predecessor exit; exit 1 is Shop and later exits are free rewards when present    | **Exact:** one declaration-owned takeover batch with one occurrence per physical exit                                                                                 | implemented           | --                                                            |
+| Narcissus benefit choice               | Entering `G_Story01` presents three NPC benefits whose concrete effects can include run and meta resources or traits      | **Exact supported surface:** rarityless offer plus independently ordered consequential pickups                                                                        | implemented           | Another omitted companion pickup gains a modeled consequence  |
+| Fixed boss and postboss rooms          | `G_PreBoss01` leads through one mutually exclusive Scylla variant and then `G_PostBoss01`                                 | **Exact:** selecting the Preboss creates ordinary `G_Boss01` then route-position `G_PostBoss01` occurrences through fixed links under the neutral difficulty baseline | implemented           | User-selected difficulty becomes a project input              |
+| Narcissus and special-room progression | Dialogue, bounty, lifetime, prior-run force, and world-upgrade gates alter availability                                   | **Excluded:** progressed-save baseline retains current-run rules only                                                                                                 | documented boundary   | Save-profile state becomes a project input                    |
 
 ## Layout
 
@@ -219,11 +219,12 @@ exit 3 -> G_PreBoss01 with another free RunProgress reward, when present
 Free rewards exclude `Devotion` and `RoomMoneyDrop`. G's maximum free-reward
 capacity is two. Each target is a distinct occurrence of the same concrete room
 declaration. The selected Preboss occurrence closes editable traversal and
-enters the layout-derived boss/postboss completion tail.
+creates the ordinary Boss and route-position Postboss occurrences through fixed
+links.
 
-## Fixed Boss and Postboss Tail
+## Fixed Boss and Postboss Rooms
 
-G completes through a layout-derived fixed sequence after the entered preboss
+G completes through a fixed-link sequence after the entered preboss
 occurrence:
 
 ```text
@@ -237,14 +238,14 @@ G_PreBoss01
 mutually exclusive user-difficulty variant and is excluded until difficulty
 becomes a project input. The automatic Mixer and weapon-dependent boss drops
 do not participate in authored reward choice or any currently modeled
-acquisition rule, so the planner deliberately gives the derived boss no
+acquisition rule, so the planner deliberately gives the fixed-linked boss no
 modeled reward surface. `G_PostBoss01` has the empty encounter, no modeled
 reward, and transitions to H.
 
-The boss and postboss are concrete derived Room Declarations referenced by the
-G layout completion sequence. They are never generated candidates or authored
-editor topology. Their declarations own their encounters, counters, modeled
-reward surfaces, and reward-store history effects. `G_Boss01` records a
+The boss and postboss are concrete ordinary Room Declarations created in the
+selected topology by fixed links. They are never generated candidates or
+authored room choices. Their declarations own their encounters, counters,
+modeled reward surfaces, and reward-store history effects. `G_Boss01` records a
 contribution from the store resolved for the preboss's outgoing boss offer even
 though its automatic drops are outside the reward model; `G_PostBoss01` records
 no store contribution.
@@ -281,7 +282,7 @@ G completeness, canonical materialization of its unified generated-decision
 topology, lifecycle/history folding, room-generation legality, reward legality,
 finding composition, and validated F-to-G route continuation are live. The fixed
 rewardless intro uses the shared rewardless lifecycle; canonical history emits
-no locked-door encounter. The layout-derived boss/postboss tail is materialized,
+no locked-door encounter. The fixed-link boss/postboss rooms are materialized,
 and `G_Boss01` records the RunProgress store resolved for its outgoing boss
 offer without inventing a boss reward.
 

@@ -213,13 +213,13 @@ Mandatory offer-time leaves remain authored and editable for picked and
 unpicked rooms. Optional picked-room details become active only when the
 authored topology activates the occurrence:
 
-| Occurrence source                  | Authored activation                                |
-| ---------------------------------- | -------------------------------------------------- |
-| Biome start or fixed entry         | active when the occurrence exists                  |
-| Linked exit                        | active when the link exists                        |
-| Ordinary or takeover batch target  | active when selected by its decision               |
-| N Hub main target                  | active when present in the authored visit sequence |
-| Automatic Boss/Postboss occurrence | fixed exit and ordinary occurrence-local detail    |
+| Occurrence source                 | Authored activation                                |
+| --------------------------------- | -------------------------------------------------- |
+| Biome start or fixed entry        | active when the occurrence exists                  |
+| Linked exit                       | active when the link exists                        |
+| Ordinary or takeover batch target | active when selected by its decision               |
+| N Hub main target                 | active when present in the authored visit sequence |
+| Fixed Boss/Postboss occurrence    | fixed link and ordinary occurrence-local detail    |
 
 Activation is not simulated entry. The workspace carries authored
 `detailsActive` separately from evaluated `entered`, so progressive coverage or
@@ -250,10 +250,10 @@ Timeline share the entry snapshot, each Ship Timeline tab uses its phase-start
 snapshot, and Doors uses the pre-exit snapshot. An inactive Room Timeline
 remains launcher-free.
 
-Automatic Boss/Postboss occurrences use the ordinary occurrence workbench and
+Fixed Boss/Postboss occurrences use the ordinary occurrence workbench and
 timeline language. Boss renders the fixed `Room entered -> Start encounter -> Boss
 defeated -> End encounter -> Cleanup · Doors open` spine, with Judgment attached
-to `Boss defeated` when active. An automatic Postboss renders the shared Room
+to `Boss defeated` when active. A fixed Postboss renders the shared Room
 Timeline product at its exact occurrence owner: required `Use fountain`,
 required `Choose keepsake` when replacing, and `Cleanup · Doors open` after the
 required action. Its rack and fountain rows are ranked by the engine; React
@@ -1064,7 +1064,7 @@ cost/capacity and assesses each proposed Arcana toggle or Void rank; React only
 disables proposals that the engine rejects. Ordinary automatic Arcana
 indicators and the derived Fear total are read-only engine products. The same
 workspace exposes a reached Judgment completion control only at its exact
-automatic Boss occurrence; there is no route-level Judgment editor. The fixed
+fixed Boss occurrence; there is no route-level Judgment editor. The fixed
 Boss and Postboss entries in the completion outline are selectable inspector
 destinations, so a completed Judgment result remains reopenable after its
 finding disappears. The Judgment picker renders one Arcana choice per row.

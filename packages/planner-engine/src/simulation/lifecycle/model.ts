@@ -89,7 +89,7 @@ export type RoomLifecycleEvent =
       readonly figLeafSkipOwner: boolean;
     })
   | (RoomLifecycleEventBase & {
-      /** Fixed automatic-Boss seam after defeat, before encounter-end effects. */
+      /** Fixed Boss seam after defeat, before encounter-end effects. */
       readonly kind: 'bossDefeated';
       readonly phaseKey: string;
       readonly execution: 'normal' | 'skippedByFigLeaf';
@@ -162,7 +162,7 @@ export interface RoomLifecycleExecutionInput {
   readonly requiredObjects?: readonly RequiredRoomObjectDescriptor[];
   readonly enteredRewardStoreKey?: string;
   readonly offerPointRewardStores?: Readonly<Record<string, string>>;
-  /** Present for occurrence rooms, including automatic Boss and Postboss rooms. */
+  /** Present for occurrence rooms, including fixed Boss and Postboss rooms. */
   readonly roomActionRoster?: RoomActionRoster;
 }
 

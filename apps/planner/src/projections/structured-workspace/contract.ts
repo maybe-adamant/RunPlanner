@@ -2806,7 +2806,7 @@ export type WorkspaceRailEntry =
 
 export interface WorkspaceBiome {
   readonly biomeKey: string;
-  /** Automatic Boss/Postboss occurrence workbenches in fixed outline order. */
+  /** Fixed-linked Boss/Postboss occurrence workbenches in outline order. */
   readonly completionOutline: readonly WorkspaceOccurrenceWorkbenchNode[];
   /** Explicitly null only when this workspace has no renderable subject. */
   readonly defaultInspectorDestination: WorkspaceDefaultInspectorDestination | null;

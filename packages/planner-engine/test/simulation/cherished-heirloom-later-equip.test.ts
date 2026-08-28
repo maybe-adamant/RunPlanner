@@ -322,7 +322,7 @@ describe('Cherished Heirloom later keepsake equips', () => {
       qualifyingEncounterUsesByRank: { Heroic: 30 },
     });
     // Postboss enters before the ranked rack action, so the new Hammer is not
-    // retroactively consumed by that automatic completion.
+    // retroactively consumed by that fixed-linked completion.
     expect(hammer).toMatchObject({
       active: true,
       traitKey: 'StaffJumpSpecialTrait',

@@ -850,14 +850,14 @@ producer-owned source, declaration-owned acquisition roles, participation, and
 chronological address. The reward kernel remains the sole authority that turns
 those roles into loot/use history, trait acquisition, and level effects.
 
-Automatic Postboss settlement uses the ordinary occurrence-owned ranked Room
+Fixed-linked Postboss settlement uses the ordinary occurrence-owned ranked Room
 Action product. Every declared Postboss fountain contributes required
 `useFountain`; `interactKeepsakeRack` is also required when a replacement is
 active. The rack action applies the selected keepsake and its immediate equip
 result at its ranked position, so `useFountain` observes either the carried
 Boss keepsake or the replacement according to the authored order. Retain omits
-the rack participant. The configured route-tail Postboss remains active with
-the same occurrence ownership and chronology.
+the rack participant. The route-position Postboss remains active with the same
+occurrence ownership and chronology whenever the route supplies one.
 
 Mandatory ordinary entries derive their required classification and legal
 lifecycle window from the engine's structural action domain. The semantic
@@ -1006,8 +1006,8 @@ does not author a duplicate value.
 O's selected Preboss batch is also a physical generated-door decision, so it
 carries the same reward-store authority as an ordinary O batch. A ShipCombat
 predecessor resolves it from the final active wheel; another O predecessor
-uses the authored Run/Meta base store. The entered Preboss and completion tail
-retain that resolved store provenance.
+uses the authored Run/Meta base store. The entered Preboss and its fixed-linked
+Boss/Postboss rooms retain that resolved store provenance.
 
 A reward-free generated batch such as Q's combat spine has no authored base
 store. Forced or individual target stores remain declaration-owned and still

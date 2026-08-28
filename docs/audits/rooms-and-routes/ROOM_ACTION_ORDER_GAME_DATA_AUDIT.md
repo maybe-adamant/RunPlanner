@@ -463,14 +463,14 @@ separate periodic `RoomsPerUpgrade.DropResources` path; it does not make
 Quick Buck's drop required. Money and this optional pickup remain outside the
 supported simulation.
 
-Schema 59 represents declaration-fixed Boss and optional Postboss rooms as
-automatic `RoomOccurrence`s outside editable topology. They retain the normal
-occurrence lifecycle, fixed exits, room features, and one room-action
-chronology, including configured-tail Postboss features. The derived
-`bossDefeated` Judgment seam precedes generic encounter-end effects, so a due
-Shrine delivery can use the ordinary Boss occurrence as a later host. Boss
-reward quantities, Dream continuation commands, and special Quick Buck rules
-remain unmodeled because no supported consumer observes them.
+Schema 68 represents the selected completion chain as ordinary topology
+occurrences connected by fixed links. Boss and the route-position Postboss
+retain the normal occurrence lifecycle, fixed exits, room features, and one
+room-action chronology. The `bossDefeated` Judgment seam precedes generic
+encounter-end effects, so a due Shrine delivery can use the ordinary Boss
+occurrence as a later host. Boss reward quantities, Dream continuation
+commands, and special Quick Buck rules remain unmodeled because no supported
+consumer observes them.
 
 ### Fountains, persistent Hub state, and Postboss Cleanup
 
@@ -538,11 +538,11 @@ second source. In the source, the true terminal condition is
 `GameData.FullRunBiomeCount`: the full-run terminal biome has no succeeding-
 biome keepsake frontier and does not inherit the ordinary fountain/rack set
 merely because its declaration kind is `PostBoss`. In the current four-biome
-routes, final completion tails contain neither the ordinary fountain nor the
-ordinary Postboss rack. Schema 59 intentionally simplifies this source
-terminal behavior for configured-tail Postboss occurrences: their declared
-features remain active, and extending the route changes only the
-declaration-fixed exit target rather than removing the feature actions.
+routes, final biome endings contain neither the ordinary fountain nor the
+ordinary Postboss rack. The schema-68 planner preserves that terminal behavior
+by modeling only the first three route-position Postboss occurrences; their
+declared features remain active, while the physical I/Q ending rooms remain
+outside supported topology.
 `F_PostBoss01` uses `Story_Chronos_01`; this does not classify its optional
 Chronos presentation as a required interaction.
 
@@ -567,12 +567,12 @@ The exact chronology and required-object barrier are one room-action owner;
 feature-specific purchase and delivery behavior remains in the room-features
 and acquisition authorities.
 
-Schema 59 carries this source order through one occurrence/completion-owned
+Schema 68 carries this source order through one occurrence-owned
 `roomActions.order`: ordinary Reprieves carry required reward and
 `useFountain`, while reached Postboss occurrences carry required `useFountain`
 and an optional `interactKeepsakeRack` when replacement is selected. The rack
-may rank before or after the fountain. Configured-tail Postboss features stay
-active, route extension changes only the declaration-fixed exit target, and H
+may rank before or after the fountain. Route-position Postboss features stay
+active wherever the route supplies a Postboss, and H
 Echo Bridge plus persistent N Hub remain outside the ordinary one-visit
 fountain set.
 
@@ -598,6 +598,24 @@ items currently rendered under Acquisitions.
 
 ## Planner disposition
 
+### Completion-room topology
+
+The first three positions of each standard route use the ordinary
+biome-position Postboss occurrence after the selected Boss. These are regular
+occurrences in the supported topology, with the same room-action chronology
+and occurrence-owned features as other rooms. The fourth position has no
+modeled recovery Postboss: the physical `I_PostBoss01` and `Q_PostBoss01`
+rooms are terminal narrative/meta-progression endings outside the supported
+planner topology. The planner therefore keeps the selected `I_Boss01` or
+`Q_Boss01` occurrence and ends the modeled route there.
+
+Dream runs are a separate future route input. Their Postboss identity follows
+the entered-biome ordinal (`Dream_PostBoss01`, `Dream_PostBoss02`, then
+`Dream_PostBoss03`), not the biome key that was just completed. The normalized
+route-position table is the intended owner of this mapping when Dream runs are
+added; no room-name or completion-tail special case is needed in room-action
+simulation.
+
 ### One general chronology for every entered room
 
 Every entered room projects one room-action chronology, including a room with
@@ -615,11 +633,11 @@ generation, commit, and exit. Authored state records only participation and
 relative chronology for the declaration-derived room actions whose order the
 player can affect.
 
-The same owner union covers automatic Postboss occurrences. A reached Postboss
+The same owner union covers fixed-linked Postboss occurrences. A reached Postboss
 receives required `useFountain` and, when replacement is selected, optional
 `interactKeepsakeRack` under its exact ordinary occurrence action address. Its
 roster uses the shared lifecycle structure, ordering assessment, repair rows,
-and event fold; it does not create a second completion order. Configured-tail
+and event fold; it does not create a second completion order. Route-position
 Postboss features remain active, while H Echo Bridge and the persistent N Hub
 remain outside this one-visit Postboss rule.
 
@@ -695,7 +713,7 @@ parallel mandatory order. This command guarantee does not rewrite source
 evidence or make missing-required documents malformed: an older or deliberately
 incomplete authored document retains its omission and one explicit canonical
 repair, while an unrelated edit leaves that repair state unchanged. The same
-retained-invalid rule applies to the automatic Postboss occurrence owner.
+retained-invalid rule applies to the fixed Postboss occurrence owner.
 
 ### Authoring remains attached to the action's semantic owner
 

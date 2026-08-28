@@ -263,7 +263,7 @@ export function assessHermesShrinePlacement(
 /**
  * Assesses one Shrine at its room-entry frontier. `priorEnteredShrineFlags`
  * deliberately describes physical history positions rather than game-name
- * membership: revisits, side rooms, shops, automatic rooms, and Chaos all
+ * membership: revisits, side rooms, shops, fixed completion rooms, and Chaos all
  * occupy a window slot.
  */
 export function assessHermesShrine(

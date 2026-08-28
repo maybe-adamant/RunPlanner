@@ -108,7 +108,7 @@ The normalized catalog contains immutable possible facts:
 - reward types, payload domains, source-support policies, concrete acquisition
   declarations, stores, bags, bindings, and shops;
 - normalized current-run requirements whose kinds have registered evaluators;
-- normal-door batch, Preboss, and automatic-tail policies.
+- normal-door batch, Preboss, and fixed-room-link policies.
 
 Catalog construction fails for:
 
@@ -186,7 +186,7 @@ For the active biome:
    marker, or Run State snapshot from a later region;
 6. retain later authored structure without inventing selected-Preboss or
    completion facts; and
-7. only when complete authorship reaches the declared completion sequence and
+7. only when complete authorship reaches the fixed-linked completion sequence and
    all selected facts are valid, publish the canonical biome, final history,
    completion transition, and downstream route seed.
 
@@ -549,7 +549,7 @@ not ask whether those facts are legal.
 A complete biome requires:
 
 - structurally closed topology from declared entry through one selected
-  Preboss and its declared completion sequence;
+  Preboss and its fixed-linked Boss/Postboss sequence;
 - all required target links and picked or visit-order choices;
 - all active Preboss-batch target links and their picked choice;
 - complete companion links required by the selected Preboss policy;
@@ -590,9 +590,9 @@ under visited combat targets: every declared local slot then has concrete
 generation state and reward state, and every generated slot has either one
 distinct entered ordinal or an explicit unentered result. The fixed preboss
 shop leaf must also be complete. Hub returns and parent restores are derived;
-Boss and Postboss are declaration-fixed automatic occurrences. A reached
+Boss and Postboss are declaration-fixed ordinary occurrences. A reached
 Postboss consumes its own `roomActions` order through the ordinary occurrence
-roster, including at a configured route tail.
+roster at each supported nonterminal route position.
 
 Only referenced occurrences participate. Removed occurrences do not remain as
 dormant project state; undo may restore their prior authored snapshot.
@@ -617,7 +617,7 @@ interface CanonicalBiome {
   biomeKey: string;
   entryRoom: CanonicalAuthoredRoom;
   decisions: CanonicalDecision[];
-  automaticRooms: CanonicalAuthoredRoom[];
+  fixedRoomLinks: CanonicalFixedRoomLink[];
   biomeState: CanonicalBiomeState;
 }
 
@@ -652,15 +652,16 @@ exit order, not by persisted insertion order or decision-array position.
 its open board, and its selected visits.
 
 ```text
-entry room -> selected decision spine -> selected Preboss -> automatic rooms
+entry room -> selected decision spine -> selected Preboss -> fixed room links
 ```
 
 The selected Preboss is a `CanonicalTarget` within its declaration-owned
-normal-door batch. Its continuation is `startsCompletion`; every unpicked
-target is a `deadLeaf`, and a picked ordinary target is `continuesSpine`.
-There is no parallel completion-entry snapshot or adapter. Automatic room
-materialization starts from the selected Preboss and carries the declared
-automatic occurrences and their entered reward-store provenance.
+normal-door batch. Every unpicked target is a `deadLeaf`, and a picked ordinary
+target is `continuesSpine`. Selecting a Preboss realizes the exact Boss and
+route-position Postboss occurrences in the same topology and records their
+fixed links. There is no parallel completion-entry snapshot or adapter.
+Materialization walks those linked occurrences and carries their entered
+reward-store provenance.
 
 The materializer walks the normalized selected spine rather than the stored
 decision array. It may dispatch on normalized declaration policy, but never on
@@ -728,7 +729,7 @@ frontier never returns to the Hub. Thus a board-owned reward failure retains
 the board target creations and reward lookup as one atomic region without
 claiming any visit. The prefix uses the same canonical room, decision, history,
 reward, and generation types as a complete biome; it omits the selected Preboss
-and completion tail because they are not yet facts.
+and its fixed completion links because they are not yet facts.
 Candidate queries may use an ordinary exit frontier to evaluate a target that
 has not yet been created, and a takeover source frontier to evaluate the entire
 Preboss batch.
@@ -742,8 +743,8 @@ No target or Hub room is materialized merely to produce that checkpoint.
 ### Shared History and N Hub Semantics
 
 History composition initializes biome counters, walks the entry room and
-selected decision spine, emits declared transition resets, walks completion
-rooms after the selected Preboss, and invokes the topology-neutral event fold.
+selected decision spine, follows the selected Preboss's fixed room links,
+emits declared transition resets, and invokes the topology-neutral event fold.
 It preserves exact physical creation order, counter state, occurrence identity,
 and restore identity. No decision-specific branch may initialize or finish a
 biome, apply its transition resets, or use a separate fold.
@@ -848,8 +849,7 @@ room.commit
 room.exit
 
 selected Preboss enters
-layout completion sequence begins
-each automatic Boss/Postboss declaration enters and commits in order
+follow its fixed Boss/Postboss room links, when present
 biome.complete
 next biome entry or route completion
 ```
@@ -918,7 +918,7 @@ for each authored main visit:
     restore the same main occurrence
   restore the same Hub room
 enter fixed authored PreBoss and resolve its shop
-walk automatic Boss and Postboss occurrences
+walk the fixed Boss and Postboss room links, when present
 ```
 
 The hub lookup is produced before the first selected visit and remains based on
@@ -1008,10 +1008,9 @@ Important consequences:
   outgoing generation observes it before the same room's later commit;
 - outgoing generation reads the source's pre-commit depth caches, while the
   picked target's preparation reads the post-commit caches;
-- automatic Boss/Postboss occurrences contribute their declared room-history
-  ordinals even though their layout order is fixed rather than editable
-  topology;
-- each automatic Boss/Postboss room applies its declaration-owned reward-store
+- Boss/Postboss occurrences contribute their declared room-history ordinals
+  through fixed links rather than editable decisions;
+- each Boss/Postboss room applies its declaration-owned reward-store
   history policy instead of a simulator room-name exception;
 - the next biome reads route-wide history only after those fixed transitions
   and the declared biome reset events have been applied;

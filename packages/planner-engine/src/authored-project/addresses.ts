@@ -27,19 +27,19 @@ export interface IncomingRewardAddress extends BiomeOwnedAddress {
   readonly kind: 'incomingReward';
   readonly occurrenceId: OccurrenceId;
 }
-/** The exact post-encounter Arcana draw owned by an automatic Boss occurrence. */
+/** The exact post-encounter Arcana draw owned by a fixed Boss occurrence. */
 export interface JudgmentArcanaAddress extends BiomeOwnedAddress {
   readonly kind: 'judgmentArcana';
   readonly occurrenceId: OccurrenceId;
   readonly phaseKey: string;
 }
-/** The exact post-Judgment Arcana draw owned by an automatic Boss occurrence. */
+/** The exact post-Judgment Arcana draw owned by a fixed Boss occurrence. */
 export interface FigurineArcanaAddress extends BiomeOwnedAddress {
   readonly kind: 'figurineArcana';
   readonly occurrenceId: OccurrenceId;
   readonly phaseKey: string;
 }
-/** A rack selection has exactly one start owner or one automatic Postboss owner. */
+/** A rack selection has exactly one start owner or one fixed Postboss owner. */
 export type KeepsakeSelectionAddress =
   | {
       readonly kind: 'keepsakeSelection';
@@ -270,11 +270,11 @@ export interface NaturalSelectionResultAddress extends BiomeOwnedAddress {
   readonly trait: TraitOfferAddress;
   readonly optionKey: 'option1' | 'option2' | 'option3';
 }
-/** One automatic end-effects rarity outcome, owned by an ordinary or automatic Boss phase. */
+/** One automatic end-effects rarity outcome, owned by an ordinary or fixed Boss phase. */
 export interface SteadyGrowthOutcomeAddress extends BiomeOwnedAddress {
   readonly kind: 'steadyGrowthOutcome';
   /**
-   * The ordinary occurrence or automatic Boss that emitted the end-effects
+   * The ordinary occurrence or fixed Boss that emitted the end-effects
    * checkpoint. `phaseKey` below is the sole phase identity; keeping an
    * EncounterPhaseAddress here would permit contradictory double phase keys.
    */

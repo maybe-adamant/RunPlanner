@@ -1,8 +1,8 @@
 import type { RawRoomLifecycleProfileDeclaration } from '../types';
 
 /**
- * Preboss takeover rooms and their automatic completion tail share the same
- * lifecycle declaration family. They are no longer a separate topology form.
+ * Preboss takeover rooms and their fixed Boss/Postboss successors share the
+ * same lifecycle declaration family. They are ordinary topology occurrences.
  */
 export const prebossCompletionRoomLifecycleProfiles = [
   {
