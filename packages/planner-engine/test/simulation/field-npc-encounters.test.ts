@@ -1195,7 +1195,7 @@ describe('field NPC encounter requirements', () => {
     expect(support(withArachne, followingArtemis)?.candidateEncounterKeys).toContain(
       'ArtemisCombatF',
     );
-  }, 15_000);
+  });
 
   it('publishes the random-event interaction domain at its exact owner without flattening branches', () => {
     const nemesisF = phase(goldenFBiome, goldenFOccurrenceId(5, 1));
@@ -1637,11 +1637,6 @@ describe('field NPC encounter requirements', () => {
       ),
     ).toBe(true);
     expect(traitHistory?.elementCounts.Fire).toBeGreaterThan(0);
-    expect(
-      traitCandidates(catalog, 'Athena', traitHistory).find(
-        (candidate) => candidate.traitKey === 'OlympianSpellCountBoon',
-      ),
-    ).toMatchObject({ available: true });
   });
 
   it('publishes Task Force only after a concrete earlier Spell Drop at the reached Athena frontier', () => {

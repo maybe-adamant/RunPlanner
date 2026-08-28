@@ -1,7 +1,23 @@
 import { describe, expect, it } from 'vitest';
 
 import { catalog, createCatalog } from '../../src';
-import { declarations } from '../../src/declarations';
+import { declarations, type RawCatalogInput } from '../../src/declarations';
+
+type MutableHexDeclaration = {
+  epicCandidates: { key: string }[];
+  rareCandidates: { key: string }[];
+  godSent: { forceKeepsakeKey: string };
+};
+
+function cloneDeclarations(): RawCatalogInput {
+  return JSON.parse(JSON.stringify(declarations)) as RawCatalogInput;
+}
+
+function mutableFirstHex(input: RawCatalogInput): MutableHexDeclaration {
+  const hex = input.traitCatalog.hexes[0];
+  if (hex === undefined) throw new Error('first Hex declaration is missing');
+  return hex as unknown as MutableHexDeclaration;
+}
 
 const layoutFacts = {
   Lung: [16, 2, 1],
@@ -138,13 +154,14 @@ describe('compiled Hex declarations', () => {
   });
 
   it('rejects cross-pool node collisions and mismatched provider keepsakes', () => {
-    const duplicate = structuredClone(declarations);
-    duplicate.traitCatalog.hexes[0].epicCandidates[0].key =
-      duplicate.traitCatalog.hexes[0].rareCandidates[0].key;
+    const duplicate = cloneDeclarations();
+    const duplicateHex = mutableFirstHex(duplicate);
+    duplicateHex.epicCandidates[0]!.key = duplicateHex.rareCandidates[0]!.key;
     expect(() => createCatalog(duplicate)).toThrow(/Rare and Epic node keys must be unique/);
 
-    const wrongKeepsake = structuredClone(declarations);
-    wrongKeepsake.traitCatalog.hexes[0].godSent.forceKeepsakeKey = 'ForceHestiaBoonKeepsake';
+    const wrongKeepsake = cloneDeclarations();
+    const wrongKeepsakeHex = mutableFirstHex(wrongKeepsake);
+    wrongKeepsakeHex.godSent.forceKeepsakeKey = 'ForceHestiaBoonKeepsake';
     expect(() => createCatalog(wrongKeepsake)).toThrow(/must be ForceZeusBoonKeepsake/);
   });
 });
