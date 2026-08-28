@@ -1,0 +1,18 @@
+{
+  "format": "run-planner-performance-v1",
+  "sampleCount": 3,
+  "targetsMs": {
+    "interaction": 1000,
+    "cachedUndo": 50
+  },
+  "metrics": [
+    "underworld.fullRebuildMs",
+    "underworld.coldCandidateProjectionMs",
+    "underworld.representativeEditPublicationMs",
+    "underworld.cachedUndoPublicationMs",
+    "surface.fullRebuildMs",
+    "surface.coldCandidateProjectionMs",
+    "surface.representativeEditPublicationMs",
+    "surface.cachedUndoPublicationMs"
+  ]
+}
