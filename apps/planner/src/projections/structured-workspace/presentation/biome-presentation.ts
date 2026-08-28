@@ -140,9 +140,11 @@ function nodeRailPresentation(
 function mainRailRewardForDoor(
   door: WorkspaceDoorContract | undefined,
 ): WorkspaceRailReward | undefined {
-  const preview = door?.rewardPreview;
+  const preview = door?.offerRewardSurface;
   const reward =
-    preview?.kind === 'visible' && preview.rewards.length === 1 ? preview.rewards[0] : undefined;
+    preview?.visibility === 'visible' && preview.rewards.length === 1
+      ? preview.rewards[0]
+      : undefined;
   return reward?.offer === null || reward?.offer === undefined
     ? undefined
     : Object.freeze({ label: reward.summary, offer: reward.offer });
@@ -153,24 +155,11 @@ function entryRailReward(
   catalog: Catalog,
   room: WorkspaceRoomSummary,
 ): WorkspaceRailReward | undefined {
-  if (room.entryReward?.offer !== null && room.entryReward?.offer !== undefined) {
-    return Object.freeze({
-      label: summarizeRewardOffer(catalog, room.entryReward.offer),
-      offer: room.entryReward.offer,
-    });
-  }
-  if (room.roomLocal.kind === 'fixed') {
-    return room.roomLocal.offer === null
-      ? undefined
-      : Object.freeze({ label: room.roomLocal.summary, offer: room.roomLocal.offer });
-  }
-  if (room.roomLocal.kind !== 'incomingReward' || room.roomLocal.control.offer === null) {
-    return undefined;
-  }
-  return Object.freeze({
-    label: summarizeRewardOffer(catalog, room.roomLocal.control.offer),
-    offer: room.roomLocal.control.offer,
-  });
+  const rewards = room.offerRewardRewards;
+  const reward = rewards.length === 1 ? rewards[0] : undefined;
+  return reward?.offer === null || reward?.offer === undefined
+    ? undefined
+    : Object.freeze({ label: summarizeRewardOffer(catalog, reward.offer), offer: reward.offer });
 }
 
 type BatchWithContinuations =
@@ -213,9 +202,11 @@ function selectedTargetRailPresentation(
 ): WorkspaceRailSelectedTarget | undefined {
   const door = node.selectedContinuation?.door;
   if (door === undefined) return undefined;
-  const visible = door.rewardPreview;
+  const visible = door.offerRewardSurface;
   const onlyReward =
-    visible.kind === 'visible' && visible.rewards.length === 1 ? visible.rewards[0] : undefined;
+    visible.visibility === 'visible' && visible.rewards.length === 1
+      ? visible.rewards[0]
+      : undefined;
   const reward =
     onlyReward?.offer === null || onlyReward?.offer === undefined
       ? undefined

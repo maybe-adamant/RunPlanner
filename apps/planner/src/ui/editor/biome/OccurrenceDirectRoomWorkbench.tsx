@@ -252,19 +252,17 @@ export function IncomingRewardOverview({
   readonly incomingDoor: WorkspaceDoorContract | undefined;
 }) {
   if (incomingDoor === undefined) return null;
-  const preview = incomingDoor.rewardPreview;
+  const preview = incomingDoor.offerRewardSurface;
   const label =
-    preview.kind === 'visible' && preview.rewards.length > 1
+    preview.visibility === 'visible' && preview.rewards.length > 1
       ? 'Incoming Rewards'
       : 'Incoming Reward';
   const summary =
-    preview.kind === 'hidden'
+    preview.visibility === 'hidden'
       ? 'Hidden'
-      : preview.kind === 'none'
+      : preview.rewards.length === 0
         ? 'None'
-        : preview.rewards.length === 0
-          ? 'None'
-          : preview.rewards.map((reward) => reward.summary).join(', ');
+        : preview.rewards.map((reward) => reward.summary).join(', ');
   return (
     <section aria-label="Incoming reward" className="room-overview-incoming-reward">
       <span className="room-overview-incoming-label">{label}</span>

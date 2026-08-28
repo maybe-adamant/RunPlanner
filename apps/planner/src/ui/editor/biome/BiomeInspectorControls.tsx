@@ -374,7 +374,10 @@ export function StartRoomIdentityEditor({
   const dispatch = useAppDispatch();
   const picker = node.room.roomPicker;
   const startPicker = picker?.kind === 'startRoomPicker' ? picker : undefined;
-  if (startPicker === undefined && node.room.entryReward === undefined) return null;
+  const startRewardControl = node.room.offerRewardRewards.find(
+    (reward) => reward.key === 'incoming',
+  )?.control;
+  if (startPicker === undefined && startRewardControl === undefined) return null;
   const interaction =
     startPicker === undefined
       ? undefined
@@ -412,10 +415,10 @@ export function StartRoomIdentityEditor({
           />
         </>
       )}
-      {node.room.entryReward === undefined ? null : (
+      {startRewardControl === undefined ? null : (
         <div aria-label="Entry reward" className="start-room-entry-reward">
           <RewardControlEditor
-            control={node.room.entryReward}
+            control={startRewardControl}
             idPrefix={`start-${node.room.occurrenceId}-entry-reward`}
             interactions={interactions}
             label="Reward"

@@ -721,6 +721,53 @@ export function normalizeRoom(
     rewards,
     `${path}.incomingReward`,
   );
+  const localChildren = normalizeLocalChildren(
+    room.localChildren ?? [],
+    `${path}.localChildren`,
+    (binding, bindingPath) => {
+      const normalized = normalizeRewardBinding(binding, rewards, bindingPath);
+      if (normalized.kind !== 'countedChoice') {
+        fail(`${bindingPath}.kind`, 'bounded reward slots require countedChoice');
+      }
+      return normalized;
+    },
+  );
+  const offerRewardBinding = (() => {
+    const raw = room.offerRewardBinding;
+    if (raw === undefined) {
+      return Object.freeze(
+        incomingReward.kind === 'none' || incomingReward.kind === 'shop'
+          ? { kind: 'none' as const }
+          : { kind: 'incomingReward' as const },
+      );
+    }
+    if (raw.kind !== 'localRewardGroup') {
+      fail(`${path}.offerRewardBinding.kind`, `unknown binding ${String(raw.kind)}`);
+    }
+    const group = localChildren.find((child) => child.key === raw.groupKey);
+    if (group === undefined) {
+      fail(
+        `${path}.offerRewardBinding.groupKey`,
+        `unknown local reward group ${String(raw.groupKey)}`,
+      );
+    }
+    if (group.kind !== 'boundedRewardSlots') {
+      fail(
+        `${path}.offerRewardBinding.groupKey`,
+        'offer reward groups must reference bounded reward slots',
+      );
+    }
+    if (group.offerRewardCapability !== 'fieldsCages') {
+      fail(
+        `${path}.offerRewardBinding.groupKey`,
+        'offer reward groups must declare the fieldsCages materialization capability',
+      );
+    }
+    return Object.freeze({
+      kind: 'localRewardGroup' as const,
+      groupKey: group.key,
+    });
+  })();
   const prebossBatchPolicy =
     room.prebossBatchPolicy === undefined
       ? undefined
@@ -965,6 +1012,7 @@ export function normalizeRoom(
     exits: Object.freeze(exits),
     additionalExits,
     incomingReward,
+    offerRewardBinding,
     blockGiftBoons: room.blockGiftBoons ?? false,
     hasKeepsakeRack: room.hasKeepsakeRack ?? false,
     hasRequiredFountain: room.hasRequiredFountain ?? false,
@@ -1004,17 +1052,7 @@ export function normalizeRoom(
       ? {}
       : { force: normalizeForce(room.force, rewards, `${path}.force`) }),
     ...(requiredObjects === undefined ? {} : { requiredObjects: Object.freeze(requiredObjects) }),
-    localChildren: normalizeLocalChildren(
-      room.localChildren ?? [],
-      `${path}.localChildren`,
-      (binding, bindingPath) => {
-        const normalized = normalizeRewardBinding(binding, rewards, bindingPath);
-        if (normalized.kind !== 'countedChoice') {
-          fail(`${bindingPath}.kind`, 'bounded reward slots require countedChoice');
-        }
-        return normalized;
-      },
-    ),
+    localChildren,
     ...(fieldsOptionalRewards === undefined ? {} : { fieldsOptionalRewards }),
     ...(infernalContractReward === undefined ? {} : { infernalContractReward }),
   });

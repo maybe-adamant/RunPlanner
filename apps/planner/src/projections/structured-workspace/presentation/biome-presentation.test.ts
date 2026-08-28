@@ -309,8 +309,8 @@ describe('structured workspace biome presentation', () => {
       (slot) => slot.hubSlotKey === firstVisitModel?.hubSlotKey,
     );
     const firstDoorReward =
-      firstVisitSlot?.door?.rewardPreview.kind === 'visible'
-        ? firstVisitSlot.door.rewardPreview.rewards[0]
+      firstVisitSlot?.door?.offerRewardSurface.visibility === 'visible'
+        ? firstVisitSlot.door.offerRewardSurface.rewards[0]
         : undefined;
     if (firstDoorReward?.offer === null || firstDoorReward?.offer === undefined) {
       throw new Error('first Hub visit has no slot-owned door reward');

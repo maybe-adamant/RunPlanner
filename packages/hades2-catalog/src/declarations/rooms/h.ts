@@ -11,6 +11,13 @@ const sparkChaosHost = (secretPointAnchorCount: number) => ({
   additionalExits: [sparkChaosExit],
 });
 
+const fieldsOfferReward = {
+  offerRewardBinding: { kind: 'localRewardGroup' as const, groupKey: 'cages' },
+};
+const fieldsOfferRewardGroup = {
+  offerRewardCapability: 'fieldsCages' as const,
+};
+
 const wellHost = (challengeSwitchAnchorCount: number) => ({
   challengeSwitchAnchorCount,
   roomShop: { profileKey: 'RoomShop' as const, spawnChance: 0.35 },
@@ -78,6 +85,7 @@ export const hRooms = [
     advancesExperimentalHammerUses: true,
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'FieldsCombat' },
+    ...fieldsOfferReward,
     structuralTags: [],
     exits: [{ index: 1, type: 'FieldsExitDoor' }],
     incomingReward: { kind: 'none' },
@@ -96,6 +104,7 @@ export const hRooms = [
     localChildren: [
       {
         key: 'cages',
+        ...fieldsOfferRewardGroup,
         kind: 'boundedRewardSlots',
         slotKeys: ['cage1', 'cage2', 'cage3'],
         rawCapacity: 5,
@@ -121,6 +130,7 @@ export const hRooms = [
     advancesExperimentalHammerUses: true,
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'FieldsCombat' },
+    ...fieldsOfferReward,
     structuralTags: [],
     exits: [
       { index: 1, type: 'FieldsExitDoor' },
@@ -147,6 +157,7 @@ export const hRooms = [
     localChildren: [
       {
         key: 'cages',
+        ...fieldsOfferRewardGroup,
         kind: 'boundedRewardSlots',
         slotKeys: ['cage1', 'cage2', 'cage3'],
         rawCapacity: 3,
@@ -172,6 +183,7 @@ export const hRooms = [
     advancesExperimentalHammerUses: true,
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'FieldsCombat' },
+    ...fieldsOfferReward,
     structuralTags: [],
     exits: [
       { index: 1, type: 'FieldsExitDoor' },
@@ -193,6 +205,7 @@ export const hRooms = [
     localChildren: [
       {
         key: 'cages',
+        ...fieldsOfferRewardGroup,
         kind: 'boundedRewardSlots',
         slotKeys: ['cage1', 'cage2', 'cage3'],
         rawCapacity: 3,
@@ -218,6 +231,7 @@ export const hRooms = [
     advancesExperimentalHammerUses: true,
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'FieldsCombat' },
+    ...fieldsOfferReward,
     structuralTags: [],
     exits: [
       { index: 1, type: 'FieldsExitDoor' },
@@ -239,6 +253,7 @@ export const hRooms = [
     localChildren: [
       {
         key: 'cages',
+        ...fieldsOfferRewardGroup,
         kind: 'boundedRewardSlots',
         slotKeys: ['cage1', 'cage2', 'cage3'],
         rawCapacity: 4,
@@ -264,6 +279,7 @@ export const hRooms = [
     advancesExperimentalHammerUses: true,
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'FieldsCombat' },
+    ...fieldsOfferReward,
     structuralTags: [],
     exits: [
       { index: 1, type: 'FieldsExitDoor' },
@@ -285,6 +301,7 @@ export const hRooms = [
     localChildren: [
       {
         key: 'cages',
+        ...fieldsOfferRewardGroup,
         kind: 'boundedRewardSlots',
         slotKeys: ['cage1', 'cage2', 'cage3'],
         rawCapacity: 5,
@@ -310,6 +327,7 @@ export const hRooms = [
     advancesExperimentalHammerUses: true,
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'FieldsCombat' },
+    ...fieldsOfferReward,
     structuralTags: [],
     exits: [
       { index: 1, type: 'FieldsExitDoor' },
@@ -331,6 +349,7 @@ export const hRooms = [
     localChildren: [
       {
         key: 'cages',
+        ...fieldsOfferRewardGroup,
         kind: 'boundedRewardSlots',
         slotKeys: ['cage1', 'cage2', 'cage3'],
         rawCapacity: 5,
@@ -356,6 +375,7 @@ export const hRooms = [
     advancesExperimentalHammerUses: true,
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'FieldsCombat' },
+    ...fieldsOfferReward,
     structuralTags: [],
     exits: [
       { index: 1, type: 'FieldsExitDoor' },
@@ -377,6 +397,7 @@ export const hRooms = [
     localChildren: [
       {
         key: 'cages',
+        ...fieldsOfferRewardGroup,
         kind: 'boundedRewardSlots',
         slotKeys: ['cage1', 'cage2', 'cage3'],
         rawCapacity: 3,
@@ -402,6 +423,7 @@ export const hRooms = [
     advancesExperimentalHammerUses: true,
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'FieldsCombat' },
+    ...fieldsOfferReward,
     structuralTags: [],
     exits: [
       { index: 1, type: 'FieldsExitDoor' },
@@ -423,6 +445,7 @@ export const hRooms = [
     localChildren: [
       {
         key: 'cages',
+        ...fieldsOfferRewardGroup,
         kind: 'boundedRewardSlots',
         slotKeys: ['cage1', 'cage2', 'cage3'],
         rawCapacity: 3,
@@ -448,6 +471,7 @@ export const hRooms = [
     advancesExperimentalHammerUses: true,
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'FieldsCombat' },
+    ...fieldsOfferReward,
     structuralTags: [],
     exits: [
       { index: 1, type: 'FieldsExitDoor' },
@@ -474,6 +498,7 @@ export const hRooms = [
     localChildren: [
       {
         key: 'cages',
+        ...fieldsOfferRewardGroup,
         kind: 'boundedRewardSlots',
         slotKeys: ['cage1', 'cage2', 'cage3'],
         rawCapacity: 2,
@@ -499,6 +524,7 @@ export const hRooms = [
     advancesExperimentalHammerUses: true,
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'FieldsCombat' },
+    ...fieldsOfferReward,
     structuralTags: [],
     exits: [
       { index: 1, type: 'FieldsExitDoor' },
@@ -520,6 +546,7 @@ export const hRooms = [
     localChildren: [
       {
         key: 'cages',
+        ...fieldsOfferRewardGroup,
         kind: 'boundedRewardSlots',
         slotKeys: ['cage1', 'cage2', 'cage3'],
         rawCapacity: 5,
@@ -545,6 +572,7 @@ export const hRooms = [
     advancesExperimentalHammerUses: true,
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'FieldsCombat' },
+    ...fieldsOfferReward,
     structuralTags: [],
     exits: [
       { index: 1, type: 'FieldsExitDoor' },
@@ -566,6 +594,7 @@ export const hRooms = [
     localChildren: [
       {
         key: 'cages',
+        ...fieldsOfferRewardGroup,
         kind: 'boundedRewardSlots',
         slotKeys: ['cage1', 'cage2', 'cage3'],
         rawCapacity: 5,
@@ -591,6 +620,7 @@ export const hRooms = [
     advancesExperimentalHammerUses: true,
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'FieldsCombat' },
+    ...fieldsOfferReward,
     structuralTags: [],
     exits: [
       { index: 1, type: 'FieldsExitDoor' },
@@ -612,6 +642,7 @@ export const hRooms = [
     localChildren: [
       {
         key: 'cages',
+        ...fieldsOfferRewardGroup,
         kind: 'boundedRewardSlots',
         slotKeys: ['cage1', 'cage2', 'cage3'],
         rawCapacity: 3,
@@ -637,6 +668,7 @@ export const hRooms = [
     advancesExperimentalHammerUses: true,
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'FieldsCombat' },
+    ...fieldsOfferReward,
     structuralTags: [],
     exits: [
       { index: 1, type: 'FieldsExitDoor' },
@@ -663,6 +695,7 @@ export const hRooms = [
     localChildren: [
       {
         key: 'cages',
+        ...fieldsOfferRewardGroup,
         kind: 'boundedRewardSlots',
         slotKeys: ['cage1', 'cage2', 'cage3'],
         rawCapacity: 2,
@@ -688,6 +721,7 @@ export const hRooms = [
     advancesExperimentalHammerUses: true,
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'FieldsCombat' },
+    ...fieldsOfferReward,
     structuralTags: [],
     exits: [
       { index: 1, type: 'FieldsExitDoor' },
@@ -714,6 +748,7 @@ export const hRooms = [
     localChildren: [
       {
         key: 'cages',
+        ...fieldsOfferRewardGroup,
         kind: 'boundedRewardSlots',
         slotKeys: ['cage1', 'cage2', 'cage3'],
         rawCapacity: 2,
@@ -739,6 +774,7 @@ export const hRooms = [
     advancesExperimentalHammerUses: true,
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'FieldsCombat' },
+    ...fieldsOfferReward,
     structuralTags: [],
     exits: [
       { index: 1, type: 'FieldsExitDoor' },
@@ -765,6 +801,7 @@ export const hRooms = [
     localChildren: [
       {
         key: 'cages',
+        ...fieldsOfferRewardGroup,
         kind: 'boundedRewardSlots',
         slotKeys: ['cage1', 'cage2', 'cage3'],
         rawCapacity: 3,

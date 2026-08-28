@@ -394,9 +394,10 @@ function projectHubNode(
       if (localVisit !== undefined) {
         markerDestinations.redirect(
           localVisit.slots.flatMap((localSlot) =>
-            localSlot.generation !== 'generated' || localSlot.door.rewardPreview.kind !== 'visible'
+            localSlot.generation !== 'generated' ||
+            localSlot.door.offerRewardSurface.visibility !== 'visible'
               ? []
-              : localSlot.door.rewardPreview.rewards.map((reward) => reward.marker),
+              : localSlot.door.offerRewardSurface.rewards.map((reward) => reward.marker),
           ),
           workbench.key,
         );

@@ -341,6 +341,12 @@ export interface RawShopRewardBinding {
   readonly additionalOptionRequirements?: Readonly<Record<string, RequirementExpression>>;
 }
 
+/** Raw declaration override for a room-owned non-incoming reward group. */
+export interface RawRoomOfferRewardBinding {
+  readonly kind: 'localRewardGroup';
+  readonly groupKey: string;
+}
+
 export type RawRewardProducerBinding =
   RawCountedRewardBinding | RawFixedRewardBinding | RawNoneRewardBinding | RawShopRewardBinding;
 
@@ -357,6 +363,8 @@ export type RawLocalChildDescriptor =
   | {
       readonly key: string;
       readonly kind: 'boundedRewardSlots';
+      /** Optional declaration-owned capability for a projected offer surface. */
+      readonly offerRewardCapability?: 'fieldsCages';
       readonly slotKeys: readonly string[];
       readonly rawCapacity: number;
       readonly maxActiveSlots: number;
@@ -423,6 +431,8 @@ export interface RawRoomDeclaration {
   readonly exits: readonly RawRoomExitDeclaration[];
   readonly additionalExits?: readonly RawAdditionalExitDeclaration[];
   readonly incomingReward: RawRewardProducerBinding;
+  /** Optional override for a bounded local reward group exposed by this room. */
+  readonly offerRewardBinding?: RawRoomOfferRewardBinding;
   /** The game room flag that suppresses Gift trait offers in this room. */
   readonly blockGiftBoons?: boolean;
   /** The game room flag that suppresses Gorgon Amulet in this room. */

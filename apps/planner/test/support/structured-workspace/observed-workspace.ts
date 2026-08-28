@@ -95,11 +95,7 @@ function appendDoorRewardMarkers(
   markers: WorkspaceMarker[],
   door: Extract<WorkspaceNode, { readonly kind: 'ordinaryBatch' }>['targets'][number]['door'],
 ): void {
-  if (door.rewardPreview.kind === 'none') return;
-  const rewards =
-    door.rewardPreview.kind === 'visible'
-      ? door.rewardPreview.rewards
-      : door.rewardPreview.authoringRewards;
+  const rewards = door.offerRewardSurface.rewards;
   for (const reward of rewards) appendMarker(markers, reward.marker);
 }
 
