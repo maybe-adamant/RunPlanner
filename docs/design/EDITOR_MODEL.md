@@ -662,6 +662,26 @@ resolved-offer editor. A declaration-forced target may display the derived pool
 as read-only context, but it does not gain another persisted store selector.
 This keeps batch, declaration, and leaf ownership visible in the UI.
 
+O gives its non-ShipCombat `authoredBaseStore` selector the product label
+`Next store roll`: it remains the one authored `ChooseNextRewardStore` outcome,
+not a claim that every selected target draws a visible reward from that bag.
+For every O normal target, the application projects one read-only target-card
+consequence from the canonical incoming reward, resolved store provenance,
+declaration-owned producer, and any forced store. React renders that complete
+product without inspecting O game names, reward keys, declarations, or store
+policy. ShipCombat says that it has no incoming reward and the outgoing store
+is discarded; Miniboss and Devotion show their forced RunProgress Boon or
+Devotion; Reprieve says its reward is drawn from the resolved RunProgress or
+MetaProgress store; and Story, Midshop, and Preboss Shop show their fixed
+identity plus the resolved RunProgress or MetaProgress provenance that counts
+as entered-store history. An unavailable or retained-invalid target publishes
+an explicit unresolved consequence instead of a false store claim. A Ship
+source has no outgoing selector: where relevant, its consequence identifies
+the store as derived from the final active wheel, whose existing wheel control
+is the only editable authority. These statements augment their existing reward
+editors and never become addresses, candidates, findings, or a second reward
+control.
+
 Replacing the batch reward pool retains every target reward. Candidate and
 selected-plan validation mark a retained reward invalid when its newly resolved
 store cannot produce it; the editor does not reset it. The UI never displays
@@ -711,6 +731,14 @@ offers marked active by that complete projection product. Reducing the active
 offer count hides the surplus offer editors without deleting their authored
 values; restoring the count reveals those values again. The picked index
 remains constrained to an active offer.
+Within one active wheel, its offers render as simultaneous offer cards: one
+active offer fills the available row, while two render as equal sibling columns
+and collapse to one column in a narrow container. The cards may share the
+compact exit-card visual language, but they are not exits: they render no door
+number, exit selection, room state, or topology action. A read-only selected
+marker may reflect the current picked index; the sole interactive `Picked
+offer` control remains at its exact wheel acquisition action on the Room
+Timeline. Wheel 1 and Wheel 2 remain separate sequential phase sections.
 The outgoing decision exposes no duplicate store selector because its
 `sourceOfferPoint` policy derives from the last active wheel. The editor
 dispatches only ship and reward-wheel semantic commands and does not encode
