@@ -11,7 +11,7 @@ the active frontier needed to orient the next delivery.
 
 ## Current Snapshot
 
-The current persisted contract is strict authored schema 66 with catalog
+The current persisted contract is strict authored schema 67 with catalog
 `0.48.0-hex-talent-layouts`. The browser product supports all eight route biomes:
 
 ```text
@@ -85,6 +85,7 @@ milestones without repeating the delivery chronology.
 | Schema 64          | Optional frozen Aspect of Persephone offer contributions, chronological Premium Service range expansion, and derived effective trait levels. |
 | Schema 65          | Frozen selected-Hex layouts and high-value identities, finite Path capacity, latched Talent Drop closure, and persistent God Sent extension. |
 | Schema 66          | Three-option Chaos Trial Upgrade envelopes, selected-pair settlement, exact Denial peer-curse bans, and ordinary Rejected row locking.       |
+| Schema 67          | Sparse Postboss Keepsake Rack changes: declaration-owned availability, explicit add/change/delete, and no authored retain no-op.             |
 
 Catalog versions advanced alongside these boundaries. The current catalog is
 `0.48.0-hex-talent-layouts`; exact declaration facts and source contacts
@@ -215,6 +216,17 @@ representative full-lane witnesses:
 
 Pools and Wells alone allow runtime-random inventory at Interact. World Shops
 and Shrines author every visible inventory identity.
+
+### Sparse Keepsake Rack authoring
+
+Schema 67 separates the physical Postboss rack from authored use. An unused
+rack has no occurrence leaf, Room Action, lifecycle event, or derived history
+entry. The editor offers **Add keepsake change**; a selected replacement can be
+changed in place or removed with **Delete keepsake change**. Changing preserves
+the ranked action and dormant immediate equip-result detail, while deletion
+clears the complete owned subtree. Run State history records only the starting
+equip and real replacements, with each entry carrying its actual effective
+biome so skipped racks do not collapse chronology labels.
 
 ### Repository cleanup closure
 
@@ -350,6 +362,17 @@ Validation claims below are the executed checks retained because they establish
 important closure boundaries. They are not a promise that every historical
 intermediate suite was green.
 
+- The schema-67 sparse Keepsake Rack closure completed on 2026-08-28 with all
+  workspace and fixture typechecks; checkpoint integrity at 3 files/20 tests;
+  253 unchanged correctness files at 2,525 passing tests; and the corrected
+  stale schema-migration file at 1 file/6 passing tests. The complete
+  correctness run's only failure was that file's obsolete schema-66 expected
+  value; after its schema-67 correction, the focused file passed without
+  rerunning the unchanged 253 files. The 17-test performance-comparison unit
+  lane, same-host relative performance comparison, ESLint, repository-wide
+  Prettier check, and production build all passed. The relative performance
+  verdict was PASS; the build retained only the existing greater-than-500-kB
+  application chunk advisory.
 - The Chaos authoring recovery closed on 2026-08-27 with workspace, catalog,
   engine, and fixture typechecking; checkpoint integrity at 3 files/20 tests;
   the 195-file regular lane at 1,939 tests; the 57-file heavy lane at 570

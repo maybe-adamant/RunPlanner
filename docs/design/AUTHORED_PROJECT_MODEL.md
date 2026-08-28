@@ -7,20 +7,19 @@ scope, biome topology, occurrence-local state, semantic addresses, commands,
 persistence, and history. Simulation algorithms, candidates, Redux state, and
 React rendering are separate concerns.
 
-## Schema 64 Boundary
+## Schema 67 Boundary
 
-Schema 64 is the sole persisted authored-project contract. The codec rejects
+Schema 67 is the sole persisted authored-project contract. The codec rejects
 every other schema version rather than manufacturing current topology or leaf
 state for a stale document. The migration CLI performs the explicit 49-to-50,
 50-to-51, 51-to-52, 52-to-53, 53-to-54, 54-to-55, 55-to-56, 56-to-57,
-57-to-58, 58-to-59, 59-to-60, 60-to-61, 61-to-62, 62-to-63, and 63-to-64
+57-to-58, 58-to-59, 59-to-60, 60-to-61, 61-to-62, 62-to-63, 63-to-64,
+64-to-65, 65-to-66, and 66-to-67
 migrations outside the production decoder. It advances the corresponding
 catalog metadata from `0.32.0-run-impacting-traits` through
-`0.47.0-persephone-effective-levels` without inventing authored outcomes.
+`0.48.0-hex-talent-layouts` without inventing authored outcomes.
 Catalog versions must match exactly after migration. The strict production
-decoder has no implicit schema-63 compatibility path; the explicit 63-to-64
-migration advances schema and catalog metadata only because an absent optional
-`persephoneLevelBonus` is the complete authored `+0` result.
+decoder has no implicit stale-schema compatibility path.
 
 Schemas 46 and 47 completed the occurrence-owned topology and chronology
 cutover: every supported authored main or N side room is a `RoomOccurrence`,
@@ -88,6 +87,14 @@ and nonzero values round-trip and remain frozen with their option; an out-of-
 range value is retained for repair and receives an engine-owned candidate
 finding. The active maximum (`5` before Premium Service and `8` afterward) is
 contextual simulation output, not a persisted field.
+
+Schema 65 adds the complete selected-Hex layout and high-value node identities.
+Schema 66 expands Trial Upgrade into its complete three-option Chaos envelope.
+Schema 67 makes Postboss Keepsake Rack authorship sparse: a physical rack remains
+declaration data, while an occurrence owns a `keepsakeRack` leaf only when the
+player actually selects a replacement. The 66-to-67 migration deletes retained
+no-op leaves and compacts replacement leaves without changing their selected
+key or immediate equip-result children.
 
 There is one biome plan and one topology language. Production state and
 semantic addresses have no layout-specific plan family, completion-transition
@@ -219,29 +226,31 @@ not a synthetic reward or topology edge.
 
 ### Keepsake Authorship
 
-The route loadout's starting keepsake and each F/G/H/N/O/P automatic Postboss
-occurrence own one exact chronological selection and that occurrence's
-`roomActions` order. A Postboss value is either `retain` or `replace` with a
-catalog keepsake key. The occurrence and its local controls are active at the
-configured route tail as well as before a successor; I and Q own no rack
-because their declarations have none.
+The route loadout owns one exact starting keepsake. F/G/H/N/O/P automatic
+Postboss room declarations expose physical racks; an occurrence owns a sparse
+`keepsakeRack` leaf with one catalog keepsake key only when the player authors
+a replacement. Absence means no interaction and carries the current keepsake.
+The occurrence and its local controls are active at the configured route tail
+as well as before a successor; I and Q own no rack because their declarations
+have none.
 
-Every structural Postboss state defaults to a `useFountain` action. Replacing a
-keepsake atomically adds the required
-`interactKeepsakeRack` action; retaining removes that action while preserving
-any dormant keepsake-specific equip detail. The action order is the sole
-chronology owner, and the automatic occurrence owns its findings and history.
+Every structural Postboss state defaults to a `useFountain` action. Adding a
+replacement atomically adds the required `interactKeepsakeRack` action. Changing
+its key preserves the ranked action and dormant keepsake-specific equip detail;
+deleting it removes the leaf, action, and all leaf-owned detail. The action
+order is the sole chronology owner, and the automatic occurrence owns its
+findings and history.
 
 Selection legality is contextual rather than codec policy. Unknown keys are
 malformed, while a structurally valid replacement that has already been
 removed, conflicts with Fated state, or is blocked by prior Athena history
-remains authored and repairable. Commands never silently convert it to retain,
-delete it, or move its effect detail to another frontier.
+remains authored and repairable. Commands never silently delete it or move its
+effect detail to another frontier.
 
 Only immediate equip outcomes are persisted beneath a selection. Jeweled Pom
 and Experimental Hammer use one closed `KeepsakeEquipResultAddress` family with
 effect-specific complete children; the result is reached on start or
-replacement and is dormant on retention or while another identity is selected.
+replacement and is dormant while another identity is selected.
 Calling Card row actions stay on their exact trait offers, Time Piece conversion
 choices stay on exact acquisition roles, and Fig Leaf/Gorgon results stay on
 exact encounter phases. This preserves one semantic owner for every authored

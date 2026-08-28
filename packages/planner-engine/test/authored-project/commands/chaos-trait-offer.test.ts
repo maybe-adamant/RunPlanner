@@ -97,7 +97,7 @@ function pair(values: Partial<AuthoredChaosTraitOffer> = {}): AuthoredChaosTrait
   };
 }
 
-describe('schema-66 Chaos TrialUpgrade authored child', () => {
+describe('Chaos TrialUpgrade authored child', () => {
   it('round-trips its unresolved default and atomically replaces the whole selected pair', () => {
     const unresolved = unresolvedProject();
     const serializedUnresolved = JSON.parse(encodeProjectDocument(unresolved)) as {
@@ -284,7 +284,7 @@ describe('schema-66 Chaos TrialUpgrade authored child', () => {
     ).toEqual(['Legendary']);
   });
 
-  it('migrates schema-63 projects into the strict schema-66 decoder path', () => {
+  it('migrates schema-63 projects into the current strict decoder path', () => {
     const legacy = JSON.parse(JSON.stringify(naturalChaosRaw)) as {
       schemaVersion: number;
       catalogVersion: string;
@@ -292,7 +292,7 @@ describe('schema-66 Chaos TrialUpgrade authored child', () => {
     legacy.schemaVersion = 63;
     legacy.catalogVersion = '0.46.0-vow-forfeit-red-onion';
     const migrated = migrateProjectDocument(legacy).document;
-    expect(migrated.schemaVersion).toBe(66);
+    expect(migrated.schemaVersion).toBe(67);
     expect(migrated.catalogVersion).toBe('0.48.0-hex-talent-layouts');
     expect(() => decodeProjectDocument(migrated, catalog)).not.toThrow();
   });
