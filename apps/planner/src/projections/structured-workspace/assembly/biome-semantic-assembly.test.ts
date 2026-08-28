@@ -188,7 +188,10 @@ function batchTargets(assembly: ReturnType<typeof assembleWorkspaceBiomeSemantic
 
 describe('structured workspace biome semantic assembly', () => {
   it('assembles a real Boss completion contact from an engine Steady Growth outcome', () => {
-    const completion = createOccurrenceAddress(nBiome, createOccurrenceId('completion:N:boss'));
+    const completion = createOccurrenceAddress(
+      nBiome,
+      createOccurrenceId('surface-n-preboss:boss'),
+    );
     const outcome = createSteadyGrowthOutcomeAddress(completion, 'Encounter');
     const project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
       kind: 'ReplaceSteadyGrowthTarget',
@@ -427,7 +430,7 @@ describe('structured workspace biome semantic assembly', () => {
     );
     expect(new Set(occurrenceIds)).toEqual(
       new Set(
-        [...(source.plan.topology?.occurrences ?? []), ...source.plan.completionOccurrences]
+        (source.plan.topology?.occurrences ?? [])
           .filter((occurrence) => !notGeneratedLocalOccurrences.has(occurrence.occurrenceId))
           .map((occurrence) => occurrence.occurrenceId),
       ),

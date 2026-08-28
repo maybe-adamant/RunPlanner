@@ -42,11 +42,10 @@ function materialize(project: ProjectDocument) {
 
 describe('F takeover materialization', () => {
   it.each([
-    [true, 'Combat', 'continuesSpine'],
-    [true, 'Preboss', 'startsCompletion'],
-    [false, 'Preboss', 'deadLeaf'],
-  ] as const)('derives %s/%s target continuation as %s', (picked, roomKind, expected) => {
-    expect(targetContinuation(picked, roomKind)).toBe(expected);
+    [true, 'continuesSpine'],
+    [false, 'deadLeaf'],
+  ] as const)('derives %s target continuation as %s', (picked, expected) => {
+    expect(targetContinuation(picked)).toBe(expected);
   });
 
   it('requires complete authored topology at the public materialization boundary', () => {
@@ -153,12 +152,12 @@ describe('F takeover materialization', () => {
     expect(
       takeover.targets.map((target) => [target.room.entryState?.kind, target.continuation]),
     ).toEqual([
-      ['shop', 'startsCompletion'],
+      ['shop', 'continuesSpine'],
       [undefined, 'deadLeaf'],
     ]);
-    expect(snapshot.automaticRooms.map((room) => room.occurrenceId)).toEqual([
-      'completion:F:boss',
-      'completion:F:postboss',
+    expect(snapshot.fixedRoomLinks?.map((link) => link.target.occurrenceId)).toEqual([
+      'f-takeover-preboss-shop:boss',
+      'f-takeover-preboss-shop:postboss',
     ]);
   });
 
@@ -175,7 +174,7 @@ describe('F takeover materialization', () => {
       ]),
     ).toEqual([
       [false, undefined, 'deadLeaf'],
-      [true, undefined, 'startsCompletion'],
+      [true, undefined, 'continuesSpine'],
     ]);
   });
 

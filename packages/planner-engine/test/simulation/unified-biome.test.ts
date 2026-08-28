@@ -473,7 +473,7 @@ describe('unified biome simulation', () => {
       ['exit2', undefined],
     ]);
     expect(takeover.targets.map((target) => target.continuation)).toEqual([
-      'startsCompletion',
+      'continuesSpine',
       'deadLeaf',
     ]);
     for (const target of takeover.targets) {
@@ -643,7 +643,7 @@ describe('unified biome simulation', () => {
     expect(o.snapshot.decisions.at(-1)).toMatchObject({
       kind: 'batch',
       rewardStore: { kind: 'sourceOfferPoint' },
-      targets: [{ continuation: 'startsCompletion' }],
+      targets: [{ continuation: 'continuesSpine' }],
     });
 
     const qProject = loadSurfaceNOPQProject();

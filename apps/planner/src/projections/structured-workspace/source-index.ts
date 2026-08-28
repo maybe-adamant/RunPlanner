@@ -353,7 +353,7 @@ function appendPrefixOwners(
     // visits remain independently covered even if malformed state reuses it.
     appendDecisionOwners(keys, decision, omittedHubTargetKey);
   }
-  for (const room of prefix.automaticRooms ?? []) appendAuthoredRoomOwners(keys, room);
+  for (const link of prefix.fixedRoomLinks ?? []) appendAuthoredRoomOwners(keys, link.target);
 
   if (frontier?.kind === 'exitDecision') {
     appendOwner(keys, frontier.origin);
@@ -396,7 +396,7 @@ function createWorkspaceEvaluatedOwnerCoverage(
     const snapshot = evaluation.snapshot;
     appendAuthoredRoomOwners(keys, snapshot.entryRoom);
     for (const decision of snapshot.decisions) appendDecisionOwners(keys, decision);
-    for (const room of snapshot.automaticRooms) appendAuthoredRoomOwners(keys, room);
+    for (const link of snapshot.fixedRoomLinks) appendAuthoredRoomOwners(keys, link.target);
   } else {
     if (!hasMaterializedPrefix(evaluation)) {
       throw new StructuredWorkspaceProjectionContractError(
@@ -446,7 +446,7 @@ function partialBatchFromPrefix(prefix: MaterializedBiomePrefix): CanonicalBatch
 
 interface EvaluatedBiomeOverlay {
   readonly additional: ReadonlyMap<string, readonly CanonicalAdditionalContinuation[]>;
-  readonly automaticRooms: ReadonlyMap<OccurrenceId, CanonicalAuthoredRoom>;
+  readonly fixedRooms: ReadonlyMap<OccurrenceId, CanonicalAuthoredRoom>;
   readonly batches: ReadonlyMap<string, WorkspaceEvaluatedBatchOverlay>;
   readonly entryRoom?: CanonicalAuthoredRoom;
   readonly hubs: ReadonlyMap<string, CanonicalHubDecision>;
@@ -457,7 +457,7 @@ function evaluatedBiomeOverlay(
   coverage: WorkspaceEvaluatedOwnerCoverageIndex,
 ): EvaluatedBiomeOverlay {
   const additional = new Map<string, readonly CanonicalAdditionalContinuation[]>();
-  const automaticRooms = new Map<OccurrenceId, CanonicalAuthoredRoom>();
+  const fixedRooms = new Map<OccurrenceId, CanonicalAuthoredRoom>();
   const batches = new Map<string, WorkspaceEvaluatedBatchOverlay>();
   const hubs = new Map<string, CanonicalHubDecision>();
   const insert = <T>(map: Map<string, T>, key: string, value: T, label: string): void => {
@@ -519,17 +519,17 @@ function evaluatedBiomeOverlay(
     }
     additional.set(key, snapshot.frontier.additional);
   }
-  for (const room of snapshot?.automaticRooms ?? []) {
-    if (automaticRooms.has(room.occurrenceId)) {
+  for (const room of snapshot?.fixedRoomLinks?.map((link) => link.target) ?? []) {
+    if (fixedRooms.has(room.occurrenceId)) {
       throw new StructuredWorkspaceProjectionContractError(
-        `${room.occurrenceId} has duplicate automatic room overlay`,
+        `${room.occurrenceId} has duplicate fixed room overlay`,
       );
     }
-    automaticRooms.set(room.occurrenceId, room);
+    fixedRooms.set(room.occurrenceId, room);
   }
   return Object.freeze({
     additional,
-    automaticRooms,
+    fixedRooms,
     batches,
     ...(snapshot?.entryRoom === undefined ? {} : { entryRoom: snapshot.entryRoom }),
     hubs,
@@ -553,8 +553,8 @@ function requireOverlayWithinCoverage(
   if (overlay.entryRoom !== undefined) {
     requireOwners('entry overlay', (keys) => appendAuthoredRoomOwners(keys, overlay.entryRoom!));
   }
-  for (const room of overlay.automaticRooms.values()) {
-    requireOwners('automatic room overlay', (keys) => appendAuthoredRoomOwners(keys, room));
+  for (const room of overlay.fixedRooms.values()) {
+    requireOwners('fixed room overlay', (keys) => appendAuthoredRoomOwners(keys, room));
   }
   for (const { batch } of overlay.batches.values()) {
     requireOwners('batch overlay', (keys) => appendBatchOwners(keys, batch));
@@ -663,7 +663,7 @@ function createWorkspaceBiomeSource(
   const exitDecisionsByOwner = new Map<string, ExitDecision>();
   const hubDecisionsByKey = new Map<string, HubDecision>();
   const topology = plan.topology;
-  for (const occurrence of [...(topology?.occurrences ?? []), ...plan.completionOccurrences]) {
+  for (const occurrence of topology?.occurrences ?? []) {
     if (occurrencesById.has(occurrence.occurrenceId)) {
       throw new StructuredWorkspaceProjectionContractError(
         semanticAddressKey(createOccurrenceAddress(biome, occurrence.occurrenceId)) +
@@ -788,7 +788,7 @@ function createWorkspaceBiomeSource(
     transcendentEmbryoOutcomes,
     layout,
     blockedOccurrenceRoom: (occurrenceId: OccurrenceId) =>
-      overlay.automaticRooms.get(occurrenceId) ??
+      overlay.fixedRooms.get(occurrenceId) ??
       blockedOccurrenceRoom(createOccurrenceAddress(biome, occurrenceId)),
     occurrence: (occurrenceId: OccurrenceId) => occurrencesById.get(occurrenceId),
     outgoingStatus: (occurrenceId: OccurrenceId) =>

@@ -36,7 +36,7 @@ const rooms: readonly RawRoomDeclaration[] = [
 ];
 
 export const declarations = {
-  version: '0.48.0-hex-talent-layouts',
+  version: '0.49.0-completion-topology',
   biomes,
   routes,
   arcanaCards,

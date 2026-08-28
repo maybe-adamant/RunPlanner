@@ -55,11 +55,11 @@ export type OccurrenceOutgoingStatus =
       readonly owner: OccurrenceAddress;
     }
   | {
-      /** Declaration/layout-owned continuation; never an authored door decision. */
-      readonly kind: 'fixedAutomatic';
+      /** Fixed completion topology continuation; never an authored door decision. */
+      readonly kind: 'fixedRoom';
       readonly owner: OccurrenceAddress;
       readonly target:
-        | { readonly kind: 'automaticOccurrence'; readonly occurrenceId: OccurrenceId }
+        | { readonly kind: 'fixedOccurrence'; readonly occurrenceId: OccurrenceId }
         | { readonly kind: 'nextBiomeIntro'; readonly biomeKey: string }
         | { readonly kind: 'routeBoundary' };
     };
@@ -176,37 +176,23 @@ export function evaluateOccurrenceOutgoingStatus(
   const occurrence = topology.occurrences.find(
     (candidate) => candidate.occurrenceId === occurrenceId,
   );
-  const automatic = plan.completionOccurrences.find(
-    (candidate) => candidate.occurrenceId === occurrenceId,
-  );
-  if (occurrence === undefined && automatic === undefined) {
+  if (occurrence === undefined) {
     throw new Error(`${occurrenceId} is not an occurrence in ${plan.biomeKey}`);
   }
-  if (automatic !== undefined) {
-    const automaticIndex = plan.completionOccurrences.indexOf(automatic);
-    const nextAutomatic = plan.completionOccurrences[automaticIndex + 1];
-    if (nextAutomatic !== undefined) {
-      return Object.freeze({
-        kind: 'fixedAutomatic' as const,
-        owner: occurrenceOwner,
-        target: Object.freeze({
-          kind: 'automaticOccurrence' as const,
-          occurrenceId: nextAutomatic.occurrenceId,
-        }),
-      });
-    }
-    const biomeIndex = input.configuredBiomeKeys.indexOf(biome.biomeKey);
-    const nextBiomeKey = biomeIndex >= 0 ? input.configuredBiomeKeys[biomeIndex + 1] : undefined;
+
+  const fixedLink = topology.fixedRoomLinks.find(
+    (link) => link.sourceOccurrenceId === occurrenceId,
+  );
+  if (fixedLink !== undefined) {
     return Object.freeze({
-      kind: 'fixedAutomatic' as const,
+      kind: 'fixedRoom' as const,
       owner: occurrenceOwner,
-      target:
-        nextBiomeKey === undefined
-          ? Object.freeze({ kind: 'routeBoundary' as const })
-          : Object.freeze({ kind: 'nextBiomeIntro' as const, biomeKey: nextBiomeKey }),
+      target: Object.freeze({
+        kind: 'fixedOccurrence' as const,
+        occurrenceId: fixedLink.targetOccurrenceId,
+      }),
     });
   }
-  if (occurrence === undefined) throw new Error(`${occurrenceId} has no topology occurrence`);
 
   const decision = authoredDecision(topology, occurrenceId);
   if (decision !== undefined) {
@@ -235,16 +221,16 @@ export function evaluateOccurrenceOutgoingStatus(
 
   const entered = selectedSpineOccurrenceIds(topology).has(occurrenceId);
   const room = catalog.rooms.byKey[occurrence.gameName];
-  if (entered && room?.kind === 'Preboss') {
-    const boss = plan.completionOccurrences[0];
-    if (boss === undefined) throw new Error(`${plan.biomeKey} has no automatic Boss occurrence`);
+  if (entered && (room?.kind === 'Boss' || room?.kind === 'PostBoss')) {
+    const biomeIndex = input.configuredBiomeKeys.indexOf(biome.biomeKey);
+    const nextBiomeKey = biomeIndex >= 0 ? input.configuredBiomeKeys[biomeIndex + 1] : undefined;
     return Object.freeze({
-      kind: 'fixedAutomatic' as const,
+      kind: 'fixedRoom' as const,
       owner: occurrenceOwner,
-      target: Object.freeze({
-        kind: 'automaticOccurrence' as const,
-        occurrenceId: boss.occurrenceId,
-      }),
+      target:
+        nextBiomeKey === undefined
+          ? Object.freeze({ kind: 'routeBoundary' as const })
+          : Object.freeze({ kind: 'nextBiomeIntro' as const, biomeKey: nextBiomeKey }),
     });
   }
 

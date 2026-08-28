@@ -4,7 +4,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { basename, dirname, extname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-const CURRENT_SCHEMA_VERSION = 67;
+const CURRENT_SCHEMA_VERSION = 68;
 const SCHEMA_49_CATALOG_VERSION = '0.27.0-arcana-fear-loadout';
 const SCHEMA_50_CATALOG_VERSION = '0.30.0-boon-rarity-ledger';
 const SCHEMA_51_CATALOG_VERSION = '0.31.0-chaos-traits';
@@ -25,6 +25,7 @@ const SCHEMA_62_CATALOG_VERSION = '0.44.0-concave-stone';
 const SCHEMA_63_CATALOG_VERSION = '0.46.0-vow-forfeit-red-onion';
 const SCHEMA_64_CATALOG_VERSION = '0.47.0-persephone-effective-levels';
 const SCHEMA_65_CATALOG_VERSION = '0.48.0-hex-talent-layouts';
+const SCHEMA_68_CATALOG_VERSION = '0.49.0-completion-topology';
 
 const HEX_DEFAULTS = {
   SpellPolymorphTrait: {
@@ -699,6 +700,200 @@ function migrate66To67(document) {
   return { retainedRacksRemoved, replacementRacksCompacted };
 }
 
+const POSTBOSS_BY_ROUTE = {
+  Underworld: ['F_PostBoss01', 'G_PostBoss01', 'H_PostBoss01', null],
+  Surface: ['N_PostBoss01', 'O_PostBoss01', 'P_PostBoss01', null],
+};
+
+function selectedSpineOccurrenceIds(topology) {
+  const occurrences = new Map(
+    (topology.occurrences ?? []).map((occurrence) => [occurrence.occurrenceId, occurrence]),
+  );
+  const entered = new Set([topology.startOccurrenceId]);
+  const visited = new Set();
+  let current = topology.startOccurrenceId;
+  while (!visited.has(current)) {
+    visited.add(current);
+    const exit = (topology.decisions ?? []).find(
+      (decision) =>
+        decision.kind === 'exit' &&
+        decision.source?.kind === 'occurrence' &&
+        decision.source.occurrenceId === current,
+    );
+    if (exit !== undefined) {
+      const selected = exit.selection;
+      if (selected?.kind === 'normal') {
+        current = (exit.normal?.targets ?? []).find(
+          (target) => target.exitKey === selected.exitKey,
+        )?.occurrenceId;
+      } else if (selected?.kind === 'derived' && (exit.normal?.targets ?? []).length === 1) {
+        current = exit.normal.targets[0].occurrenceId;
+      } else if (selected?.kind === 'additional') {
+        const additional = occurrences.get(current)?.additionalExits ?? [];
+        current = additional.find(
+          (candidate) => candidate.key === selected.additionalExitKey,
+        )?.occurrenceId;
+      } else {
+        break;
+      }
+      if (typeof current !== 'string' || !occurrences.has(current)) break;
+      entered.add(current);
+      continue;
+    }
+    const hub = (topology.decisions ?? []).find(
+      (decision) => decision.kind === 'hub' && decision.source?.occurrenceId === current,
+    );
+    if (hub === undefined) break;
+    const handoff = (topology.decisions ?? []).find(
+      (decision) =>
+        decision.kind === 'exit' &&
+        decision.source?.kind === 'hubDecision' &&
+        decision.source.decisionKey === hub.hubKey,
+    );
+    if (handoff?.selection?.kind === 'normal') {
+      current = (handoff.normal?.targets ?? []).find(
+        (target) => target.exitKey === handoff.selection.exitKey,
+      )?.occurrenceId;
+    } else if (
+      handoff?.selection?.kind === 'derived' &&
+      (handoff.normal?.targets ?? []).length === 1
+    ) {
+      current = handoff.normal.targets[0].occurrenceId;
+    } else {
+      break;
+    }
+    if (typeof current !== 'string' || !occurrences.has(current)) break;
+    entered.add(current);
+  }
+  return entered;
+}
+
+function migrate67To68(document) {
+  if (document.catalogVersion !== SCHEMA_65_CATALOG_VERSION) {
+    throw new Error(
+      `schema 67 migration expects catalog ${SCHEMA_65_CATALOG_VERSION}, received ${String(document.catalogVersion)}`,
+    );
+  }
+  let completionOccurrencesMoved = 0;
+  let completionOccurrencesRetired = 0;
+  let fixedRoomLinksAdded = 0;
+  let routePlacementsRewritten = 0;
+  let routePlacementsRetired = 0;
+  let terminalPostbossOccurrencesRetired = 0;
+  let dormantCompletionOccurrencesRetired = 0;
+  for (const route of document.routes ?? []) {
+    const postbossByBiome = POSTBOSS_BY_ROUTE[route.routeKey];
+    const movedOccurrenceIds = new Map();
+    const retiredOccurrenceIds = new Set();
+    for (const [biomeIndex, biome] of (route.biomes ?? []).entries()) {
+      const topology = biome.topology;
+      const completion = biome.completionOccurrences ?? [];
+      delete biome.completionOccurrences;
+      if (topology === null || topology === undefined) {
+        completionOccurrencesRetired += completion.length;
+        dormantCompletionOccurrencesRetired += completion.length;
+        for (const occurrence of completion) {
+          if (typeof occurrence?.occurrenceId === 'string') {
+            retiredOccurrenceIds.add(`${biome.biomeKey}:${occurrence.occurrenceId}`);
+          }
+        }
+        continue;
+      }
+      const selected = selectedSpineOccurrenceIds(topology);
+      const preboss = (topology.occurrences ?? []).find(
+        (occurrence) =>
+          selected.has(occurrence.occurrenceId) &&
+          typeof occurrence.gameName === 'string' &&
+          occurrence.gameName.startsWith(`${biome.biomeKey}_PreBoss`),
+      );
+      if (preboss === undefined) {
+        completionOccurrencesRetired += completion.length;
+        dormantCompletionOccurrencesRetired += completion.length;
+        for (const occurrence of completion) {
+          if (typeof occurrence?.occurrenceId === 'string') {
+            retiredOccurrenceIds.add(`${biome.biomeKey}:${occurrence.occurrenceId}`);
+          }
+        }
+        topology.fixedRoomLinks = [];
+        continue;
+      }
+      const boss = completion.find(
+        (occurrence) => occurrence.gameName === `${biome.biomeKey}_Boss01`,
+      );
+      if (boss === undefined) {
+        throw new Error(`schema 67 ${route.routeKey}/${biome.biomeKey} has no completion Boss`);
+      }
+      const expectedPostboss = postbossByBiome?.[biomeIndex] ?? null;
+      const postboss = completion.find((occurrence) => occurrence.gameName === expectedPostboss);
+      const moved = [[boss, 'boss'], ...(postboss === undefined ? [] : [[postboss, 'postboss']])];
+      const movedOccurrences = moved.map(([occurrence, role]) => ({
+        ...occurrence,
+        occurrenceId: `${preboss.occurrenceId}:${role}`,
+      }));
+      for (const [occurrence, role] of moved) {
+        movedOccurrenceIds.set(
+          `${biome.biomeKey}:${occurrence.occurrenceId}`,
+          `${preboss.occurrenceId}:${role}`,
+        );
+      }
+      for (const occurrence of completion) {
+        if (!moved.includes(occurrence)) {
+          if (typeof occurrence?.occurrenceId === 'string') {
+            retiredOccurrenceIds.add(`${biome.biomeKey}:${occurrence.occurrenceId}`);
+          }
+          if (occurrence.gameName.endsWith('_PostBoss01') && expectedPostboss === null) {
+            terminalPostbossOccurrencesRetired += 1;
+          }
+        }
+      }
+      topology.occurrences = [...(topology.occurrences ?? []), ...movedOccurrences];
+      topology.fixedRoomLinks = [
+        {
+          sourceOccurrenceId: preboss.occurrenceId,
+          targetOccurrenceId: movedOccurrences[0].occurrenceId,
+        },
+        ...(movedOccurrences[1] === undefined
+          ? []
+          : [
+              {
+                sourceOccurrenceId: movedOccurrences[0].occurrenceId,
+                targetOccurrenceId: movedOccurrences[1].occurrenceId,
+              },
+            ]),
+      ];
+      completionOccurrencesMoved += movedOccurrences.length;
+      fixedRoomLinksAdded += topology.fixedRoomLinks.length;
+      completionOccurrencesRetired += completion.length - movedOccurrences.length;
+    }
+    const resourcePlacements = route.resourcePlacements;
+    if (resourcePlacements !== null && typeof resourcePlacements === 'object') {
+      for (const [family, placement] of Object.entries(resourcePlacements)) {
+        if (placement === null || typeof placement !== 'object') continue;
+        const key = `${placement.biomeKey}:${placement.occurrenceId}`;
+        const movedOccurrenceId = movedOccurrenceIds.get(key);
+        if (movedOccurrenceId !== undefined) {
+          resourcePlacements[family] = { ...placement, occurrenceId: movedOccurrenceId };
+          routePlacementsRewritten += 1;
+        } else if (retiredOccurrenceIds.has(key)) {
+          resourcePlacements[family] = null;
+          routePlacementsRetired += 1;
+        }
+      }
+    }
+  }
+  document.schemaVersion = 68;
+  document.catalogVersion = SCHEMA_68_CATALOG_VERSION;
+  return {
+    completionOccurrencesMoved,
+    completionOccurrencesRetired,
+    fixedRoomLinksAdded,
+    routePlacementsRewritten,
+    routePlacementsRetired,
+    terminalPostbossOccurrencesRetired,
+    dormantCompletionOccurrencesRetired,
+  };
+}
+
 const migrations = new Map([
   [49, migrate49To50],
   [50, migrate50To51],
@@ -718,6 +913,7 @@ const migrations = new Map([
   [64, migrate64To65],
   [65, migrate65To66],
   [66, migrate66To67],
+  [67, migrate67To68],
 ]);
 
 export function migrateProjectDocument(value, targetVersion = CURRENT_SCHEMA_VERSION) {

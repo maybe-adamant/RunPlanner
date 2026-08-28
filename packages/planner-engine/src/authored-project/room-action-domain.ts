@@ -981,14 +981,14 @@ export function authoredRoomLifecycleProfileKey(
 ): string {
   if (role === 'ephyraSide') return 'EphyraSideRoom';
   if (declaration.lifecycleProfileKey !== undefined) return declaration.lifecycleProfileKey;
-  if (declaration.mode.kind === 'automatic')
-    return declaration.mode.role === 'boss' ? 'BossRoom' : 'PostBossRoom';
   if (declaration.mode.kind !== 'authored') return 'RewardlessRoom';
   switch (declaration.mode.templateKey) {
     case 'Anomaly':
     case 'Chaos':
     case 'ContractBoss':
       return 'StandardRewardRoom';
+    case 'Boss':
+      return 'BossRoom';
     case 'ClockworkCombat':
       return occurrence.state.kind === 'counted' && occurrence.state.reward === null
         ? 'ClockworkGoalRoom'
@@ -1007,6 +1007,8 @@ export function authoredRoomLifecycleProfileKey(
       return declaration.kind === 'Preboss' ? 'PrebossShopRoom' : 'WorldShopRoom';
     case 'Preboss':
       return occurrence.state.kind === 'shop' ? 'PrebossShopRoom' : 'PrebossFreeRewardRoom';
+    case 'PostBoss':
+      return 'PostBossRoom';
     case 'FixedIntro':
     case 'RewardlessCombat':
       return 'RewardlessCombatRoom';

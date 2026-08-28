@@ -712,7 +712,7 @@ describe('decision run-state snapshots', () => {
       judgment: createJudgmentArcanaAddress(
         createOccurrenceAddress(
           createBiomeAddress('Underworld', 'F'),
-          createOccurrenceId('completion:F:boss'),
+          createOccurrenceId('golden-f-preboss-shop:boss'),
         ),
         'Encounter',
       ),
@@ -727,7 +727,7 @@ describe('decision run-state snapshots', () => {
       judgment: createJudgmentArcanaAddress(
         createOccurrenceAddress(
           createBiomeAddress('Underworld', 'G'),
-          createOccurrenceId('completion:G:boss'),
+          createOccurrenceId('golden-g-preboss-shop:boss'),
         ),
         'Encounter',
       ),

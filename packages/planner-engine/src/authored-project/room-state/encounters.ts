@@ -98,10 +98,10 @@ export function decodeRoomEncounterState(
   }
   const judgmentArcanaKeysByPhase: Record<string, readonly string[]> = {};
   if (state.judgmentArcanaKeysByPhase !== undefined) {
-    if (room.mode.kind !== 'automatic' || room.mode.role !== 'boss')
+    if (room.mode.kind !== 'authored' || room.mode.templateKey !== 'Boss')
       failProjectDocument(
         `${path}.judgmentArcanaKeysByPhase`,
-        'is owned only by an automatic Boss',
+        'is owned only by a Boss occurrence',
       );
     const values = expectRecord(
       state.judgmentArcanaKeysByPhase,
@@ -130,10 +130,10 @@ export function decodeRoomEncounterState(
   }
   const figurineArcanaKeysByPhase: Record<string, readonly string[]> = {};
   if (state.figurineArcanaKeysByPhase !== undefined) {
-    if (room.mode.kind !== 'automatic' || room.mode.role !== 'boss')
+    if (room.mode.kind !== 'authored' || room.mode.templateKey !== 'Boss')
       failProjectDocument(
         `${path}.figurineArcanaKeysByPhase`,
-        'is owned only by an automatic Boss',
+        'is owned only by a Boss occurrence',
       );
     const values = expectRecord(
       state.figurineArcanaKeysByPhase,

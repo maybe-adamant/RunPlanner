@@ -218,6 +218,7 @@ function normalizeResourcePointSupport(
 
 const roomTemplateKinds = {
   Anomaly: 'Combat',
+  Boss: 'Boss',
   Chaos: 'Combat',
   ContractBoss: 'Boss',
   Devotion: 'Devotion',
@@ -233,6 +234,7 @@ const roomTemplateKinds = {
   RewardlessCombat: 'Combat',
   Shop: 'Shop',
   Preboss: 'Preboss',
+  PostBoss: 'PostBoss',
   ShipCombat: 'Combat',
   StandardCombat: 'Combat',
   Story: 'Story',
@@ -240,6 +242,7 @@ const roomTemplateKinds = {
 
 const roomTemplateRewardKinds = {
   Anomaly: 'countedChoice',
+  Boss: 'none',
   Chaos: 'fixed',
   ContractBoss: 'fixed',
   Devotion: 'fixed',
@@ -255,6 +258,7 @@ const roomTemplateRewardKinds = {
   RewardlessCombat: 'none',
   Shop: 'shop',
   Preboss: 'shop',
+  PostBoss: 'none',
   ShipCombat: 'none',
   StandardCombat: 'countedChoice',
   Story: 'fixed',
@@ -274,17 +278,6 @@ function validateMode(room: RawRoomDeclaration, path: string): RoomMode {
       fail(`${path}.prebossBatchPolicy`, 'is only valid for authored Preboss rooms');
     }
     return Object.freeze({ kind: 'derived', classification });
-  }
-  if (room.mode?.kind === 'automatic') {
-    const role = room.mode.role;
-    const expectedKind = role === 'boss' ? 'Boss' : role === 'postboss' ? 'PostBoss' : undefined;
-    if (expectedKind === undefined)
-      fail(`${path}.mode.role`, `unknown automatic role ${String(role)}`);
-    if (room.kind !== expectedKind)
-      fail(`${path}.kind`, `${role} automatic room requires ${expectedKind}`);
-    if (room.incomingReward.kind !== 'none')
-      fail(`${path}.incomingReward.kind`, 'automatic rooms have no incoming reward');
-    return Object.freeze({ kind: 'automatic', role });
   }
   if (room.mode?.kind !== 'authored') {
     fail(`${path}.mode.kind`, `unknown room mode ${String(receivedModeKind)}`);

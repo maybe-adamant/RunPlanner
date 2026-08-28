@@ -2,6 +2,7 @@ import type { BiomeLayout, Catalog } from '../../catalog-schema';
 import type {
   AuthoredRewardState,
   HermesShrineState,
+  PurgingPoolState,
   RoomActionState,
   RoomOccurrence,
 } from '../model';
@@ -38,6 +39,63 @@ import { expectExactKeys, expectRecord, failProjectDocument } from '../validatio
 import type { DecodedTopologyStructure } from './structure-codec';
 import { decodeAcquisitionSites } from './acquisition-site-codec';
 import { decodeFountainRarityResult } from '../fountain-rarity-codec';
+import { decodeKeepsakeEquipResults } from '../keepsake-equip-codec';
+import { expectBoolean, expectString } from '../validation';
+
+function decodeKeepsakeRackState(
+  value: unknown,
+  catalog: Catalog,
+  room: NonNullable<Catalog['rooms']['byKey'][string]>,
+  path: string,
+): NonNullable<RoomOccurrence['keepsakeRack']> {
+  if (!room.hasKeepsakeRack) failProjectDocument(path, 'room declaration has no keepsake rack');
+  const raw = expectRecord(value, path);
+  const hasEquipResults = Object.hasOwn(raw, 'equipResults');
+  expectExactKeys(raw, ['keepsakeKey', ...(hasEquipResults ? ['equipResults'] : [])], path);
+  const keepsakeKey = expectString(raw.keepsakeKey, `${path}.keepsakeKey`);
+  if (catalog.keepsakes.byKey[keepsakeKey] === undefined)
+    failProjectDocument(`${path}.keepsakeKey`, 'unknown keepsake');
+  return Object.freeze({
+    keepsakeKey,
+    ...(hasEquipResults
+      ? {
+          equipResults: decodeKeepsakeEquipResults(
+            raw.equipResults,
+            `${path}.equipResults`,
+            catalog,
+          ),
+        }
+      : {}),
+  });
+}
+
+function decodePurgingPoolState(
+  value: unknown,
+  catalog: Catalog,
+  room: NonNullable<Catalog['rooms']['byKey'][string]>,
+  path: string,
+): PurgingPoolState {
+  if (room.purgingPool === undefined)
+    failProjectDocument(path, 'requires a room declaration with a Purging Pool');
+  const raw = expectRecord(value, path);
+  expectExactKeys(raw, ['interacted', 'traitKeyBySlot'], path);
+  const traits = expectRecord(raw.traitKeyBySlot, `${path}.traitKeyBySlot`);
+  expectExactKeys(traits, [...room.purgingPool.slotKeys], `${path}.traitKeyBySlot`);
+  const traitKeyBySlot = Object.fromEntries(
+    room.purgingPool.slotKeys.map((slot) => {
+      const value = traits[slot];
+      if (value === null) return [slot, null];
+      const traitKey = expectString(value, `${path}.traitKeyBySlot.${slot}`);
+      if (catalog.traits.byKey[traitKey] === undefined)
+        failProjectDocument(`${path}.traitKeyBySlot.${slot}`, 'unknown trait');
+      return [slot, traitKey];
+    }),
+  ) as Readonly<Record<'left' | 'middle' | 'right', string | null>>;
+  return Object.freeze({
+    interacted: expectBoolean(raw.interacted, `${path}.interacted`),
+    traitKeyBySlot: Object.freeze(traitKeyBySlot),
+  });
+}
 
 function decodeOrdinaryHermesShrineState(
   value: unknown,
@@ -240,6 +298,24 @@ export function decodeRoomOccurrence(input: {
         `${rawOccurrence.path}.fountainRarityResult`,
       )
     : undefined;
+  const purgingPool = rawOccurrence.hasPurgingPool
+    ? decodePurgingPoolState(
+        rawOccurrence.purgingPool,
+        catalog,
+        room,
+        `${rawOccurrence.path}.purgingPool`,
+      )
+    : undefined;
+  if (room.roomShop?.forced === true && room.kind === 'PostBoss' && stygianWell === undefined)
+    failProjectDocument(`${rawOccurrence.path}.stygianWell`, 'must be an object');
+  const keepsakeRack = rawOccurrence.hasKeepsakeRack
+    ? decodeKeepsakeRackState(
+        rawOccurrence.keepsakeRack,
+        catalog,
+        room,
+        `${rawOccurrence.path}.keepsakeRack`,
+      )
+    : undefined;
   assertStygianWellPurchaseActionClosure(
     stygianWell,
     decodeRoomActionState(rawOccurrence.roomActions, `${rawOccurrence.path}.roomActions`),
@@ -248,7 +324,7 @@ export function decodeRoomOccurrence(input: {
   if (
     hermesShrine !== undefined &&
     (room.surfaceShop === undefined ||
-      room.surfaceShop.forced ||
+      (room.kind !== 'PostBoss' && room.surfaceShop.forced) ||
       room.surfaceShop.spawnChance <= 0 ||
       (room.challengeSwitchAnchorCount ?? 0) <= 0)
   )
@@ -259,7 +335,7 @@ export function decodeRoomOccurrence(input: {
   if (
     stygianWell !== undefined &&
     (room.roomShop === undefined ||
-      room.roomShop.forced ||
+      (room.kind !== 'PostBoss' && room.roomShop.forced) ||
       room.roomShop.spawnChance <= 0 ||
       (room.challengeSwitchAnchorCount ?? 0) <= 0)
   )
@@ -278,6 +354,8 @@ export function decodeRoomOccurrence(input: {
     ...(hermesShrine === undefined ? {} : { hermesShrine }),
     ...(stygianWell === undefined ? {} : { stygianWell }),
     ...(fountainRarityResult === undefined ? {} : { fountainRarityResult }),
+    ...(purgingPool === undefined ? {} : { purgingPool }),
+    ...(keepsakeRack === undefined ? {} : { keepsakeRack }),
     roomActions: Object.freeze({ order: Object.freeze([]) }),
     additionalExits: Object.freeze([]),
   });
@@ -589,6 +667,8 @@ export function decodeRoomOccurrence(input: {
     ...(hermesShrine === undefined ? {} : { hermesShrine }),
     ...(stygianWell === undefined ? {} : { stygianWell }),
     ...(fountainRarityResult === undefined ? {} : { fountainRarityResult }),
+    ...(purgingPool === undefined ? {} : { purgingPool }),
+    ...(keepsakeRack === undefined ? {} : { keepsakeRack }),
     ...(acquisitionSites === undefined ? {} : { acquisitionSites }),
     additionalExits,
   });

@@ -66,12 +66,12 @@ describe('O canonical materialization and lifecycle', () => {
       rewardStore: { kind: 'sourceOfferPoint' },
       targets: [
         {
-          continuation: 'startsCompletion',
+          continuation: 'continuesSpine',
           room: { gameName: 'O_PreBoss01', lifecycleProfileKey: 'PrebossShopRoom' },
         },
       ],
     });
-    expect(snapshot.automaticRooms.map((room) => room.gameName)).toEqual([
+    expect(snapshot.fixedRoomLinks.map((link) => link.target.gameName)).toEqual([
       'O_Boss01',
       'O_PostBoss01',
     ]);

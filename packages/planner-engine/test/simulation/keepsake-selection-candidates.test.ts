@@ -53,10 +53,14 @@ import { circeResolutionDomain } from '../../src/simulation/arcana-fear';
 type PostbossSelection = Extract<KeepsakeSelectionAddress, { readonly owner: object }>;
 
 function postbossOccurrence(biome: ReturnType<typeof createBiomeAddress>) {
-  return createOccurrenceAddress(
-    biome,
-    createOccurrenceId(`completion:${biome.biomeKey}:postboss`),
-  );
+  const prebossByBiome: Readonly<Record<string, string>> = {
+    F: 'golden-f-preboss-shop',
+    G: 'golden-g-preboss-shop',
+    P: 'surface-p-preboss-shop',
+  };
+  const prebossOccurrenceId = prebossByBiome[biome.biomeKey];
+  if (prebossOccurrenceId === undefined) throw new Error('missing Postboss fixture identity');
+  return createOccurrenceAddress(biome, createOccurrenceId(`${prebossOccurrenceId}:postboss`));
 }
 
 const fPostboss: PostbossSelection = createPostbossKeepsakeSelectionAddress(
@@ -108,7 +112,7 @@ describe('keepsake selection candidates', () => {
       },
     });
     const nPostboss = createPostbossKeepsakeSelectionAddress(
-      createOccurrenceAddress(nBiome, createOccurrenceId('completion:N:postboss')),
+      createOccurrenceAddress(nBiome, createOccurrenceId('surface-n-preboss:postboss')),
     );
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplacePostbossKeepsake',
@@ -219,14 +223,14 @@ describe('keepsake selection candidates', () => {
       (event) =>
         (event.kind === 'fountainUsed' || event.kind === 'keepsakeRackUsed') &&
         event.origin.kind === 'occurrence' &&
-        event.origin.occurrenceId === 'completion:F:postboss',
+        event.origin.occurrenceId === 'golden-f-preboss-shop:postboss',
     );
     expect(postbossEvents.map((event) => event.kind)).toEqual(['fountainUsed', 'keepsakeRackUsed']);
     const postbossCreated = f.history.events.find(
       (event) =>
         event.kind === 'roomCreated' &&
         event.origin.kind === 'occurrence' &&
-        event.origin.occurrenceId === 'completion:F:postboss',
+        event.origin.occurrenceId === 'golden-f-preboss-shop:postboss',
     );
     expect(postbossCreated).toBeDefined();
     expect(postbossCreated!.sequence).toBeLessThan(postbossEvents[0]!.sequence);
@@ -266,7 +270,7 @@ describe('keepsake selection candidates', () => {
           (event) =>
             (event.kind === 'fountainUsed' || event.kind === 'keepsakeRackUsed') &&
             event.origin.kind === 'occurrence' &&
-            event.origin.occurrenceId === 'completion:F:postboss',
+            event.origin.occurrenceId === 'golden-f-preboss-shop:postboss',
         )
         .map((event) => event.kind),
     ).toEqual(['keepsakeRackUsed', 'fountainUsed']);

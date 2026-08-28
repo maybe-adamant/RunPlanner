@@ -79,7 +79,10 @@ function selectedNaturalOffer(): Extract<AuthoredTraitOffer, { readonly kind: 't
 }
 
 function bossCompletionOwner(biome: BiomeAddress): SteadyGrowthOutcomeAddress['owner'] {
-  return createOccurrenceAddress(biome, createOccurrenceId(`completion:${biome.biomeKey}:boss`));
+  return createOccurrenceAddress(
+    biome,
+    createOccurrenceId(`surface-${biome.biomeKey.toLowerCase()}-preboss:boss`),
+  );
 }
 
 function cycleEight(
@@ -410,7 +413,7 @@ describe('run-impacting trait candidate contacts', () => {
       selected.present.routes
         .find((route) => route.routeKey === 'Surface')
         ?.biomes.find((candidate) => candidate.biomeKey === 'N')
-        ?.completionOccurrences.find(
+        ?.topology?.occurrences.find(
           (occurrence) => occurrence.occurrenceId === bossOwner.occurrenceId,
         )?.encounters.steadyGrowthTargetByPhase?.Encounter,
     ).toBe('ApolloWeaponBoon');

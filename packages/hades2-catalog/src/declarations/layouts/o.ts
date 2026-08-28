@@ -23,10 +23,7 @@ export const oBiomeLayout = {
     bounds: { maxBatches: 6, maxTargets: 6 },
   },
   completion: {
-    rooms: [
-      { role: 'boss', roomGameName: 'O_Boss01' },
-      { role: 'postboss', roomGameName: 'O_PostBoss01' },
-    ],
+    bossRoomGameName: 'O_Boss01',
     transitionEffects: [
       { kind: 'resetCounter', axis: 'biomeDepthCache' },
       { kind: 'resetCounter', axis: 'biomeEncounterDepth' },

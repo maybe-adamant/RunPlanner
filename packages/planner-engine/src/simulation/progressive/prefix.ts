@@ -8,14 +8,11 @@ import type {
   MaterializedExitDecisionFrontier,
   MaterializedHubVisitFrontier,
 } from '../materialization';
-import { selectedBatchContinuation } from '../materialization';
 import { ownerRegion } from '../finding-regions';
 import type { EncounterHistoryBlock } from '../history';
 import {
   encounterBlockFinding,
-  findingOwnerOrigin,
   locateFinding,
-  ownsOccurrence,
   type HubVisitFindingLocation,
   type LocatedFinding,
 } from './finding-location';
@@ -214,20 +211,6 @@ export function retainedInteractionPrefix(
   prefix: MaterializedBiomePrefix,
   located: LocatedFinding,
 ): MaterializedBiomePrefix {
-  const terminalDecision = prefix.decisions.at(-1);
-  if (terminalDecision?.kind === 'batch') {
-    const selected = selectedBatchContinuation(terminalDecision);
-    if (
-      selected?.kind === 'normal' &&
-      selected.target.continuation === 'startsCompletion' &&
-      ownsOccurrence(findingOwnerOrigin(located.finding), selected.target.room.occurrenceId)
-    ) {
-      // The selected Preboss and its completion tail are the final authored
-      // region. Keep this exact terminal product for reward repair rather
-      // than inventing a Hub frontier that history cannot compose.
-      return prefix;
-    }
-  }
   if (located.targetIndex === undefined) return clampPrefix(prefix, located);
   const decision = located.frontierBatch
     ? prefix.frontier?.kind === 'exitDecision'

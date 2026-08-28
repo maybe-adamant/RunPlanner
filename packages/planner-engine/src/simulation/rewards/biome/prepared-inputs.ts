@@ -334,7 +334,7 @@ export function prepareRewardEvaluationInputs(
     ),
     ...frontierAdditional(snapshot).map((continuation) => continuation.room),
     ...(hubFrontier === undefined ? [] : [hubFrontier.target.room, ...hubFrontier.localSlots]),
-    ...(snapshot.automaticRooms ?? []),
+    ...(snapshot.fixedRoomLinks ?? []).map((link) => link.target),
   ];
   const batchDecisions = allDecisions.filter(
     (decision): decision is CanonicalBatch => decision.kind === 'batch',

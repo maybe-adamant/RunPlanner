@@ -368,40 +368,15 @@ function normalizeCompletion(
   rooms: CatalogCollection<RoomDeclaration>,
   path: string,
 ): CompletionDescriptor {
-  if (rawCompletion.rooms.length === 0 || rawCompletion.rooms.length > 2) {
-    fail(`${path}.rooms`, 'must contain boss and optional postboss only');
-  }
-  const roles = freezeUniqueStrings(
-    rawCompletion.rooms.map((room) => room.role),
-    `${path}.rooms.roles`,
+  const bossRoom = requireRoom(
+    rawCompletion.bossRoomGameName,
+    biomeKey,
+    rooms,
+    `${path}.bossRoomGameName`,
   );
-  const completionRooms = rawCompletion.rooms.map((entry, index) => {
-    const expectedRole = index === 0 ? 'boss' : 'postboss';
-    if (entry.role !== expectedRole) {
-      fail(`${path}.rooms[${index}].role`, `completion role ${expectedRole} is required`);
-    }
-    const room = requireRoom(
-      entry.roomGameName,
-      biomeKey,
-      rooms,
-      `${path}.rooms[${index}].roomGameName`,
-    );
-    const expectedKind = entry.role === 'boss' ? 'Boss' : 'PostBoss';
-    if (
-      room.kind !== expectedKind ||
-      room.mode.kind !== 'automatic' ||
-      room.mode.role !== entry.role
-    ) {
-      fail(
-        `${path}.rooms[${index}].roomGameName`,
-        `${room.gameName} must be the automatic ${entry.role} ${expectedKind} room`,
-      );
-    }
-    return Object.freeze({
-      role: roles[index] as 'boss' | 'postboss',
-      roomGameName: room.gameName,
-    });
-  });
+  if (bossRoom.kind !== 'Boss') {
+    fail(`${path}.bossRoomGameName`, `${bossRoom.gameName} must be a Boss room`);
+  }
   const expectedAxes = ['biomeDepthCache', 'biomeEncounterDepth'] as const;
   if (rawCompletion.transitionEffects.length !== expectedAxes.length) {
     fail(`${path}.transitionEffects`, `requires resets for ${expectedAxes.join(', ')}`);
@@ -413,7 +388,7 @@ function normalizeCompletion(
     return Object.freeze({ kind: 'resetCounter' as const, axis: effect.axis });
   });
   return Object.freeze({
-    rooms: Object.freeze(completionRooms),
+    bossRoomGameName: bossRoom.gameName,
     transitionEffects: Object.freeze(transitionEffects),
   });
 }

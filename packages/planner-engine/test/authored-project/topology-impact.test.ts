@@ -38,6 +38,7 @@ describe('topology removal impact', () => {
         roomActions: { order: [] },
         additionalExits: [],
       })),
+      fixedRoomLinks: [],
       decisions: [
         {
           kind: 'exit' as const,
@@ -75,6 +76,7 @@ describe('topology removal impact', () => {
         roomActions: { order: [] },
         additionalExits: [],
       })),
+      fixedRoomLinks: [],
       decisions: [
         {
           kind: 'exit' as const,
@@ -120,6 +122,7 @@ describe('topology removal impact', () => {
           additionalExits: [],
         },
       ],
+      fixedRoomLinks: [],
       decisions: [],
     });
   });
@@ -147,6 +150,7 @@ describe('topology removal impact', () => {
               ]
             : [],
       })),
+      fixedRoomLinks: [],
       decisions: [
         {
           kind: 'exit' as const,
@@ -206,6 +210,7 @@ describe('topology removal impact', () => {
         roomActions: { order: [] },
         additionalExits: [],
       })),
+      fixedRoomLinks: [],
       decisions: [
         {
           kind: 'exit' as const,
@@ -270,6 +275,7 @@ describe('topology removal impact', () => {
           additionalExits: [],
         },
       ],
+      fixedRoomLinks: [],
       decisions: [],
     });
 
@@ -312,6 +318,7 @@ describe('topology removal impact', () => {
         roomActions: { order: [] },
         additionalExits: [],
       })),
+      fixedRoomLinks: [],
       decisions: [topology.decisions[0]],
     });
   });
@@ -329,6 +336,7 @@ describe('topology removal impact', () => {
         roomActions: { order: [] },
         additionalExits: [],
       })),
+      fixedRoomLinks: [],
       decisions: [
         {
           kind: 'hub' as const,
@@ -369,6 +377,7 @@ describe('topology removal impact', () => {
         roomActions: { order: [] },
         additionalExits: [],
       })),
+      fixedRoomLinks: [],
       decisions: [
         {
           kind: 'hub' as const,
@@ -415,6 +424,7 @@ describe('topology removal impact', () => {
         roomActions: { order: [] },
         additionalExits: [],
       })),
+      fixedRoomLinks: [],
       decisions: [topology.decisions[0]],
     });
     expect(describeHubSlotClosureImpact(topology, 'hub', 'combat01', 1)).toEqual({
@@ -435,6 +445,7 @@ describe('topology removal impact', () => {
         roomActions: { order: [] },
         additionalExits: [],
       })),
+      fixedRoomLinks: [],
       decisions: [
         {
           kind: 'exit' as const,

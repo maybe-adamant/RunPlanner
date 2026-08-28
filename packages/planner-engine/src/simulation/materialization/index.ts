@@ -16,6 +16,7 @@ export type {
   CanonicalBatchRewardStore,
   CanonicalBiomeState,
   CanonicalBiome,
+  CanonicalFixedRoomLink,
   CanonicalDecision,
   BiomeMaterialization,
   MaterializedBiomePrefix,

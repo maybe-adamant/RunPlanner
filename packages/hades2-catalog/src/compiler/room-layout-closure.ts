@@ -132,9 +132,7 @@ function validateDerivedRoomOwnership(
     if (layout.progression.kind === 'hub') {
       register(layout.progression.terminal.roomGameName, `${path}.progression.terminal`);
     }
-    layout.completion.rooms.forEach((completion, index) =>
-      register(completion.roomGameName, `${path}.completion.rooms[${index}]`),
-    );
+    register(layout.completion.bossRoomGameName, `${path}.completion.bossRoomGameName`);
   }
   rooms.values.forEach((room, index) => {
     if (room.mode.kind === 'derived' && !owners.has(room.gameName)) {

@@ -202,7 +202,7 @@ describe('route detour catalog declarations', () => {
   it('keeps detour room-set identity separate from the supported route layouts', () => {
     const catalog = createCatalog(declarations);
 
-    expect(catalog.version).toBe('0.48.0-hex-talent-layouts');
+    expect(catalog.version).toBe('0.49.0-completion-topology');
     expect(catalog.biomes.values.map((biome) => biome.key)).not.toContain('Anomaly');
     expect(catalog.biomes.values.map((biome) => biome.key)).not.toContain('C');
     expect(catalog.biomeLayouts.values.map((layout) => layout.biomeKey)).not.toContain('Anomaly');
@@ -525,6 +525,22 @@ describe('route detour catalog declarations', () => {
       new CatalogContractError(
         `rooms[${index}].secretPointAnchorCount`,
         'must be a non-negative integer',
+      ),
+    );
+  });
+
+  it('requires the terminal route position to have no Postboss continuation', () => {
+    const raw = input();
+    const routeIndex = raw.routes.findIndex((route) => route.key === 'Underworld');
+    if (routeIndex < 0) throw new Error('missing Underworld route');
+    (
+      raw.routes[routeIndex] as unknown as { postbossRoomGameNames: string[] }
+    ).postbossRoomGameNames = ['F_PostBoss01', 'G_PostBoss01', 'H_PostBoss01', 'F_PostBoss01'];
+
+    expect(() => createCatalog(raw)).toThrow(
+      new CatalogContractError(
+        `routes[${routeIndex}].postbossRoomGameNames[3]`,
+        'the terminal route position must be null',
       ),
     );
   });

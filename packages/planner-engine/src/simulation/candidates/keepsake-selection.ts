@@ -79,7 +79,7 @@ export function evaluateKeepsakeSelectionCandidate(
       ? undefined
       : route?.biomes
           .find((biome) => biome.biomeKey === query.selection.biomeKey)
-          ?.completionOccurrences.find(
+          ?.topology?.occurrences.find(
             (occurrence) => occurrence.occurrenceId === postbossOwner.occurrenceId,
           )?.keepsakeRack;
   const authoredKey =

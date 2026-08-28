@@ -25,7 +25,7 @@ import { renderOccurrenceWorkbench } from '@planner-test/support/biome-workbench
 
 afterEach(cleanup);
 
-const postbossId = createOccurrenceId('completion:F:postboss');
+const postbossId = createOccurrenceId('golden-f-preboss-shop:postboss');
 
 function occurrence(biome: WorkspaceBiome): WorkspaceOccurrenceWorkbenchNode | undefined {
   return biome.nodes.find(

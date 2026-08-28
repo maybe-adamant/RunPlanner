@@ -212,7 +212,6 @@ export function createCatalog(input: RawCatalogInput): Catalog {
   requireNonEmpty(input.version, 'version');
 
   const biomes = normalizeBiomes(input.biomes);
-  const routes = normalizeRoutes(input.routes, biomes);
   const rewards = createRewardKernelCatalog(input.rewardKernel);
   const traitCatalog = createTraitCatalog(input.traitCatalog);
   validateFixedAcquisitionTraitGrants(rewards, traitCatalog.traits);
@@ -247,6 +246,7 @@ export function createCatalog(input: RawCatalogInput): Catalog {
     encounterSets,
     exitTypes,
   );
+  const routes = normalizeRoutes(input.routes, biomes, rooms);
   validateLifecycleBindings(rooms, roomLifecycleProfiles, traitCatalog.traits, rewards);
   const biomeLayouts = normalizeBiomeLayouts(
     input.biomeLayouts,

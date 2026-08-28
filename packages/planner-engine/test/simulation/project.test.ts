@@ -212,7 +212,7 @@ describe('project simulation composition', () => {
         validity: 'valid',
         coverage: { kind: 'complete' },
       });
-      expect(evaluation.snapshot.automaticRooms).toHaveLength(2);
+      expect(evaluation.snapshot.fixedRoomLinks).toHaveLength(evaluation.biomeKey === 'I' ? 1 : 2);
     }
     expect(f.snapshot.entryRoom.gameName).toBe('F_Opening01');
     expect(g.snapshot.entryRoom.gameName).toBe('G_Intro');

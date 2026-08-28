@@ -36,7 +36,7 @@ describe('Stygian Well consequential purchase state', () => {
   it('keeps the forced F Postboss refill and consequences identical at a configured route tail', () => {
     const owner = createOccurrenceAddress(
       goldenFBiome,
-      createOccurrenceId('completion:F:postboss'),
+      createOccurrenceId('golden-f-preboss-shop:postboss'),
     );
     const outcomes = [true, false].map((configuredTail) => {
       const assembly = simulateProjectAssembly(
@@ -73,7 +73,10 @@ describe('Stygian Well consequential purchase state', () => {
   });
 
   it('consumes one Spark at the first authored force-capable Chaos host', () => {
-    const well = createOccurrenceAddress(goldenFBiome, createOccurrenceId('completion:F:postboss'));
+    const well = createOccurrenceAddress(
+      goldenFBiome,
+      createOccurrenceId('golden-f-preboss-shop:postboss'),
+    );
     let project = createUnderworldFWellCheckpoint(false);
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceStygianWellTravelDealRefill',
@@ -98,7 +101,10 @@ describe('Stygian Well consequential purchase state', () => {
   });
 
   it('records paid Last Stand and publishes its one-step runtime fallback', () => {
-    const well = createOccurrenceAddress(goldenFBiome, createOccurrenceId('completion:F:postboss'));
+    const well = createOccurrenceAddress(
+      goldenFBiome,
+      createOccurrenceId('golden-f-preboss-shop:postboss'),
+    );
     let project = createUnderworldFWellCheckpoint();
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceStygianWellOffer',
@@ -129,7 +135,10 @@ describe('Stygian Well consequential purchase state', () => {
   });
 
   it('uses Twist nested fallback without treating its result as a direct Extended purchase', () => {
-    const well = createOccurrenceAddress(goldenFBiome, createOccurrenceId('completion:F:postboss'));
+    const well = createOccurrenceAddress(
+      goldenFBiome,
+      createOccurrenceId('golden-f-preboss-shop:postboss'),
+    );
     let project = createUnderworldFWellCheckpoint();
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceStygianWellOffer',
@@ -172,7 +181,10 @@ describe('Stygian Well consequential purchase state', () => {
   });
 
   it('advances an Extended purchase on the existing Boss event chronology', () => {
-    const well = createOccurrenceAddress(goldenFBiome, createOccurrenceId('completion:F:postboss'));
+    const well = createOccurrenceAddress(
+      goldenFBiome,
+      createOccurrenceId('golden-f-preboss-shop:postboss'),
+    );
     let project = createUnderworldFWellCheckpoint(false);
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceStygianWellOffer',

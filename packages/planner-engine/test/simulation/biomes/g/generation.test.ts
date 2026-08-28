@@ -82,7 +82,7 @@ describe('G generation and takeover', () => {
       gameName: 'G_Intro',
       lifecycleProfileKey: 'RewardlessRoom',
     });
-    expect(g.snapshot.automaticRooms.map((room) => room.gameName)).toEqual([
+    expect(g.snapshot.fixedRoomLinks.map((link) => link.target.gameName)).toEqual([
       'G_Boss01',
       'G_PostBoss01',
     ]);

@@ -81,6 +81,11 @@ export function structurallyActiveOccurrenceIds(
         changed = true;
       }
     }
+    for (const link of topology.fixedRoomLinks) {
+      if (!active.has(link.sourceOccurrenceId) || active.has(link.targetOccurrenceId)) continue;
+      active.add(link.targetOccurrenceId);
+      changed = true;
+    }
   }
   return active;
 }
@@ -239,7 +244,6 @@ function activeDomains(
       const active = structurallyActiveOccurrenceIds(plan.topology);
       for (const occurrence of [
         ...plan.topology.occurrences.filter((candidate) => active.has(candidate.occurrenceId)),
-        ...plan.completionOccurrences,
       ]) {
         result.set(
           JSON.stringify([route.routeKey, plan.biomeKey, occurrence.occurrenceId]),
@@ -357,10 +361,9 @@ export function reconcileNewRequiredRoomActions(
     const plan = proposed.routes
       .find((route) => route.routeKey === routeKey)
       ?.biomes.find((plan) => plan.biomeKey === biomeKey);
-    const owner = [
-      ...(plan?.topology?.occurrences ?? []),
-      ...(plan?.completionOccurrences ?? []),
-    ].find((candidate) => candidate.occurrenceId === occurrenceId);
+    const owner = plan?.topology?.occurrences.find(
+      (candidate) => candidate.occurrenceId === occurrenceId,
+    );
     if (owner === undefined) throw new Error(`active Room Action owner ${ownerKey} disappeared`);
     const order = scheduleRequiredRoomActions({
       catalog,
@@ -390,13 +393,10 @@ export function reconcileNewRequiredRoomActions(
                   ? occurrence
                   : frozen({ ...occurrence, roomActions: frozen({ order }) });
               };
-              const completionOccurrences = plan.completionOccurrences.map(replaceOrder);
-              if (plan.topology === null)
-                return frozen({ ...plan, completionOccurrences: frozen(completionOccurrences) });
+              if (plan.topology === null) return plan;
               const occurrences = plan.topology.occurrences.map(replaceOrder);
               return frozen({
                 ...plan,
-                completionOccurrences: frozen(completionOccurrences),
                 topology: frozen({ ...plan.topology, occurrences: frozen(occurrences) }),
               });
             }),
@@ -416,10 +416,9 @@ export function roomActionDomainForOccurrence(
   const plan = document.routes
     .find((route) => route.routeKey === biome.routeKey)
     ?.biomes.find((candidate) => candidate.biomeKey === biome.biomeKey);
-  const occurrence = [
-    ...(plan?.topology?.occurrences ?? []),
-    ...(plan?.completionOccurrences ?? []),
-  ].find((candidate) => candidate.occurrenceId === occurrenceId);
+  const occurrence = plan?.topology?.occurrences.find(
+    (candidate) => candidate.occurrenceId === occurrenceId,
+  );
   return occurrence === undefined
     ? undefined
     : frozen({

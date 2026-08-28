@@ -376,7 +376,7 @@ describe('Run State presentation', () => {
       selection: createPostbossKeepsakeSelectionAddress(
         createOccurrenceAddress(
           createBiomeAddress('Underworld', 'G'),
-          createOccurrenceId('completion:G:postboss'),
+          createOccurrenceId('golden-g-preboss-shop:postboss'),
         ),
       ),
       keepsakeKey: 'BossPreDamageKeepsake',
@@ -389,7 +389,7 @@ describe('Run State presentation', () => {
     const snapshot = g.rewards.runStateSnapshots.find(
       (candidate) =>
         candidate.owner.kind === 'roomRunStateCheckpoint' &&
-        candidate.owner.occurrenceId === 'completion:G:postboss' &&
+        candidate.owner.occurrenceId === 'golden-g-preboss-shop:postboss' &&
         candidate.owner.checkpoint.kind === 'beforeRoomExit',
     );
     if (snapshot === undefined) throw new Error('expected G postboss Run State checkpoint');

@@ -186,40 +186,14 @@ export function withFPrebossSelection(
   exitKey: 'exit1' | 'exit2',
 ): ProjectDocument {
   const sourceOccurrenceId = goldenFOccurrenceId(10, 1);
-  return {
-    ...project,
-    routes: project.routes.map((route) =>
-      route.routeKey !== 'Underworld'
-        ? route
-        : {
-            ...route,
-            biomes: route.biomes.map((plan) =>
-              plan.biomeKey !== 'F' || plan.topology === null
-                ? plan
-                : {
-                    ...plan,
-                    topology: {
-                      ...plan.topology,
-                      decisions: plan.topology.decisions.map((decision) =>
-                        decision.kind === 'exit' &&
-                        semanticAddressKey(
-                          createExitDecisionAddress(goldenFBiome, decision.source),
-                        ) ===
-                          semanticAddressKey(
-                            createExitDecisionAddress(goldenFBiome, {
-                              kind: 'occurrence',
-                              occurrenceId: sourceOccurrenceId,
-                            }),
-                          )
-                          ? { ...decision, selection: { kind: 'normal' as const, exitKey } }
-                          : decision,
-                      ),
-                    },
-                  },
-            ),
-          },
-    ),
-  };
+  return applyProjectCommand(project, catalog, {
+    kind: 'SetExitSelection',
+    selection: createExitSelectionAddress(goldenFBiome, {
+      kind: 'occurrence',
+      occurrenceId: sourceOccurrenceId,
+    }),
+    value: { kind: 'normal', exitKey },
+  });
 }
 
 export {

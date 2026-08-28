@@ -10,7 +10,7 @@ import {
   type EncounterAuthoringRoom,
   type PreparedEncounterPhases,
 } from '../encounters/preparation';
-import type { CanonicalAuthoredRoom } from '../materialization';
+import type { CanonicalFixedRoomLink } from '../materialization';
 import { foldHistoryEvents } from './fold';
 import { foldBiomeHistoryPrefixEvents } from './fold';
 import { projectRoomPreparationCheckpoint } from './facts';
@@ -154,7 +154,7 @@ interface BiomeHistoryEnvelopeOptions<
   readonly figLeafState?: FigLeafLifecycleState;
   readonly pendingSpellDrop?: boolean;
   readonly allSpellInvested?: boolean;
-  readonly automaticRooms: readonly CanonicalAuthoredRoom[];
+  readonly fixedRoomLinks: readonly CanonicalFixedRoomLink[];
   readonly transitionEffects: readonly BiomeTransitionCounterReset[];
   readonly composeEntry: (writer: HistorySegmentWriter) => Entry;
   readonly composeBody: (writer: HistorySegmentWriter, entry: Entry) => Predecessor;
@@ -460,12 +460,12 @@ export function composeBiomeHistoryPrefixWithEncounterValidation({
   });
 }
 
-export function appendAutomaticTail(
+export function appendFixedRoomLinks(
   writer: HistorySegmentWriter,
   catalog: Catalog,
   biome: BiomeAddress,
   predecessor: CanonicalLifecycleRoom,
-  automaticRooms: readonly CanonicalAuthoredRoom[],
+  fixedRoomLinks: readonly CanonicalFixedRoomLink[],
   fail: (detail: string) => never,
 ): void {
   if (
@@ -475,9 +475,15 @@ export function appendAutomaticTail(
   ) {
     fail('completion composer did not return the entered Preboss for this biome');
   }
-  for (const completion of automaticRooms) {
-    appendStandaloneRoomCreated(writer, completion, 'layoutCompletion');
-    appendRoomLifecycle(writer, catalog, completion, fail);
+  if (predecessor.kind !== 'authored') fail('fixed completion links require an authored Preboss');
+  let source = predecessor;
+  for (const link of fixedRoomLinks) {
+    if (link.source.occurrenceId !== source.origin.occurrenceId) {
+      fail('fixed completion link does not follow its predecessor');
+    }
+    appendStandaloneRoomCreated(writer, link.target, 'layoutCompletion');
+    appendRoomLifecycle(writer, catalog, link.target, fail);
+    source = link.target;
   }
 }
 
@@ -495,7 +501,7 @@ function composeBiomeHistoryEnvelopeResult<
   figLeafState,
   pendingSpellDrop = false,
   allSpellInvested = false,
-  automaticRooms,
+  fixedRoomLinks,
   transitionEffects,
   composeEntry,
   composeBody,
@@ -534,7 +540,7 @@ function composeBiomeHistoryEnvelopeResult<
     const entry = composeEntry(writer);
     const predecessor = composeBody(writer, entry);
     const completionPredecessor = composeCompletionPredecessor(writer, predecessor);
-    appendAutomaticTail(writer, catalog, biome, completionPredecessor, automaticRooms, fail);
+    appendFixedRoomLinks(writer, catalog, biome, completionPredecessor, fixedRoomLinks, fail);
     appendEnvelope(builder, { kind: 'biomeCompleted', origin: biome });
     for (const effect of transitionEffects) {
       appendEnvelope(builder, {

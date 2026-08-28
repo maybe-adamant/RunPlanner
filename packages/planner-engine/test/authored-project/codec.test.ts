@@ -2,31 +2,18 @@ import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
 import {
-  applyProjectCommand,
-  createBiomeAddress,
-  createOccurrenceId,
-  createProjectDocument,
   decodeProjectDocument,
   encodeProjectDocument,
   type RoomActionReference,
 } from '@run-planner/engine/authored-project';
+import { createCompleteFGProject } from '@run-planner/test-fixtures/underworld';
+import surfaceNResourcesRaw from '../../../../test/fixtures/authored-project/checkpoints/surface-n-resources.runplanner.json';
+// The migration CLI is intentionally not a production engine dependency.
+// @ts-expect-error test contact imports the schema migration boundary directly.
+import { migrateProjectDocument } from '../../../../schema/migrate-project.js';
 
 function encodedFStart(): Record<string, unknown> {
-  const biome = createBiomeAddress('Underworld', 'F');
-  const project = applyProjectCommand(
-    createProjectDocument(catalog, {
-      projectId: 'codec-f',
-      configuredBiomeCounts: { Underworld: 1 },
-    }),
-    catalog,
-    {
-      kind: 'CreateStart',
-      biome,
-      occurrenceId: createOccurrenceId('codec-f-start'),
-      gameName: 'F_Opening01',
-    },
-  );
-  return JSON.parse(encodeProjectDocument(project)) as Record<string, unknown>;
+  return JSON.parse(encodeProjectDocument(createCompleteFGProject())) as Record<string, unknown>;
 }
 
 function fTopology(document: Record<string, unknown>): Record<string, unknown> {
@@ -50,12 +37,9 @@ function completionOccurrence(
   document: Record<string, unknown>,
   role: 'boss' | 'postboss',
 ): Record<string, unknown> {
-  const routes = document.routes as Array<Record<string, unknown>>;
-  const underworld = routes.find((route) => route.routeKey === 'Underworld');
-  const biome = (underworld?.biomes as Array<Record<string, unknown>> | undefined)?.[0];
-  const occurrence = (
-    biome?.completionOccurrences as Array<Record<string, unknown>> | undefined
-  )?.find((candidate) => candidate.occurrenceId === `completion:F:${role}`);
+  const occurrence = (fTopology(document).occurrences as Array<Record<string, unknown>>).find(
+    (candidate) => candidate.gameName === (role === 'boss' ? 'F_Boss01' : 'F_PostBoss01'),
+  );
   if (occurrence === undefined) throw new Error(`missing encoded F ${role} completion occurrence`);
   return occurrence;
 }
@@ -250,8 +234,9 @@ describe('project document codec', () => {
 
     const decoded = decodeProjectDocument(encoded, catalog);
     expect(
-      decoded.routes[0]?.biomes[0]?.completionOccurrences[0]?.encounters.judgmentArcanaKeysByPhase
-        ?.Encounter,
+      decoded.routes[0]?.biomes[0]?.topology?.occurrences.find(
+        (occurrence) => occurrence.gameName === 'F_Boss01',
+      )?.encounters.judgmentArcanaKeysByPhase?.Encounter,
     ).toEqual(['CastCount', 'CardDraw']);
     expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(decoded)), catalog)).toEqual(
       decoded,
@@ -271,27 +256,18 @@ describe('project document codec', () => {
     expect(() => decodeProjectDocument(encoded, catalog)).toThrow();
   });
 
-  it('strictly validates automatic occurrence identity, action domain, acquisition sites, and topology collision', () => {
+  it('strictly validates fixed occurrence identity, action domain, acquisition sites, and topology collision', () => {
     const wrongId = encodedFStart();
     completionOccurrence(wrongId, 'boss').occurrenceId = 'ordinary-id';
-    expect(() => decodeProjectDocument(wrongId, catalog)).toThrow('fixed completion occurrence id');
-
-    const invalidAction = encodedFStart();
-    completionOccurrence(invalidAction, 'postboss').roomActions = {
-      order: [{ kind: 'interactShopOffer', offerKey: 'Boon' }],
-    };
-    expect(() => decodeProjectDocument(invalidAction, catalog)).toThrow('inactive room action');
-
-    const missingFountain = encodedFStart();
-    completionOccurrence(missingFountain, 'postboss').roomActions = { order: [] };
-    expect(() => decodeProjectDocument(missingFountain, catalog)).toThrow('required useFountain');
+    expect(() => decodeProjectDocument(wrongId, catalog)).toThrow(
+      'fixedRoomLinks[0]: must reference existing occurrences',
+    );
 
     const collision = encodedFStart();
     (fTopology(collision).occurrences as Array<Record<string, unknown>>)[0]!.occurrenceId =
-      'completion:F:boss';
-    fTopology(collision).startOccurrenceId = 'completion:F:boss';
+      'golden-f-preboss-shop:boss';
     expect(() => decodeProjectDocument(collision, catalog)).toThrow(
-      'collides with editable topology',
+      'duplicates occurrence golden-f-preboss-shop:boss',
     );
 
     const acquisition = encodedFStart();
@@ -301,6 +277,52 @@ describe('project document codec', () => {
     expect(() => decodeProjectDocument(acquisition, catalog)).toThrow(
       'has no selected pickup producer',
     );
+  });
+
+  it('requires the selected Preboss fixed completion chain and no arbitrary links', () => {
+    const missing = encodedFStart();
+    (fTopology(missing).fixedRoomLinks as Array<Record<string, unknown>>).pop();
+    expect(() => decodeProjectDocument(missing, catalog)).toThrow(
+      'must contain exactly 2 fixed room links for the selected Preboss',
+    );
+
+    const extra = encodedFStart();
+    const links = fTopology(extra).fixedRoomLinks as Array<Record<string, unknown>>;
+    links.push({ ...links[0] });
+    expect(() => decodeProjectDocument(extra, catalog)).toThrow('must not repeat fixed room links');
+
+    const wrongChain = encodedFStart();
+    const wrongLinks = fTopology(wrongChain).fixedRoomLinks as Array<Record<string, unknown>>;
+    wrongLinks[0]!.sourceOccurrenceId = 'golden-f-preboss-free';
+    expect(() => decodeProjectDocument(wrongChain, catalog)).toThrow(
+      'must match the selected Preboss fixed completion chain',
+    );
+
+    const unselected = encodedFStart();
+    const prebossDecision = (
+      fTopology(unselected).decisions as Array<Record<string, unknown>>
+    ).find((decision) =>
+      (
+        decision.normal as { targets?: Array<{ occurrenceId?: string }> } | undefined
+      )?.targets?.some((target) => target.occurrenceId === 'golden-f-preboss-shop'),
+    );
+    if (prebossDecision === undefined) throw new Error('missing F Preboss decision');
+    prebossDecision.selection = { kind: 'unresolved' };
+    expect(() => decodeProjectDocument(unselected, catalog)).toThrow(
+      'must be empty when no Preboss is selected',
+    );
+  });
+
+  it('decodes the real Surface resource checkpoint after schema-68 migration', () => {
+    const migrated = migrateProjectDocument(surfaceNResourcesRaw).document;
+    const surface = migrated.routes.find(
+      (route: { routeKey: string }) => route.routeKey === 'Surface',
+    );
+    expect(surface?.resourcePlacements.Shovel).toEqual({
+      biomeKey: 'N',
+      occurrenceId: 'surface-n-preboss:postboss',
+    });
+    expect(() => decodeProjectDocument(migrated, catalog)).not.toThrow();
   });
 
   it('round-trips the complete Arcana and Fear loadout', () => {

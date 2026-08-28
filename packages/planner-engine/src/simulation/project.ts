@@ -80,7 +80,7 @@ function retainInvalidResourceEvaluation(
     biomeKey: evaluation.snapshot.biomeKey,
     entryRoom: evaluation.snapshot.entryRoom,
     decisions: evaluation.snapshot.decisions,
-    automaticRooms: evaluation.snapshot.automaticRooms,
+    fixedRoomLinks: evaluation.snapshot.fixedRoomLinks,
     biomeState: evaluation.snapshot.biomeState,
     ...(evaluation.snapshot.echoKeepsakeReplayResults === undefined
       ? {}

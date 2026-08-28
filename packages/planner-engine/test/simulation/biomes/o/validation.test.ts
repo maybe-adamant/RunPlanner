@@ -8,6 +8,7 @@ import {
   createExitDecisionAddress,
   createIncomingRewardAddress,
   createOccurrenceAddress,
+  createOccurrenceId,
   createProjectHistory,
   createRouteAddress,
   createRewardWheelAddress,
@@ -628,6 +629,22 @@ describe('selected O validation', () => {
       targetOccurrenceIds: { exit1: oOccurrenceIds.preboss },
     });
     project = authorSurfaceWorldShop(project, oBiome, oOccurrenceIds.preboss);
+    const postboss = createOccurrenceAddress(
+      oBiome,
+      createOccurrenceId(`${oOccurrenceIds.preboss}:postboss`),
+    );
+    for (const [slotKey, rewardType] of [
+      ['first', 'HealBigDrop'],
+      ['secondLeft', 'MaxHealthDrop'],
+      ['secondRight', 'MaxManaDrop'],
+    ] as const) {
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceHermesShrineOffer',
+        occurrence: postboss,
+        slotKey,
+        value: { rewardType },
+      });
+    }
 
     const { biome } = evaluateValidO(authorLegalTraitOffers(project));
     expect(biome.snapshot.decisions.at(-1)).toMatchObject({
@@ -642,7 +659,7 @@ describe('selected O validation', () => {
         },
       ],
     });
-    expect(biome.snapshot.automaticRooms[0]).toMatchObject({
+    expect(biome.snapshot.fixedRoomLinks[0]?.target).toMatchObject({
       gameName: 'O_Boss01',
       enteredRewardStoreKey: 'MetaProgress',
     });

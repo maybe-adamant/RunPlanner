@@ -85,7 +85,7 @@ function roomStatus(target: WorkspacePhysicalTarget): string {
   if (target.retained) return 'Saved room';
   if (target.clockworkReward === 'goal') return 'Clockwork Goal';
   if (target.clockworkReward === 'nonGoal') return 'Clockwork NonGoal';
-  return target.nextPath === 'startsCompletion' ? 'Preboss route' : 'Offered room';
+  return 'Offered room';
 }
 
 function ExactRepairAction({ intent }: { readonly intent: WorkspaceBatchRepairIntent }) {

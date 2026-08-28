@@ -24,8 +24,8 @@ export function applyFigurineArcanaCommand(
   );
   const boss = requireOccurrence(located.plan, command.figurine.occurrenceId, command);
   const room = catalog.rooms.byKey[boss.gameName];
-  if (room?.mode.kind !== 'automatic' || room.mode.role !== 'boss')
-    failCommand(command, 'Crystal Figurine must be owned by this biome automatic Boss');
+  if (room?.mode.kind !== 'authored' || room.mode.templateKey !== 'Boss')
+    failCommand(command, 'Crystal Figurine must be owned by this biome Boss occurrence');
   const lifecycle = assembleRoomActionDomain({
     catalog,
     biome: createBiomeAddress(command.figurine.routeKey, command.figurine.biomeKey),

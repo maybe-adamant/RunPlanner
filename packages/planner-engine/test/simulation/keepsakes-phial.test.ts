@@ -81,7 +81,7 @@ function historyWith(
 
 const occurrence = createOccurrenceAddress(
   goldenFBiome,
-  createOccurrenceId('completion:F:postboss'),
+  createOccurrenceId('golden-f-preboss-shop:postboss'),
 );
 const fountainAction: RoomActionAddress = createRoomActionAddress(
   goldenFBiome,
@@ -266,7 +266,7 @@ describe('Aromatic Phial fountain lifecycle', () => {
   });
 
   it('emits the automatic Postboss fountain lifecycle event after room creation', () => {
-    const postbossId = createOccurrenceId('completion:F:postboss');
+    const postbossId = createOccurrenceId('golden-f-preboss-shop:postboss');
     let project = createCompleteFGProject();
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceStartingKeepsake',
@@ -310,7 +310,7 @@ describe('Aromatic Phial fountain lifecycle', () => {
   });
 
   it('publishes and resolves a Phial target after a Postboss rack is moved before its fountain', () => {
-    const postbossId = createOccurrenceId('completion:F:postboss');
+    const postbossId = createOccurrenceId('golden-f-preboss-shop:postboss');
     const selection = {
       kind: 'keepsakeSelection' as const,
       routeKey: 'Underworld' as const,

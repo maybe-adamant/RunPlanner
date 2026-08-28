@@ -72,6 +72,8 @@ export interface RouteDeclaration {
   readonly key: string;
   readonly label: string;
   readonly biomeKeys: readonly string[];
+  /** Exact Postboss room for each route position; terminal positions are null. */
+  readonly postbossRoomGameNames: readonly (string | null)[];
 }
 
 export type ArcanaActivationRule =
@@ -518,6 +520,7 @@ export type RoomKind =
 
 export type RoomTemplateKey =
   | 'Anomaly'
+  | 'Boss'
   | 'Chaos'
   | 'ContractBoss'
   | 'Devotion'
@@ -531,6 +534,7 @@ export type RoomTemplateKey =
   | 'Fountain'
   | 'Miniboss'
   | 'Preboss'
+  | 'PostBoss'
   | 'RewardlessCombat'
   | 'Shop'
   | 'ShipCombat'
@@ -541,8 +545,6 @@ export type DerivedRoomClassification = 'hub';
 
 export type RoomMode =
   | { readonly kind: 'authored'; readonly templateKey: RoomTemplateKey }
-  /** A declaration-fixed physical room persisted as an automatic occurrence. */
-  | { readonly kind: 'automatic'; readonly role: 'boss' | 'postboss' }
   | { readonly kind: 'derived'; readonly classification: DerivedRoomClassification };
 
 export type ExitCompatibilityPolicy =
@@ -902,11 +904,6 @@ export interface CompletedHubExitDescriptor {
   readonly physicalExit: RoomExit;
 }
 
-export interface CompletionRoomDescriptor {
-  readonly role: 'boss' | 'postboss';
-  readonly roomGameName: string;
-}
-
 export type BiomeTransitionCounterAxis = 'biomeDepthCache' | 'biomeEncounterDepth';
 
 export interface BiomeTransitionCounterReset {
@@ -915,7 +912,7 @@ export interface BiomeTransitionCounterReset {
 }
 
 export interface CompletionDescriptor {
-  readonly rooms: readonly CompletionRoomDescriptor[];
+  readonly bossRoomGameName: string;
   readonly transitionEffects: readonly BiomeTransitionCounterReset[];
 }
 

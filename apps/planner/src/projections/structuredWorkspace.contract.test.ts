@@ -194,7 +194,7 @@ function withMalformedAuthoredBiome(
 function postbossOccurrence(routeKey: string, biomeKey: string) {
   return createOccurrenceAddress(
     createBiomeAddress(routeKey, biomeKey),
-    createOccurrenceId(`completion:${biomeKey}:postboss`),
+    createOccurrenceId(`golden-${biomeKey.toLowerCase()}-preboss-shop:postboss`),
   );
 }
 
@@ -610,19 +610,25 @@ describe('structured workspace overlay contract', () => {
     });
     invalidHammer = withMalformedAuthoredBiome(invalidHammer, 'Underworld', 'F', (plan) => ({
       ...plan,
-      completionOccurrences: plan.completionOccurrences.map((occurrence) =>
-        occurrence.occurrenceId === createOccurrenceId('completion:F:postboss')
-          ? {
-              ...occurrence,
-              keepsakeRack: {
-                ...occurrence.keepsakeRack!,
-                equipResults: {
-                  experimentalHammer: { kind: 'selected', traitKey: 'ApolloWeaponBoon' },
-                },
-              },
-            }
-          : occurrence,
-      ),
+      topology:
+        plan.topology === null
+          ? null
+          : {
+              ...plan.topology,
+              occurrences: plan.topology.occurrences.map((occurrence) =>
+                occurrence.occurrenceId === createOccurrenceId('golden-f-preboss-shop:postboss')
+                  ? {
+                      ...occurrence,
+                      keepsakeRack: {
+                        ...occurrence.keepsakeRack!,
+                        equipResults: {
+                          experimentalHammer: { kind: 'selected', traitKey: 'ApolloWeaponBoon' },
+                        },
+                      },
+                    }
+                  : occurrence,
+              ),
+            },
     }));
     const invalidAssembly = simulateProjectAssembly(catalog, invalidHammer);
     expect(invalidAssembly.evaluation.findings).toContainEqual(
@@ -827,7 +833,7 @@ describe('structured workspace overlay contract', () => {
     const fPostboss = createPostbossKeepsakeSelectionAddress(
       createOccurrenceAddress(
         createBiomeAddress('Underworld', 'F'),
-        createOccurrenceId('completion:F:postboss'),
+        createOccurrenceId('golden-f-preboss-shop:postboss'),
       ),
     );
     const postbossResult = createKeepsakeEquipResultAddress(fPostboss, 'transcendentEmbryo');

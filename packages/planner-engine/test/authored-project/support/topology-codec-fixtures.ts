@@ -39,6 +39,7 @@ export interface EncodedTopology {
   startOccurrenceId: string;
   occurrences: Array<Record<string, unknown>>;
   decisions: Array<Record<string, unknown>>;
+  fixedRoomLinks: Array<Record<string, unknown>>;
 }
 
 export interface EncodedProject extends Record<string, unknown> {

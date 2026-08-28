@@ -1,5 +1,10 @@
 import { catalog } from '@run-planner/hades2-catalog';
-import { createOccurrenceId, type ProjectDocument } from '@run-planner/engine/authored-project';
+import {
+  applyProjectCommand,
+  createExitSelectionAddress,
+  createOccurrenceId,
+  type ProjectDocument,
+} from '@run-planner/engine/authored-project';
 import {
   encounterPhaseSequenceStatusForProjectEvaluationAssembly,
   simulateProjectAssembly,
@@ -8,6 +13,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   createGoldenFGHIProject,
+  goldenFBiome,
   goldenFOccurrenceId,
 } from '@run-planner/test-fixtures/underworld';
 import { loadSurfaceNOPQProject, nOccurrenceId } from '@run-planner/test-fixtures/surface';
@@ -30,33 +36,14 @@ function withFPrebossSelection(
   exitKey: 'exit1' | 'exit2',
 ): ProjectDocument {
   const sourceOccurrenceId = goldenFOccurrenceId(10, 1);
-  return {
-    ...project,
-    routes: project.routes.map((route) =>
-      route.routeKey !== 'Underworld'
-        ? route
-        : {
-            ...route,
-            biomes: route.biomes.map((plan) =>
-              plan.biomeKey !== 'F' || plan.topology === null
-                ? plan
-                : {
-                    ...plan,
-                    topology: {
-                      ...plan.topology,
-                      decisions: plan.topology.decisions.map((decision) =>
-                        decision.kind === 'exit' &&
-                        decision.source.kind === 'occurrence' &&
-                        decision.source.occurrenceId === sourceOccurrenceId
-                          ? { ...decision, selection: { kind: 'normal' as const, exitKey } }
-                          : decision,
-                      ),
-                    },
-                  },
-            ),
-          },
-    ),
-  };
+  return applyProjectCommand(project, catalog, {
+    kind: 'SetExitSelection',
+    selection: createExitSelectionAddress(goldenFBiome, {
+      kind: 'occurrence',
+      occurrenceId: sourceOccurrenceId,
+    }),
+    value: { kind: 'normal', exitKey },
+  });
 }
 
 describe('structured workspace occurrence assembly facts', () => {

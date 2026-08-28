@@ -713,7 +713,7 @@ describe('structured workspace source index', () => {
       topology: 'localVisit',
     });
     expect(source.outgoingStatus(nOccurrenceId('preboss'))).toMatchObject({
-      kind: 'fixedAutomatic',
+      kind: 'fixedRoom',
     });
   });
 

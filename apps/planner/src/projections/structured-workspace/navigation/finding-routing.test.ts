@@ -210,7 +210,7 @@ describe('fine-grained finding routing', () => {
 
   it('requires a Postboss equip result to route through its exact completion inspector', () => {
     const selection = createPostbossKeepsakeSelectionAddress(
-      createOccurrenceAddress(biome, createOccurrenceId('completion:N:postboss')),
+      createOccurrenceAddress(biome, createOccurrenceId('surface-n-preboss:postboss')),
     );
     const result = createKeepsakeEquipResultAddress(selection, 'experimentalHammer');
     const finding = {

@@ -10,12 +10,14 @@ import type {
   ExitDecisionSource,
   ExitSelection,
   ExitTargetReference,
+  FixedRoomLink,
   HubDecision,
   HubTargetReference,
   LocalVisitDecision,
   NextRoomDecision,
   OccurrenceId,
 } from '../model';
+import { fixedCompletionOccurrenceId } from '../fixed-room-links';
 import { requireCountedBinding, type RoomOccurrenceRole } from '../room-state/declaration';
 import {
   admitsTerminalTakeoverEnvelope,
@@ -57,6 +59,10 @@ export interface RawOccurrence {
   readonly hasStygianWell?: boolean;
   readonly fountainRarityResult?: unknown;
   readonly hasFountainRarityResult?: boolean;
+  readonly purgingPool?: unknown;
+  readonly hasPurgingPool?: boolean;
+  readonly keepsakeRack?: unknown;
+  readonly hasKeepsakeRack?: boolean;
   readonly figurineArcanaKeysByPhase?: unknown;
   readonly hasFigurineArcanaKeysByPhase?: boolean;
   readonly path: string;
@@ -1112,16 +1118,22 @@ export interface DecodedTopologyStructure {
     readonly additionalExits: readonly AuthoredAdditionalExit[];
   }[];
   readonly decisions: readonly NextRoomDecision[];
+  readonly fixedRoomLinks: readonly FixedRoomLink[];
 }
 
 export function decodeTopologyStructure(
   value: unknown,
   catalog: Catalog,
   layout: BiomeLayout,
+  routeKey: string,
   path: string,
 ): DecodedTopologyStructure {
   const topology = expectRecord(value, path);
-  expectExactKeys(topology, ['startOccurrenceId', 'occurrences', 'decisions'], path);
+  expectExactKeys(
+    topology,
+    ['startOccurrenceId', 'occurrences', 'decisions', 'fixedRoomLinks'],
+    path,
+  );
   const rawOccurrences = expectArray(topology.occurrences, `${path}.occurrences`);
   const occurrences = new Map<OccurrenceId, RawOccurrence>();
   for (const [index, rawValue] of rawOccurrences.entries()) {
@@ -1132,6 +1144,8 @@ export function decodeTopologyStructure(
     const hasHermesShrine = Object.hasOwn(occurrence, 'hermesShrine');
     const hasStygianWell = Object.hasOwn(occurrence, 'stygianWell');
     const hasFountainRarityResult = Object.hasOwn(occurrence, 'fountainRarityResult');
+    const hasPurgingPool = Object.hasOwn(occurrence, 'purgingPool');
+    const hasKeepsakeRack = Object.hasOwn(occurrence, 'keepsakeRack');
     const hasFigurineArcanaKeysByPhase = Object.hasOwn(occurrence, 'figurineArcanaKeysByPhase');
     expectExactKeys(
       occurrence,
@@ -1147,6 +1161,8 @@ export function decodeTopologyStructure(
         ...(hasHermesShrine ? ['hermesShrine'] : []),
         ...(hasStygianWell ? ['stygianWell'] : []),
         ...(hasFountainRarityResult ? ['fountainRarityResult'] : []),
+        ...(hasPurgingPool ? ['purgingPool'] : []),
+        ...(hasKeepsakeRack ? ['keepsakeRack'] : []),
         ...(hasFigurineArcanaKeysByPhase ? ['figurineArcanaKeysByPhase'] : []),
       ],
       occurrencePath,
@@ -1173,12 +1189,55 @@ export function decodeTopologyStructure(
         hasStygianWell,
         fountainRarityResult: occurrence.fountainRarityResult,
         hasFountainRarityResult,
+        purgingPool: occurrence.purgingPool,
+        hasPurgingPool,
+        keepsakeRack: occurrence.keepsakeRack,
+        hasKeepsakeRack,
         figurineArcanaKeysByPhase: occurrence.figurineArcanaKeysByPhase,
         hasFigurineArcanaKeysByPhase,
         path: occurrencePath,
       }),
     );
   }
+  const rawFixedLinks = expectArray(topology.fixedRoomLinks, `${path}.fixedRoomLinks`);
+  const fixedRoomLinks = rawFixedLinks.map((value, index): FixedRoomLink => {
+    const linkPath = `${path}.fixedRoomLinks[${index}]`;
+    const link = expectRecord(value, linkPath);
+    expectExactKeys(link, ['sourceOccurrenceId', 'targetOccurrenceId'], linkPath);
+    const sourceOccurrenceId = occurrenceId(
+      link.sourceOccurrenceId,
+      `${linkPath}.sourceOccurrenceId`,
+    );
+    const targetOccurrenceId = occurrenceId(
+      link.targetOccurrenceId,
+      `${linkPath}.targetOccurrenceId`,
+    );
+    const source = occurrences.get(sourceOccurrenceId);
+    const target = occurrences.get(targetOccurrenceId);
+    if (source === undefined || target === undefined)
+      failProjectDocument(linkPath, 'must reference existing occurrences');
+    const sourceRoom = requireKnownRoom(source, catalog);
+    const targetRoom = requireKnownRoom(target, catalog);
+    const validPrebossLink = sourceRoom.kind === 'Preboss' && targetRoom.kind === 'Boss';
+    const validBossLink = sourceRoom.kind === 'Boss' && targetRoom.kind === 'PostBoss';
+    if (!validPrebossLink && !validBossLink)
+      failProjectDocument(linkPath, 'must link Preboss to Boss or Boss to PostBoss');
+    if (validPrebossLink && targetRoom.gameName !== layout.completion.bossRoomGameName)
+      failProjectDocument(linkPath, 'must target this biome completion Boss');
+    if (validBossLink) {
+      const route = catalog.routes.byKey[routeKey];
+      const biomeIndex = route?.biomeKeys.indexOf(layout.biomeKey) ?? -1;
+      const expected = biomeIndex < 0 ? undefined : route?.postbossRoomGameNames[biomeIndex];
+      if (expected === undefined || targetRoom.gameName !== expected)
+        failProjectDocument(linkPath, 'must target this route position PostBoss');
+    }
+    return Object.freeze({ sourceOccurrenceId, targetOccurrenceId });
+  });
+  if (
+    new Set(fixedRoomLinks.map((link) => `${link.sourceOccurrenceId}:${link.targetOccurrenceId}`))
+      .size !== fixedRoomLinks.length
+  )
+    failProjectDocument(`${path}.fixedRoomLinks`, 'must not repeat fixed room links');
   const startOccurrenceId = occurrenceId(topology.startOccurrenceId, `${path}.startOccurrenceId`);
   const start = occurrences.get(startOccurrenceId);
   if (start === undefined)
@@ -1256,6 +1315,91 @@ export function decodeTopologyStructure(
         selectedSources.add(targetOccurrenceId);
         addedSelectedSource = true;
       }
+    }
+    for (const decision of decisions) {
+      if (decision.kind !== 'hub' || !selectedSources.has(decision.source.occurrenceId)) continue;
+      const handoff = decisions.find(
+        (candidate): candidate is ExitDecision =>
+          candidate.kind === 'exit' &&
+          candidate.source.kind === 'hubDecision' &&
+          candidate.source.decisionKey === decision.hubKey,
+      );
+      if (handoff === undefined) continue;
+      const continuation = selectedContinuationForDecision(handoff, occurrences);
+      const targetOccurrenceId =
+        continuation?.kind === 'normal'
+          ? continuation.target.occurrenceId
+          : continuation?.kind === 'additional'
+            ? continuation.exit.occurrenceId
+            : undefined;
+      if (targetOccurrenceId !== undefined && !selectedSources.has(targetOccurrenceId)) {
+        selectedSources.add(targetOccurrenceId);
+        addedSelectedSource = true;
+      }
+    }
+    for (const link of fixedRoomLinks) {
+      if (!selectedSources.has(link.sourceOccurrenceId)) continue;
+      if (!selectedSources.has(link.targetOccurrenceId)) {
+        selectedSources.add(link.targetOccurrenceId);
+        addedSelectedSource = true;
+      }
+    }
+  }
+  const selectedPrebosses = [...occurrences.values()].filter(
+    (occurrence) =>
+      selectedSources.has(occurrence.occurrenceId) &&
+      requireKnownRoom(occurrence, catalog).kind === 'Preboss',
+  );
+  if (selectedPrebosses.length > 1) {
+    failProjectDocument(`${path}.fixedRoomLinks`, 'must have at most one selected Preboss owner');
+  }
+  const expectedFixedRoomLinks = (() => {
+    const preboss = selectedPrebosses[0];
+    if (preboss === undefined) return [] as const;
+    const bossOccurrenceId = fixedCompletionOccurrenceId(preboss.occurrenceId, 'boss');
+    const route = catalog.routes.byKey[routeKey];
+    const biomeIndex = route?.biomeKeys.indexOf(layout.biomeKey) ?? -1;
+    const postbossGameName = biomeIndex < 0 ? undefined : route?.postbossRoomGameNames[biomeIndex];
+    if (postbossGameName === undefined) {
+      failProjectDocument(
+        `${path}.fixedRoomLinks`,
+        'cannot resolve the route-position Postboss declaration',
+      );
+    }
+    const links: FixedRoomLink[] = [
+      Object.freeze({
+        sourceOccurrenceId: preboss.occurrenceId,
+        targetOccurrenceId: bossOccurrenceId,
+      }),
+    ];
+    if (postbossGameName !== null) {
+      links.push(
+        Object.freeze({
+          sourceOccurrenceId: bossOccurrenceId,
+          targetOccurrenceId: fixedCompletionOccurrenceId(preboss.occurrenceId, 'postboss'),
+        }),
+      );
+    }
+    return links;
+  })();
+  if (fixedRoomLinks.length !== expectedFixedRoomLinks.length) {
+    failProjectDocument(
+      `${path}.fixedRoomLinks`,
+      selectedPrebosses.length === 0
+        ? 'must be empty when no Preboss is selected'
+        : `must contain exactly ${expectedFixedRoomLinks.length} fixed room links for the selected Preboss`,
+    );
+  }
+  for (const [index, expected] of expectedFixedRoomLinks.entries()) {
+    const actual = fixedRoomLinks[index];
+    if (
+      actual?.sourceOccurrenceId !== expected.sourceOccurrenceId ||
+      actual.targetOccurrenceId !== expected.targetOccurrenceId
+    ) {
+      failProjectDocument(
+        `${path}.fixedRoomLinks[${index}]`,
+        'must match the selected Preboss fixed completion chain',
+      );
     }
   }
   const selectedSpine = Object.freeze({
@@ -1372,6 +1516,12 @@ export function decodeTopologyStructure(
     }
   }
 
+  for (const [index, link] of fixedRoomLinks.entries()) {
+    const linkPath = `${path}.fixedRoomLinks[${index}]`;
+    if (!selectedSources.has(link.sourceOccurrenceId))
+      failProjectDocument(linkPath, 'source must be on the selected topology spine');
+  }
+
   const owners = new Map<OccurrenceId, OccurrenceOwner>();
   const own = (id: OccurrenceId, owner: OccurrenceOwner) => {
     if (owners.has(id))
@@ -1470,6 +1620,24 @@ export function decodeTopologyStructure(
       );
     }
   }
+  for (const [index, link] of fixedRoomLinks.entries()) {
+    const target = occurrences.get(link.targetOccurrenceId);
+    if (target === undefined)
+      failProjectDocument(`${path}.fixedRoomLinks[${index}]`, 'unknown target');
+    const source = occurrences.get(link.sourceOccurrenceId);
+    if (source === undefined)
+      failProjectDocument(`${path}.fixedRoomLinks[${index}]`, 'unknown source');
+    const sourceRoom = requireKnownRoom(source, catalog);
+    const targetRoom = requireKnownRoom(target, catalog);
+    own(link.targetOccurrenceId, {
+      gameName: targetRoom.gameName,
+      role: 'ordinary',
+      entryActive: true,
+      path: `${path}.fixedRoomLinks[${index}].targetOccurrenceId`,
+    });
+    if (sourceRoom.kind !== 'Preboss' && sourceRoom.kind !== 'Boss')
+      failProjectDocument(`${path}.fixedRoomLinks[${index}]`, 'source is not a fixed-link room');
+  }
   for (const [index, decision] of decisions.entries()) {
     if (decision.kind !== 'exit') continue;
     validateDetourAutomaticContinuationDecision(
@@ -1505,5 +1673,6 @@ export function decodeTopologyStructure(
       }),
     ),
     decisions: Object.freeze(decisions),
+    fixedRoomLinks: Object.freeze(fixedRoomLinks),
   });
 }

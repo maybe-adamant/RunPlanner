@@ -39,7 +39,6 @@ const iFishingDisabled = [
   'I_Combat22',
   'I_MiniBoss01',
   'I_Story01',
-  'I_PostBoss01',
 ] as const;
 const nFishingEnabled = ['N_Opening01', 'N_PreBoss01', 'N_Combat16', 'N_Story01'] as const;
 const sourceResourceExceptionsOutsideCatalog = ['I_MiniBoss03', 'N_Shop01'] as const;
@@ -81,7 +80,6 @@ const roomsWithNoResourceFamilies = [
   'C_Boss01',
   'G_Boss01',
   'H_PostBoss01',
-  'I_PostBoss01',
   'N_Hub',
   'O_PostBoss01',
   'Q_Boss01',

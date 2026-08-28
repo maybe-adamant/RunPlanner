@@ -59,6 +59,7 @@ function authoredDetailsActiveOccurrenceIds(plan: AuthoredBiomePlan): ReadonlySe
     if (continuation?.kind === 'normal') active.add(continuation.target.occurrenceId);
     if (continuation?.kind === 'additional') active.add(continuation.exit.occurrenceId);
   }
+  for (const link of topology.fixedRoomLinks) active.add(link.targetOccurrenceId);
   return active;
 }
 
@@ -68,10 +69,7 @@ export function createWorkspaceBiomeOccurrenceAssemblyFacts(
   const active = authoredDetailsActiveOccurrenceIds(source.plan);
   const byOccurrence = new Map<OccurrenceId, WorkspaceOccurrenceAssemblyFact>();
   const topologyOccurrences = source.plan.topology?.occurrences ?? [];
-  const automaticOccurrenceIds = new Set(
-    source.plan.completionOccurrences.map((occurrence) => occurrence.occurrenceId),
-  );
-  for (const occurrence of [...topologyOccurrences, ...source.plan.completionOccurrences]) {
+  for (const occurrence of topologyOccurrences) {
     if (byOccurrence.has(occurrence.occurrenceId)) {
       throw new StructuredWorkspaceProjectionContractError(
         `${semanticAddressKey(createOccurrenceAddress(source.biome, occurrence.occurrenceId))} has duplicate authored occurrence facts`,
@@ -83,9 +81,7 @@ export function createWorkspaceBiomeOccurrenceAssemblyFacts(
         authoredAdditionalExitKeys: Object.freeze(
           (occurrence.additionalExits ?? []).map((additional) => additional.key),
         ),
-        detailsActive:
-          active.has(occurrence.occurrenceId) ||
-          automaticOccurrenceIds.has(occurrence.occurrenceId),
+        detailsActive: active.has(occurrence.occurrenceId),
         occurrenceId: occurrence.occurrenceId,
       }),
     );

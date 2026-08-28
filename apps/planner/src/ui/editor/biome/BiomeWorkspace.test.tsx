@@ -838,9 +838,7 @@ describe('BiomeWorkspace', () => {
       throw new Error('empty N start frontier is missing');
     }
     expect(emptyRail).toEqual([emptyWorkspace.frontier?.marker.focusKey]);
-    const completion = screen.getByRole('region', { name: 'Biome completion' });
-    expect(within(completion).getByText('Polyphemus')).toBeTruthy();
-    expect(within(completion).getAllByText('Postboss')).toHaveLength(1);
+    expect(screen.queryByRole('region', { name: 'Biome completion' })).toBeNull();
     cleanup();
 
     const openingProject = applyProjectCommand(emptyProjectDocument, catalog, {

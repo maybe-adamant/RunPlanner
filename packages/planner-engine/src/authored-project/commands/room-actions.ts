@@ -34,9 +34,7 @@ export function applyRoomActionCommand(
       ? command.offer.occurrenceId
       : (command.action as import('../addresses').RoomActionAddress).occurrenceId;
   const occurrence = requireOccurrence(located.plan, occurrenceId, command);
-  const occurrenceIsActive =
-    structurallyActiveOccurrenceIds(topology).has(occurrenceId) ||
-    located.plan.completionOccurrences.some((candidate) => candidate.occurrenceId === occurrenceId);
+  const occurrenceIsActive = structurallyActiveOccurrenceIds(topology).has(occurrenceId);
   const commandAddress =
     command.kind === 'ReplaceShopPurchaseParticipation' ? command.offer : command.action;
   const domain = roomActionDomainForOccurrence(

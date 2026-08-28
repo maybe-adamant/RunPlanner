@@ -124,10 +124,7 @@ export function fieldsBatchFacts(
 }
 
 /** The canonical target path when no evaluated target overlay is available. */
-export function targetContinuation(
-  picked: boolean,
-  roomKind: RoomDeclaration['kind'],
-): CanonicalTargetContinuation {
+export function targetContinuation(picked: boolean): CanonicalTargetContinuation {
   if (!picked) return 'deadLeaf';
-  return roomKind === 'Preboss' ? 'startsCompletion' : 'continuesSpine';
+  return 'continuesSpine';
 }

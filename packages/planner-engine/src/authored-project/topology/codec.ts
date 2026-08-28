@@ -10,7 +10,7 @@ export function decodeBiomeTopology(
   routeKey: string,
   path: string,
 ): BiomeTopology {
-  const structure = decodeTopologyStructure(value, catalog, layout, path);
+  const structure = decodeTopologyStructure(value, catalog, layout, routeKey, path);
   return Object.freeze({
     startOccurrenceId: structure.startOccurrenceId,
     occurrences: Object.freeze(
@@ -19,5 +19,6 @@ export function decodeBiomeTopology(
       ),
     ),
     decisions: structure.decisions,
+    fixedRoomLinks: structure.fixedRoomLinks,
   });
 }

@@ -345,7 +345,7 @@ describe('canonical N Hub materialization', () => {
         },
       ],
     });
-    expect(biome.snapshot.automaticRooms.map((room) => room.gameName)).toEqual([
+    expect(biome.snapshot.fixedRoomLinks.map((link) => link.target.gameName)).toEqual([
       'N_Boss01',
       'N_PostBoss01',
     ]);

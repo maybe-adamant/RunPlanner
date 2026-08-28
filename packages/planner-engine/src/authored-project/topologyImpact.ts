@@ -152,6 +152,16 @@ function collectTopologyRemovalClosure(
         }
       }
     }
+
+    for (const link of topology.fixedRoomLinks) {
+      if (
+        removedOccurrences.has(link.sourceOccurrenceId) &&
+        !removedOccurrences.has(link.targetOccurrenceId)
+      ) {
+        removedOccurrences.add(link.targetOccurrenceId);
+        changed = true;
+      }
+    }
   }
 
   return Object.freeze({
@@ -352,6 +362,13 @@ export function applyTopologyRemovalImpact(
     ...topology,
     occurrences: Object.freeze(
       topology.occurrences.filter((occurrence) => !removedOccurrences.has(occurrence.occurrenceId)),
+    ),
+    fixedRoomLinks: Object.freeze(
+      topology.fixedRoomLinks.filter(
+        (link) =>
+          !removedOccurrences.has(link.sourceOccurrenceId) &&
+          !removedOccurrences.has(link.targetOccurrenceId),
+      ),
     ),
     decisions: Object.freeze(
       topology.decisions.filter((decision) => {

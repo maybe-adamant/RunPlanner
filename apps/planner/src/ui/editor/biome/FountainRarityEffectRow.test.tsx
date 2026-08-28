@@ -38,7 +38,7 @@ describe('FountainRarityEffectRow', () => {
     vi.spyOn(application.store, 'dispatch').mockImplementation(() => undefined as never);
     const action = createRoomActionAddress(
       goldenFBiome,
-      createOccurrenceId('completion:F:postboss'),
+      createOccurrenceId('golden-f-preboss-shop:postboss'),
       roomActionKey({ kind: 'useFountain' }),
     );
     const outcome = createFountainRarityOutcomeAddress(action);
@@ -121,7 +121,7 @@ describe('FountainRarityEffectRow', () => {
     vi.spyOn(application.store, 'dispatch').mockImplementation(() => undefined as never);
     const action = createRoomActionAddress(
       goldenFBiome,
-      createOccurrenceId('completion:F:postboss'),
+      createOccurrenceId('golden-f-preboss-shop:postboss'),
       roomActionKey({ kind: 'useFountain' }),
     );
     const outcome = createFountainRarityOutcomeAddress(action);
@@ -196,7 +196,7 @@ describe('FountainRarityEffectRow', () => {
     act(() => application.store.dispatch(authoredProjectReplaced(project)));
     const action = createRoomActionAddress(
       goldenFBiome,
-      createOccurrenceId('completion:F:postboss'),
+      createOccurrenceId('golden-f-preboss-shop:postboss'),
       roomActionKey({ kind: 'useFountain' }),
     );
     const outcome = createFountainRarityOutcomeAddress(action);
@@ -257,7 +257,7 @@ describe('FountainRarityEffectRow', () => {
     await user.click(screen.getByLabelText('Aromatic Phial target'));
     await user.click(screen.getByText('Apollo Attack'));
     const selected = application.store.getState().projectWorkspace.history.present;
-    const selectedPostboss = selected.routes[0]?.biomes[0]?.completionOccurrences.find(
+    const selectedPostboss = selected.routes[0]?.biomes[0]?.topology?.occurrences.find(
       (candidate) => candidate.occurrenceId === action.occurrenceId,
     );
     expect(selectedPostboss?.fountainRarityResult).toEqual({ targetTraitKey: 'ApolloWeaponBoon' });
@@ -266,7 +266,7 @@ describe('FountainRarityEffectRow', () => {
     );
     act(() => application.store.dispatch(authoredProjectUndoRequested()));
     const undone = application.store.getState().projectWorkspace.history.present;
-    const undonePostboss = undone.routes[0]?.biomes[0]?.completionOccurrences.find(
+    const undonePostboss = undone.routes[0]?.biomes[0]?.topology?.occurrences.find(
       (candidate) => candidate.occurrenceId === action.occurrenceId,
     );
     expect(undonePostboss?.fountainRarityResult).toBeUndefined();

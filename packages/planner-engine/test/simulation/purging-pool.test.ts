@@ -56,7 +56,7 @@ function underworldFRewards(project: ProjectDocument) {
 
 const fPostboss = createOccurrenceAddress(
   createBiomeAddress('Underworld', 'F'),
-  createOccurrenceId('completion:F:postboss'),
+  createOccurrenceId('golden-f-preboss-shop:postboss'),
 );
 
 function asConfiguredTailF(project: ProjectDocument): ProjectDocument {

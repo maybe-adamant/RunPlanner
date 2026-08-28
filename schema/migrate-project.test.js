@@ -1,7 +1,20 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 
 import { migrateProjectDocument } from './migrate-project.js';
+
+function checkpoint(name) {
+  return JSON.parse(
+    readFileSync(
+      new URL(
+        `../test/fixtures/authored-project/checkpoints/${name}.runplanner.json`,
+        import.meta.url,
+      ),
+      'utf8',
+    ),
+  );
+}
 
 function schema49Project() {
   return {
@@ -86,7 +99,7 @@ test('66 -> 67 removes retained rack no-ops and compacts replacement racks', () 
       },
     ],
   };
-  const result = migrateProjectDocument(source);
+  const result = migrateProjectDocument(source, 67);
   assert.equal(result.document.schemaVersion, 67);
   assert.equal('keepsakeRack' in result.document.routes[0].completionOccurrences[0], false);
   assert.deepEqual(result.document.routes[0].completionOccurrences[1].keepsakeRack, {
@@ -184,7 +197,7 @@ test('63 -> 64 updates the Persephone catalog boundary without inventing optiona
     ],
   };
 
-  const result = migrateProjectDocument(source);
+  const result = migrateProjectDocument(source, 67);
 
   assert.deepEqual(source, {
     schemaVersion: 63,
@@ -304,7 +317,7 @@ test('64 -> 65 defaults every resolved SpellDrop role and only the route-owned S
     ],
   };
 
-  const result = migrateProjectDocument(source);
+  const result = migrateProjectDocument(source, 65);
   const roles =
     result.document.routes[0].biomes[0].topology.occurrences[0].encounters.spellDrop
       .traitOffersByAcquisitionRole;
@@ -383,7 +396,7 @@ test('53 -> 54 preserves Gorgon trigger values and removes generic DD fields', (
       },
     ],
   };
-  const result = migrateProjectDocument(source);
+  const result = migrateProjectDocument(source, 58);
   const occurrence = result.document.routes[0].biomes[0].topology.occurrences[0];
   assert.deepEqual(occurrence.encounters.gorgonResultByPhase, {
     Combat: { athenaTriggerConditionMet: true },
@@ -420,14 +433,14 @@ test('54 -> 55 relocates completion sidecars into exact automatic occurrences', 
       },
     ],
   };
-  const result = migrateProjectDocument(source);
+  const result = migrateProjectDocument(source, 55);
   const [boss, postboss] = result.document.routes[0].biomes[0].completionOccurrences;
   assert.equal(boss.gameName, 'F_Boss01');
   assert.deepEqual(boss.encounters.judgmentArcanaKeysByPhase, { Encounter: ['TheSorceress'] });
   assert.deepEqual(boss.encounters.steadyGrowthTargetByPhase, { Encounter: 'Attack' });
   assert.equal(postboss.gameName, 'F_PostBoss01');
   assert.deepEqual(postboss.keepsakeRack, {
-    keepsakeKey: 'JeweledPom',
+    disposition: { kind: 'replace', keepsakeKey: 'JeweledPom' },
     equipResults: { jeweledPom: { traitKey: 'LastGasp' } },
   });
   assert.deepEqual(postboss.roomActions, { order: [{ kind: 'useFountain' }] });
@@ -439,7 +452,7 @@ test('51 -> current preserves prior route content and adds resource placements',
   const source = schema49Project();
   source.schemaVersion = 51;
   source.catalogVersion = '0.31.0-chaos-traits';
-  const result = migrateProjectDocument(source);
+  const result = migrateProjectDocument(source, 67);
   assert.equal(result.document.schemaVersion, 67);
   assert.equal(result.document.catalogVersion, '0.48.0-hex-talent-layouts');
   assert.deepEqual(result.changes['51->52'], {});
@@ -491,7 +504,7 @@ test('50 -> current advances the full external migration chain through the Herme
   source.catalogVersion = '0.30.0-boon-rarity-ledger';
   source.routes[0].nestedReward.traitOffersByAcquisitionRole.self = null;
 
-  const result = migrateProjectDocument(source);
+  const result = migrateProjectDocument(source, 67);
 
   assert.equal(result.document.schemaVersion, 67);
   assert.equal(result.document.catalogVersion, '0.48.0-hex-talent-layouts');
@@ -523,9 +536,9 @@ test('55 -> 56 adds empty route-owned selected resource placements', () => {
   const source = schema49Project();
   source.schemaVersion = 55;
   source.catalogVersion = '0.37.0-automatic-completion-occurrences';
-  const result = migrateProjectDocument(source);
-  assert.equal(result.document.schemaVersion, 67);
-  assert.equal(result.document.catalogVersion, '0.48.0-hex-talent-layouts');
+  const result = migrateProjectDocument(source, 56);
+  assert.equal(result.document.schemaVersion, 56);
+  assert.equal(result.document.catalogVersion, '0.38.0-selected-resource-successes');
   assert.deepEqual(result.document.routes[0].resourcePlacements, {
     Pickaxe: null,
     Exorcism: null,
@@ -533,15 +546,13 @@ test('55 -> 56 adds empty route-owned selected resource placements', () => {
     Fishing: null,
   });
   assert.deepEqual(result.changes['55->56'], { routePlacementsAdded: 1 });
-  assert.deepEqual(result.changes['56->57'], { poolsAdded: 0 });
-  assert.deepEqual(result.changes['57->58'], { shrinesAdded: 0 });
 });
 
 test('52 -> current preserves the earlier schema-52 catalog migration ledger and adds resource placements', () => {
   const source = schema49Project();
   source.schemaVersion = 52;
   source.catalogVersion = '0.32.0-run-impacting-traits';
-  const result = migrateProjectDocument(source);
+  const result = migrateProjectDocument(source, 67);
   assert.equal(result.document.schemaVersion, 67);
   assert.equal(result.document.catalogVersion, '0.48.0-hex-talent-layouts');
   assert.deepEqual(result.document.routes, [
@@ -590,7 +601,7 @@ test('52 -> current advances the prior run-impacting-traits catalog metadata', (
   const source = schema49Project();
   source.schemaVersion = 52;
   source.catalogVersion = '0.32.1-run-impacting-traits';
-  const result = migrateProjectDocument(source);
+  const result = migrateProjectDocument(source, 67);
   assert.equal(result.document.catalogVersion, '0.48.0-hex-talent-layouts');
   assert.deepEqual(result.changes['52->53'], {
     catalogMigrations: [
@@ -631,7 +642,7 @@ test('current schema 52 -> current advances catalog metadata and adds resource p
   const source = schema49Project();
   source.schemaVersion = 52;
   source.catalogVersion = '0.34.0-sea-star';
-  const result = migrateProjectDocument(source);
+  const result = migrateProjectDocument(source, 67);
   assert.equal(result.document.schemaVersion, 67);
   assert.equal(result.document.catalogVersion, '0.48.0-hex-talent-layouts');
   assert.deepEqual(result.document.routes, [
@@ -731,23 +742,11 @@ test('57 -> 58 seeds Shrine shells only on exact forced Surface Postboss identit
     ],
   };
 
-  const result = migrateProjectDocument(source);
+  const result = migrateProjectDocument(source, 58);
   const biomes = result.document.routes[0].biomes;
-  assert.equal(result.document.schemaVersion, 67);
-  assert.equal(result.document.catalogVersion, '0.48.0-hex-talent-layouts');
-  assert.deepEqual(result.steps, [
-    '57->58',
-    '58->59',
-    '59->60',
-    '60->61',
-    '61->62',
-    '62->63',
-    '63->64',
-    '64->65',
-    '65->66',
-    '66->67',
-  ]);
-  assert.deepEqual(result.changes['65->66'], { chaosOffersMigrated: 0 });
+  assert.equal(result.document.schemaVersion, 58);
+  assert.equal(result.document.catalogVersion, '0.40.0-hermes-shrine');
+  assert.deepEqual(result.steps, ['57->58']);
   assert.deepEqual(result.changes['57->58'], { shrinesAdded: 2 });
   for (const [biomeIndex, occurrenceIndex] of [
     [0, 0],
@@ -841,28 +840,12 @@ test('58 -> 59 seeds Well shells only on exact forced Underworld Postboss identi
     ],
   };
 
-  const result = migrateProjectDocument(source);
+  const result = migrateProjectDocument(source, 59);
   const biomes = result.document.routes[0].biomes;
-  assert.equal(result.document.schemaVersion, 67);
-  assert.equal(result.document.catalogVersion, '0.48.0-hex-talent-layouts');
-  assert.deepEqual(result.steps, [
-    '58->59',
-    '59->60',
-    '60->61',
-    '61->62',
-    '62->63',
-    '63->64',
-    '64->65',
-    '65->66',
-    '66->67',
-  ]);
-  assert.deepEqual(result.changes['65->66'], { chaosOffersMigrated: 0 });
-  assert.deepEqual(result.changes['64->65'], {
-    spellHexTreesDefaulted: 0,
-    aspectHexTreesDefaulted: 0,
-  });
+  assert.equal(result.document.schemaVersion, 59);
+  assert.equal(result.document.catalogVersion, '0.41.0-stygian-well');
+  assert.deepEqual(result.steps, ['58->59']);
   assert.deepEqual(result.changes['58->59'], { wellsAdded: 2 });
-  assert.deepEqual(result.changes['59->60'], {});
   for (const [biomeIndex, occurrenceIndex] of [
     [0, 0],
     [2, 0],
@@ -894,3 +877,68 @@ test('58 -> 59 rejects a document from the wrong prior catalog', () => {
     /schema 58 migration expects catalog 0\.40\.0-hermes-shrine/,
   );
 });
+
+test('67 -> 68 moves the real Surface resources tail and rewrites its placement', () => {
+  const source = checkpoint('surface-n-resources');
+  const result = migrateProjectDocument(source);
+  const route = result.document.routes.find((candidate) => candidate.routeKey === 'Surface');
+  const biome = route.biomes.find((candidate) => candidate.biomeKey === 'N');
+  const completion = biome.topology.occurrences.filter((occurrence) =>
+    ['N_Boss01', 'N_PostBoss01'].includes(occurrence.gameName),
+  );
+
+  assert.equal(result.document.schemaVersion, 68);
+  assert.equal(result.document.catalogVersion, '0.49.0-completion-topology');
+  assert.equal('completionOccurrences' in biome, false);
+  assert.deepEqual(
+    completion.map((occurrence) => [occurrence.occurrenceId, occurrence.gameName]),
+    [
+      ['surface-n-preboss:boss', 'N_Boss01'],
+      ['surface-n-preboss:postboss', 'N_PostBoss01'],
+    ],
+  );
+  assert.equal(route.resourcePlacements.Shovel.occurrenceId, 'surface-n-preboss:postboss');
+  assert.deepEqual(result.changes['67->68'], {
+    completionOccurrencesMoved: 2,
+    completionOccurrencesRetired: 0,
+    fixedRoomLinksAdded: 2,
+    routePlacementsRewritten: 1,
+    routePlacementsRetired: 0,
+    terminalPostbossOccurrencesRetired: 0,
+    dormantCompletionOccurrencesRetired: 0,
+  });
+});
+
+test('67 -> 68 retires a terminal Postboss and clears its resource placement', () => {
+  const source = checkpoint('underworld-fghi');
+  const route = source.routes.find((candidate) => candidate.routeKey === 'Underworld');
+  route.resourcePlacements.Pickaxe = {
+    biomeKey: 'I',
+    occurrenceId: 'completion:I:postboss',
+  };
+
+  const result = migrateProjectDocument(source);
+  const biome = routeFor(result.document, 'Underworld').biomes.find(
+    (candidate) => candidate.biomeKey === 'I',
+  );
+  assert.equal(
+    biome.topology.occurrences.some((occurrence) => occurrence.gameName === 'I_PostBoss01'),
+    false,
+  );
+  assert.equal(routeFor(result.document, 'Underworld').resourcePlacements.Pickaxe, null);
+  assert.deepEqual(result.changes['67->68'], {
+    completionOccurrencesMoved: 7,
+    completionOccurrencesRetired: 1,
+    fixedRoomLinksAdded: 7,
+    routePlacementsRewritten: 0,
+    routePlacementsRetired: 1,
+    terminalPostbossOccurrencesRetired: 1,
+    dormantCompletionOccurrencesRetired: 0,
+  });
+});
+
+function routeFor(document, routeKey) {
+  const route = document.routes.find((candidate) => candidate.routeKey === routeKey);
+  if (route === undefined) throw new Error(`missing ${routeKey} route`);
+  return route;
+}

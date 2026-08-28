@@ -56,7 +56,7 @@ describe('occurrence interaction requirements', () => {
       createGoldenFGHIProject(),
       'Underworld',
       'F',
-      createOccurrenceId('completion:F:postboss'),
+      createOccurrenceId('golden-f-preboss-shop:postboss'),
     ).assembly.node.room;
     const featureKinds = occurrenceInteractionRequirements(catalog, postboss).map(
       (requirement) => requirement.kind,

@@ -818,7 +818,7 @@ describe('Echo Gift Gift Gift', () => {
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplacePostbossKeepsake',
       selection: createPostbossKeepsakeSelectionAddress(
-        createOccurrenceAddress(goldenHBiome, createOccurrenceId('completion:H:postboss')),
+        createOccurrenceAddress(goldenHBiome, createOccurrenceId('golden-h-preboss-shop:postboss')),
       ),
       keepsakeKey: 'ManaOverTimeRefundKeepsake',
     });

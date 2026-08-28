@@ -84,10 +84,7 @@ export const nBiomeLayout = {
     offerSpacingWindow: 10,
   },
   completion: {
-    rooms: [
-      { role: 'boss', roomGameName: 'N_Boss01' },
-      { role: 'postboss', roomGameName: 'N_PostBoss01' },
-    ],
+    bossRoomGameName: 'N_Boss01',
     transitionEffects: [
       { kind: 'resetCounter', axis: 'biomeDepthCache' },
       { kind: 'resetCounter', axis: 'biomeEncounterDepth' },

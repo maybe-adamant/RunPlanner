@@ -62,7 +62,7 @@ function authoredValue(
   const postbossOwner = address.selection.owner;
   return route?.biomes
     .find((biome) => biome.biomeKey === address.biomeKey)
-    ?.completionOccurrences.find(
+    ?.topology?.occurrences.find(
       (occurrence) => occurrence.occurrenceId === postbossOwner.occurrenceId,
     )?.keepsakeRack?.equipResults?.[address.resultKind];
 }

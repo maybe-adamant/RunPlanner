@@ -16,6 +16,7 @@ describe('summarizeCatalog', () => {
       key: 'FixtureRoute',
       label: 'Fixture Route',
       biomeKeys: ['A', 'B'],
+      postbossRoomGameNames: [null, null],
     };
     const catalog: Catalog = {
       version: 'fixture-1',

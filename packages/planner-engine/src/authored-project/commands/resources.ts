@@ -20,9 +20,10 @@ export function applyResourcePlacementCommand(
         command.route,
         'target biome is not configured',
       );
-    const present = [...(biome.topology?.occurrences ?? []), ...biome.completionOccurrences].some(
-      (occurrence) => occurrence.occurrenceId === command.value!.occurrenceId,
-    );
+    const present =
+      biome.topology?.occurrences.some(
+        (occurrence) => occurrence.occurrenceId === command.value!.occurrenceId,
+      ) === true;
     if (!present)
       throw new ProjectCommandContractError(
         command.kind,

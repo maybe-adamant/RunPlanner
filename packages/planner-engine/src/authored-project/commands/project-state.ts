@@ -3,7 +3,6 @@ import { createInitialBiomeState, replaceBiomeStateField } from '../biomeState';
 import { assessStartingArcanaGrasp } from '../loadout';
 import { createDefaultAuthoredHexTree, normalizeAuthoredHexTree } from '../hex-tree';
 import type { ProjectDocument } from '../model';
-import { createDefaultCompletionOccurrences } from '../room-state/defaults';
 
 import { failCommand, locateBiome, withBiome } from './contract';
 import type { ProjectStateCommand } from './types';
@@ -81,7 +80,6 @@ function configureRoutePrefix(
         biomeKey,
         state: createInitialBiomeState(layout),
         topology: null,
-        completionOccurrences: createDefaultCompletionOccurrences(catalog, biomeKey, route.loadout),
       };
     });
   const replacement = { ...route, biomes: [...retainedBiomes, ...addedBiomes] };

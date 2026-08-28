@@ -441,7 +441,7 @@ describe('Hermes Shrine entry inventory gate', () => {
 describe('Hermes Shrine delayed-delivery derivation', () => {
   const source = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
   const firstHost = createOccurrenceAddress(oBiome, oOccurrenceIds.combat01);
-  const secondHost = createOccurrenceAddress(oBiome, createOccurrenceId('completion:O:boss'));
+  const secondHost = createOccurrenceAddress(oBiome, createOccurrenceId('surface-o-preboss:boss'));
 
   it('counts only later qualifying end-effects and leaves independent items pending', () => {
     const deliveries = deriveHermesShrineDeliveries(
@@ -510,7 +510,10 @@ describe('Hermes Shrine delayed-delivery derivation', () => {
   });
 
   it('leaves a tail Postboss purchase pending when the modeled route has no later encounter', () => {
-    const tail = createOccurrenceAddress(pBiome, createOccurrenceId('completion:P:postboss'));
+    const tail = createOccurrenceAddress(
+      pBiome,
+      createOccurrenceId('surface-p-preboss-shop:postboss'),
+    );
     expect(
       deriveHermesShrineDeliveries(
         [
@@ -853,7 +856,10 @@ describe('Hermes Shrine pickup settlement', () => {
   });
 
   it('settles a rushed forced P Postboss Shrine pickup at the configured route tail', () => {
-    const host = createOccurrenceAddress(pBiome, createOccurrenceId('completion:P:postboss'));
+    const host = createOccurrenceAddress(
+      pBiome,
+      createOccurrenceId('surface-p-preboss-shop:postboss'),
+    );
     let project = loadSurfaceNOPProject();
     for (const [slotKey, rewardType] of [
       ['first', 'HealBigDrop'],

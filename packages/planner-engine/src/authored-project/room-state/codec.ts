@@ -46,6 +46,8 @@ export function decodeRoomState(
   const { role, entryActive, rememberedCountedBinding } = context;
   switch (authoredTemplateKey(room, path)) {
     case 'FixedIntro':
+    case 'Boss':
+    case 'PostBoss':
     case 'RewardlessCombat':
       requireOrdinaryRole(role, room, path);
       expectedKind(state.kind, 'none', path);

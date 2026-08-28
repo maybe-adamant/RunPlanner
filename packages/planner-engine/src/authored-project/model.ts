@@ -6,7 +6,7 @@ import type {
   AuthoredTraitOffer,
 } from './traits';
 
-export const PROJECT_DOCUMENT_SCHEMA_VERSION = 67 as const;
+export const PROJECT_DOCUMENT_SCHEMA_VERSION = 68 as const;
 export type ResourceFamily = import('../catalog-schema').ResourceFamily;
 /** Route ownership supplies the route key; the selected host is exact and durable. */
 export interface ResourcePlacement {
@@ -426,14 +426,18 @@ export interface BiomeTopology {
   readonly startOccurrenceId: OccurrenceId;
   readonly occurrences: readonly RoomOccurrence[];
   readonly decisions: readonly NextRoomDecision[];
+  readonly fixedRoomLinks: readonly FixedRoomLink[];
+}
+
+export interface FixedRoomLink {
+  readonly sourceOccurrenceId: OccurrenceId;
+  readonly targetOccurrenceId: OccurrenceId;
 }
 
 export interface AuthoredBiomePlan {
   readonly biomeKey: string;
   readonly state: AuthoredBiomeState;
   readonly topology: BiomeTopology | null;
-  /** Declaration-fixed Boss/Postboss rooms; never editable topology targets. */
-  readonly completionOccurrences: readonly RoomOccurrence[];
   /** Dormant until Gift Gift Gift reaches a Hammer replay at this biome start. */
   readonly echoKeepsakeReplayResults?: Pick<
     AuthoredKeepsakeEquipResults,

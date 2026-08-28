@@ -496,10 +496,7 @@ function projectAuthoredTargetWithOverlay(
   const physicalState =
     evaluatedTarget?.exit.kind ??
     (declaredExit === undefined ? ('unavailable' as const) : ('available' as const));
-  const fallbackContinuation: WorkspacePhysicalTarget['nextPath'] = targetContinuation(
-    selected,
-    requireWorkspaceRoom(input.catalog, occurrence.gameName).kind,
-  );
+  const fallbackContinuation: WorkspacePhysicalTarget['nextPath'] = targetContinuation(selected);
   const markerForTarget = input.markerDestinations.marker(address);
   const anomalyTakeoverAvailable =
     input.source.evaluation !== undefined && 'roomGeneration' in input.source.evaluation

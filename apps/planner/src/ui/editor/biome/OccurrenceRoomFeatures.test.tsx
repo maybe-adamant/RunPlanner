@@ -7,7 +7,6 @@ import {
   createIncomingRewardAddress,
   createEncounterPhaseAddress,
   createNemesisRandomEventAddress,
-  createExitDecisionAddress,
   createOccurrenceAddress,
   roomActionKey,
   semanticAddressKey,
@@ -29,7 +28,6 @@ import {
   createUnderworldFPoolCheckpoint,
   goldenFBiome,
   goldenFOccurrenceId,
-  goldenFStartId,
   goldenHBiome,
   loadNemesisFieldsCheckpoint,
   loadUnderworldFGProject,
@@ -315,14 +313,12 @@ describe('OccurrenceRoomFeatures', () => {
   });
 
   it('keeps an unreached Well domain visible as unassessed', async () => {
-    const occurrenceId = createOccurrenceId('completion:F:postboss');
+    const occurrenceId = createOccurrenceId('golden-f-b2-e2');
     const owner = createOccurrenceAddress(goldenFBiome, occurrenceId);
-    let project = applyProjectCommand(loadUnderworldFGProject(), catalog, {
-      kind: 'RemoveExitDecision',
-      decision: createExitDecisionAddress(goldenFBiome, {
-        kind: 'occurrence',
-        occurrenceId: goldenFStartId,
-      }),
+    let project = loadUnderworldFGProject();
+    project = applyProjectCommand(project, catalog, {
+      kind: 'AddStygianWell',
+      occurrence: owner,
     });
     project = applyProjectCommand(project, catalog, {
       kind: 'SetStygianWellInteraction',
@@ -366,7 +362,7 @@ describe('OccurrenceRoomFeatures', () => {
   });
 
   it('marks a reached stale Pool trait as selected-invalid', async () => {
-    const occurrenceId = createOccurrenceId('completion:F:postboss');
+    const occurrenceId = createOccurrenceId('golden-f-preboss-shop:postboss');
     const owner = createOccurrenceAddress(goldenFBiome, occurrenceId);
     const project = applyProjectCommand(createUnderworldFPoolCheckpoint(), catalog, {
       kind: 'ReplacePurgingPoolSlot',

@@ -21,7 +21,10 @@ import {
 } from '@run-planner/test-fixtures/underworld';
 
 const biome = createBiomeAddress('Underworld', 'F');
-const occurrence = createOccurrenceAddress(biome, createOccurrenceId('completion:F:postboss'));
+const occurrence = createOccurrenceAddress(
+  biome,
+  createOccurrenceId('golden-f-preboss-shop:postboss'),
+);
 
 function fRewards(project: ProjectDocument) {
   const biomeEvaluation = simulateProjectAssembly(catalog, project)
@@ -114,7 +117,7 @@ describe('Purging Pool sales', () => {
     const pool = disabled.routes
       .find((route) => route.routeKey === 'Underworld')
       ?.biomes.find((plan) => plan.biomeKey === 'F')
-      ?.completionOccurrences.find(
+      ?.topology?.occurrences.find(
         (entry) => entry.occurrenceId === occurrence.occurrenceId,
       )?.purgingPool;
     expect(pool?.interacted).toBe(false);
@@ -123,7 +126,7 @@ describe('Purging Pool sales', () => {
       disabled.routes
         .find((route) => route.routeKey === 'Underworld')
         ?.biomes.find((plan) => plan.biomeKey === 'F')
-        ?.completionOccurrences.find((entry) => entry.occurrenceId === occurrence.occurrenceId)
+        ?.topology?.occurrences.find((entry) => entry.occurrenceId === occurrence.occurrenceId)
         ?.roomActions.order,
     ).not.toContainEqual({ kind: 'sellPurgingPoolTrait', slotKey: 'left' });
     expect(
@@ -197,20 +200,26 @@ describe('Purging Pool sales', () => {
                   ? plan
                   : {
                       ...plan,
-                      completionOccurrences: plan.completionOccurrences.map((entry) =>
-                        entry.occurrenceId !== occurrence.occurrenceId
-                          ? entry
+                      topology:
+                        plan.topology === null
+                          ? null
                           : {
-                              ...entry,
-                              purgingPool: {
-                                ...entry.purgingPool!,
-                                traitKeyBySlot: {
-                                  ...entry.purgingPool!.traitKeyBySlot,
-                                  left: null,
-                                },
-                              },
+                              ...plan.topology,
+                              occurrences: plan.topology.occurrences.map((entry) =>
+                                entry.occurrenceId !== occurrence.occurrenceId
+                                  ? entry
+                                  : {
+                                      ...entry,
+                                      purgingPool: {
+                                        ...entry.purgingPool!,
+                                        traitKeyBySlot: {
+                                          ...entry.purgingPool!.traitKeyBySlot,
+                                          left: null,
+                                        },
+                                      },
+                                    },
+                              ),
                             },
-                      ),
                     },
               ),
             },

@@ -16,12 +16,14 @@ import type {
   ExitDecisionSource,
   ExitSelection,
   ExitTargetReference,
+  FixedRoomLink,
   HubDecision,
   LocalVisitDecision,
   OccurrenceId,
   ProjectDocument,
   RoomOccurrence,
 } from '../model';
+import { fixedCompletionOccurrenceId, fixedRoomLink } from '../fixed-room-links';
 import { requireEphyraSideRooms, type RoomOccurrenceRole } from '../room-state/declaration';
 import { createDefaultRoomState } from '../room-state/defaults';
 import { createDefaultRoomEncounterState } from '../room-state/encounter-envelope';
@@ -41,7 +43,6 @@ import {
   selectedExitKey,
 } from '../topology/query';
 import { fieldsDefaultActiveCageCount } from '../fields';
-import { createEmptyRoomActionState } from '../room-actions';
 import { createInfernalContractEntries } from '../shop';
 import {
   failCommand,
@@ -221,8 +222,33 @@ function defaultOccurrence(
         }
       : {}),
     encounters,
-    roomActions: createEmptyRoomActionState(),
+    roomActions: Object.freeze({
+      order: Object.freeze(room.hasRequiredFountain ? [{ kind: 'useFountain' as const }] : []),
+    }),
     additionalExits: Object.freeze([]),
+    ...(room.purgingPool === undefined
+      ? {}
+      : {
+          purgingPool: Object.freeze({
+            interacted: false,
+            traitKeyBySlot: Object.freeze({ left: null, middle: null, right: null }),
+          }),
+        }),
+    ...(room.surfaceShop?.forced === true
+      ? {
+          hermesShrine: Object.freeze({
+            offerBySlot: Object.freeze({ first: null, secondLeft: null, secondRight: null }),
+          }),
+        }
+      : {}),
+    ...(room.roomShop?.forced === true
+      ? {
+          stygianWell: Object.freeze({
+            interacted: false,
+            offerKeyBySlot: Object.freeze({ healing: null, secondLeft: null, secondRight: null }),
+          }),
+        }
+      : {}),
   });
 }
 
@@ -314,6 +340,142 @@ function updateTopology(
   return withBiome(document, located, { ...located.plan, topology });
 }
 
+function completionChainForSelection(
+  catalog: Catalog,
+  located: LocatedBiome,
+  topology: BiomeTopology,
+  prebossOccurrenceId: OccurrenceId,
+  command: TopologyCommand,
+): BiomeTopology {
+  const preboss = topology.occurrences.find(
+    (occurrence) => occurrence.occurrenceId === prebossOccurrenceId,
+  );
+  if (preboss === undefined) failCommand(command, 'selected Preboss occurrence is missing');
+  const prebossRoom = requireRoom(catalog, preboss.gameName, located.layout.biomeKey, command);
+  if (prebossRoom.kind !== 'Preboss') return topology;
+  const bossOccurrenceId = fixedCompletionOccurrenceId(prebossOccurrenceId, 'boss');
+  if (
+    topology.fixedRoomLinks.some(
+      (link) =>
+        link.sourceOccurrenceId === prebossOccurrenceId &&
+        link.targetOccurrenceId === bossOccurrenceId,
+    )
+  ) {
+    return topology;
+  }
+  const route = catalog.routes.values[located.routeIndex];
+  if (route === undefined) failCommand(command, 'unknown route for selected biome');
+  const bossRoom = requireRoom(
+    catalog,
+    located.layout.completion.bossRoomGameName,
+    located.layout.biomeKey,
+    command,
+  );
+  const postbossGameName = route.postbossRoomGameNames[located.biomeIndex];
+  const postbossRoom =
+    postbossGameName === null || postbossGameName === undefined
+      ? undefined
+      : requireRoom(catalog, postbossGameName, located.layout.biomeKey, command);
+  const postbossOccurrenceId = fixedCompletionOccurrenceId(prebossOccurrenceId, 'postboss');
+  const chainIds = new Set<OccurrenceId>([
+    bossOccurrenceId,
+    ...(postbossRoom === undefined ? [] : [postbossOccurrenceId]),
+  ]);
+  const withoutOldChain = Object.freeze({
+    ...topology,
+    occurrences: Object.freeze(
+      topology.occurrences.filter((occurrence) => !chainIds.has(occurrence.occurrenceId)),
+    ),
+    fixedRoomLinks: Object.freeze(
+      topology.fixedRoomLinks.filter(
+        (link) => !chainIds.has(link.sourceOccurrenceId) && !chainIds.has(link.targetOccurrenceId),
+      ),
+    ),
+  });
+  const boss = defaultOccurrence(
+    catalog,
+    bossRoom,
+    bossOccurrenceId,
+    'ordinary',
+    true,
+    undefined,
+    located.loadout,
+  );
+  const postboss =
+    postbossRoom === undefined
+      ? undefined
+      : defaultOccurrence(
+          catalog,
+          postbossRoom,
+          postbossOccurrenceId,
+          'ordinary',
+          true,
+          undefined,
+          located.loadout,
+        );
+  const fixedRoomLinks: FixedRoomLink[] = [fixedRoomLink(prebossOccurrenceId, bossOccurrenceId)];
+  if (postboss !== undefined)
+    fixedRoomLinks.push(fixedRoomLink(bossOccurrenceId, postbossOccurrenceId));
+  return Object.freeze({
+    ...withoutOldChain,
+    occurrences: Object.freeze([
+      ...withoutOldChain.occurrences,
+      boss,
+      ...(postboss === undefined ? [] : [postboss]),
+    ]),
+    fixedRoomLinks: Object.freeze([...withoutOldChain.fixedRoomLinks, ...fixedRoomLinks]),
+  });
+}
+
+function removeCompletionChainForSelection(
+  topology: BiomeTopology,
+  prebossOccurrenceId: OccurrenceId,
+): BiomeTopology {
+  const chainIds = new Set<OccurrenceId>([
+    fixedCompletionOccurrenceId(prebossOccurrenceId, 'boss'),
+    fixedCompletionOccurrenceId(prebossOccurrenceId, 'postboss'),
+  ]);
+  return Object.freeze({
+    ...topology,
+    occurrences: Object.freeze(
+      topology.occurrences.filter((occurrence) => !chainIds.has(occurrence.occurrenceId)),
+    ),
+    fixedRoomLinks: Object.freeze(
+      topology.fixedRoomLinks.filter(
+        (link) => !chainIds.has(link.sourceOccurrenceId) && !chainIds.has(link.targetOccurrenceId),
+      ),
+    ),
+  });
+}
+
+function reconcileCompletionChain(
+  catalog: Catalog,
+  located: LocatedBiome,
+  topology: BiomeTopology,
+  previousPrebossOccurrenceId: OccurrenceId | undefined,
+  nextPrebossOccurrenceId: OccurrenceId | undefined,
+  command: TopologyCommand,
+): BiomeTopology {
+  if (previousPrebossOccurrenceId === nextPrebossOccurrenceId) {
+    if (nextPrebossOccurrenceId === undefined) return topology;
+    const bossId = fixedCompletionOccurrenceId(nextPrebossOccurrenceId, 'boss');
+    if (
+      topology.fixedRoomLinks.some(
+        (link) =>
+          link.sourceOccurrenceId === nextPrebossOccurrenceId && link.targetOccurrenceId === bossId,
+      )
+    ) {
+      return topology;
+    }
+  }
+  let next = topology;
+  if (previousPrebossOccurrenceId !== undefined) {
+    next = removeCompletionChainForSelection(next, previousPrebossOccurrenceId);
+  }
+  if (nextPrebossOccurrenceId === undefined) return next;
+  return completionChainForSelection(catalog, located, next, nextPrebossOccurrenceId, command);
+}
+
 function createStart(
   document: ProjectDocument,
   catalog: Catalog,
@@ -350,6 +512,7 @@ function createStart(
       startOccurrenceId: command.occurrenceId,
       occurrences: Object.freeze([occurrence]),
       decisions: Object.freeze([]),
+      fixedRoomLinks: Object.freeze([]),
     }),
   });
 }
@@ -627,7 +790,33 @@ function createTarget(
     Object.freeze({ ...withTarget, occurrences: Object.freeze(occurrences) }),
     nextDecision,
   );
-  return updateTopology(document, located, next);
+  const selectedTarget =
+    nextSelectedExitKey === undefined
+      ? undefined
+      : targets.find((target) => target.exitKey === nextSelectedExitKey)?.occurrenceId;
+  const prebossFor = (
+    topologyValue: BiomeTopology,
+    occurrenceId: OccurrenceId | undefined,
+  ): OccurrenceId | undefined => {
+    if (occurrenceId === undefined) return undefined;
+    const occurrence = topologyValue.occurrences.find(
+      (candidate) => candidate.occurrenceId === occurrenceId,
+    );
+    return occurrence !== undefined && catalog.rooms.byKey[occurrence.gameName]?.kind === 'Preboss'
+      ? occurrenceId
+      : undefined;
+  };
+  const previousTarget =
+    previouslySelectedExitKey === undefined
+      ? undefined
+      : decision.normal.targets.find((target) => target.exitKey === previouslySelectedExitKey);
+  const previousPreboss = prebossFor(topology, previousTarget?.occurrenceId);
+  const nextPreboss = prebossFor(next, selectedTarget);
+  return updateTopology(
+    document,
+    located,
+    reconcileCompletionChain(catalog, located, next, previousPreboss, nextPreboss, command),
+  );
 }
 
 function replaceTakeoverBatch(
@@ -793,7 +982,7 @@ function replaceTakeoverBatch(
             ),
           ),
         });
-  const next = Object.freeze({
+  let next = Object.freeze({
     ...withoutOld,
     occurrences: Object.freeze([
       ...retainedOccurrences,
@@ -805,7 +994,31 @@ function replaceTakeoverBatch(
       ),
     ]),
   });
-  return updateTopology(document, located, appendDecision(next, decision));
+  for (const oldTarget of oldTargets) {
+    next = removeCompletionChainForSelection(next, oldTarget.occurrenceId);
+  }
+  const withDecision = appendDecision(next, decision);
+  const selectedTarget =
+    selectedTakeoverExitKey === undefined
+      ? undefined
+      : targets.find((target) => target.exitKey === selectedTakeoverExitKey)?.occurrenceId;
+  const selectedRoom =
+    selectedTarget === undefined
+      ? undefined
+      : withDecision.occurrences.find((occurrence) => occurrence.occurrenceId === selectedTarget);
+  return updateTopology(
+    document,
+    located,
+    selectedRoom !== undefined && catalog.rooms.byKey[selectedRoom.gameName]?.kind === 'Preboss'
+      ? completionChainForSelection(
+          catalog,
+          located,
+          withDecision,
+          selectedRoom.occurrenceId,
+          command,
+        )
+      : withDecision,
+  );
 }
 
 function setExitSelection(
@@ -928,7 +1141,33 @@ function setExitSelection(
     nextSelectedExitKey,
     command,
   );
-  return updateTopology(document, located, replaceDecision(withSelectionState, nextDecision));
+  const selectedTopology = replaceDecision(withSelectionState, nextDecision);
+  const prebossFor = (
+    topologyValue: BiomeTopology,
+    occurrenceId: OccurrenceId | undefined,
+  ): OccurrenceId | undefined => {
+    if (occurrenceId === undefined) return undefined;
+    const occurrence = topologyValue.occurrences.find(
+      (candidate) => candidate.occurrenceId === occurrenceId,
+    );
+    return occurrence !== undefined && catalog.rooms.byKey[occurrence.gameName]?.kind === 'Preboss'
+      ? occurrenceId
+      : undefined;
+  };
+  const previousPreboss = prebossFor(topology, previousSelectedOccurrenceId);
+  const nextPreboss = prebossFor(selectedTopology, nextSelectedOccurrenceId);
+  return updateTopology(
+    document,
+    located,
+    reconcileCompletionChain(
+      catalog,
+      located,
+      selectedTopology,
+      previousPreboss,
+      nextPreboss,
+      command,
+    ),
+  );
 }
 
 function replaceBatchRewardStore(

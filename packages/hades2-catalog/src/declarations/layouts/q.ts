@@ -41,7 +41,7 @@ export const qBiomeLayout = {
     bounds: { maxBatches: 6, maxTargets: 8 },
   },
   completion: {
-    rooms: [{ role: 'boss', roomGameName: 'Q_Boss01' }],
+    bossRoomGameName: 'Q_Boss01',
     transitionEffects: [
       { kind: 'resetCounter', axis: 'biomeDepthCache' },
       { kind: 'resetCounter', axis: 'biomeEncounterDepth' },

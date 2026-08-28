@@ -22,7 +22,7 @@ import {
 
 const action = createRoomActionAddress(
   goldenFBiome,
-  createOccurrenceId('completion:F:postboss'),
+  createOccurrenceId('golden-f-preboss-shop:postboss'),
   roomActionKey({ kind: 'useFountain' }),
 );
 const outcome = createFountainRarityOutcomeAddress(action);
@@ -87,7 +87,7 @@ describe('Aromatic Phial candidate frontier', () => {
     });
   });
 
-  it('reads an authored target from an automatic Postboss completion occurrence', () => {
+  it('reads an authored target from a fixed Postboss occurrence', () => {
     const project = applyProjectCommand(createCompleteFGProject(), catalog, {
       kind: 'ReplaceFountainRarityTarget',
       outcome,
