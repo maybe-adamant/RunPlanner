@@ -231,7 +231,7 @@ describe('OccurrenceWorkbench', () => {
     const nActions = screen.getByRole('region', { name: 'Room Timeline' });
     expect(nActions).toBeTruthy();
     expect(within(nActions).getByLabelText('Encounter encounter phase')).toBeTruthy();
-  }, 10_000);
+  });
 
   it('renders Shop inventory before Room features and Room Timeline', () => {
     const shop = enteredShopProject();

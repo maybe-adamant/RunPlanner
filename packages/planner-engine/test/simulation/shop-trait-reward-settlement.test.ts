@@ -563,7 +563,7 @@ describe('Shop trait acquisition processing', () => {
         ),
       );
     }
-  }, 10_000);
+  });
 
   it('reports and withholds a persisted Hammer choice made stale by a loadout change', () => {
     const room = catalog.rooms.byKey.F_Shop01;

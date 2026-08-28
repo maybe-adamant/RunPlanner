@@ -482,7 +482,7 @@ describe('Narcissus pickup producer', () => {
         },
       });
     }
-  }, 10_000);
+  });
 
   it('equips the selected Narcissus trait and settles its elemental pickups', () => {
     const project = selectNarcissus(createGoldenFGHIProject(), [

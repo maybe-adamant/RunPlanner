@@ -569,7 +569,7 @@ describe('BiomeWorkspace', () => {
       expect(inspector.querySelector('.biome-occurrence-workbench')).not.toBeNull();
       cleanup();
     }
-  }, 15_000);
+  });
 
   it('keeps a stale explicit biome owner on the projected default without selecting the rail', () => {
     const view = renderWorkspace(createGoldenFGHIProject(), 'Underworld', 'F');

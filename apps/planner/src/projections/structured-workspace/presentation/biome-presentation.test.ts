@@ -565,7 +565,7 @@ describe('structured workspace biome presentation', () => {
         ),
       ).toBe(false);
     }
-  }, 15_000);
+  });
 
   it('keeps completion landmarks outside an incomplete biome rail', () => {
     const empty = createProjectDocument(catalog, {

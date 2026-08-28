@@ -285,7 +285,7 @@ describe('workspace candidate interaction families', () => {
       expect(events).toHaveLength(0);
       expect(projectEvaluationCount, `${family} repeat load reacquired project evaluation`).toBe(2);
     }
-  }, 10_000);
+  });
 
   it('retains only completed-Hub handoff and authored takeover repair as standalone actions', () => {
     const services = createStructuredWorkspaceTestServices();

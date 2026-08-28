@@ -20,7 +20,8 @@
       ],
       "@run-planner/test-fixtures/checkpoints/surface": [
         "./test/fixtures/authored-project/checkpoints/surface.ts"
-      ]
+      ],
+      "@run-planner/test-config/progress-reporter": ["./vitest.progress-reporter.ts"]
     },
     "strict": true,
     "noEmit": true,

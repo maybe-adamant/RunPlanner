@@ -1220,7 +1220,7 @@ describe('field NPC encounter requirements', () => {
         .flatMap((route) => route.biomes)
         .find((biome) => biome.origin.biomeKey === 'F')?.findings,
     ).toContainEqual(expect.objectContaining({ code: 'nemesisOutcomeMissing' }));
-  }, 10_000);
+  });
 
   it('records Nemesis Cage01 before evaluating Cage02 without starting its depth effect', () => {
     const occurrenceId = createOccurrenceId('golden-h-combat02');

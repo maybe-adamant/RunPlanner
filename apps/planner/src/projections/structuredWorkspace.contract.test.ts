@@ -477,7 +477,7 @@ describe('structured workspace overlay contract', () => {
     ]) {
       expect(() => projectWorkspace(project, evaluation)).toThrow(message);
     }
-  }, 10_000);
+  });
 
   it('rejects an evaluator-only decision instead of rendering it as authored UI', () => {
     const project = createGoldenFGHIProject();
@@ -741,7 +741,7 @@ describe('structured workspace overlay contract', () => {
       region: 'routeRail',
       routeKey: 'Underworld',
     });
-  }, 20_000);
+  });
 
   it('projects the reached I Gift Hammer repair through its biome-owned control and destination', () => {
     const project = createGoldenEchoGiftHammerPendingProject();
@@ -777,7 +777,7 @@ describe('structured workspace overlay contract', () => {
       region: 'structure',
       nodeKey: i.entry?.key,
     });
-  }, 20_000);
+  });
 
   it('publishes immediate Embryo result interactions at route start, F Postboss, and I Echo', () => {
     const fOnlyProject = (): ProjectDocument => {
@@ -887,7 +887,7 @@ describe('structured workspace overlay contract', () => {
       ownerAddress: echoGiftEmbryoReplayAddress,
       region: 'structure',
     });
-  }, 20_000);
+  });
 
   it('rejects a fine-grained finding on a withheld dormant Ephyra side leaf', () => {
     const project = loadSurfaceNOPQProject();

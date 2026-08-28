@@ -1,203 +1,138 @@
-import {
-  createHubDecisionAddress,
-  createHubSlotAddress,
-  createOccurrenceAddress,
-  createTargetAddress,
-  semanticAddressKey,
-} from '@run-planner/engine/authored-project';
-import { simulateProject } from '@run-planner/engine/simulation';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, describe, expect, it } from 'vitest';
 
 import {
-  createApplication,
-  type ApplicationEvaluationEvent,
-} from '@planner/composition/createApplication';
-import {
-  authoredProjectCommandDispatched,
-  authoredProjectReplaced,
-  authoredProjectUndoRequested,
-} from '@planner/state/projectWorkspaceSlice';
-import {
-  createGoldenFGHIProject,
-  goldenGBiome,
-  goldenGOccurrenceId,
-  goldenGStartId,
-} from '@run-planner/test-fixtures/underworld';
-import { loadSurfaceNOPQProject, nBiome } from '@run-planner/test-fixtures/surface';
+  createRawPerformanceSnapshot,
+  performanceProductTargetsMs,
+  runPerformanceRoute,
+  writeRawPerformanceSnapshot,
+  type RoutePerformanceSamples,
+  type TimedPerformanceSample,
+} from '../support/performance-snapshot';
 
-// The canonical checkpoints now cover the complete modeled feature surface.
-// Preserve the product's explicit sub-second interaction contract.
-const interactiveBudgetMs = 1_000;
-const cachedUndoBudgetMs = 50;
-let underworldProject: ReturnType<typeof createGoldenFGHIProject>;
-let surfaceProject: ReturnType<typeof loadSurfaceNOPQProject>;
+const snapshotMode = process.env.RUN_PLANNER_PERFORMANCE_SNAPSHOT === '1';
+let underworld: RoutePerformanceSamples | undefined;
+let surface: RoutePerformanceSamples | undefined;
 
-beforeAll(() => {
-  underworldProject = createGoldenFGHIProject();
-  surfaceProject = loadSurfaceNOPQProject();
-});
-
-function measure<T>(operation: () => T): { readonly durationMs: number; readonly result: T } {
-  const started = performance.now();
-  const result = operation();
-  return Object.freeze({ durationMs: performance.now() - started, result });
-}
-
-function medianDuration(samples: readonly { readonly durationMs: number }[]): number {
-  const orderedDurations = samples.map(({ durationMs }) => durationMs).sort((a, b) => a - b);
-  return orderedDurations[Math.floor(orderedDurations.length / 2)]!;
-}
-
-function expectInteractiveDuration(durationMs: number, label: string): void {
-  expect(durationMs, `${label} took ${durationMs.toFixed(1)} ms`).toBeLessThan(interactiveBudgetMs);
-}
-
-function expectCachedUndoDuration(durationMs: number, label: string): void {
-  expect(durationMs, `${label} took ${durationMs.toFixed(1)} ms`).toBeLessThan(cachedUndoBudgetMs);
+function expectRebuildResults(run: RoutePerformanceSamples, label: string): void {
+  expect(run.rebuilds).toHaveLength(3);
+  for (const rebuild of run.rebuilds) {
+    expect(rebuild.result, `${label} must match the warmed evaluation`).toEqual(run.baseline);
+  }
 }
 
 function expectColdCandidateWork(
-  events: readonly ApplicationEvaluationEvent[],
+  samples: readonly TimedPerformanceSample[],
   label: string,
+  route: 'underworld' | 'surface',
 ): void {
-  const queryBatches = events.filter((event) => event.kind === 'queryBatch');
-  expect(queryBatches, `${label} must evaluate exactly one candidate batch`).toHaveLength(1);
-  expect(queryBatches[0]?.queryCount).toBeGreaterThan(0);
-  expect(
-    events.filter((event) => event.kind === 'projectEvaluation'),
-    `${label} must not reacquire project evaluation`,
-  ).toHaveLength(0);
+  expect(samples).toHaveLength(3);
+  for (const sample of samples) {
+    if (route === 'underworld') {
+      const result = sample.result as { readonly sections: readonly unknown[] };
+      expect(result.sections.length).toBeGreaterThan(0);
+    } else {
+      expect(sample.result).toHaveLength(2);
+    }
+    const queryBatches = sample.events.filter((event) => event.kind === 'queryBatch');
+    expect(queryBatches, `${label} must evaluate exactly one candidate batch`).toHaveLength(1);
+    expect(queryBatches[0]?.queryCount).toBeGreaterThan(0);
+    expect(
+      sample.events.filter((event) => event.kind === 'projectEvaluation'),
+      `${label} must not reacquire project evaluation`,
+    ).toHaveLength(0);
+  }
 }
 
-function expectEditWork(events: readonly ApplicationEvaluationEvent[], label: string): void {
-  expect(
-    events.filter((event) => event.kind === 'projectEvaluation'),
-    `${label} must publish exactly one project evaluation`,
-  ).toHaveLength(1);
-  expect(
-    events.filter((event) => event.kind === 'queryBatch'),
-    `${label} must not query candidates`,
-  ).toHaveLength(0);
+function expectEditWork(samples: readonly TimedPerformanceSample[], label: string): void {
+  expect(samples).toHaveLength(3);
+  for (const sample of samples) {
+    expect(
+      sample.events.filter((event) => event.kind === 'projectEvaluation'),
+      `${label} must publish exactly one project evaluation`,
+    ).toHaveLength(1);
+    expect(
+      sample.events.filter((event) => event.kind === 'queryBatch'),
+      `${label} must not query candidates`,
+    ).toHaveLength(0);
+    const result = sample.result as { readonly present: unknown; readonly project: unknown };
+    expect(result.present).not.toBe(result.project);
+  }
 }
 
-function expectCachedUndoWork(events: readonly ApplicationEvaluationEvent[], label: string): void {
-  expect(
-    events.filter((event) => event.kind === 'projectEvaluation'),
-    `${label} must reuse its cached project evaluation`,
-  ).toHaveLength(0);
-  expect(events, `${label} must not perform candidate work`).toHaveLength(0);
+function expectCachedUndoWork(samples: readonly TimedPerformanceSample[], label: string): void {
+  expect(samples).toHaveLength(3);
+  for (const sample of samples) {
+    expect(
+      sample.events.filter((event) => event.kind === 'projectEvaluation'),
+      `${label} must reuse its cached project evaluation`,
+    ).toHaveLength(0);
+    expect(sample.events, `${label} must not perform candidate work`).toHaveLength(0);
+    const result = sample.result as {
+      readonly present: unknown;
+      readonly project: unknown;
+      readonly baseline: unknown;
+      readonly evaluation: unknown;
+    };
+    expect(result.present).toBe(result.project);
+    expect(result.evaluation).toBe(result.baseline);
+  }
+}
+
+function expectInteractiveDurations(run: RoutePerformanceSamples, label: string): void {
+  const median = (samples: readonly TimedPerformanceSample[]) => {
+    const durations = samples.map(({ durationMs }) => durationMs).sort((a, b) => a - b);
+    return durations[Math.floor(durations.length / 2)]!;
+  };
+  const interactionSamples = [
+    ['full rebuild', run.rebuilds],
+    ['cold candidate projection', run.candidates],
+    ['representative edit publication', run.edits],
+  ] as const;
+  if (snapshotMode) return;
+  for (const [operation, samples] of interactionSamples) {
+    const durationMs = median(samples);
+    expect(durationMs, `${label} ${operation} took ${durationMs.toFixed(1)} ms`).toBeLessThan(
+      performanceProductTargetsMs.interaction,
+    );
+  }
+  const durationMs = median(run.undos);
+  expect(durationMs, `${label} cached undo took ${durationMs.toFixed(1)} ms`).toBeLessThan(
+    performanceProductTargetsMs.cachedUndo,
+  );
 }
 
 describe('unified biome performance', () => {
   it('keeps representative Underworld rebuild, candidate, edit, and cached undo work interactive', () => {
-    const events: ApplicationEvaluationEvent[] = [];
-    const application = createApplication({
-      observeEvaluationWork: (event) => events.push(event),
-    });
-    const project = underworldProject;
-    application.store.dispatch(authoredProjectReplaced(project));
-    const baseline = application.store.getState().projectWorkspace.assembly.evaluation;
-    events.length = 0;
-
-    // The project replacement above warms this path. Three samples keep one host-scheduling
-    // outlier from deciding the gate while the median still catches a sustained regression.
-    const rebuilds = [
-      measure(() => simulateProject(application.catalog, project)),
-      measure(() => simulateProject(application.catalog, project)),
-      measure(() => simulateProject(application.catalog, project)),
-    ];
-    for (const rebuild of rebuilds) expect(rebuild.result).toEqual(baseline);
-
-    const target = createTargetAddress(
-      goldenGBiome,
-      { kind: 'occurrence', occurrenceId: goldenGStartId },
-      'exit1',
+    underworld = runPerformanceRoute('underworld');
+    expectRebuildResults(underworld, 'Underworld full rebuild');
+    expectColdCandidateWork(
+      underworld.candidates,
+      'Underworld cold candidate projection',
+      'underworld',
     );
-    const workspace = application.selectStructuredWorkspace(application.store.getState());
-    const roomCandidates = workspace.interactions.rooms.get(semanticAddressKey(target));
-    if (roomCandidates === undefined)
-      throw new Error('G cold room-candidate interaction is missing');
-    const candidate = measure(() => roomCandidates.load());
-    expect(candidate.result.sections.length).toBeGreaterThan(0);
-    expectColdCandidateWork(events, 'Underworld cold candidate projection');
-
-    events.length = 0;
-    const edit = measure(() =>
-      application.store.dispatch(
-        authoredProjectCommandDispatched({
-          kind: 'ReplaceOccurrenceRoom',
-          occurrence: createOccurrenceAddress(goldenGBiome, goldenGOccurrenceId(1, 1)),
-          gameName: 'G_Combat02',
-        }),
-      ),
-    );
-    expect(application.store.getState().projectWorkspace.history.present).not.toBe(project);
-    expectEditWork(events, 'Underworld representative edit publication');
-
-    events.length = 0;
-    const undo = measure(() => application.store.dispatch(authoredProjectUndoRequested()));
-    expect(application.store.getState().projectWorkspace.history.present).toBe(project);
-    expect(application.store.getState().projectWorkspace.assembly.evaluation).toBe(baseline);
-    expectCachedUndoWork(events, 'Underworld cached undo publication');
-
-    expectInteractiveDuration(medianDuration(rebuilds), 'Underworld median full rebuild');
-    expectInteractiveDuration(candidate.durationMs, 'Underworld cold candidate projection');
-    expectInteractiveDuration(edit.durationMs, 'Underworld representative edit publication');
-    expectCachedUndoDuration(undo.durationMs, 'Underworld cached undo publication');
-    application.dispose();
+    expectEditWork(underworld.edits, 'Underworld representative edit publication');
+    expectCachedUndoWork(underworld.undos, 'Underworld cached undo publication');
+    expectInteractiveDurations(underworld, 'Underworld');
   });
 
   it('keeps representative Surface rebuild, candidate, edit, and cached undo work interactive', () => {
-    const events: ApplicationEvaluationEvent[] = [];
-    const application = createApplication({
-      observeEvaluationWork: (event) => events.push(event),
-    });
-    const project = surfaceProject;
-    application.store.dispatch(authoredProjectReplaced(project));
-    const baseline = application.store.getState().projectWorkspace.assembly.evaluation;
-    events.length = 0;
-
-    // The project replacement above warms this path. Three samples keep one host-scheduling
-    // outlier from deciding the gate while the median still catches a sustained regression.
-    const rebuilds = [
-      measure(() => simulateProject(application.catalog, project)),
-      measure(() => simulateProject(application.catalog, project)),
-      measure(() => simulateProject(application.catalog, project)),
-    ];
-    for (const rebuild of rebuilds) expect(rebuild.result).toEqual(baseline);
-
-    const hubSlot = createHubSlotAddress(nBiome, 'hub', 'miniBoss02');
-    const workspace = application.selectStructuredWorkspace(application.store.getState());
-    const hubCandidates = workspace.interactions.hubSlots.get(semanticAddressKey(hubSlot));
-    if (hubCandidates === undefined || hubCandidates.selected)
-      throw new Error('N cold Hub-slot candidate interaction is missing');
-    const candidate = measure(() => hubCandidates.beginOpeningAttempt().load());
-    expect(candidate.result).toHaveLength(2);
-    expectColdCandidateWork(events, 'Surface cold candidate projection');
-
-    events.length = 0;
-    const edit = measure(() =>
-      application.store.dispatch(
-        authoredProjectCommandDispatched({
-          hub: createHubDecisionAddress(nBiome, 'hub'),
-          hubSlotKeys: ['combat02', 'combat01', 'combat03', 'combat05', 'combat09', 'combat10'],
-          kind: 'ReplaceHubVisitOrder',
-        }),
-      ),
-    );
-    expect(application.store.getState().projectWorkspace.history.present).not.toBe(project);
-    expectEditWork(events, 'Surface representative edit publication');
-
-    events.length = 0;
-    const undo = measure(() => application.store.dispatch(authoredProjectUndoRequested()));
-    expect(application.store.getState().projectWorkspace.history.present).toBe(project);
-    expect(application.store.getState().projectWorkspace.assembly.evaluation).toBe(baseline);
-    expectCachedUndoWork(events, 'Surface cached undo publication');
-
-    expectInteractiveDuration(medianDuration(rebuilds), 'Surface median full rebuild');
-    expectInteractiveDuration(candidate.durationMs, 'Surface cold candidate projection');
-    expectInteractiveDuration(edit.durationMs, 'Surface representative edit publication');
-    expectCachedUndoDuration(undo.durationMs, 'Surface cached undo publication');
-    application.dispose();
+    surface = runPerformanceRoute('surface');
+    expectRebuildResults(surface, 'Surface full rebuild');
+    expectColdCandidateWork(surface.candidates, 'Surface cold candidate projection', 'surface');
+    expectEditWork(surface.edits, 'Surface representative edit publication');
+    expectCachedUndoWork(surface.undos, 'Surface cached undo publication');
+    expectInteractiveDurations(surface, 'Surface');
   });
+});
+
+afterAll(() => {
+  if (!snapshotMode) return;
+  if (underworld === undefined || surface === undefined) {
+    throw new Error('performance snapshot did not collect both route witnesses');
+  }
+  const outputPath = process.env.RUN_PLANNER_PERFORMANCE_SNAPSHOT_OUTPUT;
+  if (outputPath === undefined || outputPath.length === 0) {
+    throw new Error('RUN_PLANNER_PERFORMANCE_SNAPSHOT_OUTPUT is required for snapshot mode');
+  }
+  writeRawPerformanceSnapshot(outputPath, createRawPerformanceSnapshot({ underworld, surface }));
 });

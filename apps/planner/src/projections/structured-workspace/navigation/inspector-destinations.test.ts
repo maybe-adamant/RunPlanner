@@ -498,7 +498,7 @@ describe('workspace inspector destinations', () => {
         }
       }
     }
-  }, 15_000);
+  });
 
   it('publishes distinct Chosen God and Spurned God role labels for Devotion traits', () => {
     const workspace = project(loadSurfaceNOPQProject());
