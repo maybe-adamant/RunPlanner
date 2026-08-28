@@ -130,9 +130,21 @@ export function normalizeLocalChildren(
             'must equal raw capacity clamped to the physical slot count',
           );
         }
+        if (
+          child.offerRewardCapability !== undefined &&
+          child.offerRewardCapability !== 'fieldsCages'
+        ) {
+          fail(
+            `${childPath}.offerRewardCapability`,
+            `unknown offer reward capability ${String(child.offerRewardCapability)}`,
+          );
+        }
         return Object.freeze({
           key: keys[index] as string,
           kind: 'boundedRewardSlots',
+          ...(child.offerRewardCapability === undefined
+            ? {}
+            : { offerRewardCapability: child.offerRewardCapability }),
           slotKeys,
           rawCapacity,
           maxActiveSlots,

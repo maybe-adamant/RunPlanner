@@ -5,60 +5,17 @@ export function projectWorkspaceDoorContract(
   room: WorkspaceRoomSummary,
   declaredPreview: 'hidden' | 'visible',
 ): WorkspaceDoorContract {
-  const rewards = (() => {
-    switch (room.roomLocal.kind) {
-      case 'fixed':
-        return Object.freeze([
-          Object.freeze({
-            ...(room.roomLocal.control === undefined ? {} : { control: room.roomLocal.control }),
-            key: 'incoming',
-            label: 'Door reward',
-            marker: room.roomLocal.marker,
-            offer: room.roomLocal.offer,
-            summary: room.roomLocal.summary,
-          }),
-        ]);
-      case 'incomingReward':
-        if (room.roomLocal.clockworkReward === 'goal') {
-          return Object.freeze([]);
-        }
-        return Object.freeze([
-          Object.freeze({
-            control: room.roomLocal.control,
-            key: 'incoming',
-            label: 'Door reward',
-            marker: room.roomLocal.control.marker,
-            offer: room.roomLocal.control.offer,
-            summary: room.roomLocal.summary,
-          }),
-        ]);
-      case 'fields':
-        return Object.freeze(
-          room.roomLocal.cages.map((cage) =>
-            Object.freeze({
-              control: cage.control,
-              key: cage.key,
-              label: cage.label,
-              marker: cage.control.marker,
-              offer: cage.control.offer,
-              summary: cage.summary,
-            }),
-          ),
-        );
-      case 'none':
-      case 'ship':
-      case 'shop':
-        return Object.freeze([]);
-    }
-  })();
-  const rewardPreview: WorkspaceDoorContract['rewardPreview'] =
-    declaredPreview === 'hidden'
-      ? Object.freeze({
-          kind: 'hidden' as const,
-          authoringRewards: Object.freeze(rewards.filter((reward) => reward.control !== undefined)),
-        })
-      : rewards.length === 0
-        ? Object.freeze({ kind: 'none' as const })
-        : Object.freeze({ kind: 'visible' as const, rewards });
-  return Object.freeze({ rewardPreview, room });
+  return Object.freeze({
+    offerRewardSurface: Object.freeze({
+      visibility: declaredPreview,
+      // A hidden physical door keeps only authorable controls in the exposed
+      // surface. Fixed summaries remain part of the room product but are not
+      // authoring targets when the game does not reveal that door.
+      rewards:
+        declaredPreview === 'hidden'
+          ? room.offerRewardRewards.filter((reward) => reward.control !== undefined)
+          : room.offerRewardRewards,
+    }),
+    room,
+  });
 }

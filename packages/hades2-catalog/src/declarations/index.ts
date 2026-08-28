@@ -74,6 +74,7 @@ export type {
   RawPrebossBatchPolicy,
   RawProgressionDeclaration,
   RawRewardProducerBinding,
+  RawRoomOfferRewardBinding,
   RawRoomDeclaration,
   RawRoomLifecycleProfileDeclaration,
   RawShopRewardBinding,

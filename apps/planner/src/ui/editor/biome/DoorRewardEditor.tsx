@@ -16,12 +16,10 @@ export function DoorRewardEditor({
   readonly interactions: WorkspaceInteractionCatalog;
 }) {
   const rewards =
-    door.rewardPreview.kind === 'visible'
-      ? door.rewardPreview.rewards
-      : door.rewardPreview.kind === 'hidden'
-        ? door.rewardPreview.authoringRewards
-        : [];
-  if (door.rewardPreview.kind === 'hidden' && rewards.length === 0) {
+    door.offerRewardSurface.visibility === 'hidden'
+      ? door.offerRewardSurface.rewards.filter((reward) => reward.control !== undefined)
+      : door.offerRewardSurface.rewards;
+  if (door.offerRewardSurface.visibility === 'hidden' && rewards.length === 0) {
     return <p className="fixed-room-state">Reward hidden on this door.</p>;
   }
   if (rewards.length === 0) return null;

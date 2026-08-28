@@ -657,6 +657,12 @@ export type RoomForce =
 export type RemainingPrebossOfferPolicy =
   { readonly kind: 'none' } | { readonly kind: 'counted'; readonly reward: CountedRewardBinding };
 
+/** The room-owned reward surface exposed by a selected starting point or door. */
+export type RoomOfferRewardBinding =
+  | { readonly kind: 'none' }
+  | { readonly kind: 'incomingReward' }
+  | { readonly kind: 'localRewardGroup'; readonly groupKey: string };
+
 export type PrebossBatchPolicy =
   | {
       readonly kind: 'takeOverNormalDoors';
@@ -677,6 +683,8 @@ export interface RoomDeclaration {
   readonly exits: readonly RoomExit[];
   readonly additionalExits: readonly AdditionalExitDeclaration[];
   readonly incomingReward: RewardProducerBinding;
+  /** Declaration-owned binding for the reward surface exposed by this room. */
+  readonly offerRewardBinding: RoomOfferRewardBinding;
   /** The normalized room declaration flag that suppresses Gift trait offers. */
   readonly blockGiftBoons: boolean;
   /** Source-declared room-owned blocker for Gorgon Amulet. */
@@ -764,6 +772,8 @@ export type LocalChildDescriptor =
   | {
       readonly key: string;
       readonly kind: 'boundedRewardSlots';
+      /** Closed application materialization capability for an exposed group. */
+      readonly offerRewardCapability?: 'fieldsCages';
       readonly slotKeys: readonly string[];
       readonly rawCapacity: number;
       readonly maxActiveSlots: number;

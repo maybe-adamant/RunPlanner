@@ -2124,11 +2124,8 @@ export interface WorkspaceRoomSummary {
   readonly address: OccurrenceAddress;
   /** Authored detail activation is deliberately separate from evaluated entry. */
   readonly detailsActive: boolean;
-  /**
-   * The no-predecessor reward owned by an authored start occurrence. Ordinary
-   * entered rooms keep their predecessor-owned door reward read-only.
-   */
-  readonly entryReward?: WorkspaceRewardControl;
+  /** Complete reward surface exposed by this room's selected-offer binding. */
+  readonly offerRewardRewards: readonly WorkspaceDoorReward[];
   /** Active pool-backed encounter phases in declaration/lifecycle order. */
   readonly encounterPhases: readonly WorkspaceEncounterPhase[];
   readonly entered: boolean;
@@ -2237,17 +2234,11 @@ export interface WorkspaceDoorReward {
 
 /** One immutable predecessor-owned physical-door handoff product. */
 export interface WorkspaceDoorContract {
-  readonly rewardPreview:
-    | {
-        readonly kind: 'hidden';
-        /** Planner-owned reward controls that remain authorable despite the hidden game preview. */
-        readonly authoringRewards: readonly WorkspaceDoorReward[];
-      }
-    | { readonly kind: 'none' }
-    | {
-        readonly kind: 'visible';
-        readonly rewards: readonly WorkspaceDoorReward[];
-      };
+  /** Complete room-owned offer surface; visibility is a lossy door/rail concern. */
+  readonly offerRewardSurface: {
+    readonly visibility: 'hidden' | 'visible';
+    readonly rewards: readonly WorkspaceDoorReward[];
+  };
   readonly room: WorkspaceRoomSummary;
 }
 

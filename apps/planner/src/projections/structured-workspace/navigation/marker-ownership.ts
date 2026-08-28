@@ -141,12 +141,7 @@ export function workspaceDecisionOwnedMarkers(
     ...(node.naturalChaos === undefined ? [] : [node.naturalChaos.marker]),
     ...node.targets.map((target) => target.marker),
     ...node.targets.flatMap((target) => {
-      const preview = target.door.rewardPreview;
-      return preview.kind === 'none'
-        ? []
-        : (preview.kind === 'visible' ? preview.rewards : preview.authoringRewards).map(
-            (reward) => reward.marker,
-          );
+      return target.door.offerRewardSurface.rewards.map((reward) => reward.marker);
     }),
     ...node.missingTargets.map((target) => target.marker),
   ]);

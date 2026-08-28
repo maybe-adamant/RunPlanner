@@ -2,6 +2,7 @@ import {
   createJudgmentArcanaAddress,
   createFigurineArcanaAddress,
   createIncomingRewardAddress,
+  createLocalRewardAddress,
   createOccurrenceAddress,
   createAcquisitionEntryAddress,
   createKeepsakeEquipResultAddress,
@@ -30,11 +31,14 @@ import type {
   RunStateSnapshot,
   SelectedLevelResolutionAssessment,
 } from '@run-planner/engine/simulation';
+import { summarizeRewardOffer } from '@planner/projections/rewardPicker';
 import { requireWorkspaceRoom as requireRoom } from './catalog-room';
 import {
   StructuredWorkspaceProjectionContractError,
   type WorkspaceOccurrenceWorkbenchNode,
   type WorkspaceRewardControl,
+  type WorkspaceDoorReward,
+  type WorkspaceRoomLocal,
   type WorkspaceRoomPickerControl,
   type WorkspaceRoomSummary,
   type WorkspaceRoomTab,
@@ -61,6 +65,97 @@ import {
 import { assembleOccurrenceFeatures } from './occurrence-features-assembly';
 import { occurrenceInteractionRequirements } from './occurrence-interaction-requirements';
 import { roomWorkbenchPresentation } from './occurrence-room-workbench';
+
+function offerRewardRewards(
+  input: WorkspaceOccurrenceAssemblyInput,
+  room: ReturnType<typeof requireRoom>,
+  roomLocal: WorkspaceRoomLocal,
+  controls: readonly WorkspaceRewardControl[],
+): readonly WorkspaceDoorReward[] {
+  switch (room.offerRewardBinding.kind) {
+    case 'none':
+      return Object.freeze([]);
+    case 'incomingReward': {
+      if (roomLocal.kind === 'none') return Object.freeze([]);
+      if (roomLocal.kind === 'incomingReward' && roomLocal.clockworkReward === 'goal') {
+        return Object.freeze([]);
+      }
+      if (roomLocal.kind === 'fixed') {
+        return Object.freeze([
+          Object.freeze({
+            ...(roomLocal.control === undefined ? {} : { control: roomLocal.control }),
+            key: 'incoming',
+            label: 'Door reward',
+            marker: roomLocal.marker,
+            offer: roomLocal.offer,
+            summary: roomLocal.summary,
+          }),
+        ]);
+      }
+      if (roomLocal.kind !== 'incomingReward') return Object.freeze([]);
+      const incomingAddress = createIncomingRewardAddress(
+        input.biome,
+        input.occurrence.occurrenceId,
+      );
+      const control = controls.find(
+        (candidate) =>
+          semanticAddressKey(candidate.owner.address) === semanticAddressKey(incomingAddress),
+      );
+      if (control === undefined) {
+        throw new StructuredWorkspaceProjectionContractError(
+          `${semanticAddressKey(incomingAddress)} has no projected incoming reward control`,
+        );
+      }
+      return Object.freeze([
+        Object.freeze({
+          control,
+          key: 'incoming',
+          label: 'Door reward',
+          marker: control.marker,
+          offer: control.offer,
+          summary: roomLocal.summary,
+        }),
+      ]);
+    }
+    case 'localRewardGroup': {
+      const binding = room.offerRewardBinding;
+      const group = room.localChildren.find((child) => child.key === binding.groupKey);
+      if (group?.kind !== 'boundedRewardSlots' || group.offerRewardCapability !== 'fieldsCages') {
+        throw new StructuredWorkspaceProjectionContractError(
+          `${room.gameName} offer reward group ${binding.groupKey} has no projected group`,
+        );
+      }
+      const rewards: WorkspaceDoorReward[] = [];
+      for (const [index, slotKey] of group.slotKeys.entries()) {
+        const address = createLocalRewardAddress(
+          input.biome,
+          input.occurrence.occurrenceId,
+          group.key,
+          slotKey,
+        );
+        const control = controls.find(
+          (candidate) =>
+            semanticAddressKey(candidate.owner.address) === semanticAddressKey(address),
+        );
+        if (control === undefined) break;
+        rewards.push(
+          Object.freeze({
+            control,
+            key: slotKey,
+            label: `Cage ${index + 1}`,
+            marker: control.marker,
+            offer: control.offer,
+            summary:
+              control.offer === null
+                ? 'Choose reward'
+                : summarizeRewardOffer(input.catalog, control.offer),
+          }),
+        );
+      }
+      return Object.freeze(rewards);
+    }
+  }
+}
 
 /** Exact authored/evaluated inputs for one room-local workspace product. */
 export interface WorkspaceOccurrenceAssemblyInput {
@@ -194,6 +289,7 @@ export function assembleWorkspaceOccurrence(
     room,
   );
   const { encounterPhases, roomLocal, rewardControls: allRewardControls } = rewardLocal;
+  const offerRewardRewardsForRoom = offerRewardRewards(input, room, roomLocal, allRewardControls);
   const actionAssembly = assembleOccurrenceActions({
     biome: input.biome,
     catalog: input.catalog,
@@ -338,18 +434,10 @@ export function assembleWorkspaceOccurrence(
     ...(zagreusSpawn === undefined ? [] : [zagreusSpawn.marker]),
     ...(naturalChaosSpawn === undefined ? [] : [naturalChaosSpawn.marker]),
   ]);
-  const entryReward =
-    input.isEntry === true
-      ? allRewardControls.find(
-          (control) =>
-            semanticAddressKey(control.owner.address) ===
-            semanticAddressKey(createIncomingRewardAddress(input.biome, occurrence.occurrenceId)),
-        )
-      : undefined;
   const roomSummary: WorkspaceRoomSummary = Object.freeze({
     address,
     detailsActive: input.facts.detailsActive,
-    ...(entryReward === undefined ? {} : { entryReward }),
+    offerRewardRewards: offerRewardRewardsForRoom,
     ...(judgment === undefined ? {} : { judgment }),
     ...(figurine === undefined ? {} : { figurine }),
     ...(keepsakeSelection === undefined ? {} : { keepsakeSelection }),

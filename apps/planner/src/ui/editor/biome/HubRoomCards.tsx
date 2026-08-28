@@ -67,7 +67,9 @@ export function OpenHubRoomCard({
   const dispatch = useAppDispatch();
   const card = useRef<HTMLElement>(null);
   const rewards =
-    slot.door?.rewardPreview.kind === 'visible' ? slot.door.rewardPreview.rewards : undefined;
+    slot.door?.offerRewardSurface.visibility === 'visible'
+      ? slot.door.offerRewardSurface.rewards
+      : undefined;
   const reward = rewards?.length === 1 ? rewards[0] : undefined;
   const rewardOwnerKey =
     reward === undefined ? undefined : semanticAddressKey(reward.marker.address);

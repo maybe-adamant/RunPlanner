@@ -205,6 +205,9 @@ describe('structured workspace decision assembly', () => {
     expect(assembly.roomControls).toHaveLength(assembly.batch.targets.length);
     const selected = assembly.batch.targets.find((target) => target.selected);
     if (selected === undefined) throw new Error('selected target is missing');
+    expect(selected.room.offerRewardRewards).toHaveLength(1);
+    expect(selected.room.offerRewardRewards[0]?.key).toBe('incoming');
+    expect(selected.door.offerRewardSurface.rewards).toBe(selected.room.offerRewardRewards);
     const selectedWorkbench = assembly.workbenches.find(
       (workbench) => workbench.room.occurrenceId === selected.room.occurrenceId,
     );
@@ -446,13 +449,13 @@ describe('structured workspace decision assembly', () => {
     expect(
       assembly.batch.targets.map((target) => ({
         preview:
-          target.door.rewardPreview.kind === 'visible'
-            ? target.door.rewardPreview.rewards.map((reward) => ({
+          target.door.offerRewardSurface.visibility === 'visible'
+            ? target.door.offerRewardSurface.rewards.map((reward) => ({
                 key: reward.key,
                 label: reward.label,
                 summary: reward.summary,
               }))
-            : target.door.rewardPreview.kind,
+            : target.door.offerRewardSurface.visibility,
         room: target.door.room.label,
       })),
     ).toEqual([
@@ -471,6 +474,20 @@ describe('structured workspace decision assembly', () => {
         room: 'Combat 03',
       },
     ]);
+    expect(
+      assembly.batch.targets.map((target) =>
+        target.room.offerRewardRewards.map((reward) => reward.key),
+      ),
+    ).toEqual([
+      ['cage1', 'cage2'],
+      ['cage1', 'cage2'],
+    ]);
+    for (const target of assembly.batch.targets) {
+      for (const reward of target.room.offerRewardRewards) {
+        expect(reward.marker.address.kind).toBe('localReward');
+        expect(reward.control?.owner.address).toEqual(reward.marker.address);
+      }
+    }
     expect(
       assembly.batch.targets.every(
         (target) =>
@@ -499,7 +516,10 @@ describe('structured workspace decision assembly', () => {
     });
     if (assembly.kind !== 'batch') throw new Error('O Intro decision is not a batch');
     expect(assembly.batch.targets).toHaveLength(1);
-    expect(assembly.batch.targets[0]?.door.rewardPreview).toEqual({ kind: 'none' });
+    expect(assembly.batch.targets[0]?.door.offerRewardSurface).toEqual({
+      visibility: 'visible',
+      rewards: [],
+    });
     expect(assembly.batch.targets[0]?.room.roomLocal.kind).toBe('ship');
   });
 
@@ -746,6 +766,17 @@ describe('structured workspace decision assembly', () => {
       cageTargetCount: 1,
       doorCageRewardCount: 3,
     });
+    const fieldsWorkbench = assembly.workbenches.find(
+      (workbench) => workbench.room.roomLocal.kind === 'fields',
+    );
+    if (fieldsWorkbench?.room.roomLocal.kind !== 'fields') {
+      throw new Error('H bounded-target Fields workbench is missing');
+    }
+    expect(fieldsWorkbench.room.offerRewardRewards.map((reward) => reward.key)).toEqual([
+      'cage1',
+      'cage2',
+      'cage3',
+    ]);
   });
 
   it('withholds Fields controls and facts from a retained mixed takeover batch', () => {

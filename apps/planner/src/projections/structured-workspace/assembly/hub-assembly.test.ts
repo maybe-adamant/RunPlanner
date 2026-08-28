@@ -155,6 +155,8 @@ describe('structured workspace Hub assembly', () => {
     expect(visited?.door).toBeDefined();
     expect(visitedWorkbench?.incomingDoor).toBe(visited?.door);
     expect(visitedVisit?.door).toBe(visited?.door);
+    expect(visited?.room?.offerRewardRewards).toHaveLength(1);
+    expect(visited?.door?.offerRewardSurface.rewards).toBe(visited?.room?.offerRewardRewards);
     expect(unvisited).toMatchObject({ canClose: true, open: true, visited: false });
     const closeSlot = assembly.hubInteractionRequirements[0]?.slots.find(
       (slot) => slot.owner.hubSlotKey === 'combat03',
