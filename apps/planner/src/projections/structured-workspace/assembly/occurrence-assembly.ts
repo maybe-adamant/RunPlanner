@@ -261,17 +261,16 @@ export function assembleWorkspaceOccurrence(
     });
   })();
   const keepsakeSelection =
-    !input.facts.detailsActive || occurrence.keepsakeRack === undefined
+    !input.facts.detailsActive || room.hasKeepsakeRack !== true
       ? undefined
       : (() => {
           const address = createPostbossKeepsakeSelectionAddress(
             createOccurrenceAddress(input.biome, occurrence.occurrenceId),
           );
           const effect =
-            occurrence.keepsakeRack.disposition.kind !== 'replace'
+            occurrence.keepsakeRack === undefined
               ? undefined
-              : input.catalog.keepsakes.byKey[occurrence.keepsakeRack.disposition.keepsakeKey]
-                  ?.effect;
+              : input.catalog.keepsakes.byKey[occurrence.keepsakeRack.keepsakeKey]?.effect;
           const resultAddress =
             effect?.kind === 'jeweledPom' ||
             effect?.kind === 'experimentalHammer' ||
@@ -289,7 +288,9 @@ export function assembleWorkspaceOccurrence(
                   }),
                 }),
             marker: input.markerDestinations.marker(address),
-            value: occurrence.keepsakeRack.disposition,
+            ...(occurrence.keepsakeRack === undefined
+              ? {}
+              : { selectedKeepsakeKey: occurrence.keepsakeRack.keepsakeKey }),
           });
         })();
   const featureAssembly = assembleOccurrenceFeatures(

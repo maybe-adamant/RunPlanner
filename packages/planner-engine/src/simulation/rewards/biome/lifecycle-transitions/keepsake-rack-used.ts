@@ -9,7 +9,7 @@ import type { HistoryEvent, ProgressiveRoomHistoryViews } from '../../../history
 import type { CanonicalAuthoredRoom } from '../../../materialization';
 import { ownerRegion } from '../../../finding-regions';
 import {
-  applyKeepsakeDisposition,
+  applyKeepsakeReplacement,
   assessExperimentalHammerEquipResult,
   assessJeweledPomEquipResult,
   invalidateJeweledPom,
@@ -91,6 +91,7 @@ export function applyKeepsakeRackUsedTransition(
   historyAtRack: ProgressiveRoomHistoryViews['entry'] | undefined,
   routeLoadout: RouteLoadout,
   branches: readonly RewardBranchState[],
+  effectiveBiomeNumber: number,
 ): KeepsakeRackUsedTransition {
   const findings: LifecycleFinding[] = [];
   const keepsakeEquipResultCandidates: {
@@ -105,7 +106,7 @@ export function applyKeepsakeRackUsedTransition(
     });
 
   const rack = room.keepsakeRack;
-  const disposition = rack.disposition;
+  const keepsakeKey = rack.keepsakeKey;
   const selection = createPostbossKeepsakeSelectionAddress(event.origin);
   const encounterBlockedKeepsakeKeys = Object.freeze([
     ...new Set(
@@ -128,22 +129,20 @@ export function applyKeepsakeRackUsedTransition(
     sequence: event.sequence,
     boundary: 'at' as const,
   });
-  const invalidReplacement =
-    disposition.kind === 'replace' &&
-    branches.some(
-      (branch) =>
-        keepsakeSelectionUnavailableReason(
-          catalog,
-          branch.keepsakes,
-          disposition.keepsakeKey,
-          encounterBlockedKeepsakeKeys,
-        ) !== undefined,
-    );
+  const invalidReplacement = branches.some(
+    (branch) =>
+      keepsakeSelectionUnavailableReason(
+        catalog,
+        branch.keepsakes,
+        keepsakeKey,
+        encounterBlockedKeepsakeKeys,
+      ) !== undefined,
+  );
   if (invalidReplacement)
     findings.push(
       Object.freeze({
         finding: rewardFinding('keepsakeUnavailable', selection, {
-          key: disposition.keepsakeKey,
+          key: keepsakeKey,
           reason: 'unavailableAtRack',
         }),
         region: ownerRegion(selection),
@@ -154,28 +153,27 @@ export function applyKeepsakeRackUsedTransition(
   let rackTransitions = branches.map((branch) => {
     const before = branch.keepsakes;
     const unavailable =
-      disposition.kind === 'replace' &&
       keepsakeSelectionUnavailableReason(
         catalog,
         before,
-        disposition.keepsakeKey,
+        keepsakeKey,
         encounterBlockedKeepsakeKeys,
       ) !== undefined;
-    const equippedRank =
-      disposition.kind === 'replace' && !unavailable
-        ? keepsakeRankForEquip(
-            catalog,
-            disposition.keepsakeKey,
-            branch.traitHistory ?? createTraitHistoryState(),
-          )
-        : undefined;
+    const equippedRank = !unavailable
+      ? keepsakeRankForEquip(catalog, keepsakeKey, branch.traitHistory ?? createTraitHistoryState())
+      : undefined;
     const after = unavailable
       ? before
-      : applyKeepsakeDisposition(catalog, before, disposition, branch.arcanaFear, equippedRank);
+      : applyKeepsakeReplacement(
+          catalog,
+          before,
+          keepsakeKey,
+          branch.arcanaFear,
+          equippedRank,
+          effectiveBiomeNumber,
+        );
     const replacementSucceeded =
-      disposition.kind === 'replace' &&
-      before.currentKey !== after.currentKey &&
-      after.currentKey === disposition.keepsakeKey;
+      before.currentKey !== after.currentKey && after.currentKey === keepsakeKey;
     const detachedBranch = replacementSucceeded
       ? detachTranscendentEmbryoBlessing(catalog, branch, selection, event.sequence)
       : branch;
@@ -184,8 +182,8 @@ export function applyKeepsakeRackUsedTransition(
       branch: replacementSucceeded
         ? applyMoonBeamEquip(
             catalog,
-            applyOlympianRewardPressureEquip(catalog, transitionedBranch, disposition.keepsakeKey),
-            disposition.keepsakeKey,
+            applyOlympianRewardPressureEquip(catalog, transitionedBranch, keepsakeKey),
+            keepsakeKey,
             equippedRank,
             room.gameName === 'H_PostBoss01' || room.gameName === 'P_PostBoss01',
           )
@@ -222,19 +220,19 @@ export function applyKeepsakeRackUsedTransition(
       }),
     });
   });
-  if (disposition.kind === 'replace') {
+  {
     const successfulReplacementBranches = Object.freeze(
       rackTransitions
         .filter((transition) => transition.replacementSucceeded)
         .map((transition) => transition.branch),
     );
-    if (jeweledPomEffectForKey(catalog, disposition.keepsakeKey) !== undefined) {
+    if (jeweledPomEffectForKey(catalog, keepsakeKey) !== undefined) {
       const result = createKeepsakeEquipResultAddress(selection, 'jeweledPom');
       if (successfulReplacementBranches.length > 0 && rack.equipResults?.jeweledPom === undefined)
         findings.push(
           Object.freeze({
             finding: rewardFinding('keepsakeEquipResultMissing', result, {
-              keepsakeKey: disposition.keepsakeKey,
+              keepsakeKey,
             }),
             region: ownerRegion(selection.owner),
             chronology,
@@ -254,7 +252,7 @@ export function applyKeepsakeRackUsedTransition(
         findings.push(
           Object.freeze({
             finding: rewardFinding('keepsakeEquipResultUnavailable', result, {
-              keepsakeKey: disposition.keepsakeKey,
+              keepsakeKey,
             }),
             region: ownerRegion(selection.owner),
             chronology,
@@ -278,7 +276,7 @@ export function applyKeepsakeRackUsedTransition(
           }),
         );
     }
-    if (catalog.keepsakes.byKey[disposition.keepsakeKey]?.effect?.kind === 'experimentalHammer') {
+    if (catalog.keepsakes.byKey[keepsakeKey]?.effect?.kind === 'experimentalHammer') {
       const result = createKeepsakeEquipResultAddress(selection, 'experimentalHammer');
       if (
         successfulReplacementBranches.length > 0 &&
@@ -287,7 +285,7 @@ export function applyKeepsakeRackUsedTransition(
         findings.push(
           Object.freeze({
             finding: rewardFinding('keepsakeEquipResultMissing', result, {
-              keepsakeKey: disposition.keepsakeKey,
+              keepsakeKey,
             }),
             region: ownerRegion(selection.owner),
             chronology,
@@ -307,7 +305,7 @@ export function applyKeepsakeRackUsedTransition(
         findings.push(
           Object.freeze({
             finding: rewardFinding('keepsakeEquipResultUnavailable', result, {
-              keepsakeKey: disposition.keepsakeKey,
+              keepsakeKey,
             }),
             region: ownerRegion(selection.owner),
             chronology,
@@ -332,15 +330,15 @@ export function applyKeepsakeRackUsedTransition(
           }),
         );
     }
-    if (catalog.keepsakes.byKey[disposition.keepsakeKey]?.effect?.kind === 'transcendentEmbryo') {
+    if (catalog.keepsakes.byKey[keepsakeKey]?.effect?.kind === 'transcendentEmbryo') {
       const result = createKeepsakeEquipResultAddress(selection, 'transcendentEmbryo');
-      const effect = catalog.keepsakes.byKey[disposition.keepsakeKey]?.effect;
+      const effect = catalog.keepsakes.byKey[keepsakeKey]?.effect;
       const rarity =
         effect?.kind === 'transcendentEmbryo'
           ? effect.blessingRarityByRank[
               keepsakeRankForEquip(
                 catalog,
-                disposition.keepsakeKey,
+                keepsakeKey,
                 successfulReplacementBranches[0]?.traitHistory ?? createTraitHistoryState(),
               )
             ]
@@ -352,7 +350,7 @@ export function applyKeepsakeRackUsedTransition(
         findings.push(
           Object.freeze({
             finding: rewardFinding('keepsakeEquipResultMissing', result, {
-              keepsakeKey: disposition.keepsakeKey,
+              keepsakeKey,
             }),
             region: ownerRegion(selection),
             chronology,
@@ -374,7 +372,7 @@ export function applyKeepsakeRackUsedTransition(
         findings.push(
           Object.freeze({
             finding: rewardFinding('keepsakeEquipResultUnavailable', result, {
-              keepsakeKey: disposition.keepsakeKey,
+              keepsakeKey,
             }),
             region: ownerRegion(selection),
             chronology,
@@ -408,7 +406,7 @@ export function applyKeepsakeRackUsedTransition(
             branch: applyJeweledPomEquipResult(
               catalog,
               transition.branch,
-              disposition.keepsakeKey,
+              keepsakeKey,
               rack.equipResults,
               createKeepsakeEquipResultAddress(selection, 'jeweledPom'),
               event.sequence,
@@ -427,14 +425,12 @@ export function applyKeepsakeRackUsedTransition(
                 : applyTranscendentEmbryoEquipResult(
                     catalog,
                     transition.branch,
-                    disposition.keepsakeKey,
+                    keepsakeKey,
                     rack.equipResults.transcendentEmbryo,
                     createKeepsakeEquipResultAddress(selection, 'transcendentEmbryo'),
                     event.sequence,
                     'ordinary',
-                    transition.equippedRank ??
-                      catalog.keepsakes.byKey[disposition.keepsakeKey]?.rank ??
-                      'Epic',
+                    transition.equippedRank ?? catalog.keepsakes.byKey[keepsakeKey]?.rank ?? 'Epic',
                     routeLoadout,
                   ),
           }),
@@ -447,7 +443,7 @@ export function applyKeepsakeRackUsedTransition(
             branch: applyExperimentalHammerEquipResult(
               catalog,
               transition.branch,
-              disposition.keepsakeKey,
+              keepsakeKey,
               rack.equipResults,
               createKeepsakeEquipResultAddress(selection, 'experimentalHammer'),
               event.sequence,

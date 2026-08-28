@@ -201,11 +201,10 @@ export function presentRunState(
         catalog.keepsakes.byKey[snapshot.keepsakes.currentKey]?.label ??
         snapshot.keepsakes.currentKey,
       chronology: Object.freeze(
-        snapshot.keepsakes.history.map((entry, index) =>
+        snapshot.keepsakes.history.map((entry) =>
           Object.freeze({
-            biomeNumber: index + 1,
+            biomeNumber: entry.biomeNumber,
             label: catalog.keepsakes.byKey[entry.key]?.label ?? entry.key,
-            retained: entry.kind === 'retain',
           }),
         ),
       ),

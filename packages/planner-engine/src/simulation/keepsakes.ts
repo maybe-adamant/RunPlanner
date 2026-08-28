@@ -23,7 +23,9 @@ import {
 export type FatedStatus = 'Unknown' | 'Fated' | 'Unfated';
 export interface KeepsakeHistoryEntry {
   readonly key: string;
-  readonly kind: 'start' | 'retain' | 'replace';
+  readonly kind: 'start' | 'replace';
+  /** The biome number in which this keepsake becomes effective. */
+  readonly biomeNumber: number;
 }
 export interface KeepsakeState {
   readonly currentKey: string;
@@ -845,6 +847,7 @@ export function createKeepsakeState(
   catalog: Catalog,
   key: string,
   arcanaFear?: ArcanaFearState,
+  biomeNumber = 1,
 ): KeepsakeState {
   const keepsake = catalog.keepsakes.byKey[key];
   const effect = keepsake?.effect;
@@ -855,7 +858,7 @@ export function createKeepsakeState(
   );
   return Object.freeze({
     currentKey: key,
-    history: Object.freeze([{ key, kind: 'start' as const }]),
+    history: Object.freeze([{ key, kind: 'start' as const, biomeNumber }]),
     removedKeys: Object.freeze([]),
     fatedStatus,
     experimentalHammers: Object.freeze([]),
@@ -929,49 +932,27 @@ export function createKeepsakeState(
       : {}),
   });
 }
-export function applyKeepsakeDisposition(
+export function applyKeepsakeReplacement(
   catalog: Catalog,
   state: KeepsakeState,
-  disposition:
-    { readonly kind: 'retain' } | { readonly kind: 'replace'; readonly keepsakeKey: string },
+  keepsakeKey: string,
   arcanaFear: ArcanaFearState,
   equippedRank?: KeepsakeRank,
+  effectiveBiomeNumber = (state.history.at(-1)?.biomeNumber ?? 0) + 1,
 ): KeepsakeState {
   const activeArcanaKeys = arcanaFear.arcana.active.map((card) => card.key);
-  if (disposition.kind === 'retain') {
-    const history = Object.freeze([
-      ...state.history,
-      { key: state.currentKey, kind: 'retain' as const },
-    ]);
-    const fatedStatus = deriveFatedStatus(
-      catalog,
-      history.map((entry) => entry.key),
-      activeArcanaKeys,
-    );
-    return Object.freeze({
-      ...state,
-      history,
-      fatedStatus,
-      ...(fatedStatus === 'Unfated' && state.callingCard !== undefined
-        ? { callingCard: Object.freeze({ remainingCharges: 0 }) }
-        : {}),
-      ...(fatedStatus === 'Unfated' && state.timePiece !== undefined
-        ? { timePiece: Object.freeze({ remainingCharges: 0 }) }
-        : {}),
-    });
-  }
   // Invalid authored values deliberately remain in the document for repair,
   // but may not create a false chronological run transition.
-  const selected = catalog.keepsakes.byKey[disposition.keepsakeKey];
+  const selected = catalog.keepsakes.byKey[keepsakeKey];
   if (
     selected === undefined ||
-    keepsakeSelectionUnavailableReason(catalog, state, disposition.keepsakeKey) !== undefined
+    keepsakeSelectionUnavailableReason(catalog, state, keepsakeKey) !== undefined
   )
     return state;
   const rank = equippedRank ?? selected.rank;
   const history = Object.freeze([
     ...state.history,
-    { key: disposition.keepsakeKey, kind: 'replace' as const },
+    { key: keepsakeKey, kind: 'replace' as const, biomeNumber: effectiveBiomeNumber },
   ]);
   const fatedStatus = deriveFatedStatus(
     catalog,
@@ -1010,7 +991,7 @@ export function applyKeepsakeDisposition(
     : stateWithoutSources;
   return Object.freeze({
     ...withoutOrdinaryOlympian,
-    currentKey: disposition.keepsakeKey,
+    currentKey: keepsakeKey,
     history,
     removedKeys: Object.freeze([...state.removedKeys, state.currentKey]),
     fatedStatus,

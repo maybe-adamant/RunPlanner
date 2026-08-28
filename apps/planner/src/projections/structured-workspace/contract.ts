@@ -838,10 +838,7 @@ export interface WorkspaceKeepsakeSelectionInteraction {
   readonly owner: KeepsakeSelectionAddress;
   /** Label retained by the trigger before its candidate model is activated. */
   readonly selectedLabel: string;
-  readonly value:
-    | { readonly kind: 'retain' }
-    | { readonly kind: 'replace'; readonly keepsakeKey: string }
-    | string;
+  readonly selectedKeepsakeKey?: string;
   readonly replaceIntent: (
     keepsakeKey: string,
   ) => WorkspaceCommandIntent<
@@ -850,8 +847,8 @@ export interface WorkspaceKeepsakeSelectionInteraction {
       { readonly kind: 'ReplaceStartingKeepsake' | 'ReplacePostbossKeepsake' }
     >
   >;
-  readonly retainIntent?: () => WorkspaceCommandIntent<
-    Extract<ProjectCommand, { readonly kind: 'ReplacePostbossKeepsake' }>
+  readonly removeIntent?: () => WorkspaceCommandIntent<
+    Extract<ProjectCommand, { readonly kind: 'RemovePostbossKeepsake' }>
   >;
 }
 
@@ -2192,8 +2189,7 @@ export interface WorkspaceRoomSummary {
       readonly marker: WorkspaceMarker;
     };
     readonly marker: WorkspaceMarker;
-    readonly value:
-      { readonly kind: 'retain' } | { readonly kind: 'replace'; readonly keepsakeKey: string };
+    readonly selectedKeepsakeKey?: string;
   };
 }
 
@@ -2475,7 +2471,6 @@ export interface WorkspaceRunStatePresentation {
     readonly chronology: readonly {
       readonly biomeNumber: number;
       readonly label: string;
-      readonly retained: boolean;
     }[];
     readonly fatedStatus: 'Unknown' | 'Fated' | 'Unfated';
     readonly jeweledPomStatus: 'inactive' | 'active' | 'invalidated';

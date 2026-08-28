@@ -12,7 +12,7 @@ import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
 import { EMPTY_RESOURCE_PLACEMENTS } from '../../src/authored-project/defaults';
 import { createArcanaFearState } from '../../src/simulation/arcana-fear';
 import {
-  applyKeepsakeDisposition,
+  applyKeepsakeReplacement,
   attestGorgonBranchState,
   beginBiomeKeepsakeState,
   createKeepsakeState,
@@ -329,15 +329,15 @@ describe('Cherished Heirloom active keepsake advance', () => {
     const acquired = acquireCherished(currentBranch('BossPreDamageKeepsake'));
     expect(acquired.keepsakes).toMatchObject({
       currentKey: 'BossPreDamageKeepsake',
-      history: [{ key: 'BossPreDamageKeepsake', kind: 'start' }],
+      history: [{ key: 'BossPreDamageKeepsake', kind: 'start', biomeNumber: 1 }],
       removedKeys: [],
     });
     expect(acquired.traitHistory?.equippedTraits.KeepsakeLevelBoon).toBeDefined();
     const rank = keepsakeRankForEquip(catalog, 'SkipEncounterKeepsake', acquired.traitHistory!);
-    const replaced = applyKeepsakeDisposition(
+    const replaced = applyKeepsakeReplacement(
       catalog,
       acquired.keepsakes,
-      { kind: 'replace', keepsakeKey: 'SkipEncounterKeepsake' },
+      'SkipEncounterKeepsake',
       acquired.arcanaFear,
       rank,
     );

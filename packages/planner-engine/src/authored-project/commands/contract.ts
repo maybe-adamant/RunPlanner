@@ -56,6 +56,7 @@ export function projectCommandAddress(
     case 'ReplaceFountainRarityTarget':
       return command.outcome;
     case 'ReplacePostbossKeepsake':
+    case 'RemovePostbossKeepsake':
       return command.selection;
     case 'ReplaceJeweledPomEquipResult':
     case 'ReplaceExperimentalHammerEquipResult':

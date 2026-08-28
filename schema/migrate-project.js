@@ -4,7 +4,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { basename, dirname, extname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-const CURRENT_SCHEMA_VERSION = 66;
+const CURRENT_SCHEMA_VERSION = 67;
 const SCHEMA_49_CATALOG_VERSION = '0.27.0-arcana-fear-loadout';
 const SCHEMA_50_CATALOG_VERSION = '0.30.0-boon-rarity-ledger';
 const SCHEMA_51_CATALOG_VERSION = '0.31.0-chaos-traits';
@@ -667,6 +667,38 @@ function migrate65To66(document) {
   return { chaosOffersMigrated };
 }
 
+function migrate66To67(document) {
+  if (document.catalogVersion !== SCHEMA_65_CATALOG_VERSION) {
+    throw new Error(
+      `schema 66 migration expects catalog ${SCHEMA_65_CATALOG_VERSION}, received ${String(document.catalogVersion)}`,
+    );
+  }
+  let retainedRacksRemoved = 0;
+  let replacementRacksCompacted = 0;
+  visitRecords(document, (record) => {
+    if (!Object.hasOwn(record, 'keepsakeRack')) return;
+    const rack = record.keepsakeRack;
+    if (rack === null || typeof rack !== 'object' || Array.isArray(rack))
+      throw new Error('schema 66 keepsake rack must be an object');
+    const disposition = rack.disposition;
+    if (disposition?.kind === 'retain') {
+      delete record.keepsakeRack;
+      retainedRacksRemoved += 1;
+      return;
+    }
+    if (disposition?.kind !== 'replace' || typeof disposition.keepsakeKey !== 'string')
+      throw new Error('schema 66 keepsake rack is missing a replacement disposition');
+    record.keepsakeRack = {
+      keepsakeKey: disposition.keepsakeKey,
+      ...(rack.equipResults === undefined ? {} : { equipResults: rack.equipResults }),
+    };
+    replacementRacksCompacted += 1;
+  });
+  document.schemaVersion = 67;
+  document.catalogVersion = SCHEMA_65_CATALOG_VERSION;
+  return { retainedRacksRemoved, replacementRacksCompacted };
+}
+
 const migrations = new Map([
   [49, migrate49To50],
   [50, migrate50To51],
@@ -685,6 +717,7 @@ const migrations = new Map([
   [63, migrate63To64],
   [64, migrate64To65],
   [65, migrate65To66],
+  [66, migrate66To67],
 ]);
 
 export function migrateProjectDocument(value, targetVersion = CURRENT_SCHEMA_VERSION) {

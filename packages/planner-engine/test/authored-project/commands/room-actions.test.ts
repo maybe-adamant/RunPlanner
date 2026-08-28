@@ -14,6 +14,7 @@ import {
   createBatchRewardStoreAddress,
   createBiomeAddress,
   createEncounterPhaseAddress,
+  createKeepsakeEquipResultAddress,
   createNemesisRandomEventAddress,
   createExitDecisionAddress,
   createExitSelectionAddress,
@@ -1015,7 +1016,7 @@ describe('room-action commands', () => {
     const replaced = applyProjectCommand(retained, catalog, {
       kind: 'ReplacePostbossKeepsake',
       selection: createPostbossKeepsakeSelectionAddress(completion),
-      value: { kind: 'replace', keepsakeKey: 'ForceZeusBoonKeepsake' },
+      keepsakeKey: 'HadesAndPersephoneKeepsake',
     });
     expect(
       replaced.routes[0]?.biomes[0]?.completionOccurrences.find(
@@ -1039,15 +1040,35 @@ describe('room-action commands', () => {
     ).toEqual([rack, { kind: 'useFountain' }]);
     expect(undoProjectHistory(history).present).toBe(replaced);
 
-    const retainedAgain = applyProjectCommand(replaced, catalog, {
-      kind: 'ReplacePostbossKeepsake',
-      selection: createPostbossKeepsakeSelectionAddress(completion),
-      value: { kind: 'retain' },
+    const withResult = applyProjectCommand(replaced, catalog, {
+      kind: 'ReplaceJeweledPomEquipResult',
+      result: createKeepsakeEquipResultAddress(
+        createPostbossKeepsakeSelectionAddress(completion),
+        'jeweledPom',
+      ),
+      value: { traitKey: 'HadesLifestealBoon' },
     });
+    const deletedHistory = applyProjectHistoryCommand(createProjectHistory(withResult), catalog, {
+      kind: 'RemovePostbossKeepsake',
+      selection: createPostbossKeepsakeSelectionAddress(completion),
+    });
+    const retainedAgain = deletedHistory.present;
+    expect(
+      retainedAgain.routes[0]?.biomes[0]?.completionOccurrences.find(
+        (occurrence) => occurrence.occurrenceId === completion.occurrenceId,
+      )?.keepsakeRack,
+    ).toBeUndefined();
     expect(
       retainedAgain.routes[0]?.biomes[0]?.completionOccurrences.find(
         (occurrence) => occurrence.occurrenceId === completion.occurrenceId,
       )?.roomActions.order,
     ).toEqual([{ kind: 'useFountain' }]);
+    expect(undoProjectHistory(deletedHistory).present).toBe(withResult);
+
+    const noOpDelete = applyProjectCommand(retainedAgain, catalog, {
+      kind: 'RemovePostbossKeepsake',
+      selection: createPostbossKeepsakeSelectionAddress(completion),
+    });
+    expect(noOpDelete).toBe(retainedAgain);
   });
 });

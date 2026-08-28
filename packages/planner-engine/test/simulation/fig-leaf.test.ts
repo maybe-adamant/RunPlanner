@@ -419,7 +419,7 @@ describe('Fig Leaf state contract', () => {
       selection: createPostbossKeepsakeSelectionAddress(
         createOccurrenceAddress(nBiome, createOccurrenceId('completion:N:postboss')),
       ),
-      value: { kind: 'replace', keepsakeKey: 'GoldifyKeepsake' },
+      keepsakeKey: 'GoldifyKeepsake',
     });
     const evaluation = simulateProject(catalog, replacement);
     const route = evaluation.routes.find((candidate) => candidate.biomes.length > 0);

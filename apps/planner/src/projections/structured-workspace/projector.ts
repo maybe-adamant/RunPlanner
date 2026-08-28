@@ -218,10 +218,7 @@ export function createStructuredWorkspaceProjection(
         string,
         {
           readonly address: import('@run-planner/engine/authored-project').KeepsakeSelectionAddress;
-          readonly value:
-            | { readonly kind: 'retain' }
-            | { readonly kind: 'replace'; readonly keepsakeKey: string }
-            | string;
+          readonly selectedKeepsakeKey?: string;
         }
       >();
       const keepsakeEquipResultControls = new Map<
@@ -321,7 +318,7 @@ export function createStructuredWorkspaceProjection(
           semanticAddressKey(routeStartKeepsake),
           Object.freeze({
             address: routeStartKeepsake,
-            value: authoredRoute.loadout.startingKeepsakeKey,
+            selectedKeepsakeKey: authoredRoute.loadout.startingKeepsakeKey,
           }),
         );
         const routeStartEffect =
@@ -461,7 +458,9 @@ export function createStructuredWorkspaceProjection(
                 semanticAddressKey(node.room.keepsakeSelection.address),
                 Object.freeze({
                   address: node.room.keepsakeSelection.address,
-                  value: node.room.keepsakeSelection.value,
+                  ...(node.room.keepsakeSelection.selectedKeepsakeKey === undefined
+                    ? {}
+                    : { selectedKeepsakeKey: node.room.keepsakeSelection.selectedKeepsakeKey }),
                 }),
               );
               const equipResult = node.room.keepsakeSelection.equipResult;

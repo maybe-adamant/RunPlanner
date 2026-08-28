@@ -13,7 +13,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   advanceCurrentKeepsake,
-  applyKeepsakeDisposition,
+  applyKeepsakeReplacement,
   assessPhialTraitTargets,
   consumePhial,
   createKeepsakeState,
@@ -148,17 +148,12 @@ describe('Aromatic Phial catalog and target domains', () => {
     const initial = createKeepsakeState(catalog, 'FountainRarityKeepsake');
     expect(initial.phial).toEqual({ status: 'pending' });
     const arcanaFear = initializeTestRewardBranches()[0]!.arcanaFear;
-    const removed = applyKeepsakeDisposition(
-      catalog,
-      initial,
-      { kind: 'replace', keepsakeKey: 'GoldifyKeepsake' },
-      arcanaFear,
-    );
+    const removed = applyKeepsakeReplacement(catalog, initial, 'GoldifyKeepsake', arcanaFear);
     expect(removed.phial).toBeUndefined();
-    const reequipped = applyKeepsakeDisposition(
+    const reequipped = applyKeepsakeReplacement(
       catalog,
       createKeepsakeState(catalog, 'GoldifyKeepsake'),
-      { kind: 'replace', keepsakeKey: 'FountainRarityKeepsake' },
+      'FountainRarityKeepsake',
       arcanaFear,
     );
     expect(reequipped.phial).toEqual({ status: 'pending' });

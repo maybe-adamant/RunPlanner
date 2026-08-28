@@ -355,7 +355,7 @@ function decodeBiomePlan(
           'roomActions',
           'additionalExits',
           ...(raw.acquisitionSites === undefined ? [] : ['acquisitionSites']),
-          ...(room.hasKeepsakeRack ? ['keepsakeRack'] : []),
+          ...(raw.keepsakeRack === undefined ? [] : ['keepsakeRack']),
           ...(room.purgingPool !== undefined ? ['purgingPool'] : []),
           ...(room.surfaceShop?.forced === true ? ['hermesShrine'] : []),
           ...(room.roomShop?.forced === true ? ['stygianWell'] : []),
@@ -475,74 +475,46 @@ function decodeBiomePlan(
       );
       if (!Array.isArray(raw.additionalExits) || raw.additionalExits.length !== 0)
         fail(`${path}.completionOccurrences[${index}].additionalExits`, 'must be empty');
-      const keepsakeRack = !room.hasKeepsakeRack
-        ? undefined
-        : (() => {
-            const value = expectRecord(
-              raw.keepsakeRack,
-              `${path}.completionOccurrences[${index}].keepsakeRack`,
-            );
-            expectExactKeys(
-              value,
-              ['disposition', ...(value.equipResults === undefined ? [] : ['equipResults'])],
-              `${path}.completionOccurrences[${index}].keepsakeRack`,
-            );
-            const disposition = expectRecord(
-              value.disposition,
-              `${path}.completionOccurrences[${index}].keepsakeRack.disposition`,
-            );
-            const kind = expectString(
-              disposition.kind,
-              `${path}.completionOccurrences[${index}].keepsakeRack.disposition.kind`,
-            );
-            if (kind === 'retain')
-              expectExactKeys(
-                disposition,
-                ['kind'],
-                `${path}.completionOccurrences[${index}].keepsakeRack.disposition`,
-              );
-            else if (kind === 'replace') {
-              expectExactKeys(
-                disposition,
-                ['kind', 'keepsakeKey'],
-                `${path}.completionOccurrences[${index}].keepsakeRack.disposition`,
-              );
-              if (
-                catalog.keepsakes.byKey[
-                  expectString(
-                    disposition.keepsakeKey,
-                    `${path}.completionOccurrences[${index}].keepsakeRack.disposition.keepsakeKey`,
-                  )
-                ] === undefined
-              )
+      const keepsakeRack =
+        raw.keepsakeRack === undefined
+          ? undefined
+          : (() => {
+              if (!room.hasKeepsakeRack)
                 fail(
-                  `${path}.completionOccurrences[${index}].keepsakeRack.disposition.keepsakeKey`,
+                  `${path}.completionOccurrences[${index}].keepsakeRack`,
+                  'room declaration has no keepsake rack',
+                );
+              const value = expectRecord(
+                raw.keepsakeRack,
+                `${path}.completionOccurrences[${index}].keepsakeRack`,
+              );
+              expectExactKeys(
+                value,
+                ['keepsakeKey', ...(value.equipResults === undefined ? [] : ['equipResults'])],
+                `${path}.completionOccurrences[${index}].keepsakeRack`,
+              );
+              const keepsakeKey = expectString(
+                value.keepsakeKey,
+                `${path}.completionOccurrences[${index}].keepsakeRack.keepsakeKey`,
+              );
+              if (catalog.keepsakes.byKey[keepsakeKey] === undefined)
+                fail(
+                  `${path}.completionOccurrences[${index}].keepsakeRack.keepsakeKey`,
                   'unknown keepsake',
                 );
-            } else
-              fail(
-                `${path}.completionOccurrences[${index}].keepsakeRack.disposition.kind`,
-                'must be retain or replace',
-              );
-            return Object.freeze({
-              disposition:
-                kind === 'retain'
-                  ? Object.freeze({ kind: 'retain' as const })
-                  : Object.freeze({
-                      kind: 'replace' as const,
-                      keepsakeKey: disposition.keepsakeKey as string,
+              return Object.freeze({
+                keepsakeKey,
+                ...(value.equipResults === undefined
+                  ? {}
+                  : {
+                      equipResults: decodeKeepsakeEquipResults(
+                        value.equipResults,
+                        `${path}.completionOccurrences[${index}].keepsakeRack.equipResults`,
+                        catalog,
+                      ),
                     }),
-              ...(value.equipResults === undefined
-                ? {}
-                : {
-                    equipResults: decodeKeepsakeEquipResults(
-                      value.equipResults,
-                      `${path}.completionOccurrences[${index}].keepsakeRack.equipResults`,
-                      catalog,
-                    ),
-                  }),
-            });
-          })();
+              });
+            })();
       const occurrenceBase = Object.freeze({
         occurrenceId: completionOccurrenceId(biomeKey, descriptor.role),
         gameName: room.gameName,

@@ -13,7 +13,7 @@ import {
 import { applyJeweledPomEquipResult } from '../../src/simulation/rewards/processing';
 import { processEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement';
 import {
-  applyKeepsakeDisposition,
+  applyKeepsakeReplacement,
   createKeepsakeState,
   invalidateJeweledPom,
 } from '../../src/simulation/keepsakes';
@@ -111,10 +111,10 @@ describe('Jeweled Pom', () => {
       result,
       1,
     );
-    const neutral = applyKeepsakeDisposition(
+    const neutral = applyKeepsakeReplacement(
       catalog,
       equipped.keepsakes,
-      { kind: 'replace', keepsakeKey: 'BossPreDamageKeepsake' },
+      'BossPreDamageKeepsake',
       equipped.arcanaFear,
     );
     expect(neutral.jeweledPom).toMatchObject({ active: true, levels: 3 });
@@ -132,10 +132,10 @@ describe('Jeweled Pom', () => {
       'encounterCompleted',
     );
     expect(boosted.traitHistory?.equippedTraits.ApolloWeaponBoon?.level).toBe(4);
-    const opposing = applyKeepsakeDisposition(
+    const opposing = applyKeepsakeReplacement(
       catalog,
       neutral,
-      { kind: 'replace', keepsakeKey: 'ForceZeusBoonKeepsake' },
+      'ForceZeusBoonKeepsake',
       equipped.arcanaFear,
     );
     expect(opposing.fatedStatus).toBe('Unfated');

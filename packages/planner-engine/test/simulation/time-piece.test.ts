@@ -15,7 +15,7 @@ import {
 
 import { createKeepsakeState } from '../../src/simulation/keepsakes';
 import {
-  applyKeepsakeDisposition,
+  applyKeepsakeReplacement,
   refreshKeepsakeFatedStatus,
 } from '../../src/simulation/keepsakes';
 import { createTestArcanaFearState } from '../support/arcana-fear';
@@ -213,10 +213,10 @@ describe('Time Piece conversions', () => {
   it('retains unused charges through a neutral swap and closes them at the first Unfated transition', () => {
     const arcana = createTestArcanaFearState();
     const initial = createKeepsakeState(catalog, 'GoldifyKeepsake', arcana);
-    const neutral = applyKeepsakeDisposition(
+    const neutral = applyKeepsakeReplacement(
       catalog,
       initial,
-      { kind: 'replace', keepsakeKey: 'ManaOverTimeRefundKeepsake' },
+      'ManaOverTimeRefundKeepsake',
       arcana,
     );
     expect(neutral.timePiece?.remainingCharges).toBe(4);

@@ -664,8 +664,8 @@ describe('Judgment automatic Boss lifecycle', () => {
     const fatedKeepsakes = Object.freeze({
       ...initialKeepsakes,
       history: Object.freeze([
-        { key: 'HadesAndPersephoneKeepsake', kind: 'start' as const },
-        { key: 'BossMetaUpgradeKeepsake', kind: 'replace' as const },
+        { key: 'HadesAndPersephoneKeepsake', kind: 'start' as const, biomeNumber: 1 },
+        { key: 'BossMetaUpgradeKeepsake', kind: 'replace' as const, biomeNumber: 2 },
       ]),
       fatedStatus: 'Fated' as const,
     });

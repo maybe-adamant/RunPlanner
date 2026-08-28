@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
 import {
-  applyKeepsakeDisposition,
+  applyKeepsakeReplacement,
   consumeGorgonAppearance,
   createKeepsakeState,
   expirePendingGorgon,
@@ -255,12 +255,7 @@ describe('Gorgon Amulet lifecycle', () => {
     const pending = createKeepsakeState(catalog, 'AthenaEncounterKeepsake', fear);
     const expired = expirePendingGorgon(pending);
     expect(expired.gorgon).toEqual({ status: 'expired' });
-    const replaced = applyKeepsakeDisposition(
-      catalog,
-      pending,
-      { kind: 'replace', keepsakeKey: 'ManaOverTimeRefundKeepsake' },
-      fear,
-    );
+    const replaced = applyKeepsakeReplacement(catalog, pending, 'ManaOverTimeRefundKeepsake', fear);
     expect(replaced.currentKey).toBe('ManaOverTimeRefundKeepsake');
     expect(replaced.gorgon).toEqual({ status: 'expired' });
   });

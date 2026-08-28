@@ -117,7 +117,7 @@ function withPostbossHammer(project: ReturnType<typeof createGoldenFGHProject>) 
   const selected = applyProjectCommand(project, catalog, {
     kind: 'ReplacePostbossKeepsake',
     selection,
-    value: { kind: 'replace', keepsakeKey: 'TempHammerKeepsake' },
+    keepsakeKey: 'TempHammerKeepsake',
   });
   return applyProjectCommand(selected, catalog, {
     kind: 'ReplaceExperimentalHammerEquipResult',
@@ -132,7 +132,7 @@ function withPostbossNeutralReplacement(project: ReturnType<typeof createGoldenF
     selection: createPostbossKeepsakeSelectionAddress(
       automaticOccurrence(createBiomeAddress('Underworld', 'F'), 'postboss'),
     ),
-    value: { kind: 'replace', keepsakeKey: 'BossPreDamageKeepsake' },
+    keepsakeKey: 'BossPreDamageKeepsake',
   });
 }
 
@@ -473,7 +473,7 @@ describe('Experimental Hammer', () => {
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplacePostbossKeepsake',
       selection: rack,
-      value: { kind: 'replace', keepsakeKey: 'TempHammerKeepsake' },
+      keepsakeKey: 'TempHammerKeepsake',
     });
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceExperimentalHammerEquipResult',
@@ -525,7 +525,7 @@ describe('Experimental Hammer', () => {
       const equipped = applyProjectCommand(project, catalog, {
         kind: 'ReplacePostbossKeepsake',
         selection: rack,
-        value: { kind: 'replace', keepsakeKey: 'TempHammerKeepsake' },
+        keepsakeKey: 'TempHammerKeepsake',
       });
       return applyProjectCommand(equipped, catalog, {
         kind: 'ReplaceExperimentalHammerEquipResult',
@@ -577,7 +577,7 @@ describe('Experimental Hammer', () => {
     const rack = plan?.completionOccurrences.find(
       (occurrence) => occurrence.occurrenceId === 'completion:F:postboss',
     )?.keepsakeRack;
-    if (rack?.disposition.kind !== 'replace' || rack.equipResults === undefined)
+    if (rack === undefined || rack.equipResults === undefined)
       throw new Error('expected authored F Hammer result');
     const seed = initializeRewardBranches(
       undefined,
@@ -623,7 +623,7 @@ describe('Experimental Hammer', () => {
     let project = applyProjectCommand(createGoldenFGHProject(), catalog, {
       kind: 'ReplacePostbossKeepsake',
       selection,
-      value: { kind: 'replace', keepsakeKey: 'TempHammerKeepsake' },
+      keepsakeKey: 'TempHammerKeepsake',
     });
     const authoredResult = { kind: 'selected' as const, traitKey: 'StaffLongAttackTrait' };
     project = applyProjectCommand(project, catalog, {
@@ -643,7 +643,7 @@ describe('Experimental Hammer', () => {
     const rack = plan?.completionOccurrences.find(
       (occurrence) => occurrence.occurrenceId === 'completion:F:postboss',
     )?.keepsakeRack;
-    if (rack?.disposition.kind !== 'replace' || rack.equipResults === undefined)
+    if (rack === undefined || rack.equipResults === undefined)
       throw new Error('expected authored F Hammer result');
     const rewards = evaluateBiomeRewardsAssemblyInternal(
       catalog,
@@ -722,15 +722,15 @@ describe('Experimental Hammer', () => {
     expect(replay(base)).toBe(replay(withoutSide));
   });
 
-  it('retains its exact temporary Hammer state through both retain and neutral replacement racks', () => {
-    const retainedProject = createGoldenFGHProject();
-    const retained = evaluateBiomeRewardsAssemblyInternal(
+  it('carries its exact temporary Hammer state through an absent and neutral replacement rack', () => {
+    const unchangedProject = createGoldenFGHProject();
+    const unchanged = evaluateBiomeRewardsAssemblyInternal(
       catalog,
-      evaluatedBiome(retainedProject, 'F').snapshot,
-      evaluatedBiome(retainedProject, 'F').history,
+      evaluatedBiome(unchangedProject, 'F').snapshot,
+      evaluatedBiome(unchangedProject, 'F').history,
       1,
-      route(retainedProject).loadout,
-      [equippedBranch(retainedProject, 20)],
+      route(unchangedProject).loadout,
+      [equippedBranch(unchangedProject, 20)],
     ).simulation.branches[0]!;
     const replacedProject = withPostbossNeutralReplacement(createGoldenFGHProject());
     const replaced = evaluateBiomeRewardsAssemblyInternal(
@@ -741,13 +741,13 @@ describe('Experimental Hammer', () => {
       route(replacedProject).loadout,
       [equippedBranch(replacedProject, 20)],
     ).simulation.branches[0]!;
-    expect(retained.keepsakes.experimentalHammers.at(-1)).toMatchObject({
+    expect(unchanged.keepsakes.experimentalHammers.at(-1)).toMatchObject({
       active: true,
       acquisitionIdentity: expect.any(String),
     });
     expect(replaced.keepsakes).toMatchObject({ currentKey: 'BossPreDamageKeepsake' });
     expect(replaced.keepsakes.experimentalHammers.at(-1)).toEqual(
-      retained.keepsakes.experimentalHammers.at(-1),
+      unchanged.keepsakes.experimentalHammers.at(-1),
     );
   });
 
@@ -828,7 +828,7 @@ describe('Experimental Hammer', () => {
     const project = applyProjectCommand(createGoldenFGHProject(), catalog, {
       kind: 'ReplacePostbossKeepsake',
       selection,
-      value: { kind: 'replace', keepsakeKey: 'TempHammerKeepsake' },
+      keepsakeKey: 'TempHammerKeepsake',
     });
     const result = createKeepsakeEquipResultAddress(selection, 'experimentalHammer');
     const missingAssembly = simulateProjectAssembly(catalog, project);

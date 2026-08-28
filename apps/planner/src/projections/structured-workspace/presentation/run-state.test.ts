@@ -1,11 +1,17 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
+  applyProjectCommand,
   createBiomeAddress,
   createDefaultAuthoredHexTree,
   createExitDecisionAddress,
+  createOccurrenceAddress,
+  createOccurrenceId,
+  createPostbossKeepsakeSelectionAddress,
 } from '@run-planner/engine/authored-project';
+import { simulateProjectAssembly } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
+import { createGoldenFGHProject } from '@run-planner/test-fixtures/underworld';
 import { presentRunState } from './run-state';
 
 describe('Run State presentation', () => {
@@ -133,9 +139,8 @@ describe('Run State presentation', () => {
       keepsakes: {
         currentKey: 'GoldifyKeepsake',
         history: [
-          { key: 'ManaOverTimeRefundKeepsake', kind: 'start' },
-          { key: 'GoldifyKeepsake', kind: 'replace' },
-          { key: 'GoldifyKeepsake', kind: 'retain' },
+          { key: 'ManaOverTimeRefundKeepsake', kind: 'start', biomeNumber: 1 },
+          { key: 'GoldifyKeepsake', kind: 'replace', biomeNumber: 2 },
         ],
         removedKeys: ['ManaOverTimeRefundKeepsake'],
         fatedStatus: 'Unknown',
@@ -257,9 +262,8 @@ describe('Run State presentation', () => {
     expect(state.keepsakes).toMatchObject({
       currentLabel: 'Time Piece',
       chronology: [
-        { biomeNumber: 1, label: 'Silver Wheel', retained: false },
-        { biomeNumber: 2, label: 'Time Piece', retained: false },
-        { biomeNumber: 3, label: 'Time Piece', retained: true },
+        { biomeNumber: 1, label: 'Silver Wheel' },
+        { biomeNumber: 2, label: 'Time Piece' },
       ],
       callingCardRemainingCharges: 0,
       echoGift: {
@@ -364,5 +368,34 @@ describe('Run State presentation', () => {
         keepsakes: { ...snapshot.keepsakes, phial: { status: 'consumed' } },
       }).keepsakes.phialStatus,
     ).toBe('consumed');
+  });
+
+  it('presents a G replacement as effective in H when the F rack was skipped', () => {
+    const project = applyProjectCommand(createGoldenFGHProject(), catalog, {
+      kind: 'ReplacePostbossKeepsake',
+      selection: createPostbossKeepsakeSelectionAddress(
+        createOccurrenceAddress(
+          createBiomeAddress('Underworld', 'G'),
+          createOccurrenceId('completion:G:postboss'),
+        ),
+      ),
+      keepsakeKey: 'BossPreDamageKeepsake',
+    });
+    const g = simulateProjectAssembly(catalog, project)
+      .evaluation.routes.find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find((biome) => biome.biomeKey === 'G');
+    if (g?.authoring !== 'complete' || g.validity !== 'valid')
+      throw new Error('expected valid G biome');
+    const snapshot = g.rewards.runStateSnapshots.find(
+      (candidate) =>
+        candidate.owner.kind === 'roomRunStateCheckpoint' &&
+        candidate.owner.occurrenceId === 'completion:G:postboss' &&
+        candidate.owner.checkpoint.kind === 'beforeRoomExit',
+    );
+    if (snapshot === undefined) throw new Error('expected G postboss Run State checkpoint');
+    expect(presentRunState(catalog, snapshot).keepsakes.chronology).toContainEqual({
+      biomeNumber: 3,
+      label: 'Knuckle Bones',
+    });
   });
 });

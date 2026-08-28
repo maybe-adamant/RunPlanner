@@ -116,7 +116,11 @@ export type FountainRarityCommand = {
 export type KeepsakeCommand = {
   readonly kind: 'ReplacePostbossKeepsake';
   readonly selection: Extract<KeepsakeSelectionAddress, { readonly owner: OccurrenceAddress }>;
-  readonly value: import('../model').PostbossKeepsakeDisposition;
+  readonly keepsakeKey: string;
+};
+export type RemoveKeepsakeCommand = {
+  readonly kind: 'RemovePostbossKeepsake';
+  readonly selection: Extract<KeepsakeSelectionAddress, { readonly owner: OccurrenceAddress }>;
 };
 export type KeepsakeEquipResultCommand = {
   readonly kind: 'ReplaceJeweledPomEquipResult';
@@ -574,6 +578,7 @@ export type ProjectCommand =
   | SteadyGrowthCommand
   | FountainRarityCommand
   | KeepsakeCommand
+  | RemoveKeepsakeCommand
   | KeepsakeEquipResultCommand
   | ExperimentalHammerEquipResultCommand
   | TranscendentEmbryoEquipResultCommand

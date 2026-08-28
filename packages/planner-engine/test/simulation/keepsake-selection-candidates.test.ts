@@ -113,7 +113,7 @@ describe('keepsake selection candidates', () => {
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplacePostbossKeepsake',
       selection: nPostboss,
-      value: { kind: 'replace', keepsakeKey: 'ForceZeusBoonKeepsake' },
+      keepsakeKey: 'ForceZeusBoonKeepsake',
     });
     const route = simulateProjectAssembly(catalog, project).evaluation.routes.find(
       (candidate) => candidate.routeKey === 'Surface',
@@ -135,6 +135,7 @@ describe('keepsake selection candidates', () => {
     expect(n.rewards.branches[0]?.keepsakes.history).toContainEqual({
       key: 'ForceZeusBoonKeepsake',
       kind: 'replace',
+      biomeNumber: 2,
     });
   });
 
@@ -161,28 +162,42 @@ describe('keepsake selection candidates', () => {
     expect(result.result.options.map((option) => option.key)).toContain('GoldifyKeepsake');
   });
 
-  it('applies retain and replacement at reached Postboss frontiers with exact chronology', () => {
-    const retained = keepsakesAfter(createGoldenFGHProject(), 'F');
-    expect(retained).toMatchObject({
+  it('carries the current keepsake without a rack event and applies replacement chronologically', () => {
+    const unchangedProject = createGoldenFGHProject();
+    const unchanged = keepsakesAfter(unchangedProject, 'F');
+    expect(unchanged).toMatchObject({
       currentKey: 'ManaOverTimeRefundKeepsake',
-      history: [{ key: 'ManaOverTimeRefundKeepsake', kind: 'start' }],
+      history: [{ key: 'ManaOverTimeRefundKeepsake', kind: 'start', biomeNumber: 1 }],
       removedKeys: [],
       fatedStatus: 'Unknown',
     });
+    const unchangedCandidate = createPreparedProjectCandidateSession(
+      catalog,
+      simulateProjectAssembly(catalog, unchangedProject),
+    ).evaluate({ kind: 'keepsakeSelection', selection: fPostboss });
+    expect(unchangedCandidate).toMatchObject({
+      kind: 'keepsakeSelection',
+      result: { currentKey: 'ManaOverTimeRefundKeepsake', selectedPossible: true },
+    });
+    if (unchangedCandidate.kind !== 'keepsakeSelection')
+      throw new Error('expected F Postboss candidates');
+    expect(unchangedCandidate.result.options).not.toContainEqual(
+      expect.objectContaining({ key: 'retain-current-keepsake' }),
+    );
 
     const replaced = withPomResult(
       applyProjectCommand(createGoldenFGHProject(), catalog, {
         kind: 'ReplacePostbossKeepsake',
         selection: fPostboss,
-        value: { kind: 'replace', keepsakeKey: 'HadesAndPersephoneKeepsake' },
+        keepsakeKey: 'HadesAndPersephoneKeepsake',
       }),
       fPostboss,
     );
     expect(keepsakesAfter(replaced, 'F')).toMatchObject({
       currentKey: 'HadesAndPersephoneKeepsake',
       history: [
-        { key: 'ManaOverTimeRefundKeepsake', kind: 'start' },
-        { key: 'HadesAndPersephoneKeepsake', kind: 'replace' },
+        { key: 'ManaOverTimeRefundKeepsake', kind: 'start', biomeNumber: 1 },
+        { key: 'HadesAndPersephoneKeepsake', kind: 'replace', biomeNumber: 2 },
       ],
       removedKeys: ['ManaOverTimeRefundKeepsake'],
       fatedStatus: 'Fated',
@@ -193,7 +208,7 @@ describe('keepsake selection candidates', () => {
     const replaced = applyProjectCommand(createGoldenFGHProject(), catalog, {
       kind: 'ReplacePostbossKeepsake',
       selection: fPostboss,
-      value: { kind: 'replace', keepsakeKey: 'ForceZeusBoonKeepsake' },
+      keepsakeKey: 'ForceZeusBoonKeepsake',
     });
     const f = simulateProjectAssembly(catalog, replaced)
       .evaluation.routes.find((route) => route.routeKey === 'Underworld')
@@ -219,6 +234,7 @@ describe('keepsake selection candidates', () => {
     expect(keepsakesAfter(replaced, 'F')?.history).toContainEqual({
       key: 'ForceZeusBoonKeepsake',
       kind: 'replace',
+      biomeNumber: 2,
     });
   });
 
@@ -228,7 +244,7 @@ describe('keepsake selection candidates', () => {
     const replaced = applyProjectCommand(createGoldenFGHProject(), catalog, {
       kind: 'ReplacePostbossKeepsake',
       selection: fPostboss,
-      value: { kind: 'replace', keepsakeKey: 'ForceZeusBoonKeepsake' },
+      keepsakeKey: 'ForceZeusBoonKeepsake',
     });
     const reordered = applyProjectCommand(replaced, catalog, {
       kind: 'MoveRoomAction',
@@ -262,14 +278,14 @@ describe('keepsake selection candidates', () => {
       applyProjectCommand(createGoldenFGHProject(), catalog, {
         kind: 'ReplacePostbossKeepsake',
         selection: fPostboss,
-        value: { kind: 'replace', keepsakeKey: 'HadesAndPersephoneKeepsake' },
+        keepsakeKey: 'HadesAndPersephoneKeepsake',
       }),
       fPostboss,
     );
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplacePostbossKeepsake',
       selection: gPostboss,
-      value: { kind: 'replace', keepsakeKey: 'ManaOverTimeRefundKeepsake' },
+      keepsakeKey: 'ManaOverTimeRefundKeepsake',
     });
     const assembled = simulateProjectAssembly(catalog, project);
     const g = assembled.evaluation.routes
@@ -283,17 +299,17 @@ describe('keepsake selection candidates', () => {
       currentKey: 'HadesAndPersephoneKeepsake',
       removedKeys: ['ManaOverTimeRefundKeepsake'],
       history: [
-        { key: 'ManaOverTimeRefundKeepsake', kind: 'start' },
-        { key: 'HadesAndPersephoneKeepsake', kind: 'replace' },
+        { key: 'ManaOverTimeRefundKeepsake', kind: 'start', biomeNumber: 1 },
+        { key: 'HadesAndPersephoneKeepsake', kind: 'replace', biomeNumber: 2 },
       ],
     });
   });
 
-  it('requires the explicit retain disposition instead of replacing with the equipped identity', () => {
+  it('does not offer the carried identity as a rack replacement', () => {
     const project = applyProjectCommand(createGoldenFGHProject(), catalog, {
       kind: 'ReplacePostbossKeepsake',
       selection: fPostboss,
-      value: { kind: 'replace', keepsakeKey: 'ManaOverTimeRefundKeepsake' },
+      keepsakeKey: 'ManaOverTimeRefundKeepsake',
     });
     const assembled = simulateProjectAssembly(catalog, project);
     const candidates = createPreparedProjectCandidateSession(catalog, assembled).evaluate({
@@ -316,7 +332,7 @@ describe('keepsake selection candidates', () => {
     expect(f.rewards.branches[0]?.keepsakes).toMatchObject({
       currentKey: 'ManaOverTimeRefundKeepsake',
       removedKeys: [],
-      history: [{ key: 'ManaOverTimeRefundKeepsake', kind: 'start' }],
+      history: [{ key: 'ManaOverTimeRefundKeepsake', kind: 'start', biomeNumber: 1 }],
     });
   });
 
@@ -324,7 +340,7 @@ describe('keepsake selection candidates', () => {
     const finalProject = applyProjectCommand(createCompleteFGProject(), catalog, {
       kind: 'ReplacePostbossKeepsake',
       selection: gPostboss,
-      value: { kind: 'replace', keepsakeKey: 'BossPreDamageKeepsake' },
+      keepsakeKey: 'BossPreDamageKeepsake',
     });
     const finalSession = createPreparedProjectCandidateSession(
       catalog,
@@ -341,7 +357,7 @@ describe('keepsake selection candidates', () => {
     const reachedProject = applyProjectCommand(createGoldenFGHProject(), catalog, {
       kind: 'ReplacePostbossKeepsake',
       selection: gPostboss,
-      value: { kind: 'replace', keepsakeKey: 'BossPreDamageKeepsake' },
+      keepsakeKey: 'BossPreDamageKeepsake',
     });
     const reachedSession = createPreparedProjectCandidateSession(
       catalog,
@@ -353,35 +369,41 @@ describe('keepsake selection candidates', () => {
       kind: 'keepsakeSelection',
       result: { currentKey: 'ManaOverTimeRefundKeepsake' },
     });
-    expect(keepsakesAfter(reachedProject, 'H')?.currentKey).toBe('BossPreDamageKeepsake');
+    expect(keepsakesAfter(reachedProject, 'H')).toMatchObject({
+      currentKey: 'BossPreDamageKeepsake',
+      history: [
+        { key: 'ManaOverTimeRefundKeepsake', kind: 'start', biomeNumber: 1 },
+        { key: 'BossPreDamageKeepsake', kind: 'replace', biomeNumber: 3 },
+      ],
+    });
   });
 
   it('keeps effect-deferred identities as exact history while only Fated roles change state', () => {
     const neutral = applyProjectCommand(createGoldenFGHProject(), catalog, {
       kind: 'ReplacePostbossKeepsake',
       selection: fPostboss,
-      value: { kind: 'replace', keepsakeKey: 'BossPreDamageKeepsake' },
+      keepsakeKey: 'BossPreDamageKeepsake',
     });
     expect(keepsakesAfter(neutral, 'F')).toMatchObject({
       currentKey: 'BossPreDamageKeepsake',
       fatedStatus: 'Unknown',
       history: [
-        { key: 'ManaOverTimeRefundKeepsake', kind: 'start' },
-        { key: 'BossPreDamageKeepsake', kind: 'replace' },
+        { key: 'ManaOverTimeRefundKeepsake', kind: 'start', biomeNumber: 1 },
+        { key: 'BossPreDamageKeepsake', kind: 'replace', biomeNumber: 2 },
       ],
     });
 
     const opposing = applyProjectCommand(createGoldenFGHProject(), catalog, {
       kind: 'ReplacePostbossKeepsake',
       selection: fPostboss,
-      value: { kind: 'replace', keepsakeKey: 'ForceZeusBoonKeepsake' },
+      keepsakeKey: 'ForceZeusBoonKeepsake',
     });
     expect(keepsakesAfter(opposing, 'F')).toMatchObject({
       currentKey: 'ForceZeusBoonKeepsake',
       fatedStatus: 'Unfated',
       history: [
-        { key: 'ManaOverTimeRefundKeepsake', kind: 'start' },
-        { key: 'ForceZeusBoonKeepsake', kind: 'replace' },
+        { key: 'ManaOverTimeRefundKeepsake', kind: 'start', biomeNumber: 1 },
+        { key: 'ForceZeusBoonKeepsake', kind: 'replace', biomeNumber: 2 },
       ],
     });
   });
@@ -439,7 +461,7 @@ describe('keepsake selection candidates', () => {
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplacePostbossKeepsake',
       selection: pPostboss,
-      value: { kind: 'replace', keepsakeKey: 'AthenaEncounterKeepsake' },
+      keepsakeKey: 'AthenaEncounterKeepsake',
     });
     const invalid = simulateProjectAssembly(catalog, project).evaluation;
     expect(invalid.findings).toContainEqual(
@@ -526,7 +548,7 @@ describe('keepsake selection candidates', () => {
     let postbossProject = applyProjectCommand(createGoldenFGHProject(), catalog, {
       kind: 'ReplacePostbossKeepsake',
       selection: fPostboss,
-      value: { kind: 'replace', keepsakeKey: 'HadesAndPersephoneKeepsake' },
+      keepsakeKey: 'HadesAndPersephoneKeepsake',
     });
     const postbossResult = createKeepsakeEquipResultAddress(fPostboss, 'jeweledPom');
     expect(simulateProjectAssembly(catalog, postbossProject).evaluation.findings).toContainEqual(
@@ -556,12 +578,12 @@ describe('keepsake selection candidates', () => {
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplacePostbossKeepsake',
       selection: fPostboss,
-      value: { kind: 'replace', keepsakeKey: 'BossPreDamageKeepsake' },
+      keepsakeKey: 'BossPreDamageKeepsake',
     });
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplacePostbossKeepsake',
       selection: gPostboss,
-      value: { kind: 'replace', keepsakeKey: 'ForceZeusBoonKeepsake' },
+      keepsakeKey: 'ForceZeusBoonKeepsake',
     });
 
     const underworld = simulateProjectAssembly(catalog, project).evaluation.routes.find(

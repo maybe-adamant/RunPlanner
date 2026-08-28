@@ -56,7 +56,7 @@ export function prepareRoomCreatedPrelude(
   const room = rooms.get(semanticAddressKey(event.origin));
   const keepsakeSelectionCandidate =
     room?.kind === 'authored' &&
-    room.keepsakeRack !== undefined &&
+    catalog.rooms.byKey[room.gameName]?.hasKeepsakeRack === true &&
     event.origin.kind === 'occurrence'
       ? (() => {
           const selection = createPostbossKeepsakeSelectionAddress(event.origin);

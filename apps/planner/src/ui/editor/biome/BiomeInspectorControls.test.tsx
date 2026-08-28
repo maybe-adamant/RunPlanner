@@ -471,7 +471,7 @@ describe('Biome inspector controls', () => {
     expect(authored()?.figurineArcanaKeysByPhase?.Encounter ?? []).toHaveLength(0);
   });
 
-  it('binds the reached Postboss keepsake selector through replacement and retention', async () => {
+  it('binds the reached Postboss keepsake selector through replacement and deletion', async () => {
     const view = renderWorkspace(loadSurfaceNOPQProject(), 'Surface', 'N');
     const owner = createPostbossKeepsakeSelectionAddress(
       createOccurrenceAddress(nBiome, createOccurrenceId('completion:N:postboss')),
@@ -497,17 +497,15 @@ describe('Biome inspector controls', () => {
         ?.biomes.find((biome) => biome.biomeKey === 'N')
         ?.completionOccurrences.find(
           (occurrence) => occurrence.occurrenceId === createOccurrenceId('completion:N:postboss'),
-        )?.keepsakeRack?.disposition,
-    ).toEqual({ kind: 'replace', keepsakeKey: 'BossPreDamageKeepsake' });
+        )?.keepsakeRack,
+    ).toEqual({ keepsakeKey: 'BossPreDamageKeepsake' });
     const timeline = screen.getByRole('region', { name: 'Room Timeline' });
     await waitFor(() =>
       expect(
         within(timeline).getByRole('button', { name: 'Move Choose keepsake earlier' }),
       ).toBeTruthy(),
     );
-    const timelineSelector = within(timeline).getByRole('button', { name: 'Keepsake' });
-    fireEvent.click(timelineSelector);
-    fireEvent.click(within(screen.getByRole('listbox')).getByText('Retain current keepsake'));
+    fireEvent.click(within(timeline).getByRole('button', { name: 'Delete keepsake change' }));
     expect(
       view.application.store
         .getState()
@@ -515,7 +513,7 @@ describe('Biome inspector controls', () => {
         ?.biomes.find((biome) => biome.biomeKey === 'N')
         ?.completionOccurrences.find(
           (occurrence) => occurrence.occurrenceId === createOccurrenceId('completion:N:postboss'),
-        )?.keepsakeRack?.disposition,
-    ).toEqual({ kind: 'retain' });
+        )?.keepsakeRack,
+    ).toBeUndefined();
   });
 });

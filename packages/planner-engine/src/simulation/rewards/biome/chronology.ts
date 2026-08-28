@@ -1118,6 +1118,7 @@ export function evaluateBiomeRewardChronology(
           views.get(semanticAddressKey(event.origin))?.entry,
           routeLoadout,
           branches,
+          enteredBiomeCount + 1,
         );
         branches = transition.branches;
         if (transition.keepsakeSelectionCandidate !== undefined)

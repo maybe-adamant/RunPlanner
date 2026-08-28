@@ -74,11 +74,6 @@ export function KeepsakeSelectionPicker({
         if (open) projection.activate();
       }}
       onSelect={(keepsakeKey) => {
-        if (keepsakeKey === '') {
-          if (interaction.retainIntent !== undefined)
-            dispatch(authoredProjectCommandDispatched(interaction.retainIntent().command));
-          return;
-        }
         dispatch(authoredProjectCommandDispatched(interaction.replaceIntent(keepsakeKey).command));
       }}
       placeholder={interaction.selectedLabel}

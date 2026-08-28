@@ -74,27 +74,25 @@ export function evaluateKeepsakeSelectionCandidate(
     (candidate) => candidate.routeKey === query.selection.routeKey,
   );
   const postbossOwner = query.selection.owner === 'routeStart' ? undefined : query.selection.owner;
-  const disposition =
+  const rack =
     postbossOwner === undefined
       ? undefined
       : route?.biomes
           .find((biome) => biome.biomeKey === query.selection.biomeKey)
           ?.completionOccurrences.find(
             (occurrence) => occurrence.occurrenceId === postbossOwner.occurrenceId,
-          )?.keepsakeRack?.disposition;
+          )?.keepsakeRack;
   const authoredKey =
-    query.selection.owner === 'routeStart'
-      ? route?.loadout.startingKeepsakeKey
-      : disposition?.kind === 'replace'
-        ? disposition.keepsakeKey
-        : capability.state.currentKey;
+    query.selection.owner === 'routeStart' ? route?.loadout.startingKeepsakeKey : rack?.keepsakeKey;
   const authoredOption = options.find((option) => option.key === authoredKey);
   return Object.freeze({
     kind: 'keepsakeSelection',
     result: Object.freeze({
       currentKey: capability.state.currentKey,
       options,
-      selectedPossible: authoredOption?.selectedPossible ?? false,
+      // An absent sparse rack leaf is a legal no-interaction state, not an
+      // invalid selected option. Only a persisted replacement is assessed.
+      selectedPossible: authoredOption?.selectedPossible ?? true,
     }),
   });
 }

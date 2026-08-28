@@ -14,7 +14,7 @@ import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
 import { createArcanaFearState } from '../../src/simulation/arcana-fear';
 import {
   applyTranscendentEmbryoEquipResult,
-  applyKeepsakeDisposition,
+  applyKeepsakeReplacement,
   advanceCurrentKeepsake,
   advanceTranscendentEmbryoProgress,
   assessTranscendentEmbryoTransformation,
@@ -293,10 +293,10 @@ describe('Transcendent Embryo declaration and direct Chaos fold', () => {
       progress: 2,
       markedBlessingKey: 'ChaosElementalBlessing',
     });
-    const unequipped = applyKeepsakeDisposition(
+    const unequipped = applyKeepsakeReplacement(
       catalog,
       heirloom,
-      { kind: 'replace', keepsakeKey: 'GoldifyKeepsake' },
+      'GoldifyKeepsake',
       equipped.arcanaFear,
     );
     expect(unequipped.transcendentEmbryo).toBeUndefined();
@@ -340,12 +340,13 @@ describe('Transcendent Embryo declaration and direct Chaos fold', () => {
       {
         gameName: 'F_PostBoss01',
         keepsakeRack: {
-          disposition: { kind: 'replace', keepsakeKey: 'GoldifyKeepsake' },
+          keepsakeKey: 'GoldifyKeepsake',
         },
       } as unknown as CanonicalAuthoredRoom,
       undefined,
       createDefaultRouteLoadout(catalog),
       [equipped],
+      2,
     );
     const replaced = transition.branches[0];
     if (replaced === undefined) throw new Error('rack replacement did not produce a branch');
@@ -440,12 +441,13 @@ describe('Transcendent Embryo declaration and direct Chaos fold', () => {
       {
         gameName: 'F_PostBoss01',
         keepsakeRack: {
-          disposition: { kind: 'replace', keepsakeKey: 'RarifyKeepsake' },
+          keepsakeKey: 'RarifyKeepsake',
         },
       } as unknown as CanonicalAuthoredRoom,
       undefined,
       createDefaultRouteLoadout(catalog),
       [echoBranch],
+      2,
     );
     const replaced = transition.branches[0];
     if (replaced === undefined) throw new Error('rack replacement did not produce a branch');

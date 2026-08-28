@@ -12,7 +12,7 @@ import { describe, expect, it } from 'vitest';
 import { createTestArcanaFearState } from '../support/arcana-fear';
 import {
   applyEchoOlympianRewardPressureReplay,
-  applyKeepsakeDisposition,
+  applyKeepsakeReplacement,
   advanceCurrentKeepsake,
   consumeOlympianProviderMaterialized,
   createKeepsakeState,
@@ -520,10 +520,10 @@ describe('Olympian reward pressure', () => {
 
     const swapped = Object.freeze({
       ...withGift,
-      keepsakes: applyKeepsakeDisposition(
+      keepsakes: applyKeepsakeReplacement(
         catalog,
         withGift.keepsakes,
-        { kind: 'replace', keepsakeKey: 'ManaOverTimeRefundKeepsake' },
+        'ManaOverTimeRefundKeepsake',
         withGift.arcanaFear,
       ),
     });
@@ -532,10 +532,10 @@ describe('Olympian reward pressure', () => {
       expect.objectContaining({ providerKey: 'Ares', origin: 'echo' }),
     ]);
 
-    const later = applyKeepsakeDisposition(
+    const later = applyKeepsakeReplacement(
       catalog,
       swapped.keepsakes,
-      { kind: 'replace', keepsakeKey: 'ForceApolloBoonKeepsake' },
+      'ForceApolloBoonKeepsake',
       swapped.arcanaFear,
       'Heroic',
     );
