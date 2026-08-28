@@ -687,10 +687,14 @@ language, but its center is not an ordinary decision spine. The
   completion sequence.
 
 Exact Hub inspector destinations also carry their presentation tab: Hub,
-slot-set, and board-reward owners open Overview; visit owners open Timeline;
-and the uncommitted completed-Hub handoff opens Exit. React consumes that
-explicit destination and does not infer tab ownership from semantic-address
-shapes.
+slot-set, and main incoming-reward-identity owners open Hub Overview; main
+visit and ordering owners open Hub Timeline; entered main-room occurrences and
+their incoming-reward acquisition children open the main occurrence Timeline;
+parent-owned side generation, entry order, and side reward identity open the
+parent main occurrence Overview; entered side occurrences and their acquisition
+children open the side occurrence Timeline; and the uncommitted completed-Hub
+handoff opens Exit. React consumes that explicit destination and does not infer
+tab ownership from semantic-address shapes or rendered ancestry.
 
 The board remains a joint generation region. Its authored prefix is the only
 traversal order; its unvisited tail is React-local presentation state and is
@@ -713,12 +717,30 @@ Timeline renders only open slots as a ranked roster with read-only reward
 summaries. A visible pointer drag grip is an optional direct-manipulation
 surface, with named arrow controls retained for keyboard operation.
 
+The Hub Timeline roster reserves one shared column layout for its drag handle,
+rank, room identity, visit metadata, Room details, and reorder controls. Long
+room labels wrap within the identity column; they do not move later columns.
+The Overview board uses three equal columns at its normal workbench width, two
+at an intermediate container width, and one on narrow layouts. All 26 fixed
+slots remain in declaration order at every breakpoint, and these layout rules
+are presentation-only.
+
 The N rail gives its fixed Opening and PreHub stages and each authored Hub
 visit one read-only primary-reward token when the room projects one. This is
 the same resolved token product used by ordinary selected-room context: fixed,
 incoming, and Ephyra incoming rewards are eligible, while side-room offers are
 not. The token neither changes focus nor creates another edit path; the Hub
 board remains the sole editable main-reward surface.
+
+Entered side occurrences extend the N rail as nested children of their owning
+main visit. The rail includes only side occurrences in the authored local
+`visitOrder`; generated but unentered side rows stay on the parent Overview and
+do not receive rail entries. Side children retain side-entry order, select the
+side occurrence's Timeline, and do not contribute to the six-main-visit count.
+Parent-owned side generation, entry order, and reward-identity markers select
+the parent main visit and its Overview. The rail uses the complete marker
+family supplied by each owner, including acquisition children, rather than a
+rendered-position or partial-marker heuristic.
 
 Compact board cells may focus their room and reward state in the inspector, but
 N never acquires arbitrary room replacement merely to reuse an ordinary room
