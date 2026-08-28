@@ -52,7 +52,10 @@ import {
   pOccurrenceIds,
 } from '@run-planner/test-fixtures/surface';
 import { renderPlannerForInteraction } from '../fixtures/renderPlanner';
-import { semanticOwnerElementId } from '@planner/ui/feedback/semanticOwner';
+import {
+  semanticOwnerControlElementId,
+  semanticOwnerElementId,
+} from '@planner/ui/feedback/semanticOwner';
 
 afterEach(() => {
   cleanup();
@@ -614,8 +617,21 @@ describe('surface product loop', () => {
     if (findingButton === undefined) throw new Error('Hammer finding is not presented');
     await view.user.click(findingButton);
 
+    const destination = application
+      .selectStructuredWorkspace(application.store.getState())
+      .focusByOwner.get(semanticAddressKey(invalid.origin));
+    if (destination === undefined) throw new Error('invalid Hammer destination is missing');
+    expect(destination).toMatchObject({
+      ownerAddress: invalid.origin,
+      focusAddress: { kind: 'roomAction' },
+    });
+    expect(destination).not.toHaveProperty('traitDialogTarget');
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(document.getElementById(semanticOwnerElementId(destination.focusAddress))).toBeTruthy();
+    const action = document.getElementById(semanticOwnerControlElementId(destination.focusAddress));
+    if (action === null) throw new Error('invalid Hammer pickup action is missing');
+    await view.user.click(within(action).getByRole('button', { name: /Edit Trait/ }));
     const dialog = await screen.findByRole('dialog');
-    expect(document.getElementById(semanticOwnerElementId(invalid.origin))).toBeTruthy();
     expect(
       within(dialog).getAllByText(/Hammer is incompatible with this loadout/),
     ).not.toHaveLength(0);

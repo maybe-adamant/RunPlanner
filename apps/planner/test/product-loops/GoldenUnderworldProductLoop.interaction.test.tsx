@@ -368,7 +368,7 @@ describe('underworld product loop', () => {
     });
   });
 
-  it('opens a missing Boon Boon Boon finding at its forced child checkpoint', async () => {
+  it('routes a missing Boon Boon Boon finding through its forced child pickup', async () => {
     const application = createApplication();
     const bridgeId = createOccurrenceId('golden-h-bridge01');
     const echoOwner = createTraitOfferAddress(
@@ -421,13 +421,28 @@ describe('underworld product loop', () => {
       within(findings).getByRole('button', { name: /Choose the Boon Boon Boon outcomes/ }),
     );
 
+    const destination = application
+      .selectStructuredWorkspace(application.store.getState())
+      .focusByOwner.get(semanticAddressKey(child));
+    if (destination === undefined) throw new Error('BBB child destination is missing');
+    expect(destination).toMatchObject({
+      ownerAddress: child,
+      focusAddress: { kind: 'roomAction' },
+    });
+    expect(destination).not.toHaveProperty('traitDialogTarget');
+    expect(application.store.getState().editorSession.traitDialogTarget).toBeNull();
+    expect(application.store.getState().editorSession.focusedSemanticOwner).toEqual(
+      destination.focusAddress,
+    );
+    expect(screen.queryByRole('dialog')).toBeNull();
+    const childAction = document.getElementById(
+      semanticOwnerControlElementId(destination.focusAddress),
+    );
+    if (!(childAction instanceof HTMLElement))
+      throw new Error('BBB child pickup action is missing');
+    await view.user.click(within(childAction).getByRole('button', { name: /Edit Trait/ }));
     const dialog = await screen.findByRole('dialog');
-    expect(within(dialog).getByText('Echo offer > Boon Boon Boon choice')).toBeDefined();
-    const childControl = document.getElementById(semanticOwnerControlElementId(child));
-    if (!(childControl instanceof HTMLElement)) throw new Error('BBB child control is missing');
-    await waitFor(() => expect(document.activeElement).toBe(childControl));
-    expect(application.store.getState().editorSession.focusedSemanticOwner).toEqual(child);
-    expect(application.store.getState().editorSession.traitDialogTarget).toEqual(echoOwner);
+    expect(within(dialog).getByRole('heading', { name: 'Echo' })).toBeDefined();
     expect(dialog.textContent).not.toContain('Picked up');
   });
 
