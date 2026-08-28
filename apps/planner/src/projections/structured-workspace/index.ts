@@ -127,6 +127,7 @@ export type {
   WorkspaceRoomPickerControl,
   WorkspaceRoomInteraction,
   WorkspaceRoomSummary,
+  WorkspaceTargetRewardConsequence,
   WorkspaceRunStateBagSection,
   WorkspaceRunStateLauncher,
   WorkspaceRoute,

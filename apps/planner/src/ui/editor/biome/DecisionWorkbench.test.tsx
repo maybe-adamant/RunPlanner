@@ -907,6 +907,30 @@ describe('DecisionWorkbench', () => {
     expect(effectivePool.querySelector('p')).toBeNull();
   });
 
+  it('renders O target consequences from the decision projection and relabels only non-Ship stores', () => {
+    const project = loadSurfaceNOPQProject();
+    const shipOwner = createExitDecisionAddress(oBiome, {
+      kind: 'occurrence',
+      occurrenceId: oOccurrenceIds.combat01,
+    });
+    renderStaticDecisionWorkbench(project, 'Surface', 'O', subjectForOwner(shipOwner));
+
+    expect(screen.getByText('Devotion · RunProgress forced.')).toBeTruthy();
+    expect(screen.queryByLabelText('Reward Pool')).toBeNull();
+    expect(screen.queryByLabelText('Next store roll')).toBeNull();
+    cleanup();
+
+    const ordinaryOwner = createExitDecisionAddress(oBiome, {
+      kind: 'occurrence',
+      occurrenceId: oOccurrenceIds.devotion,
+    });
+    renderStaticDecisionWorkbench(project, 'Surface', 'O', subjectForOwner(ordinaryOwner));
+
+    expect(screen.getByText('Story fixed · counts as MetaProgress.')).toBeTruthy();
+    expect(screen.getByLabelText('Next store roll')).toBeTruthy();
+    expect(screen.queryByLabelText('Reward Pool')).toBeNull();
+  });
+
   it('labels authored-selected retained rooms without claiming evaluated entry', () => {
     const base = createGoldenFGHIProject();
     const blocked = {
