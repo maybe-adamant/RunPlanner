@@ -475,8 +475,41 @@ describe('BiomeWorkspace', () => {
       createOccurrenceAddress(nBiome, nLocalOccurrenceId('combat02', 'sideDoor1')),
     );
     expect(within(inspector).getByRole('heading', { level: 3, name: /^Entering / })).toBeTruthy();
-    expect(within(inspector).getByRole('region', { name: 'Incoming reward' })).toBeTruthy();
+    expect(within(inspector).getByRole('region', { name: 'Room Timeline' })).toBeTruthy();
     expect(within(inspector).queryByRole('button', { name: 'Reward' })).toBeNull();
+  });
+
+  it('renders entered side rooms beneath their Hub visit and focuses the side workbench', async () => {
+    const view = renderWorkspace(loadSurfaceNOPQProject(), 'Surface', 'N');
+    const biome = workspaceBiome(view.application, 'Surface', 'N');
+    const hub = biome.rail.find(
+      (entry): entry is Extract<(typeof biome.rail)[number], { readonly kind: 'hubGroup' }> =>
+        entry.kind === 'hubGroup',
+    );
+    const parentVisit = hub?.visits.find(
+      (visit) => visit.node.room.occurrenceId === nOccurrenceId('combat05'),
+    );
+    const sideVisit = parentVisit?.sideVisits[0];
+    if (sideVisit === undefined) throw new Error('entered N side visit is missing');
+
+    await view.user.click(hubRailButton());
+    const sideButton = railButtonForMarker(view.container, sideVisit.marker.focusKey);
+    expect(sideButton.textContent).toContain(sideVisit.label);
+    await view.user.click(sideButton);
+
+    expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(
+      sideVisit.node.room.marker.address,
+    );
+    expect(
+      screen.getByRole('heading', {
+        level: 3,
+        name: `Entering ${sideVisit.node.room.label}`,
+      }),
+    ).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Room Timeline' }).getAttribute('aria-selected')).toBe(
+      'true',
+    );
+    expect(screen.getByRole('region', { name: 'Room Timeline' })).toBeTruthy();
   });
 
   it('summarizes the Hub door reward in Overview without exposing another editor', async () => {

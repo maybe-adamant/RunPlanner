@@ -7,6 +7,10 @@ import {
   type WorkspaceRailEntry,
   type WorkspaceRoomSummary,
 } from '../contract';
+import {
+  workspaceHubMainRewardAcquisitionMarkers,
+  workspaceHubMainRewardMarkers,
+} from './marker-ownership';
 
 /** Final workspace products needed to bind exact semantic focus for one biome. */
 export interface WorkspaceInspectorDestinationBindingInput {
@@ -192,16 +196,7 @@ function nodeOwnedFocusKeys(node: WorkspaceNode): readonly string[] {
       return Object.freeze([
         node.marker.focusKey,
         node.openSet.focusKey,
-        ...node.slots.flatMap((slot) => [
-          slot.marker.focusKey,
-          ...(slot.localVisit === undefined
-            ? []
-            : [
-                slot.localVisit.marker.focusKey,
-                slot.localVisit.orderMarker.focusKey,
-                ...slot.localVisit.slots.map((local) => local.marker.focusKey),
-              ]),
-        ]),
+        ...node.slots.map((slot) => slot.marker.focusKey),
       ]);
   }
 }
@@ -250,8 +245,41 @@ function selectedRailKeysByFocusKey(
             visit.visitMarker.focusKey,
             visit.node.marker.focusKey,
             ...visit.node.localDetailMarkers.map((marker) => marker.focusKey),
+            ...workspaceHubMainRewardAcquisitionMarkers(visit.node.room).map(
+              (marker) => marker.focusKey,
+            ),
           ]) {
             registerRailFocusKey(result, focusKey, visit.marker.focusKey);
+          }
+          for (const marker of workspaceHubMainRewardMarkers(visit.node.room)) {
+            registerRailFocusKey(result, marker.focusKey, entry.marker.focusKey);
+          }
+          if (visit.node.localVisit !== undefined) {
+            const parentMarkers = [
+              visit.node.localVisit.marker,
+              visit.node.localVisit.orderMarker,
+              ...visit.node.localVisit.slots.flatMap((slot) => {
+                if (slot.generation !== 'generated') return [slot.marker];
+                return [slot.marker, ...workspaceHubMainRewardMarkers(slot.room)];
+              }),
+            ];
+            for (const marker of parentMarkers) {
+              registerRailFocusKey(result, marker.focusKey, visit.marker.focusKey);
+            }
+          }
+          for (const sideVisit of visit.sideVisits) {
+            for (const focusKey of [
+              sideVisit.node.marker.focusKey,
+              ...sideVisit.node.localDetailMarkers.map((marker) => marker.focusKey),
+              ...workspaceHubMainRewardAcquisitionMarkers(sideVisit.node.room).map(
+                (marker) => marker.focusKey,
+              ),
+            ]) {
+              registerRailFocusKey(result, focusKey, sideVisit.marker.focusKey);
+            }
+            for (const marker of workspaceHubMainRewardMarkers(sideVisit.node.room)) {
+              registerRailFocusKey(result, marker.focusKey, visit.marker.focusKey);
+            }
           }
         }
         break;

@@ -1,7 +1,9 @@
+import { rewardChildMarkers } from '../assembly/occurrence-action-markers';
 import type {
   WorkspaceMarker,
   WorkspaceMixedBatchNode,
   WorkspaceOrdinaryBatchNode,
+  WorkspaceRewardControl,
   WorkspaceRoomLocal,
   WorkspaceRoomSummary,
   WorkspaceTakeoverBatchNode,
@@ -11,34 +13,8 @@ import type {
 export type WorkspaceDecisionBatchNode =
   WorkspaceOrdinaryBatchNode | WorkspaceMixedBatchNode | WorkspaceTakeoverBatchNode;
 
-function rewardControlMarkers(control: {
-  readonly marker: WorkspaceMarker;
-  readonly traitOffers?: readonly {
-    readonly marker: WorkspaceMarker;
-    readonly traitAcquisitionTarget?: { readonly marker: WorkspaceMarker };
-    readonly circeResolution?: { readonly marker: WorkspaceMarker };
-    readonly echoPomTarget?: { readonly marker: WorkspaceMarker };
-    readonly echoLastRunBoon?: { readonly marker: WorkspaceMarker };
-    readonly echoLastReward?: { readonly marker: WorkspaceMarker };
-    readonly allTogetherSets?: readonly { readonly marker: WorkspaceMarker }[];
-    readonly naturalSelection?: { readonly marker: WorkspaceMarker };
-  }[];
-  readonly levelResolutions?: readonly { readonly marker: WorkspaceMarker }[];
-}): readonly WorkspaceMarker[] {
-  return Object.freeze([
-    control.marker,
-    ...(control.traitOffers ?? []).flatMap((trait) => [
-      trait.marker,
-      ...(trait.traitAcquisitionTarget === undefined ? [] : [trait.traitAcquisitionTarget.marker]),
-      ...(trait.circeResolution === undefined ? [] : [trait.circeResolution.marker]),
-      ...(trait.echoPomTarget === undefined ? [] : [trait.echoPomTarget.marker]),
-      ...(trait.echoLastRunBoon === undefined ? [] : [trait.echoLastRunBoon.marker]),
-      ...(trait.echoLastReward === undefined ? [] : [trait.echoLastReward.marker]),
-      ...(trait.allTogetherSets ?? []).map((set) => set.marker),
-      ...(trait.naturalSelection === undefined ? [] : [trait.naturalSelection.marker]),
-    ]),
-    ...(control.levelResolutions ?? []).map((resolution) => resolution.marker),
-  ]);
+function rewardControlMarkers(control: WorkspaceRewardControl): readonly WorkspaceMarker[] {
+  return Object.freeze([control.marker, ...rewardChildMarkers(control)]);
 }
 
 /** A workbench's room-local surface excludes its incoming offer. */
@@ -176,30 +152,34 @@ export function workspaceDecisionOwnedMarkers(
   ]);
 }
 
-/** Hub main-offer owners route to the board rather than a nested workbench. */
+/** The outer Hub reward identity routes to the board rather than a workbench. */
 export function workspaceHubMainRewardMarkers(
   room: WorkspaceRoomSummary,
 ): readonly WorkspaceMarker[] {
   switch (room.roomLocal.kind) {
     case 'fixed':
-      return Object.freeze([
-        room.roomLocal.marker,
-        ...(room.roomLocal.control?.traitOffers ?? []).flatMap((trait) => [
-          trait.marker,
-          ...(trait.traitAcquisitionTarget === undefined
-            ? []
-            : [trait.traitAcquisitionTarget.marker]),
-          ...(trait.circeResolution === undefined ? [] : [trait.circeResolution.marker]),
-          ...(trait.echoPomTarget === undefined ? [] : [trait.echoPomTarget.marker]),
-          ...(trait.echoLastRunBoon === undefined ? [] : [trait.echoLastRunBoon.marker]),
-          ...(trait.echoLastReward === undefined ? [] : [trait.echoLastReward.marker]),
-          ...(trait.allTogetherSets ?? []).map((set) => set.marker),
-          ...(trait.naturalSelection === undefined ? [] : [trait.naturalSelection.marker]),
-        ]),
-        ...(room.roomLocal.control?.levelResolutions ?? []).map((resolution) => resolution.marker),
-      ]);
+      return Object.freeze([room.roomLocal.marker]);
     case 'incomingReward':
-      return Object.freeze(rewardControlMarkers(room.roomLocal.control));
+      return Object.freeze([room.roomLocal.control.marker]);
+    case 'none':
+    case 'fields':
+    case 'ship':
+    case 'shop':
+      return Object.freeze([]);
+  }
+}
+
+/** Nested Hub reward acquisition owners remain in the occurrence Timeline. */
+export function workspaceHubMainRewardAcquisitionMarkers(
+  room: WorkspaceRoomSummary,
+): readonly WorkspaceMarker[] {
+  switch (room.roomLocal.kind) {
+    case 'fixed':
+      return room.roomLocal.control === undefined
+        ? Object.freeze([])
+        : rewardChildMarkers(room.roomLocal.control);
+    case 'incomingReward':
+      return rewardChildMarkers(room.roomLocal.control);
     case 'none':
     case 'fields':
     case 'ship':

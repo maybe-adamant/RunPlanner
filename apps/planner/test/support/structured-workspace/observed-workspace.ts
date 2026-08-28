@@ -178,6 +178,11 @@ function markersForNode(node: WorkspaceNode): readonly WorkspaceMarker[] {
     case 'occurrenceWorkbench':
       if (node.railMarker !== undefined) appendMarker(markers, node.railMarker);
       for (const marker of node.localDetailMarkers) appendMarker(markers, marker);
+      if (node.localVisit !== undefined) {
+        appendMarker(markers, node.localVisit.marker);
+        appendMarker(markers, node.localVisit.orderMarker);
+        for (const local of node.localVisit.slots) appendMarker(markers, local.marker);
+      }
       for (const local of node.localVisit?.slots ?? []) {
         if (local.generation === 'generated') appendDoorRewardMarkers(markers, local.door);
       }

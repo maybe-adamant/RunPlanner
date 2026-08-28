@@ -279,6 +279,42 @@ function projectHubRailEntry(
       );
     }
     const mainReward = mainRailRewardForDoor(visit.door);
+    const localVisit = workbench.localVisit;
+    const sideVisits = Object.freeze(
+      localVisit === undefined
+        ? []
+        : localVisit.visitOrder.flatMap((occurrenceId) => {
+            const slot = localVisit.slots.find(
+              (candidate) => candidate.occurrenceId === occurrenceId,
+            );
+            if (slot === undefined) {
+              throw new StructuredWorkspaceProjectionContractError(
+                `Hub visit ${visit.visitIndex} side occurrence ${occurrenceId} is not a local slot`,
+              );
+            }
+            if (slot.generation !== 'generated' || !slot.entered) return [];
+            const sideNode = workbenchesByOccurrenceId.get(slot.occurrenceId);
+            if (sideNode === undefined) {
+              throw new StructuredWorkspaceProjectionContractError(
+                `Hub visit ${visit.visitIndex} side occurrence ${slot.occurrenceId} is not projected`,
+              );
+            }
+            if (sideNode.inspectorPresentation !== 'doorTarget') {
+              throw new StructuredWorkspaceProjectionContractError(
+                `Hub visit ${visit.visitIndex} side occurrence ${slot.occurrenceId} is not a side workbench`,
+              );
+            }
+            return [
+              Object.freeze({
+                key: `${node.key}:visit:${visit.visitIndex}:side:${slot.key}`,
+                label: `Side ${slot.enteredOrdinal ?? 1} · ${slot.label}`,
+                marker: sideNode.room.marker,
+                node: sideNode,
+                visitMarker: slot.marker,
+              }),
+            ];
+          }),
+    );
     visits.push(
       Object.freeze({
         key: `${node.key}:visit:${visit.visitIndex}`,
@@ -286,6 +322,7 @@ function projectHubRailEntry(
         ...(mainReward === undefined ? {} : { mainReward }),
         marker: workbench.room.marker,
         node: workbench,
+        sideVisits,
         visitIndex: visit.visitIndex,
         visitMarker: visit.marker,
       }),

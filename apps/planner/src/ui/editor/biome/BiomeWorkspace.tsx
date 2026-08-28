@@ -252,6 +252,30 @@ function HubRailVisit({
         </span>
         {visit.mainReward === undefined ? null : <RailMainReward reward={visit.mainReward} />}
       </FocusButton>
+      {visit.sideVisits.length === 0 ? null : (
+        <ol aria-label={`${visit.label} side rooms`} className="biome-hub-rail-side-visits">
+          {visit.sideVisits.map((sideVisit) => {
+            const sideSelected = selectedRailKey === sideVisit.marker.focusKey;
+            return (
+              <li className="biome-hub-rail-side-visit" key={sideVisit.key}>
+                <FocusButton
+                  marker={sideVisit.marker}
+                  presentationMarker={sideVisit.visitMarker}
+                  selected={sideSelected}
+                >
+                  <span className="biome-rail-heading">
+                    <strong>{sideVisit.label}</strong>
+                    <span className="biome-rail-status">
+                      {assessmentLabel(sideVisit.visitMarker)}
+                      <FindingCount count={sideVisit.visitMarker.findingCount} label="findings" />
+                    </span>
+                  </span>
+                </FocusButton>
+              </li>
+            );
+          })}
+        </ol>
+      )}
     </li>
   );
 }

@@ -2703,8 +2703,19 @@ export interface WorkspaceHubVisitRailEntry {
   readonly mainReward?: WorkspaceRailReward;
   readonly marker: WorkspaceMarker;
   readonly node: WorkspaceOccurrenceWorkbenchNode;
+  /** Entered local occurrences owned by this main Hub visit. */
+  readonly sideVisits: readonly WorkspaceHubSideVisitRailEntry[];
   readonly visitMarker: WorkspaceMarker;
   readonly visitIndex: number;
+}
+
+export interface WorkspaceHubSideVisitRailEntry {
+  readonly key: string;
+  readonly label: string;
+  readonly marker: WorkspaceMarker;
+  readonly node: WorkspaceOccurrenceWorkbenchNode;
+  /** Parent-local slot marker retained for assessment and finding display. */
+  readonly visitMarker: WorkspaceMarker;
 }
 
 export interface WorkspaceHubRailEntry {

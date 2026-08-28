@@ -45,7 +45,10 @@ import type {
   WorkspaceHubInteractionRequirement,
   WorkspaceOccurrenceInteractionRequirement,
 } from '../interactions/interaction-requirements';
-import { workspaceHubMainRewardMarkers } from '../navigation/marker-ownership';
+import {
+  workspaceHubMainRewardAcquisitionMarkers,
+  workspaceHubMainRewardMarkers,
+} from '../navigation/marker-ownership';
 import type { WorkspaceMarkerDestinationEmitter } from '../navigation/marker-builder';
 import type { WorkspaceOccurrenceAssembler } from './occurrence-assembly';
 import type { WorkspaceBiomeSource } from '../source-index';
@@ -183,6 +186,7 @@ function projectHubNode(
     sourceOccurrence: RoomOccurrence,
     target: ProjectedHubTarget,
     detailsActive: boolean,
+    parentWorkbenchKey: string,
   ) => {
     const sourceRoom = requireWorkspaceRoom(catalog, sourceOccurrence.gameName);
     const group = sourceRoom.localChildren.find((child) => child.kind === 'fixedRoomSlots');
@@ -284,6 +288,14 @@ function projectHubNode(
           railMarker: descriptor.marker,
           railVisibility: 'inspectorOnly' as const,
         });
+        const sideRewardMarkers = workspaceHubMainRewardMarkers(workbench.room);
+        markerDestinations.redirect(sideRewardMarkers, parentWorkbenchKey);
+        markerDestinations.setRoomTab(sideRewardMarkers, 'overview');
+        markerDestinations.setRoomTab([workbench.room.marker], 'actions');
+        markerDestinations.setRoomTab(
+          workspaceHubMainRewardAcquisitionMarkers(workbench.room),
+          'actions',
+        );
         workbenches.push(workbench);
         return Object.freeze({
           ...descriptor,
@@ -357,7 +369,7 @@ function projectHubNode(
     const localVisit =
       occurrence === undefined || target === undefined
         ? undefined
-        : projectLocalVisit(occurrence, target, detailsActive);
+        : projectLocalVisit(occurrence, target, detailsActive, occurrenceNode!.key);
     const door =
       occurrenceNode === undefined
         ? undefined
@@ -394,6 +406,9 @@ function projectHubNode(
         redirectHubMainRewardFocus(markerDestinations, hubMarker, mainReward);
       }
       markerDestinations.setHubTab(mainRewards, 'overview');
+      const mainRewardAcquisition = workspaceHubMainRewardAcquisitionMarkers(workbench.room);
+      markerDestinations.redirect(mainRewardAcquisition, workbench.key);
+      markerDestinations.setRoomTab(mainRewardAcquisition, 'actions');
     }
     slotRequirements.push(
       target === undefined
@@ -543,20 +558,32 @@ function projectHubNode(
     Object.freeze([
       node.marker,
       node.openSet,
-      ...node.slots.flatMap((slot) => [
-        slot.marker,
-        ...(slot.localVisit === undefined
-          ? []
-          : [
-              slot.localVisit.marker,
-              slot.localVisit.orderMarker,
-              ...slot.localVisit.slots.map((local) => local.marker),
-            ]),
-      ]),
+      ...node.slots.map((slot) => slot.marker),
       ...node.visits.map((visit) => visit.marker),
     ]),
     node.key,
   );
+  for (const slot of node.slots) {
+    if (slot.localVisit === undefined || slot.room === undefined) continue;
+    const parentWorkbench = workbenches.find(
+      (workbench) => workbench.room.occurrenceId === slot.room!.occurrenceId,
+    );
+    if (parentWorkbench === undefined) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${semanticAddressKey(slot.room.address)} has no Hub room workbench for local visits`,
+      );
+    }
+    const localVisitMarkers = [
+      slot.localVisit.marker,
+      slot.localVisit.orderMarker,
+      ...slot.localVisit.slots.flatMap((local) => {
+        if (local.generation !== 'generated') return [local.marker];
+        return [local.marker, ...workspaceHubMainRewardMarkers(local.room)];
+      }),
+    ];
+    markerDestinations.redirect(localVisitMarkers, parentWorkbench.key);
+    markerDestinations.setRoomTab(localVisitMarkers, 'overview');
+  }
   markerDestinations.setHubTab(
     Object.freeze([node.marker, node.openSet, ...node.slots.map((slot) => slot.marker)]),
     'overview',

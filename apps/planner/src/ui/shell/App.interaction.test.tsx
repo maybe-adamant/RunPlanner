@@ -671,6 +671,74 @@ describe('planner history interaction', () => {
     expect(restoredInteraction.value.selectedOptionKey).toBe('option2');
   });
 
+  it('keeps a Hub main-visit trait editor on its occurrence Timeline after dismissal', async () => {
+    const application = createApplication();
+    application.store.dispatch(authoredProjectReplaced(loadSurfaceNOPQProject()));
+    application.store.dispatch(
+      routePanelSelected({ routeKey: 'Surface', panel: { kind: 'biome', biomeKey: 'N' } }),
+    );
+    const workspace = application.selectStructuredWorkspace(application.store.getState());
+    const n = workspace.routes
+      .find((route) => route.routeKey === 'Surface')
+      ?.biomes.find((biome) => biome.biomeKey === 'N');
+    const hub = n?.rail.find(
+      (entry): entry is Extract<(typeof n.rail)[number], { readonly kind: 'hubGroup' }> =>
+        entry.kind === 'hubGroup',
+    );
+    const visit = hub?.visits.find((candidate) =>
+      candidate.node.room.rewardControls.some((control) =>
+        control.traitOffers?.some((trait) => trait.address.owner.kind === 'incomingReward'),
+      ),
+    );
+    if (hub === undefined || visit === undefined) {
+      throw new Error('N Hub main visit with an incoming-reward trait is missing');
+    }
+    const trait = visit.node.room.rewardControls
+      .flatMap((control) => control.traitOffers ?? [])
+      .find((candidate) => candidate.address.owner.kind === 'incomingReward');
+    if (trait === undefined) throw new Error('N Hub main-visit trait control is missing');
+
+    const view = renderPlannerForInteraction({ application });
+    const hubRailButton = view.container.querySelector<HTMLButtonElement>(
+      '[data-kind="hubDecision"] > button',
+    );
+    if (hubRailButton === null) throw new Error('N Hub rail button is missing');
+    await view.user.click(hubRailButton);
+    await view.user.click(
+      screen.getByRole('button', {
+        name: new RegExp(`^Visit ${visit.visitIndex} · ${visit.node.room.label}`),
+      }),
+    );
+    await view.user.click(screen.getByRole('tab', { name: 'Room Timeline' }));
+
+    const mainOccurrence = visit.node.room.marker.address;
+    expect(application.store.getState().editorSession.focusedSemanticOwner).toEqual(mainOccurrence);
+    const actions = screen.getByRole('region', { name: 'Room Timeline' });
+    const traitLauncher = document.getElementById(
+      `trait-launcher-${semanticAddressKey(trait.address)}`,
+    );
+    if (!(traitLauncher instanceof HTMLButtonElement)) {
+      throw new Error('N Hub main-visit trait launcher is missing from its Timeline');
+    }
+    expect(actions.contains(traitLauncher)).toBe(true);
+    await view.user.click(traitLauncher);
+    const dialog = await screen.findByRole('dialog');
+    await view.user.click(within(dialog).getByRole('button', { name: 'Close trait offer' }));
+
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(application.store.getState().editorSession.focusedSemanticOwner).toEqual(trait.address);
+    expect(
+      screen.getByRole('heading', { level: 3, name: `Entering ${visit.node.room.label}` }),
+    ).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Room Timeline' }).getAttribute('aria-selected')).toBe(
+      'true',
+    );
+    const selectedVisitRail = Array.from(
+      view.container.querySelectorAll<HTMLButtonElement>('[data-workspace-node]'),
+    ).find((button) => button.dataset.workspaceNode === visit.marker.focusKey);
+    expect(selectedVisitRail?.dataset.selected).toBe('true');
+  });
+
   it('navigates a resource index row to its exact selected room without authoring history', async () => {
     const application = createApplication();
     application.store.dispatch(authoredProjectReplaced(loadSurfaceNResourcesProject()));
