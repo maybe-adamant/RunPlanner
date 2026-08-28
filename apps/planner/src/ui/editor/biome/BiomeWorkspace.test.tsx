@@ -1043,7 +1043,7 @@ describe('BiomeWorkspace', () => {
         name: `Entering ${first.room.label}`,
       }),
     ).toBeTruthy();
-    expect(within(firstNodeInspector).getByRole('region', { name: 'Keepsake Rack' })).toBeTruthy();
+    expect(within(firstNodeInspector).queryByRole('region', { name: 'Keepsake Rack' })).toBeNull();
     expect(
       within(firstNodeInspector).queryByText('This room is added automatically after the biome.'),
     ).toBeNull();

@@ -30,6 +30,8 @@ interface OccurrenceWorkbenchProps {
   readonly renderRoomActionRowContent?: (row: WorkspaceRoomActions['rows'][number]) => ReactNode;
   /** Exact room-owned additions to ordinary lifecycle boundaries. */
   readonly renderLifecycleBoundaryContent?: (boundary: WorkspaceRoomLifecycleBoundary) => ReactNode;
+  /** Exact room-owned optional interaction shown before its authored action exists. */
+  readonly renderOptionalRoomActionContent?: () => ReactNode;
 }
 
 /** A room-local editor that consumes the structured workspace only. */
@@ -42,6 +44,7 @@ export function OccurrenceWorkbench({
   room,
   renderRoomActionRowContent,
   renderLifecycleBoundaryContent,
+  renderOptionalRoomActionContent,
   renderRoomOverviewContent,
   runState,
 }: OccurrenceWorkbenchProps) {
@@ -225,6 +228,9 @@ export function OccurrenceWorkbench({
             {...(renderLifecycleBoundaryContent === undefined
               ? {}
               : { renderLifecycleBoundaryContent })}
+            {...(renderOptionalRoomActionContent === undefined
+              ? {}
+              : { renderOptionalRoomActionContent })}
             view="actions"
           />
         )}

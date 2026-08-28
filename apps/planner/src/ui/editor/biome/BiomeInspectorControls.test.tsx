@@ -56,7 +56,9 @@ import {
   goldenFBiome,
   goldenFOccurrenceId,
   goldenFStartId,
+  loadUnderworldFGProject,
 } from '@run-planner/test-fixtures/underworld';
+import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 import { BiomeWorkspace } from './BiomeWorkspace';
 import {
   renderWorkspace,
@@ -477,7 +479,9 @@ describe('Biome inspector controls', () => {
       createOccurrenceAddress(nBiome, createOccurrenceId('completion:N:postboss')),
     );
     act(() => view.application.store.dispatch(semanticOwnerFocused(owner)));
-    const rack = screen.getByRole('region', { name: 'Keepsake Rack' });
+    const timeline = screen.getByRole('region', { name: 'Room Timeline' });
+    const optional = within(timeline).getByRole('region', { name: 'Optional actions' });
+    const rack = within(optional).getByRole('listitem', { name: 'Keepsake Rack' });
     const selector = within(rack).getByRole('button', { name: 'Keepsake' });
     fireEvent.click(selector);
     const keepsakeList = screen.getByRole('listbox');
@@ -499,12 +503,42 @@ describe('Biome inspector controls', () => {
           (occurrence) => occurrence.occurrenceId === createOccurrenceId('completion:N:postboss'),
         )?.keepsakeRack,
     ).toEqual({ keepsakeKey: 'BossPreDamageKeepsake' });
-    const timeline = screen.getByRole('region', { name: 'Room Timeline' });
     await waitFor(() =>
       expect(
         within(timeline).getByRole('button', { name: 'Move Choose keepsake earlier' }),
       ).toBeTruthy(),
     );
+    expect(
+      within(timeline).getByText('Choose keepsake').closest('[data-in-order="true"]'),
+    ).not.toBeNull();
+    expect(within(timeline).queryByRole('listitem', { name: 'Keepsake Rack' })).toBeNull();
+    const orderBeforeChange = view.application.store
+      .getState()
+      .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
+      ?.biomes.find((biome) => biome.biomeKey === 'N')
+      ?.completionOccurrences.find(
+        (occurrence) => occurrence.occurrenceId === createOccurrenceId('completion:N:postboss'),
+      )?.roomActions.order;
+    fireEvent.click(within(timeline).getByRole('button', { name: 'Keepsake' }));
+    fireEvent.click(within(screen.getByRole('listbox')).getByText('Evil Eye'));
+    expect(
+      view.application.store
+        .getState()
+        .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
+        ?.biomes.find((biome) => biome.biomeKey === 'N')
+        ?.completionOccurrences.find(
+          (occurrence) => occurrence.occurrenceId === createOccurrenceId('completion:N:postboss'),
+        )?.roomActions.order,
+    ).toEqual(orderBeforeChange);
+    expect(
+      view.application.store
+        .getState()
+        .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
+        ?.biomes.find((biome) => biome.biomeKey === 'N')
+        ?.completionOccurrences.find(
+          (occurrence) => occurrence.occurrenceId === createOccurrenceId('completion:N:postboss'),
+        )?.keepsakeRack,
+    ).toEqual({ keepsakeKey: 'DeathVengeanceKeepsake' });
     fireEvent.click(within(timeline).getByRole('button', { name: 'Delete keepsake change' }));
     expect(
       view.application.store
@@ -515,5 +549,66 @@ describe('Biome inspector controls', () => {
           (occurrence) => occurrence.occurrenceId === createOccurrenceId('completion:N:postboss'),
         )?.keepsakeRack,
     ).toBeUndefined();
+    expect(
+      within(timeline)
+        .getByRole('region', { name: 'Optional actions' })
+        .querySelector('[aria-label="Keepsake Rack"]'),
+    ).not.toBeNull();
+    fireEvent.click(screen.getByRole('tab', { name: 'Room Overview' }));
+    expect(screen.queryByRole('region', { name: 'Keepsake Rack' })).toBeNull();
+    expect(screen.queryByRole('listitem', { name: 'Keepsake Rack' })).toBeNull();
+  });
+
+  it('publishes the Aromatic Phial target after adding the optional rack before the fountain', async () => {
+    const view = renderWorkspace(
+      authorLegalTraitOffers(loadUnderworldFGProject()),
+      'Underworld',
+      'F',
+    );
+    const postbossId = createOccurrenceId('completion:F:postboss');
+    const owner = createPostbossKeepsakeSelectionAddress(
+      createOccurrenceAddress(goldenFBiome, postbossId),
+    );
+    act(() => view.application.store.dispatch(semanticOwnerFocused(owner)));
+    const timeline = screen.getByRole('region', { name: 'Room Timeline' });
+    const optionalRack = within(
+      within(timeline).getByRole('region', { name: 'Optional actions' }),
+    ).getByRole('listitem', { name: 'Keepsake Rack' });
+    fireEvent.click(within(optionalRack).getByRole('button', { name: 'Keepsake' }));
+    const keepsakes = screen.getByRole('listbox');
+    await waitFor(() =>
+      expect(
+        within(keepsakes)
+          .getByText('Aromatic Phial')
+          .closest('[cmdk-item]')
+          ?.getAttribute('data-candidate-state'),
+      ).toBe('possible'),
+    );
+    fireEvent.click(within(keepsakes).getByText('Aromatic Phial'));
+    fireEvent.click(
+      await within(timeline).findByRole('button', { name: 'Move Choose keepsake earlier' }),
+    );
+
+    const phialTarget = await within(timeline).findByLabelText('Aromatic Phial target');
+    fireEvent.click(phialTarget);
+    const target = within(await screen.findByRole('listbox'))
+      .getAllByRole('option')
+      .find(
+        (option) =>
+          option.textContent?.trim() !== 'Unresolved' &&
+          option.getAttribute('data-disabled') !== 'true',
+      );
+    if (target === undefined) throw new Error('Aromatic Phial has no eligible Postboss target');
+    fireEvent.click(target);
+    await waitFor(() =>
+      expect(
+        view.application.store
+          .getState()
+          .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
+          ?.biomes.find((biome) => biome.biomeKey === 'F')
+          ?.completionOccurrences.find((occurrence) => occurrence.occurrenceId === postbossId)
+          ?.fountainRarityResult?.targetTraitKey,
+      ).toBeTruthy(),
+    );
   });
 });

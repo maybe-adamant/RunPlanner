@@ -290,6 +290,31 @@ export function inspectorRoomActionContent(
     <KeepsakeRackTimelineContent interactions={interactions} selection={room.keepsakeSelection} />
   );
 }
+export function inspectorOptionalRoomActionContent(
+  room: WorkspaceRoomSummary,
+  interactions: WorkspaceInteractionCatalog,
+): ReactNode {
+  const selection = room.keepsakeSelection;
+  if (selection === undefined || selection.selectedKeepsakeKey !== undefined) return null;
+  const interaction = interactions.keepsakeSelections.get(
+    workspaceInteractionKey(selection.address),
+  );
+  if (interaction === undefined) return null;
+  return (
+    <li aria-label="Keepsake Rack" className="hub-open-room-card room-action-row">
+      <div className="owner-markers room-action-identity">
+        <span aria-hidden="true" className="hub-roster-rank">
+          —
+        </span>
+        <strong>Keepsake Rack</strong>
+        <SemanticOwnerMarker address={selection.address} />
+      </div>
+      <div className="hub-rank-actions room-action-controls">
+        <PostbossKeepsakeControl interaction={interaction} />
+      </div>
+    </li>
+  );
+}
 export function inspectorLifecycleBoundaryContent(
   room: WorkspaceRoomSummary,
   interactions: WorkspaceInteractionCatalog,
@@ -314,23 +339,7 @@ export function InspectorRoomOverviewContent({
   readonly room: WorkspaceRoomSummary;
   readonly interactions: WorkspaceInteractionCatalog;
 }) {
-  const hasTimelineAction = room.roomActions?.rows.some(
-    (row) => row.reference.kind === 'interactKeepsakeRack',
-  );
-  return (
-    <>
-      <RoomResourceControls interactions={interactions} room={room} />
-      {room.keepsakeSelection === undefined || hasTimelineAction ? null : (
-        <section aria-label="Keepsake Rack" className="room-keepsake-rack">
-          <h4>Keepsake Rack</h4>
-          <KeepsakeRackTimelineContent
-            interactions={interactions}
-            selection={room.keepsakeSelection}
-          />
-        </section>
-      )}
-    </>
-  );
+  return <RoomResourceControls interactions={interactions} room={room} />;
 }
 export function EchoKeepsakeReplayControl({
   interactions,

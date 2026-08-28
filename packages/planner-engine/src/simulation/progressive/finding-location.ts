@@ -100,6 +100,7 @@ export function derivedAcquisitionEntryAncestor(
 
 export function occurrenceOwnerAddress(address: SemanticAddress): OccurrenceAddress | undefined {
   if (address.kind === 'occurrence') return address;
+  if (address.kind === 'fountainRarityOutcome') return occurrenceOwnerAddress(address.action);
   if (address.kind === 'steadyGrowthOutcome') {
     return address.owner.kind === 'occurrence' ? address.owner : undefined;
   }
@@ -290,6 +291,7 @@ export function findingOwnerOrigin(finding: SemanticFinding): SemanticAddress {
 }
 
 export function ownsOccurrence(origin: SemanticAddress, occurrenceId: string): boolean {
+  if (origin.kind === 'fountainRarityOutcome') return ownsOccurrence(origin.action, occurrenceId);
   if (
     origin.kind === 'traitOffer' ||
     origin.kind === 'naturalSelectionResult' ||
@@ -601,7 +603,12 @@ export function locateFinding(
   // Automatic Boss/Postboss occurrences are real lifecycle owners but are not
   // ordinary topology decisions. Occurrence-local feature findings belong to
   // the completed biome's final automatic-room region.
-  const automaticOccurrence = finding.origin.kind === 'occurrence' ? finding.origin : undefined;
+  const automaticOccurrence =
+    finding.origin.kind === 'occurrence'
+      ? finding.origin
+      : finding.origin.kind === 'fountainRarityOutcome'
+        ? occurrenceOwnerAddress(finding.origin)
+        : undefined;
   if (
     automaticOccurrence !== undefined &&
     automaticOccurrence.routeKey === prefix.routeKey &&
