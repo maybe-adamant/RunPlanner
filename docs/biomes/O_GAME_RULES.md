@@ -75,6 +75,31 @@ policy, not a duplicated store choice. Non-ShipCombat O sources retain the
 ordinary authored base-store choice where their room-start selection is
 otherwise observable.
 
+### Outgoing-store consequences
+
+The source-owned outgoing store is not uniformly the target's visible reward.
+The selected target declaration decides whether the inherited store is
+consumed for an ordinary reward, overridden by a forced store, discarded, or
+retained solely as entered-store provenance:
+
+| Selected O target | Incoming reward and outgoing-store consequence                                                                                                     |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ShipCombat        | No incoming reward; the inherited store is discarded.                                                                                              |
+| Miniboss          | Fixed Boon from forced RunProgress; the inherited store is overridden.                                                                             |
+| Devotion          | Fixed Devotion from forced RunProgress; the inherited store is overridden.                                                                         |
+| Reprieve          | The ordinary reward is drawn from the inherited RunProgress or MetaProgress store.                                                                 |
+| Story             | The reward is fixed Story; the inherited RunProgress or MetaProgress store is retained as entered-store provenance.                                |
+| Midshop           | The reward is fixed Shop; the inherited RunProgress or MetaProgress store is retained as entered-store provenance.                                 |
+| Preboss Shop      | The reward is fixed Shop; the inherited RunProgress or MetaProgress store is retained as entered-store provenance through the completion boundary. |
+
+Entered-store provenance is materially distinct from bag consumption. A fixed
+Story or Shop that has both `ChosenRewardType` and `RewardStoreName` contributes
+to `CalcRoomRewardStores`, so the resulting ratio and O adjustment speed may
+force a later outgoing store. A discarded ShipCombat target store records
+nothing. The planner therefore retains the declaration-owned producer and
+history semantics rather than treating every outgoing store as a generated
+reward bag.
+
 ### Candidate families and declaration-fixed completion
 
 O combat declarations retain three game-data families: the ordinary recent

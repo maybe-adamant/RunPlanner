@@ -228,6 +228,38 @@ clears the complete owned subtree. Run State history records only the starting
 equip and real replacements, with each entry carrying its actual effective
 biome so skipped racks do not collapse chronology labels.
 
+### O reward presentation closure
+
+The 2026-08-28 O reward-presentation work, delivered in commits `13f525b7` and
+`adb54f49`, keeps existing O catalog, authored, lifecycle, candidate, and
+simulation behavior intact while clarifying its two store-bearing editor
+surfaces. Target cards now receive one application-projected outgoing-store
+consequence: ShipCombat discards its inherited store, Miniboss and Devotion
+show their forced RunProgress rewards, Reprieve draws its ordinary reward from
+the resolved store, and fixed Story/Shop targets distinguish entered-store
+provenance from reward-bag consumption. A non-Ship source exposes its single
+editable `Next store roll`; a Ship source retains the final active wheel as its
+only editable outgoing-store authority.
+
+Each active O reward wheel now presents its one or two simultaneous offers as
+bounded cards within that wheel's existing phase. Two offers are equal sibling
+columns that collapse in a narrow container, dormant offers retain their
+authored values, and the Timeline remains the only interactive owner of
+`Picked offer`. The cards neither become exits nor acquire topology controls.
+
+Gate A focused Vitest passed `decision-assembly.test.ts` and
+`DecisionWorkbench.test.tsx` (2 files, 56 tests), alongside full workspace and
+fixture typechecking plus changed-file ESLint, Prettier, and diff checks. Gate
+B `npm run test:ui` passed 30 files and 287 tests; typechecking, production
+build, lint, format checking, and diff checks also passed. After review
+remediation, `ORewardWheelLayoutContract.test.ts` and changed-file lint,
+Prettier, and diff checks passed; production code was unchanged, so the full
+UI lane was not rerun. The complete repository closure gate then passed:
+typechecking; fixture integrity (3 files and 20 tests); correctness (256 files
+and 2,537 tests); performance-policy coverage (17 tests); the relative
+performance comparison with every product target in bounds; lint; formatting;
+and the production build.
+
 ### Hub editor navigation and layout closure
 
 The 2026-08-28 Hub editor correction, delivered in commits `9af264cf` and
