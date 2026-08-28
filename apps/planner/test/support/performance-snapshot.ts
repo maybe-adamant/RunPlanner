@@ -24,24 +24,13 @@ import {
 } from '@run-planner/test-fixtures/underworld';
 import { loadSurfaceNOPQProject, nBiome } from '@run-planner/test-fixtures/surface';
 import { writeFileSync } from 'node:fs';
+import performanceSnapshotContract from './performance-snapshot-contract.json';
 
-export const performanceSnapshotFormat = 'run-planner-performance-v1';
-export const performanceSnapshotSampleCount = 3;
-export const performanceProductTargetsMs = Object.freeze({
-  interaction: 1_000,
-  cachedUndo: 50,
-});
+export const performanceSnapshotFormat = performanceSnapshotContract.format;
+export const performanceSnapshotSampleCount = performanceSnapshotContract.sampleCount;
+export const performanceProductTargetsMs = Object.freeze(performanceSnapshotContract.targetsMs);
 
-export const performanceMetricNames = Object.freeze([
-  'underworld.fullRebuildMs',
-  'underworld.coldCandidateProjectionMs',
-  'underworld.representativeEditPublicationMs',
-  'underworld.cachedUndoPublicationMs',
-  'surface.fullRebuildMs',
-  'surface.coldCandidateProjectionMs',
-  'surface.representativeEditPublicationMs',
-  'surface.cachedUndoPublicationMs',
-] as const);
+export const performanceMetricNames = Object.freeze(performanceSnapshotContract.metrics);
 
 export type PerformanceMetricName = (typeof performanceMetricNames)[number];
 export type PerformanceRoute = 'underworld' | 'surface';

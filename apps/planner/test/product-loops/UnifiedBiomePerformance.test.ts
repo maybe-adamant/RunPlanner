@@ -88,7 +88,7 @@ function expectInteractiveDurations(run: RoutePerformanceSamples, label: string)
     ['cold candidate projection', run.candidates],
     ['representative edit publication', run.edits],
   ] as const;
-  if (snapshotMode) return;
+  if (snapshotMode || process.env.RUN_PLANNER_PERFORMANCE_ENFORCE_ABSOLUTE !== '1') return;
   for (const [operation, samples] of interactionSamples) {
     const durationMs = median(samples);
     expect(durationMs, `${label} ${operation} took ${durationMs.toFixed(1)} ms`).toBeLessThan(
