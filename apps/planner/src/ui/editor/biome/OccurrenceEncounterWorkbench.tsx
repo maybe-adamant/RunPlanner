@@ -473,25 +473,34 @@ export function RewardWheelWorkbench({
           }
         />
       </div>
-      <div className="reward-wheel-offers">
+      <div className="reward-wheel-offers" data-active-offer-count={wheel.offerCount}>
         {wheel.offers
           .filter((offer) => offer.active)
-          .map((offer) => (
-            <section aria-label={offer.label} className="local-reward-slot" key={offer.key}>
-              <div className="local-reward-heading">
-                <div className="owner-markers">
-                  <h6>{offer.label}</h6>
-                  <SemanticOwnerMarker address={offer.control.marker.address} />
+          .map((offer, index) => {
+            const picked = index + 1 === wheel.pickedOfferIndex;
+            return (
+              <section
+                aria-label={offer.label}
+                className="local-reward-slot reward-wheel-offer-card"
+                data-picked={picked || undefined}
+                key={offer.key}
+              >
+                <div className="local-reward-heading">
+                  <div className="owner-markers">
+                    <h6>{offer.label}</h6>
+                    <SemanticOwnerMarker address={offer.control.marker.address} />
+                  </div>
+                  {picked ? <span className="reward-wheel-picked-marker">Picked</span> : null}
                 </div>
-              </div>
-              <RewardControlEditor
-                control={offer.control}
-                idPrefix={`${idPrefix}-${offer.key}`}
-                interactions={interactions}
-                showAcquisitionChildren={false}
-              />
-            </section>
-          ))}
+                <RewardControlEditor
+                  control={offer.control}
+                  idPrefix={`${idPrefix}-${offer.key}`}
+                  interactions={interactions}
+                  showAcquisitionChildren={false}
+                />
+              </section>
+            );
+          })}
       </div>
     </section>
   );

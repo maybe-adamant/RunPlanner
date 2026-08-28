@@ -2754,8 +2754,7 @@ select {
   padding-top: 8px;
 }
 
-.ship-phase-list,
-.reward-wheel-offers {
+.ship-phase-list {
   display: grid;
   gap: 8px;
 }
@@ -2783,6 +2782,7 @@ select {
 }
 
 .reward-wheel {
+  container-type: inline-size;
   padding: 10px;
   border: 1px solid #3a3b45;
   border-radius: 10px;
@@ -2794,6 +2794,36 @@ select {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
   margin-bottom: 8px;
+}
+
+.reward-wheel-offers {
+  display: grid;
+  gap: 8px;
+}
+
+.reward-wheel-offers[data-active-offer-count='1'] {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.reward-wheel-offers[data-active-offer-count='2'] {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.reward-wheel-offer-card[data-picked='true'] {
+  border-color: #9f7ed1;
+  background: rgb(159 126 209 / 10%);
+}
+
+.reward-wheel-picked-marker {
+  color: #d6c1f2;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+@container (max-width: 34rem) {
+  .reward-wheel-offers[data-active-offer-count='2'] {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .local-reward-heading h5 {
