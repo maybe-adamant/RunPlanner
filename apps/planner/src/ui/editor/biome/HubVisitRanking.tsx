@@ -278,6 +278,7 @@ export function HubRoomOrderControls({
       aria-label={`Visit order controls for ${slot.label}; ${visitState}`}
       className="hub-rank-actions"
       data-visit-position={visitPosition === -1 ? undefined : visitPosition + 1}
+      data-hub-roster-region="reorder-controls"
       role="group"
     >
       <HubRankAction

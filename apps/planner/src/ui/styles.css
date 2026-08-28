@@ -2829,7 +2829,7 @@ select {
 
 .hub-overview-room-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   align-items: stretch;
   gap: 8px;
   padding: 12px;
@@ -3021,7 +3021,7 @@ select {
 
 .hub-roster-primary {
   display: grid;
-  grid-template-columns: 28px 26px minmax(0, 1fr) auto auto;
+  grid-template-columns: 28px 26px minmax(10rem, 2fr) minmax(10rem, 1.35fr) minmax(7rem, auto) auto;
   align-items: start;
   gap: 8px;
 }
@@ -3070,18 +3070,11 @@ select {
 }
 
 .hub-roster-identity {
-  display: flex;
+  display: grid;
   min-width: 0;
   min-block-size: 32px;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 4px 8px;
-}
-
-.hub-roster-identity > .hub-slot-heading,
-.hub-roster-identity > .hub-slot-heading > .owner-markers,
-.hub-roster-identity > .hub-slot-meta {
-  display: contents;
+  align-content: start;
+  gap: 4px;
 }
 
 .hub-roster-identity .hub-slot-heading h3 {
@@ -3095,6 +3088,33 @@ select {
   align-items: center;
   gap: 8px;
   margin-top: 7px;
+}
+
+.hub-roster-visit-meta,
+.hub-roster-details {
+  margin-top: 0;
+}
+
+.hub-roster-visit-meta {
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+}
+
+.hub-roster-details {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  justify-content: flex-start;
+}
+
+.hub-roster-details .semantic-focus-link {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.hub-roster-details-placeholder {
+  display: block;
+  min-block-size: 28px;
 }
 
 .hub-slot-state {
@@ -3524,13 +3544,13 @@ select {
   font-size: 1rem;
 }
 
-@container (max-width: 620px) {
+@container (max-width: 760px) {
   .hub-overview-room-grid {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .hub-roster-primary {
-    grid-template-columns: 28px 24px minmax(0, 1fr) auto;
+    grid-template-columns: 28px 24px minmax(0, 1fr) minmax(8rem, 1fr) auto auto;
   }
 
   .hub-roster-primary > .hub-membership-action {
@@ -3549,10 +3569,69 @@ select {
     grid-row: auto;
   }
 
-  .hub-roster-primary > .hub-rank-actions {
+  .hub-open-room-card[data-hub-card-presentation='timeline'] .hub-roster-primary {
+    grid-template-columns: 28px 24px minmax(0, 1fr) auto;
+  }
+
+  .hub-open-room-card[data-hub-card-presentation='timeline']
+    .hub-roster-primary
+    > .hub-roster-visit-meta {
     grid-column: 3 / -1;
     grid-row: 2;
+  }
+
+  .hub-open-room-card[data-hub-card-presentation='timeline']
+    .hub-roster-primary
+    > .hub-roster-details {
+    grid-column: 3;
+    grid-row: 3;
+  }
+
+  .hub-open-room-card[data-hub-card-presentation='timeline']
+    .hub-roster-primary
+    > .hub-rank-actions {
+    grid-column: 4;
+    grid-row: 3;
     justify-self: start;
+  }
+}
+
+@container (max-width: 560px) {
+  .hub-overview-room-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .hub-open-room-card[data-hub-card-presentation='timeline'] .hub-roster-primary {
+    grid-template-columns: 28px minmax(0, 1fr);
+  }
+
+  .hub-open-room-card[data-hub-card-presentation='timeline']
+    .hub-roster-primary
+    > .hub-roster-identity {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .hub-open-room-card[data-hub-card-presentation='timeline']
+    .hub-roster-primary
+    > .hub-roster-visit-meta {
+    grid-column: 1 / -1;
+    grid-row: 3;
+  }
+
+  .hub-open-room-card[data-hub-card-presentation='timeline']
+    .hub-roster-primary
+    > .hub-roster-details {
+    grid-column: 1 / -1;
+    grid-row: 4;
+  }
+
+  .hub-open-room-card[data-hub-card-presentation='timeline']
+    .hub-roster-primary
+    > .hub-rank-actions {
+    grid-column: 1 / -1;
+    grid-row: 5;
+    justify-self: end;
   }
 }
 
