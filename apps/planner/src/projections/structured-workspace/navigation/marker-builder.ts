@@ -22,6 +22,8 @@ export interface WorkspaceMarkerDestinationEmitter {
   marker(address: SemanticAddress, nodeKey?: string): WorkspaceMarker;
   redirect(markers: Iterable<WorkspaceMarker>, nodeKey: string): void;
   redirectTo(marker: WorkspaceMarker, focus: WorkspaceMarker, nodeKey: string): void;
+  /** Route a nested finding to a visible containing control without opening its leaf dialog. */
+  redirectToContext(marker: WorkspaceMarker, focus: WorkspaceMarker, nodeKey: string): void;
   setHubTab(markers: Iterable<WorkspaceMarker>, tab: WorkspaceHubTab): void;
   setRoomTab(markers: Iterable<WorkspaceMarker>, tab: WorkspaceRoomTab): void;
 }
@@ -107,6 +109,29 @@ export function createWorkspaceBiomeMarkerDestinationBuilder(
         marker.focusKey,
         Object.freeze({
           ...existing,
+          biomeKey: input.biome.biomeKey,
+          focusAddress: focus.address,
+          focusKey: focus.focusKey,
+          nodeKey,
+          ownerAddress: marker.address,
+          region: 'structure',
+          routeKey: input.routeKey,
+        }),
+      );
+    },
+    redirectToContext(marker: WorkspaceMarker, focus: WorkspaceMarker, nodeKey: string): void {
+      const existing = requireRegistered(marker);
+      const {
+        levelResolutionDialogTarget: _levelResolutionDialogTarget,
+        traitDialogTarget: _traitDialogTarget,
+        ...context
+      } = existing;
+      void _levelResolutionDialogTarget;
+      void _traitDialogTarget;
+      destinations.set(
+        marker.focusKey,
+        Object.freeze({
+          ...context,
           biomeKey: input.biome.biomeKey,
           focusAddress: focus.address,
           focusKey: focus.focusKey,

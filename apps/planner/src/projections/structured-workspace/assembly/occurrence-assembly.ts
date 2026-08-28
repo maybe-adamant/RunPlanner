@@ -56,6 +56,7 @@ import {
   assembleOccurrenceActions,
   roomTabForPhase,
   rewardChildMarkers,
+  traitOfferMarkers,
 } from './occurrence-actions-assembly';
 import { assembleOccurrenceFeatures } from './occurrence-features-assembly';
 import { occurrenceInteractionRequirements } from './occurrence-interaction-requirements';
@@ -507,6 +508,16 @@ export function assembleWorkspaceOccurrence(
       ),
     );
     for (const row of roomActions.rows) {
+      const acquisitionMarkers = Object.freeze([
+        ...(row.traitOffer === undefined ? [] : traitOfferMarkers(row.traitOffer)),
+        ...(row.rewardPayload === undefined ? [] : rewardChildMarkers(row.rewardPayload.control)),
+        ...(row.artificerOutput === undefined
+          ? []
+          : rewardChildMarkers(row.artificerOutput.control)),
+      ]);
+      for (const marker of acquisitionMarkers) {
+        input.markerDestinations.redirectToContext(marker, row.marker, node.key);
+      }
       const unavailableAcquisitionMarkers = (() => {
         if (
           row.rewardPayload !== undefined ||
@@ -554,9 +565,8 @@ export function assembleWorkspaceOccurrence(
       input.markerDestinations.setRoomTab(
         [
           row.marker,
-          ...(row.rewardPayload === undefined
-            ? []
-            : [row.rewardPayload.control.marker, ...rewardChildMarkers(row.rewardPayload.control)]),
+          ...(row.rewardPayload === undefined ? [] : [row.rewardPayload.control.marker]),
+          ...acquisitionMarkers,
           ...unavailableAcquisitionMarkers,
         ],
         tab,

@@ -8,10 +8,14 @@ import type { Catalog } from '@run-planner/engine/catalog-schema';
 import type { RunStateOwner } from '@run-planner/engine/simulation';
 
 export interface FindingSelection {
+  /** Presentation-resolved visible control that receives navigation focus. */
+  readonly focusAddress?: SemanticAddress;
   readonly key: string;
   readonly origin: SemanticAddress;
   /** Projection-resolved containing dialog for a fine-grained finding. */
-  readonly traitDialogTarget?: TraitOfferAddress;
+  readonly traitDialogTarget?: TraitOfferAddress | null;
+  /** Projection-resolved containing Pom dialog for a fine-grained finding. */
+  readonly levelResolutionDialogTarget?: LevelResolutionAddress | null;
 }
 
 /** Transient navigation references invalidated by one workspace publication. */
@@ -134,20 +138,28 @@ const editorSessionSlice = createSlice({
     },
     findingSelected(state, action: PayloadAction<FindingSelection>) {
       state.selectedFinding = action.payload;
-      state.focusedSemanticOwner = action.payload.origin;
+      const focusAddress = action.payload.focusAddress ?? action.payload.origin;
+      state.focusedSemanticOwner = focusAddress;
       state.semanticNavigationRevision += 1;
       state.traitDialogTarget =
-        action.payload.traitDialogTarget ??
-        (action.payload.origin.kind === 'traitOffer' ? action.payload.origin : null);
+        action.payload.traitDialogTarget === undefined
+          ? action.payload.origin.kind === 'traitOffer'
+            ? action.payload.origin
+            : null
+          : action.payload.traitDialogTarget;
       state.levelResolutionDialogTarget =
-        action.payload.origin.kind === 'levelResolution' ? action.payload.origin : null;
+        action.payload.levelResolutionDialogTarget === undefined
+          ? action.payload.origin.kind === 'levelResolution'
+            ? action.payload.origin
+            : null
+          : action.payload.levelResolutionDialogTarget;
       state.runStateTarget = null;
-      const route = routeKey(action.payload.origin);
+      const route = routeKey(focusAddress);
       if (route === null) {
         return;
       }
       state.activeRouteKey = route;
-      state.activePanelByRoute[route] = panelForOrigin(action.payload.origin);
+      state.activePanelByRoute[route] = panelForOrigin(focusAddress);
     },
     editorSessionReconciled(state, action: PayloadAction<EditorSessionReconciliation>) {
       if (action.payload.clearFocusedSemanticOwner) {

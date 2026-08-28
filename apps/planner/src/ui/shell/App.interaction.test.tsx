@@ -53,7 +53,7 @@ import {
   echoGiftHammerReplayAddress,
 } from '@planner-test/fixtures/echoGiftHammer';
 import { createEchoGoldHPrebossProject } from '@planner-test/fixtures/echoGoldShop';
-import { semanticOwnerElementId } from '../feedback/semanticOwner';
+import { semanticOwnerControlElementId, semanticOwnerElementId } from '../feedback/semanticOwner';
 import {
   reachedTraitOffers,
   authorLegalTraitOffers,
@@ -1131,7 +1131,7 @@ describe('planner history interaction', () => {
     );
   });
 
-  it('opens the exact unresolved SpellDrop editor from its finding', async () => {
+  it('routes an unresolved SpellDrop finding through its pickup action', async () => {
     const application = createApplication();
     const occurrenceId = goldenFOccurrenceId(10, 2);
     const selected = applyProjectCommand(createGoldenFGHProject(), catalog, {
@@ -1183,14 +1183,24 @@ describe('planner history interaction', () => {
       .find((button) => button.textContent?.includes('trait'));
     if (findingButton === undefined) throw new Error('SpellDrop finding is not presented');
     await view.user.click(findingButton);
-    expect(application.store.getState().editorSession.traitDialogTarget).toEqual(target);
-    expect(application.store.getState().editorSession.focusedSemanticOwner).toEqual(target);
+    const destination = application
+      .selectStructuredWorkspace(application.store.getState())
+      .focusByOwner.get(semanticAddressKey(target));
+    if (destination === undefined) throw new Error('SpellDrop destination is missing');
+    expect(destination).toMatchObject({
+      ownerAddress: target,
+      focusAddress: { kind: 'roomAction' },
+    });
+    expect(destination).not.toHaveProperty('traitDialogTarget');
+    expect(application.store.getState().editorSession.traitDialogTarget).toBeNull();
+    expect(application.store.getState().editorSession.focusedSemanticOwner).toEqual(
+      destination.focusAddress,
+    );
+    expect(screen.queryByRole('dialog')).toBeNull();
+    const action = document.getElementById(semanticOwnerControlElementId(destination.focusAddress));
+    if (action === null) throw new Error('SpellDrop pickup action is missing');
+    await view.user.click(within(action).getByRole('button', { name: /Edit spell/ }));
     expect(await screen.findByRole('dialog')).toBeTruthy();
-    expect(
-      application
-        .selectStructuredWorkspace(application.store.getState())
-        .focusByOwner.get(semanticAddressKey(target)),
-    ).toMatchObject({ ownerAddress: target, traitDialogTarget: target });
   });
 
   it('keeps Selene-dormant SpellDrop children out of findings, markers, destinations, and interactions', () => {
@@ -1228,7 +1238,7 @@ describe('planner history interaction', () => {
     application.dispose();
   });
 
-  it('opens a reached-invalid trait finding with its exact marker and engine reason', async () => {
+  it('routes a reached-invalid trait finding through its pickup action', async () => {
     const application = createApplication();
     application.store.dispatch(authoredProjectReplaced(createGoldenFGHIProject()));
     application.store.dispatch(
@@ -1254,17 +1264,21 @@ describe('planner history interaction', () => {
     if (findingButton === undefined) throw new Error('Hammer finding is not presented');
     await view.user.click(findingButton);
 
-    const dialog = await screen.findByRole('dialog');
-    expect(dialog.tagName).toBe('DIALOG');
-    expect(
-      application
-        .selectStructuredWorkspace(application.store.getState())
-        .focusByOwner.get(semanticAddressKey(invalid.origin)),
-    ).toMatchObject({
+    const destination = application
+      .selectStructuredWorkspace(application.store.getState())
+      .focusByOwner.get(semanticAddressKey(invalid.origin));
+    if (destination === undefined) throw new Error('invalid Hammer destination is missing');
+    expect(destination).toMatchObject({
       ownerAddress: invalid.origin,
-      traitDialogTarget: invalid.origin,
+      focusAddress: { kind: 'roomAction' },
     });
-    expect(document.getElementById(semanticOwnerElementId(invalid.origin))).toBeTruthy();
+    expect(destination).not.toHaveProperty('traitDialogTarget');
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(document.getElementById(semanticOwnerElementId(destination.focusAddress))).toBeTruthy();
+    const action = document.getElementById(semanticOwnerControlElementId(destination.focusAddress));
+    if (action === null) throw new Error('invalid Hammer pickup action is missing');
+    await view.user.click(within(action).getByRole('button', { name: /Edit Trait/ }));
+    const dialog = await screen.findByRole('dialog');
     expect(
       within(dialog).getAllByText(/Hammer is incompatible with this loadout/).length,
     ).toBeGreaterThan(0);
@@ -1415,7 +1429,7 @@ describe('planner history interaction', () => {
     expect(application.store.getState().editorSession.focusedSemanticOwner).toEqual(set);
   });
 
-  it('opens and focuses the exact targeted-acquisition child from its finding', async () => {
+  it('routes a targeted-acquisition finding through its pickup action', async () => {
     const application = createApplication();
     let project = createCompleteFGProject();
     let target: ReturnType<typeof createTraitOfferAddress> | undefined;
@@ -1500,10 +1514,23 @@ describe('planner history interaction', () => {
     if (findingButton === undefined) throw new Error('targeted acquisition finding is not shown');
     await view.user.click(findingButton);
 
+    const destination = application
+      .selectStructuredWorkspace(application.store.getState())
+      .focusByOwner.get(semanticAddressKey(child));
+    if (destination === undefined) throw new Error('targeted acquisition destination is missing');
+    expect(destination).toMatchObject({
+      ownerAddress: child,
+      focusAddress: { kind: 'roomAction' },
+    });
+    expect(destination).not.toHaveProperty('traitDialogTarget');
+    expect(screen.queryByRole('dialog')).toBeNull();
+    const action = document.getElementById(semanticOwnerControlElementId(destination.focusAddress));
+    if (action === null) throw new Error('targeted acquisition action is missing');
+    await view.user.click(within(action).getByRole('button', { name: /Edit Trait/ }));
     const dialog = await screen.findByRole('dialog');
     const targetControl = within(dialog).getByLabelText(`${optionKey} acquisition target`);
-    await waitFor(() => expect(document.activeElement).toBe(targetControl));
-    expect(application.store.getState().editorSession.focusedSemanticOwner).toEqual(child);
+    expect(targetControl).toBeTruthy();
+    expect(application.store.getState().editorSession.focusedSemanticOwner).toEqual(target);
     expect(application.store.getState().editorSession.traitDialogTarget).toEqual(target);
   });
 

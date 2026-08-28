@@ -1,4 +1,22 @@
-import type { WorkspaceMarker, WorkspaceRewardControl } from '../contract';
+import type {
+  WorkspaceMarker,
+  WorkspaceRewardControl,
+  WorkspaceTraitOfferControl,
+} from '../contract';
+
+/** Exact finding owners edited through one trait launcher. */
+export function traitOfferMarkers(trait: WorkspaceTraitOfferControl): readonly WorkspaceMarker[] {
+  return Object.freeze([
+    trait.marker,
+    ...(trait.traitAcquisitionTarget === undefined ? [] : [trait.traitAcquisitionTarget.marker]),
+    ...(trait.circeResolution === undefined ? [] : [trait.circeResolution.marker]),
+    ...(trait.echoPomTarget === undefined ? [] : [trait.echoPomTarget.marker]),
+    ...(trait.echoLastRunBoon === undefined ? [] : [trait.echoLastRunBoon.marker]),
+    ...(trait.echoLastReward === undefined ? [] : [trait.echoLastReward.marker]),
+    ...(trait.allTogetherSets ?? []).map((set) => set.marker),
+    ...(trait.naturalSelection === undefined ? [] : [trait.naturalSelection.marker]),
+  ]);
+}
 
 /**
  * The occurrence assembler publishes all reward-child marker destinations so
@@ -7,15 +25,7 @@ import type { WorkspaceMarker, WorkspaceRewardControl } from '../contract';
 export function rewardChildMarkers(control: WorkspaceRewardControl): readonly WorkspaceMarker[] {
   const markers: WorkspaceMarker[] = [];
   for (const trait of control.traitOffers ?? []) {
-    markers.push(trait.marker);
-    if (trait.traitAcquisitionTarget !== undefined)
-      markers.push(trait.traitAcquisitionTarget.marker);
-    if (trait.circeResolution !== undefined) markers.push(trait.circeResolution.marker);
-    if (trait.echoPomTarget !== undefined) markers.push(trait.echoPomTarget.marker);
-    if (trait.echoLastRunBoon !== undefined) markers.push(trait.echoLastRunBoon.marker);
-    if (trait.echoLastReward !== undefined) markers.push(trait.echoLastReward.marker);
-    for (const set of trait.allTogetherSets ?? []) markers.push(set.marker);
-    if (trait.naturalSelection !== undefined) markers.push(trait.naturalSelection.marker);
+    markers.push(...traitOfferMarkers(trait));
   }
   for (const resolution of control.levelResolutions ?? []) markers.push(resolution.marker);
   for (const conversion of control.conversions ?? []) markers.push(conversion.marker);
