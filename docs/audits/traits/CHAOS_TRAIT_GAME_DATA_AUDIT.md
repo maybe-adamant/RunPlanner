@@ -396,7 +396,7 @@ authored planner state.
 ## Planner disposition
 
 The schema-51 selected-pair model is no longer sufficient because it cannot
-derive Denial's exact run-local bans. The durable planner shape is three ordered
+derive Denial's exact run-local bans. Schema 66 replaces it with three ordered
 curse options, each with its curse identity and rolled requirement, plus one
 selected-option identity. Only the selected option additionally owns the
 curse's zero-or-one independent intensity value, its paired blessing, shared
@@ -434,3 +434,25 @@ location counting, or qualifying god-boon-pickup counting according to the
 source curse. Expiring deliberately uses the encounter-count path and assumes
 success; no authored timer outcome is added. Trial Upgrade is a direct
 acquisition and is not an Echo Reward Reward Reward replay source.
+
+The completed editor follows that same limited authoring boundary: it presents
+three ordered contextual curse/requirement columns and then the selected pair's
+curse values, blessing, shared rarity, and blessing values. It does not expose
+the source-generated peer blessings or turn Chaos into the generic ordinary
+trait picker. Declaration-owned legal defaults make a complete selected outcome
+available without fabricated inputs, while retained invalid identities remain
+available for repair.
+
+The prepared trait-offer candidate also publishes the active Ordinary/Rejected
+consequences only for ordinary Olympian and Hermes screens. The workspace
+intersects branch-local legal Rejected rows and React renders the resulting
+single blocked-row control; that row remains visible but cannot be selected or
+Rarified. This preserves both Rejected's generated-screen history and its Vow
+of Denial contact without moving Chaos eligibility or rule reconstruction into
+the application.
+
+The corrected direct-acquisition contacts are also part of the supported
+chronology. Trial Upgrade does not recreate Echo's last eligible reward. An
+ordinary replacement of Transcendent Embryo removes its marked direct blessing
+before later history is observed; the separately audited Cherished Heirloom and
+Gift Gift Gift paths retain their distinct source behaviors.

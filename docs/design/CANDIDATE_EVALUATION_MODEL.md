@@ -569,6 +569,23 @@ offers publish neither. Public reward branches carry reachable reward state,
 trait history, and events downstream, but do not carry diagnostic trait-offer
 assessment traces or candidate contexts.
 
+Chaos uses one specialized trait-offer domain on that same prepared capability.
+It supplies three independently legal curse/requirement columns and, after an
+option is selected, only that pair's declaration-owned curse operands,
+blessing domain, shared-rarity domain, and blessing operands. Catalog-owned
+defaults are part of the domain so a local editor draft can become complete
+without React deriving ranges or starting values. The two unselected blessings
+remain game-generated and are not candidate, authored, or UI state.
+
+The complete evaluated trait-offer result also carries branch-correlated Chaos
+screen rules only for ordinary Olympian and Hermes trait offers. The application
+projects Rejected's required/repair status and intersects the branch-local
+blockable row keys; it does not derive the active curse, provider applicability,
+or row domain. A blocked row remains in the complete offer but cannot be
+selected or Rarified. This is a narrow ordinary-offer projection beside the
+specialized Chaos domain, not a second candidate session or application-side
+replay.
+
 A normal `SpellDrop` is one such fixed-three, rarityless trait-offer
 capability. The engine exposes its exact self-child capability and candidates;
 the application does not duplicate the eight-spell pool or inspect loadout
