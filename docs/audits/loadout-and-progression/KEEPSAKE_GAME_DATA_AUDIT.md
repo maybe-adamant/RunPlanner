@@ -1024,6 +1024,14 @@ their ordinary equip, Cherished contact, and Gift replay behavior is now fully
 source-audited. They still participate fully in identity history, no-return,
 Fated policy, and Run State.
 
+Transcendent Embryo's ordinary rack replacement has one additional supported
+transition: it removes the exact marked direct Chaos blessing before later
+trait history observes the replacement. The removal reverses any modeled
+history effect owned by that blessing, including Creation elements and the
+matured-blessing prerequisite used by later Chaos eligibility. This is the
+ordinary-detach disposition only; Cherished Heirloom and Gift Gift Gift retain
+their separately audited lifecycle behaviors.
+
 Gift Gift Gift now captures all 29 source-eligible identities at Echo
 acquisition. Fig Leaf and Experimental Hammer apply their rank-I replay once,
 Calling Card and Time Piece add their rank-I charges at every succeeding biome,

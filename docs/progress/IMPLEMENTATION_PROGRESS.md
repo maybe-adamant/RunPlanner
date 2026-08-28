@@ -11,7 +11,7 @@ the active frontier needed to orient the next delivery.
 
 ## Current Snapshot
 
-The current persisted contract is strict authored schema 65 with catalog
+The current persisted contract is strict authored schema 66 with catalog
 `0.48.0-hex-talent-layouts`. The browser product supports all eight route biomes:
 
 ```text
@@ -84,6 +84,7 @@ milestones without repeating the delivery chronology.
 | Schemas 60-63      | Aromatic Phial fountain rarity, Crystal Figurine Boss activation, Concave Stone residual boons, and Transcendent Embryo transformations.     |
 | Schema 64          | Optional frozen Aspect of Persephone offer contributions, chronological Premium Service range expansion, and derived effective trait levels. |
 | Schema 65          | Frozen selected-Hex layouts and high-value identities, finite Path capacity, latched Talent Drop closure, and persistent God Sent extension. |
+| Schema 66          | Three-option Chaos Trial Upgrade envelopes, selected-pair settlement, exact Denial peer-curse bans, and ordinary Rejected row locking.       |
 
 Catalog versions advanced alongside these boundaries. The current catalog is
 `0.48.0-hex-talent-layouts`; exact declaration facts and source contacts
@@ -183,10 +184,20 @@ eligibility or arithmetic.
 
 Chaos, Natural Selection, both Ransoms, Steady Growth, Sea Star, Buried
 Treasure, and Quick Buck are declaration-backed and simulated where their
-effects alter the run. `BlockOfferIfPreviouslyPicked` history survives later
-trait removal. Artificer replacements, Narcissus, Echo, Quick Buck, Buried
-Treasure, and Sea Star use source-scoped generated-pickup products without a
-generic clone tree, second chronology, timer model, or resource ledger.
+effects alter the run. Schema 66 gives Trial Upgrade its source-shaped
+three-option envelope: the author selects three curses and requirements, then
+one complete selected curse/blessing outcome. The two peer blessings remain
+game-generated; Denial's unselected peer bans are curse-only. Ordinary and Rejected
+effects flow from the reached engine candidate into one exact ordinary-offer
+projection, so the editor can retain and repair a blocked option without
+reconstructing Chaos rules. Trial Upgrade is not an Echo last-reward source,
+and an ordinary Transcendent Embryo replacement removes its marked direct
+blessing before later Chaos history observes it.
+
+`BlockOfferIfPreviouslyPicked` history survives later trait removal. Artificer
+replacements, Narcissus, Echo, Quick Buck, Buried Treasure, and Sea Star use
+source-scoped generated-pickup products without a generic clone tree, second
+chronology, timer model, or resource ledger.
 
 ### Room-feature closure
 
@@ -286,6 +297,22 @@ Validation claims below are the executed checks retained because they establish
 important closure boundaries. They are not a promise that every historical
 intermediate suite was green.
 
+- The Chaos authoring recovery closed on 2026-08-27 with workspace, catalog,
+  engine, and fixture typechecking; checkpoint integrity at 3 files/20 tests;
+  the 195-file regular lane at 1,939 tests; the 57-file heavy lane at 570
+  tests; ESLint; repository-wide Prettier; and production build. Closure fixed
+  one catalog test's unsupported `structuredClone`, advanced all canonical
+  checkpoint bytes and the manifest to schema 66, moved eleven route-scale
+  test files from the five-second regular budget into the bounded heavy lane,
+  and removed one stale Athena assertion that contradicted Task Force's earlier
+  Spell Drop requirement. The test evidence was composed from the complete
+  unaffected lane inventories plus sequential passes for the moved files; no
+  redundant monolithic rerun followed those unchanged witnesses. The isolated
+  performance lane measured 1.139/1.104 seconds against its one-second rebuild
+  budget. The unchanged pre-authoring base measured 1.258/1.083 seconds on the
+  same host, so the gate did not loosen the contract or attribute the host-level
+  miss to this delivery. The build retained only the existing greater-than-
+  500-kB application chunk advisory.
 - The editor-control closure ran the complete repository sequence on
   2026-08-27: workspace and fixture typechecks; fixture integrity at 3 files/20
   tests; regular tests at 204 files/2,013 tests; heavy tests at 46 files/441
