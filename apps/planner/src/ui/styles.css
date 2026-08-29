@@ -831,6 +831,32 @@ button:disabled {
   width: 100%;
 }
 
+.trait-option-effective-summary {
+  display: grid;
+  font-size: 0.88rem;
+  gap: 0.2rem 0.65rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  margin: 0;
+}
+
+.trait-option-effective-summary dt,
+.trait-option-effective-summary dd {
+  margin: 0;
+}
+
+.trait-option-effective-summary dd {
+  color: #f2ede5;
+  font-weight: 600;
+  text-align: right;
+}
+
+.trait-offer-ordinary-option > .trait-option-selected {
+  align-items: center;
+  display: flex;
+  gap: 0.3rem;
+  margin-top: auto;
+}
+
 .trait-selected-outcome {
   background: rgb(255 255 255 / 2%);
   border: 1px solid var(--border, #ccd3df);

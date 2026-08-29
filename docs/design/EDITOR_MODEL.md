@@ -1051,8 +1051,10 @@ for repair, while Heroic is offered only when the engine exposes an
 Epic-to-Heroic replacement.
 
 An active Aspect-of-Persephone row may also present the engine's bounded
-Persephone contribution picker and the derived effective level beside the
-effective-rarity evidence. The picker offers the exact active integer range
+Persephone contribution picker and the derived effective level. Each applicable
+ordinary option presents effective rarity and effective level in the same compact,
+fixed summary; an inapplicable value retains its row as an em dash so option-card
+geometry does not depend on trait capability. The picker offers the exact active integer range
 (`+0..+5`, or `+0..+8` after a prior Premium Service acquisition). An omitted
 authored value is displayed and settled as `+0`; selecting zero removes the
 optional persisted detail. The application writes the complete trait offer

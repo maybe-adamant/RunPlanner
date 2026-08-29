@@ -106,7 +106,7 @@ export function TraitOfferOrdinaryOption({
     onUpdate(replaceTraitOfferOption(value, index, nextOption));
   };
   return (
-    <fieldset className="trait-offer-option" key={optionKey}>
+    <fieldset className="trait-offer-option trait-offer-ordinary-option" key={optionKey}>
       <legend>
         {spellOffer
           ? `${optionKey.replace('option', 'Spell ')} · ${spellOfferSlotSummary(
@@ -167,8 +167,14 @@ export function TraitOfferOrdinaryOption({
           Rarify
         </button>
       )}
-      {effectiveRarity === undefined ? null : <p>Effective rarity: {effectiveRarity}</p>}
-      {effectiveLevel === undefined ? null : <p>Effective level: {effectiveLevel}</p>}
+      {effectiveRarity === undefined && effectiveLevel === undefined ? null : (
+        <dl aria-label="Effective trait values" className="trait-option-effective-summary">
+          <dt>Effective rarity</dt>
+          <dd>{effectiveRarity ?? <span aria-label="Not applicable">—</span>}</dd>
+          <dt>Effective level</dt>
+          <dd>{effectiveLevel ?? <span aria-label="Not applicable">—</span>}</dd>
+        </dl>
+      )}
       {persephoneLevelBonusMaximum === undefined ? null : (
         <label className="field-control field-control-inline">
           <span>Persephone bonus</span>

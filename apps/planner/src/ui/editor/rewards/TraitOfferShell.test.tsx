@@ -718,7 +718,14 @@ describe('ordinary offer shell', () => {
               result: Object.freeze({
                 assessments: Object.freeze([]),
                 branches: Object.freeze([]),
-                effectiveLevels: Object.freeze([6, 4, 2]),
+                callingCard: Object.freeze([
+                  Object.freeze({
+                    effectiveRarities: Object.freeze(['Common', 'Common', 'Common'] as const),
+                    invalidActionIndexes: Object.freeze([]),
+                    rarifiableOptionKeys: Object.freeze([]),
+                  }),
+                ]),
+                effectiveLevels: Object.freeze([6, undefined, 2]),
                 findings: Object.freeze([]),
                 persephoneLevelBonusMaximums: Object.freeze([5, undefined, undefined]),
                 supported: true,
@@ -743,7 +750,14 @@ describe('ordinary offer shell', () => {
       </Provider>,
     );
 
-    expect(await screen.findByText('Effective level: 6')).toBeTruthy();
+    const effectiveSummary = (await screen.findAllByLabelText('Effective trait values'))[0];
+    if (effectiveSummary === undefined) {
+      throw new Error('effective trait summary is missing');
+    }
+    expect(effectiveSummary.textContent).toContain('Effective level6');
+    const summaries = screen.getAllByLabelText('Effective trait values');
+    expect(summaries).toHaveLength(3);
+    expect(summaries[1]?.querySelectorAll('dd')[1]?.textContent).toBe('—');
     const bonus = screen.getByRole('combobox', { name: 'option1 Persephone level bonus' });
     expect((bonus as HTMLSelectElement).value).toBe('0');
     await user.click(screen.getByRole('button', { name: 'Save trait offer' }));
