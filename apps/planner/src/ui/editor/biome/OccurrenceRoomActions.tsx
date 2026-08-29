@@ -100,6 +100,7 @@ export function RoomActionsWorkbench({
   renderEncounterPhase,
   renderRewardWheel,
   renderRowContent,
+  renderRowTrailingContent,
   renderBoundaryContent,
   ship,
 }: {
@@ -115,6 +116,8 @@ export function RoomActionsWorkbench({
   readonly renderRewardWheel?: (wheel: WorkspaceRewardWheelDescriptor) => ReactNode;
   /** Consumer-owned leaf editor for one exact shared timeline row. */
   readonly renderRowContent?: (row: WorkspaceRoomActions['rows'][number]) => ReactNode;
+  /** Consumer-owned controls placed after the shared ordering controls. */
+  readonly renderRowTrailingContent?: (row: WorkspaceRoomActions['rows'][number]) => ReactNode;
   readonly renderBoundaryContent?: (boundary: WorkspaceRoomLifecycleBoundary) => ReactNode;
   readonly ship?: {
     readonly occurrence: OccurrenceAddress;
@@ -348,6 +351,11 @@ export function RoomActionsWorkbench({
             row.rank === null ? undefined : dropState({ kind: 'beforeSlot', slotKey: row.key })
           }
           data-in-order={row.rank === null ? 'false' : 'true'}
+          data-inline-layout={
+            row.reference.kind === 'interactKeepsakeRack' || row.fountainRarity !== undefined
+              ? 'compact'
+              : undefined
+          }
           data-room-action-key={row.key}
           id={semanticOwnerControlElementId(row.address)}
           tabIndex={-1}
@@ -384,7 +392,12 @@ export function RoomActionsWorkbench({
               onRemove={removeRow}
               proposals={proposals}
               row={row}
+              showRemoval={
+                row.reference.kind !== 'interactKeepsakeRack' &&
+                (!row.participationOwnedByOverview || row.stale)
+              }
             />
+            {renderRowTrailingContent?.(row)}
           </div>
           {row.issues.length === 0 ? null : (
             <ul className="room-action-issues">

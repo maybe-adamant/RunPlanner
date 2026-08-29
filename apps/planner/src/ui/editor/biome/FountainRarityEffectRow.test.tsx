@@ -106,10 +106,10 @@ describe('FountainRarityEffectRow', () => {
         <FountainRarityEffectRow control={control} interactions={interactions} />
       </Provider>,
     );
-    expect(await screen.findByLabelText('Aromatic Phial target')).toBeTruthy();
+    expect(await screen.findByLabelText('Phial Target')).toBeTruthy();
     expect(screen.getByText('Needs repair')).toBeTruthy();
     await act(async () => {
-      screen.getByRole('button', { name: 'Clear recorded target' }).click();
+      screen.getByRole('button', { name: 'Clear Phial target' }).click();
     });
     expect(clearIntent).toHaveBeenCalledWith(null);
     application.dispose();
@@ -183,7 +183,7 @@ describe('FountainRarityEffectRow', () => {
         />
       </Provider>,
     );
-    await user.click(screen.getByLabelText('Aromatic Phial target'));
+    await user.click(screen.getByLabelText('Phial Target'));
     await user.click(screen.getByText('Apollo Attack'));
     expect(authorIntent).toHaveBeenCalledWith('ApolloWeaponBoon');
     application.dispose();
@@ -254,7 +254,7 @@ describe('FountainRarityEffectRow', () => {
       </Provider>,
     );
     const historyBefore = application.store.getState().projectWorkspace.history.past.length;
-    await user.click(screen.getByLabelText('Aromatic Phial target'));
+    await user.click(screen.getByLabelText('Phial Target'));
     await user.click(screen.getByText('Apollo Attack'));
     const selected = application.store.getState().projectWorkspace.history.present;
     const selectedPostboss = selected.routes[0]?.biomes[0]?.topology?.occurrences.find(

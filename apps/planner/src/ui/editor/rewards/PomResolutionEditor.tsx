@@ -128,6 +128,8 @@ export function RandomTraitTargetPicker({
   ariaLabel,
   id,
   interaction,
+  label = 'Recorded target',
+  layout,
   model,
   onOpenChange,
   onSelect,
@@ -137,6 +139,8 @@ export function RandomTraitTargetPicker({
   readonly ariaLabel: string;
   readonly id: string;
   readonly interaction: { readonly traitLabel: (traitKey: string) => string };
+  readonly label?: string;
+  readonly layout?: 'inline' | 'stacked';
   readonly model: ContextualPickerModel<string>;
   readonly onOpenChange?: (open: boolean) => void;
   readonly onSelect: (targetTraitKey: string) => void;
@@ -147,7 +151,8 @@ export function RandomTraitTargetPicker({
     <ContextualPicker
       ariaLabel={ariaLabel}
       id={id}
-      label="Recorded target"
+      label={label}
+      {...(layout === undefined ? {} : { layout })}
       model={model}
       onSelect={onSelect}
       {...(onOpenChange === undefined ? {} : { onOpenChange })}

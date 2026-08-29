@@ -11,6 +11,59 @@ import type {
   WorkspaceRoomLocal,
 } from '../contract';
 
+function wellPurchaseLabel(
+  catalog: Catalog,
+  occurrence: Pick<import('@run-planner/engine/authored-project').RoomOccurrence, 'stygianWell'>,
+  generationKey: import('@run-planner/engine/authored-project').StygianWellGenerationKey,
+): string {
+  const slotKey = generationKey.startsWith('initial:')
+    ? (generationKey.slice(
+        'initial:'.length,
+      ) as import('@run-planner/engine/authored-project').StygianWellSlotKey)
+    : undefined;
+  const itemKey =
+    slotKey === undefined
+      ? occurrence.stygianWell?.travelDealRefillKey
+      : occurrence.stygianWell?.offerKeyBySlot[slotKey];
+  const itemLabel =
+    itemKey === null || itemKey === undefined
+      ? undefined
+      : catalog.rewards.shops.byKey.RoomShop?.groups.values
+          .flatMap((group) => group.options.values)
+          .find((option) => option.key === itemKey)?.label;
+  if (itemLabel !== undefined) return itemLabel;
+  const slotLabel =
+    slotKey === undefined
+      ? 'Travel Deal'
+      : (catalog.rewards.shops.byKey.RoomShop?.slots.byKey[slotKey]?.label ?? slotKey);
+  return `Well ${slotLabel}`;
+}
+
+function shrinePurchaseLabel(
+  catalog: Catalog,
+  occurrence: Pick<import('@run-planner/engine/authored-project').RoomOccurrence, 'hermesShrine'>,
+  generationKey: import('@run-planner/engine/authored-project').HermesShrineGenerationKey,
+): string {
+  const slotKey = generationKey.startsWith('initial:')
+    ? (generationKey.slice(
+        'initial:'.length,
+      ) as import('@run-planner/engine/authored-project').HermesShrineSlotKey)
+    : undefined;
+  const offer =
+    slotKey === undefined
+      ? occurrence.hermesShrine?.travelDealRefill?.offer
+      : occurrence.hermesShrine?.offerBySlot[slotKey];
+  const rewardType = offer?.offer.rewardType;
+  const rewardLabel =
+    rewardType === undefined ? undefined : catalog.rewards.rewardTypes.byKey[rewardType]?.label;
+  if (rewardLabel !== undefined) return rewardLabel;
+  const slotLabel =
+    slotKey === undefined
+      ? 'Travel Deal'
+      : (catalog.rewards.shops.byKey.SurfaceShop?.slots.byKey[slotKey]?.label ?? slotKey);
+  return `Shrine ${slotLabel}`;
+}
+
 /** Presentation labels for engine-authored action references. */
 export function occurrenceActionLabel(
   catalog: Catalog,
@@ -18,6 +71,10 @@ export function occurrenceActionLabel(
   roomLocal: WorkspaceRoomLocal,
   encounterPhases: readonly WorkspaceEncounterPhase[],
   rewardControl: WorkspaceRewardControl | undefined,
+  occurrence: Pick<
+    import('@run-planner/engine/authored-project').RoomOccurrence,
+    'hermesShrine' | 'stygianWell'
+  >,
   purgingPoolTraitKeyBySlot?: Readonly<Record<'left' | 'middle' | 'right', string | null>>,
 ): string {
   const pickupLabel = (subject: string): string => {
@@ -83,9 +140,9 @@ export function occurrenceActionLabel(
       return `Buy ${rewardLabel ?? offer?.label ?? reference.offerKey}`;
     }
     case 'purchaseHermesShrineOffer':
-      return `Buy Shrine offer ${reference.generationKey}`;
+      return `Buy ${shrinePurchaseLabel(catalog, occurrence, reference.generationKey)}`;
     case 'purchaseStygianWellOffer':
-      return `Buy Well offer ${reference.generationKey}`;
+      return `Buy ${wellPurchaseLabel(catalog, occurrence, reference.generationKey)}`;
     case 'sellPurgingPoolTrait': {
       const traitKey = purgingPoolTraitKeyBySlot?.[reference.slotKey];
       return `Sell ${traitKey === null || traitKey === undefined ? `${reference.slotKey} Pool trait` : (catalog.traits.byKey[traitKey]?.label ?? traitKey)}`;

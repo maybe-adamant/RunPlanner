@@ -297,7 +297,7 @@ describe('DecisionWorkbench', () => {
       located.plan.biomeKey,
       occurrenceForId(source.occurrenceId),
     );
-    await sourceView.user.click(screen.getByRole('tab', { name: 'Features' }));
+    await sourceView.user.click(screen.getByRole('tab', { name: 'Room Overview' }));
     const features = screen.getByLabelText('Room features');
     const before = sourceView.application.store.getState().projectWorkspace.history.past.length;
     await sourceView.user.click(within(features).getByRole('checkbox', { name: 'Chaos Gate' }));
@@ -324,7 +324,7 @@ describe('DecisionWorkbench', () => {
     });
     renderOccurrenceWorkbench(project, 'Underworld', 'F', occurrenceForId(goldenFStartId));
 
-    fireEvent.click(screen.getByRole('tab', { name: 'Features' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Room Overview' }));
     const addChaos = within(screen.getByLabelText('Room features')).getByRole('checkbox', {
       name: 'Chaos Gate',
     });
@@ -381,7 +381,7 @@ describe('DecisionWorkbench', () => {
       located.plan.biomeKey,
       occurrenceForId(source.occurrenceId),
     );
-    await sourceView.user.click(screen.getByRole('tab', { name: 'Features' }));
+    await sourceView.user.click(screen.getByRole('tab', { name: 'Room Overview' }));
     expect(
       within(screen.getByLabelText('Room features')).getByRole('checkbox', {
         name: 'Zagreus Contract',

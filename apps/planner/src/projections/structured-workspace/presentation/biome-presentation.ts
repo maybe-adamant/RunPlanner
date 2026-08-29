@@ -305,10 +305,13 @@ function projectHubRailEntry(
                 `Hub visit ${visit.visitIndex} side occurrence ${slot.occurrenceId} is not a side workbench`,
               );
             }
+            const sideRoomId = slot.label.startsWith('Side Room ')
+              ? slot.label.slice('Side Room '.length)
+              : slot.label;
             return [
               Object.freeze({
                 key: `${node.key}:visit:${visit.visitIndex}:side:${slot.key}`,
-                label: `Side ${slot.enteredOrdinal ?? 1} · ${slot.label}`,
+                label: `Side ${slot.enteredOrdinal ?? 1} · Room ${sideRoomId}`,
                 marker: sideNode.room.marker,
                 node: sideNode,
                 visitMarker: slot.marker,

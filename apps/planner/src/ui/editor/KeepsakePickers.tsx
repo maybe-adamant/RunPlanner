@@ -87,20 +87,23 @@ export function KeepsakeSelectionPicker({
 export function KeepsakeEquipResultPicker({
   id,
   interaction,
+  label: labelOverride,
 }: {
   readonly id: string;
   readonly interaction: WorkspaceKeepsakeEquipResultInteraction;
+  readonly label?: string;
 }) {
   const dispatch = useAppDispatch();
   const projection = useWorkspaceInteraction(interaction);
   const domain = projection.result;
   const resultKind = interaction.owner.resultKind;
   const label =
-    resultKind === 'experimentalHammer'
+    labelOverride ??
+    (resultKind === 'experimentalHammer'
       ? 'Experimental Hammer result'
       : resultKind === 'jeweledPom'
         ? 'Jeweled Pom result'
-        : 'Transcendent Embryo result';
+        : 'Transcendent Embryo result');
   const placeholder =
     resultKind === 'experimentalHammer'
       ? 'Choose compatible Hammer'
@@ -109,10 +112,11 @@ export function KeepsakeEquipResultPicker({
         : 'Choose Chaos blessing';
 
   return (
-    <>
+    <div className="keepsake-equip-result-control">
       <ContextualPicker
         id={id}
         label={label}
+        layout="inline"
         loading={projection.pending}
         model={domain?.picker ?? emptyModel}
         onOpenChange={(open) => {
@@ -132,6 +136,6 @@ export function KeepsakeEquipResultPicker({
             .join(', ') || 'No numeric operands'}
         </p>
       )}
-    </>
+    </div>
   );
 }

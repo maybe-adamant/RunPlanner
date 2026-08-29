@@ -194,7 +194,7 @@ function roomFeatures(
   const declaredWellTwistItemKeys = declaredRoomShopTwistItemKeys(input.catalog);
   const declaredShrineAllRewardTypes = declaredSurfaceShopAllRewardTypes(input.catalog);
   const poolSlotLabel = (slotKey: 'left' | 'middle' | 'right'): string =>
-    slotKey === 'left' ? 'Left slot' : slotKey === 'middle' ? 'Middle slot' : 'Right slot';
+    slotKey === 'left' ? 'Offer 1' : slotKey === 'middle' ? 'Offer 2' : 'Offer 3';
   return Object.freeze([
     ...(room.roomShop === undefined && well === undefined && wellAssessment === undefined
       ? []
@@ -215,7 +215,7 @@ function roomFeatures(
             const itemLabel = (itemKey: string): string =>
               input.catalog.rewards.shops.byKey.RoomShop?.groups.values
                 .flatMap((group) => group.options.values)
-                .find((option) => option.key === itemKey)?.key ?? itemKey;
+                .find((option) => option.key === itemKey)?.label ?? itemKey;
             const purchased = new Set(well?.purchasedGenerationKeys ?? []);
             const initialSlots =
               well === undefined
@@ -231,11 +231,8 @@ function roomFeatures(
                       key: slotKey,
                       generationKey,
                       label:
-                        slotKey === 'healing'
-                          ? 'Healing'
-                          : slotKey === 'secondLeft'
-                            ? 'Second Left'
-                            : 'Second Right',
+                        input.catalog.rewards.shops.byKey.RoomShop?.slots.byKey[slotKey]?.label ??
+                        slotKey,
                       itemKey: selected,
                       ...(selected === null ? {} : { itemLabel: itemLabel(selected) }),
                       candidateItemKeys:
@@ -287,7 +284,7 @@ function roomFeatures(
                       Object.freeze({
                         key: 'travelDealRefill' as const,
                         generationKey,
-                        label: 'Travel Deal refill',
+                        label: 'Travel Deal',
                         itemKey: selected,
                         ...(selected === null ? {} : { itemLabel: itemLabel(selected) }),
                         candidateItemKeys: candidates,
@@ -367,17 +364,13 @@ function roomFeatures(
               slots: Object.freeze(
                 shrine === undefined
                   ? []
-                  : (
-                      [
-                        ['first', 'First'],
-                        ['secondLeft', 'Second Left'],
-                        ['secondRight', 'Second Right'],
-                      ] as const
-                    ).map(([slotKey, label]) => {
+                  : (['first', 'secondLeft', 'secondRight'] as const).map((slotKey) => {
                       const generationKey = `initial:${slotKey}` as const;
                       return Object.freeze({
                         key: slotKey,
-                        label,
+                        label:
+                          input.catalog.rewards.shops.byKey.SurfaceShop?.slots.byKey[slotKey]
+                            ?.label ?? slotKey,
                         rewardType: shrine.offerBySlot[slotKey]?.offer.rewardType ?? null,
                         ...(shrine.offerBySlot[slotKey] === null
                           ? {}

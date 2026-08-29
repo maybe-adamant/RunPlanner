@@ -256,6 +256,14 @@ describe('occurrence room facts', () => {
         {
           kind: 'travelDealRefill',
           sourceOfferKey: 'MajorNonBoon',
+          purchase: {
+            purchased: false,
+            reference: {
+              kind: 'interactAcquisitionEntry',
+              siteKey: 'roomExit',
+              entryKey: 'travelDealRefill',
+            },
+          },
           rewardControl: { rewardTypes: ['WeaponUpgradeDrop', 'MaxHealthDrop'] },
         },
         { kind: 'infernalContractReward' },

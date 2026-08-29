@@ -832,12 +832,15 @@ same ordered room fold.
 
 ### Room Features at Cleanup
 
-Purging Pool sales, Shrine purchases, and Well purchases are optional ranked
-`RoomActionReference` variants in their host occurrence's one action order. A
-Pool and Well may use their feature-local **Interact** boundary: until then
-their live random inventory remains dormant and no action is active. World Shop
-and Shrine inventories are always fully authored; neither receives that
-convenience because their visible identities affect outgoing generation.
+Purging Pool sales, Shrine purchases, and Well purchases use feature-local
+checkboxes to opt into their host occurrence's one ranked action order. An
+unchecked sale or purchase remains on its owning feature and is not duplicated
+in the generic Optional actions pool; once checked, it is an ordinary ranked
+timeline participant. A Pool and Well may use their feature-local **Interact**
+boundary: until then their live random inventory remains dormant and no action
+is active. World Shop and Shrine inventories are always fully authored; neither
+receives that convenience because their visible identities affect outgoing
+generation.
 
 Well purchases settle immediately as paid effects and never invoke free-pickup
 alternatives. A Shrine purchase instead either rushes into a required same-room

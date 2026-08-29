@@ -740,7 +740,7 @@ describe('workspace inspector destinations', () => {
     );
     if (sideParentVisit === undefined) throw new Error('N Combat 05 Hub visit is missing');
     expect(destination(complete, sideRoom)).toMatchObject({
-      roomTab: 'sideRooms',
+      roomTab: 'overview',
       inspectorSubject: { kind: 'node', nodeKey: sideParentVisit.node.key },
       selectedRailKey: sideParentVisit.marker.focusKey,
     });

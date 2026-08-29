@@ -73,6 +73,7 @@ export function DirectRoomWorkbench({
   view,
   shipPhaseKey,
   renderRoomActionRowContent,
+  renderRoomActionRowTrailingContent,
   renderLifecycleBoundaryContent,
   renderOptionalRoomActionContent,
 }: {
@@ -80,9 +81,12 @@ export function DirectRoomWorkbench({
   readonly interactions: WorkspaceInteractionCatalog;
   readonly localVisit?: WorkspaceLocalVisitDecision;
   readonly room: WorkspaceRoomSummary;
-  readonly view: 'overview' | 'features' | 'sideRooms' | 'minorRewards' | 'encounters' | 'actions';
+  readonly view: 'overview' | 'actions';
   readonly shipPhaseKey?: string;
   readonly renderRoomActionRowContent?: (row: WorkspaceRoomActions['rows'][number]) => ReactNode;
+  readonly renderRoomActionRowTrailingContent?: (
+    row: WorkspaceRoomActions['rows'][number],
+  ) => ReactNode;
   readonly renderLifecycleBoundaryContent?: (boundary: WorkspaceRoomLifecycleBoundary) => ReactNode;
   readonly renderOptionalRoomActionContent?: () => ReactNode;
 }) {
@@ -114,10 +118,15 @@ export function DirectRoomWorkbench({
   );
   switch (workbench.kind) {
     case 'standard':
-      if (view === 'overview' || view === 'minorRewards') return null;
-      if (view === 'features') return renderFeatures();
-      if (view === 'sideRooms') return renderSideRooms();
-      if (view === 'encounters') return renderEncounterStructure();
+      if (view === 'overview') {
+        return (
+          <>
+            {renderFeatures()}
+            {renderSideRooms()}
+            {renderEncounterStructure()}
+          </>
+        );
+      }
       return (
         <RoomActionsWorkbench
           {...(workbench.roomActions === undefined ? {} : { actions: workbench.roomActions })}
@@ -130,19 +139,25 @@ export function DirectRoomWorkbench({
           {...(renderRoomActionRowContent === undefined
             ? {}
             : { renderRowContent: renderRoomActionRowContent })}
+          {...(renderRoomActionRowTrailingContent === undefined
+            ? {}
+            : { renderRowTrailingContent: renderRoomActionRowTrailingContent })}
           {...(renderLifecycleBoundaryContent === undefined
             ? {}
             : { renderBoundaryContent: renderLifecycleBoundaryContent })}
         />
       );
     case 'fields':
-      if (view === 'overview') return null;
-      if (view === 'features') return renderFeatures();
-      if (view === 'sideRooms') return renderSideRooms();
-      if (view === 'minorRewards') {
-        return <FieldsWorkbench interactions={interactions} room={workbench.fields} />;
+      if (view === 'overview') {
+        return (
+          <>
+            {renderFeatures()}
+            {renderSideRooms()}
+            <FieldsWorkbench interactions={interactions} room={workbench.fields} />
+            {renderEncounterStructure()}
+          </>
+        );
       }
-      if (view === 'encounters') return renderEncounterStructure();
       return (
         <RoomActionsWorkbench
           {...(workbench.roomActions === undefined ? {} : { actions: workbench.roomActions })}
@@ -154,6 +169,9 @@ export function DirectRoomWorkbench({
           {...(renderRoomActionRowContent === undefined
             ? {}
             : { renderRowContent: renderRoomActionRowContent })}
+          {...(renderRoomActionRowTrailingContent === undefined
+            ? {}
+            : { renderRowTrailingContent: renderRoomActionRowTrailingContent })}
           {...(renderLifecycleBoundaryContent === undefined
             ? {}
             : { renderBoundaryContent: renderLifecycleBoundaryContent })}
@@ -161,12 +179,19 @@ export function DirectRoomWorkbench({
       );
     case 'shop':
       if (view === 'overview') {
-        return <ShopWorkbench interactions={interactions} room={workbench.shop} />;
+        return (
+          <>
+            <ShopWorkbench
+              {...(workbench.roomActions === undefined ? {} : { actions: workbench.roomActions })}
+              interactions={interactions}
+              room={workbench.shop}
+            />
+            {renderFeatures()}
+            {renderSideRooms()}
+            {renderEncounterStructure()}
+          </>
+        );
       }
-      if (view === 'features') return renderFeatures();
-      if (view === 'sideRooms') return renderSideRooms();
-      if (view === 'minorRewards') return null;
-      if (view === 'encounters') return renderEncounterStructure();
       return (
         <RoomActionsWorkbench
           {...(workbench.roomActions === undefined ? {} : { actions: workbench.roomActions })}
@@ -177,21 +202,27 @@ export function DirectRoomWorkbench({
           {...(renderRoomActionRowContent === undefined
             ? {}
             : { renderRowContent: renderRoomActionRowContent })}
+          {...(renderRoomActionRowTrailingContent === undefined
+            ? {}
+            : { renderRowTrailingContent: renderRoomActionRowTrailingContent })}
           {...(renderLifecycleBoundaryContent === undefined
             ? {}
             : { renderBoundaryContent: renderLifecycleBoundaryContent })}
         />
       );
     case 'ship':
-      if (view === 'overview' || view === 'sideRooms' || view === 'minorRewards') return null;
-      if (view === 'features') return renderFeatures();
-      if (view === 'encounters') {
-        return renderEncounterStructure(
-          <ShipCombatPhaseCountWorkbench
-            occurrence={room.address}
-            interactions={interactions}
-            nested
-          />,
+      if (view === 'overview') {
+        return (
+          <>
+            {renderFeatures()}
+            {renderEncounterStructure(
+              <ShipCombatPhaseCountWorkbench
+                occurrence={room.address}
+                interactions={interactions}
+                nested
+              />,
+            )}
+          </>
         );
       }
       return (
@@ -205,6 +236,9 @@ export function DirectRoomWorkbench({
           {...(renderRoomActionRowContent === undefined
             ? {}
             : { renderRowContent: renderRoomActionRowContent })}
+          {...(renderRoomActionRowTrailingContent === undefined
+            ? {}
+            : { renderRowTrailingContent: renderRoomActionRowTrailingContent })}
           {...(renderLifecycleBoundaryContent === undefined
             ? {}
             : { renderBoundaryContent: renderLifecycleBoundaryContent })}

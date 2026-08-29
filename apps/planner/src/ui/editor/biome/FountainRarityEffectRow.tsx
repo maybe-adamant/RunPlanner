@@ -53,40 +53,32 @@ export function FountainRarityEffectRow({
     if (!nextOpen && focused) setClosedAtNavigationRevision(semanticNavigationRevision);
   };
   return (
-    <div
-      aria-label="Aromatic Phial"
-      className="room-action-row room-timeline-effect-row"
-      data-fountain-rarity={control.address.action.actionKey}
-    >
-      <div className="owner-markers room-action-identity">
-        <span aria-hidden="true" className="hub-roster-rank">
-          ·
-        </span>
-        <strong>Aromatic Phial</strong>
-        <RandomTraitTargetPicker
-          ariaLabel="Aromatic Phial target"
-          id={semanticOwnerControlElementId(control.address)}
-          interaction={interaction}
-          model={domain?.picker ?? { sections: Object.freeze([]) }}
-          onSelect={(target) => executeIntent(interaction.intentFor(target))}
-          onOpenChange={onOpenChange}
-          open={open}
-          selected={selected === '' ? null : selected}
-        />
-        {domain?.selectedPossible === false && selected !== '' ? (
-          <>
-            <span className="finding-badge">Needs repair</span>
-            <button
-              className="quiet-action"
-              onClick={() => executeIntent(interaction.intentFor(null))}
-              type="button"
-            >
-              Clear recorded target
-            </button>
-          </>
-        ) : null}
-        <SemanticOwnerMarker address={control.address} />
-      </div>
+    <div className="fountain-rarity-inline" data-fountain-rarity={control.address.action.actionKey}>
+      <RandomTraitTargetPicker
+        ariaLabel="Phial Target"
+        id={semanticOwnerControlElementId(control.address)}
+        interaction={interaction}
+        label="Phial Target"
+        layout="inline"
+        model={domain?.picker ?? { sections: Object.freeze([]) }}
+        onSelect={(target) => executeIntent(interaction.intentFor(target))}
+        onOpenChange={onOpenChange}
+        open={open}
+        selected={selected === '' ? null : selected}
+      />
+      {domain?.selectedPossible === false && selected !== '' ? (
+        <>
+          <span className="finding-badge">Needs repair</span>
+          <button
+            className="quiet-action"
+            onClick={() => executeIntent(interaction.intentFor(null))}
+            type="button"
+          >
+            Clear Phial target
+          </button>
+        </>
+      ) : null}
+      <SemanticOwnerMarker address={control.address} />
     </div>
   );
 }

@@ -64,6 +64,8 @@ export interface RawRewardStoreDeclaration {
 
 export interface RawShopOptionEntryDeclaration {
   readonly key: string;
+  /** Player-facing item name. Defaults to the reward type label when omitted. */
+  readonly label?: string;
   readonly rewardType: string;
   readonly requirement?: RequirementExpression;
   readonly purchaseRequirement?: RequirementExpression;

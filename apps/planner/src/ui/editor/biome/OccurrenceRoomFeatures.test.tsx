@@ -353,13 +353,13 @@ describe('OccurrenceRoomFeatures', () => {
     const well = workbench.features.find((candidate) => candidate.kind === 'stygianWell');
     expect(well).toMatchObject({ assessment: 'unassessed' });
 
-    openRoomTab('Features');
+    openRoomTab('Room Overview');
     const presence = screen.getByRole('checkbox', { name: 'Stygian Well present' });
     expect((presence as HTMLInputElement).checked).toBe(true);
     expect((presence as HTMLInputElement).disabled).toBe(false);
-    const picker = screen.getByRole('button', { name: 'Stygian Well Healing' });
+    const picker = screen.getByRole('button', { name: 'Stygian Well Offer 1 Item' });
     await view.user.click(picker);
-    const choice = await screen.findByRole('option', { name: 'ArmorBoostStore' });
+    const choice = await screen.findByRole('option', { name: 'Splintered Shield' });
     expect(picker.getAttribute('data-candidate-state')).toBe('unassessed');
     expect(choice.getAttribute('data-candidate-state')).toBe('unassessed');
     expect(choice.getAttribute('aria-disabled')).not.toBe('true');
@@ -389,8 +389,8 @@ describe('OccurrenceRoomFeatures', () => {
         return node.room.occurrenceId === occurrenceId;
       });
     expect(feature?.kind).toBe('occurrenceWorkbench');
-    openRoomTab('Features');
-    const picker = screen.getByRole('button', { name: 'Pool of Purging Left slot' });
+    openRoomTab('Room Overview');
+    const picker = screen.getByRole('button', { name: 'Pool of Purging Offer 1 Item' });
     await view.user.click(picker);
     const choice = await screen.findByRole('option', { name: /Phalanx Shot/ });
     await waitFor(() => expect(picker.getAttribute('data-candidate-state')).toBe('impossible'));
@@ -428,11 +428,11 @@ describe('OccurrenceRoomFeatures', () => {
         ?.biomes.find((biome) => biome.biomeKey === 'H')
         ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === occurrenceId);
 
-    openRoomTab('Encounters');
+    openRoomTab('Room Overview');
     const nemesis = screen.getByRole('checkbox', { name: 'Nemesis Event' });
     expect((nemesis as HTMLInputElement).checked).toBe(true);
     expect(screen.queryByRole('combobox', { name: /Passive encounter/i })).toBeNull();
-    openRoomTab('Minor Rewards');
+    openRoomTab('Room Overview');
     const count = screen.getByRole('combobox', { name: 'Optional pickups' });
     expect((count as HTMLSelectElement).value).toBe('4');
     expect(within(count).getByRole('option', { name: '4' })).toBeTruthy();
@@ -475,7 +475,7 @@ describe('OccurrenceRoomFeatures', () => {
     act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
     await waitFor(() => expect(authoredFields()?.state).toMatchObject({ optionalRewardCount: 4 }));
 
-    openRoomTab('Encounters');
+    openRoomTab('Room Overview');
     await view.user.click(screen.getByRole('checkbox', { name: 'Nemesis Event' }));
     await waitFor(() =>
       expect(authoredFields()?.encounters.encounterKeyByPhase.Passive).not.toBe(

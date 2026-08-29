@@ -139,6 +139,7 @@ export interface RewardStoreDeclaration {
 
 export interface ShopOptionEntry {
   readonly key: string;
+  readonly label: string;
   readonly rewardType: string;
   readonly requirement?: RequirementExpression;
   readonly purchaseRequirement?: RequirementExpression;

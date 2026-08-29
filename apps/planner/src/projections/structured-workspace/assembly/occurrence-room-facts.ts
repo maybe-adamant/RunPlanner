@@ -41,7 +41,7 @@ import {
   type WorkspaceRewardControl,
   type WorkspaceRoomLocal,
   type WorkspaceShipStructurePhase,
-  type WorkspaceShopPurchaseDescriptor,
+  type WorkspaceShopSupplementalPurchaseDescriptor,
   type WorkspaceShopSupplementalDescriptor,
 } from '../contract';
 
@@ -522,11 +522,18 @@ interface ShopSupplementalAssemblyContext {
 function supplementalPurchase(
   context: ShopSupplementalAssemblyContext,
   entryKey: string,
-): WorkspaceShopPurchaseDescriptor {
+): WorkspaceShopSupplementalPurchaseDescriptor {
   const address = createAcquisitionEntryAddress(context.acquisitionSite, entryKey);
+  const reference = Object.freeze({
+    kind: 'interactAcquisitionEntry' as const,
+    siteKey: context.acquisitionSite.pointKey,
+    entryKey,
+  });
   return Object.freeze({
     address,
     marker: context.input.markerDestinations.marker(address),
+    purchased: context.selectedActionKeys.includes(entryKey),
+    reference,
   });
 }
 
@@ -549,7 +556,7 @@ function derivedRewardSupplementalOffer(
           key: ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
           label: 'Gold Gold Gold duplicate',
           explanation:
-            'This selected duplicate has no active eligible paid source. Remove its Room Action to repair the Shop.',
+            'This selected duplicate has no active eligible paid source. Clear Purchased here to repair the Shop.',
           purchase,
         })
       : Object.freeze({
@@ -557,7 +564,7 @@ function derivedRewardSupplementalOffer(
           key: TRAVEL_DEAL_REFILL_ENTRY_KEY,
           label: 'Travel Deal refill',
           explanation:
-            'This selected refill has no active triggering purchase. Remove its Room Action to repair the Shop.',
+            'This selected refill has no active triggering purchase. Clear Purchased here to repair the Shop.',
           purchase,
         });
   }
@@ -568,14 +575,13 @@ function derivedRewardSupplementalOffer(
           kind: 'echoDoubleShopPlaceholder' as const,
           key: ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
           label: 'Gold Gold Gold duplicate',
-          explanation:
-            'A prior paid non-Spell Shop action is required before this duplicate can be edited.',
+          explanation: 'Settle the first paid non-Spell Shop purchase before editing Echo Gold.',
         })
       : Object.freeze({
           kind: 'travelDealPlaceholder' as const,
           key: TRAVEL_DEAL_REFILL_ENTRY_KEY,
           label: 'Travel Deal refill',
-          explanation: 'A prior paid Shop action is required before this refill can be edited.',
+          explanation: 'Settle the first paid Shop purchase before editing Travel Deal.',
         });
   }
   if (capability.kind !== activeKind || capability.sourceOfferKey === undefined) {

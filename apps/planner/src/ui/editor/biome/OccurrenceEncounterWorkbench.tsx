@@ -1,5 +1,4 @@
 import { type OccurrenceAddress } from '@run-planner/engine/authored-project';
-import { Fragment } from 'react';
 import { candidateSupport, presentCandidateLabel } from '@planner/projections/candidateProjection';
 import {
   requireWorkspaceInteraction,
@@ -8,11 +7,11 @@ import {
   type WorkspaceEncounterPhase,
   type WorkspaceInteractionCatalog,
   type WorkspaceLocalVisitDecision,
+  type WorkspaceRoomActions,
   type WorkspaceRoomSummary,
   type WorkspaceRewardWheelDescriptor,
 } from '@planner/projections/structured-workspace';
 import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
-import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
 import { useAppDispatch } from '@planner/state/store';
 import { SemanticOwnerMarker } from '@planner/ui/feedback/EvaluationFeedback';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
@@ -95,7 +94,6 @@ function LocalVisitSlotRow({
   readonly localVisit: WorkspaceLocalVisitDecision;
   readonly slot: WorkspaceLocalVisitDecision['slots'][number];
 }) {
-  const dispatch = useAppDispatch();
   const executeIntent = useCommandIntent();
   const generation = requireWorkspaceInteraction(
     interactions.localVisitGenerations,
@@ -104,22 +102,10 @@ function LocalVisitSlotRow({
   return (
     <tr className="ephyra-side-grid-row">
       <th scope="row">
-        <div className="ephyra-side-room-heading">
-          <div className="owner-markers">
-            <span>{slot.label}</span>
-            <SemanticOwnerMarker address={slot.address} />
-          </div>
-          <p className="card-kicker">Door {slot.physicalDoorId}</p>
+        <div className="owner-markers">
+          <span>{slot.label}</span>
+          <SemanticOwnerMarker address={slot.address} />
         </div>
-        {slot.generation !== 'generated' ? null : (
-          <button
-            className="quiet-action action-compact"
-            onClick={() => dispatch(semanticOwnerFocused(slot.room.address))}
-            type="button"
-          >
-            Open {slot.label}
-          </button>
-        )}
       </th>
       <td className="ephyra-side-priority">{slot.availabilityRank}</td>
       <td>
@@ -513,13 +499,43 @@ export function RewardWheelWorkbench({
 }
 
 export function ShopWorkbench({
+  actions,
   interactions,
   room,
 }: {
+  readonly actions?: WorkspaceRoomActions;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly room: Extract<WorkspaceRoomSummary['roomLocal'], { readonly kind: 'shop' }>;
 }) {
   const executeIntent = useCommandIntent();
+  const actionInteraction =
+    actions === undefined
+      ? undefined
+      : requireWorkspaceInteraction(interactions.roomActions, actions.interactionKey);
+  const toggleSupplementalPurchase = (
+    purchase: Extract<
+      (typeof room.supplementalOffers)[number],
+      { readonly purchase: unknown }
+    >['purchase'],
+  ): void => {
+    const proposal = actions?.proposals.find(
+      (candidate) =>
+        candidate.kind === (purchase.purchased ? 'remove' : 'insert') &&
+        candidate.reference.kind === 'interactAcquisitionEntry' &&
+        candidate.reference.siteKey === purchase.reference.siteKey &&
+        candidate.reference.entryKey === purchase.reference.entryKey,
+    );
+    if (proposal?.structurallyAuthorable !== true || actionInteraction === undefined) return;
+    executeIntent(actionInteraction.intentFor(proposal.key));
+  };
+  const supplementalLabel = (kind: (typeof room.supplementalOffers)[number]['kind']): string =>
+    kind === 'infernalContractReward'
+      ? 'Contract'
+      : kind === 'travelDealPlaceholder' ||
+          kind === 'travelDealInvalid' ||
+          kind === 'travelDealRefill'
+        ? 'Travel Deal'
+        : 'Echo Gold';
   if (!room.materialized) {
     return (
       <section aria-label="Shop inventory and conditions" className="shop-editor">
@@ -535,92 +551,83 @@ export function ShopWorkbench({
       <div className="local-reward-heading">
         <h4>Shop inventory and conditions</h4>
       </div>
-      <div className="shop-table-scroll">
-        <table className="shop-offer-table">
-          <thead>
-            <tr>
-              <th scope="col">Offer</th>
-            </tr>
-          </thead>
-          <tbody>
-            {room.offers.map((offer) => (
-              <Fragment key={offer.key}>
-                <tr className="shop-offer" key={`${offer.key}:identity`}>
-                  <th scope="row">
-                    <div className="owner-markers">
-                      <span>{offer.label}</span>
-                      <SemanticOwnerMarker address={offer.rewardControl.marker.address} />
-                      <label className="purchase-control">
-                        <input
-                          aria-label={`Purchased ${offer.label}`}
-                          checked={offer.participation.purchased}
-                          onChange={(event) =>
-                            executeIntent(
-                              requireWorkspaceInteraction(
-                                interactions.shopPurchaseParticipations,
-                                offer.participation.interactionKey,
-                              ).intentFor(event.target.checked),
-                            )
-                          }
-                          type="checkbox"
-                        />
-                        Purchased
-                      </label>
-                    </div>
-                  </th>
-                </tr>
-                <tr className="shop-offer-reward" key={`${offer.key}:reward`}>
-                  <td>
-                    <RewardControlEditor
-                      control={offer.rewardControl}
-                      idPrefix={`shop-${offer.rewardControl.marker.focusKey}`}
-                      interactions={interactions}
-                      showAcquisitionChildren={false}
-                    />
-                  </td>
-                </tr>
-              </Fragment>
-            ))}
-            {room.supplementalOffers.map((offer) =>
-              offer.kind === 'travelDealPlaceholder' ||
-              offer.kind === 'echoDoubleShopPlaceholder' ? (
-                <tr className="shop-offer shop-offer-disabled" key={offer.key}>
-                  <th scope="row">
-                    {offer.label}: {offer.explanation}
-                  </th>
-                </tr>
-              ) : offer.kind === 'travelDealInvalid' || offer.kind === 'echoDoubleShopInvalid' ? (
-                <tr className="shop-offer shop-offer-invalid" key={offer.key}>
-                  <th scope="row">
-                    <span>{offer.label}</span>
-                    <small>{offer.explanation}</small>
-                  </th>
-                </tr>
-              ) : 'rewardControl' in offer ? (
-                <Fragment key={offer.key}>
-                  <tr className="shop-offer" key={`${offer.key}:identity`}>
-                    <th scope="row">
-                      <div className="owner-markers">
-                        <span>{offer.label}</span>
-                        <SemanticOwnerMarker address={offer.rewardControl.marker.address} />
-                      </div>
-                    </th>
-                  </tr>
-                  <tr className="shop-offer-reward" key={`${offer.key}:reward`}>
-                    <td>
-                      <RewardControlEditor
-                        control={offer.rewardControl}
-                        idPrefix={`shop-${offer.rewardControl.marker.focusKey}`}
-                        interactions={interactions}
-                        showAcquisitionChildren={false}
-                      />
-                    </td>
-                  </tr>
-                </Fragment>
-              ) : null,
-            )}
-          </tbody>
-        </table>
+      <div className="shop-family-offer-list">
+        {room.offers.map((offer) => (
+          <div className="shop-family-offer-row" key={offer.key}>
+            <div className="owner-markers shop-family-item-control">
+              <RewardControlEditor
+                control={offer.rewardControl}
+                idPrefix={`shop-${offer.rewardControl.marker.focusKey}`}
+                interactions={interactions}
+                label={`${offer.label} Item`}
+                showAcquisitionChildren={false}
+              />
+              <SemanticOwnerMarker address={offer.rewardControl.marker.address} />
+            </div>
+            <label className="shop-family-participation">
+              <input
+                aria-label={`Purchased ${offer.label}`}
+                checked={offer.participation.purchased}
+                onChange={(event) =>
+                  executeIntent(
+                    requireWorkspaceInteraction(
+                      interactions.shopPurchaseParticipations,
+                      offer.participation.interactionKey,
+                    ).intentFor(event.target.checked),
+                  )
+                }
+                type="checkbox"
+              />
+              Purchased
+            </label>
+          </div>
+        ))}
+        {room.supplementalOffers.map((offer) =>
+          offer.kind === 'travelDealPlaceholder' || offer.kind === 'echoDoubleShopPlaceholder' ? (
+            <div className="shop-family-offer-placeholder" key={offer.key}>
+              <strong>{supplementalLabel(offer.kind)}</strong>
+              <span>{offer.explanation}</span>
+            </div>
+          ) : offer.kind === 'travelDealInvalid' || offer.kind === 'echoDoubleShopInvalid' ? (
+            <div className="shop-family-offer-row shop-family-offer-invalid" key={offer.key}>
+              <div>
+                <strong>{supplementalLabel(offer.kind)}</strong>
+                <span>{offer.explanation}</span>
+              </div>
+              <label className="shop-family-participation">
+                <input
+                  aria-label={`Purchased ${supplementalLabel(offer.kind)}`}
+                  checked={offer.purchase.purchased}
+                  onChange={() => toggleSupplementalPurchase(offer.purchase)}
+                  type="checkbox"
+                />
+                Purchased
+              </label>
+            </div>
+          ) : 'rewardControl' in offer ? (
+            <div className="shop-family-offer-row" key={offer.key}>
+              <div className="owner-markers shop-family-item-control">
+                <RewardControlEditor
+                  control={offer.rewardControl}
+                  idPrefix={`shop-${offer.rewardControl.marker.focusKey}`}
+                  interactions={interactions}
+                  label={`${supplementalLabel(offer.kind)} Item`}
+                  showAcquisitionChildren={false}
+                />
+                <SemanticOwnerMarker address={offer.rewardControl.marker.address} />
+              </div>
+              <label className="shop-family-participation">
+                <input
+                  aria-label={`Purchased ${supplementalLabel(offer.kind)}`}
+                  checked={offer.purchase.purchased}
+                  onChange={() => toggleSupplementalPurchase(offer.purchase)}
+                  type="checkbox"
+                />
+                Purchased
+              </label>
+            </div>
+          ) : null,
+        )}
       </div>
     </section>
   );
