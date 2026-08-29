@@ -6,7 +6,7 @@ This is the consolidated source audit for the optional and automatic room
 features that are consequential to the modeled run: natural resource element
 gains, Pools of Purging, Shrines of Hermes, and Stygian Wells. It records source
 contacts, realized hosts, spacing and physical-capacity rules, inventories,
-effect matrices, bounded uncertainties, and the current schema-59 planner
+effect matrices, bounded uncertainties, and the current schema-71 planner
 dispositions.
 
 This audit owns feature-specific game facts. The shared post-encounter
@@ -27,9 +27,9 @@ validation.
 | Superseded source                            | Unique claims retained here or in the surviving authority                                                                                                                                                                                                                                                                   |
 | -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Natural Resources source audit               | Resource tool/element mapping, successful interaction boundary, run-local cap, point spacing/capacity/room declaration matrix, and selected-success planner abstraction retained in **Natural Resources**.                                                                                                                  |
-| Purging Pool source audit                    | Physical F/G/H Postboss hosts, challenge-switch realization, shop-aware candidate predicate, stack removal, reroll boundary, and schema-59 sale disposition retained in **Pools of Purging**.                                                                                                                               |
-| Shrine delivery source audit                 | Shrine host/chance/anchor matrix, three-offer inventory, pending delivery/rush/forced completion, Spell reservation, Travel Deal refill, and schema-59 disposition retained in **Shrines of Hermes**. Shared acquisition ordering remains in the acquisition and room-action authorities.                                   |
-| Stygian Well source audit                    | Well host/spacing/anchor matrix, complete 25-identity effect table, repeat and temporary-use exceptions, consequential items, and schema-59 disposition retained in **Stygian Wells**. Spark's exact SecretPoint host/count matrix remains with the [route-detour authority](../rooms-and-routes/ROUTE_DETOUR_FINDINGS.md). |
+| Purging Pool source audit                    | Physical F/G/H Postboss hosts, challenge-switch realization, shop-aware candidate predicate, stack removal, reroll boundary, and schema-71 sale disposition retained in **Pools of Purging**.                                                                                                                               |
+| Shrine delivery source audit                 | Shrine host/chance/anchor matrix, three-offer inventory, pending delivery/rush/forced completion, Spell reservation, Travel Deal refill, and schema-71 disposition retained in **Shrines of Hermes**. Shared acquisition ordering remains in the acquisition and room-action authorities.                                   |
+| Stygian Well source audit                    | Well host/spacing/anchor matrix, complete 25-identity effect table, repeat and temporary-use exceptions, consequential items, and schema-71 disposition retained in **Stygian Wells**. Ixion's exact SecretPoint host/count matrix remains with the [route-detour authority](../rooms-and-routes/ROUTE_DETOUR_FINDINGS.md). |
 | Shop and Well lifecycle source audit         | Shared Shop/Well/Shrine post-outgoing boundary and RequiredNotInStore conclusion already survive in `../rewards-and-acquisition/ACQUISITION_DELIVERY_AND_ROOM_SETTLEMENT.md`; feature-specific pool facts are retained in this audit.                                                                                       |
 | Boss completion source audit                 | Boss-death/Judgment and effect-neutral reward facts are retained in the Boss section of `../rooms-and-routes/ROOM_ACTION_ORDER_GAME_DATA_AUDIT.md`; Shrine delivery remains here only for its feature-specific source facts.                                                                                                |
 | Fountain and Postboss lifecycle source audit | Fountain, persistent N Hub, Postboss, rack, and Cleanup chronology are retained in the Fountains and Postboss section of `../rooms-and-routes/ROOM_ACTION_ORDER_GAME_DATA_AUDIT.md`; Well/Shrine availability remains here.                                                                                                 |
@@ -208,7 +208,7 @@ The Pool participates in the shared Store reroll system. A reroll excludes one
 random previous option while other previous options can return. Rerolls and
 currency are global Store behavior, not a Pool-owned modeled rule.
 
-### Current schema-59 planner disposition
+### Current schema-71 planner disposition
 
 Schema 59 represents forced physical Pools on the F/G/H Postboss occurrences.
 An uninteracted Pool keeps dormant runtime-random inventory and contributes no
@@ -478,15 +478,15 @@ The three direct run-consequential identities are:
   consumed when the choice screen closes, whether or not it is selected. An
   empty replacement set leaves the use intact.
 
-### Current schema-59 planner disposition
+### Current schema-71 planner disposition
 
 Forced F/G/H Postboss Wells are always present. An uninteracted Well retains
 dormant inventory detail but contributes no exact purchases or effects;
 interaction requires all three visible identities. Each purchase is a paid,
 atomic Cleanup action and never enters the free-pickup alternative-interaction
 lifecycle. Travel Deal owns one same-group refill from the first ranked
-purchase. The modeled state is limited to Spark uses and their next authored
-Chaos exit, Yarn rarity uses, Sacrificial Hymn replacement uses, active
+purchase. The modeled state is limited to Ixion uses and their automatically
+derived next host-capable Chaos gate, Yarn rarity uses, Sacrificial Hymn replacement uses, active
 Discount and Empty Slot lifetimes, and Extended charges. Last Stand remains a
 concrete paid consumable isolated by declaration-owned runtime fallback; the
 planner owns no Death Defiance capacity ledger. Health, damage, Magick, gold,
@@ -505,11 +505,11 @@ The following remain explicit and outside this audit's modeled contract:
 - exact affordability, health, damage, Magick, gold, and meta-resource amounts;
 - Store reroll chronology and currency;
 - temporary Well effects whose expiration is entirely sim-neutral;
-- changes to the installed Spark SecretPoint host matrix, whose current
+- changes to the installed Ixion SecretPoint host matrix, whose current
   declaration-backed counts live in the [route-detour authority](../rooms-and-routes/ROUTE_DETOUR_FINDINGS.md);
 - future changes to source pools or permanent upgrades; and
 - unsupported feature families or interaction details not declared by the
-  current schema-59 catalog.
+  current schema-71 catalog.
 
 These boundaries preserve source/model discrepancies rather than encoding
 generic permissive values. Any future expansion should update this audit's

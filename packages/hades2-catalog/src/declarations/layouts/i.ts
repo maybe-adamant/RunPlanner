@@ -16,9 +16,10 @@ export const iBiomeLayout = {
     rewardStoreOverrides: [],
     bounds: { maxBatches: 13, maxTargets: 23 },
   },
-  sparkChaos: {
+  chaos: {
     roomGameNames: ['Chaos_01', 'Chaos_02', 'Chaos_03', 'Chaos_04', 'Chaos_05', 'Chaos_06'],
     defaultRoomGameName: 'Chaos_01',
+    offerSpacingWindow: 10,
   },
   completion: {
     bossRoomGameName: 'I_Boss01',

@@ -40,7 +40,7 @@ import type {
   WorkspaceStygianWellOfferInteraction,
   WorkspaceStygianWellPurchaseInteraction,
   WorkspaceStygianWellTwistResultInteraction,
-  WorkspaceNaturalChaosSpawnInteraction,
+  WorkspaceChaosSpawnInteraction,
   WorkspaceZagreusSpawnInteraction,
   WorkspaceResourcePlacementInteraction,
 } from '../contract';
@@ -85,7 +85,7 @@ export interface WorkspaceOccurrenceLocalInteractionCatalog {
   readonly localVisitOrders: ReadonlyMap<string, WorkspaceLocalVisitOrderInteraction>;
   readonly localVisitGenerations: ReadonlyMap<string, WorkspaceLocalVisitGenerationInteraction>;
   readonly zagreusSpawns: ReadonlyMap<string, WorkspaceZagreusSpawnInteraction>;
-  readonly naturalChaosSpawns: ReadonlyMap<string, WorkspaceNaturalChaosSpawnInteraction>;
+  readonly chaosSpawns: ReadonlyMap<string, WorkspaceChaosSpawnInteraction>;
   readonly resourcePlacements: ReadonlyMap<string, WorkspaceResourcePlacementInteraction>;
 }
 
@@ -188,7 +188,7 @@ export function bindOccurrenceLocalInteractions(
   const localVisitOrders = new Map<string, WorkspaceLocalVisitOrderInteraction>();
   const localVisitGenerations = new Map<string, WorkspaceLocalVisitGenerationInteraction>();
   const zagreusSpawns = new Map<string, WorkspaceZagreusSpawnInteraction>();
-  const naturalChaosSpawns = new Map<string, WorkspaceNaturalChaosSpawnInteraction>();
+  const chaosSpawns = new Map<string, WorkspaceChaosSpawnInteraction>();
   const resourcePlacements = new Map<string, WorkspaceResourcePlacementInteraction>();
   const set = <T>(
     target: Map<string, WorkspaceCandidateInteraction<T>>,
@@ -240,14 +240,14 @@ export function bindOccurrenceLocalInteractions(
         }
         break;
       }
-      case 'naturalChaosSpawn': {
+      case 'chaosSpawn': {
         const key = semanticAddressKey(requirement.owner);
-        if (naturalChaosSpawns.has(key)) {
+        if (chaosSpawns.has(key)) {
           throw new StructuredWorkspaceProjectionContractError(
-            `${key} has multiple bound natural Chaos spawn interactions`,
+            `${key} has multiple bound Chaos spawn interactions`,
           );
         }
-        naturalChaosSpawns.set(
+        chaosSpawns.set(
           key,
           Object.freeze({
             key,
@@ -255,7 +255,7 @@ export function bindOccurrenceLocalInteractions(
             spawnIntent: () =>
               Object.freeze({
                 command: Object.freeze({
-                  kind: 'AddNaturalChaos' as const,
+                  kind: 'AddChaos' as const,
                   additional: requirement.owner,
                   occurrenceId: allocateOccurrenceId(),
                 }),
@@ -945,7 +945,7 @@ export function bindOccurrenceLocalInteractions(
     localVisitOrders,
     localVisitGenerations,
     zagreusSpawns,
-    naturalChaosSpawns,
+    chaosSpawns,
     resourcePlacements,
   });
 }

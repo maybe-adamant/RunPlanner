@@ -225,6 +225,10 @@ export {
   ProjectCommandContractError,
 } from './commands/dispatch';
 export {
+  forcedChaosOccurrenceKeys,
+  ixionGeneratedChaosOccurrenceKeys,
+} from './chaos-gate-reconciliation';
+export {
   declaredPhysicalExits,
   hostContinuationExitForDetourRoom,
   fixedWidthOneTakeoverForLayout,

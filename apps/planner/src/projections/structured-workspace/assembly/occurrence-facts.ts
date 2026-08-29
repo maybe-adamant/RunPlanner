@@ -6,7 +6,7 @@ import {
   type OccurrenceId,
 } from '@run-planner/engine/authored-project';
 import type {
-  NaturalChaosCandidateCapability,
+  ChaosCandidateCapability,
   ZagreusContractCandidateCapability,
 } from '@run-planner/engine/simulation';
 
@@ -17,7 +17,8 @@ import type { WorkspaceBiomeSource } from '../source-index';
 export interface WorkspaceOccurrenceAssemblyFact {
   readonly authoredAdditionalExitKeys: readonly string[];
   readonly detailsActive: boolean;
-  readonly naturalChaosPlacement?: NaturalChaosCandidateCapability;
+  readonly chaosPlacement?: ChaosCandidateCapability;
+  readonly chaosGateForced: boolean;
   readonly zagreusContractPlacement?: ZagreusContractCandidateCapability;
   readonly occurrenceId: OccurrenceId;
 }
@@ -82,7 +83,7 @@ export function createWorkspaceBiomeOccurrenceAssemblyFacts(
       );
     }
     const occurrenceAddress = createOccurrenceAddress(source.biome, occurrence.occurrenceId);
-    const naturalChaosPlacement = source.naturalChaosAssessment(occurrenceAddress);
+    const chaosPlacement = source.chaosAssessment(occurrenceAddress);
     const zagreusContractPlacement = source.zagreusContractAssessment(occurrenceAddress);
     byOccurrence.set(
       occurrence.occurrenceId,
@@ -91,8 +92,9 @@ export function createWorkspaceBiomeOccurrenceAssemblyFacts(
           (occurrence.additionalExits ?? []).map((additional) => additional.key),
         ),
         detailsActive: active.has(occurrence.occurrenceId),
-        ...(naturalChaosPlacement === undefined ? {} : { naturalChaosPlacement }),
+        ...(chaosPlacement === undefined ? {} : { chaosPlacement }),
         ...(zagreusContractPlacement === undefined ? {} : { zagreusContractPlacement }),
+        chaosGateForced: source.chaosGateForced(occurrenceAddress),
         occurrenceId: occurrence.occurrenceId,
       }),
     );

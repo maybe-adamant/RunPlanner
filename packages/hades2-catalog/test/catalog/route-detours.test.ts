@@ -24,7 +24,7 @@ const zagreusSources = [
   ['P_Shop01', ['OlympusIndoorExitDoor', 'OlympusOutdoorExitDoor']],
 ] as const;
 
-const naturalChaosSources = [
+const chaosSpawnSources = [
   'N_Opening01',
   'F_Opening01',
   'F_Opening02',
@@ -105,42 +105,11 @@ const naturalChaosSources = [
   'P_Shop01',
 ] as const;
 
-const sparkChaosSources = [
+const chaosHostOnlySources = [
   ...[
-    ['F_Opening01', 1],
-    ['F_Opening02', 1],
-    ['F_Opening03', 1],
-    ...Array.from(
-      { length: 22 },
-      (_, index) =>
-        [
-          `F_Combat${String(index + 1).padStart(2, '0')}`,
-          [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 2, 2, 1, 2, 2][index],
-        ] as const,
-    ),
     ['F_MiniBoss01', 1],
     ['F_MiniBoss02', 1],
     ['F_MiniBoss03', 1],
-    ['F_Story01', 3],
-    ['F_Reprieve01', 1],
-    ['F_Shop01', 1],
-  ],
-  ...[
-    ['G_Intro', 1],
-    ...Array.from(
-      { length: 20 },
-      (_, index) =>
-        [
-          `G_Combat${String(index + 1).padStart(2, '0')}`,
-          [2, 4, 2, 2, 1, 2, 1, 1, 2, 1, 1, 1, 1, 2, 3, 1, 2, 2, 1, 1][index],
-        ] as const,
-    ),
-    ['G_MiniBoss01', 2],
-    ['G_MiniBoss02', 1],
-    ['G_MiniBoss03', 2],
-    ['G_Story01', 1],
-    ['G_Reprieve01', 1],
-    ['G_Shop01', 1],
   ],
   ...[
     ['H_Intro', 2],
@@ -202,7 +171,7 @@ describe('route detour catalog declarations', () => {
   it('keeps detour room-set identity separate from the supported route layouts', () => {
     const catalog = createCatalog(declarations);
 
-    expect(catalog.version).toBe('0.49.0-completion-topology');
+    expect(catalog.version).toBe('0.50.0-unified-chaos-gates');
     expect(catalog.biomes.values.map((biome) => biome.key)).not.toContain('Anomaly');
     expect(catalog.biomes.values.map((biome) => biome.key)).not.toContain('C');
     expect(catalog.biomeLayouts.values.map((layout) => layout.biomeKey)).not.toContain('Anomaly');
@@ -419,20 +388,22 @@ describe('route detour catalog declarations', () => {
     );
   });
 
-  it('normalizes the exact natural Chaos source and host-map matrices', () => {
+  it('normalizes the exact ordinary Chaos source and host-map matrices', () => {
     const catalog = createCatalog(declarations);
     const sources = catalog.rooms.values
-      .filter((room) => room.additionalExits.some((exit) => exit.kind === 'naturalChaos'))
+      .filter((room) => room.additionalExits.some((exit) => exit.kind === 'chaos' && exit.canSpawn))
       .map((room) => room.gameName)
       .sort();
 
-    expect(sources).toEqual([...naturalChaosSources].sort());
-    for (const gameName of naturalChaosSources) {
+    expect(sources).toEqual([...chaosSpawnSources].sort());
+    for (const gameName of chaosSpawnSources) {
       expect(
-        catalog.rooms.byKey[gameName]?.additionalExits.find((exit) => exit.kind === 'naturalChaos'),
+        catalog.rooms.byKey[gameName]?.additionalExits.find((exit) => exit.kind === 'chaos'),
       ).toMatchObject({
-        kind: 'naturalChaos',
-        key: 'naturalChaos',
+        kind: 'chaos',
+        key: 'chaos',
+        canHost: true,
+        canSpawn: true,
         physicalExit: {
           type: 'ChaosExitDoor',
           compatibilityPolicyKey: 'Unconstrained',
@@ -440,22 +411,18 @@ describe('route detour catalog declarations', () => {
         },
       });
     }
-    expect(catalog.biomeLayouts.byKey.F?.naturalChaos).toEqual({
+    expect(catalog.biomeLayouts.byKey.F?.chaos).toEqual({
       roomGameNames: ['Chaos_01', 'Chaos_02', 'Chaos_03', 'Chaos_04', 'Chaos_05', 'Chaos_06'],
       defaultRoomGameName: 'Chaos_01',
       offerSpacingWindow: 10,
     });
-    expect(catalog.biomeLayouts.byKey.G?.naturalChaos).toEqual(
-      catalog.biomeLayouts.byKey.F?.naturalChaos,
-    );
-    expect(catalog.biomeLayouts.byKey.N?.naturalChaos).toEqual({
+    expect(catalog.biomeLayouts.byKey.G?.chaos).toEqual(catalog.biomeLayouts.byKey.F?.chaos);
+    expect(catalog.biomeLayouts.byKey.N?.chaos).toEqual({
       roomGameNames: ['Chaos_03', 'Chaos_06'],
       defaultRoomGameName: 'Chaos_03',
       offerSpacingWindow: 10,
     });
-    expect(catalog.biomeLayouts.byKey.P?.naturalChaos).toEqual(
-      catalog.biomeLayouts.byKey.F?.naturalChaos,
-    );
+    expect(catalog.biomeLayouts.byKey.P?.chaos).toEqual(catalog.biomeLayouts.byKey.F?.chaos);
     for (const gameName of [
       'Chaos_01',
       'Chaos_02',
@@ -477,7 +444,7 @@ describe('route detour catalog declarations', () => {
       });
     }
     expect(
-      catalog.rooms.byKey.P_Intro?.additionalExits.find((exit) => exit.kind === 'naturalChaos'),
+      catalog.rooms.byKey.P_Intro?.additionalExits.find((exit) => exit.kind === 'chaos'),
     ).toMatchObject({
       requirement: {
         kind: 'counterRange',
@@ -487,16 +454,20 @@ describe('route detour catalog declarations', () => {
     });
   });
 
-  it('normalizes the exact Spark Chaos physical-host matrix separately from natural Chaos', () => {
+  it('normalizes host-only Chaos declarations separately from ordinary spawn declarations', () => {
     const catalog = createCatalog(declarations);
     const actual = catalog.rooms.values
-      .filter((room) => room.additionalExits.some((exit) => exit.kind === 'sparkChaos'))
+      .filter((room) =>
+        room.additionalExits.some((exit) => exit.kind === 'chaos' && !exit.canSpawn),
+      )
       .map((room) => [room.gameName, room.secretPointAnchorCount] as const);
-    expect(actual).toEqual(sparkChaosSources);
-    for (const [gameName] of sparkChaosSources) {
+    expect(actual).toEqual(chaosHostOnlySources);
+    for (const [gameName] of chaosHostOnlySources) {
       expect(catalog.rooms.byKey[gameName]?.additionalExits).toContainEqual({
-        kind: 'sparkChaos',
-        key: 'sparkChaos',
+        kind: 'chaos',
+        key: 'chaos',
+        canHost: true,
+        canSpawn: false,
         physicalExit: {
           type: 'ChaosExitDoor',
           compatibilityPolicyKey: 'Unconstrained',
@@ -505,15 +476,16 @@ describe('route detour catalog declarations', () => {
       });
     }
     for (const biomeKey of ['F', 'G', 'H', 'I'] as const) {
-      expect(catalog.biomeLayouts.byKey[biomeKey]?.sparkChaos).toEqual({
+      expect(catalog.biomeLayouts.byKey[biomeKey]?.chaos).toEqual({
         roomGameNames: ['Chaos_01', 'Chaos_02', 'Chaos_03', 'Chaos_04', 'Chaos_05', 'Chaos_06'],
         defaultRoomGameName: 'Chaos_01',
+        offerSpacingWindow: 10,
       });
     }
     expect(catalog.rooms.byKey.I_Combat24?.secretPointAnchorCount).toBeUndefined();
     expect(catalog.rooms.byKey.H_PreBoss01?.secretPointAnchorCount).toBeUndefined();
     expect(catalog.rooms.byKey.I_Intro?.additionalExits).not.toContainEqual(
-      expect.objectContaining({ kind: 'sparkChaos' }),
+      expect.objectContaining({ kind: 'chaos' }),
     );
   });
 
@@ -613,9 +585,14 @@ describe('route detour catalog declarations', () => {
       }
     ).additionalExits.find((exit) => exit.kind === 'zagreusContract')!.targetRoomGameName =
       'B_Combat01';
+    const zagreusIndex = (
+      retargeted.rooms[fShopIndex] as unknown as {
+        additionalExits: { kind: string; targetRoomGameName?: string }[];
+      }
+    ).additionalExits.findIndex((exit) => exit.kind === 'zagreusContract');
     expect(() => createCatalog(retargeted)).toThrow(
       new CatalogContractError(
-        `rooms[${fShopIndex}].additionalExits[2].targetRoomGameName`,
+        `rooms[${fShopIndex}].additionalExits[${zagreusIndex}].targetRoomGameName`,
         'Zagreus contract target must be an authored C ContractBoss with automatic host return',
       ),
     );

@@ -24,7 +24,7 @@ import { SemanticOwnerMarker } from '@planner/ui/feedback/EvaluationFeedback';
 import { CandidateSelect } from './CandidateSelect';
 import {
   AnomalyRoomControl,
-  NaturalChaosMapWorkbench,
+  ChaosMapWorkbench,
   RevertAnomalyAction,
 } from './OccurrenceRoomFeatures';
 import { RoomSelector } from './RoomSelector';
@@ -142,9 +142,7 @@ function TargetRow({
 }) {
   const dispatch = useAppDispatch();
   const selectionInteraction =
-    node.targets.length === 1 &&
-    node.zagreusContract === undefined &&
-    node.naturalChaos === undefined
+    node.targets.length === 1 && node.zagreusContract === undefined && node.chaos === undefined
       ? undefined
       : requireWorkspaceInteraction(
           interactions.exitSelections,
@@ -372,19 +370,19 @@ function ZagreusContractExit({
   );
 }
 
-/** Natural Chaos keeps its door selection, navigation, and map identity together. */
-function NaturalChaosExit({
+/** Chaos keeps its door selection, navigation, and map identity together. */
+function ChaosExit({
   control,
   interactions,
   selectionName,
 }: {
-  readonly control: NonNullable<BatchNode['naturalChaos']>;
+  readonly control: NonNullable<BatchNode['chaos']>;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly selectionName: string;
 }) {
   const executeIntent = useCommandIntent();
   const interaction = requireWorkspaceInteraction(
-    interactions.naturalChaosExits,
+    interactions.chaosExits,
     workspaceInteractionKey(control.owner),
   );
   return (
@@ -414,7 +412,7 @@ function NaturalChaosExit({
             <SemanticOwnerMarker address={control.owner} />
           </div>
         </div>
-        <NaturalChaosMapWorkbench control={control} interactions={interactions} />
+        <ChaosMapWorkbench control={control} interactions={interactions} />
       </div>
     </article>
   );
@@ -601,9 +599,7 @@ export function BatchWorkbench({
       : undefined;
   const exitSelection =
     (node.persistence === 'uncommitted' && node.targets.length === 0) ||
-    (node.targets.length === 1 &&
-      node.zagreusContract === undefined &&
-      node.naturalChaos === undefined)
+    (node.targets.length === 1 && node.zagreusContract === undefined && node.chaos === undefined)
       ? undefined
       : requireWorkspaceInteraction(
           interactions.exitSelections,
@@ -651,9 +647,9 @@ export function BatchWorkbench({
             selectionName={`selection-${node.key}`}
           />
         )}
-        {node.naturalChaos === undefined ? null : (
-          <NaturalChaosExit
-            control={node.naturalChaos}
+        {node.chaos === undefined ? null : (
+          <ChaosExit
+            control={node.chaos}
             interactions={interactions}
             selectionName={`selection-${node.key}`}
           />

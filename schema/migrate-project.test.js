@@ -925,6 +925,74 @@ test('69 -> 70 replaces ranked rushed Shrine purchases with delivery actions', (
   assert.deepEqual(repeated.steps, []);
 });
 
+function schema70ChaosProject(additionalExits, selectedAdditionalExitKey) {
+  return {
+    schemaVersion: 70,
+    catalogVersion: '0.49.0-completion-topology',
+    projectId: 'chaos-gate-unification-migration',
+    routes: [
+      {
+        routeKey: 'Underworld',
+        biomes: [
+          {
+            biomeKey: 'F',
+            topology: {
+              occurrences: [
+                {
+                  occurrenceId: 'f-start',
+                  gameName: 'F_Opening01',
+                  additionalExits,
+                },
+              ],
+              decisions: [
+                {
+                  kind: 'exit',
+                  source: { kind: 'occurrence', occurrenceId: 'f-start' },
+                  normal: { targets: [] },
+                  selection: { kind: 'additional', additionalExitKey: selectedAdditionalExitKey },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    ],
+  };
+}
+
+test('70 -> 71 rejects a source with both legacy Chaos gate kinds', () => {
+  const source = schema70ChaosProject(
+    [
+      { kind: 'naturalChaos', key: 'naturalChaos', occurrenceId: 'f-chaos' },
+      { kind: 'sparkChaos', key: 'sparkChaos', occurrenceId: 'f-chaos-2' },
+    ],
+    'naturalChaos',
+  );
+
+  assert.throws(
+    () => migrateProjectDocument(source, 71),
+    /schema 70 -> 71 cannot unify multiple legacy Chaos gates at \$\.routes\[0\]\.biomes\[0\]\.topology\.occurrences\[0\]\.additionalExits \(naturalChaos, sparkChaos\)/,
+  );
+});
+
+test('70 -> 71 unifies each individual legacy Chaos gate as one authored gate', () => {
+  for (const kind of ['naturalChaos', 'sparkChaos']) {
+    const source = schema70ChaosProject([{ kind, key: kind, occurrenceId: 'f-chaos' }], kind);
+
+    const result = migrateProjectDocument(source, 71);
+    const topology = result.document.routes[0].biomes[0].topology;
+    const exits = topology.occurrences[0].additionalExits;
+    assert.equal(result.document.schemaVersion, 71);
+    assert.equal(result.document.catalogVersion, '0.50.0-unified-chaos-gates');
+    assert.deepEqual(exits, [{ kind: 'chaos', key: 'chaos', occurrenceId: 'f-chaos' }]);
+    assert.equal(topology.decisions[0].selection.additionalExitKey, 'chaos');
+    assert.deepEqual(result.changes['70->71'], { chaosGatesUnified: 1 });
+    const repeated = migrateProjectDocument(result.document, 71);
+    assert.deepEqual(repeated.document, result.document);
+    assert.deepEqual(repeated.steps, []);
+  }
+});
+
 test('58 -> 59 seeds Well shells only on exact forced Underworld Postboss identities', () => {
   const source = {
     schemaVersion: 58,
@@ -1032,8 +1100,8 @@ test('67 -> current moves a Surface completion chain and rewrites its resource p
     ['N_Boss01', 'N_PostBoss01'].includes(occurrence.gameName),
   );
 
-  assert.equal(result.document.schemaVersion, 70);
-  assert.equal(result.document.catalogVersion, '0.49.0-completion-topology');
+  assert.equal(result.document.schemaVersion, 71);
+  assert.equal(result.document.catalogVersion, '0.50.0-unified-chaos-gates');
   assert.equal('completionOccurrences' in biome, false);
   assert.deepEqual(
     completion.map((occurrence) => [occurrence.occurrenceId, occurrence.gameName]),

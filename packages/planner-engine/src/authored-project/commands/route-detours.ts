@@ -6,6 +6,7 @@ import type {
   AnomalyRoomState,
   AuthoredAdditionalExit,
   BiomeTopology,
+  IxionGeneratedChaosOrigin,
   ExitDecision,
   ExitDecisionSource,
   ExitSelection,
@@ -425,18 +426,18 @@ function additionalDeclaration(
   return declaration;
 }
 
-function naturalChaosDeclaration(
+function chaosDeclaration(
   room: RoomDeclaration,
   additionalExitKey: string,
   command: RouteDetourCommand,
-): Extract<RoomDeclaration['additionalExits'][number], { readonly kind: 'naturalChaos' }> {
+): Extract<RoomDeclaration['additionalExits'][number], { readonly kind: 'chaos' }> {
   const declaration = room.additionalExits.find(
     (
       candidate,
     ): candidate is Extract<
       RoomDeclaration['additionalExits'][number],
-      { readonly kind: 'naturalChaos' }
-    > => candidate.kind === 'naturalChaos' && candidate.key === additionalExitKey,
+      { readonly kind: 'chaos' }
+    > => candidate.kind === 'chaos' && candidate.key === additionalExitKey,
   );
   if (declaration === undefined) {
     failCommand(command, `${additionalExitKey} is not declared by ${room.gameName}`);
@@ -444,25 +445,7 @@ function naturalChaosDeclaration(
   return declaration;
 }
 
-function sparkChaosDeclaration(
-  room: RoomDeclaration,
-  additionalExitKey: string,
-  command: RouteDetourCommand,
-): Extract<RoomDeclaration['additionalExits'][number], { readonly kind: 'sparkChaos' }> {
-  const declaration = room.additionalExits.find(
-    (
-      candidate,
-    ): candidate is Extract<
-      RoomDeclaration['additionalExits'][number],
-      { readonly kind: 'sparkChaos' }
-    > => candidate.kind === 'sparkChaos' && candidate.key === additionalExitKey,
-  );
-  if (declaration === undefined)
-    failCommand(command, `${additionalExitKey} is not declared by ${room.gameName}`);
-  return declaration;
-}
-
-function requireNaturalChaosSource(
+function requireChaosSource(
   catalog: Catalog,
   located: LocatedBiome,
   topology: BiomeTopology,
@@ -470,31 +453,24 @@ function requireNaturalChaosSource(
   command: RouteDetourCommand,
 ): { readonly occurrence: RoomOccurrence; readonly room: RoomDeclaration } {
   if (selectedOrdinaryBatchIndex(topology, occurrenceId) === undefined) {
-    failCommand(command, 'a natural Chaos source must be on the selected spine');
+    failCommand(command, 'a Chaos source must be on the selected spine');
   }
   const occurrence = requireOccurrence(located.plan, occurrenceId, command);
   const room = requireRoom(catalog, occurrence.gameName, located.layout.biomeKey, command);
   if (room.mode.kind !== 'authored') {
-    failCommand(command, 'a natural Chaos source must be an authored host room');
+    failCommand(command, 'a Chaos source must be an authored host room');
   }
   return Object.freeze({ occurrence, room });
 }
 
-function naturalChaosHost(
+function chaosHost(
   located: LocatedBiome,
   command: RouteDetourCommand,
-): NonNullable<typeof located.layout.naturalChaos> {
-  const host = located.layout.naturalChaos;
+): NonNullable<typeof located.layout.chaos> {
+  const host = located.layout.chaos;
   if (host === undefined) {
-    failCommand(command, `${located.layout.biomeKey} has no natural Chaos host policy`);
+    failCommand(command, `${located.layout.biomeKey} has no Chaos room policy`);
   }
-  return host;
-}
-
-function sparkChaosHost(located: LocatedBiome, command: RouteDetourCommand) {
-  const host = located.layout.sparkChaos;
-  if (host === undefined)
-    failCommand(command, `${located.layout.biomeKey} has no Spark Chaos target policy`);
   return host;
 }
 
@@ -664,40 +640,28 @@ function removeZagreusContract(
   );
 }
 
-function addNaturalChaos(
+function addChaos(
   document: ProjectDocument,
   catalog: Catalog,
   located: LocatedBiome,
-  command: Extract<RouteDetourCommand, { readonly kind: 'AddNaturalChaos' | 'AddSparkChaos' }>,
+  command: Extract<RouteDetourCommand, { readonly kind: 'AddChaos' | 'GenerateChaos' }>,
 ): ProjectDocument {
   const topology = requireTopology(located.plan, command);
-  const { occurrence, room: sourceRoom } = requireNaturalChaosSource(
+  const { occurrence, room: sourceRoom } = requireChaosSource(
     catalog,
     located,
     topology,
     command.additional.occurrenceId,
     command,
   );
-  const declaration =
-    command.kind === 'AddSparkChaos'
-      ? sparkChaosDeclaration(sourceRoom, command.additional.additionalExitKey, command)
-      : naturalChaosDeclaration(sourceRoom, command.additional.additionalExitKey, command);
-  if (command.kind === 'AddSparkChaos' && (sourceRoom.secretPointAnchorCount ?? 0) <= 0)
-    failCommand(command, `${sourceRoom.gameName} has no physical SecretPoint`);
-  if (
-    occurrence.additionalExits.some(
-      (additional) =>
-        additional.key === declaration.key ||
-        (command.kind === 'AddSparkChaos' && additional.kind === 'naturalChaos') ||
-        (command.kind === 'AddNaturalChaos' && additional.kind === 'sparkChaos'),
-    )
-  ) {
+  const declaration = chaosDeclaration(sourceRoom, command.additional.additionalExitKey, command);
+  if (command.kind === 'AddChaos' && !declaration.canSpawn)
+    failCommand(command, `${sourceRoom.gameName} cannot naturally spawn a Chaos gate`);
+  if (!declaration.canHost) failCommand(command, `${sourceRoom.gameName} cannot host a Chaos gate`);
+  if (occurrence.additionalExits.some((additional) => additional.key === declaration.key)) {
     failCommand(command, `${declaration.key} is already authored`);
   }
-  const host =
-    command.kind === 'AddSparkChaos'
-      ? sparkChaosHost(located, command)
-      : naturalChaosHost(located, command);
+  const host = chaosHost(located, command);
   const chaosRoom = catalog.rooms.byKey[host.defaultRoomGameName];
   if (chaosRoom === undefined) {
     failCommand(command, `unknown Chaos map ${host.defaultRoomGameName}`);
@@ -716,20 +680,23 @@ function addNaturalChaos(
   const existing = exitDecisionForSource(topology, source);
   const progression = normalDecisionProgressionForLayout(located.layout);
   if (progression === undefined) {
-    failCommand(command, 'a natural Chaos source requires normal host progression');
+    failCommand(command, 'a Chaos source requires normal host progression');
   }
-  const additional: AuthoredAdditionalExit =
-    command.kind === 'AddSparkChaos'
-      ? Object.freeze({
-          kind: 'sparkChaos' as const,
-          key: 'sparkChaos' as const,
-          occurrenceId: command.occurrenceId,
-        })
-      : Object.freeze({
-          kind: 'naturalChaos' as const,
-          key: 'naturalChaos' as const,
-          occurrenceId: command.occurrenceId,
-        });
+  const additional: AuthoredAdditionalExit = Object.freeze({
+    kind: 'chaos' as const,
+    key: 'chaos' as const,
+    occurrenceId: command.occurrenceId,
+    ...(command.kind === 'GenerateChaos'
+      ? {
+          origin: Object.freeze({
+            kind: 'ixionGenerated' as const,
+            sourceBiomeKey: command.sourceBiomeKey,
+            sourceOccurrenceId: command.sourceOccurrenceId,
+            generationKey: command.generationKey,
+          } satisfies IxionGeneratedChaosOrigin),
+        }
+      : {}),
+  });
   const nextDecision: ExitDecision =
     existing === undefined
       ? createInitialExitDecision(
@@ -780,15 +747,14 @@ function removeChaos(
   document: ProjectDocument,
   catalog: Catalog,
   located: LocatedBiome,
-  command: Extract<
-    RouteDetourCommand,
-    { readonly kind: 'RemoveNaturalChaos' | 'RemoveSparkChaos' }
-  >,
+  command: Extract<RouteDetourCommand, { readonly kind: 'RemoveChaos' | 'RemoveGeneratedChaos' }>,
 ): ProjectDocument {
-  const additionalKind = command.kind === 'RemoveSparkChaos' ? 'sparkChaos' : 'naturalChaos';
   const topology = requireTopology(located.plan, command);
-  if (selectedOrdinaryBatchIndex(topology, command.additional.occurrenceId) === undefined) {
-    failCommand(command, `a ${additionalKind} source must be on the selected spine`);
+  if (
+    command.kind === 'RemoveChaos' &&
+    selectedOrdinaryBatchIndex(topology, command.additional.occurrenceId) === undefined
+  ) {
+    failCommand(command, 'a Chaos source must be on the selected spine');
   }
   const occurrence = requireOccurrence(located.plan, command.additional.occurrenceId, command);
   const source = Object.freeze({
@@ -797,12 +763,16 @@ function removeChaos(
   });
   const decision = exitDecisionForSource(topology, source);
   const additional = occurrence.additionalExits.find(
-    (candidate) =>
-      candidate.kind === additionalKind && candidate.key === command.additional.additionalExitKey,
+    (candidate): candidate is Extract<AuthoredAdditionalExit, { readonly kind: 'chaos' }> =>
+      candidate.kind === 'chaos' && candidate.key === command.additional.additionalExitKey,
   );
   if (additional === undefined) {
     failCommand(command, `${command.additional.additionalExitKey} is not authored`);
   }
+  if (command.kind === 'RemoveChaos' && additional.origin !== undefined)
+    failCommand(command, 'Ixion-generated Chaos gates are removed by their purchase');
+  if (command.kind === 'RemoveGeneratedChaos' && additional.origin?.kind !== 'ixionGenerated')
+    failCommand(command, 'only an Ixion-generated Chaos gate can be removed internally');
   const impact = describeTopologyRemovalImpact(topology, new Set([additional.occurrenceId]));
   const withoutChaos = applyTopologyRemovalImpact(topology, impact);
   const withoutFeature = replaceOccurrence(
@@ -851,27 +821,20 @@ function replaceChaosMap(
   document: ProjectDocument,
   catalog: Catalog,
   located: LocatedBiome,
-  command: Extract<
-    RouteDetourCommand,
-    { readonly kind: 'ReplaceNaturalChaosMap' | 'ReplaceSparkChaosMap' }
-  >,
+  command: Extract<RouteDetourCommand, { readonly kind: 'ReplaceChaosMap' }>,
 ): ProjectDocument {
-  const additionalKind = command.kind === 'ReplaceSparkChaosMap' ? 'sparkChaos' : 'naturalChaos';
   const topology = requireTopology(located.plan, command);
   const occurrence = requireOccurrence(located.plan, command.occurrence.occurrenceId, command);
   const source = topology.occurrences.find((candidate) =>
     candidate.additionalExits.some(
       (additional) =>
-        additional.kind === additionalKind && additional.occurrenceId === occurrence.occurrenceId,
+        additional.kind === 'chaos' && additional.occurrenceId === occurrence.occurrenceId,
     ),
   );
   if (source === undefined) {
-    failCommand(command, `${occurrence.occurrenceId} is not an authored ${additionalKind} map`);
+    failCommand(command, `${occurrence.occurrenceId} is not an authored Chaos map`);
   }
-  const host =
-    command.kind === 'ReplaceSparkChaosMap'
-      ? sparkChaosHost(located, command)
-      : naturalChaosHost(located, command);
+  const host = chaosHost(located, command);
   if (!host.roomGameNames.includes(command.gameName)) {
     failCommand(
       command,
@@ -931,15 +894,13 @@ export function applyRouteDetourCommand(
       return addZagreusContract(document, catalog, located, command);
     case 'RemoveZagreusContract':
       return removeZagreusContract(document, catalog, located, command);
-    case 'AddNaturalChaos':
-      return addNaturalChaos(document, catalog, located, command);
-    case 'AddSparkChaos':
-      return addNaturalChaos(document, catalog, located, command);
-    case 'RemoveNaturalChaos':
-    case 'RemoveSparkChaos':
+    case 'AddChaos':
+    case 'GenerateChaos':
+      return addChaos(document, catalog, located, command);
+    case 'RemoveChaos':
+    case 'RemoveGeneratedChaos':
       return removeChaos(document, catalog, located, command);
-    case 'ReplaceNaturalChaosMap':
-    case 'ReplaceSparkChaosMap':
+    case 'ReplaceChaosMap':
       return replaceChaosMap(document, catalog, located, command);
   }
 }

@@ -56,7 +56,7 @@ function roomMarkers(room: WorkspaceRoomSummary): readonly WorkspaceMarker[] {
   for (const control of room.rewardControls) appendRewardControlMarkers(markers, control);
   for (const row of room.roomActions?.rows ?? []) appendMarker(markers, row.marker);
   appendMarker(markers, room.zagreusSpawn?.marker);
-  appendMarker(markers, room.naturalChaosSpawn?.marker);
+  appendMarker(markers, room.chaosSpawn?.marker);
   const local = room.roomLocal;
   switch (local.kind) {
     case 'fixed':
@@ -140,7 +140,7 @@ function markersForNode(node: WorkspaceNode): readonly WorkspaceMarker[] {
     case 'takeoverBatch':
       appendMarker(markers, node.selection);
       appendMarker(markers, node.zagreusContract?.marker);
-      appendMarker(markers, node.naturalChaos?.marker);
+      appendMarker(markers, node.chaos?.marker);
       if (node.rewardStore !== undefined) appendMarker(markers, node.rewardStore);
       if (node.fieldsCageOutcome !== undefined) appendMarker(markers, node.fieldsCageOutcome);
       for (const target of node.targets) {
@@ -151,8 +151,8 @@ function markersForNode(node: WorkspaceNode): readonly WorkspaceMarker[] {
       if (node.zagreusContract !== undefined) {
         markers.push(...roomMarkers(node.zagreusContract.door.room));
       }
-      if (node.naturalChaos !== undefined) {
-        markers.push(...roomMarkers(node.naturalChaos.door.room));
+      if (node.chaos !== undefined) {
+        markers.push(...roomMarkers(node.chaos.door.room));
       }
       for (const target of node.missingTargets) appendMarker(markers, target.marker);
       break;

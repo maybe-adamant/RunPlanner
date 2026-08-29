@@ -3,13 +3,13 @@ import type { BiomeTopology, ExitDecision } from '../model';
 import type { RoomOccurrenceRole } from '../room-state/declaration';
 import { createDefaultRoomState } from '../room-state/defaults';
 import { failCommand, type LocatedBiome } from './contract';
-import type { ProjectCommand } from './types';
+import type { ProjectCommand, RouteDetourCommand } from './types';
 import { createInfernalContractEntries } from '../shop';
 
 function entryRole(
   room: RoomDeclaration,
   targetIndex: number,
-  command: ProjectCommand,
+  command: ProjectCommand | RouteDetourCommand,
 ): RoomOccurrenceRole {
   if (room.kind !== 'Preboss') return 'ordinary';
   if (room.prebossBatchPolicy?.kind !== 'takeOverNormalDoors') return 'prebossShop';
@@ -32,7 +32,7 @@ export function reconcileNormalTargetEntryStates(
   topology: BiomeTopology,
   decision: ExitDecision,
   selectedNormalExitKey: string | undefined,
-  command: ProjectCommand,
+  command: ProjectCommand | RouteDetourCommand,
 ): BiomeTopology {
   const occurrences = topology.occurrences.map((occurrence) => {
     const targetIndex = decision.normal.targets.findIndex(

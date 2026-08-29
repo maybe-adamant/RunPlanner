@@ -6,7 +6,7 @@ import type {
   AuthoredTraitOffer,
 } from './traits';
 
-export const PROJECT_DOCUMENT_SCHEMA_VERSION = 70 as const;
+export const PROJECT_DOCUMENT_SCHEMA_VERSION = 71 as const;
 export type ResourceFamily = import('../catalog-schema').ResourceFamily;
 /** Route ownership supplies the route key; the selected host is exact and durable. */
 export interface ResourcePlacement {
@@ -371,20 +371,22 @@ export interface ZagreusContractAdditionalExit {
   readonly occurrenceId: OccurrenceId;
 }
 
-export interface NaturalChaosAdditionalExit {
-  readonly kind: 'naturalChaos';
-  readonly key: 'naturalChaos';
-  readonly occurrenceId: OccurrenceId;
+export interface IxionGeneratedChaosOrigin {
+  readonly kind: 'ixionGenerated';
+  readonly sourceBiomeKey: string;
+  readonly sourceOccurrenceId: OccurrenceId;
+  readonly generationKey: StygianWellGenerationKey;
 }
 
-export interface SparkChaosAdditionalExit {
-  readonly kind: 'sparkChaos';
-  readonly key: 'sparkChaos';
+export interface ChaosAdditionalExit {
+  readonly kind: 'chaos';
+  readonly key: 'chaos';
   readonly occurrenceId: OccurrenceId;
+  /** Present only when Ixion inserted this gate; omission means authored. */
+  readonly origin?: IxionGeneratedChaosOrigin;
 }
 
-export type AuthoredAdditionalExit =
-  ZagreusContractAdditionalExit | NaturalChaosAdditionalExit | SparkChaosAdditionalExit;
+export type AuthoredAdditionalExit = ZagreusContractAdditionalExit | ChaosAdditionalExit;
 
 export interface ExitDecision {
   readonly kind: 'exit';

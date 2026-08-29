@@ -168,6 +168,7 @@ function generation(
   roomLifecycles: RoomLifecycleCandidateArtifacts,
   traitOffers: TraitOfferCandidateArtifacts,
   levelResolutions: LevelResolutionCandidateArtifacts,
+  forcedChaosOccurrenceKeys?: ReadonlySet<string>,
   encounterBoundary?: EncounterCandidateBoundary,
 ): BiomeGenerationAssembly {
   const ordinary = evaluateBiomeRoomGenerationAssemblyInternal(
@@ -176,6 +177,7 @@ function generation(
     history,
     enteredBiomeCount,
     rewards.targetHistory,
+    forcedChaosOccurrenceKeys,
   );
   const hub = evaluateHubDecisionGenerationInternal(catalog, snapshot, history);
   const gorgonStatus = (() => {
@@ -235,7 +237,7 @@ function generation(
       undefined,
       undefined,
       undefined,
-      ordinary.naturalChaos,
+      ordinary.chaos,
       ordinary.zagreusContracts,
     ),
     findingRegions: Object.freeze([
@@ -548,6 +550,7 @@ export function evaluateBiomeAssembly(
     rewards.lifecycleArtifacts,
     rewards.traitOfferArtifacts,
     rewards.levelResolutionArtifacts,
+    context.forcedChaosOccurrenceKeys,
   );
   const nemesisByOwner = new Map(
     rewards.simulation.nemesisRandomEventCandidates.map((candidate) => [
@@ -600,7 +603,7 @@ export function evaluateBiomeAssembly(
         rewards.fountainRarityArtifacts,
         rewards.figurineArcanaArtifacts,
         rewards.transcendentEmbryoArtifacts,
-        roomGeneration.candidateArtifacts.naturalChaos,
+        roomGeneration.candidateArtifacts.chaos,
         roomGeneration.candidateArtifacts.zagreusContracts,
       ),
     });
@@ -636,7 +639,7 @@ export function evaluateBiomeAssembly(
         rewards.fountainRarityArtifacts,
         rewards.figurineArcanaArtifacts,
         rewards.transcendentEmbryoArtifacts,
-        roomGeneration.candidateArtifacts.naturalChaos,
+        roomGeneration.candidateArtifacts.chaos,
         roomGeneration.candidateArtifacts.zagreusContracts,
       ),
       history: Object.freeze({

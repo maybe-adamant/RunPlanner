@@ -54,7 +54,8 @@ export function applyRoomEnteredTransition(
   event: Extract<HistoryEvent, { readonly kind: 'roomEntered' }>,
   room: CanonicalAuthoredRoom | undefined,
   roomView: ProgressiveRoomHistoryViews | undefined,
-  forcedSparkChaosSourceOccurrenceIds: ReadonlySet<string>,
+  chaosGateSourceOccurrenceIds: ReadonlySet<string>,
+  ixionGeneratedChaosSourceOccurrenceIds: ReadonlySet<string>,
   branches: readonly RewardBranchState[],
   findingChronology: FindingChronology,
   enteredBiomeCount: number,
@@ -68,26 +69,29 @@ export function applyRoomEnteredTransition(
   const findings: LifecycleFinding[] = [];
   if (room !== undefined) {
     const declaration = catalog.rooms.byKey[room.gameName];
-    const capable = (declaration?.secretPointAnchorCount ?? 0) > 0;
-    const authoredForced = forcedSparkChaosSourceOccurrenceIds.has(room.occurrenceId);
-    const activeSpark = next.some((branch) => branch.stygianWell.sparkUses > 0);
-    if (capable && activeSpark && !authoredForced)
+    const capable =
+      declaration?.additionalExits.some((exit) => exit.kind === 'chaos' && exit.canHost) === true;
+    const chaosGate = chaosGateSourceOccurrenceIds.has(room.occurrenceId);
+    const ixionGeneratedChaos = ixionGeneratedChaosSourceOccurrenceIds.has(room.occurrenceId);
+    const ixionPending = next.some((branch) => branch.stygianWell.sparkUses > 0);
+    const forcedChaos = capable && ixionPending && chaosGate;
+    if (capable && ixionPending && !chaosGate)
       findings.push(
         Object.freeze({
-          finding: rewardFinding('sparkChaosMissing', room.origin, { gameName: room.gameName }),
+          finding: rewardFinding('ixionChaosMissing', room.origin, { gameName: room.gameName }),
           region: ownerRegion(room.origin),
           chronology: findingChronology,
         }),
       );
-    if (authoredForced && !activeSpark)
+    if (ixionGeneratedChaos && !ixionPending)
       findings.push(
         Object.freeze({
-          finding: rewardFinding('sparkChaosUnavailable', room.origin, { gameName: room.gameName }),
+          finding: rewardFinding('ixionChaosUnavailable', room.origin, { gameName: room.gameName }),
           region: ownerRegion(room.origin),
           chronology: findingChronology,
         }),
       );
-    if (authoredForced)
+    if (forcedChaos)
       next = Object.freeze(
         next.map((branch) =>
           Object.freeze({

@@ -1109,8 +1109,8 @@ export type WorkspaceTakeoverBatchInteraction =
 type WorkspaceTakeoverCommandIntent = WorkspaceCommandIntent<TakeoverBatchCommand>;
 
 export interface WorkspaceInteractionCatalog {
-  readonly naturalChaosExits: ReadonlyMap<string, WorkspaceNaturalChaosExitInteraction>;
-  readonly naturalChaosSpawns: ReadonlyMap<string, WorkspaceNaturalChaosSpawnInteraction>;
+  readonly chaosExits: ReadonlyMap<string, WorkspaceChaosExitInteraction>;
+  readonly chaosSpawns: ReadonlyMap<string, WorkspaceChaosSpawnInteraction>;
   readonly zagreusContracts: ReadonlyMap<string, WorkspaceZagreusContractInteraction>;
   readonly zagreusSpawns: ReadonlyMap<string, WorkspaceZagreusSpawnInteraction>;
   readonly batchRewardStores: ReadonlyMap<string, WorkspaceBatchRewardStoreInteraction>;
@@ -1350,15 +1350,15 @@ export interface WorkspaceZagreusSpawnInteraction {
   >;
 }
 
-/** A natural Chaos gate is authored at its source and selected at its outgoing decision. */
-export interface WorkspaceNaturalChaosExitInteraction {
+/** A Chaos gate is authored at its source and selected at its outgoing decision. */
+export interface WorkspaceChaosExitInteraction {
   readonly key: string;
   readonly owner: AdditionalExitAddress;
   readonly mapIntent: (
     gameName: string,
-  ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceNaturalChaosMap' }>>;
-  readonly removeIntent: WorkspaceCommandIntent<
-    Extract<ProjectCommand, { readonly kind: 'RemoveNaturalChaos' }>
+  ) => WorkspaceCommandIntent<Extract<ProjectCommand, { readonly kind: 'ReplaceChaosMap' }>>;
+  readonly removeIntent?: WorkspaceCommandIntent<
+    Extract<ProjectCommand, { readonly kind: 'RemoveChaos' }>
   >;
   readonly selectIntent: WorkspaceCommandIntent<
     Extract<ProjectCommand, { readonly kind: 'SetExitSelection' }>
@@ -1366,11 +1366,11 @@ export interface WorkspaceNaturalChaosExitInteraction {
 }
 
 /** Availability belongs to the active source room; the authored gate remains occurrence-owned. */
-export interface WorkspaceNaturalChaosSpawnInteraction {
+export interface WorkspaceChaosSpawnInteraction {
   readonly key: string;
   readonly owner: AdditionalExitAddress;
   readonly spawnIntent: () => WorkspaceCommandIntent<
-    Extract<ProjectCommand, { readonly kind: 'AddNaturalChaos' }>
+    Extract<ProjectCommand, { readonly kind: 'AddChaos' }>
   >;
 }
 
@@ -1982,13 +1982,13 @@ export type WorkspaceRoomFeature =
       readonly owner: AdditionalExitAddress;
     }
   | {
-      readonly kind: 'naturalChaos';
+      readonly kind: 'chaos';
       readonly action: 'add';
       readonly presence: Extract<WorkspaceFeaturePresence, { readonly kind: 'optionalAbsent' }>;
-      readonly control: WorkspaceNaturalChaosSpawnControl;
+      readonly control: WorkspaceChaosSpawnControl;
     }
   | {
-      readonly kind: 'naturalChaos';
+      readonly kind: 'chaos';
       readonly action: 'remove';
       readonly presence:
         | Extract<WorkspaceFeaturePresence, { readonly kind: 'optionalPresent' }>
@@ -2156,8 +2156,8 @@ export interface WorkspaceRoomSummary {
   readonly anomaly?: WorkspaceAnomalyControl;
   /** Declared Midshop spawn capability; the authored door remains occurrence-owned. */
   readonly zagreusSpawn?: WorkspaceZagreusSpawnControl;
-  /** Declared natural Chaos spawn capability; the authored door remains occurrence-owned. */
-  readonly naturalChaosSpawn?: WorkspaceNaturalChaosSpawnControl;
+  /** Declared Chaos spawn capability; the authored door remains occurrence-owned. */
+  readonly chaosSpawn?: WorkspaceChaosSpawnControl;
   readonly rewardControls: readonly WorkspaceRewardControl[];
   /** Route-owned selected successful tool interactions, presented at their exact room. */
   readonly resources?: readonly {
@@ -2217,15 +2217,17 @@ export interface WorkspaceZagreusSpawnControl {
   readonly owner: AdditionalExitAddress;
 }
 
-export interface WorkspaceNaturalChaosExitControl {
+export interface WorkspaceChaosExitControl {
   readonly door: WorkspaceDoorContract;
+  readonly forced: boolean;
+  readonly kind: 'chaos';
   readonly mapChoices: readonly WorkspaceInteractionChoice<string>[];
   readonly marker: WorkspaceMarker;
   readonly owner: AdditionalExitAddress;
   readonly selected: boolean;
 }
 
-export interface WorkspaceNaturalChaosSpawnControl {
+export interface WorkspaceChaosSpawnControl {
   readonly authorable: boolean;
   readonly marker: WorkspaceMarker;
   readonly owner: AdditionalExitAddress;
@@ -2331,7 +2333,7 @@ interface WorkspaceBatchNodeBase {
   readonly effectiveRewardStore?: WorkspaceEffectiveRewardStore;
   readonly fields?: WorkspaceFieldsBatchContext;
   /** An authored additional exit is a sibling of normal targets, never a target row. */
-  readonly naturalChaos?: WorkspaceNaturalChaosExitControl;
+  readonly chaos?: WorkspaceChaosExitControl;
   readonly zagreusContract?: WorkspaceZagreusContractControl;
   readonly fieldsCageOutcome?: WorkspaceMarker;
   readonly key: string;

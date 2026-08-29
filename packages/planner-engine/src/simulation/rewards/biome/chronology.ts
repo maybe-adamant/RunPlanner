@@ -194,9 +194,16 @@ export function evaluateBiomeRewardChronology(
         : [],
     ),
   );
-  const forcedSparkChaosSourceOccurrenceIds = new Set(
+  const chaosGateSourceOccurrenceIds = new Set(
     [...additionalContinuations.values()].flatMap((continuation) =>
-      continuation.key === 'sparkChaos' ? [continuation.origin.occurrenceId] : [],
+      continuation.key === 'chaos' ? [continuation.origin.occurrenceId] : [],
+    ),
+  );
+  const ixionGeneratedChaosSourceOccurrenceIds = new Set(
+    [...additionalContinuations.values()].flatMap((continuation) =>
+      continuation.key === 'chaos' && continuation.chaosOrigin !== undefined
+        ? [continuation.origin.occurrenceId]
+        : [],
     ),
   );
   const batchesByParent = prepared.batchesByParent;
@@ -1057,7 +1064,8 @@ export function evaluateBiomeRewardChronology(
           event,
           room?.kind === 'authored' ? room : undefined,
           views.get(semanticAddressKey(event.origin)),
-          forcedSparkChaosSourceOccurrenceIds,
+          chaosGateSourceOccurrenceIds,
+          ixionGeneratedChaosSourceOccurrenceIds,
           branches,
           rewardFindingChronologyForRoom(
             snapshot,

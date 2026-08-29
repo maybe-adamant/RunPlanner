@@ -37,7 +37,7 @@ import { StructuredWorkspaceProjectionContractError } from '../contract';
  */
 export type WorkspaceOccurrenceInteractionRequirement =
   | {
-      readonly kind: 'naturalChaosSpawn';
+      readonly kind: 'chaosSpawn';
       readonly owner: AdditionalExitAddress;
     }
   | {
@@ -217,7 +217,9 @@ export interface WorkspaceBatchInteractionRequirement {
   readonly zagreusContract?: {
     readonly owner: AdditionalExitAddress;
   };
-  readonly naturalChaos?: {
+  readonly chaos?: {
+    readonly forced: boolean;
+    readonly kind: 'chaos';
     readonly owner: AdditionalExitAddress;
     readonly occurrence: OccurrenceAddress;
     readonly mapChoices: readonly WorkspaceInteractionChoice<string>[];

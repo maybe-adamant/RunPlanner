@@ -1,14 +1,16 @@
 import type { RawRoomDeclaration } from '../types';
 import { normalResourcePointSupport } from '../resources';
 
-const sparkChaosExit = {
-  kind: 'sparkChaos' as const,
-  key: 'sparkChaos' as const,
+const chaosExit = {
+  kind: 'chaos' as const,
+  key: 'chaos' as const,
   exitType: 'ChaosExitDoor',
+  canHost: true,
+  canSpawn: false,
 };
-const sparkChaosHost = (secretPointAnchorCount: number) => ({
+const chaosHost = (secretPointAnchorCount: number) => ({
   secretPointAnchorCount,
-  additionalExits: [sparkChaosExit],
+  additionalExits: [chaosExit],
 });
 
 const wellHost = (challengeSwitchAnchorCount: number) => ({
@@ -68,7 +70,7 @@ export const iRooms = [
   },
   {
     gameName: 'I_Combat01',
-    ...sparkChaosHost(1),
+    ...chaosHost(1),
     ...wellHost(3),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 01',
@@ -100,7 +102,7 @@ export const iRooms = [
   },
   {
     gameName: 'I_Combat02',
-    ...sparkChaosHost(3),
+    ...chaosHost(3),
     ...wellHost(2),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 02',
@@ -128,7 +130,7 @@ export const iRooms = [
   },
   {
     gameName: 'I_Combat03',
-    ...sparkChaosHost(1),
+    ...chaosHost(1),
     ...wellHost(2),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 03',
@@ -160,7 +162,7 @@ export const iRooms = [
   },
   {
     gameName: 'I_Combat04',
-    ...sparkChaosHost(1),
+    ...chaosHost(1),
     ...wellHost(2),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 04',
@@ -192,7 +194,7 @@ export const iRooms = [
   },
   {
     gameName: 'I_Combat05',
-    ...sparkChaosHost(1),
+    ...chaosHost(1),
     ...wellHost(2),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 05',
@@ -220,7 +222,7 @@ export const iRooms = [
   },
   {
     gameName: 'I_Combat06',
-    ...sparkChaosHost(4),
+    ...chaosHost(4),
     ...wellHost(2),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 06',
@@ -248,7 +250,7 @@ export const iRooms = [
   },
   {
     gameName: 'I_Combat07',
-    ...sparkChaosHost(3),
+    ...chaosHost(3),
     ...wellHost(2),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 07',
@@ -276,7 +278,7 @@ export const iRooms = [
   },
   {
     gameName: 'I_Combat08',
-    ...sparkChaosHost(2),
+    ...chaosHost(2),
     ...wellHost(2),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 08',
@@ -304,7 +306,7 @@ export const iRooms = [
   },
   {
     gameName: 'I_Combat09',
-    ...sparkChaosHost(1),
+    ...chaosHost(1),
     ...wellHost(2),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 09',
@@ -336,7 +338,7 @@ export const iRooms = [
   },
   {
     gameName: 'I_Combat10',
-    ...sparkChaosHost(1),
+    ...chaosHost(1),
     ...wellHost(1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 10',
@@ -368,7 +370,7 @@ export const iRooms = [
   },
   {
     gameName: 'I_Combat11',
-    ...sparkChaosHost(2),
+    ...chaosHost(2),
     ...wellHost(2),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 11',
@@ -400,7 +402,7 @@ export const iRooms = [
   },
   {
     gameName: 'I_Combat12',
-    ...sparkChaosHost(1),
+    ...chaosHost(1),
     ...wellHost(1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 12',
@@ -432,7 +434,7 @@ export const iRooms = [
   },
   {
     gameName: 'I_Combat13',
-    ...sparkChaosHost(2),
+    ...chaosHost(2),
     ...wellHost(1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 13',
@@ -460,7 +462,7 @@ export const iRooms = [
   },
   {
     gameName: 'I_Combat14',
-    ...sparkChaosHost(1),
+    ...chaosHost(1),
     ...wellHost(2),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 14',
@@ -488,7 +490,7 @@ export const iRooms = [
   },
   {
     gameName: 'I_Combat15',
-    ...sparkChaosHost(2),
+    ...chaosHost(2),
     ...wellHost(2),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 15',
@@ -520,7 +522,7 @@ export const iRooms = [
   },
   {
     gameName: 'I_Combat16',
-    ...sparkChaosHost(2),
+    ...chaosHost(2),
     ...wellHost(1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 16',
@@ -548,7 +550,7 @@ export const iRooms = [
   },
   {
     gameName: 'I_Combat17',
-    ...sparkChaosHost(4),
+    ...chaosHost(4),
     ...wellHost(1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 17',
@@ -576,7 +578,7 @@ export const iRooms = [
   },
   {
     gameName: 'I_Combat18',
-    ...sparkChaosHost(2),
+    ...chaosHost(2),
     ...wellHost(2),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 18',
@@ -608,7 +610,7 @@ export const iRooms = [
   },
   {
     gameName: 'I_Combat19',
-    ...sparkChaosHost(4),
+    ...chaosHost(4),
     ...wellHost(1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 19',
@@ -636,7 +638,7 @@ export const iRooms = [
   },
   {
     gameName: 'I_Combat20',
-    ...sparkChaosHost(3),
+    ...chaosHost(3),
     ...wellHost(1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 20',
@@ -664,7 +666,7 @@ export const iRooms = [
   },
   {
     gameName: 'I_Combat21',
-    ...sparkChaosHost(3),
+    ...chaosHost(3),
     ...wellHost(2),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 21',
@@ -696,7 +698,7 @@ export const iRooms = [
   },
   {
     gameName: 'I_Combat22',
-    ...sparkChaosHost(2),
+    ...chaosHost(2),
     ...wellHost(3),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 22',
@@ -728,7 +730,7 @@ export const iRooms = [
   },
   {
     gameName: 'I_Combat23',
-    ...sparkChaosHost(3),
+    ...chaosHost(3),
     ...wellHost(1),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 23',
@@ -827,7 +829,7 @@ export const iRooms = [
   },
   {
     gameName: 'I_MiniBoss01',
-    ...sparkChaosHost(1),
+    ...chaosHost(1),
     ...wellHost(2),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     boonRarityOverride: { Rare: 0.9, Epic: 0.1, Duo: 0.2, Legendary: 0.2 },
@@ -879,7 +881,7 @@ export const iRooms = [
   },
   {
     gameName: 'I_MiniBoss02',
-    ...sparkChaosHost(1),
+    ...chaosHost(1),
     ...wellHost(2),
     resourcePointSupport: normalResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     boonRarityOverride: { Rare: 0.9, Epic: 0.1, Duo: 0.2, Legendary: 0.2 },

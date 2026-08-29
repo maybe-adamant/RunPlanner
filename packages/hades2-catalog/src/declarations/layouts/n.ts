@@ -78,7 +78,7 @@ export const nBiomeLayout = {
       physicalExit: { index: 1, type: 'EphyraExitBossDoor' },
     },
   },
-  naturalChaos: {
+  chaos: {
     roomGameNames: ['Chaos_03', 'Chaos_06'],
     defaultRoomGameName: 'Chaos_03',
     offerSpacingWindow: 10,

@@ -1,7 +1,7 @@
 {
-  "schemaVersion": 70,
+  "schemaVersion": 71,
   "projectId": "midshop-pom-frontier",
-  "catalogVersion": "0.49.0-completion-topology",
+  "catalogVersion": "0.50.0-unified-chaos-gates",
   "routes": [
     {
       "routeKey": "Underworld",

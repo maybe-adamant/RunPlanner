@@ -70,7 +70,7 @@ function isContractAdditionalTarget(
   });
 }
 
-function isNaturalChaosAdditionalTarget(
+function isChaosAdditionalTarget(
   catalog: Catalog,
   layout: BiomeLayout,
   topology: BiomeTopology,
@@ -78,16 +78,13 @@ function isNaturalChaosAdditionalTarget(
   room: RoomDeclaration,
 ): boolean {
   if (
-    (layout.naturalChaos === undefined && layout.sparkChaos === undefined) ||
+    layout.chaos === undefined ||
     room.roomSetKey !== 'Chaos' ||
     room.mode.kind !== 'authored' ||
     room.mode.templateKey !== 'Chaos' ||
     occurrence.state.kind !== 'fixed' ||
     occurrence.anomalyReplacement !== undefined ||
-    !(
-      layout.naturalChaos?.roomGameNames.includes(room.gameName) === true ||
-      layout.sparkChaos?.roomGameNames.includes(room.gameName) === true
-    )
+    !layout.chaos.roomGameNames.includes(room.gameName)
   ) {
     return false;
   }
@@ -98,8 +95,7 @@ function isNaturalChaosAdditionalTarget(
       sourceRoom.roomSetKey === layout.biomeKey &&
       source.additionalExits.some(
         (additional) =>
-          (additional.kind === 'naturalChaos' || additional.kind === 'sparkChaos') &&
-          additional.occurrenceId === occurrence.occurrenceId,
+          additional.kind === 'chaos' && additional.occurrenceId === occurrence.occurrenceId,
       )
     );
   });
@@ -124,7 +120,5 @@ export function legalTopologyOccurrenceRoom(
   if (room.roomSetKey === layout.biomeKey) return room;
   if (isAnomalyReplacementOccurrence(layout, topology, occurrence, room)) return room;
   if (isContractAdditionalTarget(catalog, layout, topology, occurrence, room)) return room;
-  return isNaturalChaosAdditionalTarget(catalog, layout, topology, occurrence, room)
-    ? room
-    : undefined;
+  return isChaosAdditionalTarget(catalog, layout, topology, occurrence, room) ? room : undefined;
 }

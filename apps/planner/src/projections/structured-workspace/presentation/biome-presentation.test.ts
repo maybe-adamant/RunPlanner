@@ -379,21 +379,21 @@ describe('structured workspace biome presentation', () => {
       occurrenceId: nOccurrenceIds.opening,
     };
     const owner = createExitDecisionAddress(nBiome, source);
-    const additional = createAdditionalExitAddress(nBiome, source.occurrenceId, 'naturalChaos');
+    const additional = createAdditionalExitAddress(nBiome, source.occurrenceId, 'chaos');
     const chaosOccurrenceId = createOccurrenceId('presentation-n-opening-chaos');
     let project = applyProjectCommand(loadSurfaceNProject(), catalog, {
       kind: 'RemoveExitDecision',
       decision: owner,
     });
     project = applyProjectCommand(project, catalog, {
-      kind: 'AddNaturalChaos',
+      kind: 'AddChaos',
       additional,
       occurrenceId: chaosOccurrenceId,
     });
     project = applyProjectCommand(project, catalog, {
       kind: 'SetExitSelection',
       selection: createExitSelectionAddress(nBiome, source),
-      value: { kind: 'additional', additionalExitKey: 'naturalChaos' },
+      value: { kind: 'additional', additionalExitKey: 'chaos' },
     });
 
     const biome = present(project, 'Surface', 'N').presentation.biome;
@@ -446,21 +446,17 @@ describe('structured workspace biome presentation', () => {
       throw new Error('complete F takeover decision is missing');
     }
     const biome = createBiomeAddress('Underworld', 'F');
-    const additional = createAdditionalExitAddress(
-      biome,
-      takeover.source.occurrenceId,
-      'naturalChaos',
-    );
+    const additional = createAdditionalExitAddress(biome, takeover.source.occurrenceId, 'chaos');
     const chaosOccurrenceId = createOccurrenceId('presentation-f-preboss-chaos');
     let project = applyProjectCommand(base, catalog, {
-      kind: 'AddNaturalChaos',
+      kind: 'AddChaos',
       additional,
       occurrenceId: chaosOccurrenceId,
     });
     project = applyProjectCommand(project, catalog, {
       kind: 'SetExitSelection',
       selection: createExitSelectionAddress(biome, takeover.source),
-      value: { kind: 'additional', additionalExitKey: 'naturalChaos' },
+      value: { kind: 'additional', additionalExitKey: 'chaos' },
     });
 
     const presented = present(project, 'Underworld', 'F').presentation.biome;
@@ -474,8 +470,8 @@ describe('structured workspace biome presentation', () => {
     if (rail === undefined || rail.node.kind !== 'takeoverBatch') {
       throw new Error('selected F takeover rail entry is missing');
     }
-    expect(rail.node.naturalChaos?.selected).toBe(true);
-    expect(rail.label).toBe(rail.node.naturalChaos?.door.room.label);
+    expect(rail.node.chaos?.selected).toBe(true);
+    expect(rail.label).toBe(rail.node.chaos?.door.room.label);
     expect(rail.label).toMatch(/^Chaos/);
   });
 

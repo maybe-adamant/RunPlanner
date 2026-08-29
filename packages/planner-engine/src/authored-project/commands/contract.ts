@@ -9,15 +9,17 @@ import type {
   RoomOccurrence,
   AuthoredRoutePlan,
 } from '../model';
-import type { BiomeOwnedProjectCommand, ProjectCommand } from './types';
+import type { BiomeOwnedProjectCommand, ProjectCommand, RouteDetourCommand } from './types';
+
+type CommandContractSubject = ProjectCommand | RouteDetourCommand;
 
 export class ProjectCommandContractError extends Error {
-  readonly commandKind: ProjectCommand['kind'];
+  readonly commandKind: CommandContractSubject['kind'];
   readonly addressKey: string;
   readonly detail: string;
 
   constructor(
-    commandKind: ProjectCommand['kind'],
+    commandKind: CommandContractSubject['kind'],
     address: SemanticAddress | AcquisitionSiteAddress,
     detail: string,
     options?: ErrorOptions,
@@ -31,8 +33,8 @@ export class ProjectCommandContractError extends Error {
   }
 }
 
-export function projectCommandAddress(
-  command: ProjectCommand,
+function commandContractAddress(
+  command: CommandContractSubject,
 ): SemanticAddress | AcquisitionSiteAddress {
   switch (command.kind) {
     case 'ConfigureRoutePrefix':
@@ -83,15 +85,14 @@ export function projectCommandAddress(
     case 'ReplaceAnomalyMap':
     case 'ReplaceAnomalySuccess':
     case 'RevertAnomaly':
-    case 'ReplaceNaturalChaosMap':
-    case 'ReplaceSparkChaosMap':
+    case 'ReplaceChaosMap':
       return command.occurrence;
     case 'AddZagreusContract':
     case 'RemoveZagreusContract':
-    case 'AddNaturalChaos':
-    case 'AddSparkChaos':
-    case 'RemoveNaturalChaos':
-    case 'RemoveSparkChaos':
+    case 'AddChaos':
+    case 'GenerateChaos':
+    case 'RemoveChaos':
+    case 'RemoveGeneratedChaos':
       return command.additional;
     case 'RemoveHubDecision':
       return command.hub;
@@ -173,8 +174,14 @@ export function projectCommandAddress(
   }
 }
 
-export function failCommand(command: ProjectCommand, detail: string): never {
-  throw new ProjectCommandContractError(command.kind, projectCommandAddress(command), detail);
+export function projectCommandAddress(
+  command: ProjectCommand,
+): SemanticAddress | AcquisitionSiteAddress {
+  return commandContractAddress(command);
+}
+
+export function failCommand(command: CommandContractSubject, detail: string): never {
+  throw new ProjectCommandContractError(command.kind, commandContractAddress(command), detail);
 }
 
 export interface LocatedBiome {
@@ -206,7 +213,10 @@ export function locateBiome(
   return { routeIndex, biomeIndex, loadout: route.loadout, plan, layout };
 }
 
-export function requireTopology(plan: AuthoredBiomePlan, command: ProjectCommand): BiomeTopology {
+export function requireTopology(
+  plan: AuthoredBiomePlan,
+  command: CommandContractSubject,
+): BiomeTopology {
   if (plan.topology === null) failCommand(command, 'biome topology has not been started');
   return plan.topology;
 }
@@ -214,7 +224,7 @@ export function requireTopology(plan: AuthoredBiomePlan, command: ProjectCommand
 export function requireOccurrence(
   plan: AuthoredBiomePlan,
   occurrenceId: OccurrenceId,
-  command: ProjectCommand,
+  command: CommandContractSubject,
 ): RoomOccurrence {
   const occurrence = plan.topology?.occurrences.find(
     (candidate) => candidate.occurrenceId === occurrenceId,
@@ -227,7 +237,7 @@ export function requireRoom(
   catalog: Catalog,
   gameName: string,
   biomeKey: string,
-  command: ProjectCommand,
+  command: CommandContractSubject,
 ): RoomDeclaration {
   const room = catalog.rooms.byKey[gameName];
   if (room === undefined) failCommand(command, `unknown room ${gameName}`);

@@ -8,6 +8,7 @@ import {
 } from '@run-planner/engine/authored-project';
 import { createCompleteFGProject } from '@run-planner/test-fixtures/underworld';
 import surfaceNResourcesRaw from '../../../../test/fixtures/authored-project/checkpoints/surface-n-resources.runplanner.json';
+import naturalChaosRaw from '../../../../test/fixtures/authored-project/checkpoints/natural-chaos-unresolved-trial.runplanner.json';
 // The migration CLI is intentionally not a production engine dependency.
 // @ts-expect-error test contact imports the schema migration boundary directly.
 import { migrateProjectDocument } from '../../../../schema/migrate-project.js';
@@ -323,6 +324,48 @@ describe('project document codec', () => {
       occurrenceId: 'surface-n-preboss:postboss',
     });
     expect(() => decodeProjectDocument(migrated, catalog)).not.toThrow();
+  });
+
+  it('decodes either schema-70 legacy Chaos kind after unified migration', () => {
+    for (const kind of ['naturalChaos', 'sparkChaos']) {
+      const legacy = JSON.parse(JSON.stringify(naturalChaosRaw)) as {
+        schemaVersion: number;
+        catalogVersion: string;
+        routes: Array<{
+          biomes: Array<{
+            topology: {
+              occurrences: Array<{
+                occurrenceId: string;
+                additionalExits: Array<Record<string, unknown>>;
+              }>;
+              decisions: Array<Record<string, unknown>>;
+            };
+          }>;
+        }>;
+      };
+      legacy.schemaVersion = 70;
+      legacy.catalogVersion = '0.49.0-completion-topology';
+      const topology = legacy.routes[0]!.biomes[0]!.topology;
+      const opening = topology.occurrences.find(
+        (occurrence) => occurrence.occurrenceId === 'fixture-chaos-opening',
+      );
+      if (opening === undefined) throw new Error('legacy Chaos opening is missing');
+      const chaos = opening.additionalExits[0];
+      if (chaos === undefined) throw new Error('legacy Chaos gate is missing');
+      chaos.kind = kind;
+      chaos.key = kind;
+      const decision = topology.decisions.find(
+        (candidate) =>
+          candidate.kind === 'exit' &&
+          (candidate.source as { occurrenceId?: string } | undefined)?.occurrenceId ===
+            'fixture-chaos-opening',
+      );
+      if (decision === undefined) throw new Error('legacy Chaos decision is missing');
+      decision.selection = { kind: 'additional', additionalExitKey: kind };
+
+      const migrated = migrateProjectDocument(legacy).document;
+      expect(() => decodeProjectDocument(migrated, catalog)).not.toThrow();
+    }
   });
 
   it('round-trips the complete Arcana and Fear loadout', () => {

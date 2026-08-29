@@ -10,6 +10,8 @@ import type {
   ExitDecisionSource,
   ExitSelection,
   ExitTargetReference,
+  IxionGeneratedChaosOrigin,
+  StygianWellGenerationKey,
   FixedRoomLink,
   HubDecision,
   HubTargetReference,
@@ -201,15 +203,20 @@ function decodeAdditionalExits(
     const additionalPath = `${path}[${index}]`;
     const additional = expectRecord(rawValue, additionalPath);
     const kind = expectString(additional.kind, `${additionalPath}.kind`);
-    if (kind !== 'zagreusContract' && kind !== 'naturalChaos' && kind !== 'sparkChaos') {
+    if (kind !== 'zagreusContract' && kind !== 'chaos') {
       failProjectDocument(`${additionalPath}.kind`, `unknown additional exit ${kind}`);
     }
-    expectExactKeys(additional, ['kind', 'key', 'occurrenceId'], additionalPath);
+    expectExactKeys(
+      additional,
+      kind === 'chaos' && additional.origin !== undefined
+        ? ['kind', 'key', 'occurrenceId', 'origin']
+        : ['kind', 'key', 'occurrenceId'],
+      additionalPath,
+    );
     const key = expectNonBlankString(additional.key, `${additionalPath}.key`);
     if (
       (kind === 'zagreusContract' && key !== 'zagreusContract') ||
-      (kind === 'naturalChaos' && key !== 'naturalChaos') ||
-      (kind === 'sparkChaos' && key !== 'sparkChaos')
+      (kind === 'chaos' && key !== 'chaos')
     ) {
       failProjectDocument(`${additionalPath}.key`, `unknown additional exit ${key}`);
     }
@@ -225,7 +232,59 @@ function decodeAdditionalExits(
     if (kind === 'zagreusContract' && target.gameName !== 'C_Boss01') {
       failProjectDocument(`${additionalPath}.occurrenceId`, `${key} requires C_Boss01`);
     }
-    return Object.freeze({ kind, key, occurrenceId: id }) as AuthoredAdditionalExit;
+    if (kind === 'zagreusContract')
+      return Object.freeze({ kind, key, occurrenceId: id }) as AuthoredAdditionalExit;
+    let origin: IxionGeneratedChaosOrigin | undefined;
+    if (additional.origin !== undefined) {
+      const rawOrigin = expectRecord(additional.origin, `${additionalPath}.origin`);
+      const originKind = expectString(rawOrigin.kind, `${additionalPath}.origin.kind`);
+      if (originKind === 'ixionGenerated') {
+        expectExactKeys(
+          rawOrigin,
+          ['kind', 'sourceBiomeKey', 'sourceOccurrenceId', 'generationKey'],
+          `${additionalPath}.origin`,
+        );
+        origin = Object.freeze({
+          kind: 'ixionGenerated',
+          sourceBiomeKey: expectNonBlankString(
+            rawOrigin.sourceBiomeKey,
+            `${additionalPath}.origin.sourceBiomeKey`,
+          ),
+          sourceOccurrenceId: occurrenceId(
+            rawOrigin.sourceOccurrenceId,
+            `${additionalPath}.origin.sourceOccurrenceId`,
+          ),
+          generationKey: (() => {
+            const generationKey = expectNonBlankString(
+              rawOrigin.generationKey,
+              `${additionalPath}.origin.generationKey`,
+            );
+            if (
+              generationKey !== 'initial:healing' &&
+              generationKey !== 'initial:secondLeft' &&
+              generationKey !== 'initial:secondRight' &&
+              generationKey !== 'travelDealRefill'
+            )
+              failProjectDocument(
+                `${additionalPath}.origin.generationKey`,
+                `unknown Stygian Well generation ${generationKey}`,
+              );
+            return generationKey as StygianWellGenerationKey;
+          })(),
+        });
+      } else {
+        failProjectDocument(
+          `${additionalPath}.origin.kind`,
+          `unknown Chaos gate origin ${originKind}`,
+        );
+      }
+    }
+    return Object.freeze({
+      kind,
+      key,
+      occurrenceId: id,
+      ...(origin === undefined ? {} : { origin }),
+    }) as AuthoredAdditionalExit;
   });
   return Object.freeze(additional);
 }
@@ -801,7 +860,7 @@ function decodeHubDecision(
     );
   }
   // A Hub source is normally the biome-owned PreHub occurrence, but a selected
-  // natural-Chaos detour can occupy the same terminal spine position. The
+  // Chaos detour can occupy the same terminal spine position. The
   // selected-spine validation below proves that exact ownership and rejects
   // every other foreign-room source.
   requireKnownRoom(sourceOccurrence, catalog);

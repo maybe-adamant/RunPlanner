@@ -958,16 +958,16 @@ export function normalizeBiomeLayouts(
     if (progression.kind === 'hub') {
       validateHubEntryStart(start, progression, layout.biomeKey, rooms, path);
     }
-    const naturalChaos =
-      layout.naturalChaos === undefined
+    const chaos =
+      layout.chaos === undefined
         ? undefined
         : (() => {
             const roomGameNames = freezeUniqueStrings(
-              layout.naturalChaos.roomGameNames,
-              `${path}.naturalChaos.roomGameNames`,
+              layout.chaos.roomGameNames,
+              `${path}.chaos.roomGameNames`,
             );
             if (roomGameNames.length === 0) {
-              fail(`${path}.naturalChaos.roomGameNames`, 'must not be empty');
+              fail(`${path}.chaos.roomGameNames`, 'must not be empty');
             }
             for (const [index, roomGameName] of roomGameNames.entries()) {
               const room = rooms.byKey[roomGameName];
@@ -977,61 +977,24 @@ export function normalizeBiomeLayouts(
                 room.mode.kind !== 'authored' ||
                 room.mode.templateKey !== 'Chaos'
               ) {
-                fail(
-                  `${path}.naturalChaos.roomGameNames[${index}]`,
-                  'must name an authored Chaos room',
-                );
+                fail(`${path}.chaos.roomGameNames[${index}]`, 'must name an authored Chaos room');
               }
             }
             const defaultRoomGameName = requireNonEmpty(
-              layout.naturalChaos.defaultRoomGameName,
-              `${path}.naturalChaos.defaultRoomGameName`,
+              layout.chaos.defaultRoomGameName,
+              `${path}.chaos.defaultRoomGameName`,
             );
             if (!roomGameNames.includes(defaultRoomGameName)) {
-              fail(`${path}.naturalChaos.defaultRoomGameName`, 'must belong to roomGameNames');
+              fail(`${path}.chaos.defaultRoomGameName`, 'must belong to roomGameNames');
             }
             const offerSpacingWindow = requirePositiveInteger(
-              layout.naturalChaos.offerSpacingWindow,
-              `${path}.naturalChaos.offerSpacingWindow`,
+              layout.chaos.offerSpacingWindow,
+              `${path}.chaos.offerSpacingWindow`,
             );
             return Object.freeze({
               roomGameNames: roomGameNames as [string, ...string[]],
               defaultRoomGameName,
               offerSpacingWindow,
-            });
-          })();
-    const sparkChaos =
-      layout.sparkChaos === undefined
-        ? undefined
-        : (() => {
-            const roomGameNames = freezeUniqueStrings(
-              layout.sparkChaos.roomGameNames,
-              `${path}.sparkChaos.roomGameNames`,
-            );
-            if (roomGameNames.length === 0)
-              fail(`${path}.sparkChaos.roomGameNames`, 'must not be empty');
-            for (const [index, roomGameName] of roomGameNames.entries()) {
-              const room = rooms.byKey[roomGameName];
-              if (
-                room === undefined ||
-                room.roomSetKey !== 'Chaos' ||
-                room.mode.kind !== 'authored' ||
-                room.mode.templateKey !== 'Chaos'
-              )
-                fail(
-                  `${path}.sparkChaos.roomGameNames[${index}]`,
-                  'must name an authored Chaos room',
-                );
-            }
-            const defaultRoomGameName = requireNonEmpty(
-              layout.sparkChaos.defaultRoomGameName,
-              `${path}.sparkChaos.defaultRoomGameName`,
-            );
-            if (!roomGameNames.includes(defaultRoomGameName))
-              fail(`${path}.sparkChaos.defaultRoomGameName`, 'must belong to roomGameNames');
-            return Object.freeze({
-              roomGameNames: roomGameNames as [string, ...string[]],
-              defaultRoomGameName,
             });
           })();
     return Object.freeze({
@@ -1048,8 +1011,7 @@ export function normalizeBiomeLayouts(
       }),
       start,
       progression,
-      ...(naturalChaos === undefined ? {} : { naturalChaos }),
-      ...(sparkChaos === undefined ? {} : { sparkChaos }),
+      ...(chaos === undefined ? {} : { chaos }),
       completion: normalizeCompletion(
         layout.completion,
         layout.biomeKey,

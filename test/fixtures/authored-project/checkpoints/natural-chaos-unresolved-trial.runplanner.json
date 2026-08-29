@@ -1,7 +1,7 @@
 {
-  "schemaVersion": 70,
+  "schemaVersion": 71,
   "projectId": "natural-chaos-unresolved-trial-upgrade",
-  "catalogVersion": "0.49.0-completion-topology",
+  "catalogVersion": "0.50.0-unified-chaos-gates",
   "routes": [
     {
       "routeKey": "Underworld",
@@ -62,8 +62,8 @@
                 },
                 "additionalExits": [
                   {
-                    "kind": "naturalChaos",
-                    "key": "naturalChaos",
+                    "kind": "chaos",
+                    "key": "chaos",
                     "occurrenceId": "fixture-chaos-room"
                   }
                 ]
@@ -163,7 +163,7 @@
                 },
                 "selection": {
                   "kind": "additional",
-                  "additionalExitKey": "naturalChaos"
+                  "additionalExitKey": "chaos"
                 }
               },
               {

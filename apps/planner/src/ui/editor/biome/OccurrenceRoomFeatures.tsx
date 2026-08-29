@@ -2,7 +2,7 @@ import {
   requireWorkspaceInteraction,
   workspaceInteractionKey,
   type WorkspaceInteractionCatalog,
-  type WorkspaceNaturalChaosExitControl,
+  type WorkspaceChaosExitControl,
   type WorkspaceRoomActions,
   type WorkspaceRoomFeature,
   type WorkspaceRoomSummary,
@@ -26,16 +26,16 @@ const emptyNullablePicker: ContextualPickerModel<string | null> = Object.freeze(
 const emptyStringPicker: ContextualPickerModel<string> = Object.freeze({
   sections: Object.freeze([]),
 });
-export function NaturalChaosMapWorkbench({
+export function ChaosMapWorkbench({
   control,
   interactions,
 }: {
-  readonly control: WorkspaceNaturalChaosExitControl;
+  readonly control: WorkspaceChaosExitControl;
   readonly interactions: WorkspaceInteractionCatalog;
 }) {
   const executeIntent = useCommandIntent();
   const interaction = requireWorkspaceInteraction(
-    interactions.naturalChaosExits,
+    interactions.chaosExits,
     workspaceInteractionKey(control.owner),
   );
   return (
@@ -98,12 +98,12 @@ function ZagreusSpawnWorkbench({
   );
 }
 
-/** A selected source exposes only the declared natural-Chaos creation command. */
-function NaturalChaosSpawnWorkbench({
+/** A selected source exposes only the declared Chaos creation command. */
+function ChaosSpawnWorkbench({
   feature,
   interactions,
 }: {
-  readonly feature: Extract<WorkspaceRoomFeature, { readonly kind: 'naturalChaos' }>;
+  readonly feature: Extract<WorkspaceRoomFeature, { readonly kind: 'chaos' }>;
   readonly interactions: WorkspaceInteractionCatalog;
 }) {
   const executeIntent = useCommandIntent();
@@ -112,24 +112,27 @@ function NaturalChaosSpawnWorkbench({
     <label className="room-feature-presence-row">
       <input
         checked={feature.action === 'remove'}
-        data-command={feature.action === 'add' ? 'AddNaturalChaos' : 'RemoveNaturalChaos'}
+        data-command={feature.action === 'add' ? 'AddChaos' : 'RemoveChaos'}
         disabled={
           feature.presence.kind === 'forcedPresent' ||
           (feature.presence.kind === 'optionalAbsent' && !feature.presence.enabled)
         }
-        onChange={() =>
-          executeIntent(
-            feature.action === 'add'
-              ? requireWorkspaceInteraction(
-                  interactions.naturalChaosSpawns,
-                  workspaceInteractionKey(owner),
-                ).spawnIntent()
-              : requireWorkspaceInteraction(
-                  interactions.naturalChaosExits,
-                  workspaceInteractionKey(owner),
-                ).removeIntent,
-          )
-        }
+        onChange={() => {
+          if (feature.action === 'add') {
+            executeIntent(
+              requireWorkspaceInteraction(
+                interactions.chaosSpawns,
+                workspaceInteractionKey(owner),
+              ).spawnIntent(),
+            );
+            return;
+          }
+          const removeIntent = requireWorkspaceInteraction(
+            interactions.chaosExits,
+            workspaceInteractionKey(owner),
+          ).removeIntent;
+          if (removeIntent !== undefined) executeIntent(removeIntent);
+        }}
         type="checkbox"
       />
       <span>Chaos Gate</span>
@@ -325,10 +328,8 @@ export function RoomFeaturesWorkbench({
   const additionalExits = features.filter(
     (
       feature,
-    ): feature is Extract<
-      RoomFeaturePresence,
-      { readonly kind: 'naturalChaos' | 'zagreusContract' }
-    > => feature.kind === 'naturalChaos' || feature.kind === 'zagreusContract',
+    ): feature is Extract<RoomFeaturePresence, { readonly kind: 'chaos' | 'zagreusContract' }> =>
+      feature.kind === 'chaos' || feature.kind === 'zagreusContract',
   );
   const roomObjects = features.filter(
     (
@@ -387,9 +388,9 @@ export function RoomFeaturesWorkbench({
                 )}
               />
             );
-          case 'naturalChaos':
+          case 'chaos':
             return (
-              <NaturalChaosSpawnWorkbench
+              <ChaosSpawnWorkbench
                 feature={feature}
                 interactions={interactions}
                 key={workspaceInteractionKey(

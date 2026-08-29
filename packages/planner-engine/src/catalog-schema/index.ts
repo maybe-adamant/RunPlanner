@@ -594,23 +594,20 @@ export interface ZagreusContractAdditionalExitDeclaration {
   readonly maxEnteredThisRoute: number;
 }
 
-export interface NaturalChaosAdditionalExitDeclaration {
-  readonly kind: 'naturalChaos';
-  readonly key: 'naturalChaos';
+export interface ChaosAdditionalExitDeclaration {
+  readonly kind: 'chaos';
+  readonly key: 'chaos';
   readonly physicalExit: Omit<RoomExit, 'index'>;
-  /** A source-local prerequisite; host spacing remains evaluator-owned. */
+  /** A room can host Chaos even when ordinary spawning is not available. */
+  readonly canHost: boolean;
+  /** Ordinary authoring eligibility; Ixion forcing is a separate chronology. */
+  readonly canSpawn: boolean;
+  /** A source-local prerequisite for ordinary spawning. */
   readonly requirement?: RequirementExpression;
-}
-export interface SparkChaosAdditionalExitDeclaration {
-  readonly kind: 'sparkChaos';
-  readonly key: 'sparkChaos';
-  readonly physicalExit: Omit<RoomExit, 'index'>;
 }
 
 export type AdditionalExitDeclaration =
-  | ZagreusContractAdditionalExitDeclaration
-  | NaturalChaosAdditionalExitDeclaration
-  | SparkChaosAdditionalExitDeclaration;
+  ZagreusContractAdditionalExitDeclaration | ChaosAdditionalExitDeclaration;
 
 export interface RoomCounterEffects {
   readonly biomeDepthCache: number;
@@ -991,15 +988,11 @@ export interface BiomeLayout {
   };
   readonly start: StartDescriptor;
   readonly progression: ProgressionDescriptor;
-  /** Closed target domain and default for authored natural-Chaos exits in this host. */
-  readonly naturalChaos?: {
+  /** Closed target domain and default for authored Chaos exits in this host. */
+  readonly chaos?: {
     readonly roomGameNames: readonly [string, ...string[]];
     readonly defaultRoomGameName: string;
     readonly offerSpacingWindow: number;
-  };
-  readonly sparkChaos?: {
-    readonly roomGameNames: readonly [string, ...string[]];
-    readonly defaultRoomGameName: string;
   };
   readonly completion: CompletionDescriptor;
   readonly fields: readonly AuthoredFieldDescriptor[];

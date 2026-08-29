@@ -20,14 +20,10 @@ export const fBiomeLayout = {
     rewardStoreOverrides: [],
     bounds: { maxBatches: 10, maxTargets: 20 },
   },
-  naturalChaos: {
+  chaos: {
     roomGameNames: ['Chaos_01', 'Chaos_02', 'Chaos_03', 'Chaos_04', 'Chaos_05', 'Chaos_06'],
     defaultRoomGameName: 'Chaos_01',
     offerSpacingWindow: 10,
-  },
-  sparkChaos: {
-    roomGameNames: ['Chaos_01', 'Chaos_02', 'Chaos_03', 'Chaos_04', 'Chaos_05', 'Chaos_06'],
-    defaultRoomGameName: 'Chaos_01',
   },
   completion: {
     bossRoomGameName: 'F_Boss01',

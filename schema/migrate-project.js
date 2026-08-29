@@ -4,7 +4,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { basename, dirname, extname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-const CURRENT_SCHEMA_VERSION = 70;
+const CURRENT_SCHEMA_VERSION = 71;
 const SCHEMA_49_CATALOG_VERSION = '0.27.0-arcana-fear-loadout';
 const SCHEMA_50_CATALOG_VERSION = '0.30.0-boon-rarity-ledger';
 const SCHEMA_51_CATALOG_VERSION = '0.31.0-chaos-traits';
@@ -26,6 +26,8 @@ const SCHEMA_63_CATALOG_VERSION = '0.46.0-vow-forfeit-red-onion';
 const SCHEMA_64_CATALOG_VERSION = '0.47.0-persephone-effective-levels';
 const SCHEMA_65_CATALOG_VERSION = '0.48.0-hex-talent-layouts';
 const SCHEMA_68_CATALOG_VERSION = '0.49.0-completion-topology';
+const SCHEMA_70_CATALOG_VERSION = '0.49.0-completion-topology';
+const SCHEMA_71_CATALOG_VERSION = '0.50.0-unified-chaos-gates';
 
 const HEX_DEFAULTS = {
   SpellPolymorphTrait: {
@@ -995,6 +997,57 @@ function migrate69To70(document) {
   return { rushedDeliveriesActivated, purchaseActionsRemoved };
 }
 
+function migrate70To71(document) {
+  if (document.catalogVersion !== SCHEMA_70_CATALOG_VERSION) {
+    throw new Error(
+      `schema 70 migration expects catalog ${SCHEMA_70_CATALOG_VERSION}, received ${String(document.catalogVersion)}`,
+    );
+  }
+  let chaosGatesUnified = 0;
+  // The unified schema has one additional Chaos key per source occurrence.
+  // Refuse any legacy source that would collapse multiple authored children
+  // into one key instead of silently producing an unloadable document.
+  for (const [routeIndex, route] of (document.routes ?? []).entries()) {
+    for (const [biomeIndex, biome] of (route.biomes ?? []).entries()) {
+      for (const [occurrenceIndex, occurrence] of (biome.topology?.occurrences ?? []).entries()) {
+        const legacyChaos = (occurrence.additionalExits ?? []).filter(
+          (additional) => additional.kind === 'naturalChaos' || additional.kind === 'sparkChaos',
+        );
+        if (legacyChaos.length <= 1) continue;
+        const path = `$.routes[${routeIndex}].biomes[${biomeIndex}].topology.occurrences[${occurrenceIndex}].additionalExits`;
+        throw new Error(
+          `schema 70 -> 71 cannot unify multiple legacy Chaos gates at ${path} ` +
+            `(${legacyChaos.map((additional) => additional.kind).join(', ')})`,
+        );
+      }
+    }
+  }
+  for (const route of document.routes ?? []) {
+    for (const biome of route.biomes ?? []) {
+      for (const occurrence of biome.topology?.occurrences ?? []) {
+        for (const additional of occurrence.additionalExits ?? []) {
+          if (additional.kind !== 'naturalChaos' && additional.kind !== 'sparkChaos') continue;
+          additional.kind = 'chaos';
+          additional.key = 'chaos';
+          chaosGatesUnified += 1;
+        }
+      }
+      for (const decision of biome.topology?.decisions ?? []) {
+        if (decision.kind !== 'exit' || decision.selection?.kind !== 'additional') continue;
+        if (
+          decision.selection.additionalExitKey === 'naturalChaos' ||
+          decision.selection.additionalExitKey === 'sparkChaos'
+        ) {
+          decision.selection.additionalExitKey = 'chaos';
+        }
+      }
+    }
+  }
+  document.schemaVersion = 71;
+  document.catalogVersion = SCHEMA_71_CATALOG_VERSION;
+  return { chaosGatesUnified };
+}
+
 const migrations = new Map([
   [49, migrate49To50],
   [50, migrate50To51],
@@ -1017,6 +1070,7 @@ const migrations = new Map([
   [67, migrate67To68],
   [68, migrate68To69],
   [69, migrate69To70],
+  [70, migrate70To71],
 ]);
 
 export function migrateProjectDocument(value, targetVersion = CURRENT_SCHEMA_VERSION) {

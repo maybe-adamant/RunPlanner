@@ -356,11 +356,9 @@ function isCompleteBatch(
       : selected?.kind === 'additional'
         ? occurrences.get(selected.exit.occurrenceId)
         : undefined;
-  const selectedNaturalChaos =
-    selected?.kind === 'additional' &&
-    (selected.exit.kind === 'naturalChaos' || selected.exit.kind === 'sparkChaos');
+  const selectedChaos = selected?.kind === 'additional' && selected.exit.kind === 'chaos';
   return (
-    (selectedNaturalChaos || (allPhysicalTargets && hasStore)) &&
+    (selectedChaos || (allPhysicalTargets && hasStore)) &&
     selected !== undefined &&
     !(pickedOccurrence?.state.kind === 'shop' && pickedOccurrence.state.shop === undefined)
   );

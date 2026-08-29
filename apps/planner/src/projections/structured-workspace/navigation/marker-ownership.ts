@@ -124,7 +124,7 @@ export function workspaceOccurrenceOwnedMarkers(
             : [room.keepsakeSelection.equipResult.marker]),
         ]),
     ...(room.zagreusSpawn === undefined ? [] : [room.zagreusSpawn.marker]),
-    ...(room.naturalChaosSpawn === undefined ? [] : [room.naturalChaosSpawn.marker]),
+    ...(room.chaosSpawn === undefined ? [] : [room.chaosSpawn.marker]),
     ...(room.roomLocal.kind === 'fixed' ? [room.roomLocal.marker] : []),
   ]);
 }
@@ -138,7 +138,7 @@ export function workspaceDecisionOwnedMarkers(
     node.selection,
     ...(node.rewardStore === undefined ? [] : [node.rewardStore]),
     ...(node.zagreusContract === undefined ? [] : [node.zagreusContract.marker]),
-    ...(node.naturalChaos === undefined ? [] : [node.naturalChaos.marker]),
+    ...(node.chaos === undefined ? [] : [node.chaos.marker]),
     ...node.targets.map((target) => target.marker),
     ...node.targets.flatMap((target) => {
       return target.door.offerRewardSurface.rewards.map((reward) => reward.marker);

@@ -18,6 +18,7 @@ import {
   createShopOfferAddress,
   createTargetAddress,
   createTraitOfferAddress,
+  forcedChaosOccurrenceKeys,
   semanticAddressKey,
   type BiomeAddress,
   type OccurrenceId,
@@ -28,7 +29,7 @@ import {
   evaluateBiomeRewards,
   evaluateBiomeRoomGeneration,
   materializeBiomePrefix,
-  naturalChaosCandidateForProjectEvaluationAssembly,
+  chaosCandidateForProjectEvaluationAssembly,
   zagreusContractCandidateForProjectEvaluationAssembly,
   simulateProject,
   simulateProjectAssembly,
@@ -416,13 +417,13 @@ function buildNaturalChaosProject() {
     gameName: 'F_Opening01',
   });
   project = replaceApolloReward(project, fBiome, opening);
-  const additional = createAdditionalExitAddress(fBiome, opening, 'naturalChaos');
+  const additional = createAdditionalExitAddress(fBiome, opening, 'chaos');
   project = applyProjectCommand(project, catalog, {
-    kind: 'AddNaturalChaos',
+    kind: 'AddChaos',
     additional,
     occurrenceId: chaos,
   });
-  project = setAdditionalSelection(project, fBiome, opening, 'naturalChaos');
+  project = setAdditionalSelection(project, fBiome, opening, 'chaos');
   project = appendSingleTargetBatch(project, fBiome, chaos, returned, 'F_Combat01', 'RunProgress');
   project = replaceIncomingReward(project, fBiome, returned, 'MaxHealthDrop');
   return { project, opening, chaos, returned, additional };
@@ -560,9 +561,9 @@ describe('route-detour simulation', () => {
       occurrenceId: opening,
     });
     project = replaceApolloReward(project, nBiome, opening);
-    const additional = createAdditionalExitAddress(nBiome, opening, 'naturalChaos');
+    const additional = createAdditionalExitAddress(nBiome, opening, 'chaos');
     project = applyProjectCommand(project, catalog, {
-      kind: 'AddNaturalChaos',
+      kind: 'AddChaos',
       additional,
       occurrenceId: chaos,
     });
@@ -593,7 +594,7 @@ describe('route-detour simulation', () => {
         code: 'targetRoomUnavailable',
         origin: additional,
         evidence: expect.objectContaining({
-          kind: 'naturalChaos',
+          kind: 'chaos',
           failedConditions: expect.arrayContaining(['targetDomain']),
         }),
       }),
@@ -610,13 +611,13 @@ describe('route-detour simulation', () => {
       occurrenceId: opening,
     });
     project = replaceApolloReward(project, nBiome, opening);
-    const additional = createAdditionalExitAddress(nBiome, opening, 'naturalChaos');
+    const additional = createAdditionalExitAddress(nBiome, opening, 'chaos');
     project = applyProjectCommand(project, catalog, {
-      kind: 'AddNaturalChaos',
+      kind: 'AddChaos',
       additional,
       occurrenceId: chaos,
     });
-    project = setAdditionalSelection(project, nBiome, opening, 'naturalChaos');
+    project = setAdditionalSelection(project, nBiome, opening, 'chaos');
     project = createBatch(project, nBiome, chaos);
     const { snapshot, history } = prefix(project, nBiome);
 
@@ -647,9 +648,9 @@ describe('route-detour simulation', () => {
       gameName: 'F_Opening01',
     });
     project = replaceApolloReward(project, fBiome, opening);
-    const firstAdditional = createAdditionalExitAddress(fBiome, opening, 'naturalChaos');
+    const firstAdditional = createAdditionalExitAddress(fBiome, opening, 'chaos');
     project = applyProjectCommand(project, catalog, {
-      kind: 'AddNaturalChaos',
+      kind: 'AddChaos',
       additional: firstAdditional,
       occurrenceId: firstChaos,
     });
@@ -657,9 +658,9 @@ describe('route-detour simulation', () => {
     project = addTarget(project, fBiome, opening, 'exit1', firstCombat, 'F_Combat01');
     project = replaceIncomingReward(project, fBiome, firstCombat, 'MaxHealthDrop');
     project = setNormalSelection(project, fBiome, opening, 'exit1');
-    const secondAdditional = createAdditionalExitAddress(fBiome, firstCombat, 'naturalChaos');
+    const secondAdditional = createAdditionalExitAddress(fBiome, firstCombat, 'chaos');
     project = applyProjectCommand(project, catalog, {
-      kind: 'AddNaturalChaos',
+      kind: 'AddChaos',
       additional: secondAdditional,
       occurrenceId: secondChaos,
     });
@@ -671,7 +672,7 @@ describe('route-detour simulation', () => {
     const generationAssembly = simulateProjectAssembly(catalog, project);
 
     expect(
-      naturalChaosCandidateForProjectEvaluationAssembly(
+      chaosCandidateForProjectEvaluationAssembly(
         generationAssembly,
         createOccurrenceAddress(fBiome, firstCombat),
       ),
@@ -682,7 +683,7 @@ describe('route-detour simulation', () => {
         code: 'targetRoomUnavailable',
         origin: secondAdditional,
         evidence: expect.objectContaining({
-          kind: 'naturalChaos',
+          kind: 'chaos',
           failedConditions: expect.arrayContaining(['offerSpacing']),
         }),
       }),
@@ -696,24 +697,16 @@ describe('route-detour simulation', () => {
     'treats a skipped cross-biome Chaos offer at the $position predecessor as blocked=$blocked',
     ({ blocked, fBatchIndex }) => {
       const firstSource = goldenFOccurrenceId(fBatchIndex, 1);
-      const firstAdditional = createAdditionalExitAddress(
-        goldenFBiome,
-        firstSource,
-        'naturalChaos',
-      );
-      const secondAdditional = createAdditionalExitAddress(
-        goldenGBiome,
-        goldenGStartId,
-        'naturalChaos',
-      );
+      const firstAdditional = createAdditionalExitAddress(goldenFBiome, firstSource, 'chaos');
+      const secondAdditional = createAdditionalExitAddress(goldenGBiome, goldenGStartId, 'chaos');
       let project = createCompleteFGProject();
       project = applyProjectCommand(project, catalog, {
-        kind: 'AddNaturalChaos',
+        kind: 'AddChaos',
         additional: firstAdditional,
         occurrenceId: createOccurrenceId(`cross-biome-chaos-f-${fBatchIndex}`),
       });
       project = applyProjectCommand(project, catalog, {
-        kind: 'AddNaturalChaos',
+        kind: 'AddChaos',
         additional: secondAdditional,
         occurrenceId: createOccurrenceId(`cross-biome-chaos-g-${fBatchIndex}`),
       });
@@ -724,13 +717,86 @@ describe('route-detour simulation', () => {
       const spacingFinding = g?.findings.find(
         (finding) =>
           semanticAddressKey(finding.origin) === semanticAddressKey(secondAdditional) &&
-          finding.evidence.kind === 'naturalChaos' &&
+          finding.evidence.kind === 'chaos' &&
           Array.isArray(finding.evidence.failedConditions) &&
           finding.evidence.failedConditions.includes('offerSpacing'),
       );
       expect(spacingFinding !== undefined).toBe(blocked);
     },
   );
+
+  it('validates a same-host natural gate as forced while a pending Spark overrides spacing', () => {
+    const priorSource = goldenFOccurrenceId(4, 1);
+    const priorAdditional = createAdditionalExitAddress(goldenFBiome, priorSource, 'chaos');
+    const forcedAdditional = createAdditionalExitAddress(goldenGBiome, goldenGStartId, 'chaos');
+    const well = createOccurrenceAddress(
+      goldenFBiome,
+      createOccurrenceId('golden-f-preboss-shop:postboss'),
+    );
+    let project = createCompleteFGProject();
+    project = applyProjectCommand(project, catalog, {
+      kind: 'AddChaos',
+      additional: priorAdditional,
+      occurrenceId: createOccurrenceId('cross-biome-chaos-before-spark'),
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'AddChaos',
+      additional: forcedAdditional,
+      occurrenceId: createOccurrenceId('natural-overlaid-by-spark'),
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetStygianWellInteraction',
+      occurrence: well,
+      interacted: true,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceStygianWellOffer',
+      occurrence: well,
+      slotKey: 'secondLeft',
+      itemKey: 'TemporaryForcedSecretDoorTrait',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetStygianWellPurchase',
+      occurrence: well,
+      generationKey: 'initial:secondLeft',
+      purchased: true,
+    });
+
+    const first = prefix(project, goldenFBiome);
+    const second = prefix(project, goldenGBiome, first.history.current);
+    expect(
+      evaluateBiomeRoomGeneration(catalog, second.snapshot, second.history, 2).findings,
+    ).toContainEqual(
+      expect.objectContaining({
+        code: 'targetRoomUnavailable',
+        origin: forcedAdditional,
+        evidence: expect.objectContaining({
+          kind: 'chaos',
+          failedConditions: expect.arrayContaining(['offerSpacing']),
+        }),
+      }),
+    );
+
+    const forcedHosts = forcedChaosOccurrenceKeys(project, catalog);
+    expect(forcedHosts).toContain(
+      semanticAddressKey(createOccurrenceAddress(goldenGBiome, goldenGStartId)),
+    );
+    expect(
+      evaluateBiomeRoomGeneration(
+        catalog,
+        second.snapshot,
+        second.history,
+        2,
+        undefined,
+        forcedHosts,
+      ).findings,
+    ).not.toContainEqual(
+      expect.objectContaining({
+        code: 'targetRoomUnavailable',
+        origin: forcedAdditional,
+      }),
+    );
+  });
 
   it('settles a real Hermes room reward with effective Denial bans', () => {
     const { anomaly, project: initial } = buildAnomalyProject(true);

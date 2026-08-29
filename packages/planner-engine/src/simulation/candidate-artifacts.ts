@@ -251,7 +251,7 @@ export interface BiomeCandidateArtifacts {
   readonly purgingPools: PurgingPoolCandidateArtifacts;
   readonly hermesShrines: HermesShrineCandidateArtifacts;
   readonly stygianWells: StygianWellCandidateArtifacts;
-  readonly naturalChaos: NaturalChaosCandidateArtifacts;
+  readonly chaos: ChaosCandidateArtifacts;
   readonly zagreusContracts: ZagreusContractCandidateArtifacts;
 }
 
@@ -468,23 +468,23 @@ function createEmptyStygianWellCandidateArtifacts(): StygianWellCandidateArtifac
   return Object.freeze({ at: () => undefined });
 }
 
-/** Exact reached-source natural Chaos placement support. */
-export interface NaturalChaosCandidateCapability {
+/** Exact reached-source Chaos placement support for ordinary authoring. */
+export interface ChaosCandidateCapability {
   readonly placementEligible: boolean;
   readonly failedConditions: readonly string[];
 }
-export interface NaturalChaosCandidateArtifacts {
-  readonly at: (occurrence: OccurrenceAddress) => NaturalChaosCandidateCapability | undefined;
+export interface ChaosCandidateArtifacts {
+  readonly at: (occurrence: OccurrenceAddress) => ChaosCandidateCapability | undefined;
 }
-export function createNaturalChaosCandidateArtifacts(
-  contexts: ReadonlyMap<string, NaturalChaosCandidateCapability>,
-): NaturalChaosCandidateArtifacts {
+export function createChaosCandidateArtifacts(
+  contexts: ReadonlyMap<string, ChaosCandidateCapability>,
+): ChaosCandidateArtifacts {
   const privateContexts = new Map(contexts);
   return Object.freeze({
     at: (occurrence: OccurrenceAddress) => privateContexts.get(semanticAddressKey(occurrence)),
   });
 }
-function createEmptyNaturalChaosCandidateArtifacts(): NaturalChaosCandidateArtifacts {
+function createEmptyChaosCandidateArtifacts(): ChaosCandidateArtifacts {
   return Object.freeze({ at: () => undefined });
 }
 
@@ -847,7 +847,7 @@ export function createBiomeCandidateArtifacts(
     new Map(),
   ),
   transcendentEmbryo: TranscendentEmbryoCandidateArtifacts = createEmptyTranscendentEmbryoCandidateArtifacts(),
-  naturalChaos: NaturalChaosCandidateArtifacts = createEmptyNaturalChaosCandidateArtifacts(),
+  chaos: ChaosCandidateArtifacts = createEmptyChaosCandidateArtifacts(),
   zagreusContracts: ZagreusContractCandidateArtifacts = createEmptyZagreusContractCandidateArtifacts(),
 ): BiomeCandidateArtifacts {
   return Object.freeze({
@@ -870,7 +870,7 @@ export function createBiomeCandidateArtifacts(
     purgingPools,
     hermesShrines,
     stygianWells,
-    naturalChaos,
+    chaos,
     zagreusContracts,
   });
 }

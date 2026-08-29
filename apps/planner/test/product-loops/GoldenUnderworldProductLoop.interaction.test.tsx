@@ -487,7 +487,7 @@ describe('underworld product loop', () => {
         ?.biomes.find((biome) => biome.biomeKey === 'F')?.topology;
     const authoredGate = topology()
       ?.occurrences.find((occurrence) => occurrence.occurrenceId === opening)
-      ?.additionalExits.find((additional) => additional.kind === 'naturalChaos');
+      ?.additionalExits.find((additional) => additional.kind === 'chaos');
     if (authoredGate === undefined) throw new Error('natural Chaos gate was not authored');
     const chaosOccurrenceId = authoredGate.occurrenceId;
     const source = { kind: 'occurrence' as const, occurrenceId: opening };
@@ -561,7 +561,7 @@ describe('underworld product loop', () => {
           decision.source.occurrenceId === opening,
       ),
     ).toMatchObject({
-      selection: { kind: 'additional', additionalExitKey: 'naturalChaos' },
+      selection: { kind: 'additional', additionalExitKey: 'chaos' },
     });
     application.store.dispatch(
       authoredProjectReplaced(

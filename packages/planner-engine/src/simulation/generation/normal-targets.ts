@@ -37,7 +37,7 @@ import type {
 import { assessHermesShrine, priorTwoSurfaceShopPresence } from '../hermes-shrine';
 import type { TargetRewardHistoryCheckpoint } from '../rewards';
 import type {
-  NaturalChaosCandidateCapability,
+  ChaosCandidateCapability,
   ZagreusContractCandidateCapability,
 } from '../candidate-artifacts';
 import type {
@@ -800,11 +800,11 @@ interface AdditionalContinuationEntry {
 }
 
 /**
- * Assess one reached natural-Chaos source. Authored continuation validation
+ * Assess one reached Chaos source. Authored continuation validation
  * and the candidate artifact use this same helper so the editor cannot expose
  * a source that the normal target evaluator would immediately reject.
  */
-export function assessNaturalChaosPlacement(
+export function assessChaosPlacement(
   catalog: Catalog,
   layout: BiomeLayout,
   source: CanonicalGenerationSource,
@@ -812,17 +812,18 @@ export function assessNaturalChaosPlacement(
   parentHistory: ProgressiveRoomHistoryViews | undefined,
   targetGameName: string | undefined,
   enteredBiomeCount: number,
-): NaturalChaosCandidateCapability | undefined {
+): ChaosCandidateCapability | undefined {
   if (parentHistory?.entry === undefined) return undefined;
   const declaration = sourceDeclaration.additionalExits.find(
     (
       candidate,
-    ): candidate is Extract<RoomDeclaration['additionalExits'][number], { kind: 'naturalChaos' }> =>
-      candidate.kind === 'naturalChaos' && candidate.key === 'naturalChaos',
+    ): candidate is Extract<RoomDeclaration['additionalExits'][number], { kind: 'chaos' }> =>
+      candidate.kind === 'chaos' && candidate.key === 'chaos',
   );
-  const host = layout.naturalChaos;
+  const host = layout.chaos;
   const failedConditions: string[] = [];
-  if (declaration === undefined) failedConditions.push('sourceCapability');
+  if (declaration === undefined || !declaration.canSpawn || !declaration.canHost)
+    failedConditions.push('sourceCapability');
   if (host === undefined || host.roomGameNames.length === 0) failedConditions.push('targetDomain');
   if (
     sourceDeclaration.secretPointAnchorCount !== undefined &&
@@ -855,8 +856,7 @@ export function assessNaturalChaosPlacement(
     const recentOffer = parentHistory.entry.ledgers.roomCreations.find(
       (creation) =>
         creation.source === 'additionalExit' &&
-        (creation.additionalOrigin.additionalExitKey === 'naturalChaos' ||
-          creation.additionalOrigin.additionalExitKey === 'sparkChaos') &&
+        creation.additionalOrigin.additionalExitKey === 'chaos' &&
         recentOrigins.has(semanticAddressKey(creation.parentOrigin)),
     );
     if (recentOffer !== undefined) failedConditions.push('offerSpacing');
@@ -934,6 +934,7 @@ function evaluateAdditionalContinuationEntries(
   findings: SemanticFinding[],
   findingRegions: FindingRegionEntry[],
   enteredBiomeCount = 0,
+  forcedChaosOccurrenceKeys: ReadonlySet<string> = new Set(),
 ): void {
   const layout = catalog.biomeLayouts.byKey[snapshot.biomeKey];
   if (layout === undefined) {
@@ -946,34 +947,25 @@ function evaluateAdditionalContinuationEntries(
     const parentHistory = history.rooms.find(
       (room) => semanticAddressKey(room.origin) === semanticAddressKey(parentOrigin),
     );
-    if (continuation.key === 'naturalChaos' || continuation.key === 'sparkChaos') {
+    if (continuation.key === 'chaos') {
       if (source === undefined || parentHistory?.entry === undefined) continue;
-      const forced = continuation.key === 'sparkChaos';
-      const declaration = forced
-        ? sourceDeclaration?.additionalExits.find(
-            (
-              candidate,
-            ): candidate is Extract<
-              (typeof sourceDeclaration.additionalExits)[number],
-              { readonly kind: 'sparkChaos' }
-            > => candidate.kind === 'sparkChaos' && candidate.key === 'sparkChaos',
-          )
-        : sourceDeclaration?.additionalExits.find(
-            (
-              candidate,
-            ): candidate is Extract<
-              (typeof sourceDeclaration.additionalExits)[number],
-              { readonly kind: 'naturalChaos' }
-            > => candidate.kind === 'naturalChaos' && candidate.key === 'naturalChaos',
-          );
-      const host = forced ? layout.sparkChaos : layout.naturalChaos;
+      const forced = forcedChaosOccurrenceKeys.has(semanticAddressKey(parentOrigin));
+      const declaration = sourceDeclaration?.additionalExits.find(
+        (
+          candidate,
+        ): candidate is Extract<
+          (typeof sourceDeclaration.additionalExits)[number],
+          { readonly kind: 'chaos' }
+        > => candidate.kind === 'chaos' && candidate.key === 'chaos',
+      );
+      const host = layout.chaos;
       const failedConditions: string[] = [];
       if (declaration === undefined) failedConditions.push('sourceCapability');
       if (host === undefined || !host.roomGameNames.includes(continuation.room.gameName)) {
         failedConditions.push('targetDomain');
       }
       if (!forced && sourceDeclaration !== undefined) {
-        const capability = assessNaturalChaosPlacement(
+        const capability = assessChaosPlacement(
           catalog,
           layout,
           source,
@@ -986,7 +978,7 @@ function evaluateAdditionalContinuationEntries(
           if (!failedConditions.includes(condition)) failedConditions.push(condition);
         }
       }
-      const window = forced ? undefined : layout.naturalChaos?.offerSpacingWindow;
+      const window = forced ? undefined : layout.chaos?.offerSpacingWindow;
       if (failedConditions.length > 0) {
         appendFinding(
           findings,

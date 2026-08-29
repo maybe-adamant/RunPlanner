@@ -137,20 +137,20 @@ today's unobservable exact-entry split as multiple run histories.
 
 ## Counted Store Inventory
 
-| Store                   | Projected entries | Live use                                                                  | Disposition and notes                                                      |
-| ----------------------- | ----------------: | ------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| `RunProgress`           |                18 | Ordinary generated rewards, F/G/P free preboss rewards, O wheels, H cages | Exact target. Four Boon entries allow duplicates; all other entries do not |
-| `MetaProgress`          |                13 | Ordinary generated rewards and O wheels                                   | Exact fully progressed projection from the raw 19-entry store; see below   |
-| `HubRewards`            |                10 | N initial combat-room offers                                              | Exact target. Five Boon entries allow duplicates                           |
-| `SubRoomRewards`        |                23 | N ordinary side-room offers                                               | Exact current-run target; external elemental unlock is excluded            |
-| `SubRoomRewardsHard`    |                 8 | N hard side-room offers                                                   | Exact target                                                               |
-| `FieldsOptionalRewards` |                19 | Automatic H optional rewards                                              | Exact persistent bag; generated optionals are independently acquired       |
-| `TartarusRewards`       |                 9 | I non-goal combat offers                                                  | Exact target under the common external-predicate baseline                  |
-| `TyphonBossRewards`     |                 6 | Q miniboss offers                                                         | Exact target under the common external-predicate baseline                  |
-| `Secrets`               |                 1 | Chaos detour                                                              | Excluded with natural Chaos routing                                        |
-| `MinorRunProgress`      |                13 | No supported canonical producer                                           | Excluded until a live supported producer requires it                       |
-| `PreHubRewards`         |                 0 | None                                                                      | Excluded; empty game declaration                                           |
-| `FieldsCombatRewards`   |                 0 | None                                                                      | Excluded; empty game declaration                                           |
+| Store                   | Projected entries | Live use                                                                  | Disposition and notes                                                                                              |
+| ----------------------- | ----------------: | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `RunProgress`           |                18 | Ordinary generated rewards, F/G/P free preboss rewards, O wheels, H cages | Exact target. Four Boon entries allow duplicates; all other entries do not                                         |
+| `MetaProgress`          |                13 | Ordinary generated rewards and O wheels                                   | Exact fully progressed projection from the raw 19-entry store; see below                                           |
+| `HubRewards`            |                10 | N initial combat-room offers                                              | Exact target. Five Boon entries allow duplicates                                                                   |
+| `SubRoomRewards`        |                23 | N ordinary side-room offers                                               | Exact current-run target; external elemental unlock is excluded                                                    |
+| `SubRoomRewardsHard`    |                 8 | N hard side-room offers                                                   | Exact target                                                                                                       |
+| `FieldsOptionalRewards` |                19 | Automatic H optional rewards                                              | Exact persistent bag; generated optionals are independently acquired                                               |
+| `TartarusRewards`       |                 9 | I non-goal combat offers                                                  | Exact target under the common external-predicate baseline                                                          |
+| `TyphonBossRewards`     |                 6 | Q miniboss offers                                                         | Exact target under the common external-predicate baseline                                                          |
+| `Secrets`               |                 1 | Chaos detour                                                              | Raw counted-store replay is excluded; the unified Chaos direct one-entry `TrialUpgrade` normalization is supported |
+| `MinorRunProgress`      |                13 | No supported canonical producer                                           | Excluded until a live supported producer requires it                                                               |
+| `PreHubRewards`         |                 0 | None                                                                      | Excluded; empty game declaration                                                                                   |
+| `FieldsCombatRewards`   |                 0 | None                                                                      | Excluded; empty game declaration                                                                                   |
 
 ### RunProgress
 
@@ -311,7 +311,7 @@ does not make either producer a MetaProgress consumer.
 
 | Store                 | Reason it does not weaken the planner invariant                                                                                                                                                                      |
 | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Secrets`             | Natural Chaos is an excluded route-structural detour. Its one-entry raw store is not a supported planner consumer; reactivation must re-audit its peer scope.                                                        |
+| `Secrets`             | Raw counted-store replay remains excluded. The supported unified Chaos projection normalizes its direct one-entry `TrialUpgrade` outcome without replaying the raw store.                                            |
 | `MinorRunProgress`    | No supported canonical producer consumes it. A future producer must establish its filters and maximum peer scope before activation.                                                                                  |
 | `PreHubRewards`       | The game declaration is empty and has no live supported consumer. N PreHub explicitly uses `RunProgress`. Calling this empty bag would reach the raw fallback and is treated as an invalid producer/store contract.  |
 | `FieldsCombatRewards` | The game declaration is empty. H combat rooms are `NoReward`, their old store override is commented out, and cages explicitly use `RunProgress`. Calling this empty bag would be an invalid producer/store contract. |
@@ -513,8 +513,9 @@ outside the ordinary-god source set. Other resource, health, mana, armor, Last
 Stand, and weapon mutation effects retain their documented simplified or
 deferred dispositions rather than entering an untyped semantic-effect bag.
 
-The registry intentionally omits `TrialUpgrade` with the excluded `Secrets`
-store and omits `ElementalBoost`, whose I/Q shop entry is Dream-only. The four
+The registry intentionally omits raw `Secrets` counted-store replay while
+supporting the unified Chaos direct one-entry `TrialUpgrade` normalization. It
+also omits `ElementalBoost`, whose I/Q shop entry is Dream-only. The four
 individual elemental boosts remain supported through N side-room rewards even
 though their ordinary World Shop entries are also Dream-only. The commented
 Devotion block inside `HubRewards` is not a live store entry.

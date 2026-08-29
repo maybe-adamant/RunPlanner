@@ -7,6 +7,7 @@ import {
   semanticAddressKey,
 } from '../authored-project/addresses';
 import type { AuthoredRoutePlan, ProjectDocument } from '../authored-project/model';
+import { forcedChaosOccurrenceKeysForRoute } from '../authored-project/chaos-gate-reconciliation';
 import {
   createProjectCandidateArtifacts,
   type BiomeCandidateArtifacts,
@@ -125,6 +126,7 @@ function evaluateRouteAssembly(
   catalog: Catalog,
   route: AuthoredRoutePlan,
 ): RouteProjectEvaluationAssembly {
+  const forcedChaos = forcedChaosOccurrenceKeysForRoute(route, catalog);
   const evaluations: ProjectBiomeEvaluation[] = [];
   const candidateArtifacts: BiomeCandidateArtifacts[] = [];
   const completeValidPrefix: string[] = [];
@@ -270,6 +272,7 @@ function evaluateRouteAssembly(
         : undefined;
     const context = Object.freeze({
       enteredBiomeCount: index + 1,
+      forcedChaosOccurrenceKeys: forcedChaos,
       loadout: route.loadout,
       resourcePlacements: effectiveRouteResourcePlacements(catalog, route),
       ...(seed === undefined ? {} : { seed }),

@@ -63,11 +63,11 @@ catalog alternatives into one authored run document.
 
 ### One selected route per document
 
-Schema 71 replaces the project route array with one explicit route plan:
+Schema 72 replaces the project route array with one explicit route plan:
 
 ```ts
 interface ProjectDocument {
-  readonly schemaVersion: 71;
+  readonly schemaVersion: 72;
   readonly projectId: string;
   readonly catalogVersion: string;
   readonly route: AuthoredRoutePlan;
@@ -170,7 +170,7 @@ that could overwrite the preserved recovery value.
   open project. The empty chooser does not invent a fifth persisted-project
   status.
 
-## Legacy Schema-70 Disposition
+## Legacy Schema-70/71 Disposition
 
 Schema 70 always contains all catalog routes, so converting it to a one-route
 document is potentially lossy. Migration must never guess the intended route
@@ -178,7 +178,7 @@ from configured biome count, filename, current UI session, catalog order, or an
 apparently default sibling loadout.
 
 The standalone migration boundary gains an explicit route selection when a
-migration crosses schema 70 to 71:
+migration crosses schema 71 to 72:
 
 ```text
 node schema/migrate-project.js --route Surface INPUT
@@ -186,8 +186,8 @@ node schema/migrate-project.js --route Surface INPUT
 
 Locked rules:
 
-1. `--route ROUTE_KEY` is required when crossing `70 -> 71`.
-2. The selected route must exist exactly once in the schema-70 document.
+1. `--route ROUTE_KEY` is required when crossing `71 -> 72`.
+2. The selected route must exist exactly once in the schema-71 document.
 3. Migration copies that complete `AuthoredRoutePlan` without reconstructing
    loadout, resource, biome, topology, occurrence, or room-local state.
 4. The source file remains untouched unless the existing explicit `--in-place`
@@ -197,17 +197,17 @@ Locked rules:
    is added.
 6. The migration result reports the selected route key and omitted sibling route
    keys.
-7. Targeting schema 70 or earlier does not require a route option.
+7. Targeting schema 72 or earlier does not require a route option.
 8. The strict production decoder remains current-schema only. In-app legacy
    migration is not introduced by this plan.
 
 All canonical checkpoint fixtures migrate explicitly to their named route. A
 migration witness must prove that selecting each route from a synthetic
-two-authored-route schema-70 document preserves the selected subtree exactly
+two-authored-route schema-71 document preserves the selected subtree exactly
 and never mutates the input. Fixture conversion must not mass-default or
 re-author nested state.
 
-Catalog version `0.49.0-completion-topology` is unchanged because this is an
+Catalog version `0.50.0-unified-chaos-gates` is the current boundary; this future
 authored transport and ownership correction, not a catalog-fact change.
 
 ## Ownership by Lane
@@ -222,13 +222,13 @@ required.
 
 The engine owns:
 
-- schema 71 and the single-route `ProjectDocument` contract;
+- schema 72 and the single-route `ProjectDocument` contract;
 - route-specific project construction and strict decoding;
 - command matching and immutable replacement of the sole route;
 - one-route simulation, findings, summary, exact assembly, and candidate
   artifacts;
 - rejection of cross-route semantic addresses and commands; and
-- the explicit schema-70-to-71 migration transformation and its tests.
+- the explicit schema-71-to-72 migration transformation and its tests.
 
 Functions that currently search, map, or flatten project routes must either
 operate directly on `document.route` or disappear. A generic collection helper
@@ -286,7 +286,7 @@ reviewable or committable until all passes form one coherent product.
 - require `routeKey` when constructing a project and validate it through the
   catalog;
 - update strict codec paths and round-trip products;
-- add explicit `--route` migration input for `70 -> 71`;
+- add explicit `--route` migration input for `71 -> 72`;
 - migrate every canonical JSON checkpoint to its explicit route; and
 - remove superseded all-catalog-route count/order requirements from the authored
   document.
@@ -346,7 +346,7 @@ not deletion targets.
 
 After Gate A passes independent review and its accepted findings are remediated:
 
-- update `AUTHORED_PROJECT_MODEL.md` with schema 71 and one-route persistence;
+- update `AUTHORED_PROJECT_MODEL.md` with schema 72 and one-route persistence;
 - update `SIMULATION_AND_VALIDATION.md` and `ARCHITECTURE.md` with singular route
   evaluation and pipeline language;
 - update `EDITOR_MODEL.md` and `STRUCTURED_EDITOR_WORKSPACE.md` with the route
@@ -368,7 +368,7 @@ to repair an incomplete Gate A model.
 - codec round trips each route and rejects unknown routes, the old `routes`
   property, duplicate transport fields, and out-of-prefix biomes;
 - a command addressed to another route is rejected without changing identity;
-- `70 -> 71` fails without explicit route selection;
+- `71 -> 72` fails without explicit route selection;
 - selecting either route preserves that complete route subtree and leaves the
   source object unchanged; and
 - all checkpoint fixtures pass integrity and current-schema decoding.
