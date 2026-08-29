@@ -2285,6 +2285,12 @@ select {
   border: 0;
 }
 
+.start-room-fixed > .fixed-room-state {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
 .anomaly-outcome-control {
   display: inline-flex;
   align-items: center;
@@ -2990,15 +2996,8 @@ select {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.reward-wheel-offer-card[data-picked='true'] {
-  border-color: #9f7ed1;
-  background: rgb(159 126 209 / 10%);
-}
-
-.reward-wheel-picked-marker {
-  color: #d6c1f2;
-  font-size: 0.72rem;
-  font-weight: 700;
+.reward-wheel-offer-card > .exit-content {
+  padding: 10px;
 }
 
 @container (max-width: 34rem) {

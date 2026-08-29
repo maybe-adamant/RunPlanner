@@ -738,7 +738,7 @@ export function controlsForOccurrence(
             undefined,
             offer,
             reward,
-            Object.freeze(offer === null ? [] : [offer.rewardType]),
+            Object.freeze(fixedRewardType === undefined ? [] : [fixedRewardType]),
             undefined,
             false,
             undefined,

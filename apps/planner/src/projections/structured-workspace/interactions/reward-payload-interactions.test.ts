@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { decodeProjectDocument, encodeProjectDocument } from '@run-planner/engine/authored-project';
 
 import * as support from '@planner-test/support/structured-workspace/interaction-binding.test-support';
 
@@ -129,5 +130,45 @@ describe('reward-payload-interactions', () => {
         },
       },
     });
+  });
+
+  it('seeds an unresolved fixed Trial reward from its declaration-owned Devotion type', async () => {
+    const raw = JSON.parse(encodeProjectDocument(loadSurfaceNOPQProject())) as {
+      routes: Array<{
+        routeKey: string;
+        biomes: Array<{
+          biomeKey: string;
+          topology: {
+            occurrences: Array<{
+              occurrenceId: string;
+              state: { kind: string; reward: unknown };
+            }>;
+          } | null;
+        }>;
+      }>;
+    };
+    const devotion = raw.routes
+      .find((route) => route.routeKey === 'Surface')
+      ?.biomes.find((biome) => biome.biomeKey === 'O')
+      ?.topology?.occurrences.find(
+        (occurrence) => occurrence.occurrenceId === oOccurrenceIds.devotion,
+      );
+    if (devotion?.state.kind !== 'fixed') throw new Error('O Trial fixture is missing');
+    devotion.state.reward = null;
+    const project = decodeProjectDocument(raw, catalog);
+    const owner = createIncomingRewardAddress(oBiome, oOccurrenceIds.devotion);
+    const interaction = bind(project, 'Surface', 'O').interactions.rewards.get(
+      semanticAddressKey(owner),
+    );
+    if (interaction === undefined) throw new Error('O Trial reward interaction is missing');
+
+    expect(interaction.authoredRewardTypes).toEqual(['Devotion']);
+    const domain = await interaction.load();
+    expect(domain.types).toContainEqual(expect.objectContaining({ key: 'Devotion' }));
+    expect(
+      interaction
+        .model(domain, 'chosen', { rewardType: 'Devotion' })
+        .sections.flatMap((section) => section.items),
+    ).not.toHaveLength(0);
   });
 });

@@ -745,7 +745,7 @@ describe('workspace inspector destinations', () => {
       selectedRailKey: sideParentVisit.marker.focusKey,
     });
     expect(destination(complete, sideVisit.node.room.marker.address)).toMatchObject({
-      roomTab: 'actions',
+      roomTab: 'overview',
       inspectorSubject: { kind: 'node', nodeKey: sideVisit.node.key },
       selectedRailKey: sideVisit.marker.focusKey,
     });

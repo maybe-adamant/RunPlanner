@@ -143,14 +143,13 @@ another ownership path.
 
 Hub destination ownership is explicit in the application projection. Hub
 membership and the incoming identity of a main-room reward open Hub Overview;
-the main visit and ordering owner opens Hub Timeline; and the entered main-room
-occurrence, including the trait, Pom, spell, and other acquisition-resolution
-children of its incoming reward, opens that occurrence's Timeline. Side-room
+the main visit and ordering owner opens Hub Timeline; and selecting an entered
+main-room or side-room occurrence opens that occurrence's Overview. Side-room
 generation, entry order, and side reward identity remain on the parent main
-occurrence's Overview. Once a side room is entered, its lifecycle and
-acquisition detail opens the side occurrence's Timeline. React consumes these
-destinations and never derives them from address shape, rendered ancestry, or
-the currently selected tab.
+occurrence's Overview. Exact trait, Pom, spell, and other lifecycle or
+acquisition owners still open their containing occurrence Timeline. React
+consumes these destinations and never derives them from address shape, rendered
+ancestry, or the currently selected tab.
 
 Membership controls create or remove the one authored occurrence owned by a
 fixed slot; visited slots cannot be closed until their visit references are
@@ -685,6 +684,10 @@ Devotion advances through chosen and spurned sources. Partial picker progress
 is transient session state, and only the complete `ResolvedRewardOffer`
 dispatches one semantic replacement command. The contextual store, sibling,
 bag, and source rules are defined in `CONTEXTUAL_EDITOR_UX.md`.
+For a declaration-fixed reward with unresolved authored state, the application
+seeds that same payload flow from the declaration-owned reward type. The user
+therefore repairs the missing payload directly instead of encountering an empty
+reward-type domain.
 
 Blind Box deliberately exposes its intended eventual Boon source as planner
 intent even though the in-game shop hides that result. The editor labels it as
@@ -779,10 +782,18 @@ Within one active wheel, its offers render as simultaneous offer cards: one
 active offer fills the available row, while two render as equal sibling columns
 and collapse to one column in a narrow container. The cards may share the
 compact exit-card visual language, but they are not exits: they render no door
-number, exit selection, room state, or topology action. A read-only selected
-marker may reflect the current picked index; the sole interactive `Picked
-offer` control remains at its exact wheel acquisition action on the Room
-Timeline. Wheel 1 and Wheel 2 remain separate sequential phase sections.
+number, room state, or topology action. They reuse the exit-card selection shell
+and its yellow selected-state styling: when two offers are active, each card
+owns a left-side radio backed by the wheel's existing picked-offer interaction;
+one active offer retains the neutral marker and needs no choice control. The
+pick interaction validates the generated wheel through that choice point. It
+does not require the newly selected offer's acquisition child to be complete;
+that child becomes authorable on the following combat phase's pickup action.
+Earlier wheels and the selected wheel's complete generated cohort remain part
+of candidate validation. The chronological `Choose` action remains on the Room
+Timeline for ordering, but it
+does not duplicate the card selection with a dropdown. Wheel 1 and Wheel 2
+remain separate sequential phase sections.
 The outgoing decision exposes no duplicate store selector because its
 `sourceOfferPoint` policy derives from the last active wheel. The editor
 dispatches only ship and reward-wheel semantic commands and does not encode

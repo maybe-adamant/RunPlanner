@@ -20,12 +20,9 @@ import {
   type WorkspaceRewardWheelDescriptor,
   type WorkspaceShipPhasePresentation,
 } from '@planner/projections/structured-workspace';
-import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
-import { useAppDispatch } from '@planner/state/store';
 import { SemanticOwnerMarker } from '@planner/ui/feedback/EvaluationFeedback';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
-import { CandidateSelect } from './CandidateSelect';
 export { SteadyGrowthEffectRow } from './SteadyGrowthEffectRow';
 import { SteadyGrowthEffectRow } from './SteadyGrowthEffectRow';
 export { TranscendentEmbryoEffectRow } from './TranscendentEmbryoEffectRow';
@@ -126,7 +123,6 @@ export function RoomActionsWorkbench({
     readonly phaseKey?: string;
   };
 }) {
-  const dispatch = useAppDispatch();
   const executeIntent = useCommandIntent();
   const board = useRef<HTMLOListElement | HTMLDivElement>(null);
   const pendingPointerDrag = useRef<PendingRoomActionPointerDrag | undefined>(undefined);
@@ -318,7 +314,6 @@ export function RoomActionsWorkbench({
       const proposal = actions.proposals.find((candidate) => candidate.key === key);
       return proposal === undefined ? [] : [proposal];
     });
-    const wheel = row.wheelPick;
     const canDrag =
       row.rank !== null &&
       rankedRows.length > 1 &&
@@ -426,25 +421,6 @@ export function RoomActionsWorkbench({
                 <li key={issue}>{issue}</li>
               ))}
             </ul>
-          )}
-          {wheel === undefined ? null : (
-            <CandidateSelect
-              id={`room-action-${row.key}-picked`}
-              interaction={requireWorkspaceInteraction(
-                interactions.rewardWheelPicks,
-                workspaceInteractionKey(wheel),
-              )}
-              label="Picked offer"
-              onReplace={(pickedOfferIndex) =>
-                dispatch(
-                  authoredProjectCommandDispatched({
-                    kind: 'ReplaceRewardWheelPicked',
-                    wheel,
-                    pickedOfferIndex,
-                  }),
-                )
-              }
-            />
           )}
           <RoomActionAcquisitionRow
             hideOffer={inlineMysteryBoonOffer}

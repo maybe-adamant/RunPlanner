@@ -425,7 +425,24 @@ export function RewardWheelWorkbench({
     interactions.rewardWheelOfferCounts,
     workspaceInteractionKey(wheel.address),
   );
+  const pick = requireWorkspaceInteraction(
+    interactions.rewardWheelPicks,
+    workspaceInteractionKey(wheel.address),
+  );
+  const pickCandidates = useWorkspaceInteraction(pick);
   const idPrefix = `room-${occurrence.occurrenceId}-${wheel.key}`;
+  const replacePick = (pickedOfferIndex: number): void => {
+    const candidateResults = pickCandidates.result ?? pick.load();
+    const candidate = candidateResults.find((option) => option.value === pickedOfferIndex);
+    if (!candidateMayBeAuthored(candidate)) return;
+    dispatch(
+      authoredProjectCommandDispatched({
+        kind: 'ReplaceRewardWheelPicked',
+        wheel: wheel.address,
+        pickedOfferIndex,
+      }),
+    );
+  };
 
   return (
     <section aria-label={wheel.label} className="reward-wheel">
@@ -469,27 +486,44 @@ export function RewardWheelWorkbench({
         {wheel.offers
           .filter((offer) => offer.active)
           .map((offer, index) => {
-            const picked = index + 1 === wheel.pickedOfferIndex;
+            const offerIndex = index + 1;
+            const picked = offerIndex === wheel.pickedOfferIndex;
             return (
               <section
                 aria-label={offer.label}
-                className="local-reward-slot reward-wheel-offer-card"
+                className="exit-row reward-wheel-offer-card"
+                data-available="true"
                 data-picked={picked || undefined}
                 key={offer.key}
               >
-                <div className="local-reward-heading">
-                  <div className="owner-markers">
-                    <h6>{offer.label}</h6>
-                    <SemanticOwnerMarker address={offer.control.marker.address} />
+                {wheel.offerCount === 1 ? (
+                  <div aria-hidden="true" className="exit-marker" />
+                ) : (
+                  <label className="picked-control">
+                    <span className="visually-hidden">{`Pick ${offer.label} from ${wheel.label}`}</span>
+                    <input
+                      aria-label={`Pick ${offer.label} from ${wheel.label}`}
+                      checked={picked}
+                      name={`${idPrefix}-picked-offer`}
+                      onChange={() => replacePick(offerIndex)}
+                      type="radio"
+                    />
+                  </label>
+                )}
+                <div className="exit-content">
+                  <div className="local-reward-heading">
+                    <div className="owner-markers">
+                      <h6>{offer.label}</h6>
+                      <SemanticOwnerMarker address={offer.control.marker.address} />
+                    </div>
                   </div>
-                  {picked ? <span className="reward-wheel-picked-marker">Picked</span> : null}
+                  <RewardControlEditor
+                    control={offer.control}
+                    idPrefix={`${idPrefix}-${offer.key}`}
+                    interactions={interactions}
+                    showAcquisitionChildren={false}
+                  />
                 </div>
-                <RewardControlEditor
-                  control={offer.control}
-                  idPrefix={`${idPrefix}-${offer.key}`}
-                  interactions={interactions}
-                  showAcquisitionChildren={false}
-                />
               </section>
             );
           })}
