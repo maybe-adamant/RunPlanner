@@ -132,8 +132,7 @@ const findingCopy = {
   },
   baseRewardStoreUnavailable: {
     title: 'Reward pool cannot appear here',
-    description:
-      'The selected reward pool is not one of the available reward pools for these doors.',
+    description: 'The selected reward pool is unavailable at this point in the route.',
   },
   rewardAcquisitionUnavailable: {
     title: 'Reward cannot be acquired',

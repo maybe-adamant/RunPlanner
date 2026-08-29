@@ -948,7 +948,7 @@ describe('DecisionWorkbench', () => {
     }
   });
 
-  it('omits an impossible unselected batch reward pool', async () => {
+  it('keeps an impossible unselected batch reward pool visible and disabled', async () => {
     const owner = createExitDecisionAddress(goldenFBiome, {
       kind: 'occurrence',
       occurrenceId: goldenFStartId,
@@ -960,11 +960,32 @@ describe('DecisionWorkbench', () => {
       subjectForOwner(owner),
     );
     await view.user.click(screen.getByLabelText('Reward Pool'));
-    const values = Array.from(
-      (screen.getByLabelText('Reward Pool') as HTMLSelectElement).options,
-    ).map((option) => option.value);
-    expect(values).toContain('MetaProgress');
-    expect(values).not.toContain('RunProgress');
+    const options = Array.from((screen.getByLabelText('Reward Pool') as HTMLSelectElement).options);
+    expect(options.find((option) => option.value === 'MetaProgress')?.disabled).toBe(false);
+    expect(options.find((option) => option.value === 'RunProgress')).toMatchObject({
+      disabled: true,
+      textContent: 'Major Reward — unavailable',
+    });
+  });
+
+  it('keeps the complete Fields roll domain visible when history forces Maximum', async () => {
+    const owner = createExitDecisionAddress(goldenHBiome, {
+      kind: 'occurrence',
+      occurrenceId: createOccurrenceId('golden-h-miniboss01'),
+    });
+    renderDecisionWorkbench(createGoldenFGHIProject(), 'Underworld', 'H', subjectForOwner(owner));
+
+    const selector = screen.getByLabelText('Fields door roll') as HTMLSelectElement;
+    fireEvent.pointerDown(selector);
+    await waitFor(() => {
+      const choices = Array.from(selector.options).filter((option) => option.value !== '');
+      expect(choices.map((option) => option.value)).toEqual(['min', 'max']);
+      expect(choices[0]).toMatchObject({
+        disabled: true,
+        textContent: 'Minimum — unavailable',
+      });
+      expect(choices[1]?.disabled).toBe(false);
+    });
   });
 
   it('distinguishes a forced effective reward pool from the authored base pool', () => {

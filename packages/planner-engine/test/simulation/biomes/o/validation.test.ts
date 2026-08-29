@@ -240,29 +240,8 @@ describe('selected O validation', () => {
 
   it('keeps one authored chronology across both Ship combat windows and resolves the final wheel store', () => {
     const occurrence = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
-    const predecessorWheel = createRewardWheelAddress(oBiome, oOccurrenceIds.combat04, 'wheel1');
-    const wheel1 = createRewardWheelAddress(oBiome, oOccurrenceIds.combat07, 'wheel1');
     const wheel2 = createRewardWheelAddress(oBiome, oOccurrenceIds.combat07, 'wheel2');
-    let project = applyProjectCommand(loadSurfaceNOProject(), catalog, {
-      kind: 'ReplaceRewardWheelStore',
-      wheel: predecessorWheel,
-      storeKey: 'MetaProgress',
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceRewardWheelOffer',
-      offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat04, 'wheel1', 'offer1'),
-      value: { rewardType: 'GiftDrop' },
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceRewardWheelStore',
-      wheel: wheel1,
-      storeKey: 'MetaProgress',
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceRewardWheelOffer',
-      offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat07, 'wheel1', 'offer1'),
-      value: { rewardType: 'MetaCardPointsCommonBigDrop' },
-    });
+    let project = loadSurfaceNOProject();
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceRewardWheelOfferCount',
       wheel: wheel2,
@@ -283,17 +262,6 @@ describe('selected O validation', () => {
       occurrence,
       encounterCount: 3,
     });
-    for (const occurrenceId of [oOccurrenceIds.devotion, oOccurrenceIds.story]) {
-      project = applyProjectCommand(project, catalog, {
-        kind: 'ReplaceBatchRewardStore',
-        rewardStore: createBatchRewardStoreAddress(
-          oBiome,
-          createExitDecisionAddress(oBiome, { kind: 'occurrence', occurrenceId }).source,
-        ),
-        storeKey: 'RunProgress',
-      });
-    }
-
     const { biome } = evaluateValidO(authorLegalTraitOffers(project));
     const sourceDecision = biome.snapshot.decisions.find(
       (decision) =>
@@ -373,18 +341,8 @@ describe('selected O validation', () => {
   });
 
   it('keeps dormant Wheel 2 out of a two-phase chronology and resolves outgoing from Wheel 1', () => {
-    const predecessorWheel = createRewardWheelAddress(oBiome, oOccurrenceIds.combat04, 'wheel1');
     const wheel2 = createRewardWheelAddress(oBiome, oOccurrenceIds.combat07, 'wheel2');
-    let project = applyProjectCommand(loadSurfaceNOProject(), catalog, {
-      kind: 'ReplaceRewardWheelStore',
-      wheel: predecessorWheel,
-      storeKey: 'MetaProgress',
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceRewardWheelOffer',
-      offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat04, 'wheel1', 'offer1'),
-      value: { rewardType: 'GiftDrop' },
-    });
+    let project = loadSurfaceNOProject();
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceRewardWheelStore',
       wheel: wheel2,
@@ -400,17 +358,6 @@ describe('selected O validation', () => {
       offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat07, 'wheel2', 'offer1'),
       value: { rewardType: 'GiftDrop' },
     });
-    for (const occurrenceId of [oOccurrenceIds.devotion]) {
-      project = applyProjectCommand(project, catalog, {
-        kind: 'ReplaceBatchRewardStore',
-        rewardStore: createBatchRewardStoreAddress(
-          oBiome,
-          createExitDecisionAddress(oBiome, { kind: 'occurrence', occurrenceId }).source,
-        ),
-        storeKey: 'RunProgress',
-      });
-    }
-
     const { biome } = evaluateValidO(authorLegalTraitOffers(project));
     const decisions = biome.snapshot.decisions.filter((decision) => decision.kind === 'batch');
     const sourceDecision = decisions.find(
@@ -449,9 +396,9 @@ describe('selected O validation', () => {
       afterRank: 2,
       window: { kind: 'shipPostCombat', wheelKey: 'wheel1' },
     });
-    expect(predecessorDecision.resolvedSharedRewardStoreKey).toBe('MetaProgress');
+    expect(predecessorDecision.resolvedSharedRewardStoreKey).toBe('RunProgress');
     expect(sourceDecision.rewardStore).toMatchObject({ kind: 'sourceOfferPoint' });
-    expect(sourceDecision.resolvedSharedRewardStoreKey).toBe('RunProgress');
+    expect(sourceDecision.resolvedSharedRewardStoreKey).toBe('MetaProgress');
   });
 
   it('keeps a retained Combat2 NPC contact dormant across a 3 -> 2 -> 3 edit', () => {
@@ -534,14 +481,14 @@ describe('selected O validation', () => {
 
     expect(evaluated.rewards.findings).toContainEqual(
       expect.objectContaining({
-        code: 'rewardBagEntryUnavailable',
-        origin: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat07, 'wheel2', 'offer1'),
+        code: 'baseRewardStoreUnavailable',
+        origin: wheel2,
       }),
     );
     expect(evaluated.rewards.findings).not.toContainEqual(
       expect.objectContaining({
-        code: 'rewardBagEntryUnavailable',
-        origin: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat07, 'wheel1', 'offer1'),
+        code: 'baseRewardStoreUnavailable',
+        origin: wheel1,
       }),
     );
   });
@@ -620,7 +567,7 @@ describe('selected O validation', () => {
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceBatchRewardStore',
       rewardStore: createBatchRewardStoreAddress(oBiome, terminalDecision.source),
-      storeKey: 'MetaProgress',
+      storeKey: 'RunProgress',
     });
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceWithTakeoverBatch',
@@ -649,19 +596,19 @@ describe('selected O validation', () => {
     const { biome } = evaluateValidO(authorLegalTraitOffers(project));
     expect(biome.snapshot.decisions.at(-1)).toMatchObject({
       kind: 'batch',
-      rewardStore: { kind: 'authoredBaseStore', baseRewardStoreKey: 'MetaProgress' },
+      rewardStore: { kind: 'authoredBaseStore', baseRewardStoreKey: 'RunProgress' },
       targets: [
         {
           room: {
             gameName: 'O_PreBoss01',
-            incomingReward: { resolvedStoreKey: 'MetaProgress' },
+            incomingReward: { resolvedStoreKey: 'RunProgress' },
           },
         },
       ],
     });
     expect(biome.snapshot.fixedRoomLinks[0]?.target).toMatchObject({
       gameName: 'O_Boss01',
-      enteredRewardStoreKey: 'MetaProgress',
+      enteredRewardStoreKey: 'RunProgress',
     });
   });
 
@@ -884,7 +831,22 @@ describe('selected O validation', () => {
       'wheel1',
       'offer1',
     );
-    const project = applyProjectCommand(loadSurfaceNOProject(), catalog, {
+    const baseProject = loadSurfaceNOProject();
+    const baseSession = createPreparedProjectCandidateSession(
+      catalog,
+      simulateProjectAssembly(catalog, baseProject),
+    );
+    expect(
+      baseSession.evaluate({ kind: 'rewardWheelStore', wheel, storeKey: 'MetaProgress' }),
+    ).toMatchObject({
+      kind: 'rewardWheelStore',
+      result: {
+        selectedPossible: true,
+        findings: [expect.objectContaining({ code: 'rewardBagEntryUnavailable', origin: offer })],
+      },
+    });
+
+    const project = applyProjectCommand(baseProject, catalog, {
       kind: 'ReplaceRewardWheelStore',
       wheel,
       storeKey: 'MetaProgress',
@@ -1236,6 +1198,199 @@ describe('selected O validation', () => {
     });
   });
 
+  it('keeps a newly active unresolved wheel structural values authorable', () => {
+    const occurrence = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
+    const wheel = createRewardWheelAddress(oBiome, oOccurrenceIds.combat07, 'wheel2');
+    const project = applyProjectCommand(loadSurfaceNOProject(), catalog, {
+      kind: 'ReplaceShipEncounterCount',
+      occurrence,
+      encounterCount: 3,
+    });
+    const session = createPreparedProjectCandidateSession(
+      catalog,
+      simulateProjectAssembly(catalog, project),
+    );
+
+    expect(
+      session.evaluate({ kind: 'rewardWheelStore', wheel, storeKey: 'RunProgress' }),
+    ).toMatchObject({
+      kind: 'rewardWheelStore',
+      result: {
+        selectedPossible: true,
+        supportedStoreKeys: ['RunProgress'],
+        findings: [expect.objectContaining({ code: 'rewardMissing' })],
+      },
+    });
+    expect(
+      session.evaluate({ kind: 'rewardWheelStore', wheel, storeKey: 'MetaProgress' }),
+    ).toMatchObject({
+      kind: 'rewardWheelStore',
+      result: {
+        selectedPossible: false,
+        supportedStoreKeys: ['RunProgress'],
+      },
+    });
+    expect(session.evaluate({ kind: 'rewardWheelOfferCount', wheel, offerCount: 2 })).toMatchObject(
+      {
+        kind: 'rewardWheelOfferCount',
+        result: { selectedPossible: true },
+      },
+    );
+  });
+
+  it('finds an unavailable authored wheel store even when its offer belongs to that store', () => {
+    const occurrence = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
+    const wheel = createRewardWheelAddress(oBiome, oOccurrenceIds.combat07, 'wheel2');
+    const offer = createRewardWheelOfferAddress(
+      oBiome,
+      oOccurrenceIds.combat07,
+      'wheel2',
+      'offer1',
+    );
+    let project = applyProjectCommand(loadSurfaceNOProject(), catalog, {
+      kind: 'ReplaceShipEncounterCount',
+      occurrence,
+      encounterCount: 3,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceRewardWheelStore',
+      wheel,
+      storeKey: 'MetaProgress',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceRewardWheelOffer',
+      offer,
+      value: { rewardType: 'MetaCurrencyBigDrop' },
+    });
+    const evaluated = simulateProjectAssembly(catalog, project)
+      .evaluation.routes.find((route) => route.routeKey === 'Surface')
+      ?.biomes.find((biome) => biome.biomeKey === 'O');
+    if (evaluated === undefined || !('rewards' in evaluated)) {
+      throw new Error('O wheel-store finding fixture did not publish reward evaluation');
+    }
+
+    expect(evaluated.rewards.findings).toContainEqual(
+      expect.objectContaining({
+        code: 'baseRewardStoreUnavailable',
+        origin: wheel,
+        evidence: expect.objectContaining({
+          authoredStoreKey: 'MetaProgress',
+          supportStoreKeys: ['RunProgress'],
+        }),
+      }),
+    );
+    expect(evaluated.rewards.findings).not.toContainEqual(
+      expect.objectContaining({
+        code: 'rewardBagEntryUnavailable',
+        origin: offer,
+      }),
+    );
+  });
+
+  it('keeps wheel findings scoped to the exact active wheel', () => {
+    const occurrence = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
+    const wheel1 = createRewardWheelAddress(oBiome, oOccurrenceIds.combat07, 'wheel1');
+    const wheel2 = createRewardWheelAddress(oBiome, oOccurrenceIds.combat07, 'wheel2');
+    const project = applyProjectCommand(loadSurfaceNOProject(), catalog, {
+      kind: 'ReplaceShipEncounterCount',
+      occurrence,
+      encounterCount: 3,
+    });
+    const session = createPreparedProjectCandidateSession(
+      catalog,
+      simulateProjectAssembly(catalog, project),
+    );
+
+    expect(
+      session.evaluate({ kind: 'rewardWheelOfferCount', wheel: wheel1, offerCount: 1 }),
+    ).toMatchObject({
+      kind: 'rewardWheelOfferCount',
+      result: { selectedPossible: true, findings: [] },
+    });
+    expect(
+      session.evaluate({ kind: 'rewardWheelStore', wheel: wheel2, storeKey: 'RunProgress' }),
+    ).toMatchObject({
+      kind: 'rewardWheelStore',
+      result: {
+        selectedPossible: true,
+        findings: [
+          expect.objectContaining({
+            code: 'rewardMissing',
+            origin: createRewardWheelOfferAddress(
+              oBiome,
+              oOccurrenceIds.combat07,
+              'wheel2',
+              'offer1',
+            ),
+          }),
+        ],
+      },
+    });
+  });
+
+  it('authors a complete MetaProgress wheel after its structural choices', () => {
+    const wheel = createRewardWheelAddress(oBiome, oOccurrenceIds.combat07, 'wheel1');
+    const offer2 = createRewardWheelOfferAddress(
+      oBiome,
+      oOccurrenceIds.combat07,
+      'wheel1',
+      'offer2',
+    );
+    let project = loadSurfaceNOProject();
+    let session = createPreparedProjectCandidateSession(
+      catalog,
+      simulateProjectAssembly(catalog, project),
+    );
+    expect(
+      session.evaluate({ kind: 'rewardWheelStore', wheel, storeKey: 'MetaProgress' }),
+    ).toMatchObject({ result: { selectedPossible: true } });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceRewardWheelStore',
+      wheel,
+      storeKey: 'MetaProgress',
+    });
+    session = createPreparedProjectCandidateSession(
+      catalog,
+      simulateProjectAssembly(catalog, project),
+    );
+    expect(session.evaluate({ kind: 'rewardWheelOfferCount', wheel, offerCount: 2 })).toMatchObject(
+      { result: { selectedPossible: true } },
+    );
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceRewardWheelOfferCount',
+      wheel,
+      offerCount: 2,
+    });
+    session = createPreparedProjectCandidateSession(
+      catalog,
+      simulateProjectAssembly(catalog, project),
+    );
+    const offer2Candidate = session.evaluate({
+      kind: 'rewardWheelOffer',
+      offer: offer2,
+      value: { rewardType: 'GiftDrop' },
+    });
+    expect(offer2Candidate).toMatchObject({
+      kind: 'rewardWheelOffer',
+      result: { supported: true },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceRewardWheelOffer',
+      offer: offer2,
+      value: { rewardType: 'GiftDrop' },
+    });
+    session = createPreparedProjectCandidateSession(
+      catalog,
+      simulateProjectAssembly(catalog, project),
+    );
+    expect(
+      session.evaluate({ kind: 'rewardWheelPicked', wheel, pickedOfferIndex: 2 }),
+    ).toMatchObject({
+      kind: 'rewardWheelPicked',
+      result: { selectedPossible: true, findings: [] },
+    });
+  });
+
   it('uses the source-offer policy on Ship continuation and the explicit base store on Devotion', () => {
     const { project } = evaluateO();
     const candidates = createPreparedProjectCandidateSession(
@@ -1257,7 +1412,10 @@ describe('selected O validation', () => {
       }),
     ).toMatchObject({
       kind: 'batchRewardStore',
-      result: { selectedPossible: true, supportStoreKeys: ['MetaProgress'] },
+      result: {
+        selectedPossible: true,
+        supportStoreKeys: ['RunProgress', 'MetaProgress'],
+      },
     });
     expect(
       candidates.evaluate({

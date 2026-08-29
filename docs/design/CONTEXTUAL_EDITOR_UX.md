@@ -518,7 +518,10 @@ is needed. Candidate backing alone does not require a popover: the compact
 `CandidateSelect` remains appropriate for reward pool or store, Fields roll,
 Ephyra generation, reward-wheel parameters, and Ship combat phase count.
 Counts, ranks, delivery delays, insertion order, weapon or aspect, and other
-closed enums follow the same scalar rule.
+closed enums follow the same scalar rule. A candidate-backed scalar keeps its
+complete declaration-owned domain visible after assessment. Engine-impossible
+values are disabled and labeled unavailable rather than disappearing, so a
+forced rule remains distinguishable from a smaller structural domain.
 
 Stable room-feature identity domains may use the contextual presentation even
 when no focused simulator query exists. The application must then expose the

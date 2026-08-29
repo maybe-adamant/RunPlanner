@@ -1668,6 +1668,11 @@ button:disabled {
   grid-column: 1 / -1;
 }
 
+.room-timeline-effect-row > .room-judgment-popup,
+.room-timeline-effect-row > .room-figurine-popup {
+  grid-column: 1 / -1;
+}
+
 .room-judgment-popup {
   display: grid;
   gap: 10px;

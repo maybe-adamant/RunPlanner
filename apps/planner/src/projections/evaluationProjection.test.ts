@@ -162,7 +162,7 @@ describe('evaluation presentation', () => {
       [
         'baseRewardStoreUnavailable',
         'Reward pool cannot appear here',
-        'The selected reward pool is not one of the available reward pools for these doors.',
+        'The selected reward pool is unavailable at this point in the route.',
       ],
       [
         'rewardAcquisitionUnavailable',

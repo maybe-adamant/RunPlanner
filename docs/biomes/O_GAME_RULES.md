@@ -69,6 +69,14 @@ the picked option acquires. `wheel2` remains a dormant retained leaf when the
 third phase is absent. Replacing a wheel offer replaces the resolved value at
 that wheel key directly; it never wraps it in another offer object.
 
+Authoring follows those lifecycle boundaries: the wheel's pre-offer history
+determines its Run/Meta support, the declaration determines its active offer
+count, the selected store and count constrain the complete simultaneous offer
+cohort, and only then does the player select one generated offer. Unresolved or
+incompatible retained offers remain explicit repair evidence; they do not make
+a supported store or offer count unauthorable. A retained wheel store outside
+its pre-offer support remains authored and receives a wheel-owned finding.
+
 The final active wheel is the source-owned outgoing-store authority. A
 two-phase ShipCombat source supplies `wheel1.storeKey`; a three-phase source
 supplies `wheel2.storeKey`. Its outgoing batch persists the `sourceOfferPoint`

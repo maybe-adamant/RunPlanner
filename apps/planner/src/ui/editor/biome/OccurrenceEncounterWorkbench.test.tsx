@@ -880,7 +880,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     ).toBe('valid');
   });
 
-  it('withholds an unavailable opening Ship Combat2 count from new authoring', async () => {
+  it('keeps an unavailable opening Ship Combat2 count visible and disabled', async () => {
     const view = renderOccurrenceWorkbench(
       loadSurfaceNOPQProject(),
       'Surface',
@@ -892,7 +892,11 @@ describe('OccurrenceEncounterWorkbench', () => {
     await view.user.click(count);
     await waitFor(() => {
       expect(count.dataset.candidateSupport).toBe('forced');
-      expect(Array.from(count.options).map((option) => option.value)).toEqual(['2']);
+      expect(Array.from(count.options).map((option) => option.value)).toEqual(['2', '3']);
+      expect(count.options[1]).toMatchObject({
+        disabled: true,
+        textContent: 'Intro + 2 combats — unavailable',
+      });
     });
     expect(screen.getByRole('tab', { name: 'Room Overview' })).toBeTruthy();
     openRoomTab('Intro Timeline');
@@ -922,9 +926,24 @@ describe('OccurrenceEncounterWorkbench', () => {
   it('keeps Ship offer identity on the wheel and acquisition children on its Room Action row', () => {
     const wheel = createRewardWheelAddress(oBiome, oOccurrenceIds.combat07, 'wheel1');
     let project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
+      kind: 'ReplaceRewardWheelStore',
+      wheel: createRewardWheelAddress(oBiome, oOccurrenceIds.combat04, 'wheel1'),
+      storeKey: 'MetaProgress',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceRewardWheelOffer',
+      offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat04, 'wheel1', 'offer1'),
+      value: { rewardType: 'GiftDrop' },
+    });
+    project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceShipEncounterCount',
       occurrence: createOccurrenceAddress(oBiome, oOccurrenceIds.combat07),
       encounterCount: 3,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceRewardWheelStore',
+      wheel,
+      storeKey: 'RunProgress',
     });
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceRewardWheelOffer',
@@ -1008,7 +1027,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceRewardWheelStore',
       wheel,
-      storeKey: 'MetaProgress',
+      storeKey: 'RunProgress',
     });
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceRewardWheelOfferCount',
@@ -1023,12 +1042,12 @@ describe('OccurrenceEncounterWorkbench', () => {
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceRewardWheelOffer',
       offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat07, 'wheel2', 'offer1'),
-      value: { rewardType: 'GiftDrop' },
+      value: { rewardType: 'MaxHealthDrop' },
     });
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceRewardWheelOffer',
       offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat07, 'wheel2', 'offer2'),
-      value: { rewardType: 'MetaCurrencyDrop' },
+      value: { rewardType: 'MaxManaDrop' },
     });
 
     const view = renderOccurrenceWorkbench(
@@ -1045,7 +1064,7 @@ describe('OccurrenceEncounterWorkbench', () => {
     expect(
       (within(restoredWheel).getByRole('combobox', { name: 'Reward pool' }) as HTMLSelectElement)
         .value,
-    ).toBe('MetaProgress');
+    ).toBe('RunProgress');
     expect(
       (within(restoredWheel).getByRole('combobox', { name: 'Offers' }) as HTMLSelectElement).value,
     ).toBe('2');
@@ -1226,8 +1245,32 @@ describe('OccurrenceEncounterWorkbench', () => {
       'wheel1',
       'offer2',
     );
+    let project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
+      kind: 'ReplaceRewardWheelStore',
+      wheel: createRewardWheelAddress(oBiome, oOccurrenceIds.combat04, 'wheel1'),
+      storeKey: 'MetaProgress',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceRewardWheelOffer',
+      offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat04, 'wheel1', 'offer1'),
+      value: { rewardType: 'GiftDrop' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceRewardWheelStore',
+      wheel,
+      storeKey: 'RunProgress',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceRewardWheelOffer',
+      offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat07, 'wheel1', 'offer1'),
+      value: {
+        rewardType: 'Boon',
+        payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+      },
+    });
+    project = authorLegalTraitOffers(project);
     const view = renderOccurrenceWorkbench(
-      loadSurfaceNOPQProject(),
+      project,
       'Surface',
       'O',
       occurrenceById(oOccurrenceIds.combat07),
@@ -1325,6 +1368,73 @@ describe('OccurrenceEncounterWorkbench', () => {
       }),
     ).toBeNull();
     expect(within(rewardWheel).getAllByRole('radio')).toHaveLength(2);
+  });
+
+  it('authors an active O wheel through pool, count, offers, and picked offer controls', async () => {
+    const project = loadSurfaceNOPQProject();
+    const view = renderOccurrenceWorkbench(
+      project,
+      'Surface',
+      'O',
+      occurrenceById(oOccurrenceIds.combat07),
+    );
+
+    openRoomTab('Intro Timeline');
+    const wheel = screen.getByLabelText('Combat 1 reward');
+    const pool = within(wheel).getByRole('combobox', { name: 'Reward pool' }) as HTMLSelectElement;
+    await view.user.click(pool);
+    await waitFor(() => expect(pool.options[0]?.dataset.candidateSupport).toBe('impossible'));
+    await view.user.selectOptions(pool, 'MetaProgress');
+    await waitFor(() => expect(pool.value).toBe('MetaProgress'));
+    expect(
+      shipWheel(view.application.store.getState().projectWorkspace.history.present, 'wheel1')
+        .storeKey,
+    ).toBe('MetaProgress');
+
+    const count = within(wheel).getByRole('combobox', { name: 'Offers' }) as HTMLSelectElement;
+    await view.user.click(count);
+    await waitFor(() => expect(count.options[1]?.dataset.candidateSupport).toBe('possible'));
+    await view.user.selectOptions(count, '2');
+    await waitFor(() => expect(count.value).toBe('2'));
+    expect(
+      shipWheel(view.application.store.getState().projectWorkspace.history.present, 'wheel1')
+        .offerCount,
+    ).toBe(2);
+
+    const authorOffer = async (offerLabel: string, rewardLabel: string): Promise<void> => {
+      const offer = screen.getByLabelText(offerLabel);
+      await view.user.click(within(offer).getByRole('button', { name: 'Reward' }));
+      const listbox = await screen.findByRole('listbox');
+      await view.user.click(within(listbox).getByText(rewardLabel));
+      await waitFor(() =>
+        expect(within(screen.getByLabelText(offerLabel)).getByText(rewardLabel)).toBeTruthy(),
+      );
+    };
+
+    await authorOffer('Offer 1', 'Big Bones');
+    await authorOffer('Offer 2', 'Big Ashes');
+    const offer2 = within(screen.getByLabelText('Combat 1 reward')).getByLabelText('Offer 2');
+    await view.user.click(
+      within(offer2).getByRole('radio', { name: 'Pick Offer 2 from Combat 1 reward' }),
+    );
+    await waitFor(() =>
+      expect(
+        shipWheel(view.application.store.getState().projectWorkspace.history.present, 'wheel1')
+          .pickedOfferIndex,
+      ).toBe(2),
+    );
+
+    expect(
+      shipWheel(view.application.store.getState().projectWorkspace.history.present, 'wheel1'),
+    ).toMatchObject({
+      storeKey: 'MetaProgress',
+      offerCount: 2,
+      pickedOfferIndex: 2,
+      offers: {
+        offer1: { offer: { rewardType: 'MetaCurrencyBigDrop' } },
+        offer2: { offer: { rewardType: 'MetaCardPointsCommonBigDrop' } },
+      },
+    });
   });
 
   it('renders materialized Shop descriptors directly', () => {

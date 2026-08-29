@@ -23,6 +23,7 @@ import { historyFindingChronology } from '../finding-chronology';
 import type { RewardProducerFrontier } from '../../producer-frontiers';
 import type { ShipLifecycleCandidateContext } from '../../lifecycle-artifacts';
 import type { RewardLifecycleReferences } from '../prepared-inputs';
+import { rewardStoreHistorySupport } from '../reward-store-support';
 import { prepareShipLifecycleCandidateContext, rewardWheelBinding } from './reward-wheel-lifecycle';
 import { createBiomeRewardFacts } from '../../facts';
 
@@ -77,6 +78,28 @@ export function applyRewardWheelOfferPointMaterialization(
   }
 
   const findings = new Map<string, FindingRegionEntry>();
+  const layout = catalog.biomeLayouts.byKey[room.origin.biomeKey];
+  if (layout === undefined) {
+    throw new BiomeRewardSimulationContractError(
+      `${room.origin.biomeKey} has no biome layout for reward-wheel store support`,
+    );
+  }
+  const storeSupport = rewardStoreHistorySupport(layout, room.origin.biomeKey, view);
+  if (!storeSupport.supportStoreKeys.includes(wheel.storeKey)) {
+    addRewardFinding(
+      findings,
+      rewardFinding('baseRewardStoreUnavailable', wheel.origin, {
+        authoredStoreKey: wheel.storeKey,
+        enteredStoreCount: storeSupport.enteredStoreCount,
+        enteredMetaStoreCount: storeSupport.enteredMetaStoreCount,
+        currentMetaRatio: storeSupport.currentMetaRatio,
+        metaSelectionValue: storeSupport.metaSelectionValue,
+        supportStoreKeys: storeSupport.supportStoreKeys,
+      }),
+      ownerRegion(wheel.origin),
+      historyFindingChronology(event.sequence),
+    );
+  }
   const binding = rewardWheelBinding(catalog, declaration, wheel);
   const wheelStateFor = (
     base: (typeof wheel.unresolvedOffers)[number],

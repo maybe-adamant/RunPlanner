@@ -5,6 +5,14 @@ import type { HistoryStateView } from '../../history';
 import type { RewardStoreCandidateSupport, RewardStoreSupportEntry } from '../model';
 import { BiomeRewardSimulationContractError } from './biome-contract';
 
+export interface RewardStoreHistorySupport {
+  readonly enteredStoreCount: number;
+  readonly enteredMetaStoreCount: number;
+  readonly currentMetaRatio: number | null;
+  readonly metaSelectionValue: number;
+  readonly supportStoreKeys: readonly string[];
+}
+
 function enteredStoreKey(
   room: CanonicalAuthoredRoom,
   declaration: RoomDeclaration,
@@ -28,6 +36,26 @@ export function rewardStoreCandidateSupport(
   view: HistoryStateView,
   historySequence: number,
 ): RewardStoreCandidateSupport {
+  const currentStore = enteredStoreKey(source, sourceDeclaration);
+  const support = rewardStoreHistorySupport(layout, source.origin.biomeKey, view, currentStore);
+  return Object.freeze({
+    origin,
+    historySequence,
+    ...support,
+  });
+}
+
+/**
+ * Resolves the Run/Meta support at a generated reward offer's history
+ * boundary. Unlike a batch store, an O wheel has no entered-store value of
+ * its own yet, so callers omit `currentStoreKey`.
+ */
+export function rewardStoreHistorySupport(
+  layout: BiomeLayout,
+  biomeKey: string,
+  view: HistoryStateView,
+  currentStoreKey?: string,
+): RewardStoreHistorySupport {
   if (layout.progression.kind !== 'generated') {
     throw new BiomeRewardSimulationContractError(
       'Hub progression has no authored base-store policy',
@@ -40,10 +68,9 @@ export function rewardStoreCandidateSupport(
     );
   }
   const priorStores = view.ledgers.enteredRewardStores
-    .filter((entry) => entry.origin.biomeKey === source.origin.biomeKey)
+    .filter((entry) => entry.origin.biomeKey === biomeKey)
     .map((entry) => entry.storeKey);
-  const currentStore = enteredStoreKey(source, sourceDeclaration);
-  const stores = currentStore === undefined ? priorStores : [...priorStores, currentStore];
+  const stores = currentStoreKey === undefined ? priorStores : [...priorStores, currentStoreKey];
   const metaCount = stores.filter((storeKey) => storeKey === 'MetaProgress').length;
   const ratio = stores.length === 0 ? null : metaCount / stores.length;
   const metaSelectionValue =
@@ -59,8 +86,6 @@ export function rewardStoreCandidateSupport(
         : [...policy.storeKeys],
   );
   return Object.freeze({
-    origin,
-    historySequence,
     enteredStoreCount: stores.length,
     enteredMetaStoreCount: metaCount,
     currentMetaRatio: ratio,
