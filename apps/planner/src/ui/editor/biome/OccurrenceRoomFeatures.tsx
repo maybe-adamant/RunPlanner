@@ -249,12 +249,9 @@ function RoomResourceControls({
   const executeIntent = useCommandIntent();
   return (
     <div aria-label="Resources" className="room-feature-action-list" role="region">
-      <p className="resource-uniqueness-caption">
-        Each successful element outcome can be placed once across the route.
-      </p>
       {room.resources?.map((resource) => (
-        <div className="room-feature-presence-row" key={resource.family}>
-          <label>
+        <div className="room-feature-presence-row room-resource-row" key={resource.family}>
+          <label className="room-resource-selection">
             <input
               checked={resource.action === 'remove'}
               disabled={!resource.legal && resource.action !== 'remove'}
@@ -280,7 +277,7 @@ function RoomResourceControls({
               >
                 {resource.currentPlacement.biomeKey} · {resource.currentPlacement.locationLabel}
               </button>
-              . Selecting this room moves it here.
+              .
             </span>
           ) : null}
         </div>
@@ -292,7 +289,7 @@ function RoomResourceControls({
 type RoomFeaturePresence = Exclude<WorkspaceRoomFeature, { readonly kind: 'nemesisEvent' }>;
 
 type RoomFeatureEntry =
-  | { readonly kind: 'heading'; readonly key: string; readonly label: string }
+  | { readonly kind: 'heading'; readonly key: string; readonly label: ReactNode }
   | { readonly kind: 'content'; readonly key: string; readonly content: ReactNode }
   | { readonly kind: 'feature'; readonly key: string; readonly feature: RoomFeaturePresence };
 
@@ -313,7 +310,7 @@ function featureEntries(
 
 function contentEntries(
   key: string,
-  label: string,
+  label: ReactNode,
   content: ReactNode | undefined,
 ): readonly RoomFeatureEntry[] {
   return content === undefined
@@ -360,7 +357,12 @@ export function RoomFeaturesWorkbench({
       ? []
       : contentEntries(
           'resources',
-          'Resources',
+          <>
+            <span>Resources</span>{' '}
+            <span className="room-feature-heading-note">
+              (Each successful element outcome can be placed once across the route)
+            </span>
+          </>,
           <RoomResourceControls interactions={interactions} room={room} />,
         )),
     ...featureEntries('additional-exits', 'Additional Exits', additionalExits),
@@ -369,9 +371,6 @@ export function RoomFeaturesWorkbench({
   if (entries.length === 0) return null;
   return (
     <section aria-label="Room features" className="room-features-workbench">
-      <div className="local-reward-heading">
-        <h4>Features</h4>
-      </div>
       {entries.map((entry) => {
         if (entry.kind === 'heading') {
           return (
