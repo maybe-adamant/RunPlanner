@@ -237,6 +237,7 @@ export const traitCatalogInput: RawTraitCatalogInput = {
     olympian: { Rare: 0.1, Epic: 0.05, Duo: 0.12, Legendary: 0.1 },
     hermes: { Rare: 0.06, Epic: 0.03, Duo: 0, Legendary: 0.01 },
   },
+  boonReplacementChance: 0.1,
   echoLastRunBoon: {
     sources: [
       { giverKey: 'Aphrodite', lootHistorySource: 'AphroditeUpgrade' },

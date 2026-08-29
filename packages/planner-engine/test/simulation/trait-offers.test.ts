@@ -445,12 +445,66 @@ describe('rarity-aware high-tier composition', () => {
           { traitKey: 'ordinary2', kind: 'ordinary' },
         ],
         fallbackGold: false,
+        replacementRollChance: 0.1,
       }).legal,
     ).toBe(true);
   });
 });
 
 describe('Sacrificial Hymn replacement composition', () => {
+  it('uses the replacement roll only for optional or forced rows, never shortage fill', () => {
+    const fullDomain = {
+      ordinaryKeys: ['ordinary1', 'ordinary2', 'ordinary3'],
+      highTierKeys: [],
+      replacementKeys: ['replacement1'],
+      fallbackGold: false,
+    } as const;
+    const optionalReplacement = [
+      { traitKey: 'replacement1', kind: 'replacement' as const },
+      { traitKey: 'ordinary1', kind: 'ordinary' as const },
+      { traitKey: 'ordinary2', kind: 'ordinary' as const },
+    ];
+    expect(
+      assessTraitOfferDomainComposition({
+        ...fullDomain,
+        authored: optionalReplacement,
+        replacementRollChance: 0,
+      }).findings,
+    ).toContainEqual(expect.objectContaining({ code: 'replacementCompositionExceeded' }));
+    expect(
+      assessTraitOfferDomainComposition({
+        ...fullDomain,
+        authored: optionalReplacement,
+        replacementRollChance: 0.1,
+      }).legal,
+    ).toBe(true);
+    expect(
+      assessTraitOfferDomainComposition({
+        ...fullDomain,
+        authored: [
+          { traitKey: 'ordinary1', kind: 'ordinary' },
+          { traitKey: 'ordinary2', kind: 'ordinary' },
+          { traitKey: 'ordinary3', kind: 'ordinary' },
+        ],
+        replacementRollChance: 1,
+      }).findings,
+    ).toContainEqual(expect.objectContaining({ code: 'missingForcedReplacement' }));
+    expect(
+      assessTraitOfferDomainComposition({
+        ordinaryKeys: ['ordinary1', 'ordinary2'],
+        highTierKeys: [],
+        replacementKeys: ['replacement1'],
+        authored: [
+          { traitKey: 'ordinary1', kind: 'ordinary' },
+          { traitKey: 'ordinary2', kind: 'ordinary' },
+          { traitKey: 'replacement1', kind: 'replacement' },
+        ],
+        fallbackGold: false,
+        replacementRollChance: 0,
+      }).legal,
+    ).toBe(true);
+  });
+
   it('raises the existing exhaustion replacement minimum without replacing its composition model', () => {
     expect(
       assessTraitOfferDomainComposition({
@@ -463,7 +517,7 @@ describe('Sacrificial Hymn replacement composition', () => {
           { traitKey: 'ordinary3', kind: 'ordinary' },
         ],
         fallbackGold: false,
-        minimumReplacementCount: 1,
+        replacementRollChance: 1,
       }).findings,
     ).toContainEqual(expect.objectContaining({ code: 'missingForcedReplacement' }));
     expect(
@@ -477,16 +531,55 @@ describe('Sacrificial Hymn replacement composition', () => {
           { traitKey: 'ordinary2', kind: 'ordinary' },
         ],
         fallbackGold: false,
-        minimumReplacementCount: 1,
+        replacementRollChance: 1,
       }).legal,
     ).toBe(true);
+  });
+
+  it('does not add a Hymn replacement on top of shortage fill', () => {
+    const domain = {
+      ordinaryKeys: ['ordinary1'],
+      highTierKeys: [],
+      replacementKeys: ['replacement1', 'replacement2', 'replacement3'],
+      fallbackGold: false,
+      replacementRollChance: 1,
+    } as const;
+    const filled = assessTraitOfferDomainComposition({
+      ...domain,
+      authored: [
+        { traitKey: 'ordinary1', kind: 'ordinary' },
+        { traitKey: 'replacement1', kind: 'replacement' },
+        { traitKey: 'replacement2', kind: 'replacement' },
+      ],
+    });
+    expect(filled).toMatchObject({
+      legal: true,
+      maximumReplacementCount: 2,
+      replacementCount: 2,
+    });
+
+    const additive = assessTraitOfferDomainComposition({
+      ...domain,
+      authored: [
+        { traitKey: 'replacement1', kind: 'replacement' },
+        { traitKey: 'replacement2', kind: 'replacement' },
+        { traitKey: 'replacement3', kind: 'replacement' },
+      ],
+    });
+    expect(additive.maximumReplacementCount).toBe(2);
+    expect(additive.findings).toContainEqual(
+      expect.objectContaining({ code: 'replacementCompositionExceeded' }),
+    );
   });
 
   it('starts the next eligible offer with one replacement while a Hymn use is active', () => {
     const history = historyFrom([
       { giverKey: 'Apollo', traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
     ]);
-    const draft = traitOfferStartingDraft(catalog, 'Hera', history, { limitedSwapUses: 1 });
+    const draft = traitOfferStartingDraft(catalog, 'Hera', history, {
+      limitedSwapUses: 1,
+      replacementRollChance: 1,
+    });
     expect(draft).toBeDefined();
     expect(
       draft?.options.some(
@@ -508,6 +601,7 @@ describe('Sacrificial Hymn replacement composition', () => {
     ]);
     const draft = traitOfferStartingDraft(catalog, 'Hera', history, {
       limitedSwapUses: 1,
+      replacementRollChance: 1,
     });
     if (draft?.kind !== 'traits') throw new Error('expected a Hera Hymn draft');
     const replacementIndex = draft.options.findIndex(

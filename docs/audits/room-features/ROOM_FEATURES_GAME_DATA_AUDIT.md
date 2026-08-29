@@ -476,7 +476,9 @@ The three direct run-consequential identities are:
   boon offer attempts one random replacement; if the replacement set is
   nonempty, one replacement is shown and is optional to take. The use is
   consumed when the choice screen closes, whether or not it is selected. An
-  empty replacement set leaves the use intact.
+  empty replacement set leaves the use intact. Its `ForceSwaps` branch precedes
+  the ordinary 10% replacement roll and therefore still applies while
+  Ordinary has disabled that roll.
 
 ### Current schema-71 planner disposition
 

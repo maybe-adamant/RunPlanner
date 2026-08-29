@@ -355,7 +355,6 @@ describe('trait offer editor entry and dialog', () => {
                 ]),
                 chaosOfferRules: Object.freeze([
                   Object.freeze({
-                    ordinaryRequiresCommon: false,
                     rejectedBlockRequired: true,
                     rejectedBlockableOptionKeys: Object.freeze(['option2', 'option3'] as const),
                     rejectedBlockNeedsRepair: !supported,

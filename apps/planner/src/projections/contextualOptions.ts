@@ -253,11 +253,6 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
     case 'ixionChaosMissing':
     case 'ixionChaosUnavailable':
       return { kind: 'generic', message: 'Repair this Ixion-generated Chaos exit.' };
-    case 'chaosOrdinaryRequiresCommon':
-      return {
-        kind: 'trait',
-        message: 'Ordinary forces every option on this god-boon screen to Common.',
-      };
     case 'chaosRejectedBlockMissing':
       return { kind: 'trait', message: 'Rejected requires one visible option to be blocked.' };
     case 'chaosRejectedBlockUnavailable':

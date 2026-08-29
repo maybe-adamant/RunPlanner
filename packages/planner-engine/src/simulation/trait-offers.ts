@@ -29,21 +29,43 @@ export interface TraitOfferContext {
   readonly temporaryBoonRarityUses?: number;
   /** One-use forced replacement state carried by Sacrificial Hymn. */
   readonly limitedSwapUses?: number;
+  /** Effective ordinary replacement roll after source overrides. */
+  readonly replacementRollChance?: number;
 }
 
-/** Applies the active Ordinary curse at the one source-screen frontier.
- * The authored rows stay untouched: a retained non-Common row is assessed as
- * invalid instead of being silently repaired. */
-export function chaosAdjustedTraitOfferContext(
+/** Resolves offer-generation overrides at one source-screen frontier.
+ * Authored rows stay untouched: stale non-Common fresh rows are assessed as
+ * invalid, while exact promoted replacement rows remain legal. */
+export function offerGenerationAdjustedTraitGiverContext(
+  catalog: Catalog,
+  history: TraitHistoryState,
+  giverKey: string,
+  context: TraitOfferContext,
+): TraitOfferContext {
+  const provider = catalog.traitGivers.byKey[giverKey]?.providerKind;
+  if (provider !== 'olympian' && provider !== 'hermes') return context;
+  const ordinary = hasActiveChaosSemanticTag(history, 'Ordinary');
+  const replacementRollChance =
+    (context.limitedSwapUses ?? 0) > 0
+      ? 1
+      : ordinary
+        ? 0
+        : (context.replacementRollChance ?? catalog.boonReplacementChance);
+  return Object.freeze({
+    ...context,
+    replacementRollChance,
+    ...(ordinary ? { freshRarityOverride: 'Common' as const } : {}),
+  });
+}
+
+export function offerGenerationAdjustedTraitOfferContext(
   catalog: Catalog,
   history: TraitHistoryState,
   offer: AuthoredTraitOffer,
   context: TraitOfferContext,
 ): TraitOfferContext {
-  if (offer.kind !== 'traits' || !hasActiveChaosSemanticTag(history, 'Ordinary')) return context;
-  const provider = catalog.traitGivers.byKey[offer.giverKey]?.providerKind;
-  return provider === 'olympian' || provider === 'hermes'
-    ? Object.freeze({ ...context, freshRarityOverride: 'Common' })
+  return offer.kind === 'traits'
+    ? offerGenerationAdjustedTraitGiverContext(catalog, history, offer.giverKey, context)
     : context;
 }
 
@@ -218,7 +240,6 @@ export interface TraitOfferCompositionFinding {
     | 'nonPriorityTrait'
     | 'missingAttackOrSpecial'
     | 'traitOfferSelectionUnavailable'
-    | 'chaosOrdinaryRequiresCommon'
     | 'chaosRejectedBlockMissing'
     | 'chaosRejectedBlockUnavailable'
     | 'chaosPairUnavailable';
@@ -294,7 +315,7 @@ export interface TraitOfferDomainCompositionInput {
     readonly kind: TraitOfferDomainOptionKind;
   }[];
   readonly fallbackGold: boolean;
-  readonly minimumReplacementCount?: number;
+  readonly replacementRollChance: number;
 }
 
 export interface TraitOfferDomainCompositionResult {
@@ -316,7 +337,11 @@ export function assessTraitOfferDomainComposition(
   const replacements = new Set(input.replacementKeys);
   const ordinaryCandidateCount = ordinary.size;
   const replacementCount = input.authored.filter((option) => option.kind === 'replacement').length;
-  const maximumReplacementCount = ordinaryCandidateCount >= 3 ? 1 : 3 - ordinaryCandidateCount;
+  const shortageReplacementCount = Math.max(0, 3 - ordinaryCandidateCount);
+  const maximumReplacementCount = Math.max(
+    shortageReplacementCount,
+    input.replacementRollChance > 0 ? 1 : 0,
+  );
   if (input.fallbackGold) {
     const legal = ordinaryCandidateCount === 0 && replacements.size === 0;
     return Object.freeze({
@@ -341,7 +366,7 @@ export function assessTraitOfferDomainComposition(
   );
   const requiredReplacement = Math.max(
     exhaustionRequiredReplacement,
-    input.minimumReplacementCount ?? 0,
+    input.replacementRollChance === 1 && replacements.size > 0 ? 1 : 0,
   );
   const findings = Object.freeze([
     ...(ordinaryCandidateCount >= 3 && input.authored.length !== 3
@@ -489,7 +514,12 @@ function evaluateReachedTraitOfferWithAssessments(
   frozenAcquisition = false,
   frozenLevelResolutions?: readonly TraitOfferOptionLevelResolution[],
 ): ReachedTraitOfferEvaluation {
-  const effectiveContext = chaosAdjustedTraitOfferContext(catalog, before, offer, context);
+  const effectiveContext = offerGenerationAdjustedTraitOfferContext(
+    catalog,
+    before,
+    offer,
+    context,
+  );
   // Exact one-result sources (for example, a keepsake equip) are direct
   // acquisitions, not a sparse ordinary offer. They retain the normal
   // trait-level assessment and history event path without inheriting the
@@ -547,11 +577,6 @@ function evaluateReachedTraitOfferWithAssessments(
         const provider = catalog.traitGivers.byKey[offer.giverKey]?.providerKind;
         if (provider !== 'olympian' && provider !== 'hermes') return baseComposition;
         const chaosFindings: TraitOfferCompositionFinding[] = [];
-        if (
-          hasActiveChaosSemanticTag(before, 'Ordinary') &&
-          offer.options.some((option) => option.rarity !== 'Common')
-        )
-          chaosFindings.push(Object.freeze({ code: 'chaosOrdinaryRequiresCommon' }));
         if (hasActiveChaosSemanticTag(before, 'Rejected')) {
           const blocked = offer.rejectedOptionKey;
           if (blocked === undefined)
@@ -804,7 +829,7 @@ export function assessTraitReplacementComposition(
       ),
       authored: Object.freeze([]),
       fallbackGold: true,
-      minimumReplacementCount: 0,
+      replacementRollChance: context.replacementRollChance ?? catalog.boonReplacementChance,
     });
     return Object.freeze({
       applies,
@@ -860,7 +885,7 @@ export function assessTraitReplacementComposition(
     replacementKeys: Object.freeze([...replacementKeys]),
     authored: Object.freeze(authored),
     fallbackGold: false,
-    minimumReplacementCount: (context.limitedSwapUses ?? 0) > 0 && replacementKeys.size > 0 ? 1 : 0,
+    replacementRollChance: context.replacementRollChance ?? catalog.boonReplacementChance,
   });
   return Object.freeze({
     applies: true,

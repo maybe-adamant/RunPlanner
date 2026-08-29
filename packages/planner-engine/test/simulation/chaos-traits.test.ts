@@ -30,6 +30,7 @@ import { assessArtificerConversion } from '../../src/simulation/rewards/acquisit
 import { processEncounterTraitOffer } from '../../src/simulation/rewards/trait-settlement';
 import { createDefaultRouteLoadout } from '../../src/authored-project/loadout';
 import { createArcanaFearState } from '../../src/simulation/arcana-fear';
+import { applyStygianWellPurchase } from '../../src/simulation/stygian-well';
 import type {
   AuthoredChaosTraitOffer,
   AuthoredTraitOfferTraits,
@@ -395,7 +396,7 @@ describe('Chaos paired-trait history', () => {
     );
   });
 
-  it('forces Ordinary to Common and makes Rejected rows unavailable to select or Rarify', () => {
+  it('forces only fresh Ordinary rows to Common and makes Rejected rows unavailable to select or Rarify', () => {
     const ordinaryHistory = pairHistory(chaos('ChaosCommonCurse', 'ChaosElementalBlessing'));
     const nonCommon: AuthoredTraitOfferTraits = Object.freeze({
       kind: 'traits',
@@ -404,14 +405,91 @@ describe('Chaos paired-trait history', () => {
       rarificationActions: Object.freeze([]),
       options: Object.freeze([
         { traitKey: 'ZeusWeaponBoon', rarity: 'Rare' },
-        { traitKey: 'ZeusSecondaryBoon', rarity: 'Common' },
+        { traitKey: 'ZeusSpecialBoon', rarity: 'Common' },
         { traitKey: 'ZeusCastBoon', rarity: 'Common' },
       ]) as AuthoredTraitOfferTraits['options'],
     });
+    const invalidFresh = evaluateReachedTraitOffer(
+      catalog,
+      owner,
+      'self',
+      nonCommon,
+      ordinaryHistory,
+      {},
+      0,
+    );
+    expect(invalidFresh.assessments[0]?.findings).toContainEqual({
+      code: 'freshRarityUnavailable',
+      traitKey: 'ZeusWeaponBoon',
+      detail: 'Rare',
+    });
+    expect(invalidFresh.context.replacementRollChance).toBe(0);
+
+    const ordinaryWithOccupiedSlot = foldTraitHistoryEvents(catalog, [
+      ...ordinaryHistory.events,
+      Object.freeze({
+        kind: 'traitOffer' as const,
+        owner,
+        acquisitionRole: 'ordinary-setup',
+        sequence: 2,
+        giverKey: 'Apollo',
+        options: Object.freeze([
+          { traitKey: 'ApolloWeaponBoon', rarity: 'Common' as const },
+          { traitKey: 'ApolloSpecialBoon', rarity: 'Common' as const },
+          { traitKey: 'ApolloCastBoon', rarity: 'Common' as const },
+        ]) as AuthoredTraitOfferTraits['options'],
+        selectedOptionKey: 'option1' as const,
+        acquisitionPoint: 'reward',
+      }),
+    ]);
+    const replacement: AuthoredTraitOfferTraits = Object.freeze({
+      ...nonCommon,
+      options: Object.freeze([
+        { traitKey: 'ZeusWeaponBoon', rarity: 'Rare' },
+        { traitKey: 'ZeusSpecialBoon', rarity: 'Common' },
+        { traitKey: 'ZeusCastBoon', rarity: 'Common' },
+      ]) as AuthoredTraitOfferTraits['options'],
+    });
+    const mixed = evaluateReachedTraitOffer(
+      catalog,
+      owner,
+      'self',
+      replacement,
+      ordinaryWithOccupiedSlot,
+      { limitedSwapUses: 1 },
+      0,
+    );
+    expect(mixed.assessments.every((assessment) => assessment.legal)).toBe(true);
+    expect(mixed.assessments[0]?.replacementTransition).toMatchObject({
+      replacedTraitKey: 'ApolloWeaponBoon',
+      newTraitKey: 'ZeusWeaponBoon',
+      requiredRarity: 'Rare',
+    });
+    expect(mixed.replacementComposition.legal).toBe(true);
+    expect(mixed.context.replacementRollChance).toBe(1);
+
+    const address = createTraitOfferAddress(rewardOwner, 'ordinary-replacement');
+    const capability = createTraitOfferCandidateArtifacts(
+      catalog,
+      new Map([
+        [
+          semanticAddressKey(address),
+          Object.freeze([
+            Object.freeze({
+              before: ordinaryWithOccupiedSlot,
+              context: Object.freeze({ limitedSwapUses: 1 }),
+            }),
+          ]),
+        ],
+      ]),
+    ).at(address);
+    const draft = capability?.traitsStartingDraft('Zeus');
+    expect(draft?.options.some((option) => option.rarity === 'Rare')).toBe(true);
     expect(
-      evaluateReachedTraitOffer(catalog, owner, 'self', nonCommon, ordinaryHistory, {}, 0)
-        .composition.findings,
-    ).toContainEqual({ code: 'chaosOrdinaryRequiresCommon' });
+      draft?.options
+        .filter((option) => option.rarity !== 'Rare')
+        .every((option) => option.rarity === 'Common'),
+    ).toBe(true);
 
     const rejectedHistory = pairHistory(chaos('ChaosRestrictBoonCurse', 'ChaosElementalBlessing'));
     const rejected: AuthoredTraitOfferTraits = Object.freeze({
@@ -419,7 +497,7 @@ describe('Chaos paired-trait history', () => {
       giverKey: 'Zeus',
       options: Object.freeze([
         { traitKey: 'ZeusWeaponBoon', rarity: 'Common' },
-        { traitKey: 'ZeusSecondaryBoon', rarity: 'Common' },
+        { traitKey: 'ZeusSpecialBoon', rarity: 'Common' },
         { traitKey: 'ZeusCastBoon', rarity: 'Common' },
       ]) as AuthoredTraitOfferTraits['options'],
       selectedOptionKey: 'option2',
@@ -448,6 +526,73 @@ describe('Chaos paired-trait history', () => {
     expect(card.invalidActions).toEqual([0]);
   });
 
+  it('gives pending Hymn precedence over Ordinary regardless of their acquisition order', () => {
+    const occupiedHistory = foldTraitHistoryEvents(catalog, [
+      Object.freeze({
+        kind: 'traitOffer' as const,
+        owner,
+        acquisitionRole: 'ordinary-setup',
+        sequence: 1,
+        giverKey: 'Apollo',
+        options: Object.freeze([
+          { traitKey: 'ApolloWeaponBoon', rarity: 'Common' as const },
+          { traitKey: 'ApolloSpecialBoon', rarity: 'Common' as const },
+          { traitKey: 'ApolloCastBoon', rarity: 'Common' as const },
+        ]) as AuthoredTraitOfferTraits['options'],
+        selectedOptionKey: 'option1' as const,
+        acquisitionPoint: 'reward',
+      }),
+    ]);
+    const base = branchWithHistory(occupiedHistory);
+    const purchaseHymn = (branch: Parameters<typeof processEncounterTraitOffer>[1]) =>
+      Object.freeze({
+        ...branch,
+        stygianWell: applyStygianWellPurchase(catalog, branch.stygianWell, 'LimitedSwapTraitDrop'),
+      });
+    const acquireOrdinary = (branch: Parameters<typeof processEncounterTraitOffer>[1]) =>
+      processEncounterTraitOffer(
+        catalog,
+        branch,
+        rewardOwner,
+        chaos('ChaosCommonCurse', 'ChaosElementalBlessing'),
+        2,
+        'reward',
+      );
+    const hymnThenOrdinary = acquireOrdinary(purchaseHymn(base));
+    const ordinaryThenHymn = purchaseHymn(acquireOrdinary(base));
+    const replacement: AuthoredTraitOfferTraits = Object.freeze({
+      kind: 'traits',
+      giverKey: 'Zeus',
+      selectedOptionKey: 'option1',
+      rarificationActions: Object.freeze([]),
+      options: Object.freeze([
+        { traitKey: 'ZeusWeaponBoon', rarity: 'Rare' },
+        { traitKey: 'ZeusSpecialBoon', rarity: 'Common' },
+        { traitKey: 'ZeusCastBoon', rarity: 'Common' },
+      ]) as AuthoredTraitOfferTraits['options'],
+    });
+
+    const evaluations = [hymnThenOrdinary, ordinaryThenHymn].map((branch) =>
+      evaluateReachedTraitOffer(
+        catalog,
+        owner,
+        'self',
+        replacement,
+        branch.traitHistory!,
+        { limitedSwapUses: branch.stygianWell.hymnUses },
+        3,
+      ),
+    );
+
+    expect(evaluations.map((evaluation) => evaluation.context.replacementRollChance)).toEqual([
+      1, 1,
+    ]);
+    expect(evaluations.every((evaluation) => evaluation.replacementComposition.legal)).toBe(true);
+    expect(
+      [hymnThenOrdinary, ordinaryThenHymn].map((branch) => branch.stygianWell.hymnUses),
+    ).toEqual([1, 1]);
+  });
+
   it('retains Rejected repair states for missing, selected, or unexpected block keys', () => {
     const history = pairHistory(chaos('ChaosRestrictBoonCurse'));
     const base: AuthoredTraitOfferTraits = Object.freeze({
@@ -455,7 +600,7 @@ describe('Chaos paired-trait history', () => {
       giverKey: 'Zeus',
       options: Object.freeze([
         { traitKey: 'ZeusWeaponBoon', rarity: 'Common' },
-        { traitKey: 'ZeusSecondaryBoon', rarity: 'Common' },
+        { traitKey: 'ZeusSpecialBoon', rarity: 'Common' },
         { traitKey: 'ZeusCastBoon', rarity: 'Common' },
       ]) as AuthoredTraitOfferTraits['options'],
       selectedOptionKey: 'option2',
@@ -509,14 +654,13 @@ describe('Chaos paired-trait history', () => {
       giverKey: 'Zeus',
       options: Object.freeze([
         { traitKey: 'ZeusWeaponBoon', rarity: 'Common' },
-        { traitKey: 'ZeusSecondaryBoon', rarity: 'Common' },
+        { traitKey: 'ZeusSpecialBoon', rarity: 'Common' },
       ]) as AuthoredTraitOfferTraits['options'],
       selectedOptionKey: 'option2',
       rarificationActions: Object.freeze([]),
     });
     expect(capability?.chaosOfferRules(offer)).toEqual([
       {
-        ordinaryRequiresCommon: false,
         rejectedBlockRequired: true,
         rejectedBlockableOptionKeys: ['option1'],
         rejectedBlockNeedsRepair: true,

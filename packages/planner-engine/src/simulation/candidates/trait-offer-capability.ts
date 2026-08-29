@@ -30,7 +30,8 @@ import {
   echoPomGreatestLevelTraitKeys,
   echoLastRunBoonOutcomes,
   directTraitSetOutcomes,
-  chaosAdjustedTraitOfferContext,
+  offerGenerationAdjustedTraitGiverContext,
+  offerGenerationAdjustedTraitOfferContext,
   assessNaturalSelectionTargets,
   type NaturalSelectionTargetAssessment,
   evaluateReachedTraitOffer,
@@ -61,7 +62,7 @@ function traitOfferCandidateContext(
   context: TraitOfferContext,
   value: AuthoredTraitOffer,
 ): TraitOfferContext {
-  return chaosAdjustedTraitOfferContext(catalog, history, value, context);
+  return offerGenerationAdjustedTraitOfferContext(catalog, history, value, context);
 }
 
 /**
@@ -134,7 +135,6 @@ export interface TraitOfferCandidateCapability {
   readonly ransom: (value: AuthoredTraitOffer) => readonly RansomAssessment[];
   /** Closed Chaos restrictions at this exact pre-offer frontier. */
   readonly chaosOfferRules: (value?: AuthoredTraitOffer) => readonly {
-    readonly ordinaryRequiresCommon: boolean;
     readonly rejectedBlockRequired: boolean;
     readonly rejectedBlockableOptionKeys: readonly TraitOptionKey[];
     /** A retained block is missing, stale, or targets the selected row. */
@@ -417,7 +417,12 @@ export function createTraitOfferCandidateArtifacts(
                 catalog,
                 giverKey,
                 context.before,
-                context.context,
+                offerGenerationAdjustedTraitGiverContext(
+                  catalog,
+                  context.before,
+                  giverKey,
+                  context.context,
+                ),
               );
               return draft;
             })
@@ -652,14 +657,10 @@ export function createTraitOfferCandidateArtifacts(
             ? Object.freeze([])
             : Object.freeze(
                 branchContexts.map((context) => {
-                  const ordinary = context.before.activeChaosCurses.some(
-                    (curse) => curse.semanticTag === 'Ordinary',
-                  );
                   const rejected = context.before.activeChaosCurses.some(
                     (curse) => curse.semanticTag === 'Rejected',
                   );
                   return Object.freeze({
-                    ordinaryRequiresCommon: ordinary,
                     rejectedBlockRequired: rejected,
                     rejectedBlockableOptionKeys: Object.freeze(
                       !rejected

@@ -91,7 +91,6 @@ describe('trait-offer-interactions', () => {
     if (interaction?.rejectedBlockDomain === undefined)
       throw new Error('ordinary Rejected interaction is missing');
     const required = Object.freeze({
-      ordinaryRequiresCommon: false,
       rejectedBlockRequired: true,
       rejectedBlockableOptionKeys: Object.freeze(['option2', 'option3'] as const),
       rejectedBlockNeedsRepair: true,

@@ -67,6 +67,12 @@ export function normalizeBoonRarityBases(
   return Object.freeze(normalized) as TraitCatalog['boonRarityBases'];
 }
 
+export function normalizeBoonReplacementChance(raw: unknown): number {
+  if (typeof raw !== 'number' || !Number.isFinite(raw) || raw < 0 || raw > 1)
+    fail('boonReplacementChance', 'must be a finite probability from 0 through 1');
+  return raw;
+}
+
 export function normalizeContexts(
   raw: RawTraitCatalogInput['offerContexts'],
 ): CatalogCollection<TraitOfferContextDeclaration> {
