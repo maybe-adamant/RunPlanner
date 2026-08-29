@@ -170,10 +170,6 @@ function startInteractionRequirement(): WorkspaceStartInteractionRequirement {
   return Object.freeze({
     kind: 'start' as const,
     owner: createBiomeAddress('Underworld', 'F'),
-    start: Object.freeze({
-      gameNames: Object.freeze(['F_Opening01']) as readonly [string, ...string[]],
-      kind: 'choice' as const,
-    }),
   });
 }
 

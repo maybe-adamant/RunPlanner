@@ -65,9 +65,6 @@ function bindTopologyRemovalInteractions(
 
 function bindStartInteractions(
   allocateOccurrenceId: OccurrenceIdFactory,
-  catalog: Catalog,
-  candidates: CandidateProjectionSession,
-  contextualPicker: StructuredWorkspaceContextualServices['contextualPicker'],
   requirements: Iterable<WorkspaceStartInteractionRequirement>,
 ): ReadonlyMap<string, WorkspaceStartInteraction> {
   const starts = new Map<string, WorkspaceStartInteraction>();
@@ -78,51 +75,11 @@ function bindStartInteractions(
         `${key} has multiple bound start interactions`,
       );
     }
-    const gameNames =
-      requirement.start.kind === 'fixed'
-        ? Object.freeze([requirement.start.gameName])
-        : requirement.start.gameNames;
-    const rooms = Object.freeze(
-      gameNames.map((gameName) => requireWorkspaceRoom(catalog, gameName)),
-    );
-    const startKinds = new Set(rooms.map((room) => room.kind));
-    if (startKinds.size !== 1) {
-      throw new StructuredWorkspaceProjectionContractError(
-        `${key} mixes Opening and Intro room declarations`,
-      );
-    }
-    const startKind = rooms[0]?.kind;
-    const configurationLabel =
-      startKind === 'Opening'
-        ? ('Configure starting room' as const)
-        : startKind === 'Intro'
-          ? ('Configure Intro room' as const)
-          : (() => {
-              throw new StructuredWorkspaceProjectionContractError(
-                `${key} does not declare an Opening or Intro room`,
-              );
-            })();
-    let model: ContextualPickerModel<RoomDeclaration> | undefined;
-    const load = (): ContextualPickerModel<RoomDeclaration> => {
-      if (model !== undefined) return model;
-      model = contextualPicker.project(
-        candidates.startRooms(requirement.owner, rooms),
-        (option) =>
-          Object.freeze({
-            category: roomCategoryForKind(option.value.kind) ?? option.value.kind,
-            label: option.value.label,
-            selected: false,
-          }),
-        (room) => room.gameName,
-      );
-      return model;
-    };
-    const intentFor = (gameName?: string) => {
+    const intent = () => {
       const occurrenceId = allocateOccurrenceId();
       return Object.freeze({
         command: Object.freeze({
           biome: requirement.owner,
-          ...(gameName === undefined ? {} : { gameName }),
           kind: 'CreateStart' as const,
           occurrenceId,
         }),
@@ -132,49 +89,7 @@ function bindStartInteractions(
         }),
       });
     };
-    const fixedGameName =
-      requirement.start.kind === 'fixed' ? requirement.start.gameName : undefined;
-    if (requirement.start.kind === 'fixed') {
-      starts.set(
-        key,
-        Object.freeze({
-          configurationLabel,
-          fixedLabel: requireWorkspaceRoom(catalog, fixedGameName!).label,
-          intent: () => intentFor(),
-          intentFor: (room: RoomDeclaration) => {
-            if (room.gameName !== fixedGameName) {
-              throw new StructuredWorkspaceProjectionContractError(
-                `${room.gameName} is outside the declared start domain for ${key}`,
-              );
-            }
-            return intentFor();
-          },
-          key,
-          kind: 'fixed' as const,
-          load,
-          owner: requirement.owner,
-        }),
-      );
-    } else {
-      starts.set(
-        key,
-        Object.freeze({
-          configurationLabel,
-          intentFor: (room: RoomDeclaration) => {
-            if (!gameNames.includes(room.gameName)) {
-              throw new StructuredWorkspaceProjectionContractError(
-                `${room.gameName} is outside the declared start domain for ${key}`,
-              );
-            }
-            return intentFor(room.gameName);
-          },
-          key,
-          kind: 'choice' as const,
-          load,
-          owner: requirement.owner,
-        }),
-      );
-    }
+    starts.set(key, Object.freeze({ intent, key, owner: requirement.owner }));
   }
   return starts;
 }
@@ -718,13 +633,7 @@ export function bindTopologyInteractions(input: {
   }
   return Object.freeze({
     rooms,
-    starts: bindStartInteractions(
-      allocateOccurrenceId,
-      catalog,
-      candidates,
-      contextualPicker,
-      startInteractionRequirements,
-    ),
+    starts: bindStartInteractions(allocateOccurrenceId, startInteractionRequirements),
     takeoverBatches: bindTakeoverBatchInteractions(
       allocateOccurrenceId,
       catalog,

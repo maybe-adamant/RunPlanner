@@ -268,9 +268,31 @@ describe('BiomeWorkspace', () => {
   it('keeps the fixed N start room in the rail next step', () => {
     renderWorkspace(emptyProject('Surface', 1), 'Surface', 'N');
 
-    const start = screen.getByRole('button', { name: /Configure starting room/ });
+    const structure = screen.getByRole('region', { name: 'Ephyra route structure' });
+    const start = within(structure).getByRole('button', { name: /Start biome/ });
     expect(start.textContent).toContain('Next step');
     expect(start.textContent).not.toContain('Choose the first room');
+  });
+
+  it('creates F generically and leaves room and reward authoring on the Opening occurrence', async () => {
+    const view = renderWorkspace(emptyProject('Underworld', 1), 'Underworld', 'F');
+
+    expect(screen.queryByRole('button', { name: 'Room' })).toBeNull();
+    expect(screen.queryByText('Choose room to show reward')).toBeNull();
+    const inspector = screen.getByRole('complementary', { name: 'Details' });
+    await view.user.click(within(inspector).getByRole('button', { name: 'Start biome' }));
+
+    const identity = await screen.findByRole('region', { name: 'Start room configuration' });
+    expect(within(identity).getByRole('button', { name: 'Room' })).toBeTruthy();
+    expect(within(identity).getByLabelText('Reward')).toBeTruthy();
+    const plan = view.application.store
+      .getState()
+      .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find((biome) => biome.biomeKey === 'F');
+    expect(plan?.topology?.occurrences[0]?.gameName).toBe('F_Opening01');
+
+    await view.user.click(within(identity).getByRole('button', { name: 'Room' }));
+    expect(within(await screen.findByRole('listbox')).getAllByRole('option')).toHaveLength(3);
   });
 
   it('uses one concise player-facing name for the Hub rail stop', () => {

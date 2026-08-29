@@ -270,21 +270,12 @@ export interface WorkspaceTopologyRemovalInteractionRequirement {
 }
 
 /**
- * Production requirement for the authored start frontier of one topology-free
- * biome. The binder resolves declaration labels and candidate rooms lazily.
+ * Production requirement for the generic start action of one topology-free
+ * biome. The created occurrence owns room identity and reward authoring.
  */
 export interface WorkspaceStartInteractionRequirement {
   readonly kind: 'start';
   readonly owner: BiomeAddress;
-  readonly start:
-    | {
-        readonly gameName: string;
-        readonly kind: 'fixed';
-      }
-    | {
-        readonly gameNames: readonly [string, ...string[]];
-        readonly kind: 'choice';
-      };
 }
 
 /**

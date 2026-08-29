@@ -71,7 +71,7 @@ describe('structured workspace interaction binding', () => {
     });
   });
 
-  it('lazily binds the fixed start to one complete command and after-focus intent', () => {
+  it('binds a fixed start to one generic command and after-focus intent', () => {
     const project = createProjectDocument(catalog, {
       configuredBiomeCounts: { Surface: 1 },
       projectId: 'fixed-start-binding',
@@ -82,12 +82,9 @@ describe('structured workspace interaction binding', () => {
       allocations += 1;
       return occurrenceId;
     }).interactions.starts.get(semanticAddressKey(nBiome));
-    if (interaction?.kind !== 'fixed') throw new Error('N fixed start interaction is missing');
+    if (interaction === undefined) throw new Error('N start interaction is missing');
 
     expect(allocations).toBe(0);
-    interaction.load();
-    expect(allocations).toBe(0);
-    expect(interaction).not.toHaveProperty('fixedGameName');
     expect(interaction.intent()).toEqual({
       command: { biome: nBiome, kind: 'CreateStart', occurrenceId },
       focus: {
@@ -98,7 +95,7 @@ describe('structured workspace interaction binding', () => {
     expect(allocations).toBe(1);
   });
 
-  it('lazily binds an authored start choice to one complete command and after-focus intent', () => {
+  it('binds an authored-choice start to the same generic command', () => {
     const biome = createBiomeAddress('Underworld', 'F');
     const project = createProjectDocument(catalog, {
       configuredBiomeCounts: { Underworld: 1 },
@@ -110,19 +107,12 @@ describe('structured workspace interaction binding', () => {
       allocations += 1;
       return occurrenceId;
     }).interactions.starts.get(semanticAddressKey(biome));
-    if (interaction?.kind !== 'choice') throw new Error('F choice start interaction is missing');
+    if (interaction === undefined) throw new Error('F start interaction is missing');
 
     expect(allocations).toBe(0);
-    const room = interaction
-      .load()
-      .sections.flatMap((section) => section.items)
-      .find((item) => item.value.gameName === 'F_Opening02')?.value;
-    if (room === undefined) throw new Error('F Opening 02 start choice is missing');
-    expect(allocations).toBe(0);
-    expect(interaction.intentFor(room)).toEqual({
+    expect(interaction.intent()).toEqual({
       command: {
         biome,
-        gameName: 'F_Opening02',
         kind: 'CreateStart',
         occurrenceId,
       },
@@ -132,27 +122,6 @@ describe('structured workspace interaction binding', () => {
       },
     });
     expect(allocations).toBe(1);
-  });
-
-  it('rejects an out-of-domain start choice before allocating an occurrence', () => {
-    const biome = createBiomeAddress('Underworld', 'F');
-    const project = createProjectDocument(catalog, {
-      configuredBiomeCounts: { Underworld: 1 },
-      projectId: 'invalid-start-binding',
-    });
-    let allocations = 0;
-    const interaction = bind(project, 'Underworld', 'F', () => {
-      allocations += 1;
-      return createOccurrenceId('invalid-start-binding');
-    }).interactions.starts.get(semanticAddressKey(biome));
-    if (interaction?.kind !== 'choice') throw new Error('F choice start interaction is missing');
-    const combat = catalog.rooms.byKey.F_Combat01;
-    if (combat === undefined) throw new Error('F Combat 01 is missing');
-
-    expect(() => interaction.intentFor(combat)).toThrow(
-      `F_Combat01 is outside the declared start domain for ${semanticAddressKey(biome)}`,
-    );
-    expect(allocations).toBe(0);
   });
 
   it('binds existing and missing targets to exact replacement and lazy creation intents', () => {

@@ -298,11 +298,13 @@ incoming declaration and validates the explicit H Fields `cages` group. The
 application resolves one exhaustive surface for zero, one, or multiple active
 rewards; the rail remains an intentionally lossy exact-one presentation.
 
-Starts and normal doors share the Room/Reward composition, including pending,
-no-reward, single-reward, and multi-reward states. H cage rewards are exposed
-on the outgoing offer while optional Fields MetaProgress remains entered-room
-state; O ShipCombat remains a no-reward offer with its wheels room-local. The
-old preview and start-only reward shortcuts were removed without changing the
+The follow-up start-flow correction keeps the topology-free frontier as one
+generic `Start biome` action and moves all Room/Reward editing to the created
+Opening or Intro occurrence. Normal doors retain their pending, no-reward,
+single-reward, and multi-reward states. H cage rewards are exposed on the
+outgoing offer while optional Fields MetaProgress remains entered-room state;
+O ShipCombat remains a no-reward offer with its wheels room-local. The old
+preview and start-only reward shortcuts were removed without changing the
 authored schema or catalog version. Gate A catalog/contract witnesses and Gate
 B UI/planner/product witnesses passed with the documented typecheck, lint,
 format, build, and diff checks. The one closure `npm run check` passed: fixture

@@ -417,13 +417,12 @@ describe('DecisionWorkbench', () => {
 
   it('renders the ordinary outgoing cards immediately after the fixed N start', async () => {
     const view = renderDecisionWorkbench(emptyProject('Surface'), 'Surface', 'N', currentFrontier);
-    expect(screen.getByText('Configure starting room')).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Start biome' })).toBeTruthy();
     expect(screen.queryByText('N_Opening01')).toBeNull();
-    expect(screen.getByRole('button', { name: 'Room' })).toBeTruthy();
-    expect(screen.getByText('Choose room to show reward')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Room' })).toBeNull();
+    expect(screen.queryByText('Choose room to show reward')).toBeNull();
 
-    await view.user.click(screen.getByRole('button', { name: 'Room' }));
-    await view.user.click(within(screen.getByRole('listbox')).getByRole('option'));
+    await view.user.click(screen.getByRole('button', { name: 'Start biome' }));
     const plan = view.application.store
       .getState()
       .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
@@ -457,7 +456,7 @@ describe('DecisionWorkbench', () => {
     );
   });
 
-  it('uses Intro language for a fixed one-room start without auto-selecting it', async () => {
+  it('uses the same generic start action for an Intro biome', async () => {
     const view = renderDecisionWorkbench(
       createProjectDocument(catalog, {
         configuredBiomeCounts: { Surface: 4 },
@@ -467,13 +466,15 @@ describe('DecisionWorkbench', () => {
       'P',
       currentFrontier,
     );
-    expect(screen.getByText('Configure Intro room')).toBeTruthy();
-    expect(screen.getByText('Choose room to show reward')).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Start biome' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Room' })).toBeNull();
 
-    await view.user.click(screen.getByRole('button', { name: 'Room' }));
-    const options = within(screen.getByRole('listbox')).getAllByRole('option');
-    expect(options).toHaveLength(1);
-    expect(options[0]?.getAttribute('data-selected-value')).toBe('false');
+    await view.user.click(screen.getByRole('button', { name: 'Start biome' }));
+    const plan = view.application.store
+      .getState()
+      .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
+      ?.biomes.find((biome) => biome.biomeKey === 'P');
+    expect(plan?.topology?.occurrences[0]?.gameName).toBe('P_Intro');
   });
 
   it('offers only engine-declared PreHub through N Opening’s ordinary picker', async () => {
