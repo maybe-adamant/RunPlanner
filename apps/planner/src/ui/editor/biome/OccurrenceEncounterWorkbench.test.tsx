@@ -1234,13 +1234,13 @@ describe('OccurrenceEncounterWorkbench', () => {
     );
 
     openRoomTab('Intro Timeline');
-    const rewardWheel = screen.getByLabelText('Combat 1 reward');
+    let rewardWheel = screen.getByLabelText('Combat 1 reward');
     const offerGrid = rewardWheel.querySelector<HTMLElement>('.reward-wheel-offers');
     if (offerGrid === null) throw new Error('Reward wheel offer grid is missing');
     expect(offerGrid.getAttribute('data-active-offer-count')).toBe('1');
     expect(offerGrid.children).toHaveLength(1);
     expect(offerGrid.firstElementChild?.getAttribute('data-picked')).toBe('true');
-    expect(within(rewardWheel).getByText('Picked')).toBeTruthy();
+    expect(within(rewardWheel).queryByRole('radio')).toBeNull();
     expect(within(rewardWheel).queryByLabelText('Offer 2')).toBeNull();
 
     act(() =>
@@ -1256,25 +1256,35 @@ describe('OccurrenceEncounterWorkbench', () => {
     expect(offerGrid.getAttribute('data-active-offer-count')).toBe('2');
     expect(offerGrid.children).toHaveLength(2);
     expect(offerGrid.lastElementChild?.getAttribute('data-picked')).toBeNull();
+    expect(within(rewardWheel).getAllByRole('radio')).toHaveLength(2);
 
     act(() =>
       view.application.store.dispatch(
         authoredProjectCommandDispatched({
           kind: 'ReplaceRewardWheelOffer',
           offer,
-          value: { rewardType: 'MetaCurrencyDrop' },
+          value: { rewardType: 'HermesUpgrade' },
         }),
       ),
     );
-    act(() =>
-      view.application.store.dispatch(
-        authoredProjectCommandDispatched({
-          kind: 'ReplaceRewardWheelPicked',
-          wheel,
-          pickedOfferIndex: 2,
-        }),
-      ),
+    await view.user.click(
+      within(rewardWheel).getByRole('radio', {
+        name: 'Pick Offer 2 from Combat 1 reward',
+      }),
     );
+    expect(
+      shipWheel(view.application.store.getState().projectWorkspace.history.present, 'wheel1')
+        .pickedOfferIndex,
+    ).toBe(2);
+
+    openRoomTab('Combat 1 Timeline');
+    expect(
+      within(screen.getByRole('region', { name: 'Room Timeline' })).getByRole('button', {
+        name: /Choose Trait/,
+      }),
+    ).toBeTruthy();
+    openRoomTab('Intro Timeline');
+    rewardWheel = screen.getByLabelText('Combat 1 reward');
 
     act(() =>
       view.application.store.dispatch(
@@ -1291,9 +1301,9 @@ describe('OccurrenceEncounterWorkbench', () => {
       shipWheel(view.application.store.getState().projectWorkspace.history.present, 'wheel1').offers
         .offer2,
     ).toEqual({
-      offer: { rewardType: 'MetaCurrencyDrop' },
+      offer: { rewardType: 'HermesUpgrade' },
       dispositionByAcquisitionRole: { self: { kind: 'normal' } },
-      traitOffersByAcquisitionRole: {},
+      traitOffersByAcquisitionRole: { self: null },
     });
 
     act(() =>
@@ -1307,13 +1317,14 @@ describe('OccurrenceEncounterWorkbench', () => {
     );
     const restoredOffer = await within(rewardWheel).findByLabelText('Offer 2');
     expect(within(restoredOffer).getByRole('button', { name: 'Reward' }).textContent).toContain(
-      'Bones',
+      'Hermes',
     );
     expect(
-      within(screen.getByRole('region', { name: 'Room Timeline' })).getAllByRole('combobox', {
+      within(screen.getByRole('region', { name: 'Room Timeline' })).queryByRole('combobox', {
         name: 'Picked offer',
       }),
-    ).toHaveLength(1);
+    ).toBeNull();
+    expect(within(rewardWheel).getAllByRole('radio')).toHaveLength(2);
   });
 
   it('renders materialized Shop descriptors directly', () => {

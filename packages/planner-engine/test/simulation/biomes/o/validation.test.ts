@@ -1050,6 +1050,38 @@ describe('selected O validation', () => {
     ]);
   });
 
+  it('keeps a generated wheel offer selectable while its acquisition child is unresolved', () => {
+    const wheel = createRewardWheelAddress(oBiome, oOccurrenceIds.combat04, 'wheel1');
+    const secondOffer = createRewardWheelOfferAddress(
+      oBiome,
+      oOccurrenceIds.combat04,
+      'wheel1',
+      'offer2',
+    );
+    let project = applyProjectCommand(loadSurfaceNOProject(), catalog, {
+      kind: 'ReplaceRewardWheelOfferCount',
+      wheel,
+      offerCount: 2,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceRewardWheelOffer',
+      offer: secondOffer,
+      value: { rewardType: 'HermesUpgrade' },
+    });
+    const candidates = createPreparedProjectCandidateSession(
+      catalog,
+      simulateProjectAssembly(catalog, project),
+    ).evaluate([
+      { kind: 'rewardWheelOffer', offer: secondOffer, value: { rewardType: 'HermesUpgrade' } },
+      { kind: 'rewardWheelPicked', wheel, pickedOfferIndex: 2 },
+    ]);
+
+    expect(candidates).toMatchObject([
+      { kind: 'rewardWheelOffer', result: { supported: true, findings: [] } },
+      { kind: 'rewardWheelPicked', result: { selectedPossible: true, findings: [] } },
+    ]);
+  });
+
   it('rejects a stale wheel2 Hammer after the route loadout changes', () => {
     let project = loadSurfaceNOProject();
     const shipOwner = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);

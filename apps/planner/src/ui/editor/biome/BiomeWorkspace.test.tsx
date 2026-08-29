@@ -522,10 +522,10 @@ describe('BiomeWorkspace', () => {
         name: `Entering ${sideVisit.node.room.label}`,
       }),
     ).toBeTruthy();
-    expect(screen.getByRole('tab', { name: 'Room Timeline' }).getAttribute('aria-selected')).toBe(
+    expect(screen.getByRole('tab', { name: 'Room Overview' }).getAttribute('aria-selected')).toBe(
       'true',
     );
-    expect(screen.getByRole('region', { name: 'Room Timeline' })).toBeTruthy();
+    expect(screen.getByRole('region', { name: 'Room features' })).toBeTruthy();
   });
 
   it('summarizes the Hub door reward in Overview without exposing another editor', async () => {

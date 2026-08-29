@@ -1557,8 +1557,6 @@ export interface WorkspaceRoomActionRow {
   readonly window: RoomActionWindow;
   /** Exact encounter/Gorgon payload settled by this action. */
   readonly traitOffer?: WorkspaceTraitOfferControl;
-  /** Exact wheel whose picked offer is chosen by this action. */
-  readonly wheelPick?: RewardWheelAddress;
   /** Exact Phial target control nested under this occurrence-owned fountain action. */
   readonly fountainRarity?: WorkspaceFountainRarityControl;
   readonly executable: boolean;

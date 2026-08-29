@@ -303,7 +303,11 @@ export function evaluateRewardWheelLifecycleCandidate(
       : query.kind === 'rewardWheelStore'
         ? Object.freeze({ ...wheel, storeKey: query.storeKey })
         : Object.freeze({ ...wheel, pickedOfferIndex: query.pickedOfferIndex });
-  const result = context.evaluateState(replaceWheel(ship.state, query.wheel.wheelKey, replacement));
+  const replacementState = replaceWheel(ship.state, query.wheel.wheelKey, replacement);
+  const result =
+    query.kind === 'rewardWheelPicked'
+      ? context.evaluateStateThroughWheelPick(replacementState, query.wheel.wheelKey)
+      : context.evaluateState(replacementState);
   const findings = lifecycleFindings(result.findings, query.wheel);
   const selectedPossible = result.supported && findings.length === 0;
   switch (query.kind) {

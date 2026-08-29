@@ -258,8 +258,14 @@ only editable outgoing-store authority.
 Each active O reward wheel now presents its one or two simultaneous offers as
 bounded cards within that wheel's existing phase. Two offers are equal sibling
 columns that collapse in a narrow container, dormant offers retain their
-authored values, and the Timeline remains the only interactive owner of
-`Picked offer`. The cards neither become exits nor acquire topology controls.
+authored values, and two active cards expose the picked offer as a direct radio
+choice. The chronological Choose action remains ordered on the Timeline without
+a duplicate dropdown. Selecting a generated offer is no longer blocked by its
+newly exposed acquisition child; the picked reward's trait screen is authored
+on its following pickup action. Fixed O Trial rooms also recover an unresolved
+Devotion payload from their declaration-owned reward type instead of publishing
+an empty reward picker. The cards neither become exits nor acquire topology
+controls.
 
 Gate A focused Vitest passed `decision-assembly.test.ts` and
 `DecisionWorkbench.test.tsx` (2 files, 56 tests), alongside full workspace and

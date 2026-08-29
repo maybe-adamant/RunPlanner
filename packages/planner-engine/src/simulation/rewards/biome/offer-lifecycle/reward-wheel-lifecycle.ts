@@ -159,115 +159,121 @@ export function prepareShipLifecycleCandidateContext(
     routeLoadout,
   } = inputs;
   const activeWheelKeys = Object.freeze(room.rewardWheels?.map((wheel) => wheel.wheelKey) ?? []);
+  const evaluateState = (state: ShipCombatState, stopAfterPickedWheelGeneration?: string) => {
+    const ship = materializeShipCombatState(
+      catalog,
+      createBiomeAddress(room.origin.routeKey, room.origin.biomeKey),
+      declaration,
+      Object.freeze({
+        occurrenceId: room.occurrenceId,
+        gameName: room.gameName,
+        state,
+        encounters: room.encounters,
+        additionalExits: Object.freeze([]),
+        roomActions: Object.freeze({ order: Object.freeze([]) }),
+      }),
+      routeLoadout,
+    );
+    const candidateRoom = Object.freeze({
+      ...room,
+      encounterPhases: ship.encounterPhases,
+      rewardWheels: ship.rewardWheels,
+    });
+    const candidateFindings = new Map<string, FindingRegionEntry>();
+    let candidateBranches = branchesBeforeFirstWheel;
+    for (const wheel of ship.rewardWheels) {
+      if (candidateBranches.length === 0) break;
+      const lifecycleView = wheelLifecycleViews(lifecycle, candidateRoom, roomView, wheel);
+      const binding = rewardWheelBinding(catalog, declaration, wheel);
+      candidateBranches = processOfferGenerationCohort(
+        candidateBranches,
+        wheel.offers.map((offer) => ({
+          catalog,
+          reward: {
+            ...offer,
+            producerLifecycleKey: wheel.producerLifecycleKey,
+            resolvedStoreKey: wheel.storeKey,
+          },
+          binding,
+          historySequence: lifecycleView.generation.sequence + 1,
+          peers: Object.freeze([]),
+          facts: (
+            branchHistory: RewardHistoryState,
+            _shopNames: ReadonlySet<string> | undefined,
+            branch: RewardBranchState | undefined,
+          ) =>
+            createBiomeRewardFacts(
+              catalog,
+              candidateRoom,
+              candidateRoom,
+              declaration,
+              lifecycleView.generation,
+              branchHistory,
+              enteredBiomeCount,
+              undefined,
+              undefined,
+              undefined,
+              undefined,
+              branch,
+            ),
+        })),
+        candidateFindings,
+        { ordering: 'allOffers', atomicRegion: ownerRegion(wheel.origin) },
+      );
+      const picked = wheel.offers.find((offer) => offer.picked);
+      if (picked === undefined) {
+        const unresolvedPicked = wheel.unresolvedOffers.find((offer) => offer.picked);
+        if (unresolvedPicked !== undefined) {
+          addRewardFinding(
+            candidateFindings,
+            rewardFinding('rewardMissing', unresolvedPicked.origin, {}),
+          );
+          return createRewardProducerCandidateResult(candidateFindings, candidateBranches);
+        }
+        throw new BiomeRewardSimulationContractError(
+          `${room.gameName}.${wheel.wheelKey} has no picked offer`,
+        );
+      }
+      if (wheel.wheelKey === stopAfterPickedWheelGeneration) {
+        return createRewardProducerCandidateResult(candidateFindings, candidateBranches);
+      }
+      if (candidateBranches.length > 0) {
+        candidateBranches = settleOwnedAcquisitionSite(
+          catalog,
+          candidateBranches,
+          {
+            siteOwner: wheel.origin,
+            pointKey: wheel.wheelKey,
+            entryKey: 'picked',
+            source: Object.freeze({
+              ...picked,
+              producerLifecycleKey: wheel.producerLifecycleKey,
+              instanceProvenance: 'free',
+            }),
+            historySequence: lifecycleView.acquisitionSequence,
+          },
+          (branchHistory) =>
+            createBiomeRewardFacts(
+              catalog,
+              candidateRoom,
+              candidateRoom,
+              declaration,
+              lifecycleView.acquisition,
+              branchHistory,
+              enteredBiomeCount,
+            ),
+          candidateFindings,
+          ownerRegion(wheel.origin),
+        ).branches;
+      }
+    }
+    return createRewardProducerCandidateResult(candidateFindings, candidateBranches);
+  };
   return Object.freeze({
     origin: room.origin,
     activeWheelKeys,
-    evaluateState: (state: ShipCombatState) => {
-      const ship = materializeShipCombatState(
-        catalog,
-        createBiomeAddress(room.origin.routeKey, room.origin.biomeKey),
-        declaration,
-        Object.freeze({
-          occurrenceId: room.occurrenceId,
-          gameName: room.gameName,
-          state,
-          encounters: room.encounters,
-          additionalExits: Object.freeze([]),
-          roomActions: Object.freeze({ order: Object.freeze([]) }),
-        }),
-        routeLoadout,
-      );
-      const candidateRoom = Object.freeze({
-        ...room,
-        encounterPhases: ship.encounterPhases,
-        rewardWheels: ship.rewardWheels,
-      });
-      const candidateFindings = new Map<string, FindingRegionEntry>();
-      let candidateBranches = branchesBeforeFirstWheel;
-      for (const wheel of ship.rewardWheels) {
-        if (candidateBranches.length === 0) break;
-        const lifecycleView = wheelLifecycleViews(lifecycle, candidateRoom, roomView, wheel);
-        const binding = rewardWheelBinding(catalog, declaration, wheel);
-        candidateBranches = processOfferGenerationCohort(
-          candidateBranches,
-          wheel.offers.map((offer) => ({
-            catalog,
-            reward: {
-              ...offer,
-              producerLifecycleKey: wheel.producerLifecycleKey,
-              resolvedStoreKey: wheel.storeKey,
-            },
-            binding,
-            historySequence: lifecycleView.generation.sequence + 1,
-            peers: Object.freeze([]),
-            facts: (
-              branchHistory: RewardHistoryState,
-              _shopNames: ReadonlySet<string> | undefined,
-              branch: RewardBranchState | undefined,
-            ) =>
-              createBiomeRewardFacts(
-                catalog,
-                candidateRoom,
-                candidateRoom,
-                declaration,
-                lifecycleView.generation,
-                branchHistory,
-                enteredBiomeCount,
-                undefined,
-                undefined,
-                undefined,
-                undefined,
-                branch,
-              ),
-          })),
-          candidateFindings,
-          { ordering: 'allOffers', atomicRegion: ownerRegion(wheel.origin) },
-        );
-        const picked = wheel.offers.find((offer) => offer.picked);
-        if (picked === undefined) {
-          const unresolvedPicked = wheel.unresolvedOffers.find((offer) => offer.picked);
-          if (unresolvedPicked !== undefined) {
-            addRewardFinding(
-              candidateFindings,
-              rewardFinding('rewardMissing', unresolvedPicked.origin, {}),
-            );
-            return createRewardProducerCandidateResult(candidateFindings, candidateBranches);
-          }
-          throw new BiomeRewardSimulationContractError(
-            `${room.gameName}.${wheel.wheelKey} has no picked offer`,
-          );
-        }
-        if (candidateBranches.length > 0) {
-          candidateBranches = settleOwnedAcquisitionSite(
-            catalog,
-            candidateBranches,
-            {
-              siteOwner: wheel.origin,
-              pointKey: wheel.wheelKey,
-              entryKey: 'picked',
-              source: Object.freeze({
-                ...picked,
-                producerLifecycleKey: wheel.producerLifecycleKey,
-                instanceProvenance: 'free',
-              }),
-              historySequence: lifecycleView.acquisitionSequence,
-            },
-            (branchHistory) =>
-              createBiomeRewardFacts(
-                catalog,
-                candidateRoom,
-                candidateRoom,
-                declaration,
-                lifecycleView.acquisition,
-                branchHistory,
-                enteredBiomeCount,
-              ),
-            candidateFindings,
-            ownerRegion(wheel.origin),
-          ).branches;
-        }
-      }
-      return createRewardProducerCandidateResult(candidateFindings, candidateBranches);
-    },
+    evaluateState: (state: ShipCombatState) => evaluateState(state),
+    evaluateStateThroughWheelPick: (state: ShipCombatState, wheelKey: string) =>
+      evaluateState(state, wheelKey),
   });
 }

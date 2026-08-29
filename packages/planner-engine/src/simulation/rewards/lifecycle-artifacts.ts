@@ -11,11 +11,19 @@ export interface ShipLifecycleCandidateContext {
   readonly origin: OccurrenceAddress;
   readonly activeWheelKeys: readonly string[];
   readonly evaluateState: (state: ShipCombatState) => RoomLifecycleCandidateResult;
+  readonly evaluateStateThroughWheelPick: (
+    state: ShipCombatState,
+    wheelKey: string,
+  ) => RoomLifecycleCandidateResult;
 }
 
 export interface ShipLifecycleCandidateCapability {
   readonly activeWheelKeys: readonly string[];
   readonly evaluateState: (state: ShipCombatState) => RoomLifecycleCandidateResult;
+  readonly evaluateStateThroughWheelPick: (
+    state: ShipCombatState,
+    wheelKey: string,
+  ) => RoomLifecycleCandidateResult;
 }
 
 /**
@@ -38,6 +46,7 @@ export function createRoomLifecycleCandidateArtifacts(
       Object.freeze({
         activeWheelKeys: context.activeWheelKeys,
         evaluateState: context.evaluateState,
+        evaluateStateThroughWheelPick: context.evaluateStateThroughWheelPick,
       }),
     );
   }

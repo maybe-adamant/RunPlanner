@@ -340,11 +340,6 @@ function roomActionsForOccurrence(
             }),
         window: row.window,
         ...(row.stale || traitOffer === undefined ? {} : { traitOffer }),
-        ...(row.stale ||
-        row.reference.kind !== 'chooseRewardWheel' ||
-        row.owner.kind !== 'rewardWheel'
-          ? {}
-          : { wheelPick: row.owner }),
         ...(fountainRarity === undefined ? {} : { fountainRarity }),
         executable: row.executable,
       });

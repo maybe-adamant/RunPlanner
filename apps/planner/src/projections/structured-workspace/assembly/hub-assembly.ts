@@ -291,7 +291,7 @@ function projectHubNode(
         const sideRewardMarkers = workspaceHubMainRewardMarkers(workbench.room);
         markerDestinations.redirect(sideRewardMarkers, parentWorkbenchKey);
         markerDestinations.setRoomTab(sideRewardMarkers, 'overview');
-        markerDestinations.setRoomTab([workbench.room.marker], 'actions');
+        markerDestinations.setRoomTab([workbench.room.marker], 'overview');
         markerDestinations.setRoomTab(
           workspaceHubMainRewardAcquisitionMarkers(workbench.room),
           'actions',
