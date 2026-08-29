@@ -205,19 +205,10 @@ export function applyAcquisitionSiteCommand(
     const canonicalIndex = canonical.findIndex(
       (reference) => roomActionKey(reference) === roomActionKey(deliveryReference),
     );
-    if (
-      !Number.isInteger(command.index) ||
-      command.index < 0 ||
-      command.index > host.roomActions.order.length
-    )
-      failCommand(
-        command,
-        `index must be an integer from 0 through ${host.roomActions.order.length}`,
-      );
-    if (command.index !== canonicalIndex)
-      failCommand(command, `required room action canonical index is ${canonicalIndex}`);
+    if (canonicalIndex < 0)
+      failCommand(command, 'delivery has no canonical room-action insertion point');
     const nextOrder = [...host.roomActions.order];
-    nextOrder.splice(command.index, 0, deliveryReference);
+    nextOrder.splice(canonicalIndex, 0, deliveryReference);
     return updateOccurrenceTopology(
       document,
       located,

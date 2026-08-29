@@ -105,7 +105,6 @@ describe('Hermes Shrine delivery placement', () => {
     const placed = applyProjectCommand(project, catalog, {
       kind: 'PlaceHermesShrineDelivery',
       entry,
-      index: 0,
       encounterPhaseKey: 'Encounter',
     });
     const placedHost = placed.routes
@@ -372,13 +371,11 @@ describe('Hermes Shrine delivery placement', () => {
     const placed = applyProjectCommand(project, catalog, {
       kind: 'PlaceHermesShrineDelivery',
       entry,
-      index: 0,
       encounterPhaseKey: 'Encounter',
     });
     const repaired = applyProjectCommand(placed, catalog, {
       kind: 'PlaceHermesShrineDelivery',
       entry,
-      index: 1,
       encounterPhaseKey: 'LaterEncounter',
     });
     const repairedHost = repaired.routes

@@ -660,7 +660,6 @@ describe('Hermes Shrine Travel Deal generation', () => {
     project = applyProjectCommand(project, catalog, {
       kind: 'PlaceHermesShrineDelivery',
       entry: refillEntry,
-      index: 1,
       encounterPhaseKey: deliveryPhaseKey,
     });
     const route = project.routes.find((candidate) => candidate.routeKey === 'Surface');
