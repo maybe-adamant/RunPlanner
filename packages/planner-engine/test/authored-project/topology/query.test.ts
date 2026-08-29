@@ -23,7 +23,6 @@ import {
   fixedWidthOneTakeoverForSource,
   fixedWidthOneTakeoverTransitionForSource,
   hostContinuationExitForDetourRoom,
-  naturalChaosSpawnAuthoringEligibility,
   selectedExitKey,
   selectedExitTarget,
   selectedOrdinaryBatchIndex,
@@ -177,41 +176,6 @@ describe('authored topology queries', () => {
       ),
     });
     expect(selectedOrdinaryBatchIndex(cyclic, qOccurrenceIds.foyer)).toBeUndefined();
-  });
-
-  it('publishes natural Chaos authorability from the selected topology source', () => {
-    const topology = topologyFor(loadSurfaceNProject(), 'N');
-    expect(naturalChaosSpawnAuthoringEligibility(topology, nOccurrenceIds.opening)).toEqual({
-      kind: 'authorable',
-    });
-
-    const sparkTarget = createOccurrenceId('query-spark-chaos');
-    const withSpark = Object.freeze({
-      ...topology,
-      occurrences: Object.freeze(
-        topology.occurrences.map((occurrence) =>
-          occurrence.occurrenceId === nOccurrenceIds.opening
-            ? Object.freeze({
-                ...occurrence,
-                additionalExits: Object.freeze([
-                  Object.freeze({
-                    kind: 'sparkChaos' as const,
-                    key: 'sparkChaos' as const,
-                    occurrenceId: sparkTarget,
-                  }),
-                ]),
-              })
-            : occurrence,
-        ),
-      ),
-    });
-    expect(naturalChaosSpawnAuthoringEligibility(withSpark, nOccurrenceIds.opening)).toEqual({
-      kind: 'unavailable',
-      reason: 'conflictingChaosExit',
-    });
-    expect(
-      naturalChaosSpawnAuthoringEligibility(topology, createOccurrenceId('unselected-source')),
-    ).toEqual({ kind: 'unavailable', reason: 'notSelectedSpine' });
   });
 
   it('preserves declaration-owned physical exits and bounded takeover transitions', () => {

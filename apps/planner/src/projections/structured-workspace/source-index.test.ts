@@ -20,6 +20,8 @@ import {
   simulateProject,
   simulateProjectAssembly,
   type ProjectEvaluation,
+  type NaturalChaosCandidateCapability,
+  type ZagreusContractCandidateCapability,
 } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
 
@@ -185,6 +187,42 @@ describe('structured workspace source index', () => {
       });
     },
   );
+
+  it('transports exact room-feature capabilities without recomputing them in the source index', () => {
+    const project = createGoldenFGHIProject();
+    const evaluation = simulateProject(catalog, project);
+    const naturalChaos: NaturalChaosCandidateCapability = Object.freeze({
+      failedConditions: Object.freeze([]),
+      placementEligible: true,
+    });
+    const zagreusContract: ZagreusContractCandidateCapability = Object.freeze({
+      enteredContractCount: 0,
+      maximumEnteredThisRoute: 0,
+      placementEligible: true,
+    });
+    const indexed = createWorkspaceProjectSourceIndex(
+      catalog,
+      project,
+      evaluation,
+      noEncounterPhaseStatusCoverage,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      () => naturalChaos,
+      () => zagreusContract,
+    );
+    const source = biomeSource(indexed, 'Underworld', 'F');
+    const occurrence = createOccurrenceAddress(goldenFBiome, goldenFStartId);
+
+    expect(source.naturalChaosAssessment(occurrence)).toBe(naturalChaos);
+    expect(source.zagreusContractAssessment(occurrence)).toBe(zagreusContract);
+  });
 
   it('indexes an evaluated selected continuation without manufacturing a partial normal batch, and rejects an orphan continuation owner', () => {
     const fixture = selectedContractWithoutNormalTargets();

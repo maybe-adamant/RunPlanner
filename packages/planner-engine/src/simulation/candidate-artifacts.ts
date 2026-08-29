@@ -251,6 +251,8 @@ export interface BiomeCandidateArtifacts {
   readonly purgingPools: PurgingPoolCandidateArtifacts;
   readonly hermesShrines: HermesShrineCandidateArtifacts;
   readonly stygianWells: StygianWellCandidateArtifacts;
+  readonly naturalChaos: NaturalChaosCandidateArtifacts;
+  readonly zagreusContracts: ZagreusContractCandidateArtifacts;
 }
 
 /** Exact room-entry Pool generation assessment at one automatic host. */
@@ -463,6 +465,47 @@ export function createStygianWellCandidateArtifacts(
   });
 }
 function createEmptyStygianWellCandidateArtifacts(): StygianWellCandidateArtifacts {
+  return Object.freeze({ at: () => undefined });
+}
+
+/** Exact reached-source natural Chaos placement support. */
+export interface NaturalChaosCandidateCapability {
+  readonly placementEligible: boolean;
+  readonly failedConditions: readonly string[];
+}
+export interface NaturalChaosCandidateArtifacts {
+  readonly at: (occurrence: OccurrenceAddress) => NaturalChaosCandidateCapability | undefined;
+}
+export function createNaturalChaosCandidateArtifacts(
+  contexts: ReadonlyMap<string, NaturalChaosCandidateCapability>,
+): NaturalChaosCandidateArtifacts {
+  const privateContexts = new Map(contexts);
+  return Object.freeze({
+    at: (occurrence: OccurrenceAddress) => privateContexts.get(semanticAddressKey(occurrence)),
+  });
+}
+function createEmptyNaturalChaosCandidateArtifacts(): NaturalChaosCandidateArtifacts {
+  return Object.freeze({ at: () => undefined });
+}
+
+/** Exact reached-source Zagreus Contract entry-cap support. */
+export interface ZagreusContractCandidateCapability {
+  readonly placementEligible: boolean;
+  readonly enteredContractCount: number;
+  readonly maximumEnteredThisRoute: number;
+}
+export interface ZagreusContractCandidateArtifacts {
+  readonly at: (occurrence: OccurrenceAddress) => ZagreusContractCandidateCapability | undefined;
+}
+export function createZagreusContractCandidateArtifacts(
+  contexts: ReadonlyMap<string, ZagreusContractCandidateCapability>,
+): ZagreusContractCandidateArtifacts {
+  const privateContexts = new Map(contexts);
+  return Object.freeze({
+    at: (occurrence: OccurrenceAddress) => privateContexts.get(semanticAddressKey(occurrence)),
+  });
+}
+function createEmptyZagreusContractCandidateArtifacts(): ZagreusContractCandidateArtifacts {
   return Object.freeze({ at: () => undefined });
 }
 
@@ -799,6 +842,8 @@ export function createBiomeCandidateArtifacts(
     new Map(),
   ),
   transcendentEmbryo: TranscendentEmbryoCandidateArtifacts = createEmptyTranscendentEmbryoCandidateArtifacts(),
+  naturalChaos: NaturalChaosCandidateArtifacts = createEmptyNaturalChaosCandidateArtifacts(),
+  zagreusContracts: ZagreusContractCandidateArtifacts = createEmptyZagreusContractCandidateArtifacts(),
 ): BiomeCandidateArtifacts {
   return Object.freeze({
     origin,
@@ -820,6 +865,8 @@ export function createBiomeCandidateArtifacts(
     purgingPools,
     hermesShrines,
     stygianWells,
+    naturalChaos,
+    zagreusContracts,
   });
 }
 

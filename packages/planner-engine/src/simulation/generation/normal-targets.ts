@@ -37,6 +37,10 @@ import type {
 import { assessHermesShrine, priorTwoSurfaceShopPresence } from '../hermes-shrine';
 import type { TargetRewardHistoryCheckpoint } from '../rewards';
 import type {
+  NaturalChaosCandidateCapability,
+  ZagreusContractCandidateCapability,
+} from '../candidate-artifacts';
+import type {
   RequirementEvaluationEvidence,
   RoomGenerationExclusionEvidence,
   RoomGenerationExclusionReason,
@@ -795,6 +799,102 @@ interface AdditionalContinuationEntry {
   readonly parentOrigin: RoomHistoryOrigin;
 }
 
+/**
+ * Assess one reached natural-Chaos source. Authored continuation validation
+ * and the candidate artifact use this same helper so the editor cannot expose
+ * a source that the normal target evaluator would immediately reject.
+ */
+export function assessNaturalChaosPlacement(
+  catalog: Catalog,
+  layout: BiomeLayout,
+  source: CanonicalGenerationSource,
+  sourceDeclaration: RoomDeclaration,
+  parentHistory: ProgressiveRoomHistoryViews | undefined,
+  targetGameName: string | undefined,
+  enteredBiomeCount: number,
+): NaturalChaosCandidateCapability | undefined {
+  if (parentHistory?.entry === undefined) return undefined;
+  const declaration = sourceDeclaration.additionalExits.find(
+    (
+      candidate,
+    ): candidate is Extract<RoomDeclaration['additionalExits'][number], { kind: 'naturalChaos' }> =>
+      candidate.kind === 'naturalChaos' && candidate.key === 'naturalChaos',
+  );
+  const host = layout.naturalChaos;
+  const failedConditions: string[] = [];
+  if (declaration === undefined) failedConditions.push('sourceCapability');
+  if (host === undefined || host.roomGameNames.length === 0) failedConditions.push('targetDomain');
+  if (
+    sourceDeclaration.secretPointAnchorCount !== undefined &&
+    sourceDeclaration.secretPointAnchorCount <= 0
+  )
+    failedConditions.push('physicalCapability');
+  if (
+    declaration?.requirement !== undefined &&
+    !evaluateRequirement(
+      declaration.requirement,
+      projectRoomGenerationRequirementContext(
+        catalog,
+        source,
+        sourceDeclaration,
+        parentHistory.entry,
+        enteredBiomeCount,
+      ),
+    )
+  ) {
+    failedConditions.push('sourceRequirement');
+  }
+  const window = host?.offerSpacingWindow;
+  if (window !== undefined) {
+    const recentOrigins = new Set(
+      parentHistory.entry.ledgers.roomAppearances
+        .slice(0, -1)
+        .slice(-window)
+        .map((appearance) => semanticAddressKey(appearance.origin)),
+    );
+    const recentOffer = parentHistory.entry.ledgers.roomCreations.find(
+      (creation) =>
+        creation.source === 'additionalExit' &&
+        (creation.additionalOrigin.additionalExitKey === 'naturalChaos' ||
+          creation.additionalOrigin.additionalExitKey === 'sparkChaos') &&
+        recentOrigins.has(semanticAddressKey(creation.parentOrigin)),
+    );
+    if (recentOffer !== undefined) failedConditions.push('offerSpacing');
+  }
+  if (targetGameName !== undefined && !host?.roomGameNames.includes(targetGameName)) {
+    if (!failedConditions.includes('targetDomain')) failedConditions.push('targetDomain');
+  }
+  return Object.freeze({
+    placementEligible: failedConditions.length === 0,
+    failedConditions: Object.freeze(failedConditions),
+  });
+}
+
+/** Assess the entry-consumed Contract cap at one reached Midshop source. */
+export function assessZagreusContractPlacement(
+  sourceDeclaration: RoomDeclaration,
+  parentHistory: ProgressiveRoomHistoryViews | undefined,
+): ZagreusContractCandidateCapability | undefined {
+  if (parentHistory?.entry === undefined) return undefined;
+  const declaration = sourceDeclaration.additionalExits.find(
+    (
+      candidate,
+    ): candidate is Extract<
+      RoomDeclaration['additionalExits'][number],
+      { kind: 'zagreusContract' }
+    > => candidate.kind === 'zagreusContract' && candidate.key === 'zagreusContract',
+  );
+  if (declaration === undefined) return undefined;
+  const enteredContractCount = parentHistory.entry.ledgers.roomAppearances.filter(
+    (appearance) => appearance.gameName === declaration.targetRoomGameName,
+  ).length;
+  return Object.freeze({
+    placementEligible: enteredContractCount <= declaration.maxEnteredThisRoute,
+    enteredContractCount,
+    maximumEnteredThisRoute: declaration.maxEnteredThisRoute,
+  });
+}
+
 function additionalContinuationEntries(
   snapshot: BiomeGenerationSnapshot,
 ): readonly AdditionalContinuationEntry[] {
@@ -833,6 +933,7 @@ function evaluateAdditionalContinuationEntries(
   rooms: ReadonlyMap<string, CanonicalGenerationSource>,
   findings: SemanticFinding[],
   findingRegions: FindingRegionEntry[],
+  enteredBiomeCount = 0,
 ): void {
   const layout = catalog.biomeLayouts.byKey[snapshot.biomeKey];
   if (layout === undefined) {
@@ -871,40 +972,21 @@ function evaluateAdditionalContinuationEntries(
       if (host === undefined || !host.roomGameNames.includes(continuation.room.gameName)) {
         failedConditions.push('targetDomain');
       }
-      if (
-        declaration?.kind === 'naturalChaos' &&
-        declaration.requirement !== undefined &&
-        sourceDeclaration !== undefined &&
-        !evaluateRequirement(
-          declaration.requirement,
-          projectRoomGenerationRequirementContext(
-            catalog,
-            source,
-            sourceDeclaration,
-            parentHistory.entry,
-            0,
-          ),
-        )
-      ) {
-        failedConditions.push('sourceRequirement');
+      if (!forced && sourceDeclaration !== undefined) {
+        const capability = assessNaturalChaosPlacement(
+          catalog,
+          layout,
+          source,
+          sourceDeclaration,
+          parentHistory,
+          continuation.room.gameName,
+          enteredBiomeCount,
+        );
+        for (const condition of capability?.failedConditions ?? []) {
+          if (!failedConditions.includes(condition)) failedConditions.push(condition);
+        }
       }
       const window = forced ? undefined : layout.naturalChaos?.offerSpacingWindow;
-      if (!forced && window !== undefined) {
-        const recentOrigins = new Set(
-          parentHistory.entry.ledgers.roomAppearances
-            .slice(0, -1)
-            .slice(-window)
-            .map((appearance) => semanticAddressKey(appearance.origin)),
-        );
-        const recentOffer = parentHistory.entry.ledgers.roomCreations.find(
-          (creation) =>
-            creation.source === 'additionalExit' &&
-            (creation.additionalOrigin.additionalExitKey === 'naturalChaos' ||
-              creation.additionalOrigin.additionalExitKey === 'sparkChaos') &&
-            recentOrigins.has(semanticAddressKey(creation.parentOrigin)),
-        );
-        if (recentOffer !== undefined) failedConditions.push('offerSpacing');
-      }
       if (failedConditions.length > 0) {
         appendFinding(
           findings,
@@ -943,10 +1025,9 @@ function evaluateAdditionalContinuationEntries(
     // invalid prefix. Its declaration remains structurally valid, but its
     // entry-time cap checkpoint is not yet assessable.
     if (parentHistory?.entry === undefined) continue;
-    const priorEnteredContractCount = parentHistory.entry.ledgers.roomAppearances.filter(
-      (appearance) => appearance.gameName === continuation.room.gameName,
-    ).length;
-    if (priorEnteredContractCount > declaration.maxEnteredThisRoute) {
+    const contractCapability = assessZagreusContractPlacement(sourceDeclaration, parentHistory);
+    const priorEnteredContractCount = contractCapability?.enteredContractCount ?? 0;
+    if (contractCapability?.placementEligible === false) {
       appendFinding(
         findings,
         findingRegions,

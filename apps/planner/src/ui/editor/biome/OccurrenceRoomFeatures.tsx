@@ -73,7 +73,7 @@ function ZagreusSpawnWorkbench({
       <input
         checked={feature.action === 'remove'}
         data-command={feature.action === 'add' ? 'AddZagreusContract' : 'RemoveZagreusContract'}
-        disabled={feature.action === 'add' && !feature.control.materialized}
+        disabled={feature.presence.kind === 'optionalAbsent' && !feature.presence.enabled}
         onChange={() =>
           executeIntent(
             feature.action === 'add'
@@ -112,7 +112,10 @@ function NaturalChaosSpawnWorkbench({
       <input
         checked={feature.action === 'remove'}
         data-command={feature.action === 'add' ? 'AddNaturalChaos' : 'RemoveNaturalChaos'}
-        disabled={feature.action === 'add' && !feature.control.authorable}
+        disabled={
+          feature.presence.kind === 'forcedPresent' ||
+          (feature.presence.kind === 'optionalAbsent' && !feature.presence.enabled)
+        }
         onChange={() =>
           executeIntent(
             feature.action === 'add'
@@ -416,10 +419,8 @@ export function RoomFeaturesWorkbench({
                   <label className="room-feature-presence-row">
                     <input
                       aria-label="Stygian Well present"
-                      checked={feature.present}
-                      disabled={
-                        presence === undefined || (!feature.present && !feature.placementEligible)
-                      }
+                      checked={feature.presence.kind !== 'optionalAbsent'}
+                      disabled={presence === undefined}
                       onChange={(event) =>
                         presence === undefined
                           ? undefined
@@ -569,10 +570,8 @@ export function RoomFeaturesWorkbench({
                   <label className="room-feature-presence-row">
                     <input
                       aria-label="Hermes Shrine present"
-                      checked={feature.present}
-                      disabled={
-                        presence === undefined || (!feature.present && !feature.placementEligible)
-                      }
+                      checked={feature.presence.kind !== 'optionalAbsent'}
+                      disabled={presence === undefined}
                       onChange={(event) =>
                         presence === undefined
                           ? undefined

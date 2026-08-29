@@ -234,6 +234,26 @@ export function stygianWellCandidateForProjectEvaluationAssembly(
     ?.stygianWells.at(occurrence);
 }
 
+/** Exact reached-source natural Chaos placement capability. */
+export function naturalChaosCandidateForProjectEvaluationAssembly(
+  assembly: ProjectEvaluationAssembly,
+  occurrence: import('../authored-project/addresses').OccurrenceAddress,
+) {
+  return candidateArtifactsForProjectEvaluationAssembly(assembly)
+    .biomeAt(createBiomeAddress(occurrence.routeKey, occurrence.biomeKey))
+    ?.naturalChaos.at(occurrence);
+}
+
+/** Exact reached-source Contract entry-cap capability. */
+export function zagreusContractCandidateForProjectEvaluationAssembly(
+  assembly: ProjectEvaluationAssembly,
+  occurrence: import('../authored-project/addresses').OccurrenceAddress,
+) {
+  return candidateArtifactsForProjectEvaluationAssembly(assembly)
+    .biomeAt(createBiomeAddress(occurrence.routeKey, occurrence.biomeKey))
+    ?.zagreusContracts.at(occurrence);
+}
+
 /**
  * Supported exact-assembly query for one encounter phase. Application
  * composition may ask whether a particular declared phase has an evaluated

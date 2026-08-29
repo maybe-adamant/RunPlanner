@@ -90,7 +90,7 @@ describe('Hermes Shrine workbench', () => {
       occurrence(oOccurrenceIds.combat07)(
         workspaceBiome(application, 'Surface', 'O'),
       )?.room.workbench.features.find((feature) => feature.kind === 'hermesShrine'),
-    ).toMatchObject({ present: true });
+    ).toMatchObject({ presence: { kind: 'optionalPresent' } });
 
     act(() => application.store.dispatch(authoredProjectUndoRequested()));
     await waitFor(() =>

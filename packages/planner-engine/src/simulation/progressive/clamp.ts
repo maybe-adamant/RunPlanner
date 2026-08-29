@@ -137,6 +137,8 @@ export function clampSelectedProducts(
       selectedProducts.candidateArtifacts.fountainRarity,
       selectedProducts.candidateArtifacts.figurineArcana,
       selectedProducts.candidateArtifacts.transcendentEmbryo,
+      selectedProducts.candidateArtifacts.naturalChaos,
+      selectedProducts.candidateArtifacts.zagreusContracts,
     ),
   });
 }
