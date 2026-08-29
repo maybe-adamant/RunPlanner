@@ -32,8 +32,6 @@ function expectedStructuralInteraction(
       return interactions.hubSlots.get(key);
     case 'hubVisitOrder':
       return interactions.hubVisitOrders.get(key);
-    case 'naturalChaosSpawn':
-      return interactions.naturalChaosSpawns.get(key);
     case 'roomPicker':
       return interactions.rooms.get(key);
     case 'start':
@@ -105,12 +103,19 @@ function assertRenderedRoomControls(
   }
   if (room.naturalChaosSpawn !== undefined) {
     const spawn = room.naturalChaosSpawn;
-    assertExactObservedInteraction(
-      interactions.naturalChaosSpawns.get(spawn.marker.focusKey),
-      spawn.marker.focusKey,
-      spawn.owner,
-      `natural Chaos spawn ${spawn.marker.focusKey}`,
-    );
+    const interaction = interactions.naturalChaosSpawns.get(spawn.marker.focusKey);
+    if (spawn.authorable) {
+      assertExactObservedInteraction(
+        interaction,
+        spawn.marker.focusKey,
+        spawn.owner,
+        `natural Chaos spawn ${spawn.marker.focusKey}`,
+      );
+    } else if (interaction !== undefined) {
+      throw new Error(
+        `disabled natural Chaos spawn ${spawn.marker.focusKey} exposes a workspace interaction`,
+      );
+    }
   }
 }
 

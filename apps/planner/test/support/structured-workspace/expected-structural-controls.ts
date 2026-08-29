@@ -38,7 +38,6 @@ export type ExpectedWorkspaceStructuralControlKind =
   | 'fieldsCageOutcome'
   | 'hubSlot'
   | 'hubVisitOrder'
-  | 'naturalChaosSpawn'
   | 'roomPicker'
   | 'start'
   | 'takeoverBatch'
@@ -215,23 +214,6 @@ export function expectedWorkspaceStructuralControls(
           contract.key,
         );
         add('zagreusSpawn', workspaceTestOwnerKey(additional), additional);
-      }
-      const naturalChaos = sourceRoom?.additionalExits.find(
-        (candidate) => candidate.kind === 'naturalChaos',
-      );
-      if (
-        naturalChaos !== undefined &&
-        !sourceOccurrence?.additionalExits.some(
-          (additional) => additional.key === naturalChaos.key,
-        ) &&
-        activeOccurrenceIds.has(decision.source.occurrenceId)
-      ) {
-        const additional = createAdditionalExitAddress(
-          biome,
-          decision.source.occurrenceId,
-          naturalChaos.key,
-        );
-        add('naturalChaosSpawn', workspaceTestOwnerKey(additional), additional);
       }
     }
     const takeover = batchTakesOverNormalDoors(catalog, plan, decision);

@@ -402,8 +402,6 @@ function withoutStructuralInteraction(
       return { ...interactions, topologyRemovals: without(interactions.topologyRemovals) };
     case 'zagreusSpawn':
       return { ...interactions, zagreusSpawns: without(interactions.zagreusSpawns) };
-    case 'naturalChaosSpawn':
-      return { ...interactions, naturalChaosSpawns: without(interactions.naturalChaosSpawns) };
   }
 }
 
@@ -2095,7 +2093,6 @@ describe('structured workspace overlay contract', () => {
         'fieldsCageOutcome',
         'hubSlot',
         'hubVisitOrder',
-        'naturalChaosSpawn',
         'roomPicker',
         'start',
         'takeoverBatch',
