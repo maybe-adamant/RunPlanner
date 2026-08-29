@@ -1021,7 +1021,7 @@ text, while rarityless NPC and Hammer rows omit rarity entirely. Giver
 labels, selected trait labels, contextual support,
 and findings are presentation products derived from catalog and engine outputs.
 
-The same surface presents an active Selene `SpellDrop` as `Edit spell`: three
+The same surface presents an active Selene `SpellDrop` as `Edit Spell`: three
 rarityless rows and no fallback, sparse, rarity, replacement, target, or
 god-pool controls. It still binds the existing complete `ReplaceTraitOffer`
 semantic edit and exact finding destination. Opening the dialog does not
@@ -1030,8 +1030,10 @@ capability lazily. Aspect of Selene instead owns its frozen Sky Fall tree in
 the route loadout; its later Spell Drop has no trait-offer child, control, or
 missing-offer finding. The ordinary rows expose their position-owned Path of
 Stars bonus as Crescent, Half, and Full Moonglow for the first, second, and
-third slots respectively, and the launcher summarizes the selected spell and
-its fixed slot.
+third slots respectively. The launcher summarizes only the selected spell. The
+selected spell's Hex layout and high-value nodes are available from the live
+dialog draft before its first save; reopening the dialog is not an authoring
+prerequisite.
 
 First-Olympian composition findings use the same `TraitOfferAddress` and
 existing finding presentation path. The editor adds no mode or persisted state:

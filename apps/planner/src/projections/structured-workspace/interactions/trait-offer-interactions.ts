@@ -327,12 +327,26 @@ export function bindTraitOfferInteractions(input: {
               }),
           });
     const hexTreeInteraction = (value: AuthoredTraitOfferTraits, optionKey: TraitOptionKey) => {
-      if (value.selectedOptionKey !== optionKey || control.hexTree === undefined) return undefined;
+      if (value.selectedOptionKey !== optionKey) return undefined;
       const selected = value.options[optionIndex(optionKey)];
-      const hex = selected === undefined ? undefined : catalog.hexes.byKey[selected.traitKey];
+      if (selected === undefined) return undefined;
+      const hex = catalog.hexes.byKey[selected.traitKey];
       if (hex === undefined) return undefined;
+      const persistedControl =
+        control.hexTree?.optionKey === optionKey &&
+        control.hexTree.spellTraitKey === selected.traitKey
+          ? control.hexTree
+          : undefined;
+      const activeControl =
+        persistedControl ??
+        Object.freeze({
+          address: control.address,
+          marker: control.marker,
+          optionKey,
+          spellTraitKey: selected.traitKey,
+        });
       const interaction: WorkspaceHexTreeInteraction = {
-        control: control.hexTree,
+        control: activeControl,
         defaultFor: (offer) => {
           const selectedOption = offer.options[optionIndex(offer.selectedOptionKey)];
           if (selectedOption === undefined)
@@ -367,7 +381,7 @@ export function bindTraitOfferInteractions(input: {
             const option = offer.options[optionIndex(offer.selectedOptionKey)];
             const tree =
               offer.hexTree ??
-              control.hexTree?.value ??
+              persistedControl?.value ??
               createDefaultAuthoredHexTree(catalog, option!.traitKey);
             return projectHexTreeDomain(catalog, option!.traitKey, tree);
           },
