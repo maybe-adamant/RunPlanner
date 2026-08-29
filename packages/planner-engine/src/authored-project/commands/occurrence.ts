@@ -11,8 +11,40 @@ import { applyFieldsOccurrenceCommand } from './occurrence-fields';
 import type { OccurrenceLeafCommand } from './types';
 import { requireOccurrence, failCommand } from './contract';
 import { updateOccurrence } from './occurrence-mutation';
-import { createUnresolvedAcquisitionRewardState } from '../traits';
 import { hermesShrineInitialSlotKey } from '../model';
+import {
+  defaultHermesShrineDeliveryReward,
+  hermesShrineDeliveryEntryKey,
+} from '../hermes-shrine-delivery';
+
+function withRushedHermesDelivery(
+  occurrence: import('../model').RoomOccurrence,
+  origin: import('../addresses').OccurrenceAddress,
+  catalog: Catalog,
+  generationKey: import('../model').HermesShrineGenerationKey,
+  rewardType: string,
+): import('../model').RoomOccurrence {
+  const entryKey = hermesShrineDeliveryEntryKey(origin, generationKey);
+  const site = occurrence.acquisitionSites?.hermesShrineDelivery;
+  const current = site?.pickupEntries?.[entryKey];
+  const reward =
+    current !== undefined && current !== null && current.offer.rewardType === rewardType
+      ? current
+      : defaultHermesShrineDeliveryReward(catalog, rewardType);
+  return Object.freeze({
+    ...occurrence,
+    acquisitionSites: Object.freeze({
+      ...(occurrence.acquisitionSites ?? {}),
+      hermesShrineDelivery: Object.freeze({
+        ...(site ?? {}),
+        pickupEntries: Object.freeze({
+          ...(site?.pickupEntries ?? {}),
+          [entryKey]: reward,
+        }),
+      }),
+    }),
+  });
+}
 
 export function applyOccurrenceCommand(
   document: ProjectDocument,
@@ -71,22 +103,28 @@ export function applyOccurrenceCommand(
       );
       if (!supportedRewardTypes.has(command.value.rewardType))
         failCommand(command, `${command.value.rewardType} is not a SurfaceShop reward`);
+      const nextOccurrence = Object.freeze({
+        ...occurrence,
+        hermesShrine: Object.freeze({
+          ...occurrence.hermesShrine,
+          offerBySlot: Object.freeze({
+            ...occurrence.hermesShrine.offerBySlot,
+            [command.slotKey]: Object.freeze({ rewardType: command.value.rewardType }),
+          }),
+        }),
+      });
       return updateOccurrence(
         document,
         located,
-        Object.freeze({
-          ...occurrence,
-          hermesShrine: Object.freeze({
-            ...occurrence.hermesShrine,
-            offerBySlot: Object.freeze({
-              ...occurrence.hermesShrine.offerBySlot,
-              [command.slotKey]: createUnresolvedAcquisitionRewardState(catalog, command.value, {
-                kind: 'producerLifecycle',
-                key: 'HermesShrineDelivery',
-              }),
-            }),
-          }),
-        }),
+        occurrence.hermesShrine.purchaseBySlot?.[command.slotKey]?.rushed === true
+          ? withRushedHermesDelivery(
+              nextOccurrence,
+              command.occurrence,
+              catalog,
+              `initial:${command.slotKey}`,
+              command.value.rewardType,
+            )
+          : nextOccurrence,
       );
     }
     case 'SetHermesShrinePurchase': {
@@ -154,39 +192,48 @@ export function applyOccurrenceCommand(
       });
       const shrineWithoutPurchase = { ...occurrence.hermesShrine };
       delete shrineWithoutPurchase.purchaseBySlot;
+      const nextOccurrence = Object.freeze({
+        ...occurrence,
+        roomActions,
+        hermesShrine: Object.freeze({
+          ...shrineWithoutPurchase,
+          ...(Object.keys(next).length === 0
+            ? {}
+            : {
+                purchaseBySlot: Object.freeze(
+                  next,
+                ) as import('../model').HermesShrineState['purchaseBySlot'],
+              }),
+          ...(command.generationKey !== 'travelDealRefill'
+            ? {}
+            : {
+                travelDealRefill: Object.freeze({
+                  ...(() => {
+                    const withoutPurchase = {
+                      ...(occurrence.hermesShrine.travelDealRefill ?? { offer: null }),
+                    };
+                    delete withoutPurchase.purchase;
+                    return withoutPurchase;
+                  })(),
+                  ...(command.purchase === null
+                    ? {}
+                    : { purchase: Object.freeze(command.purchase) }),
+                }),
+              }),
+        }) as import('../model').HermesShrineState,
+      });
       return updateOccurrence(
         document,
         located,
-        Object.freeze({
-          ...occurrence,
-          roomActions,
-          hermesShrine: Object.freeze({
-            ...shrineWithoutPurchase,
-            ...(Object.keys(next).length === 0
-              ? {}
-              : {
-                  purchaseBySlot: Object.freeze(
-                    next,
-                  ) as import('../model').HermesShrineState['purchaseBySlot'],
-                }),
-            ...(command.generationKey !== 'travelDealRefill'
-              ? {}
-              : {
-                  travelDealRefill: Object.freeze({
-                    ...(() => {
-                      const withoutPurchase = {
-                        ...(occurrence.hermesShrine.travelDealRefill ?? { offer: null }),
-                      };
-                      delete withoutPurchase.purchase;
-                      return withoutPurchase;
-                    })(),
-                    ...(command.purchase === null
-                      ? {}
-                      : { purchase: Object.freeze(command.purchase) }),
-                  }),
-                }),
-          }) as import('../model').HermesShrineState,
-        }),
+        command.purchase?.rushed === true
+          ? withRushedHermesDelivery(
+              nextOccurrence,
+              command.occurrence,
+              catalog,
+              command.generationKey,
+              selectedOffer.rewardType,
+            )
+          : nextOccurrence,
       );
     }
     case 'ReplaceHermesShrineTravelDealRefill': {
@@ -212,10 +259,7 @@ export function applyOccurrenceCommand(
             ...occurrence.hermesShrine,
             travelDealRefill: Object.freeze({
               ...(occurrence.hermesShrine.travelDealRefill ?? {}),
-              offer: createUnresolvedAcquisitionRewardState(catalog, command.value, {
-                kind: 'producerLifecycle',
-                key: 'HermesShrineDelivery',
-              }),
+              offer: Object.freeze({ rewardType: command.value.rewardType }),
             }),
           }),
         }),

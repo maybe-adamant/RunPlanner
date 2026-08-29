@@ -2,7 +2,6 @@ import type { AcquisitionRoleAddress, BiomeAddress, TraitOfferOwnerAddress } fro
 import {
   createAcquisitionEntryAddress,
   createAcquisitionRoleAddress,
-  createAcquisitionSiteAddress,
   createIncomingRewardAddress,
   createLocalRewardAddress,
   createOccurrenceAddress,
@@ -11,7 +10,6 @@ import {
   semanticAddressKey,
 } from './addresses';
 import { acquisitionSiteFromStorageKey } from './artificer';
-import { hermesShrineDeliveryEntryKey } from './hermes-shrine-delivery';
 import { roomActionKey } from './room-action-key';
 import type { AuthoredRewardState, RoomActionReference, RoomOccurrence } from './model';
 
@@ -119,36 +117,6 @@ export function authoredAcquisitionSources(
       break;
   }
   const occurrenceAddress = createOccurrenceAddress(biome, occurrence.occurrenceId);
-  // A rushed Shrine offer is a real free pickup, but it is settled by the
-  // one purchase action rather than a second ranked acquisition-entry row.
-  // Publish its acquisition roles here so the established Artificer/Sea Star
-  // child-site machinery can attach to that source exactly as it does for any
-  // other participating free pickup.
-  for (const [slotKey, purchase] of Object.entries(occurrence.hermesShrine?.purchaseBySlot ?? {})) {
-    if (purchase?.rushed !== true) continue;
-    const reward =
-      occurrence.hermesShrine?.offerBySlot[slotKey as import('./model').HermesShrineSlotKey];
-    if (reward === null || reward === undefined) continue;
-    const entry = createAcquisitionEntryAddress(
-      createAcquisitionSiteAddress(occurrenceAddress, 'hermesShrineDelivery'),
-      hermesShrineDeliveryEntryKey(
-        occurrenceAddress,
-        `initial:${slotKey}` as import('./model').HermesShrineGenerationKey,
-      ),
-    );
-    for (const acquisitionRole of Object.keys(reward.dispositionByAcquisitionRole)) {
-      result.push(
-        Object.freeze({
-          acquisition: createAcquisitionRoleAddress(entry, acquisitionRole),
-          reward,
-          action: Object.freeze({
-            kind: 'purchaseHermesShrineOffer' as const,
-            generationKey: `initial:${slotKey}` as import('./model').HermesShrineGenerationKey,
-          }),
-        }),
-      );
-    }
-  }
   for (const [siteKey, site] of Object.entries(occurrence.acquisitionSites ?? {})) {
     const address = acquisitionSiteFromStorageKey(occurrenceAddress, siteKey);
     if (address === undefined) continue;

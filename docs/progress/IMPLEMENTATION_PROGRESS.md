@@ -11,7 +11,7 @@ the active frontier needed to orient the next delivery.
 
 ## Current Snapshot
 
-The current persisted contract is strict authored schema 68 with catalog
+The current persisted contract is strict authored schema 69 with catalog
 `0.49.0-completion-topology`. The browser product supports all eight route biomes:
 
 ```text

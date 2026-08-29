@@ -20,6 +20,61 @@ function evaluation(
 }
 
 describe('relational reward domain projection', () => {
+  it.each(['Boon', 'BlindBoxLoot'])(
+    'keeps %s possible when an acquisition entry has a legal God besides its stale selection',
+    (rewardType) => {
+      const selected = {
+        rewardType,
+        payload: { kind: 'BoonSource' as const, source: 'AresUpgrade' },
+      };
+      const supported = {
+        rewardType,
+        payload: { kind: 'BoonSource' as const, source: 'ZeusUpgrade' },
+      };
+      const prepared = prepareRewardDomain(catalog, [rewardType], selected);
+      const projected = projectRewardDomain(
+        prepared,
+        rewardDomainOffers(prepared).map((offer) => ({
+          value: offer,
+          evaluation: {
+            kind: 'acquisitionEntryOffer' as const,
+            result: {
+              supported: JSON.stringify(offer) === JSON.stringify(supported),
+              findings: [],
+            },
+          },
+        })),
+      );
+
+      expect(projected.types[0]).toMatchObject({
+        supportingOffer: supported,
+        evaluation: { kind: 'acquisitionEntryOffer', result: { supported: true } },
+      });
+      expect(projected.payload.kind).toBe('oneOf');
+      if (projected.payload.kind !== 'oneOf') {
+        throw new Error(`${rewardType} did not produce a God source domain`);
+      }
+      expect(
+        projected.payload.sources.find((option) => option.key === 'AresUpgrade'),
+      ).toMatchObject({
+        offer: selected,
+        offerEvaluation: {
+          kind: 'acquisitionEntryOffer',
+          result: { supported: false },
+        },
+      });
+      expect(
+        projected.payload.sources.find((option) => option.key === 'ZeusUpgrade'),
+      ).toMatchObject({
+        offer: supported,
+        offerEvaluation: {
+          kind: 'acquisitionEntryOffer',
+          result: { supported: true },
+        },
+      });
+    },
+  );
+
   it('retains an out-of-store selected type without collapsing its payload repair domain', () => {
     const selected = {
       rewardType: 'Boon',

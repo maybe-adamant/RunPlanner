@@ -53,7 +53,7 @@ function shrinePurchaseLabel(
     slotKey === undefined
       ? occurrence.hermesShrine?.travelDealRefill?.offer
       : occurrence.hermesShrine?.offerBySlot[slotKey];
-  const rewardType = offer?.offer.rewardType;
+  const rewardType = offer?.rewardType;
   const rewardLabel =
     rewardType === undefined ? undefined : catalog.rewards.rewardTypes.byKey[rewardType]?.label;
   if (rewardLabel !== undefined) return rewardLabel;

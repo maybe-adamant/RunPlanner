@@ -16,6 +16,7 @@ import {
   createDefaultAuthoredHexTree,
 } from '@run-planner/engine/authored-project';
 import {
+  createPreparedProjectCandidateSession,
   hermesShrineCandidateForProjectEvaluationAssembly,
   simulateProject,
   simulateProjectAssembly,
@@ -108,22 +109,22 @@ const complete = (
     offerBySlot: {
       first:
         overrides.first === undefined
-          ? { offer: { rewardType: 'HealBigDrop' } }
+          ? { rewardType: 'HealBigDrop' }
           : overrides.first === null
             ? null
-            : { offer: { rewardType: overrides.first } },
+            : { rewardType: overrides.first },
       secondLeft:
         overrides.secondLeft === undefined
-          ? { offer: { rewardType: 'SpellDrop' } }
+          ? { rewardType: 'SpellDrop' }
           : overrides.secondLeft === null
             ? null
-            : { offer: { rewardType: overrides.secondLeft } },
+            : { rewardType: overrides.secondLeft },
       secondRight:
         overrides.secondRight === undefined
-          ? { offer: { rewardType: 'TalentDrop' } }
+          ? { rewardType: 'TalentDrop' }
           : overrides.secondRight === null
             ? null
-            : { offer: { rewardType: overrides.secondRight } },
+            : { rewardType: overrides.secondRight },
     },
   }) as never;
 
@@ -891,6 +892,47 @@ describe('Hermes Shrine pickup settlement', () => {
     expect(p.rewards.hermesShrineDeliveries.map((delivery) => delivery.sourceKey)).not.toContain(
       hermesShrineDeliveryEntryKey(host, 'initial:first'),
     );
+  });
+
+  it('locates an unresolved rushed Mystery Boon beneath a fixed Postboss purchase action', () => {
+    let project = loadSurfaceNOPProject();
+    const plan = project.routes
+      .find((route) => route.routeKey === 'Surface')
+      ?.biomes.find((biome) => biome.biomeKey === 'N');
+    const postboss = plan?.topology?.occurrences.find(
+      (occurrence) => occurrence.gameName === 'N_PostBoss01',
+    );
+    if (postboss === undefined) throw new Error('fixture has no N Postboss occurrence');
+    const host = createOccurrenceAddress(createBiomeAddress('Surface', 'N'), postboss.occurrenceId);
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceHermesShrineOffer',
+      occurrence: host,
+      slotKey: 'secondRight',
+      value: { rewardType: 'BlindBoxLoot' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetHermesShrinePurchase',
+      occurrence: host,
+      generationKey: 'initial:secondRight',
+      purchase: { delay: 2, rushed: true },
+    });
+
+    const assembly = simulateProjectAssembly(catalog, project);
+    expect(assembly.evaluation.findings.map((finding) => finding.code)).toContain('rewardMissing');
+    const entry = createAcquisitionEntryAddress(
+      createAcquisitionSiteAddress(host, 'hermesShrineDelivery'),
+      hermesShrineDeliveryEntryKey(host, 'initial:secondRight'),
+    );
+    expect(
+      createPreparedProjectCandidateSession(catalog, assembly).evaluate({
+        kind: 'acquisitionEntryOffer',
+        entry,
+        value: {
+          rewardType: 'BlindBoxLoot',
+          payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+        },
+      }),
+    ).toMatchObject({ kind: 'acquisitionEntryOffer', result: { supported: true } });
   });
 
   it('settles a rushed Shrine item through the ordinary free pickup lifecycle', () => {

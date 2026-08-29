@@ -917,7 +917,7 @@ export function evaluateBiomeRewardChronology(
         pendingSpellDrops: Object.freeze(
           checkpointBranches.map((branch) =>
             Object.values(branch.pendingHermesShrineDeliveries).some(
-              (delivery) => delivery.reward.offer.rewardType === 'SpellDrop',
+              (delivery) => delivery.rewardType === 'SpellDrop',
             ),
           ),
         ),
@@ -1477,6 +1477,8 @@ export function evaluateBiomeRewardChronology(
         branches = transition.branches;
         for (const entry of transition.findings)
           findings.set(findingIdentityKey(entry.finding), entry);
+        for (const frontier of transition.producerFrontiers)
+          indexRewardProducerFrontier(producerFrontiers, frontier);
         recordAcquisitionRoleFrontiers(transition.roleFrontiers);
         if (room !== undefined)
           recordTraitChildSettlements(transition.traitChildSettlements, room.origin);
@@ -1632,7 +1634,7 @@ export function evaluateBiomeRewardChronology(
                 Object.freeze({
                   sourceKey: delivery.sourceKey,
                   sourceOrigin: delivery.sourceOrigin,
-                  rewardType: delivery.reward.offer.rewardType,
+                  rewardType: delivery.rewardType,
                   deliveryKind:
                     delivery.dueAt === undefined ? ('pending' as const) : ('countdown' as const),
                   ...(delivery.dueAt === undefined ? {} : { hostOrigin: delivery.dueAt }),

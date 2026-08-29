@@ -1,5 +1,4 @@
 import { semanticAddressKey, type TraitOfferOwnerAddress } from '../../authored-project/addresses';
-import type { AuthoredRewardState } from '../../authored-project/model';
 import {
   type ResolvedRewardOffer,
   type RewardBagState,
@@ -64,7 +63,7 @@ export interface PendingHermesShrineDelivery {
   readonly sourceKey: string;
   readonly sourceOrigin: import('../../authored-project/addresses').OccurrenceAddress;
   readonly generationKey: import('../../authored-project/model').HermesShrineGenerationKey;
-  readonly reward: AuthoredRewardState;
+  readonly rewardType: string;
   readonly remainingUses: number;
   /** Set at the exact qualifying lifecycle point; pickup settlement owns its host detail. */
   readonly dueAt?: import('../../authored-project/addresses').OccurrenceAddress;

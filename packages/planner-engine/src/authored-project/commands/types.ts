@@ -405,7 +405,7 @@ export type HermesShrineCommand =
       readonly kind: 'ReplaceHermesShrineOffer';
       readonly occurrence: OccurrenceAddress;
       readonly slotKey: import('../model').HermesShrineSlotKey;
-      readonly value: ResolvedRewardOffer;
+      readonly value: import('../model').HermesShrineInventoryOffer;
     }
   | {
       readonly kind: 'SetHermesShrinePurchase';
@@ -416,7 +416,7 @@ export type HermesShrineCommand =
   | {
       readonly kind: 'ReplaceHermesShrineTravelDealRefill';
       readonly occurrence: OccurrenceAddress;
-      readonly value: ResolvedRewardOffer;
+      readonly value: import('../model').HermesShrineInventoryOffer;
     };
 
 export type StygianWellCommand =

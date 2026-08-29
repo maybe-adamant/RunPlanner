@@ -1,5 +1,8 @@
 import type { OccurrenceAddress } from './addresses';
-import type { HermesShrineGenerationKey, OccurrenceId } from './model';
+import type { Catalog } from '../catalog-schema';
+import { locallyValidRewardOffers } from '../reward-kernel';
+import type { AuthoredRewardState, HermesShrineGenerationKey, OccurrenceId } from './model';
+import { createUnresolvedAcquisitionRewardState } from './traits';
 
 const GENERATION_KEYS = [
   'initial:first',
@@ -9,6 +12,22 @@ const GENERATION_KEYS = [
 ] as const satisfies readonly HermesShrineGenerationKey[];
 
 export const HERMES_SHRINE_DELIVERY_SITE_KEY = 'hermesShrineDelivery' as const;
+
+/**
+ * Materializes only payload-free Shrine identities. Payload-bearing identities
+ * stay unresolved until the concrete delivery pickup is authored.
+ */
+export function defaultHermesShrineDeliveryReward(
+  catalog: Catalog,
+  rewardType: string,
+): AuthoredRewardState | null {
+  const offers = locallyValidRewardOffers(catalog.rewards, rewardType);
+  if (offers.length !== 1) return null;
+  return createUnresolvedAcquisitionRewardState(catalog, offers[0]!, {
+    kind: 'producerLifecycle',
+    key: 'HermesShrineDelivery',
+  });
+}
 
 /** Stable source identity for a host-owned Shrine delivery entry. */
 export function hermesShrineDeliveryEntryKey(

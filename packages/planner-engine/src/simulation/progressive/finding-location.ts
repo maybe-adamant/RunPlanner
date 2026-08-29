@@ -603,20 +603,15 @@ export function locateFinding(
   // Fixed Boss/Postboss occurrences are real lifecycle owners but are not
   // ordinary topology decisions. Occurrence-local findings belong to the
   // completed biome's final fixed-room region.
-  const fixedOccurrence =
-    finding.origin.kind === 'occurrence'
-      ? finding.origin
-      : finding.origin.kind === 'fountainRarityOutcome'
-        ? occurrenceOwnerAddress(finding.origin)
-        : undefined;
   if (
-    fixedOccurrence !== undefined &&
-    fixedOccurrence.routeKey === prefix.routeKey &&
-    fixedOccurrence.biomeKey === prefix.biomeKey &&
+    'routeKey' in finding.origin &&
+    'biomeKey' in finding.origin &&
+    finding.origin.routeKey === prefix.routeKey &&
+    finding.origin.biomeKey === prefix.biomeKey &&
     (prefix.fixedRoomLinks ?? []).some(
       (link) =>
-        link.source.occurrenceId === fixedOccurrence.occurrenceId ||
-        link.target.occurrenceId === fixedOccurrence.occurrenceId,
+        ownsOccurrence(finding.origin, link.source.occurrenceId) ||
+        ownsOccurrence(finding.origin, link.target.occurrenceId),
     )
   ) {
     return Object.freeze({

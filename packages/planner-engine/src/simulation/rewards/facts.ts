@@ -28,7 +28,7 @@ export function visibleStoreOptionNames(
     shrineAssessments.every((assessment) => assessment.inventory?.complete === true);
   if (source.hermesShrine !== undefined && shrineInventoryVisible) {
     for (const offer of Object.values(source.hermesShrine.offerBySlot))
-      names.add(offer!.offer.rewardType);
+      names.add(offer!.rewardType);
   }
   return names;
 }
@@ -219,7 +219,7 @@ export function createBiomeRewardFacts(
     currentRoomShopOptionNames,
     rewardLookups,
     pendingSpellDrop: Object.values(branch?.pendingHermesShrineDeliveries ?? {}).some(
-      (delivery) => delivery.reward.offer.rewardType === 'SpellDrop',
+      (delivery) => delivery.rewardType === 'SpellDrop',
     ),
     allSpellInvested: branch?.hexProgress.talentDropsClosed === true,
     fail: (detail) => {

@@ -181,7 +181,7 @@ export function applyRoomEnteredTransition(
                       'generatedTarget',
                     ),
                     pendingSpellDrop: Object.values(branch.pendingHermesShrineDeliveries).some(
-                      (delivery) => delivery.reward.offer.rewardType === 'SpellDrop',
+                      (delivery) => delivery.rewardType === 'SpellDrop',
                     ),
                     fail: (detail) => {
                       throw new BiomeRewardSimulationContractError(detail);

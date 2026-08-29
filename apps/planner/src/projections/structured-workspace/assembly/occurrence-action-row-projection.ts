@@ -328,6 +328,8 @@ function roomActionsForOccurrence(
                   ((row.reference.kind === 'interactLocalReward' && roomLocal.kind !== 'fields') ||
                     (row.reference.kind === 'interactAcquisitionEntry' &&
                       input.occurrence.state.kind !== 'shop' &&
+                      resolvedRewardControl.offerEditVisibility === 'visible') ||
+                    (row.reference.kind === 'purchaseHermesShrineOffer' &&
                       resolvedRewardControl.offerEditVisibility === 'visible')),
               }),
             }),

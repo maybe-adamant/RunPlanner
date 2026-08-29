@@ -16,7 +16,10 @@ import {
   artificerReplacementEntryKey,
 } from '../artificer';
 import { createOccurrenceAddress } from '../addresses';
-import { parseHermesShrineDeliveryEntryKey } from '../hermes-shrine-delivery';
+import {
+  defaultHermesShrineDeliveryReward,
+  parseHermesShrineDeliveryEntryKey,
+} from '../hermes-shrine-delivery';
 
 function retainArtificerReplacementEntry(
   occurrence: RoomOccurrence,
@@ -128,49 +131,23 @@ export function applyAcquisitionDispositionCommand(
         owner.site.pointKey === 'hermesShrineDelivery'
           ? parseHermesShrineDeliveryEntryKey(owner.entryKey)
           : undefined;
-      if (
+      const retainedEntry = authoredAcquisitionEntryAtSite(occurrence, owner.site, owner.entryKey);
+      const rushedSource =
         shrineDelivery !== undefined &&
         shrineDelivery.generationKey !== 'travelDealRefill' &&
         shrineDelivery.routeKey === owner.routeKey &&
         shrineDelivery.biomeKey === owner.biomeKey &&
         shrineDelivery.sourceOccurrenceId === occurrence.occurrenceId
-      ) {
-        const shrine = occurrence.hermesShrine;
-        const slotKey = shrineDelivery.generationKey.slice(
-          'initial:'.length,
-        ) as import('../model').HermesShrineSlotKey;
-        const purchase = shrine?.purchaseBySlot?.[slotKey];
-        const reward = shrine?.offerBySlot[slotKey];
-        if (
-          shrine === undefined ||
-          purchase?.rushed !== true ||
-          reward === null ||
-          reward === undefined
-        )
-          failCommand(command, 'Shrine delivery is not a participating rushed source');
-        const updated = replace(reward);
-        const replaced = replaceOccurrence(
-          topology,
-          retainArtificerReplacementEntry(
-            Object.freeze({
-              ...occurrence,
-              hermesShrine: Object.freeze({
-                ...shrine,
-                offerBySlot: Object.freeze({
-                  ...shrine.offerBySlot,
-                  [slotKey]: updated,
-                }),
-              }),
-            }),
-            located,
-            owner,
-            role,
-            command.value.kind === 'artificer',
-          ),
-        );
-        return updateOccurrenceTopology(document, located, replaced);
-      }
-      const entry = authoredAcquisitionEntryAtSite(occurrence, owner.site, owner.entryKey);
+          ? occurrence.hermesShrine?.offerBySlot[
+              shrineDelivery.generationKey.slice(
+                'initial:'.length,
+              ) as import('../model').HermesShrineSlotKey
+            ]
+          : undefined;
+      const entry =
+        retainedEntry === undefined && rushedSource !== undefined && rushedSource !== null
+          ? defaultHermesShrineDeliveryReward(catalog, rushedSource.rewardType)
+          : retainedEntry;
       if (entry === undefined || entry === null)
         failCommand(command, 'missing or unresolved pickup entry');
       const replaced = replaceOccurrence(

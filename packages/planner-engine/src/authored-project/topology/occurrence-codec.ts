@@ -1,6 +1,5 @@
 import type { BiomeLayout, Catalog } from '../../catalog-schema';
 import type {
-  AuthoredRewardState,
   HermesShrineState,
   PurgingPoolState,
   RoomActionState,
@@ -9,7 +8,6 @@ import type {
 import { activeRoomActionReferences, roomActionKey } from '../room-actions';
 import { decodeRoomActionState } from './room-action-codec';
 import { assertStygianWellPurchaseActionClosure, decodeStygianWellState } from './well-codec';
-import { decodeNullableRewardState } from '../room-state/reward-acquisition-codec';
 import { decodeRoomState } from '../room-state/codec';
 import { decodeRoomEncounterState } from '../room-state/encounters';
 import { createBiomeAddress, semanticAddressKey } from '../addresses';
@@ -121,12 +119,12 @@ function decodeOrdinaryHermesShrineState(
     Object.fromEntries(
       slots.map((slot) => [
         slot,
-        decodeNullableRewardState(offers[slot], catalog, `${path}.offerBySlot.${slot}`, {
-          kind: 'producerLifecycle',
-          key: 'HermesShrineDelivery',
-        }),
+        decodeHermesShrineInventoryOffer(offers[slot], catalog, `${path}.offerBySlot.${slot}`),
       ]),
-    ) as Record<import('../model').HermesShrineSlotKey, AuthoredRewardState | null>,
+    ) as Record<
+      import('../model').HermesShrineSlotKey,
+      import('../model').HermesShrineInventoryOffer | null
+    >,
   );
   const purchases = hasPurchases ? expectRecord(raw.purchaseBySlot, `${path}.purchaseBySlot`) : {};
   const purchaseBySlot = Object.freeze(
@@ -184,11 +182,10 @@ function decodeOrdinaryHermesShrineState(
                   rushed: false,
                 });
               })();
-        const offer = decodeNullableRewardState(
+        const offer = decodeHermesShrineInventoryOffer(
           refill.offer,
           catalog,
           `${path}.travelDealRefill.offer`,
-          { kind: 'producerLifecycle', key: 'HermesShrineDelivery' },
         );
         if (purchase !== undefined && offer === null)
           failProjectDocument(
@@ -205,6 +202,20 @@ function decodeOrdinaryHermesShrineState(
     ...(hasPurchases ? { purchaseBySlot } : {}),
     ...(travelDealRefill === undefined ? {} : { travelDealRefill }),
   }) as HermesShrineState;
+}
+
+function decodeHermesShrineInventoryOffer(
+  value: unknown,
+  catalog: Catalog,
+  path: string,
+): import('../model').HermesShrineInventoryOffer | null {
+  if (value === null) return null;
+  const raw = expectRecord(value, path);
+  expectExactKeys(raw, ['rewardType'], path);
+  const rewardType = expectString(raw.rewardType, `${path}.rewardType`);
+  if (catalog.rewards.rewardTypes.byKey[rewardType] === undefined)
+    failProjectDocument(`${path}.rewardType`, 'unknown reward type');
+  return Object.freeze({ rewardType });
 }
 
 function assertHermesShrinePurchaseActionClosure(

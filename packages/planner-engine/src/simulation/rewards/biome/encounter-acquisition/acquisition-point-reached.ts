@@ -7,6 +7,7 @@ import {
   semanticAddressKey,
 } from '../../../../authored-project/addresses';
 import type { RouteLoadout } from '../../../../authored-project/model';
+import { roomActionKey } from '../../../../authored-project/room-actions';
 import {
   acquisitionSiteStorageKey,
   artificerAcquisitionSite,
@@ -14,9 +15,12 @@ import {
   parseArtificerReplacementEntryKey,
 } from '../../../../authored-project/artificer';
 import {
+  defaultHermesShrineDeliveryReward,
   hermesShrineDeliveryEntryKey,
   parseHermesShrineDeliveryEntryKey,
 } from '../../../../authored-project/hermes-shrine-delivery';
+import { createUnresolvedPickupRewardState } from '../../../../authored-project/traits';
+import type { ResolvedRewardOffer } from '../../../../reward-kernel';
 import type { HistoryEvent, ProgressiveRoomHistoryViews } from '../../../history';
 import type { CanonicalAuthoredRoom } from '../../../materialization';
 import { isPurgingPoolEligibleTrait, type PurgingPoolAssessment } from '../../../purging-pool';
@@ -47,6 +51,11 @@ import { addRewardFinding, rewardFinding } from '../../findings';
 import type { AuthoredSiteSettlementResult } from '../generation/authored-site-settlement';
 import { settleAuthoredAcquisitionSite } from '../generation/authored-site-settlement';
 import type { ReachedTraitChildCheckpoint } from '../../trait-settlement';
+import {
+  createRewardProducerCandidateResult,
+  type RewardProducerOwnerAddress,
+  type RewardProducerFrontier,
+} from '../../producer-frontiers';
 
 export interface HermesShrineRefillState {
   readonly firstRushedInitialGeneration: boolean;
@@ -63,6 +72,7 @@ export interface RuntimeOfferFallback {
 export interface AcquisitionPointReachedTransition {
   readonly branches: readonly RewardBranchState[];
   readonly findings: readonly FindingRegionEntry[];
+  readonly producerFrontiers: readonly RewardProducerFrontier[];
   readonly roleFrontiers: readonly AcquisitionRoleFrontier[];
   readonly traitChildSettlements: readonly ReachedTraitChildCheckpoint[];
   readonly authoredSiteSettlement: AuthoredSiteSettlementResult | undefined;
@@ -114,6 +124,7 @@ function shrineFallbackRewardType(
 function transitionResult(input: {
   readonly branches: readonly RewardBranchState[];
   readonly findings: ReadonlyMap<string, FindingRegionEntry>;
+  readonly producerFrontiers?: readonly RewardProducerFrontier[] | undefined;
   readonly roleFrontiers?: readonly AcquisitionRoleFrontier[] | undefined;
   readonly traitChildSettlements?: readonly ReachedTraitChildCheckpoint[] | undefined;
   readonly authoredSiteSettlement?: AuthoredSiteSettlementResult | undefined;
@@ -123,6 +134,7 @@ function transitionResult(input: {
   return Object.freeze({
     branches: Object.freeze(input.branches),
     findings: Object.freeze([...input.findings.values()]),
+    producerFrontiers: Object.freeze(input.producerFrontiers ?? []),
     roleFrontiers: Object.freeze(input.roleFrontiers ?? []),
     traitChildSettlements: Object.freeze(input.traitChildSettlements ?? []),
     authoredSiteSettlement: input.authoredSiteSettlement,
@@ -180,6 +192,75 @@ export function applyAcquisitionPointReachedTransition(
       undefined,
       branch,
     );
+  const hermesDeliveryProducerFrontier = (input: {
+    readonly address: import('../../../../authored-project/addresses').AcquisitionEntryAddress;
+    readonly rewardType: string;
+    readonly branchesBeforeEntry: readonly RewardBranchState[];
+    readonly acquisitionView: NonNullable<ProgressiveRoomHistoryViews['entry']>;
+    readonly atomicRegion: string;
+  }): RewardProducerFrontier => {
+    const addressKey = semanticAddressKey(input.address);
+    return Object.freeze({
+      generationPolicy: 'sequential' as const,
+      generationHistorySequence: event.sequence,
+      reachableBranchCount: input.branchesBeforeEntry.length,
+      acquisitionHorizon: 'ownEnteredLifecycle' as const,
+      owners: Object.freeze([input.address]),
+      evaluateOffer: (owner: RewardProducerOwnerAddress, offer: ResolvedRewardOffer) => {
+        if (semanticAddressKey(owner) !== addressKey)
+          throw new BiomeRewardSimulationContractError(
+            'Hermes delivery frontier received a foreign owner',
+          );
+        if (offer.rewardType !== input.rewardType)
+          return Object.freeze({ findings: Object.freeze([]), supported: false });
+        const candidateFindings = new Map<string, FindingRegionEntry>();
+        const candidateSettlement = settlePickupAcquisitionSite(
+          catalog,
+          input.branchesBeforeEntry,
+          {
+            siteOwner: room.origin,
+            site: input.address.site,
+            entries: Object.freeze({
+              [input.address.entryKey]: createUnresolvedPickupRewardState(
+                catalog,
+                offer,
+                'HermesShrineDelivery',
+              ),
+            }),
+            order: Object.freeze([input.address.entryKey]),
+            requiredEntryKeys: new Set([input.address.entryKey]),
+            producerLifecycleKey: 'HermesShrineDelivery',
+            historySequence: event.sequence,
+            atomicRegion: input.atomicRegion,
+            facts: (history, _names, branch) => factsAt(input.acquisitionView, history, branch),
+            findingChronology: chronology,
+            authoredSeaStarDuplicateSiteKeys,
+            artificerReplacementFor(source, role) {
+              const site = artificerAcquisitionSite(room.origin, source);
+              return (
+                room.acquisitionSites[acquisitionSiteStorageKey(site)]?.entries[
+                  artificerReplacementEntryKey(source, role)
+                ] ?? null
+              );
+            },
+            artificerReplacementSiteFor(source) {
+              return artificerAcquisitionSite(room.origin, source);
+            },
+          },
+          candidateFindings,
+        );
+        return createRewardProducerCandidateResult(
+          candidateFindings,
+          Object.freeze([
+            ...candidateSettlement.branches,
+            ...(candidateSettlement.traitChildSettlements ?? []).map(
+              (checkpoint) => checkpoint.branch,
+            ),
+          ]),
+        );
+      },
+    });
+  };
 
   if (event.point.startsWith('hermesShrinePurchase:')) {
     const generationKey = event.point.slice(
@@ -203,11 +284,15 @@ export function applyAcquisitionPointReachedTransition(
       return transitionResult({ branches: inputs.sourceBranches, findings });
     }
     const sourceKey = hermesShrineDeliveryEntryKey(room.origin, generationKey);
+    const deliverySite = createAcquisitionSiteAddress(room.origin, 'hermesShrineDelivery');
+    const retainedDelivery = room.acquisitionSites.hermesShrineDelivery?.entries[sourceKey];
+    const deliveryReward =
+      retainedDelivery ?? defaultHermesShrineDeliveryReward(catalog, offer.rewardType);
     const prior = inputs.hermesShrineRefillState;
     const fallbackRewardType = shrineFallbackRewardType(
       catalog,
       generationKey,
-      offer.offer.rewardType,
+      offer.rewardType,
       prior?.refillAssessments?.[0],
     );
     const runtimeOfferFallbacks =
@@ -220,7 +305,7 @@ export function applyAcquisitionPointReachedTransition(
                 createAcquisitionSiteAddress(room.origin, 'hermesShrineDelivery'),
                 sourceKey,
               ),
-              preferredKey: offer.offer.rewardType,
+              preferredKey: offer.rewardType,
               fallbackKey: fallbackRewardType,
             }),
           ];
@@ -266,7 +351,7 @@ export function applyAcquisitionPointReachedTransition(
           refill !== null &&
           refillAssessments.length === inputs.sourceBranches.length &&
           refillAssessments.every((assessment) =>
-            assessment.candidateRewardTypes.includes(refill.offer.rewardType),
+            assessment.candidateRewardTypes.includes(refill.rewardType),
           );
         refillState = Object.freeze({
           firstRushedInitialGeneration: true,
@@ -278,7 +363,7 @@ export function applyAcquisitionPointReachedTransition(
         else if (!supported)
           addFinding('hermesShrineTravelDealRefillUnavailable', room.origin, {
             generationKey,
-            rewardType: refill.offer.rewardType,
+            rewardType: refill.rewardType,
           });
       }
     }
@@ -293,7 +378,7 @@ export function applyAcquisitionPointReachedTransition(
                 sourceKey,
                 sourceOrigin: room.origin,
                 generationKey,
-                reward: offer,
+                rewardType: offer.rewardType,
                 remainingUses: purchase.delay,
               }),
             }),
@@ -308,17 +393,27 @@ export function applyAcquisitionPointReachedTransition(
       roomView.acquisitionPoints?.find((point) => point.point === event.point)?.before ??
       roomView.preOutgoing ??
       roomView.entry;
+    const purchaseAction = Object.freeze({
+      kind: 'purchaseHermesShrineOffer' as const,
+      generationKey,
+    });
+    const purchaseAddress = createRoomActionAddress(
+      createBiomeAddress(room.origin.routeKey, room.origin.biomeKey),
+      room.origin.occurrenceId,
+      roomActionKey(purchaseAction),
+    );
     const settled = settlePickupAcquisitionSite(
       catalog,
       inputs.sourceBranches,
       {
         siteOwner: room.origin,
-        site: createAcquisitionSiteAddress(room.origin, 'hermesShrineDelivery'),
-        entries: Object.freeze({ [sourceKey]: offer }),
+        site: deliverySite,
+        entries: Object.freeze({ [sourceKey]: deliveryReward }),
         order: Object.freeze([sourceKey]),
         requiredEntryKeys: new Set([sourceKey]),
         producerLifecycleKey: 'HermesShrineDelivery',
         historySequence: event.sequence,
+        atomicRegion: ownerRegion(purchaseAddress),
         facts: (history, _names, branch) => factsAt(acquisitionView, history, branch),
         findingChronology: chronology,
         authoredSeaStarDuplicateSiteKeys,
@@ -339,6 +434,15 @@ export function applyAcquisitionPointReachedTransition(
     return transitionResult({
       branches: settled.branches,
       findings,
+      producerFrontiers: Object.freeze([
+        hermesDeliveryProducerFrontier({
+          address: createAcquisitionEntryAddress(deliverySite, sourceKey),
+          rewardType: offer.rewardType,
+          branchesBeforeEntry: inputs.sourceBranches,
+          acquisitionView,
+          atomicRegion: ownerRegion(purchaseAddress),
+        }),
+      ]),
       roleFrontiers: settled.roleFrontiers,
       traitChildSettlements: settled.traitChildSettlements,
       runtimeOfferFallbacks,
@@ -497,7 +601,7 @@ export function applyAcquisitionPointReachedTransition(
         agreedDue === undefined ||
         retained === undefined ||
         retained === null ||
-        JSON.stringify(retained.offer) !== JSON.stringify(agreedDue.reward.offer)
+        retained.offer.rewardType !== agreedDue.rewardType
       ) {
         addFinding('rewardSourceUnavailable', entry, {
           reason: agreedDue === undefined ? 'staleHermesShrineDelivery' : 'retainedSourceMismatch',
