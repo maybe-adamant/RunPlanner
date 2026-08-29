@@ -41,6 +41,45 @@ function sourceDecision(project: ReturnType<typeof surfaceProject>, biome = oBio
 }
 
 describe('authored-project room replacement commands', () => {
+  it('cannot replace an ordinary door target with a fixed completion room', () => {
+    const openingId = createOccurrenceId('fixed-completion-replacement-opening');
+    const targetId = createOccurrenceId('fixed-completion-replacement-target');
+    let project = applyProjectCommand(fProject(), catalog, {
+      kind: 'CreateStart',
+      biome: fBiome,
+      occurrenceId: openingId,
+      gameName: 'F_Opening01',
+    });
+    const decision = createExitDecisionAddress(fBiome, {
+      kind: 'occurrence',
+      occurrenceId: openingId,
+    });
+    project = applyProjectCommand(project, catalog, { kind: 'CreateBatch', decision });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(fBiome, decision.source),
+      storeKey: 'RunProgress',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(fBiome, decision.source, 'exit1'),
+      occurrenceId: targetId,
+      gameName: 'F_Combat02',
+    });
+
+    for (const gameName of ['F_Boss01', 'F_PostBoss01'] as const) {
+      expect(() =>
+        applyProjectCommand(project, catalog, {
+          kind: 'ReplaceOccurrenceRoom',
+          occurrence: createOccurrenceAddress(fBiome, targetId),
+          gameName,
+        }),
+      ).toThrowError(
+        expect.objectContaining({ detail: `${gameName} is not an ordinary normal-door target` }),
+      );
+    }
+  });
+
   it('leaves replacement Shop inventory unresolved after a route loadout change', () => {
     const initial = fProject();
     const initialLoadout = initial.routes.find((route) => route.routeKey === 'Underworld')?.loadout;

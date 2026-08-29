@@ -763,6 +763,22 @@ describe('DecisionWorkbench', () => {
     expect(screen.queryByRole('button', { name: 'Replace doors with Preboss' })).toBeNull();
   });
 
+  it('keeps the free-reward Preboss editor visible beside its Shop peer', () => {
+    const owner = createExitDecisionAddress(goldenFBiome, {
+      kind: 'occurrence',
+      occurrenceId: goldenFOccurrenceId(10, 1),
+    });
+    renderDecisionWorkbench(createGoldenFGHIProject(), 'Underworld', 'F', subjectForOwner(owner));
+
+    const prebossOffers = screen.getAllByRole('article', { name: 'Preboss room offer' });
+    expect(prebossOffers).toHaveLength(2);
+    expect(
+      prebossOffers.filter(
+        (offer) => within(offer).queryByRole('button', { name: 'Reward' }) !== null,
+      ),
+    ).toHaveLength(1);
+  });
+
   it('keeps terminal Door 1 visible through an unresolved Fields roll and allows Preboss', async () => {
     const owner = createExitDecisionAddress(goldenHBiome, {
       kind: 'occurrence',

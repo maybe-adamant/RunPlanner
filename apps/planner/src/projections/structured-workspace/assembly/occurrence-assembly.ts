@@ -72,7 +72,14 @@ function offerRewardRewards(
   roomLocal: WorkspaceRoomLocal,
   controls: readonly WorkspaceRewardControl[],
 ): readonly WorkspaceDoorReward[] {
-  switch (room.offerRewardBinding.kind) {
+  // One Preboss declaration can materialize as either its declared Shop or a
+  // takeover-owned free-reward peer. The authored occurrence selects that
+  // producer mode, while the declaration still owns the counted reward domain.
+  const binding =
+    input.occurrence.state.kind === 'freeReward'
+      ? ({ kind: 'incomingReward' } as const)
+      : room.offerRewardBinding;
+  switch (binding.kind) {
     case 'none':
       return Object.freeze([]);
     case 'incomingReward': {
@@ -118,7 +125,6 @@ function offerRewardRewards(
       ]);
     }
     case 'localRewardGroup': {
-      const binding = room.offerRewardBinding;
       const group = room.localChildren.find((child) => child.key === binding.groupKey);
       if (group?.kind !== 'boundedRewardSlots' || group.offerRewardCapability !== 'fieldsCages') {
         throw new StructuredWorkspaceProjectionContractError(
