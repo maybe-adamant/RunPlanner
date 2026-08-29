@@ -69,6 +69,7 @@ describe('occurrence interaction requirements', () => {
       resources: [
         {
           family: 'Fishing' as const,
+          label: 'Successful Fishing — Water',
           action: 'add' as const,
           interactionKey: 'resource:Fishing',
           legal: true,

@@ -2157,9 +2157,16 @@ export interface WorkspaceRoomSummary {
   /** Route-owned selected successful tool interactions, presented at their exact room. */
   readonly resources?: readonly {
     readonly family: import('@run-planner/engine/catalog-schema').ResourceFamily;
+    readonly label: string;
     readonly action: 'add' | 'move' | 'remove';
     readonly interactionKey: string;
     readonly legal: boolean;
+    /** Only present when selecting this room would replace another placement. */
+    readonly currentPlacement?: {
+      readonly address: import('@run-planner/engine/authored-project').OccurrenceAddress;
+      readonly biomeKey: string;
+      readonly locationLabel: string;
+    };
   }[];
   readonly roomPicker?: WorkspaceRoomPickerControl;
   /** A Boss-only fixed effect at its ordinary Boss-defeated lifecycle seam. */

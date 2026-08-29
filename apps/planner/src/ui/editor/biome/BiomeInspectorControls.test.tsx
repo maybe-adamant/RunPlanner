@@ -277,9 +277,16 @@ describe('Biome inspector controls', () => {
       new Set(resourceActions.map((action) => action.closest('.room-feature-presence-row'))).size,
     ).toBe(resourceActions.length);
     expect(within(resources).queryByText('Repair required')).toBeNull();
+    expect(
+      within(resources).getByText(
+        'Each successful element outcome can be placed once across the route.',
+      ),
+    ).toBeTruthy();
     const historyBefore = view.application.store.getState().projectWorkspace.history.past.length;
 
-    const removeMining = within(resources).getByRole('checkbox', { name: 'Mining' });
+    const removeMining = within(resources).getByRole('checkbox', {
+      name: 'Successful Mining — Fire',
+    });
     expect(removeMining).toHaveProperty('checked', true);
     await view.user.click(removeMining);
     const selected = () =>
@@ -294,6 +301,115 @@ describe('Biome inspector controls', () => {
 
     act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
     expect(selected()).toEqual({ biomeKey: 'N', occurrenceId: 'surface-n-opening' });
+  });
+
+  it('binds an unplaced legal resource to one semantic edit and undo', async () => {
+    const view = renderWorkspace(loadSurfaceNResourcesProject(), 'Surface', 'N');
+    await view.user.click(screen.getByRole('button', { name: /^Opening/ }));
+    await view.user.click(screen.getByRole('tab', { name: 'Features' }));
+    const resources = screen.getByRole('region', { name: 'Resources' });
+    const fishing = within(resources).getByRole('checkbox', {
+      name: 'Successful Fishing — Water',
+    });
+    expect(fishing).toHaveProperty('checked', false);
+    expect(fishing).toHaveProperty('disabled', false);
+    const selected = () =>
+      view.application.store
+        .getState()
+        .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
+        ?.resourcePlacements.Fishing;
+    const historyBefore = view.application.store.getState().projectWorkspace.history.past.length;
+
+    await view.user.click(fishing);
+    expect(selected()).toEqual({ biomeKey: 'N', occurrenceId: 'surface-n-opening' });
+    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+      historyBefore + 1,
+    );
+
+    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
+    expect(selected()).toBeNull();
+    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+      historyBefore,
+    );
+  });
+
+  it('discloses and navigates an existing resource placement before moving it', async () => {
+    const view = renderWorkspace(loadSurfaceNResourcesProject(), 'Surface', 'N');
+    await view.user.click(screen.getByRole('button', { name: /^Opening/ }));
+    await view.user.click(screen.getByRole('tab', { name: 'Features' }));
+    const resources = screen.getByRole('region', { name: 'Resources' });
+    const opening = workspaceBiome(view.application, 'Surface', 'N').nodes.find(
+      (node): node is Extract<WorkspaceNode, { readonly kind: 'occurrenceWorkbench' }> =>
+        node.kind === 'occurrenceWorkbench' && node.room.occurrenceId === 'surface-n-opening',
+    );
+    if (opening === undefined) throw new Error('resource host room is missing');
+    const moved = opening.room.resources?.find((resource) => resource.action === 'move');
+    if (moved?.currentPlacement === undefined)
+      throw new Error('resource move disclosure is missing');
+    const illegalMove = opening.room.resources?.find(
+      (resource) => resource.action === 'move' && !resource.legal,
+    );
+    if (illegalMove === undefined) throw new Error('resource illegal-target witness is missing');
+
+    const disclosure = resources.querySelector('.resource-placement-disclosure');
+    expect(disclosure?.textContent).toContain('Selecting this room moves it here.');
+    const placementLink = within(resources).getByRole('button', {
+      name: `${moved.currentPlacement.biomeKey} · ${moved.currentPlacement.locationLabel}`,
+    });
+    expect(placementLink.classList.contains('semantic-focus-link')).toBe(true);
+    for (const label of [
+      'Successful Mining — Fire',
+      'Successful Spirit — Air',
+      'Successful Seed — Earth',
+      'Successful Fishing — Water',
+    ]) {
+      expect(within(resources).getByRole('checkbox', { name: label })).toBeTruthy();
+    }
+    const historyBeforeMove = view.application.store.getState().projectWorkspace.history;
+    const legalMove = within(resources).getByRole('checkbox', { name: moved.label });
+    await view.user.click(legalMove);
+    const movedPlacement = () =>
+      view.application.store
+        .getState()
+        .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
+        ?.resourcePlacements[moved.family];
+    expect(movedPlacement()).toEqual({
+      biomeKey: opening.room.address.biomeKey,
+      occurrenceId: opening.room.occurrenceId,
+    });
+    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+      historyBeforeMove.past.length + 1,
+    );
+    act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
+    expect(movedPlacement()).toEqual({
+      biomeKey: moved.currentPlacement.biomeKey,
+      occurrenceId: moved.currentPlacement.address.occurrenceId,
+    });
+    expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
+      historyBeforeMove.past.length,
+    );
+
+    const historyBeforeNavigation = view.application.store.getState().projectWorkspace.history;
+    const illegalCheckbox = within(resources).getByRole('checkbox', {
+      name: 'Successful Seed — Earth',
+    });
+    expect(illegalCheckbox).toHaveProperty('disabled', true);
+    await view.user.click(illegalCheckbox);
+    expect(view.application.store.getState().projectWorkspace.history).toBe(
+      historyBeforeNavigation,
+    );
+
+    const currentPlacementLink = within(resources).getByRole('button', {
+      name: `${moved.currentPlacement.biomeKey} · ${moved.currentPlacement.locationLabel}`,
+    });
+    await view.user.click(currentPlacementLink);
+
+    expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(
+      moved.currentPlacement.address,
+    );
+    expect(view.application.store.getState().projectWorkspace.history).toBe(
+      historyBeforeNavigation,
+    );
   });
 
   it('keeps the reached Judgment editor on the fixed Boss timeline and directly reopenable', () => {

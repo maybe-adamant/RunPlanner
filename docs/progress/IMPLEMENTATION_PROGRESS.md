@@ -218,6 +218,17 @@ representative full-lane witnesses:
 Pools and Wells alone allow runtime-random inventory at Interact. World Shops
 and Shrines author every visible inventory identity.
 
+The 2026-08-28 room-feature availability and resource-presentation delivery,
+implemented from the locked two-gate plan, completed the application-side
+Resource disclosure slice. Resource rows now project declaration-derived
+successful outcome labels, explain the route-wide one-placement limit, and
+disclose the prior occurrence with a semantic navigation link on internal move
+rows. Add, remove, illegal-target disabling, replacement, and Undo
+remain the existing single semantic-command path. The focused
+`BiomeInspectorControls.test.tsx` witness covers all four labels, move
+disclosure/navigation, illegal-target protection, one-edit replacement, and
+Undo. No authored schema, catalog, or simulation behavior changed.
+
 ### Sparse Keepsake Rack authoring
 
 Schema 67 separates the physical Postboss rack from authored use. An unused

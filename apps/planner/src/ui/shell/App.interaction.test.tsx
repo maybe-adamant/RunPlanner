@@ -1686,7 +1686,7 @@ describe('planner history interaction', () => {
     );
     expect(blockedBanner.getAttribute('role')).toBeNull();
     expect(blockedBanner.closest('.editor-panel')?.getAttribute('aria-live')).toBe('polite');
-    expect(screen.getByRole('button', { name: 'Room' })).toHaveProperty('disabled', false);
+    expect(screen.getByRole('button', { name: 'Start biome' })).toHaveProperty('disabled', false);
 
     await user.click(screen.getByRole('button', { name: 'Surface' }));
     await user.selectOptions(screen.getByLabelText('Configure route up to'), '4');
@@ -1706,7 +1706,7 @@ describe('planner history interaction', () => {
           new RegExp(`Finish and fix ${predecessor} before ${label} can be evaluated`),
         ),
       ).toBeTruthy();
-      expect(screen.getByRole('button', { name: 'Room' })).toHaveProperty('disabled', false);
+      expect(screen.getByRole('button', { name: 'Start biome' })).toHaveProperty('disabled', false);
     }
 
     const ephyra = screen.getByRole('button', { name: 'Ephyra' });
@@ -1714,7 +1714,7 @@ describe('planner history interaction', () => {
 
     await user.click(ephyra);
     expect(screen.getByText('Ephyra is not evaluated yet. You can still edit it.')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Room' })).toHaveProperty('disabled', false);
+    expect(screen.getByRole('button', { name: 'Start biome' })).toHaveProperty('disabled', false);
   });
 });
 

@@ -8,6 +8,7 @@ import {
   type WorkspaceRoomSummary,
 } from '@planner/projections/structured-workspace';
 import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
+import { semanticOwnerNavigated } from '@planner/state/editorSessionSlice';
 import { useAppDispatch } from '@planner/state/store';
 import { SemanticOwnerMarker } from '@planner/ui/feedback/EvaluationFeedback';
 import type { ContextualPickerModel } from '@planner/projections/contextualPicker';
@@ -237,21 +238,6 @@ export function AnomalyIdentityControls({ room }: { readonly room: WorkspaceRoom
   );
 }
 
-function resourceFamilyLabel(
-  family: import('@run-planner/engine/catalog-schema').ResourceFamily,
-): string {
-  switch (family) {
-    case 'Pickaxe':
-      return 'Mining';
-    case 'Exorcism':
-      return 'Spirit';
-    case 'Shovel':
-      return 'Seed';
-    case 'Fishing':
-      return 'Fishing';
-  }
-}
-
 function RoomResourceControls({
   interactions,
   room,
@@ -259,26 +245,45 @@ function RoomResourceControls({
   readonly interactions: WorkspaceInteractionCatalog;
   readonly room: WorkspaceRoomSummary;
 }) {
+  const dispatch = useAppDispatch();
   const executeIntent = useCommandIntent();
   return (
     <div aria-label="Resources" className="room-feature-action-list" role="region">
+      <p className="resource-uniqueness-caption">
+        Each successful element outcome can be placed once across the route.
+      </p>
       {room.resources?.map((resource) => (
-        <label className="room-feature-presence-row" key={resource.family}>
-          <input
-            checked={resource.action === 'remove'}
-            disabled={!resource.legal && resource.action !== 'remove'}
-            onChange={() =>
-              executeIntent(
-                requireWorkspaceInteraction(
-                  interactions.resourcePlacements,
-                  resource.interactionKey,
-                ).intent,
-              )
-            }
-            type="checkbox"
-          />
-          <span>{resourceFamilyLabel(resource.family)}</span>
-        </label>
+        <div className="room-feature-presence-row" key={resource.family}>
+          <label>
+            <input
+              checked={resource.action === 'remove'}
+              disabled={!resource.legal && resource.action !== 'remove'}
+              onChange={() =>
+                executeIntent(
+                  requireWorkspaceInteraction(
+                    interactions.resourcePlacements,
+                    resource.interactionKey,
+                  ).intent,
+                )
+              }
+              type="checkbox"
+            />
+            <span>{resource.label}</span>
+          </label>
+          {resource.action === 'move' && resource.currentPlacement !== undefined ? (
+            <span className="resource-placement-disclosure">
+              Currently placed at{' '}
+              <button
+                className="semantic-focus-link"
+                onClick={() => dispatch(semanticOwnerNavigated(resource.currentPlacement!.address))}
+                type="button"
+              >
+                {resource.currentPlacement.biomeKey} · {resource.currentPlacement.locationLabel}
+              </button>
+              . Selecting this room moves it here.
+            </span>
+          ) : null}
+        </div>
       ))}
     </div>
   );

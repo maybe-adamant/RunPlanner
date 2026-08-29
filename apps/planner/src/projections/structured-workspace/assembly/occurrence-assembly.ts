@@ -3,6 +3,7 @@ import {
   createFigurineArcanaAddress,
   createIncomingRewardAddress,
   createLocalRewardAddress,
+  createBiomeAddress,
   createOccurrenceAddress,
   createAcquisitionEntryAddress,
   createKeepsakeEquipResultAddress,
@@ -65,6 +66,7 @@ import {
 import { assembleOccurrenceFeatures } from './occurrence-features-assembly';
 import { occurrenceInteractionRequirements } from './occurrence-interaction-requirements';
 import { roomWorkbenchPresentation } from './occurrence-room-workbench';
+import { resourceOutcomeLabel } from './resource-labels';
 
 function offerRewardRewards(
   input: WorkspaceOccurrenceAssemblyInput,
@@ -513,8 +515,37 @@ export function assembleWorkspaceOccurrence(
               const here =
                 placement?.biomeKey === input.biome.biomeKey &&
                 placement.occurrenceId === occurrence.occurrenceId;
+              const rule = room.resourcePointSupport.rules[family];
+              if (rule === undefined) {
+                throw new StructuredWorkspaceProjectionContractError(
+                  `${room.gameName} declares ${family} without resource rules`,
+                );
+              }
+              const currentPlacement =
+                placement !== null && !here
+                  ? (() => {
+                      const entry = input.resourceAuthoring!.entered.find(
+                        (candidate) =>
+                          candidate.biomeKey === placement.biomeKey &&
+                          candidate.origin.kind === 'occurrence' &&
+                          candidate.origin.occurrenceId === placement.occurrenceId,
+                      );
+                      return Object.freeze({
+                        address: createOccurrenceAddress(
+                          createBiomeAddress(input.biome.routeKey, placement.biomeKey),
+                          placement.occurrenceId,
+                        ),
+                        biomeKey: placement.biomeKey,
+                        locationLabel:
+                          entry === undefined
+                            ? placement.occurrenceId
+                            : requireRoom(input.catalog, entry.gameName).label,
+                      });
+                    })()
+                  : undefined;
               return Object.freeze({
                 family,
+                label: resourceOutcomeLabel(family, rule.element),
                 action: here
                   ? ('remove' as const)
                   : placement === null
@@ -528,6 +559,7 @@ export function assembleWorkspaceOccurrence(
                         target.biomeKey === input.biome.biomeKey &&
                         target.occurrenceId === occurrence.occurrenceId,
                     ),
+                ...(currentPlacement === undefined ? {} : { currentPlacement }),
               });
             }),
           ),
