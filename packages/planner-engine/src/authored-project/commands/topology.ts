@@ -486,7 +486,7 @@ function createStart(
     failCommand(command, 'topology already has a start occurrence');
   const gameName =
     located.layout.start.kind === 'authoredChoice'
-      ? command.gameName
+      ? (command.gameName ?? located.layout.start.roomGameNames[0])
       : located.layout.start.roomGameName;
   if (located.layout.start.kind === 'authoredChoice') {
     if (gameName === undefined || !located.layout.start.roomGameNames.includes(gameName)) {

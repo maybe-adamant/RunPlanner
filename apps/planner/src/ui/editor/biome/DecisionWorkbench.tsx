@@ -1,7 +1,4 @@
 import type { ExitSelectionAddress, TargetAddress } from '@run-planner/engine/authored-project';
-import type { RoomDeclaration } from '@run-planner/engine/catalog-schema';
-
-import type { ContextualPickerModel } from '@planner/projections/contextualPicker';
 import {
   requireWorkspaceInteraction,
   workspaceInteractionKey,
@@ -22,9 +19,7 @@ import {
 import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
 import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
 import { useAppDispatch } from '@planner/state/store';
-import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
-import { useWorkspaceInteraction } from '@planner/ui/controls/useWorkspaceInteraction';
 import { SemanticOwnerMarker } from '@planner/ui/feedback/EvaluationFeedback';
 import { CandidateSelect } from './CandidateSelect';
 import { AnomalyIdentityControls, NaturalChaosMapWorkbench } from './OccurrenceRoomFeatures';
@@ -663,36 +658,23 @@ function StartFrontier({
 }) {
   const executeIntent = useCommandIntent();
   const start = requireWorkspaceInteraction(interactions.starts, interaction.interactionKey);
-  const candidates = useWorkspaceInteraction(start);
-  const empty: ContextualPickerModel<RoomDeclaration> = Object.freeze({
-    sections: Object.freeze([]),
-  });
   return (
     <section className="frontier-actions biome-start-frontier">
       <div>
         <p className="card-kicker">Next step</p>
-        <h3>{start.configurationLabel}</h3>
-        <SemanticOwnerMarker address={start.owner} />
+        <h3>Start biome</h3>
+        <p className="owner-markers">
+          Create the opening room, then configure its room and reward.
+          <SemanticOwnerMarker address={start.owner} />
+        </p>
       </div>
-      <div className="start-configuration-fields">
-        <ContextualPicker
-          id={`${start.key}-start`}
-          label="Room"
-          loading={candidates.pending}
-          model={candidates.result ?? empty}
-          onOpenChange={(open) => {
-            if (open) candidates.activate();
-          }}
-          onSelect={(room) => {
-            executeIntent(start.intentFor(room));
-          }}
-          placeholder="Select a room"
-        />
-        <div aria-live="polite" className="field-control field-control-inline start-reward-status">
-          <span>Reward</span>
-          <span className="fixed-room-state">Choose room to show reward</span>
-        </div>
-      </div>
+      <button
+        className="primary-action"
+        onClick={() => executeIntent(start.intent())}
+        type="button"
+      >
+        Start biome
+      </button>
     </section>
   );
 }

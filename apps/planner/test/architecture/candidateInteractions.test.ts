@@ -116,7 +116,7 @@ describe('workspace candidate interaction families', () => {
     expect(workspace.interactions.hubVisitOrders.size).toBe(1);
   });
 
-  it('binds a topology-free authored-choice start lazily from its declaration domain', () => {
+  it('does not evaluate room candidates until the created start occurrence is edited', () => {
     const events: CandidateEvaluationEvent[] = [];
     const services = createStructuredWorkspaceTestServices({
       observeCandidateEvaluation: (event) => events.push(event),
@@ -126,28 +126,14 @@ describe('workspace candidate interaction families', () => {
       projectId: 'candidate-interaction-start',
       configuredBiomeCounts: { Underworld: 1 },
     });
-    const layout = catalog.biomeLayouts.byKey.F;
-    if (layout?.start.kind !== 'authoredChoice') {
-      throw new Error('F authored-choice start declaration is missing');
-    }
     const interactions = services.structuredWorkspace.project(
       simulateProjectAssembly(catalog, project),
     ).interactions;
     const start = interactions.starts.get(semanticAddressKey(biome));
-    if (start?.kind !== 'choice') throw new Error('F authored-choice start interaction is missing');
+    if (start === undefined) throw new Error('F start interaction is missing');
 
     expect(events.filter((event) => event.kind === 'queryBatch')).toEqual([]);
-
-    const model = start.load();
-    const queryBatches = events.filter((event) => event.kind === 'queryBatch');
-    expect(queryBatches).toHaveLength(1);
-    expect(queryBatches[0]?.queryCount).toBe(layout.start.roomGameNames.length);
-    expect(
-      model.sections.flatMap((section) => section.items.map((item) => item.value.gameName)).sort(),
-    ).toEqual([...layout.start.roomGameNames].sort());
-
-    events.length = 0;
-    expect(start.load()).toBe(model);
+    expect(start.intent().command).not.toHaveProperty('gameName');
     expect(events).toEqual([]);
   });
 

@@ -102,34 +102,12 @@ function topologyRemovalInteractionRequirements(
 function startInteractionRequirements(
   source: WorkspaceBiomeSource,
 ): readonly WorkspaceStartInteractionRequirement[] {
-  const { biome, layout, plan } = source;
+  const { biome, plan } = source;
   if (plan.topology !== null) return Object.freeze([]);
-  if (layout.start.kind === 'fixedAuthored') {
-    return Object.freeze([
-      Object.freeze({
-        kind: 'start' as const,
-        owner: biome,
-        start: Object.freeze({ gameName: layout.start.roomGameName, kind: 'fixed' as const }),
-      }),
-    ]);
-  }
-  const [firstGameName, ...laterGameNames] = layout.start.roomGameNames;
-  if (firstGameName === undefined) {
-    throw new StructuredWorkspaceProjectionContractError(
-      `${semanticAddressKey(biome)} authored-choice start has no declared room`,
-    );
-  }
   return Object.freeze([
     Object.freeze({
       kind: 'start' as const,
       owner: biome,
-      start: Object.freeze({
-        gameNames: Object.freeze([firstGameName, ...laterGameNames]) as readonly [
-          string,
-          ...string[],
-        ],
-        kind: 'choice' as const,
-      }),
     }),
   ]);
 }

@@ -70,9 +70,7 @@ describe('structured workspace topology interaction assembly', () => {
     const { assembly } = assemble(project, 'Underworld', 'F');
 
     const start = assembly.startInteractionRequirements[0];
-    expect(start?.kind).toBe('start');
-    if (start?.start.kind !== 'choice') throw new Error('F authored-choice start is missing');
-    expect(start.start.gameNames).toContain('F_Opening01');
+    expect(start).toEqual({ kind: 'start', owner: goldenFBiome });
     expect(assembly.topologyRemovalInteractionRequirements).toHaveLength(0);
     expect(assembly.takeoverInteractionRequirements).toHaveLength(0);
   });

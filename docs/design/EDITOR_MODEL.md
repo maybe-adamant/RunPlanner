@@ -108,15 +108,19 @@ The one Hub decision node projects:
   completion sequence;
 - findings and candidate state attached by semantic address.
 
-Every start and physical door offer uses the same Room/Reward composition. The
-selected Room Declaration supplies its complete offer-reward surface: before a
-room is selected the Reward row says `Choose room to show reward`; afterward it
-explicitly resolves to no reward, one reward editor, or all active reward
-editors declared by that room. The application adapts this room-owned product
-for the editor, while React does not infer reward presence from biome, room
-name, template, or room-local chronology. This applies equally to F's
-multi-choice Opening, fixed one-choice Openings and Intros, ordinary doors,
-and H's active Fields cage offer group.
+The topology-free frontier exposes only the generic `Start biome` action. It
+creates and focuses the actual Opening or Intro occurrence; it does not own a
+second room picker or reward editor. The created start occurrence then owns its
+Room/Reward composition, including F's multi-choice Opening replacement picker
+and each fixed Opening or Intro identity.
+
+Every physical door uses the same Room/Reward composition. Before a room is
+selected the Reward row says `Choose room to show reward`; afterward the
+selected Room Declaration explicitly resolves it to no reward, one reward
+editor, or all active reward editors declared by that room. The application
+adapts this room-owned product for the editor, while React does not infer reward
+presence from biome, room name, template, or room-local chronology. This also
+covers H's active Fields cage offer group.
 
 `HubDecisionWorkbench` is the sole N-specific renderer inside
 `BiomeWorkspace`. Its occurrence-like tabs make the persistent board readable

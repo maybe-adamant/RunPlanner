@@ -201,24 +201,15 @@ function RailNode({
 
 function RailFrontier({
   frontier,
-  interactions,
   selectedRailKey,
 }: {
   readonly frontier: Extract<
     WorkspaceAuthoringFrontier,
     { readonly kind: 'start' | 'exitDecision' }
   >;
-  readonly interactions: WorkspaceInteractionCatalog;
   readonly selectedRailKey: string | undefined;
 }) {
-  const start =
-    frontier.kind !== 'start'
-      ? undefined
-      : requireWorkspaceInteraction(interactions.starts, frontier.interactionKey);
-  const label =
-    frontier.kind === 'start'
-      ? (start?.configurationLabel ?? 'Configure starting room')
-      : 'Continue route';
+  const label = frontier.kind === 'start' ? 'Start biome' : 'Continue route';
   return (
     <div className="biome-rail-stop biome-frontier-stop">
       <FocusButton marker={frontier.marker} selected={selectedRailKey === frontier.marker.focusKey}>
@@ -318,11 +309,9 @@ function HubRailGroup({
 
 function RailEntry({
   entry,
-  interactions,
   selectedRailKey,
 }: {
   readonly entry: WorkspaceRailEntry;
-  readonly interactions: WorkspaceInteractionCatalog;
   readonly selectedRailKey: string | undefined;
 }) {
   switch (entry.kind) {
@@ -331,13 +320,7 @@ function RailEntry({
     case 'hubGroup':
       return <HubRailGroup entry={entry} selectedRailKey={selectedRailKey} />;
     case 'frontier':
-      return (
-        <RailFrontier
-          frontier={entry.frontier}
-          interactions={interactions}
-          selectedRailKey={selectedRailKey}
-        />
-      );
+      return <RailFrontier frontier={entry.frontier} selectedRailKey={selectedRailKey} />;
   }
 }
 
@@ -498,12 +481,7 @@ export function BiomeWorkspace({
         </header>
         <div className="biome-rail">
           {biome.rail.map((entry) => (
-            <RailEntry
-              entry={entry}
-              interactions={interactions}
-              key={entry.key}
-              selectedRailKey={selectedRailKey}
-            />
+            <RailEntry entry={entry} key={entry.key} selectedRailKey={selectedRailKey} />
           ))}
         </div>
         <CompletionOutline

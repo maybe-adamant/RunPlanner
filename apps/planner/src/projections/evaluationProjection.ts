@@ -80,7 +80,7 @@ const findingCopy = {
   },
   biomeTopologyMissing: {
     title: 'Start this biome',
-    description: 'Choose a starting room before building its route.',
+    description: 'Create its opening room before building the route.',
   },
   continuationMissing: {
     title: 'Continue this route',

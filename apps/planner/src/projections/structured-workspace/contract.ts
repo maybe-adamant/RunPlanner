@@ -999,28 +999,12 @@ type WorkspaceDecisionEntryRoomCommandIntent = WorkspaceCommandIntent<
   >
 >;
 
-/** A start remains an authored action even when its declaration fixes the room. */
-export type WorkspaceStartInteraction =
-  | {
-      /** Declaration-owned language for the unified start configuration card. */
-      readonly configurationLabel: 'Configure starting room' | 'Configure Intro room';
-      readonly fixedLabel: string;
-      readonly intent: () => WorkspaceCreateStartIntent;
-      readonly intentFor: (room: RoomDeclaration) => WorkspaceCreateStartIntent;
-      readonly key: string;
-      readonly kind: 'fixed';
-      readonly load: () => ContextualPickerModel<RoomDeclaration>;
-      readonly owner: BiomeAddress;
-    }
-  | {
-      /** Declaration-owned language for the unified start configuration card. */
-      readonly configurationLabel: 'Configure starting room' | 'Configure Intro room';
-      readonly key: string;
-      readonly kind: 'choice';
-      readonly intentFor: (room: RoomDeclaration) => WorkspaceCreateStartIntent;
-      readonly load: () => ContextualPickerModel<RoomDeclaration>;
-      readonly owner: BiomeAddress;
-    };
+/** Generic topology creation; the resulting occurrence owns all room authoring. */
+export interface WorkspaceStartInteraction {
+  readonly intent: () => WorkspaceCreateStartIntent;
+  readonly key: string;
+  readonly owner: BiomeAddress;
+}
 
 export interface WorkspaceTopologyRemovalInteraction {
   readonly intent: WorkspaceCommandIntent<

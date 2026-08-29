@@ -47,6 +47,11 @@ the common layout, a `Preboss` template, and `prebossBatchPolicy`; the
 historical ledger remains in
 [`MIGRATION_PROVENANCE.md`](../progress/MIGRATION_PROVENANCE.md).
 
+The generic `CreateStart` transition uses the fixed identity directly or the
+first declaration-ordered `authoredChoice` identity as its initial occurrence.
+That initial choice is not a separate authoring surface: authored-choice starts
+remain replaceable on the created occurrence.
+
 `0.15.0-unified-biome-decisions` is the first catalog version using this
 contract. The active declaration language below uses this one envelope.
 

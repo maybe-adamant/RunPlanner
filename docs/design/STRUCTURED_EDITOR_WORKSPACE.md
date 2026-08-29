@@ -192,13 +192,18 @@ semantic focus, finding navigation, coverage, and focused-inspector language.
 The inspector renders the occurrence stage or exact structural workbench
 containing the focused semantic owner. An ordinary decision remains the
 outgoing-door section of its source occurrence and includes its batch policy
-and every physical offer's picked state, Room row, and Reward row. Starts use
-the same Room/Reward composition: `Configure starting room` or `Configure
-Intro room`, then the selected room's complete offer surface. Before a room is
-selected, the pending Reward row remains visible as `Choose room to show
-reward`; after selection it explicitly renders no reward, one editor, or all
-active editors for that room. This is one projection product, not a
-biome-specific presentation branch.
+and every physical offer's picked state, Room row, and Reward row. A topology-
+free biome instead exposes one generic `Start biome` action. That action creates
+and focuses the actual Opening or Intro occurrence, whose inspector exclusively
+owns start-room identity and reward authoring. F therefore exposes its three-
+room Opening picker only after the occurrence exists; fixed Opening and Intro
+occurrences show their declaration-owned identity without a duplicate frontier
+picker.
+
+Before a physical offer's room is selected, the pending Reward row remains
+visible as `Choose room to show reward`; after selection it explicitly renders
+no reward, one editor, or all active editors for that room. This is one
+projection product, not a biome-specific presentation branch.
 Before a decision has one selected continuation, its numbered rail stop opens
 that decision surface. Once exactly one target is selected, the same stop opens
 the selected target occurrence stage; the predecessor stage still owns and

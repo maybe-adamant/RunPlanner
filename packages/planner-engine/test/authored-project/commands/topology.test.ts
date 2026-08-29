@@ -162,6 +162,19 @@ describe('authored-project commands and topology', () => {
     });
   });
 
+  it('creates an authored-choice start from its first declared room when no room is supplied', () => {
+    const project = applyProjectCommand(fProject(), catalog, {
+      kind: 'CreateStart',
+      biome: fBiome,
+      occurrenceId: createOccurrenceId('default-f-opening'),
+    });
+
+    expect(fTopology(project)).toMatchObject({
+      startOccurrenceId: 'default-f-opening',
+      occurrences: [{ occurrenceId: 'default-f-opening', gameName: 'F_Opening01' }],
+    });
+  });
+
   it('owns Fields cage outcomes with topology batches and preserves unchanged identity', () => {
     const startId = createOccurrenceId('h-fields-start');
     let project = applyProjectCommand(hProject(), catalog, {
