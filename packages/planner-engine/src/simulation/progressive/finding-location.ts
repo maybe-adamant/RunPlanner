@@ -404,6 +404,8 @@ export interface LocatedFinding {
   readonly historySequence?: number;
   readonly historyBoundary?: 'before' | 'at' | 'after';
   readonly decisionIndex: number;
+  /** Zero-based declaration-fixed target (Boss, then Postboss) owning the finding. */
+  readonly fixedRoomIndex?: number;
   /** The owner belongs to the physical batch retained at the exit frontier. */
   readonly frontierBatch?: boolean;
   /** Earlier normal-door targets are already generated before this target. */
@@ -556,6 +558,21 @@ export function locateFinding(
       : chronology?.kind === 'hubBoard' || chronology?.kind === 'hubVisit'
         ? chronology.history
         : undefined;
+  const fixedRoomIndex = (prefix.fixedRoomLinks ?? []).findIndex((link) => {
+    const occurrenceId = link.target.occurrenceId;
+    if (ownsOccurrence(finding.origin, occurrenceId)) return true;
+    if (finding.origin.kind === 'keepsakeSelection') {
+      return (
+        finding.origin.owner !== 'routeStart' && finding.origin.owner.occurrenceId === occurrenceId
+      );
+    }
+    return (
+      finding.origin.kind === 'keepsakeEquipResult' &&
+      finding.origin.selection.kind === 'keepsakeSelection' &&
+      finding.origin.selection.owner !== 'routeStart' &&
+      finding.origin.selection.owner.occurrenceId === occurrenceId
+    );
+  });
   // Automatic Boss Arcana effects are terminal lifecycle children, not
   // authored Preboss occurrences. They follow every decision in the
   // materialized biome and have no room occurrence to use for ordinary
@@ -590,6 +607,7 @@ export function locateFinding(
     return Object.freeze({
       finding,
       decisionIndex: prefix.decisions.length - 1,
+      ...(fixedRoomIndex < 0 ? {} : { fixedRoomIndex }),
       regionKey: atomicRegion,
       ...(aggregate === undefined ? {} : { aggregate }),
       ...(historyChronology === undefined
@@ -600,23 +618,20 @@ export function locateFinding(
           }),
     });
   }
-  // Fixed Boss/Postboss occurrences are real lifecycle owners but are not
-  // ordinary topology decisions. Occurrence-local findings belong to the
-  // completed biome's final fixed-room region.
+  // Fixed Boss/Postboss occurrences are real ordered lifecycle owners but are
+  // not ordinary topology decisions. Preserve their exact position so prefix
+  // clamping can retain prior rooms without admitting later fixed rooms.
   if (
     'routeKey' in finding.origin &&
     'biomeKey' in finding.origin &&
     finding.origin.routeKey === prefix.routeKey &&
     finding.origin.biomeKey === prefix.biomeKey &&
-    (prefix.fixedRoomLinks ?? []).some(
-      (link) =>
-        ownsOccurrence(finding.origin, link.source.occurrenceId) ||
-        ownsOccurrence(finding.origin, link.target.occurrenceId),
-    )
+    fixedRoomIndex >= 0
   ) {
     return Object.freeze({
       finding,
       decisionIndex: prefix.decisions.length - 1,
+      fixedRoomIndex,
       regionKey: atomicRegion,
       ...(aggregate === undefined ? {} : { aggregate }),
       ...(historyChronology === undefined
@@ -683,6 +698,7 @@ export function locateFinding(
     return Object.freeze({
       finding,
       decisionIndex: prefix.decisions.length - 1,
+      ...(fixedRoomIndex < 0 ? {} : { fixedRoomIndex }),
       regionKey: atomicRegion,
       ...(aggregate === undefined ? {} : { aggregate }),
       ...(historyChronology === undefined

@@ -257,6 +257,21 @@ describe('Hermes Shrine workbench', () => {
     const resolvedDeliveryRow = screen.getByText(/^Receive Mystery Boon/).closest('li');
     if (resolvedDeliveryRow === null)
       throw new Error('resolved rushed Mystery Boon delivery row is missing');
+    expect(resolvedDeliveryRow.getAttribute('data-inline-layout')).toBe('mystery-boon');
+    expect(within(resolvedDeliveryRow).queryByText('Receive Mystery Boon · Apollo')).toBeNull();
+    const inlineEditors = resolvedDeliveryRow.querySelector<HTMLElement>(
+      ':scope > .room-action-controls > .room-action-inline-editors',
+    );
+    if (inlineEditors === null) throw new Error('Mystery Boon inline editors are missing');
+    const sourcePicker = within(inlineEditors).getByRole('button', { name: 'Reward' });
+    expect(sourcePicker.textContent).toContain('Apollo');
+    expect(sourcePicker.textContent).not.toContain('Mystery Boon');
+    expect(within(inlineEditors).getByRole('button', { name: /Trait/ })).toBeTruthy();
+    expect(
+      resolvedDeliveryRow
+        .querySelector(':scope > .acquisition-entry-resolution')
+        ?.getAttribute('data-empty'),
+    ).toBe('true');
     await view.user.click(within(resolvedDeliveryRow).getByRole('button', { name: 'Reward' }));
     expect(await screen.findByText('Eventual God')).toBeTruthy();
     expect(screen.queryByText('Reward type')).toBeNull();
@@ -280,11 +295,20 @@ describe('Hermes Shrine workbench', () => {
       currentOccurrence()?.acquisitionSites?.hermesShrineDelivery?.pickupEntries?.[entryKey]
         ?.traitOffersByAcquisitionRole.hiddenSource,
     ).toEqual(hiddenSourceDraft);
+    await waitFor(() =>
+      expect(within(inlineEditors).getByRole('button', { name: /Edit Trait/ })).toBeTruthy(),
+    );
     expect(() => workspaceProjection(application)).not.toThrow();
   });
 
   it('keeps an unplaced delayed Mystery delivery placement-only until its host action exists', async () => {
     const source = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
+    const host = createOccurrenceAddress(oBiome, oOccurrenceIds.devotion);
+    const entryKey = hermesShrineDeliveryEntryKey(source, 'initial:secondRight');
+    const entry = createAcquisitionEntryAddress(
+      createAcquisitionSiteAddress(host, 'hermesShrineDelivery'),
+      entryKey,
+    );
     let project = completeOrdinaryShrine();
     project = applyProjectCommand(project, catalog, {
       kind: 'ReplaceHermesShrineOffer',
@@ -311,7 +335,39 @@ describe('Hermes Shrine workbench', () => {
     await view.user.click(
       within(delivery).getByRole('button', { name: 'Place required delivery' }),
     );
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Reward' })).toBeTruthy());
+    const placedDelivery = await screen.findByText('Receive Mystery Boon');
+    const placedDeliveryRow = placedDelivery.closest('li');
+    if (placedDeliveryRow === null) throw new Error('placed Mystery delivery row is missing');
+
+    const sourceInteraction = workspaceProjection(view.application).interactions.rewards.get(
+      semanticAddressKey(entry),
+    );
+    if (sourceInteraction === undefined)
+      throw new Error('placed delayed Mystery Boon source editor is missing');
+    const sourceDomain = await sourceInteraction.load();
+    const sourceModel = sourceInteraction.model(sourceDomain, 'source', {
+      rewardType: 'BlindBoxLoot',
+    });
+    expect(
+      sourceModel.sections
+        .flatMap((section) => section.items)
+        .find((item) => item.label === 'Apollo'),
+    ).toMatchObject({ state: 'possible', disabled: false });
+
+    await view.user.click(within(placedDeliveryRow).getByRole('button', { name: 'Reward' }));
+    await view.user.click(within(await screen.findByRole('listbox')).getByText('Apollo'));
+    const hiddenSource = workspaceProjection(view.application).interactions.traitOffers.get(
+      semanticAddressKey(createTraitOfferAddress(entry, 'hiddenSource')),
+    );
+    const hiddenSourceDraft = hiddenSource?.traitsStartingDraft?.();
+    if (hiddenSource === undefined || hiddenSourceDraft === undefined)
+      throw new Error('placed delayed Mystery Boon trait editor is missing');
+    act(() =>
+      view.application.store.dispatch(
+        authoredProjectCommandDispatched(hiddenSource.intentFor(hiddenSourceDraft).command),
+      ),
+    );
+    expect(() => workspaceProjection(view.application)).not.toThrow();
   });
 
   it('keeps a reloaded Mystery delivery repairable after its earlier God leaves the pool', async () => {

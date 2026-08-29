@@ -23,6 +23,7 @@ import {
 } from '@run-planner/engine/simulation';
 import type { RewardHistoryState, RewardKernelFacts } from '@run-planner/engine/reward-kernel';
 import {
+  createSurfaceNUnresolvedBossHermesDeliveryCheckpoint,
   loadSurfaceNOProject,
   createSurfaceNOHermesShrineDeliveryCheckpoint,
   loadSurfaceNOPProject,
@@ -579,6 +580,33 @@ describe('Hermes Shrine delayed-delivery derivation', () => {
         remainingUses: 8,
       }),
     ]);
+  });
+
+  it('clamps an unresolved fixed Boss delivery after Preboss and before Postboss', () => {
+    const evaluation = simulateProjectAssembly(
+      catalog,
+      createSurfaceNUnresolvedBossHermesDeliveryCheckpoint(),
+    ).evaluation.routes.find((route) => route.routeKey === 'Surface')?.biomes[0];
+    if (
+      evaluation?.authoring !== 'complete' ||
+      evaluation.validity !== 'invalid' ||
+      !('assessmentPrefix' in evaluation)
+    ) {
+      throw new Error('fixture did not stop at the unresolved N Boss delivery');
+    }
+    expect(evaluation.assessmentPrefix?.decisions.at(-1)).toMatchObject({
+      kind: 'batch',
+      selectedExitKey: 'preboss',
+      targets: [
+        expect.objectContaining({ room: expect.objectContaining({ gameName: 'N_PreBoss01' }) }),
+      ],
+    });
+    expect(
+      evaluation.assessmentPrefix?.fixedRoomLinks?.map((link) => link.target.gameName),
+    ).toEqual(['N_Boss01']);
+    expect(
+      evaluation.materializedPrefix.fixedRoomLinks?.map((link) => link.target.gameName),
+    ).toEqual(['N_Boss01', 'N_PostBoss01']);
   });
 });
 

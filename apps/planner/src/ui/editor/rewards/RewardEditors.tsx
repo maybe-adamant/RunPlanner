@@ -23,6 +23,8 @@ interface RewardValueEditorProps {
   readonly offer: ResolvedRewardOffer | null;
   readonly onReplace: (offer: ResolvedRewardOffer) => void;
   readonly initialStep?: RewardPickerStep;
+  /** A fixed-type inline editor may present only its selected Boon source. */
+  readonly summaryMode?: 'offer' | 'source';
   readonly unresolvedSeed?: ResolvedRewardOffer;
 }
 
@@ -52,6 +54,7 @@ export function RewardValueEditor({
   offer,
   onReplace,
   initialStep = 'type',
+  summaryMode = 'offer',
   unresolvedSeed,
 }: RewardValueEditorProps) {
   const authoredOfferKey = offer === null ? '__unresolved__' : offerKey(offer);
@@ -125,7 +128,14 @@ export function RewardValueEditor({
       ? emptyModel
       : resolver.model(domain.result, active.step, active.seed);
   const activeOffer = active?.seed ?? offer ?? undefined;
-  const summary = activeOffer === undefined ? 'Choose reward' : resolver.summary(activeOffer);
+  const summary =
+    summaryMode === 'source'
+      ? activeOffer?.payload?.kind === 'BoonSource'
+        ? resolver.summary({ rewardType: activeOffer.payload.source })
+        : 'Choose God'
+      : activeOffer === undefined
+        ? 'Choose reward'
+        : resolver.summary(activeOffer);
 
   return (
     <div className="reward-value-editor">
@@ -162,6 +172,7 @@ export function CountedRewardEditor({
   label,
   onReplace,
   initialStep,
+  summaryMode,
   unresolvedSeed,
 }: CountedRewardEditorProps) {
   return (
@@ -173,6 +184,7 @@ export function CountedRewardEditor({
       offer={offer}
       onReplace={onReplace}
       {...(initialStep === undefined ? {} : { initialStep })}
+      {...(summaryMode === undefined ? {} : { summaryMode })}
       {...(unresolvedSeed === undefined ? {} : { unresolvedSeed })}
     />
   );

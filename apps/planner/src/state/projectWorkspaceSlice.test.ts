@@ -8,10 +8,12 @@ import {
   echoLastRewardPickupEntryKey,
   createExitSelectionAddress,
   createIncomingRewardAddress,
+  createOccurrenceAddress,
   createOccurrenceId,
   createProjectDocument,
   createRouteAddress,
   createTraitOfferAddress,
+  hermesShrineDeliveryEntryKey,
   type ProjectCommand,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
@@ -42,6 +44,12 @@ import {
   goldenFOccurrenceId,
   goldenHBiome,
 } from '@run-planner/test-fixtures/underworld';
+import {
+  createSurfaceNShrineSideRoomDeliveryCheckpoint,
+  nBiome,
+  nLocalOccurrenceId,
+  nOccurrenceId,
+} from '@run-planner/test-fixtures/surface';
 
 function createStore() {
   const assembleProjectEvaluation = vi.fn((project: ProjectDocument) =>
@@ -196,6 +204,71 @@ describe('project workspace application state', () => {
     expect(selectProjectEvaluation(redoneState)).toBe(
       assembleProjectEvaluation.mock.results[4]?.value.evaluation,
     );
+  });
+
+  it('reschedules one delayed Shrine delivery through simulation as one undo step', () => {
+    const { store } = createStore();
+    const source = createOccurrenceAddress(nBiome, nLocalOccurrenceId('combat11', 'sideDoor1'));
+    const entryKey = hermesShrineDeliveryEntryKey(source, 'initial:secondLeft');
+    store.dispatch(authoredProjectReplaced(createSurfaceNShrineSideRoomDeliveryCheckpoint()));
+
+    store.dispatch(
+      authoredProjectCommandDispatched({
+        kind: 'SetHermesShrinePurchase',
+        occurrence: source,
+        generationKey: 'initial:secondLeft',
+        purchase: { delay: 2, rushed: false },
+      }),
+    );
+    const delayTwo = selectPresentProject(store.getState());
+    const nPlanAtDelayTwo = delayTwo.routes
+      .find((route) => route.routeKey === 'Surface')
+      ?.biomes.find((biome) => biome.biomeKey === 'N');
+    const delayTwoHost = nPlanAtDelayTwo?.topology?.occurrences.find(
+      (occurrence) => occurrence.occurrenceId === nOccurrenceId('combat09'),
+    );
+    const retained =
+      delayTwoHost?.acquisitionSites?.hermesShrineDelivery?.pickupEntries?.[entryKey];
+    expect(retained).toMatchObject({ offer: { rewardType: 'MaxHealthDrop' } });
+
+    store.dispatch(
+      authoredProjectCommandDispatched({
+        kind: 'SetHermesShrinePurchase',
+        occurrence: source,
+        generationKey: 'initial:secondLeft',
+        purchase: { delay: 3, rushed: false },
+      }),
+    );
+    const delayThree = selectPresentProject(store.getState());
+    const nPlanAtDelayThree = delayThree.routes
+      .find((route) => route.routeKey === 'Surface')
+      ?.biomes.find((biome) => biome.biomeKey === 'N');
+    const deliveryOwners = nPlanAtDelayThree?.topology?.occurrences.filter(
+      (occurrence) =>
+        occurrence.acquisitionSites?.hermesShrineDelivery?.pickupEntries?.[entryKey] !== undefined,
+    );
+    expect(deliveryOwners).toHaveLength(1);
+    expect(deliveryOwners?.[0]).toMatchObject({ gameName: 'N_Boss01' });
+    expect(
+      deliveryOwners?.[0]?.acquisitionSites?.hermesShrineDelivery?.pickupEntries?.[entryKey],
+    ).toEqual(retained);
+    expect(deliveryOwners?.[0]?.roomActions.order).toContainEqual({
+      kind: 'interactAcquisitionEntry',
+      siteKey: 'hermesShrineDelivery',
+      entryKey,
+      encounterPhaseKey: 'Encounter',
+    });
+    expect(
+      store
+        .getState()
+        .projectWorkspace.assembly.evaluation.findings.some(
+          (finding) =>
+            finding.origin.kind === 'acquisitionEntry' && finding.origin.entryKey === entryKey,
+        ),
+    ).toBe(false);
+
+    store.dispatch(authoredProjectUndoRequested());
+    expect(selectPresentProject(store.getState())).toBe(delayTwo);
   });
 
   it('undoes and redoes one atomic Echo Pom child edit with its outer selection', () => {

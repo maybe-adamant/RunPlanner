@@ -53,6 +53,10 @@ when present, in `topology.occurrences`; each room owns the same encounter,
 acquisition-site, Room Action, and optional feature leaves as any other room.
 The strict codec validates the fixed identities, room kinds, links, and
 collision with editable topology.
+Automatic creation does not combine those occurrences into one evaluation
+unit. Progressive coverage advances through Preboss, Boss, and Postboss in
+their lifecycle order, retaining the blocked occurrence for repair without
+marking later fixed rooms as assessed.
 
 Schema 69 narrows Shrine inventory to its three visible reward identities.
 Concrete payload, trait, level, and acquisition disposition state belongs to
@@ -65,6 +69,10 @@ Rushed delivery is source-local, while a delayed delivery is derived at its
 reached host and can be atomically materialized there when that host has no
 authored acquisition site yet. The source occurrence remains encoded in the
 delivery entry identity, including for visited Hub side rooms.
+Changing purchase timing is one semantic edit: it removes the delivery's old
+active host, asks simulation for the newly reached host, and relocates the
+retained payload there. One Shrine generation therefore has at most one active
+delivery footprint, and Undo restores the complete prior schedule.
 
 Schema 56 adds a complete, route-owned four-family selected-resource record.
 Each value is null or an exact `(biomeKey, occurrenceId)` address. Structural

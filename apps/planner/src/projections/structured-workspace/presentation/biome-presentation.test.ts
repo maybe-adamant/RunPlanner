@@ -22,6 +22,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 
 import { createGoldenFGHIProject } from '@run-planner/test-fixtures/underworld';
 import {
+  createSurfaceNUnresolvedBossHermesDeliveryCheckpoint,
   loadSurfaceNProject,
   loadSurfaceNPartialHubProject,
   loadSurfaceNOPQProject,
@@ -638,6 +639,24 @@ describe('structured workspace biome presentation', () => {
         ),
       ).toBe(false);
     }
+  });
+
+  it('keeps Preboss assessed when an unresolved fixed Boss delivery blocks Postboss', () => {
+    const project = createSurfaceNUnresolvedBossHermesDeliveryCheckpoint();
+    const source = biomeSource(project, 'Surface', 'N');
+    const biome = present(project, 'Surface', 'N').presentation.biome;
+    const preboss = biome.rail.find((entry) => entry.kind === 'node' && entry.label === 'Preboss');
+    expect(preboss?.marker.assessment).toBe('assessed');
+    expect(
+      source.isAssessed(
+        createOccurrenceAddress(nBiome, createOccurrenceId(`${nOccurrenceIds.preboss}:boss`)),
+      ),
+    ).toBe(true);
+    expect(
+      source.isAssessed(
+        createOccurrenceAddress(nBiome, createOccurrenceId(`${nOccurrenceIds.preboss}:postboss`)),
+      ),
+    ).toBe(false);
   });
 
   it('does not project completion landmarks before the Preboss is selected', () => {

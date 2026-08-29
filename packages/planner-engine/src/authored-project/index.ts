@@ -256,6 +256,7 @@ export {
 } from './topologyImpact';
 export {
   applyProjectHistoryCommand,
+  applyProjectHistoryCommands,
   canRedoProjectHistory,
   canUndoProjectHistory,
   createProjectHistory,

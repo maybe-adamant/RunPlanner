@@ -1,6 +1,8 @@
 import { createAction, type Reducer } from '@reduxjs/toolkit';
 import {
   applyProjectHistoryCommand,
+  applyProjectHistoryCommands,
+  applyProjectCommand,
   createProjectHistory,
   redoProjectHistory,
   undoProjectHistory,
@@ -11,6 +13,7 @@ import {
 import { type Catalog } from '@run-planner/engine/catalog-schema';
 import {
   assertProjectEvaluationAssembly,
+  hermesShrineDeliveryPlacementForPurchaseReschedule,
   type ProjectEvaluationAssembly,
 } from '@run-planner/engine/simulation';
 
@@ -59,7 +62,24 @@ export function createProjectWorkspaceReducer(
 
   return (state = initialState, action) => {
     if (authoredProjectCommandDispatched.match(action)) {
-      const history = applyProjectHistoryCommand(state.history, catalog, action.payload);
+      const history = (() => {
+        if (action.payload.kind !== 'SetHermesShrinePurchase') {
+          return applyProjectHistoryCommand(state.history, catalog, action.payload);
+        }
+        const proposed = applyProjectCommand(state.history.present, catalog, action.payload);
+        if (proposed === state.history.present) return state.history;
+        const proposedAssembly = assembleProjectEvaluation(proposed);
+        const placement = hermesShrineDeliveryPlacementForPurchaseReschedule(
+          proposedAssembly,
+          action.payload.occurrence,
+          action.payload.generationKey,
+        );
+        return applyProjectHistoryCommands(
+          state.history,
+          catalog,
+          placement === undefined ? [action.payload] : [action.payload, placement],
+        );
+      })();
       return history === state.history
         ? state
         : publishWorkspace(history, assembleProjectEvaluation);

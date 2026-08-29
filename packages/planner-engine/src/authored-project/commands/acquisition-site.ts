@@ -22,6 +22,8 @@ import { parseArtificerReplacementEntryKey } from '../artificer';
 import {
   defaultHermesShrineDeliveryReward,
   parseHermesShrineDeliveryEntryKey,
+  removeHermesShrineDeliveryFromOtherHosts,
+  retainedHermesShrineDeliveryReward,
 } from '../hermes-shrine-delivery';
 import { createBiomeAddress } from '../addresses';
 import {
@@ -140,7 +142,17 @@ export function applyAcquisitionSiteCommand(
       existingAction?.kind === 'interactAcquisitionEntry' &&
       existingAction.encounterPhaseKey === command.encounterPhaseKey;
     if (phaseAlreadyPersisted && existingEntries[command.entry.entryKey] !== undefined)
-      return document;
+      return removeHermesShrineDeliveryFromOtherHosts(document, command.entry.entryKey, site.owner);
+    const retainedReward = retainedHermesShrineDeliveryReward(
+      document,
+      command.entry.entryKey,
+      site.owner,
+    );
+    const relocatedReward =
+      retainedReward !== undefined &&
+      (retainedReward === null || retainedReward.offer.rewardType === sourceOffer.rewardType)
+        ? retainedReward
+        : defaultHermesShrineDeliveryReward(catalog, sourceOffer.rewardType);
     const nextHostWithoutActions = Object.freeze({
       ...host,
       acquisitionSites: Object.freeze({
@@ -149,15 +161,13 @@ export function applyAcquisitionSiteCommand(
           ...(host.acquisitionSites?.hermesShrineDelivery ?? {}),
           pickupEntries: Object.freeze({
             ...existingEntries,
-            [command.entry.entryKey]:
-              existingEntries[command.entry.entryKey] ??
-              defaultHermesShrineDeliveryReward(catalog, sourceOffer.rewardType),
+            [command.entry.entryKey]: relocatedReward,
           }),
         }),
       }),
     });
     if (actionAlreadyOrdered) {
-      return updateOccurrenceTopology(
+      const updated = updateOccurrenceTopology(
         document,
         located,
         replaceOccurrence(
@@ -174,6 +184,7 @@ export function applyAcquisitionSiteCommand(
           }),
         ),
       );
+      return removeHermesShrineDeliveryFromOtherHosts(updated, command.entry.entryKey, site.owner);
     }
     const provisionalDocument = updateOccurrenceTopology(
       document,
@@ -209,7 +220,7 @@ export function applyAcquisitionSiteCommand(
       failCommand(command, 'delivery has no canonical room-action insertion point');
     const nextOrder = [...host.roomActions.order];
     nextOrder.splice(canonicalIndex, 0, deliveryReference);
-    return updateOccurrenceTopology(
+    const updated = updateOccurrenceTopology(
       document,
       located,
       replaceOccurrence(
@@ -220,6 +231,7 @@ export function applyAcquisitionSiteCommand(
         }),
       ),
     );
+    return removeHermesShrineDeliveryFromOtherHosts(updated, command.entry.entryKey, site.owner);
   }
   if (command.kind === 'SelectDerivedShopEntry') {
     if (command.site.owner.kind !== 'occurrence' || command.site.pointKey !== 'roomExit')

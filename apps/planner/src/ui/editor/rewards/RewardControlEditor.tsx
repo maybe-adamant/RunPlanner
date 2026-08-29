@@ -21,6 +21,7 @@ export function RewardControlEditor({
   showLevelResolutions = true,
   showTraitOffers = true,
   offerStartStep,
+  offerSummaryMode = 'offer',
 }: {
   readonly control: WorkspaceRewardControl;
   readonly idPrefix: string;
@@ -35,6 +36,8 @@ export function RewardControlEditor({
   readonly showTraitOffers?: boolean;
   /** A fixed-type producer can expose its payload directly without a redundant type step. */
   readonly offerStartStep?: RewardPickerStep;
+  /** A compact fixed-type picker can omit the already-visible reward type. */
+  readonly offerSummaryMode?: 'offer' | 'source';
 }) {
   const executeIntent = useCommandIntent();
   const interaction = requireWorkspaceInteraction(
@@ -67,6 +70,7 @@ export function RewardControlEditor({
           {...((offerStartStep ?? control.authoringStartStep) === undefined
             ? {}
             : { initialStep: offerStartStep ?? control.authoringStartStep })}
+          summaryMode={offerSummaryMode}
         />
       ) : (
         <RewardValueEditor
@@ -82,6 +86,7 @@ export function RewardControlEditor({
           {...((offerStartStep ?? control.authoringStartStep) === undefined
             ? {}
             : { initialStep: offerStartStep ?? control.authoringStartStep })}
+          summaryMode={offerSummaryMode}
         />
       )}
       {!showAcquisitionChildren ? null : (

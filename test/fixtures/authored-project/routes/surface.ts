@@ -200,6 +200,46 @@ export function createSurfaceNShrineSideRoomDeliveryCheckpoint(): ProjectDocumen
   });
 }
 
+/**
+ * The same visited side-room Shrine with an unresolved Hermes delivery at the
+ * fixed N Boss. Preboss has completed, Boss is the repair owner, and Postboss
+ * has not been reached.
+ */
+export function createSurfaceNUnresolvedBossHermesDeliveryCheckpoint(): ProjectDocument {
+  const source = createOccurrenceAddress(nBiome, nLocalOccurrenceId('combat11', 'sideDoor1'));
+  let project = createSurfaceNShrineSideRoomDeliveryCheckpoint();
+  project = applyProjectCommand(project, catalog, {
+    kind: 'SetHermesShrinePurchase',
+    occurrence: source,
+    generationKey: 'initial:secondLeft',
+    purchase: null,
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceHermesShrineOffer',
+    occurrence: source,
+    slotKey: 'secondRight',
+    value: { rewardType: 'BlindBoxLoot' },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'SetHermesShrinePurchase',
+    occurrence: source,
+    generationKey: 'initial:secondRight',
+    purchase: { delay: 3, rushed: false },
+  });
+  const boss = createOccurrenceAddress(
+    nBiome,
+    createOccurrenceId(`${nOccurrenceIds.preboss}:boss`),
+  );
+  return applyProjectCommand(project, catalog, {
+    kind: 'PlaceHermesShrineDelivery',
+    entry: createAcquisitionEntryAddress(
+      createAcquisitionSiteAddress(boss, 'hermesShrineDelivery'),
+      hermesShrineDeliveryEntryKey(source, 'initial:secondRight'),
+    ),
+    encounterPhaseKey: 'Encounter',
+  });
+}
+
 export function loadSurfaceNNaturalSelectionFrontierProject(): ProjectDocument {
   return loadSurfaceNNaturalSelectionFrontierCheckpoint();
 }
