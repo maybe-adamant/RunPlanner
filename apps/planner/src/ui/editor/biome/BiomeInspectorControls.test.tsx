@@ -270,18 +270,23 @@ describe('Biome inspector controls', () => {
     const view = renderWorkspace(loadSurfaceNResourcesProject(), 'Surface', 'N');
     await view.user.click(screen.getByRole('button', { name: /^Opening/ }));
     await view.user.click(screen.getByRole('tab', { name: 'Features' }));
+    expect(
+      within(screen.getByRole('region', { name: 'Room features' })).queryByRole('heading', {
+        name: 'Features',
+      }),
+    ).toBeNull();
     const resources = screen.getByRole('region', { name: 'Resources' });
+    expect(
+      screen.getByRole('heading', {
+        name: /Resources\s*\(Each successful element outcome can be placed once across the route\)/,
+      }),
+    ).toBeTruthy();
     const resourceActions = within(resources).getAllByRole('checkbox');
     expect(resourceActions.length).toBeGreaterThan(1);
     expect(
       new Set(resourceActions.map((action) => action.closest('.room-feature-presence-row'))).size,
     ).toBe(resourceActions.length);
     expect(within(resources).queryByText('Repair required')).toBeNull();
-    expect(
-      within(resources).getByText(
-        'Each successful element outcome can be placed once across the route.',
-      ),
-    ).toBeTruthy();
     const historyBefore = view.application.store.getState().projectWorkspace.history.past.length;
 
     const removeMining = within(resources).getByRole('checkbox', {
@@ -352,7 +357,8 @@ describe('Biome inspector controls', () => {
     if (illegalMove === undefined) throw new Error('resource illegal-target witness is missing');
 
     const disclosure = resources.querySelector('.resource-placement-disclosure');
-    expect(disclosure?.textContent).toContain('Selecting this room moves it here.');
+    expect(disclosure?.textContent).toContain('Currently placed at');
+    expect(disclosure?.textContent).not.toContain('Selecting this room moves it here.');
     const placementLink = within(resources).getByRole('button', {
       name: `${moved.currentPlacement.biomeKey} · ${moved.currentPlacement.locationLabel}`,
     });

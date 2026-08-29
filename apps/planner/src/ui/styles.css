@@ -2673,6 +2673,10 @@ select {
 }
 
 .room-feature-category-heading {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px;
   margin: 8px 0 0;
   padding-bottom: 6px;
   border-bottom: 1px solid #34353e;
@@ -2682,7 +2686,14 @@ select {
   text-transform: uppercase;
 }
 
-.room-features-workbench > .local-reward-heading + .room-feature-category-heading {
+.room-feature-heading-note {
+  color: #99939f;
+  font-size: 0.7rem;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.room-features-workbench > .room-feature-category-heading:first-child {
   margin-top: 0;
 }
 
@@ -2714,6 +2725,28 @@ select {
 .room-feature-presence-row:has(input:disabled) {
   color: #88858e;
   opacity: 0.68;
+}
+
+.room-resource-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  column-gap: 16px;
+}
+
+.room-resource-selection {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.resource-placement-disclosure {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.35ch;
+  min-width: 0;
+  color: #aaa4af;
 }
 
 .room-feature-category-content > .ephyra-side-editor,

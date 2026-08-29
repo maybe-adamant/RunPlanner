@@ -583,17 +583,16 @@ successful outcome: `Successful Mining — Fire`, `Successful Spirit — Air`,
 `Successful Seed — Earth`, and `Successful Fishing — Water`. The application
 projection obtains each element from the selected room declaration's
 `resourcePointSupport.rules[family].element` and combines it with the existing
-family vocabulary. The Resources group states: `Each successful element
-outcome can be placed once across the route.`
+family vocabulary. The Resources heading carries the inline note: `Each
+successful element outcome can be placed once across the route.`
 
 An absent resource uses the existing add command, an authored resource at its
 current room uses the existing remove command, and another legal room uses the
-existing replacement command as a move. Only that move row discloses the prior
-room and offers its semantic navigation link, followed by the explanation that
-selecting the current room moves the outcome there. Illegal targets remain
-disabled. No confirmation dialog is needed; one semantic edit and ordinary
-Undo provide the mutation safety contract. React renders the projected
-destination and never searches the authored route for it.
+existing replacement command as a move. Only that move row includes a second
+column identifying the current placement and linking to that occurrence.
+Illegal targets remain disabled. No confirmation dialog is needed; one semantic
+edit and ordinary Undo provide the mutation safety contract. React renders the
+projected destination and never searches the authored route for it.
 
 ## Downstream Editing
 
