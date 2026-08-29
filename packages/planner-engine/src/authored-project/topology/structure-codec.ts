@@ -517,6 +517,12 @@ function validateNormalDecisionProgressionBounds(
     ) {
       continue;
     }
+    const sourceOccurrence = occurrences.get(decision.source.occurrenceId);
+    const sourceRoom =
+      sourceOccurrence === undefined ? undefined : requireKnownRoom(sourceOccurrence, catalog);
+    if (sourceRoom !== undefined && hostContinuationExitForDetourRoom(sourceRoom) !== undefined) {
+      continue;
+    }
     const ordinal = selectedOrdinaryBatchIndex(selectedSpine, decision.source.occurrenceId);
     if (ordinal === undefined || ordinal < ordinaryBatchLimit) continue;
     if (
