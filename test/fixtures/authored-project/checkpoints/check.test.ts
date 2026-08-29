@@ -13,7 +13,13 @@ import { routeResourceAuthoring, simulateProject } from '@run-planner/engine/sim
 import { checkpointManifest, checkpointSpellDropIntents } from './manifest';
 import { checkpointRegistry, loadCheckpoint } from './registry';
 import { nFixedOccurrenceIds, nOccurrenceIds } from '../routes/surface';
-import { createSurfaceNOHermesShrineDeliveryCheckpoint, oOccurrenceIds } from '../routes/surface';
+import {
+  createSurfaceNOHermesShrineDeliveryCheckpoint,
+  createSurfaceNShrineSideRoomDeliveryCheckpoint,
+  nLocalOccurrenceId,
+  nOccurrenceId,
+  oOccurrenceIds,
+} from '../routes/surface';
 import { createUnderworldFPoolCheckpoint } from '../routes/underworld';
 
 const checkpointDirectory = resolve(process.cwd(), 'test/fixtures/authored-project/checkpoints');
@@ -103,7 +109,7 @@ describe('authored-project checkpoint integrity', () => {
     const chaosRoom = occurrences?.find(
       (occurrence) => occurrence.occurrenceId === 'fixture-chaos-room',
     );
-    expect(checkpointManifest).toHaveLength(27);
+    expect(checkpointManifest).toHaveLength(28);
     expect(chaosRoom?.gameName).toMatch(/^Chaos_/);
     expect(chaosRoom?.state).toMatchObject({
       kind: 'fixed',
@@ -211,6 +217,38 @@ describe('authored-project checkpoint integrity', () => {
       entryKey: expect.stringContaining('initial%3AsecondLeft'),
       encounterPhaseKey: 'Encounter',
     });
+  });
+
+  it('keeps the reached N side-room Shrine source separate from its unplaced later host delivery', () => {
+    const saved = loadCheckpoint('surface-n-shrine-side-room-delivery');
+    expect(encodeProjectDocument(saved)).toBe(
+      encodeProjectDocument(createSurfaceNShrineSideRoomDeliveryCheckpoint()),
+    );
+    const sourceId = nLocalOccurrenceId('combat11', 'sideDoor1');
+    const hostId = nOccurrenceId('combat09');
+    const n = saved.routes
+      .find((route) => route.routeKey === 'Surface')
+      ?.biomes.find((biome) => biome.biomeKey === 'N');
+    const source = n?.topology?.occurrences.find(
+      (occurrence) => occurrence.occurrenceId === sourceId,
+    );
+    const host = n?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === hostId);
+    expect(source?.hermesShrine?.purchaseBySlot?.secondLeft).toEqual({ delay: 2, rushed: false });
+    expect(source?.roomActions.order).not.toContainEqual(
+      expect.objectContaining({ siteKey: 'hermesShrineDelivery' }),
+    );
+    expect(host?.acquisitionSites?.hermesShrineDelivery).toBeUndefined();
+
+    const evaluation = simulateProject(catalog, saved);
+    const deliveryFinding = evaluation.findings.find(
+      (finding) => finding.code === 'hermesShrineDeliveryPlacementRequired',
+    );
+    expect(deliveryFinding?.origin).toMatchObject({
+      kind: 'acquisitionEntry',
+      site: { owner: { occurrenceId: hostId }, pointKey: 'hermesShrineDelivery' },
+      entryKey: expect.stringContaining(encodeURIComponent(String(sourceId))),
+    });
+    expect(deliveryFinding?.evidence).toMatchObject({ encounterPhaseKey: 'Encounter' });
   });
 
   it('keeps the selected N resource-success checkpoint legal, including its side-room Spirit host', () => {

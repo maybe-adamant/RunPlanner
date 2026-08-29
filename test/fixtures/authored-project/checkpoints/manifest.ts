@@ -141,6 +141,17 @@ export const checkpointManifest = Object.freeze([
     provenance: 'semantic-command recipe from the canonical Surface N checkpoint',
   },
   {
+    id: 'surface-n-shrine-side-room-delivery',
+    file: 'surface-n-shrine-side-room-delivery.runplanner.json',
+    route: 'Surface',
+    configuredBiomePrefix: ['N'],
+    scenario:
+      'Visited N side-room Shrine schedules an unplaced required delivery at a later main Hub visit',
+    schemaVersion: 70,
+    catalogVersion: '0.49.0-completion-topology',
+    provenance: 'semantic-command recipe from the canonical Surface N checkpoint',
+  },
+  {
     id: 'surface-no',
     file: 'surface-no.runplanner.json',
     route: 'Surface',
@@ -298,6 +309,7 @@ export const checkpointSpellDropIntents = Object.freeze([
   ['surface-n-quick-buck', 'surface-n-combat09', 'SpellLaserTrait'],
   ['surface-n-buried-treasure', 'surface-n-combat09', 'SpellLaserTrait'],
   ['surface-n-resources', 'surface-n-combat09', 'SpellLaserTrait'],
+  ['surface-n-shrine-side-room-delivery', 'surface-n-combat09', 'SpellLaserTrait'],
   ['surface-no', 'surface-n-combat09', 'SpellSummonTrait'],
   ['surface-no-hermes-shrine-delivery', 'surface-n-combat09', 'SpellSummonTrait'],
   ['surface-nop', 'surface-n-combat09', 'SpellTimeSlowTrait'],

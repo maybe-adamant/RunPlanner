@@ -9,6 +9,7 @@ import surfaceNSteadyGrowthRaw from './surface-n-steady-growth-frontier.runplann
 import surfaceNQuickBuckRaw from './surface-n-quick-buck.runplanner.json';
 import surfaceNBuriedTreasureRaw from './surface-n-buried-treasure.runplanner.json';
 import surfaceNResourcesRaw from './surface-n-resources.runplanner.json';
+import surfaceNShrineSideRoomDeliveryRaw from './surface-n-shrine-side-room-delivery.runplanner.json';
 import surfaceNORaw from './surface-no.runplanner.json';
 import surfaceNOHermesShrineDeliveryRaw from './surface-no-hermes-shrine-delivery.runplanner.json';
 import surfaceNOPRaw from './surface-nop.runplanner.json';
@@ -30,6 +31,7 @@ export const surfaceCheckpointArtifacts = Object.freeze({
   'surface-n-quick-buck': checkpointArtifact(surfaceNQuickBuckRaw),
   'surface-n-buried-treasure': checkpointArtifact(surfaceNBuriedTreasureRaw),
   'surface-n-resources': checkpointArtifact(surfaceNResourcesRaw),
+  'surface-n-shrine-side-room-delivery': checkpointArtifact(surfaceNShrineSideRoomDeliveryRaw),
   'surface-no': checkpointArtifact(surfaceNORaw),
   'surface-no-hermes-shrine-delivery': checkpointArtifact(surfaceNOHermesShrineDeliveryRaw),
   'surface-nop': checkpointArtifact(surfaceNOPRaw),
@@ -68,6 +70,10 @@ export function loadSurfaceNBuriedTreasureCheckpoint(): ProjectDocument {
 
 export function loadSurfaceNResourcesCheckpoint(): ProjectDocument {
   return surfaceCheckpointArtifacts['surface-n-resources'].load();
+}
+
+export function loadSurfaceNShrineSideRoomDeliveryCheckpoint(): ProjectDocument {
+  return surfaceCheckpointArtifacts['surface-n-shrine-side-room-delivery'].load();
 }
 
 export function loadSurfaceNOCheckpoint(): ProjectDocument {

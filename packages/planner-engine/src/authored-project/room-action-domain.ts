@@ -617,7 +617,7 @@ export function roomLifecycleWindowOrdinal(
     case 'standard':
       return window.phase === 'beforeCombat'
         ? beforePoint((point) => point.kind === 'encounterStart')
-        : lastAfterPoint((point) => point.kind === 'encounterEnd') + 1;
+        : lastAfterPoint((point) => point.kind === 'encounterEnd');
     case 'encounterEnd':
       return afterPoint(
         (point) => point.kind === 'encounterEnd' && point.phaseKey === window.phaseKey,

@@ -292,7 +292,7 @@ describe('Chaos TrialUpgrade authored child', () => {
     legacy.schemaVersion = 63;
     legacy.catalogVersion = '0.46.0-vow-forfeit-red-onion';
     const migrated = migrateProjectDocument(legacy).document;
-    expect(migrated.schemaVersion).toBe(69);
+    expect(migrated.schemaVersion).toBe(70);
     expect(migrated.catalogVersion).toBe('0.49.0-completion-topology');
     expect(() => decodeProjectDocument(migrated, catalog)).not.toThrow();
   });

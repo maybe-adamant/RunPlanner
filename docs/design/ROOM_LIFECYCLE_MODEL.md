@@ -832,20 +832,24 @@ same ordered room fold.
 
 ### Room Features at Cleanup
 
-Purging Pool sales, Shrine purchases, and Well purchases use feature-local
-checkboxes to opt into their host occurrence's one ranked action order. An
-unchecked sale or purchase remains on its owning feature and is not duplicated
-in the generic Optional actions pool; once checked, it is an ordinary ranked
-timeline participant. A Pool and Well may use their feature-local **Interact**
+Purging Pool sales and Well purchases use feature-local checkboxes to opt into
+their host occurrence's one ranked action order. An unchecked sale or purchase
+remains on its owning feature and is not duplicated in the generic Optional
+actions pool; once checked, it is an ordinary ranked timeline participant. A
+Shrine purchase remains feature-local: its concrete required delivery is the
+only Shrine action in the timeline. A Pool and Well may use their feature-local **Interact**
 boundary: until then their live random inventory remains dormant and no action
 is active. World Shop and Shrine inventories are always fully authored; neither
 receives that convenience because their visible identities affect outgoing
 generation.
 
 Well purchases settle immediately as paid effects and never invoke free-pickup
-alternatives. A Shrine purchase instead either rushes into a required same-room
-pickup at that one action rank or derives a later required pickup at the
-reached encounter-end host. Fixed Boss occurrences are ordinary later
+alternatives. A rushed Shrine purchase derives one required same-room pickup at
+the post-outgoing action rank; a delayed purchase derives a later required
+pickup at the reached encounter-end host. The source cleanup schedules it
+without consuming a delay use. A Hub side-room source is ordinary for
+scheduling, but cannot advance an older pending delivery; later qualifying main
+Hub visits can advance or host it. Fixed Boss occurrences are ordinary later
 delivery hosts. No feature owns a private purchase order or a completion-only
 settlement path.
 

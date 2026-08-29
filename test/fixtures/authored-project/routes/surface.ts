@@ -167,6 +167,39 @@ export function createSurfaceNOHermesShrineDeliveryCheckpoint(): ProjectDocument
   });
 }
 
+/**
+ * A reached N Hub checkpoint whose visited side-room Shrine schedules a later
+ * main-room delivery. The delivery remains intentionally unplaced so the
+ * workspace can witness the required host footprint before materialization.
+ */
+export function createSurfaceNShrineSideRoomDeliveryCheckpoint(): ProjectDocument {
+  const source = createOccurrenceAddress(nBiome, nLocalOccurrenceId('combat11', 'sideDoor1'));
+  let project = loadSurfaceNProject();
+  project = applyProjectCommand(project, catalog, {
+    kind: 'SetHermesShrinePresence',
+    occurrence: source,
+    present: true,
+  });
+  for (const [slotKey, rewardType] of [
+    ['first', 'HealBigDrop'],
+    ['secondLeft', 'MaxHealthDrop'],
+    ['secondRight', 'MaxManaDrop'],
+  ] as const) {
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceHermesShrineOffer',
+      occurrence: source,
+      slotKey,
+      value: { rewardType },
+    });
+  }
+  return applyProjectCommand(project, catalog, {
+    kind: 'SetHermesShrinePurchase',
+    occurrence: source,
+    generationKey: 'initial:secondLeft',
+    purchase: { delay: 2, rushed: false },
+  });
+}
+
 export function loadSurfaceNNaturalSelectionFrontierProject(): ProjectDocument {
   return loadSurfaceNNaturalSelectionFrontierCheckpoint();
 }

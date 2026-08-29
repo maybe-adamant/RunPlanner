@@ -58,7 +58,7 @@ export interface PendingShopState {
   readonly goldMaterialization?: PendingShopGoldMaterialization;
 }
 
-/** Cross-biome run state derived from one Shrine purchase action. */
+/** Cross-biome run state scheduled from one feature-local Shrine purchase. */
 export interface PendingHermesShrineDelivery {
   readonly sourceKey: string;
   readonly sourceOrigin: import('../../authored-project/addresses').OccurrenceAddress;

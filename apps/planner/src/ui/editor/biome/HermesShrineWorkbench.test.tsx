@@ -35,7 +35,10 @@ import type {
 } from '@planner/projections/structured-workspace';
 import {
   loadSurfaceNOProject,
+  createSurfaceNShrineSideRoomDeliveryCheckpoint,
   nBiome,
+  nLocalOccurrenceId,
+  nOccurrenceId,
   oBiome,
   oOccurrenceIds,
 } from '@run-planner/test-fixtures/surface';
@@ -479,6 +482,85 @@ describe('Hermes Shrine workbench', () => {
       siteKey: 'hermesShrineDelivery',
       entryKey,
       encounterPhaseKey: 'Encounter',
+    });
+  });
+
+  it('keeps a visited N side-room Shrine source and its empty later delivery host distinct', async () => {
+    const sourceId = nLocalOccurrenceId('combat11', 'sideDoor1');
+    const hostId = nOccurrenceId('combat09');
+    const source = createOccurrenceAddress(nBiome, sourceId);
+    const host = createOccurrenceAddress(nBiome, hostId);
+    const entryKey = hermesShrineDeliveryEntryKey(source, 'initial:secondLeft');
+    const entry = createAcquisitionEntryAddress(
+      createAcquisitionSiteAddress(host, 'hermesShrineDelivery'),
+      entryKey,
+    );
+    const application = createApplication();
+    const view = renderOccurrenceWorkbench(
+      createSurfaceNShrineSideRoomDeliveryCheckpoint(),
+      'Surface',
+      'N',
+      occurrence(hostId),
+      application,
+    );
+    fireEvent.click(screen.getByRole('tab', { name: /Timeline$/ }));
+    const delivery = screen.getByText('Receive Max Health').closest('li');
+    if (delivery === null) throw new Error('N side-room delivery row is missing');
+    expect(within(delivery).getByRole('button', { name: 'Place required delivery' })).toBeTruthy();
+    expect(
+      application.store
+        .getState()
+        .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
+        ?.biomes.find((biome) => biome.biomeKey === 'N')
+        ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === hostId)
+        ?.acquisitionSites?.hermesShrineDelivery,
+    ).toBeUndefined();
+
+    const before = workspaceProjection(application);
+    const sourceDestination = before.focusByOwner.get(semanticAddressKey(source));
+    if (sourceDestination === undefined)
+      throw new Error('side-room Shrine source destination is missing');
+    const sourceNode = before.routes
+      .find((route) => route.routeKey === 'Surface')
+      ?.biomes.find((biome) => biome.biomeKey === 'N')
+      ?.nodes.find(
+        (node) => node.kind === 'occurrenceWorkbench' && node.room.occurrenceId === sourceId,
+      );
+    if (sourceNode === undefined) throw new Error('side-room Shrine source node is missing');
+    expect(sourceDestination).toMatchObject({
+      ownerAddress: source,
+      nodeKey: sourceNode.key,
+      inspectorSubject: { kind: 'node', nodeKey: sourceNode.key },
+    });
+    await view.user.click(
+      within(delivery).getByRole('button', { name: 'Place required delivery' }),
+    );
+    await waitFor(() =>
+      expect(
+        application.store
+          .getState()
+          .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
+          ?.biomes.find((biome) => biome.biomeKey === 'N')
+          ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === hostId)
+          ?.acquisitionSites?.hermesShrineDelivery?.pickupEntries?.[entryKey],
+      ).toBeDefined(),
+    );
+
+    const hostDestination = workspaceProjection(application).focusByOwner.get(
+      semanticAddressKey(entry),
+    );
+    const hostNode = workspaceProjection(application)
+      .routes.find((route) => route.routeKey === 'Surface')
+      ?.biomes.find((biome) => biome.biomeKey === 'N')
+      ?.nodes.find(
+        (node) => node.kind === 'occurrenceWorkbench' && node.room.occurrenceId === hostId,
+      );
+    if (hostNode === undefined) throw new Error('Shrine delivery host node is missing');
+    expect(sourceDestination.nodeKey).not.toBe(hostDestination?.nodeKey);
+    expect(hostDestination).toMatchObject({
+      ownerAddress: entry,
+      nodeKey: hostNode.key,
+      inspectorSubject: { kind: 'node', nodeKey: hostNode.key },
     });
   });
 

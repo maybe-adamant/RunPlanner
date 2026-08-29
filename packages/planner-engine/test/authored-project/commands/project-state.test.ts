@@ -188,7 +188,7 @@ describe('authored-project project-state commands', () => {
     ).toBeDefined();
   });
 
-  it('rejects malformed Shrine purchase action closure in completion and ordinary persisted rooms', () => {
+  it('rejects malformed Shrine purchase closure in completion and ordinary persisted rooms', () => {
     const completionBiome = createBiomeAddress('Surface', 'N');
     const completionOccurrence = createOccurrenceAddress(
       completionBiome,
