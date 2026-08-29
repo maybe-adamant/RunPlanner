@@ -18,7 +18,9 @@ import {
   echoLastRewardPickupEntryKey,
   goldenFBiome,
   goldenHBiome,
+  hermesShrineDeliveryEntryKey,
   loadSurfaceNOPQProject,
+  loadSurfaceNOPProject,
   oBiome,
   oOccurrenceIds,
   roomActionKey,
@@ -136,6 +138,82 @@ describe('structured workspace actions assembly', () => {
 
     expect(replayRepair?.label).toBe('Interact with Reward Reward Reward replay pickup');
     expect(replayRepair?.label).not.toContain('echoLastReward:');
+  });
+
+  it('places a due delayed Shrine delivery at its engine-published encounter end', () => {
+    const source = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
+    let project = loadSurfaceNOPProject();
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetHermesShrinePresence',
+      occurrence: source,
+      present: true,
+    });
+    for (const [slotKey, rewardType] of [
+      ['first', 'HealBigDrop'],
+      ['secondLeft', 'MaxHealthDrop'],
+      ['secondRight', 'MaxManaDrop'],
+    ] as const) {
+      project = applyProjectCommand(project, catalog, {
+        kind: 'ReplaceHermesShrineOffer',
+        occurrence: source,
+        slotKey,
+        value: { rewardType },
+      });
+    }
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetHermesShrinePurchase',
+      occurrence: source,
+      generationKey: 'initial:secondLeft',
+      purchase: { delay: 2, rushed: false },
+    });
+
+    const hostId = oOccurrenceIds.devotion;
+    const entryKey = hermesShrineDeliveryEntryKey(source, 'initial:secondLeft');
+    const entry = createAcquisitionEntryAddress(
+      createAcquisitionSiteAddress(createOccurrenceAddress(oBiome, hostId), 'hermesShrineDelivery'),
+      entryKey,
+    );
+    const dueRoom = assemble(project, 'Surface', 'O', hostId).assembly.node.room;
+    const dueRow = dueRoom.roomActions?.repairRows.find(
+      (row) =>
+        row.reference.kind === 'interactAcquisitionEntry' &&
+        row.reference.siteKey === 'hermesShrineDelivery' &&
+        row.reference.entryKey === entryKey,
+    );
+
+    expect(dueRow).toMatchObject({
+      label: 'Receive Max Health',
+      participation: 'required',
+      rank: null,
+      reference: { encounterPhaseKey: 'Encounter' },
+      window: { kind: 'encounterEnd', phaseKey: 'Encounter' },
+    });
+    expect(dueRow?.placement?.command).toEqual({
+      kind: 'PlaceHermesShrineDelivery',
+      encounterPhaseKey: 'Encounter',
+      entry,
+    });
+    expect(dueRow?.proposalKeys).toEqual([]);
+    expect(dueRow?.rewardPayload).toBeUndefined();
+
+    const command = dueRow?.placement?.command;
+    if (command === undefined) throw new Error('Due Shrine delivery placement is missing');
+    const placed = applyProjectCommand(project, catalog, command);
+    const placedRoom = assemble(placed, 'Surface', 'O', hostId).assembly.node.room;
+    const placedRow = placedRoom.roomActions?.rows.find(
+      (row) =>
+        row.reference.kind === 'interactAcquisitionEntry' &&
+        row.reference.siteKey === 'hermesShrineDelivery' &&
+        row.reference.entryKey === entryKey,
+    );
+    expect(placedRow).toMatchObject({
+      label: 'Receive Max Health',
+      participation: 'required',
+      window: { kind: 'encounterEnd', phaseKey: 'Encounter' },
+    });
+    expect(placedRow?.rank).not.toBeNull();
+    expect(placedRow?.placement).toBeUndefined();
+    expect(placedRow?.rewardPayload).toBeDefined();
   });
 
   it('retains published dormant Fields and Ship controls with their occurrence-owned requirements', () => {

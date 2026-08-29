@@ -315,6 +315,9 @@ export function assembleWorkspaceOccurrence(
     ...(input.fountainRarityAssessment === undefined
       ? {}
       : { fountainRarityAssessment: input.fountainRarityAssessment }),
+    ...(input.derivedAcquisitionEntries === undefined
+      ? {}
+      : { derivedAcquisitionEntries: input.derivedAcquisitionEntries }),
     controls: allRewardControls,
     encounterPhases,
     roomLabel: room.label,

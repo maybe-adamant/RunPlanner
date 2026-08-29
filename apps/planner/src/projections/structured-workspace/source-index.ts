@@ -148,6 +148,8 @@ export interface WorkspaceBiomeSource {
     readonly sourceOfferKey?: string;
     readonly slotIndex?: number;
     readonly rewardTypes?: readonly string[];
+    readonly fixedReward?: import('@run-planner/engine/authored-project').AuthoredRewardState;
+    readonly encounterPhaseKey?: string;
     readonly retainedSourceMismatch?: boolean;
     readonly eligibleSourceOfferKeys?: readonly string[];
   }[];

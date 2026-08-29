@@ -324,6 +324,7 @@ export function RoomActionsWorkbench({
       rankedRows.length > 1 &&
       proposals.some((proposal) => proposal.kind === 'move');
     const staleShopRemoval = row.stale ? row.shopParticipation : undefined;
+    const placement = row.placement;
     const removeRow = (): void => {
       const removable = proposals.find((proposal) => proposal.kind === 'remove');
       if (removable?.structurallyAuthorable === true) {
@@ -387,16 +388,26 @@ export function RoomActionsWorkbench({
               {renderRowContent?.(row)}
               <RoomActionInlineEditors interactions={interactions} row={row} />
             </div>
-            <RoomActionOrderingControls
-              onApply={apply}
-              onRemove={removeRow}
-              proposals={proposals}
-              row={row}
-              showRemoval={
-                row.reference.kind !== 'interactKeepsakeRack' &&
-                (!row.participationOwnedByOverview || row.stale)
-              }
-            />
+            {placement === undefined ? (
+              <RoomActionOrderingControls
+                onApply={apply}
+                onRemove={removeRow}
+                proposals={proposals}
+                row={row}
+                showRemoval={
+                  row.reference.kind !== 'interactKeepsakeRack' &&
+                  (!row.participationOwnedByOverview || row.stale)
+                }
+              />
+            ) : (
+              <button
+                className="secondary-action action-compact"
+                onClick={() => executeIntent(placement)}
+                type="button"
+              >
+                Place required delivery
+              </button>
+            )}
             {renderRowTrailingContent?.(row)}
           </div>
           {row.issues.length === 0 ? null : (

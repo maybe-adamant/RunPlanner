@@ -179,6 +179,41 @@ export function assembleOccurrenceRewardLocal(
           'rewardControl' in offer ? [offer.rewardControl] : [],
         ),
   );
+  // A due delayed delivery can be the first acquisition-site product at its
+  // host. Publish its engine-attested payload owner even before the placement
+  // command materializes the sparse site, so findings and repair navigation
+  // have one exact destination at the delivery host.
+  const dueShrineDeliveryRewardControls = Object.freeze(
+    !input.facts.detailsActive
+      ? []
+      : (() => {
+          const site = createAcquisitionSiteAddress(address, 'hermesShrineDelivery');
+          const stored = input.occurrence.acquisitionSites?.hermesShrineDelivery?.pickupEntries;
+          return (input.derivedAcquisitionEntries?.(site) ?? Object.freeze([])).flatMap(
+            (capability) => {
+              if (capability.kind !== 'hermesShrineDelivery') return [];
+              if (stored?.[capability.address.entryKey] !== undefined) return [];
+              const reward = capability.fixedReward ?? null;
+              return [
+                rewardControl(
+                  input,
+                  { kind: 'acquisitionEntry' as const, address: capability.address },
+                  undefined,
+                  reward?.offer ?? null,
+                  reward,
+                  capability.rewardTypes ?? Object.freeze([]),
+                  undefined,
+                  capability.retainedSourceMismatch === true,
+                ) as WorkspaceExplicitRewardControl,
+              ];
+            },
+          );
+        })(),
+  );
+  // Same-room rushed deliveries are active before the lifecycle has published
+  // a derived host capability. Their source-owned entry remains the one
+  // acquisition control; delayed host entries above consume the exact derived
+  // capability instead of looking back to a purchase row.
   const rushedShrineRewardControls = Object.freeze(
     input.occurrence.hermesShrine === undefined
       ? []
@@ -219,6 +254,7 @@ export function assembleOccurrenceRewardLocal(
       ...baseRewardControls,
       ...pickupRewardControls,
       ...supplementalRewardControls,
+      ...dueShrineDeliveryRewardControls,
       ...rushedShrineRewardControls,
     ]),
   });

@@ -4,6 +4,7 @@ import {
   createEncounterPhaseAddress,
   createFountainRarityOutcomeAddress,
   createOccurrenceAddress,
+  createAcquisitionSiteAddress,
   createRoomActionAddress,
   createShopOfferAddress,
   INFERNAL_CONTRACT_ENTRY_KEY,
@@ -16,6 +17,7 @@ import {
   type SemanticAddress,
   type FountainRarityOutcomeAddress,
 } from '@run-planner/engine/authored-project';
+import type { WorkspaceDerivedAcquisitionEntry } from './occurrence-reward-assembly';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import {
   appendSteadyGrowthTimelineEffects,
@@ -65,6 +67,9 @@ export interface WorkspaceOccurrenceActionsInput {
     | {
         readonly kind: 'unavailable';
       };
+  readonly derivedAcquisitionEntries?: (
+    site: import('@run-planner/engine/authored-project').AcquisitionSiteAddress,
+  ) => readonly WorkspaceDerivedAcquisitionEntry[];
 }
 
 export interface WorkspaceOccurrenceActionAssemblyInput extends WorkspaceOccurrenceActionsInput {
@@ -345,9 +350,77 @@ function roomActionsForOccurrence(
       });
     }),
   );
+  const dueShrineRows = Object.freeze(
+    (
+      input.derivedAcquisitionEntries?.(
+        createAcquisitionSiteAddress(owner, 'hermesShrineDelivery'),
+      ) ?? Object.freeze([])
+    ).flatMap((capability) => {
+      if (
+        capability.kind !== 'hermesShrineDelivery' ||
+        capability.encounterPhaseKey === undefined ||
+        projectedRows.some(
+          (row) =>
+            row.reference.kind === 'interactAcquisitionEntry' &&
+            row.reference.siteKey === 'hermesShrineDelivery' &&
+            row.reference.entryKey === capability.address.entryKey,
+        )
+      )
+        return [];
+      const reference = Object.freeze({
+        kind: 'interactAcquisitionEntry' as const,
+        siteKey: 'hermesShrineDelivery' as const,
+        entryKey: capability.address.entryKey,
+        encounterPhaseKey: capability.encounterPhaseKey,
+      });
+      const control = controlAt(capability.address);
+      const actionAddress = createRoomActionAddress(
+        input.biome,
+        input.occurrence.occurrenceId,
+        roomActionKey(reference),
+      );
+      return [
+        Object.freeze({
+          address: actionAddress,
+          issues: Object.freeze(['This required action has not been placed.']),
+          key: roomActionKey(reference),
+          label: occurrenceActionLabel(
+            input.catalog,
+            reference,
+            roomLocal,
+            encounterPhases,
+            control,
+            input.occurrence,
+            input.occurrence.purgingPool?.traitKeyBySlot,
+          ),
+          marker: input.markerDestinations.marker(actionAddress),
+          proposalKeys: Object.freeze([]),
+          reference,
+          participation: 'required' as const,
+          participationOwnedByOverview: false,
+          placement: Object.freeze({
+            command: Object.freeze({
+              kind: 'PlaceHermesShrineDelivery' as const,
+              entry: capability.address,
+              encounterPhaseKey: capability.encounterPhaseKey,
+            }),
+            focus: Object.freeze({ owner: actionAddress, timing: 'after' as const }),
+          }),
+          rank: null,
+          stale: false,
+          window: Object.freeze({
+            kind: 'encounterEnd' as const,
+            phaseKey: capability.encounterPhaseKey,
+          }),
+          executable: false,
+        }),
+      ];
+    }),
+  );
+  const allProjectedRows = Object.freeze([...projectedRows, ...dueShrineRows]);
   const unrankedOrStaleRows = Object.freeze(
     lifecycleTimeline.repairRows.flatMap(({ key }) => {
-      const projected = projectedRows.find((row) => row.key === key);
+      const projected = allProjectedRows.find((row) => row.key === key);
       if (projected === undefined && !suppressedActionKeys.has(key)) {
         throw new Error(`Room action timeline repair row ${key} has no projected row`);
       }
@@ -364,11 +437,12 @@ function roomActionsForOccurrence(
     ),
   );
   const optionalKeys = new Set(optionalRows.map((row) => row.key));
-  const repairRows = Object.freeze(
-    unrankedOrStaleRows.filter(
+  const repairRows = Object.freeze([
+    ...unrankedOrStaleRows.filter(
       (row) => !optionalKeys.has(row.key) && (!row.participationOwnedByOverview || row.stale),
     ),
-  );
+    ...dueShrineRows,
+  ]);
   const steadyGrowthOutcomes = (input.steadyGrowthOutcomes ?? []).filter(
     (outcome) => semanticAddressKey(outcome.address.owner) === semanticAddressKey(owner),
   );
@@ -455,7 +529,7 @@ function roomActionsForOccurrence(
     activeLifecycleTimeline,
     roomLocal,
     encounterPhases,
-    projectedRows,
+    allProjectedRows,
     proposals,
     steadyGrowth,
     transcendentEmbryo,
@@ -479,7 +553,7 @@ function roomActionsForOccurrence(
     optionalRows,
     proposals: Object.freeze(proposals),
     repairRows,
-    rows: projectedRows,
+    rows: allProjectedRows,
     ...(steadyGrowth.length === 0 ? {} : { steadyGrowth }),
   });
 }

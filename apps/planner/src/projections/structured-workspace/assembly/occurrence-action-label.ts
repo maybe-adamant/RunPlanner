@@ -1,6 +1,7 @@
 import {
   parseArtificerReplacementEntryKey,
   parseEchoLastRewardPickupEntryKey,
+  parseHermesShrineDeliveryEntryKey,
 } from '@run-planner/engine/authored-project';
 import type { Catalog } from '@run-planner/engine/catalog-schema';
 import { summarizeRewardOffer } from '@planner/projections/rewardPicker';
@@ -129,6 +130,7 @@ export function occurrenceActionLabel(
         roomLocal.kind === 'shop'
           ? roomLocal.supplementalOffers.find((candidate) => candidate.key === reference.entryKey)
           : undefined;
+      const shrineDelivery = parseHermesShrineDeliveryEntryKey(reference.entryKey);
       const entryLabel =
         parseArtificerReplacementEntryKey(reference.entryKey) !== undefined
           ? 'Artificer'
@@ -138,6 +140,13 @@ export function occurrenceActionLabel(
               ? (catalog.rewards.rewardTypes.byKey[rewardControl.rewardTypes[0]!]?.label ??
                 reference.entryKey)
               : reference.entryKey;
+      if (shrineDelivery !== undefined) {
+        const summary =
+          rewardControl?.offer === null || rewardControl?.offer === undefined
+            ? entryLabel
+            : summarizeRewardOffer(catalog, rewardControl.offer);
+        return `Receive ${summary}`;
+      }
       return pickupLabel(supplemental?.label ?? entryLabel);
     }
     case 'useFountain':
