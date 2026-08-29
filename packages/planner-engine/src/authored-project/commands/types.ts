@@ -456,7 +456,6 @@ export type AcquisitionSiteCommand =
       /** Atomically materializes and ranks one due Shrine delivery entry. */
       readonly kind: 'PlaceHermesShrineDelivery';
       readonly entry: AcquisitionEntryAddress;
-      readonly index: number;
       /** Exact encounter end that made this cross-occurrence delivery due. */
       readonly encounterPhaseKey: string;
     }

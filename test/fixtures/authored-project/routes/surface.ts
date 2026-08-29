@@ -164,7 +164,6 @@ export function createSurfaceNOHermesShrineDeliveryCheckpoint(): ProjectDocument
       hermesShrineDeliveryEntryKey(shrine, 'initial:secondLeft'),
     ),
     encounterPhaseKey: 'Encounter',
-    index: 1,
   });
 }
 

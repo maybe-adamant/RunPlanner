@@ -122,7 +122,8 @@ entry as a prerequisite for showing it.
 Placing that row uses one Shrine-specific semantic intent that atomically:
 
 - materializes the declaration-owned default delivery entry at the exact host;
-- inserts its `interactAcquisitionEntry` reference at the selected rank; and
+- inserts its `interactAcquisitionEntry` reference at the engine-owned canonical
+  rank, after which ordinary timeline moves own player-selected reordering; and
 - preserves the full source occurrence address in the delivery key.
 
 Until it is placed, progressive evaluation blocks at that host before later
