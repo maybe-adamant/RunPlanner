@@ -325,6 +325,34 @@ Every supported concrete room declaration owns:
 - explicit room-local child descriptors where applicable;
 - complete semantic leaf defaults required by its template.
 
+### Room-owned offer-reward binding
+
+Each Room Declaration also publishes the closed binding for the reward surface
+that appears when that room is selected as a start or physical door offer:
+
+```ts
+type RoomOfferRewardBinding =
+  | { readonly kind: 'none' }
+  | { readonly kind: 'incomingReward' }
+  | { readonly kind: 'localRewardGroup'; readonly groupKey: string };
+```
+
+The ordinary binding is derived from the same declaration's `incomingReward`:
+`none` and Shop producers normalize to `none`, while every other incoming
+producer normalizes to `incomingReward`. A declaration may instead name one of
+its own bounded local reward groups when that group is the offer surface; the
+current concrete case is the active `cages` prefix on H Fields combat rooms.
+This binding is room metadata, not a second reward owner: the occurrence still
+owns the authored leaves and entered-room chronology, and Fields optional
+rewards remain entered-room controls rather than becoming cage offer rewards.
+
+Catalog compilation validates an explicit group against that exact Room
+Declaration. The group must exist, be a bounded reward-slot group, and declare
+the closed `fieldsCages` offer capability. Encounter wheels, Shop inventory,
+fixed-room slots, and `FieldsOptionalRewards` cannot be selected as an offer
+group. Every normalized room therefore has one immutable, validated binding;
+consumers do not infer it from a biome, template, game name, or rendered room.
+
 Room declarations do not own:
 
 - topology links;
@@ -675,6 +703,9 @@ Catalog construction must verify:
 - every supported concrete acquisition selects exactly one audited
   `lootAndUse` or `consumableAndUse` projection profile independently of its
   acquisition kind;
+- every Room Declaration normalizes one room-owned offer-reward binding, derives
+  ordinary bindings from its incoming reward, and validates each explicit local
+  reward-group reference against that room's supported bounded group;
 - declaration order is explicit wherever simulation consumes order;
 - layout bounds can contain every supported authored structure;
 - every fixed room link resolves to two distinct ordinary occurrences in the

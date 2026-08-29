@@ -192,7 +192,13 @@ semantic focus, finding navigation, coverage, and focused-inspector language.
 The inspector renders the occurrence stage or exact structural workbench
 containing the focused semantic owner. An ordinary decision remains the
 outgoing-door section of its source occurrence and includes its batch policy
-and every physical offer's picked state, room selector, and reward controls.
+and every physical offer's picked state, Room row, and Reward row. Starts use
+the same Room/Reward composition: `Configure starting room` or `Configure
+Intro room`, then the selected room's complete offer surface. Before a room is
+selected, the pending Reward row remains visible as `Choose room to show
+reward`; after selection it explicitly renders no reward, one editor, or all
+active editors for that room. This is one projection product, not a
+biome-specific presentation branch.
 Before a decision has one selected continuation, its numbered rail stop opens
 that decision surface. Once exactly one target is selected, the same stop opens
 the selected target occurrence stage; the predecessor stage still owns and
@@ -277,9 +283,9 @@ ArrowRight, Home, and End keyboard activation.
 
 The occurrence header presents only the compact `Entering <room>` identity plus
 cross-tab markers or controls. Room Overview consumes the exact predecessor
-door preview and renders one compact read-only incoming-reward fact: its
-visible summary, `Hidden`, or `None`. React does not rediscover an offer from
-room-local state or expose an incoming-reward editor there. A Room-features
+offer-reward surface and renders one compact read-only incoming-reward fact:
+its visible summary, `Hidden`, or `None`. React does not rediscover an offer
+from room-local state or expose an incoming-reward editor there. A Room-features
 child renders its bound Add or Remove Chaos-gate/Zagreus-contract action
 directly, without a second child heading that repeats the action's subject.
 
@@ -601,10 +607,12 @@ projected.
 ### Decision Offers and Picked State
 
 Selecting a decision shows all of its physical offers together. Every authored
-offer keeps its room selector and reward editor at the same visual level,
-because the room and incoming reward jointly describe the offered door.
-The door contract keeps game preview visibility separate from planner
-authorship. An Anomaly or Zagreus automatic return remains hidden in game, but
+offer keeps its Room and Reward rows at the same visual level, because the
+selected room owns the complete reward surface for that offered door. An
+unresolved offer keeps its pending Reward row, while a resolved room publishes
+`No reward`, one editor, or all active sibling editors. The door contract keeps
+game preview visibility separate from planner authorship. An Anomaly or
+Zagreus automatic return remains hidden in game, but
 its freshly generated host reward still consumes the ordinary reward store and
 therefore retains its reward editor and finding destination in the decision.
 Single-choice controls live on those cards, and the picked card receives the
@@ -620,21 +628,23 @@ still affect reward bags, sibling conflicts, source support, and possibility
 evaluation. They do not become equal-weight stops on the biome rail. A numbered
 decision stop always shows its decision identity and semantic assessment. When
 exactly one target is authored as selected, it navigates to that continuation's
-occurrence stage and may progressively add that room label; if its room-local
-surface has exactly one direct compact reward, it may add a structured reward
-token. The selected room remains useful context when the reward surface is
-multiple or not compactly representable, so room and reward cardinality are
-deliberately independent. Findings, evaluated entry, and physical availability
-never suppress this authored-selection context.
+occurrence stage and may progressively add that room label; if its complete
+offer surface has exactly one direct, compactly displayable reward, it may add
+a structured reward token. The selected room remains useful context when the
+reward surface is multiple or not compactly representable, so room and reward
+cardinality are deliberately independent. Findings, evaluated entry, and
+physical availability never suppress this authored-selection context.
 
-The rail product retains the resolved reward offer plus its current text
-fallback. React currently renders the fallback, while a later compact icon or
-token renderer can consume the same structured offer without recreating reward
-or selection policy. Fields, Ship, and Shop surfaces do not infer a token by
-counting nested controls. Ephyra opts in only through its explicit incoming
-main reward; its side-room offers never become an aggregate rail token. Target,
-occurrence, reward, and finding focus continue to resolve to the exact control
-inside the decision.
+The rail is intentionally lossy presentation. It consumes the complete
+room-owned offer surface but emits one reward token only for a visible,
+resolved surface containing exactly one reward. Zero, unresolved, hidden, and
+multi-reward surfaces emit no token; that omission never removes their editor,
+marker, finding, or focus destination. React consumes this derived token or
+text fallback without recreating reward or selection policy. Fields, Ship, and
+Shop surfaces do not infer a token by counting nested controls. Ephyra opts in
+only through its explicit incoming main reward; its side-room offers never
+become an aggregate rail token. Target, occurrence, reward, and finding focus
+continue to resolve to the exact control inside the decision.
 
 Picked and unpicked targets use the same occurrence identity and semantic
 addresses. Visual grouping does not change ownership.

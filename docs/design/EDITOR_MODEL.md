@@ -108,6 +108,16 @@ The one Hub decision node projects:
   completion sequence;
 - findings and candidate state attached by semantic address.
 
+Every start and physical door offer uses the same Room/Reward composition. The
+selected Room Declaration supplies its complete offer-reward surface: before a
+room is selected the Reward row says `Choose room to show reward`; afterward it
+explicitly resolves to no reward, one reward editor, or all active reward
+editors declared by that room. The application adapts this room-owned product
+for the editor, while React does not infer reward presence from biome, room
+name, template, or room-local chronology. This applies equally to F's
+multi-choice Opening, fixed one-choice Openings and Intros, ordinary doors,
+and H's active Fields cage offer group.
+
 `HubDecisionWorkbench` is the sole N-specific renderer inside
 `BiomeWorkspace`. Its occurrence-like tabs make the persistent board readable
 without changing its model: Hub Overview renders the complete fixed-slot set
@@ -199,9 +209,12 @@ decision batch
 
 The batch owns decision topology and selection. A target is the relationship
 from one physical exit to one persisted Room Occurrence. The occurrence owns
-its game room declaration and room-local state, including its incoming reward.
-Presentation may place the room and reward controls together on the decision
-card without transferring their semantic ownership to the batch or target.
+its game room declaration and room-local state, including its incoming reward
+and any local reward leaves. Presentation may place the room and its complete
+offer-reward surface together on the decision card without transferring
+semantic ownership to the batch or target. An offer surface can be empty,
+incoming, or a declaration-owned local group; the selected room remains the
+authority for that distinction.
 
 Every structurally owned occurrence must have one reachable control package.
 That package may be nested in its decision workbench; it need not appear as a
@@ -276,9 +289,9 @@ The tabs never create phase-local orders.
 
 The room header is compact orientation and renders only `Entering <room>` plus
 cross-tab markers or controls. Room Overview renders the predecessor-owned
-incoming-door preview once as a compact read-only fact: the visible reward
-summary, `Hidden`, or `None`. It never rediscovers or edits that reward from
-room-local state. Room-feature children likewise render their bound action
+offer-reward surface once as compact read-only incoming context: the visible
+reward summary, `Hidden`, or `None`. It never rediscovers or edits that reward
+from room-local state. Room-feature children likewise render their bound action
 directly under `Room features`; they do not add a duplicate Chaos-gate or
 Zagreus-contract heading above that action.
 

@@ -54,8 +54,11 @@ each target observes earlier peer creation history. The planner preserves
 possible and forced support but does not model weighted room-set RNG or
 unmodeled combat wave composition.
 
-H normal batches use no outgoing reward store. Their room-local cage bindings
-and the Preboss declaration supply the required resolved stores instead.
+H normal batches use no outgoing reward store. Fields combat Room Declarations
+expose their active cage group as the selected door's offer-reward surface;
+the Preboss declaration supplies its own required resolved stores. Optional
+Fields rewards, including optional MetaProgress, remain entered-room controls
+and do not become part of that outgoing cage surface.
 Changing a source to a narrower room preserves structurally represented
 overflow targets until the explicit `ReconcileBatchExitCapacity` command
 removes unavailable exits and their downstream subtrees.
@@ -98,10 +101,11 @@ prepare each target's cage offers -> select one target -> enter its combat ->
 generate active optionals -> execute its authored Fields actions
 ```
 
-This keeps local cages distinct from the normal-door decision and from the
-Preboss free reward. A counted cage offer consumes its declaration-backed
-RunProgress support when its owning room is prepared; selecting another normal
-peer does not recreate that room's cages.
+The active cage reward controls appear on the outgoing door offer through the
+selected room's declaration-owned offer binding, while their leaves and
+chronology remain owned by that Fields occurrence. A counted cage offer
+consumes its declaration-backed RunProgress support when its owning room is
+prepared; selecting another normal peer does not recreate that room's cages.
 
 The Passive phase is fixed entry evidence. The active cage count then creates a
 fixed sequence of two or three ordinal encounter cycles. Authored cage order
@@ -130,8 +134,10 @@ The editor keeps cage and optional identities in Room Overview and renders the
 single chronology in Room Timeline. Its engine-derived timeline brackets each
 ranked active `completeFieldsCage` with the exact ordinal Start/End boundaries;
 an unranked retained cage is repair work, not an active encounter cycle. Room
-Doors contains the unchanged outgoing decision. These tabs do not create a
-Fields-specific order or move cage rewards onto door contracts.
+Doors contains the outgoing decision and projects the active cage reward group
+from the selected room. Optional Fields rewards, including optional
+MetaProgress, remain entered-room controls; the offer surface references the
+same cage leaves without creating a second owner or chronology.
 
 ### Depth, force, and completion facts
 
