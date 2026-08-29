@@ -125,13 +125,13 @@ export function hasPendingHermesSpellDrop(
 export function attestPendingHermesSpellDrop(
   branches: readonly {
     readonly pendingHermesShrineDeliveries?: Readonly<
-      Record<string, { readonly reward: { readonly offer: { readonly rewardType: string } } }>
+      Record<string, { readonly rewardType: string }>
     >;
   }[],
 ): boolean {
   const values = branches.map((branch) =>
     Object.values(branch.pendingHermesShrineDeliveries ?? {}).some(
-      (delivery) => delivery.reward.offer.rewardType === 'SpellDrop',
+      (delivery) => delivery.rewardType === 'SpellDrop',
     ),
   );
   const first = values[0] ?? false;
@@ -210,7 +210,7 @@ export function assessHermesShrineTravelDealRefill(
   const excluded = new Set(
     Object.values(shrine.offerBySlot)
       .filter((offer): offer is NonNullable<typeof offer> => offer !== null)
-      .map((offer) => offer.offer.rewardType),
+      .map((offer) => offer.rewardType),
   );
   return Object.freeze({
     sourceGenerationKey,
@@ -289,9 +289,7 @@ export function assessHermesShrine(
             (group?.options.values ?? [])
               .filter(
                 (option) =>
-                  peer === null ||
-                  peer === undefined ||
-                  option.rewardType !== peer.offer.rewardType,
+                  peer === null || peer === undefined || option.rewardType !== peer.rewardType,
               )
               .filter(
                 (option) =>
@@ -334,10 +332,10 @@ export function assessHermesShrineInventory(
       continue;
     }
     const group = profile.groups.byKey[profile.slots.byKey[slotKey]!.groupKey]!;
-    if (!group.rewardTypes.includes(offer.offer.rewardType))
+    if (!group.rewardTypes.includes(offer.rewardType))
       issues.push(Object.freeze({ kind: 'wrongGroup', slotKey }));
     const option = group.options.values.find(
-      (candidate) => candidate.rewardType === offer.offer.rewardType,
+      (candidate) => candidate.rewardType === offer.rewardType,
     );
     if (
       requirements !== undefined &&
@@ -348,7 +346,7 @@ export function assessHermesShrineInventory(
   }
   const left = shrine.offerBySlot.secondLeft;
   const right = shrine.offerBySlot.secondRight;
-  if (left !== null && right !== null && left.offer.rewardType === right.offer.rewardType)
+  if (left !== null && right !== null && left.rewardType === right.rewardType)
     issues.push(Object.freeze({ kind: 'duplicateSecondGroup' }));
   return Object.freeze(issues);
 }

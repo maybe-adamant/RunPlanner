@@ -371,14 +371,14 @@ function roomFeatures(
                         label:
                           input.catalog.rewards.shops.byKey.SurfaceShop?.slots.byKey[slotKey]
                             ?.label ?? slotKey,
-                        rewardType: shrine.offerBySlot[slotKey]?.offer.rewardType ?? null,
+                        rewardType: shrine.offerBySlot[slotKey]?.rewardType ?? null,
                         ...(shrine.offerBySlot[slotKey] === null
                           ? {}
                           : {
                               rewardLabel:
                                 input.catalog.rewards.rewardTypes.byKey[
-                                  shrine.offerBySlot[slotKey]!.offer.rewardType
-                                ]?.label ?? shrine.offerBySlot[slotKey]!.offer.rewardType,
+                                  shrine.offerBySlot[slotKey]!.rewardType
+                                ]?.label ?? shrine.offerBySlot[slotKey]!.rewardType,
                             }),
                         candidateRewardTypes:
                           shrineAssessment?.candidateRewardTypesBySlot[slotKey] ??
@@ -408,15 +408,15 @@ function roomFeatures(
                 ? {}
                 : {
                     travelDealRefill: Object.freeze({
-                      rewardType: shrine.travelDealRefill?.offer?.offer.rewardType ?? null,
+                      rewardType: shrine.travelDealRefill?.offer?.rewardType ?? null,
                       ...(shrine.travelDealRefill?.offer === null ||
                       shrine.travelDealRefill?.offer === undefined
                         ? {}
                         : {
                             rewardLabel:
                               input.catalog.rewards.rewardTypes.byKey[
-                                shrine.travelDealRefill.offer.offer.rewardType
-                              ]?.label ?? shrine.travelDealRefill.offer.offer.rewardType,
+                                shrine.travelDealRefill.offer.rewardType
+                              ]?.label ?? shrine.travelDealRefill.offer.rewardType,
                           }),
                       candidateRewardTypes:
                         shrineAssessment === undefined

@@ -3,7 +3,13 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  createAcquisitionEntryAddress,
+  createAcquisitionSiteAddress,
+  hermesShrineDeliveryEntryKey,
   createOccurrenceAddress,
+  createOccurrenceId,
+  createTraitOfferAddress,
+  semanticAddressKey,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
@@ -12,7 +18,9 @@ import { Provider } from 'react-redux';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { createApplication } from '@planner/composition/createApplication';
+import { candidateSupport } from '@planner/projections/candidateProjection';
 import {
+  authoredProjectCommandDispatched,
   authoredProjectReplaced,
   authoredProjectRedoRequested,
   authoredProjectUndoRequested,
@@ -21,7 +29,12 @@ import type {
   WorkspaceBiome,
   WorkspaceOccurrenceWorkbenchNode,
 } from '@planner/projections/structured-workspace';
-import { loadSurfaceNOProject, oBiome, oOccurrenceIds } from '@run-planner/test-fixtures/surface';
+import {
+  loadSurfaceNOProject,
+  nBiome,
+  oBiome,
+  oOccurrenceIds,
+} from '@run-planner/test-fixtures/surface';
 import {
   renderOccurrenceWorkbench,
   workspaceBiome,
@@ -158,6 +171,103 @@ describe('Hermes Shrine workbench', () => {
     );
     expect(purchaseRow?.label).toBe('Buy Big Heal');
     expect(purchaseRow?.rewardPayload?.control.offer).toMatchObject({ rewardType: 'HealBigDrop' });
+  });
+
+  it('authors Mystery Boon identity in inventory and its god only at rushed acquisition', async () => {
+    const application = createApplication();
+    const postbossId = createOccurrenceId('surface-n-preboss:postboss');
+    const view = renderOccurrenceWorkbench(
+      loadSurfaceNOProject(),
+      'Surface',
+      'N',
+      occurrence(postbossId),
+      application,
+    );
+    const owner = createOccurrenceAddress(nBiome, postbossId);
+    const currentOccurrence = () =>
+      application.store
+        .getState()
+        .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
+        ?.biomes.find((biome) => biome.biomeKey === 'N')
+        ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === postbossId);
+
+    openOverview();
+    await view.user.click(screen.getByRole('button', { name: 'Hermes Shrine Offer 3 Item' }));
+    await view.user.click(within(await screen.findByRole('listbox')).getByText('Mystery Boon'));
+    expect(currentOccurrence()?.hermesShrine?.offerBySlot.secondRight).toEqual({
+      rewardType: 'BlindBoxLoot',
+    });
+    expect(currentOccurrence()?.acquisitionSites?.hermesShrineDelivery).toBeUndefined();
+    expect(screen.queryByText('Eventual God')).toBeNull();
+
+    await view.user.click(
+      screen.getByRole('checkbox', { name: 'Purchased Hermes Shrine Offer 3' }),
+    );
+    await view.user.click(screen.getByRole('checkbox', { name: 'Rush Hermes Shrine Offer 3' }));
+    fireEvent.click(screen.getByRole('tab', { name: /Timeline$/ }));
+    const entryKey = hermesShrineDeliveryEntryKey(owner, 'initial:secondRight');
+    const entry = createAcquisitionEntryAddress(
+      createAcquisitionSiteAddress(owner, 'hermesShrineDelivery'),
+      entryKey,
+    );
+    const sourceInteraction = workspaceProjection(application).interactions.rewards.get(
+      semanticAddressKey(entry),
+    );
+    if (sourceInteraction === undefined)
+      throw new Error('rushed Mystery Boon source editor is missing');
+    const sourceDomain = await sourceInteraction.load();
+    const sourceModel = sourceInteraction.model(sourceDomain, 'source', {
+      rewardType: 'BlindBoxLoot',
+    });
+    expect(
+      sourceModel.sections
+        .flatMap((section) => section.items)
+        .find((item) => item.label === 'Apollo'),
+    ).toMatchObject({ state: 'possible', disabled: false });
+
+    const purchaseRow = screen.getByText('Buy Mystery Boon').closest('li');
+    if (purchaseRow === null) throw new Error('rushed Mystery Boon purchase row is missing');
+    await view.user.click(within(purchaseRow).getByRole('button', { name: 'Reward' }));
+    expect(await screen.findByText('Eventual God')).toBeTruthy();
+    await view.user.click(within(await screen.findByRole('listbox')).getByText('Apollo'));
+
+    await waitFor(() =>
+      expect(
+        currentOccurrence()?.acquisitionSites?.hermesShrineDelivery?.pickupEntries?.[entryKey]
+          ?.offer,
+      ).toEqual({
+        rewardType: 'BlindBoxLoot',
+        payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+      }),
+    );
+
+    const resolvedPurchaseRow = screen.getByText('Buy Mystery Boon').closest('li');
+    if (resolvedPurchaseRow === null)
+      throw new Error('resolved rushed Mystery Boon purchase row is missing');
+    await view.user.click(within(resolvedPurchaseRow).getByRole('button', { name: 'Reward' }));
+    expect(await screen.findByText('Eventual God')).toBeTruthy();
+    expect(screen.queryByText('Reward type')).toBeNull();
+    await view.user.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    const hiddenSource = workspaceProjection(application).interactions.traitOffers.get(
+      semanticAddressKey(createTraitOfferAddress(entry, 'hiddenSource')),
+    );
+    const hiddenSourceDraft = hiddenSource?.traitsStartingDraft?.();
+    if (hiddenSource === undefined)
+      throw new Error('rushed Mystery Boon hidden-source editor is missing');
+    if (hiddenSourceDraft === undefined)
+      throw new Error('rushed Mystery Boon hidden-source draft is missing');
+    expect(candidateSupport(hiddenSource.load(hiddenSourceDraft)[0])).toBe('possible');
+    act(() =>
+      application.store.dispatch(
+        authoredProjectCommandDispatched(hiddenSource.intentFor(hiddenSourceDraft).command),
+      ),
+    );
+    expect(
+      currentOccurrence()?.acquisitionSites?.hermesShrineDelivery?.pickupEntries?.[entryKey]
+        ?.traitOffersByAcquisitionRole.hiddenSource,
+    ).toEqual(hiddenSourceDraft);
+    expect(() => workspaceProjection(application)).not.toThrow();
   });
 
   it('keeps forced Shrine inventory visible and non-removable', () => {

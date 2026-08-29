@@ -633,13 +633,15 @@ continuation is selected; no Shop-private or discarded replay exists.
 
 ### Delayed-delivery state
 
-Schema 59 represents the supported equivalent of `StorePendingDeliveryItem` as
-source-owned Shrine purchase data plus a derived lifecycle delivery product:
-the exact payload and encounter-use delay remain attached to the purchase until
-countdown, rush, or final-Preboss completion materializes the required pickup.
-The materialized pickup then enters the existing room settlement chronology;
-it is not modeled as an immediate Shop acquisition or as a permanent child of
-the purchase.
+The planner represents the supported equivalent of `StorePendingDeliveryItem`
+as source-owned Shrine inventory identity and purchase timing plus a derived
+lifecycle delivery product. The reward type and encounter-use delay remain
+attached to the scheduled delivery until countdown, rush, or final-Preboss
+completion materializes the required pickup. Hidden payload and pickup-owned
+detail are authored on that concrete delivery site, not on Shrine inventory or
+the purchase. The materialized pickup then enters the existing room settlement
+chronology; it is not modeled as an immediate Shop acquisition or as a permanent
+child of the purchase.
 
 ## Architectural pressure established by the evidence
 

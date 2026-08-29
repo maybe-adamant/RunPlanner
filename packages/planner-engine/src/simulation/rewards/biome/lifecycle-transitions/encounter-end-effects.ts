@@ -9,7 +9,10 @@ import {
   type SteadyGrowthOutcomeAddress,
   type TranscendentEmbryoOutcomeAddress,
 } from '../../../../authored-project/addresses';
-import { hermesShrineDeliveryEntryKey } from '../../../../authored-project/hermes-shrine-delivery';
+import {
+  defaultHermesShrineDeliveryReward,
+  hermesShrineDeliveryEntryKey,
+} from '../../../../authored-project/hermes-shrine-delivery';
 import type { HistoryEvent } from '../../../history';
 import type { CanonicalAuthoredRoom } from '../../../materialization';
 import { ownerRegion } from '../../../finding-regions';
@@ -392,16 +395,18 @@ export function applyEncounterEndEffectsTransition(
           room?.kind === 'authored'
             ? room.acquisitionSites?.hermesShrineDelivery?.entries[entryKey]
             : undefined;
+        const fixedReward = defaultHermesShrineDeliveryReward(catalog, delivery.rewardType);
         derivedAcquisitionEntryFrontiers.push(
           Object.freeze({
             address: createAcquisitionEntryAddress(site, entryKey),
             kind: 'hermesShrineDelivery',
             branchCohortSize: next.length,
-            fixedReward: delivery.reward,
+            rewardTypes: Object.freeze([delivery.rewardType]),
+            ...(fixedReward === null ? {} : { fixedReward }),
             retainedSourceMismatch:
               retained !== undefined &&
               retained !== null &&
-              JSON.stringify(retained.offer) !== JSON.stringify(delivery.reward.offer),
+              retained.offer.rewardType !== delivery.rewardType,
             branchesBeforeEntry: Object.freeze([branch]),
           }),
         );

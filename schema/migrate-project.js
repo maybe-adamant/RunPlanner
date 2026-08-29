@@ -4,7 +4,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { basename, dirname, extname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-const CURRENT_SCHEMA_VERSION = 68;
+const CURRENT_SCHEMA_VERSION = 69;
 const SCHEMA_49_CATALOG_VERSION = '0.27.0-arcana-fear-loadout';
 const SCHEMA_50_CATALOG_VERSION = '0.30.0-boon-rarity-ledger';
 const SCHEMA_51_CATALOG_VERSION = '0.31.0-chaos-traits';
@@ -894,6 +894,55 @@ function migrate67To68(document) {
   };
 }
 
+function migrate68To69(document) {
+  if (document.catalogVersion !== SCHEMA_68_CATALOG_VERSION) {
+    throw new Error(
+      `schema 68 migration expects catalog ${SCHEMA_68_CATALOG_VERSION}, received ${String(document.catalogVersion)}`,
+    );
+  }
+  let inventoryOffersNarrowed = 0;
+  let rushedDeliveriesMoved = 0;
+  for (const route of document.routes ?? []) {
+    for (const biome of route.biomes ?? []) {
+      for (const occurrence of biome.topology?.occurrences ?? []) {
+        const shrine = occurrence.hermesShrine;
+        if (shrine === undefined || shrine === null) continue;
+        for (const slotKey of ['first', 'secondLeft', 'secondRight']) {
+          const oldReward = shrine.offerBySlot?.[slotKey];
+          const rewardType = oldReward?.offer?.rewardType;
+          if (typeof rewardType !== 'string') continue;
+          if (shrine.purchaseBySlot?.[slotKey]?.rushed === true) {
+            const generationKey = `initial:${slotKey}`;
+            const entryKey = `hermesShrineDelivery:${encodeURIComponent(
+              JSON.stringify([
+                route.routeKey,
+                biome.biomeKey,
+                occurrence.occurrenceId,
+                generationKey,
+              ]),
+            )}`;
+            occurrence.acquisitionSites ??= {};
+            occurrence.acquisitionSites.hermesShrineDelivery ??= {};
+            occurrence.acquisitionSites.hermesShrineDelivery.pickupEntries ??= {};
+            occurrence.acquisitionSites.hermesShrineDelivery.pickupEntries[entryKey] ??= oldReward;
+            rushedDeliveriesMoved += 1;
+          }
+          shrine.offerBySlot[slotKey] = { rewardType };
+          inventoryOffersNarrowed += 1;
+        }
+        const oldRefill = shrine.travelDealRefill?.offer;
+        const refillRewardType = oldRefill?.offer?.rewardType;
+        if (typeof refillRewardType === 'string') {
+          shrine.travelDealRefill.offer = { rewardType: refillRewardType };
+          inventoryOffersNarrowed += 1;
+        }
+      }
+    }
+  }
+  document.schemaVersion = 69;
+  return { inventoryOffersNarrowed, rushedDeliveriesMoved };
+}
+
 const migrations = new Map([
   [49, migrate49To50],
   [50, migrate50To51],
@@ -914,6 +963,7 @@ const migrations = new Map([
   [65, migrate65To66],
   [66, migrate66To67],
   [67, migrate67To68],
+  [68, migrate68To69],
 ]);
 
 export function migrateProjectDocument(value, targetVersion = CURRENT_SCHEMA_VERSION) {

@@ -291,7 +291,7 @@ function projectRoomGenerationRequirementContext(
           priorTwoSurfaceShopPresence(view.ledgers.roomAppearances),
         );
   if (shrineAssessment?.complete === true && shrine !== undefined) {
-    for (const offer of Object.values(shrine.offerBySlot)) shopOptions.add(offer!.offer.rewardType);
+    for (const offer of Object.values(shrine.offerBySlot)) shopOptions.add(offer!.rewardType);
   }
   return context;
 }

@@ -6,7 +6,7 @@ import type {
   AuthoredTraitOffer,
 } from './traits';
 
-export const PROJECT_DOCUMENT_SCHEMA_VERSION = 68 as const;
+export const PROJECT_DOCUMENT_SCHEMA_VERSION = 69 as const;
 export type ResourceFamily = import('../catalog-schema').ResourceFamily;
 /** Route ownership supplies the route key; the selected host is exact and durable. */
 export interface ResourcePlacement {
@@ -113,15 +113,20 @@ export interface HermesShrinePurchase {
   readonly rushed: boolean;
 }
 
+/** Visible Shrine inventory identity. Concrete payload and pickup detail belong to delivery. */
+export interface HermesShrineInventoryOffer {
+  readonly rewardType: string;
+}
+
 /** A Travel Deal child is a fourth generation, never a replacement initial slot. */
 export interface HermesShrineTravelDealRefill {
-  readonly offer: AuthoredRewardState | null;
+  readonly offer: HermesShrineInventoryOffer | null;
   readonly purchase?: HermesShrinePurchase;
 }
 
 /** Complete entry-time Shrine inventory; purchase-owned detail is deliberately sparse. */
 export interface HermesShrineState {
-  readonly offerBySlot: Readonly<Record<HermesShrineSlotKey, AuthoredRewardState | null>>;
+  readonly offerBySlot: Readonly<Record<HermesShrineSlotKey, HermesShrineInventoryOffer | null>>;
   readonly purchaseBySlot?: Readonly<Partial<Record<HermesShrineSlotKey, HermesShrinePurchase>>>;
   /** Retained for repair even when its qualifying Travel Deal prefix changes. */
   readonly travelDealRefill?: HermesShrineTravelDealRefill;

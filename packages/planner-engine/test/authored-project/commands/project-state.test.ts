@@ -6,6 +6,8 @@ import {
   applyProjectHistoryCommand,
   createProjectDocument,
   createProjectHistory,
+  createAcquisitionEntryAddress,
+  createAcquisitionSiteAddress,
   createBiomeFieldAddress,
   createBiomeAddress,
   createOccurrenceId,
@@ -14,10 +16,13 @@ import {
   decodeProjectDocument,
   deriveRouteLoadout,
   encodeProjectDocument,
+  hermesShrineDeliveryEntryKey,
+  createTraitOfferAddress,
   ProjectCommandContractError,
   ProjectDocumentContractError,
   redoProjectHistory,
   undoProjectHistory,
+  type AuthoredTraitOfferTraits,
 } from '@run-planner/engine/authored-project';
 
 import { fBiome, fProject, iBiome, iProject } from '../support/configured-projects';
@@ -151,7 +156,7 @@ describe('authored-project project-state commands', () => {
         (candidate) => candidate.occurrenceId === 'surface-n-preboss:postboss',
       );
     expect(clearedPostboss?.hermesShrine?.travelDealRefill).toMatchObject({
-      offer: { offer: { rewardType: 'SpellDrop' } },
+      offer: { rewardType: 'SpellDrop' },
     });
     expect(clearedPostboss?.hermesShrine?.travelDealRefill?.purchase).toBeUndefined();
     expect(clearedPostboss?.roomActions.order).not.toContainEqual({
@@ -300,24 +305,35 @@ describe('authored-project project-state commands', () => {
     }
   });
 
-  it('uses the Shrine delivery lifecycle for GiftDrop Pom state while retaining SurfaceShop membership', () => {
+  it('materializes GiftDrop Pom state at rushed Shrine acquisition rather than inventory selection', () => {
     const occurrence = createOccurrenceAddress(
       createBiomeAddress('Surface', 'N'),
       createOccurrenceId('surface-n-preboss:postboss'),
     );
     const seeded = loadSurfaceNOProject();
-    const authored = applyProjectCommand(seeded, catalog, {
+    const inventoryAuthored = applyProjectCommand(seeded, catalog, {
       kind: 'ReplaceHermesShrineOffer',
       occurrence,
       slotKey: 'first',
       value: { rewardType: 'GiftDrop' },
     });
-    const state = authored.routes
+    const authored = applyProjectCommand(inventoryAuthored, catalog, {
+      kind: 'SetHermesShrinePurchase',
+      occurrence,
+      generationKey: 'initial:first',
+      purchase: { delay: 2, rushed: true },
+    });
+    const occurrenceState = authored.routes
       .find((route) => route.routeKey === 'Surface')
       ?.biomes[0]?.topology?.occurrences.find(
         (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
-      )?.hermesShrine?.offerBySlot.first;
-    expect(state?.levelResolutionsByAcquisitionRole?.self).toEqual({
+      );
+    expect(occurrenceState?.hermesShrine?.offerBySlot.first).toEqual({ rewardType: 'GiftDrop' });
+    const entryKey = hermesShrineDeliveryEntryKey(occurrence, 'initial:first');
+    expect(
+      occurrenceState?.acquisitionSites?.hermesShrineDelivery?.pickupEntries?.[entryKey]
+        ?.levelResolutionsByAcquisitionRole?.self,
+    ).toEqual({
       kind: 'random',
       targetTraitKey: null,
     });
@@ -330,8 +346,66 @@ describe('authored-project project-state commands', () => {
         .find((route) => route.routeKey === 'Surface')
         ?.biomes[0]?.topology?.occurrences.find(
           (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
-        )?.hermesShrine?.offerBySlot.first?.levelResolutionsByAcquisitionRole?.self,
+        )?.acquisitionSites?.hermesShrineDelivery?.pickupEntries?.[entryKey]
+        ?.levelResolutionsByAcquisitionRole?.self,
     ).toEqual({ kind: 'random', targetTraitKey: null });
+  });
+
+  it('authors a rushed Shrine Mystery Boon source and its hidden trait offer at acquisition', () => {
+    const occurrence = createOccurrenceAddress(
+      createBiomeAddress('Surface', 'N'),
+      createOccurrenceId('surface-n-preboss:postboss'),
+    );
+    let project = applyProjectCommand(loadSurfaceNOProject(), catalog, {
+      kind: 'ReplaceHermesShrineOffer',
+      occurrence,
+      slotKey: 'secondLeft',
+      value: { rewardType: 'BlindBoxLoot' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetHermesShrinePurchase',
+      occurrence,
+      generationKey: 'initial:secondLeft',
+      purchase: { delay: 2, rushed: true },
+    });
+    const entryKey = hermesShrineDeliveryEntryKey(occurrence, 'initial:secondLeft');
+    const entry = createAcquisitionEntryAddress(
+      createAcquisitionSiteAddress(occurrence, 'hermesShrineDelivery'),
+      entryKey,
+    );
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceAcquisitionEntryOffer',
+      entry,
+      value: {
+        rewardType: 'BlindBoxLoot',
+        payload: { kind: 'BoonSource', source: 'ApolloUpgrade' },
+      },
+    });
+    const offer: AuthoredTraitOfferTraits = {
+      kind: 'traits',
+      giverKey: 'Apollo',
+      options: [
+        { traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
+        { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
+        { traitKey: 'ApolloCastBoon', rarity: 'Common' },
+      ],
+      selectedOptionKey: 'option1',
+      rarificationActions: [],
+    };
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: createTraitOfferAddress(entry, 'hiddenSource'),
+      value: offer,
+    });
+
+    expect(
+      project.routes
+        .find((route) => route.routeKey === 'Surface')
+        ?.biomes[0]?.topology?.occurrences.find(
+          (candidate) => candidate.occurrenceId === occurrence.occurrenceId,
+        )?.acquisitionSites?.hermesShrineDelivery?.pickupEntries?.[entryKey]
+        ?.traitOffersByAcquisitionRole.hiddenSource,
+    ).toEqual(offer);
   });
 
   it('does not create completion rooms before a Preboss is selected', () => {

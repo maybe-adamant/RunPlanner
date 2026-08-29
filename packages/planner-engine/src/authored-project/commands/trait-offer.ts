@@ -28,6 +28,7 @@ import { selectedEncounterDefinitionKey } from '../room-state/encounter-envelope
 import { requireShipCombatWheels } from '../room-state/declaration';
 import { incomingLevelEffectSource } from '../room-state/level-effects';
 import { parseArtificerReplacementEntryKey } from '../artificer';
+import { parseHermesShrineDeliveryEntryKey } from '../hermes-shrine-delivery';
 import { failCommand, requireOccurrence, requireTopology, type LocatedBiome } from './contract';
 import { sameOccurrenceValue } from './occurrence-leaf-value';
 import { replaceOccurrence, updateOccurrenceTopology } from './occurrence-mutation';
@@ -160,6 +161,14 @@ function pickupEntrySource(
     return Object.freeze({
       reward: entry,
       levelEffectSource: { kind: 'producerLifecycle' as const, key: 'RoomReward' },
+    });
+  if (
+    owner.site.pointKey === 'hermesShrineDelivery' &&
+    parseHermesShrineDeliveryEntryKey(owner.entryKey) !== undefined
+  )
+    return Object.freeze({
+      reward: entry,
+      levelEffectSource: { kind: 'producerLifecycle' as const, key: 'HermesShrineDelivery' },
     });
   const producer = selectedPickupProducerForEntry(
     catalog,

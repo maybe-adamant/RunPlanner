@@ -13,7 +13,9 @@ import {
   activeSelectedPickupProducers,
   acquisitionSiteFromStorageKey,
   echoLastRewardPickupEntryKeys,
+  defaultHermesShrineDeliveryReward,
   hermesShrineDeliveryEntryKey,
+  parseHermesShrineDeliveryEntryKey,
   semanticAddressKey,
   type AcquisitionSiteAddress,
   type AuthoredRewardState,
@@ -113,6 +115,17 @@ export function assembleOccurrenceRewardLocal(
               }
               const derivedEntries = input.derivedAcquisitionEntries?.(site) ?? Object.freeze([]);
               return Object.entries(state.pickupEntries ?? {}).flatMap(([key, reward]) => {
+                const shrineDelivery =
+                  siteKey === 'hermesShrineDelivery'
+                    ? parseHermesShrineDeliveryEntryKey(key)
+                    : undefined;
+                if (
+                  shrineDelivery !== undefined &&
+                  shrineDelivery.routeKey === address.routeKey &&
+                  shrineDelivery.biomeKey === address.biomeKey &&
+                  shrineDelivery.sourceOccurrenceId === address.occurrenceId
+                )
+                  return [];
                 if (
                   siteKey === 'roomExit' &&
                   structuralEchoKeys.has(key) &&
@@ -174,22 +187,26 @@ export function assembleOccurrenceRewardLocal(
             if (purchase?.rushed !== true) return [];
             const typedSlotKey =
               slotKey as import('@run-planner/engine/authored-project').HermesShrineSlotKey;
-            const reward = input.occurrence.hermesShrine?.offerBySlot[typedSlotKey];
-            if (reward === null || reward === undefined) return [];
+            const inventoryOffer = input.occurrence.hermesShrine?.offerBySlot[typedSlotKey];
+            if (inventoryOffer === null || inventoryOffer === undefined) return [];
             const generationKey =
               `initial:${typedSlotKey}` as import('@run-planner/engine/authored-project').HermesShrineGenerationKey;
             const entry = createAcquisitionEntryAddress(
               createAcquisitionSiteAddress(address, 'hermesShrineDelivery'),
               hermesShrineDeliveryEntryKey(address, generationKey),
             );
+            const reward =
+              input.occurrence.acquisitionSites?.hermesShrineDelivery?.pickupEntries?.[
+                entry.entryKey
+              ] ?? defaultHermesShrineDeliveryReward(input.catalog, inventoryOffer.rewardType);
             return [
               rewardControl(
                 input,
                 { kind: 'acquisitionEntry' as const, address: entry },
                 undefined,
-                reward.offer,
+                reward?.offer ?? null,
                 reward,
-                Object.freeze([reward.offer.rewardType]),
+                Object.freeze([inventoryOffer.rewardType]),
               ) as WorkspaceExplicitRewardControl,
             ];
           },

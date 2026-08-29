@@ -763,6 +763,11 @@ export function settlePickupAcquisitionSite(
     readonly historySequence: number;
     readonly facts: RewardFactsFactory;
     readonly traitContext?: CanonicalResolvedIncomingReward['traitContext'];
+    /**
+     * Atomic chronology owner when a materialized pickup is reached through a
+     * different authored action, such as a rushed Hermes Shrine purchase.
+     */
+    readonly atomicRegion?: string;
     readonly findingChronology?: FindingChronology;
     readonly artificerReplacementFor?: (
       source: AcquisitionEntryAddress,
@@ -848,7 +853,7 @@ export function settlePickupAcquisitionSite(
     addRewardFinding(
       findings,
       rewardFinding('rewardMissing', address, {}),
-      ownerRegion(address),
+      request.atomicRegion ?? ownerRegion(address),
       request.findingChronology ?? historyChronology(request.historySequence),
     );
   }
@@ -907,7 +912,7 @@ export function settlePickupAcquisitionSite(
           Object.freeze({ ...binding, historySequence: request.historySequence }),
           request.facts,
           findings,
-          undefined,
+          request.atomicRegion,
           request.findingChronology,
           Object.freeze({ site, entry }),
           roleFrontiers,
@@ -931,7 +936,7 @@ export function settlePickupAcquisitionSite(
         addRewardFinding(
           findings,
           rewardFinding('rewardMissing', address, {}),
-          ownerRegion(address),
+          request.atomicRegion ?? ownerRegion(address),
           request.findingChronology ?? historyChronology(request.historySequence),
         );
         current = Object.freeze([]);
@@ -959,6 +964,7 @@ export function settlePickupAcquisitionSite(
           participation: 'mandatory',
           historySequence: request.historySequence,
           facts: request.facts,
+          ...(request.atomicRegion === undefined ? {} : { atomicRegion: request.atomicRegion }),
           ...(request.findingChronology === undefined
             ? {}
             : { findingChronology: request.findingChronology }),
@@ -1025,7 +1031,7 @@ export function settlePickupAcquisitionSite(
         Object.freeze({ ...binding, historySequence: request.historySequence }),
         request.facts,
         findings,
-        undefined,
+        request.atomicRegion,
         request.findingChronology,
         Object.freeze({ site, entry }),
         roleFrontiers,

@@ -149,7 +149,7 @@ in Combat03/08 and all families in Boss01. Chaos_01-06 inherit the Chaos base
 table. F/G Reprieve and Story, N Story, and O Reprieve/Story ignore biome
 limits.
 
-### Current schema-59 planner disposition
+### Current planner disposition
 
 The planner chooses one protected selected-success singleton per upgraded tool
 family. An authored `Add` for Mine, Exorcism, Dig, or Fish means the selected
@@ -331,12 +331,15 @@ acquisition and room-action authorities.
 Shrine presence is authored at exact ordinary and forced Postboss hosts, with
 all three visible offers always authored. There is no Interact/random-inventory
 bypass because visible names can affect host-room outgoing exclusions before
-purchase. Purchase state is sparse per stable generation; delay, rush, pending
-delivery, delivery host, Spell reservation, and runtime fallback are derived
-products. A rushed purchase settles one required pickup at its source action
-rank; a delayed purchase counts qualifying encounter-end effects and
-materializes at its reached host; final Preboss completion flushes pending
-deliveries. Numeric prices and economy remain sim-neutral.
+purchase. Inventory owns only each visible reward type. Hidden payload and
+pickup-owned detail—including Mystery Boon's eventual God and trait offer—are
+authored only on the concrete rushed or delayed delivery pickup. Purchase state
+is sparse per stable generation; delay, rush, pending delivery, delivery host,
+Spell reservation, and runtime fallback are derived products. A rushed purchase
+settles one required pickup at its source action rank; a delayed purchase counts
+qualifying encounter-end effects and materializes at its reached host; final
+Preboss completion flushes pending deliveries. Numeric prices and economy remain
+sim-neutral.
 
 ## Stygian Wells
 

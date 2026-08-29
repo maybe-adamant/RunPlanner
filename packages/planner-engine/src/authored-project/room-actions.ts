@@ -238,10 +238,21 @@ export function activeRoomActionReferences(
       )
         continue;
       const artificer = parseArtificerReplacementEntryKey(entryKey);
+      const shrineDelivery =
+        siteKey === 'hermesShrineDelivery'
+          ? parseHermesShrineDeliveryEntryKey(entryKey)
+          : undefined;
       if (
         siteKey === 'hermesShrineDelivery' &&
-        parseHermesShrineDeliveryEntryKey(entryKey) === undefined &&
+        shrineDelivery === undefined &&
         artificer === undefined
+      )
+        continue;
+      if (
+        shrineDelivery !== undefined &&
+        shrineDelivery.routeKey === biome.routeKey &&
+        shrineDelivery.biomeKey === biome.biomeKey &&
+        shrineDelivery.sourceOccurrenceId === occurrence.occurrenceId
       )
         continue;
       if (

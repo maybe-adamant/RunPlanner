@@ -7,14 +7,14 @@ scope, biome topology, occurrence-local state, semantic addresses, commands,
 persistence, and history. Simulation algorithms, candidates, Redux state, and
 React rendering are separate concerns.
 
-## Schema 68 Boundary
+## Schema 69 Boundary
 
-Schema 68 is the sole persisted authored-project contract. The codec rejects
+Schema 69 is the sole persisted authored-project contract. The codec rejects
 every other schema version rather than manufacturing current topology or leaf
 state for a stale document. The migration CLI performs the explicit 49-to-50,
 50-to-51, 51-to-52, 52-to-53, 53-to-54, 54-to-55, 55-to-56, 56-to-57,
 57-to-58, 58-to-59, 59-to-60, 60-to-61, 61-to-62, 62-to-63, 63-to-64,
-64-to-65, 65-to-66, 66-to-67, and 67-to-68
+64-to-65, 65-to-66, 66-to-67, 67-to-68, and 68-to-69
 migrations outside the production decoder. It advances the corresponding
 catalog metadata from `0.32.0-run-impacting-traits` through
 `0.49.0-completion-topology` without inventing authored outcomes.
@@ -53,6 +53,10 @@ when present, in `topology.occurrences`; each room owns the same encounter,
 acquisition-site, Room Action, and optional feature leaves as any other room.
 The strict codec validates the fixed identities, room kinds, links, and
 collision with editable topology.
+
+Schema 69 narrows Shrine inventory to its three visible reward identities.
+Concrete payload, trait, level, and acquisition disposition state belongs to
+the rushed or delayed delivery entry where the item is actually acquired.
 
 Schema 56 adds a complete, route-owned four-family selected-resource record.
 Each value is null or an exact `(biomeKey, occurrenceId)` address. Structural
@@ -784,7 +788,7 @@ stable indented JSON with a trailing newline:
 
 ```ts
 interface ProjectDocument {
-  schemaVersion: 68;
+  schemaVersion: 69;
   projectId: string;
   catalogVersion: string;
   routes: readonly AuthoredRoutePlan[];

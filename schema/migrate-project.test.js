@@ -803,6 +803,62 @@ test('57 -> 58 rejects a document from the wrong prior catalog', () => {
   );
 });
 
+test('68 -> 69 narrows Shrine inventory and preserves rushed pickup detail at acquisition', () => {
+  const oldReward = {
+    offer: { rewardType: 'BlindBoxLoot', payload: { kind: 'BoonSource', source: 'Apollo' } },
+    traitOffersByAcquisitionRole: { self: null },
+    dispositionByAcquisitionRole: { self: { kind: 'normal' } },
+  };
+  const source = {
+    schemaVersion: 68,
+    catalogVersion: '0.49.0-completion-topology',
+    projectId: 'shrine-acquisition-boundary',
+    routes: [
+      {
+        routeKey: 'Surface',
+        biomes: [
+          {
+            biomeKey: 'N',
+            topology: {
+              occurrences: [
+                {
+                  occurrenceId: 'n-postboss',
+                  gameName: 'N_PostBoss01',
+                  hermesShrine: {
+                    offerBySlot: {
+                      first: oldReward,
+                      secondLeft: null,
+                      secondRight: null,
+                    },
+                    purchaseBySlot: { first: { delay: 2, rushed: true } },
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    ],
+  };
+  const result = migrateProjectDocument(source);
+  const occurrence = result.document.routes[0].biomes[0].topology.occurrences[0];
+  const entryKey = `hermesShrineDelivery:${encodeURIComponent(
+    JSON.stringify(['Surface', 'N', 'n-postboss', 'initial:first']),
+  )}`;
+  assert.equal(result.document.schemaVersion, 69);
+  assert.deepEqual(occurrence.hermesShrine.offerBySlot.first, {
+    rewardType: 'BlindBoxLoot',
+  });
+  assert.deepEqual(
+    occurrence.acquisitionSites.hermesShrineDelivery.pickupEntries[entryKey],
+    oldReward,
+  );
+  assert.deepEqual(result.changes['68->69'], {
+    inventoryOffersNarrowed: 1,
+    rushedDeliveriesMoved: 1,
+  });
+});
+
 test('58 -> 59 seeds Well shells only on exact forced Underworld Postboss identities', () => {
   const source = {
     schemaVersion: 58,
@@ -899,7 +955,7 @@ test('58 -> 59 rejects a document from the wrong prior catalog', () => {
   );
 });
 
-test('67 -> 68 moves a Surface completion chain and rewrites its resource placement', () => {
+test('67 -> current moves a Surface completion chain and rewrites its resource placement', () => {
   const source = schema67CompletionSource('Surface', ['N'], {
     Shovel: { biomeKey: 'N', occurrenceId: 'completion:N:postboss' },
   });
@@ -910,7 +966,7 @@ test('67 -> 68 moves a Surface completion chain and rewrites its resource placem
     ['N_Boss01', 'N_PostBoss01'].includes(occurrence.gameName),
   );
 
-  assert.equal(result.document.schemaVersion, 68);
+  assert.equal(result.document.schemaVersion, 69);
   assert.equal(result.document.catalogVersion, '0.49.0-completion-topology');
   assert.equal('completionOccurrences' in biome, false);
   assert.deepEqual(

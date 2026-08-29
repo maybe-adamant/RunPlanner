@@ -7,11 +7,13 @@ export {
 } from './artificer';
 export {
   HERMES_SHRINE_DELIVERY_SITE_KEY,
+  defaultHermesShrineDeliveryReward,
   hermesShrineDeliveryEntryKey,
   parseHermesShrineDeliveryEntryKey,
 } from './hermes-shrine-delivery';
 export type {
   HermesShrineGenerationKey,
+  HermesShrineInventoryOffer,
   HermesShrinePurchase,
   HermesShrineSlotKey,
   StygianWellGenerationKey,

@@ -213,6 +213,15 @@ narrative/meta-progression rooms are outside the supported recovery topology.
 Dream Postboss selection is ordinal (`Dream_PostBoss01` through
 `Dream_PostBoss03`) and is reserved for a future Dream route declaration.
 
+### Schema 69 Shrine acquisition ownership correction
+
+Schema 69 narrows each authored Shrine inventory offer to its visible reward
+type. Concrete payload and pickup-owned state now live only at the rushed or
+delayed `hermesShrineDelivery` acquisition entry. The schema-68-to-69 migration
+preserves already-authored rushed pickup detail by moving it to the same-room
+delivery entry; delayed delivery detail already authored at its reached host is
+left in place.
+
 ## F Migration
 
 | Family                                   | Status | Primary evidence                                                | Port action                                                                                                                                                                    |

@@ -48,6 +48,9 @@ export function RoomActionAcquisitionRow({
           showLevelResolutions={false}
           showOffer={payload.showOffer}
           showTraitOffers={false}
+          {...(payload.control.offerEditStartStep === undefined
+            ? {}
+            : { offerStartStep: payload.control.offerEditStartStep })}
         />
         {row.artificerOutput === undefined ? null : (
           <div
@@ -61,6 +64,9 @@ export function RoomActionAcquisitionRow({
               idPrefix={`room-action-artificer-${row.artificerOutput.control.marker.focusKey}`}
               interactions={interactions}
               label={row.artificerOutput.label}
+              {...(row.artificerOutput.control.offerEditStartStep === undefined
+                ? {}
+                : { offerStartStep: row.artificerOutput.control.offerEditStartStep })}
             />
           </div>
         )}

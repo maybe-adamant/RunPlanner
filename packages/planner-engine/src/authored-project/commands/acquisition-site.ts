@@ -24,7 +24,7 @@ import { parseHermesShrineDeliveryEntryKey } from '../hermes-shrine-delivery';
 function shrineDeliverySource(
   document: ProjectDocument,
   entryKey: string,
-): import('../model').AuthoredRewardState | undefined {
+): import('../model').HermesShrineInventoryOffer | undefined {
   const parsed = parseHermesShrineDeliveryEntryKey(entryKey);
   if (parsed === undefined) return undefined;
   const source = document.routes
@@ -137,8 +137,8 @@ export function applyAcquisitionSiteCommand(
       ) {
         if (shrineSource === undefined)
           failCommand(command, 'does not name an exact Shrine offer source');
-        if (shrineSource.offer.rewardType !== command.value.rewardType)
-          failCommand(command, `must retain Shrine reward type ${shrineSource.offer.rewardType}`);
+        if (shrineSource.rewardType !== command.value.rewardType)
+          failCommand(command, `must retain Shrine reward type ${shrineSource.rewardType}`);
         const existing = authoredAcquisitionEntryAtSite(occurrence, site, command.entry.entryKey);
         if (
           existing !== undefined &&
