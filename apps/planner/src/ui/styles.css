@@ -215,9 +215,15 @@ select:focus-visible {
 }
 
 .trait-offer-launcher[data-trait-status='unspecified'] {
-  border-color: #4a4b55;
-  color: #b4b0b8;
-  background: #24252b;
+  border-color: rgb(226 185 113 / 55%);
+  color: #e2b971;
+  background: rgb(226 185 113 / 13%);
+}
+
+.trait-offer-launcher[data-trait-status='unspecified']:hover:not(:disabled) {
+  border-color: #e2b971;
+  color: #f3d59e;
+  background: rgb(226 185 113 / 22%);
 }
 
 .trait-offer-launcher[data-trait-status='valid'] {
@@ -646,6 +652,12 @@ button:disabled {
   flex-wrap: wrap;
   gap: 0.35rem;
   margin-top: 0.45rem;
+}
+
+.trait-offer-launcher-with-marker {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .pickup-outcome-control {
@@ -2315,10 +2327,16 @@ select {
   grid-column: 1 / -1;
 }
 
-.door-fixed-reward > .fixed-room-state {
+.door-fixed-reward > .fixed-room-state,
+.pending-room-status > .fixed-room-state,
+.pending-reward-status > .fixed-room-state {
   margin: 0;
   padding: 0;
   border: 0;
+}
+
+.biome-target-row .contextual-picker + .pending-reward-status {
+  margin-top: 8px;
 }
 
 .start-room-fixed > .fixed-room-state {
@@ -2346,7 +2364,14 @@ select {
 }
 
 .anomaly-revert-action {
-  margin-top: 12px;
+  margin: 0;
+}
+
+.anomaly-door-action-slot {
+  display: flex;
+  min-height: 28px;
+  align-items: flex-start;
+  margin-top: 10px;
 }
 
 .room-selector {

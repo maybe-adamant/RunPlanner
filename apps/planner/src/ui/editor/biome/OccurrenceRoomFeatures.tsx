@@ -145,7 +145,7 @@ function NaturalChaosSpawnWorkbench({
  * supplied its closed declaration map domain. These controls intentionally do
  * not ask React to re-evaluate replacement eligibility or reward legality.
  */
-function AnomalyMapControl({ room }: { readonly room: WorkspaceRoomSummary }) {
+export function AnomalyRoomControl({ room }: { readonly room: WorkspaceRoomSummary }) {
   const dispatch = useAppDispatch();
   const anomaly = room.anomaly;
   if (anomaly === undefined) return null;
@@ -154,7 +154,7 @@ function AnomalyMapControl({ room }: { readonly room: WorkspaceRoomSummary }) {
       className="field-control field-control-inline"
       htmlFor={`anomaly-map-${room.occurrenceId}`}
     >
-      <span>Map</span>
+      <span>Room</span>
       <select
         id={`anomaly-map-${room.occurrenceId}`}
         onChange={(event) =>
@@ -202,7 +202,7 @@ export function AnomalyClearedControl({ room }: { readonly room: WorkspaceRoomSu
   );
 }
 
-function RevertAnomalyAction({ room }: { readonly room: WorkspaceRoomSummary }) {
+export function RevertAnomalyAction({ room }: { readonly room: WorkspaceRoomSummary }) {
   const dispatch = useAppDispatch();
   const anomaly = room.anomaly;
   if (anomaly === undefined) return null;
@@ -223,17 +223,6 @@ function RevertAnomalyAction({ room }: { readonly room: WorkspaceRoomSummary }) 
       >
         Restore {anomaly.rememberedRoomLabel}
       </button>
-    </div>
-  );
-}
-
-/** Identity controls stay on the parent door that owns the takeover transition. */
-export function AnomalyIdentityControls({ room }: { readonly room: WorkspaceRoomSummary }) {
-  if (room.anomaly === undefined) return null;
-  return (
-    <div className="anomaly-identity-controls">
-      <AnomalyMapControl room={room} />
-      <RevertAnomalyAction room={room} />
     </div>
   );
 }

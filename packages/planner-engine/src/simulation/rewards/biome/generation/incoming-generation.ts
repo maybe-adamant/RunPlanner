@@ -32,6 +32,26 @@ import { historyFindingChronology, rewardFindingChronologyForRoom } from '../fin
 import type { RoomCreatedRewardContext } from './room-created-context';
 import { BiomeRewardSimulationContractError } from '../biome-contract';
 
+function incomingCandidateForOffer(
+  catalog: Catalog,
+  incoming: CanonicalResolvedIncomingReward,
+  offer: ResolvedRewardOffer,
+): CanonicalResolvedIncomingReward {
+  if (JSON.stringify(incoming.offer) === JSON.stringify(offer)) return incoming;
+  const state = createUnresolvedAcquisitionRewardState(catalog, offer, {
+    kind: 'producerLifecycle',
+    key: incoming.producerLifecycleKey,
+  });
+  return Object.freeze({
+    ...incoming,
+    ...state,
+    traitContext: Object.freeze({
+      ...incoming.traitContext,
+      devotionNoDuo: offer.rewardType === 'Devotion',
+    }),
+  });
+}
+
 interface IncomingOfferCandidateContext {
   readonly context: OfferProcessingContext;
   readonly room: RoomCreatedRewardContext['room'];
@@ -343,10 +363,12 @@ export function generateIncomingReward(
           throw new BiomeRewardSimulationContractError(
             'sequential reward frontier received a foreign owner',
           );
+        const candidate = incomingCandidateForOffer(catalog, incoming, offer);
         const candidateFindings = new Map<string, FindingRegionEntry>();
+        const candidateContext = Object.freeze({ ...offerContext, reward: candidate });
         const candidateBranches = processRewardOffer(
           inputs.branches,
-          Object.freeze({ ...offerContext, reward: Object.freeze({ ...incoming, offer }) }),
+          candidateContext,
           candidateFindings,
         );
         return completeIncomingOfferCandidate(
@@ -355,9 +377,9 @@ export function generateIncomingReward(
           inputs.enteredBiomeCount,
           inputs.authoredSeaStarDuplicateSiteKeys,
           Object.freeze({
-            context: offerContext,
+            context: candidateContext,
             room: context.room,
-            incoming,
+            incoming: candidate,
             ...(acquisitionView === undefined ? {} : { acquisitionView }),
             producerPoints,
           }),

@@ -224,6 +224,20 @@ describe('trait offer editor entry and dialog', () => {
     const interaction = workspace.interactions.traitOffers.get(semanticAddressKey(address));
     if (interaction === undefined) throw new Error('unresolved SpellDrop interaction is missing');
     expect(interaction.value).toBeNull();
+    const control = findTraitOfferControl(workspace, address);
+
+    render(
+      <Provider store={application.store}>
+        <TraitOfferLauncher control={control} interactions={workspace.interactions} />
+      </Provider>,
+    );
+    expect(
+      screen
+        .getByRole('button', { name: /spell is not selected/ })
+        .getAttribute('data-trait-status'),
+    ).toBe('unspecified');
+    expect(screen.getByLabelText(/findings?/)).toBeTruthy();
+    cleanup();
 
     render(
       <Provider store={application.store}>

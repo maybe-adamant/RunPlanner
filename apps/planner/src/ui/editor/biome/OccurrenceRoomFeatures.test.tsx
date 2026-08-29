@@ -65,7 +65,7 @@ describe('OccurrenceRoomFeatures', () => {
     expect(screen.queryByLabelText('Reward')).toBeNull();
     expect(screen.getByRole('heading', { level: 3, name: /^Entering / })).toBeTruthy();
     expect(screen.getByRole('region', { name: 'Incoming reward' })).toBeTruthy();
-    expect(screen.queryByLabelText('Map')).toBeNull();
+    expect(screen.queryByLabelText('Room')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Restore Combat 01' })).toBeNull();
     await view.user.click(screen.getByRole('checkbox', { name: 'Cleared' }));
     cleanup();
@@ -78,7 +78,7 @@ describe('OccurrenceRoomFeatures', () => {
       application,
     );
     expect(screen.getByLabelText('Reward')).toBeTruthy();
-    const map = screen.getByLabelText('Map');
+    const map = screen.getByLabelText('Room');
     const restore = screen.getByRole('button', { name: 'Restore Combat 01' });
     expect((map as HTMLSelectElement).value).toBe('B_Combat01');
     expect(screen.queryByRole('checkbox', { name: 'Cleared' })).toBeNull();
@@ -123,11 +123,11 @@ describe('OccurrenceRoomFeatures', () => {
     });
     renderOccurrenceWorkbench(invalid, 'Underworld', 'G', occurrenceById(occurrenceId));
     expect(screen.getByRole('checkbox', { name: 'Cleared' })).toBeTruthy();
-    expect(screen.queryByLabelText('Map')).toBeNull();
+    expect(screen.queryByLabelText('Room')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Restore Combat 01' })).toBeNull();
     cleanup();
     renderDecisionWorkbench(invalid, 'Underworld', 'G', decisionContainingOccurrence(occurrenceId));
-    expect(screen.getByLabelText('Map')).toBeTruthy();
+    expect(screen.getByLabelText('Room')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Restore Combat 01' })).toBeTruthy();
   });
   it('edits a selected Nemesis event through the engine-published family and result controls', async () => {

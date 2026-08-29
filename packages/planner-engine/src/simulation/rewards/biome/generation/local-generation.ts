@@ -5,6 +5,7 @@ import { createUnresolvedAcquisitionRewardState } from '../../../../authored-pro
 import type { ResolvedRewardOffer, RewardHistoryState } from '../../../../reward-kernel';
 import type { HistoryEvent, ProgressiveRoomHistoryViews } from '../../../history';
 import { ownerRegion, type FindingRegionEntry } from '../../../finding-regions';
+import type { CanonicalLocalReward } from '../../../materialization';
 import { settleOwnedAcquisitionSite } from '../../acquisition-settlement';
 import type { RewardBranchState } from '../../branch-primitives';
 import { createBiomeRewardFacts } from '../../facts';
@@ -26,6 +27,26 @@ import { createGenerationEmissions, type GenerationEmissions } from './emissions
 import { historyFindingChronology, rewardFindingChronologyForRoom } from '../finding-chronology';
 import type { RoomCreatedRewardContext } from './room-created-context';
 import { BiomeRewardSimulationContractError } from '../biome-contract';
+
+function localCandidateForOffer(
+  catalog: Catalog,
+  localReward: CanonicalLocalReward,
+  offer: ResolvedRewardOffer,
+): CanonicalLocalReward {
+  if (JSON.stringify(localReward.offer) === JSON.stringify(offer)) return localReward;
+  const state = createUnresolvedAcquisitionRewardState(catalog, offer, {
+    kind: 'producerLifecycle',
+    key: localReward.producerLifecycleKey,
+  });
+  return Object.freeze({
+    ...localReward,
+    ...state,
+    traitContext: Object.freeze({
+      ...localReward.traitContext,
+      devotionNoDuo: offer.rewardType === 'Devotion',
+    }),
+  });
+}
 
 function localAcquisition(
   context: RoomCreatedRewardContext,
@@ -132,10 +153,12 @@ export function generateLocalRewards(
             throw new BiomeRewardSimulationContractError(
               'local reward frontier received a foreign owner',
             );
+          const candidate = localCandidateForOffer(catalog, localReward, offer);
+          const candidateContext = Object.freeze({ ...offerContext, reward: candidate });
           const candidateFindings = new Map<string, FindingRegionEntry>();
           const candidateBranches = processRewardOffer(
             frontierBranches,
-            Object.freeze({ ...offerContext, reward: Object.freeze({ ...localReward, offer }) }),
+            candidateContext,
             candidateFindings,
           );
           if (
@@ -151,9 +174,9 @@ export function generateLocalRewards(
                 pointKey:
                   acquisition.event.kind === 'acquisitionPointReached'
                     ? acquisition.event.point
-                    : localReward.encounterPhaseKey,
-                entryKey: localReward.slotKey,
-                source: Object.freeze({ ...localReward, offer, instanceProvenance: 'free' }),
+                    : candidate.encounterPhaseKey,
+                entryKey: candidate.slotKey,
+                source: Object.freeze({ ...candidate, instanceProvenance: 'free' }),
                 historySequence: acquisition.event.sequence,
                 authoredSeaStarDuplicateSiteKeys: inputs.authoredSeaStarDuplicateSiteKeys,
               },

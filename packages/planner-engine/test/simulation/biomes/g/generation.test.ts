@@ -164,6 +164,44 @@ describe('G generation and takeover', () => {
     ]);
   });
 
+  it('keeps a selected reward replaceable while its current trait child is unresolved', () => {
+    const source = {
+      kind: 'occurrence' as const,
+      occurrenceId: goldenGOccurrenceId(2, 1),
+    };
+    const occurrenceId = goldenGOccurrenceId(3, 3);
+    const reward = createIncomingRewardAddress(goldenGBiome, occurrenceId);
+    let project = applyProjectCommand(createCompleteFGProject(), catalog, {
+      kind: 'SetExitSelection',
+      selection: createExitSelectionAddress(goldenGBiome, source),
+      value: { kind: 'normal', exitKey: 'exit3' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward,
+      value: { rewardType: 'HermesUpgrade' },
+    });
+    const session = createPreparedProjectCandidateSession(
+      catalog,
+      simulateProjectAssembly(catalog, project),
+    );
+
+    expect(
+      session.evaluate({
+        kind: 'incomingReward',
+        reward,
+        value: { rewardType: 'MaxHealthDrop' },
+      }),
+    ).toMatchObject({ kind: 'incomingReward', result: { supported: true, findings: [] } });
+    expect(
+      session.evaluate({
+        kind: 'incomingReward',
+        reward,
+        value: { rewardType: 'RoomMoneyDrop' },
+      }),
+    ).toMatchObject({ kind: 'incomingReward', result: { supported: true, findings: [] } });
+  });
+
   it('preserves Crawler’s non-counting encounter and excludes entered miniboss peers', () => {
     const project = createCompleteFGProject({ pickedMiniboss: 'G_MiniBoss02' });
     const { g, result } = completeG(project);
