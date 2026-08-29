@@ -255,9 +255,9 @@ describe('reward editor projections', () => {
 
   it('commits one complete Boon through keyboard-focused compound steps', async () => {
     const project = createGoldenFGHIProject();
-    const apollo = {
+    const zeus = {
       rewardType: 'Boon',
-      payload: { kind: 'BoonSource' as const, source: 'ApolloUpgrade' },
+      payload: { kind: 'BoonSource' as const, source: 'ZeusUpgrade' },
     };
     const onReplace = vi.fn();
     const user = userEvent.setup();
@@ -281,10 +281,10 @@ describe('reward editor projections', () => {
     expect(onReplace).not.toHaveBeenCalled();
     const godSearch = await screen.findByRole('combobox', { name: 'God choices' });
     expect(document.activeElement).toBe(godSearch);
-    await user.keyboard('Apollo{Enter}');
+    await user.keyboard('Zeus{Enter}');
 
     expect(onReplace).toHaveBeenCalledOnce();
-    expect(onReplace).toHaveBeenCalledWith(apollo);
+    expect(onReplace).toHaveBeenCalledWith(zeus);
   });
 
   it('ignores a stale projection failure after the project identity changes', async () => {
@@ -493,7 +493,7 @@ describe('reward editor projections', () => {
     await screen.findByText('Reward type');
     await user.click(within(await screen.findByRole('listbox')).getByText('Trial'));
     await screen.findByText('Chosen God');
-    await user.click(within(await screen.findByRole('listbox')).getByText('Apollo'));
+    await user.click(within(await screen.findByRole('listbox')).getByText('Ares'));
 
     expect(onReplace).not.toHaveBeenCalled();
     await screen.findByText('Spurned God');
@@ -504,7 +504,7 @@ describe('reward editor projections', () => {
       rewardType: 'Devotion',
       payload: {
         kind: 'DevotionPair',
-        chosenSource: 'ApolloUpgrade',
+        chosenSource: 'AresUpgrade',
         spurnedSource: 'HephaestusUpgrade',
       },
     });
@@ -570,7 +570,7 @@ describe('reward editor projections', () => {
     await screen.findByText('Reward type');
     await user.click(within(await screen.findByRole('listbox')).getByText('Trial'));
     await screen.findByText('Chosen God');
-    await user.click(within(await screen.findByRole('listbox')).getByText('Apollo'));
+    await user.click(within(await screen.findByRole('listbox')).getByText('Ares'));
     await screen.findByText('Spurned God');
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
 
