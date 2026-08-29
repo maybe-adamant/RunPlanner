@@ -15,7 +15,10 @@ import {
   authoredProjectCommandDispatched,
   authoredProjectReplaced,
 } from '@planner/state/projectWorkspaceSlice';
-import { loadSurfaceNOPQProject } from '@run-planner/test-fixtures/surface';
+import {
+  loadSurfaceNOPQProject,
+  loadSurfaceNResourcesProject,
+} from '@run-planner/test-fixtures/surface';
 import { RouteWorkspace } from './RouteWorkspace';
 import { semanticOwnerElementId } from '../feedback/semanticOwner';
 
@@ -50,66 +53,54 @@ function routeWorkspaceMarkup(
 }
 
 describe('RouteWorkspace', () => {
-  it('renders the route NPC index as a distinct panel, including an empty route', () => {
+  it('hides empty route indexes and presents Route for a stale empty-index selection', () => {
     const application = createApplication();
     application.store.dispatch(
       routePanelSelected({ routeKey: 'Underworld', panel: { kind: 'npcIndex' } }),
     );
 
     const markup = routeWorkspaceMarkup(application, 'Underworld');
-    expect(application.store.getState().editorSession.activePanelByRoute.Underworld).toEqual({
-      kind: 'npcIndex',
-    });
-    expect(markup).toContain('NPC encounters');
-    expect(markup).toContain('No resolved NPC encounters in this route.');
-    expect(markup).toContain('data-editor-layout="npcIndex"');
-    expect(markup).not.toContain('Route settings');
+    expect(markup).not.toContain('>NPCs</button>');
+    expect(markup).not.toContain('>Traits</button>');
+    expect(markup).not.toContain('>Resources</button>');
+    expect(markup).not.toContain('>Shrines</button>');
+    expect(markup).not.toContain('>Wells</button>');
+    expect(markup).not.toContain('class="panel-navigation-separator"');
+    expect(markup).toContain('data-editor-layout="overview"');
+    expect(markup).toContain('Route settings');
   });
 
-  it('renders the four-row read-only resource index for the selected route', () => {
+  it('orders configured biomes before the non-empty route indexes', () => {
     const application = createApplication();
+    application.store.dispatch(authoredProjectReplaced(loadSurfaceNOPQProject()));
+
+    const markup = routeWorkspaceMarkup(application, 'Surface');
+    const navigationMarkup = markup.slice(markup.indexOf('<nav'), markup.indexOf('</nav>'));
+    const routePosition = navigationMarkup.indexOf('>Route</button>');
+    const biomePositions = ['Ephyra', 'Thessaly', 'Olympus', 'Summit'].map((label) =>
+      navigationMarkup.indexOf(`>${label}</span>`),
+    );
+    const separatorPosition = navigationMarkup.indexOf('class="panel-navigation-separator"');
+    const indexPositions = ['NPCs', 'Traits', 'Resources', 'Shrines', 'Wells']
+      .map((label) => navigationMarkup.indexOf(`>${label}</button>`))
+      .filter((position) => position >= 0);
+    expect(routePosition).toBeGreaterThanOrEqual(0);
+    expect(biomePositions.every((position) => position > routePosition)).toBe(true);
+    expect(separatorPosition).toBeGreaterThan(Math.max(...biomePositions));
+    expect(indexPositions.length).toBeGreaterThan(0);
+    expect(indexPositions.every((position) => position > separatorPosition)).toBe(true);
+  });
+
+  it('presents a selected resource placement by room name instead of occurrence identity', () => {
+    const application = createApplication();
+    application.store.dispatch(authoredProjectReplaced(loadSurfaceNResourcesProject()));
     application.store.dispatch(
       routePanelSelected({ routeKey: 'Surface', panel: { kind: 'resources' } }),
     );
 
     const markup = routeWorkspaceMarkup(application, 'Surface');
-    expect(application.store.getState().editorSession.activePanelByRoute.Surface).toEqual({
-      kind: 'resources',
-    });
-    expect(markup).toContain('Route outcomes');
-    expect(markup).toContain('No selected success');
-    expect(markup).toContain('Mining');
-    expect(markup).toContain('Spirit');
-    expect(markup).toContain('Seed');
-    expect(markup).toContain('Fishing');
-  });
-
-  it('renders the read-only Hermes Shrine route index', () => {
-    const application = createApplication();
-    application.store.dispatch(
-      routePanelSelected({ routeKey: 'Surface', panel: { kind: 'shrines' } }),
-    );
-
-    const markup = routeWorkspaceMarkup(application, 'Surface');
-    expect(application.store.getState().editorSession.activePanelByRoute.Surface).toEqual({
-      kind: 'shrines',
-    });
-    expect(markup).toContain('Hermes Shrines');
-    expect(markup).toContain('No Shrine hosts in this route.');
-  });
-
-  it('renders the read-only Stygian Well route index', () => {
-    const application = createApplication();
-    application.store.dispatch(
-      routePanelSelected({ routeKey: 'Underworld', panel: { kind: 'wells' } }),
-    );
-
-    const markup = routeWorkspaceMarkup(application, 'Underworld');
-    expect(application.store.getState().editorSession.activePanelByRoute.Underworld).toEqual({
-      kind: 'wells',
-    });
-    expect(markup).toContain('Stygian Wells');
-    expect(markup).toContain('No Well hosts in this route.');
+    expect(markup).toContain('N · Opening');
+    expect(markup).not.toContain('surface-n-opening');
   });
 
   it('renders a configured biome through the shared workspace rather than a biome-kind editor', () => {

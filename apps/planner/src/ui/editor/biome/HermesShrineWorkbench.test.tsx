@@ -23,6 +23,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { createApplication } from '@planner/composition/createApplication';
 import { candidateSupport } from '@planner/projections/candidateProjection';
+import { projectRouteHermesShrineIndex } from '@planner/projections/routeRoomFeatureIndex';
 import {
   authoredProjectCommandDispatched,
   authoredProjectReplaced,
@@ -681,7 +682,7 @@ describe('Hermes Shrine workbench', () => {
     const user = userEvent.setup();
     render(
       <Provider store={application.store}>
-        <RouteShrinesPanel route={route} />
+        <RouteShrinesPanel rows={projectRouteHermesShrineIndex(route)} />
       </Provider>,
     );
 

@@ -2853,7 +2853,11 @@ export interface WorkspaceRoute {
   /** Assessed route-owned selected successful resource outcomes. */
   readonly resources: readonly {
     readonly family: import('@run-planner/engine/catalog-schema').ResourceFamily;
-    readonly placement?: { readonly biomeKey: string; readonly occurrenceId: OccurrenceId };
+    readonly placement?: {
+      readonly biomeKey: string;
+      readonly locationLabel: string;
+      readonly occurrenceId: OccurrenceId;
+    };
     readonly reasons: readonly string[];
     readonly valid: boolean;
   }[];

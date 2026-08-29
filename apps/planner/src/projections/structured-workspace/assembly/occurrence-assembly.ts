@@ -541,7 +541,7 @@ export function assembleWorkspaceOccurrence(
                         biomeKey: placement.biomeKey,
                         locationLabel:
                           entry === undefined
-                            ? placement.occurrenceId
+                            ? 'Unavailable room'
                             : requireRoom(input.catalog, entry.gameName).label,
                       });
                     })()
