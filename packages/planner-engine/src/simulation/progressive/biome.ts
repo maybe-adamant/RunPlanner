@@ -199,6 +199,8 @@ function generation(
       undefined,
       figurineArcana,
       undefined,
+      ordinary.naturalChaos,
+      ordinary.zagreusContracts,
     ),
     findingRegions: Object.freeze([
       ...ordinary.findingRegions,
@@ -456,6 +458,8 @@ export function evaluateProgressiveBiomeAssembly(
       evaluated.candidateArtifacts.fountainRarity,
       evaluated.candidateArtifacts.figurineArcana,
       evaluated.candidateArtifacts.transcendentEmbryo,
+      evaluated.candidateArtifacts.naturalChaos,
+      evaluated.candidateArtifacts.zagreusContracts,
     ),
   });
 }

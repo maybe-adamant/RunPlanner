@@ -63,12 +63,28 @@ export function occurrenceInteractionRequirements(
   );
   if (topLevelEncounterRequirement !== undefined) requirements.push(topLevelEncounterRequirement);
 
-  if (room.zagreusSpawn?.materialized === true) {
+  const zagreusPresence = room.workbench.features.find(
+    (feature) => feature.kind === 'zagreusContract' && feature.action === 'add',
+  );
+  if (
+    room.zagreusSpawn?.materialized === true &&
+    zagreusPresence?.kind === 'zagreusContract' &&
+    zagreusPresence.presence.kind === 'optionalAbsent' &&
+    zagreusPresence.presence.enabled
+  ) {
     requirements.push(
       Object.freeze({ kind: 'zagreusSpawn' as const, owner: room.zagreusSpawn.owner }),
     );
   }
-  if (room.naturalChaosSpawn !== undefined) {
+  const naturalChaosPresence = room.workbench.features.find(
+    (feature) => feature.kind === 'naturalChaos' && feature.action === 'add',
+  );
+  if (
+    room.naturalChaosSpawn !== undefined &&
+    naturalChaosPresence?.kind === 'naturalChaos' &&
+    naturalChaosPresence.presence.kind === 'optionalAbsent' &&
+    naturalChaosPresence.presence.enabled
+  ) {
     requirements.push(
       Object.freeze({ kind: 'naturalChaosSpawn' as const, owner: room.naturalChaosSpawn.owner }),
     );
@@ -122,7 +138,7 @@ export function occurrenceInteractionRequirements(
           assessment: feature.assessment,
           kind: 'stygianWell' as const,
           owner: room.address,
-          present: feature.present,
+          present: feature.presence.kind !== 'optionalAbsent',
           ...(feature.presenceInteractionKey === undefined
             ? {}
             : { presenceInteractionKey: feature.presenceInteractionKey }),
@@ -168,7 +184,7 @@ export function occurrenceInteractionRequirements(
           assessment: feature.assessment,
           kind: 'hermesShrine' as const,
           owner: room.address,
-          present: feature.present,
+          present: feature.presence.kind !== 'optionalAbsent',
           ...(feature.presenceInteractionKey === undefined
             ? {}
             : { presenceInteractionKey: feature.presenceInteractionKey }),

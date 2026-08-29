@@ -11,7 +11,7 @@ export function RouteShrinesPanel({ route }: { readonly route: WorkspaceRoute })
       const shrine = node.room.workbench.features.find(
         (feature) => feature.kind === 'hermesShrine',
       );
-      return shrine?.present !== true
+      return shrine === undefined || shrine.presence.kind === 'optionalAbsent'
         ? []
         : [{ biomeKey: biome.biomeKey, room: node.room, shrine }];
     }),

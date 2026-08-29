@@ -62,11 +62,6 @@ export type OrdinaryBatchCreationEligibility =
   | { readonly kind: 'ordinaryBatchLimitReached' }
   | { readonly kind: 'notGenerated' };
 
-/** Static topology support for adding one natural Chaos continuation at a room. */
-export type NaturalChaosSpawnAuthoringEligibility =
-  | { readonly kind: 'authorable' }
-  | { readonly kind: 'unavailable'; readonly reason: 'conflictingChaosExit' | 'notSelectedSpine' };
-
 /**
  * One declaration-owned physical exit resolved for an authored decision
  * source. The semantic kind keeps linked and completed-Hub endpoints from
@@ -536,31 +531,6 @@ export function selectedOrdinaryBatchIndex(
         : continuation.exit.occurrenceId;
   }
   return undefined;
-}
-
-/**
- * A natural and forced Chaos continuation cannot coexist at one source. The
- * source must also belong to the selected ordinary spine that owns authored
- * additional continuations.
- */
-export function naturalChaosSpawnAuthoringEligibility(
-  topology: SelectedSpineTopology,
-  sourceOccurrenceId: OccurrenceId,
-): NaturalChaosSpawnAuthoringEligibility {
-  if (selectedOrdinaryBatchIndex(topology, sourceOccurrenceId) === undefined) {
-    return Object.freeze({ kind: 'unavailable', reason: 'notSelectedSpine' });
-  }
-  const source = topology.occurrences?.find(
-    (occurrence) => occurrence.occurrenceId === sourceOccurrenceId,
-  );
-  if (
-    source?.additionalExits.some(
-      (additional) => additional.kind === 'naturalChaos' || additional.kind === 'sparkChaos',
-    ) === true
-  ) {
-    return Object.freeze({ kind: 'unavailable', reason: 'conflictingChaosExit' });
-  }
-  return Object.freeze({ kind: 'authorable' });
 }
 
 /**

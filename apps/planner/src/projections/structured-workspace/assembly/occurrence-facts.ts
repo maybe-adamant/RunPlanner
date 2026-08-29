@@ -1,11 +1,14 @@
 import {
   createOccurrenceAddress,
-  naturalChaosSpawnAuthoringEligibility,
   semanticAddressKey,
   type AuthoredBiomePlan,
   selectedExitContinuation,
   type OccurrenceId,
 } from '@run-planner/engine/authored-project';
+import type {
+  NaturalChaosCandidateCapability,
+  ZagreusContractCandidateCapability,
+} from '@run-planner/engine/simulation';
 
 import { StructuredWorkspaceProjectionContractError } from '../contract';
 import type { WorkspaceBiomeSource } from '../source-index';
@@ -14,7 +17,8 @@ import type { WorkspaceBiomeSource } from '../source-index';
 export interface WorkspaceOccurrenceAssemblyFact {
   readonly authoredAdditionalExitKeys: readonly string[];
   readonly detailsActive: boolean;
-  readonly naturalChaosSpawnAuthorable: boolean;
+  readonly naturalChaosPlacement?: NaturalChaosCandidateCapability;
+  readonly zagreusContractPlacement?: ZagreusContractCandidateCapability;
   readonly occurrenceId: OccurrenceId;
 }
 
@@ -77,6 +81,9 @@ export function createWorkspaceBiomeOccurrenceAssemblyFacts(
         `${semanticAddressKey(createOccurrenceAddress(source.biome, occurrence.occurrenceId))} has duplicate authored occurrence facts`,
       );
     }
+    const occurrenceAddress = createOccurrenceAddress(source.biome, occurrence.occurrenceId);
+    const naturalChaosPlacement = source.naturalChaosAssessment(occurrenceAddress);
+    const zagreusContractPlacement = source.zagreusContractAssessment(occurrenceAddress);
     byOccurrence.set(
       occurrence.occurrenceId,
       Object.freeze({
@@ -84,10 +91,8 @@ export function createWorkspaceBiomeOccurrenceAssemblyFacts(
           (occurrence.additionalExits ?? []).map((additional) => additional.key),
         ),
         detailsActive: active.has(occurrence.occurrenceId),
-        naturalChaosSpawnAuthorable:
-          source.plan.topology !== null &&
-          naturalChaosSpawnAuthoringEligibility(source.plan.topology, occurrence.occurrenceId)
-            .kind === 'authorable',
+        ...(naturalChaosPlacement === undefined ? {} : { naturalChaosPlacement }),
+        ...(zagreusContractPlacement === undefined ? {} : { zagreusContractPlacement }),
         occurrenceId: occurrence.occurrenceId,
       }),
     );

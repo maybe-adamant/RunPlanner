@@ -9,11 +9,14 @@ import {
   generationFindingChronology,
   generationRooms,
   normalTargetCandidateHistory,
+  assessNaturalChaosPlacement,
+  assessZagreusContractPlacement,
   stagedCandidatePool,
   targetGenerationViews,
   targetRewardHistories,
 } from './normal-targets';
 import type { BiomeGenerationHistory, BiomeGenerationSnapshot } from './normal-targets';
+import type { ProgressiveRoomHistoryViews } from '../history';
 import {
   evaluateTargetSlots,
   evaluateTakeoverPrebossBatchCandidate,
@@ -23,7 +26,11 @@ import {
 import { evaluateFieldsCageOutcome, fieldsCageOutcomeEvidence } from './fields-cage';
 import {
   createRoomTargetCandidateArtifacts,
+  createNaturalChaosCandidateArtifacts,
+  createZagreusContractCandidateArtifacts,
   type RoomTargetCandidateArtifacts,
+  type NaturalChaosCandidateArtifacts,
+  type ZagreusContractCandidateArtifacts,
 } from '../candidate-artifacts';
 import type { FindingRegionEntry } from '../finding-regions';
 import { findingRegion, ownerRegion } from '../finding-regions';
@@ -41,6 +48,8 @@ import type { CanonicalBatch } from '../materialization';
 interface BiomeRoomGenerationAssembly {
   readonly validation: GeneratedRoomGenerationValidation;
   readonly candidateArtifacts: RoomTargetCandidateArtifacts;
+  readonly naturalChaos: NaturalChaosCandidateArtifacts;
+  readonly zagreusContracts: ZagreusContractCandidateArtifacts;
   readonly findingRegions: readonly FindingRegionEntry[];
 }
 
@@ -65,6 +74,14 @@ export function evaluateBiomeRoomGenerationAssemblyInternal(
   const anomalyTakeovers: AnomalyTakeoverCandidateSupport[] = [];
   const findings: SemanticFinding[] = [];
   const findingRegions: FindingRegionEntry[] = [];
+  const naturalChaosCapabilities = new Map<
+    string,
+    import('../candidate-artifacts').NaturalChaosCandidateCapability
+  >();
+  const zagreusContractCapabilities = new Map<
+    string,
+    import('../candidate-artifacts').ZagreusContractCandidateCapability
+  >();
   const addFinding = (value: SemanticFinding, region = ownerRegion(value.origin)): void => {
     findings.push(value);
     findingRegions.push(findingRegion(value, region, undefined, 'generation'));
@@ -80,6 +97,34 @@ export function evaluateBiomeRoomGenerationAssemblyInternal(
     throw new BiomeRoomGenerationContractError(
       `${snapshot.biomeKey} has no normal decision progression`,
     );
+  }
+
+  for (const source of rooms.values()) {
+    const sourceDeclaration = catalog.rooms.byKey[source.gameName];
+    if (sourceDeclaration === undefined) continue;
+    const parentHistory: ProgressiveRoomHistoryViews | undefined = history.rooms.find(
+      (room) => semanticAddressKey(room.origin) === semanticAddressKey(source.origin),
+    );
+    if (sourceDeclaration.additionalExits.some((exit) => exit.kind === 'naturalChaos')) {
+      const capability = assessNaturalChaosPlacement(
+        catalog,
+        layout,
+        source,
+        sourceDeclaration,
+        parentHistory,
+        undefined,
+        enteredBiomeCount,
+      );
+      if (capability !== undefined) {
+        naturalChaosCapabilities.set(semanticAddressKey(source.origin), capability);
+      }
+    }
+    if (sourceDeclaration.additionalExits.some((exit) => exit.kind === 'zagreusContract')) {
+      const capability = assessZagreusContractPlacement(sourceDeclaration, parentHistory);
+      if (capability !== undefined) {
+        zagreusContractCapabilities.set(semanticAddressKey(source.origin), capability);
+      }
+    }
   }
 
   let ordinaryBatchIndex = 0;
@@ -210,6 +255,7 @@ export function evaluateBiomeRoomGenerationAssemblyInternal(
     rooms,
     findings,
     findingRegions,
+    enteredBiomeCount,
   );
 
   const publishedFindingRegions = Object.freeze(
@@ -232,6 +278,8 @@ export function evaluateBiomeRoomGenerationAssemblyInternal(
     validation,
     findingRegions: publishedFindingRegions,
     candidateArtifacts: createRoomTargetCandidateArtifacts(candidateContexts),
+    naturalChaos: createNaturalChaosCandidateArtifacts(naturalChaosCapabilities),
+    zagreusContracts: createZagreusContractCandidateArtifacts(zagreusContractCapabilities),
   });
 }
 

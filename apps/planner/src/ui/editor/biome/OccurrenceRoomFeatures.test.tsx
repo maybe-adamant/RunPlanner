@@ -353,6 +353,10 @@ describe('OccurrenceRoomFeatures', () => {
     const well = workbench.features.find((candidate) => candidate.kind === 'stygianWell');
     expect(well).toMatchObject({ assessment: 'unassessed' });
 
+    openRoomTab('Features');
+    const presence = screen.getByRole('checkbox', { name: 'Stygian Well present' });
+    expect((presence as HTMLInputElement).checked).toBe(true);
+    expect((presence as HTMLInputElement).disabled).toBe(false);
     const picker = screen.getByRole('button', { name: 'Stygian Well Healing' });
     await view.user.click(picker);
     const choice = await screen.findByRole('option', { name: 'ArmorBoostStore' });
@@ -385,6 +389,7 @@ describe('OccurrenceRoomFeatures', () => {
         return node.room.occurrenceId === occurrenceId;
       });
     expect(feature?.kind).toBe('occurrenceWorkbench');
+    openRoomTab('Features');
     const picker = screen.getByRole('button', { name: 'Pool of Purging Left slot' });
     await view.user.click(picker);
     const choice = await screen.findByRole('option', { name: /Phalanx Shot/ });
@@ -423,10 +428,11 @@ describe('OccurrenceRoomFeatures', () => {
         ?.biomes.find((biome) => biome.biomeKey === 'H')
         ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === occurrenceId);
 
-    const removeNemesis = screen.getByRole('button', { name: 'Remove Nemesis event' });
-    expect(removeNemesis).toBeTruthy();
-    expect(removeNemesis.classList.contains('danger-action')).toBe(true);
+    openRoomTab('Encounters');
+    const nemesis = screen.getByRole('checkbox', { name: 'Nemesis Event' });
+    expect((nemesis as HTMLInputElement).checked).toBe(true);
     expect(screen.queryByRole('combobox', { name: /Passive encounter/i })).toBeNull();
+    openRoomTab('Minor Rewards');
     const count = screen.getByRole('combobox', { name: 'Optional pickups' });
     expect((count as HTMLSelectElement).value).toBe('4');
     expect(within(count).getByRole('option', { name: '4' })).toBeTruthy();
@@ -469,16 +475,13 @@ describe('OccurrenceRoomFeatures', () => {
     act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
     await waitFor(() => expect(authoredFields()?.state).toMatchObject({ optionalRewardCount: 4 }));
 
-    openRoomTab('Room Overview');
-    await view.user.click(screen.getByRole('button', { name: 'Remove Nemesis event' }));
+    openRoomTab('Encounters');
+    await view.user.click(screen.getByRole('checkbox', { name: 'Nemesis Event' }));
     await waitFor(() =>
       expect(authoredFields()?.encounters.encounterKeyByPhase.Passive).not.toBe(
         'NemesisRandomEvent',
       ),
     );
-    const addNemesis = screen.getByRole('button', { name: 'Add Nemesis event' });
-    expect(addNemesis).toBeTruthy();
-    expect(addNemesis.classList.contains('secondary-action')).toBe(true);
     act(() => view.application.store.dispatch(authoredProjectUndoRequested()));
     await waitFor(() =>
       expect(authoredFields()?.encounters.encounterKeyByPhase.Passive).toBe('NemesisRandomEvent'),

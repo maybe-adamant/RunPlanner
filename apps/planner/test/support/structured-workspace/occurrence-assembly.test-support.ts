@@ -30,8 +30,10 @@ import {
   encounterPhaseGorgonSupportForProjectEvaluationAssembly,
   encounterPhaseSequenceStatusForProjectEvaluationAssembly,
   fieldsBatchFacts,
+  naturalChaosCandidateForProjectEvaluationAssembly,
   simulateProjectAssembly,
   traitOfferCandidateForProjectEvaluationAssembly,
+  zagreusContractCandidateForProjectEvaluationAssembly,
   type GorgonPhaseCandidateSupport,
 } from '@run-planner/engine/simulation';
 import {
@@ -92,6 +94,8 @@ function biomeSource(
     undefined,
     undefined,
     (address) => acquisitionConversionCandidateForProjectEvaluationAssembly(assembly, address),
+    (address) => naturalChaosCandidateForProjectEvaluationAssembly(assembly, address),
+    (address) => zagreusContractCandidateForProjectEvaluationAssembly(assembly, address),
   )
     .routes.find((route) => route.routeKey === routeKey)
     ?.biomes.find((biome) => biome.plan.biomeKey === biomeKey);

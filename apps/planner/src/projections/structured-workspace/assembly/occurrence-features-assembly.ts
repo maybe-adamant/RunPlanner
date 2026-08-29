@@ -8,8 +8,10 @@ import {
 import type { Catalog, RoomDeclaration } from '@run-planner/engine/catalog-schema';
 import type {
   HermesShrineCandidateCapability,
+  NaturalChaosCandidateCapability,
   PurgingPoolCandidateCapability,
   StygianWellCandidateCapability,
+  ZagreusContractCandidateCapability,
 } from '@run-planner/engine/simulation';
 import {
   type WorkspaceEncounterPhase,
@@ -27,7 +29,8 @@ export interface WorkspaceOccurrenceFeaturesInput {
   readonly facts: {
     readonly authoredAdditionalExitKeys: readonly string[];
     readonly detailsActive: boolean;
-    readonly naturalChaosSpawnAuthorable: boolean;
+    readonly naturalChaosPlacement?: NaturalChaosCandidateCapability;
+    readonly zagreusContractPlacement?: ZagreusContractCandidateCapability;
   };
   readonly hermesShrineAssessment?: (
     owner: import('@run-planner/engine/authored-project').OccurrenceAddress,
@@ -120,6 +123,7 @@ export function assembleOccurrenceFeatures(
   const zagreusSpawn =
     zagreusDeclaration === undefined ||
     input.facts.authoredAdditionalExitKeys.includes(zagreusDeclaration.key) ||
+    input.facts.zagreusContractPlacement?.placementEligible === false ||
     !input.facts.detailsActive ||
     roomLocal.kind !== 'shop' ||
     !roomLocal.materialized
@@ -142,6 +146,7 @@ export function assembleOccurrenceFeatures(
   const naturalChaosSpawn =
     naturalChaosDeclaration === undefined ||
     input.facts.authoredAdditionalExitKeys.includes(naturalChaosDeclaration.key) ||
+    input.facts.authoredAdditionalExitKeys.includes('sparkChaos') ||
     !input.facts.detailsActive
       ? undefined
       : (() => {
@@ -151,7 +156,7 @@ export function assembleOccurrenceFeatures(
             naturalChaosDeclaration.key,
           );
           return Object.freeze({
-            authorable: input.facts.naturalChaosSpawnAuthorable,
+            authorable: input.facts.naturalChaosPlacement?.placementEligible === true,
             marker: input.markerDestinations.marker(owner),
             owner,
           });
@@ -175,6 +180,7 @@ function roomFeatures(
     createAdditionalExitAddress(input.biome, input.occurrence.occurrenceId, key);
   const zagreus = room.additionalExits.find((candidate) => candidate.kind === 'zagreusContract');
   const chaos = room.additionalExits.find((candidate) => candidate.kind === 'naturalChaos');
+  const spark = room.additionalExits.find((candidate) => candidate.kind === 'sparkChaos');
   const passive = encounterPhases.find((phase) => phase.nemesisFeature !== undefined);
   const poolOwner = createOccurrenceAddress(input.biome, input.occurrence.occurrenceId);
   const poolAssessment = input.purgingPoolAssessment?.(poolOwner);
@@ -194,6 +200,18 @@ function roomFeatures(
       ? []
       : [
           (() => {
+            const wellForced = room.roomShop?.forced === true || wellAssessment?.required === true;
+            const wellPresence =
+              well === undefined
+                ? wellForced
+                  ? Object.freeze({ kind: 'forcedPresent' as const })
+                  : Object.freeze({
+                      kind: 'optionalAbsent' as const,
+                      enabled: wellAssessment?.placementEligible === true,
+                    })
+                : wellForced
+                  ? Object.freeze({ kind: 'forcedPresent' as const })
+                  : Object.freeze({ kind: 'optionalPresent' as const });
             const itemLabel = (itemKey: string): string =>
               input.catalog.rewards.shops.byKey.RoomShop?.groups.values
                 .flatMap((group) => group.options.values)
@@ -302,10 +320,9 @@ function roomFeatures(
                 ? 'unassessed'
                 : 'assessed') as WorkspaceFeatureAssessment,
               kind: 'stygianWell' as const,
-              present: well !== undefined,
-              required: wellAssessment?.required ?? room.roomShop?.forced === true,
-              placementEligible: wellAssessment?.placementEligible ?? false,
-              ...(room.roomShop?.forced === true
+              presence: wellPresence,
+              ...(wellPresence.kind === 'forcedPresent' ||
+              (wellPresence.kind === 'optionalAbsent' && !wellPresence.enabled)
                 ? {}
                 : {
                     presenceInteractionKey: `stygianWellPresence:${semanticAddressKey(poolOwner)}`,
@@ -318,52 +335,106 @@ function roomFeatures(
             });
           })(),
         ]),
-    ...(shrine === undefined && shrineAssessment === undefined
+    ...(room.surfaceShop === undefined && shrine === undefined && shrineAssessment === undefined
       ? []
       : [
-          Object.freeze({
-            assessment: (shrineAssessment === undefined
-              ? 'unassessed'
-              : 'assessed') as WorkspaceFeatureAssessment,
-            kind: 'hermesShrine' as const,
-            present: shrine !== undefined,
-            required: shrineAssessment?.required ?? room.surfaceShop?.forced === true,
-            placementEligible: shrineAssessment?.placementEligible ?? false,
-            ...(shrineAssessment?.required === true || room.surfaceShop?.forced === true
-              ? {}
-              : {
-                  presenceInteractionKey: `hermesShrinePresence:${semanticAddressKey(poolOwner)}`,
-                }),
-            slots: Object.freeze(
+          (() => {
+            const shrineForced =
+              room.surfaceShop?.forced === true || shrineAssessment?.required === true;
+            const shrinePresence =
               shrine === undefined
-                ? []
-                : (
-                    [
-                      ['first', 'First'],
-                      ['secondLeft', 'Second Left'],
-                      ['secondRight', 'Second Right'],
-                    ] as const
-                  ).map(([slotKey, label]) => {
-                    const generationKey = `initial:${slotKey}` as const;
-                    return Object.freeze({
-                      key: slotKey,
-                      label,
-                      rewardType: shrine.offerBySlot[slotKey]?.offer.rewardType ?? null,
-                      ...(shrine.offerBySlot[slotKey] === null
+                ? shrineForced
+                  ? Object.freeze({ kind: 'forcedPresent' as const })
+                  : Object.freeze({
+                      kind: 'optionalAbsent' as const,
+                      enabled: shrineAssessment?.placementEligible === true,
+                    })
+                : shrineForced
+                  ? Object.freeze({ kind: 'forcedPresent' as const })
+                  : Object.freeze({ kind: 'optionalPresent' as const });
+            return Object.freeze({
+              assessment: (shrineAssessment === undefined
+                ? 'unassessed'
+                : 'assessed') as WorkspaceFeatureAssessment,
+              kind: 'hermesShrine' as const,
+              presence: shrinePresence,
+              ...(shrinePresence.kind === 'forcedPresent' ||
+              (shrinePresence.kind === 'optionalAbsent' && !shrinePresence.enabled)
+                ? {}
+                : {
+                    presenceInteractionKey: `hermesShrinePresence:${semanticAddressKey(poolOwner)}`,
+                  }),
+              slots: Object.freeze(
+                shrine === undefined
+                  ? []
+                  : (
+                      [
+                        ['first', 'First'],
+                        ['secondLeft', 'Second Left'],
+                        ['secondRight', 'Second Right'],
+                      ] as const
+                    ).map(([slotKey, label]) => {
+                      const generationKey = `initial:${slotKey}` as const;
+                      return Object.freeze({
+                        key: slotKey,
+                        label,
+                        rewardType: shrine.offerBySlot[slotKey]?.offer.rewardType ?? null,
+                        ...(shrine.offerBySlot[slotKey] === null
+                          ? {}
+                          : {
+                              rewardLabel:
+                                input.catalog.rewards.rewardTypes.byKey[
+                                  shrine.offerBySlot[slotKey]!.offer.rewardType
+                                ]?.label ?? shrine.offerBySlot[slotKey]!.offer.rewardType,
+                            }),
+                        candidateRewardTypes:
+                          shrineAssessment?.candidateRewardTypesBySlot[slotKey] ??
+                          declaredSurfaceShopRewardTypes(input.catalog, slotKey),
+                        candidateRewards: Object.freeze(
+                          (
+                            shrineAssessment?.candidateRewardTypesBySlot[slotKey] ??
+                            declaredSurfaceShopRewardTypes(input.catalog, slotKey)
+                          ).map((rewardType) =>
+                            Object.freeze({
+                              rewardType,
+                              label:
+                                input.catalog.rewards.rewardTypes.byKey[rewardType]?.label ??
+                                rewardType,
+                            }),
+                          ),
+                        ),
+                        offerInteractionKey: `hermesShrineOffer:${semanticAddressKey(poolOwner)}:${slotKey}`,
+                        purchaseInteractionKey: `hermesShrinePurchase:${semanticAddressKey(poolOwner)}:${generationKey}`,
+                        purchase: shrine.purchaseBySlot?.[slotKey] ?? null,
+                      });
+                    }),
+              ),
+              ...(shrine === undefined ||
+              (shrine.travelDealRefill === undefined &&
+                shrineAssessment?.travelDealRefill === undefined)
+                ? {}
+                : {
+                    travelDealRefill: Object.freeze({
+                      rewardType: shrine.travelDealRefill?.offer?.offer.rewardType ?? null,
+                      ...(shrine.travelDealRefill?.offer === null ||
+                      shrine.travelDealRefill?.offer === undefined
                         ? {}
                         : {
                             rewardLabel:
                               input.catalog.rewards.rewardTypes.byKey[
-                                shrine.offerBySlot[slotKey]!.offer.rewardType
-                              ]?.label ?? shrine.offerBySlot[slotKey]!.offer.rewardType,
+                                shrine.travelDealRefill.offer.offer.rewardType
+                              ]?.label ?? shrine.travelDealRefill.offer.offer.rewardType,
                           }),
                       candidateRewardTypes:
-                        shrineAssessment?.candidateRewardTypesBySlot[slotKey] ??
-                        declaredSurfaceShopRewardTypes(input.catalog, slotKey),
+                        shrineAssessment === undefined
+                          ? declaredShrineAllRewardTypes
+                          : (shrineAssessment.travelDealRefill?.candidateRewardTypes ??
+                            Object.freeze([])),
                       candidateRewards: Object.freeze(
-                        (
-                          shrineAssessment?.candidateRewardTypesBySlot[slotKey] ??
-                          declaredSurfaceShopRewardTypes(input.catalog, slotKey)
+                        (shrineAssessment === undefined
+                          ? declaredShrineAllRewardTypes
+                          : (shrineAssessment.travelDealRefill?.candidateRewardTypes ??
+                            Object.freeze([]))
                         ).map((rewardType) =>
                           Object.freeze({
                             rewardType,
@@ -373,53 +444,13 @@ function roomFeatures(
                           }),
                         ),
                       ),
-                      offerInteractionKey: `hermesShrineOffer:${semanticAddressKey(poolOwner)}:${slotKey}`,
-                      purchaseInteractionKey: `hermesShrinePurchase:${semanticAddressKey(poolOwner)}:${generationKey}`,
-                      purchase: shrine.purchaseBySlot?.[slotKey] ?? null,
-                    });
+                      offerInteractionKey: `hermesShrineOffer:${semanticAddressKey(poolOwner)}:travelDealRefill`,
+                      purchaseInteractionKey: `hermesShrinePurchase:${semanticAddressKey(poolOwner)}:travelDealRefill`,
+                      purchase: shrine.travelDealRefill?.purchase ?? null,
+                    }),
                   }),
-            ),
-            ...(shrine === undefined ||
-            (shrine.travelDealRefill === undefined &&
-              shrineAssessment?.travelDealRefill === undefined)
-              ? {}
-              : {
-                  travelDealRefill: Object.freeze({
-                    rewardType: shrine.travelDealRefill?.offer?.offer.rewardType ?? null,
-                    ...(shrine.travelDealRefill?.offer === null ||
-                    shrine.travelDealRefill?.offer === undefined
-                      ? {}
-                      : {
-                          rewardLabel:
-                            input.catalog.rewards.rewardTypes.byKey[
-                              shrine.travelDealRefill.offer.offer.rewardType
-                            ]?.label ?? shrine.travelDealRefill.offer.offer.rewardType,
-                        }),
-                    candidateRewardTypes:
-                      shrineAssessment === undefined
-                        ? declaredShrineAllRewardTypes
-                        : (shrineAssessment.travelDealRefill?.candidateRewardTypes ??
-                          Object.freeze([])),
-                    candidateRewards: Object.freeze(
-                      (shrineAssessment === undefined
-                        ? declaredShrineAllRewardTypes
-                        : (shrineAssessment.travelDealRefill?.candidateRewardTypes ??
-                          Object.freeze([]))
-                      ).map((rewardType) =>
-                        Object.freeze({
-                          rewardType,
-                          label:
-                            input.catalog.rewards.rewardTypes.byKey[rewardType]?.label ??
-                            rewardType,
-                        }),
-                      ),
-                    ),
-                    offerInteractionKey: `hermesShrineOffer:${semanticAddressKey(poolOwner)}:travelDealRefill`,
-                    purchaseInteractionKey: `hermesShrinePurchase:${semanticAddressKey(poolOwner)}:travelDealRefill`,
-                    purchase: shrine.travelDealRefill?.purchase ?? null,
-                  }),
-                }),
-          }),
+            });
+          })(),
         ]),
     ...(pool === undefined
       ? []
@@ -481,6 +512,10 @@ function roomFeatures(
           Object.freeze({
             kind: 'zagreusContract' as const,
             action: 'add' as const,
+            presence: Object.freeze({
+              kind: 'optionalAbsent' as const,
+              enabled: input.facts.zagreusContractPlacement?.placementEligible === true,
+            }),
             control: zagreusSpawn,
           }),
         ]
@@ -489,6 +524,7 @@ function roomFeatures(
             Object.freeze({
               kind: 'zagreusContract' as const,
               action: 'remove' as const,
+              presence: Object.freeze({ kind: 'optionalPresent' as const }),
               owner: additionalOwner(zagreus.key),
             }),
           ]
@@ -498,6 +534,10 @@ function roomFeatures(
           Object.freeze({
             kind: 'naturalChaos' as const,
             action: 'add' as const,
+            presence: Object.freeze({
+              kind: 'optionalAbsent' as const,
+              enabled: naturalChaosSpawn.authorable,
+            }),
             control: naturalChaosSpawn,
           }),
         ]
@@ -506,9 +546,19 @@ function roomFeatures(
             Object.freeze({
               kind: 'naturalChaos' as const,
               action: 'remove' as const,
+              presence: Object.freeze({ kind: 'optionalPresent' as const }),
               owner: additionalOwner(chaos.key),
             }),
           ]
-        : []),
+        : spark !== undefined && authored.has(spark.key)
+          ? [
+              Object.freeze({
+                kind: 'naturalChaos' as const,
+                action: 'remove' as const,
+                presence: Object.freeze({ kind: 'forcedPresent' as const }),
+                owner: additionalOwner(spark.key),
+              }),
+            ]
+          : []),
   ]);
 }

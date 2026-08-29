@@ -122,6 +122,12 @@ export interface WorkspaceBiomeSource {
   readonly stygianWellAssessment: (
     owner: OccurrenceAddress,
   ) => import('@run-planner/engine/simulation').StygianWellCandidateCapability | undefined;
+  readonly naturalChaosAssessment: (
+    owner: OccurrenceAddress,
+  ) => import('@run-planner/engine/simulation').NaturalChaosCandidateCapability | undefined;
+  readonly zagreusContractAssessment: (
+    owner: OccurrenceAddress,
+  ) => import('@run-planner/engine/simulation').ZagreusContractCandidateCapability | undefined;
   readonly steadyGrowthOutcomes: readonly import('@run-planner/engine/simulation').BiomeRewardSimulation['steadyGrowthOutcomes'][number][];
   readonly transcendentEmbryoOutcomes: readonly import('@run-planner/engine/simulation').BiomeRewardSimulation['transcendentEmbryoOutcomes'][number][];
   readonly occurrence: (occurrenceId: OccurrenceId) => RoomOccurrence | undefined;
@@ -653,6 +659,8 @@ function createWorkspaceBiomeSource(
   stygianWellAssessment: WorkspaceBiomeSource['stygianWellAssessment'],
   resourceAuthoring: RouteResourceAuthoring,
   acquisitionConversionCandidate: WorkspaceBiomeSource['acquisitionConversionCandidate'],
+  naturalChaosAssessment: WorkspaceBiomeSource['naturalChaosAssessment'],
+  zagreusContractAssessment: WorkspaceBiomeSource['zagreusContractAssessment'],
 ): WorkspaceBiomeSource {
   const biome = createBiomeAddress(routeKey, plan.biomeKey);
   const layout = catalog.biomeLayouts.byKey[plan.biomeKey];
@@ -784,6 +792,8 @@ function createWorkspaceBiomeSource(
     purgingPoolAssessment,
     hermesShrineAssessment,
     stygianWellAssessment,
+    naturalChaosAssessment,
+    zagreusContractAssessment,
     steadyGrowthOutcomes,
     transcendentEmbryoOutcomes,
     layout,
@@ -849,6 +859,8 @@ export function createWorkspaceProjectSourceIndex(
   stygianWellAssessment: WorkspaceBiomeSource['stygianWellAssessment'] = () => undefined,
   acquisitionConversionCandidate: WorkspaceBiomeSource['acquisitionConversionCandidate'] = () =>
     undefined,
+  naturalChaosAssessment: WorkspaceBiomeSource['naturalChaosAssessment'] = () => undefined,
+  zagreusContractAssessment: WorkspaceBiomeSource['zagreusContractAssessment'] = () => undefined,
 ): WorkspaceProjectSourceIndex {
   return Object.freeze({
     routes: Object.freeze(
@@ -877,6 +889,8 @@ export function createWorkspaceProjectSourceIndex(
                 stygianWellAssessment,
                 resources,
                 acquisitionConversionCandidate,
+                naturalChaosAssessment,
+                zagreusContractAssessment,
               ),
             ),
           ),

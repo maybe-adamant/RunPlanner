@@ -223,6 +223,20 @@ function generation(
       encounterArtifacts,
       traitOffers,
       levelResolutions,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      ordinary.naturalChaos,
+      ordinary.zagreusContracts,
     ),
     findingRegions: Object.freeze([
       ...ordinary.findingRegions,
@@ -586,6 +600,8 @@ export function evaluateBiomeAssembly(
         rewards.fountainRarityArtifacts,
         rewards.figurineArcanaArtifacts,
         rewards.transcendentEmbryoArtifacts,
+        roomGeneration.candidateArtifacts.naturalChaos,
+        roomGeneration.candidateArtifacts.zagreusContracts,
       ),
     });
   }
@@ -620,6 +636,8 @@ export function evaluateBiomeAssembly(
         rewards.fountainRarityArtifacts,
         rewards.figurineArcanaArtifacts,
         rewards.transcendentEmbryoArtifacts,
+        roomGeneration.candidateArtifacts.naturalChaos,
+        roomGeneration.candidateArtifacts.zagreusContracts,
       ),
       history: Object.freeze({
         routeKey: history.routeKey,

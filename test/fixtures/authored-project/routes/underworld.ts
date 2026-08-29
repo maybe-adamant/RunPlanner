@@ -1,9 +1,12 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  createAdditionalExitAddress,
   createAcquisitionRoleAddress,
+  createBatchRewardStoreAddress,
   createBiomeAddress,
   createExitDecisionAddress,
+  createExitSelectionAddress,
   createIncomingRewardAddress,
   createLevelResolutionAddress,
   createOccurrenceAddress,
@@ -12,6 +15,7 @@ import {
   roomActionKey,
   createRouteStartKeepsakeSelectionAddress,
   createShopOfferAddress,
+  createTargetAddress,
   createTraitOfferAddress,
   type BiomeAddress,
   type OccurrenceId,
@@ -226,6 +230,101 @@ export function createCompleteFGProject(options: GoldenGProjectOptions = {}): Pr
     }
   }
   return authorLegalTraitOffers(project);
+}
+
+export interface GContractAvailabilityFixture {
+  readonly project: ProjectDocument;
+  readonly laterShop: OccurrenceId;
+}
+
+/**
+ * Two reached G Midshops with an earlier Contract either entered or skipped.
+ * Shared by the engine capability and workspace-presence witnesses.
+ */
+export function createGContractAvailabilityProject(
+  enterEarlierContract: boolean,
+): GContractAvailabilityFixture {
+  const firstShop = goldenGOccurrenceId(5, 1);
+  const firstContract = createOccurrenceId(
+    `contract-availability-first-${enterEarlierContract ? 'entered' : 'skipped'}`,
+  );
+  const laterShop = createOccurrenceId(
+    `contract-availability-later-${enterEarlierContract ? 'entered' : 'skipped'}`,
+  );
+  const firstNormalTarget = enterEarlierContract
+    ? createOccurrenceId('contract-availability-normal-entered')
+    : laterShop;
+  const firstSibling = createOccurrenceId(
+    `contract-availability-sibling-${enterEarlierContract ? 'entered' : 'skipped'}`,
+  );
+  const firstSource = source(firstShop);
+  const contractSource = source(firstContract);
+  let project = createCompleteFGProject();
+  project = applyProjectCommand(project, catalog, {
+    kind: 'RemoveExitDecision',
+    decision: createExitDecisionAddress(goldenGBiome, firstSource),
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'AddZagreusContract',
+    additional: createAdditionalExitAddress(goldenGBiome, firstShop, 'zagreusContract'),
+    occurrenceId: firstContract,
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceBatchRewardStore',
+    rewardStore: createBatchRewardStoreAddress(goldenGBiome, firstSource),
+    storeKey: 'RunProgress',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateTarget',
+    target: createTargetAddress(goldenGBiome, firstSource, 'exit1'),
+    occurrenceId: firstNormalTarget,
+    gameName: enterEarlierContract ? 'G_Combat12' : 'G_Shop01',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateTarget',
+    target: createTargetAddress(goldenGBiome, firstSource, 'exit2'),
+    occurrenceId: firstSibling,
+    gameName: 'G_Combat12',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'SetExitSelection',
+    selection: createExitSelectionAddress(goldenGBiome, firstSource),
+    value: enterEarlierContract
+      ? { kind: 'additional', additionalExitKey: 'zagreusContract' }
+      : { kind: 'normal', exitKey: 'exit1' },
+  });
+  if (enterEarlierContract) {
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateBatch',
+      decision: createExitDecisionAddress(goldenGBiome, contractSource),
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(goldenGBiome, contractSource),
+      storeKey: 'RunProgress',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'CreateTarget',
+      target: createTargetAddress(goldenGBiome, contractSource, 'exit1'),
+      occurrenceId: laterShop,
+      gameName: 'G_Shop01',
+    });
+  }
+  for (const [offerKey, value] of Object.entries({
+    Boon: {
+      rewardType: 'RandomLoot',
+      payload: { kind: 'BoonSource' as const, source: 'ApolloUpgrade' },
+    },
+    MajorNonBoon: { rewardType: 'WeaponUpgradeDrop' },
+    Minor: { rewardType: 'MaxManaDrop' },
+  })) {
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceShopOffer',
+      offer: createShopOfferAddress(goldenGBiome, laterShop, offerKey),
+      value,
+    });
+  }
+  return Object.freeze({ project, laterShop });
 }
 
 /** Short F/G witness: the F Postboss Pool sells one of its realized traits. */

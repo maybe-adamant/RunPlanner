@@ -9,7 +9,9 @@ export function RouteWellsPanel({ route }: { readonly route: WorkspaceRoute }) {
     biome.nodes.flatMap((node) => {
       if (node.kind !== 'occurrenceWorkbench') return [];
       const well = node.room.workbench.features.find((feature) => feature.kind === 'stygianWell');
-      return well?.present !== true ? [] : [{ biomeKey: biome.biomeKey, room: node.room, well }];
+      return well === undefined || well.presence.kind === 'optionalAbsent'
+        ? []
+        : [{ biomeKey: biome.biomeKey, room: node.room, well }];
     }),
   );
   return (

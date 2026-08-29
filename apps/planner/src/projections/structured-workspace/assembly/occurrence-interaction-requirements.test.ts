@@ -81,9 +81,7 @@ describe('occurrence interaction requirements', () => {
           {
             kind: 'hermesShrine' as const,
             assessment: 'unassessed' as const,
-            present: true,
-            required: false,
-            placementEligible: true,
+            presence: { kind: 'optionalPresent' as const },
             slots: [],
           },
         ],
@@ -94,5 +92,31 @@ describe('occurrence interaction requirements', () => {
         (requirement) => requirement.kind,
       ),
     ).toEqual(expect.arrayContaining(['hermesShrine', 'resourcePlacements']));
+  });
+
+  it('does not bind presence mutation for a disabled absent Well', () => {
+    const postboss = assemble(
+      createGoldenFGHIProject(),
+      'Underworld',
+      'F',
+      createOccurrenceId('golden-f-preboss-shop:postboss'),
+    ).assembly.node.room;
+    const well = postboss.workbench.features.find((feature) => feature.kind === 'stygianWell');
+    if (well?.kind !== 'stygianWell') throw new Error('Postboss Well is missing');
+
+    const requirements = occurrenceInteractionRequirements(catalog, {
+      ...postboss,
+      workbench: {
+        ...postboss.workbench,
+        features: postboss.workbench.features.map((feature) =>
+          feature === well
+            ? { ...feature, presence: { kind: 'optionalAbsent' as const, enabled: false } }
+            : feature,
+        ),
+      },
+    });
+    const requirement = requirements.find((candidate) => candidate.kind === 'stygianWell');
+    expect(requirement).toBeDefined();
+    expect(requirement).not.toHaveProperty('presenceInteractionKey');
   });
 });

@@ -99,6 +99,12 @@ import type { TakeoverBatchCommand } from '@planner/workspace/takeoverBatchInter
 export type WorkspaceAssessment = 'assessed' | 'blocked' | 'unassessed';
 /** Whether an occurrence room-feature domain has reached engine assessment. */
 export type WorkspaceFeatureAssessment = 'assessed' | 'unassessed';
+
+/** Closed application state for a structurally supported room feature. */
+export type WorkspaceFeaturePresence =
+  | { readonly kind: 'optionalAbsent'; readonly enabled: boolean }
+  | { readonly kind: 'optionalPresent' }
+  | { readonly kind: 'forcedPresent' };
 export type WorkspaceProjectionSource = 'authored' | 'canonical' | 'progressive';
 export type WorkspaceStatus = 'blocked' | 'empty' | 'incomplete' | 'invalid' | 'valid';
 
@@ -1961,21 +1967,27 @@ export type WorkspaceRoomFeature =
   | {
       readonly kind: 'zagreusContract';
       readonly action: 'add';
+      readonly presence: Extract<WorkspaceFeaturePresence, { readonly kind: 'optionalAbsent' }>;
       readonly control: WorkspaceZagreusSpawnControl;
     }
   | {
       readonly kind: 'zagreusContract';
       readonly action: 'remove';
+      readonly presence: Extract<WorkspaceFeaturePresence, { readonly kind: 'optionalPresent' }>;
       readonly owner: AdditionalExitAddress;
     }
   | {
       readonly kind: 'naturalChaos';
       readonly action: 'add';
+      readonly presence: Extract<WorkspaceFeaturePresence, { readonly kind: 'optionalAbsent' }>;
       readonly control: WorkspaceNaturalChaosSpawnControl;
     }
   | {
       readonly kind: 'naturalChaos';
       readonly action: 'remove';
+      readonly presence:
+        | Extract<WorkspaceFeaturePresence, { readonly kind: 'optionalPresent' }>
+        | Extract<WorkspaceFeaturePresence, { readonly kind: 'forcedPresent' }>;
       readonly owner: AdditionalExitAddress;
     }
   | {
@@ -1999,9 +2011,7 @@ export type WorkspaceRoomFeature =
       /** Shrine inventory is always visible and authored once present. */
       readonly kind: 'hermesShrine';
       readonly assessment: WorkspaceFeatureAssessment;
-      readonly present: boolean;
-      readonly required: boolean;
-      readonly placementEligible: boolean;
+      readonly presence: WorkspaceFeaturePresence;
       readonly presenceInteractionKey?: string;
       readonly slots: readonly {
         readonly key: import('@run-planner/engine/authored-project').HermesShrineSlotKey;
@@ -2035,9 +2045,7 @@ export type WorkspaceRoomFeature =
   | {
       readonly kind: 'stygianWell';
       readonly assessment: WorkspaceFeatureAssessment;
-      readonly present: boolean;
-      readonly required: boolean;
-      readonly placementEligible: boolean;
+      readonly presence: WorkspaceFeaturePresence;
       readonly presenceInteractionKey?: string;
       readonly interactionKey?: string;
       readonly interacted: boolean;
