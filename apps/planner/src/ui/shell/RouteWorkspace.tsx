@@ -9,6 +9,10 @@ import {
 } from '@planner/projections/evaluationProjection';
 import type { RouteEditorNavigation } from '@planner/projections/editorNavigation';
 import { projectRouteNpcIndex } from '@planner/projections/routeNpcIndex';
+import {
+  projectRouteHermesShrineIndex,
+  projectRouteStygianWellIndex,
+} from '@planner/projections/routeRoomFeatureIndex';
 import { projectRouteTraitOffers } from '@planner/projections/traitProjection';
 import { routePanelSelected, semanticOwnerNavigated } from '@planner/state/editorSessionSlice';
 import { type RootState, useAppDispatch, useAppSelector } from '@planner/state/store';
@@ -30,6 +34,8 @@ import { RouteResourcesPanel } from './RouteResourcesPanel';
 import { RouteShrinesPanel } from './RouteShrinesPanel';
 import { RouteTraitsPanel } from './RouteTraitsPanel';
 import { RouteWellsPanel } from './RouteWellsPanel';
+
+const routeOverviewPanel = Object.freeze({ kind: 'overview' as const });
 
 export function RouteWorkspace({
   catalog,
@@ -88,10 +94,48 @@ export function RouteWorkspace({
     workspaceRoute.routeKey,
     interactions,
   );
+  const shrineRows = projectRouteHermesShrineIndex(workspaceRoute);
+  const wellRows = projectRouteStygianWellIndex(workspaceRoute);
+  const hasNpcIndex = npcIndex.groups.length > 0;
+  const hasTraits = traitRows.length > 0;
+  const hasResources = workspaceRoute.resources.some(
+    (resource) => resource.placement !== undefined,
+  );
+  const hasShrines = shrineRows.length > 0;
+  const hasWells = wellRows.length > 0;
+  const hasRouteIndexes = hasNpcIndex || hasTraits || hasResources || hasShrines || hasWells;
+  const activePanelAvailable = (() => {
+    switch (activePanel.kind) {
+      case 'npcIndex':
+        return hasNpcIndex;
+      case 'traits':
+        return hasTraits;
+      case 'resources':
+        return hasResources;
+      case 'shrines':
+        return hasShrines;
+      case 'wells':
+        return hasWells;
+      case 'overview':
+      case 'biome':
+        return true;
+    }
+  })();
+  const displayedPanel = activePanelAvailable ? activePanel : routeOverviewPanel;
   const contentLayout =
-    activePanel.kind === 'biome' && activeBiomeProjection === undefined
+    displayedPanel.kind === 'biome' && activeBiomeProjection === undefined
       ? 'overview'
-      : activePanel.kind;
+      : displayedPanel.kind;
+
+  useEffect(() => {
+    if (activePanelAvailable) return;
+    dispatch(
+      routePanelSelected({
+        routeKey: workspaceRoute.routeKey,
+        panel: { kind: 'overview' },
+      }),
+    );
+  }, [activePanelAvailable, dispatch, workspaceRoute.routeKey]);
 
   /**
    * Semantic navigation owns the session destination. This short-lived local
@@ -102,8 +146,8 @@ export function RouteWorkspace({
     const phase = pendingNpcPhaseFocus.current;
     if (phase === null) return;
     if (
-      activePanel.kind !== 'biome' ||
-      activePanel.biomeKey !== phase.biomeKey ||
+      displayedPanel.kind !== 'biome' ||
+      displayedPanel.biomeKey !== phase.biomeKey ||
       workspaceRoute.routeKey !== phase.routeKey
     ) {
       pendingNpcPhaseFocus.current = null;
@@ -115,7 +159,7 @@ export function RouteWorkspace({
     );
     pendingNpcPhaseFocus.current = null;
     selector?.focus({ preventScroll: true });
-  }, [activePanel, workspaceRoute.routeKey]);
+  }, [displayedPanel, workspaceRoute.routeKey]);
 
   const navigateNpcIndexEntry = (phase: EncounterPhaseAddress): void => {
     pendingNpcPhaseFocus.current = phase;
@@ -128,9 +172,9 @@ export function RouteWorkspace({
         <nav className="panel-navigation" aria-label={`${navigation.label} panels`}>
           <p className="navigation-label">{navigation.label}</p>
           <button
-            aria-current={activePanel.kind === 'overview' ? 'page' : undefined}
+            aria-current={displayedPanel.kind === 'overview' ? 'page' : undefined}
             className="panel-navigation-item"
-            data-active={activePanel.kind === 'overview'}
+            data-active={displayedPanel.kind === 'overview'}
             onClick={() =>
               dispatch(
                 routePanelSelected({
@@ -143,86 +187,6 @@ export function RouteWorkspace({
           >
             Route
           </button>
-          <button
-            aria-current={activePanel.kind === 'npcIndex' ? 'page' : undefined}
-            className="panel-navigation-item"
-            data-active={activePanel.kind === 'npcIndex'}
-            onClick={() =>
-              dispatch(
-                routePanelSelected({
-                  routeKey: workspaceRoute.routeKey,
-                  panel: { kind: 'npcIndex' },
-                }),
-              )
-            }
-            type="button"
-          >
-            NPCs
-          </button>
-          <button
-            aria-current={activePanel.kind === 'traits' ? 'page' : undefined}
-            className="panel-navigation-item"
-            data-active={activePanel.kind === 'traits'}
-            onClick={() =>
-              dispatch(
-                routePanelSelected({
-                  routeKey: workspaceRoute.routeKey,
-                  panel: { kind: 'traits' },
-                }),
-              )
-            }
-            type="button"
-          >
-            Traits
-          </button>
-          <button
-            aria-current={activePanel.kind === 'resources' ? 'page' : undefined}
-            className="panel-navigation-item"
-            data-active={activePanel.kind === 'resources'}
-            onClick={() =>
-              dispatch(
-                routePanelSelected({
-                  routeKey: workspaceRoute.routeKey,
-                  panel: { kind: 'resources' },
-                }),
-              )
-            }
-            type="button"
-          >
-            Resources
-          </button>
-          <button
-            aria-current={activePanel.kind === 'shrines' ? 'page' : undefined}
-            className="panel-navigation-item"
-            data-active={activePanel.kind === 'shrines'}
-            onClick={() =>
-              dispatch(
-                routePanelSelected({
-                  routeKey: workspaceRoute.routeKey,
-                  panel: { kind: 'shrines' },
-                }),
-              )
-            }
-            type="button"
-          >
-            Shrines
-          </button>
-          <button
-            aria-current={activePanel.kind === 'wells' ? 'page' : undefined}
-            className="panel-navigation-item"
-            data-active={activePanel.kind === 'wells'}
-            onClick={() =>
-              dispatch(
-                routePanelSelected({
-                  routeKey: workspaceRoute.routeKey,
-                  panel: { kind: 'wells' },
-                }),
-              )
-            }
-            type="button"
-          >
-            Wells
-          </button>
           {workspaceRoute.rail.map((biomeProjection) => {
             const biomeFeedback = feedback.biomes.get(biomeProjection.biomeKey);
             if (biomeFeedback === undefined) {
@@ -234,7 +198,7 @@ export function RouteWorkspace({
             return (
               <button
                 aria-current={
-                  activePanel.kind === 'biome' && biomeProjection.biomeKey === displayedBiomeKey
+                  displayedPanel.kind === 'biome' && biomeProjection.biomeKey === displayedBiomeKey
                     ? 'page'
                     : undefined
                 }
@@ -242,7 +206,7 @@ export function RouteWorkspace({
                 aria-label={biomeProjection.label}
                 className="panel-navigation-item"
                 data-active={
-                  activePanel.kind === 'biome' && biomeProjection.biomeKey === displayedBiomeKey
+                  displayedPanel.kind === 'biome' && biomeProjection.biomeKey === displayedBiomeKey
                 }
                 data-feedback-context={biomeFeedback.context}
                 data-projection-source={biomeProjection.source}
@@ -272,6 +236,97 @@ export function RouteWorkspace({
               </button>
             );
           })}
+          {hasRouteIndexes ? <div className="panel-navigation-separator" role="separator" /> : null}
+          {hasNpcIndex ? (
+            <button
+              aria-current={displayedPanel.kind === 'npcIndex' ? 'page' : undefined}
+              className="panel-navigation-item"
+              data-active={displayedPanel.kind === 'npcIndex'}
+              onClick={() =>
+                dispatch(
+                  routePanelSelected({
+                    routeKey: workspaceRoute.routeKey,
+                    panel: { kind: 'npcIndex' },
+                  }),
+                )
+              }
+              type="button"
+            >
+              NPCs
+            </button>
+          ) : null}
+          {hasTraits ? (
+            <button
+              aria-current={displayedPanel.kind === 'traits' ? 'page' : undefined}
+              className="panel-navigation-item"
+              data-active={displayedPanel.kind === 'traits'}
+              onClick={() =>
+                dispatch(
+                  routePanelSelected({
+                    routeKey: workspaceRoute.routeKey,
+                    panel: { kind: 'traits' },
+                  }),
+                )
+              }
+              type="button"
+            >
+              Traits
+            </button>
+          ) : null}
+          {hasResources ? (
+            <button
+              aria-current={displayedPanel.kind === 'resources' ? 'page' : undefined}
+              className="panel-navigation-item"
+              data-active={displayedPanel.kind === 'resources'}
+              onClick={() =>
+                dispatch(
+                  routePanelSelected({
+                    routeKey: workspaceRoute.routeKey,
+                    panel: { kind: 'resources' },
+                  }),
+                )
+              }
+              type="button"
+            >
+              Resources
+            </button>
+          ) : null}
+          {hasShrines ? (
+            <button
+              aria-current={displayedPanel.kind === 'shrines' ? 'page' : undefined}
+              className="panel-navigation-item"
+              data-active={displayedPanel.kind === 'shrines'}
+              onClick={() =>
+                dispatch(
+                  routePanelSelected({
+                    routeKey: workspaceRoute.routeKey,
+                    panel: { kind: 'shrines' },
+                  }),
+                )
+              }
+              type="button"
+            >
+              Shrines
+            </button>
+          ) : null}
+          {hasWells ? (
+            <button
+              aria-current={displayedPanel.kind === 'wells' ? 'page' : undefined}
+              className="panel-navigation-item"
+              data-active={displayedPanel.kind === 'wells'}
+              onClick={() =>
+                dispatch(
+                  routePanelSelected({
+                    routeKey: workspaceRoute.routeKey,
+                    panel: { kind: 'wells' },
+                  }),
+                )
+              }
+              type="button"
+            >
+              Wells
+            </button>
+          ) : null}
         </nav>
       </div>
       <div className="editor-panel" aria-live="polite">
@@ -294,7 +349,7 @@ export function RouteWorkspace({
               {contextMessage}
             </p>
           )}
-          {activePanel.kind === 'overview' ? (
+          {displayedPanel.kind === 'overview' ? (
             <RouteOverview
               catalog={catalog}
               label={navigation.label}
@@ -304,16 +359,16 @@ export function RouteWorkspace({
               workspaceRoute={workspaceRoute}
               interactions={interactions}
             />
-          ) : activePanel.kind === 'npcIndex' ? (
+          ) : displayedPanel.kind === 'npcIndex' ? (
             <RouteNpcIndex index={npcIndex} onNavigate={navigateNpcIndexEntry} />
-          ) : activePanel.kind === 'traits' ? (
+          ) : displayedPanel.kind === 'traits' ? (
             <RouteTraitsPanel interactions={interactions} rows={traitRows} />
-          ) : activePanel.kind === 'resources' ? (
+          ) : displayedPanel.kind === 'resources' ? (
             <RouteResourcesPanel route={workspaceRoute} />
-          ) : activePanel.kind === 'shrines' ? (
-            <RouteShrinesPanel route={workspaceRoute} />
-          ) : activePanel.kind === 'wells' ? (
-            <RouteWellsPanel route={workspaceRoute} />
+          ) : displayedPanel.kind === 'shrines' ? (
+            <RouteShrinesPanel rows={shrineRows} />
+          ) : displayedPanel.kind === 'wells' ? (
+            <RouteWellsPanel rows={wellRows} />
           ) : activeBiomeProjection === undefined ? (
             <RouteOverview
               catalog={catalog}

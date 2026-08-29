@@ -17,6 +17,7 @@ import type {
   WorkspaceOccurrenceWorkbenchNode,
 } from '@planner/projections/structured-workspace';
 import { createApplication } from '@planner/composition/createApplication';
+import { projectRouteStygianWellIndex } from '@planner/projections/routeRoomFeatureIndex';
 import { workspaceBiome, workspaceProjection } from '@planner-test/support/biome-workbench';
 import { authoredProjectReplaced } from '@planner/state/projectWorkspaceSlice';
 import { RouteWellsPanel } from '@planner/ui/shell/RouteWellsPanel';
@@ -198,7 +199,7 @@ describe('Stygian Well workbench', () => {
     const user = userEvent.setup();
     render(
       <Provider store={application.store}>
-        <RouteWellsPanel route={route} />
+        <RouteWellsPanel rows={projectRouteStygianWellIndex(route)} />
       </Provider>,
     );
 

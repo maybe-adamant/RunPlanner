@@ -30,6 +30,7 @@ import {
   appendUniqueRoomControls,
 } from './assembly/assembly-products';
 import { assembleWorkspaceBiomeSemantics } from './assembly/biome-semantic-assembly';
+import { requireWorkspaceRoom } from './assembly/catalog-room';
 import { presentWorkspaceBiome } from './presentation/biome-presentation';
 import { registerWorkspaceFindingDestinations } from './navigation/finding-routing';
 import { createWorkspaceProjectSourceIndex, type WorkspaceBiomeSource } from './source-index';
@@ -48,19 +49,19 @@ import {
   type WorkspaceTakeoverInteractionRequirement,
   type WorkspaceTopologyRemovalInteractionRequirement,
 } from './interactions/interaction-requirements';
-import type {
-  StructuredWorkspaceContextualServices,
-  StructuredWorkspaceProjection,
-  StructuredWorkspaceProjectionService,
-  WorkspaceBiome,
-  WorkspaceInspectorDestination,
-  WorkspaceRewardControl,
-  WorkspaceAspectHexTreeControl,
-  WorkspaceTraitOfferControl,
-  WorkspaceLevelResolutionControl,
-  WorkspaceRoomPickerControl,
-  WorkspaceRunStateLauncher,
-  WorkspaceStatus,
+import {
+  type StructuredWorkspaceContextualServices,
+  type StructuredWorkspaceProjection,
+  type StructuredWorkspaceProjectionService,
+  type WorkspaceBiome,
+  type WorkspaceInspectorDestination,
+  type WorkspaceRewardControl,
+  type WorkspaceAspectHexTreeControl,
+  type WorkspaceTraitOfferControl,
+  type WorkspaceLevelResolutionControl,
+  type WorkspaceRoomPickerControl,
+  type WorkspaceRunStateLauncher,
+  type WorkspaceStatus,
 } from './contract';
 import type { OccurrenceIdFactory } from '@planner/workspace/occurrenceIds';
 import { projectHexTreeDomain } from './interactions/trait-offer-interactions';
@@ -615,9 +616,27 @@ export function createStructuredWorkspaceProjection(
             (['Pickaxe', 'Exorcism', 'Shovel', 'Fishing'] as const).map((family) => {
               const placement = routeSource.resourceAuthoring.placements[family];
               const assessment = routeSource.resourceAuthoring.assessmentByFamily[family];
+              const presentedPlacement =
+                placement === null
+                  ? undefined
+                  : (() => {
+                      const entry = routeSource.resourceAuthoring.entered.find(
+                        (candidate) =>
+                          candidate.biomeKey === placement.biomeKey &&
+                          candidate.origin.kind === 'occurrence' &&
+                          candidate.origin.occurrenceId === placement.occurrenceId,
+                      );
+                      return Object.freeze({
+                        ...placement,
+                        locationLabel:
+                          entry === undefined
+                            ? 'Unavailable room'
+                            : requireWorkspaceRoom(catalog, entry.gameName).label,
+                      });
+                    })();
               return Object.freeze({
                 family,
-                ...(placement === null ? {} : { placement }),
+                ...(presentedPlacement === undefined ? {} : { placement: presentedPlacement }),
                 reasons: assessment?.reasons ?? Object.freeze([]),
                 valid: assessment?.legal ?? placement === null,
               });

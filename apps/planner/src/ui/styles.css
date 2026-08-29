@@ -560,6 +560,11 @@ button:disabled {
   background: rgb(174 152 202 / 14%);
 }
 
+.panel-navigation-separator {
+  border-top: 1px solid #30313a;
+  margin: 8px 10px 4px;
+}
+
 .route-loadout-controls {
   display: grid;
   gap: 0.75rem;

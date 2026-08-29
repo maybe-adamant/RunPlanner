@@ -47,11 +47,18 @@ not project identity.
 
 Route and panel navigation is one generic UI-session model. The active route
 is a nullable catalog route key, where `null` selects Settings, and each route
-retains one tagged panel independently: route overview, the read-only NPC
-index, or one catalog biome. Application state and React composition do not
-define separate Underworld, Surface, F, G, NPC, or other route-specific
-navigation fields. The ordered route tabs, labels, valid biome panels, and
-initial route come from the normalized catalog. A semantic finding selects its
+retains one tagged panel independently: route overview, one catalog biome, or a
+route-local read-only index. The route navigation presents Route followed by its
+ordered biome rail as the primary run structure. A separator then introduces
+only the non-empty NPC, Traits, Resources, Shrines, and Wells indexes. Index
+visibility uses the same application-projected rows as its panel; it does not
+create an empty authoring destination. If project replacement or Undo removes
+the active index's last row, the route overview is the safe fallback.
+Application state and React
+composition do not define separate Underworld, Surface, F, G, NPC, or other
+route-specific navigation fields. The ordered route tabs, labels, valid biome
+panels, and initial route come from the normalized catalog. A semantic finding
+selects its
 owning route and biome through the same generic session action; route-owned
 findings select the route overview and project-owned findings retain the
 current top-level location. A separate exact-owner navigation action moves from
@@ -591,7 +598,10 @@ existing replacement command as a move. Only that move row includes a second
 column identifying the current placement and linking to that occurrence.
 Illegal targets remain disabled. No confirmation dialog is needed; one semantic
 edit and ordinary Undo provide the mutation safety contract. React renders the
-projected destination and never searches the authored route for it.
+projected destination and never searches the authored route for it. The
+room-local disclosure and route Resources index both use the room label resolved
+from the entered placement record; persisted occurrence IDs remain navigation
+identity and do not become product copy.
 
 ## Downstream Editing
 
