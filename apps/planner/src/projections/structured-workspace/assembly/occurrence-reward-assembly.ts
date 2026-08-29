@@ -48,7 +48,7 @@ import type {
   FieldsBatchFacts,
   GorgonPhaseCandidateSupport,
   AcquisitionConversionCandidateCapability,
-  NaturalChaosCandidateCapability,
+  ChaosCandidateCapability,
   ZagreusContractCandidateCapability,
   SelectedLevelResolutionAssessment,
 } from '@run-planner/engine/simulation';
@@ -82,7 +82,8 @@ import type { WorkspaceMarkerDestinationEmitter } from '../navigation/marker-bui
 export interface WorkspaceOccurrenceProjectionFacts {
   readonly authoredAdditionalExitKeys: readonly string[];
   readonly detailsActive: boolean;
-  readonly naturalChaosPlacement?: NaturalChaosCandidateCapability;
+  readonly chaosPlacement?: ChaosCandidateCapability;
+  readonly chaosGateForced: boolean;
   readonly zagreusContractPlacement?: ZagreusContractCandidateCapability;
 }
 

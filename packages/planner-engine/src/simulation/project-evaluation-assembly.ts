@@ -237,14 +237,14 @@ export function stygianWellCandidateForProjectEvaluationAssembly(
     ?.stygianWells.at(occurrence);
 }
 
-/** Exact reached-source natural Chaos placement capability. */
-export function naturalChaosCandidateForProjectEvaluationAssembly(
+/** Exact reached-source Chaos placement capability for ordinary authoring. */
+export function chaosCandidateForProjectEvaluationAssembly(
   assembly: ProjectEvaluationAssembly,
   occurrence: import('../authored-project/addresses').OccurrenceAddress,
 ) {
   return candidateArtifactsForProjectEvaluationAssembly(assembly)
     .biomeAt(createBiomeAddress(occurrence.routeKey, occurrence.biomeKey))
-    ?.naturalChaos.at(occurrence);
+    ?.chaos.at(occurrence);
 }
 
 /** Exact reached-source Contract entry-cap capability. */

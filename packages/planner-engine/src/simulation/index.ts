@@ -367,7 +367,7 @@ export type {
   AcquisitionConversionCandidateCapability,
   HermesShrineCandidateCapability,
   StygianWellCandidateCapability,
-  NaturalChaosCandidateCapability,
+  ChaosCandidateCapability,
   ZagreusContractCandidateCapability,
 } from './candidate-artifacts';
 export {
@@ -384,7 +384,7 @@ export {
   purgingPoolCandidateForProjectEvaluationAssembly,
   hermesShrineCandidateForProjectEvaluationAssembly,
   stygianWellCandidateForProjectEvaluationAssembly,
-  naturalChaosCandidateForProjectEvaluationAssembly,
+  chaosCandidateForProjectEvaluationAssembly,
   zagreusContractCandidateForProjectEvaluationAssembly,
   encounterPhaseCandidateSupportForProjectEvaluationAssembly,
   encounterPhaseFigLeafSupportForProjectEvaluationAssembly,

@@ -1,4 +1,15 @@
-import { createRouteAddress, encodeProjectDocument } from '@run-planner/engine/authored-project';
+import { catalog } from '@run-planner/hades2-catalog';
+import {
+  applyProjectCommand,
+  createOccurrenceAddress,
+  createRouteAddress,
+  encodeProjectDocument,
+} from '@run-planner/engine/authored-project';
+import {
+  createGoldenFGHProject,
+  goldenGBiome,
+  goldenHStartId,
+} from '@run-planner/test-fixtures/underworld';
 import { describe, expect, it } from 'vitest';
 
 import { createApplication } from '../composition/createApplication';
@@ -105,6 +116,84 @@ describe('project profile operations', () => {
       fileName: 'erebus-route.runplanner.json',
       json: savedJson,
     });
+  });
+
+  it('reconciles a pre-fix Ixion purchase into its forced gate while loading', async () => {
+    const profile = createProfileFixture();
+    let source = createGoldenFGHProject();
+    const gPostboss = source.routes
+      .find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find((biome) => biome.biomeKey === 'G')
+      ?.topology?.occurrences.find((occurrence) => occurrence.gameName === 'G_PostBoss01');
+    if (gPostboss === undefined) throw new Error('expected fixed G Postboss');
+    const well = createOccurrenceAddress(goldenGBiome, gPostboss.occurrenceId);
+    for (const command of [
+      { kind: 'SetStygianWellInteraction' as const, occurrence: well, interacted: true },
+      {
+        kind: 'ReplaceStygianWellOffer' as const,
+        occurrence: well,
+        slotKey: 'secondLeft' as const,
+        itemKey: 'TemporaryForcedSecretDoorTrait',
+      },
+      {
+        kind: 'SetStygianWellPurchase' as const,
+        occurrence: well,
+        generationKey: 'initial:secondLeft' as const,
+        purchased: true,
+      },
+    ])
+      source = applyProjectCommand(source, catalog, command);
+    const raw = JSON.parse(encodeProjectDocument(source)) as {
+      routes: Array<{
+        routeKey: string;
+        biomes: Array<{
+          biomeKey: string;
+          topology: {
+            occurrences: Array<{
+              occurrenceId: string;
+              additionalExits: Array<{ kind: string; occurrenceId: string }>;
+            }>;
+            decisions: Array<{
+              kind: string;
+              source?: { kind: string; occurrenceId?: string };
+              selection?: unknown;
+            }>;
+          } | null;
+        }>;
+      }>;
+    };
+    const h = raw.routes
+      .find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find((biome) => biome.biomeKey === 'H')?.topology;
+    const intro = h?.occurrences.find((occurrence) => occurrence.occurrenceId === goldenHStartId);
+    const chaos = intro?.additionalExits.find((exit) => exit.kind === 'chaos');
+    if (h == null || intro === undefined || chaos === undefined)
+      throw new Error('expected generated H Intro Spark');
+    intro.additionalExits = [];
+    h.occurrences = h.occurrences.filter(
+      (occurrence) => occurrence.occurrenceId !== chaos.occurrenceId,
+    );
+    const introDecision = h.decisions.find(
+      (decision) =>
+        decision.kind === 'exit' &&
+        decision.source?.kind === 'occurrence' &&
+        decision.source.occurrenceId === goldenHStartId,
+    );
+    if (introDecision === undefined) throw new Error('expected H Intro decision');
+    introDecision.selection = { kind: 'derived' };
+    profile.setLoadJson(JSON.stringify(raw));
+    const application = createApplication({ profileFile: profile.adapter });
+
+    await expect(application.projectOperations.loadProfile()).resolves.toMatchObject({
+      status: 'success',
+    });
+    expect(
+      selectPresentProject(application.store.getState())
+        .routes.find((route) => route.routeKey === 'Underworld')
+        ?.biomes.find((biome) => biome.biomeKey === 'H')
+        ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === goldenHStartId)
+        ?.additionalExits,
+    ).toEqual([expect.objectContaining({ kind: 'chaos', key: 'chaos' })]);
   });
 
   it('establishes the exact pending-save snapshot as baseline after a later edit', async () => {

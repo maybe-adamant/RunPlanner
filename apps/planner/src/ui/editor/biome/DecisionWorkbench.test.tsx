@@ -40,11 +40,13 @@ import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
 import {
   loadUnderworldFMidshopPomFrontierProject,
   createGoldenFGHIProject,
+  createUnderworldFWellCheckpoint,
   fMidshopPomShopId,
   goldenFBiome,
   goldenFOccurrenceId,
   goldenFStartId,
   goldenGBiome,
+  goldenGStartId,
   goldenGOccurrenceId,
   goldenHBiome,
 } from '@run-planner/test-fixtures/underworld';
@@ -118,7 +120,7 @@ function authoredNaturalChaosFixture() {
     route.biomes.flatMap((plan) =>
       (plan.topology?.occurrences ?? []).flatMap((occurrence) => {
         const room = catalog.rooms.byKey[occurrence.gameName];
-        return room?.additionalExits.some((exit) => exit.kind === 'naturalChaos')
+        return room?.additionalExits.some((exit) => exit.kind === 'chaos')
           ? [{ occurrence, plan, route }]
           : [];
       }),
@@ -128,8 +130,8 @@ function authoredNaturalChaosFixture() {
   const biome = createBiomeAddress(located.route.routeKey, located.plan.biomeKey);
   const source = { kind: 'occurrence' as const, occurrenceId: located.occurrence.occurrenceId };
   const project = applyProjectCommand(base, catalog, {
-    kind: 'AddNaturalChaos',
-    additional: createAdditionalExitAddress(biome, source.occurrenceId, 'naturalChaos'),
+    kind: 'AddChaos',
+    additional: createAdditionalExitAddress(biome, source.occurrenceId, 'chaos'),
     occurrenceId: createOccurrenceId('decision-workbench-natural-chaos'),
   });
   return { biome, located, project, source };
@@ -315,23 +317,44 @@ describe('DecisionWorkbench', () => {
         ?.topology?.occurrences.find(
           (occurrence) => occurrence.occurrenceId === source.occurrenceId,
         )
-        ?.additionalExits?.some((exit) => exit.kind === 'naturalChaos') ?? false,
+        ?.additionalExits?.some((exit) => exit.kind === 'chaos') ?? false,
     ).toBe(false);
   });
 
-  it('keeps a conflicting natural Chaos choice visible but disabled', () => {
-    const project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
-      kind: 'AddSparkChaos',
-      additional: createAdditionalExitAddress(goldenFBiome, goldenFStartId, 'sparkChaos'),
-      occurrenceId: createOccurrenceId('decision-workbench-spark-chaos'),
+  it('shows an automatic Spark gate as locked room evidence and an editable outgoing door', () => {
+    const well = createOccurrenceAddress(
+      goldenFBiome,
+      createOccurrenceId('golden-f-preboss-shop:postboss'),
+    );
+    const project = applyProjectCommand(createUnderworldFWellCheckpoint(false), catalog, {
+      kind: 'ReplaceStygianWellTravelDealRefill',
+      occurrence: well,
+      itemKey: 'TemporaryForcedSecretDoorTrait',
     });
-    renderOccurrenceWorkbench(project, 'Underworld', 'F', occurrenceForId(goldenFStartId));
+    renderOccurrenceWorkbench(project, 'Underworld', 'G', occurrenceForId(goldenGStartId));
 
     fireEvent.click(screen.getByRole('tab', { name: 'Room Overview' }));
     const addChaos = within(screen.getByLabelText('Room features')).getByRole('checkbox', {
       name: 'Chaos Gate',
     });
+    expect(addChaos).toHaveProperty('checked', true);
     expect(addChaos).toHaveProperty('disabled', true);
+
+    cleanup();
+    renderDecisionWorkbench(
+      project,
+      'Underworld',
+      'G',
+      subjectForOwner(
+        createExitDecisionAddress(goldenGBiome, {
+          kind: 'occurrence',
+          occurrenceId: goldenGStartId,
+        }),
+      ),
+    );
+    const gate = screen.getByRole('article', { name: 'Chaos gate exit' });
+    expect(within(gate).getByLabelText('Map')).toBeTruthy();
+    expect(within(gate).getByLabelText('Take Chaos gate')).toBeTruthy();
   });
 
   it('renders an authored Zagreus exit in its owning decision, not the Midshop workbench', async () => {

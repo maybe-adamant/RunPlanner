@@ -10,10 +10,12 @@ const surfaceShopHost = (spawnChance: number, forced = false, challengeSwitchAnc
   },
 });
 
-const naturalChaosExit = {
-  kind: 'naturalChaos' as const,
-  key: 'naturalChaos' as const,
+const chaosExit = {
+  kind: 'chaos' as const,
+  key: 'chaos' as const,
   exitType: 'ChaosExitDoor',
+  canHost: true,
+  canSpawn: true,
 };
 
 const soulPylon = {
@@ -32,7 +34,7 @@ export const nRooms = [
     kind: 'Opening',
     mode: { kind: 'authored', templateKey: 'FixedOpening' },
     lifecycleProfileKey: 'OpeningRewardRoom',
-    additionalExits: [naturalChaosExit],
+    additionalExits: [chaosExit],
     structuralTags: [],
     exits: [{ index: 1, type: 'N_OpeningDoor' }],
     incomingReward: {

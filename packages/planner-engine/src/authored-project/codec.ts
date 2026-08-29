@@ -18,6 +18,7 @@ import {
   expectString,
   failProjectDocument as fail,
 } from './validation';
+import { reconcileChaosTopology } from './chaos-gate-reconciliation';
 
 function decodeHexTree(
   value: unknown,
@@ -337,7 +338,9 @@ export function parseProjectDocument(json: string, catalog: Catalog): ProjectDoc
   } catch {
     fail('$', 'must be valid JSON');
   }
-  return decodeProjectDocument(value, catalog);
+  const decoded = decodeProjectDocument(value, catalog);
+  const reconciled = reconcileChaosTopology(decoded, catalog);
+  return reconciled === decoded ? decoded : decodeProjectDocument(reconciled, catalog);
 }
 
 export function encodeProjectDocument(document: ProjectDocument): string {

@@ -34,6 +34,20 @@ describe('structured workspace features assembly', () => {
     expect(shrine).not.toHaveProperty('presenceInteractionKey');
   });
 
+  it('omits Chaos authoring on a host-only room', () => {
+    const project = createGoldenFGHIProject();
+    const intro = project.routes
+      .find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find((biome) => biome.biomeKey === 'H')
+      ?.topology?.occurrences.find((occurrence) => occurrence.gameName === 'H_Intro');
+    if (intro === undefined) throw new Error('H Intro is missing');
+
+    const room = assemble(project, 'Underworld', 'H', intro.occurrenceId).assembly.node.room;
+
+    expect(room.chaosSpawn).toBeUndefined();
+    expect(room.workbench.features.some((feature) => feature.kind === 'chaos')).toBe(false);
+  });
+
   it('omits a consumed Contract and enables one after an earlier offer was skipped', () => {
     const entered = createGContractAvailabilityProject(true);
     const enteredRoom = assemble(entered.project, 'Underworld', 'G', entered.laterShop).assembly

@@ -33,7 +33,7 @@ import {
   encounterPhaseGorgonSupportForProjectEvaluationAssembly,
   encounterPhaseSequenceStatusForProjectEvaluationAssembly,
   fieldsBatchFacts,
-  naturalChaosCandidateForProjectEvaluationAssembly,
+  chaosCandidateForProjectEvaluationAssembly,
   simulateProjectAssembly,
   traitOfferCandidateForProjectEvaluationAssembly,
   zagreusContractCandidateForProjectEvaluationAssembly,
@@ -97,7 +97,7 @@ function biomeSource(
     undefined,
     undefined,
     (address) => acquisitionConversionCandidateForProjectEvaluationAssembly(assembly, address),
-    (address) => naturalChaosCandidateForProjectEvaluationAssembly(assembly, address),
+    (address) => chaosCandidateForProjectEvaluationAssembly(assembly, address),
     (address) => zagreusContractCandidateForProjectEvaluationAssembly(assembly, address),
   )
     .routes.find((route) => route.routeKey === routeKey)

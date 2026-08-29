@@ -6,6 +6,7 @@ import {
   createLocalVisitDecisionAddress,
   createLocalVisitOrderAddress,
   createOccurrenceAddress,
+  ixionGeneratedChaosOccurrenceKeys,
   additionalExitsForDecision,
   declaredPhysicalExits as resolveDeclaredPhysicalExits,
   selectedExitContinuation,
@@ -122,9 +123,10 @@ export interface WorkspaceBiomeSource {
   readonly stygianWellAssessment: (
     owner: OccurrenceAddress,
   ) => import('@run-planner/engine/simulation').StygianWellCandidateCapability | undefined;
-  readonly naturalChaosAssessment: (
+  readonly chaosAssessment: (
     owner: OccurrenceAddress,
-  ) => import('@run-planner/engine/simulation').NaturalChaosCandidateCapability | undefined;
+  ) => import('@run-planner/engine/simulation').ChaosCandidateCapability | undefined;
+  readonly chaosGateForced: (owner: OccurrenceAddress) => boolean;
   readonly zagreusContractAssessment: (
     owner: OccurrenceAddress,
   ) => import('@run-planner/engine/simulation').ZagreusContractCandidateCapability | undefined;
@@ -661,7 +663,8 @@ function createWorkspaceBiomeSource(
   stygianWellAssessment: WorkspaceBiomeSource['stygianWellAssessment'],
   resourceAuthoring: RouteResourceAuthoring,
   acquisitionConversionCandidate: WorkspaceBiomeSource['acquisitionConversionCandidate'],
-  naturalChaosAssessment: WorkspaceBiomeSource['naturalChaosAssessment'],
+  chaosAssessment: WorkspaceBiomeSource['chaosAssessment'],
+  chaosGateForced: WorkspaceBiomeSource['chaosGateForced'],
   zagreusContractAssessment: WorkspaceBiomeSource['zagreusContractAssessment'],
 ): WorkspaceBiomeSource {
   const biome = createBiomeAddress(routeKey, plan.biomeKey);
@@ -794,7 +797,8 @@ function createWorkspaceBiomeSource(
     purgingPoolAssessment,
     hermesShrineAssessment,
     stygianWellAssessment,
-    naturalChaosAssessment,
+    chaosAssessment,
+    chaosGateForced,
     zagreusContractAssessment,
     steadyGrowthOutcomes,
     transcendentEmbryoOutcomes,
@@ -861,9 +865,10 @@ export function createWorkspaceProjectSourceIndex(
   stygianWellAssessment: WorkspaceBiomeSource['stygianWellAssessment'] = () => undefined,
   acquisitionConversionCandidate: WorkspaceBiomeSource['acquisitionConversionCandidate'] = () =>
     undefined,
-  naturalChaosAssessment: WorkspaceBiomeSource['naturalChaosAssessment'] = () => undefined,
+  chaosAssessment: WorkspaceBiomeSource['chaosAssessment'] = () => undefined,
   zagreusContractAssessment: WorkspaceBiomeSource['zagreusContractAssessment'] = () => undefined,
 ): WorkspaceProjectSourceIndex {
+  const ixionGeneratedChaos = ixionGeneratedChaosOccurrenceKeys(project);
   return Object.freeze({
     routes: Object.freeze(
       project.routes.map((route) => {
@@ -891,7 +896,8 @@ export function createWorkspaceProjectSourceIndex(
                 stygianWellAssessment,
                 resources,
                 acquisitionConversionCandidate,
-                naturalChaosAssessment,
+                chaosAssessment,
+                (owner) => ixionGeneratedChaos.has(semanticAddressKey(owner)),
                 zagreusContractAssessment,
               ),
             ),

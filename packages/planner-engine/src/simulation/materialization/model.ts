@@ -286,7 +286,8 @@ export interface CanonicalTarget {
  */
 export interface CanonicalAdditionalContinuation {
   readonly origin: AdditionalExitAddress;
-  readonly key: 'zagreusContract' | 'naturalChaos' | 'sparkChaos';
+  readonly key: 'zagreusContract' | 'chaos';
+  readonly chaosOrigin?: import('../../authored-project/model').IxionGeneratedChaosOrigin;
   readonly picked: boolean;
   readonly room: CanonicalAuthoredRoom;
 }

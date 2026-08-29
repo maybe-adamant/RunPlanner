@@ -9,7 +9,7 @@ import {
   generationFindingChronology,
   generationRooms,
   normalTargetCandidateHistory,
-  assessNaturalChaosPlacement,
+  assessChaosPlacement,
   assessZagreusContractPlacement,
   stagedCandidatePool,
   targetGenerationViews,
@@ -26,10 +26,10 @@ import {
 import { evaluateFieldsCageOutcome, fieldsCageOutcomeEvidence } from './fields-cage';
 import {
   createRoomTargetCandidateArtifacts,
-  createNaturalChaosCandidateArtifacts,
+  createChaosCandidateArtifacts,
   createZagreusContractCandidateArtifacts,
   type RoomTargetCandidateArtifacts,
-  type NaturalChaosCandidateArtifacts,
+  type ChaosCandidateArtifacts,
   type ZagreusContractCandidateArtifacts,
 } from '../candidate-artifacts';
 import type { FindingRegionEntry } from '../finding-regions';
@@ -48,7 +48,7 @@ import type { CanonicalBatch } from '../materialization';
 interface BiomeRoomGenerationAssembly {
   readonly validation: GeneratedRoomGenerationValidation;
   readonly candidateArtifacts: RoomTargetCandidateArtifacts;
-  readonly naturalChaos: NaturalChaosCandidateArtifacts;
+  readonly chaos: ChaosCandidateArtifacts;
   readonly zagreusContracts: ZagreusContractCandidateArtifacts;
   readonly findingRegions: readonly FindingRegionEntry[];
 }
@@ -59,6 +59,7 @@ export function evaluateBiomeRoomGenerationAssemblyInternal(
   history: BiomeGenerationHistory,
   enteredBiomeCount: number,
   rewardHistoryCheckpoints?: readonly TargetRewardHistoryCheckpoint[],
+  forcedChaosOccurrenceKeys: ReadonlySet<string> = new Set(),
 ): BiomeRoomGenerationAssembly {
   if (snapshot.biomeKey !== history.biomeKey || snapshot.routeKey !== history.routeKey) {
     throw new BiomeRoomGenerationContractError(
@@ -74,9 +75,9 @@ export function evaluateBiomeRoomGenerationAssemblyInternal(
   const anomalyTakeovers: AnomalyTakeoverCandidateSupport[] = [];
   const findings: SemanticFinding[] = [];
   const findingRegions: FindingRegionEntry[] = [];
-  const naturalChaosCapabilities = new Map<
+  const chaosCapabilities = new Map<
     string,
-    import('../candidate-artifacts').NaturalChaosCandidateCapability
+    import('../candidate-artifacts').ChaosCandidateCapability
   >();
   const zagreusContractCapabilities = new Map<
     string,
@@ -105,18 +106,20 @@ export function evaluateBiomeRoomGenerationAssemblyInternal(
     const parentHistory: ProgressiveRoomHistoryViews | undefined = history.rooms.find(
       (room) => semanticAddressKey(room.origin) === semanticAddressKey(source.origin),
     );
-    if (sourceDeclaration.additionalExits.some((exit) => exit.kind === 'naturalChaos')) {
-      const capability = assessNaturalChaosPlacement(
-        catalog,
-        layout,
-        source,
-        sourceDeclaration,
-        parentHistory,
-        undefined,
-        enteredBiomeCount,
-      );
+    if (sourceDeclaration.additionalExits.some((exit) => exit.kind === 'chaos')) {
+      const capability = forcedChaosOccurrenceKeys.has(semanticAddressKey(source.origin))
+        ? Object.freeze({ placementEligible: true, failedConditions: Object.freeze([]) })
+        : assessChaosPlacement(
+            catalog,
+            layout,
+            source,
+            sourceDeclaration,
+            parentHistory,
+            undefined,
+            enteredBiomeCount,
+          );
       if (capability !== undefined) {
-        naturalChaosCapabilities.set(semanticAddressKey(source.origin), capability);
+        chaosCapabilities.set(semanticAddressKey(source.origin), capability);
       }
     }
     if (sourceDeclaration.additionalExits.some((exit) => exit.kind === 'zagreusContract')) {
@@ -256,6 +259,7 @@ export function evaluateBiomeRoomGenerationAssemblyInternal(
     findings,
     findingRegions,
     enteredBiomeCount,
+    forcedChaosOccurrenceKeys,
   );
 
   const publishedFindingRegions = Object.freeze(
@@ -278,7 +282,7 @@ export function evaluateBiomeRoomGenerationAssemblyInternal(
     validation,
     findingRegions: publishedFindingRegions,
     candidateArtifacts: createRoomTargetCandidateArtifacts(candidateContexts),
-    naturalChaos: createNaturalChaosCandidateArtifacts(naturalChaosCapabilities),
+    chaos: createChaosCandidateArtifacts(chaosCapabilities),
     zagreusContracts: createZagreusContractCandidateArtifacts(zagreusContractCapabilities),
   });
 }
@@ -289,6 +293,7 @@ export function evaluateBiomeRoomGeneration(
   history: BiomeGenerationHistory,
   enteredBiomeCount: number,
   rewardHistoryCheckpoints?: readonly TargetRewardHistoryCheckpoint[],
+  forcedChaosOccurrenceKeys: ReadonlySet<string> = new Set(),
 ): GeneratedRoomGenerationValidation {
   return evaluateBiomeRoomGenerationAssemblyInternal(
     catalog,
@@ -296,5 +301,6 @@ export function evaluateBiomeRoomGeneration(
     history,
     enteredBiomeCount,
     rewardHistoryCheckpoints,
+    forcedChaosOccurrenceKeys,
   ).validation;
 }

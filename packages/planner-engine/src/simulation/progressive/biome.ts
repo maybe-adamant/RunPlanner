@@ -69,6 +69,7 @@ export interface ProgressiveSeed {
 
 export interface ProgressiveBiomeContext {
   readonly enteredBiomeCount: number;
+  readonly forcedChaosOccurrenceKeys?: ReadonlySet<string>;
   /** A Postboss rack is reached only when this configured route continues. */
   readonly loadout: RouteLoadout;
   /** Direct biome evaluators supply the explicit empty record; route simulation supplies its owned record. */
@@ -138,6 +139,7 @@ function generation(
   keepsakeEquipResults: KeepsakeEquipResultCandidateArtifacts,
   acquisitionConversions: AcquisitionConversionCandidateArtifacts,
   derivedAcquisitionEntries: DerivedAcquisitionEntryCandidateArtifacts,
+  forcedChaosOccurrenceKeys?: ReadonlySet<string>,
   encounterBoundary?: EncounterCandidateBoundary,
 ): ProgressiveGenerationAssembly {
   const ordinary = evaluateBiomeRoomGenerationAssemblyInternal(
@@ -146,6 +148,7 @@ function generation(
     history,
     enteredBiomeCount,
     rewards.targetHistory,
+    forcedChaosOccurrenceKeys,
   );
   // An encounter block can occur after the active Hub visit's side-generation
   // checkpoint. Validate that visit against the selected authored envelope so
@@ -199,7 +202,7 @@ function generation(
       undefined,
       figurineArcana,
       undefined,
-      ordinary.naturalChaos,
+      ordinary.chaos,
       ordinary.zagreusContracts,
     ),
     findingRegions: Object.freeze([
@@ -278,6 +281,7 @@ function products(
     rewards.keepsakeEquipResultArtifacts,
     rewards.acquisitionConversionArtifacts,
     rewards.derivedAcquisitionEntryArtifacts,
+    context.forcedChaosOccurrenceKeys,
     encounterBoundary,
   );
   return Object.freeze({
@@ -458,7 +462,7 @@ export function evaluateProgressiveBiomeAssembly(
       evaluated.candidateArtifacts.fountainRarity,
       evaluated.candidateArtifacts.figurineArcana,
       evaluated.candidateArtifacts.transcendentEmbryo,
-      evaluated.candidateArtifacts.naturalChaos,
+      evaluated.candidateArtifacts.chaos,
       evaluated.candidateArtifacts.zagreusContracts,
     ),
   });

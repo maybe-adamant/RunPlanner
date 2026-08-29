@@ -427,8 +427,13 @@ requirements, replaceable ordinary G target names, seven Anomaly map names,
 and default map. A normal target may enter that room set only through this
 replacement. The four supported Midshops (`F_Shop01`, `G_Shop01`, `O_Shop01`,
 and `P_Shop01`) each declare the one `zagreusContract` additional exit to
-`C_Boss01`. Neither Anomaly maps nor `C_Boss01` belongs to a normal-door
-candidate domain.
+`C_Boss01`. Rooms that can physically host a Chaos gate declare one `chaos`
+additional exit with `canHost: true`; rooms where ordinary Chaos authoring is
+also legal set `canSpawn: true`. Host-only declarations, including H and I,
+keep `canSpawn: false`, while ordinary F/G/N/P declarations set both
+capabilities. This is one source-agnostic gate domain: Ixion-generated
+presence is derived by the engine and does not introduce another exit kind.
+Neither Anomaly maps nor `C_Boss01` belongs to a normal-door candidate domain.
 
 Anomaly maps and `C_Boss01` declare the same closed automatic exit facts:
 automatic traversal, hidden reward preview, and fresh host-normal target

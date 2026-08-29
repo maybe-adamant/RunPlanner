@@ -182,8 +182,8 @@ function selectedNaturalChaosFrontier(): {
     }),
   });
   project = applyProjectCommand(project, catalog, {
-    kind: 'AddNaturalChaos',
-    additional: createAdditionalExitAddress(goldenFBiome, openingOccurrenceId, 'naturalChaos'),
+    kind: 'AddChaos',
+    additional: createAdditionalExitAddress(goldenFBiome, openingOccurrenceId, 'chaos'),
     occurrenceId: chaosOccurrenceId,
   });
   project = applyProjectCommand(project, catalog, {
@@ -192,7 +192,7 @@ function selectedNaturalChaosFrontier(): {
       kind: 'occurrence',
       occurrenceId: openingOccurrenceId,
     }),
-    value: { kind: 'additional', additionalExitKey: 'naturalChaos' },
+    value: { kind: 'additional', additionalExitKey: 'chaos' },
   });
   return { project: authorLegalTraitOffers(project), chaosOccurrenceId };
 }

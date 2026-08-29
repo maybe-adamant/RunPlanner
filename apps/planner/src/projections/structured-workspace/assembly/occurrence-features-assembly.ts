@@ -8,7 +8,7 @@ import {
 import type { Catalog, RoomDeclaration } from '@run-planner/engine/catalog-schema';
 import type {
   HermesShrineCandidateCapability,
-  NaturalChaosCandidateCapability,
+  ChaosCandidateCapability,
   PurgingPoolCandidateCapability,
   StygianWellCandidateCapability,
   ZagreusContractCandidateCapability,
@@ -29,7 +29,8 @@ export interface WorkspaceOccurrenceFeaturesInput {
   readonly facts: {
     readonly authoredAdditionalExitKeys: readonly string[];
     readonly detailsActive: boolean;
-    readonly naturalChaosPlacement?: NaturalChaosCandidateCapability;
+    readonly chaosPlacement?: ChaosCandidateCapability;
+    readonly chaosGateForced: boolean;
     readonly zagreusContractPlacement?: ZagreusContractCandidateCapability;
   };
   readonly hermesShrineAssessment?: (
@@ -47,7 +48,7 @@ export interface WorkspaceOccurrenceFeaturesInput {
 
 export interface WorkspaceOccurrenceFeatureAssembly {
   readonly features: readonly WorkspaceRoomFeature[];
-  readonly naturalChaosSpawn: WorkspaceRoomSummary['naturalChaosSpawn'];
+  readonly chaosSpawn: WorkspaceRoomSummary['chaosSpawn'];
   readonly zagreusSpawn: WorkspaceRoomSummary['zagreusSpawn'];
 }
 
@@ -140,30 +141,28 @@ export function assembleOccurrenceFeatures(
             owner,
           });
         })();
-  const naturalChaosDeclaration = room.additionalExits.find(
-    (candidate) => candidate.kind === 'naturalChaos',
-  );
-  const naturalChaosSpawn =
-    naturalChaosDeclaration === undefined ||
-    input.facts.authoredAdditionalExitKeys.includes(naturalChaosDeclaration.key) ||
-    input.facts.authoredAdditionalExitKeys.includes('sparkChaos') ||
+  const chaosDeclaration = room.additionalExits.find((candidate) => candidate.kind === 'chaos');
+  const chaosSpawn =
+    chaosDeclaration === undefined ||
+    !chaosDeclaration.canSpawn ||
+    input.facts.authoredAdditionalExitKeys.includes(chaosDeclaration.key) ||
     !input.facts.detailsActive
       ? undefined
       : (() => {
           const owner = createAdditionalExitAddress(
             input.biome,
             input.occurrence.occurrenceId,
-            naturalChaosDeclaration.key,
+            chaosDeclaration.key,
           );
           return Object.freeze({
-            authorable: input.facts.naturalChaosPlacement?.placementEligible === true,
+            authorable: input.facts.chaosPlacement?.placementEligible === true,
             marker: input.markerDestinations.marker(owner),
             owner,
           });
         })();
   return Object.freeze({
-    features: roomFeatures(input, room, encounterPhases, zagreusSpawn, naturalChaosSpawn),
-    naturalChaosSpawn,
+    features: roomFeatures(input, room, encounterPhases, zagreusSpawn, chaosSpawn),
+    chaosSpawn,
     zagreusSpawn,
   });
 }
@@ -173,14 +172,13 @@ function roomFeatures(
   room: RoomDeclaration,
   encounterPhases: readonly WorkspaceEncounterPhase[],
   zagreusSpawn: WorkspaceRoomSummary['zagreusSpawn'],
-  naturalChaosSpawn: WorkspaceRoomSummary['naturalChaosSpawn'],
+  chaosSpawn: WorkspaceRoomSummary['chaosSpawn'],
 ): readonly WorkspaceRoomFeature[] {
   const authored = new Set(input.facts.authoredAdditionalExitKeys);
   const additionalOwner = (key: string) =>
     createAdditionalExitAddress(input.biome, input.occurrence.occurrenceId, key);
   const zagreus = room.additionalExits.find((candidate) => candidate.kind === 'zagreusContract');
-  const chaos = room.additionalExits.find((candidate) => candidate.kind === 'naturalChaos');
-  const spark = room.additionalExits.find((candidate) => candidate.kind === 'sparkChaos');
+  const chaos = room.additionalExits.find((candidate) => candidate.kind === 'chaos');
   const passive = encounterPhases.find((phase) => phase.nemesisFeature !== undefined);
   const poolOwner = createOccurrenceAddress(input.biome, input.occurrence.occurrenceId);
   const poolAssessment = input.purgingPoolAssessment?.(poolOwner);
@@ -522,36 +520,31 @@ function roomFeatures(
             }),
           ]
         : []),
-    ...(naturalChaosSpawn !== undefined
+    ...(chaosSpawn !== undefined
       ? [
           Object.freeze({
-            kind: 'naturalChaos' as const,
+            kind: 'chaos' as const,
             action: 'add' as const,
             presence: Object.freeze({
               kind: 'optionalAbsent' as const,
-              enabled: naturalChaosSpawn.authorable,
+              enabled: chaosSpawn.authorable,
             }),
-            control: naturalChaosSpawn,
+            control: chaosSpawn,
           }),
         ]
       : chaos !== undefined && authored.has(chaos.key)
         ? [
             Object.freeze({
-              kind: 'naturalChaos' as const,
+              kind: 'chaos' as const,
               action: 'remove' as const,
-              presence: Object.freeze({ kind: 'optionalPresent' as const }),
+              presence: Object.freeze({
+                kind: input.facts.chaosGateForced
+                  ? ('forcedPresent' as const)
+                  : ('optionalPresent' as const),
+              }),
               owner: additionalOwner(chaos.key),
             }),
           ]
-        : spark !== undefined && authored.has(spark.key)
-          ? [
-              Object.freeze({
-                kind: 'naturalChaos' as const,
-                action: 'remove' as const,
-                presence: Object.freeze({ kind: 'forcedPresent' as const }),
-                owner: additionalOwner(spark.key),
-              }),
-            ]
-          : []),
+        : []),
   ]);
 }

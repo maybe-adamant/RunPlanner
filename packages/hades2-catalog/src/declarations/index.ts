@@ -36,7 +36,7 @@ const rooms: readonly RawRoomDeclaration[] = [
 ];
 
 export const declarations = {
-  version: '0.49.0-completion-topology',
+  version: '0.50.0-unified-chaos-gates',
   biomes,
   routes,
   arcanaCards,

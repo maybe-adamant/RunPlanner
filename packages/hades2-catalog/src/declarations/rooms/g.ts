@@ -6,15 +6,12 @@ const wellHost = (challengeSwitchAnchorCount: number) => ({
   roomShop: { profileKey: 'RoomShop' as const, spawnChance: 0.3 },
 });
 
-const naturalChaosExit = {
-  kind: 'naturalChaos' as const,
-  key: 'naturalChaos' as const,
+const chaosExit = {
+  kind: 'chaos' as const,
+  key: 'chaos' as const,
   exitType: 'ChaosExitDoor',
-};
-const sparkChaosExit = {
-  kind: 'sparkChaos' as const,
-  key: 'sparkChaos' as const,
-  exitType: 'ChaosExitDoor',
+  canHost: true,
+  canSpawn: true,
 };
 
 export const gRooms = [
@@ -27,7 +24,7 @@ export const gRooms = [
     advancesExperimentalHammerUses: true,
     kind: 'Intro',
     mode: { kind: 'authored', templateKey: 'FixedIntro' },
-    additionalExits: [naturalChaosExit, sparkChaosExit],
+    additionalExits: [chaosExit],
     structuralTags: [],
     exits: [{ index: 1, type: 'OceanusExitDoor' }],
     incomingReward: { kind: 'none' },
@@ -48,7 +45,7 @@ export const gRooms = [
     advancesExperimentalHammerUses: true,
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
-    additionalExits: [naturalChaosExit, sparkChaosExit],
+    additionalExits: [chaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'OceanusExitDoor' },
@@ -84,7 +81,7 @@ export const gRooms = [
     advancesExperimentalHammerUses: true,
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
-    additionalExits: [naturalChaosExit, sparkChaosExit],
+    additionalExits: [chaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'OceanusExitDoor' },
@@ -116,7 +113,7 @@ export const gRooms = [
     advancesExperimentalHammerUses: true,
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
-    additionalExits: [naturalChaosExit, sparkChaosExit],
+    additionalExits: [chaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'OceanusExitDoor' },
@@ -152,7 +149,7 @@ export const gRooms = [
     advancesExperimentalHammerUses: true,
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
-    additionalExits: [naturalChaosExit, sparkChaosExit],
+    additionalExits: [chaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'OceanusExitDoor' },
@@ -187,7 +184,7 @@ export const gRooms = [
     advancesExperimentalHammerUses: true,
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
-    additionalExits: [naturalChaosExit, sparkChaosExit],
+    additionalExits: [chaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'OceanusExitDoor' },
@@ -223,7 +220,7 @@ export const gRooms = [
     advancesExperimentalHammerUses: true,
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
-    additionalExits: [naturalChaosExit, sparkChaosExit],
+    additionalExits: [chaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'OceanusExitDoor' },
@@ -259,7 +256,7 @@ export const gRooms = [
     advancesExperimentalHammerUses: true,
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
-    additionalExits: [naturalChaosExit, sparkChaosExit],
+    additionalExits: [chaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'OceanusExitDoor' },
@@ -295,7 +292,7 @@ export const gRooms = [
     advancesExperimentalHammerUses: true,
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
-    additionalExits: [naturalChaosExit, sparkChaosExit],
+    additionalExits: [chaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'OceanusExitDoor' },
@@ -331,7 +328,7 @@ export const gRooms = [
     advancesExperimentalHammerUses: true,
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
-    additionalExits: [naturalChaosExit, sparkChaosExit],
+    additionalExits: [chaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'OceanusExitDoor' },
@@ -368,7 +365,7 @@ export const gRooms = [
     advancesExperimentalHammerUses: true,
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
-    additionalExits: [naturalChaosExit, sparkChaosExit],
+    additionalExits: [chaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'OceanusExitDoor' },
@@ -404,7 +401,7 @@ export const gRooms = [
     advancesExperimentalHammerUses: true,
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
-    additionalExits: [naturalChaosExit, sparkChaosExit],
+    additionalExits: [chaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'OceanusExitDoor' },
@@ -440,7 +437,7 @@ export const gRooms = [
     advancesExperimentalHammerUses: true,
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
-    additionalExits: [naturalChaosExit, sparkChaosExit],
+    additionalExits: [chaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'OceanusExitDoor' },
@@ -476,7 +473,7 @@ export const gRooms = [
     advancesExperimentalHammerUses: true,
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
-    additionalExits: [naturalChaosExit, sparkChaosExit],
+    additionalExits: [chaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'OceanusExitDoor' },
@@ -512,7 +509,7 @@ export const gRooms = [
     advancesExperimentalHammerUses: true,
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
-    additionalExits: [naturalChaosExit, sparkChaosExit],
+    additionalExits: [chaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'OceanusExitDoor' },
@@ -549,7 +546,7 @@ export const gRooms = [
     advancesExperimentalHammerUses: true,
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
-    additionalExits: [naturalChaosExit, sparkChaosExit],
+    additionalExits: [chaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'OceanusExitDoor' },
@@ -586,7 +583,7 @@ export const gRooms = [
     advancesExperimentalHammerUses: true,
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
-    additionalExits: [naturalChaosExit, sparkChaosExit],
+    additionalExits: [chaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'OceanusExitDoor' },
@@ -622,7 +619,7 @@ export const gRooms = [
     advancesExperimentalHammerUses: true,
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
-    additionalExits: [naturalChaosExit, sparkChaosExit],
+    additionalExits: [chaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'OceanusExitDoor' },
@@ -659,7 +656,7 @@ export const gRooms = [
     advancesExperimentalHammerUses: true,
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
-    additionalExits: [naturalChaosExit, sparkChaosExit],
+    additionalExits: [chaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'OceanusExitDoor' },
@@ -698,7 +695,7 @@ export const gRooms = [
     advancesExperimentalHammerUses: true,
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
-    additionalExits: [naturalChaosExit, sparkChaosExit],
+    additionalExits: [chaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'OceanusExitDoor' },
@@ -734,7 +731,7 @@ export const gRooms = [
     advancesExperimentalHammerUses: true,
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
-    additionalExits: [naturalChaosExit, sparkChaosExit],
+    additionalExits: [chaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'OceanusExitDoor' },
@@ -771,7 +768,7 @@ export const gRooms = [
     advancesExperimentalHammerUses: true,
     kind: 'Miniboss',
     mode: { kind: 'authored', templateKey: 'Miniboss' },
-    additionalExits: [naturalChaosExit, sparkChaosExit],
+    additionalExits: [chaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'OceanusExitDoor' },
@@ -816,7 +813,7 @@ export const gRooms = [
     advancesExperimentalHammerUses: true,
     kind: 'Miniboss',
     mode: { kind: 'authored', templateKey: 'Miniboss' },
-    additionalExits: [naturalChaosExit, sparkChaosExit],
+    additionalExits: [chaosExit],
     structuralTags: [],
     exits: [{ index: 1, type: 'OceanusExitDoor' }],
     incomingReward: {
@@ -858,7 +855,7 @@ export const gRooms = [
     advancesExperimentalHammerUses: true,
     kind: 'Miniboss',
     mode: { kind: 'authored', templateKey: 'Miniboss' },
-    additionalExits: [naturalChaosExit, sparkChaosExit],
+    additionalExits: [chaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'OceanusExitDoor' },
@@ -905,7 +902,7 @@ export const gRooms = [
     kind: 'Story',
     mode: { kind: 'authored', templateKey: 'Story' },
     lifecycleProfileKey: 'StoryPickupRoom',
-    additionalExits: [naturalChaosExit, sparkChaosExit],
+    additionalExits: [chaosExit],
     structuralTags: [],
     exits: [{ index: 1, type: 'OceanusExitDoor' }],
     incomingReward: { kind: 'fixed', rewardType: 'Story', producerLifecycleKey: 'RoomReward' },
@@ -933,7 +930,7 @@ export const gRooms = [
     advancesExperimentalHammerUses: true,
     kind: 'Reprieve',
     mode: { kind: 'authored', templateKey: 'Fountain' },
-    additionalExits: [naturalChaosExit, sparkChaosExit],
+    additionalExits: [chaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'OceanusExitDoor' },
@@ -974,8 +971,7 @@ export const gRooms = [
       { index: 2, type: 'OceanusExitDoor' },
     ],
     additionalExits: [
-      naturalChaosExit,
-      sparkChaosExit,
+      chaosExit,
       {
         kind: 'zagreusContract',
         key: 'zagreusContract',

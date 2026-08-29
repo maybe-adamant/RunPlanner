@@ -215,7 +215,7 @@ describe('progressive finding ancestry and chronology', () => {
       expect.objectContaining({
         code: 'targetRoomUnavailable',
         origin: fixture.naturalChaos,
-        evidence: expect.objectContaining({ kind: 'naturalChaos' }),
+        evidence: expect.objectContaining({ kind: 'chaos' }),
       }),
     );
     expect(first.findings).not.toContainEqual(

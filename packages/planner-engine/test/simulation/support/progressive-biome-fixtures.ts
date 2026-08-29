@@ -116,7 +116,7 @@ function catalogWithImpossibleNaturalChaosSource(gameName: string) {
       return {
         ...room,
         additionalExits: room.additionalExits.map((exit) =>
-          exit.kind !== 'naturalChaos'
+          exit.kind !== 'chaos'
             ? exit
             : {
                 ...exit,
@@ -380,10 +380,10 @@ function partialFWithInvalidSiblingAdditionsAndNormalTarget() {
   const secondContract = createOccurrenceId('progressive-additional-second-contract');
   const shop = fGenerationOccurrenceId(5, 1);
   let project = createFGenerationProject(batches, { includeTakeover: false });
-  const naturalChaos = createAdditionalExitAddress(fGenerationBiome, shop, 'naturalChaos');
+  const naturalChaos = createAdditionalExitAddress(fGenerationBiome, shop, 'chaos');
   const zagreusContract = createAdditionalExitAddress(fGenerationBiome, shop, 'zagreusContract');
   project = applyProjectCommand(project, catalog, {
-    kind: 'AddNaturalChaos',
+    kind: 'AddChaos',
     additional: naturalChaos,
     occurrenceId: secondChaos,
   });

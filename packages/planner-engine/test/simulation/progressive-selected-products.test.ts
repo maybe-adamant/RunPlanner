@@ -464,7 +464,12 @@ describe('progressive selected and blocked products', () => {
     expect(normalLifecycle).toBeDefined();
     expect(prefixLifecycle).toBeDefined();
     expect(normalLifecycle).not.toBe(prefixLifecycle);
-    expect(Object.keys(normalLifecycle ?? {})).toEqual(['activeWheelKeys', 'evaluateState']);
+    expect(Object.keys(normalLifecycle ?? {})).toEqual([
+      'activeWheelKeys',
+      'supportedStoreKeysAtGeneration',
+      'evaluateState',
+      'evaluateStateThroughWheelPick',
+    ]);
 
     const invalid = applyProjectCommand(surface, catalog, {
       kind: 'ReplaceRewardWheelStore',

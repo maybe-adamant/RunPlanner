@@ -101,9 +101,9 @@ function assertRenderedRoomControls(
       `Zagreus contract ${spawn.marker.focusKey}`,
     );
   }
-  if (room.naturalChaosSpawn !== undefined) {
-    const spawn = room.naturalChaosSpawn;
-    const interaction = interactions.naturalChaosSpawns.get(spawn.marker.focusKey);
+  if (room.chaosSpawn !== undefined) {
+    const spawn = room.chaosSpawn;
+    const interaction = interactions.chaosSpawns.get(spawn.marker.focusKey);
     if (spawn.authorable) {
       assertExactObservedInteraction(
         interaction,
@@ -148,7 +148,7 @@ function assertRenderedNodeControls(
         !(node.persistence === 'uncommitted' && node.targets.length === 0) &&
         (node.targets.length !== 1 ||
           node.zagreusContract !== undefined ||
-          node.naturalChaos !== undefined)
+          node.chaos !== undefined)
       ) {
         assertExactObservedInteraction(
           interactions.exitSelections.get(node.selection.focusKey),
@@ -215,28 +215,31 @@ function assertRenderedNodeControls(
           );
         }
       }
-      if (node.naturalChaos !== undefined) {
-        const chaos = node.naturalChaos;
-        const interaction = interactions.naturalChaosExits.get(chaos.marker.focusKey);
+      if (node.chaos !== undefined) {
+        const chaos = node.chaos;
+        const interaction = interactions.chaosExits.get(chaos.marker.focusKey);
         assertExactObservedInteraction(
           interaction,
           chaos.marker.focusKey,
           chaos.owner,
           `natural Chaos ${chaos.marker.focusKey}`,
         );
+        const expectedMapKind = 'ReplaceChaosMap';
+        const removalClosed = chaos.forced
+          ? interaction?.removeIntent === undefined
+          : interaction?.removeIntent?.command.kind === 'RemoveChaos' &&
+            workspaceTestOwnerKey(interaction.removeIntent.command.additional) ===
+              workspaceTestOwnerKey(chaos.owner);
         if (
           interaction === undefined ||
-          interaction.removeIntent.command.kind !== 'RemoveNaturalChaos' ||
-          workspaceTestOwnerKey(interaction.removeIntent.command.additional) !==
-            workspaceTestOwnerKey(chaos.owner) ||
+          !removalClosed ||
           interaction.selectIntent.command.kind !== 'SetExitSelection' ||
           workspaceTestOwnerKey(interaction.selectIntent.command.selection) !==
             workspaceTestOwnerKey(node.selection.address) ||
           interaction.selectIntent.command.value.kind !== 'additional' ||
           interaction.selectIntent.command.value.additionalExitKey !==
             chaos.owner.additionalExitKey ||
-          interaction.mapIntent(chaos.door.room.gameName).command.kind !==
-            'ReplaceNaturalChaosMap' ||
+          interaction.mapIntent(chaos.door.room.gameName).command.kind !== expectedMapKind ||
           workspaceTestOwnerKey(
             interaction.mapIntent(chaos.door.room.gameName).command.occurrence,
           ) !== workspaceTestOwnerKey(chaos.door.room.address)

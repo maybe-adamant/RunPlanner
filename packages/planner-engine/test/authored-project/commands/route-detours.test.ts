@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, expectTypeOf, it } from 'vitest';
 
 import { catalog } from '@run-planner/hades2-catalog';
 import {
@@ -19,6 +19,7 @@ import {
   redoProjectHistory,
   undoProjectHistory,
   normalDecisionProgressionForLayout,
+  type ProjectCommand,
 } from '@run-planner/engine/authored-project';
 
 import { createNormalDispositionByAcquisitionRole } from '../../../src/authored-project/reward-state';
@@ -307,10 +308,10 @@ describe('authored-project route detour commands', () => {
     );
   });
 
-  it('authors, replaces, removes, and codec-round-trips an occurrence-owned natural Chaos gate', () => {
+  it('authors, replaces, removes, and codec-round-trips an occurrence-owned Chaos gate', () => {
     const opening = createOccurrenceId('natural-chaos-opening');
     const chaos = createOccurrenceId('natural-chaos-target');
-    const additional = createAdditionalExitAddress(fBiome, opening, 'naturalChaos');
+    const additional = createAdditionalExitAddress(fBiome, opening, 'chaos');
     const started = applyProjectCommand(fProject(), catalog, {
       kind: 'CreateStart',
       biome: fBiome,
@@ -318,7 +319,7 @@ describe('authored-project route detour commands', () => {
       gameName: 'F_Opening01',
     });
     const added = applyProjectHistoryCommand(createProjectHistory(started), catalog, {
-      kind: 'AddNaturalChaos',
+      kind: 'AddChaos',
       additional,
       occurrenceId: chaos,
     });
@@ -346,7 +347,7 @@ describe('authored-project route detour commands', () => {
       biomeTopology(project, 'Underworld', 'F').occurrences.find(
         (occurrence) => occurrence.occurrenceId === opening,
       )?.additionalExits,
-    ).toEqual([{ kind: 'naturalChaos', key: 'naturalChaos', occurrenceId: chaos }]);
+    ).toEqual([{ kind: 'chaos', key: 'chaos', occurrenceId: chaos }]);
     expect(
       biomeTopology(project, 'Underworld', 'F').occurrences.find(
         (occurrence) => occurrence.occurrenceId === chaos,
@@ -354,7 +355,7 @@ describe('authored-project route detour commands', () => {
     ).toMatchObject({ gameName: 'Chaos_01', state: { kind: 'fixed' } });
 
     project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceNaturalChaosMap',
+      kind: 'ReplaceChaosMap',
       occurrence: createOccurrenceAddress(fBiome, chaos),
       gameName: 'Chaos_06',
     });
@@ -369,7 +370,7 @@ describe('authored-project route detour commands', () => {
 
     const history = createProjectHistory(project);
     const removed = applyProjectHistoryCommand(history, catalog, {
-      kind: 'RemoveNaturalChaos',
+      kind: 'RemoveChaos',
       additional,
     });
     const restored = undoProjectHistory(removed);
@@ -387,16 +388,16 @@ describe('authored-project route detour commands', () => {
     const sourceId = goldenGOccurrenceId(7, 1);
     const source = { kind: 'occurrence' as const, occurrenceId: sourceId };
     const chaos = createOccurrenceId('terminal-g-natural-chaos');
-    const additional = createAdditionalExitAddress(goldenGBiome, sourceId, 'naturalChaos');
+    const additional = createAdditionalExitAddress(goldenGBiome, sourceId, 'chaos');
     let project = applyProjectCommand(createCompleteFGProject(), catalog, {
-      kind: 'AddNaturalChaos',
+      kind: 'AddChaos',
       additional,
       occurrenceId: chaos,
     });
     project = applyProjectCommand(project, catalog, {
       kind: 'SetExitSelection',
       selection: createExitSelectionAddress(goldenGBiome, source),
-      value: { kind: 'additional', additionalExitKey: 'naturalChaos' },
+      value: { kind: 'additional', additionalExitKey: 'chaos' },
     });
     const decision = createExitDecisionAddress(goldenGBiome, {
       kind: 'occurrence',
@@ -428,71 +429,39 @@ describe('authored-project route detour commands', () => {
     );
   });
 
-  it('authors Spark Chaos with distinct semantic commands and rejects a parallel natural gate', () => {
-    const opening = createOccurrenceId('spark-chaos-opening');
-    const chaos = createOccurrenceId('spark-chaos-target');
-    const additional = createAdditionalExitAddress(fBiome, opening, 'sparkChaos');
-    let project = applyProjectCommand(fProject(), catalog, {
-      kind: 'CreateStart',
-      biome: fBiome,
-      occurrenceId: opening,
-      gameName: 'F_Opening01',
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'AddSparkChaos',
-      additional,
-      occurrenceId: chaos,
-    });
-    expect(
-      biomeTopology(project, 'Underworld', 'F').occurrences.find(
-        (occurrence) => occurrence.occurrenceId === opening,
-      )?.additionalExits,
-    ).toEqual([{ kind: 'sparkChaos', key: 'sparkChaos', occurrenceId: chaos }]);
-    expect(() =>
-      applyProjectCommand(project, catalog, {
-        kind: 'AddNaturalChaos',
-        additional: createAdditionalExitAddress(fBiome, opening, 'naturalChaos'),
-        occurrenceId: createOccurrenceId('parallel-natural-chaos'),
-      }),
-    ).toThrow(/already authored/);
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceSparkChaosMap',
-      occurrence: createOccurrenceAddress(fBiome, chaos),
-      gameName: 'Chaos_06',
-    });
-    expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog)).toEqual(
-      project,
-    );
-    project = applyProjectCommand(project, catalog, { kind: 'RemoveSparkChaos', additional });
-    expect(
-      biomeTopology(project, 'Underworld', 'F').occurrences.map((room) => room.occurrenceId),
-    ).not.toContain(chaos);
+  it('does not expose generated topology creation or removal as author commands', () => {
+    expectTypeOf<
+      Extract<ProjectCommand, { readonly kind: 'GenerateChaos' }>
+    >().toEqualTypeOf<never>();
+    expectTypeOf<
+      Extract<ProjectCommand, { readonly kind: 'RemoveGeneratedChaos' }>
+    >().toEqualTypeOf<never>();
   });
 
-  it('rejects a natural Chaos map outside N’s declared target domain', () => {
+  it('rejects a Chaos map outside N’s declared target domain', () => {
     const opening = createOccurrenceId('natural-chaos-n-opening');
     const chaos = createOccurrenceId('natural-chaos-n-target');
-    const additional = createAdditionalExitAddress(nBiome, opening, 'naturalChaos');
+    const additional = createAdditionalExitAddress(nBiome, opening, 'chaos');
     let project = applyProjectCommand(nProject(), catalog, {
       kind: 'CreateStart',
       biome: nBiome,
       occurrenceId: opening,
     });
     project = applyProjectCommand(project, catalog, {
-      kind: 'AddNaturalChaos',
+      kind: 'AddChaos',
       additional,
       occurrenceId: chaos,
     });
     expect(() =>
       applyProjectCommand(project, catalog, {
-        kind: 'ReplaceNaturalChaosMap',
+        kind: 'ReplaceChaosMap',
         occurrence: createOccurrenceAddress(nBiome, chaos),
         gameName: 'Chaos_01',
       }),
     ).toThrow(/outside the N Chaos map domain/);
   });
 
-  it('removes a retained natural Chaos gate after its selected G source becomes an Anomaly', () => {
+  it('removes a retained Chaos gate after its selected G source becomes an Anomaly', () => {
     const intro = createOccurrenceId('natural-chaos-anomaly-intro');
     const target = createOccurrenceId('natural-chaos-anomaly-target');
     const chaos = createOccurrenceId('natural-chaos-anomaly-target-room');
@@ -517,9 +486,9 @@ describe('authored-project route detour commands', () => {
       occurrenceId: target,
       gameName: 'G_Combat01',
     });
-    const additional = createAdditionalExitAddress(gBiome, target, 'naturalChaos');
+    const additional = createAdditionalExitAddress(gBiome, target, 'chaos');
     project = applyProjectCommand(project, catalog, {
-      kind: 'AddNaturalChaos',
+      kind: 'AddChaos',
       additional,
       occurrenceId: chaos,
     });
@@ -528,7 +497,7 @@ describe('authored-project route detour commands', () => {
       target: createTargetAddress(gBiome, source, 'exit1'),
     });
     project = applyProjectCommand(project, catalog, {
-      kind: 'RemoveNaturalChaos',
+      kind: 'RemoveChaos',
       additional,
     });
     const topology = biomeTopology(project, 'Underworld', 'G');

@@ -43,7 +43,13 @@ import {
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
-import { createGoldenFGHIProject, goldenFBiome } from '@run-planner/test-fixtures/underworld';
+import {
+  createGoldenFGHIProject,
+  createUnderworldFWellCheckpoint,
+  goldenFBiome,
+  goldenGBiome,
+  goldenGStartId,
+} from '@run-planner/test-fixtures/underworld';
 import {
   loadSurfaceNEntryFrontierProject,
   loadSurfaceNOPQProject,
@@ -1380,30 +1386,30 @@ describe('structured workspace overlay contract', () => {
     expect(projected.interactions.zagreusSpawns.has(semanticAddressKey(additional))).toBe(false);
   });
 
-  it('routes an authored natural Chaos gate and its fixed room package to the source decision', () => {
+  it('routes an authored Chaos gate and its fixed room package to the source decision', () => {
     const base = createGoldenFGHIProject();
     const available = projectWorkspace(base);
     const located = base.routes.flatMap((route) =>
       route.biomes.flatMap((plan) =>
         (plan.topology?.occurrences ?? []).flatMap((occurrence) => {
           const room = catalog.rooms.byKey[occurrence.gameName];
-          return room?.additionalExits.some((exit) => exit.kind === 'naturalChaos')
+          return room?.additionalExits.some((exit) => exit.kind === 'chaos')
             ? [{ occurrence, plan, route }]
             : [];
         }),
       ),
     )[0];
-    if (located === undefined) throw new Error('selected natural Chaos source is missing');
+    if (located === undefined) throw new Error('selected Chaos source is missing');
     const biome = createBiomeAddress(located.route.routeKey, located.plan.biomeKey);
     const source = { kind: 'occurrence' as const, occurrenceId: located.occurrence.occurrenceId };
     const decision = createExitDecisionAddress(biome, source);
-    const additional = createAdditionalExitAddress(biome, source.occurrenceId, 'naturalChaos');
-    expect(
-      available.interactions.naturalChaosSpawns.get(semanticAddressKey(additional))?.owner,
-    ).toEqual(additional);
-    const chaosId = createOccurrenceId('workspace-natural-chaos');
+    const additional = createAdditionalExitAddress(biome, source.occurrenceId, 'chaos');
+    expect(available.interactions.chaosSpawns.get(semanticAddressKey(additional))?.owner).toEqual(
+      additional,
+    );
+    const chaosId = createOccurrenceId('workspace-chaos');
     const authored = applyProjectCommand(base, catalog, {
-      kind: 'AddNaturalChaos',
+      kind: 'AddChaos',
       additional,
       occurrenceId: chaosId,
     });
@@ -1418,8 +1424,7 @@ describe('structured workspace overlay contract', () => {
           node.kind === 'takeoverBatch') &&
         semanticAddressKey(node.owner) === semanticAddressKey(decision),
     );
-    if (batch?.naturalChaos === undefined)
-      throw new Error('natural Chaos decision card is missing');
+    if (batch?.chaos === undefined) throw new Error('Chaos decision card is missing');
     expect(() =>
       assertExpectedWorkspaceTopologyClosure({
         expected: expectedWorkspaceTopologyManifest(
@@ -1435,22 +1440,20 @@ describe('structured workspace overlay contract', () => {
         }),
       }),
     ).not.toThrow();
-    const interaction = projected.interactions.naturalChaosExits.get(
-      semanticAddressKey(additional),
-    );
+    const interaction = projected.interactions.chaosExits.get(semanticAddressKey(additional));
     expect(interaction?.owner).toEqual(additional);
     expect(interaction?.selectIntent.command).toMatchObject({
       kind: 'SetExitSelection',
-      value: { kind: 'additional', additionalExitKey: 'naturalChaos' },
+      value: { kind: 'additional', additionalExitKey: 'chaos' },
     });
-    expect(interaction?.removeIntent.command).toEqual({ kind: 'RemoveNaturalChaos', additional });
-    expect(interaction?.mapIntent(batch.naturalChaos.door.room.gameName).command).toEqual({
-      kind: 'ReplaceNaturalChaosMap',
+    expect(interaction?.removeIntent?.command).toEqual({ kind: 'RemoveChaos', additional });
+    expect(interaction?.mapIntent(batch.chaos.door.room.gameName).command).toEqual({
+      kind: 'ReplaceChaosMap',
       occurrence: createOccurrenceAddress(biome, chaosId),
-      gameName: batch.naturalChaos.door.room.gameName,
+      gameName: batch.chaos.door.room.gameName,
     });
-    expect(batch.naturalChaos.door.room.occurrenceId).toBe(chaosId);
-    expect(batch.naturalChaos.door.offerRewardSurface).toEqual({
+    expect(batch.chaos.door.room.occurrenceId).toBe(chaosId);
+    expect(batch.chaos.door.offerRewardSurface).toEqual({
       visibility: 'hidden',
       rewards: [],
     });
@@ -1459,11 +1462,11 @@ describe('structured workspace overlay contract', () => {
       (node) => node.kind === 'occurrenceWorkbench' && node.room.occurrenceId === chaosId,
     );
     if (chaosWorkbench?.kind !== 'occurrenceWorkbench') {
-      throw new Error('natural Chaos occurrence workbench is missing');
+      throw new Error('Chaos occurrence workbench is missing');
     }
     for (const address of [
       createOccurrenceAddress(biome, chaosId),
-      ...batch.naturalChaos.door.room.rewardControls.map((control) => control.owner.address),
+      ...batch.chaos.door.room.rewardControls.map((control) => control.owner.address),
     ]) {
       expect(projected.focusByOwner.get(semanticAddressKey(address))?.nodeKey).toBe(
         chaosWorkbench.key,
@@ -1487,14 +1490,45 @@ describe('structured workspace overlay contract', () => {
         }),
       }),
     ).toThrow(/additional exit/);
-    const naturalChaosExits = new Map(projected.interactions.naturalChaosExits);
-    naturalChaosExits.delete(semanticAddressKey(additional));
+    const chaosExits = new Map(projected.interactions.chaosExits);
+    chaosExits.delete(semanticAddressKey(additional));
     expect(() =>
       assertRenderedWorkspaceStructuralControlClosure({
-        interactions: { ...projected.interactions, naturalChaosExits },
+        interactions: { ...projected.interactions, chaosExits },
         routes: projected.routes,
       }),
-    ).toThrow(/natural Chaos .* exact workspace interaction/);
+    ).toThrow(/Chaos .* exact workspace interaction/);
+  });
+
+  it('keeps manual removal available while Ixion pressure overlays an authored gate', () => {
+    const well = createOccurrenceAddress(
+      goldenFBiome,
+      createOccurrenceId('golden-f-preboss-shop:postboss'),
+    );
+    const additional = createAdditionalExitAddress(goldenGBiome, goldenGStartId, 'chaos');
+    const chaosId = createOccurrenceId('workspace-chaos-overlaid');
+    let project = applyProjectCommand(createUnderworldFWellCheckpoint(false), catalog, {
+      kind: 'AddChaos',
+      additional,
+      occurrenceId: chaosId,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceStygianWellTravelDealRefill',
+      occurrence: well,
+      itemKey: 'TemporaryForcedSecretDoorTrait',
+    });
+
+    const projected = projectWorkspace(project);
+    const interaction = projected.interactions.chaosExits.get(semanticAddressKey(additional));
+    expect(interaction?.removeIntent?.command).toEqual({
+      kind: 'RemoveChaos',
+      additional,
+    });
+    expect(interaction?.mapIntent('Chaos_01').command).toEqual({
+      kind: 'ReplaceChaosMap',
+      occurrence: createOccurrenceAddress(goldenGBiome, chaosId),
+      gameName: 'Chaos_01',
+    });
   });
 
   it('keeps selected-contract and automatic-return packages in their respective decisions', () => {

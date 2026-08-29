@@ -514,7 +514,7 @@ export function retainBlockedRegionProducts(
     retainedArtifacts.fountainRarity,
     figurineArcana,
     transcendentEmbryo,
-    retainedArtifacts.naturalChaos,
+    retainedArtifacts.chaos,
     retainedArtifacts.zagreusContracts,
   );
   return Object.freeze({

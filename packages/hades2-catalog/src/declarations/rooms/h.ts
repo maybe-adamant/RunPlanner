@@ -1,14 +1,16 @@
 import type { RawRoomDeclaration } from '../types';
 import { hResourcePointSupport } from '../resources';
 
-const sparkChaosExit = {
-  kind: 'sparkChaos' as const,
-  key: 'sparkChaos' as const,
+const chaosExit = {
+  kind: 'chaos' as const,
+  key: 'chaos' as const,
   exitType: 'ChaosExitDoor',
+  canHost: true,
+  canSpawn: false,
 };
-const sparkChaosHost = (secretPointAnchorCount: number) => ({
+const chaosHost = (secretPointAnchorCount: number) => ({
   secretPointAnchorCount,
-  additionalExits: [sparkChaosExit],
+  additionalExits: [chaosExit],
 });
 
 const fieldsOfferReward = {
@@ -58,7 +60,7 @@ function fieldsOptionalRewards(gameName: keyof typeof fieldsOptionalRewardCapaci
 export const hRooms = [
   {
     gameName: 'H_Intro',
-    ...sparkChaosHost(2),
+    ...chaosHost(2),
     resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Entrance',
     roomSetKey: 'H',
@@ -77,7 +79,7 @@ export const hRooms = [
   },
   {
     gameName: 'H_Combat01',
-    ...sparkChaosHost(3),
+    ...chaosHost(3),
     ...wellHost(1),
     resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 01',
@@ -122,7 +124,7 @@ export const hRooms = [
   },
   {
     gameName: 'H_Combat02',
-    ...sparkChaosHost(3),
+    ...chaosHost(3),
     ...wellHost(1),
     resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 02',
@@ -175,7 +177,7 @@ export const hRooms = [
   },
   {
     gameName: 'H_Combat03',
-    ...sparkChaosHost(3),
+    ...chaosHost(3),
     ...wellHost(1),
     resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 03',
@@ -223,7 +225,7 @@ export const hRooms = [
   },
   {
     gameName: 'H_Combat04',
-    ...sparkChaosHost(4),
+    ...chaosHost(4),
     ...wellHost(1),
     resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 04',
@@ -271,7 +273,7 @@ export const hRooms = [
   },
   {
     gameName: 'H_Combat05',
-    ...sparkChaosHost(4),
+    ...chaosHost(4),
     ...wellHost(1),
     resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 05',
@@ -319,7 +321,7 @@ export const hRooms = [
   },
   {
     gameName: 'H_Combat06',
-    ...sparkChaosHost(3),
+    ...chaosHost(3),
     ...wellHost(1),
     resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 06',
@@ -367,7 +369,7 @@ export const hRooms = [
   },
   {
     gameName: 'H_Combat07',
-    ...sparkChaosHost(3),
+    ...chaosHost(3),
     ...wellHost(1),
     resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 07',
@@ -415,7 +417,7 @@ export const hRooms = [
   },
   {
     gameName: 'H_Combat08',
-    ...sparkChaosHost(3),
+    ...chaosHost(3),
     ...wellHost(1),
     resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 08',
@@ -463,7 +465,7 @@ export const hRooms = [
   },
   {
     gameName: 'H_Combat09',
-    ...sparkChaosHost(2),
+    ...chaosHost(2),
     ...wellHost(1),
     resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 09',
@@ -516,7 +518,7 @@ export const hRooms = [
   },
   {
     gameName: 'H_Combat10',
-    ...sparkChaosHost(4),
+    ...chaosHost(4),
     ...wellHost(1),
     resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 10',
@@ -564,7 +566,7 @@ export const hRooms = [
   },
   {
     gameName: 'H_Combat11',
-    ...sparkChaosHost(4),
+    ...chaosHost(4),
     ...wellHost(1),
     resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 11',
@@ -612,7 +614,7 @@ export const hRooms = [
   },
   {
     gameName: 'H_Combat12',
-    ...sparkChaosHost(3),
+    ...chaosHost(3),
     ...wellHost(1),
     resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 12',
@@ -660,7 +662,7 @@ export const hRooms = [
   },
   {
     gameName: 'H_Combat13',
-    ...sparkChaosHost(2),
+    ...chaosHost(2),
     ...wellHost(1),
     resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     label: 'Combat 13',
@@ -713,7 +715,7 @@ export const hRooms = [
   },
   {
     gameName: 'H_Combat14',
-    ...sparkChaosHost(3),
+    ...chaosHost(3),
     ...wellHost(1),
     resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 14',
@@ -766,7 +768,7 @@ export const hRooms = [
   },
   {
     gameName: 'H_Combat15',
-    ...sparkChaosHost(2),
+    ...chaosHost(2),
     ...wellHost(1),
     resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Combat 15',
@@ -819,7 +821,7 @@ export const hRooms = [
   },
   {
     gameName: 'H_MiniBoss01',
-    ...sparkChaosHost(1),
+    ...chaosHost(1),
     resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel']),
     boonRarityOverride: { Rare: 0.9, Epic: 0.1, Legendary: 0.05 },
     label: 'Phantom',
@@ -858,7 +860,7 @@ export const hRooms = [
   },
   {
     gameName: 'H_MiniBoss02',
-    ...sparkChaosHost(2),
+    ...chaosHost(2),
     resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     boonRarityOverride: { Rare: 0.9, Epic: 0.1, Legendary: 0.05 },
     label: 'Queen Lamia',
@@ -894,7 +896,7 @@ export const hRooms = [
   },
   {
     gameName: 'H_Bridge01',
-    ...sparkChaosHost(3),
+    ...chaosHost(3),
     resourcePointSupport: hResourcePointSupport(['Pickaxe', 'Exorcism', 'Shovel', 'Fishing']),
     label: 'Echo',
     roomSetKey: 'H',

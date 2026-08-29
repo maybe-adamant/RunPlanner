@@ -405,22 +405,17 @@ export interface RawZagreusContractAdditionalExitDeclaration {
   readonly maxEnteredThisRoute: number;
 }
 
-export interface RawNaturalChaosAdditionalExitDeclaration {
-  readonly kind: 'naturalChaos';
-  readonly key: 'naturalChaos';
+export interface RawChaosAdditionalExitDeclaration {
+  readonly kind: 'chaos';
+  readonly key: 'chaos';
   readonly exitType: string;
+  readonly canHost: boolean;
+  readonly canSpawn: boolean;
   readonly requirement?: RequirementExpression;
-}
-export interface RawSparkChaosAdditionalExitDeclaration {
-  readonly kind: 'sparkChaos';
-  readonly key: 'sparkChaos';
-  readonly exitType: string;
 }
 
 export type RawAdditionalExitDeclaration =
-  | RawZagreusContractAdditionalExitDeclaration
-  | RawNaturalChaosAdditionalExitDeclaration
-  | RawSparkChaosAdditionalExitDeclaration;
+  RawZagreusContractAdditionalExitDeclaration | RawChaosAdditionalExitDeclaration;
 
 export interface RawRoomDeclaration {
   readonly gameName: string;
@@ -537,14 +532,10 @@ export interface RawBiomeLayoutDeclaration {
       }
     | { readonly kind: 'fixedAuthored'; readonly roomGameName: string };
   readonly progression: RawProgressionDeclaration;
-  readonly naturalChaos?: {
+  readonly chaos?: {
     readonly roomGameNames: readonly [string, ...string[]];
     readonly defaultRoomGameName: string;
     readonly offerSpacingWindow: number;
-  };
-  readonly sparkChaos?: {
-    readonly roomGameNames: readonly [string, ...string[]];
-    readonly defaultRoomGameName: string;
   };
   readonly completion: CompletionDescriptor;
   readonly fields?: readonly AuthoredFieldDescriptor[];

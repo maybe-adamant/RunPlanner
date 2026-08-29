@@ -39,6 +39,7 @@ import type {
   ExitSelection,
   OccurrenceId,
   RoomActionReference,
+  StygianWellGenerationKey,
 } from '../model';
 import type {
   AuthoredGorgonAthenaOffer,
@@ -292,30 +293,29 @@ export type RouteDetourCommand =
       readonly additional: AdditionalExitAddress;
     }
   | {
-      readonly kind: 'AddNaturalChaos';
+      readonly kind: 'AddChaos';
       readonly additional: AdditionalExitAddress;
       readonly occurrenceId: OccurrenceId;
     }
   | {
-      readonly kind: 'AddSparkChaos';
+      /** Internal topology operation used only by Ixion reconciliation. */
+      readonly kind: 'GenerateChaos';
       readonly additional: AdditionalExitAddress;
       readonly occurrenceId: OccurrenceId;
+      readonly sourceBiomeKey: string;
+      readonly sourceOccurrenceId: OccurrenceId;
+      readonly generationKey: StygianWellGenerationKey;
     }
   | {
-      readonly kind: 'RemoveNaturalChaos';
+      readonly kind: 'RemoveChaos';
       readonly additional: AdditionalExitAddress;
     }
   | {
-      readonly kind: 'RemoveSparkChaos';
+      readonly kind: 'RemoveGeneratedChaos';
       readonly additional: AdditionalExitAddress;
     }
   | {
-      readonly kind: 'ReplaceNaturalChaosMap';
-      readonly occurrence: OccurrenceAddress;
-      readonly gameName: string;
-    }
-  | {
-      readonly kind: 'ReplaceSparkChaosMap';
+      readonly kind: 'ReplaceChaosMap';
       readonly occurrence: OccurrenceAddress;
       readonly gameName: string;
     };
@@ -593,7 +593,7 @@ export type ProjectCommand =
   | TopologyCommand
   | RoomReplacementCommand
   | RoomActionCommand
-  | RouteDetourCommand
+  | Exclude<RouteDetourCommand, { readonly kind: 'GenerateChaos' | 'RemoveGeneratedChaos' }>
   | OccurrenceLeafCommand
   | AcquisitionSiteCommand
   | TraitOfferCommand

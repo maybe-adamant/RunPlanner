@@ -76,18 +76,16 @@ export function occurrenceInteractionRequirements(
       Object.freeze({ kind: 'zagreusSpawn' as const, owner: room.zagreusSpawn.owner }),
     );
   }
-  const naturalChaosPresence = room.workbench.features.find(
-    (feature) => feature.kind === 'naturalChaos' && feature.action === 'add',
+  const chaosPresence = room.workbench.features.find(
+    (feature) => feature.kind === 'chaos' && feature.action === 'add',
   );
   if (
-    room.naturalChaosSpawn !== undefined &&
-    naturalChaosPresence?.kind === 'naturalChaos' &&
-    naturalChaosPresence.presence.kind === 'optionalAbsent' &&
-    naturalChaosPresence.presence.enabled
+    room.chaosSpawn !== undefined &&
+    chaosPresence?.kind === 'chaos' &&
+    chaosPresence.presence.kind === 'optionalAbsent' &&
+    chaosPresence.presence.enabled
   ) {
-    requirements.push(
-      Object.freeze({ kind: 'naturalChaosSpawn' as const, owner: room.naturalChaosSpawn.owner }),
-    );
+    requirements.push(Object.freeze({ kind: 'chaosSpawn' as const, owner: room.chaosSpawn.owner }));
   }
   if (room.resources !== undefined) {
     requirements.push(

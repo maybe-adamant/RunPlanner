@@ -1,15 +1,16 @@
 import type { RawRoomDeclaration } from '../types';
 import { normalResourcePointSupport } from '../resources';
 
-const naturalChaosExit = {
-  kind: 'naturalChaos' as const,
-  key: 'naturalChaos' as const,
+const chaosExit = {
+  kind: 'chaos' as const,
+  key: 'chaos' as const,
   exitType: 'ChaosExitDoor',
+  canHost: true,
+  canSpawn: true,
 };
-const sparkChaosExit = {
-  kind: 'sparkChaos' as const,
-  key: 'sparkChaos' as const,
-  exitType: 'ChaosExitDoor',
+const chaosHostOnlyExit = {
+  ...chaosExit,
+  canSpawn: false,
 };
 
 const wellHost = (challengeSwitchAnchorCount: number) => ({
@@ -28,7 +29,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     kind: 'Opening',
     mode: { kind: 'authored', templateKey: 'FixedOpening' },
     lifecycleProfileKey: 'OpeningRewardRoom',
-    additionalExits: [naturalChaosExit, sparkChaosExit],
+    additionalExits: [chaosExit],
     structuralTags: [],
     exits: [{ index: 1, type: 'ErebusExitDoor' }],
     incomingReward: {
@@ -61,7 +62,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     kind: 'Opening',
     mode: { kind: 'authored', templateKey: 'FixedOpening' },
     lifecycleProfileKey: 'OpeningRewardRoom',
-    additionalExits: [naturalChaosExit, sparkChaosExit],
+    additionalExits: [chaosExit],
     structuralTags: [],
     exits: [{ index: 1, type: 'ErebusExitDoor' }],
     incomingReward: {
@@ -94,7 +95,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     kind: 'Opening',
     mode: { kind: 'authored', templateKey: 'FixedOpening' },
     lifecycleProfileKey: 'OpeningRewardRoom',
-    additionalExits: [naturalChaosExit, sparkChaosExit],
+    additionalExits: [chaosExit],
     structuralTags: [],
     exits: [{ index: 1, type: 'ErebusExitDoor' }],
     incomingReward: {
@@ -127,7 +128,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     advancesExperimentalHammerUses: true,
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
-    additionalExits: [naturalChaosExit, sparkChaosExit],
+    additionalExits: [chaosExit],
     structuralTags: [],
     exits: [{ index: 1, type: 'ErebusExitDoor' }],
     incomingReward: {
@@ -161,7 +162,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     advancesExperimentalHammerUses: true,
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
-    additionalExits: [naturalChaosExit, sparkChaosExit],
+    additionalExits: [chaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'ErebusExitDoor' },
@@ -197,7 +198,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     advancesExperimentalHammerUses: true,
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
-    additionalExits: [naturalChaosExit, sparkChaosExit],
+    additionalExits: [chaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'ErebusExitDoor' },
@@ -233,7 +234,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     advancesExperimentalHammerUses: true,
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
-    additionalExits: [naturalChaosExit, sparkChaosExit],
+    additionalExits: [chaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'ErebusExitDoor' },
@@ -269,7 +270,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     advancesExperimentalHammerUses: true,
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
-    additionalExits: [naturalChaosExit, sparkChaosExit],
+    additionalExits: [chaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'ErebusExitDoor' },
@@ -305,7 +306,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     advancesExperimentalHammerUses: true,
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
-    additionalExits: [naturalChaosExit, sparkChaosExit],
+    additionalExits: [chaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'ErebusExitDoor' },
@@ -336,7 +337,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     advancesExperimentalHammerUses: true,
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
-    additionalExits: [naturalChaosExit, sparkChaosExit],
+    additionalExits: [chaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'ErebusExitDoor' },
@@ -367,7 +368,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     advancesExperimentalHammerUses: true,
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
-    additionalExits: [naturalChaosExit, sparkChaosExit],
+    additionalExits: [chaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'ErebusExitDoor' },
@@ -403,7 +404,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     advancesExperimentalHammerUses: true,
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
-    additionalExits: [naturalChaosExit, sparkChaosExit],
+    additionalExits: [chaosExit],
     structuralTags: [],
     exits: [{ index: 1, type: 'ErebusExitDoor' }],
     incomingReward: {
@@ -436,7 +437,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     advancesExperimentalHammerUses: true,
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
-    additionalExits: [naturalChaosExit, sparkChaosExit],
+    additionalExits: [chaosExit],
     structuralTags: [],
     exits: [{ index: 1, type: 'ErebusExitDoor' }],
     incomingReward: {
@@ -469,7 +470,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     advancesExperimentalHammerUses: true,
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
-    additionalExits: [naturalChaosExit, sparkChaosExit],
+    additionalExits: [chaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'ErebusExitDoor' },
@@ -505,7 +506,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     advancesExperimentalHammerUses: true,
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
-    additionalExits: [naturalChaosExit, sparkChaosExit],
+    additionalExits: [chaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'ErebusExitDoor' },
@@ -541,7 +542,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     advancesExperimentalHammerUses: true,
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
-    additionalExits: [naturalChaosExit, sparkChaosExit],
+    additionalExits: [chaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'ErebusExitDoor' },
@@ -572,7 +573,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     advancesExperimentalHammerUses: true,
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
-    additionalExits: [naturalChaosExit, sparkChaosExit],
+    additionalExits: [chaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'ErebusExitDoor' },
@@ -608,7 +609,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     advancesExperimentalHammerUses: true,
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
-    additionalExits: [naturalChaosExit, sparkChaosExit],
+    additionalExits: [chaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'ErebusExitDoor' },
@@ -644,7 +645,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     advancesExperimentalHammerUses: true,
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
-    additionalExits: [naturalChaosExit, sparkChaosExit],
+    additionalExits: [chaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'ErebusExitDoor' },
@@ -680,7 +681,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     advancesExperimentalHammerUses: true,
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
-    additionalExits: [naturalChaosExit, sparkChaosExit],
+    additionalExits: [chaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'ErebusExitDoor' },
@@ -716,7 +717,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     advancesExperimentalHammerUses: true,
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
-    additionalExits: [naturalChaosExit, sparkChaosExit],
+    additionalExits: [chaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'ErebusExitDoor' },
@@ -752,7 +753,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     advancesExperimentalHammerUses: true,
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
-    additionalExits: [naturalChaosExit, sparkChaosExit],
+    additionalExits: [chaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'ErebusExitDoor' },
@@ -788,7 +789,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     advancesExperimentalHammerUses: true,
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
-    additionalExits: [naturalChaosExit, sparkChaosExit],
+    additionalExits: [chaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'ErebusExitDoor' },
@@ -824,7 +825,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     advancesExperimentalHammerUses: true,
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
-    additionalExits: [naturalChaosExit, sparkChaosExit],
+    additionalExits: [chaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'ErebusExitDoor' },
@@ -860,7 +861,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     advancesExperimentalHammerUses: true,
     kind: 'Combat',
     mode: { kind: 'authored', templateKey: 'StandardCombat' },
-    additionalExits: [naturalChaosExit, sparkChaosExit],
+    additionalExits: [chaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'ErebusExitDoor' },
@@ -896,7 +897,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     advancesExperimentalHammerUses: true,
     kind: 'Miniboss',
     mode: { kind: 'authored', templateKey: 'Miniboss' },
-    additionalExits: [sparkChaosExit],
+    additionalExits: [chaosHostOnlyExit],
     structuralTags: [],
     exits: [{ index: 1, type: 'ErebusExitDoor' }],
     incomingReward: {
@@ -938,7 +939,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     advancesExperimentalHammerUses: true,
     kind: 'Miniboss',
     mode: { kind: 'authored', templateKey: 'Miniboss' },
-    additionalExits: [sparkChaosExit],
+    additionalExits: [chaosHostOnlyExit],
     structuralTags: [],
     exits: [{ index: 1, type: 'ErebusExitDoor' }],
     incomingReward: {
@@ -980,7 +981,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     advancesExperimentalHammerUses: true,
     kind: 'Miniboss',
     mode: { kind: 'authored', templateKey: 'Miniboss' },
-    additionalExits: [sparkChaosExit],
+    additionalExits: [chaosHostOnlyExit],
     structuralTags: [],
     exits: [{ index: 1, type: 'ErebusExitDoor' }],
     incomingReward: {
@@ -1023,7 +1024,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     advancesExperimentalHammerUses: true,
     kind: 'Story',
     mode: { kind: 'authored', templateKey: 'Story' },
-    additionalExits: [naturalChaosExit, sparkChaosExit],
+    additionalExits: [chaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'ErebusExitDoor' },
@@ -1054,7 +1055,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
     advancesExperimentalHammerUses: true,
     kind: 'Reprieve',
     mode: { kind: 'authored', templateKey: 'Fountain' },
-    additionalExits: [naturalChaosExit, sparkChaosExit],
+    additionalExits: [chaosExit],
     structuralTags: [],
     exits: [
       { index: 1, type: 'ErebusExitDoor' },
@@ -1095,8 +1096,7 @@ const fRoomDeclarations: readonly RawRoomDeclaration[] = [
       { index: 2, type: 'ErebusExitDoor' },
     ],
     additionalExits: [
-      naturalChaosExit,
-      sparkChaosExit,
+      chaosExit,
       {
         kind: 'zagreusContract',
         key: 'zagreusContract',

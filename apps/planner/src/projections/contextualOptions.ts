@@ -250,9 +250,9 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
     case 'stygianWellTravelDealRefillUnavailable':
     case 'stygianWellTwistInvalid':
       return { kind: 'store', message: 'Repair this Stygian Well inventory choice.' };
-    case 'sparkChaosMissing':
-    case 'sparkChaosUnavailable':
-      return { kind: 'generic', message: 'Repair this Spark-forced Chaos exit.' };
+    case 'ixionChaosMissing':
+    case 'ixionChaosUnavailable':
+      return { kind: 'generic', message: 'Repair this Ixion-generated Chaos exit.' };
     case 'chaosOrdinaryRequiresCommon':
       return {
         kind: 'trait',

@@ -20,7 +20,7 @@ import {
   simulateProject,
   simulateProjectAssembly,
   type ProjectEvaluation,
-  type NaturalChaosCandidateCapability,
+  type ChaosCandidateCapability,
   type ZagreusContractCandidateCapability,
 } from '@run-planner/engine/simulation';
 import { describe, expect, it } from 'vitest';
@@ -123,7 +123,7 @@ function selectedContractWithoutNormalTargets() {
   return { additional, biome, owner, project };
 }
 
-function selectedAdditionalExitWithDownstream(kind: 'naturalChaos' | 'zagreusContract') {
+function selectedAdditionalExitWithDownstream(kind: 'chaos' | 'zagreusContract') {
   const base = createGoldenFGHIProject();
   const located = base.routes.flatMap((route) =>
     route.biomes.flatMap((plan) =>
@@ -145,8 +145,8 @@ function selectedAdditionalExitWithDownstream(kind: 'naturalChaos' | 'zagreusCon
   project = applyProjectCommand(
     project,
     catalog,
-    kind === 'naturalChaos'
-      ? { kind: 'AddNaturalChaos', additional, occurrenceId: continuationId }
+    kind === 'chaos'
+      ? { kind: 'AddChaos', additional, occurrenceId: continuationId }
       : { kind: 'AddZagreusContract', additional, occurrenceId: continuationId },
   );
   project = applyProjectCommand(project, catalog, {
@@ -165,7 +165,7 @@ function selectedAdditionalExitWithDownstream(kind: 'naturalChaos' | 'zagreusCon
 }
 
 describe('structured workspace source index', () => {
-  it.each(['naturalChaos', 'zagreusContract'] as const)(
+  it.each(['chaos', 'zagreusContract'] as const)(
     'orders a selected %s continuation before retained unpicked topology',
     (kind) => {
       const fixture = selectedAdditionalExitWithDownstream(kind);
@@ -191,7 +191,7 @@ describe('structured workspace source index', () => {
   it('transports exact room-feature capabilities without recomputing them in the source index', () => {
     const project = createGoldenFGHIProject();
     const evaluation = simulateProject(catalog, project);
-    const naturalChaos: NaturalChaosCandidateCapability = Object.freeze({
+    const chaos: ChaosCandidateCapability = Object.freeze({
       failedConditions: Object.freeze([]),
       placementEligible: true,
     });
@@ -214,13 +214,13 @@ describe('structured workspace source index', () => {
       undefined,
       undefined,
       undefined,
-      () => naturalChaos,
+      () => chaos,
       () => zagreusContract,
     );
     const source = biomeSource(indexed, 'Underworld', 'F');
     const occurrence = createOccurrenceAddress(goldenFBiome, goldenFStartId);
 
-    expect(source.naturalChaosAssessment(occurrence)).toBe(naturalChaos);
+    expect(source.chaosAssessment(occurrence)).toBe(chaos);
     expect(source.zagreusContractAssessment(occurrence)).toBe(zagreusContract);
   });
 

@@ -149,12 +149,12 @@ function canonicalRewardStore(
   source: ExitDecisionSourceAddress,
   state: BatchRewardStoreState,
   takeover: boolean,
-  naturalChaosSelected: boolean,
+  chaosSelected: boolean,
 ): CanonicalBatchRewardStore {
   const origin = createBatchRewardStoreAddress(biome, source);
   if (state.kind === 'authoredBaseStore') {
     if (state.baseRewardStoreKey === null) {
-      if (takeover || naturalChaosSelected) return Object.freeze({ origin, kind: 'none' });
+      if (takeover || chaosSelected) return Object.freeze({ origin, kind: 'none' });
       fail('complete batch has no authored reward store');
     }
     return Object.freeze({
@@ -334,7 +334,7 @@ export function materializeAdditionalContinuations(
     additionalExits.map((additional) => {
       const occurrence = requireOccurrence(occurrences, additional.occurrenceId);
       const room =
-        additional.kind === 'naturalChaos' || additional.kind === 'sparkChaos'
+        additional.kind === 'chaos'
           ? requireCatalogRoom(catalog, occurrence)
           : requireRoom(catalog, layout, topology, occurrence);
       if (additional.kind === 'zagreusContract') {
@@ -351,6 +351,11 @@ export function materializeAdditionalContinuations(
       return Object.freeze({
         origin: createAdditionalExitAddress(biome, sourceOccurrenceId, additional.key),
         key: additional.key,
+        ...(additional.kind === 'chaos' && additional.origin === undefined
+          ? {}
+          : additional.kind === 'chaos'
+            ? { chaosOrigin: additional.origin }
+            : {}),
         picked: selected === additional.key,
         room: materializeAuthoredRoom({
           catalog,
@@ -485,7 +490,7 @@ export function materializeBatch(
         source,
         normal.rewardStore,
         takeover,
-        selectedAdditional?.key === 'naturalChaos' || selectedAdditional?.key === 'sparkChaos',
+        selectedAdditional?.key === 'chaos',
       ),
       ...(sharedBatchStoreKey === undefined
         ? {}

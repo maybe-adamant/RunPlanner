@@ -453,11 +453,7 @@ function normalizeAdditionalExits(
   return Object.freeze(
     rawExits.map((raw, index): AdditionalExitDeclaration => {
       const exitPath = `${path}[${index}]`;
-      if (
-        raw.kind !== 'zagreusContract' &&
-        raw.kind !== 'naturalChaos' &&
-        raw.kind !== 'sparkChaos'
-      ) {
+      if (raw.kind !== 'zagreusContract' && raw.kind !== 'chaos') {
         fail(
           `${exitPath}.kind`,
           `unknown additional exit ${String((raw as { kind?: unknown }).kind)}`,
@@ -469,39 +465,20 @@ function normalizeAdditionalExits(
       if (exitType === undefined) {
         fail(`${exitPath}.exitType`, `unknown physical exit type ${exitTypeKey}`);
       }
-      if (raw.kind === 'naturalChaos' || raw.kind === 'sparkChaos') {
-        const expectedKey = raw.kind;
-        if (key !== expectedKey)
-          fail(`${exitPath}.key`, `${raw.kind} exit key must be ${expectedKey}`);
+      if (raw.kind === 'chaos') {
+        const expectedKey = 'chaos';
+        if (key !== expectedKey) fail(`${exitPath}.key`, `chaos exit key must be ${expectedKey}`);
         if (exitType.key !== 'ChaosExitDoor')
-          fail(`${exitPath}.exitType`, `${raw.kind} exits must use ChaosExitDoor`);
+          fail(`${exitPath}.exitType`, 'chaos exits must use ChaosExitDoor');
         if (
           exitType.behavior.kind !== 'playerSelected' ||
           exitType.behavior.rewardPreview !== 'hidden'
         )
-          fail(`${exitPath}.exitType`, `${raw.kind} exits must be player-selected and hidden`);
-        if (raw.kind === 'sparkChaos')
-          return Object.freeze({
-            kind: 'sparkChaos' as const,
-            key: 'sparkChaos' as const,
-            physicalExit: Object.freeze({
-              type: exitType.key,
-              compatibilityPolicyKey: exitType.compatibilityPolicyKey,
-              behavior: exitType.behavior,
-            }),
-          });
-        if (key !== 'naturalChaos') {
-          fail(`${exitPath}.key`, 'natural Chaos exit key must be naturalChaos');
-        }
-        if (exitType.key !== 'ChaosExitDoor') {
-          fail(`${exitPath}.exitType`, 'natural Chaos exits must use ChaosExitDoor');
-        }
-        if (
-          exitType.behavior.kind !== 'playerSelected' ||
-          exitType.behavior.rewardPreview !== 'hidden'
-        ) {
-          fail(`${exitPath}.exitType`, 'natural Chaos exits must be player-selected and hidden');
-        }
+          fail(`${exitPath}.exitType`, 'chaos exits must be player-selected and hidden');
+        if (typeof raw.canHost !== 'boolean') fail(`${exitPath}.canHost`, 'must be a boolean');
+        if (typeof raw.canSpawn !== 'boolean') fail(`${exitPath}.canSpawn`, 'must be a boolean');
+        if (raw.canSpawn && !raw.canHost)
+          fail(`${exitPath}.canSpawn`, 'cannot be true when canHost is false');
         const requirement =
           raw.requirement === undefined
             ? undefined
@@ -515,8 +492,10 @@ function normalizeAdditionalExits(
           rejectEncounterHistoryRequirements(requirement, `${exitPath}.requirement`);
         }
         return Object.freeze({
-          kind: 'naturalChaos',
-          key: 'naturalChaos',
+          kind: 'chaos',
+          key: 'chaos',
+          canHost: raw.canHost,
+          canSpawn: raw.canSpawn,
           physicalExit: Object.freeze({
             type: exitType.key,
             compatibilityPolicyKey: exitType.compatibilityPolicyKey,

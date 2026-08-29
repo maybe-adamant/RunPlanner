@@ -129,7 +129,7 @@ function nodeRailPresentation(
     case 'takeoverBatch': {
       const selectedAdditionalDoors = [
         ...(node.zagreusContract?.selected === true ? [node.zagreusContract.door] : []),
-        ...(node.naturalChaos?.selected === true ? [node.naturalChaos.door] : []),
+        ...(node.chaos?.selected === true ? [node.chaos.door] : []),
       ];
       return {
         label:
@@ -179,7 +179,7 @@ function selectedContinuationDoor(node: BatchWithContinuations): WorkspaceDoorCo
   const selectedDoors = [
     ...node.targets.filter((target) => target.selected).map((target) => target.door),
     ...(node.zagreusContract?.selected === true ? [node.zagreusContract.door] : []),
-    ...(node.naturalChaos?.selected === true ? [node.naturalChaos.door] : []),
+    ...(node.chaos?.selected === true ? [node.chaos.door] : []),
   ];
   return selectedDoors.length === 1 ? selectedDoors[0] : undefined;
 }
@@ -389,7 +389,7 @@ export function presentWorkspaceBiome(
             ...(node.zagreusContract === undefined
               ? []
               : [node.zagreusContract.door.room.occurrenceId]),
-            ...(node.naturalChaos === undefined ? [] : [node.naturalChaos.door.room.occurrenceId]),
+            ...(node.chaos === undefined ? [] : [node.chaos.door.room.occurrenceId]),
           ]
         : [],
     ),

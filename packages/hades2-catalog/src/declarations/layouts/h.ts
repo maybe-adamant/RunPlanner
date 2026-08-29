@@ -29,9 +29,10 @@ export const hBiomeLayout = {
     rewardStoreOverrides: [],
     bounds: { maxBatches: 4, maxTargets: 7 },
   },
-  sparkChaos: {
+  chaos: {
     roomGameNames: ['Chaos_01', 'Chaos_02', 'Chaos_03', 'Chaos_04', 'Chaos_05', 'Chaos_06'],
     defaultRoomGameName: 'Chaos_01',
+    offerSpacingWindow: 10,
   },
   completion: {
     bossRoomGameName: 'H_Boss01',

@@ -422,7 +422,7 @@ export function assembleWorkspaceOccurrence(
     encounterPhases,
     roomLocal,
   );
-  const { features, naturalChaosSpawn, zagreusSpawn } = featureAssembly;
+  const { features, chaosSpawn, zagreusSpawn } = featureAssembly;
   const workbench = roomWorkbenchPresentation(encounterPhases, features, roomLocal, roomActions);
   const localDetailMarkers = Object.freeze([
     ...encounterPhases.flatMap((phase) => [
@@ -443,7 +443,7 @@ export function assembleWorkspaceOccurrence(
             : [keepsakeSelection.equipResult.marker]),
         ]),
     ...(zagreusSpawn === undefined ? [] : [zagreusSpawn.marker]),
-    ...(naturalChaosSpawn === undefined ? [] : [naturalChaosSpawn.marker]),
+    ...(chaosSpawn === undefined ? [] : [chaosSpawn.marker]),
   ]);
   const roomSummary: WorkspaceRoomSummary = Object.freeze({
     address,
@@ -493,7 +493,7 @@ export function assembleWorkspaceOccurrence(
         })()),
     ...(input.roomPicker === undefined ? {} : { roomPicker: input.roomPicker }),
     ...(zagreusSpawn === undefined ? {} : { zagreusSpawn }),
-    ...(naturalChaosSpawn === undefined ? {} : { naturalChaosSpawn }),
+    ...(chaosSpawn === undefined ? {} : { chaosSpawn }),
     roomLocal,
     rewardControls: allRewardControls,
     ...(input.resourceAuthoring === undefined
@@ -582,7 +582,7 @@ export function assembleWorkspaceOccurrence(
   input.markerDestinations.setRoomTab(
     [
       ...(zagreusSpawn === undefined ? [] : [zagreusSpawn.marker]),
-      ...(naturalChaosSpawn === undefined ? [] : [naturalChaosSpawn.marker]),
+      ...(chaosSpawn === undefined ? [] : [chaosSpawn.marker]),
     ],
     'overview',
   );

@@ -7,7 +7,7 @@ import type {
   WorkspaceExitSelectionInteraction,
   WorkspaceFieldsCageOutcomeInteraction,
   WorkspaceZagreusContractInteraction,
-  WorkspaceNaturalChaosExitInteraction,
+  WorkspaceChaosExitInteraction,
 } from '../contract';
 import type { WorkspaceBatchInteractionRequirement } from './interaction-requirements';
 import { candidateInteraction } from './interaction-binding-primitives';
@@ -17,7 +17,7 @@ export interface WorkspaceBatchInteractionCatalog {
   readonly exitSelections: ReadonlyMap<string, WorkspaceExitSelectionInteraction>;
   readonly fieldsCageOutcomes: ReadonlyMap<string, WorkspaceFieldsCageOutcomeInteraction>;
   readonly zagreusContracts: ReadonlyMap<string, WorkspaceZagreusContractInteraction>;
-  readonly naturalChaosExits: ReadonlyMap<string, WorkspaceNaturalChaosExitInteraction>;
+  readonly chaosExits: ReadonlyMap<string, WorkspaceChaosExitInteraction>;
 }
 
 export function bindBatchInteractions(
@@ -28,7 +28,7 @@ export function bindBatchInteractions(
   const exitSelections = new Map<string, WorkspaceExitSelectionInteraction>();
   const fieldsCageOutcomes = new Map<string, WorkspaceFieldsCageOutcomeInteraction>();
   const zagreusContracts = new Map<string, WorkspaceZagreusContractInteraction>();
-  const naturalChaosExits = new Map<string, WorkspaceNaturalChaosExitInteraction>();
+  const chaosExits = new Map<string, WorkspaceChaosExitInteraction>();
   for (const requirement of requirements) {
     if (requirement.exitSelection !== undefined) {
       const { exitSelection } = requirement;
@@ -160,15 +160,15 @@ export function bindBatchInteractions(
         }),
       );
     }
-    if (requirement.naturalChaos !== undefined) {
-      const { owner, occurrence } = requirement.naturalChaos;
+    if (requirement.chaos !== undefined) {
+      const { owner, occurrence } = requirement.chaos;
       const key = semanticAddressKey(owner);
-      if (naturalChaosExits.has(key)) {
+      if (chaosExits.has(key)) {
         throw new StructuredWorkspaceProjectionContractError(
-          `${key} has multiple bound natural Chaos exit interactions`,
+          `${key} has multiple bound Chaos exit interactions`,
         );
       }
-      naturalChaosExits.set(
+      chaosExits.set(
         key,
         Object.freeze({
           key,
@@ -176,14 +176,21 @@ export function bindBatchInteractions(
           mapIntent: (gameName: string) =>
             Object.freeze({
               command: Object.freeze({
-                kind: 'ReplaceNaturalChaosMap' as const,
+                kind: 'ReplaceChaosMap' as const,
                 occurrence,
                 gameName,
               }),
             }),
-          removeIntent: Object.freeze({
-            command: Object.freeze({ kind: 'RemoveNaturalChaos' as const, additional: owner }),
-          }),
+          ...(requirement.chaos.forced
+            ? {}
+            : {
+                removeIntent: Object.freeze({
+                  command: Object.freeze({
+                    kind: 'RemoveChaos' as const,
+                    additional: owner,
+                  }),
+                }),
+              }),
           selectIntent: Object.freeze({
             command: Object.freeze({
               kind: 'SetExitSelection' as const,
@@ -208,6 +215,6 @@ export function bindBatchInteractions(
     exitSelections,
     fieldsCageOutcomes,
     zagreusContracts,
-    naturalChaosExits,
+    chaosExits,
   });
 }

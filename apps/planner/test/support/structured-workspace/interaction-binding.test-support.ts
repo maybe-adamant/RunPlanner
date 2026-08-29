@@ -195,14 +195,14 @@ export function selectedNChaosFrontierProject(persistTerminalDecision = true): P
     },
   });
   project = applyProjectCommand(project, catalog, {
-    kind: 'AddNaturalChaos',
-    additional: createAdditionalExitAddress(nBiome, opening, 'naturalChaos'),
+    kind: 'AddChaos',
+    additional: createAdditionalExitAddress(nBiome, opening, 'chaos'),
     occurrenceId: chaos,
   });
   project = applyProjectCommand(project, catalog, {
     kind: 'SetExitSelection',
     selection: createExitSelectionAddress(nBiome, { kind: 'occurrence', occurrenceId: opening }),
-    value: { kind: 'additional', additionalExitKey: 'naturalChaos' },
+    value: { kind: 'additional', additionalExitKey: 'chaos' },
   });
   project = authorLegalTraitOffers(project);
   return persistTerminalDecision

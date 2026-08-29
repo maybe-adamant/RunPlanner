@@ -32,6 +32,7 @@ import {
 import { applyRoomActionCommand } from './room-actions';
 import { reconcileNewRequiredRoomActions } from '../room-action-defaults';
 import { reconcileSelectedPickupProducerState } from '../pickup-producers';
+import { reconcileChaosTopology } from '../chaos-gate-reconciliation';
 
 /**
  * Generated pickup sites are derived from their exact source acquisition. Run
@@ -201,12 +202,9 @@ function applyUnchecked(
     case 'RevertAnomaly':
     case 'AddZagreusContract':
     case 'RemoveZagreusContract':
-    case 'AddNaturalChaos':
-    case 'AddSparkChaos':
-    case 'RemoveNaturalChaos':
-    case 'RemoveSparkChaos':
-    case 'ReplaceNaturalChaosMap':
-    case 'ReplaceSparkChaosMap':
+    case 'AddChaos':
+    case 'RemoveChaos':
+    case 'ReplaceChaosMap':
       return applyRouteDetourCommand(
         document,
         catalog,
@@ -351,11 +349,12 @@ export function applyProjectCommand(
       withSourceActions,
       catalog,
     );
-    const reconciled = reconcileNewRequiredRoomActions(
+    const withRequiredActions = reconcileNewRequiredRoomActions(
       withSourceActions,
       withGeneratedPickupState,
       catalog,
     );
+    const reconciled = reconcileChaosTopology(withRequiredActions, catalog);
     return decodeProjectDocument(reconciled, catalog);
   } catch (error) {
     if (error instanceof ProjectCommandContractError) throw error;

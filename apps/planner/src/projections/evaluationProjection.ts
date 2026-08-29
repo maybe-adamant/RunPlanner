@@ -552,13 +552,13 @@ const findingCopy = {
     title: 'Twist result unavailable',
     description: 'Repair this retained Twist result or its purchased parent item.',
   },
-  sparkChaosMissing: {
-    title: 'Spark Chaos exit missing',
+  ixionChaosMissing: {
+    title: 'Ixion Chaos gate missing',
     description: 'Author the forced Chaos exit at the first capable physical host.',
   },
-  sparkChaosUnavailable: {
-    title: 'Spark Chaos exit unavailable',
-    description: 'Remove this forced Chaos exit or restore a pending Spark use.',
+  ixionChaosUnavailable: {
+    title: 'Ixion Chaos gate unavailable',
+    description: 'Remove this generated Chaos exit or restore a pending Ixion use.',
   },
   nemesisOutcomeMissing: {
     title: 'Choose the Nemesis event result',
