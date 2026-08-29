@@ -359,8 +359,14 @@ Five source effects intersect current planner authority:
 
 1. **Creation** changes the equipped element ledger and therefore Infusion and
    Chant eligibility after maturation.
-2. **Ordinary** forces the next counted Olympian offers to Common. It affects
-   option rarity, not merely tooltip text.
+2. **Ordinary** replaces the fresh rarity table with Common for the next
+   counted Olympian offers. A legitimate replacement row retains its explicit
+   one-step promoted rarity; Ordinary does not rewrite the completed screen.
+   `HeroData.BoonData.ReplaceChance` is `0.1`, but its source branch requires
+   `not lootData.ForceCommon`, making that roll impossible while Ordinary is
+   active. `ForceSwaps` is checked earlier, so Sacrificial Hymn still forces one
+   eligible replacement. The later shortage-fill replacement pass is
+   independent of both checks.
 3. **Rejected** keeps three generated Olympian identities but makes one exact
    option unselectable. The authored trait-offer contract must retain that
    blocked option because it is still seen and can be consumed by Vow of
@@ -421,7 +427,9 @@ default.
 Any of the 17 curses and 16 blessings may become real selected/matured trait
 history. The five consequences named above are active in their owning existing authorities:
 Creation adds elements on maturation; Ordinary constrains fresh god-offer
-rarity; Rejected retains the blocked third option and Vow of Denial contact;
+rarity and makes the ordinary replacement roll impossible while replacement
+rows forced by Hymn or offer shortage retain their promoted rarity; Rejected
+retains the blocked third option and Vow of Denial contact;
 Barren temporarily suppresses Arcana consequences including Artificer and
 Judgment; and Favor contributes to the offer-local rarity ledger. Separately,
 Denial folds the two exact unselected Chaos curse identities into later curse

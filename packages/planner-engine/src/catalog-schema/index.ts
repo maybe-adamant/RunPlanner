@@ -1026,6 +1026,7 @@ export interface Catalog {
   readonly boonRarityBases: Readonly<
     Record<'olympian' | 'hermes', import('./traits').BoonRarityValues>
   >;
+  readonly boonReplacementChance: number;
   readonly echoLastRunBoon: import('./traits').EchoLastRunBoonCatalog;
   /** Complete normalized frozen Hex layout declarations. */
   readonly hexes: CatalogCollection<import('./traits').HexDeclaration>;

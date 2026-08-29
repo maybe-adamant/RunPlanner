@@ -111,6 +111,7 @@ export interface RawTraitCatalogInput {
   readonly boonRarityBases: Readonly<
     Record<'olympian' | 'hermes', import('@run-planner/engine/catalog-schema').BoonRarityValues>
   >;
+  readonly boonReplacementChance: number;
   readonly echoLastRunBoon: {
     readonly sources: readonly {
       readonly giverKey: string;

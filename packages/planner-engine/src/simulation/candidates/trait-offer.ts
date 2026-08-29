@@ -408,7 +408,6 @@ export interface EvaluatedTraitOfferCandidate {
     readonly concaveStone?: readonly ConcaveStoneCandidateBranch[];
     /** Branch-correlated active Chaos restrictions at this complete offer. */
     readonly chaosOfferRules?: readonly {
-      readonly ordinaryRequiresCommon: boolean;
       readonly rejectedBlockRequired: boolean;
       readonly rejectedBlockableOptionKeys: readonly TraitOptionKey[];
       readonly rejectedBlockNeedsRepair: boolean;
@@ -585,7 +584,6 @@ function evaluatedTraitOfferCandidate(
   callingCard: readonly CallingCardOfferCandidateBranch[],
   concaveStone: readonly ConcaveStoneCandidateBranch[] = Object.freeze([]),
   chaosOfferRules: readonly {
-    readonly ordinaryRequiresCommon: boolean;
     readonly rejectedBlockRequired: boolean;
     readonly rejectedBlockableOptionKeys: readonly TraitOptionKey[];
     readonly rejectedBlockNeedsRepair: boolean;

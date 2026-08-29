@@ -384,11 +384,6 @@ const findingCopy = {
     title: 'Trait banned by Vow of Denial',
     description: 'This trait was left unselected in an earlier Denial offer.',
   },
-  chaosOrdinaryRequiresCommon: {
-    title: 'Ordinary requires Common options',
-    description:
-      'While Ordinary is active, this eligible god-boon screen must retain only Common rarities.',
-  },
   chaosRejectedBlockMissing: {
     title: 'Rejected needs a blocked option',
     description: 'Choose one visible, unselected option to block while Rejected is active.',

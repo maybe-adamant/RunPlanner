@@ -62,6 +62,22 @@ describe('trait offer-catalog compiler owner', () => {
     });
     expect(catalog.traitGivers.byKey.Apollo).not.toHaveProperty('boonRarityBase');
     expect(catalog.traitGivers.byKey.Hermes).not.toHaveProperty('boonRarityBase');
+    expect(catalog.boonReplacementChance).toBe(0.1);
+  });
+
+  it('rejects an invalid ordinary replacement-roll chance', () => {
+    expect(() =>
+      createCatalog({
+        ...declarations,
+        traitCatalog: { ...declarations.traitCatalog, boonReplacementChance: Number.NaN },
+      }),
+    ).toThrow(/boonReplacementChance/);
+    expect(() =>
+      createCatalog({
+        ...declarations,
+        traitCatalog: { ...declarations.traitCatalog, boonReplacementChance: 1.1 },
+      }),
+    ).toThrow(/boonReplacementChance/);
   });
 
   it('rejects incomplete, extra, and non-finite provider base declarations', () => {

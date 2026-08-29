@@ -132,7 +132,6 @@ export type TraitFindingCode =
   | 'echoShopDuplicateChildMissing'
   | 'allTogetherResultMissing'
   | 'allTogetherResultUnavailable'
-  | 'chaosOrdinaryRequiresCommon'
   | 'chaosRejectedBlockMissing'
   | 'chaosRejectedBlockUnavailable'
   | 'chaosPairUnavailable'

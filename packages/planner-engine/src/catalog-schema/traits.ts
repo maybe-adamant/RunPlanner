@@ -448,6 +448,8 @@ export interface TraitCatalog {
   readonly givers: CatalogCollection<TraitGiverDeclaration>;
   /** Complete source base ledgers for the only fresh-roll providers this slice supports. */
   readonly boonRarityBases: Readonly<Record<'olympian' | 'hermes', BoonRarityValues>>;
+  /** Source `HeroData.BoonData.ReplaceChance` for ordinary replacement rolls. */
+  readonly boonReplacementChance: number;
   readonly chaos: ChaosTraitCatalog;
   readonly echoLastRunBoon: EchoLastRunBoonCatalog;
   readonly hexes: CatalogCollection<HexDeclaration>;

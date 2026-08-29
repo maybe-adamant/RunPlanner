@@ -284,16 +284,15 @@ export function assessTraitOption(
       detail: trait.equipmentSlot,
     });
   }
-  // Ranked authored rarities are structurally allowed to retain an equipped
-  // rarity while the contextual offer decides whether it is a fresh option.
-  // Legal replacements may use their exact promoted rarity, and a source may
-  // explicitly override the fresh appearance rarity (for example, Gorgon at
-  // Heroic), even though Heroic is never an ordinary fresh offer rarity.
+  // A source override is the exact rarity for fresh rows, not an offer-wide
+  // rewrite. Legal replacements retain their explicit promoted rarity even
+  // when the fresh table is overridden (for example, Ordinary at Common).
   if (
     trait.rarityDomain.kind === 'ranked' &&
     rarity !== undefined &&
-    !trait.rarityDomain.freshOfferRarities.includes(rarity) &&
-    context.freshRarityOverride !== rarity &&
+    (context.freshRarityOverride === undefined
+      ? !trait.rarityDomain.freshOfferRarities.includes(rarity)
+      : rarity !== context.freshRarityOverride) &&
     replacementTransition === undefined
   ) {
     findings.push({
@@ -650,7 +649,7 @@ export function traitOfferStartingDraft(
         exhaustionStartingCandidates(
           catalog,
           domains,
-          (context.limitedSwapUses ?? 0) > 0 && domains.replacements.length > 0 ? 1 : 0,
+          context.replacementRollChance ?? catalog.boonReplacementChance,
         ),
         selfContained,
       )
@@ -724,7 +723,7 @@ export function nextTraitOfferDraft(
     const composition = assessDraftDomainComposition(
       current,
       domains,
-      (context.limitedSwapUses ?? 0) > 0 && domains.replacements.length > 0 ? 1 : 0,
+      context.replacementRollChance ?? catalog.boonReplacementChance,
     );
     if (composition.legal) return assessTraitOfferComposition(catalog, current, history).legal;
     if (current.options.length >= 3) return false;
@@ -802,12 +801,12 @@ function traitDraft(
 function exhaustionStartingCandidates(
   catalog: Catalog,
   domains: TraitOfferCompositionDomains,
-  minimumReplacementCount = 0,
+  replacementRollChance: number,
 ): readonly TraitCandidateAssessment[] {
   const ordinary = automaticDraftCandidates(domains.ordinary);
   const highTier = automaticDraftCandidates(domains.highTier);
   const replacements = automaticDraftCandidates(domains.replacements);
-  if (minimumReplacementCount > 0 && replacements.length > 0) {
+  if (replacementRollChance === 1 && replacements.length > 0) {
     const replacement = replacements[0]!;
     const remainder = [...ordinary, ...highTier, ...replacements.slice(1)].slice(0, 2);
     return [replacement, ...remainder];
@@ -869,7 +868,7 @@ function isAttackOrSpecial(catalog: Catalog, traitKey: string): boolean {
 function assessDraftDomainComposition(
   draft: AuthoredTraitOfferTraits,
   domains: TraitOfferCompositionDomains,
-  minimumReplacementCount = 0,
+  replacementRollChance: number,
 ): TraitOfferDomainCompositionResult {
   const ordinary = new Set(domains.ordinary.map((candidate) => candidate.traitKey));
   const highTier = new Set(domains.highTier.map((candidate) => candidate.traitKey));
@@ -891,7 +890,7 @@ function assessDraftDomainComposition(
       ),
     ),
     fallbackGold: false,
-    minimumReplacementCount,
+    replacementRollChance,
   });
 }
 

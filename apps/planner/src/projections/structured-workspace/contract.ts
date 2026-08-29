@@ -748,7 +748,6 @@ export interface WorkspaceRejectedBlockDomain {
 
 /** Engine facts from one surviving ordinary-offer branch. */
 export interface WorkspaceRejectedBlockRule {
-  readonly ordinaryRequiresCommon: boolean;
   readonly rejectedBlockRequired: boolean;
   readonly rejectedBlockableOptionKeys: readonly TraitOptionKey[];
   readonly rejectedBlockNeedsRepair: boolean;

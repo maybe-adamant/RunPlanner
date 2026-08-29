@@ -242,6 +242,7 @@ describe('derived Olympian trait replacement', () => {
         replacementKeys: keys('replacement', replacementCount),
         authored: Object.freeze(authored),
         fallbackGold,
+        replacementRollChance: 0.1,
       });
       expect(result.legal).toBe(legal);
     },
@@ -302,6 +303,7 @@ describe('derived Olympian trait replacement', () => {
           authoredKinds.map((kind, index) => ({ traitKey: `${kind}${index + 1}`, kind })),
         ),
         fallbackGold,
+        replacementRollChance: 0.1,
       });
       expect(result.legal).toBe(false);
       expect(result.findings.map((finding) => finding.code)).toContain(code);
@@ -327,6 +329,22 @@ describe('derived Olympian trait replacement', () => {
       oldRarity,
       newTraitKey: 'ApolloWeaponBoon',
       requiredRarity,
+    });
+  });
+
+  it('preserves exact replacement promotion under a fresh-rarity override', () => {
+    const before = history([['Zeus', 'ZeusWeaponBoon', 'Common']]);
+    const context = { resolvedProviderKey: 'Apollo', freshRarityOverride: 'Common' as const };
+    const replacement = assessTraitOption(catalog, 'ApolloWeaponBoon', before, context, 'Rare');
+    expect(replacement.legal).toBe(true);
+    expect(replacement.replacementTransition?.requiredRarity).toBe('Rare');
+
+    expect(
+      assessTraitOption(catalog, 'ApolloSpecialBoon', before, context, 'Rare').findings,
+    ).toContainEqual({
+      code: 'freshRarityUnavailable',
+      traitKey: 'ApolloSpecialBoon',
+      detail: 'Rare',
     });
   });
 
