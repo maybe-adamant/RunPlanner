@@ -188,13 +188,13 @@ describe('Biome inspector controls', () => {
     });
     const project = started;
     const view = renderWorkspace(project, 'Underworld', 'F');
-    const identity = screen.getByRole('region', { name: 'Start room identity' });
+    const identity = screen.getByRole('region', { name: 'Start room configuration' });
     const workbench = document.querySelector('.biome-occurrence-workbench');
     if (!(workbench instanceof HTMLElement)) throw new Error('start workbench is missing');
-    expect(within(workbench).queryByLabelText('Start room')).toBeNull();
+    expect(within(workbench).queryByLabelText('Room')).toBeNull();
     const historyBefore = view.application.store.getState().projectWorkspace.history.past.length;
 
-    await view.user.click(within(identity).getByRole('button', { name: 'Start room' }));
+    await view.user.click(within(identity).getByRole('button', { name: 'Room' }));
     const replacement = within(await screen.findByRole('listbox'))
       .getAllByRole('option')
       .find(
@@ -232,7 +232,7 @@ describe('Biome inspector controls', () => {
       occurrenceId,
     });
     const view = renderWorkspace(started, 'Underworld', 'F');
-    const identity = screen.getByRole('region', { name: 'Start room identity' });
+    const identity = screen.getByRole('region', { name: 'Start room configuration' });
     const historyBefore = view.application.store.getState().projectWorkspace.history.past.length;
 
     await view.user.click(within(identity).getByLabelText('Reward'));
@@ -259,9 +259,9 @@ describe('Biome inspector controls', () => {
   it('shows the fixed N entry reward without a start identity picker', async () => {
     const view = renderWorkspace(loadSurfaceNOPQProject(), 'Surface', 'N');
     await view.user.click(screen.getByRole('button', { name: /^Opening/ }));
-    const entryReward = screen.getByRole('region', { name: 'Entry reward' });
+    const entryReward = screen.getByRole('region', { name: 'Start room configuration' });
     expect(within(entryReward).getByLabelText('Reward')).toBeTruthy();
-    expect(within(entryReward).queryByLabelText('Start room')).toBeNull();
+    expect(within(entryReward).queryByText('Opening')).toBeTruthy();
     expect(within(entryReward).queryByRole('heading', { name: 'Entry reward' })).toBeNull();
     expect(within(entryReward).queryByRole('button', { name: /Edit Trait/ })).toBeNull();
   });

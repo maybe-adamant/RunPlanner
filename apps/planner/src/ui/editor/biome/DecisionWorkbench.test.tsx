@@ -417,11 +417,13 @@ describe('DecisionWorkbench', () => {
 
   it('renders the ordinary outgoing cards immediately after the fixed N start', async () => {
     const view = renderDecisionWorkbench(emptyProject('Surface'), 'Surface', 'N', currentFrontier);
-    expect(screen.getByText('Start with Opening')).toBeTruthy();
+    expect(screen.getByText('Configure starting room')).toBeTruthy();
     expect(screen.queryByText('N_Opening01')).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Starting room' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Room' })).toBeTruthy();
+    expect(screen.getByText('Choose room to show reward')).toBeTruthy();
 
-    await view.user.click(screen.getByRole('button', { name: 'Start biome' }));
+    await view.user.click(screen.getByRole('button', { name: 'Room' }));
+    await view.user.click(within(screen.getByRole('listbox')).getByRole('option'));
     const plan = view.application.store
       .getState()
       .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
@@ -453,6 +455,25 @@ describe('DecisionWorkbench', () => {
     expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
       before + 1,
     );
+  });
+
+  it('uses Intro language for a fixed one-room start without auto-selecting it', async () => {
+    const view = renderDecisionWorkbench(
+      createProjectDocument(catalog, {
+        configuredBiomeCounts: { Surface: 4 },
+        projectId: 'decision-workbench-intro-start',
+      }),
+      'Surface',
+      'P',
+      currentFrontier,
+    );
+    expect(screen.getByText('Configure Intro room')).toBeTruthy();
+    expect(screen.getByText('Choose room to show reward')).toBeTruthy();
+
+    await view.user.click(screen.getByRole('button', { name: 'Room' }));
+    const options = within(screen.getByRole('listbox')).getAllByRole('option');
+    expect(options).toHaveLength(1);
+    expect(options[0]?.getAttribute('data-selected-value')).toBe('false');
   });
 
   it('offers only engine-declared PreHub through N Opening’s ordinary picker', async () => {
@@ -511,6 +532,11 @@ describe('DecisionWorkbench', () => {
         true,
       ),
     );
+    const rewardTarget = document.querySelector<HTMLElement>(
+      '.biome-target-row:not([data-missing="true"]) .door-reward-list [id$="-reward"], .biome-target-row:not([data-missing="true"]) .door-reward-list [id$="-status"]',
+    );
+    if (rewardTarget === null) throw new Error('F selected offer reward target is missing');
+    await waitFor(() => expect(document.activeElement).toBe(rewardTarget));
     expect(view.application.store.getState().projectWorkspace.history.past).toHaveLength(
       historyBefore + 1,
     );
@@ -799,6 +825,29 @@ describe('DecisionWorkbench', () => {
       expect(within(card).getByRole('button', { name: 'Cage 1' })).toBeTruthy();
       expect(within(card).getByRole('button', { name: 'Cage 2' })).toBeTruthy();
       expect(offers.querySelectorAll('.field-control-inline')).toHaveLength(2);
+    }
+  });
+
+  it('shows all three max Fields cages without leaking optional pickups onto outgoing cards', () => {
+    const owner = createExitDecisionAddress(goldenHBiome, {
+      kind: 'occurrence',
+      occurrenceId: createOccurrenceId('golden-h-miniboss01'),
+    });
+    renderStaticDecisionWorkbench(
+      createGoldenFGHIProject(),
+      'Underworld',
+      'H',
+      subjectForOwner(owner),
+    );
+
+    for (const roomLabel of ['Combat 05', 'Combat 04']) {
+      const card = screen.getByRole('article', { name: `${roomLabel} room offer` });
+      const offers = within(card).getByLabelText(`${roomLabel} door rewards`);
+      for (const cage of ['Cage 1', 'Cage 2', 'Cage 3']) {
+        expect(within(card).getByRole('button', { name: cage })).toBeTruthy();
+      }
+      expect(offers.querySelectorAll('.field-control-inline')).toHaveLength(3);
+      expect(within(card).queryByText(/Optional \d/)).toBeNull();
     }
   });
 
@@ -1270,9 +1319,7 @@ describe('DecisionWorkbench', () => {
       firstNodeOfKind('mixedBatch'),
     );
     expect(document.querySelector('[data-batch-kind="mixedBatch"]')).not.toBeNull();
-    expect(
-      screen.getByRole('heading', { level: 3, name: 'Choose a room and reward' }),
-    ).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 3, name: 'Configure door offer' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Open next room' })).not.toHaveProperty(
       'disabled',
       true,

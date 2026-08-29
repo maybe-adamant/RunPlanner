@@ -217,9 +217,7 @@ function RailFrontier({
       : requireWorkspaceInteraction(interactions.starts, frontier.interactionKey);
   const label =
     frontier.kind === 'start'
-      ? start?.kind === 'fixed'
-        ? `Start with ${start.fixedLabel}`
-        : 'Choose the first room'
+      ? (start?.configurationLabel ?? 'Configure starting room')
       : 'Continue route';
   return (
     <div className="biome-rail-stop biome-frontier-stop">
