@@ -141,6 +141,9 @@ export function occurrenceActionLabel(
                 reference.entryKey)
               : reference.entryKey;
       if (shrineDelivery !== undefined) {
+        if (rewardControl?.offer?.rewardType === 'BlindBoxLoot') {
+          return `Receive ${entryLabel}`;
+        }
         const summary =
           rewardControl?.offer === null || rewardControl?.offer === undefined
             ? entryLabel

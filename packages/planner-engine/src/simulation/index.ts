@@ -376,6 +376,7 @@ export {
   countedRewardTypeDomain,
   acquisitionConversionCandidateForProjectEvaluationAssembly,
   derivedAcquisitionEntriesForProjectEvaluationAssembly,
+  hermesShrineDeliveryPlacementForPurchaseReschedule,
   blockedOccurrenceRoomForProjectEvaluationAssembly,
   keepsakeEquipResultCandidateForProjectEvaluationAssembly,
   levelResolutionCandidateForProjectEvaluationAssembly,

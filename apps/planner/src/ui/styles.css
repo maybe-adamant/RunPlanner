@@ -3451,6 +3451,33 @@ select {
   white-space: nowrap;
 }
 
+.room-action-inline-reward {
+  width: min(16rem, 24vw);
+  min-width: 13rem;
+}
+
+.room-action-inline-reward .field-control-inline {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.room-action-row[data-inline-layout='mystery-boon'] {
+  grid-template-columns: auto minmax(0, 1fr);
+}
+
+.room-action-row[data-inline-layout='mystery-boon'] > .room-action-controls,
+.room-action-row[data-inline-layout='mystery-boon'] .room-action-inline-editors {
+  width: 100%;
+  justify-content: flex-start;
+}
+
+.room-action-row[data-inline-layout='mystery-boon'] .room-action-inline-editors {
+  flex: 1;
+}
+
+.room-action-row[data-inline-layout='mystery-boon'] .trait-offer-launcher {
+  margin-inline-start: auto;
+}
+
 .room-action-row > .room-action-controls {
   justify-content: flex-end;
 }
@@ -3537,7 +3564,8 @@ select {
 }
 
 @media (max-width: 700px) {
-  .room-action-row {
+  .room-action-row,
+  .room-action-row[data-inline-layout='mystery-boon'] {
     grid-template-columns: minmax(0, 1fr);
   }
 
@@ -4007,7 +4035,8 @@ select {
 }
 
 .visually-hidden,
-.room-keepsake-control[data-label-hidden='true'] > .contextual-picker > label {
+.room-keepsake-control[data-label-hidden='true'] > .contextual-picker > label,
+.room-action-inline-reward .contextual-picker > label {
   position: absolute;
   width: 1px;
   height: 1px;

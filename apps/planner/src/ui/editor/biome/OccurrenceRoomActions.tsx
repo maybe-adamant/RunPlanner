@@ -325,6 +325,10 @@ export function RoomActionsWorkbench({
       proposals.some((proposal) => proposal.kind === 'move');
     const staleShopRemoval = row.stale ? row.shopParticipation : undefined;
     const placement = row.placement;
+    const inlineMysteryBoonOffer =
+      row.rewardPayload?.showOffer === true &&
+      (row.rewardPayload.control.offer?.rewardType ??
+        row.rewardPayload.control.authoringSeed?.rewardType) === 'BlindBoxLoot';
     const removeRow = (): void => {
       const removable = proposals.find((proposal) => proposal.kind === 'remove');
       if (removable?.structurallyAuthorable === true) {
@@ -355,7 +359,9 @@ export function RoomActionsWorkbench({
           data-inline-layout={
             row.reference.kind === 'interactKeepsakeRack' || row.fountainRarity !== undefined
               ? 'compact'
-              : undefined
+              : inlineMysteryBoonOffer
+                ? 'mystery-boon'
+                : undefined
           }
           data-room-action-key={row.key}
           id={semanticOwnerControlElementId(row.address)}
@@ -386,7 +392,11 @@ export function RoomActionsWorkbench({
           <div className="hub-rank-actions room-action-controls">
             <div className="room-action-inline-editors">
               {renderRowContent?.(row)}
-              <RoomActionInlineEditors interactions={interactions} row={row} />
+              <RoomActionInlineEditors
+                inlineRewardOffer={inlineMysteryBoonOffer}
+                interactions={interactions}
+                row={row}
+              />
             </div>
             {placement === undefined ? (
               <RoomActionOrderingControls
@@ -436,7 +446,11 @@ export function RoomActionsWorkbench({
               }
             />
           )}
-          <RoomActionAcquisitionRow interactions={interactions} row={row} />
+          <RoomActionAcquisitionRow
+            hideOffer={inlineMysteryBoonOffer}
+            interactions={interactions}
+            row={row}
+          />
           {renderSupplement(supplement)}
         </li>
         {row.rank === null ? null : checkpointRows(row.rank, checkpoints)}

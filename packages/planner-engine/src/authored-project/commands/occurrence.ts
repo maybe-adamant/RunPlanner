@@ -16,6 +16,7 @@ import {
   defaultHermesShrineDeliveryReward,
   hermesShrineDeliveryEntryKey,
   parseHermesShrineDeliveryEntryKey,
+  unplaceHermesShrineDelivery,
 } from '../hermes-shrine-delivery';
 
 function withRushedHermesDelivery(
@@ -237,7 +238,7 @@ export function applyOccurrenceCommand(
               }),
         }) as import('../model').HermesShrineState,
       });
-      return updateOccurrence(
+      const updated = updateOccurrence(
         document,
         located,
         command.purchase?.rushed === true
@@ -249,6 +250,11 @@ export function applyOccurrenceCommand(
               selectedOffer.rewardType,
             )
           : nextOccurrence,
+      );
+      return unplaceHermesShrineDelivery(
+        updated,
+        deliveryEntryKey,
+        command.purchase?.rushed === true ? command.occurrence : undefined,
       );
     }
     case 'ReplaceHermesShrineTravelDealRefill': {

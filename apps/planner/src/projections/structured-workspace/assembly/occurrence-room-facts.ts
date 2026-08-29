@@ -136,13 +136,13 @@ export function assembleOccurrenceRewardLocal(
                 const pickup = activePickups.find(
                   (candidate) => candidate.siteKey === siteKey && candidate.key === key,
                 );
-                const capability = derivedEntries.find(
-                  (entry) => entry.kind === 'echoLastReward' && entry.address.entryKey === key,
-                );
-                const fixedEchoOffer = capability?.fixedReward?.offer;
+                const capability = derivedEntries.find((entry) => entry.address.entryKey === key);
+                const echoCapability =
+                  capability?.kind === 'echoLastReward' ? capability : undefined;
+                const fixedEchoOffer = echoCapability?.fixedReward?.offer;
                 const fixedOfferEdit =
                   fixedEchoOffer === undefined ||
-                  (reward !== null && capability?.retainedSourceMismatch !== true)
+                  (reward !== null && echoCapability?.retainedSourceMismatch !== true)
                     ? undefined
                     : Object.freeze({
                         actionLabel: `${reward === null ? 'Set' : 'Update'} replay reward · ${summarizeRewardOffer(input.catalog, fixedEchoOffer)}`,

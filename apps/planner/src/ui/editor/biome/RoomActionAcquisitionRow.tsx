@@ -10,16 +10,19 @@ import { RewardControlEditor } from '../rewards/RewardControlEditor';
 
 /** Acquisition, conversion, and Artificer-output presentation for one action. */
 export function RoomActionAcquisitionRow({
+  hideOffer = false,
   row,
   interactions,
 }: {
+  readonly hideOffer?: boolean;
   readonly row: WorkspaceRoomActionRow;
   readonly interactions: WorkspaceInteractionCatalog;
 }) {
   const payload = row.rewardPayload;
   if (payload === undefined) return null;
+  const showOffer = payload.showOffer && !hideOffer;
   const visible =
-    payload.showOffer ||
+    showOffer ||
     payload.control.realizedAcquisition !== undefined ||
     (payload.showOwner && payload.control.marker.findingCount > 0) ||
     (payload.control.conversions ?? []).some(
@@ -46,7 +49,7 @@ export function RoomActionAcquisitionRow({
           interactions={interactions}
           showAcquisitionChildren
           showLevelResolutions={false}
-          showOffer={payload.showOffer}
+          showOffer={showOffer}
           showTraitOffers={false}
           {...(payload.control.offerEditStartStep === undefined
             ? {}

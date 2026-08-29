@@ -129,6 +129,15 @@ function structure(
         key: `encounterStart:${phase.phaseKey}`,
         phaseKey: phase.phaseKey,
       }),
+      ...(profileKey === 'BossRoom'
+        ? [
+            Object.freeze({
+              kind: 'bossDefeated' as const,
+              key: `bossDefeated:${phase.phaseKey}`,
+              phaseKey: phase.phaseKey,
+            }),
+          ]
+        : []),
       Object.freeze({
         kind: 'encounterEnd',
         key: `encounterEnd:${phase.phaseKey}`,
@@ -294,6 +303,37 @@ describe('room lifecycle timeline', () => {
     expect(keys.indexOf(before.key)).toBeLessThan(keys.indexOf('encounterStart'));
     expect(keys.indexOf('encounterStart')).toBeLessThan(keys.indexOf('encounterEnd'));
     expect(keys.indexOf('encounterEnd')).toBeLessThan(keys.indexOf(after.key));
+  });
+
+  it('keeps a matured Shrine delivery after Boss defeat and encounter end', () => {
+    const delivery = rankedRow(
+      {
+        kind: 'interactAcquisitionEntry',
+        siteKey: 'hermesShrineDelivery',
+        entryKey: 'hermesShrineDelivery:test',
+        encounterPhaseKey: 'Encounter',
+      },
+      { kind: 'encounterEnd', phaseKey: 'Encounter' },
+      1,
+    );
+    const timeline = assembleRoomLifecycleTimeline({
+      owner,
+      lifecycleProfileKey: 'BossRoom',
+      encounterPhases: Object.freeze([encounter('Encounter')]),
+      roomActionRoster: roster({ rows: Object.freeze([delivery]) }),
+    });
+    const keys = timeline.entries.map((entry) =>
+      entry.kind === 'action' ? entry.action.key : entry.boundary.kind,
+    );
+
+    expect(keys).toEqual([
+      'roomEntered',
+      'encounterStart',
+      'bossDefeated',
+      'encounterEnd',
+      delivery.key,
+      'cleanup',
+    ]);
   });
 
   it('orders Start before End when the only ranked action is an opening pickup before combat', () => {

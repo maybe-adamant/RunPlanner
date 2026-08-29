@@ -226,6 +226,18 @@ export function assembleRoomLifecycleTimeline(
       );
     });
 
+  const firstPostCombatRankForPhase = (phase: RoomLifecycleStructurePhase): number | undefined => {
+    const phaseRows = rowsForPhase(phase);
+    return phase.rewardWheelKey === undefined
+      ? firstRank(
+          phaseRows,
+          (row) =>
+            (row.window.kind === 'standard' && row.window.phase === 'afterCombat') ||
+            (row.window.kind === 'encounterEnd' && row.window.phaseKey === phase.phaseKey),
+        )
+      : firstRank(phaseRows, (row) => row.window.kind === 'shipPostCombat');
+  };
+
   const shipPhaseKeyForAction = (row: RoomActionRow): string | undefined => {
     if (structure.profileKey !== 'ShipCombatRoom') return undefined;
     if (row.window.kind === 'shipPostCombat') {
@@ -283,8 +295,16 @@ export function assembleRoomLifecycleTimeline(
               : 'before',
         );
       }
-      case 'bossDefeated':
-        return boundaryEntry(point, lastRank(rankedRows, () => true) ?? 0, 'after');
+      case 'bossDefeated': {
+        const phase = phaseByKey.get(point.phaseKey);
+        if (phase === undefined) throw new Error(`unknown lifecycle phase ${point.phaseKey}`);
+        const firstPostCombatRank = firstPostCombatRankForPhase(phase);
+        return boundaryEntry(
+          point,
+          firstPostCombatRank ?? lastRank(rowsForPhase(phase), () => true) ?? 0,
+          firstPostCombatRank === undefined ? 'after' : 'before',
+        );
+      }
       case 'encounterEnd': {
         const phase = phaseByKey.get(point.phaseKey);
         if (phase === undefined) throw new Error(`unknown lifecycle phase ${point.phaseKey}`);
@@ -299,15 +319,7 @@ export function assembleRoomLifecycleTimeline(
           );
         }
         const phaseRows = rowsForPhase(phase);
-        const firstPostCombatRank =
-          phase.rewardWheelKey === undefined
-            ? firstRank(
-                phaseRows,
-                (row) =>
-                  (row.window.kind === 'standard' && row.window.phase === 'afterCombat') ||
-                  (row.window.kind === 'encounterEnd' && row.window.phaseKey === phase.phaseKey),
-              )
-            : firstRank(phaseRows, (row) => row.window.kind === 'shipPostCombat');
+        const firstPostCombatRank = firstPostCombatRankForPhase(phase);
         const rank =
           firstPostCombatRank ??
           actionRank(

@@ -36,6 +36,19 @@ export function applyProjectHistoryCommand(
   return history([...current.past, current.present], next, []);
 }
 
+/** Apply one semantic transaction made of engine commands as one undo step. */
+export function applyProjectHistoryCommands(
+  current: ProjectHistory,
+  catalog: Catalog,
+  commands: readonly ProjectCommand[],
+): ProjectHistory {
+  const next = commands.reduce(
+    (document, command) => applyProjectCommand(document, catalog, command),
+    current.present,
+  );
+  return next === current.present ? current : history([...current.past, current.present], next, []);
+}
+
 export function canUndoProjectHistory(current: ProjectHistory): boolean {
   return current.past.length > 0;
 }
