@@ -91,6 +91,9 @@ export function createRoomLifecycleInput(
     ...(requiredObjects === undefined ? {} : { requiredObjects }),
     ...(offerPointRewardStores === undefined ? {} : { offerPointRewardStores }),
     ...(roomActionRoster === undefined ? {} : { roomActionRoster }),
+    ...(room.kind === 'authored' && room.hermesShrine !== undefined
+      ? { hermesShrine: room.hermesShrine }
+      : {}),
     ...(incomingReward === undefined
       ? {}
       : {

@@ -148,6 +148,8 @@ export function projectCommandAddress(
     case 'SelectDerivedShopEntry':
     case 'EditDerivedShopEntry':
       return command.site;
+    case 'PlaceHermesShrineDelivery':
+      return command.entry;
     case 'ReplaceAcquisitionEntryOffer':
       return command.entry;
     case 'SelectEncounter':

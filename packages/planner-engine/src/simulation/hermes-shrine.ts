@@ -30,8 +30,9 @@ export interface HermesShrinePurchaseScheduleInput {
 
 export interface HermesShrineDeliveryLifecycleEvent {
   readonly sequence: number;
-  readonly kind: 'encounterEndEffectsApplied' | 'finalPrebossCompletion';
   readonly origin: import('../authored-project/addresses').OccurrenceAddress;
+  readonly kind: 'encounterEndEffectsApplied' | 'finalPrebossCompletion';
+  readonly encounterPhaseKey?: string;
 }
 
 export interface DerivedHermesShrineDelivery {
@@ -42,6 +43,8 @@ export interface DerivedHermesShrineDelivery {
   readonly deliveryKind: 'rush' | 'countdown' | 'finalPrebossCompletion' | 'pending';
   readonly hostOrigin?: import('../authored-project/addresses').OccurrenceAddress;
   readonly hostSequence?: number;
+  /** Exact encounter phase whose end effects matured this delayed item. */
+  readonly encounterPhaseKey?: string;
   readonly remainingUses: number;
 }
 
@@ -79,6 +82,9 @@ export function deriveHermesShrineDeliveries(
             deliveryKind: 'finalPrebossCompletion' as const,
             hostOrigin: event.origin,
             hostSequence: event.sequence,
+            ...(event.encounterPhaseKey === undefined
+              ? {}
+              : { encounterPhaseKey: event.encounterPhaseKey }),
             remainingUses: 0,
           });
         remainingUses -= 1;
@@ -90,6 +96,9 @@ export function deriveHermesShrineDeliveries(
             deliveryKind: 'countdown' as const,
             hostOrigin: event.origin,
             hostSequence: event.sequence,
+            ...(event.encounterPhaseKey === undefined
+              ? {}
+              : { encounterPhaseKey: event.encounterPhaseKey }),
             remainingUses: 0,
           });
       }

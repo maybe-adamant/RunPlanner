@@ -43,6 +43,11 @@ interface RoomActionSchedule {
     operationIndex: number,
     state: ExecutionState,
   ) => ExecutionState;
+  readonly afterOperation: (
+    operation: RoomLifecycleOperation,
+    operationIndex: number,
+    state: ExecutionState,
+  ) => ExecutionState;
   readonly beforeEncounterPhase: (
     phase: ResolvedEncounterPhase,
     operationIndex: number,
@@ -553,6 +558,40 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
     )
     .sort((left, right) => left.rank! - right.rank!);
   let cursor = 0;
+  let shrineScheduled = false;
+
+  const scheduleShrineDeliveries = (
+    operationIndex: number,
+    initial: ExecutionState,
+  ): ExecutionState => {
+    if (shrineScheduled || context.input.hermesShrine === undefined) return initial;
+    shrineScheduled = true;
+    const deliveries = Object.entries(context.input.hermesShrine.purchaseBySlot ?? {}).flatMap(
+      ([slotKey, purchase]) => {
+        const offer =
+          context.input.hermesShrine?.offerBySlot[
+            slotKey as import('../../authored-project/model').HermesShrineSlotKey
+          ];
+        return purchase === undefined || offer === null || offer === undefined
+          ? []
+          : [
+              Object.freeze({
+                generationKey:
+                  `initial:${slotKey}` as import('../../authored-project/model').HermesShrineGenerationKey,
+                rewardType: offer.rewardType,
+                delay: purchase.delay,
+                rushed: purchase.rushed,
+              }),
+            ];
+      },
+    );
+    if (deliveries.length === 0) return initial;
+    return appendEvent(
+      initial,
+      { ...context, operationIndex },
+      { kind: 'hermesShrineDeliveriesScheduled', deliveries: Object.freeze(deliveries) },
+    );
+  };
 
   const blockAt = (state: ExecutionState, row: RoomActionRow): ExecutionState =>
     Object.freeze({
@@ -604,11 +643,6 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
         return appendEvent(state, operationContext, {
           kind: 'acquisitionPointReached',
           point: `shopOffer:${row.reference.offerKey}`,
-        });
-      case 'purchaseHermesShrineOffer':
-        return appendEvent(state, operationContext, {
-          kind: 'acquisitionPointReached',
-          point: `hermesShrinePurchase:${row.reference.generationKey}`,
         });
       case 'sellPurgingPoolTrait':
         return appendEvent(state, operationContext, {
@@ -761,8 +795,15 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
       if (missing !== undefined) state = blockAt(state, missing);
       return state;
     }
+    let scheduledInitial = initial;
+    if (
+      context.input.hermesShrine !== undefined &&
+      !context.profile.operations.some((candidate) => candidate.kind === 'generateOutgoingBatch') &&
+      (operation.kind === 'settleAcquisitionPoint' || operation.kind === 'commitRoom')
+    )
+      scheduledInitial = scheduleShrineDeliveries(operationIndex, initial);
     if (operation.kind === 'settleAcquisitionPoint' || operation.kind === 'commitRoom') {
-      let state = drainThroughRank(Number.POSITIVE_INFINITY, operationIndex, initial);
+      let state = drainThroughRank(Number.POSITIVE_INFINITY, operationIndex, scheduledInitial);
       if (state.blockedAt !== undefined) return state;
       const missing = firstMissingRequired(() => true);
       if (missing !== undefined) state = blockAt(state, missing);
@@ -817,19 +858,55 @@ function createRoomActionSchedule(context: ExecutionContext): RoomActionSchedule
     phase: ResolvedEncounterPhase,
     operationIndex: number,
     state: ExecutionState,
+  ): ExecutionState => {
+    let next = state;
+    if (
+      context.profile.key === 'ShipCombatRoom' &&
+      phase.rewardAttachment?.kind === 'rewardWheel'
+    ) {
+      next = consumeExact(
+        Object.freeze({ kind: 'interactWheelReward', wheelKey: phase.rewardAttachment.key }),
+        operationIndex,
+        next,
+        true,
+      );
+      if (next.blockedAt !== undefined) return next;
+    }
+    const deliveries = roster.rows
+      .filter(
+        (row) =>
+          row.reference.kind === 'interactAcquisitionEntry' &&
+          row.reference.siteKey === 'hermesShrineDelivery' &&
+          row.reference.encounterPhaseKey === phase.slotKey,
+      )
+      .sort(
+        (left, right) =>
+          (left.rank ?? Number.POSITIVE_INFINITY) - (right.rank ?? Number.POSITIVE_INFINITY),
+      );
+    const unranked = deliveries.find(
+      (row) => row.rank === null && row.participation === 'required' && !row.stale,
+    );
+    if (unranked !== undefined) return blockAt(next, unranked);
+    for (const delivery of deliveries) {
+      next = consumeExact(delivery.reference, operationIndex, next, true);
+      if (next.blockedAt !== undefined) return next;
+    }
+    return next;
+  };
+
+  const afterOperation = (
+    operation: RoomLifecycleOperation,
+    operationIndex: number,
+    initial: ExecutionState,
   ): ExecutionState =>
-    context.profile.key === 'ShipCombatRoom' && phase.rewardAttachment?.kind === 'rewardWheel'
-      ? consumeExact(
-          Object.freeze({ kind: 'interactWheelReward', wheelKey: phase.rewardAttachment.key }),
-          operationIndex,
-          state,
-          true,
-        )
-      : state;
+    operation.kind === 'generateOutgoingBatch'
+      ? scheduleShrineDeliveries(operationIndex, initial)
+      : initial;
 
   return Object.freeze({
     encounterPhases,
     beforeOperation,
+    afterOperation,
     beforeEncounterPhase,
     afterEncounterPhase,
   });
@@ -856,6 +933,10 @@ export function executeRoomLifecycle(
       schedule,
     );
     if (state.blockedAt !== undefined) break;
+    if (schedule !== undefined) {
+      state = schedule.afterOperation(operation, operationIndex, state);
+      if (state.blockedAt !== undefined) break;
+    }
   }
   return Object.freeze({
     origin: input.origin,

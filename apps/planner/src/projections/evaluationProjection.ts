@@ -517,6 +517,10 @@ const findingCopy = {
     title: 'Shrine offer unavailable',
     description: 'Choose an offer supported at this Shrine entry.',
   },
+  hermesShrineDeliveryPlacementRequired: {
+    title: 'Shrine delivery needs placement',
+    description: 'Place this delivered Shrine reward at its due room before authoring its pickup.',
+  },
   hermesShrineTravelDealRefillMissing: {
     title: 'Travel Deal refill missing',
     description: 'Choose the required fourth Shrine offer.',

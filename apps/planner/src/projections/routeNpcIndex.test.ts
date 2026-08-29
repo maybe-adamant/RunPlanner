@@ -91,6 +91,7 @@ function withoutArtemisPresentationMetadata(): Catalog {
     label: original.label,
     kind: original.kind,
     countsEncounterDepth: original.countsEncounterDepth,
+    advancesHermesShrineDeliveryUses: original.advancesHermesShrineDeliveryUses,
     canEncounterSkip: original.canEncounterSkip,
     blocksFigLeaf: original.blocksFigLeaf,
     blocksGorgon: original.blocksGorgon,

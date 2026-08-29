@@ -81,6 +81,7 @@ export type RewardGenerationFindingCode =
   | 'hermesShrineInventoryWrongGroup'
   | 'hermesShrineInventoryDuplicate'
   | 'hermesShrineInventoryRequirement'
+  | 'hermesShrineDeliveryPlacementRequired'
   | 'hermesShrineTravelDealRefillMissing'
   | 'hermesShrineTravelDealRefillUnavailable';
 

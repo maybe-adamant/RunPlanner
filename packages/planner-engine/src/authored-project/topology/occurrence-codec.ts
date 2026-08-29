@@ -218,26 +218,54 @@ function decodeHermesShrineInventoryOffer(
   return Object.freeze({ rewardType });
 }
 
-function assertHermesShrinePurchaseActionClosure(
+function assertHermesShrineDeliveryActionClosure(
   shrine: HermesShrineState | undefined,
   roomActions: RoomActionState,
+  source: { readonly routeKey: string; readonly biomeKey: string; readonly occurrenceId: string },
   path: string,
 ): void {
-  const purchases = new Set<import('../model').HermesShrineGenerationKey>([
-    ...Object.keys(shrine?.purchaseBySlot ?? {}).map(
-      (slotKey) => `initial:${slotKey}` as import('../model').HermesShrineGenerationKey,
-    ),
-    ...(shrine?.travelDealRefill?.purchase === undefined ? [] : ['travelDealRefill' as const]),
-  ]);
-  const actions = new Set(
-    roomActions.order.flatMap((reference) =>
-      reference.kind === 'purchaseHermesShrineOffer' ? [reference.generationKey] : [],
-    ),
+  const rushed = new Set<import('../model').HermesShrineGenerationKey>(
+    Object.entries(shrine?.purchaseBySlot ?? {})
+      .filter(([, purchase]) => purchase?.rushed === true)
+      .map(([slotKey]) => `initial:${slotKey}` as import('../model').HermesShrineGenerationKey),
   );
-  if (purchases.size !== actions.size || [...purchases].some((key) => !actions.has(key)))
+  const actionCounts = new Map<import('../model').HermesShrineGenerationKey, number>();
+  for (const reference of roomActions.order) {
+    if (
+      reference.kind !== 'interactAcquisitionEntry' ||
+      reference.siteKey !== 'hermesShrineDelivery'
+    )
+      continue;
+    const parsed = parseHermesShrineDeliveryEntryKey(reference.entryKey);
+    if (parsed !== undefined) {
+      const sourceIsCurrent =
+        parsed.routeKey === source.routeKey &&
+        parsed.biomeKey === source.biomeKey &&
+        parsed.sourceOccurrenceId === source.occurrenceId;
+      if (sourceIsCurrent && reference.encounterPhaseKey !== undefined)
+        failProjectDocument(
+          path,
+          'same-room Shrine deliveries must use the post-outgoing window without an encounter phase',
+        );
+      if (!sourceIsCurrent && reference.encounterPhaseKey === undefined)
+        failProjectDocument(
+          path,
+          'cross-occurrence Shrine deliveries must preserve their due encounter phase',
+        );
+    }
+    if (
+      parsed !== undefined &&
+      parsed.routeKey === source.routeKey &&
+      parsed.biomeKey === source.biomeKey &&
+      parsed.sourceOccurrenceId === source.occurrenceId &&
+      parsed.generationKey.startsWith('initial:')
+    )
+      actionCounts.set(parsed.generationKey, (actionCounts.get(parsed.generationKey) ?? 0) + 1);
+  }
+  if (rushed.size !== actionCounts.size || [...rushed].some((key) => actionCounts.get(key) !== 1))
     failProjectDocument(
       path,
-      'Shrine purchase details must have exactly one matching purchase action',
+      'rushed Shrine purchases must have exactly one matching delivery action',
     );
 }
 
@@ -661,9 +689,14 @@ export function decodeRoomOccurrence(input: {
     rawOccurrence.roomActions,
     `${rawOccurrence.path}.roomActions`,
   );
-  assertHermesShrinePurchaseActionClosure(
+  assertHermesShrineDeliveryActionClosure(
     hermesShrine,
     decodedRoomActions,
+    {
+      routeKey: biomeAddress.routeKey,
+      biomeKey: biomeAddress.biomeKey,
+      occurrenceId: rawOccurrence.occurrenceId,
+    },
     `${rawOccurrence.path}.roomActions.order`,
   );
   const decodedOccurrence = Object.freeze({

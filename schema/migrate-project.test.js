@@ -840,7 +840,7 @@ test('68 -> 69 narrows Shrine inventory and preserves rushed pickup detail at ac
       },
     ],
   };
-  const result = migrateProjectDocument(source);
+  const result = migrateProjectDocument(source, 69);
   const occurrence = result.document.routes[0].biomes[0].topology.occurrences[0];
   const entryKey = `hermesShrineDelivery:${encodeURIComponent(
     JSON.stringify(['Surface', 'N', 'n-postboss', 'initial:first']),
@@ -857,6 +857,72 @@ test('68 -> 69 narrows Shrine inventory and preserves rushed pickup detail at ac
     inventoryOffersNarrowed: 1,
     rushedDeliveriesMoved: 1,
   });
+});
+
+test('69 -> 70 replaces ranked rushed Shrine purchases with delivery actions', () => {
+  const source = {
+    schemaVersion: 69,
+    catalogVersion: '0.49.0-completion-topology',
+    projectId: 'shrine-delivery-action-migration',
+    routes: [
+      {
+        routeKey: 'Surface',
+        biomes: [
+          {
+            biomeKey: 'N',
+            topology: {
+              occurrences: [
+                {
+                  occurrenceId: 'n-postboss',
+                  gameName: 'N_PostBoss01',
+                  hermesShrine: {
+                    offerBySlot: {
+                      first: { rewardType: 'HealBigDrop' },
+                      secondLeft: { rewardType: 'Boon' },
+                      secondRight: null,
+                    },
+                    purchaseBySlot: {
+                      first: { delay: 2, rushed: true },
+                      secondLeft: { delay: 4, rushed: false },
+                    },
+                  },
+                  roomActions: {
+                    order: [
+                      { kind: 'useFountain' },
+                      { kind: 'purchaseHermesShrineOffer', generationKey: 'initial:first' },
+                      { kind: 'purchaseHermesShrineOffer', generationKey: 'initial:secondLeft' },
+                      { kind: 'interactKeepsakeRack' },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    ],
+  };
+
+  const result = migrateProjectDocument(source, 70);
+  const order = result.document.routes[0].biomes[0].topology.occurrences[0].roomActions.order;
+  const entryKey = `hermesShrineDelivery:${encodeURIComponent(
+    JSON.stringify(['Surface', 'N', 'n-postboss', 'initial:first']),
+  )}`;
+
+  assert.equal(result.document.schemaVersion, 70);
+  assert.deepEqual(order, [
+    { kind: 'useFountain' },
+    { kind: 'interactAcquisitionEntry', siteKey: 'hermesShrineDelivery', entryKey },
+    { kind: 'interactKeepsakeRack' },
+  ]);
+  assert.deepEqual(result.changes['69->70'], {
+    rushedDeliveriesActivated: 1,
+    purchaseActionsRemoved: 1,
+  });
+
+  const repeated = migrateProjectDocument(result.document, 70);
+  assert.deepEqual(repeated.document, result.document);
+  assert.deepEqual(repeated.steps, []);
 });
 
 test('58 -> 59 seeds Well shells only on exact forced Underworld Postboss identities', () => {
@@ -966,7 +1032,7 @@ test('67 -> current moves a Surface completion chain and rewrites its resource p
     ['N_Boss01', 'N_PostBoss01'].includes(occurrence.gameName),
   );
 
-  assert.equal(result.document.schemaVersion, 69);
+  assert.equal(result.document.schemaVersion, 70);
   assert.equal(result.document.catalogVersion, '0.49.0-completion-topology');
   assert.equal('completionOccurrences' in biome, false);
   assert.deepEqual(

@@ -1,14 +1,11 @@
 import {
   ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
   artificerReplacementEntryKey,
-  createAcquisitionEntryAddress,
-  createAcquisitionSiteAddress,
   createEncounterPhaseAddress,
   createFountainRarityOutcomeAddress,
   createOccurrenceAddress,
   createRoomActionAddress,
   createShopOfferAddress,
-  hermesShrineDeliveryEntryKey,
   INFERNAL_CONTRACT_ENTRY_KEY,
   parseArtificerReplacementEntryKey,
   TRAVEL_DEAL_REFILL_ENTRY_KEY,
@@ -190,17 +187,7 @@ function roomActionsForOccurrence(
       const wheelControl = wheel?.offers.find(
         (_offer, index) => index + 1 === wheel.pickedOfferIndex,
       )?.control;
-      const shrinePurchaseControl =
-        row.reference.kind !== 'purchaseHermesShrineOffer'
-          ? undefined
-          : controlAt(
-              createAcquisitionEntryAddress(
-                createAcquisitionSiteAddress(owner, 'hermesShrineDelivery'),
-                hermesShrineDeliveryEntryKey(owner, row.reference.generationKey),
-              ),
-            );
-      const rewardControl =
-        directControl ?? incomingControl ?? wheelControl ?? shrinePurchaseControl;
+      const rewardControl = directControl ?? incomingControl ?? wheelControl;
       const phase = encounterPhases.find((candidate) =>
         row.reference.kind === 'interactGorgon'
           ? candidate.gorgonAthena !== undefined &&
@@ -222,7 +209,6 @@ function roomActionsForOccurrence(
       const participationOwnedByOverview =
         row.reference.kind === 'interactShopOffer' ||
         row.reference.kind === 'purchaseStygianWellOffer' ||
-        row.reference.kind === 'purchaseHermesShrineOffer' ||
         row.reference.kind === 'sellPurgingPoolTrait' ||
         (roomLocal.kind === 'shop' &&
           row.reference.kind === 'interactAcquisitionEntry' &&
@@ -328,8 +314,6 @@ function roomActionsForOccurrence(
                   ((row.reference.kind === 'interactLocalReward' && roomLocal.kind !== 'fields') ||
                     (row.reference.kind === 'interactAcquisitionEntry' &&
                       input.occurrence.state.kind !== 'shop' &&
-                      resolvedRewardControl.offerEditVisibility === 'visible') ||
-                    (row.reference.kind === 'purchaseHermesShrineOffer' &&
                       resolvedRewardControl.offerEditVisibility === 'visible')),
               }),
             }),

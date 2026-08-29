@@ -209,6 +209,8 @@ export interface RawEncounterDefinitionDeclaration {
   readonly label: string;
   readonly kind: EncounterPhaseKind;
   readonly countsEncounterDepth: boolean;
+  /** Exact encounter-level policy for advancing delayed Hermes Shrine delivery uses. */
+  readonly advancesHermesShrineDeliveryUses?: boolean;
   readonly canEncounterSkip?: boolean;
   readonly blocksFigLeaf?: boolean;
   readonly blocksGorgon?: boolean;
@@ -463,6 +465,8 @@ export interface RawRoomDeclaration {
   readonly encounterEnvelopeKey: string;
   /** Exact room-level policy for temporary Hammer encounter uses. */
   readonly advancesExperimentalHammerUses: boolean;
+  /** Exact room-level policy for advancing delayed Hermes Shrine delivery uses. */
+  readonly advancesHermesShrineDeliveryUses?: boolean;
   /** Source `SkipRoomsPerUpgrade`, used by Steady Growth at end effects. */
   readonly skipRoomsPerUpgrade?: boolean;
   readonly encounterSlotBindings: readonly RawEncounterSlotBinding[];

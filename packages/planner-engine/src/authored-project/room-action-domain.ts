@@ -39,6 +39,8 @@ export type RoomActionParticipation = 'required' | 'optional';
 
 export type RoomActionWindow =
   | { readonly kind: 'standard'; readonly phase: 'beforeCombat' | 'afterCombat' }
+  /** A cross-occurrence delivery must run after this exact encounter's end effects. */
+  | { readonly kind: 'encounterEnd'; readonly phaseKey: string }
   | { readonly kind: 'postOutgoing' }
   | { readonly kind: 'fields'; readonly phaseKey?: string }
   | { readonly kind: 'shipPreCombat'; readonly wheelKey: string }
@@ -314,14 +316,6 @@ function baseContribution(
         [],
         createShopOfferAddress(biome, occurrence.occurrenceId, reference.offerKey),
       );
-    case 'purchaseHermesShrineOffer':
-      return contribution(
-        biome,
-        occurrence,
-        reference,
-        'optional',
-        frozen({ kind: 'postOutgoing' }),
-      );
     case 'sellPurgingPoolTrait':
       return contribution(
         biome,
@@ -406,13 +400,20 @@ function baseContribution(
         createOccurrenceAddress(biome, occurrence.occurrenceId),
         reference.siteKey,
       );
+      const sameRoomShrineDelivery =
+        hermesDelivery !== undefined &&
+        hermesDelivery.routeKey === biome.routeKey &&
+        hermesDelivery.biomeKey === biome.biomeKey &&
+        hermesDelivery.sourceOccurrenceId === occurrence.occurrenceId;
       return contribution(
         biome,
         occurrence,
         reference,
         required ? 'required' : 'optional',
         hermesDelivery !== undefined
-          ? frozen({ kind: 'standard', phase: 'afterCombat' })
+          ? sameRoomShrineDelivery
+            ? frozen({ kind: 'postOutgoing' })
+            : frozen({ kind: 'encounterEnd', phaseKey: reference.encounterPhaseKey! })
           : producer?.placement === 'roomExit' ||
               (producer?.source.kind === 'traitOffer' &&
                 producer.source.owner.kind === 'shopOffer') ||
@@ -458,7 +459,7 @@ export function assembleRoomLifecycleStructure(options: {
       (options.occurrence.state.kind !== 'shipCombat' ||
         index < options.occurrence.state.encounterCount),
   );
-  const combatSlots = activeSlots.filter((slot) => {
+  const lifecycleSlots = activeSlots.filter((slot) => {
     if (
       options.lifecycleProfileKey === 'FieldsCombatRoom' &&
       slot.rewardAttachment?.kind !== 'localReward'
@@ -473,9 +474,12 @@ export function assembleRoomLifecycleStructure(options: {
       options.occurrence.gameName,
     );
     const encounter = options.catalog.encounterDefinitions.byKey[encounterKey];
-    return encounter !== undefined && isCombatBearingEncounterPhaseKind(encounter.kind);
+    return (
+      options.occurrence.state.kind === 'shipCombat' ||
+      (encounter !== undefined && isCombatBearingEncounterPhaseKind(encounter.kind))
+    );
   });
-  const declaredPhases = combatSlots.map((slot) =>
+  const declaredPhases = lifecycleSlots.map((slot) =>
     frozen({
       phaseKey: slot.key,
       ...(slot.rewardAttachment?.kind === 'rewardWheel'
@@ -602,11 +606,22 @@ export function roomLifecycleWindowOrdinal(
     pointIndex(predicate) * 2;
   const afterPoint = (predicate: (point: RoomLifecycleStructurePoint) => boolean): number =>
     pointIndex(predicate) * 2 + 1;
+  const lastAfterPoint = (predicate: (point: RoomLifecycleStructurePoint) => boolean): number => {
+    const index = structure.points.reduce(
+      (last, point, candidateIndex) => (predicate(point) ? candidateIndex : last),
+      -1,
+    );
+    return (index < 0 ? 0 : index) * 2 + 1;
+  };
   switch (window.kind) {
     case 'standard':
       return window.phase === 'beforeCombat'
         ? beforePoint((point) => point.kind === 'encounterStart')
-        : afterPoint((point) => point.kind === 'encounterEnd');
+        : lastAfterPoint((point) => point.kind === 'encounterEnd') + 1;
+    case 'encounterEnd':
+      return afterPoint(
+        (point) => point.kind === 'encounterEnd' && point.phaseKey === window.phaseKey,
+      );
     case 'fields':
       return 1;
     case 'shipPreCombat':
@@ -803,11 +818,10 @@ export function assembleRoomActionDomain(options: {
         action,
       );
     }
-    // Some sources deliberately settle through a different row.  A rushed
+    // Some sources deliberately settle through a different row. A rushed
     // Shrine pickup is owned by its virtual acquisition entry but executes in
-    // the one purchase action, so its generated Artificer/Sea Star children
-    // must inherit that contribution rather than search for a nonexistent
-    // acquisition-entry row.
+    // its delivery action, so generated Artificer/Sea Star children inherit
+    // that contribution rather than search for a nonexistent source row.
     for (const source of authoredAcquisitionSources(options.biome, options.occurrence)) {
       if (source.action === undefined) continue;
       const contribution = sourceActionsByReference.get(roomActionKey(source.action));

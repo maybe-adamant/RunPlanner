@@ -117,6 +117,16 @@ export type RoomLifecycleEvent =
     })
   | (RoomLifecycleEventBase & { readonly kind: 'outgoingGenerationCheckpoint' })
   | (RoomLifecycleEventBase & {
+      /** Shrine purchases are scheduled at the source-room cleanup boundary. */
+      readonly kind: 'hermesShrineDeliveriesScheduled';
+      readonly deliveries: readonly {
+        readonly generationKey: import('../../authored-project/model').HermesShrineGenerationKey;
+        readonly rewardType: string;
+        readonly delay: number;
+        readonly rushed: boolean;
+      }[];
+    })
+  | (RoomLifecycleEventBase & {
       readonly kind: 'acquisitionPointReached';
       readonly point: string;
       /** Exact persisted site identity for one chronology-owned acquisition entry. */
@@ -164,6 +174,8 @@ export interface RoomLifecycleExecutionInput {
   readonly offerPointRewardStores?: Readonly<Record<string, string>>;
   /** Present for occurrence rooms, including fixed Boss and Postboss rooms. */
   readonly roomActionRoster?: RoomActionRoster;
+  /** Feature-local Shrine purchases, consumed only by the Shrine scheduling checkpoint. */
+  readonly hermesShrine?: import('../../authored-project/model').HermesShrineState;
 }
 
 export interface RoomHistoryFragment {

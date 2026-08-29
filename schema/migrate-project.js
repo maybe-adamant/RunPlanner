@@ -4,7 +4,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { basename, dirname, extname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-const CURRENT_SCHEMA_VERSION = 69;
+const CURRENT_SCHEMA_VERSION = 70;
 const SCHEMA_49_CATALOG_VERSION = '0.27.0-arcana-fear-loadout';
 const SCHEMA_50_CATALOG_VERSION = '0.30.0-boon-rarity-ledger';
 const SCHEMA_51_CATALOG_VERSION = '0.31.0-chaos-traits';
@@ -943,6 +943,58 @@ function migrate68To69(document) {
   return { inventoryOffersNarrowed, rushedDeliveriesMoved };
 }
 
+function migrate69To70(document) {
+  if (document.catalogVersion !== SCHEMA_68_CATALOG_VERSION) {
+    throw new Error(
+      `schema 69 migration expects catalog ${SCHEMA_68_CATALOG_VERSION}, received ${String(document.catalogVersion)}`,
+    );
+  }
+  let rushedDeliveriesActivated = 0;
+  let purchaseActionsRemoved = 0;
+  for (const route of document.routes ?? []) {
+    for (const biome of route.biomes ?? []) {
+      for (const occurrence of biome.topology?.occurrences ?? []) {
+        const shrine = occurrence.hermesShrine;
+        const order = occurrence.roomActions?.order;
+        if (!Array.isArray(order)) continue;
+        const rushed = new Set(
+          Object.entries(shrine?.purchaseBySlot ?? {})
+            .filter(([, purchase]) => purchase?.rushed === true)
+            .map(([slotKey]) => `initial:${slotKey}`),
+        );
+        const nextOrder = [];
+        for (const reference of order) {
+          if (reference?.kind !== 'purchaseHermesShrineOffer') {
+            nextOrder.push(reference);
+            continue;
+          }
+          const generationKey = reference.generationKey;
+          if (!rushed.has(generationKey)) {
+            purchaseActionsRemoved += 1;
+            continue;
+          }
+          nextOrder.push({
+            kind: 'interactAcquisitionEntry',
+            siteKey: 'hermesShrineDelivery',
+            entryKey: `hermesShrineDelivery:${encodeURIComponent(
+              JSON.stringify([
+                route.routeKey,
+                biome.biomeKey,
+                occurrence.occurrenceId,
+                generationKey,
+              ]),
+            )}`,
+          });
+          rushedDeliveriesActivated += 1;
+        }
+        occurrence.roomActions.order = nextOrder;
+      }
+    }
+  }
+  document.schemaVersion = 70;
+  return { rushedDeliveriesActivated, purchaseActionsRemoved };
+}
+
 const migrations = new Map([
   [49, migrate49To50],
   [50, migrate50To51],
@@ -964,6 +1016,7 @@ const migrations = new Map([
   [66, migrate66To67],
   [67, migrate67To68],
   [68, migrate68To69],
+  [69, migrate69To70],
 ]);
 
 export function migrateProjectDocument(value, targetVersion = CURRENT_SCHEMA_VERSION) {

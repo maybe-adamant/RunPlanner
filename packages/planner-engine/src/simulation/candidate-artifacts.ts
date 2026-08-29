@@ -515,6 +515,7 @@ export interface DerivedAcquisitionEntryCandidateCapability {
   readonly slotIndex?: number;
   readonly rewardTypes?: readonly string[];
   readonly fixedReward?: import('../authored-project/model').AuthoredRewardState;
+  readonly encounterPhaseKey?: string;
   readonly retainedSourceMismatch?: boolean;
   readonly eligibleSourceOfferKeys?: readonly string[];
 }
@@ -544,6 +545,7 @@ export function attestDerivedAcquisitionEntryCandidateCapability(
         frontier.slotIndex !== first.slotIndex ||
         JSON.stringify(frontier.rewardTypes) !== JSON.stringify(first.rewardTypes) ||
         JSON.stringify(frontier.fixedReward) !== JSON.stringify(first.fixedReward) ||
+        frontier.encounterPhaseKey !== first.encounterPhaseKey ||
         frontier.retainedSourceMismatch !== first.retainedSourceMismatch ||
         JSON.stringify(frontier.eligibleSourceOfferKeys) !==
           JSON.stringify(first.eligibleSourceOfferKeys),
@@ -556,6 +558,9 @@ export function attestDerivedAcquisitionEntryCandidateCapability(
     ...(first.slotIndex === undefined ? {} : { slotIndex: first.slotIndex }),
     ...(first.rewardTypes === undefined ? {} : { rewardTypes: first.rewardTypes }),
     ...(first.fixedReward === undefined ? {} : { fixedReward: first.fixedReward }),
+    ...(first.encounterPhaseKey === undefined
+      ? {}
+      : { encounterPhaseKey: first.encounterPhaseKey }),
     ...(first.retainedSourceMismatch === undefined
       ? {}
       : { retainedSourceMismatch: first.retainedSourceMismatch }),

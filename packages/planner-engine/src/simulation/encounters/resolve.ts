@@ -58,6 +58,7 @@ export function resolveEncounterPhases(
         label: definition.label,
         kind: definition.kind,
         countsEncounterDepth: definition.countsEncounterDepth,
+        advancesHermesShrineDeliveryUses: definition.advancesHermesShrineDeliveryUses,
         canEncounterSkip: definition.canEncounterSkip === true,
         blocksFigLeaf: definition.blocksFigLeaf === true,
         blocksGorgon: definition.blocksGorgon === true,

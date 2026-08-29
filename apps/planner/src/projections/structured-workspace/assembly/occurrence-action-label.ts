@@ -39,31 +39,6 @@ function wellPurchaseLabel(
   return `Well ${slotLabel}`;
 }
 
-function shrinePurchaseLabel(
-  catalog: Catalog,
-  occurrence: Pick<import('@run-planner/engine/authored-project').RoomOccurrence, 'hermesShrine'>,
-  generationKey: import('@run-planner/engine/authored-project').HermesShrineGenerationKey,
-): string {
-  const slotKey = generationKey.startsWith('initial:')
-    ? (generationKey.slice(
-        'initial:'.length,
-      ) as import('@run-planner/engine/authored-project').HermesShrineSlotKey)
-    : undefined;
-  const offer =
-    slotKey === undefined
-      ? occurrence.hermesShrine?.travelDealRefill?.offer
-      : occurrence.hermesShrine?.offerBySlot[slotKey];
-  const rewardType = offer?.rewardType;
-  const rewardLabel =
-    rewardType === undefined ? undefined : catalog.rewards.rewardTypes.byKey[rewardType]?.label;
-  if (rewardLabel !== undefined) return rewardLabel;
-  const slotLabel =
-    slotKey === undefined
-      ? 'Travel Deal'
-      : (catalog.rewards.shops.byKey.SurfaceShop?.slots.byKey[slotKey]?.label ?? slotKey);
-  return `Shrine ${slotLabel}`;
-}
-
 /** Presentation labels for engine-authored action references. */
 export function occurrenceActionLabel(
   catalog: Catalog,
@@ -139,8 +114,6 @@ export function occurrenceActionLabel(
           : summarizeRewardOffer(catalog, rewardControl.offer);
       return `Buy ${rewardLabel ?? offer?.label ?? reference.offerKey}`;
     }
-    case 'purchaseHermesShrineOffer':
-      return `Buy ${shrinePurchaseLabel(catalog, occurrence, reference.generationKey)}`;
     case 'purchaseStygianWellOffer':
       return `Buy ${wellPurchaseLabel(catalog, occurrence, reference.generationKey)}`;
     case 'sellPurgingPoolTrait': {

@@ -67,6 +67,7 @@ const encounter = (slotKey: string): ResolvedEncounterPhase =>
     label: slotKey,
     kind: 'combat',
     countsEncounterDepth: true,
+    advancesHermesShrineDeliveryUses: true,
     canEncounterSkip: false,
     blocksFigLeaf: false,
     blocksGorgon: false,

@@ -5,7 +5,6 @@ import { describe, expect, it } from 'vitest';
 import {
   applyProjectCommand,
   createRouteAddress,
-  createOccurrenceAddress,
   decodeProjectDocument,
   encodeProjectDocument,
 } from '@run-planner/engine/authored-project';
@@ -14,11 +13,7 @@ import { routeResourceAuthoring, simulateProject } from '@run-planner/engine/sim
 import { checkpointManifest, checkpointSpellDropIntents } from './manifest';
 import { checkpointRegistry, loadCheckpoint } from './registry';
 import { nFixedOccurrenceIds, nOccurrenceIds } from '../routes/surface';
-import {
-  createSurfaceNOHermesShrineDeliveryCheckpoint,
-  oBiome,
-  oOccurrenceIds,
-} from '../routes/surface';
+import { createSurfaceNOHermesShrineDeliveryCheckpoint, oOccurrenceIds } from '../routes/surface';
 import { createUnderworldFPoolCheckpoint } from '../routes/underworld';
 
 const checkpointDirectory = resolve(process.cwd(), 'test/fixtures/authored-project/checkpoints');
@@ -203,22 +198,18 @@ describe('authored-project checkpoint integrity', () => {
       ?.biomes.find((biome) => biome.biomeKey === 'O');
     if (o?.authoring !== 'complete' || o.validity !== 'valid')
       throw new Error('Shrine checkpoint did not complete as a valid Surface O route');
-    expect(o.rewards.hermesShrineDeliveries).toContainEqual(
-      expect.objectContaining({
-        sourceOrigin: createOccurrenceAddress(oBiome, oOccurrenceIds.combat07),
-        rewardType: 'MaxHealthDrop',
-        hostOrigin: createOccurrenceAddress(oBiome, oOccurrenceIds.combat01),
-      }),
-    );
+    expect(o.rewards.hermesShrineDeliveries).toEqual([]);
     const host = saved.routes
       .find((route) => route.routeKey === 'Surface')
       ?.biomes.find((biome) => biome.biomeKey === 'O')
       ?.topology?.occurrences.find(
-        (occurrence) => occurrence.occurrenceId === oOccurrenceIds.combat01,
+        (occurrence) => occurrence.occurrenceId === oOccurrenceIds.devotion,
       );
     expect(host?.roomActions.order).toContainEqual({
-      kind: 'interactWheelReward',
-      wheelKey: 'wheel1',
+      kind: 'interactAcquisitionEntry',
+      siteKey: 'hermesShrineDelivery',
+      entryKey: expect.stringContaining('initial%3AsecondLeft'),
+      encounterPhaseKey: 'Encounter',
     });
   });
 

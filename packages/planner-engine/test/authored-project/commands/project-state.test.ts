@@ -81,10 +81,11 @@ describe('authored-project project-state commands', () => {
     });
     const withoutShrine = occurrenceState(removed);
     expect(withoutShrine?.hermesShrine).toBeUndefined();
-    expect(withoutShrine?.roomActions.order).not.toContainEqual({
-      kind: 'purchaseHermesShrineOffer',
-      generationKey: 'initial:first',
-    });
+    expect(
+      withoutShrine?.roomActions.order.some(
+        (reference) => reference.kind === 'interactAcquisitionEntry',
+      ),
+    ).toBe(false);
     expect(() =>
       applyProjectCommand(seeded, catalog, {
         kind: 'SetHermesShrinePresence',
@@ -119,10 +120,9 @@ describe('authored-project project-state commands', () => {
         (candidate) => candidate.occurrenceId === 'surface-n-preboss:postboss',
       );
     expect(postboss?.hermesShrine?.purchaseBySlot?.first).toEqual({ delay: 2, rushed: false });
-    expect(postboss?.roomActions.order).toContainEqual({
-      kind: 'purchaseHermesShrineOffer',
-      generationKey: 'initial:first',
-    });
+    expect(postboss?.roomActions.order).not.toContainEqual(
+      expect.objectContaining({ siteKey: 'hermesShrineDelivery' }),
+    );
     expect(() =>
       applyProjectCommand(offered, catalog, {
         kind: 'SetHermesShrinePurchase',
@@ -160,8 +160,9 @@ describe('authored-project project-state commands', () => {
     });
     expect(clearedPostboss?.hermesShrine?.travelDealRefill?.purchase).toBeUndefined();
     expect(clearedPostboss?.roomActions.order).not.toContainEqual({
-      kind: 'purchaseHermesShrineOffer',
-      generationKey: 'travelDealRefill',
+      kind: 'interactAcquisitionEntry',
+      siteKey: 'hermesShrineDelivery',
+      entryKey: hermesShrineDeliveryEntryKey(occurrence, 'travelDealRefill'),
     });
     expect(() =>
       applyProjectCommand(refilled, catalog, {
@@ -205,7 +206,7 @@ describe('authored-project project-state commands', () => {
         kind: 'SetHermesShrinePurchase',
         occurrence: completionOccurrence,
         generationKey: 'initial:first',
-        purchase: { delay: 2, rushed: false },
+        purchase: { delay: 2, rushed: true },
       },
     );
     const ordinaryOccurrence = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
@@ -229,7 +230,7 @@ describe('authored-project project-state commands', () => {
         kind: 'SetHermesShrinePurchase',
         occurrence: ordinaryOccurrence,
         generationKey: 'initial:first',
-        purchase: { delay: 2, rushed: false },
+        purchase: { delay: 2, rushed: true },
       },
     );
     const mutate = (
@@ -266,7 +267,7 @@ describe('authored-project project-state commands', () => {
         (occurrence.roomActions as { order: unknown[] }).order = [];
       });
       expect(() => decodeProjectDocument(detailWithoutAction, catalog), name).toThrow(
-        'Shrine purchase details must have exactly one matching purchase action',
+        'rushed Shrine purchases must have exactly one matching delivery action',
       );
 
       const actionWithoutDetail = JSON.parse(encodeProjectDocument(project)) as Record<
@@ -277,7 +278,7 @@ describe('authored-project project-state commands', () => {
         delete (occurrence.hermesShrine as Record<string, unknown>).purchaseBySlot;
       });
       expect(() => decodeProjectDocument(actionWithoutDetail, catalog), name).toThrow(
-        'Shrine purchase details must have exactly one matching purchase action',
+        'rushed Shrine purchases must have exactly one matching delivery action',
       );
     }
     for (const [name, project, occurrenceId] of [
@@ -294,10 +295,6 @@ describe('authored-project project-state commands', () => {
           offer: null,
           purchase: { delay: 2, rushed: false },
         };
-        (occurrence.roomActions as { order: unknown[] }).order.push({
-          kind: 'purchaseHermesShrineOffer',
-          generationKey: 'travelDealRefill',
-        });
       });
       expect(() => decodeProjectDocument(nullRefillPurchase, catalog), name).toThrow(
         'requires a resolved source offer',
@@ -330,6 +327,11 @@ describe('authored-project project-state commands', () => {
       );
     expect(occurrenceState?.hermesShrine?.offerBySlot.first).toEqual({ rewardType: 'GiftDrop' });
     const entryKey = hermesShrineDeliveryEntryKey(occurrence, 'initial:first');
+    expect(occurrenceState?.roomActions.order).toContainEqual({
+      kind: 'interactAcquisitionEntry',
+      siteKey: 'hermesShrineDelivery',
+      entryKey,
+    });
     expect(
       occurrenceState?.acquisitionSites?.hermesShrineDelivery?.pickupEntries?.[entryKey]
         ?.levelResolutionsByAcquisitionRole?.self,

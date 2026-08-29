@@ -1,10 +1,13 @@
 import { catalog } from '@run-planner/hades2-catalog';
 import {
   applyProjectCommand,
+  createAcquisitionEntryAddress,
+  createAcquisitionSiteAddress,
   createBiomeAddress,
   createOccurrenceAddress,
   createOccurrenceId,
   createShopOfferAddress,
+  hermesShrineDeliveryEntryKey,
   type OccurrenceId,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
@@ -147,11 +150,21 @@ export function createSurfaceNOHermesShrineDeliveryCheckpoint(): ProjectDocument
     generationKey: 'initial:first',
     purchase: { delay: 2, rushed: true },
   });
-  return applyProjectCommand(project, catalog, {
+  project = applyProjectCommand(project, catalog, {
     kind: 'SetHermesShrinePurchase',
     occurrence: shrine,
     generationKey: 'initial:secondLeft',
     purchase: { delay: 2, rushed: false },
+  });
+  const deliveryHost = createOccurrenceAddress(oBiome, oOccurrenceIds.devotion);
+  return applyProjectCommand(project, catalog, {
+    kind: 'PlaceHermesShrineDelivery',
+    entry: createAcquisitionEntryAddress(
+      createAcquisitionSiteAddress(deliveryHost, 'hermesShrineDelivery'),
+      hermesShrineDeliveryEntryKey(shrine, 'initial:secondLeft'),
+    ),
+    encounterPhaseKey: 'Encounter',
+    index: 1,
   });
 }
 

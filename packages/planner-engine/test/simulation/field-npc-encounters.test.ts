@@ -252,6 +252,7 @@ function historyProbeCatalog(): Catalog {
     label: 'Previous room probe',
     kind: 'combat',
     countsEncounterDepth: true,
+    advancesHermesShrineDeliveryUses: true,
     canEncounterSkip: false,
     blocksFigLeaf: false,
     blocksGorgon: false,

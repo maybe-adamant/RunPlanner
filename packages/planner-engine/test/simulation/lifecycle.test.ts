@@ -3,6 +3,7 @@ import {
   createOccurrenceAddress,
   createOccurrenceId,
   createRoomActionAddress,
+  hermesShrineDeliveryEntryKey,
   roomActionKey,
   type RoomLifecycleStructure,
   type RoomLifecycleStructurePhase,
@@ -63,6 +64,7 @@ function phases(
         label: definition.label,
         kind: definition.kind,
         countsEncounterDepth: definition.countsEncounterDepth,
+        advancesHermesShrineDeliveryUses: definition.advancesHermesShrineDeliveryUses,
         canEncounterSkip: definition.canEncounterSkip,
         blocksFigLeaf: definition.blocksFigLeaf,
         blocksGorgon: definition.blocksGorgon,
@@ -207,7 +209,12 @@ function actionRoster(
       }),
     );
   });
-  points.push(Object.freeze({ kind: 'outgoingGeneration', key: 'outgoingGeneration' }));
+  if (
+    catalog.roomLifecycleProfiles.byKey[profileKey]?.operations.some(
+      (operation) => operation.kind === 'generateOutgoingBatch',
+    )
+  )
+    points.push(Object.freeze({ kind: 'outgoingGeneration', key: 'outgoingGeneration' }));
   points.push(Object.freeze({ kind: 'cleanup', key: 'cleanup' }));
   const lifecycleStructure: RoomLifecycleStructure = Object.freeze({
     profileKey,
@@ -232,6 +239,277 @@ function actionRoster(
 }
 
 describe('single-room lifecycle execution', () => {
+  it('schedules a delayed Shrine delivery at the Ephyra side-room commit boundary', () => {
+    const sideOrigin = createOccurrenceAddress(
+      createBiomeAddress('Surface', 'N'),
+      createOccurrenceId('n-sub10-side-room-shrine'),
+    );
+    const fragment = executeRoomLifecycle(
+      catalog,
+      input({
+        origin: sideOrigin,
+        lifecycleProfileKey: 'EphyraSideRoom',
+        encounterEnvelopeKey: 'SingleEncounter',
+        encounterPhases: phases('SingleEncounter', ['GeneratedN']),
+        hermesShrine: {
+          offerBySlot: { first: { rewardType: 'Boon' }, secondLeft: null, secondRight: null },
+          purchaseBySlot: { first: { delay: 2, rushed: false } },
+        },
+        roomActionRoster: actionRoster(sideOrigin, [], [], 'EphyraSideRoom'),
+      }),
+    );
+    const scheduled = fragment.events.findIndex(
+      (event) => event.kind === 'hermesShrineDeliveriesScheduled',
+    );
+    const committed = fragment.events.findIndex((event) => event.kind === 'roomCommitted');
+
+    expect(fragment.blockedAt).toBeUndefined();
+    expect(scheduled).toBeGreaterThanOrEqual(0);
+    expect(
+      fragment.events.some(
+        (event) =>
+          event.kind === 'acquisitionPointReached' && event.siteKey === 'hermesShrineDelivery',
+      ),
+    ).toBe(false);
+    expect(committed).toBeGreaterThan(scheduled);
+    expect(fragment.events[scheduled]).toMatchObject({
+      kind: 'hermesShrineDeliveriesScheduled',
+      deliveries: [{ generationKey: 'initial:first', rewardType: 'Boon', delay: 2, rushed: false }],
+    });
+  });
+
+  it('drains a rushed Shrine delivery after scheduling and before the Ephyra side-room commit', () => {
+    const sideOrigin = createOccurrenceAddress(
+      createBiomeAddress('Surface', 'N'),
+      createOccurrenceId('n-sub10-side-room-rushed-shrine'),
+    );
+    const delivery = Object.freeze({
+      kind: 'interactAcquisitionEntry' as const,
+      siteKey: 'hermesShrineDelivery',
+      entryKey: hermesShrineDeliveryEntryKey(sideOrigin, 'initial:first'),
+    });
+    const fragment = executeRoomLifecycle(
+      catalog,
+      input({
+        origin: sideOrigin,
+        lifecycleProfileKey: 'EphyraSideRoom',
+        encounterEnvelopeKey: 'SingleEncounter',
+        encounterPhases: phases('SingleEncounter', ['GeneratedN']),
+        hermesShrine: {
+          offerBySlot: { first: { rewardType: 'Boon' }, secondLeft: null, secondRight: null },
+          purchaseBySlot: { first: { delay: 2, rushed: true } },
+        },
+        roomActionRoster: actionRoster(
+          sideOrigin,
+          [delivery],
+          [
+            {
+              reference: delivery,
+              participation: 'required',
+              window: { kind: 'postOutgoing' },
+              dependencies: [],
+            },
+          ],
+          'EphyraSideRoom',
+        ),
+      }),
+    );
+    const scheduled = fragment.events.findIndex(
+      (event) => event.kind === 'hermesShrineDeliveriesScheduled',
+    );
+    const deliveryReached = fragment.events.findIndex(
+      (event) =>
+        event.kind === 'acquisitionPointReached' && event.siteKey === 'hermesShrineDelivery',
+    );
+    const committed = fragment.events.findIndex((event) => event.kind === 'roomCommitted');
+
+    expect(fragment.blockedAt).toBeUndefined();
+    expect(deliveryReached).toBeGreaterThan(scheduled);
+    expect(committed).toBeGreaterThan(deliveryReached);
+    expect(fragment.events[scheduled]).toMatchObject({
+      kind: 'hermesShrineDeliveriesScheduled',
+      deliveries: [{ generationKey: 'initial:first', rewardType: 'Boon', delay: 2, rushed: true }],
+    });
+  });
+
+  it('drains every O delivery at its exact encounter-end phase in authored order', () => {
+    const oOrigin = createOccurrenceAddress(
+      createBiomeAddress('Surface', 'O'),
+      createOccurrenceId('o-exact-shrine-delivery-phases'),
+    );
+    const source = createOccurrenceAddress(
+      createBiomeAddress('Surface', 'N'),
+      createOccurrenceId('n-shrine-delivery-source'),
+    );
+    const delivery1 = Object.freeze({
+      kind: 'interactAcquisitionEntry' as const,
+      siteKey: 'hermesShrineDelivery',
+      entryKey: hermesShrineDeliveryEntryKey(source, 'initial:first'),
+      encounterPhaseKey: 'Combat1',
+    });
+    const delivery2 = Object.freeze({
+      kind: 'interactAcquisitionEntry' as const,
+      siteKey: 'hermesShrineDelivery',
+      entryKey: hermesShrineDeliveryEntryKey(source, 'initial:secondLeft'),
+      encounterPhaseKey: 'Combat1',
+    });
+    const delivery3 = Object.freeze({
+      kind: 'interactAcquisitionEntry' as const,
+      siteKey: 'hermesShrineDelivery',
+      entryKey: hermesShrineDeliveryEntryKey(source, 'initial:secondRight'),
+      encounterPhaseKey: 'Combat2',
+    });
+    const choose1 = Object.freeze({ kind: 'chooseRewardWheel' as const, wheelKey: 'wheel1' });
+    const interact1 = Object.freeze({
+      kind: 'interactWheelReward' as const,
+      wheelKey: 'wheel1',
+    });
+    const choose2 = Object.freeze({ kind: 'chooseRewardWheel' as const, wheelKey: 'wheel2' });
+    const interact2 = Object.freeze({
+      kind: 'interactWheelReward' as const,
+      wheelKey: 'wheel2',
+    });
+    const roster = actionRoster(
+      oOrigin,
+      [choose1, interact1, delivery1, delivery2, choose2, interact2, delivery3],
+      [
+        {
+          reference: choose1,
+          participation: 'required',
+          window: { kind: 'shipPreCombat', wheelKey: 'wheel1' },
+          dependencies: [],
+        },
+        {
+          reference: interact1,
+          participation: 'required',
+          window: { kind: 'shipPostCombat', wheelKey: 'wheel1' },
+          dependencies: [{ kind: 'afterAction', action: choose1 }],
+        },
+        {
+          reference: delivery1,
+          participation: 'required',
+          window: { kind: 'encounterEnd', phaseKey: 'Combat1' },
+          dependencies: [],
+        },
+        {
+          reference: delivery2,
+          participation: 'required',
+          window: { kind: 'encounterEnd', phaseKey: 'Combat1' },
+          dependencies: [],
+        },
+        {
+          reference: choose2,
+          participation: 'required',
+          window: { kind: 'shipPreCombat', wheelKey: 'wheel2' },
+          dependencies: [],
+        },
+        {
+          reference: interact2,
+          participation: 'required',
+          window: { kind: 'shipPostCombat', wheelKey: 'wheel2' },
+          dependencies: [{ kind: 'afterAction', action: choose2 }],
+        },
+        {
+          reference: delivery3,
+          participation: 'required',
+          window: { kind: 'encounterEnd', phaseKey: 'Combat2' },
+          dependencies: [],
+        },
+      ],
+      'ShipCombatRoom',
+    );
+    const fragment = executeRoomLifecycle(
+      catalog,
+      inputWithoutProducer({
+        origin: oOrigin,
+        lifecycleProfileKey: 'ShipCombatRoom',
+        encounterEnvelopeKey: 'ShipEncounter',
+        encounterPhases: phases('ShipEncounter', [
+          'GeneratedO_Intro01',
+          'GeneratedO',
+          'GeneratedO',
+        ]),
+        roomActionRoster: roster,
+      }),
+    );
+
+    expect(fragment.blockedAt).toBeUndefined();
+    const reached = fragment.events.flatMap((event, index) =>
+      event.kind === 'acquisitionPointReached' && event.entryKey !== undefined
+        ? [{ entryKey: event.entryKey, index }]
+        : [],
+    );
+    expect(reached.map((event) => event.entryKey)).toEqual([
+      delivery1.entryKey,
+      delivery2.entryKey,
+      delivery3.entryKey,
+    ]);
+    const phase1End = fragment.events.findIndex(
+      (event) => event.kind === 'encounterEndEffectsApplied' && event.phaseKey === 'Combat1',
+    );
+    const phase2Start = fragment.events.findIndex(
+      (event) => event.kind === 'encounterStarted' && event.phaseKey === 'Combat2',
+    );
+    const phase2End = fragment.events.findIndex(
+      (event) => event.kind === 'encounterEndEffectsApplied' && event.phaseKey === 'Combat2',
+    );
+    expect(reached[0]?.index).toBeGreaterThan(phase1End);
+    expect(reached[1]?.index).toBeGreaterThan(reached[0]?.index ?? -1);
+    expect(reached[1]?.index).toBeLessThan(phase2Start);
+    expect(reached[2]?.index).toBeGreaterThan(phase2End);
+  });
+
+  it('drains a Fields delivery after its exact cage end effects', () => {
+    const fieldsOrigin = createOccurrenceAddress(
+      createBiomeAddress('Underworld', 'H'),
+      createOccurrenceId('h-exact-shrine-delivery-phase'),
+    );
+    const source = createOccurrenceAddress(
+      createBiomeAddress('Surface', 'N'),
+      createOccurrenceId('n-fields-shrine-source'),
+    );
+    const delivery = Object.freeze({
+      kind: 'interactAcquisitionEntry' as const,
+      siteKey: 'hermesShrineDelivery',
+      entryKey: hermesShrineDeliveryEntryKey(source, 'initial:first'),
+      encounterPhaseKey: 'Cage01',
+    });
+    const roster = actionRoster(
+      fieldsOrigin,
+      [delivery],
+      [
+        {
+          reference: delivery,
+          participation: 'required',
+          window: { kind: 'encounterEnd', phaseKey: 'Cage01' },
+          dependencies: [],
+        },
+      ],
+      'FieldsCombatRoom',
+      ['Passive', 'Cage01'],
+    );
+    const fragment = executeRoomLifecycle(
+      catalog,
+      inputWithoutProducer({
+        origin: fieldsOrigin,
+        lifecycleProfileKey: 'FieldsCombatRoom',
+        encounterEnvelopeKey: 'FieldsEncounter',
+        encounterPhases: phases('FieldsEncounter', ['GeneratedH_Passive', 'GeneratedH']),
+        roomActionRoster: roster,
+      }),
+    );
+    const endEffects = fragment.events.findIndex(
+      (event) => event.kind === 'encounterEndEffectsApplied' && event.phaseKey === 'Cage01',
+    );
+    const deliveryReached = fragment.events.findIndex(
+      (event) => event.kind === 'acquisitionPointReached' && event.entryKey === delivery.entryKey,
+    );
+    const committed = fragment.events.findIndex((event) => event.kind === 'roomCommitted');
+    expect(fragment.blockedAt).toBeUndefined();
+    expect(deliveryReached).toBeGreaterThan(endEffects);
+    expect(deliveryReached).toBeLessThan(committed);
+  });
+
   it('emits the derived Boss-defeated seam before completion and end effects', () => {
     const bossOrigin = createOccurrenceAddress(
       createBiomeAddress('Underworld', 'F'),

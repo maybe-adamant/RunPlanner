@@ -19,7 +19,16 @@ import {
   replaceAuthoredAcquisitionEntryAtSite,
 } from '../shop';
 import { parseArtificerReplacementEntryKey } from '../artificer';
-import { parseHermesShrineDeliveryEntryKey } from '../hermes-shrine-delivery';
+import {
+  defaultHermesShrineDeliveryReward,
+  parseHermesShrineDeliveryEntryKey,
+} from '../hermes-shrine-delivery';
+import { createBiomeAddress } from '../addresses';
+import {
+  roomActionDomainForOccurrence,
+  scheduleRequiredRoomActions,
+} from '../room-action-defaults';
+import { roomActionKey } from '../room-actions';
 
 function shrineDeliverySource(
   document: ProjectDocument,
@@ -77,6 +86,150 @@ export function applyAcquisitionSiteCommand(
   located: LocatedBiome,
   command: AcquisitionSiteCommand,
 ): ProjectDocument {
+  if (command.kind === 'PlaceHermesShrineDelivery') {
+    const site = command.entry.site;
+    if (site.owner.kind !== 'occurrence' || site.pointKey !== 'hermesShrineDelivery')
+      failCommand(command, 'is not a Shrine delivery site');
+    const topology = requireTopology(located.plan, command);
+    const host = requireOccurrence(located.plan, site.owner.occurrenceId, command);
+    const parsed = parseHermesShrineDeliveryEntryKey(command.entry.entryKey);
+    if (parsed === undefined) failCommand(command, 'does not name an exact Shrine delivery');
+    const source = document.routes
+      .find((route) => route.routeKey === parsed.routeKey)
+      ?.biomes.find((biome) => biome.biomeKey === parsed.biomeKey)
+      ?.topology?.occurrences.find(
+        (occurrence) => occurrence.occurrenceId === parsed.sourceOccurrenceId,
+      );
+    if (source?.hermesShrine === undefined)
+      failCommand(command, 'does not name a Shrine source occurrence');
+    const sourceOffer =
+      parsed.generationKey === 'travelDealRefill'
+        ? source.hermesShrine.travelDealRefill?.offer
+        : source.hermesShrine.offerBySlot[
+            parsed.generationKey.slice('initial:'.length) as import('../model').HermesShrineSlotKey
+          ];
+    const purchase =
+      parsed.generationKey === 'travelDealRefill'
+        ? source.hermesShrine.travelDealRefill?.purchase
+        : source.hermesShrine.purchaseBySlot?.[
+            parsed.generationKey.slice('initial:'.length) as import('../model').HermesShrineSlotKey
+          ];
+    if (sourceOffer === undefined || sourceOffer === null || purchase === undefined)
+      failCommand(command, 'does not name a purchased Shrine delivery');
+    if (command.encounterPhaseKey.trim().length === 0)
+      failCommand(command, 'has no due encounter phase');
+    const sourceIsHost =
+      parsed.routeKey === site.owner.routeKey &&
+      parsed.biomeKey === site.owner.biomeKey &&
+      parsed.sourceOccurrenceId === site.owner.occurrenceId;
+    if (sourceIsHost)
+      failCommand(command, 'same-room Shrine deliveries use the post-outgoing window');
+    const deliveryReference = Object.freeze({
+      kind: 'interactAcquisitionEntry' as const,
+      siteKey: 'hermesShrineDelivery',
+      entryKey: command.entry.entryKey,
+      encounterPhaseKey: command.encounterPhaseKey,
+    });
+    const actionIndex = host.roomActions.order.findIndex(
+      (reference) => roomActionKey(reference) === roomActionKey(deliveryReference),
+    );
+    const actionAlreadyOrdered = actionIndex >= 0;
+    const existingEntries = host.acquisitionSites?.hermesShrineDelivery?.pickupEntries ?? {};
+    const existingAction = actionAlreadyOrdered ? host.roomActions.order[actionIndex] : undefined;
+    const phaseAlreadyPersisted =
+      existingAction?.kind === 'interactAcquisitionEntry' &&
+      existingAction.encounterPhaseKey === command.encounterPhaseKey;
+    if (phaseAlreadyPersisted && existingEntries[command.entry.entryKey] !== undefined)
+      return document;
+    const nextHostWithoutActions = Object.freeze({
+      ...host,
+      acquisitionSites: Object.freeze({
+        ...(host.acquisitionSites ?? {}),
+        hermesShrineDelivery: Object.freeze({
+          ...(host.acquisitionSites?.hermesShrineDelivery ?? {}),
+          pickupEntries: Object.freeze({
+            ...existingEntries,
+            [command.entry.entryKey]:
+              existingEntries[command.entry.entryKey] ??
+              defaultHermesShrineDeliveryReward(catalog, sourceOffer.rewardType),
+          }),
+        }),
+      }),
+    });
+    if (actionAlreadyOrdered) {
+      return updateOccurrenceTopology(
+        document,
+        located,
+        replaceOccurrence(
+          topology,
+          Object.freeze({
+            ...nextHostWithoutActions,
+            roomActions: Object.freeze({
+              order: Object.freeze(
+                host.roomActions.order.map((reference, index) =>
+                  index === actionIndex ? deliveryReference : reference,
+                ),
+              ),
+            }),
+          }),
+        ),
+      );
+    }
+    const provisionalDocument = updateOccurrenceTopology(
+      document,
+      located,
+      replaceOccurrence(
+        topology,
+        Object.freeze({
+          ...nextHostWithoutActions,
+          roomActions: Object.freeze({
+            order: Object.freeze([...host.roomActions.order, deliveryReference]),
+          }),
+        }),
+      ),
+    );
+    const provisionalDomain = roomActionDomainForOccurrence(
+      provisionalDocument,
+      catalog,
+      createBiomeAddress(site.routeKey, site.biomeKey),
+      site.owner.occurrenceId,
+    )?.domain;
+    if (provisionalDomain === undefined)
+      failCommand(command, 'delivery host has no room-action domain');
+    const canonical = scheduleRequiredRoomActions({
+      catalog,
+      domain: provisionalDomain,
+      order: host.roomActions.order,
+      requiredKeys: new Set([roomActionKey(deliveryReference)]),
+    });
+    const canonicalIndex = canonical.findIndex(
+      (reference) => roomActionKey(reference) === roomActionKey(deliveryReference),
+    );
+    if (
+      !Number.isInteger(command.index) ||
+      command.index < 0 ||
+      command.index > host.roomActions.order.length
+    )
+      failCommand(
+        command,
+        `index must be an integer from 0 through ${host.roomActions.order.length}`,
+      );
+    if (command.index !== canonicalIndex)
+      failCommand(command, `required room action canonical index is ${canonicalIndex}`);
+    const nextOrder = [...host.roomActions.order];
+    nextOrder.splice(command.index, 0, deliveryReference);
+    return updateOccurrenceTopology(
+      document,
+      located,
+      replaceOccurrence(
+        topology,
+        Object.freeze({
+          ...nextHostWithoutActions,
+          roomActions: Object.freeze({ order: Object.freeze(nextOrder) }),
+        }),
+      ),
+    );
+  }
   if (command.kind === 'SelectDerivedShopEntry') {
     if (command.site.owner.kind !== 'occurrence' || command.site.pointKey !== 'roomExit')
       failCommand(command, 'is not an authorable Shop acquisition site');
