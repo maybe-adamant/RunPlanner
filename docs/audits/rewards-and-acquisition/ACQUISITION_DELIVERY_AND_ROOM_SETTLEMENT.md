@@ -635,13 +635,16 @@ continuation is selected; no Shop-private or discarded replay exists.
 
 The planner represents the supported equivalent of `StorePendingDeliveryItem`
 as source-owned Shrine inventory identity and purchase timing plus a derived
-lifecycle delivery product. The reward type and encounter-use delay remain
-attached to the scheduled delivery until countdown, rush, or final-Preboss
-completion materializes the required pickup. Hidden payload and pickup-owned
-detail are authored on that concrete delivery site, not on Shrine inventory or
-the purchase. The materialized pickup then enters the existing room settlement
-chronology; it is not modeled as an immediate Shop acquisition or as a permanent
-child of the purchase.
+lifecycle delivery product. Purchase is feature-local rather than an ordered
+room action. The reward type and encounter-use delay remain attached to the
+scheduled delivery until countdown, rush, or final-Preboss completion
+materializes the required pickup. An unplaced due delivery is a required
+host-owned chronology footprint and blocks later progression until its atomic
+materialization. Hidden payload and pickup-owned detail are authored on that
+concrete delivery site, not on Shrine inventory or the purchase. The
+materialized pickup then enters the existing room settlement chronology; it is
+not modeled as an immediate Shop acquisition or as a permanent child of the
+purchase.
 
 ## Architectural pressure established by the evidence
 

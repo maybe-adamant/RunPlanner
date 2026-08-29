@@ -326,7 +326,7 @@ later spawned object is an ordinary required pickup. The complete chronology,
 including which checkpoint can host or advance that delivery, remains in the
 acquisition and room-action authorities.
 
-### Current schema-59 planner disposition
+### Current schema-70 planner disposition
 
 Shrine presence is authored at exact ordinary and forced Postboss hosts, with
 all three visible offers always authored. There is no Interact/random-inventory
@@ -335,11 +335,13 @@ purchase. Inventory owns only each visible reward type. Hidden payload and
 pickup-owned detail—including Mystery Boon's eventual God and trait offer—are
 authored only on the concrete rushed or delayed delivery pickup. Purchase state
 is sparse per stable generation; delay, rush, pending delivery, delivery host,
-Spell reservation, and runtime fallback are derived products. A rushed purchase
-settles one required pickup at its source action rank; a delayed purchase counts
-qualifying encounter-end effects and materializes at its reached host; final
-Preboss completion flushes pending deliveries. Numeric prices and economy remain
-sim-neutral.
+Spell reservation, and runtime fallback are derived products. Purchase itself
+is not a room action. A rushed purchase creates one required source-room pickup;
+a delayed purchase is scheduled at source cleanup, counts qualifying later
+encounter-end effects, and materializes at its reached host. Side-room Shrines
+use the same source rule but do not consume a newly scheduled or older pending
+use. Final Preboss completion flushes pending deliveries. Numeric prices and
+economy remain sim-neutral.
 
 ## Stygian Wells
 

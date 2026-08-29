@@ -222,6 +222,19 @@ preserves already-authored rushed pickup detail by moving it to the same-room
 delivery entry; delayed delivery detail already authored at its reached host is
 left in place.
 
+### Schema 70 Shrine delivery chronology correction
+
+Schema 70 retires the separate ranked Shrine purchase action. The visible
+inventory and purchase timing stay on the source Shrine feature; each rushed or
+matured item becomes exactly one required `hermesShrineDelivery` action at the
+occurrence where it is acquired. A due delayed item may publish an unranked
+required host footprint before any acquisition-site state exists, and its one
+placement command materializes the entry at the engine-owned rank. The entry
+key retains the exact source occurrence, so a visited Ephyra side room is never
+collapsed into its Hub parent. The schema-69-to-70 migration converts rushed
+purchase ranks to their source delivery entries and removes delayed purchase
+references without inventing payload detail.
+
 ## F Migration
 
 | Family                                   | Status | Primary evidence                                                | Port action                                                                                                                                                                    |

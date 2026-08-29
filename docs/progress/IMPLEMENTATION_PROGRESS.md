@@ -207,12 +207,14 @@ The room-feature phase is complete from locked plan `74f70a7f`. It replaced
 general authored Death Defiance conditions with declaration-owned one-step
 runtime fallbacks, retained Gorgon's phase-local trigger, made Boss/Postboss
 fixed-link occurrences, and added selected-success Resources, F/G/H Pools,
-Hermes Shrines, and Stygian Wells. Four manifest-backed checkpoints remain the
+Hermes Shrines, and Stygian Wells. Five manifest-backed checkpoints remain the
 representative full-lane witnesses:
 
 - `surface-n-resources` — selected resource timing and side-room placement;
 - `underworld-f-pool` — stacked-trait removal and retained prior-pick history;
 - `surface-no-hermes-shrine-delivery` — rushed and delayed Shrine delivery;
+- `surface-n-shrine-side-room-delivery` — visited side-room Shrine source with
+  an unplaced later main-room delivery host;
 - `underworld-f-stygian-well` — Travel Deal refill and consequential Well effects.
 
 Pools and Wells alone allow runtime-random inventory at Interact. World Shops
@@ -610,6 +612,19 @@ intermediate suite was green.
   comparison; ESLint; repository-wide Prettier; and production build all
   passed. The comparison remained within every configured threshold, and the
   build retained only the existing greater-than-500-kB chunk advisory.
+- The Shrine-delivery chronology closure ran its one authorized `npm run check`
+  on 2026-08-29. Workspace/catalog/engine/fixture typechecking and checkpoint
+  integrity at 3 files/22 tests passed; correctness reached 253 passing files
+  and 2,580 passing tests before five failures exposed one generic
+  `afterCombat` ordinal regression plus stale schema-69 and removed-Features-tab
+  assertions. The ordinal was corrected without changing Shrine's exact
+  encounter-end window, and focused verification then passed the five
+  Pool/Shrine chronology files at 52 tests, the six-test migration owner, and
+  the 12-test Underworld product loop. The complete correctness lane was not
+  rerun. Standalone performance policy tests at 17/17, the same-host eight-metric
+  comparison, ESLint, repository-wide Prettier, and production build all
+  passed; the build retained only the existing greater-than-500-kB chunk
+  advisory.
 
 Focused validation remains the normal implementation practice. A complete
 `npm run check` is reserved for the declared phase closure or a shared

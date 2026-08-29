@@ -58,6 +58,14 @@ Schema 69 narrows Shrine inventory to its three visible reward identities.
 Concrete payload, trait, level, and acquisition disposition state belongs to
 the rushed or delayed delivery entry where the item is actually acquired.
 
+Schema 70 removes Shrine purchases from the room-action language. A Shrine
+feature owns the visible offer and sparse purchase timing; only its concrete
+required `hermesShrineDelivery` pickup enters an occurrence's one action order.
+Rushed delivery is source-local, while a delayed delivery is derived at its
+reached host and can be atomically materialized there when that host has no
+authored acquisition site yet. The source occurrence remains encoded in the
+delivery entry identity, including for visited Hub side rooms.
+
 Schema 56 adds a complete, route-owned four-family selected-resource record.
 Each value is null or an exact `(biomeKey, occurrenceId)` address. Structural
 topology deletion clears its exact target; room replacement retains the address
