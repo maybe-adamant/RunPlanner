@@ -269,11 +269,18 @@ describe('Biome inspector controls', () => {
   it('binds a room-local selected resource removal to one semantic edit and undo', async () => {
     const view = renderWorkspace(loadSurfaceNResourcesProject(), 'Surface', 'N');
     await view.user.click(screen.getByRole('button', { name: /^Opening/ }));
+    await view.user.click(screen.getByRole('tab', { name: 'Features' }));
     const resources = screen.getByRole('region', { name: 'Resources' });
+    const resourceActions = within(resources).getAllByRole('checkbox');
+    expect(resourceActions.length).toBeGreaterThan(1);
+    expect(
+      new Set(resourceActions.map((action) => action.closest('.room-feature-presence-row'))).size,
+    ).toBe(resourceActions.length);
+    expect(within(resources).queryByText('Repair required')).toBeNull();
     const historyBefore = view.application.store.getState().projectWorkspace.history.past.length;
 
-    const removeMining = within(resources).getByRole('button', { name: 'Remove Mining' });
-    expect(removeMining.classList.contains('danger-action')).toBe(true);
+    const removeMining = within(resources).getByRole('checkbox', { name: 'Mining' });
+    expect(removeMining).toHaveProperty('checked', true);
     await view.user.click(removeMining);
     const selected = () =>
       view.application.store

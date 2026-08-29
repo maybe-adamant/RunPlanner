@@ -1,6 +1,6 @@
 /* The inspector-node adapter deliberately exports these projected render products. */
 /* eslint-disable react-refresh/only-export-components */
-import { Fragment, useState, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 
 import {
   requireWorkspaceInteraction,
@@ -15,7 +15,6 @@ import { semanticOwnerFocused } from '@planner/state/editorSessionSlice';
 import { authoredProjectCommandDispatched } from '@planner/state/projectWorkspaceSlice';
 import { useAppDispatch } from '@planner/state/store';
 import { SemanticOwnerMarker } from '@planner/ui/feedback/EvaluationFeedback';
-import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { RoomSelector } from './RoomSelector';
 import { RewardSurfaceEditor } from './DoorRewardEditor';
 import { BiomeWorkspaceContractError } from './workspaceContract';
@@ -223,63 +222,6 @@ function FigurineArcanaControl({
   );
 }
 
-function resourceFamilyLabel(
-  family: import('@run-planner/engine/catalog-schema').ResourceFamily,
-): string {
-  switch (family) {
-    case 'Pickaxe':
-      return 'Mining';
-    case 'Exorcism':
-      return 'Spirit';
-    case 'Shovel':
-      return 'Seed';
-    case 'Fishing':
-      return 'Fishing';
-  }
-}
-
-function RoomResourceControls({
-  interactions,
-  room,
-}: {
-  readonly interactions: WorkspaceInteractionCatalog;
-  readonly room: WorkspaceRoomSummary;
-}): ReactNode {
-  const dispatchIntent = useCommandIntent();
-  if (room.resources === undefined || room.resources.length === 0) return null;
-  return (
-    <section aria-label="Resources" className="room-keepsake-rack">
-      <h4>Resources</h4>
-      {room.resources.map((resource) => (
-        <Fragment key={resource.family}>
-          <button
-            className={
-              resource.action === 'remove'
-                ? 'danger-action action-compact'
-                : 'secondary-action action-compact'
-            }
-            disabled={!resource.legal && resource.action !== 'remove'}
-            onClick={() =>
-              dispatchIntent(
-                requireWorkspaceInteraction(
-                  interactions.resourcePlacements,
-                  resource.interactionKey,
-                ).intent,
-              )
-            }
-            type="button"
-          >
-            {resource.action === 'remove'
-              ? `Remove ${resourceFamilyLabel(resource.family)}`
-              : `${resource.action === 'move' ? 'Move' : 'Add'} ${resourceFamilyLabel(resource.family)}`}
-          </button>
-          {!resource.legal ? <span role="status">Repair required</span> : null}
-        </Fragment>
-      ))}
-    </section>
-  );
-}
-
 export function inspectorRoomActionContent(
   room: WorkspaceRoomSummary,
   interactions: WorkspaceInteractionCatalog,
@@ -331,15 +273,6 @@ export function inspectorLifecycleBoundaryContent(
       )}
     </>
   );
-}
-export function InspectorRoomOverviewContent({
-  room,
-  interactions,
-}: {
-  readonly room: WorkspaceRoomSummary;
-  readonly interactions: WorkspaceInteractionCatalog;
-}) {
-  return <RoomResourceControls interactions={interactions} room={room} />;
 }
 export function EchoKeepsakeReplayControl({
   interactions,

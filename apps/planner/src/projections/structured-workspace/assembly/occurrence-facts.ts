@@ -1,5 +1,6 @@
 import {
   createOccurrenceAddress,
+  naturalChaosSpawnAuthoringEligibility,
   semanticAddressKey,
   type AuthoredBiomePlan,
   selectedExitContinuation,
@@ -13,6 +14,7 @@ import type { WorkspaceBiomeSource } from '../source-index';
 export interface WorkspaceOccurrenceAssemblyFact {
   readonly authoredAdditionalExitKeys: readonly string[];
   readonly detailsActive: boolean;
+  readonly naturalChaosSpawnAuthorable: boolean;
   readonly occurrenceId: OccurrenceId;
 }
 
@@ -82,6 +84,10 @@ export function createWorkspaceBiomeOccurrenceAssemblyFacts(
           (occurrence.additionalExits ?? []).map((additional) => additional.key),
         ),
         detailsActive: active.has(occurrence.occurrenceId),
+        naturalChaosSpawnAuthorable:
+          source.plan.topology !== null &&
+          naturalChaosSpawnAuthoringEligibility(source.plan.topology, occurrence.occurrenceId)
+            .kind === 'authorable',
         occurrenceId: occurrence.occurrenceId,
       }),
     );

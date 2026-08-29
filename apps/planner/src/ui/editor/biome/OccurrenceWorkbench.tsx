@@ -24,8 +24,6 @@ interface OccurrenceWorkbenchProps {
   readonly runState?: WorkspaceRunStateLauncher;
   readonly initialTab?: WorkspaceRoomTab;
   readonly doors?: ReactNode;
-  /** Exact room-owned controls available before an optional lifecycle action exists. */
-  readonly renderRoomOverviewContent?: () => ReactNode;
   /** Exact room-owned additions to ordinary lifecycle rows. */
   readonly renderRoomActionRowContent?: (row: WorkspaceRoomActions['rows'][number]) => ReactNode;
   /** Exact room-owned additions to ordinary lifecycle boundaries. */
@@ -45,7 +43,6 @@ export function OccurrenceWorkbench({
   renderRoomActionRowContent,
   renderLifecycleBoundaryContent,
   renderOptionalRoomActionContent,
-  renderRoomOverviewContent,
   runState,
 }: OccurrenceWorkbenchProps) {
   const requestedTab = initialTab ?? 'overview';
@@ -65,8 +62,20 @@ export function OccurrenceWorkbench({
   const tabId = (tab: WorkspaceRoomTab): string => `${idPrefix}-tab-${tab}`;
   const panelId = `${idPrefix}-panel`;
   const tabRefs = useRef<Partial<Record<WorkspaceRoomTab, HTMLButtonElement | null>>>({});
+  const hasFeatures =
+    (room.resources?.length ?? 0) > 0 ||
+    room.workbench.features.some((feature) => feature.kind !== 'nemesisEvent');
+  const hasSideRooms = localVisit !== undefined;
+  const hasMinorRewards = room.workbench.kind === 'fields';
+  const hasEncounterStructure =
+    room.workbench.kind === 'ship' ||
+    room.workbench.features.some((feature) => feature.kind === 'nemesisEvent');
   const tabOrder: WorkspaceRoomTab[] = [
     'overview',
+    ...(hasFeatures ? (['features'] as const) : []),
+    ...(hasSideRooms ? (['sideRooms'] as const) : []),
+    ...(hasMinorRewards ? (['minorRewards'] as const) : []),
+    ...(hasEncounterStructure ? (['encounters'] as const) : []),
     ...(room.workbench.kind === 'ship'
       ? room.workbench.phases.map((_phase, index) =>
           index === 0
@@ -128,6 +137,24 @@ export function OccurrenceWorkbench({
   );
   const heading = `Entering ${room.label}`;
   const tabRunState = room.runStateByTab[activeTab];
+  const renderDirectRoomWorkbench = (
+    view: 'overview' | 'features' | 'sideRooms' | 'minorRewards' | 'encounters' | 'actions',
+    shipPhaseKey?: string,
+  ): ReactNode => (
+    <DirectRoomWorkbench
+      idPrefix={idPrefix}
+      interactions={interactions}
+      {...(localVisit === undefined ? {} : { localVisit })}
+      room={room}
+      {...(renderRoomActionRowContent === undefined ? {} : { renderRoomActionRowContent })}
+      {...(renderLifecycleBoundaryContent === undefined ? {} : { renderLifecycleBoundaryContent })}
+      {...(renderOptionalRoomActionContent === undefined
+        ? {}
+        : { renderOptionalRoomActionContent })}
+      {...(shipPhaseKey === undefined ? {} : { shipPhaseKey })}
+      view={view}
+    />
+  );
 
   return (
     <article className="room-card biome-occurrence-workbench">
@@ -138,24 +165,35 @@ export function OccurrenceWorkbench({
           {runState === undefined ? null : <RunStateLauncher launcher={runState} />}
         </div>
       </header>
-      <nav aria-label="Room workbench" className="room-workbench-tabs" role="tablist">
-        {tabButton('overview', 'Room Overview')}
-        {room.workbench.kind === 'ship'
-          ? room.workbench.phases.map((phase, index) => {
-              const tab: WorkspaceRoomTab =
-                index === 0
-                  ? 'shipIntroActions'
-                  : index === 1
-                    ? 'shipCombat1Actions'
-                    : 'shipCombat2Actions';
-              return tabButton(tab, `${phase.label} Timeline`, phase.key);
-            })
-          : tabButton('actions', 'Room Timeline')}
-        {room.workbench.kind === 'ship' && room.workbench.repairRows.length > 0
-          ? tabButton('shipInactiveRepair', 'Inactive Actions')
-          : null}
-        {tabButton('doors', 'Room Doors')}
-      </nav>
+      <div className="room-workbench-tab-row">
+        <nav aria-label="Room workbench" className="room-workbench-tabs" role="tablist">
+          {tabButton('overview', 'Room Overview')}
+          {hasFeatures ? tabButton('features', 'Features') : null}
+          {hasSideRooms ? tabButton('sideRooms', 'Side Rooms') : null}
+          {hasMinorRewards ? tabButton('minorRewards', 'Minor Rewards') : null}
+          {hasEncounterStructure ? tabButton('encounters', 'Encounters') : null}
+          {room.workbench.kind === 'ship'
+            ? room.workbench.phases.map((phase, index) => {
+                const tab: WorkspaceRoomTab =
+                  index === 0
+                    ? 'shipIntroActions'
+                    : index === 1
+                      ? 'shipCombat1Actions'
+                      : 'shipCombat2Actions';
+                return tabButton(tab, `${phase.label} Timeline`, phase.key);
+              })
+            : tabButton('actions', 'Room Timeline')}
+          {room.workbench.kind === 'ship' && room.workbench.repairRows.length > 0
+            ? tabButton('shipInactiveRepair', 'Inactive Actions')
+            : null}
+          {tabButton('doors', 'Room Doors')}
+        </nav>
+        {tabRunState === undefined ? null : (
+          <div className="room-workbench-tab-utility">
+            <RunStateLauncher launcher={tabRunState} />
+          </div>
+        )}
+      </div>
       <section
         aria-label={activeTab === 'doors' ? 'Room Doors' : 'Room workbench panel'}
         aria-labelledby={tabId(activeTab)}
@@ -163,28 +201,17 @@ export function OccurrenceWorkbench({
         id={panelId}
         role="tabpanel"
       >
-        {tabRunState === undefined ? null : (
-          <div className="room-tab-utility-bar">
-            <RunStateLauncher launcher={tabRunState} />
-          </div>
-        )}
         {activeTab === 'overview' ? (
-          <>
+          <div className="room-overview-workbench">
             <IncomingRewardOverview incomingDoor={incomingDoor} />
             <AnomalyClearedControl room={room} />
-            <DirectRoomWorkbench
-              idPrefix={idPrefix}
-              interactions={interactions}
-              {...(localVisit === undefined ? {} : { localVisit })}
-              room={room}
-              {...(renderRoomActionRowContent === undefined ? {} : { renderRoomActionRowContent })}
-              {...(renderLifecycleBoundaryContent === undefined
-                ? {}
-                : { renderLifecycleBoundaryContent })}
-              {...(renderRoomOverviewContent === undefined ? {} : { renderRoomOverviewContent })}
-              view="overview"
-            />
-          </>
+            {renderDirectRoomWorkbench('overview')}
+          </div>
+        ) : activeTab === 'features' ||
+          activeTab === 'sideRooms' ||
+          activeTab === 'minorRewards' ||
+          activeTab === 'encounters' ? (
+          <div className="room-overview-workbench">{renderDirectRoomWorkbench(activeTab)}</div>
         ) : activeTab === 'doors' ? (
           (doors ?? <p className="fixed-room-state">No outgoing doors for this room.</p>)
         ) : activeTab === 'shipInactiveRepair' && room.workbench.kind === 'ship' ? (
@@ -200,39 +227,16 @@ export function OccurrenceWorkbench({
             }}
           />
         ) : room.workbench.kind === 'ship' ? (
-          <DirectRoomWorkbench
-            idPrefix={idPrefix}
-            interactions={interactions}
-            room={room}
-            {...(renderRoomActionRowContent === undefined ? {} : { renderRoomActionRowContent })}
-            {...(renderLifecycleBoundaryContent === undefined
-              ? {}
-              : { renderLifecycleBoundaryContent })}
-            {...(() => {
-              const shipPhaseKey =
-                activeTab === 'shipIntroActions'
-                  ? room.workbench.phases[0]?.key
-                  : activeTab === 'shipCombat1Actions'
-                    ? room.workbench.phases[1]?.key
-                    : room.workbench.phases[2]?.key;
-              return shipPhaseKey === undefined ? {} : { shipPhaseKey };
-            })()}
-            view="actions"
-          />
+          renderDirectRoomWorkbench(
+            'actions',
+            activeTab === 'shipIntroActions'
+              ? room.workbench.phases[0]?.key
+              : activeTab === 'shipCombat1Actions'
+                ? room.workbench.phases[1]?.key
+                : room.workbench.phases[2]?.key,
+          )
         ) : (
-          <DirectRoomWorkbench
-            idPrefix={idPrefix}
-            interactions={interactions}
-            room={room}
-            {...(renderRoomActionRowContent === undefined ? {} : { renderRoomActionRowContent })}
-            {...(renderLifecycleBoundaryContent === undefined
-              ? {}
-              : { renderLifecycleBoundaryContent })}
-            {...(renderOptionalRoomActionContent === undefined
-              ? {}
-              : { renderOptionalRoomActionContent })}
-            view="actions"
-          />
+          renderDirectRoomWorkbench('actions')
         )}
       </section>
     </article>

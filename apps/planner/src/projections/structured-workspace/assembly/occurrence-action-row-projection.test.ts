@@ -268,6 +268,11 @@ describe('structured workspace actions assembly', () => {
       owner: { kind: 'roomRunStateCheckpoint', checkpoint: { kind: 'roomEntered' } },
     });
     expect(fields.node.room.runStateByTab.overview).toBe(fields.node.room.runStateByTab.actions);
+    expect(fields.node.room.runStateByTab.features).toBe(fields.node.room.runStateByTab.overview);
+    expect(fields.node.room.runStateByTab.minorRewards).toBe(
+      fields.node.room.runStateByTab.overview,
+    );
+    expect(fields.node.room.runStateByTab.encounters).toBe(fields.node.room.runStateByTab.overview);
     expect(fields.node.room.runStateByTab.overview).toMatchObject({
       availability: 'available',
       owner: { kind: 'roomRunStateCheckpoint', checkpoint: { kind: 'roomEntered' } },
@@ -391,6 +396,8 @@ describe('structured workspace actions assembly', () => {
     expect(ship.node.room.runStateByTab.overview).toBe(
       ship.node.room.runStateByTab.shipIntroActions,
     );
+    expect(ship.node.room.runStateByTab.features).toBe(ship.node.room.runStateByTab.overview);
+    expect(ship.node.room.runStateByTab.encounters).toBe(ship.node.room.runStateByTab.overview);
     expect(ship.node.room.runStateByTab.shipIntroActions?.owner).toMatchObject({
       checkpoint: { kind: 'beforeEncounterStart', phaseKey: 'Intro' },
     });

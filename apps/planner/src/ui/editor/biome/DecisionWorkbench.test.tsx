@@ -18,7 +18,7 @@ import {
   type ProjectDocument,
   type SemanticAddress,
 } from '@run-planner/engine/authored-project';
-import { act, cleanup, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
@@ -297,11 +297,10 @@ describe('DecisionWorkbench', () => {
       located.plan.biomeKey,
       occurrenceForId(source.occurrenceId),
     );
+    await sourceView.user.click(screen.getByRole('tab', { name: 'Features' }));
     const features = screen.getByLabelText('Room features');
     const before = sourceView.application.store.getState().projectWorkspace.history.past.length;
-    await sourceView.user.click(
-      within(features).getByRole('button', { name: 'Remove Chaos gate' }),
-    );
+    await sourceView.user.click(within(features).getByRole('checkbox', { name: 'Chaos Gate' }));
     expect(sourceView.application.store.getState().projectWorkspace.history.past).toHaveLength(
       before + 1,
     );
@@ -317,7 +316,22 @@ describe('DecisionWorkbench', () => {
     ).toBe(false);
   });
 
-  it('renders an authored Zagreus exit in its owning decision, not the Midshop workbench', () => {
+  it('keeps a conflicting natural Chaos choice visible but disabled', () => {
+    const project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+      kind: 'AddSparkChaos',
+      additional: createAdditionalExitAddress(goldenFBiome, goldenFStartId, 'sparkChaos'),
+      occurrenceId: createOccurrenceId('decision-workbench-spark-chaos'),
+    });
+    renderOccurrenceWorkbench(project, 'Underworld', 'F', occurrenceForId(goldenFStartId));
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Features' }));
+    const addChaos = within(screen.getByLabelText('Room features')).getByRole('checkbox', {
+      name: 'Chaos Gate',
+    });
+    expect(addChaos).toHaveProperty('disabled', true);
+  });
+
+  it('renders an authored Zagreus exit in its owning decision, not the Midshop workbench', async () => {
     const base = createGoldenFGHIProject();
     const located = base.routes.flatMap((route) =>
       route.biomes.flatMap((plan) =>
@@ -361,15 +375,16 @@ describe('DecisionWorkbench', () => {
     expect(contract.querySelector('hr')).toBeNull();
     cleanup();
 
-    renderOccurrenceWorkbench(
+    const sourceView = renderOccurrenceWorkbench(
       project,
       located.route.routeKey,
       located.plan.biomeKey,
       occurrenceForId(source.occurrenceId),
     );
+    await sourceView.user.click(screen.getByRole('tab', { name: 'Features' }));
     expect(
-      within(screen.getByLabelText('Room features')).getByRole('button', {
-        name: 'Remove Zagreus contract',
+      within(screen.getByLabelText('Room features')).getByRole('checkbox', {
+        name: 'Zagreus Contract',
       }),
     ).toBeTruthy();
   });

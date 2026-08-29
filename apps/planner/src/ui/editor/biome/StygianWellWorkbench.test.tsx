@@ -7,7 +7,7 @@ import {
   createOccurrenceId,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Provider } from 'react-redux';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -56,6 +56,10 @@ function authoredWell(): ProjectDocument {
   return project;
 }
 
+function openFeatures(): void {
+  fireEvent.click(screen.getByRole('tab', { name: 'Features' }));
+}
+
 describe('Stygian Well workbench', () => {
   it('authors ordinary presence separately from interaction', async () => {
     const project = loadUnderworldFGProject();
@@ -73,6 +77,7 @@ describe('Stygian Well workbench', () => {
           node.kind === 'occurrenceWorkbench' && node.room.occurrenceId === occurrenceId,
       ),
     );
+    openFeatures();
     const presence = screen.getByRole('checkbox', { name: 'Stygian Well present' });
     expect((presence as HTMLInputElement).checked).toBe(false);
     expect((presence as HTMLInputElement).disabled).toBe(false);
@@ -89,7 +94,10 @@ describe('Stygian Well workbench', () => {
       'F',
       occurrence,
     );
-    expect(screen.queryByRole('checkbox', { name: 'Stygian Well present' })).toBeNull();
+    openFeatures();
+    const presence = screen.getByRole('checkbox', { name: 'Stygian Well present' });
+    expect(presence).toHaveProperty('checked', true);
+    expect(presence).toHaveProperty('disabled', true);
     expect(screen.getByRole('checkbox', { name: 'Interact with Stygian Well' })).toBeTruthy();
     expect(screen.queryAllByRole('button', { name: /^Stygian Well / })).toHaveLength(0);
 
@@ -111,6 +119,7 @@ describe('Stygian Well workbench', () => {
     });
 
     const view = renderOccurrenceWorkbench(project, 'Underworld', 'F', occurrence);
+    openFeatures();
     const picker = screen.getByRole('button', { name: 'Stygian Well Travel Deal refill' });
     await view.user.click(picker);
     const choice = await screen.findByRole('option', { name: /ArmorBoostStore/ });
@@ -122,6 +131,7 @@ describe('Stygian Well workbench', () => {
 
   it('shows Twist only for a purchased Twist generation and clears purchase intent on exit', async () => {
     const view = renderOccurrenceWorkbench(authoredWell(), 'Underworld', 'F', occurrence);
+    openFeatures();
     expect(
       screen.queryByRole('button', { name: 'Stygian Well Second Left Twist result' }),
     ).toBeNull();
@@ -159,6 +169,7 @@ describe('Stygian Well workbench', () => {
     });
 
     const view = renderOccurrenceWorkbench(project, 'Underworld', 'F', occurrence);
+    openFeatures();
     const purchase = screen.getByRole('checkbox', {
       name: 'Purchase Stygian Well Second Left',
     });

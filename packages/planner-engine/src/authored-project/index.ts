@@ -225,6 +225,7 @@ export {
 export {
   declaredPhysicalExits,
   hostContinuationExitForDetourRoom,
+  naturalChaosSpawnAuthoringEligibility,
   fixedWidthOneTakeoverForLayout,
   fixedWidthOneTakeoverTransitionForSource,
   hubTerminalTakeoverForSource,
@@ -239,6 +240,7 @@ export {
   selectedExitTarget,
   type DeclaredPhysicalExit,
   type FixedWidthOneTakeoverTransition,
+  type NaturalChaosSpawnAuthoringEligibility,
   type OrdinaryTargetAuthoringEligibility,
   type SelectedExitContinuation,
 } from './topology/query';

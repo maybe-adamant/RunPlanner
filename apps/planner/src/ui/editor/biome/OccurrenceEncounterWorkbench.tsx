@@ -149,15 +149,17 @@ function LocalVisitSlotRow({
 export function LocalVisitWorkbench({
   interactions,
   localVisit,
+  nested = false,
 }: {
   readonly interactions: WorkspaceInteractionCatalog;
   readonly localVisit: WorkspaceLocalVisitDecision;
+  readonly nested?: boolean;
 }) {
   return (
     <section aria-label="Ephyra side rooms" className="ephyra-side-editor">
       <header className="local-reward-heading">
         <div className="owner-markers">
-          <h4>Side rooms</h4>
+          {nested ? null : <h4>Side Rooms</h4>}
           <SemanticOwnerMarker address={localVisit.address} />
         </div>
         <span className="neutral-status">
@@ -348,17 +350,21 @@ export function EncounterPhaseControl({
 
 export function FieldsWorkbench({
   interactions,
+  nested = false,
   room,
 }: {
   readonly interactions: WorkspaceInteractionCatalog;
+  readonly nested?: boolean;
   readonly room: Extract<WorkspaceRoomSummary['roomLocal'], { readonly kind: 'fields' }>;
 }) {
   const dispatch = useAppDispatch();
   return (
     <section aria-label="Fields setup" className="fields-room-editor">
-      <div className="local-reward-heading">
-        <h4>Fields setup</h4>
-      </div>
+      {nested ? null : (
+        <div className="local-reward-heading">
+          <h4>Fields setup</h4>
+        </div>
+      )}
       <label className="field-control field-control-inline">
         <span>Optional pickups</span>
         <select

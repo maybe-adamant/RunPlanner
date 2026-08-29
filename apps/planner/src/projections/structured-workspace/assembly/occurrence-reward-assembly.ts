@@ -80,6 +80,7 @@ import type { WorkspaceMarkerDestinationEmitter } from '../navigation/marker-bui
 export interface WorkspaceOccurrenceProjectionFacts {
   readonly authoredAdditionalExitKeys: readonly string[];
   readonly detailsActive: boolean;
+  readonly naturalChaosSpawnAuthorable: boolean;
 }
 
 export type WorkspaceDerivedAcquisitionEntry = {

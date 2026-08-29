@@ -10,7 +10,7 @@ import type {
   WorkspaceRoomSummary,
 } from '@planner/projections/structured-workspace';
 import { RoomActionsWorkbench } from './OccurrenceRoomActions';
-import { RoomFeaturesWorkbench } from './OccurrenceRoomFeatures';
+import { RoomEncounterStructureWorkbench, RoomFeaturesWorkbench } from './OccurrenceRoomFeatures';
 import {
   EncounterPhaseControl,
   FieldsWorkbench,
@@ -29,9 +29,11 @@ import {
 export function ShipCombatPhaseCountWorkbench({
   occurrence,
   interactions,
+  nested = false,
 }: {
   readonly occurrence: OccurrenceAddress;
   readonly interactions: WorkspaceInteractionCatalog;
+  readonly nested?: boolean;
 }) {
   const dispatch = useAppDispatch();
   const interaction = requireWorkspaceInteraction(
@@ -40,9 +42,11 @@ export function ShipCombatPhaseCountWorkbench({
   );
   return (
     <section aria-label="Room overview" className="ship-combat-editor">
-      <div className="local-reward-heading">
-        <h4>Combat phases</h4>
-      </div>
+      {nested ? null : (
+        <div className="local-reward-heading">
+          <h4>Combat phases</h4>
+        </div>
+      )}
       <CandidateSelect
         id={`room-${occurrence.occurrenceId}-combat-phase-count`}
         interaction={interaction}
@@ -71,18 +75,16 @@ export function DirectRoomWorkbench({
   renderRoomActionRowContent,
   renderLifecycleBoundaryContent,
   renderOptionalRoomActionContent,
-  renderRoomOverviewContent,
 }: {
   readonly idPrefix: string;
   readonly interactions: WorkspaceInteractionCatalog;
   readonly localVisit?: WorkspaceLocalVisitDecision;
   readonly room: WorkspaceRoomSummary;
-  readonly view: 'overview' | 'actions';
+  readonly view: 'overview' | 'features' | 'sideRooms' | 'minorRewards' | 'encounters' | 'actions';
   readonly shipPhaseKey?: string;
   readonly renderRoomActionRowContent?: (row: WorkspaceRoomActions['rows'][number]) => ReactNode;
   readonly renderLifecycleBoundaryContent?: (boundary: WorkspaceRoomLifecycleBoundary) => ReactNode;
   readonly renderOptionalRoomActionContent?: () => ReactNode;
-  readonly renderRoomOverviewContent?: () => ReactNode;
 }) {
   const workbench = room.workbench;
   const renderEncounterPhase = (phase: WorkspaceEncounterPhase): ReactNode => (
@@ -93,155 +95,126 @@ export function DirectRoomWorkbench({
   ): ReactNode => (
     <RewardWheelWorkbench interactions={interactions} occurrence={room.address} wheel={wheel} />
   );
+  const renderFeatures = (): ReactNode => (
+    <RoomFeaturesWorkbench
+      features={workbench.features}
+      interactions={interactions}
+      room={room}
+      {...(workbench.roomActions === undefined ? {} : { roomActions: workbench.roomActions })}
+    />
+  );
+  const renderSideRooms = (): ReactNode =>
+    localVisit === undefined ? null : (
+      <LocalVisitWorkbench interactions={interactions} localVisit={localVisit} />
+    );
+  const renderEncounterStructure = (children?: ReactNode): ReactNode => (
+    <RoomEncounterStructureWorkbench features={workbench.features} interactions={interactions}>
+      {children}
+    </RoomEncounterStructureWorkbench>
+  );
   switch (workbench.kind) {
     case 'standard':
+      if (view === 'overview' || view === 'minorRewards') return null;
+      if (view === 'features') return renderFeatures();
+      if (view === 'sideRooms') return renderSideRooms();
+      if (view === 'encounters') return renderEncounterStructure();
       return (
-        <>
-          {view === 'overview' ? (
-            <>
-              {localVisit === undefined ? null : (
-                <LocalVisitWorkbench interactions={interactions} localVisit={localVisit} />
-              )}
-              {renderRoomOverviewContent?.()}
-              <RoomFeaturesWorkbench
-                features={workbench.features}
-                interactions={interactions}
-                {...(workbench.roomActions === undefined
-                  ? {}
-                  : { roomActions: workbench.roomActions })}
-              />
-            </>
-          ) : (
-            <RoomActionsWorkbench
-              {...(workbench.roomActions === undefined ? {} : { actions: workbench.roomActions })}
-              encounterPhases={workbench.encounterPhases}
-              idPrefix={idPrefix}
-              interactions={interactions}
-              optionalChildren={renderOptionalRoomActionContent?.()}
-              renderEncounterPhase={renderEncounterPhase}
-              renderRewardWheel={renderRewardWheel}
-              {...(renderRoomActionRowContent === undefined
-                ? {}
-                : { renderRowContent: renderRoomActionRowContent })}
-              {...(renderLifecycleBoundaryContent === undefined
-                ? {}
-                : { renderBoundaryContent: renderLifecycleBoundaryContent })}
-            />
-          )}
-        </>
+        <RoomActionsWorkbench
+          {...(workbench.roomActions === undefined ? {} : { actions: workbench.roomActions })}
+          encounterPhases={workbench.encounterPhases}
+          idPrefix={idPrefix}
+          interactions={interactions}
+          optionalChildren={renderOptionalRoomActionContent?.()}
+          renderEncounterPhase={renderEncounterPhase}
+          renderRewardWheel={renderRewardWheel}
+          {...(renderRoomActionRowContent === undefined
+            ? {}
+            : { renderRowContent: renderRoomActionRowContent })}
+          {...(renderLifecycleBoundaryContent === undefined
+            ? {}
+            : { renderBoundaryContent: renderLifecycleBoundaryContent })}
+        />
       );
     case 'fields':
+      if (view === 'overview') return null;
+      if (view === 'features') return renderFeatures();
+      if (view === 'sideRooms') return renderSideRooms();
+      if (view === 'minorRewards') {
+        return <FieldsWorkbench interactions={interactions} room={workbench.fields} />;
+      }
+      if (view === 'encounters') return renderEncounterStructure();
       return (
-        <>
-          {view === 'overview' ? (
-            <>
-              <FieldsWorkbench interactions={interactions} room={workbench.fields} />
-              {localVisit === undefined ? null : (
-                <LocalVisitWorkbench interactions={interactions} localVisit={localVisit} />
-              )}
-              {renderRoomOverviewContent?.()}
-              <RoomFeaturesWorkbench
-                features={workbench.features}
-                interactions={interactions}
-                {...(workbench.roomActions === undefined
-                  ? {}
-                  : { roomActions: workbench.roomActions })}
-              />
-            </>
-          ) : (
-            <RoomActionsWorkbench
-              {...(workbench.roomActions === undefined ? {} : { actions: workbench.roomActions })}
-              encounterPhases={workbench.encounterPhases}
-              idPrefix={idPrefix}
-              interactions={interactions}
-              renderEncounterPhase={renderEncounterPhase}
-              renderRewardWheel={renderRewardWheel}
-              {...(renderRoomActionRowContent === undefined
-                ? {}
-                : { renderRowContent: renderRoomActionRowContent })}
-              {...(renderLifecycleBoundaryContent === undefined
-                ? {}
-                : { renderBoundaryContent: renderLifecycleBoundaryContent })}
-            />
-          )}
-        </>
+        <RoomActionsWorkbench
+          {...(workbench.roomActions === undefined ? {} : { actions: workbench.roomActions })}
+          encounterPhases={workbench.encounterPhases}
+          idPrefix={idPrefix}
+          interactions={interactions}
+          renderEncounterPhase={renderEncounterPhase}
+          renderRewardWheel={renderRewardWheel}
+          {...(renderRoomActionRowContent === undefined
+            ? {}
+            : { renderRowContent: renderRoomActionRowContent })}
+          {...(renderLifecycleBoundaryContent === undefined
+            ? {}
+            : { renderBoundaryContent: renderLifecycleBoundaryContent })}
+        />
       );
     case 'shop':
+      if (view === 'overview') {
+        return <ShopWorkbench interactions={interactions} room={workbench.shop} />;
+      }
+      if (view === 'features') return renderFeatures();
+      if (view === 'sideRooms') return renderSideRooms();
+      if (view === 'minorRewards') return null;
+      if (view === 'encounters') return renderEncounterStructure();
       return (
-        <>
-          {view === 'overview' ? (
-            <>
-              <ShopWorkbench interactions={interactions} room={workbench.shop} />
-              {localVisit === undefined ? null : (
-                <LocalVisitWorkbench interactions={interactions} localVisit={localVisit} />
-              )}
-              {renderRoomOverviewContent?.()}
-              <RoomFeaturesWorkbench
-                features={workbench.features}
-                interactions={interactions}
-                {...(workbench.roomActions === undefined
-                  ? {}
-                  : { roomActions: workbench.roomActions })}
-              />
-            </>
-          ) : (
-            <RoomActionsWorkbench
-              {...(workbench.roomActions === undefined ? {} : { actions: workbench.roomActions })}
-              idPrefix={idPrefix}
-              interactions={interactions}
-              renderEncounterPhase={renderEncounterPhase}
-              renderRewardWheel={renderRewardWheel}
-              {...(renderRoomActionRowContent === undefined
-                ? {}
-                : { renderRowContent: renderRoomActionRowContent })}
-              {...(renderLifecycleBoundaryContent === undefined
-                ? {}
-                : { renderBoundaryContent: renderLifecycleBoundaryContent })}
-            />
-          )}
-        </>
+        <RoomActionsWorkbench
+          {...(workbench.roomActions === undefined ? {} : { actions: workbench.roomActions })}
+          idPrefix={idPrefix}
+          interactions={interactions}
+          renderEncounterPhase={renderEncounterPhase}
+          renderRewardWheel={renderRewardWheel}
+          {...(renderRoomActionRowContent === undefined
+            ? {}
+            : { renderRowContent: renderRoomActionRowContent })}
+          {...(renderLifecycleBoundaryContent === undefined
+            ? {}
+            : { renderBoundaryContent: renderLifecycleBoundaryContent })}
+        />
       );
     case 'ship':
+      if (view === 'overview' || view === 'sideRooms' || view === 'minorRewards') return null;
+      if (view === 'features') return renderFeatures();
+      if (view === 'encounters') {
+        return renderEncounterStructure(
+          <ShipCombatPhaseCountWorkbench
+            occurrence={room.address}
+            interactions={interactions}
+            nested
+          />,
+        );
+      }
       return (
-        <>
-          {view === 'overview' ? (
-            <>
-              <ShipCombatPhaseCountWorkbench
-                occurrence={room.address}
-                interactions={interactions}
-              />
-              {renderRoomOverviewContent?.()}
-              <RoomFeaturesWorkbench
-                features={workbench.features}
-                interactions={interactions}
-                {...(workbench.roomActions === undefined
-                  ? {}
-                  : { roomActions: workbench.roomActions })}
-              />
-            </>
-          ) : (
-            <RoomActionsWorkbench
-              {...(workbench.roomActions === undefined ? {} : { actions: workbench.roomActions })}
-              encounterPhases={room.encounterPhases}
-              idPrefix={idPrefix}
-              interactions={interactions}
-              renderEncounterPhase={renderEncounterPhase}
-              renderRewardWheel={renderRewardWheel}
-              {...(renderRoomActionRowContent === undefined
-                ? {}
-                : { renderRowContent: renderRoomActionRowContent })}
-              {...(renderLifecycleBoundaryContent === undefined
-                ? {}
-                : { renderBoundaryContent: renderLifecycleBoundaryContent })}
-              ship={{
-                occurrence: room.address,
-                phases: workbench.phases,
-                repairRows: workbench.repairRows,
-                ...(shipPhaseKey === undefined ? {} : { phaseKey: shipPhaseKey }),
-              }}
-            />
-          )}
-        </>
+        <RoomActionsWorkbench
+          {...(workbench.roomActions === undefined ? {} : { actions: workbench.roomActions })}
+          encounterPhases={room.encounterPhases}
+          idPrefix={idPrefix}
+          interactions={interactions}
+          renderEncounterPhase={renderEncounterPhase}
+          renderRewardWheel={renderRewardWheel}
+          {...(renderRoomActionRowContent === undefined
+            ? {}
+            : { renderRowContent: renderRoomActionRowContent })}
+          {...(renderLifecycleBoundaryContent === undefined
+            ? {}
+            : { renderBoundaryContent: renderLifecycleBoundaryContent })}
+          ship={{
+            occurrence: room.address,
+            phases: workbench.phases,
+            repairRows: workbench.repairRows,
+            ...(shipPhaseKey === undefined ? {} : { phaseKey: shipPhaseKey }),
+          }}
+        />
       );
   }
 }

@@ -777,6 +777,7 @@ describe('OccurrenceEncounterWorkbench', () => {
       'O',
       occurrenceById(oOccurrenceIds.combat04),
     );
+    openRoomTab('Encounters');
     const count = screen.getByRole('combobox', { name: /Combat phases/ }) as HTMLSelectElement;
     await view.user.click(count);
     await waitFor(() => expect(count.dataset.candidateSupport).toBe('impossible'));
@@ -886,6 +887,7 @@ describe('OccurrenceEncounterWorkbench', () => {
       'O',
       occurrenceById(oOccurrenceIds.combat04),
     );
+    openRoomTab('Encounters');
     const count = screen.getByRole('combobox', { name: /Combat phases/ }) as HTMLSelectElement;
     await view.user.click(count);
     await waitFor(() => {
@@ -1193,6 +1195,7 @@ describe('OccurrenceEncounterWorkbench', () => {
       'O',
       occurrenceById(oOccurrenceIds.combat07),
     );
+    openRoomTab('Encounters');
     const count = screen.getByRole('combobox', { name: /Combat phases/ }) as HTMLSelectElement;
 
     await view.user.click(count);
