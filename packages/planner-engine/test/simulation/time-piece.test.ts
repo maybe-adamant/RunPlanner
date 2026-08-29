@@ -64,8 +64,9 @@ function settle(
   value: 'normal' | 'gold',
   branches = initializeTestRewardBranches(),
   instanceProvenance: 'free' | 'paid' = 'free',
-  offer: typeof boonOffer | { readonly rewardType: 'SpellDrop' } = boonOffer,
+  offer: typeof boonOffer | { readonly rewardType: 'SpellDrop' | 'TrialUpgrade' } = boonOffer,
 ) {
+  const acquisitionRole = offer.rewardType === 'Boon' ? 'source' : 'self';
   return settleOwnedAcquisitionSite(
     catalog,
     branches,
@@ -80,8 +81,7 @@ function settle(
         producerLifecycleKey: 'RoomReward',
         instanceProvenance,
         dispositionByAcquisitionRole: {
-          [offer.rewardType === 'SpellDrop' ? 'self' : 'source']:
-            value === 'gold' ? { kind: 'timePiece' } : { kind: 'normal' },
+          [acquisitionRole]: value === 'gold' ? { kind: 'timePiece' } : { kind: 'normal' },
         },
       },
     },
@@ -127,6 +127,21 @@ describe('Time Piece conversions', () => {
     );
     expect(result.branches[0]?.hexProgress).toEqual({ bankedPathPoints: 0, investedPathPoints: 0 });
     expect(result.branches[0]?.history.useRecord.SpellDrop).toBeUndefined();
+  });
+
+  it('converts a free Chaos TrialUpgrade before its trait acquisition resolves', () => {
+    const branches = initializeTestRewardBranches().map((branch) =>
+      Object.freeze({
+        ...branch,
+        keepsakes: createKeepsakeState(catalog, 'GoldifyKeepsake', branch.arcanaFear),
+      }),
+    );
+    const result = settle('gold', branches, 'free', { rewardType: 'TrialUpgrade' });
+    expect(result.branches[0]?.keepsakes.timePiece?.remainingCharges).toBe(3);
+    expect(result.branches[0]?.events).toContainEqual(
+      expect.objectContaining({ kind: 'conversionToGold' }),
+    );
+    expect(result.branches[0]?.history.lootTypeHistory.TrialUpgrade).toBeUndefined();
   });
 
   it('keeps an invalid persisted conversion repairable without consuming a charge or suppressing the acquisition', () => {

@@ -462,6 +462,7 @@ describe('keepsake normalization', () => {
         'PoseidonUpgrade',
         'ZeusUpgrade',
         'WeaponUpgrade',
+        'TrialUpgrade',
         'SpellDrop',
         'EmptyMaxHealthSmallDrop',
         'EmptyMaxHealthDrop',

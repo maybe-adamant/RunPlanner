@@ -640,6 +640,11 @@ reward surface is multiple or not compactly representable, so room and reward
 cardinality are deliberately independent. Findings, evaluated entry, and
 physical availability never suppress this authored-selection context.
 
+A takeover decision uses the `Preboss` rail label while its selected
+continuation is the normal Preboss batch. If an additional Chaos continuation
+is selected instead, that same decision stop uses the selected Chaos room
+label; the later fresh Preboss draw remains the sole `Preboss` stop.
+
 The rail is intentionally lossy presentation. It consumes the complete
 room-owned offer surface but emits one reward token only for a visible,
 resolved surface containing exactly one reward. Zero, unresolved, hidden, and

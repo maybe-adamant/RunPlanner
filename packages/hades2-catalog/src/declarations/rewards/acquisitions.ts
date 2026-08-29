@@ -322,6 +322,7 @@ const rawAcquisitions = [
     gameName: 'TrialUpgrade',
     kind: 'loot',
     historyProjection: 'lootAndUse',
+    goldConversionEligible: true,
   },
   { gameName: 'BlindBoxLoot', kind: 'consumable', historyProjection: 'consumableAndUse' },
   {

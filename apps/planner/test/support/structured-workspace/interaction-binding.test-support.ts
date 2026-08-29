@@ -85,6 +85,7 @@ import {
   qBiome,
   qOccurrenceIds,
 } from '@run-planner/test-fixtures/surface';
+import { underworldCheckpointArtifacts } from '@run-planner/test-fixtures/checkpoints/underworld';
 import { createCandidateSessionFactory } from '@planner/projections/candidateProjection';
 import type { CandidateProjectionSession } from '@planner/projections/candidateProjection';
 import type {
@@ -110,6 +111,48 @@ export const services = {
   rewardPicker: createRewardPickerProjection(catalog, contextualPicker),
   traitDomain: createTraitDomainProjection(catalog, contextualPicker),
 };
+
+export function createReachableNaturalChaosProject(): ProjectDocument {
+  let project = underworldCheckpointArtifacts['natural-chaos-unresolved-trial'].load();
+  const openingId = createOccurrenceId('fixture-chaos-opening');
+  const source = { kind: 'occurrence' as const, occurrenceId: openingId };
+  const targetId = createOccurrenceId('interaction-chaos-target');
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: createIncomingRewardAddress(goldenFBiome, openingId),
+    value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait: createTraitOfferAddress(createIncomingRewardAddress(goldenFBiome, openingId), 'source'),
+    value: {
+      kind: 'traits',
+      giverKey: 'Apollo',
+      options: [
+        { traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
+        { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
+        { traitKey: 'ApolloCastBoon', rarity: 'Common' },
+      ],
+      selectedOptionKey: 'option1',
+    },
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'ReplaceBatchRewardStore',
+    rewardStore: createBatchRewardStoreAddress(goldenFBiome, source),
+    storeKey: 'MetaProgress',
+  });
+  project = applyProjectCommand(project, catalog, {
+    kind: 'CreateTarget',
+    target: createTargetAddress(goldenFBiome, source, 'exit1'),
+    occurrenceId: targetId,
+    gameName: 'F_Combat01',
+  });
+  return applyProjectCommand(project, catalog, {
+    kind: 'ReplaceIncomingReward',
+    reward: createIncomingRewardAddress(goldenFBiome, targetId),
+    value: { rewardType: 'MaxHealthDrop' },
+  });
+}
 
 export function selectedNChaosFrontierProject(persistTerminalDecision = true): ProjectDocument {
   const opening = createOccurrenceId('interaction-binding-n-chaos-opening');
