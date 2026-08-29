@@ -105,6 +105,10 @@ export type WorkspaceStatus = 'blocked' | 'empty' | 'incomplete' | 'invalid' | '
 /** Transient destination for an entered-room workbench. */
 export type WorkspaceRoomTab =
   | 'overview'
+  | 'features'
+  | 'sideRooms'
+  | 'minorRewards'
+  | 'encounters'
   | 'actions'
   | 'doors'
   | 'shipIntroActions'
@@ -2202,6 +2206,7 @@ export interface WorkspaceNaturalChaosExitControl {
 }
 
 export interface WorkspaceNaturalChaosSpawnControl {
+  readonly authorable: boolean;
   readonly marker: WorkspaceMarker;
   readonly owner: AdditionalExitAddress;
 }

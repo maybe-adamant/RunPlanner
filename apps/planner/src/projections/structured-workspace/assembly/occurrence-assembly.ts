@@ -538,6 +538,22 @@ export function assembleWorkspaceOccurrence(
     marker: roomSummary.marker,
     room: roomSummary,
   });
+  input.markerDestinations.setRoomTab(
+    [
+      ...(zagreusSpawn === undefined ? [] : [zagreusSpawn.marker]),
+      ...(naturalChaosSpawn === undefined ? [] : [naturalChaosSpawn.marker]),
+    ],
+    'features',
+  );
+  if (roomLocal.kind === 'fields') {
+    input.markerDestinations.setRoomTab(
+      [
+        ...roomLocal.cages.map((cage) => cage.control.marker),
+        ...roomLocal.optionalRewards.map((reward) => reward.control.marker),
+      ],
+      'minorRewards',
+    );
+  }
   for (const phase of encounterPhases) {
     input.markerDestinations.setRoomTab(
       [

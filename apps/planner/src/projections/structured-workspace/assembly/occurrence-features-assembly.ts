@@ -27,6 +27,7 @@ export interface WorkspaceOccurrenceFeaturesInput {
   readonly facts: {
     readonly authoredAdditionalExitKeys: readonly string[];
     readonly detailsActive: boolean;
+    readonly naturalChaosSpawnAuthorable: boolean;
   };
   readonly hermesShrineAssessment?: (
     owner: import('@run-planner/engine/authored-project').OccurrenceAddress,
@@ -150,6 +151,7 @@ export function assembleOccurrenceFeatures(
             naturalChaosDeclaration.key,
           );
           return Object.freeze({
+            authorable: input.facts.naturalChaosSpawnAuthorable,
             marker: input.markerDestinations.marker(owner),
             owner,
           });

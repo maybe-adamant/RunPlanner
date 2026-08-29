@@ -16,7 +16,6 @@ import { OccurrenceWorkbench } from './OccurrenceWorkbench';
 import {
   inspectorLifecycleBoundaryContent,
   inspectorRoomActionContent,
-  InspectorRoomOverviewContent,
   inspectorOptionalRoomActionContent,
   StartRoomIdentityEditor,
 } from './BiomeInspectorControls';
@@ -112,9 +111,6 @@ function OccurrenceInspector({
         renderOptionalRoomActionContent={() =>
           inspectorOptionalRoomActionContent(node.room, interactions)
         }
-        renderRoomOverviewContent={() => (
-          <InspectorRoomOverviewContent interactions={interactions} room={node.room} />
-        )}
         {...(node.runState === undefined ? {} : { runState: node.runState })}
         initialTab={roomTab ?? (defaultToDoors ? 'doors' : 'overview')}
         doors={

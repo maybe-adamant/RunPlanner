@@ -239,6 +239,7 @@ describe('OccurrenceRoomActions', () => {
       'H',
       occurrenceById(createOccurrenceId('golden-h-combat02')),
     );
+    openRoomTab('Minor Rewards');
     const fieldsSetup = screen.getByLabelText('Fields setup');
     expect(fieldsSetup).toBeTruthy();
     expect(within(fieldsSetup).getByLabelText('Optional 1')).toBeTruthy();
@@ -630,6 +631,7 @@ describe('OccurrenceRoomActions', () => {
       'F',
       completionOccurrenceById(postbossId),
     );
+    openRoomTab('Features');
     expect(screen.queryByRole('button', { name: 'Pool of Purging Left slot' })).toBeNull();
     await view.user.click(screen.getByRole('checkbox', { name: 'Interact with Pool of Purging' }));
     const left = screen.getByRole('button', { name: 'Pool of Purging Left slot' });
@@ -725,7 +727,7 @@ describe('OccurrenceRoomActions', () => {
       ]),
     );
 
-    openRoomTab('Room Overview');
+    openRoomTab('Features');
     await view.user.click(screen.getByRole('button', { name: 'Pool of Purging Left slot' }));
     await view.user.click(screen.getByRole('option', { name: 'Unresolved' }));
     await waitFor(() =>
@@ -753,7 +755,7 @@ describe('OccurrenceRoomActions', () => {
         slotKey: 'left',
       }),
     );
-    openRoomTab('Room Overview');
+    openRoomTab('Features');
     await view.user.click(screen.getByRole('checkbox', { name: 'Interact with Pool of Purging' }));
     await waitFor(() =>
       expect(screen.queryByRole('button', { name: 'Pool of Purging Middle slot' })).toBeNull(),

@@ -583,7 +583,7 @@ function projectHubNode(
       }),
     ];
     markerDestinations.redirect(localVisitMarkers, parentWorkbench.key);
-    markerDestinations.setRoomTab(localVisitMarkers, 'overview');
+    markerDestinations.setRoomTab(localVisitMarkers, 'sideRooms');
   }
   markerDestinations.setHubTab(
     Object.freeze([node.marker, node.openSet, ...node.slots.map((slot) => slot.marker)]),

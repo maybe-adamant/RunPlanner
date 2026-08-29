@@ -468,7 +468,8 @@ describe('BiomeWorkspace', () => {
     expect(screen.getByRole('region', { name: 'Incoming reward' }).textContent).toContain(
       'Big Max Magick',
     );
-    expect(screen.getByRole('heading', { name: 'Side rooms' })).toBeTruthy();
+    await view.user.click(screen.getByRole('tab', { name: 'Side Rooms' }));
+    expect(screen.getByRole('heading', { name: 'Side Rooms' })).toBeTruthy();
     expect(screen.getByText('Door 558353')).toBeTruthy();
     expect(screen.getByLabelText('Side Room 01 generation')).toBeTruthy();
     const inspector = screen.getByRole('complementary', { name: 'Details' });

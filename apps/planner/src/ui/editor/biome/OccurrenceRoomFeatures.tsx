@@ -17,6 +17,7 @@ import {
   useOptionalWorkspaceInteraction,
   useWorkspaceInteraction,
 } from '@planner/ui/controls/useWorkspaceInteraction';
+import type { ReactNode } from 'react';
 
 const emptyNullablePicker: ContextualPickerModel<string | null> = Object.freeze({
   sections: Object.freeze([]),
@@ -68,44 +69,31 @@ function ZagreusSpawnWorkbench({
   const executeIntent = useCommandIntent();
   const owner = feature.action === 'add' ? feature.control.owner : feature.owner;
   return (
-    <section aria-label="Zagreus contract availability" className="zagreus-contract-workbench">
-      <div className="owner-markers">
-        {feature.action === 'add' ? (
-          <button
-            className="quiet-action action-compact"
-            data-command="AddZagreusContract"
-            onClick={() =>
-              executeIntent(
-                requireWorkspaceInteraction(
+    <label className="room-feature-presence-row">
+      <input
+        checked={feature.action === 'remove'}
+        data-command={feature.action === 'add' ? 'AddZagreusContract' : 'RemoveZagreusContract'}
+        disabled={feature.action === 'add' && !feature.control.materialized}
+        onChange={() =>
+          executeIntent(
+            feature.action === 'add'
+              ? requireWorkspaceInteraction(
                   interactions.zagreusSpawns,
                   workspaceInteractionKey(owner),
-                ).spawnIntent(),
-              )
-            }
-            type="button"
-          >
-            Add Zagreus contract
-          </button>
-        ) : (
-          <button
-            className="danger-action action-compact"
-            data-command="RemoveZagreusContract"
-            onClick={() =>
-              executeIntent(
-                requireWorkspaceInteraction(
+                ).spawnIntent()
+              : requireWorkspaceInteraction(
                   interactions.zagreusContracts,
                   workspaceInteractionKey(owner),
                 ).removeIntent,
-              )
-            }
-            type="button"
-          >
-            Remove Zagreus contract
-          </button>
-        )}
+          )
+        }
+        type="checkbox"
+      />
+      <span>Zagreus Contract</span>
+      <span className="owner-markers">
         {feature.action === 'add' ? <SemanticOwnerMarker address={owner} /> : null}
-      </div>
-    </section>
+      </span>
+    </label>
   );
 }
 
@@ -120,44 +108,31 @@ function NaturalChaosSpawnWorkbench({
   const executeIntent = useCommandIntent();
   const owner = feature.action === 'add' ? feature.control.owner : feature.owner;
   return (
-    <section aria-label="Natural Chaos availability" className="zagreus-contract-workbench">
-      <div className="owner-markers">
-        {feature.action === 'add' ? (
-          <button
-            className="quiet-action action-compact"
-            data-command="AddNaturalChaos"
-            onClick={() =>
-              executeIntent(
-                requireWorkspaceInteraction(
+    <label className="room-feature-presence-row">
+      <input
+        checked={feature.action === 'remove'}
+        data-command={feature.action === 'add' ? 'AddNaturalChaos' : 'RemoveNaturalChaos'}
+        disabled={feature.action === 'add' && !feature.control.authorable}
+        onChange={() =>
+          executeIntent(
+            feature.action === 'add'
+              ? requireWorkspaceInteraction(
                   interactions.naturalChaosSpawns,
                   workspaceInteractionKey(owner),
-                ).spawnIntent(),
-              )
-            }
-            type="button"
-          >
-            Add Chaos gate
-          </button>
-        ) : (
-          <button
-            className="danger-action action-compact"
-            data-command="RemoveNaturalChaos"
-            onClick={() =>
-              executeIntent(
-                requireWorkspaceInteraction(
+                ).spawnIntent()
+              : requireWorkspaceInteraction(
                   interactions.naturalChaosExits,
                   workspaceInteractionKey(owner),
                 ).removeIntent,
-              )
-            }
-            type="button"
-          >
-            Remove Chaos gate
-          </button>
-        )}
+          )
+        }
+        type="checkbox"
+      />
+      <span>Chaos Gate</span>
+      <span className="owner-markers">
         {feature.action === 'add' ? <SemanticOwnerMarker address={owner} /> : null}
-      </div>
-    </section>
+      </span>
+    </label>
   );
 }
 
@@ -259,44 +234,153 @@ export function AnomalyIdentityControls({ room }: { readonly room: WorkspaceRoom
   );
 }
 
+function resourceFamilyLabel(
+  family: import('@run-planner/engine/catalog-schema').ResourceFamily,
+): string {
+  switch (family) {
+    case 'Pickaxe':
+      return 'Mining';
+    case 'Exorcism':
+      return 'Spirit';
+    case 'Shovel':
+      return 'Seed';
+    case 'Fishing':
+      return 'Fishing';
+  }
+}
+
+function RoomResourceControls({
+  interactions,
+  room,
+}: {
+  readonly interactions: WorkspaceInteractionCatalog;
+  readonly room: WorkspaceRoomSummary;
+}) {
+  const executeIntent = useCommandIntent();
+  return (
+    <div aria-label="Resources" className="room-feature-action-list" role="region">
+      {room.resources?.map((resource) => (
+        <label className="room-feature-presence-row" key={resource.family}>
+          <input
+            checked={resource.action === 'remove'}
+            disabled={!resource.legal && resource.action !== 'remove'}
+            onChange={() =>
+              executeIntent(
+                requireWorkspaceInteraction(
+                  interactions.resourcePlacements,
+                  resource.interactionKey,
+                ).intent,
+              )
+            }
+            type="checkbox"
+          />
+          <span>{resourceFamilyLabel(resource.family)}</span>
+        </label>
+      ))}
+    </div>
+  );
+}
+
+type RoomFeaturePresence = Exclude<WorkspaceRoomFeature, { readonly kind: 'nemesisEvent' }>;
+
+type RoomFeatureEntry =
+  | { readonly kind: 'heading'; readonly key: string; readonly label: string }
+  | { readonly kind: 'content'; readonly key: string; readonly content: ReactNode }
+  | { readonly kind: 'feature'; readonly key: string; readonly feature: RoomFeaturePresence };
+
+function featureEntries(
+  key: string,
+  label: string,
+  features: readonly RoomFeaturePresence[],
+): readonly RoomFeatureEntry[] {
+  return features.length === 0
+    ? Object.freeze([])
+    : Object.freeze([
+        Object.freeze({ kind: 'heading' as const, key: `${key}:heading`, label }),
+        ...features.map((feature, index) =>
+          Object.freeze({ kind: 'feature' as const, key: `${key}:${index}`, feature }),
+        ),
+      ]);
+}
+
+function contentEntries(
+  key: string,
+  label: string,
+  content: ReactNode | undefined,
+): readonly RoomFeatureEntry[] {
+  return content === undefined
+    ? Object.freeze([])
+    : Object.freeze([
+        Object.freeze({ kind: 'heading' as const, key: `${key}:heading`, label }),
+        Object.freeze({ kind: 'content' as const, key: `${key}:content`, content }),
+      ]);
+}
+
 export function RoomFeaturesWorkbench({
   features,
   interactions,
   roomActions,
+  room,
 }: {
   readonly features: readonly WorkspaceRoomFeature[];
   readonly interactions: WorkspaceInteractionCatalog;
   readonly roomActions?: WorkspaceRoomActions;
+  readonly room: WorkspaceRoomSummary;
 }) {
   const executeIntent = useCommandIntent();
-  if (features.length === 0) return null;
+  const additionalExits = features.filter(
+    (
+      feature,
+    ): feature is Extract<
+      RoomFeaturePresence,
+      { readonly kind: 'naturalChaos' | 'zagreusContract' }
+    > => feature.kind === 'naturalChaos' || feature.kind === 'zagreusContract',
+  );
+  const roomObjects = features.filter(
+    (
+      feature,
+    ): feature is Extract<
+      RoomFeaturePresence,
+      { readonly kind: 'hermesShrine' | 'purgingPool' | 'stygianWell' }
+    > =>
+      feature.kind === 'hermesShrine' ||
+      feature.kind === 'purgingPool' ||
+      feature.kind === 'stygianWell',
+  );
+  const entries: readonly RoomFeatureEntry[] = Object.freeze([
+    ...(room.resources === undefined || room.resources.length === 0
+      ? []
+      : contentEntries(
+          'resources',
+          'Resources',
+          <RoomResourceControls interactions={interactions} room={room} />,
+        )),
+    ...featureEntries('additional-exits', 'Additional Exits', additionalExits),
+    ...featureEntries('room-objects', 'Objects', roomObjects),
+  ]);
+  if (entries.length === 0) return null;
   return (
     <section aria-label="Room features" className="room-features-workbench">
       <div className="local-reward-heading">
-        <h4>Room features</h4>
+        <h4>Features</h4>
       </div>
-      {features.map((feature) => {
+      {entries.map((entry) => {
+        if (entry.kind === 'heading') {
+          return (
+            <h5 className="room-feature-category-heading" key={entry.key}>
+              {entry.label}
+            </h5>
+          );
+        }
+        if (entry.kind === 'content') {
+          return (
+            <div className="room-feature-category-content" key={entry.key}>
+              {entry.content}
+            </div>
+          );
+        }
+        const feature = entry.feature;
         switch (feature.kind) {
-          case 'nemesisEvent': {
-            const interaction = requireWorkspaceInteraction(
-              interactions.nemesisFeatures,
-              feature.interactionKey,
-            );
-            return (
-              <button
-                className={
-                  feature.action === 'remove'
-                    ? 'danger-action action-compact'
-                    : 'secondary-action action-compact'
-                }
-                key={feature.interactionKey}
-                onClick={() => executeIntent(interaction.intent)}
-                type="button"
-              >
-                {feature.action === 'add' ? 'Add Nemesis event' : 'Remove Nemesis event'}
-              </button>
-            );
-          }
           case 'zagreusContract':
             return (
               <ZagreusSpawnWorkbench
@@ -318,63 +402,66 @@ export function RoomFeaturesWorkbench({
               />
             );
           case 'stygianWell':
-            return (
-              <fieldset className="room-purging-pool" key="stygian-well">
-                <legend>Stygian Well</legend>
-                {feature.presenceInteractionKey === undefined
-                  ? null
-                  : (() => {
-                      const presence = requireWorkspaceInteraction(
-                        interactions.stygianWellPresences,
-                        feature.presenceInteractionKey,
-                      );
-                      return (
-                        <label>
-                          <input
-                            aria-label="Stygian Well present"
-                            checked={feature.present}
-                            disabled={!feature.present && !feature.placementEligible}
-                            onChange={(event) =>
-                              executeIntent(presence.intentFor(event.target.checked))
-                            }
-                            type="checkbox"
-                          />
-                          Well present
-                        </label>
-                      );
-                    })()}
-                {feature.interactionKey === undefined
-                  ? null
-                  : (() => {
-                      const interaction = requireWorkspaceInteraction(
-                        interactions.stygianWellInteractions,
-                        feature.interactionKey,
-                      );
-                      return (
-                        <label>
-                          <input
-                            aria-label="Interact with Stygian Well"
-                            checked={feature.interacted}
-                            onChange={(event) =>
-                              executeIntent(interaction.intentFor(event.target.checked))
-                            }
-                            type="checkbox"
-                          />
-                          Interact
-                        </label>
-                      );
-                    })()}
-                {feature.interacted
-                  ? feature.slots.map((slot) => (
-                      <StygianWellSlotEditor
-                        key={slot.generationKey}
-                        slot={slot}
-                        interactions={interactions}
-                      />
-                    ))
-                  : null}
-              </fieldset>
-            );
+            return (() => {
+              const presence =
+                feature.presenceInteractionKey === undefined
+                  ? undefined
+                  : requireWorkspaceInteraction(
+                      interactions.stygianWellPresences,
+                      feature.presenceInteractionKey,
+                    );
+              return (
+                <fieldset className="room-purging-pool" key="stygian-well">
+                  <legend className="visually-hidden">Stygian Well configuration</legend>
+                  <label className="room-feature-presence-row">
+                    <input
+                      aria-label="Stygian Well present"
+                      checked={feature.present}
+                      disabled={
+                        presence === undefined || (!feature.present && !feature.placementEligible)
+                      }
+                      onChange={(event) =>
+                        presence === undefined
+                          ? undefined
+                          : executeIntent(presence.intentFor(event.target.checked))
+                      }
+                      type="checkbox"
+                    />
+                    <span>Stygian Well</span>
+                  </label>
+                  {feature.interactionKey === undefined
+                    ? null
+                    : (() => {
+                        const interaction = requireWorkspaceInteraction(
+                          interactions.stygianWellInteractions,
+                          feature.interactionKey,
+                        );
+                        return (
+                          <label>
+                            <input
+                              aria-label="Interact with Stygian Well"
+                              checked={feature.interacted}
+                              onChange={(event) =>
+                                executeIntent(interaction.intentFor(event.target.checked))
+                              }
+                              type="checkbox"
+                            />
+                            Interact
+                          </label>
+                        );
+                      })()}
+                  {feature.interacted
+                    ? feature.slots.map((slot) => (
+                        <StygianWellSlotEditor
+                          key={slot.generationKey}
+                          slot={slot}
+                          interactions={interactions}
+                        />
+                      ))
+                    : null}
+                </fieldset>
+              );
+            })();
           case 'purgingPool':
             return (() => {
               const poolInteraction = requireWorkspaceInteraction(
@@ -383,7 +470,11 @@ export function RoomFeaturesWorkbench({
               );
               return (
                 <fieldset className="room-purging-pool" key="purging-pool">
-                  <legend>Pool of Purging</legend>
+                  <legend className="visually-hidden">Pool of Purging configuration</legend>
+                  <label className="room-feature-presence-row">
+                    <input aria-label="Pool of Purging" checked disabled type="checkbox" />
+                    <span>Pool of Purging</span>
+                  </label>
                   <label>
                     <input
                       aria-label="Interact with Pool of Purging"
@@ -464,74 +555,117 @@ export function RoomFeaturesWorkbench({
               );
             })();
           case 'hermesShrine':
-            return (
-              <fieldset className="room-purging-pool" key="hermes-shrine">
-                <legend>Hermes Shrine</legend>
-                {feature.presenceInteractionKey === undefined
-                  ? null
-                  : (() => {
-                      const presence = requireWorkspaceInteraction(
-                        interactions.hermesShrinePresences,
-                        feature.presenceInteractionKey,
-                      );
-                      return (
-                        <label>
-                          <input
-                            aria-label="Hermes Shrine present"
-                            checked={feature.present}
-                            disabled={!feature.present && !feature.placementEligible}
-                            onChange={(event) =>
-                              executeIntent(presence.intentFor(event.target.checked))
-                            }
-                            type="checkbox"
-                          />
-                          Shrine present
-                        </label>
-                      );
-                    })()}
-                {feature.slots.map((slot) => {
-                  const offer = requireWorkspaceInteraction(
-                    interactions.hermesShrineOffers,
-                    slot.offerInteractionKey,
-                  );
-                  const purchase = requireWorkspaceInteraction(
-                    interactions.hermesShrinePurchases,
-                    slot.purchaseInteractionKey,
-                  );
-                  return (
-                    <HermesShrineSlotEditor
-                      key={slot.key}
-                      label={slot.label}
-                      {...(slot.rewardLabel === undefined ? {} : { rewardLabel: slot.rewardLabel })}
-                      offer={offer}
-                      purchase={purchase}
+            return (() => {
+              const presence =
+                feature.presenceInteractionKey === undefined
+                  ? undefined
+                  : requireWorkspaceInteraction(
+                      interactions.hermesShrinePresences,
+                      feature.presenceInteractionKey,
+                    );
+              return (
+                <fieldset className="room-purging-pool" key="hermes-shrine">
+                  <legend className="visually-hidden">Hermes Shrine configuration</legend>
+                  <label className="room-feature-presence-row">
+                    <input
+                      aria-label="Hermes Shrine present"
+                      checked={feature.present}
+                      disabled={
+                        presence === undefined || (!feature.present && !feature.placementEligible)
+                      }
+                      onChange={(event) =>
+                        presence === undefined
+                          ? undefined
+                          : executeIntent(presence.intentFor(event.target.checked))
+                      }
+                      type="checkbox"
                     />
-                  );
-                })}
-                {feature.travelDealRefill === undefined
-                  ? null
-                  : (() => {
-                      const refill = feature.travelDealRefill;
-                      return (
-                        <HermesShrineSlotEditor
-                          label="Travel Deal refill"
-                          {...(refill.rewardLabel === undefined
-                            ? {}
-                            : { rewardLabel: refill.rewardLabel })}
-                          offer={requireWorkspaceInteraction(
-                            interactions.hermesShrineOffers,
-                            refill.offerInteractionKey,
-                          )}
-                          purchase={requireWorkspaceInteraction(
-                            interactions.hermesShrinePurchases,
-                            refill.purchaseInteractionKey,
-                          )}
-                        />
-                      );
-                    })()}
-              </fieldset>
-            );
+                    <span>Hermes Shrine</span>
+                  </label>
+                  {feature.slots.map((slot) => {
+                    const offer = requireWorkspaceInteraction(
+                      interactions.hermesShrineOffers,
+                      slot.offerInteractionKey,
+                    );
+                    const purchase = requireWorkspaceInteraction(
+                      interactions.hermesShrinePurchases,
+                      slot.purchaseInteractionKey,
+                    );
+                    return (
+                      <HermesShrineSlotEditor
+                        key={slot.key}
+                        label={slot.label}
+                        {...(slot.rewardLabel === undefined
+                          ? {}
+                          : { rewardLabel: slot.rewardLabel })}
+                        offer={offer}
+                        purchase={purchase}
+                      />
+                    );
+                  })}
+                  {feature.travelDealRefill === undefined
+                    ? null
+                    : (() => {
+                        const refill = feature.travelDealRefill;
+                        return (
+                          <HermesShrineSlotEditor
+                            label="Travel Deal refill"
+                            {...(refill.rewardLabel === undefined
+                              ? {}
+                              : { rewardLabel: refill.rewardLabel })}
+                            offer={requireWorkspaceInteraction(
+                              interactions.hermesShrineOffers,
+                              refill.offerInteractionKey,
+                            )}
+                            purchase={requireWorkspaceInteraction(
+                              interactions.hermesShrinePurchases,
+                              refill.purchaseInteractionKey,
+                            )}
+                          />
+                        );
+                      })()}
+                </fieldset>
+              );
+            })();
         }
+      })}
+    </section>
+  );
+}
+
+export function RoomEncounterStructureWorkbench({
+  children,
+  features,
+  interactions,
+}: {
+  readonly children?: ReactNode;
+  readonly features: readonly WorkspaceRoomFeature[];
+  readonly interactions: WorkspaceInteractionCatalog;
+}) {
+  const executeIntent = useCommandIntent();
+  const encounters = features.filter((feature) => feature.kind === 'nemesisEvent');
+  if (children === undefined && encounters.length === 0) return null;
+  return (
+    <section aria-label="Encounter structure" className="room-structure-workbench">
+      <div className="local-reward-heading">
+        <h4>Encounters</h4>
+      </div>
+      {children}
+      {encounters.map((feature) => {
+        const interaction = requireWorkspaceInteraction(
+          interactions.nemesisFeatures,
+          feature.interactionKey,
+        );
+        return (
+          <label className="room-feature-presence-row" key={feature.interactionKey}>
+            <input
+              checked={feature.action === 'remove'}
+              onChange={() => executeIntent(interaction.intent)}
+              type="checkbox"
+            />
+            <span>Nemesis Event</span>
+          </label>
+        );
       })}
     </section>
   );

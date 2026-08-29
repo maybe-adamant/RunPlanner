@@ -6,7 +6,7 @@ import {
   createOccurrenceAddress,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
-import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Provider } from 'react-redux';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -63,6 +63,10 @@ function completeOrdinaryShrine(project = loadSurfaceNOProject()): ProjectDocume
   return next;
 }
 
+function openFeatures(): void {
+  fireEvent.click(screen.getByRole('tab', { name: 'Features' }));
+}
+
 describe('Hermes Shrine workbench', () => {
   it('adds an eligible ordinary Shrine, exposes all inventory, and undoes the semantic edit', async () => {
     const application = createApplication();
@@ -73,6 +77,7 @@ describe('Hermes Shrine workbench', () => {
       occurrence(oOccurrenceIds.combat07),
       application,
     );
+    openFeatures();
     const presence = screen.getByRole('checkbox', { name: 'Hermes Shrine present' });
     expect((presence as HTMLInputElement).disabled).toBe(false);
     expect(screen.queryByRole('checkbox', { name: /Interact.*Hermes Shrine/i })).toBeNull();
@@ -112,6 +117,7 @@ describe('Hermes Shrine workbench', () => {
       occurrence(oOccurrenceIds.combat07),
       application,
     );
+    openFeatures();
     expect(screen.getAllByRole('button', { name: /^Hermes Shrine (First|Second)/ })).toHaveLength(
       3,
     );
@@ -145,7 +151,10 @@ describe('Hermes Shrine workbench', () => {
   it('keeps forced Shrine inventory visible and non-removable', () => {
     const postbossId = `surface-o-preboss:postboss`;
     renderOccurrenceWorkbench(loadSurfaceNOProject(), 'Surface', 'O', occurrence(postbossId));
-    expect(screen.queryByRole('checkbox', { name: 'Hermes Shrine present' })).toBeNull();
+    openFeatures();
+    const presence = screen.getByRole('checkbox', { name: 'Hermes Shrine present' });
+    expect(presence).toHaveProperty('checked', true);
+    expect(presence).toHaveProperty('disabled', true);
     expect(screen.getAllByRole('button', { name: /^Hermes Shrine (First|Second)/ })).toHaveLength(
       3,
     );
@@ -158,6 +167,7 @@ describe('Hermes Shrine workbench', () => {
       'O',
       occurrence(oOccurrenceIds.combat01),
     );
+    openFeatures();
     const presence = screen.getByRole('checkbox', { name: 'Hermes Shrine present' });
     expect((presence as HTMLInputElement).checked).toBe(false);
     expect((presence as HTMLInputElement).disabled).toBe(true);
@@ -178,6 +188,7 @@ describe('Hermes Shrine workbench', () => {
       purchase: { delay: 4, rushed: false },
     });
     renderOccurrenceWorkbench(project, 'Surface', 'O', occurrence(oOccurrenceIds.combat07));
+    openFeatures();
 
     const delay = screen.getByRole('combobox', {
       name: 'Hermes Shrine Travel Deal refill delivery delay',

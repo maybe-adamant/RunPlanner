@@ -2129,14 +2129,29 @@ select {
   letter-spacing: 0.01em;
 }
 
-.room-workbench-tabs {
+.room-workbench-tab-row {
   display: flex;
+  align-items: center;
   gap: 4px;
   min-width: 0;
   margin: 0 -4px 12px;
-  overflow-x: auto;
   border-bottom: 1px solid #353640;
+}
+
+.room-workbench-tabs {
+  display: flex;
+  flex: 1 1 auto;
+  gap: 4px;
+  min-width: 0;
+  overflow-x: auto;
   scrollbar-width: thin;
+}
+
+.room-workbench-tab-utility {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  padding: 0 4px 4px;
 }
 
 .room-workbench-tab {
@@ -2163,14 +2178,6 @@ select {
 
 .room-workbench-panel {
   min-width: 0;
-}
-
-.room-tab-utility-bar {
-  align-items: center;
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: 0.55rem;
-  min-height: 1.8rem;
 }
 
 .room-action-lifecycle-boundary {
@@ -2653,14 +2660,77 @@ select {
 }
 
 .room-features-workbench,
+.room-structure-workbench,
 .fields-room-editor,
 .ephyra-side-editor,
+.room-overview-workbench,
 .room-actions-workbench {
   display: grid;
   gap: 10px;
   margin-top: 12px;
   padding-top: 12px;
   border-top: 1px solid #353640;
+}
+
+.room-feature-category-heading {
+  margin: 8px 0 0;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #34353e;
+  color: #c8b8d8;
+  font-size: 0.76rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.room-features-workbench > .local-reward-heading + .room-feature-category-heading {
+  margin-top: 0;
+}
+
+.room-feature-category-content,
+.room-feature-action-list {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+
+.room-feature-presence-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  min-height: 30px;
+  padding: 5px 7px;
+  border: 1px solid #34353e;
+  border-radius: 8px;
+  background: rgb(255 255 255 / 2%);
+  color: #e3dde8;
+}
+
+.room-feature-presence-row input {
+  margin: 0;
+  accent-color: #a98dcc;
+}
+
+.room-feature-presence-row:has(input:disabled) {
+  color: #88858e;
+  opacity: 0.68;
+}
+
+.room-feature-category-content > .ephyra-side-editor,
+.room-feature-category-content > .fields-room-editor,
+.room-feature-category-content > .ship-combat-editor {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.room-overview-workbench > .room-features-workbench,
+.room-overview-workbench > .room-structure-workbench,
+.room-overview-workbench > .fields-room-editor,
+.room-overview-workbench > .ephyra-side-editor {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
 }
 
 .room-purging-pool {
@@ -2672,6 +2742,10 @@ select {
 .room-purging-pool > label {
   display: grid;
   gap: 4px;
+}
+
+.room-purging-pool > .room-feature-presence-row {
+  display: flex;
 }
 
 .ship-phase .encounter-editor,
@@ -3187,6 +3261,7 @@ select {
   font-size: 0.95rem;
 }
 
+.room-overview-workbench,
 .room-actions-workbench {
   display: grid;
   gap: 10px;

@@ -67,10 +67,22 @@ export function assembleOccurrenceRunState(
     if (roomLocal.kind === 'ship' && entry.boundary.kind === 'encounterStart') {
       const tab = roomTabForPhase(roomLocal, entry.boundary.phaseKey);
       byTab[tab] = entry.runState;
-      if (byTab.overview === undefined) byTab.overview = entry.runState;
+      if (byTab.overview === undefined) {
+        byTab.overview = entry.runState;
+        byTab.features = entry.runState;
+        byTab.encounters = entry.runState;
+      }
     } else if (roomLocal.kind !== 'ship' && entry.boundary.kind === 'roomEntered') {
-      byTab.overview = entry.runState;
-      byTab.actions = entry.runState;
+      for (const tab of [
+        'overview',
+        'features',
+        'sideRooms',
+        'minorRewards',
+        'encounters',
+        'actions',
+      ] as const) {
+        byTab[tab] = entry.runState;
+      }
     }
   }
   if (beforeExitRunState !== undefined) byTab.doors = beforeExitRunState;

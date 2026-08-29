@@ -86,15 +86,23 @@ describe('OccurrenceWorkbench', () => {
       'F',
       occurrenceById(goldenFOccurrenceId(1, 1)),
     );
-    const standardFeatures = screen.getByLabelText('Room features');
-    expect(standardFeatures).toBeTruthy();
     expect(screen.getByRole('tab', { name: 'Room Overview' }).getAttribute('aria-selected')).toBe(
       'true',
     );
+    expect(screen.queryByLabelText('Room features')).toBeNull();
+    openRoomTab('Features');
+    const standardFeatures = screen.getByLabelText('Room features');
+    expect(standardFeatures).toBeTruthy();
+    expect(within(standardFeatures).getByRole('heading', { name: 'Features' })).toBeTruthy();
+    expect(
+      within(standardFeatures).getByRole('heading', { name: 'Additional Exits' }),
+    ).toBeTruthy();
+    expect(document.querySelector('.room-overview-workbench')).not.toBeNull();
     expect(screen.getByRole('tab', { name: 'Room Doors' })).toBeTruthy();
     const overviewRunState = screen.getByRole('button', { name: 'Run State' });
     const entryOwner = overviewRunState.getAttribute('data-run-state-launcher');
-    expect(overviewRunState.closest('.room-tab-utility-bar')).not.toBeNull();
+    expect(overviewRunState.closest('.room-workbench-tab-row')).not.toBeNull();
+    expect(overviewRunState.closest('[role="tabpanel"]')).toBeNull();
     openRoomTab('Room Timeline');
     const standardActions = screen.getByRole('region', { name: 'Room Timeline' });
     const standardStart = within(standardActions).getByLabelText('Start encounter');
@@ -103,18 +111,18 @@ describe('OccurrenceWorkbench', () => {
     const roomEntered = within(standardActions).getByLabelText('Room entered');
     const entryRunState = screen.getByRole('button', { name: 'Run State' });
     expect(entryRunState.getAttribute('data-run-state-launcher')).toBe(entryOwner);
-    expect(entryRunState.closest('.room-tab-utility-bar')).not.toBeNull();
+    expect(entryRunState.closest('.room-workbench-tab-row')).not.toBeNull();
     expectBefore(entryRunState, roomEntered);
     expectBefore(standardStart, standardEncounter);
     expectBefore(standardEncounter, standardEnd);
     openRoomTab('Room Doors');
     expect(
-      within(screen.getByRole('tabpanel', { name: 'Room Doors' })).getByRole('button', {
+      within(screen.getByRole('tabpanel', { name: 'Room Doors' })).queryByRole('button', {
         name: 'Run State',
       }),
-    ).toBeTruthy();
+    ).toBeNull();
     expect(
-      screen.getByRole('button', { name: 'Run State' }).closest('.room-tab-utility-bar'),
+      screen.getByRole('button', { name: 'Run State' }).closest('.room-workbench-tab-row'),
     ).not.toBeNull();
   });
 
@@ -145,19 +153,19 @@ describe('OccurrenceWorkbench', () => {
     );
     const overview = screen.getByRole('button', { name: 'Run State' });
     const introOwner = overview.getAttribute('data-run-state-launcher');
-    expect(overview.closest('.room-tab-utility-bar')).not.toBeNull();
+    expect(overview.closest('.room-workbench-tab-row')).not.toBeNull();
     openRoomTab('Intro Timeline');
     const intro = screen.getByRole('button', { name: 'Run State' });
     expect(intro.getAttribute('data-run-state-launcher')).toBe(introOwner);
-    expect(intro.closest('.room-tab-utility-bar')).not.toBeNull();
+    expect(intro.closest('.room-workbench-tab-row')).not.toBeNull();
     openRoomTab('Combat 1 Timeline');
     const combat1 = screen.getByRole('button', { name: 'Run State' });
     expect(combat1.getAttribute('data-run-state-launcher')).not.toBe(introOwner);
-    expect(combat1.closest('.room-tab-utility-bar')).not.toBeNull();
+    expect(combat1.closest('.room-workbench-tab-row')).not.toBeNull();
     openRoomTab('Room Doors');
     const doors = screen.getByRole('button', { name: 'Run State' });
     expect(doors.getAttribute('data-run-state-launcher')).not.toBe(introOwner);
-    expect(doors.closest('.room-tab-utility-bar')).not.toBeNull();
+    expect(doors.closest('.room-workbench-tab-row')).not.toBeNull();
   });
 
   it('supports roving keyboard activation across the room workbench tabs', () => {
@@ -168,19 +176,20 @@ describe('OccurrenceWorkbench', () => {
       occurrenceById(goldenFOccurrenceId(1, 1)),
     );
     const overview = screen.getByRole('tab', { name: 'Room Overview' });
+    const features = screen.getByRole('tab', { name: 'Features' });
     const actions = screen.getByRole('tab', { name: 'Room Timeline' });
     const doors = screen.getByRole('tab', { name: 'Room Doors' });
     const panelId = overview.getAttribute('aria-controls');
     expect(panelId).not.toBeNull();
     const panel = panelId === null ? null : document.getElementById(panelId);
     expect(panel).not.toBeNull();
-    for (const tab of [overview, actions, doors]) {
+    for (const tab of [overview, features, actions, doors]) {
       expect(tab.getAttribute('aria-controls')).toBe(panelId);
     }
     expect(overview.getAttribute('tabindex')).toBe('0');
     fireEvent.keyDown(overview, { key: 'ArrowRight' });
-    expect(actions.getAttribute('aria-selected')).toBe('true');
-    expect(document.activeElement).toBe(actions);
+    expect(features.getAttribute('aria-selected')).toBe('true');
+    expect(document.activeElement).toBe(features);
     expect(document.getElementById(panelId!)).toBe(panel);
     fireEvent.keyDown(actions, { key: 'End' });
     expect(doors.getAttribute('aria-selected')).toBe('true');
@@ -218,13 +227,15 @@ describe('OccurrenceWorkbench', () => {
     );
   });
 
-  it('keeps N side-room generation in Overview and Room Timeline in its own tab', () => {
+  it('keeps N side-room generation and the Room Timeline in their own tabs', () => {
     renderStaticOccurrenceWorkbench(
       loadSurfaceNOPQProject(),
       'Surface',
       'N',
       occurrenceById(nOccurrenceId('combat05')),
     );
+    expect(screen.queryByLabelText('Ephyra side rooms')).toBeNull();
+    openRoomTab('Side Rooms');
     const sideRooms = screen.getByLabelText('Ephyra side rooms');
     expect(sideRooms).toBeTruthy();
     openRoomTab('Room Timeline');
@@ -233,12 +244,16 @@ describe('OccurrenceWorkbench', () => {
     expect(within(nActions).getByLabelText('Encounter encounter phase')).toBeTruthy();
   });
 
-  it('renders Shop inventory before Room features and Room Timeline', () => {
+  it('keeps Shop inventory, Features, and Room Timeline on separate tabs', () => {
     const shop = enteredShopProject();
     renderStaticOccurrenceWorkbench(shop.project, 'Underworld', 'F', occurrenceById(shop.shopId));
     const inventory = screen.getByLabelText('Shop inventory and conditions');
+    expect(inventory).toBeTruthy();
+    expect(screen.queryByLabelText('Room features')).toBeNull();
+    openRoomTab('Features');
     const shopFeatures = screen.getByLabelText('Room features');
-    expectBefore(inventory, shopFeatures);
+    expect(shopFeatures).toBeTruthy();
+    expect(screen.queryByLabelText('Shop inventory and conditions')).toBeNull();
     openRoomTab('Room Timeline');
     const shopActions = screen.getByRole('region', { name: 'Room Timeline' });
     expect(shopActions).toBeTruthy();
