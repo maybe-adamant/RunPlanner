@@ -103,16 +103,19 @@ export function TraitOfferLauncher({
         ? `${spellOffer ? 'spell' : 'trait'} configuration needs attention`
         : `${spellOffer ? 'spell' : 'trait'} configuration has no findings`;
   return (
-    <button
-      aria-label={`${label}; ${statusLabel}`}
-      className="trait-offer-launcher quiet-action action-compact"
-      data-trait-status={status}
-      id={launcherId(control.address)}
-      onClick={() => dispatch(traitOfferDialogOpened(control.address))}
-      type="button"
-    >
-      {label}
-    </button>
+    <span className="trait-offer-launcher-with-marker">
+      <SemanticOwnerMarker address={control.marker.address} />
+      <button
+        aria-label={`${label}; ${statusLabel}`}
+        className="trait-offer-launcher quiet-action action-compact"
+        data-trait-status={status}
+        id={launcherId(control.address)}
+        onClick={() => dispatch(traitOfferDialogOpened(control.address))}
+        type="button"
+      >
+        {label}
+      </button>
+    </span>
   );
 }
 

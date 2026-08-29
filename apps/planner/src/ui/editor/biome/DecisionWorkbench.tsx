@@ -22,7 +22,11 @@ import { useAppDispatch } from '@planner/state/store';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { SemanticOwnerMarker } from '@planner/ui/feedback/EvaluationFeedback';
 import { CandidateSelect } from './CandidateSelect';
-import { AnomalyIdentityControls, NaturalChaosMapWorkbench } from './OccurrenceRoomFeatures';
+import {
+  AnomalyRoomControl,
+  NaturalChaosMapWorkbench,
+  RevertAnomalyAction,
+} from './OccurrenceRoomFeatures';
 import { RoomSelector } from './RoomSelector';
 import { RunStateLauncher } from './RunStateSheet';
 import { DoorRewardEditor } from './DoorRewardEditor';
@@ -151,6 +155,10 @@ function TargetRow({
   );
   const selection = exitSelectionAddress(node.selection);
   const door = target.door;
+  const reservesAnomalyAction = node.targets.some(
+    (candidate) =>
+      candidate.anomalyTakeover !== undefined || candidate.door.room.anomaly !== undefined,
+  );
   return (
     <article
       aria-label={`${door.room.label} room offer`}
@@ -205,6 +213,7 @@ function TargetRow({
             label="Room"
           />
         )}
+        <AnomalyRoomControl room={door.room} />
         {node.targetInteraction !== 'readOnly' && target.physicalState === 'unavailable' ? (
           <p className="fixed-room-state">
             This saved door is no longer available here. Fix the earlier route first.
@@ -226,24 +235,28 @@ function TargetRow({
             interactions={interactions}
           />
         </div>
-        {target.anomalyTakeover === undefined ? null : (
-          <button
-            className="quiet-action action-compact"
-            data-command="SwitchTargetToAnomaly"
-            onClick={() =>
-              dispatch(
-                authoredProjectCommandDispatched({
-                  kind: 'SwitchTargetToAnomaly',
-                  target: targetAddress(target.marker),
-                }),
-              )
-            }
-            type="button"
-          >
-            {target.anomalyTakeover.label}
-          </button>
-        )}
-        <AnomalyIdentityControls room={door.room} />
+        {reservesAnomalyAction ? (
+          <div className="anomaly-door-action-slot">
+            {!target.selected || target.anomalyTakeover === undefined ? null : (
+              <button
+                className="quiet-action action-compact"
+                data-command="SwitchTargetToAnomaly"
+                onClick={() =>
+                  dispatch(
+                    authoredProjectCommandDispatched({
+                      kind: 'SwitchTargetToAnomaly',
+                      target: targetAddress(target.marker),
+                    }),
+                  )
+                }
+                type="button"
+              >
+                {target.anomalyTakeover.label}
+              </button>
+            )}
+            <RevertAnomalyAction room={door.room} />
+          </div>
+        ) : null}
       </div>
     </article>
   );
@@ -258,6 +271,7 @@ function MissingTargetRow({
 }) {
   const interaction = interactions.rooms.get(target.marker.focusKey);
   const canEnterDecision = interaction?.kind === 'decisionEntryRoom';
+  const canAuthorRoom = target.authoring.kind === 'ready' || canEnterDecision;
   return (
     <article
       aria-label={`Door ${target.index} unspecified room offer`}
@@ -277,7 +291,7 @@ function MissingTargetRow({
             <span className="neutral-status">Unspecified</span>
           </div>
         </div>
-        {target.authoring.kind !== 'ready' && !canEnterDecision ? null : (
+        {canAuthorRoom ? (
           <TargetRoomSelector
             ariaLabel={`Door ${target.index} room`}
             idPrefix={`target-${target.marker.focusKey}`}
@@ -285,14 +299,24 @@ function MissingTargetRow({
             interactions={interactions}
             label="Room"
           />
-        )}
-        <div
-          aria-live="polite"
-          className="field-control field-control-inline pending-reward-status"
-        >
-          <span>Reward</span>
-          <span className="fixed-room-state">Choose room to show reward</span>
-        </div>
+        ) : target.authoring.kind === 'awaitingPriorExit' ? (
+          <div
+            aria-live="polite"
+            className="field-control field-control-inline pending-room-status"
+          >
+            <span>Room</span>
+            <span className="fixed-room-state">Select the earlier door's room first</span>
+          </div>
+        ) : null}
+        {canAuthorRoom ? (
+          <div
+            aria-live="polite"
+            className="field-control field-control-inline pending-reward-status"
+          >
+            <span>Reward</span>
+            <span className="fixed-room-state">Choose room to show reward</span>
+          </div>
+        ) : null}
       </div>
     </article>
   );

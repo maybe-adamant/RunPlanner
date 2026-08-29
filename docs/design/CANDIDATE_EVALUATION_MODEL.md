@@ -408,6 +408,9 @@ and would otherwise collapse the reachable branch set.
 Candidate evaluation substitutes one proposed complete offer into the producer
 and invokes the existing reward authorities:
 
+- a changed offer identity receives the same fresh unresolved acquisition
+  children as its semantic replacement command; only the unchanged offer keeps
+  its currently authored descendants;
 - sequential producers include the effects and peer exclusions of earlier
   siblings;
 - jointly unordered producers reevaluate the complete sibling group and every

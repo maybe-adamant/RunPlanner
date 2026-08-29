@@ -7,6 +7,8 @@ import {
   createBiomeAddress,
   createBatchRewardStoreAddress,
   createExitDecisionAddress,
+  createExitSelectionAddress,
+  createIncomingRewardAddress,
   createOccurrenceAddress,
   createOccurrenceId,
   createProjectDocument,
@@ -43,6 +45,7 @@ import {
   goldenFOccurrenceId,
   goldenFStartId,
   goldenGBiome,
+  goldenGOccurrenceId,
   goldenHBiome,
 } from '@run-planner/test-fixtures/underworld';
 import {
@@ -534,7 +537,12 @@ describe('DecisionWorkbench', () => {
       true,
     );
     expect(screen.queryByLabelText('Door 2 room')).toBeNull();
-    expect(screen.queryByText('Choose Door 1 first.')).toBeNull();
+    const blockedDoor = screen.getByRole('article', {
+      name: 'Door 2 unspecified room offer',
+    });
+    expect(within(blockedDoor).getByText('Room')).toBeTruthy();
+    expect(within(blockedDoor).getByText("Select the earlier door's room first")).toBeTruthy();
+    expect(within(blockedDoor).queryByText('Reward')).toBeNull();
 
     await view.user.click(screen.getByRole('button', { name: 'Door 1 room' }));
     const possible = within(screen.getByRole('listbox'))
@@ -548,6 +556,9 @@ describe('DecisionWorkbench', () => {
         true,
       ),
     );
+    const readyDoor = screen.getByRole('article', { name: 'Door 2 unspecified room offer' });
+    expect(within(readyDoor).getByText('Reward')).toBeTruthy();
+    expect(within(readyDoor).getByText('Choose room to show reward')).toBeTruthy();
     const rewardTarget = document.querySelector<HTMLElement>(
       '.biome-target-row:not([data-missing="true"]) .door-reward-list [id$="-reward"], .biome-target-row:not([data-missing="true"]) .door-reward-list [id$="-status"]',
     );
@@ -966,6 +977,41 @@ describe('DecisionWorkbench', () => {
       disabled: true,
       textContent: 'Major Reward — unavailable',
     });
+  });
+
+  it('keeps other reward families selectable when the picked door has an unresolved trait', async () => {
+    const source = {
+      kind: 'occurrence' as const,
+      occurrenceId: goldenGOccurrenceId(2, 1),
+    };
+    const occurrenceId = goldenGOccurrenceId(3, 3);
+    let project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+      kind: 'SetExitSelection',
+      selection: createExitSelectionAddress(goldenGBiome, source),
+      value: { kind: 'normal', exitKey: 'exit3' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceIncomingReward',
+      reward: createIncomingRewardAddress(goldenGBiome, occurrenceId),
+      value: { rewardType: 'HermesUpgrade' },
+    });
+    const view = renderDecisionWorkbench(
+      project,
+      'Underworld',
+      'G',
+      subjectForOwner(createExitDecisionAddress(goldenGBiome, source)),
+    );
+    const door = screen
+      .getAllByLabelText('Combat 03 room offer')
+      .find((card) => within(card).queryByLabelText('Pick Combat 03 from Door 3'));
+    if (door === undefined) throw new Error('Selected G Door 3 is missing');
+
+    await view.user.click(within(door).getByRole('button', { name: 'Reward' }));
+    const maxHealth = within(await screen.findByRole('listbox'))
+      .getByText('Max Health')
+      .closest('[role="option"]');
+    if (maxHealth === null) throw new Error('Max Health reward option is missing');
+    expect(maxHealth.getAttribute('aria-disabled')).not.toBe('true');
   });
 
   it('keeps the complete Fields roll domain visible when history forces Maximum', async () => {
@@ -1444,7 +1490,7 @@ describe('DecisionWorkbench', () => {
     ).toBe(target.room.gameName);
   });
 
-  it('takes an Anomaly-capable target over with one exact semantic command', async () => {
+  it('selects an Anomaly-capable target before taking it over', async () => {
     const project = createGoldenFGHIProject();
     // The golden fixture is deliberately complete enough to include several
     // ordinary G batches; locate the declaration-projected target rather than
@@ -1470,20 +1516,53 @@ describe('DecisionWorkbench', () => {
       subjectForOwner(node.owner),
       application,
     );
-    const targetCard = screen
+    let targetCard = screen
       .getAllByLabelText(`${target.room.label} room offer`)
       .find((card) =>
         within(card).queryByLabelText(`Pick ${target.room.label} from Door ${target.index}`),
       );
     if (targetCard === undefined) throw new Error('Anomaly-capable target card is missing');
+    if (!target.selected) {
+      await view.user.click(
+        within(targetCard).getByLabelText(`Pick ${target.room.label} from Door ${target.index}`),
+      );
+      await waitFor(() =>
+        expect(screen.getAllByRole('button', { name: 'Replace with Anomaly' })).toHaveLength(1),
+      );
+      targetCard = screen
+        .getAllByLabelText(`${target.room.label} room offer`)
+        .find((card) =>
+          within(card).queryByLabelText(`Pick ${target.room.label} from Door ${target.index}`),
+        );
+      if (targetCard === undefined) throw new Error('Selected Anomaly-capable target is missing');
+    }
+    expect(screen.getAllByRole('button', { name: 'Replace with Anomaly' })).toHaveLength(1);
+    expect(
+      screen
+        .getAllByLabelText(/ room offer$/)
+        .every((card) => card.querySelector('.anomaly-door-action-slot') !== null),
+    ).toBe(true);
     await view.user.click(within(targetCard).getByRole('button', { name: 'Replace with Anomaly' }));
     expect(screen.queryByLabelText(`Door ${target.index} room`)).toBeNull();
-    expect(screen.getByLabelText('Map')).toBeTruthy();
-    expect(
-      dispatch.mock.calls
-        .map(([action]) => action)
-        .filter(authoredProjectCommandDispatched.match)
-        .map((action) => action.payload),
-    ).toEqual([{ kind: 'SwitchTargetToAnomaly', target: target.marker.address }]);
+    const anomalyCard = screen
+      .getAllByLabelText(/ room offer$/)
+      .find((card) => within(card).queryByRole('button', { name: /^Restore / }));
+    if (anomalyCard === undefined) throw new Error('Authored Anomaly target card is missing');
+    expect(within(anomalyCard).getByLabelText('Room')).toBeTruthy();
+    const commands = dispatch.mock.calls
+      .map(([action]) => action)
+      .filter(authoredProjectCommandDispatched.match)
+      .map((action) => action.payload);
+    expect(commands).toHaveLength(target.selected ? 1 : 2);
+    if (!target.selected) {
+      expect(commands[0]).toMatchObject({
+        kind: 'SetExitSelection',
+        value: { kind: 'normal', exitKey: target.exitKey },
+      });
+    }
+    expect(commands.at(-1)).toEqual({
+      kind: 'SwitchTargetToAnomaly',
+      target: target.marker.address,
+    });
   });
 });

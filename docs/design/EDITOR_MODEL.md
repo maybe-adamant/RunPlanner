@@ -450,14 +450,18 @@ dormantly, but the editor hides them because they produce no current game
 facts. Incoming and free-reward editors remain visible on unpicked targets
 because those offers materialize on their doors.
 
-An Anomaly-capable G target exposes one bound `Replace with Anomaly` action on
-the target card, including unpicked and finding-backed targets. The resulting
-occurrence retains its reward editor and exposes its map, authored success,
-and exact revert action. Fixed `GeneratedAnomalyB` remains a catalog and
-lifecycle fact rather than a redundant editor control. On the selected spine,
-the outgoing host continuation is an ordinary width-one decision: its concrete
-target and reward remain editable while its selection is declaration-derived,
-so React adds neither a player branch selector nor a special return control.
+An Anomaly-capable selected G target exposes one bound `Replace with Anomaly`
+action on its target card. The engine continues to project target-local
+capability for every door, while the editor reserves one stable action footer
+across sibling cards and exposes the action only on the picked door. The
+resulting occurrence retains its reward editor, presents its Anomaly map as
+the door's Room control before Reward, and exposes its authored success and
+exact revert action from the same aligned footer. Fixed `GeneratedAnomalyB`
+remains a catalog and lifecycle fact rather than a redundant editor control.
+On the selected spine, the outgoing host continuation is an ordinary width-one
+decision: its concrete target and reward remain editable while its selection
+is declaration-derived, so React adds neither a player branch selector nor a
+special return control.
 
 A selected, details-active declared Midshop with materialized Shop state
 exposes the bound Zagreus Add action from its Room features. Once authored,

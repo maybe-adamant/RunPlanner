@@ -1130,6 +1130,30 @@ describe('H Fields materialization', () => {
     expect(work).not.toEqual([]);
   });
 
+  it('keeps a Fields reward replaceable while its current trait child is unresolved', () => {
+    const combat = createOccurrenceId('golden-h-combat02');
+    const reward = createLocalRewardAddress(biome, combat, 'cages', 'cage1');
+    const project = applyProjectCommand(createGoldenFGHProject(), catalog, {
+      kind: 'ReplaceLocalReward',
+      reward,
+      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
+    });
+
+    const result = createPreparedProjectCandidateSession(
+      catalog,
+      simulateProjectAssembly(catalog, project),
+    ).evaluate({
+      kind: 'localReward',
+      reward,
+      value: { rewardType: 'MaxHealthDrop' },
+    });
+
+    expect(result).toMatchObject({
+      kind: 'localReward',
+      result: { supported: true, findings: [] },
+    });
+  });
+
   it('discards a failed first Fields completion before accepting a later sibling proposal', () => {
     const combat02 = createOccurrenceId('golden-h-combat02');
     const combat09 = createOccurrenceId('golden-h-combat09');
