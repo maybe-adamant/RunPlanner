@@ -20,6 +20,7 @@ import {
   decodeProjectDocument,
   encodeProjectDocument,
   echoLastRewardPickupEntryKey,
+  hermesShrineDeliveryEntryKey,
   roomActionKey,
   semanticAddressKey,
   type OccurrenceId,
@@ -27,6 +28,8 @@ import {
 } from '@run-planner/engine/authored-project';
 import {
   acquisitionConversionCandidateForProjectEvaluationAssembly,
+  blockedOccurrenceRoomForProjectEvaluationAssembly,
+  derivedAcquisitionEntriesForProjectEvaluationAssembly,
   encounterPhaseGorgonSupportForProjectEvaluationAssembly,
   encounterPhaseSequenceStatusForProjectEvaluationAssembly,
   fieldsBatchFacts,
@@ -87,9 +90,9 @@ function biomeSource(
     (phase) => encounterPhaseSequenceStatusForProjectEvaluationAssembly(assembly, phase),
     undefined,
     gorgonSupport,
-    () => Object.freeze([]),
+    (site) => derivedAcquisitionEntriesForProjectEvaluationAssembly(assembly, site),
     (address) => traitOfferCandidateForProjectEvaluationAssembly(assembly, address) !== undefined,
-    undefined,
+    (occurrence) => blockedOccurrenceRoomForProjectEvaluationAssembly(assembly, occurrence),
     undefined,
     undefined,
     undefined,
@@ -145,7 +148,7 @@ export function assemble(
       const room = batch?.targets.find((target) => target.room.occurrenceId === occurrenceId)?.room;
       if (room !== undefined) return room;
     }
-    return undefined;
+    return source.blockedOccurrenceRoom(occurrenceId);
   })();
   const projectedEvaluatedRoom =
     evaluatedRoom === undefined || evaluatedRoomTransform === undefined
@@ -226,6 +229,7 @@ export {
   decodeProjectDocument,
   encodeProjectDocument,
   echoLastRewardPickupEntryKey,
+  hermesShrineDeliveryEntryKey,
   encounterPhaseGorgonSupportForProjectEvaluationAssembly,
   goldenFBiome,
   goldenFOccurrenceId,

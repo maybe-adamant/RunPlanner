@@ -334,15 +334,14 @@ Primary tests:
 - Shrine workbench: delayed purchase creates no source timeline row;
 - Shrine workbench: rushed purchase creates one `Receive` row and toggling Rush
   removes/restores it without losing retained payload detail;
-- Shrine workbench: two rushed Mystery/Hermes deliveries can be reordered and
-  the first delivery determines the Travel Deal candidate prefix;
-- N Hub workflow: a delayed Mystery Boon purchased in a visited side room
-  appears as an unranked required delivery in its derived main- or side-room
-  host even when that host previously had no acquisition site;
+- Shrine workbench: an unplaced delayed delivery exposes only its atomic
+  placement action, then gains ordinary reward editing after placement;
 - structured-workspace contract: a matured delivery points to its host action
   and source Shrine overview remains navigable; and
-- product loop: author, rush, choose Mystery God and trait, reorder against a
-  second delivery, save, reload, and repair an upstream God-pool change.
+- product loop: author a Mystery God and trait, save, reload, and repair it after
+  an upstream God-pool change. Generic room-action ordering witnesses and Gate
+  A's multiple-delivery/Travel Deal tests remain the owners of those unchanged
+  policies.
 
 Intended commit: `fix(planner): present Shrine deliveries in room order`.
 
@@ -361,6 +360,11 @@ checkpoints must contain:
 The N checkpoint must prove a side-room Shrine purchase has no source-room
 delivery action, preserves that side-room occurrence as its source identity,
 and produces a required delivery footprint at the later reached host.
+Its application witness must then prove that the empty host exposes the
+unranked placement row and that source-Shrine and host-delivery navigation each
+retain their own occurrence owner. This witness lives here because the existing
+full-N fixtures do not reach a newly added side-room Shrine lifecycle; the
+compact reached checkpoint is its truthful prerequisite.
 
 Absorb the stable disposition into:
 

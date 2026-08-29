@@ -6,6 +6,9 @@ import {
   createAcquisitionEntryAddress,
   createAcquisitionSiteAddress,
   createBiomeAddress,
+  createRewardWheelOfferAddress,
+  decodeProjectDocument,
+  encodeProjectDocument,
   hermesShrineDeliveryEntryKey,
   createOccurrenceAddress,
   createOccurrenceId,
@@ -36,6 +39,7 @@ import {
   oBiome,
   oOccurrenceIds,
 } from '@run-planner/test-fixtures/surface';
+import { supportedTraitOffer } from '@run-planner/test-fixtures/shared';
 import {
   renderOccurrenceWorkbench,
   workspaceBiome,
@@ -175,7 +179,7 @@ describe('Hermes Shrine workbench', () => {
             'initial:first',
           ),
     );
-    expect(deliveryRow?.label).toContain('Big Heal');
+    expect(deliveryRow?.label).toBe('Receive Big Heal');
     expect(deliveryRow?.rewardPayload?.control.offer).toMatchObject({ rewardType: 'HealBigDrop' });
   });
 
@@ -231,9 +235,9 @@ describe('Hermes Shrine workbench', () => {
         .find((item) => item.label === 'Apollo'),
     ).toMatchObject({ state: 'possible', disabled: false });
 
-    const purchaseRow = screen.getByText('Buy Mystery Boon').closest('li');
-    if (purchaseRow === null) throw new Error('rushed Mystery Boon purchase row is missing');
-    await view.user.click(within(purchaseRow).getByRole('button', { name: 'Reward' }));
+    const deliveryRow = screen.getByText('Receive Mystery Boon').closest('li');
+    if (deliveryRow === null) throw new Error('rushed Mystery Boon delivery row is missing');
+    await view.user.click(within(deliveryRow).getByRole('button', { name: 'Reward' }));
     expect(await screen.findByText('Eventual God')).toBeTruthy();
     await view.user.click(within(await screen.findByRole('listbox')).getByText('Apollo'));
 
@@ -247,10 +251,10 @@ describe('Hermes Shrine workbench', () => {
       }),
     );
 
-    const resolvedPurchaseRow = screen.getByText('Buy Mystery Boon').closest('li');
-    if (resolvedPurchaseRow === null)
-      throw new Error('resolved rushed Mystery Boon purchase row is missing');
-    await view.user.click(within(resolvedPurchaseRow).getByRole('button', { name: 'Reward' }));
+    const resolvedDeliveryRow = screen.getByText(/^Receive Mystery Boon/).closest('li');
+    if (resolvedDeliveryRow === null)
+      throw new Error('resolved rushed Mystery Boon delivery row is missing');
+    await view.user.click(within(resolvedDeliveryRow).getByRole('button', { name: 'Reward' }));
     expect(await screen.findByText('Eventual God')).toBeTruthy();
     expect(screen.queryByText('Reward type')).toBeNull();
     await view.user.click(screen.getByRole('button', { name: 'Cancel' }));
@@ -274,6 +278,208 @@ describe('Hermes Shrine workbench', () => {
         ?.traitOffersByAcquisitionRole.hiddenSource,
     ).toEqual(hiddenSourceDraft);
     expect(() => workspaceProjection(application)).not.toThrow();
+  });
+
+  it('keeps an unplaced delayed Mystery delivery placement-only until its host action exists', async () => {
+    const source = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
+    let project = completeOrdinaryShrine();
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceHermesShrineOffer',
+      occurrence: source,
+      slotKey: 'secondRight',
+      value: { rewardType: 'BlindBoxLoot' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetHermesShrinePurchase',
+      occurrence: source,
+      generationKey: 'initial:secondRight',
+      purchase: { delay: 2, rushed: false },
+    });
+    const view = renderOccurrenceWorkbench(
+      project,
+      'Surface',
+      'O',
+      occurrence(oOccurrenceIds.devotion),
+    );
+    fireEvent.click(screen.getByRole('tab', { name: /Timeline$/ }));
+    const delivery = screen.getByText('Receive Mystery Boon').closest('li');
+    if (delivery === null) throw new Error('unplaced Mystery delivery row is missing');
+    expect(within(delivery).queryByRole('button', { name: 'Reward' })).toBeNull();
+    await view.user.click(
+      within(delivery).getByRole('button', { name: 'Place required delivery' }),
+    );
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Reward' })).toBeTruthy());
+  });
+
+  it('keeps a reloaded Mystery delivery repairable after its earlier God leaves the pool', async () => {
+    const source = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
+    const hostId = oOccurrenceIds.devotion;
+    const host = createOccurrenceAddress(oBiome, hostId);
+    const entryKey = hermesShrineDeliveryEntryKey(source, 'initial:secondRight');
+    const entry = createAcquisitionEntryAddress(
+      createAcquisitionSiteAddress(host, 'hermesShrineDelivery'),
+      entryKey,
+    );
+    let project = completeOrdinaryShrine();
+    const fourthGodReward = createRewardWheelOfferAddress(
+      oBiome,
+      oOccurrenceIds.combat04,
+      'wheel1',
+      'offer1',
+    );
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceRewardWheelOffer',
+      offer: fourthGodReward,
+      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'AphroditeUpgrade' } },
+    });
+    const fourthGodTrait = createTraitOfferAddress(fourthGodReward, 'source');
+    const fourthGodOffer = supportedTraitOffer(project, fourthGodTrait, 'Aphrodite');
+    if (fourthGodOffer === undefined) throw new Error('fourth God reward has no Aphrodite offer');
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: fourthGodTrait,
+      value: fourthGodOffer,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceHermesShrineOffer',
+      occurrence: source,
+      slotKey: 'secondRight',
+      value: { rewardType: 'BlindBoxLoot' },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetHermesShrinePurchase',
+      occurrence: source,
+      generationKey: 'initial:secondRight',
+      purchase: { delay: 2, rushed: false },
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'PlaceHermesShrineDelivery',
+      entry,
+      encounterPhaseKey: 'Encounter',
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceAcquisitionEntryOffer',
+      entry,
+      value: {
+        rewardType: 'BlindBoxLoot',
+        payload: { kind: 'BoonSource', source: 'AphroditeUpgrade' },
+      },
+    });
+    const mysteryTrait = createTraitOfferAddress(entry, 'hiddenSource');
+    const aphroditeMysteryOffer = supportedTraitOffer(project, mysteryTrait, 'Aphrodite');
+    if (aphroditeMysteryOffer === undefined)
+      throw new Error('delayed Mystery Boon has no Aphrodite trait offer');
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: mysteryTrait,
+      value: aphroditeMysteryOffer,
+    });
+
+    project = decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog);
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceRewardWheelOffer',
+      offer: fourthGodReward,
+      value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ZeusUpgrade' } },
+    });
+    const earlierTrait = createTraitOfferAddress(fourthGodReward, 'source');
+    const zeusOffer = supportedTraitOffer(project, earlierTrait, 'Zeus');
+    if (zeusOffer === undefined) throw new Error('replacement wheel has no Zeus trait offer');
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: earlierTrait,
+      value: zeusOffer,
+    });
+
+    const application = createApplication();
+    application.store.dispatch(authoredProjectReplaced(project));
+    const interaction = workspaceProjection(application).interactions.rewards.get(
+      semanticAddressKey(entry),
+    );
+    if (interaction === undefined) throw new Error('reloaded Mystery delivery editor is missing');
+    const domain = await interaction.load();
+    const model = interaction.model(domain, 'source', {
+      rewardType: 'BlindBoxLoot',
+      payload: { kind: 'BoonSource', source: 'AphroditeUpgrade' },
+    });
+    expect(
+      model.sections.flatMap((section) => section.items).find((item) => item.label === 'Aphrodite'),
+    ).toMatchObject({ state: 'impossible', disabled: true });
+    expect(
+      model.sections.flatMap((section) => section.items).find((item) => item.label === 'Zeus'),
+    ).toMatchObject({ state: 'possible', disabled: false });
+
+    const view = renderOccurrenceWorkbench(
+      project,
+      'Surface',
+      'O',
+      occurrence(hostId),
+      application,
+    );
+    fireEvent.click(screen.getByRole('tab', { name: /Timeline$/ }));
+    const delivery = screen.getByText(/^Receive Mystery Boon/).closest('li');
+    if (delivery === null) throw new Error('reloaded Mystery delivery row is missing');
+    await view.user.click(within(delivery).getByRole('button', { name: 'Reward' }));
+    await view.user.click(within(await screen.findByRole('listbox')).getByText('Zeus'));
+    await waitFor(() =>
+      expect(
+        application.store
+          .getState()
+          .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
+          ?.biomes.find((biome) => biome.biomeKey === 'O')
+          ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === hostId)
+          ?.acquisitionSites?.hermesShrineDelivery?.pickupEntries?.[entryKey]?.offer,
+      ).toMatchObject({
+        rewardType: 'BlindBoxLoot',
+        payload: { kind: 'BoonSource', source: 'ZeusUpgrade' },
+      }),
+    );
+  });
+
+  it('places a matured delayed delivery from its required host timeline row', async () => {
+    const source = createOccurrenceAddress(oBiome, oOccurrenceIds.combat07);
+    let project = completeOrdinaryShrine();
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetHermesShrinePurchase',
+      occurrence: source,
+      generationKey: 'initial:first',
+      purchase: { delay: 2, rushed: false },
+    });
+    const application = createApplication();
+    const hostId = oOccurrenceIds.devotion;
+    const view = renderOccurrenceWorkbench(
+      project,
+      'Surface',
+      'O',
+      occurrence(hostId),
+      application,
+    );
+
+    await view.user.click(screen.getByRole('tab', { name: /Timeline$/ }));
+    const deliveryRow = screen.getByText('Receive Big Heal').closest('li');
+    if (deliveryRow === null) throw new Error('delayed delivery row is missing');
+    expect(within(deliveryRow).queryByRole('button', { name: 'Remove action' })).toBeNull();
+    await view.user.click(
+      within(deliveryRow).getByRole('button', { name: 'Place required delivery' }),
+    );
+
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: 'Place required delivery' })).toBeNull(),
+    );
+    const host = application.store
+      .getState()
+      .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Surface')
+      ?.biomes.find((biome) => biome.biomeKey === 'O')
+      ?.topology?.occurrences.find((candidate) => candidate.occurrenceId === hostId);
+    const entryKey = hermesShrineDeliveryEntryKey(source, 'initial:first');
+    expect(host?.acquisitionSites?.hermesShrineDelivery?.pickupEntries?.[entryKey]).toMatchObject({
+      offer: { rewardType: 'HealBigDrop' },
+    });
+    expect(host?.roomActions.order).toContainEqual({
+      kind: 'interactAcquisitionEntry',
+      siteKey: 'hermesShrineDelivery',
+      entryKey,
+      encounterPhaseKey: 'Encounter',
+    });
   });
 
   it('keeps forced Shrine inventory visible and non-removable', () => {

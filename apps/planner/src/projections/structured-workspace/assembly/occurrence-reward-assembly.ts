@@ -100,6 +100,7 @@ export type WorkspaceDerivedAcquisitionEntry = {
   readonly slotIndex?: number;
   readonly rewardTypes?: readonly string[];
   readonly fixedReward?: AuthoredRewardState;
+  readonly encounterPhaseKey?: string;
   readonly retainedSourceMismatch?: boolean;
   readonly eligibleSourceOfferKeys?: readonly string[];
 };
