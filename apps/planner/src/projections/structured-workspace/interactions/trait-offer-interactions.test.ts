@@ -3,7 +3,6 @@ import { describe, expect, it, vi } from 'vitest';
 import * as support from '@planner-test/support/structured-workspace/interaction-binding.test-support';
 import { createGoldenFGHProject } from '@run-planner/test-fixtures/underworld';
 import { optionIndex } from '@run-planner/engine/authored-project';
-import { underworldCheckpointArtifacts } from '@run-planner/test-fixtures/checkpoints/underworld';
 import type {
   AuthoredTraitOffer,
   AuthoredTraitOfferTraits,
@@ -19,7 +18,6 @@ const {
   services,
   catalog,
   applyProjectCommand,
-  createBiomeAddress,
   createAllTogetherSetAddress,
   createCirceResolutionAddress,
   createEchoLastRunBoonAddress,
@@ -47,55 +45,12 @@ const {
   pBiome,
   pOccurrenceId,
   createCandidateSessionFactory,
-  createBatchRewardStoreAddress,
-  createTargetAddress,
+  createReachableNaturalChaosProject,
 } = support;
-
-function reachableNaturalChaosProject() {
-  let project = underworldCheckpointArtifacts['natural-chaos-unresolved-trial'].load();
-  const openingId = createOccurrenceId('fixture-chaos-opening');
-  const biome = createBiomeAddress('Underworld', 'F');
-  project = applyProjectCommand(project, catalog, {
-    kind: 'ReplaceIncomingReward',
-    reward: createIncomingRewardAddress(biome, openingId),
-    value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'ApolloUpgrade' } },
-  });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'ReplaceTraitOffer',
-    trait: createTraitOfferAddress(createIncomingRewardAddress(biome, openingId), 'source'),
-    value: {
-      kind: 'traits',
-      giverKey: 'Apollo',
-      options: [
-        { traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
-        { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
-        { traitKey: 'ApolloCastBoon', rarity: 'Common' },
-      ],
-      selectedOptionKey: 'option1',
-    },
-  });
-  const source = { kind: 'occurrence' as const, occurrenceId: openingId };
-  project = applyProjectCommand(project, catalog, {
-    kind: 'ReplaceBatchRewardStore',
-    rewardStore: createBatchRewardStoreAddress(biome, source),
-    storeKey: 'MetaProgress',
-  });
-  project = applyProjectCommand(project, catalog, {
-    kind: 'CreateTarget',
-    target: createTargetAddress(biome, source, 'exit1'),
-    occurrenceId: createOccurrenceId('interaction-chaos-target'),
-    gameName: 'F_Combat01',
-  });
-  return applyProjectCommand(project, catalog, {
-    kind: 'ReplaceIncomingReward',
-    reward: createIncomingRewardAddress(biome, createOccurrenceId('interaction-chaos-target')),
-    value: { rewardType: 'MaxHealthDrop' },
-  });
-}
 
 describe('trait-offer-interactions', () => {
   it('binds the Chaos editor to the real typed domain and one complete save intent', () => {
-    const project = reachableNaturalChaosProject();
+    const project = createReachableNaturalChaosProject();
     const { interactions } = bind(project, 'Underworld', 'F');
     const interaction = [...interactions.traitOffers.values()].find(
       (candidate) => candidate.giver.providerKind === 'chaos',

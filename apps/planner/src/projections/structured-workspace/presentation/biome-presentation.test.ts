@@ -418,6 +418,66 @@ describe('structured workspace biome presentation', () => {
     ).toHaveLength(0);
   });
 
+  it('labels a takeover-selected Chaos room instead of presenting a false Preboss stop', () => {
+    const base = createGoldenFGHIProject();
+    const plan = base.routes
+      .find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find((biome) => biome.biomeKey === 'F');
+    if (plan?.topology === null || plan === undefined) {
+      throw new Error('complete F topology fixture is missing');
+    }
+    const occurrenceById = new Map(
+      plan.topology.occurrences.map((occurrence) => [occurrence.occurrenceId, occurrence] as const),
+    );
+    const takeover = plan.topology.decisions.find(
+      (decision) =>
+        decision.kind === 'exit' &&
+        decision.source.kind === 'occurrence' &&
+        decision.normal.targets.length > 0 &&
+        decision.normal.targets.every((target) => {
+          const occurrence = occurrenceById.get(target.occurrenceId);
+          return (
+            occurrence !== undefined && catalog.rooms.byKey[occurrence.gameName]?.kind === 'Preboss'
+          );
+        }),
+    );
+    if (takeover?.kind !== 'exit' || takeover.source.kind !== 'occurrence') {
+      throw new Error('complete F takeover decision is missing');
+    }
+    const biome = createBiomeAddress('Underworld', 'F');
+    const additional = createAdditionalExitAddress(
+      biome,
+      takeover.source.occurrenceId,
+      'naturalChaos',
+    );
+    const chaosOccurrenceId = createOccurrenceId('presentation-f-preboss-chaos');
+    let project = applyProjectCommand(base, catalog, {
+      kind: 'AddNaturalChaos',
+      additional,
+      occurrenceId: chaosOccurrenceId,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetExitSelection',
+      selection: createExitSelectionAddress(biome, takeover.source),
+      value: { kind: 'additional', additionalExitKey: 'naturalChaos' },
+    });
+
+    const presented = present(project, 'Underworld', 'F').presentation.biome;
+    const rail = presented.rail.find(
+      (entry): entry is Extract<WorkspaceRailEntry, { readonly kind: 'node' }> =>
+        entry.kind === 'node' &&
+        entry.node.kind === 'takeoverBatch' &&
+        semanticAddressKey(entry.node.owner) ===
+          semanticAddressKey(createExitDecisionAddress(biome, takeover.source)),
+    );
+    if (rail === undefined || rail.node.kind !== 'takeoverBatch') {
+      throw new Error('selected F takeover rail entry is missing');
+    }
+    expect(rail.node.naturalChaos?.selected).toBe(true);
+    expect(rail.label).toBe(rail.node.naturalChaos?.door.room.label);
+    expect(rail.label).toMatch(/^Chaos/);
+  });
+
   it('progressively presents one selected room and its direct reward token', () => {
     const direct = directRewardBiome;
     const directDecision = direct.nodes.find(

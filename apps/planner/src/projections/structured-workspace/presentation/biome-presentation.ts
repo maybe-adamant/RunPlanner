@@ -126,8 +126,18 @@ function nodeRailPresentation(
     case 'ordinaryBatch':
     case 'mixedBatch':
       return { label: `Decision ${decisionIndex ?? 1}` };
-    case 'takeoverBatch':
-      return { label: 'Preboss' };
+    case 'takeoverBatch': {
+      const selectedAdditionalDoors = [
+        ...(node.zagreusContract?.selected === true ? [node.zagreusContract.door] : []),
+        ...(node.naturalChaos?.selected === true ? [node.naturalChaos.door] : []),
+      ];
+      return {
+        label:
+          selectedAdditionalDoors.length === 1
+            ? (selectedAdditionalDoors[0]?.room.label ?? 'Preboss')
+            : 'Preboss',
+      };
+    }
     case 'hubDecision':
       return { label: 'Hub' };
   }

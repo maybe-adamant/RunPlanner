@@ -12,6 +12,7 @@ import {
   createOccurrenceAddress,
   createOccurrenceId,
   createRoomActionAddress,
+  createRouteStartKeepsakeSelectionAddress,
   createShopOfferAddress,
   createSteadyGrowthOutcomeAddress,
   decodeProjectDocument,
@@ -43,6 +44,7 @@ import {
   goldenHBiome,
   loadUnderworldFGProject,
 } from '@run-planner/test-fixtures/underworld';
+import { createReachableNaturalChaosProject } from '@planner-test/support/structured-workspace/interaction-binding.test-support';
 import {
   loadSurfaceNOPQProject,
   nBiome,
@@ -75,6 +77,42 @@ afterEach(() => {
 });
 
 describe('OccurrenceRoomActions', () => {
+  it('offers Time Piece on the reached Chaos reward pickup', async () => {
+    const chaosOccurrenceId = createOccurrenceId('fixture-chaos-room');
+    const project = applyProjectCommand(createReachableNaturalChaosProject(), catalog, {
+      kind: 'ReplaceStartingKeepsake',
+      selection: createRouteStartKeepsakeSelectionAddress('Underworld'),
+      keepsakeKey: 'GoldifyKeepsake',
+    });
+    const view = renderOccurrenceWorkbench(
+      project,
+      'Underworld',
+      'F',
+      occurrenceById(chaosOccurrenceId),
+    );
+    openRoomTab('Room Timeline');
+    const actions = screen.getByRole('region', { name: 'Room Timeline' });
+    const outcome = within(actions).getByRole('combobox', {
+      name: /^Pickup outcome for /,
+    });
+    const timePiece = within(outcome).getByRole('option', {
+      name: 'Time Piece · convert to Gold',
+    });
+
+    expect((timePiece as HTMLOptionElement).disabled).toBe(false);
+    await view.user.selectOptions(outcome, 'timePiece');
+    const authoredChaos = view.application.store
+      .getState()
+      .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find((biome) => biome.biomeKey === 'F')
+      ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === chaosOccurrenceId);
+    expect(
+      authoredChaos?.state.kind === 'fixed' && authoredChaos.state.reward !== null
+        ? authoredChaos.state.reward.dispositionByAcquisitionRole.self
+        : undefined,
+    ).toEqual({ kind: 'timePiece' });
+  });
+
   it('reopens the shared Steady Growth target picker on exact finding navigation', async () => {
     const application = createApplication();
     const outcome = createSteadyGrowthOutcomeAddress(

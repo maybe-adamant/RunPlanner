@@ -165,6 +165,7 @@ export function normalizeAcquisitions(
     'StackUpgradeBig',
     'StackUpgradeTriple',
     'WeaponUpgrade',
+    'TrialUpgrade',
     'SpellDrop',
     'MaxHealthDrop',
     'MaxHealthDropBig',
