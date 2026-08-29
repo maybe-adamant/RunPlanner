@@ -153,6 +153,8 @@ export interface DerivedAcquisitionEntryFrontier {
   readonly rewardTypes?: readonly string[];
   /** Exact engine-derived state when the source offer is copied without fresh payload resolution. */
   readonly fixedReward?: AuthoredRewardState;
+  /** Exact encounter end that matured a cross-occurrence Shrine delivery. */
+  readonly encounterPhaseKey?: string;
   /** The retained authored identity disagrees with this exact derived source. */
   readonly retainedSourceMismatch?: boolean;
   /** Candidate support for editing the exact derived reward before participation is selected. */

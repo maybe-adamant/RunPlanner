@@ -241,6 +241,7 @@ function applyUnchecked(
         locateBiome(document, catalog, command),
         command,
       );
+    case 'PlaceHermesShrineDelivery':
     case 'SelectDerivedShopEntry':
     case 'ReplaceAcquisitionEntryOffer':
       return applyAcquisitionSiteCommand(

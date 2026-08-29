@@ -53,18 +53,17 @@ function decodeRoomActionReference(value: unknown, path: string): RoomActionRefe
       offerKey: expectNonBlankString(reference.offerKey, `${path}.offerKey`),
     });
   }
-  if (kind === 'purchaseHermesShrineOffer' || kind === 'purchaseStygianWellOffer') {
+  if (kind === 'purchaseStygianWellOffer') {
     expectExactKeys(reference, ['kind', 'generationKey'], path);
     const generationKey = expectNonBlankString(reference.generationKey, `${path}.generationKey`);
-    const allowed =
-      kind === 'purchaseHermesShrineOffer'
-        ? ['initial:first', 'initial:secondLeft', 'initial:secondRight', 'travelDealRefill']
-        : ['initial:healing', 'initial:secondLeft', 'initial:secondRight', 'travelDealRefill'];
+    const allowed = [
+      'initial:healing',
+      'initial:secondLeft',
+      'initial:secondRight',
+      'travelDealRefill',
+    ];
     if (!allowed.includes(generationKey))
-      failProjectDocument(
-        `${path}.generationKey`,
-        `must be a declared ${kind === 'purchaseHermesShrineOffer' ? 'Shrine' : 'Well'} generation key`,
-      );
+      failProjectDocument(`${path}.generationKey`, 'must be a declared Well generation key');
     return Object.freeze({ kind, generationKey } as RoomActionReference);
   }
   if (kind === 'sellPurgingPoolTrait') {
@@ -75,11 +74,24 @@ function decodeRoomActionReference(value: unknown, path: string): RoomActionRefe
     return Object.freeze({ kind, slotKey });
   }
   if (kind === 'interactAcquisitionEntry') {
-    expectExactKeys(reference, ['kind', 'siteKey', 'entryKey'], path);
+    const hasEncounterPhaseKey = Object.hasOwn(reference, 'encounterPhaseKey');
+    expectExactKeys(
+      reference,
+      ['kind', 'siteKey', 'entryKey', ...(hasEncounterPhaseKey ? ['encounterPhaseKey'] : [])],
+      path,
+    );
     return Object.freeze({
       kind,
       siteKey: expectNonBlankString(reference.siteKey, `${path}.siteKey`),
       entryKey: expectNonBlankString(reference.entryKey, `${path}.entryKey`),
+      ...(hasEncounterPhaseKey
+        ? {
+            encounterPhaseKey: expectNonBlankString(
+              reference.encounterPhaseKey,
+              `${path}.encounterPhaseKey`,
+            ),
+          }
+        : {}),
     });
   }
   failProjectDocument(`${path}.kind`, `unknown room action ${kind}`);

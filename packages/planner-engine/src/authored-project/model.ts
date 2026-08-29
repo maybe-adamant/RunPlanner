@@ -6,7 +6,7 @@ import type {
   AuthoredTraitOffer,
 } from './traits';
 
-export const PROJECT_DOCUMENT_SCHEMA_VERSION = 69 as const;
+export const PROJECT_DOCUMENT_SCHEMA_VERSION = 70 as const;
 export type ResourceFamily = import('../catalog-schema').ResourceFamily;
 /** Route ownership supplies the route key; the selected host is exact and durable. */
 export interface ResourcePlacement {
@@ -179,10 +179,6 @@ export type RoomActionReference =
   | { readonly kind: 'chooseRewardWheel'; readonly wheelKey: string }
   | { readonly kind: 'interactWheelReward'; readonly wheelKey: string }
   | { readonly kind: 'interactShopOffer'; readonly offerKey: string }
-  | {
-      readonly kind: 'purchaseHermesShrineOffer';
-      readonly generationKey: HermesShrineGenerationKey;
-    }
   | { readonly kind: 'purchaseStygianWellOffer'; readonly generationKey: StygianWellGenerationKey }
   | { readonly kind: 'sellPurgingPoolTrait'; readonly slotKey: 'left' | 'middle' | 'right' }
   | { readonly kind: 'interactEncounter'; readonly phaseKey: string }
@@ -191,6 +187,8 @@ export type RoomActionReference =
       readonly kind: 'interactAcquisitionEntry';
       readonly siteKey: string;
       readonly entryKey: string;
+      /** Exact encounter end at which a cross-occurrence Shrine delivery matured. */
+      readonly encounterPhaseKey?: string;
     }
   | { readonly kind: 'useFountain' }
   | { readonly kind: 'interactKeepsakeRack' };

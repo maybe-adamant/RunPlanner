@@ -12,6 +12,7 @@ export interface ResolvedEncounterPhase {
   readonly label: string;
   readonly kind: EncounterPhaseKind;
   readonly countsEncounterDepth: boolean;
+  readonly advancesHermesShrineDeliveryUses: boolean;
   readonly canEncounterSkip: boolean;
   readonly blocksFigLeaf: boolean;
   readonly blocksGorgon: boolean;

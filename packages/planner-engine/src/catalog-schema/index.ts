@@ -324,6 +324,8 @@ export interface EncounterDefinition {
   readonly label: string;
   readonly kind: EncounterPhaseKind;
   readonly countsEncounterDepth: boolean;
+  /** Exact encounter-level policy for advancing delayed Hermes Shrine delivery uses. */
+  readonly advancesHermesShrineDeliveryUses: boolean;
   /** Source-declared positive Fig Leaf support for this exact encounter. */
   readonly canEncounterSkip: boolean;
   /** Source-declared room-wide blocker carried by this encounter. */
@@ -718,6 +720,8 @@ export interface RoomDeclaration {
   readonly enteredRewardStoreHistory: EnteredRewardStoreHistoryPolicy;
   readonly encounterEnvelopeKey: string;
   readonly advancesExperimentalHammerUses: boolean;
+  /** Exact room-level policy for advancing delayed Hermes Shrine delivery uses. */
+  readonly advancesHermesShrineDeliveryUses: boolean;
   /** Source `SkipRoomsPerUpgrade`; suppresses Steady Growth's end-effects clock. */
   readonly skipRoomsPerUpgrade: boolean;
   readonly encounterSlotBindings: readonly EncounterSlotBinding[];

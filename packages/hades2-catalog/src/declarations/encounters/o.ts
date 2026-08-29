@@ -13,6 +13,7 @@ export const oEncounterDefinitions = [
     label: 'Ship intro',
     kind: 'combat',
     countsEncounterDepth: false,
+    advancesHermesShrineDeliveryUses: false,
     blocksGorgon: true,
     canEncounterSkip: true,
   },

@@ -203,6 +203,7 @@ export function assembleRoomLifecycleTimeline(
     .sort((left, right) => left.rank! - right.rank!);
   const finalRank = rankedRows.reduce((rank, row) => Math.max(rank, row.rank!), 0);
   const phaseByKey = new Map(structure.phases.map((phase) => [phase.phaseKey, phase]));
+  const finalPhaseKey = structure.phases.at(-1)?.phaseKey;
 
   const rowsForPhase = (phase: RoomLifecycleStructurePhase): readonly RoomActionRow[] =>
     rankedRows.filter((row) => {
@@ -213,9 +214,16 @@ export function assembleRoomLifecycleTimeline(
         );
       }
       if (structure.profileKey === 'FieldsCombatRoom') {
-        return row.window.kind === 'fields' && row.window.phaseKey === phase.phaseKey;
+        return (
+          (row.window.kind === 'fields' && row.window.phaseKey === phase.phaseKey) ||
+          (row.window.kind === 'encounterEnd' && row.window.phaseKey === phase.phaseKey)
+        );
       }
-      return row.window.kind === 'standard';
+      return (
+        (row.window.kind === 'standard' &&
+          (row.window.phase === 'beforeCombat' || phase.phaseKey === finalPhaseKey)) ||
+        (row.window.kind === 'encounterEnd' && row.window.phaseKey === phase.phaseKey)
+      );
     });
 
   const shipPhaseKeyForAction = (row: RoomActionRow): string | undefined => {
@@ -295,7 +303,9 @@ export function assembleRoomLifecycleTimeline(
           phase.rewardWheelKey === undefined
             ? firstRank(
                 phaseRows,
-                (row) => row.window.kind === 'standard' && row.window.phase === 'afterCombat',
+                (row) =>
+                  (row.window.kind === 'standard' && row.window.phase === 'afterCombat') ||
+                  (row.window.kind === 'encounterEnd' && row.window.phaseKey === phase.phaseKey),
               )
             : firstRank(phaseRows, (row) => row.window.kind === 'shipPostCombat');
         const rank =

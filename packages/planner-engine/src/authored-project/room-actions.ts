@@ -12,6 +12,7 @@ import { authoredAcquisitionSources } from './acquisition-sources';
 import { echoLastRewardPickupEntryKeys, activeSelectedPickupProducers } from './pickup-producers';
 import { seaStarDuplicateSourceIsActive } from './sea-star';
 export { roomActionKey } from './room-action-key';
+import { roomActionKey } from './room-action-key';
 
 export function createEmptyRoomActionState(): RoomActionState {
   return Object.freeze({ order: Object.freeze([]) });
@@ -147,32 +148,6 @@ export function activeRoomActionReferences(
         );
     }
   }
-  if (occurrence.hermesShrine !== undefined) {
-    const purchased = new Set(
-      occurrence.roomActions.order.flatMap((reference) =>
-        reference.kind === 'purchaseHermesShrineOffer' ? [reference.generationKey] : [],
-      ),
-    );
-    for (const [slotKey, offer] of Object.entries(occurrence.hermesShrine.offerBySlot)) {
-      const shrineSlot = slotKey as import('./model').HermesShrineSlotKey;
-      const generationKey = `initial:${shrineSlot}` as import('./model').HermesShrineGenerationKey;
-      if (offer !== null && purchased.has(generationKey))
-        references.push(
-          Object.freeze({
-            kind: 'purchaseHermesShrineOffer',
-            generationKey,
-          }),
-        );
-    }
-    if (
-      occurrence.hermesShrine.travelDealRefill?.offer !== null &&
-      occurrence.hermesShrine.travelDealRefill?.offer !== undefined &&
-      purchased.has('travelDealRefill')
-    )
-      references.push(
-        Object.freeze({ kind: 'purchaseHermesShrineOffer', generationKey: 'travelDealRefill' }),
-      );
-  }
   if (occurrence.stygianWell?.interacted === true) {
     const purchased = new Set(occurrence.stygianWell.purchasedGenerationKeys ?? []);
     for (const slotKey of ['healing', 'secondLeft', 'secondRight'] as const) {
@@ -242,19 +217,46 @@ export function activeRoomActionReferences(
         siteKey === 'hermesShrineDelivery'
           ? parseHermesShrineDeliveryEntryKey(entryKey)
           : undefined;
+      const existingReference = occurrence.roomActions.order.find(
+        (
+          candidate,
+        ): candidate is Extract<RoomActionReference, { kind: 'interactAcquisitionEntry' }> =>
+          candidate.kind === 'interactAcquisitionEntry' &&
+          roomActionKey(candidate) ===
+            roomActionKey({ kind: 'interactAcquisitionEntry', siteKey, entryKey }),
+      );
+      const reference: Extract<RoomActionReference, { kind: 'interactAcquisitionEntry' }> =
+        existingReference ??
+        Object.freeze({ kind: 'interactAcquisitionEntry' as const, siteKey, entryKey });
       if (
         siteKey === 'hermesShrineDelivery' &&
         shrineDelivery === undefined &&
         artificer === undefined
       )
         continue;
-      if (
-        shrineDelivery !== undefined &&
-        shrineDelivery.routeKey === biome.routeKey &&
-        shrineDelivery.biomeKey === biome.biomeKey &&
-        shrineDelivery.sourceOccurrenceId === occurrence.occurrenceId
-      )
-        continue;
+      if (shrineDelivery !== undefined) {
+        const sourceIsCurrent =
+          shrineDelivery.routeKey === biome.routeKey &&
+          shrineDelivery.biomeKey === biome.biomeKey &&
+          shrineDelivery.sourceOccurrenceId === occurrence.occurrenceId;
+        // A retained cross-occurrence entry is not a timeline action until
+        // the due encounter has reached it and supplied its exact phase. The
+        // derived capability is the repair surface before then; admitting a
+        // phase-less reference here would invent a generic cleanup window.
+        if (!sourceIsCurrent && reference.encounterPhaseKey === undefined) continue;
+        if (sourceIsCurrent) {
+          const slotKey = shrineDelivery.generationKey.startsWith('initial:')
+            ? (shrineDelivery.generationKey.slice(
+                'initial:'.length,
+              ) as import('./model').HermesShrineSlotKey)
+            : undefined;
+          if (
+            slotKey === undefined ||
+            occurrence.hermesShrine?.purchaseBySlot?.[slotKey]?.rushed !== true
+          )
+            continue;
+        }
+      }
       if (
         artificer !== undefined &&
         sourceDispositions.get(artificer.sourceKey)?.dispositionByAcquisitionRole[
@@ -262,7 +264,7 @@ export function activeRoomActionReferences(
         ]?.kind !== 'artificer'
       )
         continue;
-      references.push(Object.freeze({ kind: 'interactAcquisitionEntry', siteKey, entryKey }));
+      references.push(reference);
     }
   }
   return Object.freeze(references);

@@ -15,6 +15,7 @@ import { hermesShrineInitialSlotKey } from '../model';
 import {
   defaultHermesShrineDeliveryReward,
   hermesShrineDeliveryEntryKey,
+  parseHermesShrineDeliveryEntryKey,
 } from '../hermes-shrine-delivery';
 
 function withRushedHermesDelivery(
@@ -65,9 +66,6 @@ export function applyOccurrenceCommand(
       )
         failCommand(command, 'occurrence is not an eligible ordinary Surface Shop host');
       if (!command.present) {
-        const order = occurrence.roomActions.order.filter(
-          (reference) => reference.kind !== 'purchaseHermesShrineOffer',
-        );
         const withoutShrine = { ...occurrence };
         delete withoutShrine.hermesShrine;
         return updateOccurrence(
@@ -75,7 +73,28 @@ export function applyOccurrenceCommand(
           located,
           Object.freeze({
             ...withoutShrine,
-            roomActions: Object.freeze({ ...occurrence.roomActions, order: Object.freeze(order) }),
+            // Removing the source feature clears only its active same-room
+            // delivery actions.  The authored delivery payload remains as
+            // dormant repair detail and cross-room delivery actions retain
+            // their own host chronology.
+            roomActions: Object.freeze({
+              ...occurrence.roomActions,
+              order: Object.freeze(
+                occurrence.roomActions.order.filter((reference) => {
+                  if (
+                    reference.kind !== 'interactAcquisitionEntry' ||
+                    reference.siteKey !== 'hermesShrineDelivery'
+                  )
+                    return true;
+                  const parsed = parseHermesShrineDeliveryEntryKey(reference.entryKey);
+                  return !(
+                    parsed?.routeKey === command.occurrence.routeKey &&
+                    parsed.biomeKey === command.occurrence.biomeKey &&
+                    parsed.sourceOccurrenceId === command.occurrence.occurrenceId
+                  );
+                }),
+              ),
+            }),
           }),
         );
       }
@@ -164,30 +183,26 @@ export function applyOccurrenceCommand(
         if (command.purchase === null) delete next[slotKey];
         else next[slotKey] = Object.freeze({ ...command.purchase });
       }
+      const deliveryEntryKey = hermesShrineDeliveryEntryKey(
+        command.occurrence,
+        command.generationKey,
+      );
       const roomActions = Object.freeze({
         ...occurrence.roomActions,
+        // A rush is represented by its concrete delivery action.  Switching
+        // back to delayed or clearing the purchase removes only that active
+        // reference; the authored delivery payload remains for repair.
         order: Object.freeze(
-          command.purchase === null
-            ? occurrence.roomActions.order.filter(
+          command.purchase?.rushed === true
+            ? occurrence.roomActions.order
+            : occurrence.roomActions.order.filter(
                 (reference) =>
                   !(
-                    reference.kind === 'purchaseHermesShrineOffer' &&
-                    reference.generationKey === command.generationKey
+                    reference.kind === 'interactAcquisitionEntry' &&
+                    reference.siteKey === 'hermesShrineDelivery' &&
+                    reference.entryKey === deliveryEntryKey
                   ),
-              )
-            : occurrence.roomActions.order.some(
-                  (reference) =>
-                    reference.kind === 'purchaseHermesShrineOffer' &&
-                    reference.generationKey === command.generationKey,
-                )
-              ? occurrence.roomActions.order
-              : [
-                  ...occurrence.roomActions.order,
-                  Object.freeze({
-                    kind: 'purchaseHermesShrineOffer' as const,
-                    generationKey: command.generationKey,
-                  }),
-                ],
+              ),
         ),
       });
       const shrineWithoutPurchase = { ...occurrence.hermesShrine };

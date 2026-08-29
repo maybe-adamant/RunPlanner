@@ -65,6 +65,8 @@ export interface PendingHermesShrineDelivery {
   readonly generationKey: import('../../authored-project/model').HermesShrineGenerationKey;
   readonly rewardType: string;
   readonly remainingUses: number;
+  /** Rushed deliveries are due at their source; delayed deliveries mature later. */
+  readonly rushed?: boolean;
   /** Set at the exact qualifying lifecycle point; pickup settlement owns its host detail. */
   readonly dueAt?: import('../../authored-project/addresses').OccurrenceAddress;
   readonly dueSequence?: number;

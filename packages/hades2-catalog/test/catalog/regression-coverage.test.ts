@@ -148,14 +148,14 @@ const roomFacts = [
 ] as const;
 
 const normalizedBiomeSnapshotHashes = [
-  ['F', 'fdade906186c77af'],
-  ['G', '8d3762cf8461e5c5'],
-  ['H', '36dc5185c392d1d2'],
-  ['I', 'ee42d9c00aae2433'],
-  ['N', 'd3dd20ae73737c1c'],
-  ['O', '78ff043b1b0da3f4'],
-  ['P', 'da2fbc3b6d143337'],
-  ['Q', 'f543d404f069bad9'],
+  ['F', 'b3e6eb55911da8d4'],
+  ['G', '384d6b544b37585c'],
+  ['H', '9efee9fe30cc0656'],
+  ['I', 'cc957eaefad4f2a6'],
+  ['N', '2b78c8564c28b5c0'],
+  ['O', 'f23fa2b26522c07d'],
+  ['P', '77b1225022c49793'],
+  ['Q', '410448887641ce96'],
 ] as const;
 
 function normalizedBiomeSnapshot(biomeKey: string) {
@@ -303,6 +303,34 @@ describe('catalog regression coverage retained through unified decisions', () =>
     expect(sideBinding?.kind).toBe('set');
     if (sideBinding?.kind === 'set') expect(sideBinding.encounterSetKey).toBe('NEncountersSubRoom');
     expect(catalog.rooms.byKey.F_Opening01?.advancesExperimentalHammerUses).toBe(true);
+  });
+
+  it('declares delayed Hermes Shrine use advancement independently of room shape', () => {
+    const ephyraSideRooms = catalog.rooms.values.filter(
+      (room) => room.mode.kind === 'authored' && room.mode.templateKey === 'EphyraSideRoom',
+    );
+    expect(ephyraSideRooms).not.toHaveLength(0);
+    expect(ephyraSideRooms.every((room) => room.advancesHermesShrineDeliveryUses === false)).toBe(
+      true,
+    );
+    expect(catalog.rooms.byKey.N_Sub10?.advancesHermesShrineDeliveryUses).toBe(false);
+    expect(catalog.rooms.byKey.N_Hub?.advancesHermesShrineDeliveryUses).toBe(true);
+    expect(catalog.rooms.byKey.O_Combat04?.advancesHermesShrineDeliveryUses).toBe(true);
+    expect(
+      catalog.encounterDefinitions.byKey.PreHubGeneratedN?.advancesHermesShrineDeliveryUses,
+    ).toBe(true);
+    expect(
+      catalog.encounterDefinitions.byKey.GeneratedNSubRoom?.advancesHermesShrineDeliveryUses,
+    ).toBe(true);
+    expect(
+      catalog.encounterDefinitions.byKey.GeneratedO_Intro01?.advancesHermesShrineDeliveryUses,
+    ).toBe(false);
+    expect(
+      catalog.encounterDefinitions.byKey.Story_Circe_01?.advancesHermesShrineDeliveryUses,
+    ).toBe(false);
+    expect(catalog.encounterDefinitions.byKey.DevotionTestO?.advancesHermesShrineDeliveryUses).toBe(
+      true,
+    );
   });
 
   it('binds Travel Deal to every supported World Shop profile, including Midshops', () => {

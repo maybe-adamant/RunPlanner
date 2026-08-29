@@ -1,3 +1,4 @@
+import { isCombatBearingEncounterPhaseKind } from '@run-planner/engine/catalog-schema';
 import type {
   CatalogCollection,
   EncounterDefinition,
@@ -185,6 +186,12 @@ export function normalizeEncounterDefinitions(
       }
       if (typeof raw.countsEncounterDepth !== 'boolean') {
         fail(`${path}.countsEncounterDepth`, 'must be boolean');
+      }
+      if (
+        raw.advancesHermesShrineDeliveryUses !== undefined &&
+        typeof raw.advancesHermesShrineDeliveryUses !== 'boolean'
+      ) {
+        fail(`${path}.advancesHermesShrineDeliveryUses`, 'must be boolean');
       }
       if (raw.canEncounterSkip !== undefined && typeof raw.canEncounterSkip !== 'boolean') {
         fail(`${path}.canEncounterSkip`, 'must be boolean');
@@ -560,6 +567,8 @@ export function normalizeEncounterDefinitions(
         label,
         kind: raw.kind,
         countsEncounterDepth: raw.countsEncounterDepth,
+        advancesHermesShrineDeliveryUses:
+          raw.advancesHermesShrineDeliveryUses ?? isCombatBearingEncounterPhaseKind(raw.kind),
         canEncounterSkip: raw.canEncounterSkip ?? false,
         blocksFigLeaf: raw.blocksFigLeaf ?? false,
         blocksGorgon: raw.blocksGorgon ?? false,

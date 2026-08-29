@@ -45,6 +45,8 @@ import type { LifecycleFinding } from './types';
 export interface EncounterEndEffectsTransition {
   readonly branches: readonly RewardBranchState[];
   readonly derivedAcquisitionEntryFrontiers: readonly DerivedAcquisitionEntryFrontier[];
+  /** A due Shrine delivery has no exact ranked/retained host action yet. */
+  readonly hermesShrineDeliveryPlacementRequired: boolean;
   readonly steadyGrowthThresholds: readonly {
     readonly address: SteadyGrowthOutcomeAddress;
     readonly threshold: ReachedSteadyGrowthThreshold;
@@ -352,7 +354,14 @@ export function applyEncounterEndEffectsTransition(
     ),
   );
   const derivedAcquisitionEntryFrontiers: DerivedAcquisitionEntryFrontier[] = [];
-  if (event.origin.kind === 'occurrence') {
+  const deliveryPlacementFindings: LifecycleFinding[] = [];
+  const encounterPhase = room?.encounterPhases?.find((phase) => phase.slotKey === event.phaseKey);
+  if (
+    event.origin.kind === 'occurrence' &&
+    event.execution === 'normal' &&
+    declaration?.advancesHermesShrineDeliveryUses === true &&
+    encounterPhase?.advancesHermesShrineDeliveryUses === true
+  ) {
     const deliveryHost = event.origin;
     next = Object.freeze(
       next.map((branch) => {
@@ -396,12 +405,38 @@ export function applyEncounterEndEffectsTransition(
             ? room.acquisitionSites?.hermesShrineDelivery?.entries[entryKey]
             : undefined;
         const fixedReward = defaultHermesShrineDeliveryReward(catalog, delivery.rewardType);
+        const hasExactDeliveryAction =
+          room?.kind === 'authored' &&
+          room.roomActionRoster?.rows.some(
+            (row) =>
+              row.reference.kind === 'interactAcquisitionEntry' &&
+              row.reference.siteKey === 'hermesShrineDelivery' &&
+              row.reference.entryKey === entryKey &&
+              row.reference.encounterPhaseKey === event.phaseKey,
+          );
+        if (retained === undefined || !hasExactDeliveryAction)
+          deliveryPlacementFindings.push(
+            Object.freeze({
+              finding: rewardFinding(
+                'hermesShrineDeliveryPlacementRequired',
+                createAcquisitionEntryAddress(site, entryKey),
+                { sourceKey: delivery.sourceKey, encounterPhaseKey: event.phaseKey },
+              ),
+              region: ownerRegion(createAcquisitionEntryAddress(site, entryKey)),
+              chronology: Object.freeze({
+                kind: 'history' as const,
+                sequence: event.sequence,
+                boundary: 'at' as const,
+              }),
+            }),
+          );
         derivedAcquisitionEntryFrontiers.push(
           Object.freeze({
             address: createAcquisitionEntryAddress(site, entryKey),
             kind: 'hermesShrineDelivery',
             branchCohortSize: next.length,
             rewardTypes: Object.freeze([delivery.rewardType]),
+            encounterPhaseKey: event.phaseKey,
             ...(fixedReward === null ? {} : { fixedReward }),
             retainedSourceMismatch:
               retained !== undefined &&
@@ -434,10 +469,11 @@ export function applyEncounterEndEffectsTransition(
     return Object.freeze({
       branches: advanceRewardBranches(next, event.sequence),
       derivedAcquisitionEntryFrontiers: Object.freeze(derivedAcquisitionEntryFrontiers),
+      hermesShrineDeliveryPlacementRequired: deliveryPlacementFindings.length > 0,
       steadyGrowthThresholds: Object.freeze([]),
       transcendentEmbryoThresholds: Object.freeze([]),
       traitChildSettlements: Object.freeze([]),
-      findings: Object.freeze([]),
+      findings: Object.freeze(deliveryPlacementFindings),
     });
   const embryoTarget =
     room?.kind === 'authored'
@@ -453,7 +489,7 @@ export function applyEncounterEndEffectsTransition(
     event.origin.routeKey,
     '',
   );
-  const findings: LifecycleFinding[] = [];
+  const findings: LifecycleFinding[] = [...deliveryPlacementFindings];
   const traitChildSettlements: ReachedTraitChildCheckpoint[] = [];
   for (const blocked of steadyAdvance.blocked) {
     traitChildSettlements.push(Object.freeze({ address: blocked.address, branch: blocked.branch }));
@@ -504,6 +540,7 @@ export function applyEncounterEndEffectsTransition(
   return Object.freeze({
     branches: advanceRewardBranches(embryoAdvance.branches, event.sequence),
     derivedAcquisitionEntryFrontiers: Object.freeze(derivedAcquisitionEntryFrontiers),
+    hermesShrineDeliveryPlacementRequired: deliveryPlacementFindings.length > 0,
     steadyGrowthThresholds: steadyAdvance.thresholds,
     transcendentEmbryoThresholds: embryoAdvance.thresholds,
     traitChildSettlements: Object.freeze(traitChildSettlements),

@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 69,
+  "schemaVersion": 70,
   "projectId": "surface-2",
   "catalogVersion": "0.49.0-completion-topology",
   "routes": [
@@ -1693,12 +1693,9 @@
                       "wheelKey": "wheel1"
                     },
                     {
-                      "kind": "purchaseHermesShrineOffer",
-                      "generationKey": "initial:first"
-                    },
-                    {
-                      "kind": "purchaseHermesShrineOffer",
-                      "generationKey": "initial:secondLeft"
+                      "kind": "interactAcquisitionEntry",
+                      "siteKey": "hermesShrineDelivery",
+                      "entryKey": "hermesShrineDelivery:%5B%22Surface%22%2C%22O%22%2C%22surface-o-combat07%22%2C%22initial%3Afirst%22%5D"
                     }
                   ]
                 },
@@ -1896,11 +1893,34 @@
                       "acquisitionRole": "chosenSource"
                     },
                     {
+                      "kind": "interactAcquisitionEntry",
+                      "siteKey": "hermesShrineDelivery",
+                      "entryKey": "hermesShrineDelivery:%5B%22Surface%22%2C%22O%22%2C%22surface-o-combat07%22%2C%22initial%3AsecondLeft%22%5D",
+                      "encounterPhaseKey": "Encounter"
+                    },
+                    {
                       "kind": "interactIncomingReward",
                       "producerPoint": "afterCombat",
                       "acquisitionRole": "spurnedSource"
                     }
                   ]
+                },
+                "acquisitionSites": {
+                  "hermesShrineDelivery": {
+                    "pickupEntries": {
+                      "hermesShrineDelivery:%5B%22Surface%22%2C%22O%22%2C%22surface-o-combat07%22%2C%22initial%3AsecondLeft%22%5D": {
+                        "offer": {
+                          "rewardType": "MaxHealthDrop"
+                        },
+                        "traitOffersByAcquisitionRole": {},
+                        "dispositionByAcquisitionRole": {
+                          "self": {
+                            "kind": "normal"
+                          }
+                        }
+                      }
+                    }
+                  }
                 },
                 "additionalExits": []
               },

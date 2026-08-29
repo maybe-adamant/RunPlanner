@@ -591,6 +591,12 @@ export function normalizeRoom(
   if (typeof room.advancesExperimentalHammerUses !== 'boolean') {
     fail(`${path}.advancesExperimentalHammerUses`, 'must be a boolean');
   }
+  if (
+    room.advancesHermesShrineDeliveryUses !== undefined &&
+    typeof room.advancesHermesShrineDeliveryUses !== 'boolean'
+  ) {
+    fail(`${path}.advancesHermesShrineDeliveryUses`, 'must be a boolean when declared');
+  }
   if (room.skipRoomsPerUpgrade !== undefined && typeof room.skipRoomsPerUpgrade !== 'boolean') {
     fail(`${path}.skipRoomsPerUpgrade`, 'must be a boolean when declared');
   }
@@ -1026,6 +1032,7 @@ export function normalizeRoom(
     ...(prebossBatchPolicy === undefined ? {} : { prebossBatchPolicy }),
     encounterEnvelopeKey,
     advancesExperimentalHammerUses: room.advancesExperimentalHammerUses,
+    advancesHermesShrineDeliveryUses: room.advancesHermesShrineDeliveryUses ?? true,
     skipRoomsPerUpgrade: room.skipRoomsPerUpgrade ?? false,
     encounterSlotBindings,
     ...(forcedRewardStoreKey === undefined ? {} : { forcedRewardStoreKey }),

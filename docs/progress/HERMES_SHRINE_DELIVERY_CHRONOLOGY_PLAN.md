@@ -5,7 +5,8 @@
 - Status: locked for execution.
 - Base commit: `4d4a705a feat(planner): author shrine rewards at delivery`.
 - Intended persisted schema: 70.
-- Catalog declarations and catalog version are unchanged.
+- Catalog declarations and catalog version are unchanged except for the bounded
+  room- and encounter-level Shrine encounter-use policy added in Gate A.
 - This temporary plan is not linked from `README.md` or durable design
   authorities. Closure absorbs the lasting decisions and deletes this file.
 
@@ -98,10 +99,17 @@ maturity does not create a Travel Deal opportunity.
 
 An eligible Hub side room is an ordinary Shrine source for this purpose. Its
 purchase is scheduled from that side-room occurrence at its own cleanup
-boundary. The source room does not consume one delay use. Later visited side
-rooms and later main Hub visits advance or host the delivery according to the
-same encounter-end rules; the parent main room is neither the source nor an
-implicit delivery host.
+boundary. The source room does not consume one delay use. Ephyra side rooms
+also do not advance older delayed Shrine uses: the catalog owns an explicit
+`advancesHermesShrineDeliveryUses` room fact, with false overrides for every
+Ephyra side-room declaration and a true normalized default for ordinary rooms.
+The resolved encounter owns the same fact: combat-bearing encounters default
+true, noncombat/story encounters default false, and exact exceptions such as
+the combat-shaped O intro declare false. A countdown advances only when the
+room and exact resolved encounter both permit it and the encounter was not
+skipped. Later qualifying main Hub visits advance or host the delivery
+according to the same encounter-end rules; the parent main room is neither the
+source nor an implicit delivery host.
 
 ### A derived host must have a visible required footprint
 
@@ -143,8 +151,14 @@ recreating a removed purchase action.
 
 ### Hades II catalog
 
-No catalog work is included. Shrine hosts, inventory groups, item requirements,
-delay bounds, encounter-use declarations, and source facts do not change.
+Shrine hosts, inventory groups, item requirements, and delay bounds do not
+change. The catalog adds normalized room- and encounter-level
+`advancesHermesShrineDeliveryUses` facts. Ordinary rooms default true and every
+Ephyra side-room declaration is false. Combat-bearing encounters default true,
+noncombat/story encounters default false, and O's combat-shaped Intro is an
+explicit false exception. The engine must require both facts rather than infer
+Shrine advancement from encounter depth, Hammer-use behavior, or the mere
+existence of an end-effects event.
 
 ### Planner engine: authored model and schema
 
@@ -202,9 +216,13 @@ and delayed Shrine delivery. It must:
 
 Same-origin Shrine delivery entries are no longer suppressed from room-action
 roster derivation. Their action window is post-outgoing. A delivery whose source
-is another occurrence retains the declaration-owned reached-host window used by
-ordinary matured delivery. Stale dormant source-room entries remain excluded
-unless the matching purchase is currently rushed.
+is another occurrence preserves the exact `encounterPhaseKey` carried by the due
+capability from the encounter-end event that matured it; the room-action domain
+maps that reference to the matching encounter-end window. This phase is
+persisted only after the delivery is due, so it is not future host authority.
+Stale dormant source-room entries remain excluded unless the matching purchase
+is currently rushed. Ordinary non-delivery cleanup remains at the final
+after-combat window.
 
 When a cross-occurrence delivery becomes due, the progressive engine publishes
 the exact required-action capability and blocks at that host until the
@@ -259,7 +277,10 @@ Implement the complete schema-70 vertical slice:
 - unified rushed/delayed delivery settlement;
 - first-delivery Travel Deal behavior;
 - roster/window correction; and
-- deletion of the purchase acquisition path.
+- deletion of the purchase acquisition path; and
+- mechanical migration of every checked-in schema-69 checkpoint JSON and
+  manifest entry to schema 70, which is a hard Gate A dependency because the
+  fixture loader strictly decodes the raw current schema.
 
 The application may receive the minimum compile-preserving adaptation in this
 gate, but Gate A is not complete while any persisted or executable Shrine
@@ -270,13 +291,22 @@ Primary tests:
 - authored command tests for delayed, rushed, toggle, removal, and dormant
   detail restoration;
 - codec and schema migration tests proving exact rank preservation;
-- room-action domain tests proving same-origin rush is post-outgoing and delayed
-  host delivery retains its reached-host window;
+- codec, command, and room-action domain tests proving exact due-phase
+  round-trip, same-origin rush is post-outgoing, and delayed host delivery
+  maps to its reached encounter-end window;
 - Shrine simulation tests proving delayed scheduling without a source action,
   same-room rush settlement, and no source-room delay decrement;
+- lifecycle tests for O phase-1/phase-2 and Fields exact encounter-end
+  settlement, including multiple same-phase deliveries in authored order;
 - a Hub side-room test proving a purchase in `N_Sub10` is sourced from that
-  occurrence, a later side-room encounter advances it, and a later main Hub
+  occurrence, the side-room encounter does not advance it, and a later main Hub
   visit becomes its exact delivery host;
+- catalog regression witnesses proving the Shrine encounter-use facts cover
+  ordinary rooms, every Ephyra side-room declaration, O Intro, O Devotion,
+  O Story, and `PreHubGeneratedN` independently of encounter depth;
+- progressive chronology tests proving an unplaced due delivery records its
+  finding and capability but stops before later actions/occurrences, then
+  resumes after the atomic placement intent;
 - progressive tests proving a due delivery with no authored acquisition site
   blocks at its host and the atomic placement intent materializes and ranks the
   exact source-keyed entry;
@@ -317,10 +347,10 @@ Intended commit: `fix(planner): present Shrine deliveries in room order`.
 
 ### Gate C — Fixture and authority closure
 
-Update the canonical `surface-no-hermes-shrine-delivery` checkpoint and only
-the additional fixtures mechanically affected by schema 70. Add one compact N
-checkpoint for the side-room source seam rather than copying a large editor
-save. Together the checkpoints must contain:
+Gate A updates the canonical `surface-no-hermes-shrine-delivery` checkpoint as
+part of schema and chronology closure. Gate C adds one compact N checkpoint for
+the side-room source seam rather than copying a large editor save. Together the
+checkpoints must contain:
 
 - one rushed source-room delivery action;
 - one delayed delivery with no source-room action;
@@ -376,7 +406,7 @@ audit:
 - Persisting a future delayed-delivery host.
 - Giving Hub side-room Shrines a separate scheduling or delivery model.
 - Reordering or separately authoring purchase and rush.
-- Catalog declaration changes, game-module work, or Dream-route expansion.
+- Unrelated catalog declaration changes, game-module work, or Dream-route expansion.
 
 ## Completion criteria
 

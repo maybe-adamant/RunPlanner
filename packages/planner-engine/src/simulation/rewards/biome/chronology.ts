@@ -19,6 +19,7 @@ import type { ResourcePlacements, RouteLoadout } from '../../../authored-project
 import { EMPTY_RESOURCE_PLACEMENTS } from '../../../authored-project/defaults';
 import type { StygianWellCandidateContext } from '../../stygian-well';
 import { parseSeaStarDuplicateSiteKey } from '../../../authored-project/sea-star';
+import { parseHermesShrineDeliveryEntryKey } from '../../../authored-project/hermes-shrine-delivery';
 import type { ResolvedRewardOffer } from '../../../reward-kernel';
 import type { HistoryStateView } from '../../history';
 import type { CanonicalAuthoredRoom, CanonicalHubRoom } from '../../materialization';
@@ -997,7 +998,7 @@ export function evaluateBiomeRewardChronology(
     pendingHubBoard = undefined;
   }
 
-  for (const event of history.events) {
+  historyEvents: for (const event of history.events) {
     if (branches.length === 0) {
       break;
     }
@@ -1444,21 +1445,61 @@ export function evaluateBiomeRewardChronology(
         recordTraitChildSettlements(transition.traitChildSettlements, event.origin);
         for (const finding of transition.findings)
           addRewardFinding(findings, finding.finding, finding.region, finding.chronology);
+        if (transition.hermesShrineDeliveryPlacementRequired) break historyEvents;
+        break;
+      }
+      case 'hermesShrineDeliveriesScheduled': {
+        const sourceRoom = rooms.get(semanticAddressKey(event.origin));
+        const room = sourceRoom?.kind === 'authored' ? sourceRoom : undefined;
+        const transition = applyAcquisitionPointReachedTransition({
+          catalog,
+          snapshot,
+          event,
+          room,
+          declaration: room === undefined ? undefined : catalog.rooms.byKey[room.gameName],
+          roomView: views.get(semanticAddressKey(event.origin)),
+          sourceBranches: branches,
+          enteredBiomeCount,
+          routeLoadout,
+          rewardLookups: rewardLookup.internal,
+          authoredSeaStarDuplicateSiteKeys: Object.freeze([...authoredSeaStarDuplicateSiteKeys]),
+          purgingPoolAssessment: undefined,
+          hermesShrineRefillState: undefined,
+        });
+        branches = transition.branches;
+        for (const entry of transition.findings)
+          findings.set(findingIdentityKey(entry.finding), entry);
+        for (const frontier of transition.producerFrontiers)
+          indexRewardProducerFrontier(producerFrontiers, frontier);
+        recordAcquisitionRoleFrontiers(transition.roleFrontiers);
+        if (room !== undefined)
+          recordTraitChildSettlements(transition.traitChildSettlements, room.origin);
         break;
       }
       case 'acquisitionPointReached': {
         const sourceRoom = rooms.get(semanticAddressKey(event.origin));
         const room = sourceRoom?.kind === 'authored' ? sourceRoom : undefined;
-        const shrineKey = semanticAddressKey(event.origin);
-        const refillState: HermesShrineRefillState | undefined = event.point.startsWith(
-          'hermesShrinePurchase:',
-        )
-          ? Object.freeze({
-              firstRushedInitialGeneration: firstRushedInitialGenerationByShrine.has(shrineKey),
-              refillAssessments: hermesShrineTravelDealRefills.get(shrineKey),
-              refillSupported: hermesShrineTravelDealRefillValid.get(shrineKey),
-            })
-          : undefined;
+        const deliverySource =
+          event.siteKey === 'hermesShrineDelivery' && event.entryKey !== undefined
+            ? parseHermesShrineDeliveryEntryKey(event.entryKey)
+            : undefined;
+        const shrineKey =
+          deliverySource === undefined
+            ? semanticAddressKey(event.origin)
+            : semanticAddressKey({
+                kind: 'occurrence' as const,
+                routeKey: deliverySource.routeKey,
+                biomeKey: deliverySource.biomeKey,
+                occurrenceId: deliverySource.sourceOccurrenceId,
+              });
+        const refillState: HermesShrineRefillState | undefined =
+          deliverySource === undefined
+            ? undefined
+            : Object.freeze({
+                firstRushedInitialGeneration: firstRushedInitialGenerationByShrine.has(shrineKey),
+                refillAssessments: hermesShrineTravelDealRefills.get(shrineKey),
+                refillSupported: hermesShrineTravelDealRefillValid.get(shrineKey),
+              });
         const transition = applyAcquisitionPointReachedTransition({
           catalog,
           snapshot,

@@ -5,6 +5,7 @@ import {
   applyProjectCommand,
   createAcquisitionEntryAddress,
   createAcquisitionSiteAddress,
+  createBiomeAddress,
   hermesShrineDeliveryEntryKey,
   createOccurrenceAddress,
   createOccurrenceId,
@@ -164,13 +165,18 @@ describe('Hermes Shrine workbench', () => {
     const room = occurrence(oOccurrenceIds.combat07)(
       workspaceBiome(application, 'Surface', 'O'),
     )?.room;
-    const purchaseRow = room?.roomActions?.rows.find(
+    const deliveryRow = room?.roomActions?.rows.find(
       (row) =>
-        row.reference.kind === 'purchaseHermesShrineOffer' &&
-        row.reference.generationKey === 'initial:first',
+        row.reference.kind === 'interactAcquisitionEntry' &&
+        row.reference.siteKey === 'hermesShrineDelivery' &&
+        row.reference.entryKey ===
+          hermesShrineDeliveryEntryKey(
+            createOccurrenceAddress(createBiomeAddress('Surface', 'O'), oOccurrenceIds.combat07),
+            'initial:first',
+          ),
     );
-    expect(purchaseRow?.label).toBe('Buy Big Heal');
-    expect(purchaseRow?.rewardPayload?.control.offer).toMatchObject({ rewardType: 'HealBigDrop' });
+    expect(deliveryRow?.label).toContain('Big Heal');
+    expect(deliveryRow?.rewardPayload?.control.offer).toMatchObject({ rewardType: 'HealBigDrop' });
   });
 
   it('authors Mystery Boon identity in inventory and its god only at rushed acquisition', async () => {
