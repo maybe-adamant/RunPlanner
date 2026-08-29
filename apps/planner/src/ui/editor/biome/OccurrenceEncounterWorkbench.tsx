@@ -418,7 +418,8 @@ export function RewardWheelWorkbench({
   const pickCandidates = useWorkspaceInteraction(pick);
   const idPrefix = `room-${occurrence.occurrenceId}-${wheel.key}`;
   const replacePick = (pickedOfferIndex: number): void => {
-    const candidateResults = pickCandidates.result ?? pick.load();
+    const candidateResults = pickCandidates.result ?? pickCandidates.activate();
+    if (candidateResults === undefined) return;
     const candidate = candidateResults.find((option) => option.value === pickedOfferIndex);
     if (!candidateMayBeAuthored(candidate)) return;
     dispatch(

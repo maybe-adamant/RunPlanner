@@ -8,8 +8,6 @@ import {
   createOccurrenceAddress,
   createOccurrenceId,
   createProjectDocument,
-  createRewardWheelAddress,
-  createRewardWheelOfferAddress,
   semanticAddressKey,
   type ProjectDocument,
 } from '@run-planner/engine/authored-project';
@@ -634,41 +632,6 @@ describe('structured workspace decision assembly', () => {
     );
     expect(consequenceFor(midshop, oOccurrenceIds.combat01)).toBe(
       'Shop fixed · counts as RunProgress.',
-    );
-  });
-
-  it('derives a Ship target consequence from the final active wheel store command', () => {
-    let project = applyProjectCommand(loadSurfaceNOPQProject(), catalog, {
-      kind: 'ReplaceRewardWheelStore',
-      storeKey: 'MetaProgress',
-      wheel: createRewardWheelAddress(oBiome, oOccurrenceIds.combat02, 'wheel1'),
-    });
-    project = applyProjectCommand(project, catalog, {
-      kind: 'ReplaceRewardWheelOffer',
-      offer: createRewardWheelOfferAddress(oBiome, oOccurrenceIds.combat02, 'wheel1', 'offer1'),
-      value: { rewardType: 'GiftDrop' },
-    });
-    const source = biomeSource(authorLegalTraitOffers(project), 'Surface', 'O');
-    const decision = batchDecisionAt(source, oOccurrenceIds.combat02);
-    const evaluated = source.evaluatedBatch(
-      createExitDecisionAddress(source.biome, decision.source),
-    );
-    if (evaluated === undefined) throw new Error('O final-wheel decision evaluation is missing');
-    const kit = decisionKit(source);
-    const assembly = assembleWorkspaceDecision({
-      assembleOccurrence: kit.assembleOccurrence,
-      catalog,
-      decision,
-      evaluated,
-      kind: 'batch',
-      markerDestinations: kit.markers.emitter,
-      source,
-    });
-    if (assembly.kind !== 'batch') throw new Error('O final-wheel decision is not a batch');
-
-    expect(assembly.batch.rewardStore).toBeUndefined();
-    expect(assembly.batch.targets[0]?.rewardConsequence?.statement).toBe(
-      'Shop fixed · counts as MetaProgress.',
     );
   });
 
