@@ -2,7 +2,7 @@
 
 ## Status
 
-- **State:** Gate A implemented and reviewed; Gate B has not started
+- **State:** Gates A and B implemented and reviewed; Gate C has not started
 - **Base commit:** `d9e72e03cc6206c38d5e05b260bd9999e3e488cc`
 - **Current persistence boundary:** schema 68
 - **Current catalog boundary:** `0.49.0-completion-topology`

@@ -226,6 +226,7 @@ function TargetRow({
         <div className="door-reward-slot">
           <DoorRewardEditor
             door={door}
+            focusOwner={target.marker.address}
             idPrefix={`door-${target.marker.focusKey}`}
             interactions={interactions}
           />
@@ -290,6 +291,13 @@ function MissingTargetRow({
             label="Room"
           />
         )}
+        <div
+          aria-live="polite"
+          className="field-control field-control-inline pending-reward-status"
+        >
+          <span>Reward</span>
+          <span className="fixed-room-state">Choose room to show reward</span>
+        </div>
       </div>
     </article>
   );
@@ -591,7 +599,7 @@ export function BatchWorkbench({
       <header className="decision-heading">
         <div>
           <p className="card-kicker">{label}</p>
-          <h3>{node.targets.length === 0 ? 'Choose a room' : 'Choose a room and reward'}</h3>
+          <h3>Configure door offer</h3>
         </div>
         <div className="owner-markers">
           <SemanticOwnerMarker address={node.owner} />
@@ -659,45 +667,32 @@ function StartFrontier({
   const empty: ContextualPickerModel<RoomDeclaration> = Object.freeze({
     sections: Object.freeze([]),
   });
-  if (start.kind === 'fixed') {
-    return (
-      <section className="frontier-actions biome-start-frontier">
-        <div>
-          <p className="card-kicker">Next step</p>
-          <h3>Start with {start.fixedLabel}</h3>
-          <p>The game fixes the first room.</p>
-        </div>
-        <SemanticOwnerMarker address={start.owner} />
-        <button
-          className="primary-action"
-          onClick={() => executeIntent(start.intent())}
-          type="button"
-        >
-          Start biome
-        </button>
-      </section>
-    );
-  }
   return (
     <section className="frontier-actions biome-start-frontier">
       <div>
         <p className="card-kicker">Next step</p>
-        <h3>Choose starting room</h3>
+        <h3>{start.configurationLabel}</h3>
         <SemanticOwnerMarker address={start.owner} />
       </div>
-      <ContextualPicker
-        id={`${start.key}-start`}
-        label="Starting room"
-        loading={candidates.pending}
-        model={candidates.result ?? empty}
-        onOpenChange={(open) => {
-          if (open) candidates.activate();
-        }}
-        onSelect={(room) => {
-          executeIntent(start.intentFor(room));
-        }}
-        placeholder="Select a room"
-      />
+      <div className="start-configuration-fields">
+        <ContextualPicker
+          id={`${start.key}-start`}
+          label="Room"
+          loading={candidates.pending}
+          model={candidates.result ?? empty}
+          onOpenChange={(open) => {
+            if (open) candidates.activate();
+          }}
+          onSelect={(room) => {
+            executeIntent(start.intentFor(room));
+          }}
+          placeholder="Select a room"
+        />
+        <div aria-live="polite" className="field-control field-control-inline start-reward-status">
+          <span>Reward</span>
+          <span className="fixed-room-state">Choose room to show reward</span>
+        </div>
+      </div>
     </section>
   );
 }

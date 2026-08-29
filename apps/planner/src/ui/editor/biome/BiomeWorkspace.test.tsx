@@ -268,7 +268,7 @@ describe('BiomeWorkspace', () => {
   it('keeps the fixed N start room in the rail next step', () => {
     renderWorkspace(emptyProject('Surface', 1), 'Surface', 'N');
 
-    const start = screen.getByRole('button', { name: /Start with Opening/ });
+    const start = screen.getByRole('button', { name: /Configure starting room/ });
     expect(start.textContent).toContain('Next step');
     expect(start.textContent).not.toContain('Choose the first room');
   });
@@ -736,7 +736,7 @@ describe('BiomeWorkspace', () => {
     const inspector = screen.getByRole('complementary', { name: 'Details' });
     expect(inspector.querySelector('.biome-occurrence-workbench')).not.toBeNull();
     await view.user.click(within(inspector).getByRole('tab', { name: 'Room Doors' }));
-    expect(within(inspector).getByText('Choose a room')).toBeTruthy();
+    expect(within(inspector).getByRole('heading', { name: 'Configure door offer' })).toBeTruthy();
     expect(within(inspector).queryByText('Continue from this room')).toBeNull();
     expect(within(inspector).queryByRole('button', { name: 'Remove these doors' })).toBeNull();
     const before = view.application.store.getState().projectWorkspace.history.past.length;
@@ -788,7 +788,7 @@ describe('BiomeWorkspace', () => {
     );
     const restoredInspector = screen.getByRole('complementary', { name: 'Details' });
     await view.user.click(within(restoredInspector).getByRole('tab', { name: 'Room Doors' }));
-    expect(screen.getByText('Choose a room')).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Configure door offer' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Remove these doors' })).toBeNull();
   });
 
@@ -1266,7 +1266,7 @@ describe('BiomeWorkspace', () => {
     expect(inspector.querySelector('.biome-batch-workbench')).not.toBeNull();
   });
 
-  it('focuses a fixed Story reward on its owning predecessor door', () => {
+  it('focuses a fixed Story reward on its owning predecessor door', async () => {
     const project = loadSurfaceNOPQProject();
     const view = renderWorkspace(project, 'Surface', 'P');
     const storyOccurrenceId = pOccurrenceId('P_Story01', 7, 1);
@@ -1287,9 +1287,25 @@ describe('BiomeWorkspace', () => {
       name: `${story.room.label} room offer`,
     });
     expect(within(door).queryByText('Door reward')).toBeNull();
+    const rewardStatus = door.querySelector<HTMLElement>('.door-reward-list [id$="-status"]');
+    if (rewardStatus === null) throw new Error('fixed Story reward status is missing');
+    expect(rewardStatus.getAttribute('tabindex')).toBe('-1');
     expect(
       door.querySelector('.door-reward-list .room-state-with-marker > .semantic-owner-marker'),
     ).not.toBeNull();
+
+    act(() =>
+      view.application.store.dispatch(
+        semanticOwnerFocused(
+          createTargetAddress(
+            pBiome,
+            { kind: 'occurrence', occurrenceId: pOccurrenceId('P_Combat10', 6, 1) },
+            'exit1',
+          ),
+        ),
+      ),
+    );
+    await waitFor(() => expect(document.activeElement).toBe(rewardStatus));
   });
 
   it('moves keyboard focus through semantic owners without authoring a change', async () => {

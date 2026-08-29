@@ -17,7 +17,7 @@ import { useAppDispatch } from '@planner/state/store';
 import { SemanticOwnerMarker } from '@planner/ui/feedback/EvaluationFeedback';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { RoomSelector } from './RoomSelector';
-import { RewardControlEditor } from '../rewards/RewardControlEditor';
+import { RewardSurfaceEditor } from './DoorRewardEditor';
 import { BiomeWorkspaceContractError } from './workspaceContract';
 import { KeepsakeEquipResultPicker, KeepsakeSelectionPicker } from '../KeepsakePickers';
 
@@ -372,12 +372,9 @@ export function StartRoomIdentityEditor({
   readonly node: Extract<WorkspaceNode, { readonly kind: 'occurrenceWorkbench' }>;
 }) {
   const dispatch = useAppDispatch();
+  if (node.isEntry !== true) return null;
   const picker = node.room.roomPicker;
   const startPicker = picker?.kind === 'startRoomPicker' ? picker : undefined;
-  const startRewardControl = node.room.offerRewardRewards.find(
-    (reward) => reward.key === 'incoming',
-  )?.control;
-  if (startPicker === undefined && startRewardControl === undefined) return null;
   const interaction =
     startPicker === undefined
       ? undefined
@@ -388,44 +385,43 @@ export function StartRoomIdentityEditor({
   if (interaction !== undefined && interaction.kind !== 'startRoom')
     throw new BiomeWorkspaceContractError(`${interaction.key} is not a start-room interaction.`);
   return (
-    <section
-      aria-label={startPicker === undefined ? 'Entry reward' : 'Start room identity'}
-      className="start-room-identity"
-    >
-      {startPicker === undefined || interaction === undefined ? null : (
-        <>
-          <div className="owner-markers">
-            <h3>Room identity</h3>
-            <SemanticOwnerMarker address={node.room.address} />
-          </div>
-          <RoomSelector
-            idPrefix={`start-${node.room.occurrenceId}`}
-            interaction={interaction}
-            label="Start room"
-            onSelect={(gameName) => {
-              dispatch(
-                authoredProjectCommandDispatched({
-                  kind: 'ReplaceOccurrenceRoom',
-                  occurrence: node.room.address,
-                  gameName,
-                }),
-              );
-              dispatch(semanticOwnerFocused(node.room.address));
-            }}
-          />
-        </>
-      )}
-      {startRewardControl === undefined ? null : (
-        <div aria-label="Entry reward" className="start-room-entry-reward">
-          <RewardControlEditor
-            control={startRewardControl}
-            idPrefix={`start-${node.room.occurrenceId}-entry-reward`}
-            interactions={interactions}
-            label="Reward"
-            showAcquisitionChildren={false}
-          />
+    <section aria-label="Start room configuration" className="start-room-identity">
+      <div className="owner-markers">
+        <h3>Room and reward</h3>
+        <SemanticOwnerMarker address={node.room.address} />
+      </div>
+      {startPicker === undefined || interaction === undefined ? (
+        <div className="field-control field-control-inline start-room-fixed">
+          <span>Room</span>
+          <span className="fixed-room-state">{node.room.label}</span>
         </div>
+      ) : (
+        <RoomSelector
+          idPrefix={`start-${node.room.occurrenceId}`}
+          interaction={interaction}
+          label="Room"
+          onSelect={(gameName) => {
+            dispatch(
+              authoredProjectCommandDispatched({
+                kind: 'ReplaceOccurrenceRoom',
+                occurrence: node.room.address,
+                gameName,
+              }),
+            );
+            dispatch(semanticOwnerFocused(node.room.address));
+          }}
+        />
       )}
+      <div className="start-room-entry-reward">
+        <RewardSurfaceEditor
+          ariaLabel={`${node.room.label} starting rewards`}
+          focusOwner={node.room.address}
+          idPrefix={`start-${node.room.occurrenceId}-entry-reward`}
+          interactions={interactions}
+          rewards={node.room.offerRewardRewards}
+          visibility="visible"
+        />
+      </div>
     </section>
   );
 }

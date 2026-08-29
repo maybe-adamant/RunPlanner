@@ -85,6 +85,23 @@ function bindStartInteractions(
     const rooms = Object.freeze(
       gameNames.map((gameName) => requireWorkspaceRoom(catalog, gameName)),
     );
+    const startKinds = new Set(rooms.map((room) => room.kind));
+    if (startKinds.size !== 1) {
+      throw new StructuredWorkspaceProjectionContractError(
+        `${key} mixes Opening and Intro room declarations`,
+      );
+    }
+    const startKind = rooms[0]?.kind;
+    const configurationLabel =
+      startKind === 'Opening'
+        ? ('Configure starting room' as const)
+        : startKind === 'Intro'
+          ? ('Configure Intro room' as const)
+          : (() => {
+              throw new StructuredWorkspaceProjectionContractError(
+                `${key} does not declare an Opening or Intro room`,
+              );
+            })();
     let model: ContextualPickerModel<RoomDeclaration> | undefined;
     const load = (): ContextualPickerModel<RoomDeclaration> => {
       if (model !== undefined) return model;
@@ -115,12 +132,23 @@ function bindStartInteractions(
         }),
       });
     };
+    const fixedGameName =
+      requirement.start.kind === 'fixed' ? requirement.start.gameName : undefined;
     if (requirement.start.kind === 'fixed') {
       starts.set(
         key,
         Object.freeze({
-          fixedLabel: requireWorkspaceRoom(catalog, requirement.start.gameName).label,
+          configurationLabel,
+          fixedLabel: requireWorkspaceRoom(catalog, fixedGameName!).label,
           intent: () => intentFor(),
+          intentFor: (room: RoomDeclaration) => {
+            if (room.gameName !== fixedGameName) {
+              throw new StructuredWorkspaceProjectionContractError(
+                `${room.gameName} is outside the declared start domain for ${key}`,
+              );
+            }
+            return intentFor();
+          },
           key,
           kind: 'fixed' as const,
           load,
@@ -131,6 +159,7 @@ function bindStartInteractions(
       starts.set(
         key,
         Object.freeze({
+          configurationLabel,
           intentFor: (room: RoomDeclaration) => {
             if (!gameNames.includes(room.gameName)) {
               throw new StructuredWorkspaceProjectionContractError(

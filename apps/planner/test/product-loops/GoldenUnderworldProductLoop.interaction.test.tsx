@@ -639,9 +639,10 @@ describe('underworld product loop', () => {
         'Finish and fix Erebus before Oceanus can be evaluated. You can still edit it.',
       ),
     ).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Start biome' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Room' })).toBeTruthy();
 
-    await view.user.click(screen.getByRole('button', { name: 'Start biome' }));
+    await view.user.click(screen.getByRole('button', { name: 'Room' }));
+    await view.user.click(within(screen.getByRole('listbox')).getByRole('option'));
     const structure = screen.getByRole('region', { name: 'Oceanus route structure' });
     await view.user.click(within(structure).getByRole('button', { name: /Continue route/ }));
     await view.user.click(screen.getByRole('tab', { name: 'Room Doors' }));
@@ -655,7 +656,7 @@ describe('underworld product loop', () => {
     expect(g?.topology).not.toBeNull();
 
     await view.user.click(screen.getByRole('button', { name: 'Undo' }));
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Start biome' })).toBeTruthy());
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Room' })).toBeTruthy());
     const undone = application.store
       .getState()
       .projectWorkspace.history.present.routes.find((route) => route.routeKey === 'Underworld')
@@ -853,7 +854,7 @@ describe('underworld product loop', () => {
     });
     expect(within(automaticReturn).getAllByRole('article')).toHaveLength(1);
     expect(within(automaticReturn).queryByRole('radio')).toBeNull();
-    expect(within(automaticReturn).queryByText('Reward hidden on this door.')).toBeNull();
+    expect(within(automaticReturn).getByText('Reward hidden on this door.')).toBeTruthy();
     const returnReward = createIncomingRewardAddress(goldenGBiome, returned);
     const returnRewardOffer = () => {
       const state = application.store

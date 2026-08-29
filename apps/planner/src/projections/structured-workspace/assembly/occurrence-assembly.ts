@@ -530,6 +530,7 @@ export function assembleWorkspaceOccurrence(
     workbench,
   });
   const node: WorkspaceOccurrenceWorkbenchNode = Object.freeze({
+    ...(input.isEntry === true ? { isEntry: true } : {}),
     inspectorPresentation: 'full' as const,
     kind: 'occurrenceWorkbench' as const,
     key: `occurrence:${semanticAddressKey(address)}`,
