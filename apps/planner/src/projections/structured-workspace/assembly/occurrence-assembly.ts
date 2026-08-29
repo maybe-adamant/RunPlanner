@@ -581,7 +581,7 @@ export function assembleWorkspaceOccurrence(
       ...(zagreusSpawn === undefined ? [] : [zagreusSpawn.marker]),
       ...(naturalChaosSpawn === undefined ? [] : [naturalChaosSpawn.marker]),
     ],
-    'features',
+    'overview',
   );
   if (roomLocal.kind === 'fields') {
     input.markerDestinations.setRoomTab(
@@ -589,7 +589,7 @@ export function assembleWorkspaceOccurrence(
         ...roomLocal.cages.map((cage) => cage.control.marker),
         ...roomLocal.optionalRewards.map((reward) => reward.control.marker),
       ],
-      'minorRewards',
+      'overview',
     );
   }
   for (const phase of encounterPhases) {

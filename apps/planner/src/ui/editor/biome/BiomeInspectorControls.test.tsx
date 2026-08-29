@@ -269,7 +269,7 @@ describe('Biome inspector controls', () => {
   it('binds a room-local selected resource removal to one semantic edit and undo', async () => {
     const view = renderWorkspace(loadSurfaceNResourcesProject(), 'Surface', 'N');
     await view.user.click(screen.getByRole('button', { name: /^Opening/ }));
-    await view.user.click(screen.getByRole('tab', { name: 'Features' }));
+    await view.user.click(screen.getByRole('tab', { name: 'Room Overview' }));
     expect(
       within(screen.getByRole('region', { name: 'Room features' })).queryByRole('heading', {
         name: 'Features',
@@ -311,7 +311,7 @@ describe('Biome inspector controls', () => {
   it('binds an unplaced legal resource to one semantic edit and undo', async () => {
     const view = renderWorkspace(loadSurfaceNResourcesProject(), 'Surface', 'N');
     await view.user.click(screen.getByRole('button', { name: /^Opening/ }));
-    await view.user.click(screen.getByRole('tab', { name: 'Features' }));
+    await view.user.click(screen.getByRole('tab', { name: 'Room Overview' }));
     const resources = screen.getByRole('region', { name: 'Resources' });
     const fishing = within(resources).getByRole('checkbox', {
       name: 'Successful Fishing — Water',
@@ -341,7 +341,7 @@ describe('Biome inspector controls', () => {
   it('discloses and navigates an existing resource placement before moving it', async () => {
     const view = renderWorkspace(loadSurfaceNResourcesProject(), 'Surface', 'N');
     await view.user.click(screen.getByRole('button', { name: /^Opening/ }));
-    await view.user.click(screen.getByRole('tab', { name: 'Features' }));
+    await view.user.click(screen.getByRole('tab', { name: 'Room Overview' }));
     const resources = screen.getByRole('region', { name: 'Resources' });
     const opening = workspaceBiome(view.application, 'Surface', 'N').nodes.find(
       (node): node is Extract<WorkspaceNode, { readonly kind: 'occurrenceWorkbench' }> =>
@@ -614,7 +614,7 @@ describe('Biome inspector controls', () => {
     const timeline = screen.getByRole('region', { name: 'Room Timeline' });
     const optional = within(timeline).getByRole('region', { name: 'Optional actions' });
     const rack = within(optional).getByRole('listitem', { name: 'Keepsake Rack' });
-    const selector = within(rack).getByRole('button', { name: 'Keepsake' });
+    const selector = within(rack).getByRole('button', { name: 'Choose Keepsake' });
     fireEvent.click(selector);
     const keepsakeList = screen.getByRole('listbox');
     await waitFor(() =>
@@ -653,7 +653,7 @@ describe('Biome inspector controls', () => {
         (occurrence) =>
           occurrence.occurrenceId === createOccurrenceId('surface-n-preboss:postboss'),
       )?.roomActions.order;
-    fireEvent.click(within(timeline).getByRole('button', { name: 'Keepsake' }));
+    fireEvent.click(within(timeline).getByRole('button', { name: 'Choose Keepsake' }));
     fireEvent.click(within(screen.getByRole('listbox')).getByText('Evil Eye'));
     expect(
       view.application.store
@@ -675,7 +675,22 @@ describe('Biome inspector controls', () => {
             occurrence.occurrenceId === createOccurrenceId('surface-n-preboss:postboss'),
         )?.keepsakeRack,
     ).toEqual({ keepsakeKey: 'DeathVengeanceKeepsake' });
-    fireEvent.click(within(timeline).getByRole('button', { name: 'Delete keepsake change' }));
+    fireEvent.click(within(timeline).getByRole('button', { name: 'Choose Keepsake' }));
+    fireEvent.click(within(screen.getByRole('listbox')).getByText('Jeweled Pom'));
+    const keepsakeAction = within(timeline)
+      .getByText('Choose keepsake')
+      .closest<HTMLElement>('[data-in-order="true"]');
+    expect(keepsakeAction).not.toBeNull();
+    if (keepsakeAction === null) throw new Error('keepsake action row is absent');
+    expect(within(keepsakeAction).getByRole('button', { name: 'Choose Keepsake' })).toBeTruthy();
+    expect(within(keepsakeAction).getByRole('button', { name: 'Target' })).toBeTruthy();
+    const removeKeepsake = within(timeline).getByRole('button', {
+      name: 'Remove Choose keepsake from timeline',
+    });
+    expect(removeKeepsake.classList.contains('room-action-delete')).toBe(true);
+    expect(removeKeepsake.parentElement?.classList.contains('room-action-controls')).toBe(true);
+    expect(removeKeepsake.parentElement?.lastElementChild).toBe(removeKeepsake);
+    fireEvent.click(removeKeepsake);
     expect(
       view.application.store
         .getState()
@@ -711,7 +726,7 @@ describe('Biome inspector controls', () => {
     const optionalRack = within(
       within(timeline).getByRole('region', { name: 'Optional actions' }),
     ).getByRole('listitem', { name: 'Keepsake Rack' });
-    fireEvent.click(within(optionalRack).getByRole('button', { name: 'Keepsake' }));
+    fireEvent.click(within(optionalRack).getByRole('button', { name: 'Choose Keepsake' }));
     const keepsakes = screen.getByRole('listbox');
     await waitFor(() =>
       expect(
@@ -726,7 +741,7 @@ describe('Biome inspector controls', () => {
       await within(timeline).findByRole('button', { name: 'Move Choose keepsake earlier' }),
     );
 
-    const phialTarget = await within(timeline).findByLabelText('Aromatic Phial target');
+    const phialTarget = await within(timeline).findByLabelText('Phial Target');
     fireEvent.click(phialTarget);
     const target = within(await screen.findByRole('listbox'))
       .getAllByRole('option')

@@ -420,41 +420,43 @@ export function RoomFeaturesWorkbench({
               return (
                 <fieldset className="room-purging-pool" key="stygian-well">
                   <legend className="visually-hidden">Stygian Well configuration</legend>
-                  <label className="room-feature-presence-row">
-                    <input
-                      aria-label="Stygian Well present"
-                      checked={feature.presence.kind !== 'optionalAbsent'}
-                      disabled={presence === undefined}
-                      onChange={(event) =>
-                        presence === undefined
-                          ? undefined
-                          : executeIntent(presence.intentFor(event.target.checked))
-                      }
-                      type="checkbox"
-                    />
-                    <span>Stygian Well</span>
-                  </label>
-                  {feature.interactionKey === undefined
-                    ? null
-                    : (() => {
-                        const interaction = requireWorkspaceInteraction(
-                          interactions.stygianWellInteractions,
-                          feature.interactionKey,
-                        );
-                        return (
-                          <label>
-                            <input
-                              aria-label="Interact with Stygian Well"
-                              checked={feature.interacted}
-                              onChange={(event) =>
-                                executeIntent(interaction.intentFor(event.target.checked))
-                              }
-                              type="checkbox"
-                            />
-                            Interact
-                          </label>
-                        );
-                      })()}
+                  <div className="room-feature-interaction-header">
+                    <label className="room-feature-presence-row">
+                      <input
+                        aria-label="Stygian Well present"
+                        checked={feature.presence.kind !== 'optionalAbsent'}
+                        disabled={presence === undefined}
+                        onChange={(event) =>
+                          presence === undefined
+                            ? undefined
+                            : executeIntent(presence.intentFor(event.target.checked))
+                        }
+                        type="checkbox"
+                      />
+                      <span>Stygian Well</span>
+                    </label>
+                    {feature.interactionKey === undefined
+                      ? null
+                      : (() => {
+                          const interaction = requireWorkspaceInteraction(
+                            interactions.stygianWellInteractions,
+                            feature.interactionKey,
+                          );
+                          return (
+                            <label className="room-feature-interact-toggle">
+                              <input
+                                aria-label="Interact with Stygian Well"
+                                checked={feature.interacted}
+                                onChange={(event) =>
+                                  executeIntent(interaction.intentFor(event.target.checked))
+                                }
+                                type="checkbox"
+                              />
+                              Interact
+                            </label>
+                          );
+                        })()}
+                  </div>
                   {feature.interacted
                     ? feature.slots.map((slot) => (
                         <StygianWellSlotEditor
@@ -476,21 +478,23 @@ export function RoomFeaturesWorkbench({
               return (
                 <fieldset className="room-purging-pool" key="purging-pool">
                   <legend className="visually-hidden">Pool of Purging configuration</legend>
-                  <label className="room-feature-presence-row">
-                    <input aria-label="Pool of Purging" checked disabled type="checkbox" />
-                    <span>Pool of Purging</span>
-                  </label>
-                  <label>
-                    <input
-                      aria-label="Interact with Pool of Purging"
-                      checked={feature.interacted}
-                      onChange={(event) =>
-                        executeIntent(poolInteraction.intentFor(event.target.checked))
-                      }
-                      type="checkbox"
-                    />
-                    Interact
-                  </label>
+                  <div className="room-feature-interaction-header">
+                    <label className="room-feature-presence-row">
+                      <input aria-label="Pool of Purging" checked disabled type="checkbox" />
+                      <span>Pool of Purging</span>
+                    </label>
+                    <label className="room-feature-interact-toggle">
+                      <input
+                        aria-label="Interact with Pool of Purging"
+                        checked={feature.interacted}
+                        onChange={(event) =>
+                          executeIntent(poolInteraction.intentFor(event.target.checked))
+                        }
+                        type="checkbox"
+                      />
+                      Interact
+                    </label>
+                  </div>
                   {feature.interacted
                     ? feature.slots.map((slot) => {
                         const interaction = requireWorkspaceInteraction(
@@ -498,8 +502,7 @@ export function RoomFeaturesWorkbench({
                           slot.interactionKey,
                         );
                         return (
-                          <div key={slot.key}>
-                            {slot.label}
+                          <div className="shop-family-offer-row" key={slot.key}>
                             <PurgingPoolTraitPicker
                               interaction={interaction}
                               label={slot.label}
@@ -531,9 +534,9 @@ export function RoomFeaturesWorkbench({
                                           roomActions.interactionKey,
                                         );
                                   return (
-                                    <span>
+                                    <label className="shop-family-participation">
                                       <input
-                                        aria-label={`Sell ${slot.label}`}
+                                        aria-label={`Sold ${slot.label}`}
                                         checked={slot.sale.sold}
                                         disabled={
                                           proposal?.structurallyAuthorable !== true ||
@@ -548,8 +551,8 @@ export function RoomFeaturesWorkbench({
                                         }
                                         type="checkbox"
                                       />
-                                      Sell
-                                    </span>
+                                      Sold
+                                    </label>
                                   );
                                 })()}
                           </div>
@@ -612,7 +615,7 @@ export function RoomFeaturesWorkbench({
                         const refill = feature.travelDealRefill;
                         return (
                           <HermesShrineSlotEditor
-                            label="Travel Deal refill"
+                            label="Travel Deal"
                             {...(refill.rewardLabel === undefined
                               ? {}
                               : { rewardLabel: refill.rewardLabel })}
@@ -688,8 +691,10 @@ function PurgingPoolTraitPicker({
   const picker = useWorkspaceInteraction(interaction);
   return (
     <ContextualPicker
+      ariaLabel={`Pool of Purging ${label} Item`}
       id={`${interaction.key}-picker`}
-      label={`Pool of Purging ${label}`}
+      label={`${label} Item`}
+      layout="inline"
       loading={picker.pending}
       model={picker.result ?? emptyNullablePicker}
       onOpenChange={(open) => {
@@ -731,10 +736,12 @@ function StygianWellSlotEditor({
         );
   const twistPicker = useOptionalWorkspaceInteraction<ContextualPickerModel<string | null>>(twist);
   return (
-    <div className="room-purging-pool-slot">
+    <div className="shop-family-offer-row room-purging-pool-slot">
       <ContextualPicker
+        ariaLabel={`Stygian Well ${slot.label} Item`}
         id={`${offer.key}-picker`}
-        label={`Stygian Well ${slot.label}`}
+        label={`${slot.label} Item`}
+        layout="inline"
         loading={offerPicker.pending}
         model={offerPicker.result ?? emptyNullablePicker}
         onOpenChange={(open) => {
@@ -744,20 +751,22 @@ function StygianWellSlotEditor({
         placeholder="Unresolved"
         {...(slot.itemLabel === undefined ? {} : { triggerLabel: slot.itemLabel })}
       />
-      <label>
+      <label className="shop-family-participation">
         <input
-          aria-label={`Purchase Stygian Well ${slot.label}`}
+          aria-label={`Purchased Stygian Well ${slot.label}`}
           checked={slot.purchased}
           disabled={slot.itemKey === null}
           onChange={(event) => executeIntent(purchase.intentFor(event.target.checked))}
           type="checkbox"
         />
-        Purchase
+        Purchased
       </label>
       {twist === undefined ? null : (
         <ContextualPicker
+          ariaLabel={`Stygian Well ${slot.label} Twist result`}
           id={`${twist.key}-picker`}
-          label={`Stygian Well ${slot.label} Twist result`}
+          label={`${slot.label} Twist result`}
+          layout="inline"
           loading={twistPicker.pending}
           model={twistPicker.result ?? emptyNullablePicker}
           onOpenChange={(open) => {
@@ -786,11 +795,14 @@ function HermesShrineSlotEditor({
   const executeIntent = useCommandIntent();
   const offerPicker = useWorkspaceInteraction(offer);
   const current = purchase.purchase;
+  const displayedPurchase = current ?? { delay: 2, rushed: false };
   return (
-    <div className="hermes-shrine-slot">
+    <div className="shop-family-offer-row hermes-shrine-slot">
       <ContextualPicker
+        ariaLabel={`Hermes Shrine ${label} Item`}
         id={`${offer.key}-picker`}
-        label={`Hermes Shrine ${label}`}
+        label={`${label} Item`}
+        layout="inline"
         loading={offerPicker.pending}
         model={offerPicker.result ?? emptyStringPicker}
         onOpenChange={(open) => {
@@ -800,9 +812,9 @@ function HermesShrineSlotEditor({
         placeholder="Unresolved"
         {...(rewardLabel === undefined ? {} : { triggerLabel: rewardLabel })}
       />
-      <label>
+      <label className="shop-family-participation">
         <input
-          aria-label={`Purchase Hermes Shrine ${label}`}
+          aria-label={`Purchased Hermes Shrine ${label}`}
           checked={current !== null}
           disabled={offer.rewardType === null}
           onChange={(event) =>
@@ -812,46 +824,48 @@ function HermesShrineSlotEditor({
           }
           type="checkbox"
         />
-        Purchase
+        Purchased
       </label>
-      {current === null ? null : (
-        <>
-          <label>
-            Delivery delay
-            <select
-              aria-label={`Hermes Shrine ${label} delivery delay`}
-              onChange={(event) =>
-                executeIntent(
-                  purchase.intentFor({
-                    ...current,
-                    delay: Number(event.target.value) as 2 | 3 | 4 | 5 | 6 | 7 | 8,
-                  }),
-                )
-              }
-              value={current.delay}
-            >
-              {[2, 3, 4, 5, 6, 7, 8].map((delay) => (
-                <option key={delay} value={delay}>
-                  {delay}
-                </option>
-              ))}
-            </select>
+      <div className="hermes-shrine-purchase-details">
+        <label className="hermes-shrine-delay-control">
+          Delay
+          <select
+            aria-label={`Hermes Shrine ${label} delivery delay`}
+            disabled={current === null}
+            onChange={(event) => {
+              if (current === null) return;
+              executeIntent(
+                purchase.intentFor({
+                  ...current,
+                  delay: Number(event.target.value) as 2 | 3 | 4 | 5 | 6 | 7 | 8,
+                }),
+              );
+            }}
+            value={displayedPurchase.delay}
+          >
+            {[2, 3, 4, 5, 6, 7, 8].map((delay) => (
+              <option key={delay} value={delay}>
+                {delay}
+              </option>
+            ))}
+          </select>
+        </label>
+        {purchase.generationKey === 'travelDealRefill' ? null : (
+          <label className="shop-family-participation">
+            <input
+              aria-label={`Rush Hermes Shrine ${label}`}
+              checked={displayedPurchase.rushed}
+              disabled={current === null}
+              onChange={(event) => {
+                if (current === null) return;
+                executeIntent(purchase.intentFor({ ...current, rushed: event.target.checked }));
+              }}
+              type="checkbox"
+            />
+            Rushed
           </label>
-          {purchase.generationKey === 'travelDealRefill' ? null : (
-            <label>
-              <input
-                aria-label={`Rush Hermes Shrine ${label}`}
-                checked={current.rushed}
-                onChange={(event) =>
-                  executeIntent(purchase.intentFor({ ...current, rushed: event.target.checked }))
-                }
-                type="checkbox"
-              />
-              Rushed
-            </label>
-          )}
-        </>
-      )}
+        )}
+      </div>
     </div>
   );
 }

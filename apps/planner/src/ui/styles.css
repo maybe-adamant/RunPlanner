@@ -1590,9 +1590,47 @@ button:disabled {
 
 .room-keepsake-control {
   display: flex;
-  min-width: min(22rem, 42vw);
+  min-width: min(16rem, 30vw);
   align-items: center;
   gap: 6px;
+}
+
+.room-keepsake-action {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.room-keepsake-control > .field-control,
+.keepsake-equip-result-control > .field-control {
+  min-width: 0;
+}
+
+.room-keepsake-control[data-label-hidden='true'] > .field-control-inline {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.room-keepsake-control[data-label-hidden='true'] {
+  min-width: 0;
+}
+
+.keepsake-equip-result-control {
+  display: flex;
+  min-width: min(16rem, 30vw);
+  align-items: center;
+  gap: 8px;
+}
+
+.keepsake-equip-result-control > .field-control-inline {
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: 6px;
+}
+
+.keepsake-equip-result-control > .field-description {
+  margin: 0;
+  white-space: normal;
 }
 
 .room-timeline-effect-row > .field-control {
@@ -2488,67 +2526,47 @@ select {
   display: block;
 }
 
-.shop-table-scroll {
-  overflow-x: auto;
-}
-
-.shop-offer-table {
-  width: 100%;
+.shop-family-offer-list {
+  display: grid;
+  gap: 8px;
   min-width: 0;
-  border: 1px solid #373842;
-  border-spacing: 0;
-  border-radius: 9px;
-  background: rgb(255 255 255 / 2%);
-  overflow: hidden;
-  table-layout: fixed;
 }
 
-.shop-offer-table th,
-.shop-offer-table td {
-  padding: 8px 7px;
-  border-bottom: 1px solid #34353e;
-  text-align: start;
-  vertical-align: middle;
-}
-
-.shop-offer-table thead th {
-  color: #aaa7af;
-  background: rgb(10 11 14 / 28%);
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.shop-offer-table tbody:last-child .shop-offer-reward:last-child td {
-  border-bottom: 0;
-}
-
-.shop-offer > th {
-  min-width: 0;
-  color: #f2ede5;
-  font-size: 0.92rem;
-}
-
-.shop-offer > th .owner-markers {
+.shop-family-item-control {
   display: flex;
   min-width: 0;
   align-items: center;
   gap: 6px;
 }
 
-.shop-offer > th .owner-markers > span:first-child {
+.shop-family-item-control > .field-control {
+  width: 100%;
+}
+
+.shop-family-item-control > .reward-value-editor {
+  flex: 1 1 auto;
   min-width: 0;
-  overflow-wrap: anywhere;
 }
 
-.shop-offer-reward > td {
-  padding: 10px 11px 12px;
-  background: rgb(10 11 14 / 18%);
+.shop-family-item-control > .reward-value-editor > .field-control {
+  width: 100%;
 }
 
-.shop-offer-reward .reward-value-editor {
-  gap: 6px;
+.shop-family-offer-placeholder {
+  display: grid;
+  grid-template-columns: 8.5rem minmax(0, 1fr);
+  gap: 14px;
+  padding: 7px 0;
+  color: #aaa7af;
+  font-size: 0.82rem;
+}
+
+.shop-family-offer-invalid > div {
+  display: grid;
+  grid-template-columns: 8.5rem minmax(0, 1fr);
+  gap: 14px;
+  color: #aaa7af;
+  font-size: 0.82rem;
 }
 
 .acquisition-entry-resolution {
@@ -2772,6 +2790,44 @@ select {
   min-width: 0;
 }
 
+.shop-family-offer-row {
+  display: grid;
+  grid-template-columns: minmax(18rem, 1fr) auto;
+  align-items: center;
+  gap: 8px 14px;
+}
+
+.shop-family-offer-row > .field-control {
+  min-width: 0;
+}
+
+.shop-family-participation {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.room-purging-pool-slot > .field-control:last-child {
+  grid-column: 1 / -1;
+}
+
+.hermes-shrine-slot {
+  grid-template-columns: minmax(18rem, 1fr) auto auto;
+}
+
+.hermes-shrine-purchase-details,
+.hermes-shrine-delay-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.hermes-shrine-purchase-details {
+  gap: 12px;
+}
+
 .room-purging-pool > label {
   display: grid;
   gap: 4px;
@@ -2779,6 +2835,24 @@ select {
 
 .room-purging-pool > .room-feature-presence-row {
   display: flex;
+}
+
+.room-feature-interaction-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+}
+
+.room-feature-interaction-header > .room-feature-presence-row {
+  display: flex;
+}
+
+.room-feature-interact-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
 }
 
 .ship-phase .encounter-editor,
@@ -3381,6 +3455,41 @@ select {
   justify-content: flex-end;
 }
 
+.room-action-row[data-inline-layout='compact'] {
+  grid-template-columns: auto minmax(0, 1fr);
+}
+
+.room-action-row[data-inline-layout='compact'] > .room-action-controls {
+  width: 100%;
+  justify-content: flex-start;
+}
+
+.room-action-row[data-inline-layout='compact'] .room-action-inline-editors {
+  justify-content: flex-start;
+}
+
+.room-action-row[data-inline-layout='compact']
+  > .room-action-controls
+  > .hub-rank-action:first-of-type {
+  margin-inline-start: auto;
+}
+
+.fountain-rarity-inline {
+  display: flex;
+  min-width: min(16rem, 30vw);
+  align-items: center;
+  gap: 6px;
+}
+
+.fountain-rarity-inline > .field-control {
+  min-width: 0;
+}
+
+.fountain-rarity-inline > .field-control-inline {
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: 6px;
+}
+
 .room-action-delete {
   display: inline-grid;
   width: 30px;
@@ -3795,7 +3904,7 @@ select {
 
 .ephyra-side-grid {
   width: 100%;
-  min-width: 680px;
+  min-width: 620px;
   border-collapse: separate;
   border-spacing: 0 7px;
 }
@@ -3812,7 +3921,7 @@ select {
 
 .ephyra-side-grid tbody th,
 .ephyra-side-grid tbody td {
-  padding: 10px;
+  padding: 8px;
   border-top: 1px solid #373842;
   border-bottom: 1px solid #373842;
   vertical-align: top;
@@ -3820,7 +3929,7 @@ select {
 }
 
 .ephyra-side-grid tbody th {
-  width: 40%;
+  width: 22%;
   border-left: 1px solid #373842;
   border-radius: 9px 0 0 9px;
   text-align: left;
@@ -3831,15 +3940,6 @@ select {
   border-radius: 0 9px 9px 0;
 }
 
-.ephyra-side-room-heading {
-  display: grid;
-  gap: 3px;
-}
-
-.ephyra-side-room-heading > .card-kicker {
-  margin: 0;
-}
-
 .ephyra-side-reward {
   margin-top: 8px;
   padding-top: 8px;
@@ -3847,7 +3947,7 @@ select {
 }
 
 .ephyra-side-priority {
-  width: 12%;
+  width: 8%;
   color: #d5c897;
   font-variant-numeric: tabular-nums;
   font-weight: 700;
@@ -3906,7 +4006,8 @@ select {
   gap: 6px;
 }
 
-.visually-hidden {
+.visually-hidden,
+.room-keepsake-control[data-label-hidden='true'] > .contextual-picker > label {
   position: absolute;
   width: 1px;
   height: 1px;

@@ -26,6 +26,9 @@ interface OccurrenceWorkbenchProps {
   readonly doors?: ReactNode;
   /** Exact room-owned additions to ordinary lifecycle rows. */
   readonly renderRoomActionRowContent?: (row: WorkspaceRoomActions['rows'][number]) => ReactNode;
+  readonly renderRoomActionRowTrailingContent?: (
+    row: WorkspaceRoomActions['rows'][number],
+  ) => ReactNode;
   /** Exact room-owned additions to ordinary lifecycle boundaries. */
   readonly renderLifecycleBoundaryContent?: (boundary: WorkspaceRoomLifecycleBoundary) => ReactNode;
   /** Exact room-owned optional interaction shown before its authored action exists. */
@@ -41,6 +44,7 @@ export function OccurrenceWorkbench({
   localVisit,
   room,
   renderRoomActionRowContent,
+  renderRoomActionRowTrailingContent,
   renderLifecycleBoundaryContent,
   renderOptionalRoomActionContent,
   runState,
@@ -62,20 +66,8 @@ export function OccurrenceWorkbench({
   const tabId = (tab: WorkspaceRoomTab): string => `${idPrefix}-tab-${tab}`;
   const panelId = `${idPrefix}-panel`;
   const tabRefs = useRef<Partial<Record<WorkspaceRoomTab, HTMLButtonElement | null>>>({});
-  const hasFeatures =
-    (room.resources?.length ?? 0) > 0 ||
-    room.workbench.features.some((feature) => feature.kind !== 'nemesisEvent');
-  const hasSideRooms = localVisit !== undefined;
-  const hasMinorRewards = room.workbench.kind === 'fields';
-  const hasEncounterStructure =
-    room.workbench.kind === 'ship' ||
-    room.workbench.features.some((feature) => feature.kind === 'nemesisEvent');
   const tabOrder: WorkspaceRoomTab[] = [
     'overview',
-    ...(hasFeatures ? (['features'] as const) : []),
-    ...(hasSideRooms ? (['sideRooms'] as const) : []),
-    ...(hasMinorRewards ? (['minorRewards'] as const) : []),
-    ...(hasEncounterStructure ? (['encounters'] as const) : []),
     ...(room.workbench.kind === 'ship'
       ? room.workbench.phases.map((_phase, index) =>
           index === 0
@@ -138,7 +130,7 @@ export function OccurrenceWorkbench({
   const heading = `Entering ${room.label}`;
   const tabRunState = room.runStateByTab[activeTab];
   const renderDirectRoomWorkbench = (
-    view: 'overview' | 'features' | 'sideRooms' | 'minorRewards' | 'encounters' | 'actions',
+    view: 'overview' | 'actions',
     shipPhaseKey?: string,
   ): ReactNode => (
     <DirectRoomWorkbench
@@ -147,6 +139,9 @@ export function OccurrenceWorkbench({
       {...(localVisit === undefined ? {} : { localVisit })}
       room={room}
       {...(renderRoomActionRowContent === undefined ? {} : { renderRoomActionRowContent })}
+      {...(renderRoomActionRowTrailingContent === undefined
+        ? {}
+        : { renderRoomActionRowTrailingContent })}
       {...(renderLifecycleBoundaryContent === undefined ? {} : { renderLifecycleBoundaryContent })}
       {...(renderOptionalRoomActionContent === undefined
         ? {}
@@ -168,10 +163,6 @@ export function OccurrenceWorkbench({
       <div className="room-workbench-tab-row">
         <nav aria-label="Room workbench" className="room-workbench-tabs" role="tablist">
           {tabButton('overview', 'Room Overview')}
-          {hasFeatures ? tabButton('features', 'Features') : null}
-          {hasSideRooms ? tabButton('sideRooms', 'Side Rooms') : null}
-          {hasMinorRewards ? tabButton('minorRewards', 'Minor Rewards') : null}
-          {hasEncounterStructure ? tabButton('encounters', 'Encounters') : null}
           {room.workbench.kind === 'ship'
             ? room.workbench.phases.map((phase, index) => {
                 const tab: WorkspaceRoomTab =
@@ -207,11 +198,6 @@ export function OccurrenceWorkbench({
             <AnomalyClearedControl room={room} />
             {renderDirectRoomWorkbench('overview')}
           </div>
-        ) : activeTab === 'features' ||
-          activeTab === 'sideRooms' ||
-          activeTab === 'minorRewards' ||
-          activeTab === 'encounters' ? (
-          <div className="room-overview-workbench">{renderDirectRoomWorkbench(activeTab)}</div>
         ) : activeTab === 'doors' ? (
           (doors ?? <p className="fixed-room-state">No outgoing doors for this room.</p>)
         ) : activeTab === 'shipInactiveRepair' && room.workbench.kind === 'ship' ? (

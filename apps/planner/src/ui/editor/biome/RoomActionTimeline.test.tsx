@@ -277,7 +277,7 @@ describe('OccurrenceRoomActions', () => {
       'H',
       occurrenceById(createOccurrenceId('golden-h-combat02')),
     );
-    openRoomTab('Minor Rewards');
+    openRoomTab('Room Overview');
     const fieldsSetup = screen.getByLabelText('Fields setup');
     expect(fieldsSetup).toBeTruthy();
     expect(within(fieldsSetup).getByLabelText('Optional 1')).toBeTruthy();
@@ -669,10 +669,10 @@ describe('OccurrenceRoomActions', () => {
       'F',
       completionOccurrenceById(postbossId),
     );
-    openRoomTab('Features');
-    expect(screen.queryByRole('button', { name: 'Pool of Purging Left slot' })).toBeNull();
+    openRoomTab('Room Overview');
+    expect(screen.queryByRole('button', { name: 'Pool of Purging Offer 1 Item' })).toBeNull();
     await view.user.click(screen.getByRole('checkbox', { name: 'Interact with Pool of Purging' }));
-    const left = screen.getByRole('button', { name: 'Pool of Purging Left slot' });
+    const left = screen.getByRole('button', { name: 'Pool of Purging Offer 1 Item' });
     await view.user.click(left);
     const firstTrait = within(screen.getByRole('listbox'))
       .getAllByRole('option')
@@ -683,7 +683,10 @@ describe('OccurrenceRoomActions', () => {
       firstTrait.textContent;
     await view.user.click(firstTrait);
     for (const label of ['Middle slot', 'Right slot'] as const) {
-      const slot = screen.getByRole('button', { name: `Pool of Purging ${label}` });
+      const slotNumber = label === 'Middle slot' ? 2 : 3;
+      const slot = screen.getByRole('button', {
+        name: `Pool of Purging Offer ${slotNumber} Item`,
+      });
       await view.user.click(slot);
       const trait = within(screen.getByRole('listbox'))
         .getAllByRole('option')
@@ -702,7 +705,11 @@ describe('OccurrenceRoomActions', () => {
       ).not.toBeNull(),
     );
 
-    await view.user.click(screen.getByRole('checkbox', { name: 'Sell Left slot' }));
+    openRoomTab('Room Timeline');
+    expect(screen.queryByText(`Sell ${leftTraitLabel}`)).toBeNull();
+    openRoomTab('Room Overview');
+
+    await view.user.click(screen.getByRole('checkbox', { name: 'Sold Offer 1' }));
     await waitFor(() =>
       expect(
         view.application.store
@@ -714,7 +721,7 @@ describe('OccurrenceRoomActions', () => {
       ).toContainEqual({ kind: 'sellPurgingPoolTrait', slotKey: 'left' }),
     );
 
-    await view.user.click(screen.getByRole('checkbox', { name: 'Sell Middle slot' }));
+    await view.user.click(screen.getByRole('checkbox', { name: 'Sold Offer 2' }));
     await waitFor(() =>
       expect(
         view.application.store
@@ -765,8 +772,8 @@ describe('OccurrenceRoomActions', () => {
       ]),
     );
 
-    openRoomTab('Features');
-    await view.user.click(screen.getByRole('button', { name: 'Pool of Purging Left slot' }));
+    openRoomTab('Room Overview');
+    await view.user.click(screen.getByRole('button', { name: 'Pool of Purging Offer 1 Item' }));
     await view.user.click(screen.getByRole('option', { name: 'Unresolved' }));
     await waitFor(() =>
       expect(poolActionOrder()).toContainEqual({ kind: 'sellPurgingPoolTrait', slotKey: 'left' }),
@@ -793,10 +800,10 @@ describe('OccurrenceRoomActions', () => {
         slotKey: 'left',
       }),
     );
-    openRoomTab('Features');
+    openRoomTab('Room Overview');
     await view.user.click(screen.getByRole('checkbox', { name: 'Interact with Pool of Purging' }));
     await waitFor(() =>
-      expect(screen.queryByRole('button', { name: 'Pool of Purging Middle slot' })).toBeNull(),
+      expect(screen.queryByRole('button', { name: 'Pool of Purging Offer 2 Item' })).toBeNull(),
     );
     expect(
       view.application.store
@@ -1208,6 +1215,9 @@ describe('OccurrenceRoomActions', () => {
 
     const minor = within(actions).getByText('Buy Max Magick').closest('li');
     if (minor === null) throw new Error('Minor Shop action is missing');
+    expect(
+      within(minor).queryByRole('button', { name: 'Remove Buy Max Magick from timeline' }),
+    ).toBeNull();
     await view.user.click(
       within(minor).getByRole('button', { name: 'Move Buy Max Magick earlier' }),
     );

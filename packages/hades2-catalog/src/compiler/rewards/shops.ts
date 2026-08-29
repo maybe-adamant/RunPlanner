@@ -175,6 +175,7 @@ function normalizeShopOption(
         });
   return Object.freeze({
     key: requireNonEmpty(raw.key, `${path}.key`),
+    label: raw.label === undefined ? rewardType.label : requireNonEmpty(raw.label, `${path}.label`),
     rewardType: rewardType.gameName,
     ...(raw.requirement === undefined
       ? {}

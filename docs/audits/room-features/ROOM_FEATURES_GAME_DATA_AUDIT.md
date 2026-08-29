@@ -391,6 +391,15 @@ Well-specific interaction is immediate and paid.
 weighted group, then remaining options from ten traits and seven consumables.
 The complete live 25-identity pool is:
 
+Player-facing Well names come from the matching English `DisplayName` entries
+in `Game/Text/en/TraitText.en.sjson`, rather than from the runtime identities
+below. The catalog retains both: the identity drives simulation and the display
+name drives authoring. Representative pairs include `ArmorBoostStore` / **Splintered
+Shield**, `RandomStoreItem` / **Fateful Twist**, `TemporaryBoonRarityTrait` /
+**Yarn of Ariadne**, `TemporaryForcedSecretDoorTrait` / **Spark of Ixion**, and
+`LimitedSwapTraitDrop` / **Sacrificial Hymn**; the catalog regression owns the
+complete 25-name matrix.
+
 | Identity                                  | Exact game effect                                                        | Current planner disposition                                                      |
 | ----------------------------------------- | ------------------------------------------------------------------------ | -------------------------------------------------------------------------------- |
 | `ArmorBoostStore`                         | Grants 20 armor                                                          | Defer armor/combat state                                                         |

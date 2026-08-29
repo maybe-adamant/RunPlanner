@@ -17,7 +17,7 @@ import type {
   WorkspaceOccurrenceWorkbenchNode,
 } from '@planner/projections/structured-workspace';
 import { createApplication } from '@planner/composition/createApplication';
-import { workspaceProjection } from '@planner-test/support/biome-workbench';
+import { workspaceBiome, workspaceProjection } from '@planner-test/support/biome-workbench';
 import { authoredProjectReplaced } from '@planner/state/projectWorkspaceSlice';
 import { RouteWellsPanel } from '@planner/ui/shell/RouteWellsPanel';
 import { goldenFBiome, loadUnderworldFGProject } from '@run-planner/test-fixtures/underworld';
@@ -56,8 +56,8 @@ function authoredWell(): ProjectDocument {
   return project;
 }
 
-function openFeatures(): void {
-  fireEvent.click(screen.getByRole('tab', { name: 'Features' }));
+function openOverview(): void {
+  fireEvent.click(screen.getByRole('tab', { name: 'Room Overview' }));
 }
 
 describe('Stygian Well workbench', () => {
@@ -77,7 +77,7 @@ describe('Stygian Well workbench', () => {
           node.kind === 'occurrenceWorkbench' && node.room.occurrenceId === occurrenceId,
       ),
     );
-    openFeatures();
+    openOverview();
     const presence = screen.getByRole('checkbox', { name: 'Stygian Well present' });
     expect((presence as HTMLInputElement).checked).toBe(false);
     expect((presence as HTMLInputElement).disabled).toBe(false);
@@ -94,7 +94,7 @@ describe('Stygian Well workbench', () => {
       'F',
       occurrence,
     );
-    openFeatures();
+    openOverview();
     const presence = screen.getByRole('checkbox', { name: 'Stygian Well present' });
     expect(presence).toHaveProperty('checked', true);
     expect(presence).toHaveProperty('disabled', true);
@@ -119,10 +119,10 @@ describe('Stygian Well workbench', () => {
     });
 
     const view = renderOccurrenceWorkbench(project, 'Underworld', 'F', occurrence);
-    openFeatures();
-    const picker = screen.getByRole('button', { name: 'Stygian Well Travel Deal refill' });
+    openOverview();
+    const picker = screen.getByRole('button', { name: 'Stygian Well Travel Deal Item' });
     await view.user.click(picker);
-    const choice = await screen.findByRole('option', { name: /ArmorBoostStore/ });
+    const choice = await screen.findByRole('option', { name: /Splintered Shield/ });
     expect(picker.getAttribute('data-candidate-state')).toBe('impossible');
     expect(screen.getByText('Current selection')).toBeTruthy();
     expect(choice.getAttribute('data-candidate-state')).toBe('impossible');
@@ -131,17 +131,19 @@ describe('Stygian Well workbench', () => {
 
   it('shows Twist only for a purchased Twist generation and clears purchase intent on exit', async () => {
     const view = renderOccurrenceWorkbench(authoredWell(), 'Underworld', 'F', occurrence);
-    openFeatures();
-    expect(
-      screen.queryByRole('button', { name: 'Stygian Well Second Left Twist result' }),
-    ).toBeNull();
+    openOverview();
+    expect(screen.queryByRole('button', { name: 'Stygian Well Offer 2 Twist result' })).toBeNull();
 
-    await view.user.click(
-      screen.getByRole('checkbox', { name: 'Purchase Stygian Well Second Left' }),
+    await view.user.click(screen.getByRole('checkbox', { name: 'Purchased Stygian Well Offer 2' }));
+    expect(screen.getByRole('button', { name: 'Stygian Well Offer 2 Twist result' })).toBeTruthy();
+    const purchaseRow = occurrence(
+      workspaceBiome(view.application, 'Underworld', 'F'),
+    )?.room.roomActions?.rows.find(
+      (row) =>
+        row.reference.kind === 'purchaseStygianWellOffer' &&
+        row.reference.generationKey === 'initial:secondLeft',
     );
-    expect(
-      screen.getByRole('button', { name: 'Stygian Well Second Left Twist result' }),
-    ).toBeTruthy();
+    expect(purchaseRow?.label).toBe('Buy Fateful Twist');
 
     await view.user.click(screen.getByRole('checkbox', { name: 'Interact with Stygian Well' }));
     expect(screen.queryAllByRole('button', { name: /^Stygian Well / })).toHaveLength(0);
@@ -169,25 +171,21 @@ describe('Stygian Well workbench', () => {
     });
 
     const view = renderOccurrenceWorkbench(project, 'Underworld', 'F', occurrence);
-    openFeatures();
+    openOverview();
     const purchase = screen.getByRole('checkbox', {
-      name: 'Purchase Stygian Well Second Left',
+      name: 'Purchased Stygian Well Offer 2',
     });
-    const offer = screen.getByRole('button', { name: 'Stygian Well Second Left' });
+    const offer = screen.getByRole('button', { name: 'Stygian Well Offer 2 Item' });
     expect((purchase as HTMLInputElement).checked).toBe(true);
     expect(offer.textContent).toContain('Unresolved');
-    expect(
-      screen.queryByRole('button', { name: 'Stygian Well Second Left Twist result' }),
-    ).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Stygian Well Offer 2 Twist result' })).toBeNull();
 
     await view.user.click(offer);
-    await view.user.click(
-      screen.getByRole('option', { name: /RandomStoreItem|Random Store Item/ }),
-    );
+    await view.user.click(screen.getByRole('option', { name: 'Fateful Twist' }));
     const twist = screen.getByRole('button', {
-      name: 'Stygian Well Second Left Twist result',
+      name: 'Stygian Well Offer 2 Twist result',
     });
-    expect(twist.textContent).toMatch(/HealDropRange|Heal Drop Range/);
+    expect(twist.textContent).toContain('Life Essence');
   });
 
   it('indexes present Wells and navigates to the owning room', async () => {
@@ -206,7 +204,7 @@ describe('Stygian Well workbench', () => {
 
     const inspect = screen.getAllByRole('button', { name: 'Inspect Well' });
     expect(inspect).toHaveLength(2);
-    expect(screen.getByText(/RandomStoreItem/)).toBeTruthy();
+    expect(screen.getByText(/Fateful Twist/)).toBeTruthy();
     await user.click(inspect[0]!);
     expect(application.store.getState().editorSession.activePanelByRoute.Underworld).toEqual({
       kind: 'biome',

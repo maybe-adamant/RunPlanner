@@ -79,7 +79,7 @@ describe('OccurrenceWorkbench', () => {
     expect(screen.queryByLabelText('Room')).toBeNull();
   });
 
-  it('renders Standard workbench tabs and places encounter/actions in the Actions tab', () => {
+  it('renders Standard room contents in Overview and encounter actions in Timeline', () => {
     renderStaticOccurrenceWorkbench(
       createGoldenFGHIProject(),
       'Underworld',
@@ -89,14 +89,14 @@ describe('OccurrenceWorkbench', () => {
     expect(screen.getByRole('tab', { name: 'Room Overview' }).getAttribute('aria-selected')).toBe(
       'true',
     );
-    expect(screen.queryByLabelText('Room features')).toBeNull();
-    openRoomTab('Features');
     const standardFeatures = screen.getByLabelText('Room features');
     expect(standardFeatures).toBeTruthy();
-    expect(within(standardFeatures).getByRole('heading', { name: 'Features' })).toBeTruthy();
+    expect(within(standardFeatures).queryByRole('heading', { name: 'Features' })).toBeNull();
+    expect(within(standardFeatures).getByRole('heading', { name: /^Resources/ })).toBeTruthy();
     expect(
       within(standardFeatures).getByRole('heading', { name: 'Additional Exits' }),
     ).toBeTruthy();
+    expect(within(standardFeatures).getByRole('heading', { name: 'Objects' })).toBeTruthy();
     expect(document.querySelector('.room-overview-workbench')).not.toBeNull();
     expect(screen.getByRole('tab', { name: 'Room Doors' })).toBeTruthy();
     const overviewRunState = screen.getByRole('button', { name: 'Run State' });
@@ -176,20 +176,19 @@ describe('OccurrenceWorkbench', () => {
       occurrenceById(goldenFOccurrenceId(1, 1)),
     );
     const overview = screen.getByRole('tab', { name: 'Room Overview' });
-    const features = screen.getByRole('tab', { name: 'Features' });
     const actions = screen.getByRole('tab', { name: 'Room Timeline' });
     const doors = screen.getByRole('tab', { name: 'Room Doors' });
     const panelId = overview.getAttribute('aria-controls');
     expect(panelId).not.toBeNull();
     const panel = panelId === null ? null : document.getElementById(panelId);
     expect(panel).not.toBeNull();
-    for (const tab of [overview, features, actions, doors]) {
+    for (const tab of [overview, actions, doors]) {
       expect(tab.getAttribute('aria-controls')).toBe(panelId);
     }
     expect(overview.getAttribute('tabindex')).toBe('0');
     fireEvent.keyDown(overview, { key: 'ArrowRight' });
-    expect(features.getAttribute('aria-selected')).toBe('true');
-    expect(document.activeElement).toBe(features);
+    expect(actions.getAttribute('aria-selected')).toBe('true');
+    expect(document.activeElement).toBe(actions);
     expect(document.getElementById(panelId!)).toBe(panel);
     fireEvent.keyDown(actions, { key: 'End' });
     expect(doors.getAttribute('aria-selected')).toBe('true');
@@ -227,35 +226,34 @@ describe('OccurrenceWorkbench', () => {
     );
   });
 
-  it('keeps N side-room generation and the Room Timeline in their own tabs', () => {
+  it('keeps N side-room generation in Overview and encounter actions in Timeline', () => {
     renderStaticOccurrenceWorkbench(
       loadSurfaceNOPQProject(),
       'Surface',
       'N',
       occurrenceById(nOccurrenceId('combat05')),
     );
-    expect(screen.queryByLabelText('Ephyra side rooms')).toBeNull();
-    openRoomTab('Side Rooms');
     const sideRooms = screen.getByLabelText('Ephyra side rooms');
     expect(sideRooms).toBeTruthy();
+    expect(screen.queryByRole('tab', { name: 'Side Rooms' })).toBeNull();
     openRoomTab('Room Timeline');
     const nActions = screen.getByRole('region', { name: 'Room Timeline' });
     expect(nActions).toBeTruthy();
     expect(within(nActions).getByLabelText('Encounter encounter phase')).toBeTruthy();
   });
 
-  it('keeps Shop inventory, Features, and Room Timeline on separate tabs', () => {
+  it('composes Shop inventory and Features in Overview while keeping actions in Timeline', () => {
     const shop = enteredShopProject();
     renderStaticOccurrenceWorkbench(shop.project, 'Underworld', 'F', occurrenceById(shop.shopId));
     const inventory = screen.getByLabelText('Shop inventory and conditions');
     expect(inventory).toBeTruthy();
-    expect(screen.queryByLabelText('Room features')).toBeNull();
-    openRoomTab('Features');
     const shopFeatures = screen.getByLabelText('Room features');
     expect(shopFeatures).toBeTruthy();
-    expect(screen.queryByLabelText('Shop inventory and conditions')).toBeNull();
+    expect(screen.queryByRole('tab', { name: 'Features' })).toBeNull();
     openRoomTab('Room Timeline');
     const shopActions = screen.getByRole('region', { name: 'Room Timeline' });
     expect(shopActions).toBeTruthy();
+    expect(screen.queryByLabelText('Shop inventory and conditions')).toBeNull();
+    expect(screen.queryByLabelText('Room features')).toBeNull();
   });
 });

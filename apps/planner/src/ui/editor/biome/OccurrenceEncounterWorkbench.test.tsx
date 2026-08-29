@@ -777,7 +777,7 @@ describe('OccurrenceEncounterWorkbench', () => {
       'O',
       occurrenceById(oOccurrenceIds.combat04),
     );
-    openRoomTab('Encounters');
+    openRoomTab('Room Overview');
     const count = screen.getByRole('combobox', { name: /Combat phases/ }) as HTMLSelectElement;
     await view.user.click(count);
     await waitFor(() => expect(count.dataset.candidateSupport).toBe('impossible'));
@@ -887,7 +887,7 @@ describe('OccurrenceEncounterWorkbench', () => {
       'O',
       occurrenceById(oOccurrenceIds.combat04),
     );
-    openRoomTab('Encounters');
+    openRoomTab('Room Overview');
     const count = screen.getByRole('combobox', { name: /Combat phases/ }) as HTMLSelectElement;
     await view.user.click(count);
     await waitFor(() => {
@@ -1195,7 +1195,7 @@ describe('OccurrenceEncounterWorkbench', () => {
       'O',
       occurrenceById(oOccurrenceIds.combat07),
     );
-    openRoomTab('Encounters');
+    openRoomTab('Room Overview');
     const count = screen.getByRole('combobox', { name: /Combat phases/ }) as HTMLSelectElement;
 
     await view.user.click(count);
@@ -1324,8 +1324,8 @@ describe('OccurrenceEncounterWorkbench', () => {
       'P',
       occurrenceById(pOccurrenceIds.prebossShop),
     );
-    expect(screen.getByRole('columnheader', { name: 'Offer' })).toBeTruthy();
-    expect(screen.getAllByRole('button', { name: 'Reward' })).toHaveLength(3);
+    expect(screen.queryByRole('columnheader')).toBeNull();
+    expect(screen.getAllByRole('button', { name: /^Offer [123] Item$/ })).toHaveLength(3);
     expect(screen.queryByRole('checkbox', { name: /Interact.*Shop/i })).toBeNull();
     expect(screen.queryByText('Participation')).toBeNull();
     expect(screen.getByRole('heading', { name: 'Entering Preboss' })).toBeTruthy();

@@ -17,33 +17,24 @@ import { useAppDispatch } from '@planner/state/store';
 import { SemanticOwnerMarker } from '@planner/ui/feedback/EvaluationFeedback';
 import { RoomSelector } from './RoomSelector';
 import { RewardSurfaceEditor } from './DoorRewardEditor';
+import { TimelineActionDeleteButton } from './TimelineActionDeleteButton';
 import { BiomeWorkspaceContractError } from './workspaceContract';
 import { KeepsakeEquipResultPicker, KeepsakeSelectionPicker } from '../KeepsakePickers';
 
 function PostbossKeepsakeControl({
+  hideLabel = false,
   interaction,
 }: {
+  readonly hideLabel?: boolean;
   readonly interaction: WorkspaceKeepsakeSelectionInteraction;
 }) {
-  const dispatch = useAppDispatch();
   return (
-    <div className="room-keepsake-control">
+    <div className="room-keepsake-control" data-label-hidden={hideLabel || undefined}>
       <KeepsakeSelectionPicker
         id={`postboss-keepsake-${interaction.key}`}
         interaction={interaction}
-        label="Keepsake"
+        label="Choose Keepsake"
       />
-      {interaction.removeIntent === undefined ? null : (
-        <button
-          className="danger-action action-compact"
-          onClick={() =>
-            dispatch(authoredProjectCommandDispatched(interaction.removeIntent!().command))
-          }
-          type="button"
-        >
-          Delete keepsake change
-        </button>
-      )}
       <SemanticOwnerMarker address={interaction.owner} />
     </div>
   );
@@ -68,14 +59,37 @@ function KeepsakeRackTimelineContent({
   if (interaction === undefined) return null;
   return (
     <div className="room-keepsake-action">
-      <PostbossKeepsakeControl interaction={interaction} />
+      <PostbossKeepsakeControl hideLabel interaction={interaction} />
       {equipResult === undefined ? null : (
         <KeepsakeEquipResultPicker
           id={`${equipResult.owner.resultKind}-${equipResult.key}`}
           interaction={equipResult}
+          label="Target"
         />
       )}
     </div>
+  );
+}
+
+function KeepsakeRackTimelineDeleteButton({
+  interaction,
+}: {
+  readonly interaction: WorkspaceKeepsakeSelectionInteraction;
+}) {
+  const dispatch = useAppDispatch();
+  if (interaction.removeIntent === undefined) return null;
+  return (
+    <TimelineActionDeleteButton
+      enabled
+      explanation="Remove Choose keepsake from the timeline"
+      label="Choose keepsake"
+      onRemove={() => {
+        const intent = interaction.removeIntent?.();
+        if (intent !== undefined) {
+          dispatch(authoredProjectCommandDispatched(intent.command));
+        }
+      }}
+    />
   );
 }
 
@@ -231,6 +245,20 @@ export function inspectorRoomActionContent(
     room.keepsakeSelection === undefined ? null : (
     <KeepsakeRackTimelineContent interactions={interactions} selection={room.keepsakeSelection} />
   );
+}
+export function inspectorRoomActionTrailingContent(
+  room: WorkspaceRoomSummary,
+  interactions: WorkspaceInteractionCatalog,
+  row: NonNullable<WorkspaceRoomSummary['roomActions']>['rows'][number],
+): ReactNode {
+  if (row.reference.kind !== 'interactKeepsakeRack' || room.keepsakeSelection === undefined) {
+    return null;
+  }
+  const interaction = interactions.keepsakeSelections.get(
+    workspaceInteractionKey(room.keepsakeSelection.address),
+  );
+  if (interaction?.removeIntent === undefined) return null;
+  return <KeepsakeRackTimelineDeleteButton interaction={interaction} />;
 }
 export function inspectorOptionalRoomActionContent(
   room: WorkspaceRoomSummary,

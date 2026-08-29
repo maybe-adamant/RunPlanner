@@ -36,7 +36,6 @@ import {
   loadSurfaceNEntryFrontierResolvedProject,
   loadSurfaceNOPQProject,
   nBiome,
-  nLocalOccurrenceId,
   nOccurrenceId,
   nOccurrenceIds,
   pBiome,
@@ -468,9 +467,9 @@ describe('BiomeWorkspace', () => {
     expect(screen.getByRole('region', { name: 'Incoming reward' }).textContent).toContain(
       'Big Max Magick',
     );
-    await view.user.click(screen.getByRole('tab', { name: 'Side Rooms' }));
+    await view.user.click(screen.getByRole('tab', { name: 'Room Overview' }));
     expect(screen.getByRole('heading', { name: 'Side Rooms' })).toBeTruthy();
-    expect(screen.getByText('Door 558353')).toBeTruthy();
+    expect(screen.queryByText('Door 558353')).toBeNull();
     expect(screen.getByLabelText('Side Room 01 generation')).toBeTruthy();
     const inspector = screen.getByRole('complementary', { name: 'Details' });
     expect(inspector.querySelector('.biome-inspector-heading')).toBeNull();
@@ -493,13 +492,7 @@ describe('BiomeWorkspace', () => {
         ? localVisit.targetsBySlot.sideDoor2?.generation
         : undefined,
     ).toBe('notGenerated');
-    await view.user.click(within(inspector).getByRole('button', { name: 'Open Side Room 01' }));
-    expect(view.application.store.getState().editorSession.focusedSemanticOwner).toEqual(
-      createOccurrenceAddress(nBiome, nLocalOccurrenceId('combat02', 'sideDoor1')),
-    );
-    expect(within(inspector).getByRole('heading', { level: 3, name: /^Entering / })).toBeTruthy();
-    expect(within(inspector).getByRole('region', { name: 'Room Timeline' })).toBeTruthy();
-    expect(within(inspector).queryByRole('button', { name: 'Reward' })).toBeNull();
+    expect(within(inspector).queryByRole('button', { name: 'Open Side Room 01' })).toBeNull();
   });
 
   it('renders entered side rooms beneath their Hub visit and focuses the side workbench', async () => {

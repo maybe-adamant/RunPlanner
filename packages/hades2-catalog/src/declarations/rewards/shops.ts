@@ -184,6 +184,7 @@ const twistWellItemKeys = [
 ] as const;
 function wellOption(
   key: string,
+  label: string,
   rewardType: string,
   effect: NonNullable<RawShopOptionEntryDeclaration['stygianWell']>['effect'] = 'neutral',
   extra: Omit<RawShopOptionEntryDeclaration, 'key' | 'rewardType' | 'stygianWell'> & {
@@ -195,6 +196,7 @@ function wellOption(
 ) {
   return option({
     key,
+    label,
     rewardType,
     ...extra,
     stygianWell: { effect, ...extra.stygianWell },
@@ -213,16 +215,16 @@ export const shops = [
         key: 'Healing',
         offerCount: 1,
         options: [
-          wellOption('ArmorBoostStore', 'ArmorBoost', 'neutral', {
+          wellOption('ArmorBoostStore', 'Splintered Shield', 'ArmorBoost', 'neutral', {
             runtimeOfferFallbackRewardTypes: ['MaxHealthDrop'],
           }),
-          wellOption('DamageSelfDrop', 'RoomMoneyDrop'),
-          wellOption('HealDropRange', 'RoomRewardHealDrop'),
-          wellOption('EmptyMaxHealthShopItem', 'MaxHealthDrop'),
-          wellOption('FirstHitHealTrait', 'RoomRewardHealDrop'),
-          wellOption('TemporaryDoorHealTrait', 'RoomRewardHealDrop'),
-          wellOption('TemporaryHealExpirationTrait', 'RoomRewardHealDrop'),
-          wellOption('LastStandShopItem', 'LastStandDrop', 'lastStand', {
+          wellOption('DamageSelfDrop', 'Price of Midas', 'RoomMoneyDrop'),
+          wellOption('HealDropRange', 'Life Essence', 'RoomRewardHealDrop'),
+          wellOption('EmptyMaxHealthShopItem', 'Centaur Soul', 'MaxHealthDrop'),
+          wellOption('FirstHitHealTrait', 'Breath of Eros', 'RoomRewardHealDrop'),
+          wellOption('TemporaryDoorHealTrait', 'HydraLite', 'RoomRewardHealDrop'),
+          wellOption('TemporaryHealExpirationTrait', 'Charity Bottle', 'RoomRewardHealDrop'),
+          wellOption('LastStandShopItem', 'Kiss of Styx', 'LastStandDrop', 'lastStand', {
             runtimeOfferRequirement: 'missingLastStand',
             runtimeOfferFallbackRewardTypes: ['ArmorBoost'],
           }),
@@ -232,27 +234,33 @@ export const shops = [
         key: 'Other',
         offerCount: 2,
         options: [
-          wellOption('TemporaryImprovedSecondaryTrait', 'RoomMoneyDrop'),
-          wellOption('TemporaryImprovedCastTrait', 'RoomMoneyDrop'),
-          wellOption('TemporaryMoveSpeedTrait', 'RoomMoneyDrop'),
-          wellOption('TemporaryBoonRarityTrait', 'RandomLoot', 'yarn'),
-          wellOption('TemporaryImprovedExTrait', 'RoomMoneyDrop'),
-          wellOption('TemporaryImprovedDefenseTrait', 'RoomMoneyDrop'),
-          wellOption('TemporaryDiscountTrait', 'RoomMoneyDrop', 'discount', {
+          wellOption('TemporaryImprovedSecondaryTrait', 'Chimaera Jerky', 'RoomMoneyDrop'),
+          wellOption('TemporaryImprovedCastTrait', 'Braid of Atlas', 'RoomMoneyDrop'),
+          wellOption('TemporaryMoveSpeedTrait', 'Ignited Ichor', 'RoomMoneyDrop'),
+          wellOption('TemporaryBoonRarityTrait', 'Yarn of Ariadne', 'RandomLoot', 'yarn'),
+          wellOption('TemporaryImprovedExTrait', "Witch's Mark", 'RoomMoneyDrop'),
+          wellOption('TemporaryImprovedDefenseTrait', 'Python Scales', 'RoomMoneyDrop'),
+          wellOption('TemporaryDiscountTrait', 'Ferry Voucher', 'RoomMoneyDrop', 'discount', {
             stygianWell: { offerRequirements: ['inactive'] },
           }),
-          wellOption('TemporaryForcedSecretDoorTrait', 'RoomMoneyDrop', 'spark'),
-          wellOption('TemporaryEmptySlotDamageTrait', 'RoomMoneyDrop', 'emptySlot', {
-            stygianWell: { offerRequirements: ['inactive', 'emptyAttackOrSpecial'] },
-          }),
-          wellOption('ExtendedShopTrait', 'RoomMoneyDrop', 'extended', {
+          wellOption('TemporaryForcedSecretDoorTrait', 'Spark of Ixion', 'RoomMoneyDrop', 'spark'),
+          wellOption(
+            'TemporaryEmptySlotDamageTrait',
+            'Danaid Dagger',
+            'RoomMoneyDrop',
+            'emptySlot',
+            {
+              stygianWell: { offerRequirements: ['inactive', 'emptyAttackOrSpecial'] },
+            },
+          ),
+          wellOption('ExtendedShopTrait', 'Archaic Seal', 'RoomMoneyDrop', 'extended', {
             stygianWell: { extendedDirectPurchaseItemKeys: extendedWellItemKeys },
           }),
-          wellOption('MetaCurrencyRange', 'MetaCurrencyDrop'),
-          wellOption('MetaCardPointsCommonRange', 'MetaCardPointsCommonDrop'),
-          wellOption('MemPointsCommonRange', 'RoomMoneyDrop'),
-          wellOption('SeedMysteryRange', 'RoomMoneyDrop'),
-          wellOption('RandomStoreItem', 'RoomMoneyDrop', 'twist', {
+          wellOption('MetaCurrencyRange', 'Exhumed Remains', 'MetaCurrencyDrop'),
+          wellOption('MetaCardPointsCommonRange', 'Dust Parcel', 'MetaCardPointsCommonDrop'),
+          wellOption('MemPointsCommonRange', 'Faint Flicker', 'RoomMoneyDrop'),
+          wellOption('SeedMysteryRange', "Gaia's Gift", 'RoomMoneyDrop'),
+          wellOption('RandomStoreItem', 'Fateful Twist', 'RoomMoneyDrop', 'twist', {
             stygianWell: {
               nestedResultItemKeys: twistWellItemKeys,
               nestedRuntimeOfferFallbacks: [
@@ -263,8 +271,8 @@ export const shops = [
               ],
             },
           }),
-          wellOption('LimitedManaRegenDrop', 'MaxManaDrop'),
-          wellOption('LimitedSwapTraitDrop', 'RoomMoneyDrop', 'hymn'),
+          wellOption('LimitedManaRegenDrop', 'Mist Veil', 'MaxManaDrop'),
+          wellOption('LimitedSwapTraitDrop', 'Sacrificial Hymn', 'RoomMoneyDrop', 'hymn'),
         ],
       },
     ],

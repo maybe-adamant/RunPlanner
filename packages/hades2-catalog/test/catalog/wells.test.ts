@@ -43,6 +43,39 @@ describe('Stygian Well room facts', () => {
       profile.groups.values
         .flatMap((group) => group.options.values)
         .find((entry) => entry.key === key)!;
+    expect(
+      Object.fromEntries(
+        profile.groups.values
+          .flatMap((group) => group.options.values)
+          .map((entry) => [entry.key, entry.label]),
+      ),
+    ).toEqual({
+      ArmorBoostStore: 'Splintered Shield',
+      DamageSelfDrop: 'Price of Midas',
+      EmptyMaxHealthShopItem: 'Centaur Soul',
+      ExtendedShopTrait: 'Archaic Seal',
+      FirstHitHealTrait: 'Breath of Eros',
+      HealDropRange: 'Life Essence',
+      LastStandShopItem: 'Kiss of Styx',
+      LimitedManaRegenDrop: 'Mist Veil',
+      LimitedSwapTraitDrop: 'Sacrificial Hymn',
+      MemPointsCommonRange: 'Faint Flicker',
+      MetaCardPointsCommonRange: 'Dust Parcel',
+      MetaCurrencyRange: 'Exhumed Remains',
+      RandomStoreItem: 'Fateful Twist',
+      SeedMysteryRange: "Gaia's Gift",
+      TemporaryBoonRarityTrait: 'Yarn of Ariadne',
+      TemporaryDiscountTrait: 'Ferry Voucher',
+      TemporaryDoorHealTrait: 'HydraLite',
+      TemporaryEmptySlotDamageTrait: 'Danaid Dagger',
+      TemporaryForcedSecretDoorTrait: 'Spark of Ixion',
+      TemporaryHealExpirationTrait: 'Charity Bottle',
+      TemporaryImprovedCastTrait: 'Braid of Atlas',
+      TemporaryImprovedDefenseTrait: 'Python Scales',
+      TemporaryImprovedExTrait: "Witch's Mark",
+      TemporaryImprovedSecondaryTrait: 'Chimaera Jerky',
+      TemporaryMoveSpeedTrait: 'Ignited Ichor',
+    });
     expect(option('TemporaryDiscountTrait').stygianWell?.offerRequirements).toEqual(['inactive']);
     expect(option('TemporaryEmptySlotDamageTrait').stygianWell?.offerRequirements).toEqual([
       'inactive',

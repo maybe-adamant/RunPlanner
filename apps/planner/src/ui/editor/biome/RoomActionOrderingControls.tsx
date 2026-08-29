@@ -2,6 +2,7 @@ import type {
   WorkspaceRoomActionProposal,
   WorkspaceRoomActionRow,
 } from '@planner/projections/structured-workspace';
+import { TimelineActionDeleteButton } from './TimelineActionDeleteButton';
 
 /** Timeline-only ordering and removal controls for one already-projected action. */
 export function RoomActionOrderingControls({
@@ -9,11 +10,13 @@ export function RoomActionOrderingControls({
   proposals,
   onApply,
   onRemove,
+  showRemoval = true,
 }: {
   readonly row: WorkspaceRoomActionRow;
   readonly proposals: readonly WorkspaceRoomActionProposal[];
   readonly onApply: (proposalKey: string) => void;
   readonly onRemove: () => void;
+  readonly showRemoval?: boolean;
 }) {
   const removable = proposals.find((proposal) => proposal.kind === 'remove');
   const moveEarlier = proposals.find(
@@ -90,18 +93,14 @@ export function RoomActionOrderingControls({
           ))}
         </>
       )}
-      <button
-        aria-label={`Remove ${row.label} from timeline`}
-        className={`${removalEnabled ? 'danger-action' : 'quiet-action'} room-action-delete`}
-        disabled={!removalEnabled}
-        onClick={onRemove}
-        title={explanation}
-        type="button"
-      >
-        <svg aria-hidden="true" viewBox="0 0 16 16">
-          <path d="M3.5 4.5h9M6 2.5h4l.5 2h-5l.5-2Zm-1 2 .5 9h5l.5-9M7 7v4M9 7v4" />
-        </svg>
-      </button>
+      {showRemoval ? (
+        <TimelineActionDeleteButton
+          enabled={removalEnabled}
+          explanation={explanation}
+          label={row.label}
+          onRemove={onRemove}
+        />
+      ) : null}
     </>
   );
 }

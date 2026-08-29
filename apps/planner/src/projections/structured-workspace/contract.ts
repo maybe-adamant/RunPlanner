@@ -111,10 +111,6 @@ export type WorkspaceStatus = 'blocked' | 'empty' | 'incomplete' | 'invalid' | '
 /** Transient destination for an entered-room workbench. */
 export type WorkspaceRoomTab =
   | 'overview'
-  | 'features'
-  | 'sideRooms'
-  | 'minorRewards'
-  | 'encounters'
   | 'actions'
   | 'doors'
   | 'shipIntroActions'
@@ -1530,6 +1526,8 @@ export interface WorkspaceRoomActionRow {
   readonly proposalKeys: readonly string[];
   readonly reference: RoomActionReference;
   readonly participation: 'required' | 'optional';
+  /** Participation is authored by a room Overview control; Timeline owns ordering only. */
+  readonly participationOwnedByOverview: boolean;
   readonly rank: number | null;
   /** Artificer output identity authored at this source transformation checkpoint. */
   readonly artificerOutput?: {
@@ -1770,6 +1768,11 @@ export interface WorkspaceShopPurchaseDescriptor {
   readonly marker: WorkspaceMarker;
 }
 
+export interface WorkspaceShopSupplementalPurchaseDescriptor extends WorkspaceShopPurchaseDescriptor {
+  readonly purchased: boolean;
+  readonly reference: Extract<RoomActionReference, { readonly kind: 'interactAcquisitionEntry' }>;
+}
+
 export interface WorkspaceShopOfferDescriptor {
   readonly key: string;
   readonly label: string;
@@ -1794,13 +1797,13 @@ export type WorkspaceShopSupplementalDescriptor =
       readonly key: 'travelDealRefill' | 'echoDoubleShopReward';
       readonly label: string;
       readonly explanation: string;
-      readonly purchase: WorkspaceShopPurchaseDescriptor;
+      readonly purchase: WorkspaceShopSupplementalPurchaseDescriptor;
     }
   | {
       readonly kind: 'infernalContractReward';
       readonly key: string;
       readonly label: string;
-      readonly purchase: WorkspaceShopPurchaseDescriptor;
+      readonly purchase: WorkspaceShopSupplementalPurchaseDescriptor;
       readonly rewardControl: WorkspaceExplicitRewardControl;
       readonly materialized: boolean;
     }
@@ -1808,7 +1811,7 @@ export type WorkspaceShopSupplementalDescriptor =
       readonly kind: 'travelDealRefill';
       readonly key: string;
       readonly label: string;
-      readonly purchase: WorkspaceShopPurchaseDescriptor;
+      readonly purchase: WorkspaceShopSupplementalPurchaseDescriptor;
       readonly rewardControl: WorkspaceExplicitRewardControl;
       readonly materialized: boolean;
       readonly sourceOfferKey: string;
@@ -1817,7 +1820,7 @@ export type WorkspaceShopSupplementalDescriptor =
       readonly kind: 'echoDoubleShopReward';
       readonly key: 'echoDoubleShopReward';
       readonly label: string;
-      readonly purchase: WorkspaceShopPurchaseDescriptor;
+      readonly purchase: WorkspaceShopSupplementalPurchaseDescriptor;
       readonly rewardControl: WorkspaceExplicitRewardControl;
       readonly materialized: boolean;
       readonly sourceOfferKey: string;

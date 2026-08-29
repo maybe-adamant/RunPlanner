@@ -69,18 +69,9 @@ export function assembleOccurrenceRunState(
       byTab[tab] = entry.runState;
       if (byTab.overview === undefined) {
         byTab.overview = entry.runState;
-        byTab.features = entry.runState;
-        byTab.encounters = entry.runState;
       }
     } else if (roomLocal.kind !== 'ship' && entry.boundary.kind === 'roomEntered') {
-      for (const tab of [
-        'overview',
-        'features',
-        'sideRooms',
-        'minorRewards',
-        'encounters',
-        'actions',
-      ] as const) {
+      for (const tab of ['overview', 'actions'] as const) {
         byTab[tab] = entry.runState;
       }
     }

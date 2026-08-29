@@ -63,8 +63,8 @@ function completeOrdinaryShrine(project = loadSurfaceNOProject()): ProjectDocume
   return next;
 }
 
-function openFeatures(): void {
-  fireEvent.click(screen.getByRole('tab', { name: 'Features' }));
+function openOverview(): void {
+  fireEvent.click(screen.getByRole('tab', { name: 'Room Overview' }));
 }
 
 describe('Hermes Shrine workbench', () => {
@@ -77,15 +77,15 @@ describe('Hermes Shrine workbench', () => {
       occurrence(oOccurrenceIds.combat07),
       application,
     );
-    openFeatures();
+    openOverview();
     const presence = screen.getByRole('checkbox', { name: 'Hermes Shrine present' });
     expect((presence as HTMLInputElement).disabled).toBe(false);
     expect(screen.queryByRole('checkbox', { name: /Interact.*Hermes Shrine/i })).toBeNull();
 
     await view.user.click(presence);
-    expect(screen.getAllByRole('button', { name: /^Hermes Shrine (First|Second)/ })).toHaveLength(
-      3,
-    );
+    expect(
+      screen.getAllByRole('button', { name: /^Hermes Shrine Offer [123] Item$/ }),
+    ).toHaveLength(3);
     expect(
       occurrence(oOccurrenceIds.combat07)(
         workspaceBiome(application, 'Surface', 'O'),
@@ -117,25 +117,36 @@ describe('Hermes Shrine workbench', () => {
       occurrence(oOccurrenceIds.combat07),
       application,
     );
-    openFeatures();
-    expect(screen.getAllByRole('button', { name: /^Hermes Shrine (First|Second)/ })).toHaveLength(
-      3,
-    );
-    expect(screen.queryByText(/^HealBigDrop$/)).toBeNull();
+    openOverview();
     expect(
-      screen.queryByRole('combobox', { name: 'Hermes Shrine First delivery delay' }),
-    ).toBeNull();
-    expect(screen.queryByRole('checkbox', { name: 'Rush Hermes Shrine First' })).toBeNull();
+      screen.getAllByRole('button', { name: /^Hermes Shrine Offer [123] Item$/ }),
+    ).toHaveLength(3);
+    expect(screen.queryByText(/^HealBigDrop$/)).toBeNull();
+    const inactiveDelay = screen.getByRole('combobox', {
+      name: 'Hermes Shrine Offer 1 delivery delay',
+    });
+    const inactiveRush = screen.getByRole('checkbox', { name: 'Rush Hermes Shrine Offer 1' });
+    expect(inactiveDelay).toHaveProperty('disabled', true);
+    expect(inactiveDelay).toHaveProperty('value', '2');
+    expect(inactiveRush).toHaveProperty('disabled', true);
+    expect(inactiveRush).toHaveProperty('checked', false);
 
-    await view.user.click(screen.getByRole('checkbox', { name: 'Purchase Hermes Shrine First' }));
+    const purchased = screen.getByRole('checkbox', { name: 'Purchased Hermes Shrine Offer 1' });
+    await view.user.click(purchased);
+    const offerRow = purchased.closest<HTMLElement>('.hermes-shrine-slot');
+    if (offerRow === null) throw new Error('Hermes Shrine Offer 1 row is missing');
+    expect(inactiveDelay).toHaveProperty('disabled', false);
+    expect(inactiveRush).toHaveProperty('disabled', false);
     expect(
       (
-        screen.getByRole('combobox', {
-          name: 'Hermes Shrine First delivery delay',
+        within(offerRow).getByRole('combobox', {
+          name: 'Hermes Shrine Offer 1 delivery delay',
         }) as HTMLSelectElement
       ).value,
     ).toBe('2');
-    await view.user.click(screen.getByRole('checkbox', { name: 'Rush Hermes Shrine First' }));
+    await view.user.click(
+      within(offerRow).getByRole('checkbox', { name: 'Rush Hermes Shrine Offer 1' }),
+    );
 
     const room = occurrence(oOccurrenceIds.combat07)(
       workspaceBiome(application, 'Surface', 'O'),
@@ -145,19 +156,20 @@ describe('Hermes Shrine workbench', () => {
         row.reference.kind === 'purchaseHermesShrineOffer' &&
         row.reference.generationKey === 'initial:first',
     );
+    expect(purchaseRow?.label).toBe('Buy Big Heal');
     expect(purchaseRow?.rewardPayload?.control.offer).toMatchObject({ rewardType: 'HealBigDrop' });
   });
 
   it('keeps forced Shrine inventory visible and non-removable', () => {
     const postbossId = `surface-o-preboss:postboss`;
     renderOccurrenceWorkbench(loadSurfaceNOProject(), 'Surface', 'O', occurrence(postbossId));
-    openFeatures();
+    openOverview();
     const presence = screen.getByRole('checkbox', { name: 'Hermes Shrine present' });
     expect(presence).toHaveProperty('checked', true);
     expect(presence).toHaveProperty('disabled', true);
-    expect(screen.getAllByRole('button', { name: /^Hermes Shrine (First|Second)/ })).toHaveLength(
-      3,
-    );
+    expect(
+      screen.getAllByRole('button', { name: /^Hermes Shrine Offer [123] Item$/ }),
+    ).toHaveLength(3);
   });
 
   it('disables Add at an ineligible absent ordinary host', () => {
@@ -167,7 +179,7 @@ describe('Hermes Shrine workbench', () => {
       'O',
       occurrence(oOccurrenceIds.combat01),
     );
-    openFeatures();
+    openOverview();
     const presence = screen.getByRole('checkbox', { name: 'Hermes Shrine present' });
     expect((presence as HTMLInputElement).checked).toBe(false);
     expect((presence as HTMLInputElement).disabled).toBe(true);
@@ -188,16 +200,14 @@ describe('Hermes Shrine workbench', () => {
       purchase: { delay: 4, rushed: false },
     });
     renderOccurrenceWorkbench(project, 'Surface', 'O', occurrence(oOccurrenceIds.combat07));
-    openFeatures();
+    openOverview();
 
     const delay = screen.getByRole('combobox', {
-      name: 'Hermes Shrine Travel Deal refill delivery delay',
+      name: 'Hermes Shrine Travel Deal delivery delay',
     });
     expect((delay as HTMLSelectElement).disabled).toBe(false);
     expect((delay as HTMLSelectElement).value).toBe('4');
-    expect(
-      screen.queryByRole('checkbox', { name: 'Rush Hermes Shrine Travel Deal refill' }),
-    ).toBeNull();
+    expect(screen.queryByRole('checkbox', { name: 'Rush Hermes Shrine Travel Deal' })).toBeNull();
     expect(within(delay).getAllByRole('option')).toHaveLength(7);
   });
 

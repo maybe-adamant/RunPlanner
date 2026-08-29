@@ -16,6 +16,7 @@ import { OccurrenceWorkbench } from './OccurrenceWorkbench';
 import {
   inspectorLifecycleBoundaryContent,
   inspectorRoomActionContent,
+  inspectorRoomActionTrailingContent,
   inspectorOptionalRoomActionContent,
   StartRoomIdentityEditor,
 } from './BiomeInspectorControls';
@@ -104,6 +105,9 @@ function OccurrenceInspector({
         room={node.room}
         renderRoomActionRowContent={(row) =>
           inspectorRoomActionContent(node.room, interactions, row)
+        }
+        renderRoomActionRowTrailingContent={(row) =>
+          inspectorRoomActionTrailingContent(node.room, interactions, row)
         }
         renderLifecycleBoundaryContent={(boundary) =>
           inspectorLifecycleBoundaryContent(node.room, interactions, boundary)

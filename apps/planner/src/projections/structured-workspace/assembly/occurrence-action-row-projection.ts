@@ -1,4 +1,5 @@
 import {
+  ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY,
   artificerReplacementEntryKey,
   createAcquisitionEntryAddress,
   createAcquisitionSiteAddress,
@@ -10,6 +11,7 @@ import {
   hermesShrineDeliveryEntryKey,
   INFERNAL_CONTRACT_ENTRY_KEY,
   parseArtificerReplacementEntryKey,
+  TRAVEL_DEAL_REFILL_ENTRY_KEY,
   roomActionKey,
   semanticAddressKey,
   type RoomOccurrence,
@@ -217,6 +219,16 @@ function roomActionsForOccurrence(
           : row.reference.kind === 'interactIncomingReward'
             ? controlForRole(rewardControl, row.reference.acquisitionRole)
             : rewardControl;
+      const participationOwnedByOverview =
+        row.reference.kind === 'interactShopOffer' ||
+        row.reference.kind === 'purchaseStygianWellOffer' ||
+        row.reference.kind === 'purchaseHermesShrineOffer' ||
+        row.reference.kind === 'sellPurgingPoolTrait' ||
+        (roomLocal.kind === 'shop' &&
+          row.reference.kind === 'interactAcquisitionEntry' &&
+          (row.reference.entryKey === INFERNAL_CONTRACT_ENTRY_KEY ||
+            row.reference.entryKey === TRAVEL_DEAL_REFILL_ENTRY_KEY ||
+            row.reference.entryKey === ECHO_DOUBLE_SHOP_REWARD_ENTRY_KEY));
       const fountainRarity = (() => {
         if (row.reference.kind !== 'useFountain' || input.fountainRarityAssessment === undefined) {
           return undefined;
@@ -286,12 +298,14 @@ function roomActionsForOccurrence(
           roomLocal,
           encounterPhases,
           resolvedRewardControl,
+          input.occurrence,
           input.occurrence.purgingPool?.traitKeyBySlot,
         ),
         marker: input.markerDestinations.marker(address),
         proposalKeys: Object.freeze(proposalKeysByAction.get(row.key) ?? []),
         reference: row.reference,
         participation: row.participation,
+        participationOwnedByOverview,
         rank: row.rank,
         ...(row.stale || artificerOutput === undefined
           ? {}
@@ -356,11 +370,19 @@ function roomActionsForOccurrence(
   );
   const optionalRows = Object.freeze(
     unrankedOrStaleRows.filter(
-      (row) => row.rank === null && !row.stale && row.participation === 'optional',
+      (row) =>
+        row.rank === null &&
+        !row.stale &&
+        row.participation === 'optional' &&
+        !row.participationOwnedByOverview,
     ),
   );
   const optionalKeys = new Set(optionalRows.map((row) => row.key));
-  const repairRows = Object.freeze(unrankedOrStaleRows.filter((row) => !optionalKeys.has(row.key)));
+  const repairRows = Object.freeze(
+    unrankedOrStaleRows.filter(
+      (row) => !optionalKeys.has(row.key) && (!row.participationOwnedByOverview || row.stale),
+    ),
+  );
   const steadyGrowthOutcomes = (input.steadyGrowthOutcomes ?? []).filter(
     (outcome) => semanticAddressKey(outcome.address.owner) === semanticAddressKey(owner),
   );
