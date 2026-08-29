@@ -280,6 +280,9 @@ describe('OccurrenceRoomActions', () => {
     openRoomTab('Room Overview');
     const fieldsSetup = screen.getByLabelText('Fields setup');
     expect(fieldsSetup).toBeTruthy();
+    expect(within(fieldsSetup).queryByText('Cage reward identities')).toBeNull();
+    expect(within(fieldsSetup).queryByLabelText('Cage 1')).toBeNull();
+    expect(within(fieldsSetup).getByText('Optional reward identities')).toBeTruthy();
     expect(within(fieldsSetup).getByLabelText('Optional 1')).toBeTruthy();
     openRoomTab('Room Timeline');
     const fieldsActions = screen.getByRole('region', { name: 'Room Timeline' });

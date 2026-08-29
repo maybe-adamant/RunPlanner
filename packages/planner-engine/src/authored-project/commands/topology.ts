@@ -540,6 +540,7 @@ function createBatch(
   }
   if (
     batchEligibility.kind === 'ordinaryBatchLimitReached' &&
+    (room === undefined || hostContinuationExitForDetourRoom(room) === undefined) &&
     !admitsTerminalTakeoverEnvelope(
       catalog,
       located.layout,

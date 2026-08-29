@@ -635,7 +635,9 @@ deletes only the sibling and its descendants. Contextual spacing and source
 requirements do not make the persisted gate undecodable: evaluation reports
 them at its additional-exit owner. A selected Chaos room owns its fixed
 `Empty_Chaos` encounter and direct `TrialUpgrade` reward, then its outgoing
-ordinary decision owns the fresh host continuation.
+ordinary decision owns the fresh host continuation. That detour-owned return
+envelope remains authorable when the host biome has already exhausted its
+ordinary batch bound; the exception belongs only to the closed detour source.
 
 Room-local commands address an occurrence and declaration-owned leaf key.
 They cover incoming rewards, Fields cages, Ship encounter counts and wheels,

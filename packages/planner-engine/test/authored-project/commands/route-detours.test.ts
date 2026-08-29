@@ -31,6 +31,11 @@ import {
   nBiome,
   nProject,
 } from '../support/configured-projects';
+import {
+  createCompleteFGProject,
+  goldenGBiome,
+  goldenGOccurrenceId,
+} from '@run-planner/test-fixtures/underworld';
 
 function biomeTopology(
   project: ReturnType<typeof fProject>,
@@ -376,6 +381,51 @@ describe('authored-project route detour commands', () => {
         (occurrence) => occurrence.occurrenceId,
       ),
     ).not.toContain(chaos);
+  });
+
+  it('initializes a selected Chaos return after G reaches its ordinary batch bound', () => {
+    const sourceId = goldenGOccurrenceId(7, 1);
+    const source = { kind: 'occurrence' as const, occurrenceId: sourceId };
+    const chaos = createOccurrenceId('terminal-g-natural-chaos');
+    const additional = createAdditionalExitAddress(goldenGBiome, sourceId, 'naturalChaos');
+    let project = applyProjectCommand(createCompleteFGProject(), catalog, {
+      kind: 'AddNaturalChaos',
+      additional,
+      occurrenceId: chaos,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'SetExitSelection',
+      selection: createExitSelectionAddress(goldenGBiome, source),
+      value: { kind: 'additional', additionalExitKey: 'naturalChaos' },
+    });
+    const decision = createExitDecisionAddress(goldenGBiome, {
+      kind: 'occurrence',
+      occurrenceId: chaos,
+    });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'InitializeExitDecision',
+      decision,
+      edit: { kind: 'rewardStore', storeKey: 'RunProgress' },
+    });
+
+    expect(
+      biomeTopology(project, 'Underworld', 'G').decisions.find(
+        (candidate) =>
+          candidate.kind === 'exit' &&
+          candidate.source.kind === 'occurrence' &&
+          candidate.source.occurrenceId === chaos,
+      ),
+    ).toMatchObject({
+      normal: {
+        kind: 'batch',
+        rewardStore: { kind: 'authoredBaseStore', baseRewardStoreKey: 'RunProgress' },
+        targets: [],
+      },
+      selection: { kind: 'unresolved' },
+    });
+    expect(decodeProjectDocument(JSON.parse(encodeProjectDocument(project)), catalog)).toEqual(
+      project,
+    );
   });
 
   it('authors Spark Chaos with distinct semantic commands and rejects a parallel natural gate', () => {

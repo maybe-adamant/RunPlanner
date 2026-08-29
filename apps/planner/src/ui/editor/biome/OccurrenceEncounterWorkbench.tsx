@@ -375,20 +375,6 @@ export function FieldsWorkbench({
       </label>
       <div className="fields-reward-identities">
         <div className="local-reward-heading">
-          <h5>Cage reward identities</h5>
-        </div>
-        {room.cages.map((cage) => (
-          <div className="fields-reward-identity" key={cage.key}>
-            <RewardControlEditor
-              control={cage.control}
-              idPrefix={`fields-${room.owner.occurrenceId}-cage-${cage.key}`}
-              interactions={interactions}
-              label={cage.label}
-              showAcquisitionChildren={false}
-            />
-          </div>
-        ))}
-        <div className="local-reward-heading">
           <h5>Optional reward identities</h5>
         </div>
         {room.optionalRewards.map((reward) => (
