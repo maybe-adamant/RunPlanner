@@ -60,16 +60,10 @@ export function CandidateSelect<T extends SelectValue>({
         )}
         {interaction.choices.map((choice) => {
           const option = candidates.result?.find((candidate) => candidate.value === choice.value);
-          const retainsImpossibleValue =
-            interaction.selected === choice.value &&
-            option !== undefined &&
-            !candidateMayBeAuthored(option);
-          if (option !== undefined && !candidateMayBeAuthored(option) && !retainsImpossibleValue) {
-            return null;
-          }
+          const impossible = option !== undefined && !candidateMayBeAuthored(option);
           return (
             <option
-              disabled={retainsImpossibleValue}
+              disabled={impossible}
               key={String(choice.value)}
               value={String(choice.value)}
               {...candidateSelectState(option)}

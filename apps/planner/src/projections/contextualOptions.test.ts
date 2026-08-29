@@ -484,7 +484,7 @@ describe('contextual option projection', () => {
       'This reward is unavailable from the selected reward pool.',
     );
     expect(resolved[3]?.explanation?.message).toBe(
-      'This reward is outside the selected reward pool.',
+      'This reward pool is unavailable at this point.',
     );
     expect(resolved[4]?.explanation?.message).toBe(
       'This reward conflicts with the offer on Door 2.',

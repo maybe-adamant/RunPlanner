@@ -1633,12 +1633,12 @@
                   "encounterCount": 2,
                   "wheels": {
                     "wheel1": {
-                      "storeKey": "RunProgress",
+                      "storeKey": "MetaProgress",
                       "offerCount": 1,
                       "offers": {
                         "offer1": {
                           "offer": {
-                            "rewardType": "MaxManaDrop"
+                            "rewardType": "MetaCurrencyBigDrop"
                           },
                           "traitOffersByAcquisitionRole": {},
                           "dispositionByAcquisitionRole": {
@@ -1893,15 +1893,15 @@
                       "acquisitionRole": "chosenSource"
                     },
                     {
+                      "kind": "interactIncomingReward",
+                      "producerPoint": "afterCombat",
+                      "acquisitionRole": "spurnedSource"
+                    },
+                    {
                       "kind": "interactAcquisitionEntry",
                       "siteKey": "hermesShrineDelivery",
                       "entryKey": "hermesShrineDelivery:%5B%22Surface%22%2C%22O%22%2C%22surface-o-combat07%22%2C%22initial%3AsecondLeft%22%5D",
                       "encounterPhaseKey": "Encounter"
-                    },
-                    {
-                      "kind": "interactIncomingReward",
-                      "producerPoint": "afterCombat",
-                      "acquisitionRole": "spurnedSource"
                     }
                   ]
                 },
@@ -2314,7 +2314,7 @@
                   "kind": "batch",
                   "rewardStore": {
                     "kind": "authoredBaseStore",
-                    "baseRewardStoreKey": "MetaProgress"
+                    "baseRewardStoreKey": "RunProgress"
                   },
                   "batchState": null,
                   "targets": [

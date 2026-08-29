@@ -50,7 +50,7 @@ describe('O canonical materialization and lifecycle', () => {
     });
     expect(reprieve).toMatchObject({
       gameName: 'O_Combat07',
-      rewardWheels: [{ wheelKey: 'wheel1', storeKey: 'RunProgress' }],
+      rewardWheels: [{ wheelKey: 'wheel1', storeKey: 'MetaProgress' }],
     });
     expect(secondCombat).toMatchObject({
       gameName: 'O_Combat01',

@@ -441,24 +441,27 @@ Boon-source, and Devotion-source steps. It does not implement reward support.
 
 Each candidate family has an explicit semantic horizon:
 
-| Candidate family              | Required horizon                                            |
-| ----------------------------- | ----------------------------------------------------------- |
-| Start room                    | Declaration-owned start domain                              |
-| Room target                   | Target generation support                                   |
-| Takeover Preboss batch        | Source pre-generation support across all physical exits     |
-| Batch reward store            | Pre-generation store support                                |
-| Incoming or local reward      | Offer generation and its own entered acquisition lifecycle  |
-| Sequential sibling reward     | Earlier sibling generation plus the addressed offer         |
-| Joint unordered rewards       | Complete atomic sibling generation region                   |
-| Shop offer                    | Complete joint inventory generation                         |
-| Room Action order             | Occurrence lifecycle and roster-order assessment            |
-| Fields Min/Max                | Pre-outcome support ledger                                  |
-| Encounter phase               | Active phase preparation checkpoint and valid record prefix |
-| O encounter or wheel setting  | Addressed occurrence lifecycle region                       |
-| Hub membership                | Joint open-board constraint region                          |
-| Hub visit order               | Complete proposed prefix through the Hub visit region       |
-| Side-room generation or entry | Parent-local side-room region                               |
-| Broad biome field             | Smallest biome suffix whose rules consume the field         |
+| Candidate family              | Required horizon                                              |
+| ----------------------------- | ------------------------------------------------------------- |
+| Start room                    | Declaration-owned start domain                                |
+| Room target                   | Target generation support                                     |
+| Takeover Preboss batch        | Source pre-generation support across all physical exits       |
+| Batch reward store            | Pre-generation store support                                  |
+| Incoming or local reward      | Offer generation and its own entered acquisition lifecycle    |
+| Sequential sibling reward     | Earlier sibling generation plus the addressed offer           |
+| Joint unordered rewards       | Complete atomic sibling generation region                     |
+| Shop offer                    | Complete joint inventory generation                           |
+| Room Action order             | Occurrence lifecycle and roster-order assessment              |
+| Fields Min/Max                | Pre-outcome support ledger                                    |
+| Encounter phase               | Active phase preparation checkpoint and valid record prefix   |
+| O encounter count             | Supported phase topology; retained leaves are repair evidence |
+| O wheel store                 | Exact wheel pre-offer Run/Meta support                        |
+| O wheel offer count           | Active-wheel declaration bounds                               |
+| O wheel picked offer          | Complete generated cohort through the selected choice         |
+| Hub membership                | Joint open-board constraint region                            |
+| Hub visit order               | Complete proposed prefix through the Hub visit region         |
+| Side-room generation or entry | Parent-local side-room region                                 |
+| Broad biome field             | Smallest biome suffix whose rules consume the field           |
 
 A candidate does not become impossible merely because retained downstream
 authorship would require later repair. Room replacement, structural capacity,

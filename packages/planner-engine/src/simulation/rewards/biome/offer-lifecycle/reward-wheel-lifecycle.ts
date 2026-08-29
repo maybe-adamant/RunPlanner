@@ -25,6 +25,7 @@ import { settleOwnedAcquisitionSite } from '../../acquisition-settlement';
 import { BiomeRewardSimulationContractError } from '../biome-contract';
 import type { ShipLifecycleCandidateContext } from '../../lifecycle-artifacts';
 import type { RewardLifecycleReferences } from '../prepared-inputs';
+import { rewardStoreHistorySupport } from '../reward-store-support';
 
 export interface WheelLifecycleView {
   readonly generation: HistoryStateView;
@@ -159,6 +160,23 @@ export function prepareShipLifecycleCandidateContext(
     routeLoadout,
   } = inputs;
   const activeWheelKeys = Object.freeze(room.rewardWheels?.map((wheel) => wheel.wheelKey) ?? []);
+  const supportedStoreKeysAtGeneration = (wheelKey: string): readonly string[] => {
+    const wheel = room.rewardWheels?.find((candidate) => candidate.wheelKey === wheelKey);
+    const layout = catalog.biomeLayouts.byKey[room.origin.biomeKey];
+    if (wheel === undefined)
+      throw new BiomeRewardSimulationContractError(
+        `${room.gameName}.${wheelKey} has no active reward-wheel store support`,
+      );
+    if (layout === undefined)
+      throw new BiomeRewardSimulationContractError(
+        `${room.origin.biomeKey} has no biome layout for reward-wheel store support`,
+      );
+    return rewardStoreHistorySupport(
+      layout,
+      room.origin.biomeKey,
+      wheelLifecycleViews(lifecycle, room, roomView, wheel).generation,
+    ).supportStoreKeys;
+  };
   const evaluateState = (state: ShipCombatState, stopAfterPickedWheelGeneration?: string) => {
     const ship = materializeShipCombatState(
       catalog,
@@ -272,6 +290,7 @@ export function prepareShipLifecycleCandidateContext(
   return Object.freeze({
     origin: room.origin,
     activeWheelKeys,
+    supportedStoreKeysAtGeneration,
     evaluateState: (state: ShipCombatState) => evaluateState(state),
     evaluateStateThroughWheelPick: (state: ShipCombatState, wheelKey: string) =>
       evaluateState(state, wheelKey),

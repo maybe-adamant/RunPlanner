@@ -425,7 +425,7 @@ function findingExplanation(catalog: Catalog, finding: SemanticFinding): Candida
         message: 'This side-room setup is not available with the selected Hub rooms.',
       };
     case 'baseRewardStoreUnavailable':
-      return { kind: 'store', message: 'This reward is outside the selected reward pool.' };
+      return { kind: 'store', message: 'This reward pool is unavailable at this point.' };
     case 'rewardAcquisitionUnavailable':
       return {
         kind: 'acquisition',

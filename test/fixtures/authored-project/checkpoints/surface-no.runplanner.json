@@ -1633,12 +1633,12 @@
                   "encounterCount": 2,
                   "wheels": {
                     "wheel1": {
-                      "storeKey": "RunProgress",
+                      "storeKey": "MetaProgress",
                       "offerCount": 1,
                       "offers": {
                         "offer1": {
                           "offer": {
-                            "rewardType": "MaxManaDrop"
+                            "rewardType": "MetaCurrencyBigDrop"
                           },
                           "traitOffersByAcquisitionRole": {},
                           "dispositionByAcquisitionRole": {
@@ -2246,7 +2246,7 @@
                   "kind": "batch",
                   "rewardStore": {
                     "kind": "authoredBaseStore",
-                    "baseRewardStoreKey": "MetaProgress"
+                    "baseRewardStoreKey": "RunProgress"
                   },
                   "batchState": null,
                   "targets": [

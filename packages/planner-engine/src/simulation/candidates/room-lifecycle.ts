@@ -4,6 +4,7 @@ import {
   semanticAddressKey,
   type OccurrenceAddress,
   type RewardWheelAddress,
+  type SemanticAddress,
 } from '../../authored-project/addresses';
 import type {
   ProjectDocument,
@@ -144,6 +145,54 @@ function replaceWheel(
   });
 }
 
+interface RewardWheelIdentity {
+  readonly routeKey: string;
+  readonly biomeKey: string;
+  readonly occurrenceId: string;
+  readonly wheelKey: string;
+}
+
+function rewardWheelIdentityForAddress(address: SemanticAddress): RewardWheelIdentity | undefined {
+  switch (address.kind) {
+    case 'rewardWheel':
+    case 'rewardWheelOffer':
+      return {
+        routeKey: address.routeKey,
+        biomeKey: address.biomeKey,
+        occurrenceId: address.occurrenceId,
+        wheelKey: address.wheelKey,
+      };
+    case 'acquisitionSite':
+      return rewardWheelIdentityForAddress(address.owner);
+    case 'acquisitionEntry':
+      return rewardWheelIdentityForAddress(address.site.owner);
+    case 'traitOffer':
+    case 'acquisitionRole':
+    case 'levelResolution':
+      return rewardWheelIdentityForAddress(address.owner);
+    case 'traitAcquisitionTarget':
+    case 'circeResolution':
+    case 'echoPomTarget':
+    case 'naturalSelectionResult':
+    case 'echoLastRunBoon':
+    case 'echoLastReward':
+    case 'allTogetherSet':
+      return rewardWheelIdentityForAddress(address.trait);
+    default:
+      return undefined;
+  }
+}
+
+function belongsToRewardWheel(origin: SemanticAddress, owner: RewardWheelAddress): boolean {
+  const identity = rewardWheelIdentityForAddress(origin);
+  return (
+    identity?.routeKey === owner.routeKey &&
+    identity.biomeKey === owner.biomeKey &&
+    identity.occurrenceId === owner.occurrenceId &&
+    identity.wheelKey === owner.wheelKey
+  );
+}
+
 function lifecycleFindings(
   findings: readonly SemanticFinding[],
   owner: OccurrenceAddress | RewardWheelAddress,
@@ -158,10 +207,12 @@ function lifecycleFindings(
           finding.origin.routeKey === owner.routeKey &&
           finding.origin.biomeKey === owner.biomeKey &&
           finding.origin.owner.occurrenceId === owner.occurrenceId) ||
-        ('occurrenceId' in finding.origin &&
+        (owner.kind === 'occurrence' &&
+          'occurrenceId' in finding.origin &&
           finding.origin.occurrenceId === owner.occurrenceId &&
           finding.origin.routeKey === owner.routeKey &&
-          finding.origin.biomeKey === owner.biomeKey),
+          finding.origin.biomeKey === owner.biomeKey) ||
+        (owner.kind === 'rewardWheel' && belongsToRewardWheel(finding.origin, owner)),
     ),
   );
 }
@@ -309,7 +360,12 @@ export function evaluateRewardWheelLifecycleCandidate(
       ? context.evaluateStateThroughWheelPick(replacementState, query.wheel.wheelKey)
       : context.evaluateState(replacementState);
   const findings = lifecycleFindings(result.findings, query.wheel);
-  const selectedPossible = result.supported && findings.length === 0;
+  const selectedPossible =
+    query.kind === 'rewardWheelOfferCount'
+      ? true
+      : query.kind === 'rewardWheelStore'
+        ? context.supportedStoreKeysAtGeneration(query.wheel.wheelKey).includes(query.storeKey)
+        : result.supported && findings.length === 0;
   switch (query.kind) {
     case 'rewardWheelOfferCount':
       return Object.freeze({
@@ -327,7 +383,7 @@ export function evaluateRewardWheelLifecycleCandidate(
         kind: 'rewardWheelStore',
         result: Object.freeze({
           storeKey: query.storeKey,
-          supportedStoreKeys: descriptor.reward.storeKeys,
+          supportedStoreKeys: context.supportedStoreKeysAtGeneration(query.wheel.wheelKey),
           selectedPossible,
           findings,
         }),
