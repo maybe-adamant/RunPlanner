@@ -286,7 +286,12 @@ describe('trait offer editor entry and dialog', () => {
     expect(saved.rarificationActions).toEqual(['option1']);
     await user.click(screen.getAllByRole('button', { name: 'Rarify' })[0]!);
     await user.click(screen.getAllByRole('button', { name: 'Rarify' })[0]!);
-    expect(screen.getByText('Effective rarity: Heroic')).toBeTruthy();
+    const effectiveSummary = screen.getAllByLabelText('Effective trait values')[0];
+    if (effectiveSummary === undefined) {
+      throw new Error('effective trait summary is missing');
+    }
+    expect(effectiveSummary.textContent).toContain('Effective rarityHeroic');
+    expect(effectiveSummary.textContent).toContain('Effective level');
     expect(screen.getAllByRole('button', { name: 'Rarify' })[0]).toHaveProperty('disabled', true);
     application.dispose();
   });
