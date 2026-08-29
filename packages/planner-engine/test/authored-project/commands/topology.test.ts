@@ -453,6 +453,39 @@ describe('authored-project commands and topology', () => {
     });
   });
 
+  it('reserves Boss and Postboss declarations for the fixed Preboss completion chain', () => {
+    const startId = createOccurrenceId('fixed-completion-domain-start');
+    let project = applyProjectCommand(fProject(), catalog, {
+      kind: 'CreateStart',
+      biome: fBiome,
+      occurrenceId: startId,
+      gameName: 'F_Opening01',
+    });
+    const decision = createExitDecisionAddress(fBiome, {
+      kind: 'occurrence',
+      occurrenceId: startId,
+    });
+    project = applyProjectCommand(project, catalog, { kind: 'CreateBatch', decision });
+    project = applyProjectCommand(project, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(fBiome, decision.source),
+      storeKey: 'RunProgress',
+    });
+
+    for (const gameName of ['F_Boss01', 'F_PostBoss01'] as const) {
+      expect(() =>
+        applyProjectCommand(project, catalog, {
+          kind: 'CreateTarget',
+          target: createTargetAddress(fBiome, decision.source, 'exit1'),
+          occurrenceId: createOccurrenceId(`ordinary-${gameName}`),
+          gameName,
+        }),
+      ).toThrowError(
+        expect.objectContaining({ detail: `${gameName} is not an ordinary normal-door target` }),
+      );
+    }
+  });
+
   it('canonicalizes normal targets in declaration-owned physical exit order', () => {
     let project = applyProjectCommand(fProject(), catalog, {
       kind: 'CreateStart',

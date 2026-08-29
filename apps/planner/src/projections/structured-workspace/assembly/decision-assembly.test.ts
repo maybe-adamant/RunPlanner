@@ -905,6 +905,18 @@ describe('structured workspace decision assembly', () => {
 
     expect(assembly.batch.targetInteraction).toBe('readOnly');
     expect(assembly.roomControls).toEqual([]);
+    const freeRewardTarget = assembly.batch.targets.find(
+      (target) => target.room.roomLocal.kind === 'incomingReward',
+    );
+    if (freeRewardTarget === undefined) throw new Error('F free-reward Preboss target is missing');
+    expect(freeRewardTarget.room.offerRewardRewards).toHaveLength(1);
+    expect(freeRewardTarget.room.offerRewardRewards[0]).toMatchObject({
+      control: { kind: 'countedReward' },
+      key: 'incoming',
+    });
+    expect(freeRewardTarget.door.offerRewardSurface.rewards).toBe(
+      freeRewardTarget.room.offerRewardRewards,
+    );
   });
 
   it('keeps I’s mixed Preboss target replaceable with its decision-owned room picker', () => {
@@ -1122,7 +1134,10 @@ describe('structured workspace decision assembly', () => {
       { kind: 'ready' },
     ]);
     expect(after.roomControls).toHaveLength(1);
-    expect(after.roomControls[0]).toMatchObject({
+    const entryRoomControl = after.roomControls.find(
+      (control) => control.kind === 'decisionEntryRoomPicker',
+    );
+    expect(entryRoomControl).toMatchObject({
       address: after.batch.missingTargets[0]?.marker.address,
       decisionOwner: owner,
       kind: 'decisionEntryRoomPicker',
@@ -1130,6 +1145,9 @@ describe('structured workspace decision assembly', () => {
       ordinaryTargetGameNames: expect.arrayContaining(['F_Combat01']),
       takeoverGameNames: ['F_PreBoss01'],
     });
+    const ordinaryTargetGameNames = entryRoomControl?.ordinaryTargetGameNames ?? [];
+    expect(ordinaryTargetGameNames).not.toContain('F_Boss01');
+    expect(ordinaryTargetGameNames).not.toContain('F_PostBoss01');
   });
 
   it('projects an exact repair intent for unavailable authored exits', () => {

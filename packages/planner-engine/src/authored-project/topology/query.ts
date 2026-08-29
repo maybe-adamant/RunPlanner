@@ -338,7 +338,12 @@ export function ordinaryTargetAuthoringEligibility(
   if (room === undefined || room.roomSetKey !== layout.biomeKey || room.mode.kind !== 'authored') {
     return Object.freeze({ kind: 'unavailable', reason: 'unknownOrNonHostRoom' });
   }
-  if (room.kind === 'Intro' || room.kind === 'Opening') {
+  if (
+    room.kind === 'Boss' ||
+    room.kind === 'Intro' ||
+    room.kind === 'Opening' ||
+    room.kind === 'PostBoss'
+  ) {
     return Object.freeze({ kind: 'unavailable', reason: 'notOrdinaryRoom' });
   }
   if (room.prebossBatchPolicy?.kind === 'takeOverNormalDoors') {

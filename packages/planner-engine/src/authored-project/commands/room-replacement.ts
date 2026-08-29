@@ -201,7 +201,12 @@ function requireOrdinaryBatchTarget(
       'takeover Preboss targets can only change through their atomic batch command',
     );
   }
-  if (replacement.kind === 'Intro' || replacement.kind === 'Opening') {
+  if (
+    replacement.kind === 'Boss' ||
+    replacement.kind === 'Intro' ||
+    replacement.kind === 'Opening' ||
+    replacement.kind === 'PostBoss'
+  ) {
     failCommand(command, `${replacement.gameName} is not an ordinary normal-door target`);
   }
   if (replacement.kind === 'PreHub' && located.layout.progression.kind !== 'hub') {
