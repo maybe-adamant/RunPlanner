@@ -1199,7 +1199,7 @@ describe('planner history interaction', () => {
     expect(screen.queryByRole('dialog')).toBeNull();
     const action = document.getElementById(semanticOwnerControlElementId(destination.focusAddress));
     if (action === null) throw new Error('SpellDrop pickup action is missing');
-    await view.user.click(within(action).getByRole('button', { name: /Edit spell/ }));
+    await view.user.click(within(action).getByRole('button', { name: /Edit Spell/ }));
     expect(await screen.findByRole('dialog')).toBeTruthy();
   });
 

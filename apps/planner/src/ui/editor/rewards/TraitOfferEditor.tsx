@@ -18,7 +18,6 @@ import { useAppDispatch, useAppSelector } from '@planner/state/store';
 import { useCommandIntent } from '@planner/ui/controls/useCommandIntent';
 import { SemanticOwnerMarker } from '@planner/ui/feedback/EvaluationFeedback';
 import { semanticOwnerControlElementId } from '@planner/ui/feedback/semanticOwner';
-import { spellOfferSlotSummary } from './spellOfferPresentation';
 import { TraitOfferEditorShell } from './TraitOfferEditorShell';
 
 const OPTION_KEYS = ['option1', 'option2', 'option3'] as const;
@@ -90,11 +89,8 @@ export function TraitOfferLauncher({
   const spellOffer = interaction.giver.providerKind === 'spell';
   const label = spellOffer
     ? selected === undefined
-      ? 'Edit spell · Choose spell'
-      : `Edit spell · ${traitLabel} · ${spellOfferSlotSummary(
-          interaction.giver,
-          selectedOptionIndex,
-        )}${control.hexTree?.value?.layoutKey === undefined ? '' : ` · ${control.hexTree.value.layoutKey}`}`
+      ? 'Edit Spell - Choose Spell'
+      : `Edit Spell - ${traitLabel}`
     : control.offer === null
       ? traitLabel
       : control.giver.providerKind === 'chaos'

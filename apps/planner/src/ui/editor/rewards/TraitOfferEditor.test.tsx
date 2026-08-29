@@ -10,6 +10,8 @@ import {
   createExitSelectionAddress,
   createRouteStartKeepsakeSelectionAddress,
   createTraitOfferAddress,
+  decodeProjectDocument,
+  encodeProjectDocument,
   semanticAddressKey,
   type AuthoredTraitOffer,
   type AuthoredTraitOfferTraits,
@@ -94,11 +96,10 @@ describe('trait offer editor entry and dialog', () => {
         <TraitOfferLauncher control={initialControl} interactions={workspace.interactions} />
       </Provider>,
     );
-    const initialLauncher = screen.getByRole('button', { name: /Edit spell/ });
-    expect(initialLauncher.textContent).toContain(
-      initialInteraction.traitLabel(initialSelected.traitKey),
+    const initialLauncher = screen.getByRole('button', { name: /Edit Spell/ });
+    expect(initialLauncher.textContent).toBe(
+      `Edit Spell - ${initialInteraction.traitLabel(initialSelected.traitKey)}`,
     );
-    expect(initialLauncher.textContent).toContain('Crescent Moonglow · +0 Path of Stars');
     cleanup();
     events.length = 0;
     render(
@@ -162,11 +163,10 @@ describe('trait offer editor entry and dialog', () => {
         <TraitOfferLauncher control={changedControl} interactions={changedWorkspace.interactions} />
       </Provider>,
     );
-    const changedLauncher = screen.getByRole('button', { name: /Edit spell/ });
-    expect(changedLauncher.textContent).toContain(
-      changedInteraction.traitLabel(changedSelected.traitKey),
+    const changedLauncher = screen.getByRole('button', { name: /Edit Spell/ });
+    expect(changedLauncher.textContent).toBe(
+      `Edit Spell - ${changedInteraction.traitLabel(changedSelected.traitKey)}`,
     );
-    expect(changedLauncher.textContent).toContain('Half Moonglow · +1 Path of Stars · Maze');
     application.store.dispatch(authoredProjectUndoRequested());
     const restoredOccurrence = application.store
       .getState()
@@ -178,6 +178,62 @@ describe('trait offer editor entry and dialog', () => {
         ? restoredOccurrence.state.reward.traitOffersByAcquisitionRole?.self
         : undefined;
     expect(restored).toMatchObject({ selectedOptionKey: 'option1' });
+    application.dispose();
+  });
+
+  it('shows Hex layout customization for an unresolved Spell draft before its first save', async () => {
+    const application = createApplication();
+    const occurrenceId = goldenFOccurrenceId(10, 2);
+    const address = createTraitOfferAddress(
+      createIncomingRewardAddress(goldenFBiome, occurrenceId),
+      'self',
+    );
+    const selected = applyProjectCommand(createGoldenFGHProject(), application.catalog, {
+      kind: 'SetExitSelection',
+      selection: createExitSelectionAddress(goldenFBiome, {
+        kind: 'occurrence',
+        occurrenceId: goldenFOccurrenceId(9, 1),
+      }),
+      value: { kind: 'normal', exitKey: 'exit2' },
+    });
+    const raw = JSON.parse(encodeProjectDocument(selected)) as {
+      routes: Array<{
+        routeKey: string;
+        biomes: Array<{
+          biomeKey: string;
+          topology: {
+            occurrences: Array<{
+              occurrenceId: string;
+              state: { reward?: { traitOffersByAcquisitionRole?: { self?: unknown } } };
+            }>;
+          } | null;
+        }>;
+      }>;
+    };
+    const rawOccurrence = raw.routes
+      .find((route) => route.routeKey === 'Underworld')
+      ?.biomes.find((biome) => biome.biomeKey === 'F')
+      ?.topology?.occurrences.find((occurrence) => occurrence.occurrenceId === occurrenceId);
+    if (rawOccurrence?.state.reward?.traitOffersByAcquisitionRole === undefined) {
+      throw new Error('SpellDrop fixture has no self child to unset');
+    }
+    rawOccurrence.state.reward.traitOffersByAcquisitionRole.self = null;
+    const project = decodeProjectDocument(raw, application.catalog);
+    application.store.dispatch(authoredProjectReplaced(project));
+    const workspace = application.selectStructuredWorkspace(application.store.getState());
+    const interaction = workspace.interactions.traitOffers.get(semanticAddressKey(address));
+    if (interaction === undefined) throw new Error('unresolved SpellDrop interaction is missing');
+    expect(interaction.value).toBeNull();
+
+    render(
+      <Provider store={application.store}>
+        <TraitOfferDialog interactions={workspace.interactions} target={address} />
+      </Provider>,
+    );
+
+    expect(await screen.findByRole('button', { name: 'Hex talent layout' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Rare Hex node 1' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Epic Hex node 1' })).toBeTruthy();
     application.dispose();
   });
 
