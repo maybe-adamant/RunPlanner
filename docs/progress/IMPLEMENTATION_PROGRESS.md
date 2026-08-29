@@ -288,6 +288,29 @@ closure gate. Typechecking, fixture integrity (3 files and 20 tests), correctnes
 (255 files and 2,531 tests), performance unit coverage (17 tests), relative
 performance comparison, lint, formatting, and the production build all passed.
 
+### Room-driven offer authoring closure
+
+The 2026-08-28 room-driven offer-authoring delivery, implemented in commits
+`c0d777f1` and `3b12fb24` from locked plan `8079172f`, made the selected Room
+Declaration the authority for the complete start and door reward surface. The
+catalog now derives ordinary `none`/`incomingReward` bindings from each room's
+incoming declaration and validates the explicit H Fields `cages` group. The
+application resolves one exhaustive surface for zero, one, or multiple active
+rewards; the rail remains an intentionally lossy exact-one presentation.
+
+Starts and normal doors share the Room/Reward composition, including pending,
+no-reward, single-reward, and multi-reward states. H cage rewards are exposed
+on the outgoing offer while optional Fields MetaProgress remains entered-room
+state; O ShipCombat remains a no-reward offer with its wheels room-local. The
+old preview and start-only reward shortcuts were removed without changing the
+authored schema or catalog version. Gate A catalog/contract witnesses and Gate
+B UI/planner/product witnesses passed with the documented typecheck, lint,
+format, build, and diff checks. The one closure `npm run check` passed: fixture
+integrity covered 3 files and 21 tests; correctness covered 256 files and 2,549
+tests; the 17-test performance comparison suite and same-host relative
+comparison passed; ESLint, repository-wide Prettier, and the production build
+passed. The build retained only the existing greater-than-500-kB chunk advisory.
+
 ### Repository cleanup closure
 
 The 2026-08-25 repository cleanup made the root README a stable product and
@@ -566,6 +589,14 @@ intermediate suite was green.
   lint defects were repaired, standalone ESLint, repository-wide Prettier, and
   the production build passed; the build retained only the existing
   greater-than-500-kB chunk advisory. The full test gate was not rerun.
+
+- The room-driven offer-authoring closure ran its one authorized `npm run check`
+  on 2026-08-28 after Gate A/B review: workspace, catalog, engine, and fixture
+  typechecks; fixture integrity at 3 files/21 tests; correctness at 256
+  files/2,549 tests; the 17-test performance unit suite and same-host relative
+  comparison; ESLint; repository-wide Prettier; and production build all
+  passed. The comparison remained within every configured threshold, and the
+  build retained only the existing greater-than-500-kB chunk advisory.
 
 Focused validation remains the normal implementation practice. A complete
 `npm run check` is reserved for the declared phase closure or a shared
