@@ -38,7 +38,6 @@ export const qBiomeLayout = {
     batchPolicy: { kind: 'standard', fields: [] },
     rewardStorePolicy: { kind: 'none' },
     rewardStoreOverrides: [],
-    bounds: { maxBatches: 6, maxTargets: 8 },
   },
   completion: {
     bossRoomGameName: 'Q_Boss01',

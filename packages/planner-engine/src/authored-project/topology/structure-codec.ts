@@ -22,7 +22,6 @@ import type {
 import { fixedCompletionOccurrenceId } from '../fixed-room-links';
 import { requireCountedBinding, type RoomOccurrenceRole } from '../room-state/declaration';
 import {
-  admitsTerminalTakeoverEnvelope,
   declaredPhysicalExitsForSourceRoom,
   hostContinuationExitForDetourRoom,
   hubDecisionHandoffReadiness,
@@ -530,6 +529,7 @@ function validateNormalDecisionProgressionBounds(
 ): void {
   const progression = normalDecisionProgressionForLayout(layout);
   if (progression === undefined) return;
+  if (!('bounds' in progression)) return;
   const selectedSpine = Object.freeze({
     startOccurrenceId,
     decisions: Object.freeze([...decisions]),
@@ -593,9 +593,6 @@ function validateNormalDecisionProgressionBounds(
           'terminal Hub takeover envelope must use the exact no-choice batch state',
         );
       }
-      continue;
-    }
-    if (admitsTerminalTakeoverEnvelope(catalog, layout, selectedSpine, decision.source)) {
       continue;
     }
     failProjectDocument(`${path}.decisions`, `exceeds ${ordinaryBatchLimit} normal batches`);

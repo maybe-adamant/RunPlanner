@@ -828,7 +828,6 @@ export interface StagedCandidatePoolDescriptor {
 
 export type GeneratedProgressionPolicy =
   | { readonly kind: 'eligibilityDriven' }
-  | { readonly kind: 'fixedCount'; readonly continuationCount: number }
   | {
       readonly kind: 'staged';
       readonly stages: readonly StagedCandidatePoolDescriptor[];
@@ -860,19 +859,15 @@ export type NormalDoorBatchPolicy =
  * The declaration-owned policy for a normal exit decision. A Hub can carry a
  * bounded entry decision without becoming a second general progression family.
  */
-export interface NormalDecisionProgressionDescriptor {
-  readonly progressionPolicy: GeneratedProgressionPolicy;
+interface NormalDecisionProgressionCommon {
   readonly batchPolicy: NormalDoorBatchPolicy;
   readonly rewardStorePolicy: RewardStorePolicy;
   readonly rewardStoreOverrides: readonly SourceRewardStorePolicyOverride[];
-  readonly bounds: {
-    readonly maxBatches: number;
-    readonly maxTargets: number;
-  };
 }
 
-export interface GeneratedProgressionDescriptor extends NormalDecisionProgressionDescriptor {
+export interface GeneratedProgressionDescriptor extends NormalDecisionProgressionCommon {
   readonly kind: 'generated';
+  readonly progressionPolicy: GeneratedProgressionPolicy;
   readonly anomalyReplacement?: OceanusAnomalyReplacementDescriptor;
 }
 
@@ -889,10 +884,18 @@ export interface OceanusAnomalyReplacementDescriptor {
   readonly defaultReplacementRoomGameName: string;
 }
 
-export interface HubEntryNormalDecisionDescriptor extends NormalDecisionProgressionDescriptor {
+export interface HubEntryNormalDecisionDescriptor extends NormalDecisionProgressionCommon {
   /** Stable physical identity for the bounded normal exit from the Opening. */
   readonly exitKey: string;
+  readonly progressionPolicy: Extract<GeneratedProgressionPolicy, { readonly kind: 'staged' }>;
+  readonly bounds: {
+    readonly maxBatches: number;
+    readonly maxTargets: number;
+  };
 }
+
+export type NormalDecisionProgressionDescriptor =
+  GeneratedProgressionDescriptor | HubEntryNormalDecisionDescriptor;
 
 /**
  * The only terminal resolution admitted after a bounded Hub entry. It is

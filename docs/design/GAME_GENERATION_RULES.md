@@ -82,17 +82,18 @@ exit key); it never accepts an arbitrary string as a repair placeholder. A
 narrower replacement remains representable, while a corrupt key such as
 `banana` is rejected.
 
-Ordinary progression bounds count only ordinary batches and their ordinary
-targets. A takeover batch is the declaration-owned completion shape, not one
-more unit of generated progression, so it never consumes H, O, or Q capacity.
+Generated progression has no catalog-owned batch or target maximum. Candidate
+declarations, entered history, and force pressure decide when it continues or
+closes. Q additionally constrains ordinary candidates through its ordered stage
+pools; exhausting that sequence provides no seventh ordinary domain, but does
+not become a second Preboss authority. N's one-step Hub entry remains the only
+structurally bounded normal progression.
 
 An empty occurrence-sourced batch is an uncommitted decision envelope, not an
-ordinary progression unit. It can be created at the next ordinary slot, and a
-single extra envelope is admitted at the bound only when the exact selected
-source has a declaration-admitted terminal takeover shape. The engine rejects
-that exception for layouts such as I whose Preboss remains an ordinary peer.
-The first ordinary target realizes the ordinary unit and checks its bounds;
-selecting takeover replaces the envelope and leaves ordinary counts unchanged.
+ordinary progression unit. At that frontier the same generation authority can
+offer ordinary declarations or a `takeOverNormalDoors` Preboss according to
+their evaluated requirements and force. Selecting takeover atomically replaces
+the envelope.
 
 ## Preboss batches
 
@@ -132,10 +133,9 @@ an unsupported whole takeover shape is impossible rather than required.
 Takeover support is reduced by the engine only after it has checked every
 declaration-owned normal exit and the aggregate cap. Its published source-level
 classification is `impossible`, `possible`, or `required`; per-exit pressure
-is diagnostic evidence, not a UI rule. F/G/H/P can become required through
-this policy. O/Q's declaration-fixed width-one terminal takeovers are required
-by their fixed identity. I remains outside this family because its Preboss is
-an ordinary target.
+is diagnostic evidence, not a UI rule. F/G/H/O/P/Q can become required through
+this policy; O and Q differ only in their physical width-one takeover shape.
+I remains outside this family because its Preboss is an ordinary target.
 
 Takeover concerns normal exits only. A future additional special exit belongs
 to the enclosing decision but is not replaced, counted, or selected by the

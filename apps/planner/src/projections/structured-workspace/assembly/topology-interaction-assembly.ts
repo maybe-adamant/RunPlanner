@@ -1,7 +1,7 @@
 import {
   createExitDecisionAddress,
   createHubDecisionAddress,
-  fixedWidthOneTakeoverTransitionForSource,
+  completedHubHandoffForSource,
   semanticAddressKey,
   type ExitDecision,
   type ExitDecisionSourceAddress,
@@ -200,12 +200,7 @@ function takeoverInteractionRequirements(
   }
   const owner = completeness.frontier;
   const existing = authoredDecisions.get(semanticAddressKey(owner));
-  const fixedTransition = fixedWidthOneTakeoverTransitionForSource(
-    catalog,
-    layout,
-    topology,
-    owner.source,
-  );
+  const fixedTransition = completedHubHandoffForSource(catalog, layout, topology, owner.source);
   const requiredExitKeys =
     fixedTransition === undefined
       ? undefined

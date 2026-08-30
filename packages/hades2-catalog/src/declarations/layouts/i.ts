@@ -14,7 +14,6 @@ export const iBiomeLayout = {
     },
     rewardStorePolicy: { kind: 'none' },
     rewardStoreOverrides: [],
-    bounds: { maxBatches: 13, maxTargets: 23 },
   },
   chaos: {
     roomGameNames: ['Chaos_01', 'Chaos_02', 'Chaos_03', 'Chaos_04', 'Chaos_05', 'Chaos_06'],

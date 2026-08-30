@@ -428,9 +428,10 @@ F/G/H/P takeover Preboss batches use the same normal-exit language. They
 create one Preboss occurrence per eligible physical exit, with the
 declaration-owned Shop or Free Reward role aligned to that exit. Selecting the
 entered Preboss target is ordinary exit-selection topology; the editor does not
-add a second entry-mode selector. O/Q use a declaration-fixed width-one Preboss
-batch, while N exposes its fixed width-one Preboss Shop only through the
-completed-Hub handoff in `HubDecisionWorkbench`.
+add a second entry-mode selector. O/Q use the same evaluated takeover flow with
+a declaration-owned width-one physical shape, while N exposes its fixed
+width-one Preboss Shop only through the completed-Hub handoff in
+`HubDecisionWorkbench`.
 
 I keeps its post-goal preboss and ordinary peer in one decision card because
 they are one game batch. `Add Next Decision` is I's only frontier-advance

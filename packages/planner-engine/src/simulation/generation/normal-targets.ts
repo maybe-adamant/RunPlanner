@@ -11,11 +11,7 @@ import {
 } from '../../requirements/evaluator';
 import type { RequirementExpression } from '../../requirements/model';
 import { semanticAddressKey } from '../../authored-project/addresses';
-import {
-  fixedWidthOneTakeoverForLayout,
-  normalDecisionProgressionForLayout,
-  ordinaryProgressionBatchLimit,
-} from '../../authored-project/topology/query';
+import { normalDecisionProgressionForLayout } from '../../authored-project/topology/query';
 import type { RewardHistoryState } from '../../reward-kernel';
 import type {
   BiomeHistoryPrefix,
@@ -100,7 +96,6 @@ interface FirstTargetGenerationSupport {
 interface FirstTargetCandidateDomain {
   readonly ordinary: readonly RoomDeclaration[];
   readonly takeover: readonly RoomDeclaration[];
-  readonly fixedTakeover: RoomDeclaration | undefined;
 }
 
 interface RoomGenerationCounts {
@@ -667,26 +662,12 @@ function firstTargetCandidateDomain(
   layout: BiomeLayout,
   ordinaryBatchIndex: number,
 ): FirstTargetCandidateDomain {
-  const fixedForLayout = fixedWidthOneTakeoverForLayout(catalog, layout);
-  const fixedTakeover =
-    ordinaryBatchIndex === ordinaryProgressionBatchLimit(layout) ? fixedForLayout : undefined;
-  if (fixedTakeover !== undefined) {
-    return Object.freeze({
-      ordinary: Object.freeze([]),
-      takeover: Object.freeze([fixedTakeover]),
-      fixedTakeover,
-    });
-  }
   return Object.freeze({
     ordinary: stagedCandidatePool(catalog, layout, ordinaryBatchIndex),
-    // O/Q's declaration-owned width-one room is a terminal transition, never
-    // an ordinary early-batch option. The topology query owns its identity
-    // and shape, including malformed declaration rejection.
     takeover:
-      layout.progression.kind === 'generated' && fixedForLayout === undefined
+      layout.progression.kind === 'generated'
         ? takeoverCandidatePool(catalog, layout.biomeKey)
         : Object.freeze([]),
-    fixedTakeover: undefined,
   });
 }
 

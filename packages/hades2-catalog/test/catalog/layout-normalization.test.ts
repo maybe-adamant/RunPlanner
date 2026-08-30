@@ -19,7 +19,6 @@ describe('biome layout declaration normalization', () => {
         kind: 'generated',
         progressionPolicy: { kind: 'eligibilityDriven' },
         batchPolicy: { kind: 'standard' },
-        bounds: { maxBatches: 10, maxTargets: 20 },
       },
       completion: {
         bossRoomGameName: 'F_Boss01',
@@ -29,6 +28,7 @@ describe('biome layout declaration normalization', () => {
         ],
       },
     });
+    expect(catalog.biomeLayouts.byKey.F?.progression).not.toHaveProperty('bounds');
     expect(catalog.biomeLayouts.byKey.N).toMatchObject({
       progression: {
         kind: 'hub',
@@ -39,6 +39,19 @@ describe('biome layout declaration normalization', () => {
         },
       },
     });
+  });
+
+  it('rejects structural bounds on eligibility-driven progression', () => {
+    const bounded = input();
+    const f = bounded.biomeLayouts.find((layout) => layout.biomeKey === 'F');
+    if (f === undefined || f.progression.kind !== 'generated') {
+      throw new Error('missing F generated fixture');
+    }
+    (f.progression as unknown as { bounds: unknown }).bounds = {
+      maxBatches: 10,
+      maxTargets: 20,
+    };
+    expect(() => createCatalog(bounded)).toThrow(CatalogContractError);
   });
 
   it('rejects Hub entry, terminal, and fixed-start declarations outside the local contract', () => {

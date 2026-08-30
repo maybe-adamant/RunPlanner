@@ -492,10 +492,6 @@ export interface RawGeneratedProgressionDeclaration {
   readonly batchPolicy: NormalDoorBatchPolicy;
   readonly rewardStorePolicy: RewardStorePolicy;
   readonly rewardStoreOverrides?: readonly SourceRewardStorePolicyOverride[];
-  readonly bounds: {
-    readonly maxBatches: number;
-    readonly maxTargets: number;
-  };
 }
 
 export interface RawCompletedHubExitDeclaration extends Omit<

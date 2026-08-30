@@ -18,7 +18,6 @@ export const fBiomeLayout = {
       targetMetaRewardsAdjustSpeed: 10,
     },
     rewardStoreOverrides: [],
-    bounds: { maxBatches: 10, maxTargets: 20 },
   },
   chaos: {
     roomGameNames: ['Chaos_01', 'Chaos_02', 'Chaos_03', 'Chaos_04', 'Chaos_05', 'Chaos_06'],
