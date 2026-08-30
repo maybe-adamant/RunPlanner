@@ -391,6 +391,17 @@ The critical rule is:
 > at its generation operation. Later acquisitions never retroactively change
 > that batch's room identities, rewards, offer projections, or legality.
 
+This freeze also governs progressive retention. If the first blocking region
+occurs in a picked target's acquisition or later room lifecycle, the
+already-generated batch remains one complete source-owned product, including
+unpicked peers and their incoming offers. The blocked child remains a repair
+contact, but its unresolved effect does not enter history and cannot make a
+later target or decision assessable. If the block occurs during physical batch
+generation, retention stops at the reached physical prefix and keeps only the
+bounded repair contact at the blocking target; later targets have not yet been
+generated. These are two views of the same lifecycle boundary, not a second
+history or a rule-specific exception.
+
 Preparing the next entered room also starts its empty current-room use record.
 Current-run and biome-use records persist. This reset occurs at preparation,
 before an entered WorldShop materializes its inventory, because that room is

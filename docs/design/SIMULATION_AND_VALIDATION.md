@@ -95,6 +95,39 @@ product at a time into route order and one exact project assembly. These
 boundaries do not create alternate simulation entries, candidate-only
 evaluation, or a second history interpretation.
 
+### Generated-batch assessment and progressive retention
+
+Every ordinary outgoing decision whose source reaches outgoing generation
+publishes one decision-owned generation assessment. The assessment contains the source decision's Fields
+support, when that room exposes it, and the ordered target assessments created
+from that decision. Each target assessment owns the target's generation
+pressure and any target-local generation evidence, such as Anomaly support.
+Physical target order is the declaration-owned order in which the batch was
+generated; persisted decision order and rendered position are not substitutes.
+The assessment is immutable derived output. It is not authored state and does
+not become a second generation ledger for consumers to reconstruct.
+
+Progressive evaluation retains this product according to the point at which
+the first blocking region occurs. A block before outgoing generation publishes
+no batch assessment. A block while the batch is being generated retains the
+decision, every completed physical target assessment, and the bounded repair
+assessment for the target at the blocking contact when one exists; it does not
+claim that target as generated without its completion marker and does not
+assess later physical targets. A block in an acquisition child or later room
+lifecycle after outgoing generation retains the complete containing batch,
+including all generated peers, while keeping the child and later lifecycle
+effects outside executed history. Earlier batch assessments remain available;
+later batches and later capabilities remain unassessed.
+
+This rule follows canonical chronology and the physical generation markers,
+not reward kind, provider, biome, finding code, or editor control. An
+unresolved trait offer, targeted trait child, Pom level resolution, or another
+supported acquisition child therefore cannot erase the already-frozen source
+batch, equip its unresolved effect, or make an unpicked peer room enter. The
+same retained product serves selected validation, candidate support, and
+application projections; no consumer restores omitted generation facts from
+authored values or a presentation fallback.
+
 ## Catalog Boundary
 
 The normalized catalog contains immutable possible facts:

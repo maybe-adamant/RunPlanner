@@ -216,7 +216,7 @@ describe('structured workspace interaction binding', () => {
     expect(allocations).toBe(1);
   });
 
-  it('binds the provisional terminal Door 1 takeover choice to one create command', () => {
+  it('keeps ordinary room candidates visible while binding the forced terminal takeover', () => {
     const owner = createExitDecisionAddress(goldenFBiome, {
       kind: 'occurrence',
       occurrenceId: goldenFOccurrenceId(10, 1),
@@ -245,10 +245,10 @@ describe('structured workspace interaction binding', () => {
     const preboss = items.find((item) => item.value.gameName === 'F_PreBoss01');
     if (preboss === undefined) throw new Error('F terminal Preboss choice is missing');
     expect(preboss).toMatchObject({ disabled: false, state: 'forced' });
-    expect(items.map((item) => item.value.gameName)).toEqual(['F_PreBoss01']);
-    expect(() => interaction.intentFor('F_Combat01')).toThrow(
-      /outside the decision-entry room domain/,
-    );
+    const ordinary = items.find((item) => item.value.gameName === 'F_Combat01');
+    if (ordinary === undefined) throw new Error('F terminal ordinary choice is missing');
+    expect(ordinary).toMatchObject({ disabled: true, state: 'impossible' });
+    expect(items.length).toBeGreaterThan(1);
     expect(allocated).toEqual([]);
 
     const intent = interaction.intentFor('F_PreBoss01');

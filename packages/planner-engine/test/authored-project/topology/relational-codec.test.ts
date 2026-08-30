@@ -32,22 +32,16 @@ import {
 } from '../support/topology-codec-fixtures';
 
 describe('topology relational closure codec', () => {
-  it('rejects a raw over-bound I envelope although it has no realized target', () => {
+  it('accepts and round-trips an empty I envelope beyond the former structural bound', () => {
     const { document, terminalSourceId } = iAtOrdinaryBatchLimit();
     const terminalDecision = createExitDecisionAddress(iBiome, {
       kind: 'occurrence',
       occurrenceId: terminalSourceId,
     });
-    expect(() =>
-      applyProjectCommand(document, catalog, {
-        kind: 'CreateBatch',
-        decision: terminalDecision,
-      }),
-    ).toThrowError(
-      expect.objectContaining({
-        detail: 'normal progression has reached its declaration-owned batch bound',
-      }),
-    );
+    const expected = applyProjectCommand(document, catalog, {
+      kind: 'CreateBatch',
+      decision: terminalDecision,
+    });
 
     const encoded = encodedTopology(document, 'Underworld', 'I');
     const template = encoded.topology.decisions.at(-1);
@@ -65,10 +59,8 @@ describe('topology relational closure codec', () => {
       selection: { kind: 'unresolved' },
     });
 
-    expectDocumentError(encoded.document, {
-      path: `${encoded.path}.decisions`,
-      detail: 'exceeds 13 normal batches',
-    });
+    expect(decodeProjectDocument(encoded.document, catalog)).toEqual(expected);
+    expect(decodeProjectDocument(encodedProject(expected), catalog)).toEqual(expected);
   });
 
   it('records and removes an H terminal envelope as one ordinary semantic edit', () => {
