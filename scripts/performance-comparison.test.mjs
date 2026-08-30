@@ -263,7 +263,10 @@ describe('performance comparison command', () => {
     assert.deepEqual(readdirSync(caller), before);
     assert.ok(calls.some(({ args }) => args[0] === 'worktree' && args[1] === 'remove'));
     assert.deepEqual(
-      calls.find(({ command, args }) => command === 'npm' && args[0] === 'install')?.args,
+      calls.find(
+        ({ command, args }) =>
+          command === (process.platform === 'win32' ? 'npm.cmd' : 'npm') && args[0] === 'install',
+      )?.args,
       ['install', '--ignore-scripts', '--prefer-offline'],
     );
     assert.equal(existsSync(temporaryRoot), false);
