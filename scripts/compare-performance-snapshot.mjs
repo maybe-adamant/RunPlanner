@@ -1,6 +1,7 @@
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { spawn } from 'node:child_process';
 import process from 'node:process';
 import performanceSnapshotContract from '../apps/planner/test/support/performance-snapshot-contract.json' with { type: 'json' };
@@ -463,7 +464,7 @@ async function main() {
   if (comparison.regressions.length > 0) process.exitCode = 1;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   try {
     await main();
   } catch (error) {
