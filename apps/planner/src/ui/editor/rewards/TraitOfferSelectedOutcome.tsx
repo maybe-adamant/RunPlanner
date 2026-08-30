@@ -121,6 +121,8 @@ export function TraitOfferSelectedOutcome({
   ]);
 
   const targetDomain = optionDomain.result;
+  const selectedTraitLabel = interaction.traitLabel(option.traitKey);
+  const isHexOutcome = loadable.hexTree !== undefined;
   const hasOutcome =
     loadable.hasTargetPicker ||
     loadable.circeResolution !== undefined ||
@@ -135,8 +137,8 @@ export function TraitOfferSelectedOutcome({
   if (!hasOutcome) return null;
   return (
     <section aria-label="Selected trait outcome" className="trait-selected-outcome">
-      <h3>Selected trait outcome</h3>
-      <p className="trait-selected-outcome-name">{interaction.traitLabel(option.traitKey)}</p>
+      <h3>{isHexOutcome ? `Customize Hex · ${selectedTraitLabel}` : 'Selected trait outcome'}</h3>
+      {isHexOutcome ? null : <p className="trait-selected-outcome-name">{selectedTraitLabel}</p>}
       {loadable.hexTree === undefined || hexTreeDomain.result === undefined ? null : (
         <HexTreeEditor
           domain={hexTreeDomain.result}

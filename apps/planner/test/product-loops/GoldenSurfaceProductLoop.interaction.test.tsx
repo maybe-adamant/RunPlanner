@@ -163,7 +163,6 @@ describe('surface product loop', () => {
     application.store.dispatch(authoredProjectReplaced(authored));
     const view = renderPlannerForInteraction({ application });
 
-    await view.user.click(screen.getByRole('button', { name: 'Surface' }));
     await view.user.click(screen.getByRole('button', { name: 'Ephyra' }));
     await view.user.click(hubRailButton());
 
@@ -203,7 +202,7 @@ describe('surface product loop', () => {
     recovery.flush();
     expect(recovery.readStoredJson()).toBe(encodeProjectDocument(authored));
 
-    await view.user.click(screen.getByRole('button', { name: 'Save Profile' }));
+    await view.user.click(screen.getByRole('button', { name: 'Save' }));
     await screen.findByText('Saved the profile.');
     expect(persistence.readStoredJson()).toBe(encodeProjectDocument(authored));
     expect(selectProfileStatus(application.store.getState())).toBe('Clean');
@@ -216,7 +215,7 @@ describe('surface product loop', () => {
       }),
     );
     expect(currentEvaluation(application).status).toBe('empty');
-    await view.user.click(screen.getByRole('button', { name: 'Load Profile' }));
+    await view.user.click(screen.getByRole('button', { name: 'Load' }));
     await screen.findByText('Loaded the profile.');
     expect(currentProject(application)).toEqual(authored);
 
@@ -280,7 +279,6 @@ describe('surface product loop', () => {
     });
 
     const view = renderPlannerForInteraction({ application });
-    await view.user.click(screen.getByRole('button', { name: 'Surface' }));
     await view.user.click(screen.getByRole('button', { name: 'Traits' }));
     await waitFor(() =>
       expect(
@@ -307,7 +305,6 @@ describe('surface product loop', () => {
     recovery.flush();
     const view = renderPlannerForInteraction({ application });
 
-    await view.user.click(screen.getByRole('button', { name: 'Surface' }));
     await view.user.click(screen.getByRole('button', { name: 'Ephyra' }));
     await view.user.click(hubRailButton());
     await view.user.click(screen.getByRole('tab', { name: 'Hub Timeline' }));
@@ -369,7 +366,6 @@ describe('surface product loop', () => {
     const dispatch = vi.spyOn(application.store, 'dispatch');
     const view = renderPlannerForInteraction({ application });
 
-    await view.user.click(screen.getByRole('button', { name: 'Surface' }));
     await view.user.click(screen.getByRole('button', { name: 'Ephyra' }));
     await view.user.click(hubRailButton());
 
@@ -457,8 +453,6 @@ describe('surface product loop', () => {
     );
     application.store.dispatch(authoredProjectReplaced(invalidProject));
     const view = renderPlannerForInteraction({ application });
-    await view.user.click(screen.getByRole('button', { name: 'Surface' }));
-
     const surfaceEvaluation = currentEvaluation(application).route;
     if (surfaceEvaluation === undefined) throw new Error('Surface evaluation is missing');
     const findingIndex = surfaceEvaluation.findings.findIndex(
@@ -560,7 +554,6 @@ describe('surface product loop', () => {
     });
 
     const view = renderPlannerForInteraction({ application });
-    await view.user.click(screen.getByRole('button', { name: 'Surface' }));
     await view.user.click(screen.getByRole('button', { name: 'Traits' }));
     const replacedTraitLabel = application.catalog.traits.byKey[transition.replacedTraitKey]?.label;
     if (replacedTraitLabel === undefined) throw new Error('replacement trait label is missing');
@@ -613,7 +606,6 @@ describe('surface product loop', () => {
     if (invalid === undefined) throw new Error('reached Hammer finding is missing');
 
     const view = renderPlannerForInteraction({ application });
-    await view.user.click(screen.getByRole('button', { name: 'Surface' }));
     const findings = screen.getByRole('heading', { name: 'Findings' }).closest('section');
     if (findings === null) throw new Error('Findings panel is missing');
     const findingButton = within(findings)
@@ -680,7 +672,6 @@ describe('surface product loop', () => {
     recovery.flush();
     const view = renderPlannerForInteraction({ application });
 
-    await view.user.click(screen.getByRole('button', { name: 'Surface' }));
     await view.user.click(screen.getByRole('button', { name: 'Thessaly' }));
     const structure = screen.getByRole('region', { name: 'Thessaly route structure' });
     const decisionOwner = createExitDecisionAddress(oBiome, {

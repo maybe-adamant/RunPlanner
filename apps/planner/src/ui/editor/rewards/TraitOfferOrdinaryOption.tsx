@@ -10,7 +10,7 @@ import type { TraitOptionDomainProjection } from '@planner/projections/traitDoma
 import type { WorkspaceTraitOfferInteraction } from '@planner/projections/structured-workspace';
 import { ContextualPicker } from '@planner/ui/controls/ContextualPicker';
 import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorkspaceInteraction';
-import { spellOfferSlotSummary } from './spellOfferPresentation';
+import { spellOfferSlotPresentation } from './spellOfferPresentation';
 import { replaceTraitOfferOption } from './traitOfferOptions';
 
 const emptyTraitPicker: ContextualPickerModel<string> = Object.freeze({
@@ -66,6 +66,7 @@ export function TraitOfferOrdinaryOption({
     interaction.giver.rarityPolicy.kind === 'selectable' &&
     interaction.rarityEditableFor(option.traitKey);
   const idPrefix = `${semanticAddressKey(interaction.owner)}-${optionKey}`;
+  const spellSlot = spellOffer ? spellOfferSlotPresentation(interaction.giver, index) : undefined;
   const withSelectedHexDefault = (
     nextValue: AuthoredTraitOfferTraits,
   ): AuthoredTraitOfferTraits => {
@@ -108,12 +109,16 @@ export function TraitOfferOrdinaryOption({
   return (
     <fieldset className="trait-offer-option trait-offer-ordinary-option" key={optionKey}>
       <legend>
-        {spellOffer
-          ? `${optionKey.replace('option', 'Spell ')} · ${spellOfferSlotSummary(
-              interaction.giver,
-              index,
-            )}`
-          : optionKey.replace('option', 'Option ')}
+        {spellSlot === undefined ? (
+          optionKey.replace('option', 'Option ')
+        ) : (
+          <span className="spell-offer-slot-heading">
+            <span>
+              {optionKey.replace('option', 'Spell ')} · {spellSlot.moonglow}
+            </span>
+            <span className="spell-offer-path-points">+{spellSlot.bonus} Path of Stars</span>
+          </span>
+        )}
       </legend>
       <ContextualPicker
         ariaLabel={`${spellOffer ? optionKey.replace('option', 'Spell ') : optionKey} trait`}

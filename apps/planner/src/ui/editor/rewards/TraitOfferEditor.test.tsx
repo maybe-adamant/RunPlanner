@@ -108,9 +108,25 @@ describe('trait offer editor entry and dialog', () => {
       </Provider>,
     );
     expect(events).toEqual([]);
-    expect(screen.getByText('Spell 1 · Crescent Moonglow · +0 Path of Stars')).toBeTruthy();
-    expect(screen.getByText('Spell 2 · Half Moonglow · +1 Path of Stars')).toBeTruthy();
-    expect(screen.getByText('Spell 3 · Full Moonglow · +2 Path of Stars')).toBeTruthy();
+    expect(screen.getByText('Spell 1 · Crescent Moonglow')).toBeTruthy();
+    expect(screen.getByText('+0 Path of Stars')).toBeTruthy();
+    expect(screen.getByText('Spell 2 · Half Moonglow')).toBeTruthy();
+    expect(screen.getByText('+1 Path of Stars')).toBeTruthy();
+    expect(screen.getByText('Spell 3 · Full Moonglow')).toBeTruthy();
+    expect(screen.getByText('+2 Path of Stars')).toBeTruthy();
+    expect(
+      screen.getByRole('heading', {
+        name: `Customize Hex · ${initialInteraction.traitLabel(initialSelected.traitKey)}`,
+      }),
+    ).toBeTruthy();
+    expect(screen.queryByText('Selected trait outcome')).toBeNull();
+    expect(
+      screen.queryByText(
+        'Choose the Rare and Epic identities present in this layout. The linked God Sent talent is derived by chronology.',
+      ),
+    ).toBeNull();
+    const godSent = screen.getByText('God Sent:', { selector: 'strong' }).closest('.hex-god-sent');
+    expect(godSent?.textContent).not.toContain(' + ');
     expect(screen.queryByRole('button', { name: 'Rarify' })).toBeNull();
     expect(screen.queryByText(/^Rarity:/)).toBeNull();
     expect(screen.queryByRole('status', { name: 'Offer feedback' })).toBeNull();
@@ -125,8 +141,20 @@ describe('trait offer editor entry and dialog', () => {
     await user.click(option2);
     await user.click(screen.getByRole('button', { name: 'Hex talent layout' }));
     await user.click(screen.getByRole('option', { name: 'Maze' }));
-    await user.click(screen.getByRole('button', { name: 'Rare Hex node 1' }));
+    await user.click(screen.getByRole('button', { name: 'Rare Hex nodes' }));
+    expect(screen.getByText('Rare node 1 of 3')).toBeTruthy();
     await user.click(screen.getByRole('option', { name: 'Splendor' }));
+    expect(screen.getByText('Rare node 2 of 3')).toBeTruthy();
+    await user.click(screen.getByRole('option', { name: 'Contingency' }));
+    expect(screen.getByText('Rare node 3 of 3')).toBeTruthy();
+    await user.click(screen.getByRole('option', { name: 'Savagery' }));
+    expect(screen.queryByText('Rare node 3 of 3')).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Epic Hex nodes' }));
+    expect(screen.getByText('Epic node 1 of 2')).toBeTruthy();
+    await user.click(screen.getByRole('option', { name: 'Resonance' }));
+    expect(screen.getByText('Epic node 2 of 2')).toBeTruthy();
+    await user.click(screen.getByRole('option', { name: 'Horror' }));
+    expect(screen.queryByText('Epic node 2 of 2')).toBeNull();
     await user.click(screen.getByRole('button', { name: 'Save trait offer' }));
     expect(application.store.getState().projectWorkspace.history!.past).toHaveLength(
       historyDepth + 1,
@@ -244,8 +272,10 @@ describe('trait offer editor entry and dialog', () => {
     );
 
     expect(await screen.findByRole('button', { name: 'Hex talent layout' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Rare Hex node 1' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Epic Hex node 1' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Rare Hex nodes' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Epic Hex nodes' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Rare Hex node 1' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Epic Hex node 1' })).toBeNull();
     application.dispose();
   });
 
