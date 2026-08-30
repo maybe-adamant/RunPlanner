@@ -373,6 +373,8 @@ export function bindOccurrenceLocalInteractions(
                 key,
                 owner: event.owner,
                 reward: event.reward,
+                rewardLabelFor: (rewardType: string) =>
+                  catalog.rewards.rewardTypes.byKey[rewardType]?.label ?? 'Unknown reward',
                 value: event.value,
                 load: () =>
                   projectNemesisEventDomain(

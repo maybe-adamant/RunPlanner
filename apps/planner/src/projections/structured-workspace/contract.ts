@@ -278,6 +278,8 @@ export interface WorkspaceNemesisEventInteraction {
   readonly owner: NemesisRandomEventAddress;
   readonly load: () => WorkspaceNemesisEventDomain | undefined;
   readonly reward: ResolvedRewardOffer | null;
+  /** Player-facing catalog label for a persisted or candidate result identity. */
+  readonly rewardLabelFor: (rewardType: string) => string;
   readonly value: AuthoredNemesisRandomEventOutcome | null;
 }
 

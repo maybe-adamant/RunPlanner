@@ -42,6 +42,12 @@ export function NemesisEventEditor({
   );
   const selectedRewardType =
     rewardType !== null && rewardTypes.includes(rewardType) ? rewardType : (rewardTypes[0] ?? null);
+  const selectedRewardLabel =
+    selectedRewardType === null ? null : interaction.rewardLabelFor(selectedRewardType);
+  const missingRequirement = nemesisEventMissingRequirement(draft, selectedRewardType);
+  const hasUnsavedChanges =
+    !sameNemesisOutcome(draft, interaction.value) ||
+    selectedRewardType !== (interaction.reward?.rewardType ?? null);
 
   const setKind = (next: AuthoredNemesisRandomEventOutcome['kind']): void => {
     setRewardType(null);
@@ -58,100 +64,104 @@ export function NemesisEventEditor({
         <h4>Nemesis event</h4>
         <SemanticOwnerMarker address={interaction.owner} />
       </div>
-      <label className="field-control">
-        <span>Family</span>
-        <select
-          aria-label="Nemesis family"
-          onFocus={candidate.activate}
-          onPointerDown={candidate.activate}
-          onChange={(event) =>
-            setKind(event.target.value as AuthoredNemesisRandomEventOutcome['kind'])
-          }
-          value={kind ?? ''}
-        >
-          {draft === null ? <option value="">Choose family</option> : null}
-          {withRetained(domain?.familyKeys ?? [], draft?.kind).map((value) => (
-            <option key={value} value={value}>
-              {value.replace(/([A-Z])/g, ' $1')}
-            </option>
-          ))}
-        </select>
-      </label>
-      {draft !== null && 'response' in draft ? (
+      <div className="nemesis-event-fields">
         <label className="field-control">
-          <span>Response</span>
+          <span>Family</span>
           <select
-            aria-label="Nemesis response"
+            aria-label="Nemesis family"
+            onFocus={candidate.activate}
+            onPointerDown={candidate.activate}
             onChange={(event) =>
-              setDraft({ ...draft, response: event.target.value as 'accept' | 'decline' })
+              setKind(event.target.value as AuthoredNemesisRandomEventOutcome['kind'])
             }
-            value={draft.response}
+            value={kind ?? ''}
           >
-            {withRetained(responseDomain(domain, draft.kind), draft.response).map((value) => (
+            {draft === null ? <option value="">Choose family</option> : null}
+            {withRetained(domain?.familyKeys ?? [], draft?.kind).map((value) => (
               <option key={value} value={value}>
-                {value}
+                {nemesisFamilyLabel(value)}
               </option>
             ))}
           </select>
         </label>
-      ) : null}
-      {draft?.kind === 'damageContest' ? (
-        <label className="field-control">
-          <span>Result</span>
-          <select
-            aria-label="Nemesis contest result"
-            onChange={(event) =>
-              setDraft({
-                kind: 'damageContest',
-                result: event.target.value as 'success' | 'failure',
-              })
-            }
-            value={draft.result}
-          >
-            {withRetained(domain?.damageContestResults ?? [], draft.result).map((value) => (
-              <option key={value} value={value}>
-                {value}
-              </option>
-            ))}
-          </select>
-        </label>
-      ) : null}
-      {draft?.kind === 'traitTrade' ? (
-        <ContextualPicker
-          ariaLabel="Nemesis trait"
-          id="nemesis-trait"
-          label="Trait"
-          loading={candidate.pending}
-          model={traitPicker}
-          onOpenChange={(open) => {
-            if (open) candidate.activate();
-          }}
-          onSelect={(traitKey) => setDraft({ ...draft, traitKey })}
-          placeholder="Choose a trait"
-          {...(traitTriggerLabel === undefined ? {} : { triggerLabel: traitTriggerLabel })}
-        />
-      ) : null}
-      {draft === null ? null : (
-        <label className="field-control">
-          <span>Reward</span>
-          <select
-            aria-label="Nemesis reward"
-            onChange={(event) => setRewardType(event.target.value)}
-            value={selectedRewardType ?? ''}
-          >
-            {rewardTypes.map((value) => (
-              <option key={value} value={value}>
-                {value}
-              </option>
-            ))}
-          </select>
-        </label>
-      )}
-      <p className="fixed-room-state">{nemesisOutcomeSummary(draft, selectedRewardType)}</p>
+        {draft !== null && 'response' in draft ? (
+          <label className="field-control">
+            <span>Response</span>
+            <select
+              aria-label="Nemesis response"
+              onChange={(event) =>
+                setDraft({ ...draft, response: event.target.value as 'accept' | 'decline' })
+              }
+              value={draft.response}
+            >
+              {withRetained(responseDomain(domain, draft.kind), draft.response).map((value) => (
+                <option key={value} value={value}>
+                  {sentenceCase(value)}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : null}
+        {draft?.kind === 'damageContest' ? (
+          <label className="field-control">
+            <span>Result</span>
+            <select
+              aria-label="Nemesis contest result"
+              onChange={(event) =>
+                setDraft({
+                  kind: 'damageContest',
+                  result: event.target.value as 'success' | 'failure',
+                })
+              }
+              value={draft.result}
+            >
+              {withRetained(domain?.damageContestResults ?? [], draft.result).map((value) => (
+                <option key={value} value={value}>
+                  {sentenceCase(value)}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : null}
+        {draft?.kind === 'traitTrade' ? (
+          <ContextualPicker
+            ariaLabel="Nemesis trait"
+            id="nemesis-trait"
+            label="Trait"
+            loading={candidate.pending}
+            model={traitPicker}
+            onOpenChange={(open) => {
+              if (open) candidate.activate();
+            }}
+            onSelect={(traitKey) => setDraft({ ...draft, traitKey })}
+            placeholder="Choose a trait"
+            {...(traitTriggerLabel === undefined ? {} : { triggerLabel: traitTriggerLabel })}
+          />
+        ) : null}
+        {draft === null ? null : (
+          <label className="field-control">
+            <span>Reward</span>
+            <select
+              aria-label="Nemesis reward"
+              onChange={(event) => setRewardType(event.target.value)}
+              value={selectedRewardType ?? ''}
+            >
+              {rewardTypes.map((value) => (
+                <option key={value} value={value}>
+                  {interaction.rewardLabelFor(value)}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+      </div>
+      <p className="fixed-room-state">
+        {missingRequirement ?? nemesisOutcomeSummary(draft, selectedRewardLabel)}
+      </p>
       <div className="hub-rank-actions">
         <button
           className="primary-action"
-          disabled={draft !== null && selectedRewardType === null}
+          disabled={missingRequirement !== null || !hasUnsavedChanges}
           onClick={() =>
             executeIntent(
               interaction.intentFor(
@@ -164,7 +174,7 @@ export function NemesisEventEditor({
           }
           type="button"
         >
-          Save event
+          {missingRequirement !== null || hasUnsavedChanges ? 'Save event' : 'Saved'}
         </button>
         <button
           className="quiet-action"
@@ -179,6 +189,59 @@ export function NemesisEventEditor({
       </div>
     </section>
   );
+}
+
+function nemesisFamilyLabel(kind: AuthoredNemesisRandomEventOutcome['kind']): string {
+  switch (kind) {
+    case 'freeItem':
+      return 'Free item';
+    case 'goldTrade':
+      return 'Gold trade';
+    case 'damageTrade':
+      return 'Damage trade';
+    case 'traitTrade':
+      return 'Trait trade';
+    case 'damageContest':
+      return 'Damage contest';
+  }
+}
+
+function sentenceCase(value: string): string {
+  return `${value.charAt(0).toUpperCase()}${value.slice(1)}`;
+}
+
+function nemesisEventMissingRequirement(
+  draft: AuthoredNemesisRandomEventOutcome | null,
+  rewardType: string | null,
+): string | null {
+  if (draft === null) return 'Choose an event family.';
+  if (draft.kind === 'traitTrade' && draft.traitKey === '') {
+    return 'Choose an eligible trait.';
+  }
+  return rewardType === null ? 'Choose a result.' : null;
+}
+
+function sameNemesisOutcome(
+  left: AuthoredNemesisRandomEventOutcome | null,
+  right: AuthoredNemesisRandomEventOutcome | null,
+): boolean {
+  if (left === right) return true;
+  if (left === null || right === null || left.kind !== right.kind) return false;
+  switch (left.kind) {
+    case 'freeItem':
+      return true;
+    case 'goldTrade':
+    case 'damageTrade':
+      return 'response' in right && left.response === right.response;
+    case 'traitTrade':
+      return (
+        right.kind === 'traitTrade' &&
+        left.response === right.response &&
+        left.traitKey === right.traitKey
+      );
+    case 'damageContest':
+      return right.kind === 'damageContest' && left.result === right.result;
+  }
 }
 
 function defaultNemesisOutcome(
@@ -249,11 +312,11 @@ function nemesisRewardTypes(
 
 function nemesisOutcomeSummary(
   draft: AuthoredNemesisRandomEventOutcome | null,
-  rewardType: string | null,
+  rewardLabel: string | null,
 ): string {
   if (draft === null) return 'Outcome unresolved.';
-  if (rewardType === null) return 'Choose a result identity.';
+  if (rewardLabel === null) return 'Choose a result identity.';
   return 'response' in draft && draft.response === 'decline'
-    ? `Declined; retained result: ${rewardType}.`
-    : `Generated result: ${rewardType}.`;
+    ? `Declined; retained result: ${rewardLabel}.`
+    : `Generated result: ${rewardLabel}.`;
 }

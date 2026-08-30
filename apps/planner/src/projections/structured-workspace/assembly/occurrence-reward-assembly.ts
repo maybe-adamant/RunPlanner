@@ -1111,11 +1111,12 @@ export function activeEncounterPhasesForOwner(
                 : domain.slotKey
             : domain.slotKey,
         marker: input.markerDestinations.marker(address),
-        timelineAnchor: fieldsPassive
-          ? selectedDefinition.key === 'NemesisRandomEvent'
+        timelineAnchor:
+          selectedDefinition.key === 'NemesisRandomEvent'
             ? 'action'
-            : 'roomEntered'
-          : 'encounterStart',
+            : fieldsPassive
+              ? 'roomEntered'
+              : 'encounterStart',
         ...(figLeafSupport !== undefined || authoredFigLeafSkip
           ? {
               figLeaf: Object.freeze({
