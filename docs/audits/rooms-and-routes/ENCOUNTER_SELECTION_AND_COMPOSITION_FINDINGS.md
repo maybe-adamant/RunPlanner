@@ -34,8 +34,9 @@ The scope is:
 - encounter selection, recording, counter, and multi-phase timing;
 - adjacent Nemesis random-event and Shop facts needed to distinguish them from
   combat replacement;
-- the lower-level enemy-generation pipeline as future encounter-composition
-  evidence.
+- the boundary where a selected encounter enters lower-level enemy generation;
+  the detailed formation pipeline is owned by the focused enemy-formation
+  audit.
 
 Story presentation, dialogue content, exact enemy waves, rewards unrelated to
 encounter eligibility, debug-only rooms, Anomaly rooms, and runtime forcing are
@@ -784,29 +785,18 @@ not substitutes for those source objects.
 
 ## Enemy-Composition Pipeline
 
-For a generated encounter, the game:
+The generated wave, enemy-type, count, spawn-substitution, unit-setup, and
+post-death pipeline is now owned by
+[Enemy Formation and Fear Vows](ENEMY_FORMATION_AND_FEAR_VOW_GAME_DATA_AUDIT.md).
+That audit also records how ordinary Combat and Devotion reuse the generator
+and where Vows of Hordes, Menace, Fangs, Return, and the unit-modifying Vows
+intervene.
 
-1. resolves difficulty from base values, biome/run/encounter depth, modifiers,
-   and multipliers;
-2. computes the active-enemy cap;
-3. chooses a wave count and wave templates;
-4. allocates difficulty across waves;
-5. chooses highlight or family encounter generation;
-6. filters an `EnemySet` through introduction, elite, blacklist, grouping,
-   trait, and enemy-specific requirements;
-7. chooses enemy types;
-8. allocates counts from enemy difficulty ratings and count caps.
-
-`SetupEncounter` can subsequently replace the generated result with an enemy
-introduction encounter when a generated enemy has an unseen eligible intro.
-
-Concrete waves therefore depend on more than encounter identity and biome
-depth. Inputs include run history, save/profile state, room/map facts, traits,
-enemy declarations, RNG, and encounter-specific overrides.
-
-The source exposes possible intervention points—legal-set narrowing, enemy-set
-replacement, and complete `SpawnWaves` data—but static inspection does not
-prove that any is a safe execution adapter.
+The encounter-selection conclusions in this document stop once
+`SetupEncounter` receives the selected declaration. Concrete waves still
+depend on run and profile history, room and map facts, enemy declarations,
+traits, encounter overrides, and RNG; encounter identity and biome depth alone
+do not determine them.
 
 ## Confirmed Unknowns and Runtime Probes
 
@@ -814,8 +804,8 @@ The following questions remain outside static-source certainty:
 
 1. Whether narrowing a legal set at runtime preserves every setup,
    introduction, recording, and completion behavior for all supported rooms.
-2. Whether an exact requested enemy type survives introduction replacement and
-   map compatibility repair.
+2. Whether an exact requested enemy type survives every introduction and map
+   compatibility path described in the enemy-formation audit.
 3. Whether complete authored waves can pass every active-cap, spawn-point,
    elite, timing, and encounter-completion path safely.
 4. Which apparent source conditions are additionally affected by native engine

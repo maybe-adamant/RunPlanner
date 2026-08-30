@@ -31,6 +31,7 @@ reader-facing taxonomy, not a package or runtime boundary.
 ### Rooms and routes
 
 - [Encounter selection and composition](rooms-and-routes/ENCOUNTER_SELECTION_AND_COMPOSITION_FINDINGS.md) — Encounter envelopes, selectable compositions, and their room-level constraints.
+- [Enemy formation and Fear Vows](rooms-and-routes/ENEMY_FORMATION_AND_FEAR_VOW_GAME_DATA_AUDIT.md) — Generated Combat and Devotion waves, enemy types and counts, and the intervention order for Hordes, Menace, Fangs, Return, and adjacent Vows.
 - [I/Q World Shop phases](rooms-and-routes/I_Q_WORLD_SHOP_PHASE_GAME_DATA_AUDIT.md) — World Shop phase and inventory timing across I and Q.
 - [Room action order](rooms-and-routes/ROOM_ACTION_ORDER_GAME_DATA_AUDIT.md) — Source-backed room lifecycle and action ordering contacts.
 - [Route detours](rooms-and-routes/ROUTE_DETOUR_FINDINGS.md) — Chaos, Oceanus Anomaly, Zagreus Contract, Spark, and other route-level detour, exit, and host-room findings.
