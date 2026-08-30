@@ -463,6 +463,25 @@ function allTogetherFindingFixture() {
 }
 
 describe('planner history interaction', () => {
+  it('keeps route identity, document history, and project information in the header', async () => {
+    const { user } = renderPlannerForInteraction();
+
+    expect(document.querySelector('.app-route-identity')?.textContent).toBe('Underworld');
+    expect(screen.queryByRole('navigation', { name: 'Planner sections' })).toBeNull();
+    expect(screen.getByRole('group', { name: 'Project history' })).toBeTruthy();
+
+    await user.click(screen.getByRole('button', { name: 'About' }));
+
+    const about = await screen.findByRole('dialog', { name: 'About Run Planner' });
+    expect(within(about).getByText('Schema')).toBeTruthy();
+    expect(within(about).getByText('Catalog')).toBeTruthy();
+    expect(within(about).queryByText('MIT')).toBeNull();
+    expect(within(about).getByRole('heading', { name: 'Keyboard shortcuts' })).toBeTruthy();
+    expect(within(about).getAllByText('Ctrl/Cmd', { selector: 'kbd' })).toHaveLength(2);
+    expect(within(about).queryByText('Rooms')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Route' })).toBeTruthy();
+  });
+
   it('binds visible history controls to semantic project history', async () => {
     const { application, user } = renderPlannerForInteraction();
     const undo = screen.getByRole('button', { name: 'Undo' });
@@ -566,9 +585,8 @@ describe('planner history interaction', () => {
     expect(application.store.getState().projectWorkspace.history?.present.route.routeKey).toBe(
       'Underworld',
     );
-    expect(screen.getByRole('button', { name: 'Underworld' }).getAttribute('aria-current')).toBe(
-      'page',
-    );
+    expect(document.querySelector('.app-route-identity')?.textContent).toBe('Underworld');
+    expect(screen.getByRole('button', { name: 'Route' }).getAttribute('aria-current')).toBe('page');
     await user.selectOptions(screen.getByLabelText('Configure route up to'), '4');
 
     const oceanus = screen.getByRole('button', { name: 'Oceanus' });
@@ -1079,7 +1097,6 @@ describe('planner history interaction', () => {
     const replacementSource = traitInteraction.giver.key === 'Ares' ? 'ZeusUpgrade' : 'AresUpgrade';
     const view = renderPlannerForInteraction({ application });
 
-    await view.user.click(screen.getByRole('button', { name: target.routeKey }));
     await view.user.click(screen.getByRole('button', { name: 'Traits' }));
     const launcher = document.getElementById(`trait-launcher-${semanticAddressKey(target)}`);
     if (launcher === null) throw new Error('trait editor launcher is missing');
@@ -1562,7 +1579,6 @@ describe('planner history interaction', () => {
     });
     application.store.dispatch(authoredProjectReplaced(project));
     const view = renderPlannerForInteraction({ application });
-    await view.user.click(screen.getByRole('button', { name: 'Surface' }));
     await view.user.click(screen.getByRole('button', { name: 'Traits' }));
 
     const interactions = application.selectStructuredWorkspace(
@@ -1640,7 +1656,6 @@ describe('planner history interaction', () => {
     project = authorLegalTraitOffers(project);
     application.store.dispatch(authoredProjectReplaced(project));
     const view = renderPlannerForInteraction({ application });
-    await view.user.click(screen.getByRole('button', { name: 'Underworld' }));
     await view.user.click(screen.getByRole('button', { name: 'Traits' }));
     const interactions = application.selectStructuredWorkspace(
       application.store.getState(),
@@ -2022,20 +2037,25 @@ describe('project profile interaction', () => {
     const application = createApplication({ profileFile });
     const { user } = renderPlannerForInteraction({ application });
 
-    expect(screen.getByRole('button', { name: 'New' }).classList.contains('danger-action')).toBe(
-      true,
-    );
+    expect(screen.queryByRole('button', { name: 'New' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Save' })).toBeNull();
     expect(
-      screen.getByRole('button', { name: 'Save Profile' }).classList.contains('secondary-action'),
-    ).toBe(true);
-    expect(
-      screen.getByRole('button', { name: 'Load Profile' }).classList.contains('danger-action'),
+      screen.getByRole('button', { name: 'Load' }).classList.contains('secondary-action'),
     ).toBe(true);
     expect(screen.queryByText('Unsaved')).toBeNull();
     await user.click(
       within(screen.getByRole('group', { name: 'Choose route' })).getByRole('button', {
         name: 'Underworld',
       }),
+    );
+    expect(screen.getByRole('button', { name: 'New' }).classList.contains('danger-action')).toBe(
+      true,
+    );
+    expect(
+      screen.getByRole('button', { name: 'Save' }).classList.contains('secondary-action'),
+    ).toBe(true);
+    expect(screen.getByRole('button', { name: 'Load' }).classList.contains('danger-action')).toBe(
+      true,
     );
     expect(screen.getByText('Unsaved')).toBeTruthy();
     await user.selectOptions(screen.getByLabelText('Configure route up to'), '1');
@@ -2055,7 +2075,7 @@ describe('project profile interaction', () => {
       }),
     );
     const savedEvaluation = application.store.getState().projectWorkspace.assembly!.evaluation;
-    await user.click(screen.getByRole('button', { name: 'Save Profile' }));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
     expect(await screen.findByText('Saved the profile.')).toBeTruthy();
     expect(screen.getByText('Clean')).toBeTruthy();
     expect(profileFileName).toBe('run-plan.runplanner.json');
@@ -2073,6 +2093,14 @@ describe('project profile interaction', () => {
     expect(screen.getByText('Dirty')).toBeTruthy();
     expect(profileJson).not.toBeNull();
 
+    const workspaceBeforeNew = application.store.getState().projectWorkspace;
+    await user.click(screen.getByRole('button', { name: 'New' }));
+    expect(screen.getByRole('heading', { name: 'Choose a new route' })).toBeTruthy();
+    expect(screen.queryByRole('navigation', { name: 'Planner sections' })).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(application.store.getState().projectWorkspace).toBe(workspaceBeforeNew);
+    expect(screen.getByText('Dirty')).toBeTruthy();
+
     await user.click(screen.getByRole('button', { name: 'New' }));
     await user.click(
       within(screen.getByRole('group', { name: 'Choose route' })).getByRole('button', {
@@ -2083,7 +2111,7 @@ describe('project profile interaction', () => {
     expect(screen.getByText('Created a new project.')).toBeTruthy();
     expect(screen.getByText('Unsaved')).toBeTruthy();
 
-    await user.click(screen.getByRole('button', { name: 'Load Profile' }));
+    await user.click(screen.getByRole('button', { name: 'Load' }));
     expect(await screen.findByText('Loaded the profile.')).toBeTruthy();
     expect(configuredBiomeCount(application)).toBe(1);
     expect(
@@ -2141,13 +2169,13 @@ describe('project profile interaction', () => {
       'Autosave recovery failed: $: must be valid JSON',
     );
     expect(screen.queryByText('Unsaved')).toBeNull();
-    const discard = screen.getByRole('button', { name: 'Discard Autosave' });
+    const discard = screen.getByRole('button', { name: 'Discard' });
     expect(discard.classList.contains('danger-action')).toBe(true);
     await user.click(discard);
 
     expect(recoveryJson).toBeNull();
     expect(screen.queryByText('Autosave recovery failed: $: must be valid JSON')).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Discard Autosave' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Discard' })).toBeNull();
     expect(screen.getByText('Discarded the unreadable autosave.')).toBeTruthy();
   });
 
@@ -2161,7 +2189,7 @@ describe('project profile interaction', () => {
     const workspace = application.store.getState().projectWorkspace;
     const { user } = renderPlannerForInteraction({ application });
 
-    await user.click(screen.getByRole('button', { name: 'Load Profile' }));
+    await user.click(screen.getByRole('button', { name: 'Load' }));
 
     expect((await screen.findByRole('alert')).textContent).toBe(
       'Load Profile failed: $: must be valid JSON',
@@ -2184,11 +2212,11 @@ describe('project profile interaction', () => {
     const { user } = renderPlannerForInteraction({ application, startWithProject: false });
 
     expect(screen.getByRole('group', { name: 'Choose route' })).toBeTruthy();
-    await user.click(screen.getByRole('button', { name: 'Load Profile' }));
+    await user.click(screen.getByRole('button', { name: 'Load' }));
 
     expect(await screen.findByText('Loaded the profile.')).toBeTruthy();
     expect(screen.queryByRole('group', { name: 'Choose route' })).toBeNull();
-    expect(screen.getByRole('button', { name: 'Surface' })).toBeTruthy();
+    expect(document.querySelector('.app-route-identity')?.textContent).toBe('Surface');
   });
 
   it('preserves the initial route chooser when loading is cancelled', async () => {
@@ -2200,7 +2228,7 @@ describe('project profile interaction', () => {
     });
     const { user } = renderPlannerForInteraction({ application, startWithProject: false });
 
-    await user.click(screen.getByRole('button', { name: 'Load Profile' }));
+    await user.click(screen.getByRole('button', { name: 'Load' }));
 
     expect(await screen.findByText('Load Profile cancelled.')).toBeTruthy();
     expect(screen.getByRole('group', { name: 'Choose route' })).toBeTruthy();

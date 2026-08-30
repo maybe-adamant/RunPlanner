@@ -11,6 +11,7 @@ import {
   useAppSelector,
 } from '@planner/state/store';
 import { projectHistoryShortcut } from './projectHistoryShortcuts';
+import { ActionIcon } from '../controls/ActionIcon';
 
 export function ProjectHistoryControls({ hasProject = true }: { readonly hasProject?: boolean }) {
   const canUndo = useAppSelector(selectCanUndoProject);
@@ -43,6 +44,7 @@ export function ProjectHistoryControls({ hasProject = true }: { readonly hasProj
         title="Undo project edit (Ctrl/Cmd+Z)"
         type="button"
       >
+        <ActionIcon name="undo" />
         Undo
       </button>
       <button
@@ -53,6 +55,7 @@ export function ProjectHistoryControls({ hasProject = true }: { readonly hasProj
         title="Redo project edit (Ctrl/Cmd+Shift+Z or Ctrl+Y)"
         type="button"
       >
+        <ActionIcon name="redo" />
         Redo
       </button>
     </div>

@@ -68,6 +68,8 @@ describe('App', () => {
     const markup = appMarkup(application);
 
     expect(markup).toContain('Run Planner');
+    expect(markup).toContain('Choose your route');
+    expect(markup).toContain('Erebus → Oceanus → Fields → Tartarus');
     expect(markup).toContain('Underworld');
     expect(markup).toContain('Surface');
     expect(markup).not.toContain('Settings');
@@ -75,14 +77,15 @@ describe('App', () => {
     expect(markup).not.toContain('Project editor');
   });
 
-  it('shows Findings only for the selected route, not Settings', () => {
+  it('keeps project information out of the route workspace', () => {
     const application = createOpenTestApplication();
+    const markup = appMarkup(application);
 
-    expect(appMarkup(application)).toContain('class="project-findings"');
-
-    application.store.dispatch(settingsSelected());
-
-    expect(appMarkup(application)).not.toContain('class="project-findings"');
+    expect(markup).toContain('class="project-findings"');
+    expect(markup).toContain('class="app-route-identity">Underworld');
+    expect(markup).toContain('About</button>');
+    expect(markup).not.toContain('Planner sections');
+    expect(markup).not.toContain('<h2>Settings</h2>');
   });
 
   it('limits Findings to the selected route', () => {
@@ -194,7 +197,7 @@ describe('App', () => {
     expect(markup).toContain(semanticOwnerElementId(openSet));
   });
 
-  it('keeps route and settings navigation outside authored history', () => {
+  it('keeps route navigation outside authored history', () => {
     const application = createOpenTestApplication();
     application.store.dispatch(
       routePanelSelected({ routeKey: 'Underworld', panel: { kind: 'overview' } }),
