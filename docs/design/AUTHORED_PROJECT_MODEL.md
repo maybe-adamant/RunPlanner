@@ -12,8 +12,9 @@ React rendering are separate concerns.
 Schema 73 is the sole persisted authored-project contract. The codec rejects
 every other schema version rather than manufacturing current topology or leaf
 state for a stale document. The only conversion retained at this boundary is
-the standalone, lossless schema-72-to-73 splitter: schema 72 contains two
-independent route plans, so it emits one schema-73 document for each route.
+the standalone schema-72-to-73 splitter: schema 72 contains two independent
+route plans, so it emits one schema-73 document for each route and applies the
+catalog-version boundary corrections named below.
 The accumulated 49-to-72 migration chain is retired; schema 71 and older are
 unsupported migration inputs. Future migrations begin as a new linear chain
 from schema 73. Catalog versions must match exactly at decode contact, and the
@@ -126,9 +127,13 @@ key or immediate equip-result children.
 Schema 73 makes the project document single-route. Its `route` is the only
 authored run in the file; the catalog's route collection remains the source of
 available route choices, not a persisted sibling-run collection. A schema-72
-source is split by copying each complete route subtree without reconstructing
-or choosing authored state. The current document cannot contain a `routes`
-array or a compatibility route wrapper.
+source is split by copying each complete route subtree without choosing among
+authored alternatives. While advancing that source from catalog 0.51 to 0.52,
+the splitter also rewrites an already-created fixed Boss occurrence to the
+physical Rivals variant implied by the stored rank and route position. Its
+occurrence ID, fixed links, room-local state, and route resource address remain
+unchanged. The current document cannot contain a `routes` array or a
+compatibility route wrapper.
 
 There is one biome plan and one topology language. Production state and
 semantic addresses have no layout-specific plan family, completion-transition
@@ -483,6 +488,21 @@ Selecting a Preboss creates and enters its fixed completion occurrences through
 the topology links. There is no persisted completion flag, entry mode, or
 `closesBiomeWhenPicked` duplicate. The selected Preboss's
 ordinary peers remain real unpicked occurrences.
+
+The route declaration names the sole physical Preboss for each route position;
+alternative maps are not authoring choices. Underworld therefore uses
+`I_PreBoss02`, while a future Dream route can select `I_PreBoss01` through the
+same route-owned field. Each completion declaration similarly names its normal
+Boss and, where the game has a distinct map, its Rivals Boss. The resolved Boss
+is the Rivals map exactly when the configured Rivals rank reaches that
+one-based route position. P and I have no distinct map and retain `Boss01`.
+
+Changing the Rivals rank reconciles every already-created fixed Boss as one
+semantic edit. The physical room name and its declaration-fixed encounter
+change, while the Boss occurrence ID, fixed links, compatible local state, and
+route resource address remain attached to the same occurrence. Boss and
+Preboss labels and editor controls remain projections of that resolved
+topology; neither physical variant is exposed as an extra picker choice.
 
 ## N Hub Progression
 
