@@ -381,8 +381,12 @@ resolved offer; it is not a second store authority.
 Repeated bag entries do not duplicate editor options. Their multiplicity and
 requirements remain available to simulation. When several eligible entries can
 produce one authored value, possibility simulation preserves every distinct
-reachable post-consumption bag state. It must not invent a deterministic
-declaration-order tie-breaker for a random game choice.
+reachable post-consumption bag state. A store may explicitly certify repeated
+same-name entries as interchangeable when their simultaneous eligibility makes
+their remaining exact identity permanently future-neutral; those transition
+results collapse by aggregate count. Uncertified entries remain distinct. This
+canonical representative does not invent a deterministic declaration-order
+tie-breaker for the game's random choice.
 
 When no entry in the entire bag is eligible, the game appends a complete base
 set without discarding ineligible leftovers. It can do this twice. If no entry

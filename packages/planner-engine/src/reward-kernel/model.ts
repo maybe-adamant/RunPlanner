@@ -135,6 +135,8 @@ export interface RewardStoreEntry {
 export interface RewardStoreDeclaration {
   readonly key: string;
   readonly entries: readonly RewardStoreEntry[];
+  /** Same-name entries whose exact identity has no distinct future once both are eligible. */
+  readonly interchangeableRewardTypes?: readonly string[];
 }
 
 export interface ShopOptionEntry {

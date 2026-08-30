@@ -661,6 +661,16 @@ intermediate suite was green.
   comparison, ESLint, repository-wide Prettier, and production build all
   passed; the build retained only the existing greater-than-500-kB chunk
   advisory.
+- The reward-bag equivalence correction closed on 2026-08-30 with exact store
+  entries and requirements retained while `RunProgress` declaration data
+  certified the Health, Magick, Gold, and Pom multiplicities as
+  future-interchangeable when coeligible. Its one `npm run check` passed all
+  workspace and fixture typechecks, fixture integrity at 3 files/22 tests,
+  correctness at 258 files/2,635 tests, the 17-test performance policy suite,
+  ESLint, repository-wide Prettier, and the production build. The same-host
+  comparison passed all eight metrics and measured full rebuild reductions of
+  54% for Underworld and 82% for Surface; the build retained only the existing
+  greater-than-500-kB chunk advisory.
 
 Focused validation remains the normal implementation practice. A complete
 `npm run check` is reserved for the declared phase closure or a shared

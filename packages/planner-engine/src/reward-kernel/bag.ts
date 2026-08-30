@@ -107,10 +107,12 @@ function refill(state: RewardBagState): RewardBagState {
 
 function entrySemanticKey(store: RewardStoreDeclaration, index: number): string {
   const entry = store.entries[index];
+  const interchangeable =
+    entry !== undefined && store.interchangeableRewardTypes?.includes(entry.rewardType) === true;
   return JSON.stringify({
     rewardType: entry?.rewardType,
     allowDuplicates: entry?.allowDuplicates,
-    requirement: entry?.requirement,
+    requirement: interchangeable ? undefined : entry?.requirement,
   });
 }
 

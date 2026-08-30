@@ -39,7 +39,11 @@ const runProgressEntries = [
 ] as const;
 
 export const stores = [
-  { key: 'RunProgress', entries: runProgressEntries },
+  {
+    key: 'RunProgress',
+    entries: runProgressEntries,
+    interchangeableRewardTypes: ['MaxHealthDrop', 'MaxManaDrop', 'RoomMoneyDrop', 'StackUpgrade'],
+  },
   {
     key: 'MetaProgress',
     entries: [

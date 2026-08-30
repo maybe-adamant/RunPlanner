@@ -110,8 +110,7 @@ consumer and remains outside the canonical projection.
 Multiplicity entries are not interchangeable merely because they share a
 reward name. Once `ordinaryLootCount` is satisfied, for example, both the base
 and qualified `MaxHealthDrop` entries are eligible and the game may remove
-either exact entry. The possibility simulator therefore retains distinct exact
-post-consumption bag states and must not choose declaration order as a hidden
+either exact entry. The planner must not choose declaration order as a hidden
 tie-breaker.
 
 That exact internal split does **not** currently imply two behaviorally
@@ -128,12 +127,16 @@ different supported futures. A fresh audit of the normalized stores found:
 - every other same-reward multiplicity in the normalized stores has the same
   requirement as its peers.
 
-The generic kernel deliberately keeps exact entry identity so later catalog
-changes do not acquire an invented tie-breaker. A diagnostic editor surface,
-however, should project the effective bag: aggregate states by reward,
-eligibility, and retained requirement evidence, and expose a range only if a
-future catalog makes the aggregate count genuinely differ. It must not present
-today's unobservable exact-entry split as multiple run histories.
+The planner disposition keeps every exact ordered entry and requirement in the
+normalized store, then lets a store declaration certify same-name entries as
+interchangeable when simultaneous eligibility makes their future behavior
+identical. `RunProgress` certifies the Health, Magick, Gold, and Pom pairs. Bag
+transition canonicalization aggregates only those certified pairs; this is an
+equivalence-class representative, not an assertion about which random game
+index was removed. Hammer remains uncertified, and every undeclared
+different-requirement pair retains its exact latent branches. Diagnostic bag
+projection likewise exposes effective aggregate counts rather than presenting
+certified exact-entry identity as multiple run histories.
 
 ## Counted Store Inventory
 
