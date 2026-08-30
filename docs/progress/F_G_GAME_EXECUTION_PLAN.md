@@ -577,6 +577,89 @@ The protocol carries resolved outcomes, not trait prerequisites or another
 equipped-state simulator. The game remains responsible for applying a selected
 trait through its normal acquisition path.
 
+#### Locked Gate C trace projection
+
+Gate C does not introduce a second lifecycle or acquisition model. The
+compiler joins the following already-published complete-valid products:
+
+- `CanonicalAuthoredRoom.roomLifecycleTimeline` supplies the ordered boundary
+  and selected executable-action skeleton;
+- canonical incoming, local, encounter, and acquisition-site records supply
+  reward provenance and authored participation;
+- reward-branch concrete-acquisition events supply the reached role, game
+  identity, lifecycle point, and optional site/entry settlement;
+- selected trait-offer and level-resolution products supply the reached
+  authored screen and its branch assessments;
+- Steady Growth and Transcendent Embryo outcome products, joined through the
+  existing timeline appenders, supply automatic encounter-end rows; and
+- `RunStateSnapshot` supplies the exact diagnostic state.
+
+The execution trace is a closed union:
+
+- a boundary is `roomEntered`, `encounterStart`, `encounterEnd`, `cleanup`, or
+  `beforeRoomExit`; encounter boundaries carry the exact phase and encounter
+  identities plus the resolved end-effects expectation;
+- an acquisition action carries its semantic owner, reward/source provenance,
+  producer lifecycle key, and one or more closed role settlements;
+- a role settlement carries the resolved acquisition kind and game name and,
+  when applicable, one ordinary trait offer or one level resolution;
+- an encounter interaction carries its exact phase identity; and
+- an automatic row is either Steady Growth with source and target trait keys or
+  Transcendent Embryo with source and target blessing keys and rarity.
+
+An ordinary trait offer is either `fallbackGold` or an ordered one-to-three
+option screen. A trait screen carries its giver, selected option, optional
+rejected option, and exact runtime fallback when one was published. Each
+option carries only published trait identity, rarity, effective level, and
+replacement transition. Hammer and Spell offers use this same closed screen
+shape; their existing giver and option data distinguish them. A level
+resolution carries the published offered targets, selected target, and level
+count. The compiler does not recalculate option eligibility, effective rarity,
+replacement policy, or Pom targets.
+
+The compiler may join branch products only when the runtime instruction fields
+agree across every complete-valid branch. Disagreement, a missing reached
+product, or an acquisition event that cannot be correlated to its canonical
+owner is `executionCoverageMissing`; the compiler must reject publication. It
+must never select an arbitrary branch, infer a result from later state, or
+replay acquisition settlement.
+
+Gate C extends each existing Run State diagnostic with the exact published
+subset used by its adapters:
+
+- acquired/effective God source keys and cap state;
+- equipped trait entries, six-slot ledger, rarity, levels, Hammer ranks,
+  elements, God-rarity counts, upgradable count, and banned trait keys;
+- active Arcana key, origin, and rarity;
+- configured and effective Vow ranks plus disabled keys; and
+- Forfeit status derived from effective `BoonSkipShrineUpgrade` and the current
+  biome's `BiomeBoonSkipCount`.
+
+Chaos state, keepsake retained effects, reward priorities, Hex progress, and
+Artificer state remain in their named later gates. Fear is compared per Vow;
+the module does not invent an aggregate live Fear field.
+
+Runtime realization remains at verified natural seams. Multiple encounters
+are constrained phase-by-phase while the game performs its normal descriptor
+changes, setup, and recording. Ordinary offers are supplied through the game's
+pre-presentation `UpgradeOptions` path and verified after the player's normal
+selection. Steady Growth targets the compiled live trait through
+`AddRarityToTraits.ForceUpgrade`. Transcendent Embryo constrains only the
+synchronous random choice inside the game's normal `AddRandomChaosBlessing`
+call; it does not call `AddTraitToHero` or reproduce Chaos eligibility.
+
+Primary Gate C tests own:
+
+- strict lifecycle order without future-step search;
+- phase-indexed multi-encounter realization and start/end verification;
+- one ordinary Boon and one Devotion role settlement, including wrong-trait
+  and fallback witnesses;
+- Hammer, Pom, Spell/Talent, minor pickup, and skipped optional acquisition
+  contact;
+- one replacement offer and one effective-level offer;
+- Steady Growth and Embryo natural-trigger result control; and
+- field-level God, trait, slot, element, Arcana, Vow, and Forfeit mismatches.
+
 ### Gate D — F/G objects and interaction chronology
 
 **Outcome:** current F/G room features are present with exact inventories and
