@@ -10,5 +10,7 @@ export {
   type ExecutionPlan,
   type ExecutionReward,
   type ExecutionRoom,
+  type ExecutionRunStateCount,
+  type ExecutionRunStateDiagnostic,
   type ExecutionTraceStep,
 } from './model';
