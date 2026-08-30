@@ -1,7 +1,11 @@
 import type { Catalog, EncounterSlotBinding, RoomDeclaration } from '../../catalog-schema';
 import type { EncounterPhaseAddress } from '../addresses';
 import type { ProjectDocument, RoomEncounterState } from '../model';
-import { encounterBindingsBySlot, encounterSetForBinding } from '../room-state/encounter-envelope';
+import {
+  encounterAuthoringProfiles,
+  encounterBindingsBySlot,
+  encounterSetForBinding,
+} from '../room-state/encounter-envelope';
 import {
   failCommand,
   requireOccurrence,
@@ -114,8 +118,8 @@ function updatedSelections(
   const binding = selectableBinding(catalog, room, phase, command);
   const set = encounterSetForBinding(catalog, binding, room.gameName);
   const encounterKey =
-    command.kind === 'ResetEncounter' ? set.defaultEncounterDefinitionKey : command.encounterKey;
-  if (!set.encounterDefinitionKeys.includes(encounterKey)) {
+    command.kind === 'ResetEncounter' ? set.defaultAuthoringProfileKey : command.encounterKey;
+  if (!encounterAuthoringProfiles(set).some((profile) => profile.key === encounterKey)) {
     failCommand(command, `${encounterKey} is not available from ${set.key}`);
   }
   const selectionUnchanged = current.encounterKeyByPhase[phase.phaseKey] === encounterKey;

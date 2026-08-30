@@ -90,11 +90,20 @@ the realization without destroying authored room-local intent.
 ### Concrete encounter selection
 
 I's ordinary combat phase binds `IEncountersDefault` or
-`IEncountersSmaller` according to its declaration. Each set includes
-`NemesisCombatI` beside its exact ordinary/Goal definitions, so Nemesis can
-replace only a supported active combat phase. Fixed starts, specials, Shops,
-minibosses, Preboss, and completion rooms remain direct-definition slots with
-no encounter picker.
+`IEncountersSmaller` according to its room declaration, so Standard versus
+Small is never authored independently. Each set exposes Combat and, when its
+requirements hold, Nemesis as the genuine encounter choices. Gorgon Athena is
+the existing additive phase result rather than a third ordinary encounter
+identity.
+
+Combat is one authored profile. At encounter preparation, the derived
+Clockwork realization selects exactly one internal game definition:
+`GeneratedI` or `GeneratedI_GoalReward` for the default set, and
+`GeneratedI_Small` or `GeneratedI_Small_GoalReward` for the smaller set. The
+Goal variants remain exact history identities but never appear in persisted
+authoring or the encounter picker. Fixed starts, specials, Shops, minibosses,
+Preboss, and completion rooms remain direct-definition slots with no encounter
+picker.
 
 Nemesis selection leaves the room's Clockwork reward realization and ordinary
 reward ownership intact. Its requirements use exact definition history and the

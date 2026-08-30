@@ -135,11 +135,11 @@ export const oEncounterSets = [
   {
     key: 'OEncountersIntros',
     encounterDefinitionKeys: ['GeneratedO_Intro01', 'HeraclesCombatO'],
-    defaultEncounterDefinitionKey: 'GeneratedO_Intro01',
+    defaultAuthoringProfileKey: 'GeneratedO_Intro01',
   },
   {
     key: 'OEncountersDefault',
     encounterDefinitionKeys: ['GeneratedO', 'IcarusCombatO'],
-    defaultEncounterDefinitionKey: 'GeneratedO',
+    defaultAuthoringProfileKey: 'GeneratedO',
   },
 ] as const satisfies readonly RawEncounterSetDeclaration[];

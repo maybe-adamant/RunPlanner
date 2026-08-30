@@ -36,7 +36,7 @@ const rooms: readonly RawRoomDeclaration[] = [
 ];
 
 export const declarations = {
-  version: '0.50.0-unified-chaos-gates',
+  version: '0.51.0-biome-i-encounter-profiles',
   biomes,
   routes,
   arcanaCards,

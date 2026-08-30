@@ -1,5 +1,6 @@
 import type {
   Catalog,
+  EncounterAuthoringProfile,
   EncounterDefinition,
   EncounterEnvelopeSlot,
   EncounterSet,
@@ -70,6 +71,32 @@ export function encounterSetForBinding(
   return set;
 }
 
+export function encounterAuthoringProfileForKey(
+  set: EncounterSet,
+  encounterKey: string,
+  path: string,
+): EncounterAuthoringProfile {
+  const profile = encounterAuthoringProfiles(set).find(
+    (candidate) => candidate.key === encounterKey,
+  );
+  if (profile === undefined) {
+    failProjectDocument(path, `${encounterKey} is not an authored choice from ${set.key}`);
+  }
+  return profile;
+}
+
+export function encounterAuthoringProfiles(
+  set: EncounterSet,
+): readonly EncounterAuthoringProfile[] {
+  return (
+    set.authoringProfiles ??
+    set.encounterDefinitionKeys.map((encounterKey) => ({
+      key: encounterKey,
+      encounterDefinitionKeys: [encounterKey],
+    }))
+  );
+}
+
 export function encounterDefinitionForKey(
   catalog: Catalog,
   encounterKey: string,
@@ -82,7 +109,7 @@ export function encounterDefinitionForKey(
   return definition;
 }
 
-export function selectedEncounterDefinitionKey(
+export function selectedEncounterAuthoringProfileKey(
   catalog: Catalog,
   room: RoomDeclaration,
   encounters: RoomEncounterState,
@@ -105,9 +132,7 @@ export function selectedEncounterDefinitionKey(
     failProjectDocument(path, `${slotKey} has no authored encounter selection`);
   }
   const set = encounterSetForBinding(catalog, binding, path);
-  if (!set.encounterDefinitionKeys.includes(encounterKey)) {
-    failProjectDocument(path, `${encounterKey} is not available from ${set.key}`);
-  }
+  encounterAuthoringProfileForKey(set, encounterKey, path);
   encounterDefinitionForKey(catalog, encounterKey, path);
   return encounterKey;
 }
@@ -132,18 +157,22 @@ export function createDefaultRoomEncounterState(
       continue;
     }
     const set = encounterSetForBinding(catalog, binding, `${path}.${binding.slotKey}`);
-    if (!set.encounterDefinitionKeys.includes(set.defaultEncounterDefinitionKey)) {
+    if (
+      !encounterAuthoringProfiles(set).some(
+        (profile) => profile.key === set.defaultAuthoringProfileKey,
+      )
+    ) {
       failProjectDocument(
         `${path}.${binding.slotKey}`,
-        `${set.defaultEncounterDefinitionKey} is not a member of ${set.key}`,
+        `${set.defaultAuthoringProfileKey} is not a member of ${set.key}`,
       );
     }
     encounterDefinitionForKey(
       catalog,
-      set.defaultEncounterDefinitionKey,
+      set.defaultAuthoringProfileKey,
       `${path}.${binding.slotKey}`,
     );
-    values[binding.slotKey] = set.defaultEncounterDefinitionKey;
+    values[binding.slotKey] = set.defaultAuthoringProfileKey;
     if (
       set.encounterDefinitionKeys.some(
         (key) => catalog.encounterDefinitions.byKey[key]?.hostsGorgon === true,

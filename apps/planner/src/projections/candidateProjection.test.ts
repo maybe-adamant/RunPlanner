@@ -182,7 +182,7 @@ describe('candidate projection', () => {
     });
   });
 
-  it('adapts exact encounter support into typed coverage, activation, and requirement evidence', () => {
+  it('adapts authored encounter profiles into typed coverage and requirement evidence', () => {
     const project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
       kind: 'ResetEncounter',
       phase: createEncounterPhaseAddress(
@@ -198,18 +198,9 @@ describe('candidate projection', () => {
     );
     const candidates = createCandidateSessionFactory(catalog)
       .bind(simulateProjectAssembly(catalog, project))
-      .encounterPhases(phase, ['GeneratedI', 'GeneratedI_GoalReward']);
+      .encounterPhases(phase, ['GeneratedI', 'NemesisCombatI']);
 
     expect(candidates).toEqual([
-      expect.objectContaining({
-        evaluation: expect.objectContaining({
-          result: expect.objectContaining({
-            evidence: { kind: 'requirementsExcluded' },
-            support: 'impossible',
-          }),
-        }),
-        value: 'GeneratedI',
-      }),
       expect.objectContaining({
         evaluation: expect.objectContaining({
           result: expect.objectContaining({
@@ -217,7 +208,16 @@ describe('candidate projection', () => {
             support: 'forced',
           }),
         }),
-        value: 'GeneratedI_GoalReward',
+        value: 'GeneratedI',
+      }),
+      expect.objectContaining({
+        evaluation: expect.objectContaining({
+          result: expect.objectContaining({
+            evidence: { kind: 'requirementsExcluded' },
+            support: 'impossible',
+          }),
+        }),
+        value: 'NemesisCombatI',
       }),
     ]);
   });

@@ -158,6 +158,6 @@ export const gEncounterSets = [
       'NemesisCombatG',
       'NemesisRandomEvent',
     ],
-    defaultEncounterDefinitionKey: 'GeneratedG',
+    defaultAuthoringProfileKey: 'GeneratedG',
   },
 ] as const satisfies readonly RawEncounterSetDeclaration[];

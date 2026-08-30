@@ -22,7 +22,7 @@ export const iEncounterDefinitions = [
   },
   {
     key: 'GeneratedI_GoalReward',
-    label: 'Goal combat',
+    label: 'Combat',
     kind: 'combat',
     countsEncounterDepth: true,
     hostsGorgon: true,
@@ -31,7 +31,7 @@ export const iEncounterDefinitions = [
   },
   {
     key: 'GeneratedI_Small',
-    label: 'Small combat',
+    label: 'Combat',
     kind: 'combat',
     countsEncounterDepth: true,
     hostsGorgon: true,
@@ -40,7 +40,7 @@ export const iEncounterDefinitions = [
   },
   {
     key: 'GeneratedI_Small_GoalReward',
-    label: 'Small goal combat',
+    label: 'Combat',
     kind: 'combat',
     countsEncounterDepth: true,
     hostsGorgon: true,
@@ -114,11 +114,25 @@ export const iEncounterSets = [
   {
     key: 'IEncountersDefault',
     encounterDefinitionKeys: ['GeneratedI', 'GeneratedI_GoalReward', 'NemesisCombatI'],
-    defaultEncounterDefinitionKey: 'GeneratedI',
+    defaultAuthoringProfileKey: 'GeneratedI',
+    authoringProfiles: [
+      {
+        key: 'GeneratedI',
+        encounterDefinitionKeys: ['GeneratedI', 'GeneratedI_GoalReward'],
+      },
+      { key: 'NemesisCombatI', encounterDefinitionKeys: ['NemesisCombatI'] },
+    ],
   },
   {
     key: 'IEncountersSmaller',
     encounterDefinitionKeys: ['GeneratedI_Small', 'GeneratedI_Small_GoalReward', 'NemesisCombatI'],
-    defaultEncounterDefinitionKey: 'GeneratedI_Small',
+    defaultAuthoringProfileKey: 'GeneratedI_Small',
+    authoringProfiles: [
+      {
+        key: 'GeneratedI_Small',
+        encounterDefinitionKeys: ['GeneratedI_Small', 'GeneratedI_Small_GoalReward'],
+      },
+      { key: 'NemesisCombatI', encounterDefinitionKeys: ['NemesisCombatI'] },
+    ],
   },
 ] as const satisfies readonly RawEncounterSetDeclaration[];

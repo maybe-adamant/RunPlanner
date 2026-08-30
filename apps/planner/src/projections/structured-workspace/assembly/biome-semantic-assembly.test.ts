@@ -699,12 +699,13 @@ describe('structured workspace biome semantic assembly', () => {
     const validISource = biomeSource(underworld, 'Underworld', 'I');
     const validI = assembleWorkspaceBiomeSemantics(catalog, validISource);
     const blockedIProject = applyProjectCommand(underworld, catalog, {
-      kind: 'ResetEncounter',
+      kind: 'SelectEncounter',
       phase: createEncounterPhaseAddress(
         goldenIBiome,
         { kind: 'occurrence', occurrenceId: createOccurrenceId('golden-i-combat01') },
         'Encounter',
       ),
+      encounterKey: 'NemesisCombatI',
     });
     const blockedISource = biomeSource(blockedIProject, 'Underworld', 'I');
     const blockedI = assembleWorkspaceBiomeSemantics(catalog, blockedISource);

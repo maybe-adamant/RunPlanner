@@ -295,7 +295,15 @@ export interface RawEncounterDefinitionDeclaration {
 export interface RawEncounterSetDeclaration {
   readonly key: string;
   readonly encounterDefinitionKeys: readonly string[];
-  readonly defaultEncounterDefinitionKey: string;
+  readonly defaultAuthoringProfileKey: string;
+  /**
+   * Authored choices whose exact game definition is selected from the
+   * currently eligible member at encounter preparation time.
+   */
+  readonly authoringProfiles?: readonly {
+    readonly key: string;
+    readonly encounterDefinitionKeys: readonly string[];
+  }[];
 }
 
 export type RawEncounterSlotBinding =

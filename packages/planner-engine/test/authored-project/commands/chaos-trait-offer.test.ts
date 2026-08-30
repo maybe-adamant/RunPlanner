@@ -292,8 +292,8 @@ describe('Chaos TrialUpgrade authored child', () => {
     legacy.schemaVersion = 63;
     legacy.catalogVersion = '0.46.0-vow-forfeit-red-onion';
     const migrated = migrateProjectDocument(legacy).document;
-    expect(migrated.schemaVersion).toBe(71);
-    expect(migrated.catalogVersion).toBe('0.50.0-unified-chaos-gates');
+    expect(migrated.schemaVersion).toBe(72);
+    expect(migrated.catalogVersion).toBe('0.51.0-biome-i-encounter-profiles');
     expect(() => decodeProjectDocument(migrated, catalog)).not.toThrow();
   });
 

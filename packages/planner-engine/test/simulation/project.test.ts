@@ -230,7 +230,7 @@ describe('project simulation composition', () => {
     });
   });
 
-  it('keeps an invalid static I Goal selection visible until its exact correction is selected', () => {
+  it('keeps I Combat authored while resolving its exact Goal definition from topology', () => {
     const occurrenceId = createOccurrenceId('golden-i-combat01');
     const phase = createEncounterPhaseAddress(
       goldenIBiome,
@@ -243,44 +243,38 @@ describe('project simulation composition', () => {
       encounterPhaseCandidateSupportForProjectEvaluationAssembly(initialAssembly, phase),
     ).toMatchObject({
       active: true,
-      selectedEncounterKey: 'GeneratedI_GoalReward',
+      selectedEncounterKey: 'GeneratedI',
       selectedPossible: true,
-      candidateEncounterKeys: ['GeneratedI_GoalReward'],
+      candidateEncounterKeys: ['GeneratedI'],
     });
 
-    const reset = applyProjectCommand(initial, catalog, { kind: 'ResetEncounter', phase });
-    const { result, route: underworld } = route(reset, 'Underworld');
+    const { result, route: underworld } = route(initial, 'Underworld');
     const i = underworld.biomes.find((biome) => biome.biomeKey === 'I');
-    if (i?.authoring !== 'complete' || i.validity !== 'invalid' || !('materializedPrefix' in i)) {
-      throw new Error('reset I Goal selection did not retain an invalid editable prefix');
+    if (i?.authoring !== 'complete' || i.validity !== 'valid') {
+      throw new Error('I Combat profile did not resolve its contextual Goal definition');
     }
 
-    expect(result.status).toBe('invalid');
-    expect(i.coverage).toMatchObject({ kind: 'prefix', blockedAt: phase });
-    expect(i.findings).toContainEqual(
-      expect.objectContaining({ code: 'encounterUnavailable', origin: phase }),
-    );
-    const blockedLifecycle = i.history.events.filter(
+    expect(result.status).toBe('valid');
+    const encounterRecord = i.history.events.find(
       (event) =>
-        'origin' in event &&
+        event.kind === 'encounterRecorded' &&
         event.origin.kind === 'occurrence' &&
-        event.origin.occurrenceId === occurrenceId &&
-        (event.kind === 'roomPrepared' ||
-          event.kind === 'encounterRecorded' ||
-          event.kind === 'encounterStarted' ||
-          event.kind === 'encounterDepthAdvanced' ||
-          event.kind === 'encounterCompleted'),
+        event.origin.occurrenceId === occurrenceId,
     );
-    expect(blockedLifecycle.map((event) => event.kind)).toEqual(['roomPrepared']);
-    expect(
-      i.history.events.some(
-        (event) =>
-          event.kind === 'clockworkGoalAcquired' &&
-          event.origin.kind === 'occurrence' &&
-          event.origin.occurrenceId === occurrenceId,
-      ),
-    ).toBe(false);
+    expect(encounterRecord).toMatchObject({
+      kind: 'encounterRecorded',
+      encounterKey: 'GeneratedI_GoalReward',
+    });
+    expect(() =>
+      applyProjectCommand(initial, catalog, {
+        kind: 'SelectEncounter',
+        phase,
+        encounterKey: 'GeneratedI_GoalReward',
+      }),
+    ).toThrow(/is not available from IEncountersDefault/);
 
+    const reset = applyProjectCommand(initial, catalog, { kind: 'ResetEncounter', phase });
+    expect(simulateProject(catalog, reset).status).toBe('valid');
     const resetAssembly = simulateProjectAssembly(catalog, reset);
     expect(
       encounterPhaseCandidateSupportForProjectEvaluationAssembly(resetAssembly, phase),
@@ -288,16 +282,9 @@ describe('project simulation composition', () => {
       active: true,
       activationSatisfied: true,
       selectedEncounterKey: 'GeneratedI',
-      selectedPossible: false,
-      candidateEncounterKeys: ['GeneratedI_GoalReward'],
+      selectedPossible: true,
+      candidateEncounterKeys: ['GeneratedI'],
     });
-    const corrected = applyProjectCommand(reset, catalog, {
-      kind: 'SelectEncounter',
-      phase,
-      encounterKey: 'GeneratedI_GoalReward',
-    });
-
-    expect(simulateProject(catalog, corrected).status).toBe('valid');
   });
 
   it('composes N through Q with a completed Hub as the O history seed', () => {

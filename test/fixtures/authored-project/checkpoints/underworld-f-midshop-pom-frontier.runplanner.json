@@ -1,7 +1,7 @@
 {
-  "schemaVersion": 71,
+  "schemaVersion": 72,
   "projectId": "midshop-pom-frontier",
-  "catalogVersion": "0.50.0-unified-chaos-gates",
+  "catalogVersion": "0.51.0-biome-i-encounter-profiles",
   "routes": [
     {
       "routeKey": "Underworld",

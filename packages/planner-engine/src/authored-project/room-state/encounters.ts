@@ -11,6 +11,7 @@ import {
   failProjectDocument,
 } from '../validation';
 import {
+  encounterAuthoringProfileForKey,
   encounterBindingsBySlot,
   encounterDefinitionForKey,
   encounterSetForBinding,
@@ -63,12 +64,7 @@ export function decodeRoomEncounterState(
       failProjectDocument(`${path}.encounterKeyByPhase.${slotKey}`, 'has no selectable binding');
     }
     const set = encounterSetForBinding(catalog, binding, `${path}.encounterKeyByPhase.${slotKey}`);
-    if (!set.encounterDefinitionKeys.includes(encounterKey)) {
-      failProjectDocument(
-        `${path}.encounterKeyByPhase.${slotKey}`,
-        `${encounterKey} is not a member of ${set.key}`,
-      );
-    }
+    encounterAuthoringProfileForKey(set, encounterKey, `${path}.encounterKeyByPhase.${slotKey}`);
     encounterDefinitionForKey(catalog, encounterKey, `${path}.encounterKeyByPhase.${slotKey}`);
     encounterKeyByPhase[slotKey] = encounterKey;
   }

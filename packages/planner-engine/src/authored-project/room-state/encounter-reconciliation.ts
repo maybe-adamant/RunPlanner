@@ -2,7 +2,11 @@ import type { Catalog, RoomDeclaration } from '../../catalog-schema';
 import type { RoomEncounterState } from '../model';
 import type { AuthoredTraitOffer } from '../traits';
 import { failProjectDocument } from '../validation';
-import { encounterBindingsBySlot, encounterSetForBinding } from './encounter-envelope';
+import {
+  encounterAuthoringProfiles,
+  encounterBindingsBySlot,
+  encounterSetForBinding,
+} from './encounter-envelope';
 
 export function reconcileRoomEncounterState(
   catalog: Catalog,
@@ -44,7 +48,7 @@ export function reconcileRoomEncounterState(
     selections[binding.slotKey] =
       previousBinding?.kind === 'set' &&
       retained !== undefined &&
-      set.encounterDefinitionKeys.includes(retained)
+      encounterAuthoringProfiles(set).some((profile) => profile.key === retained)
         ? retained
         : fallback;
   }
