@@ -175,12 +175,31 @@ export interface AnomalyTakeoverCandidateSupport {
   )[];
 }
 
+/**
+ * Generation evidence owned by one physical target in an ordinary batch.
+ * The target order is the order in which the source's exits are generated.
+ */
+export interface OrdinaryTargetGenerationAssessment {
+  readonly origin: TargetAddress;
+  readonly pressure: ForcePressureLedgerEntry;
+  readonly anomaly?: AnomalyTakeoverCandidateSupport;
+}
+
+/**
+ * The complete derived assessment for one outgoing ordinary batch. Fields is
+ * decided once for the batch; force and Anomaly evidence belongs to its
+ * ordered physical targets.
+ */
+export interface OrdinaryBatchGenerationAssessment {
+  readonly origin: ExitDecisionAddress;
+  readonly fields?: FieldsCageOutcomeSupportEntry;
+  readonly targets: readonly OrdinaryTargetGenerationAssessment[];
+}
+
 export interface GeneratedRoomGenerationValidation {
   readonly biomeKey: string;
   readonly validity: 'invalid' | 'valid';
-  readonly anomalyTakeovers: readonly AnomalyTakeoverCandidateSupport[];
-  readonly forcePressure: readonly ForcePressureLedgerEntry[];
-  readonly fieldsCageOutcomes: readonly FieldsCageOutcomeSupportEntry[];
+  readonly ordinaryBatches: readonly OrdinaryBatchGenerationAssessment[];
   readonly findings: readonly SemanticFinding[];
 }
 

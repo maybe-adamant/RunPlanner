@@ -7,6 +7,10 @@ const {
   authorLegalTraitOffers,
   bindTestCandidateSession,
   catalog,
+  defaultRouteLoadout,
+  EMPTY_RESOURCE_PLACEMENTS,
+  evaluateProgressiveBiomeAssembly,
+  evaluateProgressiveBiomeAssemblyBeforeClamp,
   createCompleteFGProject,
   createExitDecisionAddress,
   createFGenerationProject,
@@ -319,6 +323,22 @@ describe('progressive prefix and frontier products', () => {
         origin: createTargetAddress(goldenGBiome, source(fixture.source), 'exit1'),
       }),
     );
+    const retainedBatch = evaluation.roomGeneration.ordinary.ordinaryBatches.find(
+      (batch) =>
+        semanticAddressKey(batch.origin) ===
+        semanticAddressKey(createExitDecisionAddress(goldenGBiome, source(fixture.source))),
+    );
+    expect(retainedBatch?.targets.map((target) => semanticAddressKey(target.origin))).toEqual([
+      semanticAddressKey(createTargetAddress(goldenGBiome, source(fixture.source), 'exit1')),
+    ]);
+    expect(retainedBatch?.targets[0]?.pressure.selectedPossible).toBe(false);
+    expect(
+      evaluation.roomGeneration.ordinary.ordinaryBatches.find(
+        (batch) =>
+          semanticAddressKey(batch.origin) ===
+          semanticAddressKey(createExitDecisionAddress(goldenGBiome, source(fixture.firstTarget))),
+      ),
+    ).toBeUndefined();
     expect(
       bindTestCandidateSession(catalog, project).evaluate({
         kind: 'roomTarget',
@@ -326,6 +346,58 @@ describe('progressive prefix and frontier products', () => {
         gameName: 'G_Combat02',
       }),
     ).toMatchObject({ kind: 'unavailable', reason: 'coverageNotReached' });
+  });
+
+  it('retains a decision-owned invalid Fields assessment without publishing target assessments', () => {
+    const project = applyProjectCommand(createGoldenFGHIProject(), catalog, {
+      kind: 'ReplaceFieldsCageOutcome',
+      decision: createExitDecisionAddress(
+        goldenHBiome,
+        source(createOccurrenceId('golden-h-combat02')),
+      ),
+      cageOutcome: 'max',
+    });
+    const evaluatedRoute = route(project, 'Underworld');
+    const previous = evaluatedRoute.biomes.find((candidate) => candidate.biomeKey === 'G');
+    const plan = project.routes
+      .find((candidate) => candidate.routeKey === 'Underworld')
+      ?.biomes.find((candidate) => candidate.biomeKey === 'H');
+    if (previous?.authoring !== 'complete' || previous.validity !== 'valid' || plan === undefined) {
+      throw new Error('invalid Fields fixture has no valid G seed or H plan');
+    }
+    const options = {
+      enteredBiomeCount: 3,
+      resourcePlacements: EMPTY_RESOURCE_PLACEMENTS,
+      loadout: defaultRouteLoadout,
+      seed: { history: previous.history, rewardBranches: previous.rewards.branches },
+    } as const;
+    const clamped = evaluateProgressiveBiomeAssembly(catalog, goldenHBiome, plan, options);
+    const selected = evaluateProgressiveBiomeAssemblyBeforeClamp(
+      catalog,
+      goldenHBiome,
+      plan,
+      options,
+    );
+    const blockedDecision = createExitDecisionAddress(
+      goldenHBiome,
+      source(createOccurrenceId('golden-h-miniboss01')),
+    );
+    const selectedBatch = selected?.evaluation.roomGeneration.ordinary.ordinaryBatches.find(
+      (batch) => semanticAddressKey(batch.origin) === semanticAddressKey(blockedDecision),
+    );
+    const retainedBatch = clamped?.evaluation.roomGeneration.ordinary.ordinaryBatches.find(
+      (batch) => semanticAddressKey(batch.origin) === semanticAddressKey(blockedDecision),
+    );
+
+    expect(clamped?.evaluation.blockedAt).toEqual(blockedDecision);
+    expect(selectedBatch?.fields).toMatchObject({
+      selectedOutcome: 'max',
+      selectedPossible: false,
+      fieldsMaxDoorsRolled: 2,
+      maxDoorCageCeiling: 2,
+    });
+    expect(retainedBatch?.fields).toEqual(selectedBatch?.fields);
+    expect(retainedBatch?.targets).toEqual([]);
   });
 
   it('records an unselected takeover’s complete physical target set at its nullable frontier', () => {

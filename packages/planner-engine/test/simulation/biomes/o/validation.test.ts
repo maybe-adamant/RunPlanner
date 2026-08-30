@@ -231,9 +231,9 @@ describe('selected O validation', () => {
       { selected: 2, support: [2, 3] },
     ]);
     expect(
-      o.roomGeneration.ordinary.forcePressure.find(
-        (entry) => entry.selectedGameName === 'O_Devotion01',
-      ),
+      o.roomGeneration.ordinary.ordinaryBatches
+        .flatMap((batch) => batch.targets.map((target) => target.pressure))
+        .find((entry) => entry.selectedGameName === 'O_Devotion01'),
     ).toMatchObject({ selectedPossible: true, selectedExclusionReasons: [] });
     expect(o.rewards.targetHistory).toHaveLength(7);
   });
@@ -772,12 +772,14 @@ describe('selected O validation', () => {
     });
     const { biome: forcedBiome } = evaluateO(forced);
     expect(
-      forcedBiome.roomGeneration.ordinary.forcePressure.find(
-        (entry) =>
-          entry.targetOrigin.kind === 'target' &&
-          entry.targetOrigin.source.kind === 'occurrence' &&
-          entry.targetOrigin.source.occurrenceId === oOccurrenceIds.devotion,
-      ),
+      forcedBiome.roomGeneration.ordinary.ordinaryBatches
+        .flatMap((batch) => batch.targets.map((target) => target.pressure))
+        .find(
+          (entry) =>
+            entry.targetOrigin.kind === 'target' &&
+            entry.targetOrigin.source.kind === 'occurrence' &&
+            entry.targetOrigin.source.occurrenceId === oOccurrenceIds.devotion,
+        ),
     ).toMatchObject({ selectedPossible: false, selectedExclusionReasons: ['forcedPool'] });
 
     const capped = applyProjectCommand(loadSurfaceNOProject(), catalog, {
@@ -787,12 +789,14 @@ describe('selected O validation', () => {
     });
     const { biome: cappedBiome } = evaluateO(capped);
     expect(
-      cappedBiome.roomGeneration.ordinary.forcePressure.find(
-        (entry) =>
-          entry.targetOrigin.kind === 'target' &&
-          entry.targetOrigin.source.kind === 'occurrence' &&
-          entry.targetOrigin.source.occurrenceId === oOccurrenceIds.story,
-      ),
+      cappedBiome.roomGeneration.ordinary.ordinaryBatches
+        .flatMap((batch) => batch.targets.map((target) => target.pressure))
+        .find(
+          (entry) =>
+            entry.targetOrigin.kind === 'target' &&
+            entry.targetOrigin.source.kind === 'occurrence' &&
+            entry.targetOrigin.source.occurrenceId === oOccurrenceIds.story,
+        ),
     ).toMatchObject({
       selectedPossible: false,
       selectedExclusionReasons: expect.arrayContaining(['maxAppearancesThisBiome']),

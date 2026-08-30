@@ -530,7 +530,9 @@ describe('unified biome simulation', () => {
       ),
       JSON.stringify(biome.findings),
     ).toContain('f-prefix-combat');
-    expect(biome.roomGeneration.ordinary.forcePressure).toHaveLength(1);
+    expect(
+      biome.roomGeneration.ordinary.ordinaryBatches.flatMap((batch) => batch.targets),
+    ).toHaveLength(1);
     const candidates = createPreparedProjectCandidateSession(catalog, assembledProject(project));
     const result = candidates.evaluate({
       kind: 'roomTarget',

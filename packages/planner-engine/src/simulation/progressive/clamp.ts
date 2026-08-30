@@ -9,7 +9,6 @@ import type { TraitChildSettlementCheckpoints } from '../rewards/biome';
 import {
   blockedAncestorChain,
   findingsAtRegion,
-  gameNameForTarget,
   mergedFindings,
   rewardOwnerAddress,
   type LocatedFinding,
@@ -69,22 +68,13 @@ export function clampSelectedProducts(
   };
   const interactionProducts = evaluatePrefix(interactionPrefix);
   const ancestors = blockedAncestorChain(authoredPrefix, unsupported);
-  const selectedTargetAssessment = (() => {
-    const target = ancestors.target;
-    if (target === undefined) return undefined;
-    const gameName = gameNameForTarget(authoredPrefix, target);
-    const evaluate =
-      selectedProducts.candidateArtifacts.roomTargets.at(target) ??
-      interactionProducts.candidateArtifacts.roomTargets.at(target);
-    return gameName === undefined || evaluate === undefined
-      ? undefined
-      : Object.freeze({ gameName, context: evaluate });
-  })();
   const retainedRoomGeneration = retainBlockedGenerationValidation(
     evaluated.evaluation.roomGeneration,
+    selectedProducts,
+    authoredPrefix,
     selectedProducts.findingRegions,
     unsupported.regionKey,
-    selectedTargetAssessment,
+    unsupported,
   );
   const blockedProducts = retainBlockedRegionProducts(
     evaluated.evaluation.rewards,
@@ -101,6 +91,7 @@ export function clampSelectedProducts(
       authoredPrefix.frontier.parent.origin.kind === 'occurrence'
       ? authoredPrefix.frontier.parent.origin
       : undefined,
+    retainedRoomGeneration.ordinary.ordinaryBatches,
   );
   const retainedRewards = blockedProducts.rewards;
   const retainedInteractions = blockedProducts.artifacts;

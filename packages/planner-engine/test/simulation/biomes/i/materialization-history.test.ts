@@ -574,9 +574,9 @@ describe('canonical I Clockwork materialization and history', () => {
       }),
     );
     expect(
-      generation.forcePressure.find(
-        (entry) => JSON.stringify(entry.targetOrigin) === JSON.stringify(target),
-      ),
+      generation.ordinaryBatches
+        .flatMap((batch) => batch.targets.map((target) => target.pressure))
+        .find((entry) => JSON.stringify(entry.targetOrigin) === JSON.stringify(target)),
     ).toMatchObject({
       selectedGameName: 'I_Combat21',
       selectedPossible: false,

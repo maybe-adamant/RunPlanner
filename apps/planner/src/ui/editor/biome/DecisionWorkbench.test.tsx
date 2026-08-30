@@ -20,6 +20,7 @@ import {
   type ProjectDocument,
   type SemanticAddress,
 } from '@run-planner/engine/authored-project';
+import { simulateProject } from '@run-planner/engine/simulation';
 import { act, cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -36,7 +37,7 @@ import {
   authoredProjectCommandDispatched,
   authoredProjectUndoRequested,
 } from '@planner/state/projectWorkspaceSlice';
-import { authorLegalTraitOffers } from '@run-planner/test-fixtures/shared';
+import { authorLegalTraitOffers, requireTraits } from '@run-planner/test-fixtures/shared';
 import {
   loadUnderworldFMidshopPomFrontierProject,
   createGoldenFGHIProject,
@@ -82,6 +83,38 @@ function emptyProject(routeKey: 'Surface' | 'Underworld'): ProjectDocument {
   return createProjectDocument(catalog, {
     projectId: `decision-workbench-empty-${routeKey}`,
     configuredBiomeCounts: { [routeKey]: 1 },
+  });
+}
+
+function blockHCombat05Trait(): ProjectDocument {
+  const completeProject = authorLegalTraitOffers(createGoldenFGHIProject());
+  const complete = simulateProject(catalog, completeProject)
+    .routes.find((candidate) => candidate.routeKey === 'Underworld')
+    ?.biomes.find((candidate) => candidate.biomeKey === 'H');
+  if (complete?.authoring !== 'complete' || complete.validity !== 'valid') {
+    throw new Error('H fixture did not produce a complete-valid baseline');
+  }
+  const selected = complete.rewards.selectedTraitOffers.find(
+    (offer) =>
+      offer.address.owner.kind === 'localReward' &&
+      offer.address.owner.occurrenceId === 'golden-h-combat05' &&
+      offer.address.owner.slotKey === 'cage3',
+  );
+  if (selected === undefined) throw new Error('H Combat 05 Cage 3 has no selected trait offer');
+  const offer = requireTraits(selected.offer);
+  const [first, second, third] = offer.options;
+  if (first === undefined || second === undefined || third === undefined) {
+    throw new Error('H Combat 05 Cage 3 trait offer is incomplete');
+  }
+  return applyProjectCommand(completeProject, catalog, {
+    kind: 'ReplaceTraitOffer',
+    trait: selected.address,
+    value: {
+      kind: 'traits',
+      giverKey: offer.giverKey,
+      options: [{ ...first, rarity: 'Heroic' }, second, third],
+      selectedOptionKey: 'option1',
+    },
   });
 }
 
@@ -1055,6 +1088,19 @@ describe('DecisionWorkbench', () => {
       });
       expect(choices[1]?.disabled).toBe(false);
     });
+  });
+
+  it('keeps the prior Fields maximum concrete while a later trait editor is unresolved', () => {
+    const owner = createExitDecisionAddress(goldenHBiome, {
+      kind: 'occurrence',
+      occurrenceId: createOccurrenceId('golden-h-miniboss01'),
+    });
+    renderDecisionWorkbench(blockHCombat05Trait(), 'Underworld', 'H', subjectForOwner(owner));
+
+    const summary = screen.getByText('Prior Max outcomes').closest('.fields-batch-summary');
+    if (!(summary instanceof HTMLElement)) throw new Error('Fields summary is missing');
+    expect(within(summary).getByText('1 / 2')).toBeTruthy();
+    expect(within(summary).queryByText('Unavailable')).toBeNull();
   });
 
   it('distinguishes a forced effective reward pool from the authored base pool', () => {

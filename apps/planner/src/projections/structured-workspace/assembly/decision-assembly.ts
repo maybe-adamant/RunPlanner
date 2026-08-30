@@ -214,9 +214,9 @@ function fieldsContextForCanonicalBatch(
   const evaluation = input.source.evaluation;
   const support =
     evaluation !== undefined && 'roomGeneration' in evaluation
-      ? evaluation.roomGeneration.ordinary.fieldsCageOutcomes.find(
+      ? evaluation.roomGeneration.ordinary.ordinaryBatches.find(
           (entry) => semanticAddressKey(entry.origin) === semanticAddressKey(batch.origin),
-        )
+        )?.fields
       : undefined;
   return Object.freeze({
     cageOutcome: batch.batchState.cageOutcome,
@@ -500,10 +500,12 @@ function projectAuthoredTargetWithOverlay(
   const markerForTarget = input.markerDestinations.marker(address);
   const anomalyTakeoverAvailable =
     input.source.evaluation !== undefined && 'roomGeneration' in input.source.evaluation
-      ? input.source.evaluation.roomGeneration.ordinary.anomalyTakeovers.some(
-          (support) =>
-            semanticAddressKey(support.origin) === semanticAddressKey(address) &&
-            support.selectedPossible,
+      ? input.source.evaluation.roomGeneration.ordinary.ordinaryBatches.some((batch) =>
+          batch.targets.some(
+            (target) =>
+              semanticAddressKey(target.origin) === semanticAddressKey(address) &&
+              target.anomaly?.selectedPossible,
+          ),
         )
       : false;
   const roomPicker: WorkspaceRoomPickerControl | undefined =
