@@ -2,25 +2,28 @@
 
 ## Status
 
-Deferred nice-to-have, recorded against base commit `e7fa43ab`.
+Reactivated and relocked against production base commit `659d0f5c`.
 
-Implementation is not currently authorized. Before this plan is reactivated,
-re-audit its current-boundary inventory, schema number, migration inputs,
-application lifecycle, test counts, and performance base against the then-live
-repository. Amend and recommit any drift before starting Gate A.
+The current-boundary inventory, schema number, migration input, application
+lifecycle, fixture surface, test surface, and performance base were refreshed
+on 2026-08-30. Gate A began from plan commit `74002a5f` and was paused when the
+schema-72 disposition changed from selecting one route to losslessly splitting
+both routes. This amendment replaces that migration contract before Gate A
+continues; its commit is the amended review base.
 
-This is an isolated future cross-lane delivery contract. It is not linked from
-the project README or stable design authorities. If reactivated and completed,
-its durable decisions move into the owning design documents and this file is
-removed.
+This is an isolated active cross-lane delivery contract. It is not linked from
+the project README or stable design authorities. At completion, its durable
+decisions move into the owning design documents and this file is removed.
 
 ## Objective
 
 Make one persisted Run Planner document represent exactly one selected catalog
-route. A new application session has no authored run until the user chooses an
-Underworld, Surface, or future catalog route. Selecting a route creates the
-single route plan and hands it to the existing route authoring, simulation,
-validation, findings, persistence, recovery, and undo/redo infrastructure.
+route. A new application session has no authored run until the user chooses a
+route. The current catalog offers Underworld and Surface; a future Dream Dive
+implementation will add the third game route without changing this one-document,
+one-run boundary. Selecting a route creates the single route plan and hands it
+to the existing route authoring, simulation, validation, findings, persistence,
+recovery, and undo/redo infrastructure.
 
 The user-visible result is:
 
@@ -41,10 +44,12 @@ runs in one file even though the execution product is one run.
 
 ## Current Live Boundary
 
-At the base commit:
+At production base `659d0f5c`:
 
 - `ProjectDocument.routes` is an array of `AuthoredRoutePlan`;
 - `createProjectDocument` creates one row for every catalog route;
+- construction accepts route-keyed `configuredBiomeCounts`, even though each
+  configured route is an independent run;
 - the strict decoder requires the complete catalog route set in catalog order;
 - project simulation maps and aggregates every authored route;
 - project evaluation and structured workspace publish route arrays;
@@ -52,8 +57,17 @@ At the base commit:
 - application startup always supplies a two-route empty fallback project;
 - Redux workspace state always owns a project history and exact evaluation;
 - the shell renders all catalog routes as sibling top-level tabs; and
-- schema-70 checkpoints therefore contain both route rows even when only one is
+- schema-72 checkpoints therefore contain both route rows even when only one is
   meaningfully authored.
+
+The live catalog version is `0.51.0-biome-i-encounter-profiles` and exposes the
+fixed Underworld `F/G/H/I` and Surface `N/O/P/Q` declarations. Dream Dive is not
+yet a catalog route. The repository has 28 canonical checkpoint JSON files; all
+are schema 72 and carry both standard route rows. A source inventory finds the
+route-collection shape in 31 planner-engine production files and 12 planner
+application production files. The current test surface has 264 test files and
+2,265 direct `it`/`test` declarations; these counts are diagnostic baselines,
+not acceptance targets.
 
 The catalog route collection remains correct. It declares which route types can
 be chosen and the ordered biomes belonging to each. The defect is carrying all
@@ -63,11 +77,11 @@ catalog alternatives into one authored run document.
 
 ### One selected route per document
 
-Schema 72 replaces the project route array with one explicit route plan:
+Schema 73 replaces the project route array with one explicit route plan:
 
 ```ts
 interface ProjectDocument {
-  readonly schemaVersion: 72;
+  readonly schemaVersion: 73;
   readonly projectId: string;
   readonly catalogVersion: string;
   readonly route: AuthoredRoutePlan;
@@ -84,11 +98,42 @@ interface AuthoredRoutePlan {
 The route remains nested as one coherent plan rather than flattening its fields
 into transport metadata. There is no additional root `routeKey`; the sole
 `route.routeKey` is the persisted route-type variable. The decoder validates it
-against the catalog and validates its biomes as a prefix of that declaration.
+against the catalog. For the two current fixed routes, it validates `biomes` as
+a prefix of the declaration's fixed order.
 
 The final model must not retain a one-element `routes` array, a `routes` getter,
 a compatibility facade, or a shadow route collection. Those would preserve the
 superseded ownership shape without serving a second concrete run.
+
+Route-specific construction is equally singular:
+
+```ts
+interface CreateProjectDocumentOptions {
+  readonly projectId: string;
+  readonly routeKey: string;
+  readonly configuredBiomeCount?: number;
+}
+```
+
+There is no route-keyed configured-count record after the cutover. The engine
+validates the selected key and initializes only that route. Test support may
+offer an explicit convenience default; production construction may not.
+
+### Dream Dive compatibility without Dream implementation
+
+The game has three conceptual routes: Underworld, Surface, and Dream Dive.
+Dream Dive reuses four biomes from the standard biome set in a run-specific
+order. The correct eventual persisted unit is still one Dream Dive route in one
+document, with that route plan owning its chosen four-biome sequence. It is not
+an Underworld row, a Surface row, and a Dream row bundled into one project.
+
+This gate does not add Dream Dive declarations, selection, randomization,
+biome-order authoring, ordinal Dream Postboss rooms, or Dream-only rules. It
+also does not generalize the current fixed-route declaration contract in
+advance. When Dream Dive is implemented, its catalog route policy must define
+the allowed biome domain and its authored route instance must persist the
+chosen order. The schema-73 singular root and route-qualified semantic
+addresses already provide the required ownership boundary.
 
 ### No persisted null route
 
@@ -136,6 +181,11 @@ React does not hardcode Underworld, Surface, their biome keys, or a closed route
 union. Selecting a choice calls an application-owned operation that constructs
 the engine-owned default document for that route.
 
+On the current catalog the chooser therefore shows exactly Underworld and
+Surface. It must not show a speculative disabled Dream Dive choice. Dream Dive
+appears automatically only after its declaration and construction policy are
+implemented in a later slice.
+
 Once open:
 
 - the top-level shell identifies the selected route and retains access to
@@ -147,6 +197,12 @@ Once open:
   catalog route; and
 - semantic navigation still validates that every addressed route matches the
   open document.
+
+The open route identity is derived from `document.route.routeKey`; editor
+session state does not duplicate it as a selectable `activeRouteKey`.
+Presentation may retain one transient `route | settings` section choice and one
+singular `RoutePanel`, but not a route-keyed panel map or another authored-route
+selector.
 
 The route chooser is also the fresh-start surface after an unreadable recovery
 payload is blocked. The blocked recovery disclosure and discard/load actions
@@ -170,45 +226,75 @@ that could overwrite the preserved recovery value.
   open project. The empty chooser does not invent a fifth persisted-project
   status.
 
-## Legacy Schema-70/71 Disposition
+When no project is open, the file controls expose New-route selection and Load,
+but omit project status, Save, Undo, and Redo. When New is invoked from an open
+project, the chooser-open flag is transient editor/application state: Cancel
+restores the untouched open project, while selecting a route atomically replaces
+the document, history, evaluation, profile metadata, and route-local session
+state.
 
-Schema 70 always contains all catalog routes, so converting it to a one-route
-document is potentially lossy. Migration must never guess the intended route
-from configured biome count, filename, current UI session, catalog order, or an
-apparently default sibling loadout.
+Choosing a route while recovery is blocked does not discard or overwrite the
+unreadable recovery payload. It may open an unsaved project, but autosave stays
+suspended until explicit Discard Autosave; unblocking then makes the current
+project eligible for the ordinary autosave publication. A successful Load may
+replace the workspace and clear the blockade only after the loaded document
+decodes.
 
-The standalone migration boundary gains an explicit route selection when a
-migration crosses schema 71 to 72:
+## Schema-72 Split Boundary and Migration Reset
+
+Schema 72 always contains two independent authored runs: Underworld and
+Surface. Schema 73 makes one route one document, so `72 -> 73` is a one-to-many
+split rather than an ordinary linear migration. The converter must not ask the
+user which route to discard and must not infer intent from configured biome
+count, filename, current UI session, catalog order, or an apparently default
+sibling loadout.
+
+The accumulated schema-49-through-72 migrator is retired at this boundary.
+Supporting arbitrarily long migration chains would preserve syntactically
+readable files while allowing many intervening semantic changes to make them
+misleading. Schema 73 becomes the new baseline for future linear migrations.
+The repository retains only a focused schema-72-to-73 splitter for the
+immediately preceding document shape; schema 71 and older are deliberately no
+longer supported migration inputs.
+
+The standalone boundary is explicit about the fork:
 
 ```text
-node schema/migrate-project.js --route Surface INPUT
+node schema/split-project-72-to-73.js INPUT
 ```
 
 Locked rules:
 
-1. `--route ROUTE_KEY` is required when crossing `71 -> 72`.
-2. The selected route must exist exactly once in the schema-71 document.
-3. Migration copies that complete `AuthoredRoutePlan` without reconstructing
-   loadout, resource, biome, topology, occurrence, or room-local state.
-4. The source file remains untouched unless the existing explicit `--in-place`
-   option is used.
-5. A file with meaningful content in both routes is converted twice with two
-   explicit route choices and two output paths; no special split-file framework
-   is added.
-6. The migration result reports the selected route key and omitted sibling route
-   keys.
-7. Targeting schema 72 or earlier does not require a route option.
+1. The splitter accepts exactly schema 72 with the expected catalog version and
+   rejects older, newer, malformed, missing-route, or duplicate-route inputs.
+2. One invocation emits two schema-73 sibling files, one containing the complete
+   Underworld `AuthoredRoutePlan` and one containing the complete Surface plan.
+3. Each output preserves the source root metadata and copies its selected route
+   subtree exactly; it does not reconstruct loadout, resource, biome, topology,
+   occurrence, or room-local state.
+4. The source object and source file are never mutated. There is no `--route`,
+   `--target`, or `--in-place` mode for this one-to-many operation.
+5. Default output names include the normalized route key and schema number so
+   both products are unambiguous siblings of the source. Output paths are
+   preflighted and existing files are not silently overwritten.
+6. The programmatic splitter returns both route-keyed documents and the CLI
+   reports both written paths. The CLI does not hide a route-selection policy.
+7. The old general migration implementation and its historical jump tests are
+   deleted rather than wrapped by the splitter. A future schema-74 migration
+   starts a fresh linear chain at schema 73.
 8. The strict production decoder remains current-schema only. In-app legacy
    migration is not introduced by this plan.
 
-All canonical checkpoint fixtures migrate explicitly to their named route. A
-migration witness must prove that selecting each route from a synthetic
-two-authored-route schema-71 document preserves the selected subtree exactly
-and never mutates the input. Fixture conversion must not mass-default or
+Canonical checkpoint fixtures are intentionally narrower than a general user
+document: every manifest row already declares the single route whose behavior
+the fixture witnesses. Fixture conversion runs the same pure split, retains the
+manifest-named output, and discards the irrelevant sibling. A witness must prove
+that each retained schema-73 route deep-equals its schema-72 subtree and that
+the source object was not mutated. Fixture conversion must not mass-default or
 re-author nested state.
 
-Catalog version `0.50.0-unified-chaos-gates` is the current boundary; this future
-authored transport and ownership correction, not a catalog-fact change.
+Catalog version `0.51.0-biome-i-encounter-profiles` remains unchanged; this is
+an authored transport and ownership correction, not a catalog-fact change.
 
 ## Ownership by Lane
 
@@ -222,13 +308,14 @@ required.
 
 The engine owns:
 
-- schema 72 and the single-route `ProjectDocument` contract;
+- schema 73 and the single-route `ProjectDocument` contract;
 - route-specific project construction and strict decoding;
 - command matching and immutable replacement of the sole route;
 - one-route simulation, findings, summary, exact assembly, and candidate
   artifacts;
 - rejection of cross-route semantic addresses and commands; and
-- the explicit schema-71-to-72 migration transformation and its tests.
+- the focused schema-72-to-73 split transformation, migration-baseline reset,
+  and their tests.
 
 Functions that currently search, map, or flatten project routes must either
 operate directly on `document.route` or disappear. A generic collection helper
@@ -254,11 +341,11 @@ not construct route defaults or decide whether a route key is legal.
 Production `createApplication()` must start without a project when no recovery
 or explicit construction input is supplied. Tests that need an already-open
 workspace use a clearly named test-support `createOpenTestApplication` helper.
-That helper defaults to Underworld and accepts an explicit route or complete
-project override; tests of startup, route choice, loading, and recovery continue
-to call production `createApplication()` directly. The helper is test-only;
-production must not gain a hidden environment-dependent default merely to avoid
-migrating tests.
+That helper defaults to Underworld and accepts an explicit catalog route key or
+complete project override; tests of startup, route choice, loading, and recovery
+continue to call production `createApplication()` directly. The helper is
+test-only; production must not gain a hidden environment-dependent default
+merely to avoid migrating tests.
 
 Underworld and Surface fixtures remain separate files and now contain only their
 named route. Performance scenarios continue to prepare independent Underworld
@@ -268,9 +355,9 @@ and Surface projects rather than combining both into one document.
 
 ### Plan commit
 
-This deferred plan is committed alone and changes no production behavior. A
-future activation must first complete and commit the fresh audit required by
-the Status section.
+This reactivated plan is committed alone and changes no production behavior.
+Its commit becomes the implementation base for Gate A; the performance baseline
+remains the production commit recorded in Status.
 
 ### Gate A — Atomic single-route vertical slice
 
@@ -280,14 +367,16 @@ make one catalog route temporarily impossible to author or preserve a hidden
 second route. Internal work may proceed in the passes below, but the gate is not
 reviewable or committable until all passes form one coherent product.
 
-#### Pass A1 — Authored contract and legacy migration
+#### Pass A1 — Authored contract and schema-72 split
 
 - replace `ProjectDocument.routes` with `ProjectDocument.route`;
-- require `routeKey` when constructing a project and validate it through the
-  catalog;
+- replace route-keyed `configuredBiomeCounts` with one required `routeKey` and
+  one optional `configuredBiomeCount`, validated through the catalog;
 - update strict codec paths and round-trip products;
-- add explicit `--route` migration input for `71 -> 72`;
-- migrate every canonical JSON checkpoint to its explicit route; and
+- replace the accumulated linear migrator with the focused lossless
+  schema-72-to-73 splitter;
+- migrate every canonical JSON checkpoint through the split and retain its
+  manifest-declared route;
 - remove superseded all-catalog-route count/order requirements from the authored
   document.
 
@@ -321,6 +410,8 @@ reviewable or committable until all passes form one coherent product.
 - remove sibling route switching from an open document;
 - retain a clear selected-route identity and Settings access;
 - make route-panel state singular;
+- derive the open route identity from the document and replace route switching
+  with one transient route/Settings section choice;
 - render the existing workspace and all contextual dialogs only when a project
   is open; and
 - preserve semantic navigation into the selected route's biomes, findings,
@@ -335,9 +426,13 @@ Gate A is incomplete while any of these remain in production:
 - `StructuredWorkspaceProjection.routes`;
 - project-wide route `find`, `map`, `flatMap`, count, or catalog-order checks;
 - `activePanelByRoute` or sibling authored-route tabs;
+- an editor-session `activeRouteKey` that duplicates the open document route;
 - a fallback project created before route selection;
 - autosave of a placeholder or null-route document; or
-- a production compatibility decoder accepting both schema shapes.
+- a production compatibility decoder accepting both schema shapes;
+- the retired schema-49-through-72 linear migration chain; or
+- route-selection, target-version, or in-place flags on the one-to-many
+  schema-72 splitter.
 
 Catalog route collections and route-qualified semantic addresses are explicitly
 not deletion targets.
@@ -346,7 +441,7 @@ not deletion targets.
 
 After Gate A passes independent review and its accepted findings are remediated:
 
-- update `AUTHORED_PROJECT_MODEL.md` with schema 72 and one-route persistence;
+- update `AUTHORED_PROJECT_MODEL.md` with schema 73 and one-route persistence;
 - update `SIMULATION_AND_VALIDATION.md` and `ARCHITECTURE.md` with singular route
   evaluation and pipeline language;
 - update `EDITOR_MODEL.md` and `STRUCTURED_EDITOR_WORKSPACE.md` with the route
@@ -368,9 +463,11 @@ to repair an incomplete Gate A model.
 - codec round trips each route and rejects unknown routes, the old `routes`
   property, duplicate transport fields, and out-of-prefix biomes;
 - a command addressed to another route is rejected without changing identity;
-- `71 -> 72` fails without explicit route selection;
-- selecting either route preserves that complete route subtree and leaves the
-  source object unchanged; and
+- the focused splitter rejects anything other than the exact schema-72 boundary;
+- one split emits exactly the Underworld and Surface documents, preserves both
+  complete route subtrees, leaves the source unchanged, and never overwrites an
+  existing output;
+- fixture migration retains exactly the manifest-declared split product; and
 - all checkpoint fixtures pass integrity and current-schema decoding.
 
 ### Simulation and candidates
@@ -395,8 +492,9 @@ to repair an incomplete Gate A model.
 - loading a current file from the chooser opens its selected route;
 - valid recovery opens the recovered route, while invalid recovery remains
   blocked without a fallback-project autosave;
-- selecting a route after discard establishes the first autosave-observable
-  document;
+- selecting a route while recovery is blocked preserves the unreadable payload
+  and schedules no autosave; explicit discard then makes that open project the
+  first autosave-observable document;
 - Settings can be entered and the selected route workspace can be resumed; and
 - opening or replacing a project clears stale route-panel, finding, dialog, and
   Run State destinations that belong to another route.
@@ -409,7 +507,7 @@ to repair an incomplete Gate A model.
 - save/load round trips the route identity and returns to the same workspace;
 - the performance snapshot still publishes the established eight independent
   Underworld/Surface metrics using single-route inputs; and
-- a same-host performance comparison against `e7fa43ab` checks that removing
+- a same-host performance comparison against `659d0f5c` checks that removing
   sibling-route evaluation does not regress rebuild, candidate, edit, or cached
   Undo behavior.
 
@@ -428,7 +526,9 @@ and validation results. Review must specifically audit:
    products;
 2. no route-key legality or route-choice policy moved into React;
 3. no placeholder project is created or autosaved before route selection;
-4. no legacy migration path silently chooses or discards a route;
+4. the schema-72 splitter emits both routes without mutation, inference, silent
+   overwrite, or a hidden route-selection mode, and the retired historical
+   migration chain is actually deleted;
 5. no test-only default leaked into production construction;
 6. no semantic address lost its route identity;
 7. route-local simulation chronology and downstream candidate behavior did not
@@ -447,8 +547,10 @@ disposition, closure documentation, and Git operations.
 - authoring, comparing, or merging several runs in one file;
 - a multi-document project manager or recent-files workspace;
 - in-app migration of legacy schemas;
-- guessing a legacy route from authored depth or filename;
-- adding Dream routes, alternate biome placements, or new route declarations;
+- migration support for schema 71 or older;
+- selecting or guessing one schema-72 route in the general splitter;
+- implementing Dream Dive route declarations, random or authored biome order,
+  Dream Postboss rooms, or Dream-only game rules;
 - changing any room, reward, encounter, trait, resource, Shop, Shrine, Well,
   Pool, keepsake, or biome game rule;
 - removing route keys from semantic addresses or persisted acquisition keys;
@@ -461,8 +563,9 @@ disposition, closure documentation, and Git operations.
 
 The plan is complete only when a fresh app owns no project until route choice,
 every current JSON document contains exactly one explicit route plan, engine and
-application products are singular through the complete pipeline, legacy route
-selection is explicit and non-destructive, both standard routes retain their
-full behavior independently, all superseded multi-route production paths are
-deleted, durable authorities absorb the decision, this temporary plan is
-removed, and the complete repository closure gate passes.
+application products are singular through the complete pipeline, the
+schema-72 split preserves both routes without mutating its source, both standard
+routes retain their full behavior independently, all superseded multi-route and
+historical migration paths are deleted, durable authorities absorb the
+decision, this temporary plan is removed, and the complete repository closure
+gate passes.
