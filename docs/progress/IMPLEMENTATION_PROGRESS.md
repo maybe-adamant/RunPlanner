@@ -399,6 +399,29 @@ owners; public catalog and engine contacts, authored schema 59, catalog
 version, simulation results, candidates, findings, persistence, and editor
 behavior remain unchanged.
 
+### Boss and Preboss variant correction closure
+
+Catalog `0.52.0-boss-preboss-variants` now contains the distinct F/G/H/N/O/Q
+Boss02 rooms and encounters. Biome completion declarations own their normal
+and optional Rivals Boss identities, while route declarations own one exact
+Preboss identity per position. Fixed completion creation resolves Rivals by
+one-based route position; changing the Vow rank reconciles already-created Boss
+occurrences without changing their IDs, links, compatible state, or resource
+addresses. Underworld selects `I_PreBoss02`; the same route contract supports a
+future Dream mapping to `I_PreBoss01` without exposing both to authoring.
+
+The planner/catalog implementation is recorded in `4c88b45f`. Its focused
+closure evidence includes catalog 24 files/247 tests, engine 136 files/1,639
+tests, the nine-test completion-variant suite, execution-compiler and
+schema-splitter witnesses, workspace and fixture typechecking, application
+candidate contacts, ESLint, and repository formatting. The final `npm run
+check` passed 22 fixture-integrity tests, 263 correctness files/2,669 tests,
+the relative performance comparison, ESLint, repository formatting, and the
+production build; the build retained only the existing greater-than-500-kB
+chunk advisory. Plan Executor commit `2511bc1` advances the strict catalog
+contact and byte-identical canonical fixtures with 50/50 Lua tests; shell
+commit `0f6ef40` pins that consumer.
+
 ### Outgoing-batch progressive retention closure
 
 The 2026-08-29 outgoing-batch correction groups ordinary generation evidence
