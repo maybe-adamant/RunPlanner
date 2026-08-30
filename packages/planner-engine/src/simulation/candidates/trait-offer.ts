@@ -11,6 +11,7 @@ import {
 import type { ProjectDocument } from '../../authored-project/model';
 import type {
   ConcaveStoneCandidateBranch,
+  TraitOfferGenerationState,
   TraitOfferCandidateArtifacts,
 } from './trait-offer-capability';
 import type { ProjectEvaluation } from '../evaluation-products';
@@ -385,6 +386,7 @@ export interface TraitOfferCandidateBranch {
   readonly assessments: readonly TraitAssessment[];
   readonly composition: TraitOfferCompositionAssessment;
   readonly replacementComposition?: TraitReplacementCompositionAssessment;
+  readonly offerGenerationState?: TraitOfferGenerationState;
   readonly targetedAcquisition?: TraitTargetedAcquisitionAssessment;
   readonly persephoneLevelBonusMaximums: readonly (number | undefined)[];
   readonly effectiveLevels: readonly (number | undefined)[];
@@ -513,6 +515,7 @@ function assessTraitOfferCandidate(
     readonly assessments: readonly TraitAssessment[];
     readonly composition: TraitOfferCompositionAssessment;
     readonly replacementComposition: TraitReplacementCompositionAssessment;
+    readonly offerGenerationState?: TraitOfferGenerationState;
     readonly targetedAcquisition: TraitTargetedAcquisitionAssessment;
     readonly persephoneLevelBonusMaximums: readonly (number | undefined)[];
     readonly effectiveLevels: readonly (number | undefined)[];
@@ -530,6 +533,9 @@ function assessTraitOfferCandidate(
         (branch.replacementComposition.replacementCount > 0 || !branch.replacementComposition.legal)
           ? { replacementComposition: branch.replacementComposition }
           : {}),
+        ...(branch.offerGenerationState === undefined
+          ? {}
+          : { offerGenerationState: branch.offerGenerationState }),
         ...(branch.targetedAcquisition.applies
           ? { targetedAcquisition: branch.targetedAcquisition }
           : {}),

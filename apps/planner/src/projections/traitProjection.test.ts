@@ -1,4 +1,8 @@
-import { simulateProjectAssembly, type ProjectEvaluation } from '@run-planner/engine/simulation';
+import {
+  simulateProjectAssembly,
+  type ProjectEvaluation,
+  type TraitOfferGenerationState,
+} from '@run-planner/engine/simulation';
 import {
   semanticAddressKey,
   type AuthoredTraitOfferTraits,
@@ -6,7 +10,11 @@ import {
 import { catalog } from '@run-planner/hades2-catalog';
 import { describe, expect, it } from 'vitest';
 
-import { projectRouteTraitOffers, projectTraitOfferFeedback } from './traitProjection';
+import {
+  projectRouteTraitOffers,
+  projectTraitOfferFeedback,
+  projectTraitOfferState,
+} from './traitProjection';
 import { createStructuredWorkspaceTestServices } from '@planner-test/fixtures/structuredWorkspace';
 import { createGoldenFGHIProject } from '@run-planner/test-fixtures/underworld';
 
@@ -45,6 +53,81 @@ describe('route trait projection', () => {
     });
     expect(feedback.options[1]).not.toHaveProperty('effectiveLevel');
     expect(feedback.options[1]).not.toHaveProperty('persephoneLevelBonusMaximum');
+  });
+
+  it('deduplicates equivalent offer states while preserving distinct branch tables', () => {
+    const offer: AuthoredTraitOfferTraits = {
+      kind: 'traits',
+      giverKey: 'Apollo',
+      options: [
+        { traitKey: 'ApolloWeaponBoon', rarity: 'Common' },
+        { traitKey: 'ApolloSpecialBoon', rarity: 'Common' },
+        { traitKey: 'ApolloCastBoon', rarity: 'Common' },
+      ],
+      selectedOptionKey: 'option1',
+    };
+    const baseState: TraitOfferGenerationState = Object.freeze({
+      rarity: Object.freeze({
+        kind: 'orderedChecks' as const,
+        values: Object.freeze({ Rare: 0.3, Epic: 0.05, Duo: 0.12, Legendary: 0.1 }),
+      }),
+      replacementRollChance: 0.1,
+      eligibleReplacementCount: 2,
+      maximumReplacementCount: 1,
+      requiredReplacementCount: 0,
+      shortageRequiredReplacementCount: 0,
+      forcedRollRequiredReplacementCount: 0,
+    });
+    const branch = (offerGenerationState: TraitOfferGenerationState) =>
+      Object.freeze({
+        assessments: Object.freeze([]),
+        composition: Object.freeze({ applies: false, legal: true, findings: Object.freeze([]) }),
+        offerGenerationState,
+        persephoneLevelBonusMaximums: Object.freeze([]),
+        effectiveLevels: Object.freeze([]),
+      });
+    const presentation = projectTraitOfferState({
+      value: offer,
+      evaluation: {
+        kind: 'traitOffer',
+        result: {
+          supported: true,
+          branches: [
+            branch(baseState),
+            branch(baseState),
+            branch(
+              Object.freeze({
+                ...baseState,
+                rarity: Object.freeze({ kind: 'fixed' as const, rarity: 'Common' as const }),
+                replacementRollChance: 1,
+              }),
+            ),
+          ],
+          assessments: [],
+          findings: [],
+          persephoneLevelBonusMaximums: [],
+          effectiveLevels: [],
+        },
+      },
+    });
+
+    expect(presentation?.states).toHaveLength(2);
+    expect(presentation?.states[0]).toMatchObject({
+      rarity: {
+        kind: 'orderedChecks',
+        checks: [
+          { label: 'Rare', value: '30%' },
+          { label: 'Epic', value: '5%' },
+          { label: 'Duo', value: '12%' },
+          { label: 'Legendary', value: '10%' },
+        ],
+      },
+      replacementChance: '10%',
+    });
+    expect(presentation?.states[1]).toMatchObject({
+      rarity: { kind: 'fixed', rarity: 'Common' },
+      replacementChance: '100%',
+    });
   });
 
   it('aggregates divergent branch evidence and sorts rows by engine chronology', () => {

@@ -797,6 +797,76 @@ button:disabled {
   min-width: 0;
 }
 
+.trait-offer-state-inspector {
+  border: 1px solid var(--border, #ccd3df);
+  border-radius: 0.45rem;
+  padding: 0.55rem 0.7rem;
+}
+
+.trait-offer-state-inspector > summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.trait-offer-state-note {
+  color: var(--muted, #98a2b3);
+  font-size: 0.8rem;
+  margin: 0.6rem 0;
+}
+
+.trait-offer-state-list {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.trait-offer-state {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.trait-offer-state + .trait-offer-state {
+  border-top: 1px solid var(--border, #ccd3df);
+  padding-top: 0.65rem;
+}
+
+.trait-offer-state h3,
+.trait-offer-state p,
+.trait-offer-state dl {
+  margin: 0;
+}
+
+.trait-offer-state-values,
+.trait-offer-state-replacement {
+  display: grid;
+  gap: 0.4rem 0.8rem;
+}
+
+.trait-offer-state-values {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.trait-offer-state-replacement {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.trait-offer-state-values > div,
+.trait-offer-state-replacement > div {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.trait-offer-state-values dt,
+.trait-offer-state-replacement dt {
+  color: var(--muted, #98a2b3);
+  font-size: 0.75rem;
+}
+
+.trait-offer-state-values dd,
+.trait-offer-state-replacement dd {
+  font-weight: 700;
+  margin: 0;
+}
+
 .chaos-trait-offer-editor {
   display: grid;
   gap: 0.85rem;
@@ -1035,6 +1105,11 @@ button:disabled {
 @media (max-width: 700px) {
   .trait-offer-options {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .trait-offer-state-values,
+  .trait-offer-state-replacement {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 

@@ -257,7 +257,11 @@ export interface TraitReplacementCompositionAssessment {
   readonly applies: boolean;
   readonly legal: boolean;
   readonly ordinaryCandidateCount: number;
+  readonly eligibleReplacementCount: number;
   readonly maximumReplacementCount: number;
+  readonly requiredReplacementCount: number;
+  readonly shortageRequiredReplacementCount: number;
+  readonly forcedRollRequiredReplacementCount: number;
   readonly replacementCount: number;
   readonly findings: readonly {
     readonly code:
@@ -321,7 +325,11 @@ export interface TraitOfferDomainCompositionInput {
 export interface TraitOfferDomainCompositionResult {
   readonly legal: boolean;
   readonly ordinaryCandidateCount: number;
+  readonly eligibleReplacementCount: number;
   readonly maximumReplacementCount: number;
+  readonly requiredReplacementCount: number;
+  readonly shortageRequiredReplacementCount: number;
+  readonly forcedRollRequiredReplacementCount: number;
   readonly replacementCount: number;
   readonly findings: TraitReplacementCompositionAssessment['findings'];
 }
@@ -347,7 +355,11 @@ export function assessTraitOfferDomainComposition(
     return Object.freeze({
       legal,
       ordinaryCandidateCount,
+      eligibleReplacementCount: replacements.size,
       maximumReplacementCount: 0,
+      requiredReplacementCount: 0,
+      shortageRequiredReplacementCount: 0,
+      forcedRollRequiredReplacementCount: 0,
       replacementCount: 0,
       findings: legal
         ? Object.freeze([])
@@ -364,9 +376,11 @@ export function assessTraitOfferDomainComposition(
     replacements.size,
     Math.max(0, 3 - ordinaryCandidateCount - authoredHighTier),
   );
+  const forcedRollRequiredReplacement =
+    input.replacementRollChance === 1 && replacements.size > 0 ? 1 : 0;
   const requiredReplacement = Math.max(
     exhaustionRequiredReplacement,
-    input.replacementRollChance === 1 && replacements.size > 0 ? 1 : 0,
+    forcedRollRequiredReplacement,
   );
   const findings = Object.freeze([
     ...(ordinaryCandidateCount >= 3 && input.authored.length !== 3
@@ -400,7 +414,11 @@ export function assessTraitOfferDomainComposition(
   return Object.freeze({
     legal: findings.length === 0,
     ordinaryCandidateCount,
+    eligibleReplacementCount: replacements.size,
     maximumReplacementCount,
+    requiredReplacementCount: requiredReplacement,
+    shortageRequiredReplacementCount: exhaustionRequiredReplacement,
+    forcedRollRequiredReplacementCount: forcedRollRequiredReplacement,
     replacementCount,
     findings,
   });
@@ -609,7 +627,11 @@ function evaluateReachedTraitOfferWithAssessments(
         applies: false,
         legal: true,
         ordinaryCandidateCount: 0,
+        eligibleReplacementCount: 0,
         maximumReplacementCount: 0,
+        requiredReplacementCount: 0,
+        shortageRequiredReplacementCount: 0,
+        forcedRollRequiredReplacementCount: 0,
         replacementCount: 0,
         findings: Object.freeze([]),
       })
@@ -842,7 +864,11 @@ export function assessTraitReplacementComposition(
       applies: false,
       legal: true,
       ordinaryCandidateCount: 0,
+      eligibleReplacementCount: 0,
       maximumReplacementCount: 0,
+      requiredReplacementCount: 0,
+      shortageRequiredReplacementCount: 0,
+      forcedRollRequiredReplacementCount: 0,
       replacementCount: 0,
       findings: Object.freeze([]),
     });
@@ -852,7 +878,11 @@ export function assessTraitReplacementComposition(
       applies: false,
       legal: !sparse,
       ordinaryCandidateCount: 0,
+      eligibleReplacementCount: 0,
       maximumReplacementCount: 0,
+      requiredReplacementCount: 0,
+      shortageRequiredReplacementCount: 0,
+      forcedRollRequiredReplacementCount: 0,
       replacementCount: 0,
       findings: sparse
         ? Object.freeze([Object.freeze({ code: 'unsupportedSparseTraitOffer' as const })])

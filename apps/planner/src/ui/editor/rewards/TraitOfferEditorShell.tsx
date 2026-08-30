@@ -8,12 +8,16 @@ import type { TraitRarity } from '@run-planner/engine/catalog-schema';
 import { useEffect, useMemo, useState } from 'react';
 
 import { candidateSupport } from '@planner/projections/candidateProjection';
-import { projectTraitOfferFeedback } from '@planner/projections/traitProjection';
+import {
+  projectTraitOfferFeedback,
+  projectTraitOfferState,
+} from '@planner/projections/traitProjection';
 import { type WorkspaceTraitOfferInteraction } from '@planner/projections/structured-workspace';
 import { useWorkspaceInteractionController } from '@planner/ui/controls/useWorkspaceInteraction';
 import { LoadedEchoLastRunBoonChoice } from './TraitOfferEchoLastRunBoon';
 import { TraitOfferOrdinaryOption } from './TraitOfferOrdinaryOption';
 import { TraitOfferSelectedOutcome } from './TraitOfferSelectedOutcome';
+import { TraitOfferStateInspector } from './TraitOfferStateInspector';
 import { replaceTraitOfferOption } from './traitOfferOptions';
 import { ChaosTraitOfferEditor } from './ChaosTraitOfferEditor';
 const OPTION_KEYS = ['option1', 'option2', 'option3'] as const;
@@ -55,6 +59,7 @@ export function TraitOfferEditorShell({
   const candidate = loaded.result?.[0];
   const support = candidateSupport(candidate);
   const feedback = projectTraitOfferFeedback(value, candidate, interaction.traitLabel);
+  const offerState = value.kind === 'traits' ? projectTraitOfferState(candidate) : undefined;
   const offerMessage =
     feedback.contextMessage ??
     (support === 'impossible'
@@ -219,6 +224,7 @@ export function TraitOfferEditorShell({
         />
       ) : value.kind !== 'traits' ? null : (
         <>
+          {offerState === undefined ? null : <TraitOfferStateInspector presentation={offerState} />}
           <div className="trait-offer-options">
             {rejectedBlock === undefined ||
             (!rejectedBlock.required && !rejectedBlock.needsRepair) ? null : (

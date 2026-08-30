@@ -45,6 +45,71 @@ export interface TraitOfferFeedback {
   readonly support: ReturnType<typeof candidateSupport>;
 }
 
+export interface TraitOfferStatePresentation {
+  readonly states: readonly {
+    readonly rarity:
+      | {
+          readonly kind: 'orderedChecks';
+          readonly checks: readonly { readonly label: string; readonly value: string }[];
+        }
+      | { readonly kind: 'fixed'; readonly rarity: string };
+    readonly replacementChance: string;
+    readonly eligibleReplacementCount: number;
+    readonly maximumReplacementCount: number;
+    readonly requiredReplacementCount: number;
+    readonly shortageRequiredReplacementCount: number;
+    readonly forcedRollRequiredReplacementCount: number;
+  }[];
+}
+
+function formatCheckValue(value: number): string {
+  return `${Number((value * 100).toFixed(6))}%`;
+}
+
+/** Presents exact branch-correlated offer-generation facts without recomputing policy. */
+export function projectTraitOfferState(
+  candidate: CandidateOptionProjection<AuthoredTraitOffer> | undefined,
+): TraitOfferStatePresentation | undefined {
+  if (candidate?.evaluation.kind !== 'traitOffer') return undefined;
+  const distinct = new Map<
+    string,
+    NonNullable<(typeof candidate.evaluation.result.branches)[number]['offerGenerationState']>
+  >();
+  for (const branch of candidate.evaluation.result.branches) {
+    const state = branch.offerGenerationState;
+    if (state !== undefined) distinct.set(JSON.stringify(state), state);
+  }
+  if (distinct.size === 0) return undefined;
+  return Object.freeze({
+    states: Object.freeze(
+      [...distinct.values()].map((state) =>
+        (() => {
+          const rarity = state.rarity;
+          return Object.freeze({
+            rarity:
+              rarity.kind === 'fixed'
+                ? Object.freeze({ kind: 'fixed' as const, rarity: rarity.rarity })
+                : Object.freeze({
+                    kind: 'orderedChecks' as const,
+                    checks: Object.freeze(
+                      (['Rare', 'Epic', 'Duo', 'Legendary'] as const).map((label) =>
+                        Object.freeze({ label, value: formatCheckValue(rarity.values[label]) }),
+                      ),
+                    ),
+                  }),
+            replacementChance: formatCheckValue(state.replacementRollChance),
+            eligibleReplacementCount: state.eligibleReplacementCount,
+            maximumReplacementCount: state.maximumReplacementCount,
+            requiredReplacementCount: state.requiredReplacementCount,
+            shortageRequiredReplacementCount: state.shortageRequiredReplacementCount,
+            forcedRollRequiredReplacementCount: state.forcedRollRequiredReplacementCount,
+          });
+        })(),
+      ),
+    ),
+  });
+}
+
 function unavailableMessage(evaluation: CandidateContextUnavailable): string {
   switch (evaluation.evidence.kind) {
     case 'authoredPrerequisiteMissing':

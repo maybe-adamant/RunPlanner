@@ -22,11 +22,8 @@ export interface BoonRarityLedger {
 
 const emptyValues = (): Record<Check, number> => ({ Rare: 0, Epic: 0, Duo: 0, Legendary: 0 });
 
-/** Assembles the game ordered chance table without probability normalization. */
-export function deriveBoonRarityLedger(
-  facts: BoonRarityFacts,
-  supportedRarities: readonly TraitRarity[],
-): BoonRarityLedger {
+/** Assembles the exact ordered check values without probability normalization. */
+export function deriveBoonRarityValues(facts: BoonRarityFacts): BoonRarityValues {
   const override = facts.roomOverride ?? facts.itemOverride;
   const values: Record<Check, number> = emptyValues();
   for (const check of BOON_RARITY_CHECKS)
@@ -38,6 +35,15 @@ export function deriveBoonRarityLedger(
     for (const check of BOON_RARITY_CHECKS)
       values[check] *= contribution.multiplicative?.[check] ?? 1;
   }
+  return Object.freeze(values);
+}
+
+/** Assembles the game ordered chance table without probability normalization. */
+export function deriveBoonRarityLedger(
+  facts: BoonRarityFacts,
+  supportedRarities: readonly TraitRarity[],
+): BoonRarityLedger {
+  const values = deriveBoonRarityValues(facts);
   const supportedChecks = BOON_RARITY_CHECKS.filter((check) => supportedRarities.includes(check));
   const possible = new Set<TraitRarity>();
   for (let index = 0; index < supportedChecks.length; index += 1) {

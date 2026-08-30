@@ -671,6 +671,17 @@ intermediate suite was green.
   comparison passed all eight metrics and measured full rebuild reductions of
   54% for Underworld and 82% for Surface; the build retained only the existing
   greater-than-500-kB chunk advisory.
+- The trait-offer state inspector closed the missing offer-local generation
+  view on 2026-08-30. The engine now publishes exact branch-correlated ordered
+  rarity checks and replacement composition through the existing trait-offer
+  candidate capability. The application only deduplicates equivalent complete
+  states and formats values; reached Olympian and Hermes dialogs disclose the
+  live draft state without adding persisted schema or a global rarity ledger.
+  Its one `npm run check` passed workspace and fixture typechecking, fixture
+  integrity at 3 files/22 tests, correctness at 258 files/2,640 tests, the
+  17-test performance policy suite, the same-host eight-metric comparison,
+  ESLint, repository-wide Prettier, and the production build. The build retained
+  only the existing greater-than-500-kB chunk advisory.
 
 Focused validation remains the normal implementation practice. A complete
 `npm run check` is reserved for the declared phase closure or a shared
