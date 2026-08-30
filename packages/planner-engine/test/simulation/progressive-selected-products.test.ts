@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest';
 
 import * as fixture from './support/progressive-biome-fixtures';
+import { requireTraits } from '@run-planner/test-fixtures/shared';
+import {
+  createAdditionalExitAddress,
+  createBatchRewardStoreAddress,
+  createExitDecisionAddress,
+  createExitSelectionAddress,
+  createLocalRewardAddress,
+  createTraitAcquisitionTargetAddress,
+} from '@run-planner/engine/authored-project';
 
 const {
   EMPTY_RESOURCE_PLACEMENTS,
@@ -34,6 +43,8 @@ const {
   goldenFStartId,
   goldenGBiome,
   goldenIBiome,
+  goldenHBiome,
+  createGoldenFGHIProject,
   createGoldenFGHProject,
   incompleteAtMissingDecision,
   incompleteHFieldsProject,
@@ -52,6 +63,407 @@ const {
 } = fixture;
 
 describe('progressive selected and blocked products', () => {
+  it('retains the complete H batch when its picked miniboss trait child blocks', () => {
+    const completeProject = authorLegalTraitOffers(createGoldenFGHIProject());
+    const complete = simulateProject(catalog, completeProject)
+      .routes.find((candidate) => candidate.routeKey === 'Underworld')
+      ?.biomes.find((candidate) => candidate.biomeKey === 'H');
+    if (complete?.authoring !== 'complete' || complete.validity !== 'valid') {
+      throw new Error('H fixture did not produce a complete-valid baseline');
+    }
+    const selected = complete.rewards.selectedTraitOffers.find(
+      (offer) =>
+        offer.address.owner.kind === 'incomingReward' &&
+        offer.address.owner.occurrenceId === 'golden-h-miniboss01',
+    );
+    if (selected === undefined) throw new Error('H miniboss has no selected trait offer');
+    const offer = requireTraits(selected.offer);
+    const [first, second, third] = offer.options;
+    if (first === undefined || second === undefined || third === undefined) {
+      throw new Error('H miniboss trait offer is incomplete');
+    }
+    const blockedTrait = selected.address;
+    const blockedProject = applyProjectCommand(completeProject, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait: blockedTrait,
+      value: {
+        kind: 'traits',
+        giverKey: offer.giverKey,
+        options: [{ ...first, rarity: 'Heroic' }, second, third],
+        selectedOptionKey: 'option1',
+      },
+    });
+    const blocked = simulateProject(catalog, blockedProject)
+      .routes.find((candidate) => candidate.routeKey === 'Underworld')
+      ?.biomes.find((candidate) => candidate.biomeKey === 'H');
+    if (blocked?.authoring !== 'complete' || blocked.validity !== 'invalid') {
+      throw new Error('H miniboss trait block did not produce a complete-invalid prefix');
+    }
+
+    const selectedBatch = complete.snapshot.decisions.find(
+      (decision) =>
+        decision.kind === 'batch' &&
+        decision.targets.some((target) => target.room.occurrenceId === 'golden-h-miniboss01'),
+    );
+    if (selectedBatch?.kind !== 'batch') throw new Error('H miniboss batch is missing');
+    const baselineBatch = complete.roomGeneration.ordinary.ordinaryBatches.find(
+      (batch) => semanticAddressKey(batch.origin) === semanticAddressKey(selectedBatch.origin),
+    );
+    const retainedBatch = blocked.roomGeneration.ordinary.ordinaryBatches.find(
+      (batch) => semanticAddressKey(batch.origin) === semanticAddressKey(selectedBatch.origin),
+    );
+    expect(blocked.coverage.blockedAt).toEqual(blockedTrait);
+    expect(baselineBatch?.fields).toMatchObject({
+      selectedOutcome: 'max',
+      fieldsMaxDoorsRolled: 0,
+      maxDoorCageCeiling: 2,
+    });
+    expect(retainedBatch?.fields).toEqual(baselineBatch?.fields);
+    expect(retainedBatch?.targets.map((target) => semanticAddressKey(target.origin))).toEqual(
+      baselineBatch?.targets.map((target) => semanticAddressKey(target.origin)),
+    );
+    expect(retainedBatch?.targets).toHaveLength(2);
+    const blockedAssembly = simulateProjectAssembly(catalog, blockedProject);
+    const blockedArtifacts =
+      candidateArtifactsForProjectEvaluationAssembly(blockedAssembly).biomeAt(goldenHBiome);
+    const peerTarget = selectedBatch.targets[1];
+    if (peerTarget === undefined) throw new Error('H miniboss batch has no physical peer');
+    expect(blockedArtifacts?.roomTargets.at(peerTarget.origin)).toBeDefined();
+    const laterBatch = complete.snapshot.decisions.find(
+      (decision) =>
+        decision.kind === 'batch' &&
+        decision.origin.source.kind === 'occurrence' &&
+        decision.origin.source.occurrenceId === 'golden-h-miniboss01',
+    );
+    if (laterBatch?.kind !== 'batch') throw new Error('H later batch is missing');
+    const laterTarget = laterBatch.targets[0];
+    if (laterTarget === undefined) throw new Error('H later batch has no target');
+    expect(blockedArtifacts?.roomTargets.at(laterTarget.origin)).toBeUndefined();
+    expect(blocked.rewards.selectedTraitOffers).toContainEqual(
+      expect.objectContaining({ address: blockedTrait }),
+    );
+    const sourceHistory = blocked.history.rooms.find(
+      (room) =>
+        room.origin.kind === 'occurrence' && room.origin.occurrenceId === 'golden-h-combat09',
+    );
+    expect(sourceHistory).toBeDefined();
+    expect(sourceHistory?.targetGenerations).toHaveLength(0);
+    expect(
+      blocked.history.events.some(
+        (event) =>
+          event.kind === 'roomCreated' &&
+          event.origin.kind === 'occurrence' &&
+          event.origin.occurrenceId === 'golden-h-miniboss01',
+      ),
+    ).toBe(false);
+  });
+
+  it('retains the complete normal batch when selected Chaos blocks at its trait child', () => {
+    const sourceOccurrenceId = goldenFOccurrenceId(1, 1);
+    const chaosOccurrenceId = createOccurrenceId('progressive-selected-chaos');
+    const additional = createAdditionalExitAddress(goldenFBiome, sourceOccurrenceId, 'chaos');
+    const completeProject = authorLegalTraitOffers(createCompleteFGProject());
+    const complete = simulateProject(catalog, completeProject)
+      .routes.find((candidate) => candidate.routeKey === 'Underworld')
+      ?.biomes.find((candidate) => candidate.biomeKey === 'F');
+    if (complete?.authoring !== 'complete' || complete.validity !== 'valid') {
+      throw new Error('selected Chaos fixture has no complete-valid F baseline');
+    }
+    let blockedProject = applyProjectCommand(completeProject, catalog, {
+      kind: 'AddChaos',
+      additional,
+      occurrenceId: chaosOccurrenceId,
+    });
+    blockedProject = applyProjectCommand(blockedProject, catalog, {
+      kind: 'RemoveExitDecision',
+      decision: createExitDecisionAddress(goldenFBiome, source(goldenFOccurrenceId(2, 1))),
+    });
+    blockedProject = applyProjectCommand(blockedProject, catalog, {
+      kind: 'SetExitSelection',
+      selection: createExitSelectionAddress(goldenFBiome, source(sourceOccurrenceId)),
+      value: { kind: 'additional', additionalExitKey: 'chaos' },
+    });
+    const chaosSource = source(chaosOccurrenceId);
+    const laterTarget = createTargetAddress(goldenFBiome, chaosSource, 'exit1');
+    blockedProject = applyProjectCommand(blockedProject, catalog, {
+      kind: 'CreateBatch',
+      decision: createExitDecisionAddress(goldenFBiome, chaosSource),
+    });
+    blockedProject = applyProjectCommand(blockedProject, catalog, {
+      kind: 'ReplaceBatchRewardStore',
+      rewardStore: createBatchRewardStoreAddress(goldenFBiome, chaosSource),
+      storeKey: 'RunProgress',
+    });
+    blockedProject = applyProjectCommand(blockedProject, catalog, {
+      kind: 'CreateTarget',
+      target: laterTarget,
+      occurrenceId: createOccurrenceId('progressive-selected-chaos-return'),
+      gameName: 'F_Combat02',
+    });
+    const blockedAssembly = simulateProjectAssembly(catalog, blockedProject);
+    const blocked = blockedAssembly.evaluation.routes
+      .find((candidate) => candidate.routeKey === 'Underworld')
+      ?.biomes.find((candidate) => candidate.biomeKey === 'F');
+    if (
+      blocked === undefined ||
+      blocked.validity !== 'invalid' ||
+      blocked.coverage.kind !== 'prefix' ||
+      !('roomGeneration' in blocked) ||
+      !('rewards' in blocked)
+    ) {
+      throw new Error('selected Chaos fixture did not block at its unresolved trait child');
+    }
+    const trait = createTraitOfferAddress(
+      createIncomingRewardAddress(goldenFBiome, chaosOccurrenceId),
+      'self',
+    );
+    const containingDecision = complete.snapshot.decisions.find(
+      (decision) =>
+        decision.kind === 'batch' &&
+        decision.origin.source.kind === 'occurrence' &&
+        decision.origin.source.occurrenceId === sourceOccurrenceId,
+    );
+    if (containingDecision?.kind !== 'batch') {
+      throw new Error('selected Chaos containing decision is missing');
+    }
+    const baselineAssessment = complete.roomGeneration.ordinary.ordinaryBatches.find(
+      (batch) => semanticAddressKey(batch.origin) === semanticAddressKey(containingDecision.origin),
+    );
+    const retainedAssessment = blocked.roomGeneration.ordinary.ordinaryBatches.find(
+      (batch) => semanticAddressKey(batch.origin) === semanticAddressKey(containingDecision.origin),
+    );
+    const artifacts =
+      candidateArtifactsForProjectEvaluationAssembly(blockedAssembly).biomeAt(goldenFBiome);
+    const session = createPreparedProjectCandidateSession(catalog, blockedAssembly);
+
+    expect(blocked.coverage.blockedAt).toEqual(trait);
+    expect(retainedAssessment?.targets.map((target) => semanticAddressKey(target.origin))).toEqual(
+      baselineAssessment?.targets.map((target) => semanticAddressKey(target.origin)),
+    );
+    expect(retainedAssessment?.targets).toHaveLength(containingDecision.targets.length);
+    expect(session.traitOfferStartingDraft(trait, 'Chaos')).toMatchObject({
+      kind: 'traits',
+      giverKey: 'Chaos',
+    });
+    expect(artifacts?.roomTargets.at(laterTarget)).toBeUndefined();
+    expect(
+      blocked.rewards.branches
+        .flatMap((branch) => branch.traitHistory?.events ?? [])
+        .some((event) => event.kind === 'traitOffer' && event.giverKey === 'Chaos'),
+    ).toBe(false);
+  });
+
+  it('retains the complete H batch and target repair capability when Bridal Glow lacks its target', () => {
+    const reward = createIncomingRewardAddress(
+      goldenHBiome,
+      createOccurrenceId('golden-h-miniboss01'),
+    );
+    const trait = createTraitOfferAddress(reward, 'source');
+    const completeOffer = {
+      kind: 'traits' as const,
+      giverKey: 'Hera',
+      options: [
+        {
+          traitKey: 'BoonDecayBoon',
+          rarity: 'Common' as const,
+          targetTraitKey: 'ApolloWeaponBoon',
+        },
+        { traitKey: 'DamageShareRetaliateBoon', rarity: 'Common' as const },
+        { traitKey: 'HeraManaBoon', rarity: 'Rare' as const },
+      ] as const,
+      selectedOptionKey: 'option1' as const,
+    };
+    let completeProject = applyProjectCommand(
+      authorLegalTraitOffers(createGoldenFGHIProject()),
+      catalog,
+      {
+        kind: 'ReplaceIncomingReward',
+        reward,
+        value: { rewardType: 'Boon', payload: { kind: 'BoonSource', source: 'HeraUpgrade' } },
+      },
+    );
+    completeProject = applyProjectCommand(completeProject, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait,
+      value: completeOffer,
+    });
+    const complete = simulateProject(catalog, completeProject)
+      .routes.find((candidate) => candidate.routeKey === 'Underworld')
+      ?.biomes.find((candidate) => candidate.biomeKey === 'H');
+    if (complete?.authoring !== 'complete' || complete.validity !== 'valid') {
+      throw new Error('targeted trait fixture did not produce a complete-valid baseline');
+    }
+    const blockedOffer = {
+      ...completeOffer,
+      options: [
+        { traitKey: 'BoonDecayBoon', rarity: 'Common' as const },
+        completeOffer.options[1],
+        completeOffer.options[2],
+      ] as const,
+    };
+    const blockedProject = applyProjectCommand(completeProject, catalog, {
+      kind: 'ReplaceTraitOffer',
+      trait,
+      value: blockedOffer,
+    });
+    const blockedAssembly = simulateProjectAssembly(catalog, blockedProject);
+    const blocked = blockedAssembly.evaluation.routes
+      .find((candidate) => candidate.routeKey === 'Underworld')
+      ?.biomes.find((candidate) => candidate.biomeKey === 'H');
+    if (
+      blocked?.authoring !== 'complete' ||
+      blocked.validity !== 'invalid' ||
+      blocked.coverage.kind !== 'prefix'
+    ) {
+      throw new Error('targeted trait fixture did not produce a complete-invalid prefix');
+    }
+    const child = createTraitAcquisitionTargetAddress(trait, 'option1');
+    const containingBatch = complete.snapshot.decisions.find(
+      (decision) =>
+        decision.kind === 'batch' &&
+        decision.targets.some((target) => target.room.occurrenceId === 'golden-h-miniboss01'),
+    );
+    if (containingBatch?.kind !== 'batch') throw new Error('targeted trait batch is missing');
+    const baselineAssessment = complete.roomGeneration.ordinary.ordinaryBatches.find(
+      (batch) => semanticAddressKey(batch.origin) === semanticAddressKey(containingBatch.origin),
+    );
+    const retainedAssessment = blocked.roomGeneration.ordinary.ordinaryBatches.find(
+      (batch) => semanticAddressKey(batch.origin) === semanticAddressKey(containingBatch.origin),
+    );
+    const laterBatch = complete.snapshot.decisions.find(
+      (decision) =>
+        decision.kind === 'batch' &&
+        decision.origin.source.kind === 'occurrence' &&
+        decision.origin.source.occurrenceId === 'golden-h-miniboss01',
+    );
+    if (laterBatch?.kind !== 'batch' || laterBatch.targets[0] === undefined) {
+      throw new Error('targeted trait later target is missing');
+    }
+    const artifacts =
+      candidateArtifactsForProjectEvaluationAssembly(blockedAssembly).biomeAt(goldenHBiome);
+    const session = createPreparedProjectCandidateSession(catalog, blockedAssembly);
+
+    expect(blocked.coverage.blockedAt).toEqual(child);
+    expect(retainedAssessment).toEqual(baselineAssessment);
+    expect(artifacts?.traitOffers.at(trait)).toBeDefined();
+    expect(
+      session.evaluate({
+        kind: 'traitAcquisitionTargetDomain',
+        trait,
+        value: blockedOffer,
+        optionKey: 'option1',
+      }),
+    ).toMatchObject({
+      kind: 'traitAcquisitionTargetDomain',
+      result: {
+        sourceTraitKey: 'BoonDecayBoon',
+        candidates: expect.arrayContaining([
+          expect.objectContaining({
+            result: expect.objectContaining({
+              traitKey: 'ApolloWeaponBoon',
+              supported: true,
+            }),
+          }),
+        ]),
+      },
+    });
+    expect(artifacts?.roomTargets.at(laterBatch.targets[0].origin)).toBeUndefined();
+    const traitEvents = blocked.rewards.branches
+      .flatMap((branch) => branch.traitHistory?.events ?? [])
+      .filter(
+        (event) =>
+          event.kind === 'traitOffer' &&
+          event.options.some((option) => option.traitKey === 'BoonDecayBoon'),
+      );
+    const traitEvent = traitEvents[0];
+    if (traitEvent?.kind !== 'traitOffer') {
+      throw new Error('blocked Bridal Glow offer event is missing');
+    }
+    expect(traitEvents).toHaveLength(1);
+    expect(traitEvent.targetedAcquisitionTransition).toBeUndefined();
+    expect(
+      blocked.rewards.branches
+        .flatMap((branch) => branch.traitHistory?.events ?? [])
+        .some(
+          (event) => event.kind === 'levelMutation' && event.sourceTraitKey === 'BoonDecayBoon',
+        ),
+    ).toBe(false);
+  });
+
+  it('retains the complete H batch and level repair capability when a Pom target is unresolved', () => {
+    const completeProject = authorLegalTraitOffers(createGoldenFGHIProject());
+    const complete = simulateProject(catalog, completeProject)
+      .routes.find((candidate) => candidate.routeKey === 'Underworld')
+      ?.biomes.find((candidate) => candidate.biomeKey === 'H');
+    if (complete?.authoring !== 'complete' || complete.validity !== 'valid') {
+      throw new Error('Pom fixture did not produce a complete-valid baseline');
+    }
+    const reward = createLocalRewardAddress(
+      goldenHBiome,
+      createOccurrenceId('golden-h-combat05'),
+      'cages',
+      'cage1',
+    );
+    const level = createLevelResolutionAddress(reward, 'self');
+    const blockedProject = applyProjectCommand(completeProject, catalog, {
+      kind: 'ReplaceLevelResolution',
+      levelResolution: level,
+      value: {
+        kind: 'choice',
+        offeredTraitKeys: ['ApolloWeaponBoon', 'ZeusSpecialBoon', 'HeraCastBoon'],
+        selectedTraitKey: null,
+      },
+    });
+    const blockedAssembly = simulateProjectAssembly(catalog, blockedProject);
+    const blocked = blockedAssembly.evaluation.routes
+      .find((candidate) => candidate.routeKey === 'Underworld')
+      ?.biomes.find((candidate) => candidate.biomeKey === 'H');
+    if (
+      blocked?.authoring !== 'complete' ||
+      blocked.validity !== 'invalid' ||
+      blocked.coverage.kind !== 'prefix'
+    ) {
+      throw new Error('Pom fixture did not produce a complete-invalid prefix');
+    }
+    const containingBatch = complete.snapshot.decisions.find(
+      (decision) =>
+        decision.kind === 'batch' &&
+        decision.targets.some((target) => target.room.occurrenceId === 'golden-h-combat05'),
+    );
+    if (containingBatch?.kind !== 'batch') throw new Error('Pom containing batch is missing');
+    const baselineAssessment = complete.roomGeneration.ordinary.ordinaryBatches.find(
+      (batch) => semanticAddressKey(batch.origin) === semanticAddressKey(containingBatch.origin),
+    );
+    const retainedAssessment = blocked.roomGeneration.ordinary.ordinaryBatches.find(
+      (batch) => semanticAddressKey(batch.origin) === semanticAddressKey(containingBatch.origin),
+    );
+    const laterBatch = complete.snapshot.decisions.find(
+      (decision) =>
+        decision.kind === 'batch' &&
+        decision.origin.source.kind === 'occurrence' &&
+        decision.origin.source.occurrenceId === 'golden-h-combat05',
+    );
+    if (laterBatch?.kind !== 'batch' || laterBatch.targets[0] === undefined) {
+      throw new Error('Pom later target is missing');
+    }
+    const artifacts =
+      candidateArtifactsForProjectEvaluationAssembly(blockedAssembly).biomeAt(goldenHBiome);
+
+    expect(blocked.coverage.blockedAt).toEqual(level);
+    expect(retainedAssessment).toEqual(baselineAssessment);
+    expect(artifacts?.levelResolutions.at(level)).toBeDefined();
+    expect(artifacts?.roomTargets.at(laterBatch.targets[0].origin)).toBeUndefined();
+    expect(
+      blocked.rewards.branches
+        .flatMap((branch) => branch.traitHistory?.events ?? [])
+        .some(
+          (event) =>
+            event.kind === 'levelMutation' &&
+            semanticAddressKey(event.owner) === semanticAddressKey(level),
+        ),
+    ).toBe(false);
+  });
+
   it.each([
     { rewardType: 'GiftDrop', label: 'Nectar' },
     { rewardType: 'MetaCurrencyDrop', label: 'Bones' },

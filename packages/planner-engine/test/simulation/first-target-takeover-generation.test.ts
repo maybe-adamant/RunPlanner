@@ -18,7 +18,11 @@ import {
 import { createCompleteFGProject, goldenGBiome } from '@run-planner/test-fixtures/underworld';
 import { createExitDecisionAddress } from '@run-planner/engine/authored-project';
 import { evaluateTakeoverPrebossBatchCandidate } from '@run-planner/engine/simulation';
-import { fGenerationBiome, fGenerationOccurrenceId } from './support/f-generation-project';
+import {
+  fGenerationBaselineBatches,
+  fGenerationBiome,
+  fGenerationOccurrenceId,
+} from './support/f-generation-project';
 import { evaluate } from './support/f-generation-evaluation';
 import {
   buildAnomalyCapProject,
@@ -58,6 +62,37 @@ function catalogWithRoom(room: RoomDeclaration): Catalog {
 }
 
 describe('first-target and takeover generation support', () => {
+  it('groups each ordinary decision and preserves its physical target order', () => {
+    const result = evaluate();
+    const batches = result.generation.ordinaryBatches;
+
+    expect(batches).toHaveLength(fGenerationBaselineBatches.length);
+    expect(new Set(batches.map((batch) => semanticAddressKey(batch.origin))).size).toBe(
+      batches.length,
+    );
+    for (const [index, authored] of fGenerationBaselineBatches.entries()) {
+      const batch = batches[index];
+      if (batch === undefined) throw new Error(`missing generation batch ${index + 1}`);
+      expect(batch.targets).toHaveLength(authored.targets.length);
+      expect(batch.targets.map((target) => target.origin.exitKey)).toEqual(
+        authored.targets.map((_, targetIndex) => `exit${targetIndex + 1}`),
+      );
+      expect(
+        batch.targets.every(
+          (target) =>
+            semanticAddressKey(target.pressure.targetOrigin) === semanticAddressKey(target.origin),
+        ),
+      ).toBe(true);
+      expect(batch).not.toHaveProperty('forcePressure');
+      expect(batch).not.toHaveProperty('anomalyTakeovers');
+      expect(batch).not.toHaveProperty('fieldsCageOutcomes');
+    }
+    expect(result.generation).not.toHaveProperty('forcePressure');
+    expect(result.generation).not.toHaveProperty('anomalyTakeovers');
+    expect(result.generation).not.toHaveProperty('fieldsCageOutcomes');
+    expect(evaluate().generation.ordinaryBatches).toEqual(batches);
+  });
+
   it('reaches the takeover Preboss at the declared depth without treating force maximum as a ceiling', () => {
     const result = evaluate();
     const takeover = evaluateTakeoverPrebossBatchCandidate(
@@ -172,9 +207,13 @@ describe('first-target and takeover generation support', () => {
           finding.code === 'targetRoomUnavailable' &&
           semanticAddressKey(finding.origin) === semanticAddressKey(laterTarget),
       );
-      const takeover = generation.anomalyTakeovers.find(
-        (support) => semanticAddressKey(support.origin) === semanticAddressKey(laterTarget),
-      );
+      const takeover = generation.ordinaryBatches
+        .flatMap((batch) => batch.targets.map((target) => target.anomaly))
+        .find(
+          (support) =>
+            support !== undefined &&
+            semanticAddressKey(support.origin) === semanticAddressKey(laterTarget),
+        );
       expect(takeover).toBeDefined();
       if (!firstAnomalySelected) {
         expect(takeover).toMatchObject({ selectedPossible: true, failedConditions: [] });
@@ -209,7 +248,11 @@ describe('first-target and takeover generation support', () => {
     const { project, earlyTarget } = buildBelowDepthAnomalyProject();
     const { snapshot, history } = prefix(project);
     const generation = evaluateBiomeRoomGeneration(catalog, snapshot, history, 2);
-    expect(generation.anomalyTakeovers).toContainEqual(
+    expect(
+      generation.ordinaryBatches.flatMap((batch) =>
+        batch.targets.flatMap((target) => (target.anomaly === undefined ? [] : [target.anomaly])),
+      ),
+    ).toContainEqual(
       expect.objectContaining({
         origin: earlyTarget,
         selectedPossible: false,
@@ -222,7 +265,11 @@ describe('first-target and takeover generation support', () => {
     const { project, target } = buildShopSourceAnomalyProject();
     const { snapshot, history } = prefix(project);
     const generation = evaluateBiomeRoomGeneration(catalog, snapshot, history, 2);
-    expect(generation.anomalyTakeovers).toContainEqual(
+    expect(
+      generation.ordinaryBatches.flatMap((batch) =>
+        batch.targets.flatMap((target) => (target.anomaly === undefined ? [] : [target.anomaly])),
+      ),
+    ).toContainEqual(
       expect.objectContaining({
         origin: target,
         selectedPossible: false,

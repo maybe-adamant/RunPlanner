@@ -61,9 +61,9 @@ export function pressure(
   exitIndex: number,
 ) {
   const target = fGenerationTargetAddress(batches, batchIndex, exitIndex);
-  const entry = result.generation.forcePressure.find(
-    (candidate) => semanticAddressKey(candidate.targetOrigin) === semanticAddressKey(target),
-  );
+  const entry = result.generation.ordinaryBatches
+    .flatMap((batch) => batch.targets.map((target) => target.pressure))
+    .find((candidate) => semanticAddressKey(candidate.targetOrigin) === semanticAddressKey(target));
   if (entry === undefined) {
     throw new Error(`missing pressure entry for batch ${batchIndex} exit ${exitIndex}`);
   }

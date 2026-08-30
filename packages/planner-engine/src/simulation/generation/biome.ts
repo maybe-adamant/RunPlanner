@@ -35,9 +35,8 @@ import {
 import type { FindingRegionEntry } from '../finding-regions';
 import { findingRegion, ownerRegion } from '../finding-regions';
 import type {
-  AnomalyTakeoverCandidateSupport,
   FieldsCageOutcomeSupportEntry,
-  ForcePressureLedgerEntry,
+  OrdinaryBatchGenerationAssessment,
   RoomTargetCandidateContext,
 } from './model';
 import type { SemanticFinding } from '../model';
@@ -70,9 +69,7 @@ export function evaluateBiomeRoomGenerationAssemblyInternal(
   const views = targetGenerationViews(history);
   const rewardHistories = targetRewardHistories(rewardHistoryCheckpoints);
   const candidateContexts = new Map<string, RoomTargetCandidateContext>();
-  const pressure: ForcePressureLedgerEntry[] = [];
-  const fieldsCageOutcomes: FieldsCageOutcomeSupportEntry[] = [];
-  const anomalyTakeovers: AnomalyTakeoverCandidateSupport[] = [];
+  const ordinaryBatches: OrdinaryBatchGenerationAssessment[] = [];
   const findings: SemanticFinding[] = [];
   const findingRegions: FindingRegionEntry[] = [];
   const chaosCapabilities = new Map<
@@ -212,13 +209,14 @@ export function evaluateBiomeRoomGenerationAssemblyInternal(
       batch.source,
       sourceDeclaration,
     );
+    let fields: FieldsCageOutcomeSupportEntry | undefined;
     if (normalProgression.batchPolicy.kind === 'fields') {
       const support = evaluateFieldsCageOutcome(
         normalProgression.batchPolicy,
         batch,
         sourceBeforeGeneration,
       );
-      fieldsCageOutcomes.push(support);
+      fields = support;
       if (!support.selectedPossible) {
         addFinding(
           finding(
@@ -230,7 +228,7 @@ export function evaluateBiomeRoomGenerationAssemblyInternal(
         );
       }
     }
-    evaluateTargetSlots(
+    const targets = evaluateTargetSlots(
       catalog,
       layout,
       stagedCandidatePool(catalog, layout, ordinaryBatchIndex),
@@ -241,12 +239,17 @@ export function evaluateBiomeRoomGenerationAssemblyInternal(
       batch.targets,
       views,
       candidateContexts,
-      anomalyTakeovers,
-      pressure,
       findings,
       findingRegions,
       enteredBiomeCount,
       rewardHistories,
+    );
+    ordinaryBatches.push(
+      Object.freeze({
+        origin: batch.origin,
+        ...(fields === undefined ? {} : { fields }),
+        targets,
+      }),
     );
     ordinaryBatchIndex += 1;
   }
@@ -273,9 +276,7 @@ export function evaluateBiomeRoomGenerationAssemblyInternal(
   const validation: GeneratedRoomGenerationValidation = Object.freeze({
     biomeKey: snapshot.biomeKey,
     validity: findings.length === 0 ? 'valid' : 'invalid',
-    anomalyTakeovers: Object.freeze(anomalyTakeovers),
-    forcePressure: Object.freeze(pressure),
-    fieldsCageOutcomes: Object.freeze(fieldsCageOutcomes),
+    ordinaryBatches: Object.freeze(ordinaryBatches),
     findings: Object.freeze(findings),
   });
   return Object.freeze({

@@ -99,9 +99,9 @@ describe('G generation and takeover', () => {
       ),
     ).toBe(false);
     expect(
-      g.roomGeneration.ordinary.forcePressure.find(
-        (entry) => entry.selectedGameName === 'G_Shop01',
-      ),
+      g.roomGeneration.ordinary.ordinaryBatches
+        .flatMap((batch) => batch.targets.map((target) => target.pressure))
+        .find((entry) => entry.selectedGameName === 'G_Shop01'),
     ).toMatchObject({
       biomeDepthCache: 5,
       selectedPossible: true,

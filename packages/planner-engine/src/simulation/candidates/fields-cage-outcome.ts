@@ -41,9 +41,9 @@ function fieldsOutcomeSupport(
   query: FieldsCageOutcomeCandidateQuery,
 ) {
   const biome = candidateBiome(evaluation, query.decision.routeKey, query.decision.biomeKey);
-  const selected = biome?.roomGeneration.ordinary.fieldsCageOutcomes.find(
+  const selected = biome?.roomGeneration.ordinary.ordinaryBatches.find(
     (entry) => semanticAddressKey(entry.origin) === semanticAddressKey(query.decision),
-  );
+  )?.fields;
   if (selected !== undefined) return selected;
   const candidate = candidatePrefix(biome);
   const prefix = candidateAssessmentPrefix(biome);

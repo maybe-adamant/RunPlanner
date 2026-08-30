@@ -16,6 +16,7 @@ import {
   type TargetAddress,
   type TraitOfferAddress,
 } from '../../authored-project/addresses';
+import type { OrdinaryBatchGenerationAssessment } from '../generation';
 import {
   createBiomeCandidateArtifacts,
   createKeepsakeEquipResultCandidateArtifacts,
@@ -30,6 +31,7 @@ import type { TraitChildSettlementCheckpoints } from '../rewards/biome';
 import { findingIdentityKey, type FindingRegionEntry } from '../finding-regions';
 import type { BiomeRewardSimulation } from '../rewards';
 import type { EncounterCandidateArtifacts } from '../encounters/candidates';
+import type { MaterializedBiomePrefix } from '../materialization';
 import type {
   RewardProducerCandidateArtifacts,
   RewardProducerOwnerAddress,
@@ -39,7 +41,8 @@ import {
   acquisitionRoleAncestor,
   derivedAcquisitionEntryAncestor,
   type BlockedAncestorChain,
-  type SelectedTargetGenerationAssessment,
+  type LocatedFinding,
+  type ProgressiveBiomeSelectedProducts,
 } from './finding-location';
 import type { BiomeGenerationValidation } from './products';
 
@@ -55,6 +58,7 @@ export function retainBlockedRegionProducts(
   blockedRegionKey: string,
   selectedFindingRegions: readonly FindingRegionEntry[],
   frontierSettlementOwner: OccurrenceAddress | undefined,
+  retainedOrdinaryBatches: readonly OrdinaryBatchGenerationAssessment[],
 ): { readonly rewards: BiomeRewardSimulation; readonly artifacts: BiomeCandidateArtifacts } {
   const blockedTraitAt: TraitOfferAddress | undefined =
     blockedAt.kind === 'traitOffer'
@@ -405,14 +409,19 @@ export function retainBlockedRegionProducts(
             ) {
               return blockedTargetCapability;
             }
-            // The interaction prefix retains exactly the blocked target's
-            // physical cohort and no later decision. Its sibling target
-            // capabilities remain assessable even though execution stopped
-            // before the invalid authored leaf.
-            return rewardOwner === undefined
-              ? retainedArtifacts.roomTargets.at(target)
-              : (blockedArtifacts.roomTargets.at(target) ??
-                  retainedArtifacts.roomTargets.at(target));
+            const retainedTarget = retainedOrdinaryBatches.some((batch) =>
+              batch.targets.some(
+                (assessment) =>
+                  semanticAddressKey(assessment.origin) === semanticAddressKey(target),
+              ),
+            );
+            // Interaction replay may need every peer to reconstruct one
+            // shared-store repair context, but only physical targets inside
+            // the retained generation horizon are publishable capabilities.
+            return rewardOwner !== undefined && retainedTarget
+              ? (blockedArtifacts.roomTargets.at(target) ??
+                  retainedArtifacts.roomTargets.at(target))
+              : retainedArtifacts.roomTargets.at(target);
           },
         });
   const blockedDerivedProducerCapability =
@@ -544,9 +553,11 @@ export function retainBlockedRegionProducts(
 
 export function retainBlockedGenerationValidation(
   retained: BiomeGenerationValidation,
+  selected: ProgressiveBiomeSelectedProducts,
+  authoredPrefix: MaterializedBiomePrefix,
   selectedFindingRegions: readonly FindingRegionEntry[],
   blockedRegionKey: string,
-  selectedTarget?: SelectedTargetGenerationAssessment,
+  unsupported: LocatedFinding,
 ): BiomeGenerationValidation {
   const findings = Object.freeze(
     selectedFindingRegions
@@ -555,21 +566,16 @@ export function retainBlockedGenerationValidation(
       )
       .map((entry) => entry.finding),
   );
-  const selectedPressure = selectedTarget?.context.evaluateGameName(
-    selectedTarget.gameName,
-  ).pressure;
-  const retainedPressureKeys = new Set(
-    retained.ordinary.forcePressure.map((entry) => semanticAddressKey(entry.targetOrigin)),
+  const ordinaryBatches = retainedOrdinaryBatchHorizon(
+    selected.roomGeneration.ordinary.ordinaryBatches,
+    authoredPrefix,
+    selected.history,
+    unsupported,
   );
-  const ordinaryForcePressure =
-    selectedPressure === undefined ||
-    retainedPressureKeys.has(semanticAddressKey(selectedPressure.targetOrigin))
-      ? retained.ordinary.forcePressure
-      : Object.freeze([...retained.ordinary.forcePressure, selectedPressure]);
   const ordinary =
-    ordinaryForcePressure === retained.ordinary.forcePressure
+    ordinaryBatches === retained.ordinary.ordinaryBatches
       ? retained.ordinary
-      : Object.freeze({ ...retained.ordinary, forcePressure: ordinaryForcePressure });
+      : Object.freeze({ ...retained.ordinary, ordinaryBatches });
   if (findings.length === 0 && ordinary === retained.ordinary) return retained;
   const retainedKeys = new Set(retained.findings.map((finding) => findingIdentityKey(finding)));
   const merged = Object.freeze([
@@ -587,4 +593,94 @@ export function retainBlockedGenerationValidation(
     ...(findings.length === 0 ? {} : { validity: 'invalid' as const }),
     findings: merged,
   });
+}
+
+function ordinaryBatchDecisionIndex(
+  authoredPrefix: MaterializedBiomePrefix,
+  origin: OrdinaryBatchGenerationAssessment['origin'],
+): number {
+  const direct = authoredPrefix.decisions.findIndex(
+    (decision) => semanticAddressKey(decision.origin) === semanticAddressKey(origin),
+  );
+  if (direct >= 0) return direct;
+  if (
+    authoredPrefix.frontier?.kind === 'exitDecision' &&
+    semanticAddressKey(authoredPrefix.frontier.origin) === semanticAddressKey(origin)
+  ) {
+    return authoredPrefix.decisions.length;
+  }
+  return Number.MAX_SAFE_INTEGER;
+}
+
+function targetGenerationCompletionSequence(
+  selected: ProgressiveBiomeSelectedProducts['history'],
+  target: TargetAddress,
+): number | undefined {
+  return selected.rooms
+    .flatMap((room) => room.targetGenerations)
+    .find(
+      (generation) => semanticAddressKey(generation.targetOrigin) === semanticAddressKey(target),
+    )?.after.sequence;
+}
+
+function batchTargetGenerationFinishedBeforeBlock(
+  selected: ProgressiveBiomeSelectedProducts['history'],
+  unsupported: LocatedFinding,
+  batch: OrdinaryBatchGenerationAssessment,
+): boolean {
+  if (batch.targets.length === 0) return false;
+  const chronologyUnavailableFallback =
+    unsupported.historySequence === undefined &&
+    unsupported.aggregate !== 'generation' &&
+    (unsupported.targetIndex !== undefined || unsupported.additionalIndex !== undefined);
+  let completedAt = -1;
+  for (const target of batch.targets) {
+    const sequence = targetGenerationCompletionSequence(selected, target.origin);
+    if (sequence === undefined) return chronologyUnavailableFallback;
+    completedAt = Math.max(completedAt, sequence);
+  }
+  if (unsupported.historySequence === undefined) {
+    return chronologyUnavailableFallback;
+  }
+  return (
+    unsupported.historySequence > completedAt ||
+    (unsupported.historySequence === completedAt && unsupported.historyBoundary === 'after')
+  );
+}
+
+/**
+ * Selects the generation assessment horizon from one canonical batch product.
+ * A blocker before target-generation completion retains the physical prefix;
+ * a later child retains the complete batch that already existed at that point.
+ */
+function retainedOrdinaryBatchHorizon(
+  selected: readonly OrdinaryBatchGenerationAssessment[],
+  authoredPrefix: MaterializedBiomePrefix,
+  history: ProgressiveBiomeSelectedProducts['history'],
+  unsupported: LocatedFinding,
+): readonly OrdinaryBatchGenerationAssessment[] {
+  if (unsupported.decisionIndex < 0) return Object.freeze([]);
+  const retained = selected.filter((batch) => {
+    const index = ordinaryBatchDecisionIndex(authoredPrefix, batch.origin);
+    if (index < unsupported.decisionIndex) return true;
+    if (index > unsupported.decisionIndex) return false;
+    return true;
+  });
+  const normalized = retained.map((batch) => {
+    const index = ordinaryBatchDecisionIndex(authoredPrefix, batch.origin);
+    if (index !== unsupported.decisionIndex) return batch;
+    if (batchTargetGenerationFinishedBeforeBlock(history, unsupported, batch)) return batch;
+    if (unsupported.targetIndex === undefined) {
+      // A decision-owned generation finding (for example Fields outcome
+      // support) is reached after the batch state exists but before its first
+      // physical target. Preserve that decision assessment with an empty
+      // completed target prefix.
+      return Object.freeze({ ...batch, targets: Object.freeze([]) });
+    }
+    return Object.freeze({
+      ...batch,
+      targets: Object.freeze(batch.targets.slice(0, unsupported.targetIndex + 1)),
+    });
+  });
+  return Object.freeze(normalized);
 }

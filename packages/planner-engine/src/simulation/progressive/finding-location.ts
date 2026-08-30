@@ -9,7 +9,6 @@ import {
   type SemanticAddress,
   type TargetAddress,
 } from '../../authored-project/addresses';
-import type { RoomTargetCandidateContext } from '../generation/model';
 import type { BiomeHistoryPrefix, EncounterHistoryBlock } from '../history';
 import type {
   CanonicalBiome,
@@ -36,11 +35,6 @@ export interface BlockedAncestorChain {
   readonly rewardOwner?: RewardProducerOwnerAddress | undefined;
   readonly occurrenceOwner?: OccurrenceAddress | undefined;
   readonly target?: TargetAddress | undefined;
-}
-
-export interface SelectedTargetGenerationAssessment {
-  readonly gameName: string;
-  readonly context: RoomTargetCandidateContext;
 }
 
 export function rewardOwnerAddress(
@@ -162,23 +156,6 @@ function targetForOccurrence(
     // artifact, not the ordinary room-target candidate surface.
   }
   return undefined;
-}
-
-export function gameNameForTarget(
-  prefix: CanonicalBiome | MaterializedBiomePrefix,
-  target: TargetAddress,
-): string | undefined {
-  const entry = prefixDecisionEntries(prefix).find(
-    ({ decision }) =>
-      decision.kind === 'batch' &&
-      decision.source.kind === 'occurrence' &&
-      target.source.kind === 'occurrence' &&
-      decision.source.occurrenceId === target.source.occurrenceId,
-  );
-  if (entry?.decision.kind !== 'batch') return undefined;
-  return entry.decision.targets.find(
-    (candidate) => semanticAddressKey(candidate.origin) === semanticAddressKey(target),
-  )?.room.gameName;
 }
 
 export function blockedAncestorChain(

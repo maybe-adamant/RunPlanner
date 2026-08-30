@@ -24,6 +24,7 @@ import type {
   AnomalyTakeoverCandidateSupport,
   ForcePressureLedgerEntry,
   HubTerminalTakeoverCandidateSupport,
+  OrdinaryTargetGenerationAssessment,
   RoomTargetCandidateContext,
   RoomTargetCandidateValidation,
   RoomGenerationExclusionEvidence,
@@ -668,18 +669,17 @@ export function evaluateTargetSlots(
   targets: readonly CanonicalTarget[],
   views: ReadonlyMap<string, TargetGenerationView>,
   candidateContexts: Map<string, RoomTargetCandidateContext>,
-  anomalyTakeovers: AnomalyTakeoverCandidateSupport[],
-  pressure: ForcePressureLedgerEntry[],
   findings: SemanticFinding[],
   findingRegions: FindingRegionEntry[],
   enteredBiomeCount: number,
   rewardHistories: ReadonlyMap<string, TargetRewardRequirementFacts>,
-): void {
+): readonly OrdinaryTargetGenerationAssessment[] {
   const sourceDeclaration = catalog.rooms.byKey[source.gameName];
   if (sourceDeclaration === undefined) {
     throw new BiomeRoomGenerationContractError(`unknown source room ${source.gameName}`);
   }
   const biome = createBiomeAddress(generationOrigin.routeKey, generationOrigin.biomeKey);
+  const assessments: OrdinaryTargetGenerationAssessment[] = [];
   const evaluateConcreteTarget = (target: CanonicalTarget): HistoryStateView => {
     const targetKey = semanticAddressKey(target.origin);
     const rewardFacts = rewardHistories.get(targetKey);
@@ -710,9 +710,14 @@ export function evaluateTargetSlots(
       rememberedGameName,
       before,
     );
-    if (anomalyTakeover !== undefined) anomalyTakeovers.push(anomalyTakeover);
     const result = candidateContext.evaluateGameName(rememberedGameName);
-    pressure.push(result.pressure);
+    assessments.push(
+      Object.freeze({
+        origin: target.origin,
+        pressure: result.pressure,
+        ...(anomalyTakeover === undefined ? {} : { anomaly: anomalyTakeover }),
+      }),
+    );
     const anomaly = anomalyReplacementEligibility(layout, source, target, before);
     if (anomaly?.selectedPossible !== false) {
       result.findings.forEach((value) => appendFinding(findings, findingRegions, value));
@@ -755,7 +760,7 @@ export function evaluateTargetSlots(
           rewardFacts,
         ),
       );
-      return;
+      return Object.freeze(assessments);
     }
     before = evaluateConcreteTarget(target);
   }
@@ -765,6 +770,7 @@ export function evaluateTargetSlots(
       evaluateConcreteTarget(target);
     }
   }
+  return Object.freeze(assessments);
 }
 
 function evaluateTakeoverAgainstSource(

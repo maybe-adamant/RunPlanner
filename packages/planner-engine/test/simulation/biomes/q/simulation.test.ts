@@ -59,7 +59,9 @@ describe('Q simulation', () => {
       biomeEncounterDepth: 0,
     });
     expect(
-      q.roomGeneration.ordinary.forcePressure.map((entry) => entry.supportRoomGameNames),
+      q.roomGeneration.ordinary.ordinaryBatches.flatMap((batch) =>
+        batch.targets.map((target) => target.pressure.supportRoomGameNames),
+      ),
     ).toEqual([
       ['Q_Combat10', 'Q_Combat11'],
       ['Q_Combat03', 'Q_Combat05', 'Q_Combat15'],

@@ -383,9 +383,9 @@ describe('F candidate support', () => {
         `F candidate parity fixture did not preserve complete F evaluation: ${JSON.stringify(selectedBiome?.findings)}`,
       );
     }
-    const selectedPressure = selectedBiome.roomGeneration.ordinary.forcePressure.find(
-      (entry) => semanticAddressKey(entry.targetOrigin) === semanticAddressKey(target),
-    );
+    const selectedPressure = selectedBiome.roomGeneration.ordinary.ordinaryBatches
+      .flatMap((batch) => batch.targets.map((target) => target.pressure))
+      .find((entry) => semanticAddressKey(entry.targetOrigin) === semanticAddressKey(target));
     if (candidate.kind !== 'roomTarget') throw new Error('expected a room-target candidate');
     expect(candidate.result.pressure).toMatchObject({
       selectedGameName: selectedPressure?.selectedGameName,

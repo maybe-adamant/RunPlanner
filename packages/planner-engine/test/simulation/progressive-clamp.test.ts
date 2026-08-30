@@ -8,6 +8,7 @@ const {
   bindTestCandidateSession,
   catalog,
   candidateArtifactsForProjectEvaluationAssembly,
+  createExitDecisionAddress,
   createIncomingRewardAddress,
   createOccurrenceAddress,
   createOccurrenceId,
@@ -21,6 +22,7 @@ const {
   prefix,
   simulateProject,
   simulateProjectAssembly,
+  semanticAddressKey,
   source,
 } = fixture;
 
@@ -67,7 +69,13 @@ describe('progressive clamp products', () => {
         target: createTargetAddress(goldenGBiome, source(fixture.source), 'exit2'),
         gameName: 'G_Combat02',
       }),
-    ).toMatchObject({ kind: 'roomTarget' });
+    ).toMatchObject({ kind: 'unavailable', reason: 'coverageNotReached' });
+    const retainedBatch = evaluation.roomGeneration.ordinary.ordinaryBatches.find(
+      (batch) =>
+        semanticAddressKey(batch.origin) ===
+        semanticAddressKey(createExitDecisionAddress(goldenGBiome, source(fixture.source))),
+    );
+    expect(retainedBatch?.targets.map((target) => target.origin.exitKey)).toEqual(['exit1']);
   });
 
   it('replays every physical peer when a later forced room changes the shared batch store', () => {

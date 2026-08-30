@@ -152,13 +152,25 @@ function withBelowDepthAnomalyTakeovers(source: WorkspaceBiomeSource): Workspace
         ...evaluation.roomGeneration,
         ordinary: Object.freeze({
           ...evaluation.roomGeneration.ordinary,
-          anomalyTakeovers: Object.freeze(
-            evaluation.roomGeneration.ordinary.anomalyTakeovers.map((support) =>
+          ordinaryBatches: Object.freeze(
+            evaluation.roomGeneration.ordinary.ordinaryBatches.map((batch) =>
               Object.freeze({
-                ...support,
-                selectedPossible: false,
-                sourceBiomeDepthCache: support.minimumBiomeDepthCache - 1,
-                failedConditions: Object.freeze(['minimumBiomeDepthCache'] as const),
+                ...batch,
+                targets: Object.freeze(
+                  batch.targets.map((target) =>
+                    target.anomaly === undefined
+                      ? target
+                      : Object.freeze({
+                          ...target,
+                          anomaly: Object.freeze({
+                            ...target.anomaly,
+                            selectedPossible: false,
+                            sourceBiomeDepthCache: target.anomaly.minimumBiomeDepthCache - 1,
+                            failedConditions: Object.freeze(['minimumBiomeDepthCache'] as const),
+                          }),
+                        }),
+                  ),
+                ),
               }),
             ),
           ),

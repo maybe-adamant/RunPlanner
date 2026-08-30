@@ -614,6 +614,19 @@ function applyTraitOfferForAcquisitionInternal(
         applied.event.selectedOptionKey,
       );
       blockedChildAddress = address;
+      blockedChildCandidateContext = Object.freeze({
+        before: evaluation.before,
+        context: withBoonRarityFacts(
+          catalog,
+          branch,
+          Object.freeze({
+            ...sourceTraitContext,
+            resolvedProviderKey: evaluation.offer.giverKey,
+          }),
+        ),
+        arcanaFear: branch.arcanaFear,
+        keepsakes: branch.keepsakes,
+      });
       if (findings !== undefined)
         evaluation.targetedAcquisition.findings.forEach((finding) =>
           addTraitChildFinding(

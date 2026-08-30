@@ -468,6 +468,7 @@ export function evaluateBiomeRewardChronology(
   const traitChildSettlementBuilders = new Map<
     string,
     {
+      readonly address: SemanticAddress;
       readonly occurrenceOwner: SemanticAddress;
       readonly branches: RewardBranchState[];
       readonly candidateContexts: TraitOfferCandidateContext[];
@@ -494,6 +495,7 @@ export function evaluateBiomeRewardChronology(
       const current = traitChildSettlementBuilders.get(key);
       if (current === undefined)
         traitChildSettlementBuilders.set(key, {
+          address: checkpoint.address,
           occurrenceOwner,
           branches: [checkpoint.branch],
           candidateContexts:
@@ -1624,8 +1626,12 @@ export function evaluateBiomeRewardChronology(
     ),
   );
   const traitCandidateContexts = new Map(traitProducts.candidateContexts);
-  for (const [key, checkpoint] of traitChildSettlementBuilders) {
+  for (const [childKey, checkpoint] of traitChildSettlementBuilders) {
     if (checkpoint.candidateContexts.length === 0) continue;
+    const key =
+      checkpoint.address.kind === 'traitAcquisitionTarget'
+        ? semanticAddressKey(checkpoint.address.trait)
+        : childKey;
     traitCandidateContexts.set(
       key,
       Object.freeze([...(traitCandidateContexts.get(key) ?? []), ...checkpoint.candidateContexts]),
