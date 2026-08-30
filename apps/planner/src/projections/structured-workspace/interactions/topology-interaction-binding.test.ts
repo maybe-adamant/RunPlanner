@@ -247,7 +247,15 @@ describe('structured workspace interaction binding', () => {
     expect(preboss).toMatchObject({ disabled: false, state: 'forced' });
     const ordinary = items.find((item) => item.value.gameName === 'F_Combat01');
     if (ordinary === undefined) throw new Error('F terminal ordinary choice is missing');
-    expect(ordinary).toMatchObject({ disabled: true, state: 'impossible' });
+    expect(ordinary).toMatchObject({
+      disabled: true,
+      label: 'Combat 01 (1 Door)',
+      state: 'impossible',
+    });
+    expect(items.find((item) => item.value.gameName === 'F_Combat02')?.label).toBe(
+      'Combat 02 (2 Doors)',
+    );
+    expect(preboss.label).toBe('Preboss');
     expect(items.length).toBeGreaterThan(1);
     expect(allocated).toEqual([]);
 
@@ -340,7 +348,7 @@ describe('structured workspace interaction binding', () => {
       .sections.flatMap((section) => section.items)
       .find((item) => item.value.gameName === 'H_Combat02');
     if (ordinary === undefined) throw new Error('H eligible ordinary Door 1 choice is missing');
-    expect(ordinary).toMatchObject({ disabled: true, state: 'possible' });
+    expect(ordinary).toMatchObject({ disabled: true, label: 'Combat 02', state: 'possible' });
     expect(() => interaction.intentFor('H_Combat02')).toThrow(/not currently authorable/);
     expect(allocations).toBe(0);
   });
