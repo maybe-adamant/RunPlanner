@@ -39,7 +39,7 @@ struct GamePlanTarget {
 
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-struct GamePlanDiscovery {
+pub(crate) struct GamePlanDiscovery {
     status: String,
     targets: Vec<GamePlanTarget>,
     message: String,
@@ -47,7 +47,7 @@ struct GamePlanDiscovery {
 
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-struct GamePlanPublication {
+pub(crate) struct GamePlanPublication {
     status: String,
     message: String,
 }
@@ -102,6 +102,7 @@ fn direct_profiles(root: &Path) -> Result<Vec<PathBuf>, String> {
     Ok(profiles)
 }
 
+#[cfg(test)]
 fn manifest_path(profile: &Path) -> PathBuf {
     profile
         .join(RETURN_OF_MODDING_DIRECTORY)

@@ -14,6 +14,7 @@
   "scripts": {
     "dev": "npm run dev --workspace @run-planner/planner",
     "desktop:dev": "npm run desktop:dev --workspace @run-planner/planner",
+    "desktop:check": "npm run desktop:check --workspace @run-planner/planner",
     "desktop:build": "npm run desktop:build --workspace @run-planner/planner",
     "schema:split-72-to-73": "node schema/split-project-72-to-73.js",
     "build": "npm run build --workspace @run-planner/planner",
