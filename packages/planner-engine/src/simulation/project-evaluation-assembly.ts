@@ -45,10 +45,9 @@ function recordProjectEvaluationSource(
 const exactProjectEvaluationAssemblyConstructionToken = Symbol(
   'exactProjectEvaluationAssemblyConstructionToken',
 );
+const exactProjectEvaluationAssemblies = new WeakSet<ProjectEvaluationAssembly>();
 let exactProjectEvaluationAssemblyArtifacts:
   ((assembly: ProjectEvaluationAssembly) => ProjectCandidateArtifacts) | undefined;
-let isExactProjectEvaluationAssembly:
-  ((assembly: ProjectEvaluationAssembly) => boolean) | undefined;
 
 class ExactProjectEvaluationAssembly implements ProjectEvaluationAssembly {
   readonly #candidateArtifacts: ProjectCandidateArtifacts;
@@ -83,16 +82,6 @@ class ExactProjectEvaluationAssembly implements ProjectEvaluationAssembly {
       }
       return assembly.#candidateArtifacts;
     };
-    isExactProjectEvaluationAssembly = (assembly: ProjectEvaluationAssembly): boolean => {
-      const candidateArtifacts = exactProjectEvaluationAssemblyArtifacts;
-      if (candidateArtifacts === undefined) return false;
-      try {
-        candidateArtifacts(assembly);
-        return true;
-      } catch {
-        return false;
-      }
-    };
   }
 }
 
@@ -109,12 +98,14 @@ export function createExactProjectEvaluationAssembly(
   candidateArtifacts: ProjectCandidateArtifacts,
 ): ProjectEvaluationAssembly {
   recordProjectEvaluationSource(evaluation, project);
-  return new ExactProjectEvaluationAssembly(
+  const assembly = new ExactProjectEvaluationAssembly(
     project,
     evaluation,
     candidateArtifacts,
     exactProjectEvaluationAssemblyConstructionToken,
   );
+  exactProjectEvaluationAssemblies.add(assembly);
+  return assembly;
 }
 
 export function assertProjectEvaluationSource(
@@ -131,7 +122,7 @@ export function assertProjectEvaluationSource(
 function requireExactProjectEvaluationAssembly(
   assembly: ProjectEvaluationAssembly,
 ): ProjectEvaluationAssembly {
-  if (isExactProjectEvaluationAssembly?.(assembly) !== true) {
+  if (!exactProjectEvaluationAssemblies.has(assembly)) {
     throw new ProjectSimulationContractError(
       'prepared project evaluation assembly was not produced by this simulator execution',
     );
@@ -146,11 +137,24 @@ function requireExactProjectEvaluationAssembly(
 }
 
 export function assertProjectEvaluationAssembly(assembly: ProjectEvaluationAssembly): void {
-  if (isExactProjectEvaluationAssembly?.(assembly) === true) return;
+  if (exactProjectEvaluationAssemblies.has(assembly)) return;
   // Application overlays intentionally preserve the authored/evaluation
   // identity while replacing only the public evaluation for contract tests.
   // Candidate artifacts remain exact-only; callers that need them still use
   // candidateArtifactsForProjectEvaluationAssembly.
+  assertProjectEvaluationSource(assembly.project, assembly.evaluation);
+}
+
+/**
+ * Exact assembly attestation for products that must not consume candidate
+ * artifacts or reconstruct an evaluation from authored state.
+ */
+export function assertExactProjectEvaluationAssembly(assembly: ProjectEvaluationAssembly): void {
+  if (!exactProjectEvaluationAssemblies.has(assembly)) {
+    throw new ProjectSimulationContractError(
+      'exact project evaluation assembly was not produced by this simulator execution',
+    );
+  }
   assertProjectEvaluationSource(assembly.project, assembly.evaluation);
 }
 

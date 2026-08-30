@@ -26,6 +26,7 @@ import {
   createUnavailableProfileFileAdapter,
   type ProfileFileAdapter,
 } from '../persistence/profileFile';
+import type { GamePlanPublisher } from '../persistence/gamePlanPublisher';
 import { createPlannerStore } from '../state/store';
 
 export interface CreateApplicationOptions {
@@ -34,6 +35,7 @@ export interface CreateApplicationOptions {
   readonly autosaveRecovery?: AutosaveRecoveryAdapter;
   readonly autosaveScheduler?: AutosaveScheduler;
   readonly profileFile?: ProfileFileAdapter;
+  readonly gamePlanPublisher?: GamePlanPublisher;
   readonly observeEvaluationWork?: (event: ApplicationEvaluationEvent) => void;
 }
 
@@ -100,6 +102,9 @@ export function createApplication(options: CreateApplicationOptions = {}) {
       : { autosaveRecovery: options.autosaveRecovery }),
     catalog,
     profileFile: options.profileFile ?? createUnavailableProfileFileAdapter(),
+    ...(options.gamePlanPublisher === undefined
+      ? {}
+      : { gamePlanPublisher: options.gamePlanPublisher }),
     store,
   });
   const autosaveCoordinator =

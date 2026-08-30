@@ -2425,10 +2425,13 @@ dependencies = [
 name = "run-planner"
 version = "0.1.0"
 dependencies = [
+ "serde",
+ "serde_json",
  "tauri",
  "tauri-build",
  "tauri-plugin-dialog",
  "tauri-plugin-fs",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]

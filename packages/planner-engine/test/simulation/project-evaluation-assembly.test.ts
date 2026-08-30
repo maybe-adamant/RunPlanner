@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { catalog } from '@run-planner/hades2-catalog';
 import type { ProjectDocument } from '@run-planner/engine/authored-project';
 import {
+  assertExactProjectEvaluationAssembly,
   candidateArtifactsForProjectEvaluationAssembly,
   ProjectSimulationContractError,
 } from '../../src/simulation/project-evaluation-assembly';
@@ -15,6 +16,18 @@ import type {
 import { createCompleteFTakeoverProject } from './support/f-takeover-project';
 
 describe('exact project evaluation assembly', () => {
+  it('attests the simulator-owned assembly without exposing candidate artifacts', () => {
+    const project = createCompleteFTakeoverProject();
+    const assembly = simulateProjectAssembly(catalog, project);
+    expect(() => assertExactProjectEvaluationAssembly(assembly)).not.toThrow();
+    expect(() =>
+      assertExactProjectEvaluationAssembly({
+        project: assembly.project,
+        evaluation: assembly.evaluation,
+      }),
+    ).toThrow(ProjectSimulationContractError);
+  });
+
   it('rejects missing, forged, and mixed exact assembly products', () => {
     const project = createCompleteFTakeoverProject();
     const first = simulateProjectAssembly(catalog, project);

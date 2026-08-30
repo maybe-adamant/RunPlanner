@@ -8,6 +8,7 @@ import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
 import { installDevBrowserErrorReporter } from './diagnostics/devBrowserErrorReporter';
 import { createBrowserProfileFileAdapter } from './persistence/browserProfileFileAdapter';
 import { createTauriProfileFileAdapter } from './persistence/tauriProfileFileAdapter';
+import { createTauriGamePlanPublisher } from './persistence/gamePlanPublisher';
 import {
   createBrowserAutosaveRecoveryAdapter,
   createBrowserAutosaveScheduler,
@@ -61,6 +62,7 @@ const application = createApplication({
     setTimeout: (task, delayMs) => globalThis.window.setTimeout(task, delayMs),
   }),
   profileFile,
+  ...(isTauri() ? { gamePlanPublisher: createTauriGamePlanPublisher() } : {}),
 });
 
 createRoot(rootElement, devBrowserErrorReporter?.rootOptions).render(

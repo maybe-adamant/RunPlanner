@@ -1,9 +1,11 @@
 import { encodeProjectDocument, parseProjectDocument } from '@run-planner/engine/authored-project';
 import { type Catalog } from '@run-planner/engine/catalog-schema';
+import { compileExecutionPlan, encodeExecutionPlan } from '@run-planner/engine/execution-plan';
 
 import type { AutosaveRecoveryAdapter } from '../persistence/autosaveRecovery';
 import { createInitialProject } from '../composition/projectBootstrap';
 import type { ProfileFileAdapter, ProfileFileReference } from '../persistence/profileFile';
+import type { GamePlanDiscovery, GamePlanPublisher } from '../persistence/gamePlanPublisher';
 import {
   newProjectCreated,
   profileLoadSucceeded,
@@ -12,7 +14,8 @@ import {
 } from '../state/profileSessionSlice';
 import { selectPresentProject, selectProfileSession, type PlannerStore } from '../state/store';
 
-export type ProjectOperation = 'discardRecovery' | 'loadProfile' | 'new' | 'saveProfile';
+export type ProjectOperation =
+  'discardRecovery' | 'loadProfile' | 'new' | 'publishGame' | 'saveProfile';
 
 export type ProjectOperationResult = {
   readonly operation: ProjectOperation;
@@ -23,6 +26,9 @@ export type ProjectOperationResult = {
 export interface ProjectOperations {
   createNew(routeKey: string): ProjectOperationResult;
   discardAutosaveRecovery(): ProjectOperationResult;
+  readonly gamePlanAvailable: boolean;
+  discoverGameProfiles(): Promise<GamePlanDiscovery>;
+  publishGame(targetId: string): Promise<ProjectOperationResult>;
   saveProfile(): Promise<ProjectOperationResult>;
   loadProfile(): Promise<ProjectOperationResult>;
 }
@@ -31,6 +37,7 @@ interface CreateProjectOperationsOptions {
   readonly autosaveRecovery?: AutosaveRecoveryAdapter;
   readonly catalog: Catalog;
   readonly profileFile: ProfileFileAdapter;
+  readonly gamePlanPublisher?: GamePlanPublisher;
   readonly store: PlannerStore;
 }
 
@@ -38,6 +45,7 @@ const operationLabels: Readonly<Record<ProjectOperation, string>> = Object.freez
   discardRecovery: 'Discard Autosave',
   loadProfile: 'Load Profile',
   new: 'New project',
+  publishGame: 'Publish to Game',
   saveProfile: 'Save Profile',
 });
 export const DEFAULT_PROFILE_FILE_NAME = 'run-plan.runplanner.json';
@@ -75,6 +83,7 @@ export function createProjectOperations(
   let activeProfileFile: ProfileFileReference | null = null;
   const currentProject = () => selectPresentProject(options.store.getState());
   return Object.freeze({
+    gamePlanAvailable: options.gamePlanPublisher !== undefined,
     createNew(routeKey: string): ProjectOperationResult {
       try {
         const project = createInitialProject(options.catalog, routeKey);
@@ -98,6 +107,45 @@ export function createProjectOperations(
         return result('discardRecovery', 'success', 'Discarded the unreadable autosave.');
       } catch (error) {
         return failure('discardRecovery', error);
+      }
+    },
+    async discoverGameProfiles(): Promise<GamePlanDiscovery> {
+      if (options.gamePlanPublisher === undefined) {
+        return Object.freeze({
+          status: 'unavailable',
+          targets: Object.freeze([]),
+          message: 'Publish to Game is available only in the desktop application.',
+        });
+      }
+      try {
+        return await options.gamePlanPublisher.discoverProfiles();
+      } catch (error) {
+        return Object.freeze({
+          status: 'unavailable',
+          targets: Object.freeze([]),
+          message: `Could not inspect game profiles: ${errorDetail(error)}`,
+        });
+      }
+    },
+    async publishGame(targetId: string): Promise<ProjectOperationResult> {
+      try {
+        if (options.gamePlanPublisher === undefined) {
+          throw new Error('Publish to Game is unavailable in this environment');
+        }
+        const workspace = options.store.getState().projectWorkspace;
+        if (workspace.kind !== 'openProject') throw new Error('No project is open');
+        const plan = compileExecutionPlan({ assembly: workspace.assembly });
+        const publication = await options.gamePlanPublisher.publish(
+          targetId,
+          encodeExecutionPlan(plan),
+        );
+        return result(
+          'publishGame',
+          publication.status === 'published' ? 'success' : 'failure',
+          publication.message,
+        );
+      } catch (error) {
+        return failure('publishGame', error);
       }
     },
     async saveProfile(): Promise<ProjectOperationResult> {
